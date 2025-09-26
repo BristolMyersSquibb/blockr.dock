@@ -1,9 +1,18 @@
 Package: blockr.dock
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
+Title: A docking layout manager for blockr
+Version: 0.0.1
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+    c(person(given = "Nicolas",
+             family = "Bennett",
+             role = c("aut", "cre"),
+             email = "nicolas@cynkra.com"),
+      person(given = "David",
+             family = "Granjon",
+             role = c("aut"),
+             email = "david@cynkra.com")
+    )
+Description: Building on the docking layout manager provided by dockViewR,
+    this provides a flexible front-end to blockr.core.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
