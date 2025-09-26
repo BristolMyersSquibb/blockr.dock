@@ -2,3 +2,5 @@
 
 export(is_dock_board)
 export(new_dock_board)
+import(blockr.core)
+import(shiny)
