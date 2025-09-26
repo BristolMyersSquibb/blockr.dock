@@ -7,13 +7,14 @@
 #'
 #' @return A `board` object
 #'
+#' @rdname dock-board
 #' @export
 new_dock_board <- function(..., class = character()) {
 	new_board(..., class = c(class, "dock_board"))
 }
 
 #' @param x Board object
-#' @rdname new_dock_board
+#' @rdname dock-board
 #' @export
 is_dock_board <- function(x) {
   inherits(x, "dock_board")
