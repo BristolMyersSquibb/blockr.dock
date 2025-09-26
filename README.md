@@ -5,9 +5,13 @@
 
 <!-- badges: start -->
 
+[![lifecycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![status](https://github.com/BristolMyersSquibb/blockr.dock/actions/workflows/ci.yaml/badge.svg)](https://github.com/BristolMyersSquibb/blockr.dock/actions/workflows/ci.yaml)
+[![coverage](https://codecov.io/gh/BristolMyersSquibb/blockr.dock/graph/badge.svg?token=VoOPRU65KA)](https://app.codecov.io/gh/BristolMyersSquibb/blockr.dock)
 <!-- badges: end -->
 
-The goal of blockr.dock is to …
+A docking layout manager provided by dockViewR can be used as front-end
+to a blockr board using this package.
 
 ## Installation
 
