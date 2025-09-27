@@ -30,6 +30,7 @@ for the `iris` dataset, we can run
 
 ``` r
 library(blockr.dock)
+library(blockr.core)
 serve(
   new_dock_board(
     blocks = c(

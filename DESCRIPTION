@@ -21,7 +21,9 @@ Imports:
     blockr.core,
     shiny,
     shinyjs,
-    bslib
+    bslib,
+    glue,
+    dockViewR
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

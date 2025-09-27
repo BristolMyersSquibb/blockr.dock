@@ -9,15 +9,6 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
     title <- id
   }
 
-  plugins <- board_plugins(
-    x,
-    c(
-      "preserve_board",
-      "notify_user",
-      "generate_code"
-    )
-  )
-
   ui <- do.call(
     bslib::page_fillable,
     c(
@@ -26,7 +17,7 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
         gap = 0,
         title = title,
         shinyjs::useShinyjs(),
-        board_ui(id, x, plugins)
+        board_ui(id, x)
       ),
       unname(
         list(...)
@@ -35,7 +26,13 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
   )
 
   server <- function(input, output, session) {
-    board_server(id, x, plugins, ...)
+    board_server(
+      id,
+      x,
+      callbacks = list(
+        dock = manage_dock
+      )
+    )
   }
 
   shinyApp(ui, server)
