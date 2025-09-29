@@ -1,19 +1,24 @@
 manage_dock <- function(board, ..., session = get_session()) {
 
-  initial_board <- isolate(board$board)
-  board_id <- isolate(board$board_id)
-
-	session$output$dock <- dockViewR::render_dock_view(
+  session$output[[dock_id()]] <- dockViewR::render_dock_view(
     {
-      blocks <- board_blocks(initial_board)
+      log_debug("initializing empty dock {dock_id(session$ns)}")
       dockViewR::dock_view(
-        panels = map(
-          dockViewR::panel,
-          id = names(blocks),
-          title = chr_ply(blocks, block_name),
-          content = block_ui(board_id, initial_board, blocks)
+        panels = lapply(
+          isolate(board_block_ids(board$board)),
+          block_panel
         )
       )
     }
+  )
+
+  observeEvent(
+    dockViewR::get_dock(dock_id(), session),
+    {
+      for (block in board_block_ids(board$board)) {
+        show_block_panel(block, add_panel = FALSE, session = session)
+      }
+    },
+    once = TRUE
   )
 }

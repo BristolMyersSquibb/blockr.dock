@@ -1,9 +1,11 @@
 #' @export
 board_ui.dock_board <- function(id, x, ...) {
   tagList(
+    show_hide_block_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
-      title = "Offcanvas blocks"
+      title = "Offcanvas blocks",
+      block_ui(id, x)
     ),
     options_ui(
       id,
@@ -11,7 +13,7 @@ board_ui.dock_board <- function(id, x, ...) {
       board_ui(id, board_plugins(x, which = "preserve_board"), x)
     ),
     dockViewR::dock_view_output(
-      NS(id, "dock"),
+      NS(id, dock_id()),
       width = "100%",
       height = "100vh"
     )
@@ -100,7 +102,7 @@ block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
                             "justify-content-start", "card-title gap-2"),
               bslib::tooltip(
                 icon("info-circle"),
-                p(icon("lightbulb"), "How to use this block?",),
+                p(icon("lightbulb"), "How to use this block?"),
                 p(blk_info$description, ".")
               )
             ),
@@ -155,4 +157,97 @@ block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
     names(blocks),
     MoreArgs = list(ns = NS(id))
   )
+}
+
+show_hide_block_dep <- function() {
+  htmltools::htmlDependency(
+    "show-hide-block",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "show-hide-block.js"
+  )
+}
+
+show_block_panel <- function(id, add_panel = TRUE, session = get_session()) {
+
+  stopifnot(is_string(id), is_bool(add_panel))
+
+  ns <- session$ns
+
+  if (add_panel) {
+    add_block_panel(id, session)
+  }
+
+  bid <- ns(id)
+  pid <- ns(paste0(dock_id(), "-block-", id))
+
+  log_debug("showing block {bid} in panel {pid}")
+
+  session$sendCustomMessage(
+    "show-block",
+    list(
+      block_id = paste0("#", bid),
+      panel_id = paste0("#", pid)
+    )
+  )
+}
+
+hide_block_panel <- function(id, session = get_session()) {
+
+  ns <- session$ns
+
+  session$sendCustomMessage(
+    "hide-block",
+    list(
+      offcanvas = paste0("#", ns("offcanvas")),
+      block_id = paste0("#", ns(paste0("dock-", id)))
+    )
+  )
+
+  remove_block_panel(id, session)
+}
+
+remove_block_panel <- function(id, session = get_session()) {
+  did <- dock_id()
+  log_debug("removing block panel {id} from dock {did}")
+  dockViewR::remove_panel(did, id, session = session)
+}
+
+add_block_panel <- function(id, session = get_session()) {
+
+  did <- dock_id()
+  pan <- block_panel(id)
+
+  log_debug("adding block {id} to dock {did}")
+
+  dockViewR::add_panel(did, panel = pan, session = session)
+}
+
+block_panel <- function(id) {
+
+  pid <- paste0("block-", id)
+
+  log_debug("creating block panel {pid}")
+
+  dockViewR::panel(
+    id = pid,
+    title = paste("Block:", id),
+    content = tagList(),
+    renderer = "always",
+    style = list(
+      overflow = "auto",
+      height = "100%"
+    )
+  )
+}
+
+dock_id <- function(ns = NULL) {
+
+  res <- "dock"
+
+  if (is.null(ns)) {
+    return(res)
+  }
+
+  ns(res)
 }

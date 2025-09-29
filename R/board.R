@@ -11,7 +11,7 @@
 #' @export
 new_dock_board <- function(..., options = dock_board_options(),
                            class = character()) {
-	new_board(..., options = options, class = c(class, "dock_board"))
+  new_board(..., options = options, class = c(class, "dock_board"))
 }
 
 #' @param x Board object

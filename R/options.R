@@ -103,7 +103,7 @@ validate_board_option.blocks_position_option <- function(x) {
   dir <- val$direction
 
   if (!(is_string(dir) && dir %in% opts)) {
-    abort(
+    blockr_abort(
       "Expecting the `direction` entry of `blocks_position_option` to be one ",
       "of {opts}.",
       class = "board_options_blocks_position_invalid"
