@@ -151,12 +151,18 @@ block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
 
   stopifnot(is_blocks(blocks))
 
-  map(
+  res <- map(
     block_panel,
     blocks,
     names(blocks),
     MoreArgs = list(ns = NS(id))
   )
+
+  if (length(blocks) == 1L) {
+    return(res[[1L]])
+  }
+
+  res
 }
 
 show_hide_block_dep <- function() {
@@ -194,7 +200,9 @@ show_block_panel <- function(id, add_panel = TRUE, session = get_session()) {
   invisible(NULL)
 }
 
-hide_block_panel <- function(id, session = get_session()) {
+hide_block_panel <- function(id, rm_panel = TRUE, session = get_session()) {
+
+  stopifnot(is_string(id), is_bool(rm_panel))
 
   ns <- session$ns
 
@@ -206,13 +214,18 @@ hide_block_panel <- function(id, session = get_session()) {
     )
   )
 
-  remove_block_panel(id, session)
+  if (rm_panel) {
+    remove_block_panel(id, session)
+  }
+
+  invisible(NULL)
 }
 
 remove_block_panel <- function(id, session = get_session()) {
   did <- dock_id()
-  log_debug("removing block panel {id} from dock {did}")
-  dockViewR::remove_panel(did, id, session = session)
+  pid <- block_panel_id(id)
+  log_debug("removing block panel {pid} from dock {did}")
+  dockViewR::remove_panel(did, pid, session = session)
 }
 
 add_block_panel <- function(id, session = get_session()) {
@@ -243,4 +256,68 @@ block_panel <- function(id) {
       height = "100%"
     )
   )
+}
+
+list_block_panels <- function(session = get_session()) {
+  res <- dockViewR::get_panels_ids(dock_id(), session)
+  res[is_block_panel_id(res)]
+}
+
+#' @export
+update_ui.dock_board <- function(x, ..., session = get_session()) {
+  restore_dock(board_layout(x), session)
+  invisible(x)
+}
+
+#' @export
+remove_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
+                                       session = get_session()) {
+
+  if (is.null(blocks)) {
+    blocks <- board_block_ids(x)
+  }
+
+  stopifnot(is.character(blocks), all(blocks %in% board_block_ids(x)))
+
+  for (blk in blocks) {
+
+    if (block_panel_id(blk) %in% list_block_panels()) {
+      hide_block_panel(blk)
+    }
+
+    removeUI(
+      paste0("#", id, "-", blk),
+      immediate = TRUE,
+      session = session
+    )
+  }
+
+  invisible(x)
+}
+
+#' @export
+insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
+                                       session = get_session()) {
+
+  if (is.null(blocks)) {
+    blocks <- board_block_ids(x)
+  }
+
+  stopifnot(is.character(blocks), all(blocks %in% board_block_ids(x)))
+
+  for (blk in blocks) {
+    insertUI(
+      paste0("#", id, "-blocks_offcanvas"),
+      "beforeEnd",
+      block_ui(id, x, blk, ...),
+      immediate = TRUE,
+      session = session
+    )
+
+    if (blk %in% layout_panel_block_ids(x)) {
+      show_block_panel(blk, session = session)
+    }
+  }
+
+  invisible(x)
 }

@@ -21,12 +21,7 @@ manage_dock <- function(board, layout, ..., session = get_session()) {
           session = session
         )
       } else {
-        log_debug("restoring dockview layout")
-        dockViewR::restore_dock(
-          dock_id(),
-          unclass(layout),
-          session = session
-        )
+        restore_dock(layout, session)
       }
     },
     once = TRUE
@@ -68,4 +63,9 @@ initial_panels_avail <- function(initial_panels, session = get_session()) {
       dockViewR::get_panels_ids(dock_id(), session)
     )
   )
+}
+
+restore_dock <- function(layout, session = get_session()) {
+  log_debug("restoring dockview layout")
+  dockViewR::restore_dock(dock_id(), unclass(layout), session = session)
 }

@@ -71,10 +71,24 @@ validate_board_layout <- function(x, blocks = character()) {
   }
 
   if (length(blocks)) {
+
     extra <- setdiff(layout_panel_block_ids(x), blocks)
+
     if (length(extra)) {
       blockr_abort(
         "Unknown layout panel{?s} {extra}.",
+        class = "board_layout_invalid"
+      )
+    }
+
+  } else {
+
+    panel_ids <- chr_xtr(x[["panels"]], "id")
+    is_id_ok <- is_block_panel_id(panel_ids)
+
+    if (!all(is_id_ok)) {
+      blockr_abort(
+        "Malformed layout panel ID{?s} {panel_ids[!is_id_ok]}.",
         class = "board_layout_invalid"
       )
     }
@@ -93,6 +107,11 @@ as_board_layout <- function(x, ...) {
 as_board_layout.board_layout <- function(x, ...) x
 
 #' @export
+as_board_layout.board <- function(x, ...) {
+  board_layout(x)
+}
+
+#' @export
 as_board_layout.list <- function(x, ...) {
 
   if ("activeGroup" %in% names(x)) {
@@ -105,6 +124,6 @@ as_board_layout.list <- function(x, ...) {
 #' @rdname dock
 #' @export
 layout_panel_block_ids <- function(x) {
-  stopifnot(is_board_layout(x))
+  x <- as_board_layout(x)
   sub("^block-", "", chr_xtr(x[["panels"]], "id"))
 }
