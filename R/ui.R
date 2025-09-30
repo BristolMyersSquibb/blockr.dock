@@ -179,7 +179,7 @@ show_block_panel <- function(id, add_panel = TRUE, session = get_session()) {
   }
 
   bid <- ns(id)
-  pid <- ns(paste0(dock_id(), "-block-", id))
+  pid <- block_panel_id(id, dock_id(ns))
 
   log_debug("showing block {bid} in panel {pid}")
 
@@ -190,6 +190,8 @@ show_block_panel <- function(id, add_panel = TRUE, session = get_session()) {
       panel_id = paste0("#", pid)
     )
   )
+
+  invisible(NULL)
 }
 
 hide_block_panel <- function(id, session = get_session()) {
@@ -200,7 +202,7 @@ hide_block_panel <- function(id, session = get_session()) {
     "hide-block",
     list(
       offcanvas = paste0("#", ns("offcanvas")),
-      block_id = paste0("#", ns(paste0("dock-", id)))
+      block_id = paste0("#", block_panel_id(id, dock_id(ns)))
     )
   )
 
@@ -221,11 +223,13 @@ add_block_panel <- function(id, session = get_session()) {
   log_debug("adding block {id} to dock {did}")
 
   dockViewR::add_panel(did, panel = pan, session = session)
+
+  invisible(NULL)
 }
 
 block_panel <- function(id) {
 
-  pid <- paste0("block-", id)
+  pid <- block_panel_id(id)
 
   log_debug("creating block panel {pid}")
 
@@ -239,15 +243,4 @@ block_panel <- function(id) {
       height = "100%"
     )
   )
-}
-
-dock_id <- function(ns = NULL) {
-
-  res <- "dock"
-
-  if (is.null(ns)) {
-    return(res)
-  }
-
-  ns(res)
 }

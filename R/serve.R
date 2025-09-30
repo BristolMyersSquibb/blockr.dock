@@ -31,7 +31,8 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
       x,
       callbacks = list(
         dock = manage_dock
-      )
+      ),
+      layout = reactiveVal()
     )
   }
 

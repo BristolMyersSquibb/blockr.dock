@@ -23,7 +23,7 @@ Imports:
     shinyjs,
     bslib,
     glue,
-    dockViewR,
+    dockViewR (>= 0.2.1),
     htmltools
 Suggests: 
     testthat (>= 3.0.0)

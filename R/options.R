@@ -65,7 +65,7 @@ new_blocks_position_option <- function(
 }
 
 reference_panel_candidates <- function(session) {
-  dockViewR::get_panels_ids("layout", session)
+  dockViewR::get_panels_ids(dock_id(), session)
 }
 
 #' @export

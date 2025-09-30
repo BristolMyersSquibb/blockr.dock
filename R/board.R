@@ -4,14 +4,18 @@
 #' extends [blockr.core::new_board()].
 #'
 #' @inheritParams blockr.core::new_board
+#' @param layout Dock layout
 #'
 #' @return A `board` object
 #'
 #' @rdname dock
 #' @export
-new_dock_board <- function(..., options = dock_board_options(),
+new_dock_board <- function(..., layout = new_board_layout(),
+                           options = dock_board_options(),
                            class = character()) {
-  new_board(..., options = options, class = c(class, "dock_board"))
+
+  new_board(..., layout = as_board_layout(layout), options = options,
+            class = c(class, "dock_board"))
 }
 
 #' @param x Board object
@@ -19,6 +23,29 @@ new_dock_board <- function(..., options = dock_board_options(),
 #' @export
 is_dock_board <- function(x) {
   inherits(x, "dock_board")
+}
+
+#' @export
+validate_board.dock_board <- function(x) {
+  x <- NextMethod()
+  validate_board_layout(board_layout(x), board_block_ids(x))
+  x
+}
+
+#' @rdname dock
+#' @export
+board_layout <- function(x) {
+  stopifnot(is_dock_board(x))
+  validate_board_layout(x[["layout"]], board_block_ids(x))
+}
+
+#' @param value Replacement value
+#' @rdname dock
+#' @export
+`board_layout<-` <- function(x, value) {
+  stopifnot(is_dock_board(x))
+  x[["layout"]] <- validate_board_layout(value, board_block_ids(x))
+  x
 }
 
 #' @rdname dock
@@ -39,3 +66,4 @@ dock_board_options <- function() {
     new_blocks_position_option(category = "Layout options")
   )
 }
+
