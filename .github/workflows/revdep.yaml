@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {pkg: 'blockr.core'}
+          - {pkg: 'BristolMyersSquibb/blockr.core'}
 
     env:
       GITHUB_PAT: ${{ secrets.BLOCKR_PAT }}
@@ -24,13 +24,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          path: core
+          path: this
 
       - uses: actions/checkout@v4
         with:
-          repository: cynkra/${{ matrix.config.pkg }}
+          repository: ${{ matrix.config.pkg }}
           token: ${{ secrets.BLOCKR_PAT }}
-          path: dep
+          path: that
 
       - uses: r-lib/actions/setup-pandoc@v2
 
@@ -42,11 +42,11 @@ jobs:
         with:
           extra-packages: |
             any::rcmdcheck
-            local::../dep
-          working-directory: core
+            local::../this
+          working-directory: that
 
       - uses: r-lib/actions/check-r-package@v2
         with:
-          working-directory: dep
+          working-directory: that
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
