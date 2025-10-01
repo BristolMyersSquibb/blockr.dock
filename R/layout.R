@@ -125,5 +125,5 @@ as_board_layout.list <- function(x, ...) {
 #' @export
 layout_panel_block_ids <- function(x) {
   x <- as_board_layout(x)
-  sub("^block-", "", chr_xtr(x[["panels"]], "id"))
+  block_id_from_panel(chr_xtr(x[["panels"]], "id"))
 }

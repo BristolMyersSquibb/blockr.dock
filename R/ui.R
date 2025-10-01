@@ -206,11 +206,15 @@ hide_block_panel <- function(id, rm_panel = TRUE, session = get_session()) {
 
   ns <- session$ns
 
+  pid <- block_panel_id(id, dock_id(ns))
+
+  log_debug("hiding block panel {pid}")
+
   session$sendCustomMessage(
     "hide-block",
     list(
       offcanvas = paste0("#", ns("offcanvas")),
-      block_id = paste0("#", block_panel_id(id, dock_id(ns)))
+      block_id = paste0("#", pid)
     )
   )
 
@@ -254,7 +258,8 @@ block_panel <- function(id) {
     style = list(
       overflow = "auto",
       height = "100%"
-    )
+    ),
+    remove = list(enable = TRUE, mode = "manual")
   )
 }
 

@@ -106,3 +106,7 @@ block_panel_id <- function(block_id, dock_id = NULL) {
 is_block_panel_id <- function(x) {
   grepl("^block-", x)
 }
+
+block_id_from_panel <- function(x) {
+  sub("^block-", "", x)
+}
