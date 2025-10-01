@@ -57,6 +57,16 @@ manage_dock <- function(board, layout, ..., session = get_session()) {
       layout(dockViewR::get_dock(dock_id(), session))
     }
   )
+
+  observeEvent(
+    session$input[[paste0(dock_id(), "_panel-to-remove")]],
+    {
+      blk <- block_id_from_panel(
+        session$input[[paste0(dock_id(), "_panel-to-remove")]]
+      )
+      hide_block_panel(blk, session = session)
+    }
+  )
 }
 
 initial_panels_avail <- function(initial_panels, session = get_session()) {
