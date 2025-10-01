@@ -66,4 +66,3 @@ dock_board_options <- function() {
     new_blocks_position_option(category = "Layout options")
   )
 }
-
