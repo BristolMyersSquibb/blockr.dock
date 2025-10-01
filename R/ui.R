@@ -180,8 +180,11 @@ show_block_panel <- function(id, add_panel = TRUE, session = get_session()) {
 
   ns <- session$ns
 
-  if (add_panel) {
+  if (add_panel && !block_panel_id(id) %in% list_block_panels(session)) {
     add_block_panel(id, session)
+  } else {
+    log_debug("selecting panel {block_panel_id(id)}")
+    dockViewR::select_panel(dock_id(), block_panel_id(id), session)
   }
 
   bid <- ns(id)
