@@ -18,7 +18,7 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports:
-    blockr.core,
+    blockr.core (>= 0.1.1),
     shiny,
     shinyjs,
     bslib,
@@ -28,3 +28,6 @@ Imports:
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+Remotes:
+    BristolMyersSquibb/blockr.core,
+    cynkra/dockViewR

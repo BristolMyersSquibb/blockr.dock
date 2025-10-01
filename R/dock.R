@@ -52,7 +52,10 @@ manage_dock <- function(board, layout, ..., session = get_session()) {
 
   observeEvent(
     dockViewR::get_dock(dock_id(), session),
-    layout(dockViewR::get_dock(dock_id(), session))
+    {
+      log_trace("updating layout")
+      layout(dockViewR::get_dock(dock_id(), session))
+    }
   )
 }
 
