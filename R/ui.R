@@ -174,54 +174,67 @@ show_hide_block_dep <- function() {
   )
 }
 
-show_block_panel <- function(id, add_panel = TRUE, session = get_session()) {
+show_block_panel <- function(id, add_panel = TRUE, immediate = FALSE,
+                             session = get_session()) {
 
-  stopifnot(is_string(id), is_bool(add_panel))
+  stopifnot(is_string(id), is_bool(add_panel), is_bool(immediate))
 
   ns <- session$ns
 
-  if (add_panel && !block_panel_id(id) %in% list_block_panels(session)) {
+  if (add_panel) {
     add_block_panel(id, session)
-  } else {
-    log_debug("selecting panel {block_panel_id(id)}")
-    dockViewR::select_panel(dock_id(), block_panel_id(id), session)
   }
 
   bid <- ns(id)
   pid <- block_panel_id(id, dock_id(ns))
 
-  log_debug("showing block {bid} in panel {pid}")
+  callback <- function() {
 
-  session$sendCustomMessage(
-    "show-block",
-    list(
-      block_id = paste0("#", bid),
-      panel_id = paste0("#", pid)
+    log_debug("showing block {bid} in panel {pid}")
+
+    session$sendCustomMessage(
+      "show-block",
+      list(
+        block_id = paste0("#", bid),
+        panel_id = paste0("#", pid)
+      )
     )
-  )
+  }
 
-  invisible(NULL)
+  if (immediate) {
+    callback()
+  } else {
+    session$onFlushed(callback, once = TRUE)
+  }
 }
 
-hide_block_panel <- function(id, rm_panel = TRUE, session = get_session()) {
+hide_block_panel <- function(id, rm_panel = TRUE, immediate = FALSE,
+                             session = get_session()) {
 
-  stopifnot(is_string(id), is_bool(rm_panel))
+  stopifnot(is_string(id), is_bool(rm_panel), is_bool(immediate))
 
   ns <- session$ns
 
-  session$sendCustomMessage(
-    "hide-block",
-    list(
-      offcanvas = paste0("#", ns("offcanvas")),
-      block_id = paste0("#", block_panel_id(id, dock_id(ns)))
-    )
-  )
+  callback <- function() {
 
-  if (rm_panel) {
-    remove_block_panel(id, session)
+    session$sendCustomMessage(
+      "hide-block",
+      list(
+        offcanvas = paste0("#", ns("offcanvas")),
+        block_id = paste0("#", block_panel_id(id, dock_id(ns)))
+      )
+    )
+
+    if (rm_panel) {
+      remove_block_panel(id, session)
+    }
   }
 
-  invisible(NULL)
+  if (immediate) {
+    callback()
+  } else {
+    session$onFlushed(callback, once = TRUE)
+  }
 }
 
 remove_block_panel <- function(id, session = get_session()) {
@@ -285,12 +298,12 @@ remove_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
   for (blk in blocks) {
 
     if (block_panel_id(blk) %in% list_block_panels()) {
-      hide_block_panel(blk)
+      hide_block_panel(blk, immediate = TRUE, session = session)
     }
 
     removeUI(
       paste0("#", id, "-", blk),
-      immediate = TRUE,
+      immediate = FALSE,
       session = session
     )
   }
@@ -302,13 +315,18 @@ remove_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
 insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
                                        session = get_session()) {
 
+  is_restore <- is.null(blocks)
+
+  if (is_restore) {
+    log_debug("no blocks passed, assuming restore")
+  }
+
   if (is.null(blocks)) {
     blocks <- board_block_ids(x)
   }
 
-  stopifnot(is.character(blocks), all(blocks %in% board_block_ids(x)))
-
   for (blk in blocks) {
+
     insertUI(
       paste0("#", id, "-blocks_offcanvas"),
       "beforeEnd",
@@ -317,7 +335,9 @@ insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
       session = session
     )
 
-    if (blk %in% layout_panel_block_ids(x)) {
+    if (is_restore && blk %in% layout_panel_block_ids(x)) {
+      show_block_panel(blk, add_panel = FALSE, session = session)
+    } else if (!is_restore) {
       show_block_panel(blk, session = session)
     }
   }

@@ -69,6 +69,20 @@ initial_panels_avail <- function(initial_panels, session = get_session()) {
 }
 
 restore_dock <- function(layout, session = get_session()) {
+
   log_debug("restoring dockview layout")
   dockViewR::restore_dock(dock_id(), unclass(layout), session = session)
+
+  observeEvent(
+    req(
+      all(names(layout[["panels"]]) %in% dockViewR::get_panels_ids(dock_id()))
+    ),
+    {
+      for (id in names(layout[["panels"]])) {
+        log_trace("selecting panel {id}")
+        dockViewR::select_panel(dock_id(), id, session)
+      }
+    },
+    once = TRUE
+  )
 }
