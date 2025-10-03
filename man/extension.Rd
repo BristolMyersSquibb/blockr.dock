@@ -7,19 +7,22 @@
 \alias{extension_ui}
 \alias{extension_server}
 \alias{extension_id}
+\alias{extension_name}
 \title{Dock extensions}
 \usage{
-new_dock_extension(server, ui, class, ...)
+new_dock_extension(server, ui, name, class, ...)
 
 is_dock_extenstion(x)
 
 validate_extension(x, ...)
 
-extension_ui(x)
+extension_ui(x, ...)
 
 extension_server(x)
 
 extension_id(x)
+
+extension_name(x)
 }
 \arguments{
 \item{server}{A function returning \code{\link[shiny:moduleServer]{shiny::moduleServer()}}}
@@ -27,6 +30,8 @@ extension_id(x)
 \item{ui}{A function with a single argument (\code{ns}) returning a \code{shiny.tag}}
 
 \item{class}{Extension subclass}
+
+\item{...}{Further attributes}
 
 \item{x}{Extension object}
 }

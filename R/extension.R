@@ -7,13 +7,15 @@
 #' @param server A function returning [shiny::moduleServer()]
 #' @param ui A function with a single argument (`ns`) returning a `shiny.tag`
 #' @param class Extension subclass
+#' @param ... Further attributes
 #'
 #' @rdname extension
 #' @export
-new_dock_extension <- function(server, ui, class, ...) {
+new_dock_extension <- function(server, ui, name, class, ...) {
 	validate_extension(
     structure(
-      list(server = server, ui = ui),
+      list(server = server, ui = ui, ...),
+      name = name,
       class = c(class, "dock_extension")
     )
   )
@@ -52,6 +54,15 @@ validate_extension.dock_extension <- function(x, ...) {
     )
   }
 
+  nme <- extension_name(x)
+
+  if (!is_string(nme)) {
+    blockr_abort(
+      "Expecting a string as extension name",
+      class = "dock_extension_invalid"
+    )
+  }
+
   ui <- extension_ui(x)
 
   if (!is.function(ui)) {
@@ -75,9 +86,9 @@ validate_extension.dock_extension <- function(x, ...) {
 
 #' @rdname extension
 #' @export
-extension_ui <- function(x) {
+extension_ui <- function(x, ...) {
   stopifnot(is_dock_extenstion(x))
-  x[["ui"]]
+  x[["ui"]](...)
 }
 
 #' @rdname extension
@@ -92,4 +103,11 @@ extension_server <- function(x) {
 extension_id <- function(x) {
   stopifnot(is_dock_extenstion(x))
   class(x)[1L]
+}
+
+#' @rdname extension
+#' @export
+extension_name <- function(x) {
+  stopifnot(is_dock_extenstion(x))
+  attr(x, "name")
 }
