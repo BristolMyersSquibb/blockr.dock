@@ -3,11 +3,23 @@
 \name{new_dock_extension}
 \alias{new_dock_extension}
 \alias{is_dock_extenstion}
+\alias{validate_extension}
+\alias{extension_ui}
+\alias{extension_server}
+\alias{extension_id}
 \title{Dock extensions}
 \usage{
 new_dock_extension(server, ui, class, ...)
 
 is_dock_extenstion(x)
+
+validate_extension(x, ...)
+
+extension_ui(x)
+
+extension_server(x)
+
+extension_id(x)
 }
 \arguments{
 \item{server}{A function returning \code{\link[shiny:moduleServer]{shiny::moduleServer()}}}
@@ -15,6 +27,8 @@ is_dock_extenstion(x)
 \item{ui}{A function with a single argument (\code{ns}) returning a \code{shiny.tag}}
 
 \item{class}{Extension subclass}
+
+\item{x}{Extension object}
 }
 \description{
 Functionality of a \code{dock_board} can be extended by supplying one or more
