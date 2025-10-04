@@ -29,48 +29,11 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
     board_server(
       id,
       x,
-      callbacks = dock_board_server_callback,
+      callbacks = board_server_callback,
       callback_location = "start",
       layout = reactiveVal()
     )
   }
 
   shinyApp(ui, server)
-}
-
-dock_board_server_callback <- function(board, update, ...,
-                                       session = get_session()) {
-
-  layout <- manage_dock(board, session)
-
-  exts <- isolate(
-    dock_extensions(board$board)
-  )
-
-  intercom <- set_names(
-    replicate(length(exts), reactiveVal()),
-    exts
-  )
-
-  ext_state <- set_names(
-    vector("list", length(exts)),
-    names(exts)
-  )
-
-  for (i in names(exts)) {
-    ext_state[[i]] <- do.call(
-      extension_server(exts[[i]]),
-      c(
-        list(board = board, update = update, layout = layout),
-        intercom,
-        list(...),
-        list(session = session)
-      )
-    )
-  }
-
-  c(
-    list(layout = layout),
-    ext_state
-  )
 }

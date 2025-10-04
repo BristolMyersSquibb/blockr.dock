@@ -2,7 +2,7 @@
 % Please edit documentation in R/ext-class.R
 \name{new_dock_extension}
 \alias{new_dock_extension}
-\alias{is_dock_extenstion}
+\alias{is_dock_extension}
 \alias{validate_extension}
 \alias{extension_ui}
 \alias{extension_server}
@@ -12,13 +12,13 @@
 \usage{
 new_dock_extension(server, ui, name, class, ...)
 
-is_dock_extenstion(x)
+is_dock_extension(x)
 
 validate_extension(x, ...)
 
-extension_ui(x, ...)
+extension_ui(x, id, ...)
 
-extension_server(x)
+extension_server(x, ...)
 
 extension_id(x)
 
@@ -36,6 +36,8 @@ extension_name(x)
 \item{...}{Further attributes}
 
 \item{x}{Extension object}
+
+\item{id}{Namespace ID}
 }
 \description{
 Functionality of a \code{dock_board} can be extended by supplying one or more

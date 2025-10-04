@@ -25,7 +25,7 @@ new_dock_extension <- function(server, ui, name, class, ...) {
 #' @param x Extension object
 #' @rdname extension
 #' @export
-is_dock_extenstion <- function(x) {
+is_dock_extension <- function(x) {
   inherits(x, "dock_extension")
 }
 
@@ -38,7 +38,7 @@ validate_extension <- function(x, ...) {
 #' @export
 validate_extension.dock_extension <- function(x, ...) {
 
-  if (!is_dock_extenstion(x) || !length(class(x)) == 2L) {
+  if (!is_dock_extension(x) || !length(class(x)) == 2L) {
     blockr_abort(
       "Expecting extensions to inherit from `dock_extension` and one ",
       "additional class.",
@@ -48,7 +48,7 @@ validate_extension.dock_extension <- function(x, ...) {
 
   id <- extension_id(x)
 
-  if (!is_string(id) || id == "dock_extension" || !grepl("_extension$", x)) {
+  if (!is_string(id) || id == "dock_extension" || !grepl("_extension$", id)) {
     blockr_abort(
       "Malformed extension subclass.",
       class = "dock_extension_invalid"
@@ -85,30 +85,47 @@ validate_extension.dock_extension <- function(x, ...) {
   x
 }
 
+#' @param id Namespace ID
 #' @rdname extension
 #' @export
-extension_ui <- function(x, ...) {
-  stopifnot(is_dock_extenstion(x))
-  x[["ui"]](...)
+extension_ui <- function(x, id, ...) {
+
+  stopifnot(is_dock_extension(x))
+
+  fun <- x[["ui"]]
+
+  if (missing(id) && !...length()) {
+    return(fun)
+  }
+
+  fun(NS(id, extension_id(x)), ...)
 }
 
 #' @rdname extension
 #' @export
-extension_server <- function(x) {
-  stopifnot(is_dock_extenstion(x))
-  x[["server"]]
+extension_server <- function(x, ...) {
+
+  stopifnot(is_dock_extension(x))
+
+  fun <- x[["server"]]
+
+  if (!...length()) {
+    return(fun)
+  }
+
+  do.call(fun, c(list(id = extension_id(x)), ...))
 }
 
 #' @rdname extension
 #' @export
 extension_id <- function(x) {
-  stopifnot(is_dock_extenstion(x))
+  stopifnot(is_dock_extension(x))
   class(x)[1L]
 }
 
 #' @rdname extension
 #' @export
 extension_name <- function(x) {
-  stopifnot(is_dock_extenstion(x))
+  stopifnot(is_dock_extension(x))
   attr(x, "name")
 }

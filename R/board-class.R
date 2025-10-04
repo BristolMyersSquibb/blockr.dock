@@ -16,8 +16,16 @@ new_dock_board <- function(..., layout = new_dock_layout(),
                            options = dock_board_options(),
                            class = character()) {
 
-  if (is_dock_extenstion(extensions)) {
+  if (is_dock_extension(extensions)) {
     extensions <- list(extensions)
+  }
+
+  if (is.null(names(extensions))) {
+    names(extensions) <- sub(
+      "_extension$",
+      "",
+      chr_ply(extensions, extension_id)
+    )
   }
 
   new_board(..., layout = as_dock_layout(layout), extensions = extensions,
@@ -91,7 +99,7 @@ dock_board_options <- function() {
 
 validate_dock_extensions <- function(x) {
 
-  if (!is.list(x) || !all(lgl_ply(x, is_dock_extenstion))) {
+  if (!is.list(x) || !all(lgl_ply(x, is_dock_extension))) {
     blockr_abort(
       "Expecting a set of extensions to be represented by a list of objects, ",
       "where each inherits from `dock_extension`.",
@@ -101,8 +109,16 @@ validate_dock_extensions <- function(x) {
 
   if (!identical(anyDuplicated(chr_ply(x, extension_id)), 0L)) {
     blockr_abort(
-      "Expecting a set of extensions to be represented contain unique ",
-      "extension types.",
+      "Expecting a set of extensions to consist of unique extension types.",
+      class = "dock_extension_invalid"
+    )
+  }
+
+  nm <- names(x)
+
+  if (is.null(nm) || any(!nchar(nm)) || !identical(anyDuplicated(nm), 0L)) {
+    blockr_abort(
+      "Expecting a set of extensions to have unique names.",
       class = "dock_extension_invalid"
     )
   }

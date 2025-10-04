@@ -1,14 +1,54 @@
-manage_dock <- function(board, session = get_session()) {
+board_server_callback <- function(board, update, ..., session = get_session()) {
+
+  layout <- manage_dock(board, session)
 
   exts <- isolate(
     dock_extensions(board$board)
   )
 
+  intercom <- set_names(
+    replicate(length(exts), reactiveVal()),
+    exts
+  )
+
+  ext_state <- set_names(
+    vector("list", length(exts)),
+    names(exts)
+  )
+
+  for (i in names(exts)) {
+    ext_state[[i]] <- extension_server(
+      exts[[i]],
+      list(board = board, update = update, layout = layout),
+      intercom,
+      list(...)
+    )
+  }
+
+  c(
+    list(layout = layout),
+    ext_state
+  )
+}
+
+manage_dock <- function(board, session = get_session()) {
+
+  initial_board <- isolate(board$board)
+
   session$output[[dock_id()]] <- dockViewR::render_dock_view(
     {
-      log_debug("initializing empty dock {dock_id(session$ns)}")
+      panels <- lapply(
+        dock_extensions(initial_board),
+        extension_panel,
+        id = session$ns(NULL),
+        board = initial_board
+      )
+      log_debug(
+        "initializing dock {dock_id(session$ns)} with {length(panels)} ",
+        "panel{?s}"
+      )
       dockViewR::dock_view(
-        panels = lapply(exts, extension_panel, session$ns(NULL)),
+        panels = unname(panels),
         defaultRenderer = "always"
       )
     }
@@ -61,9 +101,9 @@ manage_dock <- function(board, session = get_session()) {
 
 initial_panels_avail <- function(initial_panels, session = get_session()) {
   req(
-    setequal(
-      block_panel_id(initial_panels),
-      dockViewR::get_panels_ids(dock_id(), session)
+    all(
+      block_panel_id(initial_panels) %in%
+        dockViewR::get_panels_ids(dock_id(), session)
     )
   )
 }

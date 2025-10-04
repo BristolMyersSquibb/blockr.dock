@@ -1,0 +1,84 @@
+#' @export
+board_ui.dock_board <- function(id, x, ...) {
+
+  stopifnot(is_string(id))
+
+  tagList(
+    show_hide_block_dep(),
+    off_canvas(
+      id = NS(id, "blocks_offcanvas"),
+      title = "Offcanvas blocks",
+      block_ui(id, x)
+    ),
+    options_ui(
+      id,
+      as_board_options(x),
+      board_ui(id, board_plugins(x, which = "preserve_board"), x)
+    ),
+    dockViewR::dock_view_output(
+      NS(id, dock_id()),
+      width = "100%",
+      height = "100vh"
+    )
+  )
+}
+
+options_ui <- function(id, x, ...) {
+
+  opts <- split(x, chr_ply(x, attr, "category"))
+
+  offcanvas_id <- NS(id, "options_offcanvas")
+
+  tagList(
+    blockr_fab_dep(),
+    tags$button(
+      class = "blockr-fab",
+      icon("gear"),
+      `data-bs-toggle` = "offcanvas",
+      `data-bs-target` = paste0("#", offcanvas_id),
+      `aria-controls` = offcanvas_id
+    ),
+    off_canvas(
+      id = offcanvas_id,
+      position = "end",
+      title = "Board options",
+      ...,
+      hr(),
+      do.call(
+        bslib::accordion,
+        c(
+          list(
+            id = NS(id, "board_options"),
+            multiple = TRUE,
+            open = FALSE,
+            class = "accordion-flush"
+          ),
+          map(
+            do.call,
+            rep(list(bslib::accordion_panel), length(opts)),
+            map(
+              list,
+              title = names(opts),
+              lapply(opts, lapply, board_option_ui, id)
+            )
+          )
+        )
+      )
+    )
+  )
+}
+
+blockr_fab_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-fab",
+    pkg_version(),
+    src = pkg_file("assets", "css"),
+    stylesheet = "blockr-fab.css"
+  )
+}
+
+#' @export
+update_ui.dock_board <- function(x, ..., session = get_session()) {
+  restore_dock(dock_layout(x), session)
+  invisible(x)
+}

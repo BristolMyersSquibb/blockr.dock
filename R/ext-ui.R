@@ -1,4 +1,4 @@
-extension_panel <- function(ext, id) {
+extension_panel <- function(ext, id, ...) {
 
   eid <- extension_panel_id(ext)
 
@@ -7,7 +7,7 @@ extension_panel <- function(ext, id) {
   dockViewR::panel(
     id = eid,
     title = extension_name(ext),
-    content = extension_ui(id),
+    content = extension_ui(ext, id, ...),
     style = list(
       overflow = "auto",
       height = "100%"
@@ -17,7 +17,7 @@ extension_panel <- function(ext, id) {
 
 extension_panel_id <- function(ext_id, dock_id = NULL) {
 
-  if (is_dock_extenstion(ext_id)) {
+  if (is_dock_extension(ext_id)) {
     ext_id <- list(ext_id)
   }
 
