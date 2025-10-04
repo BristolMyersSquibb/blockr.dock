@@ -1,6 +1,8 @@
 #' @export
 serve.dock_board <- function(x, id = rand_names(), ...) {
 
+  stopifnot(is_string(id))
+
   opts <- as_board_options(x)
 
   if ("board_name" %in% names(opts)) {
@@ -19,9 +21,7 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
         shinyjs::useShinyjs(),
         board_ui(id, x)
       ),
-      unname(
-        list(...)
-      )
+      unname(list(...))
     )
   )
 
@@ -29,9 +29,8 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
     board_server(
       id,
       x,
-      callbacks = list(
-        dock = manage_dock
-      ),
+      callbacks = board_server_callback,
+      callback_location = "start",
       layout = reactiveVal()
     )
   }

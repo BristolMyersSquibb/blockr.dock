@@ -45,7 +45,8 @@ serve(
       a = new_dataset_block("iris"),
       b = new_scatter_block(x = "Sepal.Length", y = "Sepal.Width")
     ),
-    links = list(from = "a", to = "b", input = "data")
+    links = list(from = "a", to = "b", input = "data"),
+    extensions = new_block_extension()
   )
 )
 ```
