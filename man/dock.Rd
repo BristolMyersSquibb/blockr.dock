@@ -3,38 +3,45 @@
 \name{new_dock_board}
 \alias{new_dock_board}
 \alias{is_dock_board}
-\alias{board_layout}
-\alias{board_layout<-}
+\alias{dock_layout}
+\alias{dock_layout<-}
+\alias{dock_extensions}
+\alias{dock_extensions<-}
 \alias{dock_board_options}
-\alias{new_board_layout}
-\alias{is_board_layout}
-\alias{validate_board_layout}
-\alias{as_board_layout}
+\alias{new_dock_layout}
+\alias{is_dock_layout}
+\alias{validate_dock_layout}
+\alias{as_dock_layout}
 \alias{layout_panel_block_ids}
 \title{Dock board}
 \usage{
 new_dock_board(
   ...,
-  layout = new_board_layout(),
+  layout = new_dock_layout(),
+  extensions = list(),
   options = dock_board_options(),
   class = character()
 )
 
 is_dock_board(x)
 
-board_layout(x)
+dock_layout(x)
 
-board_layout(x) <- value
+dock_layout(x) <- value
+
+dock_extensions(x)
+
+dock_extensions(x) <- value
 
 dock_board_options()
 
-new_board_layout(grid = NULL, panels = NULL, active_group = NULL)
+new_dock_layout(grid = NULL, panels = NULL, active_group = NULL)
 
-is_board_layout(x)
+is_dock_layout(x)
 
-validate_board_layout(x, blocks = character())
+validate_dock_layout(x, blocks = character())
 
-as_board_layout(x, ...)
+as_dock_layout(x, ...)
 
 layout_panel_block_ids(x)
 }
@@ -42,6 +49,8 @@ layout_panel_block_ids(x)
 \item{...}{Further (metadata) attributes}
 
 \item{layout}{Dock layout}
+
+\item{extensions}{Dock extensions}
 
 \item{options}{Board-level user settings}
 

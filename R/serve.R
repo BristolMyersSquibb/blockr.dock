@@ -1,7 +1,7 @@
 #' @export
-serve.dock_board <- function(x, id = rand_names(), extensions = list(), ...) {
+serve.dock_board <- function(x, id = rand_names(), ...) {
 
-  stopifnot(is_string(id), is_extension_set(extensions))
+  stopifnot(is_string(id))
 
   opts <- as_board_options(x)
 
@@ -29,7 +29,7 @@ serve.dock_board <- function(x, id = rand_names(), extensions = list(), ...) {
     board_server(
       id,
       x,
-      callbacks = dock_board_server_callback(extensions),
+      callbacks = dock_board_server_callback,
       callback_location = "start",
       layout = reactiveVal()
     )
@@ -38,44 +38,39 @@ serve.dock_board <- function(x, id = rand_names(), extensions = list(), ...) {
   shinyApp(ui, server)
 }
 
-dock_board_server_callback <- function(extensions) {
+dock_board_server_callback <- function(board, update, ...,
+                                       session = get_session()) {
 
-  stopifnot(is_extension_set(extensions))
+  layout <- manage_dock(board, session)
 
-  function(board, update, ..., session = get_session()) {
+  exts <- isolate(
+    dock_extensions(board$board)
+  )
 
-    layout <- manage_dock(board, extensions, session)
+  intercom <- set_names(
+    replicate(length(exts), reactiveVal()),
+    exts
+  )
 
-    intercom <- set_names(
-      replicate(length(extensions), reactiveVal()),
-      extensions
-    )
+  ext_state <- set_names(
+    vector("list", length(exts)),
+    names(exts)
+  )
 
-    ext_state <- set_names(
-      vector("list", length(extensions)),
-      names(extensions)
-    )
-
-    for (i in names(extensions)) {
-      ext_state[[i]] <- do.call(
-        extension_server(extensions[[i]]),
-        c(
-          list(board = board, update = update, layout = layout),
-          intercom,
-          list(...),
-          list(session = session)
-        )
+  for (i in names(exts)) {
+    ext_state[[i]] <- do.call(
+      extension_server(exts[[i]]),
+      c(
+        list(board = board, update = update, layout = layout),
+        intercom,
+        list(...),
+        list(session = session)
       )
-    }
-
-    c(
-      list(layout = layout),
-      ext_state
     )
   }
-}
 
-is_extension_set <- function(x) {
-  is.list(x) && all(lgl_ply(x, is_dock_extenstion)) &&
-    identical(anyDuplicated(chr_ply(x, extension_id)), 0L)
+  c(
+    list(layout = layout),
+    ext_state
+  )
 }

@@ -1,10 +1,14 @@
-manage_dock <- function(board, extensions, session = get_session()) {
+manage_dock <- function(board, session = get_session()) {
+
+  exts <- isolate(
+    dock_extensions(board$board)
+  )
 
   session$output[[dock_id()]] <- dockViewR::render_dock_view(
     {
       log_debug("initializing empty dock {dock_id(session$ns)}")
       dockViewR::dock_view(
-        panels = lapply(extensions, extension_panel, session$ns(NULL)),
+        panels = lapply(exts, extension_panel, session$ns(NULL)),
         defaultRenderer = "always"
       )
     }
@@ -13,7 +17,7 @@ manage_dock <- function(board, extensions, session = get_session()) {
   observeEvent(
     dockViewR::get_dock(dock_id(), session),
     {
-      layout <- board_layout(board$board)
+      layout <- dock_layout(board$board)
       if (is_empty_layout(layout)) {
         lapply(
           board_block_ids(board$board),
@@ -29,7 +33,7 @@ manage_dock <- function(board, extensions, session = get_session()) {
 
   initial_block_panels <- reactive(
     {
-      layout <- board_layout(board$board)
+      layout <- dock_layout(board$board)
 
       if (is_empty_layout(layout)) {
         board_block_ids(board$board)

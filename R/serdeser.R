@@ -56,14 +56,14 @@ blockr_ser.dock_board <- function(x, blocks = NULL, options = NULL,
 
   res <- NextMethod()
 
-  res[["layout"]] <- blockr_ser(as_board_layout(layout))
+  res[["layout"]] <- blockr_ser(as_dock_layout(layout))
   res[["version"]] <- c(as.character(pkg_version()), res[["version"]])
 
   res
 }
 
 #' @export
-blockr_ser.board_layout <- function(x, ...) {
+blockr_ser.dock_layout <- function(x, ...) {
   list(object = class(x), payload = unclass(x))
 }
 
@@ -79,8 +79,8 @@ blockr_deser.dock_board <- function(x, data, ...) {
 }
 
 #' @export
-blockr_deser.board_layout <- function(x, data, ...) {
-  as_board_layout(data[["payload"]], ...)
+blockr_deser.dock_layout <- function(x, data, ...) {
+  as_dock_layout(data[["payload"]], ...)
 }
 
 #' @export

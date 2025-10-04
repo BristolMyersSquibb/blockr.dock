@@ -267,7 +267,7 @@ list_block_panels <- function(session = get_session()) {
 
 #' @export
 update_ui.dock_board <- function(x, ..., session = get_session()) {
-  restore_dock(board_layout(x), session)
+  restore_dock(dock_layout(x), session)
   invisible(x)
 }
 
@@ -347,7 +347,7 @@ extension_panel_id <- function(ext_id, dock_id = NULL) {
     ext_id <- list(ext_id)
   }
 
-  if (is_extension_set(ext_id)) {
+  if (is.list(ext_id)) {
     ext_id <- chr_ply(ext_id, extension_id)
   }
 
