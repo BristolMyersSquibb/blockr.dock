@@ -29,6 +29,8 @@ extension_name(x)
 
 \item{ui}{A function with a single argument (\code{ns}) returning a \code{shiny.tag}}
 
+\item{name}{Name for extension}
+
 \item{class}{Extension subclass}
 
 \item{...}{Further attributes}

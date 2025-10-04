@@ -1,10 +1,10 @@
-manage_dock <- function(board, layout, ..., session = get_session()) {
+manage_dock <- function(board, extensions, session = get_session()) {
 
   session$output[[dock_id()]] <- dockViewR::render_dock_view(
     {
       log_debug("initializing empty dock {dock_id(session$ns)}")
       dockViewR::dock_view(
-        panels = list(),
+        panels = lapply(extensions, extension_panel, session$ns(NULL)),
         defaultRenderer = "always"
       )
     }
@@ -50,12 +50,8 @@ manage_dock <- function(board, layout, ..., session = get_session()) {
     once = TRUE
   )
 
-  observeEvent(
-    dockViewR::get_dock(dock_id(), session),
-    {
-      log_trace("updating layout")
-      layout(dockViewR::get_dock(dock_id(), session))
-    }
+  reactive(
+    dockViewR::get_dock(dock_id(), session)
   )
 }
 

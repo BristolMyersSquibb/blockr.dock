@@ -6,6 +6,7 @@
 #'
 #' @param server A function returning [shiny::moduleServer()]
 #' @param ui A function with a single argument (`ns`) returning a `shiny.tag`
+#' @param name Name for extension
 #' @param class Extension subclass
 #' @param ... Further attributes
 #'
