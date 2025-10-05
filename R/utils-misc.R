@@ -27,3 +27,13 @@ block_panel_id <- function(block_id, dock_id = NULL) {
 is_block_panel_id <- function(x) {
   grepl("^block-", x)
 }
+
+is_zero_len <- function(x) {
+  length(x) == 0L
+}
+
+is_empty <- function(x) {
+  is_zero_len(x) || all(is.na(x) | !nchar(x))
+}
+
+filter_empty <- function(x) Filter(Negate(is_empty), x)
