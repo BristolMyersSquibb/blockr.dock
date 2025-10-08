@@ -7,12 +7,13 @@
 \alias{dock_layout<-}
 \alias{dock_extensions}
 \alias{dock_extensions<-}
+\alias{dock_ext_ids}
 \alias{dock_board_options}
 \alias{new_dock_layout}
 \alias{is_dock_layout}
 \alias{validate_dock_layout}
 \alias{as_dock_layout}
-\alias{layout_panel_block_ids}
+\alias{layout_panel_ids}
 \title{Dock board}
 \usage{
 new_dock_board(
@@ -33,6 +34,8 @@ dock_extensions(x)
 
 dock_extensions(x) <- value
 
+dock_ext_ids(x)
+
 dock_board_options()
 
 new_dock_layout(grid = NULL, panels = NULL, active_group = NULL)
@@ -43,7 +46,7 @@ validate_dock_layout(x, blocks = character())
 
 as_dock_layout(x, ...)
 
-layout_panel_block_ids(x)
+layout_panel_ids(x)
 }
 \arguments{
 \item{...}{Further (metadata) attributes}

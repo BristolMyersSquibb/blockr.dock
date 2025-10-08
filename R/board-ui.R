@@ -19,6 +19,17 @@ board_ui.dock_board <- function(id, x, ...) {
       NS(id, dock_id()),
       width = "100%",
       height = "100vh"
+    ),
+    off_canvas(
+      id = NS(id, "exts_offcanvas"),
+      position = "bottom",
+      title = "Offcanvas extensions",
+      lapply(
+        dock_extensions(x),
+        extension_ui,
+        id = id,
+        board = x
+      )
     )
   )
 }

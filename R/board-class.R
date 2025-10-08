@@ -80,6 +80,12 @@ dock_extensions <- function(x) {
 
 #' @rdname dock
 #' @export
+dock_ext_ids <- function(x) {
+  chr_ply(dock_extensions(x), extension_id)
+}
+
+#' @rdname dock
+#' @export
 dock_board_options <- function() {
   new_board_options(
     new_board_name_option(category = "Board options"),

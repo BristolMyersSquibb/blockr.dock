@@ -123,9 +123,9 @@ as_dock_layout.list <- function(x, ...) {
 
 #' @rdname dock
 #' @export
-layout_panel_block_ids <- function(x) {
+layout_panel_ids <- function(x) {
   x <- as_dock_layout(x)
-  sub("^block-", "", chr_xtr(x[["panels"]], "id"))
+  chr_xtr(x[["panels"]], "id")
 }
 
 strip_params <- function(x) {
