@@ -24,6 +24,10 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
   }
 
   server <- function(input, output, session) {
+
+    withr::local_envvar(BLOCKR_BOARD_RESTORE = "")
+    withr::local_options(blockr.board_restore = "v2")
+
     board_server(
       id,
       get_serve_obj(),

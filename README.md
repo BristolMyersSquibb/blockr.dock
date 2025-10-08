@@ -38,7 +38,7 @@ serve(
       b = new_scatter_block(x = "Sepal.Length", y = "Sepal.Width")
     ),
     links = list(from = "a", to = "b", input = "data"),
-    extensions = new_block_extension()
+    extensions = new_edit_board_extension()
   )
 )
 ```
