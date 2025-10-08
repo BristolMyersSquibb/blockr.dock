@@ -25,8 +25,7 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
 
   server <- function(input, output, session) {
 
-    withr::local_envvar(BLOCKR_BOARD_RESTORE = "")
-    withr::local_options(blockr.board_restore = "v2")
+    onStop(enable_v2_restore(), session)
 
     board_server(
       id,
@@ -37,4 +36,20 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
   }
 
   shinyApp(ui, server)
+}
+
+enable_v2_restore <- function() {
+
+  log_debug("setting v2 restore")
+
+  cur_opt <- options(blockr.board_restore = "v2")
+  cur_env <- Sys.getenv("BLOCKR_BOARD_RESTORE")
+
+  Sys.unsetenv("BLOCKR_BOARD_RESTORE")
+
+  function() {
+    log_debug("resetting restore version")
+    options(cur_opt)
+    Sys.setenv(BLOCKR_BOARD_RESTORE = cur_env)
+  }
 }
