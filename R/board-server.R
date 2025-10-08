@@ -90,7 +90,7 @@ manage_dock <- function(board, session = get_session()) {
 
         } else if (is_ext_panel_id(id)) {
 
-          ext <- lgl_ply(exts, extension_id()) == ext_panel_id_to_ext_id(id)
+          ext <- chr_ply(exts, extension_id) == ext_panel_id_to_ext_id(id)
           ext <- exts[[ext]]
 
           show_ext_panel(ext, add_panel = FALSE, session = session)

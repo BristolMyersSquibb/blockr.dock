@@ -5,7 +5,7 @@ add_ext_panel <- function(ext, session = get_session()) {
   did <- dock_id()
   pan <- ext_panel(ext)
 
-  log_debug("adding block {id} to dock {did}")
+  log_debug("adding block {extension_id(ext)} to dock {did}")
 
   dockViewR::add_panel(did, panel = pan, session = session)
 
