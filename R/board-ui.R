@@ -76,9 +76,3 @@ blockr_fab_dep <- function() {
     stylesheet = "blockr-fab.css"
   )
 }
-
-#' @export
-update_ui.dock_board <- function(x, ..., session = get_session()) {
-  restore_dock(dock_layout(x), session)
-  invisible(x)
-}

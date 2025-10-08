@@ -3,35 +3,32 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
 
   stopifnot(is_string(id))
 
-  opts <- as_board_options(x)
+  args <- list(...)
 
-  if ("board_name" %in% names(opts)) {
-    title <- board_option_value(opts[["board_name"]])
-  } else {
-    title <- id
-  }
+  ui <- function() {
 
-  ui <- do.call(
-    bslib::page_fillable,
-    c(
-      list(
-        padding = 0,
-        gap = 0,
-        title = title,
-        shinyjs::useShinyjs(),
-        board_ui(id, x)
-      ),
-      unname(list(...))
+    log_debug("building ui for board {id}")
+
+    do.call(
+      bslib::page_fillable,
+      c(
+        list(
+          padding = 0,
+          gap = 0,
+          shinyjs::useShinyjs(),
+          board_ui(id, get_serve_obj())
+        ),
+        unname(args)
+      )
     )
-  )
+  }
 
   server <- function(input, output, session) {
     board_server(
       id,
-      x,
+      get_serve_obj(),
       callbacks = board_server_callback,
-      callback_location = "start",
-      layout = reactiveVal()
+      callback_location = "start"
     )
   }
 

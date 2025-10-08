@@ -8,15 +8,19 @@
 #' @param ui A function with a single argument (`ns`) returning a `shiny.tag`
 #' @param name Name for extension
 #' @param class Extension subclass
+#' @param ctor Constructor function name
+#' @param pkg Package to look up `ctor`
 #' @param ... Further attributes
 #'
 #' @rdname extension
 #' @export
-new_dock_extension <- function(server, ui, name, class, ...) {
+new_dock_extension <- function(server, ui, name, class, ctor = sys.parent(),
+                               pkg = NULL, ...) {
 	validate_extension(
     structure(
       list(server = server, ui = ui, ...),
       name = name,
+      ctor = resolve_ctor(ctor, pkg),
       class = c(class, "dock_extension")
     )
   )
@@ -128,4 +132,11 @@ extension_id <- function(x) {
 extension_name <- function(x) {
   stopifnot(is_dock_extension(x))
   attr(x, "name")
+}
+
+#' @rdname extension
+#' @export
+extension_ctor <- function(x) {
+  stopifnot(is_dock_extension(x))
+  attr(x, "ctor")
 }

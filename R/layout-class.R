@@ -70,25 +70,25 @@ validate_dock_layout <- function(x, blocks = character()) {
     )
   }
 
+  panel_ids <- chr_xtr(x[["panels"]], "id")
+
+  is_blk_pn <- is_block_panel_id(panel_ids)
+  is_ext_pn <- is_ext_panel_id(panel_ids)
+
+  if (!all(is_blk_pn | is_ext_pn)) {
+    blockr_abort(
+      "Malformed layout panel ID{?s} {panel_ids[!is_id_ok]}.",
+      class = "dock_layout_invalid"
+    )
+  }
+
   if (length(blocks)) {
 
-    extra <- setdiff(layout_panel_block_ids(x), blocks)
+    extra <- setdiff(panel_ids[is_blk_pn], block_panel_id(blocks))
 
     if (length(extra)) {
       blockr_abort(
         "Unknown layout panel{?s} {extra}.",
-        class = "dock_layout_invalid"
-      )
-    }
-
-  } else {
-
-    panel_ids <- chr_xtr(x[["panels"]], "id")
-    is_id_ok <- is_block_panel_id(panel_ids)
-
-    if (!all(is_id_ok)) {
-      blockr_abort(
-        "Malformed layout panel ID{?s} {panel_ids[!is_id_ok]}.",
         class = "dock_layout_invalid"
       )
     }
@@ -126,4 +126,19 @@ as_dock_layout.list <- function(x, ...) {
 layout_panel_block_ids <- function(x) {
   x <- as_dock_layout(x)
   sub("^block-", "", chr_xtr(x[["panels"]], "id"))
+}
+
+strip_params <- function(x) {
+
+  x <- as_dock_layout(x)
+
+  x[["panels"]] <- lapply(
+    x[["panels"]],
+    function(y) {
+      y[["params"]] <- list()
+      y
+    }
+  )
+
+  x
 }

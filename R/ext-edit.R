@@ -1,9 +1,10 @@
-new_block_extension <- function() {
+new_edit_board_extension <- function(...) {
 	new_dock_extension(
     blk_ext_srv,
     blk_ext_ui,
     name = "Edit board",
-    class = "edit_board_extension"
+    class = "edit_board_extension",
+    ...
   )
 }
 
