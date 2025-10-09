@@ -1,14 +1,3 @@
-dock_id <- function(ns = NULL) {
-
-  res <- "dock"
-
-  if (is.null(ns)) {
-    return(res)
-  }
-
-  ns(res)
-}
-
 block_panel_id <- function(block_id, dock_id = NULL) {
 
   if (is_board(block_id)) {
