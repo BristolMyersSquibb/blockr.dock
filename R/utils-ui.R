@@ -76,3 +76,36 @@ blk_icon <- function(category, class = NULL) {
     class
   )
 }
+
+move_element <- function(from, to, session) {
+  session$sendCustomMessage(
+    "move-element",
+    list(
+      from = from,
+      to = to
+    )
+  )
+}
+
+hide_block <- function(id, session) {
+  ns <- session$ns
+
+  bid <- ns(id)
+
+  log_debug("hiding block {bid}")
+
+  from <- paste0("#", paste(dock_id(ns), id, sep = "-"), " .card")
+  to <- paste0("#", ns("offcanvas"), " .offcanvas-body")
+  move_element(from, to, session)
+}
+
+show_block <- function(id, session) {
+  ns <- session$ns
+
+  bid <- ns(id)
+  pid <- paste(dock_id(ns), id, sep = "-")
+
+  log_debug("showing block {bid} in panel {pid}")
+
+  move_element(paste0("#", bid), paste0("#", pid), session)
+}

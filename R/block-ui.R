@@ -9,7 +9,7 @@ block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
     card_tag <- div(
       class = "card",
       width = "100%",
-      id = ns(id),
+      id = ns(paste0("block-", id)),
       div(
         class = "row g-0 px-4",
         div(
@@ -160,24 +160,11 @@ show_block_panel <- function(id, add_panel = TRUE, session = get_session()) {
 
   stopifnot(is_string(id), is_bool(add_panel))
 
-  ns <- session$ns
-
   if (add_panel) {
     add_block_panel(id, session)
   }
 
-  bid <- ns(id)
-  pid <- block_panel_id(id, dock_id(ns))
-
-  log_debug("showing block {bid} in panel {pid}")
-
-  session$sendCustomMessage(
-    "show-block",
-    list(
-      block_id = paste0("#", bid),
-      panel_id = paste0("#", pid)
-    )
-  )
+  show_block(id, session)
 
   invisible(NULL)
 }
@@ -186,15 +173,7 @@ hide_block_panel <- function(id, rm_panel = TRUE, session = get_session()) {
 
   stopifnot(is_string(id), is_bool(rm_panel))
 
-  ns <- session$ns
-
-  session$sendCustomMessage(
-    "hide-block",
-    list(
-      offcanvas = paste0("#", ns("offcanvas")),
-      block_id = paste0("#", block_panel_id(id, dock_id(ns)))
-    )
-  )
+  hide_block(id, session)
 
   if (rm_panel) {
     remove_block_panel(id, session)
