@@ -25,10 +25,6 @@ block_panel_id <- function(block_id, dock_id = NULL) {
   paste0(dock_id, "-", res)
 }
 
-is_block_panel_id <- function(x) {
-  grepl("^block-", x)
-}
-
 block_panel_id_to_block_id <- function(x) {
   stopifnot(all(is_block_panel_id(x)))
   sub("^block-", "", x)
@@ -63,10 +59,6 @@ extension_panel_id <- function(ext_id, dock_id = NULL) {
   stopifnot(is_string(dock_id))
 
   paste0(dock_id, "-", res)
-}
-
-is_ext_panel_id <- function(x) {
-  grepl("^ext-", x)
 }
 
 ext_panel_id_to_ext_id <- function(x) {
