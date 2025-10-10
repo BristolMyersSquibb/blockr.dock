@@ -22,9 +22,13 @@ test_that("ids", {
 
   blk_hndl_id <- as_block_handle_id(blk_pnl_id)
 
-  expect_s3_class(blk_hndl_id, c("block_handle_id", "dock_id"))
+  expect_s3_class(
+    blk_hndl_id,
+    c("block_handle_id", "dock_handle_id", "dock_id")
+  )
 
   expect_true(is_dock_id(blk_hndl_id))
+  expect_true(is_dock_handle_id(blk_hndl_id))
   expect_true(is_block_handle_id(blk_hndl_id))
 
   expect_true(maybe_block_handle_id(blk_hndl_id))
@@ -60,6 +64,32 @@ test_that("ids", {
   expect_error(
     as_block_handle_id(ext_pnl_id),
     class = "invalid_block_handle_id_coercion"
+  )
+
+  ext_hndl_id <- as_ext_handle_id(ext_id)
+
+  expect_s3_class(
+    ext_hndl_id,
+    c("ext_handle_id", "dock_handle_id", "dock_id")
+  )
+
+  expect_true(is_dock_id(ext_hndl_id))
+  expect_true(is_dock_handle_id(ext_hndl_id))
+  expect_true(is_ext_handle_id(ext_hndl_id))
+
+  expect_true(maybe_ext_handle_id(ext_hndl_id))
+
+  expect_identical(ext_hndl_id, as_ext_handle_id(ext_hndl_id))
+  expect_identical(ext_id, as_obj_id(ext_hndl_id))
+
+  expect_error(
+    as_block_handle_id(ext_hndl_id),
+    class = "invalid_block_handle_id_coercion"
+  )
+
+  expect_error(
+    as_block_panel_id(ext_hndl_id),
+    class = "invalid_block_panel_id_coercion"
   )
 
   obj_ids <- c("foo", "bar", "baz")

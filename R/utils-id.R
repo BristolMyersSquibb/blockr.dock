@@ -34,6 +34,14 @@ is_dock_panel_id <- function(x) {
   inherits(x, "dock_panel_id")
 }
 
+new_dock_handle_id <- function(x, class = character()) {
+  new_dock_id(x, c(class, "dock_handle_id"))
+}
+
+is_dock_handle_id <- function(x) {
+  inherits(x, "dock_handle_id")
+}
+
 as_dock_panel_id <- function(x) {
 
   if (length(x) > 1L) {
@@ -132,6 +140,12 @@ as_block_panel_id.block_handle_id <- function(x) {
 }
 
 #' @export
+as_block_panel_id.list <- function(x) {
+  stopifnot(all(lgl_ply(x, is_block_panel_id)))
+  as_block_panel_id(chr_ply(x, as_obj_id))
+}
+
+#' @export
 as_obj_id.block_panel_id <- function(x) {
   unclass(sub("^block_panel-", "", x))
 }
@@ -186,12 +200,23 @@ as_ext_panel_id.extension <- function(x) {
 }
 
 #' @export
+as_ext_panel_id.ext_handle_id <- function(x) {
+  as_ext_panel_id(as_obj_id(x))
+}
+
+#' @export
+as_ext_panel_id.list <- function(x) {
+  stopifnot(all(lgl_ply(x, is_ext_panel_id)))
+  as_ext_panel_id(chr_ply(x, as_obj_id))
+}
+
+#' @export
 as_obj_id.ext_panel_id <- function(x) {
   unclass(sub("^ext_panel-", "", x))
 }
 
 new_block_handle_id <- function(x) {
-  new_dock_id(x, "block_handle_id")
+  new_dock_handle_id(x, "block_handle_id")
 }
 
 is_block_handle_id <- function(x) {
@@ -245,6 +270,82 @@ as_block_handle_id.block_panel_id <- function(x) {
 }
 
 #' @export
+as_block_handle_id.list <- function(x) {
+  stopifnot(all(lgl_ply(x, is_block_handle_id)))
+  as_block_handle_id(chr_ply(x, as_obj_id))
+}
+
+#' @export
 as_obj_id.block_handle_id <- function(x) {
   unclass(sub("^block_handle-", "", x))
+}
+
+new_ext_handle_id <- function(x) {
+  new_dock_handle_id(x, "ext_handle_id")
+}
+
+is_ext_handle_id <- function(x) {
+  inherits(x, "ext_handle_id")
+}
+
+maybe_ext_handle_id <- function(x) {
+  grepl("^ext_handle-", x)
+}
+
+#' @rdname dock_id
+#' @export
+as_ext_handle_id <- function(x) {
+  UseMethod("as_ext_handle_id")
+}
+
+#' @export
+as_ext_handle_id.ext_handle_id <- function(x) x
+
+#' @export
+as_ext_handle_id.ext_panel_id <- function(x) {
+  as_ext_handle_id(as_obj_id(x))
+}
+
+#' @export
+as_ext_handle_id.dock_id <- function(x) {
+  blockr_abort(
+    "Cannot convert an ID with class{?es} {class(x)} to `ext_handle_id`.",
+    class = "invalid_ext_handle_id_coercion"
+  )
+}
+
+#' @export
+as_ext_handle_id.character <- function(x) {
+
+  warn <- maybe_ext_handle_id(x)
+
+  if (any(warn)) {
+    blockr_warn(
+      "Potentially converting ID{?s} {x[warn]} again.",
+      class = "maybe_multiple_block_id_conversion"
+    )
+  }
+
+  new_ext_handle_id(paste0("ext_handle-", x))
+}
+
+#' @export
+as_ext_handle_id.blocks <- function(x) {
+  as_ext_handle_id(names(x))
+}
+
+#' @export
+as_ext_handle_id.block_panel_id <- function(x) {
+  as_ext_handle_id(as_obj_id(x))
+}
+
+#' @export
+as_ext_handle_id.list <- function(x) {
+  stopifnot(all(lgl_ply(x, is_ext_handle_id)))
+  as_ext_handle_id(chr_ply(x, as_obj_id))
+}
+
+#' @export
+as_obj_id.ext_handle_id <- function(x) {
+  unclass(sub("^ext_handle-", "", x))
 }

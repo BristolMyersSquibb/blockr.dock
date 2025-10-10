@@ -6,6 +6,7 @@
 \alias{as_block_panel_id}
 \alias{as_ext_panel_id}
 \alias{as_block_handle_id}
+\alias{as_ext_handle_id}
 \title{ID utilities}
 \usage{
 dock_id(ns = NULL)
@@ -17,6 +18,8 @@ as_block_panel_id(x)
 as_ext_panel_id(x)
 
 as_block_handle_id(x)
+
+as_ext_handle_id(x)
 }
 \arguments{
 \item{ns}{Namespace prefix}
