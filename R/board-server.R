@@ -44,7 +44,7 @@ manage_dock <- function(board, session = get_session()) {
   )
 
   observeEvent(
-    dockViewR::get_dock(dock_id(), session),
+    get_dock(session),
     {
       layout <- dock_layout(board$board)
 
@@ -67,12 +67,9 @@ manage_dock <- function(board, session = get_session()) {
       layout <- dock_layout(board$board)
 
       if (is_empty_layout(layout)) {
-        c(
-          block_panel_id(board$board),
-          extension_panel_id(board$board)
-        )
+        as_dock_panel_id(board$board)
       } else {
-        layout_panel_ids(layout)
+        as_dock_panel_id(layout)
       }
     }
   )
@@ -90,7 +87,7 @@ manage_dock <- function(board, session = get_session()) {
 
         } else if (is_ext_panel_id(id)) {
 
-          ext <- chr_ply(exts, extension_id) == ext_panel_id_to_ext_id(id)
+          ext <- which(chr_ply(exts, extension_id) == as_obj_id(id))
           ext <- exts[[ext]]
 
           show_ext_panel(ext, add_panel = FALSE, session = session)
@@ -107,7 +104,5 @@ manage_dock <- function(board, session = get_session()) {
     once = TRUE
   )
 
-  reactive(
-    dockViewR::get_dock(dock_id(), session)
-  )
+  reactive(get_dock(session))
 }

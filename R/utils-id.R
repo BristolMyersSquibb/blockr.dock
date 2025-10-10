@@ -42,7 +42,15 @@ is_dock_handle_id <- function(x) {
   inherits(x, "dock_handle_id")
 }
 
+#' @param x Object
+#' @rdname dock_id
+#' @export
 as_dock_panel_id <- function(x) {
+  UseMethod("as_dock_panel_id")
+}
+
+#' @export
+as_dock_panel_id.character <- function(x) {
 
   if (length(x) > 1L) {
     return(lapply(x, as_dock_panel_id))
@@ -60,6 +68,19 @@ as_dock_panel_id <- function(x) {
       class = "invalid_dock_panel_id_coercion"
     )
   }
+}
+
+#' @export
+as_dock_panel_id.board <- function(x) {
+  c(
+    lapply(x, as_block_panel_id),
+    lapply(x, as_ext_panel_id)
+  )
+}
+
+#' @export
+as_dock_panel_id.dock_layout <- function(x) {
+  as_dock_panel_id(layout_panel_ids(x))
 }
 
 #' @param x Object

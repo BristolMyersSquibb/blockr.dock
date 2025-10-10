@@ -1,37 +1,51 @@
-add_ext_panel <- function(ext, session = get_session()) {
-
-  stopifnot(is_dock_extension(ext))
-
-  did <- dock_id()
-  pan <- ext_panel(ext)
-
-  log_debug("adding block {extension_id(ext)} to dock {did}")
-
-  dockViewR::add_panel(did, panel = pan, session = session)
-
-  invisible(NULL)
-}
-
-ext_panel <- function(ext) {
-
-  eid <- extension_panel_id(ext)
-
-  log_debug("creating block panel {eid}")
-
-  dockViewR::panel(
-    id = eid,
-    title = extension_name(ext),
-    content = tagList(),
-    style = list(
-      overflow = "auto",
-      height = "100%"
-    )
-  )
-}
-
 show_ext_panel <- function(ext, add_panel = TRUE, session = get_session()) {
 
   stopifnot(is_dock_extension(ext), is_bool(add_panel))
 
+  if (add_panel) {
+    add_ext_panel(ext, session)
+  }
+
+  show_ext_ui(ext, session)
+
   invisible(NULL)
+}
+
+hide_ext_panel <- function(id, rm_panel = TRUE, session = get_session()) {
+
+  stopifnot(is_string(id), is_bool(rm_panel))
+
+  hide_ext_ui(id, session)
+
+  if (rm_panel) {
+    remove_ext_panel(id, session)
+  }
+
+  invisible(NULL)
+}
+
+hide_ext_ui <- function(id, session) {
+
+  ns <- session$ns
+  id <- as_ext_handle_id(id)
+
+  log_debug("hiding extension {ns(id)}")
+
+  from <- paste0("#", paste(dock_id(ns), id, sep = "-"), " .card")
+  to <- paste0("#", ns("offcanvas"), " .offcanvas-body")
+
+  move_element(from, to, session)
+}
+
+show_ext_ui <- function(id, session) {
+
+  ns <- session$ns
+  id <- as_ext_handle_id(id)
+
+  eid <- ns(id)
+  pid <- paste(dock_id(ns), id, sep = "-")
+
+  log_debug("showing extension {eid} in panel {pid}")
+
+  move_element(paste0("#", eid), paste0("#", pid), session)
 }

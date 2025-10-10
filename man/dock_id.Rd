@@ -2,6 +2,7 @@
 % Please edit documentation in R/utils-id.R
 \name{dock_id}
 \alias{dock_id}
+\alias{as_dock_panel_id}
 \alias{as_obj_id}
 \alias{as_block_panel_id}
 \alias{as_ext_panel_id}
@@ -10,6 +11,8 @@
 \title{ID utilities}
 \usage{
 dock_id(ns = NULL)
+
+as_dock_panel_id(x)
 
 as_obj_id(x)
 

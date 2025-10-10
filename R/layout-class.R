@@ -70,21 +70,21 @@ validate_dock_layout <- function(x, blocks = character()) {
     )
   }
 
-  panel_ids <- chr_xtr(x[["panels"]], "id")
+  panel_ids <- layout_panel_ids(x)
 
-  is_blk_pn <- is_block_panel_id(panel_ids)
-  is_ext_pn <- is_ext_panel_id(panel_ids)
+  is_blk_pn <- maybe_block_panel_id(panel_ids)
+  is_ext_pn <- maybe_ext_panel_id(panel_ids)
 
   if (!all(is_blk_pn | is_ext_pn)) {
     blockr_abort(
-      "Malformed layout panel ID{?s} {panel_ids[!is_id_ok]}.",
+      "Malformed layout panel ID{?s} {panel_ids[!(is_blk_pn | is_ext_pn)]}.",
       class = "dock_layout_invalid"
     )
   }
 
   if (length(blocks)) {
 
-    extra <- setdiff(panel_ids[is_blk_pn], block_panel_id(blocks))
+    extra <- setdiff(panel_ids[is_blk_pn], as_block_panel_id(blocks))
 
     if (length(extra)) {
       blockr_abort(
