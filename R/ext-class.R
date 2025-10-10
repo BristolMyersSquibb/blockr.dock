@@ -102,7 +102,10 @@ extension_ui <- function(x, id, ...) {
     return(fun)
   }
 
-  fun(NS(id, extension_id(x)), ...)
+  div(
+    id = as_ext_handle_id(x),
+    fun(NS(id, extension_id(x)), ...)
+  )
 }
 
 #' @rdname extension
