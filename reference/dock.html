@@ -48,28 +48,35 @@ extends <code><a href="https://bristolmyerssquibb.github.io/blockr.core/referenc
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">new_dock_board</span><span class="op">(</span></span>
 <span>  <span class="va">...</span>,</span>
-<span>  layout <span class="op">=</span> <span class="fu">new_board_layout</span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  layout <span class="op">=</span> <span class="fu">new_dock_layout</span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  extensions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  options <span class="op">=</span> <span class="fu">dock_board_options</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  class <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">is_dock_board</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">board_layout</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span><span class="fu">dock_layout</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">board_layout</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">value</span></span>
+<span><span class="fu">dock_layout</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">value</span></span>
+<span></span>
+<span><span class="fu">dock_extensions</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">dock_extensions</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">value</span></span>
+<span></span>
+<span><span class="fu">dock_ext_ids</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">dock_board_options</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">new_board_layout</span><span class="op">(</span>grid <span class="op">=</span> <span class="cn">NULL</span>, panels <span class="op">=</span> <span class="cn">NULL</span>, active_group <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu">new_dock_layout</span><span class="op">(</span>grid <span class="op">=</span> <span class="cn">NULL</span>, panels <span class="op">=</span> <span class="cn">NULL</span>, active_group <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">is_board_layout</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span><span class="fu">is_dock_layout</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">validate_board_layout</span><span class="op">(</span><span class="va">x</span>, blocks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu">validate_dock_layout</span><span class="op">(</span><span class="va">x</span>, blocks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">as_board_layout</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">as_dock_layout</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">layout_panel_block_ids</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">layout_panel_ids</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -82,6 +89,10 @@ extends <code><a href="https://bristolmyerssquibb.github.io/blockr.core/referenc
 
 <dt id="arg-layout">layout<a class="anchor" aria-label="anchor" href="#arg-layout"></a></dt>
 <dd><p>Dock layout</p></dd>
+
+
+<dt id="arg-extensions">extensions<a class="anchor" aria-label="anchor" href="#arg-extensions"></a></dt>
+<dd><p>Dock extensions</p></dd>
 
 
 <dt id="arg-options">options<a class="anchor" aria-label="anchor" href="#arg-options"></a></dt>
