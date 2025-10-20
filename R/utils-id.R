@@ -46,7 +46,11 @@ is_dock_handle_id <- function(x) {
 #' @rdname dock_id
 #' @export
 as_dock_panel_id <- function(x) {
-  UseMethod("as_dock_panel_id")
+  if (length(x)) {
+    UseMethod("as_dock_panel_id")
+  } else {
+    character()
+  }
 }
 
 #' @export
@@ -73,8 +77,8 @@ as_dock_panel_id.character <- function(x) {
 #' @export
 as_dock_panel_id.board <- function(x) {
   c(
-    lapply(x, as_block_panel_id),
-    lapply(x, as_ext_panel_id)
+    lapply(board_block_ids(x), as_block_panel_id),
+    lapply(dock_ext_ids(x), as_ext_panel_id)
   )
 }
 
@@ -87,7 +91,11 @@ as_dock_panel_id.dock_layout <- function(x) {
 #' @rdname dock_id
 #' @export
 as_obj_id <- function(x) {
-  UseMethod("as_obj_id")
+  if (length(x)) {
+    UseMethod("as_obj_id")
+  } else {
+    character()
+  }
 }
 
 #' @export
@@ -121,7 +129,11 @@ maybe_block_panel_id <- function(x) {
 #' @rdname dock_id
 #' @export
 as_block_panel_id <- function(x) {
-  UseMethod("as_block_panel_id")
+  if (length(x)) {
+    UseMethod("as_block_panel_id")
+  } else {
+    character()
+  }
 }
 
 #' @export
@@ -186,7 +198,11 @@ maybe_ext_panel_id <- function(x) {
 #' @rdname dock_id
 #' @export
 as_ext_panel_id <- function(x) {
-  UseMethod("as_ext_panel_id")
+  if (length(x)) {
+    UseMethod("as_ext_panel_id")
+  } else {
+    character()
+  }
 }
 
 #' @export
@@ -216,7 +232,7 @@ as_ext_panel_id.character <- function(x) {
 }
 
 #' @export
-as_ext_panel_id.extension <- function(x) {
+as_ext_panel_id.dock_extension <- function(x) {
   as_ext_panel_id(extension_id(x))
 }
 
@@ -251,7 +267,11 @@ maybe_block_handle_id <- function(x) {
 #' @rdname dock_id
 #' @export
 as_block_handle_id <- function(x) {
-  UseMethod("as_block_handle_id")
+  if (length(x)) {
+    UseMethod("as_block_handle_id")
+  } else {
+    character()
+  }
 }
 
 #' @export
@@ -316,7 +336,11 @@ maybe_ext_handle_id <- function(x) {
 #' @rdname dock_id
 #' @export
 as_ext_handle_id <- function(x) {
-  UseMethod("as_ext_handle_id")
+  if (length(x)) {
+    UseMethod("as_ext_handle_id")
+  } else {
+    character()
+  }
 }
 
 #' @export
@@ -351,8 +375,8 @@ as_ext_handle_id.character <- function(x) {
 }
 
 #' @export
-as_ext_handle_id.blocks <- function(x) {
-  as_ext_handle_id(names(x))
+as_ext_handle_id.dock_extension <- function(x) {
+  as_ext_handle_id(extension_id(x))
 }
 
 #' @export
@@ -363,7 +387,7 @@ as_ext_handle_id.block_panel_id <- function(x) {
 #' @export
 as_ext_handle_id.list <- function(x) {
   stopifnot(all(lgl_ply(x, is_ext_handle_id)))
-  as_ext_handle_id(chr_ply(x, as_obj_id))
+  chr_ply(x, as_ext_handle_id)
 }
 
 #' @export

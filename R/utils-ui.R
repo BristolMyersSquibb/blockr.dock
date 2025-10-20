@@ -77,7 +77,7 @@ blk_icon <- function(category, class = NULL) {
   )
 }
 
-move_element <- function(from, to, session = get_session()) {
+move_dom_element <- function(from, to, session = get_session()) {
   session$sendCustomMessage(
     "move-element",
     list(

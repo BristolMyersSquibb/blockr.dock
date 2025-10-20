@@ -103,7 +103,7 @@ extension_ui <- function(x, id, ...) {
   }
 
   div(
-    id = as_ext_handle_id(x),
+    id = NS(id, as_ext_handle_id(x)),
     fun(NS(id, extension_id(x)), ...)
   )
 }

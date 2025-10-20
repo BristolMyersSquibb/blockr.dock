@@ -191,18 +191,18 @@ hide_block_ui <- function(id, session) {
 
   from <- paste0("#", paste(dock_id(ns), id, sep = "-"), " .card")
   to <- paste0("#", ns("offcanvas"), " .offcanvas-body")
-  move_element(from, to, session)
+
+  move_dom_element(from, to, session)
 }
 
 show_block_ui <- function(id, session) {
 
   ns <- session$ns
-  id <- as_block_handle_id(id)
 
-  bid <- ns(id)
-  pid <- paste(dock_id(ns), id, sep = "-")
+  bid <- ns(as_block_handle_id(id))
+  pid <- paste(dock_id(ns), as_block_panel_id(id), sep = "-")
 
   log_debug("showing block {bid} in panel {pid}")
 
-  move_element(paste0("#", bid), paste0("#", pid), session)
+  move_dom_element(paste0("#", bid), paste0("#", pid), session)
 }
