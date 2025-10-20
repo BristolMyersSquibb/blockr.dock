@@ -1,7 +1,7 @@
 #' @param grid,panels,active_group Layout components
 #' @rdname dock
 #' @export
-new_board_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
+new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 
   if (is.null(grid)) {
     grid <- list(
@@ -22,15 +22,15 @@ new_board_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
     content <- c(content, list(activeGroup = active_group))
   }
 
-  validate_board_layout(
-    structure(content, class = "board_layout")
+  validate_dock_layout(
+    structure(content, class = "dock_layout")
   )
 }
 
 #' @rdname dock
 #' @export
-is_board_layout <- function(x) {
-  inherits(x, "board_layout")
+is_dock_layout <- function(x) {
+  inherits(x, "dock_layout")
 }
 
 is_empty_layout <- function(x) length(x[["panels"]]) == 0L
@@ -38,17 +38,17 @@ is_empty_layout <- function(x) length(x[["panels"]]) == 0L
 #' @param blocks Block IDs
 #' @rdname dock
 #' @export
-validate_board_layout <- function(x, blocks = character()) {
+validate_dock_layout <- function(x, blocks = character()) {
 
   if (is.null(x)) {
     return(x)
   }
 
-  if (!is.list(x) || !is_board_layout(x)) {
+  if (!is.list(x) || !is_dock_layout(x)) {
     blockr_abort(
       "Expecting the `layout` component of a `dock_board` to be a list ",
-      "inheriting from `board_layout`.",
-      class = "board_layout_invalid"
+      "inheriting from `dock_layout`.",
+      class = "dock_layout_invalid"
     )
   }
 
@@ -57,7 +57,7 @@ validate_board_layout <- function(x, blocks = character()) {
   if (!all(required %in% names(x))) {
     blockr_abort(
       "Expecting a `layout` to contain component{?s} {required}.",
-      class = "board_layout_invalid"
+      class = "dock_layout_invalid"
     )
   }
 
@@ -66,30 +66,30 @@ validate_board_layout <- function(x, blocks = character()) {
   if (length(unexpected)) {
     blockr_abort(
       "Not expecting `layout` component{?s} {unexpected}.",
-      class = "board_layout_invalid"
+      class = "dock_layout_invalid"
+    )
+  }
+
+  panel_ids <- layout_panel_ids(x)
+
+  is_blk_pn <- maybe_block_panel_id(panel_ids)
+  is_ext_pn <- maybe_ext_panel_id(panel_ids)
+
+  if (!all(is_blk_pn | is_ext_pn)) {
+    blockr_abort(
+      "Malformed layout panel ID{?s} {panel_ids[!(is_blk_pn | is_ext_pn)]}.",
+      class = "dock_layout_invalid"
     )
   }
 
   if (length(blocks)) {
 
-    extra <- setdiff(layout_panel_block_ids(x), blocks)
+    extra <- setdiff(panel_ids[is_blk_pn], as_block_panel_id(blocks))
 
     if (length(extra)) {
       blockr_abort(
         "Unknown layout panel{?s} {extra}.",
-        class = "board_layout_invalid"
-      )
-    }
-
-  } else {
-
-    panel_ids <- chr_xtr(x[["panels"]], "id")
-    is_id_ok <- is_block_panel_id(panel_ids)
-
-    if (!all(is_id_ok)) {
-      blockr_abort(
-        "Malformed layout panel ID{?s} {panel_ids[!is_id_ok]}.",
-        class = "board_layout_invalid"
+        class = "dock_layout_invalid"
       )
     }
   }
@@ -99,31 +99,31 @@ validate_board_layout <- function(x, blocks = character()) {
 
 #' @rdname dock
 #' @export
-as_board_layout <- function(x, ...) {
-  UseMethod("as_board_layout")
+as_dock_layout <- function(x, ...) {
+  UseMethod("as_dock_layout")
 }
 
 #' @export
-as_board_layout.board_layout <- function(x, ...) x
+as_dock_layout.dock_layout <- function(x, ...) x
 
 #' @export
-as_board_layout.board <- function(x, ...) {
-  board_layout(x)
+as_dock_layout.board <- function(x, ...) {
+  dock_layout(x)
 }
 
 #' @export
-as_board_layout.list <- function(x, ...) {
+as_dock_layout.list <- function(x, ...) {
 
   if ("activeGroup" %in% names(x)) {
     names(x)[names(x) == "activeGroup"] <- "active_group"
   }
 
-  do.call(new_board_layout, x)
+  do.call(new_dock_layout, x)
 }
 
 #' @rdname dock
 #' @export
-layout_panel_block_ids <- function(x) {
-  x <- as_board_layout(x)
-  sub("^block-", "", chr_xtr(x[["panels"]], "id"))
+layout_panel_ids <- function(x) {
+  x <- as_dock_layout(x)
+  chr_xtr(x[["panels"]], "id")
 }

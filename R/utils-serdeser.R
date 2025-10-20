@@ -42,11 +42,20 @@ serialize_board.dock_board <- function(x, blocks, layout, ...,
     session
   )
 
-  blockr_ser(
-    x,
-    blocks = blocks,
-    options = opts,
-    layout = layout()
+  do.call(
+    blockr_ser,
+    c(
+      list(
+        x,
+        blocks = blocks,
+        options = opts,
+        layout = layout()
+      ),
+      lapply(
+        list(...),
+        reval
+      )
+    )
   )
 }
 
@@ -56,31 +65,76 @@ blockr_ser.dock_board <- function(x, blocks = NULL, options = NULL,
 
   res <- NextMethod()
 
-  res[["layout"]] <- blockr_ser(as_board_layout(layout))
+  exts <- dock_extensions(x)
+  dots <- list(...)
+
+  res[["layout"]] <- blockr_ser(as_dock_layout(layout))
+  res[["extensions"]] <- map(blockr_ser, exts,
+                             dots[chr_ply(exts, extension_id)])
   res[["version"]] <- c(as.character(pkg_version()), res[["version"]])
 
   res
 }
 
 #' @export
-blockr_ser.board_layout <- function(x, ...) {
+blockr_ser.dock_layout <- function(x, ...) {
   list(object = class(x), payload = unclass(x))
+}
+
+#' @export
+blockr_ser.dock_extension <- function(x, state, ...) {
+  list(
+    object = class(x),
+    payload = coal(state, list()),
+    constructor = blockr_ser(extension_ctor(x))
+  )
 }
 
 #' @export
 blockr_deser.dock_board <- function(x, data, ...) {
   do.call(
     new_dock_board,
-    lapply(
-      data[!names(data) %in% c("version", "object")],
-      blockr_deser
+    c(
+      lapply(
+        data[!names(data) %in% c("version", "object", "extensions")],
+        blockr_deser
+      ),
+      extensions = lapply(
+        data[["extensions"]],
+        blockr_deser
+      )
     )
   )
 }
 
 #' @export
-blockr_deser.board_layout <- function(x, data, ...) {
-  as_board_layout(data[["payload"]], ...)
+blockr_deser.dock_layout <- function(x, data, ...) {
+  as_dock_layout(data[["payload"]], ...)
+}
+
+#' @export
+blockr_deser.dock_extension <- function(x, data, ...) {
+
+  stopifnot(
+    all(c("constructor", "payload") %in% names(data))
+  )
+
+  payload <- data[["payload"]]
+  ctor <- blockr_deser(data[["constructor"]])
+
+  if (is.atomic(payload)) {
+    payload <- list(payload)
+  }
+
+  args <- c(
+    payload,
+    list(
+      ctor = coal(ctor_name(ctor), ctor_fun(ctor)),
+      pkg = ctor_pkg(ctor)
+    )
+  )
+
+  do.call(ctor_fun(ctor), args)
 }
 
 #' @export

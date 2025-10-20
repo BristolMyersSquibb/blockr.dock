@@ -26,7 +26,8 @@ Imports:
     dockViewR (>= 0.2.1),
     htmltools
 Suggests: 
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    DT
 Config/testthat/edition: 3
 Remotes:
     BristolMyersSquibb/blockr.core,
