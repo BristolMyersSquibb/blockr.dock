@@ -1,5 +1,5 @@
 new_edit_board_extension <- function(...) {
-	new_dock_extension(
+  new_dock_extension(
     blk_ext_srv,
     blk_ext_ui,
     name = "Edit board",
@@ -472,7 +472,10 @@ create_dt_link_obs <- function(ids, upd, ...) {
     if (col %in% c("from", "to")) {
 
       obs2 <- observeEvent(
-        board_block_ids(rv$board),
+        {
+          req(row %in% board_link_ids(rv$board))
+          board_block_ids(rv$board)
+        },
         {
           blks <- board_blocks(rv$board)
 

@@ -127,18 +127,3 @@ layout_panel_ids <- function(x) {
   x <- as_dock_layout(x)
   chr_xtr(x[["panels"]], "id")
 }
-
-strip_params <- function(x) {
-
-  x <- as_dock_layout(x)
-
-  x[["panels"]] <- lapply(
-    x[["panels"]],
-    function(y) {
-      y[["params"]] <- list()
-      y
-    }
-  )
-
-  x
-}

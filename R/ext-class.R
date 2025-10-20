@@ -16,7 +16,7 @@
 #' @export
 new_dock_extension <- function(server, ui, name, class, ctor = sys.parent(),
                                pkg = NULL, ...) {
-	validate_extension(
+  validate_extension(
     structure(
       list(server = server, ui = ui, ...),
       name = name,

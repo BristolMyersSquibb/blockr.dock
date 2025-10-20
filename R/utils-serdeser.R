@@ -78,7 +78,7 @@ blockr_ser.dock_board <- function(x, blocks = NULL, options = NULL,
 
 #' @export
 blockr_ser.dock_layout <- function(x, ...) {
-  list(object = class(x), payload = unclass(strip_params(x)))
+  list(object = class(x), payload = unclass(x))
 }
 
 #' @export
