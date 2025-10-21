@@ -4,6 +4,11 @@ dock_panel_ids <- function(proxy) {
   )
 }
 
+dock_panel_named_ids <- function(proxy) {
+  panels <- dockViewR::get_panels(proxy)
+  set_names(chr_xtr(panels, "id"), chr_xtr(panels, "title"))
+}
+
 block_panel_ids <- function(proxy) {
 
   res <- dock_panel_ids(proxy)

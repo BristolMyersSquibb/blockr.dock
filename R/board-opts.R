@@ -31,9 +31,9 @@ new_blocks_position_option <- function(
 
       list(
         observeEvent(
-          req(length(reference_panel_candidates(dock_proxy)) > 0),
+          req(length(dock_panel_named_ids(dock_proxy)) > 0),
           {
-            layout_panels <- reference_panel_candidates(dock_proxy)
+            layout_panels <- dock_panel_named_ids(dock_proxy)
 
             updateSelectInput(
               session,
@@ -52,7 +52,7 @@ new_blocks_position_option <- function(
             updateSelectInput(
               session,
               "reference_panel",
-              choices = reference_panel_candidates(dock_proxy),
+              choices = dock_panel_named_ids(dock_proxy),
               selected = opt$reference_panel
             )
 
@@ -68,10 +68,6 @@ new_blocks_position_option <- function(
     update_trigger = c("reference_panel", "direction"),
     ...
   )
-}
-
-reference_panel_candidates <- function(proxy) {
-  dockViewR::get_panels_ids(proxy)
 }
 
 #' @export
