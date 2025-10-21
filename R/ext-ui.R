@@ -1,31 +1,32 @@
-show_ext_panel <- function(ext, add_panel = TRUE, session = get_session()) {
-
+show_ext_panel <- function(proxy, ext, add_panel = TRUE) {
   stopifnot(is_dock_extension(ext), is_bool(add_panel))
 
   if (add_panel) {
-    add_ext_panel(ext, session)
+    add_ext_panel(proxy, ext, session)
   }
 
-  show_ext_ui(ext, session)
+  show_ext_ui(ext, proxy$session)
 
   invisible(NULL)
 }
 
-hide_ext_panel <- function(id, rm_panel = TRUE, session = get_session()) {
-
+hide_ext_panel <- function(
+  proxy,
+  id,
+  rm_panel = TRUE
+) {
   stopifnot(is_string(id), is_bool(rm_panel))
 
-  hide_ext_ui(id, session)
+  hide_ext_ui(id, proxy$session)
 
   if (rm_panel) {
-    remove_ext_panel(id, session)
+    remove_ext_panel(proxy, id)
   }
 
   invisible(NULL)
 }
 
 hide_ext_ui <- function(id, session) {
-
   ns <- session$ns
   id <- as_ext_handle_id(id)
 
@@ -38,7 +39,6 @@ hide_ext_ui <- function(id, session) {
 }
 
 show_ext_ui <- function(id, session) {
-
   ns <- session$ns
 
   eid <- ns(as_ext_handle_id(id))
