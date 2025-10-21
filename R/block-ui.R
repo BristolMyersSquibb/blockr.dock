@@ -1,6 +1,8 @@
 #' @export
 block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
+
   block_panel <- function(x, id, ns) {
+
     blk_id <- ns(paste0("block_", id))
     blk_info <- get_block_metadata(x)
 
@@ -9,9 +11,9 @@ block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
       width = "100%",
       id = ns(as_block_handle_id(id)),
       div(
-        class = "row g-0 px-4",
+        class = c("row", "g-0", "px-4"),
         div(
-          class = paste(
+          class = c(
             "col-sm-2",
             "col-md-1",
             "col-lg-1",
@@ -22,11 +24,11 @@ block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
           blk_icon(blk_info$category, class = "fa-3x")
         ),
         div(
-          class = "col-sm-10 col-md-11 col-lg-11",
+          class = c("col-sm-10", "col-md-11", "col-lg-11"),
           div(
             class = "card-body",
             div(
-              class = paste(
+              class = c(
                 "d-flex",
                 "align-items-center",
                 "justify-content-start",
@@ -39,9 +41,17 @@ block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
               )
             ),
             div(
-              class = "card-subtitle mb-2 text-body-secondary",
-              span(class = "badge bg-secondary", "Type:", blk_info$category),
-              span(class = "badge bg-secondary", "Package:", blk_info$package)
+              class = c("card-subtitle", "mb-2", "text-body-secondary"),
+              span(
+                class = c("badge", "bg-secondary"),
+                "Type:",
+                blk_info$category
+              ),
+              span(
+                class = c("badge", "bg-secondary"),
+                "Package:",
+                blk_info$package
+              )
             )
           )
         )
@@ -107,13 +117,9 @@ show_hide_block_dep <- function() {
 }
 
 #' @export
-remove_block_ui.dock_board <- function(
-  id,
-  x,
-  blocks = NULL,
-  ...,
-  session = get_session()
-) {
+remove_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
+                                       session = get_session()) {
+
   if (is.null(blocks)) {
     blocks <- board_block_ids(x)
   }
@@ -140,13 +146,9 @@ remove_block_ui.dock_board <- function(
 }
 
 #' @export
-insert_block_ui.dock_board <- function(
-  id,
-  x,
-  blocks = NULL,
-  ...,
-  session = get_session()
-) {
+insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
+                                       session = get_session()) {
+
   if (is.null(blocks)) {
     blocks <- board_blocks(x)
   }
@@ -171,6 +173,7 @@ insert_block_ui.dock_board <- function(
 }
 
 show_block_panel <- function(proxy, id, add_panel = TRUE) {
+
   stopifnot(is_string(id), is_bool(add_panel))
 
   if (add_panel) {
@@ -183,6 +186,7 @@ show_block_panel <- function(proxy, id, add_panel = TRUE) {
 }
 
 hide_block_panel <- function(proxy, id, rm_panel = TRUE) {
+
   stopifnot(is_string(id), is_bool(rm_panel))
 
   hide_block_ui(id, proxy$session)
@@ -195,6 +199,7 @@ hide_block_panel <- function(proxy, id, rm_panel = TRUE) {
 }
 
 hide_block_ui <- function(id, session) {
+
   ns <- session$ns
   id <- as_block_handle_id(id)
 
@@ -207,6 +212,7 @@ hide_block_ui <- function(id, session) {
 }
 
 show_block_ui <- function(id, session) {
+
   ns <- session$ns
 
   bid <- ns(as_block_handle_id(id))

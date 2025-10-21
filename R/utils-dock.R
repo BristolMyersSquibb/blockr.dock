@@ -5,6 +5,7 @@ dock_panel_ids <- function(proxy) {
 }
 
 block_panel_ids <- function(proxy) {
+
   res <- dock_panel_ids(proxy)
 
   as_block_panel_id(
@@ -13,9 +14,10 @@ block_panel_ids <- function(proxy) {
 }
 
 remove_block_panel <- function(proxy, id) {
+
   pid <- as_block_panel_id(id)
 
-  log_debug("removing block panel {pid} from dock {did}")
+  log_debug("removing block panel {pid}")
 
   dockViewR::remove_panel(proxy, pid)
 
@@ -23,16 +25,16 @@ remove_block_panel <- function(proxy, id) {
 }
 
 add_block_panel <- function(proxy, id) {
-  pan <- block_panel(id)
 
-  log_debug("adding block {id} to dock {did}")
+  log_debug("adding block panel {as_block_panel_id(id)}")
 
-  dockViewR::add_panel(proxy, panel = pan)
+  dockViewR::add_panel(proxy, panel = block_panel(id))
 
   invisible(NULL)
 }
 
 block_panel <- function(id) {
+
   pid <- as_block_panel_id(id)
 
   log_debug("creating block panel {pid}")
@@ -49,9 +51,10 @@ block_panel <- function(id) {
 }
 
 remove_ext_panel <- function(proxy, id) {
+
   pid <- as_ext_panel_id(id)
 
-  log_debug("removing extension panel {pid} from dock {did}")
+  log_debug("removing extension panel {pid}")
 
   dockViewR::remove_panel(proxy, pid)
 
@@ -59,18 +62,18 @@ remove_ext_panel <- function(proxy, id) {
 }
 
 add_ext_panel <- function(proxy, ext) {
+
   stopifnot(is_dock_extension(ext))
 
-  pan <- ext_panel(ext)
+  log_debug("adding block {as_ext_panel_id(ext)}")
 
-  log_debug("adding block {extension_id(ext)} to dock {did}")
-
-  dockViewR::add_panel(proxy, panel = pan)
+  dockViewR::add_panel(proxy, panel = ext_panel(ext))
 
   invisible(NULL)
 }
 
 ext_panel <- function(ext) {
+
   eid <- as_ext_panel_id(ext)
 
   log_debug("creating block panel {eid}")
@@ -87,6 +90,7 @@ ext_panel <- function(ext) {
 }
 
 ext_panel_ids <- function(proxy) {
+
   res <- dock_panel_ids(proxy)
 
   as_ext_panel_id(

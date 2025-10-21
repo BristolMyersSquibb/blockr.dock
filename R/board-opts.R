@@ -23,6 +23,7 @@ new_blocks_position_option <- function(
       )
     },
     server = function(..., session) {
+
       dock_proxy <- dockViewR::dock_view_proxy(
         id = dock_id(),
         session = session
@@ -75,6 +76,7 @@ reference_panel_candidates <- function(proxy) {
 
 #' @export
 validate_board_option.blocks_position_option <- function(x) {
+
   val <- board_option_value(NextMethod())
 
   if (!is.list(val)) {
