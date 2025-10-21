@@ -11,19 +11,29 @@ block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
       width = "100%",
       id = ns(as_block_handle_id(id)),
       div(
-        class = "row g-0 px-4",
+        class = c("row", "g-0", "px-4"),
         div(
-          class = paste("col-sm-2", "col-md-1", "col-lg-1", "d-flex",
-                        "align-items-center", "justify-content-start"),
+          class = c(
+            "col-sm-2",
+            "col-md-1",
+            "col-lg-1",
+            "d-flex",
+            "align-items-center",
+            "justify-content-start"
+          ),
           blk_icon(blk_info$category, class = "fa-3x")
         ),
         div(
-          class = "col-sm-10 col-md-11 col-lg-11",
+          class = c("col-sm-10", "col-md-11", "col-lg-11"),
           div(
             class = "card-body",
             div(
-              class = paste("d-flex", "align-items-center",
-                            "justify-content-start", "card-title gap-2"),
+              class = c(
+                "d-flex",
+                "align-items-center",
+                "justify-content-start",
+                "card-title gap-2"
+              ),
               bslib::tooltip(
                 icon("info-circle"),
                 p(icon("lightbulb"), "How to use this block?"),
@@ -31,9 +41,17 @@ block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
               )
             ),
             div(
-              class = "card-subtitle mb-2 text-body-secondary",
-              span(class = "badge bg-secondary", "Type:", blk_info$category),
-              span(class = "badge bg-secondary", "Package:", blk_info$package)
+              class = c("card-subtitle", "mb-2", "text-body-secondary"),
+              span(
+                class = c("badge", "bg-secondary"),
+                "Type:",
+                blk_info$category
+              ),
+              span(
+                class = c("badge", "bg-secondary"),
+                "Package:",
+                blk_info$package
+              )
             )
           )
         )
@@ -113,7 +131,6 @@ remove_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
   stopifnot(is.character(blocks), all(blocks %in% board_block_ids(x)))
 
   for (blk in blocks) {
-
     if (as_block_panel_id(blk) %in% block_panel_ids(session)) {
       hide_block_panel(blk)
     }
@@ -150,33 +167,31 @@ insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
       session = session
     )
 
-    show_block_panel(i, session = session)
+    show_block_panel(i, proxy = dock_proxy(session))
   }
 
   invisible(x)
 }
 
-show_block_panel <- function(id, add_panel = TRUE, session = get_session()) {
+show_block_panel <- function(id, add_panel = TRUE, proxy = dock_proxy()) {
 
-  stopifnot(is_string(id), is_bool(add_panel))
-
-  if (add_panel) {
-    add_block_panel(id, session)
+  if (isTRUE(add_panel)) {
+    add_block_panel(id, proxy)
+  } else {
+    select_block_panel(id, proxy)
   }
 
-  show_block_ui(id, session)
+  show_block_ui(id, proxy$session)
 
   invisible(NULL)
 }
 
-hide_block_panel <- function(id, rm_panel = TRUE, session = get_session()) {
+hide_block_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy()) {
 
-  stopifnot(is_string(id), is_bool(rm_panel))
+  hide_block_ui(id, proxy$session)
 
-  hide_block_ui(id, session)
-
-  if (rm_panel) {
-    remove_block_panel(id, session)
+  if (isTRUE(rm_panel)) {
+    remove_block_panel(id, proxy)
   }
 
   invisible(NULL)

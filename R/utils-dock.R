@@ -1,38 +1,50 @@
-dock_panel_ids <- function(session = get_session()) {
+dock_panel_ids <- function(proxy = dock_proxy()) {
   as_dock_panel_id(
-    dockViewR::get_panels_ids(dock_id(), session)
+    dockViewR::get_panels_ids(proxy)
   )
 }
 
-block_panel_ids <- function(session = get_session()) {
+dock_panel_named_ids <- function(proxy = dock_proxy()) {
+  panels <- dockViewR::get_panels(proxy)
+  set_names(chr_xtr(panels, "id"), chr_xtr(panels, "title"))
+}
 
-  res <- dock_panel_ids(session)
+block_panel_ids <- function(proxy = dock_proxy()) {
+
+  res <- dock_panel_ids(proxy)
 
   as_block_panel_id(
     res[lgl_ply(res, is_block_panel_id)]
   )
 }
 
-remove_block_panel <- function(id, session = get_session()) {
+remove_block_panel <- function(id, proxy = dock_proxy()) {
 
-  did <- dock_id()
   pid <- as_block_panel_id(id)
 
-  log_debug("removing block panel {pid} from dock {did}")
+  log_debug("removing block panel {pid}")
 
-  dockViewR::remove_panel(did, pid, session = session)
+  dockViewR::remove_panel(proxy, pid)
 
   invisible(NULL)
 }
 
-add_block_panel <- function(id, session = get_session()) {
+add_block_panel <- function(id, proxy = dock_proxy()) {
 
-  did <- dock_id()
-  pan <- block_panel(id)
+  log_debug("adding block panel {as_block_panel_id(id)}")
 
-  log_debug("adding block {id} to dock {did}")
+  dockViewR::add_panel(proxy, panel = block_panel(id))
 
-  dockViewR::add_panel(did, panel = pan, session = session)
+  invisible(NULL)
+}
+
+select_block_panel <- function(id, proxy = dock_proxy()) {
+
+  bid <- as_block_panel_id(id)
+
+  log_debug("selecting block panel {bid}")
+
+  dockViewR::select_panel(proxy, bid)
 
   invisible(NULL)
 }
@@ -54,28 +66,35 @@ block_panel <- function(id) {
   )
 }
 
-remove_ext_panel <- function(id, session = get_session()) {
+remove_ext_panel <- function(id, proxy = dock_proxy()) {
 
-  did <- dock_id()
   pid <- as_ext_panel_id(id)
 
-  log_debug("removing extension panel {pid} from dock {did}")
+  log_debug("removing extension panel {pid}")
 
-  dockViewR::remove_panel(did, pid, session = session)
+  dockViewR::remove_panel(proxy, pid)
 
   invisible(NULL)
 }
 
-add_ext_panel <- function(ext, session = get_session()) {
+add_ext_panel <- function(ext, proxy = dock_proxy()) {
 
   stopifnot(is_dock_extension(ext))
 
-  did <- dock_id()
-  pan <- ext_panel(ext)
+  log_debug("adding block {as_ext_panel_id(ext)}")
 
-  log_debug("adding block {extension_id(ext)} to dock {did}")
+  dockViewR::add_panel(proxy, panel = ext_panel(ext))
 
-  dockViewR::add_panel(did, panel = pan, session = session)
+  invisible(NULL)
+}
+
+select_ext_panel <- function(id, proxy = dock_proxy()) {
+
+  eid <- as_ext_panel_id(id)
+
+  log_debug("selecting extension panel {eid}")
+
+  dockViewR::select_panel(proxy, eid)
 
   invisible(NULL)
 }
@@ -97,20 +116,20 @@ ext_panel <- function(ext) {
   )
 }
 
-ext_panel_ids <- function(session = get_session()) {
+ext_panel_ids <- function(proxy = dock_proxy()) {
 
-  res <- dock_panel_ids(session)
+  res <- dock_panel_ids(proxy)
 
   as_ext_panel_id(
     res[lgl_ply(res, is_ext_panel_id)]
   )
 }
 
-restore_dock <- function(layout, session = get_session()) {
+restore_dock <- function(layout, proxy = dock_proxy()) {
   log_debug("restoring dockview layout")
-  dockViewR::restore_dock(dock_id(), unclass(layout), session = session)
+  dockViewR::restore_dock(proxy, unclass(layout))
 }
 
-get_dock <- function(session = get_session()) {
-  dockViewR::get_dock(dock_id(), session)
+dock_proxy <- function(session = get_session()) {
+  dockViewR::dock_view_proxy(dock_id(), session = session)
 }
