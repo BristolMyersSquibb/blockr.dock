@@ -158,6 +158,7 @@ insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
   }
 
   for (i in names(blocks)) {
+
     insertUI(
       paste0("#", id, "-blocks_offcanvas"),
       "beforeEnd",
@@ -166,18 +167,18 @@ insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
       session = session
     )
 
-    show_block_panel(i, session = session)
+    show_block_panel(i, proxy = dock_proxy(session))
   }
 
   invisible(x)
 }
 
-show_block_panel <- function(proxy, id, add_panel = TRUE) {
+show_block_panel <- function(id, add_panel = TRUE, proxy = dock_proxy()) {
 
-  stopifnot(is_string(id), is_bool(add_panel))
-
-  if (add_panel) {
-    add_block_panel(proxy, id)
+  if (isTRUE(add_panel)) {
+    add_block_panel(id, proxy)
+  } else {
+    select_block_panel(id, proxy)
   }
 
   show_block_ui(id, proxy$session)
@@ -185,14 +186,12 @@ show_block_panel <- function(proxy, id, add_panel = TRUE) {
   invisible(NULL)
 }
 
-hide_block_panel <- function(proxy, id, rm_panel = TRUE) {
-
-  stopifnot(is_string(id), is_bool(rm_panel))
+hide_block_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy()) {
 
   hide_block_ui(id, proxy$session)
 
-  if (rm_panel) {
-    remove_block_panel(proxy, id)
+  if (isTRUE(rm_panel)) {
+    remove_block_panel(id, proxy)
   }
 
   invisible(NULL)
