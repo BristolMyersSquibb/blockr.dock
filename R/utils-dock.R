@@ -55,15 +55,7 @@ block_panel <- function(id) {
 
   log_debug("creating block panel {pid}")
 
-  dockViewR::panel(
-    id = pid,
-    title = paste("Block:", id),
-    content = tagList(),
-    style = list(
-      overflow = "auto",
-      height = "100%"
-    )
-  )
+  dock_panel(id = pid, title = paste("Block:", id))
 }
 
 remove_ext_panel <- function(id, proxy = dock_proxy()) {
@@ -105,15 +97,7 @@ ext_panel <- function(ext) {
 
   log_debug("creating block panel {eid}")
 
-  dockViewR::panel(
-    id = eid,
-    title = extension_name(ext),
-    content = tagList(),
-    style = list(
-      overflow = "auto",
-      height = "100%"
-    )
-  )
+  dock_panel(id = eid, title = extension_name(ext))
 }
 
 ext_panel_ids <- function(proxy = dock_proxy()) {
@@ -132,4 +116,45 @@ restore_dock <- function(layout, proxy = dock_proxy()) {
 
 dock_proxy <- function(session = get_session()) {
   dockViewR::dock_view_proxy(dock_id(), session = session)
+}
+
+dock_panel <- function(...) {
+
+  dockViewR::panel(
+    ...,
+    content = tagList(),
+    remove = dockViewR::new_remove_tab_plugin(
+      !is_dock_locked(),
+      mode = "manual"
+    ),
+    style = list(
+      overflow = "auto",
+      height = "100%"
+    )
+  )
+}
+
+set_dock_view_output <- function(..., session = get_session()) {
+
+  args <- c(
+    list(...),
+    if (is_dock_locked()) list(locked = TRUE, disableDnd = TRUE),
+    list(
+      defaultRenderer = "always",
+      add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked())
+    )
+  )
+
+  session$output[[dock_id()]] <- dockViewR::render_dock_view(
+    {
+      log_debug("initializing empty dock {dock_id(session$ns)}")
+      do.call(dockViewR::dock_view, args)
+    }
+  )
+
+  dock_proxy(session)
+}
+
+is_dock_locked <- function() {
+  isTRUE(blockr_option("dock_is_locked", FALSE))
 }

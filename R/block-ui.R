@@ -200,14 +200,13 @@ hide_block_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy()) {
 hide_block_ui <- function(id, session) {
 
   ns <- session$ns
-  id <- as_block_handle_id(id)
 
-  log_debug("hiding block {ns(id)}")
+  bid <- ns(as_block_handle_id(id))
+  oid <- paste0(ns("blocks_offcanvas"), " .offcanvas-body")
 
-  from <- paste0("#", paste(dock_id(ns), id, sep = "-"), " .card")
-  to <- paste0("#", ns("offcanvas"), " .offcanvas-body")
+  log_debug("hiding block {bid} in {oid}")
 
-  move_dom_element(from, to, session)
+  move_dom_element(paste0("#", bid), paste0("#", oid), session)
 }
 
 show_block_ui <- function(id, session) {

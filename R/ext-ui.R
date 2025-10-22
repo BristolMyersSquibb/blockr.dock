@@ -25,14 +25,13 @@ hide_ext_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy()) {
 hide_ext_ui <- function(id, session) {
 
   ns <- session$ns
-  id <- as_ext_handle_id(id)
 
-  log_debug("hiding extension {ns(id)}")
+  eid <- ns(as_ext_handle_id(id))
+  oid <- paste0(ns("exts_offcanvas"), " .offcanvas-body")
 
-  from <- paste0("#", paste(dock_id(ns), id, sep = "-"), " .card")
-  to <- paste0("#", ns("offcanvas"), " .offcanvas-body")
+  log_debug("hiding extension {eid} in {oid}")
 
-  move_dom_element(from, to, session)
+  move_dom_element(paste0("#", eid), paste0("#", oid), session)
 }
 
 show_ext_ui <- function(id, session) {
