@@ -3,6 +3,14 @@ board_ui.dock_board <- function(id, x, ...) {
 
   stopifnot(is_string(id))
 
+  plugins <- board_plugins(x)
+
+  if ("preserve_board" %in% names(plugins)) {
+    serdes <- board_ui(id, board_plugins(x, which = "preserve_board"), x)
+  } else {
+    serdes <- NULL
+  }
+
   tagList(
     show_hide_block_dep(),
     off_canvas(
@@ -13,7 +21,7 @@ board_ui.dock_board <- function(id, x, ...) {
     options_ui(
       id,
       as_board_options(x),
-      board_ui(id, board_plugins(x, which = "preserve_board"), x)
+      serdes
     ),
     dockViewR::dock_view_output(
       NS(id, dock_id()),
