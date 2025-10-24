@@ -130,9 +130,12 @@ remove_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
 
   stopifnot(is.character(blocks), all(blocks %in% board_block_ids(x)))
 
+  proxy <- dock_proxy(session)
+
   for (blk in blocks) {
-    if (as_block_panel_id(blk) %in% block_panel_ids(session)) {
-      hide_block_panel(blk)
+
+    if (as_block_panel_id(blk) %in% block_panel_ids(proxy)) {
+      hide_block_panel(blk, proxy = proxy)
     }
 
     removeUI(
