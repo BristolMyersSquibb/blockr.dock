@@ -117,27 +117,31 @@ manage_dock <- function(board, session = get_session()) {
   observeEvent(
     input$confirm_add,
     {
-      req(id <- input$add_dock_panel)
-      removeModal()
+      req(input$add_dock_panel)
 
-      if (grepl("^blk-", id)) {
-        show_block_panel(
-          sub("^blk-", "", id),
-          add_panel = TRUE,
-          proxy = dock
-        )
-      } else if (grepl("^ext-", id)) {
-        show_ext_panel(
-          dock_extensions(board$board)[[sub("^ext-", "", id)]],
-          add_panel = TRUE,
-          proxy = dock
-        )
-      } else {
-        blockr_abort(
-          "Unknown panel specification {id}.",
-          class = "dock_panel_invalid"
-        )
+      for (id in input$add_dock_panel) {
+
+        if (grepl("^blk-", id)) {
+          show_block_panel(
+            sub("^blk-", "", id),
+            add_panel = TRUE,
+            proxy = dock
+          )
+        } else if (grepl("^ext-", id)) {
+          show_ext_panel(
+            dock_extensions(board$board)[[sub("^ext-", "", id)]],
+            add_panel = TRUE,
+            proxy = dock
+          )
+        } else {
+          blockr_abort(
+            "Unknown panel specification {id}.",
+            class = "dock_panel_invalid"
+          )
+        }
       }
+
+      removeModal()
     }
   )
 
@@ -215,7 +219,8 @@ suggest_panels_to_add <- function(dock, board, session) {
         selectInput(
           ns("add_dock_panel"),
           label = "Panel",
-          choices = opts
+          choices = opts,
+          multiple = TRUE
         ),
         footer = tagList(
           actionButton(
