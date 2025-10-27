@@ -7,3 +7,5 @@ is_empty <- function(x) {
 }
 
 filter_empty <- function(x) Filter(Negate(is_empty), x)
+
+last <- function(x) x[[length(x)]]
