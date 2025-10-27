@@ -164,33 +164,49 @@ suggest_panels_to_add <- function(dock, board, session) {
 
   stopifnot(is.list(panels), all(lgl_ply(panels, is_dock_panel_id)))
 
+  opts <- list()
+
   blk_opts <- setdiff(
     board_block_ids(board$board),
     as_obj_id(panels[lgl_ply(panels, is_block_panel_id)])
   )
+
+  if (length(blk_opts)) {
+
+    blk_opts <- set_names(
+      paste0("blk-", blk_opts),
+      paste0(
+        chr_ply(board_blocks(board$board)[blk_opts], block_name),
+        " (",
+        blk_opts,
+        ")"
+      )
+    )
+
+    opts <- c(opts, list(Blocks = blk_opts))
+  }
 
   ext_opts <- setdiff(
     dock_ext_ids(board$board),
     as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
   )
 
-  if (length(c(blk_opts, ext_opts))) {
+  if (length(ext_opts)) {
 
-    opts <- list()
-
-    if (length(blk_opts)) {
-      opts <- c(
-        opts,
-        list(Blocks = set_names(paste0("blk-", blk_opts), blk_opts))
+    ext_opts <- set_names(
+      paste0("ext-", ext_opts),
+      paste0(
+        chr_ply(dock_extensions(board$board)[ext_opts], extension_name),
+        " (",
+        ext_opts,
+        ")"
       )
-    }
+    )
 
-    if (length(ext_opts)) {
-      opts <- c(
-        opts,
-        list(Extensions = set_names(paste0("ext-", ext_opts), ext_opts))
-      )
-    }
+    opts <- c(opts, list(Extensions = ext_opts))
+  }
+
+  if (length(opts)) {
 
     showModal(
       modalDialog(
