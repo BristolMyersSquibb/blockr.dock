@@ -37,8 +37,6 @@ manage_dock <- function(board, session = get_session()) {
 
   input <- session$input
 
-  ns <- session$ns
-
   observeEvent(
     req(input[[paste0(dock_id(), "_initialized")]]),
     {
@@ -123,10 +121,17 @@ manage_dock <- function(board, session = get_session()) {
       removeModal()
 
       if (grepl("^blk-", id)) {
-        show_block_panel(sub("^blk-", "", id), add_panel = TRUE, proxy = dock)
+        show_block_panel(
+          sub("^blk-", "", id),
+          add_panel = TRUE,
+          proxy = dock
+        )
       } else if (grepl("^ext-", id)) {
-        ext <- dock_extensions(board$board)[[sub("^ext-", "", id)]]
-        show_ext_panel(ext, add_panel = TRUE, proxy = dock)
+        show_ext_panel(
+          dock_extensions(board$board)[[sub("^ext-", "", id)]],
+          add_panel = TRUE,
+          proxy = dock
+        )
       } else {
         blockr_abort(
           "Unknown panel specification {id}.",
@@ -146,6 +151,8 @@ manage_dock <- function(board, session = get_session()) {
 
 
 suggest_panels_to_add <- function(dock, board, session) {
+
+  ns <- session$ns
 
   panels <- dock_panel_ids(dock)
 
@@ -189,15 +196,19 @@ suggest_panels_to_add <- function(dock, board, session) {
       modalDialog(
         title = "Select panel to add",
         easy_close = TRUE,
-        selectInput(session$ns("add_dock_panel"), "Panel", opts),
+        selectInput(
+          ns("add_dock_panel"),
+          label = "Panel",
+          choices = opts
+        ),
         footer = tagList(
           actionButton(
-            session$ns("cancel_add"),
+            ns("cancel_add"),
             label = "Cancel",
             class = "btn-danger"
           ),
           actionButton(
-            session$ns("confirm_add"),
+            ns("confirm_add"),
             label = "OK",
             class = "btn-success"
           )
