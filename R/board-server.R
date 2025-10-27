@@ -84,6 +84,11 @@ manage_dock <- function(board, session = get_session()) {
   observeEvent(
     input[[paste0(dock_id(), "_panel-to-remove")]],
     {
+      if (length(dock_panel_ids(dock)) == 1) {
+        notify("At least one panel must be present. Cannot remove the last panel.")
+        return()
+      }
+
       id <- as_dock_panel_id(
         input[[paste0(dock_id(), "_panel-to-remove")]]
       )
@@ -109,64 +114,19 @@ manage_dock <- function(board, session = get_session()) {
   observeEvent(
     input[[paste0(dock_id(), "_panel-to-add")]],
     {
-      panels <- dock_panel_ids(dock)
-
-      if (length(panels) == 1L) {
-        panels <- list(panels)
-      }
-
-      stopifnot(is.list(panels), all(lgl_ply(panels, is_dock_panel_id)))
-
-      blk_opts <- setdiff(
-        board_block_ids(board$board),
-        as_obj_id(panels[lgl_ply(panels, is_block_panel_id)])
-      )
-
-      ext_opts <- setdiff(
-        dock_ext_ids(board$board),
-        as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
-      )
-
-      if (length(c(blk_opts, ext_opts))) {
-
-        opts <- list()
-
-        if (length(blk_opts)) {
-          opts <- c(
-            opts,
-            list(Blocks = set_names(paste0("blk-", blk_opts), blk_opts))
-          )
-        }
-
-        if (length(ext_opts)) {
-          opts <- c(
-            opts,
-            list(Extensions = set_names(paste0("ext-", ext_opts), ext_opts))
-          )
-        }
-
-        showModal(
-          modalDialog(
-            title = "Select panel to add",
-            easy_close = TRUE,
-            selectInput(ns("add_dock_panel"), "Panel", opts),
-            footer = tagList(
-              actionButton(ns("cancel_add"), "Cancel", class = "btn-danger"),
-              actionButton(ns("confirm_add"), "OK", class = "btn-success")
-            )
-          )
-        )
-
-      } else {
-        notify("No further panels can be added. Remove some panels first.")
-      }
+      suggest_panels_to_add(dock, board, session)
     }
   )
+
+  observeEvent(req(input[[paste0(dock_id(), "_n-panels")]] == 0), {
+    suggest_panels_to_add(dock, board, session)
+  })
 
   observeEvent(
     input$confirm_add,
     {
       req(id <- input$add_dock_panel)
+      removeModal()
 
       if (grepl("^blk-", id)) {
         show_block_panel(sub("^blk-", "", id), add_panel = TRUE, proxy = dock)
@@ -188,4 +148,57 @@ manage_dock <- function(board, session = get_session()) {
   )
 
   reactive(dockViewR::get_dock(dock))
+}
+
+
+suggest_panels_to_add <- function(dock, board, session) {
+  panels <- dock_panel_ids(dock)
+
+  # If no panels
+  if (length(panels) == 0) {
+    blk_opts <- board_block_ids(board$board)
+    ext_opts <- dock_ext_ids(board$board)
+  } else {
+    if (length(panels) == 1L) {
+      panels <- list(panels)
+    }
+    stopifnot(is.list(panels), all(lgl_ply(panels, is_dock_panel_id)))
+    blk_opts <- setdiff(
+      board_block_ids(board$board),
+      as_obj_id(panels[lgl_ply(panels, is_block_panel_id)])
+    )
+    ext_opts <- setdiff(
+      dock_ext_ids(board$board),
+      as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
+    )
+  }
+
+  if (length(c(blk_opts, ext_opts))) {
+    opts <- list()
+    if (length(blk_opts)) {
+      opts <- c(
+        opts,
+        list(Blocks = set_names(paste0("blk-", blk_opts), blk_opts))
+      )
+    }
+    if (length(ext_opts)) {
+      opts <- c(
+        opts,
+        list(Extensions = set_names(paste0("ext-", ext_opts), ext_opts))
+      )
+    }
+    showModal(
+      modalDialog(
+        title = "Select panel to add",
+        easy_close = TRUE,
+        selectInput(session$ns("add_dock_panel"), "Panel", opts),
+        footer = tagList(
+          actionButton(session$ns("cancel_add"), "Cancel", class = "btn-danger"),
+          actionButton(session$ns("confirm_add"), "OK", class = "btn-success")
+        )
+      )
+    )
+  } else {
+    notify("No further panels can be added. Remove some panels first.")
+  }
 }
