@@ -20,16 +20,13 @@ new_dock_board <- function(..., layout = new_dock_layout(),
     extensions <- list(extensions)
   }
 
-  if (is.null(names(extensions))) {
-    names(extensions) <- sub(
-      "_extension$",
-      "",
-      chr_ply(extensions, extension_id)
-    )
-  }
-
-  new_board(..., layout = as_dock_layout(layout), extensions = extensions,
-            options = options, class = c(class, "dock_board"))
+  new_board(
+    ...,
+    layout = as_dock_layout(layout),
+    extensions = set_names(extensions, chr_ply(extensions, extension_id)),
+    options = options,
+    class = c(class, "dock_board")
+  )
 }
 
 #' @param x Board object
