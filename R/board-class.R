@@ -40,7 +40,7 @@ new_dock_board <- function(..., layout = new_dock_layout(),
     ...,
     layout = as_dock_layout(layout),
     extensions = set_names(extensions, chr_ply(extensions, extension_id)),
-    options = as_board_options(options),
+    options = as_board_options(opts),
     class = c(class, "dock_board")
   )
 }

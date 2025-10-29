@@ -19,7 +19,12 @@ new_dock_extension <- function(server, ui, name, class, ctor = sys.parent(),
                                pkg = NULL, options = new_board_options(), ...) {
   validate_extension(
     structure(
-      list(server = server, ui = ui, options = options, ...),
+      list(
+        server = server,
+        ui = ui,
+        options = as_board_options(options),
+        ...
+      ),
       name = name,
       ctor = resolve_ctor(ctor, pkg),
       class = c(class, "dock_extension")
