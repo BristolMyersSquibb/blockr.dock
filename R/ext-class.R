@@ -10,15 +10,16 @@
 #' @param class Extension subclass
 #' @param ctor Constructor function name
 #' @param pkg Package to look up `ctor`
+#' @param options Board options supplied by an extension
 #' @param ... Further attributes
 #'
 #' @rdname extension
 #' @export
 new_dock_extension <- function(server, ui, name, class, ctor = sys.parent(),
-                               pkg = NULL, ...) {
+                               pkg = NULL, options = new_board_options(), ...) {
   validate_extension(
     structure(
-      list(server = server, ui = ui, ...),
+      list(server = server, ui = ui, options = options, ...),
       name = name,
       ctor = resolve_ctor(ctor, pkg),
       class = c(class, "dock_extension")
@@ -86,6 +87,8 @@ validate_extension.dock_extension <- function(x, ...) {
     )
   }
 
+  validate_board_options(extension_options(x))
+
   x
 }
 
@@ -142,4 +145,11 @@ extension_name <- function(x) {
 extension_ctor <- function(x) {
   stopifnot(is_dock_extension(x))
   attr(x, "ctor")
+}
+
+#' @rdname extension
+#' @export
+extension_options <- function(x) {
+  stopifnot(is_dock_extension(x))
+  x[["options"]]
 }
