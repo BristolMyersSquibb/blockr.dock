@@ -11,7 +11,13 @@ block_ui.dock_board <- function(id, x, blocks = NULL, edit_ui = NULL, ...) {
 
     # if yellow color, use black text, otherwise white for contrasts
     bg_color <- blk_color(blk_info$category)
-    icon_color <- if (bg_color == "#F0E442") "text-dark" else "text-white"
+    icon_color <- if (bg_color == "#F0E442") "black" else "white"
+
+    # Get icon name, fallback to question-square if not available
+    icon_name <- blk_info$icon
+    if (is.null(icon_name) || !nchar(icon_name)) {
+      icon_name <- "question-square"
+    }
 
     card_tag <- tags$div(
       class = "card",
@@ -31,16 +37,22 @@ block_ui.dock_board <- function(id, x, blocks = NULL, edit_ui = NULL, ...) {
               paste0(
                 "background: %s;",
                 "border: 1px solid rgba(255, 255, 255, 0.2);",
-                "width: 60px;",
-                "min-height: 100%%;",
-                "position: relative;"
+                "width: 44px;",
+                "height: 44px;",
+                "min-width: 44px;",
+                "min-height: 44px;",
+                "cursor: help;"
               ),
               bg_color
             ),
-            div(
-              class = icon_color,
+            title = blk_info$description,
+            tags$div(
               style = "filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));",
-              blk_icon(blk_info$category, class = "xl")
+              HTML(gsub(
+                '<svg',
+                sprintf('<svg style="width: 22px; height: 22px; fill: %s;"', icon_color),
+                as.character(bsicons::bs_icon(icon_name))
+              ))
             )
           ),
           # Title section
@@ -88,9 +100,12 @@ block_card_title <- function(board, block, id, info, edit_ui, ns) {
     div(
       class = "flex-grow-1 pe-3",
       div(
-        class = "card-title mb-1",
-        style = "line-height: 1.3;",
-        edit_ui$block_name
+        style = "margin-bottom: 0.15rem;",
+        tags$h5(
+          class = "mb-0",
+          style = "font-size: 1.1rem; font-weight: 600;",
+          block_name(block)
+        )
       ),
       block_card_subtitle(board, block, id, info)
     ),
@@ -129,20 +144,10 @@ block_subtitle_id.md_board <- function(x, id) {
 #' @keywords internal
 block_card_subtitle <- function(board, block, id, info) {
   div(
-    class = "text-body-secondary small text-muted",
-    style = "line-height: 1.2;",
-    span(class(block)[1]),
-    block_subtitle_id(board, id),
-    tags$sup(
-      class = "ms-1",
-      bslib::tooltip(
-        icon("info-circle", style = "color: #9ca3af; font-size: 0.75em;"),
-        p(
-          icon("lightbulb"),
-          "How to use this block?",
-        ),
-        p(info$description, ".")
-      )
+    tags$small(
+      class = "text-muted",
+      style = "font-size: 0.75rem; color: #6c757d;",
+      sprintf("Type: %s · ID: %s", info$category, id)
     )
   )
 }
@@ -158,7 +163,7 @@ block_card_content <- function(block, id, blk_id, ns) {
     )
   )$find(".accordion-header")$addAttrs(style = "display: none;")$reset()$find(
     ".accordion-body"
-  )$append(expr_ui(blk_id, block))$allTags()
+  )$addAttrs(style = "padding: 0;")$append(expr_ui(blk_id, block))$allTags()
 
   inputs_panel$attribs$style <- "border: none; border-radius: 0;"
 
@@ -171,7 +176,7 @@ block_card_content <- function(block, id, blk_id, ns) {
     )
   )$find(".accordion-header")$addAttrs(style = "display: none;")$reset()$find(
     ".accordion-body"
-  )$append(tagList(
+  )$addAttrs(style = "padding: 0;")$append(tagList(
     block_ui(blk_id, block),
     div(id = ns(paste0("outputs-issues-wrapper-", id)))
   ))$allTags()

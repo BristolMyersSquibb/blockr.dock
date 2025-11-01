@@ -39,9 +39,10 @@ get_block_metadata <- function(x) {
   stopifnot(is_block(x))
 
   ctor <- attr(x, "ctor")
+  ctor_name <- attr(ctor, "fun")
 
-  if (is_string(ctor)) {
-    blk <- sub("^new_", "", ctor)
+  if (is_string(ctor_name)) {
+    blk <- sub("^new_", "", ctor_name)
     blks <- available_blocks()
 
     if (blk %in% names(blks)) {
@@ -51,7 +52,8 @@ get_block_metadata <- function(x) {
         category = attr(info, "category"),
         name = attr(info, "name"),
         description = attr(info, "description"),
-        package = attr(info, "package")
+        package = attr(info, "package"),
+        icon = attr(info, "icon")
       )
 
       return(res)
@@ -62,8 +64,52 @@ get_block_metadata <- function(x) {
     category = "Uncategorized",
     name = block_name(x),
     description = "No description available",
-    package = "local"
+    package = "local",
+    icon = "question-square"
   )
+}
+
+#' Remap old category names to new category names
+#'
+#' Provides backward compatibility by mapping old category names to the new
+#' standardized category system.
+#'
+#' @param category Character string with category name (old or new)
+#' @return Character string with new category name
+#' @keywords internal
+remap_category <- function(category) {
+  if (!length(category) || is.na(category)) {
+    return("uncategorized")
+  }
+
+  # Old → New category mapping
+  mapping <- c(
+    # Old categories
+    data = "input",
+    file = "input",
+    parse = "input",
+    text = "utility",
+    aiml = "model",
+    timeseries = "structured",
+    # New categories (pass through)
+    input = "input",
+    transform = "transform",
+    structured = "structured",
+    plot = "plot",
+    table = "table",
+    model = "model",
+    output = "output",
+    utility = "utility",
+    uncategorized = "uncategorized"
+  )
+
+  # Get mapped category or return uncategorized if not found
+  mapped <- mapping[category]
+  if (is.na(mapped)) {
+    return("uncategorized")
+  }
+
+  as.character(mapped)
 }
 
 blk_icon <- function(category, class = NULL) {
@@ -86,22 +132,29 @@ blk_icon <- function(category, class = NULL) {
 
 #' Get block color based on category
 #'
-#' @param category Block category
+#' Returns the color hex code for a block category using the Okabe-Ito
+#' colorblind-friendly palette.
+#'
+#' @param category Block category (old or new format)
+#' @return Character string with hex color code
 #' @export
 blk_color <- function(category) {
-  # Palette is taken from:
-  # https://siegal.bio.nyu.edu/color-palette/
-  # very nice palette that is color-blind friendly.
+  # Remap old categories to new ones
+  category <- remap_category(category)
+
+  # Okabe-Ito colorblind-friendly palette
+  # See: https://jfly.uni-koeln.de/color/
   switch(
     category,
-    data = "#0072B2",
-    transform = "#56B4E9",
-    plot = "#E69F00",
-    file = "#CC79A7",
-    parse = "#009E73",
-    table = "#F0E442",
-    text = "#D55E00",
-    "#6c757d"
+    input = "#0072B2",      # Blue
+    transform = "#009E73",  # Bluish green
+    structured = "#56B4E9", # Sky blue
+    plot = "#E69F00",       # Orange
+    table = "#CC79A7",      # Reddish purple/pink
+    model = "#F0E442",      # Yellow (includes AI/ML)
+    output = "#D55E00",     # Vermilion
+    utility = "#CCCCCC",    # Light gray
+    "#999999"               # Medium gray (uncategorized)
   )
 }
 
