@@ -1,6 +1,10 @@
-off_canvas <- function(id, title, ..., width = "w-25",
-                       position = c("start", "top", "bottom", "end")) {
-
+off_canvas <- function(
+  id,
+  title,
+  ...,
+  width = "w-25",
+  position = c("start", "top", "bottom", "end")
+) {
   label <- paste0(id, "-title")
 
   div(
@@ -27,7 +31,6 @@ off_canvas <- function(id, title, ..., width = "w-25",
 }
 
 get_block_metadata <- function(x) {
-
   stopifnot(is_block(x))
 
   ctor <- attr(x, "ctor")
@@ -59,7 +62,6 @@ get_block_metadata <- function(x) {
 }
 
 blk_icon <- function(category, class = NULL) {
-
   stopifnot(is_string(category))
 
   icon(
@@ -77,6 +79,27 @@ blk_icon <- function(category, class = NULL) {
   )
 }
 
+#' Get block color based on category
+#'
+#' @param category Block category
+#' @export
+blk_color <- function(category) {
+  # Palette is taken from:
+  # https://siegal.bio.nyu.edu/color-palette/
+  # very nice palette that is color-blind friendly.
+  switch(
+    category,
+    data = "#0072B2",
+    transform = "#56B4E9",
+    plot = "#E69F00",
+    file = "#CC79A7",
+    parse = "#009E73",
+    table = "#F0E442",
+    text = "#D55E00",
+    "#6c757d"
+  )
+}
+
 move_dom_element <- function(from, to, session = get_session()) {
   session$sendCustomMessage(
     "move-element",
@@ -85,4 +108,8 @@ move_dom_element <- function(from, to, session = get_session()) {
       to = to
     )
   )
+}
+
+drop_nulls <- function(x) {
+  x[!lgl_ply(x, is.null)]
 }

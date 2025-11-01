@@ -1,6 +1,5 @@
 #' @export
 board_ui.dock_board <- function(id, x, ...) {
-
   stopifnot(is_string(id))
 
   plugins <- board_plugins(x)
@@ -11,12 +10,18 @@ board_ui.dock_board <- function(id, x, ...) {
     serdes <- NULL
   }
 
+  if ("edit_block" %in% names(plugins)) {
+    block_plugin <- plugins[["edit_block"]]
+  } else {
+    block_plugin <- NULL
+  }
+
   tagList(
     show_hide_block_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
-      block_ui(id, x)
+      block_ui(id, x, edit_ui = block_plugin)
     ),
     options_ui(
       id,
@@ -43,7 +48,6 @@ board_ui.dock_board <- function(id, x, ...) {
 }
 
 options_ui <- function(id, x, ...) {
-
   opts <- split(x, chr_ply(x, attr, "category"))
 
   offcanvas_id <- NS(id, "options_offcanvas")
