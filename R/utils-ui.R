@@ -39,6 +39,7 @@ get_block_metadata <- function(x) {
   stopifnot(is_block(x))
 
   ctor <- attr(x, "ctor")
+  ctor <- attr(ctor, "fun")
 
   if (is_string(ctor)) {
     blk <- sub("^new_", "", ctor)
