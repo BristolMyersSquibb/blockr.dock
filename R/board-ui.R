@@ -68,7 +68,7 @@ options_ui <- function(id, x, ...) {
       ...,
       hr(),
       do.call(
-        bslib::accordion,
+        accordion,
         c(
           list(
             id = NS(id, "board_options"),
@@ -78,7 +78,7 @@ options_ui <- function(id, x, ...) {
           ),
           map(
             do.call,
-            rep(list(bslib::accordion_panel), length(opts)),
+            rep(list(accordion_panel), length(opts)),
             map(
               list,
               title = names(opts),

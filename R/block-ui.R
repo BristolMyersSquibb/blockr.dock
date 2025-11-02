@@ -135,7 +135,7 @@ block_card_subtitle <- function(board, block, id, info) {
     block_subtitle_id(board, id),
     tags$sup(
       class = "ms-1",
-      bslib::tooltip(
+      tooltip(
         icon("info-circle", style = "color: #9ca3af; font-size: 0.75em;"),
         p(
           icon("lightbulb"),
@@ -151,7 +151,7 @@ block_card_subtitle <- function(board, block, id, info) {
 block_card_content <- function(block, id, blk_id, ns) {
   # Create accordion panels and hide their headers directly
   inputs_panel <- htmltools::tagQuery(
-    bslib::accordion_panel(
+    accordion_panel(
       icon = icon("sliders"),
       title = "Block inputs",
       value = "inputs"
@@ -163,7 +163,7 @@ block_card_content <- function(block, id, blk_id, ns) {
   inputs_panel$attribs$style <- "border: none; border-radius: 0;"
 
   outputs_panel <- htmltools::tagQuery(
-    bslib::accordion_panel(
+    accordion_panel(
       icon = icon("chart-simple"),
       title = "Block output(s)",
       value = "outputs",
@@ -178,7 +178,7 @@ block_card_content <- function(block, id, blk_id, ns) {
 
   outputs_panel$attribs$style <- "border: none; border-radius: 0;"
 
-  accordions <- bslib::accordion(
+  accordions <- accordion(
     id = ns(paste0("accordion-", id)),
     multiple = TRUE,
     open = c("inputs", "outputs"),

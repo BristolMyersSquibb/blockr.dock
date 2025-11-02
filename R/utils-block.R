@@ -14,7 +14,7 @@ toggle_blk_section <- function(blk, session) {
         selected_sections <- ""
       }
 
-      bslib::accordion_panel_set(
+      accordion_panel_set(
         accordion_id,
         selected_sections
       )

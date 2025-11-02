@@ -4,7 +4,7 @@
 \alias{update_block_ui}
 \title{Update some pieces of the block UI}
 \usage{
-update_block_ui(board, update, session, parent, ...)
+update_block_ui(board, update, session)
 }
 \description{
 Some elements of the block UI require server

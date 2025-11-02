@@ -1,5 +1,5 @@
 #' @importFrom glue glue
-#' @import blockr.core shiny
+#' @import blockr.core shiny bslib
 NULL
 
 pkg_file <- function(..., pkg = parent.frame()) {
