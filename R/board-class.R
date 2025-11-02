@@ -20,11 +20,27 @@ new_dock_board <- function(..., layout = new_dock_layout(),
     extensions <- list(extensions)
   }
 
+  opts <- c(
+    list(options),
+    lapply(extensions, extension_options)
+  )
+
+  opt_ids <- character()
+
+  for (i in seq_along(opts)) {
+
+    cur <- opts[[i]]
+    cur <- cur[!names(cur) %in% opt_ids]
+
+    opt_ids <- c(opt_ids, names(cur))
+    opts[[i]] <- cur
+  }
+
   new_board(
     ...,
     layout = as_dock_layout(layout),
     extensions = set_names(extensions, chr_ply(extensions, extension_id)),
-    options = options,
+    options = as_board_options(opts),
     class = c(class, "dock_board")
   )
 }
