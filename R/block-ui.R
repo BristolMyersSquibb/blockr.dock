@@ -116,6 +116,50 @@ show_hide_block_dep <- function() {
   )
 }
 
+# Track active group changes in dockview
+#
+# Problem: When a user clicks a group then triggers an action, Shiny's flush cycle
+# means we can't reliably know which group was clicked before the action.
+#
+# Solution: Capture group changes in JavaScript immediately (before flush cycle),
+# maintain history of current + previous group IDs, send to R via Shiny input.
+#
+# Usage in extensions:
+#   history <- context$group_history()
+#   target_group <- history$previous  # Group clicked before this action
+#
+# Key insight: Use HTMLWidgets.find().getWidget() to access dockview API
+track_active_group_dep <- function() {
+  htmltools::htmlDependency(
+    "track-active-group",
+    pkg_version(),
+    src = character(0),
+    head = htmltools::tags$script(htmltools::HTML("
+      $(function () {
+        let prev = null;
+
+        function init() {
+          const el = document.querySelector('[id*=\"dock\"]');
+          const api = el && window.HTMLWidgets?.find('#' + el.id)?.getWidget?.();
+
+          if (!api) return setTimeout(init, 100);
+
+          api.onDidActiveGroupChange?.((e) => {
+            Shiny.setInputValue(el.id + '_groupChange', {
+              current: e?.id,
+              previous: prev,
+              timestamp: Date.now()
+            }, {priority: 'event'});
+            prev = e?.id;
+          });
+        }
+
+        init();
+      });
+    "))
+  )
+}
+
 #' @export
 remove_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
                                        session = get_session()) {

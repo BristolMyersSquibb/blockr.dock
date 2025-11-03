@@ -1,6 +1,6 @@
 board_server_callback <- function(board, update, ..., session = get_session()) {
 
-  layout <- manage_dock(board, session)
+  dock_state <- manage_dock(board, session)
 
   exts <- isolate(
     dock_extensions(board$board)
@@ -19,14 +19,22 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   for (i in names(exts)) {
     ext_state[[i]] <- extension_server(
       exts[[i]],
-      list(board = board, update = update, layout = layout),
+      list(
+        board = board,
+        update = update,
+        layout = dock_state$layout,
+        group_history = dock_state$group_history
+      ),
       intercom,
       list(...)
     )
   }
 
   c(
-    list(layout = layout),
+    list(
+      layout = dock_state$layout,
+      group_history = dock_state$group_history
+    ),
     ext_state
   )
 }
@@ -36,6 +44,27 @@ manage_dock <- function(board, session = get_session()) {
   dock <- set_dock_view_output(session = session)
 
   input <- session$input
+
+  # Track active group history
+  group_history <- reactiveVal(list(current = NULL, previous = NULL))
+
+  observeEvent(
+    input[[paste0(dock_id(), "_groupChange")]],
+    {
+      change <- input[[paste0(dock_id(), "_groupChange")]]
+      group_history(list(
+        current = change$current,
+        previous = change$previous,
+        timestamp = change$timestamp
+      ))
+
+      message(sprintf(
+        "Group changed: current=%s, previous=%s",
+        change$current %||% "NULL",
+        change$previous %||% "NULL"
+      ))
+    }
+  )
 
   observeEvent(
     req(input[[paste0(dock_id(), "_initialized")]]),
@@ -150,7 +179,10 @@ manage_dock <- function(board, session = get_session()) {
     removeModal()
   )
 
-  reactive(dockViewR::get_dock(dock))
+  list(
+    layout = reactive(dockViewR::get_dock(dock)),
+    group_history = group_history
+  )
 }
 
 

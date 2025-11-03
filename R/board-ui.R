@@ -13,6 +13,7 @@ board_ui.dock_board <- function(id, x, ...) {
 
   tagList(
     show_hide_block_dep(),
+    track_active_group_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
