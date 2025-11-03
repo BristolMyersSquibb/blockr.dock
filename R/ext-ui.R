@@ -1,7 +1,10 @@
 show_ext_panel <- function(ext, add_panel = TRUE, proxy = dock_proxy()) {
 
   if (isTRUE(add_panel)) {
-    add_ext_panel(ext, proxy)
+    add_ext_panel(ext, proxy = proxy)
+  } else if (is_string(add_panel)) {
+    pos <- list(referenceGroup = add_panel, direction = "within")
+    add_ext_panel(ext, position = pos, proxy = proxy)
   } else {
     select_ext_panel(ext, proxy)
   }

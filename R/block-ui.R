@@ -179,7 +179,10 @@ insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
 show_block_panel <- function(id, add_panel = TRUE, proxy = dock_proxy()) {
 
   if (isTRUE(add_panel)) {
-    add_block_panel(id, proxy)
+    add_block_panel(id, proxy = proxy)
+  } else if (is_string(add_panel)) {
+    pos <- list(referenceGroup = add_panel, direction = "within")
+    add_block_panel(id, position = pos, proxy = proxy)
   } else {
     select_block_panel(id, proxy)
   }

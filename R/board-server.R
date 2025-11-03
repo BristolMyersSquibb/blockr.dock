@@ -74,15 +74,10 @@ manage_dock <- function(board, session = get_session()) {
       )
 
       if (is_block_panel_id(id)) {
-
         hide_block_panel(id, rm_panel = TRUE, proxy = dock)
-
       } else if (is_ext_panel_id(id)) {
-
         hide_ext_panel(id, rm_panel = TRUE, proxy = dock)
-
       } else {
-
         blockr_abort(
           "Unknown panel type {class(id)}.",
           class = "dock_panel_invalid"
@@ -106,18 +101,20 @@ manage_dock <- function(board, session = get_session()) {
     {
       req(input$add_dock_panel)
 
+      grp <- input[[paste0(dock_id(), "_panel-to-add")]]
+
       for (id in input$add_dock_panel) {
 
         if (grepl("^blk-", id)) {
           show_block_panel(
             sub("^blk-", "", id),
-            add_panel = TRUE,
+            add_panel = grp,
             proxy = dock
           )
         } else if (grepl("^ext-", id)) {
           show_ext_panel(
             dock_extensions(board$board)[[sub("^ext-", "", id)]],
-            add_panel = TRUE,
+            add_panel = grp,
             proxy = dock
           )
         } else {
