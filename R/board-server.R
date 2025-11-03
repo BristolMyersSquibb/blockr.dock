@@ -42,37 +42,24 @@ manage_dock <- function(board, session = get_session()) {
     {
       layout <- dock_layout(board$board)
 
-      if (is_empty_layout(layout)) {
+      restore_dock(layout, dock)
 
-        for (id in board_block_ids(board$board)) {
-          show_block_panel(id, add_panel = TRUE, proxy = dock)
-        }
+      for (id in as_dock_panel_id(layout)) {
 
-        for (ext in dock_extensions(board$board)) {
-          show_ext_panel(ext, add_panel = TRUE, proxy = dock)
-        }
+        if (is_block_panel_id(id)) {
 
-      } else {
+          show_block_panel(id, add_panel = FALSE, proxy = dock)
 
-        restore_dock(layout, dock)
+        } else if (is_ext_panel_id(id)) {
 
-        for (id in as_dock_panel_id(layout)) {
+          show_ext_panel(id, add_panel = FALSE, proxy = dock)
 
-          if (is_block_panel_id(id)) {
+        } else {
 
-            show_block_panel(id, add_panel = FALSE, proxy = dock)
-
-          } else if (is_ext_panel_id(id)) {
-
-            show_ext_panel(id, add_panel = FALSE, proxy = dock)
-
-          } else {
-
-            blockr_abort(
-              "Unknown panel type {class(id)}.",
-              class = "dock_panel_invalid"
-            )
-          }
+          blockr_abort(
+            "Unknown panel type {class(id)}.",
+            class = "dock_panel_invalid"
+          )
         }
       }
     },

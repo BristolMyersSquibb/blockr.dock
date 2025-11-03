@@ -10,6 +10,7 @@
 \alias{dock_ext_ids}
 \alias{dock_board_options}
 \alias{new_dock_layout}
+\alias{default_dock_layout}
 \alias{is_dock_layout}
 \alias{validate_dock_layout}
 \alias{as_dock_layout}
@@ -17,9 +18,10 @@
 \title{Dock board}
 \usage{
 new_dock_board(
+  blocks = list(),
   ...,
-  layout = new_dock_layout(),
   extensions = list(),
+  layout = default_dock_layout(blocks, extensions),
   options = dock_board_options(),
   class = character()
 )
@@ -40,6 +42,8 @@ dock_board_options()
 
 new_dock_layout(grid = NULL, panels = NULL, active_group = NULL)
 
+default_dock_layout(blocks = list(), extensions = list())
+
 is_dock_layout(x)
 
 validate_dock_layout(x, blocks = character())
@@ -49,11 +53,13 @@ as_dock_layout(x, ...)
 layout_panel_ids(x)
 }
 \arguments{
+\item{blocks}{Block IDs}
+
 \item{...}{Further (metadata) attributes}
 
-\item{layout}{Dock layout}
-
 \item{extensions}{Dock extensions}
+
+\item{layout}{Dock layout}
 
 \item{options}{Board-level user settings}
 
@@ -64,8 +70,6 @@ layout_panel_ids(x)
 \item{value}{Replacement value}
 
 \item{grid, panels, active_group}{Layout components}
-
-\item{blocks}{Block IDs}
 }
 \value{
 A \code{board} object
