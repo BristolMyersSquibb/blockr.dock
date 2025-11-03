@@ -1,3 +1,7 @@
+dock_input <- function(input) {
+  paste(dock_id(), input, sep = "_")
+}
+
 dock_panel_ids <- function(proxy = dock_proxy()) {
   as_dock_panel_id(
     dockViewR::get_panels_ids(proxy)
@@ -157,4 +161,20 @@ set_dock_view_output <- function(..., session = get_session()) {
 
 is_dock_locked <- function() {
   isTRUE(blockr_option("dock_is_locked", FALSE))
+}
+
+dock_panel_groups <- function(session = get_session()) {
+
+  xtr_leaf_id <- function(x) {
+
+    if (x$type == "leaf") {
+      return(x$data$id)
+    }
+
+    lapply(x$data, xtr_leaf_id)
+  }
+
+  unlist(
+    xtr_leaf_id(session$input[[dock_input("state")]][["grid"]][["root"]])
+  )
 }

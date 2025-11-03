@@ -37,8 +37,18 @@ manage_dock <- function(board, session = get_session()) {
 
   input <- session$input
 
+  if (get_log_level() >= debug_log_level) {
+    observeEvent(
+      input[[dock_input("active-group")]],
+      {
+        ag <- input[[dock_input("active-group")]] # nolint: object_usage_linter.
+        log_debug("active group is now {ag}")
+      }
+    )
+  }
+
   observeEvent(
-    req(input[[paste0(dock_id(), "_initialized")]]),
+    req(input[[dock_input("initialized")]]),
     {
       layout <- dock_layout(board$board)
 
@@ -47,15 +57,10 @@ manage_dock <- function(board, session = get_session()) {
       for (id in as_dock_panel_id(layout)) {
 
         if (is_block_panel_id(id)) {
-
           show_block_panel(id, add_panel = FALSE, proxy = dock)
-
         } else if (is_ext_panel_id(id)) {
-
           show_ext_panel(id, add_panel = FALSE, proxy = dock)
-
         } else {
-
           blockr_abort(
             "Unknown panel type {class(id)}.",
             class = "dock_panel_invalid"
@@ -67,10 +72,10 @@ manage_dock <- function(board, session = get_session()) {
   )
 
   observeEvent(
-    input[[paste0(dock_id(), "_panel-to-remove")]],
+    input[[dock_input("panel-to-remove")]],
     {
       id <- as_dock_panel_id(
-        input[[paste0(dock_id(), "_panel-to-remove")]]
+        input[[dock_input("panel-to-remove")]]
       )
 
       if (is_block_panel_id(id)) {
@@ -87,12 +92,12 @@ manage_dock <- function(board, session = get_session()) {
   )
 
   observeEvent(
-    input[[paste0(dock_id(), "_panel-to-add")]],
+    input[[dock_input("panel-to-add")]],
     suggest_panels_to_add(dock, board, session)
   )
 
   observeEvent(
-    req(input[[paste0(dock_id(), "_n-panels")]] == 0),
+    req(input[[dock_input("n-panels")]] == 0),
     suggest_panels_to_add(dock, board, session)
   )
 
@@ -101,20 +106,23 @@ manage_dock <- function(board, session = get_session()) {
     {
       req(input$add_dock_panel)
 
-      grp <- input[[paste0(dock_id(), "_panel-to-add")]]
+      pos <- list(
+        referenceGroup = input[[dock_input("panel-to-add")]],
+        direction = "within"
+      )
 
       for (id in input$add_dock_panel) {
 
         if (grepl("^blk-", id)) {
           show_block_panel(
             sub("^blk-", "", id),
-            add_panel = grp,
+            add_panel = pos,
             proxy = dock
           )
         } else if (grepl("^ext-", id)) {
           show_ext_panel(
             dock_extensions(board$board)[[sub("^ext-", "", id)]],
-            add_panel = grp,
+            add_panel = pos,
             proxy = dock
           )
         } else {
