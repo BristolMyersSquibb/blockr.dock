@@ -47,9 +47,10 @@ extends <code><a href="https://bristolmyerssquibb.github.io/blockr.core/referenc
 
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">new_dock_board</span><span class="op">(</span></span>
+<span>  blocks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span>,</span>
-<span>  layout <span class="op">=</span> <span class="fu">new_dock_layout</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  extensions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  layout <span class="op">=</span> <span class="fu">default_dock_layout</span><span class="op">(</span><span class="va">blocks</span>, <span class="va">extensions</span><span class="op">)</span>,</span>
 <span>  options <span class="op">=</span> <span class="fu">dock_board_options</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  class <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
@@ -70,6 +71,8 @@ extends <code><a href="https://bristolmyerssquibb.github.io/blockr.core/referenc
 <span></span>
 <span><span class="fu">new_dock_layout</span><span class="op">(</span>grid <span class="op">=</span> <span class="cn">NULL</span>, panels <span class="op">=</span> <span class="cn">NULL</span>, active_group <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
+<span><span class="fu">default_dock_layout</span><span class="op">(</span>blocks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, extensions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu">is_dock_layout</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">validate_dock_layout</span><span class="op">(</span><span class="va">x</span>, blocks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
@@ -83,16 +86,20 @@ extends <code><a href="https://bristolmyerssquibb.github.io/blockr.core/referenc
     <h2>Arguments</h2>
 
 
-<dl><dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dl><dt id="arg-blocks">blocks<a class="anchor" aria-label="anchor" href="#arg-blocks"></a></dt>
+<dd><p>Block IDs</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Further (metadata) attributes</p></dd>
-
-
-<dt id="arg-layout">layout<a class="anchor" aria-label="anchor" href="#arg-layout"></a></dt>
-<dd><p>Dock layout</p></dd>
 
 
 <dt id="arg-extensions">extensions<a class="anchor" aria-label="anchor" href="#arg-extensions"></a></dt>
 <dd><p>Dock extensions</p></dd>
+
+
+<dt id="arg-layout">layout<a class="anchor" aria-label="anchor" href="#arg-layout"></a></dt>
+<dd><p>Dock layout</p></dd>
 
 
 <dt id="arg-options">options<a class="anchor" aria-label="anchor" href="#arg-options"></a></dt>
@@ -113,10 +120,6 @@ extends <code><a href="https://bristolmyerssquibb.github.io/blockr.core/referenc
 
 <dt id="arg-grid-panels-active-group">grid, panels, active_group<a class="anchor" aria-label="anchor" href="#arg-grid-panels-active-group"></a></dt>
 <dd><p>Layout components</p></dd>
-
-
-<dt id="arg-blocks">blocks<a class="anchor" aria-label="anchor" href="#arg-blocks"></a></dt>
-<dd><p>Block IDs</p></dd>
 
 </dl></div>
     <div id="value">
