@@ -39,7 +39,11 @@ default_dock_layout <- function(blocks = list(), extensions = list()) {
         tabComponent = "manual",
         params = list(
           content = list(html = c(x[["content"]][["html"]])),
-          style = x[["style"]]
+          style = x[["style"]],
+          removeCallback = list(
+            `__IS_FUNCTION__` = TRUE,
+            source = unclass(x[["remove"]][["callback"]])
+          )
         )
       )
     )
