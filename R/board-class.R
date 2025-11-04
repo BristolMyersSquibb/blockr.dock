@@ -112,8 +112,7 @@ dock_board_options <- function() {
       blockr_option("dark_mode", FALSE),
       category = "Theme options"
     ),
-    new_show_conditions_option(category = "Board options"),
-    new_blocks_position_option(category = "Layout options")
+    new_show_conditions_option(category = "Board options")
   )
 }
 
