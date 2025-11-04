@@ -1,9 +1,11 @@
 show_ext_panel <- function(ext, add_panel = TRUE, proxy = dock_proxy()) {
 
   if (isTRUE(add_panel)) {
-    add_ext_panel(ext, proxy)
-  } else {
+    add_ext_panel(ext, proxy = proxy)
+  } else if (isFALSE(add_panel)) {
     select_ext_panel(ext, proxy)
+  } else {
+    add_ext_panel(ext, position = add_panel, proxy = proxy)
   }
 
   show_ext_ui(ext, proxy$session)

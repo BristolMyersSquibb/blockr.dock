@@ -170,7 +170,20 @@ insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
       session = session
     )
 
-    show_block_panel(i, proxy = dock_proxy(session))
+    if (session$input[[dock_input("n-groups")]] < 2L) {
+      pos <- list(direction = "right")
+    } else {
+      cands <- setdiff(
+        dock_panel_groups(session),
+        session$input[[dock_input("active-group")]]
+      )
+      pos <- list(
+        referenceGroup = last(cands),
+        direction = "within"
+      )
+    }
+
+    show_block_panel(i, pos, dock_proxy(session))
   }
 
   invisible(x)
@@ -179,9 +192,11 @@ insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
 show_block_panel <- function(id, add_panel = TRUE, proxy = dock_proxy()) {
 
   if (isTRUE(add_panel)) {
-    add_block_panel(id, proxy)
-  } else {
+    add_block_panel(id, proxy = proxy)
+  } else if (isFALSE(add_panel)) {
     select_block_panel(id, proxy)
+  } else {
+    add_block_panel(id, position = add_panel, proxy = proxy)
   }
 
   show_block_ui(id, proxy$session)

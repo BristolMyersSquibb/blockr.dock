@@ -1,3 +1,7 @@
+dock_input <- function(input) {
+  paste(dock_id(), input, sep = "_")
+}
+
 dock_panel_ids <- function(proxy = dock_proxy()) {
   as_dock_panel_id(
     dockViewR::get_panels_ids(proxy)
@@ -29,11 +33,11 @@ remove_block_panel <- function(id, proxy = dock_proxy()) {
   invisible(NULL)
 }
 
-add_block_panel <- function(id, proxy = dock_proxy()) {
+add_block_panel <- function(id, ..., proxy = dock_proxy()) {
 
   log_debug("adding block panel {as_block_panel_id(id)}")
 
-  dockViewR::add_panel(proxy, panel = block_panel(id))
+  dockViewR::add_panel(proxy, panel = block_panel(id, ...))
 
   invisible(NULL)
 }
@@ -49,13 +53,13 @@ select_block_panel <- function(id, proxy = dock_proxy()) {
   invisible(NULL)
 }
 
-block_panel <- function(id) {
+block_panel <- function(id, ...) {
 
   pid <- as_block_panel_id(id)
 
   log_debug("creating block panel {pid}")
 
-  dock_panel(id = pid, title = paste("Block:", id))
+  dock_panel(id = pid, title = paste("Block:", id), ...)
 }
 
 remove_ext_panel <- function(id, proxy = dock_proxy()) {
@@ -69,13 +73,13 @@ remove_ext_panel <- function(id, proxy = dock_proxy()) {
   invisible(NULL)
 }
 
-add_ext_panel <- function(ext, proxy = dock_proxy()) {
+add_ext_panel <- function(ext, ..., proxy = dock_proxy()) {
 
   stopifnot(is_dock_extension(ext))
 
   log_debug("adding block {as_ext_panel_id(ext)}")
 
-  dockViewR::add_panel(proxy, panel = ext_panel(ext))
+  dockViewR::add_panel(proxy, panel = ext_panel(ext, ...))
 
   invisible(NULL)
 }
@@ -91,13 +95,13 @@ select_ext_panel <- function(id, proxy = dock_proxy()) {
   invisible(NULL)
 }
 
-ext_panel <- function(ext) {
+ext_panel <- function(ext, ...) {
 
   eid <- as_ext_panel_id(ext)
 
   log_debug("creating block panel {eid}")
 
-  dock_panel(id = eid, title = extension_name(ext))
+  dock_panel(id = eid, title = extension_name(ext), ...)
 }
 
 ext_panel_ids <- function(proxy = dock_proxy()) {
@@ -157,4 +161,20 @@ set_dock_view_output <- function(..., session = get_session()) {
 
 is_dock_locked <- function() {
   isTRUE(blockr_option("dock_is_locked", FALSE))
+}
+
+dock_panel_groups <- function(session = get_session()) {
+
+  xtr_leaf_id <- function(x) {
+
+    if (x$type == "leaf") {
+      return(x$data$id)
+    }
+
+    lapply(x$data, xtr_leaf_id)
+  }
+
+  unlist(
+    xtr_leaf_id(session$input[[dock_input("state")]][["grid"]][["root"]])
+  )
 }
