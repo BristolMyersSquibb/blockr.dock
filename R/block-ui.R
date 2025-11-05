@@ -149,7 +149,7 @@ remove_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
 }
 
 #' @export
-insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
+insert_block_ui.dock_board <- function(id, x, blocks = NULL, dock, ...,
                                        session = get_session()) {
 
   if (is.null(blocks)) {
@@ -170,23 +170,30 @@ insert_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
       session = session
     )
 
-    if (session$input[[dock_input("n-groups")]] < 2L) {
-      pos <- list(direction = "right")
-    } else {
-      cands <- setdiff(
-        dock_panel_groups(session),
-        session$input[[dock_input("active-group")]]
-      )
-      pos <- list(
-        referenceGroup = last(cands),
-        direction = "within"
-      )
-    }
-
-    show_block_panel(i, pos, dock_proxy(session))
+    show_block_panel(i, determine_panel_pos(dock), dock$proxy)
   }
 
   invisible(x)
+}
+
+determine_panel_pos <- function(dock) {
+
+  sess <- dock$proxy$session
+
+  if (sess$input[[dock_input("n-groups")]] < 2L) {
+    return(list(direction = "right"))
+  }
+
+  prev <- dock$prev_active_group()
+  curr <- sess$input[[dock_input("active-group")]]
+
+  if (is.null(prev) || identical(curr, prev)) {
+    grp <- last(setdiff(dock_panel_groups(sess), curr))
+  } else {
+    grp <- prev
+  }
+
+  list(referenceGroup = grp, direction = "within")
 }
 
 show_block_panel <- function(id, add_panel = TRUE, proxy = dock_proxy()) {
