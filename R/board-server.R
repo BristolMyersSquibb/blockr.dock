@@ -1,6 +1,6 @@
 board_server_callback <- function(board, update, ..., session = get_session()) {
 
-  layout <- manage_dock(board, session)
+  dock <- manage_dock(board, session)
 
   exts <- isolate(
     dock_extensions(board$board)
@@ -19,14 +19,14 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   for (i in names(exts)) {
     ext_state[[i]] <- extension_server(
       exts[[i]],
-      list(board = board, update = update, layout = layout),
+      list(board = board, update = update, dock = dock),
       intercom,
       list(...)
     )
   }
 
   c(
-    list(layout = layout),
+    list(dock = dock),
     ext_state
   )
 }
@@ -142,7 +142,27 @@ manage_dock <- function(board, session = get_session()) {
     removeModal()
   )
 
-  reactive(dockViewR::get_dock(dock))
+  prev_active_group <- reactiveVal()
+  active_group_trail <- reactiveVal()
+
+  observeEvent(
+    input[[dock_input("active-group")]],
+    {
+      cur_ag <- input[[dock_input("active-group")]]
+      pre_ag <- active_group_trail()
+      if (!identical(pre_ag, cur_ag)) {
+        log_trace("setting previous active group to {pre_ag}")
+        prev_active_group(pre_ag)
+      }
+      active_group_trail(cur_ag)
+    }
+  )
+
+  list(
+    layout = reactive(dockViewR::get_dock(dock)),
+    proxy = dock,
+    prev_active_group = prev_active_group
+  )
 }
 
 
