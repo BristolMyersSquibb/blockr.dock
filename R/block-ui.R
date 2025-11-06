@@ -2,7 +2,7 @@
 block_ui.dock_board <- function(id, x, blocks = NULL, edit_ui = NULL, ...) {
   block_panel <- function(x, id, edit_ui, ns, board) {
     blk_id <- ns(paste0("block_", id))
-    blk_info <- get_block_metadata(x)
+    blk_info <- as.list(block_metadata(registry_id_from_block(x)))
 
     # Edit plugin
     if (!is.null(edit_ui)) {
@@ -40,7 +40,7 @@ block_ui.dock_board <- function(id, x, blocks = NULL, edit_ui = NULL, ...) {
             div(
               class = icon_color,
               style = "filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));",
-              blk_icon(blk_info$category, class = "xl")
+              HTML(blk_info$icon)
             )
           ),
           # Title section

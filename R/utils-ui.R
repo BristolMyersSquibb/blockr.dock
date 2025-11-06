@@ -35,54 +35,16 @@ collapse_container <- function(id, ...) {
   tags$div(class = "collapse", id = id, ...)
 }
 
-get_block_metadata <- function(x) {
-  stopifnot(is_block(x))
+#' @rdname meta
+#' @keywords internal
+blk_icon <- function(block) {
+  id <- registry_id_from_block(block)
 
-  ctor <- attr(x, "ctor")
-  ctor <- attr(ctor, "fun")
-
-  if (is_string(ctor)) {
-    blk <- sub("^new_", "", ctor)
-    blks <- available_blocks()
-
-    if (blk %in% names(blks)) {
-      info <- blks[[blk]]
-
-      res <- list(
-        category = attr(info, "category"),
-        name = attr(info, "name"),
-        description = attr(info, "description"),
-        package = attr(info, "package")
-      )
-
-      return(res)
-    }
+  if (length(id)) {
+    block_metadata(id, "icon")
+  } else {
+    default_icon(default_category())
   }
-
-  list(
-    category = "Uncategorized",
-    name = block_name(x),
-    description = "No description available",
-    package = "local"
-  )
-}
-
-blk_icon <- function(category, class = NULL) {
-  stopifnot(is_string(category))
-
-  icon(
-    switch(
-      category,
-      data = "table",
-      file = "file",
-      parse = "gear",
-      plot = "chart-line",
-      transform = "wand-magic",
-      table = "table",
-      "reddit-alien"
-    ),
-    class
-  )
 }
 
 #' Get block color based on category
@@ -90,21 +52,22 @@ blk_icon <- function(category, class = NULL) {
 #' @param category Block category
 #' @export
 blk_color <- function(category) {
-  # Palette is taken from:
-  # https://siegal.bio.nyu.edu/color-palette/
-  # very nice palette that is color-blind friendly.
+  # Okabe-Ito colorblind-friendly palette
+  # See: https://jfly.uni-koeln.de/color/
   switch(
     category,
-    data = "#0072B2",
-    transform = "#56B4E9",
-    plot = "#E69F00",
-    file = "#CC79A7",
-    parse = "#009E73",
-    table = "#F0E442",
-    text = "#D55E00",
-    "#6c757d"
+    input = "#0072B2", # Blue
+    transform = "#009E73", # Bluish green
+    structured = "#56B4E9", # Sky blue
+    plot = "#E69F00", # Orange
+    table = "#CC79A7", # Reddish purple/pink
+    model = "#F0E442", # Yellow (includes AI/ML)
+    output = "#D55E00", # Vermilion
+    utility = "#CCCCCC", # Light gray
+    "#999999" # Medium gray (uncategorized)
   )
 }
+
 
 move_dom_element <- function(from, to, session = get_session()) {
   session$sendCustomMessage(
