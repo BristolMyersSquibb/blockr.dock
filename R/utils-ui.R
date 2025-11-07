@@ -50,7 +50,7 @@ blks_metadata <- function(blocks) {
   } else if (is_blocks(blocks)) {
     id <- lapply(blocks, registry_id_from_block)
   } else {
-    block_abort("Unsupported input type for `blocks`.")
+    blockr_abort("Unsupported input type for `blocks`.")
   }
 
   if (any(lengths(id) == 0L)) {

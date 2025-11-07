@@ -44,7 +44,10 @@ block_ui.dock_board <- function(id, x, blocks = NULL, edit_ui = NULL, ...) {
           ),
           # Title section
           div(
-            class = "d-flex flex-column justify-content-center flex-grow-1 min-height-0",
+            class = paste(
+              "d-flex flex-column justify-content-center",
+              "flex-grow-1 min-height-0"
+            ),
             block_card_title(board, x, id, blk_info, edit_ui, ns)
           )
         ),
@@ -220,7 +223,8 @@ block_card_toggles <- function(id, ns) {
 
 #' @keywords internal
 block_card_dropdown <- function(id, info, ns) {
-  # Create a custom dropdown without the default button styling (no bg on hover, ...)
+  # Create a custom dropdown without the default
+  # button styling (no bg on hover, ...)
   tags$div(
     class = "dropdown",
     tags$button(
@@ -233,12 +237,18 @@ block_card_dropdown <- function(id, info, ns) {
       icon("ellipsis-vertical")
     ),
     tags$ul(
-      class = "dropdown-menu dropdown-menu-end shadow-sm rounded-3 border-1",
+      class = paste(
+        "dropdown-menu dropdown-menu-end",
+        "shadow-sm rounded-3 border-1"
+      ),
       style = "min-width: 250px;",
       # Actions header
       tags$li(
         tags$h6(
-          class = "dropdown-header text-uppercase fw-semibold small text-secondary",
+          class = paste(
+            "dropdown-header text-uppercase",
+            "fw-semibold small text-secondary"
+          ),
           style = "font-size: 0.75rem; letter-spacing: 0.5px;",
           "Block Actions"
         )
@@ -246,7 +256,10 @@ block_card_dropdown <- function(id, info, ns) {
       # Block actions
       tags$li(
         tags$button(
-          class = "dropdown-item action-button py-2 position-relative text-center",
+          class = paste(
+            "dropdown-item action-button",
+            "py-2 position-relative text-center"
+          ),
           type = "button",
           id = ns(sprintf("append-%s", id)),
           style = "padding-left: 2.5rem;",
@@ -259,7 +272,10 @@ block_card_dropdown <- function(id, info, ns) {
       ),
       tags$li(
         tags$button(
-          class = "dropdown-item action-button py-2 position-relative text-center text-danger",
+          class = paste(
+            "dropdown-item action-button",
+            "py-2 position-relative text-center text-danger"
+          ),
           type = "button",
           id = ns(sprintf("delete-%s", id)),
           style = "padding-left: 2.5rem;",
@@ -274,7 +290,10 @@ block_card_dropdown <- function(id, info, ns) {
       # Block details header
       tags$li(
         tags$h6(
-          class = "dropdown-header text-uppercase fw-semibold small text-secondary",
+          class = paste(
+            "dropdown-header text-uppercase",
+            "fw-semibold small text-secondary"
+          ),
           style = "font-size: 0.75rem; letter-spacing: 0.5px;",
           "Block Details"
         )

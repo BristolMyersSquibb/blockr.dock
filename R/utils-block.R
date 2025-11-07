@@ -130,7 +130,6 @@ update_blk_state_ui <- function(blk, session) {
 #' @keywords internal
 handle_block_actions <- function(blk, update, session) {
   id <- attr(blk, "uid")
-  ns <- session$ns
 
   observeEvent(
     session$input[[sprintf("append-%s", id)]],
@@ -163,9 +162,6 @@ handle_block_actions <- function(blk, update, session) {
 #' @keywords internal
 #' @rdname handlers-utils
 update_block_ui <- function(board, update, session) {
-  input <- session$input
-  ns <- session$ns
-
   # Register update block UI callbacks for existing blocks
   observeEvent(
     req(length(board$blocks) > 0),
