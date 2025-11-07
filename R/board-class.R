@@ -4,15 +4,15 @@
 #' extends [blockr.core::new_board()].
 #'
 #' @inheritParams blockr.core::new_board
-#' @param layout Dock layout
 #' @param extensions Dock extensions
+#' @param layout Dock layout
 #'
 #' @return A `board` object
 #'
 #' @rdname dock
 #' @export
-new_dock_board <- function(..., layout = new_dock_layout(),
-                           extensions = list(),
+new_dock_board <- function(blocks = list(), ..., extensions = list(),
+                           layout = default_dock_layout(blocks, extensions),
                            options = dock_board_options(),
                            class = character()) {
 
@@ -20,11 +20,28 @@ new_dock_board <- function(..., layout = new_dock_layout(),
     extensions <- list(extensions)
   }
 
+  opts <- c(
+    list(options),
+    lapply(extensions, extension_options)
+  )
+
+  opt_ids <- character()
+
+  for (i in seq_along(opts)) {
+
+    cur <- opts[[i]]
+    cur <- cur[!names(cur) %in% opt_ids]
+
+    opt_ids <- c(opt_ids, names(cur))
+    opts[[i]] <- cur
+  }
+
   new_board(
+    blocks = blocks,
     ...,
-    layout = as_dock_layout(layout),
     extensions = set_names(extensions, chr_ply(extensions, extension_id)),
-    options = options,
+    layout = as_dock_layout(layout),
+    options = as_board_options(opts),
     class = c(class, "dock_board")
   )
 }
@@ -95,8 +112,7 @@ dock_board_options <- function() {
       blockr_option("dark_mode", FALSE),
       category = "Theme options"
     ),
-    new_show_conditions_option(category = "Board options"),
-    new_blocks_position_option(category = "Layout options")
+    new_show_conditions_option(category = "Board options")
   )
 }
 

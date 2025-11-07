@@ -9,6 +9,7 @@
 \alias{extension_id}
 \alias{extension_name}
 \alias{extension_ctor}
+\alias{extension_options}
 \title{Dock extensions}
 \usage{
 new_dock_extension(
@@ -18,6 +19,7 @@ new_dock_extension(
   class,
   ctor = sys.parent(),
   pkg = NULL,
+  options = new_board_options(),
   ...
 )
 
@@ -34,6 +36,8 @@ extension_id(x)
 extension_name(x)
 
 extension_ctor(x)
+
+extension_options(x)
 }
 \arguments{
 \item{server}{A function returning \code{\link[shiny:moduleServer]{shiny::moduleServer()}}}
@@ -47,6 +51,8 @@ extension_ctor(x)
 \item{ctor}{Constructor function name}
 
 \item{pkg}{Package to look up \code{ctor}}
+
+\item{options}{Board options supplied by an extension}
 
 \item{...}{Further attributes}
 

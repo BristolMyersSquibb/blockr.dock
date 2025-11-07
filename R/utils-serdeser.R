@@ -27,7 +27,7 @@ ser_deser_ui <- function(id, board) {
 }
 
 #' @export
-serialize_board.dock_board <- function(x, blocks, layout, ...,
+serialize_board.dock_board <- function(x, blocks, dock, ...,
                                        session = get_session()) {
 
   blocks <- lapply(
@@ -49,7 +49,7 @@ serialize_board.dock_board <- function(x, blocks, layout, ...,
         x,
         blocks = blocks,
         options = opts,
-        layout = layout()
+        layout = dock$layout()
       ),
       lapply(
         list(...),

@@ -31,6 +31,7 @@ for the `iris` dataset, we can run
 ``` r
 library(blockr.dock)
 library(blockr.core)
+
 serve(
   new_dock_board(
     blocks = c(
@@ -38,6 +39,12 @@ serve(
       b = new_scatter_block(x = "Sepal.Length", y = "Sepal.Width")
     ),
     links = list(from = "a", to = "b", input = "data"),
+    extensions = new_edit_board_extension()
+  )
+)
+
+serve(
+  new_dock_board(
     extensions = new_edit_board_extension()
   )
 )

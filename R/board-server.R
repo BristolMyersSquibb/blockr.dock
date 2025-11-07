@@ -1,5 +1,5 @@
 board_server_callback <- function(board, update, ..., session = get_session()) {
-  layout <- manage_dock(board, session)
+  dock <- manage_dock(board, session)
 
   # Block UI management
   update_block_ui(board, update, session)
@@ -21,14 +21,14 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   for (i in names(exts)) {
     ext_state[[i]] <- extension_server(
       exts[[i]],
-      list(board = board, update = update, layout = layout),
+      list(board = board, update = update, dock = dock),
       intercom,
       list(...)
     )
   }
 
   c(
-    list(layout = layout),
+    list(dock = dock),
     ext_state
   )
 }
@@ -38,33 +38,33 @@ manage_dock <- function(board, session = get_session()) {
 
   input <- session$input
 
+  if (get_log_level() >= debug_log_level) {
+    observeEvent(
+      input[[dock_input("active-group")]],
+      {
+        ag <- input[[dock_input("active-group")]] # nolint: object_usage_linter.
+        log_debug("active group is now {ag}")
+      }
+    )
+  }
+
   observeEvent(
-    req(input[[paste0(dock_id(), "_initialized")]]),
+    req(input[[dock_input("initialized")]]),
     {
       layout <- dock_layout(board$board)
 
-      if (is_empty_layout(layout)) {
-        for (id in board_block_ids(board$board)) {
-          show_block_panel(id, add_panel = TRUE, proxy = dock)
-        }
+      restore_dock(layout, dock)
 
-        for (ext in dock_extensions(board$board)) {
-          show_ext_panel(ext, add_panel = TRUE, proxy = dock)
-        }
-      } else {
-        restore_dock(layout, dock)
-
-        for (id in as_dock_panel_id(layout)) {
-          if (is_block_panel_id(id)) {
-            show_block_panel(id, add_panel = FALSE, proxy = dock)
-          } else if (is_ext_panel_id(id)) {
-            show_ext_panel(id, add_panel = FALSE, proxy = dock)
-          } else {
-            blockr_abort(
-              "Unknown panel type {class(id)}.",
-              class = "dock_panel_invalid"
-            )
-          }
+      for (id in as_dock_panel_id(layout)) {
+        if (is_block_panel_id(id)) {
+          show_block_panel(id, add_panel = FALSE, proxy = dock)
+        } else if (is_ext_panel_id(id)) {
+          show_ext_panel(id, add_panel = FALSE, proxy = dock)
+        } else {
+          blockr_abort(
+            "Unknown panel type {class(id)}.",
+            class = "dock_panel_invalid"
+          )
         }
       }
     },
@@ -72,10 +72,10 @@ manage_dock <- function(board, session = get_session()) {
   )
 
   observeEvent(
-    input[[paste0(dock_id(), "_panel-to-remove")]],
+    input[[dock_input("panel-to-remove")]],
     {
       id <- as_dock_panel_id(
-        input[[paste0(dock_id(), "_panel-to-remove")]]
+        input[[dock_input("panel-to-remove")]]
       )
 
       if (is_block_panel_id(id)) {
@@ -92,12 +92,12 @@ manage_dock <- function(board, session = get_session()) {
   )
 
   observeEvent(
-    input[[paste0(dock_id(), "_panel-to-add")]],
+    input[[dock_input("panel-to-add")]],
     suggest_panels_to_add(dock, board, session)
   )
 
   observeEvent(
-    req(input[[paste0(dock_id(), "_n-panels")]] == 0),
+    req(input[[dock_input("n-panels")]] == 0),
     suggest_panels_to_add(dock, board, session)
   )
 
@@ -106,17 +106,22 @@ manage_dock <- function(board, session = get_session()) {
     {
       req(input$add_dock_panel)
 
+      pos <- list(
+        referenceGroup = input[[dock_input("panel-to-add")]],
+        direction = "within"
+      )
+
       for (id in input$add_dock_panel) {
         if (grepl("^blk-", id)) {
           show_block_panel(
             sub("^blk-", "", id),
-            add_panel = TRUE,
+            add_panel = pos,
             proxy = dock
           )
         } else if (grepl("^ext-", id)) {
           show_ext_panel(
             dock_extensions(board$board)[[sub("^ext-", "", id)]],
-            add_panel = TRUE,
+            add_panel = pos,
             proxy = dock
           )
         } else {
@@ -136,7 +141,27 @@ manage_dock <- function(board, session = get_session()) {
     removeModal()
   )
 
-  reactive(dockViewR::get_dock(dock))
+  prev_active_group <- reactiveVal()
+  active_group_trail <- reactiveVal()
+
+  observeEvent(
+    input[[dock_input("active-group")]],
+    {
+      cur_ag <- input[[dock_input("active-group")]]
+      pre_ag <- active_group_trail()
+      if (!identical(pre_ag, cur_ag)) {
+        log_trace("setting previous active group to {pre_ag}")
+        prev_active_group(pre_ag)
+      }
+      active_group_trail(cur_ag)
+    }
+  )
+
+  list(
+    layout = reactive(dockViewR::get_dock(dock)),
+    proxy = dock,
+    prev_active_group = prev_active_group
+  )
 }
 
 

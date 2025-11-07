@@ -3,7 +3,7 @@
 #' @export
 new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 
-  if (is.null(grid)) {
+  if (!length(grid)) {
     grid <- list(
       root = list(type = "branch", data = list(), size = 0L),
       width = 0L,
@@ -12,18 +12,91 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
     )
   }
 
-  if (is.null(panels)) {
+  if (!length(panels)) {
     panels <- set_names(list(), character(0L))
   }
 
   content <- list(grid = grid, panels = panels)
 
-  if (not_null(active_group)) {
+  if (!length(active_group)) {
     content <- c(content, list(activeGroup = active_group))
   }
 
   validate_dock_layout(
     structure(content, class = "dock_layout")
+  )
+}
+
+#' @rdname dock
+#' @export
+default_dock_layout <- function(blocks = list(), extensions = list()) {
+
+  preproc_panel <- function(x) {
+    c(
+      x[c("id", "title")],
+      list(
+        contentComponent = "default",
+        tabComponent = "manual",
+        params = list(
+          content = list(html = c(x[["content"]][["html"]])),
+          style = x[["style"]],
+          removeCallback = list(
+            `__IS_FUNCTION__` = TRUE,
+            source = unclass(x[["remove"]][["callback"]])
+          )
+        )
+      )
+    )
+  }
+
+  new_leaf <- function(views, id) {
+    list(
+      type = "leaf",
+      data = list(views = as.list(views), activeView = views[1L], id = id),
+      size = 0.5
+    )
+  }
+
+  new_branch <- function(...) {
+    list(type = "branch", data = filter_empty(list(...)))
+  }
+
+  blk_panels <- lapply(names(blocks), block_panel)
+  ext_panels <- lapply(extensions, ext_panel)
+
+  panels <- lapply(c(blk_panels, ext_panels), preproc_panel)
+  names(panels) <- chr_xtr(panels, "id")
+
+  if (length(panels)) {
+
+    grid <- new_branch(
+      if (length(extensions)) {
+        new_leaf(chr_ply(extensions, as_ext_panel_id), id = "1")
+      },
+      if (length(blocks)) {
+        new_leaf(
+          unclass(as_block_panel_id(blocks)),
+          id = if (length(extensions)) "2" else "1"
+        )
+      }
+    )
+
+    grid <- list(
+      root = grid,
+      orientation = "HORIZONTAL"
+    )
+
+    grup <- "1"
+
+  } else {
+    grid <- NULL
+    grup <- NULL
+  }
+
+  new_dock_layout(
+    grid = grid,
+    panels = panels,
+    active_group = grup
   )
 }
 

@@ -356,6 +356,7 @@ insert_block_ui.dock_board <- function(
   id,
   x,
   blocks = NULL,
+  dock,
   ...,
   session = get_session()
 ) {
@@ -376,7 +377,7 @@ insert_block_ui.dock_board <- function(
       session = session
     )
 
-    show_block_panel(i, proxy = dock_proxy(session))
+    show_block_panel(i, determine_panel_pos(dock), dock$proxy)
   }
 
   invisible(x)
@@ -384,9 +385,11 @@ insert_block_ui.dock_board <- function(
 
 show_block_panel <- function(id, add_panel = TRUE, proxy = dock_proxy()) {
   if (isTRUE(add_panel)) {
-    add_block_panel(id, proxy)
-  } else {
+    add_block_panel(id, proxy = proxy)
+  } else if (isFALSE(add_panel)) {
     select_block_panel(id, proxy)
+  } else {
+    add_block_panel(id, position = add_panel, proxy = proxy)
   }
 
   show_block_ui(id, proxy$session)
