@@ -35,21 +35,66 @@ collapse_container <- function(id, ...) {
   tags$div(class = "collapse", id = id, ...)
 }
 
+#' Get metadata for blocks
+#'
+#' @param blocks Blocks passed as `blocks` or `block` object
 #' @rdname meta
-#' @keywords internal
-blk_icon <- function(block) {
-  id <- registry_id_from_block(block)
-
-  if (length(id)) {
-    block_metadata(id, "icon")
-  } else {
-    default_icon(default_category())
+#' @export
+blks_metadata <- function(blocks) {
+  default_name <- function(x) {
+    gsub("_", " ", class(x)[1L])
   }
+
+  if (is_block(blocks)) {
+    id <- registry_id_from_block(blocks)
+  } else if (is_blocks(blocks)) {
+    id <- lapply(blocks, registry_id_from_block)
+  } else {
+    block_abort("Unsupported input type for `blocks`.")
+  }
+
+  if (any(lengths(id) == 0L)) {
+    cat <- default_category()
+
+    res <- data.frame(
+      id = id[lengths(id) == 0L],
+      name = chr_ply(blocks[lengths(id) == 0L], default_name),
+      description = "not available",
+      category = cat,
+      icon = default_icon(cat),
+      package = "local",
+      color = blk_color(cat)
+    )
+
+    if (is_blocks(blocks)) {
+      rownames(res) <- names(blocks)[lengths(id) == 0L]
+    }
+  } else {
+    res <- NULL
+  }
+
+  if (any(lengths(id) > 0L)) {
+    reg <- block_metadata(id[lengths(id) > 0L])
+    reg <- cbind(reg, color = blk_color(reg$category))
+
+    if (is_blocks(blocks)) {
+      rownames(reg) <- names(blocks)[lengths(id) > 0L]
+    }
+
+    res <- rbind(res, reg)
+
+    if (is_blocks(blocks)) {
+      res <- res[names(blocks), ]
+    }
+  }
+
+  res
 }
 
 #' Get block color based on category
 #'
 #' @param category Block category
+#' @rdname meta
 #' @export
 blk_color <- function(category) {
   # Okabe-Ito colorblind-friendly palette

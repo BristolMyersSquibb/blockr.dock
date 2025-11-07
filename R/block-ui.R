@@ -2,7 +2,7 @@
 block_ui.dock_board <- function(id, x, blocks = NULL, edit_ui = NULL, ...) {
   block_panel <- function(x, id, edit_ui, ns, board) {
     blk_id <- ns(paste0("block_", id))
-    blk_info <- as.list(block_metadata(registry_id_from_block(x)))
+    blk_info <- blks_metadata(x)
 
     # Edit plugin
     if (!is.null(edit_ui)) {
@@ -10,8 +10,7 @@ block_ui.dock_board <- function(id, x, blocks = NULL, edit_ui = NULL, ...) {
     }
 
     # if yellow color, use black text, otherwise white for contrasts
-    bg_color <- blk_color(blk_info$category)
-    icon_color <- if (bg_color == "#F0E442") "text-dark" else "text-white"
+    icon_color <- if (blk_info$color == "#F0E442") "text-dark" else "text-white"
 
     card_tag <- tags$div(
       class = "card",
@@ -35,7 +34,7 @@ block_ui.dock_board <- function(id, x, blocks = NULL, edit_ui = NULL, ...) {
                 "min-height: 100%%;",
                 "position: relative;"
               ),
-              bg_color
+              blk_info$color
             ),
             div(
               class = icon_color,
