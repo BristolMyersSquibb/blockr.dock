@@ -1,6 +1,6 @@
 #' @keywords internal
 toggle_blk_section <- function(blk, session) {
-  id <- attr(blk, "uid")
+  id <- names(blk)
   accordion_id <- paste0("accordion-", id)
 
   observeEvent(
@@ -60,9 +60,10 @@ create_issues_ui <- function(id, statuses, ns) {
 
 #' @keywords internal
 update_blk_state_ui <- function(blk, session) {
+  id <- names(blk)
+  blk <- blk[[1]]
   conds <- names(blk$server$cond)
   ns <- session$ns
-  id <- attr(blk, "uid")
 
   lapply(conds, function(nme) {
     observeEvent(blk$server$cond[[nme]], {
@@ -129,7 +130,7 @@ update_blk_state_ui <- function(blk, session) {
 
 #' @keywords internal
 handle_block_actions <- function(blk, update, session) {
-  id <- attr(blk, "uid")
+  id <- names(blk)
 
   observeEvent(
     session$input[[sprintf("append-%s", id)]],
@@ -169,8 +170,7 @@ update_block_ui <- function(board, update, session) {
       lapply(
         names(board$blocks),
         function(id) {
-          blk <- board$blocks[[id]]
-          attr(blk, "uid") <- id
+          blk <- board$blocks[id]
           update_blk_state_ui(blk, session)
           toggle_blk_section(blk, session)
           handle_block_actions(blk, update, session)
