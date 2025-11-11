@@ -1,110 +1,46 @@
 #' @export
 block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
 
-  block_panel <- function(x, id, ns) {
-
-    blk_id <- ns(paste0("block_", id))
-    blk_info <- get_block_metadata(x)
-
-    card_tag <- div(
-      class = "card",
-      width = "100%",
-      id = ns(as_block_handle_id(id)),
-      div(
-        class = c("row", "g-0", "px-4"),
-        div(
-          class = c(
-            "col-sm-2",
-            "col-md-1",
-            "col-lg-1",
-            "d-flex",
-            "align-items-center",
-            "justify-content-start"
-          ),
-          blk_icon(blk_info$category, class = "fa-3x")
-        ),
-        div(
-          class = c("col-sm-10", "col-md-11", "col-lg-11"),
-          div(
-            class = "card-body",
-            div(
-              class = c(
-                "d-flex",
-                "align-items-center",
-                "justify-content-start",
-                "card-title gap-2"
-              ),
-              bslib::tooltip(
-                icon("info-circle"),
-                p(icon("lightbulb"), "How to use this block?"),
-                p(blk_info$description, ".")
-              )
-            ),
-            div(
-              class = c("card-subtitle", "mb-2", "text-body-secondary"),
-              span(
-                class = c("badge", "bg-secondary"),
-                "Type:",
-                blk_info$category
-              ),
-              span(
-                class = c("badge", "bg-secondary"),
-                "Package:",
-                blk_info$package
-              )
-            )
-          )
-        )
-      ),
-      bslib::accordion(
-        id = ns(paste0("accordion-", id)),
-        multiple = TRUE,
-        class = "accordion-flush",
-        open = c("inputs", "outputs", "state"),
-        bslib::accordion_panel(
-          icon = icon("sliders"),
-          title = "Block inputs",
-          value = "inputs",
-          expr_ui(blk_id, x)
-        ),
-        bslib::accordion_panel(
-          icon = icon("chart-simple"),
-          title = "Block output(s)",
-          value = "outputs",
-          style = "max-width: 100%; overflow-x: auto;",
-          block_ui(blk_id, x)
-        )
-      )
-    )
-
-    tagAppendAttributes(
-      card_tag,
-      class = "border border-0 shadow-none"
-    )
-  }
-
   stopifnot(is_string(id))
 
   if (is.null(blocks)) {
     blocks <- board_blocks(x)
-  } else if (is.character(blocks)) {
-    blocks <- board_blocks(x)[blocks]
   }
 
   stopifnot(is_blocks(blocks))
 
-  res <- map(
-    block_panel,
+  map(
+    block_card,
     blocks,
     names(blocks),
-    MoreArgs = list(ns = NS(id))
+    MoreArgs = list(
+      plugin = board_plugins(x, "edit_block"),
+      board = x,
+      board_ns = NS(id)
+    )
+  )
+}
+
+block_card <- function(blk, blk_id, plugin, board, board_ns) {
+
+  blk_srv_id <- board_ns(paste0("block_", blk_id))
+
+  edit_ui <- plugin_ui(plugin)
+
+  card_tag <- div(
+    class = "card",
+    width = "100%",
+    id = board_ns(as_block_handle_id(blk_id)),
+    edit_ui(
+      NS(blk_srv_id, plugin_id(plugin)),
+      blk,
+      blk_id,
+      expr_ui(blk_srv_id, blk),
+      block_ui(blk_srv_id, blk)
+    )
   )
 
-  if (length(blocks) == 1L) {
-    return(res[[1L]])
-  }
-
-  res
+  tagAppendAttributes(card_tag, class = "border border-0 shadow-none")
 }
 
 show_hide_block_dep <- function() {
@@ -117,29 +53,19 @@ show_hide_block_dep <- function() {
 }
 
 #' @export
-remove_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
+remove_block_ui.dock_board <- function(id, x, blocks, dock, ...,
                                        session = get_session()) {
-
-  if (is.null(blocks)) {
-    blocks <- board_block_ids(x)
-  }
-
-  if (is_blocks(blocks)) {
-    blocks <- names(blocks)
-  }
 
   stopifnot(is.character(blocks), all(blocks %in% board_block_ids(x)))
 
-  proxy <- dock_proxy(session)
-
   for (blk in blocks) {
 
-    if (as_block_panel_id(blk) %in% block_panel_ids(proxy)) {
-      hide_block_panel(blk, proxy = proxy)
+    if (as_block_panel_id(blk) %in% block_panel_ids(dock$proxy)) {
+      hide_block_panel(blk, proxy = dock$proxy)
     }
 
     removeUI(
-      paste0("#", id, "-", blk),
+      as_block_handle_id(id),
       immediate = TRUE,
       session = session
     )
@@ -149,23 +75,16 @@ remove_block_ui.dock_board <- function(id, x, blocks = NULL, ...,
 }
 
 #' @export
-insert_block_ui.dock_board <- function(id, x, blocks = NULL, dock, ...,
+insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
                                        session = get_session()) {
 
-  if (is.null(blocks)) {
-    blocks <- board_blocks(x)
-  }
-
-  if (is.character(blocks)) {
-    blocks <- board_blocks(x)[blocks]
-  }
+  stopifnot(is_blocks(blocks))
 
   for (i in names(blocks)) {
-
     insertUI(
       paste0("#", id, "-blocks_offcanvas"),
       "beforeEnd",
-      block_ui(id, x, blocks[i], ...),
+      block_ui(id, x, blocks[i], ...)[[1L]],
       immediate = TRUE,
       session = session
     )

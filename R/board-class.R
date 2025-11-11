@@ -36,11 +36,16 @@ new_dock_board <- function(blocks = list(), ..., extensions = list(),
     opts[[i]] <- cur
   }
 
+  blocks <- as_blocks(blocks)
+  layout <- as_dock_layout(layout)
+
+  validate_dock_layout(layout, names(blocks))
+
   new_board(
     blocks = blocks,
     ...,
     extensions = set_names(extensions, chr_ply(extensions, extension_id)),
-    layout = as_dock_layout(layout),
+    layout = layout,
     options = as_board_options(opts),
     class = c(class, "dock_board")
   )
@@ -51,13 +56,6 @@ new_dock_board <- function(blocks = list(), ..., extensions = list(),
 #' @export
 is_dock_board <- function(x) {
   inherits(x, "dock_board")
-}
-
-#' @export
-validate_board.dock_board <- function(x) {
-  x <- NextMethod()
-  validate_dock_layout(dock_layout(x), board_block_ids(x))
-  x
 }
 
 #' @rdname dock

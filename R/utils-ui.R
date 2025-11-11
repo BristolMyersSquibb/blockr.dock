@@ -1,6 +1,10 @@
-off_canvas <- function(id, title, ..., width = "w-25",
-                       position = c("start", "top", "bottom", "end")) {
-
+off_canvas <- function(
+  id,
+  title,
+  ...,
+  width = "w-25",
+  position = c("start", "top", "bottom", "end")
+) {
   label <- paste0(id, "-title")
 
   div(
@@ -26,55 +30,8 @@ off_canvas <- function(id, title, ..., width = "w-25",
   )
 }
 
-get_block_metadata <- function(x) {
-
-  stopifnot(is_block(x))
-
-  ctor <- attr(x, "ctor")
-
-  if (is_string(ctor)) {
-    blk <- sub("^new_", "", ctor)
-    blks <- available_blocks()
-
-    if (blk %in% names(blks)) {
-      info <- blks[[blk]]
-
-      res <- list(
-        category = attr(info, "category"),
-        name = attr(info, "name"),
-        description = attr(info, "description"),
-        package = attr(info, "package")
-      )
-
-      return(res)
-    }
-  }
-
-  list(
-    category = "Uncategorized",
-    name = block_name(x),
-    description = "No description available",
-    package = "local"
-  )
-}
-
-blk_icon <- function(category, class = NULL) {
-
-  stopifnot(is_string(category))
-
-  icon(
-    switch(
-      category,
-      data = "table",
-      file = "file",
-      parse = "gear",
-      plot = "chart-line",
-      transform = "wand-magic",
-      table = "table",
-      "reddit-alien"
-    ),
-    class
-  )
+collapse_container <- function(id, ...) {
+  tags$div(class = "collapse", id = id, ...)
 }
 
 move_dom_element <- function(from, to, session = get_session()) {
@@ -88,7 +45,6 @@ move_dom_element <- function(from, to, session = get_session()) {
 }
 
 determine_panel_pos <- function(dock) {
-
   sess <- dock$proxy$session
 
   if (sess$input[[dock_input("n-groups")]] < 2L) {
@@ -122,7 +78,6 @@ determine_panel_pos <- function(dock) {
 #' @rdname panel
 #' @export
 show_panel <- function(id, board, dock, type = c("block", "extension")) {
-
   stopifnot(is_string(id))
 
   type <- match.arg(type)
@@ -145,7 +100,6 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
   panels <- as_obj_id(panels)
 
   if (id %in% panels) {
-
     if (identical(type, "block")) {
       select_block_panel(id, proxy)
     } else {
@@ -158,12 +112,9 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
   pos <- determine_panel_pos(dock)
 
   if (identical(type, "block")) {
-
     add_block_panel(id, position = pos, proxy = proxy)
     show_block_ui(id, proxy$session)
-
   } else {
-
     exts <- dock_extensions(board)
 
     add_ext_panel(exts[[id]], position = pos, proxy = proxy)
@@ -171,4 +122,8 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
   }
 
   invisible()
+}
+
+drop_nulls <- function(x) {
+  x[!lgl_ply(x, is.null)]
 }

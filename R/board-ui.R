@@ -3,12 +3,10 @@ board_ui.dock_board <- function(id, x, ...) {
 
   stopifnot(is_string(id))
 
-  plugins <- board_plugins(x)
-
-  if ("preserve_board" %in% names(plugins)) {
-    serdes <- board_ui(id, board_plugins(x, which = "preserve_board"), x)
-  } else {
+  if (is_dock_locked()) {
     serdes <- NULL
+  } else {
+    serdes <- board_ui(id, board_plugins(x, "preserve_board"), x)
   }
 
   tagList(
@@ -43,7 +41,6 @@ board_ui.dock_board <- function(id, x, ...) {
 }
 
 options_ui <- function(id, x, ...) {
-
   opts <- split(x, chr_ply(x, attr, "category"))
 
   offcanvas_id <- NS(id, "options_offcanvas")
@@ -64,7 +61,7 @@ options_ui <- function(id, x, ...) {
       ...,
       hr(),
       do.call(
-        bslib::accordion,
+        accordion,
         c(
           list(
             id = NS(id, "board_options"),
@@ -74,7 +71,7 @@ options_ui <- function(id, x, ...) {
           ),
           map(
             do.call,
-            rep(list(bslib::accordion_panel), length(opts)),
+            rep(list(accordion_panel), length(opts)),
             map(
               list,
               title = names(opts),

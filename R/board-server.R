@@ -55,7 +55,6 @@ manage_dock <- function(board, session = get_session()) {
       restore_dock(layout, dock)
 
       for (id in as_dock_panel_id(layout)) {
-
         if (is_block_panel_id(id)) {
           show_block_panel(id, add_panel = FALSE, proxy = dock)
         } else if (is_ext_panel_id(id)) {
@@ -112,7 +111,6 @@ manage_dock <- function(board, session = get_session()) {
       )
 
       for (id in input$add_dock_panel) {
-
         if (grepl("^blk-", id)) {
           show_block_panel(
             sub("^blk-", "", id),
@@ -188,7 +186,6 @@ suggest_panels_to_add <- function(dock, board, session) {
   )
 
   if (length(blk_opts)) {
-
     blk_opts <- set_names(
       paste0("blk-", blk_opts),
       paste0(
@@ -223,7 +220,6 @@ suggest_panels_to_add <- function(dock, board, session) {
   }
 
   if (length(opts)) {
-
     showModal(
       modalDialog(
         title = "Select panel to add",
@@ -248,7 +244,6 @@ suggest_panels_to_add <- function(dock, board, session) {
         )
       )
     )
-
   } else {
     notify("No further panels can be added. Remove some panels first.")
   }

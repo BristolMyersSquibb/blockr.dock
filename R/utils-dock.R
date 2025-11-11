@@ -14,7 +14,6 @@ dock_panel_named_ids <- function(proxy = dock_proxy()) {
 }
 
 block_panel_ids <- function(proxy = dock_proxy()) {
-
   res <- dock_panel_ids(proxy)
 
   as_block_panel_id(
@@ -23,7 +22,6 @@ block_panel_ids <- function(proxy = dock_proxy()) {
 }
 
 remove_block_panel <- function(id, proxy = dock_proxy()) {
-
   pid <- as_block_panel_id(id)
 
   log_debug("removing block panel {pid}")
@@ -34,7 +32,6 @@ remove_block_panel <- function(id, proxy = dock_proxy()) {
 }
 
 add_block_panel <- function(id, ..., proxy = dock_proxy()) {
-
   log_debug("adding block panel {as_block_panel_id(id)}")
 
   dockViewR::add_panel(proxy, panel = block_panel(id, ...))
@@ -43,7 +40,6 @@ add_block_panel <- function(id, ..., proxy = dock_proxy()) {
 }
 
 select_block_panel <- function(id, proxy = dock_proxy()) {
-
   bid <- as_block_panel_id(id)
 
   log_debug("selecting block panel {bid}")
@@ -54,16 +50,14 @@ select_block_panel <- function(id, proxy = dock_proxy()) {
 }
 
 block_panel <- function(id, ...) {
-
   pid <- as_block_panel_id(id)
 
   log_debug("creating block panel {pid}")
 
-  dock_panel(id = pid, title = paste("Block:", id), ...)
+  dock_panel(id = pid, title = id, ...)
 }
 
 remove_ext_panel <- function(id, proxy = dock_proxy()) {
-
   pid <- as_ext_panel_id(id)
 
   log_debug("removing extension panel {pid}")
@@ -74,7 +68,6 @@ remove_ext_panel <- function(id, proxy = dock_proxy()) {
 }
 
 add_ext_panel <- function(ext, ..., proxy = dock_proxy()) {
-
   stopifnot(is_dock_extension(ext))
 
   log_debug("adding block {as_ext_panel_id(ext)}")
@@ -85,7 +78,6 @@ add_ext_panel <- function(ext, ..., proxy = dock_proxy()) {
 }
 
 select_ext_panel <- function(id, proxy = dock_proxy()) {
-
   eid <- as_ext_panel_id(id)
 
   log_debug("selecting extension panel {eid}")
@@ -96,7 +88,6 @@ select_ext_panel <- function(id, proxy = dock_proxy()) {
 }
 
 ext_panel <- function(ext, ...) {
-
   eid <- as_ext_panel_id(ext)
 
   log_debug("creating block panel {eid}")
@@ -105,7 +96,6 @@ ext_panel <- function(ext, ...) {
 }
 
 ext_panel_ids <- function(proxy = dock_proxy()) {
-
   res <- dock_panel_ids(proxy)
 
   as_ext_panel_id(
@@ -123,7 +113,6 @@ dock_proxy <- function(session = get_session()) {
 }
 
 dock_panel <- function(...) {
-
   dockViewR::panel(
     ...,
     content = tagList(),
@@ -139,7 +128,6 @@ dock_panel <- function(...) {
 }
 
 set_dock_view_output <- function(..., session = get_session()) {
-
   args <- c(
     list(...),
     if (is_dock_locked()) list(locked = TRUE, disableDnd = TRUE),
@@ -164,9 +152,7 @@ is_dock_locked <- function() {
 }
 
 dock_panel_groups <- function(session = get_session()) {
-
   xtr_leaf_id <- function(x) {
-
     if (x$type == "leaf") {
       return(x$data$id)
     }
