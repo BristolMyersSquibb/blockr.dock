@@ -45,6 +45,7 @@ block_card_title <- function(block, id, info) {
         textInput(
           NS(id, "block_name_in"),
           "Block name",
+          value = block_name(block),
           updateOn = "blur"
         )
       )
@@ -207,53 +208,72 @@ block_card_content <- function(ns, expr_ui, block_ui) {
 
 #' @keywords internal
 edit_block_server <- function(id, block_id, board, update, ...) {
+
+  stopifnot(is_string(block_id))
+
   moduleServer(
     id,
     function(input, output, session) {
 
-      initial_block <- isolate(
-        board_blocks(board$board)[[block_id]]
-      )
-
-      cur_name <- reactive({
-        req(board_blocks(board$board)[[block_id]])
-        block_name(board_blocks(board$board)[[block_id]])
-      })
-
-      output$block_name_out <- renderUI({
-        h3(
-          input$block_name_in,
-          tags$sup(icon("pencil-square", class = "fa-2xs"))
-        )
-      })
-
-      observeEvent(
-        cur_name(),
-        updateTextInput(
-          session,
-          "block_name_in",
-          "Block name",
-          cur_name()
-        )
-      )
-
       observeEvent(
         input$block_name_in,
         {
-          req(input$block_name_in)
-          if (!identical(cur_name(), input$block_name_in)) {
-            new_val <- board_blocks(board$board)[[block_id]]
-            block_name(new_val) <- input$block_name_in
-            new_val <- as_blocks(set_names(list(new_val), block_id))
-            update(list(blocks = list(mod = new_val)))
+          req(
+            input$block_name_in,
+            block_id %in% board_block_ids(board$board)
+          )
+
+          blk <- board_blocks(board$board)[[block_id]]
+          cur <- block_name(blk)
+
+          if (identical(cur, input$block_name_in)) {
+            return()
           }
+
+          block_name(blk) <- input$block_name_in
+
+          update(
+            list(
+              blocks = list(
+                mod = as_blocks(set_names(list(blk), block_id))
+              )
+            )
+          )
         }
       )
 
-      output$block_summary <- renderText(
-        block_summary(
-          initial_block,
-          reval_if(board$blocks[[block_id]]$server$result)
+      observeEvent(
+        update(),
+        {
+          upd <- update()
+
+          continue <- "blocks" %in% names(upd) &&
+            "mod" %in% names(upd$blocks) &&
+            block_id %in% names(upd$blocks$mod)
+
+          if (!continue) {
+            return()
+          }
+
+          new <- block_name(upd$blocks$mod[[block_id]])
+
+          if (identical(new, input$block_name_in)) {
+            return()
+          }
+
+          updateTextInput(
+            session,
+            "block_name_in",
+            "Block name",
+            new
+          )
+        }
+      )
+
+      output$block_name_out <- renderUI(
+        h3(
+          input$block_name_in,
+          tags$sup(icon("pencil-square", class = "fa-2xs"))
         )
       )
 
