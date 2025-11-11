@@ -1,19 +1,12 @@
 #' @export
 board_ui.dock_board <- function(id, x, ...) {
+
   stopifnot(is_string(id))
 
-  plugins <- board_plugins(x)
-
-  if ("preserve_board" %in% names(plugins)) {
-    serdes <- board_ui(id, board_plugins(x, which = "preserve_board"), x)
-  } else {
+  if (is_dock_locked()) {
     serdes <- NULL
-  }
-
-  if ("edit_block" %in% names(plugins)) {
-    block_plugin <- plugins[["edit_block"]]
   } else {
-    block_plugin <- NULL
+    serdes <- board_ui(id, board_plugins(x, "preserve_board"), x)
   }
 
   tagList(
@@ -21,7 +14,7 @@ board_ui.dock_board <- function(id, x, ...) {
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
-      block_ui(id, x, edit_ui = block_plugin)
+      block_ui(id, x)
     ),
     options_ui(
       id,

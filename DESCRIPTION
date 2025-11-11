@@ -26,7 +26,8 @@ Imports:
     dockViewR (>= 0.2.1),
     htmltools,
     cli,
-    shinyWidgets
+    shinyWidgets,
+    jsonlite
 Suggests: 
     testthat (>= 3.0.0),
     DT
