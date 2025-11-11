@@ -30,7 +30,6 @@ off_canvas <- function(
   )
 }
 
-#' @keywords internal
 collapse_container <- function(id, ...) {
   tags$div(class = "collapse", id = id, ...)
 }

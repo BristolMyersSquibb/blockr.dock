@@ -70,6 +70,10 @@ block_card_title <- function(block, id, info) {
 
 block_card_toggles <- function(blk, ns) {
 
+  if (is_dock_locked()) {
+    return(NULL)
+  }
+
   opts <- c("inputs", "outputs")
 
   section_toggles <- shinyWidgets::checkboxGroupButtons(
