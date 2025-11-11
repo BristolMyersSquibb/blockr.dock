@@ -25,4 +25,3 @@ ser_deser_ui <- function(id, board) {
     )
   )
 }
-

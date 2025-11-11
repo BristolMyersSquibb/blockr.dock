@@ -2,9 +2,14 @@
 serialize_board.dock_board <- function(x, blocks, dock, ...,
                                        session = get_session()) {
 
-  blocks <- lapply(
+  state <- lapply(
     lst_xtr(blocks, "server", "state"),
     lapply,
+    reval_if
+  )
+
+  visibility <- lapply(
+    lst_xtr(blocks, "server", "visible"),
     reval_if
   )
 
@@ -19,7 +24,7 @@ serialize_board.dock_board <- function(x, blocks, dock, ...,
     c(
       list(
         x,
-        blocks = blocks,
+        blocks = Map(c, state, visible = lapply(visibility, list)),
         options = opts,
         layout = dock$layout()
       ),

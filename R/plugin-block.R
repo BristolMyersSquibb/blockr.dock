@@ -23,7 +23,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
           # Right side: toggles and dropdown
           div(
             class = "d-flex align-items-center gap-2 flex-shrink-0",
-            block_card_toggles(ns),
+            block_card_toggles(blk, ns),
             block_card_dropdown(ns, blk_info, blk_id)
           )
         )
@@ -68,7 +68,7 @@ block_card_title <- function(block, id, info) {
   )
 }
 
-block_card_toggles <- function(ns) {
+block_card_toggles <- function(blk, ns) {
 
   opts <- c("inputs", "outputs")
 
@@ -78,7 +78,7 @@ block_card_toggles <- function(ns) {
     size = "sm",
     choices = set_names(opts, paste0("<small>", opts, "</small>")),
     individual = TRUE,
-    selected = opts
+    selected = coal(attr(blk, "visible"), opts)
   )
 
   # Remove the ms-auto class
@@ -259,9 +259,7 @@ edit_block_server <- function(id, block_id, board, update, ...) {
           "blk_accordion",
           input$collapse_blk_sections,
           session
-        ),
-        ignoreInit = TRUE,
-        ignoreNULL = FALSE
+        )
       )
 
       conds <- reactive(
