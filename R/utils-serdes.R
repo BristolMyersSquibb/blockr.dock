@@ -76,9 +76,11 @@ blockr_deser.dock_board <- function(x, data, ...) {
         data[!names(data) %in% c("version", "object", "extensions")],
         blockr_deser
       ),
-      extensions = lapply(
-        data[["extensions"]],
-        blockr_deser
+      list(
+        extensions = lapply(
+          data[["extensions"]],
+          blockr_deser
+        )
       )
     )
   )

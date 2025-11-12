@@ -1,10 +1,12 @@
 #' @export
 serve.dock_board <- function(x, id = rand_names(), ...) {
+
   stopifnot(is_string(id))
 
   args <- list(...)
 
   ui <- function() {
+
     log_debug("building ui for board {id}")
 
     do.call(
@@ -22,6 +24,7 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
   }
 
   server <- function(input, output, session) {
+
     onStop(enable_v2_restore(), session)
 
     board_server(
@@ -36,6 +39,7 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
 }
 
 enable_v2_restore <- function() {
+
   log_debug("setting v2 restore")
 
   cur_opt <- options(blockr.board_restore = "v2")
