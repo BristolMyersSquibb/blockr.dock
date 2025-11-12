@@ -69,6 +69,10 @@ blockr_ser.dock_extension <- function(x, state, ...) {
 
 #' @export
 blockr_deser.dock_board <- function(x, data, ...) {
+
+  # do exts first to potentially attach namespaces
+  exts <- lapply(data[["extensions"]], blockr_deser)
+
   do.call(
     new_dock_board,
     c(
@@ -76,12 +80,7 @@ blockr_deser.dock_board <- function(x, data, ...) {
         data[!names(data) %in% c("version", "object", "extensions")],
         blockr_deser
       ),
-      list(
-        extensions = lapply(
-          data[["extensions"]],
-          blockr_deser
-        )
-      )
+      list(extensions = exts)
     )
   )
 }
