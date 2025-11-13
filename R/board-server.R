@@ -11,19 +11,13 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     exts
   )
 
-  ext_state <- set_names(
-    vector("list", length(exts)),
-    names(exts)
+  ext_state <- lapply(
+    as.list(exts),
+    extension_server,
+    list(board = board, update = update, dock = dock),
+    intercom,
+    list(...)
   )
-
-  for (i in names(exts)) {
-    ext_state[[i]] <- extension_server(
-      exts[[i]],
-      list(board = board, update = update, dock = dock),
-      intercom,
-      list(...)
-    )
-  }
 
   c(
     list(dock = dock),

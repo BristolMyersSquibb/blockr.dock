@@ -3,6 +3,7 @@
 \name{new_dock_board}
 \alias{new_dock_board}
 \alias{is_dock_board}
+\alias{as_dock_board}
 \alias{dock_layout}
 \alias{dock_layout<-}
 \alias{dock_extensions}
@@ -20,13 +21,17 @@
 new_dock_board(
   blocks = list(),
   ...,
-  extensions = list(),
+  extensions = new_dock_extensions(),
   layout = default_dock_layout(blocks, extensions),
   options = dock_board_options(),
+  ctor = NULL,
+  pkg = NULL,
   class = character()
 )
 
 is_dock_board(x)
+
+as_dock_board(x, ...)
 
 dock_layout(x)
 
@@ -62,6 +67,8 @@ layout_panel_ids(x)
 \item{layout}{Dock layout}
 
 \item{options}{Board-level user settings}
+
+\item{ctor, pkg}{Constructor information (used for serialization)}
 
 \item{class}{Board sub-class}
 

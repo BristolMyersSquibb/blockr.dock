@@ -27,9 +27,5 @@ board_plugins.dock_board <- function(x, which = NULL, ...) {
 
   stopifnot(is.character(which), all(which %in% names(plugins)))
 
-  if (length(which) == 1L) {
-    plugins[[which]]
-  } else {
-    plugins[which]
-  }
+  plugins[which]
 }
