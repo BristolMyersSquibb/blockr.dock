@@ -1,12 +1,10 @@
 #' @export
 serve.dock_board <- function(x, id = rand_names(), ...) {
-
   stopifnot(is_string(id))
 
   args <- list(...)
 
   ui <- function() {
-
     log_debug("building ui for board {id}")
 
     do.call(
@@ -15,6 +13,19 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
         list(
           padding = 0,
           gap = 0,
+          theme = bs_theme(
+            version = 5,
+            # button have the same color as dockView tabs
+            "btn-active-border-shade-amount" = "5%",
+            "btn-active-bg-shade-amount" = "5%",
+            "enable-negative-margins" = "true"
+          ),
+          # Use shiny's busy indicator
+          useBusyIndicators(spinners = FALSE, pulse = TRUE),
+          busyIndicatorOptions(
+            pulse_background = "#5e626b",
+            pulse_height = "5px"
+          ),
           shinyjs::useShinyjs(),
           board_ui(id, get_serve_obj())
         ),
@@ -24,7 +35,6 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
   }
 
   server <- function(input, output, session) {
-
     onStop(enable_v2_restore(), session)
 
     board_server(
@@ -39,7 +49,6 @@ serve.dock_board <- function(x, id = rand_names(), ...) {
 }
 
 enable_v2_restore <- function() {
-
   log_debug("setting v2 restore")
 
   cur_opt <- options(blockr.board_restore = "v2")
