@@ -1,6 +1,5 @@
 board_server_callback <- function(board, update, ..., session = get_session()) {
-
-  dock <- manage_dock(board, session)
+  dock <- manage_dock(board, update, session)
 
   exts <- isolate(
     dock_extensions(board$board)
@@ -31,8 +30,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   )
 }
 
-manage_dock <- function(board, session = get_session()) {
-
+manage_dock <- function(board, update, session = get_session()) {
   dock <- set_dock_view_output(session = session)
 
   input <- session$input
@@ -156,6 +154,22 @@ manage_dock <- function(board, session = get_session()) {
     }
   )
 
+  # Update panel
+  # Panel name update
+  # When a block is modified we have to update
+  # the node data
+  observeEvent(update()$blocks$mod, {
+    blk <- update()$blocks$mod
+    blk_id <- names(blk)
+    new_name <- block_name(blk[[1]])
+    browser()
+    dockViewR::set_panel_title(
+      dock,
+      as_block_panel_id(blk_id),
+      new_name
+    )
+  })
+
   list(
     layout = reactive(dockViewR::get_dock(dock)),
     proxy = dock,
@@ -165,7 +179,6 @@ manage_dock <- function(board, session = get_session()) {
 
 
 suggest_panels_to_add <- function(dock, board, session) {
-
   ns <- session$ns
 
   panels <- dock_panel_ids(dock)
@@ -205,7 +218,6 @@ suggest_panels_to_add <- function(dock, board, session) {
   )
 
   if (length(ext_opts)) {
-
     ext_opts <- set_names(
       paste0("ext-", ext_opts),
       paste0(
