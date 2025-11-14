@@ -18,9 +18,13 @@ new_dock_board <- function(blocks = list(), ...,
                            ctor = NULL, pkg = NULL, class = character()) {
 
   extensions <- as_dock_extensions(extensions)
-
   blocks <- as_blocks(blocks)
-  layout <- as_dock_layout(layout)
+
+  if (is.character(layout)) {
+    layout <- default_dock_layout(blocks[layout], extensions)
+  } else {
+    layout <- as_dock_layout(layout)
+  }
 
   validate_dock_layout(layout, names(blocks))
 
