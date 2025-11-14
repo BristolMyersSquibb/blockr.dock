@@ -9,7 +9,13 @@
 \alias{extension_id}
 \alias{extension_name}
 \alias{extension_ctor}
-\alias{extension_options}
+\alias{new_dock_extensions}
+\alias{is_dock_extensions}
+\alias{validate_extensions}
+\alias{as_dock_extensions}
+\alias{as_dock_extensions.dock_extensions}
+\alias{as_dock_extensions.dock_extension}
+\alias{as_dock_extensions.list}
 \title{Dock extensions}
 \usage{
 new_dock_extension(
@@ -37,7 +43,19 @@ extension_name(x)
 
 extension_ctor(x)
 
-extension_options(x)
+new_dock_extensions(x = list())
+
+is_dock_extensions(x)
+
+validate_extensions(x)
+
+as_dock_extensions(x, ...)
+
+\method{as_dock_extensions}{dock_extensions}(x, ...)
+
+\method{as_dock_extensions}{dock_extension}(x, ...)
+
+\method{as_dock_extensions}{list}(x, ...)
 }
 \arguments{
 \item{server}{A function returning \code{\link[shiny:moduleServer]{shiny::moduleServer()}}}

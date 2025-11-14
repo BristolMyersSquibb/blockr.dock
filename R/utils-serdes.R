@@ -1,5 +1,5 @@
 #' @export
-serialize_board.dock_board <- function(x, blocks, dock, ...,
+serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
                                        session = get_session()) {
 
   state <- lapply(
@@ -24,33 +24,17 @@ serialize_board.dock_board <- function(x, blocks, dock, ...,
     c(
       list(
         x,
+        board_id = id,
         blocks = Map(c, state, visible = lapply(visibility, list)),
         options = opts,
-        layout = dock$layout()
-      ),
-      lapply(
-        list(...),
-        reval
+        layout = as_dock_layout(dock$layout()),
+        extensions = lapply(
+          list(...),
+          reval_if
+        )
       )
     )
   )
-}
-
-#' @export
-blockr_ser.dock_board <- function(x, blocks = NULL, options = NULL,
-                                  layout = NULL, ...) {
-
-  res <- NextMethod()
-
-  exts <- dock_extensions(x)
-  dots <- list(...)
-
-  res[["layout"]] <- blockr_ser(as_dock_layout(layout))
-  res[["extensions"]] <- map(blockr_ser, exts,
-                             dots[chr_ply(exts, extension_id)])
-  res[["version"]] <- c(as.character(pkg_version()), res[["version"]])
-
-  res
 }
 
 #' @export
@@ -68,20 +52,10 @@ blockr_ser.dock_extension <- function(x, state, ...) {
 }
 
 #' @export
-blockr_deser.dock_board <- function(x, data, ...) {
-
-  # do exts first to potentially attach namespaces
-  exts <- lapply(data[["extensions"]], blockr_deser)
-
-  do.call(
-    new_dock_board,
-    c(
-      lapply(
-        data[!names(data) %in% c("version", "object", "extensions")],
-        blockr_deser
-      ),
-      list(extensions = exts)
-    )
+blockr_ser.dock_extensions <- function(x, ...) {
+  list(
+    object = class(x),
+    payload = map(blockr_ser, x, list(...)[names(x)])
   )
 }
 
@@ -116,7 +90,21 @@ blockr_deser.dock_extension <- function(x, data, ...) {
 }
 
 #' @export
+blockr_deser.dock_extensions <- function(x, data, ...) {
+  as_dock_extensions(lapply(data[["payload"]], blockr_deser))
+}
+
+#' @export
 restore_board.dock_board <- function(x, new, result, ...,
                                      session = get_session()) {
-  result(blockr_deser(new))
+
+  des <- blockr_deser(new)
+
+  res <- as_dock_board(
+    des,
+    extensions = dock_extensions(x),
+    options = board_options(x)
+  )
+
+  result(res)
 }

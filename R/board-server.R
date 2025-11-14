@@ -11,19 +11,13 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     exts
   )
 
-  ext_state <- set_names(
-    vector("list", length(exts)),
-    names(exts)
+  ext_state <- lapply(
+    as.list(exts),
+    extension_server,
+    list(board = board, update = update, dock = dock),
+    intercom,
+    list(...)
   )
-
-  for (i in names(exts)) {
-    ext_state[[i]] <- extension_server(
-      exts[[i]],
-      list(board = board, update = update, dock = dock),
-      intercom,
-      list(...)
-    )
-  }
 
   c(
     list(dock = dock),
@@ -206,14 +200,12 @@ suggest_panels_to_add <- function(dock, board, session) {
 
   if (length(ext_opts)) {
 
+    all_exts <- as.list(dock_extensions(board$board))
+    ext_nmes <- chr_ply(all_exts[ext_opts], extension_name)
+
     ext_opts <- set_names(
       paste0("ext-", ext_opts),
-      paste0(
-        chr_ply(dock_extensions(board$board)[ext_opts], extension_name),
-        " (",
-        ext_opts,
-        ")"
-      )
+      paste0(ext_nmes, " (", ext_opts, ")")
     )
 
     opts <- c(opts, list(Extensions = ext_opts))
