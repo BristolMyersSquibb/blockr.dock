@@ -26,5 +26,6 @@ blk_icon_data_uri(icon_svg, color, size = 48, mode = c("uri", "inline"))
 \item{mode}{Switch between URI and inline HTML mode}
 }
 \description{
-Get block color based on category
+Returns metadata such as color hex codes for block categories using the
+Okabe-Ito colorblind-friendly palette.
 }

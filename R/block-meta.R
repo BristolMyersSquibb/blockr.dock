@@ -1,5 +1,8 @@
 #' Get block color based on category
 #'
+#' Returns metadata such as color hex codes for block categories using the
+#' Okabe-Ito colorblind-friendly palette.
+#'
 #' @param category Block category
 #' @rdname meta
 #' @export
