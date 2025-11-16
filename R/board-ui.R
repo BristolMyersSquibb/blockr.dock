@@ -18,8 +18,15 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
     options_ui(
       id,
       options,
-      opt_ui_or_null("preserve_board", plugins, x),
-      opt_ui_or_null("generate_code", plugins, x)
+      div(
+        id = "preserve_board",
+        class = "mb-1",
+        opt_ui_or_null("preserve_board", plugins, x)
+      ),
+      div(
+        id = "generate_code",
+        opt_ui_or_null("generate_code", plugins, x)
+      )
     ),
     dockViewR::dock_view_output(
       NS(id, dock_id()),
