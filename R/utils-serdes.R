@@ -30,7 +30,7 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
         layout = as_dock_layout(dock$layout()),
         extensions = lapply(
           list(...),
-          reval_if
+          function(x) if (is.list(x)) lapply(x, reval_if) else reval_if(x)
         )
       )
     )
@@ -52,10 +52,10 @@ blockr_ser.dock_extension <- function(x, state, ...) {
 }
 
 #' @export
-blockr_ser.dock_extensions <- function(x, ...) {
+blockr_ser.dock_extensions <- function(x, data, ...) {
   list(
     object = class(x),
-    payload = map(blockr_ser, x, list(...)[names(x)])
+    payload = map(blockr_ser, x, data[names(x)])
   )
 }
 
