@@ -31,7 +31,7 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 default_dock_layout <- function(blocks = list(), extensions = list()) {
   preproc_panel <- function(x) {
     remove <- x[["remove"]]
-    tabComponent <- if (!remove[["enable"]]) "custom" else "default"
+    tab_component <- if (!remove[["enable"]]) "custom" else "default"
     remove_callback <- NULL
     if (remove[["enable"]] && !is.null(remove[["callback"]])) {
       remove_callback <- list(
@@ -44,7 +44,7 @@ default_dock_layout <- function(blocks = list(), extensions = list()) {
       x[c("id", "title")],
       list(
         contentComponent = "default",
-        tabComponent = tabComponent,
+        tabComponent = tab_component,
         params = list(
           content = list(html = c(x[["content"]][["html"]])),
           style = x[["style"]],
