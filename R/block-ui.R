@@ -1,5 +1,5 @@
 #' @export
-block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
+block_ui.dock_board <- function(id, x, blocks = NULL, edit_ui = NULL, ...) {
   stopifnot(is_string(id))
 
   if (is.null(blocks)) {
@@ -13,7 +13,7 @@ block_ui.dock_board <- function(id, x, blocks = NULL, ...) {
     blocks,
     names(blocks),
     MoreArgs = list(
-      plugin = board_plugins(x, "edit_block"),
+      plugin = edit_ui,
       board = x,
       board_ns = NS(id)
     )

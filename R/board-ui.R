@@ -1,25 +1,32 @@
 #' @export
-board_ui.dock_board <- function(id, x, ...) {
+board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
+                                options = board_options(x), ...) {
+
+  opt_ui_or_null <- function(plg, plgs, x) {
+    if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
+  }
 
   stopifnot(is_string(id))
-
-  if (is_dock_locked()) {
-    serdes <- NULL
-  } else {
-    serdes <- board_ui(id, board_plugins(x, "preserve_board"), x)
-  }
 
   tagList(
     show_hide_block_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
-      block_ui(id, x)
+      block_ui(id, x, edit_ui = plugins[["edit_block"]])
     ),
     options_ui(
       id,
-      as_board_options(x),
-      serdes
+      options,
+      div(
+        id = "preserve_board",
+        class = "mb-1",
+        opt_ui_or_null("preserve_board", plugins, x)
+      ),
+      div(
+        id = "generate_code",
+        opt_ui_or_null("generate_code", plugins, x)
+      )
     ),
     dockViewR::dock_view_output(
       NS(id, dock_id()),
@@ -41,6 +48,9 @@ board_ui.dock_board <- function(id, x, ...) {
 }
 
 options_ui <- function(id, x, ...) {
+
+  stopifnot(is_board_options(x))
+
   opts <- split(x, chr_ply(x, attr, "category"))
 
   offcanvas_id <- NS(id, "options_offcanvas")

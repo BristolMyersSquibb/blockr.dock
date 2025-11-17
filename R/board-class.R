@@ -11,42 +11,31 @@
 #'
 #' @rdname dock
 #' @export
-new_dock_board <- function(blocks = list(), ..., extensions = list(),
+new_dock_board <- function(blocks = list(), ...,
+                           extensions = new_dock_extensions(),
                            layout = default_dock_layout(blocks, extensions),
                            options = dock_board_options(),
-                           class = character()) {
+                           ctor = NULL, pkg = NULL, class = character()) {
 
-  if (is_dock_extension(extensions)) {
-    extensions <- list(extensions)
-  }
-
-  opts <- c(
-    list(options),
-    lapply(extensions, extension_options)
-  )
-
-  opt_ids <- character()
-
-  for (i in seq_along(opts)) {
-
-    cur <- opts[[i]]
-    cur <- cur[!names(cur) %in% opt_ids]
-
-    opt_ids <- c(opt_ids, names(cur))
-    opts[[i]] <- cur
-  }
-
+  extensions <- as_dock_extensions(extensions)
   blocks <- as_blocks(blocks)
-  layout <- as_dock_layout(layout)
+
+  if (is.character(layout)) {
+    layout <- default_dock_layout(blocks[layout], extensions)
+  } else {
+    layout <- as_dock_layout(layout)
+  }
 
   validate_dock_layout(layout, names(blocks))
 
   new_board(
     blocks = blocks,
     ...,
-    extensions = set_names(extensions, chr_ply(extensions, extension_id)),
+    extensions = extensions,
     layout = layout,
-    options = as_board_options(opts),
+    options = as_board_options(options),
+    ctor = forward_ctor(ctor),
+    pkg = pkg,
     class = c(class, "dock_board")
   )
 }
@@ -56,6 +45,27 @@ new_dock_board <- function(blocks = list(), ..., extensions = list(),
 #' @export
 is_dock_board <- function(x) {
   inherits(x, "dock_board")
+}
+
+#' @rdname dock
+#' @export
+as_dock_board <- function(x, ...) {
+  UseMethod("as_dock_board")
+}
+
+#' @export
+as_dock_board.dock_board <- function(x, ...) {
+  x
+}
+
+#' @export
+as_dock_board.board <- function(x, ...) {
+  new_dock_board(
+    board_blocks(x),
+    board_links(x),
+    board_stacks(x),
+    ...
+  )
 }
 
 #' @rdname dock
@@ -78,7 +88,7 @@ dock_layout <- function(x) {
 #' @export
 dock_extensions <- function(x) {
   stopifnot(is_dock_board(x))
-  validate_dock_extensions(x[["extensions"]])
+  validate_extensions(x[["extensions"]])
 }
 
 #' @param value Replacement value
@@ -86,7 +96,7 @@ dock_extensions <- function(x) {
 #' @export
 `dock_extensions<-` <- function(x, value) {
   stopifnot(is_dock_board(x))
-  x[["extensions"]] <- validate_dock_extensions(value)
+  x[["extensions"]] <- validate_extensions(value)
   x
 }
 
@@ -100,47 +110,6 @@ dock_ext_ids <- function(x) {
 #' @export
 dock_board_options <- function() {
   new_board_options(
-    new_board_name_option(category = "Board options"),
-    if (need_llm_cfg_opts()) new_llm_model_option(category = "Board options"),
-    new_n_rows_option(category = "Table options"),
-    new_page_size_option(category = "Table options"),
-    new_filter_rows_option(category = "Table options"),
-    new_thematic_option(category = "Theme options"),
-    new_dark_mode_option(
-      blockr_option("dark_mode", FALSE),
-      category = "Theme options"
-    ),
-    new_show_conditions_option(category = "Board options")
-  )
-}
-
-validate_dock_extensions <- function(x) {
-
-  if (!is.list(x) || !all(lgl_ply(x, is_dock_extension))) {
-    blockr_abort(
-      "Expecting a set of extensions to be represented by a list of objects, ",
-      "where each inherits from `dock_extension`.",
-      class = "dock_extension_invalid"
-    )
-  }
-
-  if (!identical(anyDuplicated(chr_ply(x, extension_id)), 0L)) {
-    blockr_abort(
-      "Expecting a set of extensions to consist of unique extension types.",
-      class = "dock_extension_invalid"
-    )
-  }
-
-  nm <- names(x)
-
-  if (is.null(nm) || any(!nchar(nm)) || !identical(anyDuplicated(nm), 0L)) {
-    blockr_abort(
-      "Expecting a set of extensions to have unique names.",
-      class = "dock_extension_invalid"
-    )
-  }
-
-  invisible(
-    lapply(x, validate_extension)
+    new_board_name_option()
   )
 }

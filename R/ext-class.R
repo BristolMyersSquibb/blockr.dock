@@ -92,7 +92,7 @@ validate_extension.dock_extension <- function(x, ...) {
     )
   }
 
-  validate_board_options(extension_options(x))
+  validate_board_options(board_options(x))
 
   x
 }
@@ -152,9 +152,82 @@ extension_ctor <- function(x) {
   attr(x, "ctor")
 }
 
+#' @export
+board_options.dock_extension <- function(x, ...) {
+  x[["options"]]
+}
+
 #' @rdname extension
 #' @export
-extension_options <- function(x) {
-  stopifnot(is_dock_extension(x))
-  x[["options"]]
+new_dock_extensions <- function(x = list()) {
+  validate_extensions(
+    structure(x, class = "dock_extensions")
+  )
+}
+
+#' @rdname extension
+#' @export
+is_dock_extensions <- function(x) {
+  inherits(x, "dock_extensions")
+}
+
+#' @rdname extension
+#' @export
+validate_extensions <- function(x) {
+
+  if (!is_dock_extensions(x) || !is.list(x)) {
+    blockr_abort(
+      "Expecting extensions to inherit from `dock_extensions` and be ",
+      "represented by a list.",
+      class = "dock_extensions_invalid"
+    )
+  }
+
+  if (anyDuplicated(names(x)) > 0L) {
+    blockr_abort(
+      "Expecting extensions to have unique IDs.",
+      class = "dock_extensions_invalid"
+    )
+  }
+
+  for (ext in x) {
+    validate_extension(ext)
+  }
+
+  x
+}
+
+#' @rdname extension
+#' @export
+as_dock_extensions <- function(x, ...) {
+  UseMethod("as_dock_extensions")
+}
+
+#' @rdname extension
+#' @export
+as_dock_extensions.dock_extensions <- function(x, ...) {
+  x
+}
+
+#' @rdname extension
+#' @export
+as_dock_extensions.dock_extension <- function(x, ...) {
+  new_dock_extensions(list(x))
+}
+
+#' @rdname extension
+#' @export
+as_dock_extensions.list <- function(x, ...) {
+  new_dock_extensions(x)
+}
+
+#' @export
+names.dock_extensions <- function(x) {
+  chr_ply(x, extension_id)
+}
+
+#' @export
+as.list.dock_extensions <- function(x, ...) {
+  res <- unclass(x)
+  set_names(res, chr_ply(res, extension_id))
 }
