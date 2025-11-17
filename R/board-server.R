@@ -105,19 +105,27 @@ manage_dock <- function(board, session = get_session()) {
       )
 
       for (id in input$add_dock_panel) {
+
         if (grepl("^blk-", id)) {
+
           show_block_panel(
             sub("^blk-", "", id),
             add_panel = pos,
             proxy = dock
           )
+
         } else if (grepl("^ext-", id)) {
+
+          exts <- as.list(dock_extensions(board$board))
+
           show_ext_panel(
-            dock_extensions(board$board)[[sub("^ext-", "", id)]],
+            exts[[sub("^ext-", "", id)]],
             add_panel = pos,
             proxy = dock
           )
+
         } else {
+
           blockr_abort(
             "Unknown panel specification {id}.",
             class = "dock_panel_invalid"
