@@ -162,6 +162,9 @@ manage_dock <- function(board, update, session = get_session()) {
     blk <- update()$blocks$mod
     blk_id <- names(blk)
     new_name <- block_name(blk[[1]])
+
+    # TBD better checks
+
     dockViewR::set_panel_title(
       dock,
       as_block_panel_id(blk_id),
