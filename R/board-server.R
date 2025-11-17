@@ -111,7 +111,7 @@ manage_dock <- function(board, update, session = get_session()) {
       for (id in input$add_dock_panel) {
         if (grepl("^blk-", id)) {
           show_block_panel(
-            sub("^blk-", "", id),
+            board_blocks(board$board)[[sub("^blk-", "", id)]],
             add_panel = pos,
             proxy = dock
           )
@@ -162,7 +162,6 @@ manage_dock <- function(board, update, session = get_session()) {
     blk <- update()$blocks$mod
     blk_id <- names(blk)
     new_name <- block_name(blk[[1]])
-    browser()
     dockViewR::set_panel_title(
       dock,
       as_block_panel_id(blk_id),
@@ -257,6 +256,10 @@ suggest_panels_to_add <- function(dock, board, session) {
       )
     )
   } else {
-    notify("No further panels can be added. Remove some panels first.")
+    show_toast(toast(
+      "No further panels can be added. Remove some panels first.",
+      position = "bottom-right",
+      type = "info",
+    ))
   }
 }

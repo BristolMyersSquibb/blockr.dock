@@ -31,7 +31,7 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 default_dock_layout <- function(blocks = list(), extensions = list()) {
   preproc_panel <- function(x) {
     remove <- x[["remove"]]
-    tabComponent <- if (!remove[["enable"]]) "default" else "manual"
+    tabComponent <- if (!remove[["enable"]]) "custom" else "default"
     remove_callback <- NULL
     if (remove[["enable"]] && !is.null(remove[["callback"]])) {
       remove_callback <- list(
@@ -39,6 +39,7 @@ default_dock_layout <- function(blocks = list(), extensions = list()) {
         source = unclass(remove[["callback"]])
       )
     }
+
     c(
       x[c("id", "title")],
       list(
@@ -65,7 +66,9 @@ default_dock_layout <- function(blocks = list(), extensions = list()) {
     list(type = "branch", data = filter_empty(list(...)))
   }
 
-  blk_panels <- lapply(names(blocks), block_panel)
+  blk_panels <- lapply(names(blocks), function(nme) {
+    block_panel(blocks[nme])
+  })
   ext_panels <- lapply(extensions, ext_panel)
 
   panels <- lapply(c(blk_panels, ext_panels), preproc_panel)
