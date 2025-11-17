@@ -259,10 +259,6 @@ suggest_panels_to_add <- function(dock, board, session) {
       )
     )
   } else {
-    show_toast(toast(
-      "No further panels can be added. Remove some panels first.",
-      position = "bottom-right",
-      type = "info",
-    ))
+    notify("No further panels can be added. Remove some panels first.")
   }
 }
