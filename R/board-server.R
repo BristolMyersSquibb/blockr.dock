@@ -70,7 +70,6 @@ manage_dock <- function(board, update, session = get_session()) {
       )
 
       if (is_block_panel_id(id)) {
-        browser()
         hide_block_panel(id, rm_panel = TRUE, proxy = dock)
       } else if (is_ext_panel_id(id)) {
         hide_ext_panel(id, rm_panel = TRUE, proxy = dock)
