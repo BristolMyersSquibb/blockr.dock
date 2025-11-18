@@ -2,7 +2,6 @@
 #' @rdname dock
 #' @export
 new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
-
   if (!length(grid)) {
     grid <- list(
       root = list(type = "branch", data = list(), size = 0L),
@@ -30,20 +29,26 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 #' @rdname dock
 #' @export
 default_dock_layout <- function(blocks = list(), extensions = list()) {
-
   preproc_panel <- function(x) {
+    remove <- x[["remove"]]
+    tab_component <- if (!remove[["enable"]]) "custom" else "manual"
+    remove_callback <- NULL
+    if (remove[["enable"]] && !is.null(remove[["callback"]])) {
+      remove_callback <- list(
+        `__IS_FUNCTION__` = TRUE,
+        source = unclass(remove[["callback"]])
+      )
+    }
+
     c(
       x[c("id", "title")],
       list(
         contentComponent = "default",
-        tabComponent = "manual",
+        tabComponent = tab_component,
         params = list(
           content = list(html = c(x[["content"]][["html"]])),
           style = x[["style"]],
-          removeCallback = list(
-            `__IS_FUNCTION__` = TRUE,
-            source = unclass(x[["remove"]][["callback"]])
-          )
+          removeCallback = remove_callback
         )
       )
     )
@@ -61,14 +66,15 @@ default_dock_layout <- function(blocks = list(), extensions = list()) {
     list(type = "branch", data = filter_empty(list(...)))
   }
 
-  blk_panels <- lapply(names(blocks), block_panel)
+  blk_panels <- lapply(names(blocks), function(nme) {
+    block_panel(blocks[nme])
+  })
   ext_panels <- lapply(extensions, ext_panel)
 
   panels <- lapply(c(blk_panels, ext_panels), preproc_panel)
   names(panels) <- chr_xtr(panels, "id")
 
   if (length(panels)) {
-
     grid <- new_branch(
       if (length(extensions)) {
         new_leaf(chr_ply(extensions, as_ext_panel_id), id = "1")
@@ -87,7 +93,6 @@ default_dock_layout <- function(blocks = list(), extensions = list()) {
     )
 
     grup <- "1"
-
   } else {
     grid <- NULL
     grup <- NULL
@@ -112,7 +117,6 @@ is_empty_layout <- function(x) length(x[["panels"]]) == 0L
 #' @rdname dock
 #' @export
 validate_dock_layout <- function(x, blocks = character()) {
-
   if (is.null(x)) {
     return(x)
   }
@@ -156,7 +160,6 @@ validate_dock_layout <- function(x, blocks = character()) {
   }
 
   if (length(blocks)) {
-
     extra <- setdiff(panel_ids[is_blk_pn], as_block_panel_id(blocks))
 
     if (length(extra)) {
@@ -186,7 +189,6 @@ as_dock_layout.board <- function(x, ...) {
 
 #' @export
 as_dock_layout.list <- function(x, ...) {
-
   if ("activeGroup" %in% names(x)) {
     names(x)[names(x) == "activeGroup"] <- "active_group"
   }

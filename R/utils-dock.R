@@ -31,10 +31,10 @@ remove_block_panel <- function(id, proxy = dock_proxy()) {
   invisible(NULL)
 }
 
-add_block_panel <- function(id, ..., proxy = dock_proxy()) {
+add_block_panel <- function(block, ..., proxy = dock_proxy()) {
   log_debug("adding block panel {as_block_panel_id(id)}")
 
-  dockViewR::add_panel(proxy, panel = block_panel(id, ...))
+  dockViewR::add_panel(proxy, panel = block_panel(block, ...))
 
   invisible(NULL)
 }
@@ -49,12 +49,13 @@ select_block_panel <- function(id, proxy = dock_proxy()) {
   invisible(NULL)
 }
 
-block_panel <- function(id, ...) {
-  pid <- as_block_panel_id(id)
+block_panel <- function(block, ...) {
+  pid <- as_block_panel_id(block)
+  name <- block_name(block[[1]])
 
   log_debug("creating block panel {pid}")
 
-  dock_panel(id = pid, title = id, ...)
+  dock_panel(id = pid, title = name, ...)
 }
 
 remove_ext_panel <- function(id, proxy = dock_proxy()) {
