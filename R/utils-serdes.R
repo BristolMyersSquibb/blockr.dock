@@ -38,15 +38,15 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
 }
 
 #' @export
-blockr_ser.dock_layout <- function(x, ...) {
-  list(object = class(x), payload = unclass(x))
+blockr_ser.dock_layout <- function(x, data, ...) {
+  list(object = class(x), payload = unclass(data))
 }
 
 #' @export
-blockr_ser.dock_extension <- function(x, state, ...) {
+blockr_ser.dock_extension <- function(x, data, ...) {
   list(
     object = class(x),
-    payload = coal(state, list()),
+    payload = coal(data, list()),
     constructor = blockr_ser(extension_ctor(x))
   )
 }

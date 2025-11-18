@@ -105,16 +105,16 @@ manage_dock <- function(board, update, session = get_session()) {
 
       for (id in input$add_dock_panel) {
         if (grepl("^blk-", id)) {
-          browser()
           show_block_panel(
             board_blocks(board$board)[sub("^blk-", "", id)],
             add_panel = pos,
             proxy = dock
           )
         } else if (grepl("^ext-", id)) {
-          browser()
+          exts <- as.list(dock_extensions(board$board))
+
           show_ext_panel(
-            dock_extensions(board$board)[[sub("^ext-", "", id)]],
+            exts[[sub("^ext-", "", id)]],
             add_panel = pos,
             proxy = dock
           )
