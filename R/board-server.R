@@ -70,6 +70,7 @@ manage_dock <- function(board, update, session = get_session()) {
       )
 
       if (is_block_panel_id(id)) {
+        browser()
         hide_block_panel(id, rm_panel = TRUE, proxy = dock)
       } else if (is_ext_panel_id(id)) {
         hide_ext_panel(id, rm_panel = TRUE, proxy = dock)
@@ -104,12 +105,14 @@ manage_dock <- function(board, update, session = get_session()) {
 
       for (id in input$add_dock_panel) {
         if (grepl("^blk-", id)) {
+          browser()
           show_block_panel(
-            board_blocks(board$board)[[sub("^blk-", "", id)]],
+            board_blocks(board$board)[sub("^blk-", "", id)],
             add_panel = pos,
             proxy = dock
           )
         } else if (grepl("^ext-", id)) {
+          browser()
           show_ext_panel(
             dock_extensions(board$board)[[sub("^ext-", "", id)]],
             add_panel = pos,
@@ -153,17 +156,23 @@ manage_dock <- function(board, update, session = get_session()) {
   # When a block is modified we have to update
   # the node data
   observeEvent(update()$blocks$mod, {
-    blk <- update()$blocks$mod
-    blk_id <- names(blk)
-    new_name <- block_name(blk[[1]])
+    blks <- update()$blocks$mod
+    # Iterate over modified blocks and update panel titles
+    for (id in names(blks)) {
+      blk <- blks[[id]]
+      new_name <- block_name(blk)
+      blk_panel_id <- as_block_panel_id(id)
 
-    # TBD better checks
-
-    dockViewR::set_panel_title(
-      dock,
-      as_block_panel_id(blk_id),
-      new_name
-    )
+      old_title <- dockViewR::get_panels(dock)[[blk_panel_id]]$title
+      if (new_name == old_title) {
+        next
+      }
+      dockViewR::set_panel_title(
+        dock,
+        blk_panel_id,
+        new_name
+      )
+    }
   })
 
   list(

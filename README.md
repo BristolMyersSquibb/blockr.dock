@@ -42,12 +42,6 @@ serve(
     extensions = new_edit_board_extension()
   )
 )
-
-serve(
-  new_dock_board(
-    extensions = new_edit_board_extension()
-  )
-)
 ```
 
 This is a read-only view of this board, as no blocks can be added or
