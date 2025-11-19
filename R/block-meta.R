@@ -61,7 +61,7 @@ blks_metadata <- function(blocks) {
 
   if (any(lengths(id) > 0L)) {
     reg <- block_metadata(id[lengths(id) > 0L])
-    reg <- cbind(reg, color = blk_color(reg$category))
+    reg <- cbind(reg, color = chr_ply(reg$category, blk_color))
 
     if (is_blocks(blocks)) {
       rownames(reg) <- names(blocks)[lengths(id) > 0L]
