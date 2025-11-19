@@ -32,7 +32,7 @@ remove_block_panel <- function(id, proxy = dock_proxy()) {
 }
 
 add_block_panel <- function(block, ..., proxy = dock_proxy()) {
-  log_debug("adding block panel {as_block_panel_id(id)}")
+  log_debug("adding block panel {as_block_panel_id(block)}")
 
   dockViewR::add_panel(proxy, panel = block_panel(block, ...))
 
