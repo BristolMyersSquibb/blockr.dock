@@ -145,6 +145,7 @@ blk_icon_data_uri <- function(icon_svg, color, size = 48,
 #' @param hex Hex color code
 #' @param alpha Alpha/opacity value between 0 and 1
 #' @keywords internal
+#' @noRd
 hex_to_rgba <- function(hex, alpha = 1.0) {
   # Remove # if present
   hex <- sub("^#", "", hex)
