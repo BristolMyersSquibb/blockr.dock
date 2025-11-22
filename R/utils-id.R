@@ -237,6 +237,11 @@ as_ext_panel_id.dock_extension <- function(x) {
 }
 
 #' @export
+as_ext_panel_id.dock_extensions <- function(x) {
+  as_ext_panel_id(chr_ply(x, extension_id))
+}
+
+#' @export
 as_ext_panel_id.ext_handle_id <- function(x) {
   as_ext_panel_id(as_obj_id(x))
 }

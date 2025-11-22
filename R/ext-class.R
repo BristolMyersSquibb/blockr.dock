@@ -2,7 +2,8 @@
 #'
 #' Functionality of a `dock_board` can be extended by supplying one or more
 #' `dock_extension` objects, which essentially provide UI shown in a dock panel
-#' that allows for manipulating the board state.
+#' that allows for manipulating the board state. A set of dock extensions
+#' can be combined into a `dock_extensions` object.
 #'
 #' @param server A function returning [shiny::moduleServer()]
 #' @param ui A function with a single argument (`ns`) returning a `shiny.tag`
@@ -12,6 +13,19 @@
 #' @param pkg Package to look up `ctor`
 #' @param options Board options supplied by an extension
 #' @param ... Further attributes
+#'
+#' @return The constructors `new_dock_extension()` and `new_dock_extension()`,
+#' as do the coercion function `as_dock_extension()` and `as_dock_extension()`,
+#' return objects that inherit from `dock_extension` and `dock_extensions`
+#' respectively. This inheritance structure can be checked using
+#' `is_dock_extension()` and `is_dock_extensions()`, which both return a
+#' boolean. A `dock_extension` can be validated using `validate_extension()`
+#' and a `dock_extensions` object using `validate_extensions()`, which return
+#' the input object invisibly and throw errors as side-effects. Several getter
+#' functions return extension attributes, including `extension_ui()` (a
+#' function), `extension_server()` (a function), `extension_id()` (a string),
+#' `extension_name()` (a string) and `extension_ctor()` (an object that
+#' inherits from `blockr_ctor`).
 #'
 #' @rdname extension
 #' @export

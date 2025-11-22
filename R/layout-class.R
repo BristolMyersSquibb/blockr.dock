@@ -1,7 +1,14 @@
+#' Dock layout
+#'
+#' The arrangement of panels in a dock can be specified using a `dock_layout`
+#' object. A default layout
+#'
 #' @param grid,panels,active_group Layout components
-#' @rdname dock
+#'
+#' @rdname layout
 #' @export
 new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
+
   if (!length(grid)) {
     grid <- list(
       root = list(type = "branch", data = list(), size = 0L),
@@ -26,18 +33,30 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
   )
 }
 
-#' @rdname dock
+#' @param blocks,extensions Dock board components
+#' @param arrangement Panel arrangement
+#' @rdname layout
 #' @export
-default_dock_layout <- function(blocks = list(), extensions = list()) {
+create_dock_layout <- function(blocks = list(), extensions = list(),
+                               arrangement = NULL) {
+
   preproc_panel <- function(x) {
+
     remove <- x[["remove"]]
-    tab_component <- if (!remove[["enable"]]) "custom" else "manual"
-    remove_callback <- NULL
-    if (remove[["enable"]] && !is.null(remove[["callback"]])) {
+
+    if (isTRUE(remove[["enable"]])) {
+      tab_component <- "manual"
+    } else {
+      tab_component <- "custom"
+    }
+
+    if (isTRUE(remove[["enable"]]) && !is.null(remove[["callback"]])) {
       remove_callback <- list(
         `__IS_FUNCTION__` = TRUE,
         source = unclass(remove[["callback"]])
       )
+    } else {
+      remove_callback <- NULL
     }
 
     c(
@@ -66,9 +85,23 @@ default_dock_layout <- function(blocks = list(), extensions = list()) {
     list(type = "branch", data = filter_empty(list(...)))
   }
 
-  blk_panels <- lapply(names(blocks), function(nme) {
-    block_panel(blocks[nme])
-  })
+  blocks <- as_blocks(blocks)
+  extensions <- as_dock_extensions(extensions)
+
+  if (is.null(arrangement)) {
+    arrangement <- list(
+      as_ext_panel_id(extensions),
+      as_block_panel_id(blocks)
+    )
+  }
+
+  blk_panels <- lapply(
+    names(blocks),
+    function(nme) {
+      block_panel(blocks[nme])
+    }
+  )
+
   ext_panels <- lapply(extensions, ext_panel)
 
   panels <- lapply(c(blk_panels, ext_panels), preproc_panel)
@@ -105,7 +138,8 @@ default_dock_layout <- function(blocks = list(), extensions = list()) {
   )
 }
 
-#' @rdname dock
+#' @param x Object
+#' @rdname layout
 #' @export
 is_dock_layout <- function(x) {
   inherits(x, "dock_layout")
@@ -113,12 +147,16 @@ is_dock_layout <- function(x) {
 
 is_empty_layout <- function(x) length(x[["panels"]]) == 0L
 
-#' @param blocks Block IDs
-#' @rdname dock
+#' @rdname layout
 #' @export
 validate_dock_layout <- function(x, blocks = character()) {
+
   if (is.null(x)) {
     return(x)
+  }
+
+  if (is_blocks(blocks)) {
+    blocks <- names(blocks)
   }
 
   if (!is.list(x) || !is_dock_layout(x)) {
@@ -173,7 +211,8 @@ validate_dock_layout <- function(x, blocks = character()) {
   x
 }
 
-#' @rdname dock
+#' @param ... Generic consistency
+#' @rdname layout
 #' @export
 as_dock_layout <- function(x, ...) {
   UseMethod("as_dock_layout")
@@ -196,7 +235,7 @@ as_dock_layout.list <- function(x, ...) {
   do.call(new_dock_layout, x)
 }
 
-#' @rdname dock
+#' @rdname layout
 #' @export
 layout_panel_ids <- function(x) {
   x <- as_dock_layout(x)

@@ -1,32 +1,33 @@
-#' Get block color based on category
+#' Get block metadata
 #'
-#' Returns metadata such as color hex codes for block categories using the
-#' Okabe-Ito colorblind-friendly palette.
+#' Returns various metadata for blocks or block categories, as well as styling
+#' for block icons.
 #'
-#' @param category Block category
-#' @rdname meta
-#' @export
-blk_color <- function(category) {
-  # Okabe-Ito colorblind-friendly palette
-  # See: https://jfly.uni-koeln.de/color/
-  switch(
-    category,
-    input = "#0072B2", # Blue
-    transform = "#009E73", # Bluish green
-    structured = "#56B4E9", # Sky blue
-    plot = "#E69F00", # Orange
-    table = "#CC79A7", # Reddish purple/pink
-    model = "#F0E442", # Yellow (includes AI/ML)
-    output = "#D55E00", # Vermilion
-    utility = "#CCCCCC", # Light gray
-    "#999999" # Medium gray (uncategorized)
-  )
-}
-
+#' - `blks_metadata()`: Retrieves metadata given a `block` or `blocks` object
+#'   from the block registry. Can also handle blocks which are not
+#'   registered and provides default values in that case.
+#' - `blk_color()`: Produces colors using the Okabe-Ito colorblind-friendly
+#'   palette for a character vector of block categories.
+#' - `blk_icon_data_uri()`: Processes block icons to add color and turn them
+#'   into square-shaped icons.
+#'
 #' @param blocks Blocks passed as `blocks` or `block` object
+#'
+#' @examples
+#' blk <- blockr.core::new_dataset_block()
+#' meta <- blks_metadata(blk)
+#'
+#' col <- blk_color(meta$category)
+#' blk_icon_data_uri(meta$icon, col)
+#'
+#' @return Metadata is returned from `blks_metadata()` as a `data.frame` with
+#' each row corresponding to a block. Both `blk_color()` and
+#' `blk_icon_data_uri()` return character vectors.
+#'
 #' @rdname meta
 #' @export
 blks_metadata <- function(blocks) {
+
   default_name <- function(x) {
     gsub("_", " ", class(x)[1L])
   }
@@ -61,7 +62,7 @@ blks_metadata <- function(blocks) {
 
   if (any(lengths(id) > 0L)) {
     reg <- block_metadata(id[lengths(id) > 0L])
-    reg <- cbind(reg, color = chr_ply(reg$category, blk_color))
+    reg <- cbind(reg, color = blk_color(reg$category))
 
     if (is_blocks(blocks)) {
       rownames(reg) <- names(blocks)[lengths(id) > 0L]
@@ -75,6 +76,25 @@ blks_metadata <- function(blocks) {
   }
 
   res
+}
+
+#' @param category Block category
+#' @rdname meta
+#' @export
+blk_color <- function(category) {
+  chr_ply(
+    category,
+    switch,
+    input = "#0072B2", # Blue
+    transform = "#009E73", # Bluish green
+    structured = "#56B4E9", # Sky blue
+    plot = "#E69F00", # Orange
+    table = "#CC79A7", # Reddish purple/pink
+    model = "#F0E442", # Yellow (includes AI/ML)
+    output = "#D55E00", # Vermilion
+    utility = "#CCCCCC", # Light gray
+    "#999999" # Medium gray (uncategorized)
+  )
 }
 
 #' @param icon_svg Character string containing the SVG icon markup
@@ -135,8 +155,8 @@ blk_icon_data_uri <- function(icon_svg, color, size = 48,
     return(HTML(svg))
   }
 
-  sprintf(
-    "data:image/svg+xml;base64,%s",
+  paste0(
+    "data:image/svg+xml;base64,",
     jsonlite::base64_enc(charToRaw(svg))
   )
 }
