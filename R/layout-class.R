@@ -34,11 +34,73 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 }
 
 #' @param blocks,extensions Dock board components
+#' @rdname layout
+#' @export
+default_layout <- function(blocks, extensions) {
+  list(
+    as_ext_panel_id(extensions),
+    as_block_panel_id(blocks)
+  )
+}
+
+draw_panel_tree <- function(x) {
+
+  group_id <- 0L
+
+  new_leaf <- function(views, size = 1) {
+
+    group_id <<- group_id + 1L
+
+    res <- list(
+      type = "leaf",
+      data = list(
+        views = as.list(views),
+        activeView = views[1L],
+        id = as.character(group_id)
+      )
+    )
+
+    if (size != 1) {
+      res <- c(res, list(size = size))
+    }
+
+    res
+  }
+
+  new_branch <- function(x, size = 1) {
+
+    res <- list(type = "branch", data = filter_empty(x))
+
+    if (size != 1) {
+      res <- c(res, list(size = size))
+    }
+
+    res
+  }
+
+  draw_tree <- function(x, size = 1) {
+    if (is.list(x)) {
+      size <- 1 / length(x)
+      new_branch(lapply(x, draw_tree, size = size), size)
+    } else {
+      new_leaf(x, size)
+    }
+  }
+
+  list(
+    root = draw_tree(x),
+    orientation = "HORIZONTAL"
+  )
+}
+
 #' @param arrangement Panel arrangement
 #' @rdname layout
 #' @export
-create_dock_layout <- function(blocks = list(), extensions = list(),
-                               arrangement = NULL) {
+create_dock_layout <- function(
+  blocks = list(),
+  extensions = list(),
+  arrangement = default_layout(blocks, extensions)
+) {
 
   preproc_panel <- function(x) {
 
@@ -50,7 +112,7 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
       tab_component <- "custom"
     }
 
-    if (isTRUE(remove[["enable"]]) && !is.null(remove[["callback"]])) {
+    if (isTRUE(remove[["enable"]]) && not_null(remove[["callback"]])) {
       remove_callback <- list(
         `__IS_FUNCTION__` = TRUE,
         source = unclass(remove[["callback"]])
@@ -73,27 +135,7 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
     )
   }
 
-  new_leaf <- function(views, id) {
-    list(
-      type = "leaf",
-      data = list(views = as.list(views), activeView = views[1L], id = id),
-      size = 0.5
-    )
-  }
-
-  new_branch <- function(...) {
-    list(type = "branch", data = filter_empty(list(...)))
-  }
-
   blocks <- as_blocks(blocks)
-  extensions <- as_dock_extensions(extensions)
-
-  if (is.null(arrangement)) {
-    arrangement <- list(
-      as_ext_panel_id(extensions),
-      as_block_panel_id(blocks)
-    )
-  }
 
   blk_panels <- lapply(
     names(blocks),
@@ -102,31 +144,63 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
     }
   )
 
+  if (is_dock_extension(extensions)) {
+    ext_names <- as_ext_panel_id(extensions)
+  } else {
+    ext_names <- names(extensions)
+  }
+
+  extensions <- as_dock_extensions(extensions)
+
+  id_map <- set_names(
+    c(as_ext_panel_id(extensions), as_block_panel_id(blocks)),
+    c(ext_names, names(blocks))
+  )
+
+  ids <- unlist(arrangement)
+
+  if (all(ids %in% names(id_map)) && any(!ids %in% id_map)) {
+
+    if (anyDuplicated(id_map) > 0L) {
+
+      blockr_warn(
+        "Cannot use extension names that overlap with block names.",
+        class = "extension_block_name_clash"
+      )
+
+      arrangement <- default_layout(blocks, extensions)
+
+    } else {
+
+      arrangement <- rapply(
+        arrangement,
+        function(x, map) map[[x]],
+        "character",
+        how = "replace",
+        map = id_map
+      )
+    }
+  }
+
   ext_panels <- lapply(extensions, ext_panel)
 
   panels <- lapply(c(blk_panels, ext_panels), preproc_panel)
   names(panels) <- chr_xtr(panels, "id")
 
-  if (length(panels)) {
-    grid <- new_branch(
-      if (length(extensions)) {
-        new_leaf(chr_ply(extensions, as_ext_panel_id), id = "1")
-      },
-      if (length(blocks)) {
-        new_leaf(
-          unclass(as_block_panel_id(blocks)),
-          id = if (length(extensions)) "2" else "1"
-        )
-      }
+  if (!all(unlist(arrangement) %in% names(panels))) {
+    blockr_abort(
+      "Cannot match layout panel IDs to panels.",
+      class = "invalid_panel_layout_specification"
     )
+  }
 
-    grid <- list(
-      root = grid,
-      orientation = "HORIZONTAL"
-    )
+  if (length(arrangement)) {
 
+    grid <- draw_panel_tree(arrangement)
     grup <- "1"
+
   } else {
+
     grid <- NULL
     grup <- NULL
   }

@@ -25,31 +25,31 @@
 #' @export
 new_dock_board <- function(blocks = list(), ...,
                            extensions = new_dock_extensions(),
-                           layout = create_dock_layout(blocks, extensions),
+                           layout = default_layout(blocks, extensions),
                            options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
-  extensions <- as_dock_extensions(extensions)
-  blocks <- as_blocks(blocks)
-
-  if (is.character(layout)) {
-    layout <- create_dock_layout(blocks[layout], extensions)
-  } else {
-    layout <- as_dock_layout(layout)
-  }
-
-  validate_dock_layout(layout, names(blocks))
-
   new_board(
-    blocks = blocks,
+    blocks = as_blocks(blocks),
     ...,
-    extensions = extensions,
-    layout = layout,
+    extensions = as_dock_extensions(extensions),
+    layout = create_dock_layout(blocks, extensions, layout),
     options = as_board_options(options),
     ctor = forward_ctor(ctor),
     pkg = pkg,
     class = c(class, "dock_board")
   )
+}
+
+#' @export
+validate_board.dock_board <- function(x) {
+
+  x <- NextMethod()
+
+  validate_dock_layout(x[["layout"]], board_block_ids(x))
+  validate_extensions(x[["extensions"]])
+
+  x
 }
 
 #' @param x Board object

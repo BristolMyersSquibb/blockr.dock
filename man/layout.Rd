@@ -2,6 +2,7 @@
 % Please edit documentation in R/layout-class.R
 \name{new_dock_layout}
 \alias{new_dock_layout}
+\alias{default_layout}
 \alias{create_dock_layout}
 \alias{is_dock_layout}
 \alias{validate_dock_layout}
@@ -11,7 +12,13 @@
 \usage{
 new_dock_layout(grid = NULL, panels = NULL, active_group = NULL)
 
-create_dock_layout(blocks = list(), extensions = list(), arrangement = NULL)
+default_layout(blocks, extensions)
+
+create_dock_layout(
+  blocks = list(),
+  extensions = list(),
+  arrangement = default_layout(blocks, extensions)
+)
 
 is_dock_layout(x)
 
