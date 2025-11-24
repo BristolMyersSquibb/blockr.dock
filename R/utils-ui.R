@@ -62,40 +62,28 @@ determine_active_views <- function(layout) {
   )
 }
 
+visible_exts <- function() {
+  blockr_option("visible_extensions", "dag_extension")
+}
+
 determine_panel_pos <- function(dock) {
 
-  sess <- dock$proxy$session
-
-  default <- list(direction = "right")
-
-  if (sess$input[[dock_input("n-groups")]] < 2L) {
-    return(default)
-  }
-
   active <- determine_active_views(dock$layout())
-  cands <- names(active)[lgl_ply(active, Negate(maybe_ext_panel_id))]
+
+  keep_visible <- as_ext_panel_id(visible_exts())
+
+  cands <- names(active)[!active %in% keep_visible]
 
   if (!length(cands)) {
-    return(default)
+    return(list(direction = "right"))
   }
 
   prev <- dock$prev_active_group()
-  curr <- sess$input[[dock_input("active-group")]]
 
-  if (is.null(prev) || identical(curr, prev)) {
-
-    cands <- setdiff(cands, curr)
-
-    if (length(cands)) {
-      grp <- last(cands)
-    } else {
-      return(default)
-    }
-
-  } else if (prev %in% cands) {
+  if (isTRUE(prev %in% cands)) {
     grp <- prev
   } else {
-    return(default)
+    grp <- last(cands)
   }
 
   list(referenceGroup = grp, direction = "within")
