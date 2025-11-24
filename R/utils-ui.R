@@ -44,20 +44,46 @@ move_dom_element <- function(from, to, session = get_session()) {
   )
 }
 
-determine_panel_pos <- function(dock) {
-  sess <- dock$proxy$session
+determine_active_views <- function(layout) {
 
-  if (sess$input[[dock_input("n-groups")]] < 2L) {
+  xtr_leaf_id <- function(x) {
+
+    if (x$type == "leaf") {
+      return(set_names(x$data$activeView, x$data$id))
+    }
+
+    lapply(x$data, xtr_leaf_id)
+  }
+
+  rapply(
+    xtr_leaf_id(layout[["grid"]][["root"]]),
+    identity,
+    "character"
+  )
+}
+
+visible_exts <- function() {
+  blockr_option("visible_extensions", "dag_extension")
+}
+
+determine_panel_pos <- function(dock) {
+
+  active <- determine_active_views(dock$layout())
+
+  keep_visible <- as_ext_panel_id(visible_exts())
+
+  cands <- names(active)[!active %in% keep_visible]
+
+  if (!length(cands)) {
     return(list(direction = "right"))
   }
 
   prev <- dock$prev_active_group()
-  curr <- sess$input[[dock_input("active-group")]]
 
-  if (is.null(prev) || identical(curr, prev)) {
-    grp <- last(setdiff(dock_panel_groups(sess), curr))
-  } else {
+  if (isTRUE(prev %in% cands)) {
     grp <- prev
+  } else {
+    grp <- last(cands)
   }
 
   list(referenceGroup = grp, direction = "within")
@@ -78,6 +104,7 @@ determine_panel_pos <- function(dock) {
 #' @rdname panel
 #' @export
 show_panel <- function(id, board, dock, type = c("block", "extension")) {
+
   stopifnot(is_string(id))
 
   type <- match.arg(type)
