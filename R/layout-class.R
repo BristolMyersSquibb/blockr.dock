@@ -10,12 +10,7 @@
 new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 
   if (!length(grid)) {
-    grid <- list(
-      root = list(type = "branch", data = list(), size = 0L),
-      width = 0L,
-      height = 0L,
-      orientation = "HORIZONTAL"
-    )
+    grid <- draw_panel_tree(NULL)
   }
 
   if (!length(panels)) {
@@ -79,17 +74,65 @@ draw_panel_tree <- function(x) {
   }
 
   draw_tree <- function(x, size = 1) {
+
     if (is.list(x)) {
-      size <- 1 / length(x)
+
+      if (length(x)) {
+        size <- 1 / length(x)
+      } else {
+        size <- 0
+      }
+
       new_branch(lapply(x, draw_tree, size = size), size)
+
     } else {
+
       new_leaf(x, size)
     }
+  }
+
+  if (is.null(x)) {
+    x <- list()
+  } else if (is.character(x)) {
+    x <- as.list(x)
   }
 
   list(
     root = draw_tree(x),
     orientation = "HORIZONTAL"
+  )
+}
+
+create_layout_panel <- function(x) {
+
+  remove <- x[["remove"]]
+
+  if (isTRUE(remove[["enable"]])) {
+    tab_component <- "manual"
+  } else {
+    tab_component <- "custom"
+  }
+
+  if (isTRUE(remove[["enable"]]) && not_null(remove[["callback"]])) {
+    remove_callback <- list(
+      `__IS_FUNCTION__` = TRUE,
+      source = unclass(remove[["callback"]])
+    )
+  } else {
+    remove_callback <- NULL
+  }
+
+  c(
+    x[c("id", "title")],
+    list(
+      contentComponent = "default",
+      tabComponent = tab_component,
+      params = list(
+        content = list(html = c(x[["content"]][["html"]])),
+        style = x[["style"]],
+        removeCallback = remove_callback
+      )
+    )
   )
 }
 
@@ -101,39 +144,6 @@ create_dock_layout <- function(
   extensions = list(),
   arrangement = default_layout(blocks, extensions)
 ) {
-
-  preproc_panel <- function(x) {
-
-    remove <- x[["remove"]]
-
-    if (isTRUE(remove[["enable"]])) {
-      tab_component <- "manual"
-    } else {
-      tab_component <- "custom"
-    }
-
-    if (isTRUE(remove[["enable"]]) && not_null(remove[["callback"]])) {
-      remove_callback <- list(
-        `__IS_FUNCTION__` = TRUE,
-        source = unclass(remove[["callback"]])
-      )
-    } else {
-      remove_callback <- NULL
-    }
-
-    c(
-      x[c("id", "title")],
-      list(
-        contentComponent = "default",
-        tabComponent = tab_component,
-        params = list(
-          content = list(html = c(x[["content"]][["html"]])),
-          style = x[["style"]],
-          removeCallback = remove_callback
-        )
-      )
-    )
-  }
 
   blocks <- as_blocks(blocks)
 
@@ -173,7 +183,7 @@ create_dock_layout <- function(
     } else {
 
       arrangement <- rapply(
-        arrangement,
+        as.list(arrangement),
         function(x, map) map[[x]],
         "character",
         how = "replace",
@@ -184,7 +194,7 @@ create_dock_layout <- function(
 
   ext_panels <- lapply(extensions, ext_panel)
 
-  panels <- lapply(c(blk_panels, ext_panels), preproc_panel)
+  panels <- lapply(c(blk_panels, ext_panels), create_layout_panel)
   names(panels) <- chr_xtr(panels, "id")
 
   if (!all(unlist(arrangement) %in% names(panels))) {
