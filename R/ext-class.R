@@ -14,6 +14,10 @@
 #' @param options Board options supplied by an extension
 #' @param ... Further attributes
 #'
+#' @examples
+#' ext <- new_edit_board_extension()
+#' is_dock_extension(ext)
+#'
 #' @return The constructors `new_dock_extension()` and `new_dock_extension()`,
 #' as do the coercion function `as_dock_extension()` and `as_dock_extension()`,
 #' return objects that inherit from `dock_extension` and `dock_extensions`

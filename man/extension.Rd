@@ -98,3 +98,8 @@ Functionality of a \code{dock_board} can be extended by supplying one or more
 that allows for manipulating the board state. A set of dock extensions
 can be combined into a \code{dock_extensions} object.
 }
+\examples{
+ext <- new_edit_board_extension()
+is_dock_extension(ext)
+
+}

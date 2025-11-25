@@ -7,7 +7,7 @@
 #'
 #' @inheritParams blockr.core::new_board
 #' @param extensions Dock extensions
-#' @param layout Dock layout
+#' @param grid Dock layout
 #'
 #' @examples
 #' brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
@@ -25,7 +25,7 @@
 #' @export
 new_dock_board <- function(blocks = list(), ...,
                            extensions = new_dock_extensions(),
-                           layout = default_layout(blocks, extensions),
+                           grid = default_grid(blocks, extensions),
                            options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
@@ -33,7 +33,7 @@ new_dock_board <- function(blocks = list(), ...,
     blocks = as_blocks(blocks),
     ...,
     extensions = as_dock_extensions(extensions),
-    layout = create_dock_layout(blocks, extensions, layout),
+    layout = create_dock_layout(blocks, extensions, grid),
     options = as_board_options(options),
     ctor = forward_ctor(ctor),
     pkg = pkg,

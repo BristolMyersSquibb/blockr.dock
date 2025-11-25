@@ -1,10 +1,49 @@
 #' ID utilities
 #'
-#' Functions for converting "object IDs" (i.e. block or extension IDs) to
-#' panel IDs and other ID handling utilities.
+#' Objects, such as blocks and dock extensions carry their own IDs. These
+#' can be converted into other ID types, such as panel IDs or "handle" IDs.
+#' Panel IDs are used to refer to dock panels, while handle IDs provide
+#' "handles" for DOM manipulations. All such IDs inherit from `dock_id` and
+#' panel IDs additionally inherit from `dock_panel_id`, while handle IDs
+#' inherit from `dock_handle_id`. For panel IDs, depending on whether the panel
+#' is showing a block or an extension, the inheritance structure additionally
+#' contains `block_panel_id` or `ext_panel_id`, respectively. Similarly, for
+#' handle IDs, we have `block_handle_id` and `ext_handle_id`. All `dock_id`
+#' objects can be converted back to native IDs, by calling `as_obj_id()`.
+#' The utility function `dock_id()` returns a (possibly namespaced) ID of the
+#' `dock` instance that is used to manage all visible panels.
 #'
 #' @param ns Namespace prefix
 #'
+#' @examples
+#' blks <- c(
+#'   a = blockr.core::new_dataset_block(),
+#'   b = blockr.core::new_head_block()
+#' )
+#'
+#' ext <- new_edit_board_extension()
+#'
+#' as_dock_panel_id(blks)
+#' as_dock_panel_id(ext)
+#'
+#' identical(names(blks), as_obj_id(as_block_panel_id(blks)))
+#'
+#' as_dock_handle_id(blks)
+#' as_dock_handle_id(ext)
+#'
+#' identical(names(blks), as_obj_id(as_block_handle_id(blks)))
+#'
+#' @return Coercion functions `as_block_panel_id()`, `as_ext_panel_id()`,
+#' `as_block_handle_id()` and `as_ext_handle_id()` return objects that inherit
+#' from `block_panel_id`, `ext_panel_id`, `block_handle_id` and
+#' `ext_handle_id` as classed character vectors. The less specific coercion
+#' functions `as_dock_panel_id()` and `as_dock_handle_id()` return objects
+#' that inherit from `dock_panel_id` and `dock_handle_id`, in addition to
+#' a sub-class such as `block_panel_id` or `ext_panel_id` (in the case of
+#' `as_dock_panel_id()`). If a mix of sub-classes is returned, this will be
+#' represented by a list of classed character vectors. Finally, `as_obj_id()`
+#' returns a character vector, as does `dock_id()`.
+#' @rdname ids
 #' @export
 dock_id <- function(ns = NULL) {
 
@@ -43,7 +82,7 @@ is_dock_handle_id <- function(x) {
 }
 
 #' @param x Object
-#' @rdname dock_id
+#' @rdname ids
 #' @export
 as_dock_panel_id <- function(x) {
   if (length(x)) {
@@ -87,8 +126,23 @@ as_dock_panel_id.dock_layout <- function(x) {
   lapply(layout_panel_ids(x), as_dock_panel_id)
 }
 
+#' @export
+as_dock_panel_id.blocks <- function(x) {
+  as_block_panel_id(names(x))
+}
+
+#' @export
+as_dock_panel_id.dock_extensions <- function(x) {
+  as_ext_panel_id(names(x))
+}
+
+#' @export
+as_dock_panel_id.dock_extension <- function(x) {
+  as_ext_panel_id(extension_id(x))
+}
+
 #' @param x Object
-#' @rdname dock_id
+#' @rdname ids
 #' @export
 as_obj_id <- function(x) {
   if (length(x)) {
@@ -126,7 +180,7 @@ maybe_block_panel_id <- function(x) {
   grepl("^block_panel-", x)
 }
 
-#' @rdname dock_id
+#' @rdname ids
 #' @export
 as_block_panel_id <- function(x) {
   if (length(x)) {
@@ -195,7 +249,7 @@ maybe_ext_panel_id <- function(x) {
   grepl("^ext_panel-", x)
 }
 
-#' @rdname dock_id
+#' @rdname ids
 #' @export
 as_ext_panel_id <- function(x) {
   if (length(x)) {
@@ -269,7 +323,66 @@ maybe_block_handle_id <- function(x) {
   grepl("^block_handle-", x)
 }
 
-#' @rdname dock_id
+#' @rdname ids
+#' @export
+as_dock_handle_id <- function(x) {
+  if (length(x)) {
+    UseMethod("as_dock_handle_id")
+  } else {
+    character()
+  }
+}
+
+#' @export
+as_dock_handle_id.character <- function(x) {
+
+  if (length(x) > 1L) {
+    return(lapply(x, as_dock_handle_id))
+  }
+
+  stopifnot(is_string(x))
+
+  if (maybe_block_handle_id(x)) {
+    new_block_handle_id(x)
+  } else if (maybe_ext_handle_id(x)) {
+    new_ext_handle_id(x)
+  } else {
+    blockr_abort(
+      "Cannot convert ID {x} to a `dock_handle_id` object.",
+      class = "invalid_dock_handle_id_coercion"
+    )
+  }
+}
+
+#' @export
+as_dock_handle_id.board <- function(x) {
+  c(
+    lapply(board_block_ids(x), as_block_handle_id),
+    lapply(dock_ext_ids(x), as_ext_handle_id)
+  )
+}
+
+#' @export
+as_dock_handle_id.dock_layout <- function(x) {
+  lapply(layout_panel_ids(x), as_dock_handle_id)
+}
+
+#' @export
+as_dock_handle_id.blocks <- function(x) {
+  as_block_handle_id(names(x))
+}
+
+#' @export
+as_dock_handle_id.dock_extensions <- function(x) {
+  as_ext_handle_id(names(x))
+}
+
+#' @export
+as_dock_handle_id.dock_extension <- function(x) {
+  as_ext_handle_id(extension_id(x))
+}
+
+#' @rdname ids
 #' @export
 as_block_handle_id <- function(x) {
   if (length(x)) {
@@ -338,7 +451,7 @@ maybe_ext_handle_id <- function(x) {
   grepl("^ext_handle-", x)
 }
 
-#' @rdname dock_id
+#' @rdname ids
 #' @export
 as_ext_handle_id <- function(x) {
   if (length(x)) {
