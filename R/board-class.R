@@ -1,43 +1,55 @@
 #' Dock board
 #'
 #' Using the docking layout manager provided by dockViewR, a `dock_board`
-#' extends [blockr.core::new_board()].
+#' extends [blockr.core::new_board()]. In addition to the attributes contained
+#' in a core board, this also includes dock extensions (as `extensions`)
+#' and the panel arrangement (as `layout`).
 #'
 #' @inheritParams blockr.core::new_board
 #' @param extensions Dock extensions
-#' @param layout Dock layout
+#' @param grid Dock layout
 #'
-#' @return A `board` object
+#' @examples
+#' brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
+#' str(dock_layout(brd), max.level = 2)
+#'
+#' @return The constructor `new_dock_board()` returns a `board` object, as does
+#' the coercion function `as_dock_board()`. Inheritance can be checked using
+#' `is_dock_board()`, which returns a boolean. Getters `dock_layout()` and
+#' `dock_extensions()` return `dock_layout` and `dock_extension` objects while
+#' setters `dock_layout<-()` and `dock_extensions<-()` return the updated board
+#' object (invisibly). A character vector of IDs is returned by `dock_ext_ids()`
+#' and `dock_board_options()` returns a `board_options` object.
 #'
 #' @rdname dock
 #' @export
 new_dock_board <- function(blocks = list(), ...,
                            extensions = new_dock_extensions(),
-                           layout = default_dock_layout(blocks, extensions),
+                           grid = default_grid(blocks, extensions),
                            options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
-  extensions <- as_dock_extensions(extensions)
-  blocks <- as_blocks(blocks)
-
-  if (is.character(layout)) {
-    layout <- default_dock_layout(blocks[layout], extensions)
-  } else {
-    layout <- as_dock_layout(layout)
-  }
-
-  validate_dock_layout(layout, names(blocks))
-
   new_board(
-    blocks = blocks,
+    blocks = as_blocks(blocks),
     ...,
-    extensions = extensions,
-    layout = layout,
+    extensions = as_dock_extensions(extensions),
+    layout = create_dock_layout(blocks, extensions, grid),
     options = as_board_options(options),
     ctor = forward_ctor(ctor),
     pkg = pkg,
     class = c(class, "dock_board")
   )
+}
+
+#' @export
+validate_board.dock_board <- function(x) {
+
+  x <- NextMethod()
+
+  validate_dock_layout(x[["layout"]], board_block_ids(x))
+  validate_extensions(x[["extensions"]])
+
+  x
 }
 
 #' @param x Board object
@@ -81,7 +93,7 @@ dock_layout <- function(x) {
 `dock_layout<-` <- function(x, value) {
   stopifnot(is_dock_board(x))
   x[["layout"]] <- validate_dock_layout(value, board_block_ids(x))
-  x
+  invisible(x)
 }
 
 #' @rdname dock
@@ -97,7 +109,7 @@ dock_extensions <- function(x) {
 `dock_extensions<-` <- function(x, value) {
   stopifnot(is_dock_board(x))
   x[["extensions"]] <- validate_extensions(value)
-  x
+  invisible(x)
 }
 
 #' @rdname dock

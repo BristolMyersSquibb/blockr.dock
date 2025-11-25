@@ -78,8 +78,28 @@ as_dock_extensions(x, ...)
 
 \item{id}{Namespace ID}
 }
+\value{
+The constructors \code{new_dock_extension()} and \code{new_dock_extension()},
+as do the coercion function \code{as_dock_extension()} and \code{as_dock_extension()},
+return objects that inherit from \code{dock_extension} and \code{dock_extensions}
+respectively. This inheritance structure can be checked using
+\code{is_dock_extension()} and \code{is_dock_extensions()}, which both return a
+boolean. A \code{dock_extension} can be validated using \code{validate_extension()}
+and a \code{dock_extensions} object using \code{validate_extensions()}, which return
+the input object invisibly and throw errors as side-effects. Several getter
+functions return extension attributes, including \code{extension_ui()} (a
+function), \code{extension_server()} (a function), \code{extension_id()} (a string),
+\code{extension_name()} (a string) and \code{extension_ctor()} (an object that
+inherits from \code{blockr_ctor}).
+}
 \description{
 Functionality of a \code{dock_board} can be extended by supplying one or more
 \code{dock_extension} objects, which essentially provide UI shown in a dock panel
-that allows for manipulating the board state.
+that allows for manipulating the board state. A set of dock extensions
+can be combined into a \code{dock_extensions} object.
+}
+\examples{
+ext <- new_edit_board_extension()
+is_dock_extension(ext)
+
 }

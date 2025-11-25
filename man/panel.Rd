@@ -20,5 +20,5 @@ should be shown}
 \code{NULL}, invisibly
 }
 \description{
-Exported utilities for manipulating dock panels (i.e. displaying panels)
+Exported utilities for manipulating dock panels (i.e. displaying panels).
 }

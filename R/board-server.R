@@ -87,8 +87,19 @@ manage_dock <- function(board, update, session = get_session()) {
     suggest_panels_to_add(dock, board, session)
   )
 
+  empty_layout <- reactive(
+    {
+      req(input[[dock_input("initialized")]])
+      n_pan <- coal(
+        input[[dock_input("n-panels")]],
+        length(determine_active_views(dock_layout(board$board)))
+      )
+      req(n_pan == 0)
+    }
+  )
+
   observeEvent(
-    req(input[[dock_input("n-panels")]] == 0),
+    empty_layout(),
     suggest_panels_to_add(dock, board, session)
   )
 

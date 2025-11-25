@@ -91,7 +91,7 @@ determine_panel_pos <- function(dock) {
 
 #' UI utilities
 #'
-#' Exported utilities for manipulating dock panels (i.e. displaying panels)
+#' Exported utilities for manipulating dock panels (i.e. displaying panels).
 #'
 #' @param id Object ID
 #' @param board Board object

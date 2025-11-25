@@ -1,3 +1,19 @@
+#' Edit board extension
+#'
+#' A simplistic example of an extension which can be used for manipulating
+#' the board via a table-based UI. Mainly relevant for testing purposes.
+#'
+#' @param ... Forwarded to `new_dock_extension()`
+#'
+#' @examples
+#' ext <- new_edit_board_extension()
+#' is_dock_extension(ext)
+#'
+#' @return A board extension object that additionally inherits from
+#' `edit_board_extension`.
+#'
+#' @rdname edit
+#' @export
 new_edit_board_extension <- function(...) {
   new_dock_extension(
     blk_ext_srv,

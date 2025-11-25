@@ -1,4 +1,3 @@
-#' @keywords internal
 edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
 
   blk_info <- blks_metadata(blk)
