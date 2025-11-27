@@ -49,7 +49,7 @@ determine_active_views <- function(layout) {
   xtr_leaf_id <- function(x) {
 
     if (x$type == "leaf") {
-      return(set_names(x$data$activeView, x$data$id))
+      return(set_names(coal(x$data$activeView, ""), x$data$id))
     }
 
     lapply(x$data, xtr_leaf_id)
