@@ -62,8 +62,8 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 #' @export
 default_grid <- function(blocks, extensions) {
   list(
-    as_ext_panel_id(extensions),
-    as_block_panel_id(blocks)
+    as_ext_panel_id(as_dock_extensions(extensions)),
+    as_block_panel_id(as_blocks(blocks))
   )
 }
 
