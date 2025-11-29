@@ -110,6 +110,19 @@
   margin-top: 3px;
 }
 
+.blockr-issues-toggle {
+  cursor: pointer;
+  color: var(--blockr-color-text-meta);
+  font-size: var(--blockr-font-size-base);
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-issues-toggle:hover {
+  background-color: var(--blockr-color-bg-hover);
+}
+
 /* Section toggle buttons (inputs/outputs) - matches dockview tabs */
 .blockr-section-toggle .btn.btn-light {
   background-color: var(--blockr-grey-200) !important;
