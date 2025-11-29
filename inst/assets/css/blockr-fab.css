@@ -110,6 +110,38 @@
   margin-top: 3px;
 }
 
+/* Section toggle buttons (inputs/outputs) - matches dockview tabs */
+.blockr-section-toggle .btn.btn-light {
+  background-color: var(--blockr-grey-200) !important;
+  border: none !important;
+  border-radius: 8px;
+  color: var(--blockr-color-text-muted) !important;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-normal);
+  padding: 0.25rem 0.5rem;
+  margin: 0 2px;
+}
+
+.blockr-section-toggle .btn.btn-light:hover {
+  background-color: var(--blockr-grey-300) !important;
+  color: var(--blockr-color-text-secondary) !important;
+}
+
+.blockr-section-toggle .btn-check:checked + .btn.btn-light:hover {
+  background-color: hsl(220, 3%, 87%) !important;
+}
+
+.blockr-section-toggle .btn.btn-light.active,
+.blockr-section-toggle .btn-check:checked + .btn.btn-light {
+  background-color: var(--blockr-grey-300) !important;
+  color: var(--blockr-color-text-secondary) !important;
+  box-shadow: none !important;
+}
+
+.blockr-section-toggle .btn-group {
+  gap: 6px;
+}
+
 /* Package badge - two-tone subtle style */
 .badge-two-tone {
   display: inline-block;

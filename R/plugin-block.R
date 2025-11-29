@@ -107,14 +107,15 @@ block_card_toggles <- function(blk, ns) {
     inputId = ns("collapse_blk_sections"),
     status = "light",
     size = "sm",
-    choices = set_names(opts, paste0("<small>", opts, "</small>")),
+    choices = set_names(opts, c("Input", "Output")),
     individual = TRUE,
     selected = coal(attr(blk, "visible"), opts)
   )
 
-  # Remove the ms-auto class
-  section_toggles$attribs$class <- trimws(
-    gsub("form-group|ms-auto", "", section_toggles$attribs$class)
+  # Remove the ms-auto class, add blockr-section-toggle
+  section_toggles$attribs$class <- paste(
+    "blockr-section-toggle",
+    trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
   )
 
   section_toggles
