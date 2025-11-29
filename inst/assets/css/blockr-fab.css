@@ -329,3 +329,25 @@ small, .small {
   border-top-color: white !important;
   border-bottom-color: white !important;
 }
+
+/* ============================================
+   DataTables Styling
+   ============================================ */
+
+/* Grey stripes instead of blue - override Bootstrap variable */
+.table-striped {
+  --bs-table-striped-bg: var(--blockr-grey-200);
+}
+
+/* Info text - small and muted */
+.dataTables_wrapper .dataTables_info {
+  font-size: var(--blockr-font-size-sm) !important;
+  color: var(--blockr-color-text-muted) !important;
+  padding-top: 0.5rem;
+}
+
+/* Smaller paginator */
+.dataTables_wrapper .dataTables_paginate .page-link {
+  padding: 0.2rem 0.5rem;
+  font-size: var(--blockr-font-size-xs);
+}
