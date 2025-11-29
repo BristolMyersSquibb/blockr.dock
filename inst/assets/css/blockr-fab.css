@@ -1,3 +1,60 @@
+/* ============================================
+   CSS Design System - Variables
+   ============================================ */
+:root {
+  /* ===========================================
+     Grey Scale
+     ===========================================
+
+     We use HSL (Hue, Saturation, Lightness) for greys because:
+     - Easy to tweak: just change the lightness % value
+     - Consistent: all greys share the same hue/saturation
+
+     Subtle cool tint (blue hue 220, 3% saturation):
+     - 100: 99% lightness (lightest - page bg)
+     - 200: 97% lightness (blocks, cards, toolbar, input bg)
+     - 300: 91% lightness (borders)
+
+     To remove tint: change hue to 0, saturation to 0%
+     To warm tint: change hue to 30
+     =========================================== */
+  --blockr-grey-100: hsl(220, 3%, 99%);
+  --blockr-grey-200: hsl(220, 3%, 97%);
+  --blockr-grey-300: hsl(220, 3%, 91%);
+
+  /* Shadow - subtle, consistent across components */
+  --blockr-shadow: rgba(0, 0, 0, 0.08) 0px 2px 8px;
+
+  /* Font Sizes */
+  --blockr-font-size-base: 0.875rem;      /* 14px - base for body/inputs */
+  --blockr-font-size-sm: 0.8125rem;       /* 13px - helper text */
+  --blockr-font-size-xs: 0.75rem;         /* 12px - meta, toggles, subtitle */
+  --blockr-font-size-title: 1.25rem;      /* 20px - block title */
+  --blockr-font-size-section: 0.875rem;   /* 14px - section headers */
+
+  /* Font Weights */
+  --blockr-font-weight-normal: 400;
+  --blockr-font-weight-medium: 500;
+  --blockr-font-weight-semibold: 600;
+
+  /* Colors - Text (softened) */
+  --blockr-color-text-primary: #333;
+  --blockr-color-text-secondary: #666;
+  --blockr-color-text-muted: #999;
+  --blockr-color-text-subtle: #ccc;
+  --blockr-color-text-meta: #7a7d8f;
+
+  /* Colors - UI */
+  --blockr-color-border: var(--blockr-grey-300);
+  --blockr-color-border-hover: hsl(220, 3%, 85%);
+  --blockr-color-bg-subtle: var(--blockr-grey-200);
+  --blockr-color-bg-hover: var(--blockr-grey-300);
+  --blockr-color-error: #dc2626;
+}
+
+/* ============================================
+   FAB Button
+   ============================================ */
 .blockr-fab {
   position: fixed;
   bottom: 30px;
