@@ -7,8 +7,11 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
     class = "card-body",
     div(
       class = "d-flex align-items-stretch gap-3",
-      # Icon element
-      blk_icon_data_uri(blk_info$icon, blk_info$color, 60, "inline"),
+      # Icon element with tooltip
+      span(
+        title = blk_info$description,
+        blk_icon_data_uri(blk_info$icon, blk_info$color, 46, "inline")
+      ),
       # Title section
       div(
         class = paste(
@@ -36,10 +39,35 @@ block_card_title <- function(block, id, info) {
   div(
     class = "flex-grow-1 pe-3",
     div(
-      class = "card-title mb-1",
-      style = "line-height: 1.3;",
+      class = "card-title mb-0",
+      style = "line-height: 1.0;",
       popover(
-        uiOutput(NS(id, "block_name_out"), inline = TRUE),
+        div(
+          title = "Click to rename",
+          class = "d-inline-flex align-items-center gap-2",
+          style = paste(
+            "padding: 4px 8px;",
+            "margin: -4px -8px;",
+            "border-radius: 4px;",
+            "cursor: pointer;",
+            "border: 2px dashed transparent;",
+            "transition: border-color 0.15s ease;"
+          ),
+          onmouseover = paste0(
+            "this.style.borderColor='#ddd';",
+            "this.querySelector('.edit-icon').style.opacity='1';"
+          ),
+          onmouseout = paste0(
+            "this.style.borderColor='transparent';",
+            "this.querySelector('.edit-icon').style.opacity='0';"
+          ),
+          uiOutput(NS(id, "block_name_out"), inline = TRUE),
+          icon(
+            "pen-to-square",
+            class = "edit-icon",
+            style = "opacity: 0; font-size: 0.7em; color: #bbb; transition: opacity 0.15s ease;"
+          )
+        ),
         title = "Provide a new title",
         textInput(
           NS(id, "block_name_in"),
@@ -49,21 +77,20 @@ block_card_title <- function(block, id, info) {
         )
       )
     ),
-    div(
-      class = "text-body-secondary small text-muted",
-      style = "line-height: 1.2;",
-      span(class(block)[1]),
-      tags$sup(
-        class = "ms-1",
-        tooltip(
-          icon("info-circle", style = "color: #9ca3af; font-size: 0.75em;"),
-          p(
-            icon("lightbulb"),
-            "How to use this block?",
-          ),
-          p(info$description, ".")
-        )
-      )
+    popover(
+      span(
+        class = "blockr-subtitle",
+        info$name
+      ),
+      # Title + package badge
+      div(
+        class = "d-flex align-items-center justify-content-between gap-2 mb-2",
+        tags$strong(info$name),
+        span(class = "badge-two-tone", info$package)
+      ),
+      # Description
+      p(class = "mb-0", info$description),
+      options = list(trigger = "hover")
     )
   )
 }
@@ -270,9 +297,9 @@ edit_block_server <- function(id, block_id, board, update, ...) {
       )
 
       output$block_name_out <- renderUI(
-        h3(
+        span(
           input$block_name_in,
-          tags$sup(icon("pencil-square", class = "fa-2xs"))
+          class = "blockr-title"
         )
       )
 
