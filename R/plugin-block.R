@@ -195,6 +195,8 @@ block_card_content <- function(ns, expr_ui, block_ui) {
   )$reset(
   )$find(
     ".accordion-body"
+  )$addAttrs(
+    style = "background-color: var(--blockr-grey-200); border-radius: 8px; margin-bottom: 10px; padding-bottom: 10px; border: 1px solid var(--blockr-grey-300); box-shadow: var(--blockr-shadow);"
   )$append(
     expr_ui
   )$allTags()
@@ -215,6 +217,8 @@ block_card_content <- function(ns, expr_ui, block_ui) {
   )$reset(
   )$find(
     ".accordion-body"
+  )$addAttrs(
+    style = "padding: 0;"
   )$append(
     tagList(block_ui, div(id = ns("outputs_issues_wrapper")))
   )$allTags()
