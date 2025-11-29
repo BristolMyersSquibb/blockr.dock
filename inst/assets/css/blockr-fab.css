@@ -416,3 +416,10 @@ small, .small {
   padding: 0.2rem 0.5rem;
   font-size: var(--blockr-font-size-xs);
 }
+
+/* ============================================
+   G6 Graph Toolbar Override
+   ============================================ */
+.g6-toolbar {
+  box-shadow: none !important;
+}
