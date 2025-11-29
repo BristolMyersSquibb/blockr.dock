@@ -65,7 +65,12 @@ block_card_title <- function(block, id, info) {
           icon(
             "pen-to-square",
             class = "edit-icon",
-            style = "opacity: 0; font-size: 0.7em; color: #bbb; transition: opacity 0.15s ease;"
+            style = paste(
+              "opacity: 0;",
+              "font-size: 0.7em;",
+              "color: #bbb;",
+              "transition: opacity 0.15s ease;"
+            )
           )
         ),
         title = "Provide a new title",
@@ -196,7 +201,14 @@ block_card_content <- function(ns, expr_ui, block_ui) {
   )$find(
     ".accordion-body"
   )$addAttrs(
-    style = "background-color: var(--blockr-grey-200); border-radius: 8px; margin-bottom: 10px; padding-bottom: 10px; border: 1px solid var(--blockr-grey-300); box-shadow: var(--blockr-shadow);"
+    style = paste(
+      "background-color: var(--blockr-grey-200);",
+      "border-radius: 8px;",
+      "margin-bottom: 10px;",
+      "padding-bottom: 10px;",
+      "border: 1px solid var(--blockr-grey-300);",
+      "box-shadow: var(--blockr-shadow);"
+    )
   )$append(
     expr_ui
   )$allTags()
@@ -430,7 +442,10 @@ create_issues_ui <- function(statuses, ns) {
     id = ns("outputs_issues"),
     class = "mt-3",
     tags$div(
-      class = "d-flex align-items-center justify-content-between blockr-issues-toggle",
+      class = paste(
+        "d-flex align-items-center justify-content-between",
+        "blockr-issues-toggle"
+      ),
       `data-bs-toggle` = "collapse",
       `data-bs-target` = paste0("#", collapse_id),
       `aria-expanded` = "false",
