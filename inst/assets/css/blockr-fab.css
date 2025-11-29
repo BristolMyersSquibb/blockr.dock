@@ -198,3 +198,79 @@
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
   }
 }
+
+/* ============================================
+   Bootstrap Base Overrides
+   ============================================ */
+body {
+  font-size: var(--blockr-font-size-base);
+}
+
+label,
+.form-label,
+.shiny-input-container .control-label {
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.form-control, .form-select {
+  font-size: var(--blockr-font-size-base);
+}
+
+/* Selectize - set base font-size, spacing adjusts via em units */
+.selectize-control {
+  font-size: var(--blockr-font-size-base);
+}
+
+.selectize-input {
+  font-size: var(--blockr-font-size-base);
+}
+
+.selectize-dropdown {
+  font-size: var(--blockr-font-size-base);
+}
+
+/* Buttons - scaled down to match reduced font sizes */
+.btn {
+  font-size: var(--blockr-font-size-base);
+}
+
+.btn-sm {
+  font-size: var(--blockr-font-size-xs);
+  padding: 0.25rem 0.5rem;
+}
+
+/* Secondary buttons - use text color grays */
+.btn-outline-secondary {
+  color: var(--blockr-color-text-secondary);
+  border-color: var(--blockr-color-border);
+}
+
+.btn-outline-secondary:hover {
+  color: var(--blockr-color-text-primary);
+  background-color: var(--blockr-color-bg-subtle);
+  border-color: var(--blockr-color-border-hover);
+}
+
+h4, .h4 {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-medium);
+  font-variant-caps: all-small-caps;
+  color: var(--blockr-color-text-secondary);
+  letter-spacing: 0.5px;
+}
+
+h5, .h5 {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-medium);
+}
+
+h6, .h6 {
+  font-size: var(--blockr-font-size-base);
+  font-weight: var(--blockr-font-weight-medium);
+}
+
+small, .small {
+  font-size: var(--blockr-font-size-sm);
+}
