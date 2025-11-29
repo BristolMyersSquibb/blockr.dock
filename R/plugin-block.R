@@ -201,13 +201,13 @@ block_card_content <- function(ns, expr_ui, block_ui) {
   )$find(
     ".accordion-body"
   )$addAttrs(
-    style = paste(
-      "background-color: var(--blockr-grey-200);",
-      "border-radius: 8px;",
-      "margin-bottom: 10px;",
-      "padding-bottom: 10px;",
-      "border: 1px solid var(--blockr-grey-300);",
-      "box-shadow: var(--blockr-shadow);"
+    style = paste0(
+      "background-color: white;",
+      "border-radius: 0;",
+      "margin: 0 -16px 10px -16px;",
+      "padding: 16px 16px 10px 16px;",
+      "border-top: 1px solid var(--blockr-grey-300);",
+      "border-bottom: 1px solid var(--blockr-grey-300);"
     )
   )$append(
     expr_ui
