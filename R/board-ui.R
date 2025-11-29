@@ -58,8 +58,8 @@ options_ui <- function(id, x, ...) {
   tagList(
     blockr_fab_dep(),
     tags$button(
-      class = "blockr-fab",
-      icon("gear"),
+      class = "blockr-edge-tab",
+      bsicons::bs_icon("chevron-left"),
       `data-bs-toggle` = "offcanvas",
       `data-bs-target` = paste0("#", offcanvas_id),
       `aria-controls` = offcanvas_id

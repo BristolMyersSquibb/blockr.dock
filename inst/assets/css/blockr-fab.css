@@ -1,27 +1,425 @@
-.blockr-fab {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 60px;
-  height: 60px;
-  background-color: #000;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  font-size: 24px;
+/* ============================================
+   CSS Design System - Variables
+   ============================================ */
+:root {
+  /* ===========================================
+     Grey Scale
+     ===========================================
+
+     We use HSL (Hue, Saturation, Lightness) for greys because:
+     - Easy to tweak: just change the lightness % value
+     - Consistent: all greys share the same hue/saturation
+
+     Subtle cool tint (blue hue 220, 3% saturation):
+     - 100: 99% lightness (lightest - page bg)
+     - 200: 97% lightness (blocks, cards, toolbar, input bg)
+     - 300: 91% lightness (borders)
+
+     To remove tint: change hue to 0, saturation to 0%
+     To warm tint: change hue to 30
+     =========================================== */
+  --blockr-grey-100: hsl(220, 3%, 99%);
+  --blockr-grey-200: hsl(220, 3%, 97%);
+  --blockr-grey-300: hsl(220, 3%, 91%);
+
+  /* Shadow - subtle, consistent across components */
+  --blockr-shadow: rgba(0, 0, 0, 0.08) 0px 2px 8px;
+
+  /* Font Sizes */
+  --blockr-font-size-base: 0.875rem;      /* 14px - base for body/inputs */
+  --blockr-font-size-sm: 0.8125rem;       /* 13px - helper text */
+  --blockr-font-size-xs: 0.75rem;         /* 12px - meta, toggles, subtitle */
+  --blockr-font-size-title: 1.25rem;      /* 20px - block title */
+  --blockr-font-size-section: 0.875rem;   /* 14px - section headers */
+
+  /* Font Weights */
+  --blockr-font-weight-normal: 400;
+  --blockr-font-weight-medium: 500;
+  --blockr-font-weight-semibold: 600;
+
+  /* Colors - Text (softened) */
+  --blockr-color-text-primary: #333;
+  --blockr-color-text-secondary: #666;
+  --blockr-color-text-muted: #999;
+  --blockr-color-text-subtle: #ccc;
+  --blockr-color-text-meta: #7a7d8f;
+
+  /* Colors - UI */
+  --blockr-color-border: var(--blockr-grey-300);
+  --blockr-color-border-hover: hsl(220, 3%, 85%);
+  --blockr-color-bg-subtle: var(--blockr-grey-200);
+  --blockr-color-bg-hover: var(--blockr-grey-300);
+  --blockr-color-error: #dc2626;
+}
+
+/* ============================================
+   Typography Classes
+   ============================================ */
+.blockr-title {
+  font-size: var(--blockr-font-size-title);
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-primary);
+  margin: 0;
+}
+
+/* Inline editable title */
+.blockr-inline-edit {
+  position: relative;
+}
+
+.blockr-title-edit {
+  position: absolute;
+  top: -9px;
+  left: -8px;
+}
+
+.blockr-title-edit .form-group {
+  margin: 0;
+}
+
+.blockr-title-edit .form-control {
+  font-size: var(--blockr-font-size-title);
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-primary);
+  padding: 4px 8px;
+  height: auto;
+  width: auto;
+  min-width: 150px;
+  border: 2px dashed #bbb;
+  border-radius: 8px;
+  background: white;
+  box-shadow: none;
+}
+
+.blockr-title-edit .form-control:focus {
+  border-color: #aaa;
+  box-shadow: none;
+  outline: none;
+}
+
+.blockr-subtitle {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-normal);
+  color: var(--blockr-color-text-muted);
+  margin-left: 3px;
+}
+
+.blockr-section-header {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-label {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-helper {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-normal);
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-meta {
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-normal);
+  color: var(--blockr-color-text-meta);
+}
+
+.blockr-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  margin: 0 -16px;
+  background-color: rgba(220, 38, 38, 0.08);
+  color: var(--blockr-color-error);
+  font-size: var(--blockr-font-size-base);
+}
+
+.blockr-error-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+}
+
+.blockr-issues-toggle {
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  opacity: 1;
-  transform: scale(1);
-  transition: all 0.3s ease-in-out;
+  color: var(--blockr-color-text-meta);
+  font-size: var(--blockr-font-size-base);
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-issues-toggle:hover {
+  background-color: var(--blockr-color-bg-hover);
+}
+
+/* Section toggle buttons (inputs/outputs) - matches dockview tabs */
+.blockr-section-toggle .btn.btn-light {
+  background-color: var(--blockr-grey-200) !important;
+  border: none !important;
+  border-radius: 8px;
+  color: var(--blockr-color-text-muted) !important;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-normal);
+  padding: 0.25rem 0.5rem;
+  margin: 0 2px;
+}
+
+.blockr-section-toggle .btn.btn-light:hover {
+  background-color: var(--blockr-grey-300) !important;
+  color: var(--blockr-color-text-secondary) !important;
+}
+
+.blockr-section-toggle .btn-check:checked + .btn.btn-light:hover {
+  background-color: hsl(220, 3%, 87%) !important;
+}
+
+.blockr-section-toggle .btn.btn-light.active,
+.blockr-section-toggle .btn-check:checked + .btn.btn-light {
+  background-color: var(--blockr-grey-300) !important;
+  color: var(--blockr-color-text-secondary) !important;
+  box-shadow: none !important;
+}
+
+.blockr-section-toggle .btn-group {
+  gap: 6px;
+}
+
+/* Package badge - two-tone subtle style */
+.badge-two-tone {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.625rem;
+  border-radius: 0.25rem;
+  background-color: rgba(148, 163, 184, 0.1);
+  color: rgba(100, 116, 139, 0.9);
+  border: 1px solid rgba(100, 116, 139, 0.1);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Edge Tab (Settings Panel Trigger)
+   ============================================ */
+.blockr-edge-tab {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 80px;
+  background-color: #888;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.15);
+}
 
-  :hover {
-    background-color: #000;
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  }
+/* Accent stripe on left edge */
+.blockr-edge-tab::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  background-color: var(--blockr-grey-300);
+  border-radius: 2px;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.blockr-edge-tab:hover {
+  width: 28px;
+  background-color: #777;
+}
+
+.blockr-edge-tab:hover::before {
+  background-color: var(--blockr-grey-300);
+}
+
+.blockr-edge-tab svg,
+.blockr-edge-tab i {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.blockr-edge-tab:hover svg,
+.blockr-edge-tab:hover i {
+  opacity: 1;
+}
+
+/* ============================================
+   Bootstrap Base Overrides
+   ============================================ */
+body {
+  font-size: var(--blockr-font-size-base);
+}
+
+label,
+.form-label,
+.shiny-input-container .control-label {
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.form-control, .form-select {
+  font-size: var(--blockr-font-size-base);
+}
+
+/* Selectize - set base font-size, spacing adjusts via em units */
+.selectize-control {
+  font-size: var(--blockr-font-size-base);
+}
+
+.selectize-input {
+  font-size: var(--blockr-font-size-base);
+}
+
+.selectize-dropdown {
+  font-size: var(--blockr-font-size-base);
+}
+
+/* Buttons - scaled down to match reduced font sizes */
+.btn {
+  font-size: var(--blockr-font-size-base);
+}
+
+.btn-sm {
+  font-size: var(--blockr-font-size-xs);
+  padding: 0.25rem 0.5rem;
+}
+
+/* Secondary buttons - use text color grays */
+.btn-outline-secondary {
+  color: var(--blockr-color-text-secondary);
+  border-color: var(--blockr-color-border);
+}
+
+.btn-outline-secondary:hover {
+  color: var(--blockr-color-text-primary);
+  background-color: var(--blockr-color-bg-subtle);
+  border-color: var(--blockr-color-border-hover);
+}
+
+h4, .h4 {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-medium);
+  font-variant-caps: all-small-caps;
+  color: var(--blockr-color-text-secondary);
+  letter-spacing: 0.5px;
+}
+
+h5, .h5 {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-medium);
+}
+
+h6, .h6 {
+  font-size: var(--blockr-font-size-base);
+  font-weight: var(--blockr-font-weight-medium);
+}
+
+small, .small {
+  font-size: var(--blockr-font-size-sm);
+}
+
+/* ============================================
+   Tooltip & Popover Styling
+   ============================================ */
+.tooltip {
+  --bs-tooltip-bg: white;
+  --bs-tooltip-color: var(--blockr-color-text-secondary);
+  --bs-tooltip-opacity: 1;
+}
+
+.tooltip-inner {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-normal);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: var(--blockr-shadow);
+  border: 1px solid var(--blockr-grey-300);
+  max-width: 250px;
+  text-align: left;
+}
+
+.tooltip-arrow::before {
+  border-top-color: white !important;
+  border-bottom-color: white !important;
+}
+
+/* Popover - light style matching tooltips */
+.popover {
+  --bs-popover-bg: white;
+  --bs-popover-border-color: var(--blockr-grey-300);
+  --bs-popover-body-color: var(--blockr-color-text-secondary);
+  border-radius: 8px;
+  box-shadow: var(--blockr-shadow);
+  max-width: 280px;
+}
+
+.popover-body {
+  font-size: var(--blockr-font-size-sm);
+  padding: 12px 14px;
+}
+
+.popover-header,
+.popover .btn-close {
+  display: none;
+}
+
+.popover-arrow::before {
+  border-top-color: var(--blockr-grey-300) !important;
+  border-bottom-color: var(--blockr-grey-300) !important;
+}
+
+.popover-arrow::after {
+  border-top-color: white !important;
+  border-bottom-color: white !important;
+}
+
+/* ============================================
+   DataTables Styling
+   ============================================ */
+
+/* Grey stripes instead of blue - override Bootstrap variable */
+.table-striped {
+  --bs-table-striped-bg: var(--blockr-grey-200);
+}
+
+/* Info text - small and muted */
+.dataTables_wrapper .dataTables_info {
+  font-size: var(--blockr-font-size-sm) !important;
+  color: var(--blockr-color-text-muted) !important;
+  padding-top: 0.5rem;
+}
+
+/* Smaller paginator */
+.dataTables_wrapper .dataTables_paginate .page-link {
+  padding: 0.2rem 0.5rem;
+  font-size: var(--blockr-font-size-xs);
+}
+
+/* ============================================
+   G6 Graph Toolbar Override
+   ============================================ */
+.g6-toolbar {
+  box-shadow: none !important;
 }
