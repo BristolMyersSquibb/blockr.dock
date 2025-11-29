@@ -53,6 +53,47 @@
 }
 
 /* ============================================
+   Typography Classes
+   ============================================ */
+.blockr-title {
+  font-size: var(--blockr-font-size-title);
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-primary);
+  margin: 0;
+}
+
+.blockr-subtitle {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-normal);
+  color: var(--blockr-color-text-muted);
+  margin-left: 3px;
+}
+
+.blockr-section-header {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-label {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-helper {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-normal);
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-meta {
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-normal);
+  color: var(--blockr-color-text-meta);
+}
+
+/* ============================================
    FAB Button
    ============================================ */
 .blockr-fab {
