@@ -274,3 +274,58 @@ h6, .h6 {
 small, .small {
   font-size: var(--blockr-font-size-sm);
 }
+
+/* ============================================
+   Tooltip & Popover Styling
+   ============================================ */
+.tooltip {
+  --bs-tooltip-bg: white;
+  --bs-tooltip-color: var(--blockr-color-text-secondary);
+  --bs-tooltip-opacity: 1;
+}
+
+.tooltip-inner {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-normal);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: var(--blockr-shadow);
+  border: 1px solid var(--blockr-grey-300);
+  max-width: 250px;
+  text-align: left;
+}
+
+.tooltip-arrow::before {
+  border-top-color: white !important;
+  border-bottom-color: white !important;
+}
+
+/* Popover - light style matching tooltips */
+.popover {
+  --bs-popover-bg: white;
+  --bs-popover-border-color: var(--blockr-grey-300);
+  --bs-popover-body-color: var(--blockr-color-text-secondary);
+  border-radius: 8px;
+  box-shadow: var(--blockr-shadow);
+  max-width: 280px;
+}
+
+.popover-body {
+  font-size: var(--blockr-font-size-sm);
+  padding: 12px 14px;
+}
+
+.popover-header,
+.popover .btn-close {
+  display: none;
+}
+
+.popover-arrow::before {
+  border-top-color: var(--blockr-grey-300) !important;
+  border-bottom-color: var(--blockr-grey-300) !important;
+}
+
+.popover-arrow::after {
+  border-top-color: white !important;
+  border-bottom-color: white !important;
+}
