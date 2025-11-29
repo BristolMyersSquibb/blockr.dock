@@ -169,34 +169,64 @@
 }
 
 /* ============================================
-   FAB Button
+   Edge Tab (Settings Panel Trigger)
    ============================================ */
-.blockr-fab {
+.blockr-edge-tab {
   position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 60px;
-  height: 60px;
-  background-color: #000;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  font-size: 24px;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 80px;
+  background-color: white;
+  border: 1px solid var(--blockr-grey-300);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  opacity: 1;
-  transform: scale(1);
-  transition: all 0.3s ease-in-out;
+  transition: all 0.2s ease;
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.06);
+}
 
-  :hover {
-    background-color: #000;
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  }
+/* Accent stripe on left edge */
+.blockr-edge-tab::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  background-color: var(--blockr-color-text-secondary);
+  border-radius: 2px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.blockr-edge-tab:hover {
+  width: 28px;
+  background-color: white;
+}
+
+.blockr-edge-tab:hover::before {
+  opacity: 0.6;
+}
+
+.blockr-edge-tab svg,
+.blockr-edge-tab i {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 14px;
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-edge-tab:hover svg,
+.blockr-edge-tab:hover i {
+  opacity: 1;
 }
 
 /* ============================================
