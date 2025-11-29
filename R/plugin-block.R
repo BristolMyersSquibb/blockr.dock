@@ -423,31 +423,27 @@ update_blk_cond_observer <- function(conds, session = get_session()) {
 create_issues_ui <- function(statuses, ns) {
 
   collapse_id <- ns("outputs_issues_collapse")
+  n_issues <- length(statuses)
+  issue_text <- paste(n_issues, if (n_issues == 1) "issue" else "issues")
 
   div(
     id = ns("outputs_issues"),
-    tags$button(
-      class = paste(
-        "btn btn-sm btn-outline-secondary",
-        "mt-2 mb-2 position-relative"
-      ),
-      type = "button",
+    class = "mt-3",
+    tags$div(
+      class = "d-flex align-items-center justify-content-between blockr-issues-toggle",
       `data-bs-toggle` = "collapse",
       `data-bs-target` = paste0("#", collapse_id),
       `aria-expanded` = "false",
       `aria-controls` = collapse_id,
-      "View issues",
-      span(
-        class = paste(
-          "position-absolute top-0 start-100",
-          "translate-middle badge rounded-pill bg-danger"
-        ),
-        length(statuses)
-      )
+      span(issue_text),
+      icon("chevron-down", class = "blockr-meta")
     ),
     collapse_container(
       id = collapse_id,
-      statuses
+      div(
+        class = "pt-2",
+        statuses
+      )
     )
   )
 }
