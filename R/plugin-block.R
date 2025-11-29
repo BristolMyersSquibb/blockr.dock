@@ -36,15 +36,22 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
 }
 
 block_card_title <- function(block, id, info) {
+  ns <- NS(id)
+  input_id <- ns("block_name_in")
+
   div(
     class = "flex-grow-1 pe-3",
     div(
       class = "card-title mb-0",
       style = "line-height: 1.0;",
-      popover(
+      # Inline editable title container
+      div(
+        class = "blockr-inline-edit",
+        # Display mode - click to edit
         div(
+          id = ns("title_display"),
+          class = "blockr-title-display d-inline-flex align-items-center gap-2",
           title = "Click to rename",
-          class = "d-inline-flex align-items-center gap-2",
           style = paste(
             "padding: 4px 8px;",
             "margin: -4px -8px;",
@@ -61,7 +68,18 @@ block_card_title <- function(block, id, info) {
             "this.style.borderColor='transparent';",
             "this.querySelector('.edit-icon').style.opacity='0';"
           ),
-          uiOutput(NS(id, "block_name_out"), inline = TRUE),
+          onclick = sprintf(
+            paste0(
+              "this.style.display='none';",
+              "var editWrap = document.getElementById('%s');",
+              "editWrap.style.display='block';",
+              "var input = editWrap.querySelector('input');",
+              "input.focus();",
+              "input.select();"
+            ),
+            ns("title_edit")
+          ),
+          uiOutput(ns("block_name_out"), inline = TRUE),
           icon(
             "pen-to-square",
             class = "edit-icon",
@@ -73,12 +91,34 @@ block_card_title <- function(block, id, info) {
             )
           )
         ),
-        title = "Provide a new title",
-        textInput(
-          NS(id, "block_name_in"),
-          "Block name",
-          value = block_name(block),
-          updateOn = "blur"
+        # Edit mode - hidden by default
+        div(
+          id = ns("title_edit"),
+          class = "blockr-title-edit",
+          style = "display: none;",
+          textInput(
+            input_id,
+            label = NULL,
+            value = block_name(block)
+          ),
+          # JS to handle blur and enter key
+          tags$script(HTML(sprintf(
+            "$(document).ready(function() {
+              var input = $('#%s');
+              var display = $('#%s');
+              var editWrap = $('#%s');
+              input.on('blur', function() {
+                editWrap.hide();
+                display.css('display', 'flex');
+              });
+              input.on('keydown', function(e) {
+                if (e.key === 'Enter') {
+                  $(this).blur();
+                }
+              });
+            });",
+            input_id, ns("title_display"), ns("title_edit")
+          )))
         )
       )
     ),

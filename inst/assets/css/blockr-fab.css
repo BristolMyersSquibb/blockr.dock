@@ -62,6 +62,41 @@
   margin: 0;
 }
 
+/* Inline editable title */
+.blockr-inline-edit {
+  position: relative;
+}
+
+.blockr-title-edit {
+  position: absolute;
+  top: -9px;
+  left: -8px;
+}
+
+.blockr-title-edit .form-group {
+  margin: 0;
+}
+
+.blockr-title-edit .form-control {
+  font-size: var(--blockr-font-size-title);
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-primary);
+  padding: 4px 8px;
+  height: auto;
+  width: auto;
+  min-width: 150px;
+  border: 2px dashed #ddd;
+  border-radius: 4px;
+  background: white;
+  box-shadow: none;
+}
+
+.blockr-title-edit .form-control:focus {
+  border-color: #ccc;
+  box-shadow: none;
+  outline: none;
+}
+
 .blockr-subtitle {
   font-size: var(--blockr-font-size-sm);
   font-weight: var(--blockr-font-weight-normal);
