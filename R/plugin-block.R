@@ -360,17 +360,20 @@ update_blk_cond_observer <- function(conds, session = get_session()) {
       msgs <- NULL
 
       removeUI(
-        paste0("#", ns("errors_block"), " .alert")
+        paste0("#", ns("errors_block"), " > div")
       )
 
       if (length(cnds[["error"]])) {
         msgs <- tags$div(
-          class = sprintf("alert alert-danger"),
-          HTML(
-            cli::ansi_html(
-              paste(
-                unlist(cnds[["error"]]),
-                collapse = "\n"
+          class = "blockr-error",
+          bsicons::bs_icon("exclamation-circle", class = "blockr-error-icon"),
+          tags$span(
+            HTML(
+              cli::ansi_html(
+                paste(
+                  unlist(cnds[["error"]]),
+                  collapse = "<br>"
+                )
               )
             )
           )

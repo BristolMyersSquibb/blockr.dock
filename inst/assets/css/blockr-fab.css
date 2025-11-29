@@ -93,6 +93,23 @@
   color: var(--blockr-color-text-meta);
 }
 
+.blockr-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  margin: 8px 0 18px 0;
+  color: var(--blockr-color-error);
+  font-size: var(--blockr-font-size-base);
+}
+
+.blockr-error-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+}
+
 /* ============================================
    FAB Button
    ============================================ */
