@@ -242,7 +242,7 @@ block_card_content <- function(ns, expr_ui, block_ui) {
     ".accordion-body"
   )$addAttrs(
     style = paste0(
-      "background-color: white;",
+      "background-color: hsl(220, 3%, 98.5%);",
       "border-radius: 0;",
       "margin: 0 -16px 10px -16px;",
       "padding: 16px 16px 10px 16px;",
