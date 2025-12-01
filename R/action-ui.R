@@ -1,78 +1,87 @@
-css_modal_advanced <- function(id) {
+css_modal <- function() {
   tags$style(
     HTML(
-      sprintf(
-        "#%s {
-          max-height: 0;
-          overflow: hidden;
-          transition: max-height 0.3s ease-out;
-        }
-        #%s.expanded {
-          max-height: 500px;
-          overflow: visible;
-          transition: max-height 0.5s ease-in;
-        }
-        .modal-advanced-toggle {
-          cursor: pointer;
-          user-select: none;
-          padding: 8px 0;
-          margin-bottom: 8px;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          color: #6c757d;
-          font-size: 0.875rem;
-        }
-        .modal-chevron {
-          transition: transform 0.2s;
-          display: inline-block;
-          font-size: 14px;
-          font-weight: bold;
-        }
-        .modal-chevron.rotated {
-          transform: rotate(90deg);
-        }
-        /* Compact modal styling */
-        #shiny-modal .modal-header {
-          padding: 12px 20px;
-          border-bottom: 1px solid #e2e8f0;
-        }
-        #shiny-modal .modal-title {
-          font-size: 1.125rem;
-          font-weight: 600;
-          margin: 0;
-        }
-        #shiny-modal .modal-body {
-          padding: 20px;
-        }
-        #shiny-modal .modal-body .form-group {
-          width: 100%%;
-          margin-bottom: 16px;
-        }
-        #shiny-modal .modal-body .selectize-input,
-        #shiny-modal .modal-body input[type='text'] {
-          width: 100%%;
-        }
-        #shiny-modal .modal-body .shiny-input-container {
-          width: 100%%;
-        }
-        #shiny-modal .modal-body .control-label {
-          font-size: 0.875rem;
-          color: #6c757d;
-          margin-bottom: 4px;
-          font-weight: normal;
-        }
-        #shiny-modal .modal-footer {
-          padding: 12px 20px;
-          border-top: 1px solid #e2e8f0;
-          gap: 8px;
-        }
-        #shiny-modal .modal-footer .btn {
-          font-size: 0.875rem;
-          padding: 0.375rem 0.75rem;
-        }",
-        id,
-        id
+      "#shiny-modal .modal-header {
+        padding: 12px 20px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      #shiny-modal .modal-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0;
+      }
+      #shiny-modal .modal-body {
+        padding: 20px;
+      }
+      #shiny-modal .modal-body .form-group {
+        width: 100%;
+        margin-bottom: 16px;
+      }
+      #shiny-modal .modal-body .selectize-input,
+      #shiny-modal .modal-body input[type='text'] {
+        width: 100%;
+      }
+      #shiny-modal .modal-body .shiny-input-container {
+        width: 100%;
+      }
+      #shiny-modal .modal-body .control-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-bottom: 4px;
+        font-weight: normal;
+      }
+      #shiny-modal .modal-footer {
+        padding: 12px 20px;
+        border-top: 1px solid #e2e8f0;
+        gap: 8px;
+      }
+      #shiny-modal .modal-footer .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+      }"
+    )
+  )
+}
+
+css_modal_advanced <- function(id) {
+  tagList(
+    css_modal(),
+    tags$style(
+      HTML(
+        sprintf(
+          "#%s {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+          }
+          #%s.expanded {
+            max-height: 500px;
+            overflow: visible;
+            transition: max-height 0.5s ease-in;
+          }
+          .modal-advanced-toggle {
+            cursor: pointer;
+            user-select: none;
+            padding: 8px 0;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #6c757d;
+            font-size: 0.875rem;
+          }
+          .modal-chevron {
+            transition: transform 0.2s;
+            display: inline-block;
+            font-size: 14px;
+            font-weight: bold;
+          }
+          .modal-chevron.rotated {
+            transform: rotate(90deg);
+          }",
+          id,
+          id
+        )
       )
     )
   )
@@ -146,6 +155,20 @@ css_block_selectize <- function() {
       .selectize-dropdown .block-option:hover,
       .selectize-dropdown .block-option.active {
         background-color: #e9ecef;
+      }
+      .selectize-input .remove {
+        text-decoration: none !important;
+        color: #6c757d !important;
+        font-weight: normal !important;
+        border: none !important;
+        margin-left: 8px !important;
+        padding: 2px 6px !important;
+        border-radius: 3px !important;
+        transition: background-color 0.2s ease, color 0.2s ease;
+      }
+      .selectize-input .remove:hover {
+        background-color: rgba(108, 117, 125, 0.1) !important;
+        color: #495057 !important;
       }"
     )
   )
