@@ -350,6 +350,10 @@ label:has(input[type="file"]) {
 /* ============================================
    Offcanvas / Sidebar Styling
    ============================================ */
+.offcanvas {
+  width: 320px !important;
+}
+
 .offcanvas-title {
   font-size: 1.125rem;
   font-weight: var(--blockr-font-weight-semibold);
