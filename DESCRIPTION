@@ -30,7 +30,9 @@ Imports:
     jsonlite
 Suggests: 
     testthat (>= 3.0.0),
-    DT
+    DT,
+    colorspace,
+    methods
 Config/testthat/edition: 3
 Remotes:
     BristolMyersSquibb/blockr.core,
@@ -39,7 +41,10 @@ Collate:
     'action-class.R'
     'action-block.R'
     'action-link.R'
+    'action-modal.R'
     'action-stack.R'
+    'action-ui.R'
+    'action-utils.R'
     'block-meta.R'
     'block-ui.R'
     'board-class.R'
