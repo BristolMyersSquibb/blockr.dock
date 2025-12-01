@@ -348,6 +348,55 @@ label:has(input[type="file"]) {
 }
 
 /* ============================================
+   Offcanvas / Sidebar Styling
+   ============================================ */
+.offcanvas-title {
+  font-size: 1.125rem;
+  font-weight: var(--blockr-font-weight-semibold);
+}
+
+.offcanvas-body {
+  font-size: var(--blockr-font-size-sm);
+}
+
+.offcanvas .accordion {
+  margin: 0 -20px;
+}
+
+.offcanvas .accordion-button {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-semibold);
+  font-variant-caps: all-small-caps;
+  color: var(--blockr-color-text-secondary);
+  letter-spacing: 0.5px;
+}
+
+/* Export button adjustments */
+.offcanvas .shiny-download-link i,
+.offcanvas .shiny-download-link svg,
+.offcanvas .shiny-download-link .bsicon {
+  display: none;
+}
+
+.offcanvas .shiny-download-link {
+  margin-top: -5px;
+}
+
+/* Make Show code button smaller */
+.offcanvas .btn-default,
+.offcanvas .btn-outline-default {
+  font-size: var(--blockr-font-size-sm);
+  padding: 0.25rem 0.5rem;
+}
+
+.offcanvas hr {
+  margin-left: -20px;
+  margin-right: -20px;
+  border-color: var(--blockr-grey-300);
+  opacity: 1;
+}
+
+/* ============================================
    Tooltip & Popover Styling
    ============================================ */
 .tooltip {
