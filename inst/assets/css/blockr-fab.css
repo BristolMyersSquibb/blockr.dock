@@ -267,67 +267,10 @@
 /* ============================================
    Bootstrap Base Overrides
    ============================================ */
+
+/* --- Typography --- */
 body {
   font-size: var(--blockr-font-size-base);
-}
-
-label,
-.form-label,
-.shiny-input-container .control-label {
-  font-size: var(--blockr-font-size-xs);
-  color: var(--blockr-color-text-secondary);
-  margin-bottom: 0.25rem;
-}
-
-/* Exception: no margin-bottom for file input labels */
-label:has(input[type="file"]) {
-  margin-bottom: 0;
-}
-
-/* Override input-group-sm font size */
-.input-group-sm > .form-control,
-.input-group-sm > .form-select,
-.input-group-sm > .input-group-text,
-.input-group-sm > .btn {
-  font-size: var(--blockr-font-size-sm);
-}
-
-.form-control, .form-select {
-  font-size: var(--blockr-font-size-base);
-}
-
-/* Selectize - set base font-size, spacing adjusts via em units */
-.selectize-control {
-  font-size: var(--blockr-font-size-base);
-}
-
-.selectize-input {
-  font-size: var(--blockr-font-size-base);
-}
-
-.selectize-dropdown {
-  font-size: var(--blockr-font-size-base);
-}
-
-/* Buttons - scaled down to match reduced font sizes */
-.btn {
-  font-size: var(--blockr-font-size-base);
-}
-
-.btn-sm {
-  font-size: var(--blockr-font-size-sm);
-}
-
-/* Secondary buttons - use text color grays */
-.btn-outline-secondary {
-  color: var(--blockr-color-text-secondary);
-  border-color: var(--blockr-color-border);
-}
-
-.btn-outline-secondary:hover {
-  color: var(--blockr-color-text-primary);
-  background-color: var(--blockr-color-bg-subtle);
-  border-color: var(--blockr-color-border-hover);
 }
 
 h4, .h4 {
@@ -350,6 +293,58 @@ h6, .h6 {
 
 small, .small {
   font-size: var(--blockr-font-size-sm);
+}
+
+/* --- Labels --- */
+label,
+.form-label,
+.shiny-input-container .control-label {
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+label:has(input[type="file"]) {
+  margin-bottom: 0;
+}
+
+/* --- Form Controls --- */
+.form-control,
+.form-select {
+  font-size: var(--blockr-font-size-base);
+}
+
+.input-group-sm > .form-control,
+.input-group-sm > .form-select,
+.input-group-sm > .input-group-text,
+.input-group-sm > .btn {
+  font-size: var(--blockr-font-size-sm);
+}
+
+.selectize-control,
+.selectize-input,
+.selectize-dropdown {
+  font-size: var(--blockr-font-size-base);
+}
+
+/* --- Buttons --- */
+.btn {
+  font-size: var(--blockr-font-size-base);
+}
+
+.btn-sm {
+  font-size: var(--blockr-font-size-sm);
+}
+
+.btn-outline-secondary {
+  color: var(--blockr-color-text-secondary);
+  border-color: var(--blockr-color-border);
+}
+
+.btn-outline-secondary:hover {
+  color: var(--blockr-color-text-primary);
+  background-color: var(--blockr-color-bg-subtle);
+  border-color: var(--blockr-color-border-hover);
 }
 
 /* ============================================
