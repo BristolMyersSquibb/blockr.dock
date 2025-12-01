@@ -51,14 +51,9 @@ show_hide_block_dep <- function() {
 }
 
 #' @export
-remove_block_ui.dock_board <- function(
-  id,
-  x,
-  blocks,
-  dock,
-  ...,
-  session = get_session()
-) {
+remove_block_ui.dock_board <- function(id, x, blocks, dock, ...,
+                                       session = get_session()) {
+
   stopifnot(is.character(blocks), all(blocks %in% board_block_ids(x)))
 
   for (blk in blocks) {
@@ -77,14 +72,9 @@ remove_block_ui.dock_board <- function(
 }
 
 #' @export
-insert_block_ui.dock_board <- function(
-  id,
-  x,
-  blocks,
-  dock,
-  ...,
-  session = get_session()
-) {
+insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
+                                       session = get_session()) {
+
   stopifnot(is_blocks(blocks))
 
   for (i in names(blocks)) {

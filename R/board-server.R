@@ -1,4 +1,5 @@
 board_server_callback <- function(board, update, ..., session = get_session()) {
+
   dock <- manage_dock(board, update, session)
 
   exts <- isolate(
@@ -25,6 +26,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 }
 
 manage_dock <- function(board, update, session = get_session()) {
+
   dock <- set_dock_view_output(session = session)
 
   input <- session$input
@@ -161,29 +163,31 @@ manage_dock <- function(board, update, session = get_session()) {
     }
   )
 
-  # Update panel
-  # Panel name update
-  # When a block is modified we have to update
-  # the node data
-  observeEvent(update()$blocks$mod, {
-    blks <- update()$blocks$mod
-    # Iterate over modified blocks and update panel titles
-    for (id in names(blks)) {
-      blk <- blks[[id]]
-      new_name <- block_name(blk)
-      blk_panel_id <- as_block_panel_id(id)
+  observeEvent(
+    update()$blocks$mod,
+    {
+      blks <- update()$blocks$mod
 
-      old_title <- dockViewR::get_panels(dock)[[blk_panel_id]]$title
-      if (new_name == old_title) {
-        next
+      for (id in names(blks)) {
+
+        blk <- blks[[id]]
+        new_name <- block_name(blk)
+        blk_panel_id <- as_block_panel_id(id)
+
+        old_title <- dockViewR::get_panels(dock)[[blk_panel_id]]$title
+
+        if (new_name == old_title) {
+          next
+        }
+
+        dockViewR::set_panel_title(
+          dock,
+          blk_panel_id,
+          new_name
+        )
       }
-      dockViewR::set_panel_title(
-        dock,
-        blk_panel_id,
-        new_name
-      )
     }
-  })
+  )
 
   list(
     layout = reactive(dockViewR::get_dock(dock)),

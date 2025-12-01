@@ -125,3 +125,13 @@ dock_board_options <- function() {
     new_board_name_option()
   )
 }
+
+#' @export
+rm_blocks.dock_board <- function(x, rm, ...) {
+
+  # for now, b/c dock$layout(), passed in ... is not updated in time, we can
+  # only clear the layout to not run into validation issues
+  dock_layout(x) <- new_dock_layout()
+
+  NextMethod(object = x)
+}
