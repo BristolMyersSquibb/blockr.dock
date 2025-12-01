@@ -7,8 +7,11 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
     class = "card-body",
     div(
       class = "d-flex align-items-stretch gap-3",
-      # Icon element
-      blk_icon_data_uri(blk_info$icon, blk_info$color, 60, "inline"),
+      # Icon element with tooltip
+      span(
+        title = blk_info$description,
+        blk_icon_data_uri(blk_info$icon, blk_info$color, 46, "inline")
+      ),
       # Title section
       div(
         class = paste(
@@ -33,37 +36,106 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
 }
 
 block_card_title <- function(block, id, info) {
+  ns <- NS(id)
+  input_id <- ns("block_name_in")
+
   div(
     class = "flex-grow-1 pe-3",
     div(
-      class = "card-title mb-1",
-      style = "line-height: 1.3;",
-      popover(
-        uiOutput(NS(id, "block_name_out"), inline = TRUE),
-        title = "Provide a new title",
-        textInput(
-          NS(id, "block_name_in"),
-          "Block name",
-          value = block_name(block),
-          updateOn = "blur"
+      class = "card-title mb-0",
+      style = "line-height: 1.0;",
+      # Inline editable title container
+      div(
+        class = "blockr-inline-edit",
+        # Display mode - click to edit
+        div(
+          id = ns("title_display"),
+          class = "blockr-title-display d-inline-flex align-items-center gap-2",
+          title = "Click to rename",
+          style = paste(
+            "padding: 4px 8px;",
+            "margin: -4px -8px;",
+            "border-radius: 4px;",
+            "cursor: pointer;",
+            "border: 2px dashed transparent;",
+            "transition: border-color 0.15s ease;"
+          ),
+          onmouseover = paste0(
+            "this.style.borderColor='#ddd';",
+            "this.querySelector('.edit-icon').style.opacity='1';"
+          ),
+          onmouseout = paste0(
+            "this.style.borderColor='transparent';",
+            "this.querySelector('.edit-icon').style.opacity='0';"
+          ),
+          onclick = sprintf(
+            paste0(
+              "this.style.display='none';",
+              "var editWrap = document.getElementById('%s');",
+              "editWrap.style.display='block';",
+              "var input = editWrap.querySelector('input');",
+              "input.focus();",
+              "input.select();"
+            ),
+            ns("title_edit")
+          ),
+          uiOutput(ns("block_name_out"), inline = TRUE),
+          icon(
+            "pen-to-square",
+            class = "edit-icon",
+            style = paste(
+              "opacity: 0;",
+              "font-size: 0.7em;",
+              "color: #bbb;",
+              "transition: opacity 0.15s ease;"
+            )
+          )
+        ),
+        # Edit mode - hidden by default
+        div(
+          id = ns("title_edit"),
+          class = "blockr-title-edit",
+          style = "display: none;",
+          textInput(
+            input_id,
+            label = NULL,
+            value = block_name(block)
+          ),
+          # JS to handle blur and enter key
+          tags$script(HTML(sprintf(
+            "$(document).ready(function() {
+              var input = $('#%s');
+              var display = $('#%s');
+              var editWrap = $('#%s');
+              input.on('blur', function() {
+                editWrap.hide();
+                display.css('display', 'flex');
+              });
+              input.on('keydown', function(e) {
+                if (e.key === 'Enter') {
+                  $(this).blur();
+                }
+              });
+            });",
+            input_id, ns("title_display"), ns("title_edit")
+          )))
         )
       )
     ),
-    div(
-      class = "text-body-secondary small text-muted",
-      style = "line-height: 1.2;",
-      span(class(block)[1]),
-      tags$sup(
-        class = "ms-1",
-        tooltip(
-          icon("info-circle", style = "color: #9ca3af; font-size: 0.75em;"),
-          p(
-            icon("lightbulb"),
-            "How to use this block?",
-          ),
-          p(info$description, ".")
-        )
-      )
+    popover(
+      span(
+        class = "blockr-subtitle",
+        info$name
+      ),
+      # Title + package badge
+      div(
+        class = "d-flex align-items-center justify-content-between gap-2 mb-2",
+        tags$strong(info$name),
+        span(class = "badge-two-tone", info$package)
+      ),
+      # Description
+      p(class = "mb-0", info$description),
+      options = list(trigger = "hover")
     )
   )
 }
@@ -80,14 +152,15 @@ block_card_toggles <- function(blk, ns) {
     inputId = ns("collapse_blk_sections"),
     status = "light",
     size = "sm",
-    choices = set_names(opts, paste0("<small>", opts, "</small>")),
+    choices = set_names(opts, c("Input", "Output")),
     individual = TRUE,
     selected = coal(attr(blk, "visible"), opts)
   )
 
-  # Remove the ms-auto class
-  section_toggles$attribs$class <- trimws(
-    gsub("form-group|ms-auto", "", section_toggles$attribs$class)
+  # Remove the ms-auto class, add blockr-section-toggle
+  section_toggles$attribs$class <- paste(
+    "blockr-section-toggle",
+    trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
   )
 
   section_toggles
@@ -199,6 +272,15 @@ block_card_content <- function(ns, expr_ui, block_ui) {
   )$reset(
   )$find(
     ".accordion-body"
+  )$addAttrs(
+    style = paste0(
+      "background-color: white;",
+      "border-radius: 0;",
+      "margin: 0 -16px 10px -16px;",
+      "padding: 16px 16px 10px 16px;",
+      "border-top: 1px solid var(--blockr-grey-300);",
+      "border-bottom: 1px solid var(--blockr-grey-300);"
+    )
   )$append(
     expr_ui
   )$allTags()
@@ -219,6 +301,8 @@ block_card_content <- function(ns, expr_ui, block_ui) {
   )$reset(
   )$find(
     ".accordion-body"
+  )$addAttrs(
+    style = "padding: 0;"
   )$append(
     tagList(block_ui, div(id = ns("outputs_issues_wrapper")))
   )$allTags()
@@ -304,9 +388,9 @@ edit_block_server <- function(id, block_id, board, update, ...) {
       )
 
       output$block_name_out <- renderUI(
-        h3(
+        span(
           input$block_name_in,
-          tags$sup(icon("pencil-square", class = "fa-2xs"))
+          class = "blockr-title"
         )
       )
 
@@ -413,17 +497,20 @@ update_blk_cond_observer <- function(conds, session = get_session()) {
       msgs <- NULL
 
       removeUI(
-        paste0("#", ns("errors_block"), " .alert")
+        paste0("#", ns("errors_block"), " > div")
       )
 
       if (length(cnds[["error"]])) {
         msgs <- tags$div(
-          class = sprintf("alert alert-danger"),
-          HTML(
-            cli::ansi_html(
-              paste(
-                unlist(cnds[["error"]]),
-                collapse = "\n"
+          class = "blockr-error",
+          bsicons::bs_icon("exclamation-circle", class = "blockr-error-icon"),
+          tags$span(
+            HTML(
+              cli::ansi_html(
+                paste(
+                  unlist(cnds[["error"]]),
+                  collapse = "<br>"
+                )
               )
             )
           )
@@ -441,31 +528,30 @@ update_blk_cond_observer <- function(conds, session = get_session()) {
 create_issues_ui <- function(statuses, ns) {
 
   collapse_id <- ns("outputs_issues_collapse")
+  n_issues <- length(statuses)
+  issue_text <- paste(n_issues, if (n_issues == 1) "issue" else "issues")
 
   div(
     id = ns("outputs_issues"),
-    tags$button(
+    class = "mt-3",
+    tags$div(
       class = paste(
-        "btn btn-sm btn-outline-secondary",
-        "mt-2 mb-2 position-relative"
+        "d-flex align-items-center justify-content-between",
+        "blockr-issues-toggle"
       ),
-      type = "button",
       `data-bs-toggle` = "collapse",
       `data-bs-target` = paste0("#", collapse_id),
       `aria-expanded` = "false",
       `aria-controls` = collapse_id,
-      "View issues",
-      span(
-        class = paste(
-          "position-absolute top-0 start-100",
-          "translate-middle badge rounded-pill bg-danger"
-        ),
-        length(statuses)
-      )
+      span(issue_text),
+      icon("chevron-down", class = "blockr-meta")
     ),
     collapse_container(
       id = collapse_id,
-      statuses
+      div(
+        class = "pt-2",
+        statuses
+      )
     )
   )
 }

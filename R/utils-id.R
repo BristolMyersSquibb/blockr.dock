@@ -275,7 +275,7 @@ as_ext_panel_id.character <- function(x) {
 
   warn <- maybe_ext_panel_id(x)
 
-  if (warn) {
+  if (any(warn)) {
     blockr_warn(
       "Potentially converting ID{?s} {x[warn]} again.",
       class = "maybe_multiple_ext_id_conversion"
