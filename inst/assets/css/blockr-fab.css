@@ -279,6 +279,19 @@ label,
   margin-bottom: 0.25rem;
 }
 
+/* Exception: no margin-bottom for file input labels */
+label:has(input[type="file"]) {
+  margin-bottom: 0;
+}
+
+/* Override input-group-sm font size */
+.input-group-sm > .form-control,
+.input-group-sm > .form-select,
+.input-group-sm > .input-group-text,
+.input-group-sm > .btn {
+  font-size: var(--blockr-font-size-sm);
+}
+
 .form-control, .form-select {
   font-size: var(--blockr-font-size-base);
 }
@@ -302,8 +315,7 @@ label,
 }
 
 .btn-sm {
-  font-size: var(--blockr-font-size-xs);
-  padding: 0.25rem 0.5rem;
+  font-size: var(--blockr-font-size-sm);
 }
 
 /* Secondary buttons - use text color grays */
