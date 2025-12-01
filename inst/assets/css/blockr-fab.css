@@ -30,7 +30,7 @@
   --blockr-font-size-sm: 0.8125rem;       /* 13px - helper text */
   --blockr-font-size-xs: 0.75rem;         /* 12px - meta, toggles, subtitle */
   --blockr-font-size-title: 1.25rem;      /* 20px - block title */
-  --blockr-font-size-section: 0.875rem;   /* 14px - section headers */
+  --blockr-font-size-section: 1rem;       /* 16px - section headers */
 
   /* Font Weights */
   --blockr-font-weight-normal: 400;
