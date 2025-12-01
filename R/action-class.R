@@ -29,15 +29,16 @@ new_function <- function(formals = NULL, body = NULL, env = parent.frame()) {
 #' single argument `input`) or a [shiny::reactive()] object. The flag
 #' `as_module` controls the behavior of the returned function: if `TRUE`, it
 #' is a function (inheriting from `action_module`) with arguments `board`,
-#' `update` and `proxy`, which, when called, again returns a function with
-#' arguments `input`, `output` and `session`, suitable as argument to
+#' `update`, `...` and `domain`, which, when called, again returns a function
+#' with arguments `input`, `output` and `session`, suitable as argument to
 #' [shiny::moduleServer()]. If `FALSE` is passed instead, a function
-#' (inheriting from `action_function`) with arguments `board`, `update` and
-#' `proxy` is returned.
+#' (inheriting from `action_function`) with arguments `board`, `update`, `...`
+#' and `domain` is returned.
 #'
 #' The expression `expr`, passed when instantiating an `action` object will be
 #' evaluated in a context, where the following bindings exist: `board`,
-#' `update`, `proxy`, `input`, `output` and `session`.
+#' `update`, `domain`, `input`, `output` and `session`. In the case of
+#' `as_module = FALSE`, `domain` is an alias for `session`.
 #'
 #' @param expr An expression which will be evaluated in a shiny server context
 #'
@@ -100,7 +101,7 @@ new_action <- function(expr) {
       if (isTRUE(as_module)) {
 
         structure(
-          function(board, update, proxy) {
+          function(board, update, ..., domain = get_session()) {
             new_function(
               alist(input = , output = , session = ),
               combine_exprs(body)
@@ -114,7 +115,7 @@ new_action <- function(expr) {
         body <- c(
           quote(
             {
-              session <- proxy$session
+              session <- domain
               input <- session$input
               output <- session$output
             }
@@ -124,7 +125,7 @@ new_action <- function(expr) {
 
         structure(
           new_function(
-            alist(board = , update = , proxy = ),
+            alist(board = , update = , ... = , domain = get_session()),
             combine_exprs(body)
           ),
           class = "action_function"

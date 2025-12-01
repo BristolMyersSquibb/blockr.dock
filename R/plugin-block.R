@@ -94,8 +94,53 @@ block_card_toggles <- function(blk, ns) {
 }
 
 block_card_dropdown <- function(ns, info, blk_id) {
-  # Create a custom dropdown without the default
-  # button styling (no bg on hover, ...)
+
+  dd_header <- function(title) {
+
+    cls <- "dropdown-header text-uppercase fw-semibold small text-secondary"
+    sty <- "font-size: 0.75rem; letter-spacing: 0.5px;"
+
+    tags$li(
+      h6(class = cls, style = sty, title)
+    )
+  }
+
+  dd_action <- function(title, id, symbol, class = character()) {
+
+    cls <- c(
+      "dropdown-item action-button py-2 position-relative text-center",
+      class
+    )
+
+    tags$li(
+      tags$button(
+        class = cls,
+        type = "button",
+        id = id,
+        style = "padding-left: 2.5rem;",
+        if (not_null(symbol)) {
+          span(
+            class = "position-absolute start-0 top-50 translate-middle-y ms-3",
+            symbol
+          )
+        },
+        title
+      )
+    )
+  }
+
+  dd_info <- function(key, val) {
+    div(
+      class = "d-flex justify-content-between align-items-center mb-2",
+      span(key, class = "text-muted small"),
+      span(val, class = "small fw-medium")
+    )
+  }
+
+  dd_divider <- function() {
+    tags$li(tags$hr(class = "dropdown-divider my-2"))
+  }
+
   div(
     class = "dropdown",
     tags$button(
@@ -113,39 +158,26 @@ block_card_dropdown <- function(ns, info, blk_id) {
         "shadow-sm rounded-3 border-1"
       ),
       style = "min-width: 250px;",
-      # Block details header
-      tags$li(
-        h6(
-          class = paste(
-            "dropdown-header text-uppercase",
-            "fw-semibold small text-secondary"
-          ),
-          style = "font-size: 0.75rem; letter-spacing: 0.5px;",
-          "Block Details"
-        )
+      dd_header("Block Actions"),
+      dd_action(
+        "Append block",
+        ns("append_block"),
+        icon("plus", class = "text-success")
       ),
-      # Block details content
+      dd_action(
+        "Delete block",
+        ns("delete_block"),
+        icon("trash"),
+        class = "text-danger"
+      ),
+      dd_divider(),
+      dd_header("Block Details"),
       tags$li(
         div(
           class = "px-3 py-1",
-          # Package
-          div(
-            class = "d-flex justify-content-between align-items-center mb-2",
-            span("Package", class = "text-muted small"),
-            span(info$package, class = "small fw-medium")
-          ),
-          # Type
-          div(
-            class = "d-flex justify-content-between align-items-center mb-2",
-            span("Type", class = "text-muted small"),
-            span(info$category, class = "small fw-medium")
-          ),
-          # ID
-          div(
-            class = "d-flex justify-content-between align-items-center mb-0",
-            span("ID", class = "text-muted small"),
-            span(blk_id, class = "small fw-medium font-monospace")
-          )
+          dd_info("Package", info$package),
+          dd_info("Type", info$category),
+          dd_info("ID", blk_id)
         )
       )
     )
@@ -209,6 +241,8 @@ block_card_content <- function(ns, expr_ui, block_ui) {
 edit_block_server <- function(id, block_id, board, update, ...) {
 
   stopifnot(is_string(block_id))
+
+  dot_args <- list(...)
 
   moduleServer(
     id,
@@ -297,6 +331,25 @@ edit_block_server <- function(id, block_id, board, update, ...) {
       )
 
       update_blk_cond_observer(conds, session)
+
+      action_args <- c(list(board, update), dot_args, domain = session)
+
+      do.call(
+        append_block_action(
+          reactive(req(block_id, input$append_block)),
+          as_module = FALSE
+        ),
+        action_args
+      )
+
+
+      do.call(
+        remove_block_action(
+          reactive(req(block_id, input$delete_block)),
+          as_module = FALSE
+        ),
+        action_args
+      )
 
       list(
         visible = reactive(input$collapse_blk_sections)

@@ -1,4 +1,5 @@
 board_server_callback <- function(board, update, ..., session = get_session()) {
+
   dock <- manage_dock(board, update, session)
 
   exts <- isolate(
@@ -25,6 +26,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 }
 
 manage_dock <- function(board, update, session = get_session()) {
+
   dock <- set_dock_view_output(session = session)
 
   input <- session$input

@@ -104,15 +104,16 @@ string (referring to an \code{input}), a function (that will be called with a
 single argument \code{input}) or a \code{\link[shiny:reactive]{shiny::reactive()}} object. The flag
 \code{as_module} controls the behavior of the returned function: if \code{TRUE}, it
 is a function (inheriting from \code{action_module}) with arguments \code{board},
-\code{update} and \code{proxy}, which, when called, again returns a function with
-arguments \code{input}, \code{output} and \code{session}, suitable as argument to
+\code{update}, \code{...} and \code{domain}, which, when called, again returns a function
+with arguments \code{input}, \code{output} and \code{session}, suitable as argument to
 \code{\link[shiny:moduleServer]{shiny::moduleServer()}}. If \code{FALSE} is passed instead, a function
-(inheriting from \code{action_function}) with arguments \code{board}, \code{update} and
-\code{proxy} is returned.
+(inheriting from \code{action_function}) with arguments \code{board}, \code{update}, \code{...}
+and \code{domain} is returned.
 
 The expression \code{expr}, passed when instantiating an \code{action} object will be
 evaluated in a context, where the following bindings exist: \code{board},
-\code{update}, \code{proxy}, \code{input}, \code{output} and \code{session}.
+\code{update}, \code{domain}, \code{input}, \code{output} and \code{session}. In the case of
+\code{as_module = FALSE}, \code{domain} is an alias for \code{session}.
 }
 \section{\code{block_input_select()}}{
 
