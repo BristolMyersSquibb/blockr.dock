@@ -142,11 +142,6 @@ manage_dock <- function(board, update, session = get_session()) {
     }
   )
 
-  observeEvent(
-    input$cancel_add,
-    removeModal()
-  )
-
   prev_active_group <- reactiveVal()
   active_group_trail <- reactiveVal()
 
@@ -210,27 +205,33 @@ suggest_panels_to_add <- function(dock, board, session) {
 
   stopifnot(is.list(panels), all(lgl_ply(panels, is_dock_panel_id)))
 
-  opts <- list()
+  options_data <- list()
 
+  # Get available blocks
   blk_opts <- setdiff(
     board_block_ids(board$board),
     as_obj_id(panels[lgl_ply(panels, is_block_panel_id)])
   )
 
   if (length(blk_opts)) {
-    blk_opts <- set_names(
-      paste0("blk-", blk_opts),
-      paste0(
-        chr_ply(board_blocks(board$board)[blk_opts], block_name),
-        " (",
-        blk_opts,
-        ")"
-      )
-    )
+    blks <- board_blocks(board$board)[blk_opts]
+    meta <- blks_metadata(blks)
 
-    opts <- c(opts, list(Blocks = blk_opts))
+    for (i in seq_along(blk_opts)) {
+      id <- blk_opts[i]
+      options_data[[length(options_data) + 1L]] <- list(
+        value = paste0("blk-", id),
+        label = block_name(blks[[id]]),
+        description = paste0("ID: ", id),
+        package = meta$package[i],
+        icon = meta$icon[i],
+        color = meta$color[i],
+        searchtext = paste(block_name(blks[[id]]), id, meta$package[i])
+      )
+    }
   }
 
+  # Get available extensions
   ext_opts <- setdiff(
     dock_ext_ids(board$board),
     as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
@@ -238,42 +239,60 @@ suggest_panels_to_add <- function(dock, board, session) {
 
   if (length(ext_opts)) {
     all_exts <- as.list(dock_extensions(board$board))
-    ext_nmes <- chr_ply(all_exts[ext_opts], extension_name)
 
-    ext_opts <- set_names(
-      paste0("ext-", ext_opts),
-      paste0(ext_nmes, " (", ext_opts, ")")
-    )
+    for (ext_id in ext_opts) {
+      ext <- all_exts[[ext_id]]
+      ext_name <- extension_name(ext)
+      ext_pkg <- ctor_pkg(extension_ctor(ext))
 
-    opts <- c(opts, list(Extensions = ext_opts))
+      options_data[[length(options_data) + 1L]] <- list(
+        value = paste0("ext-", ext_id),
+        label = ext_name,
+        description = paste0("ID: ", ext_id),
+        package = coal(ext_pkg, "local"),
+        icon = extension_default_icon(),
+        color = "#999999",
+        searchtext = paste(ext_name, ext_id, ext_pkg)
+      )
+    }
   }
 
-  if (length(opts)) {
+  if (length(options_data)) {
     showModal(
       modalDialog(
-        title = "Select panel to add",
-        easy_close = TRUE,
-        selectInput(
-          ns("add_dock_panel"),
-          label = "Panel",
-          choices = opts,
-          multiple = TRUE
-        ),
-        footer = tagList(
-          actionButton(
-            ns("cancel_add"),
-            label = "Cancel",
-            class = "btn-danger"
+        title = "Add panel",
+        size = "l",
+        easyClose = TRUE,
+        footer = NULL,
+        tagList(
+          css_modal(),
+          css_block_selectize(),
+          selectizeInput(
+            ns("add_dock_panel"),
+            label = "Select panel to add",
+            choices = NULL,
+            multiple = TRUE,
+            options = list(
+              options = options_data,
+              valueField = "value",
+              labelField = "label",
+              searchField = c("label", "description", "searchtext"),
+              placeholder = "Type to search...",
+              openOnFocus = FALSE,
+              plugins = list("remove_button"),
+              render = js_blk_selectize_render()
+            )
           ),
-          actionButton(
-            ns("confirm_add"),
-            label = "OK",
-            class = "btn-success"
-          )
+          confirm_button(ns("confirm_add"), label = "Add Panel"),
+          auto_focus_script(ns("add_dock_panel"))
         )
       )
     )
   } else {
     notify("No further panels can be added. Remove some panels first.")
   }
+}
+
+extension_default_icon <- function() {
+  as.character(bsicons::bs_icon("gear"))
 }

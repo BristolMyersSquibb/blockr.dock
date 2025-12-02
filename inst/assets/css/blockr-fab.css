@@ -423,3 +423,26 @@ small, .small {
 .g6-toolbar {
   box-shadow: none !important;
 }
+
+/* ============================================
+   Dockview Left Actions (Plus Button)
+   ============================================ */
+.dv-left-actions-container {
+  display: flex;
+  align-items: center;
+}
+
+.dv-left-actions-container .fa-plus {
+  font-size: 12px;
+  color: var(--blockr-color-text-muted);
+  padding: 8px 8px;
+  margin-left: -4px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dv-left-actions-container .fa-plus:hover {
+  background-color: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-secondary);
+}
