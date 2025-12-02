@@ -19,7 +19,7 @@
 \alias{board_select}
 \title{Board actions}
 \usage{
-new_action(expr)
+new_action(expr, package = "blockr.dock")
 
 is_action(x)
 
@@ -57,6 +57,8 @@ board_select(id, blocks, selected = NULL, ...)
 }
 \arguments{
 \item{expr}{An expression which will be evaluated in a shiny server context}
+
+\item{package}{Package name where action is defined}
 
 \item{x}{Object}
 
