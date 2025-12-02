@@ -13,10 +13,10 @@ add_block_action <- new_action(
       {
         blk(NULL)
         showModal(
-          create_block_modal(
-            mode = "add",
+          block_modal(
             ns = ns,
-            board = board$board
+            board = board$board,
+            mode = "add"
           )
         )
       }
@@ -94,10 +94,10 @@ append_block_action <- new_action(
       {
         blk(NULL)
         showModal(
-          create_block_modal(
-            mode = "append",
+          block_modal(
             ns = ns,
-            board = board$board
+            board = board$board,
+            mode = "append"
           )
         )
       }
