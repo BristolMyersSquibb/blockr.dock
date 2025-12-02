@@ -31,8 +31,37 @@ Imports:
     jsonlite
 Suggests: 
     testthat (>= 3.0.0),
-    DT
+    DT,
+    colorspace,
+    methods
 Config/testthat/edition: 3
 Remotes:
     BristolMyersSquibb/blockr.core,
     cynkra/dockViewR
+Collate: 
+    'action-class.R'
+    'action-block.R'
+    'action-link.R'
+    'action-modal.R'
+    'action-stack.R'
+    'action-ui.R'
+    'action-utils.R'
+    'block-meta.R'
+    'block-ui.R'
+    'board-class.R'
+    'board-plugins.R'
+    'board-server.R'
+    'board-ui.R'
+    'ext-class.R'
+    'ext-edit.R'
+    'ext-ui.R'
+    'layout-class.R'
+    'plugin-block.R'
+    'plugin-serdes.R'
+    'utils-dock.R'
+    'utils-id.R'
+    'utils-misc.R'
+    'utils-pkg.R'
+    'utils-serdes.R'
+    'utils-serve.R'
+    'utils-ui.R'
