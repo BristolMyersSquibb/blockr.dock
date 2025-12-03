@@ -30,7 +30,7 @@
   --blockr-font-size-sm: 0.8125rem;       /* 13px - helper text */
   --blockr-font-size-xs: 0.75rem;         /* 12px - meta, toggles, subtitle */
   --blockr-font-size-title: 1.25rem;      /* 20px - block title */
-  --blockr-font-size-section: 0.875rem;   /* 14px - section headers */
+  --blockr-font-size-section: 1rem;       /* 16px - section headers */
 
   /* Font Weights */
   --blockr-font-weight-normal: 400;
@@ -267,55 +267,10 @@
 /* ============================================
    Bootstrap Base Overrides
    ============================================ */
+
+/* --- Typography --- */
 body {
   font-size: var(--blockr-font-size-base);
-}
-
-label,
-.form-label,
-.shiny-input-container .control-label {
-  font-size: var(--blockr-font-size-xs);
-  color: var(--blockr-color-text-secondary);
-  margin-bottom: 0.25rem;
-}
-
-.form-control, .form-select {
-  font-size: var(--blockr-font-size-base);
-}
-
-/* Selectize - set base font-size, spacing adjusts via em units */
-.selectize-control {
-  font-size: var(--blockr-font-size-base);
-}
-
-.selectize-input {
-  font-size: var(--blockr-font-size-base);
-}
-
-.selectize-dropdown {
-  font-size: var(--blockr-font-size-base);
-}
-
-/* Buttons - scaled down to match reduced font sizes */
-.btn {
-  font-size: var(--blockr-font-size-base);
-}
-
-.btn-sm {
-  font-size: var(--blockr-font-size-xs);
-  padding: 0.25rem 0.5rem;
-}
-
-/* Secondary buttons - use text color grays */
-.btn-outline-secondary {
-  color: var(--blockr-color-text-secondary);
-  border-color: var(--blockr-color-border);
-}
-
-.btn-outline-secondary:hover {
-  color: var(--blockr-color-text-primary);
-  background-color: var(--blockr-color-bg-subtle);
-  border-color: var(--blockr-color-border-hover);
 }
 
 h4, .h4 {
@@ -338,6 +293,111 @@ h6, .h6 {
 
 small, .small {
   font-size: var(--blockr-font-size-sm);
+}
+
+/* --- Labels --- */
+label,
+.form-label,
+.shiny-input-container .control-label {
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+label:has(input[type="file"]) {
+  margin-bottom: 0;
+}
+
+/* --- Form Controls --- */
+.form-control,
+.form-select {
+  font-size: var(--blockr-font-size-base);
+}
+
+.input-group-sm > .form-control,
+.input-group-sm > .form-select,
+.input-group-sm > .input-group-text,
+.input-group-sm > .btn {
+  font-size: var(--blockr-font-size-sm);
+}
+
+.selectize-control,
+.selectize-input,
+.selectize-dropdown {
+  font-size: var(--blockr-font-size-base);
+}
+
+/* --- Buttons --- */
+.btn {
+  font-size: var(--blockr-font-size-base);
+}
+
+.btn-sm {
+  font-size: var(--blockr-font-size-sm);
+}
+
+.btn-outline-secondary {
+  color: var(--blockr-color-text-secondary);
+  border-color: var(--blockr-color-border);
+}
+
+.btn-outline-secondary:hover {
+  color: var(--blockr-color-text-primary);
+  background-color: var(--blockr-color-bg-subtle);
+  border-color: var(--blockr-color-border-hover);
+}
+
+/* ============================================
+   Offcanvas / Sidebar Styling
+   ============================================ */
+.offcanvas {
+  width: 320px !important;
+}
+
+.offcanvas-title {
+  font-size: 1.125rem;
+  font-weight: var(--blockr-font-weight-semibold);
+}
+
+.offcanvas-body {
+  font-size: var(--blockr-font-size-sm);
+}
+
+.offcanvas .accordion {
+  margin: 0 -20px;
+}
+
+.offcanvas .accordion-button {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-semibold);
+  font-variant-caps: all-small-caps;
+  color: var(--blockr-color-text-secondary);
+  letter-spacing: 0.5px;
+}
+
+/* Export button adjustments */
+.offcanvas .shiny-download-link i,
+.offcanvas .shiny-download-link svg,
+.offcanvas .shiny-download-link .bsicon {
+  display: none;
+}
+
+.offcanvas .shiny-download-link {
+  margin-top: -5px;
+}
+
+/* Make Show code button smaller */
+.offcanvas .btn-default,
+.offcanvas .btn-outline-default {
+  font-size: var(--blockr-font-size-sm);
+  padding: 0.25rem 0.5rem;
+}
+
+.offcanvas hr {
+  margin-left: -20px;
+  margin-right: -20px;
+  border-color: var(--blockr-grey-300);
+  opacity: 1;
 }
 
 /* ============================================
