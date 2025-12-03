@@ -41,7 +41,7 @@ new_function <- function(formals = NULL, body = NULL, env = parent.frame()) {
 #' `as_module = FALSE`, `domain` is an alias for `session`.
 #'
 #' @param expr An expression which will be evaluated in a shiny server context
-#' @param package Package name where action is defined
+#' @param env Package name or environment where action is defined
 #'
 #' @return The constructor `new_action` returns a classed function that
 #' inherits from `action`. Inheritance can be checked with functions
@@ -50,7 +50,7 @@ new_function <- function(formals = NULL, body = NULL, env = parent.frame()) {
 #'
 #' @rdname action
 #' @export
-new_action <- function(expr, package = "blockr.dock") {
+new_action <- function(expr, env = parent.frame()) {
 
   proc_calls <- function(x) {
     if (is.call(x) && identical(x[[1L]], as.symbol("{"))) {
@@ -66,6 +66,10 @@ new_action <- function(expr, package = "blockr.dock") {
       list(c(as.name("{"), unlst(lapply(x, proc_calls)))),
       quote = TRUE
     )
+  }
+
+  if (is_string(env)) {
+    env <- asNamespace(env)
   }
 
   body <- list( # nolint: object_usage_linter.
@@ -99,27 +103,17 @@ new_action <- function(expr, package = "blockr.dock") {
   structure(
     function(trigger, as_module = TRUE) {
 
-      fun_env <- list2env(
-        list(trigger = trigger),
-        parent = asNamespace(package)
-      )
+      fun_env <- list2env(list(trigger = trigger), parent = env)
 
       if (isTRUE(as_module)) {
 
         structure(
           function(board, update, ..., domain = get_session()) {
-
-            res <- new_function(
+            new_function(
               alist(input = , output = , session = ),
-              combine_exprs(body)
+              combine_exprs(body),
+              `parent.env<-`(environment(), fun_env)
             )
-
-            inner_env <- environment(res)
-            parent.env(inner_env) <- fun_env
-
-            environment(res) <- inner_env
-
-            res
           },
           class = "action_module"
         )
