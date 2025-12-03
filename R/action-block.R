@@ -11,7 +11,9 @@ add_block_action <- new_action(
     observeEvent(
       trigger(),
       {
+        log_debug("showing add block action modal")
         blk(NULL)
+
         showModal(
           block_modal(
             ns = ns,

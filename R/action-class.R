@@ -114,7 +114,7 @@ new_action <- function(expr, package = "blockr.dock") {
               combine_exprs(body)
             )
 
-            inner_env <- environment()
+            inner_env <- environment(res)
             parent.env(inner_env) <- fun_env
 
             environment(res) <- inner_env
