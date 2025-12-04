@@ -19,7 +19,7 @@
 \alias{board_select}
 \title{Board actions}
 \usage{
-new_action(expr, env = parent.frame())
+new_action(func)
 
 is_action(x)
 
@@ -56,9 +56,8 @@ block_registry_selectize(id, blocks = list_blocks())
 board_select(id, blocks, selected = NULL, ...)
 }
 \arguments{
-\item{expr}{An expression which will be evaluated in a shiny server context}
-
-\item{env}{Package name or environment where action is defined}
+\item{func}{A function which will be evaluated (with modified formals) in a
+shiny server context}
 
 \item{x}{Object}
 

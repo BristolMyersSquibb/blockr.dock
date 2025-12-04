@@ -151,33 +151,23 @@ blockr_deser.dock_stack <- function(x, data, ...) {
 
 as_dock_stacks <- function(x) {
 
-  if (is_board(x)) {
-    stks <- board_stacks(x)
-  } else {
-    stopifnot(is_stacks(x))
-    stks <- x
-  }
+  x <- as_stacks(x)
 
-  todo <- lgl_ply(stks, Negate(is_dock_stack))
+  todo <- lgl_ply(x, Negate(is_dock_stack))
 
   if (!any(todo)) {
     return(x)
   }
 
   new_col <- suggest_new_colors(
-    chr_ply(stks[!todo], stack_color),
+    chr_ply(x[!todo], stack_color),
     n = sum(todo)
   )
 
-  stks[todo] <- set_names(
-    map(as_dock_stack, stks[todo], new_col),
-    names(stks[todo])
+  x[todo] <- set_names(
+    map(as_dock_stack, x[todo], new_col),
+    names(x[todo])
   )
 
-  if (is_board(x)) {
-    board_stacks(x) <- stks
-    return(x)
-  }
-
-  stks
+  x
 }

@@ -32,7 +32,7 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
   new_board(
     blocks = as_blocks(blocks),
     links = as_links(links),
-    stacks = as_dock_stacks(as_stacks(stacks)),
+    stacks = as_dock_stacks(stacks),
     ...,
     extensions = as_dock_extensions(extensions),
     layout = create_dock_layout(blocks, extensions, grid),

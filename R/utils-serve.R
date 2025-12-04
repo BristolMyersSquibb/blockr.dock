@@ -33,7 +33,7 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
           pulse_height = "5px"
         ),
         shinyjs::useShinyjs(),
-        board_ui(id, as_dock_stacks(x), plugins, options)
+        board_ui(id, x, plugins, options)
       ),
       unname(args)
     )
@@ -42,13 +42,6 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
 
 #' @export
 blockr_app_server.dock_board <- function(id, x, plugins, options, ...) {
-  board_server(
-    id,
-    as_dock_stacks(x),
-    plugins,
-    options,
-    callbacks = board_server_callback,
-    callback_location = "start",
-    ...
-  )
+  board_server(id, x, plugins, options, callbacks = board_server_callback,
+               callback_location = "start", ...)
 }

@@ -40,8 +40,8 @@ new_function <- function(formals = NULL, body = NULL, env = parent.frame()) {
 #' `update`, `domain`, `input`, `output` and `session`. In the case of
 #' `as_module = FALSE`, `domain` is an alias for `session`.
 #'
-#' @param expr An expression which will be evaluated in a shiny server context
-#' @param env Package name or environment where action is defined
+#' @param func A function which will be evaluated (with modified formals) in a
+#' shiny server context
 #'
 #' @return The constructor `new_action` returns a classed function that
 #' inherits from `action`. Inheritance can be checked with functions
@@ -50,7 +50,7 @@ new_function <- function(formals = NULL, body = NULL, env = parent.frame()) {
 #'
 #' @rdname action
 #' @export
-new_action <- function(expr, env = parent.frame()) {
+new_action <- function(func) {
 
   proc_calls <- function(x) {
     if (is.call(x) && identical(x[[1L]], as.symbol("{"))) {
@@ -80,21 +80,10 @@ new_action <- function(expr, env = parent.frame()) {
   structure(
     function(trigger, as_module = TRUE) {
 
-      # anything that touches `expr` needs to live here in order for covr
+      # anything that touches `func` needs to live here in order for covr
       # code instrumentation to work thanks to lazy-eval
 
-      if (is.function(expr)) {
-        env <- environment(expr)
-        expr <- body(expr)
-      } else {
-        expr <- substitute(expr)
-      }
-
-      if (is_string(env)) {
-        env <- asNamespace(env)
-      }
-
-      body <- list( # nolint: object_usage_linter.
+      body <- list(
         quote(
           {
             if (!is.reactive(trigger)) {
@@ -114,7 +103,7 @@ new_action <- function(expr, env = parent.frame()) {
             stopifnot(is.reactive(trigger))
           }
         ),
-        expr,
+        body(func),
         quote(
           {
             invisible(NULL)
@@ -122,7 +111,7 @@ new_action <- function(expr, env = parent.frame()) {
         )
       )
 
-      fun_env <- list2env(list(trigger = trigger), parent = env)
+      fun_env <- list2env(list(trigger = trigger), parent = environment(func))
 
       if (isTRUE(as_module)) {
 
