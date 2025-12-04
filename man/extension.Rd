@@ -16,6 +16,7 @@
 \alias{as_dock_extensions.dock_extensions}
 \alias{as_dock_extensions.dock_extension}
 \alias{as_dock_extensions.list}
+\alias{extension_block_callback}
 \title{Dock extensions}
 \usage{
 new_dock_extension(
@@ -56,6 +57,8 @@ as_dock_extensions(x, ...)
 \method{as_dock_extensions}{dock_extension}(x, ...)
 
 \method{as_dock_extensions}{list}(x, ...)
+
+extension_block_callback(x, ...)
 }
 \arguments{
 \item{server}{A function returning \code{\link[shiny:moduleServer]{shiny::moduleServer()}}}

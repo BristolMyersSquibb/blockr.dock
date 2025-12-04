@@ -15,9 +15,13 @@ board_plugins.dock_board <- function(x, which = NULL, ...) {
   }
 
   if (is.null(which) || "edit_block" %in% which) {
+
+    cbs <- lapply(dock_extensions(x), extension_block_callback)
+    srv <- edit_block_server(Filter(Negate(is.null), cbs))
+
     plugins <- c(
       plugins,
-      edit_block(edit_block_server, edit_block_ui, edit_block_validator)
+      edit_block(srv, edit_block_ui, edit_block_validator)
     )
   }
 

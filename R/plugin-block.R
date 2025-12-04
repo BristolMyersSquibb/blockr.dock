@@ -321,125 +321,150 @@ block_card_content <- function(ns, expr_ui, block_ui) {
   )
 }
 
-#' @keywords internal
-edit_block_server <- function(id, block_id, board, update, ...) {
+edit_block_server <- function(callbacks = list()) {
 
-  stopifnot(is_string(block_id))
+  stopifnot(all(lgl_ply(callbacks, is.function)))
 
-  dot_args <- list(...)
+  function(id, block_id, board, update, ...) {
 
-  moduleServer(
-    id,
-    function(input, output, session) {
+    stopifnot(is_string(block_id))
 
-      observeEvent(
-        input$block_name_in,
-        {
-          req(
-            input$block_name_in,
-            block_id %in% board_block_ids(board$board)
-          )
+    dot_args <- list(...)
 
-          blk <- board_blocks(board$board)[[block_id]]
-          cur <- block_name(blk)
+    moduleServer(
+      id,
+      function(input, output, session) {
 
-          if (identical(cur, input$block_name_in)) {
-            return()
-          }
+        observeEvent(
+          input$block_name_in,
+          {
+            req(
+              input$block_name_in,
+              block_id %in% board_block_ids(board$board)
+            )
 
-          block_name(blk) <- input$block_name_in
+            blk <- board_blocks(board$board)[[block_id]]
+            cur <- block_name(blk)
 
-          update(
-            list(
-              blocks = list(
-                mod = as_blocks(set_names(list(blk), block_id))
+            if (identical(cur, input$block_name_in)) {
+              return()
+            }
+
+            block_name(blk) <- input$block_name_in
+
+            update(
+              list(
+                blocks = list(
+                  mod = as_blocks(set_names(list(blk), block_id))
+                )
               )
             )
-          )
-        }
-      )
-
-      observeEvent(
-        update(),
-        {
-          upd <- update()
-
-          continue <- "blocks" %in% names(upd) &&
-            "mod" %in% names(upd$blocks) &&
-            block_id %in% names(upd$blocks$mod)
-
-          if (!continue) {
-            return()
           }
-
-          new <- block_name(upd$blocks$mod[[block_id]])
-
-          if (identical(new, input$block_name_in)) {
-            return()
-          }
-
-          updateTextInput(
-            session,
-            "block_name_in",
-            "Block name",
-            new
-          )
-        }
-      )
-
-      output$block_name_out <- renderUI(
-        span(
-          input$block_name_in,
-          class = "blockr-title"
         )
-      )
 
-      observeEvent(
-        input$collapse_blk_sections,
-        accordion_panel_set(
-          "blk_accordion",
+        observeEvent(
+          update(),
+          {
+            upd <- update()
+
+            continue <- "blocks" %in% names(upd) &&
+              "mod" %in% names(upd$blocks) &&
+              block_id %in% names(upd$blocks$mod)
+
+            if (!continue) {
+              return()
+            }
+
+            new <- block_name(upd$blocks$mod[[block_id]])
+
+            if (identical(new, input$block_name_in)) {
+              return()
+            }
+
+            updateTextInput(
+              session,
+              "block_name_in",
+              "Block name",
+              new
+            )
+          }
+        )
+
+        output$block_name_out <- renderUI(
+          span(
+            input$block_name_in,
+            class = "blockr-title"
+          )
+        )
+
+        observeEvent(
           input$collapse_blk_sections,
-          session
-        )
-      )
-
-      conds <- reactive(
-        {
-          req(block_id %in% names(board$blocks))
-          lapply(
-            set_names(nm = c("error", "warning", "message")),
-            function(cnd, cnds) coal(unlst(lst_xtr(cnds, cnd)), list()),
-            reactiveValuesToList(board$blocks[[block_id]]$server$cond)
+          accordion_panel_set(
+            "blk_accordion",
+            input$collapse_blk_sections,
+            session
           )
+        )
+
+        conds <- reactive(
+          {
+            req(block_id %in% names(board$blocks))
+            lapply(
+              set_names(nm = c("error", "warning", "message")),
+              function(cnd, cnds) coal(unlst(lst_xtr(cnds, cnd)), list()),
+              reactiveValuesToList(board$blocks[[block_id]]$server$cond)
+            )
+          }
+        )
+
+        update_blk_cond_observer(conds, session)
+
+        action_args <- c(list(board, update), dot_args, domain = session)
+
+        do.call(
+          append_block_action(
+            reactive(req(block_id, input$append_block)),
+            as_module = FALSE
+          ),
+          action_args
+        )
+
+        do.call(
+          remove_block_action(
+            reactive(req(block_id, input$delete_block)),
+            as_module = FALSE
+          ),
+          action_args
+        )
+
+        if (length(callbacks)) {
+
+          for (fun in callbacks) {
+
+            res <- do.call(
+              fun,
+              c(
+                list(block_id, board, update, conds),
+                dot_args,
+                list(session = session)
+              )
+            )
+
+            if (!is.null(res)) {
+              blockr_abort(
+                "Expecting edit block server callbacks to return `NULL`.",
+                class = "invalid_edit_block_server_callback_result"
+              )
+            }
+          }
         }
-      )
 
-      update_blk_cond_observer(conds, session)
-
-      action_args <- c(list(board, update), dot_args, domain = session)
-
-      do.call(
-        append_block_action(
-          reactive(req(block_id, input$append_block)),
-          as_module = FALSE
-        ),
-        action_args
-      )
-
-
-      do.call(
-        remove_block_action(
-          reactive(req(block_id, input$delete_block)),
-          as_module = FALSE
-        ),
-        action_args
-      )
-
-      list(
-        visible = reactive(input$collapse_blk_sections)
-      )
-    }
-  )
+        list(
+          visible = reactive(input$collapse_blk_sections)
+        )
+      }
+    )
+  }
 }
 
 update_blk_cond_observer <- function(conds, session = get_session()) {

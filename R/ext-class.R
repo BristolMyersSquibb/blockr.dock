@@ -146,7 +146,45 @@ extension_server <- function(x, ...) {
     return(fun)
   }
 
-  do.call(fun, c(list(id = extension_id(x)), ...))
+  validate_ext_srv_result(
+    coal(
+      do.call(fun, c(list(id = extension_id(x)), ...)),
+      list(state = list())
+    )
+  )
+}
+
+validate_ext_srv_result <- function(x) {
+
+  if (!is.list(x)) {
+    blockr_abort(
+      "Expecting an extension server to return a list.",
+      class = "extension_server_return_invalid"
+    )
+  }
+
+  if (!"state" %in% names(x)) {
+    blockr_abort(
+      "Expecting an extension server to return a component `state`.",
+      class = "extension_server_return_missing_state"
+    )
+  }
+
+  if (!is.list(x[["state"]])) {
+    blockr_abort(
+      "Expecting an extension server to return list-valued `state`.",
+      class = "extension_server_return_state_invalid"
+    )
+  }
+
+  if (length(x[["state"]]) && is.null(names(x[["state"]]))) {
+    blockr_abort(
+      "Expecting an extension server to return named `state`.",
+      class = "extension_server_return_state_invalid"
+    )
+  }
+
+  x
 }
 
 #' @rdname extension
@@ -248,4 +286,15 @@ names.dock_extensions <- function(x) {
 as.list.dock_extensions <- function(x, ...) {
   res <- unclass(x)
   set_names(res, chr_ply(res, extension_id))
+}
+
+#' @rdname extension
+#' @export
+extension_block_callback <- function(x, ...) {
+  UseMethod("extension_block_callback", x)
+}
+
+#' @export
+extension_block_callback.extension <- function(x, ...) {
+  NULL
 }

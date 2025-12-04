@@ -11,7 +11,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     exts
   )
 
-  ext_state <- lapply(
+  ext_res <- lapply(
     as.list(exts),
     extension_server,
     list(board = board, update = update, dock = dock),
@@ -21,7 +21,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   c(
     list(dock = dock),
-    ext_state
+    ext_res
   )
 }
 

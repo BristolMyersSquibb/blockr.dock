@@ -30,7 +30,7 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
         layout = as_dock_layout(dock$layout()),
         extensions = lapply(
           list(...),
-          function(x) if (is.list(x)) lapply(x, reval_if) else reval_if(x)
+          function(x) lapply(x[["state"]], reval_if)
         )
       )
     )
