@@ -77,47 +77,50 @@ new_action <- function(expr, env = parent.frame()) {
     res
   }
 
-  if (is.function(expr)) {
-    env <- environment(expr)
-    expr <- body(expr)
-  } else {
-    expr <- substitute(expr)
-  }
-
-  if (is_string(env)) {
-    env <- asNamespace(env)
-  }
-
-  body <- list( # nolint: object_usage_linter.
-    quote(
-      {
-        if (!is.reactive(trigger)) {
-          if (is_string(trigger)) {
-            trigr_q <- bquote(req(input[[.(trg)]]), list(trg = trigger))
-          } else if (is.function(trigger)) {
-            trigr_q <- bquote(.(fun)(input), list(fun = trigger))
-          } else {
-            blockr_abort(
-              "An action trigger should be a string, function or reactive ",
-              "object",
-              class = "invalid_action_trigger"
-            )
-          }
-          trigger <- reactive(trigr_q, quoted = TRUE)
-        }
-        stopifnot(is.reactive(trigger))
-      }
-    ),
-    expr,
-    quote(
-      {
-        invisible(NULL)
-      }
-    )
-  )
-
   structure(
     function(trigger, as_module = TRUE) {
+
+      # anything that touches `expr` needs to live here in order for covr
+      # code instrumentation to work thanks to lazy-eval
+
+      if (is.function(expr)) {
+        env <- environment(expr)
+        expr <- body(expr)
+      } else {
+        expr <- substitute(expr)
+      }
+
+      if (is_string(env)) {
+        env <- asNamespace(env)
+      }
+
+      body <- list( # nolint: object_usage_linter.
+        quote(
+          {
+            if (!is.reactive(trigger)) {
+              if (is_string(trigger)) {
+                trigr_q <- bquote(req(input[[.(trg)]]), list(trg = trigger))
+              } else if (is.function(trigger)) {
+                trigr_q <- bquote(.(fun)(input), list(fun = trigger))
+              } else {
+                blockr_abort(
+                  "An action trigger should be a string, function or reactive ",
+                  "object",
+                  class = "invalid_action_trigger"
+                )
+              }
+              trigger <- reactive(trigr_q, quoted = TRUE)
+            }
+            stopifnot(is.reactive(trigger))
+          }
+        ),
+        expr,
+        quote(
+          {
+            invisible(NULL)
+          }
+        )
+      )
 
       fun_env <- list2env(list(trigger = trigger), parent = env)
 
