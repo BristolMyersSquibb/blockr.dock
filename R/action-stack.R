@@ -46,7 +46,7 @@ add_stack_function <- function(trigger, board, update, input, session) {
       }
 
       # Create the stack
-      new_stk <- new_dag_stack(
+      new_stk <- new_dock_stack(
         blocks = block_ids,
         name = stack_name,
         color = stack_color
