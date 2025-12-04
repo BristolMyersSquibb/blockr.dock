@@ -54,7 +54,7 @@ are classed functions that can either be called to return a shiny module
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">new_action</span><span class="op">(</span><span class="va">expr</span>, env <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sys.parent.html" class="external-link">parent.frame</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">new_action</span><span class="op">(</span><span class="va">func</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">is_action</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
@@ -95,12 +95,9 @@ are classed functions that can either be called to return a shiny module
     <h2>Arguments</h2>
 
 
-<dl><dt id="arg-expr">expr<a class="anchor" aria-label="anchor" href="#arg-expr"></a></dt>
-<dd><p>An expression which will be evaluated in a shiny server context</p></dd>
-
-
-<dt id="arg-env">env<a class="anchor" aria-label="anchor" href="#arg-env"></a></dt>
-<dd><p>Package name or environment where action is defined</p></dd>
+<dl><dt id="arg-func">func<a class="anchor" aria-label="anchor" href="#arg-func"></a></dt>
+<dd><p>A function which will be evaluated (with modified formals) in a
+shiny server context</p></dd>
 
 
 <dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
