@@ -65,3 +65,4 @@ Collate:
     'utils-serdes.R'
     'utils-serve.R'
     'utils-ui.R'
+    'zzz-onload.R'

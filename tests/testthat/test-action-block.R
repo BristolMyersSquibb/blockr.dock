@@ -3,7 +3,7 @@ test_that("add block action", {
   ab_action <- add_block_action(reactive(TRUE))
 
   testServer(
-    function(id) {
+    function(id, ...) {
       moduleServer(
         id,
         ab_action(

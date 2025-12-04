@@ -61,11 +61,27 @@ new_action <- function(expr, env = parent.frame()) {
   }
 
   combine_exprs <- function(x) {
-    do.call(
+
+    srcrefs <- lapply(x, attr, "srcref")
+
+    res <- do.call(
       as.call,
       list(c(as.name("{"), unlst(lapply(x, proc_calls)))),
       quote = TRUE
     )
+
+    attr(res, "srcref") <- unlst(
+      c(srcrefs[1L], lapply(srcrefs[-1L], `[`, -1L))
+    )
+
+    res
+  }
+
+  if (is.function(expr)) {
+    env <- environment(expr)
+    expr <- body(expr)
+  } else {
+    expr <- substitute(expr)
   }
 
   if (is_string(env)) {
@@ -92,7 +108,7 @@ new_action <- function(expr, env = parent.frame()) {
         stopifnot(is.reactive(trigger))
       }
     ),
-    substitute(expr),
+    expr,
     quote(
       {
         invisible(NULL)
