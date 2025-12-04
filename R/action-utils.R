@@ -79,12 +79,16 @@ block_input_select <- function(block = NULL, block_id = NULL, links = NULL,
   }
 
   if (mode == "create") {
-    selectizeInput(..., choices = inps, options = opts)
-  } else if (mode == "update") {
-    updateSelectizeInput(..., choices = inps, options = opts)
-  } else {
-    inps
+    return(
+      selectizeInput(..., choices = inps, options = opts)
+    )
   }
+
+  if (mode == "update") {
+    updateSelectizeInput(..., choices = inps, options = opts)
+  }
+
+  inps
 }
 
 #' @section `block_registry_selectize()`:
