@@ -10,57 +10,6 @@ filter_empty <- function(x) Filter(Negate(is_empty), x)
 
 last <- function(x) x[[length(x)]]
 
-#' Stack color
-#'
-#' While stacks created via [blockr.core::new_stack()] do not keep track of
-#' a color attribute, there are stack objects that inherit from "stack" and
-#' do so. Such objects may implement the generic `stack_color()` in order to
-#' provide a mechanism to retrieve a color value.
-#'
-#' @param x Stack object
-#'
-#' @return A character vector of (hex encoded) color value(s).
-#'
-#' @rdname color
-#' @export
-stack_color <- function(x) {
-  UseMethod("stack_color")
-}
-
-#' @export
-stack_color.stack <- function(x) {
-  NA_character_
-}
-
-#' @export
-stack_color.stacks <- function(x) {
-  chr_ply(x, stack_color)
-}
-
-#' @export
-stack_color.board <- function(x) {
-  stack_color(board_stacks(x))
-}
-
-#' @param colors Currently used color values
-#' @param n Number of new colors to generate
-#' @rdname color
-#' @export
-suggest_new_colors <- function(colors = character(), n = 1) {
-
-  color_fun <- blockr_option("stack_color", next_color)
-
-  stopifnot(is.function(color_fun), is.character(colors), is_count(n))
-
-  res <- character()
-
-  for (i in seq_len(n)) {
-    res <- c(res, color_fun(c(colors, res)))
-  }
-
-  res
-}
-
 next_color <- function(colors = character(), lum_var = TRUE) {
 
   if (!pkg_avail("colorspace")) {
@@ -116,6 +65,10 @@ next_color <- function(colors = character(), lum_var = TRUE) {
     colorspace::polarLUV(L = new_l, C = new_c, H = new_h),
     fixup = TRUE
   )
+}
+
+is_hex_color <- function(x) {
+  grepl("^#(?:[0-9a-fA-F]{3}){1,2}$", x)
 }
 
 create_block_with_name <- function(reg_id, blk_nms, ...) {

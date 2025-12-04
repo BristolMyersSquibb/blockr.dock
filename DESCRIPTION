@@ -52,6 +52,7 @@ Collate:
     'board-plugins.R'
     'board-server.R'
     'board-ui.R'
+    'dock-stack.R'
     'ext-class.R'
     'ext-edit.R'
     'ext-ui.R'
