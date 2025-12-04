@@ -42,10 +42,33 @@ add_link_function <- function(trigger, board, update, input, session) {
         return()
       }
 
+      lnk_inp <- input$add_link_input
+      trg_blk <- board_blocks(board$board)[[input$create_link]]
+
+      if (!is.na(block_arity(trg_blk))) {
+
+        avail_inps <- block_input_select(
+          trg_blk,
+          input$create_link,
+          board_links(board$board),
+          mode = "inputs"
+        )
+
+        if (!nchar(lnk_inp) || !lnk_inp %in% avail_inps) {
+          notify(
+            "Please choose a valid link input.",
+            type = "warning",
+            session = session
+          )
+
+          return()
+        }
+      }
+
       new_lnk <- new_link(
         from = trigger(),
         to = input$create_link,
-        input = input$add_link_input
+        input = lnk_inp
       )
 
       new_lnk <- as_links(set_names(list(new_lnk), lnk_id))

@@ -84,6 +84,8 @@ link_modal <- function(ns, board, block_id) {
 
   stopifnot(is_string(block_id), block_id %in% names(board_blocks))
 
+  board_blocks <- board_blocks[names(board_blocks) != block_id]
+
   selection_id <- "create_link"
 
   avail <- map(
@@ -92,6 +94,14 @@ link_modal <- function(ns, board, block_id) {
     names(board_blocks),
     MoreArgs = list(links = board_links(board), mode = "inputs")
   )
+
+  if (sum(lengths(avail)) == 0L) {
+    notify(
+      "No inputs are currently available.",
+      type = "warning"
+    )
+    return()
+  }
 
   visible_fields <- list(
     board_select(
