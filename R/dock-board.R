@@ -23,14 +23,16 @@
 #'
 #' @rdname dock
 #' @export
-new_dock_board <- function(blocks = list(), ...,
-                           extensions = new_dock_extensions(),
+new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
+                           ..., extensions = new_dock_extensions(),
                            grid = default_grid(blocks, extensions),
                            options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
   new_board(
     blocks = as_blocks(blocks),
+    links = as_links(links),
+    stacks = as_dock_stacks(as_stacks(stacks)),
     ...,
     extensions = as_dock_extensions(extensions),
     layout = create_dock_layout(blocks, extensions, grid),

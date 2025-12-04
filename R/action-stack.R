@@ -10,15 +10,10 @@ add_stack_function <- function(trigger, board, update, input, session) {
   observeEvent(
     input$stack_confirm,
     {
-      stack_id <- input$stack_id
-      stack_name <- input$stack_name
-      stack_color <- input$stack_color
-      selected_blocks <- input$stack_block_selection
+      stk_id <- input$stack_id
 
-      if (
-        !nchar(stack_id) ||
-          stack_id %in% board_stack_ids(board$board)
-      ) {
+      if (!nchar(stk_id) || stk_id %in% board_stack_ids(board$board)) {
+
         notify(
           "Please choose a valid stack ID.",
           type = "warning",
@@ -28,31 +23,51 @@ add_stack_function <- function(trigger, board, update, input, session) {
         return()
       }
 
-      # Get blocks - use selected blocks if any, otherwise empty
-      # character vector
-      has_blocks <- length(selected_blocks) > 0 &&
-        !is.null(selected_blocks) &&
-        any(nchar(selected_blocks) > 0)
-      block_ids <- if (has_blocks) {
-        selected_blocks[nchar(selected_blocks) > 0]
+      sel_blks <- input$stack_block_selection
+
+      if (length(sel_blks) && any(nchar(sel_blks))) {
+        block_ids <- sel_blks[nchar(sel_blks) > 0]
       } else {
-        character()
+        block_ids <- character()
       }
 
-      # Create stack name - use input if provided, otherwise
-      # generate from ID
-      if (is.null(stack_name) || !nchar(stack_name)) {
-        stack_name <- id_to_sentence_case(stack_id)
+      if (!all(block_ids %in% board_block_ids(board$board))) {
+
+        notify(
+          "Please choose valid block IDs.",
+          type = "warning",
+          session = session
+        )
+
+        return()
       }
 
-      # Create the stack
+      stk_nme <- input$stack_name
+
+      if (!length(stk_nme) || !nchar(stk_nme)) {
+        stk_nme <- id_to_sentence_case(stk_id)
+      }
+
+      stk_col <- input$stack_color
+
+      if (is.null(stk_col) || !nchar(stk_col) || !is_hex_color(stk_col)) {
+
+        notify(
+          "Please choose a valid stack color.",
+          type = "warning",
+          session = session
+        )
+
+        return()
+      }
+
       new_stk <- new_dock_stack(
         blocks = block_ids,
-        name = stack_name,
-        color = stack_color
+        name = stk_nme,
+        color = stk_col
       )
 
-      new_stk <- as_stacks(set_names(list(new_stk), stack_id))
+      new_stk <- as_stacks(set_names(list(new_stk), stk_id))
 
       update(list(stacks = list(add = new_stk)))
 
@@ -93,15 +108,56 @@ edit_stack_function <- function(trigger, board, update, input, session) {
       id <- trigger()
       stack <- board_stacks(board$board)[[id]]
 
-      blocks <- input$edit_stack_blocks
+      sel_blks <- input$edit_stack_blocks
 
-      if (is.null(blocks)) {
-        blocks <- character(0)
+      if (length(sel_blks) && any(nchar(sel_blks))) {
+        block_ids <- sel_blks[nchar(sel_blks) > 0]
+      } else {
+        block_ids <- character()
       }
 
-      stack_blocks(stack) <- blocks
-      stack_color(stack) <- input$edit_stack_color
-      stack_name(stack) <- input$edit_stack_name
+      if (!all(block_ids %in% board_block_ids(board$board))) {
+
+        notify(
+          "Please choose valid block IDs.",
+          type = "warning",
+          session = session
+        )
+
+        return()
+      }
+
+      stack_blocks(stack) <- block_ids
+
+      stk_col <- input$edit_stack_color
+
+      if (is.null(stk_col) || !nchar(stk_col) || !is_hex_color(stk_col)) {
+
+        notify(
+          "Please choose a valid stack color.",
+          type = "warning",
+          session = session
+        )
+
+        return()
+      }
+
+      stack_color(stack) <- stk_col
+
+      stk_nme <- input$edit_stack_name
+
+      if (!length(stk_nme) || !nchar(stk_nme)) {
+
+        notify(
+          "Please choose a valid stack name.",
+          type = "warning",
+          session = session
+        )
+
+        return()
+      }
+
+      stack_name(stack) <- stk_nme
 
       stack <- as_stacks(set_names(list(stack), id))
 

@@ -14,6 +14,8 @@
 \usage{
 new_dock_board(
   blocks = list(),
+  links = list(),
+  stacks = list(),
   ...,
   extensions = new_dock_extensions(),
   grid = default_grid(blocks, extensions),
@@ -41,6 +43,10 @@ dock_board_options()
 }
 \arguments{
 \item{blocks}{Set of blocks}
+
+\item{links}{Set of links}
+
+\item{stacks}{Set of stacks}
 
 \item{...}{Further (metadata) attributes}
 
