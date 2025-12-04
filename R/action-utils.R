@@ -46,16 +46,20 @@ block_input_select <- function(block = NULL, block_id = NULL, links = NULL,
   }
 
   if (is.null(block)) {
+
     stopifnot(is.null(block_id), is.null(links))
 
     inps <- c(`Select a block to populate options` = "")
     opts <- list()
+
   } else {
+
     stopifnot(is_block(block))
 
     inps <- setdiff(block_inputs(block), curr)
 
     if (is.na(block_arity(block))) {
+
       num <- suppressWarnings(as.integer(curr))
       nna <- is.na(num)
 
@@ -67,9 +71,13 @@ block_input_select <- function(block = NULL, block_id = NULL, links = NULL,
       }
 
       opts <- list(create = TRUE)
+
     } else if (length(inps)) {
+
       opts <- list()
+
     } else {
+
       if (mode == "inputs") {
         return(character())
       } else {
