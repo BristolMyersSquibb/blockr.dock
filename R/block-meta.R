@@ -33,7 +33,7 @@ blks_metadata <- function(blocks) {
   }
 
   if (is_block(blocks)) {
-    id <- registry_id_from_block(blocks)
+    id <- list(registry_id_from_block(blocks))
   } else if (is_blocks(blocks)) {
     id <- lapply(blocks, registry_id_from_block)
   } else {
@@ -41,11 +41,12 @@ blks_metadata <- function(blocks) {
   }
 
   if (any(lengths(id) == 0L)) {
+
     cat <- default_category()
 
     res <- data.frame(
-      id = id[lengths(id) == 0L],
-      name = chr_ply(blocks[lengths(id) == 0L], default_name),
+      id = NA_character_,
+      name = chr_ply(as_blocks(blocks[lengths(id) == 0L]), default_name),
       description = "not available",
       category = cat,
       icon = default_icon(cat),
@@ -56,12 +57,14 @@ blks_metadata <- function(blocks) {
     if (is_blocks(blocks)) {
       rownames(res) <- names(blocks)[lengths(id) == 0L]
     }
+
   } else {
     res <- NULL
   }
 
   if (any(lengths(id) > 0L)) {
-    reg <- block_metadata(id[lengths(id) > 0L])
+
+    reg <- block_metadata(unlst(id[lengths(id) > 0L]))
     reg <- cbind(reg, color = blk_color(reg$category))
 
     if (is_blocks(blocks)) {
@@ -110,21 +113,15 @@ blk_icon_data_uri <- function(icon_svg, color, size = 48,
 
   stopifnot(is_string(icon_svg), is_string(color), is.numeric(size))
 
-  # Get icon style preference (light or solid)
   icon_style <- blockr_option("icon_style", "light")
 
-  # Extract the path/content from the icon SVG
-  # Icon SVG is typically: <svg ...><path d="..."/></svg>
-  # We want just the inner content
   icon_content <- sub("^<svg[^>]*>", "", icon_svg)
   icon_content <- sub("</svg>$", "", icon_content)
 
-  # Create outer SVG with colored rounded rectangle and icon
-  icon_size <- size * 0.6  # Icon takes 60% of total size
-  icon_offset <- size * 0.2  # Center the icon
-  corner_radius <- size * 0.15  # 15% corner radius
+  icon_size <- size * 0.6
+  icon_offset <- size * 0.2
+  corner_radius <- size * 0.15
 
-  # Determine icon fill and background opacity based on style
   if (icon_style == "light") {
     icon_fill <- color
     bg_opacity <- 0.3
@@ -133,7 +130,6 @@ blk_icon_data_uri <- function(icon_svg, color, size = 48,
     bg_opacity <- 1.0
   }
 
-  # Convert hex color to rgba with opacity
   bg_color <- hex_to_rgba(color, bg_opacity)
 
   svg <- sprintf(
@@ -150,7 +146,6 @@ blk_icon_data_uri <- function(icon_svg, color, size = 48,
     icon_size, icon_size, icon_content
   )
 
-  # Convert to base64 data URI
   if (mode == "inline") {
     return(HTML(svg))
   }
