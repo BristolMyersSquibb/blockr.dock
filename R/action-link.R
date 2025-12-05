@@ -12,6 +12,8 @@ add_link_function <- function(trigger, board, update, input, session) {
 
       res <- block_input_select(
         board_blocks(board$board)[[input$create_link]],
+        input$create_link,
+        board_links(board$board),
         mode = "update",
         session = session,
         inputId = "add_link_input"

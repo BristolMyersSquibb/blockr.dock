@@ -67,7 +67,13 @@ block_input_select <- function(block = NULL, block_id = NULL, links = NULL,
         inps <- c(inps, "1")
       } else {
         num <- num[!nna]
-        inps <- c(inps, as.character(min(setdiff(seq_len(max(num)), num))))
+        max <- max(num)
+        mis <- setdiff(seq_len(max), num)
+        if (length(mis)) {
+          inps <- c(inps, as.character(min(mis)))
+        } else {
+          inps <- c(inps, as.character(max + 1L))
+        }
       }
 
       opts <- list(create = TRUE)
