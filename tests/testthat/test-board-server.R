@@ -1,15 +1,12 @@
 test_that("board server", {
 
-  board_rv_1 <- generate_plugin_args(
-    new_dock_board(
-      blocks = c(a = new_dataset_block())
-    ),
-    mode = "read"
+  board_rv_1 <- board_args(
+    blocks = c(a = new_dataset_block())
   )
 
   with_mock_session(
     {
-      res <- board_server_callback(board_rv_1$board, update = reactiveVal())
+      res <- board_server_callback(board_rv_1, update = reactiveVal())
 
       expect_type(res, "list")
       expect_length(res, 1L)
@@ -27,17 +24,14 @@ test_that("board server", {
     }
   )
 
-  board_rv_2 <- generate_plugin_args(
-    new_dock_board(
-      blocks = c(a = new_dataset_block()),
-      extensions = new_edit_board_extension()
-    ),
-    mode = "read"
+  board_rv_2 <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = new_edit_board_extension()
   )
 
   with_mock_session(
     {
-      res <- board_server_callback(board_rv_2$board, update = reactiveVal())
+      res <- board_server_callback(board_rv_2, update = reactiveVal())
 
       expect_type(res, "list")
       expect_length(res, 2L)
@@ -88,7 +82,7 @@ test_that("board server", {
   with_mock_session(
     {
       manage_dock(
-        board_rv_2$board,
+        board_rv_2,
         update = reactiveVal(),
         session = session
       )
@@ -144,7 +138,7 @@ test_that("board server", {
   with_mock_session(
     {
       manage_dock(
-        board_rv_2$board,
+        board_rv_2,
         update = reactiveVal(),
         session = session
       )
@@ -196,7 +190,7 @@ test_that("board server", {
       upd <- reactiveVal()
 
       manage_dock(
-        board_rv_2$board,
+        board_rv_2,
         update = upd,
         session = session
       )

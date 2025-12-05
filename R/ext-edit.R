@@ -489,7 +489,10 @@ create_dt_link_obs <- function(ids, upd, ...) {
 
       obs2 <- observeEvent(
         {
-          req(row %in% board_link_ids(rv$board))
+          req(
+            row %in% board_link_ids(rv$board),
+            row %in% names(upd$curr)
+          )
           board_block_ids(rv$board)
         },
         {
