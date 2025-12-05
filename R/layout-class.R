@@ -61,10 +61,15 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 #' @rdname layout
 #' @export
 default_grid <- function(blocks, extensions) {
-  list(
-    as_ext_panel_id(as_dock_extensions(extensions)),
-    as_block_panel_id(as_blocks(blocks))
-  )
+
+  exts <- as_ext_panel_id(as_dock_extensions(extensions))
+  blks <- as_block_panel_id(as_blocks(blocks))
+
+  if (length(exts)) {
+    list(exts, blks)
+  } else {
+    list(blks)
+  }
 }
 
 draw_panel_tree <- function(x) {

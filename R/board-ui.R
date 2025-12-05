@@ -13,7 +13,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
-      block_ui(id, x, edit_ui = plugins[["edit_block"]])
+      block_ui(id, x, plugins[["edit_block"]])
     ),
     options_ui(
       id,

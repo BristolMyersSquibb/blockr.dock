@@ -231,19 +231,23 @@ block_card_dropdown <- function(ns, info, blk_id) {
         "shadow-sm rounded-3 border-1"
       ),
       style = "min-width: 250px;",
-      dd_header("Block Actions"),
-      dd_action(
-        "Append block",
-        ns("append_block"),
-        icon("plus", class = "text-success")
-      ),
-      dd_action(
-        "Delete block",
-        ns("delete_block"),
-        icon("trash"),
-        class = "text-danger"
-      ),
-      dd_divider(),
+      if (!is_dock_locked()) {
+        tagList(
+          dd_header("Block Actions"),
+          dd_action(
+            "Append block",
+            ns("append_block"),
+            icon("plus", class = "text-success")
+          ),
+          dd_action(
+            "Delete block",
+            ns("delete_block"),
+            icon("trash"),
+            class = "text-danger"
+          ),
+          dd_divider()
+        )
+      },
       dd_header("Block Details"),
       tags$li(
         div(
