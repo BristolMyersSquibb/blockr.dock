@@ -39,7 +39,7 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
 
 #' @export
 blockr_ser.dock_layout <- function(x, data, ...) {
-  list(object = class(x), payload = unclass(data))
+  list(object = class(x), payload = unclass(coal(data, x)))
 }
 
 #' @export
@@ -55,7 +55,7 @@ blockr_ser.dock_extension <- function(x, data, ...) {
 blockr_ser.dock_extensions <- function(x, data, ...) {
   list(
     object = class(x),
-    payload = map(blockr_ser, x, data[names(x)])
+    payload = map(blockr_ser, x, coal(data, list())[names(x)])
   )
 }
 

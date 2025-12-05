@@ -349,11 +349,6 @@ as_dock_layout.list <- function(x, ...) {
   do.call(new_dock_layout, x)
 }
 
-#' @export
-as_dock_layout.NULL <- function(x, ...) {
-  new_dock_layout()
-}
-
 layout_panel_ids <- function(x) {
   x <- as_dock_layout(x)
   chr_xtr(x[["panels"]], "id")
