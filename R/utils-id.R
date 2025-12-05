@@ -141,6 +141,11 @@ as_dock_panel_id.dock_extension <- function(x) {
   as_ext_panel_id(extension_id(x))
 }
 
+#' @export
+as_dock_panel_id.dock_panel_id <- function(x) {
+  x
+}
+
 #' @param x Object
 #' @rdname ids
 #' @export
@@ -380,6 +385,11 @@ as_dock_handle_id.dock_extensions <- function(x) {
 #' @export
 as_dock_handle_id.dock_extension <- function(x) {
   as_ext_handle_id(extension_id(x))
+}
+
+#' @export
+as_dock_handle_id.dock_handle_id <- function(x) {
+  x
 }
 
 #' @rdname ids

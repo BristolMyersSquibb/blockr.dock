@@ -165,3 +165,7 @@ dock_panel_groups <- function(session = get_session()) {
     xtr_leaf_id(session$input[[dock_input("state")]][["grid"]][["root"]])
   )
 }
+
+get_dock_panel <- function(id, proxy = dock_proxy()) {
+  dockViewR::get_panels(proxy)[[id]]
+}

@@ -99,3 +99,5 @@ available_stack_blocks <- function(board) {
 
   blk_ids[!(blk_ids %in% stacked_blocks)]
 }
+
+trace_env <- new.env()

@@ -89,19 +89,18 @@ manage_dock <- function(board, update, session = get_session()) {
     suggest_panels_to_add(dock, board, session)
   )
 
-  empty_layout <- reactive(
+  n_panels <- reactive(
     {
       req(input[[dock_input("initialized")]])
-      n_pan <- coal(
+      coal(
         input[[dock_input("n-panels")]],
         length(determine_active_views(dock_layout(board$board)))
       )
-      req(n_pan == 0)
     }
   )
 
   observeEvent(
-    empty_layout(),
+    req(n_panels() == 0),
     suggest_panels_to_add(dock, board, session)
   )
 
@@ -169,11 +168,13 @@ manage_dock <- function(board, update, session = get_session()) {
         new_name <- block_name(blk)
         blk_panel_id <- as_block_panel_id(id)
 
-        old_title <- dockViewR::get_panels(dock)[[blk_panel_id]]$title
+        old_title <- get_dock_panel(blk_panel_id, dock)$title
 
         if (new_name == old_title) {
           next
         }
+
+        log_debug("setting panel title {blk_panel_id} to '{new_name}'")
 
         dockViewR::set_panel_title(
           dock,
@@ -191,8 +192,8 @@ manage_dock <- function(board, update, session = get_session()) {
   )
 }
 
-
 suggest_panels_to_add <- function(dock, board, session) {
+
   ns <- session$ns
 
   panels <- dock_panel_ids(dock)

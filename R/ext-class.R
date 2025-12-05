@@ -295,6 +295,6 @@ extension_block_callback <- function(x, ...) {
 }
 
 #' @export
-extension_block_callback.extension <- function(x, ...) {
+extension_block_callback.dock_extension <- function(x, ...) {
   NULL
 }

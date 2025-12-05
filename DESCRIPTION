@@ -33,7 +33,8 @@ Suggests:
     testthat (>= 3.0.0),
     DT,
     colorspace,
-    methods
+    methods,
+    withr
 Config/testthat/edition: 3
 Remotes:
     BristolMyersSquibb/blockr.core,
