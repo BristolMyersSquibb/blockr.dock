@@ -48,7 +48,7 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 
   content <- list(grid = grid, panels = panels)
 
-  if (!length(active_group)) {
+  if (length(active_group)) {
     content <- c(content, list(activeGroup = active_group))
   }
 
@@ -67,6 +67,8 @@ default_grid <- function(blocks, extensions) {
 
   if (length(exts)) {
     list(exts, blks)
+  } else if (!length(blks)) {
+    list()
   } else {
     list(blks)
   }
@@ -345,6 +347,11 @@ as_dock_layout.list <- function(x, ...) {
   }
 
   do.call(new_dock_layout, x)
+}
+
+#' @export
+as_dock_layout.NULL <- function(x, ...) {
+  new_dock_layout()
 }
 
 layout_panel_ids <- function(x) {

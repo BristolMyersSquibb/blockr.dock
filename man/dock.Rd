@@ -18,7 +18,7 @@ new_dock_board(
   stacks = list(),
   ...,
   extensions = new_dock_extensions(),
-  grid = default_grid(blocks, extensions),
+  layout = default_grid(blocks, extensions),
   options = dock_board_options(),
   ctor = NULL,
   pkg = NULL,
@@ -52,7 +52,7 @@ dock_board_options()
 
 \item{extensions}{Dock extensions}
 
-\item{grid}{Dock layout}
+\item{layout}{Dock layout}
 
 \item{options}{Board-level user settings}
 

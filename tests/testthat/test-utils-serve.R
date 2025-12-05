@@ -1,3 +1,33 @@
+test_that("serve utils", {
+
+  board <- new_dock_board()
+
+  expect_s3_class(
+    blockr_app_options(board),
+    "board_options"
+  )
+
+  expect_s3_class(
+    blockr_app_ui(
+      "test",
+      board,
+      blockr_app_plugins(board),
+      blockr_app_options(board)
+    ),
+    "shiny.tag.list"
+  )
+
+  testServer(
+    blockr_app_server,
+    session$flushReact(),
+    args = list(
+      board,
+      blockr_app_plugins(board),
+      blockr_app_options(board)
+    )
+  )
+})
+
 test_that("dock app", {
 
   skip_on_cran()
