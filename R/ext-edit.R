@@ -156,6 +156,8 @@ add_block_observer <- function(input, board, update, session) {
   observeEvent(
     input$confirm_add,
     {
+      log_debug("add block confirm")
+
       sel <- input$registry_select
       bid <- input$block_id
 
@@ -185,6 +187,8 @@ remove_block_observer <- function(input, board, update, session) {
   observeEvent(
     input$confirm_rm,
     {
+      log_debug("rm block confirm")
+
       sel <- input$block_select
 
       if (!length(sel)) {
@@ -604,6 +608,8 @@ add_link_observer <- function(input, rv, upd, sess) {
   observeEvent(
     input$add_link,
     {
+      log_debug("add link")
+
       total <- sum(block_arity(rv$board))
 
       if (is.na(total) || length(upd$curr) < total) {
@@ -652,6 +658,8 @@ rm_link_observer <- function(input, rv, upd, sess) {
   observeEvent(
     input$rm_link,
     {
+      log_debug("rm link")
+
       sel <- input$links_dt_rows_selected
 
       if (length(sel)) {
@@ -676,6 +684,8 @@ modify_link_observer <- function(input, rv, upd, session, proxy, res) {
   observeEvent(
     input$modify_links,
     {
+      log_debug("mod link")
+
       if (!length(upd$add) && !length(upd$rm)) {
 
         notify(

@@ -56,7 +56,10 @@ test_that("condition ui test", {
   remove_count <- 0L
 
   local_mocked_bindings(
-    insert_ui = function(...) insert_count <<- insert_count + 1L,
+    insert_ui = function(..., ui) {
+      insert_count <<- insert_count + 1L
+      expect_s3_class(ui, "shiny.tag")
+    },
     remove_ui = function(...) remove_count <<- remove_count + 1L
   )
 

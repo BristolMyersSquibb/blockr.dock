@@ -34,7 +34,8 @@ Suggests:
     DT,
     colorspace,
     methods,
-    withr
+    withr,
+    shinytest2
 Config/testthat/edition: 3
 Remotes:
     BristolMyersSquibb/blockr.core,
