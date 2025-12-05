@@ -101,3 +101,7 @@ available_stack_blocks <- function(board) {
 }
 
 trace_env <- new.env()
+
+insert_ui <- insertUI
+
+remove_ui <- removeUI

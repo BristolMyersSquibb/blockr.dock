@@ -1,4 +1,5 @@
 test_that("board plugins", {
+
   plugins <- board_plugins(new_dock_board())
 
   expect_true(is_plugins(plugins))

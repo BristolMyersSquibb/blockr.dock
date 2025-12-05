@@ -512,12 +512,12 @@ update_blk_cond_observer <- function(conds, session = get_session()) {
         )
       )
 
-      removeUI(
+      remove_ui(
         paste0("#", ns("outputs_issues"))
       )
 
       if (length(statuses)) {
-        insertUI(
+        insert_ui(
           selector = paste0("#", ns("outputs_issues_wrapper")),
           ui = create_issues_ui(statuses, ns)
         )
@@ -525,7 +525,7 @@ update_blk_cond_observer <- function(conds, session = get_session()) {
 
       msgs <- NULL
 
-      removeUI(
+      remove_ui(
         paste0("#", ns("errors_block"), " > div")
       )
 
@@ -545,7 +545,7 @@ update_blk_cond_observer <- function(conds, session = get_session()) {
           )
         )
 
-        insertUI(
+        insert_ui(
           paste0("#", ns("errors_block")),
           ui = msgs
         )
