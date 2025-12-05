@@ -70,7 +70,14 @@ validate_extension.dock_extension <- function(x, ...) {
     blockr_abort(
       "Expecting extensions to inherit from `dock_extension` and one ",
       "additional class.",
-      class = "dock_extension_invalid"
+      class = "dock_extension_inheritance_invalid"
+    )
+  }
+
+  if (!is.list(x) || !all(c("ui", "server") %in% names(x))) {
+    blockr_abort(
+      "Expecting list with components `ui` and `server`.",
+      class = "dock_extension_structure_invalid"
     )
   }
 
@@ -79,7 +86,7 @@ validate_extension.dock_extension <- function(x, ...) {
   if (!is_string(id) || id == "dock_extension" || !grepl("_extension$", id)) {
     blockr_abort(
       "Malformed extension subclass.",
-      class = "dock_extension_invalid"
+      class = "dock_extension_id_invalid"
     )
   }
 
@@ -87,8 +94,8 @@ validate_extension.dock_extension <- function(x, ...) {
 
   if (!is_string(nme)) {
     blockr_abort(
-      "Expecting a string as extension name",
-      class = "dock_extension_invalid"
+      "Expecting a string as extension name.",
+      class = "dock_extension_name_invalid"
     )
   }
 
@@ -97,16 +104,16 @@ validate_extension.dock_extension <- function(x, ...) {
   if (!is.function(ui)) {
     blockr_abort(
       "Expecting a block extension UI to be specified by a function.",
-      class = "dock_extension_invalid"
+      class = "dock_extension_ui_invalid"
     )
   }
 
-  srv <- extension_ui(x)
+  srv <- extension_server(x)
 
   if (!is.function(srv)) {
     blockr_abort(
       "Expecting a block extension server to be a function.",
-      class = "dock_extension_invalid"
+      class = "dock_extension_server_invalid"
     )
   }
 
@@ -235,14 +242,14 @@ validate_extensions <- function(x) {
     blockr_abort(
       "Expecting extensions to inherit from `dock_extensions` and be ",
       "represented by a list.",
-      class = "dock_extensions_invalid"
+      class = "dock_extensions_structure_invalid"
     )
   }
 
   if (anyDuplicated(names(x)) > 0L) {
     blockr_abort(
       "Expecting extensions to have unique IDs.",
-      class = "dock_extensions_invalid"
+      class = "dock_extensions_names_invalid"
     )
   }
 
