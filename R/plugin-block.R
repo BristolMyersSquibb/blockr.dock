@@ -247,9 +247,30 @@ block_card_dropdown <- function(ns, info, blk_id) {
       tags$li(
         div(
           class = "px-3 py-1",
-          dd_info("Package", info$package),
+          div(
+            class = "d-flex justify-content-between align-items-center mb-2",
+            span("Package", class = "text-muted small"),
+            span(class = "badge-two-tone", info$package)
+          ),
           dd_info("Type", info$category),
-          dd_info("ID", blk_id)
+          div(
+            class = "d-flex justify-content-between align-items-center mb-2",
+            span("ID", class = "text-muted small"),
+            div(
+              class = "d-flex align-items-center gap-2",
+              tags$code(blk_id, style = "font-size: var(--blockr-font-size-sm);"),
+              tags$button(
+                class = "btn btn-link p-0 border-0 text-muted",
+                style = "line-height: 1; text-decoration: none;",
+                onclick = sprintf(
+                  "event.stopPropagation(); navigator.clipboard.writeText('%s'); var btn = this; var icon = btn.querySelector('svg'); icon.style.display = 'none'; btn.insertAdjacentHTML('afterbegin', '<span class=\"copy-check text-success\">✓</span>'); setTimeout(function() { btn.querySelector('.copy-check').remove(); icon.style.display = ''; }, 1500);",
+                  blk_id
+                ),
+                title = "Copy to clipboard",
+                bsicons::bs_icon("copy", size = "0.9em")
+              )
+            )
+          )
         )
       )
     )
