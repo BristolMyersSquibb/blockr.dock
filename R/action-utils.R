@@ -1,7 +1,3 @@
-#' Action utilities
-#'
-#' Several utility functions are exported for helping with action UI:
-#'
 #' @section `block_input_select()`:
 #' Determine input options for a block by removing inputs that are already used
 #' and also takes into account some edge-cases, such as variadic blocks. If
@@ -9,18 +5,14 @@
 #' "create", the return value of a [shiny::selectizeInput()] call and for
 #' "update", the return value of a [shiny::updateSelectizeInput()] call.
 #'
-#' @section `board_select()`:
-#' Block selection UI, enumerating all blocks in a board is available as
-#' `board_select()`. An object that inherits from `shiny.tag` is returned, which
-#' contains the result from a [shiny::selectizeInput()] call.
-#'
 #' @param block Block object
 #' @param block_id Block ID
 #' @param links Links object
 #' @param mode Switch for determining the return object
 #' @param ... Forwarded to other methods
 #'
-#' @return See the respective sections.
+#' @return For utilities `block_input_select()`, `block_registry_selectize()`
+#' and `board_select`, see the respective sections.
 #'
 #' @rdname action
 #' @export
@@ -108,8 +100,10 @@ block_input_select <- function(block = NULL, block_id = NULL, links = NULL,
 #' @section `block_registry_selectize()`:
 #' This creates UI for a block registry selector via [shiny::selectizeInput()]
 #' and returns an object that inherits from `shiny.tag`.
+#'
 #' @param id Input ID
 #' @param blocks Character vector of block registry IDs
+#'
 #' @rdname action
 #' @export
 block_registry_selectize <- function(id, blocks = list_blocks()) {
@@ -149,7 +143,13 @@ block_registry_selectize <- function(id, blocks = list_blocks()) {
   )
 }
 
+#' @section `board_select()`:
+#' Block selection UI, enumerating all blocks in a board is available as
+#' `board_select()`. An object that inherits from `shiny.tag` is returned, which
+#' contains the result from a [shiny::selectizeInput()] call.
+#'
 #' @param selected Character vector of pre-selected block (registry) IDs
+#'
 #' @rdname action
 #' @export
 board_select <- function(id, blocks, selected = NULL, ...) {

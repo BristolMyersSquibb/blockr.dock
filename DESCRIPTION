@@ -14,6 +14,8 @@ Authors@R:
 Description: Building on the docking layout manager provided by 'dockViewR',
     this provides a flexible front-end to 'blockr.core'. It provides an extension mechanism which allows for providing means to manipulate a board
     object via panel-based user interface components.
+URL: https://bristolmyerssquibb.github.io/blockr.dock/
+BugReports: https://github.com/BristolMyersSquibb/blockr.dock/issues
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

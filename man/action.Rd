@@ -87,7 +87,8 @@ inherits from \code{action}. Inheritance can be checked with functions
 \code{is_action()}, \code{is_action_module()} and \code{is_action_function()}, which all
 return scalar logicals.
 
-See the respective sections.
+For utilities \code{block_input_select()}, \code{block_registry_selectize()}
+and \code{board_select}, see the respective sections.
 }
 \description{
 Logic including a modal-based UI for board actions such as "append block"
@@ -95,8 +96,6 @@ or "edit stack" can be specified using \code{action} objects, which essentially
 are classed functions that can either be called to return a shiny module
 \code{as_module = TRUE} or a function \code{as_module = FALSE} which injects code
 (passed as \code{expr}) into a shiny server context.
-
-Several utility functions are exported for helping with action UI:
 }
 \details{
 An action is a function that can be called with arguments \code{trigger} and
@@ -125,16 +124,16 @@ and also takes into account some edge-cases, such as variadic blocks. If
 "update", the return value of a \code{\link[shiny:updateSelectInput]{shiny::updateSelectizeInput()}} call.
 }
 
+\section{\code{block_registry_selectize()}}{
+
+This creates UI for a block registry selector via \code{\link[shiny:selectInput]{shiny::selectizeInput()}}
+and returns an object that inherits from \code{shiny.tag}.
+}
+
 \section{\code{board_select()}}{
 
 Block selection UI, enumerating all blocks in a board is available as
 \code{board_select()}. An object that inherits from \code{shiny.tag} is returned, which
 contains the result from a \code{\link[shiny:selectInput]{shiny::selectizeInput()}} call.
-}
-
-\section{\code{block_registry_selectize()}}{
-
-This creates UI for a block registry selector via \code{\link[shiny:selectInput]{shiny::selectizeInput()}}
-and returns an object that inherits from \code{shiny.tag}.
 }
 
