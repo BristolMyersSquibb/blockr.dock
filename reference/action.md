@@ -6,8 +6,6 @@ essentially are classed functions that can either be called to return a
 shiny module `as_module = TRUE` or a function `as_module = FALSE` which
 injects code (passed as `expr`) into a shiny server context.
 
-Several utility functions are exported for helping with action UI:
-
 ## Usage
 
 ``` r
@@ -107,7 +105,8 @@ from `action`. Inheritance can be checked with functions `is_action()`,
 `is_action_module()` and `is_action_function()`, which all return scalar
 logicals.
 
-See the respective sections.
+For utilities `block_input_select()`, `block_registry_selectize()` and
+`board_select`, see the respective sections.
 
 ## Details
 
@@ -142,6 +141,12 @@ call and for "update", the return value of a
 [`shiny::updateSelectizeInput()`](https://rdrr.io/pkg/shiny/man/updateSelectInput.html)
 call.
 
+## `block_registry_selectize()`
+
+This creates UI for a block registry selector via
+[`shiny::selectizeInput()`](https://rdrr.io/pkg/shiny/man/selectInput.html)
+and returns an object that inherits from `shiny.tag`.
+
 ## `board_select()`
 
 Block selection UI, enumerating all blocks in a board is available as
@@ -149,9 +154,3 @@ Block selection UI, enumerating all blocks in a board is available as
 which contains the result from a
 [`shiny::selectizeInput()`](https://rdrr.io/pkg/shiny/man/selectInput.html)
 call.
-
-## `block_registry_selectize()`
-
-This creates UI for a block registry selector via
-[`shiny::selectizeInput()`](https://rdrr.io/pkg/shiny/man/selectInput.html)
-and returns an object that inherits from `shiny.tag`.
