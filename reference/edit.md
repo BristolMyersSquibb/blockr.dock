@@ -13,7 +13,8 @@ new_edit_board_extension(...)
 
 - ...:
 
-  Forwarded to [`new_dock_extension()`](extension.md)
+  Forwarded to
+  [`new_dock_extension()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
 
 ## Value
 
