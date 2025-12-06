@@ -1,6 +1,6 @@
 Package: blockr.dock
-Title: A docking layout manager for blockr
-Version: 0.0.1
+Title: A Docking Layout Manager for 'blockr'
+Version: 0.1.0
 Authors@R: 
     c(person(given = "Nicolas",
              family = "Bennett",
@@ -11,8 +11,9 @@ Authors@R:
              role = c("aut"),
              email = "david@cynkra.com")
     )
-Description: Building on the docking layout manager provided by dockViewR,
-    this provides a flexible front-end to blockr.core.
+Description: Building on the docking layout manager provided by 'dockViewR',
+    this provides a flexible front-end to 'blockr.core'. It provides an extension mechanism which allows for providing means to manipulate a board
+    object via panel-based user interface components.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
