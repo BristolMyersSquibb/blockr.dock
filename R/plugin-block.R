@@ -270,18 +270,26 @@ block_card_dropdown <- function(ns, info, blk_id) {
                     "event.stopPropagation(); ",
                     "navigator.clipboard.writeText('%s'); ",
                     "var btn = this; ",
-                    "var icon = btn.querySelector('svg'); ",
-                    "icon.style.display = 'none'; ",
-                    "btn.insertAdjacentHTML('afterbegin', ",
-                    "'<span class=\"copy-check text-success\">✓</span>'); ",
+                    "var copyIcon = btn.querySelector('.copy-icon'); ",
+                    "var checkIcon = btn.querySelector('.check-icon'); ",
+                    "copyIcon.style.display = 'none'; ",
+                    "checkIcon.style.display = ''; ",
                     "setTimeout(function() { ",
-                    "btn.querySelector('.copy-check').remove(); ",
-                    "icon.style.display = ''; }, 1500);"
+                    "checkIcon.style.display = 'none'; ",
+                    "copyIcon.style.display = ''; }, 1500);"
                   ),
                   blk_id
                 ),
                 title = "Copy to clipboard",
-                bsicons::bs_icon("copy", size = "0.9em")
+                span(
+                  class = "copy-icon",
+                  bsicons::bs_icon("copy", size = "0.9em")
+                ),
+                span(
+                  class = "check-icon text-success",
+                  style = "display: none;",
+                  bsicons::bs_icon("check", size = "0.9em")
+                )
               )
             )
           )
