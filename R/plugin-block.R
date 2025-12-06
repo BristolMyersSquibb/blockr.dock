@@ -233,13 +233,12 @@ block_card_dropdown <- function(ns, info, blk_id) {
           dd_action(
             "Append block",
             ns("append_block"),
-            icon("plus", class = "text-success")
+            bsicons::bs_icon("plus", class = "text-success", size = "1.1em")
           ),
           dd_action(
             "Delete block",
             ns("delete_block"),
-            icon("trash"),
-            class = "text-danger"
+            bsicons::bs_icon("trash", class = "text-danger", size = "1.1em")
           ),
           dd_divider()
         )
