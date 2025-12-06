@@ -220,11 +220,12 @@
   right: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 14px;
-  height: 80px;
-  background-color: #888;
-  border: none;
-  border-radius: 8px 0 0 8px;
+  width: 32px;
+  height: 88px;
+  background-color: var(--blockr-grey-200);
+  border: 1px solid hsl(220, 3%, 80%);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
   cursor: pointer;
   transition: all 0.2s ease;
   z-index: 1000;
@@ -232,44 +233,18 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  overflow: hidden;
-  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.15);
-}
-
-/* Accent stripe on left edge */
-.blockr-edge-tab::before {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 8px;
-  bottom: 8px;
-  width: 4px;
-  background-color: var(--blockr-grey-300);
-  border-radius: 2px;
-  opacity: 1;
-  transition: opacity 0.2s ease;
+  box-shadow: -3px 0 12px rgba(0, 0, 0, 0.08);
 }
 
 .blockr-edge-tab:hover {
-  width: 28px;
-  background-color: #777;
-}
-
-.blockr-edge-tab:hover::before {
   background-color: var(--blockr-grey-300);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
 }
 
 .blockr-edge-tab svg,
 .blockr-edge-tab i {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  font-size: 14px;
-  color: #ccc;
-}
-
-.blockr-edge-tab:hover svg,
-.blockr-edge-tab:hover i {
-  opacity: 1;
+  font-size: 16px;
+  color: hsl(220, 3%, 50%);
 }
 
 /* ============================================
