@@ -40,9 +40,6 @@ Suggests:
     withr,
     shinytest2
 Config/testthat/edition: 3
-Remotes:
-    BristolMyersSquibb/blockr.core,
-    cynkra/dockViewR
 Collate: 
     'action-class.R'
     'action-block.R'

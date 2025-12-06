@@ -10,6 +10,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
 
   tagList(
     show_hide_block_dep(),
+    blockr_dock_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
@@ -56,7 +57,6 @@ options_ui <- function(id, x, ...) {
   offcanvas_id <- NS(id, "options_offcanvas")
 
   tagList(
-    blockr_fab_dep(),
     tags$button(
       class = "blockr-edge-tab",
       bsicons::bs_icon("chevron-left"),
@@ -94,11 +94,11 @@ options_ui <- function(id, x, ...) {
   )
 }
 
-blockr_fab_dep <- function() {
+blockr_dock_dep <- function() {
   htmltools::htmlDependency(
     "blockr-fab",
     pkg_version(),
     src = pkg_file("assets", "css"),
-    stylesheet = "blockr-fab.css"
+    stylesheet = "blockr-dock.css"
   )
 }
