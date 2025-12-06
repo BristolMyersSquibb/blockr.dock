@@ -223,7 +223,7 @@ block_card_dropdown <- function(ns, info, blk_id) {
     ),
     tags$ul(
       class = paste(
-        "dropdown-menu dropdown-menu-end",
+        "dropdown-menu dropdown-menu-end blockr-block-dropdown",
         "shadow-sm rounded-3 border-1"
       ),
       style = "min-width: 250px;",

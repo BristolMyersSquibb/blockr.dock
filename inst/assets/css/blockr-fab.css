@@ -485,14 +485,14 @@ label:has(input[type="file"]) {
 }
 
 /* ============================================
-   Dropdown Menu Styling (Block Actions)
+   Block Dropdown Menu Styling
    ============================================ */
-.dropdown-menu {
+.blockr-block-dropdown {
   font-size: var(--blockr-font-size-base) !important;
 }
 
-.dropdown-menu .dropdown-header,
-.dropdown-menu h6.dropdown-header {
+.blockr-block-dropdown .dropdown-header,
+.blockr-block-dropdown h6.dropdown-header {
   font-size: var(--blockr-font-size-xs) !important;
   font-weight: var(--blockr-font-weight-semibold) !important;
   color: var(--blockr-color-text-secondary) !important;
@@ -501,23 +501,23 @@ label:has(input[type="file"]) {
   font-variant-caps: normal;
 }
 
-.dropdown-menu .dropdown-item {
+.blockr-block-dropdown .dropdown-item {
   font-size: var(--blockr-font-size-sm) !important;
 }
 
-.dropdown-menu .text-muted,
-.dropdown-menu span.text-muted {
+.blockr-block-dropdown .text-muted,
+.blockr-block-dropdown span.text-muted {
   color: var(--blockr-color-text-muted) !important;
   font-size: var(--blockr-font-size-sm) !important;
 }
 
-.dropdown-menu .small,
-.dropdown-menu span.small {
+.blockr-block-dropdown .small,
+.blockr-block-dropdown span.small {
   font-size: var(--blockr-font-size-sm) !important;
 }
 
-.dropdown-menu .fw-medium,
-.dropdown-menu span.fw-medium {
+.blockr-block-dropdown .fw-medium,
+.blockr-block-dropdown span.fw-medium {
   font-weight: var(--blockr-font-weight-medium) !important;
   font-size: var(--blockr-font-size-sm) !important;
 }
