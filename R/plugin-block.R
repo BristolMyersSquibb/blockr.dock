@@ -169,19 +169,15 @@ block_card_toggles <- function(blk, ns) {
 block_card_dropdown <- function(ns, info, blk_id) {
 
   dd_header <- function(title) {
-
-    cls <- "dropdown-header text-uppercase fw-semibold small text-secondary"
-    sty <- "font-size: 0.75rem; letter-spacing: 0.5px;"
-
     tags$li(
-      h6(class = cls, style = sty, title)
+      h6(class = "dropdown-header", title)
     )
   }
 
   dd_action <- function(title, id, symbol, class = character()) {
 
     cls <- c(
-      "dropdown-item action-button py-2 position-relative text-center",
+      "dropdown-item action-button py-2 position-relative",
       class
     )
 
@@ -227,7 +223,7 @@ block_card_dropdown <- function(ns, info, blk_id) {
     ),
     tags$ul(
       class = paste(
-        "dropdown-menu dropdown-menu-end",
+        "dropdown-menu dropdown-menu-end blockr-block-dropdown",
         "shadow-sm rounded-3 border-1"
       ),
       style = "min-width: 250px;",
@@ -237,13 +233,12 @@ block_card_dropdown <- function(ns, info, blk_id) {
           dd_action(
             "Append block",
             ns("append_block"),
-            icon("plus", class = "text-success")
+            bsicons::bs_icon("plus", class = "text-success", size = "1.1em")
           ),
           dd_action(
             "Delete block",
             ns("delete_block"),
-            icon("trash"),
-            class = "text-danger"
+            bsicons::bs_icon("trash", class = "text-danger", size = "1.1em")
           ),
           dd_divider()
         )
@@ -252,9 +247,52 @@ block_card_dropdown <- function(ns, info, blk_id) {
       tags$li(
         div(
           class = "px-3 py-1",
-          dd_info("Package", info$package),
+          div(
+            class = "d-flex justify-content-between align-items-center mb-2",
+            span("Package", class = "text-muted small"),
+            span(class = "badge-two-tone", info$package)
+          ),
           dd_info("Type", info$category),
-          dd_info("ID", blk_id)
+          div(
+            class = "d-flex justify-content-between align-items-center mb-2",
+            span("ID", class = "text-muted small"),
+            div(
+              class = "d-flex align-items-center gap-2",
+              tags$code(
+                blk_id,
+                style = "font-size: var(--blockr-font-size-sm);"
+              ),
+              tags$button(
+                class = "btn btn-link p-0 border-0 text-muted",
+                style = "line-height: 1; text-decoration: none;",
+                onclick = sprintf(
+                  paste0(
+                    "event.stopPropagation(); ",
+                    "navigator.clipboard.writeText('%s'); ",
+                    "var btn = this; ",
+                    "var copyIcon = btn.querySelector('.copy-icon'); ",
+                    "var checkIcon = btn.querySelector('.check-icon'); ",
+                    "copyIcon.style.display = 'none'; ",
+                    "checkIcon.style.display = ''; ",
+                    "setTimeout(function() { ",
+                    "checkIcon.style.display = 'none'; ",
+                    "copyIcon.style.display = ''; }, 1500);"
+                  ),
+                  blk_id
+                ),
+                title = "Copy to clipboard",
+                span(
+                  class = "copy-icon",
+                  bsicons::bs_icon("copy", size = "0.9em")
+                ),
+                span(
+                  class = "check-icon text-success",
+                  style = "display: none;",
+                  bsicons::bs_icon("check", size = "0.9em")
+                )
+              )
+            )
+          )
         )
       )
     )

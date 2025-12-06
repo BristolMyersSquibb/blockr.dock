@@ -485,6 +485,44 @@ label:has(input[type="file"]) {
 }
 
 /* ============================================
+   Block Dropdown Menu Styling
+   ============================================ */
+.blockr-block-dropdown {
+  font-size: var(--blockr-font-size-base) !important;
+}
+
+.blockr-block-dropdown .dropdown-header,
+.blockr-block-dropdown h6.dropdown-header {
+  font-size: var(--blockr-font-size-xs) !important;
+  font-weight: var(--blockr-font-weight-semibold) !important;
+  color: var(--blockr-color-text-secondary) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-variant-caps: normal;
+}
+
+.blockr-block-dropdown .dropdown-item {
+  font-size: var(--blockr-font-size-sm) !important;
+}
+
+.blockr-block-dropdown .text-muted,
+.blockr-block-dropdown span.text-muted {
+  color: var(--blockr-color-text-muted) !important;
+  font-size: var(--blockr-font-size-sm) !important;
+}
+
+.blockr-block-dropdown .small,
+.blockr-block-dropdown span.small {
+  font-size: var(--blockr-font-size-sm) !important;
+}
+
+.blockr-block-dropdown .fw-medium,
+.blockr-block-dropdown span.fw-medium {
+  font-weight: var(--blockr-font-weight-medium) !important;
+  font-size: var(--blockr-font-size-sm) !important;
+}
+
+/* ============================================
    Dockview Left Actions (Plus Button)
    ============================================ */
 .dv-left-actions-container {
