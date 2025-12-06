@@ -169,19 +169,15 @@ block_card_toggles <- function(blk, ns) {
 block_card_dropdown <- function(ns, info, blk_id) {
 
   dd_header <- function(title) {
-
-    cls <- "dropdown-header text-uppercase fw-semibold small text-secondary"
-    sty <- "font-size: 0.75rem; letter-spacing: 0.5px;"
-
     tags$li(
-      h6(class = cls, style = sty, title)
+      h6(class = "dropdown-header", title)
     )
   }
 
   dd_action <- function(title, id, symbol, class = character()) {
 
     cls <- c(
-      "dropdown-item action-button py-2 position-relative text-center",
+      "dropdown-item action-button py-2 position-relative",
       class
     )
 
