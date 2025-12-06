@@ -258,7 +258,10 @@ block_card_dropdown <- function(ns, info, blk_id) {
             span("ID", class = "text-muted small"),
             div(
               class = "d-flex align-items-center gap-2",
-              tags$code(blk_id, style = "font-size: var(--blockr-font-size-sm);"),
+              tags$code(
+                blk_id,
+                style = "font-size: var(--blockr-font-size-sm);"
+              ),
               tags$button(
                 class = "btn btn-link p-0 border-0 text-muted",
                 style = "line-height: 1; text-decoration: none;",
