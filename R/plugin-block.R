@@ -611,7 +611,7 @@ create_issues_ui <- function(statuses, ns) {
       `aria-expanded` = "false",
       `aria-controls` = collapse_id,
       span(issue_text),
-      icon("chevron-down", class = "blockr-meta")
+      bsicons::bs_icon("chevron-down", class = "blockr-meta")
     ),
     collapse_container(
       id = collapse_id,
