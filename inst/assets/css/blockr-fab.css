@@ -159,6 +159,14 @@
   background-color: var(--blockr-color-bg-hover);
 }
 
+.blockr-issues-toggle svg {
+  transition: transform 0.2s ease;
+}
+
+.blockr-issues-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
 /* Section toggle buttons (inputs/outputs) - matches dockview tabs */
 .blockr-section-toggle .btn.btn-light {
   background-color: var(--blockr-grey-200) !important;
