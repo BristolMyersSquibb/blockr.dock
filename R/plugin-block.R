@@ -263,7 +263,18 @@ block_card_dropdown <- function(ns, info, blk_id) {
                 class = "btn btn-link p-0 border-0 text-muted",
                 style = "line-height: 1; text-decoration: none;",
                 onclick = sprintf(
-                  "event.stopPropagation(); navigator.clipboard.writeText('%s'); var btn = this; var icon = btn.querySelector('svg'); icon.style.display = 'none'; btn.insertAdjacentHTML('afterbegin', '<span class=\"copy-check text-success\">✓</span>'); setTimeout(function() { btn.querySelector('.copy-check').remove(); icon.style.display = ''; }, 1500);",
+                  paste0(
+                    "event.stopPropagation(); ",
+                    "navigator.clipboard.writeText('%s'); ",
+                    "var btn = this; ",
+                    "var icon = btn.querySelector('svg'); ",
+                    "icon.style.display = 'none'; ",
+                    "btn.insertAdjacentHTML('afterbegin', ",
+                    "'<span class=\"copy-check text-success\">✓</span>'); ",
+                    "setTimeout(function() { ",
+                    "btn.querySelector('.copy-check').remove(); ",
+                    "icon.style.display = ''; }, 1500);"
+                  ),
                   blk_id
                 ),
                 title = "Copy to clipboard",
