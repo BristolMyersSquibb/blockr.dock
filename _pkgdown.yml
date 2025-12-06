@@ -1,4 +1,30 @@
-url: ~
+url: https://bristolmyerssquibb.github.io/blockr.dock/
 template:
   bootstrap: 5
+  light-switch: true
 
+reference:
+- title: Dock Board
+  desc: A `board` class that includes dock layout information and board extension object.
+  contents:
+    - new_dock_board
+    - new_dock_stack
+- title: Dock layout
+  desc: Tools for defining panel arrangements.
+  contents:
+    - new_dock_layout
+- title: Board extensions
+  desc: Board extensions allow for adding components that interact with and modify board state.
+  contents:
+    - new_dock_extension
+    - new_edit_board_extension
+- title: Board actions
+  desc: Actions are intended as re-usable, narrowly scoped board interactions, such as adding or removing a block.
+  contents:
+    - new_action
+- title: Utilities
+  desc: Various utility functions that are exported for use in dependen packages.
+  contents:
+    - show_panel
+    - blks_metadata
+    - dock_id
