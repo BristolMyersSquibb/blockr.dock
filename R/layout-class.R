@@ -216,7 +216,7 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
 
       grid <- rapply(
         as.list(grid),
-        function(x, map) map[[x]],
+        function(x, map) chr_ply(x, function(i, x) x[[i]], map),
         "character",
         how = "replace",
         map = id_map
