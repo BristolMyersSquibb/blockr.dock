@@ -31,23 +31,15 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
   )
 }
 
-options_ui <- function(id, x, ...) {
+options_ui <- function(id, opt_id, x, ...) {
 
   stopifnot(is_board_options(x))
 
   opts <- split(x, chr_ply(x, attr, "category"))
 
-  offcanvas_id <- NS(id, "options_offcanvas")
-
   tagList(
-    tags$button(
-      bsicons::bs_icon("gear"),
-      `data-bs-toggle` = "offcanvas",
-      `data-bs-target` = paste0("#", offcanvas_id),
-      `aria-controls` = offcanvas_id
-    ),
     off_canvas(
-      id = offcanvas_id,
+      id = opt_id,
       position = "end",
       title = "Board options",
       ...,

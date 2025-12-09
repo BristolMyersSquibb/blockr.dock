@@ -20,6 +20,8 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
   plugins <- board_plugins(x)
   options <- board_options(x)
 
+  opt_id <- NS(id, "options_offcanvas")
+
   do.call(
     page_fillable,
     c(
@@ -44,19 +46,27 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
           title = id_to_sentence_case(id),
           bslib::nav_spacer(),
           bslib::nav_item(
-            options_ui(
-              id,
-              options,
-              div(
-                id = "preserve_board",
-                class = "mb-1",
-                opt_ui_or_null("preserve_board", plugins, x)
-              ),
-              div(
-                id = "generate_code",
-                opt_ui_or_null("generate_code", plugins, x)
-              )
+            tags$button(
+              class = "nav-link",
+              bsicons::bs_icon("gear"),
+              `data-bs-toggle` = "offcanvas",
+              `data-bs-target` = paste0("#", opt_id),
+              `aria-controls` = opt_id
             )
+          )
+        ),
+        options_ui(
+          id,
+          opt_id,
+          options,
+          div(
+            id = "preserve_board",
+            class = "mb-1",
+            opt_ui_or_null("preserve_board", plugins, x)
+          ),
+          div(
+            id = "generate_code",
+            opt_ui_or_null("generate_code", plugins, x)
           )
         ),
         board_ui(id, x, plugins, options)
