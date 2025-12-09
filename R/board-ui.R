@@ -2,10 +2,6 @@
 board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
                                 options = board_options(x), ...) {
 
-  opt_ui_or_null <- function(plg, plgs, x) {
-    if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
-  }
-
   stopifnot(is_string(id))
 
   tagList(
@@ -15,19 +11,6 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
       block_ui(id, x, plugins[["edit_block"]])
-    ),
-    options_ui(
-      id,
-      options,
-      div(
-        id = "preserve_board",
-        class = "mb-1",
-        opt_ui_or_null("preserve_board", plugins, x)
-      ),
-      div(
-        id = "generate_code",
-        opt_ui_or_null("generate_code", plugins, x)
-      )
     ),
     dockViewR::dock_view_output(
       NS(id, dock_id()),
@@ -58,8 +41,7 @@ options_ui <- function(id, x, ...) {
 
   tagList(
     tags$button(
-      class = "blockr-edge-tab",
-      bsicons::bs_icon("chevron-left"),
+      bsicons::bs_icon("gear"),
       `data-bs-toggle` = "offcanvas",
       `data-bs-target` = paste0("#", offcanvas_id),
       `aria-controls` = offcanvas_id

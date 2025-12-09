@@ -11,7 +11,14 @@ blockr_app_options.dock_board <- function(x, ...) {
 #' @export
 blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
 
+  opt_ui_or_null <- function(plg, plgs, x) {
+    if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
+  }
+
   args <- list(...)
+
+  plugins <- board_plugins(x)
+  options <- board_options(x)
 
   do.call(
     page_fillable,
@@ -33,6 +40,25 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
           pulse_height = "5px"
         ),
         shinyjs::useShinyjs(),
+        bslib::navset_bar(
+          title = id_to_sentence_case(id),
+          bslib::nav_spacer(),
+          bslib::nav_item(
+            options_ui(
+              id,
+              options,
+              div(
+                id = "preserve_board",
+                class = "mb-1",
+                opt_ui_or_null("preserve_board", plugins, x)
+              ),
+              div(
+                id = "generate_code",
+                opt_ui_or_null("generate_code", plugins, x)
+              )
+            )
+          )
+        ),
         board_ui(id, x, plugins, options)
       ),
       unname(args)
