@@ -96,18 +96,27 @@ register_actions <- function(actions, triggers, board, update) {
     )
   }
 
-  for (i in names(actions)) {
-
-    action <- actions[[i]]
-    res <- moduleServer(i, action(triggers[[i]], board, update))
-
-    if (!is.null(res)) {
-      blockr_abort(
-        "Expecting an action server to return `NULL`",
-        class = "action_server_invalid_return"
-      )
-    }
-  }
+  map(
+    register_action,
+    names(actions),
+    actions,
+    triggers[names(actions)],
+    MoreArgs = list(board = board, update = update)
+  )
 
   invisible(NULL)
+}
+
+register_action <- function(id, action, trigger, ...) {
+
+  res <- moduleServer(id, action(trigger, ...))
+
+  if (!is.null(res)) {
+    blockr_abort(
+      "Expecting an action server to return `NULL`",
+      class = "action_server_invalid_return"
+    )
+  }
+
+  invisible()
 }
