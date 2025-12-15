@@ -87,7 +87,8 @@ dock_actions <- function() {
   )
 }
 
-register_actions <- function(actions, triggers, board, update) {
+register_actions <- function(actions, triggers, board, update,
+                             session = get_session()) {
 
   if (!setequal(names(triggers), names(actions))) {
     blockr_abort(
@@ -101,15 +102,15 @@ register_actions <- function(actions, triggers, board, update) {
     names(actions),
     actions,
     triggers[names(actions)],
-    MoreArgs = list(board = board, update = update)
+    MoreArgs = list(board = board, update = update, session = session)
   )
 
   invisible(NULL)
 }
 
-register_action <- function(id, action, trigger, ...) {
+register_action <- function(id, action, trigger, ..., session = get_session()) {
 
-  res <- moduleServer(id, action(trigger, ...))
+  res <- moduleServer(id, action(trigger, ...), session = session)
 
   if (!is.null(res)) {
     blockr_abort(

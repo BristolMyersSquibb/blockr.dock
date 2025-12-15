@@ -1,12 +1,11 @@
 test_that("add link action", {
 
-  al_action_1 <- add_link_action(reactive("b"))
-
   testServer(
     function(id, ...) {
       moduleServer(
         id,
-        al_action_1(
+        add_link_action(
+          trigger = reactive("b"),
           board = reactiveValues(
             board = new_board(
               c(
@@ -15,8 +14,7 @@ test_that("add link action", {
               )
             )
           ),
-          update = reactiveVal(list()),
-          domain = MockShinySession$new()
+          update = reactiveVal(list())
         )
       )
     },
@@ -26,13 +24,12 @@ test_that("add link action", {
     }
   )
 
-  al_action_2 <- add_link_action(reactive("a"))
-
   testServer(
     function(id, ...) {
       moduleServer(
         id,
-        al_action_2(
+        add_link_action(
+          trigger = reactive("a"),
           board = reactiveValues(
             board = new_board(
               c(
@@ -41,8 +38,7 @@ test_that("add link action", {
               )
             )
           ),
-          update = reactiveVal(list()),
-          domain = MockShinySession$new()
+          update = reactiveVal(list())
         )
       )
     },
@@ -94,13 +90,12 @@ test_that("add link action", {
 
 test_that("remove link action", {
 
-  rl_action <- remove_link_action(reactive("ab"))
-
   testServer(
     function(id, ...) {
       moduleServer(
         id,
-        rl_action(
+        remove_link_action(
+          trigger = reactive("ab"),
           board = reactiveValues(
             board = new_board(
               c(
@@ -110,8 +105,7 @@ test_that("remove link action", {
               links = links(id = "ab", from = "a", to = "b")
             )
           ),
-          update = reactiveVal(list()),
-          domain = MockShinySession$new()
+          update = reactiveVal(list())
         )
       )
     },

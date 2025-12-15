@@ -9,7 +9,7 @@
 \alias{board_select}
 \title{Board actions}
 \usage{
-new_action(func, id)
+new_action(func)
 
 is_action(x)
 
@@ -31,8 +31,6 @@ board_select(id, blocks, selected = NULL, ...)
 \item{func}{A function which will be evaluated (with modified formals) in a
 shiny server context}
 
-\item{id}{Input ID}
-
 \item{x}{Object}
 
 \item{...}{Forwarded to other methods}
@@ -44,6 +42,8 @@ shiny server context}
 \item{links}{Links object}
 
 \item{mode}{Switch for determining the return object}
+
+\item{id}{Input ID}
 
 \item{blocks}{Character vector of block registry IDs}
 

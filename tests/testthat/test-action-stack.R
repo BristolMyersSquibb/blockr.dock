@@ -1,12 +1,11 @@
 test_that("add stack action", {
 
-  as_action <- add_stack_action(reactive(TRUE))
-
   testServer(
     function(id, ...) {
       moduleServer(
         id,
-        as_action(
+        add_stack_action(
+          trigger = reactive(TRUE),
           board = reactiveValues(
             board = new_board(
               c(
@@ -15,8 +14,7 @@ test_that("add stack action", {
               )
             )
           ),
-          update = reactiveVal(list()),
-          domain = MockShinySession$new()
+          update = reactiveVal(list())
         )
       )
     },
@@ -79,13 +77,12 @@ test_that("add stack action", {
 
 test_that("edit stack action", {
 
-  es_action <- edit_stack_action(reactive("a"))
-
   testServer(
     function(id, ...) {
       moduleServer(
         id,
-        es_action(
+        edit_stack_action(
+          trigger = reactive("a"),
           board = reactiveValues(
             board = new_dock_board(
               c(
@@ -95,8 +92,7 @@ test_that("edit stack action", {
               stacks = stacks(a = "a")
             )
           ),
-          update = reactiveVal(list()),
-          domain = MockShinySession$new()
+          update = reactiveVal(list())
         )
       )
     },
@@ -152,13 +148,12 @@ test_that("edit stack action", {
 
 test_that("remove stack action", {
 
-  rs_action <- remove_stack_action(reactive("a"))
-
   testServer(
     function(id, ...) {
       moduleServer(
         id,
-        rs_action(
+        remove_stack_action(
+          trigger = reactive("a"),
           board = reactiveValues(
             board = new_dock_board(
               c(
@@ -168,8 +163,7 @@ test_that("remove stack action", {
               stacks = stacks(a = "a")
             )
           ),
-          update = reactiveVal(list()),
-          domain = MockShinySession$new()
+          update = reactiveVal(list())
         )
       )
     },

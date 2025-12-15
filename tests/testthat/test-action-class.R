@@ -1,38 +1,34 @@
 test_that("action ctor", {
 
-  act <- new_action(function() log_info("hello", pkg = "blockr.test"))
+  act <- new_action(
+    function(input, output, session) log_info("hello", pkg = "blockr.test")
+  )
 
   expect_s3_class(act, "action")
   expect_true(is_action(act))
 
-  fun <- act("go", as_module = FALSE)
+  eb_trig <- board_action_triggers(new_edit_board_extension())
 
-  expect_s3_class(fun, "action_function")
-  expect_true(is_action_function(fun))
+  expect_type(eb_trig, "list")
+  expect_length(eb_trig, 0L)
 
-  with_mock_session(
-    expect_null(fun())
-  )
+  db_trig <- board_action_triggers(new_dock_board())
 
-  mod <- act(function(input) TRUE)
+  expect_type(db_trig, "list")
+  expect_length(db_trig, 8L)
 
-  expect_s3_class(mod, "action_module")
-  expect_true(is_action_module(mod))
+  acts <- dock_actions()
+
+  expect_type(acts, "list")
+  expect_length(acts, 8L)
 
   expect_null(
-    testServer(
-      function(id) moduleServer(id, mod()),
-      NULL
+    register_actions(
+      dock_actions(),
+      board_action_triggers(new_dock_board()),
+      board = list(),
+      update = list(),
+      session = MockShinySession$new()
     )
-  )
-
-  err <- act(TRUE)
-
-  expect_error(
-    testServer(
-      function(id) moduleServer(id, err()),
-      NULL
-    ),
-    class = "invalid_action_trigger"
   )
 })
