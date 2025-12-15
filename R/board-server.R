@@ -11,13 +11,6 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     lapply(exts, board_action_triggers)
   )
 
-  observeEvent(
-    triggers[["add_block_action"]],
-    {
-      browser()
-    }
-  )
-
   ext_res <- lapply(
     exts,
     extension_server,
