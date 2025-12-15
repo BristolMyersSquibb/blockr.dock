@@ -105,3 +105,17 @@ trace_env <- new.env()
 insert_ui <- insertUI
 
 remove_ui <- removeUI
+
+combine_distinct <- function(...) {
+  Reduce(
+    function(x, y) {
+      stopifnot(
+        length(unique(names(x))) == length(x),
+        length(unique(names(y))) == length(y),
+        length(intersect(names(x), names(y))) == 0L
+      )
+      c(x, y)
+    },
+    c(...)
+  )
+}

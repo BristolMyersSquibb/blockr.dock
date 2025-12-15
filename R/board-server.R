@@ -2,25 +2,38 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   dock <- manage_dock(board, update, session)
 
-  exts <- isolate(
-    dock_extensions(board$board)
+  initial_board <- isolate(board$board)
+
+  exts <- as.list(dock_extensions(initial_board))
+
+  triggers <- combine_distinct(
+    list(board_action_triggers(initial_board)),
+    lapply(exts, board_action_triggers)
   )
 
-  intercom <- set_names(
-    replicate(length(exts), reactiveVal()),
-    exts
+  observeEvent(
+    triggers[["add_block_action"]],
+    {
+      browser()
+    }
   )
 
   ext_res <- lapply(
-    as.list(exts),
+    exts,
     extension_server,
-    list(board = board, update = update, dock = dock),
-    intercom,
+    list(board = board, update = update, dock = dock, actions = triggers),
     list(...)
   )
 
+  actions <- combine_distinct(
+    list(dock_actions()),
+    lst_xtr(ext_res, "actions")
+  )
+
+  register_actions(actions, triggers, board, update)
+
   c(
-    list(dock = dock),
+    list(dock = dock, actions = triggers),
     ext_res
   )
 }

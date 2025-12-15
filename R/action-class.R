@@ -1,20 +1,3 @@
-new_function <- function(formals = NULL, body = NULL, env = parent.frame()) {
-
-  res <- function() {}
-
-  if (!is.null(formals)) {
-    formals(res) <- formals
-  }
-
-  if (!is.null(body)) {
-    body(res) <- body
-  }
-
-  environment(res) <- env
-
-  res
-}
-
 #' Board actions
 #'
 #' Logic including a modal-based UI for board actions such as "append block"
@@ -52,105 +35,11 @@ new_function <- function(formals = NULL, body = NULL, env = parent.frame()) {
 #' @export
 new_action <- function(func) {
 
-  proc_calls <- function(x) {
-    if (is.call(x) && identical(x[[1L]], as.symbol("{"))) {
-      as.list(x)[-1L]
-    } else {
-      list(x)
-    }
-  }
-
-  combine_exprs <- function(x) {
-
-    srcrefs <- lapply(x, attr, "srcref")
-
-    res <- do.call(
-      as.call,
-      list(c(as.name("{"), unlst(lapply(x, proc_calls)))),
-      quote = TRUE
-    )
-
-    attr(res, "srcref") <- unlst(
-      c(srcrefs[1L], lapply(srcrefs[-1L], `[`, -1L))
-    )
-
-    res
-  }
-
-  structure(
-    function(trigger, as_module = TRUE) {
-
-      # anything that touches `func` needs to live here in order for covr
-      # code instrumentation to work thanks to lazy-eval
-
-      body <- list(
-        quote(
-          {
-            if (!is.reactive(trigger)) {
-              if (is_string(trigger)) {
-                trigr_q <- bquote(req(input[[.(trg)]]), list(trg = trigger))
-              } else if (is.function(trigger)) {
-                trigr_q <- bquote(.(fun)(input), list(fun = trigger))
-              } else {
-                blockr_abort(
-                  "An action trigger should be a string, function or reactive ",
-                  "object",
-                  class = "invalid_action_trigger"
-                )
-              }
-              trigger <- reactive(trigr_q, quoted = TRUE)
-            }
-            stopifnot(is.reactive(trigger))
-          }
-        ),
-        body(func),
-        quote(
-          {
-            invisible(NULL)
-          }
-        )
-      )
-
-      fun_env <- list2env(list(trigger = trigger), parent = environment(func))
-
-      if (isTRUE(as_module)) {
-
-        structure(
-          function(board, update, ..., domain = get_session()) {
-            new_function(
-              alist(input = , output = , session = ),
-              combine_exprs(body),
-              `parent.env<-`(environment(), fun_env)
-            )
-          },
-          class = "action_module"
-        )
-
-      } else {
-
-        body <- c(
-          quote(
-            {
-              session <- domain
-              input <- session$input
-              output <- session$output
-            }
-          ),
-          body
-        )
-
-        structure(
-          new_function(
-            alist(board = , update = , ... = , domain = get_session()),
-            combine_exprs(body),
-            env = fun_env
-          ),
-          class = "action_function"
-        )
-      }
-    },
-    class = "action"
+  stopifnot(
+    identical(names(formals(func)), c("input", "output", "session"))
   )
+
+  structure(func, class = "action")
 }
 
 #' @param x Object
@@ -162,12 +51,63 @@ is_action <- function(x) {
 
 #' @rdname action
 #' @export
-is_action_module <- function(x) {
-  inherits(x, "action_module")
+board_action_triggers <- function(x, ...) {
+  UseMethod("board_action_triggers")
 }
 
-#' @rdname action
 #' @export
-is_action_function <- function(x) {
-  inherits(x, "action_function")
+board_action_triggers.dock_extension <- function(x, ...) {
+  list()
+}
+
+#' @export
+board_action_triggers.dock_board <- function(x, ...) {
+  list(
+    add_block_action = reactiveVal(),
+    append_block_action = reactiveVal(),
+    remove_block_action = reactiveVal(),
+    add_link_action = reactiveVal(),
+    remove_link_action = reactiveVal(),
+    add_stack_action = reactiveVal(),
+    edit_stack_action = reactiveVal(),
+    remove_stack_action = reactiveVal()
+  )
+}
+
+dock_actions <- function() {
+  list(
+    add_block_action = add_block_action,
+    append_block_action = append_block_action,
+    remove_block_action = remove_block_action,
+    add_link_action = add_link_action,
+    remove_link_action = remove_link_action,
+    add_stack_action = add_stack_action,
+    edit_stack_action = edit_stack_action,
+    remove_stack_action = remove_stack_action
+  )
+}
+
+register_actions <- function(actions, triggers, board, update) {
+
+  if (!setequal(names(triggers), names(actions))) {
+    blockr_abort(
+      "Expecting matching sets of actions and actions triggers.",
+      class = "action_trigger_mismatch"
+    )
+  }
+
+  for (i in names(actions)) {
+
+    action <- actions[[i]]
+    res <- moduleServer(i, action(triggers[[i]], board, update))
+
+    if (!is.null(res)) {
+      blockr_abort(
+        "Expecting an action server to return `NULL`",
+        class = "action_server_invalid_return"
+      )
+    }
+  }
+
+  invisible(NULL)
 }
