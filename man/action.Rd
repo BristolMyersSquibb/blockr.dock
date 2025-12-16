@@ -3,15 +3,21 @@
 \name{new_action}
 \alias{new_action}
 \alias{is_action}
+\alias{is_action_generator}
+\alias{action_id}
 \alias{board_action_triggers}
 \alias{block_input_select}
 \alias{block_registry_selectize}
 \alias{board_select}
 \title{Board actions}
 \usage{
-new_action(func)
+new_action(func, id)
 
 is_action(x)
+
+is_action_generator(x)
+
+action_id(x)
 
 board_action_triggers(x, ...)
 
@@ -31,6 +37,8 @@ board_select(id, blocks, selected = NULL, ...)
 \item{func}{A function which will be evaluated (with modified formals) in a
 shiny server context}
 
+\item{id}{Input ID}
+
 \item{x}{Object}
 
 \item{...}{Forwarded to other methods}
@@ -42,8 +50,6 @@ shiny server context}
 \item{links}{Links object}
 
 \item{mode}{Switch for determining the return object}
-
-\item{id}{Input ID}
 
 \item{blocks}{Character vector of block registry IDs}
 

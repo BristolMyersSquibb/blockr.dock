@@ -87,7 +87,8 @@ add_link_action <- function(trigger, board, update) {
       )
 
       NULL
-    }
+    },
+    id = "add_link_action"
   )
 }
 
@@ -99,6 +100,7 @@ remove_link_action <- function(trigger, board, update) {
         update(list(links = list(rm = trigger())))
       )
       NULL
-    }
+    },
+    id = "remove_link_action"
   )
 }

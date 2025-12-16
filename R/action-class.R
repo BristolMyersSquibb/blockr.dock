@@ -25,6 +25,7 @@
 #'
 #' @param func A function which will be evaluated (with modified formals) in a
 #' shiny server context
+#' @param id Action ID
 #'
 #' @return The constructor `new_action` returns a classed function that
 #' inherits from `action`. Inheritance can be checked with functions
@@ -33,13 +34,14 @@
 #'
 #' @rdname action
 #' @export
-new_action <- function(func) {
+new_action <- function(func, id) {
 
   stopifnot(
-    identical(names(formals(func)), c("input", "output", "session"))
+    identical(names(formals(func)), c("input", "output", "session")),
+    is_string(id)
   )
 
-  structure(func, class = "action")
+  structure(func, id = id, class = "action")
 }
 
 #' @param x Object
@@ -47,6 +49,31 @@ new_action <- function(func) {
 #' @export
 is_action <- function(x) {
   inherits(x, "action")
+}
+
+#' @rdname action
+#' @export
+is_action_generator <- function(x) {
+  is.function(x) &&
+    identical(names(formals(x)), c("trigger", "board", "update")) &&
+    is_action(x())
+}
+
+#' @rdname action
+#' @export
+action_id <- function(x) {
+  UseMethod("action_id")
+}
+
+#' @export
+action_id.action <- function(x) {
+  attr(x, "id")
+}
+
+#' @export
+action_id.function <- function(x) {
+  stopifnot(is_action_generator(x))
+  action_id(x())
 }
 
 #' @rdname action
@@ -76,32 +103,32 @@ board_action_triggers.dock_board <- function(x, ...) {
 
 dock_actions <- function() {
   list(
-    add_block_action = add_block_action,
-    append_block_action = append_block_action,
-    remove_block_action = remove_block_action,
-    add_link_action = add_link_action,
-    remove_link_action = remove_link_action,
-    add_stack_action = add_stack_action,
-    edit_stack_action = edit_stack_action,
-    remove_stack_action = remove_stack_action
+    add_block_action,
+    append_block_action,
+    remove_block_action,
+    add_link_action,
+    remove_link_action,
+    add_stack_action,
+    edit_stack_action,
+    remove_stack_action
   )
 }
 
 register_actions <- function(actions, triggers, board, update,
                              session = get_session()) {
 
-  if (!setequal(names(triggers), names(actions))) {
-    blockr_abort(
-      "Expecting matching sets of actions and actions triggers.",
-      class = "action_trigger_mismatch"
-    )
-  }
+  ids <- chr_ply(actions, action_id)
+
+  stopifnot(
+    length(unique(ids)) == length(actions),
+    setequal(names(triggers), ids)
+  )
 
   map(
     register_action,
-    names(actions),
+    ids,
     actions,
-    triggers[names(actions)],
+    triggers[ids],
     MoreArgs = list(board = board, update = update, session = session)
   )
 

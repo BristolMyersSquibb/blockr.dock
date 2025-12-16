@@ -80,7 +80,8 @@ add_block_action <- function(trigger, board, update) {
       )
 
       NULL
-    }
+    },
+    id = "add_block_action"
   )
 }
 
@@ -202,7 +203,8 @@ append_block_action <- function(trigger, board, update) {
       )
 
       NULL
-    }
+    },
+    id = "append_block_action"
   )
 }
 
@@ -214,6 +216,7 @@ remove_block_action <- function(trigger, board, update) {
         update(list(blocks = list(rm = trigger())))
       )
       NULL
-    }
+    },
+    id = "remove_block_action"
   )
 }

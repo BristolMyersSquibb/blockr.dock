@@ -18,9 +18,11 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     list(...)
   )
 
-  actions <- combine_distinct(
-    list(dock_actions()),
-    lst_xtr(ext_res, "actions")
+  actions <- unlst(
+    c(
+      list(dock_actions()),
+      lst_xtr(ext_res, "actions")
+    )
   )
 
   register_actions(actions, triggers, board, update)

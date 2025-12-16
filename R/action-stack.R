@@ -79,7 +79,8 @@ add_stack_action <- function(trigger, board, update) {
       )
 
       NULL
-    }
+    },
+    id = "add_stack_action"
   )
 }
 
@@ -173,7 +174,8 @@ edit_stack_action <- function(trigger, board, update) {
       )
 
       NULL
-    }
+    },
+    id = "edit_stack_action"
   )
 }
 
@@ -185,6 +187,7 @@ remove_stack_action <- function(trigger, board, update) {
         update(list(stacks = list(rm = trigger())))
       )
       NULL
-    }
+    },
+    id = "remove_stack_action"
   )
 }
