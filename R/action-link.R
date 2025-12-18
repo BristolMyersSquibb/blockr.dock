@@ -1,4 +1,4 @@
-add_link_action <- function(trigger, board, update) {
+add_link_action <- function(trigger, board, update, ...) {
 
   new_action(
     function(input, output, session) {
@@ -92,7 +92,7 @@ add_link_action <- function(trigger, board, update) {
   )
 }
 
-remove_link_action <- function(trigger, board, update) {
+remove_link_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       observeEvent(

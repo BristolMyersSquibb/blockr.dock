@@ -55,7 +55,7 @@ is_action <- function(x) {
 #' @export
 is_action_generator <- function(x) {
   is.function(x) &&
-    identical(names(formals(x)), c("trigger", "board", "update")) &&
+    all(c("trigger", "...") %in% names(formals(x))) &&
     is_action(x())
 }
 
@@ -114,7 +114,7 @@ dock_actions <- function() {
   )
 }
 
-register_actions <- function(actions, triggers, board, update,
+register_actions <- function(actions, triggers, board, update, args,
                              session = get_session()) {
 
   ids <- chr_ply(actions, action_id)
@@ -128,16 +128,20 @@ register_actions <- function(actions, triggers, board, update,
     register_action,
     ids,
     actions,
-    triggers[ids],
-    MoreArgs = list(board = board, update = update, session = session)
+    trigger = triggers[ids],
+    MoreArgs = c(
+      list(board = board, update = update),
+      args,
+      list(session = session)
+    )
   )
 
   invisible(NULL)
 }
 
-register_action <- function(id, action, trigger, ..., session = get_session()) {
+register_action <- function(id, action, ..., session = get_session()) {
 
-  res <- moduleServer(id, action(trigger, ...), session = session)
+  res <- moduleServer(id, action(...), session = session)
 
   if (!is.null(res)) {
     blockr_abort(

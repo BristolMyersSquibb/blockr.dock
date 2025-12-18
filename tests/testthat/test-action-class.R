@@ -9,7 +9,7 @@ test_that("action ctor", {
   expect_true(is_action(act))
   expect_identical(action_id(act), "test_action")
 
-  gen <- function(trigger, board, update) act
+  gen <- function(trigger, board, update, ...) act
 
   expect_true(is_action_generator(gen))
   expect_identical(action_id(gen), "test_action")
@@ -35,6 +35,7 @@ test_that("action ctor", {
       board_action_triggers(new_dock_board()),
       board = list(),
       update = list(),
+      args = list(),
       session = MockShinySession$new()
     )
   )

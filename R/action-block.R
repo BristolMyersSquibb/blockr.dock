@@ -1,4 +1,4 @@
-add_block_action <- function(trigger, board, update) {
+add_block_action <- function(trigger, board, update, ...) {
 
   new_action(
     function(input, output, session) {
@@ -85,7 +85,7 @@ add_block_action <- function(trigger, board, update) {
   )
 }
 
-append_block_action <- function(trigger, board, update) {
+append_block_action <- function(trigger, board, update, ...) {
 
   new_action(
     function(input, output, session) {
@@ -208,7 +208,7 @@ append_block_action <- function(trigger, board, update) {
   )
 }
 
-remove_block_action <- function(trigger, board, update) {
+remove_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       observeEvent(

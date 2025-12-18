@@ -25,7 +25,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     )
   )
 
-  register_actions(actions, triggers, board, update)
+  register_actions(actions, triggers, board, update, ext_res)
 
   c(
     list(dock = dock, actions = triggers),

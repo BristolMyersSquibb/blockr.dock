@@ -1,4 +1,4 @@
-add_stack_action <- function(trigger, board, update) {
+add_stack_action <- function(trigger, board, update, ...) {
 
   new_action(
     function(input, output, session) {
@@ -84,7 +84,7 @@ add_stack_action <- function(trigger, board, update) {
   )
 }
 
-edit_stack_action <- function(trigger, board, update) {
+edit_stack_action <- function(trigger, board, update, ...) {
 
   new_action(
     function(input, output, session) {
@@ -179,7 +179,7 @@ edit_stack_action <- function(trigger, board, update) {
   )
 }
 
-remove_stack_action <- function(trigger, board, update) {
+remove_stack_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       observeEvent(
