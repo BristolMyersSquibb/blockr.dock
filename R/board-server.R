@@ -6,23 +6,20 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   exts <- as.list(dock_extensions(initial_board))
 
-  triggers <- combine_distinct(
-    list(board_action_triggers(initial_board)),
-    lapply(exts, board_action_triggers)
+  actions <- unlst(
+    c(
+      list(board_actions(initial_board)),
+      lapply(exts, board_actions)
+    )
   )
+
+  triggers <- action_triggers(actions)
 
   ext_res <- lapply(
     exts,
     extension_server,
     list(board = board, update = update, dock = dock, actions = triggers),
     list(...)
-  )
-
-  actions <- unlst(
-    c(
-      list(dock_actions()),
-      lst_xtr(ext_res, "actions")
-    )
   )
 
   register_actions(actions, triggers, board, update, ext_res)

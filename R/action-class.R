@@ -78,30 +78,17 @@ action_id.function <- function(x) {
 
 #' @rdname action
 #' @export
-board_action_triggers <- function(x, ...) {
-  UseMethod("board_action_triggers")
+board_actions <- function(x, ...) {
+  UseMethod("board_actions")
 }
 
 #' @export
-board_action_triggers.dock_extension <- function(x, ...) {
+board_actions.dock_extension <- function(x, ...) {
   list()
 }
 
 #' @export
-board_action_triggers.dock_board <- function(x, ...) {
-  list(
-    add_block_action = reactiveVal(),
-    append_block_action = reactiveVal(),
-    remove_block_action = reactiveVal(),
-    add_link_action = reactiveVal(),
-    remove_link_action = reactiveVal(),
-    add_stack_action = reactiveVal(),
-    edit_stack_action = reactiveVal(),
-    remove_stack_action = reactiveVal()
-  )
-}
-
-dock_actions <- function() {
+board_actions.dock_board <- function(x, ...) {
   list(
     add_block_action,
     append_block_action,
@@ -111,6 +98,18 @@ dock_actions <- function() {
     add_stack_action,
     edit_stack_action,
     remove_stack_action
+  )
+}
+
+action_triggers <- function(x) {
+
+  ids <- chr_ply(x, action_id)
+
+  stopifnot(length(unique(ids)) == length(x))
+
+  set_names(
+    rep(list(reactiveVal()), length(x)),
+    ids
   )
 }
 

@@ -14,25 +14,20 @@ test_that("action ctor", {
   expect_true(is_action_generator(gen))
   expect_identical(action_id(gen), "test_action")
 
-  eb_trig <- board_action_triggers(new_edit_board_extension())
+  eb_act <- board_actions(new_edit_board_extension())
 
-  expect_type(eb_trig, "list")
-  expect_length(eb_trig, 0L)
+  expect_type(eb_act, "list")
+  expect_length(eb_act, 0L)
 
-  db_trig <- board_action_triggers(new_dock_board())
+  db_act <- board_actions(new_dock_board())
 
-  expect_type(db_trig, "list")
-  expect_length(db_trig, 8L)
-
-  acts <- dock_actions()
-
-  expect_type(acts, "list")
-  expect_length(acts, 8L)
+  expect_type(db_act, "list")
+  expect_length(db_act, 8L)
 
   expect_null(
     register_actions(
-      dock_actions(),
-      board_action_triggers(new_dock_board()),
+      db_act,
+      triggers = action_triggers(db_act),
       board = list(),
       update = list(),
       args = list(),

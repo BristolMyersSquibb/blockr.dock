@@ -5,7 +5,7 @@
 \alias{is_action}
 \alias{is_action_generator}
 \alias{action_id}
-\alias{board_action_triggers}
+\alias{board_actions}
 \alias{block_input_select}
 \alias{block_registry_selectize}
 \alias{board_select}
@@ -19,7 +19,7 @@ is_action_generator(x)
 
 action_id(x)
 
-board_action_triggers(x, ...)
+board_actions(x, ...)
 
 block_input_select(
   block = NULL,
