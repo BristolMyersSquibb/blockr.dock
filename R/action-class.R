@@ -107,9 +107,9 @@ action_triggers <- function(x) {
 
   stopifnot(length(unique(ids)) == length(x))
 
-  lapply(
-    set_names(nm = ids),
-    reactiveVal
+  set_names(
+    replicate(length(ids), reactiveVal()),
+    ids
   )
 }
 
