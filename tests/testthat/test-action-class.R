@@ -24,10 +24,15 @@ test_that("action ctor", {
   expect_type(db_act, "list")
   expect_length(db_act, 8L)
 
+  trig <- action_triggers(db_act)
+
+  expect_length(trig, 8L)
+  expect_named(trig, chr_ply(db_act, action_id))
+
   expect_null(
     register_actions(
       db_act,
-      triggers = action_triggers(db_act),
+      trig,
       board = list(),
       update = list(),
       args = list(),
