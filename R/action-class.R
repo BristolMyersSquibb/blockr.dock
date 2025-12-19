@@ -154,7 +154,7 @@ register_action <- function(id, action, ..., session = get_session()) {
 
 new_trigger <- function(value = NULL) {
 
-  rv <- reactiveVal(structure(list(value), counter = 0L))
+  rv <- reactiveVal(list(value = value, counter = 0L))
 
   structure(
     function(new) {
@@ -162,10 +162,10 @@ new_trigger <- function(value = NULL) {
       cur <- rv()
 
       if (missing(new)) {
-        return(cur[[1L]])
+        return(cur[["value"]])
       }
 
-      rv(structure(list(new), counter = attr(cur, "counter") + 1L))
+      rv(list(value = new, counter = cur[["counter"]] + 1L))
 
       invisible(new)
     },
