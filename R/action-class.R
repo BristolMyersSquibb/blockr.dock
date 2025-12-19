@@ -101,6 +101,8 @@ board_actions.dock_board <- function(x, ...) {
   )
 }
 
+#' @rdname action
+#' @export
 action_triggers <- function(x) {
 
   ids <- chr_ply(x, action_id)
