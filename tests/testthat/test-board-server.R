@@ -9,8 +9,8 @@ test_that("board server", {
       res <- board_server_callback(board_rv_1, update = reactiveVal())
 
       expect_type(res, "list")
-      expect_length(res, 1L)
-      expect_named(res, "dock")
+      expect_length(res, 2L)
+      expect_named(res, c("dock", "actions"))
 
       dock <- res[["dock"]]
 
@@ -34,8 +34,8 @@ test_that("board server", {
       res <- board_server_callback(board_rv_2, update = reactiveVal())
 
       expect_type(res, "list")
-      expect_length(res, 2L)
-      expect_named(res, c("dock", "edit_board_extension"))
+      expect_length(res, 3L)
+      expect_named(res, c("dock", "actions", "edit_board_extension"))
 
       dock <- res[["dock"]]
 

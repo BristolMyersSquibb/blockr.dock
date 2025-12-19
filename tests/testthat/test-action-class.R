@@ -1,38 +1,42 @@
 test_that("action ctor", {
 
-  act <- new_action(function() log_info("hello", pkg = "blockr.test"))
+  act <- new_action(
+    function(input, output, session) log_info("hello", pkg = "blockr.test"),
+    id = "test_action"
+  )
 
   expect_s3_class(act, "action")
   expect_true(is_action(act))
+  expect_identical(action_id(act), "test_action")
 
-  fun <- act("go", as_module = FALSE)
+  gen <- function(trigger, board, update, ...) act
 
-  expect_s3_class(fun, "action_function")
-  expect_true(is_action_function(fun))
+  expect_true(is_action_generator(gen))
+  expect_identical(action_id(gen), "test_action")
 
-  with_mock_session(
-    expect_null(fun())
-  )
+  eb_act <- board_actions(new_edit_board_extension())
 
-  mod <- act(function(input) TRUE)
+  expect_type(eb_act, "list")
+  expect_length(eb_act, 0L)
 
-  expect_s3_class(mod, "action_module")
-  expect_true(is_action_module(mod))
+  db_act <- board_actions(new_dock_board())
+
+  expect_type(db_act, "list")
+  expect_length(db_act, 8L)
+
+  trig <- action_triggers(db_act)
+
+  expect_length(trig, 8L)
+  expect_named(trig, chr_ply(db_act, action_id))
 
   expect_null(
-    testServer(
-      function(id) moduleServer(id, mod()),
-      NULL
+    register_actions(
+      db_act,
+      trig,
+      board = list(),
+      update = list(),
+      args = list(),
+      session = MockShinySession$new()
     )
-  )
-
-  err <- act(TRUE)
-
-  expect_error(
-    testServer(
-      function(id) moduleServer(id, err()),
-      NULL
-    ),
-    class = "invalid_action_trigger"
   )
 })
