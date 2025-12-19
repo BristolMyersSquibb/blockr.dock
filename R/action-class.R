@@ -108,7 +108,7 @@ action_triggers <- function(x) {
   stopifnot(length(unique(ids)) == length(x))
 
   set_names(
-    replicate(length(ids), reactiveVal()),
+    replicate(length(ids), new_trigger()),
     ids
   )
 }
@@ -150,4 +150,25 @@ register_action <- function(id, action, ..., session = get_session()) {
   }
 
   invisible()
+}
+
+new_trigger <- function(value = NULL) {
+
+  rv <- reactiveVal(structure(list(value), counter = 0L))
+
+  structure(
+    function(new) {
+
+      cur <- rv()
+
+      if (missing(new)) {
+        return(cur[[1L]])
+      }
+
+      rv(structure(list(new), counter = attr(cur, "counter") + 1L))
+
+      invisible(new)
+    },
+    class = c("action_trigger", "function")
+  )
 }
