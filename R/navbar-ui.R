@@ -24,7 +24,7 @@ navbar_ui <- function(id) {
           type = "button",
           `data-bs-toggle` = "dropdown",
           `aria-expanded` = "false",
-          bsicons::bs_icon("list")
+          bsicons::bs_icon("list", size = "1.4em")
         ),
         # Dropdown content
         tags$div(
@@ -134,7 +134,7 @@ navbar_ui <- function(id) {
       tags$button(
         class = "blockr-navbar-settings-btn",
         type = "button",
-        bsicons::bs_icon("gear")
+        bsicons::bs_icon("gear", size = "1.4em")
       ),
       tags$button(
         class = "blockr-navbar-btn-outline",
