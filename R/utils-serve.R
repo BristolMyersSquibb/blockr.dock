@@ -33,6 +33,7 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
           pulse_height = "5px"
         ),
         shinyjs::useShinyjs(),
+        navbar_ui(id),
         board_ui(id, x, plugins, options)
       ),
       unname(args)

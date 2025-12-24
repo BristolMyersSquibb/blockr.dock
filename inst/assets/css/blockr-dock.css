@@ -527,3 +527,293 @@ label:has(input[type="file"]) {
   background-color: var(--blockr-color-bg-hover);
   color: var(--blockr-color-text-secondary);
 }
+
+/* ============================================
+   Top Navbar
+   ============================================ */
+nav.blockr-navbar {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.blockr-navbar > .blockr-navbar-left,
+.blockr-navbar > .blockr-navbar-right {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+}
+
+.blockr-navbar > .blockr-navbar-left {
+  gap: 12px;
+}
+
+.blockr-navbar > .blockr-navbar-right {
+  gap: 8px;
+}
+
+/* Hamburger icon button - transparent, no border */
+.blockr-navbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-navbar-icon-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.blockr-navbar-icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Save icon button - has border and bg */
+.blockr-navbar-save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-navbar-save-btn:hover {
+  background-color: #e5e7eb;
+}
+
+.blockr-navbar-save-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Settings gear button */
+.blockr-navbar-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #4b5563;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-navbar-settings-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.blockr-navbar-settings-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Workflow title */
+.blockr-navbar-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-navbar-title:hover {
+  background-color: #f3f4f6;
+}
+
+/* Separator line */
+.blockr-navbar-divider {
+  width: 1px;
+  height: 24px;
+  background: #e5e7eb;
+  margin-left: 4px;
+}
+
+/* Save status section */
+.blockr-navbar-save-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* "Saved 2 min ago" text */
+.blockr-navbar-meta {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+/* "+ New" and "Share" buttons - outlined style */
+.blockr-navbar-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-navbar-btn-outline:hover {
+  background-color: #e5e7eb;
+}
+
+.blockr-navbar-btn-outline svg {
+  width: 14px;
+  height: 14px;
+  color: #374151;
+}
+
+/* "Publish" button - primary style */
+.blockr-navbar-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  background: #2563eb;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-navbar-btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+/* Avatar */
+.blockr-navbar-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(to bottom right, #3b82f6, #9333ea);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 500;
+  color: #ffffff;
+  margin-left: 8px;
+}
+
+/* Workflows Dropdown */
+.blockr-workflows-dropdown {
+  width: 288px;
+  padding: 16px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
+  border: 1px solid #e5e7eb !important;
+  margin-top: 8px !important;
+}
+
+.blockr-workflows-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.blockr-workflows-search {
+  margin-bottom: 16px;
+}
+
+.blockr-workflows-search .form-control {
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.blockr-workflows-search .form-control:focus {
+  border-color: #d1d5db;
+  box-shadow: none;
+  outline: none;
+}
+
+.blockr-workflows-section {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.blockr-workflows-list {
+  margin-bottom: 16px;
+}
+
+.blockr-workflow-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-workflow-item:hover {
+  background-color: #f3f4f6;
+}
+
+.blockr-workflow-item.active {
+  background-color: #f3f4f6;
+}
+
+.blockr-workflow-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.blockr-workflow-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.blockr-workflows-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.blockr-workflows-link:hover {
+  text-decoration: underline;
+}
+
+.blockr-workflows-link svg {
+  width: 14px;
+  height: 14px;
+}

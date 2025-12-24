@@ -32,7 +32,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
     dockViewR::dock_view_output(
       NS(id, dock_id()),
       width = "100%",
-      height = "100vh"
+      height = "calc(100vh - 48px)"
     ),
     off_canvas(
       id = NS(id, "exts_offcanvas"),
