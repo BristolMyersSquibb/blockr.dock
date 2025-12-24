@@ -2,6 +2,10 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   dock <- manage_dock(board, update, session)
 
+  # Initialize navbar server for workflow management
+  # Pass dock for serialization support
+  navbar_server(id = NULL, board, dock = dock, session = session)
+
   exts <- isolate(
     dock_extensions(board$board)
   )

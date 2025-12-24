@@ -59,6 +59,8 @@ Collate:
     'ext-edit.R'
     'ext-ui.R'
     'layout-class.R'
+    'navbar-server.R'
+    'navbar-ui.R'
     'plugin-block.R'
     'plugin-serdes.R'
     'utils-dock.R'

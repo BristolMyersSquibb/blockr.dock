@@ -629,7 +629,13 @@ nav.blockr-navbar {
   height: 16px;
 }
 
-/* Workflow title */
+/* Workflow title - editable */
+.blockr-navbar-title-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
 .blockr-navbar-title {
   font-size: 14px;
   font-weight: 500;
@@ -642,6 +648,29 @@ nav.blockr-navbar {
 
 .blockr-navbar-title:hover {
   background-color: #f3f4f6;
+}
+
+/* Edit mode input - hidden by default */
+.blockr-navbar-title-input {
+  display: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  padding: 4px 8px;
+  border: 2px solid #2563eb;
+  border-radius: 4px;
+  background: #ffffff;
+  outline: none;
+  min-width: 120px;
+}
+
+/* When in editing mode */
+.blockr-navbar-title-wrapper.editing .blockr-navbar-title {
+  display: none;
+}
+
+.blockr-navbar-title-wrapper.editing .blockr-navbar-title-input {
+  display: block;
 }
 
 /* Separator line */
@@ -798,6 +827,16 @@ nav.blockr-navbar {
 .blockr-workflow-meta {
   font-size: 12px;
   color: #6b7280;
+}
+
+.blockr-workflow-empty {
+  color: #9ca3af;
+  font-style: italic;
+  cursor: default;
+}
+
+.blockr-workflow-empty:hover {
+  background-color: transparent;
 }
 
 .blockr-workflows-link {

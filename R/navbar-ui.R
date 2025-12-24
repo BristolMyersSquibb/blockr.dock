@@ -1,3 +1,11 @@
+#' Navbar UI Module
+#'
+#' Creates the top navbar with workflow management controls.
+#'
+#' @param id Namespace ID
+#' @return Shiny UI element
+#'
+#' @keywords internal
 navbar_ui <- function(id) {
   ns <- NS(id)
 
@@ -37,23 +45,10 @@ navbar_ui <- function(id) {
             class = "blockr-workflows-section",
             "RECENT"
           ),
+          # Dynamic workflow list from server
           tags$div(
             class = "blockr-workflows-list",
-            tags$div(
-              class = "blockr-workflow-item active",
-              tags$div(class = "blockr-workflow-name", "My Workflow"),
-              tags$div(class = "blockr-workflow-meta", "Modified 2 hours ago")
-            ),
-            tags$div(
-              class = "blockr-workflow-item",
-              tags$div(class = "blockr-workflow-name", "Data Processing Flow"),
-              tags$div(class = "blockr-workflow-meta", "Modified yesterday")
-            ),
-            tags$div(
-              class = "blockr-workflow-item",
-              tags$div(class = "blockr-workflow-name", "API Integration"),
-              tags$div(class = "blockr-workflow-meta", "Modified 3 days ago")
-            )
+            uiOutput(ns("recent_workflows"))
           ),
           tags$a(
             href = "#",
@@ -63,24 +58,71 @@ navbar_ui <- function(id) {
           )
         )
       ),
-      # Workflow title
-      tags$span(class = "blockr-navbar-title", "My Workflow"),
+      # Editable workflow title
+      tags$div(
+        id = ns("title_wrapper"),
+        class = "blockr-navbar-title-wrapper",
+        # Display mode
+        tags$span(
+          id = ns("title_display"),
+          class = "blockr-navbar-title",
+          onclick = sprintf(
+            "document.getElementById('%s').classList.add('editing'); document.getElementById('%s').focus(); document.getElementById('%s').select();",
+            ns("title_wrapper"),
+            ns("title_input"),
+            ns("title_input")
+          ),
+          ""
+        ),
+        # Edit mode input
+        tags$input(
+          id = ns("title_input"),
+          class = "blockr-navbar-title-input shiny-bound-input",
+          type = "text",
+          value = "",
+          onblur = sprintf(
+            "Shiny.setInputValue('%s', this.value, {priority: 'event'}); document.getElementById('%s').classList.remove('editing'); document.getElementById('%s').textContent = this.value;",
+            ns("title_edit"),
+            ns("title_wrapper"),
+            ns("title_display")
+          ),
+          onkeydown = sprintf(
+            "if(event.key === 'Enter') { this.blur(); } if(event.key === 'Escape') { document.getElementById('%s').classList.remove('editing'); this.value = document.getElementById('%s').textContent; }",
+            ns("title_wrapper"),
+            ns("title_display")
+          )
+        )
+      ),
       # Divider
       tags$span(class = "blockr-navbar-divider"),
       # Save status section
       tags$div(
         class = "blockr-navbar-save-section",
-        tags$span(class = "blockr-navbar-meta", "Saved 2 min ago"),
+        tags$span(
+          id = ns("save_status"),
+          class = "blockr-navbar-meta",
+          "Not saved"
+        ),
         tags$button(
-          class = "blockr-navbar-save-btn",
+          id = ns("save_btn"),
+          class = "blockr-navbar-save-btn shiny-bound-input",
           type = "button",
+          onclick = sprintf(
+            "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+            ns("save_btn")
+          ),
           bsicons::bs_icon("floppy")
         )
       ),
       # New button
       tags$button(
-        class = "blockr-navbar-btn-outline",
+        id = ns("new_btn"),
+        class = "blockr-navbar-btn-outline shiny-bound-input",
         type = "button",
+        onclick = sprintf(
+          "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+          ns("new_btn")
+        ),
         bsicons::bs_icon("plus"),
         "New"
       )
@@ -106,6 +148,22 @@ navbar_ui <- function(id) {
         "Publish"
       ),
       tags$span(class = "blockr-navbar-avatar", "JD")
-    )
+    ),
+    # JavaScript for handling title and save status updates from server
+    tags$script(HTML(sprintf("
+      $(document).ready(function() {
+        Shiny.addCustomMessageHandler('blockr-update-navbar-title', function(title) {
+          var displayEl = document.getElementById('%s');
+          var inputEl = document.getElementById('%s');
+          if (displayEl) displayEl.textContent = title;
+          if (inputEl) inputEl.value = title;
+        });
+
+        Shiny.addCustomMessageHandler('blockr-update-save-status', function(status) {
+          var statusEl = document.getElementById('%s');
+          if (statusEl) statusEl.textContent = status;
+        });
+      });
+    ", ns("title_display"), ns("title_input"), ns("save_status"))))
   )
 }
