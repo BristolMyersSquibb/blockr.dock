@@ -1182,16 +1182,21 @@ nav.blockr-navbar {
    View Switching (Board / Workflows)
    ============================================ */
 
-.blockr-board-view,
-.blockr-workflows-view {
+.blockr-board-view {
   position: relative;
 }
 
+.blockr-workflows-view {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 48px);
+}
+
 .blockr-view-hidden {
-  position: absolute;
-  left: -9999px;
-  visibility: hidden;
-  pointer-events: none;
+  position: absolute !important;
+  left: -9999px !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* ============================================
