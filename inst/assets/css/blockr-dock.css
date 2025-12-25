@@ -1,29 +1,31 @@
 /* ============================================
-   CSS Design System - Variables
+   CSS Design System - Variables (Figma-aligned)
    ============================================ */
 :root {
   /* ===========================================
-     Grey Scale
-     ===========================================
-
-     We use HSL (Hue, Saturation, Lightness) for greys because:
-     - Easy to tweak: just change the lightness % value
-     - Consistent: all greys share the same hue/saturation
-
-     Subtle cool tint (blue hue 220, 3% saturation):
-     - 100: 99% lightness (lightest - page bg)
-     - 200: 97% lightness (blocks, cards, toolbar, input bg)
-     - 300: 91% lightness (borders)
-
-     To remove tint: change hue to 0, saturation to 0%
-     To warm tint: change hue to 30
+     Grey Scale (Tailwind-style)
      =========================================== */
-  --blockr-grey-100: hsl(220, 3%, 99%);
-  --blockr-grey-200: hsl(220, 3%, 97%);
-  --blockr-grey-300: hsl(220, 3%, 91%);
+  --blockr-grey-50: #f9fafb;   /* Page bg, subtle backgrounds */
+  --blockr-grey-100: #f3f4f6;  /* Hover states, input bg */
+  --blockr-grey-200: #e5e7eb;  /* Borders */
+  --blockr-grey-300: #d1d5db;  /* Darker borders, dividers */
+  --blockr-grey-400: #9ca3af;  /* Placeholder text */
+  --blockr-grey-500: #6b7280;  /* Muted text */
+  --blockr-grey-600: #4b5563;  /* Secondary icons */
+  --blockr-grey-700: #374151;  /* Secondary text */
+  --blockr-grey-800: #1f2937;  /* Dark text */
+  --blockr-grey-900: #111827;  /* Primary text */
 
-  /* Shadow - subtle, consistent across components */
-  --blockr-shadow: rgba(0, 0, 0, 0.08) 0px 2px 8px;
+  /* Primary Blue */
+  --blockr-blue-50: #eff6ff;
+  --blockr-blue-100: #dbeafe;
+  --blockr-blue-500: #3b82f6;
+  --blockr-blue-600: #2563eb;
+  --blockr-blue-700: #1d4ed8;
+
+  /* Shadow - elevated dropdowns */
+  --blockr-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --blockr-shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 
   /* Font Sizes */
   --blockr-font-size-base: 0.875rem;      /* 14px - base for body/inputs */
@@ -37,18 +39,22 @@
   --blockr-font-weight-medium: 500;
   --blockr-font-weight-semibold: 600;
 
-  /* Colors - Text (softened) */
-  --blockr-color-text-primary: #333;
-  --blockr-color-text-secondary: #666;
-  --blockr-color-text-muted: #999;
-  --blockr-color-text-subtle: #ccc;
-  --blockr-color-text-meta: #7a7d8f;
+  /* Colors - Text (Figma-aligned) */
+  --blockr-color-text-primary: var(--blockr-grey-900);
+  --blockr-color-text-secondary: var(--blockr-grey-700);
+  --blockr-color-text-muted: var(--blockr-grey-500);
+  --blockr-color-text-subtle: var(--blockr-grey-400);
+  --blockr-color-text-meta: var(--blockr-grey-500);
 
   /* Colors - UI */
-  --blockr-color-border: var(--blockr-grey-300);
-  --blockr-color-border-hover: hsl(220, 3%, 85%);
-  --blockr-color-bg-subtle: var(--blockr-grey-200);
-  --blockr-color-bg-hover: var(--blockr-grey-300);
+  --blockr-color-border: var(--blockr-grey-200);
+  --blockr-color-border-hover: var(--blockr-grey-300);
+  --blockr-color-bg-subtle: var(--blockr-grey-50);
+  --blockr-color-bg-hover: var(--blockr-grey-100);
+  --blockr-color-bg-input: var(--blockr-grey-50);
+  --blockr-color-primary: var(--blockr-blue-600);
+  --blockr-color-primary-hover: var(--blockr-blue-700);
+  --blockr-color-primary-bg: var(--blockr-blue-50);
   --blockr-color-error: #dc2626;
 }
 
@@ -167,30 +173,31 @@
   transform: rotate(180deg);
 }
 
-/* Section toggle buttons (inputs/outputs) - matches dockview tabs */
+/* Section toggle buttons (inputs/outputs) - Figma-aligned */
 .blockr-section-toggle .btn.btn-light {
-  background-color: var(--blockr-grey-200) !important;
+  background-color: var(--blockr-grey-100) !important;
   border: none !important;
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--blockr-color-text-muted) !important;
   font-size: var(--blockr-font-size-xs);
   font-weight: var(--blockr-font-weight-normal);
-  padding: 0.25rem 0.5rem;
+  padding: 6px 10px;
   margin: 0 2px;
+  transition: all 0.15s ease;
 }
 
 .blockr-section-toggle .btn.btn-light:hover {
-  background-color: var(--blockr-grey-300) !important;
+  background-color: var(--blockr-color-border) !important;
   color: var(--blockr-color-text-secondary) !important;
 }
 
 .blockr-section-toggle .btn-check:checked + .btn.btn-light:hover {
-  background-color: hsl(220, 3%, 87%) !important;
+  background-color: var(--blockr-color-border) !important;
 }
 
 .blockr-section-toggle .btn.btn-light.active,
 .blockr-section-toggle .btn-check:checked + .btn.btn-light {
-  background-color: var(--blockr-grey-300) !important;
+  background-color: var(--blockr-color-border) !important;
   color: var(--blockr-color-text-secondary) !important;
   box-shadow: none !important;
 }
@@ -199,21 +206,21 @@
   gap: 6px;
 }
 
-/* Package badge - two-tone subtle style */
+/* Package badge - Figma-aligned subtle style */
 .badge-two-tone {
   display: inline-block;
-  padding: 0.125rem 0.375rem;
+  padding: 2px 8px;
   font-size: 0.625rem;
-  border-radius: 0.25rem;
-  background-color: rgba(148, 163, 184, 0.1);
-  color: rgba(100, 116, 139, 0.9);
-  border: 1px solid rgba(100, 116, 139, 0.1);
+  border-radius: 4px;
+  background-color: var(--blockr-grey-100);
+  color: var(--blockr-color-text-muted);
+  border: 1px solid var(--blockr-color-border);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 /* ============================================
-   Edge Tab (Settings Panel Trigger)
+   Edge Tab (Settings Panel Trigger) - Figma-aligned
    ============================================ */
 .blockr-edge-tab {
   display: none; /* Hidden - use navbar gear icon instead */
@@ -223,29 +230,29 @@
   transform: translateY(-50%);
   width: 32px;
   height: 88px;
-  background-color: var(--blockr-grey-200);
-  border: 1px solid hsl(220, 3%, 80%);
+  background-color: var(--blockr-grey-100);
+  border: 1px solid var(--blockr-color-border);
   border-right: none;
   border-radius: 10px 0 0 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  box-shadow: -3px 0 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--blockr-shadow);
 }
 
 .blockr-edge-tab:hover {
-  background-color: var(--blockr-grey-300);
-  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
+  background-color: var(--blockr-color-border);
+  box-shadow: var(--blockr-shadow-lg);
 }
 
 .blockr-edge-tab svg,
 .blockr-edge-tab i {
   font-size: 16px;
-  color: hsl(220, 3%, 50%);
+  color: var(--blockr-color-text-muted);
 }
 
 /* ============================================
@@ -292,10 +299,28 @@ label:has(input[type="file"]) {
   margin-bottom: 0;
 }
 
-/* --- Form Controls --- */
+/* --- Form Controls (Figma-aligned) --- */
 .form-control,
 .form-select {
   font-size: var(--blockr-font-size-base);
+  background-color: var(--blockr-color-bg-input);
+  border: 1px solid var(--blockr-color-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--blockr-color-text-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: #ffffff;
+  border-color: var(--blockr-color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.form-control::placeholder {
+  color: var(--blockr-grey-400);
 }
 
 .input-group-sm > .form-control,
@@ -303,48 +328,135 @@ label:has(input[type="file"]) {
 .input-group-sm > .input-group-text,
 .input-group-sm > .btn {
   font-size: var(--blockr-font-size-sm);
+  padding: 6px 10px;
 }
 
+/* Selectize - Figma-aligned */
 .selectize-control,
 .selectize-input,
 .selectize-dropdown {
   font-size: var(--blockr-font-size-base);
 }
 
-/* --- Buttons --- */
+.selectize-input {
+  background-color: var(--blockr-color-bg-input) !important;
+  border: 1px solid var(--blockr-color-border) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.selectize-input.focus {
+  background-color: #ffffff !important;
+  border-color: var(--blockr-color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+.selectize-dropdown {
+  border: 1px solid var(--blockr-color-border) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--blockr-shadow-lg) !important;
+  margin-top: 4px !important;
+}
+
+.selectize-dropdown-content .option {
+  padding: 10px 14px !important;
+  color: var(--blockr-color-text-primary);
+}
+
+.selectize-dropdown-content .option.active {
+  background-color: var(--blockr-color-bg-hover) !important;
+  color: var(--blockr-color-text-primary) !important;
+}
+
+/* --- Buttons (Figma-aligned) --- */
 .btn {
   font-size: var(--blockr-font-size-base);
+  font-weight: var(--blockr-font-weight-medium);
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.15s ease;
 }
 
 .btn-sm {
   font-size: var(--blockr-font-size-sm);
+  padding: 6px 12px;
 }
 
-.btn-outline-secondary {
-  color: var(--blockr-color-text-secondary);
-  border-color: var(--blockr-color-border);
+/* Primary button - blue */
+.btn-primary {
+  background-color: var(--blockr-color-primary);
+  border-color: var(--blockr-color-primary);
+  color: #ffffff;
 }
 
-.btn-outline-secondary:hover {
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--blockr-color-primary-hover);
+  border-color: var(--blockr-color-primary-hover);
+  color: #ffffff;
+}
+
+/* Secondary/Outline button - gray */
+.btn-secondary,
+.btn-outline-secondary,
+.btn-light {
+  background-color: var(--blockr-grey-100);
+  border: 1px solid var(--blockr-color-border);
   color: var(--blockr-color-text-primary);
-  background-color: var(--blockr-color-bg-subtle);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus,
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus,
+.btn-light:hover,
+.btn-light:focus {
+  background-color: var(--blockr-color-border);
+  border-color: var(--blockr-color-border-hover);
+  color: var(--blockr-color-text-primary);
+}
+
+/* Default/outline button */
+.btn-default,
+.btn-outline-default {
+  background-color: var(--blockr-grey-100);
+  border: 1px solid var(--blockr-color-border);
+  color: var(--blockr-color-text-primary);
+}
+
+.btn-default:hover,
+.btn-default:focus,
+.btn-outline-default:hover,
+.btn-outline-default:focus {
+  background-color: var(--blockr-color-border);
   border-color: var(--blockr-color-border-hover);
 }
 
 /* ============================================
-   Offcanvas / Sidebar Styling
+   Offcanvas / Sidebar Styling (Figma-aligned)
    ============================================ */
 .offcanvas {
   width: 320px !important;
+  border-left: 1px solid var(--blockr-color-border) !important;
+}
+
+.offcanvas-header {
+  border-bottom: 1px solid var(--blockr-color-border);
+  padding: 16px 20px;
 }
 
 .offcanvas-title {
   font-size: 1.125rem;
   font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-primary);
 }
 
 .offcanvas-body {
   font-size: var(--blockr-font-size-sm);
+  padding: 20px;
+  background: #ffffff;
 }
 
 .offcanvas .accordion {
@@ -357,6 +469,12 @@ label:has(input[type="file"]) {
   font-variant-caps: all-small-caps;
   color: var(--blockr-color-text-secondary);
   letter-spacing: 0.5px;
+  background: transparent;
+}
+
+.offcanvas .accordion-button:not(.collapsed) {
+  background: var(--blockr-color-bg-subtle);
+  box-shadow: none;
 }
 
 /* Export button adjustments */
@@ -374,18 +492,18 @@ label:has(input[type="file"]) {
 .offcanvas .btn-default,
 .offcanvas .btn-outline-default {
   font-size: var(--blockr-font-size-sm);
-  padding: 0.25rem 0.5rem;
+  padding: 6px 12px;
 }
 
 .offcanvas hr {
   margin-left: -20px;
   margin-right: -20px;
-  border-color: var(--blockr-grey-300);
+  border-color: var(--blockr-color-border);
   opacity: 1;
 }
 
 /* ============================================
-   Tooltip & Popover Styling
+   Tooltip & Popover Styling (Figma-aligned)
    ============================================ */
 .tooltip {
   --bs-tooltip-bg: white;
@@ -398,8 +516,8 @@ label:has(input[type="file"]) {
   font-weight: var(--blockr-font-weight-normal);
   padding: 8px 12px;
   border-radius: 8px;
-  box-shadow: var(--blockr-shadow);
-  border: 1px solid var(--blockr-grey-300);
+  box-shadow: var(--blockr-shadow-lg);
+  border: 1px solid var(--blockr-color-border);
   max-width: 250px;
   text-align: left;
 }
@@ -412,10 +530,11 @@ label:has(input[type="file"]) {
 /* Popover - light style matching tooltips */
 .popover {
   --bs-popover-bg: white;
-  --bs-popover-border-color: var(--blockr-grey-300);
+  --bs-popover-border-color: var(--blockr-color-border);
   --bs-popover-body-color: var(--blockr-color-text-secondary);
-  border-radius: 8px;
-  box-shadow: var(--blockr-shadow);
+  border-radius: 12px;
+  box-shadow: var(--blockr-shadow-lg);
+  border: 1px solid var(--blockr-color-border);
   max-width: 280px;
 }
 
@@ -430,8 +549,8 @@ label:has(input[type="file"]) {
 }
 
 .popover-arrow::before {
-  border-top-color: var(--blockr-grey-300) !important;
-  border-bottom-color: var(--blockr-grey-300) !important;
+  border-top-color: var(--blockr-color-border) !important;
+  border-bottom-color: var(--blockr-color-border) !important;
 }
 
 .popover-arrow::after {
@@ -440,12 +559,37 @@ label:has(input[type="file"]) {
 }
 
 /* ============================================
-   DataTables Styling
+   DataTables Styling (Figma-aligned)
    ============================================ */
 
-/* Grey stripes instead of blue - override Bootstrap variable */
+/* Grey stripes */
 .table-striped {
-  --bs-table-striped-bg: var(--blockr-grey-200);
+  --bs-table-striped-bg: var(--blockr-color-bg-subtle);
+}
+
+.table {
+  border-color: var(--blockr-color-border);
+}
+
+.table > thead {
+  background: var(--blockr-color-bg-subtle);
+}
+
+.table > thead > tr > th {
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-secondary);
+  border-bottom: 2px solid var(--blockr-color-border);
+  padding: 12px 16px;
+}
+
+.table > tbody > tr > td {
+  color: var(--blockr-color-text-primary);
+  border-bottom: 1px solid var(--blockr-grey-100);
+  padding: 12px 16px;
+}
+
+.table > tbody > tr:hover {
+  background-color: var(--blockr-color-bg-subtle);
 }
 
 /* Info text - small and muted */
@@ -459,6 +603,7 @@ label:has(input[type="file"]) {
 .dataTables_wrapper .dataTables_paginate .page-link {
   padding: 0.2rem 0.5rem;
   font-size: var(--blockr-font-size-xs);
+  border-radius: 6px;
 }
 
 /* ============================================
@@ -469,24 +614,38 @@ label:has(input[type="file"]) {
 }
 
 /* ============================================
-   Block Dropdown Menu Styling
+   Block Dropdown Menu Styling (Figma-aligned)
    ============================================ */
 .blockr-block-dropdown {
   font-size: var(--blockr-font-size-base) !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--blockr-color-border) !important;
+  box-shadow: var(--blockr-shadow-lg) !important;
+  padding: 8px !important;
 }
 
 .blockr-block-dropdown .dropdown-header,
 .blockr-block-dropdown h6.dropdown-header {
   font-size: var(--blockr-font-size-xs) !important;
-  font-weight: var(--blockr-font-weight-semibold) !important;
-  color: var(--blockr-color-text-secondary) !important;
+  font-weight: var(--blockr-font-weight-medium) !important;
+  color: var(--blockr-color-text-muted) !important;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-variant-caps: normal;
+  padding: 8px 12px 4px;
 }
 
 .blockr-block-dropdown .dropdown-item {
   font-size: var(--blockr-font-size-sm) !important;
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+  color: var(--blockr-color-text-primary) !important;
+}
+
+.blockr-block-dropdown .dropdown-item:hover,
+.blockr-block-dropdown .dropdown-item:focus {
+  background-color: var(--blockr-color-bg-hover) !important;
+  color: var(--blockr-color-text-primary) !important;
 }
 
 .blockr-block-dropdown .text-muted,
