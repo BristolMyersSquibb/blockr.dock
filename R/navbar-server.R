@@ -174,8 +174,8 @@ navbar_server <- function(id, board, dock = NULL, ..., session = get_session()) 
       decreasing = TRUE
     )]
 
-    # Return top 5
-    head(workflow_info, 5)
+    # Return top 4
+    head(workflow_info, 4)
   })
 
   # Render recent workflows list
@@ -347,6 +347,191 @@ navbar_server <- function(id, board, dock = NULL, ..., session = get_session()) 
           message("Could not get save status: ", e$message)
         }
       )
+    }
+  })
+
+  # === VERSION HISTORY ===
+
+  # Get versions for current workflow
+  current_versions <- reactive({
+    refresh_trigger()
+
+    current_name <- coal(
+      get_board_option_or_null("board_name", session),
+      board$board_id
+    )
+
+    if (is.null(current_name) || !nzchar(current_name)) {
+      return(NULL)
+    }
+
+    tryCatch({
+      versions <- blockr.session:::pin_versions(current_name, backend)
+      if (length(versions) == 0) return(NULL)
+
+      # Get metadata for each version
+      version_data <- lapply(seq_along(versions), function(i) {
+        v <- versions[i]
+        meta <- tryCatch(
+          pins::pin_meta(backend, current_name, v),
+          error = function(e) NULL
+        )
+        if (!is.null(meta)) {
+          list(
+            version = v,
+            created = meta$created,
+            is_current = i == 1
+          )
+        }
+      })
+
+      Filter(Negate(is.null), version_data)
+    }, error = function(e) NULL)
+  })
+
+  # History title (shows current workflow name)
+  output$history_title <- renderUI({
+    current_name <- coal(
+      get_board_option_or_null("board_name", session),
+      board$board_id
+    )
+    if (is.null(current_name) || !nzchar(current_name)) {
+      return(tags$span("Version history"))
+    }
+    tags$span(paste("Version history for", current_name))
+  })
+
+  # Render version history dropdown
+  output$version_history <- renderUI({
+    versions <- current_versions()
+
+    if (is.null(versions) || length(versions) == 0) {
+      return(
+        tags$div(
+          class = "blockr-version-empty",
+          "No version history available"
+        )
+      )
+    }
+
+    current_name <- coal(
+      get_board_option_or_null("board_name", session),
+      board$board_id
+    )
+
+    # Separate current and previous versions
+    current <- versions[[1]]
+    previous <- if (length(versions) > 1) versions[-1] else list()
+
+    tagList(
+      # Current version section
+      tags$div(
+        class = "blockr-version-section",
+        "CURRENT"
+      ),
+      tags$div(
+        class = "blockr-version-item blockr-version-current",
+        tags$div(
+          class = "blockr-version-item-content",
+          tags$div(class = "blockr-version-item-title", "Current version"),
+          tags$div(
+            class = "blockr-version-item-meta",
+            paste("Saved", format_time_ago(current$created))
+          )
+        ),
+        tags$span(class = "blockr-version-badge", "Current")
+      ),
+
+      # Previous versions section
+      if (length(previous) > 0) {
+        tagList(
+          tags$div(
+            class = "blockr-version-section",
+            "PREVIOUS VERSIONS"
+          ),
+          lapply(previous[1:min(3, length(previous))], function(v) {
+            tags$div(
+              class = "blockr-version-item",
+              tags$div(
+                class = "blockr-version-item-content",
+                tags$div(
+                  class = "blockr-version-item-title",
+                  paste("Version from", format_time_ago(v$created))
+                ),
+                tags$div(
+                  class = "blockr-version-item-meta",
+                  paste("Saved", format_time_ago(v$created))
+                )
+              ),
+              tags$button(
+                class = "blockr-version-restore-btn",
+                onclick = sprintf(
+                  "Shiny.setInputValue('%s', {name: '%s', version: '%s'}, {priority: 'event'})",
+                  session$ns("restore_version"),
+                  current_name,
+                  v$version
+                ),
+                "Restore"
+              )
+            )
+          }),
+          if (length(previous) > 3) {
+            tags$a(
+              href = "#",
+              class = "blockr-version-link",
+              onclick = sprintf(
+                "Shiny.setInputValue('%s', Date.now(), {priority: 'event'}); return false;",
+                session$ns("view_full_history")
+              ),
+              "View full history ",
+              bsicons::bs_icon("arrow-right")
+            )
+          }
+        )
+      }
+    )
+  })
+
+  # Restore a specific version
+  observeEvent(input$restore_version, {
+    req(input$restore_version)
+
+    workflow_name <- input$restore_version$name
+    version <- input$restore_version$version
+
+    message("=== RESTORING VERSION: ", workflow_name, " @ ", version, " ===")
+
+    meta <- tryCatch(
+      pins::pin_meta(backend, workflow_name, version),
+      error = function(e) {
+        showNotification(e$message, type = "error", session = session)
+        NULL
+      }
+    )
+
+    if (!is.null(meta)) {
+      board_ser <- tryCatch(
+        blockr.session:::download_board(
+          backend,
+          workflow_name,
+          version,
+          meta$pin_hash,
+          meta$user$format
+        ),
+        error = function(e) {
+          showNotification(e$message, type = "error", session = session)
+          NULL
+        }
+      )
+
+      if (!is.null(board_ser)) {
+        restore_board(board$board, board_ser, restore_result, session = session)
+        showNotification(
+          paste("Restored version from", format_time_ago(meta$created)),
+          type = "message",
+          session = session
+        )
+      }
     }
   })
 

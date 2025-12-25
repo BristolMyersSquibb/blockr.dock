@@ -859,6 +859,165 @@ nav.blockr-navbar {
 }
 
 /* ============================================
+   Version History Dropdown
+   ============================================ */
+
+.blockr-navbar-version-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-navbar-version-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.blockr-navbar-version-btn svg {
+  width: 14px;
+  height: 14px;
+  color: #9ca3af;
+}
+
+.blockr-version-chevron {
+  width: 12px !important;
+  height: 12px !important;
+  margin-left: 2px;
+}
+
+.blockr-version-dropdown {
+  width: 360px;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
+  border: 1px solid #e5e7eb !important;
+  margin-top: 8px !important;
+  overflow: hidden;
+}
+
+.blockr-version-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.blockr-version-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.blockr-version-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.blockr-version-section {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 20px 8px;
+}
+
+.blockr-version-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.blockr-version-item:last-child {
+  border-bottom: none;
+}
+
+.blockr-version-item:hover {
+  background: #f9fafb;
+}
+
+.blockr-version-current {
+  background: #eff6ff;
+}
+
+.blockr-version-current:hover {
+  background: #dbeafe;
+}
+
+.blockr-version-item-content {
+  flex: 1;
+}
+
+.blockr-version-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.blockr-version-item-meta {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.blockr-version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.blockr-version-restore-btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-radius: 6px;
+}
+
+.blockr-version-restore-btn:hover {
+  background: #eff6ff;
+}
+
+.blockr-version-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #3b82f6;
+  text-decoration: none;
+  padding: 12px 20px;
+}
+
+.blockr-version-link:hover {
+  text-decoration: underline;
+}
+
+.blockr-version-empty {
+  padding: 24px 20px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* ============================================
    View Switching (Board / Workflows)
    ============================================ */
 
@@ -1156,4 +1315,230 @@ nav.blockr-navbar {
   text-align: center;
   color: #6b7280;
   font-size: 14px;
+}
+
+/* ============================================
+   Tabbed Dropdown (Workflows + History)
+   ============================================ */
+
+.blockr-tabbed-dropdown {
+  width: 320px;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
+  border: 1px solid #e5e7eb !important;
+  margin-top: 8px !important;
+  overflow: hidden;
+  background: white;
+}
+
+/* Tab bar */
+.blockr-tab-bar {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+}
+
+.blockr-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.blockr-tab:hover {
+  color: #111827;
+}
+
+.blockr-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.blockr-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+.blockr-tab.active svg {
+  color: #2563eb;
+}
+
+/* Tab panels */
+.blockr-tab-panel {
+  padding: 8px;
+  max-height: 384px;
+  overflow-y: auto;
+}
+
+.blockr-tab-panel-hidden {
+  position: absolute;
+  left: -9999px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Workflows panel styling */
+.blockr-tab-panel .blockr-workflows-section {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+.blockr-tab-panel .blockr-workflows-list {
+  margin-bottom: 0;
+}
+
+.blockr-tab-footer {
+  padding: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.blockr-tab-footer .blockr-workflows-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  color: #2563eb;
+  font-size: 14px;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-tab-footer .blockr-workflows-link:hover {
+  background: #dbeafe;
+  text-decoration: none;
+}
+
+/* History panel styling */
+.blockr-history-title {
+  font-size: 14px;
+  color: #374151;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  margin: -8px -8px 8px -8px;
+  background: #f9fafb;
+}
+
+/* Current version card in history */
+.blockr-tab-panel .blockr-version-section {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 12px 8px;
+  margin: 0;
+}
+
+.blockr-tab-panel .blockr-version-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  margin-bottom: 6px;
+}
+
+.blockr-tab-panel .blockr-version-item:hover {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.blockr-tab-panel .blockr-version-current {
+  background: rgba(239, 246, 255, 0.5);
+  border-color: transparent;
+}
+
+.blockr-tab-panel .blockr-version-current:hover {
+  background: rgba(219, 234, 254, 0.5);
+}
+
+.blockr-tab-panel .blockr-version-item-content {
+  flex: 1;
+}
+
+.blockr-tab-panel .blockr-version-item-title {
+  font-size: 14px;
+  font-weight: 400;
+  color: #111827;
+}
+
+.blockr-tab-panel .blockr-version-item-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.blockr-tab-panel .blockr-version-item-desc {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.blockr-tab-panel .blockr-version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.blockr-tab-panel .blockr-version-restore-btn {
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.blockr-tab-panel .blockr-version-restore-btn:hover {
+  text-decoration: underline;
+}
+
+.blockr-tab-panel .blockr-version-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* View full history link */
+.blockr-tab-panel .blockr-version-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  color: #2563eb;
+  font-size: 14px;
+  text-decoration: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 8px -8px -8px -8px;
+}
+
+.blockr-tab-panel .blockr-version-link:hover {
+  background: #dbeafe;
+  text-decoration: none;
 }

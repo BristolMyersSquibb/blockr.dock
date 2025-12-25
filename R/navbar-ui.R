@@ -16,7 +16,7 @@ navbar_ui <- function(id) {
     tags$div(
       class = "blockr-navbar-left",
       style = "display: flex !important; flex-direction: row !important; align-items: center !important; gap: 12px;",
-      # Hamburger menu with dropdown
+      # Hamburger menu with tabbed dropdown (Workflows + History)
       tags$div(
         class = "dropdown",
         tags$button(
@@ -24,34 +24,78 @@ navbar_ui <- function(id) {
           type = "button",
           `data-bs-toggle` = "dropdown",
           `aria-expanded` = "false",
-          bsicons::bs_icon("list", size = "1.4em")
+          bsicons::bs_icon("layers", size = "1.4em")
         ),
-        # Dropdown content
+        # Tabbed dropdown content
         tags$div(
-          class = "dropdown-menu blockr-workflows-dropdown",
+          class = "dropdown-menu blockr-tabbed-dropdown",
+          # Tab bar
           tags$div(
-            class = "blockr-workflows-header",
-            "Workflows"
-          ),
-          tags$div(
-            class = "blockr-workflows-section",
-            "RECENT"
-          ),
-          # Dynamic workflow list from server
-          tags$div(
-            class = "blockr-workflows-list",
-            uiOutput(ns("recent_workflows"))
-          ),
-          tags$a(
-            href = "#",
-            class = "blockr-workflows-link",
-            onclick = sprintf(
-              "Shiny.setInputValue('%s', Date.now(), {priority: 'event'}); return false;",
-              ns("view_all_workflows")
+            class = "blockr-tab-bar",
+            tags$button(
+              id = ns("tab_workflows"),
+              class = "blockr-tab active",
+              type = "button",
+              onclick = sprintf(
+                "event.stopPropagation(); document.querySelectorAll('#%s .blockr-tab').forEach(t => t.classList.remove('active')); this.classList.add('active'); document.getElementById('%s').classList.remove('blockr-tab-panel-hidden'); document.getElementById('%s').classList.add('blockr-tab-panel-hidden');",
+                ns("tabbed_dropdown"),
+                ns("panel_workflows"),
+                ns("panel_history")
+              ),
+              bsicons::bs_icon("layers"),
+              "Workflows"
             ),
-            "View all workflows ",
-            bsicons::bs_icon("arrow-right")
-          )
+            tags$button(
+              id = ns("tab_history"),
+              class = "blockr-tab",
+              type = "button",
+              onclick = sprintf(
+                "event.stopPropagation(); document.querySelectorAll('#%s .blockr-tab').forEach(t => t.classList.remove('active')); this.classList.add('active'); document.getElementById('%s').classList.add('blockr-tab-panel-hidden'); document.getElementById('%s').classList.remove('blockr-tab-panel-hidden');",
+                ns("tabbed_dropdown"),
+                ns("panel_workflows"),
+                ns("panel_history")
+              ),
+              bsicons::bs_icon("clock-history"),
+              "History"
+            )
+          ),
+          # Workflows panel
+          tags$div(
+            id = ns("panel_workflows"),
+            class = "blockr-tab-panel",
+            tags$div(
+              class = "blockr-workflows-section",
+              "RECENT"
+            ),
+            tags$div(
+              class = "blockr-workflows-list",
+              uiOutput(ns("recent_workflows"))
+            ),
+            tags$div(
+              class = "blockr-tab-footer",
+              tags$a(
+                href = "#",
+                class = "blockr-workflows-link",
+                onclick = sprintf(
+                  "Shiny.setInputValue('%s', Date.now(), {priority: 'event'}); return false;",
+                  ns("view_all_workflows")
+                ),
+                "View all workflows ",
+                bsicons::bs_icon("arrow-right")
+              )
+            )
+          ),
+          # History panel
+          tags$div(
+            id = ns("panel_history"),
+            class = "blockr-tab-panel blockr-tab-panel-hidden",
+            tags$div(
+              class = "blockr-history-title",
+              uiOutput(ns("history_title"), inline = TRUE)
+            ),
+            uiOutput(ns("version_history"))
+          ),
+          id = ns("tabbed_dropdown")
         )
       ),
       # Editable workflow title
@@ -91,7 +135,7 @@ navbar_ui <- function(id) {
       ),
       # Divider
       tags$span(class = "blockr-navbar-divider"),
-      # Save status section
+      # Save status section (simplified - history is now in hamburger menu)
       tags$div(
         class = "blockr-navbar-save-section",
         tags$span(
