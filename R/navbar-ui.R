@@ -134,20 +134,22 @@ navbar_ui <- function(id) {
       tags$button(
         class = "blockr-navbar-settings-btn",
         type = "button",
+        `data-bs-toggle` = "offcanvas",
+        `data-bs-target` = paste0("#", ns("options_offcanvas")),
+        `aria-controls` = ns("options_offcanvas"),
         bsicons::bs_icon("gear", size = "1.4em")
       ),
       tags$button(
         class = "blockr-navbar-btn-outline",
         type = "button",
-        bsicons::bs_icon("share"),
-        "Share"
+        onclick = sprintf(
+          "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+          NS(id, "generate_code-code_mod")
+        ),
+        bsicons::bs_icon("code-slash"),
+        "Code"
       ),
-      tags$button(
-        class = "blockr-navbar-btn-primary",
-        type = "button",
-        "Publish"
-      ),
-      tags$span(class = "blockr-navbar-avatar", "JD")
+      uiOutput(ns("user_avatar"), inline = TRUE)
     ),
     # JavaScript for handling title and save status updates from server
     tags$script(HTML(sprintf("

@@ -350,7 +350,53 @@ navbar_server <- function(id, board, dock = NULL, ..., session = get_session()) 
     }
   })
 
+  # === USER AVATAR ===
+  output$user_avatar <- renderUI({
+    # Try session$user first (Shiny Server Pro / Posit Connect)
+    # Fall back to system username for local development
+    username <- coal(
+      session$user,
+      Sys.info()[["user"]],
+      Sys.getenv("USER"),
+      Sys.getenv("USERNAME"),
+      "User"
+    )
+
+    initials <- get_initials(username)
+    tags$span(class = "blockr-navbar-avatar", initials)
+  })
+
   NULL
+}
+
+#' Get initials from a username
+#'
+#' @param username Character string
+#' @return Character string with 1-2 uppercase initials
+#' @keywords internal
+get_initials <- function(username) {
+  if (is.null(username) || !nzchar(username)) {
+    return("U")
+  }
+
+ # Split by common separators (space, dot, underscore, hyphen)
+  parts <- strsplit(username, "[._ -]+")[[1]]
+  parts <- parts[nzchar(parts)]
+
+  if (length(parts) >= 2) {
+    # Take first letter of first two parts
+    initials <- paste0(
+      toupper(substr(parts[1], 1, 1)),
+      toupper(substr(parts[2], 1, 1))
+    )
+  } else if (length(parts) == 1) {
+    # Take first two letters of single name
+    initials <- toupper(substr(parts[1], 1, 2))
+  } else {
+    initials <- "U"
+  }
+
+  initials
 }
 
 #' Format timestamp as relative time

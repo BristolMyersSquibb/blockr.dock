@@ -216,6 +216,7 @@
    Edge Tab (Settings Panel Trigger)
    ============================================ */
 .blockr-edge-tab {
+  display: none; /* Hidden - use navbar gear icon instead */
   position: fixed;
   right: 0;
   top: 50%;

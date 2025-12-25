@@ -57,13 +57,7 @@ options_ui <- function(id, x, ...) {
   offcanvas_id <- NS(id, "options_offcanvas")
 
   tagList(
-    tags$button(
-      class = "blockr-edge-tab",
-      bsicons::bs_icon("chevron-left"),
-      `data-bs-toggle` = "offcanvas",
-      `data-bs-target` = paste0("#", offcanvas_id),
-      `aria-controls` = offcanvas_id
-    ),
+    # Edge tab button removed - navbar gear icon triggers this offcanvas instead
     off_canvas(
       id = offcanvas_id,
       position = "end",
