@@ -173,37 +173,39 @@
   transform: rotate(180deg);
 }
 
-/* Section toggle buttons (inputs/outputs) - Figma-aligned */
+/* Section toggle buttons (inputs/outputs) - Figma white background */
 .blockr-section-toggle .btn.btn-light {
-  background-color: var(--blockr-grey-100) !important;
-  border: none !important;
+  background-color: #ffffff !important;
+  border: 1px solid var(--blockr-color-border) !important;
   border-radius: 6px;
   color: var(--blockr-color-text-muted) !important;
   font-size: var(--blockr-font-size-xs);
   font-weight: var(--blockr-font-weight-normal);
-  padding: 6px 10px;
+  padding: 4px 10px;
   margin: 0 2px;
   transition: all 0.15s ease;
 }
 
 .blockr-section-toggle .btn.btn-light:hover {
-  background-color: var(--blockr-color-border) !important;
+  background-color: var(--blockr-color-bg-subtle) !important;
   color: var(--blockr-color-text-secondary) !important;
+  border-color: var(--blockr-color-border) !important;
 }
 
 .blockr-section-toggle .btn-check:checked + .btn.btn-light:hover {
-  background-color: var(--blockr-color-border) !important;
+  background-color: var(--blockr-grey-100) !important;
 }
 
 .blockr-section-toggle .btn.btn-light.active,
 .blockr-section-toggle .btn-check:checked + .btn.btn-light {
-  background-color: var(--blockr-color-border) !important;
-  color: var(--blockr-color-text-secondary) !important;
+  background-color: var(--blockr-color-bg-subtle) !important;
+  color: var(--blockr-color-text-primary) !important;
+  border-color: var(--blockr-color-border-hover) !important;
   box-shadow: none !important;
 }
 
 .blockr-section-toggle .btn-group {
-  gap: 6px;
+  gap: 4px;
 }
 
 /* Package badge - Figma-aligned subtle style */
