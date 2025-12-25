@@ -24,7 +24,7 @@ navbar_server <- function(id, board, dock = NULL, ..., session = get_session()) 
   output <- session$output
 
   message("=== NAVBAR SERVER INITIALIZED ===")
-  message("Session NS test: ", session$ns("test"))
+  message("Session NS: ", session$ns("test"))
 
   backend <- blockr_option("session_mgmt_backend", pins::board_local())
   message("Backend initialized: ", class(backend))
@@ -174,8 +174,8 @@ navbar_server <- function(id, board, dock = NULL, ..., session = get_session()) 
       decreasing = TRUE
     )]
 
-    # Return top 3
-    head(workflow_info, 3)
+    # Return top 5
+    head(workflow_info, 5)
   })
 
   # Render recent workflows list
@@ -348,6 +348,194 @@ navbar_server <- function(id, board, dock = NULL, ..., session = get_session()) 
         }
       )
     }
+  })
+
+  # === WORKFLOW OVERVIEW ===
+
+  # All workflows for overview table
+ all_workflows <- reactive({
+    refresh_trigger()
+
+    boards <- tryCatch(
+      blockr.session:::pin_list(backend),
+      error = function(e) character()
+    )
+    boards <- boards[boards != ""]
+
+    if (length(boards) == 0) {
+      return(data.frame(
+        name = character(),
+        created = as.POSIXct(character()),
+        modified = as.POSIXct(character()),
+        version = character(),
+        stringsAsFactors = FALSE
+      ))
+    }
+
+    # Get metadata for all workflows
+    workflow_data <- lapply(boards, function(name) {
+      tryCatch({
+        versions <- blockr.session:::pin_versions(name, backend)
+        if (length(versions) > 0) {
+          meta <- pins::pin_meta(backend, name, versions[1])
+          if (!is.null(meta)) {
+            data.frame(
+              name = name,
+              created = as.POSIXct(meta$created),
+              modified = as.POSIXct(meta$created),
+              version = versions[1],
+              stringsAsFactors = FALSE
+            )
+          }
+        }
+      }, error = function(e) NULL)
+    })
+
+    result <- do.call(rbind, Filter(Negate(is.null), workflow_data))
+    if (is.null(result)) {
+      return(data.frame(
+        name = character(),
+        created = as.POSIXct(character()),
+        modified = as.POSIXct(character()),
+        version = character(),
+        stringsAsFactors = FALSE
+      ))
+    }
+    result
+  })
+
+  # Filtered workflows based on search
+  filtered_workflows <- reactive({
+    wf <- all_workflows()
+    search_term <- input$workflow_search
+
+    if (is.null(search_term) || !nzchar(search_term)) {
+      return(wf)
+    }
+
+    wf[grepl(search_term, wf$name, ignore.case = TRUE), , drop = FALSE]
+  })
+
+  # Show workflow overview page
+  observeEvent(input$view_all_workflows, {
+    message("=== VIEW ALL WORKFLOWS CLICKED ===")
+    session$sendCustomMessage("blockr-switch-view", "workflows")
+  })
+
+  # Back to board from workflow overview
+  observeEvent(input$back_to_board, {
+    message("=== BACK TO BOARD CLICKED ===")
+    session$sendCustomMessage("blockr-switch-view", "board")
+  })
+
+  # Render workflow table
+  output$workflow_table_ui <- renderUI({
+    wf <- filtered_workflows()
+    render_workflow_table(
+      wf,
+      session$ns,
+      session$ns("load_from_overview"),
+      session$ns("selected_workflows")
+    )
+  })
+
+  # Workflow count
+  output$workflow_count <- renderText({
+    wf <- filtered_workflows()
+    n <- if (is.null(wf)) 0 else nrow(wf)
+    paste("Showing", n, "workflow", if (n != 1) "s" else "")
+  })
+
+  # Track workflows to delete
+  workflows_to_delete <- reactiveVal(character())
+
+  # Load from overview
+  observeEvent(input$load_from_overview, {
+    req(input$load_from_overview)
+    message("=== LOAD FROM OVERVIEW: ", input$load_from_overview, " ===")
+    # Switch back to board view
+    session$sendCustomMessage("blockr-switch-view", "board")
+
+    # Reuse existing load logic
+    workflow_name <- input$load_from_overview
+
+    versions <- tryCatch(
+      blockr.session:::pin_versions(workflow_name, backend),
+      error = function(e) {
+        showNotification(e$message, type = "error", session = session)
+        character()
+      }
+    )
+
+    if (length(versions) > 0) {
+      meta <- tryCatch(
+        pins::pin_meta(backend, workflow_name, versions[1]),
+        error = function(e) {
+          showNotification(e$message, type = "error", session = session)
+          NULL
+        }
+      )
+
+      if (!is.null(meta)) {
+        board_ser <- tryCatch(
+          blockr.session:::download_board(
+            backend,
+            workflow_name,
+            versions[1],
+            meta$pin_hash,
+            meta$user$format
+          ),
+          error = function(e) {
+            showNotification(e$message, type = "error", session = session)
+            NULL
+          }
+        )
+
+        if (!is.null(board_ser)) {
+          restore_board(board$board, board_ser, restore_result, session = session)
+          showNotification(
+            paste("Loaded", workflow_name),
+            type = "message",
+            session = session
+          )
+        }
+      }
+    }
+  })
+
+  # Delete selected workflows
+  observeEvent(input$delete_selected, {
+    selected <- input$selected_workflows
+    req(length(selected) > 0)
+
+    workflows_to_delete(selected)
+    showModal(delete_confirm_modal(session$ns, length(selected)))
+  })
+
+  # Confirm delete
+  observeEvent(input$confirm_delete, {
+    to_delete <- workflows_to_delete()
+    req(length(to_delete) > 0)
+
+    message("=== DELETING WORKFLOWS: ", paste(to_delete, collapse = ", "), " ===")
+
+    for (name in to_delete) {
+      tryCatch(
+        pins::pin_delete(backend, name),
+        error = function(e) message("Failed to delete: ", name, " - ", e$message)
+      )
+    }
+
+    workflows_to_delete(character())
+    removeModal()
+    refresh_trigger(refresh_trigger() + 1)
+
+    showNotification(
+      paste("Deleted", length(to_delete), "workflow", if (length(to_delete) != 1) "s" else ""),
+      type = "message",
+      session = session
+    )
+    # Table will auto-refresh via reactive dependency on refresh_trigger
   })
 
   # === USER AVATAR ===

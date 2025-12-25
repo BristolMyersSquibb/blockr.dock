@@ -8,6 +8,8 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
 
   stopifnot(is_string(id))
 
+  ns <- NS(id)
+
   tagList(
     show_hide_block_dep(),
     blockr_dock_dep(),
@@ -29,10 +31,21 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
         opt_ui_or_null("generate_code", plugins, x)
       )
     ),
-    dockViewR::dock_view_output(
-      NS(id, dock_id()),
-      width = "100%",
-      height = "calc(100vh - 48px)"
+    # Main board view (shown by default)
+    tags$div(
+      id = ns("board_view"),
+      class = "blockr-board-view",
+      dockViewR::dock_view_output(
+        NS(id, dock_id()),
+        width = "100%",
+        height = "calc(100vh - 48px)"
+      )
+    ),
+    # Workflow overview page (hidden by default using position/visibility)
+    tags$div(
+      id = ns("workflows_view"),
+      class = "blockr-workflows-view blockr-view-hidden",
+      workflow_overview_ui(ns)
     ),
     off_canvas(
       id = NS(id, "exts_offcanvas"),
@@ -44,7 +57,25 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
         id = id,
         board = x
       )
-    )
+    ),
+    # JavaScript for view switching
+    tags$script(HTML(sprintf("
+      Shiny.addCustomMessageHandler('blockr-switch-view', function(view) {
+        var boardView = document.getElementById('%s');
+        var workflowsView = document.getElementById('%s');
+        if (view === 'workflows') {
+          if (boardView) boardView.classList.add('blockr-view-hidden');
+          if (workflowsView) workflowsView.classList.remove('blockr-view-hidden');
+          // Trigger resize for reactable
+          setTimeout(function() {
+            window.dispatchEvent(new Event('resize'));
+          }, 50);
+        } else {
+          if (boardView) boardView.classList.remove('blockr-view-hidden');
+          if (workflowsView) workflowsView.classList.add('blockr-view-hidden');
+        }
+      });
+    ", ns("board_view"), ns("workflows_view"))))
   )
 }
 

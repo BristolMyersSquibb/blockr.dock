@@ -857,3 +857,303 @@ nav.blockr-navbar {
   width: 14px;
   height: 14px;
 }
+
+/* ============================================
+   View Switching (Board / Workflows)
+   ============================================ */
+
+.blockr-board-view,
+.blockr-workflows-view {
+  position: relative;
+}
+
+.blockr-view-hidden {
+  position: absolute;
+  left: -9999px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ============================================
+   Workflow Overview Page (Full Page)
+   ============================================ */
+
+/* Full page workflow overview */
+.blockr-workflow-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 48px);
+  background: #f9fafb;
+}
+
+/* Header with back button and title */
+.blockr-workflow-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 32px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.blockr-workflow-page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.blockr-workflow-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.blockr-workflow-back-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.blockr-workflow-page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.blockr-workflow-page-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.blockr-workflow-bulk-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Search bar section */
+.blockr-workflow-page-search {
+  padding: 20px 32px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.blockr-workflow-search-wrapper {
+  position: relative;
+  max-width: 400px;
+}
+
+.blockr-workflow-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.blockr-workflow-search {
+  width: 100%;
+  padding: 12px 16px 12px 42px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  background: #f9fafb;
+}
+
+.blockr-workflow-search:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Table section */
+.blockr-workflow-page-table {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+  background: white;
+}
+
+/* Footer */
+.blockr-workflow-page-footer {
+  padding: 16px 32px;
+  border-top: 1px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 14px;
+  background: white;
+}
+
+/* Load button in table */
+.blockr-wf-load-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-wf-load-btn:hover {
+  background: #1d4ed8;
+}
+
+/* Action buttons in table (external link, play) */
+.blockr-wf-action-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.blockr-wf-action-btn:hover {
+  color: #374151;
+}
+
+/* Delete button */
+.blockr-wf-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.blockr-wf-delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* Title styling in table */
+.blockr-wf-title {
+  font-weight: 500;
+}
+
+/* Workflow table styles */
+.blockr-wf-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  background: white;
+}
+
+.blockr-wf-table thead {
+  background: #f9fafb;
+}
+
+.blockr-wf-table th {
+  text-align: left;
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+  padding: 14px 16px;
+  border-bottom: 2px solid #e5e7eb;
+  user-select: none;
+}
+
+.blockr-wf-table th.sortable {
+  cursor: pointer;
+}
+
+.blockr-wf-table th.sortable:hover {
+  background: #f3f4f6;
+}
+
+.blockr-wf-table th .sort-icon::after {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.blockr-wf-table th.active-sort.asc .sort-icon::after {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 5px solid #374151;
+}
+
+.blockr-wf-table th.active-sort.desc .sort-icon::after {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #374151;
+}
+
+.blockr-wf-th-checkbox,
+.blockr-wf-td-checkbox {
+  width: 80px;
+  padding-left: 32px !important;
+  text-align: left;
+}
+
+/* Column widths for fixed layout */
+.blockr-wf-table th:nth-child(2),
+.blockr-wf-table td:nth-child(2) {
+  width: 35%;
+}
+
+.blockr-wf-table th:nth-child(3),
+.blockr-wf-table td:nth-child(3) {
+  width: 20%;
+}
+
+.blockr-wf-table th:nth-child(4),
+.blockr-wf-table td:nth-child(4) {
+  width: 20%;
+}
+
+.blockr-wf-table th:nth-child(5),
+.blockr-wf-table td:nth-child(5) {
+  width: auto;
+}
+
+.blockr-wf-table td {
+  font-size: 14px;
+  color: #111827;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.blockr-wf-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.blockr-wf-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.blockr-wf-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blockr-wf-empty {
+  padding: 48px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}

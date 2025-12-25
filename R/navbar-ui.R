@@ -34,14 +34,6 @@ navbar_ui <- function(id) {
             "Workflows"
           ),
           tags$div(
-            class = "blockr-workflows-search",
-            tags$input(
-              type = "text",
-              class = "form-control",
-              placeholder = "Search workflows..."
-            )
-          ),
-          tags$div(
             class = "blockr-workflows-section",
             "RECENT"
           ),
@@ -53,6 +45,10 @@ navbar_ui <- function(id) {
           tags$a(
             href = "#",
             class = "blockr-workflows-link",
+            onclick = sprintf(
+              "Shiny.setInputValue('%s', Date.now(), {priority: 'event'}); return false;",
+              ns("view_all_workflows")
+            ),
             "View all workflows ",
             bsicons::bs_icon("arrow-right")
           )
