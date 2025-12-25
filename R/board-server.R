@@ -6,6 +6,9 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   # Pass dock for serialization support
   navbar_server(id = NULL, board, dock = dock, session = session)
 
+  # Initialize block panel server for slide-out block selector
+  block_panel_server(board, update, session)
+
   exts <- isolate(
     dock_extensions(board$board)
   )
@@ -300,4 +303,90 @@ suggest_panels_to_add <- function(dock, board, session) {
 
 extension_default_icon <- function() {
   as.character(bsicons::bs_icon("gear"))
+}
+
+#' Block Panel Server
+#'
+#' Handles the slide-out block panel for adding/appending blocks.
+#'
+#' @param board Board reactiveValues
+#' @param update Update function
+#' @param session Shiny session
+#'
+#' @keywords internal
+block_panel_server <- function(board, update, session) {
+  input <- session$input
+  output <- session$output
+  ns <- session$ns
+
+  # Render block list with search filtering
+
+  output$block_panel_list <- renderUI({
+    search <- input$block_panel_search
+    render_block_categories(ns, search_query = search)
+  })
+
+  # Handle close button
+  observeEvent(
+    input$close_block_panel,
+    {
+      session$sendCustomMessage("blockr-hide-block-panel", list())
+    }
+  )
+
+  # Handle block selection
+  observeEvent(
+    input$block_panel_select,
+    {
+      req(input$block_panel_select, input$block_panel_state)
+
+      selected_block <- input$block_panel_select$block
+      state <- input$block_panel_state
+      mode <- state$mode
+      source_block <- state$source_block
+
+      log_debug("block panel selection: {selected_block}, mode: {mode}")
+
+      # Create the new block
+      new_blk <- create_block_with_name(
+        selected_block,
+        chr_ply(board_blocks(board$board), block_name)
+      )
+
+      # Generate unique IDs
+      blk_id <- rand_names(board_block_ids(board$board))
+      new_blk <- as_blocks(set_names(list(new_blk), blk_id))
+
+      if (mode == "append" && !is.null(source_block)) {
+        # Create link from source block to new block
+        lnk_id <- rand_names(board_link_ids(board$board))
+
+        # Determine input for new block
+        blk_inputs <- block_inputs(new_blk[[1]])
+        inp <- if (length(blk_inputs) > 0) blk_inputs[1] else "1"
+
+        new_lnk <- new_link(
+          from = source_block,
+          to = blk_id,
+          input = inp
+        )
+        new_lnk <- as_links(set_names(list(new_lnk), lnk_id))
+
+        update(
+          list(
+            blocks = list(add = new_blk),
+            links = list(add = new_lnk)
+          )
+        )
+      } else {
+        # Just add the block (add mode)
+        update(list(blocks = list(add = new_blk)))
+      }
+
+      # For add mode, keep panel open; for append mode, close it
+      if (mode == "append") {
+        session$sendCustomMessage("blockr-hide-block-panel", list())
+      }
+    }
+  )
 }

@@ -35,11 +35,14 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
     tags$div(
       id = ns("board_view"),
       class = "blockr-board-view",
+      style = "position: relative;",
       dockViewR::dock_view_output(
         NS(id, dock_id()),
         width = "100%",
         height = "calc(100vh - 48px)"
-      )
+      ),
+      # Slide-out block panel (hidden by default)
+      block_panel_ui(ns)
     ),
     # Workflow overview page (hidden by default using position/visibility)
     tags$div(
