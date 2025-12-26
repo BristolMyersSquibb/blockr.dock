@@ -1,10 +1,67 @@
-/* ============================================
-   CSS Design System - Variables (Figma-aligned)
-   ============================================ */
+/**
+ * blockr-dock.css
+ * Design system for blockr.dock - Figma-aligned
+ *
+ * TABLE OF CONTENTS
+ * =================
+ * 1. VARIABLES
+ *    1.1 Colors - Grey Scale
+ *    1.2 Colors - Primary Blue
+ *    1.3 Colors - Semantic
+ *    1.4 Shadows
+ *    1.5 Typography
+ *
+ * 2. BASE
+ *    2.1 Typography Defaults
+ *    2.2 Labels
+ *
+ * 3. TYPOGRAPHY CLASSES
+ *    3.1 Titles & Text
+ *    3.2 Inline Editable Title
+ *    3.3 Error Display
+ *    3.4 Section Toggle
+ *    3.5 Badges
+ *
+ * 4. FORMS
+ *    4.1 Form Controls
+ *    4.2 Selectize
+ *    4.3 Buttons
+ *
+ * 5. LAYOUT
+ *    5.1 Navbar
+ *    5.2 View Switching
+ *
+ * 6. COMPONENTS
+ *    6.1 Offcanvas / Sidebar
+ *    6.2 Tooltip & Popover
+ *    6.3 Dropdown Menus
+ *    6.4 Tables / DataTables
+ *
+ * 7. FEATURES
+ *    7.1 Block Selector Panel (slide-out)
+ *    7.2 Workflow Dropdown
+ *    7.3 Version History Dropdown
+ *    7.4 Tabbed Dropdown
+ *    7.5 Workflow Overview Page
+ *    7.6 Block Dropdown Menu
+ *
+ * 8. EXTERNAL / THIRD-PARTY
+ *    8.1 Dockview
+ *    8.2 G6 Graph
+ *
+ * 9. DEPRECATED
+ *    9.1 Edge Tab (hidden)
+ */
+
+
+/* =============================================================================
+   1. VARIABLES
+   ============================================================================= */
+
 :root {
-  /* ===========================================
-     Grey Scale (Tailwind-style)
-     =========================================== */
+  /* -------------------------------------------------------------------------
+     1.1 Colors - Grey Scale (Tailwind-style)
+     ------------------------------------------------------------------------- */
   --blockr-grey-50: #f9fafb;   /* Page bg, subtle backgrounds */
   --blockr-grey-100: #f3f4f6;  /* Hover states, input bg */
   --blockr-grey-200: #e5e7eb;  /* Borders */
@@ -16,17 +73,45 @@
   --blockr-grey-800: #1f2937;  /* Dark text */
   --blockr-grey-900: #111827;  /* Primary text */
 
-  /* Primary Blue */
+  /* -------------------------------------------------------------------------
+     1.2 Colors - Primary Blue
+     ------------------------------------------------------------------------- */
   --blockr-blue-50: #eff6ff;
   --blockr-blue-100: #dbeafe;
   --blockr-blue-500: #3b82f6;
   --blockr-blue-600: #2563eb;
   --blockr-blue-700: #1d4ed8;
 
-  /* Shadow - elevated dropdowns */
+  /* -------------------------------------------------------------------------
+     1.3 Colors - Semantic
+     ------------------------------------------------------------------------- */
+  /* Text */
+  --blockr-color-text-primary: var(--blockr-grey-900);
+  --blockr-color-text-secondary: var(--blockr-grey-700);
+  --blockr-color-text-muted: var(--blockr-grey-500);
+  --blockr-color-text-subtle: var(--blockr-grey-400);
+  --blockr-color-text-meta: var(--blockr-grey-500);
+
+  /* UI */
+  --blockr-color-border: var(--blockr-grey-200);
+  --blockr-color-border-hover: var(--blockr-grey-300);
+  --blockr-color-bg-subtle: var(--blockr-grey-50);
+  --blockr-color-bg-hover: var(--blockr-grey-100);
+  --blockr-color-bg-input: var(--blockr-grey-50);
+  --blockr-color-primary: var(--blockr-blue-600);
+  --blockr-color-primary-hover: var(--blockr-blue-700);
+  --blockr-color-primary-bg: var(--blockr-blue-50);
+  --blockr-color-error: #dc2626;
+
+  /* -------------------------------------------------------------------------
+     1.4 Shadows
+     ------------------------------------------------------------------------- */
   --blockr-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --blockr-shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 
+  /* -------------------------------------------------------------------------
+     1.5 Typography
+     ------------------------------------------------------------------------- */
   /* Font Sizes */
   --blockr-font-size-base: 0.875rem;      /* 14px - base for body/inputs */
   --blockr-font-size-sm: 0.8125rem;       /* 13px - helper text */
@@ -38,29 +123,65 @@
   --blockr-font-weight-normal: 400;
   --blockr-font-weight-medium: 500;
   --blockr-font-weight-semibold: 600;
-
-  /* Colors - Text (Figma-aligned) */
-  --blockr-color-text-primary: var(--blockr-grey-900);
-  --blockr-color-text-secondary: var(--blockr-grey-700);
-  --blockr-color-text-muted: var(--blockr-grey-500);
-  --blockr-color-text-subtle: var(--blockr-grey-400);
-  --blockr-color-text-meta: var(--blockr-grey-500);
-
-  /* Colors - UI */
-  --blockr-color-border: var(--blockr-grey-200);
-  --blockr-color-border-hover: var(--blockr-grey-300);
-  --blockr-color-bg-subtle: var(--blockr-grey-50);
-  --blockr-color-bg-hover: var(--blockr-grey-100);
-  --blockr-color-bg-input: var(--blockr-grey-50);
-  --blockr-color-primary: var(--blockr-blue-600);
-  --blockr-color-primary-hover: var(--blockr-blue-700);
-  --blockr-color-primary-bg: var(--blockr-blue-50);
-  --blockr-color-error: #dc2626;
 }
 
-/* ============================================
-   Typography Classes
-   ============================================ */
+
+/* =============================================================================
+   2. BASE
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   2.1 Typography Defaults
+   --------------------------------------------------------------------------- */
+body {
+  font-size: var(--blockr-font-size-base);
+}
+
+h4, .h4 {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-medium);
+  font-variant-caps: all-small-caps;
+  color: var(--blockr-color-text-secondary);
+  letter-spacing: 0.5px;
+}
+
+h5, .h5 {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-medium);
+}
+
+h6, .h6 {
+  font-size: var(--blockr-font-size-base);
+  font-weight: var(--blockr-font-weight-medium);
+}
+
+small, .small {
+  font-size: var(--blockr-font-size-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   2.2 Labels
+   --------------------------------------------------------------------------- */
+label,
+.form-label,
+.shiny-input-container .control-label {
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+label:has(input[type="file"]) {
+  margin-bottom: 0;
+}
+
+
+/* =============================================================================
+   3. TYPOGRAPHY CLASSES
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   3.1 Titles & Text
+   --------------------------------------------------------------------------- */
 .blockr-title {
   font-size: var(--blockr-font-size-title);
   font-weight: var(--blockr-font-weight-semibold);
@@ -68,7 +189,40 @@
   margin: 0;
 }
 
-/* Inline editable title */
+.blockr-subtitle {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-normal);
+  color: var(--blockr-color-text-muted);
+  margin-left: 3px;
+}
+
+.blockr-section-header {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-label {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-helper {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-normal);
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-meta {
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-normal);
+  color: var(--blockr-color-text-meta);
+}
+
+/* ---------------------------------------------------------------------------
+   3.2 Inline Editable Title
+   --------------------------------------------------------------------------- */
 .blockr-inline-edit {
   position: relative;
 }
@@ -103,37 +257,9 @@
   outline: none;
 }
 
-.blockr-subtitle {
-  font-size: var(--blockr-font-size-sm);
-  font-weight: var(--blockr-font-weight-normal);
-  color: var(--blockr-color-text-muted);
-  margin-left: 3px;
-}
-
-.blockr-section-header {
-  font-size: var(--blockr-font-size-section);
-  font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-color-text-secondary);
-}
-
-.blockr-label {
-  font-size: var(--blockr-font-size-sm);
-  font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-color-text-secondary);
-}
-
-.blockr-helper {
-  font-size: var(--blockr-font-size-sm);
-  font-weight: var(--blockr-font-weight-normal);
-  color: var(--blockr-color-text-muted);
-}
-
-.blockr-meta {
-  font-size: var(--blockr-font-size-xs);
-  font-weight: var(--blockr-font-weight-normal);
-  color: var(--blockr-color-text-meta);
-}
-
+/* ---------------------------------------------------------------------------
+   3.3 Error Display
+   --------------------------------------------------------------------------- */
 .blockr-error {
   display: flex;
   align-items: flex-start;
@@ -173,7 +299,9 @@
   transform: rotate(180deg);
 }
 
-/* Section toggle buttons (inputs/outputs) - Figma white background */
+/* ---------------------------------------------------------------------------
+   3.4 Section Toggle
+   --------------------------------------------------------------------------- */
 .blockr-section-toggle .btn.btn-light {
   background-color: #ffffff !important;
   border: 1px solid var(--blockr-color-border) !important;
@@ -208,7 +336,9 @@
   gap: 4px;
 }
 
-/* Package badge - Figma-aligned subtle style */
+/* ---------------------------------------------------------------------------
+   3.5 Badges
+   --------------------------------------------------------------------------- */
 .badge-two-tone {
   display: inline-block;
   padding: 2px 8px;
@@ -221,87 +351,14 @@
   flex-shrink: 0;
 }
 
-/* ============================================
-   Edge Tab (Settings Panel Trigger) - Figma-aligned
-   ============================================ */
-.blockr-edge-tab {
-  display: none; /* Hidden - use navbar gear icon instead */
-  position: fixed;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 88px;
-  background-color: var(--blockr-grey-100);
-  border: 1px solid var(--blockr-color-border);
-  border-right: none;
-  border-radius: 10px 0 0 10px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  box-shadow: var(--blockr-shadow);
-}
 
-.blockr-edge-tab:hover {
-  background-color: var(--blockr-color-border);
-  box-shadow: var(--blockr-shadow-lg);
-}
+/* =============================================================================
+   4. FORMS
+   ============================================================================= */
 
-.blockr-edge-tab svg,
-.blockr-edge-tab i {
-  font-size: 16px;
-  color: var(--blockr-color-text-muted);
-}
-
-/* ============================================
-   Bootstrap Base Overrides
-   ============================================ */
-
-/* --- Typography --- */
-body {
-  font-size: var(--blockr-font-size-base);
-}
-
-h4, .h4 {
-  font-size: var(--blockr-font-size-section);
-  font-weight: var(--blockr-font-weight-medium);
-  font-variant-caps: all-small-caps;
-  color: var(--blockr-color-text-secondary);
-  letter-spacing: 0.5px;
-}
-
-h5, .h5 {
-  font-size: var(--blockr-font-size-section);
-  font-weight: var(--blockr-font-weight-medium);
-}
-
-h6, .h6 {
-  font-size: var(--blockr-font-size-base);
-  font-weight: var(--blockr-font-weight-medium);
-}
-
-small, .small {
-  font-size: var(--blockr-font-size-sm);
-}
-
-/* --- Labels --- */
-label,
-.form-label,
-.shiny-input-container .control-label {
-  font-size: var(--blockr-font-size-xs);
-  color: var(--blockr-color-text-secondary);
-  margin-bottom: 0.25rem;
-}
-
-label:has(input[type="file"]) {
-  margin-bottom: 0;
-}
-
-/* --- Form Controls (Figma-aligned) --- */
+/* ---------------------------------------------------------------------------
+   4.1 Form Controls
+   --------------------------------------------------------------------------- */
 .form-control,
 .form-select {
   font-size: var(--blockr-font-size-base);
@@ -333,7 +390,9 @@ label:has(input[type="file"]) {
   padding: 6px 10px;
 }
 
-/* Selectize - Figma-aligned */
+/* ---------------------------------------------------------------------------
+   4.2 Selectize
+   --------------------------------------------------------------------------- */
 .selectize-control,
 .selectize-input,
 .selectize-dropdown {
@@ -372,7 +431,9 @@ label:has(input[type="file"]) {
   color: var(--blockr-color-text-primary) !important;
 }
 
-/* --- Buttons (Figma-aligned) --- */
+/* ---------------------------------------------------------------------------
+   4.3 Buttons
+   --------------------------------------------------------------------------- */
 .btn {
   font-size: var(--blockr-font-size-base);
   font-weight: var(--blockr-font-weight-medium);
@@ -436,263 +497,14 @@ label:has(input[type="file"]) {
   border-color: var(--blockr-color-border-hover);
 }
 
-/* ============================================
-   Offcanvas / Sidebar Styling (Figma-aligned)
-   ============================================ */
-.offcanvas {
-  width: 320px !important;
-  border-left: 1px solid var(--blockr-color-border) !important;
-}
 
-.offcanvas-header {
-  border-bottom: 1px solid var(--blockr-color-border);
-  padding: 16px 20px;
-}
+/* =============================================================================
+   5. LAYOUT
+   ============================================================================= */
 
-.offcanvas-title {
-  font-size: 1.125rem;
-  font-weight: var(--blockr-font-weight-semibold);
-  color: var(--blockr-color-text-primary);
-}
-
-.offcanvas-body {
-  font-size: var(--blockr-font-size-sm);
-  padding: 20px;
-  background: #ffffff;
-}
-
-.offcanvas .accordion {
-  margin: 0 -20px;
-}
-
-.offcanvas .accordion-button {
-  font-size: var(--blockr-font-size-section);
-  font-weight: var(--blockr-font-weight-semibold);
-  font-variant-caps: all-small-caps;
-  color: var(--blockr-color-text-secondary);
-  letter-spacing: 0.5px;
-  background: transparent;
-}
-
-.offcanvas .accordion-button:not(.collapsed) {
-  background: var(--blockr-color-bg-subtle);
-  box-shadow: none;
-}
-
-/* Export button adjustments */
-.offcanvas .shiny-download-link i,
-.offcanvas .shiny-download-link svg,
-.offcanvas .shiny-download-link .bsicon {
-  display: none;
-}
-
-.offcanvas .shiny-download-link {
-  margin-top: -5px;
-}
-
-/* Make Show code button smaller */
-.offcanvas .btn-default,
-.offcanvas .btn-outline-default {
-  font-size: var(--blockr-font-size-sm);
-  padding: 6px 12px;
-}
-
-.offcanvas hr {
-  margin-left: -20px;
-  margin-right: -20px;
-  border-color: var(--blockr-color-border);
-  opacity: 1;
-}
-
-/* ============================================
-   Tooltip & Popover Styling (Figma-aligned)
-   ============================================ */
-.tooltip {
-  --bs-tooltip-bg: white;
-  --bs-tooltip-color: var(--blockr-color-text-secondary);
-  --bs-tooltip-opacity: 1;
-}
-
-.tooltip-inner {
-  font-size: var(--blockr-font-size-sm);
-  font-weight: var(--blockr-font-weight-normal);
-  padding: 8px 12px;
-  border-radius: 8px;
-  box-shadow: var(--blockr-shadow-lg);
-  border: 1px solid var(--blockr-color-border);
-  max-width: 250px;
-  text-align: left;
-}
-
-.tooltip-arrow::before {
-  border-top-color: white !important;
-  border-bottom-color: white !important;
-}
-
-/* Popover - light style matching tooltips */
-.popover {
-  --bs-popover-bg: white;
-  --bs-popover-border-color: var(--blockr-color-border);
-  --bs-popover-body-color: var(--blockr-color-text-secondary);
-  border-radius: 12px;
-  box-shadow: var(--blockr-shadow-lg);
-  border: 1px solid var(--blockr-color-border);
-  max-width: 280px;
-}
-
-.popover-body {
-  font-size: var(--blockr-font-size-sm);
-  padding: 12px 14px;
-}
-
-.popover-header,
-.popover .btn-close {
-  display: none;
-}
-
-.popover-arrow::before {
-  border-top-color: var(--blockr-color-border) !important;
-  border-bottom-color: var(--blockr-color-border) !important;
-}
-
-.popover-arrow::after {
-  border-top-color: white !important;
-  border-bottom-color: white !important;
-}
-
-/* ============================================
-   DataTables Styling (Figma-aligned)
-   ============================================ */
-
-/* Grey stripes */
-.table-striped {
-  --bs-table-striped-bg: var(--blockr-color-bg-subtle);
-}
-
-.table {
-  border-color: var(--blockr-color-border);
-}
-
-.table > thead {
-  background: var(--blockr-color-bg-subtle);
-}
-
-.table > thead > tr > th {
-  font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-color-text-secondary);
-  border-bottom: 2px solid var(--blockr-color-border);
-  padding: 12px 16px;
-}
-
-.table > tbody > tr > td {
-  color: var(--blockr-color-text-primary);
-  border-bottom: 1px solid var(--blockr-grey-100);
-  padding: 12px 16px;
-}
-
-.table > tbody > tr:hover {
-  background-color: var(--blockr-color-bg-subtle);
-}
-
-/* Info text - small and muted */
-.dataTables_wrapper .dataTables_info {
-  font-size: var(--blockr-font-size-sm) !important;
-  color: var(--blockr-color-text-muted) !important;
-  padding-top: 0.5rem;
-}
-
-/* Smaller paginator */
-.dataTables_wrapper .dataTables_paginate .page-link {
-  padding: 0.2rem 0.5rem;
-  font-size: var(--blockr-font-size-xs);
-  border-radius: 6px;
-}
-
-/* ============================================
-   G6 Graph Toolbar Override
-   ============================================ */
-.g6-toolbar {
-  box-shadow: none !important;
-}
-
-/* ============================================
-   Block Dropdown Menu Styling (Figma-aligned)
-   ============================================ */
-.blockr-block-dropdown {
-  font-size: var(--blockr-font-size-base) !important;
-  border-radius: 12px !important;
-  border: 1px solid var(--blockr-color-border) !important;
-  box-shadow: var(--blockr-shadow-lg) !important;
-  padding: 8px !important;
-}
-
-.blockr-block-dropdown .dropdown-header,
-.blockr-block-dropdown h6.dropdown-header {
-  font-size: var(--blockr-font-size-xs) !important;
-  font-weight: var(--blockr-font-weight-medium) !important;
-  color: var(--blockr-color-text-muted) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-variant-caps: normal;
-  padding: 8px 12px 4px;
-}
-
-.blockr-block-dropdown .dropdown-item {
-  font-size: var(--blockr-font-size-sm) !important;
-  padding: 10px 12px !important;
-  border-radius: 8px !important;
-  color: var(--blockr-color-text-primary) !important;
-}
-
-.blockr-block-dropdown .dropdown-item:hover,
-.blockr-block-dropdown .dropdown-item:focus {
-  background-color: var(--blockr-color-bg-hover) !important;
-  color: var(--blockr-color-text-primary) !important;
-}
-
-.blockr-block-dropdown .text-muted,
-.blockr-block-dropdown span.text-muted {
-  color: var(--blockr-color-text-muted) !important;
-  font-size: var(--blockr-font-size-sm) !important;
-}
-
-.blockr-block-dropdown .small,
-.blockr-block-dropdown span.small {
-  font-size: var(--blockr-font-size-sm) !important;
-}
-
-.blockr-block-dropdown .fw-medium,
-.blockr-block-dropdown span.fw-medium {
-  font-weight: var(--blockr-font-weight-medium) !important;
-  font-size: var(--blockr-font-size-sm) !important;
-}
-
-/* ============================================
-   Dockview Left Actions (Plus Button)
-   ============================================ */
-.dv-left-actions-container {
-  display: flex;
-  align-items: center;
-}
-
-.dv-left-actions-container .fa-plus {
-  font-size: 12px;
-  color: var(--blockr-color-text-muted);
-  padding: 8px 8px;
-  margin-left: -4px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.dv-left-actions-container .fa-plus:hover {
-  background-color: var(--blockr-color-bg-hover);
-  color: var(--blockr-color-text-secondary);
-}
-
-/* ============================================
-   Top Navbar
-   ============================================ */
+/* ---------------------------------------------------------------------------
+   5.1 Navbar
+   --------------------------------------------------------------------------- */
 nav.blockr-navbar {
   display: flex !important;
   flex-direction: row !important;
@@ -917,7 +729,506 @@ nav.blockr-navbar {
   margin-left: 8px;
 }
 
-/* Workflows Dropdown */
+/* ---------------------------------------------------------------------------
+   5.2 View Switching
+   --------------------------------------------------------------------------- */
+.blockr-board-view {
+  position: relative;
+}
+
+.blockr-workflows-view {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 48px);
+}
+
+.blockr-view-hidden {
+  position: absolute !important;
+  left: -9999px !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+
+/* =============================================================================
+   6. COMPONENTS
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   6.1 Offcanvas / Sidebar
+   --------------------------------------------------------------------------- */
+.offcanvas {
+  width: 320px !important;
+  border-left: 1px solid var(--blockr-color-border) !important;
+}
+
+.offcanvas-header {
+  border-bottom: 1px solid var(--blockr-color-border);
+  padding: 16px 20px;
+}
+
+.offcanvas-title {
+  font-size: 1.125rem;
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-primary);
+}
+
+.offcanvas-body {
+  font-size: var(--blockr-font-size-sm);
+  padding: 20px;
+  background: #ffffff;
+}
+
+.offcanvas .accordion {
+  margin: 0 -20px;
+}
+
+.offcanvas .accordion-button {
+  font-size: var(--blockr-font-size-section);
+  font-weight: var(--blockr-font-weight-semibold);
+  font-variant-caps: all-small-caps;
+  color: var(--blockr-color-text-secondary);
+  letter-spacing: 0.5px;
+  background: transparent;
+}
+
+.offcanvas .accordion-button:not(.collapsed) {
+  background: var(--blockr-color-bg-subtle);
+  box-shadow: none;
+}
+
+/* Export button adjustments */
+.offcanvas .shiny-download-link i,
+.offcanvas .shiny-download-link svg,
+.offcanvas .shiny-download-link .bsicon {
+  display: none;
+}
+
+.offcanvas .shiny-download-link {
+  margin-top: -5px;
+}
+
+/* Make Show code button smaller */
+.offcanvas .btn-default,
+.offcanvas .btn-outline-default {
+  font-size: var(--blockr-font-size-sm);
+  padding: 6px 12px;
+}
+
+.offcanvas hr {
+  margin-left: -20px;
+  margin-right: -20px;
+  border-color: var(--blockr-color-border);
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------------------
+   6.2 Tooltip & Popover
+   --------------------------------------------------------------------------- */
+.tooltip {
+  --bs-tooltip-bg: white;
+  --bs-tooltip-color: var(--blockr-color-text-secondary);
+  --bs-tooltip-opacity: 1;
+}
+
+.tooltip-inner {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-normal);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: var(--blockr-shadow-lg);
+  border: 1px solid var(--blockr-color-border);
+  max-width: 250px;
+  text-align: left;
+}
+
+.tooltip-arrow::before {
+  border-top-color: white !important;
+  border-bottom-color: white !important;
+}
+
+/* Popover - light style matching tooltips */
+.popover {
+  --bs-popover-bg: white;
+  --bs-popover-border-color: var(--blockr-color-border);
+  --bs-popover-body-color: var(--blockr-color-text-secondary);
+  border-radius: 12px;
+  box-shadow: var(--blockr-shadow-lg);
+  border: 1px solid var(--blockr-color-border);
+  max-width: 280px;
+}
+
+.popover-body {
+  font-size: var(--blockr-font-size-sm);
+  padding: 12px 14px;
+}
+
+.popover-header,
+.popover .btn-close {
+  display: none;
+}
+
+.popover-arrow::before {
+  border-top-color: var(--blockr-color-border) !important;
+  border-bottom-color: var(--blockr-color-border) !important;
+}
+
+.popover-arrow::after {
+  border-top-color: white !important;
+  border-bottom-color: white !important;
+}
+
+/* ---------------------------------------------------------------------------
+   6.3 Dropdown Menus
+   --------------------------------------------------------------------------- */
+.blockr-block-dropdown {
+  font-size: var(--blockr-font-size-base) !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--blockr-color-border) !important;
+  box-shadow: var(--blockr-shadow-lg) !important;
+  padding: 8px !important;
+}
+
+.blockr-block-dropdown .dropdown-header,
+.blockr-block-dropdown h6.dropdown-header {
+  font-size: var(--blockr-font-size-xs) !important;
+  font-weight: var(--blockr-font-weight-medium) !important;
+  color: var(--blockr-color-text-muted) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-variant-caps: normal;
+  padding: 8px 12px 4px;
+}
+
+.blockr-block-dropdown .dropdown-item {
+  font-size: var(--blockr-font-size-sm) !important;
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+  color: var(--blockr-color-text-primary) !important;
+}
+
+.blockr-block-dropdown .dropdown-item:hover,
+.blockr-block-dropdown .dropdown-item:focus {
+  background-color: var(--blockr-color-bg-hover) !important;
+  color: var(--blockr-color-text-primary) !important;
+}
+
+.blockr-block-dropdown .text-muted,
+.blockr-block-dropdown span.text-muted {
+  color: var(--blockr-color-text-muted) !important;
+  font-size: var(--blockr-font-size-sm) !important;
+}
+
+.blockr-block-dropdown .small,
+.blockr-block-dropdown span.small {
+  font-size: var(--blockr-font-size-sm) !important;
+}
+
+.blockr-block-dropdown .fw-medium,
+.blockr-block-dropdown span.fw-medium {
+  font-weight: var(--blockr-font-weight-medium) !important;
+  font-size: var(--blockr-font-size-sm) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   6.4 Tables / DataTables
+   --------------------------------------------------------------------------- */
+/* Grey stripes */
+.table-striped {
+  --bs-table-striped-bg: var(--blockr-color-bg-subtle);
+}
+
+.table {
+  border-color: var(--blockr-color-border);
+}
+
+.table > thead {
+  background: var(--blockr-color-bg-subtle);
+}
+
+.table > thead > tr > th {
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-secondary);
+  border-bottom: 2px solid var(--blockr-color-border);
+  padding: 12px 16px;
+}
+
+.table > tbody > tr > td {
+  color: var(--blockr-color-text-primary);
+  border-bottom: 1px solid var(--blockr-grey-100);
+  padding: 12px 16px;
+}
+
+.table > tbody > tr:hover {
+  background-color: var(--blockr-color-bg-subtle);
+}
+
+/* Info text - small and muted */
+.dataTables_wrapper .dataTables_info {
+  font-size: var(--blockr-font-size-sm) !important;
+  color: var(--blockr-color-text-muted) !important;
+  padding-top: 0.5rem;
+}
+
+/* Smaller paginator */
+.dataTables_wrapper .dataTables_paginate .page-link {
+  padding: 0.2rem 0.5rem;
+  font-size: var(--blockr-font-size-xs);
+  border-radius: 6px;
+}
+
+
+/* =============================================================================
+   7. FEATURES
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   7.1 Block Selector Panel (slide-out)
+   --------------------------------------------------------------------------- */
+.blockr-block-panel {
+  position: fixed;
+  right: 0;
+  top: 48px; /* Below navbar */
+  bottom: 0;
+  width: 384px;
+  background: #ffffff;
+  border-left: 1px solid var(--blockr-color-border);
+  box-shadow: var(--blockr-shadow-lg);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(0);
+  transition: transform 0.3s ease-out;
+}
+
+.blockr-block-panel-hidden {
+  transform: translateX(100%);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.blockr-block-panel:not(.blockr-block-panel-hidden) {
+  visibility: visible;
+}
+
+/* Panel Header */
+.blockr-block-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--blockr-color-border);
+  flex-shrink: 0;
+}
+
+.blockr-block-panel-title {
+  font-size: 16px;
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-primary);
+  margin: 0;
+}
+
+.blockr-block-panel-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--blockr-grey-500);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.blockr-block-panel-close:hover {
+  background: var(--blockr-grey-100);
+  color: var(--blockr-grey-700);
+}
+
+/* Panel Search */
+.blockr-block-panel-search {
+  padding: 16px;
+  border-bottom: 1px solid var(--blockr-color-border);
+  flex-shrink: 0;
+}
+
+.blockr-block-panel-search-wrapper {
+  position: relative;
+}
+
+.blockr-block-panel-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--blockr-grey-400);
+  pointer-events: none;
+}
+
+.blockr-block-panel-search-input {
+  width: 100%;
+  padding: 10px 12px 10px 40px;
+  font-size: 14px;
+  background: var(--blockr-grey-50);
+  border: 1px solid var(--blockr-color-border);
+  border-radius: 8px;
+  color: var(--blockr-color-text-primary);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.blockr-block-panel-search-input::placeholder {
+  color: var(--blockr-grey-400);
+}
+
+.blockr-block-panel-search-input:focus {
+  outline: none;
+  border-color: var(--blockr-blue-500);
+  box-shadow: 0 0 0 3px var(--blockr-blue-100);
+}
+
+/* Panel Content (scrollable) */
+.blockr-block-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* Block Category */
+.blockr-block-category {
+  margin-bottom: 20px;
+}
+
+.blockr-block-category:last-child {
+  margin-bottom: 0;
+}
+
+.blockr-block-category-title {
+  font-size: 12px;
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-grey-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 12px 0;
+}
+
+/* Block Item */
+.blockr-block-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.blockr-block-item:hover {
+  background: var(--blockr-grey-50);
+  border-color: var(--blockr-color-border);
+}
+
+.blockr-block-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.blockr-block-item-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Category-specific icon colors (Okabe-Ito) */
+.blockr-block-item-icon.category-input {
+  background: rgba(0, 114, 178, 0.1);
+  color: #0072B2;
+}
+
+.blockr-block-item-icon.category-transform {
+  background: rgba(0, 158, 115, 0.1);
+  color: #009E73;
+}
+
+.blockr-block-item-icon.category-plot {
+  background: rgba(230, 159, 0, 0.1);
+  color: #E69F00;
+}
+
+.blockr-block-item-icon.category-table {
+  background: rgba(204, 121, 167, 0.1);
+  color: #CC79A7;
+}
+
+.blockr-block-item-icon.category-model {
+  background: rgba(240, 228, 66, 0.15);
+  color: #b8a800;
+}
+
+.blockr-block-item-icon.category-output {
+  background: rgba(213, 94, 0, 0.1);
+  color: #D55E00;
+}
+
+.blockr-block-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.blockr-block-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.blockr-block-item-name {
+  font-size: 14px;
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-primary);
+  margin: 0;
+}
+
+.blockr-block-item-pkg {
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-grey-500);
+  background: var(--blockr-grey-100);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.blockr-block-item-desc {
+  font-size: 12px;
+  color: var(--blockr-grey-500);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Empty state when search has no results */
+.blockr-block-panel-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--blockr-grey-500);
+  font-size: 14px;
+}
+
+/* ---------------------------------------------------------------------------
+   7.2 Workflow Dropdown
+   --------------------------------------------------------------------------- */
 .blockr-workflows-dropdown {
   width: 288px;
   padding: 16px !important;
@@ -1019,10 +1330,9 @@ nav.blockr-navbar {
   height: 14px;
 }
 
-/* ============================================
-   Version History Dropdown
-   ============================================ */
-
+/* ---------------------------------------------------------------------------
+   7.3 Version History Dropdown
+   --------------------------------------------------------------------------- */
 .blockr-navbar-version-btn {
   display: inline-flex;
   align-items: center;
@@ -1178,32 +1488,234 @@ nav.blockr-navbar {
   font-size: 14px;
 }
 
-/* ============================================
-   View Switching (Board / Workflows)
-   ============================================ */
-
-.blockr-board-view {
-  position: relative;
+/* ---------------------------------------------------------------------------
+   7.4 Tabbed Dropdown (Workflows + History)
+   --------------------------------------------------------------------------- */
+.blockr-tabbed-dropdown {
+  width: 320px;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
+  border: 1px solid #e5e7eb !important;
+  margin-top: 8px !important;
+  overflow: hidden;
+  background: white;
 }
 
-.blockr-workflows-view {
-  position: relative;
-  width: 100%;
-  height: calc(100vh - 48px);
+/* Tab bar */
+.blockr-tab-bar {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
 }
 
-.blockr-view-hidden {
-  position: absolute !important;
-  left: -9999px !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
+.blockr-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.15s ease;
 }
 
-/* ============================================
-   Workflow Overview Page (Full Page)
-   ============================================ */
+.blockr-tab:hover {
+  color: #111827;
+}
 
-/* Full page workflow overview */
+.blockr-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.blockr-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+.blockr-tab.active svg {
+  color: #2563eb;
+}
+
+/* Tab panels */
+.blockr-tab-panel {
+  padding: 8px;
+  max-height: 384px;
+  overflow-y: auto;
+}
+
+.blockr-tab-panel-hidden {
+  position: absolute;
+  left: -9999px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Workflows panel styling */
+.blockr-tab-panel .blockr-workflows-section {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+.blockr-tab-panel .blockr-workflows-list {
+  margin-bottom: 0;
+}
+
+.blockr-tab-footer {
+  padding: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.blockr-tab-footer .blockr-workflows-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  color: #2563eb;
+  font-size: 14px;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-tab-footer .blockr-workflows-link:hover {
+  background: #dbeafe;
+  text-decoration: none;
+}
+
+/* History panel styling */
+.blockr-history-title {
+  font-size: 14px;
+  color: #374151;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  margin: -8px -8px 8px -8px;
+  background: #f9fafb;
+}
+
+/* Current version card in history */
+.blockr-tab-panel .blockr-version-section {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 12px 8px;
+  margin: 0;
+}
+
+.blockr-tab-panel .blockr-version-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  margin-bottom: 6px;
+}
+
+.blockr-tab-panel .blockr-version-item:hover {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.blockr-tab-panel .blockr-version-current {
+  background: rgba(239, 246, 255, 0.5);
+  border-color: transparent;
+}
+
+.blockr-tab-panel .blockr-version-current:hover {
+  background: rgba(219, 234, 254, 0.5);
+}
+
+.blockr-tab-panel .blockr-version-item-content {
+  flex: 1;
+}
+
+.blockr-tab-panel .blockr-version-item-title {
+  font-size: 14px;
+  font-weight: 400;
+  color: #111827;
+}
+
+.blockr-tab-panel .blockr-version-item-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.blockr-tab-panel .blockr-version-item-desc {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.blockr-tab-panel .blockr-version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.blockr-tab-panel .blockr-version-restore-btn {
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.blockr-tab-panel .blockr-version-restore-btn:hover {
+  text-decoration: underline;
+}
+
+.blockr-tab-panel .blockr-version-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* View full history link */
+.blockr-tab-panel .blockr-version-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  color: #2563eb;
+  font-size: 14px;
+  text-decoration: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 8px -8px -8px -8px;
+}
+
+.blockr-tab-panel .blockr-version-link:hover {
+  background: #dbeafe;
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------------------
+   7.5 Workflow Overview Page (Full Page)
+   --------------------------------------------------------------------------- */
 .blockr-workflow-page {
   display: flex;
   flex-direction: column;
@@ -1483,472 +1995,82 @@ nav.blockr-navbar {
   font-size: 14px;
 }
 
-/* ============================================
-   Tabbed Dropdown (Workflows + History)
-   ============================================ */
+/* ---------------------------------------------------------------------------
+   7.6 Block Dropdown Menu
+   --------------------------------------------------------------------------- */
+/* (Styles already in 6.3 Dropdown Menus) */
 
-.blockr-tabbed-dropdown {
-  width: 320px;
-  padding: 0 !important;
-  border-radius: 12px !important;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
-  border: 1px solid #e5e7eb !important;
-  margin-top: 8px !important;
-  overflow: hidden;
-  background: white;
-}
 
-/* Tab bar */
-.blockr-tab-bar {
-  display: flex;
-  border-bottom: 1px solid #e5e7eb;
-  background: white;
-}
+/* =============================================================================
+   8. EXTERNAL / THIRD-PARTY
+   ============================================================================= */
 
-.blockr-tab {
+/* ---------------------------------------------------------------------------
+   8.1 Dockview
+   --------------------------------------------------------------------------- */
+.dv-left-actions-container {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex: 1;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  font-size: 14px;
-  font-weight: 400;
-  color: #6b7280;
-  cursor: pointer;
-  transition: color 0.15s ease;
 }
 
-.blockr-tab:hover {
-  color: #111827;
-}
-
-.blockr-tab.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
-}
-
-.blockr-tab svg {
-  width: 16px;
-  height: 16px;
-}
-
-.blockr-tab.active svg {
-  color: #2563eb;
-}
-
-/* Tab panels */
-.blockr-tab-panel {
-  padding: 8px;
-  max-height: 384px;
-  overflow-y: auto;
-}
-
-.blockr-tab-panel-hidden {
-  position: absolute;
-  left: -9999px;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* Workflows panel styling */
-.blockr-tab-panel .blockr-workflows-section {
+.dv-left-actions-container .fa-plus {
   font-size: 12px;
-  font-weight: 400;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 8px 12px;
-  margin: 0;
-}
-
-.blockr-tab-panel .blockr-workflows-list {
-  margin-bottom: 0;
-}
-
-.blockr-tab-footer {
-  padding: 8px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.blockr-tab-footer .blockr-workflows-link {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 12px;
-  color: #2563eb;
-  font-size: 14px;
-  text-decoration: none;
+  color: var(--blockr-color-text-muted);
+  padding: 8px 8px;
+  margin-left: -4px;
   border-radius: 8px;
-  transition: background-color 0.15s ease;
-}
-
-.blockr-tab-footer .blockr-workflows-link:hover {
-  background: #dbeafe;
-  text-decoration: none;
-}
-
-/* History panel styling */
-.blockr-history-title {
-  font-size: 14px;
-  color: #374151;
-  padding: 8px 12px;
-  border-bottom: 1px solid #e5e7eb;
-  margin: -8px -8px 8px -8px;
-  background: #f9fafb;
-}
-
-/* Current version card in history */
-.blockr-tab-panel .blockr-version-section {
-  font-size: 12px;
-  font-weight: 400;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 12px 12px 8px;
-  margin: 0;
-}
-
-.blockr-tab-panel .blockr-version-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  margin-bottom: 6px;
-}
-
-.blockr-tab-panel .blockr-version-item:hover {
-  background: #f9fafb;
-  border-color: #e5e7eb;
-}
-
-.blockr-tab-panel .blockr-version-current {
-  background: rgba(239, 246, 255, 0.5);
-  border-color: transparent;
-}
-
-.blockr-tab-panel .blockr-version-current:hover {
-  background: rgba(219, 234, 254, 0.5);
-}
-
-.blockr-tab-panel .blockr-version-item-content {
-  flex: 1;
-}
-
-.blockr-tab-panel .blockr-version-item-title {
-  font-size: 14px;
-  font-weight: 400;
-  color: #111827;
-}
-
-.blockr-tab-panel .blockr-version-item-meta {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 2px;
-}
-
-.blockr-tab-panel .blockr-version-item-desc {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-top: 4px;
-}
-
-.blockr-tab-panel .blockr-version-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.blockr-tab-panel .blockr-version-restore-btn {
-  padding: 0;
-  background: transparent;
-  border: none;
-  color: #2563eb;
-  font-size: 12px;
-  font-weight: 400;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.blockr-tab-panel .blockr-version-restore-btn:hover {
-  text-decoration: underline;
+.dv-left-actions-container .fa-plus:hover {
+  background-color: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-secondary);
 }
 
-.blockr-tab-panel .blockr-version-empty {
-  padding: 24px 12px;
-  text-align: center;
-  color: #6b7280;
-  font-size: 14px;
+/* ---------------------------------------------------------------------------
+   8.2 G6 Graph
+   --------------------------------------------------------------------------- */
+.g6-toolbar {
+  box-shadow: none !important;
 }
 
-/* View full history link */
-.blockr-tab-panel .blockr-version-link {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 12px;
-  color: #2563eb;
-  font-size: 14px;
-  text-decoration: none;
-  border-top: 1px solid #e5e7eb;
-  margin: 8px -8px -8px -8px;
-}
 
-.blockr-tab-panel .blockr-version-link:hover {
-  background: #dbeafe;
-  text-decoration: none;
-}
+/* =============================================================================
+   9. DEPRECATED
+   ============================================================================= */
 
-/* ============================================
-   Slide-out Block Selector Panel
-   ============================================ */
-.blockr-block-panel {
+/* ---------------------------------------------------------------------------
+   9.1 Edge Tab (Settings Panel Trigger) - Hidden, use navbar gear instead
+   --------------------------------------------------------------------------- */
+.blockr-edge-tab {
+  display: none; /* Hidden - use navbar gear icon instead */
   position: fixed;
   right: 0;
-  top: 48px; /* Below navbar */
-  bottom: 0;
-  width: 384px;
-  background: #ffffff;
-  border-left: 1px solid var(--blockr-color-border);
-  box-shadow: var(--blockr-shadow-lg);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  transform: translateX(0);
-  transition: transform 0.3s ease-out;
-}
-
-.blockr-block-panel-hidden {
-  transform: translateX(100%);
-  pointer-events: none;
-  visibility: hidden;
-}
-
-.blockr-block-panel:not(.blockr-block-panel-hidden) {
-  visibility: visible;
-}
-
-/* Panel Header */
-.blockr-block-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--blockr-color-border);
-  flex-shrink: 0;
-}
-
-.blockr-block-panel-title {
-  font-size: 16px;
-  font-weight: var(--blockr-font-weight-semibold);
-  color: var(--blockr-color-text-primary);
-  margin: 0;
-}
-
-.blockr-block-panel-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: var(--blockr-grey-500);
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.blockr-block-panel-close:hover {
-  background: var(--blockr-grey-100);
-  color: var(--blockr-grey-700);
-}
-
-/* Panel Search */
-.blockr-block-panel-search {
-  padding: 16px;
-  border-bottom: 1px solid var(--blockr-color-border);
-  flex-shrink: 0;
-}
-
-.blockr-block-panel-search-wrapper {
-  position: relative;
-}
-
-.blockr-block-panel-search-icon {
-  position: absolute;
-  left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--blockr-grey-400);
-  pointer-events: none;
-}
-
-.blockr-block-panel-search-input {
-  width: 100%;
-  padding: 10px 12px 10px 40px;
-  font-size: 14px;
-  background: var(--blockr-grey-50);
+  width: 32px;
+  height: 88px;
+  background-color: var(--blockr-grey-100);
   border: 1px solid var(--blockr-color-border);
-  border-radius: 8px;
-  color: var(--blockr-color-text-primary);
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.blockr-block-panel-search-input::placeholder {
-  color: var(--blockr-grey-400);
-}
-
-.blockr-block-panel-search-input:focus {
-  outline: none;
-  border-color: var(--blockr-blue-500);
-  box-shadow: 0 0 0 3px var(--blockr-blue-100);
-}
-
-/* Panel Content (scrollable) */
-.blockr-block-panel-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-
-/* Block Category */
-.blockr-block-category {
-  margin-bottom: 20px;
-}
-
-.blockr-block-category:last-child {
-  margin-bottom: 0;
-}
-
-.blockr-block-category-title {
-  font-size: 12px;
-  font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-grey-500);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 12px 0;
-}
-
-/* Block Item */
-.blockr-block-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  width: 100%;
-  padding: 12px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  border-right: none;
+  border-radius: 10px 0 0 10px;
   cursor: pointer;
-  text-align: left;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-
-.blockr-block-item:hover {
-  background: var(--blockr-grey-50);
-  border-color: var(--blockr-color-border);
-}
-
-.blockr-block-item-icon {
-  display: flex;
+  transition: all 0.15s ease;
+  z-index: 1000;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  flex-shrink: 0;
+  padding: 0;
+  box-shadow: var(--blockr-shadow);
 }
 
-.blockr-block-item-icon svg {
-  width: 20px;
-  height: 20px;
+.blockr-edge-tab:hover {
+  background-color: var(--blockr-color-border);
+  box-shadow: var(--blockr-shadow-lg);
 }
 
-/* Category-specific icon colors */
-.blockr-block-item-icon.category-input {
-  background: rgba(0, 114, 178, 0.1);
-  color: #0072B2;
-}
-
-.blockr-block-item-icon.category-transform {
-  background: rgba(0, 158, 115, 0.1);
-  color: #009E73;
-}
-
-.blockr-block-item-icon.category-plot {
-  background: rgba(230, 159, 0, 0.1);
-  color: #E69F00;
-}
-
-.blockr-block-item-icon.category-table {
-  background: rgba(204, 121, 167, 0.1);
-  color: #CC79A7;
-}
-
-.blockr-block-item-icon.category-model {
-  background: rgba(240, 228, 66, 0.15);
-  color: #b8a800;
-}
-
-.blockr-block-item-icon.category-output {
-  background: rgba(213, 94, 0, 0.1);
-  color: #D55E00;
-}
-
-.blockr-block-item-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.blockr-block-item-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-
-.blockr-block-item-name {
-  font-size: 14px;
-  font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-color-text-primary);
-  margin: 0;
-}
-
-.blockr-block-item-pkg {
-  font-size: 11px;
-  font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-grey-500);
-  background: var(--blockr-grey-100);
-  padding: 2px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.blockr-block-item-desc {
-  font-size: 12px;
-  color: var(--blockr-grey-500);
-  margin: 0;
-  line-height: 1.4;
-}
-
-/* Empty state when search has no results */
-.blockr-block-panel-empty {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--blockr-grey-500);
-  font-size: 14px;
+.blockr-edge-tab svg,
+.blockr-edge-tab i {
+  font-size: 16px;
+  color: var(--blockr-color-text-muted);
 }
