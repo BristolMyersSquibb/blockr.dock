@@ -133,6 +133,8 @@
 /* ---------------------------------------------------------------------------
    2.0 Page Container (Bootstrap-free)
    --------------------------------------------------------------------------- */
+
+/* Global box-sizing reset (like Bootstrap) */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -221,6 +223,44 @@ label,
 
 label:has(input[type="file"]) {
   margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   2.3 Checkboxes (Bootstrap form-check replacement)
+   --------------------------------------------------------------------------- */
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.form-check-input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--blockr-primary-500);
+}
+
+.form-check-label {
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-primary);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Checkbox group container */
+.shiny-input-checkboxgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.shiny-input-checkboxgroup > label {
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-secondary);
+  margin-bottom: 0.25rem;
 }
 
 
@@ -349,8 +389,34 @@ label:has(input[type="file"]) {
 }
 
 /* ---------------------------------------------------------------------------
-   3.4 Section Toggle
+   3.4 Section Toggle (shinyWidgets checkboxGroupButtons)
    --------------------------------------------------------------------------- */
+/* Base btn-group styling for toggle buttons */
+.blockr-section-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+}
+
+.blockr-section-toggle .btn-group {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.blockr-section-toggle .btn-group-toggle {
+  display: inline-flex;
+  gap: 4px;
+}
+
+/* Hide the actual checkbox input */
+.blockr-section-toggle .btn-check,
+.blockr-section-toggle input[type="checkbox"],
+.blockr-section-toggle input[type="radio"] {
+  position: absolute;
+  clip: rect(0, 0, 0, 0);
+  pointer-events: none;
+}
+
 .blockr-section-toggle .btn.btn-light {
   background-color: #ffffff !important;
   border: 1px solid var(--blockr-color-border) !important;
@@ -783,6 +849,8 @@ nav.blockr-navbar {
    --------------------------------------------------------------------------- */
 .blockr-board-view {
   position: relative;
+  flex: 1;
+  min-height: 0;
 }
 
 .blockr-workflows-view {
@@ -2145,6 +2213,70 @@ nav.blockr-navbar {
    --------------------------------------------------------------------------- */
 .g6-toolbar {
   box-shadow: none !important;
+}
+
+/* Ensure G6 container matches its panel dimensions BEFORE G6 initializes */
+/* The key is to constrain the g6 container so it can't exceed its panel */
+.g6 {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+/* The canvas inside G6 should also be constrained */
+.g6 canvas {
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+/* G6 node checkboxes - fix styling without Bootstrap */
+.g6 .form-check,
+.g6 [class*="form-check"] {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  margin: 0;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.g6 .form-check-input,
+.g6 input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.g6 .form-check-label {
+  font-size: 12px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* Ensure dockview panel content fills the panel */
+.dv-render-overlay,
+[class*="ext_panel-dag"] {
+  width: 100%;
+  height: 100%;
+}
+
+/* The dag canvas container should fill its parent and be the positioning context */
+.dag-canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Force dockview panel to establish sizing context */
+.dockview-panel {
+  position: relative;
+  overflow: hidden;
 }
 
 

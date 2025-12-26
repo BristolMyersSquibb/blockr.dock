@@ -3,14 +3,43 @@
  * Bootstrap-free component handlers for blockr.dock
  */
 
-// Shim: Fake Bootstrap 5 presence for bslib components (e.g., input_switch)
+// Shim: Fake Bootstrap 5 presence for bslib components (e.g., input_switch, popover)
 if (!window.bootstrap) {
+  // Minimal Popover constructor that bslib expects
+  function Popover(element, options) {
+    this.element = element;
+    this.options = options || {};
+  }
+  Popover.VERSION = '5.3.0';
+  Popover.prototype.show = function() {};
+  Popover.prototype.hide = function() {};
+  Popover.prototype.toggle = function() {};
+  Popover.prototype.dispose = function() {};
+  Popover.prototype.disconnect = function() {};
+  Popover.getInstance = function() { return null; };
+  Popover.getOrCreateInstance = function(el, opts) { return new Popover(el, opts); };
+
+  // Minimal Tooltip constructor
+  function Tooltip(element, options) {
+    this.element = element;
+    this.options = options || {};
+  }
+  Tooltip.VERSION = '5.3.0';
+  Tooltip.prototype.show = function() {};
+  Tooltip.prototype.hide = function() {};
+  Tooltip.prototype.toggle = function() {};
+  Tooltip.prototype.dispose = function() {};
+  Tooltip.getInstance = function() { return null; };
+  Tooltip.getOrCreateInstance = function(el, opts) { return new Tooltip(el, opts); };
+
   window.bootstrap = {
     Tab: { VERSION: '5.3.0' },
     Modal: { VERSION: '5.3.0' },
     Dropdown: { VERSION: '5.3.0' },
     Offcanvas: { VERSION: '5.3.0' },
-    Collapse: { VERSION: '5.3.0' }
+    Collapse: { VERSION: '5.3.0' },
+    Popover: Popover,
+    Tooltip: Tooltip
   };
 }
 
@@ -166,6 +195,82 @@ if (!window.bootstrap) {
   } else {
     initModalObserver();
   }
+
+  /* ===========================================================================
+     G6 DEBUG - Finding the root cause
+     =========================================================================== */
+
+  var g6CheckInterval = setInterval(function() {
+    document.querySelectorAll('.g6').forEach(function(el) {
+      if (el.dataset.checked) return;
+
+      var widget = window.HTMLWidgets && HTMLWidgets.find('#' + el.id);
+      if (widget && widget.getWidget) {
+        var graph = widget.getWidget();
+        if (graph) {
+          el.dataset.checked = 'true';
+
+          // THE KEY INFO - G6's internal size vs actual container
+          var graphSize = graph.getSize ? graph.getSize() : [0, 0];
+          var containerRect = el.getBoundingClientRect();
+          var viewportCenter = graph.getViewportCenter ? graph.getViewportCenter() : [0, 0, 0];
+
+          console.log('========================================');
+          console.log('G6 MISMATCH DEBUG');
+          console.log('========================================');
+          console.log('G6 internal size:    ', graphSize[0], 'x', graphSize[1]);
+          console.log('Container actual:    ', Math.round(containerRect.width), 'x', Math.round(containerRect.height));
+          console.log('Viewport center:     ', viewportCenter[0], ',', viewportCenter[1]);
+          console.log('Expected center:     ', Math.round(containerRect.width/2), ',', Math.round(containerRect.height/2));
+
+          // Check the canvas - this is what G6 actually renders to
+          var canvas = el.querySelector('canvas');
+          if (canvas) {
+            console.log('Canvas size:         ', canvas.width, 'x', canvas.height);
+            console.log('Canvas CSS size:     ', canvas.style.width, ',', canvas.style.height);
+          }
+
+          // What element does G6 think is its container?
+          console.log('');
+          console.log('Container chain sizes:');
+          var p = el;
+          for (var i = 0; i < 5 && p; i++) {
+            console.log('  [' + i + '] ' + (p.className || p.tagName).substring(0, 40) + ': ' +
+                        p.offsetWidth + 'x' + p.offsetHeight);
+            p = p.parentElement;
+          }
+
+          // Check if there's a size mismatch and fix it
+          if (Math.abs(graphSize[0] - containerRect.width) > 50) {
+            console.log('');
+            console.log('SIZE MISMATCH! G6 thinks:', graphSize[0], 'but container is:', containerRect.width);
+            console.log('Attempting to resize G6...');
+
+            // Try to resize G6 to match container
+            if (graph.setSize) {
+              graph.setSize(containerRect.width, containerRect.height);
+              console.log('Called setSize');
+            } else if (graph.changeSize) {
+              graph.changeSize(containerRect.width, containerRect.height);
+              console.log('Called changeSize');
+            }
+
+            // Check new size
+            var newSize = graph.getSize ? graph.getSize() : [0, 0];
+            console.log('New G6 size:', newSize[0], 'x', newSize[1]);
+          }
+
+          // Fix viewport if wrong
+          var newViewport = graph.getViewportCenter ? graph.getViewportCenter() : [0, 0, 0];
+          if (Math.abs(newViewport[0] - containerRect.width/2) > 50) {
+            if (graph.fitCenter) graph.fitCenter();
+          }
+        }
+      }
+    });
+  }, 300);
+
+  setTimeout(function() { clearInterval(g6CheckInterval); }, 10000);
 
   /* ===========================================================================
      DROPDOWN
