@@ -124,9 +124,10 @@ options_ui <- function(id, x, ...) {
 
 blockr_dock_dep <- function() {
   htmltools::htmlDependency(
-    "blockr-fab",
+    "blockr-dock",
     pkg_version(),
-    src = pkg_file("assets", "css"),
-    stylesheet = "blockr-dock.css"
+    src = pkg_file("assets"),
+    stylesheet = "css/blockr-dock.css",
+    script = "js/blockr-components.js"
   )
 }

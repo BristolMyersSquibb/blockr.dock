@@ -131,11 +131,60 @@
    ============================================================================= */
 
 /* ---------------------------------------------------------------------------
+   2.0 Page Container (Bootstrap-free)
+   --------------------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--blockr-font-size-base);
+  line-height: 1.5;
+  color: var(--blockr-color-text-primary);
+  background-color: var(--blockr-grey-50);
+}
+
+/* Reset list styles */
+ul, ol,
+.blockr-app ul,
+.blockr-app ol {
+  list-style: none !important;
+  padding: 0;
+  margin: 0;
+}
+
+/* Card styles (from blockr.core) */
+.card {
+  background: #fff;
+  border: 1px solid var(--blockr-color-border);
+  border-radius: 8px;
+}
+
+.card-body {
+  padding: 1rem;
+}
+
+.card-title {
+  margin-bottom: 0.5rem;
+}
+
+.blockr-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------------------
    2.1 Typography Defaults
    --------------------------------------------------------------------------- */
-body {
-  font-size: var(--blockr-font-size-base);
-}
 
 h4, .h4 {
   font-size: var(--blockr-font-size-section);
@@ -755,11 +804,40 @@ nav.blockr-navbar {
    ============================================================================= */
 
 /* ---------------------------------------------------------------------------
-   6.1 Offcanvas / Sidebar
+   6.1 Offcanvas / Sidebar (Bootstrap-free)
    --------------------------------------------------------------------------- */
 .offcanvas {
-  width: 320px !important;
-  border-left: 1px solid var(--blockr-color-border) !important;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 1045;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  visibility: hidden;
+  background-color: #fff;
+  transition: transform 0.3s ease-in-out;
+}
+
+.offcanvas-end {
+  right: 0;
+  width: 320px;
+  border-left: 1px solid var(--blockr-color-border);
+  transform: translateX(100%);
+}
+
+.offcanvas-bottom {
+  left: 0;
+  right: 0;
+  height: auto;
+  max-height: 50vh;
+  border-top: 1px solid var(--blockr-color-border);
+  transform: translateY(100%);
+}
+
+.offcanvas.show {
+  visibility: visible;
+  transform: none;
 }
 
 .offcanvas-header {
@@ -777,6 +855,40 @@ nav.blockr-navbar {
   font-size: var(--blockr-font-size-sm);
   padding: 20px;
   background: #ffffff;
+}
+
+/* Accordion/Collapse - hidden by default */
+.accordion-collapse,
+.collapse {
+  display: none;
+}
+
+.accordion-collapse.show,
+.collapse.show {
+  display: block;
+}
+
+/* Dropdown - hidden by default */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  min-width: 10rem;
+  padding: 0.5rem 0;
+  background-color: #fff;
+  border: 1px solid var(--blockr-color-border);
+  border-radius: 8px;
+  box-shadow: var(--blockr-shadow-lg);
+}
+
+.dropdown-menu.show {
+  display: block;
 }
 
 .offcanvas .accordion {
@@ -2074,3 +2186,75 @@ nav.blockr-navbar {
   font-size: 16px;
   color: var(--blockr-color-text-muted);
 }
+
+
+/* =============================================================================
+   10. BOOTSTRAP UTILITY REPLACEMENTS
+   ============================================================================= */
+
+/* Display & Flex */
+.d-flex { display: flex !important; }
+.d-inline-flex { display: inline-flex !important; }
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+.flex-column { flex-direction: column !important; }
+.flex-row { flex-direction: row !important; }
+.flex-grow-1 { flex-grow: 1 !important; }
+.flex-shrink-0 { flex-shrink: 0 !important; }
+
+/* Alignment */
+.align-items-center { align-items: center !important; }
+.align-items-start { align-items: flex-start !important; }
+.align-items-end { align-items: flex-end !important; }
+.align-items-stretch { align-items: stretch !important; }
+.justify-content-center { justify-content: center !important; }
+.justify-content-start { justify-content: flex-start !important; }
+.justify-content-end { justify-content: flex-end !important; }
+.justify-content-between { justify-content: space-between !important; }
+.justify-content-evenly { justify-content: space-evenly !important; }
+
+/* Gap */
+.gap-1 { gap: 0.25rem !important; }
+.gap-2 { gap: 0.5rem !important; }
+.gap-3 { gap: 1rem !important; }
+.gap-4 { gap: 1.5rem !important; }
+
+/* Margin */
+.m-0 { margin: 0 !important; }
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: 0.25rem !important; }
+.mb-2 { margin-bottom: 0.5rem !important; }
+.mb-3 { margin-bottom: 1rem !important; }
+.mt-0 { margin-top: 0 !important; }
+.mt-2 { margin-top: 0.5rem !important; }
+.ms-0 { margin-left: 0 !important; }
+.ms-2 { margin-left: 0.5rem !important; }
+.ms-3 { margin-left: 1rem !important; }
+.ms-auto { margin-left: auto !important; }
+.me-2 { margin-right: 0.5rem !important; }
+
+/* Padding */
+.p-0 { padding: 0 !important; }
+.p-1 { padding: 0.25rem !important; }
+.p-2 { padding: 0.5rem !important; }
+.p-3 { padding: 1rem !important; }
+.pe-3 { padding-right: 1rem !important; }
+
+/* Size */
+.w-100 { width: 100% !important; }
+.h-100 { height: 100% !important; }
+.min-height-0 { min-height: 0 !important; }
+
+/* Position */
+.position-relative { position: relative !important; }
+.position-absolute { position: absolute !important; }
+.start-0 { left: 0 !important; }
+.top-50 { top: 50% !important; }
+.translate-middle-y { transform: translateY(-50%) !important; }
+
+/* Text */
+.text-muted { color: var(--blockr-color-text-muted) !important; }
+
+/* Background & Border */
+.bg-transparent { background-color: transparent !important; }
+.border-0 { border: 0 !important; }

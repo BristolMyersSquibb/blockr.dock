@@ -13,30 +13,24 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
 
   args <- list(...)
 
-  do.call(
-    page_fillable,
-    c(
-      list(
-        padding = 0,
-        gap = 0,
-        theme = bs_theme(
-          version = 5,
-          # button have the same color as dockView tabs
-          "btn-active-border-shade-amount" = "5%",
-          "btn-active-bg-shade-amount" = "5%",
-          "enable-negative-margins" = "true"
-        ),
-        # Use shiny's busy indicator
-        useBusyIndicators(spinners = FALSE, pulse = TRUE),
-        busyIndicatorOptions(
-          pulse_background = "#5e626b",
-          pulse_height = "5px"
-        ),
-        shinyjs::useShinyjs(),
-        navbar_ui(id),
-        board_ui(id, x, plugins, options)
-      ),
-      unname(args)
+  tagList(
+    suppressDependencies("bootstrap"),
+    tags$head(
+      tags$meta(charset = "UTF-8"),
+      tags$meta(name = "viewport", content = "width=device-width, initial-scale=1")
+    ),
+    blockr_dock_dep(),
+    shinyjs::useShinyjs(),
+    useBusyIndicators(spinners = FALSE, pulse = TRUE),
+    busyIndicatorOptions(
+      pulse_background = "#5e626b",
+      pulse_height = "5px"
+    ),
+    tags$div(
+      class = "blockr-app",
+      navbar_ui(id),
+      board_ui(id, x, plugins, options),
+      args
     )
   )
 }
