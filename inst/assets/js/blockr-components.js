@@ -33,31 +33,19 @@ if (!window.bootstrap) {
   Tooltip.getOrCreateInstance = function(el, opts) { return new Tooltip(el, opts); };
 
   // Minimal Modal constructor for Shiny modals
+  // We don't actually use this - visibility is handled by MutationObserver on #shiny-modal
   function Modal(element, options) {
     this.element = element;
     this.options = options || {};
-    this._isShown = false;
   }
   Modal.VERSION = '5.3.0';
   Modal.prototype.show = function() {
-    this._isShown = true;
-    if (this.element) {
-      this.element.style.display = 'block';
-      this.element.classList.add('show');
-      document.body.classList.add('modal-open');
-    }
+    // No-op: MutationObserver handles showing
   };
   Modal.prototype.hide = function() {
-    this._isShown = false;
-    if (this.element) {
-      this.element.style.display = '';
-      this.element.classList.remove('show');
-      document.body.classList.remove('modal-open');
-    }
+    // No-op: MutationObserver handles hiding
   };
-  Modal.prototype.toggle = function() {
-    if (this._isShown) this.hide(); else this.show();
-  };
+  Modal.prototype.toggle = function() {};
   Modal.prototype.dispose = function() {};
   Modal.getInstance = function(el) { return null; };
   Modal.getOrCreateInstance = function(el, opts) { return new Modal(el, opts); };
@@ -119,9 +107,10 @@ if (!window.bootstrap) {
 
     var isOpen = target.classList.contains('show');
     var accordion = btn.closest('.accordion');
+    var allowMultiple = accordion && accordion.getAttribute('data-multiple') === 'true';
 
     // Close others (unless multiple allowed)
-    if (accordion && !accordion.hasAttribute('data-bs-always-open')) {
+    if (accordion && !allowMultiple) {
       accordion.querySelectorAll('.accordion-collapse.show').forEach(function(el) {
         if (el !== target) {
           el.classList.remove('show');
@@ -135,6 +124,28 @@ if (!window.bootstrap) {
     target.classList.toggle('show', !isOpen);
     btn.classList.toggle('collapsed', isOpen);
   });
+
+  // Shiny handler for programmatic accordion control
+  if (typeof Shiny !== 'undefined') {
+    Shiny.addCustomMessageHandler('blockr-accordion-set', function(msg) {
+      var accordion = document.getElementById(msg.id);
+      if (!accordion) return;
+
+      accordion.querySelectorAll('.accordion-item').forEach(function(item) {
+        var value = item.getAttribute('data-value');
+        var shouldBeOpen = msg.values.indexOf(value) !== -1;
+        var collapse = item.querySelector('.accordion-collapse');
+        var button = item.querySelector('.accordion-button');
+
+        if (collapse) {
+          collapse.classList.toggle('show', shouldBeOpen);
+        }
+        if (button) {
+          button.classList.toggle('collapsed', !shouldBeOpen);
+        }
+      });
+    });
+  }
 
   /* ===========================================================================
      COLLAPSE (generic)
@@ -201,26 +212,15 @@ if (!window.bootstrap) {
     }
   });
 
-  // Modal visibility observer
+  // Modal visibility observer - shows/hides #shiny-modal based on content
   var modalObserver = new MutationObserver(function(mutations) {
     var modal = document.getElementById('shiny-modal');
-    console.log('[MODAL DEBUG] MutationObserver triggered');
-    console.log('[MODAL DEBUG] Modal children:', modal ? modal.children.length : 'no modal');
-    console.log('[MODAL DEBUG] Modal innerHTML:', modal ? modal.innerHTML.substring(0, 500) : 'none');
     if (modal) {
       if (modal.children.length > 0) {
-        console.log('[MODAL DEBUG] SHOWING modal');
         modal.style.display = 'block';
         modal.classList.add('show');
         document.body.classList.add('modal-open');
-
-        // Debug: log the modal structure
-        var dialog = modal.querySelector('.modal-dialog');
-        var content = modal.querySelector('.modal-content');
-        console.log('[MODAL DEBUG] .modal-dialog:', dialog);
-        console.log('[MODAL DEBUG] .modal-content:', content);
       } else {
-        console.log('[MODAL DEBUG] Hiding modal');
         modal.style.display = '';
         modal.classList.remove('show');
         document.body.classList.remove('modal-open');
@@ -230,12 +230,9 @@ if (!window.bootstrap) {
 
   function initModalObserver() {
     var modal = document.getElementById('shiny-modal');
-    console.log('[MODAL DEBUG] initModalObserver called, modal element:', modal);
     if (modal) {
       modalObserver.observe(modal, { childList: true });
-      console.log('[MODAL DEBUG] Observer attached to #shiny-modal');
     } else {
-      console.log('[MODAL DEBUG] No #shiny-modal element found, retrying in 500ms');
       setTimeout(initModalObserver, 500);
     }
   }
@@ -247,7 +244,7 @@ if (!window.bootstrap) {
   }
 
   /* ===========================================================================
-     G6 DEBUG - Finding the root cause
+     G6 Graph Fix - Correct size/viewport mismatch after initialization
      =========================================================================== */
 
   var g6CheckInterval = setInterval(function() {
@@ -260,59 +257,21 @@ if (!window.bootstrap) {
         if (graph) {
           el.dataset.checked = 'true';
 
-          // THE KEY INFO - G6's internal size vs actual container
           var graphSize = graph.getSize ? graph.getSize() : [0, 0];
           var containerRect = el.getBoundingClientRect();
-          var viewportCenter = graph.getViewportCenter ? graph.getViewportCenter() : [0, 0, 0];
 
-          console.log('========================================');
-          console.log('G6 MISMATCH DEBUG');
-          console.log('========================================');
-          console.log('G6 internal size:    ', graphSize[0], 'x', graphSize[1]);
-          console.log('Container actual:    ', Math.round(containerRect.width), 'x', Math.round(containerRect.height));
-          console.log('Viewport center:     ', viewportCenter[0], ',', viewportCenter[1]);
-          console.log('Expected center:     ', Math.round(containerRect.width/2), ',', Math.round(containerRect.height/2));
-
-          // Check the canvas - this is what G6 actually renders to
-          var canvas = el.querySelector('canvas');
-          if (canvas) {
-            console.log('Canvas size:         ', canvas.width, 'x', canvas.height);
-            console.log('Canvas CSS size:     ', canvas.style.width, ',', canvas.style.height);
-          }
-
-          // What element does G6 think is its container?
-          console.log('');
-          console.log('Container chain sizes:');
-          var p = el;
-          for (var i = 0; i < 5 && p; i++) {
-            console.log('  [' + i + '] ' + (p.className || p.tagName).substring(0, 40) + ': ' +
-                        p.offsetWidth + 'x' + p.offsetHeight);
-            p = p.parentElement;
-          }
-
-          // Check if there's a size mismatch and fix it
+          // Fix size mismatch (G6 may have measured wrong parent)
           if (Math.abs(graphSize[0] - containerRect.width) > 50) {
-            console.log('');
-            console.log('SIZE MISMATCH! G6 thinks:', graphSize[0], 'but container is:', containerRect.width);
-            console.log('Attempting to resize G6...');
-
-            // Try to resize G6 to match container
             if (graph.setSize) {
               graph.setSize(containerRect.width, containerRect.height);
-              console.log('Called setSize');
             } else if (graph.changeSize) {
               graph.changeSize(containerRect.width, containerRect.height);
-              console.log('Called changeSize');
             }
-
-            // Check new size
-            var newSize = graph.getSize ? graph.getSize() : [0, 0];
-            console.log('New G6 size:', newSize[0], 'x', newSize[1]);
           }
 
-          // Fix viewport if wrong
-          var newViewport = graph.getViewportCenter ? graph.getViewportCenter() : [0, 0, 0];
-          if (Math.abs(newViewport[0] - containerRect.width/2) > 50) {
+          // Fix viewport center if wrong
+          var viewportCenter = graph.getViewportCenter ? graph.getViewportCenter() : [0, 0, 0];
+          if (Math.abs(viewportCenter[0] - containerRect.width/2) > 50) {
             if (graph.fitCenter) graph.fitCenter();
           }
         }
@@ -321,6 +280,50 @@ if (!window.bootstrap) {
   }, 300);
 
   setTimeout(function() { clearInterval(g6CheckInterval); }, 10000);
+
+  /* ===========================================================================
+     TOGGLE BUTTONS INPUT BINDING (replacement for shinyWidgets::checkboxGroupButtons)
+     =========================================================================== */
+
+  if (typeof Shiny !== 'undefined') {
+    var toggleButtonsBinding = new Shiny.InputBinding();
+
+    $.extend(toggleButtonsBinding, {
+      find: function(scope) {
+        return $(scope).find('.blockr-toggle-buttons');
+      },
+
+      getValue: function(el) {
+        var selected = [];
+        $(el).find('input[type="checkbox"]:checked').each(function() {
+          selected.push($(this).val());
+        });
+        return selected.length > 0 ? selected : null;
+      },
+
+      setValue: function(el, value) {
+        $(el).find('input[type="checkbox"]').each(function() {
+          var isSelected = value && value.indexOf($(this).val()) !== -1;
+          $(this).prop('checked', isSelected);
+          $(this).closest('label').toggleClass('active', isSelected);
+        });
+      },
+
+      subscribe: function(el, callback) {
+        $(el).on('change.toggleButtons', 'input[type="checkbox"]', function(e) {
+          // Toggle active class on label
+          $(this).closest('label').toggleClass('active', this.checked);
+          callback();
+        });
+      },
+
+      unsubscribe: function(el) {
+        $(el).off('.toggleButtons');
+      }
+    });
+
+    Shiny.inputBindings.register(toggleButtonsBinding, 'blockr.toggleButtons');
+  }
 
   /* ===========================================================================
      DROPDOWN

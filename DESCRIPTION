@@ -24,13 +24,10 @@ Imports:
     blockr.core (>= 0.1.1),
     bsicons,
     shiny,
-    shinyjs,
-    bslib,
     glue,
     dockViewR (>= 0.2.1),
     htmltools,
     cli,
-    shinyWidgets,
     jsonlite
 Suggests: 
     testthat (>= 3.0.0),

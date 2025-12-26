@@ -20,12 +20,6 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
       tags$meta(name = "viewport", content = "width=device-width, initial-scale=1")
     ),
     blockr_dock_dep(),
-    shinyjs::useShinyjs(),
-    useBusyIndicators(spinners = FALSE, pulse = TRUE),
-    busyIndicatorOptions(
-      pulse_background = "#5e626b",
-      pulse_height = "5px"
-    ),
     # Shiny modal container (normally created by Bootstrap)
     tags$div(id = "shiny-modal"),
     tags$div(

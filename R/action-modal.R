@@ -427,13 +427,10 @@ stack_modal <- function(ns, board, mode = c("create", "edit"), stack = NULL,
 
   # For edit mode, add color picker to visible fields
   if (mode == "edit") {
-    visible_fields[[length(visible_fields) + 1]] <- shinyWidgets::colorPickr(
+    visible_fields[[length(visible_fields) + 1]] <- color_input(
       inputId = ns("edit_stack_color"),
       label = "Stack color",
-      selected = stack_color(stack),
-      theme = "nano",
-      position = "right-end",
-      useAsButton = TRUE
+      selected = stack_color(stack)
     )
   }
 
@@ -452,15 +449,12 @@ stack_modal <- function(ns, board, mode = c("create", "edit"), stack = NULL,
     advanced_fields <- list()
 
     # Add color picker field
-    advanced_fields[[length(advanced_fields) + 1]] <- shinyWidgets::colorPickr(
+    advanced_fields[[length(advanced_fields) + 1]] <- color_input(
       inputId = ns("stack_color"),
       label = "Stack color",
       selected = suggest_new_colors(
         stack_color(board_stacks)
-      ),
-      theme = "nano",
-      position = "right-end",
-      useAsButton = TRUE
+      )
     )
 
     # Add Stack ID field

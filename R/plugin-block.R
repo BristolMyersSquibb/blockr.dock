@@ -148,22 +148,11 @@ block_card_toggles <- function(blk, ns) {
 
   opts <- c("inputs", "outputs")
 
-  section_toggles <- shinyWidgets::checkboxGroupButtons(
+  toggle_buttons(
     inputId = ns("collapse_blk_sections"),
-    status = "light",
-    size = "sm",
     choices = set_names(opts, c("Input", "Output")),
-    individual = TRUE,
     selected = coal(attr(blk, "visible"), opts)
   )
-
-  # Remove the ms-auto class, add blockr-section-toggle
-  section_toggles$attribs$class <- paste(
-    "blockr-section-toggle",
-    trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
-  )
-
-  section_toggles
 }
 
 block_card_dropdown <- function(ns, info, blk_id) {
