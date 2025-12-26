@@ -26,6 +26,8 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
       pulse_background = "#5e626b",
       pulse_height = "5px"
     ),
+    # Shiny modal container (normally created by Bootstrap)
+    tags$div(id = "shiny-modal"),
     tags$div(
       class = "blockr-app",
       navbar_ui(id),

@@ -32,9 +32,39 @@ if (!window.bootstrap) {
   Tooltip.getInstance = function() { return null; };
   Tooltip.getOrCreateInstance = function(el, opts) { return new Tooltip(el, opts); };
 
+  // Minimal Modal constructor for Shiny modals
+  function Modal(element, options) {
+    this.element = element;
+    this.options = options || {};
+    this._isShown = false;
+  }
+  Modal.VERSION = '5.3.0';
+  Modal.prototype.show = function() {
+    this._isShown = true;
+    if (this.element) {
+      this.element.style.display = 'block';
+      this.element.classList.add('show');
+      document.body.classList.add('modal-open');
+    }
+  };
+  Modal.prototype.hide = function() {
+    this._isShown = false;
+    if (this.element) {
+      this.element.style.display = '';
+      this.element.classList.remove('show');
+      document.body.classList.remove('modal-open');
+    }
+  };
+  Modal.prototype.toggle = function() {
+    if (this._isShown) this.hide(); else this.show();
+  };
+  Modal.prototype.dispose = function() {};
+  Modal.getInstance = function(el) { return null; };
+  Modal.getOrCreateInstance = function(el, opts) { return new Modal(el, opts); };
+
   window.bootstrap = {
     Tab: { VERSION: '5.3.0' },
-    Modal: { VERSION: '5.3.0' },
+    Modal: Modal,
     Dropdown: { VERSION: '5.3.0' },
     Offcanvas: { VERSION: '5.3.0' },
     Collapse: { VERSION: '5.3.0' },
@@ -172,14 +202,27 @@ if (!window.bootstrap) {
   });
 
   // Modal visibility observer
-  var modalObserver = new MutationObserver(function() {
+  var modalObserver = new MutationObserver(function(mutations) {
     var modal = document.getElementById('shiny-modal');
+    console.log('[MODAL DEBUG] MutationObserver triggered');
+    console.log('[MODAL DEBUG] Modal children:', modal ? modal.children.length : 'no modal');
+    console.log('[MODAL DEBUG] Modal innerHTML:', modal ? modal.innerHTML.substring(0, 500) : 'none');
     if (modal) {
       if (modal.children.length > 0) {
+        console.log('[MODAL DEBUG] SHOWING modal');
         modal.style.display = 'block';
+        modal.classList.add('show');
         document.body.classList.add('modal-open');
+
+        // Debug: log the modal structure
+        var dialog = modal.querySelector('.modal-dialog');
+        var content = modal.querySelector('.modal-content');
+        console.log('[MODAL DEBUG] .modal-dialog:', dialog);
+        console.log('[MODAL DEBUG] .modal-content:', content);
       } else {
+        console.log('[MODAL DEBUG] Hiding modal');
         modal.style.display = '';
+        modal.classList.remove('show');
         document.body.classList.remove('modal-open');
       }
     }
@@ -187,7 +230,14 @@ if (!window.bootstrap) {
 
   function initModalObserver() {
     var modal = document.getElementById('shiny-modal');
-    if (modal) modalObserver.observe(modal, { childList: true });
+    console.log('[MODAL DEBUG] initModalObserver called, modal element:', modal);
+    if (modal) {
+      modalObserver.observe(modal, { childList: true });
+      console.log('[MODAL DEBUG] Observer attached to #shiny-modal');
+    } else {
+      console.log('[MODAL DEBUG] No #shiny-modal element found, retrying in 500ms');
+      setTimeout(initModalObserver, 500);
+    }
   }
 
   if (document.readyState === 'loading') {

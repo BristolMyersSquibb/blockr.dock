@@ -1059,6 +1059,107 @@ nav.blockr-navbar {
 }
 
 /* ---------------------------------------------------------------------------
+   6.2.5 Modal (Shiny modal - Bootstrap-free)
+   --------------------------------------------------------------------------- */
+#shiny-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1050;
+  background-color: rgba(0, 0, 0, 0.5);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#shiny-modal .modal-dialog {
+  position: relative;
+  width: auto;
+  max-width: 500px;
+  margin: 1.75rem auto;
+  pointer-events: none;
+}
+
+#shiny-modal .modal-dialog-lg {
+  max-width: 800px;
+}
+
+#shiny-modal .modal-dialog-sm {
+  max-width: 300px;
+}
+
+#shiny-modal .modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  pointer-events: auto;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid var(--blockr-color-border);
+  border-radius: 12px;
+  box-shadow: var(--blockr-shadow-lg);
+}
+
+#shiny-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--blockr-color-border);
+}
+
+#shiny-modal .modal-title {
+  margin: 0;
+  font-size: var(--blockr-font-size-lg);
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-primary);
+}
+
+#shiny-modal .modal-body {
+  position: relative;
+  flex: 1 1 auto;
+  padding: 1.5rem;
+}
+
+#shiny-modal .modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--blockr-color-border);
+}
+
+/* Close button */
+#shiny-modal .btn-close,
+#shiny-modal .close,
+#shiny-modal [data-bs-dismiss="modal"],
+#shiny-modal [data-dismiss="modal"] {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--blockr-color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.5;
+}
+
+#shiny-modal .btn-close:hover,
+#shiny-modal .close:hover {
+  opacity: 1;
+}
+
+/* Body scroll lock when modal open */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
    6.3 Dropdown Menus
    --------------------------------------------------------------------------- */
 .blockr-block-dropdown {
