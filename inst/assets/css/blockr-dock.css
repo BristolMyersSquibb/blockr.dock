@@ -2537,6 +2537,13 @@ body.modal-open {
   box-shadow: none !important;
 }
 
+/* Use Open Sans in G6 SVG text */
+.g6 text,
+.g6 svg text,
+.g6 [class*="label"] text {
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
 /* Ensure G6 container matches its panel dimensions BEFORE G6 initializes */
 /* The key is to constrain the g6 container so it can't exceed its panel */
 .g6 {
