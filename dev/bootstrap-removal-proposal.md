@@ -48,6 +48,21 @@ blockr.dock/
 | **Better performance** | Less CSS to parse, no unused Bootstrap utilities |
 | **Simpler debugging** | One source of truth for styles |
 
+## Measured Performance Results
+
+Testing on localhost with Chrome DevTools Network tab (Load event timing):
+
+| Version | Load Time | Notes |
+|---------|-----------|-------|
+| **Without Bootstrap** | ~110-126ms | Custom CSS/JS only |
+| **With Bootstrap** | ~180-190ms | Full bslib/Bootstrap 5 |
+| **Improvement** | **~35% faster** | ~60ms savings |
+
+These measurements are from localhost where network latency is minimal. In production deployments (remote servers), the difference would be more pronounced due to:
+- Larger Bootstrap CSS/JS files requiring more transfer time
+- Additional HTTP requests for Bootstrap assets
+- No benefit from local caching on first load
+
 ## Cons
 
 | Drawback | Mitigation |
