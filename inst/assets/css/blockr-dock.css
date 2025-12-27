@@ -4,6 +4,7 @@
  *
  * TABLE OF CONTENTS
  * =================
+ * 0. FONTS
  * 1. VARIABLES
  *    1.1 Colors - Grey Scale
  *    1.2 Colors - Primary Blue
@@ -52,6 +53,43 @@
  * 9. DEPRECATED
  *    9.1 Edge Tab (hidden)
  */
+
+
+/* =============================================================================
+   0. FONTS - Open Sans (bundled)
+   ============================================================================= */
+
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/open-sans-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/open-sans-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/open-sans-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/open-sans-700.woff2') format('woff2');
+}
 
 
 /* =============================================================================
@@ -153,7 +191,7 @@ html, body {
 }
 
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: var(--blockr-font-size-base);
   line-height: 1.5;
   color: var(--blockr-color-text-primary);
@@ -267,6 +305,87 @@ label:has(input[type="file"]) {
 .shiny-input-checkboxgroup > label {
   font-size: var(--blockr-font-size-xs);
   color: var(--blockr-color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+   2.5 Radio Buttons (icon grid style - hide circles)
+   --------------------------------------------------------------------------- */
+.shiny-input-radiogroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shiny-input-radiogroup > .shiny-options-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.shiny-input-radiogroup .radio {
+  margin: 0;
+}
+
+.shiny-input-radiogroup .radio label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 80px;
+  padding: 12px 16px;
+  background: var(--blockr-grey-100);
+  border: 1px solid var(--blockr-color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-primary);
+}
+
+.shiny-input-radiogroup .radio label:hover {
+  background: var(--blockr-grey-200);
+  border-color: var(--blockr-color-border-hover);
+}
+
+/* Hide the actual radio input - completely */
+.shiny-input-radiogroup .radio input[type="radio"],
+.shiny-input-radiogroup input[type="radio"] {
+  position: absolute !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+  clip: rect(0, 0, 0, 0) !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Hide any pseudo-element circles */
+.shiny-input-radiogroup .radio input[type="radio"]::before,
+.shiny-input-radiogroup .radio input[type="radio"]::after,
+.shiny-input-radiogroup input[type="radio"]::before,
+.shiny-input-radiogroup input[type="radio"]::after {
+  display: none !important;
+}
+
+/* Selected state */
+.shiny-input-radiogroup .radio input[type="radio"]:checked + span,
+.shiny-input-radiogroup .radio label:has(input:checked) {
+  background: var(--blockr-blue-50);
+  border-color: var(--blockr-blue-500);
+  color: var(--blockr-blue-700);
+}
+
+/* Icon inside radio label */
+.shiny-input-radiogroup .radio label i,
+.shiny-input-radiogroup .radio label svg,
+.shiny-input-radiogroup .radio label .fa {
+  font-size: 1.25rem;
   margin-bottom: 0.25rem;
 }
 
@@ -429,20 +548,15 @@ label:has(input[type="file"]) {
 }
 
 /* ---------------------------------------------------------------------------
-   3.4 Section Toggle (shinyWidgets checkboxGroupButtons)
+   3.4 Section Toggle (Input/Output buttons) - small, subtle
    --------------------------------------------------------------------------- */
-/* Base btn-group styling for toggle buttons */
 .blockr-section-toggle {
   display: inline-flex !important;
   align-items: center;
   gap: 4px;
 }
 
-.blockr-section-toggle .btn-group {
-  display: inline-flex;
-  gap: 4px;
-}
-
+.blockr-section-toggle .btn-group,
 .blockr-section-toggle .btn-group-toggle {
   display: inline-flex;
   gap: 4px;
@@ -452,43 +566,35 @@ label:has(input[type="file"]) {
 .blockr-section-toggle .btn-check,
 .blockr-section-toggle input[type="checkbox"],
 .blockr-section-toggle input[type="radio"] {
-  position: absolute;
-  clip: rect(0, 0, 0, 0);
-  pointer-events: none;
+  position: absolute !important;
+  clip: rect(0, 0, 0, 0) !important;
+  pointer-events: none !important;
 }
 
 .blockr-section-toggle .btn.btn-light {
-  background-color: #ffffff !important;
+  background-color: transparent !important;
   border: 1px solid var(--blockr-color-border) !important;
-  border-radius: 6px;
+  border-radius: 6px !important;
   color: var(--blockr-color-text-muted) !important;
-  font-size: var(--blockr-font-size-xs);
-  font-weight: var(--blockr-font-weight-normal);
-  padding: 4px 10px;
-  margin: 0 2px;
+  font-size: var(--blockr-font-size-xs) !important;
+  font-weight: var(--blockr-font-weight-normal) !important;
+  padding: 3px 10px !important;
+  margin: 0 !important;
   transition: all 0.15s ease;
-}
-
-.blockr-section-toggle .btn.btn-light:hover {
-  background-color: var(--blockr-color-bg-subtle) !important;
-  color: var(--blockr-color-text-secondary) !important;
-  border-color: var(--blockr-color-border) !important;
-}
-
-.blockr-section-toggle .btn-check:checked + .btn.btn-light:hover {
-  background-color: var(--blockr-grey-100) !important;
-}
-
-.blockr-section-toggle .btn.btn-light.active,
-.blockr-section-toggle .btn-check:checked + .btn.btn-light {
-  background-color: var(--blockr-color-bg-subtle) !important;
-  color: var(--blockr-color-text-primary) !important;
-  border-color: var(--blockr-color-border-hover) !important;
   box-shadow: none !important;
 }
 
-.blockr-section-toggle .btn-group {
-  gap: 4px;
+.blockr-section-toggle .btn.btn-light:hover {
+  background-color: var(--blockr-grey-100) !important;
+  color: var(--blockr-color-text-secondary) !important;
+}
+
+.blockr-section-toggle .btn.btn-light.active,
+.blockr-section-toggle .btn-check:checked + .btn.btn-light,
+.blockr-section-toggle label:has(input:checked) {
+  background-color: var(--blockr-grey-100) !important;
+  border-color: var(--blockr-color-border-hover) !important;
+  color: var(--blockr-color-text-primary) !important;
 }
 
 /* ---------------------------------------------------------------------------
@@ -2422,6 +2528,7 @@ body.modal-open {
   background-color: var(--blockr-color-bg-hover);
   color: var(--blockr-color-text-secondary);
 }
+
 
 /* ---------------------------------------------------------------------------
    8.2 G6 Graph
