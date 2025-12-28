@@ -98,27 +98,35 @@
 
 :root {
   /* -------------------------------------------------------------------------
-     1.1 Colors - Grey Scale (Tailwind-style)
+     1.1 Colors - Grey Scale (HSL for easy dark mode inversion)
+     Hue: 220, Saturation: 13%, Lightness: varies
      ------------------------------------------------------------------------- */
-  --blockr-grey-50: #f9fafb;   /* Page bg, subtle backgrounds */
-  --blockr-grey-100: #f3f4f6;  /* Hover states, input bg */
-  --blockr-grey-200: #e5e7eb;  /* Borders */
-  --blockr-grey-300: #d1d5db;  /* Darker borders, dividers */
-  --blockr-grey-400: #9ca3af;  /* Placeholder text */
-  --blockr-grey-500: #6b7280;  /* Muted text */
-  --blockr-grey-600: #4b5563;  /* Secondary icons */
-  --blockr-grey-700: #374151;  /* Secondary text */
-  --blockr-grey-800: #1f2937;  /* Dark text */
-  --blockr-grey-900: #111827;  /* Primary text */
+  --blockr-grey-h: 220;
+  --blockr-grey-s: 13%;
+
+  --blockr-grey-50:  hsl(var(--blockr-grey-h), var(--blockr-grey-s), 98%);
+  --blockr-grey-100: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 96%);
+  --blockr-grey-200: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 91%);
+  --blockr-grey-300: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 84%);
+  --blockr-grey-400: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 65%);
+  --blockr-grey-500: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 46%);
+  --blockr-grey-600: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 34%);
+  --blockr-grey-700: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 27%);
+  --blockr-grey-800: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 17%);
+  --blockr-grey-900: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 11%);
 
   /* -------------------------------------------------------------------------
-     1.2 Colors - Primary Blue
+     1.2 Colors - Primary Blue (HSL)
+     Hue: 217, Saturation: 91%, Lightness: varies
      ------------------------------------------------------------------------- */
-  --blockr-blue-50: #eff6ff;
-  --blockr-blue-100: #dbeafe;
-  --blockr-blue-500: #3b82f6;
-  --blockr-blue-600: #2563eb;
-  --blockr-blue-700: #1d4ed8;
+  --blockr-blue-h: 217;
+  --blockr-blue-s: 91%;
+
+  --blockr-blue-50:  hsl(var(--blockr-blue-h), var(--blockr-blue-s), 97%);
+  --blockr-blue-100: hsl(var(--blockr-blue-h), var(--blockr-blue-s), 92%);
+  --blockr-blue-500: hsl(var(--blockr-blue-h), var(--blockr-blue-s), 60%);
+  --blockr-blue-600: hsl(var(--blockr-blue-h), var(--blockr-blue-s), 53%);
+  --blockr-blue-700: hsl(var(--blockr-blue-h), var(--blockr-blue-s), 48%);
 
   /* -------------------------------------------------------------------------
      1.3 Colors - Semantic
@@ -161,6 +169,746 @@
   --blockr-font-weight-normal: 400;
   --blockr-font-weight-medium: 500;
   --blockr-font-weight-semibold: 600;
+}
+
+/* =============================================================================
+   1.6 DARK MODE
+   Inverts lightness values: L → (100 - L)
+   ============================================================================= */
+.dark-mode {
+  /* Grey scale - inverted lightness */
+  --blockr-grey-50:  hsl(var(--blockr-grey-h), var(--blockr-grey-s), 11%);  /* was 98% */
+  --blockr-grey-100: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 14%);  /* was 96% */
+  --blockr-grey-200: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 18%);  /* was 91% */
+  --blockr-grey-300: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 24%);  /* was 84% */
+  --blockr-grey-400: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 45%);  /* was 65% */
+  --blockr-grey-500: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 60%);  /* was 46% */
+  --blockr-grey-600: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 70%);  /* was 34% */
+  --blockr-grey-700: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 78%);  /* was 27% */
+  --blockr-grey-800: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 86%);  /* was 17% */
+  --blockr-grey-900: hsl(var(--blockr-grey-h), var(--blockr-grey-s), 93%);  /* was 11% */
+
+  /* Blue scale - slightly adjusted for dark backgrounds */
+  --blockr-blue-50:  hsl(var(--blockr-blue-h), var(--blockr-blue-s), 15%);
+  --blockr-blue-100: hsl(var(--blockr-blue-h), var(--blockr-blue-s), 20%);
+  --blockr-blue-500: hsl(var(--blockr-blue-h), var(--blockr-blue-s), 60%);
+  --blockr-blue-600: hsl(var(--blockr-blue-h), var(--blockr-blue-s), 55%);
+  --blockr-blue-700: hsl(var(--blockr-blue-h), var(--blockr-blue-s), 50%);
+
+  /* Shadows - more pronounced on dark */
+  --blockr-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+  --blockr-shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+}
+
+/* Dockview dark theme overrides - target all dockview theme classes */
+.dark-mode [class*="dockview"],
+.dark-mode .dockview-theme-light,
+.dark-mode .dockview-theme-light-spaced {
+  --dv-group-view-background-color: hsl(220, 13%, 13%) !important;
+  --dv-tabs-and-actions-container-background-color: hsl(220, 13%, 16%) !important;
+  --dv-activegroup-visiblepanel-tab-background-color: hsl(220, 13%, 22%) !important;
+  --dv-activegroup-hiddenpanel-tab-background-color: hsl(220, 13%, 16%) !important;
+  --dv-inactivegroup-visiblepanel-tab-background-color: hsl(220, 13%, 20%) !important;
+  --dv-inactivegroup-hiddenpanel-tab-background-color: hsl(220, 13%, 16%) !important;
+  --dv-activegroup-visiblepanel-tab-color: hsl(0, 0%, 90%) !important;
+  --dv-activegroup-hiddenpanel-tab-color: hsl(0, 0%, 64%) !important;
+  --dv-inactivegroup-visiblepanel-tab-color: hsl(0, 0%, 64%) !important;
+  --dv-inactivegroup-hiddenpanel-tab-color: hsl(0, 0%, 45%) !important;
+  --dv-separator-border: hsl(220, 13%, 25%) !important;
+  --dv-tab-divider-color: hsl(220, 13%, 25%) !important;
+  --dv-paneview-header-border-color: hsl(220, 13%, 25%) !important;
+  --dv-icon-hover-background-color: hsl(220, 13%, 28%) !important;
+  --dv-background-color: hsl(220, 13%, 13%) !important;
+  /* Additional variables from dockview theme */
+  --dv-paneview-active-outline-color: var(--blockr-blue-500) !important;
+  --dv-drag-over-background-color: hsla(220, 13%, 30%, 0.5) !important;
+  --dv-drag-over-border-color: var(--blockr-blue-500) !important;
+  background-color: hsl(220, 13%, 13%) !important;
+}
+
+/* Right-click context menu dark mode */
+.dark-mode .context-menu,
+.dark-mode [class*="context-menu"],
+.dark-mode .dv-context-menu {
+  background-color: hsl(220, 13%, 16%) !important;
+  border-color: hsl(220, 13%, 25%) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark-mode .context-menu-item,
+.dark-mode [class*="context-menu"] li,
+.dark-mode [class*="context-menu"] .item {
+  color: hsl(0, 0%, 85%) !important;
+}
+
+.dark-mode .context-menu-item:hover,
+.dark-mode [class*="context-menu"] li:hover,
+.dark-mode [class*="context-menu"] .item:hover {
+  background-color: hsl(220, 13%, 22%) !important;
+  color: hsl(0, 0%, 95%) !important;
+}
+
+/* Dockview direct element overrides for dark mode */
+.dark-mode .groupview {
+  background-color: hsl(220, 13%, 13%) !important;
+}
+
+.dark-mode .tabs-and-actions-container {
+  background-color: hsl(220, 13%, 16%) !important;
+}
+
+.dark-mode .tab {
+  background-color: hsl(220, 13%, 20%) !important;
+  color: hsl(0, 0%, 64%) !important;
+}
+
+.dark-mode .tab.active-tab {
+  background-color: hsl(220, 13%, 22%) !important;
+  color: hsl(0, 0%, 90%) !important;
+}
+
+/* G6/DAG dark mode */
+.dark-mode .g6-toolbar {
+  background-color: hsl(220, 13%, 18%) !important;
+  border-color: hsl(220, 13%, 25%) !important;
+}
+
+.dark-mode .g6-toolbar svg,
+.dark-mode .g6-toolbar i,
+.dark-mode .g6-toolbar span {
+  color: hsl(0, 0%, 64%) !important;
+  fill: hsl(0, 0%, 64%) !important;
+}
+
+/* G6 edge labels and node text dark mode */
+.dark-mode .g6-label-shape,
+.dark-mode [class*="edge"] text,
+.dark-mode [class*="label"] {
+  fill: hsl(0, 0%, 64%) !important;
+  color: hsl(0, 0%, 64%) !important;
+}
+
+/* DataTables dark mode */
+.dark-mode .table,
+.dark-mode .dataTable {
+  color: hsl(0, 0%, 90%);
+  border-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .table > thead {
+  background: hsl(220, 13%, 16%);
+}
+
+.dark-mode .table > thead > tr > th {
+  color: hsl(0, 0%, 80%);
+  border-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .table > tbody > tr > td {
+  color: hsl(0, 0%, 85%);
+  border-color: hsl(220, 13%, 20%);
+}
+
+.dark-mode .table > tbody > tr:hover {
+  background-color: hsl(220, 13%, 18%);
+}
+
+.dark-mode .dataTables_wrapper .dataTables_info,
+.dark-mode .dataTables_wrapper .dataTables_length,
+.dark-mode .dataTables_wrapper .dataTables_filter {
+  color: hsl(0, 0%, 64%) !important;
+}
+
+.dark-mode .dataTables_wrapper .dataTables_paginate .page-link {
+  background-color: hsl(220, 13%, 18%);
+  border-color: hsl(220, 13%, 25%);
+  color: hsl(0, 0%, 80%);
+}
+
+.dark-mode .dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
+  background-color: var(--blockr-blue-600);
+  border-color: var(--blockr-blue-600);
+}
+
+/* Selectize dark mode */
+.dark-mode .selectize-input {
+  background-color: hsl(220, 13%, 16%) !important;
+  border-color: hsl(220, 13%, 25%) !important;
+  color: hsl(0, 0%, 90%) !important;
+}
+
+.dark-mode .selectize-input.focus {
+  background-color: hsl(220, 13%, 18%) !important;
+  border-color: var(--blockr-blue-500) !important;
+}
+
+.dark-mode .selectize-dropdown {
+  background-color: hsl(220, 13%, 16%) !important;
+  border-color: hsl(220, 13%, 25%) !important;
+}
+
+.dark-mode .selectize-dropdown-content .option {
+  color: hsl(0, 0%, 85%);
+}
+
+.dark-mode .selectize-dropdown-content .option.active {
+  background-color: hsl(220, 13%, 22%) !important;
+  color: hsl(0, 0%, 95%) !important;
+}
+
+/* Form controls dark mode */
+.dark-mode .form-control,
+.dark-mode .form-select {
+  background-color: hsl(220, 13%, 16%);
+  border-color: hsl(220, 13%, 25%);
+  color: hsl(0, 0%, 90%);
+}
+
+.dark-mode .form-control:focus,
+.dark-mode .form-select:focus {
+  background-color: hsl(220, 13%, 18%);
+  border-color: var(--blockr-blue-500);
+  color: hsl(0, 0%, 95%);
+}
+
+.dark-mode .form-control::placeholder {
+  color: hsl(0, 0%, 45%);
+}
+
+/* Checkbox dark mode */
+.dark-mode .form-check-input {
+  background-color: hsl(220, 13%, 20%);
+  border-color: hsl(220, 13%, 35%);
+}
+
+.dark-mode .form-check-input:checked {
+  background-color: var(--blockr-blue-600);
+  border-color: var(--blockr-blue-600);
+}
+
+/* Block panel content dark mode */
+.dark-mode .blockr-block-panel {
+  background: hsl(220, 13%, 13%);
+  border-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .blockr-block-panel-header {
+  border-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .blockr-block-panel-search {
+  border-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .blockr-block-panel-search-input {
+  background: hsl(220, 13%, 16%);
+  border-color: hsl(220, 13%, 25%);
+  color: hsl(0, 0%, 90%);
+}
+
+.dark-mode .blockr-block-item:hover {
+  background: hsl(220, 13%, 18%);
+  border-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .blockr-block-panel-title {
+  color: hsl(0, 0%, 93%);
+}
+
+.dark-mode .blockr-block-panel-close {
+  color: hsl(0, 0%, 70%);
+}
+
+.dark-mode .blockr-block-panel-close:hover {
+  background-color: hsl(220, 13%, 20%);
+  color: hsl(0, 0%, 90%);
+}
+
+.dark-mode .blockr-block-category-title {
+  color: hsl(0, 0%, 60%);
+}
+
+.dark-mode .blockr-block-item-name {
+  color: hsl(0, 0%, 93%);
+}
+
+.dark-mode .blockr-block-item-desc {
+  color: hsl(0, 0%, 70%);
+}
+
+.dark-mode .blockr-block-item-pkg {
+  background: hsl(220, 13%, 20%);
+  color: hsl(0, 0%, 70%);
+}
+
+/* Dockview borders and separators dark mode */
+.dark-mode .dv-resize-container,
+.dark-mode .dockview-react-part {
+  border-color: hsl(220, 13%, 25%) !important;
+}
+
+.dark-mode .sash,
+.dark-mode .sash-container .sash {
+  background-color: hsl(220, 13%, 25%) !important;
+}
+
+/* Split view container - the outer dockview border/background */
+.dark-mode .split-view-container,
+.dark-mode .split-view-container.horizontal,
+.dark-mode .split-view-container.vertical {
+  background-color: hsl(220, 13%, 13%) !important;
+}
+
+/* Dockview outer wrapper - catch white borders/backgrounds */
+.dark-mode #dockview-container,
+.dark-mode [id*="dockview"],
+.dark-mode .dockview,
+.dark-mode .dockview-react,
+.dark-mode .dv-dockview {
+  background-color: hsl(220, 13%, 13%) !important;
+  border-color: hsl(220, 13%, 25%) !important;
+}
+
+/* Main app content area below navbar */
+.dark-mode .blockr-app-body,
+.dark-mode .blockr-main,
+.dark-mode main,
+.dark-mode .main-content {
+  background-color: hsl(220, 13%, 8%) !important;
+}
+
+/* Bootstrap btn-group toggle buttons (chart type selector) */
+.dark-mode .btn-group-toggle .btn,
+.dark-mode .btn-group-toggle .btn.btn-light,
+.dark-mode .btn-group-toggle label.btn {
+  background-color: hsl(220, 13%, 20%) !important;
+  border-color: hsl(220, 13%, 30%) !important;
+  color: hsl(0, 0%, 85%) !important;
+}
+
+.dark-mode .btn-group-toggle .btn:hover,
+.dark-mode .btn-group-toggle .btn.btn-light:hover {
+  background-color: hsl(220, 13%, 25%) !important;
+  border-color: hsl(220, 13%, 35%) !important;
+  color: hsl(0, 0%, 95%) !important;
+}
+
+.dark-mode .btn-group-toggle .btn.active,
+.dark-mode .btn-group-toggle .btn.btn-light.active,
+.dark-mode .btn-group-toggle label.btn.active {
+  background-color: hsl(220, 13%, 28%) !important;
+  border-color: var(--blockr-blue-500) !important;
+  color: hsl(0, 0%, 98%) !important;
+}
+
+/* Block content UI (inside dockview panels) */
+.dark-mode .dv-render-overlay {
+  background-color: hsl(220, 13%, 13%) !important;
+}
+
+/* DAG node labels dark mode - more specific selectors */
+.dark-mode .g6-component-label,
+.dark-mode .g6-label,
+.dark-mode [class*="g6"] text,
+.dark-mode svg text,
+.dark-mode .g6 text,
+.dark-mode text[fill],
+.dark-mode .node-label,
+.dark-mode [class*="node"] text {
+  fill: hsl(0, 0%, 85%) !important;
+  color: hsl(0, 0%, 85%) !important;
+}
+
+/* Block title dark mode */
+.dark-mode .blockr-title {
+  color: hsl(0, 0%, 93%);
+}
+
+.dark-mode .blockr-subtitle {
+  color: hsl(0, 0%, 70%);
+}
+
+.dark-mode .blockr-title-edit .form-control {
+  background: hsl(220, 13%, 16%);
+  color: hsl(0, 0%, 93%);
+  border-color: hsl(220, 13%, 35%);
+}
+
+/* Inline edit / contenteditable dark mode */
+.dark-mode .blockr-inline-edit,
+.dark-mode [contenteditable="true"],
+.dark-mode input[type="text"],
+.dark-mode input:not([type]) {
+  color: hsl(0, 0%, 93%);
+}
+
+.dark-mode .blockr-inline-edit input,
+.dark-mode .blockr-inline-edit .form-control {
+  background: hsl(220, 13%, 16%);
+  color: hsl(0, 0%, 93%);
+  border-color: hsl(220, 13%, 35%);
+}
+
+/* DataTable wrapper border dark mode */
+.dark-mode .dataTables_wrapper {
+  border-color: hsl(220, 13%, 25%) !important;
+}
+
+.dark-mode table.dataTable {
+  border-color: hsl(220, 13%, 25%) !important;
+}
+
+.dark-mode table.dataTable thead th,
+.dark-mode table.dataTable tbody td {
+  border-color: hsl(220, 13%, 25%) !important;
+}
+
+/* Pagination buttons dark mode */
+.dark-mode .dataTables_paginate .paginate_button {
+  color: hsl(0, 0%, 70%) !important;
+  background-color: hsl(220, 13%, 18%) !important;
+  border-color: hsl(220, 13%, 25%) !important;
+}
+
+.dark-mode .dataTables_paginate .paginate_button:hover {
+  color: hsl(0, 0%, 90%) !important;
+  background-color: hsl(220, 13%, 22%) !important;
+}
+
+.dark-mode .dataTables_paginate .paginate_button.current {
+  color: hsl(0, 0%, 95%) !important;
+  background-color: var(--blockr-blue-600) !important;
+  border-color: var(--blockr-blue-600) !important;
+}
+
+.dark-mode .dataTables_paginate .paginate_button.disabled {
+  color: hsl(0, 0%, 45%) !important;
+}
+
+/* Navbar dark mode */
+.dark-mode nav.blockr-navbar {
+  background: hsl(220, 13%, 13%);
+  border-bottom-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .blockr-navbar-icon-btn {
+  color: hsl(0, 0%, 80%);
+}
+
+.dark-mode .blockr-navbar-icon-btn:hover {
+  background-color: hsl(220, 13%, 20%);
+}
+
+.dark-mode .blockr-navbar-save-btn {
+  background: hsl(220, 13%, 18%);
+  border-color: hsl(220, 13%, 25%);
+  color: hsl(0, 0%, 80%);
+}
+
+.dark-mode .blockr-navbar-save-btn:hover {
+  background-color: hsl(220, 13%, 22%);
+}
+
+.dark-mode .blockr-navbar-settings-btn {
+  color: hsl(0, 0%, 70%);
+}
+
+.dark-mode .blockr-navbar-settings-btn:hover {
+  background-color: hsl(220, 13%, 20%);
+}
+
+.dark-mode .blockr-navbar-title {
+  color: hsl(0, 0%, 93%);
+}
+
+.dark-mode .blockr-navbar-title:hover {
+  background-color: hsl(220, 13%, 20%);
+}
+
+.dark-mode .blockr-navbar-title-input {
+  color: hsl(0, 0%, 93%);
+  background: hsl(220, 13%, 16%);
+  border-color: var(--blockr-blue-500);
+}
+
+.dark-mode .blockr-navbar-divider {
+  background: hsl(220, 13%, 25%);
+}
+
+.dark-mode .blockr-navbar-meta {
+  color: hsl(0, 0%, 60%);
+}
+
+.dark-mode .blockr-navbar-btn-outline {
+  background: hsl(220, 13%, 18%);
+  border-color: hsl(220, 13%, 25%);
+  color: hsl(0, 0%, 93%);
+}
+
+.dark-mode .blockr-navbar-btn-outline:hover {
+  background-color: hsl(220, 13%, 22%);
+}
+
+.dark-mode .blockr-navbar-btn-outline svg {
+  color: hsl(0, 0%, 75%);
+}
+
+/* Dockview content area dark mode */
+.dark-mode .content-container,
+.dark-mode .void-container,
+.dark-mode [class*="dv-"] .content,
+.dark-mode .dv-default-tab-content {
+  background-color: hsl(220, 13%, 13%) !important;
+}
+
+/* Form control focus state dark mode */
+.dark-mode .form-control:focus,
+.dark-mode .form-select:focus {
+  background-color: hsl(220, 13%, 18%) !important;
+}
+
+/* Selectize focus state dark mode */
+.dark-mode .selectize-input.focus {
+  background-color: hsl(220, 13%, 18%) !important;
+}
+
+/* Shiny input containers dark mode */
+.dark-mode .shiny-input-container .control-label {
+  color: hsl(0, 0%, 75%);
+}
+
+/* Radio button group dark mode - match navbar button styling */
+.dark-mode .shiny-input-radiogroup .radio label {
+  background-color: hsl(220, 13%, 20%) !important;
+  border-color: hsl(220, 13%, 30%) !important;
+  color: hsl(0, 0%, 90%) !important;
+}
+
+.dark-mode .shiny-input-radiogroup .radio label:hover {
+  background-color: hsl(220, 13%, 25%) !important;
+  border-color: hsl(220, 13%, 35%) !important;
+  color: hsl(0, 0%, 95%) !important;
+}
+
+.dark-mode .shiny-input-radiogroup .radio input[type="radio"]:checked + span,
+.dark-mode .shiny-input-radiogroup .radio label:has(input:checked) {
+  background-color: hsl(220, 13%, 28%) !important;
+  border-color: var(--blockr-blue-500) !important;
+  color: hsl(0, 0%, 98%) !important;
+}
+
+/* Radio button icon colors dark mode */
+.dark-mode .shiny-input-radiogroup .radio label svg,
+.dark-mode .shiny-input-radiogroup .radio label i {
+  color: hsl(0, 0%, 80%) !important;
+}
+
+/* Section headers dark mode */
+.dark-mode h4,
+.dark-mode .h4 {
+  color: hsl(0, 0%, 75%);
+}
+
+/* Body background dark mode */
+.dark-mode body,
+.dark-mode {
+  background-color: hsl(220, 13%, 8%);
+  color: hsl(0, 0%, 90%);
+}
+
+/* Dropdown menus dark mode */
+.dark-mode .dropdown-menu {
+  background-color: hsl(220, 13%, 16%);
+  border-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .dropdown-item {
+  color: hsl(0, 0%, 85%);
+}
+
+.dark-mode .dropdown-item:hover {
+  background-color: hsl(220, 13%, 22%);
+  color: hsl(0, 0%, 95%);
+}
+
+/* Tabbed dropdown dark mode */
+.dark-mode .blockr-tabbed-dropdown {
+  background-color: hsl(220, 13%, 16%);
+  border-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .blockr-tab-bar {
+  background-color: hsl(220, 13%, 16%);
+  border-bottom-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .blockr-tab {
+  color: hsl(0, 0%, 70%);
+}
+
+.dark-mode .blockr-tab:hover {
+  background-color: hsl(220, 13%, 20%);
+}
+
+.dark-mode .blockr-tab.active {
+  color: var(--blockr-blue-500);
+  border-bottom-color: var(--blockr-blue-500);
+}
+
+.dark-mode .blockr-tab.active svg {
+  color: var(--blockr-blue-500);
+}
+
+.dark-mode .blockr-workflows-section {
+  color: hsl(0, 0%, 60%);
+}
+
+.dark-mode .blockr-workflows-link {
+  color: var(--blockr-blue-500);
+}
+
+/* Block panel content white backgrounds */
+.dark-mode .panel-body,
+.dark-mode .shiny-html-output,
+.dark-mode .shiny-bound-output,
+.dark-mode [class*="ext_panel-"],
+.dark-mode .dockview-react-part,
+.dark-mode .dockview-groupview-container,
+.dark-mode .content-container > div,
+.dark-mode [style*="background: white"],
+.dark-mode [style*="background-color: white"],
+.dark-mode [style*="background: rgb(255, 255, 255)"],
+.dark-mode [style*="background-color: rgb(255, 255, 255)"] {
+  background-color: hsl(220, 13%, 13%) !important;
+  background: hsl(220, 13%, 13%) !important;
+}
+
+/* Card (block container) dark mode */
+.dark-mode .card {
+  background: hsl(220, 13%, 13%);
+  border-color: hsl(220, 13%, 25%);
+}
+
+/* Catch-all for remaining white backgrounds in dark mode */
+.dark-mode .workflow-card,
+.dark-mode .workflow-item,
+.dark-mode .blockr-tabbed-dropdown .blockr-tab-panel,
+.dark-mode .blockr-tab-footer {
+  background-color: hsl(220, 13%, 16%);
+}
+
+/* Override tooltip/popover for dark mode */
+.dark-mode .tooltip-inner {
+  background-color: hsl(220, 13%, 22%);
+  color: hsl(0, 0%, 90%);
+  border-color: hsl(220, 13%, 30%);
+}
+
+.dark-mode .tooltip-arrow::before {
+  border-top-color: hsl(220, 13%, 22%) !important;
+  border-bottom-color: hsl(220, 13%, 22%) !important;
+}
+
+.dark-mode .popover {
+  background-color: hsl(220, 13%, 18%);
+  border-color: hsl(220, 13%, 28%);
+}
+
+.dark-mode .popover-body {
+  color: hsl(0, 0%, 85%);
+}
+
+.dark-mode .popover-arrow::before {
+  border-top-color: hsl(220, 13%, 28%) !important;
+  border-bottom-color: hsl(220, 13%, 28%) !important;
+}
+
+.dark-mode .popover-arrow::after {
+  border-top-color: hsl(220, 13%, 18%) !important;
+  border-bottom-color: hsl(220, 13%, 18%) !important;
+}
+
+/* Workflow overview page dark mode */
+.dark-mode .blockr-workflows-page {
+  background-color: hsl(220, 13%, 8%);
+}
+
+.dark-mode .blockr-workflows-card {
+  background-color: hsl(220, 13%, 16%);
+  border-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .blockr-workflows-card:hover {
+  background-color: hsl(220, 13%, 18%);
+  border-color: hsl(220, 13%, 30%);
+}
+
+/* History items dark mode */
+.dark-mode .blockr-history-item {
+  background-color: hsl(220, 13%, 16%);
+}
+
+.dark-mode .blockr-history-item:hover {
+  background-color: hsl(220, 13%, 20%);
+}
+
+.dark-mode .blockr-history-item.active {
+  background-color: hsl(220, 13%, 22%);
+  border-color: var(--blockr-blue-500);
+}
+
+/* Version history dark mode */
+.dark-mode .blockr-version-item {
+  color: hsl(0, 0%, 85%);
+}
+
+.dark-mode .blockr-version-item:hover {
+  background-color: hsl(220, 13%, 20%);
+}
+
+/* Offcanvas/sidebar dark mode */
+.dark-mode .offcanvas {
+  background-color: hsl(220, 13%, 13%);
+  border-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .offcanvas-header {
+  border-bottom-color: hsl(220, 13%, 25%);
+}
+
+.dark-mode .offcanvas-title {
+  color: hsl(0, 0%, 90%);
+}
+
+.dark-mode .blockr-offcanvas-close {
+  color: hsl(0, 0%, 70%);
+}
+
+.dark-mode .blockr-offcanvas-close:hover {
+  background-color: hsl(220, 13%, 20%);
+  color: hsl(0, 0%, 90%);
+}
+
+/* Accordion in sidebar dark mode */
+.dark-mode .blockr-accordion .blockr-accordion-button {
+  background-color: hsl(220, 13%, 16%);
+  color: hsl(0, 0%, 85%);
+}
+
+.dark-mode .blockr-accordion .blockr-accordion-button:hover {
+  background-color: hsl(220, 13%, 20%);
+}
+
+.dark-mode .blockr-accordion .blockr-accordion-body {
+  background-color: hsl(220, 13%, 13%);
+  border-color: hsl(220, 13%, 25%);
+}
+
+/* =============================================================================
+   1.7 UTILITY CLASSES
+   ============================================================================= */
+.d-none {
+  display: none !important;
 }
 
 

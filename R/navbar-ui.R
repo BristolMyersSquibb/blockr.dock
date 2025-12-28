@@ -171,6 +171,16 @@ navbar_ui <- function(id) {
     tags$div(
       class = "blockr-navbar-right",
       style = "display: flex !important; flex-direction: row !important; align-items: center !important; gap: 8px;",
+      # Dark mode toggle
+      tags$button(
+        id = ns("dark_mode_toggle"),
+        class = "blockr-navbar-icon-btn blockr-dark-mode-toggle",
+        type = "button",
+        title = "Toggle dark mode",
+        onclick = "document.body.classList.toggle('dark-mode'); this.querySelector('.icon-light').classList.toggle('d-none'); this.querySelector('.icon-dark').classList.toggle('d-none');",
+        tags$span(class = "icon-light", bsicons::bs_icon("sun", size = "1.2em")),
+        tags$span(class = "icon-dark d-none", bsicons::bs_icon("moon-stars", size = "1.2em"))
+      ),
       tags$button(
         class = "blockr-navbar-settings-btn",
         type = "button",
