@@ -200,31 +200,7 @@
   --blockr-shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.5);
 }
 
-/* Dockview dark theme overrides - target all dockview theme classes */
-.dark-mode [class*="dockview"],
-.dark-mode .dockview-theme-light,
-.dark-mode .dockview-theme-light-spaced {
-  --dv-group-view-background-color: hsl(220, 13%, 13%) !important;
-  --dv-tabs-and-actions-container-background-color: hsl(220, 13%, 16%) !important;
-  --dv-activegroup-visiblepanel-tab-background-color: hsl(220, 13%, 22%) !important;
-  --dv-activegroup-hiddenpanel-tab-background-color: hsl(220, 13%, 16%) !important;
-  --dv-inactivegroup-visiblepanel-tab-background-color: hsl(220, 13%, 20%) !important;
-  --dv-inactivegroup-hiddenpanel-tab-background-color: hsl(220, 13%, 16%) !important;
-  --dv-activegroup-visiblepanel-tab-color: hsl(0, 0%, 90%) !important;
-  --dv-activegroup-hiddenpanel-tab-color: hsl(0, 0%, 64%) !important;
-  --dv-inactivegroup-visiblepanel-tab-color: hsl(0, 0%, 64%) !important;
-  --dv-inactivegroup-hiddenpanel-tab-color: hsl(0, 0%, 45%) !important;
-  --dv-separator-border: hsl(220, 13%, 25%) !important;
-  --dv-tab-divider-color: hsl(220, 13%, 25%) !important;
-  --dv-paneview-header-border-color: hsl(220, 13%, 25%) !important;
-  --dv-icon-hover-background-color: hsl(220, 13%, 28%) !important;
-  --dv-background-color: hsl(220, 13%, 13%) !important;
-  /* Additional variables from dockview theme */
-  --dv-paneview-active-outline-color: var(--blockr-blue-500) !important;
-  --dv-drag-over-background-color: hsla(220, 13%, 30%, 0.5) !important;
-  --dv-drag-over-border-color: var(--blockr-blue-500) !important;
-  background-color: hsl(220, 13%, 13%) !important;
-}
+/* Dockview theme switching handled via JavaScript - abyss-spaced theme used for dark mode */
 
 /* Right-click context menu dark mode */
 .dark-mode .context-menu,
@@ -248,29 +224,14 @@
   color: hsl(0, 0%, 95%) !important;
 }
 
-/* Dockview direct element overrides for dark mode */
-.dark-mode .groupview {
-  background-color: hsl(220, 13%, 13%) !important;
-}
 
-.dark-mode .tabs-and-actions-container {
-  background-color: hsl(220, 13%, 16%) !important;
-}
-
-.dark-mode .tab {
-  background-color: hsl(220, 13%, 20%) !important;
-  color: hsl(0, 0%, 64%) !important;
-}
-
-.dark-mode .tab.active-tab {
-  background-color: hsl(220, 13%, 22%) !important;
-  color: hsl(0, 0%, 90%) !important;
-}
-
-/* G6/DAG dark mode */
-.dark-mode .g6-toolbar {
+/* G6/DAG dark mode - use body.dark-mode for higher specificity against inline styles */
+body.dark-mode .g6-toolbar,
+body.dark-mode [class*="g6-toolbar"],
+body.dark-mode div.g6-toolbar {
   background-color: hsl(220, 13%, 18%) !important;
   border-color: hsl(220, 13%, 25%) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark-mode .g6-toolbar svg,
@@ -441,33 +402,7 @@
   color: hsl(0, 0%, 70%);
 }
 
-/* Dockview borders and separators dark mode */
-.dark-mode .dv-resize-container,
-.dark-mode .dockview-react-part {
-  border-color: hsl(220, 13%, 25%) !important;
-}
-
-.dark-mode .sash,
-.dark-mode .sash-container .sash {
-  background-color: hsl(220, 13%, 25%) !important;
-}
-
-/* Split view container - the outer dockview border/background */
-.dark-mode .split-view-container,
-.dark-mode .split-view-container.horizontal,
-.dark-mode .split-view-container.vertical {
-  background-color: hsl(220, 13%, 13%) !important;
-}
-
-/* Dockview outer wrapper - catch white borders/backgrounds */
-.dark-mode #dockview-container,
-.dark-mode [id*="dockview"],
-.dark-mode .dockview,
-.dark-mode .dockview-react,
-.dark-mode .dv-dockview {
-  background-color: hsl(220, 13%, 13%) !important;
-  border-color: hsl(220, 13%, 25%) !important;
-}
+/* Dockview dark theme handled via native abyss-spaced theme class */
 
 /* Main app content area below navbar */
 .dark-mode .blockr-app-body,
@@ -501,10 +436,6 @@
   color: hsl(0, 0%, 98%) !important;
 }
 
-/* Block content UI (inside dockview panels) */
-.dark-mode .dv-render-overlay {
-  background-color: hsl(220, 13%, 13%) !important;
-}
 
 /* DAG node labels dark mode - more specific selectors */
 .dark-mode .g6-component-label,
@@ -515,8 +446,19 @@
 .dark-mode text[fill],
 .dark-mode .node-label,
 .dark-mode [class*="node"] text {
-  fill: hsl(0, 0%, 85%) !important;
-  color: hsl(0, 0%, 85%) !important;
+  fill: hsl(0, 0%, 95%) !important;
+  color: hsl(0, 0%, 95%) !important;
+}
+
+/* DAG node label background (path with class="background" inside label group) */
+.dark-mode svg .label .background,
+.dark-mode svg g.label .background,
+.dark-mode svg .label path.background,
+.dark-mode svg [class*="label"] .background,
+.dark-mode svg path.background,
+.dark-mode .background[fill] {
+  fill: hsl(220, 13%, 20%) !important;
+  stroke: hsl(220, 13%, 30%) !important;
 }
 
 /* Block title dark mode */
@@ -653,13 +595,6 @@
   color: hsl(0, 0%, 75%);
 }
 
-/* Dockview content area dark mode */
-.dark-mode .content-container,
-.dark-mode .void-container,
-.dark-mode [class*="dv-"] .content,
-.dark-mode .dv-default-tab-content {
-  background-color: hsl(220, 13%, 13%) !important;
-}
 
 /* Form control focus state dark mode */
 .dark-mode .form-control:focus,
@@ -767,14 +702,11 @@
   color: var(--blockr-blue-500);
 }
 
-/* Block panel content white backgrounds */
+/* Block panel content white backgrounds - non-dockview elements */
 .dark-mode .panel-body,
 .dark-mode .shiny-html-output,
 .dark-mode .shiny-bound-output,
 .dark-mode [class*="ext_panel-"],
-.dark-mode .dockview-react-part,
-.dark-mode .dockview-groupview-container,
-.dark-mode .content-container > div,
 .dark-mode [style*="background: white"],
 .dark-mode [style*="background-color: white"],
 .dark-mode [style*="background: rgb(255, 255, 255)"],
@@ -809,13 +741,33 @@
   border-bottom-color: hsl(220, 13%, 22%) !important;
 }
 
-.dark-mode .popover {
-  background-color: hsl(220, 13%, 18%);
-  border-color: hsl(220, 13%, 28%);
+.dark-mode .popover,
+.dark-mode .bs-popover-auto,
+.dark-mode .bs-popover-top,
+.dark-mode .bs-popover-bottom,
+.dark-mode .bs-popover-start,
+.dark-mode .bs-popover-end,
+.dark-mode [data-popper-placement],
+.dark-mode .blockr-popover-content,
+.dark-mode [class*="blockr-popover"] {
+  background-color: hsl(220, 13%, 18%) !important;
+  border-color: hsl(220, 13%, 28%) !important;
 }
 
-.dark-mode .popover-body {
-  color: hsl(0, 0%, 85%);
+.dark-mode .popover-body,
+.dark-mode .popover-header,
+.dark-mode .blockr-popover-body {
+  color: hsl(0, 0%, 85%) !important;
+  background-color: hsl(220, 13%, 18%) !important;
+}
+
+/* Badge dark mode - consistent across sidebar and popover */
+.dark-mode .badge-two-tone,
+.dark-mode .blockr-version-badge,
+.dark-mode [class*="badge"] {
+  background-color: hsl(220, 13%, 25%) !important;
+  color: hsl(0, 0%, 75%) !important;
+  border-color: hsl(220, 13%, 35%) !important;
 }
 
 .dark-mode .popover-arrow::before {

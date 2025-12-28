@@ -177,7 +177,7 @@ navbar_ui <- function(id) {
         class = "blockr-navbar-icon-btn blockr-dark-mode-toggle",
         type = "button",
         title = "Toggle dark mode",
-        onclick = "document.body.classList.toggle('dark-mode'); this.querySelector('.icon-light').classList.toggle('d-none'); this.querySelector('.icon-dark').classList.toggle('d-none');",
+        onclick = "document.body.classList.toggle('dark-mode'); this.querySelector('.icon-light').classList.toggle('d-none'); this.querySelector('.icon-dark').classList.toggle('d-none'); var dv = document.querySelector('[class*=\"dockview-theme-\"]'); console.log('dockview element:', dv); console.log('dockview className before:', dv ? dv.className : 'not found'); if(dv) { if(document.body.classList.contains('dark-mode')) { dv.className = dv.className.replace(/dockview-theme-[\\w-]+/, 'dockview-theme-abyss-spaced'); } else { dv.className = dv.className.replace(/dockview-theme-[\\w-]+/, 'dockview-theme-light-spaced'); } console.log('dockview className after:', dv.className); }",
         tags$span(class = "icon-light", bsicons::bs_icon("sun", size = "1.2em")),
         tags$span(class = "icon-dark d-none", bsicons::bs_icon("moon-stars", size = "1.2em"))
       ),
