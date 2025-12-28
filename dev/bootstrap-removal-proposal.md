@@ -47,6 +47,9 @@ blockr.dock/
 | **Cleaner code** | CSS variables, consistent naming, no `!important` hacks |
 | **Better performance** | Less CSS to parse, no unused Bootstrap utilities |
 | **Simpler debugging** | One source of truth for styles |
+| **Easier theming** | Dark mode via CSS variable redefinition, not specificity battles |
+
+**Dark mode example:** With centralized CSS using HSL color variables, implementing dark mode becomes straightforward - redefine lightness values in a `.dark-mode` block and components automatically adapt. Without Bootstrap, there's no need for `!important` overrides or complex selectors to fight framework specificity. The only remaining challenges are third-party JS libraries (like dockview, G6) that inject inline styles.
 
 ## Measured Performance Results
 
