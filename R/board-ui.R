@@ -123,21 +123,15 @@ viewport_detection_script <- function(ns) {
 
 #' Mobile board UI
 #'
-#' Simple tabbed layout for mobile devices
+#' Card stack layout for mobile devices - each panel becomes a card
 #' @noRd
 mobile_board_ui <- function(ns) {
   tagList(
-    # Tab bar at top
+    # Scrollable card stack container
     tags$div(
-      id = ns("mobile_tabs"),
-      class = "mobile-tab-bar"
-      # Tabs will be rendered dynamically
-    ),
-    # Content area
-    tags$div(
-      id = ns("mobile_content"),
-      class = "mobile-content-area"
-      # Active block content will be moved here
+      id = ns("mobile_card_stack"),
+      class = "mobile-card-stack"
+      # Cards will be rendered dynamically from blocks and extensions
     ),
     # Add block button (floating)
     tags$button(

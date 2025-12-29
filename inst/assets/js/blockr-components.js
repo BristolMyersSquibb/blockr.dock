@@ -357,45 +357,46 @@ if (!window.bootstrap) {
   });
 
   /* ===========================================================================
-     MOBILE LAYOUT - Separate tab-based UI for mobile devices
+     MOBILE LAYOUT - Vertical card stack for mobile devices
+     Each dockview panel becomes a card, panels with multiple tabs get internal tabs
      =========================================================================== */
 
   var MOBILE_BREAKPOINT = 900;
-  var mobileActiveTab = null;
   var mobileInitialized = false;
+  var lastRenderedCardState = '';
+  var renderCardsTimeout = null;
+  var isRenderingCards = false;
 
-  // Get all block cards from anywhere (offcanvas, dockview panels, or mobile content)
+  // Get all block cards from offcanvas (the source of truth)
   function getBlockCards() {
-    // Find all block cards in the document
-    var allCards = document.querySelectorAll('.card[id*="block_handle"]');
-    if (allCards.length === 0) return [];
+    var offcanvas = document.querySelector('[id$="blocks_offcanvas"]');
+    if (!offcanvas) return [];
 
-    // Deduplicate by ID (in case of clones)
-    var seen = {};
-    var unique = [];
-    allCards.forEach(function(card) {
-      if (!seen[card.id]) {
-        seen[card.id] = true;
-        unique.push(card);
-      }
-    });
-    return unique;
+    var cards = offcanvas.querySelectorAll('.card[id*="block_handle"]');
+    return Array.from(cards);
+  }
+
+  // Get extension panels (DAG, etc.) from the extensions offcanvas
+  function getExtensionPanels() {
+    var offcanvas = document.querySelector('[id$="exts_offcanvas"]');
+    if (!offcanvas) return [];
+
+    // Find extension content divs
+    var extPanels = offcanvas.querySelectorAll('[class*="ext_panel-"]');
+    return Array.from(extPanels);
   }
 
   // Get block info from a card element
   function getBlockInfo(card) {
     var id = card.id;
-    // Extract block ID from handle ID (format: ns-block_handle-xxx or ns-block_handle_xxx)
     var match = id.match(/block_handle[-_](.+)$/);
     var blockId = match ? match[1] : id;
 
-    // Try to find the block name - the title is rendered in an element with id ending in "block_name_out"
     var title = null;
 
     // Method 1: Look for the uiOutput element that contains the block name
     var nameOut = card.querySelector('[id$="block_name_out"]');
     if (nameOut) {
-      // Get text content, but only from text nodes or specific elements
       var h5 = nameOut.querySelector('h5, h6, .block-name, span');
       if (h5) {
         title = h5.textContent.trim();
@@ -420,119 +421,135 @@ if (!window.bootstrap) {
       }
     }
 
-    // Final fallback: use a clean version of the block ID
+    // Final fallback: prettify the block ID
     if (!title || title.length > 50) {
-      // Convert block_id like "deep_fireant" to "Deep Fireant"
       title = blockId.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
     }
 
     return { id: blockId, fullId: id, title: title };
   }
 
-  // Track last rendered state to avoid unnecessary re-renders
-  var lastRenderedBlockIds = '';
+  // Render all blocks and extensions as vertically stacked cards
+  function renderMobileCards() {
+    var cardStack = document.querySelector('.mobile-card-stack');
+    if (!cardStack) return;
 
-  // Render tabs for all blocks
-  function renderMobileTabs() {
-    var tabBar = document.querySelector('.mobile-tab-bar');
-    if (!tabBar) return;
+    var blockCards = getBlockCards();
+    var extPanels = getExtensionPanels();
 
-    var cards = getBlockCards();
-
-    // Check if anything changed to avoid flickering
-    var currentIds = cards.map(function(c) { return c.id; }).join(',');
-    if (currentIds === lastRenderedBlockIds && tabBar.children.length > 0) {
-      return; // Nothing changed, skip re-render
+    // Check if anything changed
+    var currentState = blockCards.map(function(c) { return c.id; }).join(',') +
+                       '|' + extPanels.length;
+    if (currentState === lastRenderedCardState && cardStack.children.length > 0) {
+      return; // Nothing changed
     }
-    lastRenderedBlockIds = currentIds;
+    lastRenderedCardState = currentState;
 
-    // Clear existing tabs
-    tabBar.innerHTML = '';
+    // Unbind Shiny before clearing
+    if (typeof Shiny !== 'undefined' && Shiny.unbindAll) {
+      Shiny.unbindAll(cardStack);
+    }
 
-    if (cards.length === 0) {
-      // Show empty state
-      var contentArea = document.querySelector('.mobile-content-area');
-      if (contentArea) {
-        contentArea.innerHTML = '<div class="mobile-empty-state">' +
-          '<div class="mobile-empty-state-icon">📦</div>' +
-          '<div class="mobile-empty-state-text">No blocks yet</div>' +
-          '<div class="mobile-empty-state-hint">Tap + to add a block</div>' +
-          '</div>';
-      }
+    cardStack.innerHTML = '';
+
+    // Show empty state if no blocks
+    if (blockCards.length === 0 && extPanels.length === 0) {
+      cardStack.innerHTML = '<div class="mobile-empty-state">' +
+        '<div class="mobile-empty-state-icon">📦</div>' +
+        '<div class="mobile-empty-state-text">No blocks yet</div>' +
+        '<div class="mobile-empty-state-hint">Tap + to add a block</div>' +
+        '</div>';
       return;
     }
 
-    cards.forEach(function(card, index) {
-      var info = getBlockInfo(card);
-      var tab = document.createElement('button');
-      tab.className = 'mobile-tab' + (index === 0 ? ' active' : '');
-      tab.setAttribute('data-block-id', info.fullId);
-      tab.textContent = info.title;
+    // Render each block as a card
+    blockCards.forEach(function(originalCard) {
+      var info = getBlockInfo(originalCard);
 
-      tab.addEventListener('click', function() {
-        selectMobileTab(info.fullId);
-      });
+      // Create wrapper card
+      var mobileCard = document.createElement('div');
+      mobileCard.className = 'mobile-block-card';
+      mobileCard.setAttribute('data-block-id', info.fullId);
 
-      tabBar.appendChild(tab);
+      // Card header with title
+      var header = document.createElement('div');
+      header.className = 'mobile-card-header';
+      header.innerHTML = '<span class="mobile-card-title">' + escapeHtml(info.title) + '</span>';
+      mobileCard.appendChild(header);
+
+      // Card body with cloned content
+      var body = document.createElement('div');
+      body.className = 'mobile-card-body';
+
+      // Clone the original card content
+      var clone = originalCard.cloneNode(true);
+      clone.style.display = 'block';
+      clone.classList.add('mobile-cloned-block');
+      body.appendChild(clone);
+
+      mobileCard.appendChild(body);
+      cardStack.appendChild(mobileCard);
     });
 
-    // Select first tab by default
-    if (cards.length > 0 && !mobileActiveTab) {
-      selectMobileTab(cards[0].id);
-    } else if (mobileActiveTab) {
-      // Re-select the active tab if it still exists
-      var exists = cards.some(function(c) { return c.id === mobileActiveTab; });
-      if (exists) {
-        selectMobileTab(mobileActiveTab);
-      } else {
-        selectMobileTab(cards[0].id);
+    // Render extension panels as cards (e.g., DAG view)
+    extPanels.forEach(function(extPanel, index) {
+      var mobileCard = document.createElement('div');
+      mobileCard.className = 'mobile-block-card mobile-extension-card';
+
+      // Try to get extension title
+      var title = 'Extension';
+      var extClass = Array.from(extPanel.classList).find(function(c) {
+        return c.indexOf('ext_panel-') !== -1;
+      });
+      if (extClass) {
+        // Extract name from class like "ext_panel-dag_extension"
+        var extName = extClass.replace('ext_panel-', '').replace(/_/g, ' ');
+        title = extName.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
       }
+
+      // Card header
+      var header = document.createElement('div');
+      header.className = 'mobile-card-header';
+      header.innerHTML = '<span class="mobile-card-title">' + escapeHtml(title) + '</span>';
+      mobileCard.appendChild(header);
+
+      // Card body with cloned extension content
+      var body = document.createElement('div');
+      body.className = 'mobile-card-body mobile-extension-body';
+
+      var clone = extPanel.cloneNode(true);
+      clone.style.display = 'block';
+      body.appendChild(clone);
+
+      mobileCard.appendChild(body);
+      cardStack.appendChild(mobileCard);
+    });
+
+    // Rebind Shiny
+    if (typeof Shiny !== 'undefined' && Shiny.bindAll) {
+      Shiny.bindAll(cardStack);
     }
   }
 
-  // Select a tab and show its content
-  function selectMobileTab(blockId) {
-    mobileActiveTab = blockId;
-
-    // Update tab active state
-    var tabs = document.querySelectorAll('.mobile-tab');
-    tabs.forEach(function(tab) {
-      tab.classList.toggle('active', tab.getAttribute('data-block-id') === blockId);
-    });
-
-    // Move the selected block to content area
-    var contentArea = document.querySelector('.mobile-content-area');
-    var card = document.getElementById(blockId);
-
-    if (contentArea && card) {
-      // Clear content area first
-      contentArea.innerHTML = '';
-      // Clone or move the card
-      var clone = card.cloneNode(true);
-      clone.style.display = 'block';
-      contentArea.appendChild(clone);
-
-      // Re-bind Shiny if needed
-      if (typeof Shiny !== 'undefined' && Shiny.bindAll) {
-        Shiny.bindAll(contentArea);
-      }
-    }
+  // Helper to escape HTML
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   // Handle add block button on mobile
   function setupMobileAddButton() {
     var addBtn = document.querySelector('.mobile-add-btn');
-    if (!addBtn) return;
+    if (!addBtn || addBtn.dataset.mobileSetup) return;
+    addBtn.dataset.mobileSetup = 'true';
 
     addBtn.addEventListener('click', function() {
-      // Find and show the block panel directly
       var panel = document.querySelector('.blockr-block-panel');
 
       if (panel) {
         panel.classList.remove('blockr-block-panel-hidden');
-        // Set the panel state for Shiny
         if (typeof Shiny !== 'undefined') {
-          // Find the state input ID from the panel
           var stateInput = panel.id.replace('block_panel', 'block_panel_state');
           Shiny.setInputValue(stateInput, {
             mode: 'add',
@@ -540,7 +557,6 @@ if (!window.bootstrap) {
             timestamp: Date.now()
           }, {priority: 'event'});
         }
-        // Focus search input
         setTimeout(function() {
           var searchInput = panel.querySelector('.blockr-block-panel-search-input');
           if (searchInput) searchInput.focus();
@@ -552,45 +568,35 @@ if (!window.bootstrap) {
   // Initialize mobile layout
   function initMobileLayout() {
     if (mobileInitialized) return;
-
-    // Only initialize if we're on mobile
     if (window.innerWidth > MOBILE_BREAKPOINT) return;
 
-    // Wait for DOM to be ready
     var checkReady = setInterval(function() {
-      var tabBar = document.querySelector('.mobile-tab-bar');
+      var cardStack = document.querySelector('.mobile-card-stack');
       var offcanvas = document.querySelector('[id$="blocks_offcanvas"]');
 
-      if (tabBar && offcanvas) {
+      if (cardStack && offcanvas) {
         clearInterval(checkReady);
-        renderMobileTabs();
+        renderMobileCards();
         setupMobileAddButton();
         mobileInitialized = true;
       }
     }, 100);
 
-    // Timeout after 10 seconds
     setTimeout(function() { clearInterval(checkReady); }, 10000);
   }
 
-  // Watch for block changes and update tabs
-  var renderTabsTimeout = null;
-  var isRenderingTabs = false;
-
+  // Watch for block changes and update cards
   function observeBlockChanges() {
-    // Observe the entire body for block card changes
     var observer = new MutationObserver(function(mutations) {
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
-      if (isRenderingTabs) return; // Prevent re-entrancy
+      if (isRenderingCards) return;
 
       // Check if any mutation involves block cards (not mobile UI elements)
       var blockChanged = mutations.some(function(m) {
         return Array.from(m.addedNodes).concat(Array.from(m.removedNodes)).some(function(n) {
           if (n.nodeType !== 1) return false;
-          // Only trigger for actual block cards, not mobile UI
-          if (n.classList && (n.classList.contains('mobile-tab') ||
-              n.classList.contains('mobile-tab-bar') ||
-              n.classList.contains('mobile-content-area'))) {
+          if (n.classList && (n.classList.contains('mobile-block-card') ||
+              n.classList.contains('mobile-card-stack'))) {
             return false;
           }
           return n.id && n.id.indexOf('block_handle') !== -1;
@@ -598,12 +604,11 @@ if (!window.bootstrap) {
       });
 
       if (blockChanged) {
-        // Debounce with longer delay to prevent flickering
-        clearTimeout(renderTabsTimeout);
-        renderTabsTimeout = setTimeout(function() {
-          isRenderingTabs = true;
-          renderMobileTabs();
-          setTimeout(function() { isRenderingTabs = false; }, 200);
+        clearTimeout(renderCardsTimeout);
+        renderCardsTimeout = setTimeout(function() {
+          isRenderingCards = true;
+          renderMobileCards();
+          setTimeout(function() { isRenderingCards = false; }, 200);
         }, 300);
       }
     });
@@ -631,7 +636,7 @@ if (!window.bootstrap) {
     });
   }
 
-  // Handle resize - reinitialize mobile when switching from desktop
+  // Handle resize
   var resizeTimeout;
   var wasMobile = window.innerWidth <= MOBILE_BREAKPOINT;
 
@@ -641,24 +646,22 @@ if (!window.bootstrap) {
       var isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
 
       if (isMobile && !wasMobile) {
-        // Switched from desktop to mobile - reinitialize
         mobileInitialized = false;
-        mobileActiveTab = null;
+        lastRenderedCardState = '';
         initMobileLayout();
       } else if (isMobile) {
-        // Already mobile, just refresh tabs
-        renderMobileTabs();
+        renderMobileCards();
       }
 
       wasMobile = isMobile;
     }, 150);
   });
 
-  // Shiny handler to update mobile tabs when blocks change
+  // Shiny handler to update mobile cards when blocks change
   if (typeof Shiny !== 'undefined') {
     Shiny.addCustomMessageHandler('blockr-update-mobile-tabs', function(msg) {
       if (window.innerWidth <= MOBILE_BREAKPOINT) {
-        renderMobileTabs();
+        renderMobileCards();
       }
     });
   }
