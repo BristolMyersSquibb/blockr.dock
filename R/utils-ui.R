@@ -252,8 +252,20 @@ move_dom_element <- function(from, to, session = get_session()) {
 }
 
 determine_active_views <- function(layout) {
+  # Handle empty/null layout (e.g., on mobile where dockview isn't initialized)
+  if (is.null(layout) || length(layout) == 0) {
+    return(character(0))
+  }
+
+  root <- layout[["grid"]][["root"]]
+  if (is.null(root) || length(root) == 0) {
+    return(character(0))
+  }
 
   xtr_leaf_id <- function(x) {
+    if (is.null(x) || length(x) == 0) {
+      return(character(0))
+    }
 
     if (x$type == "leaf") {
       return(set_names(coal(x$data$activeView, ""), x$data$id))
@@ -263,7 +275,7 @@ determine_active_views <- function(layout) {
   }
 
   rapply(
-    xtr_leaf_id(layout[["grid"]][["root"]]),
+    xtr_leaf_id(root),
     identity,
     "character"
   )

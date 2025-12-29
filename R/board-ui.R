@@ -1,3 +1,7 @@
+#' Mobile breakpoint for switching between dock and mobile layouts
+#' @noRd
+MOBILE_BREAKPOINT <- 900
+
 #' @export
 board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
                                 options = board_options(x), ...) {
@@ -13,6 +17,8 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
   tagList(
     show_hide_block_dep(),
     blockr_dock_dep(),
+    # Early viewport detection - sends width before Shiny fully loads
+    viewport_detection_script(ns),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
@@ -31,19 +37,25 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
         opt_ui_or_null("generate_code", plugins, x)
       )
     ),
-    # Main board view (shown by default)
+    # Desktop: Dockview layout (hidden on mobile via CSS)
     tags$div(
       id = ns("board_view"),
-      class = "blockr-board-view",
+      class = "blockr-board-view blockr-desktop-only",
       style = "position: relative;",
       dockViewR::dock_view_output(
         NS(id, dock_id()),
         width = "100%",
         height = "calc(100vh - 48px)"
-      ),
-      # Slide-out block panel (hidden by default)
-      block_panel_ui(ns)
+      )
     ),
+    # Mobile: Simple tabbed layout (hidden on desktop via CSS)
+    tags$div(
+      id = ns("mobile_view"),
+      class = "blockr-mobile-view blockr-mobile-only",
+      mobile_board_ui(ns)
+    ),
+    # Slide-out block panel (shared between desktop and mobile)
+    block_panel_ui(ns),
     # Workflow overview page (hidden by default using position/visibility)
     tags$div(
       id = ns("workflows_view"),
@@ -61,13 +73,15 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
         board = x
       )
     ),
-    # JavaScript for view switching
+    # JavaScript for view switching (handles both desktop and mobile views)
     tags$script(HTML(sprintf("
       Shiny.addCustomMessageHandler('blockr-switch-view', function(view) {
         var boardView = document.getElementById('%s');
+        var mobileView = document.getElementById('%s');
         var workflowsView = document.getElementById('%s');
         if (view === 'workflows') {
           if (boardView) boardView.classList.add('blockr-view-hidden');
+          if (mobileView) mobileView.classList.add('blockr-view-hidden');
           if (workflowsView) workflowsView.classList.remove('blockr-view-hidden');
           // Trigger resize for reactable
           setTimeout(function() {
@@ -75,10 +89,63 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
           }, 50);
         } else {
           if (boardView) boardView.classList.remove('blockr-view-hidden');
+          if (mobileView) mobileView.classList.remove('blockr-view-hidden');
           if (workflowsView) workflowsView.classList.add('blockr-view-hidden');
         }
       });
-    ", ns("board_view"), ns("workflows_view"))))
+    ", ns("board_view"), ns("mobile_view"), ns("workflows_view"))))
+  )
+}
+
+#' Viewport detection script
+#'
+#' Sends viewport width to Shiny as early as possible
+#' @noRd
+viewport_detection_script <- function(ns) {
+  tags$script(HTML(sprintf("
+    (function() {
+      function sendViewport() {
+        if (typeof Shiny !== 'undefined' && Shiny.setInputValue) {
+          Shiny.setInputValue('%s', window.innerWidth, {priority: 'event'});
+        }
+      }
+      // Send immediately when Shiny connects
+      $(document).on('shiny:connected', sendViewport);
+      // Also send on resize
+      var resizeTimer;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(sendViewport, 150);
+      });
+    })();
+  ", ns("viewport_width"))))
+}
+
+#' Mobile board UI
+#'
+#' Simple tabbed layout for mobile devices
+#' @noRd
+mobile_board_ui <- function(ns) {
+  tagList(
+    # Tab bar at top
+    tags$div(
+      id = ns("mobile_tabs"),
+      class = "mobile-tab-bar"
+      # Tabs will be rendered dynamically
+    ),
+    # Content area
+    tags$div(
+      id = ns("mobile_content"),
+      class = "mobile-content-area"
+      # Active block content will be moved here
+    ),
+    # Add block button (floating)
+    tags$button(
+      id = ns("mobile_add_block"),
+      class = "mobile-add-btn",
+      type = "button",
+      tags$span(class = "mobile-add-icon", "+")
+    )
   )
 }
 

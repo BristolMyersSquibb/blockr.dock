@@ -3419,3 +3419,151 @@ body.modal-open {
 /* Background & Border */
 .bg-transparent { background-color: transparent !important; }
 .border-0 { border: 0 !important; }
+
+
+/* =============================================================================
+   10. MOBILE LAYOUT
+   ============================================================================= */
+
+/* Mobile breakpoint: 900px */
+@media (min-width: 901px) {
+  .blockr-mobile-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .blockr-desktop-only {
+    display: none !important;
+  }
+
+  /* Mobile view container */
+  .blockr-mobile-view {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 48px);
+    background: var(--blockr-color-bg-primary);
+  }
+
+  /* Tab bar at top */
+  .mobile-tab-bar {
+    display: flex;
+    overflow-x: auto;
+    background: var(--blockr-color-bg-secondary);
+    border-bottom: 1px solid var(--blockr-color-border);
+    padding: 0;
+    min-height: 44px;
+    flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .mobile-tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-tab {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--blockr-color-text-muted);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .mobile-tab:hover {
+    color: var(--blockr-color-text-primary);
+    background: var(--blockr-color-bg-hover);
+  }
+
+  .mobile-tab.active {
+    color: var(--blockr-color-primary);
+    border-bottom-color: var(--blockr-color-primary);
+  }
+
+  .mobile-tab-icon {
+    margin-right: 6px;
+    font-size: 14px;
+  }
+
+  /* Content area */
+  .mobile-content-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+
+  /* Block cards in mobile view */
+  .mobile-content-area .card {
+    margin-bottom: 0;
+  }
+
+  /* Floating add button */
+  .mobile-add-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--blockr-color-primary);
+    color: white;
+    border: none;
+    box-shadow: var(--blockr-shadow-lg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .mobile-add-btn:hover {
+    transform: scale(1.05);
+    box-shadow: var(--blockr-shadow-xl);
+  }
+
+  .mobile-add-btn:active {
+    transform: scale(0.95);
+  }
+
+  .mobile-add-icon {
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
+  }
+
+  /* Empty state */
+  .mobile-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--blockr-color-text-muted);
+    text-align: center;
+    padding: 40px 20px;
+  }
+
+  .mobile-empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .mobile-empty-state-text {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .mobile-empty-state-hint {
+    font-size: 14px;
+    opacity: 0.7;
+  }
+}

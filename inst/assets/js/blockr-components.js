@@ -356,4 +356,295 @@ if (!window.bootstrap) {
     }
   });
 
+  /* ===========================================================================
+     MOBILE LAYOUT - Separate tab-based UI for mobile devices
+     =========================================================================== */
+
+  var MOBILE_BREAKPOINT = 900;
+  var mobileActiveTab = null;
+  var mobileInitialized = false;
+
+  // Get all block cards from anywhere (offcanvas, dockview panels, or mobile content)
+  function getBlockCards() {
+    // Find all block cards in the document
+    var allCards = document.querySelectorAll('.card[id*="block_handle"]');
+    if (allCards.length === 0) return [];
+
+    // Deduplicate by ID (in case of clones)
+    var seen = {};
+    var unique = [];
+    allCards.forEach(function(card) {
+      if (!seen[card.id]) {
+        seen[card.id] = true;
+        unique.push(card);
+      }
+    });
+    return unique;
+  }
+
+  // Get block info from a card element
+  function getBlockInfo(card) {
+    var id = card.id;
+    // Extract block ID from handle ID (format: ns-block_handle-xxx or ns-block_handle_xxx)
+    var match = id.match(/block_handle[-_](.+)$/);
+    var blockId = match ? match[1] : id;
+
+    // Try to find the block name from the editable title input
+    var title = null;
+    var titleInput = card.querySelector('.inline-editable input[type="text"]');
+    if (titleInput && titleInput.value) {
+      title = titleInput.value.trim();
+    }
+
+    // Fallback: look for the displayed title text
+    if (!title) {
+      var titleSpan = card.querySelector('.inline-editable .editable-text, .inline-editable span:not(.edit-icon)');
+      if (titleSpan) {
+        title = titleSpan.textContent.trim();
+      }
+    }
+
+    // Final fallback: use a clean version of the block ID
+    if (!title || title.length > 50) {
+      // Convert block_id like "deep_fireant" to "Deep Fireant"
+      title = blockId.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+    }
+
+    return { id: blockId, fullId: id, title: title };
+  }
+
+  // Track last rendered state to avoid unnecessary re-renders
+  var lastRenderedBlockIds = '';
+
+  // Render tabs for all blocks
+  function renderMobileTabs() {
+    var tabBar = document.querySelector('.mobile-tab-bar');
+    if (!tabBar) return;
+
+    var cards = getBlockCards();
+
+    // Check if anything changed to avoid flickering
+    var currentIds = cards.map(function(c) { return c.id; }).join(',');
+    if (currentIds === lastRenderedBlockIds && tabBar.children.length > 0) {
+      return; // Nothing changed, skip re-render
+    }
+    lastRenderedBlockIds = currentIds;
+
+    // Clear existing tabs
+    tabBar.innerHTML = '';
+
+    if (cards.length === 0) {
+      // Show empty state
+      var contentArea = document.querySelector('.mobile-content-area');
+      if (contentArea) {
+        contentArea.innerHTML = '<div class="mobile-empty-state">' +
+          '<div class="mobile-empty-state-icon">📦</div>' +
+          '<div class="mobile-empty-state-text">No blocks yet</div>' +
+          '<div class="mobile-empty-state-hint">Tap + to add a block</div>' +
+          '</div>';
+      }
+      return;
+    }
+
+    cards.forEach(function(card, index) {
+      var info = getBlockInfo(card);
+      var tab = document.createElement('button');
+      tab.className = 'mobile-tab' + (index === 0 ? ' active' : '');
+      tab.setAttribute('data-block-id', info.fullId);
+      tab.textContent = info.title;
+
+      tab.addEventListener('click', function() {
+        selectMobileTab(info.fullId);
+      });
+
+      tabBar.appendChild(tab);
+    });
+
+    // Select first tab by default
+    if (cards.length > 0 && !mobileActiveTab) {
+      selectMobileTab(cards[0].id);
+    } else if (mobileActiveTab) {
+      // Re-select the active tab if it still exists
+      var exists = cards.some(function(c) { return c.id === mobileActiveTab; });
+      if (exists) {
+        selectMobileTab(mobileActiveTab);
+      } else {
+        selectMobileTab(cards[0].id);
+      }
+    }
+  }
+
+  // Select a tab and show its content
+  function selectMobileTab(blockId) {
+    mobileActiveTab = blockId;
+
+    // Update tab active state
+    var tabs = document.querySelectorAll('.mobile-tab');
+    tabs.forEach(function(tab) {
+      tab.classList.toggle('active', tab.getAttribute('data-block-id') === blockId);
+    });
+
+    // Move the selected block to content area
+    var contentArea = document.querySelector('.mobile-content-area');
+    var card = document.getElementById(blockId);
+
+    if (contentArea && card) {
+      // Clear content area first
+      contentArea.innerHTML = '';
+      // Clone or move the card
+      var clone = card.cloneNode(true);
+      clone.style.display = 'block';
+      contentArea.appendChild(clone);
+
+      // Re-bind Shiny if needed
+      if (typeof Shiny !== 'undefined' && Shiny.bindAll) {
+        Shiny.bindAll(contentArea);
+      }
+    }
+  }
+
+  // Handle add block button on mobile
+  function setupMobileAddButton() {
+    var addBtn = document.querySelector('.mobile-add-btn');
+    if (!addBtn) return;
+
+    addBtn.addEventListener('click', function() {
+      // Find and show the block panel directly
+      var panel = document.querySelector('.blockr-block-panel');
+
+      if (panel) {
+        panel.classList.remove('blockr-block-panel-hidden');
+        // Set the panel state for Shiny
+        if (typeof Shiny !== 'undefined') {
+          // Find the state input ID from the panel
+          var stateInput = panel.id.replace('block_panel', 'block_panel_state');
+          Shiny.setInputValue(stateInput, {
+            mode: 'add',
+            source_block: null,
+            timestamp: Date.now()
+          }, {priority: 'event'});
+        }
+        // Focus search input
+        setTimeout(function() {
+          var searchInput = panel.querySelector('.blockr-block-panel-search-input');
+          if (searchInput) searchInput.focus();
+        }, 100);
+      }
+    });
+  }
+
+  // Initialize mobile layout
+  function initMobileLayout() {
+    if (mobileInitialized) return;
+
+    // Only initialize if we're on mobile
+    if (window.innerWidth > MOBILE_BREAKPOINT) return;
+
+    // Wait for DOM to be ready
+    var checkReady = setInterval(function() {
+      var tabBar = document.querySelector('.mobile-tab-bar');
+      var offcanvas = document.querySelector('[id$="blocks_offcanvas"]');
+
+      if (tabBar && offcanvas) {
+        clearInterval(checkReady);
+        renderMobileTabs();
+        setupMobileAddButton();
+        mobileInitialized = true;
+      }
+    }, 100);
+
+    // Timeout after 10 seconds
+    setTimeout(function() { clearInterval(checkReady); }, 10000);
+  }
+
+  // Watch for block changes and update tabs
+  var renderTabsTimeout = null;
+  var isRenderingTabs = false;
+
+  function observeBlockChanges() {
+    // Observe the entire body for block card changes
+    var observer = new MutationObserver(function(mutations) {
+      if (window.innerWidth > MOBILE_BREAKPOINT) return;
+      if (isRenderingTabs) return; // Prevent re-entrancy
+
+      // Check if any mutation involves block cards (not mobile UI elements)
+      var blockChanged = mutations.some(function(m) {
+        return Array.from(m.addedNodes).concat(Array.from(m.removedNodes)).some(function(n) {
+          if (n.nodeType !== 1) return false;
+          // Only trigger for actual block cards, not mobile UI
+          if (n.classList && (n.classList.contains('mobile-tab') ||
+              n.classList.contains('mobile-tab-bar') ||
+              n.classList.contains('mobile-content-area'))) {
+            return false;
+          }
+          return n.id && n.id.indexOf('block_handle') !== -1;
+        });
+      });
+
+      if (blockChanged) {
+        // Debounce with longer delay to prevent flickering
+        clearTimeout(renderTabsTimeout);
+        renderTabsTimeout = setTimeout(function() {
+          isRenderingTabs = true;
+          renderMobileTabs();
+          setTimeout(function() { isRenderingTabs = false; }, 200);
+        }, 300);
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  // Initialize
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      initMobileLayout();
+      observeBlockChanges();
+    });
+  } else {
+    initMobileLayout();
+    observeBlockChanges();
+  }
+
+  if (typeof Shiny !== 'undefined') {
+    $(document).on('shiny:connected', function() {
+      setTimeout(function() {
+        initMobileLayout();
+        observeBlockChanges();
+      }, 300);
+    });
+  }
+
+  // Handle resize - reinitialize mobile when switching from desktop
+  var resizeTimeout;
+  var wasMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(function() {
+      var isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+
+      if (isMobile && !wasMobile) {
+        // Switched from desktop to mobile - reinitialize
+        mobileInitialized = false;
+        mobileActiveTab = null;
+        initMobileLayout();
+      } else if (isMobile) {
+        // Already mobile, just refresh tabs
+        renderMobileTabs();
+      }
+
+      wasMobile = isMobile;
+    }, 150);
+  });
+
+  // Shiny handler to update mobile tabs when blocks change
+  if (typeof Shiny !== 'undefined') {
+    Shiny.addCustomMessageHandler('blockr-update-mobile-tabs', function(msg) {
+      if (window.innerWidth <= MOBILE_BREAKPOINT) {
+        renderMobileTabs();
+      }
+    });
+  }
+
 })();
