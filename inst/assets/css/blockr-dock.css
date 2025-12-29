@@ -3522,13 +3522,31 @@ body.modal-open {
   }
 
   .mobile-extension-body {
-    min-height: 200px;
+    min-height: 250px;
+    padding: 8px;
+    position: relative;
   }
 
   /* G6 graph in extension card */
   .mobile-extension-body .g6 {
     width: 100% !important;
     height: 250px !important;
+    pointer-events: none; /* Disable interaction on cloned graph */
+    opacity: 0.9;
+  }
+
+  /* View-only notice for extension cards */
+  .mobile-extension-notice {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    z-index: 10;
   }
 
   /* Floating add button */
@@ -3632,5 +3650,14 @@ body.modal-open {
     background: var(--blockr-color-primary);
     color: white;
     border-color: var(--blockr-color-primary);
+  }
+
+  /* Tab content panels - only show active */
+  .mobile-card-tab-content {
+    display: none;
+  }
+
+  .mobile-card-tab-content.active {
+    display: block;
   }
 }
