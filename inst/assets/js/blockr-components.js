@@ -389,18 +389,34 @@ if (!window.bootstrap) {
     var match = id.match(/block_handle[-_](.+)$/);
     var blockId = match ? match[1] : id;
 
-    // Try to find the block name from the editable title input
+    // Try to find the block name - the title is rendered in an element with id ending in "block_name_out"
     var title = null;
-    var titleInput = card.querySelector('.inline-editable input[type="text"]');
-    if (titleInput && titleInput.value) {
-      title = titleInput.value.trim();
+
+    // Method 1: Look for the uiOutput element that contains the block name
+    var nameOut = card.querySelector('[id$="block_name_out"]');
+    if (nameOut) {
+      // Get text content, but only from text nodes or specific elements
+      var h5 = nameOut.querySelector('h5, h6, .block-name, span');
+      if (h5) {
+        title = h5.textContent.trim();
+      } else {
+        title = nameOut.textContent.trim();
+      }
     }
 
-    // Fallback: look for the displayed title text
+    // Method 2: Look for the hidden text input that stores the name
     if (!title) {
-      var titleSpan = card.querySelector('.inline-editable .editable-text, .inline-editable span:not(.edit-icon)');
-      if (titleSpan) {
-        title = titleSpan.textContent.trim();
+      var nameInput = card.querySelector('[id$="block_name_in"]');
+      if (nameInput && nameInput.value) {
+        title = nameInput.value.trim();
+      }
+    }
+
+    // Method 3: Look for .card-title content
+    if (!title) {
+      var cardTitle = card.querySelector('.card-title h5, .card-title h6');
+      if (cardTitle) {
+        title = cardTitle.textContent.trim();
       }
     }
 
