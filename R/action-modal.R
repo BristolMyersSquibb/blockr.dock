@@ -157,6 +157,7 @@ render_block_categories <- function(ns, blocks = list_blocks(),
   category_labels <- c(
     input = "Data Sources",
     transform = "Transformations",
+    structured = "Structured Data",
     plot = "Visualizations",
     table = "Tables",
     model = "Models",
