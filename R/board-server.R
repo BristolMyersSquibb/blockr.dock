@@ -2,6 +2,9 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   dock <- manage_dock(board, update, session)
 
+  # Initialize navbar servers (from navbar_provider objects)
+  navbar_server("navbar", board, dock, session)
+
   exts <- isolate(
     dock_extensions(board$board)
   )
