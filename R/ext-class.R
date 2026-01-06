@@ -281,7 +281,9 @@ as_dock_extensions.dock_extension <- function(x, ...) {
 #' @rdname extension
 #' @export
 as_dock_extensions.list <- function(x, ...) {
-  new_dock_extensions(x)
+  # Filter out navbar_providers - they are handled separately
+  exts_only <- Filter(function(e) !is_navbar_provider(e), x)
+  new_dock_extensions(exts_only)
 }
 
 #' @export

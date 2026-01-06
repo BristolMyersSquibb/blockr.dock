@@ -186,13 +186,14 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
     }
   )
 
+  # Filter extensions first (removes navbar_providers)
+  extensions <- as_dock_extensions(extensions)
+
   if (is_dock_extension(extensions)) {
     ext_names <- as_ext_panel_id(extensions)
   } else {
     ext_names <- names(extensions)
   }
-
-  extensions <- as_dock_extensions(extensions)
 
   id_map <- set_names(
     c(as_ext_panel_id(extensions), as_block_panel_id(blocks)),

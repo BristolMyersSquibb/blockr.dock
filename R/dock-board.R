@@ -5,8 +5,13 @@
 #' in a core board, this also includes dock extensions (as `extensions`)
 #' and the panel arrangement (as `layout`).
 #'
+#' The extensions list can contain both `dock_extension` objects (which create
+#' dock panels) and `navbar_provider` objects (which contribute navbar content).
+#' These are automatically separated: dock_extensions go into the board's
+#' extensions field, while navbar_providers are stored as an attribute.
+#'
 #' @inheritParams blockr.core::new_board
-#' @param extensions Dock extensions
+#' @param extensions Dock extensions and/or navbar providers
 #' @param layout Dock layout
 #'
 #' @examples
@@ -18,8 +23,9 @@
 #' `is_dock_board()`, which returns a boolean. Getters `dock_layout()` and
 #' `dock_extensions()` return `dock_layout` and `dock_extension` objects while
 #' setters `dock_layout<-()` and `dock_extensions<-()` return the updated board
-#' object (invisibly). A character vector of IDs is returned by `dock_ext_ids()`
-#' and `dock_board_options()` returns a `board_options` object.
+#' object (invisibly). A character vector of IDs is returned by `dock_ext_ids()`,
+#' `dock_board_options()` returns a `board_options` object, and
+#' `dock_navbar_providers()` returns a list of navbar_provider objects.
 #'
 #' @rdname dock
 #' @export
@@ -29,11 +35,17 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
+
+  # Separate navbar providers from dock extensions
+
+  ext_list <- if (is.list(extensions)) extensions else list(extensions)
+  navbar_provs <- Filter(is_navbar_provider, ext_list)
+
   if (!is_dock_layout(layout)) {
     layout <- create_dock_layout(blocks, extensions, layout)
   }
 
-  new_board(
+  board <- new_board(
     blocks = as_blocks(blocks),
     links = as_links(links),
     stacks = as_dock_stacks(stacks),
@@ -45,6 +57,11 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
     pkg = pkg,
     class = c(class, "dock_board")
   )
+
+  # Store navbar providers as attribute (not serialized)
+  attr(board, "navbar_providers") <- navbar_provs
+
+  board
 }
 
 #' @export
@@ -72,8 +89,20 @@ as_dock_board <- function(x, ...) {
 }
 
 #' @export
-as_dock_board.dock_board <- function(x, ...) {
-  x
+as_dock_board.dock_board <- function(x, extensions = NULL, options = NULL, ...) {
+  if (!is.null(extensions) || !is.null(options)) {
+    new_dock_board(
+      board_blocks(x),
+      board_links(x),
+      board_stacks(x),
+      extensions = if (!is.null(extensions)) extensions else dock_extensions(x),
+      layout = dock_layout(x),
+      options = if (!is.null(options)) options else board_options(x),
+      ...
+    )
+  } else {
+    x
+  }
 }
 
 #' @export
@@ -122,6 +151,13 @@ dock_extensions <- function(x) {
 #' @export
 dock_ext_ids <- function(x) {
   chr_ply(dock_extensions(x), extension_id)
+}
+
+#' @rdname dock
+#' @export
+dock_navbar_providers <- function(x) {
+  stopifnot(is_dock_board(x))
+  coal(attr(x, "navbar_providers"), list())
 }
 
 #' @rdname dock

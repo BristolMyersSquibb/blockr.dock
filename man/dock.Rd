@@ -9,6 +9,7 @@
 \alias{dock_extensions}
 \alias{dock_extensions<-}
 \alias{dock_ext_ids}
+\alias{dock_navbar_providers}
 \alias{dock_board_options}
 \title{Dock board}
 \usage{
@@ -39,6 +40,8 @@ dock_extensions(x) <- value
 
 dock_ext_ids(x)
 
+dock_navbar_providers(x)
+
 dock_board_options()
 }
 \arguments{
@@ -50,7 +53,7 @@ dock_board_options()
 
 \item{...}{Further (metadata) attributes}
 
-\item{extensions}{Dock extensions}
+\item{extensions}{Dock extensions and/or navbar providers}
 
 \item{layout}{Dock layout}
 
@@ -70,14 +73,21 @@ the coercion function \code{as_dock_board()}. Inheritance can be checked using
 \code{is_dock_board()}, which returns a boolean. Getters \code{dock_layout()} and
 \code{dock_extensions()} return \code{dock_layout} and \code{dock_extension} objects while
 setters \verb{dock_layout<-()} and \verb{dock_extensions<-()} return the updated board
-object (invisibly). A character vector of IDs is returned by \code{dock_ext_ids()}
-and \code{dock_board_options()} returns a \code{board_options} object.
+object (invisibly). A character vector of IDs is returned by \code{dock_ext_ids()},
+\code{dock_board_options()} returns a \code{board_options} object, and
+\code{dock_navbar_providers()} returns a list of navbar_provider objects.
 }
 \description{
 Using the docking layout manager provided by dockViewR, a \code{dock_board}
 extends \code{\link[blockr.core:new_board]{blockr.core::new_board()}}. In addition to the attributes contained
 in a core board, this also includes dock extensions (as \code{extensions})
 and the panel arrangement (as \code{layout}).
+}
+\details{
+The extensions list can contain both \code{dock_extension} objects (which create
+dock panels) and \code{navbar_provider} objects (which contribute navbar content).
+These are automatically separated: dock_extensions go into the board's
+extensions field, while navbar_providers are stored as an attribute.
 }
 \examples{
 brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
