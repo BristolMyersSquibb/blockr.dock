@@ -100,10 +100,18 @@ restore_board.dock_board <- function(x, new, result, ...,
 
   des <- blockr_deser(new)
 
+  # Combine dock extensions and navbar providers from original board
+  # navbar_providers are not serialized, so we need to restore them
+  all_extensions <- c(
+    as.list(dock_extensions(x)),
+    dock_navbar_providers(x)
+  )
+
+  # Use deserialized board's options (contains saved board_name etc.)
   res <- as_dock_board(
     des,
-    extensions = dock_extensions(x),
-    options = board_options(x)
+    extensions = all_extensions,
+    options = board_options(des)
   )
 
   result(res)
