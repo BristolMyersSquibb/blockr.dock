@@ -527,3 +527,83 @@ label:has(input[type="file"]) {
   background-color: var(--blockr-color-bg-hover);
   color: var(--blockr-color-text-secondary);
 }
+
+/* ============================================
+   Navbar Styling
+   ============================================ */
+.blockr-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 16px;
+  background-color: var(--blockr-grey-200);
+  border-bottom: 1px solid var(--blockr-grey-300);
+}
+
+.blockr-navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.blockr-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Navbar icon buttons */
+.blockr-navbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--blockr-color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.blockr-navbar-icon-btn:hover {
+  background-color: var(--blockr-grey-300);
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-navbar-icon-btn svg,
+.blockr-navbar-icon-btn i {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+/* Settings offcanvas - wider for extensions */
+.blockr-settings-offcanvas {
+  width: 380px !important;
+}
+
+.blockr-settings-offcanvas .offcanvas-body {
+  padding: 0;
+}
+
+.blockr-settings-offcanvas .settings-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--blockr-grey-300);
+}
+
+.blockr-settings-offcanvas .settings-section:last-child {
+  border-bottom: none;
+}
+
+.blockr-settings-offcanvas .settings-section-title {
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
