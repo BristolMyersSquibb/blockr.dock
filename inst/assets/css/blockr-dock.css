@@ -527,3 +527,50 @@ label:has(input[type="file"]) {
   background-color: var(--blockr-color-bg-hover);
   color: var(--blockr-color-text-secondary);
 }
+
+/* ============================================
+   Navbar Styling
+   ============================================ */
+.blockr-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 48px;
+  padding: 0 16px;
+  background-color: var(--blockr-grey-200);
+  border-bottom: 1px solid var(--blockr-grey-300);
+}
+
+.blockr-navbar-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.blockr-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blockr-navbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--blockr-color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.blockr-navbar-icon-btn:hover {
+  background-color: var(--blockr-grey-300);
+  color: var(--blockr-color-text-secondary);
+}
