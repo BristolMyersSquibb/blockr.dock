@@ -74,26 +74,26 @@ options_ui <- function(id, x, ...) {
     ...,
     hr(),
     do.call(
-        accordion,
-        c(
-          list(
-            id = NS(id, "board_options"),
-            multiple = TRUE,
-            open = FALSE,
-            class = "accordion-flush"
-          ),
+      accordion,
+      c(
+        list(
+          id = NS(id, "board_options"),
+          multiple = TRUE,
+          open = FALSE,
+          class = "accordion-flush"
+        ),
+        map(
+          do.call,
+          rep(list(accordion_panel), length(opts)),
           map(
-            do.call,
-            rep(list(accordion_panel), length(opts)),
-            map(
-              list,
-              title = names(opts),
-              lapply(opts, lapply, board_option_ui, id)
-            )
+            list,
+            title = names(opts),
+            lapply(opts, lapply, board_option_ui, id)
           )
         )
       )
     )
+  )
 }
 
 blockr_dock_dep <- function() {
