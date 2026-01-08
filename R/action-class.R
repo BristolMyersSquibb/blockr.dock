@@ -2,35 +2,27 @@
 #'
 #' Logic including a modal-based UI for board actions such as "append block"
 #' or "edit stack" can be specified using `action` objects, which essentially
-#' are classed functions that can either be called to return a shiny module
-#' `as_module = TRUE` or a function `as_module = FALSE` which injects code
-#' (passed as `expr`) into a shiny server context.
+#' are classed shiny server functions.
 #'
-#' An action is a function that can be called with arguments `trigger` and
-#' `as_module` to return another function. The action trigger may either be a
-#' string (referring to an `input`), a function (that will be called with a
-#' single argument `input`) or a [shiny::reactive()] object. The flag
-#' `as_module` controls the behavior of the returned function: if `TRUE`, it
-#' is a function (inheriting from `action_module`) with arguments `board`,
-#' `update`, `...` and `domain`, which, when called, again returns a function
-#' with arguments `input`, `output` and `session`, suitable as argument to
-#' [shiny::moduleServer()]. If `FALSE` is passed instead, a function
-#' (inheriting from `action_function`) with arguments `board`, `update`, `...`
-#' and `domain` is returned.
+#' An action is a function that can be called with arguments `input`,
+#' `output` and `session`, behaving as one would expect from a shiny server
+#' module function. Actions are typically created by action generator
+#' functions, they each have a unique ID and a [shiny::reactiveVal()]-based
+#' trigger object (inheriting from `action_trigger`). Action trigger objects
+#' implement their own counter-based invalidation mechanism (on top of how
+#' reactive values behave).
 #'
-#' The expression `expr`, passed when instantiating an `action` object will be
-#' evaluated in a context, where the following bindings exist: `board`,
-#' `update`, `domain`, `input`, `output` and `session`. In the case of
-#' `as_module = FALSE`, `domain` is an alias for `session`.
-#'
-#' @param func A function which will be evaluated (with modified formals) in a
-#' shiny server context
+#' @param func A function which will be used to create a
+#' [shiny::moduleServer()].
 #' @param id Action ID
 #'
 #' @return The constructor `new_action` returns a classed function that
 #' inherits from `action`. Inheritance can be checked with functions
-#' `is_action()`, `is_action_module()` and `is_action_function()`, which all
-#' return scalar logicals.
+#' `is_action()`, `is_action_generator()` checks whether an objects is a
+#' function that returns an `action` object. String-value action IDs can be
+#' retrieved with `action_id()` and the set of actions associated with a board
+#' can be enumerated via `board_actions()`. Finally, `action_triggers()` returns
+#' a named list of objects suitable for use as action triggers.
 #'
 #' @rdname action
 #' @export

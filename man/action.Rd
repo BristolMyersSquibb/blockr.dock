@@ -37,8 +37,8 @@ block_registry_selectize(id, blocks = list_blocks())
 board_select(id, blocks, selected = NULL, ...)
 }
 \arguments{
-\item{func}{A function which will be evaluated (with modified formals) in a
-shiny server context}
+\item{func}{A function which will be used to create a
+\code{\link[shiny:moduleServer]{shiny::moduleServer()}}.}
 
 \item{id}{Input ID}
 
@@ -61,8 +61,11 @@ shiny server context}
 \value{
 The constructor \code{new_action} returns a classed function that
 inherits from \code{action}. Inheritance can be checked with functions
-\code{is_action()}, \code{is_action_module()} and \code{is_action_function()}, which all
-return scalar logicals.
+\code{is_action()}, \code{is_action_generator()} checks whether an objects is a
+function that returns an \code{action} object. String-value action IDs can be
+retrieved with \code{action_id()} and the set of actions associated with a board
+can be enumerated via \code{board_actions()}. Finally, \code{action_triggers()} returns
+a named list of objects suitable for use as action triggers.
 
 For utilities \code{block_input_select()}, \code{block_registry_selectize()}
 and \code{board_select}, see the respective sections.
@@ -70,27 +73,16 @@ and \code{board_select}, see the respective sections.
 \description{
 Logic including a modal-based UI for board actions such as "append block"
 or "edit stack" can be specified using \code{action} objects, which essentially
-are classed functions that can either be called to return a shiny module
-\code{as_module = TRUE} or a function \code{as_module = FALSE} which injects code
-(passed as \code{expr}) into a shiny server context.
+are classed shiny server functions.
 }
 \details{
-An action is a function that can be called with arguments \code{trigger} and
-\code{as_module} to return another function. The action trigger may either be a
-string (referring to an \code{input}), a function (that will be called with a
-single argument \code{input}) or a \code{\link[shiny:reactive]{shiny::reactive()}} object. The flag
-\code{as_module} controls the behavior of the returned function: if \code{TRUE}, it
-is a function (inheriting from \code{action_module}) with arguments \code{board},
-\code{update}, \code{...} and \code{domain}, which, when called, again returns a function
-with arguments \code{input}, \code{output} and \code{session}, suitable as argument to
-\code{\link[shiny:moduleServer]{shiny::moduleServer()}}. If \code{FALSE} is passed instead, a function
-(inheriting from \code{action_function}) with arguments \code{board}, \code{update}, \code{...}
-and \code{domain} is returned.
-
-The expression \code{expr}, passed when instantiating an \code{action} object will be
-evaluated in a context, where the following bindings exist: \code{board},
-\code{update}, \code{domain}, \code{input}, \code{output} and \code{session}. In the case of
-\code{as_module = FALSE}, \code{domain} is an alias for \code{session}.
+An action is a function that can be called with arguments \code{input},
+\code{output} and \code{session}, behaving as one would expect from a shiny server
+module function. Actions are typically created by action generator
+functions, they each have a unique ID and a \code{\link[shiny:reactiveVal]{shiny::reactiveVal()}}-based
+trigger object (inheriting from \code{action_trigger}). Action trigger objects
+implement their own counter-based invalidation mechanism (on top of how
+reactive values behave).
 }
 \section{\code{block_input_select()}}{
 
