@@ -1,15 +1,13 @@
 test_that("add block action", {
 
-  ab_action <- add_block_action(reactive(TRUE))
-
   testServer(
     function(id, ...) {
       moduleServer(
         id,
-        ab_action(
+        add_block_action(
+          trigger = reactive(TRUE),
           board = reactiveValues(board = new_board()),
-          update = reactiveVal(list()),
-          domain = MockShinySession$new()
+          update = reactiveVal(list())
         )
       )
     },
@@ -64,18 +62,16 @@ test_that("add block action", {
 
 test_that("append block action", {
 
-  ap_action <- append_block_action(reactive("a"))
-
   testServer(
     function(id, ...) {
       moduleServer(
         id,
-        ap_action(
+        append_block_action(
+          trigger = reactive("a"),
           board = reactiveValues(
             board = new_board(blocks = c(a = new_dataset_block()))
           ),
-          update = reactiveVal(list()),
-          domain = MockShinySession$new()
+          update = reactiveVal(list())
         )
       )
     },
@@ -150,18 +146,16 @@ test_that("append block action", {
 
 test_that("remove block action", {
 
-  ap_action <- remove_block_action(reactive("a"))
-
   testServer(
     function(id, ...) {
       moduleServer(
         id,
-        ap_action(
+        remove_block_action(
+          trigger = reactive("a"),
           board = reactiveValues(
             board = new_board(blocks = c(a = new_dataset_block()))
           ),
-          update = reactiveVal(list()),
-          domain = MockShinySession$new()
+          update = reactiveVal(list())
         )
       )
     },

@@ -367,7 +367,7 @@ edit_block_server <- function(callbacks = list()) {
 
   stopifnot(all(lgl_ply(callbacks, is.function)))
 
-  function(id, block_id, board, update, ...) {
+  function(id, block_id, board, update, actions, ...) {
 
     stopifnot(is_string(block_id))
 
@@ -461,22 +461,14 @@ edit_block_server <- function(callbacks = list()) {
 
         update_blk_cond_observer(conds, session)
 
-        action_args <- c(list(board, update), dot_args, domain = session)
-
-        do.call(
-          append_block_action(
-            reactive(req(block_id, input$append_block)),
-            as_module = FALSE
-          ),
-          action_args
+        observeEvent(
+          input$append_block,
+          actions[["append_block_action"]](block_id)
         )
 
-        do.call(
-          remove_block_action(
-            reactive(req(block_id, input$delete_block)),
-            as_module = FALSE
-          ),
-          action_args
+        observeEvent(
+          input$delete_block,
+          actions[["remove_block_action"]](block_id)
         )
 
         if (length(callbacks)) {

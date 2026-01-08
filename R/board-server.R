@@ -2,25 +2,30 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   dock <- manage_dock(board, update, session)
 
-  exts <- isolate(
-    dock_extensions(board$board)
+  initial_board <- isolate(board$board)
+
+  exts <- as.list(dock_extensions(initial_board))
+
+  actions <- unlst(
+    c(
+      list(board_actions(initial_board)),
+      lapply(exts, board_actions)
+    )
   )
 
-  intercom <- set_names(
-    replicate(length(exts), reactiveVal()),
-    exts
-  )
+  triggers <- action_triggers(actions)
 
   ext_res <- lapply(
-    as.list(exts),
+    exts,
     extension_server,
-    list(board = board, update = update, dock = dock),
-    intercom,
+    list(board = board, update = update, dock = dock, actions = triggers),
     list(...)
   )
 
+  register_actions(actions, triggers, board, update, ext_res)
+
   c(
-    list(dock = dock),
+    list(dock = dock, actions = triggers),
     ext_res
   )
 }
