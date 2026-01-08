@@ -2,36 +2,22 @@
 
 Logic including a modal-based UI for board actions such as "append
 block" or "edit stack" can be specified using `action` objects, which
-essentially are classed functions that can either be called to return a
-shiny module `as_module = TRUE` or a function `as_module = FALSE` which
-injects code (passed as `expr`) into a shiny server context.
+essentially are classed shiny server functions.
 
 ## Usage
 
 ``` r
-new_action(func)
+new_action(func, id)
 
 is_action(x)
 
-is_action_module(x)
+is_action_generator(x)
 
-is_action_function(x)
+action_id(x)
 
-add_block_action(trigger, as_module = TRUE)
+board_actions(x, ...)
 
-append_block_action(trigger, as_module = TRUE)
-
-remove_block_action(trigger, as_module = TRUE)
-
-add_link_action(trigger, as_module = TRUE)
-
-remove_link_action(trigger, as_module = TRUE)
-
-add_stack_action(trigger, as_module = TRUE)
-
-edit_stack_action(trigger, as_module = TRUE)
-
-remove_stack_action(trigger, as_module = TRUE)
+action_triggers(x)
 
 block_input_select(
   block = NULL,
@@ -50,21 +36,20 @@ board_select(id, blocks, selected = NULL, ...)
 
 - func:
 
-  A function which will be evaluated (with modified formals) in a shiny
-  server context
+  A function which will be used to create a
+  [`shiny::moduleServer()`](https://rdrr.io/pkg/shiny/man/moduleServer.html).
+
+- id:
+
+  Input ID
 
 - x:
 
   Object
 
-- trigger:
+- ...:
 
-  A string, function or
-  [`shiny::reactive()`](https://rdrr.io/pkg/shiny/man/reactive.html)
-
-- as_module:
-
-  Logical flag controlling the return type
+  Forwarded to other methods
 
 - block:
 
@@ -82,14 +67,6 @@ board_select(id, blocks, selected = NULL, ...)
 
   Switch for determining the return object
 
-- ...:
-
-  Forwarded to other methods
-
-- id:
-
-  Input ID
-
 - blocks:
 
   Character vector of block registry IDs
@@ -102,33 +79,25 @@ board_select(id, blocks, selected = NULL, ...)
 
 The constructor `new_action` returns a classed function that inherits
 from `action`. Inheritance can be checked with functions `is_action()`,
-`is_action_module()` and `is_action_function()`, which all return scalar
-logicals.
+`is_action_generator()` checks whether an objects is a function that
+returns an `action` object. String-value action IDs can be retrieved
+with `action_id()` and the set of actions associated with a board can be
+enumerated via `board_actions()`. Finally, `action_triggers()` returns a
+named list of objects suitable for use as action triggers.
 
 For utilities `block_input_select()`, `block_registry_selectize()` and
 `board_select`, see the respective sections.
 
 ## Details
 
-An action is a function that can be called with arguments `trigger` and
-`as_module` to return another function. The action trigger may either be
-a string (referring to an `input`), a function (that will be called with
-a single argument `input`) or a
-[`shiny::reactive()`](https://rdrr.io/pkg/shiny/man/reactive.html)
-object. The flag `as_module` controls the behavior of the returned
-function: if `TRUE`, it is a function (inheriting from `action_module`)
-with arguments `board`, `update`, `...` and `domain`, which, when
-called, again returns a function with arguments `input`, `output` and
-`session`, suitable as argument to
-[`shiny::moduleServer()`](https://rdrr.io/pkg/shiny/man/moduleServer.html).
-If `FALSE` is passed instead, a function (inheriting from
-`action_function`) with arguments `board`, `update`, `...` and `domain`
-is returned.
-
-The expression `expr`, passed when instantiating an `action` object will
-be evaluated in a context, where the following bindings exist: `board`,
-`update`, `domain`, `input`, `output` and `session`. In the case of
-`as_module = FALSE`, `domain` is an alias for `session`.
+An action is a function that can be called with arguments `input`,
+`output` and `session`, behaving as one would expect from a shiny server
+module function. Actions are typically created by action generator
+functions, they each have a unique ID and a
+[`shiny::reactiveVal()`](https://rdrr.io/pkg/shiny/man/reactiveVal.html)-based
+trigger object (inheriting from `action_trigger`). Action trigger
+objects implement their own counter-based invalidation mechanism (on top
+of how reactive values behave).
 
 ## `block_input_select()`
 

@@ -11,14 +11,14 @@
 Source:
 [`DESCRIPTION`](https://github.com/BristolMyersSquibb/blockr.dock/blob/main/DESCRIPTION)
 
-Bennett N, Granjon D (2025). *blockr.dock: A Docking Layout Manager for
-'blockr'*. R package version 0.1.0,
+Bennett N, Granjon D (2026). *blockr.dock: A Docking Layout Manager for
+'blockr'*. R package version 0.1.1,
 <https://bristolmyerssquibb.github.io/blockr.dock/>.
 
     @Manual{,
       title = {blockr.dock: A Docking Layout Manager for 'blockr'},
       author = {Nicolas Bennett and David Granjon},
-      year = {2025},
-      note = {R package version 0.1.0},
+      year = {2026},
+      note = {R package version 0.1.1},
       url = {https://bristolmyerssquibb.github.io/blockr.dock/},
     }
