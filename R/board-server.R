@@ -1,7 +1,5 @@
 board_server_callback <- function(board, update, ..., session = get_session()) {
 
-  dock <- manage_dock(board, update, session)
-
   initial_board <- isolate(board$board)
 
   exts <- as.list(dock_extensions(initial_board))
@@ -14,6 +12,8 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   )
 
   triggers <- action_triggers(actions)
+
+  dock <- manage_dock(board, update, triggers, session)
 
   ext_res <- lapply(
     exts,
@@ -30,7 +30,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   )
 }
 
-manage_dock <- function(board, update, session = get_session()) {
+manage_dock <- function(board, update, actions, session = get_session()) {
 
   dock <- set_dock_view_output(session = session)
 
@@ -91,22 +91,30 @@ manage_dock <- function(board, update, session = get_session()) {
 
   observeEvent(
     input[[dock_input("panel-to-add")]],
-    suggest_panels_to_add(dock, board, session)
+    suggest_panels_to_add(dock, board, session = session)
   )
 
-  n_panels <- reactive(
-    {
-      req(input[[dock_input("initialized")]])
-      coal(
-        input[[dock_input("n-panels")]],
-        length(determine_active_views(dock_layout(board$board)))
-      )
-    }
+  n_panels <- reactiveVal(
+    isolate(length(determine_active_views(dock_layout(board$board))))
+  )
+
+
+  observeEvent(
+    req(input[[dock_input("n-panels")]]),
+    n_panels(input[[dock_input("n-panels")]])
   )
 
   observeEvent(
     req(n_panels() == 0),
-    suggest_panels_to_add(dock, board, session)
+    {
+      suggest_panels_to_add(
+        dock,
+        board,
+        actions[["add_block_action"]],
+        session
+      )
+      n_panels(1L)
+    }
   )
 
   observeEvent(
@@ -197,7 +205,8 @@ manage_dock <- function(board, update, session = get_session()) {
   )
 }
 
-suggest_panels_to_add <- function(dock, board, session) {
+suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,
+                                  session = get_session()) {
 
   ns <- session$ns
 
@@ -294,6 +303,8 @@ suggest_panels_to_add <- function(dock, board, session) {
         )
       )
     )
+  } else if (!isFALSE(suggest_new)) {
+    suggest_new(TRUE)
   } else {
     notify("No further panels can be added. Remove some panels first.")
   }
