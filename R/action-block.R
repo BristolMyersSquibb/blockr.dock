@@ -1,8 +1,6 @@
 add_block_action <- function(trigger, board, update, ...) {
-
   new_action(
     function(input, output, session) {
-
       ns <- session$ns
       blk <- reactiveVal()
 
@@ -86,10 +84,8 @@ add_block_action <- function(trigger, board, update, ...) {
 }
 
 append_block_action <- function(trigger, board, update, ...) {
-
   new_action(
     function(input, output, session) {
-
       ns <- session$ns
       blk <- reactiveVal()
 
@@ -205,6 +201,115 @@ append_block_action <- function(trigger, board, update, ...) {
       NULL
     },
     id = "append_block_action"
+  )
+}
+
+prepend_block_action <- function(trigger, board, update, ...) {
+  new_action(
+    function(input, output, session) {
+      ns <- session$ns
+      blk <- reactiveVal()
+
+      observeEvent(
+        trigger(),
+        {
+          blk(NULL)
+          showModal(
+            block_modal(
+              ns = ns,
+              board = board$board,
+              mode = "prepend"
+            )
+          )
+        }
+      )
+
+      observeEvent(
+        input$prepend_block_selection,
+        {
+          req(input$prepend_block_selection)
+
+          new_blk <- create_block_with_name(
+            input$prepend_block_selection,
+            chr_ply(board_blocks(board$board), block_name)
+          )
+
+          updateTextInput(
+            session,
+            "prepend_block_name",
+            value = block_name(new_blk)
+          )
+
+          blk(new_blk)
+        }
+      )
+
+      observeEvent(
+        input$prepend_block_confirm,
+        {
+          blk_id <- input$prepend_block_id
+          lnk_id <- input$prepend_link_id
+
+          if (!nchar(blk_id) || blk_id %in% board_block_ids(board$board)) {
+            notify(
+              "Please choose a valid block ID.",
+              type = "warning",
+              session = session
+            )
+            return()
+          }
+
+          if (!nchar(lnk_id) || lnk_id %in% board_link_ids(board$board)) {
+            notify(
+              "Please choose a valid link ID.",
+              type = "warning",
+              session = session
+            )
+            return()
+          }
+
+          new_blk <- blk()
+
+          if (!is_block(new_blk)) {
+            notify(
+              "Please choose a block type.",
+              type = "warning",
+              session = session
+            )
+            return()
+          }
+
+          if (!identical(input$prepend_block_name, block_name(new_blk))) {
+            block_name(new_blk) <- input$prepend_block_name
+          }
+
+          new_blk <- as_blocks(set_names(list(new_blk), blk_id))
+
+          # Compared to append block, trigger is a bit special as
+          # it has to provide the target node
+          # and the input port to connect to.
+          new_lnk <- new_link(
+            from = blk_id,
+            to = trigger()$target,
+            input = trigger()$input
+          )
+
+          new_lnk <- as_links(set_names(list(new_lnk), lnk_id))
+
+          update(
+            list(
+              blocks = list(add = new_blk),
+              links = list(add = new_lnk)
+            )
+          )
+
+          removeModal()
+        }
+      )
+
+      NULL
+    },
+    id = "prepend_block_action"
   )
 }
 

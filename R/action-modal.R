@@ -1,12 +1,21 @@
-block_modal <- function(ns, board, mode = c("append", "add")) {
-
+block_modal <- function(ns, board, mode = c("append", "add", "prepend")) {
   mode <- match.arg(mode)
-
   board_block_ids <- board_block_ids(board)
   board_link_ids <- board_link_ids(board)
 
-  title <- if (mode == "append") "Append new block" else "Add new block"
-  button_label <- if (mode == "append") "Append Block" else "Add Block"
+  title <- switch(
+    mode,
+    append = "Append new block",
+    prepend = "Prepend new block",
+    add = "Add new block"
+  )
+
+  button_label <- switch(
+    mode,
+    append = "Append Block",
+    prepend = "Prepend Block",
+    add = "Add Block"
+  )
 
   # Use different IDs for each mode to avoid conflicts
   selection_id <- paste0(mode, "_block_selection")
@@ -16,26 +25,17 @@ block_modal <- function(ns, board, mode = c("append", "add")) {
 
   # Always visible fields
   visible_fields <- list(
-    block_registry_selectize(ns(selection_id))
-  )
-
-  # Add block name field (visible)
-  visible_fields[[length(visible_fields) + 1]] <- textInput(
-    ns(name_id),
-    label = "User defined block title (can be changed after creation)",
-    placeholder = "Select block first"
+    block_registry_selectize(ns(selection_id)),
+    # Add block name field (visible)
+    textInput(
+      ns(name_id),
+      label = "User defined block title (can be changed after creation)",
+      placeholder = "Select block first"
+    )
   )
 
   # Advanced options (collapsible)
   advanced_fields <- list()
-
-  # Add block input field only for append mode (in advanced options)
-  if (mode == "append") {
-    advanced_fields[[length(advanced_fields) + 1]] <- block_input_select(
-      inputId = ns("append_block_input"),
-      label = "Block input"
-    )
-  }
 
   # Add Block ID field
   advanced_fields[[length(advanced_fields) + 1]] <- textInput(
@@ -46,8 +46,16 @@ block_modal <- function(ns, board, mode = c("append", "add")) {
 
   # Add link ID field only for append mode (in advanced options)
   if (mode == "append") {
+    advanced_fields[[length(advanced_fields) + 1]] <- block_input_select(
+      inputId = ns("append_block_input"),
+      label = "Block input"
+    )
+  }
+
+  # Handle append/prepend link ID field
+  if (mode %in% c("append", "prepend")) {
     advanced_fields[[length(advanced_fields) + 1]] <- textInput(
-      ns("append_link_id"),
+      ns(paste0(mode, "_link_id")),
       label = "Link ID",
       value = rand_names(board_link_ids)
     )
@@ -67,7 +75,10 @@ block_modal <- function(ns, board, mode = c("append", "add")) {
     tagList(
       css_modal_advanced(ns("block-advanced-options")),
       visible_fields,
-      toggle_button(ns("block-advanced-options"), ns("block-advanced-toggle")),
+      toggle_button(
+        ns("block-advanced-options"),
+        ns("block-advanced-toggle")
+      ),
       advanced_section,
       confirm_button(
         inputId = ns(confirm_id),
@@ -79,7 +90,6 @@ block_modal <- function(ns, board, mode = c("append", "add")) {
 }
 
 link_modal <- function(ns, board, block_id) {
-
   board_blocks <- board_blocks(board)
 
   stopifnot(is_string(block_id), block_id %in% names(board_blocks))
@@ -153,9 +163,13 @@ link_modal <- function(ns, board, block_id) {
   )
 }
 
-stack_modal <- function(ns, board, mode = c("create", "edit"), stack = NULL,
-                        stack_id = NULL) {
-
+stack_modal <- function(
+  ns,
+  board,
+  mode = c("create", "edit"),
+  stack = NULL,
+  stack_id = NULL
+) {
   mode <- match.arg(mode)
 
   board_blocks <- board_blocks(board)

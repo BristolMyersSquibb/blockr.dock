@@ -1,5 +1,4 @@
 test_that("action ctor", {
-
   act <- new_action(
     function(input, output, session) log_info("hello", pkg = "blockr.test"),
     id = "test_action"
@@ -22,11 +21,11 @@ test_that("action ctor", {
   db_act <- board_actions(new_dock_board())
 
   expect_type(db_act, "list")
-  expect_length(db_act, 8L)
+  expect_length(db_act, 9L)
 
   trig <- action_triggers(db_act)
 
-  expect_length(trig, 8L)
+  expect_length(trig, 9L)
   expect_named(trig, chr_ply(db_act, action_id))
 
   expect_null(

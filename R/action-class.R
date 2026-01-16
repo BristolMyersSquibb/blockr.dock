@@ -27,7 +27,6 @@
 #' @rdname action
 #' @export
 new_action <- function(func, id) {
-
   stopifnot(
     identical(names(formals(func)), c("input", "output", "session")),
     is_string(id)
@@ -84,6 +83,7 @@ board_actions.dock_board <- function(x, ...) {
   list(
     add_block_action,
     append_block_action,
+    prepend_block_action,
     remove_block_action,
     add_link_action,
     remove_link_action,
@@ -96,7 +96,6 @@ board_actions.dock_board <- function(x, ...) {
 #' @rdname action
 #' @export
 action_triggers <- function(x) {
-
   ids <- chr_ply(x, action_id)
 
   stopifnot(length(unique(ids)) == length(x))
@@ -107,9 +106,14 @@ action_triggers <- function(x) {
   )
 }
 
-register_actions <- function(actions, triggers, board, update, args,
-                             session = get_session()) {
-
+register_actions <- function(
+  actions,
+  triggers,
+  board,
+  update,
+  args,
+  session = get_session()
+) {
   ids <- chr_ply(actions, action_id)
 
   stopifnot(
@@ -133,7 +137,6 @@ register_actions <- function(actions, triggers, board, update, args,
 }
 
 register_action <- function(id, action, ..., session = get_session()) {
-
   res <- moduleServer(id, action(...), session = session)
 
   if (!is.null(res)) {
@@ -147,12 +150,10 @@ register_action <- function(id, action, ..., session = get_session()) {
 }
 
 new_trigger <- function(value = NULL) {
-
   rv <- reactiveVal(list(value = value, counter = 0L))
 
   structure(
     function(new) {
-
       cur <- rv()
 
       if (missing(new)) {
