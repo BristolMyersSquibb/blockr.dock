@@ -285,7 +285,8 @@ prepend_block_action <- function(trigger, board, update, ...) {
 
           new_blk <- as_blocks(set_names(list(new_blk), blk_id))
 
-          # Compared to append block, trigger is a bit special as it has to provide the target node
+          # Compared to append block, trigger is a bit special as
+          # it has to provide the target node
           # and the input port to connect to.
           new_lnk <- new_link(
             from = blk_id,
