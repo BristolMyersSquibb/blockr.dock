@@ -65,6 +65,7 @@ Collate:
     'layout-class.R'
     'plugin-block.R'
     'plugin-serdes.R'
+    'reexports.R'
     'utils-dock.R'
     'utils-id.R'
     'utils-misc.R'
