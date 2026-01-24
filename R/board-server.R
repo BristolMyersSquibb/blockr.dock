@@ -2,6 +2,10 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   initial_board <- isolate(board$board)
 
+  # Initialize panel system
+  init_sidebar(session)
+  sidebar_server(board, update, session)
+
   exts <- as.list(dock_extensions(initial_board))
 
   actions <- unlst(
@@ -91,7 +95,28 @@ manage_dock <- function(board, update, actions, session = get_session()) {
 
   observeEvent(
     input[[dock_input("panel-to-add")]],
-    suggest_panels_to_add(dock, board, session = session)
+    {
+      panels <- dock_panel_ids(dock)
+      visible_block_ids <- character()
+      visible_ext_ids <- character()
+
+      if (length(panels) > 0) {
+        if (length(panels) == 1) panels <- list(panels)
+        for (p in panels) {
+          if (is_block_panel_id(p)) {
+            visible_block_ids <- c(visible_block_ids, as_obj_id(p))
+          } else if (is_ext_panel_id(p)) {
+            visible_ext_ids <- c(visible_ext_ids, as_obj_id(p))
+          }
+        }
+      }
+
+      show_sidebar(new_sidebar("add_panel", context = list(
+        reference_group = input[[dock_input("panel-to-add")]],
+        visible_block_ids = visible_block_ids,
+        visible_ext_ids = visible_ext_ids
+      )))
+    }
   )
 
   n_panels <- reactiveVal(
@@ -117,40 +142,44 @@ manage_dock <- function(board, update, actions, session = get_session()) {
     }
   )
 
+  # Handle dock panel card click from sidebar
   observeEvent(
-    input$confirm_add,
+    input$dock_panel_click,
     {
-      req(input$add_dock_panel)
+      req(input$dock_panel_click$id)
+
+      panel <- get_sidebar(session)
+      reference_group <- panel$context$reference_group
 
       pos <- list(
-        referenceGroup = input[[dock_input("panel-to-add")]],
+        referenceGroup = reference_group,
         direction = "within"
       )
 
-      for (id in input$add_dock_panel) {
-        if (grepl("^blk-", id)) {
-          show_block_panel(
-            board_blocks(board$board)[sub("^blk-", "", id)],
-            add_panel = pos,
-            proxy = dock
-          )
-        } else if (grepl("^ext-", id)) {
-          exts <- as.list(dock_extensions(board$board))
+      id <- input$dock_panel_click$id
 
-          show_ext_panel(
-            exts[[sub("^ext-", "", id)]],
-            add_panel = pos,
-            proxy = dock
-          )
-        } else {
-          blockr_abort(
-            "Unknown panel specification {id}.",
-            class = "dock_panel_invalid"
-          )
-        }
+      if (grepl("^blk-", id)) {
+        show_block_panel(
+          board_blocks(board$board)[sub("^blk-", "", id)],
+          add_panel = pos,
+          proxy = dock
+        )
+      } else if (grepl("^ext-", id)) {
+        exts <- as.list(dock_extensions(board$board))
+
+        show_ext_panel(
+          exts[[sub("^ext-", "", id)]],
+          add_panel = pos,
+          proxy = dock
+        )
+      } else {
+        blockr_abort(
+          "Unknown panel specification {id}.",
+          class = "dock_panel_invalid"
+        )
       }
 
-      removeModal()
+      hide_sidebar()
     }
   )
 

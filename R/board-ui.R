@@ -10,7 +10,10 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
 
   offcanvas_id <- NS(id, "options_offcanvas")
 
+  ns <- NS(id)
+
   tagList(
+    shinyjs::useShinyjs(),
     show_hide_block_dep(),
     blockr_dock_dep(),
     off_canvas(
@@ -18,6 +21,8 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       title = "Offcanvas blocks",
       block_ui(id, x, plugins[["edit_block"]])
     ),
+    # Sidebars
+    sidebars_ui(ns, x),
     div(
       class = "blockr-navbar",
       div(
