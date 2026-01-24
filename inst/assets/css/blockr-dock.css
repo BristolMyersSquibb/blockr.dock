@@ -295,6 +295,14 @@ label,
   margin-bottom: 0.25rem;
 }
 
+/* Checkbox/radio labels should be readable (not tiny like field labels) */
+.checkbox label,
+.radio label,
+.form-check-label {
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-primary);
+}
+
 label:has(input[type="file"]) {
   margin-bottom: 0;
 }
@@ -342,11 +350,12 @@ label:has(input[type="file"]) {
   background-color: var(--blockr-color-bg-input) !important;
   border: 1px solid var(--blockr-color-border) !important;
   border-radius: 8px !important;
-  padding: 0 12px !important;
+  padding: 4px 12px !important;
   min-height: 42px !important;
   display: flex !important;
   align-items: center !important;
   flex-wrap: wrap !important;
+  gap: 4px !important;
   box-shadow: none !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
@@ -808,6 +817,27 @@ label:has(input[type="file"]) {
 }
 
 .blockr-sidebar-close:hover {
+  background: var(--blockr-grey-100);
+  color: var(--blockr-grey-700);
+}
+
+/* Reusable icon button - for delete/dismiss/close actions */
+.blockr-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--blockr-grey-400);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.blockr-btn-icon:hover {
   background: var(--blockr-grey-100);
   color: var(--blockr-grey-700);
 }
