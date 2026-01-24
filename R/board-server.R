@@ -132,12 +132,12 @@ manage_dock <- function(board, update, actions, session = get_session()) {
   observeEvent(
     req(n_panels() == 0),
     {
-      suggest_panels_to_add(
-        dock,
-        board,
-        actions[["add_block_action"]],
-        session
-      )
+      # Show sidebar for adding panels (instead of modal)
+      show_sidebar(new_sidebar("add_panel", context = list(
+        reference_group = NULL,
+        visible_block_ids = character(),
+        visible_ext_ids = character()
+      )))
       n_panels(1L)
     }
   )
@@ -232,111 +232,6 @@ manage_dock <- function(board, update, actions, session = get_session()) {
     proxy = dock,
     prev_active_group = prev_active_group
   )
-}
-
-suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,
-                                  session = get_session()) {
-
-  ns <- session$ns
-
-  panels <- dock_panel_ids(dock)
-
-  if (length(panels) == 0L) {
-    panels <- list()
-  } else if (length(panels) == 1L) {
-    panels <- list(panels)
-  }
-
-  stopifnot(is.list(panels), all(lgl_ply(panels, is_dock_panel_id)))
-
-  options_data <- list()
-
-  # Get available blocks
-  blk_opts <- setdiff(
-    board_block_ids(board$board),
-    as_obj_id(panels[lgl_ply(panels, is_block_panel_id)])
-  )
-
-  if (length(blk_opts)) {
-    blks <- board_blocks(board$board)[blk_opts]
-    meta <- blks_metadata(blks)
-
-    for (i in seq_along(blk_opts)) {
-      id <- blk_opts[i]
-      options_data[[length(options_data) + 1L]] <- list(
-        value = paste0("blk-", id),
-        label = block_name(blks[[id]]),
-        description = paste0("ID: ", id),
-        package = meta$package[i],
-        icon = meta$icon[i],
-        color = meta$color[i],
-        searchtext = paste(block_name(blks[[id]]), id, meta$package[i])
-      )
-    }
-  }
-
-  # Get available extensions
-  ext_opts <- setdiff(
-    dock_ext_ids(board$board),
-    as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
-  )
-
-  if (length(ext_opts)) {
-    all_exts <- as.list(dock_extensions(board$board))
-
-    for (ext_id in ext_opts) {
-      ext <- all_exts[[ext_id]]
-      ext_name <- extension_name(ext)
-      ext_pkg <- ctor_pkg(extension_ctor(ext))
-
-      options_data[[length(options_data) + 1L]] <- list(
-        value = paste0("ext-", ext_id),
-        label = ext_name,
-        description = paste0("ID: ", ext_id),
-        package = coal(ext_pkg, "local"),
-        icon = extension_default_icon(),
-        color = "#999999",
-        searchtext = paste(ext_name, ext_id, ext_pkg)
-      )
-    }
-  }
-
-  if (length(options_data)) {
-    showModal(
-      modalDialog(
-        title = "Add panel",
-        size = "l",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          css_modal(),
-          css_block_selectize(),
-          selectizeInput(
-            ns("add_dock_panel"),
-            label = "Select panel to add",
-            choices = NULL,
-            multiple = TRUE,
-            options = list(
-              options = options_data,
-              valueField = "value",
-              labelField = "label",
-              searchField = c("label", "description", "searchtext"),
-              placeholder = "Type to search...",
-              openOnFocus = FALSE,
-              plugins = list("remove_button"),
-              render = js_blk_selectize_render()
-            )
-          ),
-          confirm_button(ns("confirm_add"), label = "Add Panel"),
-          auto_focus_script(ns("add_dock_panel"))
-        )
-      )
-    )
-  } else if (!isFALSE(suggest_new)) {
-    suggest_new(TRUE)
-  } else {
-    notify("No further panels can be added. Remove some panels first.")
-  }
 }
 
 extension_default_icon <- function() {
