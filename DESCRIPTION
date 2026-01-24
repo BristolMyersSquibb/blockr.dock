@@ -40,7 +40,7 @@ Suggests:
     withr,
     shinytest2
 Config/testthat/edition: 3
-Collate: 
+Collate:
     'action-class.R'
     'action-block.R'
     'action-link.R'
@@ -51,6 +51,10 @@ Collate:
     'block-meta.R'
     'block-ui.R'
     'board-plugins.R'
+    'sidebar-api.R'
+    'sidebar-ui.R'
+    'sidebar-content.R'
+    'sidebar-server.R'
     'board-server.R'
     'board-ui.R'
     'dock-board.R'
