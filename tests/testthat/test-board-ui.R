@@ -6,5 +6,6 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  expect_length(ui, 7L)
+  # 6 original + 2 (shinyjs + sidebar panels) - settings now in sidebar
+  expect_length(ui, 8L)
 })
