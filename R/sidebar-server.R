@@ -162,11 +162,24 @@ sidebar_server <- function(board, update,
   })
 
   # ==========================================================================
-  # Settings Sidebar Trigger
+  # Code Sidebar Content Renderer
+  # ==========================================================================
+
+  output$code_content <- renderUI({
+    req(identical(sidebar$sidebar_id, "code"))
+    render_code_sidebar_content(ns = ns, board = board)
+  })
+
+  # ==========================================================================
+  # Sidebar Triggers
   # ==========================================================================
 
   observeEvent(input$open_settings_sidebar, {
     show_sidebar("settings")
+  })
+
+  observeEvent(input$open_code_sidebar, {
+    show_sidebar("code")
   })
 
   # ==========================================================================

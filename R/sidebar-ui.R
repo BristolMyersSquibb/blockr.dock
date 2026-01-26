@@ -8,12 +8,11 @@
 #'
 #' @param ns Namespace function
 #' @param board The board object
-#' @param generate_code_ui Optional UI for the generate code plugin
 #'
 #' @return Shiny tags containing all sidebar containers
 #'
 #' @keywords internal
-sidebars_ui <- function(ns, board, generate_code_ui = NULL) {
+sidebars_ui <- function(ns, board) {
 
   tagList(
     # Add Block panel
@@ -95,15 +94,17 @@ sidebars_ui <- function(ns, board, generate_code_ui = NULL) {
       title = "Board Options",
       subtitle = NULL,
       show_search = FALSE,
-      content = tagList(
-        if (!is.null(generate_code_ui)) {
-          tags$div(
-            class = "blockr-settings-generate-code",
-            generate_code_ui
-          )
-        },
-        uiOutput(ns("settings_content"))
-      )
+      content = uiOutput(ns("settings_content"))
+    ),
+
+    # Code panel
+    sidebar_container_ui(
+      ns = ns,
+      id = "code",
+      title = "Generated Code",
+      subtitle = NULL,
+      show_search = FALSE,
+      content = uiOutput(ns("code_content"))
     )
   )
 }

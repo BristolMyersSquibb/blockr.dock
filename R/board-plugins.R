@@ -1,14 +1,10 @@
 #' @export
 board_plugins.dock_board <- function(x, which = NULL, ...) {
 
-  core_plugins <- c("generate_code")
-  core_plugins <- coal(intersect(which, core_plugins), core_plugins)
+  # Note: generate_code is handled directly via the navbar code button
+  # and code sidebar, not through the plugin system
 
-  if (length(core_plugins)) {
-    plugins <- NextMethod(which = core_plugins)
-  } else {
-    plugins <- plugins()
-  }
+  plugins <- plugins()
 
   if (!is_dock_locked() && (is.null(which) || "preserve_board" %in% which)) {
     plugins <- c(plugins, preserve_board(ui = ser_deser_ui))

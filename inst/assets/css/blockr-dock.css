@@ -1477,13 +1477,65 @@ label:has(input[type="file"]) {
   padding: 6px 10px;
 }
 
-/* Generate code button in settings sidebar */
-.blockr-settings-generate-code {
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--blockr-color-border);
+
+/* ============================================
+   Code Sidebar Content
+   ============================================ */
+
+/* Code wrapper with copy button */
+.blockr-code-wrapper {
+  position: relative;
 }
 
-.blockr-settings-generate-code .btn {
-  width: 100%;
+.blockr-code-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--blockr-grey-100);
+  border: 1px solid var(--blockr-color-border);
+  border-radius: 4px;
+  color: var(--blockr-grey-500);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.blockr-code-wrapper:hover .blockr-code-copy {
+  opacity: 1;
+}
+
+.blockr-code-copy:hover {
+  background: var(--blockr-grey-200);
+  color: var(--blockr-grey-700);
+}
+
+.blockr-code-copy.copied {
+  opacity: 1;
+  background: var(--blockr-blue-50);
+  border-color: var(--blockr-blue-500);
+  color: var(--blockr-blue-600);
+}
+
+/* Simple grey box with rounded corners */
+pre.blockr-code-block {
+  margin: 0;
+  background: var(--blockr-grey-50);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+pre.blockr-code-block code {
+  background: transparent !important;
+  padding: 0 !important;
 }

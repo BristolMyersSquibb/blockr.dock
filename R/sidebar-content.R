@@ -680,6 +680,134 @@ render_settings_category <- function(ns, category_name, options) {
 
 
 # =============================================================================
+# Code Sidebar Content
+# =============================================================================
+
+#' Render Code Sidebar Content
+#'
+#' Generates the content for the code sidebar, displaying generated R code.
+#'
+#' @param ns Namespace function
+#' @param board Reactive board state (with `$blocks` and `$board`)
+#'
+#' @return Shiny tags
+#'
+#' @keywords internal
+render_code_sidebar_content <- function(ns, board) {
+  # Extract expressions from blocks (using exported functions from blockr.core)
+  expressions <- lapply(lst_xtr(board$blocks, "server", "expr"), reval)
+
+  # Generate formatted code
+  code <- format_code_output(expressions, board$board)
+
+  tagList(
+    highlightjs_dep(),
+    tags$div(
+      class = "blockr-code-wrapper",
+      tags$button(
+        class = "blockr-code-copy",
+        type = "button",
+        title = "Copy to clipboard",
+        onclick = "navigator.clipboard.writeText(this.nextElementSibling.textContent).then(() => { this.classList.add('copied'); setTimeout(() => this.classList.remove('copied'), 2000); });",
+        bsicons::bs_icon("clipboard")
+      ),
+      tags$pre(
+        class = "blockr-code-block",
+        tags$code(class = "language-r", code)
+      )
+    ),
+    tags$script(HTML("if(window.hljs) hljs.highlightAll();"))
+  )
+}
+
+#' Highlight.js Dependency
+#'
+#' Returns HTML dependency for highlight.js with R language support.
+#'
+#' @return htmltools::htmlDependency
+#'
+#' @keywords internal
+highlightjs_dep <- function() {
+  htmltools::tagList(
+    htmltools::htmlDependency(
+      name = "highlightjs",
+      version = "11.9.0",
+      src = c(href = "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0"),
+      script = "highlight.min.js",
+      stylesheet = "styles/github.min.css"
+    ),
+    htmltools::htmlDependency(
+      name = "highlightjs-r",
+      version = "11.9.0",
+      src = c(href = "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages"),
+      script = "r.min.js"
+    )
+  )
+}
+
+#' Format Code Output
+#'
+#' Formats block expressions into readable R code.
+#'
+#' @param expressions Block expressions
+#' @param board Board object
+#'
+#' @return Character string of formatted R code
+#'
+#' @keywords internal
+format_code_output <- function(expressions, board) {
+  exported <- export_code(expressions, board)
+
+  # Wrap each expression based on its type
+
+  wrapped <- Map(
+    wrap_block_expr,
+    exported$exprs,
+    exported$args,
+    exported$types
+  )
+
+  # Create assignments (name <- wrapped_expr)
+  assignments <- map(
+    function(name, expr) bquote(.(nm) <- .(ex), list(nm = as.name(name), ex = expr)),
+    names(wrapped),
+    wrapped
+  )
+
+
+  # Deparse and join (width.cutoff=80 for ~80 char lines)
+  code_lines <- chr_ply(
+    assignments,
+    function(x) paste0(deparse(x, width.cutoff = 80L), collapse = "\n")
+  )
+  paste0(code_lines, collapse = "\n\n")
+}
+
+#' Wrap Block Expression
+#'
+#' Wraps a block expression based on its type and arguments.
+#'
+#' @param expr The expression
+#' @param args Arguments (linked inputs)
+#' @param type Expression type ("quoted" or "bquoted")
+#'
+#' @return Wrapped call expression
+#'
+#' @keywords internal
+wrap_block_expr <- function(expr, args, type) {
+  if (identical(type, "bquoted")) {
+    expr <- do.call(bquote, list(expr, args))
+  }
+
+  if (length(args) && identical(type, "quoted")) {
+    call("with", args, expr)
+  } else {
+    call("local", expr)
+  }
+}
+
+
+# =============================================================================
 # Helper Functions
 # =============================================================================
 

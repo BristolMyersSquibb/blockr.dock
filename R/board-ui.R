@@ -20,7 +20,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       block_ui(id, x, plugins[["edit_block"]])
     ),
     # Sidebars
-    sidebars_ui(ns, x, generate_code_ui = opt_ui_or_null("generate_code", plugins, x)),
+    sidebars_ui(ns, x),
     div(
       class = "blockr-navbar",
       div(
@@ -29,8 +29,20 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       ),
       div(
         class = "blockr-navbar-right",
+        # Code button - opens code sidebar
         tags$button(
           class = "blockr-navbar-icon-btn",
+          title = "Show generated code",
+          onclick = sprintf(
+            "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+            ns("open_code_sidebar")
+          ),
+          bsicons::bs_icon("code-slash")
+        ),
+        # Settings button
+        tags$button(
+          class = "blockr-navbar-icon-btn",
+          title = "Board settings",
           onclick = sprintf(
             "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
             ns("open_settings_sidebar")
