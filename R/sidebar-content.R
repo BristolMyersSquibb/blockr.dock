@@ -638,6 +638,48 @@ render_dock_sidebar_content <- function(ns, board, visible_block_ids,
 
 
 # =============================================================================
+# Settings Sidebar Content
+# =============================================================================
+
+render_settings_sidebar_content <- function(ns, board) {
+  # Combine board options with options from blocks (same as toolbar_ui.board)
+  options <- combine_board_options(
+    board_options(board),
+    lapply(board_blocks(board), board_options),
+    lapply(available_blocks(), board_options)
+  )
+
+  # Group by category
+  opts <- split(options, chr_ply(options, attr, "category"))
+
+  tagList(
+    lapply(names(opts), function(cat_name) {
+      render_settings_category(ns, cat_name, opts[[cat_name]])
+    })
+  )
+}
+
+render_settings_category <- function(ns, category_name, options) {
+  tags$div(
+    class = "blockr-settings-category",
+    tags$div(
+      class = "blockr-settings-category-header",
+      onclick = "this.classList.toggle('is-open');",
+      tags$span(class = "blockr-settings-category-title", category_name),
+      tags$span(
+        class = "blockr-settings-category-chevron",
+        bsicons::bs_icon("chevron-down")
+      )
+    ),
+    tags$div(
+      class = "blockr-settings-category-content",
+      lapply(options, board_option_ui, id = ns(""))
+    )
+  )
+}
+
+
+# =============================================================================
 # Helper Functions
 # =============================================================================
 

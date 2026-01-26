@@ -153,6 +153,23 @@ sidebar_server <- function(board, update,
   })
 
   # ==========================================================================
+  # Settings Sidebar Content Renderer
+  # ==========================================================================
+
+  output$settings_content <- renderUI({
+    req(identical(sidebar$sidebar_id, "settings"))
+    render_settings_sidebar_content(ns = ns, board = board$board)
+  })
+
+  # ==========================================================================
+  # Settings Sidebar Trigger
+  # ==========================================================================
+
+  observeEvent(input$open_settings_sidebar, {
+    show_sidebar("settings")
+  })
+
+  # ==========================================================================
   # Block Card Click Handlers
   # ==========================================================================
   # These handle clicks from sidebar block cards. They live here (not in

@@ -4,12 +4,14 @@
 \alias{sidebars_ui}
 \title{Sidebar Containers UI}
 \usage{
-sidebars_ui(ns, board)
+sidebars_ui(ns, board, generate_code_ui = NULL)
 }
 \arguments{
 \item{ns}{Namespace function}
 
 \item{board}{The board object}
+
+\item{generate_code_ui}{Optional UI for the generate code plugin}
 }
 \value{
 Shiny tags containing all sidebar containers
