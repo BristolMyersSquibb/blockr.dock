@@ -124,6 +124,18 @@ sidebar_container_ui <- function(ns, id, title, subtitle = NULL,
     # Header
     tags$div(
       class = "blockr-sidebar-header",
+      # Pin button
+      tags$button(
+        type = "button",
+        class = "blockr-sidebar-pin",
+        onclick = sprintf(
+          "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+          ns("toggle_sidebar_pin")
+        ),
+        title = "Pin sidebar",
+        bsicons::bs_icon("pin-angle")
+      ),
+      # Close button
       tags$button(
         type = "button",
         class = "blockr-sidebar-close",

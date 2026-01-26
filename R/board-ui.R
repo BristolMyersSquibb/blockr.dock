@@ -21,8 +21,6 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       title = "Offcanvas blocks",
       block_ui(id, x, plugins[["edit_block"]])
     ),
-    # Sidebars
-    sidebars_ui(ns, x),
     div(
       class = "blockr-navbar",
       div(
@@ -47,10 +45,17 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
         opt_ui_or_null("generate_code", plugins, x)
       )
     ),
-    dockViewR::dock_view_output(
-      NS(id, dock_id()),
-      width = "100%",
-      height = "calc(100vh - 48px)"
+    div(
+      class = "blockr-layout-wrapper",
+      div(
+        class = "blockr-dock-container",
+        dockViewR::dock_view_output(
+          NS(id, dock_id()),
+          width = "100%",
+          height = "100%"
+        )
+      ),
+      sidebars_ui(ns, x)
     ),
     off_canvas(
       id = NS(id, "exts_offcanvas"),

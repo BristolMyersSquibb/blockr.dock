@@ -224,6 +224,18 @@ sidebar_server <- function(board, update,
     input$append_block_card_click,
     {
       req(input$append_block_card_click$ctor)
+      # When pinned and first action done, add standalone blocks (no links)
+      if (isTRUE(sidebar$is_pinned) && isTRUE(sidebar$pinned_first_action_done)) {
+        new_blk <- create_block_with_name(
+          input$append_block_card_click$ctor,
+          chr_ply(board_blocks(board$board), block_name)
+        )
+        id <- rand_names(board_block_ids(board$board))
+        bk <- as_blocks(set_names(list(new_blk), id))
+        update(list(blocks = list(add = bk)))
+        return()
+      }
+
       source_block <- sidebar$context$source_block
       req(source_block)
 
@@ -258,6 +270,10 @@ sidebar_server <- function(board, update,
         links = list(add = new_lnk)
       ))
 
+      # Mark first action done for pinned mode
+      if (isTRUE(sidebar$is_pinned)) {
+        sidebar$pinned_first_action_done <- TRUE
+      }
       hide_sidebar()
     }
   )
@@ -267,12 +283,37 @@ sidebar_server <- function(board, update,
     input$append_block_card_confirm,
     {
       req(input$append_block_card_confirm$ctor)
-      source_block <- sidebar$context$source_block
-      req(source_block)
 
       ctor <- input$append_block_card_confirm$ctor
       custom_name <- input[[paste0("block_name_", ctor)]]
       custom_id <- input[[paste0("block_id_", ctor)]]
+
+      # When pinned and first action done, add standalone block (no link)
+      if (isTRUE(sidebar$is_pinned) && isTRUE(sidebar$pinned_first_action_done)) {
+        new_blk <- create_block_with_name(
+          ctor,
+          chr_ply(board_blocks(board$board), block_name)
+        )
+        if (!is.null(custom_name) && nzchar(custom_name)) {
+          block_name(new_blk) <- custom_name
+        }
+        id <- if (!is.null(custom_id) && nzchar(custom_id)) {
+          if (custom_id %in% board_block_ids(board$board)) {
+            notify("Block ID already exists, generating new one.", type = "warning")
+            rand_names(board_block_ids(board$board))
+          } else {
+            custom_id
+          }
+        } else {
+          rand_names(board_block_ids(board$board))
+        }
+        bk <- as_blocks(set_names(list(new_blk), id))
+        update(list(blocks = list(add = bk)))
+        return()
+      }
+
+      source_block <- sidebar$context$source_block
+      req(source_block)
       custom_input <- input[[paste0("block_input_", ctor)]]
       custom_link_id <- input[[paste0("link_id_", ctor)]]
 
@@ -341,6 +382,10 @@ sidebar_server <- function(board, update,
         links = list(add = new_lnk)
       ))
 
+      # Mark first action done for pinned mode
+      if (isTRUE(sidebar$is_pinned)) {
+        sidebar$pinned_first_action_done <- TRUE
+      }
       hide_sidebar()
     }
   )
@@ -350,6 +395,19 @@ sidebar_server <- function(board, update,
     input$prepend_block_card_click,
     {
       req(input$prepend_block_card_click$ctor)
+
+      # When pinned and first action done, add standalone block (no link)
+      if (isTRUE(sidebar$is_pinned) && isTRUE(sidebar$pinned_first_action_done)) {
+        new_blk <- create_block_with_name(
+          input$prepend_block_card_click$ctor,
+          chr_ply(board_blocks(board$board), block_name)
+        )
+        id <- rand_names(board_block_ids(board$board))
+        bk <- as_blocks(set_names(list(new_blk), id))
+        update(list(blocks = list(add = bk)))
+        return()
+      }
+
       target_block <- sidebar$context$target_block
       target_input <- sidebar$context$target_input
       req(target_block, target_input)
@@ -375,6 +433,10 @@ sidebar_server <- function(board, update,
         links = list(add = new_lnk)
       ))
 
+      # Mark first action done for pinned mode
+      if (isTRUE(sidebar$is_pinned)) {
+        sidebar$pinned_first_action_done <- TRUE
+      }
       hide_sidebar()
     }
   )
@@ -384,13 +446,38 @@ sidebar_server <- function(board, update,
     input$prepend_block_card_confirm,
     {
       req(input$prepend_block_card_confirm$ctor)
-      target_block <- sidebar$context$target_block
-      target_input <- sidebar$context$target_input
-      req(target_block, target_input)
 
       ctor <- input$prepend_block_card_confirm$ctor
       custom_name <- input[[paste0("block_name_", ctor)]]
       custom_id <- input[[paste0("block_id_", ctor)]]
+
+      # When pinned and first action done, add standalone block (no link)
+      if (isTRUE(sidebar$is_pinned) && isTRUE(sidebar$pinned_first_action_done)) {
+        new_blk <- create_block_with_name(
+          ctor,
+          chr_ply(board_blocks(board$board), block_name)
+        )
+        if (!is.null(custom_name) && nzchar(custom_name)) {
+          block_name(new_blk) <- custom_name
+        }
+        id <- if (!is.null(custom_id) && nzchar(custom_id)) {
+          if (custom_id %in% board_block_ids(board$board)) {
+            notify("Block ID already exists, generating new one.", type = "warning")
+            rand_names(board_block_ids(board$board))
+          } else {
+            custom_id
+          }
+        } else {
+          rand_names(board_block_ids(board$board))
+        }
+        bk <- as_blocks(set_names(list(new_blk), id))
+        update(list(blocks = list(add = bk)))
+        return()
+      }
+
+      target_block <- sidebar$context$target_block
+      target_input <- sidebar$context$target_input
+      req(target_block, target_input)
       custom_link_id <- input[[paste0("link_id_", ctor)]]
 
       new_blk <- create_block_with_name(
@@ -441,6 +528,10 @@ sidebar_server <- function(board, update,
         links = list(add = new_lnk)
       ))
 
+      # Mark first action done for pinned mode
+      if (isTRUE(sidebar$is_pinned)) {
+        sidebar$pinned_first_action_done <- TRUE
+      }
       hide_sidebar()
     }
   )
@@ -454,6 +545,8 @@ sidebar_server <- function(board, update,
     input$link_card_click,
     {
       req(input$link_card_click$target)
+      # When pinned and first action done, don't create more links
+      if (isTRUE(sidebar$is_pinned) && isTRUE(sidebar$pinned_first_action_done)) return()
       source_block <- sidebar$context$source_block
       req(source_block)
 
@@ -465,6 +558,10 @@ sidebar_server <- function(board, update,
       new_lnk <- as_links(set_names(list(new_lnk), lnk_id))
 
       update(list(links = list(add = new_lnk)))
+      # Mark first action done for pinned mode
+      if (isTRUE(sidebar$is_pinned)) {
+        sidebar$pinned_first_action_done <- TRUE
+      }
       hide_sidebar()
     }
   )
@@ -474,6 +571,8 @@ sidebar_server <- function(board, update,
     input$link_card_confirm,
     {
       req(input$link_card_confirm$target)
+      # When pinned and first action done, don't create more links
+      if (isTRUE(sidebar$is_pinned) && isTRUE(sidebar$pinned_first_action_done)) return()
       source_block <- sidebar$context$source_block
       req(source_block)
 
@@ -500,6 +599,10 @@ sidebar_server <- function(board, update,
       new_lnk <- as_links(set_names(list(new_lnk), lnk_id))
 
       update(list(links = list(add = new_lnk)))
+      # Mark first action done for pinned mode
+      if (isTRUE(sidebar$is_pinned)) {
+        sidebar$pinned_first_action_done <- TRUE
+      }
       hide_sidebar()
     }
   )

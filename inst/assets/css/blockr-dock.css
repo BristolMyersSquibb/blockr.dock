@@ -764,6 +764,23 @@ label:has(input[type="file"]) {
 }
 
 /* ============================================
+   Layout Wrapper (for pinnable sidebar)
+   ============================================ */
+.blockr-layout-wrapper {
+  display: flex;
+  height: calc(100vh - 48px);
+  width: 100%;
+  overflow: hidden;
+}
+
+.blockr-dock-container {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  transition: flex 0.3s ease-out;
+}
+
+/* ============================================
    Sidebar Styling
    ============================================ */
 
@@ -819,6 +836,57 @@ label:has(input[type="file"]) {
 .blockr-sidebar-close:hover {
   background: var(--blockr-grey-100);
   color: var(--blockr-grey-700);
+}
+
+/* Pin button */
+.blockr-sidebar-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--blockr-grey-500);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, transform 0.15s;
+}
+
+.blockr-sidebar-pin:hover {
+  background: var(--blockr-grey-100);
+  color: var(--blockr-grey-700);
+}
+
+.blockr-sidebar-pinned .blockr-sidebar-pin {
+  color: var(--blockr-blue-500);
+  transform: rotate(45deg);
+}
+
+/* Pinned sidebar styles */
+.blockr-sidebar-pinned .blockr-sidebar {
+  position: relative;
+  top: 0;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  height: 100%;
+}
+
+.blockr-sidebar-pinned .blockr-sidebar:not(.blockr-sidebar-hidden) {
+  flex-shrink: 0;
+  transform: none;
+  box-shadow: none;
+  border-left: 1px solid var(--blockr-color-border);
+}
+
+.blockr-sidebar-pinned .blockr-sidebar.blockr-sidebar-hidden {
+  width: 0;
+  min-width: 0;
+  transform: none;
+  border-left: none;
+  overflow: hidden;
 }
 
 /* Reusable icon button - for delete/dismiss/close actions */

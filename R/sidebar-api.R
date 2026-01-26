@@ -62,22 +62,45 @@ init_sidebar <- function(session = shiny::getDefaultReactiveDomain()) {
   ns <- session$ns
 
   # Create sidebar state
-  sidebar <- reactiveValues(
+ sidebar <- reactiveValues(
     sidebar_id = NULL,
     context = list(),
-    prev_sidebar_id = NULL
+    prev_sidebar_id = NULL,
+    is_pinned = FALSE,
+    pinned_first_action_done = FALSE
   )
 
   # Store in session for access by show_sidebar/hide_sidebar
   session$userData$blockr_sidebar <- sidebar
 
+  # Restore pin state from localStorage on init
+  # nolint start: line_length_linter.
+  shinyjs::runjs(sprintf(
+    "var isPinned = localStorage.getItem('blockr_sidebar_pinned') === 'true';
+     if (isPinned) {
+       document.querySelector('.blockr-layout-wrapper')?.classList.add('blockr-sidebar-pinned');
+     }
+     Shiny.setInputValue('%s', isPinned, {priority: 'event'});",
+    ns("sidebar_pinned_init")
+  ))
+  # nolint end.
+
+  # Sync localStorage state to reactiveValue
+
+  observeEvent(session$input$sidebar_pinned_init, {
+    sidebar$is_pinned <- isTRUE(session$input$sidebar_pinned_init)
+  }, once = TRUE)
+
   # Add keyboard shortcuts for sidebar
   # nolint start: line_length_linter.
 
-  # Escape to close sidebar
+  # Escape to close sidebar (only when not pinned)
   shinyjs::runjs(sprintf(
     "document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
+        var wrapper = document.querySelector('.blockr-layout-wrapper');
+        var isPinned = wrapper && wrapper.classList.contains('blockr-sidebar-pinned');
+        if (isPinned) return;
         var openSidebar = document.querySelector('.blockr-sidebar:not(.blockr-sidebar-hidden)');
         if (openSidebar) {
           Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
@@ -247,6 +270,31 @@ init_sidebar <- function(session = shiny::getDefaultReactiveDomain()) {
     sidebar$context <- list()
   })
 
+  # Pin toggle handler
+  observeEvent(session$input$toggle_sidebar_pin, {
+    toggle_pin_sidebar(session)
+  })
+
+  # Observer: react to pin state changes and update CSS class
+  observeEvent(sidebar$is_pinned, {
+    is_pinned <- sidebar$is_pinned
+    # nolint start: line_length_linter.
+    shinyjs::runjs(sprintf(
+      "var wrapper = document.querySelector('.blockr-layout-wrapper');
+       if (wrapper) {
+         if (%s) {
+           wrapper.classList.add('blockr-sidebar-pinned');
+         } else {
+           wrapper.classList.remove('blockr-sidebar-pinned');
+         }
+       }
+       localStorage.setItem('blockr_sidebar_pinned', '%s');",
+      tolower(is_pinned),
+      tolower(is_pinned)
+    ))
+    # nolint end.
+  }, ignoreInit = TRUE)
+
   invisible(sidebar)
 }
 
@@ -272,8 +320,18 @@ show_sidebar <- function(id, context = list(),
     id <- id$id
   }
 
+ # When pinned and sidebar is open, don't switch to linking modes
+  # This allows adding multiple independent blocks in pinned mode
+  if (isTRUE(sidebar$is_pinned) && !is.null(sidebar$sidebar_id)) {
+    linking_modes <- c("append_block", "prepend_block", "add_link")
+    if (id %in% linking_modes) {
+      return(invisible())
+    }
+  }
+
   sidebar$context <- context
   sidebar$sidebar_id <- id
+  sidebar$pinned_first_action_done <- FALSE
 
   invisible()
 }
@@ -284,6 +342,10 @@ show_sidebar <- function(id, context = list(),
 hide_sidebar <- function(session = shiny::getDefaultReactiveDomain()) {
   sidebar <- session$userData$blockr_sidebar
   if (is.null(sidebar)) return(invisible())
+
+
+  # When pinned, don't hide the sidebar
+  if (isTRUE(sidebar$is_pinned)) return(invisible())
 
   sidebar$sidebar_id <- NULL
   sidebar$context <- list()
@@ -306,4 +368,47 @@ new_sidebar <- function(id, context = list()) {
     list(id = id, context = context),
     class = "sidebar"
   )
+}
+
+
+#' @rdname sidebar
+#' @export
+pin_sidebar <- function(session = shiny::getDefaultReactiveDomain()) {
+  sidebar <- session$userData$blockr_sidebar
+  if (is.null(sidebar)) return(invisible())
+
+  sidebar$is_pinned <- TRUE
+  invisible()
+}
+
+
+#' @rdname sidebar
+#' @export
+unpin_sidebar <- function(session = shiny::getDefaultReactiveDomain()) {
+  sidebar <- session$userData$blockr_sidebar
+  if (is.null(sidebar)) return(invisible())
+
+  sidebar$is_pinned <- FALSE
+  invisible()
+}
+
+
+#' @rdname sidebar
+#' @export
+toggle_pin_sidebar <- function(session = shiny::getDefaultReactiveDomain()) {
+  sidebar <- session$userData$blockr_sidebar
+  if (is.null(sidebar)) return(invisible())
+
+  sidebar$is_pinned <- !isTRUE(sidebar$is_pinned)
+  invisible()
+}
+
+
+#' @rdname sidebar
+#' @export
+is_sidebar_pinned <- function(session = shiny::getDefaultReactiveDomain()) {
+  sidebar <- session$userData$blockr_sidebar
+  if (is.null(sidebar)) return(FALSE)
+
+  isTRUE(sidebar$is_pinned)
 }

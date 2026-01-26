@@ -8,6 +8,10 @@
 \alias{hide_sidebar}
 \alias{get_sidebar}
 \alias{new_sidebar}
+\alias{pin_sidebar}
+\alias{unpin_sidebar}
+\alias{toggle_pin_sidebar}
+\alias{is_sidebar_pinned}
 \title{Sidebar API}
 \usage{
 init_sidebar(session = shiny::getDefaultReactiveDomain())
@@ -19,6 +23,14 @@ hide_sidebar(session = shiny::getDefaultReactiveDomain())
 get_sidebar(session = shiny::getDefaultReactiveDomain())
 
 new_sidebar(id, context = list())
+
+pin_sidebar(session = shiny::getDefaultReactiveDomain())
+
+unpin_sidebar(session = shiny::getDefaultReactiveDomain())
+
+toggle_pin_sidebar(session = shiny::getDefaultReactiveDomain())
+
+is_sidebar_pinned(session = shiny::getDefaultReactiveDomain())
 }
 \arguments{
 \item{session}{Shiny session (default: current reactive domain)}
