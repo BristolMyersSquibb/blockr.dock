@@ -169,3 +169,31 @@ dock_panel_groups <- function(session = get_session()) {
 get_dock_panel <- function(id, proxy = dock_proxy()) {
   dockViewR::get_panels(proxy)[[id]]
 }
+
+#' Get Visible Panel Object IDs
+#'
+#' Returns the object IDs (not panel IDs) of currently visible panels,
+#' separated by type.
+#'
+#' @param proxy Dock proxy
+#'
+#' @return List with `block_ids` and `ext_ids` character vectors
+#' @keywords internal
+visible_panel_obj_ids <- function(proxy = dock_proxy()) {
+  panels <- dock_panel_ids(proxy)
+  block_ids <- character()
+  ext_ids <- character()
+
+  if (length(panels) > 0) {
+    if (length(panels) == 1) panels <- list(panels)
+    for (p in panels) {
+      if (is_block_panel_id(p)) {
+        block_ids <- c(block_ids, as_obj_id(p))
+      } else if (is_ext_panel_id(p)) {
+        ext_ids <- c(ext_ids, as_obj_id(p))
+      }
+    }
+  }
+
+  list(block_ids = block_ids, ext_ids = ext_ids)
+}
