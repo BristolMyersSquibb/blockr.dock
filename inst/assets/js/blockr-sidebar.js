@@ -11,6 +11,9 @@
   // Global Sidebar Controller
   // ===========================================================================
 
+  // Track if sidebar was just opened (for clearing search only on initial show)
+  var justOpened = false;
+
   window.blockrSidebar = {
     /**
      * Show the sidebar
@@ -19,6 +22,9 @@
     show: function() {
       var sidebar = document.querySelector('.blockr-sidebar');
       if (!sidebar) return;
+
+      // Mark as just opened (for updateMeta to know to clear/focus search)
+      justOpened = true;
 
       // Show the sidebar
       sidebar.classList.remove('blockr-sidebar-hidden');
@@ -38,6 +44,7 @@
 
       // Clear keyboard selection tracking
       selectedBlockId = null;
+      justOpened = false;
 
       $(document).trigger('blockr-sidebar-change');
     },
@@ -69,8 +76,9 @@
         var showSearch = data.show_search === true;
         searchContainer.style.display = showSearch ? '' : 'none';
 
-        // Clear and focus search if shown
-        if (showSearch) {
+        // Clear and focus search only when sidebar was just opened (not on re-renders)
+        if (showSearch && justOpened) {
+          justOpened = false;
           var searchInput = searchContainer.querySelector('.blockr-sidebar-search-input');
           if (searchInput) {
             searchInput.value = '';
