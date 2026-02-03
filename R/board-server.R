@@ -3,9 +3,10 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   initial_board <- isolate(board$board)
 
   # Get generate_code plugin UI for settings sidebar
+  # Use board_id for correct namespace (must match call_plugin_server in blockr.core)
   plugins <- board_plugins(initial_board)
   generate_code_ui <- if ("generate_code" %in% names(plugins)) {
-    board_ui(session$ns(""), plugins[["generate_code"]], initial_board)
+    board_ui(isolate(board$board_id), plugins[["generate_code"]], initial_board)
   }
 
   sidebar_server(board, update, generate_code_ui, session)
