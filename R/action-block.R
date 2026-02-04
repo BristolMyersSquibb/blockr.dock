@@ -288,10 +288,17 @@ prepend_block_action <- function(trigger, board, update, ...) {
           # Compared to append block, trigger is a bit special as
           # it has to provide the target node
           # and the input port to connect to.
+          inps <- block_input_select(
+            board_blocks(board$board)[[trigger()]],
+            trigger(),
+            board_links(board$board),
+            mode = "inputs"
+          )
+
           new_lnk <- new_link(
             from = blk_id,
-            to = trigger()$target,
-            input = trigger()$input
+            to = trigger(),
+            input = inps[1L]
           )
 
           new_lnk <- as_links(set_names(list(new_lnk), lnk_id))
