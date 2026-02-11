@@ -16,7 +16,10 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
-      block_ui(id, x, plugins[["edit_block"]])
+      block_ui(
+        id, x, plugins[["edit_block"]],
+        ctrl_ui = plugins[["ctrl_block"]]
+      )
     ),
     div(
       class = "blockr-navbar",
