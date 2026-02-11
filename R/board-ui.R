@@ -18,7 +18,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       title = "Offcanvas blocks",
       block_ui(
         id, x, plugins[["edit_block"]],
-        ctrl_ui = plugins[["ctrl_block"]]
+        ctrl_ui = if ("ctrl_block" %in% names(plugins)) plugins[["ctrl_block"]]
       )
     ),
     div(
