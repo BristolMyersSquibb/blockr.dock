@@ -64,7 +64,7 @@ blks_metadata <- function(blocks) {
 
   if (any(lengths(id) > 0L)) {
 
-    reg <- block_metadata(unlst(id[lengths(id) > 0L]))
+    reg <- registry_metadata(unlst(id[lengths(id) > 0L]))
     reg <- cbind(reg, color = blk_color(reg$category))
 
     if (is_blocks(blocks)) {

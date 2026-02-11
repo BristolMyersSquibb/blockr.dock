@@ -107,8 +107,9 @@ block_input_select <- function(block = NULL, block_id = NULL, links = NULL,
 #' @rdname action
 #' @export
 block_registry_selectize <- function(id, blocks = list_blocks()) {
+  fields <- c("name", "description", "category", "icon", "package")
   options_data <- apply(
-    block_metadata(blocks),
+    registry_metadata(blocks, fields),
     1L,
     function(blk) {
       list(
