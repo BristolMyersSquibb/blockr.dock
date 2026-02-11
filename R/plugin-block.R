@@ -1,4 +1,4 @@
-edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
+edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui, ctrl_ui = NULL) {
 
   blk_info <- blks_metadata(blk)
   ns <- NS(id)
@@ -22,15 +22,17 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
           class = "d-flex align-items-center justify-content-between w-100",
           # Left side: block name and subtitle
           block_card_title(blk, id, blk_info),
-          # Right side: toggles and dropdown
+          # Right side: AI icon, toggles, and dropdown
           div(
             class = "d-flex align-items-center gap-2 flex-shrink-0",
+            ctrl_header_icon(ns, ctrl_ui),
             block_card_toggles(blk, ns),
             block_card_dropdown(ns, blk_info, blk_id)
           )
         )
       )
     ),
+    ctrl_collapsible_section(ns, ctrl_ui),
     block_card_content(ns, expr_ui, block_ui)
   )
 }
@@ -360,6 +362,85 @@ block_card_content <- function(ns, expr_ui, block_ui) {
       inputs_panel,
       outputs_panel
     )
+  )
+}
+
+ctrl_header_icon <- function(ns, ctrl_ui) {
+  if (is.null(ctrl_ui)) return(NULL)
+  tags$button(
+    class = "btn btn-link p-1 border-0 bg-transparent text-muted blockr-ai-toggle",
+    type = "button",
+    title = "AI Assist",
+    onclick = sprintf(
+      "var content = document.getElementById('%s');
+       var icon = this.querySelector('.blockr-ai-icon');
+       if (content.classList.contains('ai-collapsed')) {
+         content.classList.remove('ai-collapsed');
+         icon.classList.add('ai-active');
+       } else {
+         content.classList.add('ai-collapsed');
+         icon.classList.remove('ai-active');
+       }",
+      ns("ctrl_content")
+    ),
+    bsicons::bs_icon("stars", class = "blockr-ai-icon")
+  )
+}
+
+ctrl_collapsible_section <- function(ns, ctrl_ui) {
+  if (is.null(ctrl_ui)) return(NULL)
+  tagList(
+    css_ctrl_section(),
+    div(
+      id = ns("ctrl_content"),
+      class = "blockr-ctrl-content ai-collapsed",
+      div(
+        class = "blockr-ctrl-body",
+        ctrl_ui
+      )
+    )
+  )
+}
+
+css_ctrl_section <- function() {
+  htmltools::htmlDependency(
+    "blockr-ctrl-section",
+    pkg_version(),
+    src = c(href = ""),
+    head = paste0("<style>",
+      ".blockr-ai-toggle:hover .blockr-ai-icon {
+        color: #7c3aed !important;
+      }
+      .blockr-ai-icon {
+        font-size: 1.1rem;
+        transition: color 0.3s, transform 0.3s;
+      }
+      .blockr-ai-icon.ai-active {
+        color: #7c3aed !important;
+        animation: blockr-sparkle 0.5s ease-out forwards;
+      }
+      @keyframes blockr-sparkle {
+        0% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+        50% { transform: scale(1.3) rotate(-8deg); filter: brightness(1.5); }
+        100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+      }
+      .blockr-ctrl-content {
+        max-height: 300px;
+        overflow-y: auto;
+        transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out;
+        opacity: 1;
+        margin: 0 -16px;
+        padding: 0 16px;
+      }
+      .blockr-ctrl-content.ai-collapsed {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+      }
+      .blockr-ctrl-body {
+        padding: 10px 0;
+      }",
+    "</style>")
   )
 }
 

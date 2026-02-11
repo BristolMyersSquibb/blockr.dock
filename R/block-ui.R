@@ -10,6 +10,10 @@ block_ui.dock_board <- function(id, x, edit_ui, ctrl_ui = NULL, blocks = NULL,
 
   stopifnot(is_blocks(blocks))
 
+  if (!is.null(ctrl_ui)) {
+    ctrl_ui <- plugin_ui(ctrl_ui)
+  }
+
   map(
     block_card,
     blocks,
@@ -18,12 +22,12 @@ block_ui.dock_board <- function(id, x, edit_ui, ctrl_ui = NULL, blocks = NULL,
       plugin = edit_ui,
       board = x,
       board_ns = NS(id),
-      ctrl_ui = ctrl_ui
+      ctrl = ctrl_ui
     )
   )
 }
 
-block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl_ui = NULL) {
+block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
 
   blk_srv_id <- board_ns(paste0("block_", blk_id))
 
@@ -35,6 +39,12 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl_ui = NULL) {
     edit_ns <- NS(blk_srv_id, "edit_block")
   }
 
+  if (!is.null(ctrl)) {
+    ctrl_tag <- ctrl(NS(blk_srv_id, "ctrl_block"), blk)
+  } else {
+    ctrl_tag <- NULL
+  }
+
   card_tag <- div(
     class = "card",
     width = "100%",
@@ -44,10 +54,9 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl_ui = NULL) {
       blk,
       blk_id,
       expr_ui(blk_srv_id, blk),
-      block_ui(blk_srv_id, blk)
-    ),
-    if (!is.null(ctrl_ui))
-      plugin_ui(ctrl_ui)(NS(blk_srv_id, "ctrl_block"), blk)
+      block_ui(blk_srv_id, blk),
+      ctrl_ui = ctrl_tag
+    )
   )
 
   tagAppendAttributes(card_tag, class = "border border-0 shadow-none")
