@@ -69,6 +69,15 @@ manage_dock <- function(board, update, actions, session = get_session()) {
     once = TRUE
   )
 
+  n_panels <- reactiveVal(
+    isolate(length(determine_active_views(dock_layout(board$board))))
+  )
+
+  observeEvent(
+    req(input[[dock_input("n-panels")]]),
+    n_panels(input[[dock_input("n-panels")]])
+  )
+
   observeEvent(
     input[[dock_input("panel-to-remove")]],
     {
@@ -78,8 +87,10 @@ manage_dock <- function(board, update, actions, session = get_session()) {
 
       if (is_block_panel_id(id)) {
         hide_block_panel(id, rm_panel = TRUE, proxy = dock)
+        n_panels(n_panels() - 1L)
       } else if (is_ext_panel_id(id)) {
         hide_ext_panel(id, rm_panel = TRUE, proxy = dock)
+        n_panels(n_panels() - 1L)
       } else {
         blockr_abort(
           "Unknown panel type {class(id)}.",
@@ -94,27 +105,14 @@ manage_dock <- function(board, update, actions, session = get_session()) {
     suggest_panels_to_add(dock, board, session = session)
   )
 
-  n_panels <- reactiveVal(
-    isolate(length(determine_active_views(dock_layout(board$board))))
-  )
-
-
-  observeEvent(
-    req(input[[dock_input("n-panels")]]),
-    n_panels(input[[dock_input("n-panels")]])
-  )
-
   observeEvent(
     req(n_panels() == 0),
-    {
-      suggest_panels_to_add(
-        dock,
-        board,
-        actions[["add_block_action"]],
-        session
-      )
-      n_panels(1L)
-    }
+    suggest_panels_to_add(
+      dock,
+      board,
+      actions[["add_block_action"]],
+      session
+    )
   )
 
   observeEvent(
@@ -128,13 +126,19 @@ manage_dock <- function(board, update, actions, session = get_session()) {
       )
 
       for (id in input$add_dock_panel) {
+
         if (grepl("^blk-", id)) {
+
           show_block_panel(
             board_blocks(board$board)[sub("^blk-", "", id)],
             add_panel = pos,
             proxy = dock
           )
+
+          n_panels(n_panels() + 1L)
+
         } else if (grepl("^ext-", id)) {
+
           exts <- as.list(dock_extensions(board$board))
 
           show_ext_panel(
@@ -142,7 +146,11 @@ manage_dock <- function(board, update, actions, session = get_session()) {
             add_panel = pos,
             proxy = dock
           )
+
+          n_panels(n_panels() + 1L)
+
         } else {
+
           blockr_abort(
             "Unknown panel specification {id}.",
             class = "dock_panel_invalid"

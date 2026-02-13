@@ -91,11 +91,6 @@ test_that("board server", {
 
       n_panels <- get("n_panels", envir = trace_env$manage_dock)
 
-      expect_error(
-        n_panels(),
-        class = "shiny.silent.error"
-      )
-
       do.call(
         session$setInputs,
         set_names(list(TRUE), dock_input("initialized"))
@@ -106,8 +101,8 @@ test_that("board server", {
       do.call(
         session$setInputs,
         set_names(
-          list(as_block_panel_id("a"), 1L),
-          c(dock_input("panel-to-remove"), dock_input("n-panels"))
+          list(as_block_panel_id("a")),
+          dock_input("panel-to-remove")
         )
       )
 
@@ -116,8 +111,8 @@ test_that("board server", {
       do.call(
         session$setInputs,
         set_names(
-          list(as_ext_panel_id("edit_board_extension"), 0L),
-          c(dock_input("panel-to-remove"), dock_input("n-panels"))
+          list(as_ext_panel_id("edit_board_extension")),
+          dock_input("panel-to-remove")
         )
       )
 
@@ -126,8 +121,8 @@ test_that("board server", {
       do.call(
         session$setInputs,
         set_names(
-          list(1L, c("blk-a", "ext-edit_board_extension"), 2L),
-          c("confirm_add", "add_dock_panel", dock_input("n-panels"))
+          list(1L, c("blk-a", "ext-edit_board_extension")),
+          c("confirm_add", "add_dock_panel")
         )
       )
 
