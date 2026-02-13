@@ -42,6 +42,11 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
     grid <- draw_panel_tree(NULL)
   }
 
+  # Ensure views in leaf nodes are lists (not character vectors) so
+  # toJSON(auto_unbox=TRUE) serializes them as JSON arrays, not scalars.
+  # After fromJSON round-trip, character vectors of length 1 get auto-unboxed.
+  grid <- fix_grid_views(grid)
+
   if (!length(panels)) {
     panels <- set_names(list(), character(0L))
   }
@@ -72,6 +77,22 @@ default_grid <- function(blocks, extensions) {
   } else {
     list(blks)
   }
+}
+
+fix_grid_views <- function(grid) {
+  fix_node <- function(node) {
+    if (identical(node$type, "leaf") && !is.null(node$data$views)) {
+      node$data$views <- as.list(node$data$views)
+    } else if (identical(node$type, "branch") && is.list(node$data)) {
+      node$data <- lapply(node$data, fix_node)
+    }
+    # Also fix root level
+    if (!is.null(node$root)) {
+      node$root <- fix_node(node$root)
+    }
+    node
+  }
+  fix_node(grid)
 }
 
 draw_panel_tree <- function(x) {
