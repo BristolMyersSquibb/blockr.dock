@@ -1,7 +1,7 @@
 Package: blockr.dock
 Title: A Docking Layout Manager for 'blockr'
 Version: 0.1.1
-Authors@R: 
+Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",
              role = c("aut", "cre"),
@@ -21,7 +21,7 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
-    blockr.core (>= 0.1.1),
+    blockr.core (>= 0.1.2),
     bsicons,
     shiny,
     shinyjs,
@@ -32,15 +32,17 @@ Imports:
     cli,
     shinyWidgets,
     jsonlite
-Suggests: 
+Suggests:
     testthat (>= 3.0.0),
     DT,
     colorspace,
     methods,
     withr,
     shinytest2
+Remotes:
+    BristolMyersSquibb/blockr.core
 Config/testthat/edition: 3
-Collate: 
+Collate:
     'action-class.R'
     'action-block.R'
     'action-link.R'
