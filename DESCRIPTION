@@ -39,8 +39,6 @@ Suggests:
     methods,
     withr,
     shinytest2
-Remotes:
-    BristolMyersSquibb/blockr.core
 Config/testthat/edition: 3
 Collate:
     'action-class.R'
