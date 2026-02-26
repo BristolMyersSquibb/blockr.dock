@@ -1,4 +1,5 @@
 block_modal <- function(ns, board, mode = c("append", "add", "prepend")) {
+
   mode <- match.arg(mode)
   board_block_ids <- board_block_ids(board)
   board_link_ids <- board_link_ids(board)

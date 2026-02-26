@@ -107,21 +107,23 @@ block_input_select <- function(block = NULL, block_id = NULL, links = NULL,
 #' @rdname action
 #' @export
 block_registry_selectize <- function(id, blocks = list_blocks()) {
-  options_data <- apply(
-    registry_metadata(blocks),
-    1L,
-    function(blk) {
-      list(
-        value = unname(blk["id"]),
-        label = unname(blk["name"]),
-        description = unname(blk["description"]),
-        category = unname(blk["category"]),
-        package = unname(blk["package"]),
-        icon = unname(blk["icon"]),
-        color = blk_color(blk["category"]),
-        searchtext = paste(blk["name"], blk["description"], blk["package"])
-      )
-    }
+
+  meta <- registry_metadata(blocks)
+
+  options_data <- map(
+    list,
+    value = meta[["id"]],
+    label = meta[["name"]],
+    description = meta[["description"]],
+    category = meta[["category"]],
+    package = meta[["package"]],
+    icon = meta[["icon"]],
+    color = blk_color(meta[["category"]]),
+    searchtext = paste(
+      meta[["name"]],
+      meta[["description"]],
+      meta[["package"]]
+    )
   )
 
   tagList(
