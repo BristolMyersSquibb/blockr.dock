@@ -13,11 +13,15 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
     reval_if
   )
 
+  all_opts <- blockr_app_options(x)
+
   opts <- lapply(
-    set_names(nm = names(as_board_options(x))),
+    set_names(nm = names(all_opts)),
     get_board_option_or_null,
     session
   )
+
+  x[["options"]] <- all_opts
 
   do.call(
     blockr_ser,
