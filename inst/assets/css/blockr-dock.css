@@ -388,6 +388,11 @@ label:has(input[type="file"]) {
   padding: 6px 12px;
 }
 
+/* File input: stretch button to match form-control height */
+.input-group .input-group-btn {
+  display: flex;
+}
+
 /* Primary button - blue */
 .btn-primary {
   background-color: var(--blockr-color-primary);
