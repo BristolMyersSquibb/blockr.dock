@@ -1,5 +1,6 @@
 #' @export
-block_ui.dock_board <- function(id, x, edit_ui, blocks = NULL, ...) {
+block_ui.dock_board <- function(id, x, edit_ui, blocks = NULL, ...,
+                                ctrl_ui = NULL) {
 
   stopifnot(is_string(id))
 
@@ -9,6 +10,8 @@ block_ui.dock_board <- function(id, x, edit_ui, blocks = NULL, ...) {
 
   stopifnot(is_blocks(blocks))
 
+  if (!is.null(ctrl_ui)) ctrl_ui <- plugin_ui(ctrl_ui)
+
   map(
     block_card,
     blocks,
@@ -16,12 +19,13 @@ block_ui.dock_board <- function(id, x, edit_ui, blocks = NULL, ...) {
     MoreArgs = list(
       plugin = edit_ui,
       board = x,
-      board_ns = NS(id)
+      board_ns = NS(id),
+      ctrl = ctrl_ui
     )
   )
 }
 
-block_card <- function(blk, blk_id, plugin, board, board_ns) {
+block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
 
   blk_srv_id <- board_ns(paste0("block_", blk_id))
 
@@ -33,6 +37,8 @@ block_card <- function(blk, blk_id, plugin, board, board_ns) {
     edit_ns <- NS(blk_srv_id, "edit_block")
   }
 
+  ctrl_tag <- if (!is.null(ctrl)) ctrl(NS(blk_srv_id, "ctrl_block"), blk)
+
   card_tag <- div(
     class = "card",
     width = "100%",
@@ -42,7 +48,8 @@ block_card <- function(blk, blk_id, plugin, board, board_ns) {
       blk,
       blk_id,
       expr_ui(blk_srv_id, blk),
-      block_ui(blk_srv_id, blk)
+      block_ui(blk_srv_id, blk),
+      ctrl_ui = ctrl_tag
     )
   )
 
@@ -81,7 +88,8 @@ remove_block_ui.dock_board <- function(id, x, blocks, dock, ...,
 
 #' @export
 insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
-                                       edit_ui, session = get_session()) {
+                                       edit_ui, ctrl_ui = NULL,
+                                       session = get_session()) {
 
   stopifnot(is_blocks(blocks))
 
@@ -89,7 +97,7 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
     insertUI(
       paste0("#", id, "-blocks_offcanvas"),
       "beforeEnd",
-      block_ui(id, x, edit_ui, blocks[i], ...)[[1L]],
+      block_ui(id, x, edit_ui, blocks[i], ..., ctrl_ui = ctrl_ui)[[1L]],
       immediate = TRUE,
       session = session
     )

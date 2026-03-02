@@ -1,4 +1,5 @@
-edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
+edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
+                          ctrl_ui = NULL) {
 
   blk_info <- blks_metadata(blk)
   ns <- NS(id)
@@ -25,12 +26,14 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
           # Right side: toggles and dropdown
           div(
             class = "d-flex align-items-center gap-2 flex-shrink-0",
+            ctrl_header_icon(ns, ctrl_ui),
             block_card_toggles(blk, ns),
             block_card_dropdown(ns, blk_info, blk_id)
           )
         )
       )
     ),
+    ctrl_collapsible_section(ns, ctrl_ui),
     block_card_content(ns, expr_ui, block_ui)
   )
 }
@@ -359,6 +362,161 @@ block_card_content <- function(ns, expr_ui, block_ui) {
       open = c("inputs", "outputs"),
       inputs_panel,
       outputs_panel
+    )
+  )
+}
+
+ctrl_header_icon <- function(ns, ctrl_ui) {
+
+  if (is.null(ctrl_ui)) {
+    return(NULL)
+  }
+
+  target_id <- ns("ctrl_section")
+
+  tags$button(
+    class = "btn btn-link p-1 border-0 bg-transparent text-muted blockr-sparkle-btn",
+    type = "button",
+    title = "Toggle AI assistant",
+    onclick = sprintf(
+      paste0(
+        "var section = document.getElementById('%s');",
+        "if (section) {",
+        "  section.classList.toggle('ai-collapsed');",
+        "  this.classList.toggle('active');",
+        "}"
+      ),
+      target_id
+    ),
+    HTML(paste0(
+      '<svg class="blockr-sparkle-svg" width="18" height="18" ',
+      'viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">',
+      '<path class="sparkle-main" d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18',
+      'L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="currentColor"/>',
+      '<path class="sparkle-sm sparkle-sm-1" d="M19 15L19.75 17.25L22 18',
+      'L19.75 18.75L19 21L18.25 18.75L16 18L18.25 17.25L19 15Z" ',
+      'fill="currentColor" opacity="0.7"/>',
+      '<path class="sparkle-sm sparkle-sm-2" d="M5 1L5.5 2.5L7 3L5.5 3.5',
+      'L5 5L4.5 3.5L3 3L4.5 2.5L5 1Z" fill="currentColor" opacity="0.5"/>',
+      '</svg>'
+    ))
+  )
+}
+
+ctrl_collapsible_section <- function(ns, ctrl_ui) {
+
+  if (is.null(ctrl_ui)) {
+    return(NULL)
+  }
+
+  div(
+    id = ns("ctrl_section"),
+    class = "blockr-ctrl-section ai-collapsed",
+    css_ctrl_section(),
+    div(
+      class = "blockr-ctrl-section-inner",
+      div(
+        class = "blockr-ctrl-section-header",
+        span("AI Assistant", class = "blockr-ctrl-section-label")
+      ),
+      div(
+        class = "blockr-ctrl-content",
+        ctrl_ui
+      )
+    )
+  )
+}
+
+css_ctrl_section <- function() {
+  htmltools::htmlDependency(
+    "blockr-ctrl-section",
+    pkg_version(),
+    src = c(href = ""),
+    head = paste0(
+      "<style>",
+
+      # --- collapsible section ---
+      ".blockr-ctrl-section {",
+      "  display: grid;",
+      "  grid-template-rows: 1fr;",
+      "  opacity: 1;",
+      "  margin: 10px -16px 0 -16px;",
+      "  transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1),",
+      "              opacity 0.35s ease, margin 0.4s ease,",
+      "              border-color 0.3s ease;",
+      "  border-top: 1px solid var(--blockr-grey-300, #dee2e6);",
+      "  background: transparent;",
+      "}",
+      ".blockr-ctrl-section-inner {",
+      "  overflow: hidden;",
+      "  padding: 12px 16px 0 16px;",
+      "  transition: padding 0.4s cubic-bezier(0.16, 1, 0.3, 1);",
+      "}",
+      ".blockr-ctrl-section.ai-collapsed {",
+      "  grid-template-rows: 0fr;",
+      "  opacity: 0;",
+      "  margin: 0 -16px;",
+      "  border-color: transparent;",
+      "}",
+      ".blockr-ctrl-section.ai-collapsed .blockr-ctrl-section-inner {",
+      "  padding-top: 0;",
+      "  padding-bottom: 0;",
+      "}",
+
+      # --- section header label ---
+      ".blockr-ctrl-section-header {",
+      "  display: flex;",
+      "  align-items: center;",
+      "  gap: 6px;",
+      "  margin: 4px 0 0 0;",
+      "  color: #374151;",
+      "  font-size: 0.75rem;",
+      "  font-weight: 600;",
+      "  text-transform: uppercase;",
+      "  letter-spacing: 0.05em;",
+      "}",
+
+      # --- header sparkle button ---
+      ".blockr-sparkle-btn {",
+      "  transition: color 0.2s ease, transform 0.2s ease;",
+      "}",
+      ".blockr-sparkle-btn:hover {",
+      "  color: #7c3aed !important;",
+      "  transform: scale(1.15);",
+      "}",
+      ".blockr-sparkle-btn.active {",
+      "  color: #7c3aed !important;",
+      "}",
+
+      # --- sparkle SVG animations ---
+      "@keyframes sparkle-rotate {",
+      "  0%   { transform: rotate(0deg) scale(1); }",
+      "  25%  { transform: rotate(5deg) scale(1.1); }",
+      "  50%  { transform: rotate(0deg) scale(1); }",
+      "  75%  { transform: rotate(-5deg) scale(1.1); }",
+      "  100% { transform: rotate(0deg) scale(1); }",
+      "}",
+      "@keyframes sparkle-twinkle {",
+      "  0%, 100% { opacity: 0.5; transform: scale(0.8); }",
+      "  50% { opacity: 1; transform: scale(1.2); }",
+      "}",
+      ".blockr-sparkle-btn.active .sparkle-main {",
+      "  animation: sparkle-rotate 3s ease-in-out infinite;",
+      "  transform-origin: center;",
+      "}",
+      ".blockr-sparkle-btn.active .sparkle-sm-1 {",
+      "  animation: sparkle-twinkle 2s ease-in-out 0.3s infinite;",
+      "  transform-origin: center;",
+      "}",
+      ".blockr-sparkle-btn.active .sparkle-sm-2 {",
+      "  animation: sparkle-twinkle 2s ease-in-out 0.8s infinite;",
+      "  transform-origin: center;",
+      "}",
+      ".blockr-sparkle-btn:hover .blockr-sparkle-svg {",
+      "  filter: drop-shadow(0 0 3px rgba(124, 58, 237, 0.4));",
+      "}",
+
+      "</style>"
     )
   )
 }
