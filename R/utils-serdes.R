@@ -104,11 +104,15 @@ restore_board.dock_board <- function(x, new, result, ...,
 
   des <- blockr_deser(new)
 
-  res <- as_dock_board(
-    des,
+  res <- new_dock_board(
+    board_blocks(des),
+    board_links(des),
+    board_stacks(des),
     extensions = dock_extensions(x),
     options = board_options(x)
   )
+
+  attr(res, "id") <- attr(des, "id")
 
   result(res)
 }
