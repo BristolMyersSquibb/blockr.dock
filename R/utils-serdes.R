@@ -109,7 +109,8 @@ restore_board.dock_board <- function(x, new, result, ...,
     board_links(des),
     board_stacks(des),
     extensions = dock_extensions(x),
-    options = board_options(x)
+    options = board_options(x),
+    layout = des[["layout"]]
   )
 
   attr(res, "id") <- attr(des, "id")
