@@ -40,6 +40,8 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 
   if (!length(grid)) {
     grid <- draw_panel_tree(NULL)
+  } else {
+    grid <- normalize_grid_views(grid)
   }
 
   if (!length(panels)) {
@@ -72,6 +74,20 @@ default_grid <- function(blocks, extensions) {
   } else {
     list(blks)
   }
+}
+
+normalize_grid_views <- function(grid) {
+  grid$root <- normalize_node_views(grid$root)
+  grid
+}
+
+normalize_node_views <- function(node) {
+  if (identical(node$type, "leaf")) {
+    node$data$views <- as.list(node$data$views)
+  } else if (identical(node$type, "branch")) {
+    node$data <- lapply(node$data, normalize_node_views)
+  }
+  node
 }
 
 draw_panel_tree <- function(x) {
