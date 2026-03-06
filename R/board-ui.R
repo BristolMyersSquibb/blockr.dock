@@ -29,6 +29,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       ),
       div(
         class = "blockr-navbar-right",
+        opt_ui_or_null("build_deck", plugins, x),
         tags$button(
           class = "blockr-navbar-icon-btn",
           `data-bs-toggle` = "offcanvas",
