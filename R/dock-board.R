@@ -132,6 +132,18 @@ dock_board_options <- function() {
   )
 }
 
+#' @importFrom blockr.core clear_board
+#' @export
+clear_board.dock_board <- function(x) {
+  res <- NextMethod()
+  dock_extensions(res) <- as_dock_extensions(
+    lapply(dock_extensions(x), function(ext) {
+      ctor_fun(extension_ctor(ext))()
+    })
+  )
+  res
+}
+
 #' @export
 rm_blocks.dock_board <- function(x, rm, ...) {
 
