@@ -95,7 +95,7 @@ blockr_deser.dock_extensions <- function(x, data, ...) {
 }
 
 #' @export
-restore_board.dock_board <- function(x, new, result, ...,
+restore_board.dock_board <- function(x, new, result, ..., meta = NULL,
                                      session = get_session()) {
 
   des <- blockr_deser(new)
@@ -106,5 +106,9 @@ restore_board.dock_board <- function(x, new, result, ...,
     options = board_options(x)
   )
 
-  result(res)
+  if (is.null(meta)) {
+    result(res)
+  } else {
+    result(list(board = res, meta = meta))
+  }
 }
