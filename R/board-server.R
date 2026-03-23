@@ -32,6 +32,12 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
 manage_dock <- function(board, update, actions, session = get_session()) {
 
+  initial_board <- isolate(board$board)
+
+  if (has_workspaces(initial_board)) {
+    return(manage_dock_workspaces(board, update, actions, session))
+  }
+
   dock <- set_dock_view_output(session = session)
 
   input <- session$input
@@ -214,8 +220,364 @@ manage_dock <- function(board, update, actions, session = get_session()) {
   )
 }
 
+manage_dock_workspaces <- function(board, update, actions,
+                                   session = get_session()) {
+
+  initial_board <- isolate(board$board)
+  workspaces <- dock_workspaces(initial_board)
+  ws_names <- names(workspaces)
+
+  input <- session$input
+
+  active_ws <- reactiveVal(ws_names[1L])
+
+  # Build block->workspace and ext->workspace maps
+  # blocks: block_id -> character vector of workspace names (1:many)
+  # exts: ext_id -> character vector of workspace names (1:many)
+  block_ws <- list()
+  ext_ws <- list()
+  for (ws in ws_names) {
+    for (bid in workspaces[[ws]][["block_ids"]]) {
+      block_ws[[bid]] <- c(block_ws[[bid]], ws)
+    }
+    for (eid in workspaces[[ws]][["ext_ids"]]) {
+      ext_ws[[eid]] <- c(ext_ws[[eid]], ws)
+    }
+  }
+  ws_map <- reactiveVal(list(blocks = block_ws, exts = ext_ws))
+
+  proxies <- list()
+  ws_prev_active <- list()
+  ws_active_trail <- list()
+
+  for (ws in ws_names) {
+    local({
+      workspace <- ws
+      ws_spec <- workspaces[[workspace]]
+
+      proxy <- set_dock_view_output(workspace = workspace, session = session)
+      proxies[[workspace]] <<- proxy
+
+      ws_prev_active[[workspace]] <<- reactiveVal()
+      ws_active_trail[[workspace]] <<- reactiveVal()
+
+      ws_dinput <- function(x) dock_input(x, workspace = workspace)
+
+      if (get_log_level() >= debug_log_level) {
+        observeEvent(
+          input[[ws_dinput("active-group")]],
+          {
+            ag <- input[[ws_dinput("active-group")]]
+            log_debug("workspace {workspace}: active group is now {ag}")
+          }
+        )
+      }
+
+      # Initialized: restore layout and show panels
+      observeEvent(
+        req(input[[ws_dinput("initialized")]], input[["screen_width"]]),
+        {
+          layout <- ws_spec[["layout"]]
+
+          if (is_dock_locked()) {
+            for (nm in names(layout$panels)) {
+              layout$panels[[nm]]$tabComponent <- "custom"
+              layout$panels[[nm]]$params$removeCallback <- NULL
+            }
+          }
+
+          screen_width <- input[["screen_width"]]
+          if (!is.null(screen_width) && screen_width < 768) {
+            collect_views <- function(node) {
+              if (node$type == "leaf") return(node$data$views)
+              unlist(lapply(node$data, collect_views), recursive = FALSE)
+            }
+            all_views <- collect_views(layout$grid$root)
+            all_views <- as.list(all_views)
+            layout$grid$root <- list(
+              type = "branch",
+              data = list(
+                list(
+                  type = "leaf",
+                  data = list(
+                    views = all_views,
+                    activeView = all_views[[1]],
+                    id = "1"
+                  ),
+                  size = 1
+                )
+              ),
+              size = 1
+            )
+          }
+
+          restore_dock(layout, proxy)
+
+          for (id in as_dock_panel_id(layout)) {
+            if (is_block_panel_id(id)) {
+              show_block_panel(
+                id, add_panel = FALSE, proxy = proxy,
+                workspace = workspace
+              )
+            } else if (is_ext_panel_id(id)) {
+              show_ext_panel(
+                id, add_panel = FALSE, proxy = proxy,
+                workspace = workspace,
+                reparent = identical(workspace, ws_names[1L])
+              )
+            } else {
+              blockr_abort(
+                "Unknown panel type {class(id)}.",
+                class = "dock_panel_invalid"
+              )
+            }
+          }
+        },
+        once = TRUE
+      )
+
+      # Panel remove
+      observeEvent(
+        input[[ws_dinput("panel-to-remove")]],
+        {
+          id <- as_dock_panel_id(input[[ws_dinput("panel-to-remove")]])
+
+          if (is_block_panel_id(id)) {
+            hide_block_panel(id, rm_panel = TRUE, proxy = proxy)
+          } else if (is_ext_panel_id(id)) {
+            hide_ext_panel(id, rm_panel = TRUE, proxy = proxy)
+          } else {
+            blockr_abort(
+              "Unknown panel type {class(id)}.",
+              class = "dock_panel_invalid"
+            )
+          }
+        }
+      )
+
+      # Panel add
+      observeEvent(
+        input[[ws_dinput("panel-to-add")]],
+        suggest_panels_to_add(
+          proxy,
+          board,
+          ws_block_ids = ws_spec[["block_ids"]],
+          ws_ext_ids = dock_ext_ids(initial_board),
+          session = session
+        )
+      )
+
+      # N-panels tracking
+      n_panels_ws <- reactiveVal(
+        isolate(length(determine_active_views(ws_spec[["layout"]])))
+      )
+
+      observeEvent(
+        req(input[[ws_dinput("n-panels")]]),
+        n_panels_ws(input[[ws_dinput("n-panels")]])
+      )
+
+      observeEvent(
+        req(n_panels_ws() == 0),
+        {
+          suggest_panels_to_add(
+            proxy,
+            board,
+            actions[["add_block_action"]],
+            ws_block_ids = ws_spec[["block_ids"]],
+            ws_ext_ids = dock_ext_ids(initial_board),
+            session = session
+          )
+          n_panels_ws(1L)
+        }
+      )
+
+      # Active group tracking
+      observeEvent(
+        input[[ws_dinput("active-group")]],
+        {
+          cur_ag <- input[[ws_dinput("active-group")]]
+          pre_ag <- ws_active_trail[[workspace]]()
+          if (!identical(pre_ag, cur_ag)) {
+            log_trace("workspace {workspace}: prev active group to {pre_ag}")
+            ws_prev_active[[workspace]](pre_ag)
+          }
+          ws_active_trail[[workspace]](cur_ag)
+        }
+      )
+    })
+  }
+
+  all_ext_ids <- dock_ext_ids(initial_board)
+
+  switch_ws <- function(ws) {
+    old_ws <- active_ws()
+    if (identical(ws, old_ws)) return(invisible())
+
+    # Hide all extension UIs (move to offcanvas)
+    for (eid in all_ext_ids) {
+      hide_ext_ui(eid, session)
+    }
+
+    # Hide multi-workspace block UIs (move to offcanvas)
+    wm <- ws_map()
+    multi_ws_bids <- names(Filter(
+      function(ws_vec) length(ws_vec) > 1L,
+      wm$blocks
+    ))
+    for (bid in multi_ws_bids) {
+      hide_block_ui(bid, session)
+    }
+
+    active_ws(ws)
+
+    session$sendCustomMessage(
+      "switch-workspace",
+      list(active = ws)
+    )
+
+    # Reparent extensions into new workspace if panel exists
+    new_proxy <- proxies[[ws]]
+    new_panels <- dock_panel_ids(new_proxy)
+    new_ext_ids <- as_obj_id(
+      new_panels[lgl_ply(new_panels, is_ext_panel_id)]
+    )
+
+    for (eid in all_ext_ids) {
+      if (eid %in% new_ext_ids) {
+        show_ext_ui(eid, session, workspace = ws)
+      }
+    }
+
+    # Reparent multi-workspace blocks into new workspace if panel exists
+    new_block_ids <- as_obj_id(
+      new_panels[lgl_ply(new_panels, is_block_panel_id)]
+    )
+    for (bid in multi_ws_bids) {
+      if (bid %in% new_block_ids) {
+        show_block_ui(bid, session, workspace = ws)
+      }
+    }
+  }
+
+  # Active workspace observer
+  observeEvent(
+    input[["active_workspace"]],
+    {
+      ws <- input[["active_workspace"]]
+      req(ws %in% ws_names)
+      switch_ws(ws)
+    }
+  )
+
+  # Detach input — route to active workspace
+  observeEvent(
+    input$detach_input,
+    {
+      block_id <- input$detach_input$block_id
+      req(block_id, block_id %in% board_block_ids(board$board))
+
+      workspace <- active_ws()
+      proxy <- proxies[[workspace]]
+
+      blk <- board_blocks(board$board)[[block_id]]
+      blk_name <- block_name(blk)
+      bpid <- as_block_panel_id(block_id)
+
+      show_block_input_panel(
+        block_id,
+        position = list(referencePanel = bpid, direction = "left"),
+        proxy = proxy,
+        block_name = blk_name,
+        session = session,
+        workspace = workspace
+      )
+    }
+  )
+
+  # Confirm add — route to active workspace
+  observeEvent(
+    input$confirm_add,
+    {
+      req(input$add_dock_panel)
+
+      ws <- active_ws()
+      proxy <- proxies[[ws]]
+
+      pos <- list(
+        referenceGroup = input[[dock_input("panel-to-add", workspace = ws)]],
+        direction = "within"
+      )
+
+      for (id in input$add_dock_panel) {
+        if (grepl("^blk-", id)) {
+          show_block_panel(
+            board_blocks(board$board)[sub("^blk-", "", id)],
+            add_panel = pos,
+            proxy = proxy,
+            workspace = ws
+          )
+        } else if (grepl("^ext-", id)) {
+          exts <- as.list(dock_extensions(board$board))
+          show_ext_panel(
+            exts[[sub("^ext-", "", id)]],
+            add_panel = pos,
+            proxy = proxy,
+            workspace = ws
+          )
+        } else {
+          blockr_abort(
+            "Unknown panel specification {id}.",
+            class = "dock_panel_invalid"
+          )
+        }
+      }
+
+      removeModal()
+    }
+  )
+
+  # Block title updates — route to all workspaces the block belongs to
+  observeEvent(
+    update()$blocks$mod,
+    {
+      blks <- update()$blocks$mod
+      wm <- ws_map()
+
+      for (id in names(blks)) {
+        blk <- blks[[id]]
+        new_name <- block_name(blk)
+        blk_panel_id <- as_block_panel_id(id)
+
+        block_workspaces <- wm$blocks[[id]]
+        if (is.null(block_workspaces)) next
+
+        for (workspace in block_workspaces) {
+          proxy <- proxies[[workspace]]
+          old_title <- get_dock_panel(blk_panel_id, proxy)$title
+          if (is.null(old_title) || new_name == old_title) next
+
+          log_debug("setting panel title {blk_panel_id} to '{new_name}'")
+          dockViewR::set_panel_title(proxy, blk_panel_id, new_name)
+        }
+      }
+    }
+  )
+
+  list(
+    layout = reactive(dockViewR::get_dock(proxies[[active_ws()]])),
+    proxy = proxies[[ws_names[1L]]],
+    proxies = proxies,
+    active_ws = active_ws,
+    ws_map = ws_map,
+    switch_workspace = switch_ws,
+    prev_active_group = reactive(ws_prev_active[[active_ws()]]())
+  )
+}
+
 suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,
-                                  panels = NULL, session = get_session()) {
+                                  panels = NULL, session = get_session(),
+                                  ws_block_ids = NULL, ws_ext_ids = NULL) {
 
   ns <- session$ns
 
@@ -233,8 +595,9 @@ suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,
   options_data <- list()
 
   # Get available blocks
+  all_blk_ids <- ws_block_ids %||% board_block_ids(board$board)
   blk_opts <- setdiff(
-    board_block_ids(board$board),
+    all_blk_ids,
     as_obj_id(panels[lgl_ply(panels, is_block_panel_id)])
   )
 
@@ -257,8 +620,9 @@ suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,
   }
 
   # Get available extensions
+  all_ext_ids <- ws_ext_ids %||% dock_ext_ids(board$board)
   ext_opts <- setdiff(
-    dock_ext_ids(board$board),
+    all_ext_ids,
     as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
   )
 

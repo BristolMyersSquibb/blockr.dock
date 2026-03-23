@@ -108,7 +108,27 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
   stopifnot(is_string(id))
 
   type <- match.arg(type)
-  proxy <- dock$proxy
+
+  workspace <- NULL
+
+  if (!is.null(dock$ws_map)) {
+    wm <- dock$ws_map()
+    workspace <- dock$active_ws()
+
+    if (identical(type, "block")) {
+      block_workspaces <- wm$blocks[[id]]
+
+      # If the block doesn't belong to the current workspace yet, add it
+      if (!is.null(block_workspaces) && !workspace %in% block_workspaces) {
+        wm$blocks[[id]] <- c(block_workspaces, workspace)
+        dock$ws_map(wm)
+      }
+    }
+
+    proxy <- dock$proxies[[workspace]]
+  } else {
+    proxy <- dock$proxy
+  }
 
   if (identical(type, "block")) {
     stopifnot(id %in% board_block_ids(board))
@@ -141,12 +161,12 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
   if (identical(type, "block")) {
     blocks <- board_blocks(board)
     add_block_panel(blocks[id], position = pos, proxy = proxy)
-    show_block_ui(id, proxy$session)
+    show_block_ui(id, proxy$session, workspace = workspace)
   } else {
     exts <- dock_extensions(board)
 
     add_ext_panel(exts[[id]], position = pos, proxy = proxy)
-    show_ext_ui(id, proxy$session)
+    show_ext_ui(id, proxy$session, workspace = workspace)
   }
 
   invisible()

@@ -45,9 +45,13 @@
 #' returns a character vector, as does `dock_id()`.
 #' @rdname ids
 #' @export
-dock_id <- function(ns = NULL) {
+dock_id <- function(ns = NULL, workspace = NULL) {
 
   res <- "dock"
+
+  if (!is.null(workspace)) {
+    res <- paste0(res, "-", workspace)
+  }
 
   if (is.null(ns)) {
     return(res)

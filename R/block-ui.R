@@ -65,8 +65,18 @@ remove_block_ui.dock_board <- function(id, x, blocks, dock, ...,
   stopifnot(is.character(blocks), all(blocks %in% board_block_ids(x)))
 
   for (blk in blocks) {
-    if (as_block_panel_id(blk) %in% block_panel_ids(dock$proxy)) {
-      hide_block_panel(blk, proxy = dock$proxy)
+    if (!is.null(dock$ws_map)) {
+      block_workspaces <- dock$ws_map()$blocks[[blk]]
+      for (ws in block_workspaces) {
+        proxy <- dock$proxies[[ws]]
+        if (as_block_panel_id(blk) %in% block_panel_ids(proxy)) {
+          hide_block_panel(blk, proxy = proxy)
+        }
+      }
+    } else {
+      if (as_block_panel_id(blk) %in% block_panel_ids(dock$proxy)) {
+        hide_block_panel(blk, proxy = dock$proxy)
+      }
     }
 
     removeUI(
@@ -100,7 +110,8 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
   invisible(x)
 }
 
-show_block_panel <- function(block, add_panel = TRUE, proxy = dock_proxy()) {
+show_block_panel <- function(block, add_panel = TRUE, proxy = dock_proxy(),
+                             workspace = NULL) {
 
   if (isTRUE(add_panel)) {
     add_block_panel(block, proxy = proxy)
@@ -110,7 +121,7 @@ show_block_panel <- function(block, add_panel = TRUE, proxy = dock_proxy()) {
     add_block_panel(block, position = add_panel, proxy = proxy)
   }
 
-  show_block_ui(block, proxy$session)
+  show_block_ui(block, proxy$session, workspace = workspace)
 
   invisible(NULL)
 }
@@ -138,12 +149,12 @@ hide_block_ui <- function(id, session) {
   move_dom_element(paste0("#", bid), paste0("#", oid), session)
 }
 
-show_block_ui <- function(id, session) {
+show_block_ui <- function(id, session, workspace = NULL) {
 
   ns <- session$ns
 
   bid <- ns(as_block_handle_id(id))
-  pid <- paste(dock_id(ns), as_block_panel_id(id), sep = "-")
+  pid <- paste(dock_id(ns, workspace = workspace), as_block_panel_id(id), sep = "-")
 
   log_debug("showing block {bid} in panel {pid}")
 

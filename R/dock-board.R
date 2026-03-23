@@ -27,7 +27,12 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            ..., extensions = new_dock_extensions(),
                            layout = default_grid(blocks, extensions),
                            options = dock_board_options(),
+                           workspaces = NULL,
                            ctor = NULL, pkg = NULL, class = character()) {
+
+  if (!is.null(workspaces)) {
+    workspaces <- validate_workspaces(workspaces, blocks, extensions)
+  }
 
   if (!is_dock_layout(layout)) {
     layout <- create_dock_layout(blocks, extensions, layout)
@@ -40,6 +45,7 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
     ...,
     extensions = as_dock_extensions(extensions),
     layout = layout,
+    workspaces = workspaces,
     options = as_board_options(options),
     ctor = forward_ctor(ctor),
     pkg = pkg,
@@ -130,6 +136,70 @@ dock_board_options <- function() {
   new_board_options(
     new_board_name_option()
   )
+}
+
+#' @rdname dock
+#' @export
+dock_workspaces <- function(x) {
+  stopifnot(is_dock_board(x))
+  x[["workspaces"]]
+}
+
+#' @rdname dock
+#' @export
+has_workspaces <- function(x) {
+  !is.null(dock_workspaces(x))
+}
+
+validate_workspaces <- function(workspaces, blocks, extensions) {
+
+  stopifnot(
+    is.list(workspaces),
+    !is.null(names(workspaces)),
+    length(workspaces) >= 1L,
+    all(nzchar(names(workspaces)))
+  )
+
+  all_blocks <- as_blocks(blocks)
+  all_exts <- as.list(as_dock_extensions(extensions))
+
+  blk_ids <- names(all_blocks)
+  ext_ids <- names(all_exts)
+
+  for (nm in names(workspaces)) {
+    ws <- workspaces[[nm]]
+
+    stopifnot(is.list(ws))
+
+    ws_blk_ids <- ws[["block_ids"]] %||% character()
+    ws_ext_ids <- ws[["ext_ids"]] %||% ext_ids
+
+    stopifnot(
+      is.character(ws_blk_ids),
+      is.character(ws_ext_ids),
+      all(ws_blk_ids %in% blk_ids),
+      all(ws_ext_ids %in% ext_ids)
+    )
+
+    workspaces[[nm]][["ext_ids"]] <- ws_ext_ids
+
+    ws_blocks <- all_blocks[ws_blk_ids]
+    ws_exts <- new_dock_extensions(all_exts[ws_ext_ids])
+
+    if (is.null(ws[["layout"]])) {
+      workspaces[[nm]][["layout"]] <- default_grid(ws_blocks, ws_exts)
+    }
+
+    if (!is_dock_layout(workspaces[[nm]][["layout"]])) {
+      workspaces[[nm]][["layout"]] <- create_dock_layout(
+        ws_blocks,
+        ws_exts,
+        workspaces[[nm]][["layout"]]
+      )
+    }
+  }
+
+  workspaces
 }
 
 #' @export

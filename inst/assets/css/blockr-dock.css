@@ -733,9 +733,17 @@ label:has(input[type="file"]) {
   gap: 12px;
 }
 
-.blockr-navbar-right {
+.blockr-navbar-center {
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+
+.blockr-navbar-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -757,4 +765,61 @@ label:has(input[type="file"]) {
 .blockr-navbar-icon-btn:hover {
   background-color: var(--blockr-grey-300);
   color: var(--blockr-color-text-secondary);
+}
+
+/* ============================================
+   Workspace / Global Tabs
+   ============================================ */
+.blockr-workspace-container {
+  overflow: hidden;
+}
+
+.blockr-workspace {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.blockr-workspace.active {
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.blockr-workspace-dropdown {
+  display: inline-block;
+}
+
+.blockr-workspace-dropdown .dropdown-toggle {
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--blockr-grey-300);
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+.blockr-workspace-dropdown .dropdown-toggle:hover {
+  background-color: var(--blockr-grey-100);
+}
+
+.blockr-workspace-dropdown .workspace-item {
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-secondary);
+  text-decoration: none;
+  padding: 6px 12px;
+  display: block;
+}
+
+.blockr-workspace-dropdown .workspace-item:hover {
+  background-color: var(--blockr-grey-100);
+}
+
+.blockr-workspace-dropdown .workspace-item.active {
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-primary);
 }

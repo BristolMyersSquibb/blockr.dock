@@ -1,5 +1,5 @@
-dock_input <- function(input) {
-  paste(dock_id(), input, sep = "_")
+dock_input <- function(input, workspace = NULL) {
+  paste(dock_id(workspace = workspace), input, sep = "_")
 }
 
 dock_panel_ids <- function(proxy = dock_proxy()) {
@@ -109,8 +109,8 @@ restore_dock <- function(layout, proxy = dock_proxy()) {
   dockViewR::restore_dock(proxy, unclass(layout))
 }
 
-dock_proxy <- function(session = get_session()) {
-  dockViewR::dock_view_proxy(dock_id(), session = session)
+dock_proxy <- function(session = get_session(), workspace = NULL) {
+  dockViewR::dock_view_proxy(dock_id(workspace = workspace), session = session)
 }
 
 dock_panel <- function(...) {
@@ -128,7 +128,7 @@ dock_panel <- function(...) {
   )
 }
 
-set_dock_view_output <- function(..., session = get_session()) {
+set_dock_view_output <- function(..., workspace = NULL, session = get_session()) {
   args <- c(
     list(...),
     if (is_dock_locked()) list(locked = TRUE, disableDnd = TRUE),
@@ -138,14 +138,16 @@ set_dock_view_output <- function(..., session = get_session()) {
     )
   )
 
-  session$output[[dock_id()]] <- dockViewR::render_dock_view(
+  did <- dock_id(workspace = workspace)
+
+  session$output[[did]] <- dockViewR::render_dock_view(
     {
-      log_debug("initializing empty dock {dock_id(session$ns)}")
+      log_debug("initializing empty dock {dock_id(session$ns, workspace = workspace)}")
       do.call(dockViewR::dock_view, args)
     }
   )
 
-  dock_proxy(session)
+  dock_proxy(session, workspace = workspace)
 }
 
 is_dock_locked <- function() {

@@ -11,7 +11,7 @@
 \alias{as_ext_handle_id}
 \title{ID utilities}
 \usage{
-dock_id(ns = NULL)
+dock_id(ns = NULL, workspace = NULL)
 
 as_dock_panel_id(x)
 

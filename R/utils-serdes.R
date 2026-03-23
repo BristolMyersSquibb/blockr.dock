@@ -19,6 +19,16 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
     session
   )
 
+  # Capture workspace layouts if applicable
+  ws_layouts <- NULL
+  ws_members <- NULL
+  if (!is.null(dock$ws_map)) {
+    ws_layouts <- lapply(dock$proxies, function(p) {
+      as_dock_layout(dockViewR::get_dock(p))
+    })
+    ws_members <- dock$ws_map()
+  }
+
   do.call(
     blockr_ser,
     c(
@@ -28,6 +38,8 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
         blocks = Map(c, state, visible = lapply(visibility, list)),
         options = opts,
         layout = as_dock_layout(dock$layout()),
+        ws_layouts = if (!is.null(ws_layouts)) list(ws_layouts),
+        ws_members = if (!is.null(ws_members)) list(ws_members),
         extensions = lapply(
           list(...),
           function(x) lapply(x[["state"]], reval_if)

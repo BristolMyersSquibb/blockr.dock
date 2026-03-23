@@ -10,6 +10,8 @@
 \alias{dock_extensions<-}
 \alias{dock_ext_ids}
 \alias{dock_board_options}
+\alias{dock_workspaces}
+\alias{has_workspaces}
 \title{Dock board}
 \usage{
 new_dock_board(
@@ -20,6 +22,7 @@ new_dock_board(
   extensions = new_dock_extensions(),
   layout = default_grid(blocks, extensions),
   options = dock_board_options(),
+  workspaces = NULL,
   ctor = NULL,
   pkg = NULL,
   class = character()
@@ -40,6 +43,10 @@ dock_extensions(x) <- value
 dock_ext_ids(x)
 
 dock_board_options()
+
+dock_workspaces(x)
+
+has_workspaces(x)
 }
 \arguments{
 \item{blocks}{Set of blocks}
