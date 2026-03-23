@@ -94,46 +94,81 @@ $(function () {
     Shiny.setInputValue(ns + 'new_workspace', Date.now(), { priority: 'event' });
   });
 
-  // Delete workspace
-  $(document).on('click', '.workspace-delete-btn', function(e) {
+  // Delete workspace — show confirmation modal
+  $(document).on('click', '.ws-delete-icon', function(e) {
     e.preventDefault();
     e.stopPropagation();
     const ws = $(this).data('workspace');
-    const ns = $(this).closest('.blockr-workspace-tabs').data('ns');
-    Shiny.setInputValue(ns + 'delete_workspace', ws, { priority: 'event' });
+    const ns = $(this).data('ns') || '';
+
+    const modalId = 'ws-delete-confirm-modal';
+    $('#' + modalId).remove();
+    const modal = $(`
+      <div class="modal fade" id="${modalId}" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-body text-center py-4">
+              <p class="mb-3">Delete workspace <strong>${ws}</strong>?</p>
+              <div class="d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-danger" id="ws-delete-confirm">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `);
+    $('body').append(modal);
+    const bsModal = new bootstrap.Modal(document.getElementById(modalId));
+    bsModal.show();
+
+    $('#ws-delete-confirm').one('click', function() {
+      bsModal.hide();
+      Shiny.setInputValue(ns + 'delete_workspace', ws, { priority: 'event' });
+    });
   });
 
-  // Rename workspace (double-click on workspace tab)
-  $(document).on('dblclick', '.workspace-tab', function(e) {
+  // Prevent edit/delete icon clicks from switching workspace or closing dropdown
+  $(document).on('click', '.ws-edit-icon, .ws-delete-icon', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    const $item = $(this);
-    const oldName = $item.data('workspace');
-    const ns = $item.closest('.blockr-workspace-tabs').data('ns');
+  });
+
+  // Prevent dropdown from closing when editing workspace name
+  let wsEditActive = false;
+  $(document).on('hide.bs.dropdown', function(e) {
+    if (wsEditActive) {
+      e.preventDefault();
+    }
+  });
+
+  // Inline rename: pencil click turns label into input
+  $(document).on('click', '.ws-edit-icon', function(e) {
+    const $tab = $(this).closest('.workspace-tab, .workspace-child-item');
+    const $label = $tab.find('.ws-tab-label');
+    if ($label.length === 0 || $label.is(':hidden')) return;
+
+    const oldName = $tab.data('workspace');
+    const ns = $tab.closest('.blockr-workspace-tabs').data('ns') || '';
+    wsEditActive = true;
 
     const $input = $('<input>', {
       type: 'text',
-      class: 'form-control form-control-sm workspace-rename-input',
+      class: 'form-control form-control-sm ws-rename-input',
       value: oldName
     });
 
-    $item.replaceWith($input);
+    $label.hide().after($input);
     $input.focus().select();
 
     function commitRename() {
+      wsEditActive = false;
       const newName = $input.val().trim();
+      $input.remove();
+      $label.show();
       if (newName && newName !== oldName) {
         Shiny.setInputValue(ns + 'rename_workspace',
           { old: oldName, new: newName }, { priority: 'event' });
-      } else {
-        // Restore original tab if no change
-        const $restored = $('<a>', {
-          href: '#',
-          class: 'nav-link workspace-tab active',
-          'data-workspace': oldName,
-          text: oldName
-        });
-        $input.replaceWith($restored);
       }
     }
 
@@ -141,17 +176,16 @@ $(function () {
     $input.on('keydown', function(ev) {
       if (ev.key === 'Enter') {
         ev.preventDefault();
+        $input.off('blur');
         commitRename();
       } else if (ev.key === 'Escape') {
-        const $restored = $('<a>', {
-          href: '#',
-          class: 'nav-link workspace-tab active',
-          'data-workspace': oldName,
-          text: oldName
-        });
-        $input.replaceWith($restored);
+        $input.val(oldName);
+        $input.off('blur');
+        commitRename();
       }
     });
+    // Prevent input clicks from bubbling to tab/dropdown
+    $input.on('click', function(ev) { ev.stopPropagation(); });
   });
 
   // R-initiated: add workspace tab
@@ -162,7 +196,7 @@ $(function () {
     li.className = 'nav-item';
     li.innerHTML = `
       <a href="#" class="nav-link workspace-tab" data-workspace="${m.name}">
-        ${m.name}
+        <span class="ws-tab-label">${m.name}</span>
       </a>
     `;
     if (newBtn) {
@@ -182,16 +216,49 @@ $(function () {
 
   // R-initiated: rename workspace tab
   Shiny.addCustomMessageHandler('rename-workspace-tab', (m) => {
+    // Update flat tabs
     const tab = document.querySelector(
       `.workspace-tab[data-workspace="${m.old}"]`
     );
     if (tab) {
       tab.dataset.workspace = m.new;
-      tab.textContent = m.new;
+      const label = tab.querySelector('.ws-tab-label');
+      if (label) label.textContent = m.new;
+    }
+
+    // Update child items in dropdowns
+    const childItem = document.querySelector(
+      `.workspace-child-item[data-workspace="${m.old}"]`
+    );
+    if (childItem) {
+      childItem.dataset.workspace = m.new;
+      const label = childItem.querySelector('.ws-tab-label');
+      if (label) label.textContent = m.new;
+
+      // Update the active child label on parent tab if this child is active
+      const parent = childItem.dataset.parent;
+      if (parent) {
+        const parentTab = document.querySelector(
+          `.workspace-tab-parent[data-parent="${parent}"]`
+        );
+        if (parentTab) {
+          const activeChild = parentTab.querySelector('.ws-active-child');
+          if (activeChild && activeChild.textContent.includes(m.old)) {
+            activeChild.textContent = ' / ' + m.new;
+          }
+        }
+      }
     }
 
     // Update workspace container ID
     const container = document.getElementById('workspace-' + m.old);
     if (container) container.id = 'workspace-' + m.new;
+
+    // Update delete icons with the old workspace name
+    document.querySelectorAll(
+      `.ws-delete-icon[data-workspace="${m.old}"]`
+    ).forEach(icon => {
+      icon.dataset.workspace = m.new;
+    });
   });
 })

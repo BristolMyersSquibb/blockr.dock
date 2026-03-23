@@ -261,9 +261,14 @@ manage_dock_workspaces <- function(board, update, actions,
   }
   ws_map <- reactiveVal(list(blocks = block_ws, exts = ext_ws))
 
-  proxies <- list()
-  ws_prev_active <- list()
-  ws_active_trail <- list()
+  proxies <- reactiveValues()
+  ws_prev_active <- reactiveValues()
+  ws_active_trail <- reactiveValues()
+
+  # Maps current workspace name -> original name (used for DOM selectors).
+  # DockView output IDs are immutable, so DOM operations must use the
+  # name from when the DockView was created.
+  ws_dom_names <- reactiveValues()
 
   for (ws in leaf_names) {
     local({
@@ -271,10 +276,11 @@ manage_dock_workspaces <- function(board, update, actions,
       ws_spec <- leaves[[workspace]]
 
       proxy <- set_dock_view_output(workspace = workspace, session = session)
-      proxies[[workspace]] <<- proxy
+      proxies[[workspace]] <- proxy
+      ws_dom_names[[workspace]] <- workspace
 
-      ws_prev_active[[workspace]] <<- reactiveVal()
-      ws_active_trail[[workspace]] <<- reactiveVal()
+      ws_prev_active[[workspace]] <- reactiveVal()
+      ws_active_trail[[workspace]] <- reactiveVal()
 
       ws_dinput <- function(x) dock_input(x, workspace = workspace)
 
@@ -420,6 +426,7 @@ manage_dock_workspaces <- function(board, update, actions,
           ws_active_trail[[workspace]](cur_ag)
         }
       )
+
     })
   }
 
@@ -446,6 +453,9 @@ manage_dock_workspaces <- function(board, update, actions,
 
     active_ws(ws)
 
+    # Use original DOM name for show_*_ui selectors
+    dom_ws <- ws_dom_names[[ws]]
+
     session$sendCustomMessage(
       "switch-workspace",
       list(active = ws, parent = leaf_parent[[ws]])
@@ -459,13 +469,13 @@ manage_dock_workspaces <- function(board, update, actions,
       wm$exts
     ))
     for (eid in ws_ext_ids) {
-      show_ext_ui(eid, session, workspace = ws)
+      show_ext_ui(eid, session, workspace = dom_ws)
     }
 
     # Reparent multi-workspace blocks based on ws_map membership
     for (bid in multi_ws_bids) {
       if (ws %in% wm$blocks[[bid]]) {
-        show_block_ui(bid, session, workspace = ws)
+        show_block_ui(bid, session, workspace = dom_ws)
       }
     }
   }
@@ -505,13 +515,69 @@ manage_dock_workspaces <- function(board, update, actions,
 
       # Create proxy
       proxy <- set_dock_view_output(workspace = ws_name, session = session)
-      proxies[[ws_name]] <<- proxy
+      proxies[[ws_name]] <- proxy
+      ws_dom_names[[ws_name]] <- ws_name
 
       # Initialize per-workspace tracking
-      ws_prev_active[[ws_name]] <<- reactiveVal()
-      ws_active_trail[[ws_name]] <<- reactiveVal()
+      ws_prev_active[[ws_name]] <- reactiveVal()
+      ws_active_trail[[ws_name]] <- reactiveVal()
 
       ws_dinput <- function(x) dock_input(x, workspace = ws_name)
+
+      # Once initialized, auto-add DAG extension if available
+      observeEvent(
+        req(input[[ws_dinput("initialized")]]),
+        {
+          exts <- as.list(dock_extensions(board$board))
+          dag_ids <- names(Filter(
+            function(ext) inherits(ext, "dag_extension"),
+            exts
+          ))
+
+          if (length(dag_ids)) {
+            # Build layout with DAG extension only
+            dag_exts <- new_dock_extensions(exts[dag_ids])
+            ws_layout <- create_dock_layout(extensions = dag_exts)
+            restore_dock(ws_layout, proxy)
+
+            # Reparent DAG extension UI into the new workspace
+            for (eid in dag_ids) {
+              show_ext_ui(eid, session, workspace = ws_name)
+            }
+
+            # Register in ws_map
+            wm <- ws_map()
+            for (eid in dag_ids) {
+              wm$exts[[eid]] <- c(wm$exts[[eid]], ws_name)
+            }
+            ws_map(wm)
+          } else {
+            # No DAG: restore empty layout with one group
+            empty_layout <- list(
+              grid = list(
+                root = list(
+                  type = "branch",
+                  data = list(
+                    list(
+                      type = "leaf",
+                      data = list(
+                        views = list(),
+                        id = "1"
+                      ),
+                      size = 1
+                    )
+                  )
+                ),
+                orientation = "HORIZONTAL"
+              ),
+              panels = list(),
+              active_group = "1"
+            )
+            dockViewR::restore_dock(proxy, empty_layout)
+          }
+        },
+        once = TRUE
+      )
 
       # Panel remove observer for new workspace
       observeEvent(
@@ -526,10 +592,35 @@ manage_dock_workspaces <- function(board, update, actions,
         }
       )
 
-      # Panel add observer for new workspace
+      # Panel add observer for new workspace (extensions only, blocks via DAG)
       observeEvent(
         input[[ws_dinput("panel-to-add")]],
-        suggest_panels_to_add(proxy, board, session = session)
+        suggest_panels_to_add(
+          proxy, board, session = session,
+          ws_block_ids = character(0)
+        )
+      )
+
+      # N-panels tracking: auto-suggest when all panels are closed
+      n_panels_ws <- reactiveVal(1L)
+
+      observeEvent(
+        req(input[[ws_dinput("n-panels")]]),
+        n_panels_ws(input[[ws_dinput("n-panels")]])
+      )
+
+      observeEvent(
+        req(n_panels_ws() == 0),
+        {
+          suggest_panels_to_add(
+            proxy,
+            board,
+            ws_block_ids = character(0),
+            ws_ext_ids = dock_ext_ids(board$board),
+            session = session
+          )
+          n_panels_ws(1L)
+        }
       )
 
       # Active group tracking for new workspace
@@ -552,6 +643,20 @@ manage_dock_workspaces <- function(board, update, actions,
       session$sendCustomMessage(
         "add-workspace-tab",
         list(name = ws_name)
+      )
+
+      # Insert edit/delete actions into the new tab
+      insertUI(
+        selector = paste0(
+          ".workspace-tab[data-workspace='", ws_name, "']"
+        ),
+        where = "beforeEnd",
+        ui = tags$span(
+          class = "ws-tab-actions",
+          workspace_edit_icon(),
+          workspace_delete_icon(session$ns, ws_name)
+        ),
+        immediate = TRUE
       )
 
       # Switch to new workspace
@@ -594,9 +699,10 @@ manage_dock_workspaces <- function(board, update, actions,
       )
 
       # Clean up proxy and tracking
-      proxies[[ws_name]] <<- NULL
-      ws_prev_active[[ws_name]] <<- NULL
-      ws_active_trail[[ws_name]] <<- NULL
+      proxies[[ws_name]] <- NULL
+      ws_prev_active[[ws_name]] <- NULL
+      ws_active_trail[[ws_name]] <- NULL
+      ws_dom_names[[ws_name]] <- NULL
 
       # Remove nav-tab entry
       session$sendCustomMessage(
@@ -617,14 +723,18 @@ manage_dock_workspaces <- function(board, update, actions,
       if (!nzchar(new_name) || new_name %in% names(proxies)) return()
 
       # Update proxy key
-      proxies[[new_name]] <<- proxies[[old_name]]
-      proxies[[old_name]] <<- NULL
+      proxies[[new_name]] <- proxies[[old_name]]
+      proxies[[old_name]] <- NULL
 
       # Update tracking
-      ws_prev_active[[new_name]] <<- ws_prev_active[[old_name]]
-      ws_prev_active[[old_name]] <<- NULL
-      ws_active_trail[[new_name]] <<- ws_active_trail[[old_name]]
-      ws_active_trail[[old_name]] <<- NULL
+      ws_prev_active[[new_name]] <- ws_prev_active[[old_name]]
+      ws_prev_active[[old_name]] <- NULL
+      ws_active_trail[[new_name]] <- ws_active_trail[[old_name]]
+      ws_active_trail[[old_name]] <- NULL
+
+      # Preserve original DOM name (DockView output ID is immutable)
+      ws_dom_names[[new_name]] <- ws_dom_names[[old_name]]
+      ws_dom_names[[old_name]] <- NULL
 
       # Update ws_map references
       wm <- ws_map()
@@ -656,6 +766,7 @@ manage_dock_workspaces <- function(board, update, actions,
 
       workspace <- active_ws()
       proxy <- proxies[[workspace]]
+      dom_ws <- ws_dom_names[[workspace]]
 
       blk <- board_blocks(board$board)[[block_id]]
       blk_name <- block_name(blk)
@@ -667,7 +778,7 @@ manage_dock_workspaces <- function(board, update, actions,
         proxy = proxy,
         block_name = blk_name,
         session = session,
-        workspace = workspace
+        workspace = dom_ws
       )
     }
   )
@@ -680,9 +791,11 @@ manage_dock_workspaces <- function(board, update, actions,
 
       ws <- active_ws()
       proxy <- proxies[[ws]]
+      dom_ws <- ws_dom_names[[ws]]
 
       pos <- list(
-        referenceGroup = input[[dock_input("panel-to-add", workspace = ws)]],
+        referenceGroup = input[[dock_input("panel-to-add",
+          workspace = dom_ws)]],
         direction = "within"
       )
 
@@ -692,7 +805,7 @@ manage_dock_workspaces <- function(board, update, actions,
             board_blocks(board$board)[sub("^blk-", "", id)],
             add_panel = pos,
             proxy = proxy,
-            workspace = ws
+            workspace = dom_ws
           )
         } else if (grepl("^ext-", id)) {
           exts <- as.list(dock_extensions(board$board))
@@ -700,7 +813,7 @@ manage_dock_workspaces <- function(board, update, actions,
             exts[[sub("^ext-", "", id)]],
             add_panel = pos,
             proxy = proxy,
-            workspace = ws
+            workspace = dom_ws
           )
         } else {
           blockr_abort(
@@ -747,6 +860,7 @@ manage_dock_workspaces <- function(board, update, actions,
     proxies = proxies,
     active_ws = active_ws,
     ws_map = ws_map,
+    ws_dom_names = ws_dom_names,
     switch_workspace = switch_ws,
     prev_active_group = reactive(ws_prev_active[[active_ws()]]())
   )
@@ -867,10 +981,10 @@ extension_default_icon <- function() {
 
 generate_workspace_name <- function(existing_names) {
   i <- length(existing_names) + 1L
-  candidate <- paste("Workspace", i)
+  candidate <- paste0("Workspace-", i)
   while (candidate %in% existing_names) {
     i <- i + 1L
-    candidate <- paste("Workspace", i)
+    candidate <- paste0("Workspace-", i)
   }
   candidate
 }

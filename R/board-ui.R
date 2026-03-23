@@ -182,7 +182,12 @@ workspace_tabs_ui <- function(id, x) {
                   href = "#",
                   `data-workspace` = cnm,
                   `data-parent` = nm,
-                  cnm
+                  tags$span(class = "ws-tab-label", cnm),
+                  tags$span(
+                    class = "ws-tab-actions",
+                    workspace_edit_icon(),
+                    workspace_delete_icon(id, cnm)
+                  )
                 )
               )
             })
@@ -199,7 +204,12 @@ workspace_tabs_ui <- function(id, x) {
                           if (is_active) "active"),
             href = "#",
             `data-workspace` = nm,
-            nm
+            tags$span(class = "ws-tab-label", nm),
+            tags$span(
+              class = "ws-tab-actions",
+              workspace_edit_icon(),
+              workspace_delete_icon(id, nm)
+            )
           )
         )
       }
@@ -213,6 +223,28 @@ workspace_tabs_ui <- function(id, x) {
         bsicons::bs_icon("plus")
       )
     )
+  )
+}
+
+workspace_edit_icon <- function() {
+  tags$span(
+    class = "ws-edit-icon",
+    bsicons::bs_icon("pencil")
+  )
+}
+
+workspace_delete_icon <- function(ns, ws_name) {
+  if (is.character(ns)) {
+    ns_prefix <- NS(ns, "")
+  } else {
+    ns_prefix <- ns("")
+  }
+  tags$span(
+    class = "ws-delete-icon",
+    tabindex = "0",
+    `data-workspace` = ws_name,
+    `data-ns` = ns_prefix,
+    bsicons::bs_icon("x")
   )
 }
 
