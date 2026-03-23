@@ -789,37 +789,68 @@ label:has(input[type="file"]) {
   pointer-events: auto;
 }
 
-.blockr-workspace-dropdown {
-  display: inline-block;
+/* Workspace tabs (in navbar) */
+.blockr-workspace-tabs {
+  border-bottom: none;
+  margin-bottom: 0;
+  gap: 2px;
 }
 
-.blockr-workspace-dropdown .dropdown-toggle {
+.blockr-workspace-tabs .nav-link {
   font-size: var(--blockr-font-size-sm);
   font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-color-text-secondary);
-  background: transparent;
-  border: 1px solid var(--blockr-grey-300);
+  color: var(--blockr-color-text-muted);
+  border: none;
   border-radius: 6px;
-  padding: 4px 10px;
+  padding: 6px 14px;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.blockr-workspace-dropdown .dropdown-toggle:hover {
-  background-color: var(--blockr-grey-100);
-}
-
-.blockr-workspace-dropdown .workspace-item {
-  font-size: var(--blockr-font-size-sm);
+.blockr-workspace-tabs .nav-link:hover {
   color: var(--blockr-color-text-secondary);
-  text-decoration: none;
-  padding: 6px 12px;
-  display: block;
-}
-
-.blockr-workspace-dropdown .workspace-item:hover {
   background-color: var(--blockr-grey-100);
 }
 
-.blockr-workspace-dropdown .workspace-item.active {
-  font-weight: var(--blockr-font-weight-semibold);
+.blockr-workspace-tabs .nav-link.active {
   color: var(--blockr-color-text-primary);
+  font-weight: var(--blockr-font-weight-semibold);
+  background-color: var(--blockr-grey-100);
+}
+
+/* Parent tab with dropdown */
+.blockr-workspace-tabs .workspace-tab-parent {
+  cursor: pointer;
+}
+
+.blockr-workspace-tabs .ws-active-child {
+  font-weight: var(--blockr-font-weight-normal);
+  color: var(--blockr-color-text-muted);
+  font-size: var(--blockr-font-size-xs);
+}
+
+/* Child dropdown menu */
+.workspace-child-menu {
+  border-radius: 8px;
+  border: 1px solid var(--blockr-color-border);
+  box-shadow: var(--blockr-shadow);
+  padding: 4px;
+  min-width: 140px;
+}
+
+.workspace-child-menu .dropdown-item {
+  font-size: var(--blockr-font-size-sm);
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: var(--blockr-color-text-secondary);
+}
+
+.workspace-child-menu .dropdown-item:hover {
+  background-color: var(--blockr-grey-100);
+  color: var(--blockr-color-text-primary);
+}
+
+.workspace-child-menu .dropdown-item.active {
+  background-color: var(--blockr-grey-100);
+  color: var(--blockr-color-text-primary);
+  font-weight: var(--blockr-font-weight-semibold);
 }

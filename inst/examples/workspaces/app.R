@@ -19,11 +19,18 @@ serve(
     links = links,
     extensions = new_dag_extension(),
     workspaces = list(
-      Data = list(
-        block_ids = c("dataset_1", "head_1")
+      Analysis = list(
+        children = list(
+          Data = list(
+            block_ids = c("dataset_1", "head_1")
+          ),
+          Plots = list(
+            block_ids = c("dataset_2", "scatter_1")
+          )
+        )
       ),
-      Plots = list(
-        block_ids = c("dataset_2", "scatter_1")
+      Summary = list(
+        block_ids = c("dataset_1")
       )
     )
   ),

@@ -42,7 +42,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       ),
       div(
         class = "blockr-navbar-center",
-        if (has_workspaces(x)) workspace_dropdown_ui(id, x)
+        if (has_workspaces(x)) workspace_tabs_ui(id, x)
       ),
       div(
         class = "blockr-navbar-right",
@@ -113,15 +113,18 @@ options_ui <- function(id, x, ...) {
 }
 
 workspace_dock_ui <- function(id, x) {
-  ws_names <- names(dock_workspaces(x))
+  workspaces <- dock_workspaces(x)
+  leaf_names <- ws_leaf_names(workspaces)
+  first_leaf <- leaf_names[1L]
   dock_height <- "calc(100vh - 48px)"
 
   div(
     class = "blockr-workspace-container",
+    id = NS(id, "workspace-container"),
     style = sprintf("position: relative; height: %s;", dock_height),
-    lapply(seq_along(ws_names), function(i) {
-      ws <- ws_names[i]
-      is_active <- i == 1L
+    lapply(seq_along(leaf_names), function(i) {
+      ws <- leaf_names[i]
+      is_active <- ws == first_leaf
       div(
         class = paste("blockr-workspace", if (is_active) "active"),
         id = paste0("workspace-", ws),
@@ -135,34 +138,72 @@ workspace_dock_ui <- function(id, x) {
   )
 }
 
-workspace_dropdown_ui <- function(id, x) {
-  ws_names <- names(dock_workspaces(x))
-  if (length(ws_names) <= 1L) return(NULL)
+workspace_tabs_ui <- function(id, x) {
+  workspaces <- dock_workspaces(x)
+  first_leaf <- ws_leaf_names(workspaces)[1L]
+  first_top <- names(workspaces)[1L]
 
-  ns_id <- NS(id, "")
+  tags$ul(
+    class = "nav nav-tabs blockr-workspace-tabs",
+    `data-ns` = NS(id, ""),
+    lapply(names(workspaces), function(nm) {
+      ws <- workspaces[[nm]]
 
-  div(
-    class = "blockr-workspace-dropdown",
-    `data-ns` = ns_id,
-    tags$button(
-      class = "btn btn-default dropdown-toggle",
-      `data-bs-toggle` = "dropdown",
-      tags$span(class = "active-ws-label", ws_names[[1]]),
-      tags$span(class = "caret")
-    ),
-    tags$ul(
-      class = "dropdown-menu workspace-dropdown-menu",
-      lapply(ws_names, function(ws) {
+      if (is_ws_parent(ws)) {
+        # Parent tab with dropdown for children
+        children <- ws[["children"]]
+        first_child <- names(children)[1L]
+        is_active <- nm == first_top
+
         tags$li(
+          class = "nav-item dropdown",
           tags$a(
+            class = paste("nav-link dropdown-toggle workspace-tab-parent",
+                          if (is_active) "active"),
             href = "#",
-            class = paste("workspace-item", if (ws == ws_names[[1]]) "active"),
-            `data-workspace` = ws,
-            ws
+            `data-bs-toggle` = "dropdown",
+            role = "button",
+            `aria-expanded` = "false",
+            `data-parent` = nm,
+            tags$span(class = "ws-parent-label", nm),
+            tags$span(
+              class = "ws-active-child",
+              if (is_active) paste0(" / ", first_child)
+            )
+          ),
+          tags$ul(
+            class = "dropdown-menu workspace-child-menu",
+            lapply(names(children), function(cnm) {
+              is_first <- cnm == first_child && is_active
+              tags$li(
+                tags$a(
+                  class = paste("dropdown-item workspace-child-item",
+                                if (is_first) "active"),
+                  href = "#",
+                  `data-workspace` = cnm,
+                  `data-parent` = nm,
+                  cnm
+                )
+              )
+            })
           )
         )
-      })
-    )
+      } else {
+        # Leaf tab — no dropdown
+        is_active <- nm == first_leaf
+
+        tags$li(
+          class = "nav-item",
+          tags$a(
+            class = paste("nav-link workspace-tab",
+                          if (is_active) "active"),
+            href = "#",
+            `data-workspace` = nm,
+            nm
+          )
+        )
+      }
+    })
   )
 }
 

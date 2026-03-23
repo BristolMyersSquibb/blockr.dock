@@ -225,22 +225,37 @@ manage_dock_workspaces <- function(board, update, actions,
 
   initial_board <- isolate(board$board)
   workspaces <- dock_workspaces(initial_board)
-  ws_names <- names(workspaces)
+
+  # Flatten to leaf workspaces (each gets a DockView)
+  leaves <- ws_leaves(workspaces)
+  leaf_names <- names(leaves)
+
+  # Build leaf_name -> parent_name map (NULL for top-level leaves)
+  leaf_parent <- list()
+  for (nm in names(workspaces)) {
+    ws <- workspaces[[nm]]
+    if (is_ws_parent(ws)) {
+      for (cnm in names(ws[["children"]])) {
+        leaf_parent[[cnm]] <- nm
+      }
+    }
+    # Top-level leaves have no parent entry (NULL)
+  }
 
   input <- session$input
 
-  active_ws <- reactiveVal(ws_names[1L])
+  active_ws <- reactiveVal(leaf_names[1L])
 
   # Build block->workspace and ext->workspace maps
-  # blocks: block_id -> character vector of workspace names (1:many)
-  # exts: ext_id -> character vector of workspace names (1:many)
+  # blocks: block_id -> character vector of leaf workspace names (1:many)
+  # exts: ext_id -> character vector of leaf workspace names (1:many)
   block_ws <- list()
   ext_ws <- list()
-  for (ws in ws_names) {
-    for (bid in workspaces[[ws]][["block_ids"]]) {
+  for (ws in leaf_names) {
+    for (bid in leaves[[ws]][["block_ids"]]) {
       block_ws[[bid]] <- c(block_ws[[bid]], ws)
     }
-    for (eid in workspaces[[ws]][["ext_ids"]]) {
+    for (eid in leaves[[ws]][["ext_ids"]]) {
       ext_ws[[eid]] <- c(ext_ws[[eid]], ws)
     }
   }
@@ -250,10 +265,10 @@ manage_dock_workspaces <- function(board, update, actions,
   ws_prev_active <- list()
   ws_active_trail <- list()
 
-  for (ws in ws_names) {
+  for (ws in leaf_names) {
     local({
       workspace <- ws
-      ws_spec <- workspaces[[workspace]]
+      ws_spec <- leaves[[workspace]]
 
       proxy <- set_dock_view_output(workspace = workspace, session = session)
       proxies[[workspace]] <<- proxy
@@ -323,7 +338,7 @@ manage_dock_workspaces <- function(board, update, actions,
               show_ext_panel(
                 id, add_panel = FALSE, proxy = proxy,
                 workspace = workspace,
-                reparent = identical(workspace, ws_names[1L])
+                reparent = identical(workspace, leaf_names[1L])
               )
             } else {
               blockr_abort(
@@ -433,7 +448,7 @@ manage_dock_workspaces <- function(board, update, actions,
 
     session$sendCustomMessage(
       "switch-workspace",
-      list(active = ws)
+      list(active = ws, parent = leaf_parent[[ws]])
     )
 
     # Reparent extensions into new workspace based on ws_map membership
@@ -460,7 +475,7 @@ manage_dock_workspaces <- function(board, update, actions,
     input[["active_workspace"]],
     {
       ws <- input[["active_workspace"]]
-      req(ws %in% ws_names)
+      req(ws %in% leaf_names)
       switch_ws(ws)
     }
   )
@@ -561,7 +576,7 @@ manage_dock_workspaces <- function(board, update, actions,
 
   list(
     layout = reactive(dockViewR::get_dock(proxies[[active_ws()]])),
-    proxy = proxies[[ws_names[1L]]],
+    proxy = proxies[[leaf_names[1L]]],
     proxies = proxies,
     active_ws = active_ws,
     ws_map = ws_map,

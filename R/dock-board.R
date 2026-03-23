@@ -166,9 +166,7 @@ validate_workspaces <- function(workspaces, blocks, extensions) {
   blk_ids <- names(all_blocks)
   ext_ids <- names(all_exts)
 
-  for (nm in names(workspaces)) {
-    ws <- workspaces[[nm]]
-
+  validate_ws_entry <- function(ws, nm) {
     stopifnot(is.list(ws))
 
     ws_blk_ids <- ws[["block_ids"]] %||% character()
@@ -181,25 +179,93 @@ validate_workspaces <- function(workspaces, blocks, extensions) {
       all(ws_ext_ids %in% ext_ids)
     )
 
-    workspaces[[nm]][["ext_ids"]] <- ws_ext_ids
+    ws[["ext_ids"]] <- ws_ext_ids
 
     ws_blocks <- all_blocks[ws_blk_ids]
     ws_exts <- new_dock_extensions(all_exts[ws_ext_ids])
 
     if (is.null(ws[["layout"]])) {
-      workspaces[[nm]][["layout"]] <- default_grid(ws_blocks, ws_exts)
+      ws[["layout"]] <- default_grid(ws_blocks, ws_exts)
     }
 
-    if (!is_dock_layout(workspaces[[nm]][["layout"]])) {
-      workspaces[[nm]][["layout"]] <- create_dock_layout(
-        ws_blocks,
-        ws_exts,
-        workspaces[[nm]][["layout"]]
+    if (!is_dock_layout(ws[["layout"]])) {
+      ws[["layout"]] <- create_dock_layout(ws_blocks, ws_exts, ws[["layout"]])
+    }
+
+    ws
+  }
+
+  for (nm in names(workspaces)) {
+    ws <- workspaces[[nm]]
+    stopifnot(is.list(ws))
+
+    if (!is.null(ws[["children"]])) {
+      # Parent workspace: validate children, parent has no DockView
+      children <- ws[["children"]]
+      stopifnot(
+        is.list(children),
+        !is.null(names(children)),
+        length(children) >= 1L,
+        all(nzchar(names(children)))
       )
+      for (cnm in names(children)) {
+        children[[cnm]] <- validate_ws_entry(children[[cnm]], cnm)
+      }
+      workspaces[[nm]][["children"]] <- children
+    } else {
+      # Leaf workspace: validate directly
+      workspaces[[nm]] <- validate_ws_entry(ws, nm)
     }
   }
 
+  # Ensure all leaf names are unique
+  leaf_names <- ws_leaf_names(workspaces)
+  if (anyDuplicated(leaf_names)) {
+    blockr_abort(
+      "Workspace leaf names must be unique. Duplicated: {leaf_names[duplicated(leaf_names)]}.",
+      class = "duplicate_workspace_names"
+    )
+  }
+
   workspaces
+}
+
+#' Get all leaf workspace names
+#' @noRd
+ws_leaf_names <- function(workspaces) {
+  nms <- character()
+  for (nm in names(workspaces)) {
+    ws <- workspaces[[nm]]
+    if (!is.null(ws[["children"]])) {
+      nms <- c(nms, names(ws[["children"]]))
+    } else {
+      nms <- c(nms, nm)
+    }
+  }
+  nms
+}
+
+#' Get flat list of leaf workspaces (name -> spec)
+#' @noRd
+ws_leaves <- function(workspaces) {
+  leaves <- list()
+  for (nm in names(workspaces)) {
+    ws <- workspaces[[nm]]
+    if (!is.null(ws[["children"]])) {
+      for (cnm in names(ws[["children"]])) {
+        leaves[[cnm]] <- ws[["children"]][[cnm]]
+      }
+    } else {
+      leaves[[nm]] <- ws
+    }
+  }
+  leaves
+}
+
+#' Check if a workspace entry is a parent (has children)
+#' @noRd
+is_ws_parent <- function(ws) {
+  !is.null(ws[["children"]])
 }
 
 #' @export
