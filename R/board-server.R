@@ -436,25 +436,20 @@ manage_dock_workspaces <- function(board, update, actions,
       list(active = ws)
     )
 
-    # Reparent extensions into new workspace if panel exists
-    new_proxy <- proxies[[ws]]
-    new_panels <- dock_panel_ids(new_proxy)
-    new_ext_ids <- as_obj_id(
-      new_panels[lgl_ply(new_panels, is_ext_panel_id)]
-    )
-
-    for (eid in all_ext_ids) {
-      if (eid %in% new_ext_ids) {
-        show_ext_ui(eid, session, workspace = ws)
-      }
+    # Reparent extensions into new workspace based on ws_map membership
+    # (dock_panel_ids is unreliable — dockViewR JS state can lose track
+    # of extension panels after all block panels are closed)
+    ws_ext_ids <- names(Filter(
+      function(ws_vec) ws %in% ws_vec,
+      wm$exts
+    ))
+    for (eid in ws_ext_ids) {
+      show_ext_ui(eid, session, workspace = ws)
     }
 
-    # Reparent multi-workspace blocks into new workspace if panel exists
-    new_block_ids <- as_obj_id(
-      new_panels[lgl_ply(new_panels, is_block_panel_id)]
-    )
+    # Reparent multi-workspace blocks based on ws_map membership
     for (bid in multi_ws_bids) {
-      if (bid %in% new_block_ids) {
+      if (ws %in% wm$blocks[[bid]]) {
         show_block_ui(bid, session, workspace = ws)
       }
     }
