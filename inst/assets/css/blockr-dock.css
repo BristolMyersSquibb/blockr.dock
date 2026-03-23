@@ -854,3 +854,20 @@ label:has(input[type="file"]) {
   color: var(--blockr-color-text-primary);
   font-weight: var(--blockr-font-weight-semibold);
 }
+
+.workspace-new-btn {
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-muted);
+}
+
+.workspace-new-btn:hover {
+  color: var(--blockr-color-primary);
+  background-color: var(--blockr-color-primary-bg);
+}
+
+.workspace-rename-input {
+  font-size: var(--blockr-font-size-sm) !important;
+  padding: 4px 8px !important;
+  margin: 2px 0;
+  flex-grow: 1;
+}

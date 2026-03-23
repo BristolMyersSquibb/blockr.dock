@@ -203,7 +203,16 @@ workspace_tabs_ui <- function(id, x) {
           )
         )
       }
-    })
+    }),
+    # New workspace button
+    tags$li(
+      class = "nav-item",
+      tags$a(
+        href = "#",
+        class = "nav-link workspace-new-btn",
+        bsicons::bs_icon("plus")
+      )
+    )
   )
 }
 

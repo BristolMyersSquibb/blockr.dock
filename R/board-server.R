@@ -475,8 +475,175 @@ manage_dock_workspaces <- function(board, update, actions,
     input[["active_workspace"]],
     {
       ws <- input[["active_workspace"]]
-      req(ws %in% leaf_names)
+      req(ws %in% names(proxies))
       switch_ws(ws)
+    }
+  )
+
+  # Create workspace
+  observeEvent(
+    input[["new_workspace"]],
+    {
+      ws_name <- generate_workspace_name(names(proxies))
+      ns <- session$ns
+
+      # Insert DockView container into DOM
+      insertUI(
+        selector = paste0("#", ns("workspace-container")),
+        where = "beforeEnd",
+        ui = tags$div(
+          class = "blockr-workspace",
+          id = paste0("workspace-", ws_name),
+          dockViewR::dock_view_output(
+            ns(dock_id(workspace = ws_name)),
+            width = "100%",
+            height = "100%"
+          )
+        ),
+        immediate = TRUE
+      )
+
+      # Create proxy
+      proxy <- set_dock_view_output(workspace = ws_name, session = session)
+      proxies[[ws_name]] <<- proxy
+
+      # Initialize per-workspace tracking
+      ws_prev_active[[ws_name]] <<- reactiveVal()
+      ws_active_trail[[ws_name]] <<- reactiveVal()
+
+      ws_dinput <- function(x) dock_input(x, workspace = ws_name)
+
+      # Panel remove observer for new workspace
+      observeEvent(
+        input[[ws_dinput("panel-to-remove")]],
+        {
+          id <- as_dock_panel_id(input[[ws_dinput("panel-to-remove")]])
+          if (is_block_panel_id(id)) {
+            hide_block_panel(id, rm_panel = TRUE, proxy = proxy)
+          } else if (is_ext_panel_id(id)) {
+            hide_ext_panel(id, rm_panel = TRUE, proxy = proxy)
+          }
+        }
+      )
+
+      # Panel add observer for new workspace
+      observeEvent(
+        input[[ws_dinput("panel-to-add")]],
+        suggest_panels_to_add(proxy, board, session = session)
+      )
+
+      # Active group tracking for new workspace
+      observeEvent(
+        input[[ws_dinput("active-group")]],
+        {
+          cur_ag <- input[[ws_dinput("active-group")]]
+          pre_ag <- ws_active_trail[[ws_name]]()
+          if (!identical(pre_ag, cur_ag)) {
+            ws_prev_active[[ws_name]](pre_ag)
+          }
+          ws_active_trail[[ws_name]](cur_ag)
+        }
+      )
+
+      # Update ws_map: new workspace has no blocks/exts initially
+      # (blocks/exts get added when the user opens them)
+
+      # Add nav-tab entry
+      session$sendCustomMessage(
+        "add-workspace-tab",
+        list(name = ws_name)
+      )
+
+      # Switch to new workspace
+      switch_ws(ws_name)
+    }
+  )
+
+  # Delete workspace
+  observeEvent(
+    input[["delete_workspace"]],
+    {
+      ws_name <- input[["delete_workspace"]]
+      all_ws <- names(proxies)
+
+      # Cannot delete last workspace
+      if (length(all_ws) <= 1L) return()
+
+      # Switch away if deleting the active workspace
+      if (identical(ws_name, active_ws())) {
+        remaining <- setdiff(all_ws, ws_name)
+        switch_ws(remaining[[1L]])
+      }
+
+      # Remove workspace from ws_map
+      wm <- ws_map()
+      for (bid in names(wm$blocks)) {
+        wm$blocks[[bid]] <- setdiff(wm$blocks[[bid]], ws_name)
+        if (!length(wm$blocks[[bid]])) wm$blocks[[bid]] <- NULL
+      }
+      for (eid in names(wm$exts)) {
+        wm$exts[[eid]] <- setdiff(wm$exts[[eid]], ws_name)
+        if (!length(wm$exts[[eid]])) wm$exts[[eid]] <- NULL
+      }
+      ws_map(wm)
+
+      # Remove DockView container from DOM
+      removeUI(
+        selector = paste0("#workspace-", ws_name),
+        immediate = TRUE
+      )
+
+      # Clean up proxy and tracking
+      proxies[[ws_name]] <<- NULL
+      ws_prev_active[[ws_name]] <<- NULL
+      ws_active_trail[[ws_name]] <<- NULL
+
+      # Remove nav-tab entry
+      session$sendCustomMessage(
+        "remove-workspace-tab",
+        list(name = ws_name)
+      )
+    }
+  )
+
+  # Rename workspace
+  observeEvent(
+    input[["rename_workspace"]],
+    {
+      old_name <- input[["rename_workspace"]]$old
+      new_name <- input[["rename_workspace"]]$new
+
+      # Validate: non-empty, unique
+      if (!nzchar(new_name) || new_name %in% names(proxies)) return()
+
+      # Update proxy key
+      proxies[[new_name]] <<- proxies[[old_name]]
+      proxies[[old_name]] <<- NULL
+
+      # Update tracking
+      ws_prev_active[[new_name]] <<- ws_prev_active[[old_name]]
+      ws_prev_active[[old_name]] <<- NULL
+      ws_active_trail[[new_name]] <<- ws_active_trail[[old_name]]
+      ws_active_trail[[old_name]] <<- NULL
+
+      # Update ws_map references
+      wm <- ws_map()
+      for (bid in names(wm$blocks)) {
+        wm$blocks[[bid]][wm$blocks[[bid]] == old_name] <- new_name
+      }
+      for (eid in names(wm$exts)) {
+        wm$exts[[eid]][wm$exts[[eid]] == old_name] <- new_name
+      }
+      ws_map(wm)
+
+      # Update active_ws if needed
+      if (identical(active_ws(), old_name)) active_ws(new_name)
+
+      # Update nav-tab + container via JS
+      session$sendCustomMessage(
+        "rename-workspace-tab",
+        list(old = old_name, new = new_name)
+      )
     }
   )
 
@@ -576,7 +743,7 @@ manage_dock_workspaces <- function(board, update, actions,
 
   list(
     layout = reactive(dockViewR::get_dock(proxies[[active_ws()]])),
-    proxy = proxies[[leaf_names[1L]]],
+    proxy = NULL,
     proxies = proxies,
     active_ws = active_ws,
     ws_map = ws_map,
@@ -696,4 +863,14 @@ suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,
 
 extension_default_icon <- function() {
   as.character(bsicons::bs_icon("gear"))
+}
+
+generate_workspace_name <- function(existing_names) {
+  i <- length(existing_names) + 1L
+  candidate <- paste("Workspace", i)
+  while (candidate %in% existing_names) {
+    i <- i + 1L
+    candidate <- paste("Workspace", i)
+  }
+  candidate
 }
