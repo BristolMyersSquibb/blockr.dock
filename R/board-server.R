@@ -275,6 +275,16 @@ manage_dock_workspaces <- function(board, update, actions,
   # name from when the DockView was created.
   ws_dom_names <- reactiveValues()
 
+  # Reverse lookup: given an original (DOM) name, return the current name.
+  # Needed because observers created at init capture the original name,
+
+  # but ws_prev_active / ws_active_trail are keyed by current name.
+  ws_current_name <- function(original) {
+    nms <- reactiveValuesToList(ws_dom_names)
+    idx <- match(original, nms)
+    if (is.na(idx)) original else names(nms)[idx]
+  }
+
   for (ws in leaf_names) {
     if (isTRUE(leaves[[ws]][["disabled"]])) next
 
@@ -424,13 +434,16 @@ manage_dock_workspaces <- function(board, update, actions,
       observeEvent(
         input[[ws_dinput("active-group")]],
         {
+          ws_cur <- ws_current_name(workspace)
           cur_ag <- input[[ws_dinput("active-group")]]
-          pre_ag <- ws_active_trail[[workspace]]()
+          trail <- ws_active_trail[[ws_cur]]
+          req(is.function(trail))
+          pre_ag <- trail()
           if (!identical(pre_ag, cur_ag)) {
-            log_trace("workspace {workspace}: prev active group to {pre_ag}")
-            ws_prev_active[[workspace]](pre_ag)
+            log_trace("workspace {ws_cur}: prev active group to {pre_ag}")
+            ws_prev_active[[ws_cur]](pre_ag)
           }
-          ws_active_trail[[workspace]](cur_ag)
+          ws_active_trail[[ws_cur]](cur_ag)
         }
       )
 
@@ -438,6 +451,12 @@ manage_dock_workspaces <- function(board, update, actions,
   }
 
   all_ext_ids <- dock_ext_ids(initial_board)
+
+  # reactiveValues keeps NULL entries in names() after rv[["x"]] <- NULL,
+  # so we must filter them out to get truly active workspace names.
+  active_proxy_names <- function() {
+    names(Filter(Negate(is.null), reactiveValuesToList(proxies)))
+  }
 
   switch_ws <- function(ws) {
     old_ws <- active_ws()
@@ -499,7 +518,7 @@ manage_dock_workspaces <- function(board, update, actions,
     input[["active_workspace"]],
     {
       ws <- input[["active_workspace"]]
-      req(ws %in% names(proxies))
+      req(ws %in% active_proxy_names())
       switch_ws(ws)
     }
   )
@@ -508,7 +527,7 @@ manage_dock_workspaces <- function(board, update, actions,
   observeEvent(
     input[["new_workspace"]],
     {
-      ws_name <- generate_workspace_name(names(proxies))
+      ws_name <- generate_workspace_name(active_proxy_names())
       ns <- session$ns
 
       # Insert DockView container into DOM
@@ -641,12 +660,15 @@ manage_dock_workspaces <- function(board, update, actions,
       observeEvent(
         input[[ws_dinput("active-group")]],
         {
+          ws_cur <- ws_current_name(ws_name)
           cur_ag <- input[[ws_dinput("active-group")]]
-          pre_ag <- ws_active_trail[[ws_name]]()
+          trail <- ws_active_trail[[ws_cur]]
+          req(is.function(trail))
+          pre_ag <- trail()
           if (!identical(pre_ag, cur_ag)) {
-            ws_prev_active[[ws_name]](pre_ag)
+            ws_prev_active[[ws_cur]](pre_ag)
           }
-          ws_active_trail[[ws_name]](cur_ag)
+          ws_active_trail[[ws_cur]](cur_ag)
         }
       )
 
@@ -683,34 +705,34 @@ manage_dock_workspaces <- function(board, update, actions,
     input[["delete_workspace"]],
     {
       ws_name <- input[["delete_workspace"]]
-      all_ws <- names(proxies)
+      all_ws <- active_proxy_names()
 
       # Cannot delete last workspace
       if (length(all_ws) <= 1L) return()
 
-      # Switch away if deleting the active workspace
+      # Determine the workspace we'll land on after deletion
       if (identical(ws_name, active_ws())) {
-        remaining <- setdiff(all_ws, ws_name)
-        switch_ws(remaining[[1L]])
+        target_ws <- setdiff(all_ws, ws_name)[[1L]]
+      } else {
+        target_ws <- active_ws()
       }
 
-      # Move block/ext UIs to offcanvas BEFORE destroying the container,
-      # so they survive for other workspaces that still reference them.
-      # Skip UIs already in the active workspace (switch_ws put them there).
+      # 1) Evacuate: move ALL block/ext UIs that belong to the deleted
+      #    workspace into offcanvas, unconditionally.  This guarantees
+      #    nothing is left inside the container when it is destroyed.
       wm <- ws_map()
-      active <- active_ws()
       for (bid in names(wm$blocks)) {
-        if (ws_name %in% wm$blocks[[bid]] && !(active %in% wm$blocks[[bid]])) {
+        if (ws_name %in% wm$blocks[[bid]]) {
           hide_block_ui(bid, session)
         }
       }
       for (eid in names(wm$exts)) {
-        if (ws_name %in% wm$exts[[eid]] && !(active %in% wm$exts[[eid]])) {
+        if (ws_name %in% wm$exts[[eid]]) {
           hide_ext_ui(eid, session)
         }
       }
 
-      # Remove workspace from ws_map
+      # 2) Update ws_map: remove deleted workspace from all memberships
       for (bid in names(wm$blocks)) {
         wm$blocks[[bid]] <- setdiff(wm$blocks[[bid]], ws_name)
         if (!length(wm$blocks[[bid]])) wm$blocks[[bid]] <- NULL
@@ -721,13 +743,40 @@ manage_dock_workspaces <- function(board, update, actions,
       }
       ws_map(wm)
 
-      # Remove DockView container from DOM (now safe — UIs are in offcanvas)
-      removeUI(
-        selector = paste0("#workspace-", ws_name),
-        immediate = TRUE
+      # 3) Remove DockView container from DOM (same channel as move-element
+      #    so evacuation completes first)
+      session$sendCustomMessage(
+        "remove-workspace-container",
+        list(id = paste0("workspace-", ws_name))
       )
 
-      # Clean up proxy and tracking
+      # 4) Switch active workspace (CSS toggle)
+      if (!identical(target_ws, active_ws())) {
+        active_ws(target_ws)
+        session$sendCustomMessage(
+          "switch-workspace",
+          list(
+            active = target_ws,
+            parent = get0(target_ws, envir = leaf_parent)
+          )
+        )
+      }
+
+      # 5) Re-show ALL blocks/exts that belong to the target workspace.
+      #    This is the single source of truth for what should be visible.
+      dom_ws <- ws_dom_names[[target_ws]]
+      for (bid in names(wm$blocks)) {
+        if (target_ws %in% wm$blocks[[bid]]) {
+          show_block_ui(bid, session, workspace = dom_ws)
+        }
+      }
+      for (eid in names(wm$exts)) {
+        if (target_ws %in% wm$exts[[eid]]) {
+          show_ext_ui(eid, session, workspace = dom_ws)
+        }
+      }
+
+      # 6) Clean up proxy and tracking
       proxies[[ws_name]] <- NULL
       ws_prev_active[[ws_name]] <- NULL
       ws_active_trail[[ws_name]] <- NULL
@@ -736,7 +785,7 @@ manage_dock_workspaces <- function(board, update, actions,
         rm(list = ws_name, envir = leaf_parent)
       }
 
-      # Remove nav-tab entry
+      # 7) Remove nav-tab entry
       session$sendCustomMessage(
         "remove-workspace-tab",
         list(name = ws_name)
@@ -752,7 +801,7 @@ manage_dock_workspaces <- function(board, update, actions,
       new_name <- input[["rename_workspace"]]$new
 
       # Validate: non-empty, unique
-      if (!nzchar(new_name) || new_name %in% names(proxies)) return()
+      if (!nzchar(new_name) || new_name %in% active_proxy_names()) return()
 
       # Update proxy key
       proxies[[new_name]] <- proxies[[old_name]]

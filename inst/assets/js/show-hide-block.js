@@ -211,6 +211,18 @@ $(function () {
     }
   });
 
+  // R-initiated: remove workspace DockView container from DOM
+  // Uses sendCustomMessage (same channel as move-element) to guarantee
+  // ordering: all move-element calls complete before the container is destroyed.
+  Shiny.addCustomMessageHandler('remove-workspace-container', (m) => {
+    const el = document.getElementById(m.id);
+    if (el) {
+      // Unbind Shiny outputs/inputs before removing to avoid orphaned bindings
+      Shiny.unbindAll(el);
+      el.remove();
+    }
+  });
+
   // R-initiated: remove workspace tab
   Shiny.addCustomMessageHandler('remove-workspace-tab', (m) => {
     // Remove flat tab
