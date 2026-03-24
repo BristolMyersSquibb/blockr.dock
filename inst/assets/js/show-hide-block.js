@@ -303,6 +303,14 @@ $(function () {
   Shiny.addCustomMessageHandler('add-workspace-tab', (m) => {
     const tabs = document.querySelector('.blockr-workspace-tabs');
 
+    const actionsHtml = `
+      <span class="ws-tab-actions">
+        <span class="ws-edit-icon">${bsIconPencil}</span>
+        <span class="ws-delete-icon" tabindex="0"
+              data-workspace="${m.name}" data-ns="${m.ns}">${bsIconX}</span>
+      </span>
+    `;
+
     if (m.parent) {
       // Add as child inside parent dropdown
       const menu = tabs.querySelector(
@@ -315,6 +323,7 @@ $(function () {
           <a href="#" class="dropdown-item workspace-child-item"
              data-workspace="${m.name}" data-parent="${m.parent}">
             <span class="ws-tab-label">${m.name}</span>
+            ${actionsHtml}
           </a>
         `;
         if (addBtn) {
@@ -331,6 +340,7 @@ $(function () {
       li.innerHTML = `
         <a href="#" class="nav-link workspace-tab" data-workspace="${m.name}">
           <span class="ws-tab-label">${m.name}</span>
+          ${actionsHtml}
         </a>
       `;
       if (newBtn) {
@@ -365,6 +375,11 @@ $(function () {
           <a href="#" class="dropdown-item workspace-child-item active"
              data-workspace="${m.child}" data-parent="${m.parent}">
             <span class="ws-tab-label">${m.child}</span>
+            <span class="ws-tab-actions">
+              <span class="ws-edit-icon">${bsIconPencil}</span>
+              <span class="ws-delete-icon" tabindex="0"
+                    data-workspace="${m.child}" data-ns="${m.ns}">${bsIconX}</span>
+            </span>
           </a>
         </li>
         <li>

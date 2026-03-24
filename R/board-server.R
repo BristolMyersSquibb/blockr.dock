@@ -714,38 +714,10 @@ manage_dock_workspaces <- function(board, update, actions,
         # Add nav-tab entry
         session$sendCustomMessage(
           "add-workspace-tab",
-          list(name = ws_name, parent = ws_parent)
+          list(name = ws_name, parent = ws_parent, ns = session$ns(""))
         )
 
-        if (is.null(ws_parent)) {
-          # Insert edit/delete actions into flat tab
-          insertUI(
-            selector = paste0(
-              ".workspace-tab[data-workspace='", ws_name, "']"
-            ),
-            where = "beforeEnd",
-            ui = tags$span(
-              class = "ws-tab-actions",
-              workspace_edit_icon(),
-              workspace_delete_icon(session$ns, ws_name)
-            ),
-            immediate = TRUE
-          )
-        } else {
-          # Insert edit/delete actions into child dropdown item
-          insertUI(
-            selector = paste0(
-              ".workspace-child-item[data-workspace='", ws_name, "']"
-            ),
-            where = "beforeEnd",
-            ui = tags$span(
-              class = "ws-tab-actions",
-              workspace_edit_icon(),
-              workspace_delete_icon(session$ns, ws_name)
-            ),
-            immediate = TRUE
-          )
-        }
+        # Edit/delete icons are included in the JS template
       }
 
       # Switch to new workspace
