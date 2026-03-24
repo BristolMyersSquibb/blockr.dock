@@ -885,9 +885,11 @@ label:has(input[type="file"]) {
   font-size: 1.1rem;
   color: var(--blockr-color-text-muted);
   background-color: transparent !important;
+  border-radius: 0 !important;
   border-top: 1px solid var(--blockr-color-border);
-  margin-top: 4px;
-  padding-top: 8px;
+  margin: 4px -4px -4px;
+  padding: 8px 12px 6px;
+  width: calc(100% + 8px);
 }
 
 .workspace-child-new-btn:hover,
