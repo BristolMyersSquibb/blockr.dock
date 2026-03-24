@@ -850,9 +850,9 @@ label:has(input[type="file"]) {
 }
 
 .workspace-child-menu .dropdown-item.active {
-  background-color: var(--blockr-grey-100);
-  color: var(--blockr-color-text-primary);
-  font-weight: var(--blockr-font-weight-semibold);
+  background-color: transparent;
+  color: var(--blockr-color-text-secondary);
+  font-weight: var(--blockr-font-weight-normal);
 }
 
 .workspace-new-btn {
@@ -869,7 +869,6 @@ label:has(input[type="file"]) {
 .ws-edit-icon {
   display: inline-flex;
   align-items: center;
-  margin-left: 4px;
   opacity: 0;
   cursor: pointer;
   color: var(--blockr-color-text-muted);
@@ -887,11 +886,22 @@ label:has(input[type="file"]) {
   color: var(--blockr-color-text-secondary);
 }
 
+/* Make tab links flex so actions align right */
+.workspace-tab,
+.workspace-child-item {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 /* Workspace tab action icons container */
 .ws-tab-actions {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* Workspace delete icon (x) */
@@ -917,10 +927,13 @@ label:has(input[type="file"]) {
 /* Inline rename input */
 .ws-rename-input {
   font-size: var(--blockr-font-size-sm) !important;
-  padding: 2px 6px !important;
-  height: auto !important;
+  padding: 0 4px !important;
+  height: 1.4em !important;
+  line-height: 1.4 !important;
   min-height: 0 !important;
   width: auto;
   min-width: 80px;
   max-width: 160px;
+  border-width: 1px !important;
+  vertical-align: middle;
 }

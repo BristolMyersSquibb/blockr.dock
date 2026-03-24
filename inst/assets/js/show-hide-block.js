@@ -221,7 +221,16 @@ $(function () {
     const childItem = document.querySelector(
       `.workspace-child-item[data-workspace="${m.name}"]`
     );
-    if (childItem) childItem.closest('li').remove();
+    if (childItem) {
+      const dropdownMenu = childItem.closest('.workspace-child-menu');
+      childItem.closest('li').remove();
+
+      // If no children remain, remove the entire parent tab
+      if (dropdownMenu &&
+          dropdownMenu.querySelectorAll('.workspace-child-item').length === 0) {
+        dropdownMenu.closest('.nav-item').remove();
+      }
+    }
   });
 
   // R-initiated: rename workspace tab
