@@ -190,6 +190,11 @@ workspace_tabs_ui <- function(id, x) {
           tags$span(
             class = "ws-active-child",
             if (is_active) paste0(" / ", first_child)
+          ),
+          tags$span(
+            class = "ws-tab-actions ws-parent-actions",
+            workspace_edit_icon(parent = TRUE),
+            workspace_delete_icon(id, nm, parent = TRUE)
           )
         )
         if (all_disabled) {
@@ -203,6 +208,7 @@ workspace_tabs_ui <- function(id, x) {
           parent_link,
           tags$ul(
             class = "dropdown-menu workspace-child-menu",
+            `data-parent` = nm,
             lapply(names(children), function(cnm) {
               is_first <- cnm == first_child && is_active
               child_disabled <- isTRUE(children[[cnm]][["disabled"]])
@@ -232,7 +238,16 @@ workspace_tabs_ui <- function(id, x) {
               }
 
               tags$li(child_link)
-            })
+            }),
+            # "+" button to add child workspace inside this parent
+            tags$li(
+              tags$a(
+                href = "#",
+                class = "dropdown-item workspace-child-new-btn",
+                `data-parent` = nm,
+                bsicons::bs_icon("plus")
+              )
+            )
           )
         )
       } else {
@@ -278,21 +293,21 @@ workspace_tabs_ui <- function(id, x) {
   )
 }
 
-workspace_edit_icon <- function() {
+workspace_edit_icon <- function(parent = FALSE) {
   tags$span(
-    class = "ws-edit-icon",
+    class = paste("ws-edit-icon", if (parent) "ws-parent-edit-icon"),
     bsicons::bs_icon("pencil")
   )
 }
 
-workspace_delete_icon <- function(ns, ws_name) {
+workspace_delete_icon <- function(ns, ws_name, parent = FALSE) {
   if (is.character(ns)) {
     ns_prefix <- NS(ns, "")
   } else {
     ns_prefix <- ns("")
   }
   tags$span(
-    class = "ws-delete-icon",
+    class = paste("ws-delete-icon", if (parent) "ws-parent-delete-icon"),
     tabindex = "0",
     `data-workspace` = ws_name,
     `data-ns` = ns_prefix,

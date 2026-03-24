@@ -523,177 +523,230 @@ manage_dock_workspaces <- function(board, update, actions,
     }
   )
 
+  # Helper: bootstrap a new leaf workspace (DockView container, proxy,
+
+  # observers, ws_map entry). Returns the proxy invisibly.
+  init_leaf_workspace <- function(ws_name) {
+    ns <- session$ns
+
+    # Insert DockView container into DOM
+    insertUI(
+      selector = paste0("#", ns("workspace-container")),
+      where = "beforeEnd",
+      ui = tags$div(
+        class = "blockr-workspace",
+        id = paste0("workspace-", ws_name),
+        dockViewR::dock_view_output(
+          ns(dock_id(workspace = ws_name)),
+          width = "100%",
+          height = "100%"
+        )
+      ),
+      immediate = TRUE
+    )
+
+    # Create proxy
+    proxy <- set_dock_view_output(workspace = ws_name, session = session)
+    proxies[[ws_name]] <- proxy
+    ws_dom_names[[ws_name]] <- ws_name
+
+    # Initialize per-workspace tracking
+    ws_prev_active[[ws_name]] <- reactiveVal()
+    ws_active_trail[[ws_name]] <- reactiveVal()
+
+    ws_dinput <- function(x) dock_input(x, workspace = ws_name)
+
+    # Once initialized, auto-add DAG extension if available
+    observeEvent(
+      req(input[[ws_dinput("initialized")]]),
+      {
+        exts <- as.list(dock_extensions(board$board))
+        dag_ids <- names(Filter(
+          function(ext) inherits(ext, "dag_extension"),
+          exts
+        ))
+
+        if (length(dag_ids)) {
+          # Build layout with DAG extension only
+          dag_exts <- new_dock_extensions(exts[dag_ids])
+          ws_layout <- create_dock_layout(extensions = dag_exts)
+          restore_dock(ws_layout, proxy)
+
+          # Reparent DAG extension UI into the new workspace
+          for (eid in dag_ids) {
+            show_ext_ui(eid, session, workspace = ws_name)
+          }
+
+          # Register in ws_map
+          wm <- ws_map()
+          for (eid in dag_ids) {
+            wm$exts[[eid]] <- c(wm$exts[[eid]], ws_name)
+          }
+          ws_map(wm)
+        } else {
+          # No DAG: restore empty layout with one group
+          empty_layout <- list(
+            grid = list(
+              root = list(
+                type = "branch",
+                data = list(
+                  list(
+                    type = "leaf",
+                    data = list(
+                      views = list(),
+                      id = "1"
+                    ),
+                    size = 1
+                  )
+                )
+              ),
+              orientation = "HORIZONTAL"
+            ),
+            panels = list(),
+            active_group = "1"
+          )
+          dockViewR::restore_dock(proxy, empty_layout)
+        }
+      },
+      once = TRUE
+    )
+
+    # Panel remove observer for new workspace
+    observeEvent(
+      input[[ws_dinput("panel-to-remove")]],
+      {
+        id <- as_dock_panel_id(input[[ws_dinput("panel-to-remove")]])
+        if (is_block_panel_id(id)) {
+          hide_block_panel(id, rm_panel = TRUE, proxy = proxy)
+        } else if (is_ext_panel_id(id)) {
+          hide_ext_panel(id, rm_panel = TRUE, proxy = proxy)
+        }
+      }
+    )
+
+    # Panel add observer for new workspace (extensions only, blocks via DAG)
+    observeEvent(
+      input[[ws_dinput("panel-to-add")]],
+      suggest_panels_to_add(
+        proxy, board, session = session,
+        ws_block_ids = character(0)
+      )
+    )
+
+    # N-panels tracking: auto-suggest when all panels are closed
+    n_panels_ws <- reactiveVal(1L)
+
+    observeEvent(
+      req(input[[ws_dinput("n-panels")]]),
+      n_panels_ws(input[[ws_dinput("n-panels")]])
+    )
+
+    observeEvent(
+      req(n_panels_ws() == 0),
+      {
+        suggest_panels_to_add(
+          proxy,
+          board,
+          ws_block_ids = character(0),
+          ws_ext_ids = dock_ext_ids(board$board),
+          session = session
+        )
+        n_panels_ws(1L)
+      }
+    )
+
+    # Active group tracking for new workspace
+    observeEvent(
+      input[[ws_dinput("active-group")]],
+      {
+        ws_cur <- ws_current_name(ws_name)
+        cur_ag <- input[[ws_dinput("active-group")]]
+        trail <- ws_active_trail[[ws_cur]]
+        req(is.function(trail))
+        pre_ag <- trail()
+        if (!identical(pre_ag, cur_ag)) {
+          ws_prev_active[[ws_cur]](pre_ag)
+        }
+        ws_active_trail[[ws_cur]](cur_ag)
+      }
+    )
+
+    invisible(proxy)
+  }
+
   # Create workspace
   observeEvent(
     input[["new_workspace"]],
     {
-      ws_name <- generate_workspace_name(active_proxy_names())
-      ns <- session$ns
+      ws_input <- input[["new_workspace"]]
+      ws_parent <- ws_input$parent
+      ws_type <- ws_input$type %||% "simple"
 
-      # Insert DockView container into DOM
-      insertUI(
-        selector = paste0("#", ns("workspace-container")),
-        where = "beforeEnd",
-        ui = tags$div(
-          class = "blockr-workspace",
-          id = paste0("workspace-", ws_name),
-          dockViewR::dock_view_output(
-            ns(dock_id(workspace = ws_name)),
-            width = "100%",
-            height = "100%"
-          )
-        ),
-        immediate = TRUE
-      )
-
-      # Create proxy
-      proxy <- set_dock_view_output(workspace = ws_name, session = session)
-      proxies[[ws_name]] <- proxy
-      ws_dom_names[[ws_name]] <- ws_name
-
-      # Initialize per-workspace tracking
-      ws_prev_active[[ws_name]] <- reactiveVal()
-      ws_active_trail[[ws_name]] <- reactiveVal()
-
-      ws_dinput <- function(x) dock_input(x, workspace = ws_name)
-
-      # Once initialized, auto-add DAG extension if available
-      observeEvent(
-        req(input[[ws_dinput("initialized")]]),
-        {
-          exts <- as.list(dock_extensions(board$board))
-          dag_ids <- names(Filter(
-            function(ext) inherits(ext, "dag_extension"),
-            exts
-          ))
-
-          if (length(dag_ids)) {
-            # Build layout with DAG extension only
-            dag_exts <- new_dock_extensions(exts[dag_ids])
-            ws_layout <- create_dock_layout(extensions = dag_exts)
-            restore_dock(ws_layout, proxy)
-
-            # Reparent DAG extension UI into the new workspace
-            for (eid in dag_ids) {
-              show_ext_ui(eid, session, workspace = ws_name)
-            }
-
-            # Register in ws_map
-            wm <- ws_map()
-            for (eid in dag_ids) {
-              wm$exts[[eid]] <- c(wm$exts[[eid]], ws_name)
-            }
-            ws_map(wm)
-          } else {
-            # No DAG: restore empty layout with one group
-            empty_layout <- list(
-              grid = list(
-                root = list(
-                  type = "branch",
-                  data = list(
-                    list(
-                      type = "leaf",
-                      data = list(
-                        views = list(),
-                        id = "1"
-                      ),
-                      size = 1
-                    )
-                  )
-                ),
-                orientation = "HORIZONTAL"
-              ),
-              panels = list(),
-              active_group = "1"
-            )
-            dockViewR::restore_dock(proxy, empty_layout)
-          }
-        },
-        once = TRUE
-      )
-
-      # Panel remove observer for new workspace
-      observeEvent(
-        input[[ws_dinput("panel-to-remove")]],
-        {
-          id <- as_dock_panel_id(input[[ws_dinput("panel-to-remove")]])
-          if (is_block_panel_id(id)) {
-            hide_block_panel(id, rm_panel = TRUE, proxy = proxy)
-          } else if (is_ext_panel_id(id)) {
-            hide_ext_panel(id, rm_panel = TRUE, proxy = proxy)
-          }
-        }
-      )
-
-      # Panel add observer for new workspace (extensions only, blocks via DAG)
-      observeEvent(
-        input[[ws_dinput("panel-to-add")]],
-        suggest_panels_to_add(
-          proxy, board, session = session,
-          ws_block_ids = character(0)
+      if (identical(ws_type, "parent")) {
+        # Create a new parent group with one initial child
+        parent_name <- generate_workspace_name(
+          active_proxy_names(), prefix = "Group"
         )
-      )
+        ws_name <- generate_workspace_name(active_proxy_names())
 
-      # N-panels tracking: auto-suggest when all panels are closed
-      n_panels_ws <- reactiveVal(1L)
+        leaf_parent[[ws_name]] <- parent_name
+        init_leaf_workspace(ws_name)
 
-      observeEvent(
-        req(input[[ws_dinput("n-panels")]]),
-        n_panels_ws(input[[ws_dinput("n-panels")]])
-      )
-
-      observeEvent(
-        req(n_panels_ws() == 0),
-        {
-          suggest_panels_to_add(
-            proxy,
-            board,
-            ws_block_ids = character(0),
-            ws_ext_ids = dock_ext_ids(board$board),
-            session = session
+        # Add parent tab with child in dropdown
+        session$sendCustomMessage(
+          "add-parent-workspace-tab",
+          list(
+            parent = parent_name,
+            child = ws_name,
+            ns = session$ns("")
           )
-          n_panels_ws(1L)
+        )
+      } else {
+        # Simple leaf or child of existing parent
+        ws_name <- generate_workspace_name(active_proxy_names())
+
+        if (!is.null(ws_parent)) {
+          leaf_parent[[ws_name]] <- ws_parent
         }
-      )
 
-      # Active group tracking for new workspace
-      observeEvent(
-        input[[ws_dinput("active-group")]],
-        {
-          ws_cur <- ws_current_name(ws_name)
-          cur_ag <- input[[ws_dinput("active-group")]]
-          trail <- ws_active_trail[[ws_cur]]
-          req(is.function(trail))
-          pre_ag <- trail()
-          if (!identical(pre_ag, cur_ag)) {
-            ws_prev_active[[ws_cur]](pre_ag)
-          }
-          ws_active_trail[[ws_cur]](cur_ag)
+        init_leaf_workspace(ws_name)
+
+        # Add nav-tab entry
+        session$sendCustomMessage(
+          "add-workspace-tab",
+          list(name = ws_name, parent = ws_parent)
+        )
+
+        if (is.null(ws_parent)) {
+          # Insert edit/delete actions into flat tab
+          insertUI(
+            selector = paste0(
+              ".workspace-tab[data-workspace='", ws_name, "']"
+            ),
+            where = "beforeEnd",
+            ui = tags$span(
+              class = "ws-tab-actions",
+              workspace_edit_icon(),
+              workspace_delete_icon(session$ns, ws_name)
+            ),
+            immediate = TRUE
+          )
+        } else {
+          # Insert edit/delete actions into child dropdown item
+          insertUI(
+            selector = paste0(
+              ".workspace-child-item[data-workspace='", ws_name, "']"
+            ),
+            where = "beforeEnd",
+            ui = tags$span(
+              class = "ws-tab-actions",
+              workspace_edit_icon(),
+              workspace_delete_icon(session$ns, ws_name)
+            ),
+            immediate = TRUE
+          )
         }
-      )
-
-      # Update ws_map: new workspace has no blocks/exts initially
-      # (blocks/exts get added when the user opens them)
-
-      # Add nav-tab entry
-      session$sendCustomMessage(
-        "add-workspace-tab",
-        list(name = ws_name)
-      )
-
-      # Insert edit/delete actions into the new tab
-      insertUI(
-        selector = paste0(
-          ".workspace-tab[data-workspace='", ws_name, "']"
-        ),
-        where = "beforeEnd",
-        ui = tags$span(
-          class = "ws-tab-actions",
-          workspace_edit_icon(),
-          workspace_delete_icon(session$ns, ws_name)
-        ),
-        immediate = TRUE
-      )
+      }
 
       # Switch to new workspace
       switch_ws(ws_name)
@@ -840,6 +893,135 @@ manage_dock_workspaces <- function(board, update, actions,
       # Update nav-tab + container via JS
       session$sendCustomMessage(
         "rename-workspace-tab",
+        list(old = old_name, new = new_name)
+      )
+    }
+  )
+
+  # Delete parent workspace (and all its children)
+  observeEvent(
+    input[["delete_parent_workspace"]],
+    {
+      parent_name <- input[["delete_parent_workspace"]]
+
+      # Find all children of this parent
+      children <- ls(leaf_parent)
+      children <- children[vapply(
+        children,
+        function(nm) identical(leaf_parent[[nm]], parent_name),
+        logical(1L)
+      )]
+
+      all_ws <- active_proxy_names()
+      non_parent_ws <- setdiff(all_ws, children)
+
+      # Cannot delete if it would leave no workspaces
+      if (length(non_parent_ws) < 1L) return()
+
+      # Determine landing workspace
+      current <- active_ws()
+      if (current %in% children) {
+        target_ws <- non_parent_ws[[1L]]
+      } else {
+        target_ws <- current
+      }
+
+      wm <- ws_map()
+
+      # Delete each child workspace
+      for (child in children) {
+        # Evacuate blocks/exts
+        for (bid in names(wm$blocks)) {
+          if (child %in% wm$blocks[[bid]]) {
+            hide_block_ui(bid, session)
+          }
+        }
+        for (eid in names(wm$exts)) {
+          if (child %in% wm$exts[[eid]]) {
+            hide_ext_ui(eid, session)
+          }
+        }
+
+        # Remove from ws_map
+        for (bid in names(wm$blocks)) {
+          wm$blocks[[bid]] <- setdiff(wm$blocks[[bid]], child)
+          if (!length(wm$blocks[[bid]])) wm$blocks[[bid]] <- NULL
+        }
+        for (eid in names(wm$exts)) {
+          wm$exts[[eid]] <- setdiff(wm$exts[[eid]], child)
+          if (!length(wm$exts[[eid]])) wm$exts[[eid]] <- NULL
+        }
+
+        # Remove DockView container
+        session$sendCustomMessage(
+          "remove-workspace-container",
+          list(id = paste0("workspace-", child))
+        )
+
+        # Clean up tracking
+        proxies[[child]] <- NULL
+        ws_prev_active[[child]] <- NULL
+        ws_active_trail[[child]] <- NULL
+        ws_dom_names[[child]] <- NULL
+        rm(list = child, envir = leaf_parent)
+      }
+
+      ws_map(wm)
+
+      # Switch to target workspace
+      if (!identical(target_ws, active_ws()) || current %in% children) {
+        active_ws(target_ws)
+        session$sendCustomMessage(
+          "switch-workspace",
+          list(
+            active = target_ws,
+            parent = get0(target_ws, envir = leaf_parent)
+          )
+        )
+      }
+
+      # Re-show blocks/exts for target workspace
+      dom_ws <- ws_dom_names[[target_ws]]
+      for (bid in names(wm$blocks)) {
+        if (target_ws %in% wm$blocks[[bid]]) {
+          show_block_ui(bid, session, workspace = dom_ws)
+        }
+      }
+      for (eid in names(wm$exts)) {
+        if (target_ws %in% wm$exts[[eid]]) {
+          show_ext_ui(eid, session, workspace = dom_ws)
+        }
+      }
+
+      # Remove parent tab from DOM
+      session$sendCustomMessage(
+        "remove-parent-workspace-tab",
+        list(name = parent_name)
+      )
+    }
+  )
+
+  # Rename parent workspace
+  observeEvent(
+    input[["rename_parent_workspace"]],
+    {
+      old_name <- input[["rename_parent_workspace"]]$old
+      new_name <- input[["rename_parent_workspace"]]$new
+
+      # Validate: non-empty, unique among parent names
+      if (!nzchar(new_name) || identical(old_name, new_name)) return()
+
+      # Update leaf_parent for all children
+      children <- ls(leaf_parent)
+      for (child in children) {
+        if (identical(leaf_parent[[child]], old_name)) {
+          leaf_parent[[child]] <- new_name
+        }
+      }
+
+      # Update JS
+      session$sendCustomMessage(
+        "rename-parent-workspace-tab",
         list(old = old_name, new = new_name)
       )
     }
@@ -1067,12 +1249,12 @@ extension_default_icon <- function() {
   as.character(bsicons::bs_icon("gear"))
 }
 
-generate_workspace_name <- function(existing_names) {
+generate_workspace_name <- function(existing_names, prefix = "Workspace") {
   i <- length(existing_names) + 1L
-  candidate <- paste0("Workspace-", i)
+  candidate <- paste0(prefix, "-", i)
   while (candidate %in% existing_names) {
     i <- i + 1L
-    candidate <- paste0("Workspace-", i)
+    candidate <- paste0(prefix, "-", i)
   }
   candidate
 }
