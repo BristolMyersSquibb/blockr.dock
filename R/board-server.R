@@ -694,8 +694,23 @@ manage_dock_workspaces <- function(board, update, actions,
         switch_ws(remaining[[1L]])
       }
 
-      # Remove workspace from ws_map
+      # Move block/ext UIs to offcanvas BEFORE destroying the container,
+      # so they survive for other workspaces that still reference them.
+      # Skip UIs already in the active workspace (switch_ws put them there).
       wm <- ws_map()
+      active <- active_ws()
+      for (bid in names(wm$blocks)) {
+        if (ws_name %in% wm$blocks[[bid]] && !(active %in% wm$blocks[[bid]])) {
+          hide_block_ui(bid, session)
+        }
+      }
+      for (eid in names(wm$exts)) {
+        if (ws_name %in% wm$exts[[eid]] && !(active %in% wm$exts[[eid]])) {
+          hide_ext_ui(eid, session)
+        }
+      }
+
+      # Remove workspace from ws_map
       for (bid in names(wm$blocks)) {
         wm$blocks[[bid]] <- setdiff(wm$blocks[[bid]], ws_name)
         if (!length(wm$blocks[[bid]])) wm$blocks[[bid]] <- NULL
@@ -706,7 +721,7 @@ manage_dock_workspaces <- function(board, update, actions,
       }
       ws_map(wm)
 
-      # Remove DockView container from DOM
+      # Remove DockView container from DOM (now safe — UIs are in offcanvas)
       removeUI(
         selector = paste0("#workspace-", ws_name),
         immediate = TRUE
