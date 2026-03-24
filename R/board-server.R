@@ -231,7 +231,8 @@ manage_dock_workspaces <- function(board, update, actions,
   leaf_names <- names(leaves)
 
   # Build leaf_name -> parent_name map (NULL for top-level leaves)
-  leaf_parent <- list()
+  # Use an environment so it can be mutated from within observers
+  leaf_parent <- new.env(parent = emptyenv())
   for (nm in names(workspaces)) {
     ws <- workspaces[[nm]]
     if (is_ws_parent(ws)) {
@@ -456,9 +457,14 @@ manage_dock_workspaces <- function(board, update, actions,
     # Use original DOM name for show_*_ui selectors
     dom_ws <- ws_dom_names[[ws]]
 
+    log_debug(
+      "switch_ws: ws={ws}, dom_ws={dom_ws}, ",
+      "dock_id={dock_id(session$ns, workspace = dom_ws)}"
+    )
+
     session$sendCustomMessage(
       "switch-workspace",
-      list(active = ws, parent = leaf_parent[[ws]])
+      list(active = ws, parent = get0(ws, envir = leaf_parent))
     )
 
     # Reparent extensions into new workspace based on ws_map membership
@@ -469,12 +475,14 @@ manage_dock_workspaces <- function(board, update, actions,
       wm$exts
     ))
     for (eid in ws_ext_ids) {
+      log_debug("switch_ws: show_ext_ui({eid}, workspace={dom_ws})")
       show_ext_ui(eid, session, workspace = dom_ws)
     }
 
     # Reparent multi-workspace blocks based on ws_map membership
     for (bid in multi_ws_bids) {
       if (ws %in% wm$blocks[[bid]]) {
+        log_debug("switch_ws: show_block_ui({bid}, workspace={dom_ws})")
         show_block_ui(bid, session, workspace = dom_ws)
       }
     }
@@ -703,6 +711,9 @@ manage_dock_workspaces <- function(board, update, actions,
       ws_prev_active[[ws_name]] <- NULL
       ws_active_trail[[ws_name]] <- NULL
       ws_dom_names[[ws_name]] <- NULL
+      if (exists(ws_name, envir = leaf_parent)) {
+        rm(list = ws_name, envir = leaf_parent)
+      }
 
       # Remove nav-tab entry
       session$sendCustomMessage(
@@ -735,6 +746,13 @@ manage_dock_workspaces <- function(board, update, actions,
       # Preserve original DOM name (DockView output ID is immutable)
       ws_dom_names[[new_name]] <- ws_dom_names[[old_name]]
       ws_dom_names[[old_name]] <- NULL
+
+      # Update leaf_parent map
+      parent <- get0(old_name, envir = leaf_parent)
+      if (!is.null(parent)) {
+        leaf_parent[[new_name]] <- parent
+        rm(list = old_name, envir = leaf_parent)
+      }
 
       # Update ws_map references
       wm <- ws_map()

@@ -31,7 +31,10 @@ $(function () {
   Shiny.addCustomMessageHandler(
     'switch-workspace', (m) => {
       // Toggle DockView containers
-      document.querySelectorAll('.blockr-workspace').forEach(ws => {
+      const allWs = document.querySelectorAll('.blockr-workspace');
+      console.log('switch-workspace: active=' + m.active,
+        'containers:', Array.from(allWs).map(ws => ws.id));
+      allWs.forEach(ws => {
         ws.classList.toggle('active', ws.id === 'workspace-' + m.active);
       });
 
@@ -208,20 +211,29 @@ $(function () {
 
   // R-initiated: remove workspace tab
   Shiny.addCustomMessageHandler('remove-workspace-tab', (m) => {
+    // Remove flat tab
     const tab = document.querySelector(
       `.workspace-tab[data-workspace="${m.name}"]`
     );
     if (tab) tab.closest('.nav-item').remove();
+
+    // Remove child item from parent dropdown
+    const childItem = document.querySelector(
+      `.workspace-child-item[data-workspace="${m.name}"]`
+    );
+    if (childItem) childItem.closest('li').remove();
   });
 
   // R-initiated: rename workspace tab
   Shiny.addCustomMessageHandler('rename-workspace-tab', (m) => {
-    // Update flat tabs
+    // Update flat tabs — use jQuery .data() to update cache (not just dataset)
+    // because click handlers read via $.data('workspace')
     const tab = document.querySelector(
       `.workspace-tab[data-workspace="${m.old}"]`
     );
     if (tab) {
-      tab.dataset.workspace = m.new;
+      $(tab).data('workspace', m.new);
+      tab.setAttribute('data-workspace', m.new);
       const label = tab.querySelector('.ws-tab-label');
       if (label) label.textContent = m.new;
     }
@@ -231,7 +243,8 @@ $(function () {
       `.workspace-child-item[data-workspace="${m.old}"]`
     );
     if (childItem) {
-      childItem.dataset.workspace = m.new;
+      $(childItem).data('workspace', m.new);
+      childItem.setAttribute('data-workspace', m.new);
       const label = childItem.querySelector('.ws-tab-label');
       if (label) label.textContent = m.new;
 
@@ -258,7 +271,8 @@ $(function () {
     document.querySelectorAll(
       `.ws-delete-icon[data-workspace="${m.old}"]`
     ).forEach(icon => {
-      icon.dataset.workspace = m.new;
+      $(icon).data('workspace', m.new);
+      icon.setAttribute('data-workspace', m.new);
     });
   });
 })
