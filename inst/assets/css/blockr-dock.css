@@ -817,6 +817,19 @@ label:has(input[type="file"]) {
   background-color: var(--blockr-grey-100);
 }
 
+/* Disabled workspace tabs */
+.blockr-workspace-tabs .nav-link.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: default;
+}
+
+.workspace-child-menu .dropdown-item.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: default;
+}
+
 /* Parent tab with dropdown */
 .blockr-workspace-tabs .workspace-tab-parent {
   cursor: pointer;

@@ -245,14 +245,18 @@ manage_dock_workspaces <- function(board, update, actions,
 
   input <- session$input
 
-  active_ws <- reactiveVal(leaf_names[1L])
+  enabled_leaves <- Filter(
+    function(nm) !isTRUE(leaves[[nm]][["disabled"]]),
+    leaf_names
+  )
+  active_ws <- reactiveVal(enabled_leaves[1L])
 
   # Build block->workspace and ext->workspace maps
   # blocks: block_id -> character vector of leaf workspace names (1:many)
   # exts: ext_id -> character vector of leaf workspace names (1:many)
   block_ws <- list()
   ext_ws <- list()
-  for (ws in leaf_names) {
+  for (ws in enabled_leaves) {
     for (bid in leaves[[ws]][["block_ids"]]) {
       block_ws[[bid]] <- c(block_ws[[bid]], ws)
     }
@@ -272,6 +276,8 @@ manage_dock_workspaces <- function(board, update, actions,
   ws_dom_names <- reactiveValues()
 
   for (ws in leaf_names) {
+    if (isTRUE(leaves[[ws]][["disabled"]])) next
+
     local({
       workspace <- ws
       ws_spec <- leaves[[workspace]]

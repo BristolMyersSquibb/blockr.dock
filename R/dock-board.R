@@ -180,6 +180,7 @@ validate_workspaces <- function(workspaces, blocks, extensions) {
     )
 
     ws[["ext_ids"]] <- ws_ext_ids
+    ws[["disabled"]] <- isTRUE(ws[["disabled"]])
 
     ws_blocks <- all_blocks[ws_blk_ids]
     ws_exts <- new_dock_extensions(all_exts[ws_ext_ids])

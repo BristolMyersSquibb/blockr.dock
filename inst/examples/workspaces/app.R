@@ -31,6 +31,10 @@ serve(
       ),
       Summary = list(
         block_ids = c("dataset_1")
+      ),
+      Reports = list(
+        block_ids = character(),
+        disabled = TRUE
       )
     )
   ),

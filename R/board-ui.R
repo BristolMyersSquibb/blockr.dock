@@ -114,16 +114,18 @@ options_ui <- function(id, x, ...) {
 
 workspace_dock_ui <- function(id, x) {
   workspaces <- dock_workspaces(x)
-  leaf_names <- ws_leaf_names(workspaces)
-  first_leaf <- leaf_names[1L]
+  leaves <- ws_leaves(workspaces)
+  leaf_names <- names(leaves)
+  enabled <- Filter(function(nm) !isTRUE(leaves[[nm]][["disabled"]]), leaf_names)
+  first_leaf <- enabled[1L]
   dock_height <- "calc(100vh - 48px)"
 
   div(
     class = "blockr-workspace-container",
     id = NS(id, "workspace-container"),
     style = sprintf("position: relative; height: %s;", dock_height),
-    lapply(seq_along(leaf_names), function(i) {
-      ws <- leaf_names[i]
+    lapply(leaf_names, function(ws) {
+      if (isTRUE(leaves[[ws]][["disabled"]])) return(NULL)
       is_active <- ws == first_leaf
       div(
         class = paste("blockr-workspace", if (is_active) "active"),
@@ -140,8 +142,19 @@ workspace_dock_ui <- function(id, x) {
 
 workspace_tabs_ui <- function(id, x) {
   workspaces <- dock_workspaces(x)
-  first_leaf <- ws_leaf_names(workspaces)[1L]
-  first_top <- names(workspaces)[1L]
+  leaves <- ws_leaves(workspaces)
+  enabled <- Filter(function(nm) !isTRUE(leaves[[nm]][["disabled"]]), names(leaves))
+  first_leaf <- enabled[1L]
+
+  # First top-level entry that has at least one enabled leaf
+  first_top <- Find(function(nm) {
+    ws <- workspaces[[nm]]
+    if (is_ws_parent(ws)) {
+      any(!vapply(ws[["children"]], function(c) isTRUE(c[["disabled"]]), logical(1L)))
+    } else {
+      !isTRUE(ws[["disabled"]])
+    }
+  }, names(workspaces))
 
   tags$ul(
     class = "nav nav-tabs blockr-workspace-tabs",
@@ -155,63 +168,102 @@ workspace_tabs_ui <- function(id, x) {
         first_child <- names(children)[1L]
         is_active <- nm == first_top
 
+        # Parent is disabled if ALL children are disabled
+        all_disabled <- all(
+          vapply(children, function(c) isTRUE(c[["disabled"]]), logical(1L))
+        )
+
+        parent_classes <- paste(
+          "nav-link dropdown-toggle workspace-tab-parent",
+          if (is_active) "active",
+          if (all_disabled) "disabled"
+        )
+
+        parent_link <- tags$a(
+          class = parent_classes,
+          href = "#",
+          `data-bs-toggle` = if (!all_disabled) "dropdown",
+          role = "button",
+          `aria-expanded` = "false",
+          `data-parent` = nm,
+          tags$span(class = "ws-parent-label", nm),
+          tags$span(
+            class = "ws-active-child",
+            if (is_active) paste0(" / ", first_child)
+          )
+        )
+        if (all_disabled) {
+          parent_link <- tagAppendAttributes(
+            parent_link, `aria-disabled` = "true"
+          )
+        }
+
         tags$li(
           class = "nav-item dropdown",
-          tags$a(
-            class = paste("nav-link dropdown-toggle workspace-tab-parent",
-                          if (is_active) "active"),
-            href = "#",
-            `data-bs-toggle` = "dropdown",
-            role = "button",
-            `aria-expanded` = "false",
-            `data-parent` = nm,
-            tags$span(class = "ws-parent-label", nm),
-            tags$span(
-              class = "ws-active-child",
-              if (is_active) paste0(" / ", first_child)
-            )
-          ),
+          parent_link,
           tags$ul(
             class = "dropdown-menu workspace-child-menu",
             lapply(names(children), function(cnm) {
               is_first <- cnm == first_child && is_active
-              tags$li(
-                tags$a(
-                  class = paste("dropdown-item workspace-child-item",
-                                if (is_first) "active"),
-                  href = "#",
-                  `data-workspace` = cnm,
-                  `data-parent` = nm,
-                  tags$span(class = "ws-tab-label", cnm),
-                  tags$span(
-                    class = "ws-tab-actions",
-                    workspace_edit_icon(),
-                    workspace_delete_icon(id, cnm)
-                  )
+              child_disabled <- isTRUE(children[[cnm]][["disabled"]])
+
+              child_classes <- paste(
+                "dropdown-item workspace-child-item",
+                if (is_first) "active",
+                if (child_disabled) "disabled"
+              )
+
+              child_link <- tags$a(
+                class = child_classes,
+                href = "#",
+                `data-workspace` = cnm,
+                `data-parent` = nm,
+                tags$span(class = "ws-tab-label", cnm),
+                if (!child_disabled) tags$span(
+                  class = "ws-tab-actions",
+                  workspace_edit_icon(),
+                  workspace_delete_icon(id, cnm)
                 )
               )
+              if (child_disabled) {
+                child_link <- tagAppendAttributes(
+                  child_link, `aria-disabled` = "true"
+                )
+              }
+
+              tags$li(child_link)
             })
           )
         )
       } else {
         # Leaf tab — no dropdown
         is_active <- nm == first_leaf
+        is_disabled <- isTRUE(ws[["disabled"]])
 
-        tags$li(
-          class = "nav-item",
-          tags$a(
-            class = paste("nav-link workspace-tab",
-                          if (is_active) "active"),
-            href = "#",
-            `data-workspace` = nm,
-            tags$span(class = "ws-tab-label", nm),
-            tags$span(
-              class = "ws-tab-actions",
-              workspace_edit_icon(),
-              workspace_delete_icon(id, nm)
-            )
+        tab_classes <- paste(
+          "nav-link workspace-tab",
+          if (is_active) "active",
+          if (is_disabled) "disabled"
+        )
+
+        tab_link <- tags$a(
+          class = tab_classes,
+          href = "#",
+          `data-workspace` = nm,
+          tags$span(class = "ws-tab-label", nm),
+          if (!is_disabled) tags$span(
+            class = "ws-tab-actions",
+            workspace_edit_icon(),
+            workspace_delete_icon(id, nm)
           )
         )
+        if (is_disabled) {
+          tab_link <- tagAppendAttributes(
+            tab_link, `aria-disabled` = "true"
+          )
+        }
+
+        tags$li(class = "nav-item", tab_link)
       }
     }),
     # New workspace button

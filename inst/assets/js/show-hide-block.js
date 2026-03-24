@@ -77,6 +77,7 @@ $(function () {
   // Flat tab click
   $(document).on('click', '.workspace-tab', function(e) {
     e.preventDefault();
+    if ($(this).hasClass('disabled')) return;
     const ws = $(this).data('workspace');
     const ns = $(this).closest('.blockr-workspace-tabs').data('ns');
     Shiny.setInputValue(ns + 'active_workspace', ws, { priority: 'event' });
@@ -85,6 +86,7 @@ $(function () {
   // Dropdown child item click
   $(document).on('click', '.workspace-child-item', function(e) {
     e.preventDefault();
+    if ($(this).hasClass('disabled')) return;
     const ws = $(this).data('workspace');
     const ns = $(this).closest('.blockr-workspace-tabs').data('ns');
     Shiny.setInputValue(ns + 'active_workspace', ws, { priority: 'event' });
