@@ -146,6 +146,10 @@ workspace_tabs_ui <- function(id, x) {
   enabled <- Filter(function(nm) !isTRUE(leaves[[nm]][["disabled"]]), names(leaves))
   first_leaf <- enabled[1L]
 
+  can_rename <- ws_can_rename(x)
+  can_delete <- ws_can_delete(x)
+  can_create <- ws_can_create(x)
+
   # First top-level entry that has at least one enabled leaf
   first_top <- Find(function(nm) {
     ws <- workspaces[[nm]]
@@ -191,10 +195,10 @@ workspace_tabs_ui <- function(id, x) {
             class = "ws-active-child",
             if (is_active) paste0(" / ", first_child)
           ),
-          tags$span(
+          if (can_rename || can_delete) tags$span(
             class = "ws-tab-actions ws-parent-actions",
-            workspace_edit_icon(parent = TRUE),
-            workspace_delete_icon(id, nm, parent = TRUE)
+            if (can_rename) workspace_edit_icon(parent = TRUE),
+            if (can_delete) workspace_delete_icon(id, nm, parent = TRUE)
           )
         )
         if (all_disabled) {
@@ -225,10 +229,10 @@ workspace_tabs_ui <- function(id, x) {
                 `data-workspace` = cnm,
                 `data-parent` = nm,
                 tags$span(class = "ws-tab-label", cnm),
-                if (!child_disabled) tags$span(
+                if (!child_disabled && (can_rename || can_delete)) tags$span(
                   class = "ws-tab-actions",
-                  workspace_edit_icon(),
-                  workspace_delete_icon(id, cnm)
+                  if (can_rename) workspace_edit_icon(),
+                  if (can_delete) workspace_delete_icon(id, cnm)
                 )
               )
               if (child_disabled) {
@@ -240,7 +244,7 @@ workspace_tabs_ui <- function(id, x) {
               tags$li(child_link)
             }),
             # "+" button to add child workspace inside this parent
-            tags$li(
+            if (can_create) tags$li(
               tags$a(
                 href = "#",
                 class = "dropdown-item workspace-child-new-btn",
@@ -266,10 +270,10 @@ workspace_tabs_ui <- function(id, x) {
           href = "#",
           `data-workspace` = nm,
           tags$span(class = "ws-tab-label", nm),
-          if (!is_disabled) tags$span(
+          if (!is_disabled && (can_rename || can_delete)) tags$span(
             class = "ws-tab-actions",
-            workspace_edit_icon(),
-            workspace_delete_icon(id, nm)
+            if (can_rename) workspace_edit_icon(),
+            if (can_delete) workspace_delete_icon(id, nm)
           )
         )
         if (is_disabled) {
@@ -282,7 +286,7 @@ workspace_tabs_ui <- function(id, x) {
       }
     }),
     # New workspace button
-    tags$li(
+    if (can_create) tags$li(
       class = "nav-item",
       tags$a(
         href = "#",

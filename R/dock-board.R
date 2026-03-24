@@ -28,10 +28,15 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            layout = default_grid(blocks, extensions),
                            options = dock_board_options(),
                            workspaces = NULL,
+                           ws_create = TRUE, ws_rename = TRUE,
+                           ws_delete = TRUE,
                            ctor = NULL, pkg = NULL, class = character()) {
 
   if (!is.null(workspaces)) {
     workspaces <- validate_workspaces(workspaces, blocks, extensions)
+    attr(workspaces, "ws_create") <- isTRUE(ws_create)
+    attr(workspaces, "ws_rename") <- isTRUE(ws_rename)
+    attr(workspaces, "ws_delete") <- isTRUE(ws_delete)
   }
 
   if (!is_dock_layout(layout)) {
@@ -149,6 +154,18 @@ dock_workspaces <- function(x) {
 #' @export
 has_workspaces <- function(x) {
   !is.null(dock_workspaces(x))
+}
+
+ws_can_create <- function(x) {
+  isTRUE(attr(dock_workspaces(x), "ws_create") %||% TRUE)
+}
+
+ws_can_rename <- function(x) {
+  isTRUE(attr(dock_workspaces(x), "ws_rename") %||% TRUE)
+}
+
+ws_can_delete <- function(x) {
+  isTRUE(attr(dock_workspaces(x), "ws_delete") %||% TRUE)
 }
 
 validate_workspaces <- function(workspaces, blocks, extensions) {
