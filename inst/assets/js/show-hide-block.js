@@ -422,7 +422,21 @@ $(function () {
       `.workspace-child-item[data-workspace="${m.name}"]`
     );
     if (childItem) {
+      const parentName = childItem.dataset.parent;
       childItem.closest('li').remove();
+
+      // Clear the active child label if it was showing the removed child
+      if (parentName) {
+        const parentTab = document.querySelector(
+          `.workspace-tab-parent[data-parent="${parentName}"]`
+        );
+        if (parentTab) {
+          const activeChild = parentTab.querySelector('.ws-active-child');
+          if (activeChild && activeChild.textContent.includes(m.name)) {
+            activeChild.textContent = '';
+          }
+        }
+      }
     }
   });
 
