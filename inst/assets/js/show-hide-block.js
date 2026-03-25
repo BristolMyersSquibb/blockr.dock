@@ -72,11 +72,12 @@ $(function () {
           tab.classList.remove('active');
         });
       }
+
     }
   )
 
   // Flat tab click
-  $(document).on('click', '.workspace-tab', function(e) {
+  $(document).on('click', '.workspace-tab', function (e) {
     e.preventDefault();
     if ($(this).hasClass('disabled')) return;
     const ws = $(this).data('workspace');
@@ -85,7 +86,7 @@ $(function () {
   });
 
   // Dropdown child item click
-  $(document).on('click', '.workspace-child-item', function(e) {
+  $(document).on('click', '.workspace-child-item', function (e) {
     e.preventDefault();
     if ($(this).hasClass('disabled')) return;
     const ws = $(this).data('workspace');
@@ -94,7 +95,7 @@ $(function () {
   });
 
   // New workspace (top-level) — show type picker modal
-  $(document).on('click', '.workspace-new-btn', function(e) {
+  $(document).on('click', '.workspace-new-btn', function (e) {
     e.preventDefault();
     const ns = $(this).closest('.blockr-workspace-tabs').data('ns');
     const modalId = 'ws-new-type-modal';
@@ -125,13 +126,13 @@ $(function () {
     const bsModal = new bootstrap.Modal(document.getElementById(modalId));
     bsModal.show();
 
-    $('#ws-new-simple').one('click', function() {
+    $('#ws-new-simple').one('click', function () {
       bsModal.hide();
       Shiny.setInputValue(ns + 'new_workspace',
         { ts: Date.now(), parent: null, type: 'simple' }, { priority: 'event' });
     });
 
-    $('#ws-new-parent').one('click', function() {
+    $('#ws-new-parent').one('click', function () {
       bsModal.hide();
       Shiny.setInputValue(ns + 'new_workspace',
         { ts: Date.now(), parent: null, type: 'parent' }, { priority: 'event' });
@@ -139,7 +140,7 @@ $(function () {
   });
 
   // New child workspace inside a parent dropdown
-  $(document).on('click', '.workspace-child-new-btn', function(e) {
+  $(document).on('click', '.workspace-child-new-btn', function (e) {
     e.preventDefault();
     e.stopPropagation();
     const parent = $(this).data('parent');
@@ -149,7 +150,7 @@ $(function () {
   });
 
   // Delete workspace (leaf) — show confirmation modal
-  $(document).on('click', '.ws-delete-icon:not(.ws-parent-delete-icon)', function(e) {
+  $(document).on('click', '.ws-delete-icon:not(.ws-parent-delete-icon)', function (e) {
     e.preventDefault();
     e.stopPropagation();
     const ws = $(this).data('workspace');
@@ -159,7 +160,7 @@ $(function () {
   });
 
   // Delete parent workspace — deletes parent and all children
-  $(document).on('click', '.ws-parent-delete-icon', function(e) {
+  $(document).on('click', '.ws-parent-delete-icon', function (e) {
     e.preventDefault();
     e.stopPropagation();
     const ws = $(this).data('workspace');
@@ -190,28 +191,28 @@ $(function () {
     const bsModal = new bootstrap.Modal(document.getElementById(modalId));
     bsModal.show();
 
-    $('#ws-delete-confirm').one('click', function() {
+    $('#ws-delete-confirm').one('click', function () {
       bsModal.hide();
       Shiny.setInputValue(ns + inputName, name, { priority: 'event' });
     });
   }
 
   // Prevent edit/delete icon clicks from switching workspace or closing dropdown
-  $(document).on('click', '.ws-edit-icon, .ws-delete-icon', function(e) {
+  $(document).on('click', '.ws-edit-icon, .ws-delete-icon', function (e) {
     e.preventDefault();
     e.stopPropagation();
   });
 
   // Prevent dropdown from closing when editing workspace name
   let wsEditActive = false;
-  $(document).on('hide.bs.dropdown', function(e) {
+  $(document).on('hide.bs.dropdown', function (e) {
     if (wsEditActive) {
       e.preventDefault();
     }
   });
 
   // Inline rename: pencil click turns label into input
-  $(document).on('click', '.ws-edit-icon:not(.ws-parent-edit-icon)', function(e) {
+  $(document).on('click', '.ws-edit-icon:not(.ws-parent-edit-icon)', function (e) {
     const $tab = $(this).closest('.workspace-tab, .workspace-child-item');
     const $label = $tab.find('.ws-tab-label');
     if ($label.length === 0 || $label.is(':hidden')) return;
@@ -241,7 +242,7 @@ $(function () {
     }
 
     $input.on('blur', commitRename);
-    $input.on('keydown', function(ev) {
+    $input.on('keydown', function (ev) {
       if (ev.key === 'Enter') {
         ev.preventDefault();
         $input.off('blur');
@@ -253,11 +254,11 @@ $(function () {
       }
     });
     // Prevent input clicks from bubbling to tab/dropdown
-    $input.on('click', function(ev) { ev.stopPropagation(); });
+    $input.on('click', function (ev) { ev.stopPropagation(); });
   });
 
   // Inline rename for parent tabs
-  $(document).on('click', '.ws-parent-edit-icon', function() {
+  $(document).on('click', '.ws-parent-edit-icon', function () {
     const $parent = $(this).closest('.nav-item');
     const $label = $parent.find('.ws-parent-label');
     if ($label.length === 0 || $label.is(':hidden')) return;
@@ -285,7 +286,7 @@ $(function () {
     }
 
     $input.on('blur', commitRename);
-    $input.on('keydown', function(ev) {
+    $input.on('keydown', function (ev) {
       if (ev.key === 'Enter') {
         ev.preventDefault();
         $input.off('blur');
@@ -296,7 +297,7 @@ $(function () {
         commitRename();
       }
     });
-    $input.on('click', function(ev) { ev.stopPropagation(); });
+    $input.on('click', function (ev) { ev.stopPropagation(); });
   });
 
   // R-initiated: add workspace tab (flat or as child of parent)

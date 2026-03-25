@@ -33,29 +33,38 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
   if (!is.null(workspaces)) {
+    # Preserve flags from already-classed workspaces (e.g. from deserialization)
+    if (inherits(workspaces, "dock_workspaces")) {
+      ws_create <- attr(workspaces, "ws_create") %||% ws_create
+      ws_rename <- attr(workspaces, "ws_rename") %||% ws_rename
+      ws_delete <- attr(workspaces, "ws_delete") %||% ws_delete
+    }
     workspaces <- validate_workspaces(workspaces, blocks, extensions)
-    attr(workspaces, "ws_create") <- isTRUE(ws_create)
-    attr(workspaces, "ws_rename") <- isTRUE(ws_rename)
-    attr(workspaces, "ws_delete") <- isTRUE(ws_delete)
+    workspaces <- as_dock_workspaces(workspaces, ws_create, ws_rename, ws_delete)
   }
 
   if (!is_dock_layout(layout)) {
     layout <- create_dock_layout(blocks, extensions, layout)
   }
 
-  new_board(
+  board_args <- list(
     blocks = as_blocks(blocks),
     links = as_links(links),
     stacks = as_dock_stacks(stacks),
     ...,
     extensions = as_dock_extensions(extensions),
     layout = layout,
-    workspaces = workspaces,
     options = as_board_options(options),
     ctor = forward_ctor(ctor),
     pkg = pkg,
     class = c(class, "dock_board")
   )
+
+  if (!is.null(workspaces)) {
+    board_args[["workspaces"]] <- workspaces
+  }
+
+  do.call(new_board, board_args)
 }
 
 #' @export
@@ -154,6 +163,14 @@ dock_workspaces <- function(x) {
 #' @export
 has_workspaces <- function(x) {
   !is.null(dock_workspaces(x))
+}
+
+as_dock_workspaces <- function(x, ws_create = TRUE, ws_rename = TRUE,
+                               ws_delete = TRUE) {
+  attr(x, "ws_create") <- isTRUE(ws_create)
+  attr(x, "ws_rename") <- isTRUE(ws_rename)
+  attr(x, "ws_delete") <- isTRUE(ws_delete)
+  structure(x, class = "dock_workspaces")
 }
 
 ws_can_create <- function(x) {

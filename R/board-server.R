@@ -249,7 +249,13 @@ manage_dock_workspaces <- function(board, update, actions,
     function(nm) !isTRUE(leaves[[nm]][["disabled"]]),
     leaf_names
   )
-  active_ws <- reactiveVal(enabled_leaves[1L])
+  saved_active <- attr(workspaces, "active_ws")
+  initial_active <- if (!is.null(saved_active) && saved_active %in% enabled_leaves) {
+    saved_active
+  } else {
+    enabled_leaves[1L]
+  }
+  active_ws <- reactiveVal(initial_active)
 
   # Build block->workspace and ext->workspace maps
   # blocks: block_id -> character vector of leaf workspace names (1:many)
@@ -351,17 +357,19 @@ manage_dock_workspaces <- function(board, update, actions,
 
           restore_dock(layout, proxy)
 
+          is_initial_ws <- identical(workspace, initial_active)
           for (id in as_dock_panel_id(layout)) {
             if (is_block_panel_id(id)) {
               show_block_panel(
                 id, add_panel = FALSE, proxy = proxy,
-                workspace = workspace
+                workspace = workspace,
+                reparent = is_initial_ws
               )
             } else if (is_ext_panel_id(id)) {
               show_ext_panel(
                 id, add_panel = FALSE, proxy = proxy,
                 workspace = workspace,
-                reparent = identical(workspace, leaf_names[1L])
+                reparent = is_initial_ws
               )
             } else {
               blockr_abort(
@@ -1103,6 +1111,7 @@ manage_dock_workspaces <- function(board, update, actions,
     active_ws = active_ws,
     ws_map = ws_map,
     ws_dom_names = ws_dom_names,
+    leaf_parent = leaf_parent,
     switch_workspace = switch_ws,
     prev_active_group = reactive(ws_prev_active[[active_ws()]]())
   )

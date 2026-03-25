@@ -111,7 +111,7 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
 }
 
 show_block_panel <- function(block, add_panel = TRUE, proxy = dock_proxy(),
-                             workspace = NULL) {
+                             workspace = NULL, reparent = TRUE) {
 
   if (isTRUE(add_panel)) {
     add_block_panel(block, proxy = proxy)
@@ -121,7 +121,9 @@ show_block_panel <- function(block, add_panel = TRUE, proxy = dock_proxy(),
     add_block_panel(block, position = add_panel, proxy = proxy)
   }
 
-  show_block_ui(block, proxy$session, workspace = workspace)
+  if (isTRUE(reparent)) {
+    show_block_ui(block, proxy$session, workspace = workspace)
+  }
 
   invisible(NULL)
 }

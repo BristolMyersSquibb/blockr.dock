@@ -23,6 +23,9 @@ new_dock_board(
   layout = default_grid(blocks, extensions),
   options = dock_board_options(),
   workspaces = NULL,
+  ws_create = TRUE,
+  ws_rename = TRUE,
+  ws_delete = TRUE,
   ctor = NULL,
   pkg = NULL,
   class = character()

@@ -117,7 +117,12 @@ workspace_dock_ui <- function(id, x) {
   leaves <- ws_leaves(workspaces)
   leaf_names <- names(leaves)
   enabled <- Filter(function(nm) !isTRUE(leaves[[nm]][["disabled"]]), leaf_names)
-  first_leaf <- enabled[1L]
+  saved_active <- attr(workspaces, "active_ws")
+  first_leaf <- if (!is.null(saved_active) && saved_active %in% enabled) {
+    saved_active
+  } else {
+    enabled[1L]
+  }
   dock_height <- "calc(100vh - 48px)"
 
   div(
@@ -144,21 +149,16 @@ workspace_tabs_ui <- function(id, x) {
   workspaces <- dock_workspaces(x)
   leaves <- ws_leaves(workspaces)
   enabled <- Filter(function(nm) !isTRUE(leaves[[nm]][["disabled"]]), names(leaves))
-  first_leaf <- enabled[1L]
+  saved_active <- attr(workspaces, "active_ws")
+  active_leaf <- if (!is.null(saved_active) && saved_active %in% enabled) {
+    saved_active
+  } else {
+    enabled[1L]
+  }
 
   can_rename <- ws_can_rename(x)
   can_delete <- ws_can_delete(x)
   can_create <- ws_can_create(x)
-
-  # First top-level entry that has at least one enabled leaf
-  first_top <- Find(function(nm) {
-    ws <- workspaces[[nm]]
-    if (is_ws_parent(ws)) {
-      any(!vapply(ws[["children"]], function(c) isTRUE(c[["disabled"]]), logical(1L)))
-    } else {
-      !isTRUE(ws[["disabled"]])
-    }
-  }, names(workspaces))
 
   tags$ul(
     class = "nav nav-tabs blockr-workspace-tabs",
@@ -169,8 +169,9 @@ workspace_tabs_ui <- function(id, x) {
       if (is_ws_parent(ws)) {
         # Parent tab with dropdown for children
         children <- ws[["children"]]
-        first_child <- names(children)[1L]
-        is_active <- nm == first_top
+        # Active if the active_leaf is one of this parent's children
+        active_child <- Find(function(cnm) cnm == active_leaf, names(children))
+        is_active <- !is.null(active_child)
 
         # Parent is disabled if ALL children are disabled
         all_disabled <- all(
@@ -193,7 +194,7 @@ workspace_tabs_ui <- function(id, x) {
           tags$span(class = "ws-parent-label", nm),
           tags$span(
             class = "ws-active-child",
-            if (is_active) paste0(" / ", first_child)
+            if (is_active) paste0(" / ", active_child)
           ),
           if (can_rename || can_delete) tags$span(
             class = "ws-tab-actions ws-parent-actions",
@@ -214,7 +215,7 @@ workspace_tabs_ui <- function(id, x) {
             class = "dropdown-menu workspace-child-menu",
             `data-parent` = nm,
             lapply(names(children), function(cnm) {
-              is_first <- cnm == first_child && is_active
+              is_first <- identical(cnm, active_child)
               child_disabled <- isTRUE(children[[cnm]][["disabled"]])
 
               child_classes <- paste(
@@ -256,7 +257,7 @@ workspace_tabs_ui <- function(id, x) {
         )
       } else {
         # Leaf tab — no dropdown
-        is_active <- nm == first_leaf
+        is_active <- nm == active_leaf
         is_disabled <- isTRUE(ws[["disabled"]])
 
         tab_classes <- paste(
