@@ -174,15 +174,15 @@ as_dock_workspaces <- function(x, ws_create = TRUE, ws_rename = TRUE,
 }
 
 ws_can_create <- function(x) {
-  isTRUE(attr(dock_workspaces(x), "ws_create") %||% TRUE)
+  !is_dock_locked() && isTRUE(attr(dock_workspaces(x), "ws_create") %||% TRUE)
 }
 
 ws_can_rename <- function(x) {
-  isTRUE(attr(dock_workspaces(x), "ws_rename") %||% TRUE)
+  !is_dock_locked() && isTRUE(attr(dock_workspaces(x), "ws_rename") %||% TRUE)
 }
 
 ws_can_delete <- function(x) {
-  isTRUE(attr(dock_workspaces(x), "ws_delete") %||% TRUE)
+  !is_dock_locked() && isTRUE(attr(dock_workspaces(x), "ws_delete") %||% TRUE)
 }
 
 validate_workspaces <- function(workspaces, blocks, extensions) {
