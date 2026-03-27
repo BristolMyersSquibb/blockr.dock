@@ -95,6 +95,26 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
 
   stopifnot(is_blocks(blocks))
 
+  # Resolve the correct proxy: active workspace proxy or single dock proxy
+  if (!is.null(dock$active_ws)) {
+    ws <- dock$active_ws()
+    proxy <- dock$proxies[[ws]]
+    workspace <- dock$ws_dom_names[[ws]]
+
+    # Register new blocks in the active workspace's ws_map
+    wm <- dock$ws_map()
+    for (i in names(blocks)) {
+      block_workspaces <- wm$blocks[[i]]
+      if (is.null(block_workspaces) || !ws %in% block_workspaces) {
+        wm$blocks[[i]] <- c(block_workspaces, ws)
+      }
+    }
+    dock$ws_map(wm)
+  } else {
+    proxy <- dock$proxy
+    workspace <- NULL
+  }
+
   for (i in names(blocks)) {
     insertUI(
       paste0("#", id, "-blocks_offcanvas"),
@@ -104,7 +124,10 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
       session = session
     )
 
-    show_block_panel(blocks[i], determine_panel_pos(dock), dock$proxy)
+    show_block_panel(
+      blocks[i], determine_panel_pos(dock), proxy,
+      workspace = workspace
+    )
   }
 
   invisible(x)
