@@ -276,6 +276,12 @@ manage_dock_workspaces <- function(board, update, actions,
   ws_prev_active <- reactiveValues()
   ws_active_trail <- reactiveValues()
 
+  # Track workspaces whose block UIs have been reparented into panels.
+  # On init only the initial_active workspace is reparented; others are
+  # deferred until the user first switches to them.
+  ws_reparented <- new.env(parent = emptyenv())
+  ws_reparented[[initial_active]] <- TRUE
+
   # Maps current workspace name -> original name (used for DOM selectors).
   # DockView output IDs are immutable, so DOM operations must use the
   # name from when the DockView was created.
@@ -516,6 +522,19 @@ manage_dock_workspaces <- function(board, update, actions,
     for (bid in multi_ws_bids) {
       if (ws %in% wm$blocks[[bid]]) {
         log_debug("switch_ws: show_block_ui({bid}, workspace={dom_ws})")
+        show_block_ui(bid, session, workspace = dom_ws)
+      }
+    }
+
+    # First visit: reparent single-workspace blocks (deferred from init)
+    if (is.null(ws_reparented[[ws]])) {
+      ws_reparented[[ws]] <- TRUE
+      single_ws_bids <- names(Filter(
+        function(ws_vec) length(ws_vec) == 1L && ws %in% ws_vec,
+        wm$blocks
+      ))
+      for (bid in single_ws_bids) {
+        log_debug("switch_ws: first-visit reparent {bid} to {dom_ws}")
         show_block_ui(bid, session, workspace = dom_ws)
       }
     }
