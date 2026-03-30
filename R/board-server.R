@@ -68,6 +68,9 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
   # Resolve layout: use provided layout or fall back to board's dock_layout
   init_layout <- layout %||% isolate(dock_layout(board$board))
 
+  # Block/ext cards live at the board (parent) namespace level
+  board_ns <- get_session()$ns
+
   moduleServer(id, function(input, output, session) {
 
     dock <- set_dock_view_output(session = session)
@@ -89,9 +92,11 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
 
         for (pid in as_dock_panel_id(init_layout)) {
           if (is_block_panel_id(pid)) {
-            show_block_panel(pid, add_panel = FALSE, proxy = dock)
+            show_block_panel(pid, add_panel = FALSE, proxy = dock,
+                             board_ns = board_ns)
           } else if (is_ext_panel_id(pid)) {
-            show_ext_panel(pid, add_panel = FALSE, proxy = dock)
+            show_ext_panel(pid, add_panel = FALSE, proxy = dock,
+                           board_ns = board_ns)
           } else {
             blockr_abort(
               "Unknown panel type {class(pid)}.",
@@ -120,10 +125,12 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
         )
 
         if (is_block_panel_id(pid)) {
-          hide_block_panel(pid, rm_panel = TRUE, proxy = dock)
+          hide_block_panel(pid, rm_panel = TRUE, proxy = dock,
+                           board_ns = board_ns)
           n_panels(n_panels() - 1L)
         } else if (is_ext_panel_id(pid)) {
-          hide_ext_panel(pid, rm_panel = TRUE, proxy = dock)
+          hide_ext_panel(pid, rm_panel = TRUE, proxy = dock,
+                         board_ns = board_ns)
           n_panels(n_panels() - 1L)
         } else {
           blockr_abort(
@@ -167,7 +174,8 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
             show_block_panel(
               board_blocks(board$board)[sub("^blk-", "", pid)],
               add_panel = pos,
-              proxy = dock
+              proxy = dock,
+              board_ns = board_ns
             )
 
             n_panels(n_panels() + 1L)
@@ -179,7 +187,8 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
             show_ext_panel(
               exts[[sub("^ext-", "", pid)]],
               add_panel = pos,
-              proxy = dock
+              proxy = dock,
+              board_ns = board_ns
             )
 
             n_panels(n_panels() + 1L)
@@ -244,6 +253,7 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
     list(
       layout = reactive(dockViewR::get_dock(dock)),
       proxy = dock,
+      board_ns = board_ns,
       prev_active_group = prev_active_group,
       n_panels = n_panels,
       active_group_trail = active_group_trail

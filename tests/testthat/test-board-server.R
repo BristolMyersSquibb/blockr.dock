@@ -15,10 +15,10 @@ test_that("board server", {
       dock <- res[["dock"]]
 
       expect_type(dock, "list")
-      expect_length(dock, 5L)
+      expect_length(dock, 6L)
       expect_named(
         dock,
-        c("layout", "proxy", "prev_active_group", "n_panels",
+        c("layout", "proxy", "board_ns", "prev_active_group", "n_panels",
           "active_group_trail")
       )
 
@@ -44,10 +44,10 @@ test_that("board server", {
       dock <- res[["dock"]]
 
       expect_type(dock, "list")
-      expect_length(dock, 5L)
+      expect_length(dock, 6L)
       expect_named(
         dock,
-        c("layout", "proxy", "prev_active_group", "n_panels",
+        c("layout", "proxy", "board_ns", "prev_active_group", "n_panels",
           "active_group_trail")
       )
 
