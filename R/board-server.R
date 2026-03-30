@@ -23,8 +23,9 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
     docks <- list()
     for (ws_name in names(workspaces)) {
+      ws_ly <- workspace_layout(workspaces[[ws_name]])
       docks[[ws_name]] <- manage_dock(
-        ws_dock_id(ws_name), board, update, triggers, ws_name = ws_name
+        ws_dock_id(ws_name), board, update, triggers, layout = ws_ly
       )
     }
 
@@ -62,7 +63,10 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   )
 }
 
-manage_dock <- function(id, board, update, actions, ws_name = NULL) {
+manage_dock <- function(id, board, update, actions, layout = NULL) {
+
+  # Resolve layout: use provided layout or fall back to board's dock_layout
+  init_layout <- layout %||% isolate(dock_layout(board$board))
 
   moduleServer(id, function(input, output, session) {
 
@@ -81,11 +85,9 @@ manage_dock <- function(id, board, update, actions, ws_name = NULL) {
     observeEvent(
       req(input[[dock_input("initialized")]]),
       {
-        layout <- ws_layout(board, ws_name)
+        restore_dock(init_layout, dock)
 
-        restore_dock(layout, dock)
-
-        for (pid in as_dock_panel_id(layout)) {
+        for (pid in as_dock_panel_id(init_layout)) {
           if (is_block_panel_id(pid)) {
             show_block_panel(pid, add_panel = FALSE, proxy = dock)
           } else if (is_ext_panel_id(pid)) {
@@ -102,7 +104,7 @@ manage_dock <- function(id, board, update, actions, ws_name = NULL) {
     )
 
     n_panels <- reactiveVal(
-      isolate(length(determine_active_views(ws_layout(board, ws_name))))
+      length(determine_active_views(init_layout))
     )
 
     observeEvent(
@@ -249,32 +251,194 @@ manage_dock <- function(id, board, update, actions, ws_name = NULL) {
   })
 }
 
-# Get workspace-specific or global layout from the board
-ws_layout <- function(board, ws_name = NULL) {
-  if (!is.null(ws_name)) {
-    workspace_layout(board$board[["layout"]][[ws_name]])
-  } else {
-    dock_layout(board$board)
-  }
-}
-
 add_ws_observer <- function(session, board, ws_state, update, triggers, docks) {
   input <- session$input
+  ns <- session$ns
 
+  # Show modal for workspace creation
   observeEvent(input$ws_nav_add, {
     req(ws_can_crud(ws_state()))
 
     ws <- ws_state()
-    new_name <- paste("Page", length(ws) + 1L)
-    ws[[new_name]] <- dock_workspace()
-    ws_state(ws)
+    default_name <- paste("Page", length(ws) + 1L)
 
-    docks[[new_name]] <<- manage_dock(
-      ws_dock_id(new_name), board, update, triggers, ws_name = new_name
+    # Build block options
+    blk_ids <- board_block_ids(board$board)
+    blk_options <- list()
+
+    if (length(blk_ids)) {
+      blks <- board_blocks(board$board)[blk_ids]
+      meta <- blks_metadata(blks)
+
+      for (i in seq_along(blk_ids)) {
+        id <- blk_ids[i]
+        blk_options[[length(blk_options) + 1L]] <- list(
+          value = id,
+          label = block_name(blks[[id]]),
+          description = paste0("ID: ", id),
+          package = meta$package[i],
+          icon = meta$icon[i],
+          color = meta$color[i],
+          searchtext = paste(block_name(blks[[id]]), id, meta$package[i])
+        )
+      }
+    }
+
+    # Build extension options
+    ext_ids <- dock_ext_ids(board$board)
+    ext_options <- list()
+
+    if (length(ext_ids)) {
+      all_exts <- as.list(dock_extensions(board$board))
+
+      for (ext_id in ext_ids) {
+        ext <- all_exts[[ext_id]]
+        ext_name <- extension_name(ext)
+        ext_pkg <- ctor_pkg(extension_ctor(ext))
+
+        ext_options[[length(ext_options) + 1L]] <- list(
+          value = ext_id,
+          label = ext_name,
+          description = paste0("ID: ", ext_id),
+          package = coal(ext_pkg, "local"),
+          icon = extension_default_icon(),
+          color = "#999999",
+          searchtext = paste(ext_name, ext_id, ext_pkg)
+        )
+      }
+    }
+
+    showModal(
+      modalDialog(
+        title = "New workspace",
+        size = "l",
+        easyClose = TRUE,
+        footer = NULL,
+        tagList(
+          css_modal(),
+          textInput(
+            ns("ws_new_name"),
+            "Workspace name",
+            value = default_name
+          ),
+          if (length(blk_options)) {
+            tagList(
+              css_block_selectize(),
+              selectizeInput(
+                ns("ws_new_blocks"),
+                label = "Blocks to show",
+                choices = NULL,
+                multiple = TRUE,
+                options = list(
+                  options = blk_options,
+                  valueField = "value",
+                  labelField = "label",
+                  searchField = c("label", "description", "searchtext"),
+                  placeholder = "Select blocks...",
+                  openOnFocus = FALSE,
+                  plugins = list("remove_button"),
+                  render = js_blk_selectize_render()
+                )
+              )
+            )
+          },
+          if (length(ext_options)) {
+            selectizeInput(
+              ns("ws_new_exts"),
+              label = "Extensions to show",
+              choices = NULL,
+              multiple = TRUE,
+              options = list(
+                options = ext_options,
+                valueField = "value",
+                labelField = "label",
+                searchField = c("label", "description", "searchtext"),
+                placeholder = "Select extensions...",
+                openOnFocus = FALSE,
+                plugins = list("remove_button"),
+                render = js_blk_selectize_render()
+              )
+            )
+          },
+          uiOutput(ns("ws_name_validation")),
+          confirm_button(ns("confirm_ws_add"), label = "Create workspace")
+        )
+      )
+    )
+  })
+
+  # Name validation feedback
+  output <- session$output
+  output$ws_name_validation <- renderUI({
+    req(input$ws_new_name)
+    ws <- ws_state()
+    name <- trimws(input$ws_new_name)
+
+    if (nchar(name) == 0L) {
+      tags$div(class = "text-danger", "Name cannot be empty.")
+    } else if (name %in% names(ws)) {
+      tags$div(class = "text-danger", "A workspace with this name already exists.")
+    } else {
+      NULL
+    }
+  })
+
+  # Confirm workspace creation
+  observeEvent(input$confirm_ws_add, {
+    ws <- ws_state()
+    new_name <- trimws(input$ws_new_name)
+
+    # Validate
+    if (nchar(new_name) == 0L || new_name %in% names(ws)) return()
+
+    removeModal()
+
+    # Build layout from selected blocks and extensions
+    selected_ids <- c(input$ws_new_blocks, input$ws_new_exts)
+    ws_ly <- create_dock_layout(
+      blocks = board_blocks(board$board)[
+        intersect(input$ws_new_blocks %||% character(), board_block_ids(board$board))
+      ],
+      extensions = as_dock_extensions(
+        as.list(dock_extensions(board$board))[
+          intersect(input$ws_new_exts %||% character(), dock_ext_ids(board$board))
+        ]
+      )
     )
 
-    # sendInputMessage auto-namespaces, so pass un-namespaced ID
+    ws[[new_name]] <- dock_workspace(layout = ws_ly)
+    ws_state(ws)
+
+    # Insert dock output container into the DOM
+    ws_id <- ws_dock_id(new_name)
+    dock_output_id <- NS(NS(ns(NULL), ws_id), dock_id())
+
+    insertUI(
+      selector = paste0("#", ns("ws_container")),
+      where = "beforeEnd",
+      ui = div(
+        id = ns(paste0("ws_wrap_", ws_id)),
+        class = "blockr-ws-dock",
+        dockViewR::dock_view_output(
+          dock_output_id,
+          width = "100%",
+          height = "100%"
+        )
+      )
+    )
+
+    # Start the dock module for this workspace
+    docks[[new_name]] <<- manage_dock(
+      ws_dock_id(new_name), board, update, triggers, layout = ws_ly
+    )
+
+    # Update the navigation dropdown and switch to new workspace
     session$sendInputMessage("ws_nav", list(add = new_name))
+
+    # Switch to the new workspace
+    session$sendCustomMessage("switch-workspace", list(
+      id = ns(paste0("ws_wrap_", ws_id))
+    ))
   })
 }
 

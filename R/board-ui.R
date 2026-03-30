@@ -90,6 +90,7 @@ dock_outputs_ui <- function(id, workspaces) {
   active <- active_workspace(workspaces)
 
   div(
+    id = NS(id, "ws_container"),
     class = "blockr-ws-container",
     style = paste0("position: relative; height: ", dock_height, ";"),
     lapply(names(workspaces), function(ws_name) {

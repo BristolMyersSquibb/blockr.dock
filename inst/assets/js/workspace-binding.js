@@ -52,7 +52,7 @@ $(function () {
       if (data.hasOwnProperty('add')) {
         var name = data.add;
         var canCrud = data.canCrud !== false;
-        var newItem = $('<button>')
+        var newItem = $('<div>')
           .addClass('dropdown-item blockr-ws-item')
           .attr('data-ws-name', name)
           .append(
@@ -60,29 +60,41 @@ $(function () {
           );
 
         if (canCrud) {
+          var pencilSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-pencil" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"></path></svg>';
+          var xLgSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-x-lg" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"></path></svg>';
           newItem.append(
             $('<span>')
               .addClass('blockr-ws-item-actions')
               .append(
-                $('<button>')
+                $('<span>')
                   .addClass('blockr-ws-action blockr-ws-edit')
+                  .attr('role', 'button')
                   .attr('title', 'Rename')
-                  .html('<i class="bi bi-pencil"></i>'),
-                $('<button>')
+                  .html(pencilSvg),
+                $('<span>')
                   .addClass('blockr-ws-action blockr-ws-remove')
+                  .attr('role', 'button')
                   .attr('title', 'Remove')
-                  .html('<i class="bi bi-x-lg"></i>')
+                  .html(xLgSvg)
               )
           );
         }
 
-        // Insert before the add button (if present) or at end
-        var $addBtn = $(el).find('.blockr-ws-add');
-        if ($addBtn.length) {
-          $addBtn.before(newItem);
+        // Insert before the divider (if present) or at end
+        var $divider = $(el).find('.dropdown-divider');
+        if ($divider.length) {
+          $divider.before(newItem);
         } else {
           $(el).append(newItem);
         }
+
+        // Activate the new item and update toggle label
+        $(el).find('.blockr-ws-item').removeClass('active');
+        newItem.addClass('active');
+        $(el)
+          .closest('.blockr-ws-dropdown')
+          .find('.blockr-ws-toggle-label')
+          .text(name);
       }
 
       if (data.hasOwnProperty('remove')) {
@@ -198,8 +210,23 @@ $(function () {
 
   // Custom message handler to switch the active dockview
   Shiny.addCustomMessageHandler('switch-workspace', function (m) {
-    $('.blockr-ws-dock').removeClass('blockr-ws-dock-active');
-    var target = '#' + m.id;
-    $(target).addClass('blockr-ws-dock-active');
+    var activate = function () {
+      $('.blockr-ws-dock').removeClass('blockr-ws-dock-active');
+      $('#' + CSS.escape(m.id)).addClass('blockr-ws-dock-active');
+    };
+
+    // Element may not exist yet (insertUI in same flush), retry briefly
+    if (document.getElementById(m.id)) {
+      activate();
+    } else {
+      var attempts = 0;
+      var timer = setInterval(function () {
+        attempts++;
+        if (document.getElementById(m.id) || attempts >= 20) {
+          clearInterval(timer);
+          activate();
+        }
+      }, 50);
+    }
   });
 });
