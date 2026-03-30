@@ -18,6 +18,9 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   if (!is.null(workspaces)) {
     input <- session$input
 
+    # Mutable workspace state (board$board is read-only)
+    ws_state <- reactiveVal(workspaces)
+
     docks <- list()
     for (ws_name in names(workspaces)) {
       docks[[ws_name]] <- manage_dock(
@@ -33,9 +36,9 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     })
 
     # Workspace CRUD (only when unlocked)
-    add_ws_observer(session, board, update, triggers, docks)
-    remove_ws_observer(session, board)
-    rename_ws_observer(session, board)
+    add_ws_observer(session, board, ws_state, update, triggers, docks)
+    remove_ws_observer(session, ws_state)
+    rename_ws_observer(session, ws_state)
 
     # Use active workspace's dock for extensions
     dock <- docks[[active_workspace(workspaces)]]
@@ -255,40 +258,74 @@ ws_layout <- function(board, ws_name = NULL) {
   }
 }
 
-add_ws_observer <- function(session, board, update, triggers, docks) {
+add_ws_observer <- function(session, board, ws_state, update, triggers, docks) {
   input <- session$input
-  ws_nav_id <- session$ns("ws_nav")
 
   observeEvent(input$ws_nav_add, {
-    req(ws_can_crud(board_workspaces(board$board)))
+    req(ws_can_crud(ws_state()))
 
-    ws <- board$board[["layout"]]
+    ws <- ws_state()
     new_name <- paste("Page", length(ws) + 1L)
     ws[[new_name]] <- dock_workspace()
-    board$board[["layout"]] <- ws
+    ws_state(ws)
 
     docks[[new_name]] <<- manage_dock(
       ws_dock_id(new_name), board, update, triggers, ws_name = new_name
     )
 
-    session$sendInputMessage(ws_nav_id, list(add = new_name))
+    # sendInputMessage auto-namespaces, so pass un-namespaced ID
+    session$sendInputMessage("ws_nav", list(add = new_name))
   })
 }
 
-remove_ws_observer <- function(session, board) {
+remove_ws_observer <- function(session, ws_state) {
   input <- session$input
-  ws_nav_id <- session$ns("ws_nav")
+  ns <- session$ns
 
+  # Show confirmation modal
   observeEvent(input$ws_nav_remove, {
-    req(ws_can_crud(board_workspaces(board$board)))
+    req(ws_can_crud(ws_state()))
 
     rm_name <- input$ws_nav_remove
-    ws <- board$board[["layout"]]
+    ws <- ws_state()
 
     if (length(ws) <= 1L) {
       notify("Cannot remove the last workspace.")
       return()
     }
+
+    showModal(
+      modalDialog(
+        title = "Remove workspace",
+        size = "s",
+        easyClose = TRUE,
+        footer = NULL,
+        tagList(
+          tags$p(
+            "Are you sure you want to remove workspace ",
+            tags$strong(rm_name), "?"
+          ),
+          div(
+            style = "display: flex; justify-content: flex-end; gap: 8px;
+              margin-top: 20px;",
+            modalButton("Cancel"),
+            actionButton(
+              ns("confirm_ws_remove"),
+              "Remove",
+              class = "btn-danger"
+            )
+          )
+        )
+      )
+    )
+  })
+
+  # Perform removal after confirmation
+  observeEvent(input$confirm_ws_remove, {
+    removeModal()
+
+    rm_name <- input$ws_nav_remove
+    ws <- ws_state()
 
     ws[[rm_name]] <- NULL
 
@@ -296,27 +333,28 @@ remove_ws_observer <- function(session, board) {
       active_workspace(ws) <- names(ws)[1L]
     }
 
-    board$board[["layout"]] <- ws
+    ws_state(ws)
 
-    session$sendInputMessage(ws_nav_id, list(
+    # sendInputMessage auto-namespaces, so pass un-namespaced ID
+    session$sendInputMessage("ws_nav", list(
       remove = rm_name,
       value = active_workspace(ws)
     ))
 
     session$sendCustomMessage("switch-workspace", list(
-      id = session$ns(paste0("ws_wrap_", ws_dock_id(active_workspace(ws))))
+      id = ns(paste0("ws_wrap_", ws_dock_id(active_workspace(ws))))
     ))
   })
 }
 
-rename_ws_observer <- function(session, board) {
+rename_ws_observer <- function(session, ws_state) {
   input <- session$input
 
   observeEvent(input$ws_nav_rename, {
-    req(ws_can_crud(board_workspaces(board$board)))
+    req(ws_can_crud(ws_state()))
 
     rename <- input$ws_nav_rename
-    ws <- board$board[["layout"]]
+    ws <- ws_state()
 
     nms <- names(ws)
     idx <- match(rename$from, nms)
@@ -329,7 +367,7 @@ rename_ws_observer <- function(session, board) {
       active_workspace(ws) <- rename$to
     }
 
-    board$board[["layout"]] <- ws
+    ws_state(ws)
   })
 }
 
