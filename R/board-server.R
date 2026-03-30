@@ -13,7 +13,36 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   triggers <- action_triggers(actions)
 
-  dock <- manage_dock(board, update, triggers, session)
+  workspaces <- board_workspaces(initial_board)
+
+  if (!is.null(workspaces)) {
+    input <- session$input
+
+    docks <- list()
+    for (ws_name in names(workspaces)) {
+      docks[[ws_name]] <- manage_dock(
+        ws_dock_id(ws_name), board, update, triggers, ws_name = ws_name
+      )
+    }
+
+    # Workspace switching
+    observeEvent(input$ws_nav, {
+      session$sendCustomMessage("switch-workspace", list(
+        id = session$ns(paste0("ws_wrap_", ws_dock_id(input$ws_nav)))
+      ))
+    })
+
+    # Workspace CRUD (only when unlocked)
+    add_ws_observer(session, board, update, triggers, docks)
+    remove_ws_observer(session, board)
+    rename_ws_observer(session, board)
+
+    # Use active workspace's dock for extensions
+    dock <- docks[[active_workspace(workspaces)]]
+
+  } else {
+    dock <- manage_dock("dock_main", board, update, triggers)
+  }
 
   ext_res <- lapply(
     exts,
@@ -30,188 +59,278 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   )
 }
 
-manage_dock <- function(board, update, actions, session = get_session()) {
+manage_dock <- function(id, board, update, actions, ws_name = NULL) {
 
-  dock <- set_dock_view_output(session = session)
+  moduleServer(id, function(input, output, session) {
 
-  input <- session$input
+    dock <- set_dock_view_output(session = session)
 
-  if (get_log_level() >= debug_log_level) {
+    if (get_log_level() >= debug_log_level) {
+      observeEvent(
+        input[[dock_input("active-group")]],
+        {
+          ag <- input[[dock_input("active-group")]] # nolint: object_usage_linter.
+          log_debug("active group is now {ag}")
+        }
+      )
+    }
+
+    observeEvent(
+      req(input[[dock_input("initialized")]]),
+      {
+        layout <- ws_layout(board, ws_name)
+
+        restore_dock(layout, dock)
+
+        for (pid in as_dock_panel_id(layout)) {
+          if (is_block_panel_id(pid)) {
+            show_block_panel(pid, add_panel = FALSE, proxy = dock)
+          } else if (is_ext_panel_id(pid)) {
+            show_ext_panel(pid, add_panel = FALSE, proxy = dock)
+          } else {
+            blockr_abort(
+              "Unknown panel type {class(pid)}.",
+              class = "dock_panel_invalid"
+            )
+          }
+        }
+      },
+      once = TRUE
+    )
+
+    n_panels <- reactiveVal(
+      isolate(length(determine_active_views(ws_layout(board, ws_name))))
+    )
+
+    observeEvent(
+      req(input[[dock_input("n-panels")]]),
+      n_panels(input[[dock_input("n-panels")]])
+    )
+
+    observeEvent(
+      input[[dock_input("panel-to-remove")]],
+      {
+        pid <- as_dock_panel_id(
+          input[[dock_input("panel-to-remove")]]
+        )
+
+        if (is_block_panel_id(pid)) {
+          hide_block_panel(pid, rm_panel = TRUE, proxy = dock)
+          n_panels(n_panels() - 1L)
+        } else if (is_ext_panel_id(pid)) {
+          hide_ext_panel(pid, rm_panel = TRUE, proxy = dock)
+          n_panels(n_panels() - 1L)
+        } else {
+          blockr_abort(
+            "Unknown panel type {class(pid)}.",
+            class = "dock_panel_invalid"
+          )
+        }
+      }
+    )
+
+    observeEvent(
+      input[[dock_input("panel-to-add")]],
+      suggest_panels_to_add(dock, board, session = session)
+    )
+
+    observeEvent(
+      req(n_panels() == 0),
+      suggest_panels_to_add(
+        dock,
+        board,
+        actions[["add_block_action"]],
+        panels = list(),
+        session
+      )
+    )
+
+    observeEvent(
+      input$confirm_add,
+      {
+        req(input$add_dock_panel)
+
+        pos <- list(
+          referenceGroup = input[[dock_input("panel-to-add")]],
+          direction = "within"
+        )
+
+        for (pid in input$add_dock_panel) {
+
+          if (grepl("^blk-", pid)) {
+
+            show_block_panel(
+              board_blocks(board$board)[sub("^blk-", "", pid)],
+              add_panel = pos,
+              proxy = dock
+            )
+
+            n_panels(n_panels() + 1L)
+
+          } else if (grepl("^ext-", pid)) {
+
+            exts <- as.list(dock_extensions(board$board))
+
+            show_ext_panel(
+              exts[[sub("^ext-", "", pid)]],
+              add_panel = pos,
+              proxy = dock
+            )
+
+            n_panels(n_panels() + 1L)
+
+          } else {
+
+            blockr_abort(
+              "Unknown panel specification {pid}.",
+              class = "dock_panel_invalid"
+            )
+          }
+        }
+
+        removeModal()
+      }
+    )
+
+    prev_active_group <- reactiveVal()
+    active_group_trail <- reactiveVal()
+
     observeEvent(
       input[[dock_input("active-group")]],
       {
-        ag <- input[[dock_input("active-group")]] # nolint: object_usage_linter.
-        log_debug("active group is now {ag}")
+        cur_ag <- input[[dock_input("active-group")]]
+        pre_ag <- active_group_trail()
+        if (!identical(pre_ag, cur_ag)) {
+          log_trace("setting previous active group to {pre_ag}")
+          prev_active_group(pre_ag)
+        }
+        active_group_trail(cur_ag)
       }
     )
+
+    observeEvent(
+      update()$blocks$mod,
+      {
+        blks <- update()$blocks$mod
+
+        for (blk_id in names(blks)) {
+
+          blk <- blks[[blk_id]]
+          new_name <- block_name(blk)
+          blk_panel_id <- as_block_panel_id(blk_id)
+
+          old_title <- get_dock_panel(blk_panel_id, dock)$title
+
+          if (new_name == old_title) {
+            next
+          }
+
+          log_debug("setting panel title {blk_panel_id} to '{new_name}'")
+
+          dockViewR::set_panel_title(
+            dock,
+            blk_panel_id,
+            new_name
+          )
+        }
+      }
+    )
+
+    list(
+      layout = reactive(dockViewR::get_dock(dock)),
+      proxy = dock,
+      prev_active_group = prev_active_group,
+      n_panels = n_panels,
+      active_group_trail = active_group_trail
+    )
+  })
+}
+
+# Get workspace-specific or global layout from the board
+ws_layout <- function(board, ws_name = NULL) {
+  if (!is.null(ws_name)) {
+    workspace_layout(board$board[["layout"]][[ws_name]])
+  } else {
+    dock_layout(board$board)
   }
+}
 
-  observeEvent(
-    req(input[[dock_input("initialized")]]),
-    {
-      layout <- dock_layout(board$board)
+add_ws_observer <- function(session, board, update, triggers, docks) {
+  input <- session$input
+  ws_nav_id <- session$ns("ws_nav")
 
-      restore_dock(layout, dock)
+  observeEvent(input$ws_nav_add, {
+    req(ws_can_crud(board_workspaces(board$board)))
 
-      for (id in as_dock_panel_id(layout)) {
-        if (is_block_panel_id(id)) {
-          show_block_panel(id, add_panel = FALSE, proxy = dock)
-        } else if (is_ext_panel_id(id)) {
-          show_ext_panel(id, add_panel = FALSE, proxy = dock)
-        } else {
-          blockr_abort(
-            "Unknown panel type {class(id)}.",
-            class = "dock_panel_invalid"
-          )
-        }
-      }
-    },
-    once = TRUE
-  )
+    ws <- board$board[["layout"]]
+    new_name <- paste("Page", length(ws) + 1L)
+    ws[[new_name]] <- dock_workspace()
+    board$board[["layout"]] <- ws
 
-  n_panels <- reactiveVal(
-    isolate(length(determine_active_views(dock_layout(board$board))))
-  )
-
-  observeEvent(
-    req(input[[dock_input("n-panels")]]),
-    n_panels(input[[dock_input("n-panels")]])
-  )
-
-  observeEvent(
-    input[[dock_input("panel-to-remove")]],
-    {
-      id <- as_dock_panel_id(
-        input[[dock_input("panel-to-remove")]]
-      )
-
-      if (is_block_panel_id(id)) {
-        hide_block_panel(id, rm_panel = TRUE, proxy = dock)
-        n_panels(n_panels() - 1L)
-      } else if (is_ext_panel_id(id)) {
-        hide_ext_panel(id, rm_panel = TRUE, proxy = dock)
-        n_panels(n_panels() - 1L)
-      } else {
-        blockr_abort(
-          "Unknown panel type {class(id)}.",
-          class = "dock_panel_invalid"
-        )
-      }
-    }
-  )
-
-  observeEvent(
-    input[[dock_input("panel-to-add")]],
-    suggest_panels_to_add(dock, board, session = session)
-  )
-
-  observeEvent(
-    req(n_panels() == 0),
-    suggest_panels_to_add(
-      dock,
-      board,
-      actions[["add_block_action"]],
-      panels = list(),
-      session
+    docks[[new_name]] <<- manage_dock(
+      ws_dock_id(new_name), board, update, triggers, ws_name = new_name
     )
-  )
 
-  observeEvent(
-    input$confirm_add,
-    {
-      req(input$add_dock_panel)
+    session$sendInputMessage(ws_nav_id, list(add = new_name))
+  })
+}
 
-      pos <- list(
-        referenceGroup = input[[dock_input("panel-to-add")]],
-        direction = "within"
-      )
+remove_ws_observer <- function(session, board) {
+  input <- session$input
+  ws_nav_id <- session$ns("ws_nav")
 
-      for (id in input$add_dock_panel) {
+  observeEvent(input$ws_nav_remove, {
+    req(ws_can_crud(board_workspaces(board$board)))
 
-        if (grepl("^blk-", id)) {
+    rm_name <- input$ws_nav_remove
+    ws <- board$board[["layout"]]
 
-          show_block_panel(
-            board_blocks(board$board)[sub("^blk-", "", id)],
-            add_panel = pos,
-            proxy = dock
-          )
-
-          n_panels(n_panels() + 1L)
-
-        } else if (grepl("^ext-", id)) {
-
-          exts <- as.list(dock_extensions(board$board))
-
-          show_ext_panel(
-            exts[[sub("^ext-", "", id)]],
-            add_panel = pos,
-            proxy = dock
-          )
-
-          n_panels(n_panels() + 1L)
-
-        } else {
-
-          blockr_abort(
-            "Unknown panel specification {id}.",
-            class = "dock_panel_invalid"
-          )
-        }
-      }
-
-      removeModal()
+    if (length(ws) <= 1L) {
+      notify("Cannot remove the last workspace.")
+      return()
     }
-  )
 
-  prev_active_group <- reactiveVal()
-  active_group_trail <- reactiveVal()
+    ws[[rm_name]] <- NULL
 
-  observeEvent(
-    input[[dock_input("active-group")]],
-    {
-      cur_ag <- input[[dock_input("active-group")]]
-      pre_ag <- active_group_trail()
-      if (!identical(pre_ag, cur_ag)) {
-        log_trace("setting previous active group to {pre_ag}")
-        prev_active_group(pre_ag)
-      }
-      active_group_trail(cur_ag)
+    if (identical(active_workspace(ws), rm_name)) {
+      active_workspace(ws) <- names(ws)[1L]
     }
-  )
 
-  observeEvent(
-    update()$blocks$mod,
-    {
-      blks <- update()$blocks$mod
+    board$board[["layout"]] <- ws
 
-      for (id in names(blks)) {
+    session$sendInputMessage(ws_nav_id, list(
+      remove = rm_name,
+      value = active_workspace(ws)
+    ))
 
-        blk <- blks[[id]]
-        new_name <- block_name(blk)
-        blk_panel_id <- as_block_panel_id(id)
+    session$sendCustomMessage("switch-workspace", list(
+      id = session$ns(paste0("ws_wrap_", ws_dock_id(active_workspace(ws))))
+    ))
+  })
+}
 
-        old_title <- get_dock_panel(blk_panel_id, dock)$title
+rename_ws_observer <- function(session, board) {
+  input <- session$input
 
-        if (new_name == old_title) {
-          next
-        }
+  observeEvent(input$ws_nav_rename, {
+    req(ws_can_crud(board_workspaces(board$board)))
 
-        log_debug("setting panel title {blk_panel_id} to '{new_name}'")
+    rename <- input$ws_nav_rename
+    ws <- board$board[["layout"]]
 
-        dockViewR::set_panel_title(
-          dock,
-          blk_panel_id,
-          new_name
-        )
-      }
+    nms <- names(ws)
+    idx <- match(rename$from, nms)
+    if (is.na(idx)) return()
+
+    nms[idx] <- rename$to
+    names(ws) <- nms
+
+    if (identical(active_workspace(ws), rename$from)) {
+      active_workspace(ws) <- rename$to
     }
-  )
 
-  list(
-    layout = reactive(dockViewR::get_dock(dock)),
-    proxy = dock,
-    prev_active_group = prev_active_group
-  )
+    board$board[["layout"]] <- ws
+  })
 }
 
 suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,

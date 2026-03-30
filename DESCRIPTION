@@ -68,3 +68,5 @@ Collate:
     'utils-serdes.R'
     'utils-serve.R'
     'utils-ui.R'
+    'workspace-class.R'
+    'workspace-ui.R'

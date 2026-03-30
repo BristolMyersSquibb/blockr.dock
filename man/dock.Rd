@@ -9,6 +9,7 @@
 \alias{dock_extensions}
 \alias{dock_extensions<-}
 \alias{dock_ext_ids}
+\alias{board_workspaces}
 \alias{dock_board_options}
 \title{Dock board}
 \usage{
@@ -39,6 +40,8 @@ dock_extensions(x) <- value
 
 dock_ext_ids(x)
 
+board_workspaces(x)
+
 dock_board_options()
 }
 \arguments{
@@ -52,7 +55,8 @@ dock_board_options()
 
 \item{extensions}{Dock extensions}
 
-\item{layout}{Dock layout}
+\item{layout}{Either a grid specification (list), a \code{dock_layout} or a
+\code{\link[=dock_workspaces]{dock_workspaces()}} object}
 
 \item{options}{Board-level user settings}
 
@@ -70,14 +74,19 @@ the coercion function \code{as_dock_board()}. Inheritance can be checked using
 \code{is_dock_board()}, which returns a boolean. Getters \code{dock_layout()} and
 \code{dock_extensions()} return \code{dock_layout} and \code{dock_extension} objects while
 setters \verb{dock_layout<-()} and \verb{dock_extensions<-()} return the updated board
-object (invisibly). A character vector of IDs is returned by \code{dock_ext_ids()}
-and \code{dock_board_options()} returns a \code{board_options} object.
+object (invisibly). When \code{layout} is a \code{dock_workspaces} object,
+\code{board_workspaces()} returns it and \code{dock_layout()} returns the active
+workspace's layout. A character vector of IDs is returned by
+\code{dock_ext_ids()} and \code{dock_board_options()} returns a \code{board_options}
+object.
 }
 \description{
 Using the docking layout manager provided by dockViewR, a \code{dock_board}
 extends \code{\link[blockr.core:new_board]{blockr.core::new_board()}}. In addition to the attributes contained
 in a core board, this also includes dock extensions (as \code{extensions})
-and the panel arrangement (as \code{layout}).
+and the panel arrangement (as \code{layout}). The \code{layout} parameter accepts
+either a grid specification (as before) or a \code{\link[=dock_workspaces]{dock_workspaces()}} object
+for multi-workspace boards.
 }
 \examples{
 brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))

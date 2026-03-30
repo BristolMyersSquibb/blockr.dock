@@ -19,6 +19,16 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
     session
   )
 
+  # When workspaces are present, serialize the full dock_workspaces object
+  # (which contains per-workspace layouts). Otherwise serialize a single layout.
+  ly <- x[["layout"]]
+
+  layout_data <- if (is_dock_workspaces(ly)) {
+    blockr_ser(ly, dock = dock)
+  } else {
+    as_dock_layout(dock$layout())
+  }
+
   do.call(
     blockr_ser,
     c(
@@ -27,7 +37,7 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
         board_id = id,
         blocks = Map(c, state, visible = lapply(visibility, list)),
         options = opts,
-        layout = as_dock_layout(dock$layout()),
+        layout = layout_data,
         extensions = lapply(
           list(...),
           function(x) lapply(x[["state"]], reval_if)
@@ -40,6 +50,25 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
 #' @export
 blockr_ser.dock_layout <- function(x, data, ...) {
   list(object = class(x), payload = unclass(coal(data, x)))
+}
+
+#' @export
+blockr_ser.dock_workspace <- function(x, data, ...) {
+  list(
+    object = class(x),
+    payload = list(layout = unclass(workspace_layout(x)))
+  )
+}
+
+#' @export
+blockr_ser.dock_workspaces <- function(x, data, ...) {
+  list(
+    object = class(x),
+    payload = list(
+      active = active_workspace(x),
+      workspaces = lapply(x, blockr_ser)
+    )
+  )
 }
 
 #' @export
@@ -62,6 +91,20 @@ blockr_ser.dock_extensions <- function(x, data, ...) {
 #' @export
 blockr_deser.dock_layout <- function(x, data, ...) {
   as_dock_layout(data[["payload"]], ...)
+}
+
+#' @export
+blockr_deser.dock_workspace <- function(x, data, ...) {
+  dock_workspace(layout = data[["payload"]][["layout"]])
+}
+
+#' @export
+blockr_deser.dock_workspaces <- function(x, data, ...) {
+  payload <- data[["payload"]]
+  ws_list <- lapply(payload[["workspaces"]], blockr_deser)
+  res <- dock_workspaces(ws_list)
+  active_workspace(res) <- payload[["active"]]
+  res
 }
 
 #' @export
@@ -100,11 +143,18 @@ restore_board.dock_board <- function(x, new, result, ..., meta = NULL,
 
   des <- blockr_deser(new)
 
-  res <- as_dock_board(
-    des,
+  # Preserve workspace layout if present in deserialized board
+  extra <- list(
     extensions = dock_extensions(x),
     options = board_options(x)
   )
+
+  ly <- des[["layout"]]
+  if (is_dock_workspaces(ly)) {
+    extra[["layout"]] <- ly
+  }
+
+  res <- do.call(as_dock_board, c(list(des), extra))
 
   if (is.null(meta)) {
     result(res)

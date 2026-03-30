@@ -9,6 +9,16 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
   stopifnot(is_string(id))
 
   offcanvas_id <- NS(id, "options_offcanvas")
+  workspaces <- board_workspaces(x)
+
+  # Workspace nav in the navbar (only when workspaces are defined)
+  ws_nav <- NULL
+  if (!is.null(workspaces)) {
+    ws_nav <- workspace_nav_ui(id, workspaces)
+  }
+
+  # Dock output(s): one per workspace, or a single one without workspaces
+  dock_outputs <- dock_outputs_ui(id, workspaces)
 
   tagList(
     show_hide_block_dep(),
@@ -26,6 +36,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       ),
       div(
         class = "blockr-navbar-right",
+        ws_nav,
         tags$button(
           class = "blockr-navbar-icon-btn",
           `data-bs-toggle` = "offcanvas",
@@ -42,11 +53,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
         opt_ui_or_null("generate_code", plugins, x)
       )
     ),
-    dockViewR::dock_view_output(
-      NS(id, dock_id()),
-      width = "100%",
-      height = "calc(100vh - 48px)"
-    ),
+    dock_outputs,
     off_canvas(
       id = NS(id, "exts_offcanvas"),
       position = "bottom",
@@ -59,6 +66,53 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       )
     )
   )
+}
+
+# Generate dockview output(s). When workspaces are defined, one dock per
+# workspace stacked via CSS; otherwise a single dock.
+# Each dock output is placed inside a moduleServer namespace so that
+# manage_dock(id, ...) can render to session$output[[dock_id()]] and
+# dockViewR inputs resolve correctly.
+dock_outputs_ui <- function(id, workspaces) {
+
+  dock_height <- "calc(100vh - 48px)"
+
+  if (is.null(workspaces)) {
+    return(
+      dockViewR::dock_view_output(
+        NS(NS(id, "dock_main"), dock_id()),
+        width = "100%",
+        height = dock_height
+      )
+    )
+  }
+
+  active <- active_workspace(workspaces)
+
+  div(
+    class = "blockr-ws-container",
+    style = paste0("position: relative; height: ", dock_height, ";"),
+    lapply(names(workspaces), function(ws_name) {
+      ws_id <- ws_dock_id(ws_name)
+      is_active <- identical(ws_name, active)
+
+      div(
+        id = NS(id, paste0("ws_wrap_", ws_id)),
+        class = paste("blockr-ws-dock",
+                       if (is_active) "blockr-ws-dock-active"),
+        dockViewR::dock_view_output(
+          NS(NS(id, ws_id), dock_id()),
+          width = "100%",
+          height = "100%"
+        )
+      )
+    })
+  )
+}
+
+# Workspace-specific dock ID from workspace name
+ws_dock_id <- function(ws_name) {
+  paste0("dock_", gsub("[^a-zA-Z0-9_]", "_", ws_name))
 }
 
 options_ui <- function(id, x, ...) {
