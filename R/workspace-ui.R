@@ -60,20 +60,22 @@ ws_item_ui <- function(ws_name, active = FALSE, can_crud = FALSE) {
   if (can_crud) {
     actions <- tags$span(
       class = "blockr-ws-item-actions",
-      tags$button(
+      tags$span(
         class = "blockr-ws-action blockr-ws-edit",
+        role = "button",
         title = "Rename",
         bsicons::bs_icon("pencil")
       ),
-      tags$button(
+      tags$span(
         class = "blockr-ws-action blockr-ws-remove",
+        role = "button",
         title = "Remove",
         bsicons::bs_icon("x-lg")
       )
     )
   }
 
-  tags$button(
+  tags$div(
     class = cls,
     `data-ws-name` = ws_name,
     tags$span(class = "blockr-ws-item-name", ws_name),

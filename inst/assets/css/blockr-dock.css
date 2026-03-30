@@ -793,7 +793,7 @@ label:has(input[type="file"]) {
 }
 
 /* Workspace item */
-.blockr-ws-item {
+.blockr-ws-item.dropdown-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -805,17 +805,17 @@ label:has(input[type="file"]) {
   cursor: pointer;
 }
 
-.blockr-ws-item.active {
+.blockr-ws-item.dropdown-item.active {
   background-color: var(--blockr-primary-100);
   color: var(--blockr-primary-700);
   font-weight: var(--blockr-font-weight-medium);
 }
 
-.blockr-ws-item:hover {
+.blockr-ws-item.dropdown-item:hover {
   background-color: var(--blockr-grey-100);
 }
 
-.blockr-ws-item.active:hover {
+.blockr-ws-item.dropdown-item.active:hover {
   background-color: var(--blockr-primary-100);
 }
 
@@ -835,7 +835,7 @@ label:has(input[type="file"]) {
   flex-shrink: 0;
 }
 
-.blockr-ws-item:hover .blockr-ws-item-actions {
+.blockr-ws-item.dropdown-item:hover .blockr-ws-item-actions {
   display: flex;
 }
 
