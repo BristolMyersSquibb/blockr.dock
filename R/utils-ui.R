@@ -141,12 +141,12 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
   if (identical(type, "block")) {
     blocks <- board_blocks(board)
     add_block_panel(blocks[id], position = pos, proxy = proxy)
-    show_block_ui(id, proxy$session)
+    show_block_ui(id, proxy$session, board_ns = proxy_board_ns(proxy))
   } else {
     exts <- dock_extensions(board)
 
     add_ext_panel(exts[[id]], position = pos, proxy = proxy)
-    show_ext_ui(id, proxy$session)
+    show_ext_ui(id, proxy$session, board_ns = proxy_board_ns(proxy))
   }
 
   invisible()

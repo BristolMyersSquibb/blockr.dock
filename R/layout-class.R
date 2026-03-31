@@ -82,31 +82,19 @@ draw_panel_tree <- function(x) {
 
     group_id <<- group_id + 1L
 
-    res <- list(
+    list(
       type = "leaf",
       data = list(
         views = as.list(views),
         activeView = views[1L],
         id = as.character(group_id)
-      )
+      ),
+      size = size
     )
-
-    if (size != 1) {
-      res <- c(res, list(size = size))
-    }
-
-    res
   }
 
   new_branch <- function(x, size = 1) {
-
-    res <- list(type = "branch", data = filter_empty(x))
-
-    if (size != 1) {
-      res <- c(res, list(size = size))
-    }
-
-    res
+    list(type = "branch", data = filter_empty(x), size = size)
   }
 
   draw_tree <- function(x, size = 1) {

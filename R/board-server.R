@@ -31,18 +31,55 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
     # Workspace switching
     observeEvent(input$ws_nav, {
+      new_ws <- input$ws_nav
+      ws <- ws_state()
+      old_ws <- active_workspace(ws)
+
+      if (!identical(old_ws, new_ws)) {
+        # Move elements from old workspace back to offcanvas
+        if (old_ws %in% names(docks)) {
+          old_proxy <- docks[[old_ws]]$proxy
+          old_bns <- proxy_board_ns(old_proxy)
+          for (bid in as_obj_id(block_panel_ids(old_proxy))) {
+            hide_block_ui(bid, old_proxy$session, board_ns = old_bns)
+          }
+          for (eid in as_obj_id(ext_panel_ids(old_proxy))) {
+            hide_ext_ui(eid, old_proxy$session, board_ns = old_bns)
+          }
+        }
+
+        # Move elements into new workspace panels
+        if (new_ws %in% names(docks)) {
+          new_proxy <- docks[[new_ws]]$proxy
+          new_bns <- proxy_board_ns(new_proxy)
+          for (bid in as_obj_id(block_panel_ids(new_proxy))) {
+            show_block_ui(bid, new_proxy$session, board_ns = new_bns)
+          }
+          for (eid in as_obj_id(ext_panel_ids(new_proxy))) {
+            show_ext_ui(eid, new_proxy$session, board_ns = new_bns)
+          }
+        }
+
+        # Update active workspace and switch the dock used by extensions
+        active_workspace(ws) <- new_ws
+        ws_state(ws)
+        update_active_dock(active_dock, docks[[new_ws]])
+      }
+
       session$sendCustomMessage("switch-workspace", list(
-        id = session$ns(paste0("ws_wrap_", ws_dock_id(input$ws_nav)))
+        id = session$ns(paste0("ws_wrap_", ws_dock_id(new_ws)))
       ))
-    })
+    }, ignoreInit = TRUE)
 
     # Workspace CRUD (only when unlocked)
     add_ws_observer(session, board, ws_state, update, triggers, docks)
     remove_ws_observer(session, ws_state)
     rename_ws_observer(session, ws_state)
 
-    # Use active workspace's dock for extensions
-    dock <- docks[[active_workspace(workspaces)]]
+    # Reactive dock that always points to the active workspace's dock
+    active_dock <- reactiveValues()
+    update_active_dock(active_dock, docks[[active_workspace(workspaces)]])
+    dock <- active_dock
 
   } else {
     dock <- manage_dock("dock_main", board, update, triggers)
@@ -74,6 +111,7 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
   moduleServer(id, function(input, output, session) {
 
     dock <- set_dock_view_output(session = session)
+    dock$board_ns <- board_ns
 
     if (get_log_level() >= debug_log_level) {
       observeEvent(
@@ -92,11 +130,9 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
 
         for (pid in as_dock_panel_id(init_layout)) {
           if (is_block_panel_id(pid)) {
-            show_block_panel(pid, add_panel = FALSE, proxy = dock,
-                             board_ns = board_ns)
+            show_block_panel(pid, add_panel = FALSE, proxy = dock)
           } else if (is_ext_panel_id(pid)) {
-            show_ext_panel(pid, add_panel = FALSE, proxy = dock,
-                           board_ns = board_ns)
+            show_ext_panel(pid, add_panel = FALSE, proxy = dock)
           } else {
             blockr_abort(
               "Unknown panel type {class(pid)}.",
@@ -125,12 +161,10 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
         )
 
         if (is_block_panel_id(pid)) {
-          hide_block_panel(pid, rm_panel = TRUE, proxy = dock,
-                           board_ns = board_ns)
+          hide_block_panel(pid, rm_panel = TRUE, proxy = dock)
           n_panels(n_panels() - 1L)
         } else if (is_ext_panel_id(pid)) {
-          hide_ext_panel(pid, rm_panel = TRUE, proxy = dock,
-                         board_ns = board_ns)
+          hide_ext_panel(pid, rm_panel = TRUE, proxy = dock)
           n_panels(n_panels() - 1L)
         } else {
           blockr_abort(
@@ -174,8 +208,7 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
             show_block_panel(
               board_blocks(board$board)[sub("^blk-", "", pid)],
               add_panel = pos,
-              proxy = dock,
-              board_ns = board_ns
+              proxy = dock
             )
 
             n_panels(n_panels() + 1L)
@@ -187,8 +220,7 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
             show_ext_panel(
               exts[[sub("^ext-", "", pid)]],
               add_panel = pos,
-              proxy = dock,
-              board_ns = board_ns
+              proxy = dock
             )
 
             n_panels(n_panels() + 1L)
@@ -253,7 +285,6 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
     list(
       layout = reactive(dockViewR::get_dock(dock)),
       proxy = dock,
-      board_ns = board_ns,
       prev_active_group = prev_active_group,
       n_panels = n_panels,
       active_group_trail = active_group_trail

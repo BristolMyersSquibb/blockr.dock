@@ -8,14 +8,16 @@ show_ext_panel <- function(ext, add_panel = TRUE, proxy = dock_proxy(), ...) {
     add_ext_panel(ext, position = add_panel, proxy = proxy)
   }
 
-  show_ext_ui(ext, proxy$session, ...)
+  show_ext_ui(ext, proxy$session,
+              board_ns = proxy_board_ns(proxy), ...)
 
   invisible(NULL)
 }
 
 hide_ext_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy(), ...) {
 
-  hide_ext_ui(id, proxy$session, ...)
+  hide_ext_ui(id, proxy$session,
+              board_ns = proxy_board_ns(proxy), ...)
 
   if (isTRUE(rm_panel)) {
     remove_ext_panel(id, proxy)

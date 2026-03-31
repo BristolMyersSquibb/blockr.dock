@@ -902,7 +902,6 @@ label:has(input[type="file"]) {
   z-index: 0;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.1s ease;
 }
 
 .blockr-ws-dock-active {

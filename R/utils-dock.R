@@ -3,9 +3,15 @@ dock_input <- function(input) {
 }
 
 dock_panel_ids <- function(proxy = dock_proxy()) {
-  as_dock_panel_id(
+  res <- as_dock_panel_id(
     dockViewR::get_panels_ids(proxy)
   )
+  # as_dock_panel_id.character returns a list for length > 1 but a single
+
+  # classed vector for length 1. Normalise to list so that downstream
+  # lgl_ply / [[ extraction preserves S3 classes.
+  if (!is.list(res)) res <- list(res)
+  res
 }
 
 dock_panel_named_ids <- function(proxy = dock_proxy()) {
@@ -113,6 +119,10 @@ dock_proxy <- function(session = get_session()) {
   dockViewR::dock_view_proxy(dock_id(), session = session)
 }
 
+proxy_board_ns <- function(proxy) {
+  proxy$board_ns %||% proxy$session$ns
+}
+
 dock_panel <- function(...) {
   dockViewR::panel(
     ...,
@@ -164,6 +174,14 @@ dock_panel_groups <- function(session = get_session()) {
   unlist(
     xtr_leaf_id(session$input[[dock_input("state")]][["grid"]][["root"]])
   )
+}
+
+update_active_dock <- function(rv, dock) {
+  rv$layout <- dock$layout
+  rv$proxy <- dock$proxy
+  rv$prev_active_group <- dock$prev_active_group
+  rv$n_panels <- dock$n_panels
+  rv$active_group_trail <- dock$active_group_trail
 }
 
 get_dock_panel <- function(id, proxy = dock_proxy()) {
