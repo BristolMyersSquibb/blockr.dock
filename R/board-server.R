@@ -23,9 +23,40 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
     # Environment (not list) so mutations in sub-functions are visible here
     docks <- new.env(parent = emptyenv())
+    ns <- session$ns
+    # Track used dock IDs so dynamically added workspaces never collide
+    used_dock_ids <- character()
+    next_dock_id <- function() {
+      did <- paste0("dock_", rand_names(used_dock_ids))
+      used_dock_ids <<- c(used_dock_ids, did)
+      did
+    }
+
+    active <- active_workspace(workspaces)
     for (ws_name in names(workspaces)) {
       ws_ly <- workspace_layout(workspaces[[ws_name]])
-      ws_did <- ws_dock_id(ws_name)
+      ws_did <- next_dock_id()
+      dock_output_id <- NS(ns(ws_did), dock_id())
+
+      insertUI(
+        selector = paste0("#", ns("ws_container")),
+        where = "beforeEnd",
+        ui = div(
+          id = ns(paste0("ws_wrap_", ws_did)),
+          class = paste(
+            "blockr-ws-dock",
+            if (identical(ws_name, active)) "blockr-ws-dock-active"
+          ),
+          dockViewR::dock_view_output(
+            dock_output_id,
+            width = "100%",
+            height = "100%"
+          )
+        ),
+        immediate = TRUE,
+        session = session
+      )
+
       dock_res <- manage_dock(ws_did, board, update, triggers, layout = ws_ly)
       dock_res$dock_id <- ws_did
       docks[[ws_name]] <- dock_res
@@ -38,6 +69,11 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
       old_ws <- active_workspace(ws)
 
       if (!identical(old_ws, new_ws)) {
+        # Switch active dock CSS class FIRST so move-element guard passes
+        session$sendCustomMessage("switch-workspace", list(
+          id = session$ns(paste0("ws_wrap_", docks[[new_ws]]$dock_id))
+        ))
+
         # Move elements from old workspace back to offcanvas
         if (exists(old_ws, envir = docks, inherits = FALSE)) {
           old_proxy <- docks[[old_ws]]$proxy
@@ -66,21 +102,21 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
         active_workspace(ws) <- new_ws
         ws_state(ws)
         update_active_dock(active_dock, docks[[new_ws]])
+      } else {
+        session$sendCustomMessage("switch-workspace", list(
+          id = session$ns(paste0("ws_wrap_", docks[[new_ws]]$dock_id))
+        ))
       }
-
-      session$sendCustomMessage("switch-workspace", list(
-        id = session$ns(paste0("ws_wrap_", docks[[new_ws]]$dock_id))
-      ))
     }, ignoreInit = TRUE)
 
     # Workspace CRUD (only when unlocked)
-    add_ws_observer(session, board, ws_state, update, triggers, docks)
+    add_ws_observer(session, board, ws_state, update, triggers, docks, next_dock_id)
     remove_ws_observer(session, ws_state, docks, active_dock)
     rename_ws_observer(session, ws_state, docks)
 
     # Reactive dock that always points to the active workspace's dock
     active_dock <- reactiveValues()
-    update_active_dock(active_dock, docks[[active_workspace(workspaces)]])
+    update_active_dock(active_dock, docks[[active]])
     dock <- active_dock
 
   } else {
@@ -294,7 +330,8 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
   })
 }
 
-add_ws_observer <- function(session, board, ws_state, update, triggers, docks) {
+add_ws_observer <- function(session, board, ws_state, update, triggers, docks,
+                           next_dock_id) {
   input <- session$input
   ns <- session$ns
 
@@ -460,7 +497,7 @@ add_ws_observer <- function(session, board, ws_state, update, triggers, docks) {
     ws_state(ws)
 
     # Insert dock output container into the DOM
-    ws_id <- ws_dock_id(new_name)
+    ws_id <- next_dock_id()
     dock_output_id <- NS(NS(ns(NULL), ws_id), dock_id())
 
     insertUI(
@@ -543,15 +580,28 @@ remove_ws_observer <- function(session, ws_state, docks, active_dock) {
     was_active <- identical(active_workspace(ws), rm_name)
 
     # Hide block/ext UI from the removed workspace (move back to offcanvas)
-    if (was_active && exists(rm_name, envir = docks, inherits = FALSE)) {
-      rm_proxy <- docks[[rm_name]]$proxy
+    if (exists(rm_name, envir = docks, inherits = FALSE)) {
+      rm_dock <- docks[[rm_name]]
+      rm_proxy <- rm_dock$proxy
       rm_bns <- proxy_board_ns(rm_proxy)
-      for (bid in as_obj_id(block_panel_ids(rm_proxy))) {
-        hide_block_ui(bid, rm_proxy$session, board_ns = rm_bns)
+
+      if (was_active) {
+        for (bid in as_obj_id(block_panel_ids(rm_proxy))) {
+          hide_block_ui(bid, rm_proxy$session, board_ns = rm_bns)
+        }
+        for (eid in as_obj_id(ext_panel_ids(rm_proxy))) {
+          hide_ext_ui(eid, rm_proxy$session, board_ns = rm_bns)
+        }
       }
-      for (eid in as_obj_id(ext_panel_ids(rm_proxy))) {
-        hide_ext_ui(eid, rm_proxy$session, board_ns = rm_bns)
-      }
+
+      # Destroy module observers/inputs/outputs and remove DOM wrapper
+      destroy_module(rm_dock$dock_id, session = session)
+      removeUI(
+        selector = paste0("#", ns(paste0("ws_wrap_", rm_dock$dock_id))),
+        immediate = TRUE,
+        session = session
+      )
+      rm(list = rm_name, envir = docks)
     }
 
     ws[[rm_name]] <- NULL

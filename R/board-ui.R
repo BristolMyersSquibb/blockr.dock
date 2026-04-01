@@ -87,27 +87,10 @@ dock_outputs_ui <- function(id, workspaces) {
     )
   }
 
-  active <- active_workspace(workspaces)
-
   div(
     id = NS(id, "ws_container"),
     class = "blockr-ws-container",
-    style = paste0("position: relative; height: ", dock_height, ";"),
-    lapply(names(workspaces), function(ws_name) {
-      ws_id <- ws_dock_id(ws_name)
-      is_active <- identical(ws_name, active)
-
-      div(
-        id = NS(id, paste0("ws_wrap_", ws_id)),
-        class = paste("blockr-ws-dock",
-                       if (is_active) "blockr-ws-dock-active"),
-        dockViewR::dock_view_output(
-          NS(NS(id, ws_id), dock_id()),
-          width = "100%",
-          height = "100%"
-        )
-      )
-    })
+    style = paste0("position: relative; height: ", dock_height, ";")
   )
 }
 
