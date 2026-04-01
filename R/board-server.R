@@ -75,7 +75,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
     # Workspace CRUD (only when unlocked)
     add_ws_observer(session, board, ws_state, update, triggers, docks)
-    remove_ws_observer(session, ws_state, docks)
+    remove_ws_observer(session, ws_state, docks, active_dock)
     rename_ws_observer(session, ws_state, docks)
 
     # Reactive dock that always points to the active workspace's dock
@@ -485,7 +485,7 @@ add_ws_observer <- function(session, board, ws_state, update, triggers, docks) {
   })
 }
 
-remove_ws_observer <- function(session, ws_state, docks) {
+remove_ws_observer <- function(session, ws_state, docks, active_dock) {
   input <- session$input
   ns <- session$ns
 
@@ -533,22 +533,49 @@ remove_ws_observer <- function(session, ws_state, docks) {
 
     rm_name <- input$ws_nav_remove
     ws <- ws_state()
+    was_active <- identical(active_workspace(ws), rm_name)
+
+    # Hide block/ext UI from the removed workspace (move back to offcanvas)
+    if (was_active && exists(rm_name, envir = docks, inherits = FALSE)) {
+      rm_proxy <- docks[[rm_name]]$proxy
+      rm_bns <- proxy_board_ns(rm_proxy)
+      for (bid in as_obj_id(block_panel_ids(rm_proxy))) {
+        hide_block_ui(bid, rm_proxy$session, board_ns = rm_bns)
+      }
+      for (eid in as_obj_id(ext_panel_ids(rm_proxy))) {
+        hide_ext_ui(eid, rm_proxy$session, board_ns = rm_bns)
+      }
+    }
 
     ws[[rm_name]] <- NULL
 
-    if (identical(active_workspace(ws), rm_name)) {
+    if (was_active) {
       active_workspace(ws) <- names(ws)[1L]
     }
 
     ws_state(ws)
 
+    active_name <- active_workspace(ws)
+
+    # Show block/ext UI in the target workspace
+    if (was_active && exists(active_name, envir = docks, inherits = FALSE)) {
+      new_proxy <- docks[[active_name]]$proxy
+      new_bns <- proxy_board_ns(new_proxy)
+      for (bid in as_obj_id(block_panel_ids(new_proxy))) {
+        show_block_ui(bid, new_proxy$session, board_ns = new_bns)
+      }
+      for (eid in as_obj_id(ext_panel_ids(new_proxy))) {
+        show_ext_ui(eid, new_proxy$session, board_ns = new_bns)
+      }
+      update_active_dock(active_dock, docks[[active_name]])
+    }
+
     # sendInputMessage auto-namespaces, so pass un-namespaced ID
     session$sendInputMessage("ws_nav", list(
       remove = rm_name,
-      value = active_workspace(ws)
+      value = active_name
     ))
 
-    active_name <- active_workspace(ws)
     session$sendCustomMessage("switch-workspace", list(
       id = ns(paste0("ws_wrap_", docks[[active_name]]$dock_id))
     ))
