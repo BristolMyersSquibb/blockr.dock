@@ -21,12 +21,14 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     # Mutable workspace state (board$board is read-only)
     ws_state <- reactiveVal(workspaces)
 
-    docks <- list()
+    # Environment (not list) so mutations in sub-functions are visible here
+    docks <- new.env(parent = emptyenv())
     for (ws_name in names(workspaces)) {
       ws_ly <- workspace_layout(workspaces[[ws_name]])
-      docks[[ws_name]] <- manage_dock(
-        ws_dock_id(ws_name), board, update, triggers, layout = ws_ly
-      )
+      ws_did <- ws_dock_id(ws_name)
+      dock_res <- manage_dock(ws_did, board, update, triggers, layout = ws_ly)
+      dock_res$dock_id <- ws_did
+      docks[[ws_name]] <- dock_res
     }
 
     # Workspace switching
@@ -37,7 +39,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
       if (!identical(old_ws, new_ws)) {
         # Move elements from old workspace back to offcanvas
-        if (old_ws %in% names(docks)) {
+        if (exists(old_ws, envir = docks, inherits = FALSE)) {
           old_proxy <- docks[[old_ws]]$proxy
           old_bns <- proxy_board_ns(old_proxy)
           for (bid in as_obj_id(block_panel_ids(old_proxy))) {
@@ -49,7 +51,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
         }
 
         # Move elements into new workspace panels
-        if (new_ws %in% names(docks)) {
+        if (exists(new_ws, envir = docks, inherits = FALSE)) {
           new_proxy <- docks[[new_ws]]$proxy
           new_bns <- proxy_board_ns(new_proxy)
           for (bid in as_obj_id(block_panel_ids(new_proxy))) {
@@ -67,14 +69,14 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
       }
 
       session$sendCustomMessage("switch-workspace", list(
-        id = session$ns(paste0("ws_wrap_", ws_dock_id(new_ws)))
+        id = session$ns(paste0("ws_wrap_", docks[[new_ws]]$dock_id))
       ))
     }, ignoreInit = TRUE)
 
     # Workspace CRUD (only when unlocked)
     add_ws_observer(session, board, ws_state, update, triggers, docks)
-    remove_ws_observer(session, ws_state)
-    rename_ws_observer(session, ws_state)
+    remove_ws_observer(session, ws_state, docks)
+    rename_ws_observer(session, ws_state, docks)
 
     # Reactive dock that always points to the active workspace's dock
     active_dock <- reactiveValues()
@@ -469,9 +471,9 @@ add_ws_observer <- function(session, board, ws_state, update, triggers, docks) {
     )
 
     # Start the dock module for this workspace
-    docks[[new_name]] <<- manage_dock(
-      ws_dock_id(new_name), board, update, triggers, layout = ws_ly
-    )
+    dock_res <- manage_dock(ws_id, board, update, triggers, layout = ws_ly)
+    dock_res$dock_id <- ws_id
+    docks[[new_name]] <- dock_res
 
     # Update the navigation dropdown and switch to new workspace
     session$sendInputMessage("ws_nav", list(add = new_name))
@@ -483,7 +485,7 @@ add_ws_observer <- function(session, board, ws_state, update, triggers, docks) {
   })
 }
 
-remove_ws_observer <- function(session, ws_state) {
+remove_ws_observer <- function(session, ws_state, docks) {
   input <- session$input
   ns <- session$ns
 
@@ -546,13 +548,14 @@ remove_ws_observer <- function(session, ws_state) {
       value = active_workspace(ws)
     ))
 
+    active_name <- active_workspace(ws)
     session$sendCustomMessage("switch-workspace", list(
-      id = ns(paste0("ws_wrap_", ws_dock_id(active_workspace(ws))))
+      id = ns(paste0("ws_wrap_", docks[[active_name]]$dock_id))
     ))
   })
 }
 
-rename_ws_observer <- function(session, ws_state) {
+rename_ws_observer <- function(session, ws_state, docks) {
   input <- session$input
 
   observeEvent(input$ws_nav_rename, {
@@ -573,6 +576,14 @@ rename_ws_observer <- function(session, ws_state) {
     }
 
     ws_state(ws)
+
+    # Update docks key; dock_id inside the entry stays unchanged so
+    # DOM wrapper lookups still target the original element.
+    # docks is an environment (reference semantics), so plain <- suffices.
+    if (exists(rename$from, envir = docks, inherits = FALSE)) {
+      docks[[rename$to]] <- docks[[rename$from]]
+      rm(list = rename$from, envir = docks)
+    }
   })
 }
 

@@ -867,10 +867,17 @@ label:has(input[type="file"]) {
 .blockr-ws-rename-input {
   flex: 1;
   padding: 2px 6px;
-  border: 1px solid var(--blockr-primary-400);
+  border: 1px solid var(--blockr-color-primary);
   border-radius: 4px;
   font-size: var(--blockr-font-size-sm);
+  background-color: var(--blockr-color-bg-input);
+  color: var(--blockr-color-text-primary);
   outline: none;
+}
+
+.blockr-ws-rename-input:focus {
+  border-color: var(--blockr-color-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 /* Add button */
