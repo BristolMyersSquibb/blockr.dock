@@ -419,6 +419,11 @@ add_ws_observer <- function(session, board, ws_state, update, triggers, docks) {
 
     if (nchar(name) == 0L) {
       tags$div(class = "text-danger", "Name cannot be empty.")
+    } else if (!grepl("^[a-zA-Z0-9 _-]+$", name)) {
+      tags$div(
+        class = "text-danger",
+        "Only letters, numbers, spaces, hyphens and underscores are allowed."
+      )
     } else if (name %in% names(ws)) {
       tags$div(class = "text-danger", "A workspace with this name already exists.")
     } else {
@@ -432,7 +437,9 @@ add_ws_observer <- function(session, board, ws_state, update, triggers, docks) {
     new_name <- trimws(input$ws_new_name)
 
     # Validate
-    if (nchar(new_name) == 0L || new_name %in% names(ws)) return()
+    if (nchar(new_name) == 0L ||
+        !grepl("^[a-zA-Z0-9 _-]+$", new_name) ||
+        new_name %in% names(ws)) return()
 
     removeModal()
 

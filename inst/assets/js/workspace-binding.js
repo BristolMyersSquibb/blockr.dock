@@ -1,4 +1,12 @@
 $(function () {
+  var showNotification = function (message, type, duration) {
+    Shiny.notifications.show({
+      html: message,
+      type: type || 'warning',
+      duration: duration != null ? duration : 3000
+    });
+  };
+
   var workspaceBinding = new Shiny.InputBinding();
 
   $.extend(workspaceBinding, {
@@ -63,7 +71,27 @@ $(function () {
           if (committed) return;
           committed = true;
 
-          var newName = $input.val().trim() || currentName;
+          var rawName = $input.val().trim();
+          // Validate: non-empty, alphanumeric/spaces/hyphens/underscores only,
+          // and not a duplicate of another workspace
+          var errorMsg = null;
+          if (rawName.length === 0) {
+            errorMsg = 'Workspace name cannot be empty.';
+          } else if (!/^[a-zA-Z0-9 _-]+$/.test(rawName)) {
+            errorMsg = 'Invalid name. Only letters, numbers, spaces, hyphens and underscores are allowed.';
+          } else {
+            var $siblings = $item.closest('.blockr-ws-nav').find('.blockr-ws-item');
+            $siblings.each(function () {
+              if (this !== $item[0] && $(this).attr('data-ws-name') === rawName) {
+                errorMsg = 'A workspace with this name already exists.';
+                return false; // break
+              }
+            });
+          }
+          if (errorMsg) {
+            showNotification(errorMsg);
+          }
+          var newName = errorMsg ? currentName : rawName;
           var $newName = $('<span>')
             .addClass('blockr-ws-item-name')
             .text(newName);
