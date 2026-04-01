@@ -808,7 +808,7 @@ label:has(input[type="file"]) {
 .blockr-ws-item.dropdown-item.active {
   background-color: var(--blockr-primary-100);
   color: var(--blockr-primary-700);
-  font-weight: var(--blockr-font-weight-medium);
+  font-weight: var(--blockr-font-weight-semibold);
 }
 
 .blockr-ws-item.dropdown-item:hover {
@@ -899,6 +899,7 @@ label:has(input[type="file"]) {
 /* ============================================
    Multi-dock stacking (workspaces)
    ============================================ */
+
 .blockr-ws-container {
   overflow: hidden;
 }
