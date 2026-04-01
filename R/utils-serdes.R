@@ -1,5 +1,6 @@
 #' @export
-serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
+serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
+                                       ws_data = NULL, ...,
                                        session = get_session()) {
 
   state <- lapply(
@@ -19,12 +20,10 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
     session
   )
 
-  # When workspaces are present, serialize the full dock_workspaces object
-  # (which contains per-workspace layouts). Otherwise serialize a single layout.
   ly <- x[["layout"]]
 
   layout_data <- if (is_dock_workspaces(ly)) {
-    blockr_ser(ly, dock = dock)
+    ws_data()
   } else {
     as_dock_layout(dock$layout())
   }
@@ -62,11 +61,12 @@ blockr_ser.dock_workspace <- function(x, data, ...) {
 
 #' @export
 blockr_ser.dock_workspaces <- function(x, data, ...) {
+  ws <- if (!missing(data) && is_dock_workspaces(data)) data else x
   list(
-    object = class(x),
+    object = class(ws),
     payload = list(
-      active = active_workspace(x),
-      workspaces = lapply(x, blockr_ser)
+      active = active_workspace(ws),
+      workspaces = lapply(ws, blockr_ser)
     )
   )
 }

@@ -119,8 +119,22 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     update_active_dock(active_dock, docks[[active]])
     dock <- active_dock
 
+    # Reactive that returns current workspace state with live dock layouts
+    ws_data <- reactive({
+      ws <- ws_state()
+      for (ws_name in names(ws)) {
+        if (exists(ws_name, envir = docks, inherits = FALSE)) {
+          workspace_layout(ws[[ws_name]]) <- as_dock_layout(
+            docks[[ws_name]]$layout()
+          )
+        }
+      }
+      ws
+    })
+
   } else {
     dock <- manage_dock("dock_main", board, update, triggers)
+    ws_data <- NULL
   }
 
   ext_res <- lapply(
@@ -133,7 +147,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   register_actions(actions, triggers, board, update, ext_res)
 
   c(
-    list(dock = dock, actions = triggers),
+    list(dock = dock, actions = triggers, ws_data = ws_data),
     ext_res
   )
 }

@@ -66,14 +66,19 @@ initialise_layout <- function(layout, blocks, extensions) {
       ly <- workspace_layout(ws)
 
       if (!is_dock_layout(ly)) {
-        ws_ids <- workspace_ids(ws)
-        ws_blks <- blocks[intersect(ws_ids, names(blocks))]
-        ext_list <- as.list(extensions)
-        ws_exts <- as_dock_extensions(
-          ext_list[intersect(ws_ids, names(ext_list))]
-        )
-
-        workspace_layout(ws) <- create_dock_layout(ws_blks, ws_exts, ly)
+        if (is.list(ly) && all(c("grid", "panels") %in% names(ly))) {
+          # Already a resolved layout (e.g. deserialized from JSON) —
+          # just restore the S3 class
+          workspace_layout(ws) <- as_dock_layout(ly)
+        } else {
+          ws_ids <- workspace_ids(ws)
+          ws_blks <- blocks[intersect(ws_ids, names(blocks))]
+          ext_list <- as.list(extensions)
+          ws_exts <- as_dock_extensions(
+            ext_list[intersect(ws_ids, names(ext_list))]
+          )
+          workspace_layout(ws) <- create_dock_layout(ws_blks, ws_exts, ly)
+        }
         layout[[ws_name]] <- ws
       }
     }
@@ -82,7 +87,11 @@ initialise_layout <- function(layout, blocks, extensions) {
 
   } else if (!is_dock_layout(layout)) {
 
-    create_dock_layout(blocks, extensions, layout)
+    if (is.list(layout) && all(c("grid", "panels") %in% names(layout))) {
+      as_dock_layout(layout)
+    } else {
+      create_dock_layout(blocks, extensions, layout)
+    }
 
   } else {
 
