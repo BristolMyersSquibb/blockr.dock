@@ -26,6 +26,11 @@ $(function () {
     },
 
     subscribe: function (el, callback) {
+      // Programmatic updates (receiveMessage) trigger 'change'
+      $(el).on('change.workspaceBinding', function () {
+        callback(true);
+      });
+
       // Workspace switch: click on item (but not on action buttons)
       $(el).on('click.workspaceBinding', '.blockr-ws-item', function (e) {
         if ($(e.target).closest('.blockr-ws-item-actions').length) {
