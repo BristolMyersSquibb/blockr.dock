@@ -130,8 +130,6 @@ hide_block_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy(), ...) {
 
 hide_block_ui <- function(id, session, board_ns = session$ns) {
 
-  ns <- session$ns
-
   bid <- board_ns(as_block_handle_id(id))
   oid <- paste0(board_ns("blocks_offcanvas"), " .offcanvas-body")
 
@@ -142,10 +140,11 @@ hide_block_ui <- function(id, session, board_ns = session$ns) {
 
 show_block_ui <- function(id, session, board_ns = session$ns) {
 
-  ns <- session$ns
-
+  # board_ns: board-level namespace for DOM element IDs (handles, offcanvas).
+  # session$ns: dock-module namespace for dock panel IDs.
+  # These differ when called from a nested dock module (workspaces).
   bid <- board_ns(as_block_handle_id(id))
-  pid <- paste(dock_id(ns), as_block_panel_id(id), sep = "-")
+  pid <- paste(dock_id(session$ns), as_block_panel_id(id), sep = "-")
 
   log_debug("showing block {bid} in panel {pid}")
 

@@ -28,8 +28,6 @@ hide_ext_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy(), ...) {
 
 hide_ext_ui <- function(id, session, board_ns = session$ns) {
 
-  ns <- session$ns
-
   eid <- board_ns(as_ext_handle_id(id))
   oid <- paste0(board_ns("exts_offcanvas"), " .offcanvas-body")
 
@@ -40,10 +38,11 @@ hide_ext_ui <- function(id, session, board_ns = session$ns) {
 
 show_ext_ui <- function(id, session, board_ns = session$ns) {
 
-  ns <- session$ns
-
+  # board_ns: board-level namespace for DOM element IDs (handles, offcanvas).
+  # session$ns: dock-module namespace for dock panel IDs.
+  # These differ when called from a nested dock module (workspaces).
   eid <- board_ns(as_ext_handle_id(id))
-  pid <- paste(dock_id(ns), as_ext_panel_id(id), sep = "-")
+  pid <- paste(dock_id(session$ns), as_ext_panel_id(id), sep = "-")
 
   log_debug("showing extension {eid} in panel {pid}")
 

@@ -77,7 +77,7 @@ remove_ext_panel <- function(id, proxy = dock_proxy()) {
 add_ext_panel <- function(ext, ..., proxy = dock_proxy()) {
   stopifnot(is_dock_extension(ext))
 
-  log_debug("adding block {as_ext_panel_id(ext)}")
+  log_debug("adding extension panel {as_ext_panel_id(ext)}")
 
   dockViewR::add_panel(proxy, panel = ext_panel(ext, ...))
 
@@ -97,7 +97,7 @@ select_ext_panel <- function(id, proxy = dock_proxy()) {
 ext_panel <- function(ext, ...) {
   eid <- as_ext_panel_id(ext)
 
-  log_debug("creating block panel {eid}")
+  log_debug("creating extension panel {eid}")
 
   dock_panel(id = eid, title = extension_name(ext), ...)
 }
