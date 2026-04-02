@@ -179,25 +179,19 @@ switch_workspace_observer <- function(ws, session, dock_mgr) {
     state <- ws$state
     old_ws <- active_workspace(state)
 
-    if (!identical(old_ws, new_ws)) {
-      session$sendCustomMessage("switch-workspace", list(
-        id = session$ns(
-          paste0("ws_wrap_", dock_mgr$docks[[new_ws]]$dock_id)
-        )
-      ))
+    session$sendCustomMessage("switch-workspace", list(
+      id = session$ns(
+        paste0("ws_wrap_", dock_mgr$docks[[new_ws]]$dock_id)
+      )
+    ))
 
+    if (!identical(old_ws, new_ws)) {
       hide_workspace_ui(old_ws, dock_mgr$docks)
       show_workspace_ui(new_ws, dock_mgr$docks)
 
       active_workspace(state) <- new_ws
       ws$state <- state
       update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_ws]])
-    } else {
-      session$sendCustomMessage("switch-workspace", list(
-        id = session$ns(
-          paste0("ws_wrap_", dock_mgr$docks[[new_ws]]$dock_id)
-        )
-      ))
     }
   }, ignoreInit = TRUE)
 }
