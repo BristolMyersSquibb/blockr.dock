@@ -299,7 +299,8 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
       observeEvent(
         input[[dock_input("active-group")]],
         {
-          ag <- input[[dock_input("active-group")]] # nolint: object_usage_linter.
+          # nolint next: object_usage_linter.
+          ag <- input[[dock_input("active-group")]]
           log_debug("active group is now {ag}")
         }
       )
@@ -497,8 +498,9 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
     state <- ws$state
     default_name <- paste("Page", length(state) + 1L)
 
-    blk_options <- build_block_options(board$board, board_block_ids(board$board))
-    ext_options <- build_ext_options(board$board, dock_ext_ids(board$board))
+    brd <- board$board
+    blk_options <- build_block_options(brd, board_block_ids(brd))
+    ext_options <- build_ext_options(brd, dock_ext_ids(brd))
 
     showModal(
       modalDialog(
@@ -577,14 +579,19 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
     removeModal()
 
     # Build layout from selected blocks and extensions
+    brd <- board$board
+    sel_blks <- intersect(
+      input$ws_new_blocks %||% character(),
+      board_block_ids(brd)
+    )
+    sel_exts <- intersect(
+      input$ws_new_exts %||% character(),
+      dock_ext_ids(brd)
+    )
     ws_ly <- create_dock_layout(
-      blocks = board_blocks(board$board)[
-        intersect(input$ws_new_blocks %||% character(), board_block_ids(board$board))
-      ],
+      blocks = board_blocks(brd)[sel_blks],
       extensions = as_dock_extensions(
-        as.list(dock_extensions(board$board))[
-          intersect(input$ws_new_exts %||% character(), dock_ext_ids(board$board))
-        ]
+        as.list(dock_extensions(brd))[sel_exts]
       )
     )
 

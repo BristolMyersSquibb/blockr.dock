@@ -100,7 +100,8 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
   invisible(x)
 }
 
-show_block_panel <- function(block, add_panel = TRUE, proxy = dock_proxy(), ...) {
+show_block_panel <- function(block, add_panel = TRUE,
+                             proxy = dock_proxy(), ...) {
 
   if (isTRUE(add_panel)) {
     add_block_panel(block, proxy = proxy)
