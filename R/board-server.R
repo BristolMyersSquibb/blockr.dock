@@ -720,6 +720,13 @@ remove_ws_observer <- function(ws, session, dock_mgr) {
 
     active_name <- active_workspace(state)
 
+    # switch-workspace must fire before show_workspace_ui so the target
+    # dock has blockr-ws-dock-active; otherwise move-element silently
+    # drops DOM moves into inactive docks.
+    session$sendCustomMessage("switch-workspace", list(
+      id = ns(paste0("ws_wrap_", dock_mgr$docks[[active_name]]$dock_id))
+    ))
+
     # Show block/ext UI in the target workspace
     if (was_active) {
       show_workspace_ui(active_name, dock_mgr$docks)
@@ -730,10 +737,6 @@ remove_ws_observer <- function(ws, session, dock_mgr) {
     session$sendInputMessage("ws_nav", list(
       remove = rm_name,
       value = active_name
-    ))
-
-    session$sendCustomMessage("switch-workspace", list(
-      id = ns(paste0("ws_wrap_", dock_mgr$docks[[active_name]]$dock_id))
     ))
   })
 }
