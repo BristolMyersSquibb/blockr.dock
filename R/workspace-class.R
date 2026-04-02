@@ -26,11 +26,38 @@
 #'
 #' @rdname workspace
 #' @export
-dock_workspace <- function(layout = list()) {
+new_dock_workspace <- function(layout = list()) {
+  stopifnot(is.list(layout))
   structure(
     list(layout = layout),
     class = "dock_workspace"
   )
+}
+
+#' @rdname workspace
+#' @export
+validate_dock_workspace <- function(x) {
+  if (!is_dock_workspace(x)) {
+    blockr_abort(
+      "Expecting a `dock_workspace` object.",
+      class = "dock_workspace_structure_invalid"
+    )
+  }
+
+  if (!is.list(x[["layout"]])) {
+    blockr_abort(
+      "Workspace layout must be a list.",
+      class = "dock_workspace_layout_invalid"
+    )
+  }
+
+  x
+}
+
+#' @rdname workspace
+#' @export
+dock_workspace <- function(layout = list()) {
+  validate_dock_workspace(new_dock_workspace(layout = layout))
 }
 
 #' @rdname workspace
@@ -66,7 +93,7 @@ workspace_layout <- function(x) {
 #' @param ... Named `dock_workspace` objects
 #' @rdname workspace
 #' @export
-dock_workspaces <- function(...) {
+new_dock_workspaces <- function(...) {
   ws <- list(...)
 
   if (length(ws) == 1L && is.list(ws[[1L]]) && !is_dock_workspace(ws[[1L]])) {
@@ -77,20 +104,17 @@ dock_workspaces <- function(...) {
     ws <- list(Page = dock_workspace())
   }
 
-  if (is.null(names(ws)) || any(names(ws) == "")) {
-    blockr_abort(
-      "All workspaces must be named.",
-      class = "dock_workspaces_names_missing"
-    )
-  }
-
-  validate_dock_workspaces(
-    structure(
-      ws,
-      active = names(ws)[1L],
-      class = "dock_workspaces"
-    )
+  structure(
+    ws,
+    active = names(ws)[1L],
+    class = "dock_workspaces"
   )
+}
+
+#' @rdname workspace
+#' @export
+dock_workspaces <- function(...) {
+  validate_dock_workspaces(new_dock_workspaces(...))
 }
 
 #' @rdname workspace
