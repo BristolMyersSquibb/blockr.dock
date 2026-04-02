@@ -94,11 +94,6 @@ dock_outputs_ui <- function(id, workspaces) {
   )
 }
 
-# Workspace-specific dock ID from workspace name
-ws_dock_id <- function(ws_name) {
-  paste0("dock_", gsub("[^a-zA-Z0-9_]", "_", ws_name))
-}
-
 options_ui <- function(id, x, ...) {
 
   stopifnot(is_board_options(x))
