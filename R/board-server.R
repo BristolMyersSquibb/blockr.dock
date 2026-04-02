@@ -497,51 +497,8 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
     state <- ws$state
     default_name <- paste("Page", length(state) + 1L)
 
-    # Build block options
-    blk_ids <- board_block_ids(board$board)
-    blk_options <- list()
-
-    if (length(blk_ids)) {
-      blks <- board_blocks(board$board)[blk_ids]
-      meta <- blks_metadata(blks)
-
-      for (i in seq_along(blk_ids)) {
-        id <- blk_ids[i]
-        blk_options[[length(blk_options) + 1L]] <- list(
-          value = id,
-          label = block_name(blks[[id]]),
-          description = paste0("ID: ", id),
-          package = meta$package[i],
-          icon = meta$icon[i],
-          color = meta$color[i],
-          searchtext = paste(block_name(blks[[id]]), id, meta$package[i])
-        )
-      }
-    }
-
-    # Build extension options
-    ext_ids <- dock_ext_ids(board$board)
-    ext_options <- list()
-
-    if (length(ext_ids)) {
-      all_exts <- as.list(dock_extensions(board$board))
-
-      for (ext_id in ext_ids) {
-        ext <- all_exts[[ext_id]]
-        ext_name <- extension_name(ext)
-        ext_pkg <- ctor_pkg(extension_ctor(ext))
-
-        ext_options[[length(ext_options) + 1L]] <- list(
-          value = ext_id,
-          label = ext_name,
-          description = paste0("ID: ", ext_id),
-          package = coal(ext_pkg, "local"),
-          icon = extension_default_icon(),
-          color = "#999999",
-          searchtext = paste(ext_name, ext_id, ext_pkg)
-        )
-      }
-    }
+    blk_options <- build_block_options(board$board, board_block_ids(board$board))
+    ext_options <- build_ext_options(board$board, dock_ext_ids(board$board))
 
     showModal(
       modalDialog(
@@ -606,21 +563,8 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
   output <- session$output
   output$ws_name_validation <- renderUI({
     req(input$ws_new_name)
-    state <- ws$state
-    name <- trimws(input$ws_new_name)
-
-    if (nchar(name) == 0L) {
-      tags$div(class = "text-danger", "Name cannot be empty.")
-    } else if (!grepl("^[a-zA-Z0-9 _-]+$", name)) {
-      tags$div(
-        class = "text-danger",
-        "Only letters, numbers, spaces, hyphens and underscores are allowed."
-      )
-    } else if (name %in% names(state)) {
-      tags$div(class = "text-danger", "A workspace with this name already exists.")
-    } else {
-      NULL
-    }
+    msg <- validate_ws_name(trimws(input$ws_new_name), names(ws$state))
+    if (!is.null(msg)) tags$div(class = "text-danger", msg)
   })
 
   # Confirm workspace creation
@@ -628,10 +572,7 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
     state <- ws$state
     new_name <- trimws(input$ws_new_name)
 
-    # Validate
-    if (nchar(new_name) == 0L ||
-        !grepl("^[a-zA-Z0-9 _-]+$", new_name) ||
-        new_name %in% names(state)) return()
+    if (!is.null(validate_ws_name(new_name, names(state)))) return()
 
     removeModal()
 
@@ -860,57 +801,20 @@ suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,
 
   stopifnot(is.list(panels), all(lgl_ply(panels, is_dock_panel_id)))
 
-  options_data <- list()
-
-  # Get available blocks
   blk_opts <- setdiff(
     board_block_ids(board$board),
     as_obj_id(panels[lgl_ply(panels, is_block_panel_id)])
   )
 
-  if (length(blk_opts)) {
-    blks <- board_blocks(board$board)[blk_opts]
-    meta <- blks_metadata(blks)
-
-    for (i in seq_along(blk_opts)) {
-      id <- blk_opts[i]
-      options_data[[length(options_data) + 1L]] <- list(
-        value = paste0("blk-", id),
-        label = block_name(blks[[id]]),
-        description = paste0("ID: ", id),
-        package = meta$package[i],
-        icon = meta$icon[i],
-        color = meta$color[i],
-        searchtext = paste(block_name(blks[[id]]), id, meta$package[i])
-      )
-    }
-  }
-
-  # Get available extensions
   ext_opts <- setdiff(
     dock_ext_ids(board$board),
     as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
   )
 
-  if (length(ext_opts)) {
-    all_exts <- as.list(dock_extensions(board$board))
-
-    for (ext_id in ext_opts) {
-      ext <- all_exts[[ext_id]]
-      ext_name <- extension_name(ext)
-      ext_pkg <- ctor_pkg(extension_ctor(ext))
-
-      options_data[[length(options_data) + 1L]] <- list(
-        value = paste0("ext-", ext_id),
-        label = ext_name,
-        description = paste0("ID: ", ext_id),
-        package = coal(ext_pkg, "local"),
-        icon = extension_default_icon(),
-        color = "#999999",
-        searchtext = paste(ext_name, ext_id, ext_pkg)
-      )
-    }
-  }
+  options_data <- c(
+    build_block_options(board$board, blk_opts, prefix = "blk-"),
+    build_ext_options(board$board, ext_opts, prefix = "ext-")
+  )
 
   if (length(options_data)) {
     showModal(
@@ -954,4 +858,108 @@ suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,
 #' @noRd
 extension_default_icon <- function() {
   as.character(bsicons::bs_icon("gear"))
+}
+
+#' Build a single selectize option entry.
+#'
+#' Shared structure for block and extension options in panel pickers.
+#'
+#' @param value Option value (ID, possibly prefixed).
+#' @param label Display label.
+#' @param id Raw object ID.
+#' @param package Package name string.
+#' @param icon Icon HTML string.
+#' @param color Colour string.
+#'
+#' @return A named list.
+#'
+#' @noRd
+build_one_option <- function(value, label, id, package, icon, color) {
+  list(
+    value = value,
+    label = label,
+    description = paste0("ID: ", id),
+    package = package,
+    icon = icon,
+    color = color,
+    searchtext = paste(label, id, package)
+  )
+}
+
+#' Build selectize option entries for blocks.
+#'
+#' @param board Board object.
+#' @param blk_ids Character vector of block IDs to include.
+#' @param prefix String prepended to each value (e.g. `"blk-"`).
+#'
+#' @return A list of option lists suitable for `selectizeInput`.
+#'
+#' @noRd
+build_block_options <- function(board, blk_ids, prefix = "") {
+  if (!length(blk_ids)) return(list())
+
+  blks <- board_blocks(board)[blk_ids]
+  meta <- blks_metadata(blks)
+
+  lapply(seq_along(blk_ids), function(i) {
+    id <- blk_ids[i]
+    build_one_option(
+      value = paste0(prefix, id),
+      label = block_name(blks[[id]]),
+      id = id,
+      package = meta$package[i],
+      icon = meta$icon[i],
+      color = meta$color[i]
+    )
+  })
+}
+
+#' Build selectize option entries for extensions.
+#'
+#' @param board Board object.
+#' @param ext_ids Character vector of extension IDs to include.
+#' @param prefix String prepended to each value (e.g. `"ext-"`).
+#'
+#' @return A list of option lists suitable for `selectizeInput`.
+#'
+#' @noRd
+build_ext_options <- function(board, ext_ids, prefix = "") {
+  if (!length(ext_ids)) return(list())
+
+  all_exts <- as.list(dock_extensions(board))
+
+  lapply(ext_ids, function(ext_id) {
+    ext <- all_exts[[ext_id]]
+    ext_name <- extension_name(ext)
+    ext_pkg <- ctor_pkg(extension_ctor(ext))
+
+    build_one_option(
+      value = paste0(prefix, ext_id),
+      label = ext_name,
+      id = ext_id,
+      package = coal(ext_pkg, "local"),
+      icon = extension_default_icon(),
+      color = "#999999"
+    )
+  })
+}
+
+#' Validate a workspace name.
+#'
+#' @param name Trimmed workspace name string.
+#' @param existing Character vector of existing workspace names.
+#'
+#' @return Error message string, or `NULL` if valid.
+#'
+#' @noRd
+validate_ws_name <- function(name, existing) {
+  if (nchar(name) == 0L) {
+    "Name cannot be empty."
+  } else if (!grepl("^[a-zA-Z0-9 _-]+$", name)) {
+    "Only letters, numbers, spaces, hyphens and underscores are allowed."
+  } else if (name %in% existing) {
+    "A workspace with this name already exists."
+  } else {
+    NULL
+  }
 }
