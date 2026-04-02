@@ -58,8 +58,6 @@ and extension IDs, e.g. \code{list("dataset_1", "head_1")} or
 \item{value}{Replacement value}
 
 \item{...}{Named \code{dock_workspace} objects}
-
-\item{workspaces}{Replacement value}
 }
 \value{
 \code{dock_workspace()} returns a \code{dock_workspace} object.

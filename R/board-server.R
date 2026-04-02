@@ -153,7 +153,7 @@ init_workspace_docks <- function(workspaces, board, update, triggers,
   update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active_ws]])
 
   bare <- dock_workspaces(
-    setNames(
+    set_names(
       lapply(names(workspaces), function(x) dock_workspace()),
       names(workspaces)
     )
@@ -218,7 +218,7 @@ live_workspace_data <- function(ws, dock_mgr) {
         layout = as_dock_layout(dock_mgr$docks[[ws_name]]$layout())
       )
     })
-    res <- dock_workspaces(setNames(ws_list, names(state)))
+    res <- dock_workspaces(set_names(ws_list, names(state)))
     active_workspace(res) <- active_workspace(state)
     res
   })

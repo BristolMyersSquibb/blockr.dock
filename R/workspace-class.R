@@ -198,7 +198,6 @@ ws_can_crud <- function(x) {
   !is_dock_locked()
 }
 
-#' @param workspaces Replacement value
 #' @rdname workspace
 #' @export
 `dock_workspaces<-` <- function(x, value) {
