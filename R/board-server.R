@@ -799,11 +799,6 @@ suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,
 
   if (is.null(panels)) {
     panels <- dock_panel_ids(dock)
-    if (length(panels) == 0L) {
-      panels <- list()
-    } else if (length(panels) == 1L) {
-      panels <- list(panels)
-    }
   }
 
   stopifnot(is.list(panels), all(lgl_ply(panels, is_dock_panel_id)))
