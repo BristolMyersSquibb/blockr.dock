@@ -3,15 +3,10 @@ dock_input <- function(input) {
 }
 
 dock_panel_ids <- function(proxy = dock_proxy()) {
-  res <- as_dock_panel_id(
-    dockViewR::get_panels_ids(proxy)
-  )
-  # as_dock_panel_id.character returns a list for length > 1 but a single
-
-  # classed vector for length 1. Normalise to list so that downstream
-  # lgl_ply / [[ extraction preserves S3 classes.
-  if (!is.list(res)) res <- list(res)
-  res
+  res <- as_dock_panel_id(dockViewR::get_panels_ids(proxy))
+  # Normalise to list: as_dock_panel_id returns a list for length > 1
+  # but a single classed vector for length <= 1.
+  if (!is.list(res)) list(res) else res
 }
 
 dock_panel_named_ids <- function(proxy = dock_proxy()) {

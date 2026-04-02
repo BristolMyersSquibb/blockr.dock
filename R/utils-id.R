@@ -95,21 +95,25 @@ as_dock_panel_id <- function(x) {
 #' @export
 as_dock_panel_id.character <- function(x) {
 
-  if (length(x) > 1L) {
-    return(lapply(x, as_dock_panel_id))
+  coerce_one <- function(id) {
+    if (maybe_block_panel_id(id)) {
+      new_block_panel_id(id)
+    } else if (maybe_ext_panel_id(id)) {
+      new_ext_panel_id(id)
+    } else {
+      blockr_abort(
+        "Cannot convert ID {id} to a `dock_panel_id` object.",
+        class = "invalid_dock_panel_id_coercion"
+      )
+    }
   }
 
-  stopifnot(is_string(x))
-
-  if (maybe_block_panel_id(x)) {
-    new_block_panel_id(x)
-  } else if (maybe_ext_panel_id(x)) {
-    new_ext_panel_id(x)
+  # Single string: return a single classed ID.
+  # Multiple strings: return a list of classed IDs.
+  if (length(x) == 1L) {
+    coerce_one(x)
   } else {
-    blockr_abort(
-      "Cannot convert ID {x} to a `dock_panel_id` object.",
-      class = "invalid_dock_panel_id_coercion"
-    )
+    lapply(x, coerce_one)
   }
 }
 
