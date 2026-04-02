@@ -220,42 +220,6 @@
 }
 
 /* ============================================
-   Edge Tab (Settings Panel Trigger) - Figma-aligned
-   ============================================ */
-.blockr-edge-tab {
-  display: none; /* Hidden - use navbar gear icon instead */
-  position: fixed;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 88px;
-  background-color: var(--blockr-grey-100);
-  border: 1px solid var(--blockr-color-border);
-  border-right: none;
-  border-radius: 10px 0 0 10px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  box-shadow: var(--blockr-shadow);
-}
-
-.blockr-edge-tab:hover {
-  background-color: var(--blockr-color-border);
-  box-shadow: var(--blockr-shadow-lg);
-}
-
-.blockr-edge-tab svg,
-.blockr-edge-tab i {
-  font-size: 16px;
-  color: var(--blockr-color-text-muted);
-}
-
-/* ============================================
    Bootstrap Base Overrides
    ============================================ */
 
@@ -806,8 +770,8 @@ label:has(input[type="file"]) {
 }
 
 .blockr-ws-item.dropdown-item.active {
-  background-color: var(--blockr-primary-100);
-  color: var(--blockr-primary-700);
+  background-color: var(--blockr-blue-100);
+  color: var(--blockr-blue-700);
   font-weight: var(--blockr-font-weight-semibold);
 }
 
@@ -816,7 +780,7 @@ label:has(input[type="file"]) {
 }
 
 .blockr-ws-item.dropdown-item.active:hover {
-  background-color: var(--blockr-primary-100);
+  background-color: var(--blockr-blue-100);
 }
 
 /* Item name */
