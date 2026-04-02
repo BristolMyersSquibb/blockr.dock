@@ -42,7 +42,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
     # Extensions receive active_dock — a reactiveValues that always mirrors
     # whichever workspace is currently active (swapped by update_active_dock).
-    dock <- dock_mgr$active_dock_dock
+    dock <- dock_mgr$active_dock
     ws_data <- live_workspace_data(ws, dock_mgr)
 
   } else {
@@ -148,7 +148,7 @@ init_workspace_docks <- function(workspaces, board, update, triggers,
     dock_mgr$docks[[ws_name]] <- dock_res
   }
 
-  update_active_dock(dock_mgr$active_dock_dock, dock_mgr$docks[[active_ws]])
+  update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active_ws]])
 
   bare <- dock_workspaces(
     setNames(
@@ -164,7 +164,7 @@ init_workspace_docks <- function(workspaces, board, update, triggers,
 #'
 #' When the user selects a different tab via `input$ws_nav`, hides block/ext
 #' UI for the old workspace, shows it for the new one, updates `ws$state`,
-#' and swaps `dock_mgr$active_dock_dock` to point at the new workspace's dock.
+#' and swaps `dock_mgr$active_dock` to point at the new workspace's dock.
 #'
 #' @param ws Reactive workspace state (from [init_workspace_docks()]).
 #' @param session Shiny session.
@@ -191,7 +191,7 @@ switch_workspace_observer <- function(ws, session, dock_mgr) {
 
       active_workspace(state) <- new_ws
       ws$state <- state
-      update_active_dock(dock_mgr$active_dock_dock, dock_mgr$docks[[new_ws]])
+      update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_ws]])
     } else {
       session$sendCustomMessage("switch-workspace", list(
         id = session$ns(
