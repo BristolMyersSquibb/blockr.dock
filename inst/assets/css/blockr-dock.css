@@ -827,16 +827,18 @@ label:has(input[type="file"]) {
   white-space: nowrap;
 }
 
-/* CRUD action buttons */
+/* CRUD action buttons — use opacity instead of display to prevent layout jump */
 .blockr-ws-item-actions {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s ease;
 }
 
 .blockr-ws-item.dropdown-item:hover .blockr-ws-item-actions {
-  display: flex;
+  opacity: 1;
 }
 
 .blockr-ws-action {
