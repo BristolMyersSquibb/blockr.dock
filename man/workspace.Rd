@@ -73,5 +73,5 @@ layout specification as a (possibly nested) list of block and extension
 IDs — the same format accepted by \code{create_dock_layout(grid = ...)}.
 Block and extension membership is derived from that layout.
 Multiple workspaces are combined via \code{dock_workspaces()}. Workspace CRUD
-is enabled unless the dock is locked (see \code{\link[=is_dock_locked]{is_dock_locked()}}).
+is enabled unless the dock is locked (see \code{is_dock_locked()}).
 }

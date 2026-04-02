@@ -9,7 +9,8 @@
 #' @param ... Extension server arguments.
 #' @param session Shiny session.
 #'
-#' @return List with `dock`, `actions`, `ws_data`, and extension results.
+#' @return List with `dock`, `actions`, and extension results. When
+#'   workspaces are present, also includes `ws_data`.
 #'
 #' @noRd
 board_server_callback <- function(board, update, ..., session = get_session()) {
@@ -60,7 +61,8 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   register_actions(actions, triggers, board, update, ext_res)
 
   c(
-    list(dock = dock, actions = triggers, ws_data = ws_data),
+    list(dock = dock, actions = triggers),
+    if (!is.null(ws_data)) list(ws_data = ws_data),
     ext_res
   )
 }
@@ -76,7 +78,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 #'     (each a list with `layout`, `proxy`, `dock_id`, etc.).}
 #'   \item{`active_dock`}{A `reactiveValues` that mirrors the dock module
 #'     result of the currently active workspace. Extensions hold a stable
-#'     reference to this; its contents are swapped by [update_active_dock()]
+#'     reference to this; its contents are swapped by `update_active_dock()`
 #'     when the user switches workspaces.}
 #'   \item{`next_id`}{Closure returning a unique dock module ID on each call.}
 #' }
@@ -98,15 +100,15 @@ new_dock_manager <- function() {
 #' Initialise dock modules for each workspace.
 #'
 #' For every workspace in `workspaces`, inserts a dock view output container
-#' into the DOM and starts a [manage_dock()] module. Workspace layouts are
+#' into the DOM and starts a `manage_dock()` module. Workspace layouts are
 #' read from `workspaces` once for seeding; afterwards, layouts live
 #' exclusively in `dock_mgr$docks` (no duplication in `ws$state`).
 #'
 #' @param workspaces A `dock_workspaces` object (from the initial board).
 #' @param board,update,triggers Reactive board state, update signal, and
-#'   action triggers — forwarded to [manage_dock()].
+#'   action triggers — forwarded to `manage_dock()`.
 #' @param session Shiny session.
-#' @param dock_mgr Dock manager created by [new_dock_manager()].
+#' @param dock_mgr Dock manager created by `new_dock_manager()`.
 #'
 #' @return A `reactiveValues` with a single slot `$state` — a
 #'   `dock_workspaces` object tracking workspace names and which is active.
@@ -166,7 +168,7 @@ init_workspace_docks <- function(workspaces, board, update, triggers,
 #' UI for the old workspace, shows it for the new one, updates `ws$state`,
 #' and swaps `dock_mgr$active_dock` to point at the new workspace's dock.
 #'
-#' @param ws Reactive workspace state (from [init_workspace_docks()]).
+#' @param ws Reactive workspace state (from `init_workspace_docks()`).
 #' @param session Shiny session.
 #' @param dock_mgr Dock manager.
 #'
@@ -481,7 +483,7 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
 #' @param session Shiny session.
 #' @param dock_mgr Dock manager.
 #' @param board,update,triggers Reactive board state, update signal, and
-#'   action triggers — forwarded to [manage_dock()].
+#'   action triggers — forwarded to `manage_dock()`.
 #'
 #' @noRd
 add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {

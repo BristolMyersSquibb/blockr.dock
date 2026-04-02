@@ -9,7 +9,7 @@
 #' IDs — the same format accepted by `create_dock_layout(grid = ...)`.
 #' Block and extension membership is derived from that layout.
 #' Multiple workspaces are combined via `dock_workspaces()`. Workspace CRUD
-#' is enabled unless the dock is locked (see [is_dock_locked()]).
+#' is enabled unless the dock is locked (see `is_dock_locked()`).
 #'
 #' @param layout Layout specification as a (possibly nested) list of block
 #'   and extension IDs, e.g. `list("dataset_1", "head_1")` or
@@ -67,11 +67,9 @@ workspace_layout <- function(x) {
 #' @rdname workspace
 #' @export
 dock_workspaces <- function(...) {
-
   ws <- list(...)
 
-  if (length(ws) == 1L && is.list(ws[[1L]]) &&
-      !is_dock_workspace(ws[[1L]])) {
+  if (length(ws) == 1L && is.list(ws[[1L]]) && !is_dock_workspace(ws[[1L]])) {
     ws <- ws[[1L]]
   }
 
@@ -104,7 +102,6 @@ is_dock_workspaces <- function(x) {
 #' @rdname workspace
 #' @export
 validate_dock_workspaces <- function(x) {
-
   if (!is_dock_workspaces(x) || !is.list(x)) {
     blockr_abort(
       "Expecting workspaces to inherit from `dock_workspaces` and be a list.",
