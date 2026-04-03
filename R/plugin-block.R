@@ -4,10 +4,19 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
   blk_info <- blks_metadata(blk)
   ns <- NS(id)
 
+  visible <- coal(attr(blk, "visible"), c("header", "inputs", "outputs"))
+  header_hidden <- !"header" %in% visible
+
   div(
-    class = "card-body",
+    class = paste("card-body", if (header_hidden) "blockr-header-hidden"),
+    if (header_hidden) {
+      tags$script(HTML(sprintf(
+        "$(function() { Shiny.setInputValue('%s', false); });",
+        ns("header_visible")
+      )))
+    },
     div(
-      class = "d-flex align-items-stretch gap-3",
+      class = "d-flex align-items-stretch gap-3 blockr-header-row",
       # Icon element with tooltip
       span(
         title = blk_info$description,
@@ -23,9 +32,9 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
           class = "d-flex align-items-center justify-content-between w-100",
           # Left side: block name and subtitle
           block_card_title(blk, id, blk_info),
-          # Right side: toggles and dropdown
+          # Right side: toggles, pin, dropdown
           div(
-            class = "d-flex align-items-center gap-2 flex-shrink-0",
+            class = "d-flex align-items-center gap-1 flex-shrink-0",
             ctrl_header_icon(ns, ctrl_ui),
             block_card_toggles(blk, ns),
             block_card_dropdown(ns, blk_info, blk_id)
@@ -33,8 +42,23 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
         )
       )
     ),
+    # Restore header button — only visible when header is hidden
+    tags$button(
+      class = "btn blockr-restore-header-btn",
+      type = "button",
+      title = "Show header",
+      onclick = sprintf(
+        paste0(
+          "var card = this.closest('.card-body');",
+          "card.classList.remove('blockr-header-hidden');",
+          "Shiny.setInputValue('%s', true, {priority: 'event'});"
+        ),
+        ns("header_visible")
+      ),
+      icon("chevron-down")
+    ),
     ctrl_collapsible_section(ns, ctrl_ui),
-    block_card_content(ns, expr_ui, block_ui)
+    block_card_content(ns, expr_ui, block_ui, visible)
   )
 }
 
@@ -151,13 +175,21 @@ block_card_toggles <- function(blk, ns) {
 
   opts <- c("inputs", "outputs")
 
+  icon_labels <- list(
+    as.character(icon("sliders")),
+    as.character(icon("eye"))
+  )
+
+  tooltip_titles <- c("Controls", "Preview")
+
   section_toggles <- shinyWidgets::checkboxGroupButtons(
     inputId = ns("collapse_blk_sections"),
     status = "light",
     size = "sm",
-    choices = set_names(opts, c("Input", "Output")),
+    choiceNames = icon_labels,
+    choiceValues = opts,
     individual = TRUE,
-    selected = coal(attr(blk, "visible"), opts)
+    selected = intersect(coal(attr(blk, "visible"), opts), opts)
   )
 
   # Remove the ms-auto class, add blockr-section-toggle
@@ -166,7 +198,36 @@ block_card_toggles <- function(blk, ns) {
     trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
   )
 
-  section_toggles
+  tagList(
+    section_toggles,
+    tags$script(HTML(sprintf(
+      "$(function() {
+        var id = '%s';
+        var titles = %s;
+        var btns = $('#' + id).find('.btn');
+        btns.each(function(i) {
+          $(this).attr('data-bs-toggle', 'tooltip')
+                 .attr('data-bs-title', titles[i])
+                 .attr('data-bs-placement', 'bottom');
+        });
+        // Init tooltips in closest card-body
+        var card = document.getElementById(id).closest('.card-body');
+        if (card) {
+          var sel = '[data-bs-toggle=\"tooltip\"]';
+          card.querySelectorAll(sel).forEach(function(t) {
+            var tip = new bootstrap.Tooltip(t, {
+              delay: { show: 1000, hide: 0 },
+              trigger: 'hover'
+            });
+            // Hide tooltip on click to prevent it sticking
+            t.addEventListener('click', function() { tip.hide(); });
+          });
+        }
+      });",
+      ns("collapse_blk_sections"),
+      jsonlite::toJSON(tooltip_titles)
+    )))
+  )
 }
 
 block_card_dropdown <- function(ns, info, blk_id) {
@@ -189,7 +250,6 @@ block_card_dropdown <- function(ns, info, blk_id) {
         class = cls,
         type = "button",
         id = id,
-        style = "padding-left: 2.5rem;",
         if (not_null(symbol)) {
           span(
             class = "position-absolute start-0 top-50 translate-middle-y ms-3",
@@ -203,7 +263,7 @@ block_card_dropdown <- function(ns, info, blk_id) {
 
   dd_info <- function(key, val) {
     div(
-      class = "d-flex justify-content-between align-items-center mb-2",
+      class = "d-flex justify-content-between align-items-center mb-3",
       span(key, class = "text-muted small"),
       span(val, class = "small fw-medium")
     )
@@ -216,12 +276,10 @@ block_card_dropdown <- function(ns, info, blk_id) {
   div(
     class = "dropdown",
     tags$button(
-      class = "btn btn-link p-1 border-0 bg-transparent text-muted",
+      class = "btn btn-light blockr-header-icon",
       type = "button",
       `data-bs-toggle` = "dropdown",
       `aria-expanded` = "false",
-      onmouseover = "this.classList.add('text-dark');",
-      onmouseout = "this.classList.remove('text-dark');",
       icon("ellipsis-vertical")
     ),
     tags$ul(
@@ -243,27 +301,53 @@ block_card_dropdown <- function(ns, info, blk_id) {
             ns("delete_block"),
             bsicons::bs_icon("trash", class = "text-danger", size = "1.1em")
           ),
+          tags$li(
+            tags$button(
+              class = "dropdown-item py-2 position-relative",
+              type = "button",
+              onclick = sprintf(
+                paste0(
+                  "var card = this.closest('.card-body');",
+                  "card.classList.add('blockr-header-hidden');",
+                  "Shiny.setInputValue('%s', false, {priority: 'event'});"
+                ),
+                ns("header_visible")
+              ),
+              span(
+                class = paste(
+                  "position-absolute start-0",
+                  "top-50 translate-middle-y ms-3"
+                ),
+                bsicons::bs_icon(
+                  "chevron-bar-contract",
+                  class = "text-muted",
+                  size = "1.1em"
+                )
+              ),
+              "Hide header"
+            )
+          ),
           dd_divider()
         )
       },
       dd_header("Block Details"),
       tags$li(
         div(
-          class = "px-3 py-1",
+          class = "px-3 py-2",
           div(
-            class = "d-flex justify-content-between align-items-center mb-2",
+            class = "d-flex justify-content-between align-items-center mb-3",
             span("Package", class = "text-muted small"),
             span(class = "badge-two-tone", info$package)
           ),
           dd_info("Type", info$category),
           div(
-            class = "d-flex justify-content-between align-items-center mb-2",
+            class = "d-flex justify-content-between align-items-center",
             span("ID", class = "text-muted small"),
             div(
               class = "d-flex align-items-center gap-2",
               tags$code(
                 blk_id,
-                style = "font-size: var(--blockr-font-size-sm);"
+                style = "font-size: var(--blockr-font-size-xs);"
               ),
               tags$button(
                 class = "btn btn-link p-0 border-0 text-muted",
@@ -302,7 +386,12 @@ block_card_dropdown <- function(ns, info, blk_id) {
   )
 }
 
-block_card_content <- function(ns, expr_ui, block_ui) {
+block_card_content <- function(ns, expr_ui, block_ui, initial_visible = NULL) {
+
+  open_panels <- setdiff(
+    coal(initial_visible, c("header", "inputs", "outputs")),
+    "header"
+  )
 
   inputs_panel <- htmltools::tagQuery(
     accordion_panel(
@@ -359,7 +448,7 @@ block_card_content <- function(ns, expr_ui, block_ui) {
     accordion(
       id = ns("blk_accordion"),
       multiple = TRUE,
-      open = c("inputs", "outputs"),
+      open = open_panels,
       inputs_panel,
       outputs_panel
     )
@@ -375,12 +464,11 @@ ctrl_header_icon <- function(ns, ctrl_ui) {
   target_id <- ns("ctrl_section")
 
   tags$button(
-    class = paste(
-      "btn btn-link p-1 border-0",
-      "bg-transparent text-muted blockr-sparkle-btn"
-    ),
+    class = "btn btn-light blockr-header-icon blockr-sparkle-btn",
     type = "button",
-    title = "Toggle AI assistant",
+    `data-bs-toggle` = "tooltip",
+    `data-bs-title` = "AI Assistant",
+    `data-bs-placement` = "bottom",
     onclick = sprintf(
       paste0(
         "var section = document.getElementById('%s');",
@@ -392,7 +480,7 @@ ctrl_header_icon <- function(ns, ctrl_ui) {
       target_id
     ),
     HTML(paste0(
-      '<svg class="blockr-sparkle-svg" width="18" height="18" ',
+      '<svg class="blockr-sparkle-svg" width="16" height="16" ',
       'viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">',
       '<path class="sparkle-main" d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18',
       'L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="currentColor"/>',
@@ -507,11 +595,20 @@ edit_block_server <- function(callbacks = list()) {
 
         observeEvent(
           input$collapse_blk_sections,
-          accordion_panel_set(
-            "blk_accordion",
-            input$collapse_blk_sections,
-            session
-          )
+          {
+            selected <- coal(input$collapse_blk_sections, character(0))
+            all_panels <- c("inputs", "outputs")
+            to_open <- intersect(selected, all_panels)
+            to_close <- setdiff(all_panels, selected)
+            if (length(to_open) > 0L) {
+              accordion_panel_open("blk_accordion", to_open, session)
+            }
+            if (length(to_close) > 0L) {
+              accordion_panel_close("blk_accordion", to_close, session)
+            }
+          },
+          ignoreNULL = FALSE,
+          ignoreInit = TRUE
         )
 
         conds <- reactive(
@@ -560,7 +657,11 @@ edit_block_server <- function(callbacks = list()) {
         }
 
         list(
-          visible = reactive(input$collapse_blk_sections)
+          visible = reactive({
+            sections <- input$collapse_blk_sections
+            header <- input$header_visible
+            c(if (!isFALSE(header)) "header", sections)
+          })
         )
       }
     )
