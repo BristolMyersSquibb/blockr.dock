@@ -375,7 +375,10 @@ ctrl_header_icon <- function(ns, ctrl_ui) {
   target_id <- ns("ctrl_section")
 
   tags$button(
-    class = "btn btn-link p-1 border-0 bg-transparent text-muted blockr-sparkle-btn",
+    class = paste(
+      "btn btn-link p-1 border-0",
+      "bg-transparent text-muted blockr-sparkle-btn"
+    ),
     type = "button",
     title = "Toggle AI assistant",
     onclick = sprintf(
@@ -398,7 +401,7 @@ ctrl_header_icon <- function(ns, ctrl_ui) {
       'fill="currentColor" opacity="0.7"/>',
       '<path class="sparkle-sm sparkle-sm-2" d="M5 1L5.5 2.5L7 3L5.5 3.5',
       'L5 5L4.5 3.5L3 3L4.5 2.5L5 1Z" fill="currentColor" opacity="0.5"/>',
-      '</svg>'
+      '</svg>' # nolint: quotes_linter.
     ))
   )
 }
