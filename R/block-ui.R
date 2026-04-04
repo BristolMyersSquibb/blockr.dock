@@ -37,7 +37,9 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
     edit_ns <- NS(blk_srv_id, "edit_block")
   }
 
-  ctrl_tag <- if (!is.null(ctrl)) ctrl(NS(blk_srv_id, "ctrl_block"), blk)
+  ctrl_tag <- if (isTRUE(attr(blk, "external_ctrl")) && !is.null(ctrl)) {
+    ctrl(NS(blk_srv_id, "ctrl_block"), blk)
+  }
 
   card_tag <- div(
     class = "card",
