@@ -1,5 +1,5 @@
 edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
-                          ctrl_ui = NULL) {
+                          ctrl_ui = NULL, ctrl_meta = NULL) {
 
   blk_info <- blks_metadata(blk)
   ns <- NS(id)
@@ -8,12 +8,10 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
     class = "card-body",
     div(
       class = "d-flex align-items-stretch gap-3",
-      # Icon element with tooltip
       span(
         title = blk_info$description,
         blk_icon_data_uri(blk_info$icon, blk_info$color, 46, "inline")
       ),
-      # Title section
       div(
         class = paste(
           "d-flex flex-column justify-content-center",
@@ -21,20 +19,16 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
         ),
         div(
           class = "d-flex align-items-center justify-content-between w-100",
-          # Left side: block name and subtitle
           block_card_title(blk, id, blk_info),
-          # Right side: toggles and dropdown
           div(
             class = "d-flex align-items-center gap-2 flex-shrink-0",
-            ctrl_header_icon(ns, ctrl_ui),
-            block_card_toggles(blk, ns),
+            block_card_toggles(blk, ns, ctrl_meta),
             block_card_dropdown(ns, blk_info, blk_id)
           )
         )
       )
     ),
-    ctrl_collapsible_section(ns, ctrl_ui),
-    block_card_content(ns, expr_ui, block_ui)
+    block_card_content(ns, expr_ui, block_ui, ctrl_ui)
   )
 }
 
@@ -143,30 +137,48 @@ block_card_title <- function(block, id, info) {
   )
 }
 
-block_card_toggles <- function(blk, ns) {
+block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
 
   if (is_dock_locked()) {
     return(NULL)
   }
 
-  opts <- c("inputs", "outputs")
+  vals <- c("inputs", "outputs")
+  names <- list("Input", "Output")
+
+  if (!is.null(ctrl_meta)) {
+    vals <- c(vals, "ctrl")
+    names <- c(names, list(ctrl_button_label(ctrl_meta)))
+  }
 
   section_toggles <- shinyWidgets::checkboxGroupButtons(
     inputId = ns("collapse_blk_sections"),
     status = "light",
     size = "sm",
-    choices = set_names(opts, c("Input", "Output")),
+    choiceNames = names,
+    choiceValues = vals,
     individual = TRUE,
-    selected = coal(attr(blk, "visible"), opts)
+    selected = coal(attr(blk, "visible"), c("inputs", "outputs"))
   )
 
-  # Remove the ms-auto class, add blockr-section-toggle
   section_toggles$attribs$class <- paste(
     "blockr-section-toggle",
     trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
   )
 
   section_toggles
+}
+
+ctrl_button_label <- function(meta) {
+
+  label <- if (nzchar(coal(meta$label, ""))) meta$label
+  inner <- if (is.null(meta$icon)) label else tagList(meta$icon, label)
+
+  if (is.null(meta$class)) {
+    return(inner)
+  }
+
+  span(class = meta$class, inner)
 }
 
 block_card_dropdown <- function(ns, info, blk_id) {
@@ -302,7 +314,7 @@ block_card_dropdown <- function(ns, info, blk_id) {
   )
 }
 
-block_card_content <- function(ns, expr_ui, block_ui) {
+block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
 
   inputs_panel <- htmltools::tagQuery(
     accordion_panel(
@@ -354,80 +366,56 @@ block_card_content <- function(ns, expr_ui, block_ui) {
 
   outputs_panel$attribs$style <- "border: none; border-radius: 0;"
 
+  ctrl_panel <- if (!is.null(ctrl_ui)) build_ctrl_panel(ctrl_ui)
+
   tagList(
     div(id = ns("errors_block"), class = "mt-4"),
     accordion(
       id = ns("blk_accordion"),
       multiple = TRUE,
       open = c("inputs", "outputs"),
+      ctrl_panel,
       inputs_panel,
       outputs_panel
     )
   )
 }
 
-ctrl_header_icon <- function(ns, ctrl_ui) {
+build_ctrl_panel <- function(ctrl_ui) {
 
-  if (is.null(ctrl_ui)) {
-    return(NULL)
-  }
-
-  target_id <- ns("ctrl_section")
-
-  tags$button(
-    class = paste(
-      "btn btn-link p-1 border-0",
-      "bg-transparent text-muted blockr-sparkle-btn"
-    ),
-    type = "button",
-    title = "Toggle AI assistant",
-    onclick = sprintf(
-      paste0(
-        "var section = document.getElementById('%s');",
-        "if (section) {",
-        "  section.classList.toggle('ai-collapsed');",
-        "  this.classList.toggle('active');",
-        "}"
-      ),
-      target_id
-    ),
-    HTML(paste0(
-      '<svg class="blockr-sparkle-svg" width="18" height="18" ',
-      'viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">',
-      '<path class="sparkle-main" d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18',
-      'L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="currentColor"/>',
-      '<path class="sparkle-sm sparkle-sm-1" d="M19 15L19.75 17.25L22 18',
-      'L19.75 18.75L19 21L18.25 18.75L16 18L18.25 17.25L19 15Z" ',
-      'fill="currentColor" opacity="0.7"/>',
-      '<path class="sparkle-sm sparkle-sm-2" d="M5 1L5.5 2.5L7 3L5.5 3.5',
-      'L5 5L4.5 3.5L3 3L4.5 2.5L5 1Z" fill="currentColor" opacity="0.5"/>',
-      '</svg>' # nolint: quotes_linter.
-    ))
-  )
-}
-
-ctrl_collapsible_section <- function(ns, ctrl_ui) {
-
-  if (is.null(ctrl_ui)) {
-    return(NULL)
-  }
-
-  div(
-    id = ns("ctrl_section"),
-    class = "blockr-ctrl-section ai-collapsed",
-    div(
-      class = "blockr-ctrl-section-inner",
-      div(
-        class = "blockr-ctrl-section-header",
-        span("AI Assistant", class = "blockr-ctrl-section-label")
-      ),
-      div(
-        class = "blockr-ctrl-content",
-        ctrl_ui
-      )
+  panel <- htmltools::tagQuery(
+    accordion_panel(
+      title = "Control",
+      value = "ctrl"
     )
-  )
+  )$find(
+    ".accordion-header"
+  )$addAttrs(
+    style = "display: none;"
+  )$reset(
+  )$find(
+    ".accordion-body"
+  )$addAttrs(
+    style = paste0(
+      "background-color: white;",
+      "border-radius: 0;",
+      "margin: 0 -16px 10px -16px;",
+      "padding: 16px 16px 10px 16px;",
+      "border-top: 1px solid var(--blockr-grey-300);",
+      "border-bottom: 1px solid var(--blockr-grey-300);"
+    )
+  )$append(
+    ctrl_ui
+  )$allTags()
+
+  panel$attribs$style <- "border: none; border-radius: 0;"
+
+  panel
 }
+
+ctrl_btn_label <- function(fn) coal(attr(fn, "ctrl_label"), "Control")
+ctrl_btn_icon  <- function(fn) attr(fn, "ctrl_icon")
+ctrl_btn_class <- function(fn) attr(fn, "ctrl_class")
 
 edit_block_server <- function(callbacks = list()) {
 

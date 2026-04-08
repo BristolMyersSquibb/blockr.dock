@@ -37,7 +37,17 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
     edit_ns <- NS(blk_srv_id, "edit_block")
   }
 
-  ctrl_tag <- if (!is.null(ctrl)) ctrl(NS(blk_srv_id, "ctrl_block"), blk)
+  if (!is.null(ctrl) && has_external_ctrl(blk)) {
+    ctrl_tag <- ctrl(NS(blk_srv_id, "ctrl_block"), blk)
+    ctrl_meta <- list(
+      label = ctrl_btn_label(ctrl),
+      icon  = ctrl_btn_icon(ctrl),
+      class = ctrl_btn_class(ctrl)
+    )
+  } else {
+    ctrl_tag <- NULL
+    ctrl_meta <- NULL
+  }
 
   card_tag <- div(
     class = "card",
@@ -49,11 +59,17 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
       blk_id,
       expr_ui(blk_srv_id, blk),
       block_ui(blk_srv_id, blk),
-      ctrl_ui = ctrl_tag
+      ctrl_ui = ctrl_tag,
+      ctrl_meta = ctrl_meta
     )
   )
 
   tagAppendAttributes(card_tag, class = "border border-0 shadow-none")
+}
+
+has_external_ctrl <- function(x) {
+  ctrl <- attr(x, "external_ctrl")
+  isTRUE(ctrl) || (is.character(ctrl) && length(ctrl) > 0L)
 }
 
 show_hide_block_dep <- function() {
