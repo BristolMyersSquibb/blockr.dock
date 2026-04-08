@@ -40,9 +40,10 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
   if (!is.null(ctrl) && has_external_ctrl(blk)) {
     ctrl_tag <- ctrl(NS(blk_srv_id, "ctrl_block"), blk)
     ctrl_meta <- list(
-      label = ctrl_btn_label(ctrl),
-      icon  = ctrl_btn_icon(ctrl),
-      class = ctrl_btn_class(ctrl)
+      label   = ctrl_btn_label(ctrl),
+      icon    = ctrl_btn_icon(ctrl),
+      class   = ctrl_btn_class(ctrl),
+      tooltip = ctrl_btn_tooltip(ctrl)
     )
   } else {
     ctrl_tag <- NULL

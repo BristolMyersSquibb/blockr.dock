@@ -4,10 +4,20 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
   blk_info <- blks_metadata(blk)
   ns <- NS(id)
 
+  visible <- coal(attr(blk, "visible"), c("header", "inputs", "outputs"))
+  header_hidden <- !"header" %in% visible
+
   div(
-    class = "card-body",
+    class = paste("card-body", if (header_hidden) "blockr-header-hidden"),
+    if (header_hidden) {
+      tags$script(HTML(sprintf(
+        "$(function() { Shiny.setInputValue('%s', false); });",
+        ns("header_visible")
+      )))
+    },
     div(
-      class = "d-flex align-items-stretch gap-3",
+      class = "d-flex align-items-stretch gap-3 blockr-header-row",
+      # Icon element with tooltip
       span(
         title = blk_info$description,
         blk_icon_data_uri(blk_info$icon, blk_info$color, 46, "inline")
@@ -21,14 +31,29 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
           class = "d-flex align-items-center justify-content-between w-100",
           block_card_title(blk, id, blk_info),
           div(
-            class = "d-flex align-items-center gap-2 flex-shrink-0",
+            class = "d-flex align-items-center gap-1 flex-shrink-0",
             block_card_toggles(blk, ns, ctrl_meta),
             block_card_dropdown(ns, blk_info, blk_id)
           )
         )
       )
     ),
-    block_card_content(ns, expr_ui, block_ui, ctrl_ui)
+    # Restore header button — only visible when header is hidden
+    tags$button(
+      class = "btn blockr-restore-header-btn",
+      type = "button",
+      title = "Show header",
+      onclick = sprintf(
+        paste0(
+          "var card = this.closest('.card-body');",
+          "card.classList.remove('blockr-header-hidden');",
+          "Shiny.setInputValue('%s', true, {priority: 'event'});"
+        ),
+        ns("header_visible")
+      ),
+      icon("chevron-down")
+    ),
+    block_card_content(ns, expr_ui, block_ui, ctrl_ui, visible)
   )
 }
 
@@ -144,21 +169,26 @@ block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
   }
 
   vals <- c("inputs", "outputs")
-  names <- list("Input", "Output")
+  icon_labels <- list(
+    as.character(icon("sliders")),
+    as.character(icon("eye"))
+  )
+  tooltip_titles <- c("Controls", "Preview")
 
   if (!is.null(ctrl_meta)) {
     vals <- c(vals, "ctrl")
-    names <- c(names, list(ctrl_button_label(ctrl_meta)))
+    icon_labels <- c(icon_labels, list(as.character(ctrl_button_label(ctrl_meta))))
+    tooltip_titles <- c(tooltip_titles, coal(ctrl_meta$tooltip, ctrl_meta$label, "Control"))
   }
 
   section_toggles <- shinyWidgets::checkboxGroupButtons(
     inputId = ns("collapse_blk_sections"),
     status = "light",
     size = "sm",
-    choiceNames = names,
+    choiceNames = icon_labels,
     choiceValues = vals,
     individual = TRUE,
-    selected = coal(attr(blk, "visible"), c("inputs", "outputs"))
+    selected = intersect(coal(attr(blk, "visible"), c("inputs", "outputs")), vals)
   )
 
   section_toggles$attribs$class <- paste(
@@ -166,7 +196,36 @@ block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
     trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
   )
 
-  section_toggles
+  tagList(
+    section_toggles,
+    tags$script(HTML(sprintf(
+      "$(function() {
+        var id = '%s';
+        var titles = %s;
+        var btns = $('#' + id).find('.btn');
+        btns.each(function(i) {
+          $(this).attr('data-bs-toggle', 'tooltip')
+                 .attr('data-bs-title', titles[i])
+                 .attr('data-bs-placement', 'bottom');
+        });
+        // Init tooltips in closest card-body
+        var card = document.getElementById(id).closest('.card-body');
+        if (card) {
+          var sel = '[data-bs-toggle=\"tooltip\"]';
+          card.querySelectorAll(sel).forEach(function(t) {
+            var tip = new bootstrap.Tooltip(t, {
+              delay: { show: 1000, hide: 0 },
+              trigger: 'hover'
+            });
+            // Hide tooltip on click to prevent it sticking
+            t.addEventListener('click', function() { tip.hide(); });
+          });
+        }
+      });",
+      ns("collapse_blk_sections"),
+      jsonlite::toJSON(tooltip_titles)
+    )))
+  )
 }
 
 ctrl_button_label <- function(meta) {
@@ -201,7 +260,6 @@ block_card_dropdown <- function(ns, info, blk_id) {
         class = cls,
         type = "button",
         id = id,
-        style = "padding-left: 2.5rem;",
         if (not_null(symbol)) {
           span(
             class = "position-absolute start-0 top-50 translate-middle-y ms-3",
@@ -215,7 +273,7 @@ block_card_dropdown <- function(ns, info, blk_id) {
 
   dd_info <- function(key, val) {
     div(
-      class = "d-flex justify-content-between align-items-center mb-2",
+      class = "d-flex justify-content-between align-items-center mb-3",
       span(key, class = "text-muted small"),
       span(val, class = "small fw-medium")
     )
@@ -228,12 +286,10 @@ block_card_dropdown <- function(ns, info, blk_id) {
   div(
     class = "dropdown",
     tags$button(
-      class = "btn btn-link p-1 border-0 bg-transparent text-muted",
+      class = "btn btn-light blockr-header-icon",
       type = "button",
       `data-bs-toggle` = "dropdown",
       `aria-expanded` = "false",
-      onmouseover = "this.classList.add('text-dark');",
-      onmouseout = "this.classList.remove('text-dark');",
       icon("ellipsis-vertical")
     ),
     tags$ul(
@@ -255,27 +311,53 @@ block_card_dropdown <- function(ns, info, blk_id) {
             ns("delete_block"),
             bsicons::bs_icon("trash", class = "text-danger", size = "1.1em")
           ),
+          tags$li(
+            tags$button(
+              class = "dropdown-item py-2 position-relative",
+              type = "button",
+              onclick = sprintf(
+                paste0(
+                  "var card = this.closest('.card-body');",
+                  "card.classList.add('blockr-header-hidden');",
+                  "Shiny.setInputValue('%s', false, {priority: 'event'});"
+                ),
+                ns("header_visible")
+              ),
+              span(
+                class = paste(
+                  "position-absolute start-0",
+                  "top-50 translate-middle-y ms-3"
+                ),
+                bsicons::bs_icon(
+                  "chevron-bar-contract",
+                  class = "text-muted",
+                  size = "1.1em"
+                )
+              ),
+              "Hide header"
+            )
+          ),
           dd_divider()
         )
       },
       dd_header("Block Details"),
       tags$li(
         div(
-          class = "px-3 py-1",
+          class = "px-3 py-2",
           div(
-            class = "d-flex justify-content-between align-items-center mb-2",
+            class = "d-flex justify-content-between align-items-center mb-3",
             span("Package", class = "text-muted small"),
             span(class = "badge-two-tone", info$package)
           ),
           dd_info("Type", info$category),
           div(
-            class = "d-flex justify-content-between align-items-center mb-2",
+            class = "d-flex justify-content-between align-items-center",
             span("ID", class = "text-muted small"),
             div(
               class = "d-flex align-items-center gap-2",
               tags$code(
                 blk_id,
-                style = "font-size: var(--blockr-font-size-sm);"
+                style = "font-size: var(--blockr-font-size-xs);"
               ),
               tags$button(
                 class = "btn btn-link p-0 border-0 text-muted",
@@ -314,7 +396,13 @@ block_card_dropdown <- function(ns, info, blk_id) {
   )
 }
 
-block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
+block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL,
+                              initial_visible = NULL) {
+
+  open_panels <- setdiff(
+    coal(initial_visible, c("header", "inputs", "outputs")),
+    "header"
+  )
 
   inputs_panel <- htmltools::tagQuery(
     accordion_panel(
@@ -373,7 +461,7 @@ block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
     accordion(
       id = ns("blk_accordion"),
       multiple = TRUE,
-      open = c("inputs", "outputs"),
+      open = open_panels,
       ctrl_panel,
       inputs_panel,
       outputs_panel
@@ -399,10 +487,9 @@ build_ctrl_panel <- function(ctrl_ui) {
     style = paste0(
       "background-color: white;",
       "border-radius: 0;",
-      "margin: 0 -16px 10px -16px;",
+      "margin: 0 -16px 0 -16px;",
       "padding: 16px 16px 10px 16px;",
-      "border-top: 1px solid var(--blockr-grey-300);",
-      "border-bottom: 1px solid var(--blockr-grey-300);"
+      "border-top: 1px solid var(--blockr-grey-300);"
     )
   )$append(
     ctrl_ui
@@ -413,9 +500,10 @@ build_ctrl_panel <- function(ctrl_ui) {
   panel
 }
 
-ctrl_btn_label <- function(fn) coal(attr(fn, "ctrl_label"), "Control")
-ctrl_btn_icon  <- function(fn) attr(fn, "ctrl_icon")
-ctrl_btn_class <- function(fn) attr(fn, "ctrl_class")
+ctrl_btn_label   <- function(fn) coal(attr(fn, "ctrl_label"), "Control")
+ctrl_btn_icon    <- function(fn) attr(fn, "ctrl_icon")
+ctrl_btn_class   <- function(fn) attr(fn, "ctrl_class")
+ctrl_btn_tooltip <- function(fn) attr(fn, "ctrl_tooltip")
 
 edit_block_server <- function(callbacks = list()) {
 
@@ -548,7 +636,11 @@ edit_block_server <- function(callbacks = list()) {
         }
 
         list(
-          visible = reactive(input$collapse_blk_sections)
+          visible = reactive({
+            sections <- input$collapse_blk_sections
+            header <- input$header_visible
+            c(if (!isFALSE(header)) "header", sections)
+          })
         )
       }
     )
