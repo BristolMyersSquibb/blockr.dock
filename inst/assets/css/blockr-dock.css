@@ -453,6 +453,19 @@ label:has(input[type="file"]) {
   border-left: 1px solid var(--blockr-color-border) !important;
 }
 
+/* Lazy-eval support: block cards that live in the offcanvas staging area
+   must report as display:none so Shiny's isHidden() returns TRUE and
+   blockr.core's lazy-eval suspends the block. Bootstrap's default
+   .offcanvas uses visibility:hidden which leaves descendants with nonzero
+   offsetWidth/offsetHeight — Shiny still considers them visible and the
+   block evaluates on startup. This rule forces the card handles to be
+   display:none until they're moved out of the offcanvas into a dock
+   panel (at which point the move-element JS triggers a shown event that
+   re-evaluates clientData and resumes the block). */
+.offcanvas:not(.show) > .offcanvas-body > .card {
+  display: none !important;
+}
+
 .offcanvas-header {
   border-bottom: 1px solid var(--blockr-color-border);
   padding: 16px 20px;
