@@ -14,7 +14,13 @@ $(function () {
       if ($wsDock.length > 0 && !$wsDock.hasClass('blockr-view-dock-active')) {
         return;
       }
-      $(m.to).append($(m.from));
+      var $moved = $(m.from);
+      $(m.to).append($moved);
+      // Notify Shiny to re-evaluate output hidden state for all bound
+      // outputs. The moved card's output is now inside a visible container
+      // (dock panel), so clientData `_hidden` should flip to FALSE and
+      // blockr.core's lazy-eval will resume the block.
+      $moved.trigger('shown.sendOutputHiddenState');
     }
   )
 })

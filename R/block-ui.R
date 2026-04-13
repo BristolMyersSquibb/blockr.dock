@@ -53,6 +53,13 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
     class = "card",
     width = "100%",
     id = board_ns(as_block_handle_id(blk_id)),
+    # Visibility sensor for blockr.core's lazy-eval. A no-op output whose
+    # `_hidden` state in clientData lets the server know whether the entire
+    # card is on-screen. Lives outside `edit_ui(...)` so future changes to
+    # the dock's chrome can't accidentally hide it independently of the
+    # card. Must be present for lazy-eval to work — board subclasses are
+    # expected to honor this contract.
+    shiny::uiOutput(NS(blk_srv_id, "card_probe"), inline = TRUE),
     edit_ui(
       edit_ns,
       blk,
