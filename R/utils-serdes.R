@@ -90,12 +90,35 @@ blockr_ser.dock_extensions <- function(x, data, ...) {
 
 #' @export
 blockr_deser.dock_layout <- function(x, data, ...) {
-  as_dock_layout(data[["payload"]], ...)
+  as_dock_layout(normalize_dock_layout(data[["payload"]]), ...)
 }
 
 #' @export
 blockr_deser.dock_workspace <- function(x, data, ...) {
-  dock_workspace(layout = data[["payload"]][["layout"]])
+  dock_workspace(layout = normalize_dock_layout(data[["payload"]][["layout"]]))
+}
+
+# dockview.js expects `views` to always be a JSON array. Single-element
+# arrays round-trip through jsonlite as scalar character vectors, which
+# breaks the JS `fromJSON` with "Cannot read properties of undefined
+# (reading 'id')". Walk the grid and re-wrap scalars as lists.
+normalize_dock_layout <- function(ly) {
+  if (is.null(ly) || is.null(ly$grid)) return(ly)
+  ly$grid$root <- normalize_dock_node(ly$grid$root)
+  ly
+}
+
+normalize_dock_node <- function(node) {
+  if (!is.list(node) || is.null(node$type)) return(node)
+  if (identical(node$type, "leaf")) {
+    if (!is.null(node$data) && !is.null(node$data$views) &&
+        !is.list(node$data$views)) {
+      node$data$views <- as.list(node$data$views)
+    }
+  } else if (identical(node$type, "branch") && is.list(node$data)) {
+    node$data <- lapply(node$data, normalize_dock_node)
+  }
+  node
 }
 
 #' @export
