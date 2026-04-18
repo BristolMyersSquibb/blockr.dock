@@ -143,7 +143,7 @@ show_block_ui <- function(id, session, board_ns = session$ns) {
 
   # board_ns: board-level namespace for DOM element IDs (handles, offcanvas).
   # session$ns: dock-module namespace for dock panel IDs.
-  # These differ when called from a nested dock module (workspaces).
+  # These differ when called from a nested dock module (views).
   bid <- board_ns(as_block_handle_id(id))
   pid <- paste(dock_id(session$ns), as_block_panel_id(id), sep = "-")
 

@@ -9,9 +9,9 @@ $(function () {
         console.warn(`move-element: 'to' selector ${m.to} not found in DOM`);
         return;
       }
-      // Don't move elements into inactive workspace docks
-      var $wsDock = $(m.to).closest('.blockr-ws-dock');
-      if ($wsDock.length > 0 && !$wsDock.hasClass('blockr-ws-dock-active')) {
+      // Don't move elements into inactive view docks
+      var $wsDock = $(m.to).closest('.blockr-view-dock');
+      if ($wsDock.length > 0 && !$wsDock.hasClass('blockr-view-dock-active')) {
         return;
       }
       $(m.to).append($(m.from));

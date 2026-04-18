@@ -7,33 +7,33 @@ $(function () {
     });
   };
 
-  var workspaceBinding = new Shiny.InputBinding();
+  var viewBinding = new Shiny.InputBinding();
 
-  $.extend(workspaceBinding, {
+  $.extend(viewBinding, {
     find: function (scope) {
-      return $(scope).find('.blockr-ws-nav');
+      return $(scope).find('.blockr-view-nav');
     },
 
     getValue: function (el) {
-      return $(el).find('.blockr-ws-item.active').attr('data-ws-name') || null;
+      return $(el).find('.blockr-view-item.active').attr('data-view-name') || null;
     },
 
     setValue: function (el, value) {
-      $(el).find('.blockr-ws-item').removeClass('active');
+      $(el).find('.blockr-view-item').removeClass('active');
       $(el)
-        .find('.blockr-ws-item[data-ws-name="' + value + '"]')
+        .find('.blockr-view-item[data-view-name="' + value + '"]')
         .addClass('active');
     },
 
     subscribe: function (el, callback) {
       // Programmatic updates (receiveMessage) trigger 'change'
-      $(el).on('change.workspaceBinding', function () {
+      $(el).on('change.viewBinding', function () {
         callback(true);
       });
 
-      // Workspace switch: click on item (but not on action buttons)
-      $(el).on('click.workspaceBinding', '.blockr-ws-item', function (e) {
-        if ($(e.target).closest('.blockr-ws-item-actions').length) {
+      // View switch: click on item (but not on action buttons)
+      $(el).on('click.viewBinding', '.blockr-view-item', function (e) {
+        if ($(e.target).closest('.blockr-view-item-actions').length) {
           e.stopPropagation();
           return;
         }
@@ -42,29 +42,29 @@ $(function () {
         var $item = $(this);
         var $nav = $(el);
 
-        $nav.find('.blockr-ws-item').removeClass('active');
+        $nav.find('.blockr-view-item').removeClass('active');
         $item.addClass('active');
 
-        var wsName = $item.attr('data-ws-name');
+        var viewName = $item.attr('data-view-name');
         $nav
-          .closest('.blockr-ws-dropdown')
-          .find('.blockr-ws-toggle-label')
-          .text(wsName);
+          .closest('.blockr-view-dropdown')
+          .find('.blockr-view-toggle-label')
+          .text(viewName);
 
         callback(true);
       });
 
       // Edit click: swap name span for inline input
-      $(el).on('click.workspaceBinding', '.blockr-ws-edit', function (e) {
+      $(el).on('click.viewBinding', '.blockr-view-edit', function (e) {
         e.stopPropagation();
         e.preventDefault();
 
-        var $item = $(this).closest('.blockr-ws-item');
-        var $name = $item.find('.blockr-ws-item-name');
+        var $item = $(this).closest('.blockr-view-item');
+        var $name = $item.find('.blockr-view-item-name');
         var currentName = $name.text();
 
         var $input = $('<input>')
-          .addClass('blockr-ws-rename-input')
+          .addClass('blockr-view-rename-input')
           .val(currentName)
           .attr('type', 'text');
 
@@ -78,17 +78,17 @@ $(function () {
 
           var rawName = $input.val().trim();
           // Validate: non-empty, alphanumeric/spaces/hyphens/underscores only,
-          // and not a duplicate of another workspace
+          // and not a duplicate of another view
           var errorMsg = null;
           if (rawName.length === 0) {
-            errorMsg = 'Workspace name cannot be empty.';
+            errorMsg = 'View name cannot be empty.';
           } else if (!/^[a-zA-Z0-9 _-]+$/.test(rawName)) {
             errorMsg = 'Invalid name. Only letters, numbers, spaces, hyphens and underscores are allowed.';
           } else {
-            var $siblings = $item.closest('.blockr-ws-nav').find('.blockr-ws-item');
+            var $siblings = $item.closest('.blockr-view-nav').find('.blockr-view-item');
             $siblings.each(function () {
-              if (this !== $item[0] && $(this).attr('data-ws-name') === rawName) {
-                errorMsg = 'A workspace with this name already exists.';
+              if (this !== $item[0] && $(this).attr('data-view-name') === rawName) {
+                errorMsg = 'A view with this name already exists.';
                 return false; // break
               }
             });
@@ -98,21 +98,21 @@ $(function () {
           }
           var newName = errorMsg ? currentName : rawName;
           var $newName = $('<span>')
-            .addClass('blockr-ws-item-name')
+            .addClass('blockr-view-item-name')
             .text(newName);
           $input.replaceWith($newName);
 
           if (newName !== currentName) {
-            $item.attr('data-ws-name', newName);
+            $item.attr('data-view-name', newName);
 
             if ($item.hasClass('active')) {
               $item
-                .closest('.blockr-ws-dropdown')
-                .find('.blockr-ws-toggle-label')
+                .closest('.blockr-view-dropdown')
+                .find('.blockr-view-toggle-label')
                 .text(newName);
             }
 
-            var $nav = $item.closest('.blockr-ws-nav');
+            var $nav = $item.closest('.blockr-view-nav');
             var id = $nav.attr('id');
             Shiny.setInputValue(id + '_rename', {
               from: currentName,
@@ -121,7 +121,7 @@ $(function () {
           }
 
           if (closeMenu) {
-            var toggle = $item.closest('.blockr-ws-dropdown')
+            var toggle = $item.closest('.blockr-view-dropdown')
               .find('[data-bs-toggle="dropdown"]')[0];
             if (toggle) {
               var dd = bootstrap.Dropdown.getOrCreateInstance(toggle);
@@ -137,7 +137,7 @@ $(function () {
           } else if (e.key === 'Escape') {
             committed = true;
             var $newName = $('<span>')
-              .addClass('blockr-ws-item-name')
+              .addClass('blockr-view-item-name')
               .text(currentName);
             $input.replaceWith($newName);
           }
@@ -149,24 +149,24 @@ $(function () {
       });
 
       // Remove click
-      $(el).on('click.workspaceBinding', '.blockr-ws-remove', function (e) {
+      $(el).on('click.viewBinding', '.blockr-view-remove', function (e) {
         e.stopPropagation();
         e.preventDefault();
 
-        var $item = $(this).closest('.blockr-ws-item');
-        var wsName = $item.attr('data-ws-name');
-        var $nav = $item.closest('.blockr-ws-nav');
+        var $item = $(this).closest('.blockr-view-item');
+        var viewName = $item.attr('data-view-name');
+        var $nav = $item.closest('.blockr-view-nav');
         var id = $nav.attr('id');
 
-        Shiny.setInputValue(id + '_remove', wsName, { priority: 'event' });
+        Shiny.setInputValue(id + '_remove', viewName, { priority: 'event' });
       });
 
       // Add click
-      $(el).on('click.workspaceBinding', '.blockr-ws-add', function (e) {
+      $(el).on('click.viewBinding', '.blockr-view-add', function (e) {
         e.stopPropagation();
         e.preventDefault();
 
-        var $nav = $(this).closest('.blockr-ws-nav');
+        var $nav = $(this).closest('.blockr-view-nav');
         var id = $nav.attr('id');
 
         Shiny.setInputValue(id + '_add', Date.now(), { priority: 'event' });
@@ -174,15 +174,15 @@ $(function () {
     },
 
     unsubscribe: function (el) {
-      $(el).off('.workspaceBinding');
+      $(el).off('.viewBinding');
     },
 
     receiveMessage: function (el, data) {
       if (data.hasOwnProperty('value')) {
         this.setValue(el, data.value);
         $(el)
-          .closest('.blockr-ws-dropdown')
-          .find('.blockr-ws-toggle-label')
+          .closest('.blockr-view-dropdown')
+          .find('.blockr-view-toggle-label')
           .text(data.value);
       }
 
@@ -190,10 +190,10 @@ $(function () {
         var name = data.add;
         var canCrud = data.canCrud !== false;
         var newItem = $('<div>')
-          .addClass('dropdown-item blockr-ws-item')
-          .attr('data-ws-name', name)
+          .addClass('dropdown-item blockr-view-item')
+          .attr('data-view-name', name)
           .append(
-            $('<span>').addClass('blockr-ws-item-name').text(name)
+            $('<span>').addClass('blockr-view-item-name').text(name)
           );
 
         if (canCrud) {
@@ -201,15 +201,15 @@ $(function () {
           var xLgSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-x-lg" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"></path></svg>';
           newItem.append(
             $('<span>')
-              .addClass('blockr-ws-item-actions')
+              .addClass('blockr-view-item-actions')
               .append(
                 $('<span>')
-                  .addClass('blockr-ws-action blockr-ws-edit')
+                  .addClass('blockr-view-action blockr-view-edit')
                   .attr('role', 'button')
                   .attr('title', 'Rename')
                   .html(pencilSvg),
                 $('<span>')
-                  .addClass('blockr-ws-action blockr-ws-remove')
+                  .addClass('blockr-view-action blockr-view-remove')
                   .attr('role', 'button')
                   .attr('title', 'Remove')
                   .html(xLgSvg)
@@ -226,31 +226,31 @@ $(function () {
         }
 
         // Activate the new item and update toggle label
-        $(el).find('.blockr-ws-item').removeClass('active');
+        $(el).find('.blockr-view-item').removeClass('active');
         newItem.addClass('active');
         $(el)
-          .closest('.blockr-ws-dropdown')
-          .find('.blockr-ws-toggle-label')
+          .closest('.blockr-view-dropdown')
+          .find('.blockr-view-toggle-label')
           .text(name);
       }
 
       if (data.hasOwnProperty('remove')) {
         $(el)
-          .find('.blockr-ws-item[data-ws-name="' + data.remove + '"]')
+          .find('.blockr-view-item[data-view-name="' + data.remove + '"]')
           .remove();
       }
 
       if (data.hasOwnProperty('rename')) {
         var $target = $(el).find(
-          '.blockr-ws-item[data-ws-name="' + data.rename.from + '"]'
+          '.blockr-view-item[data-view-name="' + data.rename.from + '"]'
         );
-        $target.attr('data-ws-name', data.rename.to);
-        $target.find('.blockr-ws-item-name').text(data.rename.to);
+        $target.attr('data-view-name', data.rename.to);
+        $target.find('.blockr-view-item-name').text(data.rename.to);
 
         if ($target.hasClass('active')) {
           $(el)
-            .closest('.blockr-ws-dropdown')
-            .find('.blockr-ws-toggle-label')
+            .closest('.blockr-view-dropdown')
+            .find('.blockr-view-toggle-label')
             .text(data.rename.to);
         }
       }
@@ -259,13 +259,13 @@ $(function () {
     }
   });
 
-  Shiny.inputBindings.register(workspaceBinding, 'blockr.workspace');
+  Shiny.inputBindings.register(viewBinding, 'blockr.view');
 
   // Custom message handler to switch the active dockview
-  Shiny.addCustomMessageHandler('switch-workspace', function (m) {
+  Shiny.addCustomMessageHandler('switch-view', function (m) {
     var activate = function () {
-      $('.blockr-ws-dock').removeClass('blockr-ws-dock-active');
-      $('#' + CSS.escape(m.id)).addClass('blockr-ws-dock-active');
+      $('.blockr-view-dock').removeClass('blockr-view-dock-active');
+      $('#' + CSS.escape(m.id)).addClass('blockr-view-dock-active');
     };
 
     // Element may not exist yet (insertUI in same flush), retry briefly

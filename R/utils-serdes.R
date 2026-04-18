@@ -22,7 +22,7 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
 
   ly <- x[["layout"]]
 
-  layout_data <- if (is_dock_workspaces(ly)) {
+  layout_data <- if (is_dock_layouts(ly)) {
     ws_data()
   } else {
     as_dock_layout(dock$layout())
@@ -48,25 +48,18 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
 
 #' @export
 blockr_ser.dock_layout <- function(x, data, ...) {
-  list(object = class(x), payload = unclass(coal(data, x)))
+  payload <- if (!missing(data)) coal(data, x) else x
+  list(object = class(x), payload = unclass(payload))
 }
 
 #' @export
-blockr_ser.dock_workspace <- function(x, data, ...) {
+blockr_ser.dock_layouts <- function(x, data, ...) {
+  lys <- if (!missing(data) && is_dock_layouts(data)) data else x
   list(
-    object = class(x),
-    payload = list(layout = unclass(workspace_layout(x)))
-  )
-}
-
-#' @export
-blockr_ser.dock_workspaces <- function(x, data, ...) {
-  ws <- if (!missing(data) && is_dock_workspaces(data)) data else x
-  list(
-    object = class(ws),
+    object = class(lys),
     payload = list(
-      active = active_workspace(ws),
-      workspaces = lapply(ws, blockr_ser)
+      active = active_view(lys),
+      views = lapply(lys, blockr_ser)
     )
   )
 }
@@ -94,16 +87,35 @@ blockr_deser.dock_layout <- function(x, data, ...) {
 }
 
 #' @export
-blockr_deser.dock_workspace <- function(x, data, ...) {
-  dock_workspace(layout = data[["payload"]][["layout"]])
+blockr_deser.dock_layouts <- function(x, data, ...) {
+  payload <- data[["payload"]]
+  v_list <- lapply(payload[["views"]], blockr_deser)
+  res <- dock_layouts(v_list)
+  active_view(res) <- payload[["active"]]
+  res
 }
 
+# Legacy backwards compatibility: deserialize old dock_workspace format
+#' @export
+blockr_deser.dock_workspace <- function(x, data, ...) {
+  # Old format: payload = list(layout = <layout_data>)
+  # Return a dock_layout (or plain list that initialise_layout can handle)
+  payload <- data[["payload"]]
+  ly <- payload[["layout"]]
+  if (is.list(ly) && all(c("grid", "panels") %in% names(ly))) {
+    as_dock_layout(ly)
+  } else {
+    ly %||% list()
+  }
+}
+
+# Legacy backwards compatibility: deserialize old dock_workspaces format
 #' @export
 blockr_deser.dock_workspaces <- function(x, data, ...) {
   payload <- data[["payload"]]
-  ws_list <- lapply(payload[["workspaces"]], blockr_deser)
-  res <- dock_workspaces(ws_list)
-  active_workspace(res) <- payload[["active"]]
+  v_list <- lapply(payload[["workspaces"]], blockr_deser)
+  res <- dock_layouts(v_list)
+  active_view(res) <- payload[["active"]]
   res
 }
 
@@ -143,14 +155,14 @@ restore_board.dock_board <- function(x, new, result, ..., meta = NULL,
 
   des <- blockr_deser(new)
 
-  # Preserve workspace layout if present in deserialized board
+  # Preserve view layout if present in deserialized board
   extra <- list(
     extensions = dock_extensions(x),
     options = board_options(x)
   )
 
   ly <- des[["layout"]]
-  if (is_dock_workspaces(ly)) {
+  if (is_dock_layouts(ly)) {
     extra[["layout"]] <- ly
   }
 

@@ -724,11 +724,11 @@ label:has(input[type="file"]) {
 }
 
 /* ============================================
-   Workspace Navigation
+   View Navigation
    ============================================ */
 
 /* Dropdown toggle */
-.blockr-ws-toggle {
+.blockr-view-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -739,25 +739,25 @@ label:has(input[type="file"]) {
   color: var(--blockr-color-text-secondary);
 }
 
-.blockr-ws-toggle-label {
+.blockr-view-toggle-label {
   max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.blockr-ws-toggle::after {
+.blockr-view-toggle::after {
   margin-left: 2px;
 }
 
 /* Dropdown menu */
-.blockr-ws-nav.dropdown-menu {
+.blockr-view-nav.dropdown-menu {
   min-width: 200px;
   padding: 4px;
 }
 
-/* Workspace item */
-.blockr-ws-item.dropdown-item {
+/* View item */
+.blockr-view-item.dropdown-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -769,22 +769,22 @@ label:has(input[type="file"]) {
   cursor: pointer;
 }
 
-.blockr-ws-item.dropdown-item.active {
+.blockr-view-item.dropdown-item.active {
   background-color: var(--blockr-blue-100);
   color: var(--blockr-blue-700);
   font-weight: var(--blockr-font-weight-semibold);
 }
 
-.blockr-ws-item.dropdown-item:hover {
+.blockr-view-item.dropdown-item:hover {
   background-color: var(--blockr-grey-100);
 }
 
-.blockr-ws-item.dropdown-item.active:hover {
+.blockr-view-item.dropdown-item.active:hover {
   background-color: var(--blockr-blue-100);
 }
 
 /* Item name */
-.blockr-ws-item-name {
+.blockr-view-item-name {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -792,7 +792,7 @@ label:has(input[type="file"]) {
 }
 
 /* CRUD action buttons — use opacity instead of display to prevent layout jump */
-.blockr-ws-item-actions {
+.blockr-view-item-actions {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -801,11 +801,11 @@ label:has(input[type="file"]) {
   transition: opacity 0.1s ease;
 }
 
-.blockr-ws-item.dropdown-item:hover .blockr-ws-item-actions {
+.blockr-view-item.dropdown-item:hover .blockr-view-item-actions {
   opacity: 1;
 }
 
-.blockr-ws-action {
+.blockr-view-action {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -820,17 +820,17 @@ label:has(input[type="file"]) {
   font-size: 11px;
 }
 
-.blockr-ws-action:hover {
+.blockr-view-action:hover {
   background-color: var(--blockr-grey-300);
   color: var(--blockr-color-text-secondary);
 }
 
-.blockr-ws-remove:hover {
+.blockr-view-remove:hover {
   color: var(--blockr-color-danger, #dc3545);
 }
 
 /* Inline rename input */
-.blockr-ws-rename-input {
+.blockr-view-rename-input {
   flex: 1;
   padding: 2px 6px;
   border: 1px solid var(--blockr-color-primary);
@@ -841,13 +841,13 @@ label:has(input[type="file"]) {
   outline: none;
 }
 
-.blockr-ws-rename-input:focus {
+.blockr-view-rename-input:focus {
   border-color: var(--blockr-color-primary);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 /* Add button */
-.blockr-ws-add {
+.blockr-view-add {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -857,20 +857,20 @@ label:has(input[type="file"]) {
   color: var(--blockr-color-text-muted);
 }
 
-.blockr-ws-add:hover {
+.blockr-view-add:hover {
   background-color: var(--blockr-grey-100);
   color: var(--blockr-color-text-primary);
 }
 
 /* ============================================
-   Multi-dock stacking (workspaces)
+   Multi-dock stacking (views)
    ============================================ */
 
-.blockr-ws-container {
+.blockr-view-container {
   overflow: hidden;
 }
 
-.blockr-ws-dock {
+.blockr-view-dock {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -878,7 +878,7 @@ label:has(input[type="file"]) {
   opacity: 0;
 }
 
-.blockr-ws-dock-active {
+.blockr-view-dock-active {
   z-index: 1;
   pointer-events: auto;
   opacity: 1;

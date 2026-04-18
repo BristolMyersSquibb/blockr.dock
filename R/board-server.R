@@ -1,7 +1,7 @@
 #' Set up dock board server logic.
 #'
 #' Entry point called by blockr.core's board server. Creates dock
-#' infrastructure (single dock or multi-workspace), starts extension
+#' infrastructure (single dock or multi-view), starts extension
 #' servers, and wires up action triggers.
 #'
 #' @param board Reactive board state (list with `$board`).
@@ -10,7 +10,7 @@
 #' @param session Shiny session.
 #'
 #' @return List with `dock`, `actions`, and extension results. When
-#'   workspaces are present, also includes `ws_data`.
+#'   views are present, also includes `view_data`.
 #'
 #' @noRd
 board_server_callback <- function(board, update, ..., session = get_session()) {
@@ -28,27 +28,27 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   triggers <- action_triggers(actions)
 
-  workspaces <- board_workspaces(initial_board)
+  views <- board_views(initial_board)
 
-  if (!is.null(workspaces)) {
+  if (!is.null(views)) {
     dock_mgr <- new_dock_manager()
-    ws <- init_workspace_docks(
-      workspaces, board, update, triggers, session, dock_mgr
+    vs <- init_view_docks(
+      views, board, update, triggers, session, dock_mgr
     )
 
-    switch_workspace_observer(ws, session, dock_mgr)
-    add_ws_observer(ws, session, dock_mgr, board, update, triggers)
-    remove_ws_observer(ws, session, dock_mgr)
-    rename_ws_observer(ws, session, dock_mgr)
+    switch_view_observer(vs, session, dock_mgr)
+    add_view_observer(vs, session, dock_mgr, board, update, triggers)
+    remove_view_observer(vs, session, dock_mgr)
+    rename_view_observer(vs, session, dock_mgr)
 
     # Extensions receive active_dock — a reactiveValues that always mirrors
-    # whichever workspace is currently active (swapped by update_active_dock).
+    # whichever view is currently active (swapped by update_active_dock).
     dock <- dock_mgr$active_dock
-    ws_data <- live_workspace_data(ws, dock_mgr)
+    view_data <- live_view_data(vs, dock_mgr)
 
   } else {
     dock <- manage_dock("dock_main", board, update, triggers)
-    ws_data <- NULL
+    view_data <- NULL
   }
 
   ext_res <- lapply(
@@ -62,24 +62,24 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   c(
     list(dock = dock, actions = triggers),
-    if (!is.null(ws_data)) list(ws_data = ws_data),
+    if (!is.null(view_data)) list(ws_data = view_data),
     ext_res
   )
 }
 
 #' Create a dock manager.
 #'
-#' Plain environment bundling all workspace dock infrastructure so it can
+#' Plain environment bundling all view dock infrastructure so it can
 #' be passed as a single parameter to helper functions.
 #'
 #' @return An environment with:
 #' \describe{
-#'   \item{`docks`}{Environment mapping workspace names to dock module results
+#'   \item{`docks`}{Environment mapping view names to dock module results
 #'     (each a list with `layout`, `proxy`, `dock_id`, etc.).}
 #'   \item{`active_dock`}{A `reactiveValues` that mirrors the dock module
-#'     result of the currently active workspace. Extensions hold a stable
+#'     result of the currently active view. Extensions hold a stable
 #'     reference to this; its contents are swapped by `update_active_dock()`
-#'     when the user switches workspaces.}
+#'     when the user switches views.}
 #'   \item{`next_id`}{Closure returning a unique dock module ID on each call.}
 #' }
 #'
@@ -97,43 +97,43 @@ new_dock_manager <- function() {
   mgr
 }
 
-#' Initialise dock modules for each workspace.
+#' Initialise dock modules for each view.
 #'
-#' For every workspace in `workspaces`, inserts a dock view output container
-#' into the DOM and starts a `manage_dock()` module. Workspace layouts are
-#' read from `workspaces` once for seeding; afterwards, layouts live
-#' exclusively in `dock_mgr$docks` (no duplication in `ws$state`).
+#' For every view in `views`, inserts a dock view output container
+#' into the DOM and starts a `manage_dock()` module. View layouts are
+#' read from `views` once for seeding; afterwards, layouts live
+#' exclusively in `dock_mgr$docks` (no duplication in `vs$state`).
 #'
-#' @param workspaces A `dock_workspaces` object (from the initial board).
+#' @param views A `dock_layouts` object (from the initial board).
 #' @param board,update,triggers Reactive board state, update signal, and
 #'   action triggers — forwarded to `manage_dock()`.
 #' @param session Shiny session.
 #' @param dock_mgr Dock manager created by `new_dock_manager()`.
 #'
 #' @return A `reactiveValues` with a single slot `$state` — a
-#'   `dock_workspaces` object tracking workspace names and which is active.
+#'   `dock_layouts` object tracking view names and which is active.
 #'   Layouts are empty; the authoritative layout data lives in
-#'   `dock_mgr$docks[[ws_name]]$layout()`.
+#'   `dock_mgr$docks[[view_name]]$layout()`.
 #'
 #' @noRd
-init_workspace_docks <- function(workspaces, board, update, triggers,
-                                 session, dock_mgr) {
+init_view_docks <- function(views, board, update, triggers,
+                            session, dock_mgr) {
   ns <- session$ns
-  active_ws <- active_workspace(workspaces)
+  active_v <- active_view(views)
 
-  for (ws_name in names(workspaces)) {
-    ws_ly <- workspace_layout(workspaces[[ws_name]])
-    ws_did <- dock_mgr$next_id()
-    dock_output_id <- NS(ns(ws_did), dock_id())
+  for (view_name in names(views)) {
+    v_ly <- views[[view_name]]
+    v_did <- dock_mgr$next_id()
+    dock_output_id <- NS(ns(v_did), dock_id())
 
     insertUI(
-      selector = paste0("#", ns("ws_container")),
+      selector = paste0("#", ns("view_container")),
       where = "beforeEnd",
       ui = div(
-        id = ns(paste0("ws_wrap_", ws_did)),
+        id = ns(paste0("view_wrap_", v_did)),
         class = paste(
-          "blockr-ws-dock",
-          if (identical(ws_name, active_ws)) "blockr-ws-dock-active"
+          "blockr-view-dock",
+          if (identical(view_name, active_v)) "blockr-view-dock-active"
         ),
         dockViewR::dock_view_output(
           dock_output_id,
@@ -145,97 +145,95 @@ init_workspace_docks <- function(workspaces, board, update, triggers,
       session = session
     )
 
-    dock_res <- manage_dock(ws_did, board, update, triggers, layout = ws_ly)
-    dock_res$dock_id <- ws_did
-    dock_mgr$docks[[ws_name]] <- dock_res
+    dock_res <- manage_dock(v_did, board, update, triggers, layout = v_ly)
+    dock_res$dock_id <- v_did
+    dock_mgr$docks[[view_name]] <- dock_res
   }
 
-  update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active_ws]])
+  update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active_v]])
 
-  bare <- dock_workspaces(
+  bare <- dock_layouts(
     set_names(
-      lapply(names(workspaces), function(x) dock_workspace()),
-      names(workspaces)
+      lapply(names(views), function(x) list()),
+      names(views)
     )
   )
-  active_workspace(bare) <- active_ws
+  active_view(bare) <- active_v
   reactiveValues(state = bare)
 }
 
-#' Observe workspace tab switches.
+#' Observe view tab switches.
 #'
-#' When the user selects a different tab via `input$ws_nav`, hides block/ext
-#' UI for the old workspace, shows it for the new one, updates `ws$state`,
-#' and swaps `dock_mgr$active_dock` to point at the new workspace's dock.
+#' When the user selects a different tab via `input$view_nav`, hides block/ext
+#' UI for the old view, shows it for the new one, updates `vs$state`,
+#' and swaps `dock_mgr$active_dock` to point at the new view's dock.
 #'
-#' @param ws Reactive workspace state (from `init_workspace_docks()`).
+#' @param vs Reactive view state (from `init_view_docks()`).
 #' @param session Shiny session.
 #' @param dock_mgr Dock manager.
 #'
 #' @noRd
-switch_workspace_observer <- function(ws, session, dock_mgr) {
+switch_view_observer <- function(vs, session, dock_mgr) {
   input <- session$input
 
-  observeEvent(input$ws_nav, {
-    new_ws <- input$ws_nav
-    state <- ws$state
-    old_ws <- active_workspace(state)
+  observeEvent(input$view_nav, {
+    new_v <- input$view_nav
+    state <- vs$state
+    old_v <- active_view(state)
 
-    session$sendCustomMessage("switch-workspace", list(
+    session$sendCustomMessage("switch-view", list(
       id = session$ns(
-        paste0("ws_wrap_", dock_mgr$docks[[new_ws]]$dock_id)
+        paste0("view_wrap_", dock_mgr$docks[[new_v]]$dock_id)
       )
     ))
 
-    if (!identical(old_ws, new_ws)) {
-      hide_workspace_ui(old_ws, dock_mgr$docks)
-      show_workspace_ui(new_ws, dock_mgr$docks)
+    if (!identical(old_v, new_v)) {
+      hide_view_ui(old_v, dock_mgr$docks)
+      show_view_ui(new_v, dock_mgr$docks)
 
-      active_workspace(state) <- new_ws
-      ws$state <- state
-      update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_ws]])
+      active_view(state) <- new_v
+      vs$state <- state
+      update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_v]])
     }
   }, ignoreInit = TRUE)
 }
 
-#' Build a reactive `dock_workspaces` with live layouts for serialization.
+#' Build a reactive `dock_layouts` with live layouts for serialization.
 #'
-#' Merges workspace names/active from `ws$state` (source of truth for
+#' Merges view names/active from `vs$state` (source of truth for
 #' membership) with live layouts from `dock_mgr$docks` (source of truth
 #' for panel arrangement). Called by `serialize_board.dock_board()`.
 #'
-#' @param ws Reactive workspace state.
+#' @param vs Reactive view state.
 #' @param dock_mgr Dock manager.
 #'
-#' @return A [shiny::reactive()] returning a `dock_workspaces` object.
+#' @return A [shiny::reactive()] returning a `dock_layouts` object.
 #'
 #' @noRd
-live_workspace_data <- function(ws, dock_mgr) {
+live_view_data <- function(vs, dock_mgr) {
   reactive({
-    state <- ws$state
-    ws_list <- lapply(names(state), function(ws_name) {
-      dock_workspace(
-        layout = as_dock_layout(dock_mgr$docks[[ws_name]]$layout())
-      )
+    state <- vs$state
+    v_list <- lapply(names(state), function(view_name) {
+      as_dock_layout(dock_mgr$docks[[view_name]]$layout())
     })
-    res <- dock_workspaces(set_names(ws_list, names(state)))
-    active_workspace(res) <- active_workspace(state)
+    res <- dock_layouts(set_names(v_list, names(state)))
+    active_view(res) <- active_view(state)
     res
   })
 }
 
-#' Hide all block and extension UI for a workspace.
+#' Hide all block and extension UI for a view.
 #'
 #' Moves block/extension cards off-screen (back to offcanvas) so they are
-#' not visible while the workspace is inactive.
+#' not visible while the view is inactive.
 #'
-#' @param ws_name Workspace name (string).
+#' @param view_name View name (string).
 #' @param docks Environment of dock module results (`dock_mgr$docks`).
 #'
 #' @noRd
-hide_workspace_ui <- function(ws_name, docks) {
-  if (!exists(ws_name, envir = docks, inherits = FALSE)) return()
-  proxy <- docks[[ws_name]]$proxy
+hide_view_ui <- function(view_name, docks) {
+  if (!exists(view_name, envir = docks, inherits = FALSE)) return()
+  proxy <- docks[[view_name]]$proxy
   bns <- proxy_board_ns(proxy)
   for (bid in as_obj_id(block_panel_ids(proxy))) {
     hide_block_ui(bid, proxy$session, board_ns = bns)
@@ -245,18 +243,18 @@ hide_workspace_ui <- function(ws_name, docks) {
   }
 }
 
-#' Show all block and extension UI for a workspace.
+#' Show all block and extension UI for a view.
 #'
-#' Restores block/extension cards into the viewport when a workspace
+#' Restores block/extension cards into the viewport when a view
 #' becomes active.
 #'
-#' @param ws_name Workspace name (string).
+#' @param view_name View name (string).
 #' @param docks Environment of dock module results (`dock_mgr$docks`).
 #'
 #' @noRd
-show_workspace_ui <- function(ws_name, docks) {
-  if (!exists(ws_name, envir = docks, inherits = FALSE)) return()
-  proxy <- docks[[ws_name]]$proxy
+show_view_ui <- function(view_name, docks) {
+  if (!exists(view_name, envir = docks, inherits = FALSE)) return()
+  proxy <- docks[[view_name]]$proxy
   bns <- proxy_board_ns(proxy)
   for (bid in as_obj_id(block_panel_ids(proxy))) {
     show_block_ui(bid, proxy$session, board_ns = bns)
@@ -270,7 +268,7 @@ show_workspace_ui <- function(ws_name, docks) {
 #'
 #' Sets up the dock view, restores an initial layout, and handles panel
 #' add/remove interactions. Used both for single-dock boards and for each
-#' workspace in multi-workspace boards.
+#' view in multi-view boards.
 #'
 #' @param id Module ID.
 #' @param board,update Reactive board state and update signal.
@@ -475,27 +473,27 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
   })
 }
 
-#' Observe workspace addition requests.
+#' Observe view addition requests.
 #'
-#' Shows a modal to name the new workspace and pick blocks/extensions,
-#' then inserts a new dock module, updates `ws$state`, and switches to it.
+#' Shows a modal to name the new view and pick blocks/extensions,
+#' then inserts a new dock module, updates `vs$state`, and switches to it.
 #'
-#' @param ws Reactive workspace state.
+#' @param vs Reactive view state.
 #' @param session Shiny session.
 #' @param dock_mgr Dock manager.
 #' @param board,update,triggers Reactive board state, update signal, and
 #'   action triggers — forwarded to `manage_dock()`.
 #'
 #' @noRd
-add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
+add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
   input <- session$input
   ns <- session$ns
 
-  # Show modal for workspace creation
-  observeEvent(input$ws_nav_add, {
-    req(ws_can_crud(ws$state))
+  # Show modal for view creation
+  observeEvent(input$view_nav_add, {
+    req(view_can_crud(vs$state))
 
-    state <- ws$state
+    state <- vs$state
     default_name <- paste("Page", length(state) + 1L)
 
     brd <- board$board
@@ -504,22 +502,22 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
 
     showModal(
       modalDialog(
-        title = "New workspace",
+        title = "New view",
         size = "l",
         easyClose = TRUE,
         footer = NULL,
         tagList(
           css_modal(),
           textInput(
-            ns("ws_new_name"),
-            "Workspace name",
+            ns("view_new_name"),
+            "View name",
             value = default_name
           ),
           if (length(blk_options)) {
             tagList(
               css_block_selectize(),
               selectizeInput(
-                ns("ws_new_blocks"),
+                ns("view_new_blocks"),
                 label = "Blocks to show",
                 choices = NULL,
                 multiple = TRUE,
@@ -538,7 +536,7 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
           },
           if (length(ext_options)) {
             selectizeInput(
-              ns("ws_new_exts"),
+              ns("view_new_exts"),
               label = "Extensions to show",
               choices = NULL,
               multiple = TRUE,
@@ -554,8 +552,8 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
               )
             )
           },
-          uiOutput(ns("ws_name_validation")),
-          confirm_button(ns("confirm_ws_add"), label = "Create workspace")
+          uiOutput(ns("view_name_validation")),
+          confirm_button(ns("confirm_view_add"), label = "Create view")
         )
       )
     )
@@ -563,51 +561,51 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
 
   # Name validation feedback
   output <- session$output
-  output$ws_name_validation <- renderUI({
-    req(input$ws_new_name)
-    msg <- validate_ws_name(trimws(input$ws_new_name), names(ws$state))
+  output$view_name_validation <- renderUI({
+    req(input$view_new_name)
+    msg <- validate_view_name(trimws(input$view_new_name), names(vs$state))
     if (!is.null(msg)) tags$div(class = "text-danger", msg)
   })
 
-  # Confirm workspace creation
-  observeEvent(input$confirm_ws_add, {
-    state <- ws$state
-    new_name <- trimws(input$ws_new_name)
+  # Confirm view creation
+  observeEvent(input$confirm_view_add, {
+    state <- vs$state
+    new_name <- trimws(input$view_new_name)
 
-    if (!is.null(validate_ws_name(new_name, names(state)))) return()
+    if (!is.null(validate_view_name(new_name, names(state)))) return()
 
     removeModal()
 
     # Build layout from selected blocks and extensions
     brd <- board$board
     sel_blks <- intersect(
-      input$ws_new_blocks %||% character(),
+      input$view_new_blocks %||% character(),
       board_block_ids(brd)
     )
     sel_exts <- intersect(
-      input$ws_new_exts %||% character(),
+      input$view_new_exts %||% character(),
       dock_ext_ids(brd)
     )
-    ws_ly <- create_dock_layout(
+    v_ly <- create_dock_layout(
       blocks = board_blocks(brd)[sel_blks],
       extensions = as_dock_extensions(
         as.list(dock_extensions(brd))[sel_exts]
       )
     )
 
-    state[[new_name]] <- dock_workspace()
-    ws$state <- state
+    state[[new_name]] <- list()
+    vs$state <- state
 
     # Insert dock output container into the DOM
-    ws_id <- dock_mgr$next_id()
-    dock_output_id <- NS(NS(ns(NULL), ws_id), dock_id())
+    v_id <- dock_mgr$next_id()
+    dock_output_id <- NS(NS(ns(NULL), v_id), dock_id())
 
     insertUI(
-      selector = paste0("#", ns("ws_container")),
+      selector = paste0("#", ns("view_container")),
       where = "beforeEnd",
       ui = div(
-        id = ns(paste0("ws_wrap_", ws_id)),
-        class = "blockr-ws-dock",
+        id = ns(paste0("view_wrap_", v_id)),
+        class = "blockr-view-dock",
         dockViewR::dock_view_output(
           dock_output_id,
           width = "100%",
@@ -616,57 +614,57 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
       )
     )
 
-    # Start the dock module for this workspace
-    dock_res <- manage_dock(ws_id, board, update, triggers, layout = ws_ly)
-    dock_res$dock_id <- ws_id
+    # Start the dock module for this view
+    dock_res <- manage_dock(v_id, board, update, triggers, layout = v_ly)
+    dock_res$dock_id <- v_id
     dock_mgr$docks[[new_name]] <- dock_res
 
-    # Update the navigation dropdown and switch to new workspace
-    session$sendInputMessage("ws_nav", list(add = new_name))
+    # Update the navigation dropdown and switch to new view
+    session$sendInputMessage("view_nav", list(add = new_name))
 
-    # Switch to the new workspace
-    session$sendCustomMessage("switch-workspace", list(
-      id = ns(paste0("ws_wrap_", ws_id))
+    # Switch to the new view
+    session$sendCustomMessage("switch-view", list(
+      id = ns(paste0("view_wrap_", v_id))
     ))
   })
 }
 
-#' Observe workspace removal requests.
+#' Observe view removal requests.
 #'
 #' Shows a confirmation modal, then destroys the dock module, removes
-#' the DOM container, updates `ws$state`, and switches to another workspace
+#' the DOM container, updates `vs$state`, and switches to another view
 #' if the removed one was active.
 #'
-#' @param ws Reactive workspace state.
+#' @param vs Reactive view state.
 #' @param session Shiny session.
 #' @param dock_mgr Dock manager.
 #'
 #' @noRd
-remove_ws_observer <- function(ws, session, dock_mgr) {
+remove_view_observer <- function(vs, session, dock_mgr) {
   input <- session$input
   ns <- session$ns
 
   # Show confirmation modal
-  observeEvent(input$ws_nav_remove, {
-    req(ws_can_crud(ws$state))
+  observeEvent(input$view_nav_remove, {
+    req(view_can_crud(vs$state))
 
-    rm_name <- input$ws_nav_remove
-    state <- ws$state
+    rm_name <- input$view_nav_remove
+    state <- vs$state
 
     if (length(state) <= 1L) {
-      notify("Cannot remove the last workspace.")
+      notify("Cannot remove the last view.")
       return()
     }
 
     showModal(
       modalDialog(
-        title = "Remove workspace",
+        title = "Remove view",
         size = "s",
         easyClose = TRUE,
         footer = NULL,
         tagList(
           tags$p(
-            "Are you sure you want to remove workspace ",
+            "Are you sure you want to remove view ",
             tags$strong(rm_name), "?"
           ),
           div(
@@ -674,7 +672,7 @@ remove_ws_observer <- function(ws, session, dock_mgr) {
               margin-top: 20px;",
             modalButton("Cancel"),
             actionButton(
-              ns("confirm_ws_remove"),
+              ns("confirm_view_remove"),
               "Remove",
               class = "btn-danger"
             )
@@ -685,25 +683,25 @@ remove_ws_observer <- function(ws, session, dock_mgr) {
   })
 
   # Perform removal after confirmation
-  observeEvent(input$confirm_ws_remove, {
+  observeEvent(input$confirm_view_remove, {
     removeModal()
 
-    rm_name <- input$ws_nav_remove
-    state <- ws$state
-    was_active <- identical(active_workspace(state), rm_name)
+    rm_name <- input$view_nav_remove
+    state <- vs$state
+    was_active <- identical(active_view(state), rm_name)
 
-    # Hide block/ext UI from the removed workspace (move back to offcanvas)
+    # Hide block/ext UI from the removed view (move back to offcanvas)
     if (exists(rm_name, envir = dock_mgr$docks, inherits = FALSE)) {
       rm_dock <- dock_mgr$docks[[rm_name]]
 
       if (was_active) {
-        hide_workspace_ui(rm_name, dock_mgr$docks)
+        hide_view_ui(rm_name, dock_mgr$docks)
       }
 
       # Destroy module observers/inputs/outputs and remove DOM wrapper
       destroy_module(rm_dock$dock_id, session = session)
       removeUI(
-        selector = paste0("#", ns(paste0("ws_wrap_", rm_dock$dock_id))),
+        selector = paste0("#", ns(paste0("view_wrap_", rm_dock$dock_id))),
         immediate = TRUE,
         session = session
       )
@@ -713,52 +711,52 @@ remove_ws_observer <- function(ws, session, dock_mgr) {
     state[[rm_name]] <- NULL
 
     if (was_active) {
-      active_workspace(state) <- names(state)[1L]
+      active_view(state) <- names(state)[1L]
     }
 
-    ws$state <- state
+    vs$state <- state
 
-    active_name <- active_workspace(state)
+    active_name <- active_view(state)
 
-    # switch-workspace must fire before show_workspace_ui so the target
-    # dock has blockr-ws-dock-active; otherwise move-element silently
+    # switch-view must fire before show_view_ui so the target
+    # dock has blockr-view-dock-active; otherwise move-element silently
     # drops DOM moves into inactive docks.
-    session$sendCustomMessage("switch-workspace", list(
-      id = ns(paste0("ws_wrap_", dock_mgr$docks[[active_name]]$dock_id))
+    session$sendCustomMessage("switch-view", list(
+      id = ns(paste0("view_wrap_", dock_mgr$docks[[active_name]]$dock_id))
     ))
 
-    # Show block/ext UI in the target workspace
+    # Show block/ext UI in the target view
     if (was_active) {
-      show_workspace_ui(active_name, dock_mgr$docks)
+      show_view_ui(active_name, dock_mgr$docks)
       update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active_name]])
     }
 
     # sendInputMessage auto-namespaces, so pass un-namespaced ID
-    session$sendInputMessage("ws_nav", list(
+    session$sendInputMessage("view_nav", list(
       remove = rm_name,
       value = active_name
     ))
   })
 }
 
-#' Observe workspace rename requests.
+#' Observe view rename requests.
 #'
-#' Updates the workspace name in both `ws$state` and `dock_mgr$docks`.
+#' Updates the view name in both `vs$state` and `dock_mgr$docks`.
 #' The internal `dock_id` is unchanged so DOM lookups remain valid.
 #'
-#' @param ws Reactive workspace state.
+#' @param vs Reactive view state.
 #' @param session Shiny session.
 #' @param dock_mgr Dock manager.
 #'
 #' @noRd
-rename_ws_observer <- function(ws, session, dock_mgr) {
+rename_view_observer <- function(vs, session, dock_mgr) {
   input <- session$input
 
-  observeEvent(input$ws_nav_rename, {
-    req(ws_can_crud(ws$state))
+  observeEvent(input$view_nav_rename, {
+    req(view_can_crud(vs$state))
 
-    rename <- input$ws_nav_rename
-    state <- ws$state
+    rename <- input$view_nav_rename
+    state <- vs$state
 
     nms <- names(state)
     idx <- match(rename$from, nms)
@@ -767,11 +765,11 @@ rename_ws_observer <- function(ws, session, dock_mgr) {
     nms[idx] <- rename$to
     names(state) <- nms
 
-    if (identical(active_workspace(state), rename$from)) {
-      active_workspace(state) <- rename$to
+    if (identical(active_view(state), rename$from)) {
+      active_view(state) <- rename$to
     }
 
-    ws$state <- state
+    vs$state <- state
 
     # Update docks key; dock_id inside the entry stays unchanged so
     # DOM wrapper lookups still target the original element.
@@ -949,21 +947,21 @@ build_ext_options <- function(board, ext_ids, prefix = "") {
   })
 }
 
-#' Validate a workspace name.
+#' Validate a view name.
 #'
-#' @param name Trimmed workspace name string.
-#' @param existing Character vector of existing workspace names.
+#' @param name Trimmed view name string.
+#' @param existing Character vector of existing view names.
 #'
 #' @return Error message string, or `NULL` if valid.
 #'
 #' @noRd
-validate_ws_name <- function(name, existing) {
+validate_view_name <- function(name, existing) {
   if (nchar(name) == 0L) {
     "Name cannot be empty."
   } else if (!grepl("^[a-zA-Z0-9 _-]+$", name)) {
     "Only letters, numbers, spaces, hyphens and underscores are allowed."
   } else if (name %in% existing) {
-    "A workspace with this name already exists."
+    "A view with this name already exists."
   } else {
     NULL
   }

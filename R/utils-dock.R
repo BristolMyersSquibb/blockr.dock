@@ -176,8 +176,8 @@ dock_panel_groups <- function(session = get_session()) {
 #' Swap the contents of `dock_mgr$active_dock` to mirror a different dock.
 #'
 #' Extensions hold a stable reference to `dock_mgr$active_dock` (a
-#' `reactiveValues`). When the user switches workspaces, this function
-#' copies the new workspace's dock module result into it so extensions
+#' `reactiveValues`). When the user switches views, this function
+#' copies the new view's dock module result into it so extensions
 #' transparently see the new dock without needing to re-bind.
 #'
 #' @param rv The `reactiveValues` to update (`dock_mgr$active_dock`).

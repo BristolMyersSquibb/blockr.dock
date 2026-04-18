@@ -4,13 +4,14 @@
 #' extends [blockr.core::new_board()]. In addition to the attributes contained
 #' in a core board, this also includes dock extensions (as `extensions`)
 #' and the panel arrangement (as `layout`). The `layout` parameter accepts
-#' either a grid specification (as before) or a [dock_workspaces()] object
-#' for multi-workspace boards.
+#' either a grid specification (as before), a `dock_layouts()` object
+#' for multi-view boards, or a plain named list of layout specs which is
+#' auto-detected as multi-view.
 #'
 #' @inheritParams blockr.core::new_board
 #' @param extensions Dock extensions
-#' @param layout Either a grid specification (list), a `dock_layout` or a
-#'   [dock_workspaces()] object
+#' @param layout Either a grid specification (list), a `dock_layout`, a
+#'   `dock_layouts()` object, or a named `list()` of layout specs
 #'
 #' @examples
 #' brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
@@ -21,9 +22,9 @@
 #' `is_dock_board()`, which returns a boolean. Getters `dock_layout()` and
 #' `dock_extensions()` return `dock_layout` and `dock_extension` objects while
 #' setters `dock_layout<-()` and `dock_extensions<-()` return the updated board
-#' object (invisibly). When `layout` is a `dock_workspaces` object,
-#' `board_workspaces()` returns it and `dock_layout()` returns the active
-#' workspace's layout. A character vector of IDs is returned by
+#' object (invisibly). When `layout` is a `dock_layouts` object,
+#' `board_views()` returns it and `dock_layout()` returns the active
+#' view's layout. A character vector of IDs is returned by
 #' `dock_ext_ids()` and `dock_board_options()` returns a `board_options`
 #' object.
 #'
@@ -54,32 +55,40 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
   )
 }
 
-# When layout is a dock_workspaces object, resolve each workspace's raw grid
+# When layout is a dock_layouts object, resolve each view's raw grid
 # into a dock_layout. When layout is a raw grid, convert to dock_layout.
-# Returns the resolved layout (dock_workspaces or dock_layout).
+# A plain named list-of-lists is auto-detected as multi-view.
+# Returns the resolved layout (dock_layouts or dock_layout).
 initialise_layout <- function(layout, blocks, extensions) {
 
-  if (is_dock_workspaces(layout)) {
+  # Auto-detect plain named list-of-lists as multi-view
+  if (is.list(layout) && !is_dock_layouts(layout) && !is_dock_layout(layout)) {
+    nms <- names(layout)
+    if (!is.null(nms) && all(nzchar(nms)) &&
+        all(vapply(layout, is.list, logical(1)))) {
+      layout <- as_dock_layouts(layout)
+    }
+  }
 
-    for (ws_name in names(layout)) {
-      ws <- layout[[ws_name]]
-      ly <- workspace_layout(ws)
+  if (is_dock_layouts(layout)) {
+
+    for (view_name in names(layout)) {
+      ly <- layout[[view_name]]
 
       if (!is_dock_layout(ly)) {
         if (is.list(ly) && all(c("grid", "panels") %in% names(ly))) {
           # Already a resolved layout (e.g. deserialized from JSON) —
           # just restore the S3 class
-          workspace_layout(ws) <- as_dock_layout(ly)
+          layout[[view_name]] <- as_dock_layout(ly)
         } else {
-          ws_ids <- workspace_ids(ws)
-          ws_blks <- blocks[intersect(ws_ids, names(blocks))]
+          v_ids <- view_ids(ly)
+          v_blks <- blocks[intersect(v_ids, names(blocks))]
           ext_list <- as.list(extensions)
-          ws_exts <- as_dock_extensions(
-            ext_list[intersect(ws_ids, names(ext_list))]
+          v_exts <- as_dock_extensions(
+            ext_list[intersect(v_ids, names(ext_list))]
           )
-          workspace_layout(ws) <- create_dock_layout(ws_blks, ws_exts, ly)
+          layout[[view_name]] <- create_dock_layout(v_blks, v_exts, ly)
         }
-        layout[[ws_name]] <- ws
       }
     }
 
@@ -106,8 +115,8 @@ validate_board.dock_board <- function(x) {
 
   ly <- x[["layout"]]
 
-  if (is_dock_workspaces(ly)) {
-    validate_dock_workspaces(ly)
+  if (is_dock_layouts(ly)) {
+    validate_dock_layouts(ly)
   } else {
     validate_dock_layout(ly, board_block_ids(x))
   }
@@ -152,9 +161,8 @@ dock_layout <- function(x) {
 
   ly <- x[["layout"]]
 
-  if (is_dock_workspaces(ly)) {
-    ws <- ly[[active_workspace(ly)]]
-    return(validate_dock_layout(workspace_layout(ws), board_block_ids(x)))
+  if (is_dock_layouts(ly)) {
+    return(validate_dock_layout(ly[[active_view(ly)]], board_block_ids(x)))
   }
 
   validate_dock_layout(ly, board_block_ids(x))
@@ -168,11 +176,9 @@ dock_layout <- function(x) {
 
   ly <- x[["layout"]]
 
-  if (is_dock_workspaces(ly)) {
-    ws_name <- active_workspace(ly)
-    ws <- ly[[ws_name]]
-    workspace_layout(ws) <- validate_dock_layout(value, board_block_ids(x))
-    ly[[ws_name]] <- ws
+  if (is_dock_layouts(ly)) {
+    view_name <- active_view(ly)
+    ly[[view_name]] <- validate_dock_layout(value, board_block_ids(x))
     x[["layout"]] <- ly
   } else {
     x[["layout"]] <- validate_dock_layout(value, board_block_ids(x))
@@ -201,20 +207,6 @@ dock_extensions <- function(x) {
 #' @export
 dock_ext_ids <- function(x) {
   chr_ply(dock_extensions(x), extension_id)
-}
-
-#' @rdname dock
-#' @export
-board_workspaces <- function(x) {
-  stopifnot(is_dock_board(x))
-
-  ly <- x[["layout"]]
-
-  if (is_dock_workspaces(ly)) {
-    ly
-  } else {
-    NULL
-  }
 }
 
 #' @rdname dock
