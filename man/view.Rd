@@ -18,7 +18,7 @@ new_dock_layouts(...)
 
 validate_dock_layouts(x)
 
-dock_layouts(..., .active = NULL)
+dock_layouts(..., active = NULL)
 
 is_dock_layouts(x)
 
@@ -41,7 +41,7 @@ as_dock_layouts(x, ...)
 
 \item{x}{Object}
 
-\item{.active}{Optional name of the initially active view. Defaults to
+\item{active}{Optional name of the initially active view. Defaults to
 the first element.}
 
 \item{value}{Replacement value}
@@ -81,7 +81,7 @@ active_view(ly)
 ly2 <- dock_layouts(
   Analysis = list("dataset_1"),
   Overview = list("dag_extension"),
-  .active = "Overview"
+  active = "Overview"
 )
 active_view(ly2)
 

@@ -11,11 +11,11 @@ test_that("dock_layouts constructor", {
   expect_identical(active_view(ly), "Analysis")
 })
 
-test_that("dock_layouts .active parameter", {
+test_that("dock_layouts active parameter", {
   ly <- dock_layouts(
     A = list("x"),
     B = list("y"),
-    .active = "B"
+    active = "B"
   )
 
   expect_identical(active_view(ly), "B")

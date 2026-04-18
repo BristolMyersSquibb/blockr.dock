@@ -13,7 +13,7 @@
 #'
 #' @param ... Named list elements, each a layout specification (possibly
 #'   nested list of block/extension IDs) or a `dock_layout` object.
-#' @param .active Optional name of the initially active view. Defaults to
+#' @param active Optional name of the initially active view. Defaults to
 #'   the first element.
 #'
 #' @return `dock_layouts()` returns a `dock_layouts` object.
@@ -37,7 +37,7 @@
 #' ly2 <- dock_layouts(
 #'   Analysis = list("dataset_1"),
 #'   Overview = list("dag_extension"),
-#'   .active = "Overview"
+#'   active = "Overview"
 #' )
 #' active_view(ly2)
 #'
@@ -116,11 +116,11 @@ validate_dock_layouts <- function(x) {
 
 #' @rdname view
 #' @export
-dock_layouts <- function(..., .active = NULL) {
+dock_layouts <- function(..., active = NULL) {
   res <- validate_dock_layouts(new_dock_layouts(...))
 
-  if (!is.null(.active)) {
-    active_view(res) <- .active
+  if (!is.null(active)) {
+    active_view(res) <- active
   }
 
   res

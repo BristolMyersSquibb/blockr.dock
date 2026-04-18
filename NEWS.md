@@ -10,8 +10,8 @@
   )
   ```
 
-  Set the initially active view with `.active`:
-  `dock_layouts(..., .active = "Overview")`.
+  Set the initially active view with `active`:
+  `dock_layouts(..., active = "Overview")`.
   Previously saved boards are restored automatically. Single view boards
   still work.
 
