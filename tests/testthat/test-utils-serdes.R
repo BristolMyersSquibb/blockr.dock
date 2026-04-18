@@ -16,3 +16,22 @@ test_that("ser/des utils", {
     ignore_function_env = TRUE
   )
 })
+
+test_that("dock_layouts serialization round-trip", {
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layout = dock_layouts(
+      Tab1 = list("a", "b"),
+      Tab2 = list("a"),
+      active = "Tab2"
+    )
+  )
+
+  ser <- blockr_ser(brd)
+  des <- blockr_deser(ser)
+
+  ly <- des[["layout"]]
+  expect_s3_class(ly, "dock_layouts")
+  expect_named(ly, c("Tab1", "Tab2"))
+  expect_identical(active_view(ly), "Tab2")
+})

@@ -12,8 +12,7 @@
 
   Set the initially active view with `active`:
   `dock_layouts(..., active = "Overview")`.
-  Previously saved boards are restored automatically. Single view boards
-  still work.
+  Single view boards still work.
 
 # blockr.dock 0.1.0
 

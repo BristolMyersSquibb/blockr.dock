@@ -62,7 +62,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   c(
     list(dock = dock, actions = triggers),
-    if (!is.null(view_data)) list(ws_data = view_data),
+    if (!is.null(view_data)) list(view_data = view_data),
     ext_res
   )
 }
@@ -124,7 +124,7 @@ init_view_docks <- function(views, board, update, triggers,
   for (view_name in names(views)) {
     v_ly <- views[[view_name]]
     v_did <- dock_mgr$next_id()
-    dock_output_id <- NS(ns(v_did), dock_id())
+    dock_output_id <- ns(NS(v_did, dock_id()))
 
     insertUI(
       selector = paste0("#", ns("view_container")),
@@ -598,7 +598,7 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
 
     # Insert dock output container into the DOM
     v_id <- dock_mgr$next_id()
-    dock_output_id <- NS(NS(ns(NULL), v_id), dock_id())
+    dock_output_id <- ns(NS(v_id, dock_id()))
 
     insertUI(
       selector = paste0("#", ns("view_container")),

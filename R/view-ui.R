@@ -1,5 +1,5 @@
-# View navigation dropdown UI and dependency
-
+#' View navigation dropdown UI and dependency.
+#' @noRd
 view_binding_dep <- function() {
   htmltools::htmlDependency(
     "blockr-view",
@@ -9,6 +9,7 @@ view_binding_dep <- function() {
   )
 }
 
+#' @noRd
 view_nav_ui <- function(id, views) {
 
   ns <- NS(id)
@@ -51,6 +52,7 @@ view_nav_ui <- function(id, views) {
   )
 }
 
+#' @noRd
 view_item_ui <- function(view_name, active = FALSE, can_crud = FALSE) {
 
   cls <- paste("dropdown-item blockr-view-item",

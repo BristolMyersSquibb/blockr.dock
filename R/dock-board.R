@@ -65,7 +65,8 @@ initialise_layout <- function(layout, blocks, extensions) {
   if (is.list(layout) && !is_dock_layouts(layout) && !is_dock_layout(layout)) {
     nms <- names(layout)
     if (!is.null(nms) && all(nzchar(nms)) &&
-        all(vapply(layout, is.list, logical(1)))) {
+          !all(c("grid", "panels") %in% nms) &&
+          all(vapply(layout, is.list, logical(1)))) {
       layout <- as_dock_layouts(layout)
     }
   }
