@@ -11,7 +11,7 @@ board <- new_dock_board(
   layout = dock_layouts(
     Analysis = list("dataset_1", "head_1", "dag_extension"),
     Overview = list("dag_extension"),
-    .active = "Overview"
+    active = "Overview"
   )
 )
 
