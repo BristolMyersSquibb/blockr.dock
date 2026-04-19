@@ -976,13 +976,13 @@ label:has(input[type="file"]) {
   border-top: none !important;
 }
 
-/* Restore button: hidden by default, shown when header is hidden */
-.blockr-restore-header-btn {
-  display: none !important;
-}
-
-.blockr-header-hidden > .blockr-restore-header-btn {
-  display: flex !important;
+/* Restore button: hidden by default, shown when header is hidden.
+   Shape/size are set unconditionally so they apply even if the parent
+   briefly loses `blockr-header-hidden` during re-render — otherwise
+   `.btn { border-radius: 6px }` wins and the button renders as a
+   rounded square instead of a circle. */
+.blockr-restore-header-btn.btn {
+  display: none;
   align-items: center;
   justify-content: center;
   position: absolute;
@@ -990,20 +990,73 @@ label:has(input[type="file"]) {
   right: 14px;
   z-index: 10;
   background-color: white;
-  border: 1px solid var(--blockr-grey-200);
-  border-radius: 50%;
+  border: 1px solid var(--blockr-grey-200) !important;
+  border-radius: 50% !important;
   color: var(--blockr-grey-400);
   font-size: 8px;
-  padding: 0;
+  padding: 0 !important;
   width: 22px;
   height: 22px;
   min-width: 0;
   line-height: 1;
   cursor: pointer;
   transition: all 0.15s ease;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
-.blockr-header-hidden > .blockr-restore-header-btn:hover {
+.blockr-header-hidden > .blockr-restore-header-btn.btn {
+  display: flex;
+}
+
+.blockr-restore-header-btn.btn:hover,
+.blockr-restore-header-btn.btn:focus,
+.blockr-restore-header-btn.btn:focus-visible {
   color: var(--blockr-grey-600);
   background-color: var(--blockr-grey-100);
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Keep a Blockr.Select dropdown fully visible while open. Three ancestors
+   normally clip or occlude it:
+     1. Sibling block cards — fixed by raising this card's z-index.
+     2. .dockview-panel — Dockview's panel container sets overflow: auto for
+        internal scrolling; while a select is open we need overflow: visible
+        so the dropdown paints outside the panel bounds.
+     3. .dv-render-overlay — Dockview sets `contain: layout paint` +
+        `isolation: isolate` on this wrapper, which creates a hard clipping
+        boundary that z-index alone cannot escape. Relax both while a select
+        is open.
+   All three are scoped with :has(.blockr-select--open) so the override
+   only applies while the dropdown is actually open. */
+.card:has(.blockr-select--open) {
+  z-index: 1080;
+}
+
+/* Dockview sets `style="overflow: auto"` inline on .dockview-panel and
+   `contain: layout paint; isolation: isolate` on .dv-render-overlay for its
+   own rendering. We have to shout (!important) to override the inline
+   overflow while a select is open. We also raise the panel's z-index so
+   the dropdown paints above sibling panels stacked below it. */
+.blockr-ws-container:has(.blockr-select--open) {
+  overflow: visible;
+}
+
+.dv-groupview:has(.blockr-select--open) {
+  overflow: visible;
+  z-index: 1080;
+}
+
+.dockview-panel:has(.blockr-select--open) {
+  overflow: visible !important;
+  z-index: 1080;
+  position: relative;
+}
+
+.dv-render-overlay:has(.blockr-select--open) {
+  contain: none;
+  isolation: auto;
+  overflow: visible;
+  z-index: 1080;
 }

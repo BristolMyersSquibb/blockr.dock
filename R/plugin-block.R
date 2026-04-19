@@ -38,21 +38,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
         )
       )
     ),
-    # Restore header button — only visible when header is hidden
-    tags$button(
-      class = "btn blockr-restore-header-btn",
-      type = "button",
-      title = "Show header",
-      onclick = sprintf(
-        paste0(
-          "var card = this.closest('.card-body');",
-          "card.classList.remove('blockr-header-hidden');",
-          "Shiny.setInputValue('%s', true, {priority: 'event'});"
-        ),
-        ns("header_visible")
-      ),
-      icon("chevron-down")
-    ),
+    block_card_restore_btn(ns),
     block_card_content(ns, expr_ui, block_ui, ctrl_ui, visible)
   )
 }
@@ -393,6 +379,28 @@ block_card_dropdown <- function(ns, info, blk_id) {
         )
       )
     )
+  )
+}
+
+block_card_restore_btn <- function(ns) {
+
+  if (is_dock_locked()) {
+    return(NULL)
+  }
+
+  tags$button(
+    class = "btn blockr-restore-header-btn",
+    type = "button",
+    title = "Show header",
+    onclick = sprintf(
+      paste0(
+        "var card = this.closest('.card-body');",
+        "card.classList.remove('blockr-header-hidden');",
+        "Shiny.setInputValue('%s', true, {priority: 'event'});"
+      ),
+      ns("header_visible")
+    ),
+    icon("chevron-down")
   )
 }
 
