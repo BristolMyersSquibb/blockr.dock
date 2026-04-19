@@ -36,17 +36,14 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
-  extensions <- as_dock_extensions(extensions)
-  blocks <- as_blocks(blocks)
-
   layout <- initialise_layout(layout, blocks, extensions)
 
   new_board(
-    blocks = blocks,
+    blocks = as_blocks(blocks),
     links = as_links(links),
     stacks = as_dock_stacks(stacks),
     ...,
-    extensions = extensions,
+    extensions = as_dock_extensions(extensions),
     layout = layout,
     options = as_board_options(options),
     ctor = forward_ctor(ctor),
@@ -73,6 +70,10 @@ initialise_layout <- function(layout, blocks, extensions) {
 
   if (is_dock_layouts(layout)) {
 
+    # Multi-view needs coerced extensions/blocks for ID-based subsetting
+    c_exts <- as_dock_extensions(extensions)
+    c_blks <- as_blocks(blocks)
+
     for (view_name in names(layout)) {
       ly <- layout[[view_name]]
 
@@ -83,8 +84,8 @@ initialise_layout <- function(layout, blocks, extensions) {
           layout[[view_name]] <- as_dock_layout(ly)
         } else {
           v_ids <- view_ids(ly)
-          v_blks <- blocks[intersect(v_ids, names(blocks))]
-          ext_list <- as.list(extensions)
+          v_blks <- c_blks[intersect(v_ids, names(c_blks))]
+          ext_list <- as.list(c_exts)
           v_exts <- as_dock_extensions(
             ext_list[intersect(v_ids, names(ext_list))]
           )
