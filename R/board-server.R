@@ -450,7 +450,11 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
 
           old_title <- get_dock_panel(blk_panel_id, dock)$title
 
-          if (new_name == old_title) {
+          if (identical(new_name, old_title)) {
+            next
+          }
+
+          if (is.null(old_title)) {
             next
           }
 
