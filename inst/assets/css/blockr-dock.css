@@ -883,3 +883,22 @@ label:has(input[type="file"]) {
   pointer-events: auto;
   opacity: 1;
 }
+
+/* Empty dock prompt — overlays the dockview when no panels are present */
+.blockr-empty-dock-prompt {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--blockr-color-text-muted, #6b7280);
+  pointer-events: auto;
+}
+
+.blockr-empty-dock-prompt p {
+  margin: 0;
+  font-size: var(--blockr-font-size-sm, 14px);
+}

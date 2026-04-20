@@ -152,6 +152,20 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
   invisible()
 }
 
+#' @noRd
+empty_dock_prompt <- function(ns) {
+  div(
+    class = "blockr-empty-dock-prompt",
+    bsicons::bs_icon("plus-circle", size = "2em"),
+    tags$p("Start by adding a panel"),
+    actionButton(
+      ns("empty_dock_add"),
+      "Add panel",
+      class = "btn-outline-primary btn-sm"
+    )
+  )
+}
+
 drop_nulls <- function(x) {
   x[!lgl_ply(x, is.null)]
 }

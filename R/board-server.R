@@ -14,7 +14,6 @@
 #'
 #' @noRd
 board_server_callback <- function(board, update, ..., session = get_session()) {
-
   initial_board <- isolate(board$board)
 
   exts <- as.list(dock_extensions(initial_board))
@@ -33,7 +32,12 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   if (!is.null(views)) {
     dock_mgr <- new_dock_manager()
     vs <- init_view_docks(
-      views, board, update, triggers, session, dock_mgr
+      views,
+      board,
+      update,
+      triggers,
+      session,
+      dock_mgr
     )
 
     switch_view_observer(vs, session, dock_mgr)
@@ -45,7 +49,6 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     # whichever view is currently active (swapped by update_active_dock).
     dock <- dock_mgr$active_dock
     view_data <- live_view_data(vs, dock_mgr)
-
   } else {
     dock <- manage_dock("dock_main", board, update, triggers)
     view_data <- NULL
@@ -116,10 +119,10 @@ new_dock_manager <- function() {
 #'   `dock_mgr$docks[[view_name]]$layout()`.
 #'
 #' @noRd
-init_view_docks <- function(views, board, update, triggers,
-                            session, dock_mgr) {
+init_view_docks <- function(views, board, update, triggers, session, dock_mgr) {
   ns <- session$ns
   active_v <- active_view(views)
+  current_active <- reactiveVal(active_v)
 
   for (view_name in names(views)) {
     v_ly <- views[[view_name]]
@@ -139,18 +142,28 @@ init_view_docks <- function(views, board, update, triggers,
           dock_output_id,
           width = "100%",
           height = "100%"
-        )
+        ),
+        uiOutput(NS(ns(v_did), "empty_prompt"))
       ),
       immediate = TRUE,
       session = session
     )
 
-    dock_res <- manage_dock(v_did, board, update, triggers, layout = v_ly)
+    local_name <- view_name
+    dock_res <- manage_dock(
+      v_did,
+      board,
+      update,
+      triggers,
+      layout = v_ly,
+      is_active = reactive(identical(current_active(), local_name))
+    )
     dock_res$dock_id <- v_did
     dock_mgr$docks[[view_name]] <- dock_res
   }
 
   update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active_v]])
+  dock_mgr$current_active <- current_active
 
   bare <- dock_layouts(
     set_names(
@@ -176,26 +189,34 @@ init_view_docks <- function(views, board, update, triggers,
 switch_view_observer <- function(vs, session, dock_mgr) {
   input <- session$input
 
-  observeEvent(input$view_nav, {
-    new_v <- input$view_nav
-    state <- vs$state
-    old_v <- active_view(state)
+  observeEvent(
+    input$view_nav,
+    {
+      new_v <- input$view_nav
+      state <- vs$state
+      old_v <- active_view(state)
 
-    session$sendCustomMessage("switch-view", list(
-      id = session$ns(
-        paste0("view_wrap_", dock_mgr$docks[[new_v]]$dock_id)
+      session$sendCustomMessage(
+        "switch-view",
+        list(
+          id = session$ns(
+            paste0("view_wrap_", dock_mgr$docks[[new_v]]$dock_id)
+          )
+        )
       )
-    ))
 
-    if (!identical(old_v, new_v)) {
-      hide_view_ui(old_v, dock_mgr$docks)
-      show_view_ui(new_v, dock_mgr$docks)
+      if (!identical(old_v, new_v)) {
+        hide_view_ui(old_v, dock_mgr$docks)
+        show_view_ui(new_v, dock_mgr$docks)
 
-      active_view(state) <- new_v
-      vs$state <- state
-      update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_v]])
-    }
-  }, ignoreInit = TRUE)
+        active_view(state) <- new_v
+        vs$state <- state
+        update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_v]])
+        dock_mgr$current_active(new_v)
+      }
+    },
+    ignoreInit = TRUE
+  )
 }
 
 #' Build a reactive `dock_layouts` with live layouts for serialization.
@@ -232,7 +253,9 @@ live_view_data <- function(vs, dock_mgr) {
 #'
 #' @noRd
 hide_view_ui <- function(view_name, docks) {
-  if (!exists(view_name, envir = docks, inherits = FALSE)) return()
+  if (!exists(view_name, envir = docks, inherits = FALSE)) {
+    return()
+  }
   proxy <- docks[[view_name]]$proxy
   bns <- proxy_board_ns(proxy)
   for (bid in as_obj_id(block_panel_ids(proxy))) {
@@ -253,7 +276,9 @@ hide_view_ui <- function(view_name, docks) {
 #'
 #' @noRd
 show_view_ui <- function(view_name, docks) {
-  if (!exists(view_name, envir = docks, inherits = FALSE)) return()
+  if (!exists(view_name, envir = docks, inherits = FALSE)) {
+    return()
+  }
   proxy <- docks[[view_name]]$proxy
   bns <- proxy_board_ns(proxy)
   for (bid in as_obj_id(block_panel_ids(proxy))) {
@@ -275,13 +300,22 @@ show_view_ui <- function(view_name, docks) {
 #' @param actions Action triggers.
 #' @param layout Optional initial `dock_layout`; defaults to the board's
 #'   `dock_layout()`.
+#' @param is_active A [shiny::reactive()] returning `TRUE` when this dock
+#'   is the currently active view. Controls whether the empty-dock prompt
+#'   is shown. Defaults to always-active (single-dock boards).
 #'
 #' @return A list with `layout` (reactive), `proxy`, `prev_active_group`,
 #'   `n_panels`, and `active_group_trail`.
 #'
 #' @noRd
-manage_dock <- function(id, board, update, actions, layout = NULL) {
-
+manage_dock <- function(
+  id,
+  board,
+  update,
+  actions,
+  layout = NULL,
+  is_active = reactive(TRUE)
+) {
   # Resolve layout: use provided layout or fall back to board's dock_layout
   init_layout <- layout %||% isolate(dock_layout(board$board))
 
@@ -289,7 +323,6 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
   board_ns <- get_session()$ns
 
   moduleServer(id, function(input, output, session) {
-
     dock <- set_dock_view_output(session = session)
     dock$board_ns <- board_ns
 
@@ -361,15 +394,15 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
       suggest_panels_to_add(dock, board, session = session)
     )
 
+    # Empty-dock prompt — rendered for all empty docks, visibility
+    # handled by the dock wrapper's CSS (opacity/pointer-events).
+    output$empty_prompt <- renderUI({
+      if (n_panels() == 0) empty_dock_prompt(session$ns)
+    })
+
     observeEvent(
-      req(n_panels() == 0),
-      suggest_panels_to_add(
-        dock,
-        board,
-        actions[["add_block_action"]],
-        panels = list(),
-        session
-      )
+      input$empty_dock_add,
+      suggest_panels_to_add(dock, board, panels = list(), session = session)
     )
 
     observeEvent(
@@ -377,15 +410,17 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
       {
         req(input$add_dock_panel)
 
-        pos <- list(
-          referenceGroup = input[[dock_input("panel-to-add")]],
-          direction = "within"
-        )
+        ref_group <- input[[dock_input("panel-to-add")]]
+
+        pos <- if (!is.null(ref_group)) {
+          list(referenceGroup = ref_group, direction = "within")
+        } else {
+          # Empty dock — no reference group, let DockView place freely
+          TRUE
+        }
 
         for (pid in input$add_dock_panel) {
-
           if (grepl("^blk-", pid)) {
-
             show_block_panel(
               board_blocks(board$board)[sub("^blk-", "", pid)],
               add_panel = pos,
@@ -393,9 +428,7 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
             )
 
             n_panels(n_panels() + 1L)
-
           } else if (grepl("^ext-", pid)) {
-
             exts <- as.list(dock_extensions(board$board))
 
             show_ext_panel(
@@ -405,9 +438,7 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
             )
 
             n_panels(n_panels() + 1L)
-
           } else {
-
             blockr_abort(
               "Unknown panel specification {pid}.",
               class = "dock_panel_invalid"
@@ -441,7 +472,6 @@ manage_dock <- function(id, board, update, actions, layout = NULL) {
         blks <- update()$blocks$mod
 
         for (blk_id in names(blks)) {
-
           blk <- blks[[blk_id]]
           new_name <- block_name(blk)
           blk_panel_id <- as_block_panel_id(blk_id)
@@ -572,7 +602,9 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
     state <- vs$state
     new_name <- trimws(input$view_new_name)
 
-    if (!is.null(validate_view_name(new_name, names(state)))) return()
+    if (!is.null(validate_view_name(new_name, names(state)))) {
+      return()
+    }
 
     removeModal()
 
@@ -610,7 +642,8 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
           dock_output_id,
           width = "100%",
           height = "100%"
-        )
+        ),
+        uiOutput(NS(ns(v_id), "empty_prompt"))
       )
     )
 
@@ -623,9 +656,12 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
     session$sendInputMessage("view_nav", list(add = new_name))
 
     # Switch to the new view
-    session$sendCustomMessage("switch-view", list(
-      id = ns(paste0("view_wrap_", v_id))
-    ))
+    session$sendCustomMessage(
+      "switch-view",
+      list(
+        id = ns(paste0("view_wrap_", v_id))
+      )
+    )
   })
 }
 
@@ -665,7 +701,8 @@ remove_view_observer <- function(vs, session, dock_mgr) {
         tagList(
           tags$p(
             "Are you sure you want to remove view ",
-            tags$strong(rm_name), "?"
+            tags$strong(rm_name),
+            "?"
           ),
           div(
             style = "display: flex; justify-content: flex-end; gap: 8px;
@@ -721,9 +758,12 @@ remove_view_observer <- function(vs, session, dock_mgr) {
     # switch-view must fire before show_view_ui so the target
     # dock has blockr-view-dock-active; otherwise move-element silently
     # drops DOM moves into inactive docks.
-    session$sendCustomMessage("switch-view", list(
-      id = ns(paste0("view_wrap_", dock_mgr$docks[[active_name]]$dock_id))
-    ))
+    session$sendCustomMessage(
+      "switch-view",
+      list(
+        id = ns(paste0("view_wrap_", dock_mgr$docks[[active_name]]$dock_id))
+      )
+    )
 
     # Show block/ext UI in the target view
     if (was_active) {
@@ -732,10 +772,13 @@ remove_view_observer <- function(vs, session, dock_mgr) {
     }
 
     # sendInputMessage auto-namespaces, so pass un-namespaced ID
-    session$sendInputMessage("view_nav", list(
-      remove = rm_name,
-      value = active_name
-    ))
+    session$sendInputMessage(
+      "view_nav",
+      list(
+        remove = rm_name,
+        value = active_name
+      )
+    )
   })
 }
 
@@ -760,7 +803,9 @@ rename_view_observer <- function(vs, session, dock_mgr) {
 
     nms <- names(state)
     idx <- match(rename$from, nms)
-    if (is.na(idx)) return()
+    if (is.na(idx)) {
+      return()
+    }
 
     nms[idx] <- rename$to
     names(state) <- nms
@@ -793,9 +838,13 @@ rename_view_observer <- function(vs, session, dock_mgr) {
 #' @param session Shiny session.
 #'
 #' @noRd
-suggest_panels_to_add <- function(dock, board, suggest_new = FALSE,
-                                  panels = NULL, session = get_session()) {
-
+suggest_panels_to_add <- function(
+  dock,
+  board,
+  suggest_new = FALSE,
+  panels = NULL,
+  session = get_session()
+) {
   ns <- session$ns
 
   if (is.null(panels)) {
@@ -899,7 +948,9 @@ build_one_option <- function(value, label, id, package, icon, color) {
 #'
 #' @noRd
 build_block_options <- function(board, blk_ids, prefix = "") {
-  if (!length(blk_ids)) return(list())
+  if (!length(blk_ids)) {
+    return(list())
+  }
 
   blks <- board_blocks(board)[blk_ids]
   meta <- blks_metadata(blks)
@@ -927,7 +978,9 @@ build_block_options <- function(board, blk_ids, prefix = "") {
 #'
 #' @noRd
 build_ext_options <- function(board, ext_ids, prefix = "") {
-  if (!length(ext_ids)) return(list())
+  if (!length(ext_ids)) {
+    return(list())
+  }
 
   all_exts <- as.list(dock_extensions(board))
 
