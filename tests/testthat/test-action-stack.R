@@ -1,66 +1,69 @@
 test_that("add stack action", {
 
+  r_board <- reactiveValues(
+    board = new_board(
+      c(
+        a = new_dataset_block("iris"),
+        b = new_head_block()
+      )
+    )
+  )
+  r_update <- reactiveVal(list())
+
   testServer(
     function(id, ...) {
       moduleServer(
         id,
         add_stack_action(
           trigger = reactive(TRUE),
-          board = reactiveValues(
-            board = new_board(
-              c(
-                a = new_dataset_block("iris"),
-                b = new_head_block()
-              )
-            )
-          ),
-          update = reactiveVal(list())
+          board = r_board,
+          update = r_update
         )
       )
     },
     {
       session$flushReact()
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
         stack_confirm = 1L,
         stack_id = ""
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
-        stack_confirm = 1L,
+        stack_confirm = 2L,
         stack_id = "test"
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
-        stack_confirm = 1L,
+        stack_confirm = 3L,
         stack_id = "test",
         stack_block_selection = "test"
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
-        stack_confirm = 1L,
+        stack_confirm = 4L,
         stack_id = "test",
         stack_block_selection = "",
         stack_color = "test"
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
-        stack_confirm = 1L,
+        stack_confirm = 5L,
         stack_id = "test",
         stack_block_selection = "",
         stack_color = "#FFFFFF"
       )
 
-      upd <- update()
+      upd <- r_update()
 
       expect_length(upd, 1L)
       expect_named(upd, "stacks")
@@ -77,61 +80,64 @@ test_that("add stack action", {
 
 test_that("edit stack action", {
 
+  r_board <- reactiveValues(
+    board = new_dock_board(
+      c(
+        a = new_dataset_block("iris"),
+        b = new_head_block()
+      ),
+      stacks = stacks(a = "a")
+    )
+  )
+  r_update <- reactiveVal(list())
+
   testServer(
     function(id, ...) {
       moduleServer(
         id,
         edit_stack_action(
           trigger = reactive("a"),
-          board = reactiveValues(
-            board = new_dock_board(
-              c(
-                a = new_dataset_block("iris"),
-                b = new_head_block()
-              ),
-              stacks = stacks(a = "a")
-            )
-          ),
-          update = reactiveVal(list())
+          board = r_board,
+          update = r_update
         )
       )
     },
     {
       session$flushReact()
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
         edit_stack_confirm = 1L,
         edit_stack_blocks = "test"
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
-        edit_stack_confirm = 1L,
+        edit_stack_confirm = 2L,
         edit_stack_blocks = "",
         edit_stack_color = "test"
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
-        edit_stack_confirm = 1L,
+        edit_stack_confirm = 3L,
         edit_stack_blocks = "",
         edit_stack_color = "#FFFFFF",
         edit_stack_name = ""
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
-        edit_stack_confirm = 1L,
+        edit_stack_confirm = 4L,
         edit_stack_blocks = "",
         edit_stack_color = "#FFFFFF",
         edit_stack_name = "Test stack"
       )
 
-      upd <- update()
+      upd <- r_update()
 
       expect_length(upd, 1L)
       expect_named(upd, "stacks")
@@ -148,29 +154,32 @@ test_that("edit stack action", {
 
 test_that("remove stack action", {
 
+  r_board <- reactiveValues(
+    board = new_dock_board(
+      c(
+        a = new_dataset_block("iris"),
+        b = new_head_block()
+      ),
+      stacks = stacks(a = "a")
+    )
+  )
+  r_update <- reactiveVal(list())
+
   testServer(
     function(id, ...) {
       moduleServer(
         id,
         remove_stack_action(
           trigger = reactive("a"),
-          board = reactiveValues(
-            board = new_dock_board(
-              c(
-                a = new_dataset_block("iris"),
-                b = new_head_block()
-              ),
-              stacks = stacks(a = "a")
-            )
-          ),
-          update = reactiveVal(list())
+          board = r_board,
+          update = r_update
         )
       )
     },
     {
       session$flushReact()
 
-      upd <- update()
+      upd <- r_update()
 
       expect_length(upd, 1L)
       expect_named(upd, "stacks")
