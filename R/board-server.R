@@ -524,7 +524,9 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
     req(view_can_crud(vs$state))
 
     state <- vs$state
-    default_name <- paste("Page", length(state) + 1L)
+    n <- length(state) + 1L
+    while (paste("Page", n) %in% names(state)) n <- n + 1L
+    default_name <- paste("Page", n)
 
     brd <- board$board
     blk_options <- build_block_options(brd, board_block_ids(brd))
