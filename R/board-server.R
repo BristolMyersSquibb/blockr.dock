@@ -517,6 +517,7 @@ manage_dock <- function(
 #' @noRd
 add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
   input <- session$input
+  output <- session$output
   ns <- session$ns
 
   # Show modal for view creation
@@ -592,7 +593,6 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
   })
 
   # Name validation feedback
-  output <- session$output
   output$view_name_validation <- renderUI({
     req(input$view_new_name)
     msg <- validate_view_name(trimws(input$view_new_name), names(vs$state))
