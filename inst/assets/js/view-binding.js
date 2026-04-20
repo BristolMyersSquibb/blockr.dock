@@ -1,4 +1,19 @@
 $(function () {
+  // Bootstrap modal cleanup corrupts the body's inline styles: it sets
+  // `padding: 0px` (shorthand) on open but only restores `padding-right`
+  // on close, leaving stale padding-top/bottom/left inline values.
+  // Fix: save the full style attribute before the modal opens and
+  // restore it after the modal closes.
+  $(document.body).on('show.bs.modal', function () {
+    document.body._preModalStyle = document.body.getAttribute('style') || '';
+  });
+  $(document.body).on('hidden.bs.modal', function () {
+    if (document.body._preModalStyle !== undefined) {
+      document.body.setAttribute('style', document.body._preModalStyle);
+      delete document.body._preModalStyle;
+    }
+  });
+
   var showNotification = function (message, type, duration) {
     Shiny.notifications.show({
       html: message,
