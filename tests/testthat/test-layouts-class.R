@@ -11,14 +11,38 @@ test_that("dock_layouts constructor", {
   expect_identical(active_view(ly), "Analysis")
 })
 
-test_that("dock_layouts active parameter", {
+test_that("dock_view marks a view active via attribute", {
+  v <- dock_view("a", "b", active = TRUE)
+  expect_true(is.list(v))
+  expect_identical(unlist(v), c("a", "b"))
+  expect_true(isTRUE(attr(v, "active")))
+
+  expect_null(attr(dock_view("a"), "active"))
+  expect_null(attr(dock_view("a", active = FALSE), "active"))
+})
+
+test_that("dock_layouts uses per-view active attribute", {
   ly <- dock_layouts(
     A = list("x"),
-    B = list("y"),
-    active = "B"
+    B = dock_view("y", active = TRUE)
   )
 
   expect_identical(active_view(ly), "B")
+})
+
+test_that("dock_layouts auto-defaults first view active", {
+  ly <- dock_layouts(A = list("x"), B = list("y"))
+  expect_identical(active_view(ly), "A")
+})
+
+test_that("validate_dock_layouts rejects multiple active views", {
+  expect_error(
+    dock_layouts(
+      A = dock_view("x", active = TRUE),
+      B = dock_view("y", active = TRUE)
+    ),
+    class = "dock_layouts_multiple_active"
+  )
 })
 
 test_that("dock_layouts default to one empty page", {
@@ -119,8 +143,35 @@ test_that("dock_layouts() accepted by new_dock_board", {
   expect_true(is_dock_layout(board_views(brd)[["V1"]]))
 })
 
-test_that("board_views returns NULL for single-layout board", {
+test_that("active attribute survives layout resolution", {
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layout = dock_layouts(
+      First = list("a"),
+      Second = dock_view("a", "b", active = TRUE)
+    )
+  )
+
+  views <- board_views(brd)
+  expect_identical(active_view(views), "Second")
+  expect_true(is_dock_layout(views[["Second"]]))
+})
+
+test_that("default board has a single auto-named Page view", {
   brd <- new_dock_board(c(a = new_dataset_block()))
+  views <- board_views(brd)
+  expect_s3_class(views, "dock_layouts")
+  expect_named(views, "Page")
+  expect_identical(active_view(views), "Page")
+  # Default Page is auto-populated from blocks + extensions
+  expect_true(is_dock_layout(views[["Page"]]))
+})
+
+test_that("board_views returns NULL when an explicit raw grid is passed", {
+  brd <- new_dock_board(
+    c(a = new_dataset_block()),
+    layout = list("a")
+  )
   expect_null(board_views(brd))
 })
 

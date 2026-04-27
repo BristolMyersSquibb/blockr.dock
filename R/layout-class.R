@@ -61,10 +61,23 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 #' @rdname layout
 #' @export
 default_grid <- function(blocks, extensions) {
+  build_default_grid(
+    blks = as_block_panel_id(as_blocks(blocks)),
+    exts = as_ext_panel_id(as_dock_extensions(extensions))
+  )
+}
 
-  exts <- as_ext_panel_id(as_dock_extensions(extensions))
-  blks <- as_block_panel_id(as_blocks(blocks))
+# Like `default_grid()` but emits block / extension names rather than
+# panel IDs -- the form a multi-view spec expects (see
+# `dock_layouts()` and `initialise_layout()`).
+default_view_grid <- function(blocks, extensions) {
+  build_default_grid(
+    blks = names(as_blocks(blocks)),
+    exts = names(as_dock_extensions(extensions))
+  )
+}
 
+build_default_grid <- function(blks, exts) {
   if (length(exts)) {
     list(exts, blks)
   } else if (!length(blks)) {

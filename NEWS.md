@@ -10,9 +10,17 @@
   )
   ```
 
-  Set the initially active view with `active`:
-  `dock_layouts(..., active = "Overview")`.
-  Single view boards still work.
+  Mark a view as initially active by tagging its spec via `dock_view()`:
+
+  ```r
+  layout = list(
+    Analysis = list("block_1", "block_2"),
+    Overview = dock_view("dag_extension", active = TRUE)
+  )
+  ```
+
+  If no view is tagged, the first one is used. Single-view boards still
+  work.
 
 # blockr.dock 0.1.0
 

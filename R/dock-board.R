@@ -32,7 +32,9 @@
 #' @export
 new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            ..., extensions = new_dock_extensions(),
-                           layout = default_grid(blocks, extensions),
+                           layout = dock_layouts(
+                             Page = default_view_grid(blocks, extensions)
+                           ),
                            options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
@@ -76,6 +78,7 @@ initialise_layout <- function(layout, blocks, extensions) {
 
     for (view_name in names(layout)) {
       ly <- layout[[view_name]]
+      was_active <- is_active_view(ly)
 
       if (!is_dock_layout(ly)) {
         if (is.list(ly) && all(c("grid", "panels") %in% names(ly))) {
@@ -91,6 +94,10 @@ initialise_layout <- function(layout, blocks, extensions) {
           )
           layout[[view_name]] <- create_dock_layout(v_blks, v_exts, ly)
         }
+      }
+
+      if (was_active) {
+        layout[[view_name]] <- mark_active(layout[[view_name]])
       }
     }
 
@@ -180,7 +187,9 @@ dock_layout <- function(x) {
 
   if (is_dock_layouts(ly)) {
     view_name <- active_view(ly)
-    ly[[view_name]] <- validate_dock_layout(value, board_block_ids(x))
+    ly[[view_name]] <- mark_active(
+      validate_dock_layout(value, board_block_ids(x))
+    )
     x[["layout"]] <- ly
   } else {
     x[["layout"]] <- validate_dock_layout(value, board_block_ids(x))

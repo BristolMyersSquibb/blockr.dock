@@ -1,5 +1,7 @@
 test_that("board server", {
 
+  # Multi-view path is exercised by the default `dock_layouts(Page = ...)`
+  # layout — `board_server_callback` returns an extra `view_data` reactive.
   board_rv_1 <- board_args(
     blocks = c(a = new_dataset_block())
   )
@@ -9,13 +11,11 @@ test_that("board server", {
       res <- board_server_callback(board_rv_1, update = reactiveVal())
 
       expect_type(res, "list")
-      expect_length(res, 2L)
-      expect_named(res, c("dock", "actions"))
+      expect_named(res, c("dock", "actions", "view_data"))
 
       dock <- res[["dock"]]
 
       expect_type(dock, "list")
-      expect_length(dock, 5L)
       expect_named(
         dock,
         c("layout", "proxy", "prev_active_group", "n_panels",
@@ -25,6 +25,7 @@ test_that("board server", {
       expect_s3_class(dock[["layout"]], "reactive")
       expect_s3_class(dock[["proxy"]], "dock_view_proxy")
       expect_s3_class(dock[["prev_active_group"]], "reactive")
+      expect_s3_class(res[["view_data"]], "reactive")
     }
   )
 
@@ -38,13 +39,14 @@ test_that("board server", {
       res <- board_server_callback(board_rv_2, update = reactiveVal())
 
       expect_type(res, "list")
-      expect_length(res, 3L)
-      expect_named(res, c("dock", "actions", "edit_board_extension"))
+      expect_named(
+        res,
+        c("dock", "actions", "view_data", "edit_board_extension")
+      )
 
       dock <- res[["dock"]]
 
       expect_type(dock, "list")
-      expect_length(dock, 5L)
       expect_named(
         dock,
         c("layout", "proxy", "prev_active_group", "n_panels",

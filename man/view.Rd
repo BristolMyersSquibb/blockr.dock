@@ -4,6 +4,7 @@
 \alias{new_dock_layouts}
 \alias{validate_dock_layouts}
 \alias{dock_layouts}
+\alias{dock_view}
 \alias{is_dock_layouts}
 \alias{view_ids}
 \alias{active_view}
@@ -18,7 +19,9 @@ new_dock_layouts(...)
 
 validate_dock_layouts(x)
 
-dock_layouts(..., active = NULL)
+dock_layouts(...)
+
+dock_view(..., active = FALSE)
 
 is_dock_layouts(x)
 
@@ -41,13 +44,15 @@ as_dock_layouts(x, ...)
 
 \item{x}{Object}
 
-\item{active}{Optional name of the initially active view. Defaults to
-the first element.}
+\item{active}{Logical; mark this view as the initially active one.
+At most one view in a \code{dock_layouts()} may be active.}
 
 \item{value}{Replacement value}
 }
 \value{
 \code{dock_layouts()} returns a \code{dock_layouts} object.
+\code{dock_view()} returns a list (the view spec) with the \code{active}
+attribute set when requested.
 \code{is_dock_layouts()} returns a boolean.
 \code{active_view()} returns a string and \verb{active_view<-()} returns
 the modified \code{dock_layouts} object invisibly.
@@ -62,14 +67,17 @@ via the board's DAG; view membership is a layout concern only.
 }
 \details{
 Multiple views are defined via \code{dock_layouts()}, which accepts named
-list elements — each a (possibly nested) list of block and extension
+list elements -- each a (possibly nested) list of block and extension
 IDs (the same format accepted by \code{create_dock_layout(grid = ...)}).
 A plain named \code{list()} is also accepted and auto-detected by
-\code{\link[=new_dock_board]{new_dock_board()}}. View CRUD is enabled unless the dock is locked
+\code{\link[=new_dock_board]{new_dock_board()}}. A view can be marked as the initially active one
+by tagging its spec with \code{attr(view, "active") <- TRUE}, conveniently
+produced by \code{\link[=dock_view]{dock_view()}}. If no view is tagged, the first one is
+used. View CRUD is enabled unless the dock is locked
 (see \code{is_dock_locked()}).
 }
 \examples{
-# Explicit constructor
+# Explicit constructor (first view is active by default)
 ly <- dock_layouts(
   Analysis = list("dataset_1", "head_1"),
   Overview = list("dag_extension")
@@ -77,11 +85,10 @@ ly <- dock_layouts(
 is_dock_layouts(ly)
 active_view(ly)
 
-# Set initial active view
+# Mark a specific view as initially active
 ly2 <- dock_layouts(
   Analysis = list("dataset_1"),
-  Overview = list("dag_extension"),
-  active = "Overview"
+  Overview = dock_view("dag_extension", active = TRUE)
 )
 active_view(ly2)
 
