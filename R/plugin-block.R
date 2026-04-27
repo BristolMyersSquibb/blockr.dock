@@ -150,16 +150,27 @@ block_card_title <- function(block, id, info) {
 
 block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
 
-  if (is_dock_locked()) {
+  locked <- is_dock_locked()
+
+  # When locked, the inputs/outputs collapse toggles are hidden — but the
+  # ctrl toggle (e.g. AI assistant sparkle) is still useful and must stay.
+  # Bail out only when there's nothing left to render.
+  if (locked && is.null(ctrl_meta)) {
     return(NULL)
   }
 
-  vals <- c("inputs", "outputs")
-  icon_labels <- list(
-    as.character(icon("sliders")),
-    as.character(icon("eye"))
-  )
-  tooltip_titles <- c("Controls", "Preview")
+  if (locked) {
+    vals <- character()
+    icon_labels <- list()
+    tooltip_titles <- character()
+  } else {
+    vals <- c("inputs", "outputs")
+    icon_labels <- list(
+      as.character(icon("sliders")),
+      as.character(icon("eye"))
+    )
+    tooltip_titles <- c("Controls", "Preview")
+  }
 
   if (!is.null(ctrl_meta)) {
     vals <- c(vals, "ctrl")
@@ -589,13 +600,28 @@ edit_block_server <- function(callbacks = list()) {
           )
         )
 
+        # Pre-lock visibility for inputs/outputs. In locked mode the toggle
+        # only carries the ctrl button — inputs/outputs stay frozen at
+        # whatever the user had configured before locking. Reading the
+        # block's persisted `visible` attr gives that frozen state, but
+        # under isolate so it doesn't take a reactive dep on board$board.
+        locked_io_visible <- function() {
+          blk <- isolate(board_blocks(board$board)[[block_id]])
+          intersect(
+            coal(attr(blk, "visible"), c("inputs", "outputs")),
+            c("inputs", "outputs")
+          )
+        }
+
         observeEvent(
           input$collapse_blk_sections,
-          accordion_panel_set(
-            "blk_accordion",
-            input$collapse_blk_sections,
-            session
-          )
+          {
+            sections <- input$collapse_blk_sections
+            if (is_dock_locked()) {
+              sections <- union(locked_io_visible(), sections)
+            }
+            accordion_panel_set("blk_accordion", sections, session)
+          }
         )
 
         conds <- reactive(
@@ -647,6 +673,12 @@ edit_block_server <- function(callbacks = list()) {
           visible = reactive({
             sections <- input$collapse_blk_sections
             header <- input$header_visible
+            # Mirror the observer: in locked mode the toggle only governs
+            # ctrl, so report inputs/outputs from their frozen pre-lock
+            # state instead of letting them silently disappear from attr.
+            if (is_dock_locked()) {
+              sections <- union(locked_io_visible(), sections)
+            }
             c(if (!isFALSE(header)) "header", sections)
           })
         )

@@ -1018,3 +1018,9 @@ label:has(input[type="file"]) {
   outline: none !important;
 }
 
+
+/* Locked dock: hide tab close (X) actions on every tab. The remove plugin's
+   enable=FALSE disables the click but dockViewR still renders the element. */
+.blockr-ws-dock-locked .dv-default-tab-action {
+  display: none !important;
+}

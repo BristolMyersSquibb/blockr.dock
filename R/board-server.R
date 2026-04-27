@@ -133,7 +133,8 @@ init_workspace_docks <- function(workspaces, board, update, triggers,
         id = ns(paste0("ws_wrap_", ws_did)),
         class = paste(
           "blockr-ws-dock",
-          if (identical(ws_name, active_ws)) "blockr-ws-dock-active"
+          if (identical(ws_name, active_ws)) "blockr-ws-dock-active",
+          if (is_dock_locked()) "blockr-ws-dock-locked"
         ),
         dockViewR::dock_view_output(
           dock_output_id,
@@ -611,7 +612,10 @@ add_ws_observer <- function(ws, session, dock_mgr, board, update, triggers) {
       where = "beforeEnd",
       ui = div(
         id = ns(paste0("ws_wrap_", ws_id)),
-        class = "blockr-ws-dock",
+        class = paste(
+          "blockr-ws-dock",
+          if (is_dock_locked()) "blockr-ws-dock-locked"
+        ),
         dockViewR::dock_view_output(
           dock_output_id,
           width = "100%",
