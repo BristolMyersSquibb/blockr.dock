@@ -10,13 +10,15 @@ filter_empty <- function(x) Filter(Negate(is_empty), x)
 
 last <- function(x) x[[length(x)]]
 
+fallback_palette <- c(
+  "#66C2A5", "#FC8D62", "#8DA0CB", "#E78AC3",
+  "#A6D854", "#FFD92F", "#E5C494", "#B3B3B3"
+)
+
 next_color <- function(colors = character(), lum_var = TRUE) {
 
   if (!pkg_avail("colorspace")) {
-    blockr_abort(
-      "Package 'colorspace' is required.",
-      class = "colorspace_not_available"
-    )
+    return(fallback_palette[(length(colors) %% length(fallback_palette)) + 1L])
   }
 
   if (length(colors)) {
