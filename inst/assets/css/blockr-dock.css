@@ -220,42 +220,6 @@
 }
 
 /* ============================================
-   Edge Tab (Settings Panel Trigger) - Figma-aligned
-   ============================================ */
-.blockr-edge-tab {
-  display: none; /* Hidden - use navbar gear icon instead */
-  position: fixed;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 88px;
-  background-color: var(--blockr-grey-100);
-  border: 1px solid var(--blockr-color-border);
-  border-right: none;
-  border-radius: 10px 0 0 10px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  box-shadow: var(--blockr-shadow);
-}
-
-.blockr-edge-tab:hover {
-  background-color: var(--blockr-color-border);
-  box-shadow: var(--blockr-shadow-lg);
-}
-
-.blockr-edge-tab svg,
-.blockr-edge-tab i {
-  font-size: 16px;
-  color: var(--blockr-color-text-muted);
-}
-
-/* ============================================
    Bootstrap Base Overrides
    ============================================ */
 
@@ -757,4 +721,184 @@ label:has(input[type="file"]) {
 .blockr-navbar-icon-btn:hover {
   background-color: var(--blockr-grey-300);
   color: var(--blockr-color-text-secondary);
+}
+
+/* ============================================
+   View Navigation
+   ============================================ */
+
+/* Dropdown toggle */
+.blockr-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 4px 10px;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-view-toggle-label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-view-toggle::after {
+  margin-left: 2px;
+}
+
+/* Dropdown menu */
+.blockr-view-nav.dropdown-menu {
+  min-width: 200px;
+  padding: 4px;
+}
+
+/* View item */
+.blockr-view-item.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-primary);
+  cursor: pointer;
+}
+
+.blockr-view-item.dropdown-item.active {
+  background-color: var(--blockr-blue-100);
+  color: var(--blockr-blue-700);
+  font-weight: var(--blockr-font-weight-semibold);
+}
+
+.blockr-view-item.dropdown-item:hover {
+  background-color: var(--blockr-grey-100);
+}
+
+.blockr-view-item.dropdown-item.active:hover {
+  background-color: var(--blockr-blue-100);
+}
+
+/* Item name */
+.blockr-view-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* CRUD action buttons — use opacity instead of display to prevent layout jump */
+.blockr-view-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.blockr-view-item.dropdown-item:hover .blockr-view-item-actions {
+  opacity: 1;
+}
+
+.blockr-view-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--blockr-color-text-muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.blockr-view-action:hover {
+  background-color: var(--blockr-grey-300);
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-view-remove:hover {
+  color: var(--blockr-color-danger, #dc3545);
+}
+
+/* Inline rename input */
+.blockr-view-rename-input {
+  flex: 1;
+  padding: 2px 6px;
+  border: 1px solid var(--blockr-color-primary);
+  border-radius: 4px;
+  font-size: var(--blockr-font-size-sm);
+  background-color: var(--blockr-color-bg-input);
+  color: var(--blockr-color-text-primary);
+  outline: none;
+}
+
+.blockr-view-rename-input:focus {
+  border-color: var(--blockr-color-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+/* Add button */
+.blockr-view-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-view-add:hover {
+  background-color: var(--blockr-grey-100);
+  color: var(--blockr-color-text-primary);
+}
+
+/* ============================================
+   Multi-dock stacking (views)
+   ============================================ */
+
+.blockr-view-container {
+  overflow: hidden;
+}
+
+.blockr-view-dock {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.blockr-view-dock-active {
+  z-index: 1;
+  pointer-events: auto;
+  opacity: 1;
+}
+
+/* Empty dock prompt — overlays the dockview when no panels are present */
+.blockr-empty-dock-prompt {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--blockr-color-text-muted, #6b7280);
+  pointer-events: auto;
+}
+
+.blockr-empty-dock-prompt p {
+  margin: 0;
+  font-size: var(--blockr-font-size-sm, 14px);
 }

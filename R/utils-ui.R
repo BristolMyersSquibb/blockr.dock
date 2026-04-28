@@ -141,15 +141,29 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
   if (identical(type, "block")) {
     blocks <- board_blocks(board)
     add_block_panel(blocks[id], position = pos, proxy = proxy)
-    show_block_ui(id, proxy$session)
+    show_block_ui(id, proxy$session, board_ns = proxy_board_ns(proxy))
   } else {
     exts <- dock_extensions(board)
 
     add_ext_panel(exts[[id]], position = pos, proxy = proxy)
-    show_ext_ui(id, proxy$session)
+    show_ext_ui(id, proxy$session, board_ns = proxy_board_ns(proxy))
   }
 
   invisible()
+}
+
+#' @noRd
+empty_dock_prompt <- function(ns) {
+  div(
+    class = "blockr-empty-dock-prompt",
+    bsicons::bs_icon("plus-circle", size = "2em"),
+    tags$p("Start by adding a panel"),
+    actionButton(
+      ns("empty_dock_add"),
+      "Add panel",
+      class = "btn-outline-primary btn-sm"
+    )
+  )
 }
 
 drop_nulls <- function(x) {

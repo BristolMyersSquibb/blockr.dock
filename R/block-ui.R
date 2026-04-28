@@ -100,7 +100,8 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
   invisible(x)
 }
 
-show_block_panel <- function(block, add_panel = TRUE, proxy = dock_proxy()) {
+show_block_panel <- function(block, add_panel = TRUE,
+                             proxy = dock_proxy(), ...) {
 
   if (isTRUE(add_panel)) {
     add_block_panel(block, proxy = proxy)
@@ -110,14 +111,16 @@ show_block_panel <- function(block, add_panel = TRUE, proxy = dock_proxy()) {
     add_block_panel(block, position = add_panel, proxy = proxy)
   }
 
-  show_block_ui(block, proxy$session)
+  show_block_ui(block, proxy$session,
+                board_ns = proxy_board_ns(proxy), ...)
 
   invisible(NULL)
 }
 
-hide_block_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy()) {
+hide_block_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy(), ...) {
 
-  hide_block_ui(id, proxy$session)
+  hide_block_ui(id, proxy$session,
+                board_ns = proxy_board_ns(proxy), ...)
 
   if (isTRUE(rm_panel)) {
     remove_block_panel(id, proxy)
@@ -126,24 +129,23 @@ hide_block_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy()) {
   invisible(NULL)
 }
 
-hide_block_ui <- function(id, session) {
+hide_block_ui <- function(id, session, board_ns = session$ns) {
 
-  ns <- session$ns
-
-  bid <- ns(as_block_handle_id(id))
-  oid <- paste0(ns("blocks_offcanvas"), " .offcanvas-body")
+  bid <- board_ns(as_block_handle_id(id))
+  oid <- paste0(board_ns("blocks_offcanvas"), " .offcanvas-body")
 
   log_debug("hiding block {bid} in {oid}")
 
   move_dom_element(paste0("#", bid), paste0("#", oid), session)
 }
 
-show_block_ui <- function(id, session) {
+show_block_ui <- function(id, session, board_ns = session$ns) {
 
-  ns <- session$ns
-
-  bid <- ns(as_block_handle_id(id))
-  pid <- paste(dock_id(ns), as_block_panel_id(id), sep = "-")
+  # board_ns: board-level namespace for DOM element IDs (handles, offcanvas).
+  # session$ns: dock-module namespace for dock panel IDs.
+  # These differ when called from a nested dock module (views).
+  bid <- board_ns(as_block_handle_id(id))
+  pid <- paste(dock_id(session$ns), as_block_panel_id(id), sep = "-")
 
   log_debug("showing block {bid} in panel {pid}")
 

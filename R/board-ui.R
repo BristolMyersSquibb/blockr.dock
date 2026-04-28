@@ -9,6 +9,16 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
   stopifnot(is_string(id))
 
   offcanvas_id <- NS(id, "options_offcanvas")
+  views <- board_views(x)
+
+  # View nav in the navbar (only when views are defined)
+  v_nav <- NULL
+  if (!is.null(views)) {
+    v_nav <- view_nav_ui(id, views)
+  }
+
+  # Dock output(s): one per view, or a single one without views
+  dock_outputs <- dock_outputs_ui(id, views)
 
   tagList(
     show_hide_block_dep(),
@@ -26,6 +36,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       ),
       div(
         class = "blockr-navbar-right",
+        v_nav,
         tags$button(
           class = "blockr-navbar-icon-btn",
           `data-bs-toggle` = "offcanvas",
@@ -42,11 +53,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
         opt_ui_or_null("generate_code", plugins, x)
       )
     ),
-    dockViewR::dock_view_output(
-      NS(id, dock_id()),
-      width = "100%",
-      height = "calc(100vh - 48px)"
-    ),
+    dock_outputs,
     off_canvas(
       id = NS(id, "exts_offcanvas"),
       position = "bottom",
@@ -58,6 +65,32 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
         board = x
       )
     )
+  )
+}
+
+# Generate dockview output(s). When views are defined, one dock per
+# view stacked via CSS; otherwise a single dock.
+# Each dock output is placed inside a moduleServer namespace so that
+# manage_dock(id, ...) can render to session$output[[dock_id()]] and
+# dockViewR inputs resolve correctly.
+dock_outputs_ui <- function(id, views) {
+
+  dock_height <- "calc(100vh - 48px)"
+
+  if (is.null(views)) {
+    return(
+      dockViewR::dock_view_output(
+        NS(NS(id, "dock_main"), dock_id()),
+        width = "100%",
+        height = dock_height
+      )
+    )
+  }
+
+  div(
+    id = NS(id, "view_container"),
+    class = "blockr-view-container",
+    style = paste0("position: relative; height: ", dock_height, ";")
   )
 }
 
