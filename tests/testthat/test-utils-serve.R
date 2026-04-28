@@ -33,7 +33,7 @@ test_that("dock app", {
   skip_on_cran()
 
   app <- shinytest2::AppDriver$new(
-    system.file("examples", "dock", "app.R", package = "blockr.dock"),
+    system.file("examples", "empty", "app.R", package = "blockr.dock"),
     name = "dock",
     seed = 42,
     load_timeout = 30 * 1000
