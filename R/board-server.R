@@ -903,8 +903,18 @@ suggest_panels_to_add <- function(
     )
   } else if (!isFALSE(suggest_new)) {
     suggest_new(TRUE)
+  } else if (
+    length(board_block_ids(board$board)) == 0L &&
+      length(dock_ext_ids(board$board)) == 0L
+  ) {
+    notify("The board has no blocks yet. Add a new block to get started.")
   } else {
-    notify("No further panels can be added. Remove some panels first.")
+    notify(
+      paste(
+        "All blocks and extensions are already in this view.",
+        "Add a new block to the board first."
+      )
+    )
   }
 }
 
