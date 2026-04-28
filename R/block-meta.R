@@ -27,21 +27,7 @@
 #' @rdname meta
 #' @export
 blks_metadata <- function(blocks) {
-
   meta <- block_metadata(blocks)
-
-  if (is.null(meta)) {
-    meta <- data.frame(
-      id = character(),
-      name = character(),
-      description = character(),
-      category = character(),
-      icon = character(),
-      arguments = I(list()),
-      package = character()
-    )
-  }
-
   cbind(meta, color = blk_color(meta$category))
 }
 
