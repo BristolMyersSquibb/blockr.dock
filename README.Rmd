@@ -4,7 +4,7 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r, include = FALSE}
+```{r, include=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 [![coverage](https://codecov.io/gh/BristolMyersSquibb/blockr.dock/graph/badge.svg?token=6RAAMZS4DS)](https://app.codecov.io/gh/BristolMyersSquibb/blockr.dock)
 <!-- badges: end -->
 
-A docking layout manager provided by dockViewR can be used as front-end to a blockr board using this package.
+A docking layout manager provided by [dockViewR](https://github.com/DivadNojnarg/dockViewR) can be used as front-end to a [blockr](https://blockr.site/) board using this package.
 
 ## Installation
 
@@ -32,25 +32,70 @@ You can install the development version of blockr.dock from [GitHub](https://git
 pak::pak("BristolMyersSquibb/blockr.dock")
 ```
 
-## Example
+## Simple dock
 
-To start up a board for visualizing `Sepal.Length` against `Sepal.Width` for the `iris` dataset, we can run
+To start up a board for visualizing `Sepal.Length` against `Sepal.Width`
+for the `iris` dataset:
 
-```r
-library(blockr.dock)
-library(blockr.core)
+```{r dock-code, code=readLines("inst/examples/dock/app.R"), eval=FALSE}
+```
 
-serve(
-  new_dock_board(
-    blocks = c(
-      a = new_dataset_block("iris"),
-      b = new_scatter_block(x = "Sepal.Length", y = "Sepal.Width")
-    ),
-    links = list(from = "a", to = "b", input = "data"),
-    extensions = list(edit = new_edit_board_extension()),
-    layout = list("edit", list("a", "b"))
-  )
+```{r dock-screenshot, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
+webshot2::appshot(
+  shiny::shinyAppDir(system.file("examples", "dock", package = "blockr.dock")),
+  file = "man/figures/dock.png",
+  delay = 3,
+  vwidth = 900,
+  vheight = 600
 )
 ```
 
-This is a read-only view of this board, as no blocks can be added or removed and block connectivity cannot be changed. We can however change parameters for the input data and visualization.
+![Simple dock](man/figures/dock.png)
+
+## Locked dock
+
+A locked dock prevents users from adding or removing blocks and
+extensions. Drag-and-drop and panel resizing are also disabled.
+
+```{r locked-dock-code, code=readLines("inst/examples/locked-dock/app.R"), eval=FALSE}
+```
+
+```{r locked-dock-screenshot, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
+webshot2::appshot(
+  shiny::shinyAppDir(system.file("examples", "locked-dock", package = "blockr.dock")),
+  file = "man/figures/locked-dock.png",
+  delay = 3,
+  vwidth = 900,
+  vheight = 600
+)
+```
+
+![Locked dock](man/figures/locked-dock.png)
+
+## Multi-view dock
+
+Define multiple views (global tabs), each with its own DockView layout.
+Blocks and extensions are shared across views via the board's DAG; view
+membership is a layout concern only.
+
+```{r views-code, code=readLines("inst/examples/views/app.R"), eval=FALSE}
+```
+
+```{r views-screenshot, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
+# Use shinytest2 to click the view dropdown open before screenshotting
+withr::local_envvar(NOT_CRAN = "true")
+app <- shinytest2::AppDriver$new(
+  system.file("examples", "views", package = "blockr.dock"),
+  width = 900,
+  height = 600
+)
+Sys.sleep(4)
+app$run_js("document.querySelector('.blockr-view-toggle').click()")
+Sys.sleep(0.5)
+tmp <- tempfile(fileext = ".png")
+app$get_screenshot(tmp)
+file.copy(tmp, "man/figures/views.png", overwrite = TRUE)
+app$stop()
+```
+
+![Multi-view dock](man/figures/views.png)

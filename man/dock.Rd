@@ -18,7 +18,7 @@ new_dock_board(
   stacks = list(),
   ...,
   extensions = new_dock_extensions(),
-  layout = default_grid(blocks, extensions),
+  layout = dock_layouts(Page = default_view_grid(blocks, extensions)),
   options = dock_board_options(),
   ctor = NULL,
   pkg = NULL,
@@ -52,7 +52,8 @@ dock_board_options()
 
 \item{extensions}{Dock extensions}
 
-\item{layout}{Dock layout}
+\item{layout}{Either a grid specification (list), a \code{dock_layout}, a
+\code{dock_layouts()} object, or a named \code{list()} of layout specs}
 
 \item{options}{Board-level user settings}
 
@@ -70,14 +71,20 @@ the coercion function \code{as_dock_board()}. Inheritance can be checked using
 \code{is_dock_board()}, which returns a boolean. Getters \code{dock_layout()} and
 \code{dock_extensions()} return \code{dock_layout} and \code{dock_extension} objects while
 setters \verb{dock_layout<-()} and \verb{dock_extensions<-()} return the updated board
-object (invisibly). A character vector of IDs is returned by \code{dock_ext_ids()}
-and \code{dock_board_options()} returns a \code{board_options} object.
+object (invisibly). When \code{layout} is a \code{dock_layouts} object,
+\code{board_views()} returns it and \code{dock_layout()} returns the active
+view's layout. A character vector of IDs is returned by
+\code{dock_ext_ids()} and \code{dock_board_options()} returns a \code{board_options}
+object.
 }
 \description{
 Using the docking layout manager provided by dockViewR, a \code{dock_board}
 extends \code{\link[blockr.core:new_board]{blockr.core::new_board()}}. In addition to the attributes contained
 in a core board, this also includes dock extensions (as \code{extensions})
-and the panel arrangement (as \code{layout}).
+and the panel arrangement (as \code{layout}). The \code{layout} parameter accepts
+either a grid specification (as before), a \code{dock_layouts()} object
+for multi-view boards, or a plain named list of layout specs which is
+auto-detected as multi-view.
 }
 \examples{
 brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))

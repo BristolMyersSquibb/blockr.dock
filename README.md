@@ -10,8 +10,9 @@
 [![coverage](https://codecov.io/gh/BristolMyersSquibb/blockr.dock/graph/badge.svg?token=6RAAMZS4DS)](https://app.codecov.io/gh/BristolMyersSquibb/blockr.dock)
 <!-- badges: end -->
 
-A docking layout manager provided by dockViewR can be used as front-end
-to a blockr board using this package.
+A docking layout manager provided by
+[dockViewR](https://github.com/DivadNojnarg/dockViewR) can be used as
+front-end to a [blockr](https://blockr.site/) board using this package.
 
 ## Installation
 
@@ -23,10 +24,10 @@ You can install the development version of blockr.dock from
 pak::pak("BristolMyersSquibb/blockr.dock")
 ```
 
-## Example
+## Simple dock
 
 To start up a board for visualizing `Sepal.Length` against `Sepal.Width`
-for the `iris` dataset, we can run
+for the `iris` dataset:
 
 ``` r
 library(blockr.dock)
@@ -45,6 +46,73 @@ serve(
 )
 ```
 
-This is a read-only view of this board, as no blocks can be added or
-removed and block connectivity cannot be changed. We can however change
-parameters for the input data and visualization.
+<figure>
+<img src="man/figures/dock.png" alt="Simple dock" />
+<figcaption aria-hidden="true">Simple dock</figcaption>
+</figure>
+
+## Locked dock
+
+A locked dock prevents users from adding or removing blocks and
+extensions. Drag-and-drop and panel resizing are also disabled.
+
+``` r
+library(blockr.dock)
+library(blockr.core)
+
+options(blockr.dock_is_locked = TRUE)
+
+serve(
+  new_dock_board(
+    blocks = c(
+      a = new_dataset_block("iris"),
+      b = new_head_block(n = 20L),
+      c = new_scatter_block(x = "Sepal.Length", y = "Sepal.Width"),
+      d = new_subset_block()
+    ),
+    links = c(
+      new_link("a", "b", input = "data"),
+      new_link("b", "c", input = "data"),
+      new_link("b", "d", input = "data")
+    ),
+    layout = list(list("a", "b"), list("c", "d"))
+  )
+)
+```
+
+<figure>
+<img src="man/figures/locked-dock.png" alt="Locked dock" />
+<figcaption aria-hidden="true">Locked dock</figcaption>
+</figure>
+
+## Multi-view dock
+
+Define multiple views (global tabs), each with its own DockView layout.
+Blocks and extensions are shared across views via the board’s DAG; view
+membership is a layout concern only.
+
+``` r
+library(blockr.core)
+library(blockr.dock)
+
+board <- new_dock_board(
+  extensions = blockr.dag::new_dag_extension(),
+  blocks = c(
+    dataset_1 = new_dataset_block(),
+    head_1 = new_head_block()
+  ),
+  links = new_link("dataset_1", "head_1"),
+  layout = list(
+    Analysis = list("dataset_1", "head_1", "dag_extension"),
+    Overview = dock_view("dag_extension", active = TRUE),
+    Empty = list()
+  )
+)
+
+serve(board, "my_board")
+```
+
+<figure>
+<img src="man/figures/views.png" alt="Multi-view dock" />
+<figcaption aria-hidden="true">Multi-view dock</figcaption>
+</figure>

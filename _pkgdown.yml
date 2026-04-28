@@ -13,6 +13,12 @@ reference:
   desc: Tools for defining panel arrangements.
   contents:
     - new_dock_layout
+- title: Dock views
+  desc: Multi-view (tabbed) boards. Each view is its own panel arrangement.
+  contents:
+    - new_dock_layouts
+    - dock_view
+    - active_view
 - title: Board extensions
   desc: Board extensions allow for adding components that interact with and modify board state.
   contents:
@@ -23,7 +29,7 @@ reference:
   contents:
     - new_action
 - title: Utilities
-  desc: Various utility functions that are exported for use in dependen packages.
+  desc: Various utility functions that are exported for use in dependent packages.
   contents:
     - show_panel
     - blks_metadata

@@ -3,9 +3,12 @@ dock_input <- function(input) {
 }
 
 dock_panel_ids <- function(proxy = dock_proxy()) {
-  as_dock_panel_id(
-    dockViewR::get_panels_ids(proxy)
-  )
+  ids <- dockViewR::get_panels_ids(proxy)
+  if (!length(ids)) return(list())
+  res <- as_dock_panel_id(ids)
+  # Normalise to list: as_dock_panel_id returns a list for length > 1
+  # but a single classed vector for length <= 1.
+  if (!is.list(res)) list(res) else res
 }
 
 dock_panel_named_ids <- function(proxy = dock_proxy()) {
@@ -71,7 +74,7 @@ remove_ext_panel <- function(id, proxy = dock_proxy()) {
 add_ext_panel <- function(ext, ..., proxy = dock_proxy()) {
   stopifnot(is_dock_extension(ext))
 
-  log_debug("adding block {as_ext_panel_id(ext)}")
+  log_debug("adding extension panel {as_ext_panel_id(ext)}")
 
   dockViewR::add_panel(proxy, panel = ext_panel(ext, ...))
 
@@ -91,7 +94,7 @@ select_ext_panel <- function(id, proxy = dock_proxy()) {
 ext_panel <- function(ext, ...) {
   eid <- as_ext_panel_id(ext)
 
-  log_debug("creating block panel {eid}")
+  log_debug("creating extension panel {eid}")
 
   dock_panel(id = eid, title = extension_name(ext), ...)
 }
@@ -111,6 +114,10 @@ restore_dock <- function(layout, proxy = dock_proxy()) {
 
 dock_proxy <- function(session = get_session()) {
   dockViewR::dock_view_proxy(dock_id(), session = session)
+}
+
+proxy_board_ns <- function(proxy) {
+  proxy$board_ns %||% proxy$session$ns
 }
 
 dock_panel <- function(...) {
@@ -164,6 +171,25 @@ dock_panel_groups <- function(session = get_session()) {
   unlist(
     xtr_leaf_id(session$input[[dock_input("state")]][["grid"]][["root"]])
   )
+}
+
+#' Swap the contents of `dock_mgr$active_dock` to mirror a different dock.
+#'
+#' Extensions hold a stable reference to `dock_mgr$active_dock` (a
+#' `reactiveValues`). When the user switches views, this function
+#' copies the new view's dock module result into it so extensions
+#' transparently see the new dock without needing to re-bind.
+#'
+#' @param rv The `reactiveValues` to update (`dock_mgr$active_dock`).
+#' @param dock A dock module result (list with `layout`, `proxy`, etc.).
+#'
+#' @noRd
+update_active_dock <- function(rv, dock) {
+  rv$layout <- dock$layout
+  rv$proxy <- dock$proxy
+  rv$prev_active_group <- dock$prev_active_group
+  rv$n_panels <- dock$n_panels
+  rv$active_group_trail <- dock$active_group_trail
 }
 
 get_dock_panel <- function(id, proxy = dock_proxy()) {

@@ -1,13 +1,16 @@
 test_that("add block action", {
 
+  r_board <- reactiveValues(board = new_board())
+  r_update <- reactiveVal(list())
+
   testServer(
     function(id, ...) {
       moduleServer(
         id,
         add_block_action(
           trigger = reactive(TRUE),
-          board = reactiveValues(board = new_board()),
-          update = reactiveVal(list())
+          board = r_board,
+          update = r_update
         )
       )
     },
@@ -18,34 +21,34 @@ test_that("add block action", {
       session$setInputs(add_block_selection = "dataset_block")
       expect_s3_class(blk(), "block")
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
         add_block_confirm = 1L,
         add_block_id = ""
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       tmp <- blk()
       blk(NULL)
 
       session$setInputs(
-        add_block_confirm = 1L,
+        add_block_confirm = 2L,
         add_block_id = "test"
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       blk(tmp)
 
       session$setInputs(
-        add_block_confirm = 1L,
+        add_block_confirm = 3L,
         add_block_id = "test",
         add_block_name = "Test block"
       )
 
-      upd <- update()
+      upd <- r_update()
 
       expect_length(upd, 1L)
       expect_named(upd, "blocks")
@@ -62,16 +65,19 @@ test_that("add block action", {
 
 test_that("append block action", {
 
+  r_board <- reactiveValues(
+    board = new_board(blocks = c(a = new_dataset_block()))
+  )
+  r_update <- reactiveVal(list())
+
   testServer(
     function(id, ...) {
       moduleServer(
         id,
         append_block_action(
           trigger = reactive("a"),
-          board = reactiveValues(
-            board = new_board(blocks = c(a = new_dataset_block()))
-          ),
-          update = reactiveVal(list())
+          board = r_board,
+          update = r_update
         )
       )
     },
@@ -85,44 +91,44 @@ test_that("append block action", {
       session$setInputs(append_block_selection = "head_block")
       expect_s3_class(blk(), "block")
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
         append_block_confirm = 1L,
         append_block_id = ""
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$setInputs(
-        append_block_confirm = 1L,
+        append_block_confirm = 2L,
         append_block_id = "test",
         append_link_id = ""
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       tmp <- blk()
       blk(NULL)
 
       session$setInputs(
-        append_block_confirm = 1L,
+        append_block_confirm = 3L,
         append_block_id = "test",
         append_link_id = "test"
       )
 
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       blk(tmp)
 
       session$setInputs(
-        append_block_confirm = 1L,
+        append_block_confirm = 4L,
         append_block_id = "test",
         append_link_id = "test",
         append_block_name = "Test block"
       )
 
-      upd <- update()
+      upd <- r_update()
 
       expect_length(upd, 2L)
       expect_named(upd, c("blocks", "links"))
@@ -146,25 +152,28 @@ test_that("append block action", {
 
 test_that("remove block action", {
 
+  r_board <- reactiveValues(
+    board = new_board(blocks = c(a = new_dataset_block()))
+  )
+  r_update <- reactiveVal(list())
+
   testServer(
     function(id, ...) {
       moduleServer(
         id,
         remove_block_action(
           trigger = reactive("a"),
-          board = reactiveValues(
-            board = new_board(blocks = c(a = new_dataset_block()))
-          ),
-          update = reactiveVal(list())
+          board = r_board,
+          update = r_update
         )
       )
     },
     {
-      expect_length(update(), 0L)
+      expect_length(r_update(), 0L)
 
       session$flushReact()
 
-      upd <- update()
+      upd <- r_update()
 
       expect_length(upd, 1L)
       expect_named(upd, "blocks")
