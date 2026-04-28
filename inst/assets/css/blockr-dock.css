@@ -173,37 +173,58 @@
   transform: rotate(180deg);
 }
 
-/* Section toggle buttons (inputs/outputs) - Figma-aligned */
+/* Shared header icon button — ghost style */
+.blockr-header-icon.btn.btn-light,
 .blockr-section-toggle .btn.btn-light {
-  background-color: var(--blockr-grey-100) !important;
+  background-color: transparent !important;
   border: none !important;
-  border-radius: 6px;
-  color: var(--blockr-color-text-muted) !important;
-  font-size: var(--blockr-font-size-xs);
-  font-weight: var(--blockr-font-weight-normal);
-  padding: 6px 10px;
-  margin: 0 2px;
+  border-radius: 8px;
+  color: var(--blockr-grey-300) !important;
+  font-size: 12px;
+  padding: 6px 7px;
+  margin: 0;
   transition: all 0.15s ease;
+  line-height: 1;
+  box-shadow: none !important;
 }
 
+.blockr-header-icon.btn.btn-light:hover,
 .blockr-section-toggle .btn.btn-light:hover {
-  background-color: var(--blockr-color-border) !important;
-  color: var(--blockr-color-text-secondary) !important;
+  background-color: var(--blockr-grey-100) !important;
+  color: var(--blockr-grey-400) !important;
 }
 
 .blockr-section-toggle .btn-check:checked + .btn.btn-light:hover {
-  background-color: var(--blockr-color-border) !important;
+  background-color: var(--blockr-blue-50) !important;
+  color: var(--blockr-blue-500) !important;
 }
 
 .blockr-section-toggle .btn.btn-light.active,
 .blockr-section-toggle .btn-check:checked + .btn.btn-light {
-  background-color: var(--blockr-color-border) !important;
-  color: var(--blockr-color-text-secondary) !important;
+  background-color: transparent !important;
+  color: var(--blockr-blue-500) !important;
   box-shadow: none !important;
 }
 
+/* Ensure all header icons have consistent square hit area */
+.blockr-header-icon.btn.btn-light,
+.blockr-section-toggle .btn.btn-light {
+  min-width: 28px;
+  height: 28px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Constrain any SVG inside toggle buttons to match icon size */
+.blockr-section-toggle .btn.btn-light svg {
+  width: 14px;
+  height: 14px;
+}
+
 .blockr-section-toggle .btn-group {
-  gap: 6px;
+  gap: 2px;
 }
 
 /* Package badge - Figma-aligned subtle style */
@@ -610,7 +631,28 @@ label:has(input[type="file"]) {
   border-radius: 12px !important;
   border: 1px solid var(--blockr-color-border) !important;
   box-shadow: var(--blockr-shadow-lg) !important;
-  padding: 8px !important;
+  padding: 12px 8px 8px !important;
+  margin-top: 8px !important;
+}
+
+/* Arrow pointing up toward the trigger button */
+.blockr-block-dropdown::before,
+.blockr-block-dropdown::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+
+.blockr-block-dropdown::before {
+  top: -9px;
+  border-bottom: 9px solid var(--blockr-color-border);
+}
+
+.blockr-block-dropdown::after {
+  top: -8px;
+  border-bottom: 8px solid #fff;
 }
 
 .blockr-block-dropdown .dropdown-header,
@@ -626,7 +668,7 @@ label:has(input[type="file"]) {
 
 .blockr-block-dropdown .dropdown-item {
   font-size: var(--blockr-font-size-sm) !important;
-  padding: 10px 12px !important;
+  padding: 10px 12px 10px 2.5rem !important;
   border-radius: 8px !important;
   color: var(--blockr-color-text-primary) !important;
 }
