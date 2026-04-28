@@ -40,7 +40,7 @@ Suggests:
     withr,
     shinytest2
 Remotes:
-    BristolMyersSquibb/blockr.core@empty-block-metadata
+    BristolMyersSquibb/blockr.core
 Config/testthat/edition: 3
 Collate:
     'action-class.R'
