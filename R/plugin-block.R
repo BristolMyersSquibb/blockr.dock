@@ -1,4 +1,5 @@
-edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
+edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
+                          ctrl_ui = NULL, ctrl_meta = NULL) {
 
   blk_info <- blks_metadata(blk)
   ns <- NS(id)
@@ -7,12 +8,10 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
     class = "card-body",
     div(
       class = "d-flex align-items-stretch gap-3",
-      # Icon element with tooltip
       span(
         title = blk_info$description,
         blk_icon_data_uri(blk_info$icon, blk_info$color, 46, "inline")
       ),
-      # Title section
       div(
         class = paste(
           "d-flex flex-column justify-content-center",
@@ -20,18 +19,16 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui) {
         ),
         div(
           class = "d-flex align-items-center justify-content-between w-100",
-          # Left side: block name and subtitle
           block_card_title(blk, id, blk_info),
-          # Right side: toggles and dropdown
           div(
-            class = "d-flex align-items-center gap-2 flex-shrink-0",
-            block_card_toggles(blk, ns),
+            class = "d-flex align-items-center gap-1 flex-shrink-0",
+            block_card_toggles(blk, ns, ctrl_meta),
             block_card_dropdown(ns, blk_info, blk_id)
           )
         )
       )
     ),
-    block_card_content(ns, expr_ui, block_ui)
+    block_card_content(ns, expr_ui, block_ui, ctrl_ui)
   )
 }
 
@@ -140,30 +137,70 @@ block_card_title <- function(block, id, info) {
   )
 }
 
-block_card_toggles <- function(blk, ns) {
+block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
 
   if (is_dock_locked()) {
     return(NULL)
   }
 
-  opts <- c("inputs", "outputs")
+  vals <- c("inputs", "outputs")
+  icon_labels <- list(
+    as.character(icon("sliders")),
+    as.character(icon("eye"))
+  )
+  tooltip_titles <- c("Controls", "Preview")
+
+  if (!is.null(ctrl_meta)) {
+    vals <- c(vals, "ctrl")
+    icon_labels <- c(
+      icon_labels,
+      list(as.character(ctrl_button_label(ctrl_meta)))
+    )
+    tooltip_titles <- c(
+      tooltip_titles,
+      coal(ctrl_meta$tooltip, ctrl_meta$label, "Control")
+    )
+  }
 
   section_toggles <- shinyWidgets::checkboxGroupButtons(
     inputId = ns("collapse_blk_sections"),
     status = "light",
     size = "sm",
-    choices = set_names(opts, c("Input", "Output")),
+    choiceNames = icon_labels,
+    choiceValues = vals,
     individual = TRUE,
-    selected = coal(attr(blk, "visible"), opts)
+    selected = coal(attr(blk, "visible"), c("inputs", "outputs"))
   )
 
-  # Remove the ms-auto class, add blockr-section-toggle
   section_toggles$attribs$class <- paste(
     "blockr-section-toggle",
     trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
   )
 
-  section_toggles
+  tagList(
+    section_toggles,
+    tags$script(HTML(sprintf(
+      "$(function() {
+        var btns = $('#%s').find('.btn');
+        var titles = %s;
+        btns.each(function(i) { $(this).attr('title', titles[i]); });
+      });",
+      ns("collapse_blk_sections"),
+      jsonlite::toJSON(tooltip_titles)
+    )))
+  )
+}
+
+ctrl_button_label <- function(meta) {
+
+  label <- if (nzchar(coal(meta$label, ""))) meta$label
+  inner <- if (is.null(meta$icon)) label else tagList(meta$icon, label)
+
+  if (is.null(meta$class)) {
+    return(inner)
+  }
+
+  span(class = meta$class, inner)
 }
 
 block_card_dropdown <- function(ns, info, blk_id) {
@@ -186,7 +223,6 @@ block_card_dropdown <- function(ns, info, blk_id) {
         class = cls,
         type = "button",
         id = id,
-        style = "padding-left: 2.5rem;",
         if (not_null(symbol)) {
           span(
             class = "position-absolute start-0 top-50 translate-middle-y ms-3",
@@ -200,7 +236,7 @@ block_card_dropdown <- function(ns, info, blk_id) {
 
   dd_info <- function(key, val) {
     div(
-      class = "d-flex justify-content-between align-items-center mb-2",
+      class = "d-flex justify-content-between align-items-center mb-3",
       span(key, class = "text-muted small"),
       span(val, class = "small fw-medium")
     )
@@ -213,12 +249,10 @@ block_card_dropdown <- function(ns, info, blk_id) {
   div(
     class = "dropdown",
     tags$button(
-      class = "btn btn-link p-1 border-0 bg-transparent text-muted",
+      class = "btn btn-light blockr-header-icon",
       type = "button",
       `data-bs-toggle` = "dropdown",
       `aria-expanded` = "false",
-      onmouseover = "this.classList.add('text-dark');",
-      onmouseout = "this.classList.remove('text-dark');",
       icon("ellipsis-vertical")
     ),
     tags$ul(
@@ -246,21 +280,21 @@ block_card_dropdown <- function(ns, info, blk_id) {
       dd_header("Block Details"),
       tags$li(
         div(
-          class = "px-3 py-1",
+          class = "px-3 py-2",
           div(
-            class = "d-flex justify-content-between align-items-center mb-2",
+            class = "d-flex justify-content-between align-items-center mb-3",
             span("Package", class = "text-muted small"),
             span(class = "badge-two-tone", info$package)
           ),
           dd_info("Type", info$category),
           div(
-            class = "d-flex justify-content-between align-items-center mb-2",
+            class = "d-flex justify-content-between align-items-center",
             span("ID", class = "text-muted small"),
             div(
               class = "d-flex align-items-center gap-2",
               tags$code(
                 blk_id,
-                style = "font-size: var(--blockr-font-size-sm);"
+                style = "font-size: var(--blockr-font-size-xs);"
               ),
               tags$button(
                 class = "btn btn-link p-0 border-0 text-muted",
@@ -299,7 +333,7 @@ block_card_dropdown <- function(ns, info, blk_id) {
   )
 }
 
-block_card_content <- function(ns, expr_ui, block_ui) {
+block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
 
   inputs_panel <- htmltools::tagQuery(
     accordion_panel(
@@ -351,17 +385,56 @@ block_card_content <- function(ns, expr_ui, block_ui) {
 
   outputs_panel$attribs$style <- "border: none; border-radius: 0;"
 
+  ctrl_panel <- if (!is.null(ctrl_ui)) build_ctrl_panel(ctrl_ui)
+
   tagList(
     div(id = ns("errors_block"), class = "mt-4"),
     accordion(
       id = ns("blk_accordion"),
       multiple = TRUE,
       open = c("inputs", "outputs"),
+      ctrl_panel,
       inputs_panel,
       outputs_panel
     )
   )
 }
+
+build_ctrl_panel <- function(ctrl_ui) {
+
+  panel <- htmltools::tagQuery(
+    accordion_panel(
+      title = "Control",
+      value = "ctrl"
+    )
+  )$find(
+    ".accordion-header"
+  )$addAttrs(
+    style = "display: none;"
+  )$reset(
+  )$find(
+    ".accordion-body"
+  )$addAttrs(
+    style = paste0(
+      "background-color: white;",
+      "border-radius: 0;",
+      "margin: 0 -16px 10px -16px;",
+      "padding: 16px 16px 10px 16px;",
+      "border-top: 1px solid var(--blockr-grey-300);",
+      "border-bottom: 1px solid var(--blockr-grey-300);"
+    )
+  )$append(
+    ctrl_ui
+  )$allTags()
+
+  panel$attribs$style <- "border: none; border-radius: 0;"
+
+  panel
+}
+
+ctrl_btn_label <- function(fn) coal(attr(fn, "ctrl_label"), "Control")
+ctrl_btn_icon  <- function(fn) attr(fn, "ctrl_icon")
+ctrl_btn_class <- function(fn) attr(fn, "ctrl_class")
 
 edit_block_server <- function(callbacks = list()) {
 
