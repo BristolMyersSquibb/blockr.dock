@@ -35,6 +35,24 @@ Tools for defining panel arrangements.
   [`as_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   : Dock layout
 
+## Dock views
+
+Multi-view (tabbed) boards. Each view is its own panel arrangement.
+
+- [`new_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`validate_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`is_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`view_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`active_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`` `active_view<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`view_can_crud()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`` `dock_layouts<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`as_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  : Dock views (layouts)
+
 ## Board extensions
 
 Board extensions allow for adding components that interact with and
@@ -75,7 +93,7 @@ such as adding or removing a block.
 
 ## Utilities
 
-Various utility functions that are exported for use in dependen
+Various utility functions that are exported for use in dependent
 packages.
 
 - [`show_panel()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel.md)
