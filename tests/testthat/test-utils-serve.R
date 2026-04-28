@@ -32,22 +32,11 @@ test_that("dock app", {
 
   skip_on_cran()
 
-  app <- try(
-    shinytest2::AppDriver$new(
-      system.file("examples", "dock", "app.R", package = "blockr.dock"),
-      name = "dock",
-      seed = 42,
-      load_timeout = 30 * 1000
-    )
-  )
-
-  testthat::skip_if(
-    inherits(app, "try-error"),
-    "Cannot start shinytest2 dock app."
-  )
-
-  app$wait_for_value(
-    input = "my_board-edit_board_extension-registry_select"
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "empty", "app.R", package = "blockr.dock"),
+    name = "dock",
+    seed = 42,
+    load_timeout = 30 * 1000
   )
 
   app$set_inputs(
