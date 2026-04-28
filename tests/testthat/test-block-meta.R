@@ -49,3 +49,12 @@ test_that("block metadata", {
   expect_s3_class(icon2, "html")
   expect_length(icon2, 1L)
 })
+
+test_that("block metadata for empty blocks", {
+
+  meta <- blks_metadata(blockr.core::as_blocks(list()))
+
+  expect_s3_class(meta, "data.frame")
+  expect_identical(nrow(meta), 0L)
+  expect_true(all(c("name", "category", "icon", "color") %in% names(meta)))
+})
