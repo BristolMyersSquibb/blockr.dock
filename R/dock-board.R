@@ -34,9 +34,7 @@
 #' @export
 new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            ..., extensions = new_dock_extensions(),
-                           layouts = dock_layouts(
-                             Page = default_layout(blocks, extensions)
-                           ),
+                           layouts = default_layout(blocks, extensions),
                            options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 

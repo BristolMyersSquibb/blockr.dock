@@ -60,7 +60,7 @@ having more than one view.
 
 # Starting from scratch
 
-The simplest possible board: no blocks, no extensions, no `layout`. Since `new_dock_board()` defaults to `dock_layouts(Page = default_layout(blocks, extensions))`, and `default_layout()` returns an empty list when there are no blocks or extensions, the resulting layout is `dock_layouts(Page = list())`:
+The simplest possible board: no blocks, no extensions, no `layouts`. Since `new_dock_board()` defaults to `layouts = default_layout(blocks, extensions)` — which returns an empty list here — and the empty list gets coerced to a single-page `dock_layouts`, the resulting collection is `dock_layouts(Page = list())`:
 
 ```{r}
 new_dock_board()

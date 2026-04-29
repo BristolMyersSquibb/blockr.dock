@@ -21,7 +21,7 @@
 
   If none is marked, the first one is used.
 
-  In `new_dock_board()`, the `layouts` argument now defaults to `dock_layouts(Page = default_layout(blocks, extensions))`, so it creates a single-page dashboard with a default panel arrangement when nothing is specified by the user.
+  In `new_dock_board()`, the `layouts` argument now defaults to `default_layout(blocks, extensions)`, which is coerced to a single-page `dock_layouts(Page = ...)` so that nothing-is-specified gives you a single-page dashboard with a sensible panel arrangement.
 
 * **Breaking changes** to the layout API:
   - Renamed `new_dock_board()`'s `layout` parameter to `layouts` (and the corresponding board field), since boards now hold a `dock_layouts` collection.
