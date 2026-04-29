@@ -21,7 +21,7 @@
 
   If no view is tagged, the first one is used.
 
-  In `new_dock_board`, the layout now defaults to `dock_layouts(Page = default_view_grid(blocks, extensions))`, so it create a single page dashboard with a default grid when nothing is specified by the user.
+  In `new_dock_board()`, the layout now defaults to `dock_layouts(Page = default_layout(blocks, extensions))`, so it creates a single-page dashboard with a default panel arrangement when nothing is specified by the user. The previously-exported `default_grid()` (which emitted panel IDs) is no longer exported; use `default_layout()` to obtain the names-form default that `dock_layouts()` and `create_dock_layout()` consume.
 
 # blockr.dock 0.1.0
 
