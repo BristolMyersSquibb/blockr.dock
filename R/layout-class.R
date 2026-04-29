@@ -183,15 +183,14 @@ create_layout_panel <- function(x) {
 create_dock_layout <- function(blocks = list(), extensions = list(),
                                grid = default_layout(blocks, extensions)) {
 
-  blocks <- as_blocks(blocks)
-
   ext_names <- if (is_dock_extension(extensions)) {
     extension_id(extensions)
   } else {
     names(extensions)
   }
 
-  extensions <- as_dock_extensions(extensions)
+  blocks <- as_blocks(blocks)
+  ext_coll <- as_dock_extensions(extensions)
 
   blk_panels <- lapply(
     names(blocks),
@@ -201,7 +200,7 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
   )
 
   id_map <- set_names(
-    c(as_ext_panel_id(extensions), as_block_panel_id(blocks)),
+    c(as_ext_panel_id(ext_coll), as_block_panel_id(blocks)),
     c(ext_names, names(blocks))
   )
 
@@ -218,7 +217,7 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
 
       grid <- build_default_grid(
         blks = as_block_panel_id(blocks),
-        exts = as_ext_panel_id(extensions)
+        exts = as_ext_panel_id(ext_coll)
       )
 
     } else {
@@ -233,7 +232,7 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
     }
   }
 
-  ext_panels <- lapply(extensions, ext_panel)
+  ext_panels <- lapply(ext_coll, ext_panel)
 
   panels <- lapply(c(blk_panels, ext_panels), create_layout_panel)
   names(panels) <- chr_xtr(panels, "id")
