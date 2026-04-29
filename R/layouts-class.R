@@ -179,17 +179,17 @@ view_can_crud <- function(x) {
 
 #' @rdname view
 #' @export
-`dock_layouts<-` <- function(x, value) {
+`board_layouts<-` <- function(x, value) {
   stopifnot(is_dock_board(x))
-  x[["layout"]] <- validate_dock_layouts(value)
+  x[["layouts"]] <- validate_dock_layouts(value)
   invisible(x)
 }
 
 #' @rdname view
 #' @export
-board_views <- function(x) {
+board_layouts <- function(x) {
   stopifnot(is_dock_board(x))
-  x[["layout"]]
+  x[["layouts"]]
 }
 
 #' @param ... Generic consistency

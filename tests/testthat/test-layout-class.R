@@ -21,7 +21,7 @@ test_that("layout resolution accepts a bare dock_extension", {
   brd2 <- new_dock_board(
     blocks = blks,
     extensions = ext,
-    layout = list("edit_board_extension", c("a", "b"))
+    layouts = list("edit_board_extension", c("a", "b"))
   )
   expect_setequal(
     layout_panel_ids(active_layout(brd2)),
@@ -46,7 +46,7 @@ test_that("layout resolution accepts a named list of extensions", {
   brd2 <- new_dock_board(
     blocks = blks,
     extensions = exts,
-    layout = list("edit_board_extension", c("a", "b"))
+    layouts = list("edit_board_extension", c("a", "b"))
   )
   expect_setequal(
     layout_panel_ids(active_layout(brd2)),
@@ -71,7 +71,7 @@ test_that("layout resolution accepts a dock_extensions collection", {
   brd2 <- new_dock_board(
     blocks = blks,
     extensions = exts,
-    layout = list("edit_board_extension", c("a", "b"))
+    layouts = list("edit_board_extension", c("a", "b"))
   )
   expect_setequal(
     layout_panel_ids(active_layout(brd2)),
@@ -104,13 +104,13 @@ test_that("dock_layout constructor with active flag", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layout = dock_layouts(
+    layouts = dock_layouts(
       First = list("a"),
       Second = dock_layout("a", "b", active = TRUE)
     )
   )
 
-  expect_identical(active_view(board_views(brd)), "Second")
+  expect_identical(active_view(board_layouts(brd)), "Second")
   expect_length(active_layout(brd)$panels, 2L)
 })
 

@@ -28,7 +28,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   triggers <- action_triggers(actions)
 
-  views <- board_views(initial_board)
+  views <- board_layouts(initial_board)
 
   dock_mgr <- new_dock_manager()
   vs <- init_view_docks(

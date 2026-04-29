@@ -3,9 +3,9 @@
 #' Using the docking layout manager provided by dockViewR, a `dock_board`
 #' extends [blockr.core::new_board()]. In addition to the attributes contained
 #' in a core board, this also includes dock extensions (as `extensions`)
-#' and the panel arrangement (as `layout`). The `layout` is always stored
-#' internally as a [dock_layouts()] object (multi-view); single-page boards
-#' are a degenerate case with one auto-named "Page" view.
+#' and the panel arrangement (as `layouts`). The `layouts` field is always
+#' stored internally as a [dock_layouts()] object (multi-view); single-page
+#' boards are a degenerate case with one auto-named "Page" view.
 #'
 #' Dispatch is type-driven: a `dock_layouts` is used as-is, a `dock_layout`
 #' is wrapped via `as_dock_layouts()`, and a plain list (raw grid spec) is
@@ -13,7 +13,7 @@
 #'
 #' @inheritParams blockr.core::new_board
 #' @param extensions Dock extensions
-#' @param layout A `dock_layouts()` object, a `dock_layout`, or a raw
+#' @param layouts A `dock_layouts()` object, a `dock_layout`, or a raw
 #'   grid specification (list). All forms are normalised to `dock_layouts`.
 #'
 #' @examples
@@ -22,7 +22,7 @@
 #'
 #' @return The constructor `new_dock_board()` returns a `board` object, as does
 #' the coercion function `as_dock_board()`. Inheritance can be checked using
-#' `is_dock_board()`, which returns a boolean. `board_views()` returns the
+#' `is_dock_board()`, which returns a boolean. `board_layouts()` returns the
 #' board's `dock_layouts`; `active_layout()` returns the active view's resolved
 #' `dock_layout` and `active_layout<-()` writes into the active view. The
 #' `dock_extensions()` and `dock_extensions<-()` accessors return / set the
@@ -34,13 +34,13 @@
 #' @export
 new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            ..., extensions = new_dock_extensions(),
-                           layout = dock_layouts(
+                           layouts = dock_layouts(
                              Page = default_layout(blocks, extensions)
                            ),
                            options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
-  layout <- initialise_layout(layout, blocks, extensions)
+  layouts <- initialise_layout(layouts, blocks, extensions)
 
   new_board(
     blocks = as_blocks(blocks),
@@ -48,7 +48,7 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
     stacks = as_dock_stacks(stacks),
     ...,
     extensions = as_dock_extensions(extensions),
-    layout = layout,
+    layouts = layouts,
     options = as_board_options(options),
     ctor = forward_ctor(ctor),
     pkg = pkg,
@@ -105,8 +105,8 @@ validate_board.dock_board <- function(x) {
 
   x <- NextMethod()
 
-  validate_dock_layouts(x[["layout"]])
-  validate_extensions(x[["extensions"]])
+  validate_dock_layouts(board_layouts(x))
+  validate_extensions(dock_extensions(x))
 
   x
 }
@@ -142,9 +142,7 @@ as_dock_board.board <- function(x, ...) {
 #' @rdname dock
 #' @export
 active_layout <- function(x) {
-  stopifnot(is_dock_board(x))
-
-  ly <- x[["layout"]]
+  ly <- board_layouts(x)
   validate_dock_layout(ly[[active_view(ly)]], board_block_ids(x))
 }
 
@@ -152,14 +150,11 @@ active_layout <- function(x) {
 #' @rdname dock
 #' @export
 `active_layout<-` <- function(x, value) {
-  stopifnot(is_dock_board(x))
-
-  ly <- x[["layout"]]
-  view_name <- active_view(ly)
-  ly[[view_name]] <- mark_active(
+  ly <- board_layouts(x)
+  ly[[active_view(ly)]] <- mark_active(
     validate_dock_layout(value, board_block_ids(x))
   )
-  x[["layout"]] <- ly
+  board_layouts(x) <- ly
 
   invisible(x)
 }

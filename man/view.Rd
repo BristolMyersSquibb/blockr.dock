@@ -9,8 +9,8 @@
 \alias{active_view}
 \alias{active_view<-}
 \alias{view_can_crud}
-\alias{dock_layouts<-}
-\alias{board_views}
+\alias{board_layouts<-}
+\alias{board_layouts}
 \alias{as_dock_layouts}
 \title{Dock views (layouts)}
 \usage{
@@ -30,9 +30,9 @@ active_view(x) <- value
 
 view_can_crud(x)
 
-dock_layouts(x) <- value
+board_layouts(x) <- value
 
-board_views(x)
+board_layouts(x)
 
 as_dock_layouts(x, ...)
 }

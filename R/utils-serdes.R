@@ -30,7 +30,7 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
         board_id = id,
         blocks = Map(c, state, visible = lapply(visibility, list)),
         options = opts,
-        layout = layout_data,
+        layouts = layout_data,
         extensions = lapply(
           list(...),
           function(x) lapply(x[["state"]], reval_if)
@@ -128,7 +128,7 @@ restore_board.dock_board <- function(x, new, result, ..., meta = NULL,
   extra <- list(
     extensions = dock_extensions(x),
     options = board_options(x),
-    layout = des[["layout"]]
+    layouts = des[["layouts"]]
   )
 
   res <- do.call(as_dock_board, c(list(des), extra))

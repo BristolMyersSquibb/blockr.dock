@@ -18,7 +18,7 @@ new_dock_board(
   stacks = list(),
   ...,
   extensions = new_dock_extensions(),
-  layout = dock_layouts(Page = default_layout(blocks, extensions)),
+  layouts = dock_layouts(Page = default_layout(blocks, extensions)),
   options = dock_board_options(),
   ctor = NULL,
   pkg = NULL,
@@ -52,7 +52,7 @@ dock_board_options()
 
 \item{extensions}{Dock extensions}
 
-\item{layout}{A \code{dock_layouts()} object, a \code{dock_layout}, or a raw
+\item{layouts}{A \code{dock_layouts()} object, a \code{dock_layout}, or a raw
 grid specification (list). All forms are normalised to \code{dock_layouts}.}
 
 \item{options}{Board-level user settings}
@@ -68,7 +68,7 @@ grid specification (list). All forms are normalised to \code{dock_layouts}.}
 \value{
 The constructor \code{new_dock_board()} returns a \code{board} object, as does
 the coercion function \code{as_dock_board()}. Inheritance can be checked using
-\code{is_dock_board()}, which returns a boolean. \code{board_views()} returns the
+\code{is_dock_board()}, which returns a boolean. \code{board_layouts()} returns the
 board's \code{dock_layouts}; \code{active_layout()} returns the active view's resolved
 \code{dock_layout} and \verb{active_layout<-()} writes into the active view. The
 \code{dock_extensions()} and \verb{dock_extensions<-()} accessors return / set the
@@ -80,9 +80,9 @@ object.
 Using the docking layout manager provided by dockViewR, a \code{dock_board}
 extends \code{\link[blockr.core:new_board]{blockr.core::new_board()}}. In addition to the attributes contained
 in a core board, this also includes dock extensions (as \code{extensions})
-and the panel arrangement (as \code{layout}). The \code{layout} is always stored
-internally as a \code{\link[=dock_layouts]{dock_layouts()}} object (multi-view); single-page boards
-are a degenerate case with one auto-named "Page" view.
+and the panel arrangement (as \code{layouts}). The \code{layouts} field is always
+stored internally as a \code{\link[=dock_layouts]{dock_layouts()}} object (multi-view); single-page
+boards are a degenerate case with one auto-named "Page" view.
 }
 \details{
 Dispatch is type-driven: a \code{dock_layouts} is used as-is, a \code{dock_layout}
