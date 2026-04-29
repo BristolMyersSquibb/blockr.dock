@@ -60,7 +60,7 @@ having more than one view.
 
 # Starting from scratch
 
-The simplest possible board: no blocks, no extensions, no `layouts`. Since `new_dock_board()` defaults to `layouts = default_layout(blocks, extensions)` — which returns an empty list here — and the empty list gets coerced to a single-page `dock_layouts`, the resulting collection is `dock_layouts(Page = list())`:
+The simplest possible board: no blocks, no extensions, no `layouts`. Since `new_dock_board()` defaults to `layouts = default_grid(blocks, extensions)` — which returns an empty list here — and the empty list gets coerced to a single-page `dock_layouts`, the resulting collection is `dock_layouts(Page = list())`:
 
 ```{r}
 new_dock_board()
@@ -87,7 +87,7 @@ says so and points you to add a block first. From this empty starting
 point you can grow the board interactively.
 
 When you do supply blocks or extensions but still no `layout`, the
-default `Page` is auto-populated by `default_layout()`: blocks alone
+default `Page` is auto-populated by `default_grid()`: blocks alone
 become a single row of panels; blocks together with extensions become
 the familiar sidebar-and-main shape (extensions on the left, blocks on
 the right). Pass `layouts = ` only to override that.
@@ -307,7 +307,7 @@ new_dock_board(
 └─────────┴──────────────────┘
 ```
 
-This is also what `default_layout()` produces when both blocks and
+This is also what `default_grid()` produces when both blocks and
 extensions are present: extensions on the left, blocks on the right.
 
 # Multiple views (pages)
@@ -355,7 +355,7 @@ splits.
 ## Choosing the initially active view
 
 By default, the first layout is active. To start on a different one,
-construct that view's content with `dock_layout(..., active = TRUE)`:
+construct that view's content with `dock_grid(..., active = TRUE)`:
 
 ```{r}
 new_dock_board(
@@ -363,7 +363,7 @@ new_dock_board(
   extensions = new_edit_board_extension(),
   layouts = dock_layouts(
     Analysis = list("a", "b"),
-    Editor = dock_layout("edit_board_extension", active = TRUE)
+    Editor = dock_grid("edit_board_extension", active = TRUE)
   )
 )
 ```
@@ -376,7 +376,7 @@ new_dock_board(
 └────────────────────────────┘
 ```
 
-`dock_layout(..., active = TRUE)` attaches an `active` attribute to
+`dock_grid(..., active = TRUE)` attaches an `active` attribute to
 the layout spec. The validator rejects more than one layout marked
 `active`. If none is marked, the first one wins.
 
@@ -417,7 +417,7 @@ new_dock_board(
   layouts = dock_layouts(
     Data = list("edit_board_extension", c("raw", "cleaned")),
     Analysis = list(list("summary", "plot1"), "plot2"),
-    Charts = dock_layout(c("plot1", "plot2"), active = TRUE)
+    Charts = dock_grid(c("plot1", "plot2"), active = TRUE)
   )
 )
 ```
@@ -482,7 +482,7 @@ panel (`"plot2"`).
 | Sidebar + main | `list("ext", "main")` |
 | Two columns, both stacked | `list(list("a", "b"), list("c", "d"))` |
 | Multiple views | `dock_layouts(A = ..., B = ...)` |
-| Start on view `B` | `dock_layouts(A = ..., B = dock_layout(..., active = TRUE))` |
+| Start on view `B` | `dock_layouts(A = ..., B = dock_grid(..., active = TRUE))` |
 | Empty starter view | `dock_layouts(Page = list())` (or just `dock_layouts()`) |
 
 # Where to go from here

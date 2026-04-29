@@ -18,7 +18,7 @@ new_dock_board(
   stacks = list(),
   ...,
   extensions = new_dock_extensions(),
-  layouts = default_layout(blocks, extensions),
+  layouts = default_grid(blocks, extensions),
   options = dock_board_options(),
   ctor = NULL,
   pkg = NULL,

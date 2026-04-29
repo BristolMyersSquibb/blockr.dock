@@ -79,34 +79,34 @@ test_that("layout resolution accepts a dock_extensions collection", {
   )
 })
 
-test_that("default_layout uses class-name convention across input forms", {
+test_that("default_grid uses class-name convention across input forms", {
 
   blks <- c(a = new_dataset_block())
-  expected <- list("edit_board_extension", "a")
+  expected <- dock_grid("edit_board_extension", "a")
 
   expect_identical(
-    default_layout(blks, new_edit_board_extension()),
+    default_grid(blks, new_edit_board_extension()),
     expected
   )
 
   expect_identical(
-    default_layout(blks, list(edit = new_edit_board_extension())),
+    default_grid(blks, list(edit = new_edit_board_extension())),
     expected
   )
 
   expect_identical(
-    default_layout(blks, new_dock_extensions(list(new_edit_board_extension()))),
+    default_grid(blks, new_dock_extensions(list(new_edit_board_extension()))),
     expected
   )
 })
 
-test_that("dock_layout constructor with active flag", {
+test_that("dock_grid constructor with active flag", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = dock_layouts(
       First = list("a"),
-      Second = dock_layout("a", "b", active = TRUE)
+      Second = dock_grid("a", "b", active = TRUE)
     )
   )
 

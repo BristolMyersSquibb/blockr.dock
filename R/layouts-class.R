@@ -7,25 +7,25 @@
 #'
 #' Multiple views are defined via `dock_layouts()`, which accepts named
 #' list elements -- each either a raw grid spec (a possibly-nested list
-#' of block/extension IDs) or a `dock_layout` object created with
-#' [dock_layout()]. A layout can be marked as the initially active one
-#' by passing `active = TRUE` to `dock_layout()`; if none is marked,
-#' the first one is used. View CRUD is enabled unless the dock is locked
+#' of block/extension IDs) or a `dock_grid` object created with
+#' [dock_grid()]. A grid can be marked as the initially active one by
+#' passing `active = TRUE` to `dock_grid()`; if none is marked, the
+#' first one is used. View CRUD is enabled unless the dock is locked
 #' (see `is_dock_locked()`).
 #'
-#' @param ... Named list elements, each a layout specification (raw list
-#'   of block/extension IDs) or a `dock_layout` object.
+#' @param ... Named list elements, each a `dock_grid`, a `dock_layout`,
+#'   or a raw list of block/extension IDs.
 #'
 #' @return `dock_layouts()` returns a `dock_layouts` object.
 #'   `is_dock_layouts()` returns a boolean.
 #'   `active_view()` returns a string and `active_view<-()` returns
-#'   the modified `dock_layouts` object invisibly.
+#'   the modified `dock_layouts` (or `dock_board`) object invisibly.
 #'   `view_ids()` returns all IDs (block + extension) found in a layout
 #'   specification. The `view_can_crud()` helper returns `FALSE` when the
 #'   dock is locked.
 #'
 #' @examples
-#' # First layout is active by default
+#' # First view is active by default
 #' ly <- dock_layouts(
 #'   Analysis = list("dataset_1", "head_1"),
 #'   Overview = list("dag_extension")
@@ -33,10 +33,10 @@
 #' is_dock_layouts(ly)
 #' active_view(ly)
 #'
-#' # Mark a specific layout as initially active
+#' # Mark a specific view as initially active
 #' ly2 <- dock_layouts(
 #'   Analysis = list("dataset_1"),
-#'   Overview = dock_layout("dag_extension", active = TRUE)
+#'   Overview = dock_grid("dag_extension", active = TRUE)
 #' )
 #' active_view(ly2)
 #'
@@ -62,7 +62,7 @@ new_dock_layouts <- function(...) {
 
   # Auto-default first view to active if none is marked.
   if (!any(vapply(vws, is_active_view, logical(1L)))) {
-    vws[[1L]] <- mark_active(vws[[1L]])
+    vws[[1L]] <- set_active_view(vws[[1L]])
   }
 
   structure(vws, class = "dock_layouts")
@@ -178,7 +178,7 @@ active_view.dock_board <- function(x) {
   }
 
   for (nm in names(x)) {
-    x[[nm]] <- mark_active(x[[nm]], identical(nm, value))
+    x[[nm]] <- set_active_view(x[[nm]], identical(nm, value))
   }
 
   invisible(x)
@@ -226,7 +226,7 @@ as_dock_layouts.dock_layouts <- function(x, ...) x
 
 #' @export
 as_dock_layouts.dock_layout <- function(x, ...) {
-  dock_layouts(Page = mark_active(x))
+  dock_layouts(Page = set_active_view(x))
 }
 
 #' @export
@@ -240,7 +240,12 @@ is_active_view <- function(x) {
   isTRUE(attr(x, "active"))
 }
 
-mark_active <- function(x, active = TRUE) {
+is_view <- function(x) {
+  is_dock_layout(x) || is_dock_grid(x) || (is.list(x) && !is.object(x))
+}
+
+set_active_view <- function(x, active = TRUE) {
+  stopifnot(is_view(x))
   attr(x, "active") <- if (isTRUE(active)) TRUE else NULL
   x
 }

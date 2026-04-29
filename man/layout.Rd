@@ -2,8 +2,10 @@
 % Please edit documentation in R/layout-class.R
 \name{new_dock_layout}
 \alias{new_dock_layout}
-\alias{dock_layout}
-\alias{default_layout}
+\alias{dock_grid}
+\alias{is_dock_grid}
+\alias{as_dock_grid}
+\alias{default_grid}
 \alias{is_dock_layout}
 \alias{validate_dock_layout}
 \alias{as_dock_layout}
@@ -16,9 +18,13 @@ new_dock_layout(
   active = FALSE
 )
 
-dock_layout(..., active = FALSE)
+dock_grid(..., active = FALSE)
 
-default_layout(blocks, extensions)
+is_dock_grid(x)
+
+as_dock_grid(x, ...)
+
+default_grid(blocks, extensions)
 
 is_dock_layout(x)
 
@@ -29,41 +35,42 @@ as_dock_layout(x, ...)
 \arguments{
 \item{grid, panels, active_group}{Layout components}
 
-\item{active}{Logical; mark this layout as the active (initially-selected)
-one within a \code{dock_layouts}.}
+\item{active}{Logical; mark this layout/grid as the active
+(initially-selected) one within a \code{dock_layouts}.}
 
 \item{...}{Generic consistency}
 
-\item{blocks, extensions}{Dock board components}
-
 \item{x}{Object}
+
+\item{blocks, extensions}{Dock board components}
 }
 \value{
-The inline constructor \code{dock_layout()} returns a layout spec (a
-list of IDs with an \code{active} attribute). The low-level constructor
-\code{new_dock_layout()} and the coercion function \code{as_dock_layout()} return
-a fully-resolved \code{dock_layout} object. A helper function for specifying
-a default layout is available as \code{default_layout()}, which returns a list
-of character vectors of block / extension names suitable as a view spec
-inside \code{\link[=dock_layouts]{dock_layouts()}}. The validator \code{validate_dock_layout()} returns
-its input and throws errors as side-effect; inheritance can be checked
-using \code{is_dock_layout()} which returns a boolean.
+The low-level constructor \code{new_dock_layout()} and the coercion
+function \code{as_dock_layout()} return a fully-resolved \code{dock_layout} object.
+The inline constructor \code{dock_grid()} returns a \code{dock_grid} (an unresolved
+arrangement spec). \code{default_grid()} returns a \code{dock_grid} describing the
+default arrangement. The validator \code{validate_dock_layout()} returns its
+input and throws errors as side-effect; inheritance can be checked using
+\code{is_dock_layout()} and \code{is_dock_grid()}, which return booleans.
 }
 \description{
-The arrangement of panels within a single view (page) is specified by a
-\code{dock_layout} object. The user-facing inline constructor \code{dock_layout()}
-takes block / extension IDs (and an optional \code{active} flag) for use inside
-\code{\link[=dock_layouts]{dock_layouts()}}. A default arrangement is available via \code{default_layout()}
-which results in two panel groups: extensions on the left and blocks on
-the right. The low-level constructor \code{new_dock_layout()} builds a layout
-from pre-resolved fields.
+A \code{dock_layout} object is the dockview-shaped (\code{grid} + \code{panels}) panel
+arrangement of a single view. The low-level constructor
+\code{new_dock_layout()} builds it from pre-resolved fields; \code{as_dock_layout()}
+coerces a serialized payload back into one.
 }
 \details{
+For inline construction inside \code{\link[=dock_layouts]{dock_layouts()}}, use \code{\link[=dock_grid]{dock_grid()}} —
+which builds an unresolved arrangement spec (a \code{dock_grid}, with the
+optional \code{active} flag), to be panel-resolved later when the board's
+blocks and extensions are known. \code{default_grid()} produces the default
+arrangement for a given set of blocks and extensions.
+
 A \emph{view} is the conceptual page-level container; a \emph{layout} is the
 technical panel arrangement inside a view. Views are managed via
-\code{\link[=dock_layouts]{dock_layouts()}} (which keys layouts by view name); each layout is a
-\code{dock_layout} object. At most one layout in a \code{dock_layouts} may be
-marked as the active (initially-selected) one.
+\code{\link[=dock_layouts]{dock_layouts()}} (which keys layouts by view name). At most one entry
+in a \code{dock_layouts} may be marked as the active (initially-selected)
+one.
 }
 \examples{
 blks <- c(
@@ -75,8 +82,8 @@ exts <- list(
   edit = new_edit_board_extension()
 )
 
-default_layout(blks, exts)
+default_grid(blks, exts)
 
-dock_layout("a", "b", active = TRUE)
+dock_grid("a", "b", active = TRUE)
 
 }

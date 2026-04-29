@@ -47,7 +47,7 @@ as_dock_layouts(x, ...)
 \code{dock_layouts()} returns a \code{dock_layouts} object.
 \code{is_dock_layouts()} returns a boolean.
 \code{active_view()} returns a string and \verb{active_view<-()} returns
-the modified \code{dock_layouts} object invisibly.
+the modified \code{dock_layouts} (or \code{dock_board}) object invisibly.
 \code{view_ids()} returns all IDs (block + extension) found in a layout
 specification. The \code{view_can_crud()} helper returns \code{FALSE} when the
 dock is locked.
@@ -61,14 +61,14 @@ view membership is a layout concern only.
 \details{
 Multiple views are defined via \code{dock_layouts()}, which accepts named
 list elements -- each either a raw grid spec (a possibly-nested list
-of block/extension IDs) or a \code{dock_layout} object created with
-\code{\link[=dock_layout]{dock_layout()}}. A layout can be marked as the initially active one
-by passing \code{active = TRUE} to \code{dock_layout()}; if none is marked,
-the first one is used. View CRUD is enabled unless the dock is locked
+of block/extension IDs) or a \code{dock_grid} object created with
+\code{\link[=dock_grid]{dock_grid()}}. A grid can be marked as the initially active one by
+passing \code{active = TRUE} to \code{dock_grid()}; if none is marked, the
+first one is used. View CRUD is enabled unless the dock is locked
 (see \code{is_dock_locked()}).
 }
 \examples{
-# First layout is active by default
+# First view is active by default
 ly <- dock_layouts(
   Analysis = list("dataset_1", "head_1"),
   Overview = list("dag_extension")
@@ -76,10 +76,10 @@ ly <- dock_layouts(
 is_dock_layouts(ly)
 active_view(ly)
 
-# Mark a specific layout as initially active
+# Mark a specific view as initially active
 ly2 <- dock_layouts(
   Analysis = list("dataset_1"),
-  Overview = dock_layout("dag_extension", active = TRUE)
+  Overview = dock_grid("dag_extension", active = TRUE)
 )
 active_view(ly2)
 
