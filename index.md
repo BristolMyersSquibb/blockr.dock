@@ -36,7 +36,7 @@ serve(
 )
 ```
 
-![Simple dock](reference/figures/dock.png)
+![Simple dock](reference/figures/single-page.png)
 
 Simple dock
 
@@ -73,11 +73,18 @@ serve(
 
 Locked dock
 
-## Multi-view dock
+## Layouts
 
-Define multiple views (global tabs), each with its own DockView layout.
-Blocks and extensions are shared across views via the board’s DAG; view
-membership is a layout concern only.
+Since `blockr.dock` 0.1.1 every board carries a `dock_layouts` object: a
+list of one or more views, exposed as a tab dropdown at the top of the
+app. The single-page case (what rendered as a no-tab dock in 0.1.0) is
+now a `dock_layouts` with one auto-named `"Page"` view, which is what
+you see in the [Simple dock](#simple-dock) screenshot above.
+
+To define multiple views explicitly, pass a `dock_layouts(...)` to
+`layout`. Each named entry becomes a tab; blocks and extensions are
+shared across views via the board’s DAG, view membership is a layout
+concern only.
 
 ``` r
 library(blockr.core)
@@ -90,7 +97,7 @@ board <- new_dock_board(
     head_1 = new_head_block()
   ),
   links = new_link("dataset_1", "head_1"),
-  layout = list(
+  layout = dock_layouts(
     Analysis = list("dataset_1", "head_1", "dag_extension"),
     Overview = dock_view("dag_extension", active = TRUE),
     Empty = list()
@@ -103,3 +110,8 @@ serve(board, "my_board")
 ![Multi-view dock](reference/figures/views.png)
 
 Multi-view dock
+
+For the full set of shapes accepted by `new_dock_board(layout = ...)`
+(nested grids, tabbed panels, active-view selection, the coercion rules
+that normalise everything to a `dock_layouts`), see
+[`vignette("layouts", package = "blockr.dock")`](https://bristolmyerssquibb.github.io/blockr.dock/articles/layouts.md).

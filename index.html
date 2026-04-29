@@ -32,6 +32,12 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="articles/layouts.html">Defining dock layouts</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -87,7 +93,7 @@
 <span>    layout <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"edit"</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<figure><img src="reference/figures/dock.png" alt="Simple dock"><figcaption aria-hidden="true">
+<figure><img src="reference/figures/single-page.png" alt="Simple dock"><figcaption aria-hidden="true">
 Simple dock
 </figcaption></figure>
 </div>
@@ -122,9 +128,10 @@ Locked dock
 </figcaption></figure>
 </div>
 <div class="section level2">
-<h2 id="multi-view-dock">Multi-view dock<a class="anchor" aria-label="anchor" href="#multi-view-dock"></a>
+<h2 id="layouts">Layouts<a class="anchor" aria-label="anchor" href="#layouts"></a>
 </h2>
-<p>Define multiple views (global tabs), each with its own DockView layout. Blocks and extensions are shared across views via the board’s DAG; view membership is a layout concern only.</p>
+<p>Since <code>blockr.dock</code> 0.1.1 every board carries a <code>dock_layouts</code> object: a list of one or more views, exposed as a tab dropdown at the top of the app. The single-page case (what rendered as a no-tab dock in 0.1.0) is now a <code>dock_layouts</code> with one auto-named <code>"Page"</code> view, which is what you see in the <a href="#simple-dock">Simple dock</a> screenshot above.</p>
+<p>To define multiple views explicitly, pass a <code>dock_layouts(...)</code> to <code>layout</code>. Each named entry becomes a tab; blocks and extensions are shared across views via the board’s DAG, view membership is a layout concern only.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bristolmyerssquibb.github.io/blockr.core/" class="external-link">blockr.core</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bristolmyerssquibb.github.io/blockr.dock/">blockr.dock</a></span><span class="op">)</span></span>
@@ -136,7 +143,7 @@ Locked dock
 <span>    head_1 <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_transform_block.html" class="external-link">new_head_block</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  links <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_link.html" class="external-link">new_link</a></span><span class="op">(</span><span class="st">"dataset_1"</span>, <span class="st">"head_1"</span><span class="op">)</span>,</span>
-<span>  layout <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  layout <span class="op">=</span> <span class="fu"><a href="reference/view.html">dock_layouts</a></span><span class="op">(</span></span>
 <span>    Analysis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"dataset_1"</span>, <span class="st">"head_1"</span>, <span class="st">"dag_extension"</span><span class="op">)</span>,</span>
 <span>    Overview <span class="op">=</span> <span class="fu"><a href="reference/view.html">dock_view</a></span><span class="op">(</span><span class="st">"dag_extension"</span>, active <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
 <span>    Empty <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -146,7 +153,7 @@ Locked dock
 <span><span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">serve</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"my_board"</span><span class="op">)</span></span></code></pre></div>
 <figure><img src="reference/figures/views.png" alt="Multi-view dock"><figcaption aria-hidden="true">
 Multi-view dock
-</figcaption></figure>
+</figcaption></figure><p>For the full set of shapes accepted by <code>new_dock_board(layout = ...)</code> (nested grids, tabbed panels, active-view selection, the coercion rules that normalise everything to a <code>dock_layouts</code>), see <code><a href="articles/layouts.html">vignette("layouts", package = "blockr.dock")</a></code>.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -188,6 +195,7 @@ Multi-view dock
 <li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="lifecycle"></a></li>
 <li><a href="https://github.com/BristolMyersSquibb/blockr.dock/actions/workflows/ci.yaml" class="external-link"><img src="https://github.com/BristolMyersSquibb/blockr.dock/actions/workflows/ci.yaml/badge.svg" alt="status"></a></li>
 <li><a href="https://app.codecov.io/gh/BristolMyersSquibb/blockr.dock" class="external-link"><img src="https://codecov.io/gh/BristolMyersSquibb/blockr.dock/graph/badge.svg?token=6RAAMZS4DS" alt="coverage"></a></li>
+<li><a href="https://CRAN.R-project.org/package=blockr.dock" class="external-link"><img src="https://www.r-pkg.org/badges/version/blockr.dock" alt="CRAN status"></a></li>
 </ul>
 </div>
 

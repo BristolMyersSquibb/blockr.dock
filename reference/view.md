@@ -1,8 +1,9 @@
 # Dock views (layouts)
 
-A `dock_board` can contain multiple views (global tabs), each with its
-own DockView layout. Blocks and extensions are shared across views via
-the board's DAG; view membership is a layout concern only.
+A `dock_board` always holds a `dock_layouts` object (multi-view tabs).
+Single-page boards are a degenerate case: one auto-named "Page" view.
+Blocks and extensions are shared across views via the board's DAG; view
+membership is a layout concern only.
 
 ## Usage
 
@@ -65,14 +66,11 @@ the dock is locked.
 
 Multiple views are defined via `dock_layouts()`, which accepts named
 list elements – each a (possibly nested) list of block and extension IDs
-(the same format accepted by `create_dock_layout(grid = ...)`). A plain
-named [`list()`](https://rdrr.io/r/base/list.html) is also accepted and
-auto-detected by
-[`new_dock_board()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md).
-A view can be marked as the initially active one by tagging its spec
-with `attr(view, "active") <- TRUE`, conveniently produced by
-`dock_view()`. If no view is tagged, the first one is used. View CRUD is
-enabled unless the dock is locked (see `is_dock_locked()`).
+(the same format accepted by `create_dock_layout(grid = ...)`). A view
+can be marked as the initially active one by tagging its spec with
+`attr(view, "active") <- TRUE`, conveniently produced by `dock_view()`.
+If no view is tagged, the first one is used. View CRUD is enabled unless
+the dock is locked (see `is_dock_locked()`).
 
 ## Examples
 

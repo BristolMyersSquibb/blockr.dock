@@ -5,11 +5,10 @@ extends
 [`blockr.core::new_board()`](https://bristolmyerssquibb.github.io/blockr.core/reference/new_board.html).
 In addition to the attributes contained in a core board, this also
 includes dock extensions (as `extensions`) and the panel arrangement (as
-`layout`). The `layout` parameter accepts either a grid specification
-(as before), a
+`layout`). The `layout` is always stored internally as a
 [`dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-object for multi-view boards, or a plain named list of layout specs
-which is auto-detected as multi-view.
+object (multi-view); single-page boards are a degenerate case with one
+auto-named "Page" view.
 
 ## Usage
 
@@ -68,10 +67,10 @@ dock_board_options()
 
 - layout:
 
-  Either a grid specification (list), a `dock_layout`, a
+  A
   [`dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  object, or a named [`list()`](https://rdrr.io/r/base/list.html) of
-  layout specs
+  object, a `dock_layout`, or a raw grid specification (list). All forms
+  are normalised to `dock_layouts`.
 
 - options:
 
@@ -97,15 +96,23 @@ dock_board_options()
 
 The constructor `new_dock_board()` returns a `board` object, as does the
 coercion function `as_dock_board()`. Inheritance can be checked using
-`is_dock_board()`, which returns a boolean. Getters `dock_layout()` and
-`dock_extensions()` return `dock_layout` and `dock_extension` objects
-while setters `dock_layout<-()` and `dock_extensions<-()` return the
-updated board object (invisibly). When `layout` is a `dock_layouts`
-object,
+`is_dock_board()`, which returns a boolean.
 [`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-returns it and `dock_layout()` returns the active view's layout. A
-character vector of IDs is returned by `dock_ext_ids()` and
-`dock_board_options()` returns a `board_options` object.
+returns the board's `dock_layouts`; `dock_layout()` returns the active
+view's resolved `dock_layout` and `dock_layout<-()` writes into the
+active view. The `dock_extensions()` and `dock_extensions<-()` accessors
+return / set the board's `dock_extension` objects. A character vector of
+IDs is returned by `dock_ext_ids()` and `dock_board_options()` returns a
+`board_options` object.
+
+## Details
+
+Dispatch is type-driven: a `dock_layouts` is used as-is, a `dock_layout`
+is wrapped via
+[`as_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md),
+and a plain list (raw grid spec) is resolved via
+[`create_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+and then wrapped.
 
 ## Examples
 
