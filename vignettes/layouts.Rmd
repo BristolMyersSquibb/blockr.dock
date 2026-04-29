@@ -45,24 +45,8 @@ normalises it to a `dock_layouts`:
 | A `dock_layout` (resolved via `create_dock_layout()`) | single page | `dock_layouts(Page = ...)` |
 | A raw list (grid spec) | single-page raw grid | `dock_layouts(Page = ...)` |
 
-```{r coercion-flow, eval=TRUE, echo=FALSE, message=FALSE}
-DiagrammeR::mermaid(
-  '
-flowchart LR
-  in[/"layout = ..."/] --> q1{"is dock_layouts?"}
-  q1 -- yes --> u1["use as-is"]
-  q1 -- no --> q2{"is dock_layout?"}
-  q2 -- yes --> u2["dock_layouts(Page = .)"]
-  q2 -- no --> q3{"has grid + panels keys?"}
-  q3 -- yes --> u3["as_dock_layout, then wrap"]
-  q3 -- no --> u4["create_dock_layout, then wrap"]
-  u1 --> out[("dock_layouts")]
-  u2 --> out
-  u3 --> out
-  u4 --> out
-',
-  height = 280
-)
+```{r coercion-flow, eval=TRUE, echo=FALSE}
+blockr.core::include_mermaid("coercion-flow")
 ```
 
 The catch-all bottom branch covers anything else: a raw nested list, a

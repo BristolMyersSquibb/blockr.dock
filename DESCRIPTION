@@ -40,8 +40,7 @@ Suggests:
     withr,
     shinytest2,
     knitr,
-    rmarkdown,
-    DiagrammeR
+    rmarkdown
 Config/testthat/edition: 3
 Collate:
     'action-class.R'
