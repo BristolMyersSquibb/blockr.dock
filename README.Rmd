@@ -19,6 +19,7 @@ knitr::opts_chunk$set(
 [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![status](https://github.com/BristolMyersSquibb/blockr.dock/actions/workflows/ci.yaml/badge.svg)](https://github.com/BristolMyersSquibb/blockr.dock/actions/workflows/ci.yaml)
 [![coverage](https://codecov.io/gh/BristolMyersSquibb/blockr.dock/graph/badge.svg?token=6RAAMZS4DS)](https://app.codecov.io/gh/BristolMyersSquibb/blockr.dock)
+[![CRAN status](https://www.r-pkg.org/badges/version/blockr.dock)](https://CRAN.R-project.org/package=blockr.dock)
 <!-- badges: end -->
 
 A docking layout manager provided by [dockViewR](https://github.com/DivadNojnarg/dockViewR) can be used as front-end to a [blockr](https://blockr.site/) board using this package.
@@ -37,20 +38,20 @@ pak::pak("BristolMyersSquibb/blockr.dock")
 To start up a board for visualizing `Sepal.Length` against `Sepal.Width`
 for the `iris` dataset:
 
-```{r dock-code, code=readLines("inst/examples/dock/app.R"), eval=FALSE}
+```{r single-page-code, code=readLines("inst/examples/single-page/app.R"), eval=FALSE}
 ```
 
-```{r dock-screenshot, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
+```{r single-page-screenshot, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
 webshot2::appshot(
-  shiny::shinyAppDir(system.file("examples", "dock", package = "blockr.dock")),
-  file = "man/figures/dock.png",
+  shiny::shinyAppDir(system.file("examples", "single-page", package = "blockr.dock")),
+  file = "man/figures/single-page.png",
   delay = 3,
   vwidth = 900,
   vheight = 600
 )
 ```
 
-![Simple dock](man/figures/dock.png)
+![Simple dock](man/figures/single-page.png)
 
 ## Locked dock
 
@@ -72,11 +73,18 @@ webshot2::appshot(
 
 ![Locked dock](man/figures/locked-dock.png)
 
-## Multi-view dock
+## Layouts
 
-Define multiple views (global tabs), each with its own DockView layout.
-Blocks and extensions are shared across views via the board's DAG; view
-membership is a layout concern only.
+Since `blockr.dock` 0.1.1 every board carries a `dock_layouts` object:
+a list of one or more views, exposed as a tab dropdown at the top of
+the app. The single-page case (what rendered as a no-tab dock in
+0.1.0) is now a `dock_layouts` with one auto-named `"Page"` view, which
+is what you see in the [Simple dock](#simple-dock) screenshot above.
+
+To define multiple views explicitly, pass a `dock_layouts(...)` to
+`layout`. Each named entry becomes a tab; blocks and extensions are
+shared across views via the board's DAG, view membership is a layout
+concern only.
 
 ```{r views-code, code=readLines("inst/examples/views/app.R"), eval=FALSE}
 ```
@@ -99,3 +107,8 @@ app$stop()
 ```
 
 ![Multi-view dock](man/figures/views.png)
+
+For the full set of shapes accepted by `new_dock_board(layout = ...)`
+(nested grids, tabbed panels, active-view selection, the coercion rules
+that normalise everything to a `dock_layouts`), see
+`vignette("layouts", package = "blockr.dock")`.

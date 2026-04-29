@@ -61,20 +61,19 @@ specification. The \code{view_can_crud()} helper returns \code{FALSE} when the
 dock is locked.
 }
 \description{
-A \code{dock_board} can contain multiple views (global tabs), each with its
-own DockView layout. Blocks and extensions are shared across views
-via the board's DAG; view membership is a layout concern only.
+A \code{dock_board} always holds a \code{dock_layouts} object (multi-view tabs).
+Single-page boards are a degenerate case: one auto-named "Page" view.
+Blocks and extensions are shared across views via the board's DAG;
+view membership is a layout concern only.
 }
 \details{
 Multiple views are defined via \code{dock_layouts()}, which accepts named
 list elements -- each a (possibly nested) list of block and extension
 IDs (the same format accepted by \code{create_dock_layout(grid = ...)}).
-A plain named \code{list()} is also accepted and auto-detected by
-\code{\link[=new_dock_board]{new_dock_board()}}. A view can be marked as the initially active one
-by tagging its spec with \code{attr(view, "active") <- TRUE}, conveniently
-produced by \code{\link[=dock_view]{dock_view()}}. If no view is tagged, the first one is
-used. View CRUD is enabled unless the dock is locked
-(see \code{is_dock_locked()}).
+A view can be marked as the initially active one by tagging its spec
+with \code{attr(view, "active") <- TRUE}, conveniently produced by
+\code{\link[=dock_view]{dock_view()}}. If no view is tagged, the first one is used. View CRUD
+is enabled unless the dock is locked (see \code{is_dock_locked()}).
 }
 \examples{
 # Explicit constructor (first view is active by default)

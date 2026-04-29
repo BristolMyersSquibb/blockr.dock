@@ -1,7 +1,8 @@
 #' Set up dock board server logic.
 #'
-#' Entry point called by blockr.core's board server. Creates dock
-#' infrastructure (single dock or multi-view), starts extension
+#' Entry point called by blockr.core's board server. Creates the dock
+#' infrastructure (always multi-view; single-page boards are a
+#' degenerate case with one auto-named "Page" view), starts extension
 #' servers, and wires up action triggers.
 #'
 #' @param board Reactive board state (list with `$board`).
@@ -9,8 +10,8 @@
 #' @param ... Extension server arguments.
 #' @param session Shiny session.
 #'
-#' @return List with `dock`, `actions`, and extension results. When
-#'   views are present, also includes `view_data`.
+#' @return List with `dock`, `actions`, `view_data`, and extension
+#'   results.
 #'
 #' @noRd
 board_server_callback <- function(board, update, ..., session = get_session()) {
@@ -29,30 +30,25 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   views <- board_views(initial_board)
 
-  if (!is.null(views)) {
-    dock_mgr <- new_dock_manager()
-    vs <- init_view_docks(
-      views,
-      board,
-      update,
-      triggers,
-      session,
-      dock_mgr
-    )
+  dock_mgr <- new_dock_manager()
+  vs <- init_view_docks(
+    views,
+    board,
+    update,
+    triggers,
+    session,
+    dock_mgr
+  )
 
-    switch_view_observer(vs, session, dock_mgr)
-    add_view_observer(vs, session, dock_mgr, board, update, triggers)
-    remove_view_observer(vs, session, dock_mgr)
-    rename_view_observer(vs, session, dock_mgr)
+  switch_view_observer(vs, session, dock_mgr)
+  add_view_observer(vs, session, dock_mgr, board, update, triggers)
+  remove_view_observer(vs, session, dock_mgr)
+  rename_view_observer(vs, session, dock_mgr)
 
-    # Extensions receive active_dock — a reactiveValues that always mirrors
-    # whichever view is currently active (swapped by update_active_dock).
-    dock <- dock_mgr$active_dock
-    view_data <- live_view_data(vs, dock_mgr)
-  } else {
-    dock <- manage_dock("dock_main", board, update, triggers)
-    view_data <- NULL
-  }
+  # Extensions receive active_dock — a reactiveValues that always mirrors
+  # whichever view is currently active (swapped by update_active_dock).
+  dock <- dock_mgr$active_dock
+  view_data <- live_view_data(vs, dock_mgr)
 
   ext_res <- lapply(
     exts,
@@ -64,8 +60,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   register_actions(actions, triggers, board, update, ext_res)
 
   c(
-    list(dock = dock, actions = triggers),
-    if (!is.null(view_data)) list(view_data = view_data),
+    list(dock = dock, actions = triggers, view_data = view_data),
     ext_res
   )
 }

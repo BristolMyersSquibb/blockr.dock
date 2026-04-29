@@ -38,9 +38,10 @@ Suggests:
     colorspace,
     methods,
     withr,
-    shinytest2
-Remotes:
-    BristolMyersSquibb/blockr.core
+    shinytest2,
+    knitr,
+    rmarkdown,
+    DiagrammeR
 Config/testthat/edition: 3
 Collate:
     'action-class.R'
@@ -72,3 +73,4 @@ Collate:
     'utils-ui.R'
     'layouts-class.R'
     'view-ui.R'
+VignetteBuilder: knitr

@@ -20,13 +20,7 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
     session
   )
 
-  ly <- x[["layout"]]
-
-  layout_data <- if (is_dock_layouts(ly)) {
-    view_data()
-  } else {
-    as_dock_layout(dock$layout())
-  }
+  layout_data <- view_data()
 
   do.call(
     blockr_ser,
@@ -131,16 +125,11 @@ restore_board.dock_board <- function(x, new, result, ..., meta = NULL,
 
   des <- blockr_deser(new)
 
-  # Preserve view layout if present in deserialized board
   extra <- list(
     extensions = dock_extensions(x),
-    options = board_options(x)
+    options = board_options(x),
+    layout = des[["layout"]]
   )
-
-  ly <- des[["layout"]]
-  if (is_dock_layouts(ly)) {
-    extra[["layout"]] <- ly
-  }
 
   res <- do.call(as_dock_board, c(list(des), extra))
 
