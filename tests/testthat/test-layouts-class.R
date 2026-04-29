@@ -114,10 +114,10 @@ test_that("as_dock_layouts identity on dock_layouts", {
   expect_identical(as_dock_layouts(ly), ly)
 })
 
-test_that("plain named list auto-detected by new_dock_board", {
+test_that("multi-view requires dock_layouts() (no auto-promotion)", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layout = list(
+    layout = dock_layouts(
       Tab1 = list("a", "b"),
       Tab2 = list("a")
     )
@@ -167,18 +167,21 @@ test_that("default board has a single auto-named Page view", {
   expect_true(is_dock_layout(views[["Page"]]))
 })
 
-test_that("board_views returns NULL when an explicit raw grid is passed", {
+test_that("raw grid layout is wrapped in a single-page dock_layouts", {
   brd <- new_dock_board(
     c(a = new_dataset_block()),
     layout = list("a")
   )
-  expect_null(board_views(brd))
+  views <- board_views(brd)
+  expect_s3_class(views, "dock_layouts")
+  expect_named(views, "Page")
+  expect_identical(active_view(views), "Page")
 })
 
 test_that("dock_layout getter returns active view layout", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layout = list(
+    layout = dock_layouts(
       First = list("a"),
       Second = list("a", "b")
     )
@@ -188,4 +191,13 @@ test_that("dock_layout getter returns active view layout", {
   expect_true(is_dock_layout(ly))
   # Active view is "First" which has 1 panel (block a)
   expect_length(ly$panels, 1L)
+})
+
+test_that("as_dock_layouts.dock_layout wraps in single Page", {
+  ly <- create_dock_layout(c(a = new_dataset_block()))
+  views <- as_dock_layouts(ly)
+  expect_s3_class(views, "dock_layouts")
+  expect_named(views, "Page")
+  expect_identical(active_view(views), "Page")
+  expect_true(is_dock_layout(views[["Page"]]))
 })

@@ -8,6 +8,8 @@
 [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![status](https://github.com/BristolMyersSquibb/blockr.dock/actions/workflows/ci.yaml/badge.svg)](https://github.com/BristolMyersSquibb/blockr.dock/actions/workflows/ci.yaml)
 [![coverage](https://codecov.io/gh/BristolMyersSquibb/blockr.dock/graph/badge.svg?token=6RAAMZS4DS)](https://app.codecov.io/gh/BristolMyersSquibb/blockr.dock)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/blockr.dock)](https://CRAN.R-project.org/package=blockr.dock)
 <!-- badges: end -->
 
 A docking layout manager provided by
@@ -47,7 +49,7 @@ serve(
 ```
 
 <figure>
-<img src="man/figures/dock.png" alt="Simple dock" />
+<img src="man/figures/single-page.png" alt="Simple dock" />
 <figcaption aria-hidden="true">Simple dock</figcaption>
 </figure>
 
@@ -85,11 +87,18 @@ serve(
 <figcaption aria-hidden="true">Locked dock</figcaption>
 </figure>
 
-## Multi-view dock
+## Layouts
 
-Define multiple views (global tabs), each with its own DockView layout.
-Blocks and extensions are shared across views via the board’s DAG; view
-membership is a layout concern only.
+Since `blockr.dock` 0.1.1 every board carries a `dock_layouts` object: a
+list of one or more views, exposed as a tab dropdown at the top of the
+app. The single-page case (what rendered as a no-tab dock in 0.1.0) is
+now a `dock_layouts` with one auto-named `"Page"` view, which is what
+you see in the [Simple dock](#simple-dock) screenshot above.
+
+To define multiple views explicitly, pass a `dock_layouts(...)` to
+`layout`. Each named entry becomes a tab; blocks and extensions are
+shared across views via the board’s DAG, view membership is a layout
+concern only.
 
 ``` r
 library(blockr.core)
@@ -102,7 +111,7 @@ board <- new_dock_board(
     head_1 = new_head_block()
   ),
   links = new_link("dataset_1", "head_1"),
-  layout = list(
+  layout = dock_layouts(
     Analysis = list("dataset_1", "head_1", "dag_extension"),
     Overview = dock_view("dag_extension", active = TRUE),
     Empty = list()
@@ -116,3 +125,8 @@ serve(board, "my_board")
 <img src="man/figures/views.png" alt="Multi-view dock" />
 <figcaption aria-hidden="true">Multi-view dock</figcaption>
 </figure>
+
+For the full set of shapes accepted by `new_dock_board(layout = ...)`
+(nested grids, tabbed panels, active-view selection, the coercion rules
+that normalise everything to a `dock_layouts`), see
+`vignette("layouts", package = "blockr.dock")`.

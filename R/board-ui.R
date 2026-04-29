@@ -11,13 +11,12 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
   offcanvas_id <- NS(id, "options_offcanvas")
   views <- board_views(x)
 
-  # View nav in the navbar (only when views are defined)
-  v_nav <- NULL
-  if (!is.null(views)) {
-    v_nav <- view_nav_ui(id, views)
-  }
+  # View nav in the navbar -- always present, since boards always carry a
+  # `dock_layouts` (single-page boards have one auto-named "Page" view).
+  v_nav <- view_nav_ui(id, views)
 
-  # Dock output(s): one per view, or a single one without views
+  # One dock output per view, stacked inside the view container; visibility
+  # is toggled by CSS based on the active view.
   dock_outputs <- dock_outputs_ui(id, views)
 
   tagList(
@@ -68,29 +67,15 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
   )
 }
 
-# Generate dockview output(s). When views are defined, one dock per
-# view stacked via CSS; otherwise a single dock.
-# Each dock output is placed inside a moduleServer namespace so that
-# manage_dock(id, ...) can render to session$output[[dock_id()]] and
-# dockViewR inputs resolve correctly.
+# View container -- one dock output per view is inserted into this element
+# at server time by `init_view_docks()`. Each dock output sits inside a
+# nested moduleServer namespace so `manage_dock(id, ...)` can render to
+# `session$output[[dock_id()]]` and dockViewR inputs resolve correctly.
 dock_outputs_ui <- function(id, views) {
-
-  dock_height <- "calc(100vh - 48px)"
-
-  if (is.null(views)) {
-    return(
-      dockViewR::dock_view_output(
-        NS(NS(id, "dock_main"), dock_id()),
-        width = "100%",
-        height = dock_height
-      )
-    )
-  }
-
   div(
     id = NS(id, "view_container"),
     class = "blockr-view-container",
-    style = paste0("position: relative; height: ", dock_height, ";")
+    style = "position: relative; height: calc(100vh - 48px);"
   )
 }
 

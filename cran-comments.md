@@ -11,3 +11,7 @@
 0 errors | 0 warnings | 0 notes
 
 * Initial release
+
+## Notes
+
+This release also fixes failing tests on CRAN: https://cran.r-project.org/web/checks/check_results_blockr.dock.html

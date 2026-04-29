@@ -1,18 +1,17 @@
 #' Dock views (layouts)
 #'
-#' A `dock_board` can contain multiple views (global tabs), each with its
-#' own DockView layout. Blocks and extensions are shared across views
-#' via the board's DAG; view membership is a layout concern only.
+#' A `dock_board` always holds a `dock_layouts` object (multi-view tabs).
+#' Single-page boards are a degenerate case: one auto-named "Page" view.
+#' Blocks and extensions are shared across views via the board's DAG;
+#' view membership is a layout concern only.
 #'
 #' Multiple views are defined via `dock_layouts()`, which accepts named
 #' list elements -- each a (possibly nested) list of block and extension
 #' IDs (the same format accepted by `create_dock_layout(grid = ...)`).
-#' A plain named `list()` is also accepted and auto-detected by
-#' [new_dock_board()]. A view can be marked as the initially active one
-#' by tagging its spec with `attr(view, "active") <- TRUE`, conveniently
-#' produced by [dock_view()]. If no view is tagged, the first one is
-#' used. View CRUD is enabled unless the dock is locked
-#' (see `is_dock_locked()`).
+#' A view can be marked as the initially active one by tagging its spec
+#' with `attr(view, "active") <- TRUE`, conveniently produced by
+#' [dock_view()]. If no view is tagged, the first one is used. View CRUD
+#' is enabled unless the dock is locked (see `is_dock_locked()`).
 #'
 #' @param ... Named list elements, each a layout specification (possibly
 #'   nested list of block/extension IDs) or a `dock_layout` object. For
@@ -201,14 +200,7 @@ view_can_crud <- function(x) {
 #' @export
 board_views <- function(x) {
   stopifnot(is_dock_board(x))
-
-  ly <- x[["layout"]]
-
-  if (is_dock_layouts(ly)) {
-    ly
-  } else {
-    NULL
-  }
+  x[["layout"]]
 }
 
 #' @param ... Generic consistency
@@ -220,6 +212,11 @@ as_dock_layouts <- function(x, ...) {
 
 #' @export
 as_dock_layouts.dock_layouts <- function(x, ...) x
+
+#' @export
+as_dock_layouts.dock_layout <- function(x, ...) {
+  dock_layouts(Page = mark_active(x))
+}
 
 #' @export
 as_dock_layouts.list <- function(x, ...) {
