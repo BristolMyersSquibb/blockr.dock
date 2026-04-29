@@ -13,8 +13,9 @@ status](https://www.r-pkg.org/badges/version/blockr.dock)](https://CRAN.R-projec
 <!-- badges: end -->
 
 A docking layout manager provided by
-[dockViewR](https://github.com/DivadNojnarg/dockViewR) can be used as
-front-end to a [blockr](https://blockr.site/) board using this package.
+[dockViewR](https://github.com/cynkra/dockViewR) can be used as
+front-end to a [blockr](https://github.com/BristolMyersSquibb/blockr)
+board using this package.
 
 ## Installation
 
