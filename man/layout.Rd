@@ -16,7 +16,7 @@ default_layout(blocks, extensions)
 create_dock_layout(
   blocks = list(),
   extensions = list(),
-  grid = default_panel_grid(blocks, extensions)
+  grid = default_layout(blocks, extensions)
 )
 
 is_dock_layout(x)

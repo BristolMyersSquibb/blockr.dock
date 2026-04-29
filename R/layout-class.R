@@ -69,16 +69,16 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
 #' @rdname layout
 #' @export
 default_layout <- function(blocks, extensions) {
+
+  ext_names <- if (is_dock_extension(extensions)) {
+    extension_id(extensions)
+  } else {
+    names(extensions)
+  }
+
   build_default_grid(
     blks = names(as_blocks(blocks)),
-    exts = names(as_dock_extensions(extensions))
-  )
-}
-
-default_panel_grid <- function(blocks, extensions) {
-  build_default_grid(
-    blks = as_block_panel_id(as_blocks(blocks)),
-    exts = as_ext_panel_id(as_dock_extensions(extensions))
+    exts = ext_names
   )
 }
 
@@ -181,9 +181,17 @@ create_layout_panel <- function(x) {
 #' @rdname layout
 #' @export
 create_dock_layout <- function(blocks = list(), extensions = list(),
-                               grid = default_panel_grid(blocks, extensions)) {
+                               grid = default_layout(blocks, extensions)) {
 
   blocks <- as_blocks(blocks)
+
+  ext_names <- if (is_dock_extension(extensions)) {
+    extension_id(extensions)
+  } else {
+    names(extensions)
+  }
+
+  extensions <- as_dock_extensions(extensions)
 
   blk_panels <- lapply(
     names(blocks),
@@ -191,14 +199,6 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
       block_panel(blocks[nme])
     }
   )
-
-  if (is_dock_extension(extensions)) {
-    ext_names <- as_ext_panel_id(extensions)
-  } else {
-    ext_names <- names(extensions)
-  }
-
-  extensions <- as_dock_extensions(extensions)
 
   id_map <- set_names(
     c(as_ext_panel_id(extensions), as_block_panel_id(blocks)),
@@ -209,14 +209,17 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
 
   if (all(ids %in% names(id_map)) && any(!ids %in% id_map)) {
 
-    if (anyDuplicated(id_map) > 0L) {
+    if (anyDuplicated(names(id_map)) > 0L) {
 
       blockr_warn(
         "Cannot use extension names that overlap with block names.",
         class = "extension_block_name_clash"
       )
 
-      grid <- default_panel_grid(blocks, extensions)
+      grid <- build_default_grid(
+        blks = as_block_panel_id(blocks),
+        exts = as_ext_panel_id(extensions)
+      )
 
     } else {
 
