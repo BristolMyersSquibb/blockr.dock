@@ -75,6 +75,27 @@ test_that("active_view get/set", {
   )
 })
 
+test_that("active_view get/set dispatches on dock_board", {
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = dock_layouts(
+      First = list("a"),
+      Second = list("b")
+    )
+  )
+
+  expect_identical(active_view(brd), "First")
+
+  active_view(brd) <- "Second"
+  expect_identical(active_view(brd), "Second")
+  expect_identical(active_view(board_layouts(brd)), "Second")
+
+  expect_error(
+    { active_view(brd) <- "Nope" },
+    class = "dock_view_not_found"
+  )
+})
+
 test_that("validate_dock_layouts rejects invalid input", {
   expect_error(
     validate_dock_layouts(list()),

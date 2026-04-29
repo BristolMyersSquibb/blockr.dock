@@ -145,16 +145,30 @@ view_ids <- function(x) {
 #' @rdname view
 #' @export
 active_view <- function(x) {
-  stopifnot(is_dock_layouts(x))
+  UseMethod("active_view")
+}
+
+#' @export
+active_view.dock_layouts <- function(x) {
   idx <- which(vapply(x, is_active_view, logical(1L)))[1L]
   names(x)[idx]
+}
+
+#' @export
+active_view.dock_board <- function(x) {
+  active_view(board_layouts(x))
 }
 
 #' @param value Replacement value
 #' @rdname view
 #' @export
 `active_view<-` <- function(x, value) {
-  stopifnot(is_dock_layouts(x), is_string(value))
+  UseMethod("active_view<-")
+}
+
+#' @export
+`active_view<-.dock_layouts` <- function(x, value) {
+  stopifnot(is_string(value))
 
   if (!value %in% names(x)) {
     blockr_abort(
@@ -167,6 +181,14 @@ active_view <- function(x) {
     x[[nm]] <- mark_active(x[[nm]], identical(nm, value))
   }
 
+  invisible(x)
+}
+
+#' @export
+`active_view<-.dock_board` <- function(x, value) {
+  ly <- board_layouts(x)
+  active_view(ly) <- value
+  board_layouts(x) <- ly
   invisible(x)
 }
 
