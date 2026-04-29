@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 [![CRAN status](https://www.r-pkg.org/badges/version/blockr.dock)](https://CRAN.R-project.org/package=blockr.dock)
 <!-- badges: end -->
 
-A docking layout manager provided by [dockViewR](https://github.com/DivadNojnarg/dockViewR) can be used as front-end to a [blockr](https://blockr.site/) board using this package.
+A docking layout manager provided by [dockViewR](https://github.com/cynkra/dockViewR) can be used as front-end to a [blockr](https://github.com/BristolMyersSquibb/blockr) board using this package.
 
 ## Installation
 
