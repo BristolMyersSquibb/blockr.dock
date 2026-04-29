@@ -4,12 +4,13 @@ test_that("panel layout", {
   expect_snapshot(draw_panel_tree(list("a", list("b", "c"))))
 })
 
-test_that("create_dock_layout accepts a bare dock_extension", {
+test_that("layout resolution accepts a bare dock_extension", {
 
   blks <- c(a = new_dataset_block(), b = new_head_block())
   ext <- new_edit_board_extension()
 
-  ly <- create_dock_layout(blks, ext)
+  brd <- new_dock_board(blocks = blks, extensions = ext)
+  ly <- active_layout(brd)
 
   expect_true(is_dock_layout(ly))
   expect_setequal(
@@ -17,20 +18,24 @@ test_that("create_dock_layout accepts a bare dock_extension", {
     c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
   )
 
-  ly2 <- create_dock_layout(blks, ext, list("edit_board_extension", c("a", "b")))
-
+  brd2 <- new_dock_board(
+    blocks = blks,
+    extensions = ext,
+    layout = list("edit_board_extension", c("a", "b"))
+  )
   expect_setequal(
-    layout_panel_ids(ly2),
+    layout_panel_ids(active_layout(brd2)),
     c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
   )
 })
 
-test_that("create_dock_layout accepts a named list of extensions", {
+test_that("layout resolution accepts a named list of extensions", {
 
   blks <- c(a = new_dataset_block(), b = new_head_block())
   exts <- list(edit = new_edit_board_extension())
 
-  ly <- create_dock_layout(blks, exts)
+  brd <- new_dock_board(blocks = blks, extensions = exts)
+  ly <- active_layout(brd)
 
   expect_true(is_dock_layout(ly))
   expect_setequal(
@@ -38,20 +43,24 @@ test_that("create_dock_layout accepts a named list of extensions", {
     c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
   )
 
-  ly2 <- create_dock_layout(blks, exts, list("edit", c("a", "b")))
-
+  brd2 <- new_dock_board(
+    blocks = blks,
+    extensions = exts,
+    layout = list("edit_board_extension", c("a", "b"))
+  )
   expect_setequal(
-    layout_panel_ids(ly2),
+    layout_panel_ids(active_layout(brd2)),
     c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
   )
 })
 
-test_that("create_dock_layout accepts a dock_extensions collection", {
+test_that("layout resolution accepts a dock_extensions collection", {
 
   blks <- c(a = new_dataset_block(), b = new_head_block())
   exts <- new_dock_extensions(list(new_edit_board_extension()))
 
-  ly <- create_dock_layout(blks, exts)
+  brd <- new_dock_board(blocks = blks, extensions = exts)
+  ly <- active_layout(brd)
 
   expect_true(is_dock_layout(ly))
   expect_setequal(
@@ -59,32 +68,57 @@ test_that("create_dock_layout accepts a dock_extensions collection", {
     c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
   )
 
-  ly2 <- create_dock_layout(
-    blks, exts, list("edit_board_extension", c("a", "b"))
+  brd2 <- new_dock_board(
+    blocks = blks,
+    extensions = exts,
+    layout = list("edit_board_extension", c("a", "b"))
   )
-
   expect_setequal(
-    layout_panel_ids(ly2),
+    layout_panel_ids(active_layout(brd2)),
     c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
   )
 })
 
-test_that("default_layout matches create_dock_layout key shape per input form", {
+test_that("default_layout uses class-name convention across input forms", {
 
   blks <- c(a = new_dataset_block())
+  expected <- list("edit_board_extension", "a")
 
   expect_identical(
     default_layout(blks, new_edit_board_extension()),
-    list("edit_board_extension", "a")
+    expected
   )
 
   expect_identical(
     default_layout(blks, list(edit = new_edit_board_extension())),
-    list("edit", "a")
+    expected
   )
 
   expect_identical(
     default_layout(blks, new_dock_extensions(list(new_edit_board_extension()))),
-    list("edit_board_extension", "a")
+    expected
   )
+})
+
+test_that("dock_layout constructor with active flag", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layout = dock_layouts(
+      First = list("a"),
+      Second = dock_layout("a", "b", active = TRUE)
+    )
+  )
+
+  expect_identical(active_view(board_views(brd)), "Second")
+  expect_length(active_layout(brd)$panels, 2L)
+})
+
+test_that("new_dock_layout accepts active flag", {
+
+  ly <- new_dock_layout(active = TRUE)
+  expect_true(isTRUE(attr(ly, "active")))
+
+  ly2 <- new_dock_layout()
+  expect_null(attr(ly2, "active"))
 })

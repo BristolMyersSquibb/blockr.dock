@@ -4,8 +4,8 @@
 \alias{new_dock_board}
 \alias{is_dock_board}
 \alias{as_dock_board}
-\alias{dock_layout}
-\alias{dock_layout<-}
+\alias{active_layout}
+\alias{active_layout<-}
 \alias{dock_extensions}
 \alias{dock_extensions<-}
 \alias{dock_ext_ids}
@@ -29,9 +29,9 @@ is_dock_board(x)
 
 as_dock_board(x, ...)
 
-dock_layout(x)
+active_layout(x)
 
-dock_layout(x) <- value
+active_layout(x) <- value
 
 dock_extensions(x)
 
@@ -69,8 +69,8 @@ grid specification (list). All forms are normalised to \code{dock_layouts}.}
 The constructor \code{new_dock_board()} returns a \code{board} object, as does
 the coercion function \code{as_dock_board()}. Inheritance can be checked using
 \code{is_dock_board()}, which returns a boolean. \code{board_views()} returns the
-board's \code{dock_layouts}; \code{dock_layout()} returns the active view's resolved
-\code{dock_layout} and \verb{dock_layout<-()} writes into the active view. The
+board's \code{dock_layouts}; \code{active_layout()} returns the active view's resolved
+\code{dock_layout} and \verb{active_layout<-()} writes into the active view. The
 \code{dock_extensions()} and \verb{dock_extensions<-()} accessors return / set the
 board's \code{dock_extension} objects. A character vector of IDs is returned by
 \code{dock_ext_ids()} and \code{dock_board_options()} returns a \code{board_options}
@@ -87,10 +87,10 @@ are a degenerate case with one auto-named "Page" view.
 \details{
 Dispatch is type-driven: a \code{dock_layouts} is used as-is, a \code{dock_layout}
 is wrapped via \code{as_dock_layouts()}, and a plain list (raw grid spec) is
-resolved via \code{create_dock_layout()} and then wrapped.
+resolved via \code{resolve_dock_layout()} and then wrapped.
 }
 \examples{
 brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
-str(dock_layout(brd), max.level = 2)
+str(active_layout(brd), max.level = 2)
 
 }

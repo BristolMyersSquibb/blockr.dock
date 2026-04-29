@@ -9,7 +9,7 @@
 #'
 #' Dispatch is type-driven: a `dock_layouts` is used as-is, a `dock_layout`
 #' is wrapped via `as_dock_layouts()`, and a plain list (raw grid spec) is
-#' resolved via `create_dock_layout()` and then wrapped.
+#' resolved via `resolve_dock_layout()` and then wrapped.
 #'
 #' @inheritParams blockr.core::new_board
 #' @param extensions Dock extensions
@@ -18,13 +18,13 @@
 #'
 #' @examples
 #' brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
-#' str(dock_layout(brd), max.level = 2)
+#' str(active_layout(brd), max.level = 2)
 #'
 #' @return The constructor `new_dock_board()` returns a `board` object, as does
 #' the coercion function `as_dock_board()`. Inheritance can be checked using
 #' `is_dock_board()`, which returns a boolean. `board_views()` returns the
-#' board's `dock_layouts`; `dock_layout()` returns the active view's resolved
-#' `dock_layout` and `dock_layout<-()` writes into the active view. The
+#' board's `dock_layouts`; `active_layout()` returns the active view's resolved
+#' `dock_layout` and `active_layout<-()` writes into the active view. The
 #' `dock_extensions()` and `dock_extensions<-()` accessors return / set the
 #' board's `dock_extension` objects. A character vector of IDs is returned by
 #' `dock_ext_ids()` and `dock_board_options()` returns a `board_options`
@@ -56,22 +56,14 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
   )
 }
 
-# Normalise the user-provided `layout` into a `dock_layouts` object whose
-# views are all resolved `dock_layout` objects. Dispatch is type-driven:
-#   - dock_layouts: resolve any raw view specs into dock_layout objects
-#   - dock_layout : wrap into a single-view dock_layouts (active = TRUE)
-#   - raw list / grid spec: build a dock_layout via create_dock_layout(),
-#                           then wrap as above
 initialise_layout <- function(layout, blocks, extensions) {
 
   if (!is_dock_layouts(layout) && !is_dock_layout(layout)) {
 
-    # Either a pre-resolved layout payload (with grid+panels keys) from
-    # deserialization, or a raw grid spec.
     if (is.list(layout) && all(c("grid", "panels") %in% names(layout))) {
       layout <- as_dock_layout(layout)
     } else {
-      layout <- create_dock_layout(blocks, extensions, layout)
+      layout <- resolve_dock_layout(blocks, extensions, layout)
     }
   }
 
@@ -79,8 +71,6 @@ initialise_layout <- function(layout, blocks, extensions) {
     layout <- as_dock_layouts(layout)
   }
 
-  # layout is now dock_layouts; resolve each view's raw spec into a
-  # dock_layout, preserving the active attribute across coercion.
   c_exts <- as_dock_extensions(extensions)
   c_blks <- as_blocks(blocks)
 
@@ -90,8 +80,6 @@ initialise_layout <- function(layout, blocks, extensions) {
 
     if (!is_dock_layout(ly)) {
       if (is.list(ly) && all(c("grid", "panels") %in% names(ly))) {
-        # Already a resolved layout (e.g. deserialized from JSON) --
-        # just restore the S3 class
         layout[[view_name]] <- as_dock_layout(ly)
       } else {
         v_ids <- view_ids(ly)
@@ -100,7 +88,7 @@ initialise_layout <- function(layout, blocks, extensions) {
         v_exts <- as_dock_extensions(
           ext_list[intersect(v_ids, names(ext_list))]
         )
-        layout[[view_name]] <- create_dock_layout(v_blks, v_exts, ly)
+        layout[[view_name]] <- resolve_dock_layout(v_blks, v_exts, ly)
       }
     }
 
@@ -153,7 +141,7 @@ as_dock_board.board <- function(x, ...) {
 
 #' @rdname dock
 #' @export
-dock_layout <- function(x) {
+active_layout <- function(x) {
   stopifnot(is_dock_board(x))
 
   ly <- x[["layout"]]
@@ -163,7 +151,7 @@ dock_layout <- function(x) {
 #' @param value Replacement value
 #' @rdname dock
 #' @export
-`dock_layout<-` <- function(x, value) {
+`active_layout<-` <- function(x, value) {
   stopifnot(is_dock_board(x))
 
   ly <- x[["layout"]]
@@ -211,7 +199,7 @@ rm_blocks.dock_board <- function(x, rm, ...) {
 
   # for now, b/c dock$layout(), passed in ... is not updated in time, we can
   # only clear the layout to not run into validation issues
-  dock_layout(x) <- create_dock_layout(extensions = dock_extensions(x))
+  active_layout(x) <- resolve_dock_layout(extensions = dock_extensions(x))
 
   NextMethod(object = x)
 }

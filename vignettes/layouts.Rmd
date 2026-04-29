@@ -354,9 +354,8 @@ splits.
 
 ## Choosing the initially active view
 
-By default, the first view is active. To start on a different one,
-mark its spec with the `active` attribute. The convenient way is
-`dock_view()`:
+By default, the first layout is active. To start on a different one,
+construct that view's content with `dock_layout(..., active = TRUE)`:
 
 ```{r}
 new_dock_board(
@@ -364,7 +363,7 @@ new_dock_board(
   extensions = new_edit_board_extension(),
   layout = dock_layouts(
     Analysis = list("a", "b"),
-    Editor = dock_view("edit_board_extension", active = TRUE)
+    Editor = dock_layout("edit_board_extension", active = TRUE)
   )
 )
 ```
@@ -377,22 +376,9 @@ new_dock_board(
 └────────────────────────────┘
 ```
 
-`dock_view(..., active = TRUE)` is a thin wrapper that calls
-`structure(list(...), active = TRUE)` under the hood. For one-off
-cases you can also write the attribute directly:
-
-```{r}
-overview <- list("a")
-attr(overview, "active") <- TRUE
-
-dock_layouts(
-  Analysis = list("a", "b"),
-  Overview = overview
-)
-```
-
-The validator rejects more than one view marked `active`. If none is
-marked, the first view wins.
+`dock_layout(..., active = TRUE)` attaches an `active` attribute to
+the layout spec. The validator rejects more than one layout marked
+`active`. If none is marked, the first one wins.
 
 ## Empty views
 
@@ -431,7 +417,7 @@ new_dock_board(
   layout = dock_layouts(
     Data = list("edit_board_extension", c("raw", "cleaned")),
     Analysis = list(list("summary", "plot1"), "plot2"),
-    Charts = dock_view(c("plot1", "plot2"), active = TRUE)
+    Charts = dock_layout(c("plot1", "plot2"), active = TRUE)
   )
 )
 ```
@@ -496,12 +482,10 @@ panel (`"plot2"`).
 | Sidebar + main | `list("ext", "main")` |
 | Two columns, both stacked | `list(list("a", "b"), list("c", "d"))` |
 | Multiple views | `dock_layouts(A = ..., B = ...)` |
-| Start on view `B` | `dock_layouts(A = ..., B = dock_view(..., active = TRUE))` |
+| Start on view `B` | `dock_layouts(A = ..., B = dock_layout(..., active = TRUE))` |
 | Empty starter view | `dock_layouts(Page = list())` (or just `dock_layouts()`) |
 
 # Where to go from here
 
-- See `?dock_layouts` and `?dock_view` for the reference docs of the
+- See `?dock_layouts` and `?dock_layout` for the reference docs of the
   multi-view API.
-- See `?create_dock_layout` for fine-grained control over how a single
-  view's grid is built.

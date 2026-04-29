@@ -11,20 +11,20 @@ test_that("dock_layouts constructor", {
   expect_identical(active_view(ly), "Analysis")
 })
 
-test_that("dock_view marks a view active via attribute", {
-  v <- dock_view("a", "b", active = TRUE)
+test_that("dock_layout marks a layout active via attribute", {
+  v <- dock_layout("a", "b", active = TRUE)
   expect_true(is.list(v))
   expect_identical(unlist(v), c("a", "b"))
   expect_true(isTRUE(attr(v, "active")))
 
-  expect_null(attr(dock_view("a"), "active"))
-  expect_null(attr(dock_view("a", active = FALSE), "active"))
+  expect_null(attr(dock_layout("a"), "active"))
+  expect_null(attr(dock_layout("a", active = FALSE), "active"))
 })
 
 test_that("dock_layouts uses per-view active attribute", {
   ly <- dock_layouts(
     A = list("x"),
-    B = dock_view("y", active = TRUE)
+    B = dock_layout("y", active = TRUE)
   )
 
   expect_identical(active_view(ly), "B")
@@ -38,8 +38,8 @@ test_that("dock_layouts auto-defaults first view active", {
 test_that("validate_dock_layouts rejects multiple active views", {
   expect_error(
     dock_layouts(
-      A = dock_view("x", active = TRUE),
-      B = dock_view("y", active = TRUE)
+      A = dock_layout("x", active = TRUE),
+      B = dock_layout("y", active = TRUE)
     ),
     class = "dock_layouts_multiple_active"
   )
@@ -148,7 +148,7 @@ test_that("active attribute survives layout resolution", {
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layout = dock_layouts(
       First = list("a"),
-      Second = dock_view("a", "b", active = TRUE)
+      Second = dock_layout("a", "b", active = TRUE)
     )
   )
 
@@ -187,14 +187,14 @@ test_that("dock_layout getter returns active view layout", {
     )
   )
 
-  ly <- dock_layout(brd)
+  ly <- active_layout(brd)
   expect_true(is_dock_layout(ly))
   # Active view is "First" which has 1 panel (block a)
   expect_length(ly$panels, 1L)
 })
 
 test_that("as_dock_layouts.dock_layout wraps in single Page", {
-  ly <- create_dock_layout(c(a = new_dataset_block()))
+  ly <- new_dock_layout()
   views <- as_dock_layouts(ly)
   expect_s3_class(views, "dock_layouts")
   expect_named(views, "Page")

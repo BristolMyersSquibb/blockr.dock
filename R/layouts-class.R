@@ -6,22 +6,17 @@
 #' view membership is a layout concern only.
 #'
 #' Multiple views are defined via `dock_layouts()`, which accepts named
-#' list elements -- each a (possibly nested) list of block and extension
-#' IDs (the same format accepted by `create_dock_layout(grid = ...)`).
-#' A view can be marked as the initially active one by tagging its spec
-#' with `attr(view, "active") <- TRUE`, conveniently produced by
-#' [dock_view()]. If no view is tagged, the first one is used. View CRUD
-#' is enabled unless the dock is locked (see `is_dock_locked()`).
+#' list elements -- each either a raw grid spec (a possibly-nested list
+#' of block/extension IDs) or a `dock_layout` object created with
+#' [dock_layout()]. A layout can be marked as the initially active one
+#' by passing `active = TRUE` to `dock_layout()`; if none is marked,
+#' the first one is used. View CRUD is enabled unless the dock is locked
+#' (see `is_dock_locked()`).
 #'
-#' @param ... Named list elements, each a layout specification (possibly
-#'   nested list of block/extension IDs) or a `dock_layout` object. For
-#'   `dock_view()`, unnamed block / extension IDs that compose the view.
-#' @param active Logical; mark this view as the initially active one.
-#'   At most one view in a `dock_layouts()` may be active.
+#' @param ... Named list elements, each a layout specification (raw list
+#'   of block/extension IDs) or a `dock_layout` object.
 #'
 #' @return `dock_layouts()` returns a `dock_layouts` object.
-#'   `dock_view()` returns a list (the view spec) with the `active`
-#'   attribute set when requested.
 #'   `is_dock_layouts()` returns a boolean.
 #'   `active_view()` returns a string and `active_view<-()` returns
 #'   the modified `dock_layouts` object invisibly.
@@ -30,7 +25,7 @@
 #'   dock is locked.
 #'
 #' @examples
-#' # Explicit constructor (first view is active by default)
+#' # First layout is active by default
 #' ly <- dock_layouts(
 #'   Analysis = list("dataset_1", "head_1"),
 #'   Overview = list("dag_extension")
@@ -38,10 +33,10 @@
 #' is_dock_layouts(ly)
 #' active_view(ly)
 #'
-#' # Mark a specific view as initially active
+#' # Mark a specific layout as initially active
 #' ly2 <- dock_layouts(
 #'   Analysis = list("dataset_1"),
-#'   Overview = dock_view("dag_extension", active = TRUE)
+#'   Overview = dock_layout("dag_extension", active = TRUE)
 #' )
 #' active_view(ly2)
 #'
@@ -131,12 +126,6 @@ validate_dock_layouts <- function(x) {
 #' @export
 dock_layouts <- function(...) {
   validate_dock_layouts(new_dock_layouts(...))
-}
-
-#' @rdname view
-#' @export
-dock_view <- function(..., active = FALSE) {
-  mark_active(list(...), active)
 }
 
 #' @param x Object

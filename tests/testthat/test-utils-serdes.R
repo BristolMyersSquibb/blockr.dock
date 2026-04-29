@@ -22,7 +22,7 @@ test_that("dock_layouts serialization round-trip", {
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layout = dock_layouts(
       Tab1 = list("a", "b"),
-      Tab2 = dock_view("a", active = TRUE)
+      Tab2 = dock_layout("a", active = TRUE)
     )
   )
 

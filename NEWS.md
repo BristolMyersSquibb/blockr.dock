@@ -10,18 +10,24 @@
   )
   ```
 
-  Mark a view as initially active by tagging its spec via `dock_view()`:
+  Mark a layout as initially active with `dock_layout(..., active = TRUE)`:
 
   ```r
   layout = dock_layouts(
     Analysis = list("block_1", "block_2"),
-    Overview = dock_view("dag_extension", active = TRUE)
+    Overview = dock_layout("dag_extension", active = TRUE)
   )
   ```
 
-  If no view is tagged, the first one is used.
+  If none is marked, the first one is used.
 
-  In `new_dock_board()`, the layout now defaults to `dock_layouts(Page = default_layout(blocks, extensions))`, so it creates a single-page dashboard with a default panel arrangement when nothing is specified by the user. The previously-exported `default_grid()` (which emitted panel IDs) is no longer exported; use `default_layout()` to obtain the names-form default that `dock_layouts()` and `create_dock_layout()` consume.
+  In `new_dock_board()`, the layout now defaults to `dock_layouts(Page = default_layout(blocks, extensions))`, so it creates a single-page dashboard with a default panel arrangement when nothing is specified by the user.
+
+* **Breaking changes** to the layout API:
+  - Renamed the board accessor `dock_layout(brd)` (and setter `dock_layout(brd) <-`) to `active_layout(brd)` / `active_layout(brd) <-`. This frees up `dock_layout()` as the inline constructor.
+  - Removed `dock_view()`; use `dock_layout(..., active = FALSE)` instead — same semantics, and the name fits the vocabulary (a view's content is a layout).
+  - Unexported the high-level resolver `create_dock_layout()` (renamed internally to `resolve_dock_layout()`); the public surface is now `dock_layout()` (inline spec), `new_dock_layout()` (low-level constructor), and `default_layout()` (default arrangement).
+  - The previously-exported `default_grid()` (panel-ID form) is no longer exported; use `default_layout()` for the names-form default that `dock_layouts()` consumes.
 
 # blockr.dock 0.1.0
 

@@ -1,19 +1,22 @@
 #' Dock layout
 #'
 #' The arrangement of panels within a single view (page) is specified by a
-#' `dock_layout` object. A default layout is available via `default_layout()`
+#' `dock_layout` object. The user-facing inline constructor `dock_layout()`
+#' takes block / extension IDs (and an optional `active` flag) for use inside
+#' [dock_layouts()]. A default arrangement is available via `default_layout()`
 #' which results in two panel groups: extensions on the left and blocks on
-#' the right. Complementing the low-level constructor `new_dock_layout()`,
-#' a high-level entry point `create_dock_layout()` will create panels for
-#' extensions and blocks, which can then be arranged via a nested list of
-#' character vectors passed as `grid` argument.
+#' the right. The low-level constructor `new_dock_layout()` builds a layout
+#' from pre-resolved fields.
 #'
 #' A *view* is the conceptual page-level container; a *layout* is the
 #' technical panel arrangement inside a view. Views are managed via
 #' [dock_layouts()] (which keys layouts by view name); each layout is a
-#' `dock_layout` object.
+#' `dock_layout` object. At most one layout in a `dock_layouts` may be
+#' marked as the active (initially-selected) one.
 #'
 #' @param grid,panels,active_group Layout components
+#' @param active Logical; mark this layout as the active (initially-selected)
+#'   one within a `dock_layouts`.
 #'
 #' @examples
 #' blks <- c(
@@ -25,26 +28,24 @@
 #'   edit = new_edit_board_extension()
 #' )
 #'
-#' grid <- list("edit", list("a", "b"))
-#'
-#' layout <- create_dock_layout(blks, exts, grid)
-#' is_dock_layout(layout)
-#'
 #' default_layout(blks, exts)
 #'
-#' @return The constructor `new_dock_layout()`, as does the high-level utility
-#' `create_dock_layout()`, as well as the coercion function `as_dock_layout()`,
-#' all return a `dock_layout` object. A helper function for specifying a default
-#' layout grid is available as `default_layout()`, which returns a list of
-#' character vectors of block / extension names suitable as input to
-#' `create_dock_layout()` or as a view spec inside `dock_layouts()`. The
-#' validator `validate_dock_layout()` returns its input and throws errors as
-#' side-effect and inheritance can be checked using `is_dock_layout` which
-#' returns a boolean.
+#' dock_layout("a", "b", active = TRUE)
+#'
+#' @return The inline constructor `dock_layout()` returns a layout spec (a
+#' list of IDs with an `active` attribute). The low-level constructor
+#' `new_dock_layout()` and the coercion function `as_dock_layout()` return
+#' a fully-resolved `dock_layout` object. A helper function for specifying
+#' a default layout is available as `default_layout()`, which returns a list
+#' of character vectors of block / extension names suitable as a view spec
+#' inside [dock_layouts()]. The validator `validate_dock_layout()` returns
+#' its input and throws errors as side-effect; inheritance can be checked
+#' using `is_dock_layout()` which returns a boolean.
 #'
 #' @rdname layout
 #' @export
-new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
+new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL,
+                            active = FALSE) {
 
   if (!length(grid)) {
     grid <- draw_panel_tree(NULL)
@@ -60,25 +61,27 @@ new_dock_layout <- function(grid = NULL, panels = NULL, active_group = NULL) {
     content <- c(content, list(activeGroup = active_group))
   }
 
-  validate_dock_layout(
-    structure(content, class = "dock_layout")
+  mark_active(
+    validate_dock_layout(
+      structure(content, class = "dock_layout")
+    ),
+    active
   )
+}
+
+#' @rdname layout
+#' @export
+dock_layout <- function(..., active = FALSE) {
+  mark_active(list(...), active)
 }
 
 #' @param blocks,extensions Dock board components
 #' @rdname layout
 #' @export
 default_layout <- function(blocks, extensions) {
-
-  ext_names <- if (is_dock_extension(extensions)) {
-    extension_id(extensions)
-  } else {
-    names(extensions)
-  }
-
   build_default_grid(
     blks = names(as_blocks(blocks)),
-    exts = ext_names
+    exts = names(as_dock_extensions(extensions))
   )
 }
 
@@ -178,16 +181,8 @@ create_layout_panel <- function(x) {
   )
 }
 
-#' @rdname layout
-#' @export
-create_dock_layout <- function(blocks = list(), extensions = list(),
-                               grid = default_layout(blocks, extensions)) {
-
-  ext_names <- if (is_dock_extension(extensions)) {
-    extension_id(extensions)
-  } else {
-    names(extensions)
-  }
+resolve_dock_layout <- function(blocks = list(), extensions = list(),
+                                grid = default_layout(blocks, extensions)) {
 
   blocks <- as_blocks(blocks)
   ext_coll <- as_dock_extensions(extensions)
@@ -201,7 +196,7 @@ create_dock_layout <- function(blocks = list(), extensions = list(),
 
   id_map <- set_names(
     c(as_ext_panel_id(ext_coll), as_block_panel_id(blocks)),
-    c(ext_names, names(blocks))
+    c(names(ext_coll), names(blocks))
   )
 
   ids <- unlist(grid)
@@ -345,7 +340,7 @@ as_dock_layout.dock_layout <- function(x, ...) x
 
 #' @export
 as_dock_layout.board <- function(x, ...) {
-  dock_layout(x)
+  active_layout(x)
 }
 
 #' @export
