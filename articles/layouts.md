@@ -32,6 +32,8 @@ the constructor normalises it to a `dock_layouts`:
 | A `dock_layout` (resolved via [`create_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)) | single page          | `dock_layouts(Page = ...)` |
 | A raw list (grid spec)                                                                                                        | single-page raw grid | `dock_layouts(Page = ...)` |
 
+![](mermaid/coercion-flow.svg)
+
 The catch-all bottom branch covers anything else: a raw nested list, a
 top-level character vector, even a named list of lists. **Names at the
 top level are dropped** there; to get multiple views you must use

@@ -60,9 +60,8 @@
 
 
 
-<script src="layouts_files/htmlwidgets-1.6.4/htmlwidgets.js"></script><script src="layouts_files/d3-3.3.8/d3.min.js"></script><script src="layouts_files/dagre-0.4.0/dagre-d3.min.js"></script><link href="layouts_files/mermaid-0.3.0/dist/mermaid.css" rel="stylesheet">
-<script src="layouts_files/mermaid-0.3.0/dist/mermaid.slim.min.js"></script><link href="layouts_files/DiagrammeR-styles-0.2/styles.css" rel="stylesheet">
-<script src="layouts_files/chromatography-0.1/chromatography.js"></script><script src="layouts_files/DiagrammeR-binding-1.0.12/DiagrammeR.js"></script><div class="row">
+
+<div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Defining dock layouts</h1>
@@ -127,8 +126,8 @@ has one entry until you add more.</p>
 </tr>
 </tbody>
 </table>
-<div id="htmlwidget-ac96cb3ee4656e2e9ec3" style="width:700px;height:280px;" class="DiagrammeR html-widget"></div>
-<script type="application/json" data-for="htmlwidget-ac96cb3ee4656e2e9ec3">{"x":{"diagram":"\nflowchart LR\n  in[/\"layout = ...\"/] --> q1{\"is dock_layouts?\"}\n  q1 -- yes --> u1[\"use as-is\"]\n  q1 -- no --> q2{\"is dock_layout?\"}\n  q2 -- yes --> u2[\"dock_layouts(Page = .)\"]\n  q2 -- no --> q3{\"has grid + panels keys?\"}\n  q3 -- yes --> u3[\"as_dock_layout, then wrap\"]\n  q3 -- no --> u4[\"create_dock_layout, then wrap\"]\n  u1 --> out[(\"dock_layouts\")]\n  u2 --> out\n  u3 --> out\n  u4 --> out\n"},"evals":[],"jsHooks":[]}</script><p>The catch-all bottom branch covers anything else: a raw nested list,
+<p><img src="mermaid/coercion-flow.svg"><!-- --></p>
+<p>The catch-all bottom branch covers anything else: a raw nested list,
 a top-level character vector, even a named list of lists. <strong>Names
 at the top level are dropped</strong> there; to get multiple views you
 must use <code>dock_layouts(...)</code> explicitly.</p>
