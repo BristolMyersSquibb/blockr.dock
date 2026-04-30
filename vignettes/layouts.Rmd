@@ -42,8 +42,9 @@ normalises it to a `dock_layouts`:
 | You pass | Treated as | Final shape |
 | --- | --- | --- |
 | `dock_layouts(...)` | multi-view, as-is | itself |
-| A `dock_layout` (resolved via `create_dock_layout()`) | single page | `dock_layouts(Page = ...)` |
-| A raw list (grid spec) | single-page raw grid | `dock_layouts(Page = ...)` |
+| A `dock_layout` (already resolved) | single page | `dock_layouts(Page = ...)` |
+| A `dock_grid` (unresolved spec) | single-page, resolved on the way in | `dock_layouts(Page = ...)` |
+| A raw list (grid spec) | single-page raw grid, resolved on the way in | `dock_layouts(Page = ...)` |
 
 ```{r coercion-flow, eval=TRUE, echo=FALSE}
 blockr.core::include_mermaid("coercion-flow")
@@ -86,7 +87,7 @@ the board has no blocks or extensions to choose from, so the picker
 says so and points you to add a block first. From this empty starting
 point you can grow the board interactively.
 
-When you do supply blocks or extensions but still no `layout`, the
+When you do supply blocks or extensions but still no `layouts`, the
 default `Page` is auto-populated by `default_grid()`: blocks alone
 become a single row of panels; blocks together with extensions become
 the familiar sidebar-and-main shape (extensions on the left, blocks on
@@ -94,7 +95,7 @@ the right). Pass `layouts = ` only to override that.
 
 # Single-page raw grid
 
-The simplest `layout`: a list (or character vector) of block/extension
+The simplest layout: a list (or character vector) of block/extension
 IDs. The shape of the list determines the grid.
 
 The two rules to internalise:
@@ -487,5 +488,5 @@ panel (`"plot2"`).
 
 # Where to go from here
 
-- See `?dock_layouts` and `?dock_layout` for the reference docs of the
-  multi-view API.
+- See `?dock_layouts` for the multi-view collection and `?dock_grid` /
+  `?dock_layout` for the per-view spec and resolved forms.

@@ -43,7 +43,7 @@ serve(
     ),
     links = list(from = "a", to = "b", input = "data"),
     extensions = list(edit = new_edit_board_extension()),
-    layout = list("edit", list("a", "b"))
+    layouts = list("edit", list("a", "b"))
   )
 )
 ```
@@ -77,7 +77,7 @@ serve(
       new_link("b", "c", input = "data"),
       new_link("b", "d", input = "data")
     ),
-    layout = list(list("a", "b"), list("c", "d"))
+    layouts = list(list("a", "b"), list("c", "d"))
   )
 )
 ```
@@ -96,7 +96,7 @@ now a `dock_layouts` with one auto-named `"Page"` view, which is what
 you see in the [Simple dock](#simple-dock) screenshot above.
 
 To define multiple views explicitly, pass a `dock_layouts(...)` to
-`layout`. Each named entry becomes a tab; blocks and extensions are
+`layouts`. Each named entry becomes a tab; blocks and extensions are
 shared across views via the board’s DAG, view membership is a layout
 concern only.
 
@@ -111,9 +111,9 @@ board <- new_dock_board(
     head_1 = new_head_block()
   ),
   links = new_link("dataset_1", "head_1"),
-  layout = dock_layouts(
+  layouts = dock_layouts(
     Analysis = list("dataset_1", "head_1", "dag_extension"),
-    Overview = dock_view("dag_extension", active = TRUE),
+    Overview = dock_grid("dag_extension", active = TRUE),
     Empty = list()
   )
 )
@@ -126,7 +126,7 @@ serve(board, "my_board")
 <figcaption aria-hidden="true">Multi-view dock</figcaption>
 </figure>
 
-For the full set of shapes accepted by `new_dock_board(layout = ...)`
+For the full set of shapes accepted by `new_dock_board(layouts = ...)`
 (nested grids, tabbed panels, active-view selection, the coercion rules
 that normalise everything to a `dock_layouts`), see
 `vignette("layouts", package = "blockr.dock")`.

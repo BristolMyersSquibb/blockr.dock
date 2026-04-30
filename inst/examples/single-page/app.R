@@ -9,6 +9,6 @@ serve(
     ),
     links = list(from = "a", to = "b", input = "data"),
     extensions = list(edit = new_edit_board_extension()),
-    layout = list("edit", list("a", "b"))
+    layouts = list("edit", list("a", "b"))
   )
 )

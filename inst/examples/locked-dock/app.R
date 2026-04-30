@@ -16,6 +16,6 @@ serve(
       new_link("b", "c", input = "data"),
       new_link("b", "d", input = "data")
     ),
-    layout = list(list("a", "b"), list("c", "d"))
+    layouts = list(list("a", "b"), list("c", "d"))
   )
 )

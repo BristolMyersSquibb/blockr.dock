@@ -82,7 +82,7 @@ the app. The single-page case (what rendered as a no-tab dock in
 is what you see in the [Simple dock](#simple-dock) screenshot above.
 
 To define multiple views explicitly, pass a `dock_layouts(...)` to
-`layout`. Each named entry becomes a tab; blocks and extensions are
+`layouts`. Each named entry becomes a tab; blocks and extensions are
 shared across views via the board's DAG, view membership is a layout
 concern only.
 
@@ -108,7 +108,7 @@ app$stop()
 
 ![Multi-view dock](man/figures/views.png)
 
-For the full set of shapes accepted by `new_dock_board(layout = ...)`
+For the full set of shapes accepted by `new_dock_board(layouts = ...)`
 (nested grids, tabbed panels, active-view selection, the coercion rules
 that normalise everything to a `dock_layouts`), see
 `vignette("layouts", package = "blockr.dock")`.

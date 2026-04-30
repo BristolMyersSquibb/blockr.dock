@@ -31,7 +31,7 @@
   - Removed `dock_view()`; use `dock_grid(..., active = FALSE)` instead.
   - Renamed `default_layout()` to `default_grid()` to reflect the return type (a `dock_grid`, not a `dock_layout`).
   - Unexported the high-level resolver `create_dock_layout()` (renamed internally to `resolve_dock_layout()`).
-  - The previously-exported `default_grid()` (panel-ID form, unrelated to the new `default_grid()`) was already unexported; the name is now reused for the names-form default that `dock_layouts()` consumes.
+  - **Silent semantic change to `default_grid()`**: in 0.1.0, the exported `default_grid(blocks, extensions)` returned a list of *panel IDs* (`block_panel-a`, `ext_panel-foo`); in 0.1.1 the same call returns a list of plain *block/extension names* (`a`, `foo`), wrapped in a `dock_grid`. Existing call sites compile but produce different values. Audit any direct uses of `default_grid()` and switch to the panel-ID accessors (`as_block_panel_id()`, `as_ext_panel_id()`) if you depended on the old shape.
 
 # blockr.dock 0.1.0
 
