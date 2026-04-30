@@ -27,10 +27,10 @@ you'll build most often.
 
 # The big picture
 
-Internally, every board carries a `dock_layouts()` object. This is a list
-of one or more **views** (the global tabs you see at the top of the app).
-A view's content is a `dock_layout`: the per-view DockView grid that
-arranges block and extension **panels**.
+Internally, every board carries a `dock_layouts` collection. This is a
+named list of one or more **views** (the global tabs you see at the top
+of the app). A view's content is a `dock_layout`: the per-view DockView
+grid that arranges block and extension **panels**.
 
 Single-page boards are the degenerate case: a `dock_layouts` with one
 auto-named view called `"Page"`. The view-nav dropdown is always present;
@@ -41,27 +41,27 @@ normalises it to a `dock_layouts`:
 
 | You pass | Treated as | Final shape |
 | --- | --- | --- |
-| `dock_layouts(...)` | multi-view, as-is | itself |
-| A `dock_layout` (already resolved) | single page | `dock_layouts(Page = ...)` |
-| A `dock_grid` (unresolved spec) | single-page, resolved on the way in | `dock_layouts(Page = ...)` |
-| A raw list (grid spec) | single-page raw grid, resolved on the way in | `dock_layouts(Page = ...)` |
+| A named `list(A = ..., B = ...)` | multi-view (each name is a view) | `dock_layouts` collection |
+| A `dock_layout` (already resolved) | single page | wrapped as `Page` slot |
+| A `dock_grid` (unresolved spec) | single-page, resolved on the way in | wrapped as `Page` slot |
+| A raw list (grid spec) | single-page raw grid, resolved on the way in | wrapped as `Page` slot |
 
 ```{r coercion-flow, eval=TRUE, echo=FALSE}
 blockr.core::include_mermaid("coercion-flow")
 ```
 
-The catch-all bottom branch covers anything else: a raw nested list, a
-top-level character vector, even a named list of lists. **Names at the
-top level are dropped** there; to get multiple views you must use
-`dock_layouts(...)` explicitly.
+The dispatch is name-driven: a list with top-level names becomes
+multi-view (one slot per name); an unnamed list (or a `dock_grid`) is
+treated as a single-page grid spec. To get multiple views, name the
+top-level entries.
 
 So you only ever need to think about two things: the **grid syntax** for
-arranging panels inside a view, and the **`dock_layouts()` syntax** for
-having more than one view.
+arranging panels inside a view, and **named-list syntax** for having
+more than one view.
 
 # Starting from scratch
 
-The simplest possible board: no blocks, no extensions, no `layouts`. Since `new_dock_board()` defaults to `layouts = default_grid(blocks, extensions)` — which returns an empty list here — and the empty list gets coerced to a single-page `dock_layouts`, the resulting collection is `dock_layouts(Page = list())`:
+The simplest possible board: no blocks, no extensions, no `layouts`. Since `new_dock_board()` defaults to `layouts = default_grid(blocks, extensions)` — which returns an empty `dock_grid` here — and the empty grid gets resolved and wrapped as a single `Page` view, the resulting collection is a `dock_layouts` with one empty `Page` slot:
 
 ```{r}
 new_dock_board()
@@ -313,14 +313,14 @@ extensions are present: extensions on the left, blocks on the right.
 
 # Multiple views (pages)
 
-Wrap the per-view grids in `dock_layouts()`. Each named entry becomes a
-separate page in the view-nav dropdown:
+Pass a named list. Each named entry becomes a separate page in the
+view-nav dropdown:
 
 ```{r}
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
-  layouts = dock_layouts(
+  layouts = list(
     Analysis = list("a", "b"),
     Editor = list("edit_board_extension")
   )
@@ -349,9 +349,8 @@ Switching to `Editor` via the dropdown:
 └────────────────────────────┘
 ```
 
-Each value inside `dock_layouts()` follows exactly the same grid syntax
-as the single-page form: character vectors for tabs, nested lists for
-splits.
+Each slot value follows exactly the same grid syntax as the single-page
+form: character vectors for tabs, nested lists for splits.
 
 ## Choosing the initially active view
 
@@ -362,7 +361,7 @@ construct that view's content with `dock_grid(..., active = TRUE)`:
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
-  layouts = dock_layouts(
+  layouts = list(
     Analysis = list("a", "b"),
     Editor = dock_grid("edit_board_extension", active = TRUE)
   )
@@ -388,9 +387,12 @@ watermark prompt as the empty default board (see `Starting from
 scratch`), scoped to that tab.
 
 ```{r}
-dock_layouts(
-  Analysis = list("a", "b"),
-  Empty = list()
+new_dock_board(
+  blocks = c(a = new_dataset_block(), b = new_head_block()),
+  layouts = list(
+    Analysis = list("a", "b"),
+    Empty = list()
+  )
 )
 ```
 
@@ -415,7 +417,7 @@ new_dock_board(
     new_link("cleaned", "plot1", "data"),
     new_link("cleaned", "plot2", "data")
   ),
-  layouts = dock_layouts(
+  layouts = list(
     Data = list("edit_board_extension", c("raw", "cleaned")),
     Analysis = list(list("summary", "plot1"), "plot2"),
     Charts = dock_grid(c("plot1", "plot2"), active = TRUE)
@@ -482,11 +484,11 @@ panel (`"plot2"`).
 | Tabbed single panel | `list(c("a", "b"))` |
 | Sidebar + main | `list("ext", "main")` |
 | Two columns, both stacked | `list(list("a", "b"), list("c", "d"))` |
-| Multiple views | `dock_layouts(A = ..., B = ...)` |
-| Start on view `B` | `dock_layouts(A = ..., B = dock_grid(..., active = TRUE))` |
-| Empty starter view | `dock_layouts(Page = list())` (or just `dock_layouts()`) |
+| Multiple views | `list(A = ..., B = ...)` |
+| Start on view `B` | `list(A = ..., B = dock_grid(..., active = TRUE))` |
+| Empty starter view | `list(Page = list())` |
 
 # Where to go from here
 
-- See `?dock_layouts` for the multi-view collection and `?dock_grid` /
-  `?dock_layout` for the per-view spec and resolved forms.
+- See `?dock_grid` and `?dock_layout` for the per-view spec and resolved
+  forms; `?active_view` for switching the active view at runtime.

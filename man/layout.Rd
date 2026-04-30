@@ -60,17 +60,17 @@ arrangement of a single view. The low-level constructor
 coerces a serialized payload back into one.
 }
 \details{
-For inline construction inside \code{\link[=dock_layouts]{dock_layouts()}}, use \code{\link[=dock_grid]{dock_grid()}} —
-which builds an unresolved arrangement spec (a \code{dock_grid}, with the
-optional \code{active} flag), to be panel-resolved later when the board's
-blocks and extensions are known. \code{default_grid()} produces the default
-arrangement for a given set of blocks and extensions.
+For inline construction inside \code{new_dock_board(layouts = ...)}, use
+\code{\link[=dock_grid]{dock_grid()}} — which builds an unresolved arrangement spec (a
+\code{dock_grid}, with the optional \code{active} flag), to be panel-resolved
+later when the board's blocks and extensions are known.
+\code{default_grid()} produces the default arrangement for a given set
+of blocks and extensions.
 
 A \emph{view} is the conceptual page-level container; a \emph{layout} is the
-technical panel arrangement inside a view. Views are managed via
-\code{\link[=dock_layouts]{dock_layouts()}} (which keys layouts by view name). At most one entry
-in a \code{dock_layouts} may be marked as the active (initially-selected)
-one.
+technical panel arrangement inside a view. The board holds an
+internal \code{dock_layouts} collection (keyed by view name); at most
+one entry may be marked as the active (initially-selected) one.
 }
 \examples{
 blks <- c(

@@ -104,7 +104,7 @@ test_that("dock_grid constructor with active flag", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = dock_layouts(
+    layouts = list(
       First = list("a"),
       Second = dock_grid("a", "b", active = TRUE)
     )

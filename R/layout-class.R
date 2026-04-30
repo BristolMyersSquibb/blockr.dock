@@ -5,17 +5,17 @@
 #' `new_dock_layout()` builds it from pre-resolved fields; `as_dock_layout()`
 #' coerces a serialized payload back into one.
 #'
-#' For inline construction inside [dock_layouts()], use [dock_grid()] —
-#' which builds an unresolved arrangement spec (a `dock_grid`, with the
-#' optional `active` flag), to be panel-resolved later when the board's
-#' blocks and extensions are known. `default_grid()` produces the default
-#' arrangement for a given set of blocks and extensions.
+#' For inline construction inside `new_dock_board(layouts = ...)`, use
+#' [dock_grid()] — which builds an unresolved arrangement spec (a
+#' `dock_grid`, with the optional `active` flag), to be panel-resolved
+#' later when the board's blocks and extensions are known.
+#' `default_grid()` produces the default arrangement for a given set
+#' of blocks and extensions.
 #'
 #' A *view* is the conceptual page-level container; a *layout* is the
-#' technical panel arrangement inside a view. Views are managed via
-#' [dock_layouts()] (which keys layouts by view name). At most one entry
-#' in a `dock_layouts` may be marked as the active (initially-selected)
-#' one.
+#' technical panel arrangement inside a view. The board holds an
+#' internal `dock_layouts` collection (keyed by view name); at most
+#' one entry may be marked as the active (initially-selected) one.
 #'
 #' @param grid,panels,active_group Layout components
 #' @param active Logical; mark this layout/grid as the active

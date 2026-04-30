@@ -5,19 +5,21 @@
 #' Blocks and extensions are shared across views via the board's DAG;
 #' view membership is a layout concern only.
 #'
-#' Multiple views are defined via `dock_layouts()`, which accepts named
-#' list elements -- each either a raw grid spec (a possibly-nested list
-#' of block/extension IDs) or a `dock_grid` object created with
-#' [dock_grid()]. A grid can be marked as the initially active one by
-#' passing `active = TRUE` to `dock_grid()`; if none is marked, the
-#' first one is used. View CRUD is enabled unless the dock is locked
-#' (see `is_dock_locked()`).
+#' Multi-view boards are defined by passing a named list to
+#' `new_dock_board()`'s `layouts` argument: each name is a view, each
+#' value is the panel arrangement inside that view (a [dock_grid()],
+#' a `dock_layout`, or a raw list of block/extension IDs). A view can
+#' be marked as the initially active one by passing `active = TRUE`
+#' to [dock_grid()]; if none is marked, the first one is used. View
+#' CRUD is enabled unless the dock is locked (see `is_dock_locked()`).
 #'
-#' @param ... Named list elements, each a `dock_grid`, a `dock_layout`,
-#'   or a raw list of block/extension IDs.
+#' The `dock_layouts` type is the resolved collection that the board
+#' holds internally — every slot is a fully-resolved `dock_layout`.
+#' Users do not normally construct one directly; instead they pass a
+#' plain named list to `new_dock_board(layouts = ...)`, which resolves
+#' grid specs into layouts using the board's blocks and extensions.
 #'
-#' @return `dock_layouts()` returns a `dock_layouts` object.
-#'   `is_dock_layouts()` returns a boolean.
+#' @return `is_dock_layouts()` returns a boolean.
 #'   `active_view()` returns a string and `active_view<-()` returns
 #'   the modified `dock_layouts` (or `dock_board`) object invisibly.
 #'   `view_ids()` returns all IDs (block + extension) found in a layout
@@ -25,29 +27,26 @@
 #'   dock is locked.
 #'
 #' @examples
-#' # First view is active by default
-#' ly <- dock_layouts(
-#'   Analysis = list("dataset_1", "head_1"),
-#'   Overview = list("dag_extension")
+#' brd <- new_dock_board(
+#'   blocks = c(
+#'     dataset_1 = blockr.core::new_dataset_block(),
+#'     head_1 = blockr.core::new_head_block()
+#'   ),
+#'   layouts = list(
+#'     Analysis = list("dataset_1", "head_1"),
+#'     Overview = dock_grid("dataset_1", active = TRUE)
+#'   )
 #' )
-#' is_dock_layouts(ly)
-#' active_view(ly)
-#'
-#' # Mark a specific view as initially active
-#' ly2 <- dock_layouts(
-#'   Analysis = list("dataset_1"),
-#'   Overview = dock_grid("dag_extension", active = TRUE)
-#' )
-#' active_view(ly2)
+#' active_view(brd)
 #'
 #' @rdname view
-#' @export
+#' @keywords internal
 new_dock_layouts <- function(...) {
   vws <- list(...)
 
   # Unwrap a single list argument only when it looks like a wrapped collection
   # of named views -- e.g. dock_layouts(list(A = ..., B = ...)).
-  # Do NOT unwrap dock_layouts(V1 = list("a")) where vws is already correct.
+  # Do NOT unwrap dock_layouts(V1 = new_dock_layout(...)) where vws is correct.
   if (length(vws) == 1L && is.list(vws[[1L]]) && !is_dock_layout(vws[[1L]])) {
     inner <- vws[[1L]]
     inner_nms <- names(inner)
@@ -57,14 +56,8 @@ new_dock_layouts <- function(...) {
   }
 
   if (!length(vws)) {
-    vws <- list(Page = dock_grid())
+    vws <- list(Page = new_dock_layout())
   }
-
-  vws <- lapply(vws, function(v) {
-    if (is_dock_layout(v) || is_dock_grid(v)) v
-    else if (is.list(v)) as_dock_grid(v)
-    else v
-  })
 
   if (!any(vapply(vws, is_active_view, logical(1L)))) {
     vws[[1L]] <- set_active_view(vws[[1L]])
@@ -73,8 +66,6 @@ new_dock_layouts <- function(...) {
   structure(vws, class = "dock_layouts")
 }
 
-#' @rdname view
-#' @export
 validate_dock_layouts <- function(x) {
   if (!is_dock_layouts(x) || !is.list(x)) {
     blockr_abort(
@@ -107,9 +98,9 @@ validate_dock_layouts <- function(x) {
   }
 
   for (v in x) {
-    if (!is.list(v)) {
+    if (!is_dock_layout(v)) {
       blockr_abort(
-        "All elements of `dock_layouts` must be lists.",
+        "All elements of `dock_layouts` must be `dock_layout` objects.",
         class = "dock_layouts_element_invalid"
       )
     }
@@ -127,8 +118,6 @@ validate_dock_layouts <- function(x) {
   x
 }
 
-#' @rdname view
-#' @export
 dock_layouts <- function(...) {
   validate_dock_layouts(new_dock_layouts(...))
 }
@@ -232,11 +221,6 @@ as_dock_layouts.dock_layouts <- function(x, ...) x
 #' @export
 as_dock_layouts.dock_layout <- function(x, ...) {
   dock_layouts(Page = set_active_view(x))
-}
-
-#' @export
-as_dock_layouts.list <- function(x, ...) {
-  dock_layouts(x)
 }
 
 # Internal helpers ------------------------------------------------------------

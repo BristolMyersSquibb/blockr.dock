@@ -52,8 +52,9 @@ dock_board_options()
 
 \item{extensions}{Dock extensions}
 
-\item{layouts}{A \code{dock_layouts()} object, a \code{dock_layout}, or a raw
-grid specification (list). All forms are normalised to \code{dock_layouts}.}
+\item{layouts}{A named list of per-view arrangements (multi-view), a
+\code{dock_grid} / \code{dock_layout} / raw list (single-page), or an existing
+\code{dock_layouts} collection. All forms are normalised to \code{dock_layouts}.}
 
 \item{options}{Board-level user settings}
 
@@ -81,13 +82,16 @@ Using the docking layout manager provided by dockViewR, a \code{dock_board}
 extends \code{\link[blockr.core:new_board]{blockr.core::new_board()}}. In addition to the attributes contained
 in a core board, this also includes dock extensions (as \code{extensions})
 and the panel arrangement (as \code{layouts}). The \code{layouts} field is always
-stored internally as a \code{\link[=dock_layouts]{dock_layouts()}} object (multi-view); single-page
+stored internally as a \code{dock_layouts} collection (multi-view); single-page
 boards are a degenerate case with one auto-named "Page" view.
 }
 \details{
-Dispatch is type-driven: a \code{dock_layouts} is used as-is, a \code{dock_layout}
-is wrapped via \code{as_dock_layouts()}, and a plain list (raw grid spec) is
-resolved via \code{resolve_dock_layout()} and then wrapped.
+For multi-view boards, pass a named list to \verb{layouts =} — each name
+becomes a view, each value is the panel arrangement (a \code{\link[=dock_grid]{dock_grid()}},
+a \code{dock_layout}, or a raw list of block/extension IDs). For a single-page
+board, pass a raw grid spec or a \code{dock_grid} directly. Either way the
+input is normalised to a \code{dock_layouts} with grids resolved into layouts
+using the board's blocks and extensions.
 }
 \examples{
 brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))

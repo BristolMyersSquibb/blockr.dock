@@ -162,7 +162,7 @@ init_view_docks <- function(views, board, update, triggers, session, dock_mgr) {
 
   bare <- dock_layouts(
     set_names(
-      lapply(names(views), function(x) list()),
+      lapply(names(views), function(x) new_dock_layout()),
       names(views)
     )
   )

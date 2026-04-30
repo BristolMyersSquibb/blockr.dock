@@ -95,10 +95,10 @@ app. The single-page case (what rendered as a no-tab dock in 0.1.0) is
 now a `dock_layouts` with one auto-named `"Page"` view, which is what
 you see in the [Simple dock](#simple-dock) screenshot above.
 
-To define multiple views explicitly, pass a `dock_layouts(...)` to
-`layouts`. Each named entry becomes a tab; blocks and extensions are
-shared across views via the board’s DAG, view membership is a layout
-concern only.
+To define multiple views explicitly, pass a named list to `layouts`.
+Each named entry becomes a tab; blocks and extensions are shared
+across views via the board’s DAG, view membership is a layout concern
+only.
 
 ``` r
 library(blockr.core)
@@ -111,7 +111,7 @@ board <- new_dock_board(
     head_1 = new_head_block()
   ),
   links = new_link("dataset_1", "head_1"),
-  layouts = dock_layouts(
+  layouts = list(
     Analysis = list("dataset_1", "head_1", "dag_extension"),
     Overview = dock_grid("dag_extension", active = TRUE),
     Empty = list()
