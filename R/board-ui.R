@@ -9,7 +9,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
   stopifnot(is_string(id))
 
   offcanvas_id <- NS(id, "options_offcanvas")
-  views <- board_views(x)
+  views <- board_layouts(x)
 
   # View nav in the navbar -- always present, since boards always carry a
   # `dock_layouts` (single-page boards have one auto-named "Page" view).

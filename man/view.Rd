@@ -2,26 +2,17 @@
 % Please edit documentation in R/layouts-class.R
 \name{new_dock_layouts}
 \alias{new_dock_layouts}
-\alias{validate_dock_layouts}
-\alias{dock_layouts}
-\alias{dock_view}
 \alias{is_dock_layouts}
 \alias{view_ids}
 \alias{active_view}
 \alias{active_view<-}
 \alias{view_can_crud}
-\alias{dock_layouts<-}
-\alias{board_views}
+\alias{board_layouts<-}
+\alias{board_layouts}
 \alias{as_dock_layouts}
 \title{Dock views (layouts)}
 \usage{
 new_dock_layouts(...)
-
-validate_dock_layouts(x)
-
-dock_layouts(...)
-
-dock_view(..., active = FALSE)
 
 is_dock_layouts(x)
 
@@ -33,9 +24,9 @@ active_view(x) <- value
 
 view_can_crud(x)
 
-dock_layouts(x) <- value
+board_layouts(x) <- value
 
-board_views(x)
+board_layouts(x)
 
 as_dock_layouts(x, ...)
 }
@@ -44,18 +35,12 @@ as_dock_layouts(x, ...)
 
 \item{x}{Object}
 
-\item{active}{Logical; mark this view as the initially active one.
-At most one view in a \code{dock_layouts()} may be active.}
-
 \item{value}{Replacement value}
 }
 \value{
-\code{dock_layouts()} returns a \code{dock_layouts} object.
-\code{dock_view()} returns a list (the view spec) with the \code{active}
-attribute set when requested.
 \code{is_dock_layouts()} returns a boolean.
 \code{active_view()} returns a string and \verb{active_view<-()} returns
-the modified \code{dock_layouts} object invisibly.
+the modified \code{dock_layouts} (or \code{dock_board}) object invisibly.
 \code{view_ids()} returns all IDs (block + extension) found in a layout
 specification. The \code{view_can_crud()} helper returns \code{FALSE} when the
 dock is locked.
@@ -67,28 +52,32 @@ Blocks and extensions are shared across views via the board's DAG;
 view membership is a layout concern only.
 }
 \details{
-Multiple views are defined via \code{dock_layouts()}, which accepts named
-list elements -- each a (possibly nested) list of block and extension
-IDs (the same format accepted by \code{create_dock_layout(grid = ...)}).
-A view can be marked as the initially active one by tagging its spec
-with \code{attr(view, "active") <- TRUE}, conveniently produced by
-\code{\link[=dock_view]{dock_view()}}. If no view is tagged, the first one is used. View CRUD
-is enabled unless the dock is locked (see \code{is_dock_locked()}).
+Multi-view boards are defined by passing a named list to
+\code{new_dock_board()}'s \code{layouts} argument: each name is a view, each
+value is the panel arrangement inside that view (a \code{\link[=dock_grid]{dock_grid()}},
+a \code{dock_layout}, or a raw list of block/extension IDs). A view can
+be marked as the initially active one by passing \code{active = TRUE}
+to \code{\link[=dock_grid]{dock_grid()}}; if none is marked, the first one is used. View
+CRUD is enabled unless the dock is locked (see \code{is_dock_locked()}).
+
+The \code{dock_layouts} type is the resolved collection that the board
+holds internally — every slot is a fully-resolved \code{dock_layout}.
+Users do not normally construct one directly; instead they pass a
+plain named list to \code{new_dock_board(layouts = ...)}, which resolves
+grid specs into layouts using the board's blocks and extensions.
 }
 \examples{
-# Explicit constructor (first view is active by default)
-ly <- dock_layouts(
-  Analysis = list("dataset_1", "head_1"),
-  Overview = list("dag_extension")
+brd <- new_dock_board(
+  blocks = c(
+    dataset_1 = blockr.core::new_dataset_block(),
+    head_1 = blockr.core::new_head_block()
+  ),
+  layouts = list(
+    Analysis = list("dataset_1", "head_1"),
+    Overview = dock_grid("dataset_1", active = TRUE)
+  )
 )
-is_dock_layouts(ly)
-active_view(ly)
-
-# Mark a specific view as initially active
-ly2 <- dock_layouts(
-  Analysis = list("dataset_1"),
-  Overview = dock_view("dag_extension", active = TRUE)
-)
-active_view(ly2)
+active_view(brd)
 
 }
+\keyword{internal}

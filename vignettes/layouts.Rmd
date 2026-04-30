@@ -21,46 +21,47 @@ library(blockr.dock)
 ```
 
 A `dock_board` exposes a single argument that controls panel arrangement:
-the `layout`. This vignette walks through every shape `layout` accepts,
+the `layouts`. This vignette walks through every shape `layouts` accepts,
 shows what UI each shape produces, and ends with patterns for the layouts
 you'll build most often.
 
 # The big picture
 
-Internally, every board carries a `dock_layouts()` object. This is a list
-of one or more **views** (the global tabs you see at the top of the app).
-A view's content is a `dock_layout`: the per-view DockView grid that
-arranges block and extension **panels**.
+Internally, every board carries a `dock_layouts` collection. This is a
+named list of one or more **views** (the global tabs you see at the top
+of the app). A view's content is a `dock_layout`: the per-view DockView
+grid that arranges block and extension **panels**.
 
 Single-page boards are the degenerate case: a `dock_layouts` with one
 auto-named view called `"Page"`. The view-nav dropdown is always present;
 it just has one entry until you add more.
 
-When you pass a `layout =` argument to `new_dock_board()`, the constructor
+When you pass a `layouts =` argument to `new_dock_board()`, the constructor
 normalises it to a `dock_layouts`:
 
 | You pass | Treated as | Final shape |
 | --- | --- | --- |
-| `dock_layouts(...)` | multi-view, as-is | itself |
-| A `dock_layout` (resolved via `create_dock_layout()`) | single page | `dock_layouts(Page = ...)` |
-| A raw list (grid spec) | single-page raw grid | `dock_layouts(Page = ...)` |
+| A named `list(A = ..., B = ...)` | multi-view (each name is a view) | `dock_layouts` collection |
+| A `dock_layout` (already resolved) | single page | wrapped as `Page` slot |
+| A `dock_grid` (unresolved spec) | single-page, resolved on the way in | wrapped as `Page` slot |
+| A raw list (grid spec) | single-page raw grid, resolved on the way in | wrapped as `Page` slot |
 
 ```{r coercion-flow, eval=TRUE, echo=FALSE}
 blockr.core::include_mermaid("coercion-flow")
 ```
 
-The catch-all bottom branch covers anything else: a raw nested list, a
-top-level character vector, even a named list of lists. **Names at the
-top level are dropped** there; to get multiple views you must use
-`dock_layouts(...)` explicitly.
+The dispatch is name-driven: a list with top-level names becomes
+multi-view (one slot per name); an unnamed list (or a `dock_grid`) is
+treated as a single-page grid spec. To get multiple views, name the
+top-level entries.
 
 So you only ever need to think about two things: the **grid syntax** for
-arranging panels inside a view, and the **`dock_layouts()` syntax** for
-having more than one view.
+arranging panels inside a view, and **named-list syntax** for having
+more than one view.
 
 # Starting from scratch
 
-The simplest possible board: no blocks, no extensions, no `layout`. Since, `new_dock_layout()` defaults to `dock_layouts(Page = default_view_grid(blocks, extensions))`, and `default_view_grid()` returns an empty list when there are no blocks or extensions, the resulting layout is `dock_layouts(Page = list())`:
+The simplest possible board: no blocks, no extensions, no `layouts`. Since `new_dock_board()` defaults to `layouts = default_grid(blocks, extensions)` — which returns an empty `dock_grid` here — and the empty grid gets resolved and wrapped as a single `Page` view, the resulting collection is a `dock_layouts` with one empty `Page` slot:
 
 ```{r}
 new_dock_board()
@@ -86,15 +87,15 @@ the board has no blocks or extensions to choose from, so the picker
 says so and points you to add a block first. From this empty starting
 point you can grow the board interactively.
 
-When you do supply blocks or extensions but still no `layout`, the
+When you do supply blocks or extensions but still no `layouts`, the
 default `Page` is auto-populated by `default_grid()`: blocks alone
 become a single row of panels; blocks together with extensions become
 the familiar sidebar-and-main shape (extensions on the left, blocks on
-the right). Pass `layout = ` only to override that.
+the right). Pass `layouts = ` only to override that.
 
 # Single-page raw grid
 
-The simplest `layout`: a list (or character vector) of block/extension
+The simplest layout: a list (or character vector) of block/extension
 IDs. The shape of the list determines the grid.
 
 The two rules to internalise:
@@ -112,7 +113,7 @@ A single ID gives one panel filling the whole view:
 ```{r}
 new_dock_board(
   blocks = c(a = new_dataset_block()),
-  layout = list("a")
+  layouts = list("a")
 )
 ```
 
@@ -133,7 +134,7 @@ Two top-level entries → two columns split horizontally:
 ```{r}
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
-  layout = list("a", "b")
+  layouts = list("a", "b")
 )
 ```
 
@@ -155,7 +156,7 @@ vertical split:
 ```{r}
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
-  layout = list(list("a", "b"))
+  layouts = list(list("a", "b"))
 )
 ```
 
@@ -182,7 +183,7 @@ same DockView panel as tabs:
 ```{r}
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
-  layout = list(c("a", "b"))
+  layouts = list(c("a", "b"))
 )
 ```
 
@@ -217,7 +218,7 @@ new_dock_board(
     b = new_head_block(),
     c = new_head_block()
   ),
-  layout = list("a", list("b", "c"))
+  layouts = list("a", list("b", "c"))
 )
 ```
 
@@ -241,7 +242,7 @@ new_dock_board(
     c = new_head_block(),
     d = new_head_block()
   ),
-  layout = list(list("a", "b"), list("c", "d"))
+  layouts = list(list("a", "b"), list("c", "d"))
 )
 ```
 
@@ -268,7 +269,7 @@ new_dock_board(
     b = new_head_block(),
     c = new_head_block()
   ),
-  layout = list(list("a", list("b", "c")))
+  layouts = list(list("a", list("b", "c")))
 )
 ```
 
@@ -291,7 +292,7 @@ extension, and a tabbed panel on the right with several blocks:
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
-  layout = list("edit_board_extension", c("a", "b"))
+  layouts = list("edit_board_extension", c("a", "b"))
 )
 ```
 
@@ -312,14 +313,14 @@ extensions are present: extensions on the left, blocks on the right.
 
 # Multiple views (pages)
 
-Wrap the per-view grids in `dock_layouts()`. Each named entry becomes a
-separate page in the view-nav dropdown:
+Pass a named list. Each named entry becomes a separate page in the
+view-nav dropdown:
 
 ```{r}
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
-  layout = dock_layouts(
+  layouts = list(
     Analysis = list("a", "b"),
     Editor = list("edit_board_extension")
   )
@@ -348,23 +349,21 @@ Switching to `Editor` via the dropdown:
 └────────────────────────────┘
 ```
 
-Each value inside `dock_layouts()` follows exactly the same grid syntax
-as the single-page form: character vectors for tabs, nested lists for
-splits.
+Each slot value follows exactly the same grid syntax as the single-page
+form: character vectors for tabs, nested lists for splits.
 
 ## Choosing the initially active view
 
-By default, the first view is active. To start on a different one,
-mark its spec with the `active` attribute. The convenient way is
-`dock_view()`:
+By default, the first layout is active. To start on a different one,
+construct that view's content with `dock_grid(..., active = TRUE)`:
 
 ```{r}
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
-  layout = dock_layouts(
+  layouts = list(
     Analysis = list("a", "b"),
-    Editor = dock_view("edit_board_extension", active = TRUE)
+    Editor = dock_grid("edit_board_extension", active = TRUE)
   )
 )
 ```
@@ -377,22 +376,9 @@ new_dock_board(
 └────────────────────────────┘
 ```
 
-`dock_view(..., active = TRUE)` is a thin wrapper that calls
-`structure(list(...), active = TRUE)` under the hood. For one-off
-cases you can also write the attribute directly:
-
-```{r}
-overview <- list("a")
-attr(overview, "active") <- TRUE
-
-dock_layouts(
-  Analysis = list("a", "b"),
-  Overview = overview
-)
-```
-
-The validator rejects more than one view marked `active`. If none is
-marked, the first view wins.
+`dock_grid(..., active = TRUE)` attaches an `active` attribute to
+the layout spec. The validator rejects more than one layout marked
+`active`. If none is marked, the first one wins.
 
 ## Empty views
 
@@ -401,9 +387,12 @@ watermark prompt as the empty default board (see `Starting from
 scratch`), scoped to that tab.
 
 ```{r}
-dock_layouts(
-  Analysis = list("a", "b"),
-  Empty = list()
+new_dock_board(
+  blocks = c(a = new_dataset_block(), b = new_head_block()),
+  layouts = list(
+    Analysis = list("a", "b"),
+    Empty = list()
+  )
 )
 ```
 
@@ -428,10 +417,10 @@ new_dock_board(
     new_link("cleaned", "plot1", "data"),
     new_link("cleaned", "plot2", "data")
   ),
-  layout = dock_layouts(
+  layouts = list(
     Data = list("edit_board_extension", c("raw", "cleaned")),
     Analysis = list(list("summary", "plot1"), "plot2"),
-    Charts = dock_view(c("plot1", "plot2"), active = TRUE)
+    Charts = dock_grid(c("plot1", "plot2"), active = TRUE)
   )
 )
 ```
@@ -495,13 +484,11 @@ panel (`"plot2"`).
 | Tabbed single panel | `list(c("a", "b"))` |
 | Sidebar + main | `list("ext", "main")` |
 | Two columns, both stacked | `list(list("a", "b"), list("c", "d"))` |
-| Multiple views | `dock_layouts(A = ..., B = ...)` |
-| Start on view `B` | `dock_layouts(A = ..., B = dock_view(..., active = TRUE))` |
-| Empty starter view | `dock_layouts(Page = list())` (or just `dock_layouts()`) |
+| Multiple views | `list(A = ..., B = ...)` |
+| Start on view `B` | `list(A = ..., B = dock_grid(..., active = TRUE))` |
+| Empty starter view | `list(Page = list())` |
 
 # Where to go from here
 
-- See `?dock_layouts` and `?dock_view` for the reference docs of the
-  multi-view API.
-- See `?create_dock_layout` for fine-grained control over how a single
-  view's grid is built.
+- See `?dock_grid` and `?dock_layout` for the per-view spec and resolved
+  forms; `?active_view` for switching the active view at runtime.

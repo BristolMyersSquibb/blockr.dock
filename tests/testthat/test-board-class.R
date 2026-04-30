@@ -30,7 +30,7 @@ test_that("dock board", {
   expect_setequal(board_link_ids(board1), c("ad", "cd", "bc", "de"))
   expect_setequal(board_stack_ids(board1), "bc")
 
-  expect_length(dock_layout(board1)$panels, 6L)
+  expect_length(active_layout(board1)$panels, 6L)
 
   empty <- clear_board(board1)
 
@@ -38,7 +38,7 @@ test_that("dock board", {
   expect_length(board_links(empty), 0L)
   expect_length(board_stacks(empty), 0L)
 
-  expect_length(dock_layout(empty)$panels, 1L)
+  expect_length(active_layout(empty)$panels, 1L)
 
   expect_identical(
     board_options(board1),

@@ -28,7 +28,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   triggers <- action_triggers(actions)
 
-  views <- board_views(initial_board)
+  views <- board_layouts(initial_board)
 
   dock_mgr <- new_dock_manager()
   vs <- init_view_docks(
@@ -162,7 +162,7 @@ init_view_docks <- function(views, board, update, triggers, session, dock_mgr) {
 
   bare <- dock_layouts(
     set_names(
-      lapply(names(views), function(x) list()),
+      lapply(names(views), function(x) new_dock_layout()),
       names(views)
     )
   )
@@ -294,7 +294,7 @@ show_view_ui <- function(view_name, docks) {
 #' @param board,update Reactive board state and update signal.
 #' @param actions Action triggers.
 #' @param layout Optional initial `dock_layout`; defaults to the board's
-#'   `dock_layout()`.
+#'   `active_layout()`.
 #' @param is_active A [shiny::reactive()] returning `TRUE` when this dock
 #'   is the currently active view. Controls whether the empty-dock prompt
 #'   is shown. Defaults to always-active (single-dock boards).
@@ -311,8 +311,7 @@ manage_dock <- function(
   layout = NULL,
   is_active = reactive(TRUE)
 ) {
-  # Resolve layout: use provided layout or fall back to board's dock_layout
-  init_layout <- layout %||% isolate(dock_layout(board$board))
+  init_layout <- layout %||% isolate(active_layout(board$board))
 
   # Block/ext cards live at the board (parent) namespace level
   board_ns <- get_session()$ns
@@ -615,7 +614,7 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
       input$view_new_exts %||% character(),
       dock_ext_ids(brd)
     )
-    v_ly <- create_dock_layout(
+    v_ly <- resolve_dock_layout(
       blocks = board_blocks(brd)[sel_blks],
       extensions = as_dock_extensions(
         as.list(dock_extensions(brd))[sel_exts]
