@@ -57,10 +57,15 @@ new_dock_layouts <- function(...) {
   }
 
   if (!length(vws)) {
-    vws <- list(Page = list())
+    vws <- list(Page = dock_grid())
   }
 
-  # Auto-default first view to active if none is marked.
+  vws <- lapply(vws, function(v) {
+    if (is_dock_layout(v) || is_dock_grid(v)) v
+    else if (is.list(v)) as_dock_grid(v)
+    else v
+  })
+
   if (!any(vapply(vws, is_active_view, logical(1L)))) {
     vws[[1L]] <- set_active_view(vws[[1L]])
   }
@@ -237,15 +242,11 @@ as_dock_layouts.list <- function(x, ...) {
 # Internal helpers ------------------------------------------------------------
 
 is_active_view <- function(x) {
-  isTRUE(attr(x, "active"))
-}
-
-is_view <- function(x) {
-  is_dock_layout(x) || is_dock_grid(x) || (is.list(x) && !is.object(x))
+  (is_dock_layout(x) || is_dock_grid(x)) && isTRUE(attr(x, "active"))
 }
 
 set_active_view <- function(x, active = TRUE) {
-  stopifnot(is_view(x))
+  stopifnot(is_dock_layout(x) || is_dock_grid(x))
   attr(x, "active") <- if (isTRUE(active)) TRUE else NULL
   x
 }
