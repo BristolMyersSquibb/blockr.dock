@@ -64,6 +64,7 @@ Collate:
     'ext-class.R'
     'ext-edit.R'
     'ext-ui.R'
+    'external.R'
     'layout-class.R'
     'plugin-block.R'
     'plugin-serdes.R'

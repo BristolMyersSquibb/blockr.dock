@@ -45,6 +45,10 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   remove_view_observer(vs, session, dock_mgr)
   rename_view_observer(vs, session, dock_mgr)
 
+  # Expose dock state to external callers in the same Shiny session
+  # (e.g. blockr.mcp's MCP tool bodies).
+  stash_dock_handle(session, vs, dock_mgr)
+
   # Extensions receive active_dock — a reactiveValues that always mirrors
   # whichever view is currently active (swapped by update_active_dock).
   dock <- dock_mgr$active_dock
@@ -186,30 +190,7 @@ switch_view_observer <- function(vs, session, dock_mgr) {
 
   observeEvent(
     input$view_nav,
-    {
-      new_v <- input$view_nav
-      state <- vs$state
-      old_v <- active_view(state)
-
-      session$sendCustomMessage(
-        "switch-view",
-        list(
-          id = session$ns(
-            paste0("view_wrap_", dock_mgr$docks[[new_v]]$dock_id)
-          )
-        )
-      )
-
-      if (!identical(old_v, new_v)) {
-        hide_view_ui(old_v, dock_mgr$docks)
-        show_view_ui(new_v, dock_mgr$docks)
-
-        active_view(state) <- new_v
-        vs$state <- state
-        update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_v]])
-        dock_mgr$current_active(new_v)
-      }
-    },
+    do_switch_view(input$view_nav, vs, session, dock_mgr),
     ignoreInit = TRUE
   )
 }
