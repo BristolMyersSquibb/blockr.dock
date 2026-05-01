@@ -46,7 +46,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   rename_view_observer(vs, session, dock_mgr)
 
   # Expose dock state to external callers in the same Shiny session
-  # (e.g. blockr.mcp's MCP tool bodies).
+  # (e.g. blockr.mcp's MCP tool bodies, blockr.assistant's chat tools).
   stash_dock_handle(session, vs, dock_mgr, board, update, triggers)
   run_session_start_hooks(board, update, session)
 

@@ -8,6 +8,64 @@
 # All hooks read state stashed on `session$userData$blockr_dock_handle`,
 # which `board_server_callback()` populates on session start.
 
+# Session-start hook registry. External packages (e.g. blockr.mcp)
+# register a function with `dock_on_session_start()`; dock invokes
+# every registered function from `board_server_callback()` once a
+# Shiny session opens. Supported extension point for packages that
+# need to know when a dock session is live and want access to the
+# live board / board_update reactives — without going through the
+# `callbacks` arg of `serve()` (which dock's app-server consumes for
+# its own bookkeeping).
+.dock_session_hooks <- new.env(parent = emptyenv())
+.dock_session_hooks$cbs <- list()
+
+#' Register a callback that runs when a dock Shiny session starts
+#'
+#' Receives the same arguments dock's own session callback receives:
+#' the read-only board reactive, the `board_update` reactiveVal, and
+#' the Shiny session. Use this to capture the live session in your
+#' own package state.
+#'
+#' Multiple hooks can register under different names; calling with the
+#' same name replaces the existing one.
+#'
+#' @param name A stable identifier for the hook (used for replacement).
+#' @param fn A function `function(board, update, session)`.
+#' @return Invisibly, NULL.
+#' @export
+dock_on_session_start <- function(name, fn) {
+  stopifnot(
+    is.character(name), length(name) == 1L, nzchar(name),
+    is.function(fn)
+  )
+  .dock_session_hooks$cbs[[name]] <- fn
+  invisible()
+}
+
+# Run all registered session-start hooks. Called from
+# `board_server_callback()`. Errors in individual hooks are caught
+# and surfaced as warnings so one bad hook can't take down the dock.
+run_session_start_hooks <- function(board, update, session) {
+  msg <- sprintf(
+    "[blockr.dock build:2026-04-30-debug-4] run_session_start_hooks in PID %d, %d hook(s) registered: [%s]\n",
+    Sys.getpid(),
+    length(.dock_session_hooks$cbs),
+    paste(names(.dock_session_hooks$cbs), collapse = ", ")
+  )
+  cat(msg, file = stderr())
+  cat(msg, file = stdout())
+  cat(msg, file = "/tmp/blockr-mcp-debug.log", append = TRUE)
+  for (nm in names(.dock_session_hooks$cbs)) {
+    tryCatch(
+      .dock_session_hooks$cbs[[nm]](board, update, session),
+      error = function(e) {
+        warning("dock session-start hook '", nm, "' failed: ",
+                conditionMessage(e), call. = FALSE)
+      }
+    )
+  }
+}
+
 #' Stash the dock state handle on the Shiny session
 #'
 #' Called from `board_server_callback()`. Makes view-switching and
