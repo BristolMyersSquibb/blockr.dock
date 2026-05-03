@@ -473,7 +473,12 @@ manage_dock <- function(
 
           old_title <- get_dock_panel(blk_panel_id, dock)$title
 
-          if (new_name == old_title) {
+          # Skip when there's no panel for this block (e.g. card still in
+          # the offcanvas) or when the name didn't actually change. Without
+          # the length guard, comparing against a NULL/empty old_title
+          # produces logical(0) and crashes the `if`.
+          if (length(old_title) == 0L || length(new_name) == 0L ||
+              identical(new_name, old_title)) {
             next
           }
 
