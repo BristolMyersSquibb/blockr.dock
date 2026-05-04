@@ -17,7 +17,8 @@ add_block_action <- function(trigger, board, update, ...) {
               mode = "add"
             )
           )
-        }
+        },
+        label = "add_block"
       )
 
       observeEvent(
@@ -37,7 +38,8 @@ add_block_action <- function(trigger, board, update, ...) {
           )
 
           blk(new_blk)
-        }
+        },
+        label = "add_block_select"
       )
 
       observeEvent(
@@ -74,7 +76,8 @@ add_block_action <- function(trigger, board, update, ...) {
 
           update(list(blocks = list(add = bk)))
           removeModal()
-        }
+        },
+        label = "add_block_confirm"
       )
 
       NULL
@@ -100,7 +103,8 @@ append_block_action <- function(trigger, board, update, ...) {
               mode = "append"
             )
           )
-        }
+        },
+        label = "append_block"
       )
 
       observeEvent(
@@ -135,7 +139,8 @@ append_block_action <- function(trigger, board, update, ...) {
           )
 
           blk(new_blk)
-        }
+        },
+        label = "append_block_select"
       )
 
       observeEvent(
@@ -195,7 +200,8 @@ append_block_action <- function(trigger, board, update, ...) {
           )
 
           removeModal()
-        }
+        },
+        label = "append_block_confirm"
       )
 
       NULL
@@ -221,7 +227,8 @@ prepend_block_action <- function(trigger, board, update, ...) {
               mode = "prepend"
             )
           )
-        }
+        },
+        label = "prepend_block"
       )
 
       observeEvent(
@@ -241,7 +248,8 @@ prepend_block_action <- function(trigger, board, update, ...) {
           )
 
           blk(new_blk)
-        }
+        },
+        label = "prepend_block_select"
       )
 
       observeEvent(
@@ -311,7 +319,8 @@ prepend_block_action <- function(trigger, board, update, ...) {
           )
 
           removeModal()
-        }
+        },
+        label = "prepend_block_confirm"
       )
 
       NULL
@@ -325,7 +334,8 @@ remove_block_action <- function(trigger, board, update, ...) {
     function(input, output, session) {
       observeEvent(
         trigger(),
-        update(list(blocks = list(rm = trigger())))
+        update(list(blocks = list(rm = trigger()))),
+        label = "remove_block"
       )
       NULL
     },

@@ -7,7 +7,8 @@ add_stack_action <- function(trigger, board, update, ...) {
         trigger(),
         showModal(
           stack_modal(ns = session$ns, board = board$board, mode = "create")
-        )
+        ),
+        label = "add_stack"
       )
 
       observeEvent(
@@ -75,7 +76,8 @@ add_stack_action <- function(trigger, board, update, ...) {
           update(list(stacks = list(add = new_stk)))
 
           removeModal()
-        }
+        },
+        label = "add_stack_confirm"
       )
 
       NULL
@@ -105,7 +107,8 @@ edit_stack_action <- function(trigger, board, update, ...) {
               stack_id = trigger()
             )
           )
-        }
+        },
+        label = "edit_stack"
       )
 
       observeEvent(
@@ -170,7 +173,8 @@ edit_stack_action <- function(trigger, board, update, ...) {
           update(list(stacks = list(mod = stack)))
 
           removeModal()
-        }
+        },
+        label = "edit_stack_confirm"
       )
 
       NULL
@@ -184,7 +188,8 @@ remove_stack_action <- function(trigger, board, update, ...) {
     function(input, output, session) {
       observeEvent(
         trigger(),
-        update(list(stacks = list(rm = trigger())))
+        update(list(stacks = list(rm = trigger()))),
+        label = "remove_stack"
       )
       NULL
     },

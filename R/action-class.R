@@ -150,7 +150,10 @@ register_action <- function(id, action, ..., session = get_session()) {
 }
 
 new_trigger <- function(value = NULL) {
-  rv <- reactiveVal(list(value = value, counter = 0L))
+  rv <- reactiveVal(
+    list(value = value, counter = 0L),
+    label = "action_trigger"
+  )
 
   structure(
     function(new) {
