@@ -50,6 +50,63 @@ test_that("edit block server", {
   )
 })
 
+test_that("block_card_toggles renders standalone sparkle when locked and Controls visible", {
+
+  withr::local_options(blockr.dock_is_locked = TRUE)
+
+  ctrl_meta <- list(
+    label   = "",
+    icon    = htmltools::HTML("<svg/>"),
+    class   = "blockr-sparkle-btn",
+    tooltip = "AI Assistant"
+  )
+
+  ui <- block_card_toggles(
+    new_dataset_block(),
+    shiny::NS("test"),
+    ctrl_meta
+  )
+
+  rendered <- as.character(htmltools::renderTags(ui)$html)
+
+  expect_match(rendered, 'id="test-toggle_ctrl_locked"', fixed = TRUE)
+  expect_match(rendered, "blockr-header-icon", fixed = TRUE)
+  expect_match(rendered, "blockr-sparkle-btn", fixed = TRUE)
+  expect_no_match(rendered, "collapse_blk_sections")
+})
+
+test_that("block_card_toggles hides sparkle when locked and Controls hidden", {
+
+  withr::local_options(blockr.dock_is_locked = TRUE)
+
+  ctrl_meta <- list(
+    label   = "",
+    icon    = htmltools::HTML("<svg/>"),
+    class   = "blockr-sparkle-btn",
+    tooltip = "AI Assistant"
+  )
+
+  blk <- new_dataset_block()
+  attr(blk, "visible") <- c("outputs")
+
+  ui <- block_card_toggles(blk, shiny::NS("test"), ctrl_meta)
+
+  expect_null(ui)
+})
+
+test_that("block_card_toggles returns NULL when locked without ctrl_meta", {
+
+  withr::local_options(blockr.dock_is_locked = TRUE)
+
+  ui <- block_card_toggles(
+    new_dataset_block(),
+    shiny::NS("test"),
+    ctrl_meta = NULL
+  )
+
+  expect_null(ui)
+})
+
 test_that("condition ui test", {
 
   insert_count <- 0L

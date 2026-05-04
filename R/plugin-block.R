@@ -140,7 +140,7 @@ block_card_title <- function(block, id, info) {
 block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
 
   if (is_dock_locked()) {
-    return(NULL)
+    return(locked_ctrl_button(blk, ns, ctrl_meta))
   }
 
   vals <- c("inputs", "outputs")
@@ -188,6 +188,27 @@ block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
       ns("collapse_blk_sections"),
       jsonlite::toJSON(tooltip_titles)
     )))
+  )
+}
+
+locked_ctrl_button <- function(blk, ns, ctrl_meta) {
+
+  if (is.null(ctrl_meta)) {
+    return(NULL)
+  }
+
+  visible <- coal(attr(blk, "visible"), c("inputs", "outputs"))
+
+  if (!"inputs" %in% visible) {
+    return(NULL)
+  }
+
+  tags$button(
+    id = ns("toggle_ctrl_locked"),
+    type = "button",
+    class = "action-button btn btn-light blockr-header-icon",
+    title = coal(ctrl_meta$tooltip, ctrl_meta$label, "AI Assistant"),
+    ctrl_button_label(ctrl_meta)
   )
 }
 
@@ -519,6 +540,21 @@ edit_block_server <- function(callbacks = list()) {
             input$collapse_blk_sections,
             session
           )
+        )
+
+        ctrl_locked_open <- reactiveVal(FALSE)
+
+        observeEvent(
+          input$toggle_ctrl_locked,
+          {
+            ctrl_locked_open(!ctrl_locked_open())
+            if (ctrl_locked_open()) {
+              accordion_panel_open("blk_accordion", "ctrl", session = session)
+            } else {
+              accordion_panel_close("blk_accordion", "ctrl", session = session)
+            }
+          },
+          ignoreInit = TRUE
         )
 
         conds <- reactive(
