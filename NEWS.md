@@ -1,3 +1,7 @@
+# blockr.dock (development version)
+
+* Fix #119: when the dock is locked, the AI assistant sparkle button stays in the block header alongside the Controls panel — the inputs/outputs section toggles remain hidden as before.
+
 # blockr.dock 0.1.1
 
 * Added prepend block action.
