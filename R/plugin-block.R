@@ -474,7 +474,8 @@ edit_block_server <- function(callbacks = list()) {
                 )
               )
             )
-          }
+          },
+          label = otel_lbl("block_rename")
         )
 
         observeEvent(
@@ -502,7 +503,8 @@ edit_block_server <- function(callbacks = list()) {
               "Block name",
               new
             )
-          }
+          },
+          label = otel_lbl("block_name_sync")
         )
 
         output$block_name_out <- renderUI(
@@ -518,7 +520,8 @@ edit_block_server <- function(callbacks = list()) {
             "blk_accordion",
             input$collapse_blk_sections,
             session
-          )
+          ),
+          label = otel_lbl("block_section_collapse")
         )
 
         conds <- reactive(
@@ -529,19 +532,22 @@ edit_block_server <- function(callbacks = list()) {
               function(cnd, cnds) coal(unlst(lst_xtr(cnds, cnd)), list()),
               reactiveValuesToList(board$blocks[[block_id]]$server$cond)
             )
-          }
+          },
+          label = otel_lbl("block_conds")
         )
 
         update_blk_cond_observer(conds, session)
 
         observeEvent(
           input$append_block,
-          actions[["append_block_action"]](block_id)
+          actions[["append_block_action"]](block_id),
+          label = otel_lbl("block_card_append")
         )
 
         observeEvent(
           input$delete_block,
-          actions[["remove_block_action"]](block_id)
+          actions[["remove_block_action"]](block_id),
+          label = otel_lbl("block_card_delete")
         )
 
         if (length(callbacks)) {
@@ -567,7 +573,10 @@ edit_block_server <- function(callbacks = list()) {
         }
 
         list(
-          visible = reactive(input$collapse_blk_sections)
+          visible = reactive(
+            input$collapse_blk_sections,
+            label = otel_lbl("block_visible")
+          )
         )
       }
     )
@@ -653,7 +662,8 @@ update_blk_cond_observer <- function(conds, session = get_session()) {
           ui = msgs
         )
       }
-    }
+    },
+    label = otel_lbl("block_cond_render")
   )
 }
 
