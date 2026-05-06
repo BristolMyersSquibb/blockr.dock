@@ -6,7 +6,7 @@ add_link_action <- function(trigger, board, update, ...) {
       observeEvent(
         trigger(),
         showModal(link_modal(session$ns, board$board, trigger())),
-        label = "add_link"
+        label = otel_lbl("add_link")
       )
 
       observeEvent(
@@ -31,7 +31,7 @@ add_link_action <- function(trigger, board, update, ...) {
             return()
           }
         },
-        label = "add_link_select"
+        label = otel_lbl("add_link_select")
       )
 
       observeEvent(
@@ -86,7 +86,7 @@ add_link_action <- function(trigger, board, update, ...) {
 
           removeModal()
         },
-        label = "add_link_confirm"
+        label = otel_lbl("add_link_confirm")
       )
 
       NULL
@@ -101,7 +101,7 @@ remove_link_action <- function(trigger, board, update, ...) {
       observeEvent(
         trigger(),
         update(list(links = list(rm = trigger()))),
-        label = "remove_link"
+        label = otel_lbl("remove_link")
       )
       NULL
     },

@@ -132,7 +132,7 @@ blk_ext_srv <- function(id, board, update, ...) {
         {
           upd$curr <- board_links(board$board)
         },
-        label = "edit_ext_links_sync"
+        label = otel_lbl("edit_ext_links_sync")
       )
 
       output$links_dt <- DT::renderDataTable(
@@ -181,7 +181,7 @@ add_block_observer <- function(input, board, update, session) {
         list(blocks = list(add = add))
       )
     },
-    label = "edit_ext_add_block"
+    label = otel_lbl("edit_ext_add_block")
   )
 }
 
@@ -219,7 +219,7 @@ remove_block_observer <- function(input, board, update, session) {
         list(blocks = list(rm = sel))
       )
     },
-    label = "edit_ext_remove_block"
+    label = otel_lbl("edit_ext_remove_block")
   )
 }
 
@@ -231,7 +231,7 @@ update_block_select_observer <- function(board, session) {
       "block_select",
       choices = board_block_ids(board$board)
     ),
-    label = "edit_ext_update_block_select"
+    label = otel_lbl("edit_ext_update_block_select")
   )
 }
 
@@ -489,7 +489,7 @@ create_dt_link_obs <- function(ids, upd, ...) {
         upd$edit <- list(row = row, col = col, val = new)
       },
       ignoreInit = TRUE,
-      label = "edit_ext_link_cell"
+      label = otel_lbl("edit_ext_link_cell")
     )
 
     res <- list(obs1)
@@ -523,7 +523,7 @@ create_dt_link_obs <- function(ids, upd, ...) {
             selected = from_selected(upd)
           )
         },
-        label = "edit_ext_link_block_sync"
+        label = otel_lbl("edit_ext_link_block_sync")
       )
 
       res <- c(res, list(obs2))
@@ -578,7 +578,7 @@ create_link_obs_observer <- function(input, rv, upd, session, proxy) {
                                 rv, session)
       upd <- destroy_dt_link_obs(setdiff(names(upd$obs), ids), upd)
     },
-    label = "edit_ext_create_link_obs"
+    label = otel_lbl("edit_ext_create_link_obs")
   )
 }
 
@@ -607,7 +607,7 @@ edit_link_observer <- function(upd, rv) {
         upd$add <- c(upd$add, new)
       }
     },
-    label = "edit_ext_edit_link"
+    label = otel_lbl("edit_ext_edit_link")
   )
 }
 
@@ -658,7 +658,7 @@ add_link_observer <- function(input, rv, upd, sess) {
         )
       }
     },
-    label = "edit_ext_add_link"
+    label = otel_lbl("edit_ext_add_link")
   )
 }
 
@@ -685,7 +685,7 @@ rm_link_observer <- function(input, rv, upd, sess) {
         notify("No row selected", type = "warning", session = sess)
       }
     },
-    label = "edit_ext_rm_link"
+    label = otel_lbl("edit_ext_rm_link")
   )
 }
 
@@ -738,6 +738,6 @@ modify_link_observer <- function(input, rv, upd, session, proxy, res) {
         rownames = FALSE
       )
     },
-    label = "edit_ext_modify_links"
+    label = otel_lbl("edit_ext_modify_links")
   )
 }

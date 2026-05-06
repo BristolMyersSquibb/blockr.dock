@@ -8,7 +8,7 @@ add_stack_action <- function(trigger, board, update, ...) {
         showModal(
           stack_modal(ns = session$ns, board = board$board, mode = "create")
         ),
-        label = "add_stack"
+        label = otel_lbl("add_stack")
       )
 
       observeEvent(
@@ -77,7 +77,7 @@ add_stack_action <- function(trigger, board, update, ...) {
 
           removeModal()
         },
-        label = "add_stack_confirm"
+        label = otel_lbl("add_stack_confirm")
       )
 
       NULL
@@ -108,7 +108,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
             )
           )
         },
-        label = "edit_stack"
+        label = otel_lbl("edit_stack")
       )
 
       observeEvent(
@@ -174,7 +174,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
 
           removeModal()
         },
-        label = "edit_stack_confirm"
+        label = otel_lbl("edit_stack_confirm")
       )
 
       NULL
@@ -189,7 +189,7 @@ remove_stack_action <- function(trigger, board, update, ...) {
       observeEvent(
         trigger(),
         update(list(stacks = list(rm = trigger()))),
-        label = "remove_stack"
+        label = otel_lbl("remove_stack")
       )
       NULL
     },

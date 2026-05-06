@@ -117,7 +117,7 @@ new_dock_manager <- function() {
 init_view_docks <- function(views, board, update, triggers, session, dock_mgr) {
   ns <- session$ns
   active_v <- active_view(views)
-  current_active <- reactiveVal(active_v, label = "current_active_view")
+  current_active <- reactiveVal(active_v, label = otel_lbl("current_active_view"))
 
   for (view_name in names(views)) {
     v_ly <- views[[view_name]]
@@ -153,7 +153,7 @@ init_view_docks <- function(views, board, update, triggers, session, dock_mgr) {
       layout = v_ly,
       is_active = reactive(
         identical(current_active(), local_name),
-        label = "dock_is_active"
+        label = otel_lbl("dock_is_active")
       )
     )
     dock_res$dock_id <- v_did
@@ -214,7 +214,7 @@ switch_view_observer <- function(vs, session, dock_mgr) {
       }
     },
     ignoreInit = TRUE,
-    label = "switch_view"
+    label = otel_lbl("switch_view")
   )
 }
 
@@ -241,7 +241,7 @@ live_view_data <- function(vs, dock_mgr) {
       active_view(res) <- active_view(state)
       res
     },
-    label = "live_view_data"
+    label = otel_lbl("live_view_data")
   )
 }
 
@@ -316,7 +316,7 @@ manage_dock <- function(
   update,
   actions,
   layout = NULL,
-  is_active = reactive(TRUE, label = "dock_is_active_default")
+  is_active = reactive(TRUE, label = otel_lbl("dock_is_active_default"))
 ) {
   # Resolve layout: use provided layout or fall back to board's dock_layout
   init_layout <- layout %||% isolate(dock_layout(board$board))
@@ -336,7 +336,7 @@ manage_dock <- function(
           ag <- input[[dock_input("active-group")]]
           log_debug("active group is now {ag}")
         },
-        label = "dock_active_group_log"
+        label = otel_lbl("dock_active_group_log")
       )
     }
 
@@ -359,18 +359,18 @@ manage_dock <- function(
         }
       },
       once = TRUE,
-      label = "dock_initialize"
+      label = otel_lbl("dock_initialize")
     )
 
     n_panels <- reactiveVal(
       length(determine_active_views(init_layout)),
-      label = "dock_n_panels"
+      label = otel_lbl("dock_n_panels")
     )
 
     observeEvent(
       req(input[[dock_input("n-panels")]]),
       n_panels(input[[dock_input("n-panels")]]),
-      label = "dock_n_panels_sync"
+      label = otel_lbl("dock_n_panels_sync")
     )
 
     observeEvent(
@@ -393,13 +393,13 @@ manage_dock <- function(
           )
         }
       },
-      label = "dock_panel_remove"
+      label = otel_lbl("dock_panel_remove")
     )
 
     observeEvent(
       input[[dock_input("panel-to-add")]],
       suggest_panels_to_add(dock, board, session = session),
-      label = "dock_panel_add_suggest"
+      label = otel_lbl("dock_panel_add_suggest")
     )
 
     # Empty-dock prompt — rendered for all empty docks, visibility
@@ -411,7 +411,7 @@ manage_dock <- function(
     observeEvent(
       input$empty_dock_add,
       suggest_panels_to_add(dock, board, panels = list(), session = session),
-      label = "dock_empty_add"
+      label = otel_lbl("dock_empty_add")
     )
 
     observeEvent(
@@ -457,11 +457,11 @@ manage_dock <- function(
 
         removeModal()
       },
-      label = "dock_panel_add_confirm"
+      label = otel_lbl("dock_panel_add_confirm")
     )
 
-    prev_active_group <- reactiveVal(label = "dock_prev_active_group")
-    active_group_trail <- reactiveVal(label = "dock_active_group_trail")
+    prev_active_group <- reactiveVal(label = otel_lbl("dock_prev_active_group"))
+    active_group_trail <- reactiveVal(label = otel_lbl("dock_active_group_trail"))
 
     observeEvent(
       input[[dock_input("active-group")]],
@@ -474,7 +474,7 @@ manage_dock <- function(
         }
         active_group_trail(cur_ag)
       },
-      label = "dock_active_group_track"
+      label = otel_lbl("dock_active_group_track")
     )
 
     observeEvent(
@@ -502,11 +502,11 @@ manage_dock <- function(
           )
         }
       },
-      label = "dock_panel_title_sync"
+      label = otel_lbl("dock_panel_title_sync")
     )
 
     list(
-      layout = reactive(dockViewR::get_dock(dock), label = "dock_layout"),
+      layout = reactive(dockViewR::get_dock(dock), label = otel_lbl("dock_layout")),
       proxy = dock,
       prev_active_group = prev_active_group,
       n_panels = n_panels,
@@ -602,7 +602,7 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
         )
       )
     )
-  }, label = "view_add")
+  }, label = otel_lbl("view_add"))
 
   # Name validation feedback
   output$view_name_validation <- renderUI({
@@ -676,7 +676,7 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
         id = ns(paste0("view_wrap_", v_id))
       )
     )
-  }, label = "view_add_confirm")
+  }, label = otel_lbl("view_add_confirm"))
 }
 
 #' Observe view removal requests.
@@ -731,7 +731,7 @@ remove_view_observer <- function(vs, session, dock_mgr) {
         )
       )
     )
-  }, label = "view_remove")
+  }, label = otel_lbl("view_remove"))
 
   # Perform removal after confirmation
   observeEvent(input$confirm_view_remove, {
@@ -793,7 +793,7 @@ remove_view_observer <- function(vs, session, dock_mgr) {
         value = active_name
       )
     )
-  }, label = "view_remove_confirm")
+  }, label = otel_lbl("view_remove_confirm"))
 }
 
 #' Observe view rename requests.
@@ -836,7 +836,7 @@ rename_view_observer <- function(vs, session, dock_mgr) {
       dock_mgr$docks[[rename$to]] <- dock_mgr$docks[[rename$from]]
       rm(list = rename$from, envir = dock_mgr$docks)
     }
-  }, label = "view_rename")
+  }, label = otel_lbl("view_rename"))
 }
 
 #' Show a modal for adding panels to the dock.
