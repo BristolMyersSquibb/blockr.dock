@@ -1,11 +1,21 @@
-add_link_action <- function(trigger, board, update, ...) {
+add_link_action <- function(trigger, board, update, ...,
+                            sidebar_id = "main_sidebar") {
 
   new_action(
     function(input, output, session) {
 
       observeEvent(
         trigger(),
-        showModal(link_modal(session$ns, board$board, trigger()))
+        {
+          body <- link_sidebar_body(session$ns, board$board, trigger())
+          if (is.null(body)) return()
+
+          blockr.ui::show_sidebar(
+            sidebar_id,
+            title = "Create new link",
+            ui = body
+          )
+        }
       )
 
       observeEvent(
@@ -82,7 +92,11 @@ add_link_action <- function(trigger, board, update, ...) {
             list(links = list(add = new_lnk))
           )
 
-          removeModal()
+          blockr.ui::keep_or_hide_sidebar(
+            sidebar_id,
+            title = "Create new link",
+            ui = link_sidebar_body(session$ns, board$board, trigger())
+          )
         }
       )
 

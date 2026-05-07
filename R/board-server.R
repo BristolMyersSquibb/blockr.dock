@@ -44,6 +44,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   add_view_observer(vs, session, dock_mgr, board, update, triggers)
   remove_view_observer(vs, session, dock_mgr)
   rename_view_observer(vs, session, dock_mgr)
+  settings_observer(session, board)
 
   # Extensions receive active_dock — a reactiveValues that always mirrors
   # whichever view is currently active (swapped by update_active_dock).
@@ -168,6 +169,33 @@ init_view_docks <- function(views, board, update, triggers, session, dock_mgr) {
   )
   active_view(bare) <- active_v
   reactiveValues(state = bare)
+}
+
+#' Observe navbar settings-gear clicks.
+#'
+#' Replaces the previous Bootstrap settings offcanvas: when the gear
+#' fires, render the same options accordion (`settings_body()`) into
+#' the shared sidebar via `blockr.ui::show_sidebar()`.
+#'
+#' @param session Shiny session (the board's session).
+#' @param board Reactive board state.
+#' @noRd
+settings_observer <- function(session, board) {
+  input <- session$input
+  # Strip the trailing "-" so settings_body() can use NS(id, ...) on the
+  # un-namespaced board module id, exactly as `options_ui()` did before.
+  id <- sub("-$", "", session$ns(""))
+
+  observeEvent(
+    input$settings_btn,
+    {
+      blockr.ui::show_sidebar(
+        "main_sidebar",
+        title = "Board options",
+        ui = settings_body(id, board$board)
+      )
+    }
+  )
 }
 
 #' Observe view tab switches.

@@ -22,6 +22,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
     blockr.core (>= 0.1.2),
+    blockr.ui,
     bsicons,
     shiny,
     shinyjs,
@@ -32,6 +33,8 @@ Imports:
     cli,
     shinyWidgets,
     jsonlite
+Remotes:
+    BristolMyersSquibb/blockr.ui@phase1-sidebar-primitive
 Suggests:
     testthat (>= 3.0.0),
     DT,
@@ -46,7 +49,7 @@ Collate:
     'action-class.R'
     'action-block.R'
     'action-link.R'
-    'action-modal.R'
+    'action-sidebar.R'
     'action-stack.R'
     'action-ui.R'
     'action-utils.R'

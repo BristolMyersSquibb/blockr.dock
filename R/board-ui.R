@@ -2,13 +2,8 @@
 board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
                                 options = board_options(x), ...) {
 
-  opt_ui_or_null <- function(plg, plgs, x) {
-    if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
-  }
-
   stopifnot(is_string(id))
 
-  offcanvas_id <- NS(id, "options_offcanvas")
   views <- board_views(x)
 
   # View nav in the navbar -- always present, since boards always carry a
@@ -34,25 +29,18 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       class = "blockr-navbar",
       div(
         class = "blockr-navbar-left",
-        opt_ui_or_null("preserve_board", plugins, x)
+        if ("preserve_board" %in% names(plugins)) {
+          board_ui(id, plugins[["preserve_board"]], x)
+        }
       ),
       div(
         class = "blockr-navbar-right",
         v_nav,
-        tags$button(
-          class = "blockr-navbar-icon-btn",
-          `data-bs-toggle` = "offcanvas",
-          `data-bs-target` = paste0("#", offcanvas_id),
-          bsicons::bs_icon("gear")
+        actionButton(
+          inputId = NS(id, "settings_btn"),
+          label = bsicons::bs_icon("gear"),
+          class = "blockr-navbar-icon-btn"
         )
-      )
-    ),
-    options_ui(
-      id,
-      options,
-      div(
-        id = "generate_code",
-        opt_ui_or_null("generate_code", plugins, x)
       )
     ),
     dock_outputs,
@@ -66,7 +54,11 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
         id = id,
         board = x
       )
-    )
+    ),
+    # Sidebar mount: fixed top-level DOM id so any deeply-nested action
+    # handler can target it via `blockr.ui::show_sidebar("main_sidebar", ...)`
+    # through `rootScope` walking. Single sidebar per app at v0.
+    blockr.ui::sidebar_ui("main_sidebar")
   )
 }
 
@@ -82,17 +74,39 @@ dock_outputs_ui <- function(id, views) {
   )
 }
 
-options_ui <- function(id, x, ...) {
+#' Build the body of the board-options sidebar.
+#'
+#' Returns a tagList containing the same options accordion that the
+#' Bootstrap offcanvas used to render. Called at server time from
+#' `board_server_callback()` when the user clicks the navbar gear, and
+#' passed to `blockr.ui::show_sidebar()`.
+#'
+#' Uses `blockr.core::blockr_app_options(x)` (rather than `board_options(x)`)
+#' so the accordion includes options contributed by blocks on the board and
+#' by registered block constructors — same set `serve()` passes to the
+#' top-level `board_ui()` call.
+#'
+#' @param id Board module id.
+#' @param x Current board (`board$board`).
+#' @param plugins Board plugins.
+#' @param options Augmented board options (board + block contributions).
+#' @noRd
+settings_body <- function(id, x, plugins = board_plugins(x),
+                          options = blockr.core::blockr_app_options(x)) {
 
-  stopifnot(is_board_options(x))
+  opt_ui_or_null <- function(plg, plgs, x) {
+    if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
+  }
 
-  opts <- split(x, chr_ply(x, attr, "category"))
+  stopifnot(is_board_options(options))
 
-  off_canvas(
-    id = NS(id, "options_offcanvas"),
-    position = "end",
-    title = "Board options",
-    ...,
+  opts <- split(options, chr_ply(options, attr, "category"))
+
+  tagList(
+    div(
+      id = "generate_code",
+      opt_ui_or_null("generate_code", plugins, x)
+    ),
     hr(),
     do.call(
       accordion,
