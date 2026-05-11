@@ -39,6 +39,19 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       div(
         class = "blockr-navbar-right",
         v_nav,
+        if (is_dock_locked()) {
+          tags$span(
+            class = "blockr-lock-indicator",
+            title = "Editing is disabled by this deployment.",
+            `aria-label` = "Read-only mode",
+            role = "status",
+            bsicons::bs_icon("lock-fill"),
+            tags$span(
+              class = "blockr-lock-indicator-label",
+              "Read-only"
+            )
+          )
+        },
         tags$button(
           class = "blockr-navbar-icon-btn",
           `data-bs-toggle` = "offcanvas",

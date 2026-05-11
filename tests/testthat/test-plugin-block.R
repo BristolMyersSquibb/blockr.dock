@@ -96,7 +96,7 @@ test_that("condition ui test", {
   )
 })
 
-test_that("locked dock renders block_card_toggles hidden so saved visibility round-trips (#122)", {
+test_that("locked dock keeps block_card_toggles hidden (#122)", {
 
   blk <- new_dataset_block()
   attr(blk, "visible") <- "outputs"

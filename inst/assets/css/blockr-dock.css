@@ -765,6 +765,29 @@ label:has(input[type="file"]) {
   color: var(--blockr-color-text-secondary);
 }
 
+/* Read-only / locked-mode indicator. Styled as a static status pill,
+   not a button -- no hover state, no pointer cursor. Sits between the
+   view nav and the settings gear in the navbar right slot. */
+.blockr-lock-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--blockr-color-text-secondary);
+  background-color: var(--blockr-color-bg-subtle);
+  border: 1px solid var(--blockr-color-border);
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
+  cursor: default;
+  user-select: none;
+}
+
+.blockr-lock-indicator-label {
+  white-space: nowrap;
+}
+
 /* ============================================
    View Navigation
    ============================================ */
