@@ -1,7 +1,11 @@
 #' @export
-board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
-                                options = board_options(x), ...) {
-
+board_ui.dock_board <- function(
+  id,
+  x,
+  plugins = board_plugins(x),
+  options = board_options(x),
+  ...
+) {
   stopifnot(is_string(id))
 
   views <- board_views(x)
@@ -21,7 +25,9 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
       block_ui(
-        id, x, plugins[["edit_block"]],
+        id,
+        x,
+        plugins[["edit_block"]],
         ctrl_ui = if ("ctrl_block" %in% names(plugins)) plugins[["ctrl_block"]]
       )
     ),
@@ -58,7 +64,7 @@ board_ui.dock_board <- function(id, x, plugins = board_plugins(x),
     # Sidebar mount: fixed top-level DOM id so any deeply-nested action
     # handler can target it via `blockr.ui::show_sidebar("main_sidebar", ...)`
     # through `rootScope` walking. Single sidebar per app at v0.
-    blockr.ui::sidebar_ui("main_sidebar")
+    blockr.ui::sidebar_ui("main_sidebar", mode = "push")
   )
 }
 
@@ -91,9 +97,12 @@ dock_outputs_ui <- function(id, views) {
 #' @param plugins Board plugins.
 #' @param options Augmented board options (board + block contributions).
 #' @noRd
-settings_body <- function(id, x, plugins = board_plugins(x),
-                          options = blockr.core::blockr_app_options(x)) {
-
+settings_body <- function(
+  id,
+  x,
+  plugins = board_plugins(x),
+  options = blockr.core::blockr_app_options(x)
+) {
   opt_ui_or_null <- function(plg, plgs, x) {
     if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
   }
