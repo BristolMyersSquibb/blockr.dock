@@ -139,10 +139,6 @@ block_card_title <- function(block, id, info) {
 
 block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
 
-  if (is_dock_locked()) {
-    return(NULL)
-  }
-
   vals <- c("inputs", "outputs")
   icon_labels <- list(
     as.character(icon("sliders")),
@@ -176,6 +172,15 @@ block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
     "blockr-section-toggle",
     trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
   )
+
+  # Locked dock: render the widget hidden so `input$collapse_blk_sections`
+  # still seeds the accordion via the observer below and honors any saved
+  # `attr(blk, "visible")` on restore (#122). Hidden (not removed) means
+  # the user can neither see nor toggle it. The tooltip wiring is skipped
+  # because nothing is hoverable.
+  if (is_dock_locked()) {
+    return(div(style = "display: none;", section_toggles))
+  }
 
   tagList(
     section_toggles,
