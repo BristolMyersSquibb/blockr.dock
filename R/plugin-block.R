@@ -560,10 +560,15 @@ edit_block_server <- function(callbacks = list()) {
         conds <- reactive(
           {
             req(block_id %in% names(board$blocks))
+            # Under lazy-eval the block server (and its `cond`
+            # reactiveValues) is constructed on first reveal; until then
+            # there are no conditions to surface.
+            srv <- board$blocks[[block_id]][["server"]]
+            req(srv)
             lapply(
               set_names(nm = c("error", "warning", "message")),
               function(cnd, cnds) coal(unlst(lst_xtr(cnds, cnd)), list()),
-              reactiveValuesToList(board$blocks[[block_id]]$server$cond)
+              reactiveValuesToList(srv$cond)
             )
           }
         )
