@@ -3,6 +3,17 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
                                        view_data = NULL, ...,
                                        session = get_session()) {
 
+  # Under lazy-eval a not-yet-revealed block carries a placeholder entry
+  # with `server = NULL` and therefore no runtime state. For such blocks
+  # the per-block payload must be `NULL` so `blockr_ser.block()` falls
+  # back to `initial_block_state()` and serializes the block's
+  # constructor args (matching the static `blockr_ser(board)` path).
+  # Passing an empty `list()` instead makes `blockr_ser.block()` treat
+  # the state as "known empty" and silently drop every constructor arg.
+  has_srv <- vapply(
+    blocks, function(b) !is.null(b[["server"]]), logical(1)
+  )
+
   state <- lapply(
     lst_xtr(blocks, "server", "state"),
     lapply,
@@ -28,7 +39,14 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
       list(
         x,
         board_id = id,
-        blocks = Map(c, state, visible = lapply(visibility, list)),
+        blocks = Map(
+          function(st, vis, keep) {
+            if (keep) c(st, visible = list(vis)) else NULL
+          },
+          state,
+          visibility,
+          has_srv
+        ),
         options = opts,
         layout = layout_data,
         extensions = lapply(
