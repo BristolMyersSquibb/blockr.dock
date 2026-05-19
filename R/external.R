@@ -233,9 +233,21 @@ dock_get_layout <- function(session = shiny::getDefaultReactiveDomain()) {
   if (is.null(h)) return(NULL)
   state <- h$vs$state
   av <- as.character(active_view(state))
-  ly <- shiny::isolate(
-    as_dock_layout(h$dock_mgr$docks[[av]]$layout())
+  raw <- shiny::isolate(
+    tryCatch(h$dock_mgr$docks[[av]]$layout(), error = function(e) NULL)
   )
+  # Right after a programmatic rebuild the view's layout() reactive
+  # is NULL until the browser re-renders. Degrade gracefully instead
+  # of erroring in as_dock_layout(NULL).
+  if (is.null(raw)) {
+    return(list(
+      active_view = av,
+      views       = names(state),
+      panels      = character(0L),
+      layout      = NULL
+    ))
+  }
+  ly <- shiny::isolate(as_dock_layout(raw))
   list(
     active_view = av,
     views       = names(state),
@@ -359,11 +371,27 @@ dock_add_view <- function(name, blocks = NULL, exts = NULL,
   dock_res$dock_id <- v_id
   dock_mgr$docks[[name]] <- dock_res
 
+  old_v <- as.character(active_view(state))
+
   session$sendInputMessage("view_nav", list(add = name))
   session$sendCustomMessage(
     "switch-view",
     list(id = ns(paste0("view_wrap_", v_id)))
   )
+
+  # Switch active view SERVER-SIDE too. The UI add-view observer
+  # relies on a client round-trip (view_nav input -> switch_view
+  # observer) to advance active_view; the external/MCP path has no
+  # round-trip before the next tool call, so without this a following
+  # dock_set_layout() would target the previously-active view.
+  if (!identical(old_v, name)) {
+    hide_view_ui(old_v, dock_mgr$docks)
+    show_view_ui(name, dock_mgr$docks)
+    active_view(state) <- name
+    h$vs$state <- state
+    update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[name]])
+    dock_mgr$current_active(name)
+  }
   })
   invisible(name)
 }
