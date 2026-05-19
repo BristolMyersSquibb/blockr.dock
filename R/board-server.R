@@ -47,7 +47,8 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   # Expose dock state to external callers in the same Shiny session
   # (e.g. blockr.mcp's MCP tool bodies).
-  stash_dock_handle(session, vs, dock_mgr)
+  stash_dock_handle(session, vs, dock_mgr, board, update, triggers)
+  run_session_start_hooks(board, update, session)
 
   # Extensions receive active_dock — a reactiveValues that always mirrors
   # whichever view is currently active (swapped by update_active_dock).
