@@ -437,3 +437,65 @@ dock_remove_view <- function(name,
   )
   invisible(active_name)
 }
+
+#' Rename a view programmatically
+#'
+#' Changes a view's name (the label in the view selector). Mirrors the
+#' dock UI rename. The dock module keeps its `dock_id`, so DOM lookups
+#' are unaffected.
+#'
+#' @param old Current view name.
+#' @param new New view name.
+#' @param session The Shiny session. Defaults to the current one.
+#' @return Invisibly, the new view name.
+#' @export
+dock_rename_view <- function(old, new,
+                             session = shiny::getDefaultReactiveDomain()) {
+  if (is.null(session)) {
+    stop("dock_rename_view() must be called inside a Shiny session.",
+         call. = FALSE)
+  }
+  h <- dock_get_handle(session)
+  if (is.null(h)) {
+    stop("No dock handle on this session — is the dock app running?",
+         call. = FALSE)
+  }
+  vs <- h$vs
+  dock_mgr <- h$dock_mgr
+  state <- vs$state
+
+  if (!old %in% names(state)) {
+    stop(sprintf("View '%s' does not exist. Available: %s",
+                 old, paste(names(state), collapse = ", ")),
+         call. = FALSE)
+  }
+  new <- trimws(new)
+  if (identical(old, new)) {
+    return(invisible(new))
+  }
+  msg <- validate_view_name(new, setdiff(names(state), old))
+  if (!is.null(msg)) stop(msg, call. = FALSE)
+
+  shiny::withReactiveDomain(session, {
+    nms <- names(state)
+    nms[match(old, nms)] <- new
+    names(state) <- nms
+    if (identical(as.character(active_view(state)), old)) {
+      active_view(state) <- new
+    }
+    vs$state <- state
+
+    if (exists(old, envir = dock_mgr$docks, inherits = FALSE)) {
+      dock_mgr$docks[[new]] <- dock_mgr$docks[[old]]
+      rm(list = old, envir = dock_mgr$docks)
+    }
+
+    # Refresh the view selector widget client-side (the observer path
+    # relies on the reactive cycle; the external path is outside it).
+    session$sendInputMessage(
+      "view_nav",
+      list(rename = list(from = old, to = new))
+    )
+  })
+  invisible(new)
+}
