@@ -106,7 +106,7 @@ test_that("locked dock keeps block_card_toggles hidden (#122)", {
     list(blockr.dock_is_locked = NULL),
     block_card_toggles(blk, NS("x"))
   )
-  expect_false(inherits(unlocked, "shiny.tag"))   # tagList
+  expect_s3_class(unlocked, "shiny.tag.list")
   unlocked_html <- as.character(htmltools::tagList(unlocked))
   expect_match(unlocked_html, 'value="outputs".*checked', fixed = FALSE)
   expect_false(grepl("display: none", unlocked_html, fixed = TRUE))
