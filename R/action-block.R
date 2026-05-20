@@ -1,5 +1,4 @@
-add_block_action <- function(trigger, board, update, ...,
-                             sidebar_id = "main_sidebar") {
+add_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       ns <- session$ns
@@ -12,7 +11,7 @@ add_block_action <- function(trigger, board, update, ...,
           blk(NULL)
 
           blockr.ui::show_sidebar(
-            sidebar_id,
+            "main_sidebar",
             title = "Add new block",
             ui = block_sidebar_body(
               ns = ns,
@@ -77,7 +76,7 @@ add_block_action <- function(trigger, board, update, ...,
 
           update(list(blocks = list(add = bk)))
           blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
+            "main_sidebar",
             title = "Add new block",
             ui = block_sidebar_body(ns, board$board, mode = "add")
           )
@@ -90,8 +89,7 @@ add_block_action <- function(trigger, board, update, ...,
   )
 }
 
-append_block_action <- function(trigger, board, update, ...,
-                                sidebar_id = "main_sidebar") {
+append_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       ns <- session$ns
@@ -102,7 +100,7 @@ append_block_action <- function(trigger, board, update, ...,
         {
           blk(NULL)
           blockr.ui::show_sidebar(
-            sidebar_id,
+            "main_sidebar",
             title = "Append new block",
             ui = block_sidebar_body(
               ns = ns,
@@ -205,7 +203,7 @@ append_block_action <- function(trigger, board, update, ...,
           )
 
           blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
+            "main_sidebar",
             title = "Append new block",
             ui = block_sidebar_body(ns, board$board, mode = "append")
           )
@@ -218,8 +216,7 @@ append_block_action <- function(trigger, board, update, ...,
   )
 }
 
-prepend_block_action <- function(trigger, board, update, ...,
-                                 sidebar_id = "main_sidebar") {
+prepend_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       ns <- session$ns
@@ -230,7 +227,7 @@ prepend_block_action <- function(trigger, board, update, ...,
         {
           blk(NULL)
           blockr.ui::show_sidebar(
-            sidebar_id,
+            "main_sidebar",
             title = "Prepend new block",
             ui = block_sidebar_body(
               ns = ns,
@@ -328,7 +325,7 @@ prepend_block_action <- function(trigger, board, update, ...,
           )
 
           blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
+            "main_sidebar",
             title = "Prepend new block",
             ui = block_sidebar_body(ns, board$board, mode = "prepend")
           )

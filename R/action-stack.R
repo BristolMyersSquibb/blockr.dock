@@ -1,5 +1,4 @@
-add_stack_action <- function(trigger, board, update, ...,
-                             sidebar_id = "main_sidebar") {
+add_stack_action <- function(trigger, board, update, ...) {
 
   new_action(
     function(input, output, session) {
@@ -8,7 +7,7 @@ add_stack_action <- function(trigger, board, update, ...,
         trigger(),
         {
           blockr.ui::show_sidebar(
-            sidebar_id,
+            "main_sidebar",
             title = "Create new stack",
             ui = stack_sidebar_body(
               ns = session$ns,
@@ -84,7 +83,7 @@ add_stack_action <- function(trigger, board, update, ...,
           update(list(stacks = list(add = new_stk)))
 
           blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
+            "main_sidebar",
             title = "Create new stack",
             ui = stack_sidebar_body(session$ns, board$board, mode = "create")
           )
@@ -97,8 +96,7 @@ add_stack_action <- function(trigger, board, update, ...,
   )
 }
 
-edit_stack_action <- function(trigger, board, update, ...,
-                              sidebar_id = "main_sidebar") {
+edit_stack_action <- function(trigger, board, update, ...) {
 
   new_action(
     function(input, output, session) {
@@ -111,7 +109,7 @@ edit_stack_action <- function(trigger, board, update, ...,
           stack <- board_stacks(board$board)[[trigger()]]
 
           blockr.ui::show_sidebar(
-            sidebar_id,
+            "main_sidebar",
             title = "Edit stack",
             ui = stack_sidebar_body(
               ns = ns,
@@ -188,7 +186,7 @@ edit_stack_action <- function(trigger, board, update, ...,
           # Re-pull the stack so the form reflects the just-saved state.
           fresh_stack <- board_stacks(board$board)[[trigger()]]
           blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
+            "main_sidebar",
             title = "Edit stack",
             ui = stack_sidebar_body(
               ns,
