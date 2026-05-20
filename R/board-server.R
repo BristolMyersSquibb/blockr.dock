@@ -182,9 +182,10 @@ init_view_docks <- function(views, board, update, triggers, session, dock_mgr) {
 #' @noRd
 settings_observer <- function(session, board) {
   input <- session$input
-  # Strip the trailing "-" so settings_body() can use NS(id, ...) on the
-  # un-namespaced board module id, exactly as `options_ui()` did before.
-  id <- sub("-$", "", session$ns(""))
+  # `session$ns(NULL)` returns the bare module id (documented Shiny API:
+  # `?NS`, `id = NULL` → namespace itself). Used here because
+  # `settings_body()` namespaces its own children with `NS(id, ...)`.
+  id <- session$ns(NULL)
 
   observeEvent(
     input$settings_btn,
