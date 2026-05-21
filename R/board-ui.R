@@ -86,15 +86,20 @@ dock_outputs_ui <- function(id, views) {
 #' `board_server_callback()` when the user clicks the navbar gear, and
 #' passed to `blockr.ui::show_sidebar()`.
 #'
-#' Uses `blockr.core::blockr_app_options(x)` (rather than `board_options(x)`)
-#' so the accordion includes options contributed by blocks on the board and
-#' by registered block constructors — same set `serve()` passes to the
-#' top-level `board_ui()` call.
+#' Caller-supplied `options` (threaded down from `serve(board, options =
+#' custom_options(...))` via `blockr_app_server.dock_board()` →
+#' `board_server_callback()` → `settings_observer()`) wins. When the
+#' caller passed nothing, falls back to `blockr.core::blockr_app_options(x)`
+#' so the accordion still includes options contributed by blocks on the
+#' board and by registered block constructors — the same set `serve()`
+#' would have computed on the default path.
 #'
 #' @param id Board module id.
 #' @param x Current board (`board$board`).
 #' @param plugins Board plugins.
 #' @param options Augmented board options (board + block contributions).
+#'   `NULL` means "no caller override"; the default is recomputed via
+#'   `blockr.core::blockr_app_options(x)`.
 #' @noRd
 settings_body <- function(
   id,
