@@ -3,7 +3,6 @@ board_ui.dock_board <- function(
   id,
   x,
   plugins = board_plugins(x),
-  options = board_options(x),
   ...
 ) {
   stopifnot(is_string(id))
@@ -101,11 +100,16 @@ settings_body <- function(
   id,
   x,
   plugins = board_plugins(x),
-  options = blockr.core::blockr_app_options(x)
+  options = NULL
 ) {
   opt_ui_or_null <- function(plg, plgs, x) {
     if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
   }
+
+  # Caller-supplied `options` (threaded from `serve()` through
+  # `blockr_app_server.dock_board()` / `settings_observer()`) wins; fall
+  # back to the recomputed default only when the caller has nothing to say.
+  options <- options %||% blockr.core::blockr_app_options(x)
 
   stopifnot(is_board_options(options))
 
