@@ -96,10 +96,9 @@ link_sidebar_body <- function(ns, board, block_id) {
   )
 
   if (sum(lengths(avail)) == 0L) {
-    notify(
-      "No inputs are currently available.",
-      type = "warning"
-    )
+    # Pure UI builder: signal "nothing to render" with NULL and let the
+    # caller decide whether to warn (initial open) or close silently
+    # (post-confirm chain path).
     return(NULL)
   }
 
