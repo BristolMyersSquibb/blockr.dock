@@ -3,6 +3,8 @@ add_link_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
 
+      sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
+
       observeEvent(
         trigger(),
         {
@@ -16,7 +18,7 @@ add_link_action <- function(trigger, board, update, ...) {
           }
 
           blockr.ui::show_sidebar(
-            "actions_sidebar",
+            sidebar_id,
             title = "Create new link",
             ui = body
           )
@@ -101,7 +103,7 @@ add_link_action <- function(trigger, board, update, ...) {
           # silently if the link we just added consumed the last input.
           # `update()` only sets a reactiveVal; the board state is mutated
           # on the next reactive flush, so defer the availability check
-          # until after the flush — otherwise `board$board` is still the
+          # until after the flush; otherwise `board$board` is still the
           # pre-link snapshot. `onFlushed` runs outside a reactive context,
           # so `isolate()` is needed to read `board$board`.
           src_id <- trigger()
@@ -110,10 +112,10 @@ add_link_action <- function(trigger, board, update, ...) {
               isolate({
                 body <- link_sidebar_body(session$ns, board$board, src_id)
                 if (is.null(body)) {
-                  blockr.ui::hide_sidebar("actions_sidebar")
+                  blockr.ui::hide_sidebar(sidebar_id)
                 } else {
                   blockr.ui::keep_or_hide_sidebar(
-                    "actions_sidebar",
+                    sidebar_id,
                     title = "Create new link",
                     ui = body
                   )

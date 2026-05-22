@@ -3,6 +3,7 @@ board_ui.dock_board <- function(
   id,
   x,
   plugins = board_plugins(x),
+  options = blockr.core::blockr_app_options(x),
   ...
 ) {
   stopifnot(is_string(id))
@@ -41,10 +42,17 @@ board_ui.dock_board <- function(
       div(
         class = "blockr-navbar-right",
         v_nav,
-        actionButton(
-          inputId = NS(id, "settings_btn"),
-          label = bsicons::bs_icon("gear"),
-          class = "blockr-navbar-icon-btn"
+        # Pure-JS open trigger via `data-blockr-sidebar-target`. The
+        # settings sidebar's body is pre-rendered into its mount below, so
+        # no server observer is needed: clicking the gear toggles the
+        # panel client-side. `tags$button` (not `actionButton`) because
+        # there is no `input$<id>` to wire.
+        tags$button(
+          type = "button",
+          class = "btn action-button blockr-navbar-icon-btn",
+          `data-blockr-sidebar-target` = NS(id, "settings_sidebar"),
+          `aria-label` = "Board options",
+          bsicons::bs_icon("gear")
         )
       )
     ),
@@ -60,23 +68,39 @@ board_ui.dock_board <- function(
         board = x
       )
     ),
-    # Sidebar mounts. Fixed top-level DOM ids so any deeply-nested
-    # consumer can target them via `blockr.ui::show_sidebar(<id>, ...)`
-    # through `rootScope` walking. Contract: one sidebar = one concern.
-    # We mount two on the right (matching their navbar triggers) but with
-    # different modes so they coexist cleanly when both are open:
-    #   * "actions_sidebar"  — the six action handlers (add/append/prepend
+    # Sidebar mounts. Ids are namespaced with `NS(id, ...)` so two
+    # `board_ui.dock_board()` instances on the same page don't collide on
+    # DOM ids. Action handlers reach the matching mount by reading
+    # `board$board_id` (set by blockr.core in the board's reactiveValues)
+    # and composing `NS(board$board_id, "actions_sidebar")` at server time.
+    # Contract: one sidebar = one concern. We mount two on the right
+    # (matching their navbar triggers) but with different modes so they
+    # coexist cleanly when both are open:
+    #   * "actions_sidebar":  the six action handlers (add/append/prepend
     #     block, add link, add/edit stack). `push` mode: shifts page
-    #     content aside while open.
-    #   * "settings_sidebar" — the navbar gear's board-options panel.
+    #     content aside while open. Body is populated server-side via
+    #     `show_sidebar()` because each action ships a freshly-built form.
+    #   * "settings_sidebar": the navbar gear's board-options panel.
     #     `overlay` mode: layers above the page (and above the action
-    #     panel when both are pinned) without reflowing content.
+    #     panel when both are pinned) without reflowing content. Body is
+    #     pre-rendered here at UI-build time and the gear button opens it
+    #     via `data-blockr-sidebar-target` (pure JS, no server roundtrip).
     # Reusing one DOM slot across both concerns would let a foreign caller
-    # silently swap a pinned panel's body — the JS replaces content in
+    # silently swap a pinned panel's body, since the JS replaces content in
     # place and never inspects the pin class. Splitting by concern keeps
     # pin semantics intuitive without multi-pin machinery on the JS side.
-    blockr.ui::sidebar_ui("actions_sidebar", mode = "push", side = "right"),
-    blockr.ui::sidebar_ui("settings_sidebar", mode = "overlay", side = "right")
+    blockr.ui::sidebar_ui(
+      NS(id, "actions_sidebar"),
+      mode = "push",
+      side = "right"
+    ),
+    blockr.ui::sidebar_ui(
+      NS(id, "settings_sidebar"),
+      ui = settings_body(id, x, options = options),
+      title = "Board options",
+      mode = "overlay",
+      side = "right"
+    )
   )
 }
 
@@ -104,7 +128,7 @@ dock_outputs_ui <- function(id, views) {
 #' `board_server_callback()` → `settings_observer()`) wins. When the
 #' caller passed nothing, falls back to `blockr.core::blockr_app_options(x)`
 #' so the accordion still includes options contributed by blocks on the
-#' board and by registered block constructors — the same set `serve()`
+#' board and by registered block constructors, the same set `serve()`
 #' would have computed on the default path.
 #'
 #' @param id Board module id.

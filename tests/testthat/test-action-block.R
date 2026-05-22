@@ -150,6 +150,56 @@ test_that("append block action", {
   )
 })
 
+test_that("add block action chains via keep_or_hide_sidebar on confirm", {
+  # Successful confirm should fire `keep_or_hide_sidebar()` (the chain
+  # branch) — the pinned-vs-unpinned decision lives inside blockr.ui, so
+  # we just assert the call shape from the action handler.
+
+  keep_calls <- list()
+
+  local_mocked_bindings(
+    show_sidebar = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(id, ...) {
+      keep_calls[[length(keep_calls) + 1L]] <<- list(id = id, args = list(...))
+      invisible(NULL)
+    },
+    hide_sidebar = function(...) invisible(NULL),
+    .package = "blockr.ui"
+  )
+
+  r_board <- reactiveValues(board = new_board(), board_id = "my_board")
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_block_action(
+          trigger = reactive(TRUE),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      session$setInputs(add_block_selection = "dataset_block")
+
+      session$setInputs(
+        add_block_confirm = 1L,
+        add_block_id = "x",
+        add_block_name = "X block"
+      )
+
+      expect_length(r_update(), 1L)
+      expect_length(keep_calls, 1L)
+      # `sidebar_id` is composed from `board$board_id` inside the action.
+      expect_identical(keep_calls[[1L]]$id, "my_board-actions_sidebar")
+      expect_identical(keep_calls[[1L]]$args$title, "Add new block")
+    }
+  )
+})
+
 test_that("remove block action", {
 
   r_board <- reactiveValues(

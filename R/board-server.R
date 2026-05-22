@@ -15,15 +15,6 @@
 #'
 #' @noRd
 board_server_callback <- function(board, update, ..., session = get_session()) {
-  dot_args <- list(...)
-
-  # `app_options` is the user-supplied `options` from `serve()`, re-passed
-  # by `blockr_app_server.dock_board()` so it survives blockr.core's
-  # callback dispatch (which consumes the official `options` arg for its
-  # own userData wiring and does not forward it). May be `NULL` if the
-  # caller did not customise — `settings_body()` falls back to recompute.
-  app_options <- dot_args[["app_options"]]
-
   initial_board <- isolate(board$board)
 
   exts <- as.list(dock_extensions(initial_board))
@@ -53,7 +44,6 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   add_view_observer(vs, session, dock_mgr, board, update, triggers)
   remove_view_observer(vs, session, dock_mgr)
   rename_view_observer(vs, session, dock_mgr)
-  settings_observer(session, board, options = app_options)
 
   # Extensions receive active_dock — a reactiveValues that always mirrors
   # whichever view is currently active (swapped by update_active_dock).
@@ -178,39 +168,6 @@ init_view_docks <- function(views, board, update, triggers, session, dock_mgr) {
   )
   active_view(bare) <- active_v
   reactiveValues(state = bare)
-}
-
-#' Observe navbar settings-gear clicks.
-#'
-#' Replaces the previous Bootstrap settings offcanvas: when the gear
-#' fires, render the same options accordion (`settings_body()`) into
-#' the shared sidebar via `blockr.ui::show_sidebar()`.
-#'
-#' @param session Shiny session (the board's session).
-#' @param board Reactive board state.
-#' @param options Optional `board_options`. When supplied (typically the
-#'   user-customised value threaded down from `serve(board, options = ...)`),
-#'   it overrides `settings_body()`'s default recompute so the sidebar
-#'   renders the caller's intended options set. `NULL` falls through to
-#'   the default `blockr.core::blockr_app_options(x)`.
-#' @noRd
-settings_observer <- function(session, board, options = NULL) {
-  input <- session$input
-  # `session$ns(NULL)` returns the bare module id (documented Shiny API:
-  # `?NS`, `id = NULL` → namespace itself). Used here because
-  # `settings_body()` namespaces its own children with `NS(id, ...)`.
-  id <- session$ns(NULL)
-
-  observeEvent(
-    input$settings_btn,
-    {
-      blockr.ui::show_sidebar(
-        "settings_sidebar",
-        title = "Board options",
-        ui = settings_body(id, board$board, options = options)
-      )
-    }
-  )
 }
 
 #' Observe view tab switches.
