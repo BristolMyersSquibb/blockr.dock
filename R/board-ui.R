@@ -60,10 +60,23 @@ board_ui.dock_board <- function(
         board = x
       )
     ),
-    # Sidebar mount: fixed top-level DOM id so any deeply-nested action
-    # handler can target it via `blockr.ui::show_sidebar("main_sidebar", ...)`
-    # through `rootScope` walking. Single sidebar per app at v0.
-    blockr.ui::sidebar_ui("main_sidebar", mode = "push")
+    # Sidebar mounts. Fixed top-level DOM ids so any deeply-nested
+    # consumer can target them via `blockr.ui::show_sidebar(<id>, ...)`
+    # through `rootScope` walking. Contract: one sidebar = one concern.
+    # We mount two on the right (matching their navbar triggers) but with
+    # different modes so they coexist cleanly when both are open:
+    #   * "actions_sidebar"  — the six action handlers (add/append/prepend
+    #     block, add link, add/edit stack). `push` mode: shifts page
+    #     content aside while open.
+    #   * "settings_sidebar" — the navbar gear's board-options panel.
+    #     `overlay` mode: layers above the page (and above the action
+    #     panel when both are pinned) without reflowing content.
+    # Reusing one DOM slot across both concerns would let a foreign caller
+    # silently swap a pinned panel's body — the JS replaces content in
+    # place and never inspects the pin class. Splitting by concern keeps
+    # pin semantics intuitive without multi-pin machinery on the JS side.
+    blockr.ui::sidebar_ui("actions_sidebar", mode = "push", side = "right"),
+    blockr.ui::sidebar_ui("settings_sidebar", mode = "overlay", side = "right")
   )
 }
 

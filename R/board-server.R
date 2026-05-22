@@ -205,7 +205,7 @@ settings_observer <- function(session, board, options = NULL) {
     input$settings_btn,
     {
       blockr.ui::show_sidebar(
-        "main_sidebar",
+        "settings_sidebar",
         title = "Board options",
         ui = settings_body(id, board$board, options = options)
       )

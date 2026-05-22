@@ -16,7 +16,7 @@ add_link_action <- function(trigger, board, update, ...) {
           }
 
           blockr.ui::show_sidebar(
-            "main_sidebar",
+            "actions_sidebar",
             title = "Create new link",
             ui = body
           )
@@ -110,10 +110,10 @@ add_link_action <- function(trigger, board, update, ...) {
               isolate({
                 body <- link_sidebar_body(session$ns, board$board, src_id)
                 if (is.null(body)) {
-                  blockr.ui::hide_sidebar("main_sidebar")
+                  blockr.ui::hide_sidebar("actions_sidebar")
                 } else {
                   blockr.ui::keep_or_hide_sidebar(
-                    "main_sidebar",
+                    "actions_sidebar",
                     title = "Create new link",
                     ui = body
                   )
