@@ -470,19 +470,19 @@ edit_block_server <- function(callbacks = list()) {
               block_id %in% board_block_ids(board$board)
             )
 
-            blk <- board_blocks(board$board)[[block_id]]
-            cur <- block_name(blk)
+            cur <- block_name(board_blocks(board$board)[[block_id]])
 
             if (identical(cur, input$block_name_in)) {
               return()
             }
 
-            block_name(blk) <- input$block_name_in
-
             update(
               list(
                 blocks = list(
-                  mod = as_blocks(set_names(list(blk), block_id))
+                  mod = set_names(
+                    list(list(block_name = input$block_name_in)),
+                    block_id
+                  )
                 )
               )
             )
@@ -496,13 +496,14 @@ edit_block_server <- function(callbacks = list()) {
 
             continue <- "blocks" %in% names(upd) &&
               "mod" %in% names(upd$blocks) &&
-              block_id %in% names(upd$blocks$mod)
+              block_id %in% names(upd$blocks$mod) &&
+              "block_name" %in% names(upd$blocks$mod[[block_id]])
 
             if (!continue) {
               return()
             }
 
-            new <- block_name(upd$blocks$mod[[block_id]])
+            new <- block_name(board_blocks(board$board)[[block_id]])
 
             if (identical(new, input$block_name_in)) {
               return()

@@ -179,18 +179,37 @@ test_that("board server", {
 
   ms3$flushReact()
 
-  with_mock_context(ms3, {
-    upd(
-      list(
-        blocks = list(
-          mod = blocks(a = new_dataset_block(block_name = "Test block"))
-        )
-      )
-    )
-  })
+  panel_lookups <- 0L
 
   with_mocked_bindings(
-    ms3$flushReact(),
-    get_dock_panel = function(...) list(title = "Old title")
+    {
+      with_mock_context(ms3, {
+        upd(
+          list(
+            blocks = list(
+              mod = list(a = list(block_name = "Test block"))
+            )
+          )
+        )
+      })
+      ms3$flushReact()
+
+      with_mock_context(ms3, {
+        upd(
+          list(
+            blocks = list(
+              mod = list(a = list(dataset = "iris"))
+            )
+          )
+        )
+      })
+      ms3$flushReact()
+    },
+    get_dock_panel = function(...) {
+      panel_lookups <<- panel_lookups + 1L
+      list(title = "Old title")
+    }
   )
+
+  expect_identical(panel_lookups, 1L)
 })

@@ -20,11 +20,11 @@ test_that("edit block server", {
 
       expect_length(upd$blocks$mod, 1L)
       expect_named(upd$blocks$mod, "a")
-      expect_s3_class(upd$blocks$mod, "blocks")
+      expect_type(upd$blocks$mod, "list")
 
       expect_identical(
-        block_name(upd$blocks$mod[[1L]]),
-        "Test block name"
+        upd$blocks$mod$a,
+        list(block_name = "Test block name")
       )
     },
     args = list(
