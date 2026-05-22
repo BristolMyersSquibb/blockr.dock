@@ -42,6 +42,19 @@ board_ui.dock_board <- function(
       div(
         class = "blockr-navbar-right",
         v_nav,
+        if (is_dock_locked()) {
+          tags$span(
+            class = "blockr-lock-indicator",
+            title = "Editing is disabled by this deployment.",
+            `aria-label` = "Read-only mode",
+            role = "status",
+            bsicons::bs_icon("lock-fill"),
+            tags$span(
+              class = "blockr-lock-indicator-label",
+              "Read-only"
+            )
+          )
+        },
         # Pure-JS open trigger via `data-blockr-sidebar-target`. The
         # settings sidebar's body is pre-rendered into its mount below, so
         # no server observer is needed: clicking the gear toggles the
