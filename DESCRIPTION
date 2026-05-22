@@ -34,7 +34,7 @@ Imports:
     shinyWidgets,
     jsonlite
 Remotes:
-    BristolMyersSquibb/blockr.ui@phase1-sidebar-primitive
+    BristolMyersSquibb/blockr.ui
 Suggests:
     testthat (>= 3.0.0),
     DT,
