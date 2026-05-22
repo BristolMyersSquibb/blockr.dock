@@ -2,12 +2,15 @@
 
 ## blockr.dock 0.1.1
 
+CRAN release: 2026-04-29
+
 - Added prepend block action.
 
 - Define multi-view boards with
   [`dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md):
 
   ``` r
+
   layout = dock_layouts(
     Analysis = list("block_1", "block_2"),
     Overview = list("dag_extension")
@@ -18,6 +21,7 @@
   [`dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md):
 
   ``` r
+
   layout = dock_layouts(
     Analysis = list("block_1", "block_2"),
     Overview = dock_view("dag_extension", active = TRUE)

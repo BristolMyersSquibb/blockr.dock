@@ -11,6 +11,7 @@ You can install the development version of blockr.dock from
 [GitHub](https://github.com/) with:
 
 ``` r
+
 # install.packages("pak")
 pak::pak("BristolMyersSquibb/blockr.dock")
 ```
@@ -21,6 +22,7 @@ To start up a board for visualizing `Sepal.Length` against `Sepal.Width`
 for the `iris` dataset:
 
 ``` r
+
 library(blockr.dock)
 library(blockr.core)
 
@@ -47,6 +49,7 @@ A locked dock prevents users from adding or removing blocks and
 extensions. Drag-and-drop and panel resizing are also disabled.
 
 ``` r
+
 library(blockr.dock)
 library(blockr.core)
 
@@ -88,6 +91,7 @@ shared across views via the board’s DAG, view membership is a layout
 concern only.
 
 ``` r
+
 library(blockr.core)
 library(blockr.dock)
 

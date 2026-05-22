@@ -1,6 +1,7 @@
 # Defining dock layouts
 
 ``` r
+
 library(blockr.core)
 library(blockr.dock)
 ```
@@ -26,11 +27,11 @@ When you pass a `layout =` argument to
 [`new_dock_board()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md),
 the constructor normalises it to a `dock_layouts`:
 
-| You pass                                                                                                                      | Treated as           | Final shape                |
-|-------------------------------------------------------------------------------------------------------------------------------|----------------------|----------------------------|
-| `dock_layouts(...)`                                                                                                           | multi-view, as-is    | itself                     |
-| A `dock_layout` (resolved via [`create_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)) | single page          | `dock_layouts(Page = ...)` |
-| A raw list (grid spec)                                                                                                        | single-page raw grid | `dock_layouts(Page = ...)` |
+| You pass | Treated as | Final shape |
+|----|----|----|
+| `dock_layouts(...)` | multi-view, as-is | itself |
+| A `dock_layout` (resolved via [`create_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)) | single page | `dock_layouts(Page = ...)` |
+| A raw list (grid spec) | single-page raw grid | `dock_layouts(Page = ...)` |
 
 ![](mermaid/coercion-flow.svg)
 
@@ -55,6 +56,7 @@ defaults to
 extensions, the resulting layout is `dock_layouts(Page = list())`:
 
 ``` r
+
 new_dock_board()
 ```
 
@@ -101,6 +103,7 @@ The two rules to internalise:
 A single ID gives one panel filling the whole view:
 
 ``` r
+
 new_dock_board(
   blocks = c(a = new_dataset_block()),
   layout = list("a")
@@ -120,6 +123,7 @@ new_dock_board(
 Two top-level entries → two columns split horizontally:
 
 ``` r
+
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   layout = list("a", "b")
@@ -141,6 +145,7 @@ Wrap the entries in **one extra layer** of
 split:
 
 ``` r
+
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   layout = list(list("a", "b"))
@@ -166,6 +171,7 @@ Use a **character vector** (not a list) to put multiple panels in the
 same DockView panel as tabs:
 
 ``` r
+
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   layout = list(c("a", "b"))
@@ -195,6 +201,7 @@ Combine the two rules to build any layout.
 ### Two columns, the right one stacked
 
 ``` r
+
 new_dock_board(
   blocks = c(
     a = new_dataset_block(),
@@ -216,6 +223,7 @@ new_dock_board(
 ### Two columns, both stacked
 
 ``` r
+
 new_dock_board(
   blocks = c(
     a = new_dataset_block(),
@@ -242,6 +250,7 @@ vertical stack. Useful when you want a row that holds two panels
 side-by-side:
 
 ``` r
+
 new_dock_board(
   blocks = c(
     a = new_dataset_block(),
@@ -266,6 +275,7 @@ A common dashboard shape: a narrow column on the left holding an
 extension, and a tabbed panel on the right with several blocks:
 
 ``` r
+
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
@@ -295,6 +305,7 @@ Wrap the per-view grids in
 Each named entry becomes a separate page in the view-nav dropdown:
 
 ``` r
+
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
@@ -335,6 +346,7 @@ its spec with the `active` attribute. The convenient way is
 [`dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md):
 
 ``` r
+
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
@@ -356,6 +368,7 @@ new_dock_board(
 you can also write the attribute directly:
 
 ``` r
+
 overview <- list("a")
 attr(overview, "active") <- TRUE
 
@@ -375,6 +388,7 @@ prompt as the empty default board (see `Starting from scratch`), scoped
 to that tab.
 
 ``` r
+
 dock_layouts(
   Analysis = list("a", "b"),
   Empty = list()
@@ -387,6 +401,7 @@ A pot-pourri exercising every feature: multiple views, nested grids,
 tabbed panels, an extension as a sidebar, and an explicit active view.
 
 ``` r
+
 new_dock_board(
   blocks = c(
     raw = new_dataset_block(),
@@ -455,17 +470,17 @@ named view.
 
 ## Cheat-sheet
 
-| Goal                      | Syntax                                                                                                                         |
-|---------------------------|--------------------------------------------------------------------------------------------------------------------------------|
-| One panel                 | `list("a")`                                                                                                                    |
-| Two side-by-side panels   | `list("a", "b")`                                                                                                               |
-| Two stacked panels        | `list(list("a", "b"))`                                                                                                         |
-| Tabbed single panel       | `list(c("a", "b"))`                                                                                                            |
-| Sidebar + main            | `list("ext", "main")`                                                                                                          |
-| Two columns, both stacked | `list(list("a", "b"), list("c", "d"))`                                                                                         |
-| Multiple views            | `dock_layouts(A = ..., B = ...)`                                                                                               |
-| Start on view `B`         | `dock_layouts(A = ..., B = dock_view(..., active = TRUE))`                                                                     |
-| Empty starter view        | `dock_layouts(Page = list())` (or just [`dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)) |
+| Goal | Syntax |
+|----|----|
+| One panel | `list("a")` |
+| Two side-by-side panels | `list("a", "b")` |
+| Two stacked panels | `list(list("a", "b"))` |
+| Tabbed single panel | `list(c("a", "b"))` |
+| Sidebar + main | `list("ext", "main")` |
+| Two columns, both stacked | `list(list("a", "b"), list("c", "d"))` |
+| Multiple views | `dock_layouts(A = ..., B = ...)` |
+| Start on view `B` | `dock_layouts(A = ..., B = dock_view(..., active = TRUE))` |
+| Empty starter view | `dock_layouts(Page = list())` (or just [`dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)) |
 
 ## Where to go from here
 
