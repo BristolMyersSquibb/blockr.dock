@@ -46,15 +46,6 @@ dock_on_session_start <- function(name, fn) {
 # `board_server_callback()`. Errors in individual hooks are caught
 # and surfaced as warnings so one bad hook can't take down the dock.
 run_session_start_hooks <- function(board, update, session) {
-  msg <- sprintf(
-    "[blockr.dock build:2026-04-30-debug-4] run_session_start_hooks in PID %d, %d hook(s) registered: [%s]\n",
-    Sys.getpid(),
-    length(.dock_session_hooks$cbs),
-    paste(names(.dock_session_hooks$cbs), collapse = ", ")
-  )
-  cat(msg, file = stderr())
-  cat(msg, file = stdout())
-  cat(msg, file = "/tmp/blockr-mcp-debug.log", append = TRUE)
   for (nm in names(.dock_session_hooks$cbs)) {
     tryCatch(
       .dock_session_hooks$cbs[[nm]](board, update, session),
@@ -89,7 +80,12 @@ stash_dock_handle <- function(session, vs, dock_mgr,
     dock_mgr = dock_mgr,
     board    = board,
     update   = update,
-    triggers = triggers
+    triggers = triggers,
+    # Capture the dock board's own session, not whatever module session
+    # happens to call dock_get_handle(). External callers (assistant
+    # extension, MCP) live in nested module scopes; using their
+    # session$ns()/insertUI would target the wrong namespace.
+    session  = session
   )
   invisible()
 }
@@ -126,6 +122,7 @@ dock_set_active_view <- function(view_name,
          call. = FALSE)
   }
   h <- dock_get_handle(session)
+  if (!is.null(h) && !is.null(h$session)) session <- h$session
   if (is.null(h)) {
     stop("No dock handle on this session — is the dock app running?",
          call. = FALSE)
@@ -182,6 +179,7 @@ do_switch_view <- function(new_v, vs, session, dock_mgr) {
 #' @export
 dock_state <- function(session = shiny::getDefaultReactiveDomain()) {
   h <- dock_get_handle(session)
+  if (!is.null(h) && !is.null(h$session)) session <- h$session
   if (is.null(h)) return(NULL)
   state <- h$vs$state
   list(
@@ -288,6 +286,7 @@ do_rebuild_view <- function(view_name, new_layout, h, session) {
 #' @export
 dock_get_layout <- function(session = shiny::getDefaultReactiveDomain()) {
   h <- dock_get_handle(session)
+  if (!is.null(h) && !is.null(h$session)) session <- h$session
   if (is.null(h)) return(NULL)
   state <- h$vs$state
   av <- as.character(active_view(state))
@@ -333,6 +332,7 @@ dock_set_layout <- function(grid,
          call. = FALSE)
   }
   h <- dock_get_handle(session)
+  if (!is.null(h) && !is.null(h$session)) session <- h$session
   if (is.null(h) || is.null(h$board)) {
     stop("No dock handle on this session — is the dock app running?",
          call. = FALSE)
@@ -378,6 +378,7 @@ dock_add_view <- function(name, blocks = NULL, exts = NULL,
          call. = FALSE)
   }
   h <- dock_get_handle(session)
+  if (!is.null(h) && !is.null(h$session)) session <- h$session
   if (is.null(h) || is.null(h$board)) {
     stop("No dock handle on this session — is the dock app running?",
          call. = FALSE)
@@ -470,6 +471,7 @@ dock_remove_view <- function(name,
          call. = FALSE)
   }
   h <- dock_get_handle(session)
+  if (!is.null(h) && !is.null(h$session)) session <- h$session
   if (is.null(h)) {
     stop("No dock handle on this session — is the dock app running?",
          call. = FALSE)
@@ -542,6 +544,7 @@ dock_rename_view <- function(old, new,
          call. = FALSE)
   }
   h <- dock_get_handle(session)
+  if (!is.null(h) && !is.null(h$session)) session <- h$session
   if (is.null(h)) {
     stop("No dock handle on this session — is the dock app running?",
          call. = FALSE)
