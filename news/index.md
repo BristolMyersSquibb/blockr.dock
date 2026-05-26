@@ -39,4 +39,4 @@ CRAN release: 2026-04-29
 
 CRAN release: 2025-12-11
 
-- Initial CRAN submission
+- Initial CRAN submission 2026-05-26 15:47:33 UTC
