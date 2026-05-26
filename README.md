@@ -113,7 +113,11 @@ board <- new_dock_board(
   ),
   links = new_link("dataset_1", "head_1"),
   layouts = list(
-    Analysis = list("dataset_1", "head_1", "dag_extension"),
+    Analysis = dock_layout(
+      "dag_extension",
+      panels("dataset_1", "head_1", active = "head_1"),
+      sizes = c(0.3, 0.7)
+    ),
     Overview = dock_layout("dag_extension", active = TRUE),
     Empty = list()
   )

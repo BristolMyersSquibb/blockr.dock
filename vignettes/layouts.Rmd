@@ -419,9 +419,17 @@ new_dock_board(
     new_link("cleaned", "plot2", "data")
   ),
   layouts = list(
-    Data = list("edit_board_extension", c("raw", "cleaned")),
-    Analysis = list(list("summary", "plot1"), "plot2"),
-    Charts = dock_layout(c("plot1", "plot2"), active = TRUE)
+    Data = dock_layout(
+      "edit_board_extension",
+      panels("raw", "cleaned", active = "cleaned"),
+      sizes = c(0.25, 0.75)
+    ),
+    Analysis = dock_layout(
+      group("summary", "plot1", sizes = c(0.4, 0.6)),
+      "plot2",
+      sizes = c(0.55, 0.45)
+    ),
+    Charts = dock_layout(panels("plot1", "plot2"), active = TRUE)
   )
 )
 ```
@@ -445,34 +453,38 @@ there first.
 └────────────────────────────┘
 ```
 
-**Data**: extension on the left, two dataset blocks tabbed on the
-right. Same pattern as the "Sidebar + tabs" example earlier, just
-inside a named view.
+**Data**: a slim extension sidebar on the left holding the editor, and
+a wide right column with `raw` / `cleaned` tabbed. `active = "cleaned"`
+opens the cleaned tab by default; `sizes = c(0.25, 0.75)` carves out
+the narrow sidebar.
 
 ```
 ┌────────────────────────────┐
 │  Data  [+]                 │
-├─────────┬──────────────────┤
-│         │ ┌─────┐┌────────┐│
-│  edit   │ │ raw ││cleaned ││
-│         │ └─────┘└────────┘│
-│         │                  │
-│         │  (data tabs)     │
-└─────────┴──────────────────┘
+├──────┬─────────────────────┤
+│      │┌─────┐┌─────────┐   │
+│ edit ││ raw ││ cleaned │   │
+│      │└─────┘└─────────┘   │
+│      │  (cleaned shown)    │
+└──────┴─────────────────────┘
+  25%          75%
 ```
 
-**Analysis**: two top-level columns. The left column is a vertical
-stack (`list("summary", "plot1")`) and the right column is a single
-panel (`"plot2"`).
+**Analysis**: two top-level columns at 55/45. The left column is a
+nested `group()` with a 40/60 vertical split (summary on top, plot1
+below); the right column is a single panel (`plot2`).
 
 ```
 ┌────────────────────────────┐
 │  Analysis  [+]             │
 ├─────────────┬──────────────┤
-│   summary   │              │
+│   summary   │              │   40% / 55%
 ├─────────────┤    plot2     │
-│    plot1    │              │
+│             │              │
+│    plot1    │              │   60% / 45%
+│             │              │
 └─────────────┴──────────────┘
+     55%             45%
 ```
 
 # Custom split ratios and active tabs
@@ -482,29 +494,137 @@ a tabbed group. For non-default ratios or a non-default open tab,
 escalate to the typed constructors:
 
 * `dock_layout(..., sizes = c(...))` — sizes parallel to the root
-  children.
-* `group(..., sizes = c(...))` — same, for a nested branch.
+  children. The numbers are relative; they don't have to sum to `1`.
+* `group(..., sizes = c(...))` — same, for a nested branch (any level
+  below the root).
 * `panels(..., active = "...")` — tabbed leaf with an explicit open
   tab. Equivalent to a character-vector child, except you also get to
   pick the active tab.
 
+## A 30/70 split
+
+`dock_layout(..., sizes =)` runs parallel to the children passed in
+`...`. With two children the layout splits horizontally; with two
+sizes it does so unevenly:
+
 ```{r}
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
-  extensions = new_edit_board_extension(),
+  layouts = list(
+    Main = dock_layout("a", "b", sizes = c(0.3, 0.7))
+  )
+)
+```
+
+```
+┌────────────────────────────┐
+│  Main  [+]                 │
+├──────────┬─────────────────┤
+│          │                 │
+│    a     │        b        │
+│          │                 │
+└──────────┴─────────────────┘
+   30%             70%
+```
+
+## Stacking with sizes
+
+Same idea, vertical layout: pass `orientation = "vertical"` so the
+root split runs top-to-bottom instead of left-to-right.
+
+```{r}
+new_dock_board(
+  blocks = c(a = new_dataset_block(), b = new_head_block()),
+  layouts = list(
+    Main = dock_layout("a", "b",
+                       orientation = "vertical",
+                       sizes = c(0.25, 0.75))
+  )
+)
+```
+
+```
+┌────────────────────────────┐
+│  Main  [+]                 │
+├────────────────────────────┤
+│            a               │   25%
+├────────────────────────────┤
+│                            │
+│            b               │   75%
+│                            │
+└────────────────────────────┘
+```
+
+## Choosing the open tab
+
+`panels()` builds a tabbed leaf. Without `active`, the first ID opens
+by default — same behaviour as a bare character vector. Pass `active`
+to open a different tab on load:
+
+```{r}
+new_dock_board(
+  blocks = c(
+    a = new_dataset_block(),
+    b = new_head_block(),
+    c = new_head_block()
+  ),
+  layouts = list(
+    Main = dock_layout(panels("a", "b", "c", active = "b"))
+  )
+)
+```
+
+```
+┌────────────────────────────┐
+│  Main  [+]                 │
+├────────────────────────────┤
+│ ┌────┐┌──────┐┌────┐       │
+│ │ a  ││  b   ││ c  │       │
+│ └────┘└──────┘└────┘       │
+│         ↑                  │
+│   b is open by default     │
+│                            │
+└────────────────────────────┘
+```
+
+## Sizes inside a nested branch
+
+`group()` is the equivalent of an inner `list(...)` but with its own
+`sizes`. Use it whenever you need ratios on a non-root branch:
+
+```{r}
+new_dock_board(
+  blocks = c(
+    a = new_dataset_block(),
+    b = new_head_block(),
+    c = new_head_block()
+  ),
   layouts = list(
     Main = dock_layout(
-      "edit_board_extension",
-      panels("a", "b", active = "b"),
+      "a",
+      group("b", "c", sizes = c(0.6, 0.4)),
       sizes = c(0.3, 0.7)
     )
   )
 )
 ```
 
-`orientation = "vertical"` on `dock_layout()` flips the top-level
-split direction; nesting inside `group()` / `list()` alternates from
-there.
+```
+┌────────────────────────────┐
+│  Main  [+]                 │
+├────────┬───────────────────┤
+│        │      b            │   inner: 60% top
+│        ├───────────────────┤
+│   a    │      c            │   inner: 40% bottom
+│        │                   │
+│        │                   │
+└────────┴───────────────────┘
+   30%          70%
+```
+
+Outer `sizes = c(0.3, 0.7)` controls the root split (left / right);
+inner `group(..., sizes = c(0.6, 0.4))` controls the right column's
+internal stack.
 
 # Cheat-sheet
 

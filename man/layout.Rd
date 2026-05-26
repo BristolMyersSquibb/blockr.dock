@@ -105,14 +105,27 @@ exts <- list(
   edit = new_edit_board_extension()
 )
 
+# The default arrangement for a given set of blocks and extensions
 default_layout(blks, exts)
 
+# Mark a layout as the initially-active view in a `dock_layouts`
+# collection
 dock_layout("a", "b", active = TRUE)
 
+# Tabbed leaf with an explicit open tab
+panels("a", "b", "edit_board_extension", active = "edit_board_extension")
+
+# Branch with explicit child ratios
+group("a", "b", sizes = c(0.3, 0.7))
+
+# Composing them inside a layout
 dock_layout(
   "a",
   panels("b", "edit_board_extension", active = "edit_board_extension"),
   sizes = c(0.3, 0.7)
 )
+
+# Vertical top-level split
+dock_layout("a", "b", orientation = "vertical")
 
 }
