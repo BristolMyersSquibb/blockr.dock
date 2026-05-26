@@ -467,13 +467,17 @@ manage_dock <- function(
         blks <- update()$blocks$mod
 
         for (blk_id in names(blks)) {
-          blk <- blks[[blk_id]]
-          new_name <- block_name(blk)
+
+          if (!"block_name" %in% names(blks[[blk_id]])) {
+            next
+          }
+
+          new_name <- block_name(board_blocks(board$board)[[blk_id]])
           blk_panel_id <- as_block_panel_id(blk_id)
 
           old_title <- get_dock_panel(blk_panel_id, dock)$title
 
-          if (new_name == old_title) {
+          if (identical(new_name, old_title)) {
             next
           }
 
