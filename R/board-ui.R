@@ -170,33 +170,45 @@ settings_body <- function(
 
   opts <- split(options, chr_ply(options, attr, "category"))
 
-  tagList(
-    div(
-      id = "generate_code",
-      opt_ui_or_null("generate_code", plugins, x)
-    ),
-    hr(),
-    do.call(
-      accordion,
-      c(
-        list(
-          id = NS(id, "board_options"),
-          multiple = TRUE,
-          open = FALSE,
-          class = "accordion-flush"
-        ),
-        map(
-          do.call,
-          rep(list(accordion_panel), length(opts)),
+  generate_code_block <- div(
+    id = "generate_code",
+    opt_ui_or_null("generate_code", plugins, x)
+  )
+
+  # Locked mode: the board-options accordion (board_name, ...) mutates
+  # state via `set_board_option_value()`. Drop it so the sidebar exposes
+  # only the read-only `generate_code` export; the gear button stays
+  # visible so users can still pull generated code (#135). The matching
+  # `board_option_server` observers live in `blockr.core` and are out of
+  # reach for `req_unlocked()` from here — a forged `Shiny.setInputValue`
+  # could still mutate state; the principled fix is upstream.
+  options_accordion <- if (!is_dock_locked()) {
+    tagList(
+      hr(),
+      do.call(
+        accordion,
+        c(
+          list(
+            id = NS(id, "board_options"),
+            multiple = TRUE,
+            open = FALSE,
+            class = "accordion-flush"
+          ),
           map(
-            list,
-            title = names(opts),
-            lapply(opts, lapply, board_option_ui, id)
+            do.call,
+            rep(list(accordion_panel), length(opts)),
+            map(
+              list,
+              title = names(opts),
+              lapply(opts, lapply, board_option_ui, id)
+            )
           )
         )
       )
     )
-  )
+  }
+
+  tagList(generate_code_block, options_accordion)
 }
 
 blockr_dock_dep <- function() {
