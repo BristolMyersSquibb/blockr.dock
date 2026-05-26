@@ -45,6 +45,25 @@ invocation, no observer span in OpenTelemetry traces, no log noise.
 \code{is_dock_locked()} reads a non-reactive base R option (set via
 \code{options(blockr.dock_is_locked = TRUE)}), so this adds no spurious
 reactive dependencies.
+\subsection{Extension authors}{
+
+\code{blockr.dock} does not auto-hide extensions in locked mode. The
+right behaviour depends on the extension and is left to its author.
+Pick whichever of these fits the use case:
+\itemize{
+\item \strong{Hide the panel entirely} when locked. Return \code{NULL} (or an
+empty \code{tagList()}) from the extension's \code{ui} function when
+\code{is_dock_locked()} is \code{TRUE}. Best when the extension only makes
+sense as an authoring tool (e.g. a board editor).
+\item \strong{Render read-only} when locked. Keep the panel visible but drop
+write controls, and gate any remaining mutating observers with
+\code{req_unlocked()}. Useful when the extension offers inspection
+value beyond editing (e.g. a DAG visualiser).
+\item \strong{Gate mutations only}. Keep the UI intact and wrap every
+state-mutating observer's \code{eventExpr} with \code{req_unlocked()}. The
+simplest path when the UI is already read-only by nature.
+}
+}
 }
 \examples{
 # In an extension's mutating observer:

@@ -227,6 +227,24 @@ set_dock_view_output <- function(..., session = get_session()) {
 #' `options(blockr.dock_is_locked = TRUE)`), so this adds no spurious
 #' reactive dependencies.
 #'
+#' ## Extension authors
+#'
+#' `blockr.dock` does not auto-hide extensions in locked mode. The
+#' right behaviour depends on the extension and is left to its author.
+#' Pick whichever of these fits the use case:
+#'
+#' * **Hide the panel entirely** when locked. Return `NULL` (or an
+#'   empty `tagList()`) from the extension's `ui` function when
+#'   `is_dock_locked()` is `TRUE`. Best when the extension only makes
+#'   sense as an authoring tool (e.g. a board editor).
+#' * **Render read-only** when locked. Keep the panel visible but drop
+#'   write controls, and gate any remaining mutating observers with
+#'   `req_unlocked()`. Useful when the extension offers inspection
+#'   value beyond editing (e.g. a DAG visualiser).
+#' * **Gate mutations only**. Keep the UI intact and wrap every
+#'   state-mutating observer's `eventExpr` with `req_unlocked()`. The
+#'   simplest path when the UI is already read-only by nature.
+#'
 #' @return `is_dock_locked()` returns a single `TRUE` / `FALSE`.
 #'   `req_unlocked()` returns invisibly when the dock is unlocked; when
 #'   locked it raises a silent [shiny::req()] failure so the enclosing
