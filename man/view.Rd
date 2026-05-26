@@ -2,6 +2,7 @@
 % Please edit documentation in R/layouts-class.R
 \name{new_dock_layouts}
 \alias{new_dock_layouts}
+\alias{validate_dock_layouts}
 \alias{is_dock_layouts}
 \alias{active_view}
 \alias{active_view<-}
@@ -11,6 +12,8 @@
 \title{Dock views (layouts)}
 \usage{
 new_dock_layouts(...)
+
+validate_dock_layouts(x)
 
 is_dock_layouts(x)
 
@@ -33,6 +36,7 @@ as_dock_layouts(x, ...)
 }
 \value{
 \code{is_dock_layouts()} returns a boolean.
+\code{validate_dock_layouts()} returns its input and throws on error.
 \code{active_view()} returns a string and \verb{active_view<-()} returns
 the modified \code{dock_layouts} (or \code{dock_board}) object invisibly.
 }

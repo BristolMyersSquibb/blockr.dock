@@ -18,6 +18,7 @@
 #' which validates and wraps it.
 #'
 #' @return `is_dock_layouts()` returns a boolean.
+#'   `validate_dock_layouts()` returns its input and throws on error.
 #'   `active_view()` returns a string and `active_view<-()` returns
 #'   the modified `dock_layouts` (or `dock_board`) object invisibly.
 #'
@@ -58,6 +59,8 @@ new_dock_layouts <- function(...) {
   structure(vws, class = "dock_layouts")
 }
 
+#' @rdname view
+#' @export
 validate_dock_layouts <- function(x) {
   if (!is_dock_layouts(x) || !is.list(x)) {
     blockr_abort(
