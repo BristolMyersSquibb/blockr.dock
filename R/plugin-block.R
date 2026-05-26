@@ -178,13 +178,12 @@ block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
   # `attr(blk, "visible")` on restore (#122). The tooltip wiring is skipped
   # because nothing is hoverable.
   #
-  # NOTE: this is a UI-only hide, not a real lock. `display: none` removes the
-  # widget from view but the checkbox group is still a live Shiny input — a
-  # client can flip it via `Shiny.setInputValue()` and the observer below will
-  # happily mutate accordion state. "Lock" here is a UX affordance, not a
-  # server-side trust boundary. The principled fix is to drop the hidden
-  # widget entirely and seed the accordion directly from `attr(blk, "visible")`
-  # on startup, so the observer can be gated on `!is_dock_locked()`. TODO(#TBD).
+  # The hidden widget is a UX affordance — `display: none` removes the
+  # checkbox group from view but leaves the underlying Shiny input live so
+  # its initial value still fires the `collapse_blk_sections` observer
+  # once and seeds the accordion from any restored `attr(blk, "visible")`.
+  # That observer is intentionally NOT gated by `req_unlocked()`; see its
+  # comment below for the rationale and the principled follow-up.
   if (is_dock_locked()) {
     return(div(style = "display: none;", section_toggles))
   }
@@ -463,12 +462,14 @@ edit_block_server <- function(callbacks = list()) {
       function(input, output, session) {
 
         observeEvent(
-          input$block_name_in,
           {
+            req_unlocked()
             req(
               input$block_name_in,
               block_id %in% board_block_ids(board$board)
             )
+          },
+          {
 
             blk <- board_blocks(board$board)[[block_id]]
             cur <- block_name(blk)
@@ -524,6 +525,16 @@ edit_block_server <- function(callbacks = list()) {
           )
         )
 
+        # Intentionally NOT gated by `req_unlocked()`. In locked mode the
+        # checkbox is rendered hidden so its initial value still fires this
+        # observer once at startup, seeding the accordion from any restored
+        # `attr(blk, "visible")` (#122). The effect is local UI state only
+        # (showing / hiding accordion panels in the user's own browser); no
+        # board state is mutated, so the locked-mode trust boundary does
+        # not apply. The principled fix is to drop the hidden widget
+        # entirely and pass `visible` into `block_card_content()` so the
+        # accordion is seeded via its `open = ` argument; then this
+        # observer can be safely gated.
         observeEvent(
           input$collapse_blk_sections,
           accordion_panel_set(
@@ -547,12 +558,18 @@ edit_block_server <- function(callbacks = list()) {
         update_blk_cond_observer(conds, session)
 
         observeEvent(
-          input$append_block,
+          {
+            req_unlocked()
+            input$append_block
+          },
           actions[["append_block_action"]](block_id)
         )
 
         observeEvent(
-          input$delete_block,
+          {
+            req_unlocked()
+            input$delete_block
+          },
           actions[["remove_block_action"]](block_id)
         )
 

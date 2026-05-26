@@ -194,8 +194,72 @@ set_dock_view_output <- function(..., session = get_session()) {
   dock_proxy(session)
 }
 
+#' Dock locked-mode trust boundary
+#'
+#' Helpers for respecting the `blockr.dock_is_locked` option in custom
+#' extensions and downstream packages. `is_dock_locked()` is the
+#' predicate used by UI builders to skip rendering write controls;
+#' `req_unlocked()` is the matching server-side gate that short-circuits
+#' the trigger of any state-mutating [shiny::observeEvent()], so a
+#' forged `Shiny.setInputValue()` cannot bypass the UI hide.
+#'
+#' @details
+#' UI hides (`display: none`, missing buttons, [view_can_crud()]) are
+#' the obvious defence; they leave the underlying Shiny inputs live so a
+#' client can still flip them via `Shiny.setInputValue()`. Pair every UI
+#' gate with `req_unlocked()` in the *trigger* of any state-mutating
+#' observer:
+#'
+#' ```r
+#' observeEvent(
+#'   {
+#'     req_unlocked()
+#'     input$confirm_view_add
+#'   },
+#'   { ... mutation ... }
+#' )
+#' ```
+#'
+#' Placing the check in the `eventExpr` (rather than the handler body)
+#' makes the trigger itself short-circuit when locked: no handler
+#' invocation, no observer span in OpenTelemetry traces, no log noise.
+#' `is_dock_locked()` reads a non-reactive base R option (set via
+#' `options(blockr.dock_is_locked = TRUE)`), so this adds no spurious
+#' reactive dependencies.
+#'
+#' @return `is_dock_locked()` returns a single `TRUE` / `FALSE`.
+#'   `req_unlocked()` returns invisibly when the dock is unlocked; when
+#'   locked it raises a silent [shiny::req()] failure so the enclosing
+#'   `observeEvent` skips the handler.
+#'
+#' @examples
+#' # In an extension's mutating observer:
+#' \dontrun{
+#' observeEvent(
+#'   {
+#'     req_unlocked()
+#'     input$my_confirm
+#'   },
+#'   {
+#'     update(list(blocks = list(add = new_blk)))
+#'   }
+#' )
+#' }
+#'
+#' @rdname dock-locked
+#' @export
 is_dock_locked <- function() {
   isTRUE(blockr_option("dock_is_locked", FALSE))
+}
+
+#' @rdname dock-locked
+#' @export
+req_unlocked <- function() {
+  if (is_dock_locked()) {
+    log_debug("blocked: dock is locked")
+    req(FALSE)
+  }
+  invisible()
 }
 
 dock_panel_groups <- function(session = get_session()) {

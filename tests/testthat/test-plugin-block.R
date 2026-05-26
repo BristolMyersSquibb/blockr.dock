@@ -50,6 +50,27 @@ test_that("edit block server", {
   )
 })
 
+test_that("locked dock blocks edit_block_server name mutation (#127)", {
+  # nbenn's PR #125 review: hiding the UI is not enough — the underlying
+  # input is live and can be flipped via `Shiny.setInputValue`. The
+  # `block_name_in` observer must refuse to call `update()` when the dock
+  # is locked.
+  withr::local_options(blockr.dock_is_locked = TRUE)
+
+  testServer(
+    edit_block_server(),
+    {
+      session$setInputs(block_name_in = "Forged name")
+      expect_null(update())
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("condition ui test", {
 
   insert_count <- 0L

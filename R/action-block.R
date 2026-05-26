@@ -6,7 +6,10 @@ add_block_action <- function(trigger, board, update, ...) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
 
       observeEvent(
-        trigger(),
+        {
+          req_unlocked()
+          trigger()
+        },
         {
           log_debug("showing add block action sidebar")
           blk(NULL)
@@ -24,10 +27,11 @@ add_block_action <- function(trigger, board, update, ...) {
       )
 
       observeEvent(
-        input$add_block_selection,
         {
+          req_unlocked()
           req(input$add_block_selection)
-
+        },
+        {
           new_blk <- create_block_with_name(
             input$add_block_selection,
             chr_ply(board_blocks(board$board), block_name)
@@ -44,7 +48,10 @@ add_block_action <- function(trigger, board, update, ...) {
       )
 
       observeEvent(
-        input$add_block_confirm,
+        {
+          req_unlocked()
+          input$add_block_confirm
+        },
         {
           id <- input$add_block_id
           bk <- blk()
@@ -98,7 +105,10 @@ append_block_action <- function(trigger, board, update, ...) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
 
       observeEvent(
-        trigger(),
+        {
+          req_unlocked()
+          trigger()
+        },
         {
           blk(NULL)
           blockr.ui::show_sidebar(
@@ -114,10 +124,11 @@ append_block_action <- function(trigger, board, update, ...) {
       )
 
       observeEvent(
-        input$append_block_selection,
         {
+          req_unlocked()
           req(input$append_block_selection)
-
+        },
+        {
           new_blk <- create_block_with_name(
             input$append_block_selection,
             chr_ply(board_blocks(board$board), block_name)
@@ -149,7 +160,10 @@ append_block_action <- function(trigger, board, update, ...) {
       )
 
       observeEvent(
-        input$append_block_confirm,
+        {
+          req_unlocked()
+          input$append_block_confirm
+        },
         {
           blk_id <- input$append_block_id
           lnk_id <- input$append_link_id
@@ -226,7 +240,10 @@ prepend_block_action <- function(trigger, board, update, ...) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
 
       observeEvent(
-        trigger(),
+        {
+          req_unlocked()
+          trigger()
+        },
         {
           blk(NULL)
           blockr.ui::show_sidebar(
@@ -242,10 +259,11 @@ prepend_block_action <- function(trigger, board, update, ...) {
       )
 
       observeEvent(
-        input$prepend_block_selection,
         {
+          req_unlocked()
           req(input$prepend_block_selection)
-
+        },
+        {
           new_blk <- create_block_with_name(
             input$prepend_block_selection,
             chr_ply(board_blocks(board$board), block_name)
@@ -262,7 +280,10 @@ prepend_block_action <- function(trigger, board, update, ...) {
       )
 
       observeEvent(
-        input$prepend_block_confirm,
+        {
+          req_unlocked()
+          input$prepend_block_confirm
+        },
         {
           blk_id <- input$prepend_block_id
           lnk_id <- input$prepend_link_id
@@ -345,7 +366,10 @@ remove_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       observeEvent(
-        trigger(),
+        {
+          req_unlocked()
+          trigger()
+        },
         update(list(blocks = list(rm = trigger())))
       )
       NULL
