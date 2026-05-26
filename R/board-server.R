@@ -397,6 +397,9 @@ manage_dock <- function(
 
     # Empty-dock prompt — rendered for all empty docks, visibility
     # handled by the dock wrapper's CSS (opacity/pointer-events).
+    # `empty_dock_prompt()` is mode-aware: it renders the "Add panel"
+    # call-to-action when unlocked, and a non-actionable placeholder
+    # when locked (#136).
     output$empty_prompt <- renderUI({
       if (n_panels() == 0) empty_dock_prompt(session$ns)
     })
