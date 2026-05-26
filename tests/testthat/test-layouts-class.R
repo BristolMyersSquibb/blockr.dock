@@ -110,14 +110,14 @@ test_that("rejects invalid layout shapes at the new_dock_board boundary", {
   )
 })
 
-test_that("view_ids extracts IDs from layout spec", {
+test_that("layout_ids extracts IDs from layout spec", {
 
   expect_identical(
-    sort(view_ids(list("a", list("b", "c")))),
+    sort(layout_ids(list("a", list("b", "c")))),
     c("a", "b", "c")
   )
 
-  expect_null(view_ids(list()))
+  expect_null(layout_ids(list()))
 })
 
 test_that("multi-view layouts produce typed slots", {

@@ -35,6 +35,7 @@
   - Unexported the high-level resolver `create_dock_layout()` (renamed internally to `resolve_dock_layout()`).
   - Unexported `dock_layouts()` and `validate_dock_layouts()`. The user-facing input shape for `new_dock_board(layouts = ...)` is a plain named list — the `dock_layouts` type is the resolved collection that the board holds internally. `is_dock_layouts()` (predicate) and `as_dock_layouts()` (with `dock_layouts` and `dock_layout` methods) remain exported.
   - Unexported `new_dock_layout()`; use `dock_layout()` instead.
+  - Unexported `view_ids()` and `view_can_crud()`. Both were internal helpers exposed by accident; renamed to `layout_ids()` and `views_can_crud()` respectively to align with what they operate on.
 
 # blockr.dock 0.1.0
 

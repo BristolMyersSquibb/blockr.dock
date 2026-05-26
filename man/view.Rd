@@ -3,10 +3,8 @@
 \name{new_dock_layouts}
 \alias{new_dock_layouts}
 \alias{is_dock_layouts}
-\alias{view_ids}
 \alias{active_view}
 \alias{active_view<-}
-\alias{view_can_crud}
 \alias{board_layouts<-}
 \alias{board_layouts}
 \alias{as_dock_layouts}
@@ -16,13 +14,9 @@ new_dock_layouts(...)
 
 is_dock_layouts(x)
 
-view_ids(x)
-
 active_view(x)
 
 active_view(x) <- value
-
-view_can_crud(x)
 
 board_layouts(x) <- value
 
@@ -41,9 +35,6 @@ as_dock_layouts(x, ...)
 \code{is_dock_layouts()} returns a boolean.
 \code{active_view()} returns a string and \verb{active_view<-()} returns
 the modified \code{dock_layouts} (or \code{dock_board}) object invisibly.
-\code{view_ids()} returns all IDs (block + extension) found in a layout
-specification. The \code{view_can_crud()} helper returns \code{FALSE} when the
-dock is locked.
 }
 \description{
 A \code{dock_board} always holds a \code{dock_layouts} object (multi-view tabs).

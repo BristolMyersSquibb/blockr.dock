@@ -20,9 +20,6 @@
 #' @return `is_dock_layouts()` returns a boolean.
 #'   `active_view()` returns a string and `active_view<-()` returns
 #'   the modified `dock_layouts` (or `dock_board`) object invisibly.
-#'   `view_ids()` returns all IDs (block + extension) found in a layout
-#'   specification. The `view_can_crud()` helper returns `FALSE` when the
-#'   dock is locked.
 #'
 #' @examples
 #' brd <- new_dock_board(
@@ -124,9 +121,8 @@ is_dock_layouts <- function(x) {
   inherits(x, "dock_layouts")
 }
 
-#' @rdname view
-#' @export
-view_ids <- function(x) {
+#' @noRd
+layout_ids <- function(x) {
   stopifnot(is.list(x))
   unique(unlist(x))
 }
@@ -181,9 +177,8 @@ active_view.dock_board <- function(x) {
   invisible(x)
 }
 
-#' @rdname view
-#' @export
-view_can_crud <- function(x) {
+#' @noRd
+views_can_crud <- function(x) {
   stopifnot(is_dock_layouts(x))
   !is_dock_locked()
 }

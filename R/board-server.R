@@ -530,7 +530,7 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
 
   # Show modal for view creation
   observeEvent(input$view_nav_add, {
-    req(view_can_crud(vs$state))
+    req(views_can_crud(vs$state))
 
     state <- vs$state
     n <- length(state) + 1L
@@ -699,7 +699,7 @@ remove_view_observer <- function(vs, session, dock_mgr) {
 
   # Show confirmation modal
   observeEvent(input$view_nav_remove, {
-    req(view_can_crud(vs$state))
+    req(views_can_crud(vs$state))
 
     rm_name <- input$view_nav_remove
     state <- vs$state
@@ -813,7 +813,7 @@ rename_view_observer <- function(vs, session, dock_mgr) {
   input <- session$input
 
   observeEvent(input$view_nav_rename, {
-    req(view_can_crud(vs$state))
+    req(views_can_crud(vs$state))
 
     rename <- input$view_nav_rename
     state <- vs$state
