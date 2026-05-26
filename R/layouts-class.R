@@ -7,17 +7,15 @@
 #'
 #' Multi-view boards are defined by passing a named list to
 #' `new_dock_board()`'s `layouts` argument: each name is a view, each
-#' value is the panel arrangement inside that view (a [dock_grid()],
-#' a `dock_layout`, or a raw list of block/extension IDs). A view can
-#' be marked as the initially active one by passing `active = TRUE`
-#' to [dock_grid()]; if none is marked, the first one is used. View
-#' CRUD is enabled unless the dock is locked (see `is_dock_locked()`).
+#' value is the panel arrangement inside that view (a [dock_layout()],
+#' or a raw list of block / extension IDs). A view can be marked as the
+#' initially-active one by passing `active = TRUE` to [dock_layout()];
+#' if none is marked, the first one is used. View CRUD is enabled
+#' unless the dock is locked (see `is_dock_locked()`).
 #'
-#' The `dock_layouts` type is the resolved collection that the board
-#' holds internally — every slot is a fully-resolved `dock_layout`.
-#' Users do not normally construct one directly; instead they pass a
-#' plain named list to `new_dock_board(layouts = ...)`, which resolves
-#' grid specs into layouts using the board's blocks and extensions.
+#' Users do not normally construct a `dock_layouts` directly; instead
+#' they pass a plain named list to `new_dock_board(layouts = ...)`,
+#' which validates and wraps it.
 #'
 #' @return `is_dock_layouts()` returns a boolean.
 #'   `active_view()` returns a string and `active_view<-()` returns
@@ -34,7 +32,7 @@
 #'   ),
 #'   layouts = list(
 #'     Analysis = list("dataset_1", "head_1"),
-#'     Overview = dock_grid("dataset_1", active = TRUE)
+#'     Overview = dock_layout("dataset_1", active = TRUE)
 #'   )
 #' )
 #' active_view(brd)
@@ -44,9 +42,6 @@
 new_dock_layouts <- function(...) {
   vws <- list(...)
 
-  # Unwrap a single list argument only when it looks like a wrapped collection
-  # of named views -- e.g. dock_layouts(list(A = ..., B = ...)).
-  # Do NOT unwrap dock_layouts(V1 = new_dock_layout(...)) where vws is correct.
   if (length(vws) == 1L && is.list(vws[[1L]]) && !is_dock_layout(vws[[1L]])) {
     inner <- vws[[1L]]
     inner_nms <- names(inner)
@@ -223,14 +218,12 @@ as_dock_layouts.dock_layout <- function(x, ...) {
   dock_layouts(Page = set_active_view(x))
 }
 
-# Internal helpers ------------------------------------------------------------
-
 is_active_view <- function(x) {
-  (is_dock_layout(x) || is_dock_grid(x)) && isTRUE(attr(x, "active"))
+  is_dock_layout(x) && isTRUE(attr(x, "active"))
 }
 
 set_active_view <- function(x, active = TRUE) {
-  stopifnot(is_dock_layout(x) || is_dock_grid(x))
+  stopifnot(is_dock_layout(x))
   attr(x, "active") <- if (isTRUE(active)) TRUE else NULL
   x
 }

@@ -18,7 +18,7 @@ new_dock_board(
   stacks = list(),
   ...,
   extensions = new_dock_extensions(),
-  layouts = default_grid(blocks, extensions),
+  layouts = default_layout(blocks, extensions),
   options = dock_board_options(),
   ctor = NULL,
   pkg = NULL,
@@ -53,8 +53,8 @@ dock_board_options()
 \item{extensions}{Dock extensions}
 
 \item{layouts}{A named list of per-view arrangements (multi-view), a
-\code{dock_grid} / \code{dock_layout} / raw list (single-page), or an existing
-\code{dock_layouts} collection. All forms are normalised to \code{dock_layouts}.}
+\code{dock_layout} / raw list (single-page), or an existing \code{dock_layouts}
+collection. All forms are normalised to \code{dock_layouts}.}
 
 \item{options}{Board-level user settings}
 
@@ -70,7 +70,7 @@ dock_board_options()
 The constructor \code{new_dock_board()} returns a \code{board} object, as does
 the coercion function \code{as_dock_board()}. Inheritance can be checked using
 \code{is_dock_board()}, which returns a boolean. \code{board_layouts()} returns the
-board's \code{dock_layouts}; \code{active_layout()} returns the active view's resolved
+board's \code{dock_layouts}; \code{active_layout()} returns the active view's
 \code{dock_layout} and \verb{active_layout<-()} writes into the active view. The
 \code{dock_extensions()} and \verb{dock_extensions<-()} accessors return / set the
 board's \code{dock_extension} objects. A character vector of IDs is returned by
@@ -87,11 +87,11 @@ boards are a degenerate case with one auto-named "Page" view.
 }
 \details{
 For multi-view boards, pass a named list to \verb{layouts =} — each name
-becomes a view, each value is the panel arrangement (a \code{\link[=dock_grid]{dock_grid()}},
-a \code{dock_layout}, or a raw list of block/extension IDs). For a single-page
-board, pass a raw grid spec or a \code{dock_grid} directly. Either way the
-input is normalised to a \code{dock_layouts} with grids resolved into layouts
-using the board's blocks and extensions.
+becomes a view, each value is the panel arrangement (a \code{\link[=dock_layout]{dock_layout()}}
+or a raw list of block / extension IDs). For a single-page board, pass
+a \code{dock_layout} or raw list directly. Either way the input is normalised
+to a \code{dock_layouts}, with leaf IDs resolved against the board's blocks
+and extensions.
 }
 \examples{
 brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))

@@ -21,24 +21,13 @@ test_that("multi-view layouts via new_dock_board", {
   expect_identical(active_view(views), "Analysis")
 })
 
-test_that("dock_grid marks an arrangement active via attribute", {
-
-  v <- dock_grid("a", "b", active = TRUE)
-  expect_true(is_dock_grid(v))
-  expect_identical(unlist(v), c("a", "b"))
-  expect_true(isTRUE(attr(v, "active")))
-
-  expect_null(attr(dock_grid("a"), "active"))
-  expect_null(attr(dock_grid("a", active = FALSE), "active"))
-})
-
-test_that("dock_grid marker selects active view", {
+test_that("dock_layout marker selects active view", {
 
   brd <- new_dock_board(
     blocks = c(x = new_dataset_block(), y = new_head_block()),
     layouts = list(
       A = list("x"),
-      B = dock_grid("y", active = TRUE)
+      B = dock_layout("y", active = TRUE)
     )
   )
 
@@ -61,8 +50,8 @@ test_that("rejects multiple active views", {
     new_dock_board(
       blocks = c(x = new_dataset_block(), y = new_head_block()),
       layouts = list(
-        A = dock_grid("x", active = TRUE),
-        B = dock_grid("y", active = TRUE)
+        A = dock_layout("x", active = TRUE),
+        B = dock_layout("y", active = TRUE)
       )
     ),
     class = "dock_layouts_multiple_active"
@@ -95,7 +84,9 @@ test_that("active_view get/set on a dock_board", {
   expect_identical(active_view(board_layouts(brd)), "Second")
 
   expect_error(
-    { active_view(brd) <- "Nope" },
+    {
+      active_view(brd) <- "Nope"
+    },
     class = "dock_view_not_found"
   )
 })
@@ -154,7 +145,7 @@ test_that("active attribute survives layout resolution", {
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
       First = list("a"),
-      Second = dock_grid("a", "b", active = TRUE)
+      Second = dock_layout("a", "b", active = TRUE)
     )
   )
 
@@ -199,7 +190,7 @@ test_that("active_layout returns the active view's resolved layout", {
 
   ly <- active_layout(brd)
   expect_true(is_dock_layout(ly))
-  expect_length(ly$panels, 1L)
+  expect_length(layout_panel_ids(ly), 1L)
 })
 
 test_that("as_dock_layouts.dock_layout wraps in single Page", {

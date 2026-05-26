@@ -43,7 +43,12 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
 #' @export
 blockr_ser.dock_layout <- function(x, data, ...) {
   payload <- if (!missing(data)) coal(data, x) else x
-  list(object = class(x), payload = unclass(payload))
+  payload <- as_dock_layout(payload)
+  body <- list(grid = payload[["grid"]])
+  if (!is.null(payload[["activeGroup"]])) {
+    body[["activeGroup"]] <- payload[["activeGroup"]]
+  }
+  list(object = class(x), payload = body, active = is_active_view(payload))
 }
 
 #' @export
@@ -77,7 +82,9 @@ blockr_ser.dock_extensions <- function(x, data, ...) {
 
 #' @export
 blockr_deser.dock_layout <- function(x, data, ...) {
-  as_dock_layout(data[["payload"]], ...)
+  payload <- data[["payload"]]
+  attr(payload, "active") <- isTRUE(data[["active"]])
+  as_dock_layout(payload, ...)
 }
 
 #' @export

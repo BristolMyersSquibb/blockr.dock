@@ -8,17 +8,17 @@
 #' boards are a degenerate case with one auto-named "Page" view.
 #'
 #' For multi-view boards, pass a named list to `layouts =` — each name
-#' becomes a view, each value is the panel arrangement (a [dock_grid()],
-#' a `dock_layout`, or a raw list of block/extension IDs). For a single-page
-#' board, pass a raw grid spec or a `dock_grid` directly. Either way the
-#' input is normalised to a `dock_layouts` with grids resolved into layouts
-#' using the board's blocks and extensions.
+#' becomes a view, each value is the panel arrangement (a [dock_layout()]
+#' or a raw list of block / extension IDs). For a single-page board, pass
+#' a `dock_layout` or raw list directly. Either way the input is normalised
+#' to a `dock_layouts`, with leaf IDs resolved against the board's blocks
+#' and extensions.
 #'
 #' @inheritParams blockr.core::new_board
 #' @param extensions Dock extensions
 #' @param layouts A named list of per-view arrangements (multi-view), a
-#'   `dock_grid` / `dock_layout` / raw list (single-page), or an existing
-#'   `dock_layouts` collection. All forms are normalised to `dock_layouts`.
+#'   `dock_layout` / raw list (single-page), or an existing `dock_layouts`
+#'   collection. All forms are normalised to `dock_layouts`.
 #'
 #' @examples
 #' brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
@@ -27,7 +27,7 @@
 #' @return The constructor `new_dock_board()` returns a `board` object, as does
 #' the coercion function `as_dock_board()`. Inheritance can be checked using
 #' `is_dock_board()`, which returns a boolean. `board_layouts()` returns the
-#' board's `dock_layouts`; `active_layout()` returns the active view's resolved
+#' board's `dock_layouts`; `active_layout()` returns the active view's
 #' `dock_layout` and `active_layout<-()` writes into the active view. The
 #' `dock_extensions()` and `dock_extensions<-()` accessors return / set the
 #' board's `dock_extension` objects. A character vector of IDs is returned by
@@ -38,7 +38,7 @@
 #' @export
 new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            ..., extensions = new_dock_extensions(),
-                           layouts = default_grid(blocks, extensions),
+                           layouts = default_layout(blocks, extensions),
                            options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
@@ -68,21 +68,24 @@ initialise_layout <- function(layouts, blocks, extensions) {
   }
 
   if (is_dock_layout(layouts)) {
-    return(as_dock_layouts(layouts))
+    return(as_dock_layouts(resolve_dock_layout(c_blks, c_exts, layouts)))
   }
 
-  if (is.list(layouts) && !is_dock_grid(layouts) &&
-        all(c("grid", "panels") %in% names(layouts))) {
-    return(as_dock_layouts(as_dock_layout(layouts)))
+  if (is.list(layouts) && "grid" %in% names(layouts)) {
+    return(as_dock_layouts(resolve_dock_layout(c_blks, c_exts, layouts)))
   }
 
   is_multi_view <- (
-    is.list(layouts) && length(layouts) > 0L && !is_dock_grid(layouts) &&
-      !is.null(names(layouts))
+    is.list(layouts) && length(layouts) > 0L && !is.null(names(layouts))
   )
 
   if (!is_multi_view) {
-    return(as_dock_layouts(resolve_dock_layout(c_blks, c_exts, layouts)))
+    spec <- if (is.list(layouts)) {
+      do.call(dock_layout, layouts)
+    } else {
+      do.call(dock_layout, as.list(layouts))
+    }
+    return(as_dock_layouts(resolve_dock_layout(c_blks, c_exts, spec)))
   }
 
   resolve_views(layouts, c_blks, c_exts)
@@ -106,23 +109,7 @@ resolve_views <- function(specs, c_blks, c_exts) {
     )
   }
 
-  specs <- lapply(specs, function(v) {
-    if (is_dock_layout(v) || is_dock_grid(v)) {
-      v
-    } else if (is.list(v) && all(c("grid", "panels") %in% names(v))) {
-      as_dock_layout(v)
-    } else if (is.list(v)) {
-      as_dock_grid(v)
-    } else {
-      blockr_abort(
-        paste(
-          "Each layout slot must be a `dock_layout`, a `dock_grid`,",
-          "or a list."
-        ),
-        class = "dock_layouts_element_invalid"
-      )
-    }
-  })
+  specs <- lapply(specs, coerce_view_spec)
 
   if (!any(vapply(specs, is_active_view, logical(1L)))) {
     specs[[1L]] <- set_active_view(specs[[1L]])
@@ -135,14 +122,14 @@ resolve_views <- function(specs, c_blks, c_exts) {
     ly <- specs[[view_name]]
     was_active <- is_active_view(ly)
 
-    if (!is_dock_layout(ly)) {
-      v_ids <- view_ids(ly)
-      v_blks <- c_blks[intersect(v_ids, names(c_blks))]
-      v_exts <- as_dock_extensions(
-        ext_list[intersect(v_ids, names(ext_list))]
-      )
-      specs[[view_name]] <- resolve_dock_layout(v_blks, v_exts, ly)
-    }
+    v_obj <- panel_obj_ids(layout_panel_ids(ly))
+
+    v_blks <- c_blks[intersect(v_obj, names(c_blks))]
+    v_exts <- as_dock_extensions(
+      ext_list[intersect(v_obj, names(ext_list))]
+    )
+
+    specs[[view_name]] <- resolve_dock_layout(v_blks, v_exts, ly)
 
     if (was_active) {
       specs[[view_name]] <- set_active_view(specs[[view_name]])
@@ -150,6 +137,34 @@ resolve_views <- function(specs, c_blks, c_exts) {
   }
 
   validate_dock_layouts(structure(specs, class = "dock_layouts"))
+}
+
+panel_obj_ids <- function(ids) {
+  is_blk <- maybe_block_panel_id(ids)
+  is_ext <- maybe_ext_panel_id(ids)
+  ids[is_blk] <- sub("^block_panel-", "", ids[is_blk])
+  ids[is_ext] <- sub("^ext_panel-", "", ids[is_ext])
+  ids
+}
+
+coerce_view_spec <- function(v) {
+  if (is_dock_layout(v)) {
+    return(v)
+  }
+
+  if (is.list(v) && "grid" %in% names(v)) {
+    return(as_dock_layout(v))
+  }
+
+  if (is.list(v)) {
+    active <- isTRUE(attr(v, "active"))
+    return(set_active_view(do.call(dock_layout, unname(v)), active))
+  }
+
+  blockr_abort(
+    "Each layout slot must be a `dock_layout` or a list.",
+    class = "dock_layouts_element_invalid"
+  )
 }
 
 #' @export

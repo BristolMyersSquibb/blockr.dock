@@ -107,9 +107,12 @@ ext_panel_ids <- function(proxy = dock_proxy()) {
   )
 }
 
-restore_dock <- function(layout, proxy = dock_proxy()) {
+restore_layout <- function(layout, proxy, blocks = list(),
+                           extensions = list()) {
   log_debug("restoring dockview layout")
-  dockViewR::restore_dock(proxy, unclass(layout))
+  payload <- dockview_payload(layout, blocks, extensions)
+  dockViewR::restore_dock(proxy, unclass(payload))
+  invisible(NULL)
 }
 
 dock_proxy <- function(session = get_session()) {

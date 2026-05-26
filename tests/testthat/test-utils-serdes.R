@@ -22,7 +22,7 @@ test_that("dock_layouts serialization round-trip", {
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
       Tab1 = list("a", "b"),
-      Tab2 = dock_grid("a", active = TRUE)
+      Tab2 = dock_layout("a", active = TRUE)
     )
   )
 
@@ -33,4 +33,17 @@ test_that("dock_layouts serialization round-trip", {
   expect_s3_class(ly, "dock_layouts")
   expect_named(ly, c("Tab1", "Tab2"))
   expect_identical(active_view(ly), "Tab2")
+})
+
+test_that("serialized dock_layout carries no panels", {
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(Page = list("a", "b"))
+  )
+
+  ser <- blockr_ser(brd)
+  payload <- ser[["payload"]][["layouts"]][["payload"]][["views"]][[1L]]
+
+  expect_named(payload[["payload"]], c("grid", "activeGroup"))
+  expect_false("panels" %in% names(payload[["payload"]]))
 })

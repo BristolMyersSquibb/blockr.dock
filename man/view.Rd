@@ -54,17 +54,15 @@ view membership is a layout concern only.
 \details{
 Multi-view boards are defined by passing a named list to
 \code{new_dock_board()}'s \code{layouts} argument: each name is a view, each
-value is the panel arrangement inside that view (a \code{\link[=dock_grid]{dock_grid()}},
-a \code{dock_layout}, or a raw list of block/extension IDs). A view can
-be marked as the initially active one by passing \code{active = TRUE}
-to \code{\link[=dock_grid]{dock_grid()}}; if none is marked, the first one is used. View
-CRUD is enabled unless the dock is locked (see \code{is_dock_locked()}).
+value is the panel arrangement inside that view (a \code{\link[=dock_layout]{dock_layout()}},
+or a raw list of block / extension IDs). A view can be marked as the
+initially-active one by passing \code{active = TRUE} to \code{\link[=dock_layout]{dock_layout()}};
+if none is marked, the first one is used. View CRUD is enabled
+unless the dock is locked (see \code{is_dock_locked()}).
 
-The \code{dock_layouts} type is the resolved collection that the board
-holds internally — every slot is a fully-resolved \code{dock_layout}.
-Users do not normally construct one directly; instead they pass a
-plain named list to \code{new_dock_board(layouts = ...)}, which resolves
-grid specs into layouts using the board's blocks and extensions.
+Users do not normally construct a \code{dock_layouts} directly; instead
+they pass a plain named list to \code{new_dock_board(layouts = ...)},
+which validates and wraps it.
 }
 \examples{
 brd <- new_dock_board(
@@ -74,7 +72,7 @@ brd <- new_dock_board(
   ),
   layouts = list(
     Analysis = list("dataset_1", "head_1"),
-    Overview = dock_grid("dataset_1", active = TRUE)
+    Overview = dock_layout("dataset_1", active = TRUE)
   )
 )
 active_view(brd)
