@@ -48,6 +48,20 @@ validate_stack.dock_stack <- function(x) {
   x
 }
 
+#' @export
+update_stack.dock_stack <- function(x, delta) {
+
+  args <- list(
+    blocks = stack_blocks(x),
+    name = stack_name(x),
+    color = stack_color(x)
+  )
+
+  args[names(delta)] <- delta
+
+  do.call(new_dock_stack, args)
+}
+
 #' @rdname stack
 #' @export
 stack_color <- function(x) {
