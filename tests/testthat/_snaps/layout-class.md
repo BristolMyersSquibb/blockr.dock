@@ -11,7 +11,7 @@
       list()
       
       $root$size
-      [1] 0
+      [1] 1
       
       
       $orientation
@@ -93,7 +93,7 @@
       
       
       $root$size
-      [1] 0.3333333
+      [1] 1
       
       
       $orientation
@@ -185,7 +185,7 @@
       
       
       $root$size
-      [1] 0.5
+      [1] 1
       
       
       $orientation

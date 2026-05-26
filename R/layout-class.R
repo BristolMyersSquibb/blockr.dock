@@ -7,11 +7,26 @@
 #' extensions, so only the arrangement is stored in a `dock_layout`. See
 #' [is_dock_layouts()] for the collection-level helpers.
 #'
-#' The constructor `dock_layout(...)` accepts bare IDs and nested lists
-#' for non-trivial arrangements. Pass `active = TRUE` to mark this
-#' layout as the initially-active view in a `dock_layouts` collection.
-#' `default_layout(blocks, extensions)` produces the default two-row
-#' arrangement (extensions on top, blocks below) for a board.
+#' Construct a layout with:
+#'
+#' * `dock_layout(...)`: the page-level container. Its `...` are the
+#'   children of the root branch. Bare strings become single-panel
+#'   leaves, character vectors become tabbed leaves, lists become
+#'   nested branches. Use [panels()] for a tabbed leaf with an explicit
+#'   open tab, and [group()] for a branch with explicit sizes.
+#' * `panels(..., active = NULL)`: a tabbed leaf whose tab strip holds
+#'   the given panel IDs. `active` selects the initially-open tab; the
+#'   first ID wins by default. A single-panel `panels()` is permitted
+#'   but redundant (a bare string is equivalent).
+#' * `group(..., sizes = NULL)`: a branch container. `sizes` is a
+#'   numeric vector parallel to `...` that overrides the even split.
+#' * `default_layout(blocks, extensions)` produces the default two-row
+#'   arrangement (extensions on top, blocks below) for a board.
+#'
+#' `dock_layout()` accepts `orientation = "horizontal" | "vertical"`
+#' for the top-level split direction, `sizes` for the root-branch
+#' ratios, and `active = TRUE` to mark this layout as the
+#' initially-active view in a `dock_layouts` collection.
 #'
 #' A *view* is the conceptual page-level container; a *layout* is the
 #' panel arrangement inside a view. The dockview-shape `grid + panels`
@@ -19,10 +34,17 @@
 #' `dock_layout` against the board's blocks and extensions; it is not a
 #' public type.
 #'
-#' @param ... For `dock_layout()`, block / extension IDs (single strings
-#'   or nested lists for non-trivial arrangements). For `as_dock_layout()`,
-#'   reserved for generic consistency.
-#' @param active Logical; mark this layout as the initially-active view.
+#' @param ... For `dock_layout()` and `group()`, layout children (bare
+#'   IDs, character vectors, lists, `panels()`, or `group()`). For
+#'   `panels()`, panel IDs. For `as_dock_layout()`, reserved for generic
+#'   consistency.
+#' @param orientation Top-level split direction; one of `"horizontal"`
+#'   (default) or `"vertical"`.
+#' @param active For `dock_layout()`, logical: mark this layout as the
+#'   initially-active view. For `panels()`, the ID of the tab to open by
+#'   default.
+#' @param sizes Numeric vector parallel to `...`, giving each child's
+#'   share of the parent (positive; need not sum to 1).
 #'
 #' @examples
 #' blks <- c(
@@ -38,26 +60,118 @@
 #'
 #' dock_layout("a", "b", active = TRUE)
 #'
+#' dock_layout(
+#'   "a",
+#'   panels("b", "edit_board_extension", active = "edit_board_extension"),
+#'   sizes = c(0.3, 0.7)
+#' )
+#'
 #' @return `dock_layout()` and `default_layout()` return a `dock_layout`
-#' object. `as_dock_layout()` coerces a board (returning its active
-#' view's layout) or a serialized payload. `is_dock_layout()` returns
-#' a boolean. `validate_dock_layout()` returns its input and throws
-#' on error.
+#' object. `panels()` returns a `dock_panels` node and `group()` returns
+#' a `dock_group` node — both are layout sub-trees usable inside
+#' `dock_layout()` / `group()`. `as_dock_layout()` coerces a board
+#' (returning its active view's layout) or a serialized payload.
+#' `is_dock_layout()` returns a boolean. `validate_dock_layout()`
+#' returns its input and throws on error.
 #'
 #' @rdname layout
 #' @export
-dock_layout <- function(..., active = FALSE) {
+dock_layout <- function(..., orientation = c("horizontal", "vertical"),
+                        active = FALSE, sizes = NULL) {
+
+  orientation <- match.arg(orientation)
+  children <- list(...)
+
+  validate_sizes(sizes, children)
+
+  root_spec <- if (length(children) == 0L) {
+    NULL
+  } else {
+    new_dock_group(children, sizes)
+  }
+
   new_dock_layout(
-    grid = draw_panel_tree(list(...)),
+    grid = build_grid_tree(root_spec, orientation = orientation),
     active = active
   )
+}
+
+#' @rdname layout
+#' @export
+panels <- function(..., active = NULL) {
+  ids <- chr_ply(list(...), identity)
+
+  if (length(ids) && !is.null(active)) {
+
+    if (!is_string(active) || !active %in% ids) {
+      blockr_abort(
+        "`active` must be one of the panel IDs.",
+        class = "dock_panels_active_invalid"
+      )
+    }
+  }
+
+  new_dock_panels(ids, active = active)
+}
+
+#' @rdname layout
+#' @export
+group <- function(..., sizes = NULL) {
+  children <- list(...)
+  validate_sizes(sizes, children)
+  new_dock_group(children, sizes)
+}
+
+new_dock_panels <- function(ids, active = NULL) {
+  structure(
+    list(views = as.list(ids), active = active),
+    class = c("dock_panels", "dock_node")
+  )
+}
+
+new_dock_group <- function(children, sizes = NULL) {
+  structure(
+    list(children = children, sizes = sizes),
+    class = c("dock_group", "dock_node")
+  )
+}
+
+is_dock_panels <- function(x) {
+  inherits(x, "dock_panels")
+}
+
+is_dock_group <- function(x) {
+  inherits(x, "dock_group")
+}
+
+is_dock_node <- function(x) {
+  inherits(x, "dock_node")
+}
+
+validate_sizes <- function(sizes, children) {
+  if (is.null(sizes)) {
+    return(invisible(NULL))
+  }
+
+  if (!is.numeric(sizes) || length(sizes) != length(children) ||
+        any(sizes <= 0)) {
+    blockr_abort(
+      paste(
+        "`sizes` must be a positive numeric vector of length equal to",
+        "the number of children."
+      ),
+      class = "dock_layout_sizes_invalid"
+    )
+  }
+
+  invisible(NULL)
 }
 
 new_dock_layout <- function(grid = NULL, active_group = NULL,
                             active = FALSE) {
 
   if (is.null(grid)) {
-    grid <- draw_panel_tree(NULL)
+    grid <- build_grid_tree(NULL)
   }
 
   content <- list(grid = grid)
@@ -113,13 +227,9 @@ default_layout <- function(blocks, extensions) {
   blks <- names(as_blocks(blocks))
   exts <- names(as_dock_extensions(extensions))
 
-  spec <- if (length(exts)) {
-    list(exts, blks)
-  } else if (length(blks)) {
-    list(blks)
-  } else {
-    list()
-  }
+  spec <- list()
+  if (length(exts)) spec <- c(spec, list(exts))
+  if (length(blks)) spec <- c(spec, list(blks))
 
   do.call(dock_layout, spec)
 }
@@ -188,57 +298,100 @@ validate_dock_layout <- function(x, blocks = character()) {
   x
 }
 
-draw_panel_tree <- function(x) {
+# Build the dockview-shape grid tree (`{root, orientation}`) from a
+# user-facing spec. Accepts:
+#   - NULL                       → empty branch root
+#   - character (single or vec)  → tabbed leaf (single elem ⇒ one tab)
+#   - dock_panels                → tabbed leaf with the given active tab
+#   - dock_group                 → branch with the given sizes
+#   - bare list                  → branch (even split)
+build_grid_tree <- function(spec, orientation = "horizontal") {
 
   group_id <- 0L
 
-  new_leaf <- function(views, size = 1) {
-
+  next_id <- function() {
     group_id <<- group_id + 1L
+    as.character(group_id)
+  }
 
+  make_leaf <- function(views, size, active_view = NULL) {
     list(
       type = "leaf",
       data = list(
         views = as.list(views),
-        activeView = views[1L],
-        id = as.character(group_id)
+        activeView = active_view %||% views[[1L]],
+        id = next_id()
       ),
       size = size
     )
   }
 
-  new_branch <- function(x, size = 1) {
-    list(type = "branch", data = filter_empty(x), size = size)
+  make_branch <- function(children, size) {
+    list(
+      type = "branch",
+      data = filter_empty(children),
+      size = size
+    )
   }
 
-  draw_tree <- function(x, size = 1) {
+  walk <- function(node, size = 1) {
 
-    if (is.list(x)) {
-
-      if (length(x)) {
-        size <- 1 / length(x)
-      } else {
-        size <- 0
+    if (is.character(node)) {
+      if (length(node) == 0L) {
+        return(NULL)
       }
-
-      new_branch(lapply(x, draw_tree, size = size), size)
-
-    } else {
-
-      new_leaf(x, size)
+      return(make_leaf(node, size = size))
     }
+
+    if (is_dock_panels(node)) {
+      return(
+        make_leaf(node[["views"]], size = size,
+                  active_view = node[["active"]])
+      )
+    }
+
+    if (is_dock_group(node)) {
+      n <- length(node[["children"]])
+      child_sizes <- node[["sizes"]] %||% empty_or_even(n)
+      children <- Map(walk, node[["children"]], child_sizes)
+      return(make_branch(children, size = size))
+    }
+
+    if (is.list(node)) {
+      n <- length(node)
+      child_sizes <- empty_or_even(n)
+      children <- Map(walk, node, child_sizes)
+      return(make_branch(children, size = size))
+    }
+
+    blockr_abort(
+      "Unknown layout node type: {.cls {class(node)}}.",
+      class = "dock_layout_node_invalid"
+    )
   }
 
-  if (is.null(x)) {
-    x <- list()
-  } else if (is.character(x)) {
-    x <- as.list(x)
+  if (is.null(spec)) {
+    spec <- list()
   }
 
   list(
-    root = draw_tree(x),
-    orientation = "HORIZONTAL"
+    root = walk(spec),
+    orientation = toupper(orientation)
   )
+}
+
+empty_or_even <- function(n) {
+  if (n) rep(1 / n, n) else numeric()
+}
+
+# Back-compat wrapper used by snapshot tests. Top-level character
+# vectors split into separate leaves (legacy entry-point behaviour),
+# matching the pre-Option B `draw_panel_tree()`.
+draw_panel_tree <- function(x) {
+  if (is.character(x)) {
+    x <- as.list(x)
+  }
+  build_grid_tree(x)
 }
 
 grid_panel_ids <- function(grid) {
@@ -323,8 +476,9 @@ rewrite_grid_leaves <- function(grid, id_map) {
     if (identical(node[["type"]], "leaf")) {
       views <- chr_ply(node[["data"]][["views"]], identity)
       mapped <- chr_ply(views, function(v) id_map[[v]] %||% v)
+      active_view <- node[["data"]][["activeView"]]
       node[["data"]][["views"]] <- as.list(mapped)
-      node[["data"]][["activeView"]] <- mapped[1L]
+      node[["data"]][["activeView"]] <- id_map[[active_view]] %||% active_view
       return(node)
     }
     node[["data"]] <- lapply(node[["data"]], walk)

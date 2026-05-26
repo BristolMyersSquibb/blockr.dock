@@ -2,13 +2,24 @@
 % Please edit documentation in R/layout-class.R
 \name{dock_layout}
 \alias{dock_layout}
+\alias{panels}
+\alias{group}
 \alias{is_dock_layout}
 \alias{as_dock_layout}
 \alias{default_layout}
 \alias{validate_dock_layout}
 \title{Dock layout}
 \usage{
-dock_layout(..., active = FALSE)
+dock_layout(
+  ...,
+  orientation = c("horizontal", "vertical"),
+  active = FALSE,
+  sizes = NULL
+)
+
+panels(..., active = NULL)
+
+group(..., sizes = NULL)
 
 is_dock_layout(x)
 
@@ -19,11 +30,20 @@ default_layout(blocks, extensions)
 validate_dock_layout(x, blocks = character())
 }
 \arguments{
-\item{...}{For \code{dock_layout()}, block / extension IDs (single strings
-or nested lists for non-trivial arrangements). For \code{as_dock_layout()},
-reserved for generic consistency.}
+\item{...}{For \code{dock_layout()} and \code{group()}, layout children (bare
+IDs, character vectors, lists, \code{panels()}, or \code{group()}). For
+\code{panels()}, panel IDs. For \code{as_dock_layout()}, reserved for generic
+consistency.}
 
-\item{active}{Logical; mark this layout as the initially-active view.}
+\item{orientation}{Top-level split direction; one of \code{"horizontal"}
+(default) or \code{"vertical"}.}
+
+\item{active}{For \code{dock_layout()}, logical: mark this layout as the
+initially-active view. For \code{panels()}, the ID of the tab to open by
+default.}
+
+\item{sizes}{Numeric vector parallel to \code{...}, giving each child's
+share of the parent (positive; need not sum to 1).}
 
 \item{x}{Object}
 
@@ -31,10 +51,12 @@ reserved for generic consistency.}
 }
 \value{
 \code{dock_layout()} and \code{default_layout()} return a \code{dock_layout}
-object. \code{as_dock_layout()} coerces a board (returning its active
-view's layout) or a serialized payload. \code{is_dock_layout()} returns
-a boolean. \code{validate_dock_layout()} returns its input and throws
-on error.
+object. \code{panels()} returns a \code{dock_panels} node and \code{group()} returns
+a \code{dock_group} node — both are layout sub-trees usable inside
+\code{dock_layout()} / \code{group()}. \code{as_dock_layout()} coerces a board
+(returning its active view's layout) or a serialized payload.
+\code{is_dock_layout()} returns a boolean. \code{validate_dock_layout()}
+returns its input and throws on error.
 }
 \description{
 A \code{dock_layout} is the panel arrangement for a single view: a tree of
@@ -45,11 +67,27 @@ extensions, so only the arrangement is stored in a \code{dock_layout}. See
 \code{\link[=is_dock_layouts]{is_dock_layouts()}} for the collection-level helpers.
 }
 \details{
-The constructor \code{dock_layout(...)} accepts bare IDs and nested lists
-for non-trivial arrangements. Pass \code{active = TRUE} to mark this
-layout as the initially-active view in a \code{dock_layouts} collection.
-\code{default_layout(blocks, extensions)} produces the default two-row
+Construct a layout with:
+\itemize{
+\item \code{dock_layout(...)}: the page-level container. Its \code{...} are the
+children of the root branch. Bare strings become single-panel
+leaves, character vectors become tabbed leaves, lists become
+nested branches. Use \code{\link[=panels]{panels()}} for a tabbed leaf with an explicit
+open tab, and \code{\link[=group]{group()}} for a branch with explicit sizes.
+\item \code{panels(..., active = NULL)}: a tabbed leaf whose tab strip holds
+the given panel IDs. \code{active} selects the initially-open tab; the
+first ID wins by default. A single-panel \code{panels()} is permitted
+but redundant (a bare string is equivalent).
+\item \code{group(..., sizes = NULL)}: a branch container. \code{sizes} is a
+numeric vector parallel to \code{...} that overrides the even split.
+\item \code{default_layout(blocks, extensions)} produces the default two-row
 arrangement (extensions on top, blocks below) for a board.
+}
+
+\code{dock_layout()} accepts \code{orientation = "horizontal" | "vertical"}
+for the top-level split direction, \code{sizes} for the root-branch
+ratios, and \code{active = TRUE} to mark this layout as the
+initially-active view in a \code{dock_layouts} collection.
 
 A \emph{view} is the conceptual page-level container; a \emph{layout} is the
 panel arrangement inside a view. The dockview-shape \code{grid + panels}
@@ -70,5 +108,11 @@ exts <- list(
 default_layout(blks, exts)
 
 dock_layout("a", "b", active = TRUE)
+
+dock_layout(
+  "a",
+  panels("b", "edit_board_extension", active = "edit_board_extension"),
+  sizes = c(0.3, 0.7)
+)
 
 }

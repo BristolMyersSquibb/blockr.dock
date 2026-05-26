@@ -475,6 +475,37 @@ panel (`"plot2"`).
 └─────────────┴──────────────┘
 ```
 
+# Custom split ratios and active tabs
+
+The list-of-IDs sugar splits space evenly and opens the first panel in
+a tabbed group. For non-default ratios or a non-default open tab,
+escalate to the typed constructors:
+
+* `dock_layout(..., sizes = c(...))` — sizes parallel to the root
+  children.
+* `group(..., sizes = c(...))` — same, for a nested branch.
+* `panels(..., active = "...")` — tabbed leaf with an explicit open
+  tab. Equivalent to a character-vector child, except you also get to
+  pick the active tab.
+
+```{r}
+new_dock_board(
+  blocks = c(a = new_dataset_block(), b = new_head_block()),
+  extensions = new_edit_board_extension(),
+  layouts = list(
+    Main = dock_layout(
+      "edit_board_extension",
+      panels("a", "b", active = "b"),
+      sizes = c(0.3, 0.7)
+    )
+  )
+)
+```
+
+`orientation = "vertical"` on `dock_layout()` flips the top-level
+split direction; nesting inside `group()` / `list()` alternates from
+there.
+
 # Cheat-sheet
 
 | Goal | Syntax |
@@ -485,11 +516,15 @@ panel (`"plot2"`).
 | Tabbed single panel | `list(c("a", "b"))` |
 | Sidebar + main | `list("ext", "main")` |
 | Two columns, both stacked | `list(list("a", "b"), list("c", "d"))` |
+| Custom split ratio | `dock_layout("a", "b", sizes = c(0.3, 0.7))` |
+| Custom open tab | `dock_layout(panels("a", "b", active = "b"))` |
+| Vertical top-level split | `dock_layout("a", "b", orientation = "vertical")` |
 | Multiple views | `list(A = ..., B = ...)` |
 | Start on view `B` | `list(A = ..., B = dock_layout(..., active = TRUE))` |
 | Empty starter view | `list(Page = list())` |
 
 # Where to go from here
 
-- See `?dock_layout` for the per-view layout type and `?active_view`
-  for switching the active view at runtime.
+- See `?dock_layout` for the per-view layout type (including
+  `panels()` and `group()`) and `?active_view` for switching the
+  active view at runtime.

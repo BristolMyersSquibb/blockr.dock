@@ -155,6 +155,65 @@ test_that("dockview_payload materialises grid + panels on demand", {
   expect_identical(payload$panels[["block_panel-a"]][["title"]], "Dataset")
 })
 
+test_that("sizes propagate to grid leaves and nested branches", {
+
+  ly <- dock_layout("a", "b", sizes = c(0.3, 0.7))
+  expect_equal(ly$grid$root$data[[1L]]$size, 0.3)
+  expect_equal(ly$grid$root$data[[2L]]$size, 0.7)
+
+  ly2 <- dock_layout(
+    "a",
+    group("b", "c", sizes = c(0.4, 0.6)),
+    sizes = c(0.3, 0.7)
+  )
+  outer <- ly2$grid$root$data
+  expect_equal(outer[[1L]]$size, 0.3)
+  expect_equal(outer[[2L]]$size, 0.7)
+  expect_equal(outer[[2L]]$data[[1L]]$size, 0.4)
+  expect_equal(outer[[2L]]$data[[2L]]$size, 0.6)
+})
+
+test_that("panels() sets the active tab in a tabbed leaf", {
+
+  ly <- dock_layout(panels("a", "b", "c", active = "b"))
+  leaf <- ly$grid$root$data[[1L]]
+  expect_identical(leaf$data$activeView, "b")
+  expect_identical(unlist(leaf$data$views), c("a", "b", "c"))
+})
+
+test_that("panels() with single id is allowed but redundant", {
+
+  expect_silent(panels("a"))
+  ly <- dock_layout(panels("a"))
+  expect_identical(layout_panel_ids(ly), "a")
+})
+
+test_that("orientation flips the top-level grid", {
+
+  ly <- dock_layout("a", "b", orientation = "vertical")
+  expect_identical(ly$grid$orientation, "VERTICAL")
+})
+
+test_that("dock_layout rejects invalid sizes vector", {
+
+  expect_error(
+    dock_layout("a", "b", sizes = c(0.5)),
+    class = "dock_layout_sizes_invalid"
+  )
+  expect_error(
+    dock_layout("a", "b", sizes = c(-0.5, 1.5)),
+    class = "dock_layout_sizes_invalid"
+  )
+})
+
+test_that("panels() rejects active that isn't one of the IDs", {
+
+  expect_error(
+    panels("a", "b", active = "c"),
+    class = "dock_panels_active_invalid"
+  )
+})
+
 test_that("lock_panels flips tabComponent both ways (#124)", {
 
   blks <- c(a = new_dataset_block())
