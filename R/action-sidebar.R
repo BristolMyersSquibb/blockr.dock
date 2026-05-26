@@ -1,15 +1,11 @@
-block_modal <- function(ns, board, mode = c("append", "add", "prepend")) {
-
+block_sidebar_body <- function(
+  ns,
+  board,
+  mode = c("append", "add", "prepend")
+) {
   mode <- match.arg(mode)
   board_block_ids <- board_block_ids(board)
   board_link_ids <- board_link_ids(board)
-
-  title <- switch(
-    mode,
-    append = "Append new block",
-    prepend = "Prepend new block",
-    add = "Add new block"
-  )
 
   button_label <- switch(
     mode,
@@ -68,29 +64,22 @@ block_modal <- function(ns, board, mode = c("append", "add", "prepend")) {
     tagList(advanced_fields)
   )
 
-  modalDialog(
-    title = title,
-    size = "l",
-    easyClose = TRUE,
-    footer = NULL,
-    tagList(
-      css_modal_advanced(ns("block-advanced-options")),
-      visible_fields,
-      toggle_button(
-        ns("block-advanced-options"),
-        ns("block-advanced-toggle")
-      ),
-      advanced_section,
-      confirm_button(
-        inputId = ns(confirm_id),
-        label = button_label
-      ),
-      auto_focus_script(ns(selection_id))
+  tagList(
+    css_modal_advanced(ns("block-advanced-options")),
+    visible_fields,
+    toggle_button(
+      ns("block-advanced-options"),
+      ns("block-advanced-toggle")
+    ),
+    advanced_section,
+    confirm_button(
+      inputId = ns(confirm_id),
+      label = button_label
     )
   )
 }
 
-link_modal <- function(ns, board, block_id) {
+link_sidebar_body <- function(ns, board, block_id) {
   board_blocks <- board_blocks(board)
 
   stopifnot(is_string(block_id), block_id %in% names(board_blocks))
@@ -107,11 +96,10 @@ link_modal <- function(ns, board, block_id) {
   )
 
   if (sum(lengths(avail)) == 0L) {
-    notify(
-      "No inputs are currently available.",
-      type = "warning"
-    )
-    return()
+    # Pure UI builder: signal "nothing to render" with NULL and let the
+    # caller decide whether to warn (initial open) or close silently
+    # (post-confirm chain path).
+    return(NULL)
   }
 
   visible_fields <- list(
@@ -145,26 +133,19 @@ link_modal <- function(ns, board, block_id) {
     tagList(advanced_fields)
   )
 
-  modalDialog(
-    title = "Create new link",
-    size = "m",
-    easyClose = TRUE,
-    footer = NULL,
-    tagList(
-      css_modal_advanced(ns("link-advanced-options")),
-      visible_fields,
-      toggle,
-      advanced_section,
-      confirm_button(
-        inputId = ns("add_link_confirm"),
-        label = "Add Link"
-      ),
-      auto_focus_script(ns(selection_id))
+  tagList(
+    css_modal_advanced(ns("link-advanced-options")),
+    visible_fields,
+    toggle,
+    advanced_section,
+    confirm_button(
+      inputId = ns("add_link_confirm"),
+      label = "Add Link"
     )
   )
 }
 
-stack_modal <- function(
+stack_sidebar_body <- function(
   ns,
   board,
   mode = c("create", "edit"),
@@ -189,7 +170,6 @@ stack_modal <- function(
   board_blocks <- board_blocks[avail]
 
   # Mode-specific values
-  title <- if (mode == "create") "Create new stack" else "Edit stack"
   button_label <- if (mode == "create") "Create Stack" else "Update Stack"
 
   selection_id <- if (mode == "create") {
@@ -277,21 +257,14 @@ stack_modal <- function(
     )
   }
 
-  modalDialog(
-    title = title,
-    size = "l",
-    easyClose = TRUE,
-    footer = NULL,
-    tagList(
-      css_modal_advanced(ns("stack-advanced-options")),
-      visible_fields,
-      toggle,
-      advanced_section,
-      confirm_button(
-        inputId = ns(confirm_id),
-        label = button_label
-      ),
-      auto_focus_script(ns(selection_id))
+  tagList(
+    css_modal_advanced(ns("stack-advanced-options")),
+    visible_fields,
+    toggle,
+    advanced_section,
+    confirm_button(
+      inputId = ns(confirm_id),
+      label = button_label
     )
   )
 }

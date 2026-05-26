@@ -3,9 +3,26 @@ add_link_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
 
+      sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
+
       observeEvent(
         trigger(),
-        showModal(link_modal(session$ns, board$board, trigger()))
+        {
+          body <- link_sidebar_body(session$ns, board$board, trigger())
+          if (is.null(body)) {
+            notify(
+              "No inputs are currently available.",
+              type = "warning"
+            )
+            return()
+          }
+
+          blockr.ui::show_sidebar(
+            sidebar_id,
+            title = "Create new link",
+            ui = body
+          )
+        }
       )
 
       observeEvent(
@@ -82,7 +99,31 @@ add_link_action <- function(trigger, board, update, ...) {
             list(links = list(add = new_lnk))
           )
 
-          removeModal()
+          # Pinned sidebar: rebuild the form for another link, or close
+          # silently if the link we just added consumed the last input.
+          # `update()` only sets a reactiveVal; the board state is mutated
+          # on the next reactive flush, so defer the availability check
+          # until after the flush; otherwise `board$board` is still the
+          # pre-link snapshot. `onFlushed` runs outside a reactive context,
+          # so `isolate()` is needed to read `board$board`.
+          src_id <- trigger()
+          session$onFlushed(
+            function() {
+              isolate({
+                body <- link_sidebar_body(session$ns, board$board, src_id)
+                if (is.null(body)) {
+                  blockr.ui::hide_sidebar(sidebar_id)
+                } else {
+                  blockr.ui::keep_or_hide_sidebar(
+                    sidebar_id,
+                    title = "Create new link",
+                    ui = body
+                  )
+                }
+              })
+            },
+            once = TRUE
+          )
         }
       )
 

@@ -13,6 +13,10 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
 
   args <- list(...)
 
+  # `options` is forwarded to `board_ui()` so the settings sidebar's
+  # pre-rendered body reflects `serve(board, options = custom_options(...))`
+  # overrides at page-build time.
+
   do.call(
     page_fillable,
     c(
@@ -33,7 +37,7 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
           pulse_height = "5px"
         ),
         shinyjs::useShinyjs(),
-        board_ui(id, x, plugins, options)
+        board_ui(id, x, plugins, options = options)
       ),
       unname(args)
     )

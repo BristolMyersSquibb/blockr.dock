@@ -3,11 +3,21 @@ add_stack_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
 
+      sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
+
       observeEvent(
         trigger(),
-        showModal(
-          stack_modal(ns = session$ns, board = board$board, mode = "create")
-        )
+        {
+          blockr.ui::show_sidebar(
+            sidebar_id,
+            title = "Create new stack",
+            ui = stack_sidebar_body(
+              ns = session$ns,
+              board = board$board,
+              mode = "create"
+            )
+          )
+        }
       )
 
       observeEvent(
@@ -74,7 +84,11 @@ add_stack_action <- function(trigger, board, update, ...) {
 
           update(list(stacks = list(add = new_stk)))
 
-          removeModal()
+          blockr.ui::keep_or_hide_sidebar(
+            sidebar_id,
+            title = "Create new stack",
+            ui = stack_sidebar_body(session$ns, board$board, mode = "create")
+          )
         }
       )
 
@@ -90,14 +104,17 @@ edit_stack_action <- function(trigger, board, update, ...) {
     function(input, output, session) {
 
       ns <- session$ns
+      sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
 
       observeEvent(
         trigger(),
         {
           stack <- board_stacks(board$board)[[trigger()]]
 
-          showModal(
-            stack_modal(
+          blockr.ui::show_sidebar(
+            sidebar_id,
+            title = "Edit stack",
+            ui = stack_sidebar_body(
               ns = ns,
               board = board$board,
               mode = "edit",
@@ -169,7 +186,19 @@ edit_stack_action <- function(trigger, board, update, ...) {
 
           update(list(stacks = list(mod = stack)))
 
-          removeModal()
+          # Re-pull the stack so the form reflects the just-saved state.
+          fresh_stack <- board_stacks(board$board)[[trigger()]]
+          blockr.ui::keep_or_hide_sidebar(
+            sidebar_id,
+            title = "Edit stack",
+            ui = stack_sidebar_body(
+              ns,
+              board$board,
+              mode = "edit",
+              stack = fresh_stack,
+              stack_id = trigger()
+            )
+          )
         }
       )
 

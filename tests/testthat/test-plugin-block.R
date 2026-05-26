@@ -95,3 +95,31 @@ test_that("condition ui test", {
     }
   )
 })
+
+test_that("locked dock keeps block_card_toggles hidden (#122)", {
+
+  blk <- new_dataset_block()
+  attr(blk, "visible") <- "outputs"
+
+  # Unlocked: widget renders visible, with `selected` matching saved attr
+  unlocked <- withr::with_options(
+    list(blockr.dock_is_locked = NULL),
+    block_card_toggles(blk, NS("x"))
+  )
+  expect_s3_class(unlocked, "shiny.tag.list")
+  unlocked_html <- as.character(htmltools::tagList(unlocked))
+  expect_match(unlocked_html, 'value="outputs".*checked', fixed = FALSE)
+  expect_false(grepl("display: none", unlocked_html, fixed = TRUE))
+
+  # Locked: widget still renders (so input$collapse_blk_sections seeds
+  # accordion_panel_set) but is hidden and the tooltip script is dropped
+  locked <- withr::with_options(
+    list(blockr.dock_is_locked = TRUE),
+    block_card_toggles(blk, NS("x"))
+  )
+  expect_s3_class(locked, "shiny.tag")
+  locked_html <- as.character(locked)
+  expect_match(locked_html, "display: none", fixed = TRUE)
+  expect_match(locked_html, 'value="outputs".*checked', fixed = FALSE)
+  expect_false(grepl("<script", locked_html, fixed = TRUE))
+})

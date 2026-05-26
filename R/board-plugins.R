@@ -10,7 +10,10 @@ board_plugins.dock_board <- function(x, which = NULL, ...) {
     plugins <- plugins()
   }
 
-  if (!is_dock_locked() && (is.null(which) || "preserve_board" %in% which)) {
+  # Save / restore stays available in locked mode: locking is about
+  # preventing layout / structural mutations, not blocking a wholesale
+  # state import/export. See issue #123.
+  if (is.null(which) || "preserve_board" %in% which) {
     plugins <- c(plugins, preserve_board(ui = ser_deser_ui))
   }
 

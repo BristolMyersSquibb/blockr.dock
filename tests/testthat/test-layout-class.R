@@ -154,3 +154,74 @@ test_that("dockview_payload materialises grid + panels on demand", {
   expect_named(payload$panels, c("block_panel-a", "block_panel-b"))
   expect_identical(payload$panels[["block_panel-a"]][["title"]], "Dataset")
 })
+
+test_that("lock_panels flips tabComponent both ways (#124)", {
+
+  blks <- c(a = new_dataset_block())
+
+  # dockview_payload reads is_dock_locked() when building panels, so the
+  # `tabComponent` it emits already reflects the option in effect at call
+  # time. lock_panels is the explicit re-coercion applied at restore time
+  # to bring saved panels in line with the *current* lock state.
+  unlocked_payload <- withr::with_options(
+    list(blockr.dock_is_locked = NULL),
+    dockview_payload(dock_layout("a"), blocks = blks)
+  )
+
+  saved_tabs <- vapply(
+    unlocked_payload[["panels"]], `[[`, character(1L), "tabComponent"
+  )
+  expect_true(all(saved_tabs == "manual"))
+
+  locked_view <- lock_panels(unlocked_payload, locked = TRUE)
+  restored_tabs <- vapply(
+    locked_view[["panels"]], `[[`, character(1L), "tabComponent"
+  )
+  expect_true(all(restored_tabs == "custom"))
+  expect_true(
+    all(vapply(
+      locked_view[["panels"]],
+      function(p) is.null(p[["params"]][["removeCallback"]]),
+      logical(1L)
+    ))
+  )
+
+  unlocked_view <- lock_panels(locked_view, locked = FALSE)
+  expect_true(all(
+    vapply(unlocked_view[["panels"]], `[[`, character(1L), "tabComponent") ==
+      "manual"
+  ))
+  expect_true(all(vapply(
+    unlocked_view[["panels"]],
+    function(p) {
+      rc <- p[["params"]][["removeCallback"]]
+      isTRUE(rc[["__IS_FUNCTION__"]]) &&
+        grepl("panel-to-remove", rc[["source"]], fixed = TRUE)
+    },
+    logical(1L)
+  )))
+})
+
+test_that("lock_panels restores callback on save-locked -> restore-unlocked", {
+
+  blks <- c(a = new_dataset_block())
+
+  locked_payload <- withr::with_options(
+    list(blockr.dock_is_locked = TRUE),
+    dockview_payload(dock_layout("a"), blocks = blks)
+  )
+
+  saved_callbacks <- lapply(
+    locked_payload[["panels"]],
+    function(p) p[["params"]][["removeCallback"]]
+  )
+  expect_true(all(vapply(saved_callbacks, is.null, logical(1L))))
+
+  unlocked_view <- lock_panels(locked_payload, locked = FALSE)
+  for (p in unlocked_view[["panels"]]) {
+    expect_identical(p[["tabComponent"]], "manual")
+    rc <- p[["params"]][["removeCallback"]]
+    expect_true(isTRUE(rc[["__IS_FUNCTION__"]]))
+    expect_match(rc[["source"]], "panel-to-remove", fixed = TRUE)
+  }
+})
