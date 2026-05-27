@@ -55,6 +55,8 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   dock <- dock_mgr$active_dock
   view_data <- live_view_data(vs, dock_mgr)
 
+  sync_layouts_to_board(view_data, update, board)
+
   ext_res <- lapply(
     exts,
     extension_server,
@@ -226,23 +228,77 @@ switch_view_observer <- function(vs, session, dock_mgr) {
 #'
 #' Merges view names/active from `vs$state` (source of truth for
 #' membership) with live layouts from `dock_mgr$docks` (source of truth
-#' for panel arrangement). Called by `serialize_board.dock_board()`.
+#' for panel arrangement). Returns `NULL` while any view is still
+#' uninitialized (dockview's JS-side `_state` input has not arrived
+#' yet) so callers can `req()` it without choking on the initial flush.
 #'
 #' @param vs Reactive view state.
 #' @param dock_mgr Dock manager.
 #'
-#' @return A [shiny::reactive()] returning a `dock_layouts` object.
+#' @return A [shiny::reactive()] returning a `dock_layouts` object or
+#'   `NULL`.
 #'
 #' @noRd
 live_view_data <- function(vs, dock_mgr) {
   reactive({
     state <- vs$state
     v_list <- lapply(names(state), function(view_name) {
-      dockview_to_layout(dock_mgr$docks[[view_name]]$layout())
+      ly <- dock_mgr$docks[[view_name]]$layout()
+      if (is.null(ly)) NULL else dockview_to_layout(ly)
     })
+
+    if (any(vapply(v_list, is.null, logical(1L)))) {
+      return(NULL)
+    }
+
     res <- dock_layouts(set_names(v_list, names(state)))
     active_view(res) <- active_view(state)
     res
+  })
+}
+
+#' Mirror live dock state back into `rv$board` via the update lifecycle.
+#'
+#' UI-driven layout mutations (panel close/add, drag-resize/rearrange,
+#' view tab switch, view CRUD) update dockview's JS state and the local
+#' `vs$state` reactive, but nothing else propagates the result back to
+#' `rv$board`. Without this observer, `board_layouts(rv$board)` drifts
+#' from what the user sees and the serializer is forced to splice in
+#' `live_view_data()` instead of reading the spec directly.
+#'
+#' The write goes through `update(list(views = ...))` rather than a
+#' direct mutation of `board$board`: that's read-only in the plugin
+#' context, and routing through the update channel composes cleanly
+#' with the rest of the lifecycle (validation, augment, apply hooks
+#' from other subclasses). The matching `apply_board_update.dock_board`
+#' method writes the layouts into `rv$board`.
+#'
+#' Debounced because drag-resize emits many rapid events per gesture;
+#' un-throttled, every frame would round-trip through the update
+#' lifecycle.
+#'
+#' @param view_data Reactive from `live_view_data()`.
+#' @param update The board update channel from `board_server_callback`.
+#' @param board Board reactiveValues (read-only).
+#' @param millis Debounce interval, milliseconds. Pass `0` to skip
+#'   debouncing (tests).
+#'
+#' @noRd
+sync_layouts_to_board <- function(view_data, update, board, millis = 250) {
+  src <- if (millis > 0L) shiny::debounce(view_data, millis) else view_data
+  layouts_to_board_observer(src, update, board)
+}
+
+layouts_to_board_observer <- function(view_data, update, board) {
+  observe({
+    new_layouts <- req(view_data())
+    current <- isolate(board_layouts(board$board))
+
+    if (identical(current, new_layouts)) {
+      return()
+    }
+
+    update(list(views = new_layouts))
   })
 }
 
