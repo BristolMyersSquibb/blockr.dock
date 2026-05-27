@@ -35,7 +35,7 @@ test_that("dock_layouts serialization round-trip", {
   expect_identical(active_view(ly), "Tab2")
 })
 
-test_that("serialized dock_layout carries no panels", {
+test_that("serialized dock_layout uses the decoupled wire spec", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(Page = list("a", "b"))
@@ -44,8 +44,79 @@ test_that("serialized dock_layout carries no panels", {
   ser <- blockr_ser(brd)
   payload <- ser[["payload"]][["layouts"]][["payload"]][["views"]][[1L]]
 
-  expect_named(payload[["payload"]], c("grid", "activeGroup"))
-  expect_false("panels" %in% names(payload[["payload"]]))
+  expect_named(payload[["payload"]], c("orientation", "root"))
+  expect_false(any(c("grid", "panels", "activeGroup") %in%
+                     names(payload[["payload"]])))
+})
+
+test_that("grid_to_wire normalises pixel sizes to ratios", {
+
+  # dockview returns absolute sizes from live state. Build a tree that
+  # looks like what get_dock() would emit after a user resize and check
+  # that the wire form carries ratios summing to 1.
+  pixel_grid <- list(
+    root = list(
+      type = "branch",
+      data = list(
+        list(
+          type = "leaf",
+          data = list(views = list("a"), activeView = "a", id = "1"),
+          size = 300
+        ),
+        list(
+          type = "leaf",
+          data = list(views = list("b"), activeView = "b", id = "2"),
+          size = 700
+        )
+      ),
+      size = 1000
+    ),
+    orientation = "HORIZONTAL"
+  )
+
+  wire <- grid_to_wire(pixel_grid)
+  expect_equal(wire[["root"]][["sizes"]], c(0.3, 0.7))
+})
+
+test_that("grid_to_wire omits even sizes and default active tabs", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(Page = list("a", c("b", "a")))
+  )
+
+  ser <- blockr_ser(brd)
+  root <- ser[["payload"]][["layouts"]][["payload"]][["views"]][[1L]][[
+    "payload"
+  ]][["root"]]
+
+  # Two equal-share children: sizes field omitted entirely.
+  expect_false("sizes" %in% names(root))
+
+  # Second child is a tabbed leaf whose first panel is the default
+  # active — `active` should be absent.
+  tabbed <- root[["children"]][[2L]]
+  expect_setequal(unlist(tabbed[["panels"]]),
+                  c("block_panel-b", "block_panel-a"))
+  expect_false("active" %in% names(tabbed))
+})
+
+test_that("wire_to_grid restores activeGroup default and group ids", {
+
+  wire <- list(
+    orientation = "horizontal",
+    root = list(
+      children = list(
+        list(panels = list("block_panel-a")),
+        list(panels = list("block_panel-b"))
+      )
+    )
+  )
+
+  grid <- wire_to_grid(wire)
+  expect_identical(grid[["orientation"]], "HORIZONTAL")
+  expect_identical(grid[["root"]][["data"]][[1L]][["data"]][["id"]], "1")
+  expect_identical(grid[["root"]][["data"]][[2L]][["data"]][["id"]], "2")
 })
 
 # Layout features encoded in the grid tree (sizes, activeView,

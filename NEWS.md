@@ -36,6 +36,7 @@
   - Unexported the `dock_layouts()` constructor. The user-facing input shape for `new_dock_board(layouts = ...)` is a plain named list — the `dock_layouts` type is the resolved collection that the board holds internally. `is_dock_layouts()`, `as_dock_layouts()`, and `validate_dock_layouts()` remain exported.
   - Unexported `new_dock_layout()`; use `dock_layout()` instead.
   - Unexported `view_ids()` and `view_can_crud()`. Both were internal helpers exposed by accident; renamed to `layout_ids()` and `views_can_crud()` respectively to align with what they operate on.
+  - Wire format for serialised `dock_layout` decoupled from dockview's internal tree. The persisted shape is now a `{orientation, root}` recursive spec; `Branch = {children, sizes?}`, `Leaf = {panels, active?}`. Sizes are ratios (auto-normalised from dockview's pixel sizes); even splits omit the `sizes` field; the default open tab omits `active`. Legacy payloads (with the dockview-shape `grid` field) load via a shape-discriminated reader. Producer-version routing is tracked in #153 (depends on blockr.core forwarding `...` in `blockr_deser.list`).
 
 # blockr.dock 0.1.0
 
