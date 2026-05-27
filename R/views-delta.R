@@ -680,6 +680,36 @@ apply_views_active <- function(active, board, dock_mgr = NULL,
 #'
 #' @noRd
 apply_layout_diff <- function(view, target, proxy, blocks, extensions) {
+
   log_debug("applying layout diff for view {view}")
+
+  # Block / extension UIs live in board-level wrapper elements (the
+  # offcanvas at init time, a dockview panel container while attached)
+  # and are moved between them via `move_dom_element`. `restore_dock`
+  # tears the panel containers down, taking the attached UIs with them,
+  # so we have to (a) park the UIs back in the offcanvas first and
+  # (b) reattach them to the freshly-rendered panels afterwards.
+  for (pid in block_panel_ids(proxy)) {
+    hide_block_panel(pid, rm_panel = FALSE, proxy = proxy)
+  }
+  for (pid in ext_panel_ids(proxy)) {
+    hide_ext_panel(pid, rm_panel = FALSE, proxy = proxy)
+  }
+
   restore_layout(target, proxy, blocks = blocks, extensions = extensions)
+
+  for (pid in as_dock_panel_id(target)) {
+    if (is_block_panel_id(pid)) {
+      show_block_panel(pid, add_panel = FALSE, proxy = proxy)
+    } else if (is_ext_panel_id(pid)) {
+      show_ext_panel(pid, add_panel = FALSE, proxy = proxy)
+    } else {
+      blockr_abort(
+        "Unknown panel type {.cls {class(pid)}}.",
+        class = "dock_panel_invalid"
+      )
+    }
+  }
+
+  invisible(NULL)
 }
