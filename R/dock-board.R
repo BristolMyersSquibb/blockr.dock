@@ -265,9 +265,27 @@ dock_board_options <- function() {
 #' @export
 rm_blocks.dock_board <- function(x, rm, ...) {
 
-  # for now, b/c dock$layout(), passed in ... is not updated in time, we can
-  # only clear the layout to not run into validation issues
-  active_layout(x) <- resolve_dock_layout(extensions = dock_extensions(x))
+  if (is_blocks(rm)) {
+    rm <- names(rm)
+  }
+
+  layouts <- board_layouts(x)
+  rm_panels <- as.character(as_block_panel_id(rm))
+
+  for (v in names(layouts)) {
+
+    pids <- layout_panel_ids(layouts[[v]])
+
+    if (any(pids %in% rm_panels)) {
+      was_active <- is_active_view(layouts[[v]])
+      layouts[[v]] <- set_active_view(
+        drop_panels_from_layout(layouts[[v]], rm_panels),
+        was_active
+      )
+    }
+  }
+
+  board_layouts(x) <- layouts
 
   NextMethod(object = x)
 }
@@ -276,19 +294,76 @@ rm_blocks.dock_board <- function(x, rm, ...) {
 validate_board_update.dock_board <- function(payload, board, ...,
                                              session = get_session()) {
 
-  if ("views" %in% names(payload) && !is.null(payload$views)) {
-    validate_dock_layouts(payload$views)
+  if ("views" %in% names(payload) && !is.null(payload$views) &&
+        !is.list(payload$views)) {
+    blockr_abort(
+      "`views` must be a list with optional `add`/`mod`/`rm`/`active`.",
+      class = "dock_views_delta_invalid"
+    )
   }
 
   NextMethod()
 }
 
 #' @export
+augment_board_update.dock_board <- function(upd, board, ...,
+                                            session = get_session()) {
+
+  upd <- NextMethod()
+
+  rm_block_ids <- upd$blocks$rm %||% character()
+  skip_views <- upd$views$rm %||% character()
+
+  if (length(upd$views$add) || length(upd$views$mod)) {
+    upd$views <- resolve_views_layouts(upd$views, board, upd)
+  }
+
+  if (length(rm_block_ids)) {
+
+    merged <- merge_views_mod(
+      upd$views$mod,
+      board_layouts(board),
+      rm_block_ids,
+      skip_views = skip_views
+    )
+
+    if (length(merged)) {
+      upd$views$mod <- merged
+    }
+  }
+
+  if (length(upd$views)) {
+    validate_views_delta(upd$views, board, upd)
+  }
+
+  upd
+}
+
+#' @export
 apply_board_update.dock_board <- function(board, upd, ...,
                                           session = get_session()) {
 
-  if ("views" %in% names(upd) && !is.null(upd$views)) {
-    board_layouts(board) <- upd$views
+  if (!length(upd$views)) {
+    return(board)
+  }
+
+  dot_args <- list(...)
+  dock_mgr <- dot_args$dock_mgr
+
+  if (length(upd$views$rm)) {
+    board <- apply_views_rm(upd$views$rm, board, dock_mgr, session)
+  }
+
+  if (length(upd$views$add)) {
+    board <- apply_views_add(upd$views$add, board, dock_mgr, session)
+  }
+
+  if (length(upd$views$mod)) {
+    board <- apply_views_mod(upd$views$mod, board, dock_mgr)
+  }
+
+  if (!is.null(upd$views$active)) {
+    board <- apply_views_active(upd$views$active, board, dock_mgr, session)
   }
 
   board
