@@ -28,6 +28,13 @@
 #' ratios, and `active = TRUE` to mark this layout as the
 #' initially-active view in a `dock_layouts` collection.
 #'
+#' `as_layout_spec()` canonicalises a stored layout by routing it
+#' through the spec form (`as.list()`) and back: sizes are normalised to
+#' ratios, even splits and default-active tabs collapse to their bare
+#' form, and dockview's volatile leaf IDs are regenerated. The result is
+#' a `dock_layout` equivalent to the input, so
+#' `as_layout_spec(dock_layout(...))` round-trips.
+#'
 #' A *view* is the conceptual page-level container; a *layout* is the
 #' panel arrangement inside a view. The dockview-shape `grid + panels`
 #' payload that dockViewR consumes is an internal projection of a
@@ -54,6 +61,7 @@
 #' @param blocks,extensions Dock board components. For `default_layout()`
 #'   the components to arrange; for `as_dock_layout()`, optional, used to
 #'   resolve bare IDs and validate the result.
+#' @param layout A `dock_layout` object.
 #'
 #' @examples
 #' blks <- c(
@@ -93,9 +101,10 @@
 #' a `dock_group` node — both are layout sub-trees usable inside
 #' `dock_layout()` / `group()`. `as_dock_layout()` returns a
 #' `dock_layout` (from a board or a spec list); `as.list()` of a
-#' `dock_layout` returns the spec list. `is_dock_layout()` returns a
-#' boolean. `validate_dock_layout()` returns its input and throws on
-#' error.
+#' `dock_layout` returns the spec list. `as_layout_spec()` rebuilds a
+#' stored `dock_layout` from its inferred constructor form (idempotent
+#' under `dock_layout(...)`). `is_dock_layout()` returns a boolean.
+#' `validate_dock_layout()` returns its input and throws on error.
 #'
 #' @rdname layout
 #' @export
@@ -275,6 +284,18 @@ default_layout <- function(blocks, extensions) {
   if (length(blks)) spec <- c(spec, list(blks))
 
   do.call(dock_layout, spec)
+}
+
+#' @rdname layout
+#' @export
+as_layout_spec <- function(layout) {
+
+  stopifnot(is_dock_layout(layout))
+
+  set_active_view(
+    spec_to_layout(layout_to_spec(layout)),
+    is_active_view(layout)
+  )
 }
 
 #' @rdname layout
