@@ -200,6 +200,75 @@ test_that("add block action chains via keep_or_hide_sidebar on confirm", {
   )
 })
 
+test_that("locked dock refuses add_block_action mutation (#127)", {
+  # Even with valid inputs simulating a forged `Shiny.setInputValue` bypass
+  # of the UI gate, the action's mutation handler must not call `update()`
+  # when the dock is locked. The trigger-level `req_unlocked()` short-
+  # circuits the eventExpr so the handler is never scheduled.
+  withr::local_options(blockr.dock_is_locked = TRUE)
+
+  r_board <- reactiveValues(board = new_board())
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_block_action(
+          trigger = reactive(TRUE),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # Selection observer is also gated — `blk()` stays NULL.
+      expect_null(blk())
+      session$setInputs(add_block_selection = "dataset_block")
+      expect_null(blk())
+
+      # Confirm observer is gated — no `update()` call, even with the
+      # arguments that would succeed in the unlocked test above.
+      session$setInputs(
+        add_block_confirm = 1L,
+        add_block_id = "test",
+        add_block_name = "Test block"
+      )
+      expect_length(r_update(), 0L)
+    }
+  )
+})
+
+test_that("locked dock refuses remove_block_action mutation (#127)", {
+  withr::local_options(blockr.dock_is_locked = TRUE)
+
+  r_board <- reactiveValues(
+    board = new_board(blocks = c(a = new_dataset_block()))
+  )
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        remove_block_action(
+          trigger = reactive("a"),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      # Trigger fires immediately in unlocked mode (see the test above) —
+      # under lock, the eventExpr block calls `req(FALSE)` and the handler
+      # never runs.
+      session$flushReact()
+      expect_length(r_update(), 0L)
+    }
+  )
+})
+
 test_that("remove block action", {
 
   r_board <- reactiveValues(

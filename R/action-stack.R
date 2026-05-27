@@ -6,7 +6,10 @@ add_stack_action <- function(trigger, board, update, ...) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
 
       observeEvent(
-        trigger(),
+        {
+          req_unlocked()
+          trigger()
+        },
         {
           blockr.ui::show_sidebar(
             sidebar_id,
@@ -21,7 +24,10 @@ add_stack_action <- function(trigger, board, update, ...) {
       )
 
       observeEvent(
-        input$stack_confirm,
+        {
+          req_unlocked()
+          input$stack_confirm
+        },
         {
           stk_id <- input$stack_id
 
@@ -107,7 +113,10 @@ edit_stack_action <- function(trigger, board, update, ...) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
 
       observeEvent(
-        trigger(),
+        {
+          req_unlocked()
+          trigger()
+        },
         {
           stack <- board_stacks(board$board)[[trigger()]]
 
@@ -126,7 +135,10 @@ edit_stack_action <- function(trigger, board, update, ...) {
       )
 
       observeEvent(
-        input$edit_stack_confirm,
+        {
+          req_unlocked()
+          input$edit_stack_confirm
+        },
         {
           id <- trigger()
           stack <- board_stacks(board$board)[[id]]
@@ -212,7 +224,10 @@ remove_stack_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       observeEvent(
-        trigger(),
+        {
+          req_unlocked()
+          trigger()
+        },
         update(list(stacks = list(rm = trigger())))
       )
       NULL

@@ -213,3 +213,11 @@ test_that("board server", {
 
   expect_identical(panel_lookups, 1L)
 })
+
+test_that("empty-view prompt drops the add affordance in locked mode (#136)", {
+  unlocked <- as.character(empty_dock_prompt(NS("x"), locked = FALSE))
+  locked   <- as.character(empty_dock_prompt(NS("x"), locked = TRUE))
+
+  expect_match(unlocked, "x-empty_dock_add", fixed = TRUE)
+  expect_false(grepl("x-empty_dock_add", locked, fixed = TRUE))
+})

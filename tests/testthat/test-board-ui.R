@@ -93,6 +93,27 @@ test_that("caller-supplied `options` flows into the rendered settings body", {
   expect_false(grepl('id="test-board_name"', html, fixed = TRUE))
 })
 
+test_that("locked dock hides the board-options accordion in the settings body (#135)", {
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  locked_html <- withr::with_options(
+    list(blockr.dock_is_locked = TRUE),
+    as.character(board_ui("test", brd))
+  )
+
+  # Generate-code block stays (read-only export).
+  expect_match(locked_html, 'id="generate_code"', fixed = TRUE)
+  # The board_name input is the canonical mutating control; it must not
+  # render. (Other entries in the accordion follow the same path.)
+  expect_false(grepl('id="test-board_name"', locked_html, fixed = TRUE))
+  # Gear button stays so the user can still reach generate_code.
+  expect_match(
+    locked_html,
+    'data-blockr-sidebar-target="test-settings_sidebar"',
+    fixed = TRUE
+  )
+})
+
 test_that("locked mode renders a navbar lock indicator", {
 
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))

@@ -51,6 +51,38 @@ test_that("add stack action chains via keep_or_hide_sidebar on confirm", {
   )
 })
 
+test_that("locked dock refuses add_stack_action mutation (#127)", {
+  withr::local_options(blockr.dock_is_locked = TRUE)
+
+  r_board <- reactiveValues(
+    board = new_board(c(a = new_dataset_block("iris")))
+  )
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_stack_action(
+          trigger = reactive(TRUE),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      session$setInputs(
+        stack_confirm = 1L,
+        stack_id = "test",
+        stack_block_selection = "",
+        stack_color = "#FFFFFF"
+      )
+      expect_length(r_update(), 0L)
+    }
+  )
+})
+
 test_that("add stack action", {
 
   r_board <- reactiveValues(

@@ -45,9 +45,7 @@ move_dom_element <- function(from, to, session = get_session()) {
 }
 
 determine_active_views <- function(layout) {
-
   xtr_leaf_id <- function(x) {
-
     if (x$type == "leaf") {
       return(set_names(coal(x$data$activeView, ""), x$data$id))
     }
@@ -67,7 +65,6 @@ visible_exts <- function() {
 }
 
 determine_panel_pos <- function(dock) {
-
   active <- determine_active_views(dock$layout())
 
   keep_visible <- as_ext_panel_id(visible_exts())
@@ -104,7 +101,6 @@ determine_panel_pos <- function(dock) {
 #' @rdname panel
 #' @export
 show_panel <- function(id, board, dock, type = c("block", "extension")) {
-
   stopifnot(is_string(id))
 
   type <- match.arg(type)
@@ -152,8 +148,28 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
   invisible()
 }
 
+#' Empty-dock watermark.
+#'
+#' Rendered as an overlay when a dock has no panels. In locked mode the
+#' "Add panel" call-to-action is replaced by a read-only placeholder so
+#' the view does not appear blank but no editing affordance is offered
+#' (#136).
+#'
+#' @param ns Module namespace function.
+#' @param locked Whether the dock is locked. Defaults to the live option.
+#'
 #' @noRd
-empty_dock_prompt <- function(ns) {
+empty_dock_prompt <- function(ns, locked = is_dock_locked()) {
+  if (isTRUE(locked)) {
+    return(
+      div(
+        class = "blockr-empty-dock-prompt",
+        bsicons::bs_icon("lock-fill", size = "2em"),
+        tags$p("Empty view editing is disabled in locked mode")
+      )
+    )
+  }
+
   div(
     class = "blockr-empty-dock-prompt",
     bsicons::bs_icon("plus-circle", size = "2em"),

@@ -154,7 +154,10 @@ blk_ext_srv <- function(id, board, update, ...) {
 
 add_block_observer <- function(input, board, update, session) {
   observeEvent(
-    input$confirm_add,
+    {
+      req_unlocked()
+      input$confirm_add
+    },
     {
       log_debug("add block confirm")
 
@@ -185,7 +188,10 @@ add_block_observer <- function(input, board, update, session) {
 
 remove_block_observer <- function(input, board, update, session) {
   observeEvent(
-    input$confirm_rm,
+    {
+      req_unlocked()
+      input$confirm_rm
+    },
     {
       log_debug("rm block confirm")
 
@@ -414,7 +420,10 @@ create_dt_link_obs <- function(ids, upd, ...) {
     log_debug("creating link DT observers ", inp)
 
     obs1 <- observeEvent(
-      input[[inp]],
+      {
+        req_unlocked()
+        input[[inp]]
+      },
       {
         blks <- board_blocks(rv$board)
 
@@ -606,7 +615,10 @@ edit_link_observer <- function(upd, rv) {
 add_link_observer <- function(input, rv, upd, sess) {
 
   observeEvent(
-    input$add_link,
+    {
+      req_unlocked()
+      input$add_link
+    },
     {
       log_debug("add link")
 
@@ -656,7 +668,10 @@ add_link_observer <- function(input, rv, upd, sess) {
 rm_link_observer <- function(input, rv, upd, sess) {
 
   observeEvent(
-    input$rm_link,
+    {
+      req_unlocked()
+      input$rm_link
+    },
     {
       log_debug("rm link")
 
@@ -682,7 +697,10 @@ rm_link_observer <- function(input, rv, upd, sess) {
 modify_link_observer <- function(input, rv, upd, session, proxy, res) {
 
   observeEvent(
-    input$modify_links,
+    {
+      req_unlocked()
+      input$modify_links
+    },
     {
       log_debug("mod link")
 

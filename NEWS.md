@@ -1,3 +1,19 @@
+# blockr.dock (development version)
+
+* Locked-mode hardening:
+  * Server-side trust boundary: every state-mutating `observeEvent` in
+    the package now gates its `eventExpr` with `req_unlocked()`, so a
+    forged `Shiny.setInputValue` cannot bypass UI hides (#127).
+  * New exported helpers `is_dock_locked()` and `req_unlocked()` give
+    extension authors the same primitives. `blockr.dock` does not
+    auto-hide extensions in locked mode; each extension picks its own
+    behaviour (see `?dock-locked`).
+  * Empty views in locked mode now show a read-only placeholder
+    instead of the "Add panel" call-to-action (#136).
+  * The board-options accordion is hidden from the settings sidebar in
+    locked mode; the gear button stays for read-only access to the
+    generated-code export (#135).
+
 # blockr.dock 0.1.1
 
 * Added prepend block action.

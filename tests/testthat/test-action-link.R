@@ -278,6 +278,61 @@ test_that("add link action hides sidebar when no inputs remain post-confirm", {
   )
 })
 
+test_that("locked dock refuses add/remove link action mutations (#127)", {
+  withr::local_options(blockr.dock_is_locked = TRUE)
+
+  r_board <- reactiveValues(
+    board = new_board(
+      c(a = new_dataset_block("iris"), b = new_head_block()),
+      links = links(id = "ab", from = "a", to = "b")
+    )
+  )
+  r_update <- reactiveVal(list())
+
+  # add_link_action: confirm-with-valid-inputs must not mutate.
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_link_action(
+          trigger = reactive("a"),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      session$setInputs(create_link = "b")
+      session$setInputs(
+        add_link_confirm = 1L,
+        add_link_id = "new_link",
+        add_link_input = "data"
+      )
+      expect_length(r_update(), 0L)
+    }
+  )
+
+  # remove_link_action: trigger fires on flush in unlocked, but the gated
+  # eventExpr blocks it here.
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        remove_link_action(
+          trigger = reactive("ab"),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      expect_length(r_update(), 0L)
+    }
+  )
+})
+
 test_that("remove link action", {
 
   r_board <- reactiveValues(

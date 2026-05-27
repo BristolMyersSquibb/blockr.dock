@@ -6,7 +6,10 @@ add_link_action <- function(trigger, board, update, ...) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
 
       observeEvent(
-        trigger(),
+        {
+          req_unlocked()
+          trigger()
+        },
         {
           body <- link_sidebar_body(session$ns, board$board, trigger())
           if (is.null(body)) {
@@ -26,10 +29,11 @@ add_link_action <- function(trigger, board, update, ...) {
       )
 
       observeEvent(
-        input$create_link,
         {
+          req_unlocked()
           req(input$create_link)
-
+        },
+        {
           res <- block_input_select(
             board_blocks(board$board)[[input$create_link]],
             input$create_link,
@@ -50,7 +54,10 @@ add_link_action <- function(trigger, board, update, ...) {
       )
 
       observeEvent(
-        input$add_link_confirm,
+        {
+          req_unlocked()
+          input$add_link_confirm
+        },
         {
           lnk_id <- input$add_link_id
 
@@ -137,7 +144,10 @@ remove_link_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       observeEvent(
-        trigger(),
+        {
+          req_unlocked()
+          trigger()
+        },
         update(list(links = list(rm = trigger())))
       )
       NULL

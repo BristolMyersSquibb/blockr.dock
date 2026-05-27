@@ -363,7 +363,10 @@ manage_dock <- function(
     )
 
     observeEvent(
-      input[[dock_input("panel-to-remove")]],
+      {
+        req_unlocked()
+        input[[dock_input("panel-to-remove")]]
+      },
       {
         pid <- as_dock_panel_id(
           input[[dock_input("panel-to-remove")]]
@@ -385,23 +388,35 @@ manage_dock <- function(
     )
 
     observeEvent(
-      input[[dock_input("panel-to-add")]],
+      {
+        req_unlocked()
+        input[[dock_input("panel-to-add")]]
+      },
       suggest_panels_to_add(dock, board, session = session)
     )
 
     # Empty-dock prompt — rendered for all empty docks, visibility
     # handled by the dock wrapper's CSS (opacity/pointer-events).
+    # `empty_dock_prompt()` is mode-aware: it renders the "Add panel"
+    # call-to-action when unlocked, and a non-actionable placeholder
+    # when locked (#136).
     output$empty_prompt <- renderUI({
       if (n_panels() == 0) empty_dock_prompt(session$ns)
     })
 
     observeEvent(
-      input$empty_dock_add,
+      {
+        req_unlocked()
+        input$empty_dock_add
+      },
       suggest_panels_to_add(dock, board, panels = list(), session = session)
     )
 
     observeEvent(
-      input$confirm_add,
+      {
+        req_unlocked()
+        input$confirm_add
+      },
       {
         req(input$add_dock_panel)
 
@@ -520,76 +535,82 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
   ns <- session$ns
 
   # Show modal for view creation
-  observeEvent(input$view_nav_add, {
-    req(view_can_crud(vs$state))
+  observeEvent(
+    {
+      req_unlocked()
+      input$view_nav_add
+    },
+    {
+      req(view_can_crud(vs$state))
 
-    state <- vs$state
-    n <- length(state) + 1L
-    while (paste("Page", n) %in% names(state)) n <- n + 1L
-    default_name <- paste("Page", n)
+      state <- vs$state
+      n <- length(state) + 1L
+      while (paste("Page", n) %in% names(state)) n <- n + 1L
+      default_name <- paste("Page", n)
 
-    brd <- board$board
-    blk_options <- build_block_options(brd, board_block_ids(brd))
-    ext_options <- build_ext_options(brd, dock_ext_ids(brd))
+      brd <- board$board
+      blk_options <- build_block_options(brd, board_block_ids(brd))
+      ext_options <- build_ext_options(brd, dock_ext_ids(brd))
 
-    showModal(
-      modalDialog(
-        title = "New view",
-        size = "l",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          css_modal(),
-          textInput(
-            ns("view_new_name"),
-            "View name",
-            value = default_name
-          ),
-          if (length(blk_options)) {
-            tagList(
-              css_block_selectize(),
+      showModal(
+        modalDialog(
+          title = "New view",
+          size = "l",
+          easyClose = TRUE,
+          footer = NULL,
+          tagList(
+            css_modal(),
+            textInput(
+              ns("view_new_name"),
+              "View name",
+              value = default_name
+            ),
+            if (length(blk_options)) {
+              tagList(
+                css_block_selectize(),
+                selectizeInput(
+                  ns("view_new_blocks"),
+                  label = "Blocks to show",
+                  choices = NULL,
+                  multiple = TRUE,
+                  options = list(
+                    options = blk_options,
+                    valueField = "value",
+                    labelField = "label",
+                    searchField = c("label", "description", "searchtext"),
+                    placeholder = "Select blocks...",
+                    openOnFocus = FALSE,
+                    plugins = list("remove_button"),
+                    render = js_blk_selectize_render()
+                  )
+                )
+              )
+            },
+            if (length(ext_options)) {
               selectizeInput(
-                ns("view_new_blocks"),
-                label = "Blocks to show",
+                ns("view_new_exts"),
+                label = "Extensions to show",
                 choices = NULL,
                 multiple = TRUE,
                 options = list(
-                  options = blk_options,
+                  options = ext_options,
                   valueField = "value",
                   labelField = "label",
                   searchField = c("label", "description", "searchtext"),
-                  placeholder = "Select blocks...",
+                  placeholder = "Select extensions...",
                   openOnFocus = FALSE,
                   plugins = list("remove_button"),
                   render = js_blk_selectize_render()
                 )
               )
-            )
-          },
-          if (length(ext_options)) {
-            selectizeInput(
-              ns("view_new_exts"),
-              label = "Extensions to show",
-              choices = NULL,
-              multiple = TRUE,
-              options = list(
-                options = ext_options,
-                valueField = "value",
-                labelField = "label",
-                searchField = c("label", "description", "searchtext"),
-                placeholder = "Select extensions...",
-                openOnFocus = FALSE,
-                plugins = list("remove_button"),
-                render = js_blk_selectize_render()
-              )
-            )
-          },
-          uiOutput(ns("view_name_validation")),
-          confirm_button(ns("confirm_view_add"), label = "Create view")
+            },
+            uiOutput(ns("view_name_validation")),
+            confirm_button(ns("confirm_view_add"), label = "Create view")
+          )
         )
       )
-    )
-  })
+    }
+  )
 
   # Name validation feedback
   output$view_name_validation <- renderUI({
@@ -599,71 +620,77 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
   })
 
   # Confirm view creation
-  observeEvent(input$confirm_view_add, {
-    state <- vs$state
-    new_name <- trimws(input$view_new_name)
+  observeEvent(
+    {
+      req_unlocked()
+      input$confirm_view_add
+    },
+    {
+      state <- vs$state
+      new_name <- trimws(input$view_new_name)
 
-    if (!is.null(validate_view_name(new_name, names(state)))) {
-      return()
+      if (!is.null(validate_view_name(new_name, names(state)))) {
+        return()
+      }
+
+      removeModal()
+
+      # Build layout from selected blocks and extensions
+      brd <- board$board
+      sel_blks <- intersect(
+        input$view_new_blocks %||% character(),
+        board_block_ids(brd)
+      )
+      sel_exts <- intersect(
+        input$view_new_exts %||% character(),
+        dock_ext_ids(brd)
+      )
+      v_ly <- create_dock_layout(
+        blocks = board_blocks(brd)[sel_blks],
+        extensions = as_dock_extensions(
+          as.list(dock_extensions(brd))[sel_exts]
+        )
+      )
+
+      state[[new_name]] <- list()
+      vs$state <- state
+
+      # Insert dock output container into the DOM
+      v_id <- dock_mgr$next_id()
+      dock_output_id <- ns(NS(v_id, dock_id()))
+
+      insertUI(
+        selector = paste0("#", ns("view_container")),
+        where = "beforeEnd",
+        ui = div(
+          id = ns(paste0("view_wrap_", v_id)),
+          class = "blockr-view-dock",
+          dockViewR::dock_view_output(
+            dock_output_id,
+            width = "100%",
+            height = "100%"
+          ),
+          uiOutput(NS(ns(v_id), "empty_prompt"))
+        )
+      )
+
+      # Start the dock module for this view
+      dock_res <- manage_dock(v_id, board, update, triggers, layout = v_ly)
+      dock_res$dock_id <- v_id
+      dock_mgr$docks[[new_name]] <- dock_res
+
+      # Update the navigation dropdown and switch to new view
+      session$sendInputMessage("view_nav", list(add = new_name))
+
+      # Switch to the new view
+      session$sendCustomMessage(
+        "switch-view",
+        list(
+          id = ns(paste0("view_wrap_", v_id))
+        )
+      )
     }
-
-    removeModal()
-
-    # Build layout from selected blocks and extensions
-    brd <- board$board
-    sel_blks <- intersect(
-      input$view_new_blocks %||% character(),
-      board_block_ids(brd)
-    )
-    sel_exts <- intersect(
-      input$view_new_exts %||% character(),
-      dock_ext_ids(brd)
-    )
-    v_ly <- create_dock_layout(
-      blocks = board_blocks(brd)[sel_blks],
-      extensions = as_dock_extensions(
-        as.list(dock_extensions(brd))[sel_exts]
-      )
-    )
-
-    state[[new_name]] <- list()
-    vs$state <- state
-
-    # Insert dock output container into the DOM
-    v_id <- dock_mgr$next_id()
-    dock_output_id <- ns(NS(v_id, dock_id()))
-
-    insertUI(
-      selector = paste0("#", ns("view_container")),
-      where = "beforeEnd",
-      ui = div(
-        id = ns(paste0("view_wrap_", v_id)),
-        class = "blockr-view-dock",
-        dockViewR::dock_view_output(
-          dock_output_id,
-          width = "100%",
-          height = "100%"
-        ),
-        uiOutput(NS(ns(v_id), "empty_prompt"))
-      )
-    )
-
-    # Start the dock module for this view
-    dock_res <- manage_dock(v_id, board, update, triggers, layout = v_ly)
-    dock_res$dock_id <- v_id
-    dock_mgr$docks[[new_name]] <- dock_res
-
-    # Update the navigation dropdown and switch to new view
-    session$sendInputMessage("view_nav", list(add = new_name))
-
-    # Switch to the new view
-    session$sendCustomMessage(
-      "switch-view",
-      list(
-        id = ns(paste0("view_wrap_", v_id))
-      )
-    )
-  })
+  )
 }
 
 #' Observe view removal requests.
@@ -682,105 +709,117 @@ remove_view_observer <- function(vs, session, dock_mgr) {
   ns <- session$ns
 
   # Show confirmation modal
-  observeEvent(input$view_nav_remove, {
-    req(view_can_crud(vs$state))
+  observeEvent(
+    {
+      req_unlocked()
+      input$view_nav_remove
+    },
+    {
+      req(view_can_crud(vs$state))
 
-    rm_name <- input$view_nav_remove
-    state <- vs$state
+      rm_name <- input$view_nav_remove
+      state <- vs$state
 
-    if (length(state) <= 1L) {
-      notify("Cannot remove the last view.")
-      return()
-    }
+      if (length(state) <= 1L) {
+        notify("Cannot remove the last view.")
+        return()
+      }
 
-    showModal(
-      modalDialog(
-        title = "Remove view",
-        size = "s",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          tags$p(
-            "Are you sure you want to remove view ",
-            tags$strong(rm_name),
-            "?"
-          ),
-          div(
-            style = "display: flex; justify-content: flex-end; gap: 8px;
-              margin-top: 20px;",
-            modalButton("Cancel"),
-            actionButton(
-              ns("confirm_view_remove"),
-              "Remove",
-              class = "btn-danger"
+      showModal(
+        modalDialog(
+          title = "Remove view",
+          size = "s",
+          easyClose = TRUE,
+          footer = NULL,
+          tagList(
+            tags$p(
+              "Are you sure you want to remove view ",
+              tags$strong(rm_name),
+              "?"
+            ),
+            div(
+              style = "display: flex; justify-content: flex-end; gap: 8px;
+                margin-top: 20px;",
+              modalButton("Cancel"),
+              actionButton(
+                ns("confirm_view_remove"),
+                "Remove",
+                class = "btn-danger"
+              )
             )
           )
         )
       )
-    )
-  })
+    }
+  )
 
   # Perform removal after confirmation
-  observeEvent(input$confirm_view_remove, {
-    removeModal()
+  observeEvent(
+    {
+      req_unlocked()
+      input$confirm_view_remove
+    },
+    {
+      removeModal()
 
-    rm_name <- input$view_nav_remove
-    state <- vs$state
-    was_active <- identical(active_view(state), rm_name)
+      rm_name <- input$view_nav_remove
+      state <- vs$state
+      was_active <- identical(active_view(state), rm_name)
 
-    # Hide block/ext UI from the removed view (move back to offcanvas)
-    if (exists(rm_name, envir = dock_mgr$docks, inherits = FALSE)) {
-      rm_dock <- dock_mgr$docks[[rm_name]]
+      # Hide block/ext UI from the removed view (move back to offcanvas)
+      if (exists(rm_name, envir = dock_mgr$docks, inherits = FALSE)) {
+        rm_dock <- dock_mgr$docks[[rm_name]]
 
-      if (was_active) {
-        hide_view_ui(rm_name, dock_mgr$docks)
+        if (was_active) {
+          hide_view_ui(rm_name, dock_mgr$docks)
+        }
+
+        # Destroy module observers/inputs/outputs and remove DOM wrapper
+        destroy_module(rm_dock$dock_id, session = session)
+        removeUI(
+          selector = paste0("#", ns(paste0("view_wrap_", rm_dock$dock_id))),
+          immediate = TRUE,
+          session = session
+        )
+        rm(list = rm_name, envir = dock_mgr$docks)
       }
 
-      # Destroy module observers/inputs/outputs and remove DOM wrapper
-      destroy_module(rm_dock$dock_id, session = session)
-      removeUI(
-        selector = paste0("#", ns(paste0("view_wrap_", rm_dock$dock_id))),
-        immediate = TRUE,
-        session = session
+      state[[rm_name]] <- NULL
+
+      if (was_active) {
+        active_view(state) <- names(state)[1L]
+      }
+
+      vs$state <- state
+
+      active_name <- active_view(state)
+
+      # switch-view must fire before show_view_ui so the target
+      # dock has blockr-view-dock-active; otherwise move-element silently
+      # drops DOM moves into inactive docks.
+      session$sendCustomMessage(
+        "switch-view",
+        list(
+          id = ns(paste0("view_wrap_", dock_mgr$docks[[active_name]]$dock_id))
+        )
       )
-      rm(list = rm_name, envir = dock_mgr$docks)
-    }
 
-    state[[rm_name]] <- NULL
+      # Show block/ext UI in the target view
+      if (was_active) {
+        show_view_ui(active_name, dock_mgr$docks)
+        update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active_name]])
+      }
 
-    if (was_active) {
-      active_view(state) <- names(state)[1L]
-    }
-
-    vs$state <- state
-
-    active_name <- active_view(state)
-
-    # switch-view must fire before show_view_ui so the target
-    # dock has blockr-view-dock-active; otherwise move-element silently
-    # drops DOM moves into inactive docks.
-    session$sendCustomMessage(
-      "switch-view",
-      list(
-        id = ns(paste0("view_wrap_", dock_mgr$docks[[active_name]]$dock_id))
+      # sendInputMessage auto-namespaces, so pass un-namespaced ID
+      session$sendInputMessage(
+        "view_nav",
+        list(
+          remove = rm_name,
+          value = active_name
+        )
       )
-    )
-
-    # Show block/ext UI in the target view
-    if (was_active) {
-      show_view_ui(active_name, dock_mgr$docks)
-      update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active_name]])
     }
-
-    # sendInputMessage auto-namespaces, so pass un-namespaced ID
-    session$sendInputMessage(
-      "view_nav",
-      list(
-        remove = rm_name,
-        value = active_name
-      )
-    )
-  })
+  )
 }
 
 #' Observe view rename requests.
@@ -796,34 +835,40 @@ remove_view_observer <- function(vs, session, dock_mgr) {
 rename_view_observer <- function(vs, session, dock_mgr) {
   input <- session$input
 
-  observeEvent(input$view_nav_rename, {
-    req(view_can_crud(vs$state))
+  observeEvent(
+    {
+      req_unlocked()
+      input$view_nav_rename
+    },
+    {
+      req(view_can_crud(vs$state))
 
-    rename <- input$view_nav_rename
-    state <- vs$state
+      rename <- input$view_nav_rename
+      state <- vs$state
 
-    nms <- names(state)
-    idx <- match(rename$from, nms)
-    if (is.na(idx)) {
-      return()
+      nms <- names(state)
+      idx <- match(rename$from, nms)
+      if (is.na(idx)) {
+        return()
+      }
+
+      nms[idx] <- rename$to
+      names(state) <- nms
+
+      if (identical(active_view(state), rename$from)) {
+        active_view(state) <- rename$to
+      }
+
+      vs$state <- state
+
+      # Update docks key; dock_id inside the entry stays unchanged so
+      # DOM wrapper lookups still target the original element.
+      if (exists(rename$from, envir = dock_mgr$docks, inherits = FALSE)) {
+        dock_mgr$docks[[rename$to]] <- dock_mgr$docks[[rename$from]]
+        rm(list = rename$from, envir = dock_mgr$docks)
+      }
     }
-
-    nms[idx] <- rename$to
-    names(state) <- nms
-
-    if (identical(active_view(state), rename$from)) {
-      active_view(state) <- rename$to
-    }
-
-    vs$state <- state
-
-    # Update docks key; dock_id inside the entry stays unchanged so
-    # DOM wrapper lookups still target the original element.
-    if (exists(rename$from, envir = dock_mgr$docks, inherits = FALSE)) {
-      dock_mgr$docks[[rename$to]] <- dock_mgr$docks[[rename$from]]
-      rm(list = rename$from, envir = dock_mgr$docks)
-    }
-  })
+  )
 }
 
 #' Show a modal for adding panels to the dock.
