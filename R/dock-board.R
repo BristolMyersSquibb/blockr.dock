@@ -273,7 +273,8 @@ rm_blocks.dock_board <- function(x, rm, ...) {
 }
 
 #' @export
-validate_board_update.dock_board <- function(payload, board) {
+validate_board_update.dock_board <- function(payload, board, ...,
+                                             session = get_session()) {
 
   if ("views" %in% names(payload) && !is.null(payload$views)) {
     validate_dock_layouts(payload$views)
@@ -282,15 +283,13 @@ validate_board_update.dock_board <- function(payload, board) {
   NextMethod()
 }
 
-# Post-core hook: rv$board has already settled by the time we run.
-# core's apply path is fixed; subclass slots like `views` are handled
-# here instead of swapping the whole apply generic.
 #' @export
-apply_board_update.dock_board <- function(board, upd, rv, ...) {
+apply_board_update.dock_board <- function(board, upd, ...,
+                                          session = get_session()) {
 
   if ("views" %in% names(upd) && !is.null(upd$views)) {
-    board_layouts(rv$board) <- upd$views
+    board_layouts(board) <- upd$views
   }
 
-  invisible()
+  board
 }

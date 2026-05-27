@@ -302,35 +302,19 @@ test_that("layouts_to_board_observer is idempotent when nothing changed", {
   expect_identical(fire_count, 0L)
 })
 
-test_that("apply_board_update.dock_board writes views slot to rv$board", {
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
-
+test_that("apply_board_update.dock_board returns board with views applied", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(A = list("a"), B = list("b"))
   )
 
-  rv <- with_mock_context(ms, reactiveValues(board = brd))
-
   new_views <- board_layouts(brd)
   active_view(new_views) <- "B"
 
-  with_mock_context(ms, {
-    apply_board_update(
-      brd,
-      list(views = new_views),
-      rv,
-      session = ms,
-      edit_block = NULL,
-      ctrl_block = NULL,
-      edit_stack = NULL,
-      edit_plugin_args = list(),
-      dot_args = list()
-    )
-  })
+  out <- apply_board_update(brd, list(views = new_views))
 
-  expect_identical(active_view(board_layouts(isolate(rv$board))), "B")
+  expect_true(is_dock_board(out))
+  expect_identical(active_view(board_layouts(out)), "B")
 })
 
 test_that("validate_board_update.dock_board rejects malformed views slot", {
