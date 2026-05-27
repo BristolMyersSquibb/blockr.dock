@@ -272,38 +272,19 @@ rm_blocks.dock_board <- function(x, rm, ...) {
   NextMethod(object = x)
 }
 
-#' Board update lifecycle methods for `dock_board`.
-#'
-#' Extends the core update lifecycle with a `views` payload slot
-#' carrying a `dock_layouts` object. The augment method validates the
-#' slot; the apply method writes it into `rv$board` via `board_layouts<-`
-#' so that `board_layouts(rv$board)` stays in sync with UI-driven layout
-#' changes (panel close/add, drag-resize/rearrange, view CRUD). See
-#' [blockr.core::augment_board_update()] for the dispatch contract.
-#'
-#' @param upd Board update payload.
-#' @param board Current `dock_board` object.
-#' @param rv Board server's `reactiveValues` store.
-#' @param ... Passed to `NextMethod()` for in-core slot processing.
-#'
-#' @name dock_board_update_lifecycle
-#' @keywords internal
-NULL
-
-#' @rdname dock_board_update_lifecycle
 #' @export
-augment_board_update.dock_board <- function(upd, board) {
+validate_board_update.dock_board <- function(payload, board) {
 
-  upd <- NextMethod()
-
-  if ("views" %in% names(upd) && !is.null(upd$views)) {
-    validate_dock_layouts(upd$views)
+  if ("views" %in% names(payload) && !is.null(payload$views)) {
+    validate_dock_layouts(payload$views)
   }
 
-  upd
+  NextMethod()
 }
 
-#' @rdname dock_board_update_lifecycle
+# Post-core hook: rv$board has already settled by the time we run.
+# core's apply path is fixed; subclass slots like `views` are handled
+# here instead of swapping the whole apply generic.
 #' @export
 apply_board_update.dock_board <- function(board, upd, rv, ...) {
 
@@ -311,5 +292,5 @@ apply_board_update.dock_board <- function(board, upd, rv, ...) {
     board_layouts(rv$board) <- upd$views
   }
 
-  NextMethod()
+  invisible()
 }

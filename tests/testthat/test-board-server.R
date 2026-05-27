@@ -333,11 +333,11 @@ test_that("apply_board_update.dock_board writes views slot to rv$board", {
   expect_identical(active_view(board_layouts(isolate(rv$board))), "B")
 })
 
-test_that("augment_board_update.dock_board rejects malformed views slot", {
+test_that("validate_board_update.dock_board rejects malformed views slot", {
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))
 
   expect_error(
-    augment_board_update(list(views = "not a dock_layouts"), brd),
+    validate_board_update(list(views = "not a dock_layouts"), brd),
     class = "dock_layouts_structure_invalid"
   )
 })
