@@ -160,7 +160,7 @@ dock_proxy <- function(session = get_session()) {
 }
 
 proxy_board_ns <- function(proxy) {
-  proxy$board_ns %||% proxy$session$ns
+  coal(proxy$board_ns, proxy$session$ns)
 }
 
 dock_panel <- function(...) {

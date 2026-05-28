@@ -52,7 +52,7 @@ new_dock_layouts <- function(...) {
     vws <- list(Page = new_dock_layout())
   }
 
-  if (!any(vapply(vws, is_active_view, logical(1L)))) {
+  if (!any(lgl_ply(vws, is_active_view))) {
     vws[[1L]] <- set_active_view(vws[[1L]])
   }
 
@@ -101,7 +101,7 @@ validate_dock_layouts <- function(x) {
     }
   }
 
-  n_active <- sum(vapply(x, is_active_view, logical(1L)))
+  n_active <- sum(lgl_ply(x, is_active_view))
 
   if (n_active > 1L) {
     blockr_abort(
@@ -138,7 +138,7 @@ active_view <- function(x) {
 
 #' @export
 active_view.dock_layouts <- function(x) {
-  idx <- which(vapply(x, is_active_view, logical(1L)))[1L]
+  idx <- which(lgl_ply(x, is_active_view))[1L]
   names(x)[idx]
 }
 

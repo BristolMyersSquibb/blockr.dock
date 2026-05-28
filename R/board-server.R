@@ -55,6 +55,8 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   dock <- dock_mgr$active_dock
   view_data <- live_view_data(vs, dock_mgr)
 
+  sync_layouts_to_board(view_data, update, board)
+
   ext_res <- lapply(
     exts,
     extension_server,
@@ -222,27 +224,46 @@ switch_view_observer <- function(vs, session, dock_mgr) {
   )
 }
 
-#' Build a reactive `dock_layouts` with live layouts for serialization.
-#'
-#' Merges view names/active from `vs$state` (source of truth for
-#' membership) with live layouts from `dock_mgr$docks` (source of truth
-#' for panel arrangement). Called by `serialize_board.dock_board()`.
-#'
-#' @param vs Reactive view state.
-#' @param dock_mgr Dock manager.
-#'
-#' @return A [shiny::reactive()] returning a `dock_layouts` object.
-#'
-#' @noRd
+# Returns NULL while any view's dockview `_state` input is still
+# pending — observers downstream can `req()` past the initial flush.
 live_view_data <- function(vs, dock_mgr) {
   reactive({
     state <- vs$state
     v_list <- lapply(names(state), function(view_name) {
-      dockview_to_layout(dock_mgr$docks[[view_name]]$layout())
+      ly <- dock_mgr$docks[[view_name]]$layout()
+      if (is.null(ly)) NULL else dockview_to_layout(ly)
     })
+
+    if (any(lgl_ply(v_list, is.null))) {
+      return(NULL)
+    }
+
     res <- dock_layouts(set_names(v_list, names(state)))
     active_view(res) <- active_view(state)
     res
+  })
+}
+
+# Writes go through update(list(views = ...)) — board$board is
+# read-only at the plugin boundary; routing through the update channel
+# lets apply_board_update.dock_board mutate rv$board where it's writable
+# and composes with augment/apply hooks from other subclasses. Debounced
+# because drag-resize emits many rapid events per gesture.
+sync_layouts_to_board <- function(view_data, update, board, millis = 250) {
+  src <- if (millis > 0L) shiny::debounce(view_data, millis) else view_data
+  layouts_to_board_observer(src, update, board)
+}
+
+layouts_to_board_observer <- function(view_data, update, board) {
+  observe({
+    new_layouts <- req(view_data())
+    current <- isolate(board_layouts(board$board))
+
+    if (identical(current, new_layouts)) {
+      return()
+    }
+
+    update(list(views = new_layouts))
   })
 }
 
@@ -322,9 +343,9 @@ manage_dock <- function(
   extensions = NULL
 ) {
   init_board <- isolate(board$board)
-  init_layout <- layout %||% active_layout(init_board)
-  init_blocks <- blocks %||% board_blocks(init_board)
-  init_exts <- extensions %||% dock_extensions(init_board)
+  init_layout <- coal(layout, active_layout(init_board))
+  init_blocks <- coal(blocks, board_blocks(init_board))
+  init_exts <- coal(extensions, dock_extensions(init_board))
 
   # Block/ext cards live at the board (parent) namespace level
   board_ns <- get_session()$ns
@@ -625,11 +646,11 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
     # Build layout from selected blocks and extensions
     brd <- board$board
     sel_blks <- intersect(
-      input$view_new_blocks %||% character(),
+      coal(input$view_new_blocks, character()),
       board_block_ids(brd)
     )
     sel_exts <- intersect(
-      input$view_new_exts %||% character(),
+      coal(input$view_new_exts, character()),
       dock_ext_ids(brd)
     )
     v_blks <- board_blocks(brd)[sel_blks]

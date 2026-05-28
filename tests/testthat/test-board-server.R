@@ -213,3 +213,142 @@ test_that("board server", {
 
   expect_identical(panel_lookups, 1L)
 })
+
+test_that("live_view_data is NULL while any view layout is uninitialized", {
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  layouts <- with_mock_context(ms, {
+    list(A = reactiveVal(NULL), B = reactiveVal(NULL))
+  })
+
+  res <- with_mock_context(ms, {
+    vs <- reactiveValues(
+      state = dock_layouts(A = new_dock_layout(), B = new_dock_layout())
+    )
+    dock_mgr <- new_dock_manager()
+    dock_mgr$docks$A <- list(layout = layouts$A)
+    dock_mgr$docks$B <- list(layout = layouts$B)
+    list(vd = live_view_data(vs, dock_mgr), vs = vs)
+  })
+
+  expect_null(isolate(res$vd()))
+
+  with_mock_context(ms, layouts$A(list(grid = list(), panels = list())))
+  expect_null(isolate(res$vd()))
+
+  with_mock_context(ms, layouts$B(list(grid = list(), panels = list())))
+
+  lys <- isolate(res$vd())
+  expect_s3_class(lys, "dock_layouts")
+  expect_named(lys, c("A", "B"))
+  expect_identical(active_view(lys), "A")
+})
+
+test_that("layouts_to_board_observer fires update views on divergence", {
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"), B = list("b"))
+  )
+
+  rv <- with_mock_context(ms, reactiveValues(board = brd))
+  vd <- with_mock_context(ms, reactiveVal(NULL))
+
+  captured <- list()
+  upd <- function(payload) {
+    captured[[length(captured) + 1L]] <<- payload
+  }
+
+  with_mock_context(ms, layouts_to_board_observer(vd, upd, rv))
+  ms$flushReact()
+
+  expect_length(captured, 0L)
+
+  new_views <- isolate(board_layouts(rv$board))
+  active_view(new_views) <- "B"
+
+  with_mock_context(ms, vd(new_views))
+  ms$flushReact()
+
+  expect_length(captured, 1L)
+  expect_named(captured[[1L]], "views")
+  expect_identical(active_view(captured[[1L]]$views), "B")
+})
+
+test_that("layouts_to_board_observer is idempotent when nothing changed", {
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(Page = list("a"))
+  )
+
+  rv <- with_mock_context(ms, reactiveValues(board = brd))
+  vd <- with_mock_context(ms, reactiveVal(NULL))
+
+  fire_count <- 0L
+  upd <- function(payload) fire_count <<- fire_count + 1L
+
+  with_mock_context(ms, layouts_to_board_observer(vd, upd, rv))
+  ms$flushReact()
+
+  with_mock_context(ms, vd(isolate(board_layouts(rv$board))))
+  ms$flushReact()
+
+  expect_identical(fire_count, 0L)
+})
+
+test_that("apply_board_update.dock_board returns board with views applied", {
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"), B = list("b"))
+  )
+
+  new_views <- board_layouts(brd)
+  active_view(new_views) <- "B"
+
+  out <- apply_board_update(brd, list(views = new_views))
+
+  expect_true(is_dock_board(out))
+  expect_identical(active_view(board_layouts(out)), "B")
+})
+
+test_that("validate_board_update.dock_board rejects malformed views slot", {
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  expect_error(
+    validate_board_update(list(views = "not a dock_layouts"), brd),
+    class = "dock_layouts_structure_invalid"
+  )
+})
+
+test_that("views slot flows through full board_update lifecycle", {
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"), B = list("b"))
+  )
+
+  new_views <- board_layouts(brd)
+  active_view(new_views) <- "B"
+
+  testServer(
+    blockr.core:::board_server.board,
+    {
+      session$flushReact()
+
+      board_update(list(views = new_views))
+      session$flushReact()
+
+      expect_identical(active_view(board_layouts(rv$board)), "B")
+      expect_null(board_update())
+    },
+    args = list(
+      x = brd,
+      plugins = list(blockr.core::manage_blocks())
+    )
+  )
+})

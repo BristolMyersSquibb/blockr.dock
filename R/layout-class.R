@@ -200,7 +200,7 @@ new_dock_layout <- function(grid = NULL, active_group = NULL,
   content <- list(grid = grid)
 
   if (length(grid_panel_ids(grid))) {
-    content[["activeGroup"]] <- active_group %||% "1"
+    content[["activeGroup"]] <- coal(active_group, "1")
   }
 
   set_active_view(
@@ -249,8 +249,8 @@ as_dock_layout.list <- function(x, blocks = NULL, extensions = NULL, ...) {
 
   if (!is.null(blocks) || !is.null(extensions)) {
     layout <- resolve_dock_layout(
-      blocks = blocks %||% list(),
-      extensions = extensions %||% list(),
+      blocks = coal(blocks, list()),
+      extensions = coal(extensions, list()),
       layout = layout
     )
   }
@@ -362,7 +362,7 @@ build_grid_tree <- function(spec, orientation = "horizontal") {
       type = "leaf",
       data = list(
         views = as.list(views),
-        activeView = active_view %||% views[[1L]],
+        activeView = coal(active_view, views[[1L]]),
         id = next_id()
       ),
       size = size
@@ -395,7 +395,7 @@ build_grid_tree <- function(spec, orientation = "horizontal") {
 
     if (is_dock_group(node)) {
       n <- length(node[["children"]])
-      child_sizes <- node[["sizes"]] %||% empty_or_even(n)
+      child_sizes <- coal(node[["sizes"]], empty_or_even(n))
       children <- Map(walk, node[["children"]], child_sizes)
       return(make_branch(children, size = size))
     }
@@ -520,10 +520,10 @@ rewrite_grid_leaves <- function(grid, id_map) {
     }
     if (identical(node[["type"]], "leaf")) {
       views <- chr_ply(node[["data"]][["views"]], identity)
-      mapped <- chr_ply(views, function(v) id_map[[v]] %||% v)
+      mapped <- chr_mply(coal, as.list(id_map)[views], views)
       active_view <- node[["data"]][["activeView"]]
       node[["data"]][["views"]] <- as.list(mapped)
-      node[["data"]][["activeView"]] <- id_map[[active_view]] %||% active_view
+      node[["data"]][["activeView"]] <- coal(id_map[[active_view]], active_view)
       return(node)
     }
     node[["data"]] <- lapply(node[["data"]], walk)
@@ -581,8 +581,8 @@ dockview_payload <- function(layout, blocks = list(), extensions = list()) {
   blk_ids <- sub("^block_panel-", "", blk_pids)
   ext_ids <- sub("^ext_panel-", "", ext_pids)
 
-  blk_panels <- lapply(blk_ids, function(id) block_panel(blocks[id]))
-  ext_panels <- lapply(ext_ids, function(id) ext_panel(ext_list[[id]]))
+  blk_panels <- lapply(split(blocks[blk_ids], seq_along(blk_ids)), block_panel)
+  ext_panels <- lapply(ext_list[ext_ids], ext_panel)
 
   panels <- lapply(c(blk_panels, ext_panels), create_layout_panel)
   names(panels) <- chr_xtr(panels, "id")

@@ -115,7 +115,7 @@ resolve_views <- function(specs, c_blks, c_exts) {
 
   specs <- lapply(specs, coerce_view_spec)
 
-  if (!any(vapply(specs, is_active_view, logical(1L)))) {
+  if (!any(lgl_ply(specs, is_active_view))) {
     specs[[1L]] <- set_active_view(specs[[1L]])
   }
 
@@ -270,4 +270,26 @@ rm_blocks.dock_board <- function(x, rm, ...) {
   active_layout(x) <- resolve_dock_layout(extensions = dock_extensions(x))
 
   NextMethod(object = x)
+}
+
+#' @export
+validate_board_update.dock_board <- function(payload, board, ...,
+                                             session = get_session()) {
+
+  if ("views" %in% names(payload) && !is.null(payload$views)) {
+    validate_dock_layouts(payload$views)
+  }
+
+  NextMethod()
+}
+
+#' @export
+apply_board_update.dock_board <- function(board, upd, ...,
+                                          session = get_session()) {
+
+  if ("views" %in% names(upd) && !is.null(upd$views)) {
+    board_layouts(board) <- upd$views
+  }
+
+  board
 }
