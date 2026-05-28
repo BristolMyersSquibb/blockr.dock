@@ -72,7 +72,11 @@ initialise_layout <- function(layouts, blocks, extensions) {
   }
 
   if (is.list(layouts) && "grid" %in% names(layouts)) {
-    return(as_dock_layouts(resolve_dock_layout(c_blks, c_exts, layouts)))
+    return(
+      as_dock_layouts(
+        resolve_dock_layout(c_blks, c_exts, dockview_to_layout(layouts))
+      )
+    )
   }
 
   is_multi_view <- (
@@ -155,7 +159,7 @@ coerce_view_spec <- function(v) {
   }
 
   if (is.list(v) && "grid" %in% names(v)) {
-    return(as_dock_layout(v))
+    return(dockview_to_layout(v))
   }
 
   if (is.list(v)) {

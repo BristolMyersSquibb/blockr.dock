@@ -56,7 +56,7 @@ test_that("serialized dock_layout uses the flattened wire spec", {
   expect_identical(payload[["children"]][[2L]], "block_panel-b")
 })
 
-test_that("grid_to_wire normalises pixel sizes to ratios", {
+test_that("grid_to_spec normalises pixel sizes to ratios", {
 
   # dockview returns absolute sizes from live state. Build a tree that
   # looks like what get_dock() would emit after a user resize and check
@@ -81,11 +81,11 @@ test_that("grid_to_wire normalises pixel sizes to ratios", {
     orientation = "HORIZONTAL"
   )
 
-  wire <- grid_to_wire(pixel_grid)
+  wire <- grid_to_spec(pixel_grid)
   expect_equal(wire[["sizes"]], c(0.3, 0.7))
 })
 
-test_that("grid_to_wire omits even sizes and default active tabs", {
+test_that("grid_to_spec omits even sizes and default active tabs", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -108,14 +108,14 @@ test_that("grid_to_wire omits even sizes and default active tabs", {
   expect_false("active" %in% names(tabbed))
 })
 
-test_that("wire_to_grid restores group ids from the flattened spec", {
+test_that("spec_to_grid restores group ids from the flattened spec", {
 
   wire <- list(
     orientation = "horizontal",
     children = list("block_panel-a", "block_panel-b")
   )
 
-  grid <- wire_to_grid(wire)
+  grid <- spec_to_grid(wire)
   expect_identical(grid[["orientation"]], "HORIZONTAL")
   expect_identical(grid[["root"]][["data"]][[1L]][["data"]][["id"]], "1")
   expect_identical(grid[["root"]][["data"]][[2L]][["data"]][["id"]], "2")
@@ -123,10 +123,10 @@ test_that("wire_to_grid restores group ids from the flattened spec", {
 
 test_that("focus round-trips and is omitted for the default group", {
 
-  # Two leaves; focus the second (a tabbed group). Build via wire_to_grid
+  # Two leaves; focus the second (a tabbed group). Build via spec_to_grid
   # so we can assign a non-default activeGroup the way live dockview state
   # would.
-  grid <- wire_to_grid(
+  grid <- spec_to_grid(
     list(
       orientation = "horizontal",
       children = list(
@@ -138,20 +138,20 @@ test_that("focus round-trips and is omitted for the default group", {
   )
 
   focused <- new_dock_layout(grid = grid, active_group = "2")
-  wire <- layout_to_wire(focused)
+  wire <- layout_to_spec(focused)
   expect_identical(wire[["focus"]], "block_panel-c")
-  expect_identical(wire_to_layout(wire)[["activeGroup"]], "2")
+  expect_identical(spec_to_layout(wire)[["activeGroup"]], "2")
 
   # Focus on the first leaf is the load default — omitted.
   default <- new_dock_layout(grid = grid, active_group = "1")
-  wire_default <- layout_to_wire(default)
+  wire_default <- layout_to_spec(default)
   expect_false("focus" %in% names(wire_default))
-  expect_identical(wire_to_layout(wire_default)[["activeGroup"]], "1")
+  expect_identical(spec_to_layout(wire_default)[["activeGroup"]], "1")
 })
 
 test_that("focus survives a real JSON round-trip", {
 
-  grid <- wire_to_grid(
+  grid <- spec_to_grid(
     list(
       orientation = "horizontal",
       children = list("block_panel-a", "block_panel-b")
@@ -161,7 +161,7 @@ test_that("focus survives a real JSON round-trip", {
 
   json <- layout_to_json(focused)
   expect_match(json, "\"focus\":\"block_panel-b\"", fixed = TRUE)
-  expect_identical(layout_from_json(json)[["activeGroup"]], "2")
+  expect_identical(as_dock_layout(json)[["activeGroup"]], "2")
 })
 
 test_that("layout survives a real JSON encode/decode round-trip", {
@@ -202,7 +202,7 @@ test_that("layout survives a real JSON encode/decode round-trip", {
   )
 })
 
-test_that("layout_to_json / layout_from_json round-trip", {
+test_that("layout JSON / spec round-trips via as_dock_layout", {
 
   ly <- dock_layout(
     "a",
@@ -212,20 +212,38 @@ test_that("layout_to_json / layout_from_json round-trip", {
 
   json <- layout_to_json(ly)
   expect_type(json, "character")
-  expect_identical(layout_from_json(json), ly)
+  expect_identical(as_dock_layout(json), ly)
 
   # Accepts an already-parsed list too.
   parsed <- jsonlite::fromJSON(json, simplifyDataFrame = FALSE,
                                simplifyMatrix = FALSE)
-  expect_identical(layout_from_json(parsed), ly)
+  expect_identical(as_dock_layout(parsed), ly)
+
+  # as.list() of a layout is the spec; as_dock_layout() inverts it.
+  expect_identical(as_dock_layout(as.list(ly)), ly)
 })
 
-test_that("layout_from_json resolves bare IDs against blocks/extensions", {
+test_that("as_dock_layout rejects dockview's internal grid shape", {
+
+  ly <- resolve_dock_layout(
+    blocks = c(a = new_dataset_block()),
+    layout = dock_layout("a")
+  )
+
+  # An unclassed dock_layout / get_dock() output is grid-shaped — not a
+  # public input.
+  expect_error(
+    as_dock_layout(unclass(ly)),
+    class = "dock_layout_dockview_input"
+  )
+})
+
+test_that("as_dock_layout resolves bare IDs against blocks/extensions", {
 
   blks <- c(a = new_dataset_block(), b = new_head_block())
   json <- '{"orientation":"horizontal","children":["a","b"]}'
 
-  ly <- layout_from_json(json, blocks = blks)
+  ly <- as_dock_layout(json, blocks = blks)
   expect_setequal(
     layout_panel_ids(ly),
     c("block_panel-a", "block_panel-b")
@@ -233,7 +251,7 @@ test_that("layout_from_json resolves bare IDs against blocks/extensions", {
 
   # An unknown panel is rejected by the folded validation.
   expect_error(
-    layout_from_json(
+    as_dock_layout(
       '{"orientation":"horizontal","children":["a","nope"]}',
       blocks = blks
     ),

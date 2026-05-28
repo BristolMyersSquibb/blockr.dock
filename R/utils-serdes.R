@@ -46,7 +46,7 @@ blockr_ser.dock_layout <- function(x, data, ...) {
   payload <- as_dock_layout(payload)
   list(
     object = class(x),
-    payload = layout_to_wire(payload),
+    payload = layout_to_spec(payload),
     active = is_active_view(payload)
   )
 }
@@ -90,12 +90,9 @@ blockr_deser.dock_layout <- function(x, data, ...) {
   # see blockr.dock#153 for the planned version-based routing once
   # blockr.core forwards `...` through `blockr_deser.list`.
   layout <- if ("grid" %in% names(payload)) {
-    new_dock_layout(
-      grid = payload[["grid"]],
-      active_group = payload[["activeGroup"]] %||% payload[["active_group"]]
-    )
+    dockview_to_layout(payload)
   } else {
-    wire_to_layout(payload)
+    spec_to_layout(payload)
   }
 
   set_active_view(layout, active)
@@ -141,10 +138,11 @@ blockr_deser.dock_extensions <- function(x, data, ...) {
 }
 
 #
-# Wire format converters
+# Spec converters (our serialized format <-> dockview's internal grid)
 #
-# The persisted layout shape is a recursive tree, deliberately distinct
-# from dockview's internal grid format. The top-level object is itself a
+# The persisted layout shape (the "spec") is a recursive tree,
+# deliberately distinct from dockview's internal grid format. The
+# top-level object is itself a
 # branch — it carries `children`, an optional `sizes`, and an
 # `orientation`. A node within is either:
 #
@@ -161,17 +159,17 @@ blockr_deser.dock_extensions <- function(x, data, ...) {
 # of the focused group). It's omitted when focus is on the first leaf
 # (the default on load). It's distinct from a leaf's `active`: `active`
 # is leaf-local (which tab is open here), `focus` is layout-global
-# (which panel is focused overall). grid_to_wire()/wire_to_grid() handle
-# the pure structure; layout_to_wire()/wire_to_layout() add the focus.
+# (which panel is focused overall). grid_to_spec()/spec_to_grid() handle
+# the pure structure; layout_to_spec()/spec_to_layout() add the focus.
 #
 # Dockview's internal fields (type tags, per-branch size, leaf id) are
 # not stored — they're regenerated on the way back in. Dockview emits
-# absolute pixel sizes from live state after a user resize; grid_to_wire()
-# normalises them to ratios on save. wire_to_grid() is robust to the
+# absolute pixel sizes from live state after a user resize; grid_to_spec()
+# normalises them to ratios on save. spec_to_grid() is robust to the
 # atomic-vector coercion `jsonlite::fromJSON(simplifyVector = TRUE)`
 # applies to all-scalar arrays.
 
-grid_to_wire <- function(grid) {
+grid_to_spec <- function(grid) {
 
   walk <- function(node) {
 
@@ -223,7 +221,7 @@ grid_to_wire <- function(grid) {
   )
 }
 
-wire_to_grid <- function(wire) {
+spec_to_grid <- function(wire) {
 
   group_id <- 0L
 
@@ -302,10 +300,10 @@ normalise_sizes <- function(sizes) {
 # Layout-level conversion: the grid <-> wire structure plus the
 # focused-panel pointer that lives on the `dock_layout`, not the grid.
 
-layout_to_wire <- function(layout) {
+layout_to_spec <- function(layout) {
 
   layout <- as_dock_layout(layout)
-  wire <- grid_to_wire(layout[["grid"]])
+  wire <- grid_to_spec(layout[["grid"]])
 
   focus <- focus_panel(layout[["grid"]], layout[["activeGroup"]])
   if (!is.null(focus)) {
@@ -315,13 +313,24 @@ layout_to_wire <- function(layout) {
   wire
 }
 
-wire_to_layout <- function(wire) {
+spec_to_layout <- function(wire) {
 
-  grid <- wire_to_grid(wire)
+  grid <- spec_to_grid(wire)
 
   new_dock_layout(
     grid = grid,
     active_group = focus_group_id(grid, wire[["focus"]])
+  )
+}
+
+# Wrap a dockview-shaped list (its own `get_dock()` output, or an
+# unclassed `dock_layout`) back into a `dock_layout`. Internal only —
+# dockview's grid shape is not a public input; `as_dock_layout()` speaks
+# the spec, not this.
+dockview_to_layout <- function(x) {
+  new_dock_layout(
+    grid = x[["grid"]],
+    active_group = x[["activeGroup"]] %||% x[["active_group"]]
   )
 }
 
@@ -381,10 +390,11 @@ focus_group_id <- function(grid, focus) {
 
 #' Layout serialization and inspection
 #'
-#' Read and write the JSON wire form of a [dock_layout][layout], and
-#' inspect the panel IDs it references. These are the canonical
-#' accessors for the serialized layout format — downstream tooling
-#' should call them rather than re-implement the format.
+#' Write the JSON form of a [dock_layout][layout] and inspect the panel
+#' IDs it references. These are the canonical accessors for the
+#' serialized layout format — downstream tooling should call them rather
+#' than re-implement the format. To go the other way (JSON or a parsed
+#' spec back to a `dock_layout`), use [as_dock_layout()][layout].
 #'
 #' `layout_to_json()` renders a layout as a JSON string. The shape is a
 #' recursive tree: the top object carries `orientation`, `children`, an
@@ -394,30 +404,21 @@ focus_group_id <- function(grid, focus) {
 #' with `children` / optional `sizes` (nested branch). Sizes are ratios
 #' summing to 1, omitted when even.
 #'
-#' `layout_from_json()` is the inverse. It accepts a JSON string or an
-#' already-parsed list. When `blocks` and / or `extensions` are
-#' supplied, bare IDs in the spec are resolved to canonical panel IDs
-#' and the result is validated against them (the
-#' [resolve_dock_layout][layout] + [validate_dock_layout][layout]
-#' combination) — so a parse failure, an unknown panel, or a malformed
-#' arrangement throws the usual classed error.
-#'
 #' `layout_panel_ids()` returns the canonical panel IDs
 #' (`block_panel-…` / `ext_panel-…`) referenced by a layout;
 #' `panel_obj_ids()` strips those prefixes back to bare block /
 #' extension IDs.
 #'
-#' @param x A `dock_layout` (for `layout_to_json()`), or a JSON string /
-#'   parsed list (for `layout_from_json()`).
+#' @param x A `dock_layout`.
 #' @param layout A `dock_layout` object.
 #' @param ids Character vector of panel IDs.
-#' @param blocks,extensions Optional board components used to resolve and
-#'   validate bare IDs in `layout_from_json()`.
 #' @param ... Forwarded to [jsonlite::toJSON()].
 #'
-#' @return `layout_to_json()` returns a JSON string; `layout_from_json()`
-#'   a `dock_layout`. `layout_panel_ids()` and `panel_obj_ids()` return
-#'   character vectors.
+#' @return `layout_to_json()` returns a JSON string. `layout_panel_ids()`
+#'   and `panel_obj_ids()` return character vectors.
+#'
+#' @seealso [as_dock_layout()][layout] for the inverse (JSON / spec →
+#'   `dock_layout`).
 #'
 #' @examples
 #' ly <- dock_layout("a", panels("b", "c", active = "c"), sizes = c(0.3, 0.7))
@@ -425,35 +426,12 @@ focus_group_id <- function(grid, focus) {
 #' json <- layout_to_json(ly)
 #' cat(json)
 #'
-#' identical(layout_from_json(json), ly)
+#' identical(as_dock_layout(json), ly)
 #'
 #' @rdname layout-json
 #' @export
 layout_to_json <- function(x, ...) {
-  jsonlite::toJSON(layout_to_wire(x), auto_unbox = TRUE, null = "null", ...)
-}
-
-#' @rdname layout-json
-#' @export
-layout_from_json <- function(x, blocks = NULL, extensions = NULL) {
-
-  wire <- if (is.character(x)) {
-    jsonlite::fromJSON(x, simplifyDataFrame = FALSE, simplifyMatrix = FALSE)
-  } else {
-    x
-  }
-
-  layout <- wire_to_layout(wire)
-
-  if (!is.null(blocks) || !is.null(extensions)) {
-    layout <- resolve_dock_layout(
-      blocks = blocks %||% list(),
-      extensions = extensions %||% list(),
-      layout = layout
-    )
-  }
-
-  layout
+  jsonlite::toJSON(layout_to_spec(x), auto_unbox = TRUE, null = "null", ...)
 }
 
 sizes_are_even <- function(sizes) {

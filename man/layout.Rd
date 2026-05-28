@@ -32,8 +32,7 @@ validate_dock_layout(x, blocks = character())
 \arguments{
 \item{...}{For \code{dock_layout()} and \code{group()}, layout children (bare
 IDs, character vectors, lists, \code{panels()}, or \code{group()}). For
-\code{panels()}, panel IDs. For \code{as_dock_layout()}, reserved for generic
-consistency.}
+\code{panels()}, panel IDs. Otherwise reserved for generic consistency.}
 
 \item{orientation}{Top-level split direction; one of \code{"horizontal"}
 (default) or \code{"vertical"}.}
@@ -47,14 +46,17 @@ share of the parent (positive; need not sum to 1).}
 
 \item{x}{Object}
 
-\item{blocks, extensions}{Dock board components}
+\item{blocks, extensions}{Dock board components. For \code{default_layout()}
+the components to arrange; for \code{as_dock_layout()}, optional, used to
+resolve bare IDs and validate the result.}
 }
 \value{
 \code{dock_layout()} and \code{default_layout()} return a \code{dock_layout}
 object. \code{panels()} returns a \code{dock_panels} node and \code{group()} returns
 a \code{dock_group} node — both are layout sub-trees usable inside
-\code{dock_layout()} / \code{group()}. \code{as_dock_layout()} coerces a board
-(returning its active view's layout) or a serialized payload.
+\code{dock_layout()} / \code{group()}. \code{as_dock_layout()} returns a
+\code{dock_layout} (from a board, a JSON string, or a spec list);
+\code{as.list()} of a \code{dock_layout} returns the spec list.
 \code{is_dock_layout()} returns a boolean. \code{validate_dock_layout()}
 returns its input and throws on error.
 }
@@ -94,6 +96,13 @@ panel arrangement inside a view. The dockview-shape \code{grid + panels}
 payload that dockViewR consumes is an internal projection of a
 \code{dock_layout} against the board's blocks and extensions; it is not a
 public type.
+
+\code{as_dock_layout()} coerces to a \code{dock_layout}: a \code{dock_layout}
+(identity), a \code{board} (its active layout), a JSON string, or a spec
+list (the shape \code{\link[=layout_to_json]{layout_to_json()}} writes; also \code{as.list()} of a
+layout). Pass \code{blocks} / \code{extensions} to resolve bare IDs to canonical
+panel IDs and validate. \code{as.list()} of a \code{dock_layout} returns that
+spec list.
 }
 \examples{
 blks <- c(

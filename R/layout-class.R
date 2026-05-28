@@ -34,10 +34,16 @@
 #' `dock_layout` against the board's blocks and extensions; it is not a
 #' public type.
 #'
+#' `as_dock_layout()` coerces to a `dock_layout`: a `dock_layout`
+#' (identity), a `board` (its active layout), a JSON string, or a spec
+#' list (the shape [layout_to_json()] writes; also `as.list()` of a
+#' layout). Pass `blocks` / `extensions` to resolve bare IDs to canonical
+#' panel IDs and validate. `as.list()` of a `dock_layout` returns that
+#' spec list.
+#'
 #' @param ... For `dock_layout()` and `group()`, layout children (bare
 #'   IDs, character vectors, lists, `panels()`, or `group()`). For
-#'   `panels()`, panel IDs. For `as_dock_layout()`, reserved for generic
-#'   consistency.
+#'   `panels()`, panel IDs. Otherwise reserved for generic consistency.
 #' @param orientation Top-level split direction; one of `"horizontal"`
 #'   (default) or `"vertical"`.
 #' @param active For `dock_layout()`, logical: mark this layout as the
@@ -45,6 +51,9 @@
 #'   default.
 #' @param sizes Numeric vector parallel to `...`, giving each child's
 #'   share of the parent (positive; need not sum to 1).
+#' @param blocks,extensions Dock board components. For `default_layout()`
+#'   the components to arrange; for `as_dock_layout()`, optional, used to
+#'   resolve bare IDs and validate the result.
 #'
 #' @examples
 #' blks <- c(
@@ -82,8 +91,9 @@
 #' @return `dock_layout()` and `default_layout()` return a `dock_layout`
 #' object. `panels()` returns a `dock_panels` node and `group()` returns
 #' a `dock_group` node — both are layout sub-trees usable inside
-#' `dock_layout()` / `group()`. `as_dock_layout()` coerces a board
-#' (returning its active view's layout) or a serialized payload.
+#' `dock_layout()` / `group()`. `as_dock_layout()` returns a
+#' `dock_layout` (from a board, a JSON string, or a spec list);
+#' `as.list()` of a `dock_layout` returns the spec list.
 #' `is_dock_layout()` returns a boolean. `validate_dock_layout()`
 #' returns its input and throws on error.
 #'
@@ -223,16 +233,48 @@ as_dock_layout.board <- function(x, ...) {
 }
 
 #' @export
-as_dock_layout.list <- function(x, ...) {
-  active <- isTRUE(attr(x, "active"))
-  active_group <- x[["activeGroup"]] %||% x[["active_group"]]
-  set_active_view(
-    new_dock_layout(grid = x[["grid"]], active_group = active_group),
-    active
-  )
+as_dock_layout.character <- function(x, blocks = NULL, extensions = NULL, ...) {
+  spec <- jsonlite::fromJSON(x, simplifyDataFrame = FALSE,
+                             simplifyMatrix = FALSE)
+  as_dock_layout(spec, blocks = blocks, extensions = extensions, ...)
 }
 
-#' @param blocks,extensions Dock board components
+#' @export
+as_dock_layout.json <- function(x, ...) {
+  as_dock_layout(unclass(x), ...)
+}
+
+#' @export
+as_dock_layout.list <- function(x, blocks = NULL, extensions = NULL, ...) {
+
+  if ("grid" %in% names(x) && !"children" %in% names(x)) {
+    blockr_abort(
+      paste(
+        "This looks like dockview's internal layout, which is not a public",
+        "input. Pass a layout spec (see `?layout_to_json`) instead."
+      ),
+      class = "dock_layout_dockview_input"
+    )
+  }
+
+  layout <- spec_to_layout(x)
+
+  if (!is.null(blocks) || !is.null(extensions)) {
+    layout <- resolve_dock_layout(
+      blocks = blocks %||% list(),
+      extensions = extensions %||% list(),
+      layout = layout
+    )
+  }
+
+  layout
+}
+
+#' @export
+as.list.dock_layout <- function(x, ...) {
+  layout_to_spec(x)
+}
+
 #' @rdname layout
 #' @export
 default_layout <- function(blocks, extensions) {

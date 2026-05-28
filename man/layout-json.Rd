@@ -5,7 +5,6 @@
 \alias{panel_obj_ids}
 \alias{layout_panel_ids}
 \alias{layout_to_json}
-\alias{layout_from_json}
 \title{Layout serialization and inspection}
 \usage{
 panel_obj_ids(ids)
@@ -13,32 +12,26 @@ panel_obj_ids(ids)
 layout_panel_ids(layout)
 
 layout_to_json(x, ...)
-
-layout_from_json(x, blocks = NULL, extensions = NULL)
 }
 \arguments{
 \item{ids}{Character vector of panel IDs.}
 
 \item{layout}{A \code{dock_layout} object.}
 
-\item{x}{A \code{dock_layout} (for \code{layout_to_json()}), or a JSON string /
-parsed list (for \code{layout_from_json()}).}
+\item{x}{A \code{dock_layout}.}
 
 \item{...}{Forwarded to \code{\link[jsonlite:toJSON]{jsonlite::toJSON()}}.}
-
-\item{blocks, extensions}{Optional board components used to resolve and
-validate bare IDs in \code{layout_from_json()}.}
 }
 \value{
-\code{layout_to_json()} returns a JSON string; \code{layout_from_json()}
-a \code{dock_layout}. \code{layout_panel_ids()} and \code{panel_obj_ids()} return
-character vectors.
+\code{layout_to_json()} returns a JSON string. \code{layout_panel_ids()}
+and \code{panel_obj_ids()} return character vectors.
 }
 \description{
-Read and write the JSON wire form of a \link[=layout]{dock_layout}, and
-inspect the panel IDs it references. These are the canonical
-accessors for the serialized layout format — downstream tooling
-should call them rather than re-implement the format.
+Write the JSON form of a \link[=layout]{dock_layout} and inspect the panel
+IDs it references. These are the canonical accessors for the
+serialized layout format — downstream tooling should call them rather
+than re-implement the format. To go the other way (JSON or a parsed
+spec back to a \code{dock_layout}), use \link[=layout]{as_dock_layout()}.
 }
 \details{
 \code{layout_to_json()} renders a layout as a JSON string. The shape is a
@@ -48,14 +41,6 @@ focus); a child is either a bare string (single-panel leaf), an
 object with \code{panels} / optional \code{active} (tabbed leaf), or an object
 with \code{children} / optional \code{sizes} (nested branch). Sizes are ratios
 summing to 1, omitted when even.
-
-\code{layout_from_json()} is the inverse. It accepts a JSON string or an
-already-parsed list. When \code{blocks} and / or \code{extensions} are
-supplied, bare IDs in the spec are resolved to canonical panel IDs
-and the result is validated against them (the
-\link[=layout]{resolve_dock_layout} + \link[=layout]{validate_dock_layout}
-combination) — so a parse failure, an unknown panel, or a malformed
-arrangement throws the usual classed error.
 
 \code{layout_panel_ids()} returns the canonical panel IDs
 (\verb{block_panel-…} / \verb{ext_panel-…}) referenced by a layout;
@@ -68,6 +53,10 @@ ly <- dock_layout("a", panels("b", "c", active = "c"), sizes = c(0.3, 0.7))
 json <- layout_to_json(ly)
 cat(json)
 
-identical(layout_from_json(json), ly)
+identical(as_dock_layout(json), ly)
 
+}
+\seealso{
+\link[=layout]{as_dock_layout()} for the inverse (JSON / spec →
+\code{dock_layout}).
 }

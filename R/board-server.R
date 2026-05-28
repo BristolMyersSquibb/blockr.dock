@@ -238,7 +238,7 @@ live_view_data <- function(vs, dock_mgr) {
   reactive({
     state <- vs$state
     v_list <- lapply(names(state), function(view_name) {
-      as_dock_layout(dock_mgr$docks[[view_name]]$layout())
+      dockview_to_layout(dock_mgr$docks[[view_name]]$layout())
     })
     res <- dock_layouts(set_names(v_list, names(state)))
     active_view(res) <- active_view(state)
