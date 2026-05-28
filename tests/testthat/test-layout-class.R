@@ -284,3 +284,73 @@ test_that("lock_panels restores callback on save-locked -> restore-unlocked", {
     expect_match(rc[["source"]], "panel-to-remove", fixed = TRUE)
   }
 })
+
+test_that("as_layout_spec round-trips canonical layouts (#145)", {
+
+  expect_equal(as_layout_spec(dock_layout()), dock_layout())
+  expect_equal(as_layout_spec(dock_layout("a")), dock_layout("a"))
+  expect_equal(as_layout_spec(dock_layout("a", "b")), dock_layout("a", "b"))
+
+  expect_equal(
+    as_layout_spec(dock_layout(c("a", "b"))),
+    dock_layout(c("a", "b"))
+  )
+
+  expect_equal(
+    as_layout_spec(dock_layout(panels("a", "b", active = "b"))),
+    dock_layout(panels("a", "b", active = "b"))
+  )
+
+  expect_equal(
+    as_layout_spec(dock_layout("a", "b", sizes = c(0.3, 0.7))),
+    dock_layout("a", "b", sizes = c(0.3, 0.7))
+  )
+
+  nested <- dock_layout(
+    "a",
+    group("b", "c", sizes = c(0.6, 0.4)),
+    sizes = c(0.3, 0.7)
+  )
+  expect_equal(as_layout_spec(nested), nested)
+})
+
+test_that("as_layout_spec carries orientation, active, activeGroup (#145)", {
+
+  vertical <- dock_layout("a", "b", orientation = "vertical")
+  expect_equal(as_layout_spec(vertical), vertical)
+
+  marked_active <- dock_layout("a", "b", active = TRUE)
+  expect_equal(as_layout_spec(marked_active), marked_active)
+  expect_true(isTRUE(attr(as_layout_spec(marked_active), "active")))
+
+  ly <- dock_layout("a", "b")
+  ly[["activeGroup"]] <- "2"
+  expect_identical(as_layout_spec(ly)[["activeGroup"]], "2")
+})
+
+test_that("as_layout_spec drops sizes when even-split (#145)", {
+
+  even <- dock_layout("a", "b", sizes = c(0.5, 0.5))
+  expect_equal(as_layout_spec(even), dock_layout("a", "b"))
+})
+
+test_that("as_layout_spec rejects non-dock_layout input (#145)", {
+
+  expect_error(as_layout_spec(list()))
+  expect_error(as_layout_spec("a"))
+})
+
+test_that("as_layout_spec normalises pixel-count sizes to ratios (#145)", {
+
+  # A layout coming back from dockview JS carries `size` in pixels
+  # (sibling sizes sum to the parent's pixel size), not fractions.
+  # `as_layout_spec()` should emit canonical fractions summing to 1.
+  pixel_layout <- dock_layout("a", "b")
+  pixel_layout[["grid"]][["root"]][["data"]][[1L]][["size"]] <- 300
+  pixel_layout[["grid"]][["root"]][["data"]][[2L]][["size"]] <- 700
+
+  expect_equal(
+    as_layout_spec(pixel_layout),
+    dock_layout("a", "b", sizes = c(0.3, 0.7))
+  )
+})

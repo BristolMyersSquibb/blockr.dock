@@ -7,6 +7,7 @@
 \alias{is_dock_layout}
 \alias{as_dock_layout}
 \alias{default_layout}
+\alias{as_layout_spec}
 \alias{validate_dock_layout}
 \title{Dock layout}
 \usage{
@@ -26,6 +27,8 @@ is_dock_layout(x)
 as_dock_layout(x, ...)
 
 default_layout(blocks, extensions)
+
+as_layout_spec(layout)
 
 validate_dock_layout(x, blocks = character())
 }
@@ -49,6 +52,8 @@ share of the parent (positive; need not sum to 1).}
 \item{blocks, extensions}{Dock board components. For \code{default_layout()}
 the components to arrange; for \code{as_dock_layout()}, optional, used to
 resolve bare IDs and validate the result.}
+
+\item{layout}{A \code{dock_layout} object.}
 }
 \value{
 \code{dock_layout()} and \code{default_layout()} return a \code{dock_layout}
@@ -56,9 +61,10 @@ object. \code{panels()} returns a \code{dock_panels} node and \code{group()} ret
 a \code{dock_group} node — both are layout sub-trees usable inside
 \code{dock_layout()} / \code{group()}. \code{as_dock_layout()} returns a
 \code{dock_layout} (from a board or a spec list); \code{as.list()} of a
-\code{dock_layout} returns the spec list. \code{is_dock_layout()} returns a
-boolean. \code{validate_dock_layout()} returns its input and throws on
-error.
+\code{dock_layout} returns the spec list. \code{as_layout_spec()} rebuilds a
+stored \code{dock_layout} into canonical constructor form (idempotent
+under \code{dock_layout(...)}). \code{is_dock_layout()} returns a boolean.
+\code{validate_dock_layout()} returns its input and throws on error.
 }
 \description{
 A \code{dock_layout} is the panel arrangement for a single view: a tree of
@@ -90,6 +96,14 @@ arrangement (extensions on top, blocks below) for a board.
 for the top-level split direction, \code{sizes} for the root-branch
 ratios, and \code{active = TRUE} to mark this layout as the
 initially-active view in a \code{dock_layouts} collection.
+
+\code{as_layout_spec()} reconstructs a stored layout into canonical
+constructor form by round-tripping it through its spec
+(\code{as_dock_layout(as.list(layout))}), preserving the active-view
+marker. Sizes normalise to ratios and even splits drop their
+\code{sizes}, so the result is idempotent under \code{dock_layout(...)}.
+Useful for programmatic callers that need a complex layout in the
+same vocabulary they use at construction time.
 
 A \emph{view} is the conceptual page-level container; a \emph{layout} is the
 panel arrangement inside a view. The dockview-shape \code{grid + panels}

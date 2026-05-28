@@ -28,6 +28,14 @@
 #' ratios, and `active = TRUE` to mark this layout as the
 #' initially-active view in a `dock_layouts` collection.
 #'
+#' `as_layout_spec()` reconstructs a stored layout into canonical
+#' constructor form by round-tripping it through its spec
+#' (`as_dock_layout(as.list(layout))`), preserving the active-view
+#' marker. Sizes normalise to ratios and even splits drop their
+#' `sizes`, so the result is idempotent under `dock_layout(...)`.
+#' Useful for programmatic callers that need a complex layout in the
+#' same vocabulary they use at construction time.
+#'
 #' A *view* is the conceptual page-level container; a *layout* is the
 #' panel arrangement inside a view. The dockview-shape `grid + panels`
 #' payload that dockViewR consumes is an internal projection of a
@@ -54,6 +62,7 @@
 #' @param blocks,extensions Dock board components. For `default_layout()`
 #'   the components to arrange; for `as_dock_layout()`, optional, used to
 #'   resolve bare IDs and validate the result.
+#' @param layout A `dock_layout` object.
 #'
 #' @examples
 #' blks <- c(
@@ -93,9 +102,10 @@
 #' a `dock_group` node — both are layout sub-trees usable inside
 #' `dock_layout()` / `group()`. `as_dock_layout()` returns a
 #' `dock_layout` (from a board or a spec list); `as.list()` of a
-#' `dock_layout` returns the spec list. `is_dock_layout()` returns a
-#' boolean. `validate_dock_layout()` returns its input and throws on
-#' error.
+#' `dock_layout` returns the spec list. `as_layout_spec()` rebuilds a
+#' stored `dock_layout` into canonical constructor form (idempotent
+#' under `dock_layout(...)`). `is_dock_layout()` returns a boolean.
+#' `validate_dock_layout()` returns its input and throws on error.
 #'
 #' @rdname layout
 #' @export
@@ -275,6 +285,18 @@ default_layout <- function(blocks, extensions) {
   if (length(blks)) spec <- c(spec, list(blks))
 
   do.call(dock_layout, spec)
+}
+
+#' @rdname layout
+#' @export
+as_layout_spec <- function(layout) {
+
+  stopifnot(is_dock_layout(layout))
+
+  set_active_view(
+    as_dock_layout(as.list(layout)),
+    is_active_view(layout)
+  )
 }
 
 #' @rdname layout
