@@ -139,6 +139,8 @@ resolve_views <- function(specs, c_blks, c_exts) {
   validate_dock_layouts(structure(specs, class = "dock_layouts"))
 }
 
+#' @rdname layout-json
+#' @export
 panel_obj_ids <- function(ids) {
   is_blk <- maybe_block_panel_id(ids)
   is_ext <- maybe_ext_panel_id(ids)

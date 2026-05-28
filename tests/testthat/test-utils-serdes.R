@@ -35,18 +35,25 @@ test_that("dock_layouts serialization round-trip", {
   expect_identical(active_view(ly), "Tab2")
 })
 
-test_that("serialized dock_layout uses the decoupled wire spec", {
+test_that("serialized dock_layout uses the flattened wire spec", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(Page = list("a", "b"))
   )
 
   ser <- blockr_ser(brd)
-  payload <- ser[["payload"]][["layouts"]][["payload"]][["views"]][[1L]]
+  payload <- ser[["payload"]][["layouts"]][["payload"]][["views"]][[1L]][[
+    "payload"
+  ]]
 
-  expect_named(payload[["payload"]], c("orientation", "root"))
-  expect_false(any(c("grid", "panels", "activeGroup") %in%
-                     names(payload[["payload"]])))
+  # Flattened: no `root` wrapper, branch fields hoisted to the top.
+  expect_true("children" %in% names(payload))
+  expect_false(any(c("grid", "panels", "activeGroup", "root") %in%
+                     names(payload)))
+
+  # Single-panel leaves serialize as bare strings.
+  expect_identical(payload[["children"]][[1L]], "block_panel-a")
+  expect_identical(payload[["children"]][[2L]], "block_panel-b")
 })
 
 test_that("grid_to_wire normalises pixel sizes to ratios", {
@@ -75,7 +82,7 @@ test_that("grid_to_wire normalises pixel sizes to ratios", {
   )
 
   wire <- grid_to_wire(pixel_grid)
-  expect_equal(wire[["root"]][["sizes"]], c(0.3, 0.7))
+  expect_equal(wire[["sizes"]], c(0.3, 0.7))
 })
 
 test_that("grid_to_wire omits even sizes and default active tabs", {
@@ -86,37 +93,121 @@ test_that("grid_to_wire omits even sizes and default active tabs", {
   )
 
   ser <- blockr_ser(brd)
-  root <- ser[["payload"]][["layouts"]][["payload"]][["views"]][[1L]][[
+  payload <- ser[["payload"]][["layouts"]][["payload"]][["views"]][[1L]][[
     "payload"
-  ]][["root"]]
+  ]]
 
   # Two equal-share children: sizes field omitted entirely.
-  expect_false("sizes" %in% names(root))
+  expect_false("sizes" %in% names(payload))
 
   # Second child is a tabbed leaf whose first panel is the default
   # active — `active` should be absent.
-  tabbed <- root[["children"]][[2L]]
+  tabbed <- payload[["children"]][[2L]]
   expect_setequal(unlist(tabbed[["panels"]]),
                   c("block_panel-b", "block_panel-a"))
   expect_false("active" %in% names(tabbed))
 })
 
-test_that("wire_to_grid restores activeGroup default and group ids", {
+test_that("wire_to_grid restores group ids from the flattened spec", {
 
   wire <- list(
     orientation = "horizontal",
-    root = list(
-      children = list(
-        list(panels = list("block_panel-a")),
-        list(panels = list("block_panel-b"))
-      )
-    )
+    children = list("block_panel-a", "block_panel-b")
   )
 
   grid <- wire_to_grid(wire)
   expect_identical(grid[["orientation"]], "HORIZONTAL")
   expect_identical(grid[["root"]][["data"]][[1L]][["data"]][["id"]], "1")
   expect_identical(grid[["root"]][["data"]][[2L]][["data"]][["id"]], "2")
+})
+
+test_that("layout survives a real JSON encode/decode round-trip", {
+
+  # The internal ser/des tests round-trip R lists only. blockr.core
+  # writes to disk via toJSON(null = "null") / fromJSON(simplifyVector =
+  # TRUE), which collapses all-scalar arrays to atomic vectors. Exercise
+  # that path so a boxing/simplify regression can't ship silently.
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(),
+      b = new_head_block(),
+      c = new_head_block()
+    ),
+    layouts = list(
+      Page = dock_layout(
+        "a",
+        group("b", "c", sizes = c(0.4, 0.6)),
+        sizes = c(0.3, 0.7)
+      )
+    )
+  )
+
+  ser <- blockr_ser(brd)
+  json <- jsonlite::toJSON(ser, null = "null")
+  back <- jsonlite::fromJSON(json, simplifyDataFrame = FALSE,
+                             simplifyMatrix = FALSE)
+  ly <- blockr_deser(back)[["layouts"]][["Page"]]
+
+  expect_equal(ly$grid$root$data[[1L]]$size, 0.3)
+  expect_equal(ly$grid$root$data[[2L]]$size, 0.7)
+  expect_identical(ly$grid$root$data[[2L]]$type, "branch")
+  expect_equal(ly$grid$root$data[[2L]]$data[[1L]]$size, 0.4)
+  expect_equal(ly$grid$root$data[[2L]]$data[[2L]]$size, 0.6)
+  expect_setequal(
+    layout_panel_ids(ly),
+    c("block_panel-a", "block_panel-b", "block_panel-c")
+  )
+})
+
+test_that("layout_to_json / layout_from_json round-trip", {
+
+  ly <- dock_layout(
+    "a",
+    panels("b", "c", active = "c"),
+    sizes = c(0.3, 0.7)
+  )
+
+  json <- layout_to_json(ly)
+  expect_type(json, "character")
+  expect_identical(layout_from_json(json), ly)
+
+  # Accepts an already-parsed list too.
+  parsed <- jsonlite::fromJSON(json, simplifyDataFrame = FALSE,
+                               simplifyMatrix = FALSE)
+  expect_identical(layout_from_json(parsed), ly)
+})
+
+test_that("layout_from_json resolves bare IDs against blocks/extensions", {
+
+  blks <- c(a = new_dataset_block(), b = new_head_block())
+  json <- '{"orientation":"horizontal","children":["a","b"]}'
+
+  ly <- layout_from_json(json, blocks = blks)
+  expect_setequal(
+    layout_panel_ids(ly),
+    c("block_panel-a", "block_panel-b")
+  )
+
+  # An unknown panel is rejected by the folded validation.
+  expect_error(
+    layout_from_json(
+      '{"orientation":"horizontal","children":["a","nope"]}',
+      blocks = blks
+    ),
+    class = "dock_layout_invalid"
+  )
+})
+
+test_that("layout_panel_ids and panel_obj_ids are inverse-ish", {
+
+  ly <- resolve_dock_layout(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layout = dock_layout("a", "b")
+  )
+
+  pids <- layout_panel_ids(ly)
+  expect_setequal(pids, c("block_panel-a", "block_panel-b"))
+  expect_setequal(panel_obj_ids(pids), c("a", "b"))
 })
 
 # Layout features encoded in the grid tree (sizes, activeView,

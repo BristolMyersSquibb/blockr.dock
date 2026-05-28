@@ -146,20 +146,26 @@ blockr_deser.dock_extensions <- function(x, data, ...) {
 # Wire format converters
 #
 # The persisted layout shape is a recursive tree, deliberately distinct
-# from dockview's internal grid format. The top-level object carries
-# `orientation` and `root`. A node is either a branch (children plus
-# optional sizes) or a leaf (panels plus optional active tab).
+# from dockview's internal grid format. The top-level object is itself a
+# branch — it carries `children`, an optional `sizes`, and an
+# `orientation`. A node within is either:
 #
-# Sizes are ratios summing to 1; omitted when the split is even. The
-# active tab is omitted when the open tab is the first panel (the
-# implicit default). Dockview's internal fields (type tags, per-branch
-# size, leaf id, layout-level activeGroup) are not stored — they're
-# regenerated on the way back in.
+#   - a bare string: a single-panel leaf (the common case);
+#   - an object with `panels` (and optional `active`): a tabbed leaf;
+#   - an object with `children` (and optional `sizes`): a nested branch.
+#
+# Bare arrays never appear as node values, so the three forms are
+# syntactically distinct. Sizes are ratios summing to 1, omitted when
+# the split is even. The active tab is omitted when the open tab is the
+# first panel (the implicit default). Dockview's internal fields (type
+# tags, per-branch size, leaf id, layout-level activeGroup) are not
+# stored — they're regenerated on the way back in.
 #
 # Dockview emits absolute pixel sizes from live state after a user
-# resize; grid_to_wire() normalises them to ratios on save. The opposite
-# direction (wire_to_grid()) re-assigns the dockview-style fields needed
-# by restore_dock().
+# resize; grid_to_wire() normalises them to ratios on save. wire_to_grid()
+# re-assigns the dockview-style fields needed by restore_dock(), and is
+# robust to the atomic-vector coercion `jsonlite::fromJSON(simplifyVector
+# = TRUE)` applies to all-scalar arrays.
 
 grid_to_wire <- function(grid) {
 
@@ -167,10 +173,15 @@ grid_to_wire <- function(grid) {
 
     if (identical(node[["type"]], "leaf")) {
       views <- unlist(node[["data"]][["views"]])
+
+      if (length(views) == 1L) {
+        return(views[[1L]])
+      }
+
       out <- list(panels = as.list(views))
 
       active <- node[["data"]][["activeView"]]
-      if (length(views) > 1L && !identical(active, views[[1L]])) {
+      if (!identical(active, views[[1L]])) {
         out[["active"]] <- active
       }
 
@@ -198,9 +209,13 @@ grid_to_wire <- function(grid) {
     )
   }
 
-  list(
-    orientation = tolower(grid[["orientation"]] %||% "horizontal"),
-    root = walk(grid[["root"]])
+  # The root is always a branch (the constructor wraps args in a group),
+  # so its `children` / `sizes` hoist to the top alongside orientation.
+  root_wire <- walk(grid[["root"]])
+
+  c(
+    list(orientation = tolower(grid[["orientation"]] %||% "horizontal")),
+    root_wire
   )
 }
 
@@ -213,23 +228,26 @@ wire_to_grid <- function(wire) {
     as.character(group_id)
   }
 
+  leaf <- function(views, active, size) {
+    list(
+      type = "leaf",
+      data = list(views = views, activeView = active, id = next_id()),
+      size = size
+    )
+  }
+
   walk <- function(node, size = 1) {
+
+    # Bare string (possibly a length-1 vector post-fromJSON): single leaf.
+    if (is.character(node)) {
+      view <- node[[1L]]
+      return(leaf(list(view), view, size))
+    }
 
     if (!is.null(node[["panels"]])) {
       views <- as.list(unlist(node[["panels"]]))
       active <- node[["active"]] %||% views[[1L]]
-
-      return(
-        list(
-          type = "leaf",
-          data = list(
-            views = views,
-            activeView = active,
-            id = next_id()
-          ),
-          size = size
-        )
-      )
+      return(leaf(views, active, size))
     }
 
     if (!is.null(node[["children"]])) {
@@ -249,13 +267,20 @@ wire_to_grid <- function(wire) {
     }
 
     blockr_abort(
-      "Wire node must have either `panels` or `children`.",
+      "Wire node must be a string or an object with `panels` or `children`.",
       class = "dock_layout_wire_invalid"
     )
   }
 
+  # The top object is the root branch (children + optional sizes) plus
+  # orientation; reassemble it before walking.
+  root_spec <- list(children = wire[["children"]] %||% list())
+  if (!is.null(wire[["sizes"]])) {
+    root_spec[["sizes"]] <- wire[["sizes"]]
+  }
+
   list(
-    root = walk(wire[["root"]]),
+    root = walk(root_spec),
     orientation = toupper(wire[["orientation"]] %||% "horizontal")
   )
 }
@@ -268,6 +293,83 @@ normalise_sizes <- function(sizes) {
 
   total <- sum(sizes)
   if (total > 0) sizes / total else sizes
+}
+
+#' Layout serialization and inspection
+#'
+#' Read and write the JSON wire form of a [dock_layout][layout], and
+#' inspect the panel IDs it references. These are the canonical
+#' accessors for the serialized layout format — downstream tooling
+#' should call them rather than re-implement the format.
+#'
+#' `layout_to_json()` renders a layout as a JSON string. The shape is a
+#' recursive tree: the top object carries `orientation`, `children`, and
+#' an optional `sizes`; a child is either a bare string (single-panel
+#' leaf), an object with `panels` / optional `active` (tabbed leaf), or
+#' an object with `children` / optional `sizes` (nested branch). Sizes
+#' are ratios summing to 1, omitted when even.
+#'
+#' `layout_from_json()` is the inverse. It accepts a JSON string or an
+#' already-parsed list. When `blocks` and / or `extensions` are
+#' supplied, bare IDs in the spec are resolved to canonical panel IDs
+#' and the result is validated against them (the
+#' [resolve_dock_layout][layout] + [validate_dock_layout][layout]
+#' combination) — so a parse failure, an unknown panel, or a malformed
+#' arrangement throws the usual classed error.
+#'
+#' `layout_panel_ids()` returns the canonical panel IDs
+#' (`block_panel-…` / `ext_panel-…`) referenced by a layout;
+#' `panel_obj_ids()` strips those prefixes back to bare block /
+#' extension IDs.
+#'
+#' @param x A `dock_layout` (for `layout_to_json()`), or a JSON string /
+#'   parsed list (for `layout_from_json()`).
+#' @param layout A `dock_layout` object.
+#' @param ids Character vector of panel IDs.
+#' @param blocks,extensions Optional board components used to resolve and
+#'   validate bare IDs in `layout_from_json()`.
+#' @param ... Forwarded to [jsonlite::toJSON()].
+#'
+#' @return `layout_to_json()` returns a JSON string; `layout_from_json()`
+#'   a `dock_layout`. `layout_panel_ids()` and `panel_obj_ids()` return
+#'   character vectors.
+#'
+#' @examples
+#' ly <- dock_layout("a", panels("b", "c", active = "c"), sizes = c(0.3, 0.7))
+#'
+#' json <- layout_to_json(ly)
+#' cat(json)
+#'
+#' identical(layout_from_json(json), ly)
+#'
+#' @rdname layout-json
+#' @export
+layout_to_json <- function(x, ...) {
+  wire <- grid_to_wire(as_dock_layout(x)[["grid"]])
+  jsonlite::toJSON(wire, auto_unbox = TRUE, null = "null", ...)
+}
+
+#' @rdname layout-json
+#' @export
+layout_from_json <- function(x, blocks = NULL, extensions = NULL) {
+
+  wire <- if (is.character(x)) {
+    jsonlite::fromJSON(x, simplifyDataFrame = FALSE, simplifyMatrix = FALSE)
+  } else {
+    x
+  }
+
+  layout <- new_dock_layout(grid = wire_to_grid(wire))
+
+  if (!is.null(blocks) || !is.null(extensions)) {
+    layout <- resolve_dock_layout(
+      blocks = blocks %||% list(),
+      extensions = extensions %||% list(),
+      layout = layout
+    )
+  }
+
+  layout
 }
 
 sizes_are_even <- function(sizes) {

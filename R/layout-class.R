@@ -428,9 +428,11 @@ grid_panel_ids <- function(grid) {
   if (is.null(res)) character() else res
 }
 
-layout_panel_ids <- function(x) {
-  x <- as_dock_layout(x)
-  grid_panel_ids(x[["grid"]])
+#' @rdname layout-json
+#' @export
+layout_panel_ids <- function(layout) {
+  layout <- as_dock_layout(layout)
+  grid_panel_ids(layout[["grid"]])
 }
 
 resolve_dock_layout <- function(blocks = list(), extensions = list(),

@@ -13,6 +13,10 @@ reference:
   desc: Tools for defining panel arrangements.
   contents:
     - dock_layout
+- title: Layout serialization
+  desc: Read, write and inspect the JSON wire form of a layout.
+  contents:
+    - layout_to_json
 - title: Dock views
   desc: Multi-view (tabbed) boards. Each view is its own panel arrangement.
   contents:
