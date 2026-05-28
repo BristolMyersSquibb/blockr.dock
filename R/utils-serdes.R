@@ -390,35 +390,41 @@ focus_group_id <- function(grid, focus) {
 
 #' Layout serialization and inspection
 #'
-#' Write the JSON form of a [dock_layout][layout] and inspect the panel
-#' IDs it references. These are the canonical accessors for the
+#' Read and write the JSON form of a [dock_layout][layout], and inspect
+#' the panel IDs it references. These are the canonical accessors for the
 #' serialized layout format — downstream tooling should call them rather
-#' than re-implement the format. To go the other way (JSON or a parsed
-#' spec back to a `dock_layout`), use [as_dock_layout()][layout].
+#' than re-implement the format.
 #'
-#' `layout_to_json()` renders a layout as a JSON string. The shape is a
-#' recursive tree: the top object carries `orientation`, `children`, an
-#' optional `sizes`, and an optional `focus` (the panel with current
-#' focus); a child is either a bare string (single-panel leaf), an
-#' object with `panels` / optional `active` (tabbed leaf), or an object
-#' with `children` / optional `sizes` (nested branch). Sizes are ratios
-#' summing to 1, omitted when even.
+#' `layout_to_json()` renders a layout as a JSON string; `layout_from_json()`
+#' is the inverse. The shape is a recursive tree: the top object carries
+#' `orientation`, `children`, an optional `sizes`, and an optional `focus`
+#' (the panel with current focus); a child is either a bare string
+#' (single-panel leaf), an object with `panels` / optional `active`
+#' (tabbed leaf), or an object with `children` / optional `sizes` (nested
+#' branch). Sizes are ratios summing to 1, omitted when even.
+#'
+#' `layout_from_json()` accepts a JSON string or an already-parsed spec
+#' list and delegates to [as_dock_layout()][layout]; when `blocks` /
+#' `extensions` are supplied, bare IDs are resolved to canonical panel
+#' IDs and the result is validated (an unknown panel or malformed
+#' arrangement throws the usual classed error).
 #'
 #' `layout_panel_ids()` returns the canonical panel IDs
 #' (`block_panel-…` / `ext_panel-…`) referenced by a layout;
 #' `panel_obj_ids()` strips those prefixes back to bare block /
 #' extension IDs.
 #'
-#' @param x A `dock_layout`.
+#' @param x A `dock_layout` (for `layout_to_json()`), or a JSON string /
+#'   parsed spec list (for `layout_from_json()`).
 #' @param layout A `dock_layout` object.
 #' @param ids Character vector of panel IDs.
+#' @param blocks,extensions Optional board components used to resolve and
+#'   validate bare IDs in `layout_from_json()`.
 #' @param ... Forwarded to [jsonlite::toJSON()].
 #'
-#' @return `layout_to_json()` returns a JSON string. `layout_panel_ids()`
-#'   and `panel_obj_ids()` return character vectors.
-#'
-#' @seealso [as_dock_layout()][layout] for the inverse (JSON / spec →
-#'   `dock_layout`).
+#' @return `layout_to_json()` returns a JSON string; `layout_from_json()`
+#'   a `dock_layout`. `layout_panel_ids()` and `panel_obj_ids()` return
+#'   character vectors.
 #'
 #' @examples
 #' ly <- dock_layout("a", panels("b", "c", active = "c"), sizes = c(0.3, 0.7))
@@ -426,12 +432,25 @@ focus_group_id <- function(grid, focus) {
 #' json <- layout_to_json(ly)
 #' cat(json)
 #'
-#' identical(as_dock_layout(json), ly)
+#' identical(layout_from_json(json), ly)
 #'
 #' @rdname layout-json
 #' @export
 layout_to_json <- function(x, ...) {
   jsonlite::toJSON(layout_to_spec(x), auto_unbox = TRUE, null = "null", ...)
+}
+
+#' @rdname layout-json
+#' @export
+layout_from_json <- function(x, blocks = NULL, extensions = NULL) {
+
+  spec <- if (is.character(x)) {
+    jsonlite::fromJSON(x, simplifyDataFrame = FALSE, simplifyMatrix = FALSE)
+  } else {
+    x
+  }
+
+  as_dock_layout(spec, blocks = blocks, extensions = extensions)
 }
 
 sizes_are_even <- function(sizes) {

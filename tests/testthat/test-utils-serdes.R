@@ -161,7 +161,7 @@ test_that("focus survives a real JSON round-trip", {
 
   json <- layout_to_json(focused)
   expect_match(json, "\"focus\":\"block_panel-b\"", fixed = TRUE)
-  expect_identical(as_dock_layout(json)[["activeGroup"]], "2")
+  expect_identical(layout_from_json(json)[["activeGroup"]], "2")
 })
 
 test_that("layout survives a real JSON encode/decode round-trip", {
@@ -202,7 +202,7 @@ test_that("layout survives a real JSON encode/decode round-trip", {
   )
 })
 
-test_that("layout JSON / spec round-trips via as_dock_layout", {
+test_that("JSON crosses via layout_to_json / layout_from_json", {
 
   ly <- dock_layout(
     "a",
@@ -212,15 +212,26 @@ test_that("layout JSON / spec round-trips via as_dock_layout", {
 
   json <- layout_to_json(ly)
   expect_type(json, "character")
-  expect_identical(as_dock_layout(json), ly)
+  expect_identical(layout_from_json(json), ly)
 
-  # Accepts an already-parsed list too.
+  # layout_from_json also tolerates an already-parsed spec list.
   parsed <- jsonlite::fromJSON(json, simplifyDataFrame = FALSE,
                                simplifyMatrix = FALSE)
-  expect_identical(as_dock_layout(parsed), ly)
+  expect_identical(layout_from_json(parsed), ly)
+})
+
+test_that("spec list crosses via as.list / as_dock_layout", {
+
+  ly <- dock_layout(
+    "a",
+    panels("b", "c", active = "c"),
+    sizes = c(0.3, 0.7)
+  )
 
   # as.list() of a layout is the spec; as_dock_layout() inverts it.
-  expect_identical(as_dock_layout(as.list(ly)), ly)
+  spec <- as.list(ly)
+  expect_true(is.list(spec) && !is_dock_layout(spec))
+  expect_identical(as_dock_layout(spec), ly)
 })
 
 test_that("as_dock_layout rejects dockview's internal grid shape", {
@@ -238,12 +249,12 @@ test_that("as_dock_layout rejects dockview's internal grid shape", {
   )
 })
 
-test_that("as_dock_layout resolves bare IDs against blocks/extensions", {
+test_that("layout_from_json resolves bare IDs against blocks/extensions", {
 
   blks <- c(a = new_dataset_block(), b = new_head_block())
   json <- '{"orientation":"horizontal","children":["a","b"]}'
 
-  ly <- as_dock_layout(json, blocks = blks)
+  ly <- layout_from_json(json, blocks = blks)
   expect_setequal(
     layout_panel_ids(ly),
     c("block_panel-a", "block_panel-b")
@@ -251,7 +262,7 @@ test_that("as_dock_layout resolves bare IDs against blocks/extensions", {
 
   # An unknown panel is rejected by the folded validation.
   expect_error(
-    as_dock_layout(
+    layout_from_json(
       '{"orientation":"horizontal","children":["a","nope"]}',
       blocks = blks
     ),

@@ -35,11 +35,11 @@
 #' public type.
 #'
 #' `as_dock_layout()` coerces to a `dock_layout`: a `dock_layout`
-#' (identity), a `board` (its active layout), a JSON string, or a spec
-#' list (the shape [layout_to_json()] writes; also `as.list()` of a
-#' layout). Pass `blocks` / `extensions` to resolve bare IDs to canonical
-#' panel IDs and validate. `as.list()` of a `dock_layout` returns that
-#' spec list.
+#' (identity), a `board` (its active layout), or a spec list (`as.list()`
+#' of a layout, or a parsed [layout_to_json()] string). Pass `blocks` /
+#' `extensions` to resolve bare IDs to canonical panel IDs and validate.
+#' `as.list()` of a `dock_layout` returns that spec list. The JSON-string
+#' boundary is [layout_to_json()] / [layout_from_json()].
 #'
 #' @param ... For `dock_layout()` and `group()`, layout children (bare
 #'   IDs, character vectors, lists, `panels()`, or `group()`). For
@@ -92,10 +92,10 @@
 #' object. `panels()` returns a `dock_panels` node and `group()` returns
 #' a `dock_group` node — both are layout sub-trees usable inside
 #' `dock_layout()` / `group()`. `as_dock_layout()` returns a
-#' `dock_layout` (from a board, a JSON string, or a spec list);
-#' `as.list()` of a `dock_layout` returns the spec list.
-#' `is_dock_layout()` returns a boolean. `validate_dock_layout()`
-#' returns its input and throws on error.
+#' `dock_layout` (from a board or a spec list); `as.list()` of a
+#' `dock_layout` returns the spec list. `is_dock_layout()` returns a
+#' boolean. `validate_dock_layout()` returns its input and throws on
+#' error.
 #'
 #' @rdname layout
 #' @export
@@ -230,18 +230,6 @@ as_dock_layout.dock_layout <- function(x, ...) x
 #' @export
 as_dock_layout.board <- function(x, ...) {
   active_layout(x)
-}
-
-#' @export
-as_dock_layout.character <- function(x, blocks = NULL, extensions = NULL, ...) {
-  spec <- jsonlite::fromJSON(x, simplifyDataFrame = FALSE,
-                             simplifyMatrix = FALSE)
-  as_dock_layout(spec, blocks = blocks, extensions = extensions, ...)
-}
-
-#' @export
-as_dock_layout.json <- function(x, ...) {
-  as_dock_layout(unclass(x), ...)
 }
 
 #' @export

@@ -55,10 +55,10 @@ resolve bare IDs and validate the result.}
 object. \code{panels()} returns a \code{dock_panels} node and \code{group()} returns
 a \code{dock_group} node — both are layout sub-trees usable inside
 \code{dock_layout()} / \code{group()}. \code{as_dock_layout()} returns a
-\code{dock_layout} (from a board, a JSON string, or a spec list);
-\code{as.list()} of a \code{dock_layout} returns the spec list.
-\code{is_dock_layout()} returns a boolean. \code{validate_dock_layout()}
-returns its input and throws on error.
+\code{dock_layout} (from a board or a spec list); \code{as.list()} of a
+\code{dock_layout} returns the spec list. \code{is_dock_layout()} returns a
+boolean. \code{validate_dock_layout()} returns its input and throws on
+error.
 }
 \description{
 A \code{dock_layout} is the panel arrangement for a single view: a tree of
@@ -98,11 +98,11 @@ payload that dockViewR consumes is an internal projection of a
 public type.
 
 \code{as_dock_layout()} coerces to a \code{dock_layout}: a \code{dock_layout}
-(identity), a \code{board} (its active layout), a JSON string, or a spec
-list (the shape \code{\link[=layout_to_json]{layout_to_json()}} writes; also \code{as.list()} of a
-layout). Pass \code{blocks} / \code{extensions} to resolve bare IDs to canonical
-panel IDs and validate. \code{as.list()} of a \code{dock_layout} returns that
-spec list.
+(identity), a \code{board} (its active layout), or a spec list (\code{as.list()}
+of a layout, or a parsed \code{\link[=layout_to_json]{layout_to_json()}} string). Pass \code{blocks} /
+\code{extensions} to resolve bare IDs to canonical panel IDs and validate.
+\code{as.list()} of a \code{dock_layout} returns that spec list. The JSON-string
+boundary is \code{\link[=layout_to_json]{layout_to_json()}} / \code{\link[=layout_from_json]{layout_from_json()}}.
 }
 \examples{
 blks <- c(
