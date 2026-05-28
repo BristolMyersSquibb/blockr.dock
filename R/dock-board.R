@@ -115,7 +115,7 @@ resolve_views <- function(specs, c_blks, c_exts) {
 
   specs <- lapply(specs, coerce_view_spec)
 
-  if (!any(vapply(specs, is_active_view, logical(1L)))) {
+  if (!any(lgl_ply(specs, is_active_view))) {
     specs[[1L]] <- set_active_view(specs[[1L]])
   }
 

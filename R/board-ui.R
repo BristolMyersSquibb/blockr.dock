@@ -164,7 +164,7 @@ settings_body <- function(
   # Caller-supplied `options` (threaded from `serve()` through
   # `blockr_app_server.dock_board()` / `settings_observer()`) wins; fall
   # back to the recomputed default only when the caller has nothing to say.
-  options <- options %||% blockr.core::blockr_app_options(x)
+  options <- coal(options, blockr.core::blockr_app_options(x))
 
   stopifnot(is_board_options(options))
 

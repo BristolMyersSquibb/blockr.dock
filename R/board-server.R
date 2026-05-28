@@ -343,9 +343,9 @@ manage_dock <- function(
   extensions = NULL
 ) {
   init_board <- isolate(board$board)
-  init_layout <- layout %||% active_layout(init_board)
-  init_blocks <- blocks %||% board_blocks(init_board)
-  init_exts <- extensions %||% dock_extensions(init_board)
+  init_layout <- coal(layout, active_layout(init_board))
+  init_blocks <- coal(blocks, board_blocks(init_board))
+  init_exts <- coal(extensions, dock_extensions(init_board))
 
   # Block/ext cards live at the board (parent) namespace level
   board_ns <- get_session()$ns
@@ -646,11 +646,11 @@ add_view_observer <- function(vs, session, dock_mgr, board, update, triggers) {
     # Build layout from selected blocks and extensions
     brd <- board$board
     sel_blks <- intersect(
-      input$view_new_blocks %||% character(),
+      coal(input$view_new_blocks, character()),
       board_block_ids(brd)
     )
     sel_exts <- intersect(
-      input$view_new_exts %||% character(),
+      coal(input$view_new_exts, character()),
       dock_ext_ids(brd)
     )
     v_blks <- board_blocks(brd)[sel_blks]

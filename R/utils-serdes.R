@@ -193,7 +193,7 @@ grid_to_spec <- function(grid) {
     if (identical(node[["type"]], "branch")) {
       children <- lapply(node[["data"]], walk)
 
-      raw_sizes <- vapply(node[["data"]], `[[`, numeric(1), "size")
+      raw_sizes <- dbl_xtr(node[["data"]], "size")
       norm_sizes <- normalise_sizes(raw_sizes)
 
       out <- list(children = children)
@@ -216,7 +216,7 @@ grid_to_spec <- function(grid) {
   root_wire <- walk(grid[["root"]])
 
   c(
-    list(orientation = tolower(grid[["orientation"]] %||% "horizontal")),
+    list(orientation = tolower(coal(grid[["orientation"]], "horizontal"))),
     root_wire
   )
 }
@@ -248,13 +248,14 @@ spec_to_grid <- function(wire) {
 
     if (!is.null(node[["panels"]])) {
       views <- as.list(unlist(node[["panels"]]))
-      active <- node[["active"]] %||% views[[1L]]
+      active <- coal(node[["active"]], views[[1L]])
       return(leaf(views, active, size))
     }
 
     if (!is.null(node[["children"]])) {
       n <- length(node[["children"]])
-      child_sizes <- node[["sizes"]] %||% (
+      child_sizes <- coal(
+        node[["sizes"]],
         if (n) rep(1 / n, n) else numeric()
       )
       children <- Map(walk, node[["children"]], child_sizes)
@@ -276,14 +277,14 @@ spec_to_grid <- function(wire) {
 
   # The top object is the root branch (children + optional sizes) plus
   # orientation; reassemble it before walking.
-  root_spec <- list(children = wire[["children"]] %||% list())
+  root_spec <- list(children = coal(wire[["children"]], list()))
   if (!is.null(wire[["sizes"]])) {
     root_spec[["sizes"]] <- wire[["sizes"]]
   }
 
   list(
     root = walk(root_spec),
-    orientation = toupper(wire[["orientation"]] %||% "horizontal")
+    orientation = toupper(coal(wire[["orientation"]], "horizontal"))
   )
 }
 
@@ -330,7 +331,10 @@ spec_to_layout <- function(wire) {
 dockview_to_layout <- function(x) {
   new_dock_layout(
     grid = x[["grid"]],
-    active_group = x[["activeGroup"]] %||% x[["active_group"]]
+    active_group = coal(
+      x[["activeGroup"]], x[["active_group"]],
+      fail_all = FALSE
+    )
   )
 }
 
