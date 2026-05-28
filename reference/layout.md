@@ -1,62 +1,122 @@
 # Dock layout
 
-The arrangement of panels in a dock can be specified using a
-`dock_layout` object. A default layout is available via `default_grid()`
-which results in two panel groups, the one on the left containing all
-extension panels and the one on the right all block panels.
-Complementing the low-level constructor `new_dock_layout()`, a
-high-level entry point `create_dock_layout()` will create panels for
-extensions and blocks, which can then be arranged via a nested list of
-character vectors passed as `grid` argument.
+A `dock_layout` is the panel arrangement for a single view: a tree of
+block / extension IDs, with at most one leaf marked as initially active.
+A board holds a `dock_layouts` collection (one layout per view); panel
+content is derived on demand from the board's blocks and extensions, so
+only the arrangement is stored in a `dock_layout`. See
+[`is_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+for the collection-level helpers.
 
 ## Usage
 
 ``` r
-new_dock_layout(grid = NULL, panels = NULL, active_group = NULL)
-
-default_grid(blocks, extensions)
-
-create_dock_layout(
-  blocks = list(),
-  extensions = list(),
-  grid = default_grid(blocks, extensions)
+dock_layout(
+  ...,
+  orientation = c("horizontal", "vertical"),
+  active = FALSE,
+  sizes = NULL
 )
+
+panels(..., active = NULL)
+
+group(..., sizes = NULL)
 
 is_dock_layout(x)
 
-validate_dock_layout(x, blocks = character())
-
 as_dock_layout(x, ...)
+
+default_layout(blocks, extensions)
+
+validate_dock_layout(x, blocks = character())
 ```
 
 ## Arguments
 
-- grid, panels, active_group:
+- ...:
 
-  Layout components
+  For `dock_layout()` and `group()`, layout children (bare IDs,
+  character vectors, lists, `panels()`, or `group()`). For `panels()`,
+  panel IDs. Otherwise reserved for generic consistency.
 
-- blocks, extensions:
+- orientation:
 
-  Dock board components
+  Top-level split direction; one of `"horizontal"` (default) or
+  `"vertical"`.
+
+- active:
+
+  For `dock_layout()`, logical: mark this layout as the initially-active
+  view. For `panels()`, the ID of the tab to open by default.
+
+- sizes:
+
+  Numeric vector parallel to `...`, giving each child's share of the
+  parent (positive; need not sum to 1).
 
 - x:
 
   Object
 
-- ...:
+- blocks, extensions:
 
-  Generic consistency
+  Dock board components. For `default_layout()` the components to
+  arrange; for `as_dock_layout()`, optional, used to resolve bare IDs
+  and validate the result.
 
 ## Value
 
-The constructor `new_dock_layout()`, as does the high-level utility
-`create_dock_layout()`, as well as the coercion function
-`as_dock_layout()`, all return a `dock_layout` object. A helper function
-for specifying a default grid is available as `default_grid()`, which
-returns a list of character vectors. The validator
-`validate_dock_layout()` returns its input and throws errors as
-side-effect and inheritance can be checked using `is_dock_layout` which
-returns a boolean.
+`dock_layout()` and `default_layout()` return a `dock_layout` object.
+`panels()` returns a `dock_panels` node and `group()` returns a
+`dock_group` node — both are layout sub-trees usable inside
+`dock_layout()` / `group()`. `as_dock_layout()` returns a `dock_layout`
+(from a board or a spec list);
+[`as.list()`](https://rdrr.io/r/base/list.html) of a `dock_layout`
+returns the spec list. `is_dock_layout()` returns a boolean.
+`validate_dock_layout()` returns its input and throws on error.
+
+## Details
+
+Construct a layout with:
+
+- `dock_layout(...)`: the page-level container. Its `...` are the
+  children of the root branch. Bare strings become single-panel leaves,
+  character vectors become tabbed leaves, lists become nested branches.
+  Use `panels()` for a tabbed leaf with an explicit open tab, and
+  `group()` for a branch with explicit sizes.
+
+- `panels(..., active = NULL)`: a tabbed leaf whose tab strip holds the
+  given panel IDs. `active` selects the initially-open tab; the first ID
+  wins by default. A single-panel `panels()` is permitted but redundant
+  (a bare string is equivalent).
+
+- `group(..., sizes = NULL)`: a branch container. `sizes` is a numeric
+  vector parallel to `...` that overrides the even split.
+
+- `default_layout(blocks, extensions)` produces the default two-row
+  arrangement (extensions on top, blocks below) for a board.
+
+`dock_layout()` accepts `orientation = "horizontal" | "vertical"` for
+the top-level split direction, `sizes` for the root-branch ratios, and
+`active = TRUE` to mark this layout as the initially-active view in a
+`dock_layouts` collection.
+
+A *view* is the conceptual page-level container; a *layout* is the panel
+arrangement inside a view. The dockview-shape `grid + panels` payload
+that dockViewR consumes is an internal projection of a `dock_layout`
+against the board's blocks and extensions; it is not a public type.
+
+`as_dock_layout()` coerces to a `dock_layout`: a `dock_layout`
+(identity), a `board` (its active layout), or a spec list
+([`as.list()`](https://rdrr.io/r/base/list.html) of a layout, or a
+parsed
+[`layout_to_json()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)
+string). Pass `blocks` / `extensions` to resolve bare IDs to canonical
+panel IDs and validate. [`as.list()`](https://rdrr.io/r/base/list.html)
+of a `dock_layout` returns that spec list. The JSON-string boundary is
+[`layout_to_json()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)
+/
+[`layout_from_json()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md).
 
 ## Examples
 
@@ -70,9 +130,311 @@ exts <- list(
   edit = new_edit_board_extension()
 )
 
-grid <- list("edit", list("a", "b"))
+# The default arrangement for a given set of blocks and extensions
+default_layout(blks, exts)
+#> $grid
+#> $grid$root
+#> $grid$root$type
+#> [1] "branch"
+#> 
+#> $grid$root$data
+#> $grid$root$data[[1]]
+#> $grid$root$data[[1]]$type
+#> [1] "leaf"
+#> 
+#> $grid$root$data[[1]]$data
+#> $grid$root$data[[1]]$data$views
+#> $grid$root$data[[1]]$data$views[[1]]
+#> [1] "edit_board_extension"
+#> 
+#> 
+#> $grid$root$data[[1]]$data$activeView
+#> [1] "edit_board_extension"
+#> 
+#> $grid$root$data[[1]]$data$id
+#> [1] "1"
+#> 
+#> 
+#> $grid$root$data[[1]]$size
+#> [1] 0.5
+#> 
+#> 
+#> $grid$root$data[[2]]
+#> $grid$root$data[[2]]$type
+#> [1] "leaf"
+#> 
+#> $grid$root$data[[2]]$data
+#> $grid$root$data[[2]]$data$views
+#> $grid$root$data[[2]]$data$views[[1]]
+#> [1] "a"
+#> 
+#> $grid$root$data[[2]]$data$views[[2]]
+#> [1] "b"
+#> 
+#> 
+#> $grid$root$data[[2]]$data$activeView
+#> [1] "a"
+#> 
+#> $grid$root$data[[2]]$data$id
+#> [1] "2"
+#> 
+#> 
+#> $grid$root$data[[2]]$size
+#> [1] 0.5
+#> 
+#> 
+#> 
+#> $grid$root$size
+#> [1] 1
+#> 
+#> 
+#> $grid$orientation
+#> [1] "HORIZONTAL"
+#> 
+#> 
+#> $activeGroup
+#> [1] "1"
+#> 
+#> attr(,"class")
+#> [1] "dock_layout"
 
-layout <- create_dock_layout(blks, exts, grid)
-is_dock_layout(layout)
+# Mark a layout as the initially-active view in a `dock_layouts`
+# collection
+dock_layout("a", "b", active = TRUE)
+#> $grid
+#> $grid$root
+#> $grid$root$type
+#> [1] "branch"
+#> 
+#> $grid$root$data
+#> $grid$root$data[[1]]
+#> $grid$root$data[[1]]$type
+#> [1] "leaf"
+#> 
+#> $grid$root$data[[1]]$data
+#> $grid$root$data[[1]]$data$views
+#> $grid$root$data[[1]]$data$views[[1]]
+#> [1] "a"
+#> 
+#> 
+#> $grid$root$data[[1]]$data$activeView
+#> [1] "a"
+#> 
+#> $grid$root$data[[1]]$data$id
+#> [1] "1"
+#> 
+#> 
+#> $grid$root$data[[1]]$size
+#> [1] 0.5
+#> 
+#> 
+#> $grid$root$data[[2]]
+#> $grid$root$data[[2]]$type
+#> [1] "leaf"
+#> 
+#> $grid$root$data[[2]]$data
+#> $grid$root$data[[2]]$data$views
+#> $grid$root$data[[2]]$data$views[[1]]
+#> [1] "b"
+#> 
+#> 
+#> $grid$root$data[[2]]$data$activeView
+#> [1] "b"
+#> 
+#> $grid$root$data[[2]]$data$id
+#> [1] "2"
+#> 
+#> 
+#> $grid$root$data[[2]]$size
+#> [1] 0.5
+#> 
+#> 
+#> 
+#> $grid$root$size
+#> [1] 1
+#> 
+#> 
+#> $grid$orientation
+#> [1] "HORIZONTAL"
+#> 
+#> 
+#> $activeGroup
+#> [1] "1"
+#> 
+#> attr(,"class")
+#> [1] "dock_layout"
+#> attr(,"active")
 #> [1] TRUE
+
+# Tabbed leaf with an explicit open tab
+panels("a", "b", "edit_board_extension", active = "edit_board_extension")
+#> $views
+#> $views[[1]]
+#> [1] "a"
+#> 
+#> $views[[2]]
+#> [1] "b"
+#> 
+#> $views[[3]]
+#> [1] "edit_board_extension"
+#> 
+#> 
+#> $active
+#> [1] "edit_board_extension"
+#> 
+#> attr(,"class")
+#> [1] "dock_panels" "dock_node"  
+
+# Branch with explicit child ratios
+group("a", "b", sizes = c(0.3, 0.7))
+#> $children
+#> $children[[1]]
+#> [1] "a"
+#> 
+#> $children[[2]]
+#> [1] "b"
+#> 
+#> 
+#> $sizes
+#> [1] 0.3 0.7
+#> 
+#> attr(,"class")
+#> [1] "dock_group" "dock_node" 
+
+# Composing them inside a layout
+dock_layout(
+  "a",
+  panels("b", "edit_board_extension", active = "edit_board_extension"),
+  sizes = c(0.3, 0.7)
+)
+#> $grid
+#> $grid$root
+#> $grid$root$type
+#> [1] "branch"
+#> 
+#> $grid$root$data
+#> $grid$root$data[[1]]
+#> $grid$root$data[[1]]$type
+#> [1] "leaf"
+#> 
+#> $grid$root$data[[1]]$data
+#> $grid$root$data[[1]]$data$views
+#> $grid$root$data[[1]]$data$views[[1]]
+#> [1] "a"
+#> 
+#> 
+#> $grid$root$data[[1]]$data$activeView
+#> [1] "a"
+#> 
+#> $grid$root$data[[1]]$data$id
+#> [1] "1"
+#> 
+#> 
+#> $grid$root$data[[1]]$size
+#> [1] 0.3
+#> 
+#> 
+#> $grid$root$data[[2]]
+#> $grid$root$data[[2]]$type
+#> [1] "leaf"
+#> 
+#> $grid$root$data[[2]]$data
+#> $grid$root$data[[2]]$data$views
+#> $grid$root$data[[2]]$data$views[[1]]
+#> [1] "b"
+#> 
+#> $grid$root$data[[2]]$data$views[[2]]
+#> [1] "edit_board_extension"
+#> 
+#> 
+#> $grid$root$data[[2]]$data$activeView
+#> [1] "edit_board_extension"
+#> 
+#> $grid$root$data[[2]]$data$id
+#> [1] "2"
+#> 
+#> 
+#> $grid$root$data[[2]]$size
+#> [1] 0.7
+#> 
+#> 
+#> 
+#> $grid$root$size
+#> [1] 1
+#> 
+#> 
+#> $grid$orientation
+#> [1] "HORIZONTAL"
+#> 
+#> 
+#> $activeGroup
+#> [1] "1"
+#> 
+#> attr(,"class")
+#> [1] "dock_layout"
+
+# Vertical top-level split
+dock_layout("a", "b", orientation = "vertical")
+#> $grid
+#> $grid$root
+#> $grid$root$type
+#> [1] "branch"
+#> 
+#> $grid$root$data
+#> $grid$root$data[[1]]
+#> $grid$root$data[[1]]$type
+#> [1] "leaf"
+#> 
+#> $grid$root$data[[1]]$data
+#> $grid$root$data[[1]]$data$views
+#> $grid$root$data[[1]]$data$views[[1]]
+#> [1] "a"
+#> 
+#> 
+#> $grid$root$data[[1]]$data$activeView
+#> [1] "a"
+#> 
+#> $grid$root$data[[1]]$data$id
+#> [1] "1"
+#> 
+#> 
+#> $grid$root$data[[1]]$size
+#> [1] 0.5
+#> 
+#> 
+#> $grid$root$data[[2]]
+#> $grid$root$data[[2]]$type
+#> [1] "leaf"
+#> 
+#> $grid$root$data[[2]]$data
+#> $grid$root$data[[2]]$data$views
+#> $grid$root$data[[2]]$data$views[[1]]
+#> [1] "b"
+#> 
+#> 
+#> $grid$root$data[[2]]$data$activeView
+#> [1] "b"
+#> 
+#> $grid$root$data[[2]]$data$id
+#> [1] "2"
+#> 
+#> 
+#> $grid$root$data[[2]]$size
+#> [1] 0.5
+#> 
+#> 
+#> 
+#> $grid$root$size
+#> [1] 1
+#> 
+#> 
+#> $grid$orientation
+#> [1] "VERTICAL"
+#> 
+#> 
+#> $activeGroup
+#> [1] "1"
+#> 
+#> attr(,"class")
+#> [1] "dock_layout"
 ```

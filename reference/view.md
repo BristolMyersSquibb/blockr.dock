@@ -12,23 +12,15 @@ new_dock_layouts(...)
 
 validate_dock_layouts(x)
 
-dock_layouts(...)
-
-dock_view(..., active = FALSE)
-
 is_dock_layouts(x)
-
-view_ids(x)
 
 active_view(x)
 
 active_view(x) <- value
 
-view_can_crud(x)
+board_layouts(x) <- value
 
-dock_layouts(x) <- value
-
-board_views(x)
+board_layouts(x)
 
 as_dock_layouts(x, ...)
 ```
@@ -43,53 +35,47 @@ as_dock_layouts(x, ...)
 
   Object
 
-- active:
-
-  Logical; mark this view as the initially active one. At most one view
-  in a `dock_layouts()` may be active.
-
 - value:
 
   Replacement value
 
 ## Value
 
-`dock_layouts()` returns a `dock_layouts` object. `dock_view()` returns
-a list (the view spec) with the `active` attribute set when requested.
-`is_dock_layouts()` returns a boolean. `active_view()` returns a string
-and `active_view<-()` returns the modified `dock_layouts` object
-invisibly. `view_ids()` returns all IDs (block + extension) found in a
-layout specification. The `view_can_crud()` helper returns `FALSE` when
-the dock is locked.
+`is_dock_layouts()` returns a boolean. `validate_dock_layouts()` returns
+its input and throws on error. `active_view()` returns a string and
+`active_view<-()` returns the modified `dock_layouts` (or `dock_board`)
+object invisibly.
 
 ## Details
 
-Multiple views are defined via `dock_layouts()`, which accepts named
-list elements – each a (possibly nested) list of block and extension IDs
-(the same format accepted by `create_dock_layout(grid = ...)`). A view
-can be marked as the initially active one by tagging its spec with
-`attr(view, "active") <- TRUE`, conveniently produced by `dock_view()`.
-If no view is tagged, the first one is used. View CRUD is enabled unless
+Multi-view boards are defined by passing a named list to
+[`new_dock_board()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)'s
+`layouts` argument: each name is a view, each value is the panel
+arrangement inside that view (a
+[`dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md),
+or a raw list of block / extension IDs). A view can be marked as the
+initially-active one by passing `active = TRUE` to
+[`dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md);
+if none is marked, the first one is used. View CRUD is enabled unless
 the dock is locked (see `is_dock_locked()`).
+
+Users do not normally construct a `dock_layouts` directly; instead they
+pass a plain named list to `new_dock_board(layouts = ...)`, which
+validates and wraps it.
 
 ## Examples
 
 ``` r
-# Explicit constructor (first view is active by default)
-ly <- dock_layouts(
-  Analysis = list("dataset_1", "head_1"),
-  Overview = list("dag_extension")
+brd <- new_dock_board(
+  blocks = c(
+    dataset_1 = blockr.core::new_dataset_block(),
+    head_1 = blockr.core::new_head_block()
+  ),
+  layouts = list(
+    Analysis = list("dataset_1", "head_1"),
+    Overview = dock_layout("dataset_1", active = TRUE)
+  )
 )
-is_dock_layouts(ly)
-#> [1] TRUE
-active_view(ly)
-#> [1] "Analysis"
-
-# Mark a specific view as initially active
-ly2 <- dock_layouts(
-  Analysis = list("dataset_1"),
-  Overview = dock_view("dag_extension", active = TRUE)
-)
-active_view(ly2)
+active_view(brd)
 #> [1] "Overview"
 ```
