@@ -12,12 +12,14 @@ reference:
 - title: Dock layout
   desc: Tools for defining panel arrangements.
   contents:
-    - new_dock_layout
+    - dock_layout
+- title: Layout serialization
+  desc: Read, write and inspect the JSON wire form of a layout.
+  contents:
+    - layout_to_json
 - title: Dock views
   desc: Multi-view (tabbed) boards. Each view is its own panel arrangement.
   contents:
-    - new_dock_layouts
-    - dock_view
     - active_view
 - title: Board extensions
   desc: Board extensions allow for adding components that interact with and modify board state.

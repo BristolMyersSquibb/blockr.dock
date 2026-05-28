@@ -15,7 +15,7 @@ view_nav_ui <- function(id, views) {
   ns <- NS(id)
   nav_id <- ns("view_nav")
   active <- active_view(views)
-  can_crud <- view_can_crud(views)
+  can_crud <- views_can_crud(views)
 
   items <- lapply(names(views), function(view_name) {
     view_item_ui(view_name, active = identical(view_name, active),

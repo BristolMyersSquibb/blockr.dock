@@ -8,7 +8,7 @@ board_ui.dock_board <- function(
 ) {
   stopifnot(is_string(id))
 
-  views <- board_views(x)
+  views <- board_layouts(x)
 
   # View nav in the navbar -- always present, since boards always carry a
   # `dock_layouts` (single-page boards have one auto-named "Page" view).

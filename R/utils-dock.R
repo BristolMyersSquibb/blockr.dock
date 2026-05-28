@@ -107,8 +107,11 @@ ext_panel_ids <- function(proxy = dock_proxy()) {
   )
 }
 
-restore_dock <- function(layout, proxy = dock_proxy()) {
+restore_layout <- function(layout, proxy, blocks = list(),
+                           extensions = list()) {
   log_debug("restoring dockview layout")
+
+  payload <- dockview_payload(layout, blocks, extensions)
 
   # Coerce each panel's closability to match the *current* lock state.
   # Without this, a board saved unlocked (panels have tabComponent = "manual")
@@ -116,9 +119,10 @@ restore_dock <- function(layout, proxy = dock_proxy()) {
   # dock-level locked / disableDnd / add_tab config is already set from the
   # current state at `set_dock_view_output()`; we just need the per-panel
   # tabComponent to follow suit (#124).
-  layout <- lock_panels(layout, locked = is_dock_locked())
+  payload <- lock_panels(payload, locked = is_dock_locked())
 
-  dockViewR::restore_dock(proxy, unclass(layout))
+  dockViewR::restore_dock(proxy, unclass(payload))
+  invisible(NULL)
 }
 
 # Rewrite every panel's `tabComponent` and `removeCallback` so closability
