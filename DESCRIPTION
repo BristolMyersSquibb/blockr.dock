@@ -1,6 +1,6 @@
 Package: blockr.dock
 Title: A Docking Layout Manager for 'blockr'
-Version: 0.1.1
+Version: 0.1.2
 Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",
@@ -34,7 +34,8 @@ Imports:
     shinyWidgets,
     jsonlite
 Remotes:
-    BristolMyersSquibb/blockr.ui
+    BristolMyersSquibb/blockr.ui,
+    BristolMyersSquibb/blockr.core
 Suggests:
     testthat (>= 3.0.0),
     DT,
