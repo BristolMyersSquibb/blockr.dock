@@ -520,7 +520,7 @@ rewrite_grid_leaves <- function(grid, id_map) {
     }
     if (identical(node[["type"]], "leaf")) {
       views <- chr_ply(node[["data"]][["views"]], identity)
-      mapped <- unname(id_map[views])
+      mapped <- chr_mply(coal, as.list(id_map)[views], views)
       active_view <- node[["data"]][["activeView"]]
       node[["data"]][["views"]] <- as.list(mapped)
       node[["data"]][["activeView"]] <- coal(id_map[[active_view]], active_view)
