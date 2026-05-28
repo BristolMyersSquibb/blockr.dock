@@ -1,5 +1,16 @@
 # Changelog
 
+## blockr.dock 0.1.2
+
+- `board_layouts(rv$board)` now stays in sync with UI-driven layout
+  changes (panel close/add, drag-resize/rearrange, view CRUD). UI-driven
+  mutations are routed through `update(list(views = ...))` and applied
+  by new `validate_board_update.dock_board()` and
+  `apply_board_update.dock_board()` methods, riding the same lifecycle
+  as block/link/stack mutations. Writes are debounced (250 ms) so
+  drag-resize doesn’t thrash. Requires `blockr.core (>= 0.1.3)` for the
+  update lifecycle generics.
+
 ## blockr.dock 0.1.1
 
 CRAN release: 2026-04-29
