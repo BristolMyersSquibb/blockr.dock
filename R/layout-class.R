@@ -581,7 +581,7 @@ dockview_payload <- function(layout, blocks = list(), extensions = list()) {
   blk_ids <- sub("^block_panel-", "", blk_pids)
   ext_ids <- sub("^ext_panel-", "", ext_pids)
 
-  blk_panels <- lapply(map(`[`, list(blocks), blk_ids), block_panel)
+  blk_panels <- lapply(split(blocks[blk_ids], seq_along(blk_ids)), block_panel)
   ext_panels <- lapply(ext_list[ext_ids], ext_panel)
 
   panels <- lapply(c(blk_panels, ext_panels), create_layout_panel)
