@@ -60,7 +60,13 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   ext_res <- lapply(
     exts,
     extension_server,
-    list(board = board, update = update, dock = dock, actions = triggers),
+    list(
+      board = board,
+      update = update,
+      dock = dock,
+      actions = triggers,
+      view_data = view_data
+    ),
     list(...)
   )
 

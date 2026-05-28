@@ -9,6 +9,15 @@
   drag-resize doesn't thrash. Requires `blockr.core (>= 0.1.3)` for
   the update lifecycle generics.
 
+* Extension server functions now receive a `view_data` reactive
+  exposing the full live `dock_layouts` (names, active view, and
+  per-view grids). Existing extensions that swallow extra arguments
+  via `...` continue to work unchanged (#146).
+
+* Added `as_layout_spec()`, which reconstructs a stored `dock_layout`
+  into canonical constructor form (idempotent under `dock_layout(...)`)
+  by round-tripping through its spec (#145).
+
 # blockr.dock 0.1.1
 
 * Added prepend block action.

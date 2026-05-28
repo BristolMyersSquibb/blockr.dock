@@ -352,3 +352,42 @@ test_that("views slot flows through full board_update lifecycle", {
     )
   )
 })
+
+test_that("extensions receive view_data reactive", {
+
+  captured <- new.env(parent = emptyenv())
+
+  probe_srv <- function(id, board, update, ..., view_data) {
+    moduleServer(id, function(input, output, session) {
+      captured$view_data <- view_data
+    })
+    list(state = list())
+  }
+
+  new_view_data_probe_extension <- function() {
+    new_dock_extension(
+      probe_srv,
+      function(id) tagList(),
+      name = "View data probe",
+      class = "view_data_probe_extension"
+    )
+  }
+
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = new_view_data_probe_extension(),
+    layouts = list(
+      First = dock_layout("a"),
+      Second = dock_layout("a", active = TRUE)
+    )
+  )
+
+  with_mock_session(
+    {
+      res <- board_server_callback(board_rv, update = reactiveVal())
+
+      expect_s3_class(captured$view_data, "reactive")
+      expect_identical(captured$view_data, res[["view_data"]])
+    }
+  )
+})

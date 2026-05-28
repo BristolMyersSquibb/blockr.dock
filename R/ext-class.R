@@ -5,6 +5,15 @@
 #' that allows for manipulating the board state. A set of dock extensions
 #' can be combined into a `dock_extensions` object.
 #'
+#' Extension server functions are invoked by `board_server_callback()` with
+#' the following named arguments (plus `id` for namespacing): `board` (the
+#' reactive board state), `update` (the update signal), `dock` (a
+#' `reactiveValues` mirroring the currently active view's dock module
+#' result), `actions` (action triggers) and `view_data` (a
+#' [shiny::reactive()] returning the full `dock_layouts` of all live views,
+#' invalidated on layout, panel, or view-membership changes). Servers
+#' typically accept `...` and pull out only the arguments they need.
+#'
 #' @param server A function returning [shiny::moduleServer()]
 #' @param ui A function with a single argument (`ns`) returning a `shiny.tag`
 #' @param name Name for extension

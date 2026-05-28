@@ -101,6 +101,16 @@ Functionality of a \code{dock_board} can be extended by supplying one or more
 that allows for manipulating the board state. A set of dock extensions
 can be combined into a \code{dock_extensions} object.
 }
+\details{
+Extension server functions are invoked by \code{board_server_callback()} with
+the following named arguments (plus \code{id} for namespacing): \code{board} (the
+reactive board state), \code{update} (the update signal), \code{dock} (a
+\code{reactiveValues} mirroring the currently active view's dock module
+result), \code{actions} (action triggers) and \code{view_data} (a
+\code{\link[shiny:reactive]{shiny::reactive()}} returning the full \code{dock_layouts} of all live views,
+invalidated on layout, panel, or view-membership changes). Servers
+typically accept \code{...} and pull out only the arguments they need.
+}
 \examples{
 ext <- new_edit_board_extension()
 is_dock_extension(ext)
