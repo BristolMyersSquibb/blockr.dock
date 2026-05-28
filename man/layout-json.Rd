@@ -42,11 +42,12 @@ should call them rather than re-implement the format.
 }
 \details{
 \code{layout_to_json()} renders a layout as a JSON string. The shape is a
-recursive tree: the top object carries \code{orientation}, \code{children}, and
-an optional \code{sizes}; a child is either a bare string (single-panel
-leaf), an object with \code{panels} / optional \code{active} (tabbed leaf), or
-an object with \code{children} / optional \code{sizes} (nested branch). Sizes
-are ratios summing to 1, omitted when even.
+recursive tree: the top object carries \code{orientation}, \code{children}, an
+optional \code{sizes}, and an optional \code{focus} (the panel with current
+focus); a child is either a bare string (single-panel leaf), an
+object with \code{panels} / optional \code{active} (tabbed leaf), or an object
+with \code{children} / optional \code{sizes} (nested branch). Sizes are ratios
+summing to 1, omitted when even.
 
 \code{layout_from_json()} is the inverse. It accepts a JSON string or an
 already-parsed list. When \code{blocks} and / or \code{extensions} are

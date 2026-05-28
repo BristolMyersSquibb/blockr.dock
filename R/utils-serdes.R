@@ -46,7 +46,7 @@ blockr_ser.dock_layout <- function(x, data, ...) {
   payload <- as_dock_layout(payload)
   list(
     object = class(x),
-    payload = grid_to_wire(payload[["grid"]]),
+    payload = layout_to_wire(payload),
     active = is_active_view(payload)
   )
 }
@@ -89,18 +89,16 @@ blockr_deser.dock_layout <- function(x, data, ...) {
   # possibly alongside a now-redundant `panels` map. Discriminate by shape:
   # see blockr.dock#153 for the planned version-based routing once
   # blockr.core forwards `...` through `blockr_deser.list`.
-  if ("grid" %in% names(payload)) {
-    grid <- payload[["grid"]]
-    active_group <- payload[["activeGroup"]] %||% payload[["active_group"]]
+  layout <- if ("grid" %in% names(payload)) {
+    new_dock_layout(
+      grid = payload[["grid"]],
+      active_group = payload[["activeGroup"]] %||% payload[["active_group"]]
+    )
   } else {
-    grid <- wire_to_grid(payload)
-    active_group <- NULL
+    wire_to_layout(payload)
   }
 
-  set_active_view(
-    new_dock_layout(grid = grid, active_group = active_group),
-    active
-  )
+  set_active_view(layout, active)
 }
 
 #' @export
@@ -157,15 +155,21 @@ blockr_deser.dock_extensions <- function(x, data, ...) {
 # Bare arrays never appear as node values, so the three forms are
 # syntactically distinct. Sizes are ratios summing to 1, omitted when
 # the split is even. The active tab is omitted when the open tab is the
-# first panel (the implicit default). Dockview's internal fields (type
-# tags, per-branch size, leaf id, layout-level activeGroup) are not
-# stored — they're regenerated on the way back in.
+# first panel (the implicit default).
 #
-# Dockview emits absolute pixel sizes from live state after a user
-# resize; grid_to_wire() normalises them to ratios on save. wire_to_grid()
-# re-assigns the dockview-style fields needed by restore_dock(), and is
-# robust to the atomic-vector coercion `jsonlite::fromJSON(simplifyVector
-# = TRUE)` applies to all-scalar arrays.
+# A top-level `focus` names the panel with current focus (the open tab
+# of the focused group). It's omitted when focus is on the first leaf
+# (the default on load). It's distinct from a leaf's `active`: `active`
+# is leaf-local (which tab is open here), `focus` is layout-global
+# (which panel is focused overall). grid_to_wire()/wire_to_grid() handle
+# the pure structure; layout_to_wire()/wire_to_layout() add the focus.
+#
+# Dockview's internal fields (type tags, per-branch size, leaf id) are
+# not stored — they're regenerated on the way back in. Dockview emits
+# absolute pixel sizes from live state after a user resize; grid_to_wire()
+# normalises them to ratios on save. wire_to_grid() is robust to the
+# atomic-vector coercion `jsonlite::fromJSON(simplifyVector = TRUE)`
+# applies to all-scalar arrays.
 
 grid_to_wire <- function(grid) {
 
@@ -295,6 +299,86 @@ normalise_sizes <- function(sizes) {
   if (total > 0) sizes / total else sizes
 }
 
+# Layout-level conversion: the grid <-> wire structure plus the
+# focused-panel pointer that lives on the `dock_layout`, not the grid.
+
+layout_to_wire <- function(layout) {
+
+  layout <- as_dock_layout(layout)
+  wire <- grid_to_wire(layout[["grid"]])
+
+  focus <- focus_panel(layout[["grid"]], layout[["activeGroup"]])
+  if (!is.null(focus)) {
+    wire[["focus"]] <- focus
+  }
+
+  wire
+}
+
+wire_to_layout <- function(wire) {
+
+  grid <- wire_to_grid(wire)
+
+  new_dock_layout(
+    grid = grid,
+    active_group = focus_group_id(grid, wire[["focus"]])
+  )
+}
+
+grid_leaves <- function(grid) {
+
+  leaves <- list()
+
+  walk <- function(node) {
+    if (is.null(node) || !length(node)) {
+      return(invisible())
+    }
+    if (identical(node[["type"]], "leaf")) {
+      leaves[[length(leaves) + 1L]] <<- node[["data"]]
+    } else {
+      lapply(node[["data"]], walk)
+    }
+    invisible()
+  }
+
+  walk(grid[["root"]])
+  leaves
+}
+
+# Serialize side: translate the focused group id to its open panel.
+# Omitted when focus is on the first leaf ("1"), which is the load default.
+focus_panel <- function(grid, active_group) {
+
+  if (is.null(active_group) || identical(active_group, "1")) {
+    return(NULL)
+  }
+
+  for (leaf in grid_leaves(grid)) {
+    if (identical(leaf[["id"]], active_group)) {
+      return(leaf[["activeView"]])
+    }
+  }
+
+  NULL
+}
+
+# Deserialize side: find the group id whose panels include the focused
+# panel, so it can be restored as the active group.
+focus_group_id <- function(grid, focus) {
+
+  if (is.null(focus)) {
+    return(NULL)
+  }
+
+  for (leaf in grid_leaves(grid)) {
+    if (focus %in% unlist(leaf[["views"]])) {
+      return(leaf[["id"]])
+    }
+  }
+
+  NULL
+}
+
 #' Layout serialization and inspection
 #'
 #' Read and write the JSON wire form of a [dock_layout][layout], and
@@ -303,11 +387,12 @@ normalise_sizes <- function(sizes) {
 #' should call them rather than re-implement the format.
 #'
 #' `layout_to_json()` renders a layout as a JSON string. The shape is a
-#' recursive tree: the top object carries `orientation`, `children`, and
-#' an optional `sizes`; a child is either a bare string (single-panel
-#' leaf), an object with `panels` / optional `active` (tabbed leaf), or
-#' an object with `children` / optional `sizes` (nested branch). Sizes
-#' are ratios summing to 1, omitted when even.
+#' recursive tree: the top object carries `orientation`, `children`, an
+#' optional `sizes`, and an optional `focus` (the panel with current
+#' focus); a child is either a bare string (single-panel leaf), an
+#' object with `panels` / optional `active` (tabbed leaf), or an object
+#' with `children` / optional `sizes` (nested branch). Sizes are ratios
+#' summing to 1, omitted when even.
 #'
 #' `layout_from_json()` is the inverse. It accepts a JSON string or an
 #' already-parsed list. When `blocks` and / or `extensions` are
@@ -345,8 +430,7 @@ normalise_sizes <- function(sizes) {
 #' @rdname layout-json
 #' @export
 layout_to_json <- function(x, ...) {
-  wire <- grid_to_wire(as_dock_layout(x)[["grid"]])
-  jsonlite::toJSON(wire, auto_unbox = TRUE, null = "null", ...)
+  jsonlite::toJSON(layout_to_wire(x), auto_unbox = TRUE, null = "null", ...)
 }
 
 #' @rdname layout-json
@@ -359,7 +443,7 @@ layout_from_json <- function(x, blocks = NULL, extensions = NULL) {
     x
   }
 
-  layout <- new_dock_layout(grid = wire_to_grid(wire))
+  layout <- wire_to_layout(wire)
 
   if (!is.null(blocks) || !is.null(extensions)) {
     layout <- resolve_dock_layout(

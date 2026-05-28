@@ -121,6 +121,49 @@ test_that("wire_to_grid restores group ids from the flattened spec", {
   expect_identical(grid[["root"]][["data"]][[2L]][["data"]][["id"]], "2")
 })
 
+test_that("focus round-trips and is omitted for the default group", {
+
+  # Two leaves; focus the second (a tabbed group). Build via wire_to_grid
+  # so we can assign a non-default activeGroup the way live dockview state
+  # would.
+  grid <- wire_to_grid(
+    list(
+      orientation = "horizontal",
+      children = list(
+        "block_panel-a",
+        list(panels = list("block_panel-b", "block_panel-c"),
+             active = "block_panel-c")
+      )
+    )
+  )
+
+  focused <- new_dock_layout(grid = grid, active_group = "2")
+  wire <- layout_to_wire(focused)
+  expect_identical(wire[["focus"]], "block_panel-c")
+  expect_identical(wire_to_layout(wire)[["activeGroup"]], "2")
+
+  # Focus on the first leaf is the load default — omitted.
+  default <- new_dock_layout(grid = grid, active_group = "1")
+  wire_default <- layout_to_wire(default)
+  expect_false("focus" %in% names(wire_default))
+  expect_identical(wire_to_layout(wire_default)[["activeGroup"]], "1")
+})
+
+test_that("focus survives a real JSON round-trip", {
+
+  grid <- wire_to_grid(
+    list(
+      orientation = "horizontal",
+      children = list("block_panel-a", "block_panel-b")
+    )
+  )
+  focused <- new_dock_layout(grid = grid, active_group = "2")
+
+  json <- layout_to_json(focused)
+  expect_match(json, "\"focus\":\"block_panel-b\"", fixed = TRUE)
+  expect_identical(layout_from_json(json)[["activeGroup"]], "2")
+})
+
 test_that("layout survives a real JSON encode/decode round-trip", {
 
   # The internal ser/des tests round-trip R lists only. blockr.core
