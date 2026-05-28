@@ -520,7 +520,7 @@ rewrite_grid_leaves <- function(grid, id_map) {
     }
     if (identical(node[["type"]], "leaf")) {
       views <- chr_ply(node[["data"]][["views"]], identity)
-      mapped <- chr_ply(views, function(v) coal(id_map[[v]], v))
+      mapped <- unname(id_map[views])
       active_view <- node[["data"]][["activeView"]]
       node[["data"]][["views"]] <- as.list(mapped)
       node[["data"]][["activeView"]] <- coal(id_map[[active_view]], active_view)
@@ -582,7 +582,7 @@ dockview_payload <- function(layout, blocks = list(), extensions = list()) {
   ext_ids <- sub("^ext_panel-", "", ext_pids)
 
   blk_panels <- lapply(blk_ids, function(id) block_panel(blocks[id]))
-  ext_panels <- lapply(ext_ids, function(id) ext_panel(ext_list[[id]]))
+  ext_panels <- lapply(ext_list[ext_ids], ext_panel)
 
   panels <- lapply(c(blk_panels, ext_panels), create_layout_panel)
   names(panels) <- chr_xtr(panels, "id")
