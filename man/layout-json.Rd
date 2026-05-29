@@ -24,7 +24,7 @@ layout_from_json(x, blocks = NULL, extensions = NULL)
 \item{x}{A \code{dock_layout} (for \code{layout_to_json()}), or a JSON string /
 parsed spec list (for \code{layout_from_json()}).}
 
-\item{...}{Forwarded to \code{\link[jsonlite:toJSON]{jsonlite::toJSON()}}.}
+\item{...}{Forwarded to \code{\link[jsonlite:fromJSON]{jsonlite::toJSON()}}.}
 
 \item{blocks, extensions}{Optional board components used to resolve and
 validate bare IDs in \code{layout_from_json()}.}
