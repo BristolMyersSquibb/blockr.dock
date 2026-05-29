@@ -258,7 +258,7 @@ spec_to_grid <- function(wire) {
         node[["sizes"]],
         if (n) rep(1 / n, n) else numeric()
       )
-      children <- Map(walk, node[["children"]], child_sizes)
+      children <- map(walk, node[["children"]], child_sizes)
 
       return(
         list(
