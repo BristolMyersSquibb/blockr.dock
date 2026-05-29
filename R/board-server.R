@@ -281,21 +281,10 @@ layouts_to_board_observer <- function(view_data, update, board) {
   })
 }
 
-#' Compute a structured `views` delta between two `dock_layouts`.
-#'
-#' Mirrors live UI state back through the update lifecycle without
-#' resending unchanged views. Per-view layout comparison ignores the
-#' `active` attribute (a view's active-membership marker lives in the
-#' container, not the layout itself); the active-view name change is
-#' reported separately via the `$active` slot.
-#'
-#' @param current The current `dock_layouts` on the board.
-#' @param new_layouts The desired `dock_layouts` (from `live_view_data`).
-#'
-#' @return A list with optional `add`/`mod`/`rm`/`active` slots, empty
-#'   if the two are identical up to the active-view marker.
-#'
-#' @noRd
+# Structured `views` delta between two `dock_layouts`, so live UI state
+# mirrors back through the update lifecycle without resending unchanged
+# views. Per-view comparison uses the wire spec (ignores volatile
+# fields); the active-view change rides the `$active` slot.
 diff_dock_layouts <- function(current, new_layouts) {
 
   cur_nms <- names(current)

@@ -1,23 +1,8 @@
-#' Resolve raw IDs in `views$add` / `views$mod` layouts to the
-#' canonical `block_panel-...` / `ext_panel-...` form.
-#'
-#' Callers may submit layouts built with bare IDs (e.g.
-#' `dock_layout("blk_a")`); resolving here normalises them before
-#' validation and apply. Mirrors what `initialise_layout()` does at
-#' board construction time. Resolution uses the *pre-rm* block set
-#' (current ∪ `blocks$add`) so that user-submitted layouts referencing
-#' a block being removed still resolve — `merge_views_mod()` then
-#' drops those references on the canonical form before
-#' `validate_views_delta()` checks post-state.
-#'
-#' @param views The `views` payload slice.
-#' @param board The current `dock_board`.
-#' @param upd The full augmented update payload (provides
-#'   `blocks$add` for the resolution block set).
-#'
-#' @return The `views` slice with `add` / `mod` layouts rewritten.
-#'
-#' @noRd
+# Resolve bare IDs in submitted `add` / `mod` layouts to canonical
+# block_panel-/ext_panel- form (as `initialise_layout()` does at
+# construction). Uses the pre-rm block set (current + blocks$add) so a
+# layout referencing a to-be-removed block still resolves;
+# `merge_views_mod()` drops it before the post-state checks.
 resolve_views_layouts <- function(views, board, upd) {
 
   current_blocks <- board_blocks(board)
@@ -55,22 +40,9 @@ resolve_views_layouts <- function(views, board, upd) {
   views
 }
 
-#' Validate a `views` payload slice.
-#'
-#' Structural and cross-reference checks for the `views` slot of a
-#' `dock_board` update payload. Run from
-#' `augment_board_update.dock_board()` after in-core augmentation, so
-#' panel-ID xrefs resolve against the post-augment block set.
-#'
-#' @param views The `views` payload slice
-#'   (`list(add, mod, rm, active)`).
-#' @param board The current `dock_board`.
-#' @param upd The full augmented update payload (used to derive the
-#'   post-state block set for panel-ID xref).
-#'
-#' @return `views` invisibly. Throws classed errors on invalid input.
-#'
-#' @noRd
+# Structural + cross-reference checks for the `views` slice. Runs after
+# in-core augmentation, so panel-ID xrefs resolve against the post-state
+# block set derived from `upd`.
 validate_views_delta <- function(views, board, upd) {
 
   if (!is.list(views)) {
@@ -258,20 +230,9 @@ validate_layout_panel_refs <- function(layout, ok_panels, view_name) {
   invisible(layout)
 }
 
-#' Drop panel IDs from a single `dock_layout`.
-#'
-#' Walks the layout's grid tree and removes any leaf views matching the
-#' supplied panel IDs. Leaves that become empty are dropped; their
-#' parent branches collapse if all children vanish. The active-view
-#' marker on the layout is preserved.
-#'
-#' @param layout A `dock_layout`.
-#' @param panel_ids Character vector of panel IDs to drop (the full
-#'   `block_panel-...` / `ext_panel-...` form).
-#'
-#' @return The modified `dock_layout`.
-#'
-#' @noRd
+# Remove the given panel IDs from a layout's grid: empty leaves drop,
+# branches with no surviving children collapse, the active-view marker
+# is preserved.
 drop_panels_from_layout <- function(layout, panel_ids) {
 
   if (!length(panel_ids)) {
@@ -326,60 +287,9 @@ drop_panels_from_layout <- function(layout, panel_ids) {
   set_active_view(result, was_active)
 }
 
-#' Compute the per-view auto-augment for `blocks$rm`.
-#'
-#' For every current view layout that contains an affected panel,
-#' returns a cleaned `dock_layout`. Pass the result through
-#' [merge_views_mod()] to combine with any user-submitted `views$mod`.
-#'
-#' @param layouts The current `dock_layouts` on the board.
-#' @param rm_block_ids Character vector of block IDs being removed.
-#' @param skip_views Character vector of view names to skip (e.g.
-#'   `views$rm` — no point cleaning a view that will be deleted).
-#'
-#' @return A named list (possibly empty) of `view_name -> dock_layout`.
-#'
-#' @noRd
-drop_panels_from_layouts <- function(layouts, rm_block_ids,
-                                     skip_views = character()) {
-
-  if (!length(rm_block_ids)) {
-    return(list())
-  }
-
-  rm_panels <- as.character(as_block_panel_id(rm_block_ids))
-
-  out <- list()
-
-  for (v in setdiff(names(layouts), skip_views)) {
-
-    layout <- layouts[[v]]
-    pids <- layout_panel_ids(layout)
-
-    if (any(pids %in% rm_panels)) {
-      out[[v]] <- drop_panels_from_layout(layout, rm_panels)
-    }
-  }
-
-  out
-}
-
-#' Merge user-supplied `views$mod` with the block-removal augment.
-#'
-#' When both target the same view, the augment runs on top of the
-#' user-supplied layout (drop the same panel IDs). When only one is
-#' present, that one wins.
-#'
-#' @param user_mod User-supplied `views$mod` (may be `NULL`).
-#' @param layouts Current `dock_layouts` (used for `skip_views`
-#'   semantics).
-#' @param rm_block_ids Character vector of block IDs being removed.
-#' @param skip_views Views to skip entirely (e.g. `views$rm`).
-#'
-#' @return A named list of `view_name -> dock_layout` representing the
-#'   merged `views$mod`.
-#'
-#' @noRd
+# Merge user-supplied `views$mod` with the block-removal cleanup: when
+# both touch a view, the cleanup drops the removed block from whatever
+# layout the user submitted; otherwise the present one wins.
 merge_views_mod <- function(user_mod, layouts, rm_block_ids,
                             skip_views = character()) {
 
@@ -432,6 +342,12 @@ apply_views_rm <- function(rm_names, board, dock_mgr = NULL, session = NULL) {
     if (exists(v, envir = dock_mgr$docks, inherits = FALSE)) {
 
       rm_dock <- dock_mgr$docks[[v]]
+
+      # Park the view's block / ext UIs back in the offcanvas before the
+      # dock is destroyed — otherwise a block that survives in another
+      # view loses its (board-level, single-instance) UI along with the
+      # torn-down panel container. No-op for views already parked.
+      hide_view_ui(v, dock_mgr$docks)
 
       destroy_module(rm_dock$dock_id, session = session)
       removeUI(
@@ -570,18 +486,12 @@ apply_views_mod <- function(mod_views, board, dock_mgr = NULL) {
   board
 }
 
-#' Test whether two layouts describe the same panel arrangement.
-#'
-#' Used by [apply_views_mod()] to short-circuit `restore_layout` when
-#' the live dockView state already matches the target — avoids the
-#' visual rebuild on UI-driven sync. Compares the normalised wire spec
-#' (`layout_to_spec()`), which already drops volatile pixel sizes and
-#' regenerated group IDs; we additionally drop `focus` so a
-#' focus-only change (a tab click) doesn't force a rebuild. `a` is the
-#' live dockview wire shape (`get_dock()` output); `b` is the target
-#' `dock_layout`.
-#'
-#' @noRd
+# Whether two layouts describe the same panel arrangement, used to
+# short-circuit `restore_layout` when the live dockview state already
+# matches the target. Compares normalised wire specs (drops volatile
+# pixel sizes / regenerated group IDs) and additionally drops `focus`
+# so a tab click doesn't force a rebuild. `a` is the live wire shape
+# (`get_dock()`); `b` is the target `dock_layout`.
 layouts_match <- function(a, b) {
 
   to_spec <- function(x) {
@@ -664,21 +574,9 @@ apply_views_active <- function(active, board, dock_mgr = NULL,
   board
 }
 
-#' Apply a single view-layout diff.
-#'
-#' v1 implementation: unconditionally calls [restore_layout()] with the
-#' target layout. Surgical diff paths (identical-layout noop, active-tab
-#' only, panel reorder, etc.) are a deferred follow-up; the dispatch
-#' point lives here so callers stay stable across that change.
-#'
-#' @param view Name of the view being modified (for logging / future
-#'   diff dispatch).
-#' @param target The desired `dock_layout`.
-#' @param proxy The dockView proxy for this view.
-#' @param blocks,extensions Current board components (for layout
-#'   payload construction).
-#'
-#' @noRd
+# Apply one view's layout change. v1 unconditionally restores the target
+# layout; surgical diff paths (noop / active-tab / reorder) are a
+# deferred follow-up that can dispatch here without touching callers.
 apply_layout_diff <- function(view, target, proxy, blocks, extensions) {
 
   log_debug("applying layout diff for view {view}")
@@ -688,12 +586,14 @@ apply_layout_diff <- function(view, target, proxy, blocks, extensions) {
   # and are moved between them via `move_dom_element`. `restore_dock`
   # tears the panel containers down, taking the attached UIs with them,
   # so we have to (a) park the UIs back in the offcanvas first and
-  # (b) reattach them to the freshly-rendered panels afterwards.
-  for (pid in block_panel_ids(proxy)) {
-    hide_block_panel(pid, rm_panel = FALSE, proxy = proxy)
+  # (b) reattach them to the freshly-rendered panels afterwards. Iterate
+  # object ids (as `hide_view_ui()` does): `for` over the classed id
+  # vector would drop the class and double-prefix the move target.
+  for (oid in as_obj_id(block_panel_ids(proxy))) {
+    hide_block_panel(oid, rm_panel = FALSE, proxy = proxy)
   }
-  for (pid in ext_panel_ids(proxy)) {
-    hide_ext_panel(pid, rm_panel = FALSE, proxy = proxy)
+  for (oid in as_obj_id(ext_panel_ids(proxy))) {
+    hide_ext_panel(oid, rm_panel = FALSE, proxy = proxy)
   }
 
   restore_layout(target, proxy, blocks = blocks, extensions = extensions)
