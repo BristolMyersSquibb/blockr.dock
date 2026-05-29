@@ -321,7 +321,7 @@ test_that("prepend block action: invalid block_id / link_id do not update", {
   )
 })
 
-test_that("prepend block action: NULL target_input falls back to the only slot", {
+test_that("prepend: NULL target_input falls back to only slot", {
   # head_block has arity 1 (input "data"); the browser hides the
   # target_input picker, so spec$target_input arrives as NULL. The
   # handler must fall back to `block_input_select(..., mode = "inputs")[1L]`.
@@ -364,7 +364,7 @@ test_that("prepend block action: NULL target_input falls back to the only slot",
   )
 })
 
-test_that("append / prepend: unknown type bails after build_block_from_spec NULL", {
+test_that("append / prepend: unknown type bails after NULL block", {
   # Both handlers must short-circuit on a build failure (the
   # `if (is.null(new_blk)) return()` guard after build_block_from_spec).
   r_board <- reactiveValues(
@@ -382,11 +382,13 @@ test_that("append / prepend: unknown type bails after build_block_from_spec NULL
     .package = "blockr.ui"
   )
 
-  bogus <- function(update_rv) list(
-    type = "no_such_block_xyz", id = "x", title = NULL,
-    link_id = "l", block_input = "x", target_input = "x",
-    nonce = 1
-  )
+  bogus <- function(update_rv) {
+    list(
+      type = "no_such_block_xyz", id = "x", title = NULL,
+      link_id = "l", block_input = "x", target_input = "x",
+      nonce = 1
+    )
+  }
 
   testServer(
     function(id, ...) {
@@ -425,7 +427,7 @@ test_that("append / prepend: unknown type bails after build_block_from_spec NULL
   )
 })
 
-test_that("build_block_from_spec: unknown type yields a notified error and no update", {
+test_that("build_block_from_spec: unknown type bails with notify", {
   # An unknown registry uid in spec$type makes create_block_with_name
   # throw; `build_block_from_spec` catches it, notifies, returns NULL,
   # and the handlers bail without calling update().
