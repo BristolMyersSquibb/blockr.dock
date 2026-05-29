@@ -4,19 +4,15 @@ add_block_action <- function(trigger, board, update, ...) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
       added <- blockr.ui::block_browser_server("browser")
 
-      show_browser <- function() {
-        blockr.ui::show_sidebar(
-          sidebar_id,
-          title = "Add new block",
-          ui = blockr.ui::block_browser_ui(
-            session$ns("browser"), board$board
-          )
-        )
+      browser_ui <- function() {
+        blockr.ui::block_browser_ui(session$ns("browser"), board$board)
       }
 
       observeEvent(trigger(), {
         log_debug("showing add block action sidebar")
-        show_browser()
+        blockr.ui::show_sidebar(
+          sidebar_id, title = "Add new block", ui = browser_ui()
+        )
       })
 
       observeEvent(added(), {
@@ -34,11 +30,7 @@ add_block_action <- function(trigger, board, update, ...) {
         ))
 
         blockr.ui::keep_or_hide_sidebar(
-          sidebar_id,
-          title = "Add new block",
-          ui = blockr.ui::block_browser_ui(
-            session$ns("browser"), board$board
-          )
+          sidebar_id, title = "Add new block", ui = browser_ui()
         )
       })
 
@@ -54,15 +46,16 @@ append_block_action <- function(trigger, board, update, ...) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
       added <- blockr.ui::block_browser_server("browser")
 
+      browser_ui <- function() {
+        blockr.ui::block_browser_ui(
+          session$ns("browser"), board$board,
+          blockr.ui::append_to(trigger())
+        )
+      }
+
       observeEvent(trigger(), {
         blockr.ui::show_sidebar(
-          sidebar_id,
-          title = "Append new block",
-          ui = blockr.ui::block_browser_ui(
-            session$ns("browser"),
-            board$board,
-            blockr.ui::append_to(trigger())
-          )
+          sidebar_id, title = "Append new block", ui = browser_ui()
         )
       })
 
@@ -105,13 +98,7 @@ append_block_action <- function(trigger, board, update, ...) {
         ))
 
         blockr.ui::keep_or_hide_sidebar(
-          sidebar_id,
-          title = "Append new block",
-          ui = blockr.ui::block_browser_ui(
-            session$ns("browser"),
-            board$board,
-            blockr.ui::append_to(trigger())
-          )
+          sidebar_id, title = "Append new block", ui = browser_ui()
         )
       })
 
@@ -127,15 +114,16 @@ prepend_block_action <- function(trigger, board, update, ...) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
       added <- blockr.ui::block_browser_server("browser")
 
+      browser_ui <- function() {
+        blockr.ui::block_browser_ui(
+          session$ns("browser"), board$board,
+          blockr.ui::prepend_to(trigger())
+        )
+      }
+
       observeEvent(trigger(), {
         blockr.ui::show_sidebar(
-          sidebar_id,
-          title = "Prepend new block",
-          ui = blockr.ui::block_browser_ui(
-            session$ns("browser"),
-            board$board,
-            blockr.ui::prepend_to(trigger())
-          )
+          sidebar_id, title = "Prepend new block", ui = browser_ui()
         )
       })
 
@@ -177,13 +165,7 @@ prepend_block_action <- function(trigger, board, update, ...) {
         ))
 
         blockr.ui::keep_or_hide_sidebar(
-          sidebar_id,
-          title = "Prepend new block",
-          ui = blockr.ui::block_browser_ui(
-            session$ns("browser"),
-            board$board,
-            blockr.ui::prepend_to(trigger())
-          )
+          sidebar_id, title = "Prepend new block", ui = browser_ui()
         )
       })
 
