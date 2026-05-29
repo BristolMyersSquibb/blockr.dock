@@ -34,6 +34,10 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   views <- board_layouts(initial_board)
 
   dock_mgr <- new_dock_manager()
+  dock_mgr$board_rv <- board
+  dock_mgr$update <- update
+  dock_mgr$triggers <- triggers
+
   vs <- init_view_docks(
     views,
     board,
@@ -44,6 +48,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     blocks = c_blks,
     extensions = c_exts
   )
+  dock_mgr$vs <- vs
 
   switch_view_observer(vs, session, dock_mgr)
   add_view_observer(vs, session, dock_mgr, board, update, triggers)
@@ -67,7 +72,12 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   register_actions(actions, triggers, board, update, ext_res)
 
   c(
-    list(dock = dock, actions = triggers, view_data = view_data),
+    list(
+      dock = dock,
+      actions = triggers,
+      view_data = view_data,
+      dock_mgr = dock_mgr
+    ),
     ext_res
   )
 }
@@ -263,8 +273,57 @@ layouts_to_board_observer <- function(view_data, update, board) {
       return()
     }
 
-    update(list(views = new_layouts))
+    delta <- diff_dock_layouts(current, new_layouts)
+
+    if (length(delta)) {
+      update(list(views = delta))
+    }
   })
+}
+
+# Structured `views` delta between two `dock_layouts`, so live UI state
+# mirrors back through the update lifecycle without resending unchanged
+# views. Per-view comparison uses the wire spec (ignores volatile
+# fields); the active-view change rides the `$active` slot.
+diff_dock_layouts <- function(current, new_layouts) {
+
+  cur_nms <- names(current)
+  new_nms <- names(new_layouts)
+
+  add_names <- setdiff(new_nms, cur_nms)
+  rm_names <- setdiff(cur_nms, new_nms)
+  common <- intersect(cur_nms, new_nms)
+
+  mod_views <- list()
+  for (v in common) {
+
+    cur_spec <- layout_to_spec(current[[v]])
+    new_spec <- layout_to_spec(new_layouts[[v]])
+
+    if (!identical(cur_spec, new_spec)) {
+      mod_views[[v]] <- new_layouts[[v]]
+    }
+  }
+
+  cur_active <- active_view(current)
+  new_active <- active_view(new_layouts)
+
+  out <- list()
+
+  if (length(add_names)) {
+    out$add <- as.list(unclass(new_layouts))[add_names]
+  }
+  if (length(rm_names)) {
+    out$rm <- rm_names
+  }
+  if (length(mod_views)) {
+    out$mod <- mod_views
+  }
+  if (!identical(cur_active, new_active) && !is.null(new_active)) {
+    out$active <- new_active
+  }
+
+  out
 }
 
 #' Hide all block and extension UI for a view.

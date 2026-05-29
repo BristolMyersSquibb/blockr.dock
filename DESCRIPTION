@@ -76,4 +76,5 @@ Collate:
     'utils-ui.R'
     'layouts-class.R'
     'view-ui.R'
+    'views-delta.R'
 VignetteBuilder: knitr

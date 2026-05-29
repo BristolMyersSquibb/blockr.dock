@@ -1,11 +1,25 @@
 # blockr.dock 0.1.2
 
+* The `views` slot in the `board_update` payload is now a structured
+  delta (`add` / `mod` / `rm` / `active`) instead of a wholesale
+  `dock_layouts` replacement. Mentioned views are touched, omitted
+  views keep their current state, and the four sub-slots compose
+  atomically with `blocks` / `links` / `stacks` in the same lifecycle
+  tick. See `?dock_board_update_lifecycle` for the contract (#150).
+
+* Removing a block no longer clears the active view's layout. Instead,
+  every view containing the removed block has the block's panel
+  dropped surgically from its layout, preserving the rest of the grid.
+  `augment_board_update.dock_board()` performs the cleanup for the
+  `update()` lifecycle path; `rm_blocks.dock_board()` does the same
+  surgically (rather than nuking the active layout) for direct
+  callers like `clear_board()` (#150).
+
 * `board_layouts(rv$board)` now stays in sync with UI-driven layout
   changes (panel close/add, drag-resize/rearrange, view CRUD).
   UI-driven mutations are routed through `update(list(views = ...))`
-  and applied by new `validate_board_update.dock_board()` and
-  `apply_board_update.dock_board()` methods, riding the same lifecycle
-  as block/link/stack mutations. Writes are debounced (250 ms) so
+  and applied via `validate_board_update.dock_board()` and
+  `apply_board_update.dock_board()`. Writes are debounced (250 ms) so
   drag-resize doesn't thrash. Requires `blockr.core (>= 0.1.3)` for
   the update lifecycle generics.
 

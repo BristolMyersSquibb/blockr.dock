@@ -121,6 +121,45 @@ test_that("spec_to_grid restores group ids from the flattened spec", {
   expect_identical(grid[["root"]][["data"]][[2L]][["data"]][["id"]], "2")
 })
 
+test_that("spec_to_grid leaves branch children unnamed for char-vector input", {
+
+  # jsonlite simplifies `["a","b"]` to a character vector; base `Map`'s
+  # USE.NAMES would then name the branch children by value, diverging
+  # from the constructor path that passes an (unnamed) list.
+  from_vector <- spec_to_grid(
+    list(orientation = "horizontal", children = c("a", "b"))
+  )
+  from_list <- spec_to_grid(
+    list(orientation = "horizontal", children = list("a", "b"))
+  )
+
+  expect_null(names(from_vector[["root"]][["data"]]))
+  expect_identical(from_vector, from_list)
+})
+
+test_that("constructor and JSON paths yield identical specs", {
+
+  ctor <- dock_layout("a", "b")
+  json <- layout_from_json(
+    '{"orientation":"horizontal","children":["a","b"]}'
+  )
+
+  expect_identical(layout_panel_ids(ctor), layout_panel_ids(json))
+  expect_identical(layout_to_spec(ctor), layout_to_spec(json))
+  expect_null(names(layout_to_spec(json)[["children"]]))
+
+  # Nested: a tabbed leaf alongside a single-panel leaf.
+  ctor_nested <- dock_layout(c("a", "b"), "c")
+  json_nested <- layout_from_json(
+    '{"orientation":"horizontal","children":[{"panels":["a","b"]},"c"]}'
+  )
+
+  expect_identical(
+    layout_to_spec(ctor_nested),
+    layout_to_spec(json_nested)
+  )
+})
+
 test_that("focus round-trips and is omitted for the default group", {
 
   # Two leaves; focus the second (a tabbed group). Build via spec_to_grid

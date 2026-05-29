@@ -11,7 +11,7 @@ test_that("board server", {
       res <- board_server_callback(board_rv_1, update = reactiveVal())
 
       expect_type(res, "list")
-      expect_named(res, c("dock", "actions", "view_data"))
+      expect_named(res, c("dock", "actions", "view_data", "dock_mgr"))
 
       dock <- res[["dock"]]
 
@@ -41,7 +41,7 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "edit_board_extension")
+        c("dock", "actions", "view_data", "dock_mgr", "edit_board_extension")
       )
 
       dock <- res[["dock"]]
@@ -275,7 +275,8 @@ test_that("layouts_to_board_observer fires update views on divergence", {
 
   expect_length(captured, 1L)
   expect_named(captured[[1L]], "views")
-  expect_identical(active_view(captured[[1L]]$views), "B")
+  expect_identical(captured[[1L]]$views$active, "B")
+  expect_null(captured[[1L]]$views$mod)
 })
 
 test_that("layouts_to_board_observer is idempotent when nothing changed", {
@@ -302,16 +303,13 @@ test_that("layouts_to_board_observer is idempotent when nothing changed", {
   expect_identical(fire_count, 0L)
 })
 
-test_that("apply_board_update.dock_board returns board with views applied", {
+test_that("apply_board_update.dock_board switches active view", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(A = list("a"), B = list("b"))
   )
 
-  new_views <- board_layouts(brd)
-  active_view(new_views) <- "B"
-
-  out <- apply_board_update(brd, list(views = new_views))
+  out <- apply_board_update(brd, list(views = list(active = "B")))
 
   expect_true(is_dock_board(out))
   expect_identical(active_view(board_layouts(out)), "B")
@@ -321,8 +319,8 @@ test_that("validate_board_update.dock_board rejects malformed views slot", {
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))
 
   expect_error(
-    validate_board_update(list(views = "not a dock_layouts"), brd),
-    class = "dock_layouts_structure_invalid"
+    validate_board_update(list(views = "not a delta"), brd),
+    class = "dock_views_delta_invalid"
   )
 })
 
@@ -332,15 +330,12 @@ test_that("views slot flows through full board_update lifecycle", {
     layouts = list(A = list("a"), B = list("b"))
   )
 
-  new_views <- board_layouts(brd)
-  active_view(new_views) <- "B"
-
   testServer(
     blockr.core:::board_server.board,
     {
       session$flushReact()
 
-      board_update(list(views = new_views))
+      board_update(list(views = list(active = "B")))
       session$flushReact()
 
       expect_identical(active_view(board_layouts(rv$board)), "B")
