@@ -91,6 +91,20 @@ test_that("active_view get/set on a dock_board", {
   )
 })
 
+test_that("active_view returns NULL when no view is active", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(First = list("a"), Second = list("b"))
+  )
+
+  views <- board_layouts(brd)
+  views[["First"]] <- NULL
+
+  expect_false(any_active_view(views))
+  expect_null(active_view(views))
+})
+
 test_that("rejects invalid layout shapes at the new_dock_board boundary", {
 
   expect_error(

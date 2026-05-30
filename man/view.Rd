@@ -37,8 +37,9 @@ as_dock_layouts(x, ...)
 \value{
 \code{is_dock_layouts()} returns a boolean.
 \code{validate_dock_layouts()} returns its input and throws on error.
-\code{active_view()} returns a string and \verb{active_view<-()} returns
-the modified \code{dock_layouts} (or \code{dock_board}) object invisibly.
+\code{active_view()} returns the active view's name, or \code{NULL} when no
+view is active, and \verb{active_view<-()} returns the modified
+\code{dock_layouts} (or \code{dock_board}) object invisibly.
 }
 \description{
 A \code{dock_board} always holds a \code{dock_layouts} object (multi-view tabs).
