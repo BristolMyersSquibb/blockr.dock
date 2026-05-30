@@ -42,9 +42,9 @@ as_dock_layouts(x, ...)
 ## Value
 
 `is_dock_layouts()` returns a boolean. `validate_dock_layouts()` returns
-its input and throws on error. `active_view()` returns a string and
-`active_view<-()` returns the modified `dock_layouts` (or `dock_board`)
-object invisibly.
+its input and throws on error. `active_view()` returns the active view's
+name, or `NULL` when no view is active, and `active_view<-()` returns
+the modified `dock_layouts` (or `dock_board`) object invisibly.
 
 ## Details
 

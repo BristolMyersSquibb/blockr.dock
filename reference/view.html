@@ -95,8 +95,9 @@ view membership is a layout concern only.</p>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><code>is_dock_layouts()</code> returns a boolean.
 <code>validate_dock_layouts()</code> returns its input and throws on error.
-<code>active_view()</code> returns a string and <code>active_view&lt;-()</code> returns
-the modified <code>dock_layouts</code> (or <code>dock_board</code>) object invisibly.</p>
+<code>active_view()</code> returns the active view's name, or <code>NULL</code> when no
+view is active, and <code>active_view&lt;-()</code> returns the modified
+<code>dock_layouts</code> (or <code>dock_board</code>) object invisibly.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
