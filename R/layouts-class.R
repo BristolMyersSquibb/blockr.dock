@@ -19,8 +19,9 @@
 #'
 #' @return `is_dock_layouts()` returns a boolean.
 #'   `validate_dock_layouts()` returns its input and throws on error.
-#'   `active_view()` returns a string and `active_view<-()` returns
-#'   the modified `dock_layouts` (or `dock_board`) object invisibly.
+#'   `active_view()` returns the active view's name, or `NULL` when no
+#'   view is active, and `active_view<-()` returns the modified
+#'   `dock_layouts` (or `dock_board`) object invisibly.
 #'
 #' @examples
 #' brd <- new_dock_board(
@@ -138,7 +139,13 @@ active_view <- function(x) {
 
 #' @export
 active_view.dock_layouts <- function(x) {
+
   idx <- which(lgl_ply(x, is_active_view))[1L]
+
+  if (is.na(idx)) {
+    return(NULL)
+  }
+
   names(x)[idx]
 }
 
@@ -218,6 +225,10 @@ as_dock_layouts.dock_layout <- function(x, ...) {
 
 is_active_view <- function(x) {
   is_dock_layout(x) && isTRUE(attr(x, "active"))
+}
+
+any_active_view <- function(x) {
+  any(lgl_ply(x, is_active_view))
 }
 
 set_active_view <- function(x, active = TRUE) {

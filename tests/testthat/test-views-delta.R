@@ -431,3 +431,57 @@ test_that("blocks$rm augment carries through to apply for view cleanup", {
     0L
   )
 })
+
+test_that("apply_views_rm syncs the view_nav switcher on lifecycle removal", {
+
+  run_rm <- function(rm_names, active) {
+
+    brd <- new_dock_board(
+      blocks = c(a = new_dataset_block(), b = new_head_block()),
+      layouts = list(A = list("a"), B = list("b"), C = list("a"))
+    )
+
+    sent <- list()
+    session <- list(
+      ns = identity,
+      sendInputMessage = function(input_id, message) {
+        sent[[length(sent) + 1L]] <<- message
+        invisible()
+      }
+    )
+
+    dock_mgr <- new_dock_manager()
+    dock_mgr$current_active <- reactiveVal(active)
+
+    state <- dock_layouts(
+      A = new_dock_layout(),
+      B = new_dock_layout(),
+      C = new_dock_layout()
+    )
+    active_view(state) <- active
+    dock_mgr$vs <- reactiveValues(state = state)
+
+    isolate(apply_views_rm(rm_names, brd, dock_mgr, session))
+
+    sent
+  }
+
+  non_active <- run_rm("B", active = "A")
+  expect_true(any(lgl_ply(non_active, function(m) identical(m$remove, "B"))))
+  expect_true(any(lgl_ply(non_active, function(m) identical(m$value, "A"))))
+
+  was_active <- run_rm("A", active = "A")
+  expect_true(any(lgl_ply(was_active, function(m) identical(m$remove, "A"))))
+  expect_true(any(lgl_ply(was_active, function(m) identical(m$value, "B"))))
+})
+
+test_that("apply_views_rm skips nav sync on the headless path", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"), B = list("b"))
+  )
+
+  expect_silent(out <- apply_views_rm("B", brd))
+  expect_named(board_layouts(out), "A")
+})

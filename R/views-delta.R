@@ -323,7 +323,7 @@ apply_views_rm <- function(rm_names, board, dock_mgr = NULL, session = NULL) {
     class = "dock_layouts"
   )
 
-  if (length(layouts) && is.null(active_view(layouts))) {
+  if (length(layouts) && !any_active_view(layouts)) {
     layouts[[1L]] <- set_active_view(layouts[[1L]])
   }
 
@@ -361,7 +361,7 @@ apply_views_rm <- function(rm_names, board, dock_mgr = NULL, session = NULL) {
     state[[v]] <- NULL
   }
 
-  if (length(state) && is.null(active_view(state))) {
+  if (length(state) && !any_active_view(state)) {
     active_view(state) <- names(state)[[1L]]
   }
 
@@ -372,6 +372,14 @@ apply_views_rm <- function(rm_names, board, dock_mgr = NULL, session = NULL) {
     new_active <- active_view(state)
     update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_active]])
     dock_mgr$current_active(new_active)
+  }
+
+  for (v in rm_names) {
+    session$sendInputMessage("view_nav", list(remove = v))
+  }
+
+  if (length(state)) {
+    session$sendInputMessage("view_nav", list(value = active_view(state)))
   }
 
   board
