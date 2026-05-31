@@ -69,6 +69,11 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     list(...)
   )
 
+  # Externally controllable extension state is written from the apply path
+  # (apply_board_update.dock_board), which reaches these live reactiveVals
+  # through dock_mgr.
+  dock_mgr$ext_res <- ext_res
+
   register_actions(actions, triggers, board, update, ext_res)
 
   c(

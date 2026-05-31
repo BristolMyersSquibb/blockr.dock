@@ -79,3 +79,69 @@ test_that("dock extensions validation", {
     class = "dock_extensions_names_invalid"
   )
 })
+
+ctrl_ext <- function(external_ctrl = TRUE, ctor = function(content = "") NULL) {
+  new_dock_extension(
+    server = function(id, ...) NULL,
+    ui = function(id) tagList(),
+    name = "Document",
+    class = "doc_extension",
+    ctor = ctor,
+    external_ctrl = external_ctrl
+  )
+}
+
+test_that("new_dock_extension validates external_ctrl", {
+
+  expect_error(ctrl_ext(external_ctrl = 1L))
+
+  expect_identical(attr(new_edit_board_extension(), "external_ctrl"), FALSE)
+  expect_identical(attr(ctrl_ext(), "external_ctrl"), TRUE)
+})
+
+test_that("ext_ctor_inputs drops dots", {
+
+  ext <- ctrl_ext(ctor = function(content = "", select = "", ...) NULL)
+  expect_setequal(ext_ctor_inputs(ext), c("content", "select"))
+})
+
+test_that("extension_external_ctrl_vars resolves against ctor inputs", {
+
+  ext <- ctrl_ext(ctor = function(content = "", select = "") NULL)
+
+  expect_setequal(extension_external_ctrl_vars(ext), c("content", "select"))
+
+  attr(ext, "external_ctrl") <- FALSE
+  expect_identical(extension_external_ctrl_vars(ext), character())
+
+  attr(ext, "external_ctrl") <- "content"
+  expect_identical(extension_external_ctrl_vars(ext), "content")
+
+  attr(ext, "external_ctrl") <- "nonexistent"
+  expect_error(extension_external_ctrl_vars(ext))
+})
+
+test_that("validate_ext_srv_result enforces controllable reactiveVals", {
+
+  ext <- ctrl_ext()
+
+  expect_silent(
+    validate_ext_srv_result(list(state = list(content = reactiveVal("x"))), ext)
+  )
+
+  expect_error(
+    validate_ext_srv_result(list(state = list(content = reactive("x"))), ext),
+    class = "extension_ctrl_var_not_rv"
+  )
+
+  expect_error(
+    validate_ext_srv_result(list(state = list(other = reactiveVal(1))), ext),
+    class = "extension_ctrl_var_absent"
+  )
+
+  off <- ctrl_ext(external_ctrl = FALSE)
+
+  expect_silent(
+    validate_ext_srv_result(list(state = list(content = reactive("x"))), off)
+  )
+})

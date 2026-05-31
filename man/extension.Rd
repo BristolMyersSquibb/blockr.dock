@@ -27,6 +27,7 @@ new_dock_extension(
   ctor = sys.parent(),
   pkg = NULL,
   options = new_board_options(),
+  external_ctrl = FALSE,
   ...
 )
 
@@ -74,6 +75,10 @@ extension_block_callback(x, ...)
 \item{pkg}{Package to look up \code{ctor}}
 
 \item{options}{Board options supplied by an extension}
+
+\item{external_ctrl}{Set up external control (experimental). \code{FALSE}
+(the default) opts out; \code{TRUE} exposes every constructor input as
+externally controllable; a character vector names a subset of them.}
 
 \item{...}{Further attributes}
 

@@ -12,6 +12,9 @@
 #' @param ctor Constructor function name
 #' @param pkg Package to look up `ctor`
 #' @param options Board options supplied by an extension
+#' @param external_ctrl Set up external control (experimental). `FALSE`
+#' (the default) opts out; `TRUE` exposes every constructor input as
+#' externally controllable; a character vector names a subset of them.
 #' @param ... Further attributes
 #'
 #' @examples
@@ -34,7 +37,11 @@
 #' @rdname extension
 #' @export
 new_dock_extension <- function(server, ui, name, class, ctor = sys.parent(),
-                               pkg = NULL, options = new_board_options(), ...) {
+                               pkg = NULL, options = new_board_options(),
+                               external_ctrl = FALSE, ...) {
+
+  stopifnot(is_bool(external_ctrl) || is.character(external_ctrl))
+
   validate_extension(
     structure(
       list(
@@ -45,6 +52,7 @@ new_dock_extension <- function(server, ui, name, class, ctor = sys.parent(),
       ),
       name = name,
       ctor = resolve_ctor(ctor, pkg),
+      external_ctrl = external_ctrl,
       class = c(class, "dock_extension")
     )
   )
@@ -157,41 +165,63 @@ extension_server <- function(x, ...) {
     coal(
       do.call(fun, c(list(id = extension_id(x)), ...)),
       list(state = list())
-    )
+    ),
+    x
   )
 }
 
-validate_ext_srv_result <- function(x) {
+validate_ext_srv_result <- function(res, x) {
 
-  if (!is.list(x)) {
+  if (!is.list(res)) {
     blockr_abort(
       "Expecting an extension server to return a list.",
       class = "extension_server_return_invalid"
     )
   }
 
-  if (!"state" %in% names(x)) {
+  if (!"state" %in% names(res)) {
     blockr_abort(
       "Expecting an extension server to return a component `state`.",
       class = "extension_server_return_missing_state"
     )
   }
 
-  if (!is.list(x[["state"]])) {
+  if (!is.list(res[["state"]])) {
     blockr_abort(
       "Expecting an extension server to return list-valued `state`.",
       class = "extension_server_return_state_invalid"
     )
   }
 
-  if (length(x[["state"]]) && is.null(names(x[["state"]]))) {
+  if (length(res[["state"]]) && is.null(names(res[["state"]]))) {
     blockr_abort(
       "Expecting an extension server to return named `state`.",
       class = "extension_server_return_state_invalid"
     )
   }
 
-  x
+  vars <- extension_external_ctrl_vars(x)
+
+  miss <- setdiff(vars, names(res[["state"]]))
+
+  if (length(miss)) {
+    blockr_abort(
+      "Externally controllable variable{?s} {miss} absent from extension ",
+      "`state`.",
+      class = "extension_ctrl_var_absent"
+    )
+  }
+
+  not_rv <- !lgl_ply(res[["state"]][vars], inherits, "reactiveVal")
+
+  if (any(not_rv)) {
+    blockr_abort(
+      "Externally controllable extension state must be `reactiveVal`.",
+      class = "extension_ctrl_var_not_rv"
+    )
+  }
+
+  res
 }
 
 #' @rdname extension
@@ -213,6 +243,24 @@ extension_name <- function(x) {
 extension_ctor <- function(x) {
   stopifnot(is_dock_extension(x))
   attr(x, "ctor")
+}
+
+ext_ctor_inputs <- function(x) {
+  setdiff(names(formals(extension_ctor(x))), "...")
+}
+
+extension_external_ctrl_vars <- function(x) {
+
+  res <- attr(x, "external_ctrl")
+
+  if (isTRUE(res)) {
+    ext_ctor_inputs(x)
+  } else if (isFALSE(res) || is.null(res)) {
+    character()
+  } else {
+    stopifnot(is.character(res), all(res %in% ext_ctor_inputs(x)))
+    res
+  }
 }
 
 #' @export

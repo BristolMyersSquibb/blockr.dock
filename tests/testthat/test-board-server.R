@@ -347,3 +347,43 @@ test_that("views slot flows through full board_update lifecycle", {
     )
   )
 })
+
+test_that("validate_board_update.dock_board rejects bad extensions slot", {
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  expect_error(
+    validate_board_update(list(extensions = "not a delta"), brd),
+    class = "dock_extensions_delta_invalid"
+  )
+})
+
+test_that("extensions slot writes controllable state via apply_board_update", {
+
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = new_ctrl_extension(content = "# old")
+  )
+
+  with_mock_session(
+    {
+      res <- board_server_callback(board_rv, update = reactiveVal())
+
+      content <- res$dock_mgr$ext_res$doc_extension$state$content
+
+      expect_s3_class(content, "reactiveVal")
+      expect_identical(isolate(content()), "# old")
+
+      apply_board_update(
+        isolate(board_rv$board),
+        list(
+          extensions = list(
+            mod = list(doc_extension = list(content = "# new"))
+          )
+        ),
+        dock_mgr = res$dock_mgr
+      )
+
+      expect_identical(isolate(content()), "# new")
+    }
+  )
+})
