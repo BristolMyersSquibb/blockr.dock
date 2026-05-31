@@ -31,8 +31,9 @@
 #' the input object invisibly and throw errors as side-effects. Several getter
 #' functions return extension attributes, including `extension_ui()` (a
 #' function), `extension_server()` (a function), `extension_id()` (a string),
-#' `extension_name()` (a string) and `extension_ctor()` (an object that
-#' inherits from `blockr_ctor`).
+#' `extension_name()` (a string), `extension_ctor()` (an object that
+#' inherits from `blockr_ctor`) and `extension_external_ctrl_vars()` (a
+#' character vector of externally controllable constructor inputs).
 #'
 #' @rdname extension
 #' @export
@@ -249,6 +250,8 @@ ext_ctor_inputs <- function(x) {
   setdiff(names(formals(extension_ctor(x))), "...")
 }
 
+#' @rdname extension
+#' @export
 extension_external_ctrl_vars <- function(x) {
 
   res <- attr(x, "external_ctrl")

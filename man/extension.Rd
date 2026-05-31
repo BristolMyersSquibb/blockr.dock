@@ -9,6 +9,7 @@
 \alias{extension_id}
 \alias{extension_name}
 \alias{extension_ctor}
+\alias{extension_external_ctrl_vars}
 \alias{new_dock_extensions}
 \alias{is_dock_extensions}
 \alias{validate_extensions}
@@ -44,6 +45,8 @@ extension_id(x)
 extension_name(x)
 
 extension_ctor(x)
+
+extension_external_ctrl_vars(x)
 
 new_dock_extensions(x = list())
 
@@ -97,8 +100,9 @@ and a \code{dock_extensions} object using \code{validate_extensions()}, which re
 the input object invisibly and throw errors as side-effects. Several getter
 functions return extension attributes, including \code{extension_ui()} (a
 function), \code{extension_server()} (a function), \code{extension_id()} (a string),
-\code{extension_name()} (a string) and \code{extension_ctor()} (an object that
-inherits from \code{blockr_ctor}).
+\code{extension_name()} (a string), \code{extension_ctor()} (an object that
+inherits from \code{blockr_ctor}) and \code{extension_external_ctrl_vars()} (a
+character vector of externally controllable constructor inputs).
 }
 \description{
 Functionality of a \code{dock_board} can be extended by supplying one or more
