@@ -387,3 +387,38 @@ test_that("extensions slot writes controllable state via apply_board_update", {
     }
   )
 })
+
+test_that("extension servers can read peer extension state", {
+
+  peers <- NULL
+
+  probe <- new_dock_extension(
+    server = function(id, board, update, extensions, ...) {
+      peers <<- extensions
+      moduleServer(id, function(input, output, session) list(state = list()))
+    },
+    ui = function(id) tagList(),
+    name = "Probe",
+    class = "probe_extension",
+    ctor = function(...) NULL
+  )
+
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = as_dock_extensions(
+      list(new_ctrl_extension(content = "# hi"), probe)
+    )
+  )
+
+  with_mock_session(
+    {
+      board_server_callback(board_rv, update = reactiveVal())
+
+      expect_true("doc_extension" %in% ls(peers))
+      expect_identical(
+        isolate(peers[["doc_extension"]]$state$content()),
+        "# hi"
+      )
+    }
+  )
+})

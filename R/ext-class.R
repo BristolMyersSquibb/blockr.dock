@@ -5,7 +5,11 @@
 #' that allows for manipulating the board state. A set of dock extensions
 #' can be combined into a `dock_extensions` object.
 #'
-#' @param server A function returning [shiny::moduleServer()]
+#' @param server A function returning [shiny::moduleServer()]. Beyond
+#' `id`, it is called with the board handles `board`, `update`, `dock`
+#' and `actions`, plus `extensions` -- an environment exposing every
+#' extension's server result keyed by ID (each carrying its `state`),
+#' so one extension can read another's state via `extensions[[id]]`.
 #' @param ui A function with a single argument (`ns`) returning a `shiny.tag`
 #' @param name Name for extension
 #' @param class Extension subclass
