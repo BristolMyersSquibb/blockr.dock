@@ -34,7 +34,7 @@ Imports:
     shinyWidgets,
     jsonlite
 Remotes:
-    BristolMyersSquibb/blockr.ui@add-block-browser,
+    BristolMyersSquibb/blockr.ui,
     BristolMyersSquibb/blockr.core
 Suggests:
     testthat (>= 3.0.0),
