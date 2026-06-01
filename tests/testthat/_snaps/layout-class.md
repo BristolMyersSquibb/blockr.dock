@@ -192,3 +192,68 @@
       [1] "HORIZONTAL"
       
 
+# dock_layout has a tree-style print method
+
+    Code
+      print(dock_layout("a", "b"))
+    Output
+      <dock_layout> horizontal
+      ├─ a
+      └─ b
+
+---
+
+    Code
+      print(dock_layout(group("data", "filt", "head"), "assistant_extension", sizes = c(
+        0.6, 0.4)))
+    Output
+      <dock_layout> horizontal
+      ├─ group (vertical, 60%)
+      │  ├─ data
+      │  ├─ filt
+      │  └─ head
+      └─ assistant_extension (40%)
+
+---
+
+    Code
+      print(dock_layout("a", panels("b", "c", "edit", active = "c")))
+    Output
+      <dock_layout> horizontal
+      ├─ a
+      └─ tabs
+         ├─ b
+         ├─ c (active)
+         └─ edit
+
+---
+
+    Code
+      print(dock_layout("x", "y", "z", orientation = "vertical", sizes = c(0.5, 0.3,
+        0.2)))
+    Output
+      <dock_layout> vertical
+      ├─ x (50%)
+      ├─ y (30%)
+      └─ z (20%)
+
+---
+
+    Code
+      print(dock_layout("top", group("a", group("b", "c"))))
+    Output
+      <dock_layout> horizontal
+      ├─ top
+      └─ group (vertical)
+         ├─ a
+         └─ group (horizontal)
+            ├─ b
+            └─ c
+
+---
+
+    Code
+      print(dock_layout())
+    Output
+      <dock_layout> horizontal (empty)
+

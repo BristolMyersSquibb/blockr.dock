@@ -263,6 +263,165 @@ as.list.dock_layout <- function(x, ...) {
   layout_to_spec(x)
 }
 
+#' @param bare For `format()` / `print()`, drop the `block_panel-` /
+#'   `ext_panel-` prefixes from panel IDs (see [panel_obj_ids()]).
+#' @rdname layout
+#' @export
+format.dock_layout <- function(x, ..., bare = TRUE) {
+
+  spec <- as.list(x)
+  orientation <- coal(spec[["orientation"]], "horizontal", fail_all = FALSE)
+
+  header <- paste0("<dock_layout> ", orientation)
+  children <- spec[["children"]]
+
+  if (!length(children)) {
+    return(paste0(header, " (empty)"))
+  }
+
+  c(
+    header,
+    format_dock_nodes(
+      children, spec[["sizes"]], orientation, spec[["focus"]], bare,
+      prefix = ""
+    )
+  )
+}
+
+#' @rdname layout
+#' @export
+print.dock_layout <- function(x, ...) {
+  cat(format(x, ...), sep = "\n")
+  invisible(x)
+}
+
+flip_orientation <- function(x) {
+  if (identical(x, "horizontal")) "vertical" else "horizontal"
+}
+
+format_dock_nodes <- function(children, sizes, orientation, focus, bare,
+                              prefix) {
+
+  n <- length(children)
+
+  render_one <- function(i) {
+
+    last <- i == n
+    branch <- if (last) "\u2514\u2500 " else "\u251c\u2500 "
+    indent <- if (last) "   " else "\u2502  "
+
+    format_dock_node(
+      children[[i]],
+      orientation,
+      if (length(sizes)) sizes[[i]] else NULL,
+      focus,
+      bare,
+      paste0(prefix, branch),
+      paste0(prefix, indent)
+    )
+  }
+
+  unlst(lapply(seq_len(n), render_one))
+}
+
+format_dock_node <- function(node, orientation, size, focus, bare,
+                             line_prefix, child_prefix) {
+
+  if (is.character(node)) {
+
+    paste0(
+      line_prefix,
+      dock_panel_label(node, bare),
+      dock_attrs(dock_size_label(size), dock_focus_label(node, focus))
+    )
+
+  } else if (not_null(node[["panels"]])) {
+
+    format_dock_tabs(node, size, focus, bare, line_prefix, child_prefix)
+
+  } else if (not_null(node[["children"]])) {
+
+    format_dock_branch(
+      node, orientation, size, focus, bare, line_prefix, child_prefix
+    )
+
+  } else {
+
+    blockr_abort(
+      "Encountered an unknown layout node while formatting.",
+      class = "dock_layout_format_invalid"
+    )
+  }
+}
+
+format_dock_branch <- function(node, orientation, size, focus, bare,
+                               line_prefix, child_prefix) {
+
+  orientation <- flip_orientation(orientation)
+
+  c(
+    paste0(
+      line_prefix, "group",
+      dock_attrs(orientation, dock_size_label(size))
+    ),
+    format_dock_nodes(
+      node[["children"]], node[["sizes"]], orientation, focus, bare,
+      child_prefix
+    )
+  )
+}
+
+format_dock_tabs <- function(node, size, focus, bare, line_prefix,
+                             child_prefix) {
+
+  tabs <- chr_ply(node[["panels"]], identity)
+  active <- coal(node[["active"]], tabs[[1L]], fail_all = FALSE)
+  n <- length(tabs)
+
+  render_tab <- function(i) {
+
+    branch <- if (i == n) "\u2514\u2500 " else "\u251c\u2500 "
+    id <- tabs[[i]]
+
+    paste0(
+      child_prefix, branch,
+      dock_panel_label(id, bare),
+      dock_attrs(
+        if (identical(id, active)) "active",
+        dock_focus_label(id, focus)
+      )
+    )
+  }
+
+  c(
+    paste0(line_prefix, "tabs", dock_attrs(dock_size_label(size))),
+    unlst(lapply(seq_len(n), render_tab))
+  )
+}
+
+dock_panel_label <- function(id, bare) {
+  if (isTRUE(bare)) panel_obj_ids(id) else id
+}
+
+dock_size_label <- function(size) {
+  if (is.null(size)) NULL else paste0(round(100 * size), "%")
+}
+
+dock_focus_label <- function(id, focus) {
+  if (not_null(focus) && identical(id, focus)) "focus" else NULL
+}
+
+dock_attrs <- function(...) {
+
+  tokens <- c(...)
+
+  if (!length(tokens)) {
+    return("")
+  }
+
+  paste0(" (", paste(tokens, collapse = ", "), ")")
+}
+
 #' @rdname layout
 #' @export
 default_layout <- function(blocks, extensions) {

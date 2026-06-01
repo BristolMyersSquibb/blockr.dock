@@ -1,5 +1,11 @@
 # blockr.dock (development version)
 
+* `dock_layout` objects gain `format()` / `print()` methods that render
+  the arrangement as an indented tree: orientation, nested groups with
+  their sizes, tabbed leaves with the active tab, and the focused panel.
+  Panel IDs print without their `block_panel-` / `ext_panel-` prefixes
+  by default; pass `bare = FALSE` for the canonical IDs (#161).
+
 * The add / append / prepend block action handlers now mount the
   `blockr.ui` block-browser module: a card-list block picker with
   search, per-category icons, and a per-card expand for tweaking the

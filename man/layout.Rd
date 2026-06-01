@@ -6,6 +6,8 @@
 \alias{group}
 \alias{is_dock_layout}
 \alias{as_dock_layout}
+\alias{format.dock_layout}
+\alias{print.dock_layout}
 \alias{default_layout}
 \alias{validate_dock_layout}
 \title{Dock layout}
@@ -24,6 +26,10 @@ group(..., sizes = NULL)
 is_dock_layout(x)
 
 as_dock_layout(x, ...)
+
+\method{format}{dock_layout}(x, ..., bare = TRUE)
+
+\method{print}{dock_layout}(x, ...)
 
 default_layout(blocks, extensions)
 
@@ -45,6 +51,9 @@ default.}
 share of the parent (positive; need not sum to 1).}
 
 \item{x}{Object}
+
+\item{bare}{For \code{format()} / \code{print()}, drop the \code{block_panel-} /
+\code{ext_panel-} prefixes from panel IDs (see \code{\link[=panel_obj_ids]{panel_obj_ids()}}).}
 
 \item{blocks, extensions}{Dock board components. For \code{default_layout()}
 the components to arrange; for \code{as_dock_layout()}, optional, used to
