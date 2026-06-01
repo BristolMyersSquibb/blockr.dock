@@ -438,24 +438,7 @@ draw_panel_tree <- function(x) {
 }
 
 grid_panel_ids <- function(grid) {
-
-  if (is.null(grid) || !length(grid[["root"]])) {
-    return(character())
-  }
-
-  walk <- function(node) {
-    if (is.null(node) || !length(node)) {
-      return(NULL)
-    }
-    if (identical(node[["type"]], "leaf")) {
-      return(unlist(node[["data"]][["views"]]))
-    }
-    unlist(lapply(node[["data"]], walk))
-  }
-
-  res <- walk(grid[["root"]])
-
-  if (is.null(res)) character() else res
+  chr_ply(unlst(lst_xtr(grid_leaves(grid), "views")), identity)
 }
 
 #' @rdname layout-json
@@ -514,24 +497,20 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
 
 rewrite_grid_leaves <- function(grid, id_map) {
 
-  walk <- function(node) {
-    if (is.null(node) || !length(node)) {
-      return(node)
-    }
-    if (identical(node[["type"]], "leaf")) {
-      views <- chr_ply(node[["data"]][["views"]], identity)
-      mapped <- chr_mply(coal, as.list(id_map)[views], views)
-      active_view <- node[["data"]][["activeView"]]
-      node[["data"]][["views"]] <- as.list(mapped)
-      node[["data"]][["activeView"]] <- coal(id_map[[active_view]], active_view)
-      return(node)
-    }
-    node[["data"]] <- lapply(node[["data"]], walk)
-    node
+  rename_leaf <- function(leaf) {
+
+    views <- chr_ply(leaf[["data"]][["views"]], identity)
+    active <- leaf[["data"]][["activeView"]]
+
+    leaf[["data"]][["views"]] <- as.list(
+      chr_mply(coal, as.list(id_map)[views], views)
+    )
+    leaf[["data"]][["activeView"]] <- coal(id_map[[active]], active)
+
+    leaf
   }
 
-  grid[["root"]] <- walk(grid[["root"]])
-  grid
+  grid_map_leaves(grid, rename_leaf)
 }
 
 create_layout_panel <- function(x) {
