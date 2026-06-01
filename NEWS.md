@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* The per-session dock manager is created at the board-server entry
+  point (`blockr_app_server.dock_board()`) and passed *down* to
+  `board_server_callback()` and `apply_board_update.dock_board()`
+  through `board_server()`'s `...` / `dot_args`, instead of being
+  created in the callback and threaded *back* through the merged
+  callback return. It is now a classed `dock_manager` with a
+  validator. Internal refactor; no change to board behaviour (#164).
+
 * The add / append / prepend block action handlers now mount the
   `blockr.ui` block-browser module: a card-list block picker with
   search, per-category icons, and a per-card expand for tweaking the

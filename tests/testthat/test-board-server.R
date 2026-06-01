@@ -11,7 +11,7 @@ test_that("board server", {
       res <- board_server_callback(board_rv_1, update = reactiveVal())
 
       expect_type(res, "list")
-      expect_named(res, c("dock", "actions", "view_data", "dock_mgr"))
+      expect_named(res, c("dock", "actions", "view_data"))
 
       dock <- res[["dock"]]
 
@@ -41,7 +41,7 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "dock_mgr", "edit_board_extension")
+        c("dock", "actions", "view_data", "edit_board_extension")
       )
 
       dock <- res[["dock"]]
@@ -366,9 +366,14 @@ test_that("extensions slot writes controllable state via apply_board_update", {
 
   with_mock_session(
     {
-      res <- board_server_callback(board_rv, update = reactiveVal())
+      dock_mgr <- new_dock_manager()
+      board_server_callback(
+        board_rv,
+        update = reactiveVal(),
+        dock_mgr = dock_mgr
+      )
 
-      content <- res$dock_mgr$ext_res$doc_extension$state$content
+      content <- dock_mgr$ext_res$doc_extension$state$content
 
       expect_s3_class(content, "reactiveVal")
       expect_identical(isolate(content()), "# old")
@@ -380,7 +385,7 @@ test_that("extensions slot writes controllable state via apply_board_update", {
             mod = list(doc_extension = list(content = "# new"))
           )
         ),
-        dock_mgr = res$dock_mgr
+        dock_mgr = dock_mgr
       )
 
       expect_identical(isolate(content()), "# new")

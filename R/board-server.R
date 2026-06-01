@@ -8,13 +8,21 @@
 #' @param board Reactive board state (list with `$board`).
 #' @param update Reactive update signal from blockr.core.
 #' @param ... Extension server arguments.
+#' @param dock_mgr Per-session dock handle from [new_dock_manager()], created
+#'   at the board-server entry point and threaded in through `board_server()`'s
+#'   `...` so the apply path reaches the live dock registry.
 #' @param session Shiny session.
 #'
 #' @return List with `dock`, `actions`, `view_data`, and extension
 #'   results.
 #'
 #' @noRd
-board_server_callback <- function(board, update, ..., session = get_session()) {
+board_server_callback <- function(board, update, ...,
+                                  dock_mgr = new_dock_manager(),
+                                  session = get_session()) {
+
+  validate_dock_manager(dock_mgr)
+
   initial_board <- isolate(board$board)
 
   c_blks <- board_blocks(initial_board)
@@ -33,7 +41,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   views <- board_layouts(initial_board)
 
-  dock_mgr <- new_dock_manager()
+  dock_mgr$active_dock <- reactiveValues()
   dock_mgr$board_rv <- board
   dock_mgr$update <- update
   dock_mgr$triggers <- triggers
@@ -102,8 +110,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     list(
       dock = dock,
       actions = triggers,
-      view_data = view_data,
-      dock_mgr = dock_mgr
+      view_data = view_data
     ),
     ext_res
   )
@@ -111,32 +118,59 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
 #' Create a dock manager.
 #'
-#' Plain environment bundling all view dock infrastructure so it can
-#' be passed as a single parameter to helper functions.
+#' A `dock_manager` (a classed environment) bundling all view dock
+#' infrastructure into a single per-session handle. Created once at the
+#' board-server entry point and threaded to the callback and apply path via
+#' `board_server()`'s `...`. Construction sets up only the domain-agnostic
+#' parts; the session-scoped reactives (`active_dock`, `board_rv`, `update`,
+#' `triggers`, `vs`, `current_active`, `ext_res`) are attached by
+#' `board_server_callback()` so they bind to the board module's reactive
+#' domain rather than the outer app session.
 #'
-#' @return An environment with:
+#' @return A `dock_manager` environment with:
 #' \describe{
 #'   \item{`docks`}{Environment mapping view names to dock module results
 #'     (each a list with `layout`, `proxy`, `dock_id`, etc.).}
-#'   \item{`active_dock`}{A `reactiveValues` that mirrors the dock module
-#'     result of the currently active view. Extensions hold a stable
-#'     reference to this; its contents are swapped by `update_active_dock()`
-#'     when the user switches views.}
 #'   \item{`next_id`}{Closure returning a unique dock module ID on each call.}
 #' }
+#' The callback then attaches `active_dock` (a `reactiveValues` mirroring the
+#' active view's dock module result, swapped by `update_active_dock()` on view
+#' switches) and the other session reactives listed above.
 #'
 #' @noRd
 new_dock_manager <- function() {
   mgr <- new.env(parent = emptyenv())
   mgr$docks <- new.env(parent = emptyenv())
-  mgr$active_dock <- reactiveValues()
   used_ids <- character()
   mgr$next_id <- function() {
     did <- paste0("dock_", rand_names(used_ids))
     used_ids <<- c(used_ids, did)
     did
   }
-  mgr
+  structure(mgr, class = "dock_manager")
+}
+
+is_dock_manager <- function(x) {
+  inherits(x, "dock_manager")
+}
+
+validate_dock_manager <- function(x) {
+
+  if (!is_dock_manager(x) || !is.environment(x)) {
+    blockr_abort(
+      "Expecting a `dock_manager` object.",
+      class = "dock_manager_invalid"
+    )
+  }
+
+  if (!is.environment(x$docks) || !is.function(x$next_id)) {
+    blockr_abort(
+      "A `dock_manager` needs a `docks` registry and an id generator.",
+      class = "dock_manager_invalid"
+    )
+  }
+
+  invisible(x)
 }
 
 #' Initialise dock modules for each view.

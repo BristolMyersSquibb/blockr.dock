@@ -47,5 +47,5 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
 #' @export
 blockr_app_server.dock_board <- function(id, x, plugins, options, ...) {
   board_server(id, x, plugins, options, callbacks = board_server_callback,
-               callback_location = "start", ...)
+               callback_location = "start", dock_mgr = new_dock_manager(), ...)
 }
