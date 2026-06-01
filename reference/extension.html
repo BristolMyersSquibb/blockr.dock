@@ -66,6 +66,7 @@ can be combined into a <code>dock_extensions</code> object.</p>
 <span>  ctor <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sys.parent.html" class="external-link">sys.parent</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  pkg <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  options <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_board_options.html" class="external-link">new_board_options</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  external_ctrl <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -108,7 +109,11 @@ can be combined into a <code>dock_extensions</code> object.</p>
 
 
 <dl><dt id="arg-server">server<a class="anchor" aria-label="anchor" href="#arg-server"></a></dt>
-<dd><p>A function returning <code><a href="https://rdrr.io/pkg/shiny/man/moduleServer.html" class="external-link">shiny::moduleServer()</a></code></p></dd>
+<dd><p>A function returning <code><a href="https://rdrr.io/pkg/shiny/man/moduleServer.html" class="external-link">shiny::moduleServer()</a></code>. Beyond
+<code>id</code>, it is called with the board handles <code>board</code>, <code>update</code>, <code>dock</code>
+and <code>actions</code>, plus <code>extensions</code> – an environment exposing every
+extension's server result keyed by ID (each carrying its <code>state</code>),
+so one extension can read another's state via <code>extensions[[id]]</code>.</p></dd>
 
 
 <dt id="arg-ui">ui<a class="anchor" aria-label="anchor" href="#arg-ui"></a></dt>
@@ -133,6 +138,12 @@ can be combined into a <code>dock_extensions</code> object.</p>
 
 <dt id="arg-options">options<a class="anchor" aria-label="anchor" href="#arg-options"></a></dt>
 <dd><p>Board options supplied by an extension</p></dd>
+
+
+<dt id="arg-external-ctrl">external_ctrl<a class="anchor" aria-label="anchor" href="#arg-external-ctrl"></a></dt>
+<dd><p>Set up external control (experimental). <code>FALSE</code>
+(the default) opts out; <code>TRUE</code> exposes every constructor input as
+externally controllable; a character vector names a subset of them.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

@@ -16,6 +16,7 @@ new_dock_extension(
   ctor = sys.parent(),
   pkg = NULL,
   options = new_board_options(),
+  external_ctrl = FALSE,
   ...
 )
 
@@ -58,7 +59,12 @@ extension_block_callback(x, ...)
 - server:
 
   A function returning
-  [`shiny::moduleServer()`](https://rdrr.io/pkg/shiny/man/moduleServer.html)
+  [`shiny::moduleServer()`](https://rdrr.io/pkg/shiny/man/moduleServer.html).
+  Beyond `id`, it is called with the board handles `board`, `update`,
+  `dock` and `actions`, plus `extensions` – an environment exposing
+  every extension's server result keyed by ID (each carrying its
+  `state`), so one extension can read another's state via
+  `extensions[[id]]`.
 
 - ui:
 
@@ -83,6 +89,12 @@ extension_block_callback(x, ...)
 - options:
 
   Board options supplied by an extension
+
+- external_ctrl:
+
+  Set up external control (experimental). `FALSE` (the default) opts
+  out; `TRUE` exposes every constructor input as externally
+  controllable; a character vector names a subset of them.
 
 - ...:
 
