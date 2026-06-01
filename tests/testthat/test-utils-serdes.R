@@ -137,6 +137,97 @@ test_that("spec_to_grid leaves branch children unnamed for char-vector input", {
   expect_identical(from_vector, from_list)
 })
 
+test_that("grid_map_leaves transforms leaves and keeps the tree shape", {
+
+  grid <- spec_to_grid(
+    list(
+      orientation = "horizontal",
+      children = list("a", list(children = list("b", "c")))
+    )
+  )
+
+  upcase_leaf <- function(leaf) {
+
+    views <- toupper(unlist(leaf[["data"]][["views"]]))
+    leaf[["data"]][["views"]] <- as.list(views)
+    leaf[["data"]][["activeView"]] <- toupper(leaf[["data"]][["activeView"]])
+
+    leaf
+  }
+
+  out <- grid_map_leaves(grid, upcase_leaf)
+
+  expect_identical(grid_panel_ids(out), c("A", "B", "C"))
+  expect_identical(out[["orientation"]], "HORIZONTAL")
+
+  inner <- out[["root"]][["data"]][[2L]]
+  expect_identical(inner[["type"]], "branch")
+  expect_length(inner[["data"]], 2L)
+})
+
+test_that("grid_map_leaves prunes a leaf on NULL and keeps its siblings", {
+
+  grid <- spec_to_grid(
+    list(
+      orientation = "horizontal",
+      children = list("a", list(children = list("b", "c")))
+    )
+  )
+
+  drop_b <- function(leaf) {
+    if (identical(unlist(leaf[["data"]][["views"]]), "b")) NULL else leaf
+  }
+
+  out <- grid_map_leaves(grid, drop_b)
+
+  expect_identical(grid_panel_ids(out), c("a", "c"))
+
+  inner <- out[["root"]][["data"]][[2L]]
+  expect_identical(inner[["type"]], "branch")
+  expect_length(inner[["data"]], 1L)
+})
+
+test_that("grid_map_leaves collapses a branch whose leaves all prune", {
+
+  grid <- spec_to_grid(
+    list(
+      orientation = "horizontal",
+      children = list("a", list(children = list("b", "c")))
+    )
+  )
+
+  drop_bc <- function(leaf) {
+    keep <- !any(unlist(leaf[["data"]][["views"]]) %in% c("b", "c"))
+    if (keep) leaf else NULL
+  }
+
+  out <- grid_map_leaves(grid, drop_bc)
+
+  expect_identical(grid_panel_ids(out), "a")
+  expect_length(out[["root"]][["data"]], 1L)
+  expect_identical(
+    out[["root"]][["data"]][[1L]][["data"]][["views"]][[1L]],
+    "a"
+  )
+})
+
+test_that("grid_map_leaves collapses to a NULL root when every leaf prunes", {
+
+  grid <- spec_to_grid(
+    list(
+      orientation = "horizontal",
+      children = list("a", list(children = list("b", "c")))
+    )
+  )
+
+  prune_all <- function(leaf) NULL
+
+  out <- grid_map_leaves(grid, prune_all)
+
+  expect_null(out[["root"]])
+  expect_identical(grid_panel_ids(out), character())
+})
+
 test_that("constructor and JSON paths yield identical specs", {
 
   ctor <- dock_layout("a", "b")

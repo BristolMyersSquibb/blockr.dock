@@ -239,46 +239,29 @@ drop_panels_from_layout <- function(layout, panel_ids) {
     return(layout)
   }
 
-  walk <- function(node) {
+  drop_from_leaf <- function(leaf) {
 
-    if (is.null(node) || !length(node)) {
+    views <- unlist(leaf[["data"]][["views"]], use.names = FALSE)
+    kept <- setdiff(views, panel_ids)
+
+    if (!length(kept)) {
       return(NULL)
     }
 
-    if (identical(node[["type"]], "leaf")) {
+    leaf[["data"]][["views"]] <- as.list(kept)
 
-      views <- unlist(node[["data"]][["views"]], use.names = FALSE)
-      kept <- setdiff(views, panel_ids)
-
-      if (length(kept) == 0L) {
-        return(NULL)
-      }
-
-      node[["data"]][["views"]] <- as.list(kept)
-
-      av <- node[["data"]][["activeView"]]
-      if (is.null(av) || !av %in% kept) {
-        node[["data"]][["activeView"]] <- kept[[1L]]
-      }
-
-      return(node)
+    av <- leaf[["data"]][["activeView"]]
+    if (is.null(av) || !av %in% kept) {
+      leaf[["data"]][["activeView"]] <- kept[[1L]]
     }
 
-    children <- lapply(node[["data"]], walk)
-    children <- Filter(Negate(is.null), children)
-
-    if (length(children) == 0L) {
-      return(NULL)
-    }
-
-    node[["data"]] <- children
-    node
+    leaf
   }
 
   was_active <- is_active_view(layout)
 
   result <- layout
-  result[["grid"]][["root"]] <- walk(layout[["grid"]][["root"]])
+  result[["grid"]] <- grid_map_leaves(result[["grid"]], drop_from_leaf)
 
   if (!length(grid_panel_ids(result[["grid"]]))) {
     result[["activeGroup"]] <- NULL
