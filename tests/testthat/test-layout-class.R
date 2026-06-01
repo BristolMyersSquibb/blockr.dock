@@ -284,3 +284,82 @@ test_that("lock_panels restores callback on save-locked -> restore-unlocked", {
     expect_match(rc[["source"]], "panel-to-remove", fixed = TRUE)
   }
 })
+
+test_that("dock_layout has a tree-style print method", {
+
+  expect_snapshot(print(dock_layout("a", "b")))
+
+  expect_snapshot(
+    print(
+      dock_layout(
+        group("data", "filt", "head"), "assistant_extension",
+        sizes = c(0.6, 0.4)
+      )
+    )
+  )
+
+  expect_snapshot(
+    print(dock_layout("a", panels("b", "c", "edit", active = "c")))
+  )
+
+  expect_snapshot(
+    print(
+      dock_layout(
+        "x", "y", "z",
+        orientation = "vertical", sizes = c(0.5, 0.3, 0.2)
+      )
+    )
+  )
+
+  expect_snapshot(print(dock_layout("top", group("a", group("b", "c")))))
+
+  expect_snapshot(print(dock_layout()))
+})
+
+test_that("dock_layout format strips panel-id prefixes unless bare = FALSE", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = list(edit = new_edit_board_extension())
+  )
+
+  ly <- active_layout(brd)
+
+  bare <- format(ly)
+  full <- format(ly, bare = FALSE)
+
+  expect_false(any(grepl("block_panel-|ext_panel-", bare)))
+  expect_true(any(grepl("ext_panel-edit_board_extension", full, fixed = TRUE)))
+  expect_true(any(grepl("block_panel-a", full, fixed = TRUE)))
+})
+
+test_that("dock_layout format marks the focused panel", {
+
+  ly <- as_dock_layout(
+    list(
+      orientation = "horizontal",
+      children = list("a", list(panels = list("b", "c"), active = "c")),
+      focus = "c"
+    )
+  )
+
+  out <- format(ly)
+
+  expect_match(out[length(out)], "focus", fixed = TRUE)
+  expect_false(any(grepl("a (active", out, fixed = TRUE)))
+})
+
+test_that("empty dock_layout formats as a single line", {
+
+  out <- format(dock_layout())
+
+  expect_length(out, 1L)
+  expect_match(out, "empty", fixed = TRUE)
+})
+
+test_that("print.dock_layout returns its input invisibly", {
+
+  ly <- dock_layout("a", "b")
+
+  expect_identical(expect_invisible(print(ly)), ly)
+})
