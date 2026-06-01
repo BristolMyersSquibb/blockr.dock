@@ -1,3 +1,20 @@
+# blockr.dock (development version)
+
+* The add / append / prepend block action handlers now mount the
+  `blockr.ui` block-browser module: a card-list block picker with
+  search, per-category icons, and a per-card expand for tweaking the
+  id / title / link / port before adding. Repeated single clicks on a
+  card produce distinct blocks (suggested ids are seeded against the
+  board so they never collide), replacing the old single-select
+  selectize form. The per-field Shiny inputs (`<mode>_block_selection`
+  / `<mode>_block_id` / `<mode>_block_name` / `<mode>_link_id` /
+  `<mode>_block_input` / `<mode>_block_confirm`) are gone in favour of
+  a single committed-block reactive returned by
+  `blockr.ui::block_browser_server()`. `block_sidebar_body()` is
+  removed (nothing in-tree calls it; link / stack flows use
+  `link_sidebar_body()` / `stack_sidebar_body()` unchanged). Requires
+  `blockr.ui` with the block-browser module.
+
 # blockr.dock 0.1.2
 
 * The `views` slot in the `board_update` payload is now a structured

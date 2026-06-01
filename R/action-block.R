@@ -1,88 +1,38 @@
 add_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
-      ns <- session$ns
-      blk <- reactiveVal()
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
+      added <- blockr.ui::block_browser_server("browser")
 
-      observeEvent(
-        trigger(),
-        {
-          log_debug("showing add block action sidebar")
-          blk(NULL)
+      browser_ui <- function() {
+        blockr.ui::block_browser_ui(session$ns("browser"), board$board)
+      }
 
-          blockr.ui::show_sidebar(
-            sidebar_id,
-            title = "Add new block",
-            ui = block_sidebar_body(
-              ns = ns,
-              board = board$board,
-              mode = "add"
-            )
+      observeEvent(trigger(), {
+        log_debug("showing add block action sidebar")
+        blockr.ui::show_sidebar(
+          sidebar_id, title = "Add new block", ui = browser_ui()
+        )
+      })
+
+      observeEvent(added(), {
+        spec <- added()
+
+        if (!valid_block_id(spec$id, board$board, session)) return()
+
+        new_blk <- build_block_from_spec(spec, board$board, session)
+        if (is.null(new_blk)) return()
+
+        update(list(
+          blocks = list(
+            add = as_blocks(set_names(list(new_blk), spec$id))
           )
-        }
-      )
+        ))
 
-      observeEvent(
-        input$add_block_selection,
-        {
-          req(input$add_block_selection)
-
-          new_blk <- create_block_with_name(
-            input$add_block_selection,
-            chr_ply(board_blocks(board$board), block_name)
-          )
-
-          updateTextInput(
-            session,
-            "add_block_name",
-            value = block_name(new_blk)
-          )
-
-          blk(new_blk)
-        }
-      )
-
-      observeEvent(
-        input$add_block_confirm,
-        {
-          id <- input$add_block_id
-          bk <- blk()
-
-          if (!nchar(id) || id %in% board_block_ids(board$board)) {
-            notify(
-              "Please choose a valid block ID.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          if (!is_block(bk)) {
-            notify(
-              "Please choose a block type.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          if (!identical(input$add_block_name, block_name(bk))) {
-            block_name(bk) <- input$add_block_name
-          }
-
-          bk <- as_blocks(set_names(list(bk), id))
-
-          update(list(blocks = list(add = bk)))
-          blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
-            title = "Add new block",
-            ui = block_sidebar_body(ns, board$board, mode = "add")
-          )
-        }
-      )
+        blockr.ui::keep_or_hide_sidebar(
+          sidebar_id, title = "Add new block", ui = browser_ui()
+        )
+      })
 
       NULL
     },
@@ -93,124 +43,64 @@ add_block_action <- function(trigger, board, update, ...) {
 append_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
-      ns <- session$ns
-      blk <- reactiveVal()
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
+      added <- blockr.ui::block_browser_server("browser")
 
-      observeEvent(
-        trigger(),
-        {
-          blk(NULL)
-          blockr.ui::show_sidebar(
-            sidebar_id,
-            title = "Append new block",
-            ui = block_sidebar_body(
-              ns = ns,
-              board = board$board,
-              mode = "append"
-            )
-          )
-        }
-      )
+      browser_ui <- function() {
+        blockr.ui::block_browser_ui(
+          session$ns("browser"), board$board,
+          blockr.ui::append_to(trigger())
+        )
+      }
 
-      observeEvent(
-        input$append_block_selection,
-        {
-          req(input$append_block_selection)
+      observeEvent(trigger(), {
+        blockr.ui::show_sidebar(
+          sidebar_id, title = "Append new block", ui = browser_ui()
+        )
+      })
 
-          new_blk <- create_block_with_name(
-            input$append_block_selection,
-            chr_ply(board_blocks(board$board), block_name)
-          )
+      observeEvent(added(), {
+        spec <- added()
 
-          res <- block_input_select(
+        if (!valid_block_id(spec$id, board$board, session)) return()
+        if (!valid_link_id(spec$link_id, board$board, session)) return()
+
+        new_blk <- build_block_from_spec(spec, board$board, session)
+        if (is.null(new_blk)) return()
+
+        # The browser hides the input-port picker when the new block
+        # has a single named input or is variadic. `block_input_select`
+        # resolves both cases uniformly: it returns the named slot, or
+        # a freshly-generated integer slot for variadic blocks.
+        block_input <- spec$block_input
+        if (is.null(block_input) || !nzchar(block_input)) {
+          block_input <- block_input_select(
             new_blk,
-            mode = "update",
-            session = session,
-            inputId = "append_block_input"
-          )
-
-          if (is.null(res)) {
-            notify(
-              "No inputs are available for the selected block.",
-              type = "warning"
-            )
-            return()
-          }
-
-          updateTextInput(
-            session,
-            "append_block_name",
-            value = block_name(new_blk)
-          )
-
-          blk(new_blk)
+            block_id = spec$id,
+            links = board_links(board$board),
+            mode = "inputs"
+          )[1L]
         }
-      )
 
-      observeEvent(
-        input$append_block_confirm,
-        {
-          blk_id <- input$append_block_id
-          lnk_id <- input$append_link_id
+        new_lnk <- new_link(
+          from = trigger(),
+          to = spec$id,
+          input = block_input
+        )
 
-          if (!nchar(blk_id) || blk_id %in% board_block_ids(board$board)) {
-            notify(
-              "Please choose a valid block ID.",
-              type = "warning",
-              session = session
-            )
-            return()
-          }
-
-          if (!nchar(lnk_id) || lnk_id %in% board_link_ids(board$board)) {
-            notify(
-              "Please choose a valid link ID.",
-              type = "warning",
-              session = session
-            )
-            return()
-          }
-
-          new_blk <- blk()
-
-          if (!is_block(new_blk)) {
-            notify(
-              "Please choose a block type.",
-              type = "warning",
-              session = session
-            )
-            return()
-          }
-
-          if (!identical(input$append_block_name, block_name(new_blk))) {
-            block_name(new_blk) <- input$append_block_name
-          }
-
-          new_blk <- as_blocks(set_names(list(new_blk), blk_id))
-
-          new_lnk <- new_link(
-            from = trigger(),
-            to = blk_id,
-            input = input$append_block_input
+        update(list(
+          blocks = list(
+            add = as_blocks(set_names(list(new_blk), spec$id))
+          ),
+          links = list(
+            add = as_links(set_names(list(new_lnk), spec$link_id))
           )
+        ))
 
-          new_lnk <- as_links(set_names(list(new_lnk), lnk_id))
-
-          update(
-            list(
-              blocks = list(add = new_blk),
-              links = list(add = new_lnk)
-            )
-          )
-
-          blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
-            title = "Append new block",
-            ui = block_sidebar_body(ns, board$board, mode = "append")
-          )
-        }
-      )
+        blockr.ui::keep_or_hide_sidebar(
+          sidebar_id, title = "Append new block", ui = browser_ui()
+        )
+      })
 
       NULL
     },
@@ -221,119 +111,63 @@ append_block_action <- function(trigger, board, update, ...) {
 prepend_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
-      ns <- session$ns
-      blk <- reactiveVal()
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
+      added <- blockr.ui::block_browser_server("browser")
 
-      observeEvent(
-        trigger(),
-        {
-          blk(NULL)
-          blockr.ui::show_sidebar(
-            sidebar_id,
-            title = "Prepend new block",
-            ui = block_sidebar_body(
-              ns = ns,
-              board = board$board,
-              mode = "prepend"
-            )
-          )
-        }
-      )
+      browser_ui <- function() {
+        blockr.ui::block_browser_ui(
+          session$ns("browser"), board$board,
+          blockr.ui::prepend_to(trigger())
+        )
+      }
 
-      observeEvent(
-        input$prepend_block_selection,
-        {
-          req(input$prepend_block_selection)
+      observeEvent(trigger(), {
+        blockr.ui::show_sidebar(
+          sidebar_id, title = "Prepend new block", ui = browser_ui()
+        )
+      })
 
-          new_blk <- create_block_with_name(
-            input$prepend_block_selection,
-            chr_ply(board_blocks(board$board), block_name)
-          )
+      observeEvent(added(), {
+        spec <- added()
 
-          updateTextInput(
-            session,
-            "prepend_block_name",
-            value = block_name(new_blk)
-          )
+        if (!valid_block_id(spec$id, board$board, session)) return()
+        if (!valid_link_id(spec$link_id, board$board, session)) return()
 
-          blk(new_blk)
-        }
-      )
+        new_blk <- build_block_from_spec(spec, board$board, session)
+        if (is.null(new_blk)) return()
 
-      observeEvent(
-        input$prepend_block_confirm,
-        {
-          blk_id <- input$prepend_block_id
-          lnk_id <- input$prepend_link_id
-
-          if (!nchar(blk_id) || blk_id %in% board_block_ids(board$board)) {
-            notify(
-              "Please choose a valid block ID.",
-              type = "warning",
-              session = session
-            )
-            return()
-          }
-
-          if (!nchar(lnk_id) || lnk_id %in% board_link_ids(board$board)) {
-            notify(
-              "Please choose a valid link ID.",
-              type = "warning",
-              session = session
-            )
-            return()
-          }
-
-          new_blk <- blk()
-
-          if (!is_block(new_blk)) {
-            notify(
-              "Please choose a block type.",
-              type = "warning",
-              session = session
-            )
-            return()
-          }
-
-          if (!identical(input$prepend_block_name, block_name(new_blk))) {
-            block_name(new_blk) <- input$prepend_block_name
-          }
-
-          new_blk <- as_blocks(set_names(list(new_blk), blk_id))
-
-          # Compared to append block, trigger is a bit special as
-          # it has to provide the target node
-          # and the input port to connect to.
+        # Target input port: user pick (arity > 1) or default to the
+        # first available slot, mirroring the previous prepend behaviour.
+        target_input <- spec$target_input
+        if (is.null(target_input) || !nzchar(target_input)) {
           inps <- block_input_select(
             board_blocks(board$board)[[trigger()]],
             trigger(),
             board_links(board$board),
             mode = "inputs"
           )
-
-          new_lnk <- new_link(
-            from = blk_id,
-            to = trigger(),
-            input = inps[1L]
-          )
-
-          new_lnk <- as_links(set_names(list(new_lnk), lnk_id))
-
-          update(
-            list(
-              blocks = list(add = new_blk),
-              links = list(add = new_lnk)
-            )
-          )
-
-          blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
-            title = "Prepend new block",
-            ui = block_sidebar_body(ns, board$board, mode = "prepend")
-          )
+          target_input <- inps[1L]
         }
-      )
+
+        new_lnk <- new_link(
+          from = spec$id,
+          to = trigger(),
+          input = target_input
+        )
+
+        update(list(
+          blocks = list(
+            add = as_blocks(set_names(list(new_blk), spec$id))
+          ),
+          links = list(
+            add = as_links(set_names(list(new_lnk), spec$link_id))
+          )
+        ))
+
+        blockr.ui::keep_or_hide_sidebar(
+          sidebar_id, title = "Prepend new block", ui = browser_ui()
+        )
+      })
 
       NULL
     },
@@ -352,4 +186,62 @@ remove_block_action <- function(trigger, board, update, ...) {
     },
     id = "remove_block_action"
   )
+}
+
+# ---- helpers shared by add / append / prepend --------------------------
+
+# The block browser pre-seeds unique ids via `rand_names()` against the
+# current board, so the typical case here is a no-op pass. We still
+# guard against an empty / duplicate id that the user could type into
+# the per-card form.
+valid_block_id <- function(id, board, session) {
+  if (is.null(id) || !nzchar(id) || id %in% board_block_ids(board)) {
+    notify(
+      "Please choose a valid block ID.",
+      type = "warning",
+      session = session
+    )
+    return(FALSE)
+  }
+  TRUE
+}
+
+valid_link_id <- function(id, board, session) {
+  if (is.null(id) || !nzchar(id) || id %in% board_link_ids(board)) {
+    notify(
+      "Please choose a valid link ID.",
+      type = "warning",
+      session = session
+    )
+    return(FALSE)
+  }
+  TRUE
+}
+
+# Instantiate via the registry by uid (spec$type). Apply the user's
+# title if supplied; otherwise keep `create_block_with_name`'s auto-
+# numbered name so "Dataset 1" / "Dataset 2" still works on repeat adds.
+build_block_from_spec <- function(spec, board, session) {
+  blk <- tryCatch(
+    create_block_with_name(
+      spec$type,
+      chr_ply(board_blocks(board), block_name)
+    ),
+    error = function(e) {
+      notify(
+        paste0("Could not create block: ", conditionMessage(e)),
+        type = "error",
+        session = session
+      )
+      NULL
+    }
+  )
+
+  if (is.null(blk)) return(NULL)
+
+  if (!is.null(spec$title) && nzchar(spec$title)) {
+    block_name(blk) <- spec$title
+  }
+
+  blk
 }
