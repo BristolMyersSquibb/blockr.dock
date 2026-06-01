@@ -438,8 +438,7 @@ draw_panel_tree <- function(x) {
 }
 
 grid_panel_ids <- function(grid) {
-  views <- unlst(lst_xtr(grid_leaves(grid), "views"), recursive = TRUE)
-  coal(views, character())
+  chr_ply(unlst(lst_xtr(grid_leaves(grid), "views")), identity)
 }
 
 #' @rdname layout-json
