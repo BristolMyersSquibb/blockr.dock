@@ -62,6 +62,7 @@ Collate:
     'dock-board.R'
     'dock-stack.R'
     'ext-class.R'
+    'ext-delta.R'
     'ext-edit.R'
     'ext-ui.R'
     'layout-class.R'

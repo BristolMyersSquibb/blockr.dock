@@ -302,6 +302,14 @@ validate_board_update.dock_board <- function(payload, board, ...,
     )
   }
 
+  if ("extensions" %in% names(payload) && !is.null(payload$extensions) &&
+        !is.list(payload$extensions)) {
+    blockr_abort(
+      "`extensions` must be a list with an optional `mod` component.",
+      class = "dock_extensions_delta_invalid"
+    )
+  }
+
   NextMethod()
 }
 
@@ -336,6 +344,10 @@ augment_board_update.dock_board <- function(upd, board, ...,
     validate_views_delta(upd$views, board, upd)
   }
 
+  if (length(upd$extensions)) {
+    validate_extensions_delta(upd$extensions, board)
+  }
+
   upd
 }
 
@@ -343,12 +355,16 @@ augment_board_update.dock_board <- function(upd, board, ...,
 apply_board_update.dock_board <- function(board, upd, ...,
                                           session = get_session()) {
 
+  dot_args <- list(...)
+  dock_mgr <- dot_args$dock_mgr
+
+  if (length(upd$extensions$mod) && !is.null(dock_mgr)) {
+    apply_extensions_mod(upd$extensions$mod, dock_mgr$ext_res)
+  }
+
   if (!length(upd$views)) {
     return(board)
   }
-
-  dot_args <- list(...)
-  dock_mgr <- dot_args$dock_mgr
 
   if (length(upd$views$rm)) {
     board <- apply_views_rm(upd$views$rm, board, dock_mgr, session)

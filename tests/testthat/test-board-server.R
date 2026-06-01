@@ -347,3 +347,78 @@ test_that("views slot flows through full board_update lifecycle", {
     )
   )
 })
+
+test_that("validate_board_update.dock_board rejects bad extensions slot", {
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  expect_error(
+    validate_board_update(list(extensions = "not a delta"), brd),
+    class = "dock_extensions_delta_invalid"
+  )
+})
+
+test_that("extensions slot writes controllable state via apply_board_update", {
+
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = new_ctrl_extension(content = "# old")
+  )
+
+  with_mock_session(
+    {
+      res <- board_server_callback(board_rv, update = reactiveVal())
+
+      content <- res$dock_mgr$ext_res$doc_extension$state$content
+
+      expect_s3_class(content, "reactiveVal")
+      expect_identical(isolate(content()), "# old")
+
+      apply_board_update(
+        isolate(board_rv$board),
+        list(
+          extensions = list(
+            mod = list(doc_extension = list(content = "# new"))
+          )
+        ),
+        dock_mgr = res$dock_mgr
+      )
+
+      expect_identical(isolate(content()), "# new")
+    }
+  )
+})
+
+test_that("extension servers can read peer extension state", {
+
+  peers <- NULL
+
+  probe <- new_dock_extension(
+    server = function(id, board, update, extensions, ...) {
+      peers <<- extensions
+      moduleServer(id, function(input, output, session) list(state = list()))
+    },
+    ui = function(id) tagList(),
+    name = "Probe",
+    class = "probe_extension",
+    ctor = function(...) NULL
+  )
+
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = as_dock_extensions(
+      list(new_ctrl_extension(content = "# hi"), probe)
+    )
+  )
+
+  with_mock_session(
+    {
+      board_server_callback(board_rv, update = reactiveVal())
+
+      expect_true("doc_extension" %in% ls(peers))
+      expect_identical(
+        isolate(peers[["doc_extension"]]$state$content()),
+        "# hi"
+      )
+    }
+  )
+})

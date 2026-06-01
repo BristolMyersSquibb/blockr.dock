@@ -62,12 +62,39 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   sync_layouts_to_board(view_data, update, board)
 
+  # Each extension can read the others' server results through the
+  # `extensions` environment: one active binding per id, each resolving to
+  # the live result (carrying its `state`). `dock_mgr$ext_res` is filled
+  # right after this lapply, so a binding resolves on first read -- always
+  # post-init (e.g. on a tool call). Lets one extension (such as the
+  # assistant) read another's controllable state via `extensions[[id]]`.
+  peers <- new.env(parent = emptyenv())
+
+  bind_peer <- function(id) {
+    makeActiveBinding(id, function() dock_mgr$ext_res[[id]], peers)
+  }
+
+  for (ext_id in names(exts)) {
+    bind_peer(ext_id)
+  }
+
   ext_res <- lapply(
     exts,
     extension_server,
-    list(board = board, update = update, dock = dock, actions = triggers),
+    list(
+      board = board,
+      update = update,
+      dock = dock,
+      actions = triggers,
+      extensions = peers
+    ),
     list(...)
   )
+
+  # Externally controllable extension state is written from the apply path
+  # (apply_board_update.dock_board), which reaches these live reactiveVals
+  # through dock_mgr.
+  dock_mgr$ext_res <- ext_res
 
   register_actions(actions, triggers, board, update, ext_res)
 

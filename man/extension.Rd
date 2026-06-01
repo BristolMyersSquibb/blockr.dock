@@ -27,6 +27,7 @@ new_dock_extension(
   ctor = sys.parent(),
   pkg = NULL,
   options = new_board_options(),
+  external_ctrl = FALSE,
   ...
 )
 
@@ -61,7 +62,11 @@ as_dock_extensions(x, ...)
 extension_block_callback(x, ...)
 }
 \arguments{
-\item{server}{A function returning \code{\link[shiny:moduleServer]{shiny::moduleServer()}}}
+\item{server}{A function returning \code{\link[shiny:moduleServer]{shiny::moduleServer()}}. Beyond
+\code{id}, it is called with the board handles \code{board}, \code{update}, \code{dock}
+and \code{actions}, plus \code{extensions} -- an environment exposing every
+extension's server result keyed by ID (each carrying its \code{state}),
+so one extension can read another's state via \code{extensions[[id]]}.}
 
 \item{ui}{A function with a single argument (\code{ns}) returning a \code{shiny.tag}}
 
@@ -74,6 +79,10 @@ extension_block_callback(x, ...)
 \item{pkg}{Package to look up \code{ctor}}
 
 \item{options}{Board options supplied by an extension}
+
+\item{external_ctrl}{Set up external control (experimental). \code{FALSE}
+(the default) opts out; \code{TRUE} exposes every constructor input as
+externally controllable; a character vector names a subset of them.}
 
 \item{...}{Further attributes}
 
