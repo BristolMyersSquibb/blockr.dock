@@ -70,7 +70,7 @@ validate_extensions_delta <- function(extensions, board) {
       )
     }
 
-    extra <- setdiff(names(delta), extension_external_ctrl_vars(ext_list[[id]]))
+    extra <- setdiff(names(delta), external_ctrl_vars(ext_list[[id]]))
 
     if (length(extra)) {
       blockr_abort(

@@ -105,20 +105,20 @@ test_that("ext_ctor_inputs drops dots", {
   expect_setequal(ext_ctor_inputs(ext), c("content", "select"))
 })
 
-test_that("extension_external_ctrl_vars resolves against ctor inputs", {
+test_that("external_ctrl_vars.dock_extension resolves against ctor inputs", {
 
   ext <- ctrl_ext(ctor = function(content = "", select = "") NULL)
 
-  expect_setequal(extension_external_ctrl_vars(ext), c("content", "select"))
+  expect_setequal(external_ctrl_vars(ext), c("content", "select"))
 
   attr(ext, "external_ctrl") <- FALSE
-  expect_identical(extension_external_ctrl_vars(ext), character())
+  expect_identical(external_ctrl_vars(ext), character())
 
   attr(ext, "external_ctrl") <- "content"
-  expect_identical(extension_external_ctrl_vars(ext), "content")
+  expect_identical(external_ctrl_vars(ext), "content")
 
   attr(ext, "external_ctrl") <- "nonexistent"
-  expect_error(extension_external_ctrl_vars(ext))
+  expect_error(external_ctrl_vars(ext))
 })
 
 test_that("validate_ext_srv_result enforces controllable reactiveVals", {
