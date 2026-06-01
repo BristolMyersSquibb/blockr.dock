@@ -148,8 +148,8 @@ resolve_views <- function(specs, c_blks, c_exts) {
 panel_obj_ids <- function(ids) {
   is_blk <- maybe_block_panel_id(ids)
   is_ext <- maybe_ext_panel_id(ids)
-  ids[is_blk] <- sub("^block_panel-", "", ids[is_blk])
-  ids[is_ext] <- sub("^ext_panel-", "", ids[is_ext])
+  ids[is_blk] <- as_obj_id(new_block_panel_id(ids[is_blk]))
+  ids[is_ext] <- as_obj_id(new_ext_panel_id(ids[is_ext]))
   ids
 }
 

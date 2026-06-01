@@ -535,19 +535,19 @@ manage_dock <- function(
         }
 
         for (pid in input$add_dock_panel) {
-          if (grepl("^blk-", pid)) {
+          if (maybe_block_panel_id(pid)) {
             show_block_panel(
-              board_blocks(board$board)[sub("^blk-", "", pid)],
+              board_blocks(board$board)[as_obj_id(new_block_panel_id(pid))],
               add_panel = pos,
               proxy = dock
             )
 
             n_panels(n_panels() + 1L)
-          } else if (grepl("^ext-", pid)) {
+          } else if (maybe_ext_panel_id(pid)) {
             exts <- as.list(dock_extensions(board$board))
 
             show_ext_panel(
-              exts[[sub("^ext-", "", pid)]],
+              exts[[as_obj_id(new_ext_panel_id(pid))]],
               add_panel = pos,
               proxy = dock
             )
@@ -992,8 +992,8 @@ suggest_panels_to_add <- function(
   )
 
   options_data <- c(
-    build_block_options(board$board, blk_opts, prefix = "blk-"),
-    build_ext_options(board$board, ext_opts, prefix = "ext-")
+    build_block_options(board$board, blk_opts, value_fun = as_block_panel_id),
+    build_ext_options(board$board, ext_opts, value_fun = as_ext_panel_id)
   )
 
   if (length(options_data)) {
@@ -1080,12 +1080,15 @@ build_one_option <- function(value, label, id, package, icon, color) {
 #'
 #' @param board Board object.
 #' @param blk_ids Character vector of block IDs to include.
-#' @param prefix String prepended to each value (e.g. `"blk-"`).
+#' @param value_fun Coercion applied to each ID to form the option value;
+#'   defaults to `identity` (bare IDs, for a block-only selectize). The
+#'   panel picker passes `as_block_panel_id` so a single mixed selectize
+#'   can be disambiguated on read-back.
 #'
 #' @return A list of option lists suitable for `selectizeInput`.
 #'
 #' @noRd
-build_block_options <- function(board, blk_ids, prefix = "") {
+build_block_options <- function(board, blk_ids, value_fun = identity) {
   if (!length(blk_ids)) {
     return(list())
   }
@@ -1096,7 +1099,7 @@ build_block_options <- function(board, blk_ids, prefix = "") {
   lapply(seq_along(blk_ids), function(i) {
     id <- blk_ids[i]
     build_one_option(
-      value = paste0(prefix, id),
+      value = as.character(value_fun(id)),
       label = block_name(blks[[id]]),
       id = id,
       package = meta$package[i],
@@ -1110,12 +1113,15 @@ build_block_options <- function(board, blk_ids, prefix = "") {
 #'
 #' @param board Board object.
 #' @param ext_ids Character vector of extension IDs to include.
-#' @param prefix String prepended to each value (e.g. `"ext-"`).
+#' @param value_fun Coercion applied to each ID to form the option value;
+#'   defaults to `identity` (bare IDs, for an extension-only selectize). The
+#'   panel picker passes `as_ext_panel_id` so a single mixed selectize
+#'   can be disambiguated on read-back.
 #'
 #' @return A list of option lists suitable for `selectizeInput`.
 #'
 #' @noRd
-build_ext_options <- function(board, ext_ids, prefix = "") {
+build_ext_options <- function(board, ext_ids, value_fun = identity) {
   if (!length(ext_ids)) {
     return(list())
   }
@@ -1128,7 +1134,7 @@ build_ext_options <- function(board, ext_ids, prefix = "") {
     ext_pkg <- ctor_pkg(extension_ctor(ext))
 
     build_one_option(
-      value = paste0(prefix, ext_id),
+      value = as.character(value_fun(ext_id)),
       label = ext_name,
       id = ext_id,
       package = coal(ext_pkg, "local"),

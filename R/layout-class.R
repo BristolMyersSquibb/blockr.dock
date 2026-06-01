@@ -578,8 +578,8 @@ dockview_payload <- function(layout, blocks = list(), extensions = list()) {
   blk_pids <- panel_ids[maybe_block_panel_id(panel_ids)]
   ext_pids <- panel_ids[maybe_ext_panel_id(panel_ids)]
 
-  blk_ids <- sub("^block_panel-", "", blk_pids)
-  ext_ids <- sub("^ext_panel-", "", ext_pids)
+  blk_ids <- as_obj_id(new_block_panel_id(blk_pids))
+  ext_ids <- as_obj_id(new_ext_panel_id(ext_pids))
 
   blk_panels <- lapply(split(blocks[blk_ids], seq_along(blk_ids)), block_panel)
   ext_panels <- lapply(ext_list[ext_ids], ext_panel)
