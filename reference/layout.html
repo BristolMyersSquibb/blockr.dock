@@ -79,6 +79,12 @@ extensions, so only the arrangement is stored in a <code>dock_layout</code>. See
 <span></span>
 <span><span class="fu">as_dock_layout</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># S3 method for class 'dock_layout'</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, bare <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'dock_layout'</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu">default_layout</span><span class="op">(</span><span class="va">blocks</span>, <span class="va">extensions</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">validate_dock_layout</span><span class="op">(</span><span class="va">x</span>, blocks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
@@ -112,6 +118,11 @@ share of the parent (positive; need not sum to 1).</p></dd>
 
 <dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>Object</p></dd>
+
+
+<dt id="arg-bare">bare<a class="anchor" aria-label="anchor" href="#arg-bare"></a></dt>
+<dd><p>For <code><a href="https://rdrr.io/r/base/format.html" class="external-link">format()</a></code> / <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>, drop the <code>block_panel-</code> /
+<code>ext_panel-</code> prefixes from panel IDs (see <code><a href="layout-json.html">panel_obj_ids()</a></code>).</p></dd>
 
 
 <dt id="arg-blocks-extensions">blocks, extensions<a class="anchor" aria-label="anchor" href="#arg-blocks-extensions"></a></dt>
@@ -176,139 +187,18 @@ boundary is <code><a href="layout-json.html">layout_to_json()</a></code> / <code
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The default arrangement for a given set of blocks and extensions</span></span></span>
 <span class="r-in"><span><span class="fu">default_layout</span><span class="op">(</span><span class="va">blks</span>, <span class="va">exts</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "branch"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "leaf"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$views</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$views[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "edit_board_extension"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$activeView</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "edit_board_extension"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$id</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "1"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "leaf"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$views</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$views[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$views[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "b"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$activeView</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$id</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$orientation</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "HORIZONTAL"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $activeGroup</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "1"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dock_layout"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;dock_layout&gt; horizontal</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ├─ edit_board_extension</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> └─ tabs</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    ├─ a (active)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    └─ b</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Mark a layout as the initially-active view in a `dock_layouts`</span></span></span>
 <span class="r-in"><span><span class="co"># collection</span></span></span>
 <span class="r-in"><span><span class="fu">dock_layout</span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, active <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "branch"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "leaf"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$views</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$views[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$activeView</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$id</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "1"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "leaf"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$views</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$views[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "b"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$activeView</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "b"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$id</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$orientation</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "HORIZONTAL"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $activeGroup</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "1"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dock_layout"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"active")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;dock_layout&gt; horizontal</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ├─ a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> └─ b</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Tabbed leaf with an explicit open tab</span></span></span>
 <span class="r-in"><span><span class="fu">panels</span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"edit_board_extension"</span>, active <span class="op">=</span> <span class="st">"edit_board_extension"</span><span class="op">)</span></span></span>
@@ -351,136 +241,17 @@ boundary is <code><a href="layout-json.html">layout_to_json()</a></code> / <code
 <span class="r-in"><span>  <span class="fu">panels</span><span class="op">(</span><span class="st">"b"</span>, <span class="st">"edit_board_extension"</span>, active <span class="op">=</span> <span class="st">"edit_board_extension"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  sizes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "branch"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "leaf"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$views</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$views[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$activeView</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$id</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "1"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "leaf"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$views</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$views[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "b"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$views[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "edit_board_extension"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$activeView</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "edit_board_extension"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$id</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.7</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$orientation</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "HORIZONTAL"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $activeGroup</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "1"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dock_layout"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;dock_layout&gt; horizontal</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ├─ a (30%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> └─ tabs (70%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    ├─ b</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    └─ edit_board_extension (active)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Vertical top-level split</span></span></span>
 <span class="r-in"><span><span class="fu">dock_layout</span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, orientation <span class="op">=</span> <span class="st">"vertical"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "branch"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "leaf"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$views</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$views[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$activeView</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$data$id</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "1"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[1]]$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "leaf"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$views</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$views[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "b"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$activeView</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "b"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$data$id</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$data[[2]]$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$root$size</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $grid$orientation</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "VERTICAL"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $activeGroup</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "1"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dock_layout"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;dock_layout&gt; vertical</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ├─ a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> └─ b</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

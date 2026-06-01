@@ -158,6 +158,8 @@ Tools for defining panel arrangements.
   [`group()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   [`is_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   [`as_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+  [`format(`*`<dock_layout>`*`)`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+  [`print(`*`<dock_layout>`*`)`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   [`default_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   [`validate_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   : Dock layout

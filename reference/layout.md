@@ -26,6 +26,12 @@ is_dock_layout(x)
 
 as_dock_layout(x, ...)
 
+# S3 method for class 'dock_layout'
+format(x, ..., bare = TRUE)
+
+# S3 method for class 'dock_layout'
+print(x, ...)
+
 default_layout(blocks, extensions)
 
 validate_dock_layout(x, blocks = character())
@@ -57,6 +63,13 @@ validate_dock_layout(x, blocks = character())
 - x:
 
   Object
+
+- bare:
+
+  For [`format()`](https://rdrr.io/r/base/format.html) /
+  [`print()`](https://rdrr.io/r/base/print.html), drop the
+  `block_panel-` / `ext_panel-` prefixes from panel IDs (see
+  [`panel_obj_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)).
 
 - blocks, extensions:
 
@@ -132,139 +145,18 @@ exts <- list(
 
 # The default arrangement for a given set of blocks and extensions
 default_layout(blks, exts)
-#> $grid
-#> $grid$root
-#> $grid$root$type
-#> [1] "branch"
-#> 
-#> $grid$root$data
-#> $grid$root$data[[1]]
-#> $grid$root$data[[1]]$type
-#> [1] "leaf"
-#> 
-#> $grid$root$data[[1]]$data
-#> $grid$root$data[[1]]$data$views
-#> $grid$root$data[[1]]$data$views[[1]]
-#> [1] "edit_board_extension"
-#> 
-#> 
-#> $grid$root$data[[1]]$data$activeView
-#> [1] "edit_board_extension"
-#> 
-#> $grid$root$data[[1]]$data$id
-#> [1] "1"
-#> 
-#> 
-#> $grid$root$data[[1]]$size
-#> [1] 0.5
-#> 
-#> 
-#> $grid$root$data[[2]]
-#> $grid$root$data[[2]]$type
-#> [1] "leaf"
-#> 
-#> $grid$root$data[[2]]$data
-#> $grid$root$data[[2]]$data$views
-#> $grid$root$data[[2]]$data$views[[1]]
-#> [1] "a"
-#> 
-#> $grid$root$data[[2]]$data$views[[2]]
-#> [1] "b"
-#> 
-#> 
-#> $grid$root$data[[2]]$data$activeView
-#> [1] "a"
-#> 
-#> $grid$root$data[[2]]$data$id
-#> [1] "2"
-#> 
-#> 
-#> $grid$root$data[[2]]$size
-#> [1] 0.5
-#> 
-#> 
-#> 
-#> $grid$root$size
-#> [1] 1
-#> 
-#> 
-#> $grid$orientation
-#> [1] "HORIZONTAL"
-#> 
-#> 
-#> $activeGroup
-#> [1] "1"
-#> 
-#> attr(,"class")
-#> [1] "dock_layout"
+#> <dock_layout> horizontal
+#> ├─ edit_board_extension
+#> └─ tabs
+#>    ├─ a (active)
+#>    └─ b
 
 # Mark a layout as the initially-active view in a `dock_layouts`
 # collection
 dock_layout("a", "b", active = TRUE)
-#> $grid
-#> $grid$root
-#> $grid$root$type
-#> [1] "branch"
-#> 
-#> $grid$root$data
-#> $grid$root$data[[1]]
-#> $grid$root$data[[1]]$type
-#> [1] "leaf"
-#> 
-#> $grid$root$data[[1]]$data
-#> $grid$root$data[[1]]$data$views
-#> $grid$root$data[[1]]$data$views[[1]]
-#> [1] "a"
-#> 
-#> 
-#> $grid$root$data[[1]]$data$activeView
-#> [1] "a"
-#> 
-#> $grid$root$data[[1]]$data$id
-#> [1] "1"
-#> 
-#> 
-#> $grid$root$data[[1]]$size
-#> [1] 0.5
-#> 
-#> 
-#> $grid$root$data[[2]]
-#> $grid$root$data[[2]]$type
-#> [1] "leaf"
-#> 
-#> $grid$root$data[[2]]$data
-#> $grid$root$data[[2]]$data$views
-#> $grid$root$data[[2]]$data$views[[1]]
-#> [1] "b"
-#> 
-#> 
-#> $grid$root$data[[2]]$data$activeView
-#> [1] "b"
-#> 
-#> $grid$root$data[[2]]$data$id
-#> [1] "2"
-#> 
-#> 
-#> $grid$root$data[[2]]$size
-#> [1] 0.5
-#> 
-#> 
-#> 
-#> $grid$root$size
-#> [1] 1
-#> 
-#> 
-#> $grid$orientation
-#> [1] "HORIZONTAL"
-#> 
-#> 
-#> $activeGroup
-#> [1] "1"
-#> 
-#> attr(,"class")
-#> [1] "dock_layout"
-#> attr(,"active")
-#> [1] TRUE
+#> <dock_layout> horizontal
+#> ├─ a
+#> └─ b
 
 # Tabbed leaf with an explicit open tab
 panels("a", "b", "edit_board_extension", active = "edit_board_extension")
@@ -307,134 +199,15 @@ dock_layout(
   panels("b", "edit_board_extension", active = "edit_board_extension"),
   sizes = c(0.3, 0.7)
 )
-#> $grid
-#> $grid$root
-#> $grid$root$type
-#> [1] "branch"
-#> 
-#> $grid$root$data
-#> $grid$root$data[[1]]
-#> $grid$root$data[[1]]$type
-#> [1] "leaf"
-#> 
-#> $grid$root$data[[1]]$data
-#> $grid$root$data[[1]]$data$views
-#> $grid$root$data[[1]]$data$views[[1]]
-#> [1] "a"
-#> 
-#> 
-#> $grid$root$data[[1]]$data$activeView
-#> [1] "a"
-#> 
-#> $grid$root$data[[1]]$data$id
-#> [1] "1"
-#> 
-#> 
-#> $grid$root$data[[1]]$size
-#> [1] 0.3
-#> 
-#> 
-#> $grid$root$data[[2]]
-#> $grid$root$data[[2]]$type
-#> [1] "leaf"
-#> 
-#> $grid$root$data[[2]]$data
-#> $grid$root$data[[2]]$data$views
-#> $grid$root$data[[2]]$data$views[[1]]
-#> [1] "b"
-#> 
-#> $grid$root$data[[2]]$data$views[[2]]
-#> [1] "edit_board_extension"
-#> 
-#> 
-#> $grid$root$data[[2]]$data$activeView
-#> [1] "edit_board_extension"
-#> 
-#> $grid$root$data[[2]]$data$id
-#> [1] "2"
-#> 
-#> 
-#> $grid$root$data[[2]]$size
-#> [1] 0.7
-#> 
-#> 
-#> 
-#> $grid$root$size
-#> [1] 1
-#> 
-#> 
-#> $grid$orientation
-#> [1] "HORIZONTAL"
-#> 
-#> 
-#> $activeGroup
-#> [1] "1"
-#> 
-#> attr(,"class")
-#> [1] "dock_layout"
+#> <dock_layout> horizontal
+#> ├─ a (30%)
+#> └─ tabs (70%)
+#>    ├─ b
+#>    └─ edit_board_extension (active)
 
 # Vertical top-level split
 dock_layout("a", "b", orientation = "vertical")
-#> $grid
-#> $grid$root
-#> $grid$root$type
-#> [1] "branch"
-#> 
-#> $grid$root$data
-#> $grid$root$data[[1]]
-#> $grid$root$data[[1]]$type
-#> [1] "leaf"
-#> 
-#> $grid$root$data[[1]]$data
-#> $grid$root$data[[1]]$data$views
-#> $grid$root$data[[1]]$data$views[[1]]
-#> [1] "a"
-#> 
-#> 
-#> $grid$root$data[[1]]$data$activeView
-#> [1] "a"
-#> 
-#> $grid$root$data[[1]]$data$id
-#> [1] "1"
-#> 
-#> 
-#> $grid$root$data[[1]]$size
-#> [1] 0.5
-#> 
-#> 
-#> $grid$root$data[[2]]
-#> $grid$root$data[[2]]$type
-#> [1] "leaf"
-#> 
-#> $grid$root$data[[2]]$data
-#> $grid$root$data[[2]]$data$views
-#> $grid$root$data[[2]]$data$views[[1]]
-#> [1] "b"
-#> 
-#> 
-#> $grid$root$data[[2]]$data$activeView
-#> [1] "b"
-#> 
-#> $grid$root$data[[2]]$data$id
-#> [1] "2"
-#> 
-#> 
-#> $grid$root$data[[2]]$size
-#> [1] 0.5
-#> 
-#> 
-#> 
-#> $grid$root$size
-#> [1] 1
-#> 
-#> 
-#> $grid$orientation
-#> [1] "VERTICAL"
-#> 
-#> 
-#> $activeGroup
-#> [1] "1"
-#> 
-#> attr(,"class")
-#> [1] "dock_layout"
+#> <dock_layout> vertical
+#> ├─ a
+#> └─ b
 ```
