@@ -367,6 +367,17 @@ test_that("drop_panels_from_layout preserves remaining structure", {
   expect_length(layout_panel_ids(res_full), 0L)
 })
 
+test_that("drop_panels_from_layout resets the active tab when it is dropped", {
+
+  ly <- dock_layout(panels("a", "b", active = "b"))
+
+  res <- drop_panels_from_layout(ly, "b")
+  leaf <- res[["grid"]][["root"]][["data"]][[1L]][["data"]]
+
+  expect_identical(unlist(leaf[["views"]]), "a")
+  expect_identical(leaf[["activeView"]], "a")
+})
+
 test_that("empty views payload causes apply to be a no-op", {
 
   brd <- new_dock_board(

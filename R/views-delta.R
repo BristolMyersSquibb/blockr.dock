@@ -241,7 +241,7 @@ drop_panels_from_layout <- function(layout, panel_ids) {
 
   drop_from_leaf <- function(leaf) {
 
-    views <- unlist(leaf[["data"]][["views"]], use.names = FALSE)
+    views <- unlst(leaf[["data"]][["views"]])
     kept <- setdiff(views, panel_ids)
 
     if (!length(kept)) {

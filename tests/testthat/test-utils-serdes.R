@@ -228,6 +228,15 @@ test_that("grid_map_leaves collapses to a NULL root when every leaf prunes", {
   expect_identical(grid_panel_ids(out), character())
 })
 
+test_that("grid_map_leaves is a no-op on an already-empty grid", {
+
+  grid <- list(root = NULL, orientation = "HORIZONTAL")
+  out <- grid_map_leaves(grid, identity)
+
+  expect_null(out[["root"]])
+  expect_identical(out[["orientation"]], "HORIZONTAL")
+})
+
 test_that("constructor and JSON paths yield identical specs", {
 
   ctor <- dock_layout("a", "b")
