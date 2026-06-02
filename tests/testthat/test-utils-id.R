@@ -105,3 +105,19 @@ test_that("ids", {
   expect_identical(dock_pnl_ids, as_dock_panel_id(panel_ids))
   expect_identical(as_obj_id(dock_pnl_ids), obj_ids)
 })
+
+test_that("view handle ids round-trip", {
+
+  view_id <- "verdant_aardvark"
+
+  hndl <- as_view_handle_id(view_id)
+
+  expect_s3_class(hndl, c("view_handle_id", "dock_handle_id", "dock_id"))
+  expect_true(is_dock_id(hndl))
+  expect_true(is_dock_handle_id(hndl))
+  expect_true(maybe_view_handle_id(hndl))
+
+  expect_identical(unclass(hndl), "view_handle-verdant_aardvark")
+  expect_identical(hndl, as_view_handle_id(hndl))
+  expect_identical(view_id, as_obj_id(hndl))
+})

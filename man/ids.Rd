@@ -9,6 +9,7 @@
 \alias{as_dock_handle_id}
 \alias{as_block_handle_id}
 \alias{as_ext_handle_id}
+\alias{as_view_handle_id}
 \title{ID utilities}
 \usage{
 dock_id(ns = NULL)
@@ -26,6 +27,8 @@ as_dock_handle_id(x)
 as_block_handle_id(x)
 
 as_ext_handle_id(x)
+
+as_view_handle_id(x)
 }
 \arguments{
 \item{ns}{Namespace prefix}
@@ -41,8 +44,9 @@ functions \code{as_dock_panel_id()} and \code{as_dock_handle_id()} return object
 that inherit from \code{dock_panel_id} and \code{dock_handle_id}, in addition to
 a sub-class such as \code{block_panel_id} or \code{ext_panel_id} (in the case of
 \code{as_dock_panel_id()}). If a mix of sub-classes is returned, this will be
-represented by a list of classed character vectors. Finally, \code{as_obj_id()}
-returns a character vector, as does \code{dock_id()}.
+represented by a list of classed character vectors. \code{as_view_handle_id()}
+maps a view id to its DOM container id (a \code{view_handle_id}). Finally,
+\code{as_obj_id()} returns a character vector, as does \code{dock_id()}.
 }
 \description{
 Objects, such as blocks and dock extensions carry their own IDs. These
@@ -53,7 +57,8 @@ panel IDs additionally inherit from \code{dock_panel_id}, while handle IDs
 inherit from \code{dock_handle_id}. For panel IDs, depending on whether the panel
 is showing a block or an extension, the inheritance structure additionally
 contains \code{block_panel_id} or \code{ext_panel_id}, respectively. Similarly, for
-handle IDs, we have \code{block_handle_id} and \code{ext_handle_id}. All \code{dock_id}
+handle IDs, we have \code{block_handle_id} and \code{ext_handle_id} for block / extension
+cards, plus \code{view_handle_id} for a view's DOM container. All \code{dock_id}
 objects can be converted back to native IDs, by calling \code{as_obj_id()}.
 The utility function \code{dock_id()} returns a (possibly namespaced) ID of the
 \code{dock} instance that is used to manage all visible panels.

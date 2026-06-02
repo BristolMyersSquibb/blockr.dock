@@ -166,7 +166,7 @@ init_view_docks <- function(views, board, update, triggers, session, dock_mgr,
       selector = paste0("#", ns("view_container")),
       where = "beforeEnd",
       ui = div(
-        id = ns(paste0("view_wrap_", v_id)),
+        id = ns(as_view_handle_id(v_id)),
         class = paste(
           "blockr-view-dock",
           if (identical(v_id, active_v)) "blockr-view-dock-active"
@@ -243,7 +243,7 @@ switch_view_observer <- function(vs, session, dock_mgr) {
         "switch-view",
         list(
           id = session$ns(
-            paste0("view_wrap_", dock_mgr$docks[[new_id]]$dock_id)
+            as_view_handle_id(dock_mgr$docks[[new_id]]$dock_id)
           )
         )
       )

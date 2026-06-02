@@ -89,28 +89,15 @@ reconstruct_dock_layouts <- function(views) {
   validate_dock_layouts(structure(views, class = "dock_layouts"))
 }
 
-# Mint a stable id per view, store the display name (the incoming list
-# name) as an attribute and re-key the list by id.
+# Move the incoming list name onto each view as its display-name
+# attribute and re-key the list by a freshly minted stable id. Ids come
+# from blockr.core's `rand_names()`, the same generator block / stack /
+# link ids use, so views are styled consistently with the rest.
 mint_view_ids <- function(views) {
-
-  nms <- names(views)
-  used <- character()
-  out <- list()
-
-  for (i in seq_along(views)) {
-
-    id <- new_view_id(used)
-    used <- c(used, id)
-    out[[id]] <- `view_name<-`(views[[i]], nms[[i]])
-  }
-
-  out
-}
-
-# A stable, DOM- and namespace-safe view id, unique against `existing`
-# (the promoted runtime dock id this issue makes persistent).
-new_view_id <- function(existing = character()) {
-  paste0("dock_", rand_names(sub("^dock_", "", existing)))
+  set_names(
+    map(`view_name<-`, views, names(views)),
+    rand_names(n = length(views))
+  )
 }
 
 validate_view_input_names <- function(nms) {

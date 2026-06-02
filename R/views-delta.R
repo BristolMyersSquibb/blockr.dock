@@ -71,20 +71,14 @@ normalize_views_delta <- function(views, board) {
   views
 }
 
-# Give each added view a stable id, re-keyed by id with the former list
-# key carried as the display name.
+# Give each added view a stable id (minted via `rand_names()`, unique
+# against the existing view ids), re-keyed by id with the former list key
+# carried as the display name.
 mint_added_view_ids <- function(add, existing_ids) {
-
-  used <- existing_ids
-  out <- list()
-
-  for (nm in names(add)) {
-    id <- new_view_id(used)
-    used <- c(used, id)
-    out[[id]] <- `view_name<-`(add[[nm]], nm)
-  }
-
-  out
+  set_names(
+    map(`view_name<-`, add, names(add)),
+    rand_names(existing_ids, n = length(add))
+  )
 }
 
 # Map a single view reference (an id already, or a display name) to a view
@@ -427,7 +421,7 @@ apply_views_rm <- function(rm_ids, board, dock_mgr = NULL, session = NULL) {
 
       destroy_module(rm_dock$dock_id, session = session)
       removeUI(
-        selector = paste0("#", ns(paste0("view_wrap_", rm_dock$dock_id))),
+        selector = paste0("#", ns(as_view_handle_id(rm_dock$dock_id))),
         immediate = TRUE,
         session = session
       )
@@ -455,7 +449,7 @@ apply_views_rm <- function(rm_ids, board, dock_mgr = NULL, session = NULL) {
       session$sendCustomMessage(
         "switch-view",
         list(
-          id = ns(paste0("view_wrap_", dock_mgr$docks[[new_active]]$dock_id))
+          id = ns(as_view_handle_id(dock_mgr$docks[[new_active]]$dock_id))
         )
       )
 
@@ -508,7 +502,7 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
       selector = paste0("#", ns("view_container")),
       where = "beforeEnd",
       ui = div(
-        id = ns(paste0("view_wrap_", v)),
+        id = ns(as_view_handle_id(v)),
         class = "blockr-view-dock",
         dockViewR::dock_view_output(
           dock_output_id,
@@ -712,7 +706,7 @@ apply_views_active <- function(active, board, dock_mgr = NULL,
   session$sendCustomMessage(
     "switch-view",
     list(
-      id = ns(paste0("view_wrap_", dock_mgr$docks[[active]]$dock_id))
+      id = ns(as_view_handle_id(dock_mgr$docks[[active]]$dock_id))
     )
   )
 
