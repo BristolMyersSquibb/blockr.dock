@@ -177,4 +177,3 @@ valid_stack_color <- function(color, session) {
   }
   TRUE
 }
-

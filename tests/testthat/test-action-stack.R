@@ -4,7 +4,7 @@
 # `menu-stack_color`, and `menu-stack_id`. Drive them directly to
 # simulate the user creating / editing a stack.
 local_mocked_sidebar <- function(env = parent.frame()) {
-  local_mocked_bindings(
+  testthat::local_mocked_bindings(
     show_sidebar         = function(...) invisible(list(...)),
     keep_or_hide_sidebar = function(...) invisible(list(...)),
     hide_sidebar         = function(...) invisible(list(...)),
