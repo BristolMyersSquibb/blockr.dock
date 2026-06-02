@@ -19,6 +19,9 @@
 #' @param layouts A named list of per-view arrangements (multi-view), a
 #'   `dock_layout` / raw list (single-page), or an existing `dock_layouts`
 #'   collection. All forms are normalised to `dock_layouts`.
+#' @param active Id of the initially active view (a key of `layouts`).
+#'   Defaults to the first view. Which view is active is a property of the
+#'   collection, not of an individual layout.
 #'
 #' @examples
 #' brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
@@ -39,10 +42,10 @@
 new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            ..., extensions = new_dock_extensions(),
                            layouts = default_layout(blocks, extensions),
-                           options = dock_board_options(),
+                           active = NULL, options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
-  layouts <- initialise_layout(layouts, blocks, extensions)
+  layouts <- initialise_layout(layouts, blocks, extensions, active)
 
   new_board(
     blocks = as_blocks(blocks),
@@ -58,56 +61,58 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
   )
 }
 
-initialise_layout <- function(layouts, blocks, extensions) {
+initialise_layout <- function(layouts, blocks, extensions, active = NULL) {
 
   c_blks <- as_blocks(blocks)
   c_exts <- as_dock_extensions(extensions)
 
-  if (is_dock_layouts(layouts)) {
-    return(validate_dock_layouts(layouts))
-  }
+  res <- if (is_dock_layouts(layouts)) {
 
-  if (is_dock_layout(layouts)) {
-    return(as_dock_layouts(resolve_dock_layout(c_blks, c_exts, layouts)))
-  }
+    validate_dock_layouts(layouts)
 
-  if (is.list(layouts) && "grid" %in% names(layouts)) {
-    return(
-      as_dock_layouts(
-        resolve_dock_layout(c_blks, c_exts, dockview_to_layout(layouts))
-      )
+  } else if (is_dock_layout(layouts)) {
+
+    as_dock_layouts(resolve_dock_layout(c_blks, c_exts, layouts))
+
+  } else if (is.list(layouts) && "grid" %in% names(layouts)) {
+
+    as_dock_layouts(
+      resolve_dock_layout(c_blks, c_exts, dockview_to_layout(layouts))
     )
-  }
 
-  # A multi-view input is a list keyed by view id, or a list whose
-  # elements are themselves `dock_layout`s (keyless — ids minted). A bare
-  # list of panel ids (`list("a", "b")`) is a single view's children.
-  is_multi_view <- (
-    is.list(layouts) && length(layouts) > 0L &&
-      (!is.null(names(layouts)) || any(lgl_ply(layouts, is_dock_layout)))
-  )
+  } else if (is_multi_view(layouts)) {
 
-  if (!is_multi_view) {
+    resolve_views(layouts, c_blks, c_exts)
+
+  } else {
+
     spec <- if (is.list(layouts)) {
       do.call(dock_layout, layouts)
     } else {
       do.call(dock_layout, as.list(layouts))
     }
-    return(as_dock_layouts(resolve_dock_layout(c_blks, c_exts, spec)))
+    as_dock_layouts(resolve_dock_layout(c_blks, c_exts, spec))
   }
 
-  resolve_views(layouts, c_blks, c_exts)
+  # The active view is the container's to name (by id); default first.
+  if (!is.null(active)) {
+    active_view(res) <- active
+  }
+
+  res
+}
+
+# A multi-view input is a list keyed by view id, or a list whose elements
+# are themselves `dock_layout`s (keyless — ids minted). A bare list of
+# panel ids (`list("a", "b")`) is a single view's children.
+is_multi_view <- function(layouts) {
+  is.list(layouts) && length(layouts) > 0L &&
+    (!is.null(names(layouts)) || any(lgl_ply(layouts, is_dock_layout)))
 }
 
 resolve_views <- function(specs, c_blks, c_exts) {
 
   specs <- lapply(specs, coerce_view_spec)
-
-  # Capture which view is active before resolving: the active marker lives
-  # on the container, so the position is what carries over (resolving a
-  # view rebuilds the layout and drops its construction-time hint).
-  hinted <- lgl_ply(specs, has_active_hint)
-  active_idx <- if (any(hinted)) which(hinted)[1L] else 1L
 
   ext_list <- as.list(c_exts)
 
@@ -127,12 +132,7 @@ resolve_views <- function(specs, c_blks, c_exts) {
     specs[[i]] <- resolve_dock_layout(v_blks, v_exts, ly)
   }
 
-  specs <- mint_view_ids(specs)
-
-  res <- reconstruct_dock_layouts(specs)
-  active_view(res) <- names(specs)[active_idx]
-
-  res
+  reconstruct_dock_layouts(mint_view_ids(specs))
 }
 
 #' @rdname layout-json
@@ -155,8 +155,7 @@ coerce_view_spec <- function(v) {
   }
 
   if (is.list(v)) {
-    active <- isTRUE(attr(v, "active", exact = TRUE))
-    return(do.call(dock_layout, c(unname(v), list(active = active))))
+    return(do.call(dock_layout, unname(v)))
   }
 
   blockr_abort(

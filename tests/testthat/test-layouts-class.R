@@ -23,20 +23,18 @@ test_that("multi-view layouts via new_dock_board", {
   expect_identical(active_name(views), "Analysis")
 })
 
-test_that("dock_layout marker selects active view", {
+test_that("new_dock_board(active=) selects the active view by id", {
 
   brd <- new_dock_board(
     blocks = c(x = new_dataset_block(), y = new_head_block()),
-    layouts = list(
-      A = list("x"),
-      B = dock_layout("y", active = TRUE)
-    )
+    layouts = list(A = list("x"), B = list("y")),
+    active = "B"
   )
 
   expect_identical(active_name(brd), "B")
 })
 
-test_that("auto-defaults first view active when none marked", {
+test_that("auto-defaults first view active when none chosen", {
 
   brd <- new_dock_board(
     blocks = c(x = new_dataset_block(), y = new_head_block()),
@@ -46,19 +44,16 @@ test_that("auto-defaults first view active when none marked", {
   expect_identical(active_name(brd), "A")
 })
 
-test_that("multiple active hints resolve to the first", {
+test_that("new_dock_board rejects an unknown active id", {
 
-  # The container holds a single active id, so two construction-time hints
-  # can't produce two active views: the first one wins (no error).
-  brd <- new_dock_board(
-    blocks = c(x = new_dataset_block(), y = new_head_block()),
-    layouts = list(
-      A = dock_layout("x", active = TRUE),
-      B = dock_layout("y", active = TRUE)
-    )
+  expect_error(
+    new_dock_board(
+      blocks = c(x = new_dataset_block(), y = new_head_block()),
+      layouts = list(A = list("x"), B = list("y")),
+      active = "nope"
+    ),
+    class = "dock_view_not_found"
   )
-
-  expect_identical(active_name(brd), "A")
 })
 
 test_that("empty layouts arg yields a single auto-generated view", {
@@ -207,14 +202,15 @@ test_that("multi-view layouts produce typed slots", {
   expect_true(is_dock_layout(views[[vid(views, "Tab2")]]))
 })
 
-test_that("active attribute survives layout resolution", {
+test_that("the active view survives layout resolution", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
       First = list("a"),
-      Second = dock_layout("a", "b", active = TRUE)
-    )
+      Second = dock_layout("a", "b")
+    ),
+    active = "Second"
   )
 
   views <- board_layouts(brd)

@@ -22,8 +22,9 @@ test_that("dock_layouts serialization round-trip", {
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
       Tab1 = list("a", "b"),
-      Tab2 = dock_layout("a", active = TRUE)
-    )
+      Tab2 = dock_layout("a")
+    ),
+    active = "Tab2"
   )
 
   ser <- blockr_ser(brd)
@@ -50,8 +51,9 @@ test_that("a multi-view board round-trips identically through ser/des", {
         sizes = c(0.3, 0.7),
         name = "Analysis"
       ),
-      overview = dock_layout("a", name = "Overview", active = TRUE)
-    )
+      overview = dock_layout("a", name = "Overview")
+    ),
+    active = "overview"
   )
 
   before <- board_layouts(brd)
@@ -71,8 +73,9 @@ test_that("serialized dock_layouts records view id, name and active", {
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
       view_one = dock_layout("a", name = "Analysis"),
-      view_two = dock_layout("b", active = TRUE, name = "Overview")
-    )
+      view_two = dock_layout("b", name = "Overview")
+    ),
+    active = "view_two"
   )
 
   layouts <- blockr_ser(brd)[["payload"]][["layouts"]]

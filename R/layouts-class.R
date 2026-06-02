@@ -20,10 +20,10 @@
 #' is the panel arrangement inside that view (a [dock_layout()], or a raw
 #' list of block / extension IDs). The display name is set on the layout
 #' via `dock_layout(name = )`; with none set, a label is derived from the
-#' id. A view can be marked as the initially-active one by passing
-#' `active = TRUE` to [dock_layout()]; if none is marked, the first one is
-#' used. View CRUD is enabled unless the dock is locked (see
-#' `is_dock_locked()`).
+#' id. The initially-active view is chosen by `new_dock_board(active = )`
+#' (a view id), defaulting to the first; it is a property of the
+#' collection, never of an individual layout. View CRUD is enabled unless
+#' the dock is locked (see `is_dock_locked()`).
 #'
 #' Users do not normally construct a `dock_layouts` directly; instead
 #' they pass a plain named list to `new_dock_board(layouts = ...)`,
@@ -47,8 +47,9 @@
 #'   ),
 #'   layouts = list(
 #'     analysis = dock_layout("dataset_1", "head_1", name = "Analysis"),
-#'     overview = dock_layout("dataset_1", name = "Overview", active = TRUE)
-#'   )
+#'     overview = dock_layout("dataset_1", name = "Overview")
+#'   ),
+#'   active = "overview"
 #' )
 #' view_names(board_layouts(brd))
 #'
@@ -317,27 +318,11 @@ as_dock_layouts.dock_layout <- function(x, ...) {
 }
 
 # Wrap an id-keyed list of views as a `dock_layouts`, recording the active
-# view as a single field on the container. The active view is the one
-# carrying a construction-time hint (`dock_layout(active = TRUE)`), or the
-# first view when none is hinted; the per-view hints are dropped so the
-# container is the sole owner of the marker.
+# view as a single field on the container. Active defaults to the first
+# view; callers choose a different one through `active_view<-()` (or, at
+# board construction, `new_dock_board(active = )`). A view never carries
+# its own active marker — the container is the sole owner.
 finalize_layouts_active <- function(views) {
-
-  hinted <- lgl_ply(views, has_active_hint)
-
-  active <- if (any(hinted)) {
-    names(views)[which(hinted)[1L]]
-  } else if (length(views)) {
-    names(views)[1L]
-  } else {
-    NULL
-  }
-
-  views <- lapply(views, `attr<-`, "active", NULL)
-
+  active <- if (length(views)) names(views)[1L] else NULL
   structure(views, class = "dock_layouts", active = active)
-}
-
-has_active_hint <- function(x) {
-  isTRUE(attr(x, "active", exact = TRUE))
 }
