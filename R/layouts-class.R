@@ -62,7 +62,8 @@ new_dock_layouts <- function(...) {
   }
 
   if (!length(vws)) {
-    vws <- list(Page = new_dock_layout())
+    # Keyless: id is minted, display name derived from it (no hardcoded id).
+    vws <- list(new_dock_layout())
   }
 
   vws <- mint_view_ids(vws)
@@ -102,29 +103,12 @@ mint_view_ids <- function(views, reserved = character()) {
   }
 
   given <- nzchar(ids)
-  validate_view_ids(ids[given])
 
   if (any(!given)) {
     ids[!given] <- rand_names(c(reserved, ids[given]), n = sum(!given))
   }
 
   set_names(views, ids)
-}
-
-# View ids key the container, so they must be DOM- and namespace-safe
-# identifiers — free-form display labels live on the object as the name.
-validate_view_ids <- function(ids) {
-
-  bad <- ids[!grepl("^[A-Za-z0-9_]+$", ids)]
-
-  if (length(bad)) {
-    blockr_abort(
-      "View id{?s} {bad} must be alphanumeric (underscores allowed).",
-      class = "dock_view_id_invalid"
-    )
-  }
-
-  invisible(ids)
 }
 
 #' @rdname view
@@ -157,6 +141,17 @@ validate_dock_layouts <- function(x) {
     blockr_abort(
       "View ids must be unique.",
       class = "dock_layouts_ids_duplicated"
+    )
+  }
+
+  # Ids key the container and become DOM / namespace ids, so they must be
+  # safe identifiers; free-form display labels live on the view as a name.
+  bad <- ids[!grepl("^[A-Za-z0-9_]+$", ids)]
+
+  if (length(bad)) {
+    blockr_abort(
+      "View id{?s} {bad} must be alphanumeric (underscores allowed).",
+      class = "dock_view_id_invalid"
     )
   }
 
@@ -203,16 +198,16 @@ layout_ids <- function(x) {
 #' @rdname view
 #' @export
 view_name <- function(x) {
-  # exact = TRUE: a bare "name" would otherwise partial-match the "names"
-  # attribute and return the layout's element names.
-  attr(x, "name", exact = TRUE)
+  # Stored under "view_name" rather than "name" so it can't partial-match
+  # the "names" attribute (`attr()` matches partially by default).
+  attr(x, "view_name", exact = TRUE)
 }
 
 #' @rdname view
 #' @export
 `view_name<-` <- function(x, value) {
   stopifnot(is_dock_layout(x), is_string(value))
-  attr(x, "name") <- value
+  attr(x, "view_name") <- value
   x
 }
 
@@ -228,20 +223,12 @@ view_names <- function(x) {
 # name from its class (underscores to spaces, capitalise the first
 # letter). The id is the collection key, so this needs both.
 view_label <- function(layout, id) {
-  coal(view_name(layout), humanize_id(id), fail_all = FALSE)
+  coal(view_name(layout), name_from_id(id), fail_all = FALSE)
 }
 
-humanize_id <- function(id) {
+name_from_id <- function(id) {
   res <- gsub("_", " ", id)
   paste0(toupper(substr(res, 1L, 1L)), substring(res, 2L))
-}
-
-# Resolve a display label to its view id within a collection. Returns the
-# first match (display labels are kept unique at the input / UI boundary)
-# or `NA`.
-view_id_by_name <- function(x, name) {
-  nms <- view_names(x)
-  unname(names(nms)[match(name, nms)])
 }
 
 #' @rdname view
@@ -333,7 +320,7 @@ as_dock_layouts.dock_layouts <- function(x, ...) x
 
 #' @export
 as_dock_layouts.dock_layout <- function(x, ...) {
-  dock_layouts(Page = set_active_view(x))
+  dock_layouts(set_active_view(x))
 }
 
 is_active_view <- function(x) {

@@ -15,9 +15,11 @@
   ids. In `new_dock_board(layouts = list(...))` the **list name is the
   view's id** (the container's key, like a block id — minted when
   absent); the display name is set on the view via `dock_layout(name = )`
-  and falls back to a label derived from the id when unset. Name-keyed
-  `views` deltas (e.g. from `blockr.assistant`) are resolved to ids at
-  ingest, so existing producers keep working unchanged (#166).
+  and falls back to a label derived from the id when unset. The `views`
+  delta addresses existing views by **id** (the only stable handle) —
+  `mod` / `rm` / `active` carry ids; `add` supplies a display name and
+  mints the id. Producers that addressed views by name (e.g.
+  `blockr.assistant`) must switch to ids (#166).
 
 * `dock_layout` objects gain `format()` / `print()` methods that render
   the arrangement as an indented tree: orientation, nested groups with

@@ -534,10 +534,6 @@ new_view_handle_id <- function(x) {
   new_dock_handle_id(x, "view_handle_id")
 }
 
-is_view_handle_id <- function(x) {
-  inherits(x, "view_handle_id")
-}
-
 maybe_view_handle_id <- function(x) {
   grepl("^view_handle-", x)
 }

@@ -108,36 +108,17 @@ blockr_deser.dock_layout <- function(x, data, ...) {
 #' @export
 blockr_deser.dock_layouts <- function(x, data, ...) {
   payload <- data[["payload"]]
-  views <- payload[["views"]]
 
-  v_list <- lapply(views, blockr_deser)
+  # `views` is keyed by stable id; each carries its display name (when
+  # set) and the active marker. Restore the ids as-is and the active view
+  # by id.
+  res <- reconstruct_dock_layouts(lapply(payload[["views"]], blockr_deser))
 
-  # New-format payloads key `views` by stable id and carry the display
-  # name on each layout; legacy payloads key by display name with no id.
-  # Restore ids when present, mint them (using the name keys) otherwise.
-  if (length(v_list) && all(lgl_ply(v_list, has_view_name))) {
-
-    res <- reconstruct_dock_layouts(v_list)
-
-    if (is_string(payload[["active"]]) && payload[["active"]] %in% names(res)) {
-      active_view(res) <- payload[["active"]]
-    }
-
-  } else {
-
-    res <- dock_layouts(set_names(v_list, names(views)))
-
-    active_id <- view_id_by_name(res, payload[["active"]])
-    if (!is.na(active_id)) {
-      active_view(res) <- active_id
-    }
+  if (is_string(payload[["active"]]) && payload[["active"]] %in% names(res)) {
+    active_view(res) <- payload[["active"]]
   }
 
   res
-}
-
-has_view_name <- function(x) {
-  is_string(view_name(x))
 }
 
 #' @export

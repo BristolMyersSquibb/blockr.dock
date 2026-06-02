@@ -41,61 +41,22 @@ resolve_views_layouts <- function(views, board, upd) {
 }
 
 # Normalise an inbound `views` delta to be keyed purely by stable view id.
-# The dock's own live-sync emits id-keyed deltas already; external
-# producers (e.g. the assistant) address views by display name. Here every
-# `add` gets a freshly minted id (its key — the desired display name —
-# becomes the new view's name), and every `mod` / `rm` / `active`
-# reference — an id or a name — resolves to an id. Downstream of this, a
-# name is never a key.
+# Existing views are addressed by id only — `mod` / `rm` / `active` carry
+# ids (the one unique, stable handle; the display name is just sugar) and
+# pass through untouched. The exception is `add`: a new view has no id
+# yet, so its key is the desired display name and a fresh id is minted.
 normalize_views_delta <- function(views, board) {
 
-  layouts <- board_layouts(board)
-
   if (length(views$add)) {
-    views$add <- mint_added_view_ids(views$add, names(layouts))
-  }
-
-  if (length(views$mod)) {
-    names(views$mod) <- chr_ply(
-      names(views$mod), resolve_view_ref, layouts, views$add
-    )
-  }
-
-  if (length(views$rm)) {
-    views$rm <- chr_ply(views$rm, resolve_view_ref, layouts, views$add)
-  }
-
-  if (!is.null(views$active)) {
-    views$active <- resolve_view_ref(views$active, layouts, views$add)
+    views$add <- mint_added_view_ids(views$add, names(board_layouts(board)))
   }
 
   views
 }
 
-# Map a single view reference (an id already, or a display name) to a view
-# id, considering existing board views and views added in the same delta.
-resolve_view_ref <- function(ref, layouts, added = list()) {
-
-  if (ref %in% names(layouts) || ref %in% names(added)) {
-    return(ref)
-  }
-
-  by_name <- view_id_by_name(layouts, ref)
-  if (!is.na(by_name)) {
-    return(by_name)
-  }
-
-  added_hit <- match(ref, chr_ply(added, view_name))
-  if (!is.na(added_hit)) {
-    return(names(added)[added_hit])
-  }
-
-  ref
-}
-
-# Wire-added views are keyed by the desired display name (the LLM / UI
-# supplies a name, not an id): mint a fresh id for each — unique against
-# the board's existing ids — and carry the key over as the display name.
+# Mint a fresh id for each added view — unique against the board's
+# existing ids — carrying the key (the desired display name) onto the
+# view as its name.
 mint_added_view_ids <- function(add, reserved) {
   set_names(
     map(`view_name<-`, add, names(add)),
@@ -476,9 +437,20 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
 
   layouts <- board_layouts(board)
 
+  # An added view may ask to become active (its layout carries the active
+  # marker). At most one view is active, so clear the rest when it does.
+  flags <- lgl_ply(add_views, is_active_view, use_names = TRUE)
+  new_active <- names(flags)[flags][1L]
+
+  if (!is.na(new_active)) {
+    for (id in names(layouts)) {
+      layouts[[id]] <- set_active_view(layouts[[id]], FALSE)
+    }
+  }
+
   for (v in names(add_views)) {
 
-    layouts[[v]] <- set_active_view(add_views[[v]], active = FALSE)
+    layouts[[v]] <- set_active_view(add_views[[v]], identical(v, new_active))
   }
 
   board_layouts(board) <- layouts
@@ -542,6 +514,10 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
   }
 
   dock_mgr$vs$state <- state
+
+  if (!is.na(new_active)) {
+    switch_active_view(new_active, dock_mgr, session)
+  }
 
   board
 }
@@ -696,12 +672,23 @@ apply_views_active <- function(active, board, dock_mgr = NULL,
     return(board)
   }
 
+  switch_active_view(active, dock_mgr, session)
+
+  board
+}
+
+# Runtime switch to view `active` (by id): activate its dock in the DOM,
+# move the block / ext UIs across, and point active_dock and the nav at
+# it. The board's active marker is set by the caller; this drives the
+# live session state.
+switch_active_view <- function(active, dock_mgr, session) {
+
   ns <- session$ns
   state <- isolate(dock_mgr$vs$state)
   old_active <- active_view(state)
 
   if (identical(old_active, active)) {
-    return(board)
+    return(invisible())
   }
 
   session$sendCustomMessage(
@@ -725,7 +712,7 @@ apply_views_active <- function(active, board, dock_mgr = NULL,
     list(value = active)
   )
 
-  board
+  invisible()
 }
 
 # Apply one view's layout change. v1 unconditionally restores the target

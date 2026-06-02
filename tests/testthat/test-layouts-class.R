@@ -60,13 +60,30 @@ test_that("rejects multiple active views", {
   )
 })
 
-test_that("empty layouts arg yields a single Page view", {
+test_that("empty layouts arg yields a single auto-generated view", {
 
   brd <- new_dock_board()
   views <- board_layouts(brd)
 
   expect_length(views, 1L)
-  expect_identical(unname(view_names(views)), "Page")
+  expect_true(nzchar(names(views)))
+  expect_identical(active_view(views), names(views))
+})
+
+test_that("dock_layouts() with no views yields one auto-generated view", {
+
+  views <- dock_layouts()
+
+  expect_s3_class(views, "dock_layouts")
+  expect_length(views, 1L)
+  expect_true(nzchar(names(views)))
+})
+
+test_that("dock_layouts() unwraps a single list of views", {
+
+  views <- dock_layouts(list(one = dock_layout("a"), two = dock_layout("b")))
+
+  expect_identical(names(views), c("one", "two"))
 })
 
 test_that("active_view get/set on a dock_board", {
@@ -184,15 +201,15 @@ test_that("active attribute survives layout resolution", {
   expect_true(is_dock_layout(views[[vid(views, "Second")]]))
 })
 
-test_that("default board has a single auto-named Page view", {
+test_that("default board has a single auto-generated, active view", {
 
   brd <- new_dock_board(c(a = new_dataset_block()))
   views <- board_layouts(brd)
 
   expect_s3_class(views, "dock_layouts")
-  expect_identical(unname(view_names(views)), "Page")
-  expect_identical(active_name(views), "Page")
-  expect_true(is_dock_layout(views[[vid(views, "Page")]]))
+  expect_length(views, 1L)
+  expect_identical(active_view(views), names(views))
+  expect_true(is_dock_layout(views[[names(views)]]))
 })
 
 test_that("raw grid layout is wrapped in a single-page dock_layouts", {
@@ -204,8 +221,8 @@ test_that("raw grid layout is wrapped in a single-page dock_layouts", {
 
   views <- board_layouts(brd)
   expect_s3_class(views, "dock_layouts")
-  expect_identical(unname(view_names(views)), "Page")
-  expect_identical(active_name(views), "Page")
+  expect_length(views, 1L)
+  expect_identical(active_view(views), names(views))
 })
 
 test_that("active_layout returns the active view's resolved layout", {
@@ -223,15 +240,15 @@ test_that("active_layout returns the active view's resolved layout", {
   expect_length(layout_panel_ids(ly), 1L)
 })
 
-test_that("as_dock_layouts.dock_layout wraps in single Page", {
+test_that("as_dock_layouts.dock_layout wraps in a single active view", {
 
   ly <- new_dock_layout()
   views <- as_dock_layouts(ly)
 
   expect_s3_class(views, "dock_layouts")
-  expect_identical(unname(view_names(views)), "Page")
-  expect_identical(active_name(views), "Page")
-  expect_true(is_dock_layout(views[[vid(views, "Page")]]))
+  expect_length(views, 1L)
+  expect_identical(active_view(views), names(views))
+  expect_true(is_dock_layout(views[[names(views)]]))
 })
 
 test_that("as_dock_layouts identity on dock_layouts", {

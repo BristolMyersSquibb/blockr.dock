@@ -63,13 +63,14 @@ test_that("apply_views: full delta round-trips through board_layouts", {
     layouts = list(A = list("a"), B = list("b"))
   )
 
+  # add C (marked active — a new view has no id to reference yet), mod A,
+  # rm B. mod / rm address existing views by id.
   upd <- augment_board_update(
     list(
       views = list(
-        add = list(C = dock_layout("a")),
+        add = list(C = set_active_view(dock_layout("a"))),
         mod = list(A = dock_layout("a", "b")),
-        rm = "B",
-        active = "C"
+        rm = "B"
       )
     ),
     brd
@@ -84,6 +85,87 @@ test_that("apply_views: full delta round-trips through board_layouts", {
     layout_panel_ids(views[[vid(views, "A")]]),
     c("block_panel-a", "block_panel-b")
   )
+})
+
+test_that("apply_views_add honours an active add on the board", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"), B = list("b"))
+  )
+  expect_identical(active_view(board_layouts(brd)), "A")
+
+  out <- apply_views_add(
+    setNames(list(set_active_view(dock_layout("a"))), "cid"),
+    brd
+  )
+
+  views <- board_layouts(out)
+  expect_setequal(names(views), c("A", "B", "cid"))
+  expect_identical(active_view(views), "cid")
+})
+
+test_that("apply_views_rename writes the display name, keeps the id", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(
+      view_one = dock_layout("a", name = "Old"),
+      view_two = list("a")
+    )
+  )
+
+  out <- apply_views_rename(setNames(list("New"), "view_one"), brd)
+
+  views <- board_layouts(out)
+  expect_identical(names(views), c("view_one", "view_two"))
+  expect_identical(view_name(views[["view_one"]]), "New")
+})
+
+test_that("rename flows through apply_board_update", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(v1 = dock_layout("a", name = "Old"), v2 = list("a"))
+  )
+
+  out <- apply_board_update(
+    brd,
+    list(views = list(rename = setNames(list("New"), "v1")))
+  )
+
+  expect_identical(view_name(board_layouts(out)[["v1"]]), "New")
+})
+
+test_that("apply_views_rename syncs the nav and live state (runtime)", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(v1 = dock_layout("a", name = "Old"), v2 = list("a"))
+  )
+
+  sent <- list()
+  session <- list(
+    ns = identity,
+    sendInputMessage = function(input_id, message) {
+      sent[[length(sent) + 1L]] <<- message
+      invisible()
+    }
+  )
+
+  dock_mgr <- new_dock_manager()
+  dock_mgr$vs <- reactiveValues(state = board_layouts(brd))
+
+  isolate(
+    apply_views_rename(setNames(list("New"), "v1"), brd, dock_mgr, session)
+  )
+
+  expect_true(
+    any(lgl_ply(sent, function(m) {
+      identical(m$rename$id, "v1") && identical(m$rename$to, "New")
+    }))
+  )
+  expect_identical(view_name(isolate(dock_mgr$vs$state)[["v1"]]), "New")
 })
 
 test_that("blocks$rm auto-augments views$mod for every affected view", {

@@ -5,13 +5,15 @@ board_args <- function(...) {
   )[["board"]]
 }
 
-# Resolve a view's stable id from its display name. Views are keyed by id
-# internally; tests that know a view by name use this to reach its id.
+# Resolve a view's stable id from its display label. Views are keyed by
+# id internally; tests that know a view by its label use this to reach
+# the id (labels are unique within the fixtures).
 vid <- function(x, name) {
   if (is_dock_board(x)) {
     x <- board_layouts(x)
   }
-  id <- view_id_by_name(x, name)
+  nms <- view_names(x)
+  id <- names(nms)[match(name, nms)]
   if (is.na(id)) {
     stop("no view named ", name)
   }
