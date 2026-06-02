@@ -79,8 +79,12 @@ initialise_layout <- function(layouts, blocks, extensions) {
     )
   }
 
+  # A multi-view input is a list keyed by view id, or a list whose
+  # elements are themselves `dock_layout`s (keyless — ids minted). A bare
+  # list of panel ids (`list("a", "b")`) is a single view's children.
   is_multi_view <- (
-    is.list(layouts) && length(layouts) > 0L && !is.null(names(layouts))
+    is.list(layouts) && length(layouts) > 0L &&
+      (!is.null(names(layouts)) || any(lgl_ply(layouts, is_dock_layout)))
   )
 
   if (!is_multi_view) {
@@ -97,8 +101,6 @@ initialise_layout <- function(layouts, blocks, extensions) {
 
 resolve_views <- function(specs, c_blks, c_exts) {
 
-  validate_view_input_names(names(specs))
-
   specs <- lapply(specs, coerce_view_spec)
 
   if (!any(lgl_ply(specs, is_active_view))) {
@@ -107,9 +109,11 @@ resolve_views <- function(specs, c_blks, c_exts) {
 
   ext_list <- as.list(c_exts)
 
-  for (view_name in names(specs)) {
+  # Iterate by position: a view's key is its id and may be absent (minted
+  # later), so it cannot be used to index here.
+  for (i in seq_along(specs)) {
 
-    ly <- specs[[view_name]]
+    ly <- specs[[i]]
     was_active <- is_active_view(ly)
 
     v_obj <- panel_obj_ids(layout_panel_ids(ly))
@@ -119,10 +123,10 @@ resolve_views <- function(specs, c_blks, c_exts) {
       ext_list[intersect(v_obj, names(ext_list))]
     )
 
-    specs[[view_name]] <- resolve_dock_layout(v_blks, v_exts, ly)
+    specs[[i]] <- resolve_dock_layout(v_blks, v_exts, ly)
 
     if (was_active) {
-      specs[[view_name]] <- set_active_view(specs[[view_name]])
+      specs[[i]] <- set_active_view(specs[[i]])
     }
   }
 

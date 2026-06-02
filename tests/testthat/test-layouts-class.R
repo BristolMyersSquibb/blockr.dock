@@ -7,8 +7,8 @@ test_that("multi-view layouts via new_dock_board", {
       c = new_head_block()
     ),
     layouts = list(
-      Analysis = list("a", "b"),
-      Overview = list("c")
+      view_a = dock_layout("a", "b", name = "Analysis"),
+      view_b = dock_layout("c", name = "Overview")
     )
   )
 
@@ -17,9 +17,8 @@ test_that("multi-view layouts via new_dock_board", {
   expect_s3_class(views, "dock_layouts")
   expect_true(is_dock_layouts(views))
   expect_length(views, 2L)
-  expect_true(all(nzchar(names(views))))
-  expect_length(unique(names(views)), 2L)
-  expect_false(any(names(views) %in% view_names(views)))
+  # the list key is the (container's) id; the name lives on the object
+  expect_identical(names(views), c("view_a", "view_b"))
   expect_identical(unname(view_names(views)), c("Analysis", "Overview"))
   expect_identical(active_name(views), "Analysis")
 })
@@ -108,23 +107,37 @@ test_that("active_view returns NULL when no view is active", {
   expect_null(active_view(views))
 })
 
-test_that("rejects invalid layout shapes at the new_dock_board boundary", {
+test_that("rejects invalid view ids at the new_dock_board boundary", {
 
-  expect_error(
-    new_dock_board(
-      blocks = c(a = new_dataset_block(), b = new_head_block()),
-      layouts = list(A = list("a"), list("b"))
-    ),
-    class = "dock_layouts_names_missing"
-  )
-
+  # duplicate ids (list keys)
   expect_error(
     new_dock_board(
       blocks = c(a = new_dataset_block(), b = new_head_block()),
       layouts = list(A = list("a"), A = list("b"))
     ),
-    class = "dock_layouts_names_duplicated"
+    class = "dock_layouts_ids_duplicated"
   )
+
+  # an id (list key) with characters that aren't DOM / namespace safe
+  expect_error(
+    new_dock_board(
+      blocks = c(a = new_dataset_block()),
+      layouts = setNames(list(list("a")), "bad id")
+    ),
+    class = "dock_view_id_invalid"
+  )
+})
+
+test_that("a keyless view gets a minted id", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(pinned = list("a"), dock_layout("b"))
+  )
+
+  ids <- names(board_layouts(brd))
+  expect_true("pinned" %in% ids)
+  expect_length(unique(ids), 2L)
 })
 
 test_that("layout_ids extracts IDs from layout spec", {
@@ -248,61 +261,40 @@ test_that("view_name<- rewrites only the display name, not the id", {
   expect_identical(view_name(views[[id]]), "Renamed")
 })
 
-test_that("dock_layout(id =) pins a fixed view id", {
+test_that("the list key is the view id, the name lives on the layout", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
-      Analysis = dock_layout("a", id = "view_one"),
-      Overview = dock_layout("b", id = "view_two")
+      view_one = dock_layout("a", name = "Analysis"),
+      view_two = dock_layout("b", name = "Overview")
     )
   )
 
   views <- board_layouts(brd)
   expect_identical(names(views), c("view_one", "view_two"))
   expect_identical(unname(view_names(views)), c("Analysis", "Overview"))
-
-  # the construction-time hint is consumed, not retained on the layout
-  expect_null(attr(views[["view_one"]], "id", exact = TRUE))
 })
 
-test_that("fixed and minted view ids coexist", {
+test_that("an unnamed view derives its display label from the id", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(Fixed = dock_layout("a", id = "pinned"), Auto = list("a"))
+    layouts = list(my_view = list("a"))
   )
 
-  ids <- names(board_layouts(brd))
-  expect_true("pinned" %in% ids)
-  expect_length(unique(ids), 2L)
+  views <- board_layouts(brd)
+  expect_null(view_name(views[["my_view"]]))
+  expect_identical(unname(view_names(views)), "My view")
 })
 
-test_that("duplicate fixed view ids are rejected", {
-
-  expect_error(
-    new_dock_board(
-      blocks = c(a = new_dataset_block()),
-      layouts = list(
-        A = dock_layout("a", id = "dup"),
-        B = dock_layout("a", id = "dup")
-      )
-    ),
-    class = "dock_layouts_ids_duplicated"
-  )
-})
-
-test_that("an empty fixed view id is rejected", {
-  expect_error(dock_layout("a", id = ""), class = "dock_view_id_invalid")
-})
-
-test_that("fixed view ids survive serialization", {
+test_that("view ids survive serialization", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
-      Analysis = dock_layout("a", id = "view_one"),
-      Overview = dock_layout("b", id = "view_two")
+      view_one = dock_layout("a", name = "Analysis"),
+      view_two = dock_layout("b", name = "Overview")
     )
   )
 

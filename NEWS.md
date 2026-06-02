@@ -12,11 +12,12 @@
   deterministically from the view id (no random per-render minting), and
   the `views` delta gains a `rename` slot. Naming constraints relax to
   display concerns (non-empty, unique label). Serialization round-trips
-  ids and migrates id-less boards by minting ids on load. Name-keyed
+  ids. In `new_dock_board(layouts = list(...))` the **list name is the
+  view's id** (the container's key, like a block id — minted when
+  absent); the display name is set on the view via `dock_layout(name = )`
+  and falls back to a label derived from the id when unset. Name-keyed
   `views` deltas (e.g. from `blockr.assistant`) are resolved to ids at
-  ingest, so existing producers keep working unchanged. Pass
-  `dock_layout(id = )` to pin a view's id at construction instead of
-  minting one (#166).
+  ingest, so existing producers keep working unchanged (#166).
 
 * `dock_layout` objects gain `format()` / `print()` methods that render
   the arrangement as an indented tree: orientation, nested groups with

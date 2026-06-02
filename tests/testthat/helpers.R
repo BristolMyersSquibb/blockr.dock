@@ -18,7 +18,8 @@ vid <- function(x, name) {
   id
 }
 
-# Display name of the active view, or NULL when none is active.
+# Display label of the active view (derived from the id when unnamed),
+# or NULL when none is active.
 active_name <- function(x) {
   if (is_dock_board(x)) {
     x <- board_layouts(x)
@@ -27,7 +28,7 @@ active_name <- function(x) {
   if (is.null(av)) {
     return(NULL)
   }
-  view_name(x[[av]])
+  unname(view_names(x)[av])
 }
 
 # Minimal externally controllable extension: its sole constructor input

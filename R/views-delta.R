@@ -43,15 +43,16 @@ resolve_views_layouts <- function(views, board, upd) {
 # Normalise an inbound `views` delta to be keyed purely by stable view id.
 # The dock's own live-sync emits id-keyed deltas already; external
 # producers (e.g. the assistant) address views by display name. Here every
-# `add` gets a freshly minted id (its former key becomes the new view's
-# display name), and every `mod` / `rm` / `active` reference — an id or a
-# name — resolves to an id. Downstream of this, a name is never a key.
+# `add` gets a freshly minted id (its key — the desired display name —
+# becomes the new view's name), and every `mod` / `rm` / `active`
+# reference — an id or a name — resolves to an id. Downstream of this, a
+# name is never a key.
 normalize_views_delta <- function(views, board) {
 
   layouts <- board_layouts(board)
 
   if (length(views$add)) {
-    views$add <- mint_view_ids(views$add, names(layouts))
+    views$add <- mint_added_view_ids(views$add, names(layouts))
   }
 
   if (length(views$mod)) {
@@ -90,6 +91,16 @@ resolve_view_ref <- function(ref, layouts, added = list()) {
   }
 
   ref
+}
+
+# Wire-added views are keyed by the desired display name (the LLM / UI
+# supplies a name, not an id): mint a fresh id for each — unique against
+# the board's existing ids — and carry the key over as the display name.
+mint_added_view_ids <- function(add, reserved) {
+  set_names(
+    map(`view_name<-`, add, names(add)),
+    rand_names(reserved, n = length(add))
+  )
 }
 
 # Structural + cross-reference checks for the `views` slice. Runs after

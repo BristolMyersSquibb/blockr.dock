@@ -37,14 +37,14 @@ test_that("dock_layouts serialization round-trip", {
 
 test_that("serialized dock_layouts records view id, name and active", {
 
-  # Fixed ids (via dock_layout(id=)) keep the wire shape deterministic so
-  # the id (object key) / name (field) / active split stays visible and
+  # Fixed ids (the list keys) keep the wire shape deterministic so the id
+  # (object key) / name (field) / active split stays visible and
   # regression-guarded.
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
-      Analysis = dock_layout("a", id = "view_one"),
-      Overview = dock_layout("b", active = TRUE, id = "view_two")
+      view_one = dock_layout("a", name = "Analysis"),
+      view_two = dock_layout("b", active = TRUE, name = "Overview")
     )
   )
 

@@ -15,7 +15,7 @@ view_nav_ui <- function(id, views) {
   ns <- NS(id)
   nav_id <- ns("view_nav")
   active <- active_view(views)
-  active_nm <- coal(view_name(views[[active]]), active, fail_all = FALSE)
+  active_nm <- unname(view_names(views)[active])
   can_crud <- views_can_crud(views)
 
   items <- map(
