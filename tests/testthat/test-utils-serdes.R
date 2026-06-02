@@ -35,6 +35,33 @@ test_that("dock_layouts serialization round-trip", {
   expect_identical(active_name(ly), "Tab2")
 })
 
+test_that("a multi-view board round-trips identically through ser/des", {
+
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(),
+      b = new_head_block(),
+      c = new_head_block()
+    ),
+    layouts = list(
+      analysis = dock_layout(
+        "a",
+        panels("b", "c", active = "c"),
+        sizes = c(0.3, 0.7),
+        name = "Analysis"
+      ),
+      overview = dock_layout("a", name = "Overview", active = TRUE)
+    )
+  )
+
+  before <- board_layouts(brd)
+  after <- blockr_deser(blockr_ser(brd))[["layouts"]]
+
+  # ids (keys), display names, the active marker and every view's layout
+  # survive a full serialize / deserialize cycle.
+  expect_identical(after, before)
+})
+
 test_that("serialized dock_layouts records view id, name and active", {
 
   # Fixed ids (the list keys) keep the wire shape deterministic so the id
