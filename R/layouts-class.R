@@ -90,14 +90,54 @@ reconstruct_dock_layouts <- function(views) {
 }
 
 # Move the incoming list name onto each view as its display-name
-# attribute and re-key the list by a freshly minted stable id. Ids come
-# from blockr.core's `rand_names()`, the same generator block / stack /
-# link ids use, so views are styled consistently with the rest.
-mint_view_ids <- function(views) {
-  set_names(
-    map(`view_name<-`, views, names(views)),
-    rand_names(n = length(views))
-  )
+# attribute and re-key the list by a stable id: an id set explicitly via
+# `dock_layout(id = )` is honoured, the rest are minted with
+# blockr.core's `rand_names()` — the same generator (and bare style)
+# block / stack / link ids use. The construction-time id hint is dropped
+# once consumed, so a freshly built collection is attribute-identical to
+# a deserialized one. `reserved` lists ids already in use (the board's
+# existing views, when minting for a delta-driven add).
+mint_view_ids <- function(views, reserved = character()) {
+
+  views <- map(`view_name<-`, views, names(views))
+
+  ids <- chr_ply(views, view_id_or_na)
+  unset <- is.na(ids)
+
+  if (any(unset)) {
+    ids[unset] <- rand_names(c(reserved, ids[!unset]), n = sum(unset))
+  }
+
+  set_names(lapply(views, drop_view_id), ids)
+}
+
+# Construction-time id hint, stashed by `dock_layout(id = )` and consumed
+# by `mint_view_ids()`. Kept internal: post-assembly a view's id is its
+# collection key (`names()`), never a layout attribute.
+view_id <- function(x) {
+  attr(x, "id", exact = TRUE)
+}
+
+`view_id<-` <- function(x, value) {
+
+  if (!is_string(value) || !nzchar(value)) {
+    blockr_abort(
+      "A view id must be a single non-empty string.",
+      class = "dock_view_id_invalid"
+    )
+  }
+
+  attr(x, "id") <- value
+  x
+}
+
+view_id_or_na <- function(x) {
+  coal(view_id(x), NA_character_, fail_all = FALSE)
+}
+
+drop_view_id <- function(x) {
+  attr(x, "id") <- NULL
+  x
 }
 
 validate_view_input_names <- function(nms) {

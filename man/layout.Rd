@@ -16,7 +16,8 @@ dock_layout(
   ...,
   orientation = c("horizontal", "vertical"),
   active = FALSE,
-  sizes = NULL
+  sizes = NULL,
+  id = NULL
 )
 
 panels(..., active = NULL)
@@ -49,6 +50,10 @@ default.}
 
 \item{sizes}{Numeric vector parallel to \code{...}, giving each child's
 share of the parent (positive; need not sum to 1).}
+
+\item{id}{For \code{dock_layout()}, an optional fixed view id (a single
+non-empty string). When omitted, an id is minted at assembly. Must
+be unique across the views of a \code{dock_layouts}.}
 
 \item{x}{Object}
 
@@ -97,8 +102,11 @@ arrangement (extensions on top, blocks below) for a board.
 
 \code{dock_layout()} accepts \code{orientation = "horizontal" | "vertical"}
 for the top-level split direction, \code{sizes} for the root-branch
-ratios, and \code{active = TRUE} to mark this layout as the
-initially-active view in a \code{dock_layouts} collection.
+ratios, \code{active = TRUE} to mark this layout as the initially-active
+view in a \code{dock_layouts} collection, and \code{id} to pin the view's
+stable id (otherwise one is minted). The list name in
+\code{new_dock_board(layouts = list(...))} becomes the view's display
+name; \code{id} is the only way to also fix its identity.
 
 A \emph{view} is the conceptual page-level container; a \emph{layout} is the
 panel arrangement inside a view. The dockview-shape \code{grid + panels}

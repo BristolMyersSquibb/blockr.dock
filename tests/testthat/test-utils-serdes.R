@@ -35,6 +35,29 @@ test_that("dock_layouts serialization round-trip", {
   expect_identical(active_name(ly), "Tab2")
 })
 
+test_that("serialized dock_layouts records view id, name and active", {
+
+  # Fixed ids (via dock_layout(id=)) keep the wire shape deterministic so
+  # the id (object key) / name (field) / active split stays visible and
+  # regression-guarded.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(
+      Analysis = dock_layout("a", id = "view_one"),
+      Overview = dock_layout("b", active = TRUE, id = "view_two")
+    )
+  )
+
+  layouts <- blockr_ser(brd)[["payload"]][["layouts"]]
+
+  expect_snapshot(
+    cat(
+      jsonlite::toJSON(layouts, pretty = TRUE, auto_unbox = TRUE,
+                       null = "null")
+    )
+  )
+})
+
 test_that("serialized dock_layout uses the flattened wire spec", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),

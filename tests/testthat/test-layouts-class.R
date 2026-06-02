@@ -247,3 +247,66 @@ test_that("view_name<- rewrites only the display name, not the id", {
   expect_identical(names(views), id)
   expect_identical(view_name(views[[id]]), "Renamed")
 })
+
+test_that("dock_layout(id =) pins a fixed view id", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(
+      Analysis = dock_layout("a", id = "view_one"),
+      Overview = dock_layout("b", id = "view_two")
+    )
+  )
+
+  views <- board_layouts(brd)
+  expect_identical(names(views), c("view_one", "view_two"))
+  expect_identical(unname(view_names(views)), c("Analysis", "Overview"))
+
+  # the construction-time hint is consumed, not retained on the layout
+  expect_null(attr(views[["view_one"]], "id", exact = TRUE))
+})
+
+test_that("fixed and minted view ids coexist", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(Fixed = dock_layout("a", id = "pinned"), Auto = list("a"))
+  )
+
+  ids <- names(board_layouts(brd))
+  expect_true("pinned" %in% ids)
+  expect_length(unique(ids), 2L)
+})
+
+test_that("duplicate fixed view ids are rejected", {
+
+  expect_error(
+    new_dock_board(
+      blocks = c(a = new_dataset_block()),
+      layouts = list(
+        A = dock_layout("a", id = "dup"),
+        B = dock_layout("a", id = "dup")
+      )
+    ),
+    class = "dock_layouts_ids_duplicated"
+  )
+})
+
+test_that("an empty fixed view id is rejected", {
+  expect_error(dock_layout("a", id = ""), class = "dock_view_id_invalid")
+})
+
+test_that("fixed view ids survive serialization", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(
+      Analysis = dock_layout("a", id = "view_one"),
+      Overview = dock_layout("b", id = "view_two")
+    )
+  )
+
+  des <- blockr_deser(blockr_ser(brd))[["layouts"]]
+  expect_identical(names(des), c("view_one", "view_two"))
+  expect_identical(unname(view_names(des)), c("Analysis", "Overview"))
+})

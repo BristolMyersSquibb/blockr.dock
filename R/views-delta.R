@@ -51,7 +51,7 @@ normalize_views_delta <- function(views, board) {
   layouts <- board_layouts(board)
 
   if (length(views$add)) {
-    views$add <- mint_added_view_ids(views$add, names(layouts))
+    views$add <- mint_view_ids(views$add, names(layouts))
   }
 
   if (length(views$mod)) {
@@ -69,16 +69,6 @@ normalize_views_delta <- function(views, board) {
   }
 
   views
-}
-
-# Give each added view a stable id (minted via `rand_names()`, unique
-# against the existing view ids), re-keyed by id with the former list key
-# carried as the display name.
-mint_added_view_ids <- function(add, existing_ids) {
-  set_names(
-    map(`view_name<-`, add, names(add)),
-    rand_names(existing_ids, n = length(add))
-  )
 }
 
 # Map a single view reference (an id already, or a display name) to a view

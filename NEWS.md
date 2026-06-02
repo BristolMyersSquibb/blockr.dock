@@ -14,7 +14,9 @@
   display concerns (non-empty, unique label). Serialization round-trips
   ids and migrates id-less boards by minting ids on load. Name-keyed
   `views` deltas (e.g. from `blockr.assistant`) are resolved to ids at
-  ingest, so existing producers keep working unchanged (#166).
+  ingest, so existing producers keep working unchanged. Pass
+  `dock_layout(id = )` to pin a view's id at construction instead of
+  minting one (#166).
 
 * `dock_layout` objects gain `format()` / `print()` methods that render
   the arrangement as an indented tree: orientation, nested groups with
