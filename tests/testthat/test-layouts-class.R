@@ -157,6 +157,24 @@ test_that("a keyless view gets a minted id", {
   expect_length(unique(ids), 2L)
 })
 
+test_that("ids with . and - separators (ids-package styles) are accepted", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(
+      `verdant-aardvark` = dock_layout("a"),
+      `swift.otter` = dock_layout("b")
+    )
+  )
+
+  views <- board_layouts(brd)
+  expect_setequal(names(views), c("verdant-aardvark", "swift.otter"))
+  expect_setequal(
+    unname(view_names(views)),
+    c("Verdant aardvark", "Swift otter")
+  )
+})
+
 test_that("layout_ids extracts IDs from layout spec", {
 
   expect_identical(

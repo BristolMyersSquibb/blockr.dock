@@ -145,12 +145,14 @@ validate_dock_layouts <- function(x) {
   }
 
   # Ids key the container and become DOM / namespace ids, so they must be
-  # safe identifiers; free-form display labels live on the view as a name.
-  bad <- ids[!grepl("^[A-Za-z0-9_]+$", ids)]
+  # safe identifiers (no whitespace); free-form display labels live on the
+  # view as a name. The allowed set covers the styles the `ids` package
+  # emits — letters, digits, and the `_` / `-` / `.` separators.
+  bad <- ids[!grepl("^[A-Za-z0-9._-]+$", ids)]
 
   if (length(bad)) {
     blockr_abort(
-      "View id{?s} {bad} must be alphanumeric (underscores allowed).",
+      "View id{?s} {bad} must be a safe identifier (letters, digits, . - _).",
       class = "dock_view_id_invalid"
     )
   }
@@ -227,7 +229,7 @@ view_label <- function(layout, id) {
 }
 
 name_from_id <- function(id) {
-  res <- gsub("_", " ", id)
+  res <- gsub("[._-]", " ", id)
   paste0(toupper(substr(res, 1L, 1L)), substring(res, 2L))
 }
 
