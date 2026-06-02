@@ -154,47 +154,23 @@ new_dock_manager <- function() {
 #' @noRd
 init_view_docks <- function(views, board, update, triggers, session, dock_mgr,
                             blocks, extensions) {
-  ns <- session$ns
   active_v <- active_view(views)
   current_active <- reactiveVal(active_v)
 
   for (v_id in names(views)) {
-    v_ly <- views[[v_id]]
-    dock_output_id <- ns(NS(v_id, dock_id()))
-
-    insertUI(
-      selector = paste0("#", ns("view_container")),
-      where = "beforeEnd",
-      ui = div(
-        id = ns(as_view_handle_id(v_id)),
-        class = paste(
-          "blockr-view-dock",
-          if (identical(v_id, active_v)) "blockr-view-dock-active"
-        ),
-        dockViewR::dock_view_output(
-          dock_output_id,
-          width = "100%",
-          height = "100%"
-        ),
-        uiOutput(NS(ns(v_id), "empty_prompt"))
-      ),
-      immediate = TRUE,
-      session = session
-    )
-
-    local_id <- v_id
-    dock_res <- manage_dock(
+    instantiate_view(
       v_id,
+      views[[v_id]],
       board,
       update,
       triggers,
-      layout = v_ly,
-      is_active = reactive(identical(current_active(), local_id)),
+      session,
+      dock_mgr$docks,
+      current_active = current_active,
       blocks = blocks,
-      extensions = extensions
+      extensions = extensions,
+      active = identical(v_id, active_v)
     )
-    dock_res$dock_id <- v_id
-    dock_mgr$docks[[v_id]] <- dock_res
   }
 
   update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active_v]])
@@ -409,6 +385,79 @@ show_view_ui <- function(view_id, docks) {
   for (eid in as_obj_id(ext_panel_ids(proxy))) {
     show_ext_ui(eid, proxy$session, board_ns = bns)
   }
+}
+
+# Insert a view's dock container into the DOM and start its manage_dock
+# module, keyed by the stable view id (which is the module id and the DOM
+# stem). Shared by the initial render and post-init view additions. When
+# `current_active` is supplied, the dock's empty-prompt tracks whether this
+# view is the active one; otherwise it is treated as always active.
+instantiate_view <- function(v_id, layout, board, update, triggers, session,
+                             docks, current_active = NULL, blocks = NULL,
+                             extensions = NULL, active = FALSE) {
+
+  ns <- session$ns
+
+  is_active <- if (is.null(current_active)) {
+    reactive(TRUE)
+  } else {
+    reactive(identical(current_active(), v_id))
+  }
+
+  insertUI(
+    selector = paste0("#", ns("view_container")),
+    where = "beforeEnd",
+    ui = div(
+      id = ns(as_view_handle_id(v_id)),
+      class = paste(
+        "blockr-view-dock",
+        if (isTRUE(active)) "blockr-view-dock-active"
+      ),
+      dockViewR::dock_view_output(
+        ns(NS(v_id, dock_id())),
+        width = "100%",
+        height = "100%"
+      ),
+      uiOutput(NS(ns(v_id), "empty_prompt"))
+    ),
+    immediate = TRUE,
+    session = session
+  )
+
+  dock_res <- manage_dock(
+    v_id, board, update, triggers,
+    layout = layout,
+    is_active = is_active,
+    blocks = blocks,
+    extensions = extensions
+  )
+  dock_res$dock_id <- v_id
+  docks[[v_id]] <- dock_res
+
+  invisible(dock_res)
+}
+
+# Tear down a view's dock module and remove its DOM container. Parks the
+# view's block / ext UIs in the offcanvas first, so a block that survives in
+# another view keeps its single-instance board-level UI.
+teardown_view <- function(v_id, session, docks) {
+
+  if (!exists(v_id, envir = docks, inherits = FALSE)) {
+    return(invisible())
+  }
+
+  rm_dock <- docks[[v_id]]
+
+  hide_view_ui(v_id, docks)
+  destroy_module(rm_dock$dock_id, session = session)
+  removeUI(
+    selector = paste0("#", session$ns(as_view_handle_id(rm_dock$dock_id))),
+    immediate = TRUE,
+    session = session
+  )
+  rm(list = v_id, envir = docks)
+
+  invisible()
 }
 
 #' Run a single dockViewR instance as a Shiny module.

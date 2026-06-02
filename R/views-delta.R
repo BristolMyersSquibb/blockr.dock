@@ -392,26 +392,7 @@ apply_views_rm <- function(rm_ids, board, dock_mgr = NULL, session = NULL) {
   was_active_removed <- active_view(state) %in% rm_ids
 
   for (v in rm_ids) {
-
-    if (exists(v, envir = dock_mgr$docks, inherits = FALSE)) {
-
-      rm_dock <- dock_mgr$docks[[v]]
-
-      # Park the view's block / ext UIs back in the offcanvas before the
-      # dock is destroyed — otherwise a block that survives in another
-      # view loses its (board-level, single-instance) UI along with the
-      # torn-down panel container. No-op for views already parked.
-      hide_view_ui(v, dock_mgr$docks)
-
-      destroy_module(rm_dock$dock_id, session = session)
-      removeUI(
-        selector = paste0("#", ns(as_view_handle_id(rm_dock$dock_id))),
-        immediate = TRUE,
-        session = session
-      )
-      rm(list = v, envir = dock_mgr$docks)
-    }
-
+    teardown_view(v, session, dock_mgr$docks)
     state[[v]] <- NULL
   }
 
@@ -474,8 +455,6 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
     return(board)
   }
 
-  ns <- session$ns
-
   for (v in names(add_views)) {
 
     # The view id (minted in augment_board_update.dock_board) is the dock
@@ -484,36 +463,17 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
       next
     }
 
-    dock_output_id <- ns(NS(v, dock_id()))
-
-    insertUI(
-      selector = paste0("#", ns("view_container")),
-      where = "beforeEnd",
-      ui = div(
-        id = ns(as_view_handle_id(v)),
-        class = "blockr-view-dock",
-        dockViewR::dock_view_output(
-          dock_output_id,
-          width = "100%",
-          height = "100%"
-        ),
-        uiOutput(NS(ns(v), "empty_prompt"))
-      ),
-      immediate = TRUE,
-      session = session
-    )
-
-    dock_res <- manage_dock(
+    instantiate_view(
       v,
+      add_views[[v]],
       dock_mgr$board_rv,
       dock_mgr$update,
       dock_mgr$triggers,
-      layout = add_views[[v]],
+      session,
+      dock_mgr$docks,
       blocks = board_blocks(board),
       extensions = dock_extensions(board)
     )
-    dock_res$dock_id <- v
-    dock_mgr$docks[[v]] <- dock_res
 
     session$sendInputMessage(
       "view_nav",
