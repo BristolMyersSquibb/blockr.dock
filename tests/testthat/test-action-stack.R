@@ -1,22 +1,32 @@
-test_that("add stack action chains via keep_or_hide_sidebar on confirm", {
-  keep_calls <- list()
-
+# The stack menu publishes its committed selection into the parent
+# session's namespace as `menu-commit` (list(blocks, nonce)); the
+# panel-level form fields are real Shiny inputs at `menu-stack_name`,
+# `menu-stack_color`, and `menu-stack_id`. Drive them directly to
+# simulate the user creating / editing a stack.
+local_mocked_sidebar <- function(env = parent.frame()) {
   local_mocked_bindings(
-    show_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(id, ...) {
-      keep_calls[[length(keep_calls) + 1L]] <<- list(id = id, args = list(...))
-      invisible(NULL)
-    },
-    hide_sidebar = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    show_sidebar         = function(...) invisible(list(...)),
+    keep_or_hide_sidebar = function(...) invisible(list(...)),
+    hide_sidebar         = function(...) invisible(list(...)),
+    .package = "blockr.ui",
+    .env = env
   )
+}
 
+set_menu <- function(session, blocks, name, color, id, nonce) {
+  session$setInputs(
+    `menu-stack_name` = name,
+    `menu-stack_color` = color,
+    `menu-stack_id` = id,
+    `menu-commit` = list(blocks = blocks, nonce = nonce)
+  )
+}
+
+test_that("add stack action: valid commit creates one stack", {
+  local_mocked_sidebar()
   r_board <- reactiveValues(
     board = new_board(
-      c(
-        a = new_dataset_block("iris"),
-        b = new_head_block()
-      )
+      c(a = new_dataset_block("iris"), b = new_head_block())
     ),
     board_id = "my_board"
   )
@@ -35,31 +45,33 @@ test_that("add stack action chains via keep_or_hide_sidebar on confirm", {
     },
     {
       session$flushReact()
-      session$setInputs(
-        stack_confirm = 1L,
-        stack_id = "s1",
-        stack_name = "Stack 1",
-        stack_block_selection = c("a", "b"),
-        stack_color = "#ff0000"
+      set_menu(
+        session,
+        blocks = c("a", "b"),
+        name = "My stack",
+        color = "#ff0000",
+        id = "s1",
+        nonce = 1L
       )
 
-      expect_length(r_update(), 1L)
-      expect_length(keep_calls, 1L)
-      expect_identical(keep_calls[[1L]]$id, "my_board-actions_sidebar")
-      expect_identical(keep_calls[[1L]]$args$title, "Create new stack")
+      upd <- r_update()
+      expect_length(upd, 1L)
+      expect_named(upd, "stacks")
+      expect_named(upd$stacks, "add")
+      expect_named(upd$stacks$add, "s1")
+      expect_s3_class(upd$stacks$add, "stacks")
+      expect_identical(stack_blocks(upd$stacks$add[["s1"]]), c("a", "b"))
+      expect_identical(stack_name(upd$stacks$add[["s1"]]), "My stack")
+      expect_identical(stack_color(upd$stacks$add[["s1"]]), "#ff0000")
     }
   )
 })
 
-test_that("add stack action", {
-
+test_that("add stack action: invalid inputs short-circuit before update", {
+  local_mocked_sidebar()
   r_board <- reactiveValues(
-    board = new_board(
-      c(
-        a = new_dataset_block("iris"),
-        b = new_head_block()
-      )
-    )
+    board = new_board(c(a = new_dataset_block("iris"))),
+    board_id = "b"
   )
   r_update <- reactiveVal(list())
 
@@ -76,71 +88,42 @@ test_that("add stack action", {
     },
     {
       session$flushReact()
+
+      # Empty id -> rejected.
+      set_menu(
+        session,
+        blocks = "a", name = "N", color = "#ffffff", id = "",
+        nonce = 1L
+      )
       expect_length(r_update(), 0L)
 
-      session$setInputs(
-        stack_confirm = 1L,
-        stack_id = ""
+      # Empty name -> rejected.
+      set_menu(
+        session,
+        blocks = "a", name = "", color = "#ffffff", id = "s1",
+        nonce = 2L
       )
-
       expect_length(r_update(), 0L)
 
-      session$setInputs(
-        stack_confirm = 2L,
-        stack_id = "test"
+      # Invalid colour -> rejected.
+      set_menu(
+        session,
+        blocks = "a", name = "N", color = "not-a-hex", id = "s1",
+        nonce = 3L
       )
-
       expect_length(r_update(), 0L)
-
-      session$setInputs(
-        stack_confirm = 3L,
-        stack_id = "test",
-        stack_block_selection = "test"
-      )
-
-      expect_length(r_update(), 0L)
-
-      session$setInputs(
-        stack_confirm = 4L,
-        stack_id = "test",
-        stack_block_selection = "",
-        stack_color = "test"
-      )
-
-      expect_length(r_update(), 0L)
-
-      session$setInputs(
-        stack_confirm = 5L,
-        stack_id = "test",
-        stack_block_selection = "",
-        stack_color = "#FFFFFF"
-      )
-
-      upd <- r_update()
-
-      expect_length(upd, 1L)
-      expect_named(upd, "stacks")
-
-      expect_length(upd$stacks, 1L)
-      expect_named(upd$stacks, "add")
-
-      expect_length(upd$stacks$add, 1L)
-      expect_named(upd$stacks$add, "test")
-      expect_s3_class(upd$stacks$add, "stacks")
     }
   )
 })
 
-test_that("edit stack action", {
-
+test_that("edit stack action: valid commit modifies the existing stack", {
+  local_mocked_sidebar()
   r_board <- reactiveValues(
     board = new_dock_board(
-      c(
-        a = new_dataset_block("iris"),
-        b = new_head_block()
-      ),
-      stacks = stacks(a = "a")
-    )
+      c(a = new_dataset_block("iris"), b = new_head_block()),
+      stacks = stacks(s1 = "a")
+    ),
+    board_id = "b"
   )
   r_update <- reactiveVal(list())
 
@@ -149,7 +132,7 @@ test_that("edit stack action", {
       moduleServer(
         id,
         edit_stack_action(
-          trigger = reactive("a"),
+          trigger = reactive("s1"),
           board = r_board,
           update = r_update
         )
@@ -157,62 +140,79 @@ test_that("edit stack action", {
     },
     {
       session$flushReact()
-      expect_length(r_update(), 0L)
-
-      session$setInputs(
-        edit_stack_confirm = 1L,
-        edit_stack_blocks = "test"
-      )
-
-      expect_length(r_update(), 0L)
-
-      session$setInputs(
-        edit_stack_confirm = 2L,
-        edit_stack_blocks = "",
-        edit_stack_color = "test"
-      )
-
-      expect_length(r_update(), 0L)
-
-      session$setInputs(
-        edit_stack_confirm = 3L,
-        edit_stack_blocks = "",
-        edit_stack_color = "#FFFFFF",
-        edit_stack_name = ""
-      )
-
-      expect_length(r_update(), 0L)
-
-      session$setInputs(
-        edit_stack_confirm = 4L,
-        edit_stack_blocks = "",
-        edit_stack_color = "#FFFFFF",
-        edit_stack_name = "Test stack"
+      set_menu(
+        session,
+        blocks = c("a", "b"),
+        name = "Updated",
+        color = "#00ff00",
+        id = NULL,
+        nonce = 1L
       )
 
       upd <- r_update()
-
       expect_length(upd, 1L)
       expect_named(upd, "stacks")
-
-      expect_length(upd$stacks, 1L)
       expect_named(upd$stacks, "mod")
+      expect_named(upd$stacks$mod, "s1")
+      # `mod` entries are partial-arg deltas (named list of constructor
+      # argument values), not full `stacks` objects.
+      expect_type(upd$stacks$mod, "list")
+      expect_false(inherits(upd$stacks$mod, "stacks"))
+      expect_identical(upd$stacks$mod[["s1"]]$blocks, c("a", "b"))
+      expect_identical(upd$stacks$mod[["s1"]]$name, "Updated")
+      expect_identical(upd$stacks$mod[["s1"]]$color, "#00ff00")
+    }
+  )
+})
 
-      expect_length(upd$stacks$mod, 1L)
-      expect_named(upd$stacks$mod, "a")
-      expect_s3_class(upd$stacks$mod, "stacks")
+test_that("edit stack action: invalid colour / block id short-circuit", {
+  local_mocked_sidebar()
+  r_board <- reactiveValues(
+    board = new_dock_board(
+      c(a = new_dataset_block("iris"), b = new_head_block()),
+      stacks = stacks(s1 = "a")
+    ),
+    board_id = "b"
+  )
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_stack_action(
+          trigger = reactive("s1"),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+
+      # Empty name -> rejected.
+      set_menu(
+        session,
+        blocks = c("a", "b"), name = "", color = "#abcdef", id = NULL,
+        nonce = 1L
+      )
+      expect_length(r_update(), 0L)
+
+      # Invalid colour -> rejected.
+      set_menu(
+        session,
+        blocks = c("a", "b"), name = "N", color = "not-hex", id = NULL,
+        nonce = 2L
+      )
+      expect_length(r_update(), 0L)
     }
   )
 })
 
 test_that("remove stack action", {
-
   r_board <- reactiveValues(
     board = new_dock_board(
-      c(
-        a = new_dataset_block("iris"),
-        b = new_head_block()
-      ),
+      c(a = new_dataset_block("iris"), b = new_head_block()),
       stacks = stacks(a = "a")
     )
   )
@@ -231,16 +231,10 @@ test_that("remove stack action", {
     },
     {
       session$flushReact()
-
       upd <- r_update()
-
       expect_length(upd, 1L)
       expect_named(upd, "stacks")
-
-      expect_length(upd$stacks, 1L)
       expect_named(upd$stacks, "rm")
-
-      expect_length(upd$stacks$rm, 1L)
       expect_identical(upd$stacks$rm, "a")
     }
   )

@@ -1,96 +1,40 @@
 add_stack_action <- function(trigger, board, update, ...) {
-
   new_action(
     function(input, output, session) {
-
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
+      committed <- blockr.ui::stack_menu_server("menu")
 
-      observeEvent(
-        trigger(),
-        {
-          blockr.ui::show_sidebar(
-            sidebar_id,
-            title = "Create new stack",
-            ui = stack_sidebar_body(
-              ns = session$ns,
-              board = board$board,
-              mode = "create"
-            )
-          )
-        }
-      )
+      menu_ui <- function() {
+        blockr.ui::stack_menu_ui(session$ns("menu"), board$board)
+      }
 
-      observeEvent(
-        input$stack_confirm,
-        {
-          stk_id <- input$stack_id
+      observeEvent(trigger(), {
+        blockr.ui::show_sidebar(
+          sidebar_id, title = "Create new stack", ui = menu_ui()
+        )
+      })
 
-          if (!nchar(stk_id) || stk_id %in% board_stack_ids(board$board)) {
+      observeEvent(committed(), {
+        spec <- committed()
 
-            notify(
-              "Please choose a valid stack ID.",
-              type = "warning",
-              session = session
-            )
+        if (!valid_stack_id(spec$id, board$board, session)) return()
+        if (!valid_stack_name(spec$name, session)) return()
+        if (!valid_stack_color(spec$color, session)) return()
 
-            return()
-          }
+        new_stk <- new_dock_stack(
+          blocks = as.character(spec$blocks %||% character()),
+          name = spec$name,
+          color = spec$color
+        )
 
-          sel_blks <- input$stack_block_selection
+        update(list(
+          stacks = list(add = as_stacks(set_names(list(new_stk), spec$id)))
+        ))
 
-          if (length(sel_blks) && any(nchar(sel_blks))) {
-            block_ids <- sel_blks[nchar(sel_blks) > 0]
-          } else {
-            block_ids <- character()
-          }
-
-          if (!all(block_ids %in% board_block_ids(board$board))) {
-
-            notify(
-              "Please choose valid block IDs.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          stk_nme <- input$stack_name
-
-          if (!length(stk_nme) || !nchar(stk_nme)) {
-            stk_nme <- id_to_sentence_case(stk_id)
-          }
-
-          stk_col <- input$stack_color
-
-          if (is.null(stk_col) || !nchar(stk_col) || !is_hex_color(stk_col)) {
-
-            notify(
-              "Please choose a valid stack color.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          new_stk <- new_dock_stack(
-            blocks = block_ids,
-            name = stk_nme,
-            color = stk_col
-          )
-
-          new_stk <- as_stacks(set_names(list(new_stk), stk_id))
-
-          update(list(stacks = list(add = new_stk)))
-
-          blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
-            title = "Create new stack",
-            ui = stack_sidebar_body(session$ns, board$board, mode = "create")
-          )
-        }
-      )
+        blockr.ui::keep_or_hide_sidebar(
+          sidebar_id, title = "Create new stack", ui = menu_ui()
+        )
+      })
 
       NULL
     },
@@ -99,108 +43,57 @@ add_stack_action <- function(trigger, board, update, ...) {
 }
 
 edit_stack_action <- function(trigger, board, update, ...) {
-
   new_action(
     function(input, output, session) {
-
-      ns <- session$ns
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
+      committed <- blockr.ui::stack_menu_server("menu")
 
-      observeEvent(
-        trigger(),
-        {
-          stack <- board_stacks(board$board)[[trigger()]]
+      menu_ui <- function() {
+        blockr.ui::stack_menu_ui(
+          session$ns("menu"), board$board, target = trigger()
+        )
+      }
 
-          blockr.ui::show_sidebar(
-            sidebar_id,
-            title = "Edit stack",
-            ui = stack_sidebar_body(
-              ns = ns,
-              board = board$board,
-              mode = "edit",
-              stack = stack,
-              stack_id = trigger()
+      # The sidebar title carries the stack identifier so users always
+      # see which stack they're editing (the menu body no longer prints
+      # a subtitle of its own).
+      sidebar_title <- function() paste0("Edit stack ", trigger())
+
+      observeEvent(trigger(), {
+        blockr.ui::show_sidebar(
+          sidebar_id, title = sidebar_title(), ui = menu_ui()
+        )
+      })
+
+      observeEvent(committed(), {
+        spec <- committed()
+        id <- trigger()
+
+        if (!valid_stack_name(spec$name, session)) return()
+        if (!valid_stack_color(spec$color, session)) return()
+
+        # `mod` entries are now partial-arg deltas applied via
+        # `update_stack()` on the blockr.core side. Reserved key
+        # `blocks` replaces the member block IDs; every other key
+        # updates the named attribute. Passing a full `stacks` object
+        # here trips `board_update_stacks_mod_entry_invalid`.
+        update(list(
+          stacks = list(
+            mod = set_names(
+              list(list(
+                blocks = as.character(spec$blocks %||% character()),
+                name = spec$name,
+                color = spec$color
+              )),
+              id
             )
           )
-        }
-      )
+        ))
 
-      observeEvent(
-        input$edit_stack_confirm,
-        {
-          id <- trigger()
-          stack <- board_stacks(board$board)[[id]]
-
-          sel_blks <- input$edit_stack_blocks
-
-          if (length(sel_blks) && any(nchar(sel_blks))) {
-            block_ids <- sel_blks[nchar(sel_blks) > 0]
-          } else {
-            block_ids <- character()
-          }
-
-          if (!all(block_ids %in% board_block_ids(board$board))) {
-
-            notify(
-              "Please choose valid block IDs.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          stack_blocks(stack) <- block_ids
-
-          stk_col <- input$edit_stack_color
-
-          if (is.null(stk_col) || !nchar(stk_col) || !is_hex_color(stk_col)) {
-
-            notify(
-              "Please choose a valid stack color.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          stack_color(stack) <- stk_col
-
-          stk_nme <- input$edit_stack_name
-
-          if (!length(stk_nme) || !nchar(stk_nme)) {
-
-            notify(
-              "Please choose a valid stack name.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          stack_name(stack) <- stk_nme
-
-          stack <- as_stacks(set_names(list(stack), id))
-
-          update(list(stacks = list(mod = stack)))
-
-          # Re-pull the stack so the form reflects the just-saved state.
-          fresh_stack <- board_stacks(board$board)[[trigger()]]
-          blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
-            title = "Edit stack",
-            ui = stack_sidebar_body(
-              ns,
-              board$board,
-              mode = "edit",
-              stack = fresh_stack,
-              stack_id = trigger()
-            )
-          )
-        }
-      )
+        blockr.ui::keep_or_hide_sidebar(
+          sidebar_id, title = sidebar_title(), ui = menu_ui()
+        )
+      })
 
       NULL
     },
@@ -220,3 +113,45 @@ remove_stack_action <- function(trigger, board, update, ...) {
     id = "remove_stack_action"
   )
 }
+
+# ---- shared validators -------------------------------------------------
+
+# blockr.ui's stack_menu_ui seeds a fresh id via `rand_names()` against
+# the current board, so the typical case is a no-op pass. We still guard
+# against an empty / duplicate id that the user could type in.
+valid_stack_id <- function(id, board, session) {
+  if (is.null(id) || !nzchar(id) || id %in% board_stack_ids(board)) {
+    notify(
+      "Please choose a valid stack ID.",
+      type = "warning",
+      session = session
+    )
+    return(FALSE)
+  }
+  TRUE
+}
+
+valid_stack_name <- function(name, session) {
+  if (is.null(name) || !nzchar(name)) {
+    notify(
+      "Please choose a valid stack name.",
+      type = "warning",
+      session = session
+    )
+    return(FALSE)
+  }
+  TRUE
+}
+
+valid_stack_color <- function(color, session) {
+  if (is.null(color) || !nzchar(color) || !is_hex_color(color)) {
+    notify(
+      "Please choose a valid stack color.",
+      type = "warning",
+      session = session
+    )
+    return(FALSE)
+  }
+  TRUE
+}
+

@@ -1,5 +1,17 @@
 # blockr.dock (development version)
 
+* The add / edit stack action handlers now mount the `blockr.ui`
+  stack-menu module: a multi-select card-list block picker with
+  search, per-category icons, an inline hue / lightness colour
+  picker, and a panel-level form for the stack name / colour / id.
+  The per-field Shiny inputs (`stack_id` / `stack_name` /
+  `stack_color` / `stack_block_selection` / `stack_confirm` and the
+  `edit_stack_*` equivalents) are gone in favour of a single
+  committed-stack reactive returned by `blockr.ui::stack_menu_server()`.
+  `stack_sidebar_body()` is removed (no in-tree callers remain; out-of
+  -tree consumers migrate to `blockr.ui::stack_menu_ui()`). Drops the
+  `shinyWidgets::colorPickr` floating popover - the new colour picker
+  renders inline in the sidebar.
 * The add / append / prepend block action handlers now mount the
   `blockr.ui` block-browser module: a card-list block picker with
   search, per-category icons, and a per-card expand for tweaking the
