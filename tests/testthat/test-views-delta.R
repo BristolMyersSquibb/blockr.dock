@@ -12,9 +12,10 @@ test_that("apply_views_add adds new view to board_layouts", {
 
   out <- apply_board_update(brd, upd)
 
-  expect_named(board_layouts(out), c("A", "NewView"))
+  views <- board_layouts(out)
+  expect_setequal(unname(view_names(views)), c("A", "NewView"))
   expect_identical(
-    layout_panel_ids(board_layouts(out)$NewView),
+    layout_panel_ids(views[[vid(views, "NewView")]]),
     "block_panel-b"
   )
 })
@@ -29,8 +30,8 @@ test_that("apply_views_rm removes a view from board_layouts", {
   upd <- augment_board_update(list(views = list(rm = "B")), brd)
   out <- apply_board_update(brd, upd)
 
-  expect_named(board_layouts(out), "A")
-  expect_identical(active_view(board_layouts(out)), "A")
+  expect_identical(unname(view_names(board_layouts(out))), "A")
+  expect_identical(active_name(out), "A")
 })
 
 test_that("apply_views_mod replaces a view's layout in board_layouts", {
@@ -47,11 +48,12 @@ test_that("apply_views_mod replaces a view's layout in board_layouts", {
 
   out <- apply_board_update(brd, upd)
 
+  views <- board_layouts(out)
   expect_setequal(
-    layout_panel_ids(board_layouts(out)$A),
+    layout_panel_ids(views[[vid(views, "A")]]),
     c("block_panel-a", "block_panel-b")
   )
-  expect_identical(active_view(board_layouts(out)), "A")
+  expect_identical(active_name(out), "A")
 })
 
 test_that("apply_views: full delta round-trips through board_layouts", {
@@ -75,10 +77,11 @@ test_that("apply_views: full delta round-trips through board_layouts", {
 
   out <- apply_board_update(brd, upd)
 
-  expect_named(board_layouts(out), c("A", "C"))
-  expect_identical(active_view(board_layouts(out)), "C")
+  views <- board_layouts(out)
+  expect_setequal(unname(view_names(views)), c("A", "C"))
+  expect_identical(active_name(out), "C")
   expect_setequal(
-    layout_panel_ids(board_layouts(out)$A),
+    layout_panel_ids(views[[vid(views, "A")]]),
     c("block_panel-a", "block_panel-b")
   )
 })
@@ -101,14 +104,20 @@ test_that("blocks$rm auto-augments views$mod for every affected view", {
   upd <- list(blocks = list(rm = "b"))
   res <- augment_board_update(upd, brd)
 
-  expect_setequal(names(res$views$mod), c("Analysis", "Overview"))
+  expect_setequal(
+    names(res$views$mod),
+    c(vid(brd, "Analysis"), vid(brd, "Overview"))
+  )
 
   expect_setequal(
-    layout_panel_ids(res$views$mod$Analysis),
+    layout_panel_ids(res$views$mod[[vid(brd, "Analysis")]]),
     c("block_panel-a", "block_panel-c")
   )
-  expect_length(layout_panel_ids(res$views$mod$Overview), 0L)
-  expect_null(res$views$mod$Other)
+  expect_length(
+    layout_panel_ids(res$views$mod[[vid(brd, "Overview")]]),
+    0L
+  )
+  expect_null(res$views$mod[[vid(brd, "Other")]])
 })
 
 test_that("blocks$rm augment skips views in views$rm", {
@@ -124,8 +133,8 @@ test_that("blocks$rm augment skips views in views$rm", {
   )
   res <- augment_board_update(upd, brd)
 
-  expect_named(res$views$mod, "A")
-  expect_identical(res$views$rm, "B")
+  expect_named(res$views$mod, vid(brd, "A"))
+  expect_identical(res$views$rm, vid(brd, "B"))
 })
 
 test_that("augment merges user-submitted mod with block-removal cleanup", {
@@ -148,7 +157,7 @@ test_that("augment merges user-submitted mod with block-removal cleanup", {
   res <- augment_board_update(upd, brd)
 
   expect_setequal(
-    layout_panel_ids(res$views$mod$Analysis),
+    layout_panel_ids(res$views$mod[[vid(brd, "Analysis")]]),
     c("block_panel-a", "block_panel-c")
   )
 })
@@ -169,27 +178,54 @@ test_that("blocks+views payload augments with refs to newly-added blocks", {
   augmented <- augment_board_update(upd, brd)
 
   expect_setequal(
-    layout_panel_ids(augmented$views$mod$A),
+    layout_panel_ids(augmented$views$mod[[vid(brd, "A")]]),
     c("block_panel-a", "block_panel-new1")
   )
 })
 
-test_that("validate_views_delta rejects add/rm clash", {
+test_that("add + rm of the same name replaces the view with a fresh id", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
     layouts = list(A = list("a"), B = list("a"))
   )
 
+  old_b <- vid(brd, "B")
+
+  # With identity carried by id, removing B and adding a view also named
+  # "B" is a legitimate replace, not a name clash: the new view gets a
+  # fresh id.
+  upd <- augment_board_update(
+    list(
+      views = list(
+        add = list(B = dock_layout("a")),
+        rm = "B"
+      )
+    ),
+    brd
+  )
+
+  out <- apply_board_update(brd, upd)
+  views <- board_layouts(out)
+
+  expect_setequal(unname(view_names(views)), c("A", "B"))
+  expect_false(old_b %in% names(views))
+})
+
+test_that("validate_views_delta rejects an id in both add and rm", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(A = list("a"), B = list("a"))
+  )
+
+  id <- vid(brd, "B")
+
   expect_error(
-    augment_board_update(
-      list(
-        views = list(
-          add = list(B = dock_layout("a")),
-          rm = "B"
-        )
-      ),
-      brd
+    validate_views_delta(
+      list(add = setNames(list(dock_layout("a")), id), rm = id),
+      brd,
+      list()
     ),
     class = "dock_views_delta_add_rm_clash"
   )
@@ -216,22 +252,23 @@ test_that("validate_views_delta rejects mod referencing a name in rm", {
   )
 })
 
-test_that("validate_views_delta rejects mod referencing a name in add", {
+test_that("validate_views_delta rejects an id in both mod and add", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
     layouts = list(A = list("a"))
   )
 
+  id <- vid(brd, "A")
+
   expect_error(
-    augment_board_update(
+    validate_views_delta(
       list(
-        views = list(
-          add = list(B = dock_layout("a")),
-          mod = list(B = dock_layout("a"))
-        )
+        add = setNames(list(dock_layout("a")), id),
+        mod = setNames(list(dock_layout("a")), id)
       ),
-      brd
+      brd,
+      list()
     ),
     class = "dock_views_delta_mod_add_clash"
   )
@@ -322,7 +359,26 @@ test_that("validate_views_delta rejects mod on unknown view", {
   )
 })
 
-test_that("validate_views_delta rejects add on existing view", {
+test_that("validate_views_delta rejects adding an existing id", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(A = list("a"))
+  )
+
+  id <- vid(brd, "A")
+
+  expect_error(
+    validate_views_delta(
+      list(add = setNames(list(dock_layout("a")), id)),
+      brd,
+      list()
+    ),
+    class = "dock_views_delta_add_existing"
+  )
+})
+
+test_that("validate_views_delta rejects an unknown rename id", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
@@ -330,11 +386,12 @@ test_that("validate_views_delta rejects add on existing view", {
   )
 
   expect_error(
-    augment_board_update(
-      list(views = list(add = list(A = dock_layout("a")))),
-      brd
+    validate_views_delta(
+      list(rename = list(ghost_id = "New")),
+      brd,
+      list()
     ),
-    class = "dock_views_delta_add_existing"
+    class = "dock_views_delta_rename_unknown"
   )
 })
 
@@ -409,7 +466,7 @@ test_that("board_update lifecycle resets to NULL after views-only payload", {
 
       expect_null(board_update())
       expect_setequal(
-        layout_panel_ids(board_layouts(rv$board)$A),
+        layout_panel_ids(board_layouts(rv$board)[[vid(rv$board, "A")]]),
         c("block_panel-a", "block_panel-b")
       )
     },
@@ -429,28 +486,31 @@ test_that("blocks$rm augment carries through to apply for view cleanup", {
 
   upd <- augment_board_update(list(blocks = list(rm = "b")), brd)
 
-  expect_named(upd$views$mod, c("A", "B"))
+  expect_setequal(names(upd$views$mod), c(vid(brd, "A"), vid(brd, "B")))
 
   out <- apply_views_mod(upd$views$mod, brd)
 
   expect_identical(
-    layout_panel_ids(board_layouts(out)$A),
+    layout_panel_ids(board_layouts(out)[[vid(brd, "A")]]),
     "block_panel-a"
   )
   expect_length(
-    layout_panel_ids(board_layouts(out)$B),
+    layout_panel_ids(board_layouts(out)[[vid(brd, "B")]]),
     0L
   )
 })
 
 test_that("apply_views_rm syncs the view_nav switcher on lifecycle removal", {
 
-  run_rm <- function(rm_names, active) {
+  run_rm <- function(rm_label, active_label) {
 
     brd <- new_dock_board(
       blocks = c(a = new_dataset_block(), b = new_head_block()),
       layouts = list(A = list("a"), B = list("b"), C = list("a"))
     )
+
+    state <- board_layouts(brd)
+    name_to_id <- setNames(names(view_names(state)), unname(view_names(state)))
 
     sent <- list()
     session <- list(
@@ -462,28 +522,39 @@ test_that("apply_views_rm syncs the view_nav switcher on lifecycle removal", {
     )
 
     dock_mgr <- new_dock_manager()
-    dock_mgr$current_active <- reactiveVal(active)
+    dock_mgr$current_active <- reactiveVal(name_to_id[[active_label]])
 
-    state <- dock_layouts(
-      A = new_dock_layout(),
-      B = new_dock_layout(),
-      C = new_dock_layout()
-    )
-    active_view(state) <- active
+    active_view(state) <- name_to_id[[active_label]]
     dock_mgr$vs <- reactiveValues(state = state)
 
-    isolate(apply_views_rm(rm_names, brd, dock_mgr, session))
+    isolate(apply_views_rm(name_to_id[[rm_label]], brd, dock_mgr, session))
 
-    sent
+    list(sent = sent, ids = name_to_id)
   }
 
-  non_active <- run_rm("B", active = "A")
-  expect_true(any(lgl_ply(non_active, function(m) identical(m$remove, "B"))))
-  expect_true(any(lgl_ply(non_active, function(m) identical(m$value, "A"))))
+  non_active <- run_rm("B", "A")
+  expect_true(
+    any(lgl_ply(non_active$sent, function(m) {
+      identical(m$remove, non_active$ids[["B"]])
+    }))
+  )
+  expect_true(
+    any(lgl_ply(non_active$sent, function(m) {
+      identical(m$value, non_active$ids[["A"]])
+    }))
+  )
 
-  was_active <- run_rm("A", active = "A")
-  expect_true(any(lgl_ply(was_active, function(m) identical(m$remove, "A"))))
-  expect_true(any(lgl_ply(was_active, function(m) identical(m$value, "B"))))
+  was_active <- run_rm("A", "A")
+  expect_true(
+    any(lgl_ply(was_active$sent, function(m) {
+      identical(m$remove, was_active$ids[["A"]])
+    }))
+  )
+  expect_true(
+    any(lgl_ply(was_active$sent, function(m) {
+      identical(m$value, was_active$ids[["B"]])
+    }))
+  )
 })
 
 test_that("apply_views_rm skips nav sync on the headless path", {
@@ -493,6 +564,6 @@ test_that("apply_views_rm skips nav sync on the headless path", {
     layouts = list(A = list("a"), B = list("b"))
   )
 
-  expect_silent(out <- apply_views_rm("B", brd))
-  expect_named(board_layouts(out), "A")
+  expect_silent(out <- apply_views_rm(vid(brd, "B"), brd))
+  expect_identical(unname(view_names(board_layouts(out))), "A")
 })

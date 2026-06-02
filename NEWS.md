@@ -1,5 +1,21 @@
 # blockr.dock (development version)
 
+* Views now carry a stable, immutable **id** decoupled from their
+  editable display **name**, mirroring the id / name split used for
+  blocks. `dock_layouts` (and the runtime `dock_mgr$docks` registry) are
+  keyed by id; the name is an attribute read / written via `view_name()`
+  / `view_name<-()` (with `view_names()` for a whole collection), and
+  `active_view()` now returns the active view's id. Renaming a view is a
+  pure name-attribute write — the id, dock module and DOM element are
+  untouched, so no structure is ever re-keyed (and the live-sync rename
+  no longer leaks as remove-then-add). The dock module / DOM ids derive
+  deterministically from the view id (no random per-render minting), and
+  the `views` delta gains a `rename` slot. Naming constraints relax to
+  display concerns (non-empty, unique label). Serialization round-trips
+  ids and migrates id-less boards by minting ids on load. Name-keyed
+  `views` deltas (e.g. from `blockr.assistant`) are resolved to ids at
+  ingest, so existing producers keep working unchanged (#166).
+
 * `dock_layout` objects gain `format()` / `print()` methods that render
   the arrangement as an indented tree: orientation, nested groups with
   their sizes, tabbed leaves with the active tab, and the focused panel.

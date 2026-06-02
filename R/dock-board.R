@@ -97,21 +97,7 @@ initialise_layout <- function(layouts, blocks, extensions) {
 
 resolve_views <- function(specs, c_blks, c_exts) {
 
-  nms <- names(specs)
-
-  if (is.null(nms) || any(!nzchar(nms))) {
-    blockr_abort(
-      "All views must be named.",
-      class = "dock_layouts_names_missing"
-    )
-  }
-
-  if (anyDuplicated(nms) > 0L) {
-    blockr_abort(
-      "View names must be unique.",
-      class = "dock_layouts_names_duplicated"
-    )
-  }
+  validate_view_input_names(names(specs))
 
   specs <- lapply(specs, coerce_view_spec)
 
@@ -140,7 +126,7 @@ resolve_views <- function(specs, c_blks, c_exts) {
     }
   }
 
-  validate_dock_layouts(structure(specs, class = "dock_layouts"))
+  reconstruct_dock_layouts(mint_view_ids(specs))
 }
 
 #' @rdname layout-json
@@ -224,9 +210,16 @@ active_layout <- function(x) {
 #' @export
 `active_layout<-` <- function(x, value) {
   ly <- board_layouts(x)
-  ly[[active_view(ly)]] <- set_active_view(
-    validate_dock_layout(value, board_block_ids(x))
-  )
+  id <- active_view(ly)
+
+  new <- set_active_view(validate_dock_layout(value, board_block_ids(x)))
+
+  nm <- view_name(ly[[id]])
+  if (!is.null(nm)) {
+    view_name(new) <- nm
+  }
+
+  ly[[id]] <- new
   board_layouts(x) <- ly
 
   invisible(x)
@@ -297,7 +290,10 @@ validate_board_update.dock_board <- function(payload, board, ...,
   if ("views" %in% names(payload) && !is.null(payload$views) &&
         !is.list(payload$views)) {
     blockr_abort(
-      "`views` must be a list with optional `add`/`mod`/`rm`/`active`.",
+      paste(
+        "`views` must be a list with optional",
+        "`add`/`mod`/`rm`/`active`/`rename`."
+      ),
       class = "dock_views_delta_invalid"
     )
   }
@@ -319,12 +315,18 @@ augment_board_update.dock_board <- function(upd, board, ...,
 
   upd <- NextMethod()
 
-  rm_block_ids <- upd$blocks$rm %||% character()
-  skip_views <- upd$views$rm %||% character()
-
   if (length(upd$views$add) || length(upd$views$mod)) {
     upd$views <- resolve_views_layouts(upd$views, board, upd)
   }
+
+  # Mint ids for added views and resolve every name reference to an id, so
+  # the rest of the pipeline (merge, validate, apply) is purely id-keyed.
+  if (length(upd$views)) {
+    upd$views <- normalize_views_delta(upd$views, board)
+  }
+
+  rm_block_ids <- upd$blocks$rm %||% character()
+  skip_views <- upd$views$rm %||% character()
 
   if (length(rm_block_ids)) {
 
@@ -376,6 +378,10 @@ apply_board_update.dock_board <- function(board, upd, ...,
 
   if (length(upd$views$mod)) {
     board <- apply_views_mod(upd$views$mod, board, dock_mgr)
+  }
+
+  if (length(upd$views$rename)) {
+    board <- apply_views_rename(upd$views$rename, board, dock_mgr, session)
   }
 
   if (!is.null(upd$views$active)) {

@@ -614,6 +614,7 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
   ext_coll <- as_dock_extensions(extensions)
 
   layout <- as_dock_layout(layout)
+  view_nm <- view_name(layout)
 
   id_map <- set_names(
     c(as_ext_panel_id(ext_coll), as_block_panel_id(blocks)),
@@ -649,6 +650,10 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
 
       layout[["grid"]] <- rewrite_grid_leaves(layout[["grid"]], id_map)
     }
+  }
+
+  if (!is.null(view_nm)) {
+    view_name(layout) <- view_nm
   }
 
   validate_dock_layout(layout, blocks)

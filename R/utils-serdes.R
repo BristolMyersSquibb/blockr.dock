@@ -47,7 +47,8 @@ blockr_ser.dock_layout <- function(x, data, ...) {
   list(
     object = class(x),
     payload = layout_to_spec(payload),
-    active = is_active_view(payload)
+    active = is_active_view(payload),
+    name = view_name(payload)
   )
 }
 
@@ -95,16 +96,48 @@ blockr_deser.dock_layout <- function(x, data, ...) {
     spec_to_layout(payload)
   }
 
-  set_active_view(layout, active)
+  layout <- set_active_view(layout, active)
+
+  if (is_string(data[["name"]])) {
+    view_name(layout) <- data[["name"]]
+  }
+
+  layout
 }
 
 #' @export
 blockr_deser.dock_layouts <- function(x, data, ...) {
   payload <- data[["payload"]]
-  v_list <- lapply(payload[["views"]], blockr_deser)
-  res <- dock_layouts(v_list)
-  active_view(res) <- payload[["active"]]
+  views <- payload[["views"]]
+
+  v_list <- lapply(views, blockr_deser)
+
+  # New-format payloads key `views` by stable id and carry the display
+  # name on each layout; legacy payloads key by display name with no id.
+  # Restore ids when present, mint them (using the name keys) otherwise.
+  if (length(v_list) && all(lgl_ply(v_list, has_view_name))) {
+
+    res <- reconstruct_dock_layouts(v_list)
+
+    if (is_string(payload[["active"]]) && payload[["active"]] %in% names(res)) {
+      active_view(res) <- payload[["active"]]
+    }
+
+  } else {
+
+    res <- dock_layouts(set_names(v_list, names(views)))
+
+    active_id <- view_id_by_name(res, payload[["active"]])
+    if (!is.na(active_id)) {
+      active_view(res) <- active_id
+    }
+  }
+
   res
+}
+
+has_view_name <- function(x) {
+  is_string(view_name(x))
 }
 
 #' @export

@@ -110,7 +110,7 @@ test_that("dock_layout constructor with active flag selects the view", {
     )
   )
 
-  expect_identical(active_view(board_layouts(brd)), "Second")
+  expect_identical(active_name(brd), "Second")
   expect_length(layout_panel_ids(active_layout(brd)), 2L)
 })
 
@@ -125,10 +125,12 @@ test_that("layout is stored without panels (no duplication across views)", {
   )
 
   views <- board_layouts(brd)
+  a <- views[[vid(views, "A")]]
+  b <- views[[vid(views, "B")]]
 
-  expect_named(views$A, c("grid", "activeGroup"))
-  expect_false("panels" %in% names(views$A))
-  expect_false("panels" %in% names(views$B))
+  expect_named(a, c("grid", "activeGroup"))
+  expect_false("panels" %in% names(a))
+  expect_false("panels" %in% names(b))
 })
 
 test_that("dock_layout marks an arrangement active via attribute", {

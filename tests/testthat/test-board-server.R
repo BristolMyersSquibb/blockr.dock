@@ -232,9 +232,10 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
     vs <- reactiveValues(
       state = dock_layouts(A = new_dock_layout(), B = new_dock_layout())
     )
+    ids <- names(vs$state)
     dock_mgr <- new_dock_manager()
-    dock_mgr$docks$A <- list(layout = layouts$A)
-    dock_mgr$docks$B <- list(layout = layouts$B)
+    dock_mgr$docks[[ids[[1L]]]] <- list(layout = layouts$A)
+    dock_mgr$docks[[ids[[2L]]]] <- list(layout = layouts$B)
     list(vd = live_view_data(vs, dock_mgr), vs = vs)
   })
 
@@ -247,8 +248,8 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
 
   lys <- isolate(res$vd())
   expect_s3_class(lys, "dock_layouts")
-  expect_named(lys, c("A", "B"))
-  expect_identical(active_view(lys), "A")
+  expect_identical(unname(view_names(lys)), c("A", "B"))
+  expect_identical(active_name(lys), "A")
 })
 
 test_that("layouts_to_board_observer fires update views on divergence", {
@@ -274,14 +275,15 @@ test_that("layouts_to_board_observer fires update views on divergence", {
   expect_length(captured, 0L)
 
   new_views <- isolate(board_layouts(rv$board))
-  active_view(new_views) <- "B"
+  b_id <- vid(new_views, "B")
+  active_view(new_views) <- b_id
 
   with_mock_context(ms, vd(new_views))
   ms$flushReact()
 
   expect_length(captured, 1L)
   expect_named(captured[[1L]], "views")
-  expect_identical(captured[[1L]]$views$active, "B")
+  expect_identical(captured[[1L]]$views$active, b_id)
   expect_null(captured[[1L]]$views$mod)
 })
 
@@ -315,10 +317,10 @@ test_that("apply_board_update.dock_board switches active view", {
     layouts = list(A = list("a"), B = list("b"))
   )
 
-  out <- apply_board_update(brd, list(views = list(active = "B")))
+  out <- apply_board_update(brd, list(views = list(active = vid(brd, "B"))))
 
   expect_true(is_dock_board(out))
-  expect_identical(active_view(board_layouts(out)), "B")
+  expect_identical(active_name(out), "B")
 })
 
 test_that("validate_board_update.dock_board rejects malformed views slot", {
@@ -344,7 +346,7 @@ test_that("views slot flows through full board_update lifecycle", {
       board_update(list(views = list(active = "B")))
       session$flushReact()
 
-      expect_identical(active_view(board_layouts(rv$board)), "B")
+      expect_identical(active_name(rv$board), "B")
       expect_null(board_update())
     },
     args = list(

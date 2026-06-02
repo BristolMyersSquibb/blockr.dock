@@ -5,23 +5,35 @@
 #' Blocks and extensions are shared across views via the board's DAG;
 #' view membership is a layout concern only.
 #'
+#' Each view carries a stable, immutable **id** (the key into the
+#' `dock_layouts` collection) that is distinct from its editable display
+#' **name**. This mirrors the id / name separation used for blocks (an
+#' immutable id keys the collection; [blockr.core::block_name()] is an
+#' editable label). The id is minted once when the view is created and
+#' never changes — rename only rewrites the name attribute, never the
+#' key. Use `view_name()` / `view_name<-()` to read and write a view's
+#' display name and `view_names()` for all names in a collection.
+#'
 #' Multi-view boards are defined by passing a named list to
-#' `new_dock_board()`'s `layouts` argument: each name is a view, each
-#' value is the panel arrangement inside that view (a [dock_layout()],
-#' or a raw list of block / extension IDs). A view can be marked as the
-#' initially-active one by passing `active = TRUE` to [dock_layout()];
-#' if none is marked, the first one is used. View CRUD is enabled
-#' unless the dock is locked (see `is_dock_locked()`).
+#' `new_dock_board()`'s `layouts` argument: each **name** is a view's
+#' display label, each value is the panel arrangement inside that view (a
+#' [dock_layout()], or a raw list of block / extension IDs). A view can be
+#' marked as the initially-active one by passing `active = TRUE` to
+#' [dock_layout()]; if none is marked, the first one is used. View CRUD is
+#' enabled unless the dock is locked (see `is_dock_locked()`).
 #'
 #' Users do not normally construct a `dock_layouts` directly; instead
 #' they pass a plain named list to `new_dock_board(layouts = ...)`,
-#' which validates and wraps it.
+#' which validates, mints view ids and wraps it.
 #'
 #' @return `is_dock_layouts()` returns a boolean.
 #'   `validate_dock_layouts()` returns its input and throws on error.
-#'   `active_view()` returns the active view's name, or `NULL` when no
+#'   `active_view()` returns the active view's id, or `NULL` when no
 #'   view is active, and `active_view<-()` returns the modified
-#'   `dock_layouts` (or `dock_board`) object invisibly.
+#'   `dock_layouts` (or `dock_board`) object invisibly. `view_name()`
+#'   returns a single display name (or `NULL`), `view_name<-()` the
+#'   modified `dock_layout`, and `view_names()` a character vector of
+#'   display names keyed by view id.
 #'
 #' @examples
 #' brd <- new_dock_board(
@@ -34,7 +46,7 @@
 #'     Overview = dock_layout("dataset_1", active = TRUE)
 #'   )
 #' )
-#' active_view(brd)
+#' view_names(board_layouts(brd))
 #'
 #' @rdname view
 #' @keywords internal
@@ -53,11 +65,71 @@ new_dock_layouts <- function(...) {
     vws <- list(Page = new_dock_layout())
   }
 
+  validate_view_input_names(names(vws))
+
+  vws <- mint_view_ids(vws)
+
   if (!any(lgl_ply(vws, is_active_view))) {
     vws[[1L]] <- set_active_view(vws[[1L]])
   }
 
   structure(vws, class = "dock_layouts")
+}
+
+# Wrap an already id-keyed list of `dock_layout`s (each carrying its
+# `view_name` attribute) as a `dock_layouts` without minting fresh ids.
+# Used by the runtime rebuild paths and new-format deserialization, where
+# identity must be preserved across recomputes.
+reconstruct_dock_layouts <- function(views) {
+
+  if (length(views) && !any(lgl_ply(views, is_active_view))) {
+    views[[1L]] <- set_active_view(views[[1L]])
+  }
+
+  validate_dock_layouts(structure(views, class = "dock_layouts"))
+}
+
+# Mint a stable id per view, store the display name (the incoming list
+# name) as an attribute and re-key the list by id.
+mint_view_ids <- function(views) {
+
+  nms <- names(views)
+  used <- character()
+  out <- list()
+
+  for (i in seq_along(views)) {
+
+    id <- new_view_id(used)
+    used <- c(used, id)
+    out[[id]] <- `view_name<-`(views[[i]], nms[[i]])
+  }
+
+  out
+}
+
+# A stable, DOM- and namespace-safe view id, unique against `existing`
+# (the promoted runtime dock id this issue makes persistent).
+new_view_id <- function(existing = character()) {
+  paste0("dock_", rand_names(sub("^dock_", "", existing)))
+}
+
+validate_view_input_names <- function(nms) {
+
+  if (is.null(nms) || any(!nzchar(nms))) {
+    blockr_abort(
+      "All views must be named.",
+      class = "dock_layouts_names_missing"
+    )
+  }
+
+  if (anyDuplicated(nms) > 0L) {
+    blockr_abort(
+      "View names must be unique.",
+      class = "dock_layouts_names_duplicated"
+    )
+  }
+
+  invisible(nms)
 }
 
 #' @rdname view
@@ -77,19 +149,19 @@ validate_dock_layouts <- function(x) {
     )
   }
 
-  nms <- names(x)
+  ids <- names(x)
 
-  if (is.null(nms) || any(nms == "")) {
+  if (is.null(ids) || any(ids == "")) {
     blockr_abort(
-      "All views must be named.",
-      class = "dock_layouts_names_missing"
+      "All views must carry an id.",
+      class = "dock_layouts_ids_missing"
     )
   }
 
-  if (anyDuplicated(nms) > 0L) {
+  if (anyDuplicated(ids) > 0L) {
     blockr_abort(
-      "View names must be unique.",
-      class = "dock_layouts_names_duplicated"
+      "View ids must be unique.",
+      class = "dock_layouts_ids_duplicated"
     )
   }
 
@@ -129,6 +201,38 @@ is_dock_layouts <- function(x) {
 layout_ids <- function(x) {
   stopifnot(is.list(x))
   unique(unlist(x))
+}
+
+#' @param x A `dock_layout` (for `view_name()` / `view_name<-()`) or a
+#'   `dock_layouts` collection (for `view_names()`).
+#' @rdname view
+#' @export
+view_name <- function(x) {
+  # exact = TRUE: a bare "name" would otherwise partial-match the "names"
+  # attribute and return the layout's element names.
+  attr(x, "name", exact = TRUE)
+}
+
+#' @rdname view
+#' @export
+`view_name<-` <- function(x, value) {
+  stopifnot(is_dock_layout(x), is_string(value))
+  attr(x, "name") <- value
+  x
+}
+
+#' @rdname view
+#' @export
+view_names <- function(x) {
+  stopifnot(is_dock_layouts(x))
+  set_names(chr_ply(x, view_name), names(x))
+}
+
+# Resolve a display name to its view id within a collection. Returns the
+# first match (names are kept unique at the input / UI boundary) or `NA`.
+view_id_by_name <- function(x, name) {
+  nms <- view_names(x)
+  unname(names(nms)[match(name, nms)])
 }
 
 #' @rdname view

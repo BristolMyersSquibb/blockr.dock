@@ -31,8 +31,8 @@ test_that("dock_layouts serialization round-trip", {
 
   ly <- des[["layouts"]]
   expect_s3_class(ly, "dock_layouts")
-  expect_named(ly, c("Tab1", "Tab2"))
-  expect_identical(active_view(ly), "Tab2")
+  expect_identical(unname(view_names(ly)), c("Tab1", "Tab2"))
+  expect_identical(active_name(ly), "Tab2")
 })
 
 test_that("serialized dock_layout uses the flattened wire spec", {
@@ -328,7 +328,7 @@ test_that("layout survives a real JSON encode/decode round-trip", {
   json <- jsonlite::toJSON(ser, null = "null")
   back <- jsonlite::fromJSON(json, simplifyDataFrame = FALSE,
                              simplifyMatrix = FALSE)
-  ly <- blockr_deser(back)[["layouts"]][["Page"]]
+  ly <- blockr_deser(back)[["layouts"]][[1L]]
 
   expect_equal(ly$grid$root$data[[1L]]$size, 0.3)
   expect_equal(ly$grid$root$data[[2L]]$size, 0.7)
@@ -430,7 +430,7 @@ test_that("dock_layout custom sizes round-trip through ser/des", {
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(Page = dock_layout("a", "b", sizes = c(0.3, 0.7)))
   )
-  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][["Page"]]
+  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][[1L]]
   expect_equal(ly$grid$root$data[[1L]]$size, 0.3)
   expect_equal(ly$grid$root$data[[2L]]$size, 0.7)
 })
@@ -446,7 +446,7 @@ test_that("panels(active = ...) round-trips through ser/des", {
       Page = dock_layout(panels("a", "b", "c", active = "b"))
     )
   )
-  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][["Page"]]
+  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][[1L]]
   expect_identical(
     ly$grid$root$data[[1L]]$data$activeView,
     "block_panel-b"
@@ -460,7 +460,7 @@ test_that("orientation round-trips through ser/des", {
       Page = dock_layout("a", "b", orientation = "vertical")
     )
   )
-  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][["Page"]]
+  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][[1L]]
   expect_identical(ly$grid$orientation, "VERTICAL")
 })
 
@@ -479,7 +479,7 @@ test_that("nested group() sizes round-trip through ser/des", {
       )
     )
   )
-  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][["Page"]]
+  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][[1L]]
   outer <- ly$grid$root$data
   expect_equal(outer[[1L]]$size, 0.3)
   expect_equal(outer[[2L]]$size, 0.7)
