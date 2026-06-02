@@ -169,6 +169,9 @@ blockr_deser.dock_extensions <- function(x, data, ...) {
 # atomic-vector coercion `jsonlite::fromJSON(simplifyVector = TRUE)`
 # applies to all-scalar arrays.
 
+# A whole-tree fold rather than a leaf map: branches become wire
+# `children`/`sizes` and leaves collapse to strings or `panels`, so the
+# leaf-only grid_map_leaves() can't express it — it keeps its own walk.
 grid_to_spec <- function(grid) {
 
   walk <- function(node) {
@@ -356,6 +359,37 @@ grid_leaves <- function(grid) {
 
   walk(grid[["root"]])
   leaves
+}
+
+# Map counterpart to grid_leaves(): rebuild the grid, applying `fn` to
+# each leaf node. `fn` returns a replacement leaf (to transform it) or
+# NULL (to prune it); a branch whose children all prune away collapses to
+# NULL too, so empty leaves and branches never survive. Returns the grid
+# with its root rebuilt (a NULL root when everything prunes).
+grid_map_leaves <- function(grid, fn) {
+
+  walk <- function(node) {
+
+    if (is.null(node) || !length(node)) {
+      return(NULL)
+    }
+
+    if (identical(node[["type"]], "leaf")) {
+      return(fn(node))
+    }
+
+    children <- Filter(Negate(is.null), lapply(node[["data"]], walk))
+
+    if (!length(children)) {
+      return(NULL)
+    }
+
+    node[["data"]] <- children
+    node
+  }
+
+  grid[["root"]] <- walk(grid[["root"]])
+  grid
 }
 
 # Serialize side: translate the focused group id to its open panel.

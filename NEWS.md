@@ -10,8 +10,15 @@
   committed-stack reactive returned by `blockr.ui::stack_menu_server()`.
   `stack_sidebar_body()` is removed (no in-tree callers remain; out-of
   -tree consumers migrate to `blockr.ui::stack_menu_ui()`). Drops the
-  `shinyWidgets::colorPickr` floating popover - the new colour picker
+  `shinyWidgets::colorPickr` floating popover; the new colour picker
   renders inline in the sidebar.
+
+* `dock_layout` objects gain `format()` / `print()` methods that render
+  the arrangement as an indented tree: orientation, nested groups with
+  their sizes, tabbed leaves with the active tab, and the focused panel.
+  Panel IDs print without their `block_panel-` / `ext_panel-` prefixes
+  by default; pass `bare = FALSE` for the canonical IDs (#161).
+
 * The add / append / prepend block action handlers now mount the
   `blockr.ui` block-browser module: a card-list block picker with
   search, per-category icons, and a per-card expand for tweaking the

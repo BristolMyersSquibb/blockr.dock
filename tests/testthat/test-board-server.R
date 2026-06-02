@@ -113,7 +113,13 @@ test_that("board server", {
   do.call(
     ms$setInputs,
     set_names(
-      list(1L, c("blk-a", "ext-edit_board_extension")),
+      list(
+        1L,
+        c(
+          as_block_panel_id("a"),
+          as_ext_panel_id("edit_board_extension")
+        )
+      ),
       c(mod_input("confirm_add"), mod_input("add_dock_panel"))
     )
   )
