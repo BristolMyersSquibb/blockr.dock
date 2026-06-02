@@ -31,8 +31,20 @@ add_stack_action <- function(trigger, board, update, ...) {
           stacks = list(add = as_stacks(set_names(list(new_stk), spec$id)))
         ))
 
-        blockr.ui::keep_or_hide_sidebar(
-          sidebar_id, title = "Create new stack", ui = menu_ui()
+        # `update()` only sets a reactiveVal; the board state is mutated
+        # on the next reactive flush, so defer the sidebar rebuild until
+        # after the flush. Otherwise `menu_ui()` reads `board$board` from
+        # the pre-add snapshot and re-suggests the just-used stack id.
+        # `onFlushed` runs outside a reactive context, hence `isolate()`.
+        session$onFlushed(
+          function() {
+            isolate(
+              blockr.ui::keep_or_hide_sidebar(
+                sidebar_id, title = "Create new stack", ui = menu_ui()
+              )
+            )
+          },
+          once = TRUE
         )
       })
 
@@ -90,8 +102,19 @@ edit_stack_action <- function(trigger, board, update, ...) {
           )
         ))
 
-        blockr.ui::keep_or_hide_sidebar(
-          sidebar_id, title = sidebar_title(), ui = menu_ui()
+        # Defer the sidebar rebuild to the next reactive flush so
+        # `menu_ui()` reads the merged board state. Without this, the
+        # rebuilt form shows the pre-edit selection (e.g. a block the
+        # user just removed still appears selected).
+        session$onFlushed(
+          function() {
+            isolate(
+              blockr.ui::keep_or_hide_sidebar(
+                sidebar_id, title = sidebar_title(), ui = menu_ui()
+              )
+            )
+          },
+          once = TRUE
         )
       })
 
