@@ -219,12 +219,16 @@ new_dock_layout <- function(grid = NULL, active_group = NULL,
     content[["activeGroup"]] <- coal(active_group, "1")
   }
 
-  set_active_view(
-    validate_dock_layout(
-      structure(content, class = "dock_layout")
-    ),
-    active
-  )
+  res <- validate_dock_layout(structure(content, class = "dock_layout"))
+
+  # `active` is a construction-time hint, not the active marker itself:
+  # `new_dock_layouts()` reads it to set the container's single active
+  # field, then drops it (see `finalize_layouts_active()`).
+  if (isTRUE(active)) {
+    attr(res, "active") <- TRUE
+  }
+
+  res
 }
 
 #' @param x Object
@@ -650,8 +654,6 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
         class = "extension_block_name_clash"
       )
 
-      was_active <- is_active_view(layout)
-
       spec <- list()
       if (length(ext_coll)) {
         spec <- c(spec, list(as.character(as_ext_panel_id(ext_coll))))
@@ -660,7 +662,7 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
         spec <- c(spec, list(as.character(as_block_panel_id(blocks))))
       }
 
-      layout <- set_active_view(do.call(dock_layout, spec), was_active)
+      layout <- do.call(dock_layout, spec)
 
     } else {
 

@@ -45,10 +45,26 @@ resolve_views_layouts <- function(views, board, upd) {
 # ids (the one unique, stable handle; the display name is just sugar) and
 # pass through untouched. The exception is `add`: a new view has no id
 # yet, so its key is the desired display name and a fresh id is minted.
+# `active` may also forward-reference a view added in the same delta by its
+# `add` key, which is resolved here to the minted id (see below).
 normalize_views_delta <- function(views, board) {
 
   if (length(views$add)) {
+
+    add_keys <- names(views$add)
     views$add <- mint_added_view_ids(views$add, names(board_layouts(board)))
+
+    # "Add a view and make it active" in one delta: a new view has no id
+    # to name in `active` until it is minted just above, so `active` may
+    # carry its `add` key (the desired display name) instead. Resolve that
+    # to the minted id here, before `validate_views_delta()` checks it
+    # against the post-state ids. An `active` already naming an existing
+    # view passes through; add keys resolve first, so the (vanishingly
+    # unlikely) clash between an add key and an existing id settles
+    # deterministically in favour of the freshly added view.
+    if (is_string(views$active) && views$active %in% add_keys) {
+      views$active <- names(views$add)[match(views$active, add_keys)]
+    }
   }
 
   views
@@ -280,8 +296,9 @@ validate_layout_panel_refs <- function(layout, ok_panels, view_name) {
 }
 
 # Remove the given panel IDs from a layout's grid: empty leaves drop,
-# branches with no surviving children collapse, the active-view marker
-# is preserved.
+# branches with no surviving children collapse, each leaf's open tab is
+# kept (falling back to the first survivor). Which view is active is a
+# container concern, untouched by reshaping a single view's grid.
 drop_panels_from_layout <- function(layout, panel_ids) {
 
   if (!length(panel_ids)) {
@@ -307,8 +324,6 @@ drop_panels_from_layout <- function(layout, panel_ids) {
     leaf
   }
 
-  was_active <- is_active_view(layout)
-
   result <- layout
   result[["grid"]] <- grid_map_leaves(result[["grid"]], drop_from_leaf)
 
@@ -316,7 +331,7 @@ drop_panels_from_layout <- function(layout, panel_ids) {
     result[["activeGroup"]] <- NULL
   }
 
-  set_active_view(result, was_active)
+  result
 }
 
 # Merge user-supplied `views$mod` with the block-removal cleanup: when
@@ -349,14 +364,21 @@ merge_views_mod <- function(user_mod, layouts, rm_block_ids,
 apply_views_rm <- function(rm_ids, board, dock_mgr = NULL, session = NULL) {
 
   layouts <- board_layouts(board)
+  old_active <- active_view(layouts)
   surviving <- setdiff(names(layouts), rm_ids)
+
   layouts <- structure(
     as.list(unclass(layouts))[surviving],
     class = "dock_layouts"
   )
 
-  if (length(layouts) && !any_active_view(layouts)) {
-    layouts[[1L]] <- set_active_view(layouts[[1L]])
+  if (length(surviving)) {
+    active_view(layouts) <- if (!is.null(old_active) &&
+                                  old_active %in% surviving) {
+      old_active
+    } else {
+      surviving[[1L]]
+    }
   }
 
   board_layouts(board) <- layouts
@@ -393,7 +415,7 @@ apply_views_rm <- function(rm_ids, board, dock_mgr = NULL, session = NULL) {
     state[[v]] <- NULL
   }
 
-  if (length(state) && !any_active_view(state)) {
+  if (length(state) && is.null(active_view(state))) {
     active_view(state) <- names(state)[[1L]]
   }
 
@@ -437,20 +459,13 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
 
   layouts <- board_layouts(board)
 
-  # An added view may ask to become active (its layout carries the active
-  # marker). At most one view is active, so clear the rest when it does.
-  flags <- lgl_ply(add_views, is_active_view, use_names = TRUE)
-  new_active <- names(flags)[flags][1L]
-
-  if (!is.na(new_active)) {
-    for (id in names(layouts)) {
-      layouts[[id]] <- set_active_view(layouts[[id]], FALSE)
-    }
-  }
-
+  # Adding a view never changes which one is active: that travels on the
+  # delta's `active` slot (resolved to the new view's id in
+  # `normalize_views_delta()` when it names an add) and is applied by
+  # `apply_views_active()` once the view exists. Here we only splice the
+  # new views into the container.
   for (v in names(add_views)) {
-
-    layouts[[v]] <- set_active_view(add_views[[v]], identical(v, new_active))
+    layouts[[v]] <- add_views[[v]]
   }
 
   board_layouts(board) <- layouts
@@ -515,10 +530,6 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
 
   dock_mgr$vs$state <- state
 
-  if (!is.na(new_active)) {
-    switch_active_view(new_active, dock_mgr, session)
-  }
-
   board
 }
 
@@ -528,11 +539,12 @@ apply_views_mod <- function(mod_views, board, dock_mgr = NULL) {
 
   for (v in names(mod_views)) {
 
-    was_active <- is_active_view(layouts[[v]])
-    new <- set_active_view(mod_views[[v]], was_active)
+    new <- mod_views[[v]]
 
     # A mod replaces the arrangement, not the identity: keep the display
     # name (the incoming layout carries it only on the live-sync path).
+    # Which view is active is a container field, unaffected by replacing a
+    # view's layout under the same id.
     nm <- coal(view_name(mod_views[[v]]), view_name(layouts[[v]]),
                fail_all = FALSE)
     if (!is.null(nm)) {

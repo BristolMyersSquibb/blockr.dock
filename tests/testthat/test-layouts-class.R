@@ -46,18 +46,19 @@ test_that("auto-defaults first view active when none marked", {
   expect_identical(active_name(brd), "A")
 })
 
-test_that("rejects multiple active views", {
+test_that("multiple active hints resolve to the first", {
 
-  expect_error(
-    new_dock_board(
-      blocks = c(x = new_dataset_block(), y = new_head_block()),
-      layouts = list(
-        A = dock_layout("x", active = TRUE),
-        B = dock_layout("y", active = TRUE)
-      )
-    ),
-    class = "dock_layouts_multiple_active"
+  # The container holds a single active id, so two construction-time hints
+  # can't produce two active views: the first one wins (no error).
+  brd <- new_dock_board(
+    blocks = c(x = new_dataset_block(), y = new_head_block()),
+    layouts = list(
+      A = dock_layout("x", active = TRUE),
+      B = dock_layout("y", active = TRUE)
+    )
   )
+
+  expect_identical(active_name(brd), "A")
 })
 
 test_that("empty layouts arg yields a single auto-generated view", {
@@ -110,7 +111,7 @@ test_that("active_view get/set on a dock_board", {
   )
 })
 
-test_that("active_view returns NULL when no view is active", {
+test_that("active_view returns NULL when the active view is gone", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -118,9 +119,11 @@ test_that("active_view returns NULL when no view is active", {
   )
 
   views <- board_layouts(brd)
+
+  # First is the (defaulted) active view; dropping it directly leaves the
+  # container's active id dangling, which reads back as "no active view".
   views[[vid(views, "First")]] <- NULL
 
-  expect_false(any_active_view(views))
   expect_null(active_view(views))
 })
 

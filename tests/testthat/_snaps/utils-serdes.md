@@ -16,7 +16,6 @@
                   "block_panel-a"
                 ]
               },
-              "active": false,
               "name": "Analysis"
             },
             "view_two": {
@@ -27,7 +26,6 @@
                   "block_panel-b"
                 ]
               },
-              "active": true,
               "name": "Overview"
             }
           }

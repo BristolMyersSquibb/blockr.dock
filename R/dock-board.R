@@ -103,9 +103,11 @@ resolve_views <- function(specs, c_blks, c_exts) {
 
   specs <- lapply(specs, coerce_view_spec)
 
-  if (!any(lgl_ply(specs, is_active_view))) {
-    specs[[1L]] <- set_active_view(specs[[1L]])
-  }
+  # Capture which view is active before resolving: the active marker lives
+  # on the container, so the position is what carries over (resolving a
+  # view rebuilds the layout and drops its construction-time hint).
+  hinted <- lgl_ply(specs, has_active_hint)
+  active_idx <- if (any(hinted)) which(hinted)[1L] else 1L
 
   ext_list <- as.list(c_exts)
 
@@ -114,7 +116,6 @@ resolve_views <- function(specs, c_blks, c_exts) {
   for (i in seq_along(specs)) {
 
     ly <- specs[[i]]
-    was_active <- is_active_view(ly)
 
     v_obj <- panel_obj_ids(layout_panel_ids(ly))
 
@@ -124,13 +125,14 @@ resolve_views <- function(specs, c_blks, c_exts) {
     )
 
     specs[[i]] <- resolve_dock_layout(v_blks, v_exts, ly)
-
-    if (was_active) {
-      specs[[i]] <- set_active_view(specs[[i]])
-    }
   }
 
-  reconstruct_dock_layouts(mint_view_ids(specs))
+  specs <- mint_view_ids(specs)
+
+  res <- reconstruct_dock_layouts(specs)
+  active_view(res) <- names(specs)[active_idx]
+
+  res
 }
 
 #' @rdname layout-json
@@ -153,8 +155,8 @@ coerce_view_spec <- function(v) {
   }
 
   if (is.list(v)) {
-    active <- isTRUE(attr(v, "active"))
-    return(set_active_view(do.call(dock_layout, unname(v)), active))
+    active <- isTRUE(attr(v, "active", exact = TRUE))
+    return(do.call(dock_layout, c(unname(v), list(active = active))))
   }
 
   blockr_abort(
@@ -216,7 +218,7 @@ active_layout <- function(x) {
   ly <- board_layouts(x)
   id <- active_view(ly)
 
-  new <- set_active_view(validate_dock_layout(value, board_block_ids(x)))
+  new <- validate_dock_layout(value, board_block_ids(x))
 
   nm <- view_name(ly[[id]])
   if (!is.null(nm)) {
@@ -274,11 +276,7 @@ rm_blocks.dock_board <- function(x, rm, ...) {
     pids <- layout_panel_ids(layouts[[v]])
 
     if (any(pids %in% rm_panels)) {
-      was_active <- is_active_view(layouts[[v]])
-      layouts[[v]] <- set_active_view(
-        drop_panels_from_layout(layouts[[v]], rm_panels),
-        was_active
-      )
+      layouts[[v]] <- drop_panels_from_layout(layouts[[v]], rm_panels)
     }
   }
 

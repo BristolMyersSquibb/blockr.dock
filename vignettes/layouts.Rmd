@@ -377,9 +377,11 @@ new_dock_board(
 └────────────────────────────┘
 ```
 
-`dock_layout(..., active = TRUE)` attaches an `active` attribute to
-the layout. The validator rejects more than one layout marked
-`active`. If none is marked, the first one wins.
+`dock_layout(..., active = TRUE)` marks that view as the initially
+active one. Which view is active is tracked as a single field on the
+`dock_layouts` collection rather than a per-view flag, so it is always
+exactly one: the first view marked `active` wins, and if none is marked
+the first view does.
 
 ## Empty views
 

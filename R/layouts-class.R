@@ -66,13 +66,7 @@ new_dock_layouts <- function(...) {
     vws <- list(new_dock_layout())
   }
 
-  vws <- mint_view_ids(vws)
-
-  if (!any(lgl_ply(vws, is_active_view))) {
-    vws[[1L]] <- set_active_view(vws[[1L]])
-  }
-
-  structure(vws, class = "dock_layouts")
+  finalize_layouts_active(mint_view_ids(vws))
 }
 
 # Wrap an already id-keyed list of `dock_layout`s (each carrying its
@@ -80,12 +74,7 @@ new_dock_layouts <- function(...) {
 # Used by the runtime rebuild paths and new-format deserialization, where
 # identity must be preserved across recomputes.
 reconstruct_dock_layouts <- function(views) {
-
-  if (length(views) && !any(lgl_ply(views, is_active_view))) {
-    views[[1L]] <- set_active_view(views[[1L]])
-  }
-
-  validate_dock_layouts(structure(views, class = "dock_layouts"))
+  validate_dock_layouts(finalize_layouts_active(views))
 }
 
 # Assemble views into an id-keyed `dock_layouts` list. The incoming list
@@ -166,12 +155,16 @@ validate_dock_layouts <- function(x) {
     }
   }
 
-  n_active <- sum(lgl_ply(x, is_active_view))
+  # "Exactly one active" is structural: the container holds a single active
+  # id (see `active_view()`), so two-or-more active can no longer be
+  # represented and needs no count check. We only guard the field against
+  # pointing at a view that isn't here.
+  active <- attr(x, "active", exact = TRUE)
 
-  if (n_active > 1L) {
+  if (!is.null(active) && !active %in% ids) {
     blockr_abort(
-      "Expecting at most one active view, found {n_active}.",
-      class = "dock_layouts_multiple_active"
+      "Active view {active} does not exist.",
+      class = "dock_view_not_found"
     )
   }
 
@@ -242,13 +235,13 @@ active_view <- function(x) {
 #' @export
 active_view.dock_layouts <- function(x) {
 
-  idx <- which(lgl_ply(x, is_active_view))[1L]
+  id <- attr(x, "active", exact = TRUE)
 
-  if (is.na(idx)) {
+  if (is.null(id) || !id %in% names(x)) {
     return(NULL)
   }
 
-  names(x)[idx]
+  id
 }
 
 #' @export
@@ -274,9 +267,7 @@ active_view.dock_board <- function(x) {
     )
   }
 
-  for (nm in names(x)) {
-    x[[nm]] <- set_active_view(x[[nm]], identical(nm, value))
-  }
+  attr(x, "active") <- value
 
   invisible(x)
 }
@@ -322,19 +313,31 @@ as_dock_layouts.dock_layouts <- function(x, ...) x
 
 #' @export
 as_dock_layouts.dock_layout <- function(x, ...) {
-  dock_layouts(set_active_view(x))
+  dock_layouts(x)
 }
 
-is_active_view <- function(x) {
-  is_dock_layout(x) && isTRUE(attr(x, "active"))
+# Wrap an id-keyed list of views as a `dock_layouts`, recording the active
+# view as a single field on the container. The active view is the one
+# carrying a construction-time hint (`dock_layout(active = TRUE)`), or the
+# first view when none is hinted; the per-view hints are dropped so the
+# container is the sole owner of the marker.
+finalize_layouts_active <- function(views) {
+
+  hinted <- lgl_ply(views, has_active_hint)
+
+  active <- if (any(hinted)) {
+    names(views)[which(hinted)[1L]]
+  } else if (length(views)) {
+    names(views)[1L]
+  } else {
+    NULL
+  }
+
+  views <- lapply(views, `attr<-`, "active", NULL)
+
+  structure(views, class = "dock_layouts", active = active)
 }
 
-any_active_view <- function(x) {
-  any(lgl_ply(x, is_active_view))
-}
-
-set_active_view <- function(x, active = TRUE) {
-  stopifnot(is_dock_layout(x))
-  attr(x, "active") <- if (isTRUE(active)) TRUE else NULL
-  x
+has_active_hint <- function(x) {
+  isTRUE(attr(x, "active", exact = TRUE))
 }
