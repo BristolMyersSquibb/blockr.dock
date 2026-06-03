@@ -462,6 +462,29 @@ edit_block_server <- function(callbacks = list()) {
       id,
       function(input, output, session) {
 
+        cur_name <- reactive(
+          {
+            blk <- board_blocks(board$board)[[block_id]]
+            if (is_block(blk)) block_name(blk) else NULL
+          }
+        )
+
+        observeEvent(
+          cur_name(),
+          {
+            if (identical(cur_name(), input$block_name_in)) {
+              return()
+            }
+
+            updateTextInput(
+              session,
+              "block_name_in",
+              "Block name",
+              cur_name()
+            )
+          }
+        )
+
         observeEvent(
           input$block_name_in,
           {
@@ -470,9 +493,7 @@ edit_block_server <- function(callbacks = list()) {
               block_id %in% board_block_ids(board$board)
             )
 
-            cur <- block_name(board_blocks(board$board)[[block_id]])
-
-            if (identical(cur, input$block_name_in)) {
+            if (identical(cur_name(), input$block_name_in)) {
               return()
             }
 
@@ -485,35 +506,6 @@ edit_block_server <- function(callbacks = list()) {
                   )
                 )
               )
-            )
-          }
-        )
-
-        observeEvent(
-          update(),
-          {
-            upd <- update()
-
-            continue <- "blocks" %in% names(upd) &&
-              "mod" %in% names(upd$blocks) &&
-              block_id %in% names(upd$blocks$mod) &&
-              "block_name" %in% names(upd$blocks$mod[[block_id]])
-
-            if (!continue) {
-              return()
-            }
-
-            new <- block_name(board_blocks(board$board)[[block_id]])
-
-            if (identical(new, input$block_name_in)) {
-              return()
-            }
-
-            updateTextInput(
-              session,
-              "block_name_in",
-              "Block name",
-              new
             )
           }
         )
