@@ -79,8 +79,12 @@ initialise_layout <- function(layouts, blocks, extensions) {
     )
   }
 
+  # A multi-view input is a list keyed by view id, or a list whose
+  # elements are themselves `dock_layout`s (keyless — ids minted). A bare
+  # list of panel ids (`list("a", "b")`) is a single view's children.
   is_multi_view <- (
-    is.list(layouts) && length(layouts) > 0L && !is.null(names(layouts))
+    is.list(layouts) && length(layouts) > 0L &&
+      (!is.null(names(layouts)) || any(lgl_ply(layouts, is_dock_layout)))
   )
 
   if (!is_multi_view) {
@@ -97,22 +101,6 @@ initialise_layout <- function(layouts, blocks, extensions) {
 
 resolve_views <- function(specs, c_blks, c_exts) {
 
-  nms <- names(specs)
-
-  if (is.null(nms) || any(!nzchar(nms))) {
-    blockr_abort(
-      "All views must be named.",
-      class = "dock_layouts_names_missing"
-    )
-  }
-
-  if (anyDuplicated(nms) > 0L) {
-    blockr_abort(
-      "View names must be unique.",
-      class = "dock_layouts_names_duplicated"
-    )
-  }
-
   specs <- lapply(specs, coerce_view_spec)
 
   if (!any(lgl_ply(specs, is_active_view))) {
@@ -121,9 +109,11 @@ resolve_views <- function(specs, c_blks, c_exts) {
 
   ext_list <- as.list(c_exts)
 
-  for (view_name in names(specs)) {
+  # Iterate by position: a view's key is its id and may be absent (minted
+  # later), so it cannot be used to index here.
+  for (i in seq_along(specs)) {
 
-    ly <- specs[[view_name]]
+    ly <- specs[[i]]
     was_active <- is_active_view(ly)
 
     v_obj <- panel_obj_ids(layout_panel_ids(ly))
@@ -133,14 +123,14 @@ resolve_views <- function(specs, c_blks, c_exts) {
       ext_list[intersect(v_obj, names(ext_list))]
     )
 
-    specs[[view_name]] <- resolve_dock_layout(v_blks, v_exts, ly)
+    specs[[i]] <- resolve_dock_layout(v_blks, v_exts, ly)
 
     if (was_active) {
-      specs[[view_name]] <- set_active_view(specs[[view_name]])
+      specs[[i]] <- set_active_view(specs[[i]])
     }
   }
 
-  validate_dock_layouts(structure(specs, class = "dock_layouts"))
+  reconstruct_dock_layouts(mint_view_ids(specs))
 }
 
 #' @rdname layout-json
@@ -224,9 +214,16 @@ active_layout <- function(x) {
 #' @export
 `active_layout<-` <- function(x, value) {
   ly <- board_layouts(x)
-  ly[[active_view(ly)]] <- set_active_view(
-    validate_dock_layout(value, board_block_ids(x))
-  )
+  id <- active_view(ly)
+
+  new <- set_active_view(validate_dock_layout(value, board_block_ids(x)))
+
+  nm <- view_name(ly[[id]])
+  if (!is.null(nm)) {
+    view_name(new) <- nm
+  }
+
+  ly[[id]] <- new
   board_layouts(x) <- ly
 
   invisible(x)
@@ -297,7 +294,10 @@ validate_board_update.dock_board <- function(payload, board, ...,
   if ("views" %in% names(payload) && !is.null(payload$views) &&
         !is.list(payload$views)) {
     blockr_abort(
-      "`views` must be a list with optional `add`/`mod`/`rm`/`active`.",
+      paste(
+        "`views` must be a list with optional",
+        "`add`/`mod`/`rm`/`active`/`rename`."
+      ),
       class = "dock_views_delta_invalid"
     )
   }
@@ -319,12 +319,18 @@ augment_board_update.dock_board <- function(upd, board, ...,
 
   upd <- NextMethod()
 
-  rm_block_ids <- upd$blocks$rm %||% character()
-  skip_views <- upd$views$rm %||% character()
-
   if (length(upd$views$add) || length(upd$views$mod)) {
     upd$views <- resolve_views_layouts(upd$views, board, upd)
   }
+
+  # Mint ids for added views and resolve every name reference to an id, so
+  # the rest of the pipeline (merge, validate, apply) is purely id-keyed.
+  if (length(upd$views)) {
+    upd$views <- normalize_views_delta(upd$views, board)
+  }
+
+  rm_block_ids <- upd$blocks$rm %||% character()
+  skip_views <- upd$views$rm %||% character()
 
   if (length(rm_block_ids)) {
 
@@ -376,6 +382,10 @@ apply_board_update.dock_board <- function(board, upd, ...,
 
   if (length(upd$views$mod)) {
     board <- apply_views_mod(upd$views$mod, board, dock_mgr)
+  }
+
+  if (length(upd$views$rename)) {
+    board <- apply_views_rename(upd$views$rename, board, dock_mgr, session)
   }
 
   if (!is.null(upd$views$active)) {

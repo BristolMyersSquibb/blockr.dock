@@ -25,8 +25,13 @@
 #'
 #' `dock_layout()` accepts `orientation = "horizontal" | "vertical"`
 #' for the top-level split direction, `sizes` for the root-branch
-#' ratios, and `active = TRUE` to mark this layout as the
-#' initially-active view in a `dock_layouts` collection.
+#' ratios, `active = TRUE` to mark this layout as the initially-active
+#' view in a `dock_layouts` collection, and `name` for the view's
+#' display label. In `new_dock_board(layouts = list(...))` the list name
+#' is the view's stable *id* (the container's key, like a block id),
+#' minted when absent; `name` sets the free-form display label on the
+#' view itself. When no name is given, one is derived from the id for
+#' display.
 #'
 #' A *view* is the conceptual page-level container; a *layout* is the
 #' panel arrangement inside a view. The dockview-shape `grid + panels`
@@ -51,6 +56,11 @@
 #'   default.
 #' @param sizes Numeric vector parallel to `...`, giving each child's
 #'   share of the parent (positive; need not sum to 1).
+#' @param name For `dock_layout()`, an optional display label for the
+#'   view (free-form). When omitted, a label is derived from the view's
+#'   id. The view's id is the list name in
+#'   `new_dock_board(layouts = list(...))`, minted when absent and unique
+#'   across the views of a `dock_layouts`.
 #' @param blocks,extensions Dock board components. For `default_layout()`
 #'   the components to arrange; for `as_dock_layout()`, optional, used to
 #'   resolve bare IDs and validate the result.
@@ -100,7 +110,7 @@
 #' @rdname layout
 #' @export
 dock_layout <- function(..., orientation = c("horizontal", "vertical"),
-                        active = FALSE, sizes = NULL) {
+                        active = FALSE, sizes = NULL, name = NULL) {
 
   orientation <- match.arg(orientation)
   children <- list(...)
@@ -113,10 +123,16 @@ dock_layout <- function(..., orientation = c("horizontal", "vertical"),
     new_dock_group(children, sizes)
   }
 
-  new_dock_layout(
+  res <- new_dock_layout(
     grid = build_grid_tree(root_spec, orientation = orientation),
     active = active
   )
+
+  if (!is.null(name)) {
+    view_name(res) <- name
+  }
+
+  res
 }
 
 #' @rdname layout
@@ -614,6 +630,7 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
   ext_coll <- as_dock_extensions(extensions)
 
   layout <- as_dock_layout(layout)
+  view_nm <- view_name(layout)
 
   id_map <- set_names(
     c(as_ext_panel_id(ext_coll), as_block_panel_id(blocks)),
@@ -649,6 +666,10 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
 
       layout[["grid"]] <- rewrite_grid_leaves(layout[["grid"]], id_map)
     }
+  }
+
+  if (!is.null(view_nm)) {
+    view_name(layout) <- view_nm
   }
 
   validate_dock_layout(layout, blocks)

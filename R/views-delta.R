@@ -40,6 +40,30 @@ resolve_views_layouts <- function(views, board, upd) {
   views
 }
 
+# Normalise an inbound `views` delta to be keyed purely by stable view id.
+# Existing views are addressed by id only — `mod` / `rm` / `active` carry
+# ids (the one unique, stable handle; the display name is just sugar) and
+# pass through untouched. The exception is `add`: a new view has no id
+# yet, so its key is the desired display name and a fresh id is minted.
+normalize_views_delta <- function(views, board) {
+
+  if (length(views$add)) {
+    views$add <- mint_added_view_ids(views$add, names(board_layouts(board)))
+  }
+
+  views
+}
+
+# Mint a fresh id for each added view — unique against the board's
+# existing ids — carrying the key (the desired display name) onto the
+# view as its name.
+mint_added_view_ids <- function(add, reserved) {
+  set_names(
+    map(`view_name<-`, add, names(add)),
+    rand_names(reserved, n = length(add))
+  )
+}
+
 # Structural + cross-reference checks for the `views` slice. Runs after
 # in-core augmentation, so panel-ID xrefs resolve against the post-state
 # block set derived from `upd`.
@@ -47,12 +71,17 @@ validate_views_delta <- function(views, board, upd) {
 
   if (!is.list(views)) {
     blockr_abort(
-      "`views` must be a list with optional `add`/`mod`/`rm`/`active`.",
+      paste(
+        "`views` must be a list with optional",
+        "`add`/`mod`/`rm`/`active`/`rename`."
+      ),
       class = "dock_views_delta_invalid"
     )
   }
 
-  unknown_keys <- setdiff(names(views), c("add", "mod", "rm", "active"))
+  unknown_keys <- setdiff(
+    names(views), c("add", "mod", "rm", "active", "rename")
+  )
   if (length(unknown_keys)) {
     blockr_abort(
       "Unknown `views` slice key{?s}: {unknown_keys}.",
@@ -60,39 +89,51 @@ validate_views_delta <- function(views, board, upd) {
     )
   }
 
-  add_names <- names(views$add) %||% character()
-  mod_names <- names(views$mod) %||% character()
-  rm_names <- views$rm %||% character()
+  add_ids <- names(views$add) %||% character()
+  mod_ids <- names(views$mod) %||% character()
+  rm_ids <- views$rm %||% character()
+  rename_ids <- names(views$rename) %||% character()
   active <- views$active
 
   add_unnamed <- length(views$add) &&
-    (is.null(names(views$add)) || any(!nzchar(add_names)))
+    (is.null(names(views$add)) || any(!nzchar(add_ids)))
 
   if (add_unnamed) {
     blockr_abort(
-      "All entries of `views$add` must be named.",
+      "All entries of `views$add` must carry a view id.",
       class = "dock_views_delta_unnamed"
     )
   }
 
   mod_unnamed <- length(views$mod) &&
-    (is.null(names(views$mod)) || any(!nzchar(mod_names)))
+    (is.null(names(views$mod)) || any(!nzchar(mod_ids)))
 
   if (mod_unnamed) {
     blockr_abort(
-      "All entries of `views$mod` must be named.",
+      "All entries of `views$mod` must carry a view id.",
       class = "dock_views_delta_unnamed"
     )
   }
 
-  if (length(rm_names) && !is.character(rm_names)) {
+  if (length(rm_ids) && !is.character(rm_ids)) {
     blockr_abort(
-      "`views$rm` must be a character vector of view names.",
+      "`views$rm` must be a character vector of view ids.",
       class = "dock_views_delta_invalid"
     )
   }
 
-  clash <- intersect(add_names, rm_names)
+  rename_unnamed <- length(views$rename) &&
+    (is.null(names(views$rename)) || any(!nzchar(rename_ids)) ||
+       !all(lgl_ply(views$rename, is_string)))
+
+  if (rename_unnamed) {
+    blockr_abort(
+      "`views$rename` must map view ids to single display names.",
+      class = "dock_views_delta_invalid"
+    )
+  }
+
+  clash <- intersect(add_ids, rm_ids)
   if (length(clash)) {
     blockr_abort(
       "View{?s} {clash} cannot appear in both `views$add` and `views$rm`.",
@@ -100,7 +141,7 @@ validate_views_delta <- function(views, board, upd) {
     )
   }
 
-  mod_in_rm <- intersect(mod_names, rm_names)
+  mod_in_rm <- intersect(mod_ids, rm_ids)
   if (length(mod_in_rm)) {
     blockr_abort(
       "View{?s} {mod_in_rm} cannot appear in both `views$mod` and `views$rm`.",
@@ -108,7 +149,7 @@ validate_views_delta <- function(views, board, upd) {
     )
   }
 
-  mod_in_add <- intersect(mod_names, add_names)
+  mod_in_add <- intersect(mod_ids, add_ids)
   if (length(mod_in_add)) {
     blockr_abort(
       paste(
@@ -120,7 +161,7 @@ validate_views_delta <- function(views, board, upd) {
   }
 
   current_views <- names(board_layouts(board))
-  unknown_mod <- setdiff(mod_names, current_views)
+  unknown_mod <- setdiff(mod_ids, current_views)
   if (length(unknown_mod)) {
     blockr_abort(
       "View{?s} {unknown_mod} in `views$mod` do not exist on the board.",
@@ -128,7 +169,7 @@ validate_views_delta <- function(views, board, upd) {
     )
   }
 
-  unknown_rm <- setdiff(rm_names, current_views)
+  unknown_rm <- setdiff(rm_ids, current_views)
   if (length(unknown_rm)) {
     blockr_abort(
       "View{?s} {unknown_rm} in `views$rm` do not exist on the board.",
@@ -136,7 +177,15 @@ validate_views_delta <- function(views, board, upd) {
     )
   }
 
-  add_clash <- intersect(add_names, current_views)
+  unknown_rename <- setdiff(rename_ids, current_views)
+  if (length(unknown_rename)) {
+    blockr_abort(
+      "View{?s} {unknown_rename} in `views$rename` do not exist on the board.",
+      class = "dock_views_delta_rename_unknown"
+    )
+  }
+
+  add_clash <- intersect(add_ids, current_views)
   if (length(add_clash)) {
     blockr_abort(
       "View{?s} {add_clash} in `views$add` already exist on the board.",
@@ -144,7 +193,7 @@ validate_views_delta <- function(views, board, upd) {
     )
   }
 
-  post_views <- setdiff(c(current_views, add_names), rm_names)
+  post_views <- setdiff(c(current_views, add_ids), rm_ids)
 
   if (!length(post_views)) {
     blockr_abort(
@@ -157,7 +206,7 @@ validate_views_delta <- function(views, board, upd) {
 
     if (!is_string(active)) {
       blockr_abort(
-        "`views$active` must be a single view name.",
+        "`views$active` must be a single view id.",
         class = "dock_views_delta_active_invalid"
       )
     }
@@ -180,7 +229,7 @@ validate_views_delta <- function(views, board, upd) {
     as_ext_panel_id(dock_ext_ids(board))
   )
 
-  for (v in add_names) {
+  for (v in add_ids) {
 
     if (!is_dock_layout(views$add[[v]])) {
       blockr_abort(
@@ -192,7 +241,7 @@ validate_views_delta <- function(views, board, upd) {
     validate_layout_panel_refs(views$add[[v]], ok_panels, v)
   }
 
-  for (v in mod_names) {
+  for (v in mod_ids) {
 
     if (!is_dock_layout(views$mod[[v]])) {
       blockr_abort(
@@ -297,10 +346,10 @@ merge_views_mod <- function(user_mod, layouts, rm_block_ids,
   out
 }
 
-apply_views_rm <- function(rm_names, board, dock_mgr = NULL, session = NULL) {
+apply_views_rm <- function(rm_ids, board, dock_mgr = NULL, session = NULL) {
 
   layouts <- board_layouts(board)
-  surviving <- setdiff(names(layouts), rm_names)
+  surviving <- setdiff(names(layouts), rm_ids)
   layouts <- structure(
     as.list(unclass(layouts))[surviving],
     class = "dock_layouts"
@@ -318,9 +367,9 @@ apply_views_rm <- function(rm_names, board, dock_mgr = NULL, session = NULL) {
 
   ns <- session$ns
   state <- isolate(dock_mgr$vs$state)
-  was_active_removed <- active_view(state) %in% rm_names
+  was_active_removed <- active_view(state) %in% rm_ids
 
-  for (v in rm_names) {
+  for (v in rm_ids) {
 
     if (exists(v, envir = dock_mgr$docks, inherits = FALSE)) {
 
@@ -334,7 +383,7 @@ apply_views_rm <- function(rm_names, board, dock_mgr = NULL, session = NULL) {
 
       destroy_module(rm_dock$dock_id, session = session)
       removeUI(
-        selector = paste0("#", ns(paste0("view_wrap_", rm_dock$dock_id))),
+        selector = paste0("#", ns(as_view_handle_id(rm_dock$dock_id))),
         immediate = TRUE,
         session = session
       )
@@ -353,11 +402,27 @@ apply_views_rm <- function(rm_names, board, dock_mgr = NULL, session = NULL) {
   if (was_active_removed && length(state)) {
 
     new_active <- active_view(state)
-    update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_active]])
+
+    if (exists(new_active, envir = dock_mgr$docks, inherits = FALSE)) {
+
+      # switch-view must fire before show_view_ui so the target dock carries
+      # blockr-view-dock-active; otherwise move-element drops DOM moves into
+      # an inactive dock.
+      session$sendCustomMessage(
+        "switch-view",
+        list(
+          id = ns(as_view_handle_id(dock_mgr$docks[[new_active]]$dock_id))
+        )
+      )
+
+      show_view_ui(new_active, dock_mgr$docks)
+      update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_active]])
+    }
+
     dock_mgr$current_active(new_active)
   }
 
-  for (v in rm_names) {
+  for (v in rm_ids) {
     session$sendInputMessage("view_nav", list(remove = v))
   }
 
@@ -372,9 +437,20 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
 
   layouts <- board_layouts(board)
 
+  # An added view may ask to become active (its layout carries the active
+  # marker). At most one view is active, so clear the rest when it does.
+  flags <- lgl_ply(add_views, is_active_view, use_names = TRUE)
+  new_active <- names(flags)[flags][1L]
+
+  if (!is.na(new_active)) {
+    for (id in names(layouts)) {
+      layouts[[id]] <- set_active_view(layouts[[id]], FALSE)
+    }
+  }
+
   for (v in names(add_views)) {
 
-    layouts[[v]] <- set_active_view(add_views[[v]], active = FALSE)
+    layouts[[v]] <- set_active_view(add_views[[v]], identical(v, new_active))
   }
 
   board_layouts(board) <- layouts
@@ -387,28 +463,33 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
 
   for (v in names(add_views)) {
 
-    v_id <- dock_mgr$next_id()
-    dock_output_id <- ns(NS(v_id, dock_id()))
+    # The view id (minted in augment_board_update.dock_board) is the dock
+    # module id and the stem of the DOM ids — no separate runtime mint.
+    if (exists(v, envir = dock_mgr$docks, inherits = FALSE)) {
+      next
+    }
+
+    dock_output_id <- ns(NS(v, dock_id()))
 
     insertUI(
       selector = paste0("#", ns("view_container")),
       where = "beforeEnd",
       ui = div(
-        id = ns(paste0("view_wrap_", v_id)),
+        id = ns(as_view_handle_id(v)),
         class = "blockr-view-dock",
         dockViewR::dock_view_output(
           dock_output_id,
           width = "100%",
           height = "100%"
         ),
-        uiOutput(NS(ns(v_id), "empty_prompt"))
+        uiOutput(NS(ns(v), "empty_prompt"))
       ),
       immediate = TRUE,
       session = session
     )
 
     dock_res <- manage_dock(
-      v_id,
+      v,
       dock_mgr$board_rv,
       dock_mgr$update,
       dock_mgr$triggers,
@@ -416,20 +497,27 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
       blocks = board_blocks(board),
       extensions = dock_extensions(board)
     )
-    dock_res$dock_id <- v_id
+    dock_res$dock_id <- v
     dock_mgr$docks[[v]] <- dock_res
 
-    session$sendInputMessage("view_nav", list(add = v))
+    session$sendInputMessage(
+      "view_nav",
+      list(add = list(id = v, name = view_name(add_views[[v]])))
+    )
   }
 
   state <- isolate(dock_mgr$vs$state)
 
   for (v in names(add_views)) {
 
-    state[[v]] <- new_dock_layout()
+    state[[v]] <- bare_view(add_views[[v]])
   }
 
   dock_mgr$vs$state <- state
+
+  if (!is.na(new_active)) {
+    switch_active_view(new_active, dock_mgr, session)
+  }
 
   board
 }
@@ -441,7 +529,17 @@ apply_views_mod <- function(mod_views, board, dock_mgr = NULL) {
   for (v in names(mod_views)) {
 
     was_active <- is_active_view(layouts[[v]])
-    layouts[[v]] <- set_active_view(mod_views[[v]], was_active)
+    new <- set_active_view(mod_views[[v]], was_active)
+
+    # A mod replaces the arrangement, not the identity: keep the display
+    # name (the incoming layout carries it only on the live-sync path).
+    nm <- coal(view_name(mod_views[[v]]), view_name(layouts[[v]]),
+               fail_all = FALSE)
+    if (!is.null(nm)) {
+      view_name(new) <- nm
+    }
+
+    layouts[[v]] <- new
   }
 
   board_layouts(board) <- layouts
@@ -471,6 +569,47 @@ apply_views_mod <- function(mod_views, board, dock_mgr = NULL) {
       proxy = dock_mgr$docks[[v]]$proxy,
       blocks = board_blocks(board),
       extensions = dock_extensions(board)
+    )
+  }
+
+  board
+}
+
+# Rename one or more views: a name-attribute write keyed by stable id.
+# `rename` is a named list mapping view id to its new display name. The
+# id is untouched, so the dock module, DOM element and registry key all
+# survive — no layout rebuild, no re-keying.
+apply_views_rename <- function(rename, board, dock_mgr = NULL,
+                               session = NULL) {
+
+  layouts <- board_layouts(board)
+
+  for (id in names(rename)) {
+    if (id %in% names(layouts)) {
+      view_name(layouts[[id]]) <- rename[[id]]
+    }
+  }
+
+  board_layouts(board) <- layouts
+
+  if (is.null(dock_mgr) || is.null(session)) {
+    return(board)
+  }
+
+  state <- isolate(dock_mgr$vs$state)
+
+  for (id in names(rename)) {
+    if (id %in% names(state)) {
+      view_name(state[[id]]) <- rename[[id]]
+    }
+  }
+
+  dock_mgr$vs$state <- state
+
+  for (id in names(rename)) {
+    session$sendInputMessage(
+      "view_nav",
+      list(rename = list(id = id, to = rename[[id]]))
     )
   }
 
@@ -533,18 +672,29 @@ apply_views_active <- function(active, board, dock_mgr = NULL,
     return(board)
   }
 
+  switch_active_view(active, dock_mgr, session)
+
+  board
+}
+
+# Runtime switch to view `active` (by id): activate its dock in the DOM,
+# move the block / ext UIs across, and point active_dock and the nav at
+# it. The board's active marker is set by the caller; this drives the
+# live session state.
+switch_active_view <- function(active, dock_mgr, session) {
+
   ns <- session$ns
   state <- isolate(dock_mgr$vs$state)
   old_active <- active_view(state)
 
   if (identical(old_active, active)) {
-    return(board)
+    return(invisible())
   }
 
   session$sendCustomMessage(
     "switch-view",
     list(
-      id = ns(paste0("view_wrap_", dock_mgr$docks[[active]]$dock_id))
+      id = ns(as_view_handle_id(dock_mgr$docks[[active]]$dock_id))
     )
   )
 
@@ -562,7 +712,7 @@ apply_views_active <- function(active, board, dock_mgr = NULL,
     list(value = active)
   )
 
-  board
+  invisible()
 }
 
 # Apply one view's layout change. v1 unconditionally restores the target

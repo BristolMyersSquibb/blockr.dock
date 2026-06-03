@@ -47,7 +47,8 @@ blockr_ser.dock_layout <- function(x, data, ...) {
   list(
     object = class(x),
     payload = layout_to_spec(payload),
-    active = is_active_view(payload)
+    active = is_active_view(payload),
+    name = view_name(payload)
   )
 }
 
@@ -95,15 +96,28 @@ blockr_deser.dock_layout <- function(x, data, ...) {
     spec_to_layout(payload)
   }
 
-  set_active_view(layout, active)
+  layout <- set_active_view(layout, active)
+
+  if (is_string(data[["name"]])) {
+    view_name(layout) <- data[["name"]]
+  }
+
+  layout
 }
 
 #' @export
 blockr_deser.dock_layouts <- function(x, data, ...) {
   payload <- data[["payload"]]
-  v_list <- lapply(payload[["views"]], blockr_deser)
-  res <- dock_layouts(v_list)
-  active_view(res) <- payload[["active"]]
+
+  # `views` is keyed by stable id; each carries its display name (when
+  # set) and the active marker. Restore the ids as-is and the active view
+  # by id.
+  res <- reconstruct_dock_layouts(lapply(payload[["views"]], blockr_deser))
+
+  if (is_string(payload[["active"]]) && payload[["active"]] %in% names(res)) {
+    active_view(res) <- payload[["active"]]
+  }
+
   res
 }
 
