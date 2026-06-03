@@ -30,10 +30,11 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   triggers <- action_triggers(actions)
 
   # Per-session dock state, closure-private — no handle crosses the package
-  # boundary. `reconcile_views()` is the sole mutator. `docks` is the live
-  # `manage_dock()` registry (keyed by view id); `current_active` is the
-  # shown-active id (lags the board so a switch is detectable); `vs$state`
-  # mirrors the view set / display names / active id for the live-sync and nav.
+  # boundary, and `reconcile_views()` is the sole mutator. `docks` is the
+  # live `manage_dock()` registry (keyed by view id). `current_active` and
+  # `vs$state` are the two facets of the rendered mirror of `board_layouts`:
+  # the shown-active id, and the shown view set / display names — each lags
+  # the committed board so reconcile can diff committed-vs-shown and apply it.
   docks <- new.env(parent = emptyenv())
   active_dock <- reactiveValues()
   current_active <- reactiveVal(NULL)
