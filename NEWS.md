@@ -1,5 +1,17 @@
 # blockr.dock (development version)
 
+* The dock manager is no longer threaded across the package boundary.
+  `apply_board_update.dock_board()` is now a pure reducer over
+  `board_layouts()`; the live view surgery (instantiate / tear down /
+  restore / rename / switch) runs in a single closure-resident reconcile
+  pass driven by the committed board, replacing the duplicated
+  delta-driven and UI-driven view CRUD. `new_dock_manager()` is now
+  per-session closure state instead of a handle returned from the board
+  callback and recovered through `dot_args`. Also makes
+  `augment_board_update.dock_board()` idempotent — a view id is minted
+  once rather than re-minted on every augment pass — fixing a view-add
+  loop (#164).
+
 * Views now carry a stable, immutable **id** decoupled from their
   editable display **name**, mirroring the id / name split used for
   blocks. `dock_layouts` (and the runtime `dock_mgr$docks` registry) are

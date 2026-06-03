@@ -70,14 +70,21 @@ normalize_views_delta <- function(views, board) {
   views
 }
 
-# Mint a fresh id for each added view — unique against the board's
-# existing ids — carrying the key (the desired display name) onto the
-# view as its name.
+# Mint a stable id for each added view that still needs one — unique against
+# the board's existing ids — carrying the key (the desired display name) onto
+# the view as its name. A view that already has a name (and thus an id key,
+# from an earlier pass) is left untouched, which keeps augment idempotent:
+# the update lifecycle re-runs augment until it stops changing the payload, so
+# re-minting on every pass would loop a view add forever.
 mint_added_view_ids <- function(add, reserved) {
-  set_names(
-    map(`view_name<-`, add, names(add)),
-    rand_names(reserved, n = length(add))
-  )
+  needs <- lgl_ply(add, function(x) is.null(view_name(x)))
+  if (!any(needs)) {
+    return(add)
+  }
+  add[needs] <- map(`view_name<-`, add[needs], names(add)[needs])
+  ids <- names(add)
+  ids[needs] <- rand_names(c(reserved, ids[!needs]), n = sum(needs))
+  set_names(add, ids)
 }
 
 # Structural + cross-reference checks for the `views` slice. Runs after
@@ -361,7 +368,7 @@ merge_views_mod <- function(user_mod, layouts, rm_block_ids,
   out
 }
 
-apply_views_rm <- function(rm_ids, board, dock_mgr = NULL, session = NULL) {
+apply_views_rm <- function(rm_ids, board) {
 
   layouts <- board_layouts(board)
   old_active <- active_view(layouts)
@@ -383,60 +390,10 @@ apply_views_rm <- function(rm_ids, board, dock_mgr = NULL, session = NULL) {
 
   board_layouts(board) <- layouts
 
-  if (is.null(dock_mgr) || is.null(session)) {
-    return(board)
-  }
-
-  ns <- session$ns
-  state <- isolate(dock_mgr$vs$state)
-  was_active_removed <- active_view(state) %in% rm_ids
-
-  for (v in rm_ids) {
-    teardown_view(v, session, dock_mgr$docks)
-    state[[v]] <- NULL
-  }
-
-  if (length(state) && is.null(active_view(state))) {
-    active_view(state) <- names(state)[[1L]]
-  }
-
-  dock_mgr$vs$state <- state
-
-  if (was_active_removed && length(state)) {
-
-    new_active <- active_view(state)
-
-    if (exists(new_active, envir = dock_mgr$docks, inherits = FALSE)) {
-
-      # switch-view must fire before show_view_ui so the target dock carries
-      # blockr-view-dock-active; otherwise move-element drops DOM moves into
-      # an inactive dock.
-      session$sendCustomMessage(
-        "switch-view",
-        list(
-          id = ns(as_view_handle_id(dock_mgr$docks[[new_active]]$dock_id))
-        )
-      )
-
-      show_view_ui(new_active, dock_mgr$docks)
-      update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_active]])
-    }
-
-    dock_mgr$current_active(new_active)
-  }
-
-  for (v in rm_ids) {
-    session$sendInputMessage("view_nav", list(remove = v))
-  }
-
-  if (length(state)) {
-    session$sendInputMessage("view_nav", list(value = active_view(state)))
-  }
-
   board
 }
 
-apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
+apply_views_add <- function(add_views, board) {
 
   layouts <- board_layouts(board)
 
@@ -451,49 +408,10 @@ apply_views_add <- function(add_views, board, dock_mgr = NULL, session = NULL) {
 
   board_layouts(board) <- layouts
 
-  if (is.null(dock_mgr) || is.null(session)) {
-    return(board)
-  }
-
-  for (v in names(add_views)) {
-
-    # The view id (minted in augment_board_update.dock_board) is the dock
-    # module id and the stem of the DOM ids — no separate runtime mint.
-    if (exists(v, envir = dock_mgr$docks, inherits = FALSE)) {
-      next
-    }
-
-    instantiate_view(
-      v,
-      add_views[[v]],
-      dock_mgr$board_rv,
-      dock_mgr$update,
-      dock_mgr$triggers,
-      session,
-      dock_mgr$docks,
-      blocks = board_blocks(board),
-      extensions = dock_extensions(board)
-    )
-
-    session$sendInputMessage(
-      "view_nav",
-      list(add = list(id = v, name = view_name(add_views[[v]])))
-    )
-  }
-
-  state <- isolate(dock_mgr$vs$state)
-
-  for (v in names(add_views)) {
-
-    state[[v]] <- bare_view(add_views[[v]])
-  }
-
-  dock_mgr$vs$state <- state
-
   board
 }
 
-apply_views_mod <- function(mod_views, board, dock_mgr = NULL) {
+apply_views_mod <- function(mod_views, board) {
 
   layouts <- board_layouts(board)
 
@@ -516,34 +434,6 @@ apply_views_mod <- function(mod_views, board, dock_mgr = NULL) {
 
   board_layouts(board) <- layouts
 
-  if (is.null(dock_mgr)) {
-    return(board)
-  }
-
-  for (v in names(mod_views)) {
-
-    if (!exists(v, envir = dock_mgr$docks, inherits = FALSE)) {
-      next
-    }
-
-    live <- tryCatch(
-      isolate(dock_mgr$docks[[v]]$layout()),
-      error = function(e) NULL
-    )
-
-    if (!is.null(live) && layouts_match(live, mod_views[[v]])) {
-      next
-    }
-
-    apply_layout_diff(
-      view = v,
-      target = mod_views[[v]],
-      proxy = dock_mgr$docks[[v]]$proxy,
-      blocks = board_blocks(board),
-      extensions = dock_extensions(board)
-    )
-  }
-
   board
 }
 
@@ -551,8 +441,7 @@ apply_views_mod <- function(mod_views, board, dock_mgr = NULL) {
 # `rename` is a named list mapping view id to its new display name. The
 # id is untouched, so the dock module, DOM element and registry key all
 # survive — no layout rebuild, no re-keying.
-apply_views_rename <- function(rename, board, dock_mgr = NULL,
-                               session = NULL) {
+apply_views_rename <- function(rename, board) {
 
   layouts <- board_layouts(board)
 
@@ -563,27 +452,6 @@ apply_views_rename <- function(rename, board, dock_mgr = NULL,
   }
 
   board_layouts(board) <- layouts
-
-  if (is.null(dock_mgr) || is.null(session)) {
-    return(board)
-  }
-
-  state <- isolate(dock_mgr$vs$state)
-
-  for (id in names(rename)) {
-    if (id %in% names(state)) {
-      view_name(state[[id]]) <- rename[[id]]
-    }
-  }
-
-  dock_mgr$vs$state <- state
-
-  for (id in names(rename)) {
-    session$sendInputMessage(
-      "view_nav",
-      list(rename = list(id = id, to = rename[[id]]))
-    )
-  }
 
   board
 }
@@ -633,18 +501,11 @@ layouts_match <- function(a, b) {
   identical(spec_a, spec_b)
 }
 
-apply_views_active <- function(active, board, dock_mgr = NULL,
-                               session = NULL) {
+apply_views_active <- function(active, board) {
 
   layouts <- board_layouts(board)
   active_view(layouts) <- active
   board_layouts(board) <- layouts
-
-  if (is.null(dock_mgr) || is.null(session)) {
-    return(board)
-  }
-
-  switch_active_view(active, dock_mgr, session)
 
   board
 }
@@ -655,7 +516,6 @@ apply_views_active <- function(active, board, dock_mgr = NULL,
 # live session state.
 switch_active_view <- function(active, dock_mgr, session) {
 
-  ns <- session$ns
   state <- isolate(dock_mgr$vs$state)
   old_active <- active_view(state)
 
@@ -663,20 +523,25 @@ switch_active_view <- function(active, dock_mgr, session) {
     return(invisible())
   }
 
-  session$sendCustomMessage(
-    "switch-view",
-    list(
-      id = ns(as_view_handle_id(dock_mgr$docks[[active]]$dock_id))
-    )
-  )
+  if (exists(active, envir = dock_mgr$docks, inherits = FALSE)) {
 
-  hide_view_ui(old_active, dock_mgr$docks)
-  show_view_ui(active, dock_mgr$docks)
+    # switch-view must fire before show_view_ui so the target dock carries
+    # blockr-view-dock-active; otherwise move-element drops DOM moves into an
+    # inactive dock.
+    session$sendCustomMessage(
+      "switch-view",
+      list(
+        id = session$ns(as_view_handle_id(dock_mgr$docks[[active]]$dock_id))
+      )
+    )
+
+    hide_view_ui(old_active, dock_mgr$docks)
+    show_view_ui(active, dock_mgr$docks)
+    update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active]])
+  }
 
   active_view(state) <- active
   dock_mgr$vs$state <- state
-
-  update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active]])
   dock_mgr$current_active(active)
 
   session$sendInputMessage(

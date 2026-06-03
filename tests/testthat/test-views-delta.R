@@ -163,7 +163,30 @@ test_that("rename flows through apply_board_update", {
   expect_identical(view_name(board_layouts(out)[["v1"]]), "New")
 })
 
-test_that("apply_views_rename syncs the nav and live state (runtime)", {
+test_that("augment_board_update is idempotent for a view add", {
+
+  # The update lifecycle re-runs augment until it stops changing the
+  # payload (preprocess_board_update). Minting a fresh id on every pass
+  # never converges and loops the view-add update, so a second augment of
+  # an already-augmented add must be a no-op.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(Page = list("a"))
+  )
+
+  upd <- list(
+    views = list(add = setNames(list(dock_layout("a")), "Second"),
+                 active = "Second")
+  )
+
+  once <- augment_board_update(upd, brd)
+  twice <- augment_board_update(once, brd)
+
+  expect_identical(once, twice)
+  expect_identical(view_name(once$views$add[[1L]]), "Second")
+})
+
+test_that("reconcile_views syncs the nav and live state on rename", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
@@ -176,15 +199,19 @@ test_that("apply_views_rename syncs the nav and live state (runtime)", {
     sendInputMessage = function(input_id, message) {
       sent[[length(sent) + 1L]] <<- message
       invisible()
-    }
+    },
+    sendCustomMessage = function(type, message) invisible()
   )
 
   dock_mgr <- new_dock_manager()
+  dock_mgr$current_active <- reactiveVal(active_view(board_layouts(brd)))
   dock_mgr$vs <- reactiveValues(state = board_layouts(brd))
 
-  isolate(
-    apply_views_rename(setNames(list("New"), "v1"), brd, dock_mgr, session)
-  )
+  # The board carries the new name; the live state still has the old one, so
+  # reconcile detects the rename and relabels the nav + vs$state.
+  renamed <- apply_views_rename(setNames(list("New"), "v1"), brd)
+
+  isolate(reconcile_views(renamed, dock_mgr, session))
 
   expect_true(
     any(lgl_ply(sent, function(m) {
@@ -608,7 +635,7 @@ test_that("blocks$rm augment carries through to apply for view cleanup", {
   )
 })
 
-test_that("apply_views_rm syncs the view_nav switcher on lifecycle removal", {
+test_that("reconcile_views syncs the view_nav switcher on removal", {
 
   run_rm <- function(rm_label, active_label) {
 
@@ -626,7 +653,8 @@ test_that("apply_views_rm syncs the view_nav switcher on lifecycle removal", {
       sendInputMessage = function(input_id, message) {
         sent[[length(sent) + 1L]] <<- message
         invisible()
-      }
+      },
+      sendCustomMessage = function(type, message) invisible()
     )
 
     dock_mgr <- new_dock_manager()
@@ -635,23 +663,24 @@ test_that("apply_views_rm syncs the view_nav switcher on lifecycle removal", {
     active_view(state) <- name_to_id[[active_label]]
     dock_mgr$vs <- reactiveValues(state = state)
 
-    isolate(apply_views_rm(name_to_id[[rm_label]], brd, dock_mgr, session))
+    # Remove on the board (pure), then reconcile the live session against it.
+    removed <- apply_views_rm(name_to_id[[rm_label]], brd)
+
+    isolate(reconcile_views(removed, dock_mgr, session))
 
     list(sent = sent, ids = name_to_id)
   }
 
+  # Removing a non-active view drops its tab; the active selection is
+  # unchanged, so no `value` message is needed.
   non_active <- run_rm("B", "A")
   expect_true(
     any(lgl_ply(non_active$sent, function(m) {
       identical(m$remove, non_active$ids[["B"]])
     }))
   )
-  expect_true(
-    any(lgl_ply(non_active$sent, function(m) {
-      identical(m$value, non_active$ids[["A"]])
-    }))
-  )
 
+  # Removing the active view drops its tab and switches to a survivor.
   was_active <- run_rm("A", "A")
   expect_true(
     any(lgl_ply(was_active$sent, function(m) {
@@ -665,7 +694,7 @@ test_that("apply_views_rm syncs the view_nav switcher on lifecycle removal", {
   )
 })
 
-test_that("apply_views_rm skips nav sync on the headless path", {
+test_that("apply_views_rm is a pure board transform", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),

@@ -11,7 +11,7 @@ test_that("board server", {
       res <- board_server_callback(board_rv_1, update = reactiveVal())
 
       expect_type(res, "list")
-      expect_named(res, c("dock", "actions", "view_data", "dock_mgr"))
+      expect_named(res, c("dock", "actions", "view_data"))
 
       dock <- res[["dock"]]
 
@@ -41,7 +41,7 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "dock_mgr", "edit_board_extension")
+        c("dock", "actions", "view_data", "edit_board_extension")
       )
 
       dock <- res[["dock"]]
@@ -365,35 +365,39 @@ test_that("validate_board_update.dock_board rejects bad extensions slot", {
   )
 })
 
-test_that("extensions slot writes controllable state via apply_board_update", {
+test_that("extensions mod state is applied via the update lifecycle", {
 
   board_rv <- board_args(
     blocks = c(a = new_dataset_block()),
     extensions = new_ctrl_extension(content = "# old")
   )
 
-  with_mock_session(
-    {
-      res <- board_server_callback(board_rv, update = reactiveVal())
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
 
-      content <- res$dock_mgr$ext_res$doc_extension$state$content
+  upd <- reactiveVal()
 
-      expect_s3_class(content, "reactiveVal")
-      expect_identical(isolate(content()), "# old")
+  res <- with_mock_context(ms, board_server_callback(board_rv, update = upd))
 
-      apply_board_update(
-        isolate(board_rv$board),
-        list(
-          extensions = list(
-            mod = list(doc_extension = list(content = "# new"))
-          )
-        ),
-        dock_mgr = res$dock_mgr
-      )
+  ms$flushReact()
 
-      expect_identical(isolate(content()), "# new")
-    }
+  # ext_res is spread into the callback result, so the extension's
+  # controllable state is reachable without a dock handle.
+  content <- res$doc_extension$state$content
+
+  expect_s3_class(content, "reactiveVal")
+  expect_identical(isolate(content()), "# old")
+
+  # An `extensions$mod` delta is applied by the closure observer, not the
+  # (now pure) apply hook.
+  upd(
+    list(
+      extensions = list(mod = list(doc_extension = list(content = "# new")))
+    )
   )
+  ms$flushReact()
+
+  expect_identical(isolate(content()), "# new")
 })
 
 test_that("extension servers can read peer extension state", {

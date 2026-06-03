@@ -50,10 +50,22 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   )
   dock_mgr$vs <- vs
 
-  switch_view_observer(vs, session, dock_mgr)
+  switch_view_observer(session, dock_mgr)
   add_view_observer(vs, session, dock_mgr, board, update)
   remove_view_observer(vs, session, dock_mgr)
   rename_view_observer(vs, session, dock_mgr)
+
+  # Make the live dock session match the committed board: a single
+  # closure-resident reconcile pass replaces the per-delta surgery that used
+  # to live in apply_board_update.dock_board, so that hook stays a pure
+  # reducer and dock state never crosses the package boundary. High priority
+  # so the DOM is current before other board observers react.
+  observeEvent(
+    board$board,
+    reconcile_views(board$board, dock_mgr, session),
+    ignoreInit = TRUE,
+    priority = 100
+  )
 
   # Extensions receive active_dock — a reactiveValues that always mirrors
   # whichever view is currently active (swapped by update_active_dock).
@@ -91,10 +103,15 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     list(...)
   )
 
-  # Externally controllable extension state is written from the apply path
-  # (apply_board_update.dock_board), which reaches these live reactiveVals
-  # through dock_mgr.
   dock_mgr$ext_res <- ext_res
+
+  # Externally controllable extension state is applied here, in the closure
+  # that owns ext_res, rather than from the (now pure) apply hook. The update
+  # payload carries the mod directly; the reactiveVal writes are idempotent.
+  observeEvent(
+    update()$extensions$mod,
+    apply_extensions_mod(update()$extensions$mod, dock_mgr$ext_res)
+  )
 
   register_actions(actions, triggers, board, update, ext_res)
 
@@ -102,8 +119,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     list(
       dock = dock,
       actions = triggers,
-      view_data = view_data,
-      dock_mgr = dock_mgr
+      view_data = view_data
     ),
     ext_res
   )
@@ -195,43 +211,23 @@ bare_view <- function(x) {
 
 #' Observe view tab switches.
 #'
-#' When the user selects a different tab via `input$view_nav` (carrying the
-#' target view id), hides block/ext UI for the old view, shows it for the
-#' new one, updates `vs$state`, and swaps `dock_mgr$active_dock` to point at
-#' the new view's dock.
+#' A tab click (`input$view_nav` carries the target view id) requests an
+#' active-view change through the update lifecycle; the reconcile pass does
+#' the DOM switch. Guarded so a no-op (e.g. the nav echoing a programmatic
+#' `value` set back) does not re-enter the lifecycle.
 #'
-#' @param vs Reactive view state (from `init_view_docks()`).
 #' @param session Shiny session.
 #' @param dock_mgr Dock manager.
 #'
 #' @noRd
-switch_view_observer <- function(vs, session, dock_mgr) {
-  input <- session$input
-
+switch_view_observer <- function(session, dock_mgr) {
   observeEvent(
-    input$view_nav,
+    session$input$view_nav,
     {
-      new_id <- input$view_nav
-      state <- vs$state
-      old_id <- active_view(state)
+      target <- session$input$view_nav
 
-      session$sendCustomMessage(
-        "switch-view",
-        list(
-          id = session$ns(
-            as_view_handle_id(dock_mgr$docks[[new_id]]$dock_id)
-          )
-        )
-      )
-
-      if (!identical(old_id, new_id)) {
-        hide_view_ui(old_id, dock_mgr$docks)
-        show_view_ui(new_id, dock_mgr$docks)
-
-        active_view(state) <- new_id
-        vs$state <- state
-        update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[new_id]])
-        dock_mgr$current_active(new_id)
+      if (!identical(target, isolate(dock_mgr$current_active()))) {
+        dock_mgr$update(list(views = list(active = target)))
       }
     },
     ignoreInit = TRUE
@@ -351,7 +347,7 @@ diff_dock_layouts <- function(current, new_layouts) {
 #'
 #' @noRd
 hide_view_ui <- function(view_id, docks) {
-  if (!exists(view_id, envir = docks, inherits = FALSE)) {
+  if (is.null(view_id) || !exists(view_id, envir = docks, inherits = FALSE)) {
     return()
   }
   proxy <- docks[[view_id]]$proxy
@@ -374,7 +370,7 @@ hide_view_ui <- function(view_id, docks) {
 #'
 #' @noRd
 show_view_ui <- function(view_id, docks) {
-  if (!exists(view_id, envir = docks, inherits = FALSE)) {
+  if (is.null(view_id) || !exists(view_id, envir = docks, inherits = FALSE)) {
     return()
   }
   proxy <- docks[[view_id]]$proxy
@@ -456,6 +452,90 @@ teardown_view <- function(v_id, session, docks) {
     session = session
   )
   rm(list = v_id, envir = docks)
+
+  invisible()
+}
+
+# Make the live dock session match the committed board's view set:
+# instantiate added views, tear down removed ones, restore views whose
+# layout changed, relabel renamed ones, and switch to the active view.
+# Driven by board$board so apply_board_update.dock_board stays a pure
+# reducer and dock state never crosses the package boundary. Idempotent — a
+# board already matching the live state produces no surgery — so it composes
+# with the live-sync (DOM -> board) path without ping-ponging.
+reconcile_views <- function(board, dock_mgr, session) {
+
+  layouts <- board_layouts(board)
+  want <- names(layouts)
+  state <- isolate(dock_mgr$vs$state)
+  have <- names(state)
+
+  for (v in setdiff(want, have)) {
+
+    instantiate_view(
+      v,
+      layouts[[v]],
+      dock_mgr$board_rv,
+      dock_mgr$update,
+      dock_mgr$triggers,
+      session,
+      dock_mgr$docks,
+      current_active = dock_mgr$current_active,
+      blocks = board_blocks(board),
+      extensions = dock_extensions(board)
+    )
+
+    session$sendInputMessage(
+      "view_nav",
+      list(add = list(id = v, name = view_name(layouts[[v]])))
+    )
+
+    state[[v]] <- bare_view(layouts[[v]])
+  }
+
+  for (v in setdiff(have, want)) {
+
+    teardown_view(v, session, dock_mgr$docks)
+    session$sendInputMessage("view_nav", list(remove = v))
+    state[[v]] <- NULL
+  }
+
+  for (v in intersect(want, have)) {
+
+    new_nm <- view_name(layouts[[v]])
+
+    if (!identical(new_nm, view_name(state[[v]]))) {
+      view_name(state[[v]]) <- new_nm
+      session$sendInputMessage(
+        "view_nav",
+        list(rename = list(id = v, to = new_nm))
+      )
+    }
+
+    live <- tryCatch(
+      isolate(dock_mgr$docks[[v]]$layout()),
+      error = function(e) NULL
+    )
+
+    if (!is.null(live) && !layouts_match(live, layouts[[v]])) {
+      apply_layout_diff(
+        view = v,
+        target = layouts[[v]],
+        proxy = dock_mgr$docks[[v]]$proxy,
+        blocks = board_blocks(board),
+        extensions = dock_extensions(board)
+      )
+    }
+  }
+
+  dock_mgr$vs$state <- state
+
+  active <- active_view(layouts)
+
+  if (!is.null(active) &&
+        !identical(active, isolate(dock_mgr$current_active()))) {
+    switch_active_view(active, dock_mgr, session)
+  }
 
   invisible()
 }
@@ -903,11 +983,11 @@ remove_view_observer <- function(vs, session, dock_mgr) {
 
 #' Observe view rename requests.
 #'
-#' Rename is a pure name-attribute write: `input$view_nav_rename` carries
-#' the stable view id and the new name. The view's id — and hence its dock
-#' module, DOM element and `dock_mgr$docks` key — is untouched; only the
-#' display name changes, in `vs$state` and (via a `rename` delta) on the
-#' board. No structure is re-keyed.
+#' Rename is a pure name-attribute write: `input$view_nav_rename` carries the
+#' stable view id and the new name. It travels through the update lifecycle as
+#' a `rename` delta; the reconcile pass writes the new name into `vs$state`
+#' and the nav. The id — and hence the dock module, DOM element and registry
+#' key — is untouched.
 #'
 #' @param vs Reactive view state.
 #' @param session Shiny session.
@@ -921,18 +1001,13 @@ rename_view_observer <- function(vs, session, dock_mgr) {
     req(views_can_crud(vs$state))
 
     rename <- input$view_nav_rename
-    id <- rename$id
-    state <- vs$state
 
-    if (!id %in% names(state)) {
+    if (!rename$id %in% names(vs$state)) {
       return()
     }
 
-    view_name(state[[id]]) <- rename$to
-    vs$state <- state
-
     dock_mgr$update(
-      list(views = list(rename = set_names(list(rename$to), id)))
+      list(views = list(rename = set_names(list(rename$to), rename$id)))
     )
   })
 }
