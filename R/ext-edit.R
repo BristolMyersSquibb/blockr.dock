@@ -25,83 +25,91 @@ new_edit_board_extension <- function(...) {
 }
 
 blk_ext_ui <- function(id, board) {
-  tagList(
-    fluidRow(
-      column(
-        4,
-        selectInput(
-          NS(id, "registry_select"),
-          "Select block from registry",
-          choices = list_blocks()
-        )
-      ),
-      column(
-        4,
-        textInput(
-          inputId = NS(id, "block_id"),
-          label = "Block ID",
-          value = rand_names(board_block_ids(board))
-        )
-      ),
-      column(
-        4,
+
+  div(
+    class = "blockr-ext-edit",
+    div(
+      class = "blockr-ext-edit-section",
+      div(
+        class = "blockr-ext-edit-row",
+        div(
+          class = "flex-grow-1",
+          selectInput(
+            NS(id, "registry_select"),
+            "Select block from registry",
+            choices = list_blocks(),
+            width = "100%"
+          )
+        ),
+        div(
+          class = "flex-grow-1",
+          textInput(
+            NS(id, "block_id"),
+            "Block ID",
+            value = rand_names(board_block_ids(board)),
+            width = "100%"
+          )
+        ),
         actionButton(
           NS(id, "confirm_add"),
           "Add block",
-          class = "btn-success"
-        )
-      )
-    ),
-    fluidRow(
-      column(
-        4,
-        selectInput(
-          NS(id, "block_select"),
-          "Select block(s) from board",
-          choices = board_block_ids(board),
-          multiple = TRUE
+          icon = icon("plus"),
+          class = "btn-primary"
         )
       ),
-      column(
-        4,
+      div(
+        class = "blockr-ext-edit-row",
+        div(
+          class = "flex-grow-1",
+          selectInput(
+            NS(id, "block_select"),
+            "Select block(s) from board",
+            choices = board_block_ids(board),
+            multiple = TRUE,
+            width = "100%"
+          )
+        ),
         actionButton(
           NS(id, "confirm_rm"),
           "Remove block",
+          icon = icon("trash"),
           class = "btn-danger"
         )
       )
     ),
-    DT::dataTableOutput(NS(id, "links_dt")),
-    fluidRow(
-      column(
-        3,
-        textInput(
-          NS(id, "new_link_id"),
-          "Next link ID",
-          value = rand_names(board_link_ids(board))
-        )
+    div(
+      class = "blockr-ext-edit-section",
+      div(
+        class = "blockr-ext-edit-links",
+        DT::dataTableOutput(NS(id, "links_dt"))
       ),
-      column(
-        3,
+      div(
+        class = "blockr-ext-edit-row",
+        div(
+          class = "flex-grow-1",
+          textInput(
+            NS(id, "new_link_id"),
+            "Next link ID",
+            value = rand_names(board_link_ids(board)),
+            width = "100%"
+          )
+        ),
         actionButton(
           NS(id, "add_link"),
           "Add link row",
-          icon = icon("plus")
-        )
-      ),
-      column(
-        3,
+          icon = icon("plus"),
+          class = "btn-primary"
+        ),
         actionButton(
           NS(id, "rm_link"),
           "Remove row(s)",
-          icon = icon("minus")
-        )
-      ),
-      column(
-        3,
+          icon = icon("minus"),
+          class = "btn-danger"
+        ),
         actionButton(
           NS(id, "modify_links"),
           "Apply changes",
+          icon = icon("check"),
           class = "btn-success"
         )
       )
@@ -118,6 +126,7 @@ blk_ext_srv <- function(id, board, update, ...) {
       add_block_observer(input, board, update, session)
       remove_block_observer(input, board, update, session)
       update_block_select_observer(board, session)
+      toggle_remove_block_observer(input, session)
 
       upd <- reactiveValues(
         add = links(),
@@ -146,6 +155,9 @@ blk_ext_srv <- function(id, board, update, ...) {
       add_link_observer(input, board, upd, session)
       rm_link_observer(input, board, upd, session)
       modify_link_observer(input, board, upd, session, links_proxy, update)
+
+      toggle_remove_link_observer(input, session)
+      toggle_apply_changes_observer(upd, session)
 
       NULL
     }
@@ -231,6 +243,36 @@ update_block_select_observer <- function(board, session) {
   )
 }
 
+toggle_remove_block_observer <- function(input, session) {
+  observe(
+    updateActionButton(
+      session,
+      "confirm_rm",
+      disabled = !length(input$block_select)
+    )
+  )
+}
+
+toggle_remove_link_observer <- function(input, session) {
+  observe(
+    updateActionButton(
+      session,
+      "rm_link",
+      disabled = !length(input$links_dt_rows_selected)
+    )
+  )
+}
+
+toggle_apply_changes_observer <- function(upd, session) {
+  observe(
+    updateActionButton(
+      session,
+      "modify_links",
+      disabled = !length(upd$add) && !length(upd$rm)
+    )
+  )
+}
+
 validate_block_addition <- function(block, id, board, session) {
 
   if (nchar(id) == 0L || !is_string(id)) {
@@ -282,8 +324,9 @@ link_dt <- function(dat, ns, board) {
       ),
       dom = "tp",
       ordering = FALSE,
+      autoWidth = FALSE,
       columnDefs = list(
-        list(targets = 0, width = "125px")
+        list(targets = 0, width = "90px")
       )
     ),
     rownames = FALSE,
@@ -369,7 +412,7 @@ dt_selectize <- function(id, val, choices, create = FALSE) {
   res <- htmltools::tagQuery(
     res
   )$addAttrs(
-    style = "width: 175px; margin-bottom: 0;"
+    style = "min-width: 120px; width: 100%; margin-bottom: 0;"
   )$allTags()
 
   as.character(res)
