@@ -620,9 +620,15 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
   layout <- as_dock_layout(layout)
   view_nm <- view_name(layout)
 
+  ext_pid <- as_ext_panel_id(ext_coll)
+  ext_key <- ext_alias_ids(ext_coll)
+  ext_cls <- names(ext_coll)
+
+  aliased <- ext_key != ext_cls
+
   id_map <- set_names(
-    c(as_ext_panel_id(ext_coll), as_block_panel_id(blocks)),
-    c(names(ext_coll), names(blocks))
+    c(ext_pid, ext_pid[aliased], as_block_panel_id(blocks)),
+    c(ext_key, ext_cls[aliased], names(blocks))
   )
 
   panel_ids <- grid_panel_ids(layout[["grid"]])

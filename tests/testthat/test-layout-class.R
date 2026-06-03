@@ -71,6 +71,32 @@ test_that("layout resolution accepts a named list of extensions", {
   )
 })
 
+test_that("a keyed extension is addressable in a layout by its list key", {
+
+  blks <- c(a = new_dataset_block(), b = new_head_block())
+  exts <- list(edit = new_edit_board_extension())
+
+  brd <- new_dock_board(
+    blocks = blks,
+    extensions = exts,
+    layouts = list("edit", "a", "b")
+  )
+  expect_setequal(
+    layout_panel_ids(active_layout(brd)),
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+  )
+
+  nested <- new_dock_board(
+    blocks = blks,
+    extensions = exts,
+    layouts = list("edit", list("a", "b"))
+  )
+  expect_setequal(
+    layout_panel_ids(active_layout(nested)),
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+  )
+})
+
 test_that("layout resolution accepts a dock_extensions collection", {
 
   blks <- c(a = new_dataset_block(), b = new_head_block())

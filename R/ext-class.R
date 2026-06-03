@@ -362,6 +362,24 @@ names.dock_extensions <- function(x) {
   chr_ply(x, extension_id)
 }
 
+# The id by which a layout addresses an extension: the user's list key
+# where keyed, else the class-derived `extension_id()`. `names()` is
+# hard-overridden to the class id, so the transient key only survives on
+# the underlying (unclassed) list.
+ext_alias_ids <- function(x) {
+
+  x <- as_dock_extensions(x)
+
+  ids <- chr_ply(x, extension_id)
+  keys <- names(unclass(x))
+
+  if (is.null(keys)) {
+    return(ids)
+  }
+
+  ifelse(nzchar(keys), keys, ids)
+}
+
 #' @export
 as.list.dock_extensions <- function(x, ...) {
   res <- unclass(x)
