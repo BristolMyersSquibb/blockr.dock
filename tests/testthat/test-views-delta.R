@@ -685,7 +685,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
         reconcile_views(removed, function(...) NULL, docks, active_dock,
                         client_active, client_views, session)
       ),
-      teardown_view = function(view_id, session, docks) {
+      remove_view = function(view_id, session, docks) {
         rm(list = view_id, envir = docks)
         invisible()
       },

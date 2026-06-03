@@ -29,13 +29,9 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   triggers <- action_triggers(actions)
 
-  # Per-session dock state, closure-private — no handle crosses the package
-  # boundary, and `reconcile_views()` is the sole mutator. `docks` is the
-  # live `manage_dock()` registry (keyed by view id). `client_active` and
-  # `client_views` are the server-side record of what the client (browser)
-  # currently shows — the shown-active id, and the shown view set / display
-  # names — each lagging the committed `board_layouts` (the server truth) so
-  # reconcile can diff server-vs-client and push the difference to the DOM.
+  # Per-session dock state, closure-private. `docks` is the live manage_dock()
+  # registry; `client_active` / `client_views` mirror what the browser shows
+  # (lagging board_layouts), diffed by reconcile_views() — the sole mutator.
   docks <- new.env(parent = emptyenv())
   active_dock <- reactiveValues()
   client_active <- reactiveVal(NULL)
@@ -318,13 +314,11 @@ show_view_ui <- function(view_id, docks) {
   }
 }
 
-# Insert a view's dock container into the DOM and start its manage_dock
-# module, keyed by the stable view id (which is the module id and the DOM
-# stem). Shared by the initial render and post-init view additions. `active`
-# stamps the active CSS class at insert so the initially-shown view is visible
-# without waiting on a switch round-trip.
-instantiate_view <- function(v_id, layout, board, update, session, docks,
-                             blocks = NULL, extensions = NULL, active = FALSE) {
+# Insert a view's dock container, start its manage_dock module, and register
+# the result in `docks` under the view id. `active` stamps the active CSS
+# class at insert so the initially-shown view needs no switch round-trip.
+create_view <- function(v_id, layout, board, update, session, docks,
+                        blocks = NULL, extensions = NULL, active = FALSE) {
 
   ns <- session$ns
 
@@ -348,21 +342,20 @@ instantiate_view <- function(v_id, layout, board, update, session, docks,
     session = session
   )
 
-  dock_res <- manage_dock(
+  docks[[v_id]] <- manage_dock(
     v_id, board, update,
     layout = layout,
     blocks = blocks,
     extensions = extensions
   )
-  docks[[v_id]] <- dock_res
 
-  invisible(dock_res)
+  invisible()
 }
 
-# Tear down a view's dock module and remove its DOM container. Parks the
-# view's block / ext UIs in the offcanvas first, so a block that survives in
-# another view keeps its single-instance board-level UI.
-teardown_view <- function(v_id, session, docks) {
+# Destroy a view's dock module, deregister it from `docks`, and remove its DOM
+# container. Parks the view's block / ext UI in the offcanvas first so a block
+# surviving in another view keeps its single-instance board-level UI.
+remove_view <- function(v_id, session, docks) {
 
   if (!exists(v_id, envir = docks, inherits = FALSE)) {
     return(invisible())
@@ -398,7 +391,7 @@ reconcile_views <- function(board, update, docks, active_dock,
 
   for (v in setdiff(want, have)) {
 
-    instantiate_view(
+    create_view(
       v,
       layouts[[v]],
       board,
@@ -420,7 +413,7 @@ reconcile_views <- function(board, update, docks, active_dock,
 
   for (v in setdiff(have, want)) {
 
-    teardown_view(v, session, docks)
+    remove_view(v, session, docks)
     session$sendInputMessage("view_nav", list(remove = v))
     state[[v]] <- NULL
   }

@@ -118,7 +118,7 @@ board_ui.dock_board <- function(
 }
 
 # View container -- one dock output per view is inserted into this element
-# at server time by the reconcile pass (`instantiate_view()`). Each dock
+# at server time by the reconcile pass (`create_view()`). Each dock
 # output sits inside a nested moduleServer namespace so `manage_dock(id, ...)`
 # can render to `session$output[[dock_id()]]` and dockViewR inputs resolve.
 dock_outputs_ui <- function(id, views) {
