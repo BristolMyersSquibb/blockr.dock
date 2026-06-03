@@ -63,36 +63,10 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
 
 initialise_layout <- function(layouts, blocks, extensions, active = NULL) {
 
-  c_blks <- as_blocks(blocks)
-  c_exts <- as_dock_extensions(extensions)
-
-  res <- if (is_dock_layouts(layouts)) {
-
-    validate_dock_layouts(layouts)
-
-  } else if (is_dock_layout(layouts)) {
-
-    as_dock_layouts(resolve_dock_layout(c_blks, c_exts, layouts))
-
-  } else if (is.list(layouts) && "grid" %in% names(layouts)) {
-
-    as_dock_layouts(
-      resolve_dock_layout(c_blks, c_exts, dockview_to_layout(layouts))
-    )
-
-  } else if (is_multi_view(layouts)) {
-
-    resolve_views(layouts, c_blks, c_exts)
-
-  } else {
-
-    spec <- if (is.list(layouts)) {
-      do.call(dock_layout, layouts)
-    } else {
-      do.call(dock_layout, as.list(layouts))
-    }
-    as_dock_layouts(resolve_dock_layout(c_blks, c_exts, spec))
-  }
+  # `as_dock_layouts()` homogenises every accepted input form (a
+  # `dock_layouts`, a single `dock_layout`, a multi-view list, a bare
+  # panel-id list / vector) into a resolved `dock_layouts`.
+  res <- as_dock_layouts(layouts, blocks = blocks, extensions = extensions)
 
   # The active view is the container's to name (by id); default first.
   if (!is.null(active)) {
@@ -104,9 +78,10 @@ initialise_layout <- function(layouts, blocks, extensions, active = NULL) {
 
 # A multi-view input is a list keyed by view id, or a list whose elements
 # are themselves `dock_layout`s (keyless — ids minted). A bare list of
-# panel ids (`list("a", "b")`) is a single view's children.
+# panel ids (`list("a", "b")`) is a single view's children, and a
+# `grid`-keyed list is dockview's single-view internal form.
 is_multi_view <- function(layouts) {
-  is.list(layouts) && length(layouts) > 0L &&
+  is.list(layouts) && length(layouts) > 0L && !("grid" %in% names(layouts)) &&
     (!is.null(names(layouts)) || any(lgl_ply(layouts, is_dock_layout)))
 }
 

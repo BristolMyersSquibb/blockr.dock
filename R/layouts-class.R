@@ -310,19 +310,56 @@ as_dock_layouts <- function(x, ...) {
 }
 
 #' @export
-as_dock_layouts.dock_layouts <- function(x, ...) x
+as_dock_layouts.dock_layouts <- function(x, ...) {
+  validate_dock_layouts(x)
+}
 
 #' @export
-as_dock_layouts.dock_layout <- function(x, ...) {
+as_dock_layouts.dock_layout <- function(x, blocks = NULL, extensions = NULL,
+                                        ...) {
+  if (not_null(blocks) || not_null(extensions)) {
+    x <- resolve_dock_layout(coal(blocks, list()), coal(extensions, list()), x)
+  }
   dock_layouts(x)
+}
+
+#' @export
+as_dock_layouts.list <- function(x, blocks = NULL, extensions = NULL, ...) {
+
+  if (is_multi_view(x)) {
+    return(
+      resolve_views(
+        x,
+        as_blocks(coal(blocks, list())),
+        as_dock_extensions(coal(extensions, list()))
+      )
+    )
+  }
+
+  # A single view: dockview's internal grid-list or a bare list of panel
+  # ids. `coerce_view_spec()` turns either into a `dock_layout`, which the
+  # `dock_layout` method then resolves and wraps.
+  as_dock_layouts(coerce_view_spec(x), blocks = blocks, extensions = extensions)
+}
+
+#' @export
+as_dock_layouts.default <- function(x, ...) {
+  as_dock_layouts(as.list(x), ...)
 }
 
 # Wrap an id-keyed list of views as a `dock_layouts`, recording the active
 # view as a single field on the container. Active defaults to the first
-# view; callers choose a different one through `active_view<-()` (or, at
-# board construction, `new_dock_board(active = )`). A view never carries
-# its own active marker — the container is the sole owner.
+# view, written through the `active_view<-()` setter; callers choose a
+# different one that way (or, at board construction,
+# `new_dock_board(active = )`). A view never carries its own active marker
+# — the container is the sole owner.
 finalize_layouts_active <- function(views) {
-  active <- if (length(views)) names(views)[1L] else NULL
-  structure(views, class = "dock_layouts", active = active)
+
+  res <- structure(views, class = "dock_layouts")
+
+  if (length(res)) {
+    active_view(res) <- names(res)[1L]
+  }
+
+  res
 }

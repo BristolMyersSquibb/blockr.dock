@@ -279,6 +279,39 @@ test_that("as_dock_layouts identity on dock_layouts", {
   expect_identical(as_dock_layouts(ly), ly)
 })
 
+test_that("a bare-vector layouts arg coerces to one view", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = c("a", "b")
+  )
+
+  views <- board_layouts(brd)
+
+  expect_length(views, 1L)
+  expect_setequal(
+    layout_panel_ids(views[[1L]]),
+    c("block_panel-a", "block_panel-b")
+  )
+})
+
+test_that("validate_dock_layouts rejects an active id that isn't present", {
+
+  views <- board_layouts(
+    new_dock_board(
+      blocks = c(a = new_dataset_block(), b = new_head_block()),
+      layouts = list(A = list("a"), B = list("b"))
+    )
+  )
+
+  attr(views, "active") <- "ghost"
+
+  expect_error(
+    validate_dock_layouts(views),
+    class = "dock_view_not_found"
+  )
+})
+
 test_that("view_name<- rewrites only the display name, not the id", {
 
   brd <- new_dock_board(

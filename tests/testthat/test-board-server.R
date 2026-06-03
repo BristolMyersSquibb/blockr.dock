@@ -430,3 +430,44 @@ test_that("extension servers can read peer extension state", {
     }
   )
 })
+
+test_that("New view modal confirm submits an add-and-activate delta", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"))
+  )
+
+  captured <- NULL
+
+  testServer(
+    function(input, output, session) {
+      vs <- reactiveValues(state = board_layouts(brd))
+      board <- reactiveValues(board = brd)
+      add_view_observer(
+        vs,
+        session,
+        dock_mgr = NULL,
+        board = board,
+        update = function(x) captured <<- x
+      )
+    },
+    {
+      session$setInputs(
+        view_new_name = "Charts",
+        view_new_blocks = "a",
+        view_new_exts = character(),
+        confirm_view_add = 1L
+      )
+      session$flushReact()
+
+      # The new view has no id yet, so "add and activate" travels as the
+      # add key in both slots; the dock resolves it to the minted id in
+      # normalize_views_delta().
+      expect_named(captured$views, c("add", "active"))
+      expect_identical(captured$views$active, "Charts")
+      expect_identical(names(captured$views$add), "Charts")
+      expect_true(is_dock_layout(captured$views$add[[1L]]))
+    }
+  )
+})

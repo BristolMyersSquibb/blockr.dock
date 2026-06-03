@@ -4,6 +4,23 @@ test_that("panel layout", {
   expect_snapshot(draw_panel_tree(list("a", list("b", "c"))))
 })
 
+test_that("active_layout<- replaces the active view's layout, keeps its id", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"), B = list("b")),
+    active = "B"
+  )
+
+  active_layout(brd) <- dock_layout("block_panel-a", "block_panel-b")
+
+  expect_identical(active_view(board_layouts(brd)), "B")
+  expect_setequal(
+    layout_panel_ids(active_layout(brd)),
+    c("block_panel-a", "block_panel-b")
+  )
+})
+
 test_that("layout resolution accepts a bare dock_extension", {
 
   blks <- c(a = new_dataset_block(), b = new_head_block())
