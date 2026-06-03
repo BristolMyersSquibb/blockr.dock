@@ -217,7 +217,8 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
     docks <- new.env(parent = emptyenv())
     docks[[ids[[1L]]]] <- list(layout = layouts$A)
     docks[[ids[[2L]]]] <- list(layout = layouts$B)
-    list(vd = live_view_data(vs, docks), vs = vs)
+    current_active <- reactiveVal(ids[[1L]])
+    list(vd = live_view_data(vs, docks, current_active), vs = vs)
   })
 
   expect_null(isolate(res$vd()))

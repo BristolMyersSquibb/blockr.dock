@@ -514,7 +514,7 @@ apply_views_active <- function(active, board) {
 # move the block / ext UIs across, and point active_dock and the nav at
 # it. The board's active marker is set by the caller; this drives the
 # live session state.
-switch_active_view <- function(active, docks, active_dock, current_active, vs,
+switch_active_view <- function(active, docks, active_dock, current_active,
                                session) {
 
   old <- isolate(current_active())
@@ -538,9 +538,6 @@ switch_active_view <- function(active, docks, active_dock, current_active, vs,
     update_active_dock(active_dock, docks[[active]])
   }
 
-  state <- isolate(vs$state)
-  active_view(state) <- active
-  vs$state <- state
   current_active(active)
 
   session$sendInputMessage(

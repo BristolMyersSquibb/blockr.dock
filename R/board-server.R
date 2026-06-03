@@ -62,7 +62,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   # Extensions receive active_dock — a reactiveValues that always mirrors
   # whichever view is currently active (swapped by update_active_dock).
   dock <- active_dock
-  view_data <- live_view_data(vs, docks)
+  view_data <- live_view_data(vs, docks, current_active)
 
   sync_layouts_to_board(view_data, update, board)
 
@@ -116,13 +116,12 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 }
 
 # The initial `vs$state`: one bare (empty) layout per view, carrying the
-# display name and the active marker. Gives live_view_data and the nav the
-# view set before any dockview has reported its live layout; the dock modules
-# themselves are created by the reconcile pass (its empty-`docks` case).
+# display name. Gives live_view_data and the nav the view set before any
+# dockview has reported its live layout; the dock modules themselves are
+# created by the reconcile pass (its empty-`docks` case). Which view is active
+# is tracked solely by `current_active`, not here.
 seed_view_state <- function(views) {
-  bare <- reconstruct_dock_layouts(lapply(views, bare_view))
-  active_view(bare) <- active_view(views)
-  bare
+  reconstruct_dock_layouts(lapply(views, bare_view))
 }
 
 # An empty layout standing in for a view in `vs$state`: carries the
@@ -163,9 +162,11 @@ switch_view_observer <- function(session, update, current_active) {
   )
 }
 
-# Returns NULL while any view's dockview `_state` input is still
-# pending — observers downstream can `req()` past the initial flush.
-live_view_data <- function(vs, docks) {
+# Returns NULL while any view's dockview `_state` input is still pending —
+# observers downstream can `req()` past the initial flush. The active view
+# comes from `current_active` (the single rendered-active record), not from
+# `vs$state`.
+live_view_data <- function(vs, docks, current_active) {
   reactive({
     state <- vs$state
     v_list <- lapply(names(state), function(v_id) {
@@ -186,7 +187,10 @@ live_view_data <- function(vs, docks) {
     }
 
     res <- reconstruct_dock_layouts(set_names(v_list, names(state)))
-    active_view(res) <- active_view(state)
+    ca <- current_active()
+    if (!is.null(ca)) {
+      active_view(res) <- ca
+    }
     res
   })
 }
@@ -463,7 +467,7 @@ reconcile_views <- function(board, update, triggers, docks, active_dock,
   vs$state <- state
 
   if (!is.null(active) && !identical(active, isolate(current_active()))) {
-    switch_active_view(active, docks, active_dock, current_active, vs, session)
+    switch_active_view(active, docks, active_dock, current_active, session)
   }
 
   invisible()
