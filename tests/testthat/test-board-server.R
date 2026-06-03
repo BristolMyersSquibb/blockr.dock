@@ -13,18 +13,10 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(res, c("dock", "actions", "view_data"))
 
-      dock <- res[["dock"]]
-
-      expect_type(dock, "list")
-      expect_named(
-        dock,
-        c("layout", "proxy", "prev_active_group", "n_panels",
-          "active_group_trail")
-      )
-
-      expect_s3_class(dock[["layout"]], "reactive")
-      expect_s3_class(dock[["proxy"]], "dock_view_proxy")
-      expect_s3_class(dock[["prev_active_group"]], "reactive")
+      # `dock` is the active-dock reactiveValues handle the extensions
+      # receive; its contents are filled by the reconcile pass (init render),
+      # exercised by the app test — here we assert only the returned shape.
+      expect_s3_class(res[["dock"]], "reactivevalues")
       expect_s3_class(res[["view_data"]], "reactive")
     }
   )
@@ -44,18 +36,7 @@ test_that("board server", {
         c("dock", "actions", "view_data", "edit_board_extension")
       )
 
-      dock <- res[["dock"]]
-
-      expect_type(dock, "list")
-      expect_named(
-        dock,
-        c("layout", "proxy", "prev_active_group", "n_panels",
-          "active_group_trail")
-      )
-
-      expect_s3_class(dock[["layout"]], "reactive")
-      expect_s3_class(dock[["proxy"]], "dock_view_proxy")
-      expect_s3_class(dock[["prev_active_group"]], "reactive")
+      expect_s3_class(res[["dock"]], "reactivevalues")
 
       ext <- res[["edit_board_extension"]]
 
@@ -233,10 +214,10 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
       state = dock_layouts(A = new_dock_layout(), B = new_dock_layout())
     )
     ids <- names(vs$state)
-    dock_mgr <- new_dock_manager()
-    dock_mgr$docks[[ids[[1L]]]] <- list(layout = layouts$A)
-    dock_mgr$docks[[ids[[2L]]]] <- list(layout = layouts$B)
-    list(vd = live_view_data(vs, dock_mgr), vs = vs)
+    docks <- new.env(parent = emptyenv())
+    docks[[ids[[1L]]]] <- list(layout = layouts$A)
+    docks[[ids[[2L]]]] <- list(layout = layouts$B)
+    list(vd = live_view_data(vs, docks), vs = vs)
   })
 
   expect_null(isolate(res$vd()))

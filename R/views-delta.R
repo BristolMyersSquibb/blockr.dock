@@ -514,35 +514,34 @@ apply_views_active <- function(active, board) {
 # move the block / ext UIs across, and point active_dock and the nav at
 # it. The board's active marker is set by the caller; this drives the
 # live session state.
-switch_active_view <- function(active, dock_mgr, session) {
+switch_active_view <- function(active, docks, active_dock, current_active, vs,
+                               session) {
 
-  state <- isolate(dock_mgr$vs$state)
-  old_active <- active_view(state)
+  old <- isolate(current_active())
 
-  if (identical(old_active, active)) {
+  if (identical(old, active)) {
     return(invisible())
   }
 
-  if (exists(active, envir = dock_mgr$docks, inherits = FALSE)) {
+  if (exists(active, envir = docks, inherits = FALSE)) {
 
     # switch-view must fire before show_view_ui so the target dock carries
     # blockr-view-dock-active; otherwise move-element drops DOM moves into an
     # inactive dock.
     session$sendCustomMessage(
       "switch-view",
-      list(
-        id = session$ns(as_view_handle_id(dock_mgr$docks[[active]]$dock_id))
-      )
+      list(id = session$ns(as_view_handle_id(active)))
     )
 
-    hide_view_ui(old_active, dock_mgr$docks)
-    show_view_ui(active, dock_mgr$docks)
-    update_active_dock(dock_mgr$active_dock, dock_mgr$docks[[active]])
+    hide_view_ui(old, docks)
+    show_view_ui(active, docks)
+    update_active_dock(active_dock, docks[[active]])
   }
 
+  state <- isolate(vs$state)
   active_view(state) <- active
-  dock_mgr$vs$state <- state
-  dock_mgr$current_active(active)
+  vs$state <- state
+  current_active(active)
 
   session$sendInputMessage(
     "view_nav",

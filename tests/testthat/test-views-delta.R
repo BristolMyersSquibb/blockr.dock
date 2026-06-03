@@ -203,22 +203,32 @@ test_that("reconcile_views syncs the nav and live state on rename", {
     sendCustomMessage = function(type, message) invisible()
   )
 
-  dock_mgr <- new_dock_manager()
-  dock_mgr$current_active <- reactiveVal(active_view(board_layouts(brd)))
-  dock_mgr$vs <- reactiveValues(state = board_layouts(brd))
+  # Pre-populate the registry so reconcile sees the views as already
+  # instantiated (no DOM surgery); their live layout is pending (NULL) so the
+  # layout-mod check is skipped and only the rename fires.
+  docks <- new.env(parent = emptyenv())
+  for (id in names(board_layouts(brd))) {
+    docks[[id]] <- list(layout = function() NULL)
+  }
+  active_dock <- reactiveValues()
+  current_active <- reactiveVal(active_view(board_layouts(brd)))
+  vs <- reactiveValues(state = board_layouts(brd))
 
   # The board carries the new name; the live state still has the old one, so
   # reconcile detects the rename and relabels the nav + vs$state.
   renamed <- apply_views_rename(setNames(list("New"), "v1"), brd)
 
-  isolate(reconcile_views(renamed, dock_mgr, session))
+  isolate(
+    reconcile_views(renamed, function(...) NULL, NULL, docks, active_dock,
+                    current_active, vs, session)
+  )
 
   expect_true(
     any(lgl_ply(sent, function(m) {
       identical(m$rename$id, "v1") && identical(m$rename$to, "New")
     }))
   )
-  expect_identical(view_name(isolate(dock_mgr$vs$state)[["v1"]]), "New")
+  expect_identical(view_name(isolate(vs$state)[["v1"]]), "New")
 })
 
 test_that("blocks$rm auto-augments views$mod for every affected view", {
@@ -657,16 +667,32 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
       sendCustomMessage = function(type, message) invisible()
     )
 
-    dock_mgr <- new_dock_manager()
-    dock_mgr$current_active <- reactiveVal(name_to_id[[active_label]])
+    # Registry pre-populated for every view; the DOM helpers are mocked so the
+    # test exercises reconcile's nav-sync, not the live teardown / switch.
+    docks <- new.env(parent = emptyenv())
+    for (id in names(state)) docks[[id]] <- list(layout = function() NULL)
+    active_dock <- reactiveValues()
+    current_active <- reactiveVal(name_to_id[[active_label]])
 
     active_view(state) <- name_to_id[[active_label]]
-    dock_mgr$vs <- reactiveValues(state = state)
+    vs <- reactiveValues(state = state)
 
     # Remove on the board (pure), then reconcile the live session against it.
     removed <- apply_views_rm(name_to_id[[rm_label]], brd)
 
-    isolate(reconcile_views(removed, dock_mgr, session))
+    with_mocked_bindings(
+      isolate(
+        reconcile_views(removed, function(...) NULL, NULL, docks, active_dock,
+                        current_active, vs, session)
+      ),
+      teardown_view = function(view_id, session, docks) {
+        rm(list = view_id, envir = docks)
+        invisible()
+      },
+      hide_view_ui = function(...) NULL,
+      show_view_ui = function(...) NULL,
+      update_active_dock = function(...) NULL
+    )
 
     list(sent = sent, ids = name_to_id)
   }
