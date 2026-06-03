@@ -222,7 +222,7 @@ grid_to_spec <- function(grid) {
     }
 
     blockr_abort(
-      "Unknown grid node type: {.val {node[['type']]}}.",
+      "Unknown grid node type: {node[['type']]}.",
       class = "dock_layout_wire_invalid"
     )
   }

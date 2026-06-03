@@ -4,6 +4,14 @@ test_that("panel layout", {
   expect_snapshot(draw_panel_tree(list("a", list("b", "c"))))
 })
 
+test_that("an invalid layout node reports a legible error", {
+  expect_error(
+    dock_layout("a", active = TRUE),
+    "Unknown layout node type",
+    class = "dock_layout_node_invalid"
+  )
+})
+
 test_that("active_layout<- replaces the active view's layout, keeps its id", {
 
   brd <- new_dock_board(

@@ -571,7 +571,7 @@ build_grid_tree <- function(spec, orientation = "horizontal") {
     }
 
     blockr_abort(
-      "Unknown layout node type: {.cls {class(node)}}.",
+      "Unknown layout node type: {class(node)}.",
       class = "dock_layout_node_invalid"
     )
   }
