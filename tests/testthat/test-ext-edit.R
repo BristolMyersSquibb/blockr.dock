@@ -134,7 +134,7 @@ test_that("edit extension server (links)", {
         as_links(set_names(list(new_link("a", "b", "data")), lnk))
       )
 
-      session$setInputs(modify_links = 1)
+      session$setInputs(apply_changes = 1)
 
       expect_identical(
         update()$links,
@@ -225,7 +225,7 @@ test_that("edit extension server (links)", {
 
       expect_identical(upd$rm, "aa")
 
-      session$setInputs(modify_links = 1)
+      session$setInputs(apply_changes = 1)
 
       expect_identical(
         update()$links,
@@ -281,7 +281,7 @@ test_that("edit extension server (stacks)", {
       expect_identical(stack_color(staged), "#123456")
       expect_identical(stack_blocks(staged), "a")
 
-      session$setInputs(modify_stacks = 1)
+      session$setInputs(apply_changes = 1)
 
       res <- update()$stacks
 
@@ -334,7 +334,7 @@ test_that("edit extension server (stacks)", {
       expect_identical(stk$edit$col, "blocks")
       expect_setequal(stk$edit$val, c("a", "b"))
 
-      session$setInputs(modify_stacks = 1)
+      session$setInputs(apply_changes = 1)
 
       res <- update()$stacks
 
@@ -372,7 +372,7 @@ test_that("edit extension server (stacks)", {
 
       expect_identical(stk$rm, "s1")
 
-      session$setInputs(modify_stacks = 1)
+      session$setInputs(apply_changes = 1)
 
       res <- update()$stacks
 

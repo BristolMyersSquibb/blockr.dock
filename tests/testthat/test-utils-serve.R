@@ -73,7 +73,7 @@ test_that("dock app", {
   app$set_inputs(`my_board-edit_board_extension-ab_input` = "data")
   app$wait_for_idle()
 
-  app$click("my_board-edit_board_extension-modify_links")
+  app$click("my_board-edit_board_extension-apply_changes")
 
   app$wait_for_idle()
   app$expect_values(export = TRUE, screenshot_args = FALSE)
@@ -89,7 +89,7 @@ test_that("dock app", {
   app$set_inputs(`my_board-edit_board_extension-s1_blocks` = "a")
   app$wait_for_idle()
 
-  app$click("my_board-edit_board_extension-modify_stacks")
+  app$click("my_board-edit_board_extension-apply_changes")
 
   app$wait_for_idle()
   app$expect_values(export = TRUE, screenshot_args = FALSE)

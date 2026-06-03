@@ -30,6 +30,7 @@ blk_ext_ui <- function(id, board) {
     class = "blockr-ext-edit",
     div(
       class = "blockr-ext-edit-section",
+      div("Blocks", class = "blockr-ext-edit-title"),
       div(
         class = "blockr-ext-edit-row",
         div(
@@ -79,6 +80,7 @@ blk_ext_ui <- function(id, board) {
     ),
     div(
       class = "blockr-ext-edit-section",
+      div("Links", class = "blockr-ext-edit-title"),
       div(
         class = "blockr-ext-edit-links",
         DT::dataTableOutput(NS(id, "links_dt"))
@@ -105,17 +107,12 @@ blk_ext_ui <- function(id, board) {
           "Remove row(s)",
           icon = icon("minus"),
           class = "btn-danger"
-        ),
-        actionButton(
-          NS(id, "modify_links"),
-          "Apply changes",
-          icon = icon("check"),
-          class = "btn-success"
         )
       )
     ),
     div(
       class = "blockr-ext-edit-section",
+      div("Stacks", class = "blockr-ext-edit-title"),
       div(
         class = "blockr-ext-edit-stacks",
         DT::dataTableOutput(NS(id, "stacks_dt"))
@@ -142,13 +139,16 @@ blk_ext_ui <- function(id, board) {
           "Remove row(s)",
           icon = icon("minus"),
           class = "btn-danger"
-        ),
-        actionButton(
-          NS(id, "modify_stacks"),
-          "Apply changes",
-          icon = icon("check"),
-          class = "btn-success"
         )
+      )
+    ),
+    div(
+      class = "blockr-ext-edit-footer",
+      actionButton(
+        NS(id, "apply_changes"),
+        "Apply changes",
+        icon = icon("check"),
+        class = "btn-success"
       )
     )
   )
@@ -191,10 +191,8 @@ blk_ext_srv <- function(id, board, update, ...) {
       edit_link_observer(upd, board)
       add_link_observer(input, board, upd, session)
       rm_link_observer(input, board, upd, session)
-      modify_link_observer(input, board, upd, session, links_proxy, update)
 
       toggle_remove_link_observer(input, session)
-      toggle_apply_changes_observer(upd, session)
 
       stk <- reactiveValues(
         add = stacks(),
@@ -223,10 +221,12 @@ blk_ext_srv <- function(id, board, update, ...) {
       edit_stack_observer(stk, board)
       add_stack_observer(input, board, stk, session)
       rm_stack_observer(input, board, stk, session)
-      modify_stack_observer(input, board, stk, session, stacks_proxy, update)
 
       toggle_remove_stack_observer(input, session)
-      toggle_apply_stacks_observer(stk, session)
+
+      apply_changes_observer(input, board, upd, stk, session, links_proxy,
+                             stacks_proxy, update)
+      toggle_apply_changes_observer(upd, stk, session)
 
       NULL
     }
@@ -332,12 +332,13 @@ toggle_remove_link_observer <- function(input, session) {
   )
 }
 
-toggle_apply_changes_observer <- function(upd, session) {
+toggle_apply_changes_observer <- function(upd, stk, session) {
   observe(
     updateActionButton(
       session,
-      "modify_links",
-      disabled = !length(upd$add) && !length(upd$rm)
+      "apply_changes",
+      disabled = !length(upd$add) && !length(upd$rm) &&
+        !length(stk$add) && !length(stk$rm) && !length(stk$mod)
     )
   )
 }
@@ -791,14 +792,18 @@ rm_link_observer <- function(input, rv, upd, sess) {
   )
 }
 
-modify_link_observer <- function(input, rv, upd, session, proxy, res) {
+apply_changes_observer <- function(input, rv, upd, stk, session, links_proxy,
+                                   stacks_proxy, res) {
 
   observeEvent(
-    input$modify_links,
+    input$apply_changes,
     {
-      log_debug("mod link")
+      log_debug("apply changes")
 
-      if (!length(upd$add) && !length(upd$rm)) {
+      has_links <- length(upd$add) || length(upd$rm)
+      has_stacks <- length(stk$add) || length(stk$rm) || length(stk$mod)
+
+      if (!has_links && !has_stacks) {
 
         notify(
           "No changes specified.",
@@ -810,35 +815,91 @@ modify_link_observer <- function(input, rv, upd, session, proxy, res) {
       }
 
       new <- tryCatch(
-        modify_board_links(rv$board, upd$add, upd$rm),
-        warning = function(e) {
-          notify(conditionMessage(e), duration = NULL, type = "warning",
-                 session = session)
-        },
+        withCallingHandlers(
+          {
+            b <- rv$board
+
+            if (has_links) {
+              b <- modify_board_links(b, upd$add, upd$rm)
+            }
+
+            if (has_stacks) {
+              b <- modify_board_stacks(b, stk$add, stk$rm, stk$mod)
+            }
+
+            b
+          },
+          warning = function(e) {
+            notify(conditionMessage(e), duration = NULL, type = "warning",
+                   session = session)
+            invokeRestart("muffleWarning")
+          }
+        ),
         error = function(e) {
           notify(conditionMessage(e), duration = NULL, type = "error",
                  session = session)
+          NULL
         }
       )
 
-      res(
-        list(
-          links = list(
-            add = if (length(upd$add)) upd$add,
-            rm = if (length(upd$rm)) upd$rm
-          )
+      if (is.null(new)) {
+        return()
+      }
+
+      delta <- list()
+
+      if (has_links) {
+        delta$links <- list(
+          add = if (length(upd$add)) upd$add,
+          rm = if (length(upd$rm)) upd$rm
         )
-      )
+      }
 
-      upd$add <- links()
-      upd$rm <- character()
-      upd$curr <- board_links(new)
+      if (has_stacks) {
+        delta$stacks <- list(
+          add = if (length(stk$add)) stk$add,
+          rm = if (length(stk$rm)) stk$rm,
+          mod = if (length(stk$mod)) {
+            lapply(
+              stk$mod,
+              function(s) {
+                list(
+                  name = stack_name(s),
+                  blocks = stack_blocks(s),
+                  color = stack_color(s)
+                )
+              }
+            )
+          }
+        )
+      }
 
-      DT::replaceData(
-        proxy,
-        dt_board_link(upd$curr, session$ns, rv$board),
-        rownames = FALSE
-      )
+      res(delta)
+
+      if (has_links) {
+        upd$add <- links()
+        upd$rm <- character()
+        upd$curr <- board_links(new)
+
+        DT::replaceData(
+          links_proxy,
+          dt_board_link(upd$curr, session$ns, rv$board),
+          rownames = FALSE
+        )
+      }
+
+      if (has_stacks) {
+        stk$add <- stacks()
+        stk$rm <- character()
+        stk$mod <- stacks()
+        stk$curr <- board_stacks(new)
+
+        DT::replaceData(
+          stacks_proxy,
+          dt_board_stack(stk$curr, session$ns, rv$board),
+          rownames = FALSE
+        )
+      }
     }
   )
 }
@@ -1171,97 +1232,12 @@ rm_stack_observer <- function(input, rv, upd, sess) {
   )
 }
 
-modify_stack_observer <- function(input, rv, upd, session, proxy, res) {
-
-  observeEvent(
-    input$modify_stacks,
-    {
-      log_debug("mod stack")
-
-      if (!length(upd$add) && !length(upd$rm) && !length(upd$mod)) {
-
-        notify(
-          "No changes specified.",
-          type = "warning",
-          session = session
-        )
-
-        return()
-      }
-
-      new <- tryCatch(
-        withCallingHandlers(
-          modify_board_stacks(rv$board, upd$add, upd$rm, upd$mod),
-          warning = function(e) {
-            notify(conditionMessage(e), duration = NULL, type = "warning",
-                   session = session)
-            invokeRestart("muffleWarning")
-          }
-        ),
-        error = function(e) {
-          notify(conditionMessage(e), duration = NULL, type = "error",
-                 session = session)
-          NULL
-        }
-      )
-
-      if (is.null(new)) {
-        return()
-      }
-
-      mod_payload <- if (length(upd$mod)) {
-        lapply(
-          upd$mod,
-          function(s) {
-            list(
-              name = stack_name(s),
-              blocks = stack_blocks(s),
-              color = stack_color(s)
-            )
-          }
-        )
-      }
-
-      res(
-        list(
-          stacks = list(
-            add = if (length(upd$add)) upd$add,
-            rm = if (length(upd$rm)) upd$rm,
-            mod = mod_payload
-          )
-        )
-      )
-
-      upd$add <- stacks()
-      upd$rm <- character()
-      upd$mod <- stacks()
-      upd$curr <- board_stacks(new)
-
-      DT::replaceData(
-        proxy,
-        dt_board_stack(upd$curr, session$ns, rv$board),
-        rownames = FALSE
-      )
-    }
-  )
-}
-
 toggle_remove_stack_observer <- function(input, session) {
   observe(
     updateActionButton(
       session,
       "rm_stack",
       disabled = !length(input$stacks_dt_rows_selected)
-    )
-  )
-}
-
-toggle_apply_stacks_observer <- function(upd, session) {
-  observe(
-    updateActionButton(
-      session,
-      "modify_stacks",
-      disabled = !length(upd$add) && !length(upd$rm) && !length(upd$mod)
     )
   )
 }

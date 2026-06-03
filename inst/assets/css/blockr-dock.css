@@ -978,8 +978,15 @@ label:has(input[type="file"]) {
 .blockr-ext-edit {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   padding: 16px;
+}
+
+/* A divider above every section after the first (and above the footer) so the
+   block / link / stack sections read as distinct groups, not one dense run. */
+.blockr-ext-edit > * + * {
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  padding-top: 16px;
 }
 
 .blockr-ext-edit-section {
@@ -987,6 +994,21 @@ label:has(input[type="file"]) {
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+}
+
+.blockr-ext-edit-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+/* The single, global apply button sits in its own footer, right-aligned. */
+.blockr-ext-edit-footer {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* Inputs and the buttons that act on them share a baseline-aligned row, so
