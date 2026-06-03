@@ -56,6 +56,7 @@
   --blockr-color-primary-hover: var(--blockr-blue-700);
   --blockr-color-primary-bg: var(--blockr-blue-50);
   --blockr-color-error: #dc2626;
+  --blockr-color-success: #16a34a;
 }
 
 /* ============================================
@@ -1005,13 +1006,6 @@ label:has(input[type="file"]) {
   gap: 6px;
 }
 
-/* "Apply changes" commits the staged link edits -- a distinct step from the
-   per-row staging controls, so it sits on its own right-aligned line. */
-.blockr-ext-edit-apply {
-  display: flex;
-  justify-content: flex-end;
-}
-
 /* The flex gaps are the single source of spacing within the extension. */
 .blockr-ext-edit .form-group {
   margin-bottom: 0;
@@ -1035,10 +1029,20 @@ label:has(input[type="file"]) {
   padding: 8px 10px;
 }
 
-/* Give the pagination room from the table above and the controls below. */
-.blockr-ext-edit .dataTables_paginate {
-  margin-top: 12px;
-  padding: 4px 0;
+/* A small gap above the table (DataTables resets this margin with a
+   higher-specificity rule, so scope through .dataTables_wrapper to win). */
+.blockr-ext-edit .dataTables_wrapper .dataTables_paginate {
+  margin-top: 6px;
+}
+
+/* Space the page buttons; Bootstrap butts them together with collapsed
+   borders by default. */
+.blockr-ext-edit .dataTables_paginate .pagination {
+  gap: 4px;
+}
+
+.blockr-ext-edit .dataTables_paginate .pagination .page-link {
+  margin-left: 0;
 }
 
 /* Semantic action buttons must win over the .btn-default that Shiny's
@@ -1067,5 +1071,18 @@ label:has(input[type="file"]) {
 .blockr-ext-edit .btn-danger:focus {
   background-color: #b91c1c;
   border-color: #b91c1c;
+  color: #ffffff;
+}
+
+.blockr-ext-edit .btn-success {
+  background-color: var(--blockr-color-success);
+  border-color: var(--blockr-color-success);
+  color: #ffffff;
+}
+
+.blockr-ext-edit .btn-success:hover,
+.blockr-ext-edit .btn-success:focus {
+  background-color: #15803d;
+  border-color: #15803d;
   color: #ffffff;
 }

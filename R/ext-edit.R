@@ -97,21 +97,20 @@ blk_ext_ui <- function(id, board) {
         actionButton(
           NS(id, "add_link"),
           "Add link row",
-          icon = icon("plus")
+          icon = icon("plus"),
+          class = "btn-primary"
         ),
         actionButton(
           NS(id, "rm_link"),
           "Remove row(s)",
-          icon = icon("minus")
-        )
-      ),
-      div(
-        class = "blockr-ext-edit-apply",
+          icon = icon("minus"),
+          class = "btn-danger"
+        ),
         actionButton(
           NS(id, "modify_links"),
           "Apply changes",
           icon = icon("check"),
-          class = "btn-primary"
+          class = "btn-success"
         )
       )
     )
