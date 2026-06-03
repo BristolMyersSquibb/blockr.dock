@@ -8,6 +8,7 @@
 \alias{extension_server}
 \alias{extension_id}
 \alias{extension_name}
+\alias{extension_description}
 \alias{extension_ctor}
 \alias{new_dock_extensions}
 \alias{is_dock_extensions}
@@ -24,6 +25,7 @@ new_dock_extension(
   ui,
   name,
   class,
+  description = NULL,
   ctor = sys.parent(),
   pkg = NULL,
   options = new_board_options(),
@@ -42,6 +44,8 @@ extension_server(x, ...)
 extension_id(x)
 
 extension_name(x)
+
+extension_description(x)
 
 extension_ctor(x)
 
@@ -74,6 +78,9 @@ so one extension can read another's state via \code{extensions[[id]]}.}
 
 \item{class}{Extension subclass}
 
+\item{description}{Optional free-text description of the extension, surfaced
+as consumer-neutral metadata (e.g. to the AI assistant)}
+
 \item{ctor}{Constructor function name}
 
 \item{pkg}{Package to look up \code{ctor}}
@@ -101,8 +108,8 @@ and a \code{dock_extensions} object using \code{validate_extensions()}, which re
 the input object invisibly and throw errors as side-effects. Several getter
 functions return extension attributes, including \code{extension_ui()} (a
 function), \code{extension_server()} (a function), \code{extension_id()} (a string),
-\code{extension_name()} (a string) and \code{extension_ctor()} (an object that
-inherits from \code{blockr_ctor}).
+\code{extension_name()} (a string), \code{extension_description()} (a string or
+\code{NULL}) and \code{extension_ctor()} (an object that inherits from \code{blockr_ctor}).
 }
 \description{
 Functionality of a \code{dock_board} can be extended by supplying one or more
