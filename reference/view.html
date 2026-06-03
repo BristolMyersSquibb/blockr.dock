@@ -64,6 +64,12 @@ view membership is a layout concern only.</p>
 <span></span>
 <span><span class="fu">is_dock_layouts</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
+<span><span class="fu">view_name</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">view_name</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">value</span></span>
+<span></span>
+<span><span class="fu">view_names</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu">active_view</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">active_view</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">value</span></span>
@@ -84,7 +90,8 @@ view membership is a layout concern only.</p>
 
 
 <dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>Object</p></dd>
+<dd><p>A <code>dock_layout</code> (for <code>view_name()</code> / <code>view_name&lt;-()</code>) or a
+<code>dock_layouts</code> collection (for <code>view_names()</code>).</p></dd>
 
 
 <dt id="arg-value">value<a class="anchor" aria-label="anchor" href="#arg-value"></a></dt>
@@ -95,22 +102,37 @@ view membership is a layout concern only.</p>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><code>is_dock_layouts()</code> returns a boolean.
 <code>validate_dock_layouts()</code> returns its input and throws on error.
-<code>active_view()</code> returns the active view's name, or <code>NULL</code> when no
+<code>active_view()</code> returns the active view's id, or <code>NULL</code> when no
 view is active, and <code>active_view&lt;-()</code> returns the modified
-<code>dock_layouts</code> (or <code>dock_board</code>) object invisibly.</p>
+<code>dock_layouts</code> (or <code>dock_board</code>) object invisibly. <code>view_name()</code>
+returns a view's explicit display name (or <code>NULL</code>), <code>view_name&lt;-()</code>
+the modified <code>dock_layout</code>, and <code>view_names()</code> a character vector of
+display labels keyed by view id (derived from the id where a view
+has no explicit name).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Multi-view boards are defined by passing a named list to
-<code><a href="dock.html">new_dock_board()</a></code>'s <code>layouts</code> argument: each name is a view, each
-value is the panel arrangement inside that view (a <code><a href="layout.html">dock_layout()</a></code>,
-or a raw list of block / extension IDs). A view can be marked as the
-initially-active one by passing <code>active = TRUE</code> to <code><a href="layout.html">dock_layout()</a></code>;
-if none is marked, the first one is used. View CRUD is enabled
-unless the dock is locked (see <code>is_dock_locked()</code>).</p>
+    <p>Each view carries a stable, immutable <strong>id</strong> (the key into the
+<code>dock_layouts</code> collection) that is distinct from its editable display
+<strong>name</strong>. This mirrors the id / name separation used for blocks (an
+immutable id keys the collection; <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/block_name.html" class="external-link">blockr.core::block_name()</a></code> is an
+editable label). The id is minted once when the view is created and
+never changes — rename only rewrites the name attribute, never the
+key. Use <code>view_name()</code> / <code>view_name&lt;-()</code> to read and write a view's
+display name and <code>view_names()</code> for all names in a collection.</p>
+<p>Multi-view boards are defined by passing a named list to
+<code><a href="dock.html">new_dock_board()</a></code>'s <code>layouts</code> argument: each <strong>name is the view's id</strong>
+(the container's key, like a block id — minted when absent), each value
+is the panel arrangement inside that view (a <code><a href="layout.html">dock_layout()</a></code>, or a raw
+list of block / extension IDs). The display name is set on the layout
+via <code>dock_layout(name = )</code>; with none set, a label is derived from the
+id. A view can be marked as the initially-active one by passing
+<code>active = TRUE</code> to <code><a href="layout.html">dock_layout()</a></code>; if none is marked, the first one is
+used. View CRUD is enabled unless the dock is locked (see
+<code>is_dock_locked()</code>).</p>
 <p>Users do not normally construct a <code>dock_layouts</code> directly; instead
 they pass a plain named list to <code>new_dock_board(layouts = ...)</code>,
-which validates and wraps it.</p>
+which resolves, validates and wraps it (minting any absent ids).</p>
     </div>
 
     <div class="section level2">
@@ -121,12 +143,13 @@ which validates and wraps it.</p>
 <span class="r-in"><span>    head_1 <span class="op">=</span> <span class="fu">blockr.core</span><span class="fu">::</span><span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_transform_block.html" class="external-link">new_head_block</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  layouts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    Analysis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"dataset_1"</span>, <span class="st">"head_1"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    Overview <span class="op">=</span> <span class="fu"><a href="layout.html">dock_layout</a></span><span class="op">(</span><span class="st">"dataset_1"</span>, active <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    analysis <span class="op">=</span> <span class="fu"><a href="layout.html">dock_layout</a></span><span class="op">(</span><span class="st">"dataset_1"</span>, <span class="st">"head_1"</span>, name <span class="op">=</span> <span class="st">"Analysis"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    overview <span class="op">=</span> <span class="fu"><a href="layout.html">dock_layout</a></span><span class="op">(</span><span class="st">"dataset_1"</span>, name <span class="op">=</span> <span class="st">"Overview"</span>, active <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">active_view</span><span class="op">(</span><span class="va">brd</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Overview"</span>
+<span class="r-in"><span><span class="fu">view_names</span><span class="op">(</span><span class="fu">board_layouts</span><span class="op">(</span><span class="va">brd</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   analysis   overview </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> "Analysis" "Overview" </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

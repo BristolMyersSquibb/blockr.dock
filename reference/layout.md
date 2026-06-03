@@ -15,7 +15,8 @@ dock_layout(
   ...,
   orientation = c("horizontal", "vertical"),
   active = FALSE,
-  sizes = NULL
+  sizes = NULL,
+  name = NULL
 )
 
 panels(..., active = NULL)
@@ -59,6 +60,13 @@ validate_dock_layout(x, blocks = character())
 
   Numeric vector parallel to `...`, giving each child's share of the
   parent (positive; need not sum to 1).
+
+- name:
+
+  For `dock_layout()`, an optional display label for the view
+  (free-form). When omitted, a label is derived from the view's id. The
+  view's id is the list name in `new_dock_board(layouts = list(...))`,
+  minted when absent and unique across the views of a `dock_layouts`.
 
 - x:
 
@@ -110,9 +118,13 @@ Construct a layout with:
   arrangement (extensions on top, blocks below) for a board.
 
 `dock_layout()` accepts `orientation = "horizontal" | "vertical"` for
-the top-level split direction, `sizes` for the root-branch ratios, and
+the top-level split direction, `sizes` for the root-branch ratios,
 `active = TRUE` to mark this layout as the initially-active view in a
-`dock_layouts` collection.
+`dock_layouts` collection, and `name` for the view's display label. In
+`new_dock_board(layouts = list(...))` the list name is the view's stable
+*id* (the container's key, like a block id), minted when absent; `name`
+sets the free-form display label on the view itself. When no name is
+given, one is derived from the id for display.
 
 A *view* is the conceptual page-level container; a *layout* is the panel
 arrangement inside a view. The dockview-shape `grid + panels` payload

@@ -55,6 +55,9 @@ Multi-view (tabbed) boards. Each view is its own panel arrangement.
 - [`new_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`validate_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`is_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`view_name()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`` `view_name<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`view_names()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`active_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`` `active_view<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`` `board_layouts<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
@@ -119,4 +122,5 @@ packages.
   [`as_dock_handle_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
   [`as_block_handle_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
   [`as_ext_handle_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
+  [`as_view_handle_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
   : ID utilities

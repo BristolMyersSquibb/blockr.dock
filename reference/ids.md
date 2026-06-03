@@ -8,10 +8,11 @@ panel IDs additionally inherit from `dock_panel_id`, while handle IDs
 inherit from `dock_handle_id`. For panel IDs, depending on whether the
 panel is showing a block or an extension, the inheritance structure
 additionally contains `block_panel_id` or `ext_panel_id`, respectively.
-Similarly, for handle IDs, we have `block_handle_id` and
-`ext_handle_id`. All `dock_id` objects can be converted back to native
-IDs, by calling `as_obj_id()`. The utility function `dock_id()` returns
-a (possibly namespaced) ID of the `dock` instance that is used to manage
+Similarly, for handle IDs, we have `block_handle_id` and `ext_handle_id`
+for block / extension cards, plus `view_handle_id` for a view's DOM
+container. All `dock_id` objects can be converted back to native IDs, by
+calling `as_obj_id()`. The utility function `dock_id()` returns a
+(possibly namespaced) ID of the `dock` instance that is used to manage
 all visible panels.
 
 ## Usage
@@ -32,6 +33,8 @@ as_dock_handle_id(x)
 as_block_handle_id(x)
 
 as_ext_handle_id(x)
+
+as_view_handle_id(x)
 ```
 
 ## Arguments
@@ -54,8 +57,10 @@ functions `as_dock_panel_id()` and `as_dock_handle_id()` return objects
 that inherit from `dock_panel_id` and `dock_handle_id`, in addition to a
 sub-class such as `block_panel_id` or `ext_panel_id` (in the case of
 `as_dock_panel_id()`). If a mix of sub-classes is returned, this will be
-represented by a list of classed character vectors. Finally,
-`as_obj_id()` returns a character vector, as does `dock_id()`.
+represented by a list of classed character vectors.
+`as_view_handle_id()` maps a view id to its DOM container id (a
+`view_handle_id`). Finally, `as_obj_id()` returns a character vector, as
+does `dock_id()`.
 
 ## Examples
 
