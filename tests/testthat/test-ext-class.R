@@ -41,6 +41,18 @@ test_that("dock extension validation", {
       structure(
         list(ui = 1L, server = 1L),
         name = "test",
+        description = 1L,
+        class = c("test_extension", "dock_extension")
+      )
+    ),
+    class = "dock_extension_description_invalid"
+  )
+
+  expect_error(
+    validate_extension(
+      structure(
+        list(ui = 1L, server = 1L),
+        name = "test",
         class = c("test_extension", "dock_extension")
       )
     ),
@@ -97,6 +109,18 @@ test_that("new_dock_extension validates external_ctrl", {
 
   expect_identical(attr(new_edit_board_extension(), "external_ctrl"), FALSE)
   expect_identical(attr(ctrl_ext(), "external_ctrl"), TRUE)
+})
+
+test_that("extension description defaults to NULL and is accessible", {
+
+  expect_null(extension_description(ctrl_ext()))
+
+  desc <- "References block results via blockr://<block_id>."
+
+  expect_identical(
+    extension_description(new_edit_board_extension(description = desc)),
+    desc
+  )
 })
 
 test_that("ext_ctor_inputs drops dots", {
