@@ -318,20 +318,14 @@ show_view_ui <- function(view_id, docks) {
 
 # Insert a view's dock container into the DOM and start its manage_dock
 # module, keyed by the stable view id (which is the module id and the DOM
-# stem). Shared by the initial render and post-init view additions. When
-# `current_active` is supplied, the dock's empty-prompt tracks whether this
-# view is the active one; otherwise it is treated as always active.
+# stem). Shared by the initial render and post-init view additions. `active`
+# stamps the active CSS class at insert so the initially-shown view is visible
+# without waiting on a switch round-trip.
 instantiate_view <- function(v_id, layout, board, update, triggers, session,
-                             docks, current_active = NULL, blocks = NULL,
-                             extensions = NULL, active = FALSE) {
+                             docks, blocks = NULL, extensions = NULL,
+                             active = FALSE) {
 
   ns <- session$ns
-
-  is_active <- if (is.null(current_active)) {
-    reactive(TRUE)
-  } else {
-    reactive(identical(current_active(), v_id))
-  }
 
   insertUI(
     selector = paste0("#", ns("view_container")),
@@ -356,7 +350,6 @@ instantiate_view <- function(v_id, layout, board, update, triggers, session,
   dock_res <- manage_dock(
     v_id, board, update, triggers,
     layout = layout,
-    is_active = is_active,
     blocks = blocks,
     extensions = extensions
   )
@@ -415,7 +408,6 @@ reconcile_views <- function(board, update, triggers, docks, active_dock,
       triggers,
       session,
       docks,
-      current_active = current_active,
       blocks = board_blocks(board),
       extensions = dock_extensions(board),
       active = identical(v, active)
@@ -484,9 +476,6 @@ reconcile_views <- function(board, update, triggers, docks, active_dock,
 #' @param actions Action triggers.
 #' @param layout Optional initial `dock_layout`; defaults to the board's
 #'   `active_layout()`.
-#' @param is_active A [shiny::reactive()] returning `TRUE` when this dock
-#'   is the currently active view. Controls whether the empty-dock prompt
-#'   is shown. Defaults to always-active (single-dock boards).
 #'
 #' @return A list with `layout` (reactive), `proxy`, `prev_active_group`,
 #'   `n_panels`, and `active_group_trail`.
@@ -498,7 +487,6 @@ manage_dock <- function(
   update,
   actions,
   layout = NULL,
-  is_active = reactive(TRUE),
   blocks = NULL,
   extensions = NULL
 ) {
