@@ -53,8 +53,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   observeEvent(
     board$board,
     reconcile_views(
-      board$board, update, triggers, docks, active_dock, current_active, vs,
-      session
+      board$board, update, docks, active_dock, current_active, vs, session
     ),
     priority = 100
   )
@@ -321,9 +320,8 @@ show_view_ui <- function(view_id, docks) {
 # stem). Shared by the initial render and post-init view additions. `active`
 # stamps the active CSS class at insert so the initially-shown view is visible
 # without waiting on a switch round-trip.
-instantiate_view <- function(v_id, layout, board, update, triggers, session,
-                             docks, blocks = NULL, extensions = NULL,
-                             active = FALSE) {
+instantiate_view <- function(v_id, layout, board, update, session, docks,
+                             blocks = NULL, extensions = NULL, active = FALSE) {
 
   ns <- session$ns
 
@@ -348,12 +346,11 @@ instantiate_view <- function(v_id, layout, board, update, triggers, session,
   )
 
   dock_res <- manage_dock(
-    v_id, board, update, triggers,
+    v_id, board, update,
     layout = layout,
     blocks = blocks,
     extensions = extensions
   )
-  dock_res$dock_id <- v_id
   docks[[v_id]] <- dock_res
 
   invisible(dock_res)
@@ -368,12 +365,10 @@ teardown_view <- function(v_id, session, docks) {
     return(invisible())
   }
 
-  rm_dock <- docks[[v_id]]
-
   hide_view_ui(v_id, docks)
-  destroy_module(rm_dock$dock_id, session = session)
+  destroy_module(v_id, session = session)
   removeUI(
-    selector = paste0("#", session$ns(as_view_handle_id(rm_dock$dock_id))),
+    selector = paste0("#", session$ns(as_view_handle_id(v_id))),
     immediate = TRUE,
     session = session
   )
@@ -389,7 +384,7 @@ teardown_view <- function(v_id, session, docks) {
 # reducer and dock state never crosses the package boundary. Idempotent — a
 # board already matching the live state produces no surgery — so it composes
 # with the live-sync (DOM -> board) path without ping-ponging.
-reconcile_views <- function(board, update, triggers, docks, active_dock,
+reconcile_views <- function(board, update, docks, active_dock,
                             current_active, vs, session) {
 
   layouts <- board_layouts(board)
@@ -405,7 +400,6 @@ reconcile_views <- function(board, update, triggers, docks, active_dock,
       layouts[[v]],
       board,
       update,
-      triggers,
       session,
       docks,
       blocks = board_blocks(board),
@@ -473,7 +467,6 @@ reconcile_views <- function(board, update, triggers, docks, active_dock,
 #'
 #' @param id Module ID.
 #' @param board,update Reactive board state and update signal.
-#' @param actions Action triggers.
 #' @param layout Optional initial `dock_layout`; defaults to the board's
 #'   `active_layout()`.
 #'
@@ -485,7 +478,6 @@ manage_dock <- function(
   id,
   board,
   update,
-  actions,
   layout = NULL,
   blocks = NULL,
   extensions = NULL

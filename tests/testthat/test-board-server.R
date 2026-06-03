@@ -56,8 +56,7 @@ test_that("board server", {
   withr::defer(if (!ms$isClosed()) ms$close())
 
   res <- with_mock_context(ms, {
-    manage_dock("dock_main", board_rv_2, update = reactiveVal(),
-                actions = list())
+    manage_dock("dock_main", board_rv_2, update = reactiveVal())
   })
 
   ms$flushReact()
@@ -111,8 +110,7 @@ test_that("board server", {
   withr::defer(if (!ms2$isClosed()) ms2$close())
 
   res2 <- with_mock_context(ms2, {
-    manage_dock("dock_main", board_rv_2, update = reactiveVal(),
-                actions = list())
+    manage_dock("dock_main", board_rv_2, update = reactiveVal())
   })
 
   ms2$flushReact()
@@ -161,7 +159,7 @@ test_that("board server", {
   upd <- reactiveVal()
 
   with_mock_context(ms3, {
-    manage_dock("dock_main", board_rv_2, update = upd, actions = list())
+    manage_dock("dock_main", board_rv_2, update = upd)
   })
 
   ms3$flushReact()

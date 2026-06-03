@@ -219,7 +219,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
   renamed <- apply_views_rename(setNames(list("New"), "v1"), brd)
 
   isolate(
-    reconcile_views(renamed, function(...) NULL, NULL, docks, active_dock,
+    reconcile_views(renamed, function(...) NULL, docks, active_dock,
                     current_active, vs, session)
   )
 
@@ -682,7 +682,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
 
     with_mocked_bindings(
       isolate(
-        reconcile_views(removed, function(...) NULL, NULL, docks, active_dock,
+        reconcile_views(removed, function(...) NULL, docks, active_dock,
                         current_active, vs, session)
       ),
       teardown_view = function(view_id, session, docks) {
