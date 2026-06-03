@@ -83,11 +83,6 @@ create_block_with_name <- function(reg_id, blk_nms, ...) {
   create_block(reg_id, ..., block_name = name_fun(blk_nms))
 }
 
-new_stack_name <- function(board) {
-  existsing <- chr_ply(board_stacks(board), stack_name)
-  last(make.unique(c(existsing, default_stack_name()), sep = " "))
-}
-
 trace_env <- new.env()
 
 insert_ui <- insertUI
