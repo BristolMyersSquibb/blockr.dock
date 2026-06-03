@@ -42,19 +42,15 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   remove_view_observer(client_views, session, update)
   rename_view_observer(client_views, session, update)
 
-  # Reconcile the live dock session against the committed board: create /
-  # destroy / restore / rename / switch views, so apply_board_update.dock_board
-  # stays a pure reducer and nothing is threaded across the boundary. Runs on
-  # the initial board too (no ignoreInit): view init is just the empty-`docks`
-  # case of reconcile — create every view, show the active one. High priority
-  # so the DOM is current before other board observers react.
+  # Reconcile the live dock session against the committed board (create /
+  # destroy / restore / rename / switch views), keeping apply_board_update a
+  # pure reducer. No ignoreInit: initial render is the empty-`docks` case.
   observeEvent(
     board$board,
     reconcile_views(
       board$board, update, docks, active_dock, client_active, client_views,
       session
-    ),
-    priority = 100
+    )
   )
 
   # Extensions receive active_dock — a reactiveValues that always mirrors
@@ -160,15 +156,19 @@ switch_view_observer <- function(session, update, client_active) {
   )
 }
 
-# Returns NULL while any view's dockview `_state` input is still pending —
-# observers downstream can `req()` past the initial flush. The active view
-# comes from `client_active` (the single client-shown-active record), not
-# from `client_views`.
+# Returns NULL while any view is still pending — its dock not yet created by
+# reconcile, or its dockview layout not yet reported — so downstream observers
+# `req()` past the initial flush instead of racing reconcile. The active view
+# comes from `client_active`, not `client_views`.
 live_view_data <- function(client_views, docks, client_active) {
   reactive({
     state <- client_views()
     v_list <- lapply(names(state), function(v_id) {
-      ly <- docks[[v_id]]$layout()
+      dk <- docks[[v_id]]
+      if (is.null(dk)) {
+        return(NULL)
+      }
+      ly <- dk$layout()
       if (is.null(ly)) {
         return(NULL)
       }
