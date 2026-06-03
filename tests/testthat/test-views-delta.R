@@ -211,16 +211,16 @@ test_that("reconcile_views syncs the nav and live state on rename", {
     docks[[id]] <- list(layout = function() NULL)
   }
   active_dock <- reactiveValues()
-  current_active <- reactiveVal(active_view(board_layouts(brd)))
-  vs <- reactiveValues(state = board_layouts(brd))
+  client_active <- reactiveVal(active_view(board_layouts(brd)))
+  client_views <- reactiveVal(board_layouts(brd))
 
   # The board carries the new name; the live state still has the old one, so
-  # reconcile detects the rename and relabels the nav + vs$state.
+  # reconcile detects the rename and relabels the nav + client_views.
   renamed <- apply_views_rename(setNames(list("New"), "v1"), brd)
 
   isolate(
     reconcile_views(renamed, function(...) NULL, docks, active_dock,
-                    current_active, vs, session)
+                    client_active, client_views, session)
   )
 
   expect_true(
@@ -228,7 +228,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
       identical(m$rename$id, "v1") && identical(m$rename$to, "New")
     }))
   )
-  expect_identical(view_name(isolate(vs$state)[["v1"]]), "New")
+  expect_identical(view_name(isolate(client_views())[["v1"]]), "New")
 })
 
 test_that("blocks$rm auto-augments views$mod for every affected view", {
@@ -672,10 +672,10 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     docks <- new.env(parent = emptyenv())
     for (id in names(state)) docks[[id]] <- list(layout = function() NULL)
     active_dock <- reactiveValues()
-    current_active <- reactiveVal(name_to_id[[active_label]])
+    client_active <- reactiveVal(name_to_id[[active_label]])
 
     active_view(state) <- name_to_id[[active_label]]
-    vs <- reactiveValues(state = state)
+    client_views <- reactiveVal(state)
 
     # Remove on the board (pure), then reconcile the live session against it.
     removed <- apply_views_rm(name_to_id[[rm_label]], brd)
@@ -683,7 +683,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     with_mocked_bindings(
       isolate(
         reconcile_views(removed, function(...) NULL, docks, active_dock,
-                        current_active, vs, session)
+                        client_active, client_views, session)
       ),
       teardown_view = function(view_id, session, docks) {
         rm(list = view_id, envir = docks)

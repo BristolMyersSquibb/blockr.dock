@@ -208,15 +208,15 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
   })
 
   res <- with_mock_context(ms, {
-    vs <- reactiveValues(
-      state = dock_layouts(A = new_dock_layout(), B = new_dock_layout())
+    client_views <- reactiveVal(
+      dock_layouts(A = new_dock_layout(), B = new_dock_layout())
     )
-    ids <- names(vs$state)
+    ids <- names(client_views())
     docks <- new.env(parent = emptyenv())
     docks[[ids[[1L]]]] <- list(layout = layouts$A)
     docks[[ids[[2L]]]] <- list(layout = layouts$B)
-    current_active <- reactiveVal(ids[[1L]])
-    list(vd = live_view_data(vs, docks, current_active), vs = vs)
+    client_active <- reactiveVal(ids[[1L]])
+    list(vd = live_view_data(client_views, docks, client_active))
   })
 
   expect_null(isolate(res$vd()))
