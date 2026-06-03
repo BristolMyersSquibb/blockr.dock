@@ -85,8 +85,8 @@ validate_extensions_delta <- function(extensions, board) {
 }
 
 # Write each `extensions$mod` delta into the live extension `state`
-# reactiveVals built by `board_server_callback()` (reachable via
-# `dock_mgr$ext_res`). Mirrors blockr.core's `apply_block_mod_delta()`:
+# reactiveVals built by `board_server_callback()` (its `ext_res`).
+# Mirrors blockr.core's `apply_block_mod_delta()`:
 # only entries that actually change are written, so unchanged values do
 # not spuriously invalidate downstream reactives.
 apply_extensions_mod <- function(mod, ext_res) {

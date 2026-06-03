@@ -11,20 +11,12 @@ test_that("board server", {
       res <- board_server_callback(board_rv_1, update = reactiveVal())
 
       expect_type(res, "list")
-      expect_named(res, c("dock", "actions", "view_data", "dock_mgr"))
+      expect_named(res, c("dock", "actions", "view_data"))
 
-      dock <- res[["dock"]]
-
-      expect_type(dock, "list")
-      expect_named(
-        dock,
-        c("layout", "proxy", "prev_active_group", "n_panels",
-          "active_group_trail")
-      )
-
-      expect_s3_class(dock[["layout"]], "reactive")
-      expect_s3_class(dock[["proxy"]], "dock_view_proxy")
-      expect_s3_class(dock[["prev_active_group"]], "reactive")
+      # `dock` is the active-dock reactiveValues handle the extensions
+      # receive; its contents are filled by the reconcile pass (init render),
+      # exercised by the app test — here we assert only the returned shape.
+      expect_s3_class(res[["dock"]], "reactivevalues")
       expect_s3_class(res[["view_data"]], "reactive")
     }
   )
@@ -41,21 +33,10 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "dock_mgr", "edit_board_extension")
+        c("dock", "actions", "view_data", "edit_board_extension")
       )
 
-      dock <- res[["dock"]]
-
-      expect_type(dock, "list")
-      expect_named(
-        dock,
-        c("layout", "proxy", "prev_active_group", "n_panels",
-          "active_group_trail")
-      )
-
-      expect_s3_class(dock[["layout"]], "reactive")
-      expect_s3_class(dock[["proxy"]], "dock_view_proxy")
-      expect_s3_class(dock[["prev_active_group"]], "reactive")
+      expect_s3_class(res[["dock"]], "reactivevalues")
 
       ext <- res[["edit_board_extension"]]
 
@@ -75,8 +56,7 @@ test_that("board server", {
   withr::defer(if (!ms$isClosed()) ms$close())
 
   res <- with_mock_context(ms, {
-    manage_dock("dock_main", board_rv_2, update = reactiveVal(),
-                actions = list())
+    manage_dock("dock_main", board_rv_2, update = reactiveVal())
   })
 
   ms$flushReact()
@@ -130,8 +110,7 @@ test_that("board server", {
   withr::defer(if (!ms2$isClosed()) ms2$close())
 
   res2 <- with_mock_context(ms2, {
-    manage_dock("dock_main", board_rv_2, update = reactiveVal(),
-                actions = list())
+    manage_dock("dock_main", board_rv_2, update = reactiveVal())
   })
 
   ms2$flushReact()
@@ -180,7 +159,7 @@ test_that("board server", {
   upd <- reactiveVal()
 
   with_mock_context(ms3, {
-    manage_dock("dock_main", board_rv_2, update = upd, actions = list())
+    manage_dock("dock_main", board_rv_2, update = upd)
   })
 
   ms3$flushReact()
@@ -229,14 +208,15 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
   })
 
   res <- with_mock_context(ms, {
-    vs <- reactiveValues(
-      state = dock_layouts(A = new_dock_layout(), B = new_dock_layout())
+    client_views <- reactiveVal(
+      dock_layouts(A = new_dock_layout(), B = new_dock_layout())
     )
-    ids <- names(vs$state)
-    dock_mgr <- new_dock_manager()
-    dock_mgr$docks[[ids[[1L]]]] <- list(layout = layouts$A)
-    dock_mgr$docks[[ids[[2L]]]] <- list(layout = layouts$B)
-    list(vd = live_view_data(vs, dock_mgr), vs = vs)
+    ids <- names(client_views())
+    docks <- new.env(parent = emptyenv())
+    docks[[ids[[1L]]]] <- list(layout = layouts$A)
+    docks[[ids[[2L]]]] <- list(layout = layouts$B)
+    client_active <- reactiveVal(ids[[1L]])
+    list(vd = live_view_data(client_views, docks, client_active))
   })
 
   expect_null(isolate(res$vd()))
@@ -365,35 +345,39 @@ test_that("validate_board_update.dock_board rejects bad extensions slot", {
   )
 })
 
-test_that("extensions slot writes controllable state via apply_board_update", {
+test_that("extensions mod state is applied via the update lifecycle", {
 
   board_rv <- board_args(
     blocks = c(a = new_dataset_block()),
     extensions = new_ctrl_extension(content = "# old")
   )
 
-  with_mock_session(
-    {
-      res <- board_server_callback(board_rv, update = reactiveVal())
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
 
-      content <- res$dock_mgr$ext_res$doc_extension$state$content
+  upd <- reactiveVal()
 
-      expect_s3_class(content, "reactiveVal")
-      expect_identical(isolate(content()), "# old")
+  res <- with_mock_context(ms, board_server_callback(board_rv, update = upd))
 
-      apply_board_update(
-        isolate(board_rv$board),
-        list(
-          extensions = list(
-            mod = list(doc_extension = list(content = "# new"))
-          )
-        ),
-        dock_mgr = res$dock_mgr
-      )
+  ms$flushReact()
 
-      expect_identical(isolate(content()), "# new")
-    }
+  # ext_res is spread into the callback result, so the extension's
+  # controllable state is reachable without a dock handle.
+  content <- res$doc_extension$state$content
+
+  expect_s3_class(content, "reactiveVal")
+  expect_identical(isolate(content()), "# old")
+
+  # An `extensions$mod` delta is applied by the closure observer, not the
+  # (now pure) apply hook.
+  upd(
+    list(
+      extensions = list(mod = list(doc_extension = list(content = "# new")))
+    )
   )
+  ms$flushReact()
+
+  expect_identical(isolate(content()), "# new")
 })
 
 test_that("extension servers can read peer extension state", {
@@ -442,12 +426,11 @@ test_that("New view modal confirm submits an add-and-activate delta", {
 
   testServer(
     function(input, output, session) {
-      vs <- reactiveValues(state = board_layouts(brd))
+      client_views <- reactiveVal(board_layouts(brd))
       board <- reactiveValues(board = brd)
       add_view_observer(
-        vs,
+        client_views,
         session,
-        dock_mgr = NULL,
         board = board,
         update = function(x) captured <<- x
       )

@@ -321,38 +321,30 @@ augment_board_update.dock_board <- function(upd, board, ...,
 }
 
 #' @export
-apply_board_update.dock_board <- function(board, upd, ...,
-                                          session = get_session()) {
-
-  dot_args <- list(...)
-  dock_mgr <- dot_args$dock_mgr
-
-  if (length(upd$extensions$mod) && !is.null(dock_mgr)) {
-    apply_extensions_mod(upd$extensions$mod, dock_mgr$ext_res)
-  }
+apply_board_update.dock_board <- function(board, upd, ...) {
 
   if (!length(upd$views)) {
     return(board)
   }
 
   if (length(upd$views$rm)) {
-    board <- apply_views_rm(upd$views$rm, board, dock_mgr, session)
+    board <- apply_views_rm(upd$views$rm, board)
   }
 
   if (length(upd$views$add)) {
-    board <- apply_views_add(upd$views$add, board, dock_mgr, session)
+    board <- apply_views_add(upd$views$add, board)
   }
 
   if (length(upd$views$mod)) {
-    board <- apply_views_mod(upd$views$mod, board, dock_mgr)
+    board <- apply_views_mod(upd$views$mod, board)
   }
 
   if (length(upd$views$rename)) {
-    board <- apply_views_rename(upd$views$rename, board, dock_mgr, session)
+    board <- apply_views_rename(upd$views$rename, board)
   }
 
   if (!is.null(upd$views$active)) {
-    board <- apply_views_active(upd$views$active, board, dock_mgr, session)
+    board <- apply_views_active(upd$views$active, board)
   }
 
   board
