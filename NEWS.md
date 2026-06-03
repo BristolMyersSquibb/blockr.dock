@@ -1,5 +1,17 @@
 # blockr.dock (development version)
 
+* `add_link_action()` now mounts the `blockr.ui` link-menu module and
+  is bidirectional: right-clicking a downstream block now lets you pick
+  an upstream source, not just a target. The card-list menu owns its
+  own empty-state, supports a multi-link session (the just-wired card
+  drops client-side without a re-render, and the sidebar closes itself
+  once the pool drains), and replaces the per-field link inputs
+  (`create_link` / `add_link_input` / `add_link_id` / `add_link_confirm`)
+  with a single committed-spec reactive from
+  `blockr.ui::link_menu_server()`. `link_sidebar_body()` is removed (no
+  in-tree callers remain; out-of-tree consumers migrate to
+  `blockr.ui::link_menu_ui()` / `link_menu_server()`).
+
 * The add / edit stack action handlers now mount the `blockr.ui`
   stack-menu module: a multi-select card-list block picker with
   search, per-category icons, an inline hue / lightness colour
