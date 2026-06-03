@@ -326,7 +326,13 @@ as_dock_layouts.dock_layout <- function(x, blocks = NULL, extensions = NULL,
 #' @export
 as_dock_layouts.list <- function(x, blocks = NULL, extensions = NULL, ...) {
 
-  if (is_multi_view(x)) {
+  # Multi-view: a list keyed by view id, or one holding `dock_layout`s
+  # (keyless — ids minted). A `grid`-keyed list (dockview's internal
+  # single-view form) or a bare panel-id list is a single view.
+  multi_view <- !("grid" %in% names(x)) &&
+    (not_null(names(x)) || any(lgl_ply(x, is_dock_layout)))
+
+  if (multi_view) {
     return(
       resolve_views(
         x,
@@ -336,15 +342,18 @@ as_dock_layouts.list <- function(x, blocks = NULL, extensions = NULL, ...) {
     )
   }
 
-  # A single view: dockview's internal grid-list or a bare list of panel
-  # ids. `coerce_view_spec()` turns either into a `dock_layout`, which the
-  # `dock_layout` method then resolves and wraps.
+  # Single view: `coerce_view_spec()` turns the grid-list or bare panel-id
+  # list into a `dock_layout`, which the `dock_layout` method then resolves
+  # and wraps.
   as_dock_layouts(coerce_view_spec(x), blocks = blocks, extensions = extensions)
 }
 
 #' @export
 as_dock_layouts.default <- function(x, ...) {
-  as_dock_layouts(as.list(x), ...)
+  blockr_abort(
+    "Cannot coerce a {class(x)[[1L]]} object to a `dock_layouts`.",
+    class = "dock_layouts_coerce_invalid"
+  )
 }
 
 # Wrap an id-keyed list of views as a `dock_layouts`, recording the active

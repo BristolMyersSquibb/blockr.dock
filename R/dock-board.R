@@ -76,15 +76,6 @@ initialise_layout <- function(layouts, blocks, extensions, active = NULL) {
   res
 }
 
-# A multi-view input is a list keyed by view id, or a list whose elements
-# are themselves `dock_layout`s (keyless — ids minted). A bare list of
-# panel ids (`list("a", "b")`) is a single view's children, and a
-# `grid`-keyed list is dockview's single-view internal form.
-is_multi_view <- function(layouts) {
-  is.list(layouts) && length(layouts) > 0L && !("grid" %in% names(layouts)) &&
-    (!is.null(names(layouts)) || any(lgl_ply(layouts, is_dock_layout)))
-}
-
 resolve_views <- function(specs, c_blks, c_exts) {
 
   specs <- lapply(specs, coerce_view_spec)

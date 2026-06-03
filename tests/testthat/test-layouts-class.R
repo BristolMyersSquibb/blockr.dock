@@ -279,19 +279,11 @@ test_that("as_dock_layouts identity on dock_layouts", {
   expect_identical(as_dock_layouts(ly), ly)
 })
 
-test_that("a bare-vector layouts arg coerces to one view", {
+test_that("as_dock_layouts errors on an unsupported input type", {
 
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = c("a", "b")
-  )
-
-  views <- board_layouts(brd)
-
-  expect_length(views, 1L)
-  expect_setequal(
-    layout_panel_ids(views[[1L]]),
-    c("block_panel-a", "block_panel-b")
+  expect_error(
+    as_dock_layouts(1L),
+    class = "dock_layouts_coerce_invalid"
   )
 })
 
