@@ -258,6 +258,6 @@ test_that("dummy edit extension ui test", {
     new_dock_board(blocks = c(a = new_dataset_block()))
   )
 
-  expect_s3_class(ui, "shiny.tag.list")
-  expect_length(ui, 4L)
+  expect_s3_class(ui, "shiny.tag")
+  expect_identical(htmltools::tagGetAttribute(ui, "class"), "blockr-ext-edit")
 })

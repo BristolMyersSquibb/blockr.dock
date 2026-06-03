@@ -967,3 +967,83 @@ label:has(input[type="file"]) {
   margin: 0;
   font-size: var(--blockr-font-size-sm, 14px);
 }
+
+/* ============================================
+   Edit Board Extension
+   ============================================ */
+
+/* Padded container with consistent vertical rhythm so content does not hug
+   the panel borders, matching a block panel's internal gutter. */
+.blockr-ext-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 16px;
+}
+
+.blockr-ext-edit-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Inputs and the buttons that act on them share a baseline-aligned row, so
+   action buttons no longer float above their inputs' labels. */
+.blockr-ext-edit-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* The flex gaps are the single source of spacing within the extension. */
+.blockr-ext-edit .form-group {
+  margin-bottom: 0;
+}
+
+/* Keep the links table within the panel: the selectize cells flex to fit
+   instead of overflowing at a fixed width and clipping the Input column. At
+   panel widths too narrow for the cells' min-width, the table scrolls
+   horizontally rather than clipping. */
+.blockr-ext-edit-links {
+  overflow-x: auto;
+}
+
+.blockr-ext-edit table.dataTable {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.blockr-ext-edit table.dataTable td,
+.blockr-ext-edit table.dataTable th {
+  padding: 8px 10px;
+}
+
+/* Semantic action buttons must win over the .btn-default that Shiny's
+   actionButton() always carries; these scoped rules out-specify it so the
+   constructive and destructive actions are visually distinguishable. */
+.blockr-ext-edit .btn-primary {
+  background-color: var(--blockr-color-primary);
+  border-color: var(--blockr-color-primary);
+  color: #ffffff;
+}
+
+.blockr-ext-edit .btn-primary:hover,
+.blockr-ext-edit .btn-primary:focus {
+  background-color: var(--blockr-color-primary-hover);
+  border-color: var(--blockr-color-primary-hover);
+  color: #ffffff;
+}
+
+.blockr-ext-edit .btn-danger {
+  background-color: var(--blockr-color-error);
+  border-color: var(--blockr-color-error);
+  color: #ffffff;
+}
+
+.blockr-ext-edit .btn-danger:hover,
+.blockr-ext-edit .btn-danger:focus {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
+  color: #ffffff;
+}
