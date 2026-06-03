@@ -78,5 +78,21 @@ test_that("dock app", {
   app$wait_for_idle()
   app$expect_values(export = TRUE, screenshot_args = FALSE)
 
+  app$set_inputs(`my_board-edit_board_extension-new_stack_id` = "s1")
+
+  app$click("my_board-edit_board_extension-add_stack")
+  app$wait_for_idle()
+
+  app$set_inputs(`my_board-edit_board_extension-s1_name` = "My Stack")
+  app$wait_for_idle()
+
+  app$set_inputs(`my_board-edit_board_extension-s1_blocks` = "a")
+  app$wait_for_idle()
+
+  app$click("my_board-edit_board_extension-modify_stacks")
+
+  app$wait_for_idle()
+  app$expect_values(export = TRUE, screenshot_args = FALSE)
+
   app$stop()
 })

@@ -1011,12 +1011,25 @@ label:has(input[type="file"]) {
   margin-bottom: 0;
 }
 
-/* Keep the links table within the panel: the selectize cells flex to fit
-   instead of overflowing at a fixed width and clipping the Input column. At
-   panel widths too narrow for the cells' min-width, the table scrolls
-   horizontally rather than clipping. */
-.blockr-ext-edit-links {
+/* Keep the links and stacks tables within the panel: the input cells flex to
+   fit instead of overflowing at a fixed width and clipping a column. At panel
+   widths too narrow for the cells' min-width, the table scrolls horizontally
+   rather than clipping. */
+.blockr-ext-edit-links,
+.blockr-ext-edit-stacks {
   overflow-x: auto;
+}
+
+/* The stacks table's native colour input: fill the cell at a workable height
+   and drop the browser's default chunky padding. */
+.blockr-ext-edit-color {
+  width: 100%;
+  min-width: 56px;
+  height: 38px;
+  padding: 2px;
+  border: 1px solid var(--bs-border-color, #ced4da);
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .blockr-ext-edit table.dataTable {
