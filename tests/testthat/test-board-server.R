@@ -426,12 +426,11 @@ test_that("New view modal confirm submits an add-and-activate delta", {
 
   testServer(
     function(input, output, session) {
-      vs <- reactiveValues(state = board_layouts(brd))
+      client_views <- reactiveVal(board_layouts(brd))
       board <- reactiveValues(board = brd)
       add_view_observer(
-        vs,
+        client_views,
         session,
-        dock_mgr = NULL,
         board = board,
         update = function(x) captured <<- x
       )
