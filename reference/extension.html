@@ -63,6 +63,7 @@ can be combined into a <code>dock_extensions</code> object.</p>
 <span>  <span class="va">ui</span>,</span>
 <span>  <span class="va">name</span>,</span>
 <span>  <span class="va">class</span>,</span>
+<span>  description <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ctor <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sys.parent.html" class="external-link">sys.parent</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  pkg <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  options <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_board_options.html" class="external-link">new_board_options</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -81,6 +82,8 @@ can be combined into a <code>dock_extensions</code> object.</p>
 <span><span class="fu">extension_id</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">extension_name</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">extension_description</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">extension_ctor</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
@@ -128,6 +131,11 @@ so one extension can read another's state via <code>extensions[[id]]</code>.</p>
 <dd><p>Extension subclass</p></dd>
 
 
+<dt id="arg-description">description<a class="anchor" aria-label="anchor" href="#arg-description"></a></dt>
+<dd><p>Optional free-text description of the extension, surfaced
+as consumer-neutral metadata (e.g. to the AI assistant)</p></dd>
+
+
 <dt id="arg-ctor">ctor<a class="anchor" aria-label="anchor" href="#arg-ctor"></a></dt>
 <dd><p>Constructor function name</p></dd>
 
@@ -170,8 +178,8 @@ and a <code>dock_extensions</code> object using <code>validate_extensions()</cod
 the input object invisibly and throw errors as side-effects. Several getter
 functions return extension attributes, including <code>extension_ui()</code> (a
 function), <code>extension_server()</code> (a function), <code>extension_id()</code> (a string),
-<code>extension_name()</code> (a string) and <code>extension_ctor()</code> (an object that
-inherits from <code>blockr_ctor</code>).</p>
+<code>extension_name()</code> (a string), <code>extension_description()</code> (a string or
+<code>NULL</code>) and <code>extension_ctor()</code> (an object that inherits from <code>blockr_ctor</code>).</p>
     </div>
 
     <div class="section level2">

@@ -13,6 +13,7 @@ new_dock_extension(
   ui,
   name,
   class,
+  description = NULL,
   ctor = sys.parent(),
   pkg = NULL,
   options = new_board_options(),
@@ -31,6 +32,8 @@ extension_server(x, ...)
 extension_id(x)
 
 extension_name(x)
+
+extension_description(x)
 
 extension_ctor(x)
 
@@ -78,6 +81,11 @@ extension_block_callback(x, ...)
 
   Extension subclass
 
+- description:
+
+  Optional free-text description of the extension, surfaced as
+  consumer-neutral metadata (e.g. to the AI assistant)
+
 - ctor:
 
   Constructor function name
@@ -121,8 +129,9 @@ both return a boolean. A `dock_extension` can be validated using
 throw errors as side-effects. Several getter functions return extension
 attributes, including `extension_ui()` (a function),
 `extension_server()` (a function), `extension_id()` (a string),
-`extension_name()` (a string) and `extension_ctor()` (an object that
-inherits from `blockr_ctor`).
+`extension_name()` (a string), `extension_description()` (a string or
+`NULL`) and `extension_ctor()` (an object that inherits from
+`blockr_ctor`).
 
 ## Examples
 
