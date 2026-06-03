@@ -758,14 +758,19 @@ add_view_observer <- function(vs, session, dock_mgr, board, update) {
     v_exts <- as_dock_extensions(
       as.list(dock_extensions(brd))[sel_exts]
     )
-    # Mark the new view active so it is switched to on creation; the id is
-    # minted in augment, so we can't reference it by id here — the add
-    # layout's active marker is how "add and activate" travels.
-    v_ly <- set_active_view(
-      resolve_dock_layout(blocks = v_blks, extensions = v_exts)
-    )
+    v_ly <- resolve_dock_layout(blocks = v_blks, extensions = v_exts)
 
-    update(list(views = list(add = set_names(list(v_ly), new_name))))
+    # Switch to the new view on creation. Its id is minted in augment, so
+    # we point `active` at its `add` key (the display name); the dock
+    # resolves that to the minted id in `normalize_views_delta()`.
+    update(
+      list(
+        views = list(
+          add = set_names(list(v_ly), new_name),
+          active = new_name
+        )
+      )
+    )
   })
 }
 

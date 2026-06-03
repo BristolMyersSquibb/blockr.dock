@@ -63,14 +63,15 @@ test_that("apply_views: full delta round-trips through board_layouts", {
     layouts = list(A = list("a"), B = list("b"))
   )
 
-  # add C (marked active — a new view has no id to reference yet), mod A,
-  # rm B. mod / rm address existing views by id.
+  # add C and make it active (a new view has no id yet, so `active` names
+  # it by its add key), mod A, rm B. mod / rm address existing views by id.
   upd <- augment_board_update(
     list(
       views = list(
-        add = list(C = set_active_view(dock_layout("a"))),
+        add = list(C = dock_layout("a")),
         mod = list(A = dock_layout("a", "b")),
-        rm = "B"
+        rm = "B",
+        active = "C"
       )
     ),
     brd
@@ -87,7 +88,7 @@ test_that("apply_views: full delta round-trips through board_layouts", {
   )
 })
 
-test_that("apply_views_add honours an active add on the board", {
+test_that("apply_views_add adds a view, leaving the active one untouched", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -95,14 +96,39 @@ test_that("apply_views_add honours an active add on the board", {
   )
   expect_identical(active_view(board_layouts(brd)), "A")
 
+  # Adding a view never changes which is active — that rides the `active`
+  # slot, applied separately by `apply_views_active()`.
   out <- apply_views_add(
-    setNames(list(set_active_view(dock_layout("a"))), "cid"),
+    setNames(list(dock_layout("a")), "cid"),
     brd
   )
 
   views <- board_layouts(out)
   expect_setequal(names(views), c("A", "B", "cid"))
-  expect_identical(active_view(views), "cid")
+  expect_identical(active_view(views), "A")
+})
+
+test_that("a delta can add a view and activate it by its add key", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"), B = list("b"))
+  )
+
+  upd <- augment_board_update(
+    list(views = list(add = list(C = dock_layout("a")), active = "C")),
+    brd
+  )
+
+  # normalize_views_delta resolves the `active` add key to the minted id
+  # before validation / apply see it.
+  expect_identical(upd$views$active, names(upd$views$add))
+  expect_false(upd$views$active %in% c("A", "B"))
+
+  out <- apply_board_update(brd, upd)
+
+  expect_identical(active_name(out), "C")
+  expect_identical(active_view(board_layouts(out)), upd$views$active)
 })
 
 test_that("apply_views_rename writes the display name, keeps the id", {

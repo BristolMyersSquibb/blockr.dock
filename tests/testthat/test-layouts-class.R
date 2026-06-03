@@ -23,20 +23,18 @@ test_that("multi-view layouts via new_dock_board", {
   expect_identical(active_name(views), "Analysis")
 })
 
-test_that("dock_layout marker selects active view", {
+test_that("new_dock_board(active=) selects the active view by id", {
 
   brd <- new_dock_board(
     blocks = c(x = new_dataset_block(), y = new_head_block()),
-    layouts = list(
-      A = list("x"),
-      B = dock_layout("y", active = TRUE)
-    )
+    layouts = list(A = list("x"), B = list("y")),
+    active = "B"
   )
 
   expect_identical(active_name(brd), "B")
 })
 
-test_that("auto-defaults first view active when none marked", {
+test_that("auto-defaults first view active when none chosen", {
 
   brd <- new_dock_board(
     blocks = c(x = new_dataset_block(), y = new_head_block()),
@@ -46,17 +44,15 @@ test_that("auto-defaults first view active when none marked", {
   expect_identical(active_name(brd), "A")
 })
 
-test_that("rejects multiple active views", {
+test_that("new_dock_board rejects an unknown active id", {
 
   expect_error(
     new_dock_board(
       blocks = c(x = new_dataset_block(), y = new_head_block()),
-      layouts = list(
-        A = dock_layout("x", active = TRUE),
-        B = dock_layout("y", active = TRUE)
-      )
+      layouts = list(A = list("x"), B = list("y")),
+      active = "nope"
     ),
-    class = "dock_layouts_multiple_active"
+    class = "dock_view_not_found"
   )
 })
 
@@ -110,7 +106,7 @@ test_that("active_view get/set on a dock_board", {
   )
 })
 
-test_that("active_view returns NULL when no view is active", {
+test_that("active_view returns NULL when the active view is gone", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -118,9 +114,11 @@ test_that("active_view returns NULL when no view is active", {
   )
 
   views <- board_layouts(brd)
+
+  # First is the (defaulted) active view; dropping it directly leaves the
+  # container's active id dangling, which reads back as "no active view".
   views[[vid(views, "First")]] <- NULL
 
-  expect_false(any_active_view(views))
   expect_null(active_view(views))
 })
 
@@ -204,14 +202,15 @@ test_that("multi-view layouts produce typed slots", {
   expect_true(is_dock_layout(views[[vid(views, "Tab2")]]))
 })
 
-test_that("active attribute survives layout resolution", {
+test_that("the active view survives layout resolution", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
       First = list("a"),
-      Second = dock_layout("a", "b", active = TRUE)
-    )
+      Second = dock_layout("a", "b")
+    ),
+    active = "Second"
   )
 
   views <- board_layouts(brd)
@@ -278,6 +277,31 @@ test_that("as_dock_layouts identity on dock_layouts", {
   ly <- board_layouts(brd)
 
   expect_identical(as_dock_layouts(ly), ly)
+})
+
+test_that("as_dock_layouts errors on an unsupported input type", {
+
+  expect_error(
+    as_dock_layouts(1L),
+    class = "dock_layouts_coerce_invalid"
+  )
+})
+
+test_that("validate_dock_layouts rejects an active id that isn't present", {
+
+  views <- board_layouts(
+    new_dock_board(
+      blocks = c(a = new_dataset_block(), b = new_head_block()),
+      layouts = list(A = list("a"), B = list("b"))
+    )
+  )
+
+  attr(views, "active") <- "ghost"
+
+  expect_error(
+    validate_dock_layouts(views),
+    class = "dock_view_not_found"
+  )
 })
 
 test_that("view_name<- rewrites only the display name, not the id", {

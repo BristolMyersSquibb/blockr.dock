@@ -20,10 +20,10 @@
 #' is the panel arrangement inside that view (a [dock_layout()], or a raw
 #' list of block / extension IDs). The display name is set on the layout
 #' via `dock_layout(name = )`; with none set, a label is derived from the
-#' id. A view can be marked as the initially-active one by passing
-#' `active = TRUE` to [dock_layout()]; if none is marked, the first one is
-#' used. View CRUD is enabled unless the dock is locked (see
-#' `is_dock_locked()`).
+#' id. The initially-active view is chosen by `new_dock_board(active = )`
+#' (a view id), defaulting to the first; it is a property of the
+#' collection, never of an individual layout. View CRUD is enabled unless
+#' the dock is locked (see `is_dock_locked()`).
 #'
 #' Users do not normally construct a `dock_layouts` directly; instead
 #' they pass a plain named list to `new_dock_board(layouts = ...)`,
@@ -47,8 +47,9 @@
 #'   ),
 #'   layouts = list(
 #'     analysis = dock_layout("dataset_1", "head_1", name = "Analysis"),
-#'     overview = dock_layout("dataset_1", name = "Overview", active = TRUE)
-#'   )
+#'     overview = dock_layout("dataset_1", name = "Overview")
+#'   ),
+#'   active = "overview"
 #' )
 #' view_names(board_layouts(brd))
 #'
@@ -66,13 +67,7 @@ new_dock_layouts <- function(...) {
     vws <- list(new_dock_layout())
   }
 
-  vws <- mint_view_ids(vws)
-
-  if (!any(lgl_ply(vws, is_active_view))) {
-    vws[[1L]] <- set_active_view(vws[[1L]])
-  }
-
-  structure(vws, class = "dock_layouts")
+  finalize_layouts_active(mint_view_ids(vws))
 }
 
 # Wrap an already id-keyed list of `dock_layout`s (each carrying its
@@ -80,12 +75,7 @@ new_dock_layouts <- function(...) {
 # Used by the runtime rebuild paths and new-format deserialization, where
 # identity must be preserved across recomputes.
 reconstruct_dock_layouts <- function(views) {
-
-  if (length(views) && !any(lgl_ply(views, is_active_view))) {
-    views[[1L]] <- set_active_view(views[[1L]])
-  }
-
-  validate_dock_layouts(structure(views, class = "dock_layouts"))
+  validate_dock_layouts(finalize_layouts_active(views))
 }
 
 # Assemble views into an id-keyed `dock_layouts` list. The incoming list
@@ -166,12 +156,16 @@ validate_dock_layouts <- function(x) {
     }
   }
 
-  n_active <- sum(lgl_ply(x, is_active_view))
+  # "Exactly one active" is structural: the container holds a single active
+  # id (see `active_view()`), so two-or-more active can no longer be
+  # represented and needs no count check. We only guard the field against
+  # pointing at a view that isn't here.
+  active <- attr(x, "active", exact = TRUE)
 
-  if (n_active > 1L) {
+  if (!is.null(active) && !active %in% ids) {
     blockr_abort(
-      "Expecting at most one active view, found {n_active}.",
-      class = "dock_layouts_multiple_active"
+      "Active view {active} does not exist.",
+      class = "dock_view_not_found"
     )
   }
 
@@ -242,13 +236,13 @@ active_view <- function(x) {
 #' @export
 active_view.dock_layouts <- function(x) {
 
-  idx <- which(lgl_ply(x, is_active_view))[1L]
+  id <- attr(x, "active", exact = TRUE)
 
-  if (is.na(idx)) {
+  if (is.null(id) || !id %in% names(x)) {
     return(NULL)
   }
 
-  names(x)[idx]
+  id
 }
 
 #' @export
@@ -274,9 +268,7 @@ active_view.dock_board <- function(x) {
     )
   }
 
-  for (nm in names(x)) {
-    x[[nm]] <- set_active_view(x[[nm]], identical(nm, value))
-  }
+  attr(x, "active") <- value
 
   invisible(x)
 }
@@ -318,23 +310,65 @@ as_dock_layouts <- function(x, ...) {
 }
 
 #' @export
-as_dock_layouts.dock_layouts <- function(x, ...) x
+as_dock_layouts.dock_layouts <- function(x, ...) {
+  validate_dock_layouts(x)
+}
 
 #' @export
-as_dock_layouts.dock_layout <- function(x, ...) {
-  dock_layouts(set_active_view(x))
+as_dock_layouts.dock_layout <- function(x, blocks = NULL, extensions = NULL,
+                                        ...) {
+  if (not_null(blocks) || not_null(extensions)) {
+    x <- resolve_dock_layout(coal(blocks, list()), coal(extensions, list()), x)
+  }
+  dock_layouts(x)
 }
 
-is_active_view <- function(x) {
-  is_dock_layout(x) && isTRUE(attr(x, "active"))
+#' @export
+as_dock_layouts.list <- function(x, blocks = NULL, extensions = NULL, ...) {
+
+  # Multi-view: a list keyed by view id, or one holding `dock_layout`s
+  # (keyless — ids minted). A `grid`-keyed list (dockview's internal
+  # single-view form) or a bare panel-id list is a single view.
+  multi_view <- !("grid" %in% names(x)) &&
+    (not_null(names(x)) || any(lgl_ply(x, is_dock_layout)))
+
+  if (multi_view) {
+    return(
+      resolve_views(
+        x,
+        as_blocks(coal(blocks, list())),
+        as_dock_extensions(coal(extensions, list()))
+      )
+    )
+  }
+
+  # Single view: `coerce_view_spec()` turns the grid-list or bare panel-id
+  # list into a `dock_layout`, which the `dock_layout` method then resolves
+  # and wraps.
+  as_dock_layouts(coerce_view_spec(x), blocks = blocks, extensions = extensions)
 }
 
-any_active_view <- function(x) {
-  any(lgl_ply(x, is_active_view))
+#' @export
+as_dock_layouts.default <- function(x, ...) {
+  blockr_abort(
+    "Cannot coerce a {class(x)[[1L]]} object to a `dock_layouts`.",
+    class = "dock_layouts_coerce_invalid"
+  )
 }
 
-set_active_view <- function(x, active = TRUE) {
-  stopifnot(is_dock_layout(x))
-  attr(x, "active") <- if (isTRUE(active)) TRUE else NULL
-  x
+# Wrap an id-keyed list of views as a `dock_layouts`, recording the active
+# view as a single field on the container. Active defaults to the first
+# view, written through the `active_view<-()` setter; callers choose a
+# different one that way (or, at board construction,
+# `new_dock_board(active = )`). A view never carries its own active marker
+# — the container is the sole owner.
+finalize_layouts_active <- function(views) {
+
+  res <- structure(views, class = "dock_layouts")
+
+  if (length(res)) {
+    active_view(res) <- names(res)[1L]
+  }
+
+  res
 }

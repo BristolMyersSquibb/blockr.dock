@@ -77,10 +77,10 @@ Multi-view boards are defined by passing a named list to
 is the panel arrangement inside that view (a \code{\link[=dock_layout]{dock_layout()}}, or a raw
 list of block / extension IDs). The display name is set on the layout
 via \code{dock_layout(name = )}; with none set, a label is derived from the
-id. A view can be marked as the initially-active one by passing
-\code{active = TRUE} to \code{\link[=dock_layout]{dock_layout()}}; if none is marked, the first one is
-used. View CRUD is enabled unless the dock is locked (see
-\code{is_dock_locked()}).
+id. The initially-active view is chosen by \code{new_dock_board(active = )}
+(a view id), defaulting to the first; it is a property of the
+collection, never of an individual layout. View CRUD is enabled unless
+the dock is locked (see \code{is_dock_locked()}).
 
 Users do not normally construct a \code{dock_layouts} directly; instead
 they pass a plain named list to \code{new_dock_board(layouts = ...)},
@@ -94,8 +94,9 @@ brd <- new_dock_board(
   ),
   layouts = list(
     analysis = dock_layout("dataset_1", "head_1", name = "Analysis"),
-    overview = dock_layout("dataset_1", name = "Overview", active = TRUE)
-  )
+    overview = dock_layout("dataset_1", name = "Overview")
+  ),
+  active = "overview"
 )
 view_names(board_layouts(brd))
 

@@ -4,6 +4,23 @@ test_that("panel layout", {
   expect_snapshot(draw_panel_tree(list("a", list("b", "c"))))
 })
 
+test_that("active_layout<- replaces the active view's layout, keeps its id", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"), B = list("b")),
+    active = "B"
+  )
+
+  active_layout(brd) <- dock_layout("block_panel-a", "block_panel-b")
+
+  expect_identical(active_view(board_layouts(brd)), "B")
+  expect_setequal(
+    layout_panel_ids(active_layout(brd)),
+    c("block_panel-a", "block_panel-b")
+  )
+})
+
 test_that("layout resolution accepts a bare dock_extension", {
 
   blks <- c(a = new_dataset_block(), b = new_head_block())
@@ -100,14 +117,15 @@ test_that("default_layout uses class-name convention across input forms", {
   )
 })
 
-test_that("dock_layout constructor with active flag selects the view", {
+test_that("new_dock_board(active=) selects the view", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
       First = list("a"),
-      Second = dock_layout("a", "b", active = TRUE)
-    )
+      Second = dock_layout("a", "b")
+    ),
+    active = "Second"
   )
 
   expect_identical(active_name(brd), "Second")
@@ -131,17 +149,6 @@ test_that("layout is stored without panels (no duplication across views)", {
   expect_named(a, c("grid", "activeGroup"))
   expect_false("panels" %in% names(a))
   expect_false("panels" %in% names(b))
-})
-
-test_that("dock_layout marks an arrangement active via attribute", {
-
-  v <- dock_layout("a", "b", active = TRUE)
-  expect_true(is_dock_layout(v))
-  expect_setequal(layout_panel_ids(v), c("a", "b"))
-  expect_true(isTRUE(attr(v, "active")))
-
-  expect_null(attr(dock_layout("a"), "active"))
-  expect_null(attr(dock_layout("a", active = FALSE), "active"))
 })
 
 test_that("dockview_payload materialises grid + panels on demand", {

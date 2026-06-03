@@ -19,6 +19,7 @@ new_dock_board(
   ...,
   extensions = new_dock_extensions(),
   layouts = default_layout(blocks, extensions),
+  active = NULL,
   options = dock_board_options(),
   ctor = NULL,
   pkg = NULL,
@@ -55,6 +56,10 @@ dock_board_options()
 \item{layouts}{A named list of per-view arrangements (multi-view), a
 \code{dock_layout} / raw list (single-page), or an existing \code{dock_layouts}
 collection. All forms are normalised to \code{dock_layouts}.}
+
+\item{active}{Id of the initially active view (a key of \code{layouts}).
+Defaults to the first view. Which view is active is a property of the
+collection, not of an individual layout.}
 
 \item{options}{Board-level user settings}
 
