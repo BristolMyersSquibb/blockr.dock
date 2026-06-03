@@ -996,6 +996,22 @@ label:has(input[type="file"]) {
   gap: 8px;
 }
 
+/* Match the action buttons' height to the inputs they sit beside. */
+.blockr-ext-edit .btn {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* "Apply changes" commits the staged link edits -- a distinct step from the
+   per-row staging controls, so it sits on its own right-aligned line. */
+.blockr-ext-edit-apply {
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* The flex gaps are the single source of spacing within the extension. */
 .blockr-ext-edit .form-group {
   margin-bottom: 0;
@@ -1017,6 +1033,12 @@ label:has(input[type="file"]) {
 .blockr-ext-edit table.dataTable td,
 .blockr-ext-edit table.dataTable th {
   padding: 8px 10px;
+}
+
+/* Give the pagination room from the table above and the controls below. */
+.blockr-ext-edit .dataTables_paginate {
+  margin-top: 12px;
+  padding: 4px 0;
 }
 
 /* Semantic action buttons must win over the .btn-default that Shiny's

@@ -103,7 +103,10 @@ blk_ext_ui <- function(id, board) {
           NS(id, "rm_link"),
           "Remove row(s)",
           icon = icon("minus")
-        ),
+        )
+      ),
+      div(
+        class = "blockr-ext-edit-apply",
         actionButton(
           NS(id, "modify_links"),
           "Apply changes",
@@ -124,6 +127,7 @@ blk_ext_srv <- function(id, board, update, ...) {
       add_block_observer(input, board, update, session)
       remove_block_observer(input, board, update, session)
       update_block_select_observer(board, session)
+      toggle_remove_block_observer(input, session)
 
       upd <- reactiveValues(
         add = links(),
@@ -152,6 +156,9 @@ blk_ext_srv <- function(id, board, update, ...) {
       add_link_observer(input, board, upd, session)
       rm_link_observer(input, board, upd, session)
       modify_link_observer(input, board, upd, session, links_proxy, update)
+
+      toggle_remove_link_observer(input, session)
+      toggle_apply_changes_observer(upd, session)
 
       NULL
     }
@@ -233,6 +240,36 @@ update_block_select_observer <- function(board, session) {
       session,
       "block_select",
       choices = board_block_ids(board$board)
+    )
+  )
+}
+
+toggle_remove_block_observer <- function(input, session) {
+  observe(
+    updateActionButton(
+      session,
+      "confirm_rm",
+      disabled = !length(input$block_select)
+    )
+  )
+}
+
+toggle_remove_link_observer <- function(input, session) {
+  observe(
+    updateActionButton(
+      session,
+      "rm_link",
+      disabled = !length(input$links_dt_rows_selected)
+    )
+  )
+}
+
+toggle_apply_changes_observer <- function(upd, session) {
+  observe(
+    updateActionButton(
+      session,
+      "modify_links",
+      disabled = !length(upd$add) && !length(upd$rm)
     )
   )
 }
