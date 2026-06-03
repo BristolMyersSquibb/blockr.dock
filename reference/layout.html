@@ -67,7 +67,6 @@ extensions, so only the arrangement is stored in a <code>dock_layout</code>. See
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">dock_layout</span><span class="op">(</span></span>
 <span>  <span class="va">...</span>,</span>
 <span>  orientation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"horizontal"</span>, <span class="st">"vertical"</span><span class="op">)</span>,</span>
-<span>  active <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  sizes <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  name <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
@@ -106,12 +105,6 @@ IDs, character vectors, lists, <code>panels()</code>, or <code>group()</code>). 
 (default) or <code>"vertical"</code>.</p></dd>
 
 
-<dt id="arg-active">active<a class="anchor" aria-label="anchor" href="#arg-active"></a></dt>
-<dd><p>For <code>dock_layout()</code>, logical: mark this layout as the
-initially-active view. For <code>panels()</code>, the ID of the tab to open by
-default.</p></dd>
-
-
 <dt id="arg-sizes">sizes<a class="anchor" aria-label="anchor" href="#arg-sizes"></a></dt>
 <dd><p>Numeric vector parallel to <code>...</code>, giving each child's
 share of the parent (positive; need not sum to 1).</p></dd>
@@ -123,6 +116,10 @@ view (free-form). When omitted, a label is derived from the view's
 id. The view's id is the list name in
 <code>new_dock_board(layouts = list(...))</code>, minted when absent and unique
 across the views of a <code>dock_layouts</code>.</p></dd>
+
+
+<dt id="arg-active">active<a class="anchor" aria-label="anchor" href="#arg-active"></a></dt>
+<dd><p>For <code>panels()</code>, the ID of the tab to open by default.</p></dd>
 
 
 <dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
@@ -168,13 +165,14 @@ numeric vector parallel to <code>...</code> that overrides the even split.</p></
 arrangement (extensions on top, blocks below) for a board.</p></li>
 </ul><p><code>dock_layout()</code> accepts <code>orientation = "horizontal" | "vertical"</code>
 for the top-level split direction, <code>sizes</code> for the root-branch
-ratios, <code>active = TRUE</code> to mark this layout as the initially-active
-view in a <code>dock_layouts</code> collection, and <code>name</code> for the view's
-display label. In <code>new_dock_board(layouts = list(...))</code> the list name
-is the view's stable <em>id</em> (the container's key, like a block id),
-minted when absent; <code>name</code> sets the free-form display label on the
-view itself. When no name is given, one is derived from the id for
-display.</p>
+ratios, and <code>name</code> for the view's display label. In
+<code>new_dock_board(layouts = list(...))</code> the list name is the view's
+stable <em>id</em> (the container's key, like a block id), minted when
+absent; <code>name</code> sets the free-form display label on the view itself.
+When no name is given, one is derived from the id for display. Which
+view starts active is a property of the collection, not of any one
+layout: pass <code>new_dock_board(active = )</code> (a view id) to choose it,
+defaulting to the first.</p>
 <p>A <em>view</em> is the conceptual page-level container; a <em>layout</em> is the
 panel arrangement inside a view. The dockview-shape <code>grid + panels</code>
 payload that dockViewR consumes is an internal projection of a
@@ -206,13 +204,6 @@ boundary is <code><a href="layout-json.html">layout_to_json()</a></code> / <code
 <span class="r-out co"><span class="r-pr">#&gt;</span> └─ tabs</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    ├─ a (active)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    └─ b</span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Mark a layout as the initially-active view in a `dock_layouts`</span></span></span>
-<span class="r-in"><span><span class="co"># collection</span></span></span>
-<span class="r-in"><span><span class="fu">dock_layout</span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, active <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;dock_layout&gt; horizontal</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ├─ a</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> └─ b</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Tabbed leaf with an explicit open tab</span></span></span>
 <span class="r-in"><span><span class="fu">panels</span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"edit_board_extension"</span>, active <span class="op">=</span> <span class="st">"edit_board_extension"</span><span class="op">)</span></span></span>

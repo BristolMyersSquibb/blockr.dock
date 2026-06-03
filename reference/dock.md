@@ -19,6 +19,7 @@ new_dock_board(
   ...,
   extensions = new_dock_extensions(),
   layouts = default_layout(blocks, extensions),
+  active = NULL,
   options = dock_board_options(),
   ctor = NULL,
   pkg = NULL,
@@ -69,6 +70,12 @@ dock_board_options()
   A named list of per-view arrangements (multi-view), a `dock_layout` /
   raw list (single-page), or an existing `dock_layouts` collection. All
   forms are normalised to `dock_layouts`.
+
+- active:
+
+  Id of the initially active view (a key of `layouts`). Defaults to the
+  first view. Which view is active is a property of the collection, not
+  of an individual layout.
 
 - options:
 
@@ -124,5 +131,4 @@ str(active_layout(brd), max.level = 2)
 #>   ..$ orientation: chr "HORIZONTAL"
 #>  $ activeGroup: chr "1"
 #>  - attr(*, "class")= chr "dock_layout"
-#>  - attr(*, "active")= logi TRUE
 ```

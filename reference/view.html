@@ -126,10 +126,10 @@ display name and <code>view_names()</code> for all names in a collection.</p>
 is the panel arrangement inside that view (a <code><a href="layout.html">dock_layout()</a></code>, or a raw
 list of block / extension IDs). The display name is set on the layout
 via <code>dock_layout(name = )</code>; with none set, a label is derived from the
-id. A view can be marked as the initially-active one by passing
-<code>active = TRUE</code> to <code><a href="layout.html">dock_layout()</a></code>; if none is marked, the first one is
-used. View CRUD is enabled unless the dock is locked (see
-<code>is_dock_locked()</code>).</p>
+id. The initially-active view is chosen by <code>new_dock_board(active = )</code>
+(a view id), defaulting to the first; it is a property of the
+collection, never of an individual layout. View CRUD is enabled unless
+the dock is locked (see <code>is_dock_locked()</code>).</p>
 <p>Users do not normally construct a <code>dock_layouts</code> directly; instead
 they pass a plain named list to <code>new_dock_board(layouts = ...)</code>,
 which resolves, validates and wraps it (minting any absent ids).</p>
@@ -144,8 +144,9 @@ which resolves, validates and wraps it (minting any absent ids).</p>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  layouts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    analysis <span class="op">=</span> <span class="fu"><a href="layout.html">dock_layout</a></span><span class="op">(</span><span class="st">"dataset_1"</span>, <span class="st">"head_1"</span>, name <span class="op">=</span> <span class="st">"Analysis"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    overview <span class="op">=</span> <span class="fu"><a href="layout.html">dock_layout</a></span><span class="op">(</span><span class="st">"dataset_1"</span>, name <span class="op">=</span> <span class="st">"Overview"</span>, active <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span>    overview <span class="op">=</span> <span class="fu"><a href="layout.html">dock_layout</a></span><span class="op">(</span><span class="st">"dataset_1"</span>, name <span class="op">=</span> <span class="st">"Overview"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span>,</span></span>
+<span class="r-in"><span>  active <span class="op">=</span> <span class="st">"overview"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">view_names</span><span class="op">(</span><span class="fu">board_layouts</span><span class="op">(</span><span class="va">brd</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   analysis   overview </span>

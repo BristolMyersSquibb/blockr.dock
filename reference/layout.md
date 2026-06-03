@@ -14,7 +14,6 @@ for the collection-level helpers.
 dock_layout(
   ...,
   orientation = c("horizontal", "vertical"),
-  active = FALSE,
   sizes = NULL,
   name = NULL
 )
@@ -51,11 +50,6 @@ validate_dock_layout(x, blocks = character())
   Top-level split direction; one of `"horizontal"` (default) or
   `"vertical"`.
 
-- active:
-
-  For `dock_layout()`, logical: mark this layout as the initially-active
-  view. For `panels()`, the ID of the tab to open by default.
-
 - sizes:
 
   Numeric vector parallel to `...`, giving each child's share of the
@@ -67,6 +61,10 @@ validate_dock_layout(x, blocks = character())
   (free-form). When omitted, a label is derived from the view's id. The
   view's id is the list name in `new_dock_board(layouts = list(...))`,
   minted when absent and unique across the views of a `dock_layouts`.
+
+- active:
+
+  For `panels()`, the ID of the tab to open by default.
 
 - x:
 
@@ -118,13 +116,15 @@ Construct a layout with:
   arrangement (extensions on top, blocks below) for a board.
 
 `dock_layout()` accepts `orientation = "horizontal" | "vertical"` for
-the top-level split direction, `sizes` for the root-branch ratios,
-`active = TRUE` to mark this layout as the initially-active view in a
-`dock_layouts` collection, and `name` for the view's display label. In
+the top-level split direction, `sizes` for the root-branch ratios, and
+`name` for the view's display label. In
 `new_dock_board(layouts = list(...))` the list name is the view's stable
 *id* (the container's key, like a block id), minted when absent; `name`
 sets the free-form display label on the view itself. When no name is
-given, one is derived from the id for display.
+given, one is derived from the id for display. Which view starts active
+is a property of the collection, not of any one layout: pass
+`new_dock_board(active = )` (a view id) to choose it, defaulting to the
+first.
 
 A *view* is the conceptual page-level container; a *layout* is the panel
 arrangement inside a view. The dockview-shape `grid + panels` payload
@@ -162,13 +162,6 @@ default_layout(blks, exts)
 #> └─ tabs
 #>    ├─ a (active)
 #>    └─ b
-
-# Mark a layout as the initially-active view in a `dock_layouts`
-# collection
-dock_layout("a", "b", active = TRUE)
-#> <dock_layout> horizontal
-#> ├─ a
-#> └─ b
 
 # Tabbed leaf with an explicit open tab
 panels("a", "b", "edit_board_extension", active = "edit_board_extension")

@@ -71,6 +71,7 @@ boards are a degenerate case with one auto-named "Page" view.</p>
 <span>  <span class="va">...</span>,</span>
 <span>  extensions <span class="op">=</span> <span class="fu"><a href="extension.html">new_dock_extensions</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  layouts <span class="op">=</span> <span class="fu"><a href="layout.html">default_layout</a></span><span class="op">(</span><span class="va">blocks</span>, <span class="va">extensions</span><span class="op">)</span>,</span>
+<span>  active <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  options <span class="op">=</span> <span class="fu">dock_board_options</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  ctor <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  pkg <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -122,6 +123,12 @@ boards are a degenerate case with one auto-named "Page" view.</p>
 <dd><p>A named list of per-view arrangements (multi-view), a
 <code>dock_layout</code> / raw list (single-page), or an existing <code>dock_layouts</code>
 collection. All forms are normalised to <code>dock_layouts</code>.</p></dd>
+
+
+<dt id="arg-active">active<a class="anchor" aria-label="anchor" href="#arg-active"></a></dt>
+<dd><p>Id of the initially active view (a key of <code>layouts</code>).
+Defaults to the first view. Which view is active is a property of the
+collection, not of an individual layout.</p></dd>
 
 
 <dt id="arg-options">options<a class="anchor" aria-label="anchor" href="#arg-options"></a></dt>
@@ -176,7 +183,6 @@ and extensions.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ..$ orientation: chr "HORIZONTAL"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  $ activeGroup: chr "1"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  - attr(*, "class")= chr "dock_layout"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  - attr(*, "active")= logi TRUE</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

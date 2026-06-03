@@ -401,26 +401,29 @@ splits.</p>
 <h3 id="choosing-the-initially-active-view">Choosing the initially active view<a class="anchor" aria-label="anchor" href="#choosing-the-initially-active-view"></a>
 </h3>
 <p>By default, the first layout is active. To start on a different one,
-construct that view’s content with
-<code>dock_layout(..., active = TRUE)</code>:</p>
+name it with <code>new_dock_board(active = )</code>, using its view id
+(the <code>layouts</code> key):</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/dock.html">new_dock_board</a></span><span class="op">(</span></span>
 <span>  blocks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_data_block.html" class="external-link">new_dataset_block</a></span><span class="op">(</span><span class="op">)</span>, b <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_transform_block.html" class="external-link">new_head_block</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  extensions <span class="op">=</span> <span class="fu"><a href="../reference/edit.html">new_edit_board_extension</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  layouts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    Analysis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span><span class="op">)</span>,</span>
-<span>    Editor <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_layout</a></span><span class="op">(</span><span class="st">"edit_board_extension"</span>, active <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
+<span>    Editor <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_layout</a></span><span class="op">(</span><span class="st">"edit_board_extension"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  active <span class="op">=</span> <span class="st">"Editor"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <pre><code>┌────────────────────────────┐
 │ Editor  [+]   ← starts here│
 ├────────────────────────────┤
 │           edit             │
 └────────────────────────────┘</code></pre>
-<p><code>dock_layout(..., active = TRUE)</code> attaches an
-<code>active</code> attribute to the layout. The validator rejects more
-than one layout marked <code>active</code>. If none is marked, the first
-one wins.</p>
+<p>Which view is active is tracked as a single field on the
+<code>dock_layouts</code> collection, keyed by view id — like the id
+itself, it belongs to the collection, not to any one layout. So it is
+always exactly one: the id named in <code>active</code> (defaulting to
+the first view). Change it at runtime with
+<code>active_view(board) &lt;- id</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="empty-views">Empty views<a class="anchor" aria-label="anchor" href="#empty-views"></a>
@@ -471,8 +474,9 @@ view.</p>
 <span>      <span class="st">"plot2"</span>,</span>
 <span>      sizes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.55</span>, <span class="fl">0.45</span><span class="op">)</span></span>
 <span>    <span class="op">)</span>,</span>
-<span>    Charts <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_layout</a></span><span class="op">(</span><span class="fu"><a href="../reference/layout.html">panels</a></span><span class="op">(</span><span class="st">"plot1"</span>, <span class="st">"plot2"</span><span class="op">)</span>, active <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
+<span>    Charts <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_layout</a></span><span class="op">(</span><span class="fu"><a href="../reference/layout.html">panels</a></span><span class="op">(</span><span class="st">"plot1"</span>, <span class="st">"plot2"</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  active <span class="op">=</span> <span class="st">"Charts"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>The board has three views. <code>Charts</code> is marked active, so
 the user lands there first.</p>
@@ -704,7 +708,7 @@ the right column’s internal stack.</p>
 <tr class="odd">
 <td>Start on view <code>B</code>
 </td>
-<td><code>list(A = ..., B = dock_layout(..., active = TRUE))</code></td>
+<td><code>new_dock_board(layouts = list(A = ..., B = ...), active = "B")</code></td>
 </tr>
 <tr class="even">
 <td>Empty starter view</td>
