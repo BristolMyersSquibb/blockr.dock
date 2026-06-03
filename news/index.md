@@ -2,6 +2,21 @@
 
 ## blockr.dock (development version)
 
+- The dock “manager” object is gone. `apply_board_update.dock_board()`
+  is now a pure reducer over
+  [`board_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md);
+  all live view surgery (instantiate / tear down / restore / rename /
+  switch) runs in a single closure-resident reconcile pass driven by the
+  committed board, replacing the duplicated delta-driven and UI-driven
+  view CRUD. View init is just the empty-registry case of that pass
+  (create every view, show the active one), so there is no separate init
+  path. The per-session dock state is ordinary closure-private state
+  passed explicitly, not a handle threaded back from the board callback
+  through `dot_args`. Also makes `augment_board_update.dock_board()`
+  idempotent — a view id is minted once rather than re-minted on every
+  augment pass — fixing a view-add loop
+  ([\#164](https://github.com/BristolMyersSquibb/blockr.dock/issues/164)).
+
 - Views now carry a stable, immutable **id** decoupled from their
   editable display **name**, mirroring the id / name split used for
   blocks. `dock_layouts` (and the runtime `dock_mgr$docks` registry) are
