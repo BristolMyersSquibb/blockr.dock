@@ -992,16 +992,25 @@ dt_color <- function(id, val) {
 
   # A native colour input that reports straight through Shiny.setInputValue: it
   # carries no Shiny input binding, so it survives the DataTables redraw and the
-  # Shiny.bindAll() that re-binds the table's textInput/selectInput cells.
-  as.character(
-    tags$input(
-      type = "color",
-      id = id,
-      value = val,
-      class = "blockr-ext-edit-color",
-      onchange = paste0("Shiny.setInputValue('", id, "', this.value);")
-    )
+  # Shiny.bindAll() that re-binds the table's textInput/selectInput cells. The
+  # form-control-color class matches the radius and swatch rounding of the
+  # inputs beside it; the inline height matches this theme's taller form-control
+  # (form-control-color otherwise hard-codes Bootstrap's shorter input height).
+  res <- tags$input(
+    type = "color",
+    id = id,
+    value = val,
+    class = "form-control form-control-color",
+    onchange = paste0("Shiny.setInputValue('", id, "', this.value);")
   )
+
+  res <- htmltools::tagQuery(
+    res
+  )$addAttrs(
+    style = "width: 100%; min-width: 56px; height: calc(1.5em + 1.25rem + 2px)"
+  )$allTags()
+
+  as.character(res)
 }
 
 create_dt_stack_obs <- function(ids, upd, ...) {
