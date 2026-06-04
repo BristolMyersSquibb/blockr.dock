@@ -110,13 +110,30 @@ test_that("edit board extension stacks (e2e)", {
 
   nsid <- function(x) paste0("my_board-edit_board_extension-", x)
 
-  set_in <- function(id, value) {
-    do.call(app$set_inputs, set_names(list(value), nsid(id)))
+  # Staging inputs do not drive an output, so do not wait for one.
+  set_in <- function(app, id, value) {
+    do.call(
+      app$set_inputs,
+      c(set_names(list(value), nsid(id)), list(wait_ = FALSE))
+    )
   }
 
-  click <- function(id) app$click(nsid(id))
+  click <- function(app, id) app$click(nsid(id))
 
-  set_color <- function(id, hex) {
+  # A DataTables redraw (e.g. after adding a stack row) re-renders the cell
+  # inputs, which Shiny re-binds client-side after the server goes idle; wait
+  # for the binding before driving the new row's inputs.
+  wait_bound <- function(app, id) {
+    app$wait_for_js(
+      paste0(
+        "document.querySelector('#", nsid(id),
+        ".shiny-bound-input') !== null"
+      ),
+      timeout = 15 * 1000
+    )
+  }
+
+  set_color <- function(app, id, hex) {
     app$run_js(
       paste0(
         "var e=document.getElementById('", nsid(id), "'); e.value='", hex,
@@ -125,7 +142,7 @@ test_that("edit board extension stacks (e2e)", {
     )
   }
 
-  field <- function(id) {
+  field <- function(app, id) {
     app$get_js(
       paste0(
         "(function(){var e=document.getElementById('", nsid(id),
@@ -134,27 +151,28 @@ test_that("edit board extension stacks (e2e)", {
     )
   }
 
-  set_in("new_stack_id", "grp")
-  click("add_stack")
+  set_in(app, "new_stack_id", "grp")
+  click(app, "add_stack")
+  app$wait_for_idle()
+  wait_bound(app, "grp_name")
+
+  set_in(app, "grp_name", "Group A")
+  set_in(app, "grp_blocks", "data")
+  set_color(app, "grp_color", "#aabbcc")
   app$wait_for_idle()
 
-  set_in("grp_name", "Group A")
-  set_in("grp_blocks", "data")
-  set_color("grp_color", "#aabbcc")
+  click(app, "apply_changes")
   app$wait_for_idle()
 
-  click("apply_changes")
+  expect_identical(field(app, "grp_name"), "Group A")
+  expect_identical(tolower(field(app, "grp_color")), "#aabbcc")
+
+  set_color(app, "grp_color", "#112233")
+  app$wait_for_idle()
+  click(app, "apply_changes")
   app$wait_for_idle()
 
-  expect_identical(field("grp_name"), "Group A")
-  expect_identical(tolower(field("grp_color")), "#aabbcc")
-
-  set_color("grp_color", "#112233")
-  app$wait_for_idle()
-  click("apply_changes")
-  app$wait_for_idle()
-
-  expect_identical(tolower(field("grp_color")), "#112233")
+  expect_identical(tolower(field(app, "grp_color")), "#112233")
 
   app$run_js(
     paste0(
@@ -163,12 +181,12 @@ test_that("edit board extension stacks (e2e)", {
     )
   )
   app$wait_for_idle()
-  click("rm_stack")
+  click(app, "rm_stack")
   app$wait_for_idle()
-  click("apply_changes")
+  click(app, "apply_changes")
   app$wait_for_idle()
 
-  expect_null(field("grp_name"))
+  expect_null(field(app, "grp_name"))
 
   app$stop()
 })
