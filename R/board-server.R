@@ -385,9 +385,11 @@ reconcile_views <- function(board, update, docks, active_dock,
 
   layouts <- board_layouts(board)
   want <- names(layouts)
+  labels <- view_names(layouts)
   server_active <- active_view(layouts)
   state <- isolate(client_views())
   have <- ls(docks)
+  shown <- names(state)
 
   for (v in setdiff(want, have)) {
 
@@ -403,12 +405,19 @@ reconcile_views <- function(board, update, docks, active_dock,
       active = identical(v, server_active)
     )
 
+    state[[v]] <- bare_view(layouts[[v]])
+  }
+
+  # Add a nav item only for views the nav doesn't already show. `board_ui`
+  # renders every seeded view statically, so this set is empty on init;
+  # gating on `docks` (also empty on init) instead re-adds each as a
+  # blank-labelled duplicate (#189). Label from the container `view_names()`,
+  # which resolves whether the name sits on the layout or is derived from id.
+  for (v in setdiff(want, shown)) {
     session$sendInputMessage(
       "view_nav",
-      list(add = list(id = v, name = view_name(layouts[[v]])))
+      list(add = list(id = v, name = labels[[v]]))
     )
-
-    state[[v]] <- bare_view(layouts[[v]])
   }
 
   for (v in setdiff(have, want)) {

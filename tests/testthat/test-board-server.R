@@ -291,6 +291,109 @@ test_that("layouts_to_board_observer is idempotent when nothing changed", {
   expect_identical(fire_count, 0L)
 })
 
+test_that("view nav renders one labelled item per view (#189)", {
+
+  board <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(First = dock_layout("a"), Second = dock_layout("b")),
+    active = "First"
+  )
+
+  ui <- view_nav_ui("brd", board_layouts(board))
+
+  items <- htmltools::tagQuery(ui)$find(".blockr-view-item")$selectedTags()
+  spans <- htmltools::tagQuery(ui)$find(".blockr-view-item-name")$selectedTags()
+
+  labels <- chr_ply(
+    spans,
+    function(span) {
+      txt <- span$children
+      if (length(txt)) as.character(txt[[1L]]) else ""
+    }
+  )
+
+  expect_length(items, 2L)
+  expect_setequal(labels, c("First", "Second"))
+})
+
+test_that("reconcile_views adds a nav item only for unshown views (#189)", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  board <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(First = dock_layout("a"), Second = dock_layout("b")),
+    active = "First"
+  )
+
+  sent <- list()
+  rec_session <- list(
+    sendInputMessage = function(input_id, message) {
+      sent[[length(sent) + 1L]] <<- message
+    }
+  )
+
+  # Stand in for create_view: register the dock without the DOM / module
+  # machinery so `ls(docks)` tracks created views. The add decision under test
+  # keys off client_views, not docks.
+  stub_create <- function(v_id, layout, board, update, session, docks, ...) {
+    assign(v_id, list(layout = function() NULL), envir = docks)
+  }
+
+  docks <- new.env(parent = emptyenv())
+  client_views <- with_mock_context(
+    ms,
+    reactiveVal(seed_view_state(board_layouts(board)))
+  )
+  client_active <- with_mock_context(ms, reactiveVal(NULL))
+  active_dock <- with_mock_context(ms, reactiveValues())
+  update <- with_mock_context(ms, reactiveVal())
+
+  reconcile <- function(brd) {
+    with_mocked_bindings(
+      with_mock_context(
+        ms,
+        reconcile_views(
+          brd, update, docks, active_dock, client_active, client_views,
+          rec_session
+        )
+      ),
+      create_view = stub_create,
+      switch_active_view = function(...) invisible(),
+      .package = "blockr.dock"
+    )
+  }
+
+  adds <- function() Filter(function(m) "add" %in% names(m), sent)
+
+  # Init: board_ui has statically rendered both views, so reconcile must add
+  # none (the bug re-added each as a blank-labelled duplicate).
+  reconcile(board)
+  expect_length(adds(), 0L)
+
+  # A view added at runtime (named only by its list-key id) reaches the nav
+  # exactly once, labelled from the id rather than the empty layout name.
+  board <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(
+      First = dock_layout("a"),
+      Second = dock_layout("b"),
+      Third = dock_layout("a")
+    ),
+    active = "First"
+  )
+
+  sent <- list()
+  reconcile(board)
+
+  rt <- adds()
+
+  expect_length(rt, 1L)
+  expect_identical(rt[[1L]]$add$id, "Third")
+  expect_identical(rt[[1L]]$add$name, "Third")
+})
+
 test_that("apply_board_update.dock_board switches active view", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
