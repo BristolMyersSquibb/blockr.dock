@@ -96,6 +96,52 @@ test_that("edit board extension links blocks (e2e)", {
   app$stop()
 })
 
+test_that("adding a second block keeps both block panels (#196)", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "empty", "app.R", package = "blockr.dock"),
+    name = "panel-visibility",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  # A block panel's open tab outlives the panel content, which dockview
+  # detaches while inactive -- so the tab strip, not the (detached) card, is
+  # where panel presence is observable. Each tab carries its panel id as
+  # `...-dock-tab-block_panel-<id>`; read them straight off the live DOM.
+  block_panel_tabs <- function() {
+    html <- xml2::read_html(app$get_html("#my_board-view_container"))
+    nodes <- xml2::xml_find_all(html, "//*[contains(@id, '-tab-block_panel-')]")
+    sort(sub(".*-tab-(block_panel-.+)$", "\\1", xml2::xml_attr(nodes, "id")))
+  }
+
+  add_block <- function(registry, id) {
+    app$set_inputs(
+      `my_board-edit_board_extension-registry_select` = registry,
+      `my_board-edit_board_extension-block_id` = id
+    )
+    app$click("my_board-edit_board_extension-confirm_add")
+    app$wait_for_idle()
+  }
+
+  add_block("dataset_block", "a")
+  expect_identical(block_panel_tabs(), "block_panel-a")
+
+  # Pre-fix, the second add fired reconcile_views against a board_layouts that
+  # lagged the live dock, restoring it and wiping both block panels -- leaving
+  # only the extension (#196). Both block tabs must survive.
+  add_block("head_block", "b")
+  expect_identical(block_panel_tabs(), c("block_panel-a", "block_panel-b"))
+
+  app$stop()
+})
+
 test_that("edit board extension stacks (e2e)", {
 
   skip_on_cran()

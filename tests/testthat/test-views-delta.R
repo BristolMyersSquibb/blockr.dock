@@ -207,6 +207,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
   # instantiated (no DOM surgery); their live layout is pending (NULL) so the
   # layout-mod check is skipped and only the rename fires.
   docks <- new.env(parent = emptyenv())
+  committed_layouts <- new.env(parent = emptyenv())
   for (id in names(board_layouts(brd))) {
     docks[[id]] <- list(layout = function() NULL)
   }
@@ -221,7 +222,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
 
   isolate(
     reconcile_views(board, function(...) NULL, docks, active_dock,
-                    client_active, client_views, session)
+                    client_active, client_views, committed_layouts, session)
   )
 
   expect_true(
@@ -671,6 +672,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     # Registry pre-populated for every view; the DOM helpers are mocked so the
     # test exercises reconcile's nav-sync, not the live teardown / switch.
     docks <- new.env(parent = emptyenv())
+    committed_layouts <- new.env(parent = emptyenv())
     for (id in names(state)) docks[[id]] <- list(layout = function() NULL)
     active_dock <- reactiveValues()
     client_active <- reactiveVal(name_to_id[[active_label]])
@@ -685,7 +687,8 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     with_mocked_bindings(
       isolate(
         reconcile_views(board, function(...) NULL, docks, active_dock,
-                        client_active, client_views, session)
+                        client_active, client_views, committed_layouts,
+                        session)
       ),
       remove_view = function(view_id, session, docks) {
         rm(list = view_id, envir = docks)
