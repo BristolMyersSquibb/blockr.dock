@@ -80,7 +80,9 @@ resolve_views <- function(specs, c_blks, c_exts) {
 
   specs <- lapply(specs, coerce_view_spec)
 
-  ext_list <- as.list(c_exts)
+  ext_alias <- ext_alias_ids(c_exts)
+  ext_cls <- names(c_exts)
+  ext_list <- set_names(unclass(c_exts), ext_alias)
 
   # Iterate by position: a view's key is its id and may be absent (minted
   # later), so it cannot be used to index here.
@@ -91,9 +93,10 @@ resolve_views <- function(specs, c_blks, c_exts) {
     v_obj <- panel_obj_ids(layout_panel_ids(ly))
 
     v_blks <- c_blks[intersect(v_obj, names(c_blks))]
-    v_exts <- as_dock_extensions(
-      ext_list[intersect(v_obj, names(ext_list))]
-    )
+
+    # A view may address an extension by its key alias or its class id.
+    in_view <- ext_alias %in% v_obj | ext_cls %in% v_obj
+    v_exts <- as_dock_extensions(ext_list[in_view])
 
     specs[[i]] <- resolve_dock_layout(v_blks, v_exts, ly)
   }

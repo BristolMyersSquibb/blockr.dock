@@ -23,6 +23,26 @@ test_that("multi-view layouts via new_dock_board", {
   expect_identical(active_name(views), "Analysis")
 })
 
+test_that("multi-view addresses a keyed extension by its list key", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = list(edit = new_edit_board_extension()),
+    layouts = list(
+      Edit = dock_layout("edit", "a"),
+      Data = dock_layout("b")
+    )
+  )
+
+  views <- board_layouts(brd)
+
+  expect_setequal(
+    layout_panel_ids(views[["Edit"]]),
+    c("block_panel-a", "ext_panel-edit_board_extension")
+  )
+  expect_setequal(layout_panel_ids(views[["Data"]]), "block_panel-b")
+})
+
 test_that("new_dock_board(active=) selects the active view by id", {
 
   brd <- new_dock_board(
