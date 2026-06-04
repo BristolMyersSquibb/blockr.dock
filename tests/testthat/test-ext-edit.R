@@ -398,6 +398,45 @@ test_that("edit extension server (stacks)", {
   )
 })
 
+test_that("edit extension applies links and stacks together", {
+
+  testServer(
+    blk_ext_srv,
+    {
+      session$flushReact()
+
+      upd$add <- as_links(set_names(list(new_link("a", "b", "data")), "lnk"))
+
+      stk$edit <- list(row = "s1", col = "name", val = "Renamed")
+      session$flushReact()
+
+      expect_length(upd$add, 1L)
+      expect_true("s1" %in% names(stk$mod))
+
+      session$setInputs(apply_changes = 1)
+
+      res <- update()
+
+      expect_named(res, c("links", "stacks"))
+      expect_s3_class(res$links$add, "links")
+      expect_named(res$stacks$mod, "s1")
+
+      expect_identical(upd$add, links())
+      expect_identical(stk$mod, stacks())
+    },
+    args = list(
+      board = board_args(
+        blocks = c(
+          a = new_dataset_block("iris"),
+          b = new_subset_block()
+        ),
+        stacks = stacks(s1 = new_dock_stack(blocks = "a", name = "One"))
+      ),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("dummy edit extension ui test", {
 
   ui <- blk_ext_ui(
