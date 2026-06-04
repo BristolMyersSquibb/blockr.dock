@@ -81,18 +81,82 @@ blockr_ser.dock_extensions <- function(x, data, ...) {
 }
 
 #' @export
-blockr_deser.dock_layout <- function(x, data, ...) {
-  payload <- data[["payload"]]
+blockr_deser.dock_board <- function(x, data, ...) {
 
-  # Legacy payloads (pre-decoupling) embed dockview's `grid` tree directly,
-  # possibly alongside a now-redundant `panels` map. Discriminate by shape:
-  # see blockr.dock#153 for the planned version-based routing once
-  # blockr.core forwards `...` through `blockr_deser.list`.
-  layout <- if ("grid" %in% names(payload)) {
+  stopifnot(
+    all(c("constructor", "payload") %in% names(data))
+  )
+
+  ctor <- blockr_deser(data[["constructor"]])
+
+  # Reimplemented rather than delegated to core's blockr_deser.board: it
+  # drops extra args, so threading the producer version downward means
+  # owning the payload deser here.
+  args <- c(
+    lapply(
+      data[["payload"]],
+      blockr_deser,
+      producer_version = data[["constructor"]][["version"]]
+    ),
+    list(
+      ctor = coal(ctor_name(ctor), ctor_fun(ctor)),
+      pkg = ctor_pkg(ctor)
+    )
+  )
+
+  res <- do.call(ctor_fun(ctor), args)
+
+  attr(res, "id") <- data[["id"]]
+
+  res
+}
+
+# Pick by highest applicable `since`, not list position, so the registry
+# needn't be kept in order.
+layout_reader_for <- function(version, formats) {
+
+  since <- numeric_version(chr_xtr(formats, "since"))
+  applicable <- which(since <= version)
+
+  if (!length(applicable)) {
+    return(NULL)
+  }
+
+  newest <- applicable[order(since[applicable], decreasing = TRUE)[1L]]
+
+  formats[[newest]][["read"]]
+}
+
+# Route by producer version, falling back to shape discrimination when it
+# is missing or predates the registry.
+read_layout_payload <- function(payload, producer_version = NULL) {
+
+  formats <- list(
+    list(since = "0.1.2", read = spec_to_layout)
+  )
+
+  version <- if (is_string(producer_version)) {
+    numeric_version(producer_version, strict = FALSE)
+  }
+
+  if (length(version) && !is.na(version)) {
+    reader <- layout_reader_for(version, formats)
+    if (!is.null(reader)) {
+      return(reader(payload))
+    }
+  }
+
+  if ("grid" %in% names(payload)) {
     dockview_to_layout(payload)
   } else {
     spec_to_layout(payload)
   }
+}
+
+#' @export
+blockr_deser.dock_layout <- function(x, data, ..., producer_version = NULL) {
+
+  layout <- read_layout_payload(data[["payload"]], producer_version)
 
   # Which view is active is restored at the container level from
   # `dock_layouts`' `active` field; a per-view `active` boolean in older
@@ -111,7 +175,9 @@ blockr_deser.dock_layouts <- function(x, data, ...) {
   # `views` is keyed by stable id; each carries its display name (when
   # set). The active view is recorded once, at the container level, and
   # restored by id below.
-  res <- reconstruct_dock_layouts(lapply(payload[["views"]], blockr_deser))
+  res <- reconstruct_dock_layouts(
+    lapply(payload[["views"]], blockr_deser, ...)
+  )
 
   if (is_string(payload[["active"]]) && payload[["active"]] %in% names(res)) {
     active_view(res) <- payload[["active"]]
