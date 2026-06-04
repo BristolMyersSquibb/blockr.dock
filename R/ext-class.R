@@ -13,6 +13,8 @@
 #' @param ui A function with a single argument (`ns`) returning a `shiny.tag`
 #' @param name Name for extension
 #' @param class Extension subclass
+#' @param description Optional free-text description of the extension, surfaced
+#' as consumer-neutral metadata (e.g. to the AI assistant)
 #' @param ctor Constructor function name
 #' @param pkg Package to look up `ctor`
 #' @param options Board options supplied by an extension
@@ -35,12 +37,13 @@
 #' the input object invisibly and throw errors as side-effects. Several getter
 #' functions return extension attributes, including `extension_ui()` (a
 #' function), `extension_server()` (a function), `extension_id()` (a string),
-#' `extension_name()` (a string) and `extension_ctor()` (an object that
-#' inherits from `blockr_ctor`).
+#' `extension_name()` (a string), `extension_description()` (a string or
+#' `NULL`) and `extension_ctor()` (an object that inherits from `blockr_ctor`).
 #'
 #' @rdname extension
 #' @export
-new_dock_extension <- function(server, ui, name, class, ctor = sys.parent(),
+new_dock_extension <- function(server, ui, name, class,
+                               description = NULL, ctor = sys.parent(),
                                pkg = NULL, options = new_board_options(),
                                external_ctrl = FALSE, ...) {
 
@@ -55,6 +58,7 @@ new_dock_extension <- function(server, ui, name, class, ctor = sys.parent(),
         ...
       ),
       name = name,
+      description = description,
       ctor = resolve_ctor(ctor, pkg),
       external_ctrl = external_ctrl,
       class = c(class, "dock_extension")
@@ -108,6 +112,15 @@ validate_extension.dock_extension <- function(x, ...) {
     blockr_abort(
       "Expecting a string as extension name.",
       class = "dock_extension_name_invalid"
+    )
+  }
+
+  desc <- extension_description(x)
+
+  if (!is.null(desc) && !is_string(desc)) {
+    blockr_abort(
+      "Expecting extension description to be a string or `NULL`.",
+      class = "dock_extension_description_invalid"
     )
   }
 
@@ -244,6 +257,13 @@ extension_name <- function(x) {
 
 #' @rdname extension
 #' @export
+extension_description <- function(x) {
+  stopifnot(is_dock_extension(x))
+  attr(x, "description")
+}
+
+#' @rdname extension
+#' @export
 extension_ctor <- function(x) {
   stopifnot(is_dock_extension(x))
   attr(x, "ctor")
@@ -340,6 +360,24 @@ as_dock_extensions.list <- function(x, ...) {
 #' @export
 names.dock_extensions <- function(x) {
   chr_ply(x, extension_id)
+}
+
+# The id by which a layout addresses an extension: the user's list key
+# where keyed, else the class-derived `extension_id()`. `names()` is
+# hard-overridden to the class id, so the transient key only survives on
+# the underlying (unclassed) list.
+ext_alias_ids <- function(x) {
+
+  x <- as_dock_extensions(x)
+
+  ids <- chr_ply(x, extension_id)
+  keys <- names(unclass(x))
+
+  if (is.null(keys)) {
+    return(ids)
+  }
+
+  ifelse(nzchar(keys), keys, ids)
 }
 
 #' @export

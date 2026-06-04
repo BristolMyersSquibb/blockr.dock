@@ -579,7 +579,7 @@ apply_layout_diff <- function(view, target, proxy, blocks, extensions) {
       show_ext_panel(pid, add_panel = FALSE, proxy = proxy)
     } else {
       blockr_abort(
-        "Unknown panel type {.cls {class(pid)}}.",
+        "Unknown panel type {class(pid)}.",
         class = "dock_panel_invalid"
       )
     }

@@ -4,6 +4,14 @@ test_that("panel layout", {
   expect_snapshot(draw_panel_tree(list("a", list("b", "c"))))
 })
 
+test_that("an invalid layout node reports a legible error", {
+  expect_error(
+    dock_layout("a", active = TRUE),
+    "Unknown layout node type",
+    class = "dock_layout_node_invalid"
+  )
+})
+
 test_that("active_layout<- replaces the active view's layout, keeps its id", {
 
   brd <- new_dock_board(
@@ -67,6 +75,32 @@ test_that("layout resolution accepts a named list of extensions", {
   )
   expect_setequal(
     layout_panel_ids(active_layout(brd2)),
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+  )
+})
+
+test_that("a keyed extension is addressable in a layout by its list key", {
+
+  blks <- c(a = new_dataset_block(), b = new_head_block())
+  exts <- list(edit = new_edit_board_extension())
+
+  brd <- new_dock_board(
+    blocks = blks,
+    extensions = exts,
+    layouts = list("edit", "a", "b")
+  )
+  expect_setequal(
+    layout_panel_ids(active_layout(brd)),
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+  )
+
+  nested <- new_dock_board(
+    blocks = blks,
+    extensions = exts,
+    layouts = list("edit", list("a", "b"))
+  )
+  expect_setequal(
+    layout_panel_ids(active_layout(nested)),
     c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
   )
 })

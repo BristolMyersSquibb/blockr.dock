@@ -50,6 +50,67 @@ test_that("edit block server", {
   )
 })
 
+test_that("renaming a block does not loop (#181)", {
+
+  pushed <- character()
+
+  local_mocked_bindings(
+    updateTextInput = function(session, input_id, label, value) {
+      pushed <<- c(pushed, value)
+    }
+  )
+
+  board_named <- function(nm) {
+    blk <- new_dataset_block()
+    block_name(blk) <- nm
+    new_dock_board(blocks = c(a = blk))
+  }
+
+  board <- reactiveValues(board = board_named("Dataset"))
+
+  testServer(
+    edit_block_server(),
+    {
+      session$flushReact()
+
+      expect_identical(pushed, "Dataset")
+
+      n_before <- length(pushed)
+
+      session$setInputs(block_name_in = "Renamed block")
+      session$flushReact()
+
+      expect_identical(
+        update()$blocks$mod$a,
+        list(block_name = "Renamed block")
+      )
+
+      # The input sync reads the applied board, not the pending request.
+      # Core applies updates last (priority = -Inf), so board$board still
+      # holds the old name here -> the sync does not fire and no stale name
+      # is pushed back to loop (#181).
+      expect_length(pushed, n_before)
+
+      board$board <- board_named("Renamed block")
+      session$flushReact()
+
+      # Applied name now matches the input -> still no spurious push.
+      expect_length(pushed, n_before)
+
+      board$board <- board_named("External")
+      session$flushReact()
+
+      # A rename originating elsewhere still flows into the text input.
+      expect_identical(pushed, c("Dataset", "External"))
+    },
+    args = list(
+      block_id = "a",
+      board = board,
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("condition ui test", {
 
   insert_count <- 0L
