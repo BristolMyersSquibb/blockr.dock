@@ -48,7 +48,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   observeEvent(
     board$board,
     reconcile_views(
-      board$board, update, docks, active_dock, client_active, client_views,
+      board, update, docks, active_dock, client_active, client_views,
       session
     )
   )
@@ -376,6 +376,9 @@ remove_view <- function(v_id, session, docks) {
 # Make the live dock session match the committed board's view set:
 # instantiate added views, tear down removed ones, restore views whose
 # layout changed, relabel renamed ones, and switch to the active view.
+# Takes the reactive board handle (not a snapshot) so the live list reaches
+# manage_dock, whose interaction observers read board$board after the fact
+# (#194); the committed board is snapshotted once here for this pass's reads.
 # Driven by board$board so apply_board_update.dock_board stays a pure
 # reducer and dock state never crosses the package boundary. Idempotent — a
 # board already matching the live state produces no surgery — so it composes
@@ -383,7 +386,9 @@ remove_view <- function(v_id, session, docks) {
 reconcile_views <- function(board, update, docks, active_dock,
                             client_active, client_views, session) {
 
-  layouts <- board_layouts(board)
+  brd <- board$board
+
+  layouts <- board_layouts(brd)
   want <- names(layouts)
   labels <- view_names(layouts)
   server_active <- active_view(layouts)
@@ -400,8 +405,8 @@ reconcile_views <- function(board, update, docks, active_dock,
       update,
       session,
       docks,
-      blocks = board_blocks(board),
-      extensions = dock_extensions(board),
+      blocks = board_blocks(brd),
+      extensions = dock_extensions(brd),
       active = identical(v, server_active)
     )
 
@@ -449,8 +454,8 @@ reconcile_views <- function(board, update, docks, active_dock,
         view = v,
         target = layouts[[v]],
         proxy = docks[[v]]$proxy,
-        blocks = board_blocks(board),
-        extensions = dock_extensions(board)
+        blocks = board_blocks(brd),
+        extensions = dock_extensions(brd)
       )
     }
   }
