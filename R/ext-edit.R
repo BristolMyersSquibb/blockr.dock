@@ -470,10 +470,13 @@ dt_board_link <- function(lnk, ns, board) {
 
 dt_selectize <- function(id, val, choices, create = FALSE) {
 
+  # Render the dropdown on <body> so it is not clipped by the table wrapper's
+  # overflow (overflow-x: auto forces overflow-y to auto, which would otherwise
+  # cut the menu off at the table's lower edge).
+  opts <- list(dropdownParent = "body")
+
   if (isTRUE(create)) {
-    opts <- list(create = TRUE)
-  } else {
-    opts <- NULL
+    opts$create <- TRUE
   }
 
   res <- selectizeInput(id, label = NULL, choices = c("", choices),
@@ -976,8 +979,11 @@ dt_text <- function(id, val) {
 
 dt_select <- function(id, val, rem) {
 
-  res <- selectInput(id, label = NULL, choices = c("", val, rem),
-                     selected = val, multiple = TRUE)
+  # selectizeInput (rather than selectInput) so the dropdown can render on
+  # <body> and escape the table wrapper's overflow clipping (see dt_selectize).
+  res <- selectizeInput(id, label = NULL, choices = c("", val, rem),
+                        selected = val, multiple = TRUE,
+                        options = list(dropdownParent = "body"))
 
   res <- htmltools::tagQuery(
     res
