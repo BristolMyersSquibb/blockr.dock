@@ -35,7 +35,7 @@ Imports:
     jsonlite
 Remotes:
     BristolMyersSquibb/blockr.ui,
-    BristolMyersSquibb/blockr.core
+    BristolMyersSquibb/blockr.core@205-str-value
 Suggests:
     testthat (>= 3.0.0),
     DT,

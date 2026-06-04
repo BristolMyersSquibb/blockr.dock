@@ -299,6 +299,25 @@ print.dock_layout <- function(x, ...) {
   invisible(x)
 }
 
+#' @export
+str_value.dock_layout <- function(x, ...) {
+
+  ids <- panel_obj_ids(layout_panel_ids(x))
+
+  if (!length(ids)) {
+    return("<dock_layout> (empty)")
+  }
+
+  paste0("<dock_layout> ", paste0(ids, collapse = ", "))
+}
+
+#' @importFrom utils str
+#' @export
+str.dock_layout <- function(object, ...) {
+  cat(" ", str_value(object), "\n", sep = "")
+  invisible(object)
+}
+
 flip_orientation <- function(x) {
   if (identical(x, "horizontal")) "vertical" else "horizontal"
 }

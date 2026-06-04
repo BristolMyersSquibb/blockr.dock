@@ -406,3 +406,21 @@ test_that("print.dock_layout returns its input invisibly", {
 
   expect_identical(expect_invisible(print(ly)), ly)
 })
+
+test_that("str_value.dock_layout lists the panel object ids", {
+
+  ly <- dock_layout("ext_panel-edit_board_extension", "block_panel-a")
+
+  expect_identical(str_value(ly), "<dock_layout> edit_board_extension, a")
+
+  expect_output(
+    str(ly),
+    "<dock_layout> edit_board_extension, a",
+    fixed = TRUE
+  )
+})
+
+test_that("str_value.dock_layout marks an empty layout", {
+
+  expect_identical(str_value(dock_layout()), "<dock_layout> (empty)")
+})
