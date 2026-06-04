@@ -28,7 +28,11 @@
   reactive, so a pinned stack menu stays in sync with board changes
   (removing a block drops its card live); spec validation moved into
   `blockr.ui` (the dock-side `valid_stack_*` validators are gone), and
-  `dock_stack` colour checks reuse `blockr.ui::is_hex_color()`.
+  `dock_stack` colour checks reuse `blockr.ui::is_hex_color()`. The
+  handlers consume the menu's committed `blockr.core` `stacks` object
+  directly (`as_dock_stacks()` re-classes it to `dock_stack`); that
+  coercion now preserves a carried `color` attribute instead of always
+  synthesising a fresh colour.
 
 * `dock_layout` objects gain `format()` / `print()` methods that render
   the arrangement as an indented tree: orientation, nested groups with
