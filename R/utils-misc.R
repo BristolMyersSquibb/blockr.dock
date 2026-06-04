@@ -69,10 +69,6 @@ next_color <- function(colors = character(), lum_var = TRUE) {
   )
 }
 
-is_hex_color <- function(x) {
-  grepl("^#(?:[0-9a-fA-F]{3}){1,2}$", x)
-}
-
 create_block_with_name <- function(reg_id, blk_nms, ...) {
   name_fun <- function(nms) {
     function(class) {

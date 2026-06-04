@@ -11,7 +11,11 @@
   `stack_sidebar_body()` is removed (no in-tree callers remain; out-of
   -tree consumers migrate to `blockr.ui::stack_menu_ui()`). Drops the
   `shinyWidgets::colorPickr` floating popover; the new colour picker
-  renders inline in the sidebar.
+  renders inline in the sidebar. The handlers now pass the board as a
+  reactive, so a pinned stack menu stays in sync with board changes
+  (removing a block drops its card live); spec validation moved into
+  `blockr.ui` (the dock-side `valid_stack_*` validators are gone), and
+  `dock_stack` colour checks reuse `blockr.ui::is_hex_color()`.
 
 * `dock_layout` objects gain `format()` / `print()` methods that render
   the arrangement as an indented tree: orientation, nested groups with

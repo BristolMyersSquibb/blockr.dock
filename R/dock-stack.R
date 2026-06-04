@@ -38,7 +38,7 @@ validate_stack.dock_stack <- function(x) {
 
   col <- stack_color(NextMethod())
 
-  if (!is_string(col) || !is_hex_color(col)) {
+  if (!is_string(col) || !blockr.ui::is_hex_color(col)) {
     blockr_abort(
       "Expecting stack color as string-valued hex color.",
       class = "invalid_stack_color"
@@ -112,7 +112,7 @@ stack_color.dock_stack <- function(x) {
 #' @rdname stack
 #' @export
 `stack_color<-` <- function(x, value) {
-  stopifnot(is_dock_stack(x), is_string(value), is_hex_color(value))
+  stopifnot(is_dock_stack(x), is_string(value), blockr.ui::is_hex_color(value))
   attr(x, "color") <- value
   x
 }
