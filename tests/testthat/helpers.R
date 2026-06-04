@@ -54,3 +54,33 @@ new_ctrl_extension <- function(content = "") {
     external_ctrl = TRUE
   )
 }
+
+# Parse the live view-nav dropdown of a running app into one row per view
+# (id, display label, active flag), so a browser test can state the nav
+# contract directly: one entry per view, unique ids, no blank labels. Reads
+# the rendered DOM (post static UI + any client-side `add`/`remove`), which
+# is where the two layers compose -- the seam a unit test can't observe.
+#
+# `blockr-view-item` is a prefix of the child `-name` / `-actions` classes,
+# so match the class token exactly (space-padded) rather than by substring.
+read_view_nav <- function(app, board_id = "my_board") {
+  by_class <- function(axis, token) {
+    sprintf(
+      "%s*[contains(concat(' ', normalize-space(@class), ' '), ' %s ')]",
+      axis, token
+    )
+  }
+
+  nav <- xml2::read_html(app$get_html(paste0("#", board_id, "-view_nav")))
+  items <- xml2::xml_find_all(nav, by_class("//", "blockr-view-item"))
+  name_nodes <- xml2::xml_find_first(
+    items, by_class(".//", "blockr-view-item-name")
+  )
+
+  data.frame(
+    id = xml2::xml_attr(items, "data-view-id"),
+    label = trimws(xml2::xml_text(name_nodes)),
+    active = grepl("(^| )active( |$)", xml2::xml_attr(items, "class")),
+    stringsAsFactors = FALSE
+  )
+}
