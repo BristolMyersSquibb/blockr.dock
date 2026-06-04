@@ -28,7 +28,7 @@ test_that("serve utils", {
   )
 })
 
-test_that("dock app", {
+test_that("dock app renders a block added via the extension (#191)", {
 
   skip_on_cran()
 
@@ -36,63 +36,62 @@ test_that("dock app", {
     system.file("examples", "empty", "app.R", package = "blockr.dock"),
     name = "dock",
     seed = 42,
-    load_timeout = 30 * 1000
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
   )
+  withr::defer(app$stop())
 
+  # The Edit board panel is active on load, so a plain click adds the block.
   app$set_inputs(
     `my_board-edit_board_extension-registry_select` = "dataset_block",
     `my_board-edit_board_extension-block_id` = "a"
   )
-
   app$click("my_board-edit_board_extension-confirm_add")
 
-  app$wait_for_idle()
-  app$expect_values(export = TRUE, screenshot_args = FALSE)
+  # The block card carries a stable `block_handle-<id>` DOM id; its presence
+  # is the add-block -> dock-render seam -- the board update mounting a panel.
+  app$wait_for_js("document.getElementById('my_board-block_handle-a') !== null")
 
-  app$set_inputs(
-    `my_board-edit_board_extension-registry_select` = "head_block",
-    `my_board-edit_board_extension-block_id` = "b"
+  expect_equal(
+    app$get_js(
+      "document.querySelectorAll('[id^=\"my_board-block_handle-\"]').length"
+    ),
+    1
+  )
+})
+
+test_that("edit board extension links blocks (e2e)", {
+
+  skip_on_cran()
+
+  # A board pre-seeded with a source and a transform block so the test drives
+  # only link operations -- adding blocks would deactivate the extension panel
+  # and race shinytest2 (see apps/edit-link/app.R, mirroring edit-stacks).
+  app <- shinytest2::AppDriver$new(
+    test_path("apps", "edit-link"),
+    name = "edit-link",
+    seed = 42,
+    load_timeout = 30 * 1000
   )
 
-  app$click("my_board-edit_board_extension-confirm_add")
-
+  set_in(app, "new_link_id", "ab")
+  click(app, "add_link")
   app$wait_for_idle()
-  app$expect_values(export = TRUE, screenshot_args = FALSE)
+  wait_bound(app, "ab_from")
 
-  app$set_inputs(`my_board-edit_board_extension-new_link_id` = "ab")
-
-  app$click("my_board-edit_board_extension-add_link")
+  set_in(app, "ab_from", "a")
   app$wait_for_idle()
-
-  app$set_inputs(`my_board-edit_board_extension-ab_from` = "a")
+  set_in(app, "ab_to", "b")
   app$wait_for_idle()
-
-  app$set_inputs(`my_board-edit_board_extension-ab_to` = "b")
+  set_in(app, "ab_input", "data")
   app$wait_for_idle()
 
-  app$set_inputs(`my_board-edit_board_extension-ab_input` = "data")
+  click(app, "apply_changes")
   app$wait_for_idle()
 
-  app$click("my_board-edit_board_extension-apply_changes")
-
-  app$wait_for_idle()
-  app$expect_values(export = TRUE, screenshot_args = FALSE)
-
-  app$set_inputs(`my_board-edit_board_extension-new_stack_id` = "s1")
-
-  app$click("my_board-edit_board_extension-add_stack")
-  app$wait_for_idle()
-
-  app$set_inputs(`my_board-edit_board_extension-s1_name` = "My Stack")
-  app$wait_for_idle()
-
-  app$set_inputs(`my_board-edit_board_extension-s1_blocks` = "a")
-  app$wait_for_idle()
-
-  app$click("my_board-edit_board_extension-apply_changes")
-
-  app$wait_for_idle()
-  app$expect_values(export = TRUE, screenshot_args = FALSE)
+  expect_identical(field(app, "ab_from"), "a")
+  expect_identical(field(app, "ab_to"), "b")
+  expect_identical(field(app, "ab_input"), "data")
 
   app$stop()
 })
@@ -107,49 +106,6 @@ test_that("edit board extension stacks (e2e)", {
     seed = 42,
     load_timeout = 30 * 1000
   )
-
-  nsid <- function(x) paste0("my_board-edit_board_extension-", x)
-
-  # Staging inputs do not drive an output, so do not wait for one.
-  set_in <- function(app, id, value) {
-    do.call(
-      app$set_inputs,
-      c(set_names(list(value), nsid(id)), list(wait_ = FALSE))
-    )
-  }
-
-  click <- function(app, id) app$click(nsid(id))
-
-  # A DataTables redraw (e.g. after adding a stack row) re-renders the cell
-  # inputs, which Shiny re-binds client-side after the server goes idle; wait
-  # for the binding before driving the new row's inputs.
-  wait_bound <- function(app, id) {
-    app$wait_for_js(
-      paste0(
-        "document.querySelector('#", nsid(id),
-        ".shiny-bound-input') !== null"
-      ),
-      timeout = 15 * 1000
-    )
-  }
-
-  set_color <- function(app, id, hex) {
-    app$run_js(
-      paste0(
-        "var e=document.getElementById('", nsid(id), "'); e.value='", hex,
-        "'; e.dispatchEvent(new Event('change'));"
-      )
-    )
-  }
-
-  field <- function(app, id) {
-    app$get_js(
-      paste0(
-        "(function(){var e=document.getElementById('", nsid(id),
-        "'); return e ? e.value : null;})()"
-      )
-    )
-  }
 
   set_in(app, "new_stack_id", "grp")
   click(app, "add_stack")
