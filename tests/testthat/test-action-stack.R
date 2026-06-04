@@ -165,6 +165,102 @@ test_that("edit stack action: valid commit modifies the existing stack", {
   )
 })
 
+test_that("edit stack action: board change with no active edit is inert", {
+  # Reproduces the create-stack crash: with no edit in progress
+  # (`trigger()` is NULL), a board change from another action must not
+  # error in the auto-close observer, and must not close the sidebar.
+  hide_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(id, ...) {
+      hide_calls[[length(hide_calls) + 1L]] <<- id
+      invisible(NULL)
+    },
+    sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE),
+    .package = "blockr.ui"
+  )
+
+  r_board <- reactiveValues(
+    board = new_dock_board(c(a = new_dataset_block("iris"))),
+    board_id = "b"
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_stack_action(
+          trigger = reactive(NULL),
+          board = r_board,
+          update = reactiveVal(list())
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # Another action mutates the board (e.g. creates a stack).
+      r_board$board <- new_dock_board(
+        c(a = new_dataset_block("iris")),
+        stacks = stacks(s1 = "a")
+      )
+      expect_no_error(session$flushReact())
+      expect_length(hide_calls, 0L)
+    }
+  )
+})
+
+test_that("edit stack action: removing the edited stack closes the sidebar", {
+  # Open the edit menu for `s1`, then remove `s1` from the board: the
+  # board observer must close the sidebar immediately (not wait for an
+  # "Update" click), and never error in `lookup_stack()`.
+  hide_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(id, ...) {
+      hide_calls[[length(hide_calls) + 1L]] <<- id
+      invisible(NULL)
+    },
+    # The auto-close is gated on the sidebar being open.
+    sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE),
+    .package = "blockr.ui"
+  )
+
+  r_board <- reactiveValues(
+    board = new_dock_board(
+      c(a = new_dataset_block("iris"), b = new_head_block()),
+      stacks = stacks(s1 = "a")
+    ),
+    board_id = "b"
+  )
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_stack_action(
+          trigger = reactive("s1"),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      expect_length(hide_calls, 0L)
+
+      # Remove the edited stack -> sidebar closes live.
+      r_board$board <- new_dock_board(board_blocks(r_board$board))
+      session$flushReact()
+
+      expect_gte(length(hide_calls), 1L)
+      expect_identical(hide_calls[[1L]], "b-actions_sidebar")
+    }
+  )
+})
+
 test_that("edit stack action: invalid colour / block id short-circuit", {
   local_mocked_sidebar()
   r_board <- reactiveValues(

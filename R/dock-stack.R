@@ -129,7 +129,9 @@ as_dock_stack.dock_stack <- function(x, ...) {
 }
 
 #' @export
-as_dock_stack.stack <- function(x, color = suggest_new_colors(), ...) {
+as_dock_stack.stack <- function(x,
+                                color = attr(x, "color") %||%
+                                  suggest_new_colors(), ...) {
 
   attr(x, "color") <- color
 
@@ -173,13 +175,26 @@ as_dock_stacks <- function(x) {
     return(x)
   }
 
-  new_col <- suggest_new_colors(
-    chr_ply(x[!todo], stack_color),
-    n = sum(todo)
+  # A non-dock stack may already carry a `color` attribute (e.g. one
+  # built by `blockr.ui`'s stack menu via `new_stack(..., color = )`):
+  # keep it. Only stacks lacking a colour get a freshly suggested one,
+  # seeded against the existing palette + the carried colours.
+  carried <- chr_ply(
+    x[todo],
+    function(s) attr(s, "color", exact = TRUE) %||% NA_character_
   )
+  cols <- carried
+  need <- is.na(carried)
+
+  if (any(need)) {
+    cols[need] <- suggest_new_colors(
+      c(chr_ply(x[!todo], stack_color), carried[!need]),
+      n = sum(need)
+    )
+  }
 
   x[todo] <- set_names(
-    map(as_dock_stack, x[todo], new_col),
+    map(as_dock_stack, x[todo], cols),
     names(x[todo])
   )
 
