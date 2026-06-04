@@ -4,7 +4,16 @@ add_link_action <- function(trigger, board, update, ...) {
     function(input, output, session) {
 
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-      committed <- blockr.ui::link_menu_server("menu")
+      # Pass the board + anchor as reactives: the menu validates the
+      # committed link id itself and keeps an open panel in sync with the
+      # board (a freed-up target reappears, a removed block's card drops),
+      # so this handler is a thin adapter - no dock-side validator, no
+      # manual pool-update.
+      committed <- blockr.ui::link_menu_server(
+        "menu",
+        board = reactive(board$board),
+        anchor = reactive(trigger())
+      )
 
       menu_ui <- function() {
         blockr.ui::link_menu_ui(
@@ -28,8 +37,6 @@ add_link_action <- function(trigger, board, update, ...) {
 
       observeEvent(committed(), {
         spec <- committed()
-
-        if (!valid_link_id(spec$link_id, board$board, session)) return()
 
         links <- board_links(board$board)
         trg_blk <- board_blocks(board$board)[[spec$target]]
@@ -60,37 +67,16 @@ add_link_action <- function(trigger, board, update, ...) {
           )
         )
 
-        # Multi-link session: keep the menu open and push a live
-        # eligibility update so the just-wired card drops client-side
-        # without a full re-render. `update()` only sets a reactiveVal,
-        # so the board mutates on the next reactive flush - defer the
-        # pool recompute until after the flush, otherwise `board$board`
-        # is still the pre-link snapshot. `onFlushed` runs outside a
-        # reactive context, hence `isolate()`.
-        anchor <- trigger()
+        # Close after a single link unless the user pinned the sidebar.
+        # When pinned, the menu's own board observer drops the just-wired
+        # card in place (no re-render) so the user can add another link.
         session$onFlushed(
           function() {
-            isolate({
-              pools <- blockr.ui::link_eligible_pools(board$board, anchor)
-
-              if (!length(pools$outgoing) && !length(pools$incoming)) {
+            isolate(
+              if (!isTRUE(blockr.ui::sidebar_state(sidebar_id)$pinned)) {
                 blockr.ui::hide_sidebar(sidebar_id)
-                return()
               }
-
-              session$sendInputMessage(
-                session$ns("menu-commit"),
-                list(
-                  type = "pool-update",
-                  eligible = list(
-                    outgoing = pools$outgoing,
-                    incoming = pools$incoming
-                  ),
-                  free_inputs = pools$free_inputs,
-                  link_id_seed = rand_names(board_link_ids(board$board))
-                )
-              )
-            })
+            )
           },
           once = TRUE
         )
@@ -113,21 +99,4 @@ remove_link_action <- function(trigger, board, update, ...) {
     },
     id = "remove_link_action"
   )
-}
-
-# ---- shared validators -------------------------------------------------
-
-# blockr.ui's link_menu_ui seeds a fresh link id via `rand_names()`
-# against the current board, so the typical case is a no-op pass. We
-# still guard against an empty / duplicate id the user could type in.
-valid_link_id <- function(id, board, session) {
-  if (is.null(id) || !nzchar(id) || id %in% board_link_ids(board)) {
-    notify(
-      "Please choose a valid link ID.",
-      type = "warning",
-      session = session
-    )
-    return(FALSE)
-  }
-  TRUE
 }
