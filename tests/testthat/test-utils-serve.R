@@ -73,10 +73,120 @@ test_that("dock app", {
   app$set_inputs(`my_board-edit_board_extension-ab_input` = "data")
   app$wait_for_idle()
 
-  app$click("my_board-edit_board_extension-modify_links")
+  app$click("my_board-edit_board_extension-apply_changes")
 
   app$wait_for_idle()
   app$expect_values(export = TRUE, screenshot_args = FALSE)
+
+  app$set_inputs(`my_board-edit_board_extension-new_stack_id` = "s1")
+
+  app$click("my_board-edit_board_extension-add_stack")
+  app$wait_for_idle()
+
+  app$set_inputs(`my_board-edit_board_extension-s1_name` = "My Stack")
+  app$wait_for_idle()
+
+  app$set_inputs(`my_board-edit_board_extension-s1_blocks` = "a")
+  app$wait_for_idle()
+
+  app$click("my_board-edit_board_extension-apply_changes")
+
+  app$wait_for_idle()
+  app$expect_values(export = TRUE, screenshot_args = FALSE)
+
+  app$stop()
+})
+
+test_that("edit board extension stacks (e2e)", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    test_path("apps", "edit-stacks"),
+    name = "edit-stacks",
+    seed = 42,
+    load_timeout = 30 * 1000
+  )
+
+  nsid <- function(x) paste0("my_board-edit_board_extension-", x)
+
+  # Staging inputs do not drive an output, so do not wait for one.
+  set_in <- function(app, id, value) {
+    do.call(
+      app$set_inputs,
+      c(set_names(list(value), nsid(id)), list(wait_ = FALSE))
+    )
+  }
+
+  click <- function(app, id) app$click(nsid(id))
+
+  # A DataTables redraw (e.g. after adding a stack row) re-renders the cell
+  # inputs, which Shiny re-binds client-side after the server goes idle; wait
+  # for the binding before driving the new row's inputs.
+  wait_bound <- function(app, id) {
+    app$wait_for_js(
+      paste0(
+        "document.querySelector('#", nsid(id),
+        ".shiny-bound-input') !== null"
+      ),
+      timeout = 15 * 1000
+    )
+  }
+
+  set_color <- function(app, id, hex) {
+    app$run_js(
+      paste0(
+        "var e=document.getElementById('", nsid(id), "'); e.value='", hex,
+        "'; e.dispatchEvent(new Event('change'));"
+      )
+    )
+  }
+
+  field <- function(app, id) {
+    app$get_js(
+      paste0(
+        "(function(){var e=document.getElementById('", nsid(id),
+        "'); return e ? e.value : null;})()"
+      )
+    )
+  }
+
+  set_in(app, "new_stack_id", "grp")
+  click(app, "add_stack")
+  app$wait_for_idle()
+  wait_bound(app, "grp_name")
+
+  set_in(app, "grp_name", "Group A")
+  set_in(app, "grp_blocks", "data")
+  set_color(app, "grp_color", "#aabbcc")
+  app$wait_for_idle()
+
+  click(app, "apply_changes")
+  app$wait_for_idle()
+
+  expect_identical(field(app, "grp_name"), "Group A")
+  expect_identical(tolower(field(app, "grp_color")), "#aabbcc")
+
+  set_color(app, "grp_color", "#112233")
+  app$wait_for_idle()
+  click(app, "apply_changes")
+  app$wait_for_idle()
+
+  expect_identical(tolower(field(app, "grp_color")), "#112233")
+
+  app$run_js(
+    paste0(
+      "Shiny.setInputValue('", nsid("stacks_dt_rows_selected"),
+      "', [1], {priority: 'event'});"
+    )
+  )
+  app$wait_for_idle()
+  click(app, "rm_stack")
+  app$wait_for_idle()
+  click(app, "apply_changes")
+  app$wait_for_idle()
+
+  expect_null(field(app, "grp_name"))
 
   app$stop()
 })

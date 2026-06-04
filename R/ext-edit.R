@@ -30,6 +30,7 @@ blk_ext_ui <- function(id, board) {
     class = "blockr-ext-edit",
     div(
       class = "blockr-ext-edit-section",
+      div("Blocks", class = "blockr-ext-edit-title"),
       div(
         class = "blockr-ext-edit-row",
         div(
@@ -79,6 +80,7 @@ blk_ext_ui <- function(id, board) {
     ),
     div(
       class = "blockr-ext-edit-section",
+      div("Links", class = "blockr-ext-edit-title"),
       div(
         class = "blockr-ext-edit-links",
         DT::dataTableOutput(NS(id, "links_dt"))
@@ -105,13 +107,48 @@ blk_ext_ui <- function(id, board) {
           "Remove row(s)",
           icon = icon("minus"),
           class = "btn-danger"
+        )
+      )
+    ),
+    div(
+      class = "blockr-ext-edit-section",
+      div("Stacks", class = "blockr-ext-edit-title"),
+      div(
+        class = "blockr-ext-edit-stacks",
+        DT::dataTableOutput(NS(id, "stacks_dt"))
+      ),
+      div(
+        class = "blockr-ext-edit-row",
+        div(
+          class = "flex-grow-1",
+          textInput(
+            NS(id, "new_stack_id"),
+            "Next stack ID",
+            value = rand_names(board_stack_ids(board)),
+            width = "100%"
+          )
         ),
         actionButton(
-          NS(id, "modify_links"),
-          "Apply changes",
-          icon = icon("check"),
-          class = "btn-success"
+          NS(id, "add_stack"),
+          "Add stack row",
+          icon = icon("plus"),
+          class = "btn-primary"
+        ),
+        actionButton(
+          NS(id, "rm_stack"),
+          "Remove row(s)",
+          icon = icon("minus"),
+          class = "btn-danger"
         )
+      )
+    ),
+    div(
+      class = "blockr-ext-edit-footer",
+      actionButton(
+        NS(id, "apply_changes"),
+        "Apply changes",
+        icon = icon("check"),
+        class = "btn-success"
       )
     )
   )
@@ -154,10 +191,42 @@ blk_ext_srv <- function(id, board, update, ...) {
       edit_link_observer(upd, board)
       add_link_observer(input, board, upd, session)
       rm_link_observer(input, board, upd, session)
-      modify_link_observer(input, board, upd, session, links_proxy, update)
 
       toggle_remove_link_observer(input, session)
-      toggle_apply_changes_observer(upd, session)
+
+      stk <- reactiveValues(
+        add = stacks(),
+        rm = character(),
+        mod = stacks(),
+        curr = isolate(board_stacks(board$board)),
+        obs = list(),
+        edit = NULL
+      )
+
+      observeEvent(
+        board_stacks(board$board),
+        {
+          stk$curr <- board_stacks(board$board)
+        }
+      )
+
+      output$stacks_dt <- DT::renderDataTable(
+        stack_dt(isolate(stk$curr), session$ns, isolate(board$board)),
+        server = TRUE
+      )
+
+      stacks_proxy <- DT::dataTableProxy("stacks_dt", session)
+
+      create_stack_obs_observer(input, board, stk, session, stacks_proxy)
+      edit_stack_observer(stk, board)
+      add_stack_observer(input, board, stk, session)
+      rm_stack_observer(input, board, stk, session)
+
+      toggle_remove_stack_observer(input, session)
+
+      apply_changes_observer(input, board, upd, stk, session, links_proxy,
+                             stacks_proxy, update)
+      toggle_apply_changes_observer(upd, stk, session)
 
       NULL
     }
@@ -263,12 +332,13 @@ toggle_remove_link_observer <- function(input, session) {
   )
 }
 
-toggle_apply_changes_observer <- function(upd, session) {
+toggle_apply_changes_observer <- function(upd, stk, session) {
   observe(
     updateActionButton(
       session,
-      "modify_links",
-      disabled = !length(upd$add) && !length(upd$rm)
+      "apply_changes",
+      disabled = !length(upd$add) && !length(upd$rm) &&
+        !length(stk$add) && !length(stk$rm) && !length(stk$mod)
     )
   )
 }
@@ -400,10 +470,13 @@ dt_board_link <- function(lnk, ns, board) {
 
 dt_selectize <- function(id, val, choices, create = FALSE) {
 
+  # Render the dropdown on <body> so it is not clipped by the table wrapper's
+  # overflow (overflow-x: auto forces overflow-y to auto, which would otherwise
+  # cut the menu off at the table's lower edge).
+  opts <- list(dropdownParent = "body")
+
   if (isTRUE(create)) {
-    opts <- list(create = TRUE)
-  } else {
-    opts <- NULL
+    opts$create <- TRUE
   }
 
   res <- selectizeInput(id, label = NULL, choices = c("", choices),
@@ -722,14 +795,18 @@ rm_link_observer <- function(input, rv, upd, sess) {
   )
 }
 
-modify_link_observer <- function(input, rv, upd, session, proxy, res) {
+apply_changes_observer <- function(input, rv, upd, stk, session, links_proxy,
+                                   stacks_proxy, res) {
 
   observeEvent(
-    input$modify_links,
+    input$apply_changes,
     {
-      log_debug("mod link")
+      log_debug("apply changes")
 
-      if (!length(upd$add) && !length(upd$rm)) {
+      has_links <- length(upd$add) || length(upd$rm)
+      has_stacks <- length(stk$add) || length(stk$rm) || length(stk$mod)
+
+      if (!has_links && !has_stacks) {
 
         notify(
           "No changes specified.",
@@ -741,35 +818,441 @@ modify_link_observer <- function(input, rv, upd, session, proxy, res) {
       }
 
       new <- tryCatch(
-        modify_board_links(rv$board, upd$add, upd$rm),
-        warning = function(e) {
-          notify(conditionMessage(e), duration = NULL, type = "warning",
-                 session = session)
-        },
+        withCallingHandlers(
+          {
+            b <- rv$board
+
+            if (has_links) {
+              b <- modify_board_links(b, upd$add, upd$rm)
+            }
+
+            if (has_stacks) {
+              b <- modify_board_stacks(b, stk$add, stk$rm, stk$mod)
+            }
+
+            b
+          },
+          warning = function(e) {
+            notify(conditionMessage(e), duration = NULL, type = "warning",
+                   session = session)
+            invokeRestart("muffleWarning")
+          }
+        ),
         error = function(e) {
           notify(conditionMessage(e), duration = NULL, type = "error",
                  session = session)
+          NULL
         }
       )
 
-      res(
-        list(
-          links = list(
-            add = if (length(upd$add)) upd$add,
-            rm = if (length(upd$rm)) upd$rm
-          )
-        )
-      )
+      if (is.null(new)) {
+        return()
+      }
 
-      upd$add <- links()
-      upd$rm <- character()
-      upd$curr <- board_links(new)
+      delta <- list()
+
+      if (has_links) {
+        delta$links <- list(
+          add = if (length(upd$add)) upd$add,
+          rm = if (length(upd$rm)) upd$rm
+        )
+      }
+
+      if (has_stacks) {
+        delta$stacks <- list(
+          add = if (length(stk$add)) stk$add,
+          rm = if (length(stk$rm)) stk$rm,
+          mod = if (length(stk$mod)) {
+            lapply(
+              stk$mod,
+              function(s) {
+                list(
+                  name = stack_name(s),
+                  blocks = stack_blocks(s),
+                  color = stack_color(s)
+                )
+              }
+            )
+          }
+        )
+      }
+
+      res(delta)
+
+      if (has_links) {
+        upd$add <- links()
+        upd$rm <- character()
+        upd$curr <- board_links(new)
+
+        DT::replaceData(
+          links_proxy,
+          dt_board_link(upd$curr, session$ns, rv$board),
+          rownames = FALSE
+        )
+      }
+
+      if (has_stacks) {
+        stk$add <- stacks()
+        stk$rm <- character()
+        stk$mod <- stacks()
+        stk$curr <- board_stacks(new)
+
+        DT::replaceData(
+          stacks_proxy,
+          dt_board_stack(stk$curr, session$ns, rv$board),
+          rownames = FALSE
+        )
+      }
+    }
+  )
+}
+
+stack_dt <- function(dat, ns, board) {
+
+  res <- DT::datatable(
+    dt_board_stack(dat, ns, board),
+    options = list(
+      pageLength = 5,
+      preDrawCallback = DT::JS(
+        "function() { Shiny.unbindAll(this.api().table().node()); }"
+      ),
+      drawCallback = DT::JS(
+        "function() { Shiny.bindAll(this.api().table().node()); }"
+      ),
+      dom = "tp",
+      ordering = FALSE,
+      autoWidth = FALSE,
+      columnDefs = list(
+        list(targets = 0, width = "90px")
+      )
+    ),
+    rownames = FALSE,
+    escape = FALSE
+  )
+
+  DT::formatStyle(res, 1L, `vertical-align` = "middle")
+}
+
+dt_board_stack <- function(stk, ns, board) {
+
+  ids <- names(stk)
+
+  data.frame(
+    ID = ids,
+    Name = chr_mply(
+      dt_text,
+      lapply(paste0(ids, "_name"), ns),
+      chr_ply(stk, stack_name)
+    ),
+    Color = chr_mply(
+      dt_color,
+      lapply(paste0(ids, "_color"), ns),
+      chr_ply(stk, stack_color)
+    ),
+    Blocks = chr_mply(
+      dt_select,
+      lapply(paste0(ids, "_blocks"), ns),
+      lapply(stk, as.character),
+      MoreArgs = list(
+        rem = free_stack_blocks(stk, board_block_ids(board))
+      )
+    )
+  )
+}
+
+free_stack_blocks <- function(stk, blocks) {
+  blocks[!blocks %in% unlst(lapply(stk, as.character))]
+}
+
+dt_text <- function(id, val) {
+
+  res <- textInput(id, label = NULL, value = val)
+
+  res <- htmltools::tagQuery(
+    res
+  )$addAttrs(
+    style = "min-width: 140px; width: 100%; margin-bottom: 0;"
+  )$allTags()
+
+  as.character(res)
+}
+
+dt_select <- function(id, val, rem) {
+
+  # selectizeInput (rather than selectInput) so the dropdown can render on
+  # <body> and escape the table wrapper's overflow clipping (see dt_selectize).
+  res <- selectizeInput(id, label = NULL, choices = c("", val, rem),
+                        selected = val, multiple = TRUE,
+                        options = list(dropdownParent = "body"))
+
+  res <- htmltools::tagQuery(
+    res
+  )$addAttrs(
+    style = "min-width: 180px; width: 100%; margin-bottom: 0;"
+  )$allTags()
+
+  as.character(res)
+}
+
+dt_color <- function(id, val) {
+
+  # A native colour input that reports straight through Shiny.setInputValue: it
+  # carries no Shiny input binding, so it survives the DataTables redraw and the
+  # Shiny.bindAll() that re-binds the table's textInput/selectInput cells. The
+  # form-control-color class matches the radius and swatch rounding of the
+  # inputs beside it; the inline height matches this theme's taller form-control
+  # (form-control-color otherwise hard-codes Bootstrap's shorter input height).
+  res <- tags$input(
+    type = "color",
+    id = id,
+    value = val,
+    class = "form-control form-control-color",
+    onchange = paste0("Shiny.setInputValue('", id, "', this.value);")
+  )
+
+  res <- htmltools::tagQuery(
+    res
+  )$addAttrs(
+    style = "width: 100%; min-width: 56px; height: calc(1.5em + 1.25rem + 2px)"
+  )$allTags()
+
+  as.character(res)
+}
+
+create_dt_stack_obs <- function(ids, upd, ...) {
+
+  create_obs <- function(col, row, upd, input, blks, sess) {
+
+    inp <- paste0(row, "_", col)
+
+    log_debug("creating stack DT observer ", inp)
+
+    observeEvent(
+      input[[inp]],
+      {
+        new <- input[[inp]]
+
+        if (col == "blocks" && setequal(stack_blocks(upd$curr[[row]]), new)) {
+          return()
+        }
+
+        if (col == "name" && identical(stack_name(upd$curr[[row]]), new)) {
+          return()
+        }
+
+        if (col == "color" && identical(stack_color(upd$curr[[row]]), new)) {
+          return()
+        }
+
+        if (col == "blocks") {
+
+          if (is.null(new)) {
+            new <- character()
+          }
+
+          rem <- setdiff(names(upd$curr), row)
+          ava <- free_stack_blocks(c(upd$curr[rem], new), names(blks))
+
+          for (i in rem) {
+
+            cur <- stack_blocks(upd$curr[[i]])
+
+            updateSelectInput(
+              sess,
+              paste0(i, "_blocks"),
+              label = NULL,
+              choices = c(cur, ava),
+              selected = cur
+            )
+          }
+
+        } else if (!col %in% c("name", "color")) {
+
+          blockr_abort(
+            "Unexpected input: column {col}.",
+            class = "unexpected_stack_col_input"
+          )
+        }
+
+        upd$edit <- list(row = row, col = col, val = new)
+      },
+      ignoreInit = TRUE,
+      ignoreNULL = FALSE
+    )
+  }
+
+  create_obs_for_id <- function(id, ...) {
+    lapply(
+      set_names(nm = c("name", "color", "blocks")),
+      create_obs,
+      id,
+      ...
+    )
+  }
+
+  upd$obs[ids] <- lapply(ids, create_obs_for_id, upd, ...)
+
+  upd
+}
+
+destroy_dt_stack_obs <- function(ids, update) {
+
+  for (row in ids) {
+
+    for (col in c("name", "color", "blocks")) {
+      log_debug("destroying stack DT observer ", row, " ", col)
+      update$obs[[row]][[col]]$destroy()
+    }
+
+    update$obs[[row]] <- NULL
+  }
+
+  update
+}
+
+create_stack_obs_observer <- function(input, rv, upd, session, proxy) {
+
+  observeEvent(
+    names(upd$curr),
+    {
+      ids <- names(upd$curr)
 
       DT::replaceData(
         proxy,
-        dt_board_link(upd$curr, session$ns, rv$board),
+        dt_board_stack(upd$curr, session$ns, rv$board),
         rownames = FALSE
       )
+
+      upd <- create_dt_stack_obs(setdiff(ids, names(upd$obs)), upd, input,
+                                 board_blocks(rv$board), session)
+      upd <- destroy_dt_stack_obs(setdiff(names(upd$obs), ids), upd)
     }
+  )
+}
+
+edit_stack_observer <- function(upd, rv) {
+
+  observeEvent(
+    upd$edit,
+    {
+      row <- upd$edit$row
+      col <- upd$edit$col
+      val <- upd$edit$val
+
+      if (col == "color" && !is_hex_color(val)) {
+        return()
+      }
+
+      if (col == "name") {
+        stack_name(upd$curr[[row]]) <- val
+      } else if (col == "color") {
+        stack_color(upd$curr[[row]]) <- val
+      } else if (col == "blocks") {
+        stack_blocks(upd$curr[[row]]) <- val
+      }
+
+      if (row %in% board_stack_ids(rv$board)) {
+
+        if (row %in% names(upd$mod)) {
+          upd$mod[row] <- upd$curr[row]
+        } else {
+          upd$mod <- c(upd$mod, upd$curr[row])
+        }
+
+      } else {
+
+        if (row %in% names(upd$add)) {
+          upd$add[row] <- upd$curr[row]
+        } else {
+          upd$add <- c(upd$add, upd$curr[row])
+        }
+      }
+    }
+  )
+}
+
+add_stack_observer <- function(input, rv, upd, sess) {
+
+  observeEvent(
+    input$add_stack,
+    {
+      log_debug("add stack")
+
+      new_id <- input$new_stack_id
+
+      if (length(new_id) && nchar(new_id)) {
+
+        updateTextInput(
+          session = sess,
+          inputId = "new_stack_id",
+          value = rand_names(c(names(upd$curr), new_id))
+        )
+
+        if (new_id %in% names(upd$curr)) {
+
+          notify(
+            "Please choose a unique stack ID.",
+            type = "warning",
+            session = sess
+          )
+
+          return()
+        }
+
+      } else {
+
+        new_id <- rand_names(names(upd$curr))
+      }
+
+      new <- set_names(
+        list(
+          new_dock_stack(
+            name = id_to_sentence_case(new_id),
+            color = suggest_new_colors(stack_color(upd$curr))
+          )
+        ),
+        new_id
+      )
+
+      upd$curr <- c(upd$curr, new)
+      upd$add <- c(upd$add, upd$curr[length(upd$curr)])
+    }
+  )
+}
+
+rm_stack_observer <- function(input, rv, upd, sess) {
+
+  observeEvent(
+    input$rm_stack,
+    {
+      log_debug("rm stack")
+
+      sel <- input$stacks_dt_rows_selected
+
+      if (length(sel)) {
+
+        ids <- names(upd$curr[sel])
+
+        upd$rm <- c(upd$rm, ids[ids %in% board_stack_ids(rv$board)])
+
+        upd$add <- upd$add[setdiff(names(upd$add), ids)]
+        upd$mod <- upd$mod[setdiff(names(upd$mod), ids)]
+        upd$curr <- upd$curr[setdiff(names(upd$curr), ids)]
+
+      } else {
+
+        notify("No row selected", type = "warning", session = sess)
+      }
+    }
+  )
+}
+
+toggle_remove_stack_observer <- function(input, session) {
+  observe(
+    updateActionButton(
+      session,
+      "rm_stack",
+      disabled = !length(input$stacks_dt_rows_selected)
+    )
   )
 }
