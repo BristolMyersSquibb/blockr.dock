@@ -2,7 +2,13 @@ add_stack_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-      committed <- blockr.ui::stack_menu_server("menu")
+      # Pass the board as a reactive: the menu validates the committed
+      # spec (id / name / colour) itself and keeps an open panel in sync
+      # with the board (cards added / removed live), so this handler is a
+      # thin adapter - no dock-side validators, no manual refresh.
+      committed <- blockr.ui::stack_menu_server(
+        "menu", board = reactive(board$board)
+      )
 
       menu_ui <- function() {
         blockr.ui::stack_menu_ui(session$ns("menu"), board$board)
@@ -16,10 +22,6 @@ add_stack_action <- function(trigger, board, update, ...) {
 
       observeEvent(committed(), {
         spec <- committed()
-
-        if (!valid_stack_id(spec$id, board$board, session)) return()
-        if (!valid_stack_name(spec$name, session)) return()
-        if (!valid_stack_color(spec$color, session)) return()
 
         new_stk <- new_dock_stack(
           blocks = as.character(spec$blocks %||% character()),
@@ -58,7 +60,11 @@ edit_stack_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-      committed <- blockr.ui::stack_menu_server("menu")
+      committed <- blockr.ui::stack_menu_server(
+        "menu",
+        board = reactive(board$board),
+        target = reactive(trigger())
+      )
 
       menu_ui <- function() {
         blockr.ui::stack_menu_ui(
@@ -80,9 +86,6 @@ edit_stack_action <- function(trigger, board, update, ...) {
       observeEvent(committed(), {
         spec <- committed()
         id <- trigger()
-
-        if (!valid_stack_name(spec$name, session)) return()
-        if (!valid_stack_color(spec$color, session)) return()
 
         # `mod` entries are now partial-arg deltas applied via
         # `update_stack()` on the blockr.core side. Reserved key
@@ -135,45 +138,4 @@ remove_stack_action <- function(trigger, board, update, ...) {
     },
     id = "remove_stack_action"
   )
-}
-
-# ---- shared validators -------------------------------------------------
-
-# blockr.ui's stack_menu_ui seeds a fresh id via `rand_names()` against
-# the current board, so the typical case is a no-op pass. We still guard
-# against an empty / duplicate id that the user could type in.
-valid_stack_id <- function(id, board, session) {
-  if (is.null(id) || !nzchar(id) || id %in% board_stack_ids(board)) {
-    notify(
-      "Please choose a valid stack ID.",
-      type = "warning",
-      session = session
-    )
-    return(FALSE)
-  }
-  TRUE
-}
-
-valid_stack_name <- function(name, session) {
-  if (is.null(name) || !nzchar(name)) {
-    notify(
-      "Please choose a valid stack name.",
-      type = "warning",
-      session = session
-    )
-    return(FALSE)
-  }
-  TRUE
-}
-
-valid_stack_color <- function(color, session) {
-  if (is.null(color) || !nzchar(color) || !is_hex_color(color)) {
-    notify(
-      "Please choose a valid stack color.",
-      type = "warning",
-      session = session
-    )
-    return(FALSE)
-  }
-  TRUE
 }
