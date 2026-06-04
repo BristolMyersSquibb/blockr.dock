@@ -84,3 +84,50 @@ read_view_nav <- function(app, board_id = "my_board") {
     stringsAsFactors = FALSE
   )
 }
+
+# Shared helpers for the edit-board extension e2e tests (links, stacks). The
+# extension namespaces its inputs under `my_board-edit_board_extension-`. The
+# extension panel stays active in those tests (pre-seeded fixtures, no block
+# adds), so plain set_inputs/click drive it reliably.
+nsid <- function(x) paste0("my_board-edit_board_extension-", x)
+
+# Staging inputs do not drive an output, so do not wait for one.
+set_in <- function(app, id, value) {
+  do.call(
+    app$set_inputs,
+    c(set_names(list(value), nsid(id)), list(wait_ = FALSE))
+  )
+}
+
+click <- function(app, id) app$click(nsid(id))
+
+# A DataTables redraw (e.g. after adding a row) re-renders the cell inputs,
+# which Shiny re-binds client-side after the server goes idle; wait for the
+# binding before driving the new row's inputs.
+wait_bound <- function(app, id) {
+  app$wait_for_js(
+    paste0(
+      "document.querySelector('#", nsid(id),
+      ".shiny-bound-input') !== null"
+    ),
+    timeout = 15 * 1000
+  )
+}
+
+set_color <- function(app, id, hex) {
+  app$run_js(
+    paste0(
+      "var e=document.getElementById('", nsid(id), "'); e.value='", hex,
+      "'; e.dispatchEvent(new Event('change'));"
+    )
+  )
+}
+
+field <- function(app, id) {
+  app$get_js(
+    paste0(
+      "(function(){var e=document.getElementById('", nsid(id),
+      "'); return e ? e.value : null;})()"
+    )
+  )
+}
