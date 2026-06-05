@@ -125,10 +125,5 @@ and extensions.
 ``` r
 brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
 str(active_layout(brd), max.level = 2)
-#> List of 2
-#>  $ grid       :List of 2
-#>   ..$ root       :List of 3
-#>   ..$ orientation: chr "HORIZONTAL"
-#>  $ activeGroup: chr "1"
-#>  - attr(*, "class")= chr "dock_layout"
+#>  <dock_layout> a
 ```
