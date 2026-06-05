@@ -199,6 +199,56 @@ test_that("board server", {
   expect_identical(panel_lookups, 1L)
 })
 
+test_that("renaming a block refreshes the dock panel title (#193)", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  # The rename observer runs before the board update is applied, so board$board
+  # still carries the old name; the new name lives only in the mod delta. A
+  # board read would relabel to the old title and no-op -- assert the panel
+  # picks up the delta's name instead.
+  board_rv <- board_args(blocks = c(a = new_dataset_block()))
+  old_name <- with_mock_context(
+    ms,
+    isolate(block_name(board_blocks(board_rv$board)[["a"]]))
+  )
+  upd <- reactiveVal()
+
+  with_mock_context(ms, {
+    manage_dock("dock_main", board_rv, update = upd)
+  })
+
+  ms$flushReact()
+
+  title_set <- NULL
+
+  with_mocked_bindings(
+    with_mocked_bindings(
+      {
+        with_mock_context(ms, {
+          upd(
+            list(
+              blocks = list(
+                mod = list(a = list(block_name = "Renamed"))
+              )
+            )
+          )
+        })
+        ms$flushReact()
+      },
+      set_panel_title = function(proxy, id, title, ...) {
+        title_set <<- title
+        invisible(proxy)
+      },
+      .package = "dockViewR"
+    ),
+    get_dock_panel = function(...) list(title = old_name)
+  )
+
+  expect_identical(title_set, "Renamed")
+})
+
 test_that("live_view_data is NULL while any view layout is uninitialized", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
