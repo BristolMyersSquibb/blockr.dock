@@ -169,3 +169,79 @@ test_that("validate_ext_srv_result enforces controllable reactiveVals", {
     validate_ext_srv_result(list(state = list(content = reactive("x"))), off)
   )
 })
+
+test_that("str_value.dock_extension lists ctor inputs, marking controllable", {
+
+  ext <- ctrl_ext(
+    external_ctrl = "content",
+    ctor = function(content = "", select = "") NULL
+  )
+
+  expect_identical(str_value(ext), "<doc_extension> content*, select")
+
+  expect_output(
+    str(ext),
+    "<doc_extension> content*, select",
+    fixed = TRUE
+  )
+})
+
+test_that("str_value.dock_extension renders a stateless extension bare", {
+
+  expect_identical(
+    str_value(new_edit_board_extension()),
+    "<edit_board_extension>"
+  )
+})
+
+test_that("str_value.dock_extensions renders one line per extension", {
+
+  exts <- as_dock_extensions(
+    list(
+      ctrl_ext(
+        external_ctrl = "content",
+        ctor = function(content = "", select = "") NULL
+      ),
+      new_edit_board_extension()
+    )
+  )
+
+  expect_identical(
+    str_value(exts),
+    paste(
+      "<dock_extensions[2]>",
+      "  doc_extension: <doc_extension> content*, select",
+      "  edit_board_extension: <edit_board_extension>",
+      sep = "\n"
+    )
+  )
+
+  expect_output(
+    str(exts),
+    "doc_extension: <doc_extension> content*, select",
+    fixed = TRUE
+  )
+})
+
+test_that("str_value.dock_extensions keys lines by the container alias", {
+
+  exts <- as_dock_extensions(
+    list(my_doc = ctrl_ext(ctor = function() NULL))
+  )
+
+  expect_identical(names(exts), "doc_extension")
+
+  expect_identical(
+    str_value(exts),
+    paste(
+      "<dock_extensions[1]>",
+      "  my_doc: <doc_extension>",
+      sep = "\n"
+    )
+  )
+})
+
+test_that("str_value.dock_extensions handles an empty container", {
+
+  expect_identical(str_value(new_dock_extensions()), "<dock_extensions[0]>")
+})

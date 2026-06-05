@@ -293,6 +293,29 @@ board_options.dock_extension <- function(x, ...) {
   x[["options"]]
 }
 
+#' @export
+str_value.dock_extension <- function(x, ...) {
+
+  out <- paste0("<", class(x)[1L], ">")
+
+  args <- ext_ctor_inputs(x)
+
+  if (length(args)) {
+    ctrl <- external_ctrl_vars(x)
+    args <- ifelse(args %in% ctrl, paste0(args, "*"), args)
+    out <- paste0(out, " ", paste0(args, collapse = ", "))
+  }
+
+  out
+}
+
+#' @importFrom utils str
+#' @export
+str.dock_extension <- function(object, ...) {
+  cat(" ", str_value(object), "\n", sep = "")
+  invisible(object)
+}
+
 #' @rdname extension
 #' @export
 new_dock_extensions <- function(x = list()) {
@@ -384,6 +407,26 @@ ext_alias_ids <- function(x) {
 as.list.dock_extensions <- function(x, ...) {
   res <- unclass(x)
   set_names(res, chr_ply(res, extension_id))
+}
+
+#' @export
+str_value.dock_extensions <- function(x, ...) {
+
+  items <- if (length(x)) {
+    paste0("  ", ext_alias_ids(x), ": ", chr_ply(x, str_value))
+  }
+
+  paste(
+    c(paste0("<dock_extensions[", length(x), "]>"), items),
+    collapse = "\n"
+  )
+}
+
+#' @importFrom utils str
+#' @export
+str.dock_extensions <- function(object, ...) {
+  cat(str_value(object), "\n", sep = "")
+  invisible(object)
 }
 
 #' @rdname extension
