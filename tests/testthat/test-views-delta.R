@@ -217,9 +217,10 @@ test_that("reconcile_views syncs the nav and live state on rename", {
   # The board carries the new name; the live state still has the old one, so
   # reconcile detects the rename and relabels the nav + client_views.
   renamed <- apply_views_rename(setNames(list("New"), "v1"), brd)
+  board <- reactiveValues(board = renamed)
 
   isolate(
-    reconcile_views(renamed, function(...) NULL, docks, active_dock,
+    reconcile_views(board, function(...) NULL, docks, active_dock,
                     client_active, client_views, session)
   )
 
@@ -679,10 +680,11 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
 
     # Remove on the board (pure), then reconcile the live session against it.
     removed <- apply_views_rm(name_to_id[[rm_label]], brd)
+    board <- reactiveValues(board = removed)
 
     with_mocked_bindings(
       isolate(
-        reconcile_views(removed, function(...) NULL, docks, active_dock,
+        reconcile_views(board, function(...) NULL, docks, active_dock,
                         client_active, client_views, session)
       ),
       remove_view = function(view_id, session, docks) {

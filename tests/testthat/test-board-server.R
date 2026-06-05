@@ -351,11 +351,12 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
   update <- with_mock_context(ms, reactiveVal())
 
   reconcile <- function(brd) {
+    board <- with_mock_context(ms, reactiveValues(board = brd))
     with_mocked_bindings(
       with_mock_context(
         ms,
         reconcile_views(
-          brd, update, docks, active_dock, client_active, client_views,
+          board, update, docks, active_dock, client_active, client_views,
           rec_session
         )
       ),
@@ -392,6 +393,55 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
   expect_length(rt, 1L)
   expect_identical(rt[[1L]]$add$id, "Third")
   expect_identical(rt[[1L]]$add$name, "Third")
+})
+
+test_that("reconcile_views forwards the live board to created views (#194)", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  board <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(Page = dock_layout())
+  )
+
+  rv <- with_mock_context(ms, reactiveValues(board = board))
+
+  forwarded <- NULL
+  capture_create <- function(v_id, layout, board, update, session, docks, ...) {
+    forwarded <<- board
+    assign(v_id, list(layout = function() NULL), envir = docks)
+  }
+
+  docks <- new.env(parent = emptyenv())
+  client_views <- with_mock_context(ms, reactiveVal(list()))
+  client_active <- with_mock_context(ms, reactiveVal(NULL))
+  active_dock <- with_mock_context(ms, reactiveValues())
+  update <- with_mock_context(ms, reactiveVal())
+  rec_session <- list(
+    ns = identity,
+    sendInputMessage = function(...) invisible()
+  )
+
+  with_mocked_bindings(
+    with_mock_context(
+      ms,
+      reconcile_views(
+        rv, update, docks, active_dock, client_active, client_views,
+        rec_session
+      )
+    ),
+    create_view = capture_create,
+    switch_active_view = function(...) invisible(),
+    .package = "blockr.dock"
+  )
+
+  # manage_dock's interaction observers (add panel, rename block) read
+  # board$board after the fact, so reconcile must forward the reactive handle.
+  # The bug forwarded the snapshot object, whose $board is NULL — crashing
+  # board_blocks() with `is_board(x) is not TRUE` on the next add-panel click.
+  expect_true(is_dock_board(isolate(forwarded$board)))
+  expect_silent(isolate(board_block_ids(forwarded$board)))
 })
 
 test_that("apply_board_update.dock_board switches active view", {
