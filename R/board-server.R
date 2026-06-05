@@ -655,11 +655,13 @@ manage_dock <- function(
 
         for (blk_id in names(blks)) {
 
-          if (!"block_name" %in% names(blks[[blk_id]])) {
+          delta <- blks[[blk_id]]
+
+          if (!"block_name" %in% names(delta)) {
             next
           }
 
-          new_name <- block_name(board_blocks(board$board)[[blk_id]])
+          new_name <- delta[["block_name"]]
           blk_panel_id <- as_block_panel_id(blk_id)
 
           old_title <- get_dock_panel(blk_panel_id, dock)$title
