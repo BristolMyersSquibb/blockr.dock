@@ -183,6 +183,33 @@ is_dock_layouts <- function(x) {
   inherits(x, "dock_layouts")
 }
 
+#' @export
+str_value.dock_layouts <- function(x, ...) {
+
+  ids <- names(x)
+
+  marks <- rep("", length(x))
+  active <- active_view(x)
+
+  if (not_null(active)) {
+    marks[ids == active] <- " (active)"
+  }
+
+  lines <- paste0("  ", ids, ": ", chr_ply(x, str_value), marks)
+
+  paste(
+    c(paste0("<dock_layouts[", length(x), "]>"), lines),
+    collapse = "\n"
+  )
+}
+
+#' @importFrom utils str
+#' @export
+str.dock_layouts <- function(object, ...) {
+  cat(str_value(object), "\n", sep = "")
+  invisible(object)
+}
+
 #' @noRd
 layout_ids <- function(x) {
   stopifnot(is.list(x))
