@@ -381,3 +381,33 @@ test_that("view ids survive serialization", {
   expect_identical(names(des), c("view_one", "view_two"))
   expect_identical(unname(view_names(des)), c("Analysis", "Overview"))
 })
+
+test_that("str_value.dock_layouts renders one line per view, marking active", {
+
+  brd <- new_dock_board(
+    blocks = c(d = new_dataset_block(), h = new_head_block()),
+    layouts = list(
+      v1 = dock_layout("d", "h"),
+      v2 = dock_layout("d")
+    ),
+    active = "v2"
+  )
+
+  lys <- board_layouts(brd)
+
+  expect_identical(
+    str_value(lys),
+    paste(
+      "<dock_layouts[2]>",
+      "  v1: <dock_layout> d, h",
+      "  v2: <dock_layout> d (active)",
+      sep = "\n"
+    )
+  )
+
+  expect_output(
+    str(lys),
+    "v2: <dock_layout> d (active)",
+    fixed = TRUE
+  )
+})
