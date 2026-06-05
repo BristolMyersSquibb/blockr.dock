@@ -45,3 +45,42 @@ test_that("dock board", {
     board_options(empty)
   )
 })
+
+test_that("str_value.dock_board renders every section", {
+
+  board <- new_dock_board(
+    blocks = c(a = new_dataset_block("iris"), b = new_head_block()),
+    links = c(ab = new_link("a", "b", "data")),
+    stacks = list(
+      grp = new_dock_stack(c("a", "b"), name = "Group A", color = "#ff0000")
+    ),
+    layouts = list(one = dock_layout("a"), two = dock_layout("b")),
+    active = "two",
+    extensions = new_edit_board_extension()
+  )
+
+  expect_snapshot(cat(str_value(board)))
+})
+
+test_that("str_value.dock_board renders empty sections", {
+
+  board <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(main = dock_layout("a"))
+  )
+
+  expect_snapshot(cat(str_value(board)))
+})
+
+test_that("str() on a dock_board displays via the inherited str.board", {
+
+  board <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(main = dock_layout("a")),
+    extensions = new_edit_board_extension()
+  )
+
+  # No str.dock_board method exists: the inherited str.board re-dispatches
+  # str_value() to str_value.dock_board, so the dock sections still display.
+  expect_snapshot(str(board))
+})
