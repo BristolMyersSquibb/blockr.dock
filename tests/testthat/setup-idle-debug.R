@@ -1,15 +1,75 @@
 # Temporary diagnostic for the intermittent e2e "did not become stable"
-# failures. shinytest2 evaluates its init readiness / idle checks through
-# `chromote_eval()` and collapses any browser-side exception into one opaque
-# message, so a CI failure tells us nothing actionable. Trace that function's
-# exit: whenever one of those checks returns a JS exception, print the real
-# exception text and a snapshot of jQuery / readiness / page state at that
-# instant. Fires only on failure; no behavioural change. Remove once a failing
-# run has been captured.
+# failures. Two traces, both produce output only on failure; no behavioural
+# change.
+#
+#   1. `app_init_browser_log()` runs once per init, just before the navigate
+#      and with the chromote session in hand. Trace it to attach CDP listeners
+#      that record the navigation/context lifecycle (frameNavigated,
+#      executionContext created/destroyed/cleared, loadEventFired).
+#
+#   2. shinytest2 collapses any browser-side exception from its init readiness
+#      / idle checks into one opaque "did not become stable". Trace
+#      `chromote_eval()` on exit: when an init check returns a JS exception,
+#      print the real exception text, a snapshot of jQuery / readiness / page
+#      state, and the recorded lifecycle timeline -- the sequence a
+#      point-in-time probe cannot show.
+#
+# Remove once a failing run has pinned the trigger.
 
 if (requireNamespace("shinytest2", quietly = TRUE)) {
 
-  install_idle_trace <- function() {
+  lc <- new.env(parent = emptyenv())
+  lc$events <- character()
+  lc$t0 <- NULL
+  options(blockr_idle_lifecycle = lc)
+
+  install_traces <- function() {
+
+    trace(
+      "app_init_browser_log",
+      where = asNamespace("shinytest2"),
+      print = FALSE,
+      exit = quote({
+        lc <- getOption("blockr_idle_lifecycle")
+
+        if (!is.null(lc)) {
+
+          lc$events <- character()
+          lc$t0 <- Sys.time()
+
+          blank <- function(x) if (is.null(x)) "" else x
+          rec <- function(line) {
+            ms <- as.numeric(Sys.time() - lc$t0, units = "secs") * 1000
+            lc$events <- c(lc$events, sprintf("%8.1fms  %s", ms, line))
+          }
+          sub <- function(ev, fn) ev(wait_ = FALSE, callback_ = fn)
+          sess <- self$get_chromote_session()
+
+          tryCatch({
+            sess$Page$enable(wait_ = FALSE)
+            sess$Runtime$enable(wait_ = FALSE)
+            sub(sess$Page$frameNavigated, function(m) {
+              rec(paste0("navigated url=", blank(m$frame$url)))
+            })
+            sub(sess$Page$loadEventFired, function(m) rec("loadEventFired"))
+            sub(sess$Runtime$executionContextCreated, function(m) {
+              rec(paste0("ctx created id=", m$context$id,
+                         " origin=", blank(m$context$origin)))
+            })
+            sub(sess$Runtime$executionContextDestroyed, function(m) {
+              rec(paste0("ctx destroyed id=", m$executionContextId))
+            })
+            sub(sess$Runtime$executionContextsCleared, function(m) {
+              rec("ctx all cleared (navigation)")
+            })
+          }, error = function(e) {
+            msg <- paste0("[attach failed: ", conditionMessage(e), "]")
+            lc$events <- c(lc$events, msg)
+          })
+        }
+      })
+    )
+
     trace(
       "chromote_eval",
       where = asNamespace("shinytest2"),
@@ -48,6 +108,12 @@ if (requireNamespace("shinytest2", quietly = TRUE)) {
             " frames=", probe("frames.length")
           )
           message("href : ", probe("window.location.href"))
+
+          lc <- getOption("blockr_idle_lifecycle")
+          if (!is.null(lc) && length(lc$events)) {
+            message("CDP nav/context timeline (from init, pre-navigate):")
+            for (ev in lc$events) message("  ", ev)
+          }
           message("----------------------------------------------------")
         }
       })
@@ -55,16 +121,17 @@ if (requireNamespace("shinytest2", quietly = TRUE)) {
   }
 
   tryCatch(
-    suppressMessages(install_idle_trace()),
+    suppressMessages(install_traces()),
     error = function(e) {
-      message("[idle-debug] trace not installed: ", conditionMessage(e))
+      message("[idle-debug] traces not installed: ", conditionMessage(e))
     }
   )
 
   withr::defer(
-    suppressMessages(suppressWarnings(
+    suppressMessages(suppressWarnings({
+      untrace("app_init_browser_log", where = asNamespace("shinytest2"))
       untrace("chromote_eval", where = asNamespace("shinytest2"))
-    )),
+    })),
     teardown_env()
   )
 }
