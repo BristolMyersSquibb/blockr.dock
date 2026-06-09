@@ -22,6 +22,20 @@ $(function () {
     });
   };
 
+  // Views are addressed by a stable id (`data-view-id`); the visible
+  // text (`.blockr-view-item-name`) is a free-form display label. Switch,
+  // remove and rename all travel by id, so a rename never re-keys.
+  var itemName = function ($item) {
+    return $item.find('.blockr-view-item-name').text();
+  };
+
+  var setToggleLabel = function ($el, text) {
+    $el
+      .closest('.blockr-view-dropdown')
+      .find('.blockr-view-toggle-label')
+      .text(text);
+  };
+
   var viewBinding = new Shiny.InputBinding();
 
   $.extend(viewBinding, {
@@ -30,14 +44,17 @@ $(function () {
     },
 
     getValue: function (el) {
-      return $(el).find('.blockr-view-item.active').attr('data-view-name') || null;
+      return $(el).find('.blockr-view-item.active').attr('data-view-id') || null;
     },
 
     setValue: function (el, value) {
       $(el).find('.blockr-view-item').removeClass('active');
-      $(el)
-        .find('.blockr-view-item[data-view-name="' + value + '"]')
+      var $item = $(el)
+        .find('.blockr-view-item[data-view-id="' + value + '"]')
         .addClass('active');
+      if ($item.length) {
+        setToggleLabel($(el), itemName($item));
+      }
     },
 
     subscribe: function (el, callback) {
@@ -60,11 +77,7 @@ $(function () {
         $nav.find('.blockr-view-item').removeClass('active');
         $item.addClass('active');
 
-        var viewName = $item.attr('data-view-name');
-        $nav
-          .closest('.blockr-view-dropdown')
-          .find('.blockr-view-toggle-label')
-          .text(viewName);
+        setToggleLabel($nav, itemName($item));
 
         callback(true);
       });
@@ -92,17 +105,15 @@ $(function () {
           committed = true;
 
           var rawName = $input.val().trim();
-          // Validate: non-empty, alphanumeric/spaces/hyphens/underscores only,
-          // and not a duplicate of another view
+          // The name is a free-form display label: the only checks are
+          // non-empty and not a duplicate of another view's name.
           var errorMsg = null;
           if (rawName.length === 0) {
             errorMsg = 'View name cannot be empty.';
-          } else if (!/^[a-zA-Z0-9 _-]+$/.test(rawName)) {
-            errorMsg = 'Invalid name. Only letters, numbers, spaces, hyphens and underscores are allowed.';
           } else {
             var $siblings = $item.closest('.blockr-view-nav').find('.blockr-view-item');
             $siblings.each(function () {
-              if (this !== $item[0] && $(this).attr('data-view-name') === rawName) {
+              if (this !== $item[0] && itemName($(this)) === rawName) {
                 errorMsg = 'A view with this name already exists.';
                 return false; // break
               }
@@ -118,19 +129,15 @@ $(function () {
           $input.replaceWith($newName);
 
           if (newName !== currentName) {
-            $item.attr('data-view-name', newName);
-
+            // The id is stable across a rename; only the label changes.
             if ($item.hasClass('active')) {
-              $item
-                .closest('.blockr-view-dropdown')
-                .find('.blockr-view-toggle-label')
-                .text(newName);
+              setToggleLabel($item.closest('.blockr-view-dropdown'), newName);
             }
 
             var $nav = $item.closest('.blockr-view-nav');
-            var id = $nav.attr('id');
-            Shiny.setInputValue(id + '_rename', {
-              from: currentName,
+            var navId = $nav.attr('id');
+            Shiny.setInputValue(navId + '_rename', {
+              id: $item.attr('data-view-id'),
               to: newName
             }, { priority: 'event' });
           }
@@ -169,11 +176,11 @@ $(function () {
         e.preventDefault();
 
         var $item = $(this).closest('.blockr-view-item');
-        var viewName = $item.attr('data-view-name');
+        var viewId = $item.attr('data-view-id');
         var $nav = $item.closest('.blockr-view-nav');
-        var id = $nav.attr('id');
+        var navId = $nav.attr('id');
 
-        Shiny.setInputValue(id + '_remove', viewName, { priority: 'event' });
+        Shiny.setInputValue(navId + '_remove', viewId, { priority: 'event' });
       });
 
       // Add click
@@ -182,9 +189,9 @@ $(function () {
         e.preventDefault();
 
         var $nav = $(this).closest('.blockr-view-nav');
-        var id = $nav.attr('id');
+        var navId = $nav.attr('id');
 
-        Shiny.setInputValue(id + '_add', Date.now(), { priority: 'event' });
+        Shiny.setInputValue(navId + '_add', Date.now(), { priority: 'event' });
       });
     },
 
@@ -195,20 +202,17 @@ $(function () {
     receiveMessage: function (el, data) {
       if (data.hasOwnProperty('value')) {
         this.setValue(el, data.value);
-        $(el)
-          .closest('.blockr-view-dropdown')
-          .find('.blockr-view-toggle-label')
-          .text(data.value);
       }
 
       if (data.hasOwnProperty('add')) {
-        var name = data.add;
+        var addId = data.add.id;
+        var addName = data.add.name;
         var canCrud = data.canCrud !== false;
         var newItem = $('<div>')
           .addClass('dropdown-item blockr-view-item')
-          .attr('data-view-name', name)
+          .attr('data-view-id', addId)
           .append(
-            $('<span>').addClass('blockr-view-item-name').text(name)
+            $('<span>').addClass('blockr-view-item-name').text(addName)
           );
 
         if (canCrud) {
@@ -243,30 +247,23 @@ $(function () {
         // Activate the new item and update toggle label
         $(el).find('.blockr-view-item').removeClass('active');
         newItem.addClass('active');
-        $(el)
-          .closest('.blockr-view-dropdown')
-          .find('.blockr-view-toggle-label')
-          .text(name);
+        setToggleLabel($(el), addName);
       }
 
       if (data.hasOwnProperty('remove')) {
         $(el)
-          .find('.blockr-view-item[data-view-name="' + data.remove + '"]')
+          .find('.blockr-view-item[data-view-id="' + data.remove + '"]')
           .remove();
       }
 
       if (data.hasOwnProperty('rename')) {
         var $target = $(el).find(
-          '.blockr-view-item[data-view-name="' + data.rename.from + '"]'
+          '.blockr-view-item[data-view-id="' + data.rename.id + '"]'
         );
-        $target.attr('data-view-name', data.rename.to);
         $target.find('.blockr-view-item-name').text(data.rename.to);
 
         if ($target.hasClass('active')) {
-          $(el)
-            .closest('.blockr-view-dropdown')
-            .find('.blockr-view-toggle-label')
-            .text(data.rename.to);
+          setToggleLabel($(el), data.rename.to);
         }
       }
 

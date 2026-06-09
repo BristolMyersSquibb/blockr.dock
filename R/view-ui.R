@@ -15,12 +15,15 @@ view_nav_ui <- function(id, views) {
   ns <- NS(id)
   nav_id <- ns("view_nav")
   active <- active_view(views)
+  active_nm <- unname(view_names(views)[active])
   can_crud <- views_can_crud(views)
 
-  items <- lapply(names(views), function(view_name) {
-    view_item_ui(view_name, active = identical(view_name, active),
-                 can_crud = can_crud)
-  })
+  items <- map(
+    view_item_ui,
+    names(views),
+    view_names(views),
+    MoreArgs = list(active_id = active, can_crud = can_crud)
+  )
 
   add_btn <- NULL
   if (can_crud) {
@@ -40,7 +43,7 @@ view_nav_ui <- function(id, views) {
       `data-bs-toggle` = "dropdown",
       `aria-expanded` = "false",
       bsicons::bs_icon("journals"),
-      tags$span(class = "blockr-view-toggle-label", active)
+      tags$span(class = "blockr-view-toggle-label", active_nm)
     ),
     div(
       class = "dropdown-menu blockr-view-nav",
@@ -53,10 +56,11 @@ view_nav_ui <- function(id, views) {
 }
 
 #' @noRd
-view_item_ui <- function(view_name, active = FALSE, can_crud = FALSE) {
+view_item_ui <- function(view_id, view_name, active_id = NULL,
+                         can_crud = FALSE) {
 
   cls <- paste("dropdown-item blockr-view-item",
-               if (active) "active" else "")
+               if (identical(view_id, active_id)) "active" else "")
 
   actions <- NULL
   if (can_crud) {
@@ -79,7 +83,7 @@ view_item_ui <- function(view_name, active = FALSE, can_crud = FALSE) {
 
   tags$div(
     class = cls,
-    `data-view-name` = view_name,
+    `data-view-id` = view_id,
     tags$span(class = "blockr-view-item-name", view_name),
     actions
   )

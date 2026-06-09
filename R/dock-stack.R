@@ -150,6 +150,11 @@ format.dock_stack <- function(x, ...) {
 }
 
 #' @export
+str_value.dock_stack <- function(x, ...) {
+  paste0(NextMethod(), " Color: \"", stack_color(x), "\"")
+}
+
+#' @export
 as.list.dock_stack <- function(x, ...) {
   list(
     blocks = as.character(x),

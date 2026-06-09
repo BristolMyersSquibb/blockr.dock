@@ -4,6 +4,31 @@ test_that("panel layout", {
   expect_snapshot(draw_panel_tree(list("a", list("b", "c"))))
 })
 
+test_that("an invalid layout node reports a legible error", {
+  expect_error(
+    dock_layout("a", active = TRUE),
+    "Unknown layout node type",
+    class = "dock_layout_node_invalid"
+  )
+})
+
+test_that("active_layout<- replaces the active view's layout, keeps its id", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"), B = list("b")),
+    active = "B"
+  )
+
+  active_layout(brd) <- dock_layout("block_panel-a", "block_panel-b")
+
+  expect_identical(active_view(board_layouts(brd)), "B")
+  expect_setequal(
+    layout_panel_ids(active_layout(brd)),
+    c("block_panel-a", "block_panel-b")
+  )
+})
+
 test_that("layout resolution accepts a bare dock_extension", {
 
   blks <- c(a = new_dataset_block(), b = new_head_block())
@@ -54,6 +79,32 @@ test_that("layout resolution accepts a named list of extensions", {
   )
 })
 
+test_that("a keyed extension is addressable in a layout by its list key", {
+
+  blks <- c(a = new_dataset_block(), b = new_head_block())
+  exts <- list(edit = new_edit_board_extension())
+
+  brd <- new_dock_board(
+    blocks = blks,
+    extensions = exts,
+    layouts = list("edit", "a", "b")
+  )
+  expect_setequal(
+    layout_panel_ids(active_layout(brd)),
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+  )
+
+  nested <- new_dock_board(
+    blocks = blks,
+    extensions = exts,
+    layouts = list("edit", list("a", "b"))
+  )
+  expect_setequal(
+    layout_panel_ids(active_layout(nested)),
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+  )
+})
+
 test_that("layout resolution accepts a dock_extensions collection", {
 
   blks <- c(a = new_dataset_block(), b = new_head_block())
@@ -100,17 +151,18 @@ test_that("default_layout uses class-name convention across input forms", {
   )
 })
 
-test_that("dock_layout constructor with active flag selects the view", {
+test_that("new_dock_board(active=) selects the view", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(
       First = list("a"),
-      Second = dock_layout("a", "b", active = TRUE)
-    )
+      Second = dock_layout("a", "b")
+    ),
+    active = "Second"
   )
 
-  expect_identical(active_view(board_layouts(brd)), "Second")
+  expect_identical(active_name(brd), "Second")
   expect_length(layout_panel_ids(active_layout(brd)), 2L)
 })
 
@@ -125,21 +177,12 @@ test_that("layout is stored without panels (no duplication across views)", {
   )
 
   views <- board_layouts(brd)
+  a <- views[[vid(views, "A")]]
+  b <- views[[vid(views, "B")]]
 
-  expect_named(views$A, c("grid", "activeGroup"))
-  expect_false("panels" %in% names(views$A))
-  expect_false("panels" %in% names(views$B))
-})
-
-test_that("dock_layout marks an arrangement active via attribute", {
-
-  v <- dock_layout("a", "b", active = TRUE)
-  expect_true(is_dock_layout(v))
-  expect_setequal(layout_panel_ids(v), c("a", "b"))
-  expect_true(isTRUE(attr(v, "active")))
-
-  expect_null(attr(dock_layout("a"), "active"))
-  expect_null(attr(dock_layout("a", active = FALSE), "active"))
+  expect_named(a, c("grid", "activeGroup"))
+  expect_false("panels" %in% names(a))
+  expect_false("panels" %in% names(b))
 })
 
 test_that("dockview_payload materialises grid + panels on demand", {
@@ -362,4 +405,22 @@ test_that("print.dock_layout returns its input invisibly", {
   ly <- dock_layout("a", "b")
 
   expect_identical(expect_invisible(print(ly)), ly)
+})
+
+test_that("str_value.dock_layout lists the panel object ids", {
+
+  ly <- dock_layout("ext_panel-edit_board_extension", "block_panel-a")
+
+  expect_identical(str_value(ly), "<dock_layout> edit_board_extension, a")
+
+  expect_output(
+    str(ly),
+    "<dock_layout> edit_board_extension, a",
+    fixed = TRUE
+  )
+})
+
+test_that("str_value.dock_layout marks an empty layout", {
+
+  expect_identical(str_value(dock_layout()), "<dock_layout> (empty)")
 })

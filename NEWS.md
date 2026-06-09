@@ -8,18 +8,51 @@
   `stack_color` / `stack_block_selection` / `stack_confirm` and the
   `edit_stack_*` equivalents) are gone in favour of a single
   committed-stack reactive returned by `blockr.ui::stack_menu_server()`.
-  `stack_sidebar_body()` is removed (no in-tree callers remain; out-of
-  -tree consumers migrate to `blockr.ui::stack_menu_ui()`). Drops the
-  `shinyWidgets::colorPickr` floating popover; the new colour picker
+  `stack_sidebar_body()` is removed (no in-tree callers remain;
+  out-of-tree consumers migrate to `blockr.ui::stack_menu_ui()`). Drops
+  the `shinyWidgets::colorPickr` floating popover; the new colour picker
   renders inline in the sidebar. The handlers now pass the board as a
   reactive, so a pinned stack menu stays in sync with board changes
   (removing a block drops its card live); spec validation moved into
-  `blockr.ui` (the dock-side `valid_stack_*` validators are gone), and
-  `dock_stack` colour checks reuse `blockr.ui::is_hex_color()`. The
-  handlers consume the menu's committed `blockr.core` `stacks` object
-  directly (`as_dock_stacks()` re-classes it to `dock_stack`); that
-  coercion now preserves a carried `color` attribute instead of always
-  synthesising a fresh colour.
+  `blockr.ui` (the dock-side `valid_stack_*` validators are gone). The
+  menu builds `dock_stack` objects itself via
+  `blockr.dock::new_dock_stack()` (gated behind
+  `pkg_avail("blockr.dock")`, a Suggests back-edge), so the handlers
+  apply the committed `stacks` object as-is.
+
+* The dock "manager" object is gone. `apply_board_update.dock_board()` is
+  now a pure reducer over `board_layouts()`; all live view surgery
+  (instantiate / tear down / restore / rename / switch) runs in a single
+  closure-resident reconcile pass driven by the committed board, replacing
+  the duplicated delta-driven and UI-driven view CRUD. View init is just the
+  empty-registry case of that pass (create every view, show the active one),
+  so there is no separate init path. The per-session dock state is ordinary
+  closure-private state passed explicitly, not a handle threaded back from
+  the board callback through `dot_args`. Also makes
+  `augment_board_update.dock_board()` idempotent — a view id is minted once
+  rather than re-minted on every augment pass — fixing a view-add loop
+  (#164).
+
+* Views now carry a stable, immutable **id** decoupled from their
+  editable display **name**, mirroring the id / name split used for
+  blocks. `dock_layouts` (and the runtime `dock_mgr$docks` registry) are
+  keyed by id; the name is an attribute read / written via `view_name()`
+  / `view_name<-()` (with `view_names()` for a whole collection), and
+  `active_view()` now returns the active view's id. Renaming a view is a
+  pure name-attribute write — the id, dock module and DOM element are
+  untouched, so no structure is ever re-keyed (and the live-sync rename
+  no longer leaks as remove-then-add). The dock module / DOM ids derive
+  deterministically from the view id (no random per-render minting), and
+  the `views` delta gains a `rename` slot. Naming constraints relax to
+  display concerns (non-empty, unique label). Serialization round-trips
+  ids. In `new_dock_board(layouts = list(...))` the **list name is the
+  view's id** (the container's key, like a block id — minted when
+  absent); the display name is set on the view via `dock_layout(name = )`
+  and falls back to a label derived from the id when unset. The `views`
+  delta addresses existing views by **id** (the only stable handle) —
+  `mod` / `rm` / `active` carry ids; `add` supplies a display name and
+  mints the id. Producers that addressed views by name (e.g.
+  `blockr.assistant`) must switch to ids (#166).
 
 * `dock_layout` objects gain `format()` / `print()` methods that render
   the arrangement as an indented tree: orientation, nested groups with
