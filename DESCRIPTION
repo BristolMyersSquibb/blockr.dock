@@ -35,7 +35,8 @@ Imports:
     jsonlite
 Remotes:
     BristolMyersSquibb/blockr.ui,
-    BristolMyersSquibb/blockr.core
+    BristolMyersSquibb/blockr.core,
+    nbenn/shinytest2@wait-for-app-serving
 Suggests:
     testthat (>= 3.0.0),
     DT,
