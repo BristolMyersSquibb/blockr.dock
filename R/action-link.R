@@ -36,36 +36,9 @@ add_link_action <- function(trigger, board, update, ...) {
       })
 
       observeEvent(committed(), {
-        spec <- committed()
-
-        links <- board_links(board$board)
-        trg_blk <- board_blocks(board$board)[[spec$target]]
-
-        # The menu only renders a port picker for finite-arity targets
-        # with > 1 free slot, so `spec$block_input` arrives NULL for
-        # arity-1 and variadic targets. Resolve the slot ourselves in
-        # those cases: the first free named input, or - for variadic
-        # targets - a freshly generated slot, both via the same helper.
-        chosen_input <- spec$block_input
-        if (is.null(chosen_input) || !nzchar(chosen_input)) {
-          chosen_input <- block_input_select(
-            trg_blk, spec$target, links, mode = "inputs"
-          )[1L]
-        }
-
-        new_lnk <- new_link(
-          from = spec$source,
-          to = spec$target,
-          input = chosen_input
-        )
-
-        update(
-          list(
-            links = list(
-              add = as_links(set_names(list(new_lnk), spec$link_id))
-            )
-          )
-        )
+        # The menu returns a ready-to-apply `links` object (id-keyed, with
+        # the target port already resolved), so just add it.
+        update(list(links = list(add = committed())))
 
         # Close after a single link unless the user pinned the sidebar.
         # When pinned, the menu's own board observer drops the just-wired
