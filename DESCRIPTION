@@ -34,7 +34,7 @@ Imports:
     shinyWidgets,
     jsonlite
 Remotes:
-    BristolMyersSquibb/blockr.ui,
+    BristolMyersSquibb/blockr.ui@add-link-menu,
     BristolMyersSquibb/blockr.core
 Suggests:
     testthat (>= 3.0.0),
@@ -51,7 +51,6 @@ Collate:
     'action-class.R'
     'action-block.R'
     'action-link.R'
-    'action-sidebar.R'
     'action-stack.R'
     'action-ui.R'
     'action-utils.R'

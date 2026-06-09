@@ -4,128 +4,56 @@ add_link_action <- function(trigger, board, update, ...) {
     function(input, output, session) {
 
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-
-      observeEvent(
-        trigger(),
-        {
-          body <- link_sidebar_body(session$ns, board$board, trigger())
-          if (is.null(body)) {
-            notify(
-              "No inputs are currently available.",
-              type = "warning"
-            )
-            return()
-          }
-
-          blockr.ui::show_sidebar(
-            sidebar_id,
-            title = "Create new link",
-            ui = body
-          )
-        }
+      # Pass the board + anchor as reactives: the menu validates the
+      # committed link id itself and keeps an open panel in sync with the
+      # board (a freed-up target reappears, a removed block's card drops),
+      # so this handler is a thin adapter - no dock-side validator, no
+      # manual pool-update.
+      committed <- blockr.ui::link_menu_server(
+        "menu",
+        board = reactive(board$board),
+        anchor = reactive(trigger())
       )
 
-      observeEvent(
-        input$create_link,
-        {
-          req(input$create_link)
+      menu_ui <- function() {
+        blockr.ui::link_menu_ui(
+          session$ns("menu"), board$board, anchor = trigger()
+        )
+      }
 
-          res <- block_input_select(
-            board_blocks(board$board)[[input$create_link]],
-            input$create_link,
-            board_links(board$board),
-            mode = "update",
-            session = session,
-            inputId = "add_link_input"
-          )
+      # The sidebar title carries the anchor so users always see which
+      # block they're connecting; the wording reads correctly whichever
+      # direction the card lives in (OUTGOING / INCOMING).
+      sidebar_title <- function() paste0("Connect ", trigger())
 
-          if (is.null(res)) {
-            notify(
-              "No inputs are available for the selected block.",
-              type = "warning"
+      observeEvent(trigger(), {
+        # The link menu owns its own empty-state, so there's no pre-flight
+        # NULL-check / notification here anymore: a block that can't be
+        # linked still opens the sidebar with an in-place empty message.
+        blockr.ui::show_sidebar(
+          sidebar_id, title = sidebar_title(), ui = menu_ui()
+        )
+      })
+
+      observeEvent(committed(), {
+        # The menu returns a ready-to-apply `links` object (id-keyed, with
+        # the target port already resolved), so just add it.
+        update(list(links = list(add = committed())))
+
+        # Close after a single link unless the user pinned the sidebar.
+        # When pinned, the menu's own board observer drops the just-wired
+        # card in place (no re-render) so the user can add another link.
+        session$onFlushed(
+          function() {
+            isolate(
+              if (!isTRUE(blockr.ui::sidebar_state(sidebar_id)$pinned)) {
+                blockr.ui::hide_sidebar(sidebar_id)
+              }
             )
-            return()
-          }
-        }
-      )
-
-      observeEvent(
-        input$add_link_confirm,
-        {
-          lnk_id <- input$add_link_id
-
-          if (!nchar(lnk_id) || lnk_id %in% board_link_ids(board$board)) {
-            notify(
-              "Please choose a valid link ID.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          lnk_inp <- input$add_link_input
-          trg_blk <- board_blocks(board$board)[[input$create_link]]
-
-          if (!is.na(block_arity(trg_blk))) {
-
-            avail_inps <- block_input_select(
-              trg_blk,
-              input$create_link,
-              board_links(board$board),
-              mode = "inputs"
-            )
-
-            if (!nchar(lnk_inp) || !lnk_inp %in% avail_inps) {
-              notify(
-                "Please choose a valid link input.",
-                type = "warning",
-                session = session
-              )
-
-              return()
-            }
-          }
-
-          new_lnk <- new_link(
-            from = trigger(),
-            to = input$create_link,
-            input = lnk_inp
-          )
-
-          new_lnk <- as_links(set_names(list(new_lnk), lnk_id))
-
-          update(
-            list(links = list(add = new_lnk))
-          )
-
-          # Pinned sidebar: rebuild the form for another link, or close
-          # silently if the link we just added consumed the last input.
-          # `update()` only sets a reactiveVal; the board state is mutated
-          # on the next reactive flush, so defer the availability check
-          # until after the flush; otherwise `board$board` is still the
-          # pre-link snapshot. `onFlushed` runs outside a reactive context,
-          # so `isolate()` is needed to read `board$board`.
-          src_id <- trigger()
-          session$onFlushed(
-            function() {
-              isolate({
-                body <- link_sidebar_body(session$ns, board$board, src_id)
-                if (is.null(body)) {
-                  blockr.ui::hide_sidebar(sidebar_id)
-                } else {
-                  blockr.ui::keep_or_hide_sidebar(
-                    sidebar_id,
-                    title = "Create new link",
-                    ui = body
-                  )
-                }
-              })
-            },
-            once = TRUE
-          )
-        }
-      )
+          },
+          once = TRUE
+        )
+      })
 
       NULL
     },
