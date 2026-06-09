@@ -38,7 +38,7 @@ validate_stack.dock_stack <- function(x) {
 
   col <- stack_color(NextMethod())
 
-  if (!is_string(col) || !blockr.ui::is_hex_color(col)) {
+  if (!is_string(col) || !is_hex_color(col)) {
     blockr_abort(
       "Expecting stack color as string-valued hex color.",
       class = "invalid_stack_color"
@@ -112,7 +112,7 @@ stack_color.dock_stack <- function(x) {
 #' @rdname stack
 #' @export
 `stack_color<-` <- function(x, value) {
-  stopifnot(is_dock_stack(x), is_string(value), blockr.ui::is_hex_color(value))
+  stopifnot(is_dock_stack(x), is_string(value), is_hex_color(value))
   attr(x, "color") <- value
   x
 }
@@ -129,9 +129,7 @@ as_dock_stack.dock_stack <- function(x, ...) {
 }
 
 #' @export
-as_dock_stack.stack <- function(x,
-                                color = attr(x, "color") %||%
-                                  suggest_new_colors(), ...) {
+as_dock_stack.stack <- function(x, color = suggest_new_colors(), ...) {
 
   attr(x, "color") <- color
 
@@ -175,26 +173,13 @@ as_dock_stacks <- function(x) {
     return(x)
   }
 
-  # A non-dock stack may already carry a `color` attribute (e.g. one
-  # built by `blockr.ui`'s stack menu via `new_stack(..., color = )`):
-  # keep it. Only stacks lacking a colour get a freshly suggested one,
-  # seeded against the existing palette + the carried colours.
-  carried <- chr_ply(
-    x[todo],
-    function(s) attr(s, "color", exact = TRUE) %||% NA_character_
+  new_col <- suggest_new_colors(
+    chr_ply(x[!todo], stack_color),
+    n = sum(todo)
   )
-  cols <- carried
-  need <- is.na(carried)
-
-  if (any(need)) {
-    cols[need] <- suggest_new_colors(
-      c(chr_ply(x[!todo], stack_color), carried[!need]),
-      n = sum(need)
-    )
-  }
 
   x[todo] <- set_names(
-    map(as_dock_stack, x[todo], cols),
+    map(as_dock_stack, x[todo], new_col),
     names(x[todo])
   )
 

@@ -21,10 +21,10 @@ add_stack_action <- function(trigger, board, update, ...) {
       })
 
       observeEvent(committed(), {
-        # The menu returns a `blockr.core` stacks object (id-keyed, colour
-        # carried as an attribute); `as_dock_stacks()` re-classes it to
-        # `dock_stack` preserving that colour. No reshaping here.
-        update(list(stacks = list(add = as_dock_stacks(committed()))))
+        # The menu returns an id-keyed stacks object of `dock_stack`
+        # objects (built via `blockr.dock::new_dock_stack()`), ready to
+        # apply as-is.
+        update(list(stacks = list(add = committed())))
 
         # `update()` only sets a reactiveVal; the board state is mutated
         # on the next reactive flush, so defer the sidebar rebuild until
@@ -108,10 +108,9 @@ edit_stack_action <- function(trigger, board, update, ...) {
           return()
         }
 
-        # Re-class to `dock_stack` first (preserving the carried colour),
-        # so the `stack_*()` accessors read the real values - on a bare
-        # core `stack`, `stack_color()` returns a placeholder.
-        stk <- as_dock_stacks(committed())[[id]]
+        # The committed stacks are already `dock_stack` objects, so the
+        # `stack_*()` accessors below read the real colour / name values.
+        stk <- committed()[[id]]
 
         # `mod` entries are partial-arg deltas applied via `update_stack()`
         # on the blockr.core side (a full `stacks` object trips
