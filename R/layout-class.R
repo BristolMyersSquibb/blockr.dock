@@ -25,8 +25,14 @@
 #'
 #' `dock_layout()` accepts `orientation = "horizontal" | "vertical"`
 #' for the top-level split direction, `sizes` for the root-branch
-#' ratios, and `active = TRUE` to mark this layout as the
-#' initially-active view in a `dock_layouts` collection.
+#' ratios, and `name` for the view's display label. In
+#' `new_dock_board(layouts = list(...))` the list name is the view's
+#' stable *id* (the container's key, like a block id), minted when
+#' absent; `name` sets the free-form display label on the view itself.
+#' When no name is given, one is derived from the id for display. Which
+#' view starts active is a property of the collection, not of any one
+#' layout: pass `new_dock_board(active = )` (a view id) to choose it,
+#' defaulting to the first.
 #'
 #' A *view* is the conceptual page-level container; a *layout* is the
 #' panel arrangement inside a view. The dockview-shape `grid + panels`
@@ -46,11 +52,14 @@
 #'   `panels()`, panel IDs. Otherwise reserved for generic consistency.
 #' @param orientation Top-level split direction; one of `"horizontal"`
 #'   (default) or `"vertical"`.
-#' @param active For `dock_layout()`, logical: mark this layout as the
-#'   initially-active view. For `panels()`, the ID of the tab to open by
-#'   default.
+#' @param active For `panels()`, the ID of the tab to open by default.
 #' @param sizes Numeric vector parallel to `...`, giving each child's
 #'   share of the parent (positive; need not sum to 1).
+#' @param name For `dock_layout()`, an optional display label for the
+#'   view (free-form). When omitted, a label is derived from the view's
+#'   id. The view's id is the list name in
+#'   `new_dock_board(layouts = list(...))`, minted when absent and unique
+#'   across the views of a `dock_layouts`.
 #' @param blocks,extensions Dock board components. For `default_layout()`
 #'   the components to arrange; for `as_dock_layout()`, optional, used to
 #'   resolve bare IDs and validate the result.
@@ -67,10 +76,6 @@
 #'
 #' # The default arrangement for a given set of blocks and extensions
 #' default_layout(blks, exts)
-#'
-#' # Mark a layout as the initially-active view in a `dock_layouts`
-#' # collection
-#' dock_layout("a", "b", active = TRUE)
 #'
 #' # Tabbed leaf with an explicit open tab
 #' panels("a", "b", "edit_board_extension", active = "edit_board_extension")
@@ -100,7 +105,7 @@
 #' @rdname layout
 #' @export
 dock_layout <- function(..., orientation = c("horizontal", "vertical"),
-                        active = FALSE, sizes = NULL) {
+                        sizes = NULL, name = NULL) {
 
   orientation <- match.arg(orientation)
   children <- list(...)
@@ -113,10 +118,15 @@ dock_layout <- function(..., orientation = c("horizontal", "vertical"),
     new_dock_group(children, sizes)
   }
 
-  new_dock_layout(
-    grid = build_grid_tree(root_spec, orientation = orientation),
-    active = active
+  res <- new_dock_layout(
+    grid = build_grid_tree(root_spec, orientation = orientation)
   )
+
+  if (!is.null(name)) {
+    view_name(res) <- name
+  }
+
+  res
 }
 
 #' @rdname layout
@@ -190,8 +200,7 @@ validate_sizes <- function(sizes, children) {
   invisible(NULL)
 }
 
-new_dock_layout <- function(grid = NULL, active_group = NULL,
-                            active = FALSE) {
+new_dock_layout <- function(grid = NULL, active_group = NULL) {
 
   if (is.null(grid)) {
     grid <- build_grid_tree(NULL)
@@ -203,12 +212,7 @@ new_dock_layout <- function(grid = NULL, active_group = NULL,
     content[["activeGroup"]] <- coal(active_group, "1")
   }
 
-  set_active_view(
-    validate_dock_layout(
-      structure(content, class = "dock_layout")
-    ),
-    active
-  )
+  validate_dock_layout(structure(content, class = "dock_layout"))
 }
 
 #' @param x Object
@@ -293,6 +297,25 @@ format.dock_layout <- function(x, ..., bare = TRUE) {
 print.dock_layout <- function(x, ...) {
   cat(format(x, ...), sep = "\n")
   invisible(x)
+}
+
+#' @export
+str_value.dock_layout <- function(x, ...) {
+
+  ids <- panel_obj_ids(layout_panel_ids(x))
+
+  if (!length(ids)) {
+    return("<dock_layout> (empty)")
+  }
+
+  paste0("<dock_layout> ", paste0(ids, collapse = ", "))
+}
+
+#' @importFrom utils str
+#' @export
+str.dock_layout <- function(object, ...) {
+  cat(" ", str_value(object), "\n", sep = "")
+  invisible(object)
 }
 
 flip_orientation <- function(x) {
@@ -567,7 +590,7 @@ build_grid_tree <- function(spec, orientation = "horizontal") {
     }
 
     blockr_abort(
-      "Unknown layout node type: {.cls {class(node)}}.",
+      "Unknown layout node type: {class(node)}.",
       class = "dock_layout_node_invalid"
     )
   }
@@ -614,10 +637,17 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
   ext_coll <- as_dock_extensions(extensions)
 
   layout <- as_dock_layout(layout)
+  view_nm <- view_name(layout)
+
+  ext_pid <- as_ext_panel_id(ext_coll)
+  ext_key <- ext_alias_ids(ext_coll)
+  ext_cls <- names(ext_coll)
+
+  aliased <- ext_key != ext_cls
 
   id_map <- set_names(
-    c(as_ext_panel_id(ext_coll), as_block_panel_id(blocks)),
-    c(names(ext_coll), names(blocks))
+    c(ext_pid, ext_pid[aliased], as_block_panel_id(blocks)),
+    c(ext_key, ext_cls[aliased], names(blocks))
   )
 
   panel_ids <- grid_panel_ids(layout[["grid"]])
@@ -633,8 +663,6 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
         class = "extension_block_name_clash"
       )
 
-      was_active <- is_active_view(layout)
-
       spec <- list()
       if (length(ext_coll)) {
         spec <- c(spec, list(as.character(as_ext_panel_id(ext_coll))))
@@ -643,12 +671,16 @@ resolve_dock_layout <- function(blocks = list(), extensions = list(),
         spec <- c(spec, list(as.character(as_block_panel_id(blocks))))
       }
 
-      layout <- set_active_view(do.call(dock_layout, spec), was_active)
+      layout <- do.call(dock_layout, spec)
 
     } else {
 
       layout[["grid"]] <- rewrite_grid_leaves(layout[["grid"]], id_map)
     }
+  }
+
+  if (!is.null(view_nm)) {
+    view_name(layout) <- view_nm
   }
 
   validate_dock_layout(layout, blocks)

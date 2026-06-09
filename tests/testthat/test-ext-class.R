@@ -41,6 +41,18 @@ test_that("dock extension validation", {
       structure(
         list(ui = 1L, server = 1L),
         name = "test",
+        description = 1L,
+        class = c("test_extension", "dock_extension")
+      )
+    ),
+    class = "dock_extension_description_invalid"
+  )
+
+  expect_error(
+    validate_extension(
+      structure(
+        list(ui = 1L, server = 1L),
+        name = "test",
         class = c("test_extension", "dock_extension")
       )
     ),
@@ -99,6 +111,18 @@ test_that("new_dock_extension validates external_ctrl", {
   expect_identical(attr(ctrl_ext(), "external_ctrl"), TRUE)
 })
 
+test_that("extension description defaults to NULL and is accessible", {
+
+  expect_null(extension_description(ctrl_ext()))
+
+  desc <- "References block results via blockr://<block_id>."
+
+  expect_identical(
+    extension_description(new_edit_board_extension(description = desc)),
+    desc
+  )
+})
+
 test_that("ext_ctor_inputs drops dots", {
 
   ext <- ctrl_ext(ctor = function(content = "", select = "", ...) NULL)
@@ -144,4 +168,80 @@ test_that("validate_ext_srv_result enforces controllable reactiveVals", {
   expect_silent(
     validate_ext_srv_result(list(state = list(content = reactive("x"))), off)
   )
+})
+
+test_that("str_value.dock_extension lists ctor inputs, marking controllable", {
+
+  ext <- ctrl_ext(
+    external_ctrl = "content",
+    ctor = function(content = "", select = "") NULL
+  )
+
+  expect_identical(str_value(ext), "<doc_extension> content*, select")
+
+  expect_output(
+    str(ext),
+    "<doc_extension> content*, select",
+    fixed = TRUE
+  )
+})
+
+test_that("str_value.dock_extension renders a stateless extension bare", {
+
+  expect_identical(
+    str_value(new_edit_board_extension()),
+    "<edit_board_extension>"
+  )
+})
+
+test_that("str_value.dock_extensions renders one line per extension", {
+
+  exts <- as_dock_extensions(
+    list(
+      ctrl_ext(
+        external_ctrl = "content",
+        ctor = function(content = "", select = "") NULL
+      ),
+      new_edit_board_extension()
+    )
+  )
+
+  expect_identical(
+    str_value(exts),
+    paste(
+      "<dock_extensions[2]>",
+      "  doc_extension: <doc_extension> content*, select",
+      "  edit_board_extension: <edit_board_extension>",
+      sep = "\n"
+    )
+  )
+
+  expect_output(
+    str(exts),
+    "doc_extension: <doc_extension> content*, select",
+    fixed = TRUE
+  )
+})
+
+test_that("str_value.dock_extensions keys lines by the container alias", {
+
+  exts <- as_dock_extensions(
+    list(my_doc = ctrl_ext(ctor = function() NULL))
+  )
+
+  expect_identical(names(exts), "doc_extension")
+
+  expect_identical(
+    str_value(exts),
+    paste(
+      "<dock_extensions[1]>",
+      "  my_doc: <doc_extension>",
+      sep = "\n"
+    )
+  )
+})
+
+test_that("str_value.dock_extensions handles an empty container", {
+
+  expect_identical(str_value(new_dock_extensions()), "<dock_extensions[0]>")
 })

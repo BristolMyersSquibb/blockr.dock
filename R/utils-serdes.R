@@ -47,7 +47,7 @@ blockr_ser.dock_layout <- function(x, data, ...) {
   list(
     object = class(x),
     payload = layout_to_spec(payload),
-    active = is_active_view(payload)
+    name = view_name(payload)
   )
 }
 
@@ -83,7 +83,6 @@ blockr_ser.dock_extensions <- function(x, data, ...) {
 #' @export
 blockr_deser.dock_layout <- function(x, data, ...) {
   payload <- data[["payload"]]
-  active <- isTRUE(data[["active"]])
 
   # Legacy payloads (pre-decoupling) embed dockview's `grid` tree directly,
   # possibly alongside a now-redundant `panels` map. Discriminate by shape:
@@ -95,15 +94,29 @@ blockr_deser.dock_layout <- function(x, data, ...) {
     spec_to_layout(payload)
   }
 
-  set_active_view(layout, active)
+  # Which view is active is restored at the container level from
+  # `dock_layouts`' `active` field; a per-view `active` boolean in older
+  # payloads is ignored here.
+  if (is_string(data[["name"]])) {
+    view_name(layout) <- data[["name"]]
+  }
+
+  layout
 }
 
 #' @export
 blockr_deser.dock_layouts <- function(x, data, ...) {
   payload <- data[["payload"]]
-  v_list <- lapply(payload[["views"]], blockr_deser)
-  res <- dock_layouts(v_list)
-  active_view(res) <- payload[["active"]]
+
+  # `views` is keyed by stable id; each carries its display name (when
+  # set). The active view is recorded once, at the container level, and
+  # restored by id below.
+  res <- reconstruct_dock_layouts(lapply(payload[["views"]], blockr_deser))
+
+  if (is_string(payload[["active"]]) && payload[["active"]] %in% names(res)) {
+    active_view(res) <- payload[["active"]]
+  }
+
   res
 }
 
@@ -209,7 +222,7 @@ grid_to_spec <- function(grid) {
     }
 
     blockr_abort(
-      "Unknown grid node type: {.val {node[['type']]}}.",
+      "Unknown grid node type: {node[['type']]}.",
       class = "dock_layout_wire_invalid"
     )
   }

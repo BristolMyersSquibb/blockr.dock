@@ -62,3 +62,26 @@ test_that("update_stack.dock_stack merges delta", {
   expect_identical(stack_color(res), "#ff0000")
   expect_identical(stack_blocks(res), c("a", "b"))
 })
+
+test_that("str_value.dock_stack appends the stack colour", {
+
+  ds <- new_dock_stack(blocks = c("a", "b"), name = "Hi", color = "#ff0000")
+
+  expect_identical(
+    str_value(ds),
+    "<dock_stack> \"Hi\": a, b Color: \"#ff0000\""
+  )
+
+  empty <- new_dock_stack(name = "Empty", color = "#00ff00")
+
+  expect_identical(
+    str_value(empty),
+    "<dock_stack> \"Empty\" Color: \"#00ff00\""
+  )
+
+  expect_output(
+    str(ds),
+    "<dock_stack> \"Hi\": a, b Color: \"#ff0000\"",
+    fixed = TRUE
+  )
+})

@@ -15,8 +15,8 @@
 dock_layout(
   ...,
   orientation = c("horizontal", "vertical"),
-  active = FALSE,
-  sizes = NULL
+  sizes = NULL,
+  name = NULL
 )
 
 panels(..., active = NULL)
@@ -43,17 +43,21 @@ IDs, character vectors, lists, \code{panels()}, or \code{group()}). For
 \item{orientation}{Top-level split direction; one of \code{"horizontal"}
 (default) or \code{"vertical"}.}
 
-\item{active}{For \code{dock_layout()}, logical: mark this layout as the
-initially-active view. For \code{panels()}, the ID of the tab to open by
-default.}
-
 \item{sizes}{Numeric vector parallel to \code{...}, giving each child's
 share of the parent (positive; need not sum to 1).}
 
+\item{name}{For \code{dock_layout()}, an optional display label for the
+view (free-form). When omitted, a label is derived from the view's
+id. The view's id is the list name in
+\code{new_dock_board(layouts = list(...))}, minted when absent and unique
+across the views of a \code{dock_layouts}.}
+
+\item{active}{For \code{panels()}, the ID of the tab to open by default.}
+
 \item{x}{Object}
 
-\item{bare}{For \code{format()} / \code{print()}, drop the \code{block_panel-} /
-\code{ext_panel-} prefixes from panel IDs (see \code{\link[=panel_obj_ids]{panel_obj_ids()}}).}
+\item{bare}{For \code{format()} / \code{print()}, drop the \verb{block_panel-} /
+\verb{ext_panel-} prefixes from panel IDs (see \code{\link[=panel_obj_ids]{panel_obj_ids()}}).}
 
 \item{blocks, extensions}{Dock board components. For \code{default_layout()}
 the components to arrange; for \code{as_dock_layout()}, optional, used to
@@ -97,8 +101,14 @@ arrangement (extensions on top, blocks below) for a board.
 
 \code{dock_layout()} accepts \code{orientation = "horizontal" | "vertical"}
 for the top-level split direction, \code{sizes} for the root-branch
-ratios, and \code{active = TRUE} to mark this layout as the
-initially-active view in a \code{dock_layouts} collection.
+ratios, and \code{name} for the view's display label. In
+\code{new_dock_board(layouts = list(...))} the list name is the view's
+stable \emph{id} (the container's key, like a block id), minted when
+absent; \code{name} sets the free-form display label on the view itself.
+When no name is given, one is derived from the id for display. Which
+view starts active is a property of the collection, not of any one
+layout: pass \code{new_dock_board(active = )} (a view id) to choose it,
+defaulting to the first.
 
 A \emph{view} is the conceptual page-level container; a \emph{layout} is the
 panel arrangement inside a view. The dockview-shape \code{grid + panels}
@@ -125,10 +135,6 @@ exts <- list(
 
 # The default arrangement for a given set of blocks and extensions
 default_layout(blks, exts)
-
-# Mark a layout as the initially-active view in a `dock_layouts`
-# collection
-dock_layout("a", "b", active = TRUE)
 
 # Tabbed leaf with an explicit open tab
 panels("a", "b", "edit_board_extension", active = "edit_board_extension")

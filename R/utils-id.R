@@ -8,8 +8,10 @@
 #' inherit from `dock_handle_id`. For panel IDs, depending on whether the panel
 #' is showing a block or an extension, the inheritance structure additionally
 #' contains `block_panel_id` or `ext_panel_id`, respectively. Similarly, for
-#' handle IDs, we have `block_handle_id` and `ext_handle_id`. All `dock_id`
-#' objects can be converted back to native IDs, by calling `as_obj_id()`.
+#' handle IDs, we have `block_handle_id` and `ext_handle_id` for block /
+#' extension cards, plus `view_handle_id` for a view's DOM container. All
+#' `dock_id` objects can be converted back to native IDs, by calling
+#' `as_obj_id()`.
 #' The utility function `dock_id()` returns a (possibly namespaced) ID of the
 #' `dock` instance that is used to manage all visible panels.
 #'
@@ -41,8 +43,9 @@
 #' that inherit from `dock_panel_id` and `dock_handle_id`, in addition to
 #' a sub-class such as `block_panel_id` or `ext_panel_id` (in the case of
 #' `as_dock_panel_id()`). If a mix of sub-classes is returned, this will be
-#' represented by a list of classed character vectors. Finally, `as_obj_id()`
-#' returns a character vector, as does `dock_id()`.
+#' represented by a list of classed character vectors. `as_view_handle_id()`
+#' maps a view id to its DOM container id (a `view_handle_id`). Finally,
+#' `as_obj_id()` returns a character vector, as does `dock_id()`.
 #' @rdname ids
 #' @export
 dock_id <- function(ns = NULL) {
@@ -525,4 +528,45 @@ as_ext_handle_id.list <- function(x) {
 #' @export
 as_obj_id.ext_handle_id <- function(x) {
   unclass(sub("^ext_handle-", "", x))
+}
+
+new_view_handle_id <- function(x) {
+  new_dock_handle_id(x, "view_handle_id")
+}
+
+maybe_view_handle_id <- function(x) {
+  grepl("^view_handle-", x)
+}
+
+#' @rdname ids
+#' @export
+as_view_handle_id <- function(x) {
+  if (length(x)) {
+    UseMethod("as_view_handle_id")
+  } else {
+    character()
+  }
+}
+
+#' @export
+as_view_handle_id.view_handle_id <- function(x) x
+
+#' @export
+as_view_handle_id.character <- function(x) {
+
+  warn <- maybe_view_handle_id(x)
+
+  if (any(warn)) {
+    blockr_warn(
+      "Potentially converting ID{?s} {x[warn]} again.",
+      class = "maybe_multiple_view_id_conversion"
+    )
+  }
+
+  new_view_handle_id(paste0("view_handle-", x))
+}
+
+#' @export
+as_obj_id.view_handle_id <- function(x) {
+  unclass(sub("^view_handle-", "", x))
 }
