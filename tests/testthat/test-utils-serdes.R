@@ -584,3 +584,95 @@ test_that("legacy dock_layout payload with panels still loads", {
   expect_identical(ly$grid$orientation, "HORIZONTAL")
   expect_identical(ly$activeGroup, "1")
 })
+
+# The payload carries both a flattened spec and a stale dockview `grid`, so
+# the routing choice is observable: 0.1.2+ reads the spec, older and
+# version-less payloads fall back to the grid.
+test_that("producer version routes layout reading ahead of payload shape", {
+
+  payload <- list(
+    object = "dock_layout",
+    payload = list(
+      orientation = "horizontal",
+      children = list("block_panel-a"),
+      grid = list(
+        root = list(
+          type = "leaf",
+          data = list(
+            views = list("block_panel-stale"),
+            activeView = "block_panel-stale",
+            id = "1"
+          ),
+          size = 1
+        ),
+        orientation = "HORIZONTAL"
+      )
+    )
+  )
+
+  versioned <- blockr_deser(payload, producer_version = "0.1.2")
+  expect_identical(layout_panel_ids(versioned), "block_panel-a")
+
+  old <- blockr_deser(payload, producer_version = "0.1.1")
+  expect_identical(layout_panel_ids(old), "block_panel-stale")
+
+  legacy <- blockr_deser(payload)
+  expect_identical(layout_panel_ids(legacy), "block_panel-stale")
+})
+
+test_that("layout_reader_for picks the newest applicable format, order-blind", {
+
+  # The pick must be by highest `since`, not list position, so adding a
+  # future format out of order can't shadow it. Assert both orderings.
+  formats <- list(
+    list(since = "0.1.2", read = function(payload) "spec"),
+    list(since = "0.2.0", read = function(payload) "v2")
+  )
+
+  pick <- function(fmts, v) {
+    reader <- layout_reader_for(numeric_version(v), fmts)
+    if (is.null(reader)) NULL else reader(NULL)
+  }
+
+  for (fmts in list(formats, rev(formats))) {
+    expect_identical(pick(fmts, "0.2.5"), "v2")
+    expect_identical(pick(fmts, "0.1.9"), "spec")
+    expect_null(pick(fmts, "0.1.1"))
+  }
+})
+
+test_that("producer version threads from the board down to layout reading", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(Page = dock_layout("a"))
+  )
+
+  ser <- blockr_ser(brd)
+
+  expect_identical(
+    ser[["constructor"]][["version"]],
+    as.character(utils::packageVersion("blockr.dock"))
+  )
+
+  # Inject a stale dockview `grid` into the spec payload: the spec reader
+  # wins only if the board's producer version reaches the nested layout
+  # reader, exercising the full threading path.
+  views <- ser[["payload"]][["layouts"]][["payload"]][["views"]]
+  views[[1L]][["payload"]][["grid"]] <- list(
+    root = list(
+      type = "leaf",
+      data = list(
+        views = list("block_panel-stale"),
+        activeView = "block_panel-stale",
+        id = "1"
+      ),
+      size = 1
+    ),
+    orientation = "HORIZONTAL"
+  )
+  ser[["payload"]][["layouts"]][["payload"]][["views"]] <- views
+
+  des <- blockr_deser(ser)
+  expect_identical(layout_panel_ids(des[["layouts"]][[1L]]), "block_panel-a")
+})
