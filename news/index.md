@@ -2,6 +2,12 @@
 
 ## blockr.dock (development version)
 
+- Adding a block before the dock view has finished initialising no
+  longer throws `argument is of length zero`. While the dock is
+  uninitialised its layout is `NULL`; `determine_active_views()` now
+  treats that as an empty dock, so the block’s panel is placed freely
+  instead of being stranded in the offcanvas.
+
 - `add_link_action()` now mounts the `blockr.ui` link-menu module and is
   bidirectional: right-clicking a downstream block now lets you pick an
   upstream source, not just a target. The handler passes the board and
