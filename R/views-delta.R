@@ -341,6 +341,47 @@ drop_panels_from_layout <- function(layout, panel_ids) {
   result
 }
 
+# Add a panel to a view's layout as a new tab in its last group (an empty view
+# gets a single-panel grid), making it the open tab. Mirrors the live
+# `determine_panel_pos()` placement closely enough for the structural sync; the
+# exact arrangement is reconciled by the debounced geometry echo.
+append_panel_to_layout <- function(layout, panel_id) {
+
+  nm <- view_name(layout)
+  grid <- layout[["grid"]]
+
+  if (!length(grid_panel_ids(grid))) {
+
+    out <- new_dock_layout(grid = build_grid_tree(list(panel_id)))
+
+  } else {
+
+    leaves <- grid_leaves(grid)
+    last_id <- leaves[[length(leaves)]][["id"]]
+
+    append_to_last <- function(leaf) {
+
+      if (identical(leaf[["data"]][["id"]], last_id)) {
+        leaf[["data"]][["views"]] <- c(
+          leaf[["data"]][["views"]], list(panel_id)
+        )
+        leaf[["data"]][["activeView"]] <- panel_id
+      }
+
+      leaf
+    }
+
+    out <- layout
+    out[["grid"]] <- grid_map_leaves(grid, append_to_last)
+  }
+
+  if (!is.null(nm)) {
+    view_name(out) <- nm
+  }
+
+  validate_dock_layout(out)
+}
+
 # Merge user-supplied `views$mod` with the block-removal cleanup: when
 # both touch a view, the cleanup drops the removed block from whatever
 # layout the user submitted; otherwise the present one wins.

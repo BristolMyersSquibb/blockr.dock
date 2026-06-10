@@ -24,20 +24,58 @@ block_panel_ids <- function(proxy = dock_proxy()) {
   )
 }
 
+# Authoritative server-side panel membership, carried on the dock proxy. Every
+# panel add / remove flows through these helpers, so the set stays in lockstep
+# with the live dock without waiting for the browser's debounced state echo --
+# which is what lets reconcile tell a just-added panel from a stale layout. A
+# bare dock_proxy() (no manage_dock backing) carries no tracker and is left be.
+track_panel_added <- function(proxy, id) {
+  lp <- proxy[["live_panels"]]
+
+  if (is.null(lp)) {
+    return(invisible())
+  }
+
+  pid <- as.character(id)
+  cur <- isolate(lp())
+
+  if (!pid %in% cur) {
+    lp(c(cur, pid))
+  }
+
+  invisible()
+}
+
+track_panel_removed <- function(proxy, id) {
+  lp <- proxy[["live_panels"]]
+
+  if (is.null(lp)) {
+    return(invisible())
+  }
+
+  lp(setdiff(isolate(lp()), as.character(id)))
+
+  invisible()
+}
+
 remove_block_panel <- function(id, proxy = dock_proxy()) {
   pid <- as_block_panel_id(id)
 
   log_debug("removing block panel {pid}")
 
   dockViewR::remove_panel(proxy, pid)
+  track_panel_removed(proxy, pid)
 
   invisible(NULL)
 }
 
 add_block_panel <- function(block, ..., proxy = dock_proxy()) {
-  log_debug("adding block panel {as_block_panel_id(block)}")
+  pid <- as_block_panel_id(block)
+
+  log_debug("adding block panel {pid}")
 
   dockViewR::add_panel(proxy, panel = block_panel(block, ...))
+  track_panel_added(proxy, pid)
 
   invisible(NULL)
 }
@@ -67,6 +105,7 @@ remove_ext_panel <- function(id, proxy = dock_proxy()) {
   log_debug("removing extension panel {pid}")
 
   dockViewR::remove_panel(proxy, pid)
+  track_panel_removed(proxy, pid)
 
   invisible(NULL)
 }
@@ -74,9 +113,12 @@ remove_ext_panel <- function(id, proxy = dock_proxy()) {
 add_ext_panel <- function(ext, ..., proxy = dock_proxy()) {
   stopifnot(is_dock_extension(ext))
 
-  log_debug("adding extension panel {as_ext_panel_id(ext)}")
+  pid <- as_ext_panel_id(ext)
+
+  log_debug("adding extension panel {pid}")
 
   dockViewR::add_panel(proxy, panel = ext_panel(ext, ...))
+  track_panel_added(proxy, pid)
 
   invisible(NULL)
 }

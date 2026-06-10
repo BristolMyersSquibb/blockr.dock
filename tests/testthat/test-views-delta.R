@@ -204,12 +204,16 @@ test_that("reconcile_views syncs the nav and live state on rename", {
   )
 
   # Pre-populate the registry so reconcile sees the views as already
-  # instantiated (no DOM surgery); their live layout is pending (NULL) so the
-  # layout-mod check is skipped and only the rename fires.
+  # instantiated (no DOM surgery). The proxy's membership matches the board and
+  # the live layout is pending (NULL), so the layout check is a no-op and only
+  # the rename fires.
   docks <- new.env(parent = emptyenv())
-  committed_layouts <- new.env(parent = emptyenv())
   for (id in names(board_layouts(brd))) {
-    docks[[id]] <- list(layout = function() NULL)
+    ids <- as.character(layout_panel_ids(board_layouts(brd)[[id]]))
+    docks[[id]] <- list(
+      layout = function() NULL,
+      proxy = list(live_panels = reactiveVal(ids))
+    )
   }
   active_dock <- reactiveValues()
   client_active <- reactiveVal(active_view(board_layouts(brd)))
@@ -222,7 +226,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
 
   isolate(
     reconcile_views(board, function(...) NULL, docks, active_dock,
-                    client_active, client_views, committed_layouts, session)
+                    client_active, client_views, session)
   )
 
   expect_true(
@@ -582,6 +586,28 @@ test_that("drop_panels_from_layout resets the active tab when it is dropped", {
   expect_identical(leaf[["activeView"]], "a")
 })
 
+test_that("append_panel_to_layout appends a tab to the last group", {
+
+  out <- append_panel_to_layout(dock_layout("a", "b"), "c")
+
+  expect_setequal(layout_panel_ids(out), c("a", "b", "c"))
+
+  leaves <- grid_leaves(out[["grid"]])
+  last <- leaves[[length(leaves)]]
+
+  expect_true("c" %in% unlist(last[["views"]]))
+  expect_identical(last[["activeView"]], "c")
+})
+
+test_that("append_panel_to_layout seeds an empty view, keeps the name", {
+
+  empty <- append_panel_to_layout(new_dock_layout(), "a")
+  expect_setequal(layout_panel_ids(empty), "a")
+
+  named <- append_panel_to_layout(dock_layout("a", name = "Page 1"), "b")
+  expect_identical(view_name(named), "Page 1")
+})
+
 test_that("empty views payload causes apply to be a no-op", {
 
   brd <- new_dock_board(
@@ -669,11 +695,17 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
       sendCustomMessage = function(type, message) invisible()
     )
 
-    # Registry pre-populated for every view; the DOM helpers are mocked so the
-    # test exercises reconcile's nav-sync, not the live teardown / switch.
+    # Registry pre-populated for every view (proxy membership matching the
+    # board); the DOM helpers are mocked so the test exercises reconcile's
+    # nav-sync, not the live teardown / switch.
     docks <- new.env(parent = emptyenv())
-    committed_layouts <- new.env(parent = emptyenv())
-    for (id in names(state)) docks[[id]] <- list(layout = function() NULL)
+    for (id in names(state)) {
+      ids <- as.character(layout_panel_ids(state[[id]]))
+      docks[[id]] <- list(
+        layout = function() NULL,
+        proxy = list(live_panels = reactiveVal(ids))
+      )
+    }
     active_dock <- reactiveValues()
     client_active <- reactiveVal(name_to_id[[active_label]])
 
@@ -687,8 +719,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     with_mocked_bindings(
       isolate(
         reconcile_views(board, function(...) NULL, docks, active_dock,
-                        client_active, client_views, committed_layouts,
-                        session)
+                        client_active, client_views, session)
       ),
       remove_view = function(view_id, session, docks) {
         rm(list = view_id, envir = docks)
