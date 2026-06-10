@@ -2,6 +2,46 @@
 
 ## blockr.dock (development version)
 
+- `add_link_action()` now mounts the `blockr.ui` link-menu module and is
+  bidirectional: right-clicking a downstream block now lets you pick an
+  upstream source, not just a target. The handler passes the board and
+  anchor as reactives, so the menu owns link-id validation and keeps a
+  pinned menu in sync with the board itself - removing a link frees a
+  target whose card reappears live, and removing a block drops its card,
+  both without a re-render. The per-field link inputs (`create_link` /
+  `add_link_input` / `add_link_id` / `add_link_confirm`) and the
+  dock-side `valid_link_id` validator are gone in favour of a single
+  committed-spec reactive from
+  [`blockr.ui::link_menu_server()`](https://rdrr.io/pkg/blockr.ui/man/link-menu.html).
+  `link_sidebar_body()` is removed (no in-tree callers remain;
+  out-of-tree consumers migrate to
+  [`blockr.ui::link_menu_ui()`](https://rdrr.io/pkg/blockr.ui/man/link-menu.html)
+  / `link_menu_server()`).
+
+- The add / edit stack action handlers now mount the `blockr.ui`
+  stack-menu module: a multi-select card-list block picker with search,
+  per-category icons, an inline hue / lightness colour picker, and a
+  panel-level form for the stack name / colour / id. The per-field Shiny
+  inputs (`stack_id` / `stack_name` / `stack_color` /
+  `stack_block_selection` / `stack_confirm` and the `edit_stack_*`
+  equivalents) are gone in favour of a single committed-stack reactive
+  returned by
+  [`blockr.ui::stack_menu_server()`](https://rdrr.io/pkg/blockr.ui/man/stack-menu.html).
+  `stack_sidebar_body()` is removed (no in-tree callers remain;
+  out-of-tree consumers migrate to
+  [`blockr.ui::stack_menu_ui()`](https://rdrr.io/pkg/blockr.ui/man/stack-menu.html)).
+  Drops the
+  [`shinyWidgets::colorPickr`](https://dreamrs.github.io/shinyWidgets/reference/colorPickr.html)
+  floating popover; the new colour picker renders inline in the sidebar.
+  The handlers now pass the board as a reactive, so a pinned stack menu
+  stays in sync with board changes (removing a block drops its card
+  live); spec validation moved into `blockr.ui` (the dock-side
+  `valid_stack_*` validators are gone). The menu builds `dock_stack`
+  objects itself via
+  [`blockr.dock::new_dock_stack()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/stack.md)
+  (gated behind `pkg_avail("blockr.dock")`, a Suggests back-edge), so
+  the handlers apply the committed `stacks` object as-is.
+
 - Layout deserialization now routes on the producing blockr.dock version
   rather than sniffing the payload shape. `blockr_deser.dock_board()`
   reads the producer version off the saved `constructor$version` and
