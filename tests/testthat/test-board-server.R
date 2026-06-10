@@ -747,6 +747,39 @@ test_that("extensions mod state is applied via the update lifecycle", {
   expect_identical(isolate(content()), "# new")
 })
 
+test_that("a live-only panel add folds into board_layouts (#217)", {
+
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(Page = list("a"))
+  )
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  upd <- reactiveVal()
+  res <- with_mock_context(ms, board_server_callback(board_rv, update = upd))
+  ms$flushReact()
+
+  proxy <- isolate(res$dock$proxy)
+  expect_false(is.null(proxy$live_panels))
+
+  # The add-panel modal / show_panel touch only the live dock; board_layouts
+  # must catch up in the same flush (via the fold observer), not the debounced
+  # echo, or a later reconcile would restore a layout missing the new panel.
+  cur <- isolate(proxy$live_panels())
+  isolate(proxy$live_panels(c(cur, "block_panel-b")))
+  ms$flushReact()
+
+  delta <- isolate(upd())
+
+  expect_false(is.null(delta$views$mod))
+  expect_setequal(
+    layout_panel_ids(delta$views$mod[[1L]]),
+    c("block_panel-a", "block_panel-b")
+  )
+})
+
 test_that("extension servers can read peer extension state", {
 
   peers <- NULL

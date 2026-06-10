@@ -553,6 +553,28 @@ manage_dock <- function(
     dock$board_ns <- board_ns
     dock$live_panels <- reactiveVal(as.character(layout_panel_ids(init_layout)))
 
+    # Fold live-only membership changes — the add-panel modal, a closed tab, an
+    # extension show / hide — back into board_layouts in the same flush, so the
+    # panel set stays authoritative server-side and a later board change never
+    # restores a layout that lags the live dock. Block add / remove fold through
+    # the update lifecycle already; this catches the dock-only paths.
+    observeEvent(
+      dock$live_panels(),
+      {
+        layouts <- board_layouts(board$board)
+
+        if (id %in% names(layouts)) {
+
+          folded <- fold_live_membership(layouts[[id]], dock$live_panels())
+
+          if (!is.null(folded)) {
+            update(list(views = list(mod = set_names(list(folded), id))))
+          }
+        }
+      },
+      ignoreInit = TRUE
+    )
+
     if (get_log_level() >= debug_log_level) {
       observeEvent(
         input[[dock_input("active-group")]],

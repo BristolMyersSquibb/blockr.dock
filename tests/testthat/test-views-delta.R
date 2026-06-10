@@ -608,6 +608,20 @@ test_that("append_panel_to_layout seeds an empty view, keeps the name", {
   expect_identical(view_name(named), "Page 1")
 })
 
+test_that("fold_live_membership matches the layout to the live panel set", {
+
+  ly <- dock_layout("a", "b")
+
+  added <- fold_live_membership(ly, c("a", "b", "c"))
+  expect_setequal(layout_panel_ids(added), c("a", "b", "c"))
+
+  dropped <- fold_live_membership(ly, "a")
+  expect_setequal(layout_panel_ids(dropped), "a")
+
+  # Already in sync -> NULL, so the caller skips a no-op update.
+  expect_null(fold_live_membership(ly, c("a", "b")))
+})
+
 test_that("empty views payload causes apply to be a no-op", {
 
   brd <- new_dock_board(

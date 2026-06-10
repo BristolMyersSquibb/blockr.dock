@@ -382,6 +382,31 @@ append_panel_to_layout <- function(layout, panel_id) {
   validate_dock_layout(out)
 }
 
+# Reconcile a view's stored layout to the panel set the live dock now holds,
+# dropping removed panels and appending added ones. Returns `NULL` when the
+# membership already matches, so the caller can skip a no-op update. Lets the
+# dock-only mutation paths (the add-panel modal, a closed tab, an extension
+# show/hide) fold their change into board_layouts without each re-deriving it.
+fold_live_membership <- function(layout, live_ids) {
+
+  current <- layout_panel_ids(layout)
+
+  added <- setdiff(live_ids, current)
+  removed <- setdiff(current, live_ids)
+
+  if (!length(added) && !length(removed)) {
+    return(NULL)
+  }
+
+  out <- drop_panels_from_layout(layout, removed)
+
+  for (pid in added) {
+    out <- append_panel_to_layout(out, pid)
+  }
+
+  out
+}
+
 # Merge user-supplied `views$mod` with the block-removal cleanup: when
 # both touch a view, the cleanup drops the removed block from whatever
 # layout the user submitted; otherwise the present one wins.
