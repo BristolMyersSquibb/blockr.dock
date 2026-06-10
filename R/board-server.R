@@ -7,6 +7,8 @@
 #'
 #' @param board Reactive board state (list with `$board`).
 #' @param update Reactive update signal from blockr.core.
+#' @param visible Reactive write-channel from blockr.core, fed the set of
+#'   on-screen block ids so core can gate off-screen blocks.
 #' @param ... Extension server arguments.
 #' @param session Shiny session.
 #'
@@ -14,7 +16,8 @@
 #'   results.
 #'
 #' @noRd
-board_server_callback <- function(board, update, ..., session = get_session()) {
+board_server_callback <- function(board, update, visible, ...,
+                                  session = get_session()) {
   initial_board <- isolate(board$board)
 
   c_exts <- dock_extensions(initial_board)
@@ -57,6 +60,12 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
       session
     )
   )
+
+  # Gate off-screen blocks from the first flush, before the client reports its
+  # layout (else core's all-visible default evaluates every block at startup).
+  visible(visible_block_ids(active_layout(initial_board)))
+
+  report_visible_observer(visible, client_active, docks)
 
   # Extensions receive active_dock — a reactiveValues that always mirrors
   # whichever view is currently active (swapped by update_active_dock).
@@ -158,6 +167,19 @@ switch_view_observer <- function(session, update, client_active) {
       }
     },
     ignoreInit = TRUE
+  )
+}
+
+report_visible_observer <- function(visible, client_active, docks) {
+
+  active_layout <- reactive({
+    active <- req(client_active())
+    req(docks[[active]])$layout()
+  })
+
+  observeEvent(
+    active_layout(),
+    visible(visible_block_ids(active_layout()))
   )
 }
 
