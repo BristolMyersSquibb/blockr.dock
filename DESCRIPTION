@@ -52,7 +52,6 @@ Collate:
     'action-class.R'
     'action-block.R'
     'action-link.R'
-    'action-sidebar.R'
     'action-stack.R'
     'action-ui.R'
     'action-utils.R'

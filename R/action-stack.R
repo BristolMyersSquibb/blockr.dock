@@ -1,96 +1,47 @@
 add_stack_action <- function(trigger, board, update, ...) {
-
   new_action(
     function(input, output, session) {
-
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-
-      observeEvent(
-        trigger(),
-        {
-          blockr.ui::show_sidebar(
-            sidebar_id,
-            title = "Create new stack",
-            ui = stack_sidebar_body(
-              ns = session$ns,
-              board = board$board,
-              mode = "create"
-            )
-          )
-        }
+      # Pass the board as a reactive: the menu validates the committed
+      # spec (id / name / colour) itself and keeps an open panel in sync
+      # with the board (cards added / removed live), so this handler is a
+      # thin adapter - no dock-side validators, no manual refresh.
+      committed <- blockr.ui::stack_menu_server(
+        "menu", board = reactive(board$board)
       )
 
-      observeEvent(
-        input$stack_confirm,
-        {
-          stk_id <- input$stack_id
+      menu_ui <- function() {
+        blockr.ui::stack_menu_ui(session$ns("menu"), board$board)
+      }
 
-          if (!nchar(stk_id) || stk_id %in% board_stack_ids(board$board)) {
+      observeEvent(trigger(), {
+        blockr.ui::show_sidebar(
+          sidebar_id, title = "Create new stack", ui = menu_ui()
+        )
+      })
 
-            notify(
-              "Please choose a valid stack ID.",
-              type = "warning",
-              session = session
+      observeEvent(committed(), {
+        # The menu returns an id-keyed stacks object of `dock_stack`
+        # objects (built via `blockr.dock::new_dock_stack()`), ready to
+        # apply as-is.
+        update(list(stacks = list(add = committed())))
+
+        # `update()` only sets a reactiveVal; the board state is mutated
+        # on the next reactive flush, so defer the sidebar rebuild until
+        # after the flush. Otherwise `menu_ui()` reads `board$board` from
+        # the pre-add snapshot and re-suggests the just-used stack id.
+        # `onFlushed` runs outside a reactive context, hence `isolate()`.
+        session$onFlushed(
+          function() {
+            isolate(
+              blockr.ui::keep_or_hide_sidebar(
+                sidebar_id, title = "Create new stack", ui = menu_ui()
+              )
             )
-
-            return()
-          }
-
-          sel_blks <- input$stack_block_selection
-
-          if (length(sel_blks) && any(nchar(sel_blks))) {
-            block_ids <- sel_blks[nchar(sel_blks) > 0]
-          } else {
-            block_ids <- character()
-          }
-
-          if (!all(block_ids %in% board_block_ids(board$board))) {
-
-            notify(
-              "Please choose valid block IDs.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          stk_nme <- input$stack_name
-
-          if (!length(stk_nme) || !nchar(stk_nme)) {
-            stk_nme <- id_to_sentence_case(stk_id)
-          }
-
-          stk_col <- input$stack_color
-
-          if (is.null(stk_col) || !nchar(stk_col) || !is_hex_color(stk_col)) {
-
-            notify(
-              "Please choose a valid stack color.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          new_stk <- new_dock_stack(
-            blocks = block_ids,
-            name = stk_nme,
-            color = stk_col
-          )
-
-          new_stk <- as_stacks(set_names(list(new_stk), stk_id))
-
-          update(list(stacks = list(add = new_stk)))
-
-          blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
-            title = "Create new stack",
-            ui = stack_sidebar_body(session$ns, board$board, mode = "create")
-          )
-        }
-      )
+          },
+          once = TRUE
+        )
+      })
 
       NULL
     },
@@ -99,108 +50,101 @@ add_stack_action <- function(trigger, board, update, ...) {
 }
 
 edit_stack_action <- function(trigger, board, update, ...) {
-
   new_action(
     function(input, output, session) {
-
-      ns <- session$ns
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-
-      observeEvent(
-        trigger(),
-        {
-          stack <- board_stacks(board$board)[[trigger()]]
-
-          blockr.ui::show_sidebar(
-            sidebar_id,
-            title = "Edit stack",
-            ui = stack_sidebar_body(
-              ns = ns,
-              board = board$board,
-              mode = "edit",
-              stack = stack,
-              stack_id = trigger()
-            )
-          )
-        }
+      committed <- blockr.ui::stack_menu_server(
+        "menu",
+        board = reactive(board$board),
+        target = reactive(trigger())
       )
 
-      observeEvent(
-        input$edit_stack_confirm,
-        {
-          id <- trigger()
-          stack <- board_stacks(board$board)[[id]]
+      menu_ui <- function() {
+        blockr.ui::stack_menu_ui(
+          session$ns("menu"), board$board, target = trigger()
+        )
+      }
 
-          sel_blks <- input$edit_stack_blocks
+      # The sidebar title carries the stack identifier so users always
+      # see which stack they're editing (the menu body no longer prints
+      # a subtitle of its own).
+      sidebar_title <- function() paste0("Edit stack ", trigger())
 
-          if (length(sel_blks) && any(nchar(sel_blks))) {
-            block_ids <- sel_blks[nchar(sel_blks) > 0]
-          } else {
-            block_ids <- character()
-          }
+      observeEvent(trigger(), {
+        blockr.ui::show_sidebar(
+          sidebar_id, title = sidebar_title(), ui = menu_ui()
+        )
+      })
 
-          if (!all(block_ids %in% board_block_ids(board$board))) {
+      # Close the sidebar the moment the edited stack leaves the board
+      # (removed elsewhere): editing a stack that no longer exists makes
+      # no sense, so don't wait for an "Update" click. Guarded on the
+      # sidebar being open. (If another action had since taken over the
+      # shared slot this could close that form too - a rare
+      # edit-then-switch-then-remove sequence; revisit with sidebar
+      # ownership if it ever bites.)
+      observeEvent(board$board, {
+        id <- trigger()
+        # No-op unless an edit is actually in progress (a valid stack id);
+        # otherwise `trigger()` is NULL / empty (e.g. while another action
+        # mutates the board) and the membership test would error.
+        if (length(id) == 1L && !is.na(id) && nzchar(id) &&
+              !id %in% board_stack_ids(board$board) &&
+              isTRUE(blockr.ui::sidebar_state(sidebar_id)$open)) {
+          blockr.ui::hide_sidebar(sidebar_id)
+        }
+      }, ignoreInit = TRUE)
 
-            notify(
-              "Please choose valid block IDs.",
-              type = "warning",
-              session = session
-            )
+      observeEvent(committed(), {
+        id <- trigger()
 
-            return()
-          }
+        # Safety net for a race (board change not yet observed when the
+        # user clicks): committing for a stack that's gone would error
+        # (the `mod` update and the post-commit `menu_ui()` rebuild both
+        # look it up). Bail and close unless `id` is a present stack.
+        if (!(length(id) == 1L && !is.na(id) && nzchar(id) &&
+                id %in% board_stack_ids(board$board))) {
+          blockr.ui::hide_sidebar(sidebar_id)
+          return()
+        }
 
-          stack_blocks(stack) <- block_ids
+        # The committed stacks are already `dock_stack` objects, so the
+        # `stack_*()` accessors below read the real colour / name values.
+        stk <- committed()[[id]]
 
-          stk_col <- input$edit_stack_color
-
-          if (is.null(stk_col) || !nchar(stk_col) || !is_hex_color(stk_col)) {
-
-            notify(
-              "Please choose a valid stack color.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          stack_color(stack) <- stk_col
-
-          stk_nme <- input$edit_stack_name
-
-          if (!length(stk_nme) || !nchar(stk_nme)) {
-
-            notify(
-              "Please choose a valid stack name.",
-              type = "warning",
-              session = session
-            )
-
-            return()
-          }
-
-          stack_name(stack) <- stk_nme
-
-          stack <- as_stacks(set_names(list(stack), id))
-
-          update(list(stacks = list(mod = stack)))
-
-          # Re-pull the stack so the form reflects the just-saved state.
-          fresh_stack <- board_stacks(board$board)[[trigger()]]
-          blockr.ui::keep_or_hide_sidebar(
-            sidebar_id,
-            title = "Edit stack",
-            ui = stack_sidebar_body(
-              ns,
-              board$board,
-              mode = "edit",
-              stack = fresh_stack,
-              stack_id = trigger()
+        # `mod` entries are partial-arg deltas applied via `update_stack()`
+        # on the blockr.core side (a full `stacks` object trips
+        # `board_update_stacks_mod_entry_invalid`), so unpack the stack
+        # into its fields. Reserved key `blocks` replaces the member ids;
+        # the rest update the named attributes.
+        update(list(
+          stacks = list(
+            mod = set_names(
+              list(list(
+                blocks = stack_blocks(stk),
+                name = stack_name(stk),
+                color = stack_color(stk)
+              )),
+              id
             )
           )
-        }
-      )
+        ))
+
+        # Defer the sidebar rebuild to the next reactive flush so
+        # `menu_ui()` reads the merged board state. Without this, the
+        # rebuilt form shows the pre-edit selection (e.g. a block the
+        # user just removed still appears selected).
+        session$onFlushed(
+          function() {
+            isolate(
+              blockr.ui::keep_or_hide_sidebar(
+                sidebar_id, title = sidebar_title(), ui = menu_ui()
+              )
+            )
+          },
+          once = TRUE
+        )
+      })
 
       NULL
     },
