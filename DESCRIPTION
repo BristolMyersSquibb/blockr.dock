@@ -34,8 +34,8 @@ Imports:
     shinyWidgets,
     jsonlite
 Remotes:
-    BristolMyersSquibb/blockr.ui,
-    BristolMyersSquibb/blockr.core,
+    BristolMyersSquibb/blockr.ui@3-pin-blockr-core-185,
+    BristolMyersSquibb/blockr.core#211,
     nbenn/shinytest2@wait-for-app-serving
 Suggests:
     testthat (>= 3.0.0),
