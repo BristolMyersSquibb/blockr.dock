@@ -46,6 +46,12 @@ move_dom_element <- function(from, to, session = get_session()) {
 
 determine_active_views <- function(layout) {
 
+  root <- layout[["grid"]][["root"]]
+
+  if (is.null(root)) {
+    return(character())
+  }
+
   xtr_leaf_id <- function(x) {
 
     if (x$type == "leaf") {
@@ -55,11 +61,7 @@ determine_active_views <- function(layout) {
     lapply(x$data, xtr_leaf_id)
   }
 
-  rapply(
-    xtr_leaf_id(layout[["grid"]][["root"]]),
-    identity,
-    "character"
-  )
+  rapply(xtr_leaf_id(root), identity, "character")
 }
 
 visible_exts <- function() {
