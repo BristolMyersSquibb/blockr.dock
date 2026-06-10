@@ -8,7 +8,11 @@ test_that("board server", {
 
   with_mock_session(
     {
-      res <- board_server_callback(board_rv_1, update = reactiveVal())
+      res <- board_server_callback(
+        board_rv_1,
+        update = reactiveVal(),
+        visible = reactiveVal()
+      )
 
       expect_type(res, "list")
       expect_named(res, c("dock", "actions", "view_data"))
@@ -28,7 +32,11 @@ test_that("board server", {
 
   with_mock_session(
     {
-      res <- board_server_callback(board_rv_2, update = reactiveVal())
+      res <- board_server_callback(
+        board_rv_2,
+        update = reactiveVal(),
+        visible = reactiveVal()
+      )
 
       expect_type(res, "list")
       expect_named(
@@ -280,6 +288,86 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
   expect_s3_class(lys, "dock_layouts")
   expect_identical(unname(view_names(lys)), c("A", "B"))
   expect_identical(active_name(lys), "A")
+})
+
+test_that("visible_block_ids returns the front-tab block of each group", {
+
+  two_groups <- dock_layout(panels("block_panel-a"), panels("block_panel-b"))
+  expect_setequal(visible_block_ids(two_groups), c("a", "b"))
+
+  background_tab <- dock_layout(
+    panels("block_panel-a", "block_panel-b", active = "block_panel-a")
+  )
+  expect_identical(visible_block_ids(background_tab), "a")
+
+  ext_front <- dock_layout(panels("ext_panel-editor"))
+  expect_identical(visible_block_ids(ext_front), character())
+
+  nested <- dock_layout(
+    panels("block_panel-a"),
+    group(panels("block_panel-b"), panels("ext_panel-editor"))
+  )
+  expect_setequal(visible_block_ids(nested), c("a", "b"))
+
+  expect_identical(visible_block_ids(dock_layout()), character())
+})
+
+test_that("report_visible_observer publishes the active view's blocks", {
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  env <- with_mock_context(ms, {
+    layout_a <- reactiveVal(NULL)
+    layout_b <- reactiveVal(NULL)
+
+    docks <- new.env(parent = emptyenv())
+    docks[["A"]] <- list(layout = layout_a)
+    docks[["B"]] <- list(layout = layout_b)
+
+    visible <- reactiveVal()
+    client_active <- reactiveVal("A")
+
+    report_visible_observer(visible, client_active, docks)
+
+    list(a = layout_a, b = layout_b, active = client_active, visible = visible)
+  })
+
+  ms$flushReact()
+  expect_null(isolate(env$visible()))
+
+  with_mock_context(ms, env$a(
+    dock_layout(panels("block_panel-a"), panels("block_panel-b"))
+  ))
+  ms$flushReact()
+  expect_setequal(isolate(env$visible()), c("a", "b"))
+
+  with_mock_context(ms, env$b(dock_layout(panels("block_panel-d"))))
+  ms$flushReact()
+  expect_setequal(isolate(env$visible()), c("a", "b"))
+
+  with_mock_context(ms, env$a(
+    dock_layout(panels("ext_panel-editor"), panels("block_panel-b"))
+  ))
+  ms$flushReact()
+  expect_identical(isolate(env$visible()), "b")
+
+  with_mock_context(ms, env$active("B"))
+  ms$flushReact()
+  expect_identical(isolate(env$visible()), "d")
+})
+
+test_that("board_server_callback seeds visibility before the client reports", {
+
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block(), b = new_head_block())
+  )
+
+  with_mock_session({
+    visible <- reactiveVal()
+    board_server_callback(board_rv, update = reactiveVal(), visible = visible)
+
+    expect_identical(isolate(visible()), "a")
+  })
 })
 
 test_that("layouts_to_board_observer fires update views on divergence", {
@@ -687,7 +775,10 @@ test_that("extensions mod state is applied via the update lifecycle", {
 
   upd <- reactiveVal()
 
-  res <- with_mock_context(ms, board_server_callback(board_rv, update = upd))
+  res <- with_mock_context(
+    ms,
+    board_server_callback(board_rv, update = upd, visible = reactiveVal())
+  )
 
   ms$flushReact()
 
@@ -734,7 +825,11 @@ test_that("extension servers can read peer extension state", {
 
   with_mock_session(
     {
-      board_server_callback(board_rv, update = reactiveVal())
+      board_server_callback(
+        board_rv,
+        update = reactiveVal(),
+        visible = reactiveVal()
+      )
 
       expect_true("doc_extension" %in% ls(peers))
       expect_identical(
