@@ -32,7 +32,11 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   # Per-session dock state, closure-private. `docks` is the live manage_dock()
   # registry; `client_active` / `client_views` mirror what the browser shows
   # (lagging board_layouts), diffed by reconcile_views() — the sole mutator.
+  # `committed_layouts` records, per view, the board_layouts the live dock was
+  # last reconciled to, so reconcile pushes a layout back to the dock only when
+  # the committed layout genuinely changed (#196).
   docks <- new.env(parent = emptyenv())
+  committed_layouts <- new.env(parent = emptyenv())
   active_dock <- reactiveValues()
   client_active <- reactiveVal(NULL)
   client_views <- reactiveVal(seed_view_state(board_layouts(initial_board)))
@@ -49,7 +53,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     board$board,
     reconcile_views(
       board, update, docks, active_dock, client_active, client_views,
-      session
+      committed_layouts, session
     )
   )
 
@@ -375,16 +379,17 @@ remove_view <- function(v_id, session, docks) {
 
 # Make the live dock session match the committed board's view set:
 # instantiate added views, tear down removed ones, restore views whose
-# layout changed, relabel renamed ones, and switch to the active view.
-# Takes the reactive board handle (not a snapshot) so the live list reaches
-# manage_dock, whose interaction observers read board$board after the fact
-# (#194); the committed board is snapshotted once here for this pass's reads.
-# Driven by board$board so apply_board_update.dock_board stays a pure
+# committed layout changed, relabel renamed ones, and switch to the active
+# view. Takes the reactive board handle (not a snapshot) so the live list
+# reaches manage_dock, whose interaction observers read board$board after the
+# fact (#194); the committed board is snapshotted once here for this pass's
+# reads. Driven by board$board so apply_board_update.dock_board stays a pure
 # reducer and dock state never crosses the package boundary. Idempotent — a
 # board already matching the live state produces no surgery — so it composes
 # with the live-sync (DOM -> board) path without ping-ponging.
 reconcile_views <- function(board, update, docks, active_dock,
-                            client_active, client_views, session) {
+                            client_active, client_views, committed_layouts,
+                            session) {
 
   brd <- board$board
 
@@ -411,6 +416,7 @@ reconcile_views <- function(board, update, docks, active_dock,
     )
 
     state[[v]] <- bare_view(layouts[[v]])
+    committed_layouts[[v]] <- layouts[[v]]
   }
 
   # Add a nav item only for views the nav doesn't already show. `board_ui`
@@ -430,6 +436,10 @@ reconcile_views <- function(board, update, docks, active_dock,
     remove_view(v, session, docks)
     session$sendInputMessage("view_nav", list(remove = v))
     state[[v]] <- NULL
+
+    if (exists(v, envir = committed_layouts, inherits = FALSE)) {
+      rm(list = v, envir = committed_layouts)
+    }
   }
 
   for (v in intersect(want, have)) {
@@ -444,19 +454,33 @@ reconcile_views <- function(board, update, docks, active_dock,
       )
     }
 
-    live <- tryCatch(
-      isolate(docks[[v]]$layout()),
-      error = function(e) NULL
-    )
+    # Restore the live dock from board_layouts only when this view's committed
+    # layout actually changed (a views$mod, a board restore). A block add
+    # touches the live dock through insert_block_ui without changing
+    # board_layouts, and the live-sync mirrors it back later; reconciling that
+    # drift here would restore the dock to a board_layouts that lags it, wiping
+    # the just-added block panels (#196).
+    prev <- get0(v, envir = committed_layouts, inherits = FALSE,
+                 ifnotfound = NULL)
 
-    if (!is.null(live) && !layouts_match(live, layouts[[v]])) {
-      apply_layout_diff(
-        view = v,
-        target = layouts[[v]],
-        proxy = docks[[v]]$proxy,
-        blocks = board_blocks(brd),
-        extensions = dock_extensions(brd)
+    committed_layouts[[v]] <- layouts[[v]]
+
+    if (is.null(prev) || !layouts_match(layouts[[v]], prev)) {
+
+      live <- tryCatch(
+        isolate(docks[[v]]$layout()),
+        error = function(e) NULL
       )
+
+      if (!is.null(live) && !layouts_match(live, layouts[[v]])) {
+        apply_layout_diff(
+          view = v,
+          target = layouts[[v]],
+          proxy = docks[[v]]$proxy,
+          blocks = board_blocks(brd),
+          extensions = dock_extensions(brd)
+        )
+      }
     }
   }
 

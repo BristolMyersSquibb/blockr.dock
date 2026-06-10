@@ -392,6 +392,7 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
   }
 
   docks <- new.env(parent = emptyenv())
+  committed_layouts <- new.env(parent = emptyenv())
   client_views <- with_mock_context(
     ms,
     reactiveVal(seed_view_state(board_layouts(board)))
@@ -407,7 +408,7 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
         ms,
         reconcile_views(
           board, update, docks, active_dock, client_active, client_views,
-          rec_session
+          committed_layouts, rec_session
         )
       ),
       create_view = stub_create,
@@ -464,6 +465,7 @@ test_that("reconcile_views forwards the live board to created views (#194)", {
   }
 
   docks <- new.env(parent = emptyenv())
+  committed_layouts <- new.env(parent = emptyenv())
   client_views <- with_mock_context(ms, reactiveVal(list()))
   client_active <- with_mock_context(ms, reactiveVal(NULL))
   active_dock <- with_mock_context(ms, reactiveValues())
@@ -478,7 +480,7 @@ test_that("reconcile_views forwards the live board to created views (#194)", {
       ms,
       reconcile_views(
         rv, update, docks, active_dock, client_active, client_views,
-        rec_session
+        committed_layouts, rec_session
       )
     ),
     create_view = capture_create,
@@ -492,6 +494,131 @@ test_that("reconcile_views forwards the live board to created views (#194)", {
   # board_blocks() with `is_board(x) is not TRUE` on the next add-panel click.
   expect_true(is_dock_board(isolate(forwarded$board)))
   expect_silent(isolate(board_block_ids(forwarded$board)))
+})
+
+test_that("reconcile skips a view with unchanged committed layout (#196)", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  session <- list(
+    ns = identity,
+    sendInputMessage = function(input_id, message) invisible(),
+    sendCustomMessage = function(type, message) invisible()
+  )
+
+  # One view holding block `a`. The live dock is ahead -- block `b`'s panel was
+  # just added through insert_block_ui, but board_layouts has not caught up
+  # (the live-sync is debounced). reconcile must not restore the dock to
+  # board_layouts here: that would wipe the just-added panel (#196).
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(V = dock_layout("a"))
+  )
+  board <- with_mock_context(ms, reactiveValues(board = brd))
+
+  target <- board_layouts(brd)[["V"]]
+  ahead <- board_layouts(
+    new_dock_board(
+      blocks = c(a = new_dataset_block(), b = new_head_block()),
+      layouts = list(V = dock_layout("a", "b"))
+    )
+  )[["V"]]
+
+  docks <- new.env(parent = emptyenv())
+  docks[["V"]] <- list(layout = function() ahead, proxy = NULL)
+
+  committed_layouts <- new.env(parent = emptyenv())
+  committed_layouts[["V"]] <- target
+
+  client_views <- with_mock_context(
+    ms,
+    reactiveVal(seed_view_state(board_layouts(brd)))
+  )
+  client_active <- with_mock_context(ms, reactiveVal("V"))
+  active_dock <- with_mock_context(ms, reactiveValues())
+  update <- with_mock_context(ms, reactiveVal())
+
+  diffed <- 0L
+
+  with_mocked_bindings(
+    with_mock_context(
+      ms,
+      reconcile_views(
+        board, update, docks, active_dock, client_active, client_views,
+        committed_layouts, session
+      )
+    ),
+    apply_layout_diff = function(...) diffed <<- diffed + 1L,
+    switch_active_view = function(...) invisible(),
+    .package = "blockr.dock"
+  )
+
+  expect_identical(diffed, 0L)
+})
+
+test_that("reconcile_views restores a view whose committed layout changed", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  session <- list(
+    ns = identity,
+    sendInputMessage = function(input_id, message) invisible(),
+    sendCustomMessage = function(type, message) invisible()
+  )
+
+  # The committed layout (and the live dock) hold block `a`; the board now
+  # carries `a` + `b` (a views$mod / restore). reconcile must push the new
+  # layout to the lagging live dock.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(V = dock_layout("a", "b"))
+  )
+  board <- with_mock_context(ms, reactiveValues(board = brd))
+
+  target <- board_layouts(brd)[["V"]]
+  behind <- board_layouts(
+    new_dock_board(
+      blocks = c(a = new_dataset_block(), b = new_head_block()),
+      layouts = list(V = dock_layout("a"))
+    )
+  )[["V"]]
+
+  docks <- new.env(parent = emptyenv())
+  docks[["V"]] <- list(layout = function() behind, proxy = NULL)
+
+  committed_layouts <- new.env(parent = emptyenv())
+  committed_layouts[["V"]] <- behind
+
+  client_views <- with_mock_context(
+    ms,
+    reactiveVal(seed_view_state(board_layouts(brd)))
+  )
+  client_active <- with_mock_context(ms, reactiveVal("V"))
+  active_dock <- with_mock_context(ms, reactiveValues())
+  update <- with_mock_context(ms, reactiveVal())
+
+  captured <- NULL
+
+  with_mocked_bindings(
+    with_mock_context(
+      ms,
+      reconcile_views(
+        board, update, docks, active_dock, client_active, client_views,
+        committed_layouts, session
+      )
+    ),
+    apply_layout_diff = function(view, target, ...) {
+      captured <<- list(view = view, target = target)
+    },
+    switch_active_view = function(...) invisible(),
+    .package = "blockr.dock"
+  )
+
+  expect_false(is.null(captured))
+  expect_identical(captured$view, "V")
+  expect_true(layouts_match(captured$target, target))
 })
 
 test_that("apply_board_update.dock_board switches active view", {
