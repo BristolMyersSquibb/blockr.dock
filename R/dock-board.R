@@ -172,6 +172,16 @@ as_dock_board.board <- function(x, ...) {
   )
 }
 
+#' @export
+str_value.dock_board <- function(x, ...) {
+  paste(
+    NextMethod(),
+    str_value(board_layouts(x)),
+    str_value(dock_extensions(x)),
+    sep = "\n"
+  )
+}
+
 #' @rdname dock
 #' @export
 active_layout <- function(x) {
