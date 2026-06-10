@@ -33,6 +33,15 @@
   `pkg_avail("blockr.dock")`, a Suggests back-edge), so the handlers
   apply the committed `stacks` object as-is.
 
+* Layout deserialization now routes on the producing blockr.dock version
+  rather than sniffing the payload shape. `blockr_deser.dock_board()` reads
+  the producer version off the saved `constructor$version` and threads it
+  down (through `blockr.core`'s `...`-forwarding `blockr_deser.list()`) to
+  `blockr_deser.dock_layout()`, which picks the wire-format reader from a
+  version-keyed registry. Shape discrimination (legacy dockview `grid` vs.
+  flattened spec) stays as the fallback for version-less payloads — very
+  old saves or hand-crafted JSON (#153).
+
 * The dock "manager" object is gone. `apply_board_update.dock_board()` is
   now a pure reducer over `board_layouts()`; all live view surgery
   (instantiate / tear down / restore / rename / switch) runs in a single
