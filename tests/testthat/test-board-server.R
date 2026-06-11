@@ -388,10 +388,11 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
   # machinery so `ls(docks)` tracks created views. The add decision under test
   # keys off client_views, not docks.
   stub_create <- function(v_id, layout, board, update, session, docks, ...) {
-    proxy <- list(
+    dock <- list(
+      layout = function() NULL,
       live_panels = reactiveVal(as.character(layout_panel_ids(layout)))
     )
-    assign(v_id, list(layout = function() NULL, proxy = proxy), envir = docks)
+    assign(v_id, dock, envir = docks)
   }
 
   docks <- new.env(parent = emptyenv())
@@ -532,7 +533,7 @@ test_that("reconcile_views skips an added panel pending its echo (#196)", {
   docks <- new.env(parent = emptyenv())
   docks[["V"]] <- list(
     layout = function() behind,
-    proxy = list(live_panels = with_mock_context(ms, reactiveVal(target_ids)))
+    live_panels = with_mock_context(ms, reactiveVal(target_ids))
   )
 
   client_views <- with_mock_context(
@@ -597,7 +598,7 @@ test_that("reconcile_views pushes a programmatic membership change", {
   docks <- new.env(parent = emptyenv())
   docks[["V"]] <- list(
     layout = function() NULL,
-    proxy = list(live_panels = live_panels)
+    live_panels = live_panels
   )
 
   client_views <- with_mock_context(
@@ -761,14 +762,14 @@ test_that("a live-only panel add folds into board_layouts (#217)", {
   res <- with_mock_context(ms, board_server_callback(board_rv, update = upd))
   ms$flushReact()
 
-  proxy <- isolate(res$dock$proxy)
-  expect_false(is.null(proxy$live_panels))
+  live_panels <- isolate(res$dock$live_panels)
+  expect_false(is.null(live_panels))
 
   # The add-panel modal / show_panel touch only the live dock; board_layouts
   # must catch up in the same flush (via the fold observer), not the debounced
   # echo, or a later reconcile would restore a layout missing the new panel.
-  cur <- isolate(proxy$live_panels())
-  isolate(proxy$live_panels(c(cur, "block_panel-b")))
+  cur <- isolate(live_panels())
+  isolate(live_panels(c(cur, "block_panel-b")))
   ms$flushReact()
 
   delta <- isolate(upd())

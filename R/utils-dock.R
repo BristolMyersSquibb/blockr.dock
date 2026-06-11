@@ -24,58 +24,57 @@ block_panel_ids <- function(proxy = dock_proxy()) {
   )
 }
 
-# Authoritative server-side panel membership, carried on the dock proxy. Every
-# panel add / remove flows through these helpers, so the set stays in lockstep
-# with the live dock without waiting for the browser's debounced state echo --
-# which is what lets reconcile tell a just-added panel from a stale layout. A
-# bare dock_proxy() (no manage_dock backing) carries no tracker and is left be.
-track_panel_added <- function(proxy, id) {
-  lp <- proxy[["live_panels"]]
+# Maintain the authoritative server-side panel-membership set. Every panel add /
+# remove flows through add_*_panel() / remove_*_panel(), so updating here keeps
+# `live_panels` in lockstep with the live dock without waiting for the browser's
+# debounced state echo -- which is what lets reconcile tell a just-added panel
+# from a stale layout. `live_panels` is NULL for a dock with no tracker (a bare
+# test stub), in which case tracking is a no-op.
+track_panel_added <- function(live_panels, id) {
 
-  if (is.null(lp)) {
+  if (is.null(live_panels)) {
     return(invisible())
   }
 
   pid <- as.character(id)
-  cur <- isolate(lp())
+  cur <- isolate(live_panels())
 
   if (!pid %in% cur) {
-    lp(c(cur, pid))
+    live_panels(c(cur, pid))
   }
 
   invisible()
 }
 
-track_panel_removed <- function(proxy, id) {
-  lp <- proxy[["live_panels"]]
+track_panel_removed <- function(live_panels, id) {
 
-  if (is.null(lp)) {
+  if (is.null(live_panels)) {
     return(invisible())
   }
 
-  lp(setdiff(isolate(lp()), as.character(id)))
+  live_panels(setdiff(isolate(live_panels()), as.character(id)))
 
   invisible()
 }
 
-remove_block_panel <- function(id, proxy = dock_proxy()) {
+remove_block_panel <- function(id, dock) {
   pid <- as_block_panel_id(id)
 
   log_debug("removing block panel {pid}")
 
-  dockViewR::remove_panel(proxy, pid)
-  track_panel_removed(proxy, pid)
+  dockViewR::remove_panel(dock$proxy, pid)
+  track_panel_removed(dock$live_panels, pid)
 
   invisible(NULL)
 }
 
-add_block_panel <- function(block, ..., proxy = dock_proxy()) {
+add_block_panel <- function(block, ..., dock) {
   pid <- as_block_panel_id(block)
 
   log_debug("adding block panel {pid}")
 
-  dockViewR::add_panel(proxy, panel = block_panel(block, ...))
-  track_panel_added(proxy, pid)
+  dockViewR::add_panel(dock$proxy, panel = block_panel(block, ...))
+  track_panel_added(dock$live_panels, pid)
 
   invisible(NULL)
 }
@@ -99,26 +98,26 @@ block_panel <- function(block, ...) {
   dock_panel(id = pid, title = name, ...)
 }
 
-remove_ext_panel <- function(id, proxy = dock_proxy()) {
+remove_ext_panel <- function(id, dock) {
   pid <- as_ext_panel_id(id)
 
   log_debug("removing extension panel {pid}")
 
-  dockViewR::remove_panel(proxy, pid)
-  track_panel_removed(proxy, pid)
+  dockViewR::remove_panel(dock$proxy, pid)
+  track_panel_removed(dock$live_panels, pid)
 
   invisible(NULL)
 }
 
-add_ext_panel <- function(ext, ..., proxy = dock_proxy()) {
+add_ext_panel <- function(ext, ..., dock) {
   stopifnot(is_dock_extension(ext))
 
   pid <- as_ext_panel_id(ext)
 
   log_debug("adding extension panel {pid}")
 
-  dockViewR::add_panel(proxy, panel = ext_panel(ext, ...))
-  track_panel_added(proxy, pid)
+  dockViewR::add_panel(dock$proxy, panel = ext_panel(ext, ...))
+  track_panel_added(dock$live_panels, pid)
 
   invisible(NULL)
 }
@@ -201,8 +200,8 @@ dock_proxy <- function(session = get_session()) {
   dockViewR::dock_view_proxy(dock_id(), session = session)
 }
 
-proxy_board_ns <- function(proxy) {
-  coal(proxy$board_ns, proxy$session$ns)
+dock_board_ns <- function(dock) {
+  coal(dock$board_ns, dock$proxy$session$ns)
 }
 
 dock_panel <- function(...) {
@@ -266,12 +265,15 @@ dock_panel_groups <- function(session = get_session()) {
 #' without needing to re-bind.
 #'
 #' @param rv The `active_dock` `reactiveValues` to update.
-#' @param dock A dock module result (list with `layout`, `proxy`, etc.).
+#' @param dock A dock module result (list with `proxy`, `board_ns`,
+#'   `live_panels`, `layout`, etc.).
 #'
 #' @noRd
 update_active_dock <- function(rv, dock) {
-  rv$layout <- dock$layout
   rv$proxy <- dock$proxy
+  rv$board_ns <- dock$board_ns
+  rv$live_panels <- dock$live_panels
+  rv$layout <- dock$layout
   rv$prev_active_group <- dock$prev_active_group
   rv$n_panels <- dock$n_panels
   rv$active_group_trail <- dock$active_group_trail

@@ -108,7 +108,6 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
   stopifnot(is_string(id))
 
   type <- match.arg(type)
-  proxy <- dock$proxy
 
   if (identical(type, "block")) {
     stopifnot(id %in% board_block_ids(board))
@@ -116,7 +115,7 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
     stopifnot(id %in% dock_ext_ids(board))
   }
 
-  panels <- dock_panel_ids(proxy)
+  panels <- dock_panel_ids(dock$proxy)
 
   if (identical(type, "block")) {
     panels <- panels[lgl_ply(panels, is_block_panel_id)]
@@ -128,9 +127,9 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
 
   if (id %in% panels) {
     if (identical(type, "block")) {
-      select_block_panel(id, proxy)
+      select_block_panel(id, dock$proxy)
     } else {
-      select_ext_panel(id, proxy)
+      select_ext_panel(id, dock$proxy)
     }
 
     return(invisible())
@@ -140,13 +139,13 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
 
   if (identical(type, "block")) {
     blocks <- board_blocks(board)
-    add_block_panel(blocks[id], position = pos, proxy = proxy)
-    show_block_ui(id, proxy$session, board_ns = proxy_board_ns(proxy))
+    add_block_panel(blocks[id], position = pos, dock = dock)
+    show_block_ui(id, dock$proxy$session, board_ns = dock_board_ns(dock))
   } else {
     exts <- dock_extensions(board)
 
-    add_ext_panel(exts[[id]], position = pos, proxy = proxy)
-    show_ext_ui(id, proxy$session, board_ns = proxy_board_ns(proxy))
+    add_ext_panel(exts[[id]], position = pos, dock = dock)
+    show_ext_ui(id, dock$proxy$session, board_ns = dock_board_ns(dock))
   }
 
   invisible()

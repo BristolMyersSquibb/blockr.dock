@@ -212,7 +212,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
     ids <- as.character(layout_panel_ids(board_layouts(brd)[[id]]))
     docks[[id]] <- list(
       layout = function() NULL,
-      proxy = list(live_panels = reactiveVal(ids))
+      live_panels = reactiveVal(ids)
     )
   }
   active_dock <- reactiveValues()
@@ -717,7 +717,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
       ids <- as.character(layout_panel_ids(state[[id]]))
       docks[[id]] <- list(
         layout = function() NULL,
-        proxy = list(live_panels = reactiveVal(ids))
+        live_panels = reactiveVal(ids)
       )
     }
     active_dock <- reactiveValues()

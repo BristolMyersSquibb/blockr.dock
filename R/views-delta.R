@@ -617,7 +617,7 @@ switch_active_view <- function(active, docks, active_dock, client_active,
 # Apply one view's layout change. v1 unconditionally restores the target
 # layout; surgical diff paths (noop / active-tab / reorder) are a
 # deferred follow-up that can dispatch here without touching callers.
-apply_layout_diff <- function(view, target, proxy, blocks, extensions) {
+apply_layout_diff <- function(view, target, dock, blocks, extensions) {
 
   log_debug("applying layout diff for view {view}")
 
@@ -629,20 +629,20 @@ apply_layout_diff <- function(view, target, proxy, blocks, extensions) {
   # (b) reattach them to the freshly-rendered panels afterwards. Iterate
   # object ids (as `hide_view_ui()` does): `for` over the classed id
   # vector would drop the class and double-prefix the move target.
-  for (oid in as_obj_id(block_panel_ids(proxy))) {
-    hide_block_panel(oid, rm_panel = FALSE, proxy = proxy)
+  for (oid in as_obj_id(block_panel_ids(dock$proxy))) {
+    hide_block_panel(oid, rm_panel = FALSE, dock = dock)
   }
-  for (oid in as_obj_id(ext_panel_ids(proxy))) {
-    hide_ext_panel(oid, rm_panel = FALSE, proxy = proxy)
+  for (oid in as_obj_id(ext_panel_ids(dock$proxy))) {
+    hide_ext_panel(oid, rm_panel = FALSE, dock = dock)
   }
 
-  restore_layout(target, proxy, blocks = blocks, extensions = extensions)
+  restore_layout(target, dock$proxy, blocks = blocks, extensions = extensions)
 
   for (pid in as_dock_panel_id(target)) {
     if (is_block_panel_id(pid)) {
-      show_block_panel(pid, add_panel = FALSE, proxy = proxy)
+      show_block_panel(pid, add_panel = FALSE, dock = dock)
     } else if (is_ext_panel_id(pid)) {
-      show_ext_panel(pid, add_panel = FALSE, proxy = proxy)
+      show_ext_panel(pid, add_panel = FALSE, dock = dock)
     } else {
       blockr_abort(
         "Unknown panel type {class(pid)}.",
