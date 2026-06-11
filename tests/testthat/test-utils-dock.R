@@ -1,3 +1,42 @@
+test_that("panel tracking keeps the live_panels membership in step", {
+
+  shiny::isolate({
+
+    live_panels <- shiny::reactiveVal(character())
+
+    track_panel_added(live_panels, "block_panel-a")
+    track_panel_added(live_panels, "block_panel-b")
+    track_panel_added(live_panels, "block_panel-a")
+
+    expect_setequal(live_panels(), c("block_panel-a", "block_panel-b"))
+
+    track_panel_removed(live_panels, "block_panel-a")
+
+    expect_setequal(live_panels(), "block_panel-b")
+  })
+})
+
+test_that("panel tracking is a no-op without a tracker", {
+  expect_silent(track_panel_added(NULL, "block_panel-a"))
+  expect_silent(track_panel_removed(NULL, "block_panel-a"))
+})
+
+test_that("add_block_panel records the panel in the dock tracker", {
+
+  local_mocked_bindings(
+    add_panel = function(...) invisible(),
+    .package = "dockViewR"
+  )
+
+  shiny::isolate({
+
+    dock <- list(proxy = NULL, live_panels = shiny::reactiveVal(character()))
+    add_block_panel(c(a = new_dataset_block()), dock = dock)
+
+    expect_setequal(dock$live_panels(), "block_panel-a")
+  })
+})
+
 test_that("parking panels iterates object ids, not panel strings", {
 
   # The footgun: `for` over the classed vector `block_panel_ids()`

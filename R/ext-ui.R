@@ -1,26 +1,26 @@
-show_ext_panel <- function(ext, add_panel = TRUE, proxy = dock_proxy(), ...) {
+show_ext_panel <- function(ext, add_panel = TRUE, dock, ...) {
 
   if (isTRUE(add_panel)) {
-    add_ext_panel(ext, proxy = proxy)
+    add_ext_panel(ext, dock = dock)
   } else if (isFALSE(add_panel)) {
-    select_ext_panel(ext, proxy)
+    select_ext_panel(ext, dock$proxy)
   } else {
-    add_ext_panel(ext, position = add_panel, proxy = proxy)
+    add_ext_panel(ext, position = add_panel, dock = dock)
   }
 
-  show_ext_ui(ext, proxy$session,
-              board_ns = proxy_board_ns(proxy), ...)
+  show_ext_ui(ext, dock$proxy$session,
+              board_ns = dock_board_ns(dock), ...)
 
   invisible(NULL)
 }
 
-hide_ext_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy(), ...) {
+hide_ext_panel <- function(id, rm_panel = TRUE, dock, ...) {
 
-  hide_ext_ui(id, proxy$session,
-              board_ns = proxy_board_ns(proxy), ...)
+  hide_ext_ui(id, dock$proxy$session,
+              board_ns = dock_board_ns(dock), ...)
 
   if (isTRUE(rm_panel)) {
-    remove_ext_panel(id, proxy)
+    remove_ext_panel(id, dock)
   }
 
   invisible(NULL)
