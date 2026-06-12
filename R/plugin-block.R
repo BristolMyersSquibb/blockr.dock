@@ -529,10 +529,10 @@ edit_block_server <- function(callbacks = list()) {
         conds <- reactive(
           {
             req(block_id %in% names(board$blocks))
+            df <- board$blocks[[block_id]]$server$conditions()
             lapply(
               set_names(nm = c("error", "warning", "message")),
-              function(cnd, cnds) coal(unlst(lst_xtr(cnds, cnd)), list()),
-              reactiveValuesToList(board$blocks[[block_id]]$server$cond)
+              function(sev) df$message[df$severity == sev]
             )
           }
         )
