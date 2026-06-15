@@ -17,4 +17,13 @@ $(function () {
       $(m.to).append($(m.from));
     }
   )
+
+  // Subtle mode: hide every block header (icon, title, subtitle, toolbar)
+  // at once by toggling a single body class. The navbar button's active
+  // look is driven off the same class via CSS, so no element id is needed.
+  Shiny.addCustomMessageHandler(
+    'toggle-block-headers', (hide) => {
+      document.body.classList.toggle('blockr-hide-headers', !!hide);
+    }
+  )
 })

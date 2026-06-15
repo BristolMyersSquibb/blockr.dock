@@ -766,6 +766,41 @@ label:has(input[type="file"]) {
   color: var(--blockr-color-text-secondary);
 }
 
+/* Subtle mode: hide every block header at once. The body class is toggled
+   client-side (see toggle-block-headers handler); `display: none` reflows
+   so the freed vertical space is reclaimed. */
+.blockr-hide-headers .blockr-block-header {
+  /* !important to beat Bootstrap's `.d-flex { display: flex !important }`
+     utility on the same element. */
+  display: none !important;
+}
+
+/* Navbar toggle reflects the engaged state off the same body class, so the
+   button needs no per-click JS to light up. */
+.blockr-hide-headers .blockr-navbar-toggle-headers {
+  background-color: var(--blockr-blue-50);
+  color: var(--blockr-blue-500);
+}
+
+/* With the header hidden, the accordion chrome that framed it now reads as a
+   stray bordered strip floating below the panel handle: the card-body top
+   padding + the empty `.mt-4` errors slot leave ~40px of dead space, and the
+   first section's top border draws a line under it. Collapse the dead space
+   and drop that top border. The first section's bottom border stays as a
+   clean inputs/outputs divider. `!important` beats the inline styles set in
+   `block_card_content()`. */
+.blockr-hide-headers .card-body {
+  padding-top: 8px !important;
+}
+
+.blockr-hide-headers .card-body > .mt-4 {
+  margin-top: 0 !important;
+}
+
+.blockr-hide-headers .accordion-item:first-child .accordion-body {
+  border-top: none !important;
+}
+
 /* Read-only / locked-mode indicator. Styled as a static status pill,
    not a button -- no hover state, no pointer cursor. Sits between the
    view nav and the settings gear in the navbar right slot. */

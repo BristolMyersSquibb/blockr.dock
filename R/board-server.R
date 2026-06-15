@@ -46,6 +46,17 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   remove_view_observer(client_views, session, update)
   rename_view_observer(client_views, session, update)
 
+  # Navbar "subtle mode" button: flip the `hide_block_headers` board option.
+  # The option's own server (see `new_hide_block_headers_option()`) reacts to
+  # the value and pushes the `toggle-block-headers` message that hides/shows
+  # every block header client-side. Routing through the option keeps a single
+  # source of truth and persists the choice on save. This is the board-level
+  # session (where the navbar lives), not the nested per-view `manage_dock`.
+  observeEvent(session$input$toggle_headers, {
+    cur <- isTRUE(get_board_option_value("hide_block_headers", session))
+    set_board_option_value("hide_block_headers", !cur, session)
+  })
+
   # Reconcile the live dock session against the committed board (create /
   # destroy / restore / rename / switch views), keeping apply_board_update a
   # pure reducer. No ignoreInit: initial render is the empty-`docks` case.

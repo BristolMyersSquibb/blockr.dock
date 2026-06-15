@@ -231,11 +231,42 @@ dock_ext_ids <- function(x) {
   chr_ply(dock_extensions(x), extension_id)
 }
 
+#' @param hide_block_headers Logical; start the board with block headers
+#'   (icon, title, subtitle, toolbar) hidden. Toggled at runtime from the
+#'   navbar.
+#'
 #' @rdname dock
 #' @export
-dock_board_options <- function() {
+dock_board_options <- function(hide_block_headers = FALSE) {
   new_board_options(
-    new_board_name_option()
+    new_board_name_option(),
+    new_hide_block_headers_option(hide_block_headers)
+  )
+}
+
+# Board option backing the navbar "subtle mode" toggle. Appearance-only,
+# modeled on `blockr.core::new_dark_mode_option()`: it carries no settings
+# sidebar UI (the navbar button is the control) and its server pushes the
+# current value to the client, where `toggle-block-headers` flips the
+# `blockr-hide-headers` body class. Being a board option, the choice
+# serializes with the board and seeds the initial state on restore.
+new_hide_block_headers_option <- function(value = FALSE,
+                                          category = "Board options", ...) {
+  new_board_option(
+    id = "hide_block_headers",
+    default = isTRUE(value),
+    ui = function(id) NULL,
+    server = function(..., session) {
+      observeEvent(
+        get_board_option_or_null("hide_block_headers", session),
+        session$sendCustomMessage(
+          "toggle-block-headers",
+          isTRUE(get_board_option_value("hide_block_headers", session))
+        )
+      )
+    },
+    category = category,
+    ...
   )
 }
 

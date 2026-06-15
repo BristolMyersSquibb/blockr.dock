@@ -7,7 +7,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
   div(
     class = "card-body",
     div(
-      class = "d-flex align-items-stretch gap-3",
+      class = "d-flex align-items-stretch gap-3 blockr-block-header",
       span(
         title = blk_info$description,
         blk_icon_data_uri(blk_info$icon, blk_info$color, 46, "inline")

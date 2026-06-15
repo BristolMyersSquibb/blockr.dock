@@ -40,7 +40,7 @@ dock_extensions(x) <- value
 
 dock_ext_ids(x)
 
-dock_board_options()
+dock_board_options(hide_block_headers = FALSE)
 }
 \arguments{
 \item{blocks}{Set of blocks}
@@ -70,6 +70,10 @@ collection, not of an individual layout.}
 \item{x}{Board object}
 
 \item{value}{Replacement value}
+
+\item{hide_block_headers}{Logical; start the board with block headers
+(icon, title, subtitle, toolbar) hidden. Toggled at runtime from the
+navbar.}
 }
 \value{
 The constructor \code{new_dock_board()} returns a \code{board} object, as does

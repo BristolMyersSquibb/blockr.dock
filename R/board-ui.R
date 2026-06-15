@@ -55,6 +55,20 @@ board_ui.dock_board <- function(
             )
           )
         },
+        # Subtle mode toggle: hides all block headers (icon, title,
+        # subtitle, toolbar) to reclaim space. Unlike the gear it is an
+        # `actionButton` so the server can persist the choice via the
+        # `hide_block_headers` board option. Hidden when the dock is
+        # locked, alongside the other editing affordances.
+        if (!is_dock_locked()) {
+          actionButton(
+            NS(id, "toggle_headers"),
+            label = bsicons::bs_icon("card-heading"),
+            class = "btn blockr-navbar-icon-btn blockr-navbar-toggle-headers",
+            title = "Toggle block headers",
+            `aria-label` = "Toggle block headers"
+          )
+        },
         # Pure-JS open trigger via `data-blockr-sidebar-target`. The
         # settings sidebar's body is pre-rendered into its mount below, so
         # no server observer is needed: clicking the gear toggles the
