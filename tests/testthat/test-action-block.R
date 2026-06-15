@@ -1,17 +1,22 @@
-# The browser publishes its committed-block spec into the parent
-# session's namespace as `<sub>-commit`, where <sub> is the module id
-# the handler mounts (`block_browser_server("browser")`). Drive that
-# input directly to simulate the user adding a block.
+# `block_browser_server("browser")` publishes its committed value into the
+# parent session's namespace as `browser-commit`. The module now builds
+# the block (and, for append / prepend, the link with its port resolved)
+# and returns a ready-to-apply value: a `blocks` object for add, or
+# `list(blocks, links)` for append / prepend. The handlers just apply it,
+# so these tests drive `browser-commit` and assert the `update()` payload.
+#
+# Id semantics: an empty id field means "assign me one" - the module
+# resolves a unique, board-avoiding id at commit. Only a *non-empty*
+# duplicate id is rejected (no commit fires).
 commit_spec <- function(...) list(...)
 
-test_that("add block action: valid commit creates one block", {
+test_that("add block action: commit creates one ready block", {
   r_board <- reactiveValues(board = new_board(), board_id = "b")
   r_update <- reactiveVal(list())
-
   local_mocked_bindings(
-    show_sidebar       = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
-    hide_sidebar       = function(...) invisible(list(...)),
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL),
     .package = "blockr.ui"
   )
 
@@ -20,28 +25,15 @@ test_that("add block action: valid commit creates one block", {
       moduleServer(
         id,
         add_block_action(
-          trigger = reactive(TRUE),
-          board   = r_board,
-          update  = r_update
+          trigger = reactive(TRUE), board = r_board, update = r_update
         )
       )
     },
     {
       session$flushReact()
 
-      # Invalid: empty id -> no update.
       session$setInputs(`browser-commit` = commit_spec(
-        type = "dataset_block", id = "", title = NULL,
-        link_id = NULL, block_input = NULL, target_input = NULL,
-        nonce = 1
-      ))
-      expect_length(r_update(), 0L)
-
-      # Valid commit -> one block under spec$id.
-      session$setInputs(`browser-commit` = commit_spec(
-        type = "dataset_block", id = "ds1", title = "My data",
-        link_id = NULL, block_input = NULL, target_input = NULL,
-        nonce = 2
+        type = "dataset_block", id = "ds1", title = "My data", nonce = 1
       ))
 
       upd <- r_update()
@@ -54,20 +46,84 @@ test_that("add block action: valid commit creates one block", {
   )
 })
 
+test_that("add block action: an empty id is auto-assigned", {
+  r_board <- reactiveValues(board = new_board(), board_id = "b")
+  r_update <- reactiveVal(list())
+  local_mocked_bindings(
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL),
+    .package = "blockr.ui"
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_block_action(
+          trigger = reactive(TRUE), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+
+      session$setInputs(`browser-commit` = commit_spec(
+        type = "dataset_block", id = "", title = NULL, nonce = 1
+      ))
+
+      upd <- r_update()
+      expect_named(upd, "blocks")
+      expect_s3_class(upd$blocks$add, "blocks")
+      # Auto-generated, non-empty id.
+      expect_true(nzchar(names(upd$blocks$add)))
+    }
+  )
+})
+
+test_that("add block action: a non-empty duplicate id is rejected", {
+  r_board <- reactiveValues(
+    board = new_board(blocks = c(ds1 = new_dataset_block())),
+    board_id = "b"
+  )
+  r_update <- reactiveVal(list())
+  local_mocked_bindings(
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL),
+    .package = "blockr.ui"
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_block_action(
+          trigger = reactive(TRUE), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+
+      session$setInputs(`browser-commit` = commit_spec(
+        type = "dataset_block", id = "ds1", title = NULL, nonce = 1
+      ))
+      expect_length(r_update(), 0L)
+    }
+  )
+})
+
 test_that("append block action: NULL block_input falls back to the only slot", {
-  # head_block has a single input ("data"); the browser hides the
-  # input-port picker so spec$block_input arrives as NULL. The handler
-  # must fall back to that sole slot.
   r_board <- reactiveValues(
     board = new_board(blocks = c(a = new_dataset_block())),
     board_id = "b"
   )
   r_update <- reactiveVal(list())
-
   local_mocked_bindings(
-    show_sidebar       = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
-    hide_sidebar       = function(...) invisible(list(...)),
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL),
     .package = "blockr.ui"
   )
 
@@ -76,18 +132,15 @@ test_that("append block action: NULL block_input falls back to the only slot", {
       moduleServer(
         id,
         append_block_action(
-          trigger = reactive("a"),
-          board   = r_board,
-          update  = r_update
+          trigger = reactive("a"), board = r_board, update = r_update
         )
       )
     },
     {
       session$flushReact()
-      session$setInputs(`browser-commit` = list(
+      session$setInputs(`browser-commit` = commit_spec(
         type = "head_block", id = "h1", title = NULL,
-        link_id = "lnk1", block_input = NULL, target_input = NULL,
-        nonce = 1
+        link_id = "lnk1", block_input = NULL, nonce = 1
       ))
 
       upd <- r_update()
@@ -104,11 +157,10 @@ test_that("append block action: valid commit creates one block + one link", {
     board_id = "b"
   )
   r_update <- reactiveVal(list())
-
   local_mocked_bindings(
-    show_sidebar       = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
-    hide_sidebar       = function(...) invisible(list(...)),
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL),
     .package = "blockr.ui"
   )
 
@@ -117,28 +169,16 @@ test_that("append block action: valid commit creates one block + one link", {
       moduleServer(
         id,
         append_block_action(
-          trigger = reactive("a"),
-          board   = r_board,
-          update  = r_update
+          trigger = reactive("a"), board = r_board, update = r_update
         )
       )
     },
     {
       session$flushReact()
 
-      # Missing link_id -> no update.
-      session$setInputs(`browser-commit` = commit_spec(
-        type = "head_block", id = "h1", title = NULL,
-        link_id = "", block_input = "data", target_input = NULL,
-        nonce = 1
-      ))
-      expect_length(r_update(), 0L)
-
-      # Valid commit -> blocks add + links add.
       session$setInputs(`browser-commit` = commit_spec(
         type = "head_block", id = "h1", title = "First rows",
-        link_id = "lnk1", block_input = "data", target_input = NULL,
-        nonce = 2
+        link_id = "lnk1", block_input = "data", nonce = 1
       ))
 
       upd <- r_update()
@@ -147,6 +187,46 @@ test_that("append block action: valid commit creates one block + one link", {
       expect_named(upd$links$add, "lnk1")
       expect_s3_class(upd$blocks$add, "blocks")
       expect_s3_class(upd$links$add, "links")
+      # Link wires source -> new block.
+      df <- as.data.frame(upd$links$add)
+      expect_identical(df$from, "a")
+      expect_identical(df$to, "h1")
+    }
+  )
+})
+
+test_that("append block action: an empty link_id is auto-assigned", {
+  r_board <- reactiveValues(
+    board = new_board(blocks = c(a = new_dataset_block())),
+    board_id = "b"
+  )
+  r_update <- reactiveVal(list())
+  local_mocked_bindings(
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL),
+    .package = "blockr.ui"
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        append_block_action(
+          trigger = reactive("a"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      session$setInputs(`browser-commit` = commit_spec(
+        type = "head_block", id = "h1", title = NULL,
+        link_id = "", block_input = "data", nonce = 1
+      ))
+
+      upd <- r_update()
+      expect_named(upd, c("blocks", "links"))
+      expect_true(nzchar(names(upd$links$add)))
     }
   )
 })
@@ -157,11 +237,10 @@ test_that("prepend block action: target_input picks the link slot", {
     board_id = "b"
   )
   r_update <- reactiveVal(list())
-
   local_mocked_bindings(
-    show_sidebar       = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
-    hide_sidebar       = function(...) invisible(list(...)),
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL),
     .package = "blockr.ui"
   )
 
@@ -170,9 +249,7 @@ test_that("prepend block action: target_input picks the link slot", {
       moduleServer(
         id,
         prepend_block_action(
-          trigger = reactive("m"),
-          board   = r_board,
-          update  = r_update
+          trigger = reactive("m"), board = r_board, update = r_update
         )
       )
     },
@@ -181,19 +258,62 @@ test_that("prepend block action: target_input picks the link slot", {
 
       session$setInputs(`browser-commit` = commit_spec(
         type = "dataset_block", id = "ds1", title = NULL,
-        link_id = "lnk1", block_input = NULL, target_input = "y",
-        nonce = 1
+        link_id = "lnk1", block_input = NULL, target_input = "y", nonce = 1
       ))
 
       upd <- r_update()
       expect_named(upd, c("blocks", "links"))
       expect_named(upd$blocks$add, "ds1")
       expect_named(upd$links$add, "lnk1")
+      df <- as.data.frame(upd$links$add)
+      # Prepend wires new block -> target on the chosen slot.
+      expect_identical(df$from, "ds1")
+      expect_identical(df$to, "m")
+      expect_identical(df$input, "y")
     }
   )
 })
 
-test_that("add block action chains via keep_or_hide_sidebar on confirm", {
+test_that("prepend: NULL target_input falls back to only slot", {
+  # head_block has arity 1 (input "data"); the browser hides the
+  # target_input picker, so spec$target_input arrives as NULL. The
+  # module resolves the target's only free slot.
+  r_board <- reactiveValues(
+    board = new_board(blocks = c(h = new_head_block())),
+    board_id = "b"
+  )
+  r_update <- reactiveVal(list())
+  local_mocked_bindings(
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL),
+    .package = "blockr.ui"
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        prepend_block_action(
+          trigger = reactive("h"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      session$setInputs(`browser-commit` = commit_spec(
+        type = "dataset_block", id = "ds1", title = NULL,
+        link_id = "lnk1", block_input = NULL, target_input = NULL, nonce = 1
+      ))
+
+      upd <- r_update()
+      expect_length(upd$links$add, 1L)
+      expect_identical(as.data.frame(upd$links$add)$input, "data")
+    }
+  )
+})
+
+test_that("add block action toggles its pre-rendered sidebar on confirm", {
   keep_calls <- list()
 
   local_mocked_bindings(
@@ -215,251 +335,23 @@ test_that("add block action chains via keep_or_hide_sidebar on confirm", {
       moduleServer(
         id,
         add_block_action(
-          trigger = reactive(TRUE),
-          board   = r_board,
-          update  = r_update
+          trigger = reactive(TRUE), board = r_board, update = r_update
         )
       )
     },
     {
       session$flushReact()
       session$setInputs(`browser-commit` = commit_spec(
-        type = "dataset_block", id = "x", title = "X block",
-        link_id = NULL, block_input = NULL, target_input = NULL,
-        nonce = 1
+        type = "dataset_block", id = "x", title = "X block", nonce = 1
       ))
 
       expect_length(r_update(), 1L)
       expect_length(keep_calls, 1L)
-      expect_identical(keep_calls[[1L]]$id, "my_board-actions_sidebar")
+      # Add now targets its dedicated, pre-rendered sidebar and re-opens
+      # without `ui` (no re-render).
+      expect_identical(keep_calls[[1L]]$id, "my_board-add_block_sidebar")
       expect_identical(keep_calls[[1L]]$args$title, "Add new block")
-    }
-  )
-})
-
-test_that("append block action: invalid block_id does not update", {
-  r_board <- reactiveValues(
-    board = new_board(blocks = c(a = new_dataset_block())),
-    board_id = "b"
-  )
-  r_update <- reactiveVal(list())
-
-  local_mocked_bindings(
-    show_sidebar       = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
-    hide_sidebar       = function(...) invisible(list(...)),
-    .package = "blockr.ui"
-  )
-
-  testServer(
-    function(id, ...) {
-      moduleServer(
-        id,
-        append_block_action(
-          trigger = reactive("a"),
-          board   = r_board,
-          update  = r_update
-        )
-      )
-    },
-    {
-      session$flushReact()
-      session$setInputs(`browser-commit` = list(
-        type = "head_block", id = "", title = NULL,
-        link_id = "lnk1", block_input = "data", target_input = NULL,
-        nonce = 1
-      ))
-      expect_length(r_update(), 0L)
-    }
-  )
-})
-
-test_that("prepend block action: invalid block_id / link_id do not update", {
-  r_board <- reactiveValues(
-    board = new_board(blocks = c(m = new_merge_block())),
-    board_id = "b"
-  )
-  r_update <- reactiveVal(list())
-
-  local_mocked_bindings(
-    show_sidebar       = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
-    hide_sidebar       = function(...) invisible(list(...)),
-    .package = "blockr.ui"
-  )
-
-  testServer(
-    function(id, ...) {
-      moduleServer(
-        id,
-        prepend_block_action(
-          trigger = reactive("m"),
-          board   = r_board,
-          update  = r_update
-        )
-      )
-    },
-    {
-      session$flushReact()
-
-      # Empty block_id -> bail.
-      session$setInputs(`browser-commit` = list(
-        type = "dataset_block", id = "", title = NULL,
-        link_id = "lnk1", block_input = NULL, target_input = "x",
-        nonce = 1
-      ))
-      expect_length(r_update(), 0L)
-
-      # Empty link_id -> bail.
-      session$setInputs(`browser-commit` = list(
-        type = "dataset_block", id = "ds1", title = NULL,
-        link_id = "", block_input = NULL, target_input = "x",
-        nonce = 2
-      ))
-      expect_length(r_update(), 0L)
-    }
-  )
-})
-
-test_that("prepend: NULL target_input falls back to only slot", {
-  # head_block has arity 1 (input "data"); the browser hides the
-  # target_input picker, so spec$target_input arrives as NULL. The
-  # handler must fall back to `block_input_select(..., mode = "inputs")[1L]`.
-  r_board <- reactiveValues(
-    board = new_board(blocks = c(h = new_head_block())),
-    board_id = "b"
-  )
-  r_update <- reactiveVal(list())
-
-  local_mocked_bindings(
-    show_sidebar       = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
-    hide_sidebar       = function(...) invisible(list(...)),
-    .package = "blockr.ui"
-  )
-
-  testServer(
-    function(id, ...) {
-      moduleServer(
-        id,
-        prepend_block_action(
-          trigger = reactive("h"),
-          board   = r_board,
-          update  = r_update
-        )
-      )
-    },
-    {
-      session$flushReact()
-      session$setInputs(`browser-commit` = list(
-        type = "dataset_block", id = "ds1", title = NULL,
-        link_id = "lnk1", block_input = NULL, target_input = NULL,
-        nonce = 1
-      ))
-
-      upd <- r_update()
-      expect_length(upd$links$add, 1L)
-      expect_identical(as.data.frame(upd$links$add)$input, "data")
-    }
-  )
-})
-
-test_that("append / prepend: unknown type bails after NULL block", {
-  # Both handlers must short-circuit on a build failure (the
-  # `if (is.null(new_blk)) return()` guard after build_block_from_spec).
-  r_board <- reactiveValues(
-    board = new_board(blocks = c(a = new_dataset_block(),
-                                 m = new_merge_block())),
-    board_id = "b"
-  )
-  r_update_app <- reactiveVal(list())
-  r_update_pre <- reactiveVal(list())
-
-  local_mocked_bindings(
-    show_sidebar       = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
-    hide_sidebar       = function(...) invisible(list(...)),
-    .package = "blockr.ui"
-  )
-
-  bogus <- function(update_rv) {
-    list(
-      type = "no_such_block_xyz", id = "x", title = NULL,
-      link_id = "l", block_input = "x", target_input = "x",
-      nonce = 1
-    )
-  }
-
-  testServer(
-    function(id, ...) {
-      moduleServer(
-        id,
-        append_block_action(
-          trigger = reactive("a"),
-          board   = r_board,
-          update  = r_update_app
-        )
-      )
-    },
-    {
-      session$flushReact()
-      session$setInputs(`browser-commit` = bogus(r_update_app))
-      expect_length(r_update_app(), 0L)
-    }
-  )
-
-  testServer(
-    function(id, ...) {
-      moduleServer(
-        id,
-        prepend_block_action(
-          trigger = reactive("m"),
-          board   = r_board,
-          update  = r_update_pre
-        )
-      )
-    },
-    {
-      session$flushReact()
-      session$setInputs(`browser-commit` = bogus(r_update_pre))
-      expect_length(r_update_pre(), 0L)
-    }
-  )
-})
-
-test_that("build_block_from_spec: unknown type bails with notify", {
-  # An unknown registry uid in spec$type makes create_block_with_name
-  # throw; `build_block_from_spec` catches it, notifies, returns NULL,
-  # and the handlers bail without calling update().
-  r_board <- reactiveValues(board = new_board(), board_id = "b")
-  r_update <- reactiveVal(list())
-
-  local_mocked_bindings(
-    show_sidebar       = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
-    hide_sidebar       = function(...) invisible(list(...)),
-    .package = "blockr.ui"
-  )
-
-  testServer(
-    function(id, ...) {
-      moduleServer(
-        id,
-        add_block_action(
-          trigger = reactive(TRUE),
-          board   = r_board,
-          update  = r_update
-        )
-      )
-    },
-    {
-      session$flushReact()
-      session$setInputs(`browser-commit` = list(
-        type = "no_such_block_xyz", id = "x", title = NULL,
-        link_id = NULL, block_input = NULL, target_input = NULL,
-        nonce = 1
-      ))
-      expect_length(r_update(), 0L)
+      expect_null(keep_calls[[1L]]$args$ui)
     }
   )
 })
@@ -475,9 +367,7 @@ test_that("remove block action", {
       moduleServer(
         id,
         remove_block_action(
-          trigger = reactive("a"),
-          board   = r_board,
-          update  = r_update
+          trigger = reactive("a"), board = r_board, update = r_update
         )
       )
     },

@@ -86,13 +86,18 @@ board_ui.dock_board <- function(
     # DOM ids. Action handlers reach the matching mount by reading
     # `board$board_id` (set by blockr.core in the board's reactiveValues)
     # and composing `NS(board$board_id, "actions_sidebar")` at server time.
-    # Contract: one sidebar = one concern. We mount two on the right
+    # Contract: one sidebar = one concern. We mount three on the right
     # (matching their navbar triggers) but with different modes so they
     # coexist cleanly when both are open:
-    #   * "actions_sidebar":  the six action handlers (add/append/prepend
-    #     block, add link, add/edit stack). `push` mode: shifts page
-    #     content aside while open. Body is populated server-side via
-    #     `show_sidebar()` because each action ships a freshly-built form.
+    #   * "actions_sidebar":  the trigger-specific action handlers
+    #     (append/prepend block, add link, add/edit stack). `push` mode:
+    #     shifts page content aside while open. Body is populated
+    #     server-side via `show_sidebar()` because each ships a
+    #     freshly-built, trigger-dependent form.
+    #   * "add_block_sidebar": the add-block browser. `push` mode. Body
+    #     is pre-rendered here at UI-build time (its catalogue is the
+    #     registry, board-independent) and the add action just toggles
+    #     it, so opening never re-renders.
     #   * "settings_sidebar": the navbar gear's board-options panel.
     #     `overlay` mode: layers above the page (and above the action
     #     panel when both are pinned) without reflowing content. Body is
@@ -104,7 +109,23 @@ board_ui.dock_board <- function(
     # pin semantics intuitive without multi-pin machinery on the JS side.
     blockr.ui::sidebar_ui(
       NS(id, "actions_sidebar"),
-      mode = "push",
+      mode = "overlay",
+      side = "right"
+    ),
+    # "add_block_sidebar": the add-block browser. Its catalogue is the
+    # registry and never varies, so the body is pre-rendered here once
+    # rather than rebuilt on every open (the dynamic actions_sidebar
+    # path). The id is composed so the markup lands under the
+    # `add_block_action` server's namespace - that handler mounts
+    # `block_browser_server("browser")` and just toggles this panel
+    # (`show_sidebar()` with no `ui`), so opening it never re-renders.
+    blockr.ui::sidebar_ui(
+      NS(id, "add_block_sidebar"),
+      ui = blockr.ui::block_browser_ui(
+        NS(NS(id, "add_block_action"), "browser")
+      ),
+      title = "Add new block",
+      mode = "overlay",
       side = "right"
     ),
     blockr.ui::sidebar_ui(

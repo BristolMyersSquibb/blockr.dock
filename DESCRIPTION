@@ -34,7 +34,7 @@ Imports:
     shinyWidgets,
     jsonlite
 Remotes:
-    BristolMyersSquibb/blockr.ui,
+    BristolMyersSquibb/blockr.ui@feat/block-browser-prerender-and-ready-objects,
     BristolMyersSquibb/blockr.core,
     nbenn/shinytest2@wait-for-app-serving
 Suggests:
