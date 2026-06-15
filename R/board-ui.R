@@ -86,18 +86,19 @@ board_ui.dock_board <- function(
     # DOM ids. Action handlers reach the matching mount by reading
     # `board$board_id` (set by blockr.core in the board's reactiveValues)
     # and composing `NS(board$board_id, "actions_sidebar")` at server time.
-    # Contract: one sidebar = one concern. We mount three on the right
+    # Contract: one sidebar = one concern. We mount four on the right
     # (matching their navbar triggers) but with different modes so they
     # coexist cleanly when both are open:
-    #   * "actions_sidebar":  the trigger-specific action handlers
-    #     (append/prepend block, add link, add/edit stack). `push` mode:
-    #     shifts page content aside while open. Body is populated
-    #     server-side via `show_sidebar()` because each ships a
-    #     freshly-built, trigger-dependent form.
-    #   * "add_block_sidebar": the add-block browser. `push` mode. Body
-    #     is pre-rendered here at UI-build time (its catalogue is the
-    #     registry, board-independent) and the add action just toggles
-    #     it, so opening never re-renders.
+    #   * "actions_sidebar":  the remaining trigger-specific handlers
+    #     (add link, add/edit stack, and the dormant prepend block).
+    #     Body is populated server-side via `show_sidebar()` because each
+    #     ships a freshly-built, trigger-dependent form.
+    #   * "add_block_sidebar" / "append_block_sidebar": the block browser
+    #     for the add and append flows. Both catalogues are registry-based
+    #     (board- / source-independent), so their bodies are pre-rendered
+    #     here at UI-build time and the handlers just toggle them open, so
+    #     opening never re-renders. The source for append is supplied
+    #     server-side at commit.
     #   * "settings_sidebar": the navbar gear's board-options panel.
     #     `overlay` mode: layers above the page (and above the action
     #     panel when both are pinned) without reflowing content. Body is
@@ -125,6 +126,23 @@ board_ui.dock_board <- function(
         NS(NS(id, "add_block_action"), "browser")
       ),
       title = "Add new block",
+      mode = "overlay",
+      side = "right"
+    ),
+    # "append_block_sidebar": the append browser. Its linkable-block
+    # catalogue is registry-based, not source-specific, so it too is
+    # pre-rendered once (via the source-less `append_to()` descriptor).
+    # The right-clicked source is supplied server-side by the append
+    # action at commit; the "Append from X" context goes in the sidebar
+    # title. Composed id so the markup lands under the
+    # `append_block_action` server's namespace.
+    blockr.ui::sidebar_ui(
+      NS(id, "append_block_sidebar"),
+      ui = blockr.ui::block_browser_ui(
+        NS(NS(id, "append_block_action"), "browser"),
+        target = blockr.ui::append_to()
+      ),
+      title = "Append new block",
       mode = "overlay",
       side = "right"
     ),

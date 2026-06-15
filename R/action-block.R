@@ -37,31 +37,28 @@ add_block_action <- function(trigger, board, update, ...) {
 append_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
-      sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-      # Append is trigger-specific (the source is the right-clicked
-      # block), so the browser is rendered per open. Passing board +
-      # target makes it return `list(blocks, links)` with the link's
-      # port already resolved - this handler just applies both.
+      # The append catalogue (linkable blocks) is registry-based, not
+      # source-specific, so its body is pre-rendered once in `board_ui()`
+      # (the `append_block_sidebar` mount) and opening is a pure toggle.
+      # The source (right-clicked block) is supplied here via the `target`
+      # reactive and resolved into the link at commit; the "Append from X"
+      # context goes in the sidebar title.
+      sidebar_id <- NS(isolate(board$board_id), "append_block_sidebar")
       added <- blockr.ui::block_browser_server(
         "browser",
         board = reactive(board$board),
         target = reactive(blockr.ui::append_to(trigger()))
       )
 
-      browser_ui <- function() {
-        blockr.ui::block_browser_ui(
-          session$ns("browser"), board$board,
-          blockr.ui::append_to(trigger())
-        )
-      }
+      title <- function() paste0("Append from ", trigger())
 
       observeEvent(trigger(), {
-        blockr.ui::show_sidebar(
-          sidebar_id, title = "Append new block", ui = browser_ui()
-        )
+        blockr.ui::show_sidebar(sidebar_id, title = title())
       })
 
       observeEvent(added(), {
+        # `added()` is `list(blocks, links)` with the link's port already
+        # resolved menu-side; apply both.
         res <- added()
         update(list(
           blocks = list(add = res$blocks),
@@ -69,7 +66,7 @@ append_block_action <- function(trigger, board, update, ...) {
         ))
 
         blockr.ui::keep_or_hide_sidebar(
-          sidebar_id, title = "Append new block", ui = browser_ui()
+          sidebar_id, ui = NULL, title = title()
         )
       })
 

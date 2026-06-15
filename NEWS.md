@@ -1,13 +1,16 @@
 # blockr.dock (development version)
 
-* The add-block browser is pre-rendered once into a dedicated
-  `add_block_sidebar` and merely toggled open, instead of being rebuilt
-  on every open. The add / append / prepend handlers are thin adapters
-  over `blockr.ui::block_browser_server()`, which now returns
-  ready-to-apply `blocks` / `links` objects (target port resolved
-  menu-side); the dock-side `build_block_from_spec()`, `valid_block_id()`
-  and `valid_link_id()` helpers are removed. Requires the matching
-  blockr.ui (`block_browser_server()` ready-objects contract).
+* The add and append block browsers are each pre-rendered once into a
+  dedicated sidebar (`add_block_sidebar` / `append_block_sidebar`) and
+  merely toggled open, instead of being rebuilt on every open (the append
+  rebuild was ~500 ms with a large registry, dominated by instantiating
+  every block to compute the linkable filter). The add / append / prepend
+  handlers are thin adapters over `blockr.ui::block_browser_server()`,
+  which now returns ready-to-apply `blocks` / `links` objects (target port
+  resolved menu-side); the dock-side `build_block_from_spec()`,
+  `valid_block_id()` and `valid_link_id()` helpers are removed. Requires
+  the matching blockr.ui (`block_browser_server()` ready-objects
+  contract).
 
 * Adding a block before the dock view has finished initialising no
   longer throws `argument is of length zero`. While the dock is
