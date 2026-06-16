@@ -356,6 +356,53 @@ test_that("add block action toggles its pre-rendered sidebar on confirm", {
   )
 })
 
+test_that("append block action toggles its pre-rendered sidebar on confirm", {
+  keep_calls <- list()
+
+  local_mocked_bindings(
+    show_sidebar = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(id, ...) {
+      keep_calls[[length(keep_calls) + 1L]] <<-
+        list(id = id, args = list(...))
+      invisible(NULL)
+    },
+    hide_sidebar = function(...) invisible(NULL),
+    .package = "blockr.ui"
+  )
+
+  r_board <- reactiveValues(
+    board = new_board(blocks = c(a = new_dataset_block())),
+    board_id = "my_board"
+  )
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        append_block_action(
+          trigger = reactive("a"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      session$setInputs(`browser-commit` = commit_spec(
+        type = "head_block", id = "h1", title = NULL,
+        link_id = "lnk1", block_input = "data", nonce = 1
+      ))
+
+      expect_named(r_update(), c("blocks", "links"))
+      expect_length(keep_calls, 1L)
+      # Append also targets its dedicated, pre-rendered sidebar and
+      # re-opens without `ui` (no re-render); the source goes in the title.
+      expect_identical(keep_calls[[1L]]$id, "my_board-append_block_sidebar")
+      expect_identical(keep_calls[[1L]]$args$title, "Append from a")
+      expect_null(keep_calls[[1L]]$args$ui)
+    }
+  )
+})
+
 test_that("remove block action", {
   r_board <- reactiveValues(
     board = new_board(blocks = c(a = new_dataset_block()))
