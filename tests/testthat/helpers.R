@@ -149,6 +149,18 @@ read_dock_state <- function(app, board_id = "my_board") {
   )
 }
 
+# A block panel's open tab outlives the panel content, which dockview detaches
+# while inactive -- so the tab strip, not the (detached) card, is where panel
+# presence is observable. Each tab carries its panel id as
+# `...-dock-tab-block_panel-<id>`; read them sorted straight off the live DOM.
+block_panel_tabs <- function(app, board_id = "my_board") {
+  html <- xml2::read_html(
+    app$get_html(paste0("#", board_id, "-view_container"))
+  )
+  nodes <- xml2::xml_find_all(html, "//*[contains(@id, '-tab-block_panel-')]")
+  sort(sub(".*-tab-(block_panel-.+)$", "\\1", xml2::xml_attr(nodes, "id")))
+}
+
 # Shared helpers for the edit-board extension e2e tests (links, stacks). The
 # extension namespaces its inputs under `my_board-edit_board_extension-`. The
 # extension panel stays active in those tests (pre-seeded fixtures, no block
