@@ -49,12 +49,25 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   # Reconcile the live dock session against the committed board (create /
   # destroy / restore / rename / switch views), keeping apply_board_update a
   # pure reducer. No ignoreInit: initial render is the empty-`docks` case.
+  #
+  # priority = 100 so this runs before the layout upsync on the init flush.
+  # The upsync reads live_view_data, which iterates `docks`; until reconcile
+  # has populated `docks`, live_view_data returns NULL early WITHOUT taking a
+  # dependency on any dock's `_state` input. reconcile's later client_views()
+  # write is an identical() no-op, so live_view_data would never re-evaluate
+  # and view_data() would stay NULL for the whole session -- stranding the
+  # upsync (no live layout ever mirrored to board_layouts) and the export
+  # (serialize_board then falls back to the board's default layout). Ordering
+  # dock creation first lets live_view_data's first read see the docks and
+  # bind to `_state`. Do not drop this without making live_view_data
+  # re-evaluate on dock creation by some other means.
   observeEvent(
     board$board,
     reconcile_views(
       board, update, docks, active_dock, client_active, client_views,
       committed_layouts, session
-    )
+    ),
+    priority = 100
   )
 
   # Extensions receive active_dock — a reactiveValues that always mirrors
