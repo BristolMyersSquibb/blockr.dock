@@ -111,16 +111,6 @@ test_that("adding a second block keeps both block panels (#196)", {
 
   app$wait_for_idle()
 
-  # A block panel's open tab outlives the panel content, which dockview
-  # detaches while inactive -- so the tab strip, not the (detached) card, is
-  # where panel presence is observable. Each tab carries its panel id as
-  # `...-dock-tab-block_panel-<id>`; read them straight off the live DOM.
-  block_panel_tabs <- function() {
-    html <- xml2::read_html(app$get_html("#my_board-view_container"))
-    nodes <- xml2::xml_find_all(html, "//*[contains(@id, '-tab-block_panel-')]")
-    sort(sub(".*-tab-(block_panel-.+)$", "\\1", xml2::xml_attr(nodes, "id")))
-  }
-
   add_block <- function(registry, id) {
     app$set_inputs(
       `my_board-edit_board_extension-registry_select` = registry,
@@ -131,13 +121,13 @@ test_that("adding a second block keeps both block panels (#196)", {
   }
 
   add_block("dataset_block", "a")
-  expect_identical(block_panel_tabs(), "block_panel-a")
+  expect_identical(block_panel_tabs(app), "block_panel-a")
 
   # Pre-fix, the second add fired reconcile_views against a board_layouts that
   # lagged the live dock, restoring it and wiping both block panels -- leaving
   # only the extension (#196). Both block tabs must survive.
   add_block("head_block", "b")
-  expect_identical(block_panel_tabs(), c("block_panel-a", "block_panel-b"))
+  expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
 
   app$stop()
 })
@@ -235,4 +225,71 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   expect_false(anyDuplicated(nav$id) > 0L)
   expect_true("Third" %in% nav$label)
   expect_false(any(nav$label == ""))
+})
+
+test_that("appending a block via its context menu adds a linked panel", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    test_path("apps", "append-block"),
+    name = "append-block",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  expect_identical(block_panel_tabs(app), "block_panel-a")
+
+  # Open the source block's context menu and fire "Append block", which opens
+  # the pre-rendered append browser in the right sidebar.
+  app$run_js(
+    paste0(
+      "document.querySelector('#my_board-block_handle-a ",
+      ".blockr-header-icon').click()"
+    )
+  )
+  app$click("my_board-block_a-edit_block-append_block")
+  app$wait_for_idle()
+
+  expect_true(
+    app$get_js(
+      paste0(
+        "document.getElementById('my_board-append_block_sidebar')",
+        ".classList.contains('blockr-sidebar-open')"
+      )
+    )
+  )
+
+  # Clicking a catalogue card quick-adds that block with default settings,
+  # firing the browser's client-side commit binding that the append action
+  # observes.
+  app$run_js(
+    paste0(
+      "document.querySelector('#my_board-append_block_action-browser-commit ",
+      ".blockr-block-browser-card[data-block-type=\"head_block\"] ",
+      ".blockr-block-browser-card-name').click()"
+    )
+  )
+  app$wait_for_idle()
+
+  tabs <- block_panel_tabs(app)
+
+  expect_length(tabs, 2L)
+  expect_true("block_panel-a" %in% tabs)
+
+  new_id <- sub("^block_panel-", "", setdiff(tabs, "block_panel-a"))
+
+  # Append, unlike a plain add, also wires a link from the source into the new
+  # block. The link is proven through data flow: the appended head block
+  # computes head(iris) -- six rows of the source's five columns -- which is
+  # reachable only if it received `a`'s output.
+  results <- app$get_value(export = "result")
+
+  expect_setequal(names(results), c("a", new_id))
+  expect_s3_class(results[[new_id]], "data.frame")
+  expect_identical(dim(results[[new_id]]), c(6L, 5L))
 })
