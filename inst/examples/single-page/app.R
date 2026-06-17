@@ -10,5 +10,6 @@ serve(
     links = list(from = "a", to = "b", input = "data"),
     extensions = list(edit = new_edit_board_extension()),
     layouts = list("edit", list("a", "b"))
-  )
+  ),
+  "my_board"
 )

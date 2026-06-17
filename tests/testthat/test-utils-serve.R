@@ -572,3 +572,80 @@ test_that("dock panel move updates layout state and serialization (#234)", {
     )
   )
 })
+
+test_that("locked board hides block actions, shows lock indicator (#236)", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "locked-dock", "app.R", package = "blockr.dock"),
+    name = "locked-board",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, 4)
+
+  count <- function(selector) {
+    app$get_js(sprintf("document.querySelectorAll('%s').length", selector))
+  }
+
+  # Read-only indicator rendered in the navbar (driven by is_dock_locked()).
+  expect_equal(count(".blockr-lock-indicator"), 1)
+  expect_match(
+    app$get_js("document.querySelector('.blockr-lock-indicator').innerText"),
+    "Read-only"
+  )
+
+  # Block cards and their dropdown menus render, but the locked dock suppresses
+  # the mutating actions: no append / delete buttons anywhere.
+  expect_gte(count(".blockr-block-dropdown"), 1)
+  expect_equal(count("[id$=\"-append_block\"]"), 0)
+  expect_equal(count("[id$=\"-delete_block\"]"), 0)
+
+  # The dropdown's "Block Actions" section is gone; "Block Details" remains.
+  headers <- app$get_js(
+    paste0(
+      "Array.from(document.querySelectorAll(",
+      "'.blockr-block-dropdown .dropdown-header'",
+      ")).map(function(e) { return e.innerText; }).join('|')"
+    )
+  )
+  expect_match(headers, "Block Details")
+  expect_false(grepl("Block Actions", headers))
+
+  # View CRUD is locked too: no "New page" add control.
+  expect_equal(count(".blockr-view-add"), 0)
+})
+
+test_that("single-page board renders one auto-named view (#236)", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "single-page", "app.R", package = "blockr.dock"),
+    name = "single-page",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, 2)
+
+  nav <- read_view_nav(app)
+
+  # No named views were declared, so the board resolves to exactly one view,
+  # auto-named (non-blank label) and active.
+  expect_identical(nrow(nav), 1L)
+  expect_true(nav$active)
+  expect_true(nzchar(nav$label))
+
+  # Exactly one view dock is rendered and active, and it is this view's.
+  docks <- read_view_docks(app)
+  expect_identical(nrow(docks), 1L)
+  expect_true(docks$active)
+  expect_identical(docks$id, nav$id)
+})
