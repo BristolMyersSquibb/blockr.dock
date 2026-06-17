@@ -85,6 +85,36 @@ read_view_nav <- function(app, board_id = "my_board") {
   )
 }
 
+# Parse the live view-dock containers into one row per view (id, active flag),
+# so a browser test can assert the rendered docks track a view-lifecycle
+# change alongside the nav: switching moves the `blockr-view-dock-active`
+# class, adding inserts a container, removing drops one. Each view's dock sits
+# in `#<board>-view_handle-<id>`; the active one carries the extra class
+# (toggled by the `switch-view` client handler). Reads the composed DOM -- the
+# seam a unit test can't observe.
+read_view_docks <- function(app, board_id = "my_board") {
+  by_class <- function(token) {
+    sprintf(
+      "//*[contains(concat(' ', normalize-space(@class), ' '), ' %s ')]",
+      token
+    )
+  }
+
+  cont <- xml2::read_html(
+    app$get_html(paste0("#", board_id, "-view_container"))
+  )
+  docks <- xml2::xml_find_all(cont, by_class("blockr-view-dock"))
+  prefix <- paste0("^", board_id, "-view_handle-")
+
+  data.frame(
+    id = sub(prefix, "", xml2::xml_attr(docks, "id")),
+    active = grepl(
+      "(^| )blockr-view-dock-active( |$)", xml2::xml_attr(docks, "class")
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
 # Wait until the server-rendered dock shell is in place: the view nav, every
 # block card and the active view's handle. These render independently of the
 # dockview client, so the serialization e2e can read them without racing the

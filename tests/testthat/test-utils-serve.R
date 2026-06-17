@@ -388,3 +388,98 @@ test_that("removing a stack via the edit extension updates the board", {
 
   expect_null(field(app, "grp_name"))
 })
+
+test_that("view lifecycle: switch, rename, remove a view (#232)", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-lifecycle",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  # Resolve the two seeded views' stable ids from their labels once. Every
+  # operation travels by id (`data-view-id`); a rename moves a label but never
+  # the id, so these stay valid for the whole lifecycle.
+  nav <- read_view_nav(app)
+  expect_identical(nrow(nav), 2L)
+
+  first <- nav$id[nav$label == "First"]
+  second <- nav$id[nav$label == "Second"]
+
+  item_sel <- function(id) {
+    sprintf("#my_board-view_nav .blockr-view-item[data-view-id=\"%s\"]", id)
+  }
+
+  # First is active on load: its dock alone carries blockr-view-dock-active.
+  docks <- read_view_docks(app)
+  expect_setequal(docks$id, c(first, second))
+  expect_identical(docks$id[docks$active], first)
+
+  # Switch active view: clicking the Second nav item reports its id to
+  # `view_nav`; the reconcile swaps which dock is active.
+  app$run_js(
+    paste0("document.querySelector('", item_sel(second), "').click()")
+  )
+  app$wait_for_idle()
+
+  nav <- read_view_nav(app)
+  expect_identical(nav$label[nav$active], "Second")
+
+  docks <- read_view_docks(app)
+  expect_identical(docks$id[docks$active], second)
+
+  # Rename the active view through the pencil: it swaps the label span for an
+  # inline input that commits on Enter, sending `view_nav_rename`. The id is
+  # stable, so the label moves but the dock container (keyed by id) does not.
+  app$run_js(
+    paste0(
+      "var it = document.querySelector('", item_sel(second), "');",
+      "it.querySelector('.blockr-view-edit').click();",
+      "var inp = it.querySelector('.blockr-view-rename-input');",
+      "inp.value = 'Renamed';",
+      "$(inp).trigger($.Event('keydown', {key: 'Enter'}));"
+    )
+  )
+  app$wait_for_idle()
+
+  nav <- read_view_nav(app)
+  expect_identical(nrow(nav), 2L)
+  expect_false(anyDuplicated(nav$id) > 0L)
+  expect_setequal(nav$label, c("First", "Renamed"))
+  expect_identical(nav$id[nav$label == "Renamed"], second)
+  expect_identical(nav$label[nav$active], "Renamed")
+
+  docks <- read_view_docks(app)
+  expect_setequal(docks$id, c(first, second))
+  expect_identical(docks$id[docks$active], second)
+
+  # Remove the (non-active) First view: the x button sends `view_nav_remove`
+  # and the confirmation modal's button drives the delete. The reconcile drops
+  # both its nav entry and its dock container, leaving the renamed survivor.
+  app$run_js(
+    paste0(
+      "document.querySelector('", item_sel(first),
+      " .blockr-view-remove').click()"
+    )
+  )
+  app$wait_for_idle()
+
+  app$click("my_board-confirm_view_remove")
+  app$wait_for_idle()
+
+  nav <- read_view_nav(app)
+  expect_identical(nrow(nav), 1L)
+  expect_identical(nav$label, "Renamed")
+  expect_true(nav$active)
+
+  docks <- read_view_docks(app)
+  expect_identical(docks$id, second)
+  expect_true(docks$active)
+})
