@@ -66,9 +66,9 @@ test_that("edit board extension links blocks (e2e)", {
 
   # A board pre-seeded with a source and a transform block so the test drives
   # only link operations -- adding blocks would deactivate the extension panel
-  # and race shinytest2 (see apps/edit-link/app.R, mirroring edit-stacks).
+  # and race shinytest2. The same bare fixture serves the stacks test below.
   app <- shinytest2::AppDriver$new(
-    test_path("apps", "edit-link"),
+    system.file("examples", "edit-add", "app.R", package = "blockr.dock"),
     name = "edit-link",
     seed = 42,
     load_timeout = 30 * 1000
@@ -137,7 +137,7 @@ test_that("edit board extension stacks (e2e)", {
   skip_on_cran()
 
   app <- shinytest2::AppDriver$new(
-    test_path("apps", "edit-stacks"),
+    system.file("examples", "edit-add", "app.R", package = "blockr.dock"),
     name = "edit-stacks",
     seed = 42,
     load_timeout = 30 * 1000
@@ -149,7 +149,7 @@ test_that("edit board extension stacks (e2e)", {
   wait_bound(app, "grp_name")
 
   set_in(app, "grp_name", "Group A")
-  set_in(app, "grp_blocks", "data")
+  set_in(app, "grp_blocks", "a")
   set_color(app, "grp_color", "#aabbcc")
   app$wait_for_idle()
 
@@ -232,7 +232,7 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   skip_on_cran()
 
   app <- shinytest2::AppDriver$new(
-    test_path("apps", "serdes"),
+    system.file("examples", "serdes", "app.R", package = "blockr.dock"),
     name = "serdes",
     seed = 42,
     load_timeout = 40 * 1000,
