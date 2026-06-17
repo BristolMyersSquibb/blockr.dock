@@ -111,16 +111,6 @@ test_that("adding a second block keeps both block panels (#196)", {
 
   app$wait_for_idle()
 
-  # A block panel's open tab outlives the panel content, which dockview
-  # detaches while inactive -- so the tab strip, not the (detached) card, is
-  # where panel presence is observable. Each tab carries its panel id as
-  # `...-dock-tab-block_panel-<id>`; read them straight off the live DOM.
-  block_panel_tabs <- function() {
-    html <- xml2::read_html(app$get_html("#my_board-view_container"))
-    nodes <- xml2::xml_find_all(html, "//*[contains(@id, '-tab-block_panel-')]")
-    sort(sub(".*-tab-(block_panel-.+)$", "\\1", xml2::xml_attr(nodes, "id")))
-  }
-
   add_block <- function(registry, id) {
     app$set_inputs(
       `my_board-edit_board_extension-registry_select` = registry,
@@ -131,13 +121,13 @@ test_that("adding a second block keeps both block panels (#196)", {
   }
 
   add_block("dataset_block", "a")
-  expect_identical(block_panel_tabs(), "block_panel-a")
+  expect_identical(block_panel_tabs(app), "block_panel-a")
 
   # Pre-fix, the second add fired reconcile_views against a board_layouts that
   # lagged the live dock, restoring it and wiping both block panels -- leaving
   # only the extension (#196). Both block tabs must survive.
   add_block("head_block", "b")
-  expect_identical(block_panel_tabs(), c("block_panel-a", "block_panel-b"))
+  expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
 
   app$stop()
 })
@@ -300,4 +290,101 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # The deserialize + reconcile + re-render rebuilds the dock-owned view
   # structure and the blocks identically.
   expect_identical(read_dock_state(app), before)
+})
+
+test_that("deleting a block via its card menu drops the panel and its link", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "remove-block",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
+  expect_identical(field(app, "ab_from"), "a")
+
+  # The card's "Delete block" dropdown item sets this input (immediate, no
+  # browser); fire it directly so the test does not depend on b's panel being
+  # the front tab -- its card is detached from the DOM while inactive.
+  app$run_js(
+    paste0(
+      "Shiny.setInputValue(",
+      "'my_board-block_b-edit_block-delete_block', 1, {priority: 'event'});"
+    )
+  )
+  app$wait_for_idle()
+
+  # The board update removes b's dock panel and cascade-removes the dependent
+  # link, whose row then leaves the extension's links table.
+  expect_identical(block_panel_tabs(app), "block_panel-a")
+  expect_null(field(app, "ab_from"))
+})
+
+test_that("removing a link via the edit extension updates the board", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "remove-link",
+    seed = 42,
+    load_timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+  expect_identical(field(app, "ab_from"), "a")
+
+  app$run_js(
+    paste0(
+      "Shiny.setInputValue('", nsid("links_dt_rows_selected"),
+      "', [1], {priority: 'event'});"
+    )
+  )
+  app$wait_for_idle()
+
+  click(app, "rm_link")
+  app$wait_for_idle()
+  click(app, "apply_changes")
+  app$wait_for_idle()
+
+  expect_null(field(app, "ab_from"))
+})
+
+test_that("removing a stack via the edit extension updates the board", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "remove-stack",
+    seed = 42,
+    load_timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+  expect_identical(field(app, "grp_name"), "Group A")
+
+  app$run_js(
+    paste0(
+      "Shiny.setInputValue('", nsid("stacks_dt_rows_selected"),
+      "', [1], {priority: 'event'});"
+    )
+  )
+  app$wait_for_idle()
+
+  click(app, "rm_stack")
+  app$wait_for_idle()
+  click(app, "apply_changes")
+  app$wait_for_idle()
+
+  expect_null(field(app, "grp_name"))
 })
