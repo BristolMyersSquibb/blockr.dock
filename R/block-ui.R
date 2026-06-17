@@ -89,7 +89,7 @@ remove_block_ui.dock_board <- function(id, x, blocks, dock, ...,
 
   for (blk in blocks) {
     if (as_block_panel_id(blk) %in% block_panel_ids(dock$proxy)) {
-      hide_block_panel(blk, proxy = dock$proxy)
+      hide_block_panel(blk, dock = dock)
     }
 
     removeUI(
@@ -118,36 +118,35 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
       session = session
     )
 
-    show_block_panel(blocks[i], determine_panel_pos(dock), dock$proxy)
+    show_block_panel(blocks[i], determine_panel_pos(dock), dock)
   }
 
   invisible(x)
 }
 
-show_block_panel <- function(block, add_panel = TRUE,
-                             proxy = dock_proxy(), ...) {
+show_block_panel <- function(block, add_panel = TRUE, dock, ...) {
 
   if (isTRUE(add_panel)) {
-    add_block_panel(block, proxy = proxy)
+    add_block_panel(block, dock = dock)
   } else if (isFALSE(add_panel)) {
-    select_block_panel(block, proxy)
+    select_block_panel(block, dock$proxy)
   } else {
-    add_block_panel(block, position = add_panel, proxy = proxy)
+    add_block_panel(block, position = add_panel, dock = dock)
   }
 
-  show_block_ui(block, proxy$session,
-                board_ns = proxy_board_ns(proxy), ...)
+  show_block_ui(block, dock$proxy$session,
+                board_ns = dock_board_ns(dock), ...)
 
   invisible(NULL)
 }
 
-hide_block_panel <- function(id, rm_panel = TRUE, proxy = dock_proxy(), ...) {
+hide_block_panel <- function(id, rm_panel = TRUE, dock, ...) {
 
-  hide_block_ui(id, proxy$session,
-                board_ns = proxy_board_ns(proxy), ...)
+  hide_block_ui(id, dock$proxy$session,
+                board_ns = dock_board_ns(dock), ...)
 
   if (isTRUE(rm_panel)) {
-    remove_block_panel(id, proxy)
+    remove_block_panel(id, dock)
   }
 
   invisible(NULL)

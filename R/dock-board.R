@@ -333,8 +333,41 @@ augment_board_update.dock_board <- function(upd, board, ...,
   upd
 }
 
+# Record added blocks' panels in the active view's layout, in the same update
+# that adds the blocks. insert_block_ui() places them in the live dock; folding
+# them into board_layouts here -- rather than waiting for the debounced live
+# sync -- keeps the panel set authoritative server-side, so reconcile never
+# restores a board_layouts that lags the dock (#196) and serialization never
+# drops an added panel.
+add_block_panels_to_view <- function(board, block_ids) {
+
+  layouts <- board_layouts(board)
+  active <- active_view(layouts)
+
+  if (is.null(active)) {
+    return(board)
+  }
+
+  layout <- layouts[[active]]
+
+  for (bid in block_ids) {
+    layout <- append_panel_to_layout(
+      layout, as.character(as_block_panel_id(bid))
+    )
+  }
+
+  layouts[[active]] <- layout
+  board_layouts(board) <- layouts
+
+  board
+}
+
 #' @export
 apply_board_update.dock_board <- function(board, upd, ...) {
+
+  if (length(upd$blocks$add)) {
+    board <- add_block_panels_to_view(board, names(upd$blocks$add))
+  }
 
   if (!length(upd$views)) {
     return(board)

@@ -30,13 +30,12 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   triggers <- action_triggers(actions)
 
   # Per-session dock state, closure-private. `docks` is the live manage_dock()
-  # registry; `client_active` / `client_views` mirror what the browser shows
-  # (lagging board_layouts), diffed by reconcile_views() — the sole mutator.
-  # `committed_layouts` records, per view, the board_layouts the live dock was
-  # last reconciled to, so reconcile pushes a layout back to the dock only when
-  # the committed layout genuinely changed (#196).
+  # registry; `client_active` / `client_views` mirror which views the browser
+  # shows, diffed by reconcile_views() — the sole mutator. Per-view panel
+  # membership lives on each dock proxy (`live_panels`), kept authoritative by
+  # the add/remove touchpoints, so reconcile compares against it rather than the
+  # lagging browser echo.
   docks <- new.env(parent = emptyenv())
-  committed_layouts <- new.env(parent = emptyenv())
   active_dock <- reactiveValues()
   client_active <- reactiveVal(NULL)
   client_views <- reactiveVal(seed_view_state(board_layouts(initial_board)))
@@ -53,7 +52,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     board$board,
     reconcile_views(
       board, update, docks, active_dock, client_active, client_views,
-      committed_layouts, session
+      session
     )
   )
 
@@ -285,13 +284,13 @@ hide_view_ui <- function(view_id, docks) {
   if (is.null(view_id) || !exists(view_id, envir = docks, inherits = FALSE)) {
     return()
   }
-  proxy <- docks[[view_id]]$proxy
-  bns <- proxy_board_ns(proxy)
-  for (bid in as_obj_id(block_panel_ids(proxy))) {
-    hide_block_ui(bid, proxy$session, board_ns = bns)
+  dock <- docks[[view_id]]
+  bns <- dock_board_ns(dock)
+  for (bid in as_obj_id(block_panel_ids(dock$proxy))) {
+    hide_block_ui(bid, dock$proxy$session, board_ns = bns)
   }
-  for (eid in as_obj_id(ext_panel_ids(proxy))) {
-    hide_ext_ui(eid, proxy$session, board_ns = bns)
+  for (eid in as_obj_id(ext_panel_ids(dock$proxy))) {
+    hide_ext_ui(eid, dock$proxy$session, board_ns = bns)
   }
 }
 
@@ -308,13 +307,13 @@ show_view_ui <- function(view_id, docks) {
   if (is.null(view_id) || !exists(view_id, envir = docks, inherits = FALSE)) {
     return()
   }
-  proxy <- docks[[view_id]]$proxy
-  bns <- proxy_board_ns(proxy)
-  for (bid in as_obj_id(block_panel_ids(proxy))) {
-    show_block_ui(bid, proxy$session, board_ns = bns)
+  dock <- docks[[view_id]]
+  bns <- dock_board_ns(dock)
+  for (bid in as_obj_id(block_panel_ids(dock$proxy))) {
+    show_block_ui(bid, dock$proxy$session, board_ns = bns)
   }
-  for (eid in as_obj_id(ext_panel_ids(proxy))) {
-    show_ext_ui(eid, proxy$session, board_ns = bns)
+  for (eid in as_obj_id(ext_panel_ids(dock$proxy))) {
+    show_ext_ui(eid, dock$proxy$session, board_ns = bns)
   }
 }
 
@@ -378,18 +377,17 @@ remove_view <- function(v_id, session, docks) {
 }
 
 # Make the live dock session match the committed board's view set:
-# instantiate added views, tear down removed ones, restore views whose
-# committed layout changed, relabel renamed ones, and switch to the active
-# view. Takes the reactive board handle (not a snapshot) so the live list
-# reaches manage_dock, whose interaction observers read board$board after the
-# fact (#194); the committed board is snapshotted once here for this pass's
-# reads. Driven by board$board so apply_board_update.dock_board stays a pure
-# reducer and dock state never crosses the package boundary. Idempotent — a
-# board already matching the live state produces no surgery — so it composes
-# with the live-sync (DOM -> board) path without ping-ponging.
+# instantiate added views, tear down removed ones, push layout changes to
+# surviving views, relabel renamed ones, and switch to the active view. Takes
+# the reactive board handle (not a snapshot) so the live list reaches
+# manage_dock, whose interaction observers read board$board after the fact
+# (#194); the committed board is snapshotted once here for this pass's reads.
+# Driven by board$board so apply_board_update.dock_board stays a pure reducer
+# and dock state never crosses the package boundary. Idempotent — a board
+# already matching the live state produces no surgery — so it composes with the
+# live-sync (DOM -> board) path without ping-ponging.
 reconcile_views <- function(board, update, docks, active_dock,
-                            client_active, client_views, committed_layouts,
-                            session) {
+                            client_active, client_views, session) {
 
   brd <- board$board
 
@@ -416,7 +414,6 @@ reconcile_views <- function(board, update, docks, active_dock,
     )
 
     state[[v]] <- bare_view(layouts[[v]])
-    committed_layouts[[v]] <- layouts[[v]]
   }
 
   # Add a nav item only for views the nav doesn't already show. `board_ui`
@@ -436,10 +433,6 @@ reconcile_views <- function(board, update, docks, active_dock,
     remove_view(v, session, docks)
     session$sendInputMessage("view_nav", list(remove = v))
     state[[v]] <- NULL
-
-    if (exists(v, envir = committed_layouts, inherits = FALSE)) {
-      rm(list = v, envir = committed_layouts)
-    }
   }
 
   for (v in intersect(want, have)) {
@@ -454,34 +447,13 @@ reconcile_views <- function(board, update, docks, active_dock,
       )
     }
 
-    # Restore the live dock from board_layouts only when this view's committed
-    # layout actually changed (a views$mod, a board restore). A block add
-    # touches the live dock through insert_block_ui without changing
-    # board_layouts, and the live-sync mirrors it back later; reconciling that
-    # drift here would restore the dock to a board_layouts that lags it, wiping
-    # the just-added block panels (#196).
-    prev <- get0(v, envir = committed_layouts, inherits = FALSE,
-                 ifnotfound = NULL)
-
-    committed_layouts[[v]] <- layouts[[v]]
-
-    if (is.null(prev) || !layouts_match(layouts[[v]], prev)) {
-
-      live <- tryCatch(
-        isolate(docks[[v]]$layout()),
-        error = function(e) NULL
-      )
-
-      if (!is.null(live) && !layouts_match(live, layouts[[v]])) {
-        apply_layout_diff(
-          view = v,
-          target = layouts[[v]],
-          proxy = docks[[v]]$proxy,
-          blocks = board_blocks(brd),
-          extensions = dock_extensions(brd)
-        )
-      }
-    }
+    reconcile_view_layout(
+      docks[[v]],
+      v,
+      layouts[[v]],
+      board_blocks(brd),
+      dock_extensions(brd)
+    )
   }
 
   client_views(state)
@@ -490,6 +462,54 @@ reconcile_views <- function(board, update, docks, active_dock,
         !identical(server_active, isolate(client_active()))) {
     switch_active_view(
       server_active, docks, active_dock, client_active, session
+    )
+  }
+
+  invisible()
+}
+
+# Push one view's committed layout to its live dock. Panel membership is tracked
+# authoritatively on the proxy (`live_panels`), kept in lockstep by the
+# add/remove touchpoints, so a mismatch there is a programmatic add / remove the
+# dock has not been told about (a views$mod, a board restore) — restore it and
+# record the new membership. When membership already agrees, only the
+# arrangement can differ; reconcile that against the browser's echoed state, but
+# skip until the echo has caught up to the current membership, so a just-added
+# panel (live_panels ahead of the echo) does not read as an arrangement change
+# and force a needless rebuild (#196).
+reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
+
+  target_ids <- layout_panel_ids(target)
+  live_ids <- isolate(dock$live_panels())
+
+  if (!setequal(live_ids, target_ids)) {
+
+    apply_layout_diff(
+      view = view,
+      target = target,
+      dock = dock,
+      blocks = blocks,
+      extensions = extensions
+    )
+
+    dock$live_panels(target_ids)
+
+    return(invisible())
+  }
+
+  live <- tryCatch(isolate(dock$layout()), error = function(e) NULL)
+
+  if (is.null(live) || !setequal(grid_panel_ids(live[["grid"]]), target_ids)) {
+    return(invisible())
+  }
+
+  if (!layouts_match(live, target)) {
+    apply_layout_diff(
+      view = view,
+      target = target,
+      dock = dock,
+      blocks = blocks,
+      extensions = extensions
     )
   }
 
@@ -507,8 +527,9 @@ reconcile_views <- function(board, update, docks, active_dock,
 #' @param layout Optional initial `dock_layout`; defaults to the board's
 #'   `active_layout()`.
 #'
-#' @return A list with `layout` (reactive), `proxy`, `prev_active_group`,
-#'   `n_panels`, and `active_group_trail`.
+#' @return The view's `dock` handle: a list holding the dockViewR `proxy`
+#'   alongside `board_ns`, `live_panels`, `layout` (reactive), `n_panels`,
+#'   `prev_active_group`, and `active_group_trail`.
 #'
 #' @noRd
 manage_dock <- function(
@@ -528,8 +549,50 @@ manage_dock <- function(
   board_ns <- get_session()$ns
 
   moduleServer(id, function(input, output, session) {
-    dock <- set_dock_view_output(session = session)
-    dock$board_ns <- board_ns
+
+    # `dock` is our handle for this view's live dock: it *contains* the
+    # dockViewR proxy alongside the server-side state the dock helpers need --
+    # the board-level namespace, the authoritative panel-membership set, and the
+    # module's reactive outputs. The proxy itself is never mutated. n_panels
+    # derives from the membership set, so the empty-dock prompt no longer waits
+    # on the browser's `n-panels` echo.
+    proxy <- set_dock_view_output(session = session)
+    live_panels <- reactiveVal(as.character(layout_panel_ids(init_layout)))
+    prev_active_group <- reactiveVal()
+    active_group_trail <- reactiveVal()
+    n_panels <- reactive(length(live_panels()))
+
+    dock <- list(
+      proxy = proxy,
+      board_ns = board_ns,
+      live_panels = live_panels,
+      layout = reactive(dockViewR::get_dock(proxy)),
+      n_panels = n_panels,
+      prev_active_group = prev_active_group,
+      active_group_trail = active_group_trail
+    )
+
+    # Fold live-only membership changes — the add-panel modal, a closed tab, an
+    # extension show / hide — back into board_layouts in the same flush, so the
+    # panel set stays authoritative server-side and a later board change never
+    # restores a layout that lags the live dock. Block add / remove fold through
+    # the update lifecycle already; this catches the dock-only paths.
+    observeEvent(
+      live_panels(),
+      {
+        layouts <- board_layouts(board$board)
+
+        if (id %in% names(layouts)) {
+
+          folded <- fold_live_membership(layouts[[id]], live_panels())
+
+          if (!is.null(folded)) {
+            update(list(views = list(mod = set_names(list(folded), id))))
+          }
+        }
+      },
+      ignoreInit = TRUE
+    )
 
     if (get_log_level() >= debug_log_level) {
       observeEvent(
@@ -545,14 +608,14 @@ manage_dock <- function(
     observeEvent(
       req(input[[dock_input("initialized")]]),
       {
-        restore_layout(init_layout, dock,
+        restore_layout(init_layout, dock$proxy,
                        blocks = init_blocks, extensions = init_exts)
 
         for (pid in as_dock_panel_id(init_layout)) {
           if (is_block_panel_id(pid)) {
-            show_block_panel(pid, add_panel = FALSE, proxy = dock)
+            show_block_panel(pid, add_panel = FALSE, dock = dock)
           } else if (is_ext_panel_id(pid)) {
-            show_ext_panel(pid, add_panel = FALSE, proxy = dock)
+            show_ext_panel(pid, add_panel = FALSE, dock = dock)
           } else {
             blockr_abort(
               "Unknown panel type {class(pid)}.",
@@ -564,15 +627,6 @@ manage_dock <- function(
       once = TRUE
     )
 
-    n_panels <- reactiveVal(
-      length(determine_active_views(init_layout))
-    )
-
-    observeEvent(
-      req(input[[dock_input("n-panels")]]),
-      n_panels(input[[dock_input("n-panels")]])
-    )
-
     observeEvent(
       input[[dock_input("panel-to-remove")]],
       {
@@ -581,11 +635,9 @@ manage_dock <- function(
         )
 
         if (is_block_panel_id(pid)) {
-          hide_block_panel(pid, rm_panel = TRUE, proxy = dock)
-          n_panels(n_panels() - 1L)
+          hide_block_panel(pid, rm_panel = TRUE, dock = dock)
         } else if (is_ext_panel_id(pid)) {
-          hide_ext_panel(pid, rm_panel = TRUE, proxy = dock)
-          n_panels(n_panels() - 1L)
+          hide_ext_panel(pid, rm_panel = TRUE, dock = dock)
         } else {
           blockr_abort(
             "Unknown panel type {class(pid)}.",
@@ -630,20 +682,16 @@ manage_dock <- function(
             show_block_panel(
               board_blocks(board$board)[as_obj_id(new_block_panel_id(pid))],
               add_panel = pos,
-              proxy = dock
+              dock = dock
             )
-
-            n_panels(n_panels() + 1L)
           } else if (maybe_ext_panel_id(pid)) {
             exts <- as.list(dock_extensions(board$board))
 
             show_ext_panel(
               exts[[as_obj_id(new_ext_panel_id(pid))]],
               add_panel = pos,
-              proxy = dock
+              dock = dock
             )
-
-            n_panels(n_panels() + 1L)
           } else {
             blockr_abort(
               "Unknown panel specification {pid}.",
@@ -655,9 +703,6 @@ manage_dock <- function(
         removeModal()
       }
     )
-
-    prev_active_group <- reactiveVal()
-    active_group_trail <- reactiveVal()
 
     observeEvent(
       input[[dock_input("active-group")]],
@@ -688,7 +733,7 @@ manage_dock <- function(
           new_name <- delta[["block_name"]]
           blk_panel_id <- as_block_panel_id(blk_id)
 
-          old_title <- get_dock_panel(blk_panel_id, dock)$title
+          old_title <- get_dock_panel(blk_panel_id, dock$proxy)$title
 
           if (identical(new_name, old_title)) {
             next
@@ -697,7 +742,7 @@ manage_dock <- function(
           log_debug("setting panel title {blk_panel_id} to '{new_name}'")
 
           dockViewR::set_panel_title(
-            dock,
+            dock$proxy,
             blk_panel_id,
             new_name
           )
@@ -705,13 +750,7 @@ manage_dock <- function(
       }
     )
 
-    list(
-      layout = reactive(dockViewR::get_dock(dock)),
-      proxy = dock,
-      prev_active_group = prev_active_group,
-      n_panels = n_panels,
-      active_group_trail = active_group_trail
-    )
+    dock
   })
 }
 
@@ -990,7 +1029,7 @@ suggest_panels_to_add <- function(
   ns <- session$ns
 
   if (is.null(panels)) {
-    panels <- dock_panel_ids(dock)
+    panels <- dock_panel_ids(dock$proxy)
   }
 
   stopifnot(is.list(panels), all(lgl_ply(panels, is_dock_panel_id)))

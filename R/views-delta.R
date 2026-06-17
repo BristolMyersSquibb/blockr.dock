@@ -341,6 +341,72 @@ drop_panels_from_layout <- function(layout, panel_ids) {
   result
 }
 
+# Add a panel to a view's layout as a new tab in its last group (an empty view
+# gets a single-panel grid), making it the open tab. Mirrors the live
+# `determine_panel_pos()` placement closely enough for the structural sync; the
+# exact arrangement is reconciled by the debounced geometry echo.
+append_panel_to_layout <- function(layout, panel_id) {
+
+  nm <- view_name(layout)
+  grid <- layout[["grid"]]
+
+  if (!length(grid_panel_ids(grid))) {
+
+    out <- new_dock_layout(grid = build_grid_tree(list(panel_id)))
+
+  } else {
+
+    leaves <- grid_leaves(grid)
+    last_id <- leaves[[length(leaves)]][["id"]]
+
+    append_to_last <- function(leaf) {
+
+      if (identical(leaf[["data"]][["id"]], last_id)) {
+        leaf[["data"]][["views"]] <- c(
+          leaf[["data"]][["views"]], list(panel_id)
+        )
+        leaf[["data"]][["activeView"]] <- panel_id
+      }
+
+      leaf
+    }
+
+    out <- layout
+    out[["grid"]] <- grid_map_leaves(grid, append_to_last)
+  }
+
+  if (!is.null(nm)) {
+    view_name(out) <- nm
+  }
+
+  validate_dock_layout(out)
+}
+
+# Reconcile a view's stored layout to the panel set the live dock now holds,
+# dropping removed panels and appending added ones. Returns `NULL` when the
+# membership already matches, so the caller can skip a no-op update. Lets the
+# dock-only mutation paths (the add-panel modal, a closed tab, an extension
+# show/hide) fold their change into board_layouts without each re-deriving it.
+fold_live_membership <- function(layout, live_ids) {
+
+  current <- layout_panel_ids(layout)
+
+  added <- setdiff(live_ids, current)
+  removed <- setdiff(current, live_ids)
+
+  if (!length(added) && !length(removed)) {
+    return(NULL)
+  }
+
+  out <- drop_panels_from_layout(layout, removed)
+
+  for (pid in added) {
+    out <- append_panel_to_layout(out, pid)
+  }
+
+  out
+}
+
 # Merge user-supplied `views$mod` with the block-removal cleanup: when
 # both touch a view, the cleanup drops the removed block from whatever
 # layout the user submitted; otherwise the present one wins.
@@ -551,7 +617,7 @@ switch_active_view <- function(active, docks, active_dock, client_active,
 # Apply one view's layout change. v1 unconditionally restores the target
 # layout; surgical diff paths (noop / active-tab / reorder) are a
 # deferred follow-up that can dispatch here without touching callers.
-apply_layout_diff <- function(view, target, proxy, blocks, extensions) {
+apply_layout_diff <- function(view, target, dock, blocks, extensions) {
 
   log_debug("applying layout diff for view {view}")
 
@@ -563,20 +629,20 @@ apply_layout_diff <- function(view, target, proxy, blocks, extensions) {
   # (b) reattach them to the freshly-rendered panels afterwards. Iterate
   # object ids (as `hide_view_ui()` does): `for` over the classed id
   # vector would drop the class and double-prefix the move target.
-  for (oid in as_obj_id(block_panel_ids(proxy))) {
-    hide_block_panel(oid, rm_panel = FALSE, proxy = proxy)
+  for (oid in as_obj_id(block_panel_ids(dock$proxy))) {
+    hide_block_panel(oid, rm_panel = FALSE, dock = dock)
   }
-  for (oid in as_obj_id(ext_panel_ids(proxy))) {
-    hide_ext_panel(oid, rm_panel = FALSE, proxy = proxy)
+  for (oid in as_obj_id(ext_panel_ids(dock$proxy))) {
+    hide_ext_panel(oid, rm_panel = FALSE, dock = dock)
   }
 
-  restore_layout(target, proxy, blocks = blocks, extensions = extensions)
+  restore_layout(target, dock$proxy, blocks = blocks, extensions = extensions)
 
   for (pid in as_dock_panel_id(target)) {
     if (is_block_panel_id(pid)) {
-      show_block_panel(pid, add_panel = FALSE, proxy = proxy)
+      show_block_panel(pid, add_panel = FALSE, dock = dock)
     } else if (is_ext_panel_id(pid)) {
-      show_ext_panel(pid, add_panel = FALSE, proxy = proxy)
+      show_ext_panel(pid, add_panel = FALSE, dock = dock)
     } else {
       blockr_abort(
         "Unknown panel type {class(pid)}.",
