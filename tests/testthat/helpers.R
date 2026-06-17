@@ -85,6 +85,70 @@ read_view_nav <- function(app, board_id = "my_board") {
   )
 }
 
+# Wait until the server-rendered dock shell is in place: the view nav, every
+# block card and the active view's handle. These render independently of the
+# dockview client, so the serialization e2e can read them without racing the
+# (client-side) panel layout.
+wait_dock_loaded <- function(app, n_blocks, board_id = "my_board") {
+  app$wait_for_js(
+    sprintf("document.querySelector('#%s-view_nav') !== null", board_id),
+    timeout = 30 * 1000
+  )
+  app$wait_for_js(
+    sprintf(
+      "document.querySelectorAll('[id^=\"%s-block_handle-\"]').length === %d",
+      board_id, n_blocks
+    ),
+    timeout = 30 * 1000
+  )
+  app$wait_for_js(
+    "document.querySelector('.blockr-view-dock-active') !== null",
+    timeout = 30 * 1000
+  )
+}
+
+# The dock-owned board state observable in server-rendered DOM: the view nav
+# (one row per view), the active view's id (the `blockr-view-dock-active`
+# handle), and every block's card id. The serialization e2e captures this
+# before and after a save / restore reload to assert the round-trip rebuilds it
+# identically. Block cards live in a pool the dockview client teleports into
+# panels, so query their ids globally rather than from a fixed container.
+read_dock_state <- function(app, board_id = "my_board") {
+  container <- xml2::read_html(
+    app$get_html(paste0("#", board_id, "-view_container"))
+  )
+  active_node <- xml2::xml_find_all(
+    container,
+    paste0(
+      "//*[contains(concat(' ', normalize-space(@class), ' '), ",
+      "' blockr-view-dock-active ')]"
+    )
+  )
+  active_view <- sub(
+    paste0("^", board_id, "-view_handle-"), "",
+    xml2::xml_attr(active_node, "id")
+  )
+
+  handles <- unlist(
+    app$get_js(
+      sprintf(
+        paste0(
+          "Array.from(document.querySelectorAll(",
+          "'[id^=\"%s-block_handle-\"]')).map(e => e.id)"
+        ),
+        board_id
+      )
+    )
+  )
+  block_ids <- sort(sub(paste0("^", board_id, "-block_handle-"), "", handles))
+
+  list(
+    nav = read_view_nav(app, board_id),
+    active_view = active_view,
+    blocks = block_ids
+  )
+}
+
 # Shared helpers for the edit-board extension e2e tests (links, stacks). The
 # extension namespaces its inputs under `my_board-edit_board_extension-`. The
 # extension panel stays active in those tests (pre-seeded fixtures, no block

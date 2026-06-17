@@ -236,3 +236,68 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   expect_true("Third" %in% nav$label)
   expect_false(any(nav$label == ""))
 })
+
+test_that("a board survives the live Export/Import round-trip (#233)", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    test_path("apps", "serdes"),
+    name = "serdes",
+    seed = 42,
+    load_timeout = 40 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 3)
+  before <- read_dock_state(app)
+
+  # The fixture seeds the dock-owned state the round-trip must preserve: two
+  # named views with a non-default active view, plus three blocks.
+  expect_setequal(before$nav$label, c("Overview", "Analysis"))
+  expect_identical(before$nav$label[before$nav$active], "Analysis")
+  expect_identical(before$active_view, "analysis")
+  expect_identical(before$blocks, c("a", "b", "c"))
+
+  # Export through the live download handler, then assert the server-produced
+  # artifact carries the dock-owned state the DOM does not surface without the
+  # dockview client -- the extension, the panel-level layout, the producer
+  # version that routes deserialization -- alongside blocks, links and stacks.
+  path <- app$get_download("my_board-preserve_board-serialize")
+  expect_gt(file.size(path), 0)
+
+  ser <- jsonlite::fromJSON(path, simplifyDataFrame = FALSE,
+                            simplifyMatrix = FALSE)
+  expect_identical(
+    ser$constructor$version,
+    as.character(utils::packageVersion("blockr.dock"))
+  )
+
+  restored <- blockr_deser(ser)
+  expect_setequal(board_block_ids(restored), c("a", "b", "c"))
+  expect_identical(board_link_ids(restored), "ab")
+  expect_setequal(names(board_stacks(restored)), "grp")
+  expect_length(dock_extensions(restored), 1L)
+
+  ly <- board_layouts(restored)
+  expect_identical(unname(view_names(ly)), c("Overview", "Analysis"))
+  expect_identical(active_view(ly), "analysis")
+  expect_setequal(
+    layout_panel_ids(ly[["analysis"]]),
+    c("ext_panel-edit_board_extension", "block_panel-a", "block_panel-b")
+  )
+
+  # Import the saved file. Restoring reloads the session: the probe, wiped by
+  # the reload, both waits for and proves the reload fired.
+  app$run_js("window.__serdes_probe = true;")
+  app$upload_file(`my_board-preserve_board-restore` = path, wait_ = FALSE)
+  app$wait_for_js("typeof window.__serdes_probe === 'undefined'",
+                  timeout = 30 * 1000)
+
+  wait_dock_loaded(app, n_blocks = 3)
+
+  # The deserialize + reconcile + re-render rebuilds the dock-owned view
+  # structure and the blocks identically.
+  expect_identical(read_dock_state(app), before)
+})
