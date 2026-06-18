@@ -30,12 +30,14 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   triggers <- action_triggers(actions)
 
   # Per-session dock state, closure-private. `docks` is the live manage_dock()
-  # registry; `client_active` / `client_views` mirror which views the browser
-  # shows, diffed by reconcile_views() — the sole mutator. Per-view panel
-  # membership lives on each dock proxy (`live_panels`), kept authoritative by
-  # the add/remove touchpoints, so reconcile compares against it rather than the
-  # lagging browser echo.
-  docks <- new.env(parent = emptyenv())
+  # registry, keyed by view id; `client_active` / `client_views` mirror which
+  # views the browser shows, diffed by reconcile_views() — the sole mutator.
+  # Per-view panel membership lives on each dock proxy (`live_panels`), kept
+  # authoritative by the add/remove touchpoints, so reconcile compares against
+  # it rather than the lagging browser echo. `docks` is a `reactiveValues`, so
+  # live_view_data() depends on each view's entry and re-evaluates when
+  # reconcile creates it, whatever the init flush order.
+  docks <- reactiveValues()
   active_dock <- reactiveValues()
   client_active <- reactiveVal(NULL)
   client_views <- reactiveVal(seed_view_state(board_layouts(initial_board)))
@@ -161,8 +163,11 @@ switch_view_observer <- function(session, update, client_active) {
 
 # Returns NULL while any view is still pending — its dock not yet created by
 # reconcile, or its dockview layout not yet reported — so downstream observers
-# `req()` past the initial flush instead of racing reconcile. The active view
-# comes from `client_active`, not `client_views`.
+# `req()` past the initial flush. Reading `docks[[v_id]]` (a reactiveValues)
+# takes a dependency on each view's entry, so this re-evaluates when reconcile
+# creates the dock — whatever the init flush order — rather than stranding on
+# the empty-`docks` early return. The active view comes from `client_active`,
+# not `client_views`.
 live_view_data <- function(client_views, docks, client_active) {
   reactive({
     state <- client_views()
@@ -277,11 +282,11 @@ diff_dock_layouts <- function(current, new_layouts) {
 #' not visible while the view is inactive.
 #'
 #' @param view_id View id (string).
-#' @param docks Environment of dock module results, keyed by view id.
+#' @param docks `reactiveValues` of dock module results, keyed by view id.
 #'
 #' @noRd
 hide_view_ui <- function(view_id, docks) {
-  if (is.null(view_id) || !exists(view_id, envir = docks, inherits = FALSE)) {
+  if (is.null(view_id) || !(view_id %in% names(docks))) {
     return()
   }
   dock <- docks[[view_id]]
@@ -300,11 +305,11 @@ hide_view_ui <- function(view_id, docks) {
 #' becomes active.
 #'
 #' @param view_id View id (string).
-#' @param docks Environment of dock module results, keyed by view id.
+#' @param docks `reactiveValues` of dock module results, keyed by view id.
 #'
 #' @noRd
 show_view_ui <- function(view_id, docks) {
-  if (is.null(view_id) || !exists(view_id, envir = docks, inherits = FALSE)) {
+  if (is.null(view_id) || !(view_id %in% names(docks))) {
     return()
   }
   dock <- docks[[view_id]]
@@ -360,7 +365,7 @@ create_view <- function(v_id, layout, board, update, session, docks,
 # surviving in another view keeps its single-instance board-level UI.
 remove_view <- function(v_id, session, docks) {
 
-  if (!exists(v_id, envir = docks, inherits = FALSE)) {
+  if (!(v_id %in% names(docks))) {
     return(invisible())
   }
 
@@ -371,7 +376,7 @@ remove_view <- function(v_id, session, docks) {
     immediate = TRUE,
     session = session
   )
-  rm(list = v_id, envir = docks)
+  trim_rv(docks, v_id)
 
   invisible()
 }
@@ -396,7 +401,7 @@ reconcile_views <- function(board, update, docks, active_dock,
   labels <- view_names(layouts)
   server_active <- active_view(layouts)
   state <- isolate(client_views())
-  have <- ls(docks)
+  have <- names(docks)
   shown <- names(state)
 
   for (v in setdiff(want, have)) {

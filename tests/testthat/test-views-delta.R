@@ -207,7 +207,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
   # instantiated (no DOM surgery). The proxy's membership matches the board and
   # the live layout is pending (NULL), so the layout check is a no-op and only
   # the rename fires.
-  docks <- new.env(parent = emptyenv())
+  docks <- reactiveValues()
   for (id in names(board_layouts(brd))) {
     ids <- as.character(layout_panel_ids(board_layouts(brd)[[id]]))
     docks[[id]] <- list(
@@ -712,7 +712,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     # Registry pre-populated for every view (proxy membership matching the
     # board); the DOM helpers are mocked so the test exercises reconcile's
     # nav-sync, not the live teardown / switch.
-    docks <- new.env(parent = emptyenv())
+    docks <- reactiveValues()
     for (id in names(state)) {
       ids <- as.character(layout_panel_ids(state[[id]]))
       docks[[id]] <- list(
@@ -736,7 +736,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
                         client_active, client_views, session)
       ),
       remove_view = function(view_id, session, docks) {
-        rm(list = view_id, envir = docks)
+        trim_rv(docks, view_id)
         invisible()
       },
       hide_view_ui = function(...) NULL,
