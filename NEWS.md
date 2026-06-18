@@ -1,5 +1,14 @@
 # blockr.dock (development version)
 
+* Live panel rearrangements are no longer lost when a board is saved
+  (#243). `view_data()`, the live dock layout that serialization reads,
+  was stuck at `NULL` for the whole session, so Export fell back to the
+  board's default layout. The live dock registry is now a
+  `reactiveValues` rather than a plain environment, so `view_data()`
+  takes a dependency on each view's entry and re-evaluates when reconcile
+  creates it -- whatever the init flush order -- instead of relying on a
+  reconcile observer priority to win that race.
+
 * The add and append block browsers are each pre-rendered once into a
   dedicated sidebar (`add_block_sidebar` / `append_block_sidebar`) and
   merely toggled open, instead of being rebuilt on every open (the append

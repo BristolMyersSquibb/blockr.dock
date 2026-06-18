@@ -589,7 +589,7 @@ switch_active_view <- function(active, docks, active_dock, client_active,
     return(invisible())
   }
 
-  if (exists(active, envir = docks, inherits = FALSE)) {
+  if (active %in% names(docks)) {
 
     # switch-view must fire before show_view_ui so the target dock carries
     # blockr-view-dock-active; otherwise move-element drops DOM moves into an

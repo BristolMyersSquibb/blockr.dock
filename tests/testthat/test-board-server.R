@@ -262,7 +262,7 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
       dock_layouts(A = new_dock_layout(), B = new_dock_layout())
     )
     ids <- names(client_views())
-    docks <- new.env(parent = emptyenv())
+    docks <- reactiveValues()
     docks[[ids[[1L]]]] <- list(layout = layouts$A)
     docks[[ids[[2L]]]] <- list(layout = layouts$B)
     client_active <- reactiveVal(ids[[1L]])
@@ -280,6 +280,89 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
   expect_s3_class(lys, "dock_layouts")
   expect_identical(unname(view_names(lys)), c("A", "B"))
   expect_identical(active_name(lys), "A")
+})
+
+test_that("live_view_data re-evaluates once docks are populated (#243)", {
+
+  # Regression: live_view_data first evaluated with `docks` still empty (its
+  # dock module not yet created by reconcile) and hit the empty-dock early
+  # return. When `docks` was a plain environment that read took no reactive
+  # dependency, so reconcile populating `docks` never re-triggered it --
+  # view_data() stayed NULL for the session and serialize fell back to the
+  # default layout. As a `reactiveValues`, reading `docks[[v_id]]` (even for an
+  # absent key) subscribes, so creating the dock re-evaluates this -- with no
+  # separate signal and regardless of flush order.
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  res <- with_mock_context(ms, {
+    client_views <- reactiveVal(dock_layouts(A = new_dock_layout()))
+    docks <- reactiveValues()
+    client_active <- reactiveVal(NULL)
+    list(
+      vd = live_view_data(client_views, docks, client_active),
+      docks = docks,
+      view = names(client_views())[[1L]]
+    )
+  })
+
+  # First read with empty docks: NULL, but the absent-key read has subscribed.
+  expect_null(isolate(res$vd()))
+
+  # Mimic reconcile creating the dock: the reactiveValues write alone
+  # re-triggers live_view_data.
+  layout <- with_mock_context(
+    ms, reactiveVal(list(grid = list(), panels = list()))
+  )
+  with_mock_context(ms, res$docks[[res$view]] <- list(layout = layout))
+
+  lys <- isolate(res$vd())
+
+  expect_s3_class(lys, "dock_layouts")
+  expect_identical(unname(view_names(lys)), "A")
+})
+
+test_that("view_data() tracks a reported layout despite flush order (#243)", {
+
+  # The same regression through the real reconcile + live_view_data composition.
+  # Reading view_data() before the first flush reproduces the init order the
+  # bug needs -- the upsync reads live_view_data while `docks` is still empty,
+  # before reconcile creates the dock modules. The browser then reports a
+  # rearranged layout via the dock `_state` input, which view_data() must pick
+  # up rather than staying frozen at the seed.
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(Page = dock_layout("a", "b"))
+  )
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  res <- with_mock_context(
+    ms, board_server_callback(board_rv, update = reactiveVal())
+  )
+
+  # Force the first read before reconcile runs: docks empty, so NULL.
+  expect_null(isolate(res$view_data()))
+
+  ms$flushReact()
+
+  # The browser reports the live grid through the dock `_state` input, carrying
+  # the real `block_panel-*` ids reversed from the seeded order. It is built
+  # with the public dock_layout() constructor -- which dockview_to_layout()
+  # accepts unclassed -- rather than hand-rolled dockview JSON.
+  reported <- unclass(dock_layout("block_panel-b", "block_panel-a"))
+  do.call(ms$setInputs, set_names(list(reported), "Page-dock_state"))
+  ms$flushReact()
+
+  vd <- isolate(res$view_data())
+
+  # view_data() carries the reported order, not the frozen `[a, b]` default.
+  expect_s3_class(vd, "dock_layouts")
+  expect_identical(
+    layout_panel_ids(vd[["Page"]]),
+    c("block_panel-b", "block_panel-a")
+  )
 })
 
 test_that("layouts_to_board_observer fires update views on divergence", {
@@ -385,17 +468,17 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
   )
 
   # Stand in for create_view: register the dock without the DOM / module
-  # machinery so `ls(docks)` tracks created views. The add decision under test
-  # keys off client_views, not docks.
+  # machinery so `names(docks)` tracks created views. The add decision under
+  # test keys off client_views, not docks.
   stub_create <- function(v_id, layout, board, update, session, docks, ...) {
     dock <- list(
       layout = function() NULL,
       live_panels = reactiveVal(as.character(layout_panel_ids(layout)))
     )
-    assign(v_id, dock, envir = docks)
+    docks[[v_id]] <- dock
   }
 
-  docks <- new.env(parent = emptyenv())
+  docks <- with_mock_context(ms, reactiveValues())
   client_views <- with_mock_context(
     ms,
     reactiveVal(seed_view_state(board_layouts(board)))
@@ -464,10 +547,10 @@ test_that("reconcile_views forwards the live board to created views (#194)", {
   forwarded <- NULL
   capture_create <- function(v_id, layout, board, update, session, docks, ...) {
     forwarded <<- board
-    assign(v_id, list(layout = function() NULL), envir = docks)
+    docks[[v_id]] <- list(layout = function() NULL)
   }
 
-  docks <- new.env(parent = emptyenv())
+  docks <- with_mock_context(ms, reactiveValues())
   client_views <- with_mock_context(ms, reactiveVal(list()))
   client_active <- with_mock_context(ms, reactiveVal(NULL))
   active_dock <- with_mock_context(ms, reactiveValues())
@@ -530,7 +613,7 @@ test_that("reconcile_views skips an added panel pending its echo (#196)", {
     )
   )[["V"]]
 
-  docks <- new.env(parent = emptyenv())
+  docks <- with_mock_context(ms, reactiveValues())
   docks[["V"]] <- list(
     layout = function() behind,
     live_panels = with_mock_context(ms, reactiveVal(target_ids))
@@ -595,7 +678,7 @@ test_that("reconcile_views pushes a programmatic membership change", {
 
   live_panels <- with_mock_context(ms, reactiveVal(behind_ids))
 
-  docks <- new.env(parent = emptyenv())
+  docks <- with_mock_context(ms, reactiveValues())
   docks[["V"]] <- list(
     layout = function() NULL,
     live_panels = live_panels
