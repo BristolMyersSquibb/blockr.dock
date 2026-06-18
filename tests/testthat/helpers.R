@@ -208,15 +208,21 @@ set_in <- function(app, id, value) {
 click <- function(app, id) app$click(nsid(id))
 
 # A DataTables redraw (e.g. after adding a row) re-renders the cell inputs,
-# which Shiny re-binds client-side after the server goes idle; wait for the
-# binding before driving the new row's inputs.
-wait_bound <- function(app, id) {
+# which the table's `drawCallback` re-binds via `Shiny.bindAll` -- but only
+# once the async redraw completes, which can land *after* the server reports
+# idle. So idle alone does not mean the new inputs are drivable: wait for idle,
+# then poll for the `.shiny-bound-input` marker the rebind adds, both under one
+# generous budget. A fixed 15s window let a slow CI runner's redraw outlast it
+# and eject green PRs from the merge queue.
+wait_bound <- function(app, id, timeout = 30 * 1000) {
+
+  app$wait_for_idle(timeout = timeout)
+
   app$wait_for_js(
     paste0(
-      "document.querySelector('#", nsid(id),
-      ".shiny-bound-input') !== null"
+      "document.querySelector('#", nsid(id), ".shiny-bound-input') !== null"
     ),
-    timeout = 15 * 1000
+    timeout = timeout
   )
 }
 

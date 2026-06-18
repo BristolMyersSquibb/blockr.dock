@@ -76,7 +76,6 @@ test_that("edit board extension links blocks (e2e)", {
 
   set_in(app, "new_link_id", "ab")
   click(app, "add_link")
-  app$wait_for_idle()
   wait_bound(app, "ab_from")
 
   set_in(app, "ab_from", "a")
@@ -145,7 +144,6 @@ test_that("edit board extension stacks (e2e)", {
 
   set_in(app, "new_stack_id", "grp")
   click(app, "add_stack")
-  app$wait_for_idle()
   wait_bound(app, "grp_name")
 
   set_in(app, "grp_name", "Group A")
