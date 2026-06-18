@@ -483,3 +483,92 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_identical(docks$id, second)
   expect_true(docks$active)
 })
+
+test_that("dock panel move updates layout state and serialization (#234)", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "layout-edit",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+
+  # The dockview client reports its live arrangement through the `_state`
+  # input, which the dock converts into a `dock_layout` -- the resulting
+  # layout state. `group_of` resolves which dock group holds a panel.
+  read_layout <- function() {
+    dockview_to_layout(app$get_value(input = paste0(dock, "_state")))
+  }
+
+  group_of <- function(layout, panel) {
+    leaves <- grid_leaves(layout[["grid"]])
+    Position(function(leaf) panel %in% unlist(leaf[["views"]]), leaves)
+  }
+
+  # Settle on a target group count: `wait_for_js` returns as soon as the
+  # client reports it, then `wait_for_idle` lets the `_state` echo reach the
+  # server before it is read.
+  await_groups <- function(n) {
+    app$wait_for_js(
+      paste0(
+        "HTMLWidgets.find('#", dock, "')",
+        ".getWidget().groups.length === ", n
+      ),
+      timeout = 15 * 1000
+    )
+    app$wait_for_idle()
+  }
+
+  # The fixture seeds blocks a and b tabbed together in a single dock group
+  # (the extension panel sits in its own group).
+  await_groups(2L)
+  before <- read_layout()
+  expect_identical(
+    group_of(before, "block_panel-a"),
+    group_of(before, "block_panel-b")
+  )
+
+  # A real HTML5 drag is impractical to drive through chromote, so reach the
+  # live dockview API and split panel b out into its own group. The rearrange
+  # lives entirely in the dockview client, so no `testServer` test observes
+  # it -- the seam the issue calls out.
+  app$run_js(
+    paste0(
+      "var api = HTMLWidgets.find('#", dock, "').getWidget();",
+      "var b = api.getPanel('block_panel-b');",
+      "b.api.moveTo({group: b.api.group, position: 'right'});"
+    )
+  )
+  await_groups(3L)
+
+  layout <- read_layout()
+
+  # Layout state: a and b, tabbed together before, now sit in separate groups.
+  expect_false(
+    identical(
+      group_of(layout, "block_panel-a"),
+      group_of(layout, "block_panel-b")
+    )
+  )
+
+  # Serialization: the dock-owned serializer reflects the split -- the spec
+  # round-trips to a layout that keeps every panel and still separates a and b.
+  reparsed <- layout_from_json(layout_to_json(layout))
+  expect_setequal(
+    panel_obj_ids(layout_panel_ids(reparsed)),
+    c("a", "b", "edit_board_extension")
+  )
+  expect_false(
+    identical(
+      group_of(reparsed, "block_panel-a"),
+      group_of(reparsed, "block_panel-b")
+    )
+  )
+})
