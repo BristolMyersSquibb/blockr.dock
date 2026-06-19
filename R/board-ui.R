@@ -207,13 +207,22 @@ settings_body <- function(
 
   stopifnot(is_board_options(options))
 
+  generate_code <- div(
+    id = "generate_code",
+    opt_ui_or_null("generate_code", plugins, x)
+  )
+
+  # Locked board: the options accordion edits board state via
+  # set_board_option_value(), which the core gate rejects while locked. Drop it
+  # so the sidebar offers only the read-only generated-code export.
+  if (is_dock_locked()) {
+    return(generate_code)
+  }
+
   opts <- split(options, chr_ply(options, attr, "category"))
 
   tagList(
-    div(
-      id = "generate_code",
-      opt_ui_or_null("generate_code", plugins, x)
-    ),
+    generate_code,
     hr(),
     do.call(
       accordion,

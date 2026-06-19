@@ -1,5 +1,25 @@
 # blockr.dock (development version)
 
+* Locked mode is now enforced as a server-side trust boundary rather than
+  by UI hiding alone (#127). Locking is driven by blockr.core's
+  `blockr.locked` option (`is_dock_locked()` now reads it, and the
+  `blockr.core` update gate refuses every structural mutation while
+  locked), so a forged `Shiny.setInputValue()` can no longer add, remove,
+  rename or edit blocks, links, stacks, views or board options. View
+  navigation stays live: switching the active view is handled
+  client-side, not through the (now refused) board-update lifecycle. The
+  board-options accordion (#135) and the empty-view "Add panel"
+  call-to-action (#136) are dropped in locked mode.
+
+* Hiding a block's input section now freezes those inputs server-side via
+  blockr.core's per-block `frozen` channel (#127). The input toggle only
+  ever hid the controls with `display: none`, leaving the underlying Shiny
+  inputs live and forgeable; the block whose input section is hidden is now
+  named on the `frozen` channel, so core holds its expression and stops
+  consuming its inputs (a forged input reaches nothing), while the block
+  still re-evaluates on upstream data changes. Showing the section again
+  thaws it.
+
 * Live panel rearrangements are no longer lost when a board is saved
   (#243). `view_data()`, the live dock layout that serialization reads,
   was stuck at `NULL` for the whole session, so Export fell back to the

@@ -74,3 +74,16 @@ test_that("panel-id accessors are empty-safe", {
   expect_length(block_panel_ids(proxy = NULL), 0L)
   expect_length(ext_panel_ids(proxy = NULL), 0L)
 })
+
+test_that("is_dock_locked reads the blockr.locked option", {
+
+  withr::with_options(
+    list(blockr.locked = NULL),
+    expect_false(is_dock_locked())
+  )
+
+  withr::with_options(
+    list(blockr.locked = TRUE),
+    expect_true(is_dock_locked())
+  )
+})

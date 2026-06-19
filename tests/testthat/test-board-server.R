@@ -938,3 +938,133 @@ test_that("New view modal confirm submits an add-and-activate delta", {
     }
   )
 })
+
+test_that("locked board switches views client-side, no board update (#127)", {
+
+  withr::local_options(blockr.locked = TRUE)
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = dock_layout("a"), B = dock_layout("b")),
+    active = "A"
+  )
+
+  client_active <- reactiveVal("A")
+  captured <- NULL
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        function(input, output, session) {
+          switch_view_observer(
+            session,
+            update = function(x) captured <<- x,
+            client_active = client_active,
+            board = reactiveValues(board = brd),
+            docks = reactiveValues(),
+            active_dock = reactiveValues()
+          )
+        }
+      )
+    },
+    {
+      # The nav starts on the active view; that first (init) input is
+      # swallowed by ignoreInit. The second is the switch under test.
+      session$setInputs(view_nav = "A")
+      session$setInputs(view_nav = "B")
+      session$flushReact()
+
+      # The active view advances in session state, but nothing travels the
+      # update channel: on a locked board the core gate rejects every
+      # board_update, so navigation has to switch the DOM directly.
+      expect_identical(client_active(), "B")
+      expect_null(captured)
+    }
+  )
+})
+
+test_that("unlocked board switches views through the update channel", {
+
+  withr::local_options(blockr.locked = FALSE)
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = dock_layout("a"), B = dock_layout("b")),
+    active = "A"
+  )
+
+  client_active <- reactiveVal("A")
+  captured <- NULL
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        function(input, output, session) {
+          switch_view_observer(
+            session,
+            update = function(x) captured <<- x,
+            client_active = client_active,
+            board = reactiveValues(board = brd),
+            docks = reactiveValues(),
+            active_dock = reactiveValues()
+          )
+        }
+      )
+    },
+    {
+      # The nav starts on the active view; that first (init) input is
+      # swallowed by ignoreInit. The second is the switch under test.
+      session$setInputs(view_nav = "A")
+      session$setInputs(view_nav = "B")
+      session$flushReact()
+
+      # The switch rides the update lifecycle; flipping client_active is the
+      # reconcile pass's job, so the observer leaves it untouched.
+      expect_identical(captured, list(views = list(active = "B")))
+      expect_identical(client_active(), "A")
+    }
+  )
+})
+
+test_that("hiding a block's input section freezes it on the channel (#127)", {
+
+  brd <- new_board(blocks = c(a = new_dataset_block(), b = new_dataset_block()))
+
+  frozen <- reactiveVal(NULL)
+  vis_a <- reactiveVal(c("inputs", "outputs"))
+  vis_b <- reactiveVal(c("inputs", "outputs"))
+
+  board <- reactiveValues(
+    board = brd,
+    blocks = list(
+      a = list(server = list(visible = vis_a)),
+      b = list(server = list(visible = vis_b))
+    )
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        function(input, output, session) freeze_hidden_inputs(board, frozen)
+      )
+    },
+    {
+      session$flushReact()
+      # Both sections shown: nothing frozen.
+      expect_identical(frozen(), character())
+
+      # Hide b's input section -> b is named on the channel.
+      vis_b(c("outputs"))
+      session$flushReact()
+      expect_identical(frozen(), "b")
+
+      # Show it again -> thaw.
+      vis_b(c("inputs", "outputs"))
+      session$flushReact()
+      expect_identical(frozen(), character())
+    }
+  )
+})

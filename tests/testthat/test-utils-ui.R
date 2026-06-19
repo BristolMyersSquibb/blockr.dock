@@ -33,3 +33,19 @@ test_that("determine_panel_pos places freely before the dock initialises", {
     list(direction = "right")
   )
 })
+
+test_that("empty_dock_prompt offers no add control when locked (#136)", {
+
+  unlocked <- withr::with_options(
+    list(blockr.locked = NULL),
+    as.character(empty_dock_prompt(NS("x")))
+  )
+  expect_match(unlocked, 'id="x-empty_dock_add"', fixed = TRUE)
+
+  locked <- withr::with_options(
+    list(blockr.locked = TRUE),
+    as.character(empty_dock_prompt(NS("x")))
+  )
+  expect_false(grepl("empty_dock_add", locked, fixed = TRUE))
+  expect_match(locked, "lock-fill", fixed = TRUE)
+})

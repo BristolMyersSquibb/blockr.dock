@@ -155,6 +155,16 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
 
 #' @noRd
 empty_dock_prompt <- function(ns) {
+  if (is_dock_locked()) {
+    return(
+      div(
+        class = "blockr-empty-dock-prompt",
+        bsicons::bs_icon("lock-fill", size = "2em"),
+        tags$p("This view is empty")
+      )
+    )
+  }
+
   div(
     class = "blockr-empty-dock-prompt",
     bsicons::bs_icon("plus-circle", size = "2em"),
