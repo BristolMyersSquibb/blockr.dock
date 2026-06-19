@@ -266,7 +266,7 @@ test_that("lock_panels flips tabComponent both ways (#124)", {
   # time. lock_panels is the explicit re-coercion applied at restore time
   # to bring saved panels in line with the *current* lock state.
   unlocked_payload <- withr::with_options(
-    list(blockr.dock_is_locked = NULL),
+    list(blockr.locked = NULL),
     dockview_payload(dock_layout("a"), blocks = blks)
   )
 
@@ -309,7 +309,7 @@ test_that("lock_panels restores callback on save-locked -> restore-unlocked", {
   blks <- c(a = new_dataset_block())
 
   locked_payload <- withr::with_options(
-    list(blockr.dock_is_locked = TRUE),
+    list(blockr.locked = TRUE),
     dockview_payload(dock_layout("a"), blocks = blks)
   )
 

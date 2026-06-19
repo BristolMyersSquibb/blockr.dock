@@ -240,7 +240,10 @@ set_dock_view_output <- function(..., session = get_session()) {
 }
 
 is_dock_locked <- function() {
-  isTRUE(blockr_option("dock_is_locked", FALSE))
+  # Read blockr.core's `blockr.locked` flag, the same source the server-side
+  # gate consults via is_board_locked(); one option drives both the gate and
+  # dock's UI hides.
+  isTRUE(blockr_option("locked", FALSE))
 }
 
 dock_panel_groups <- function(session = get_session()) {

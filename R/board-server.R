@@ -14,7 +14,8 @@
 #'   results.
 #'
 #' @noRd
-board_server_callback <- function(board, update, ..., session = get_session()) {
+board_server_callback <- function(board, update, ..., frozen = NULL,
+                                  session = get_session()) {
   initial_board <- isolate(board$board)
 
   c_exts <- dock_extensions(initial_board)
@@ -42,10 +43,19 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   client_active <- reactiveVal(NULL)
   client_views <- reactiveVal(seed_view_state(board_layouts(initial_board)))
 
-  switch_view_observer(session, update, client_active)
+  switch_view_observer(
+    session, update, client_active, board, docks, active_dock
+  )
   add_view_observer(client_views, session, board, update)
   remove_view_observer(client_views, session, update)
   rename_view_observer(client_views, session, update)
+
+  # Freeze the inputs of any block whose input section is hidden, so a forged
+  # input behind the `display: none` toggle cannot reach them server-side
+  # (#127). `frozen` is the write-channel blockr.core hands the callback.
+  if (!is.null(frozen)) {
+    freeze_hidden_inputs(board, frozen)
+  }
 
   # Reconcile the live dock session against the committed board (create /
   # destroy / restore / rename / switch views), keeping apply_board_update a
@@ -147,18 +157,49 @@ bare_view <- function(x) {
 #' @param client_active Reactive holding the client-shown active view id.
 #'
 #' @noRd
-switch_view_observer <- function(session, update, client_active) {
+switch_view_observer <- function(session, update, client_active, board, docks,
+                                 active_dock) {
   observeEvent(
     session$input$view_nav,
     {
       target <- session$input$view_nav
 
-      if (!identical(target, isolate(client_active()))) {
+      if (identical(target, isolate(client_active()))) {
+        return()
+      }
+
+      # On a locked board the active view is ephemeral client state, not a
+      # board mutation: the core update gate rejects every board_update while
+      # locked, so switch the DOM directly rather than through the lifecycle.
+      if (is_board_locked(isolate(board$board))) {
+        switch_active_view(target, docks, active_dock, client_active, session)
+      } else {
         update(list(views = list(active = target)))
       }
     },
     ignoreInit = TRUE
   )
+}
+
+# Drive blockr.core's per-block `frozen` channel from the input-section toggle.
+# A block whose "inputs" section is hidden keeps a live Shiny input behind a
+# `display: none`, so naming it on the channel makes core hold its expression
+# and stop consuming its inputs — a forged input then reaches nothing (#127).
+# A block with no edit-block plugin (no `visible`) or whose toggle has not yet
+# reported is treated as shown, hence not frozen.
+freeze_hidden_inputs <- function(board, frozen) {
+  observe({
+    inputs_hidden <- function(id) {
+      vis <- board$blocks[[id]]$server$visible
+      if (is.null(vis)) {
+        return(FALSE)
+      }
+      sections <- vis()
+      !is.null(sections) && !("inputs" %in% sections)
+    }
+
+    frozen(as.character(Filter(inputs_hidden, board_block_ids(board$board))))
+  })
 }
 
 # Returns NULL while any view is still pending — its dock not yet created by
@@ -213,6 +254,13 @@ sync_layouts_to_board <- function(view_data, update, board, millis = 250) {
 
 layouts_to_board_observer <- function(view_data, update, board) {
   observe({
+    # Locked board: never mirror live layout back. The update gate would
+    # reject it anyway, and navigation already switches the active view
+    # client-side (see switch_view_observer).
+    if (is_board_locked(isolate(board$board))) {
+      return()
+    }
+
     new_layouts <- req(view_data())
     current <- isolate(board_layouts(board$board))
 
