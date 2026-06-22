@@ -55,6 +55,17 @@ board_ui.dock_board <- function(
             )
           )
         },
+        # Panel navigator trigger. Unlike the gear, its body is dynamic
+        # (the live board + view state), so it is a real action button:
+        # the server observer renders it on click via `show_sidebar()`.
+        tags$button(
+          type = "button",
+          class = "btn action-button blockr-navbar-icon-btn",
+          id = NS(id, "open_panel_navigator"),
+          `aria-label` = "Blocks",
+          title = "Blocks",
+          bsicons::bs_icon("grid-1x2")
+        ),
         # Pure-JS open trigger via `data-blockr-sidebar-target`. The
         # settings sidebar's body is pre-rendered into its mount below, so
         # no server observer is needed: clicking the gear toggles the
@@ -150,6 +161,15 @@ board_ui.dock_board <- function(
       NS(id, "settings_sidebar"),
       ui = settings_body(id, x, options = options),
       title = "Board options",
+      mode = "overlay",
+      side = "right"
+    ),
+    # "panel_navigator_sidebar": the Blocks navigator. Its body lists the
+    # live board grouped by stack with per-row view-visibility toggles, so
+    # it is rendered server-side on open (via `show_sidebar()` from
+    # `panel_navigator_observer()`), not pre-rendered here.
+    blockr.ui::sidebar_ui(
+      NS(id, "panel_navigator_sidebar"),
       mode = "overlay",
       side = "right"
     )

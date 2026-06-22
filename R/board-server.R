@@ -104,6 +104,11 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   register_actions(actions, triggers, board, update, ext_res)
 
+  # The Blocks navigator: a dock-side sidebar over the live board. Reads the
+  # block list / stacks from core and toggles per-view panel visibility on
+  # the active dock; needs no blockr.ui changes (builds on its primitives).
+  panel_navigator_observer(board, update, dock, session = session)
+
   c(
     list(
       dock = dock,
