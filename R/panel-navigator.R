@@ -40,41 +40,152 @@ panel_navigator_observer <- function(board, update, dock,
                                      session = get_session()) {
   input <- session$input
   ns <- session$ns
+  sidebar_id <- ns("panel_navigator_sidebar")
 
-  observeEvent(input$open_panel_navigator, {
+  render_nav <- function() {
     blockr.ui::show_sidebar(
-      ns("panel_navigator_sidebar"),
+      sidebar_id,
       title = "Blocks",
       ui = panel_navigator_body(board$board, dock, ns)
     )
-  })
+  }
+
+  # Re-render on the next flush (after `update()` has mutated the board) but
+  # only while the sidebar is open — used after grouping changes that move
+  # cards between sections or add a section. Rename / toggle update the DOM
+  # client-side, so they skip this to keep scroll / search state.
+  refresh_nav <- function() {
+    session$onFlushed(
+      function() {
+        isolate(
+          if (isTRUE(blockr.ui::sidebar_state(sidebar_id)$open)) {
+            render_nav()
+          }
+        )
+      },
+      once = TRUE
+    )
+  }
+
+  observeEvent(input$open_panel_navigator, render_nav())
 
   observeEvent(input$panel_nav_event, {
     ev <- input$panel_nav_event
-    req(ev$kind, ev$id)
-
+    req(ev$kind)
     brd <- board$board
-    bid <- ev$id
-
-    if (!bid %in% board_block_ids(brd)) {
-      return()
-    }
 
     switch(
       ev$kind,
-      toggle = {
-        if (identical(ev$to, "add")) {
-          show_block_panel(board_blocks(brd)[bid], add_panel = TRUE, dock = dock)
-        } else {
-          hide_block_panel(bid, rm_panel = TRUE, dock = dock)
-        }
+      # Dock (view-membership) events — applied on the active dock.
+      toggle = nav_toggle(brd, dock, ev$id, ev$to),
+      focus = if (ev$id %in% board_block_ids(brd)) {
+        select_block_panel(ev$id, dock$proxy)
       },
-      focus = select_block_panel(bid, dock$proxy),
+      # Core events — applied through the board `update()` channel.
+      rename = nav_rename_block(brd, update, ev$id, ev$value),
+      rename_stack = nav_rename_stack(brd, update, ev$id, ev$value),
+      assign = {
+        nav_reassign_stack(brd, update, ev$id, ev$to)
+        refresh_nav()
+      },
+      add_stack = {
+        nav_add_stack(brd, update)
+        refresh_nav()
+      },
       invisible(NULL)
     )
   })
 
   invisible(NULL)
+}
+
+# ---- event handlers ----------------------------------------------------
+
+nav_toggle <- function(board, dock, bid, to) {
+  if (!bid %in% board_block_ids(board)) {
+    return(invisible())
+  }
+  if (identical(to, "add")) {
+    show_block_panel(board_blocks(board)[bid], add_panel = TRUE, dock = dock)
+  } else {
+    hide_block_panel(bid, rm_panel = TRUE, dock = dock)
+  }
+}
+
+nav_rename_block <- function(board, update, bid, value) {
+  value <- trimws(coal(value, ""))
+  if (nzchar(value) && bid %in% board_block_ids(board)) {
+    update(list(
+      blocks = list(mod = set_names(list(list(block_name = value)), bid))
+    ))
+  }
+}
+
+nav_rename_stack <- function(board, update, sid, value) {
+  value <- trimws(coal(value, ""))
+  if (nzchar(value) && sid %in% board_stack_ids(board)) {
+    # Partial-arg delta: `update_stack()` merges it onto the live stack, so
+    # sending only `name` preserves the blocks and colour.
+    update(list(
+      stacks = list(mod = set_names(list(list(name = value)), sid))
+    ))
+  }
+}
+
+# Move a block to stack `to` ("" / NA -> Ungrouped). One block lives in at
+# most one stack, so this is a remove-from-source + add-to-target pair, sent
+# as a single delta so blockr.core validates the consistent end state.
+nav_reassign_stack <- function(board, update, bid, to) {
+  if (!bid %in% board_block_ids(board)) {
+    return(invisible())
+  }
+
+  stacks <- board_stacks(board)
+  to <- if (is.null(to) || !nzchar(to)) NA_character_ else to
+
+  src <- NA_character_
+  for (sid in names(stacks)) {
+    if (bid %in% stack_blocks(stacks[[sid]])) {
+      src <- sid
+      break
+    }
+  }
+
+  if (identical(src, to)) {
+    return(invisible())
+  }
+  if (!is.na(to) && !to %in% names(stacks)) {
+    return(invisible())
+  }
+
+  mods <- list()
+  if (!is.na(src)) {
+    mods[[src]] <- list(blocks = setdiff(stack_blocks(stacks[[src]]), bid))
+  }
+  if (!is.na(to)) {
+    mods[[to]] <- list(blocks = union(stack_blocks(stacks[[to]]), bid))
+  }
+
+  if (length(mods)) {
+    update(list(stacks = list(mod = mods)))
+  }
+}
+
+# Create an empty stack with a fresh id and a default "Stack N" name (the
+# user renames it inline afterwards). It renders immediately as a drop zone.
+nav_add_stack <- function(board, update) {
+  existing <- chr_ply(board_stacks(board), stack_name)
+  n <- length(existing) + 1L
+  while (paste("Stack", n) %in% existing) {
+    n <- n + 1L
+  }
+
+  new_id <- rand_names(old_names = board_stack_ids(board))
+  stk <- as_dock_stacks(
+    set_names(list(new_dock_stack(character(), name = paste("Stack", n))), new_id)
+  )
+
+  update(list(stacks = list(add = stk)))
 }
 
 # Build the sidebar body: a search box + stack-grouped block cards. Pure
@@ -112,6 +223,12 @@ panel_navigator_body <- function(board, dock, ns) {
         lapply(groups, nav_group, shown = shown, others = others,
                blocks = blocks)
       ),
+      tags$button(
+        type = "button",
+        class = "blockr-panel-nav-add-stack",
+        bsicons::bs_icon("plus-lg"),
+        "New stack"
+      ),
       div(
         class = "blockr-block-browser-empty",
         "No blocks match your search."
@@ -133,18 +250,20 @@ nav_groups <- function(board, blocks) {
   groups <- lapply(seq_along(stacks), function(i) {
     s <- stacks[[i]]
     list(
+      id = names(stacks)[[i]],
       name = coal(stack_name(s), names(stacks)[[i]]),
       color = nav_stack_color(s),
       ids = stack_blocks(s)
     )
   })
 
-  if (length(ungrouped)) {
-    groups <- c(
-      groups,
-      list(list(name = "Ungrouped", color = NA_character_, ids = ungrouped))
-    )
-  }
+  # The Ungrouped bucket carries no stack id (`""`); dropping a card on it
+  # removes the block from its stack.
+  groups <- c(
+    groups,
+    list(list(id = "", name = "Ungrouped", color = NA_character_,
+              ids = ungrouped))
+  )
 
   groups
 }
@@ -166,6 +285,9 @@ nav_group <- function(g, shown, others, blocks) {
   div(
     class = "blockr-block-browser-category blockr-panel-nav-group",
     `data-category` = g$name,
+    # The stack id (`""` for Ungrouped) is the drop target: dropping a card
+    # here reassigns the block to this stack (or out of any stack).
+    `data-stack-id` = g$id,
     div(
       class = "blockr-panel-nav-group-head",
       if (!is.na(g$color)) {
@@ -207,6 +329,7 @@ nav_card <- function(bid, blk, blk1, is_shown, tags_for) {
       if (is_shown) "pn-shown" else "pn-hidden"
     ),
     `data-block-id` = bid,
+    draggable = "true",
     `data-name` = name,
     `data-package` = package,
     `data-category` = category,

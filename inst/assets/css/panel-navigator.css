@@ -109,3 +109,78 @@
 .blockr-panel-nav-card.pn-shown {
   cursor: pointer;
 }
+
+/* ---- drag to reassign ------------------------------------------------ */
+
+.blockr-panel-nav-card[draggable="true"] {
+  cursor: grab;
+}
+
+.blockr-panel-nav-card.pn-dragging {
+  opacity: 0.4;
+}
+
+.blockr-panel-nav-group.pn-drop-target {
+  outline: 2px dashed var(--bb-blue-500);
+  outline-offset: 2px;
+  border-radius: 8px;
+  background: var(--bb-blue-100);
+}
+
+/* Keep an empty stack (no cards) visible as a drop zone — the block-browser
+   CSS would otherwise hide any category with no non-hidden card, which also
+   matches a genuinely empty group. Search-filtered groups (cards present
+   but all hidden) still collapse via that rule. */
+.blockr-panel-nav-group:not(:has(.blockr-block-browser-card)) {
+  display: flex !important;
+  flex-direction: column;
+}
+
+.blockr-panel-nav-group:not(:has(.blockr-block-browser-card))
+  .blockr-block-browser-cards::after {
+  content: "Drop a block here";
+  display: block;
+  padding: 10px 8px;
+  font-size: 12px;
+  color: var(--bb-grey-400);
+  border: 1px dashed var(--bb-grey-300);
+  border-radius: 6px;
+  text-align: center;
+}
+
+/* ---- inline rename --------------------------------------------------- */
+
+.blockr-panel-nav-group-head h3 {
+  cursor: text;
+}
+
+.pn-editing {
+  outline: 2px solid var(--bb-blue-500);
+  outline-offset: 1px;
+  border-radius: 3px;
+  background: #fff;
+  cursor: text;
+}
+
+/* ---- "+ New stack" --------------------------------------------------- */
+
+.blockr-panel-nav-add-stack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--bb-grey-600);
+  background: transparent;
+  border: 1px dashed var(--bb-grey-300);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.blockr-panel-nav-add-stack:hover {
+  background: var(--bb-grey-50);
+  border-color: var(--bb-grey-400);
+  color: var(--bb-grey-900);
+}
