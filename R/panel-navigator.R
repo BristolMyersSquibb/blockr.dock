@@ -63,6 +63,21 @@ panel_navigator_observer <- function(board, update, dock,
 
   observeEvent(input$open_panel_navigator, render_nav())
 
+  # Follow view switches: the switches / counts / tags are all relative to
+  # the ACTIVE view, so a pinned navigator must re-render when the active
+  # view changes. Keyed on the active view id (not every board change) so
+  # block edits and visibility toggles keep scroll / collapse / search
+  # state. The render is deferred (refresh_nav -> onFlushed), so it runs
+  # after reconcile has swapped `active_dock` to the now-active view.
+  last_view <- reactiveVal(active_view(board_layouts(isolate(board$board))))
+  observeEvent(board$board, {
+    av <- active_view(board_layouts(board$board))
+    if (!identical(av, isolate(last_view()))) {
+      last_view(av)
+      refresh_nav()
+    }
+  }, ignoreInit = TRUE)
+
   # One multiplexed input, keyed by `kind` (the navigator's InputBinding).
   observeEvent(input$panel_nav_event, {
     ev <- input$panel_nav_event
