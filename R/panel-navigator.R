@@ -85,7 +85,7 @@ panel_navigator_observer <- function(board, update, dock,
       rename = nav_rename_block(brd, update, ev$id, ev$value),
       rename_stack = nav_rename_stack(brd, update, ev$id, ev$value),
       assign = {
-        nav_reassign_stack(brd, update, ev$id, ev$to)
+        nav_reassign_stack(brd, update, ev$id, ev$to, ev$order)
         refresh_nav()
       },
       add_stack = {
@@ -132,16 +132,25 @@ nav_rename_stack <- function(board, update, sid, value) {
   }
 }
 
-# Move a block to stack `to` ("" / NA -> Ungrouped). One block lives in at
-# most one stack, so this is a remove-from-source + add-to-target pair, sent
-# as a single delta so blockr.core validates the consistent end state.
-nav_reassign_stack <- function(board, update, bid, to) {
+# Move a block to stack `to` ("" / NA -> Ungrouped), or reorder within a
+# stack. One block lives in at most one stack, so a cross-stack move is a
+# remove-from-source + add-to-target pair sent as one delta (blockr.core
+# validates the consistent end state). `order` is the client's full ordered
+# block-id list for the target stack (drag-insert position); when supplied it
+# sets the target's membership order, which serialises as stack block order.
+# Dropping on Ungrouped has no per-stack order to keep, so it just clears the
+# block's stack.
+nav_reassign_stack <- function(board, update, bid, to, order = NULL) {
   if (!bid %in% board_block_ids(board)) {
     return(invisible())
   }
 
   stacks <- board_stacks(board)
   to <- if (is.null(to) || !nzchar(to)) NA_character_ else to
+
+  if (!is.na(to) && !to %in% names(stacks)) {
+    return(invisible())
+  }
 
   src <- NA_character_
   for (sid in names(stacks)) {
@@ -151,24 +160,41 @@ nav_reassign_stack <- function(board, update, bid, to) {
     }
   }
 
-  if (identical(src, to)) {
-    return(invisible())
-  }
-  if (!is.na(to) && !to %in% names(stacks)) {
+  # Target Ungrouped: drop out of any stack (no order to persist there).
+  if (is.na(to)) {
+    if (is.na(src)) {
+      return(invisible())
+    }
+    update(list(stacks = list(mod = set_names(
+      list(list(blocks = setdiff(stack_blocks(stacks[[src]]), bid))), src
+    ))))
     return(invisible())
   }
 
-  mods <- list()
-  if (!is.na(src)) {
+  # Target is a real stack: build its new ordered membership. Trust the
+  # client order but fence it to ids that legitimately belong here (the
+  # target's current members plus the incoming block).
+  cur <- stack_blocks(stacks[[to]])
+  allowed <- c(cur, bid)
+  new_order <- if (length(order)) {
+    o <- intersect(as.character(order), board_block_ids(board))
+    o <- unique(o[o %in% allowed])
+    if (!bid %in% o) o <- c(o, bid)
+    o
+  } else {
+    union(cur, bid)
+  }
+
+  if (identical(src, to) && identical(new_order, cur)) {
+    return(invisible())
+  }
+
+  mods <- set_names(list(list(blocks = new_order)), to)
+  if (!is.na(src) && !identical(src, to)) {
     mods[[src]] <- list(blocks = setdiff(stack_blocks(stacks[[src]]), bid))
   }
-  if (!is.na(to)) {
-    mods[[to]] <- list(blocks = union(stack_blocks(stacks[[to]]), bid))
-  }
 
-  if (length(mods)) {
-    update(list(stacks = list(mod = mods)))
-  }
+  update(list(stacks = list(mod = mods)))
 }
 
 # Create an empty stack with a fresh id and a default "Stack N" name (the

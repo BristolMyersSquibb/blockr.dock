@@ -81,10 +81,49 @@
     }
   });
 
-  // ---- drag a card onto a stack heading to reassign --------------------
+  // ---- drag a card to reassign (onto a stack) or reorder (between cards)-
 
   function dropGroup(el) {
     return el && el.closest ? el.closest(".blockr-panel-nav-group") : null;
+  }
+
+  // The would-be target ordering for `group` if `draggedId` were dropped at
+  // vertical position `clientY`: the group's cards (minus the dragged one)
+  // with the dragged id spliced in before the first card whose midpoint is
+  // below the cursor (else appended). `beforeCard` is that card, for the
+  // insertion indicator.
+  function reorderState(group, draggedId, clientY) {
+    var cards = Array.prototype.filter.call(
+      group.querySelectorAll(".blockr-panel-nav-card"),
+      function (c) {
+        return c.getAttribute("data-block-id") !== draggedId;
+      }
+    );
+    var beforeCard = null;
+    for (var i = 0; i < cards.length; i++) {
+      var r = cards[i].getBoundingClientRect();
+      if (clientY < r.top + r.height / 2) {
+        beforeCard = cards[i];
+        break;
+      }
+    }
+    var ids = cards.map(function (c) {
+      return c.getAttribute("data-block-id");
+    });
+    var idx = beforeCard
+      ? ids.indexOf(beforeCard.getAttribute("data-block-id"))
+      : ids.length;
+    ids.splice(idx, 0, draggedId);
+    return { order: ids, beforeCard: beforeCard };
+  }
+
+  function clearIndicators(root) {
+    Array.prototype.forEach.call(
+      root.querySelectorAll(".pn-drop-before, .pn-drop-end"),
+      function (el) {
+        el.classList.remove("pn-drop-before", "pn-drop-end");
+      }
+    );
   }
 
   document.addEventListener("dragstart", function (event) {
@@ -106,17 +145,35 @@
   document.addEventListener("dragend", function (event) {
     var card = event.target.closest(".blockr-panel-nav-card");
     if (card) card.classList.remove("pn-dragging");
-    var roots = document.querySelectorAll(".pn-drop-target");
-    Array.prototype.forEach.call(roots, function (el) {
-      el.classList.remove("pn-drop-target");
-    });
+    Array.prototype.forEach.call(
+      document.querySelectorAll(".pn-drop-target"),
+      function (el) {
+        el.classList.remove("pn-drop-target");
+      }
+    );
+    var root = navRoot(card);
+    if (root) clearIndicators(root);
   });
 
   document.addEventListener("dragover", function (event) {
     var grp = dropGroup(event.target);
-    if (!grp || !navRoot(grp)) return;
+    var root = grp && navRoot(grp);
+    if (!root) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
+
+    // Insertion indicator: the dragged card is known via `.pn-dragging`
+    // (dataTransfer is unreadable during dragover).
+    clearIndicators(root);
+    var dragged = root.querySelector(".pn-dragging");
+    if (!dragged) return;
+    var st = reorderState(grp, dragged.getAttribute("data-block-id"), event.clientY);
+    if (st.beforeCard) {
+      st.beforeCard.classList.add("pn-drop-before");
+    } else {
+      var cards = grp.querySelector(".blockr-block-browser-cards");
+      if (cards) cards.classList.add("pn-drop-end");
+    }
   });
 
   document.addEventListener("dragenter", function (event) {
@@ -128,21 +185,30 @@
     var grp = dropGroup(event.target);
     if (grp && !grp.contains(event.relatedTarget)) {
       grp.classList.remove("pn-drop-target");
+      clearIndicators(navRoot(grp));
     }
   });
 
   document.addEventListener("drop", function (event) {
     var grp = dropGroup(event.target);
-    if (!grp || !navRoot(grp)) return;
+    var root = grp && navRoot(grp);
+    if (!root) return;
     event.preventDefault();
     grp.classList.remove("pn-drop-target");
+    clearIndicators(root);
+
     var bid = event.dataTransfer.getData("text/plain");
     if (!bid) return;
-    // `data-stack-id` is the target stack ("" = Ungrouped / out of stack).
-    send(navRoot(grp), {
+
+    // `data-stack-id` is the target stack ("" = Ungrouped / out of stack);
+    // `order` is the full target ordering, so the same event handles a
+    // cross-stack move, a reorder within a stack, and an append-on-heading.
+    var st = reorderState(grp, bid, event.clientY);
+    send(root, {
       kind: "assign",
       id: bid,
-      to: grp.getAttribute("data-stack-id") || ""
+      to: grp.getAttribute("data-stack-id") || "",
+      order: st.order
     });
   });
 

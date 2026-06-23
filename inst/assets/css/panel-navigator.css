@@ -127,6 +127,16 @@
   background: var(--bb-blue-100);
 }
 
+/* Insertion indicator while reordering: a line before the target card, or
+   at the end of the list when appending. */
+.blockr-panel-nav-card.pn-drop-before {
+  box-shadow: 0 -2px 0 0 var(--bb-blue-500);
+}
+
+.blockr-block-browser-cards.pn-drop-end {
+  box-shadow: 0 2px 0 0 var(--bb-blue-500);
+}
+
 /* Keep an empty stack (no cards) visible as a drop zone — the block-browser
    CSS would otherwise hide any category with no non-hidden card, which also
    matches a genuinely empty group. Search-filtered groups (cards present
