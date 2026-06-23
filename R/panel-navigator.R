@@ -1,37 +1,31 @@
 #' Panel navigator
 #'
-#' A right-side sidebar that lists *every* block on the board, grouped by
-#' its blockr.core stack (or "Ungrouped"), with a per-row eye toggle
-#' reflecting whether the block's panel is on the current view. It turns
-#' the add-panel picker inside-out: instead of "what can I add", it shows
-#' "here is everything you have, and where it is".
+#' A right-side sidebar listing *every* block on the board grouped by its
+#' blockr.core stack (or "Ungrouped"), each block a row with a visibility
+#' switch reflecting whether its panel is on the current view. It turns the
+#' add-panel picker inside-out: instead of "what can I add", it shows "here
+#' is everything you have, and where it is".
 #'
-#' The navigator lives entirely in blockr.dock and is built on the
-#' `blockr.ui` sidebar + card primitives (it reuses the block-browser card
-#' chrome via `blockr.ui::block_browser_dep()` but renders its own markup,
-#' so blockr.ui needs no changes). It is wired by
-#' `panel_navigator_observer()` from `board_server_callback()`:
+#' This is the "Visible blocks" design (variant B) ported verbatim from the
+#' blockr.ui `feat/panel-navigator-stacks` prototype: collapsible accent-
+#' coloured stack bars, a per-row toggle switch, grip-drag to move / reorder
+#' blocks between stacks, inline rename (double-click), and a "+ New stack"
+#' control. The CSS / JS are self-contained (no block-browser dependency),
+#' so the navigator lives entirely in blockr.dock and needs nothing from
+#' blockr.ui beyond the sidebar shell.
 #'
-#' * the navbar "Blocks" button (`open_panel_navigator`) opens the sidebar,
-#'   rendering the current board / view state server-side;
-#' * the card eye toggles a block's panel on the active view via
-#'   `show_block_panel()` / `hide_block_panel()`;
-#' * clicking a shown row reveals (selects) its panel via
-#'   `select_block_panel()`.
-#'
-#' Visibility is a *view* concern (it lives in the dock layout, not the
-#' core board), which is exactly why the navigator is a dock feature: the
-#' eye toggles per-view panel membership, while the block list and stack
-#' grouping it reads come straight from blockr.core.
-#'
-#' This first cut covers the read / eye / reveal path; rename, drag-to-stack
-#' and "+ new stack" are layered on top later (they route through the core
-#' board `update()` channel, not the dock).
+#' Wired by `panel_navigator_observer()` from `board_server_callback()`:
+#' the navbar "Blocks" button opens the sidebar (rendered server-side from
+#' live board / view state); the switch toggles a panel on the active view
+#' (`show/hide_block_panel`); a row click reveals (`select_block_panel`);
+#' grip-drag / rename / new-stack go through the core board `update()`
+#' channel. Visibility is a view concern (the dock layout, not the core
+#' board), which is exactly why the navigator is a dock feature.
 #'
 #' @param board Reactive board state (list with `$board`).
-#' @param update Board update signal (reserved for the later core-event
-#'   path; unused in this cut).
-#' @param dock The active dock handle (`active_dock`): carries `proxy`,
+#' @param update Board update signal (for the core events: assign / rename /
+#'   add-stack).
+#' @param dock The active dock handle (`active_dock`): `proxy`,
 #'   `live_panels`, `board_ns`.
 #' @param session Shiny session (the board session).
 #'
@@ -52,8 +46,8 @@ panel_navigator_observer <- function(board, update, dock,
 
   # Re-render on the next flush (after `update()` has mutated the board) but
   # only while the sidebar is open — used after grouping changes that move
-  # cards between sections or add a section. Rename / toggle update the DOM
-  # client-side, so they skip this to keep scroll / search state.
+  # cards between sections or add a section. Toggle / rename update the DOM
+  # client-side, so they skip this to keep scroll / collapse / search state.
   refresh_nav <- function() {
     session$onFlushed(
       function() {
@@ -69,6 +63,7 @@ panel_navigator_observer <- function(board, update, dock,
 
   observeEvent(input$open_panel_navigator, render_nav())
 
+  # One multiplexed input, keyed by `kind` (the navigator's InputBinding).
   observeEvent(input$panel_nav_event, {
     ev <- input$panel_nav_event
     req(ev$kind)
@@ -82,14 +77,17 @@ panel_navigator_observer <- function(board, update, dock,
         select_block_panel(ev$id, dock$proxy)
       },
       # Core events — applied through the board `update()` channel.
-      rename = nav_rename_block(brd, update, ev$id, ev$value),
-      rename_stack = nav_rename_stack(brd, update, ev$id, ev$value),
+      rename = nav_rename_block(brd, update, ev$id, ev$name),
+      rename_stack = nav_rename_stack(brd, update, ev$stack, ev$name),
       assign = {
-        nav_reassign_stack(brd, update, ev$id, ev$to, ev$order)
+        payload <- nav_reassign_payload(brd, ev$id, coal(ev$stack, ""), ev$before)
+        if (!is.null(payload)) {
+          update(payload)
+        }
         refresh_nav()
       },
       add_stack = {
-        nav_add_stack(brd, update)
+        nav_add_stack(brd, update, ev$name)
         refresh_nav()
       },
       invisible(NULL)
@@ -132,93 +130,93 @@ nav_rename_stack <- function(board, update, sid, value) {
   }
 }
 
-# Move a block to stack `to` ("" / NA -> Ungrouped), or reorder within a
-# stack. One block lives in at most one stack, so a cross-stack move is a
-# remove-from-source + add-to-target pair sent as one delta (blockr.core
-# validates the consistent end state). `order` is the client's full ordered
-# block-id list for the target stack (drag-insert position); when supplied it
-# sets the target's membership order, which serialises as stack block order.
-# Dropping on Ungrouped has no per-stack order to keep, so it just clears the
-# block's stack.
-nav_reassign_stack <- function(board, update, bid, to, order = NULL) {
-  if (!bid %in% board_block_ids(board)) {
-    return(invisible())
+# Build the board-update payload for a grip drag: move `block_id` into stack
+# `target` ("" = ungrouped) before block `before` (or append), or reorder
+# within a stack. Pure blockr.core; the deltas carry only `blocks`, so stack
+# name / colour are preserved, and stack block order serialises. Returns
+# `NULL` for a no-op.
+nav_reassign_payload <- function(board, block_id, target, before = NULL) {
+  if (!block_id %in% board_block_ids(board)) {
+    return(NULL)
   }
 
-  stacks <- board_stacks(board)
-  to <- if (is.null(to) || !nzchar(to)) NA_character_ else to
+  all_stacks <- board_stacks(board)
 
-  if (!is.na(to) && !to %in% names(stacks)) {
-    return(invisible())
-  }
-
-  src <- NA_character_
-  for (sid in names(stacks)) {
-    if (bid %in% stack_blocks(stacks[[sid]])) {
-      src <- sid
+  cur <- NULL
+  for (sid in names(all_stacks)) {
+    if (block_id %in% stack_blocks(all_stacks[[sid]])) {
+      cur <- sid
       break
     }
   }
 
-  # Target Ungrouped: drop out of any stack (no order to persist there).
-  if (is.na(to)) {
-    if (is.na(src)) {
-      return(invisible())
+  target <- if (identical(target, "") || is.na(target)) NULL else target
+  before <- if (length(before) && nzchar(before)) before else NULL
+
+  if (!is.null(target) && !target %in% names(all_stacks)) {
+    return(NULL)
+  }
+
+  insert_before <- function(vec, id, before) {
+    vec <- setdiff(vec, id)
+    if (is.null(before) || !before %in% vec) {
+      c(vec, id)
+    } else {
+      append(vec, id, after = match(before, vec) - 1L)
     }
-    update(list(stacks = list(mod = set_names(
-      list(list(blocks = setdiff(stack_blocks(stacks[[src]]), bid))), src
-    ))))
-    return(invisible())
   }
 
-  # Target is a real stack: build its new ordered membership. Trust the
-  # client order but fence it to ids that legitimately belong here (the
-  # target's current members plus the incoming block).
-  cur <- stack_blocks(stacks[[to]])
-  allowed <- c(cur, bid)
-  new_order <- if (length(order)) {
-    o <- intersect(as.character(order), board_block_ids(board))
-    o <- unique(o[o %in% allowed])
-    if (!bid %in% o) o <- c(o, bid)
-    o
-  } else {
-    union(cur, bid)
+  if (identical(cur, target)) {
+    if (is.null(target)) {
+      return(NULL)
+    }
+    blks <- stack_blocks(all_stacks[[target]])
+    new_blks <- insert_before(blks, block_id, before)
+    if (identical(new_blks, blks)) {
+      return(NULL)
+    }
+    return(list(
+      stacks = list(mod = set_names(list(list(blocks = new_blks)), target))
+    ))
   }
 
-  if (identical(src, to) && identical(new_order, cur)) {
-    return(invisible())
+  mod <- list()
+  if (!is.null(cur)) {
+    mod[[cur]] <- list(blocks = setdiff(stack_blocks(all_stacks[[cur]]), block_id))
+  }
+  if (!is.null(target)) {
+    mod[[target]] <- list(
+      blocks = insert_before(stack_blocks(all_stacks[[target]]), block_id, before)
+    )
   }
 
-  mods <- set_names(list(list(blocks = new_order)), to)
-  if (!is.na(src) && !identical(src, to)) {
-    mods[[src]] <- list(blocks = setdiff(stack_blocks(stacks[[src]]), bid))
-  }
-
-  update(list(stacks = list(mod = mods)))
+  list(stacks = list(mod = mod))
 }
 
-# Create an empty stack with a fresh id and a default "Stack N" name (the
-# user renames it inline afterwards). It renders immediately as a drop zone.
-nav_add_stack <- function(board, update) {
-  existing <- chr_ply(board_stacks(board), stack_name)
-  n <- length(existing) + 1L
-  while (paste("Stack", n) %in% existing) {
-    n <- n + 1L
+# Create an empty stack with the user-supplied name and a fresh id; it
+# renders immediately as a drop target.
+nav_add_stack <- function(board, update, name) {
+  name <- trimws(coal(name, ""))
+  if (!nzchar(name)) {
+    return(invisible())
   }
 
   new_id <- rand_names(old_names = board_stack_ids(board))
   stk <- as_dock_stacks(
-    set_names(list(new_dock_stack(character(), name = paste("Stack", n))), new_id)
+    set_names(list(new_dock_stack(character(), name = name)), new_id)
   )
 
   update(list(stacks = list(add = stk)))
 }
 
-# Build the sidebar body: a search box + stack-grouped block cards. Pure
-# function of the current board + the active dock's live panel set, so it
-# is re-rendered on each open (and, later, on board-structure change).
-panel_navigator_body <- function(board, dock, ns) {
+# ---- model -------------------------------------------------------------
 
+# Shape the grouped model the renderer consumes: a list of groups, each
+# `list(id, name, color, kind, entries)`, where an entry is
+# `list(id, type, title, subtitle, icon, package, color, on_view, tags)`.
+# Pure function of the current board + the active dock's live panel set.
+nav_build_model <- function(board, dock) {
+  blocks <- board_blocks(board)
   layouts <- board_layouts(board)
   active <- active_view(layouts)
   labels <- view_names(layouts)
@@ -226,174 +224,55 @@ panel_navigator_body <- function(board, dock, ns) {
   shown <- shown_block_ids(dock)
   others <- other_view_tags(layouts, active, labels)
 
-  blocks <- board_blocks(board)
-  groups <- nav_groups(board, blocks)
-
-  htmltools::attachDependencies(
-    div(
-      id = ns("panel_nav"),
-      class = "blockr-stack-menu blockr-panel-nav",
-      # JS reads this to address the multiplexed Shiny input it fires
-      # (toggle / focus events). `.blockr-stack-menu` only resolves the
-      # shared card design tokens; the block-browser InputBinding scopes to
-      # `.blockr-block-browser`, so it never binds here.
-      `data-input-id` = ns("panel_nav_event"),
-      tags$input(
-        type = "search",
-        class = "blockr-block-browser-search blockr-panel-nav-search",
-        placeholder = "Search...",
-        `aria-label` = "Search blocks"
-      ),
-      div(
-        class = "blockr-block-browser-categories blockr-panel-nav-groups",
-        lapply(groups, nav_group, shown = shown, others = others,
-               blocks = blocks)
-      ),
-      tags$button(
-        type = "button",
-        class = "blockr-panel-nav-add-stack",
-        bsicons::bs_icon("plus-lg"),
-        "New stack"
-      ),
-      div(
-        class = "blockr-block-browser-empty",
-        "No blocks match your search."
-      )
-    ),
-    list(blockr.ui::block_browser_dep(), panel_navigator_dep())
-  )
-}
-
-# Group block ids by stack, in board order, with an "Ungrouped" bucket
-# (block ids in no stack) last. Each group carries its display name and
-# colour (NA when none / plain white).
-nav_groups <- function(board, blocks) {
   stacks <- board_stacks(board)
-
   grouped <- unlist(lapply(stacks, stack_blocks), use.names = FALSE)
   ungrouped <- setdiff(board_block_ids(board), grouped)
 
+  entry <- function(bid) {
+    meta <- blks_metadata(blocks[bid])
+    list(
+      id = bid,
+      type = "block",
+      title = coal(safe_block_name(blocks[[bid]]), as.character(meta$name[1L])),
+      subtitle = as.character(meta$category[1L]),
+      icon = as.character(meta$icon[1L]),
+      package = as.character(meta$package[1L]),
+      color = as.character(meta$color[1L]),
+      on_view = bid %in% shown,
+      tags = unique(others[[bid]])
+    )
+  }
+
   groups <- lapply(seq_along(stacks), function(i) {
     s <- stacks[[i]]
+    ids <- intersect(stack_blocks(s), names(blocks))
     list(
       id = names(stacks)[[i]],
       name = coal(stack_name(s), names(stacks)[[i]]),
-      color = nav_stack_color(s),
-      ids = stack_blocks(s)
+      color = nav_stack_accent(s),
+      kind = "stack",
+      entries = lapply(ids, entry)
     )
   })
 
-  # The Ungrouped bucket carries no stack id (`""`); dropping a card on it
-  # removes the block from its stack.
-  groups <- c(
+  # Ungrouped carries no stack id (`""`) and stays a drop target so a block
+  # can be dragged out of a stack.
+  c(
     groups,
-    list(list(id = "", name = "Ungrouped", color = NA_character_,
-              ids = ungrouped))
+    list(list(id = "", name = "Ungrouped", color = "", kind = "ungrouped",
+              entries = lapply(ungrouped, entry)))
   )
-
-  groups
 }
 
-# Stack colour, or NA when it carries none (a plain core stack reports
-# white) — used to decide whether to draw the heading colour dot.
-nav_stack_color <- function(s) {
-  col <- tryCatch(stack_color(s), error = function(e) NA_character_)
-  if (!is_string(col) || !nzchar(col) || toupper(col) == "#FFFFFF") {
-    return(NA_character_)
+# Stack accent colour, or "" when it carries none (a plain core stack
+# reports white) so the renderer falls back to neutral grey.
+nav_stack_accent <- function(s) {
+  col <- tryCatch(stack_color(s), error = function(e) "")
+  if (!is_string(col) || !grepl("^#[0-9a-fA-F]{6}$", col) ||
+        toupper(col) == "#FFFFFF") {
+    return("")
   }
   col
-}
-
-nav_group <- function(g, shown, others, blocks) {
-  ids <- intersect(g$ids, names(blocks))
-  n_shown <- sum(ids %in% shown)
-
-  div(
-    class = "blockr-block-browser-category blockr-panel-nav-group",
-    `data-category` = g$name,
-    # The stack id (`""` for Ungrouped) is the drop target: dropping a card
-    # here reassigns the block to this stack (or out of any stack).
-    `data-stack-id` = g$id,
-    div(
-      class = "blockr-panel-nav-group-head",
-      if (!is.na(g$color)) {
-        tags$span(
-          class = "blockr-panel-nav-dot",
-          style = paste0("background:", g$color, ";")
-        )
-      },
-      tags$h3(g$name),
-      tags$span(
-        class = "blockr-panel-nav-count",
-        paste0(n_shown, "/", length(ids), " shown")
-      )
-    ),
-    div(
-      class = "blockr-block-browser-cards",
-      lapply(ids, function(bid) {
-        nav_card(bid, blocks[[bid]], blocks[bid], bid %in% shown, others[[bid]])
-      })
-    )
-  )
-}
-
-# One card row, reusing the block-browser card classes for the icon tile /
-# name chrome, plus the navigator's own eye toggle and view tags. `blk` is
-# the single block (for its instance name); `blk1` the length-1 blocks
-# subset (for registry metadata via blks_metadata()).
-nav_card <- function(bid, blk, blk1, is_shown, tags_for) {
-
-  meta <- blks_metadata(blk1)
-  name <- coal(safe_block_name(blk), as.character(meta$name[1L]))
-  icon <- as.character(meta$icon[1L])
-  category <- as.character(meta$category[1L])
-  package <- as.character(meta$package[1L])
-
-  div(
-    class = paste(
-      "blockr-block-browser-card blockr-panel-nav-card",
-      if (is_shown) "pn-shown" else "pn-hidden"
-    ),
-    `data-block-id` = bid,
-    draggable = "true",
-    `data-name` = name,
-    `data-package` = package,
-    `data-category` = category,
-    div(
-      class = "blockr-block-browser-card-header",
-      tags$span(
-        class = "blockr-block-browser-card-icon",
-        if (nzchar(icon)) htmltools::HTML(icon)
-      ),
-      div(
-        class = "blockr-block-browser-card-body",
-        div(
-          class = "blockr-block-browser-card-titles",
-          tags$span(class = "blockr-block-browser-card-name", name),
-          if (length(tags_for)) {
-            tags$span(
-              class = "blockr-panel-nav-tags",
-              lapply(unique(tags_for), function(t) {
-                tags$span(class = "blockr-panel-nav-tag", t)
-              })
-            )
-          },
-          tags$button(
-            type = "button",
-            class = "blockr-panel-nav-eye",
-            `aria-label` = "Toggle on this view",
-            title = "Show / hide on this view",
-            bsicons::bs_icon("eye-fill")
-          )
-        )
-      )
-    )
-  )
-}
-
-safe_block_name <- function(blk) {
-  nm <- tryCatch(block_name(blk), error = function(e) NULL)
-  if (is.null(nm) || !nzchar(nm)) NULL else nm
 }
 
 # Block ids whose panel is currently shown on the ACTIVE view. Read from
@@ -426,11 +305,269 @@ other_view_tags <- function(layouts, active, labels) {
   res
 }
 
-# Block-panel id strings -> block ids. The panel id format is
-# "block_panel-<id>" (see maybe_block_panel_id()).
+# Block-panel id strings -> block ids ("block_panel-<id>").
 block_ids_from_panels <- function(pids) {
   pids <- as.character(pids)
   sub("^block_panel-", "", grep("^block_panel-", pids, value = TRUE))
+}
+
+safe_block_name <- function(blk) {
+  nm <- tryCatch(block_name(blk), error = function(e) NULL)
+  if (is.null(nm) || !nzchar(nm)) NULL else nm
+}
+
+# ---- rendering (the "Visible blocks" design, variant B) ----------------
+
+# Build the sidebar body: search + stack-grouped block rows + add-stack.
+panel_navigator_body <- function(board, dock, ns) {
+  model <- nav_build_model(board, dock)
+
+  htmltools::attachDependencies(
+    div(
+      # Root id = the InputBinding's reported input ("panel_nav_event").
+      id = ns("panel_nav_event"),
+      class = "blockr-panel-navigator",
+      tags$input(
+        type = "search",
+        class = "blockr-panel-nav-search",
+        placeholder = "Search blocks...",
+        `aria-label` = "Search blocks",
+        autocomplete = "off",
+        autocorrect = "off",
+        autocapitalize = "off",
+        spellcheck = "false"
+      ),
+      div(
+        class = "blockr-panel-nav-body",
+        lapply(model, nav_group_section)
+      ),
+      div(
+        class = "blockr-panel-nav-empty",
+        "No blocks match your search."
+      ),
+      nav_add_stack_control()
+    ),
+    list(panel_navigator_dep())
+  )
+}
+
+# One group = one coloured stack bar (`ghd`) you click to collapse, listing
+# block rows. Accent = the stack colour (via `--accent*` vars); Ungrouped
+# uses a neutral grey. The "N shown" count is how many of the group's blocks
+# are currently visible (on the active view).
+nav_group_section <- function(group) {
+  accent <- if (identical(group$kind, "stack") && nzchar(coal(group$color, ""))) {
+    group$color
+  } else {
+    "#6b7280"
+  }
+  style <- sprintf(
+    "--accent:%s;--accent-bg:%s;--accent-ink:%s;",
+    accent, hex_alpha(accent, 0.13), darken_hex(accent, 0.72)
+  )
+
+  droppable <- group$kind %in% c("stack", "ungrouped")
+  shown <- sum(vapply(group$entries, function(e) isTRUE(e$on_view), logical(1L)))
+
+  label <- if (identical(group$kind, "stack")) {
+    nav_rename("stack", group$name, "blockr-panel-nav-glab")
+  } else {
+    tags$span(class = "blockr-panel-nav-glab", group$name)
+  }
+
+  empty_ungrouped <- identical(group$kind, "ungrouped") &&
+    length(group$entries) == 0L
+
+  div(
+    class = paste(
+      "blockr-panel-nav-grp open",
+      if (droppable) "blockr-panel-nav-dropzone" else "",
+      if (empty_ungrouped) "blockr-panel-nav-grp-empty" else ""
+    ),
+    style = style,
+    `data-stack-id` = if (droppable) group$id else NULL,
+    `data-kind` = group$kind,
+    div(
+      class = "blockr-panel-nav-ghd",
+      role = "button",
+      tabindex = "0",
+      `aria-expanded` = "true",
+      nav_caret_icon(),
+      label,
+      tags$span(
+        class = "blockr-panel-nav-gvis",
+        sprintf("%d shown", shown)
+      )
+    ),
+    div(
+      class = "blockr-panel-nav-gbody",
+      div(
+        class = "blockr-panel-nav-rows",
+        lapply(group$entries, nav_entry_card)
+      )
+    )
+  )
+}
+
+# One block row: grip (hover) + category-tinted icon tile + renamable name
+# (+ other-view tags) + the visibility switch. `.on`/`.off` reflects
+# current-view membership.
+nav_entry_card <- function(entry) {
+  on_view <- isTRUE(entry$on_view)
+  cat_color <- if (nzchar(coal(entry$color, ""))) entry$color else "#999999"
+
+  div(
+    class = paste("blockr-panel-nav-row", if (on_view) "on" else "off"),
+    draggable = "true",
+    `data-panel-id` = entry$id,
+    `data-panel-type` = entry$type,
+    `data-on-view` = if (on_view) "true" else "false",
+    `data-search` = tolower(paste(entry$title, entry$subtitle, entry$package)),
+    tags$span(
+      class = "blockr-panel-nav-grip",
+      title = "Drag to move between stacks / reorder",
+      `aria-hidden` = "true",
+      nav_grip_icon()
+    ),
+    tags$span(
+      class = "blockr-panel-nav-tile",
+      style = sprintf(
+        "background:%s;color:%s", hex_alpha(cat_color, 0.13), cat_color
+      ),
+      if (nzchar(entry$icon)) htmltools::HTML(entry$icon)
+    ),
+    tags$span(
+      class = "blockr-panel-nav-namewrap",
+      nav_rename("block", entry$title, "blockr-panel-nav-name"),
+      nav_tags_row(entry$tags)
+    ),
+    nav_switch(on_view)
+  )
+}
+
+nav_tags_row <- function(tags) {
+  if (!length(tags)) {
+    return(NULL)
+  }
+  shiny::tags$span(
+    class = "blockr-panel-nav-tags",
+    lapply(tags, function(t) {
+      shiny::tags$span(class = "blockr-panel-nav-tag", t)
+    })
+  )
+}
+
+# Canonical inline-rename widget: double-click the name / label to rename;
+# a subtle hover highlight hints it is editable (no pencil); Enter / blur
+# commit, Esc reverts; F2 is the keyboard path. `kind` is "block" or
+# "stack" (the navigator commits the matching rename event).
+nav_rename <- function(kind, text, extra_class = NULL) {
+  tags$span(
+    class = "blockr-panel-nav-rename",
+    `data-rename-kind` = kind,
+    tags$span(
+      class = paste("blockr-panel-nav-rename-text", extra_class),
+      title = "Double-click to rename",
+      text
+    ),
+    tags$input(
+      class = "blockr-panel-nav-rename-input",
+      type = "text",
+      value = text,
+      tabindex = "-1",
+      `aria-label` = "Rename",
+      autocomplete = "off",
+      autocorrect = "off",
+      autocapitalize = "off",
+      spellcheck = "false"
+    )
+  )
+}
+
+# The switch is the ONLY visibility toggle: a row's pill switch. role=switch
+# + aria-checked; the JS toggles on click / Enter / Space.
+nav_switch <- function(on) {
+  tags$span(
+    class = "blockr-panel-nav-switch",
+    role = "switch",
+    tabindex = "0",
+    `aria-checked` = if (on) "true" else "false",
+    `aria-label` = "Show / hide on this view"
+  )
+}
+
+# A compact footer to create a new (empty) stack: a button that reveals an
+# inline name input. Submitting fires an "add_stack" event.
+nav_add_stack_control <- function() {
+  div(
+    class = "blockr-panel-nav-addstack",
+    tags$button(
+      type = "button",
+      class = "blockr-panel-nav-addstack-btn",
+      "+ New stack"
+    ),
+    div(
+      class = "blockr-panel-nav-addstack-form",
+      tags$input(
+        type = "text",
+        class = "blockr-panel-nav-addstack-input",
+        placeholder = "Stack name, then Enter",
+        autocomplete = "off",
+        autocorrect = "off",
+        autocapitalize = "off",
+        spellcheck = "false"
+      )
+    )
+  )
+}
+
+# ---- icons + colour helpers --------------------------------------------
+
+nav_caret_icon <- function() {
+  htmltools::HTML(paste0(
+    '<svg class="blockr-panel-nav-caret" viewBox="0 0 24 24" width="15" ',
+    'height="15" fill="none" stroke="currentColor" stroke-width="2" ',
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+    '<path d="m9 18 6-6-6-6"/></svg>'
+  ))
+}
+
+nav_grip_icon <- function() {
+  htmltools::HTML(paste0(
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" ',
+    'aria-hidden="true"><circle cx="9" cy="6" r="1.4"/>',
+    '<circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/>',
+    '<circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/>',
+    '<circle cx="15" cy="18" r="1.4"/></svg>'
+  ))
+}
+
+# rgba()/darkened helpers for the per-stack / per-category accent. Colours
+# are 6-digit hex; anything else falls back unchanged.
+hex_alpha <- function(hex, alpha) {
+  rgb <- hex_rgb(hex)
+  if (is.null(rgb)) {
+    return(hex)
+  }
+  sprintf("rgba(%d,%d,%d,%.2f)", rgb[1], rgb[2], rgb[3], alpha)
+}
+
+darken_hex <- function(hex, factor) {
+  rgb <- hex_rgb(hex)
+  if (is.null(rgb)) {
+    return(hex)
+  }
+  sprintf("#%02x%02x%02x", round(rgb[1] * factor), round(rgb[2] * factor),
+          round(rgb[3] * factor))
+}
+
+hex_rgb <- function(hex) {
+  hex <- sub("^#", "", hex)
+  if (!grepl("^[0-9a-fA-F]{6}$", hex)) {
+    return(NULL)
+  }
+  c(strtoi(substr(hex, 1, 2), 16L), strtoi(substr(hex, 3, 4), 16L),
+    strtoi(substr(hex, 5, 6), 16L))
 }
 
 panel_navigator_dep <- function() {

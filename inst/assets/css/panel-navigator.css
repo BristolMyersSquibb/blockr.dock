@@ -1,196 +1,450 @@
-/* Panel navigator: dock-side styling for the "Blocks" sidebar.
+/* Panel navigator — the "Visible blocks" design (variant B).
+   See _blockr.design/open/panel-navigator/6-visibility-sidebar-variantB.md.
+   Self-contained: no dependency on the block-browser tokens. */
 
-   The card chrome (icon tile, name, search, category/cards layout) comes
-   from blockr.ui's block_browser_dep(), reused as-is via the shared
-   `.blockr-block-browser-*` classes. The navigator root carries
-   `.blockr-stack-menu` purely to resolve that bundle's `--bb-*` design
-   tokens; it deliberately is NOT `.blockr-block-browser` (whose input
-   binding would otherwise treat these rows as add-a-block cards).
+.blockr-panel-navigator {
+  --g50: #f9fafb;
+  --g100: #f3f4f6;
+  --g200: #e5e7eb;
+  --g300: #d1d5db;
+  --g400: #9ca3af;
+  --g500: #6b7280;
+  --g700: #374151;
+  --g900: #111827;
+  --blue: #2162b7;
 
-   Only the navigator-specific bits live here: the root container (the
-   block-browser root layout is scoped to its own class, so we re-state a
-   minimal version), the stack heading dot + "N shown" count, the view
-   tags, the eye toggle, and the dimmed look of a hidden row. */
-
-.blockr-panel-nav {
   display: flex;
   flex-direction: column;
   gap: 12px;
   height: 100%;
   min-height: 0;
-  margin: -16px;
-  padding: 16px;
-  color: var(--bb-grey-900);
+  color: var(--g900);
 }
 
-/* Stack heading: colour dot + label + right-aligned shown count. */
-.blockr-panel-nav-group-head {
+/* ---- search ---- */
+.blockr-panel-nav-search {
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  border: 1px solid var(--g200);
+  border-radius: 9px;
+  background: var(--g50)
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239ca3af'><path d='M11.74 10.34a6.5 6.5 0 1 0-1.4 1.4l3.85 3.85a1 1 0 0 0 1.42-1.42l-3.85-3.85zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/></svg>")
+    no-repeat 12px center / 14px 14px;
+  font-size: 13.5px;
+  color: var(--g900);
+}
+
+.blockr-panel-nav-search::placeholder {
+  color: var(--g400);
+}
+
+.blockr-panel-nav-search:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(33, 98, 183, 0.15);
+}
+
+/* ---- body / groups ---- */
+.blockr-panel-nav-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.blockr-panel-nav-grp {
+  margin-bottom: 8px;
+  border: 1px solid var(--g200);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.blockr-panel-nav-grp.blockr-panel-nav-dropover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.blockr-panel-nav-grp.hidden {
+  display: none;
+}
+
+/* An empty Ungrouped is hidden, but reappears while a drag is in progress
+   so it can still receive a block dragged out of a stack. */
+.blockr-panel-nav-grp-empty {
+  display: none;
+}
+
+.blockr-panel-navigator.is-dragging .blockr-panel-nav-grp-empty {
+  display: block;
+}
+
+.blockr-panel-navigator.is-dragging .blockr-panel-nav-grp-empty
+  .blockr-panel-nav-rows {
+  min-height: 22px;
+}
+
+.blockr-panel-navigator.is-dragging .blockr-panel-nav-grp-empty
+  .blockr-panel-nav-rows::after {
+  content: "Drop here to ungroup";
+  display: block;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--g400);
+}
+
+/* ---- the stack bar ---- */
+.blockr-panel-nav-ghd {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 13px;
+  border: none;
+  background: var(--accent-bg);
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.blockr-panel-nav-ghd:hover {
+  filter: brightness(0.97);
+}
+
+.blockr-panel-nav-caret {
+  flex: 0 0 auto;
+  color: var(--accent);
+  transition: transform 0.18s ease;
+}
+
+.blockr-panel-nav-grp.open .blockr-panel-nav-caret {
+  transform: rotate(90deg);
+}
+
+.blockr-panel-nav-glab {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--accent-ink);
+}
+
+.blockr-panel-nav-gvis {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+/* ---- collapse animation ---- */
+.blockr-panel-nav-gbody {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease;
+}
+
+.blockr-panel-nav-grp.open .blockr-panel-nav-gbody {
+  grid-template-rows: 1fr;
+}
+
+.blockr-panel-nav-rows {
+  overflow: hidden;
+  min-height: 0;
+  background: #fff;
+  padding: 6px;
+}
+
+/* ---- block row ---- */
+.blockr-panel-nav-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  position: relative;
+  background: #fff;
 }
 
-.blockr-panel-nav-group-head h3 {
-  margin: 0;
+.blockr-panel-nav-row:hover {
+  background: var(--g50);
 }
 
-.blockr-panel-nav-dot {
-  flex: 0 0 auto;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+.blockr-panel-nav-row.hidden {
+  display: none;
 }
 
-.blockr-panel-nav-count {
-  margin-left: auto;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--bb-grey-400);
-  white-space: nowrap;
-}
-
-/* View tags ("also on <view>"). */
-.blockr-panel-nav-tags {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-left: 8px;
-}
-
-.blockr-panel-nav-tag {
-  font-size: 10px;
-  line-height: 1.4;
-  padding: 0 6px;
-  border-radius: 9999px;
-  background: var(--bb-grey-100);
-  color: var(--bb-grey-500);
-  white-space: nowrap;
-}
-
-/* Eye toggle, pushed to the row's right edge. */
-.blockr-panel-nav-eye {
-  margin-left: auto;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  cursor: pointer;
-  color: var(--bb-blue-600);
-  transition: background 0.12s ease, color 0.12s ease;
-}
-
-.blockr-panel-nav-eye:hover {
-  background: var(--bb-grey-100);
-}
-
-.blockr-panel-nav-card.pn-hidden .blockr-panel-nav-eye {
-  color: var(--bb-grey-400);
-}
-
-/* A hidden row is greyed out (its block is not on the current view). */
-.blockr-panel-nav-card.pn-hidden {
-  opacity: 0.55;
-}
-
-.blockr-panel-nav-card.pn-hidden:hover,
-.blockr-panel-nav-card.pn-hidden:focus-within {
-  opacity: 1;
-}
-
-/* A shown row's body invites a reveal-on-click. */
-.blockr-panel-nav-card.pn-shown {
-  cursor: pointer;
-}
-
-/* ---- drag to reassign ------------------------------------------------ */
-
-.blockr-panel-nav-card[draggable="true"] {
-  cursor: grab;
-}
-
-.blockr-panel-nav-card.pn-dragging {
+.blockr-panel-nav-row.dragging {
   opacity: 0.4;
 }
 
-.blockr-panel-nav-group.pn-drop-target {
-  outline: 2px dashed var(--bb-blue-500);
-  outline-offset: 2px;
-  border-radius: 8px;
-  background: var(--bb-blue-100);
+/* drop-position indicator while reordering */
+.blockr-panel-nav-row.dropline::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
 }
 
-/* Insertion indicator while reordering: a line before the target card, or
-   at the end of the list when appending. */
-.blockr-panel-nav-card.pn-drop-before {
-  box-shadow: 0 -2px 0 0 var(--bb-blue-500);
+.blockr-panel-nav-grip {
+  flex: 0 0 auto;
+  width: 16px;
+  display: grid;
+  place-items: center;
+  color: var(--g300);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
 
-.blockr-block-browser-cards.pn-drop-end {
-  box-shadow: 0 2px 0 0 var(--bb-blue-500);
+.blockr-panel-nav-row:hover .blockr-panel-nav-grip {
+  opacity: 1;
 }
 
-/* Keep an empty stack (no cards) visible as a drop zone — the block-browser
-   CSS would otherwise hide any category with no non-hidden card, which also
-   matches a genuinely empty group. Search-filtered groups (cards present
-   but all hidden) still collapse via that rule. */
-.blockr-panel-nav-group:not(:has(.blockr-block-browser-card)) {
-  display: flex !important;
+.blockr-panel-nav-grip:active {
+  cursor: grabbing;
+}
+
+.blockr-panel-nav-tile {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+}
+
+.blockr-panel-nav-tile svg,
+.blockr-panel-nav-tile img {
+  width: 15px;
+  height: 15px;
+}
+
+.blockr-panel-nav-namewrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
-.blockr-panel-nav-group:not(:has(.blockr-block-browser-card))
-  .blockr-block-browser-cards::after {
-  content: "Drop a block here";
+.blockr-panel-nav-name {
   display: block;
-  padding: 10px 8px;
-  font-size: 12px;
-  color: var(--bb-grey-400);
-  border: 1px dashed var(--bb-grey-300);
-  border-radius: 6px;
-  text-align: center;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--g900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ---- inline rename --------------------------------------------------- */
-
-.blockr-panel-nav-group-head h3 {
-  cursor: text;
+.blockr-panel-nav-row.off .blockr-panel-nav-name {
+  color: var(--g400);
 }
 
-.pn-editing {
-  outline: 2px solid var(--bb-blue-500);
-  outline-offset: 1px;
-  border-radius: 3px;
+.blockr-panel-nav-row.off .blockr-panel-nav-tile {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+/* ---- the switch: the ONLY visibility toggle ---- */
+.blockr-panel-nav-switch {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 20px;
+  border-radius: 99px;
+  background: var(--g300);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.blockr-panel-nav-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
   background: #fff;
-  cursor: text;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
 }
 
-/* ---- "+ New stack" --------------------------------------------------- */
+.blockr-panel-nav-row.on .blockr-panel-nav-switch {
+  background: var(--accent);
+}
 
-.blockr-panel-nav-add-stack {
+.blockr-panel-nav-row.on .blockr-panel-nav-switch::after {
+  transform: translateX(14px);
+}
+
+.blockr-panel-nav-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- other-view tags ---- */
+.blockr-panel-nav-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.blockr-panel-nav-tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  padding: 4px 10px;
-  font-size: 12px;
-  color: var(--bb-grey-600);
-  background: transparent;
-  border: 1px dashed var(--bb-grey-300);
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 0 6px;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: var(--g500);
+  background: var(--g100);
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.blockr-panel-nav-tag::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  margin-right: 3px;
+  border-radius: 50%;
+  background: var(--g400);
+}
+
+/* ---- inline rename (canonical pattern; see nav_rename() in R) ---- */
+/* The name (block) or label (stack) is a dedicated rename zone: a subtle
+   hover chip hints it is editable (no pencil); double-click to edit. */
+.blockr-panel-nav-rename {
+  position: relative;
+  display: block;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.blockr-panel-nav-rename-text {
+  display: block;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 1px 4px;
+  margin: -1px -4px;
+  cursor: text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: background 0.12s ease, border-color 0.12s ease;
 }
 
-.blockr-panel-nav-add-stack:hover {
-  background: var(--bb-grey-50);
-  border-color: var(--bb-grey-400);
-  color: var(--bb-grey-900);
+.blockr-panel-nav-rename-text:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: var(--g200);
+}
+
+.blockr-panel-nav-rename-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  padding: 1px 4px;
+  font: inherit;
+  color: var(--g900);
+  background: #fff;
+  border: 1px solid var(--blue);
+  border-radius: 5px;
+  box-sizing: border-box;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.blockr-panel-nav-rename-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(33, 98, 183, 0.15);
+}
+
+.blockr-panel-nav-rename.editing .blockr-panel-nav-rename-text {
+  opacity: 0;
+}
+
+.blockr-panel-nav-rename.editing .blockr-panel-nav-rename-input {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---- empty state ---- */
+.blockr-panel-nav-empty {
+  display: none;
+  padding: 18px 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--g400);
+}
+
+.blockr-panel-navigator.is-empty .blockr-panel-nav-empty {
+  display: block;
+}
+
+.blockr-panel-navigator.is-empty .blockr-panel-nav-body {
+  display: none;
+}
+
+/* ---- add-stack control ---- */
+.blockr-panel-nav-addstack {
+  flex: 0 0 auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--g100);
+}
+
+.blockr-panel-nav-addstack-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--blue);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.blockr-panel-nav-addstack-btn:hover {
+  background: rgba(33, 98, 183, 0.08);
+}
+
+.blockr-panel-nav-addstack-form {
+  display: none;
+  padding: 6px 0 0;
+}
+
+.blockr-panel-nav-addstack.is-open .blockr-panel-nav-addstack-form {
+  display: block;
+}
+
+.blockr-panel-nav-addstack.is-open .blockr-panel-nav-addstack-btn {
+  display: none;
+}
+
+.blockr-panel-nav-addstack-input {
+  width: 100%;
+  height: 32px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--g300);
+  border-radius: 6px;
+}
+
+.blockr-panel-nav-addstack-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(33, 98, 183, 0.15);
 }

@@ -1,292 +1,356 @@
-/* Panel navigator: client behaviour for the dock's "Blocks" sidebar.
- *
- * The body is injected dynamically (via blockr.ui::show_sidebar), so all
- * handlers are delegated on `document` and scoped to the navigator root
- * (`.blockr-panel-nav`). The root's `data-input-id` is the Shiny input the
- * navigator's server observer reads (a multiplexed {kind, id, to, nonce}).
- *
- * Eye toggles are optimistic: the row's shown/hidden class is flipped (and
- * the group count updated) immediately, then the event is sent for the
- * server to apply via show/hide_block_panel(). Search reuses the shared
- * card filter shipped by block_browser_dep() (window.BlockrUI.cardSearch).
- */
 (function () {
   "use strict";
 
+  // The panel navigator (variant B). A single Shiny input whose value is
+  // multiplexed by `kind`:
+  //   - "toggle":       the switch shows / hides a block on the view
+  //   - "assign":       grip-drag a block to another stack, or reorder
+  //   - "add_stack":    create a new (empty) stack
+  //   - "rename":       rename a block
+  //   - "rename_stack": rename a stack
+  // The value carries a monotonically increasing `nonce` so Shiny re-fires.
+  var EVT = "blockr-panel-navigator:event";
   var seq = 0;
 
-  function navRoot(el) {
-    return el && el.closest ? el.closest(".blockr-panel-nav") : null;
+  function commit(root, value) {
+    value.nonce = ++seq;
+    root._navValue = value;
+    root.dispatchEvent(new CustomEvent(EVT));
   }
 
-  function send(root, payload) {
-    var id = root.getAttribute("data-input-id");
-    if (!id || !window.Shiny) return;
-    payload.nonce = ++seq;
-    Shiny.setInputValue(id, payload, { priority: "event" });
-  }
-
-  function updateCount(card) {
-    var group = card.closest(".blockr-panel-nav-group");
-    if (!group) return;
-    var total = group.querySelectorAll(".blockr-panel-nav-card").length;
-    var shown = group.querySelectorAll(
-      ".blockr-panel-nav-card.pn-shown"
-    ).length;
-    var count = group.querySelector(".blockr-panel-nav-count");
-    if (count) count.textContent = shown + "/" + total + " shown";
-  }
-
-  document.addEventListener("click", function (event) {
-    var root = navRoot(event.target);
-    if (!root) return;
-
-    var card = event.target.closest(".blockr-panel-nav-card");
-    if (!card) return;
-
-    var bid = card.getAttribute("data-block-id");
-
-    if (event.target.closest(".blockr-panel-nav-eye")) {
-      var wasShown = card.classList.contains("pn-shown");
-      card.classList.toggle("pn-shown", !wasShown);
-      card.classList.toggle("pn-hidden", wasShown);
-      updateCount(card);
-      send(root, { kind: "toggle", id: bid, to: wasShown ? "remove" : "add" });
-      return;
-    }
-
-    // Row body click: reveal (bring the panel to front) when it is shown.
-    if (card.classList.contains("pn-shown")) {
-      send(root, { kind: "focus", id: bid });
-    }
-  });
-
-  document.addEventListener("input", function (event) {
-    var root = navRoot(event.target);
-    if (!root) return;
-    if (!event.target.classList.contains("blockr-panel-nav-search")) return;
-
-    if (window.BlockrUI && window.BlockrUI.cardSearch) {
-      window.BlockrUI.cardSearch.applySearch(root, event.target.value);
-    }
-  });
-
-  // ---- "+ New stack" ---------------------------------------------------
-
-  document.addEventListener("click", function (event) {
-    var root = navRoot(event.target);
-    if (!root) return;
-    if (event.target.closest(".blockr-panel-nav-add-stack")) {
-      send(root, { kind: "add_stack" });
-    }
-  });
-
-  // ---- drag a card to reassign (onto a stack) or reorder (between cards)-
-
-  function dropGroup(el) {
-    return el && el.closest ? el.closest(".blockr-panel-nav-group") : null;
-  }
-
-  // The would-be target ordering for `group` if `draggedId` were dropped at
-  // vertical position `clientY`: the group's cards (minus the dragged one)
-  // with the dragged id spliced in before the first card whose midpoint is
-  // below the cursor (else appended). `beforeCard` is that card, for the
-  // insertion indicator.
-  function reorderState(group, draggedId, clientY) {
-    var cards = Array.prototype.filter.call(
-      group.querySelectorAll(".blockr-panel-nav-card"),
-      function (c) {
-        return c.getAttribute("data-block-id") !== draggedId;
-      }
-    );
-    var beforeCard = null;
-    for (var i = 0; i < cards.length; i++) {
-      var r = cards[i].getBoundingClientRect();
-      if (clientY < r.top + r.height / 2) {
-        beforeCard = cards[i];
-        break;
-      }
-    }
-    var ids = cards.map(function (c) {
-      return c.getAttribute("data-block-id");
+  // ---- search ----------------------------------------------------------
+  function applySearch(root, query) {
+    var q = (query || "").trim().toLowerCase();
+    var any = false;
+    root.querySelectorAll(".blockr-panel-nav-row").forEach(function (row) {
+      var hit = q.length === 0 ||
+        (row.getAttribute("data-search") || "").indexOf(q) !== -1;
+      row.classList.toggle("hidden", !hit);
+      if (hit) any = true;
     });
-    var idx = beforeCard
-      ? ids.indexOf(beforeCard.getAttribute("data-block-id"))
-      : ids.length;
-    ids.splice(idx, 0, draggedId);
-    return { order: ids, beforeCard: beforeCard };
+    root.querySelectorAll(".blockr-panel-nav-grp").forEach(function (grp) {
+      var vis = grp.querySelectorAll(
+        ".blockr-panel-nav-row:not(.hidden)"
+      ).length;
+      // While searching, hide empty groups and open the matching ones so
+      // hits inside collapsed stacks are visible.
+      grp.classList.toggle("hidden", q.length > 0 && vis === 0);
+      if (q.length > 0 && vis > 0) grp.classList.add("open");
+    });
+    root.classList.toggle("is-empty", !any && q.length > 0);
   }
 
-  function clearIndicators(root) {
-    Array.prototype.forEach.call(
-      root.querySelectorAll(".pn-drop-before, .pn-drop-end"),
-      function (el) {
-        el.classList.remove("pn-drop-before", "pn-drop-end");
-      }
-    );
+  // ---- visibility toggle (the switch is the ONLY toggle) ---------------
+  function updateShown(row) {
+    var grp = row.closest(".blockr-panel-nav-grp");
+    if (!grp) return;
+    var n = grp.querySelectorAll(".blockr-panel-nav-row.on").length;
+    var vis = grp.querySelector(".blockr-panel-nav-gvis");
+    if (vis) vis.textContent = n + " shown";
   }
 
-  document.addEventListener("dragstart", function (event) {
-    var card = event.target.closest(".blockr-panel-nav-card");
-    if (!card || !navRoot(card)) return;
-    // The eye and an in-progress rename must not start a drag.
-    if (
-      card.getAttribute("data-editing") === "true" ||
-      event.target.closest(".blockr-panel-nav-eye")
-    ) {
-      event.preventDefault();
-      return;
+  function commitToggle(root, row) {
+    var on = row.getAttribute("data-on-view") === "true";
+    row.setAttribute("data-on-view", on ? "false" : "true");
+    row.classList.toggle("on", !on);
+    row.classList.toggle("off", on);
+    var sw = row.querySelector(".blockr-panel-nav-switch");
+    if (sw) sw.setAttribute("aria-checked", on ? "false" : "true");
+    updateShown(row);
+    commit(root, {
+      kind: "toggle",
+      id: row.getAttribute("data-panel-id"),
+      type: row.getAttribute("data-panel-type"),
+      to: on ? "remove" : "add"
+    });
+  }
+
+  function toggleCollapse(ghd) {
+    var grp = ghd.closest(".blockr-panel-nav-grp");
+    var open = grp.classList.toggle("open");
+    ghd.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  // ---- inline rename (canonical pattern; see nav_rename() in R) --------
+  function enterEdit(wrapper) {
+    if (wrapper.classList.contains("editing")) return;
+    var textEl = wrapper.querySelector(".blockr-panel-nav-rename-text");
+    var input = wrapper.querySelector(".blockr-panel-nav-rename-input");
+    if (!textEl || !input) return;
+    var host = wrapper.closest('[draggable="true"]');
+    if (host) { wrapper._navHost = host; host.setAttribute("draggable", "false"); }
+    input.value = textEl.textContent;
+    wrapper.classList.add("editing");
+    input.focus();
+    input.select();
+  }
+
+  function exitEdit(wrapper) {
+    wrapper.classList.remove("editing");
+    if (wrapper._navHost) {
+      wrapper._navHost.setAttribute("draggable", "true");
+      wrapper._navHost = null;
     }
-    event.dataTransfer.setData("text/plain", card.getAttribute("data-block-id"));
-    event.dataTransfer.effectAllowed = "move";
-    card.classList.add("pn-dragging");
-  });
+  }
 
-  document.addEventListener("dragend", function (event) {
-    var card = event.target.closest(".blockr-panel-nav-card");
-    if (card) card.classList.remove("pn-dragging");
-    Array.prototype.forEach.call(
-      document.querySelectorAll(".pn-drop-target"),
-      function (el) {
-        el.classList.remove("pn-drop-target");
-      }
-    );
-    var root = navRoot(card);
-    if (root) clearIndicators(root);
-  });
-
-  document.addEventListener("dragover", function (event) {
-    var grp = dropGroup(event.target);
-    var root = grp && navRoot(grp);
-    if (!root) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-
-    // Insertion indicator: the dragged card is known via `.pn-dragging`
-    // (dataTransfer is unreadable during dragover).
-    clearIndicators(root);
-    var dragged = root.querySelector(".pn-dragging");
-    if (!dragged) return;
-    var st = reorderState(grp, dragged.getAttribute("data-block-id"), event.clientY);
-    if (st.beforeCard) {
-      st.beforeCard.classList.add("pn-drop-before");
+  function commitRename(root, wrapper) {
+    var textEl = wrapper.querySelector(".blockr-panel-nav-rename-text");
+    var input = wrapper.querySelector(".blockr-panel-nav-rename-input");
+    var name = (input.value || "").trim();
+    exitEdit(wrapper);
+    if (!name || name === textEl.textContent) return;
+    textEl.textContent = name; // optimistic
+    if (wrapper.getAttribute("data-rename-kind") === "stack") {
+      var grp = wrapper.closest(".blockr-panel-nav-grp");
+      commit(root, {
+        kind: "rename_stack",
+        stack: grp ? grp.getAttribute("data-stack-id") || "" : "",
+        name: name
+      });
     } else {
-      var cards = grp.querySelector(".blockr-block-browser-cards");
-      if (cards) cards.classList.add("pn-drop-end");
-    }
-  });
-
-  document.addEventListener("dragenter", function (event) {
-    var grp = dropGroup(event.target);
-    if (grp && navRoot(grp)) grp.classList.add("pn-drop-target");
-  });
-
-  document.addEventListener("dragleave", function (event) {
-    var grp = dropGroup(event.target);
-    if (grp && !grp.contains(event.relatedTarget)) {
-      grp.classList.remove("pn-drop-target");
-      clearIndicators(navRoot(grp));
-    }
-  });
-
-  document.addEventListener("drop", function (event) {
-    var grp = dropGroup(event.target);
-    var root = grp && navRoot(grp);
-    if (!root) return;
-    event.preventDefault();
-    grp.classList.remove("pn-drop-target");
-    clearIndicators(root);
-
-    var bid = event.dataTransfer.getData("text/plain");
-    if (!bid) return;
-
-    // `data-stack-id` is the target stack ("" = Ungrouped / out of stack);
-    // `order` is the full target ordering, so the same event handles a
-    // cross-stack move, a reorder within a stack, and an append-on-heading.
-    var st = reorderState(grp, bid, event.clientY);
-    send(root, {
-      kind: "assign",
-      id: bid,
-      to: grp.getAttribute("data-stack-id") || "",
-      order: st.order
-    });
-  });
-
-  // ---- inline rename (double-click a block name or stack heading) ------
-
-  document.addEventListener("dblclick", function (event) {
-    var root = navRoot(event.target);
-    if (!root) return;
-
-    var nameEl = event.target.closest(".blockr-block-browser-card-name");
-    if (nameEl) {
-      var card = nameEl.closest(".blockr-panel-nav-card");
-      beginEdit(root, nameEl, "rename", card.getAttribute("data-block-id"), card);
-      return;
-    }
-
-    var headEl = event.target.closest(".blockr-panel-nav-group-head h3");
-    if (headEl) {
-      var grp = headEl.closest(".blockr-panel-nav-group");
-      var sid = grp.getAttribute("data-stack-id");
-      // Ungrouped (no id) is not a real stack and can't be renamed.
-      if (sid) beginEdit(root, headEl, "rename_stack", sid, null);
-    }
-  });
-
-  function beginEdit(root, el, kind, id, card) {
-    if (el.getAttribute("contenteditable") === "true") return;
-    var orig = el.textContent;
-    var done = false;
-
-    if (card) {
-      card.setAttribute("data-editing", "true");
-      card.setAttribute("draggable", "false");
-    }
-    el.setAttribute("contenteditable", "true");
-    el.classList.add("pn-editing");
-    el.focus();
-
-    var range = document.createRange();
-    range.selectNodeContents(el);
-    var sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-
-    function finish(commit) {
-      if (done) return;
-      done = true;
-      el.removeAttribute("contenteditable");
-      el.classList.remove("pn-editing");
-      if (card) {
-        card.removeAttribute("data-editing");
-        card.setAttribute("draggable", "true");
+      var row = wrapper.closest(".blockr-panel-nav-row");
+      if (row) {
+        row.setAttribute(
+          "data-search",
+          (name + " " + (row.getAttribute("data-search") || "")).toLowerCase()
+        );
       }
-      el.removeEventListener("keydown", onKey);
-      el.removeEventListener("blur", onBlur);
-
-      var val = el.textContent.trim();
-      if (commit && val && val !== orig) {
-        send(root, { kind: kind, id: id, value: val });
-      } else {
-        el.textContent = orig;
-      }
+      commit(root, {
+        kind: "rename",
+        type: "block",
+        id: row ? row.getAttribute("data-panel-id") : null,
+        name: name
+      });
     }
-
-    function onKey(ev) {
-      if (ev.key === "Enter") {
-        ev.preventDefault();
-        finish(true);
-      } else if (ev.key === "Escape") {
-        ev.preventDefault();
-        finish(false);
-      }
-    }
-    function onBlur() {
-      finish(true);
-    }
-
-    el.addEventListener("keydown", onKey);
-    el.addEventListener("blur", onBlur);
   }
+
+  function wireRenameInput(root, wrapper) {
+    if (wrapper.dataset.navRenameWired === "1") return;
+    wrapper.dataset.navRenameWired = "1";
+    var input = wrapper.querySelector(".blockr-panel-nav-rename-input");
+    if (!input) return;
+    input.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        input.blur();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        wrapper._navCancel = true;
+        input.blur();
+      }
+      event.stopPropagation();
+    });
+    input.addEventListener("blur", function () {
+      if (wrapper._navCancel) { wrapper._navCancel = false; exitEdit(wrapper); return; }
+      commitRename(root, wrapper);
+    });
+    input.addEventListener("click", function (e) { e.stopPropagation(); });
+    input.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+
+  function startEdit(root, wrapper) {
+    wireRenameInput(root, wrapper);
+    enterEdit(wrapper);
+  }
+
+  // ---- grip drag: move between stacks (mostly) / reorder within --------
+  function clearDropMarks(root) {
+    root.querySelectorAll(".blockr-panel-nav-dropover").forEach(function (g) {
+      g.classList.remove("blockr-panel-nav-dropover");
+    });
+    root.querySelectorAll(".blockr-panel-nav-row.dropline").forEach(function (r) {
+      r.classList.remove("dropline");
+    });
+  }
+
+  function initNavigator(root) {
+    if (root.dataset.blockrPanelNavInit === "1") return;
+    root.dataset.blockrPanelNavInit = "1";
+
+    var search = root.querySelector(".blockr-panel-nav-search");
+    if (search) {
+      search.addEventListener("input", function () {
+        applySearch(root, search.value);
+      });
+    }
+
+    var body = root.querySelector(".blockr-panel-nav-body");
+    if (body) {
+      body.addEventListener("click", function (event) {
+        // The switch is the ONLY visibility toggle.
+        var sw = event.target.closest(".blockr-panel-nav-switch");
+        if (sw) {
+          var srow = sw.closest(".blockr-panel-nav-row");
+          if (srow) commitToggle(root, srow);
+          event.preventDefault();
+          return;
+        }
+        // The stack bar collapses — except its rename label (rename zone).
+        var ghd = event.target.closest(".blockr-panel-nav-ghd");
+        if (ghd) {
+          if (event.target.closest(".blockr-panel-nav-rename-text")) return;
+          toggleCollapse(ghd);
+          event.preventDefault();
+          return;
+        }
+        // Click a row body (not the name, which is a rename zone) -> reveal:
+        // bring a VISIBLE block's tab to the front. Never changes visibility
+        // (the switch owns that); clicking a hidden row is inert.
+        var frow = event.target.closest(".blockr-panel-nav-row");
+        if (frow &&
+            !event.target.closest(".blockr-panel-nav-rename-text") &&
+            !event.target.closest(".blockr-panel-nav-grip") &&
+            frow.getAttribute("data-on-view") === "true") {
+          commit(root, {
+            kind: "focus",
+            id: frow.getAttribute("data-panel-id"),
+            type: frow.getAttribute("data-panel-type")
+          });
+        }
+      });
+
+      body.addEventListener("dblclick", function (event) {
+        var rt = event.target.closest(".blockr-panel-nav-rename-text");
+        if (!rt) return;
+        event.preventDefault();
+        startEdit(root, rt.closest(".blockr-panel-nav-rename"));
+      });
+
+      body.addEventListener("keydown", function (event) {
+        var sw = event.target.closest(".blockr-panel-nav-switch");
+        if (sw && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          var srow = sw.closest(".blockr-panel-nav-row");
+          if (srow) commitToggle(root, srow);
+          return;
+        }
+        if (event.key === "F2") {
+          var hostRow = event.target.closest(
+            ".blockr-panel-nav-row, .blockr-panel-nav-ghd"
+          );
+          if (hostRow) {
+            var w = hostRow.querySelector(".blockr-panel-nav-rename");
+            if (w) { event.preventDefault(); startEdit(root, w); }
+          }
+          return;
+        }
+        var ghd = event.target.closest(".blockr-panel-nav-ghd");
+        if (ghd && event.target === ghd &&
+            (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          toggleCollapse(ghd);
+        }
+      });
+
+      body.addEventListener("dragstart", function (event) {
+        var row = event.target.closest(".blockr-panel-nav-row");
+        if (!row || row.getAttribute("draggable") !== "true") return;
+        root._navDragId = row.getAttribute("data-panel-id");
+        root._navDragRow = row;
+        row.classList.add("dragging");
+        // Reveal an empty Ungrouped as a drop target for the drag.
+        root.classList.add("is-dragging");
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", root._navDragId);
+        }
+      });
+
+      body.addEventListener("dragend", function () {
+        if (root._navDragRow) root._navDragRow.classList.remove("dragging");
+        root.classList.remove("is-dragging");
+        clearDropMarks(root);
+        root._navDragId = null;
+        root._navDragRow = null;
+        root._navDropStack = null;
+        root._navDropBeforeId = null;
+      });
+
+      body.addEventListener("dragover", function (event) {
+        if (root._navDragId == null) return;
+        var grp = event.target.closest(".blockr-panel-nav-dropzone");
+        if (!grp) return;
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+        clearDropMarks(root);
+        grp.classList.add("blockr-panel-nav-dropover");
+        root._navDropStack = grp.getAttribute("data-stack-id") || "";
+        // Insert-before = the first row whose midpoint is below the cursor.
+        var rows = Array.prototype.slice
+          .call(grp.querySelectorAll(".blockr-panel-nav-row"))
+          .filter(function (r) { return r !== root._navDragRow; });
+        var beforeId = null;
+        for (var i = 0; i < rows.length; i++) {
+          var rect = rows[i].getBoundingClientRect();
+          if (event.clientY < rect.top + rect.height / 2) {
+            beforeId = rows[i].getAttribute("data-panel-id");
+            rows[i].classList.add("dropline");
+            break;
+          }
+        }
+        root._navDropBeforeId = beforeId;
+      });
+
+      body.addEventListener("drop", function (event) {
+        if (root._navDragId == null) return;
+        var grp = event.target.closest(".blockr-panel-nav-dropzone");
+        if (!grp) { clearDropMarks(root); return; }
+        event.preventDefault();
+        var id = root._navDragId;
+        var stack = root._navDropStack != null ? root._navDropStack
+          : (grp.getAttribute("data-stack-id") || "");
+        var before = root._navDropBeforeId || null;
+        clearDropMarks(root);
+        commit(root, { kind: "assign", id: id, stack: stack, before: before });
+      });
+    }
+
+    // ---- add-stack control ------------------------------------------
+    var addWrap = root.querySelector(".blockr-panel-nav-addstack");
+    if (addWrap) {
+      var btn = addWrap.querySelector(".blockr-panel-nav-addstack-btn");
+      var input = addWrap.querySelector(".blockr-panel-nav-addstack-input");
+      if (btn && input) {
+        btn.addEventListener("click", function () {
+          if (addWrap.classList.toggle("is-open")) input.focus();
+        });
+        input.addEventListener("keydown", function (event) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            var name = input.value.trim();
+            if (!name) return;
+            commit(root, { kind: "add_stack", name: name });
+            input.value = "";
+            addWrap.classList.remove("is-open");
+          } else if (event.key === "Escape") {
+            input.value = "";
+            addWrap.classList.remove("is-open");
+          }
+        });
+      }
+    }
+  }
+
+  var binding = new Shiny.InputBinding();
+  $.extend(binding, {
+    find: function (scope) {
+      return $(scope).find(".blockr-panel-navigator");
+    },
+    initialize: function (el) { initNavigator(el); },
+    getValue: function (el) { return el._navValue || null; },
+    subscribe: function (el, callback) {
+      initNavigator(el);
+      var handler = function () { callback(); };
+      el._navHandler = handler;
+      el.addEventListener(EVT, handler);
+    },
+    unsubscribe: function (el) {
+      if (el._navHandler) {
+        el.removeEventListener(EVT, el._navHandler);
+        el._navHandler = null;
+      }
+    }
+  });
+
+  Shiny.inputBindings.register(binding, "blockr.ui.panelNavigator");
 })();
