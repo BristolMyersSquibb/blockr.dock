@@ -60,6 +60,7 @@ Collate:
     'board-plugins.R'
     'board-server.R'
     'board-ui.R'
+    'panel-navigator.R'
     'dock-board.R'
     'dock-stack.R'
     'ext-class.R'
