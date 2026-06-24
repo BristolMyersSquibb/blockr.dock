@@ -589,6 +589,10 @@ switch_active_view <- function(active, docks, active_dock, client_active,
     return(invisible())
   }
 
+  message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"),
+          "] view-switch ", old, " -> ", active, " START")
+  .t0 <- Sys.time()
+
   if (active %in% names(docks)) {
 
     # switch-view must fire before show_view_ui so the target dock carries
@@ -600,8 +604,15 @@ switch_active_view <- function(active, docks, active_dock, client_active,
     )
 
     hide_view_ui(old, docks)
+    .t_hide <- Sys.time()
     show_view_ui(active, docks)
+    .t_show <- Sys.time()
     update_active_dock(active_dock, docks[[active]])
+
+    message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"),
+            "] view-switch ", active, " ui-done hide=",
+            round(as.numeric(.t_hide - .t0), 3), "s show=",
+            round(as.numeric(.t_show - .t_hide), 3), "s")
   }
 
   client_active(active)
