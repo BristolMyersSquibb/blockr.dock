@@ -193,8 +193,6 @@ live_view_data <- function(client_views, docks, client_active) {
       # *first*, so they are not lost here.
       if (!setequal(as.character(layout_panel_ids(out)),
                     as.character(isolate(dk$live_panels())))) {
-        message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"),
-                "] sync-guard ", v_id, " echo-membership != live_panels -> HOLD")
         return(NULL)
       }
 
@@ -240,10 +238,6 @@ layouts_to_board_observer <- function(view_data, update, board) {
     delta <- diff_dock_layouts(current, new_layouts)
 
     if (length(delta)) {
-      message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"), "] sync echo->board: mod=[",
-              paste(names(delta$mod), collapse = ","), "] add=",
-              length(delta$add), " rm=", length(delta$rm),
-              if (!is.null(delta$active)) paste0(" active=", delta$active) else "")
       update(list(views = delta))
     }
   })
@@ -510,7 +504,6 @@ reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
 
   if (!setequal(live_ids, target_ids)) {
 
-    message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"), "] reconcile ", view, " membership-diff -> PUSH")
     apply_layout_diff(
       view = view,
       target = target,
@@ -528,14 +521,10 @@ reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
   live <- tryCatch(isolate(dock$layout()), error = function(e) NULL)
 
   if (is.null(live) || !setequal(grid_panel_ids(live[["grid"]]), target_ids)) {
-    message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"), "] reconcile ", view, " echo-membership-lag -> skip")
     return(invisible())
   }
 
   if (!layouts_match(live, target)) {
-
-    message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"), "] reconcile ", view, " arr-mismatch; target-changed-vs-last=",
-            !layouts_match(isolate(dock$last_applied()), target))
 
     # The browser's echoed arrangement (`live`) differs from `target`. Only
     # re-push when `target` itself changed since we last applied it -- a genuine
