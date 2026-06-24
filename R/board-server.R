@@ -181,6 +181,23 @@ live_view_data <- function(client_views, docks, client_active) {
         return(NULL)
       }
       out <- dockview_to_layout(ly)
+
+      # FIX #3: do not fold a mid-flight echo into the board. The browser's
+      # `_state` echo can fire while `apply_layout_diff` is tearing the dock
+      # down and rebuilding it, reporting a *partial* panel set. `live_panels`
+      # is the authoritative server-side membership; if the echo disagrees, it
+      # is mid-relayout -- folding it would corrupt `target` and make reconcile
+      # do another full teardown (the membership-diff loop). Hold this view
+      # (-> whole sync holds) until its echo membership catches up. Legitimate
+      # membership changes update `live_panels` via the add/remove touchpoints
+      # *first*, so they are not lost here.
+      if (!setequal(as.character(layout_panel_ids(out)),
+                    as.character(isolate(dk$live_panels())))) {
+        message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"),
+                "] sync-guard ", v_id, " echo-membership != live_panels -> HOLD")
+        return(NULL)
+      }
+
       nm <- view_name(state[[v_id]])
       if (!is.null(nm)) {
         view_name(out) <- nm
@@ -223,6 +240,10 @@ layouts_to_board_observer <- function(view_data, update, board) {
     delta <- diff_dock_layouts(current, new_layouts)
 
     if (length(delta)) {
+      message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"), "] sync echo->board: mod=[",
+              paste(names(delta$mod), collapse = ","), "] add=",
+              length(delta$add), " rm=", length(delta$rm),
+              if (!is.null(delta$active)) paste0(" active=", delta$active) else "")
       update(list(views = delta))
     }
   })
@@ -489,6 +510,7 @@ reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
 
   if (!setequal(live_ids, target_ids)) {
 
+    message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"), "] reconcile ", view, " membership-diff -> PUSH")
     apply_layout_diff(
       view = view,
       target = target,
@@ -498,6 +520,7 @@ reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
     )
 
     dock$live_panels(target_ids)
+    dock$last_applied(target)
 
     return(invisible())
   }
@@ -505,17 +528,35 @@ reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
   live <- tryCatch(isolate(dock$layout()), error = function(e) NULL)
 
   if (is.null(live) || !setequal(grid_panel_ids(live[["grid"]]), target_ids)) {
+    message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"), "] reconcile ", view, " echo-membership-lag -> skip")
     return(invisible())
   }
 
   if (!layouts_match(live, target)) {
-    apply_layout_diff(
-      view = view,
-      target = target,
-      dock = dock,
-      blocks = blocks,
-      extensions = extensions
-    )
+
+    message("[loopdbg ", format(Sys.time(), "%H:%M:%OS2"), "] reconcile ", view, " arr-mismatch; target-changed-vs-last=",
+            !layouts_match(isolate(dock$last_applied()), target))
+
+    # The browser's echoed arrangement (`live`) differs from `target`. Only
+    # re-push when `target` itself changed since we last applied it -- a genuine
+    # server-side rearrange (block add, views$mod, restore). If `target` is
+    # unchanged, the mismatch is just the debounced `_state` echo lagging while
+    # the layout settles; re-pushing here tears the dock down and restores it,
+    # which makes the browser echo again -> reconcile -> re-push ... an infinite
+    # teardown/restore loop that never converges on a slow / CPU-contended
+    # client (the "loads forever" symptom). Wait for the echo to catch up.
+    if (!layouts_match(isolate(dock$last_applied()), target)) {
+
+      apply_layout_diff(
+        view = view,
+        target = target,
+        dock = dock,
+        blocks = blocks,
+        extensions = extensions
+      )
+
+      dock$last_applied(target)
+    }
   }
 
   invisible()
@@ -566,6 +607,12 @@ manage_dock <- function(
     prev_active_group <- reactiveVal()
     active_group_trail <- reactiveVal()
     n_panels <- reactive(length(live_panels()))
+    # The target layout we last pushed to this dock. Used by
+    # reconcile_view_layout() to tell a genuine server-side arrangement change
+    # from the browser's debounced `_state` echo merely lagging behind a stable
+    # target -- the latter must NOT trigger a re-push (else infinite loop on
+    # slow clients).
+    last_applied <- reactiveVal(init_layout)
 
     dock <- list(
       proxy = proxy,
@@ -574,7 +621,8 @@ manage_dock <- function(
       layout = reactive(dockViewR::get_dock(proxy)),
       n_panels = n_panels,
       prev_active_group = prev_active_group,
-      active_group_trail = active_group_trail
+      active_group_trail = active_group_trail,
+      last_applied = last_applied
     )
 
     # Fold live-only membership changes — the add-panel modal, a closed tab, an
