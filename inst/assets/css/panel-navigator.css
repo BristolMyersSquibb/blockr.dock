@@ -1,0 +1,450 @@
+/* Panel navigator — the "Visible blocks" design (variant B).
+   See _blockr.design/open/panel-navigator/6-visibility-sidebar-variantB.md.
+   Self-contained: no dependency on the block-browser tokens. */
+
+.blockr-panel-navigator {
+  --g50: #f9fafb;
+  --g100: #f3f4f6;
+  --g200: #e5e7eb;
+  --g300: #d1d5db;
+  --g400: #9ca3af;
+  --g500: #6b7280;
+  --g700: #374151;
+  --g900: #111827;
+  --blue: #2162b7;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  color: var(--g900);
+}
+
+/* ---- search ---- */
+.blockr-panel-nav-search {
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  border: 1px solid var(--g200);
+  border-radius: 9px;
+  background: var(--g50)
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239ca3af'><path d='M11.74 10.34a6.5 6.5 0 1 0-1.4 1.4l3.85 3.85a1 1 0 0 0 1.42-1.42l-3.85-3.85zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/></svg>")
+    no-repeat 12px center / 14px 14px;
+  font-size: 13.5px;
+  color: var(--g900);
+}
+
+.blockr-panel-nav-search::placeholder {
+  color: var(--g400);
+}
+
+.blockr-panel-nav-search:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(33, 98, 183, 0.15);
+}
+
+/* ---- body / groups ---- */
+.blockr-panel-nav-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.blockr-panel-nav-grp {
+  margin-bottom: 8px;
+  border: 1px solid var(--g200);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.blockr-panel-nav-grp.blockr-panel-nav-dropover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.blockr-panel-nav-grp.hidden {
+  display: none;
+}
+
+/* An empty Ungrouped is hidden, but reappears while a drag is in progress
+   so it can still receive a block dragged out of a stack. */
+.blockr-panel-nav-grp-empty {
+  display: none;
+}
+
+.blockr-panel-navigator.is-dragging .blockr-panel-nav-grp-empty {
+  display: block;
+}
+
+.blockr-panel-navigator.is-dragging .blockr-panel-nav-grp-empty
+  .blockr-panel-nav-rows {
+  min-height: 22px;
+}
+
+.blockr-panel-navigator.is-dragging .blockr-panel-nav-grp-empty
+  .blockr-panel-nav-rows::after {
+  content: "Drop here to ungroup";
+  display: block;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--g400);
+}
+
+/* ---- the stack bar ---- */
+.blockr-panel-nav-ghd {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 13px;
+  border: none;
+  background: var(--accent-bg);
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.blockr-panel-nav-ghd:hover {
+  filter: brightness(0.97);
+}
+
+.blockr-panel-nav-caret {
+  flex: 0 0 auto;
+  color: var(--accent);
+  transition: transform 0.18s ease;
+}
+
+.blockr-panel-nav-grp.open .blockr-panel-nav-caret {
+  transform: rotate(90deg);
+}
+
+.blockr-panel-nav-glab {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--accent-ink);
+}
+
+.blockr-panel-nav-gvis {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+/* ---- collapse animation ---- */
+.blockr-panel-nav-gbody {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease;
+}
+
+.blockr-panel-nav-grp.open .blockr-panel-nav-gbody {
+  grid-template-rows: 1fr;
+}
+
+.blockr-panel-nav-rows {
+  overflow: hidden;
+  min-height: 0;
+  background: #fff;
+  padding: 6px;
+}
+
+/* ---- block row ---- */
+.blockr-panel-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  position: relative;
+  background: #fff;
+}
+
+.blockr-panel-nav-row:hover {
+  background: var(--g50);
+}
+
+.blockr-panel-nav-row.hidden {
+  display: none;
+}
+
+.blockr-panel-nav-row.dragging {
+  opacity: 0.4;
+}
+
+/* drop-position indicator while reordering */
+.blockr-panel-nav-row.dropline::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.blockr-panel-nav-grip {
+  flex: 0 0 auto;
+  width: 16px;
+  display: grid;
+  place-items: center;
+  color: var(--g300);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.blockr-panel-nav-row:hover .blockr-panel-nav-grip {
+  opacity: 1;
+}
+
+.blockr-panel-nav-grip:active {
+  cursor: grabbing;
+}
+
+.blockr-panel-nav-tile {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+}
+
+.blockr-panel-nav-tile svg,
+.blockr-panel-nav-tile img {
+  width: 15px;
+  height: 15px;
+}
+
+.blockr-panel-nav-namewrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.blockr-panel-nav-name {
+  display: block;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--g900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blockr-panel-nav-row.off .blockr-panel-nav-name {
+  color: var(--g400);
+}
+
+.blockr-panel-nav-row.off .blockr-panel-nav-tile {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+/* ---- the switch: the ONLY visibility toggle ---- */
+.blockr-panel-nav-switch {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 20px;
+  border-radius: 99px;
+  background: var(--g300);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.blockr-panel-nav-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.blockr-panel-nav-row.on .blockr-panel-nav-switch {
+  background: var(--accent);
+}
+
+.blockr-panel-nav-row.on .blockr-panel-nav-switch::after {
+  transform: translateX(14px);
+}
+
+.blockr-panel-nav-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- other-view tags ---- */
+.blockr-panel-nav-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.blockr-panel-nav-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: var(--g500);
+  background: var(--g100);
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.blockr-panel-nav-tag::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  margin-right: 3px;
+  border-radius: 50%;
+  background: var(--g400);
+}
+
+/* ---- inline rename (canonical pattern; see nav_rename() in R) ---- */
+/* The name (block) or label (stack) is a dedicated rename zone: a subtle
+   hover chip hints it is editable (no pencil); double-click to edit. */
+.blockr-panel-nav-rename {
+  position: relative;
+  display: block;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.blockr-panel-nav-rename-text {
+  display: block;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 1px 4px;
+  margin: -1px -4px;
+  cursor: text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.blockr-panel-nav-rename-text:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: var(--g200);
+}
+
+.blockr-panel-nav-rename-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  padding: 1px 4px;
+  font: inherit;
+  color: var(--g900);
+  background: #fff;
+  border: 1px solid var(--blue);
+  border-radius: 5px;
+  box-sizing: border-box;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.blockr-panel-nav-rename-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(33, 98, 183, 0.15);
+}
+
+.blockr-panel-nav-rename.editing .blockr-panel-nav-rename-text {
+  opacity: 0;
+}
+
+.blockr-panel-nav-rename.editing .blockr-panel-nav-rename-input {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---- empty state ---- */
+.blockr-panel-nav-empty {
+  display: none;
+  padding: 18px 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--g400);
+}
+
+.blockr-panel-navigator.is-empty .blockr-panel-nav-empty {
+  display: block;
+}
+
+.blockr-panel-navigator.is-empty .blockr-panel-nav-body {
+  display: none;
+}
+
+/* ---- add-stack control ---- */
+.blockr-panel-nav-addstack {
+  flex: 0 0 auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--g100);
+}
+
+.blockr-panel-nav-addstack-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--blue);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.blockr-panel-nav-addstack-btn:hover {
+  background: rgba(33, 98, 183, 0.08);
+}
+
+.blockr-panel-nav-addstack-form {
+  display: none;
+  padding: 6px 0 0;
+}
+
+.blockr-panel-nav-addstack.is-open .blockr-panel-nav-addstack-form {
+  display: block;
+}
+
+.blockr-panel-nav-addstack.is-open .blockr-panel-nav-addstack-btn {
+  display: none;
+}
+
+.blockr-panel-nav-addstack-input {
+  width: 100%;
+  height: 32px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--g300);
+  border-radius: 6px;
+}
+
+.blockr-panel-nav-addstack-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(33, 98, 183, 0.15);
+}
