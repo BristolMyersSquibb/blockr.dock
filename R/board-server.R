@@ -33,10 +33,11 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   # registry, keyed by view id; `client_active` / `client_views` mirror which
   # views the browser shows, diffed by reconcile_views() — the sole mutator.
   # Per-view panel membership lives on each dock proxy (`live_panels`), kept
-  # authoritative by the add/remove touchpoints, so reconcile compares against
-  # it rather than the lagging browser echo. `docks` is a `reactiveValues`, so
-  # live_view_data() depends on each view's entry and re-evaluates when
-  # reconcile creates it, whatever the init flush order.
+  # authoritative by the add/remove touchpoints; it drives `n_panels` / the
+  # empty-dock prompt and the membership fold without waiting on the lagging
+  # browser echo. `docks` is a `reactiveValues`, so live_view_data() depends on
+  # each view's entry and re-evaluates when reconcile creates it, whatever the
+  # init flush order.
   docks <- reactiveValues()
   active_dock <- reactiveValues()
   client_active <- reactiveVal(NULL)
@@ -382,15 +383,17 @@ remove_view <- function(v_id, session, docks) {
 }
 
 # Make the live dock session match the committed board's view set:
-# instantiate added views, tear down removed ones, push layout changes to
-# surviving views, relabel renamed ones, and switch to the active view. Takes
-# the reactive board handle (not a snapshot) so the live list reaches
-# manage_dock, whose interaction observers read board$board after the fact
-# (#194); the committed board is snapshotted once here for this pass's reads.
-# Driven by board$board so apply_board_update.dock_board stays a pure reducer
-# and dock state never crosses the package boundary. Idempotent — a board
-# already matching the live state produces no surgery — so it composes with the
-# live-sync (DOM -> board) path without ping-ponging.
+# instantiate added views, tear down removed ones, relabel renamed ones, and
+# switch to the active view. The board owns which views exist, their names and
+# the active one; a view's per-view arrangement is client-owned and flows dock
+# -> board only (the live-sync fold), so reconcile never pushes a layout back to
+# its live dock. Takes the reactive board handle (not a snapshot) so the live
+# list reaches manage_dock, whose interaction observers read board$board after
+# the fact (#194); the committed board is snapshotted once here for this pass's
+# reads. Driven by board$board so apply_board_update.dock_board stays a pure
+# reducer and dock state never crosses the package boundary. Idempotent — a
+# board already matching the live view set produces no surgery — so it composes
+# with the live-sync (DOM -> board) path without ping-ponging.
 reconcile_views <- function(board, update, docks, active_dock,
                             client_active, client_views, session) {
 
@@ -451,14 +454,6 @@ reconcile_views <- function(board, update, docks, active_dock,
         list(rename = list(id = v, to = new_nm))
       )
     }
-
-    reconcile_view_layout(
-      docks[[v]],
-      v,
-      layouts[[v]],
-      board_blocks(brd),
-      dock_extensions(brd)
-    )
   }
 
   client_views(state)
@@ -467,54 +462,6 @@ reconcile_views <- function(board, update, docks, active_dock,
         !identical(server_active, isolate(client_active()))) {
     switch_active_view(
       server_active, docks, active_dock, client_active, session
-    )
-  }
-
-  invisible()
-}
-
-# Push one view's committed layout to its live dock. Panel membership is tracked
-# authoritatively on the proxy (`live_panels`), kept in lockstep by the
-# add/remove touchpoints, so a mismatch there is a programmatic add / remove the
-# dock has not been told about (a views$mod, a board restore) — restore it and
-# record the new membership. When membership already agrees, only the
-# arrangement can differ; reconcile that against the browser's echoed state, but
-# skip until the echo has caught up to the current membership, so a just-added
-# panel (live_panels ahead of the echo) does not read as an arrangement change
-# and force a needless rebuild (#196).
-reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
-
-  target_ids <- layout_panel_ids(target)
-  live_ids <- isolate(dock$live_panels())
-
-  if (!setequal(live_ids, target_ids)) {
-
-    apply_layout_diff(
-      view = view,
-      target = target,
-      dock = dock,
-      blocks = blocks,
-      extensions = extensions
-    )
-
-    dock$live_panels(target_ids)
-
-    return(invisible())
-  }
-
-  live <- tryCatch(isolate(dock$layout()), error = function(e) NULL)
-
-  if (is.null(live) || !setequal(grid_panel_ids(live[["grid"]]), target_ids)) {
-    return(invisible())
-  }
-
-  if (!layouts_match(live, target)) {
-    apply_layout_diff(
-      view = view,
-      target = target,
-      dock = dock,
-      blocks = blocks,
-      extensions = extensions
     )
   }
 
