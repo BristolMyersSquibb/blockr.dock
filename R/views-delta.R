@@ -407,6 +407,29 @@ fold_live_membership <- function(layout, live_ids) {
   out
 }
 
+# Decide whether a browser `_state` echo is a genuine user rearrangement to fold
+# into board_layouts. `source` is dockview's companion provenance flag: only a
+# `"client"` gesture (drag, sash resize, tab activation) is a real delta -- a
+# `"server"` echo is the dock's own push coming back, and folding it loops
+# through reconcile (#252). `live` is the dockview-shaped echo; `current` the
+# view's committed layout. Returns the replacement `dock_layout` when the
+# arrangement genuinely changed (compared by wire spec, so volatile sizes and
+# regenerated ids do not register), else NULL.
+arrangement_fold <- function(live, source, current) {
+
+  if (is.null(live) || !identical(source, "client")) {
+    return(NULL)
+  }
+
+  layout <- dockview_to_layout(live)
+
+  if (identical(layout_to_spec(layout), layout_to_spec(current))) {
+    return(NULL)
+  }
+
+  layout
+}
+
 # Merge user-supplied `views$mod` with the block-removal cleanup: when
 # both touch a view, the cleanup drops the removed block from whatever
 # layout the user submitted; otherwise the present one wins.

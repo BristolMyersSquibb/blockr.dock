@@ -28,7 +28,7 @@ Imports:
     shinyjs,
     bslib,
     glue,
-    dockViewR (>= 0.2.1),
+    dockViewR (>= 0.3.0),
     htmltools,
     cli,
     shinyWidgets,
@@ -36,6 +36,7 @@ Imports:
 Remotes:
     BristolMyersSquibb/blockr.ui,
     BristolMyersSquibb/blockr.core,
+    cynkra/dockViewR@70-state-provenance,
     nbenn/shinytest2@wait-for-app-serving
 Suggests:
     testthat (>= 3.0.0),

@@ -1,6 +1,5 @@
 #' @export
-serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
-                                       view_data = NULL, ...,
+serialize_board.dock_board <- function(x, blocks, id = NULL, dock, ...,
                                        session = get_session()) {
 
   state <- lapply(
@@ -20,7 +19,10 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
     session
   )
 
-  layout_data <- view_data()
+  # board_layouts is authoritative: every genuine user rearrangement is folded
+  # in live, so the committed board already carries the on-screen arrangement
+  # and we never read the racy browser echo at save time.
+  layout_data <- board_layouts(x)
 
   do.call(
     blockr_ser,

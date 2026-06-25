@@ -1,13 +1,20 @@
 # blockr.dock (development version)
 
-* Live panel rearrangements are no longer lost when a board is saved
-  (#243). `view_data()`, the live dock layout that serialization reads,
-  was stuck at `NULL` for the whole session, so Export fell back to the
-  board's default layout. The live dock registry is now a
-  `reactiveValues` rather than a plain environment, so `view_data()`
-  takes a dependency on each view's entry and re-evaluates when reconcile
-  creates it -- whatever the init flush order -- instead of relying on a
-  reconcile observer priority to win that race.
+* The dock layout feedback loop is cut at its source (#257, #252).
+  The browser echoes its `_state` both for the dock's own programmatic
+  pushes (a restore, an add / remove) and for genuine user gestures;
+  folding a push's echo back into the board fed a restore / reconcile
+  loop that, on a slow client, could tear a board down to empty on load
+  (#252). dockViewR now tags each `_state` with its provenance (the
+  companion `_state-source` input, `"server"` / `"client"`), so the dock
+  folds only real user rearrangements into `board_layouts` and drops its
+  own echoes. `board_layouts` is now authoritative throughout:
+  serialization reads it directly instead of the round-tripped live echo
+  (so a save can no longer strand on a mid-flight `NULL`, superseding the
+  earlier #243 fix), and reconcile re-pushes from the layout each view
+  last realised rather than from the browser echo. The per-facet
+  echo-rejection guards (`live_view_data()` and the layout up-sync) are
+  removed. Requires the matching dockViewR (`_state-source` provenance).
 
 * The add and append block browsers are each pre-rendered once into a
   dedicated sidebar (`add_block_sidebar` / `append_block_sidebar`) and

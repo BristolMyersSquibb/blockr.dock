@@ -1,7 +1,7 @@
 test_that("board server", {
 
   # Multi-view path is exercised by the default `dock_layouts(Page = ...)`
-  # layout — `board_server_callback` returns an extra `view_data` reactive.
+  # layout.
   board_rv_1 <- board_args(
     blocks = c(a = new_dataset_block())
   )
@@ -11,13 +11,12 @@ test_that("board server", {
       res <- board_server_callback(board_rv_1, update = reactiveVal())
 
       expect_type(res, "list")
-      expect_named(res, c("dock", "actions", "view_data"))
+      expect_named(res, c("dock", "actions"))
 
       # `dock` is the active-dock reactiveValues handle the extensions
       # receive; its contents are filled by the reconcile pass (init render),
       # exercised by the app test — here we assert only the returned shape.
       expect_s3_class(res[["dock"]], "reactivevalues")
-      expect_s3_class(res[["view_data"]], "reactive")
     }
   )
 
@@ -33,7 +32,7 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "edit_board_extension")
+        c("dock", "actions", "edit_board_extension")
       )
 
       expect_s3_class(res[["dock"]], "reactivevalues")
@@ -249,87 +248,44 @@ test_that("renaming a block refreshes the dock panel title (#193)", {
   expect_identical(title_set, "Renamed")
 })
 
-test_that("live_view_data is NULL while any view layout is uninitialized", {
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
+test_that("arrangement_fold gates the fold on client provenance (#257)", {
 
-  layouts <- with_mock_context(ms, {
-    list(A = reactiveVal(NULL), B = reactiveVal(NULL))
-  })
+  # The browser echoes its `_state` for our own pushes (provenance "server")
+  # and for genuine user gestures ("client") alike. Folding a server echo back
+  # into the board is the restore / reconcile loop (#252); only a client
+  # gesture is a real delta. This is the structural cut: same echo, different
+  # source, opposite outcome.
+  current <- dock_layout("a", "b")
+  reordered <- unclass(dock_layout("b", "a"))
+  unchanged <- unclass(dock_layout("a", "b"))
 
-  res <- with_mock_context(ms, {
-    client_views <- reactiveVal(
-      dock_layouts(A = new_dock_layout(), B = new_dock_layout())
-    )
-    ids <- names(client_views())
-    docks <- reactiveValues()
-    docks[[ids[[1L]]]] <- list(layout = layouts$A)
-    docks[[ids[[2L]]]] <- list(layout = layouts$B)
-    client_active <- reactiveVal(ids[[1L]])
-    list(vd = live_view_data(client_views, docks, client_active))
-  })
+  # A server echo -- our push coming back -- is never folded, even when it
+  # differs from the committed layout. This is what breaks the loop.
+  expect_null(arrangement_fold(reordered, "server", current))
 
-  expect_null(isolate(res$vd()))
+  # No provenance at all is treated as not-client: still dropped.
+  expect_null(arrangement_fold(reordered, NULL, current))
 
-  with_mock_context(ms, layouts$A(list(grid = list(), panels = list())))
-  expect_null(isolate(res$vd()))
+  # A not-yet-reported echo (NULL) is dropped rather than folded as empty.
+  expect_null(arrangement_fold(NULL, "client", current))
 
-  with_mock_context(ms, layouts$B(list(grid = list(), panels = list())))
+  # A client gesture that genuinely rearranges folds in, carrying the new order.
+  folded <- arrangement_fold(reordered, "client", current)
+  expect_s3_class(folded, "dock_layout")
+  expect_identical(layout_panel_ids(folded), c("b", "a"))
 
-  lys <- isolate(res$vd())
-  expect_s3_class(lys, "dock_layouts")
-  expect_identical(unname(view_names(lys)), c("A", "B"))
-  expect_identical(active_name(lys), "A")
+  # A client echo that matches the committed arrangement is a no-op (a tab
+  # click reporting the same grid), so nothing is folded.
+  expect_null(arrangement_fold(unchanged, "client", current))
 })
 
-test_that("live_view_data re-evaluates once docks are populated (#243)", {
+test_that("a client gesture folds in; a server echo does not (#257)", {
 
-  # Regression: live_view_data first evaluated with `docks` still empty (its
-  # dock module not yet created by reconcile) and hit the empty-dock early
-  # return. When `docks` was a plain environment that read took no reactive
-  # dependency, so reconcile populating `docks` never re-triggered it --
-  # view_data() stayed NULL for the session and serialize fell back to the
-  # default layout. As a `reactiveValues`, reading `docks[[v_id]]` (even for an
-  # absent key) subscribes, so creating the dock re-evaluates this -- with no
-  # separate signal and regardless of flush order.
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
-
-  res <- with_mock_context(ms, {
-    client_views <- reactiveVal(dock_layouts(A = new_dock_layout()))
-    docks <- reactiveValues()
-    client_active <- reactiveVal(NULL)
-    list(
-      vd = live_view_data(client_views, docks, client_active),
-      docks = docks,
-      view = names(client_views())[[1L]]
-    )
-  })
-
-  # First read with empty docks: NULL, but the absent-key read has subscribed.
-  expect_null(isolate(res$vd()))
-
-  # Mimic reconcile creating the dock: the reactiveValues write alone
-  # re-triggers live_view_data.
-  layout <- with_mock_context(
-    ms, reactiveVal(list(grid = list(), panels = list()))
-  )
-  with_mock_context(ms, res$docks[[res$view]] <- list(layout = layout))
-
-  lys <- isolate(res$vd())
-
-  expect_s3_class(lys, "dock_layouts")
-  expect_identical(unname(view_names(lys)), "A")
-})
-
-test_that("view_data() tracks a reported layout despite flush order (#243)", {
-
-  # The same regression through the real reconcile + live_view_data composition.
-  # Reading view_data() before the first flush reproduces the init order the
-  # bug needs -- the upsync reads live_view_data while `docks` is still empty,
-  # before reconcile creates the dock modules. The browser then reports a
-  # rearranged layout via the dock `_state` input, which view_data() must pick
-  # up rather than staying frozen at the seed.
+  # End-to-end through the real module: the browser reports a reordered grid via
+  # `_state`, tagged by `_state-source`. A "server" echo (our own push coming
+  # back) must not feed the board -- that is the #252 loop -- while a genuine
+  # "client" gesture must fold in, so board_layouts stays the single source of
+  # truth that serialization reads.
   board_rv <- board_args(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(Page = dock_layout("a", "b"))
@@ -338,90 +294,80 @@ test_that("view_data() tracks a reported layout despite flush order (#243)", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
 
-  res <- with_mock_context(
-    ms, board_server_callback(board_rv, update = reactiveVal())
-  )
+  # `update` is the board's reactiveVal write channel; record every payload it
+  # carries so we can assert which echoes folded. The fold is debounced (a drag
+  # bursts), so each step advances the mock clock before flushing.
+  captured <- list()
+  update <- with_mock_context(ms, reactiveVal())
 
-  # Force the first read before reconcile runs: docks empty, so NULL.
-  expect_null(isolate(res$view_data()))
-
+  with_mock_context(ms, {
+    board_server_callback(board_rv, update = update)
+    observe({
+      payload <- update()
+      if (!is.null(payload)) captured[[length(captured) + 1L]] <<- payload
+    })
+  })
   ms$flushReact()
 
-  # The browser reports the live grid through the dock `_state` input, carrying
-  # the real `block_panel-*` ids reversed from the seeded order. It is built
-  # with the public dock_layout() constructor -- which dockview_to_layout()
-  # accepts unclassed -- rather than hand-rolled dockview JSON.
+  mods <- function() Filter(function(p) !is.null(p$views$mod), captured)
+
   reported <- unclass(dock_layout("block_panel-b", "block_panel-a"))
-  do.call(ms$setInputs, set_names(list(reported), "Page-dock_state"))
+
+  # A server-sourced echo of a reordering is our own push coming back: dropped.
+  ms$setInputs(
+    `Page-dock_state-source` = "server", `Page-dock_state` = reported
+  )
+  ms$elapse(300)
   ms$flushReact()
 
-  vd <- isolate(res$view_data())
+  expect_length(mods(), 0L)
 
-  # view_data() carries the reported order, not the frozen `[a, b]` default.
-  expect_s3_class(vd, "dock_layouts")
+  # The same reordering, now a genuine user gesture, folds into board_layouts.
+  ms$setInputs(
+    `Page-dock_state-source` = "client", `Page-dock_state` = reported
+  )
+  ms$elapse(300)
+  ms$flushReact()
+
+  folded <- mods()
+  expect_length(folded, 1L)
   expect_identical(
-    layout_panel_ids(vd[["Page"]]),
+    layout_panel_ids(folded[[1L]]$views$mod$Page),
     c("block_panel-b", "block_panel-a")
   )
 })
 
-test_that("layouts_to_board_observer fires update views on divergence", {
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
+test_that("serialize_board.dock_board reads board_layouts (#257)", {
 
+  # Serialization no longer round-trips the live browser echo: it reads
+  # board_layouts(x) directly, so it can never strand on a mid-flight NULL and
+  # always reflects whatever the fold path has committed.
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"), B = list("b"))
+    layouts = list(Page = dock_layout("b", "a"))
   )
 
-  rv <- with_mock_context(ms, reactiveValues(board = brd))
-  vd <- with_mock_context(ms, reactiveVal(NULL))
-
-  captured <- list()
-  upd <- function(payload) {
-    captured[[length(captured) + 1L]] <<- payload
-  }
-
-  with_mock_context(ms, layouts_to_board_observer(vd, upd, rv))
-  ms$flushReact()
-
-  expect_length(captured, 0L)
-
-  new_views <- isolate(board_layouts(rv$board))
-  b_id <- vid(new_views, "B")
-  active_view(new_views) <- b_id
-
-  with_mock_context(ms, vd(new_views))
-  ms$flushReact()
-
-  expect_length(captured, 1L)
-  expect_named(captured[[1L]], "views")
-  expect_identical(captured[[1L]]$views$active, b_id)
-  expect_null(captured[[1L]]$views$mod)
-})
-
-test_that("layouts_to_board_observer is idempotent when nothing changed", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
 
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block()),
-    layouts = list(Page = list("a"))
+  ser <- with_mock_context(
+    ms,
+    serialize_board(
+      brd,
+      blocks = list(),
+      id = "brd",
+      dock = NULL,
+      session = ms
+    )
   )
 
-  rv <- with_mock_context(ms, reactiveValues(board = brd))
-  vd <- with_mock_context(ms, reactiveVal(NULL))
+  views <- ser$payload$layouts$payload$views
 
-  fire_count <- 0L
-  upd <- function(payload) fire_count <<- fire_count + 1L
-
-  with_mock_context(ms, layouts_to_board_observer(vd, upd, rv))
-  ms$flushReact()
-
-  with_mock_context(ms, vd(isolate(board_layouts(rv$board))))
-  ms$flushReact()
-
-  expect_identical(fire_count, 0L)
+  expect_named(views, "Page")
+  expect_identical(
+    layout_panel_ids(blockr_deser(views$Page)),
+    c("block_panel-b", "block_panel-a")
+  )
 })
 
 test_that("view nav renders one labelled item per view (#189)", {
@@ -472,8 +418,8 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
   # test keys off client_views, not docks.
   stub_create <- function(v_id, layout, board, update, session, docks, ...) {
     dock <- list(
-      layout = function() NULL,
-      live_panels = reactiveVal(as.character(layout_panel_ids(layout)))
+      live_panels = reactiveVal(as.character(layout_panel_ids(layout))),
+      last_applied = reactiveVal(layout)
     )
     docks[[v_id]] <- dock
   }
@@ -581,7 +527,7 @@ test_that("reconcile_views forwards the live board to created views (#194)", {
   expect_silent(isolate(board_block_ids(forwarded$board)))
 })
 
-test_that("reconcile_views skips an added panel pending its echo (#196)", {
+test_that("reconcile_views does not rebuild a dock already realised (#196)", {
 
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
@@ -592,31 +538,24 @@ test_that("reconcile_views skips an added panel pending its echo (#196)", {
     sendCustomMessage = function(type, message) invisible()
   )
 
-  # board_layouts holds both panels synchronously (the block-add fold) and the
-  # proxy's live_panels tracker has caught `b` from insert_block_ui, but the
-  # browser has not yet echoed `b` back through get_dock. reconcile must not
-  # restore here: membership agrees, so the only apparent difference is the
-  # not-yet-echoed panel insert_block_ui already placed -- restoring would wipe
-  # it (#196).
+  # A live-only membership change (the add-panel modal, a closed tab) has
+  # already run: the proxy op placed the panel, `live_panels` caught it, and the
+  # membership fold recorded the folded layout on `last_applied`. reconcile must
+  # not rebuild -- membership and arrangement both agree with what the dock has
+  # realised, so restoring would needlessly tear the live arrangement down
+  # (#196). Decided from `last_applied`, never the lagging browser echo.
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(V = dock_layout("a", "b"))
   )
   board <- with_mock_context(ms, reactiveValues(board = brd))
 
-  target_ids <- layout_panel_ids(board_layouts(brd)[["V"]])
-
-  behind <- board_layouts(
-    new_dock_board(
-      blocks = c(a = new_dataset_block()),
-      layouts = list(V = dock_layout("a"))
-    )
-  )[["V"]]
+  target <- board_layouts(brd)[["V"]]
 
   docks <- with_mock_context(ms, reactiveValues())
   docks[["V"]] <- list(
-    layout = function() behind,
-    live_panels = with_mock_context(ms, reactiveVal(target_ids))
+    live_panels = with_mock_context(ms, reactiveVal(layout_panel_ids(target))),
+    last_applied = with_mock_context(ms, reactiveVal(target))
   )
 
   client_views <- with_mock_context(
@@ -680,8 +619,8 @@ test_that("reconcile_views pushes a programmatic membership change", {
 
   docks <- with_mock_context(ms, reactiveValues())
   docks[["V"]] <- list(
-    layout = function() NULL,
-    live_panels = live_panels
+    live_panels = live_panels,
+    last_applied = with_mock_context(ms, reactiveVal(new_dock_layout()))
   )
 
   client_views <- with_mock_context(
@@ -715,6 +654,75 @@ test_that("reconcile_views pushes a programmatic membership change", {
 
   # The push records the new membership, so a later pass is a no-op.
   expect_setequal(isolate(live_panels()), layout_panel_ids(target))
+})
+
+test_that("reconcile_views records a live add without rebuilding (#191)", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  session <- list(
+    ns = identity,
+    sendInputMessage = function(input_id, message) invisible(),
+    sendCustomMessage = function(type, message) invisible()
+  )
+
+  # A block add places its panel via the live insert (insert_block_ui) and folds
+  # into board_layouts; `live_panels` catches it before reconcile runs.
+  # `last_applied` still holds the pre-add layout, so its panel SET differs from
+  # the target -- but the browser already realised the add. reconcile must
+  # record the new layout, NOT rebuild: a rebuild fights the live insert and
+  # drops the freshly-mounted block card (#191).
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(V = dock_layout("a", "b"))
+  )
+  board <- with_mock_context(ms, reactiveValues(board = brd))
+
+  target <- board_layouts(brd)[["V"]]
+
+  pre_add <- board_layouts(
+    new_dock_board(
+      blocks = c(a = new_dataset_block()),
+      layouts = list(V = dock_layout("a"))
+    )
+  )[["V"]]
+
+  last_applied <- with_mock_context(ms, reactiveVal(pre_add))
+
+  docks <- with_mock_context(ms, reactiveValues())
+  docks[["V"]] <- list(
+    live_panels = with_mock_context(
+      ms, reactiveVal(layout_panel_ids(target))
+    ),
+    last_applied = last_applied
+  )
+
+  client_views <- with_mock_context(
+    ms,
+    reactiveVal(seed_view_state(board_layouts(brd)))
+  )
+  client_active <- with_mock_context(ms, reactiveVal("V"))
+  active_dock <- with_mock_context(ms, reactiveValues())
+  update <- with_mock_context(ms, reactiveVal())
+
+  diffed <- 0L
+
+  with_mocked_bindings(
+    with_mock_context(
+      ms,
+      reconcile_views(
+        board, update, docks, active_dock, client_active, client_views,
+        session
+      )
+    ),
+    apply_layout_diff = function(...) diffed <<- diffed + 1L,
+    switch_active_view = function(...) invisible(),
+    .package = "blockr.dock"
+  )
+
+  expect_identical(diffed, 0L)
+  expect_true(layouts_match(isolate(last_applied()), target))
 })
 
 test_that("apply_board_update.dock_board switches active view", {

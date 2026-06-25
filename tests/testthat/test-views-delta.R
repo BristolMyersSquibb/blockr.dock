@@ -205,14 +205,14 @@ test_that("reconcile_views syncs the nav and live state on rename", {
 
   # Pre-populate the registry so reconcile sees the views as already
   # instantiated (no DOM surgery). The proxy's membership matches the board and
-  # the live layout is pending (NULL), so the layout check is a no-op and only
-  # the rename fires.
+  # the realised layout already equals the target, so the layout check is a
+  # no-op and only the rename fires.
   docks <- reactiveValues()
   for (id in names(board_layouts(brd))) {
     ids <- as.character(layout_panel_ids(board_layouts(brd)[[id]]))
     docks[[id]] <- list(
-      layout = function() NULL,
-      live_panels = reactiveVal(ids)
+      live_panels = reactiveVal(ids),
+      last_applied = reactiveVal(board_layouts(brd)[[id]])
     )
   }
   active_dock <- reactiveValues()
@@ -716,8 +716,8 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     for (id in names(state)) {
       ids <- as.character(layout_panel_ids(state[[id]]))
       docks[[id]] <- list(
-        layout = function() NULL,
-        live_panels = reactiveVal(ids)
+        live_panels = reactiveVal(ids),
+        last_applied = reactiveVal(state[[id]])
       )
     }
     active_dock <- reactiveValues()

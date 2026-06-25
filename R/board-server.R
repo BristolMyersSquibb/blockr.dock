@@ -10,8 +10,7 @@
 #' @param ... Extension server arguments.
 #' @param session Shiny session.
 #'
-#' @return List with `dock`, `actions`, `view_data`, and extension
-#'   results.
+#' @return List with `dock`, `actions`, and extension results.
 #'
 #' @noRd
 board_server_callback <- function(board, update, ..., session = get_session()) {
@@ -33,10 +32,11 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   # registry, keyed by view id; `client_active` / `client_views` mirror which
   # views the browser shows, diffed by reconcile_views() — the sole mutator.
   # Per-view panel membership lives on each dock proxy (`live_panels`), kept
-  # authoritative by the add/remove touchpoints, so reconcile compares against
-  # it rather than the lagging browser echo. `docks` is a `reactiveValues`, so
-  # live_view_data() depends on each view's entry and re-evaluates when
-  # reconcile creates it, whatever the init flush order.
+  # authoritative by the add/remove touchpoints; the arrangement each dock last
+  # realised lives on `last_applied`, so reconcile pushes from server intent
+  # rather than reading the lagging browser echo. board_layouts is the single
+  # source of truth: each dock folds only genuine user gestures (provenance
+  # `"client"`) back into it, so a server push never echoes into the board.
   docks <- reactiveValues()
   active_dock <- reactiveValues()
   client_active <- reactiveVal(NULL)
@@ -61,9 +61,6 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   # Extensions receive active_dock — a reactiveValues that always mirrors
   # whichever view is currently active (swapped by update_active_dock).
   dock <- active_dock
-  view_data <- live_view_data(client_views, docks, client_active)
-
-  sync_layouts_to_board(view_data, update, board)
 
   # Each extension can read the others' server results through the
   # `extensions` environment: one active binding per id, each resolving to
@@ -107,25 +104,24 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   c(
     list(
       dock = dock,
-      actions = triggers,
-      view_data = view_data
+      actions = triggers
     ),
     ext_res
   )
 }
 
 # The initial `client_views`: one bare (empty) layout per view, carrying the
-# display name. Gives live_view_data and the nav the view set before any
-# dockview has reported its live layout; the dock modules themselves are
-# created by the reconcile pass (its empty-`docks` case). Which view is active
-# is tracked solely by `client_active`, not here.
+# display name. Gives the nav the view set before any dockview has reported its
+# live layout; the dock modules themselves are created by the reconcile pass
+# (its empty-`docks` case). Which view is active is tracked solely by
+# `client_active`, not here.
 seed_view_state <- function(views) {
   reconstruct_dock_layouts(lapply(views, bare_view))
 }
 
 # An empty layout standing in for a view in `client_views`: carries the
-# view's display name so live_view_data / serialization keep the
-# id -> name mapping without duplicating the layout itself.
+# view's display name so the nav keeps the id -> name mapping without
+# duplicating the layout itself.
 bare_view <- function(x) {
   ly <- new_dock_layout()
   nm <- view_name(x)
@@ -159,121 +155,6 @@ switch_view_observer <- function(session, update, client_active) {
     },
     ignoreInit = TRUE
   )
-}
-
-# Returns NULL while any view is still pending — its dock not yet created by
-# reconcile, or its dockview layout not yet reported — so downstream observers
-# `req()` past the initial flush. Reading `docks[[v_id]]` (a reactiveValues)
-# takes a dependency on each view's entry, so this re-evaluates when reconcile
-# creates the dock — whatever the init flush order — rather than stranding on
-# the empty-`docks` early return. The active view comes from `client_active`,
-# not `client_views`.
-live_view_data <- function(client_views, docks, client_active) {
-  reactive({
-    state <- client_views()
-    v_list <- lapply(names(state), function(v_id) {
-      dk <- docks[[v_id]]
-      if (is.null(dk)) {
-        return(NULL)
-      }
-      ly <- dk$layout()
-      if (is.null(ly)) {
-        return(NULL)
-      }
-      out <- dockview_to_layout(ly)
-      nm <- view_name(state[[v_id]])
-      if (!is.null(nm)) {
-        view_name(out) <- nm
-      }
-      out
-    })
-
-    if (any(lgl_ply(v_list, is.null))) {
-      return(NULL)
-    }
-
-    res <- reconstruct_dock_layouts(set_names(v_list, names(state)))
-    ca <- client_active()
-    if (!is.null(ca)) {
-      active_view(res) <- ca
-    }
-    res
-  })
-}
-
-# Writes go through update(list(views = ...)) — board$board is
-# read-only at the plugin boundary; routing through the update channel
-# lets apply_board_update.dock_board mutate rv$board where it's writable
-# and composes with augment/apply hooks from other subclasses. Debounced
-# because drag-resize emits many rapid events per gesture.
-sync_layouts_to_board <- function(view_data, update, board, millis = 250) {
-  src <- if (millis > 0L) shiny::debounce(view_data, millis) else view_data
-  layouts_to_board_observer(src, update, board)
-}
-
-layouts_to_board_observer <- function(view_data, update, board) {
-  observe({
-    new_layouts <- req(view_data())
-    current <- isolate(board_layouts(board$board))
-
-    if (identical(current, new_layouts)) {
-      return()
-    }
-
-    delta <- diff_dock_layouts(current, new_layouts)
-
-    if (length(delta)) {
-      update(list(views = delta))
-    }
-  })
-}
-
-# Structured `views` delta between two `dock_layouts`, keyed by stable
-# view id, so live UI state mirrors back through the update lifecycle
-# without resending unchanged views. Per-view comparison uses the wire
-# spec (ignores volatile fields and the display name — renames travel on
-# their own slot); the active-view change rides the `$active` slot. Since
-# the id is stable across a rename, a rename never surfaces here as a
-# removal of the old view paired with an addition of a new one.
-diff_dock_layouts <- function(current, new_layouts) {
-
-  cur_ids <- names(current)
-  new_ids <- names(new_layouts)
-
-  add_ids <- setdiff(new_ids, cur_ids)
-  rm_ids <- setdiff(cur_ids, new_ids)
-  common <- intersect(cur_ids, new_ids)
-
-  mod_views <- list()
-  for (v in common) {
-
-    cur_spec <- layout_to_spec(current[[v]])
-    new_spec <- layout_to_spec(new_layouts[[v]])
-
-    if (!identical(cur_spec, new_spec)) {
-      mod_views[[v]] <- new_layouts[[v]]
-    }
-  }
-
-  cur_active <- active_view(current)
-  new_active <- active_view(new_layouts)
-
-  out <- list()
-
-  if (length(add_ids)) {
-    out$add <- as.list(unclass(new_layouts))[add_ids]
-  }
-  if (length(rm_ids)) {
-    out$rm <- rm_ids
-  }
-  if (length(mod_views)) {
-    out$mod <- mod_views
-  }
-  if (!identical(cur_active, new_active) && !is.null(new_active)) {
-    out$active <- new_active
-  }
-
-  out
 }
 
 #' Hide all block and extension UI for a view.
@@ -477,11 +358,15 @@ reconcile_views <- function(board, update, docks, active_dock,
 # authoritatively on the proxy (`live_panels`), kept in lockstep by the
 # add/remove touchpoints, so a mismatch there is a programmatic add / remove the
 # dock has not been told about (a views$mod, a board restore) — restore it and
-# record the new membership. When membership already agrees, only the
-# arrangement can differ; reconcile that against the browser's echoed state, but
-# skip until the echo has caught up to the current membership, so a just-added
-# panel (live_panels ahead of the echo) does not read as an arrangement change
-# and force a needless rebuild (#196).
+# record the new membership. When membership already agrees, decide a rebuild
+# from server intent — the layout this dock last realised (`last_applied`) —
+# never the browser's echoed `_state`, which lags a push and races the
+# membership set. A change in the panel SET since we last applied means a live
+# add / remove (the `+` / `x` buttons, a block add) the browser already placed:
+# recording it is enough, rebuilding would fight the live op (#191, #196). Only
+# a genuine arrangement change at the SAME membership — a programmatic views$mod
+# — warrants a push; `layouts_match` drops volatile sizes / ids / focus, so a
+# tab click never rebuilds.
 reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
 
   target_ids <- layout_panel_ids(target)
@@ -498,17 +383,16 @@ reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
     )
 
     dock$live_panels(target_ids)
+    dock$last_applied(target)
 
     return(invisible())
   }
 
-  live <- tryCatch(isolate(dock$layout()), error = function(e) NULL)
+  applied <- isolate(dock$last_applied())
+  same_membership <- setequal(layout_panel_ids(applied), target_ids)
 
-  if (is.null(live) || !setequal(grid_panel_ids(live[["grid"]]), target_ids)) {
-    return(invisible())
-  }
+  if (same_membership && !layouts_match(applied, target)) {
 
-  if (!layouts_match(live, target)) {
     apply_layout_diff(
       view = view,
       target = target,
@@ -517,6 +401,8 @@ reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
       extensions = extensions
     )
   }
+
+  dock$last_applied(target)
 
   invisible()
 }
@@ -563,15 +449,24 @@ manage_dock <- function(
     # on the browser's `n-panels` echo.
     proxy <- set_dock_view_output(session = session)
     live_panels <- reactiveVal(as.character(layout_panel_ids(init_layout)))
+    last_applied <- reactiveVal(init_layout)
     prev_active_group <- reactiveVal()
     active_group_trail <- reactiveVal()
     n_panels <- reactive(length(live_panels()))
+
+    # `layout` is the browser's live `_state` echo; `layout_source` is its
+    # companion provenance flag (`"server"` for our own pushes, `"client"`
+    # for a user gesture). Both read straight off the dockview inputs.
+    layout <- reactive(dockViewR::get_dock(proxy))
+    layout_source <- reactive(input[[dock_input("state-source")]])
 
     dock <- list(
       proxy = proxy,
       board_ns = board_ns,
       live_panels = live_panels,
-      layout = reactive(dockViewR::get_dock(proxy)),
+      last_applied = last_applied,
+      layout = layout,
+      layout_source = layout_source,
       n_panels = n_panels,
       prev_active_group = prev_active_group,
       active_group_trail = active_group_trail
@@ -581,7 +476,9 @@ manage_dock <- function(
     # extension show / hide — back into board_layouts in the same flush, so the
     # panel set stays authoritative server-side and a later board change never
     # restores a layout that lags the live dock. Block add / remove fold through
-    # the update lifecycle already; this catches the dock-only paths.
+    # the update lifecycle already; this catches the dock-only paths. reconcile
+    # reads the new membership off `live_panels` and records it without a
+    # rebuild, so this only owns the board-side fold.
     observeEvent(
       live_panels(),
       {
@@ -594,6 +491,36 @@ manage_dock <- function(
           if (!is.null(folded)) {
             update(list(views = list(mod = set_names(list(folded), id))))
           }
+        }
+      },
+      ignoreInit = TRUE
+    )
+
+    # Fold a genuine user rearrangement (drag, sash resize, tab click) into
+    # board_layouts, the single source of truth. `arrangement_fold` keeps only
+    # `"client"`-sourced echoes: a `"server"` echo is our own push coming back,
+    # and folding it would feed reconcile and loop (#252). Recording the
+    # realised layout on `last_applied` stops the reconcile this fold triggers
+    # from pushing it straight back. Debounced because a drag bursts. Membership
+    # is left alone (adds / closes round-trip server-side, reading `"server"`).
+    live_layout <- shiny::debounce(layout, millis = 250)
+
+    observeEvent(
+      live_layout(),
+      {
+        layouts <- isolate(board_layouts(board$board))
+
+        if (!id %in% names(layouts)) {
+          return()
+        }
+
+        folded <- arrangement_fold(
+          live_layout(), isolate(layout_source()), layouts[[id]]
+        )
+
+        if (!is.null(folded)) {
+          last_applied(folded)
+          update(list(views = list(mod = set_names(list(folded), id))))
         }
       },
       ignoreInit = TRUE
