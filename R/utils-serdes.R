@@ -14,8 +14,14 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
     reval_if
   )
 
+  # The settings UI manages `blockr_app_options()` (board options plus those
+  # contributed by blocks and the registry), a wider set than the board's own
+  # `board_options()`. Persist that set so a user-changed option backed by a
+  # block (e.g. preview rows) survives save and restore.
+  board_options(x) <- blockr_app_options(x)
+
   opts <- lapply(
-    set_names(nm = names(as_board_options(x))),
+    set_names(nm = names(board_options(x))),
     get_board_option_or_null,
     session
   )

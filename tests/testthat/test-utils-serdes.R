@@ -676,3 +676,47 @@ test_that("producer version threads from the board down to layout reading", {
   des <- blockr_deser(ser)
   expect_identical(layout_panel_ids(des[["layouts"]][[1L]]), "block_panel-a")
 })
+
+# A board option the user can change in the settings sidebar must survive a
+# save / restore round-trip. An empty board owns only `board_name`, yet the
+# sidebar manages the wider `blockr_app_options()` set (options contributed by
+# registered blocks, e.g. the `n_rows` preview-row count). Serialize used to
+# read only the board's own options, so a changed block-backed option was
+# dropped and reverted to its default on reload.
+test_that("a user-changed block-backed board option survives save/restore", {
+
+  brd <- new_dock_board()
+
+  expect_false("n_rows" %in% names(board_options(brd)))
+  expect_true("n_rows" %in% names(blockr_app_options(brd)))
+
+  ser <- NULL
+
+  testServer(
+    get_s3_method("board_server", brd),
+    {
+      session$flushReact()
+
+      session$setInputs(n_rows = 100L)
+      session$flushReact()
+
+      ser <<- serialize_board(
+        rv$board, rv$blocks, id = "empty", dock = NULL,
+        view_data = function() NULL, session = session
+      )
+    },
+    args = list(
+      x = brd,
+      plugins = list(blockr.core::manage_blocks()),
+      options = blockr_app_options(brd)
+    )
+  )
+
+  loaded <- blockr_deser(ser)
+
+  expect_true("n_rows" %in% names(board_options(loaded)))
+  expect_identical(
+    board_option_value(blockr_app_options(loaded)[["n_rows"]]),
+    100L
+  )
+})
