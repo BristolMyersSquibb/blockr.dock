@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* Board options changed in the settings sidebar are no longer reset to
+  their defaults on save and reload (blockr.session#23). Serialization
+  persisted only the board's own `board_options()`, but the sidebar
+  manages the wider `blockr_app_options()` set -- options contributed by
+  blocks and the registry, such as the preview-row count -- so a changed
+  block-backed option was dropped and reverted on restore.
+  `serialize_board()` now persists the full managed set.
+
 * Live panel rearrangements are no longer lost when a board is saved
   (#243). `view_data()`, the live dock layout that serialization reads,
   was stuck at `NULL` for the whole session, so Export fell back to the
