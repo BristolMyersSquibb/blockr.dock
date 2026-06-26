@@ -115,49 +115,95 @@ read_view_docks <- function(app, board_id = "my_board") {
   )
 }
 
-# Wait until the server-rendered dock shell is in place: the view nav, every
-# block card and the active view's handle. These render independently of the
-# dockview client, so the serialization e2e can read them without racing the
-# (client-side) panel layout.
-wait_dock_loaded <- function(app, n_blocks, board_id = "my_board") {
-  app$wait_for_js(
-    sprintf("document.querySelector('#%s-view_nav') !== null", board_id),
-    timeout = 30 * 1000
+# Wrap `wait_for_js` so a timeout dumps the page state before failing. The
+# queue-only e2e flakes never reproduce locally, so a residual timeout has to
+# carry enough context to be actionable rather than an opaque "JS did not
+# evaluate to true" (mirrors setup-idle-debug.R). `diagnose` is a closure that
+# returns a one-shot status string.
+wait_js <- function(app, cond, diagnose, timeout = 30 * 1000) {
+  tryCatch(
+    app$wait_for_js(cond, timeout = timeout),
+    error = function(e) {
+      message("\n--- [e2e-wait] timed out waiting for: ", cond)
+      message(diagnose())
+      message("----------------------------------------------------")
+      stop(e)
+    }
   )
-  app$wait_for_js(
+}
+
+# A snapshot of the dock shell for the wait diagnostics: which markers are
+# present, the server-rendered active view (nav), and the client-toggled dock
+# handles -- the latter can lag or stall on a loaded runner, which is exactly
+# why the waits below gate on the nav marker and not on these.
+dock_shell_diag <- function(app, board_id) {
+  js <- r"(JSON.stringify((function () {
+    var nav = document.querySelector('#__BID__-view_nav');
+    var activeSel = '#__BID__-view_nav .blockr-view-item.active';
+    var active = document.querySelector(activeSel);
+    var dockActive = document.querySelector('.blockr-view-dock-active');
+    return {
+      nav: nav !== null,
+      blocks: document.querySelectorAll('[id^="__BID__-block_handle-"]').length,
+      navActive: active ? active.getAttribute('data-view-id') : null,
+      dockHandles: Array.from(document.querySelectorAll('.blockr-view-dock'))
+        .map(function (e) { return e.id; }),
+      dockActive: dockActive ? dockActive.id : null
+    };
+  })()))"
+
+  app$get_js(gsub("__BID__", board_id, js, fixed = TRUE))
+}
+
+# Wait until the server-rendered dock shell is in place: the view nav, every
+# block card and the active view. These render independently of the dockview
+# client, so the serialization e2e can read them without racing the
+# (client-side) panel layout. The active view is gated on the server-rendered
+# nav marker (`.blockr-view-item.active`), not the client-toggled
+# `.blockr-view-dock-active` class -- the latter is applied by the `switch-view`
+# handler whose retry budget can lapse on a loaded runner, leaving it
+# permanently off and ejecting a green PR.
+wait_dock_loaded <- function(app, n_blocks, board_id = "my_board") {
+
+  diagnose <- function() dock_shell_diag(app, board_id)
+
+  wait_js(
+    app,
+    sprintf("document.querySelector('#%s-view_nav') !== null", board_id),
+    diagnose
+  )
+  wait_js(
+    app,
     sprintf(
       "document.querySelectorAll('[id^=\"%s-block_handle-\"]').length === %d",
       board_id, n_blocks
     ),
-    timeout = 30 * 1000
+    diagnose
   )
-  app$wait_for_js(
-    "document.querySelector('.blockr-view-dock-active') !== null",
-    timeout = 30 * 1000
+  wait_js(
+    app,
+    sprintf(
+      paste0(
+        "document.querySelector(",
+        "'#%s-view_nav .blockr-view-item.active') !== null"
+      ),
+      board_id
+    ),
+    diagnose
   )
 }
 
 # The dock-owned board state observable in server-rendered DOM: the view nav
-# (one row per view), the active view's id (the `blockr-view-dock-active`
-# handle), and every block's card id. The serialization e2e captures this
-# before and after a save / restore reload to assert the round-trip rebuilds it
-# identically. Block cards live in a pool the dockview client teleports into
-# panels, so query their ids globally rather than from a fixed container.
+# (one row per view, including which is active), and every block's card id. The
+# serialization e2e captures this before and after a save / restore reload to
+# assert the round-trip rebuilds it identically. The active view is read off the
+# server-rendered nav marker rather than the client-toggled
+# `.blockr-view-dock-active` handle, which can stall on a loaded runner (see
+# wait_dock_loaded). Block cards live in a pool the dockview client teleports
+# into panels, so query their ids globally rather than from a fixed container.
 read_dock_state <- function(app, board_id = "my_board") {
-  container <- xml2::read_html(
-    app$get_html(paste0("#", board_id, "-view_container"))
-  )
-  active_node <- xml2::xml_find_all(
-    container,
-    paste0(
-      "//*[contains(concat(' ', normalize-space(@class), ' '), ",
-      "' blockr-view-dock-active ')]"
-    )
-  )
-  active_view <- sub(
-    paste0("^", board_id, "-view_handle-"), "",
-    xml2::xml_attr(active_node, "id")
-  )
+
+  nav <- read_view_nav(app, board_id)
 
   handles <- unlist(
     app$get_js(
@@ -173,8 +219,8 @@ read_dock_state <- function(app, board_id = "my_board") {
   block_ids <- sort(sub(paste0("^", board_id, "-block_handle-"), "", handles))
 
   list(
-    nav = read_view_nav(app, board_id),
-    active_view = active_view,
+    nav = nav,
+    active_view = nav$id[nav$active],
     blocks = block_ids
   )
 }
@@ -208,21 +254,51 @@ set_in <- function(app, id, value) {
 click <- function(app, id) app$click(nsid(id))
 
 # A DataTables redraw (e.g. after adding a row) re-renders the cell inputs,
-# which the table's `drawCallback` re-binds via `Shiny.bindAll` -- but only
-# once the async redraw completes, which can land *after* the server reports
-# idle. So idle alone does not mean the new inputs are drivable: wait for idle,
-# then poll for the `.shiny-bound-input` marker the rebind adds, both under one
-# generous budget. A fixed 15s window let a slow CI runner's redraw outlast it
-# and eject green PRs from the merge queue.
+# which the table's `drawCallback` re-binds via `Shiny.bindAll` once the async
+# redraw lands -- which can be after the server reports idle. The old approach
+# polled for the `.shiny-bound-input` marker, but `Shiny.unbindAll` strips that
+# class on *every* redraw, so a poll can sample an unbound window (or a stalled
+# rebind can leave it off for the whole budget) and eject a green PR. Instead
+# latch a sticky flag the first time a `shiny:bound` event reports the target
+# bound: set once, it survives the later unbind/rebind churn. `draw.dt` is
+# counted only to make a residual timeout diagnosable. The triggering click has
+# already awaited idle, so wait_bound adds no idle wait of its own (one would
+# only re-expose the separate idle-check flake).
 wait_bound <- function(app, id, timeout = 30 * 1000) {
 
-  app$wait_for_idle(timeout = timeout)
+  target <- nsid(id)
 
-  app$wait_for_js(
-    paste0(
-      "document.querySelector('#", nsid(id), ".shiny-bound-input') !== null"
-    ),
-    timeout = timeout
+  js <- r"((function () {
+    var id = '__ID__';
+    var bound = function () {
+      var el = document.getElementById(id);
+      return !!(el && el.classList.contains('shiny-bound-input'));
+    };
+    var st = {done: bound(), draws: 0, existed: !!document.getElementById(id)};
+    window.__blockrWaitBound = st;
+    if (st.done) return;
+    $(document).on('draw.dt.blockrWaitBound', function () { st.draws += 1; });
+    $(document).on('shiny:bound.blockrWaitBound', function () {
+      if (bound()) { st.done = true; $(document).off('.blockrWaitBound'); }
+    });
+  })())"
+
+  app$run_js(gsub("__ID__", target, js, fixed = TRUE))
+
+  diagnose <- function() {
+    sprintf(
+      "[wait_bound] id=%s state=%s tables=%s",
+      target,
+      app$get_js("JSON.stringify(window.__blockrWaitBound)"),
+      app$get_js("document.querySelectorAll('table.dataTable').length")
+    )
+  }
+
+  wait_js(
+    app,
+    "window.__blockrWaitBound && window.__blockrWaitBound.done === true",
+    diagnose,
+    timeout
   )
 }
 
