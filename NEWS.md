@@ -1,5 +1,12 @@
 # blockr.dock (development version)
 
+* Dock extensions now receive `view_data`, the live all-views layout
+  reactive (the same one serialization reads), so an extension can read
+  the current arrangement of every view directly instead of folding it
+  through `board_layouts(board$board)`. `view_data()` is `NULL` until
+  every view has reported its layout once, so consumers should `req()`
+  it (#264).
+
 * The dock no longer loops forever or tears its panels down on a slow
   client (#252). The live layout was held in two bindings that formed a
   cycle: the live-sync fold pushed the dockview client's state into

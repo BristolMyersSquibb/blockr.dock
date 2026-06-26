@@ -59,8 +59,11 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     )
   )
 
-  # Extensions receive active_dock — a reactiveValues that always mirrors
-  # whichever view is currently active (swapped by update_active_dock).
+  # Extensions receive `dock` (active_dock, a reactiveValues mirroring whichever
+  # view is currently active, swapped by update_active_dock) for the active
+  # view, plus `view_data` for the live all-views layout — the same reactive
+  # serialization reads. `view_data()` is NULL until every view has reported its
+  # layout once (the all-or-nothing in live_view_data), so consumers req() it.
   dock <- active_dock
   view_data <- live_view_data(client_views, docks, client_active)
 
@@ -89,6 +92,7 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
       board = board,
       update = update,
       dock = dock,
+      view_data = view_data,
       actions = triggers,
       extensions = peers
     ),
