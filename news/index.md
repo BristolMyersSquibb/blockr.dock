@@ -2,6 +2,24 @@
 
 ## blockr.dock (development version)
 
+- The dock no longer loops forever or tears its panels down on a slow
+  client
+  ([\#252](https://github.com/BristolMyersSquibb/blockr.dock/issues/252)).
+  The live layout was held in two bindings that formed a cycle: the
+  live-sync fold pushed the dockview client’s state into `board_layouts`
+  (dock -\> board), and a reconcile step pushed `board_layouts` back to
+  the widget (board -\> dock). A board update that originated at the
+  dock still triggered a re-push, whose echo folded back; on a slow
+  client a partial client state folded an impoverished layout that the
+  push then faithfully restored. The board -\> dock arrangement push
+  (`reconcile_view_layout()` / `apply_layout_diff()`) is removed: a
+  view’s arrangement is client-owned and now flows dock -\> board only.
+  `reconcile_views()` still owns what the board is authoritative over –
+  which views exist, their names, the active view, and the initial
+  layout on load – and the fold keeps `board_layouts` current for
+  serialization and live readers. With one direction live there is no
+  echo to suppress and no layout-tracking state to maintain.
+
 - Live panel rearrangements are no longer lost when a board is saved
   ([\#243](https://github.com/BristolMyersSquibb/blockr.dock/issues/243)).
   `view_data()`, the live dock layout that serialization reads, was
