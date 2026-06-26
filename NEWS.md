@@ -42,6 +42,12 @@
   adjacent panel group is enough to re-emit the board, which is why #201
   surfaced this. The refresh now overlays the staged additions, edits and
   removals onto the refreshed applied state instead of clobbering them.
+* Dock extensions now receive `view_data`, the live all-views layout
+  reactive (the same one serialization reads), so an extension can read
+  the current arrangement of every view directly instead of folding it
+  through `board_layouts(board$board)`. `view_data()` is `NULL` until
+  every view has reported its layout once, so consumers should `req()`
+  it (#264).
 
 * The dock no longer loops forever or tears its panels down on a slow
   client (#252). The live layout was held in two bindings that formed a

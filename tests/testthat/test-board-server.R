@@ -966,6 +966,35 @@ test_that("extension servers can read peer extension state", {
   )
 })
 
+test_that("extension servers receive the live view_data reactive (#264)", {
+
+  captured <- NULL
+
+  probe <- new_dock_extension(
+    server = function(id, ...) {
+      captured <<- list(...)[["view_data"]]
+      moduleServer(id, function(input, output, session) list(state = list()))
+    },
+    ui = function(id) tagList(),
+    name = "Probe",
+    class = "probe_extension",
+    ctor = function(...) NULL
+  )
+
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = as_dock_extensions(list(probe))
+  )
+
+  with_mock_session(
+    {
+      board_server_callback(board_rv, update = reactiveVal())
+
+      expect_true(is.reactive(captured))
+    }
+  )
+})
+
 test_that("New view modal confirm submits an add-and-activate delta", {
 
   brd <- new_dock_board(
