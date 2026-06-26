@@ -13,9 +13,10 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(res, c("dock", "actions", "view_data"))
 
-      # `dock` is the active-dock reactiveValues handle the extensions
-      # receive; its contents are filled by the reconcile pass (init render),
-      # exercised by the app test — here we assert only the returned shape.
+      # `dock` is the internal active-dock reactiveValues handle (the block
+      # insert / remove plugin places panels through it), still returned to the
+      # board server; its contents are filled by the reconcile pass (init
+      # render), exercised by the app test — here we assert only the shape.
       expect_s3_class(res[["dock"]], "reactivevalues")
       expect_s3_class(res[["view_data"]], "reactive")
     }
@@ -363,65 +364,6 @@ test_that("view_data() tracks a reported layout despite flush order (#243)", {
     layout_panel_ids(vd[["Page"]]),
     c("block_panel-b", "block_panel-a")
   )
-})
-
-test_that("layouts_to_board_observer fires update views on divergence", {
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
-
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"), B = list("b"))
-  )
-
-  rv <- with_mock_context(ms, reactiveValues(board = brd))
-  vd <- with_mock_context(ms, reactiveVal(NULL))
-
-  captured <- list()
-  upd <- function(payload) {
-    captured[[length(captured) + 1L]] <<- payload
-  }
-
-  with_mock_context(ms, layouts_to_board_observer(vd, upd, rv))
-  ms$flushReact()
-
-  expect_length(captured, 0L)
-
-  new_views <- isolate(board_layouts(rv$board))
-  b_id <- vid(new_views, "B")
-  active_view(new_views) <- b_id
-
-  with_mock_context(ms, vd(new_views))
-  ms$flushReact()
-
-  expect_length(captured, 1L)
-  expect_named(captured[[1L]], "views")
-  expect_identical(captured[[1L]]$views$active, b_id)
-  expect_null(captured[[1L]]$views$mod)
-})
-
-test_that("layouts_to_board_observer is idempotent when nothing changed", {
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
-
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block()),
-    layouts = list(Page = list("a"))
-  )
-
-  rv <- with_mock_context(ms, reactiveValues(board = brd))
-  vd <- with_mock_context(ms, reactiveVal(NULL))
-
-  fire_count <- 0L
-  upd <- function(payload) fire_count <<- fire_count + 1L
-
-  with_mock_context(ms, layouts_to_board_observer(vd, upd, rv))
-  ms$flushReact()
-
-  with_mock_context(ms, vd(isolate(board_layouts(rv$board))))
-  ms$flushReact()
-
-  expect_identical(fire_count, 0L)
 })
 
 test_that("view nav renders one labelled item per view (#189)", {
@@ -829,13 +771,13 @@ test_that("extension servers can read peer extension state", {
   )
 })
 
-test_that("extension servers receive the live view_data reactive (#264)", {
+test_that("extension servers receive view_data, not the active dock (#264)", {
 
   captured <- NULL
 
   probe <- new_dock_extension(
     server = function(id, ...) {
-      captured <<- list(...)[["view_data"]]
+      captured <<- list(...)
       moduleServer(id, function(input, output, session) list(state = list()))
     },
     ui = function(id) tagList(),
@@ -853,7 +795,11 @@ test_that("extension servers receive the live view_data reactive (#264)", {
     {
       board_server_callback(board_rv, update = reactiveVal())
 
-      expect_true(is.reactive(captured))
+      expect_true(is.reactive(captured[["view_data"]]))
+
+      # `dock` (active_dock) is retired from the extension surface -- it is
+      # internal now (#264).
+      expect_false("dock" %in% names(captured))
     }
   )
 })

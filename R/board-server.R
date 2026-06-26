@@ -30,10 +30,13 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
   triggers <- action_triggers(actions)
 
   # Per-session dock state, closure-private. `docks` is the live manage_dock()
-  # registry, keyed by view id; `client_active` / `client_views` mirror which
-  # views the browser shows, diffed by reconcile_views() — the sole mutator.
-  # Per-view panel membership lives on each dock proxy (`live_panels`), kept
-  # authoritative by the add/remove touchpoints; it drives `n_panels` / the
+  # registry of built dock modules, keyed by view id. `client_views` is the nav
+  # model: the nav-rendered set of views plus their display names, and
+  # live_view_data()'s name source. It is distinct from `docks` only during the
+  # init flush (board_ui seeds the nav statically); reconcile_views() is its
+  # sole mutator. `client_active` mirrors which view the browser shows as
+  # active. Per-view panel membership lives on each dock proxy (`live_panels`),
+  # kept authoritative by the add/remove touchpoints; it drives `n_panels` / the
   # empty-dock prompt and the membership fold without waiting on the lagging
   # browser echo. `docks` is a `reactiveValues`, so live_view_data() depends on
   # each view's entry and re-evaluates when reconcile creates it, whatever the
@@ -59,15 +62,12 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     )
   )
 
-  # Extensions receive `dock` (active_dock, a reactiveValues mirroring whichever
-  # view is currently active, swapped by update_active_dock) for the active
-  # view, plus `view_data` for the live all-views layout — the same reactive
-  # serialization reads. `view_data()` is NULL until every view has reported its
-  # layout once (the all-or-nothing in live_view_data), so consumers req() it.
-  dock <- active_dock
+  # `view_data` is the live all-views layout -- the same reactive serialization
+  # reads. It is NULL until every view has reported its layout once (the
+  # all-or-nothing in live_view_data), so consumers req() it. A view's live
+  # arrangement is read on demand here; it no longer folds back into
+  # `board_layouts`.
   view_data <- live_view_data(client_views, docks, client_active)
-
-  sync_layouts_to_board(view_data, update, board)
 
   # Each extension can read the others' server results through the
   # `extensions` environment: one active binding per id, each resolving to
@@ -85,13 +85,23 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
     bind_peer(ext_id)
   }
 
+  # Two bundles of live handles, kept in step. Extension servers are called
+  # (below) with `board` + `update` (read / mutate the board), `view_data` +
+  # `actions` (the live products) and the `extensions` peer env. The callback
+  # RETURNS `dock`, `view_data`, `actions` and each extension's result to core,
+  # which spreads them into every plugin's args. `view_data` + `actions` are in
+  # both -- they are consumed on each side (serialization and the edit-block
+  # plugin read the returned pair). The gaps are deliberate: `dock`
+  # (active_dock) is returned for core's block insert / remove plugin but
+  # withheld from extensions, which read layout via `view_data`; `board` /
+  # `update` are core's own inputs, not echoed back; the peer env stays
+  # internal (core gets the resolved `ext_res`).
   ext_res <- lapply(
     exts,
     extension_server,
     list(
       board = board,
       update = update,
-      dock = dock,
       view_data = view_data,
       actions = triggers,
       extensions = peers
@@ -109,9 +119,12 @@ board_server_callback <- function(board, update, ..., session = get_session()) {
 
   register_actions(actions, triggers, board, update, ext_res)
 
+  # Returned to core, spread into every plugin's args (see the two-bundle note
+  # above): `dock` for block placement, `view_data` for serialization, `actions`
+  # for the edit-block plugin, and each extension's resolved result.
   c(
     list(
-      dock = dock,
+      dock = active_dock,
       actions = triggers,
       view_data = view_data
     ),
@@ -209,82 +222,6 @@ live_view_data <- function(client_views, docks, client_active) {
     }
     res
   })
-}
-
-# Writes go through update(list(views = ...)) — board$board is
-# read-only at the plugin boundary; routing through the update channel
-# lets apply_board_update.dock_board mutate rv$board where it's writable
-# and composes with augment/apply hooks from other subclasses. Debounced
-# because drag-resize emits many rapid events per gesture.
-sync_layouts_to_board <- function(view_data, update, board, millis = 250) {
-  src <- if (millis > 0L) shiny::debounce(view_data, millis) else view_data
-  layouts_to_board_observer(src, update, board)
-}
-
-layouts_to_board_observer <- function(view_data, update, board) {
-  observe({
-    new_layouts <- req(view_data())
-    current <- isolate(board_layouts(board$board))
-
-    if (identical(current, new_layouts)) {
-      return()
-    }
-
-    delta <- diff_dock_layouts(current, new_layouts)
-
-    if (length(delta)) {
-      log_trace("committing live dock layout deltas back to the board")
-      update(list(views = delta))
-    }
-  })
-}
-
-# Structured `views` delta between two `dock_layouts`, keyed by stable
-# view id, so live UI state mirrors back through the update lifecycle
-# without resending unchanged views. Per-view comparison uses the wire
-# spec (ignores volatile fields and the display name — renames travel on
-# their own slot); the active-view change rides the `$active` slot. Since
-# the id is stable across a rename, a rename never surfaces here as a
-# removal of the old view paired with an addition of a new one.
-diff_dock_layouts <- function(current, new_layouts) {
-
-  cur_ids <- names(current)
-  new_ids <- names(new_layouts)
-
-  add_ids <- setdiff(new_ids, cur_ids)
-  rm_ids <- setdiff(cur_ids, new_ids)
-  common <- intersect(cur_ids, new_ids)
-
-  mod_views <- list()
-  for (v in common) {
-
-    cur_spec <- layout_to_spec(current[[v]])
-    new_spec <- layout_to_spec(new_layouts[[v]])
-
-    if (!identical(cur_spec, new_spec)) {
-      mod_views[[v]] <- new_layouts[[v]]
-    }
-  }
-
-  cur_active <- active_view(current)
-  new_active <- active_view(new_layouts)
-
-  out <- list()
-
-  if (length(add_ids)) {
-    out$add <- as.list(unclass(new_layouts))[add_ids]
-  }
-  if (length(rm_ids)) {
-    out$rm <- rm_ids
-  }
-  if (length(mod_views)) {
-    out$mod <- mod_views
-  }
-  if (!identical(cur_active, new_active) && !is.null(new_active)) {
-    out$active <- new_active
-  }
-
-  out
 }
 
 #' Hide all block and extension UI for a view.
@@ -395,15 +332,16 @@ remove_view <- function(v_id, session, docks) {
 # Make the live dock session match the committed board's view set:
 # instantiate added views, tear down removed ones, relabel renamed ones, and
 # switch to the active view. The board owns which views exist, their names and
-# the active one; a view's per-view arrangement is client-owned and flows dock
-# -> board only (the live-sync fold), so reconcile never pushes a layout back to
-# its live dock. Takes the reactive board handle (not a snapshot) so the live
-# list reaches manage_dock, whose interaction observers read board$board after
-# the fact (#194); the committed board is snapshotted once here for this pass's
-# reads. Driven by board$board so apply_board_update.dock_board stays a pure
-# reducer and dock state never crosses the package boundary. Idempotent — a
-# board already matching the live view set produces no surgery — so it composes
-# with the live-sync (DOM -> board) path without ping-ponging.
+# the active one; a view's per-view arrangement is client-owned, read live via
+# view_data() and never folded back into board_layouts, so reconcile never
+# pushes a layout to its live dock. Takes the reactive board handle (not a
+# snapshot) so the live list reaches manage_dock, whose interaction observers
+# read board$board after the fact (#194); the committed board is snapshotted
+# once here for this pass's reads. Driven by board$board
+# so apply_board_update.dock_board stays a pure reducer and dock state never
+# crosses the package boundary. Idempotent — a board already matching the live
+# view set produces no surgery — so it composes with the membership fold
+# (DOM -> board) without ping-ponging.
 reconcile_views <- function(board, update, docks, active_dock,
                             client_active, client_views, session) {
 
