@@ -44,6 +44,7 @@ Suggests:
     methods,
     withr,
     shinytest2,
+    chromote,
     xml2,
     knitr,
     rmarkdown

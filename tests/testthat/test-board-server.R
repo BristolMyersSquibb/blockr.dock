@@ -581,7 +581,7 @@ test_that("reconcile_views forwards the live board to created views (#194)", {
   expect_silent(isolate(board_block_ids(forwarded$board)))
 })
 
-test_that("reconcile_views skips an added panel pending its echo (#196)", {
+test_that("reconcile_views never pushes a layout back to a live dock (#259)", {
 
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
@@ -592,80 +592,19 @@ test_that("reconcile_views skips an added panel pending its echo (#196)", {
     sendCustomMessage = function(type, message) invisible()
   )
 
-  # board_layouts holds both panels synchronously (the block-add fold) and the
-  # proxy's live_panels tracker has caught `b` from insert_block_ui, but the
-  # browser has not yet echoed `b` back through get_dock. reconcile must not
-  # restore here: membership agrees, so the only apparent difference is the
-  # not-yet-echoed panel insert_block_ui already placed -- restoring would wipe
-  # it (#196).
+  # board_layouts carries `a` + `b` for view V while the live dock's tracked
+  # membership is only `a`: the committed board and the live dock have diverged.
+  # A view's arrangement is client-owned and flows dock -> board only, so
+  # reconcile must never restore the dock from board_layouts. That board -> dock
+  # push -- restore_dock faithfully replaying a board_layouts that lagged the
+  # live dock -- is exactly the feedback loop that tore panels down on a slow
+  # client (#252). Pre-#259 this divergence drove apply_layout_diff ->
+  # restore_layout; now nothing pushes.
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(V = dock_layout("a", "b"))
   )
   board <- with_mock_context(ms, reactiveValues(board = brd))
-
-  target_ids <- layout_panel_ids(board_layouts(brd)[["V"]])
-
-  behind <- board_layouts(
-    new_dock_board(
-      blocks = c(a = new_dataset_block()),
-      layouts = list(V = dock_layout("a"))
-    )
-  )[["V"]]
-
-  docks <- with_mock_context(ms, reactiveValues())
-  docks[["V"]] <- list(
-    layout = function() behind,
-    live_panels = with_mock_context(ms, reactiveVal(target_ids))
-  )
-
-  client_views <- with_mock_context(
-    ms,
-    reactiveVal(seed_view_state(board_layouts(brd)))
-  )
-  client_active <- with_mock_context(ms, reactiveVal("V"))
-  active_dock <- with_mock_context(ms, reactiveValues())
-  update <- with_mock_context(ms, reactiveVal())
-
-  diffed <- 0L
-
-  with_mocked_bindings(
-    with_mock_context(
-      ms,
-      reconcile_views(
-        board, update, docks, active_dock, client_active, client_views,
-        session
-      )
-    ),
-    apply_layout_diff = function(...) diffed <<- diffed + 1L,
-    switch_active_view = function(...) invisible(),
-    .package = "blockr.dock"
-  )
-
-  expect_identical(diffed, 0L)
-})
-
-test_that("reconcile_views pushes a programmatic membership change", {
-
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
-
-  session <- list(
-    ns = identity,
-    sendInputMessage = function(input_id, message) invisible(),
-    sendCustomMessage = function(type, message) invisible()
-  )
-
-  # board_layouts now carries `a` + `b`, but the dock's tracked membership is
-  # only `a`: a programmatic views$mod added `b`'s panel with no live op, so
-  # reconcile must push the new layout to the dock and record the new set.
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(V = dock_layout("a", "b"))
-  )
-  board <- with_mock_context(ms, reactiveValues(board = brd))
-
-  target <- board_layouts(brd)[["V"]]
 
   behind_ids <- layout_panel_ids(
     board_layouts(
@@ -676,12 +615,10 @@ test_that("reconcile_views pushes a programmatic membership change", {
     )[["V"]]
   )
 
-  live_panels <- with_mock_context(ms, reactiveVal(behind_ids))
-
   docks <- with_mock_context(ms, reactiveValues())
   docks[["V"]] <- list(
     layout = function() NULL,
-    live_panels = live_panels
+    live_panels = with_mock_context(ms, reactiveVal(behind_ids))
   )
 
   client_views <- with_mock_context(
@@ -692,7 +629,7 @@ test_that("reconcile_views pushes a programmatic membership change", {
   active_dock <- with_mock_context(ms, reactiveValues())
   update <- with_mock_context(ms, reactiveVal())
 
-  captured <- NULL
+  restored <- 0L
 
   with_mocked_bindings(
     with_mock_context(
@@ -702,19 +639,12 @@ test_that("reconcile_views pushes a programmatic membership change", {
         session
       )
     ),
-    apply_layout_diff = function(view, target, ...) {
-      captured <<- list(view = view, target = target)
-    },
+    restore_layout = function(...) restored <<- restored + 1L,
     switch_active_view = function(...) invisible(),
     .package = "blockr.dock"
   )
 
-  expect_false(is.null(captured))
-  expect_identical(captured$view, "V")
-  expect_true(layouts_match(captured$target, target))
-
-  # The push records the new membership, so a later pass is a no-op.
-  expect_setequal(isolate(live_panels()), layout_panel_ids(target))
+  expect_identical(restored, 0L)
 })
 
 test_that("apply_board_update.dock_board switches active view", {

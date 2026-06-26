@@ -522,51 +522,6 @@ apply_views_rename <- function(rename, board) {
   board
 }
 
-# Whether two layouts describe the same panel arrangement, used to
-# short-circuit `restore_layout` when the live dockview state already
-# matches the target. Compares normalised wire specs (drops volatile
-# pixel sizes / regenerated group IDs) and additionally drops `focus`
-# so a tab click doesn't force a rebuild. `a` is the live wire shape
-# (`get_dock()`); `b` is the target `dock_layout`.
-layouts_match <- function(a, b) {
-
-  to_spec <- function(x) {
-
-    if (is.null(x)) {
-      return(NULL)
-    }
-
-    ly <- if (is_dock_layout(x)) {
-      x
-    } else {
-      tryCatch(dockview_to_layout(x), error = function(e) NULL)
-    }
-
-    if (is.null(ly)) {
-      return(NULL)
-    }
-
-    spec <- tryCatch(layout_to_spec(ly), error = function(e) NULL)
-
-    if (is.null(spec)) {
-      return(NULL)
-    }
-
-    spec[["focus"]] <- NULL
-
-    spec
-  }
-
-  spec_a <- to_spec(a)
-  spec_b <- to_spec(b)
-
-  if (is.null(spec_a) || is.null(spec_b)) {
-    return(FALSE)
-  }
-
-  identical(spec_a, spec_b)
-}
-
 apply_views_active <- function(active, board) {
 
   layouts <- board_layouts(board)
@@ -612,44 +567,4 @@ switch_active_view <- function(active, docks, active_dock, client_active,
   )
 
   invisible()
-}
-
-# Apply one view's layout change. v1 unconditionally restores the target
-# layout; surgical diff paths (noop / active-tab / reorder) are a
-# deferred follow-up that can dispatch here without touching callers.
-apply_layout_diff <- function(view, target, dock, blocks, extensions) {
-
-  log_debug("applying layout diff for view {view}")
-
-  # Block / extension UIs live in board-level wrapper elements (the
-  # offcanvas at init time, a dockview panel container while attached)
-  # and are moved between them via `move_dom_element`. `restore_dock`
-  # tears the panel containers down, taking the attached UIs with them,
-  # so we have to (a) park the UIs back in the offcanvas first and
-  # (b) reattach them to the freshly-rendered panels afterwards. Iterate
-  # object ids (as `hide_view_ui()` does): `for` over the classed id
-  # vector would drop the class and double-prefix the move target.
-  for (oid in as_obj_id(block_panel_ids(dock$proxy))) {
-    hide_block_panel(oid, rm_panel = FALSE, dock = dock)
-  }
-  for (oid in as_obj_id(ext_panel_ids(dock$proxy))) {
-    hide_ext_panel(oid, rm_panel = FALSE, dock = dock)
-  }
-
-  restore_layout(target, dock$proxy, blocks = blocks, extensions = extensions)
-
-  for (pid in as_dock_panel_id(target)) {
-    if (is_block_panel_id(pid)) {
-      show_block_panel(pid, add_panel = FALSE, dock = dock)
-    } else if (is_ext_panel_id(pid)) {
-      show_ext_panel(pid, add_panel = FALSE, dock = dock)
-    } else {
-      blockr_abort(
-        "Unknown panel type {class(pid)}.",
-        class = "dock_panel_invalid"
-      )
-    }
-  }
-
-  invisible(NULL)
 }
