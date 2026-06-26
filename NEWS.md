@@ -47,7 +47,26 @@
   the current arrangement of every view directly instead of folding it
   through `board_layouts(board$board)`. `view_data()` is `NULL` until
   every view has reported its layout once, so consumers should `req()`
-  it (#264).
+  it. The `dock` handle (the active-view `active_dock` mirror) is retired
+  from the extension surface at the same time: it is internal now, used
+  only by the board-level block insert / remove plugin (#264).
+
+* Multi-view boards no longer emit a burst of redundant board updates at
+  startup (#271). Restoring a multi-group layout makes the dockview client
+  transiently activate each group in turn, and the dock -> board arrangement
+  fold (`layouts_to_board_observer`) compared layouts through
+  `layout_to_spec`, whose `focus` field tracks the active group -- so each
+  cross-group focus tick read as a layout change and committed an
+  `update(list(views = ...))`, on the order of ten redundant updates before
+  the board settled (worst on large boards, e.g. 12 views / 99 blocks / 30
+  groups). That fold is removed: a view's live arrangement is now read on
+  demand -- on save, or by an extension via `view_data()` -- instead of
+  mirrored back into `board_layouts` on every dockview tick, so the burst is
+  gone. The removal is lossless, since `serialize_board.dock_board` already
+  reads the live layout from `view_data()` and the fold had no remaining
+  runtime reader; `board_layouts` still carries the committed view set,
+  names, active view and panel membership, kept current by the membership
+  fold (#264).
 
 * The dock no longer loops forever or tears its panels down on a slow
   client (#252). The live layout was held in two bindings that formed a
@@ -61,9 +80,8 @@
   view's arrangement is client-owned and now flows dock -> board only.
   `reconcile_views()` still owns what the board is authoritative over --
   which views exist, their names, the active view, and the initial layout
-  on load -- and the fold keeps `board_layouts` current for serialization
-  and live readers. With one direction live there is no echo to suppress
-  and no layout-tracking state to maintain.
+  on load. With one direction live there is no echo to suppress and no
+  layout-tracking state to maintain.
 
 * Live panel rearrangements are no longer lost when a board is saved
   (#243). `view_data()`, the live dock layout that serialization reads,
