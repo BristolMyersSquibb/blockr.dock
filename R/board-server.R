@@ -179,9 +179,14 @@ live_view_data <- function(client_views, docks, client_active) {
       }
       ly <- dk$layout()
       if (is.null(ly)) {
+        log_trace("view_data: view {v_id} has no live layout yet")
         return(NULL)
       }
       out <- dockview_to_layout(ly)
+      log_trace(
+        "view_data: view {v_id} reports ",
+        "{length(layout_panel_ids(out))} live panel(s)"
+      )
       nm <- view_name(state[[v_id]])
       if (!is.null(nm)) {
         view_name(out) <- nm
@@ -224,6 +229,7 @@ layouts_to_board_observer <- function(view_data, update, board) {
     delta <- diff_dock_layouts(current, new_layouts)
 
     if (length(delta)) {
+      log_trace("committing live dock layout deltas back to the board")
       update(list(views = delta))
     }
   })
