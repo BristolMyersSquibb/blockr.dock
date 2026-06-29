@@ -67,10 +67,13 @@ extension_block_callback(x, ...)
 }
 \arguments{
 \item{server}{A function returning \code{\link[shiny:moduleServer]{shiny::moduleServer()}}. Beyond
-\code{id}, it is called with the board handles \code{board}, \code{update}, \code{dock}
-and \code{actions}, plus \code{extensions} -- an environment exposing every
-extension's server result keyed by ID (each carrying its \code{state}),
-so one extension can read another's state via \code{extensions[[id]]}.}
+\code{id}, it is called with the board handles \code{board}, \code{update},
+\code{view_data} and \code{actions}, plus \code{extensions} -- an environment
+exposing every extension's server result keyed by ID (each carrying
+its \code{state}), so one extension can read another's state via
+\code{extensions[[id]]}. \code{view_data} is a reactive holding the live
+all-views layout (the committed board is \code{board}); it is \code{NULL}
+until every view has reported its layout once, so \code{req()} it.}
 
 \item{ui}{A function with a single argument (\code{ns}) returning a \code{shiny.tag}}
 
