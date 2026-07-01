@@ -73,7 +73,7 @@ board_server_callback <- function(board, update, visible, ...,
   dock <- active_dock
   view_data <- live_view_data(client_views, docks, client_active)
 
-  sync_layouts_to_board(view_data, update, board, docks)
+  layouts_to_board_observer(view_data, update, board, docks)
 
   # Each extension can read the others' server results through the
   # `extensions` environment: one active binding per id, each resolving to
@@ -235,17 +235,15 @@ live_view_data <- function(client_views, docks, client_active) {
   })
 }
 
-# Writes go through update(list(views = ...)) — board$board is
-# read-only at the plugin boundary; routing through the update channel
-# lets apply_board_update.dock_board mutate rv$board where it's writable
-# and composes with augment/apply hooks from other subclasses. Debounced
-# because drag-resize emits many rapid events per gesture.
-sync_layouts_to_board <- function(view_data, update, board, docks,
-                                  millis = 250) {
-  src <- if (millis > 0L) shiny::debounce(view_data, millis) else view_data
-  layouts_to_board_observer(src, update, board, docks)
-}
-
+# Fold the live dock arrangement (grid and focused group) back into the board
+# when a settled gesture diverges from the committed layout. Writes go through
+# update(list(views = ...)) — board$board is read-only at the plugin boundary;
+# routing through the update channel lets apply_board_update.dock_board mutate
+# rv$board where it's writable and composes with augment/apply hooks from other
+# subclasses. No debounce: dockViewR emits `_state` once per settled gesture
+# (discrete boundaries plus sash-end, coalesced), and `keep_foldable` drops the
+# server-tagged echoes a restore's active-group cycling produces, so view_data
+# turns over only on settled client gestures -- no event burst is left to bound.
 layouts_to_board_observer <- function(view_data, update, board, docks) {
   observe({
     new_layouts <- req(view_data())

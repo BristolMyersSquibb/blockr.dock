@@ -55,6 +55,16 @@
   flows both ways again, but the cycle is broken by provenance rather than
   by dropping a direction.
 
+* The 250 ms live-sync debounce is removed (#271). It only rate-limited a
+  startup board-update burst: restoring a multi-group layout makes dockview
+  cycle its active group, re-emitting `_state` per tick, and the fold read
+  each as a rearrangement and committed a redundant board update (~10 per
+  assembly on a large board). Those echoes now carry `_state-source:
+  "server"` and are dropped by the same `keep_foldable` guard that breaks the
+  push loop, so the burst is absorbed at its source and there is nothing left
+  to bound. Focus stays live in `_state`, so a settled tab activation is
+  still folded and serialized.
+
 * Live panel rearrangements are no longer lost when a board is saved
   (#243). `view_data()`, the live dock layout that serialization reads,
   was stuck at `NULL` for the whole session, so Export fell back to the
