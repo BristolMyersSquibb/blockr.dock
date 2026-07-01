@@ -52,6 +52,8 @@ block_input_select <- function(block = NULL, block_id = NULL, links = NULL,
 
     if (is.na(block_arity(block))) {
 
+      inps <- c(inps, "")
+
       opts <- list(create = TRUE)
 
     } else if (length(inps)) {
