@@ -760,3 +760,32 @@ test_that("a named variadic link input renders as the selected option", {
   expect_match(dt$Input[[1L]], "value=\"left\"[^>]*selected")
   expect_false(grepl("value=\"left\"", dt$Input[[2L]]))
 })
+
+test_that("clearing a variadic link's name stages a positional edit", {
+
+  board_rv <- reactiveValues(
+    board = new_dock_board(
+      blocks = c(
+        a = new_dataset_block("BOD"),
+        b = new_dataset_block("BOD"),
+        c = new_rbind_block()
+      ),
+      links = links(ac = new_link("a", "c", "left"))
+    )
+  )
+
+  testServer(
+    blk_ext_srv,
+    {
+      session$flushReact()
+
+      session$setInputs(ac_input = "")
+      session$flushReact()
+
+      expect_length(upd$add, 1L)
+      expect_identical(upd$add[["ac"]][["input"]], "")
+      expect_true("ac" %in% upd$rm)
+    },
+    args = list(board = board_rv, update = reactiveVal())
+  )
+})
