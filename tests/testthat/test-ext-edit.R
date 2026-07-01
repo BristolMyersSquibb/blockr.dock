@@ -726,3 +726,20 @@ test_that("dummy edit extension ui test", {
   expect_s3_class(ui, "shiny.tag")
   expect_identical(htmltools::tagGetAttribute(ui, "class"), "blockr-ext-edit")
 })
+
+test_that("variadic link inputs offer no positional-integer options", {
+
+  board <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block("BOD"),
+      b = new_dataset_block("BOD"),
+      c = new_rbind_block()
+    ),
+    links = links(ac = new_link("a", "c"), bc = new_link("b", "c"))
+  )
+
+  dt <- dt_board_link(board_links(board), NS("x"), board)
+
+  expect_false(grepl("<option[^>]*value=\"[0-9]", dt$Input[[1L]]))
+  expect_false(grepl("<option[^>]*value=\"[0-9]", dt$Input[[2L]]))
+})
