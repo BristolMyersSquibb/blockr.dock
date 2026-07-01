@@ -2,6 +2,20 @@
 
 ## blockr.dock (development version)
 
+- The “Edit board” extension no longer loses unsaved link and stack
+  edits when the board reactive re-emits
+  ([\#277](https://github.com/BristolMyersSquibb/blockr.dock/issues/277)).
+  Two observers reset the staged working copy (`upd$curr` / `stk$curr`)
+  to the board’s applied links and stacks on every re-emit, so a staged
+  row vanished from the table while its half-filled entry lingered in
+  `upd$add` and later failed apply with “Expecting all links to refer to
+  known block IDs”. A layout change in an adjacent panel group is enough
+  to re-emit the board, which is why
+  [\#201](https://github.com/BristolMyersSquibb/blockr.dock/issues/201)
+  surfaced this. The refresh now overlays the staged additions, edits
+  and removals onto the refreshed applied state instead of clobbering
+  them.
+
 - The dock no longer loops forever or tears its panels down on a slow
   client
   ([\#252](https://github.com/BristolMyersSquibb/blockr.dock/issues/252)).
