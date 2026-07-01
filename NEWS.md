@@ -1,5 +1,16 @@
 # blockr.dock (development version)
 
+* The "Edit board" extension now re-syncs its staged working copy only
+  when the board's links or stacks actually change, not on every board
+  re-emit (#281). The two observers keying `upd$curr` / `stk$curr` off
+  `board_links()` / `board_stacks()` fired on each board invalidation --
+  `observeEvent` does not value-dedupe -- so a benign dock interaction (a
+  panel switch or view fold, which re-emits the board via #201) churned
+  the editor's working copy even when no link or stack changed. A
+  `reactiveVal` + `identical()` guard now gates each re-sync on a real
+  change, so the #277 and #279 guards become defensive rather than
+  load-bearing.
+
 * The "Edit board" extension no longer flickers the manage-links table's
   cell selectize inputs on a board re-emit (#279). The observer that keeps
   the table in sync re-rendered every row whenever `upd$curr` was reset --
