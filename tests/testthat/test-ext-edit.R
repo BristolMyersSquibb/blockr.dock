@@ -659,6 +659,63 @@ test_that("edit extension keeps staged stack edits when the board re-emits", {
   )
 })
 
+test_that("edit extension ignores no-op board re-emits", {
+
+  link_syncs <- 0L
+  stack_syncs <- 0L
+
+  real_merge_links <- merge_staged_links
+  real_merge_stacks <- merge_staged_stacks
+
+  local_mocked_bindings(
+    merge_staged_links = function(...) {
+      link_syncs <<- link_syncs + 1L
+      real_merge_links(...)
+    },
+    merge_staged_stacks = function(...) {
+      stack_syncs <<- stack_syncs + 1L
+      real_merge_stacks(...)
+    }
+  )
+
+  testServer(
+    blk_ext_srv,
+    {
+      session$flushReact()
+
+      expect_gt(link_syncs, 0L)
+      expect_gt(stack_syncs, 0L)
+
+      link_base <- link_syncs
+      stack_base <- stack_syncs
+
+      board$board <- new_dock_board(
+        blocks = c(
+          a = new_dataset_block("iris"),
+          b = new_subset_block()
+        ),
+        links = links(aa = new_link(from = "a", to = "b")),
+        stacks = stacks(s1 = new_dock_stack(blocks = "a", name = "One"))
+      )
+      session$flushReact()
+
+      expect_identical(link_syncs, link_base)
+      expect_identical(stack_syncs, stack_base)
+    },
+    args = list(
+      board = board_args(
+        blocks = c(
+          a = new_dataset_block("iris"),
+          b = new_subset_block()
+        ),
+        links = links(aa = new_link(from = "a", to = "b")),
+        stacks = stacks(s1 = new_dock_stack(blocks = "a", name = "One"))
+      ),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("dummy edit extension ui test", {
 
   ui <- blk_ext_ui(

@@ -173,12 +173,12 @@ blk_ext_srv <- function(id, board, update, ...) {
         edit = NULL
       )
 
+      applied_links <- deduped_board_reactive(board, board_links)
+
       observeEvent(
-        board_links(board$board),
+        applied_links(),
         {
-          upd$curr <- merge_staged_links(
-            board_links(board$board), upd$add, upd$rm
-          )
+          upd$curr <- merge_staged_links(applied_links(), upd$add, upd$rm)
         }
       )
 
@@ -205,11 +205,13 @@ blk_ext_srv <- function(id, board, update, ...) {
         edit = NULL
       )
 
+      applied_stacks <- deduped_board_reactive(board, board_stacks)
+
       observeEvent(
-        board_stacks(board$board),
+        applied_stacks(),
         {
           stk$curr <- merge_staged_stacks(
-            board_stacks(board$board), stk$add, stk$rm, stk$mod
+            applied_stacks(), stk$add, stk$rm, stk$mod
           )
         }
       )
@@ -235,6 +237,23 @@ blk_ext_srv <- function(id, board, update, ...) {
       NULL
     }
   )
+}
+
+deduped_board_reactive <- function(board, accessor) {
+
+  val <- reactiveVal(isolate(accessor(board$board)))
+
+  observe(
+    {
+      new <- accessor(board$board)
+
+      if (!identical(new, isolate(val()))) {
+        val(new)
+      }
+    }
+  )
+
+  val
 }
 
 add_block_observer <- function(input, board, update, session) {
