@@ -565,6 +565,54 @@ test_that("edit extension keeps staged link edits when the board re-emits", {
   )
 })
 
+test_that("edit extension redraws links only when the id set changes", {
+
+  redraws <- 0L
+
+  local_mocked_bindings(
+    replaceData = function(...) redraws <<- redraws + 1L,
+    .package = "DT"
+  )
+
+  testServer(
+    blk_ext_srv,
+    {
+      session$flushReact()
+
+      expect_identical(names(upd$curr), "aa")
+      expect_setequal(names(upd$obs), "aa")
+
+      base <- redraws
+
+      upd$curr <- links(aa = new_link(from = "a", to = ""))
+      session$flushReact()
+
+      expect_identical(names(upd$curr), "aa")
+      expect_identical(redraws, base)
+      expect_setequal(names(upd$obs), "aa")
+
+      upd$curr <- links(
+        aa = new_link(from = "a", to = ""),
+        bb = new_link(from = "b", to = "")
+      )
+      session$flushReact()
+
+      expect_gt(redraws, base)
+      expect_setequal(names(upd$obs), c("aa", "bb"))
+    },
+    args = list(
+      board = board_args(
+        blocks = c(
+          a = new_dataset_block("iris"),
+          b = new_subset_block()
+        ),
+        links = links(aa = new_link(from = "a", to = "b"))
+      ),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("edit extension keeps staged stack edits when the board re-emits", {
 
   testServer(

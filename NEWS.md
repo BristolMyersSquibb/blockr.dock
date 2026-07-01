@@ -1,5 +1,16 @@
 # blockr.dock (development version)
 
+* The "Edit board" extension no longer flickers the manage-links table's
+  cell selectize inputs on a board re-emit (#279). The observer that keeps
+  the table in sync re-rendered every row whenever `upd$curr` was reset --
+  `observeEvent(names(upd$curr))` fires on each invalidation, not only when
+  the link ids change -- and the redundant `DT::replaceData` unbound and
+  rebound the From / To / Input inputs, briefly blanking a selectize until
+  the async redraw landed. A panel switch re-emits the board (via #201), so
+  plain navigation churned the table. The table now redraws only when the
+  set of link ids actually changes; value edits and no-op re-emits are
+  skipped, while applying staged changes still redraws through its own path.
+
 * The "Edit board" extension no longer loses unsaved link and stack edits
   when the board reactive re-emits (#277). Two observers reset the staged
   working copy (`upd$curr` / `stk$curr`) to the board's applied links and
