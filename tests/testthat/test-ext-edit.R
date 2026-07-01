@@ -437,6 +437,180 @@ test_that("edit extension applies links and stacks together", {
   )
 })
 
+test_that("merge_staged_links overlays staged edits on refreshed links", {
+
+  applied <- links(
+    l1 = new_link(from = "a", to = "c", input = "1"),
+    l2 = new_link(from = "b", to = "c", input = "2")
+  )
+
+  expect_identical(
+    merge_staged_links(applied, links(), character()),
+    applied
+  )
+
+  added <- links(x = new_link(from = "", to = "", input = ""))
+  expect_identical(
+    merge_staged_links(applied, added, character()),
+    c(applied, added)
+  )
+
+  edited <- links(l1 = new_link(from = "a", to = "c", input = "9"))
+  in_place <- applied
+  in_place["l1"] <- edited
+  expect_identical(merge_staged_links(applied, edited, "l1"), in_place)
+
+  expect_named(merge_staged_links(applied, links(), "l2"), "l1")
+
+  expect_named(
+    merge_staged_links(applied["l1"], added, character()),
+    c("l1", "x")
+  )
+})
+
+test_that("merge_staged_stacks overlays staged edits on refreshed stacks", {
+
+  applied <- stacks(
+    k1 = new_dock_stack(name = "One", color = "#111111"),
+    k2 = new_dock_stack(name = "Two", color = "#222222")
+  )
+
+  expect_identical(
+    merge_staged_stacks(applied, stacks(), character(), stacks()),
+    applied
+  )
+
+  added <- stacks(z = new_dock_stack(name = "Zed", color = "#333333"))
+  expect_identical(
+    merge_staged_stacks(applied, added, character(), stacks()),
+    c(applied, added)
+  )
+
+  modded <- stacks(k1 = new_dock_stack(name = "Renamed", color = "#999999"))
+  in_place <- applied
+  in_place[["k1"]] <- modded[["k1"]]
+  expect_identical(
+    merge_staged_stacks(applied, stacks(), character(), modded),
+    in_place
+  )
+
+  expect_named(
+    merge_staged_stacks(applied, added, "k2", stacks()),
+    c("k1", "z")
+  )
+})
+
+test_that("edit extension keeps staged link edits when the board re-emits", {
+
+  testServer(
+    blk_ext_srv,
+    {
+      session$flushReact()
+
+      session$setInputs(add_link = 1)
+      session$flushReact()
+
+      row <- names(upd$add)
+      expect_length(upd$curr, 1L)
+      expect_identical(names(upd$curr), row)
+
+      board$board <- new_dock_board(
+        blocks = c(
+          a = new_dataset_block("iris"),
+          b = new_dataset_block("mtcars"),
+          c = new_rbind_block()
+        )
+      )
+      session$flushReact()
+
+      expect_length(upd$curr, 1L)
+      expect_identical(names(upd$curr), row)
+      expect_identical(upd$add, upd$curr[row])
+
+      upd$edit <- list(row = row, col = "from", val = "a")
+      session$flushReact()
+      upd$edit <- list(row = row, col = "to", val = "c")
+      session$flushReact()
+      upd$edit <- list(row = row, col = "input", val = "1")
+      session$flushReact()
+
+      session$setInputs(add_link = 2)
+      session$flushReact()
+
+      row2 <- setdiff(names(upd$curr), row)
+      upd$edit <- list(row = row2, col = "from", val = "b")
+      session$flushReact()
+      upd$edit <- list(row = row2, col = "to", val = "c")
+      session$flushReact()
+      upd$edit <- list(row = row2, col = "input", val = "2")
+      session$flushReact()
+
+      session$setInputs(apply_changes = 1)
+
+      res <- update()$links
+
+      expect_s3_class(res$add, "links")
+      expect_length(res$add, 2L)
+    },
+    args = list(
+      board = board_args(
+        blocks = c(
+          a = new_dataset_block("iris"),
+          b = new_dataset_block("mtcars"),
+          c = new_rbind_block()
+        )
+      ),
+      update = reactiveVal()
+    )
+  )
+})
+
+test_that("edit extension keeps staged stack edits when the board re-emits", {
+
+  testServer(
+    blk_ext_srv,
+    {
+      session$flushReact()
+
+      session$setInputs(new_stack_id = "s1", add_stack = 1)
+      session$flushReact()
+
+      stk$edit <- list(row = "s1", col = "blocks", val = "a")
+      session$flushReact()
+
+      expect_named(stk$add, "s1")
+      expect_true("s1" %in% names(stk$curr))
+
+      board$board <- new_dock_board(
+        blocks = c(
+          a = new_dataset_block("iris"),
+          b = new_subset_block()
+        )
+      )
+      session$flushReact()
+
+      expect_true("s1" %in% names(stk$curr))
+      expect_named(stk$add, "s1")
+      expect_identical(stk$curr[["s1"]], stk$add[["s1"]])
+
+      session$setInputs(apply_changes = 1)
+
+      res <- update()$stacks
+
+      expect_named(res$add, "s1")
+    },
+    args = list(
+      board = board_args(
+        blocks = c(
+          a = new_dataset_block("iris"),
+          b = new_subset_block()
+        )
+      ),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("dummy edit extension ui test", {
 
   ui <- blk_ext_ui(

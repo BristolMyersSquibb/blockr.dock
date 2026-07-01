@@ -176,7 +176,9 @@ blk_ext_srv <- function(id, board, update, ...) {
       observeEvent(
         board_links(board$board),
         {
-          upd$curr <- board_links(board$board)
+          upd$curr <- merge_staged_links(
+            board_links(board$board), upd$add, upd$rm
+          )
         }
       )
 
@@ -206,7 +208,9 @@ blk_ext_srv <- function(id, board, update, ...) {
       observeEvent(
         board_stacks(board$board),
         {
-          stk$curr <- board_stacks(board$board)
+          stk$curr <- merge_staged_stacks(
+            board_stacks(board$board), stk$add, stk$rm, stk$mod
+          )
         }
       )
 
@@ -719,6 +723,20 @@ edit_link_observer <- function(upd, rv) {
   )
 }
 
+merge_staged_links <- function(applied, add, rm) {
+
+  keep <- setdiff(names(applied), setdiff(rm, names(add)))
+  out <- applied[keep]
+
+  edited <- intersect(keep, names(add))
+
+  if (length(edited)) {
+    out[edited] <- add[edited]
+  }
+
+  c(out, add[setdiff(names(add), names(applied))])
+}
+
 add_link_observer <- function(input, rv, upd, sess) {
 
   observeEvent(
@@ -1169,6 +1187,20 @@ edit_stack_observer <- function(upd, rv) {
       }
     }
   )
+}
+
+merge_staged_stacks <- function(applied, add, rm, mod) {
+
+  keep <- setdiff(names(applied), rm)
+  out <- applied[keep]
+
+  modded <- intersect(keep, names(mod))
+
+  if (length(modded)) {
+    out[modded] <- mod[modded]
+  }
+
+  c(out, add[setdiff(names(add), names(applied))])
 }
 
 add_stack_observer <- function(input, rv, upd, sess) {
