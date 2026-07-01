@@ -1158,6 +1158,10 @@ create_stack_obs_observer <- function(input, rv, upd, session, proxy) {
     {
       ids <- names(upd$curr)
 
+      if (setequal(ids, names(upd$obs))) {
+        return()
+      }
+
       DT::replaceData(
         proxy,
         dt_board_stack(upd$curr, session$ns, rv$board),
