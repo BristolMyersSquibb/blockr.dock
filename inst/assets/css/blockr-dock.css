@@ -1109,3 +1109,22 @@ label:has(input[type="file"]) {
   border-color: #15803d;
   color: #ffffff;
 }
+
+/* ============================================
+   Busy pulse — scope to real computation
+   ============================================ */
+
+/* Shiny's page pulse (enabled in serve() via useBusyIndicators(pulse = TRUE))
+   shows whenever the session is busy, i.e. on any observer flush. A plain panel
+   switch round-trips to the server -- the on-screen visibility report and the
+   layout fold -- without recomputing any visible output, so the pulse would
+   fire for what is only layout bookkeeping. Gate it on a genuinely
+   recalculating output inside the visible view container: block evaluation
+   marks its output "recalculating" there, bookkeeping does not. Scoping to the
+   view container is deliberate -- an off-screen block parked in the (hidden)
+   offcanvas pool stays "recalculating" while it waits for evaluation, and that
+   pool sits outside the container, so a pending hidden block never forces the
+   pulse. Startup and real recompute still pulse; a bare panel switch does not. */
+html[data-shiny-busy-pulse].shiny-busy:not(:has(.blockr-view-container .recalculating))::after {
+  display: none;
+}
