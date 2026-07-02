@@ -64,6 +64,14 @@ determine_active_views <- function(layout) {
   rapply(xtr_leaf_id(root), identity, "character")
 }
 
+visible_block_ids <- function(layout) {
+
+  front_panels <- as.character(determine_active_views(layout))
+  block_panels <- front_panels[maybe_block_panel_id(front_panels)]
+
+  as_obj_id(new_block_panel_id(block_panels))
+}
+
 visible_exts <- function() {
   blockr_option("visible_extensions", "dag_extension")
 }
