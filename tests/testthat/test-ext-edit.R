@@ -726,3 +726,66 @@ test_that("dummy edit extension ui test", {
   expect_s3_class(ui, "shiny.tag")
   expect_identical(htmltools::tagGetAttribute(ui, "class"), "blockr-ext-edit")
 })
+
+test_that("variadic link inputs offer no positional-integer options", {
+
+  board <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block("BOD"),
+      b = new_dataset_block("BOD"),
+      c = new_rbind_block()
+    ),
+    links = links(ac = new_link("a", "c"), bc = new_link("b", "c"))
+  )
+
+  dt <- dt_board_link(board_links(board), NS("x"), board)
+
+  expect_false(grepl("<option[^>]*value=\"[0-9]", dt$Input[[1L]]))
+  expect_false(grepl("<option[^>]*value=\"[0-9]", dt$Input[[2L]]))
+})
+
+test_that("a named variadic link input renders as the selected option", {
+
+  board <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block("BOD"),
+      b = new_dataset_block("BOD"),
+      c = new_rbind_block()
+    ),
+    links = links(ac = new_link("a", "c", "left"), bc = new_link("b", "c", ""))
+  )
+
+  dt <- dt_board_link(board_links(board), NS("x"), board)
+
+  expect_match(dt$Input[[1L]], "value=\"left\"[^>]*selected")
+  expect_false(grepl("value=\"left\"", dt$Input[[2L]]))
+})
+
+test_that("clearing a variadic link's name stages a positional edit", {
+
+  board_rv <- reactiveValues(
+    board = new_dock_board(
+      blocks = c(
+        a = new_dataset_block("BOD"),
+        b = new_dataset_block("BOD"),
+        c = new_rbind_block()
+      ),
+      links = links(ac = new_link("a", "c", "left"))
+    )
+  )
+
+  testServer(
+    blk_ext_srv,
+    {
+      session$flushReact()
+
+      session$setInputs(ac_input = "")
+      session$flushReact()
+
+      expect_length(upd$add, 1L)
+      expect_identical(upd$add[["ac"]][["input"]], "")
+      expect_true("ac" %in% upd$rm)
+    },
+    args = list(board = board_rv, update = reactiveVal())
+  )
+})

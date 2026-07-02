@@ -7,5 +7,5 @@ test_that("action utils", {
     mode = "inputs"
   )
 
-  expect_identical(inps, "1")
+  expect_identical(inps, "")
 })

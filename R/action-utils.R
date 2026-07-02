@@ -52,21 +52,7 @@ block_input_select <- function(block = NULL, block_id = NULL, links = NULL,
 
     if (is.na(block_arity(block))) {
 
-      num <- suppressWarnings(as.integer(curr))
-      nna <- is.na(num)
-
-      if (all(nna)) {
-        inps <- c(inps, "1")
-      } else {
-        num <- num[!nna]
-        max <- max(num)
-        mis <- setdiff(seq_len(max), num)
-        if (length(mis)) {
-          inps <- c(inps, as.character(min(mis)))
-        } else {
-          inps <- c(inps, as.character(max + 1L))
-        }
-      }
+      inps <- c(inps, "")
 
       opts <- list(create = TRUE)
 
