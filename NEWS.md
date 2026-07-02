@@ -1,5 +1,16 @@
 # blockr.dock (development version)
 
+* The busy pulse no longer flashes on a plain panel switch, only on real
+  computation (#285). `serve()` enables shiny's page pulse
+  (`useBusyIndicators(pulse = TRUE)`), which shows on any server-busy flush --
+  and a panel switch round-trips to the server (the on-screen visibility report
+  and the layout fold) without recomputing a visible output, so the pulse fired
+  for what is only layout bookkeeping. A CSS rule now gates the pulse on a
+  genuinely recalculating output inside the visible view container: startup and
+  block evaluation still pulse, a bare panel switch does not. A block still
+  pending evaluation in the (hidden) offcanvas pool sits outside the container,
+  so it never forces the pulse either.
+
 * The "Edit board" extension now re-syncs its staged working copy only
   when the board's links or stacks actually change, not on every board
   re-emit (#281). The two observers keying `upd$curr` / `stk$curr` off

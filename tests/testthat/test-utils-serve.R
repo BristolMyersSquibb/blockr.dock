@@ -647,3 +647,77 @@ test_that("single-page board renders one auto-named view (#236)", {
   expect_true(docks$active)
   expect_identical(docks$id, nav$id)
 })
+
+test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "busy-pulse",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  # serve() opts the dock into shiny's page pulse. A panel switch marks the
+  # session busy (the visibility report and layout fold round-trips) without
+  # recomputing a visible output, so the pulse would fire for what is only
+  # layout bookkeeping; block evaluation marks its output `.recalculating`
+  # inside the view container. The live pulse is a sub-second transient, racy
+  # to sample, so drive the two busy states directly and read the pulse
+  # pseudo-element's computed display (fixed positioning blockifies it when
+  # shown, so a visible pulse is "block"). The recalculating element is placed
+  # outside the view container (a hidden block still pending evaluation in the
+  # offcanvas pool) versus inside it (real visible work) to pin the scope.
+  probe <- jsonlite::fromJSON(
+    app$get_js(
+      r"(JSON.stringify((function () {
+        var html = document.documentElement;
+        var pulse = function () {
+          return getComputedStyle(html, '::after').display;
+        };
+        var mark = function (parent) {
+          var el = document.createElement('div');
+          el.className = 'recalculating';
+          parent.appendChild(el);
+          return el;
+        };
+
+        var enabled = html.dataset.shinyBusyPulse === 'true';
+        var container = document.querySelector('.blockr-view-container');
+        html.classList.add('shiny-busy');
+
+        var hidden = mark(document.body);
+        var bookkeeping = pulse();
+        hidden.remove();
+
+        var visible = mark(container);
+        var computing = pulse();
+        visible.remove();
+
+        html.classList.remove('shiny-busy');
+
+        return {
+          enabled: enabled, hasContainer: container !== null,
+          bookkeeping: bookkeeping, computing: computing
+        };
+      })()))"
+    )
+  )
+
+  # The dock opts into the pulse, and the view container the scope keys on is
+  # present.
+  expect_true(probe$enabled)
+  expect_true(probe$hasContainer)
+
+  # Busy with a recalculating output only outside the view container (a bare
+  # panel switch, or a hidden block still pending in the offcanvas) hides the
+  # pulse; busy with a recalculating output inside it (block evaluation) shows
+  # it.
+  expect_identical(probe$bookkeeping, "none")
+  expect_identical(probe$computing, "block")
+})
