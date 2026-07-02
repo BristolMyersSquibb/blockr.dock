@@ -39,11 +39,11 @@ block_card_title <- function(block, id, info) {
   div(
     class = "flex-grow-1 pe-3",
     div(
-      class = "card-title mb-0",
+      class = "card-title mb-0 d-flex align-items-center",
       style = "line-height: 1.0;",
-      # Inline editable title container
+      uiOutput(ns("status_indicator"), inline = TRUE),
       div(
-        class = "blockr-inline-edit",
+        class = "blockr-inline-edit flex-grow-1",
         # Display mode - click to edit
         div(
           id = ns("title_display"),
@@ -392,7 +392,11 @@ block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
   )$addAttrs(
     style = "padding: 0;"
   )$append(
-    tagList(block_ui, div(id = ns("outputs_issues_wrapper")))
+    tagList(
+      block_ui,
+      uiOutput(ns("status_note")),
+      div(id = ns("outputs_issues_wrapper"))
+    )
   )$allTags()
 
   outputs_panel$attribs$style <- "border: none; border-radius: 0;"
@@ -517,6 +521,16 @@ edit_block_server <- function(callbacks = list()) {
           )
         )
 
+        blk_status <- reactive(reval_if(board$eval[[block_id]]))
+
+        output$status_indicator <- renderUI(
+          block_status_indicator(blk_status())
+        )
+
+        output$status_note <- renderUI(
+          block_status_note(blk_status())
+        )
+
         observeEvent(
           input$collapse_blk_sections,
           accordion_panel_set(
@@ -529,11 +543,7 @@ edit_block_server <- function(callbacks = list()) {
         conds <- reactive(
           {
             req(block_id %in% names(board$blocks))
-            df <- board$blocks[[block_id]]$server$conditions()
-            lapply(
-              set_names(nm = c("error", "warning", "message")),
-              function(sev) df$message[df$severity == sev]
-            )
+            block_cond_buckets(board$blocks[[block_id]]$server$conditions())
           }
         )
 
@@ -577,6 +587,16 @@ edit_block_server <- function(callbacks = list()) {
       }
     )
   }
+}
+
+block_cond_buckets <- function(df) {
+
+  df <- df[df$phase != "status", , drop = FALSE]
+
+  lapply(
+    set_names(nm = c("error", "warning", "message")),
+    function(sev) df$message[df$severity == sev]
+  )
 }
 
 update_blk_cond_observer <- function(conds, session = get_session()) {
@@ -690,6 +710,54 @@ create_issues_ui <- function(statuses, ns) {
         statuses
       )
     )
+  )
+}
+
+block_status_indicator <- function(status) {
+
+  if (!is_string(status)) {
+    return(NULL)
+  }
+
+  info <- switch(
+    status,
+    waiting = list(tone = "waiting", label = "Waiting for a data input"),
+    unset = list(tone = "unset", label = "Set this block's inputs"),
+    failed = list(tone = "failed", label = "Evaluation failed")
+  )
+
+  if (is.null(info)) {
+    return(NULL)
+  }
+
+  tags$span(
+    class = paste0("blockr-status-dot blockr-status-dot-", info$tone),
+    title = info$label,
+    role = "img",
+    `aria-label` = info$label
+  )
+}
+
+block_status_note <- function(status) {
+
+  if (!is_string(status)) {
+    return(NULL)
+  }
+
+  info <- switch(
+    status,
+    waiting = list(icon = "diagram-3", text = "Waiting for a data input"),
+    unset = list(icon = "sliders", text = "Set this block's inputs")
+  )
+
+  if (is.null(info)) {
+    return(NULL)
+  }
+
+  div(
+    class = "blockr-status-note",
+    bsicons::bs_icon(info$icon, class = "blockr-status-note-icon"),
+    tags$span(info$text)
   )
 }
 

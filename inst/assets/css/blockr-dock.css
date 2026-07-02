@@ -23,6 +23,14 @@
   --blockr-blue-600: #2563eb;
   --blockr-blue-700: #1d4ed8;
 
+  /* Amber - waiting / not-yet-configured status */
+  --blockr-amber-500: #f59e0b;
+
+  /* Block eval status */
+  --blockr-status-waiting: var(--blockr-amber-500);
+  --blockr-status-unset: var(--blockr-blue-500);
+  --blockr-status-failed: var(--blockr-color-error);
+
   /* Shadow - elevated dropdowns */
   --blockr-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --blockr-shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.25);
@@ -172,6 +180,49 @@
 
 .blockr-issues-toggle[aria-expanded="true"] svg {
   transform: rotate(180deg);
+}
+
+/* Block eval status: header dot + empty-output placeholder.
+   The dot's output stays in flow when empty (rather than display:none) so it
+   is never suspended-while-hidden and left stuck ".recalculating", which would
+   trip the busy-pulse scope; an empty inline output collapses to zero width on
+   its own. The dot spaces itself from the title via its own margin. */
+.blockr-status-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background-color: var(--blockr-grey-400);
+}
+
+.blockr-status-dot-waiting {
+  background-color: var(--blockr-status-waiting);
+}
+
+.blockr-status-dot-unset {
+  background-color: var(--blockr-status-unset);
+}
+
+.blockr-status-dot-failed {
+  background-color: var(--blockr-status-failed);
+}
+
+.blockr-status-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--blockr-color-text-muted);
+  font-size: var(--blockr-font-size-base);
+}
+
+.blockr-status-note-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--blockr-color-text-subtle);
 }
 
 /* Shared header icon button — ghost style */
