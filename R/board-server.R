@@ -73,7 +73,7 @@ board_server_callback <- function(board, update, visible, ...,
   dock <- active_dock
   view_data <- live_view_data(client_views, docks, client_active)
 
-  sync_layouts_to_board(view_data, update, board)
+  layouts_to_board_observer(view_data, update, board, docks)
 
   # Each extension can read the others' server results through the
   # `extensions` environment: one active binding per id, each resolving to
@@ -235,17 +235,16 @@ live_view_data <- function(client_views, docks, client_active) {
   })
 }
 
-# Writes go through update(list(views = ...)) — board$board is
-# read-only at the plugin boundary; routing through the update channel
-# lets apply_board_update.dock_board mutate rv$board where it's writable
-# and composes with augment/apply hooks from other subclasses. Debounced
-# because drag-resize emits many rapid events per gesture.
-sync_layouts_to_board <- function(view_data, update, board, millis = 250) {
-  src <- if (millis > 0L) shiny::debounce(view_data, millis) else view_data
-  layouts_to_board_observer(src, update, board)
-}
-
-layouts_to_board_observer <- function(view_data, update, board) {
+# Fold the live dock arrangement (grid and focused group) back into the board
+# when a settled gesture diverges from the committed layout. Writes go through
+# update(list(views = ...)) — board$board is read-only at the plugin boundary;
+# routing through the update channel lets apply_board_update.dock_board mutate
+# rv$board where it's writable and composes with augment/apply hooks from other
+# subclasses. No debounce: dockViewR emits `_state` once per settled gesture
+# (discrete boundaries plus sash-end, coalesced), and `keep_foldable` drops the
+# server-tagged echoes a restore's active-group cycling produces, so view_data
+# turns over only on settled client gestures -- no event burst is left to bound.
+layouts_to_board_observer <- function(view_data, update, board, docks) {
   observe({
     new_layouts <- req(view_data())
     current <- isolate(board_layouts(board$board))
@@ -256,11 +255,55 @@ layouts_to_board_observer <- function(view_data, update, board) {
 
     delta <- diff_dock_layouts(current, new_layouts)
 
+    delta$mod <- keep_foldable(delta$mod, docks)
+
+    if (!length(delta$mod)) {
+      delta$mod <- NULL
+    }
+
     if (length(delta)) {
       log_trace("committing live dock layout deltas back to the board")
       update(list(views = delta))
     }
   })
+}
+
+# Fold a view's arrangement echo back into the board only when it is a settled
+# user gesture. Two echoes are dropped. A server-origin echo (source "server")
+# is a board -> dock push reporting its own result; folding it re-commits the
+# push and loops -- the reason the push could not coexist with the fold until
+# provenance arrived to tell the two apart. A membership-lagging echo, whose
+# panel set is behind the dock's authoritative `live_panels` tracker (a paint
+# before a server restore has landed, or an add / remove the touchpoint has not
+# yet recorded), is stale: folding it commits an impoverished layout the push
+# then faithfully restores, wiping the view. A settled client gesture echoes
+# "client" with membership matching the tracker, and still folds.
+keep_foldable <- function(mod, docks) {
+
+  if (!length(mod)) {
+    return(mod)
+  }
+
+  foldable <- function(view, layout) {
+
+    dk <- docks[[view]]
+
+    if (is.null(dk)) {
+      return(TRUE)
+    }
+
+    if (identical(isolate(dk$source()), "server")) {
+      return(FALSE)
+    }
+
+    if (is.null(dk$live_panels)) {
+      return(TRUE)
+    }
+
+    setequal(layout_panel_ids(layout), isolate(dk$live_panels()))
+  }
+
+  mod[lgl_mply(foldable, names(mod), mod)]
 }
 
 # Structured `views` delta between two `dock_layouts`, keyed by stable
@@ -488,6 +531,14 @@ reconcile_views <- function(board, update, docks, active_dock,
         list(rename = list(id = v, to = new_nm))
       )
     }
+
+    reconcile_view_layout(
+      docks[[v]],
+      v,
+      layouts[[v]],
+      board_blocks(brd),
+      dock_extensions(brd)
+    )
   }
 
   client_views(state)
@@ -496,6 +547,54 @@ reconcile_views <- function(board, update, docks, active_dock,
         !identical(server_active, isolate(client_active()))) {
     switch_active_view(
       server_active, docks, active_dock, client_active, session
+    )
+  }
+
+  invisible()
+}
+
+# Push one view's committed layout to its live dock. Panel membership is tracked
+# authoritatively on the proxy (`live_panels`), kept in lockstep by the
+# add/remove touchpoints, so a mismatch there is a programmatic add / remove the
+# dock has not been told about (a views$mod, a board restore) — restore it and
+# record the new membership. When membership already agrees, only the
+# arrangement can differ; reconcile that against the browser's echoed state, but
+# skip until the echo has caught up to the current membership, so a just-added
+# panel (live_panels ahead of the echo) does not read as an arrangement change
+# and force a needless rebuild (#196).
+reconcile_view_layout <- function(dock, view, target, blocks, extensions) {
+
+  target_ids <- layout_panel_ids(target)
+  live_ids <- isolate(dock$live_panels())
+
+  if (!setequal(live_ids, target_ids)) {
+
+    apply_layout_diff(
+      view = view,
+      target = target,
+      dock = dock,
+      blocks = blocks,
+      extensions = extensions
+    )
+
+    dock$live_panels(target_ids)
+
+    return(invisible())
+  }
+
+  live <- tryCatch(isolate(dock$layout()), error = function(e) NULL)
+
+  if (is.null(live) || !setequal(grid_panel_ids(live[["grid"]]), target_ids)) {
+    return(invisible())
+  }
+
+  if (!layouts_match(live, target)) {
+    apply_layout_diff(
+      view = view,
+      target = target,
+      dock = dock,
+      blocks = blocks,
+      extensions = extensions
     )
   }
 
@@ -553,6 +652,7 @@ manage_dock <- function(
       board_ns = board_ns,
       live_panels = live_panels,
       layout = reactive(dockViewR::get_dock(proxy)),
+      source = reactive(input[[dock_input("state-source")]]),
       n_panels = n_panels,
       prev_active_group = prev_active_group,
       active_group_trail = active_group_trail

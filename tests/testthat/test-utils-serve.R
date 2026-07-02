@@ -571,6 +571,71 @@ test_that("dock panel move updates layout state and serialization (#234)", {
   )
 })
 
+test_that("a focus change lands in layout state and serialization (#271)", {
+
+  skip_on_cran()
+
+  app <- shinytest2::AppDriver$new(
+    system.file("examples", "focus", "app.R", package = "blockr.dock"),
+    name = "focus-persist",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+
+  read_layout <- function() {
+    dockview_to_layout(app$get_value(input = paste0(dock, "_state")))
+  }
+
+  await_groups <- function(n) {
+    app$wait_for_js(
+      paste0(
+        "HTMLWidgets.find('#", dock, "')",
+        ".getWidget().groups.length === ", n
+      ),
+      timeout = 15 * 1000
+    )
+    app$wait_for_idle()
+  }
+
+  # Activating a panel is a pure focus change -- no structural rearrangement.
+  # It reaches the live dockview API directly, the client path a real tab
+  # click takes, so the echo is reported as a "client" gesture.
+  activate <- function(panel) {
+    app$run_js(
+      paste0(
+        "HTMLWidgets.find('#", dock, "')",
+        ".getWidget().getPanel('", panel, "').api.setActive();"
+      )
+    )
+    app$wait_for_idle()
+  }
+
+  await_groups(2L)
+
+  # Focus a panel in each group in turn: the focused panel the client reports
+  # through `_state` moves with the activation. A pure focus change must still
+  # turn `_state` over -- the board owns arrangement, but focus stays live on
+  # the wire, or a tab click is lost on save.
+  activate("block_panel-a")
+  focus_a <- layout_to_spec(read_layout())[["focus"]]
+
+  activate("block_panel-b")
+  layout_b <- read_layout()
+  focus_b <- layout_to_spec(layout_b)[["focus"]]
+
+  expect_identical(focus_b, "block_panel-b")
+  expect_false(identical(focus_a, focus_b))
+
+  # The dock-owned serializer round-trips the focused panel.
+  reparsed <- layout_from_json(layout_to_json(layout_b))
+  expect_identical(layout_to_spec(reparsed)[["focus"]], "block_panel-b")
+})
+
 test_that("locked board hides block actions, shows lock indicator (#236)", {
 
   skip_on_cran()

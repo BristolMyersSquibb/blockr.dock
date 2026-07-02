@@ -43,21 +43,27 @@
   surfaced this. The refresh now overlays the staged additions, edits and
   removals onto the refreshed applied state instead of clobbering them.
 
-* The dock no longer loops forever or tears its panels down on a slow
-  client (#252). The live layout was held in two bindings that formed a
-  cycle: the live-sync fold pushed the dockview client's state into
-  `board_layouts` (dock -> board), and a reconcile step pushed
-  `board_layouts` back to the widget (board -> dock). A board update that
-  originated at the dock still triggered a re-push, whose echo folded back;
-  on a slow client a partial client state folded an impoverished layout
-  that the push then faithfully restored. The board -> dock arrangement
-  push (`reconcile_view_layout()` / `apply_layout_diff()`) is removed: a
-  view's arrangement is client-owned and now flows dock -> board only.
-  `reconcile_views()` still owns what the board is authoritative over --
-  which views exist, their names, the active view, and the initial layout
-  on load -- and the fold keeps `board_layouts` current for serialization
-  and live readers. With one direction live there is no echo to suppress
-  and no layout-tracking state to maintain.
+* The board is the authoritative owner of dock arrangement, and the board
+  -> dock push no longer loops (#252). dockViewR now tags every `_state`
+  echo with its origin (`_state-source`: server or client), so the board
+  -> dock push (`reconcile_view_layout()` / `apply_layout_diff()`) is
+  restored: `reconcile_views()` pushes a view's committed layout to its
+  live dock, and the live-sync fold drops the "server"-tagged echo of that
+  push instead of re-committing it. A genuine user gesture echoes "client"
+  and still folds, so the board stays current for serialization and live
+  readers. This supersedes the one-direction stopgap (#259): arrangement
+  flows both ways again, but the cycle is broken by provenance rather than
+  by dropping a direction.
+
+* The 250 ms live-sync debounce is removed (#271). It only rate-limited a
+  startup board-update burst: restoring a multi-group layout makes dockview
+  cycle its active group, re-emitting `_state` per tick, and the fold read
+  each as a rearrangement and committed a redundant board update (~10 per
+  assembly on a large board). Those echoes now carry `_state-source:
+  "server"` and are dropped by the same `keep_foldable` guard that breaks the
+  push loop, so the burst is absorbed at its source and there is nothing left
+  to bound. Focus stays live in `_state`, so a settled tab activation is
+  still folded and serialized.
 
 * Live panel rearrangements are no longer lost when a board is saved
   (#243). `view_data()`, the live dock layout that serialization reads,
