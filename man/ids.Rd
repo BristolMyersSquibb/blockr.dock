@@ -57,9 +57,10 @@ panel IDs additionally inherit from \code{dock_panel_id}, while handle IDs
 inherit from \code{dock_handle_id}. For panel IDs, depending on whether the panel
 is showing a block or an extension, the inheritance structure additionally
 contains \code{block_panel_id} or \code{ext_panel_id}, respectively. Similarly, for
-handle IDs, we have \code{block_handle_id} and \code{ext_handle_id} for block / extension
-cards, plus \code{view_handle_id} for a view's DOM container. All \code{dock_id}
-objects can be converted back to native IDs, by calling \code{as_obj_id()}.
+handle IDs, we have \code{block_handle_id} and \code{ext_handle_id} for block /
+extension cards, plus \code{view_handle_id} for a view's DOM container. All
+\code{dock_id} objects can be converted back to native IDs, by calling
+\code{as_obj_id()}.
 The utility function \code{dock_id()} returns a (possibly namespaced) ID of the
 \code{dock} instance that is used to manage all visible panels.
 }

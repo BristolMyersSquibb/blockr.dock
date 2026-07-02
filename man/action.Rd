@@ -89,13 +89,13 @@ reactive values behave).
 Determine input options for a block by removing inputs that are already used
 and also takes into account some edge-cases, such as variadic blocks. If
 \code{mode} is set as "inputs", this will return a character vector, for
-"create", the return value of a \code{\link[shiny:selectInput]{shiny::selectizeInput()}} call and for
-"update", the return value of a \code{\link[shiny:updateSelectInput]{shiny::updateSelectizeInput()}} call.
+"create", the return value of a \code{\link[shiny:selectizeInput]{shiny::selectizeInput()}} call and for
+"update", the return value of a \code{\link[shiny:updateSelectizeInput]{shiny::updateSelectizeInput()}} call.
 }
 
 \section{\code{block_registry_selectize()}}{
 
-This creates UI for a block registry selector via \code{\link[shiny:selectInput]{shiny::selectizeInput()}}
+This creates UI for a block registry selector via \code{\link[shiny:selectizeInput]{shiny::selectizeInput()}}
 and returns an object that inherits from \code{shiny.tag}.
 }
 
@@ -103,6 +103,6 @@ and returns an object that inherits from \code{shiny.tag}.
 
 Block selection UI, enumerating all blocks in a board is available as
 \code{board_select()}. An object that inherits from \code{shiny.tag} is returned, which
-contains the result from a \code{\link[shiny:selectInput]{shiny::selectizeInput()}} call.
+contains the result from a \code{\link[shiny:selectizeInput]{shiny::selectizeInput()}} call.
 }
 
