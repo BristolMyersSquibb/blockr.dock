@@ -208,20 +208,40 @@ test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {
   expect_identical(buckets$message, character(0))
 })
 
+test_that("block_status_style is the shared status-dot spec (#290)", {
+
+  waiting <- block_status_style("waiting")
+  expect_identical(waiting$color, "#f59e0b")
+  expect_identical(waiting$size, 12L)
+  expect_identical(waiting$placement, "right-bottom")
+  expect_identical(waiting$label, "Waiting for a data input")
+
+  expect_identical(block_status_style("unset")$color, "#eab308")
+  expect_identical(block_status_style("failed")$color, "#dc2626")
+
+  # `ready`, `dormant` and non-strings carry no indicator.
+  for (st in list("ready", "dormant", NULL, character(), c("a", "b"))) {
+    expect_null(block_status_style(st))
+  }
+})
+
 test_that("block status indicator + note reflect eval status (#290)", {
 
   waiting_dot <- block_status_indicator("waiting")
   expect_s3_class(waiting_dot, "shiny.tag")
-  expect_match(as.character(waiting_dot), "blockr-status-dot-waiting")
+  expect_match(as.character(waiting_dot), "blockr-status-dot", fixed = TRUE)
+  expect_match(as.character(waiting_dot), "#f59e0b", fixed = TRUE)
   expect_match(as.character(waiting_dot), "Waiting for a data input")
 
   expect_match(
     as.character(block_status_indicator("unset")),
-    "blockr-status-dot-unset"
+    "#eab308",
+    fixed = TRUE
   )
   expect_match(
     as.character(block_status_indicator("failed")),
-    "blockr-status-dot-failed"
+    "#dc2626",
+    fixed = TRUE
   )
 
   expect_match(
@@ -261,7 +281,7 @@ test_that("edit block server surfaces eval status reactively (#290)", {
       session$flushReact()
 
       expect_identical(blk_status(), "waiting")
-      expect_match(html(output$status_indicator), "blockr-status-dot-waiting")
+      expect_match(html(output$status_indicator), "#f59e0b", fixed = TRUE)
       expect_match(html(output$status_note), "Waiting for a data input")
 
       status("failed")
@@ -270,7 +290,7 @@ test_that("edit block server surfaces eval status reactively (#290)", {
       # `failed` shows the dot but leaves the note empty -- the raised error
       # uses the error styling instead of a status placeholder.
       expect_identical(blk_status(), "failed")
-      expect_match(html(output$status_indicator), "blockr-status-dot-failed")
+      expect_match(html(output$status_indicator), "#dc2626", fixed = TRUE)
       expect_identical(html(output$status_note), "")
 
       status("ready")

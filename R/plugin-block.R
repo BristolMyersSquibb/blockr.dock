@@ -717,28 +717,65 @@ create_issues_ui <- function(statuses, ns) {
   )
 }
 
-block_status_indicator <- function(status) {
+#' Block eval-status indicator styling
+#'
+#' Visual specification for the coloured dot that marks a block's eval status
+#' (the `waiting` / `unset` / `failed` states described in
+#' [blockr.core::block_server()]). Front-ends share this so the dot renders
+#' with a consistent colour, size and placement: the dock draws it on the block
+#' card icon, and blockr.dag draws it as a node badge.
+#'
+#' @param status A block eval status. Only `waiting`, `unset` and `failed`
+#'   carry an indicator; any other value -- including `ready`, `dormant` or a
+#'   non-string -- yields `NULL`.
+#'
+#' @return `NULL` when `status` carries no indicator, otherwise a list with
+#'   components `color` (hex), `size` (pixel diameter), `placement` and
+#'   `label`.
+#'
+#' @examples
+#' block_status_style("waiting")
+#' block_status_style("ready")
+#'
+#' @export
+block_status_style <- function(status) {
 
   if (!is_string(status)) {
     return(NULL)
   }
 
-  info <- switch(
+  spec <- switch(
     status,
-    waiting = list(tone = "waiting", label = "Waiting for a data input"),
-    unset = list(tone = "unset", label = "Set this block's inputs"),
-    failed = list(tone = "failed", label = "Evaluation failed")
+    waiting = list(color = "#f59e0b", label = "Waiting for a data input"),
+    unset = list(color = "#eab308", label = "Set this block's inputs"),
+    failed = list(color = "#dc2626", label = "Evaluation failed")
   )
 
-  if (is.null(info)) {
+  if (is.null(spec)) {
+    return(NULL)
+  }
+
+  c(spec, list(size = 12L, placement = "right-bottom"))
+}
+
+block_status_indicator <- function(status) {
+
+  spec <- block_status_style(status)
+
+  if (is.null(spec)) {
     return(NULL)
   }
 
   tags$span(
-    class = paste0("blockr-status-dot blockr-status-dot-", info$tone),
-    title = info$label,
+    class = "blockr-status-dot",
+    style = htmltools::css(
+      width = paste0(spec$size, "px"),
+      height = paste0(spec$size, "px"),
+      `background-color` = spec$color
+    ),
+    title = spec$label,
     role = "img",
-    `aria-label` = info$label
+    `aria-label` = spec$label
   )
 }
 
@@ -748,20 +785,20 @@ block_status_note <- function(status) {
     return(NULL)
   }
 
-  info <- switch(
+  icon <- switch(
     status,
-    waiting = list(icon = "diagram-3", text = "Waiting for a data input"),
-    unset = list(icon = "sliders", text = "Set this block's inputs")
+    waiting = "diagram-3",
+    unset = "sliders"
   )
 
-  if (is.null(info)) {
+  if (is.null(icon)) {
     return(NULL)
   }
 
   div(
     class = "blockr-status-note",
-    bsicons::bs_icon(info$icon, class = "blockr-status-note-icon"),
-    tags$span(info$text)
+    bsicons::bs_icon(icon, class = "blockr-status-note-icon"),
+    tags$span(block_status_style(status)$label)
   )
 }
 

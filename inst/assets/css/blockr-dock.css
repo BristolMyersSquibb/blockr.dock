@@ -23,14 +23,6 @@
   --blockr-blue-600: #2563eb;
   --blockr-blue-700: #1d4ed8;
 
-  /* Amber - waiting / not-yet-configured status */
-  --blockr-amber-500: #f59e0b;
-
-  /* Block eval status */
-  --blockr-status-waiting: var(--blockr-amber-500);
-  --blockr-status-unset: var(--blockr-blue-500);
-  --blockr-status-failed: var(--blockr-color-error);
-
   /* Shadow - elevated dropdowns */
   --blockr-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --blockr-shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.25);
@@ -184,10 +176,12 @@
 
 /* Block eval status: on-icon status dot + empty-output placeholder.
    The dot is layered onto the block icon's lower-right corner (iOS badge
-   style), matching blockr.dag's node badge placement. The dot output must
-   stay in flow when empty (never display:none) so it is not suspended while
-   hidden and left stuck ".recalculating", which would trip the busy-pulse
-   scope; an empty inline output takes no space on its own. */
+   style), matching blockr.dag's node badge placement. Its size and colour are
+   set inline from `block_status_style()` -- the source of truth both
+   front-ends share -- so only structure lives here. The dot output must stay
+   in flow when empty (never display:none) so it is not suspended while hidden
+   and left stuck ".recalculating", which would trip the busy-pulse scope; an
+   empty inline output takes no space on its own. */
 .blockr-block-icon {
   position: relative;
   display: inline-flex;
@@ -199,24 +193,9 @@
   right: -2px;
   bottom: -2px;
   z-index: 1;
-  width: 12px;
-  height: 12px;
   border: 2px solid #fff;
   border-radius: 50%;
   box-sizing: border-box;
-  background-color: var(--blockr-grey-400);
-}
-
-.blockr-status-dot-waiting {
-  background-color: var(--blockr-status-waiting);
-}
-
-.blockr-status-dot-unset {
-  background-color: var(--blockr-status-unset);
-}
-
-.blockr-status-dot-failed {
-  background-color: var(--blockr-status-failed);
 }
 
 .blockr-status-note {

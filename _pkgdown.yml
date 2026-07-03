@@ -36,3 +36,4 @@ reference:
     - show_panel
     - blks_metadata
     - dock_id
+    - block_status_style
