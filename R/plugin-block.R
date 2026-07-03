@@ -399,7 +399,7 @@ block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
     tagList(
       block_ui,
       uiOutput(ns("status_note")),
-      div(id = ns("outputs_issues_wrapper"))
+      block_issues_ui(ns)
     )
   )$allTags()
 
@@ -551,6 +551,9 @@ edit_block_server <- function(callbacks = list()) {
           }
         )
 
+        output$issues_count <- renderText(cond_issue_label(conds()))
+        outputOptions(output, "issues_count", suspendWhenHidden = FALSE)
+
         update_blk_cond_observer(conds, session)
 
         observeEvent(
@@ -599,102 +602,108 @@ block_cond_buckets <- function(df) {
 
   lapply(
     set_names(nm = c("error", "warning", "message")),
-    function(sev) df$message[df$severity == sev]
+    function(sev) {
+      rows <- df[df$severity == sev, , drop = FALSE]
+      rows <- rows[!duplicated(rows$id), , drop = FALSE]
+      set_names(rows$message, rows$id)
+    }
   )
 }
 
 update_blk_cond_observer <- function(conds, session = get_session()) {
 
   ns <- session$ns
+  rendered <- character()
 
   observeEvent(
     conds(),
     {
-      cnds <- conds()
+      specs <- cond_ui_specs(conds(), ns)
+      keep <- names(specs)
 
-      statuses <- drop_nulls(
-        lapply(
-          c("warning", "message"),
-          function(status) {
+      for (dom_id in setdiff(rendered, keep)) {
+        remove_ui(paste0("#", dom_id))
+      }
 
-            cl <- switch(
-              status,
-              warning = "warning",
-              message = "light"
-            )
-
-            msgs <- NULL
-
-            if (length(cnds[[status]])) {
-              msgs <- tags$div(
-                class = sprintf("alert alert-%s", cl),
-                HTML(
-                  cli::ansi_html(
-                    paste(
-                      unlist(cnds[[status]]),
-                      collapse = "\n"
-                    )
-                  )
-                )
-              )
-            }
-
-            msgs
-          }
-        )
-      )
-
-      remove_ui(
-        paste0("#", ns("outputs_issues"))
-      )
-
-      if (length(statuses)) {
+      for (dom_id in setdiff(keep, rendered)) {
         insert_ui(
-          selector = paste0("#", ns("outputs_issues_wrapper")),
-          ui = create_issues_ui(statuses, ns)
+          selector = specs[[dom_id]]$selector,
+          ui = specs[[dom_id]]$ui
         )
       }
 
-      msgs <- NULL
-
-      remove_ui(
-        paste0("#", ns("errors_block"), " > div")
-      )
-
-      if (length(cnds[["error"]])) {
-        msgs <- tags$div(
-          class = "blockr-error",
-          bsicons::bs_icon("exclamation-circle", class = "blockr-error-icon"),
-          tags$span(
-            HTML(
-              cli::ansi_html(
-                paste(
-                  unlist(cnds[["error"]]),
-                  collapse = "<br>"
-                )
-              )
-            )
-          )
-        )
-
-        insert_ui(
-          paste0("#", ns("errors_block")),
-          ui = msgs
-        )
-      }
+      rendered <<- keep
     }
   )
 }
 
-create_issues_ui <- function(statuses, ns) {
+cond_ui_specs <- function(cnds, ns) {
+
+  selectors <- c(
+    error = paste0("#", ns("errors_block")),
+    warning = paste0("#", ns("outputs_issues_warnings")),
+    message = paste0("#", ns("outputs_issues_messages"))
+  )
+
+  specs <- list()
+
+  for (severity in names(selectors)) {
+
+    msgs <- cnds[[severity]]
+    ids <- names(msgs)
+
+    for (i in seq_along(msgs)) {
+
+      dom_id <- ns(paste0("cond_", severity, "_", ids[[i]]))
+
+      specs[[dom_id]] <- list(
+        selector = selectors[[severity]],
+        ui = cond_alert(dom_id, msgs[[i]], severity)
+      )
+    }
+  }
+
+  specs
+}
+
+cond_alert <- function(dom_id, msg, severity) {
+
+  content <- HTML(cli::ansi_html(msg))
+
+  if (identical(severity, "error")) {
+    return(
+      tags$div(
+        id = dom_id,
+        class = "blockr-error",
+        bsicons::bs_icon("exclamation-circle", class = "blockr-error-icon"),
+        tags$span(content)
+      )
+    )
+  }
+
+  cl <- switch(severity, warning = "warning", message = "light")
+
+  tags$div(
+    id = dom_id,
+    class = sprintf("blockr-issue alert alert-%s", cl),
+    content
+  )
+}
+
+cond_issue_label <- function(cnds) {
+
+  n <- length(cnds$warning) + length(cnds$message)
+
+  paste(n, if (n == 1L) "issue" else "issues")
+}
+
+block_issues_ui <- function(ns) {
 
   collapse_id <- ns("outputs_issues_collapse")
-  n_issues <- length(statuses)
-  issue_text <- paste(n_issues, if (n_issues == 1) "issue" else "issues")
 
   div(
     id = ns("outputs_issues"),
-    class = "mt-3",
+    class = "mt-3 blockr-issues",
     tags$div(
       class = paste(
         "d-flex align-items-center justify-content-between",
@@ -704,14 +713,15 @@ create_issues_ui <- function(statuses, ns) {
       `data-bs-target` = paste0("#", collapse_id),
       `aria-expanded` = "false",
       `aria-controls` = collapse_id,
-      span(issue_text),
+      textOutput(ns("issues_count"), inline = TRUE),
       bsicons::bs_icon("chevron-down", class = "blockr-meta")
     ),
     collapse_container(
       id = collapse_id,
       div(
         class = "pt-2",
-        statuses
+        div(id = ns("outputs_issues_warnings")),
+        div(id = ns("outputs_issues_messages"))
       )
     )
   )

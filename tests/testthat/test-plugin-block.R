@@ -111,17 +111,60 @@ test_that("renaming a block does not loop (#181)", {
   )
 })
 
-test_that("condition ui test", {
+test_that("block_cond_buckets keys messages by condition id (#36)", {
 
-  insert_count <- 0L
-  remove_count <- 0L
+  df <- data.frame(
+    block = "a",
+    phase = c("data", "eval", "eval", "status", "eval"),
+    severity = c("warning", "warning", "message", "message", "error"),
+    message = c("w one", "w two", "m one", "status note", "boom"),
+    id = c("id_w1", "id_w2", "id_m1", "id_status", "id_e1"),
+    stringsAsFactors = FALSE
+  )
+
+  buckets <- block_cond_buckets(df)
+
+  expect_named(buckets, c("error", "warning", "message"))
+
+  expect_false("status note" %in% buckets$message)
+
+  expect_identical(buckets$warning, c(id_w1 = "w one", id_w2 = "w two"))
+  expect_identical(buckets$message, c(id_m1 = "m one"))
+  expect_identical(buckets$error, c(id_e1 = "boom"))
+})
+
+test_that("block_cond_buckets de-duplicates repeated conditions (#36)", {
+
+  df <- data.frame(
+    block = "a",
+    phase = c("data", "eval"),
+    severity = "warning",
+    message = "same warning",
+    id = "dup_id",
+    stringsAsFactors = FALSE
+  )
+
+  expect_identical(
+    block_cond_buckets(df)$warning,
+    c(dup_id = "same warning")
+  )
+})
+
+test_that("condition UI updates surgically by condition id (#36)", {
+
+  inserted <- character()
+  removed <- character()
 
   local_mocked_bindings(
-    insert_ui = function(..., ui) {
-      insert_count <<- insert_count + 1L
+    insert_ui = function(selector, ..., ui) {
+      id <- ui$attribs$id
+      if (is.null(id)) id <- NA_character_
+      inserted[[length(inserted) + 1L]] <<- id
       expect_s3_class(ui, "shiny.tag")
     },
-    remove_ui = function(...) remove_count <<- remove_count + 1L
+    remove_ui = function(selector, ...) {
+      removed[[length(removed) + 1L]] <<- selector
+    }
   )
 
   with_mock_session(
@@ -130,29 +173,40 @@ test_that("condition ui test", {
 
       update_blk_cond_observer(cond)
 
-      expect_identical(insert_count, 0L)
-      expect_identical(remove_count, 0L)
-
       session$flushReact()
 
-      expect_identical(insert_count, 0L)
-      expect_identical(remove_count, 0L)
+      expect_length(inserted, 0L)
+      expect_length(removed, 0L)
 
       cond(
-        list(message = "hello", warning = list("world", "bye"))
+        list(
+          error = character(),
+          warning = c(a1 = "first warning", b2 = "second warning"),
+          message = c(c3 = "a message")
+        )
       )
 
       session$flushReact()
 
-      expect_identical(insert_count, 1L)
-      expect_identical(remove_count, 2L)
+      expect_length(inserted, 3L)
+      expect_length(removed, 0L)
+      expect_true(any(grepl("cond_warning_a1", inserted, fixed = TRUE)))
+      expect_true(any(grepl("cond_message_c3", inserted, fixed = TRUE)))
 
-      cond(list(error = "oh no"))
+      cond(
+        list(
+          error = c(d4 = "boom"),
+          warning = c(a1 = "first warning"),
+          message = c(c3 = "a message")
+        )
+      )
 
       session$flushReact()
 
-      expect_identical(insert_count, 2L)
-      expect_identical(remove_count, 4L)
+      expect_length(inserted, 4L)
+      expect_length(removed, 1L)
+      expect_true(any(grepl("cond_error_d4", inserted, fixed = TRUE)))
+      expect_match(removed[[1L]], "cond_warning_b2")
     }
   )
 })
@@ -201,11 +255,11 @@ test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {
   expect_named(buckets, c("error", "warning", "message"))
 
   # The status-phase explanation is not painted as a warning ...
-  expect_identical(buckets$warning, "real warning")
+  expect_identical(buckets$warning, c(w1 = "real warning"))
 
-  # ... while genuine warnings and errors still surface.
-  expect_identical(buckets$error, "real error")
-  expect_identical(buckets$message, character(0))
+  # ... while genuine warnings and errors still surface, keyed by id.
+  expect_identical(buckets$error, c(e1 = "real error"))
+  expect_length(buckets$message, 0L)
 })
 
 test_that("block_status_style is the shared status-dot spec (#290)", {
