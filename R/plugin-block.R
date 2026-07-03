@@ -8,9 +8,13 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
     class = "card-body",
     div(
       class = "d-flex align-items-stretch gap-3",
-      span(
-        title = blk_info$description,
-        blk_icon_data_uri(blk_info$icon, blk_info$color, 46, "inline")
+      div(
+        class = "blockr-block-icon",
+        span(
+          title = blk_info$description,
+          blk_icon_data_uri(blk_info$icon, blk_info$color, 46, "inline")
+        ),
+        uiOutput(ns("status_indicator"), inline = TRUE)
       ),
       div(
         class = paste(
@@ -39,11 +43,11 @@ block_card_title <- function(block, id, info) {
   div(
     class = "flex-grow-1 pe-3",
     div(
-      class = "card-title mb-0 d-flex align-items-center",
+      class = "card-title mb-0",
       style = "line-height: 1.0;",
-      uiOutput(ns("status_indicator"), inline = TRUE),
+      # Inline editable title container
       div(
-        class = "blockr-inline-edit flex-grow-1",
+        class = "blockr-inline-edit",
         # Display mode - click to edit
         div(
           id = ns("title_display"),

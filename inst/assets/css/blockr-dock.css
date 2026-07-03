@@ -182,18 +182,28 @@
   transform: rotate(180deg);
 }
 
-/* Block eval status: header dot + empty-output placeholder.
-   The dot's output stays in flow when empty (rather than display:none) so it
-   is never suspended-while-hidden and left stuck ".recalculating", which would
-   trip the busy-pulse scope; an empty inline output collapses to zero width on
-   its own. The dot spaces itself from the title via its own margin. */
-.blockr-status-dot {
-  display: inline-block;
+/* Block eval status: on-icon status dot + empty-output placeholder.
+   The dot is layered onto the block icon's lower-right corner (iOS badge
+   style), matching blockr.dag's node badge placement. The dot output must
+   stay in flow when empty (never display:none) so it is not suspended while
+   hidden and left stuck ".recalculating", which would trip the busy-pulse
+   scope; an empty inline output takes no space on its own. */
+.blockr-block-icon {
+  position: relative;
+  display: inline-flex;
   flex-shrink: 0;
-  width: 9px;
-  height: 9px;
-  margin-right: 8px;
+}
+
+.blockr-status-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
   border-radius: 50%;
+  box-sizing: border-box;
   background-color: var(--blockr-grey-400);
 }
 
