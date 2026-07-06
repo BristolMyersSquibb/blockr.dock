@@ -184,3 +184,126 @@ test_that("locked dock keeps block_card_toggles hidden (#122)", {
   expect_match(locked_html, 'value="outputs".*checked', fixed = FALSE)
   expect_false(grepl("<script", locked_html, fixed = TRUE))
 })
+
+test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {
+
+  df <- data.frame(
+    block = "a",
+    phase = c("status", "eval", "data"),
+    severity = c("warning", "warning", "error"),
+    message = c("waiting note", "real warning", "real error"),
+    id = c("s1", "w1", "e1"),
+    stringsAsFactors = FALSE
+  )
+
+  buckets <- block_cond_buckets(df)
+
+  expect_named(buckets, c("error", "warning", "message"))
+
+  # The status-phase explanation is not painted as a warning ...
+  expect_identical(buckets$warning, "real warning")
+
+  # ... while genuine warnings and errors still surface.
+  expect_identical(buckets$error, "real error")
+  expect_identical(buckets$message, character(0))
+})
+
+test_that("block_status_style is the shared status-dot spec (#290)", {
+
+  waiting <- block_status_style("waiting")
+  expect_identical(waiting$color, "#f59e0b")
+  expect_identical(waiting$size, 8L)
+  expect_identical(waiting$label, "Waiting for a data input")
+
+  expect_identical(block_status_style("unset")$color, "#eab308")
+  expect_identical(block_status_style("failed")$color, "#dc2626")
+
+  # `ready`, `dormant` and non-strings carry no indicator.
+  for (st in list("ready", "dormant", NULL, character(), c("a", "b"))) {
+    expect_null(block_status_style(st))
+  }
+})
+
+test_that("block status indicator + note reflect eval status (#290)", {
+
+  waiting_dot <- block_status_indicator("waiting")
+  expect_s3_class(waiting_dot, "shiny.tag")
+  expect_match(as.character(waiting_dot), "blockr-status-dot", fixed = TRUE)
+  expect_match(as.character(waiting_dot), "#f59e0b", fixed = TRUE)
+  expect_match(as.character(waiting_dot), "Waiting for a data input")
+
+  expect_match(
+    as.character(block_status_indicator("unset")),
+    "#eab308",
+    fixed = TRUE
+  )
+  expect_match(
+    as.character(block_status_indicator("failed")),
+    "#dc2626",
+    fixed = TRUE
+  )
+
+  expect_match(
+    as.character(block_status_note("waiting")),
+    "Waiting for a data input"
+  )
+  expect_match(
+    as.character(block_status_note("unset")),
+    "Set this block's inputs",
+    fixed = TRUE
+  )
+
+  # `failed` keeps the error styling, so no placeholder note.
+  expect_null(block_status_note("failed"))
+
+  # `ready`, `dormant` and an absent status carry no affordance.
+  for (st in list("ready", "dormant", NULL, character(), c("a", "b"))) {
+    expect_null(block_status_indicator(st))
+    expect_null(block_status_note(st))
+  }
+})
+
+test_that("edit block server surfaces eval status reactively (#290)", {
+
+  status <- reactiveVal("waiting")
+
+  board <- reactiveValues(
+    board = new_dock_board(blocks = c(a = new_dataset_block())),
+    eval = list(a = reactive(status()))
+  )
+
+  testServer(
+    edit_block_server(),
+    {
+      html <- function(out) paste0(as.character(out$html), collapse = "")
+
+      session$flushReact()
+
+      expect_identical(blk_status(), "waiting")
+      expect_match(html(output$status_indicator), "#f59e0b", fixed = TRUE)
+      expect_match(html(output$status_note), "Waiting for a data input")
+
+      status("failed")
+      session$flushReact()
+
+      # `failed` shows the dot but leaves the note empty -- the raised error
+      # uses the error styling instead of a status placeholder.
+      expect_identical(blk_status(), "failed")
+      expect_match(html(output$status_indicator), "#dc2626", fixed = TRUE)
+      expect_identical(html(output$status_note), "")
+
+      status("ready")
+      session$flushReact()
+
+      # A ready block carries no status affordance at all.
+      expect_identical(blk_status(), "ready")
+      expect_identical(html(output$status_indicator), "")
+      expect_identical(html(output$status_note), "")
+    },
+    args = list(
+      block_id = "a",
+      board = board,
+      update = reactiveVal()
+    )
+  )
+})

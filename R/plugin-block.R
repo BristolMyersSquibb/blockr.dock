@@ -8,9 +8,13 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
     class = "card-body",
     div(
       class = "d-flex align-items-stretch gap-3",
-      span(
-        title = blk_info$description,
-        blk_icon_data_uri(blk_info$icon, blk_info$color, 46, "inline")
+      div(
+        class = "blockr-block-icon",
+        span(
+          title = blk_info$description,
+          blk_icon_data_uri(blk_info$icon, blk_info$color, mode = "inline")
+        ),
+        uiOutput(ns("status_indicator"), inline = TRUE)
       ),
       div(
         class = paste(
@@ -392,7 +396,11 @@ block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
   )$addAttrs(
     style = "padding: 0;"
   )$append(
-    tagList(block_ui, div(id = ns("outputs_issues_wrapper")))
+    tagList(
+      block_ui,
+      uiOutput(ns("status_note")),
+      div(id = ns("outputs_issues_wrapper"))
+    )
   )$allTags()
 
   outputs_panel$attribs$style <- "border: none; border-radius: 0;"
@@ -517,6 +525,16 @@ edit_block_server <- function(callbacks = list()) {
           )
         )
 
+        blk_status <- reactive(reval_if(board$eval[[block_id]]))
+
+        output$status_indicator <- renderUI(
+          block_status_indicator(blk_status())
+        )
+
+        output$status_note <- renderUI(
+          block_status_note(blk_status())
+        )
+
         observeEvent(
           input$collapse_blk_sections,
           accordion_panel_set(
@@ -529,11 +547,7 @@ edit_block_server <- function(callbacks = list()) {
         conds <- reactive(
           {
             req(block_id %in% names(board$blocks))
-            df <- board$blocks[[block_id]]$server$conditions()
-            lapply(
-              set_names(nm = c("error", "warning", "message")),
-              function(sev) df$message[df$severity == sev]
-            )
+            block_cond_buckets(board$blocks[[block_id]]$server$conditions())
           }
         )
 
@@ -577,6 +591,16 @@ edit_block_server <- function(callbacks = list()) {
       }
     )
   }
+}
+
+block_cond_buckets <- function(df) {
+
+  df <- df[df$phase != "status", , drop = FALSE]
+
+  lapply(
+    set_names(nm = c("error", "warning", "message")),
+    function(sev) df$message[df$severity == sev]
+  )
 }
 
 update_blk_cond_observer <- function(conds, session = get_session()) {
@@ -690,6 +714,77 @@ create_issues_ui <- function(statuses, ns) {
         statuses
       )
     )
+  )
+}
+
+#' @param status A block eval status. Only `waiting`, `unset` and `failed`
+#'   carry an indicator; any other value -- including `ready`, `dormant` or a
+#'   non-string -- yields `NULL`. The returned `size` is the coloured dot's
+#'   pixel diameter; each front-end draws it with a 2px white ring so the dock
+#'   card icon and the DAG node badge match.
+#' @rdname meta
+#' @export
+block_status_style <- function(status) {
+
+  if (!is_string(status)) {
+    return(NULL)
+  }
+
+  spec <- switch(
+    status,
+    waiting = list(color = "#f59e0b", label = "Waiting for a data input"),
+    unset = list(color = "#eab308", label = "Set this block's inputs"),
+    failed = list(color = "#dc2626", label = "Evaluation failed")
+  )
+
+  if (is.null(spec)) {
+    return(NULL)
+  }
+
+  c(spec, list(size = 8L))
+}
+
+block_status_indicator <- function(status) {
+
+  spec <- block_status_style(status)
+
+  if (is.null(spec)) {
+    return(NULL)
+  }
+
+  tags$span(
+    class = "blockr-status-dot",
+    style = htmltools::css(
+      width = paste0(spec$size, "px"),
+      height = paste0(spec$size, "px"),
+      `background-color` = spec$color
+    ),
+    title = spec$label,
+    role = "img",
+    `aria-label` = spec$label
+  )
+}
+
+block_status_note <- function(status) {
+
+  if (!is_string(status)) {
+    return(NULL)
+  }
+
+  icon <- switch(
+    status,
+    waiting = "diagram-3",
+    unset = "sliders"
+  )
+
+  if (is.null(icon)) {
+    return(NULL)
+  }
+
+  div(
+    class = "blockr-status-note",
+    bsicons::bs_icon(icon, class = "blockr-status-note-icon"),
+    tags$span(block_status_style(status)$label)
   )
 }
 

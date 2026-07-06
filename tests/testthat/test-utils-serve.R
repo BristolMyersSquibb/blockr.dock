@@ -512,12 +512,15 @@ test_that("dock panel move updates layout state and serialization (#234)", {
 
   # Settle on a target group count: `wait_for_js` returns as soon as the
   # client reports it, then `wait_for_idle` lets the `_state` echo reach the
-  # server before it is read.
+  # server before it is read. Optional-chain through the widget: early in
+  # startup `HTMLWidgets.find()` / `getWidget()` can still be null, and the
+  # poll must wait that window out (yield `false`) rather than dereference
+  # null and abort with "Cannot read properties of null (reading 'getWidget')".
   await_groups <- function(n) {
     app$wait_for_js(
       paste0(
         "HTMLWidgets.find('#", dock, "')",
-        ".getWidget().groups.length === ", n
+        "?.getWidget()?.groups.length === ", n
       ),
       timeout = 15 * 1000
     )

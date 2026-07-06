@@ -10,6 +10,10 @@
 #'   palette for a character vector of block categories.
 #' - `blk_icon_data_uri()`: Processes block icons to add color and turn them
 #'   into square-shaped icons.
+#' - `block_status_style()`: Returns the styling for a block's eval-status
+#'   indicator (the coloured dot) -- shared so front-ends render it
+#'   consistently (the dock draws it on the block card icon, blockr.dag as a
+#'   node badge).
 #'
 #' @param blocks Blocks passed as `blocks` or `block` object
 #'
@@ -20,9 +24,13 @@
 #' col <- blk_color(meta$category)
 #' blk_icon_data_uri(meta$icon, col)
 #'
+#' block_status_style("waiting")
+#'
 #' @return Metadata is returned from `blks_metadata()` as a `data.frame` with
 #' each row corresponding to a block. Both `blk_color()` and
-#' `blk_icon_data_uri()` return character vectors.
+#' `blk_icon_data_uri()` return character vectors. `block_status_style()`
+#' returns a list with `color`, `size` and `label`, or `NULL` for a status
+#' with no indicator.
 #'
 #' @rdname meta
 #' @export
