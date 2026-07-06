@@ -717,28 +717,12 @@ create_issues_ui <- function(statuses, ns) {
   )
 }
 
-#' Block eval-status indicator styling
-#'
-#' Visual specification for the coloured dot that marks a block's eval status
-#' (the `waiting` / `unset` / `failed` states described in
-#' [blockr.core::block_server()]). Front-ends share this so the dot renders
-#' with a consistent colour, size and placement: the dock draws it on the block
-#' card icon, and blockr.dag draws it as a node badge.
-#'
 #' @param status A block eval status. Only `waiting`, `unset` and `failed`
 #'   carry an indicator; any other value -- including `ready`, `dormant` or a
-#'   non-string -- yields `NULL`.
-#'
-#' @return `NULL` when `status` carries no indicator, otherwise a list with
-#'   components `color` (hex), `size` (the coloured dot's pixel diameter),
-#'   `placement` and `label`. Each front-end draws the dot at this diameter
-#'   with a 2px white ring around it, so the dock card icon and the DAG node
-#'   badge match.
-#'
-#' @examples
-#' block_status_style("waiting")
-#' block_status_style("ready")
-#'
+#'   non-string -- yields `NULL`. The returned `size` is the coloured dot's
+#'   pixel diameter; each front-end draws it with a 2px white ring so the dock
+#'   card icon and the DAG node badge match.
+#' @rdname meta
 #' @export
 block_status_style <- function(status) {
 
