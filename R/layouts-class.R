@@ -1,43 +1,56 @@
-#' Dock views (layouts)
+#' Dock views: structure and grid
 #'
-#' A `dock_board` always holds a `dock_layouts` object (multi-view tabs).
+#' A `dock_board` stores its views as two independent slots. **Structure**
+#' — which panels belong to each view, plus the view names, ids and the
+#' active view — is a `dock_views` collection of `dock_view` objects, read
+#' with `board_views()`. **Grid** — the geometry of each view (nesting, tab
+#' groups, sizes) — is a separate, `NULL`-valid `dock_grids` slot, read with
+#' `board_grids()`. `board_layouts()` composes the two into the
+#' grid-bearing `dock_layouts` handle the update lifecycle still reads.
 #' Single-page boards are a degenerate case: one auto-named "Page" view.
-#' Blocks and extensions are shared across views via the board's DAG;
-#' view membership is a layout concern only.
+#' Blocks and extensions are shared across views via the board's DAG; view
+#' membership is a layout concern only.
 #'
-#' Each view carries a stable, immutable **id** (the key into the
-#' `dock_layouts` collection) that is distinct from its editable display
-#' **name**. This mirrors the id / name separation used for blocks (an
-#' immutable id keys the collection; [blockr.core::block_name()] is an
-#' editable label). The id is minted once when the view is created and
-#' never changes — rename only rewrites the name attribute, never the
-#' key. Use `view_name()` / `view_name<-()` to read and write a view's
-#' display name and `view_names()` for all names in a collection.
+#' Each view carries a stable, immutable **id** (its key in the collection)
+#' distinct from its editable display **name**. This mirrors the id / name
+#' separation used for blocks (an immutable id keys the collection;
+#' [blockr.core::block_name()] is an editable label). The id is minted once
+#' when the view is created and never changes — rename only rewrites the
+#' name attribute, never the key. Use `view_name()` / `view_name<-()` to
+#' read and write a view's display name, `view_names()` for all names in a
+#' collection, and `view_members()` for a `dock_view`'s ordered panel-id
+#' set.
 #'
 #' Multi-view boards are defined by passing a named list to
 #' `new_dock_board()`'s `layouts` argument: each **name is the view's id**
 #' (the container's key, like a block id — minted when absent), each value
 #' is the panel arrangement inside that view (a [dock_layout()], or a raw
-#' list of block / extension IDs). The display name is set on the layout
-#' via `dock_layout(name = )`; with none set, a label is derived from the
-#' id. The initially-active view is chosen by `new_dock_board(active = )`
-#' (a view id), defaulting to the first; it is a property of the
-#' collection, never of an individual layout. View CRUD is enabled unless
-#' the dock is locked (see `is_dock_locked()`).
+#' list of block / extension IDs), split into the structure and grid
+#' slots at construction. The display name is set on the layout via
+#' `dock_layout(name = )`; with none set, a label is derived from the id.
+#' The initially-active view is chosen by `new_dock_board(active = )` (a
+#' view id), defaulting to the first; it is a property of the collection,
+#' never of an individual layout. View CRUD is enabled unless the dock is
+#' locked (see `is_dock_locked()`).
 #'
-#' Users do not normally construct a `dock_layouts` directly; instead
-#' they pass a plain named list to `new_dock_board(layouts = ...)`,
-#' which resolves, validates and wraps it (minting any absent ids).
+#' A stored grid must reference only panels in its view's membership
+#' (`grid ⊆ membership`); the board is valid with no grid at
+#' all. Users do not normally construct these objects directly; they pass a
+#' plain named list to `new_dock_board(layouts = ...)`, which resolves,
+#' validates and splits it.
 #'
-#' @return `is_dock_layouts()` returns a boolean.
-#'   `validate_dock_layouts()` returns its input and throws on error.
-#'   `active_view()` returns the active view's id, or `NULL` when no
-#'   view is active, and `active_view<-()` returns the modified
-#'   `dock_layouts` (or `dock_board`) object invisibly. `view_name()`
-#'   returns a view's explicit display name (or `NULL`), `view_name<-()`
-#'   the modified `dock_layout`, and `view_names()` a character vector of
-#'   display labels keyed by view id (derived from the id where a view
-#'   has no explicit name).
+#' @return `board_views()` returns a `dock_views`, `board_grids()` a
+#'   `dock_grids` or `NULL`, and their setters the modified board
+#'   invisibly. `view_members()` returns a character vector. `is_dock_view()`
+#'   / `is_dock_views()` / `is_dock_grids()` / `is_dock_layouts()`
+#'   return a boolean; `validate_dock_views()`, `validate_dock_grids()`
+#'   and `validate_dock_layouts()` return their (validated) input and throw
+#'   on error. `active_view()` returns the active view's id, or `NULL` when
+#'   no view is active, and `active_view<-()` the modified collection (or
+#'   `dock_board`) invisibly. `view_name()` returns a view's explicit
+#'   display name (or `NULL`), `view_name<-()` the modified object, and
+#'   `view_names()` a character vector of display labels keyed by view id
+#'   (derived from the id where a view has no explicit name).
 #'
 #' @examples
 #' brd <- new_dock_board(
@@ -51,7 +64,8 @@
 #'   ),
 #'   active = "overview"
 #' )
-#' view_names(board_layouts(brd))
+#' view_names(board_views(brd))
+#' view_members(board_views(brd)[["analysis"]])
 #'
 #' @rdname view
 #' @keywords internal
@@ -216,8 +230,10 @@ layout_ids <- function(x) {
   unique(unlist(x))
 }
 
-#' @param x A `dock_layout` (for `view_name()` / `view_name<-()`) or a
-#'   `dock_layouts` collection (for `view_names()`).
+#' @param x An object appropriate to the function: a `dock_view` /
+#'   `dock_layout` (for `view_name()`, `view_members()`), a `dock_views` /
+#'   `dock_layouts` collection (for `view_names()`, `active_view()`), a
+#'   `dock_grids`, or a `dock_board` (for the board accessors).
 #' @rdname view
 #' @export
 view_name <- function(x) {
@@ -229,7 +245,7 @@ view_name <- function(x) {
 #' @rdname view
 #' @export
 `view_name<-` <- function(x, value) {
-  stopifnot(is_dock_layout(x), is_string(value))
+  stopifnot(is_dock_layout(x) || is_dock_view(x), is_string(value))
   attr(x, "view_name") <- value
   x
 }
@@ -237,7 +253,7 @@ view_name <- function(x) {
 #' @rdname view
 #' @export
 view_names <- function(x) {
-  stopifnot(is_dock_layouts(x))
+  stopifnot(is_dock_layouts(x) || is_dock_views(x))
   set_names(chr_mply(view_label, x, names(x)), names(x))
 }
 
@@ -274,7 +290,7 @@ active_view.dock_layouts <- function(x) {
 
 #' @export
 active_view.dock_board <- function(x) {
-  active_view(board_layouts(x))
+  active_view(board_views(x))
 }
 
 #' @param value Replacement value
@@ -310,7 +326,7 @@ active_view.dock_board <- function(x) {
 
 #' @noRd
 views_can_crud <- function(x) {
-  stopifnot(is_dock_layouts(x))
+  stopifnot(is_dock_layouts(x) || is_dock_views(x))
   !is_dock_locked()
 }
 
@@ -318,15 +334,21 @@ views_can_crud <- function(x) {
 #' @export
 `board_layouts<-` <- function(x, value) {
   stopifnot(is_dock_board(x))
-  x[["layouts"]] <- validate_dock_layouts(value)
+  parts <- decompose_layouts(validate_dock_layouts(value))
+  board_views(x) <- parts[["views"]]
+  board_grids(x) <- parts[["grids"]]
   invisible(x)
 }
 
+# The board stores structure (`board_views()`) and geometry
+# (`board_grids()`) as separate slots; `board_layouts()` composes the
+# grid-bearing `dock_layouts` the update lifecycle still reads. A bridge until
+# #294 rewires the flow onto the two slots directly.
 #' @rdname view
 #' @export
 board_layouts <- function(x) {
   stopifnot(is_dock_board(x))
-  x[["layouts"]]
+  compose_layouts(board_views(x), board_grids(x))
 }
 
 #' @param ... Generic consistency

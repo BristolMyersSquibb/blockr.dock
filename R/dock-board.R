@@ -3,22 +3,24 @@
 #' Using the docking layout manager provided by dockViewR, a `dock_board`
 #' extends [blockr.core::new_board()]. In addition to the attributes contained
 #' in a core board, this also includes dock extensions (as `extensions`)
-#' and the panel arrangement (as `layouts`). The `layouts` field is always
-#' stored internally as a `dock_layouts` collection (multi-view); single-page
+#' and the per-view layout. At construction the `layouts` input is split
+#' into two board slots — view structure ([board_views()]) and grid
+#' geometry ([board_grids()]); [board_layouts()] recomposes them. Single-page
 #' boards are a degenerate case with one auto-named "Page" view.
 #'
 #' For multi-view boards, pass a named list to `layouts =` — each name
 #' becomes a view, each value is the panel arrangement (a [dock_layout()]
 #' or a raw list of block / extension IDs). For a single-page board, pass
-#' a `dock_layout` or raw list directly. Either way the input is normalised
-#' to a `dock_layouts`, with leaf IDs resolved against the board's blocks
-#' and extensions.
+#' a `dock_layout` or raw list directly. Either way the input's leaf IDs
+#' are resolved against the board's blocks and extensions, then split into
+#' the structure and grid slots.
 #'
 #' @inheritParams blockr.core::new_board
 #' @param extensions Dock extensions
 #' @param layouts A named list of per-view arrangements (multi-view), a
 #'   `dock_layout` / raw list (single-page), or an existing `dock_layouts`
-#'   collection. All forms are normalised to `dock_layouts`.
+#'   collection. All forms are resolved and split into the board's
+#'   structure (`board_views()`) and grid (`board_grids()`) slots.
 #' @param active Id of the initially active view (a key of `layouts`).
 #'   Defaults to the first view. Which view is active is a property of the
 #'   collection, not of an individual layout.
@@ -45,7 +47,7 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            active = NULL, options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
-  layouts <- initialise_layout(layouts, blocks, extensions, active)
+  parts <- initialise_layout(layouts, blocks, extensions, active)
 
   new_board(
     blocks = as_blocks(blocks),
@@ -53,7 +55,8 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
     stacks = as_dock_stacks(stacks),
     ...,
     extensions = as_dock_extensions(extensions),
-    layouts = layouts,
+    views = parts[["views"]],
+    grids = parts[["grids"]],
     options = as_board_options(options),
     ctor = forward_ctor(ctor),
     pkg = pkg,
@@ -61,19 +64,20 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
   )
 }
 
+# Build the fused `dock_layouts` from any accepted input form, then split it
+# into the board's structure (`views`) and geometry (`grids`) slots.
+# `as_dock_layouts()` homogenises a `dock_layouts`, a single `dock_layout`, a
+# multi-view list, or a bare panel-id list / vector into a resolved
+# `dock_layouts`; `decompose_layouts()` is the DSL-decomposition seam.
 initialise_layout <- function(layouts, blocks, extensions, active = NULL) {
 
-  # `as_dock_layouts()` homogenises every accepted input form (a
-  # `dock_layouts`, a single `dock_layout`, a multi-view list, a bare
-  # panel-id list / vector) into a resolved `dock_layouts`.
   res <- as_dock_layouts(layouts, blocks = blocks, extensions = extensions)
 
-  # The active view is the container's to name (by id); default first.
   if (!is.null(active)) {
     active_view(res) <- active
   }
 
-  res
+  decompose_layouts(res)
 }
 
 resolve_views <- function(specs, c_blks, c_exts) {
@@ -138,7 +142,10 @@ validate_board.dock_board <- function(x) {
 
   x <- NextMethod()
 
-  validate_dock_layouts(board_layouts(x))
+  views <- board_views(x)
+
+  validate_dock_views(views)
+  validate_dock_grids(board_grids(x), views)
   validate_extensions(dock_extensions(x))
 
   x

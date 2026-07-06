@@ -55,7 +55,8 @@ dock_board_options()
 
 \item{layouts}{A named list of per-view arrangements (multi-view), a
 \code{dock_layout} / raw list (single-page), or an existing \code{dock_layouts}
-collection. All forms are normalised to \code{dock_layouts}.}
+collection. All forms are resolved and split into the board's
+structure (\code{board_views()}) and grid (\code{board_grids()}) slots.}
 
 \item{active}{Id of the initially active view (a key of \code{layouts}).
 Defaults to the first view. Which view is active is a property of the
@@ -86,17 +87,18 @@ object.
 Using the docking layout manager provided by dockViewR, a \code{dock_board}
 extends \code{\link[blockr.core:new_board]{blockr.core::new_board()}}. In addition to the attributes contained
 in a core board, this also includes dock extensions (as \code{extensions})
-and the panel arrangement (as \code{layouts}). The \code{layouts} field is always
-stored internally as a \code{dock_layouts} collection (multi-view); single-page
+and the per-view layout. At construction the \code{layouts} input is split
+into two board slots — view structure (\code{\link[=board_views]{board_views()}}) and grid
+geometry (\code{\link[=board_grids]{board_grids()}}); \code{\link[=board_layouts]{board_layouts()}} recomposes them. Single-page
 boards are a degenerate case with one auto-named "Page" view.
 }
 \details{
 For multi-view boards, pass a named list to \verb{layouts =} — each name
 becomes a view, each value is the panel arrangement (a \code{\link[=dock_layout]{dock_layout()}}
 or a raw list of block / extension IDs). For a single-page board, pass
-a \code{dock_layout} or raw list directly. Either way the input is normalised
-to a \code{dock_layouts}, with leaf IDs resolved against the board's blocks
-and extensions.
+a \code{dock_layout} or raw list directly. Either way the input's leaf IDs
+are resolved against the board's blocks and extensions, then split into
+the structure and grid slots.
 }
 \examples{
 brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))

@@ -377,7 +377,7 @@ test_that("view ids survive serialization", {
     )
   )
 
-  des <- blockr_deser(blockr_ser(brd))[["layouts"]]
+  des <- board_views(blockr_deser(blockr_ser(brd)))
   expect_identical(names(des), c("view_one", "view_two"))
   expect_identical(unname(view_names(des)), c("Analysis", "Overview"))
 })

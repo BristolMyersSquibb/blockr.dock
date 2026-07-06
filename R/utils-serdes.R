@@ -20,7 +20,16 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
     session
   )
 
-  layout_data <- view_data()
+  # Geometry is client-owned until #294's mirror, so read the live layout for
+  # grid freshness and split it into the board's two slots. When the client
+  # has not reported yet, fall back to the stored slots (NULL data).
+  live <- view_data()
+
+  layout_parts <- if (is.null(live)) {
+    list(views = NULL, grids = NULL)
+  } else {
+    decompose_layouts(live)
+  }
 
   do.call(
     blockr_ser,
@@ -30,7 +39,8 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
         board_id = id,
         blocks = Map(c, state, visible = lapply(visibility, list)),
         options = opts,
-        layouts = layout_data,
+        views = layout_parts[["views"]],
+        grids = layout_parts[["grids"]],
         extensions = lapply(
           list(...),
           function(x) lapply(x[["state"]], reval_if)
@@ -64,6 +74,37 @@ blockr_ser.dock_layouts <- function(x, data, ...) {
 }
 
 #' @export
+blockr_ser.dock_views <- function(x, data, ...) {
+  vws <- if (!missing(data) && is_dock_views(data)) data else x
+  list(
+    object = class(vws),
+    payload = list(
+      active = active_view(vws),
+      views = lapply(vws, blockr_ser)
+    )
+  )
+}
+
+#' @export
+blockr_ser.dock_view <- function(x, data, ...) {
+  view <- if (!missing(data) && is_dock_view(data)) data else x
+  list(
+    object = class(view),
+    payload = as.list(view_members(view)),
+    name = view_name(view)
+  )
+}
+
+#' @export
+blockr_ser.dock_grids <- function(x, data, ...) {
+  arr <- if (!missing(data) && is_dock_grids(data)) data else x
+  list(
+    object = class(arr),
+    payload = lapply(Filter(Negate(is.null), as.list(arr)), layout_to_spec)
+  )
+}
+
+#' @export
 blockr_ser.dock_extension <- function(x, data, ...) {
   list(
     object = class(x),
@@ -92,13 +133,25 @@ blockr_deser.dock_board <- function(x, data, ...) {
   # Reimplemented rather than delegated to core's blockr_deser.board: it
   # drops extra args, so threading the producer version downward means
   # owning the payload deser here.
+  des <- lapply(
+    data[["payload"]],
+    blockr_deser,
+    producer_version = data[["constructor"]][["version"]]
+  )
+
+  # The split structure / grid slots recombine into the constructor's
+  # `layouts` argument, which re-decomposes them. Pre-split payloads carry a
+  # fused `layouts` field instead.
+  layouts <- if (not_null(des[["views"]])) {
+    compose_layouts(des[["views"]], des[["grids"]])
+  } else {
+    des[["layouts"]]
+  }
+
   args <- c(
-    lapply(
-      data[["payload"]],
-      blockr_deser,
-      producer_version = data[["constructor"]][["version"]]
-    ),
+    des[setdiff(names(des), c("views", "grids", "layouts"))],
     list(
+      layouts = layouts,
       ctor = coal(ctor_name(ctor), ctor_fun(ctor)),
       pkg = ctor_pkg(ctor)
     )
@@ -184,6 +237,35 @@ blockr_deser.dock_layouts <- function(x, data, ...) {
   }
 
   res
+}
+
+#' @export
+blockr_deser.dock_views <- function(x, data, ...) {
+  payload <- data[["payload"]]
+
+  res <- reconstruct_dock_views(
+    lapply(payload[["views"]], blockr_deser, ...)
+  )
+
+  if (is_string(payload[["active"]]) && payload[["active"]] %in% names(res)) {
+    active_view(res) <- payload[["active"]]
+  }
+
+  res
+}
+
+#' @export
+blockr_deser.dock_view <- function(x, data, ...) {
+  name <- if (is_string(data[["name"]])) data[["name"]] else NULL
+  new_dock_view(as.character(unlst(data[["payload"]])), name = name)
+}
+
+#' @export
+blockr_deser.dock_grids <- function(x, data, ..., producer_version = NULL) {
+  new_dock_grids(
+    lapply(data[["payload"]], read_layout_payload,
+           producer_version = producer_version)
+  )
 }
 
 #' @export
@@ -589,7 +671,7 @@ restore_board.dock_board <- function(x, new, result, ..., meta = NULL,
   extra <- list(
     extensions = dock_extensions(x),
     options = board_options(x),
-    layouts = des[["layouts"]]
+    layouts = board_layouts(des)
   )
 
   res <- do.call(as_dock_board, c(list(des), extra))
