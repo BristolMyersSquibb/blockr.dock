@@ -2,6 +2,20 @@
 
 ## blockr.dock (development version)
 
+- Block eval status is now a first-class panel affordance instead of
+  leaking through as an incidental warning
+  ([\#290](https://github.com/BristolMyersSquibb/blockr.dock/issues/290)).
+  Consuming the `board$eval[[id]]` status enum that blockr.core exposes,
+  a `waiting` block (a required data input is unconnected) or an `unset`
+  block (a required user input is not yet provided) shows a dedicated
+  placeholder in its output region – “Waiting for a data input” / “Set
+  this block’s inputs” – rather than core’s status explanation being
+  painted as a generic warning alert. That `status`-phase condition is
+  now separated from genuine warnings so the two are no longer
+  conflated. A small colour-coded dot in the block card header marks
+  `waiting`, `unset` and `failed` blocks, so a board shows at a glance
+  which blocks are not yet producing output.
+
 - The busy pulse no longer flashes on a plain panel switch, only on real
   computation
   ([\#285](https://github.com/BristolMyersSquibb/blockr.dock/issues/285)).

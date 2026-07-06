@@ -114,6 +114,7 @@ packages.
 - [`blks_metadata()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)
   [`blk_color()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)
   [`blk_icon_data_uri()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)
+  [`block_status_style()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)
   : Get block metadata
 - [`dock_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
   [`as_dock_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
