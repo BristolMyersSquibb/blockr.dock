@@ -38,8 +38,8 @@ card icon and the DAG node badge match.}
 Metadata is returned from \code{blks_metadata()} as a \code{data.frame} with
 each row corresponding to a block. Both \code{blk_color()} and
 \code{blk_icon_data_uri()} return character vectors. \code{block_status_style()}
-returns a list with \code{color}, \code{size}, \code{placement} and \code{label}, or \code{NULL}
-for a status with no indicator.
+returns a list with \code{color}, \code{size} and \code{label}, or \code{NULL} for a status
+with no indicator.
 }
 \description{
 Returns various metadata for blocks or block categories, as well as styling

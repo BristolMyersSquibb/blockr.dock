@@ -29,8 +29,8 @@
 #' @return Metadata is returned from `blks_metadata()` as a `data.frame` with
 #' each row corresponding to a block. Both `blk_color()` and
 #' `blk_icon_data_uri()` return character vectors. `block_status_style()`
-#' returns a list with `color`, `size`, `placement` and `label`, or `NULL`
-#' for a status with no indicator.
+#' returns a list with `color`, `size` and `label`, or `NULL` for a status
+#' with no indicator.
 #'
 #' @rdname meta
 #' @export

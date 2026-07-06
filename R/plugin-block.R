@@ -741,7 +741,7 @@ block_status_style <- function(status) {
     return(NULL)
   }
 
-  c(spec, list(size = 8L, placement = "right-bottom"))
+  c(spec, list(size = 8L))
 }
 
 block_status_indicator <- function(status) {
