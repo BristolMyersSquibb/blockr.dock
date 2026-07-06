@@ -368,9 +368,15 @@ grid_to_spec <- function(grid) {
     )
   }
 
-  # The root is always a branch (the constructor wraps args in a group),
-  # so its `children` / `sizes` hoist to the top alongside orientation.
-  root_wire <- walk(grid[["root"]])
+  root <- grid[["root"]]
+
+  # A pruned-to-nothing grid (grid_map_leaves collapses an all-empty tree to a
+  # NULL root) has no branch to walk; it serializes like a constructed empty
+  # layout -- an empty `children` list -- so an all-ghost grid met with empty
+  # membership still round-trips instead of aborting here. Otherwise the
+  # root is a branch (the constructor wraps args in a group), its `children` /
+  # `sizes` hoisting to the top alongside orientation.
+  root_wire <- if (is.null(root)) list(children = list()) else walk(root)
 
   c(
     list(orientation = tolower(coal(grid[["orientation"]], "horizontal"))),

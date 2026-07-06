@@ -20,6 +20,17 @@ board_server_callback <- function(board, update, visible, ...,
                                   session = get_session()) {
   initial_board <- isolate(board$board)
 
+  # When a dev-mode commit budget is set, instrument every dock-issued commit
+  # before any observer captures `update`, so all writers (the grid mirror,
+  # the membership lifecycle, view CRUD, extensions) are counted and
+  # budget-checked through one wrapper, and the e2e probe reads the tally. Off
+  # by default: production keeps the raw `update`, no wrapper, no overhead.
+  if (commit_probe_enabled()) {
+    commit_ledger <- new_commit_ledger()
+    update <- instrument_commits(update, commit_ledger, session)
+    register_commit_probe(commit_ledger, session)
+  }
+
   c_exts <- dock_extensions(initial_board)
   exts <- as.list(c_exts)
 
@@ -77,6 +88,10 @@ board_server_callback <- function(board, update, visible, ...,
   # arrangement is read on demand here; it no longer folds back into
   # `board_layouts`.
   view_data <- live_view_data(client_views, docks, client_active)
+
+  if (commit_probe_enabled()) {
+    register_roundtrip_probe(board, view_data, session)
+  }
 
   # Each extension can read the others' server results through the
   # `extensions` environment: one active binding per id, each resolving to

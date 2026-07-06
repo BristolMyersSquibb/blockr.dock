@@ -74,10 +74,18 @@ restrict_grid <- function(grid, members) {
 # every committed board (via validate_dock_grids), so a non-canonical write is a
 # classed error rather than a source of re-echo churn: a grid that does not
 # match its own canonical form would structurally differ from the next echo and
-# commit spuriously.
+# commit spuriously. The fixed-point test uses the mirror's own
+# `all.equal(tolerance = grid_size_tol())` -- structure exact, sizes tolerant --
+# because `canonicalize_grid()` normalises sizes and so is not bit-exact
+# idempotent on the arbitrary ratios a real drag produces; an `identical()` test
+# would reject the mirror's own committed values.
 validate_grid_value <- function(grid, id) {
 
-  if (!identical(grid, canonicalize_grid(grid))) {
+  is_fixed <- isTRUE(
+    all.equal(grid, canonicalize_grid(grid), tolerance = grid_size_tol())
+  )
+
+  if (!is_fixed) {
     blockr_abort(
       "Grid for view {id} is not a canonical fixed point.",
       class = "dock_grid_not_canonical"

@@ -592,6 +592,18 @@ test_that("drop_panels_from_layout preserves remaining structure", {
   expect_length(layout_panel_ids(res_full), 0L)
 })
 
+test_that("dropping every panel leaves a round-trippable empty layout", {
+
+  # A grid pruned to nothing must collapse to an empty branch, the shape a
+  # constructed empty layout has -- not a NULL root, which the wire conversion
+  # in canonicalize_grid() cannot express. Otherwise composing or restoring a
+  # view whose grid is all ghosts against empty membership aborts.
+  emptied <- drop_panels_from_layout(dock_layout("a", "b"), c("a", "b"))
+
+  expect_no_error(canonicalize_grid(emptied))
+  expect_identical(layout_to_spec(emptied), layout_to_spec(new_dock_layout()))
+})
+
 test_that("drop_panels_from_layout resets the active tab when it is dropped", {
 
   ly <- dock_layout(panels("a", "b", active = "b"))

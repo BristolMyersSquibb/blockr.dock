@@ -221,3 +221,38 @@ test_that("the mirror stores an in-flight echo verbatim; compose prunes it", {
     )
   })
 })
+
+test_that("validate_grid_value tolerates size jitter but not real drift", {
+
+  # canonicalize_grid normalises sizes, so re-canonicalising an arbitrary ratio
+  # can shift the last bit -- the values a real drag commits are not bit-exact
+  # idempotent. The fixed-point check must use the mirror's size tolerance (not
+  # identical()), or the mirror's own committed grids fail validation. Find such
+  # a grid: one project_grid() output that is not its own identical() fixed
+  # point.
+  set.seed(1)
+  drifter <- NULL
+
+  for (k in seq_len(200L)) {
+    g <- project_grid(
+      dock_layout("block_panel-a", "block_panel-b", sizes = runif(2L, 0.1, 1))
+    )
+    if (!identical(g, canonicalize_grid(g))) {
+      drifter <- g
+      break
+    }
+  }
+
+  expect_false(is.null(drifter))
+  expect_no_error(validate_grid_value(drifter, "V"))
+
+  # A grid whose sizes are not normalised is a real, past-tolerance departure
+  # from its canonical form, so it is still rejected -- the tolerance absorbs
+  # last-bit jitter, not a genuinely different layout.
+  bad <- dock_layout("block_panel-a", "block_panel-b", sizes = c(1, 9))
+
+  expect_error(
+    validate_grid_value(bad, "V"),
+    class = "dock_grid_not_canonical"
+  )
+})

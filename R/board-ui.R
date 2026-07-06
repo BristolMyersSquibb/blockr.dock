@@ -165,7 +165,8 @@ dock_outputs_ui <- function(id, views) {
   div(
     id = NS(id, "view_container"),
     class = "blockr-view-container",
-    style = "position: relative; height: calc(100vh - 48px);"
+    style = "position: relative; height: calc(100vh - 48px);",
+    commit_probe_ui(id)
   )
 }
 

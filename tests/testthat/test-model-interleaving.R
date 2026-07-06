@@ -1,0 +1,434 @@
+# Model-based interleaving tests for the split-record flow (#294). The pure
+# reducers -- `apply_board_update` for membership (`views$mod`) and the
+# grid mirror (`views$grid`), plus `project_grid` /
+# `compose_layouts` -- are driven against an abstract client that tracks a
+# rendered panel set and a raw layout it echoes. The client places panels
+# arbitrarily; every property here is placement-agnostic, so no dockview logic
+# is duplicated and arbitrary placement is a stronger test than a faithful one.
+#
+# The event alphabet is {server op, client gesture, echo delivery (with flush
+# lag), restore}. A settled echo is a snapshot the generator delivers some steps
+# after it is taken, so membership can shift underneath it -- the flush lag that
+# makes an in-flight echo carry a since-removed panel (a ghost) or miss a
+# just-added one (an un-landed member). The single view is "V"; multi-view
+# membership is covered in test-views-delta.R.
+
+model_pool <- function() {
+  set_names(
+    lapply(seq_len(6L), function(i) new_dataset_block()),
+    letters[seq_len(6L)]
+  )
+}
+
+model_panels <- function() as.character(as_block_panel_id(letters[seq_len(6L)]))
+
+# The client's echo: a flat or lightly-nested layout over its rendered set, with
+# arbitrary sizes so the projection's default-elision and the mirror's size
+# tolerance are exercised. A single panel (or none) has no geometry to echo.
+client_layout <- function(rendered, sizes = NULL, nested = FALSE) {
+
+  rendered <- as.character(rendered)
+
+  if (!length(rendered)) {
+    return(new_dock_layout())
+  }
+
+  if (length(rendered) == 1L) {
+    return(dock_layout(rendered))
+  }
+
+  if (isTRUE(nested) && length(rendered) >= 3L) {
+    head <- rendered[[1L]]
+    tail <- rendered[-1L]
+    return(
+      dock_layout(
+        head,
+        do.call(group, as.list(tail)),
+        sizes = c(0.4, 0.6)
+      )
+    )
+  }
+
+  args <- as.list(rendered)
+
+  if (not_null(sizes)) {
+    args <- c(args, list(sizes = sizes))
+  }
+
+  do.call(dock_layout, args)
+}
+
+model_new <- function() {
+  brd <- new_dock_board(
+    blocks = model_pool(),
+    layouts = list(V = dock_layout("a", "b", "c"))
+  )
+  members <- view_members(board_views(brd)[["V"]])
+  list(
+    board = brd,
+    client = list(rendered = members, arr = client_layout(members),
+                  pending = NULL)
+  )
+}
+
+model_members <- function(st) view_members(board_views(st$board)[["V"]])
+
+model_stored <- function(st) board_grids(st$board)[["V"]]
+
+# The composed (shown) panel set: the intersection the board would render.
+model_shown <- function(st) {
+  layout_panel_ids(board_layouts(st$board)[["V"]])
+}
+
+# Membership write through the pure reducer, reporting whether the set changed
+# (one board commit) or not (a no-op).
+model_set_members <- function(st, members) {
+
+  before <- model_members(st)
+
+  st$board <- apply_board_update(
+    st$board,
+    list(views = list(mod = set_names(list(as.character(members)), "V")))
+  )
+
+  list(st = st, commit = as.integer(!setequal(before, model_members(st))))
+}
+
+# The grid mirror, reproduced verbatim from observe_grid_echo(): project the
+# pending echo, skip the commit when the canonical result is within the size
+# tolerance of what is stored (the all.equal guard), else store the canonical
+# echo. Returns the commit count so the "one gesture, at most one commit" bound
+# is checkable.
+model_deliver_echo <- function(st) {
+
+  echo <- st$client$pending
+
+  if (is.null(echo)) {
+    return(list(st = st, commit = 0L))
+  }
+
+  stored <- model_stored(st)
+  slot <- project_grid(echo)
+
+  if (isTRUE(all.equal(stored, slot, tolerance = grid_size_tol()))) {
+    st$client$pending <- NULL
+    return(list(st = st, commit = 0L))
+  }
+
+  wire <- canonicalize_grid(echo)
+
+  st$board <- apply_board_update(
+    st$board,
+    list(views = list(grid = set_names(list(wire), "V")))
+  )
+  st$client$pending <- NULL
+
+  list(st = st, commit = 1L)
+}
+
+# Restore-as-rebuild: reconstruct the board from its composed handle (ghosts
+# pruned, membership normalised to the shown intersection, grids
+# materialised as authored), then rebuild the client from the restored board.
+model_restore <- function(st) {
+
+  st$board <- new_dock_board(
+    blocks = board_blocks(st$board),
+    layouts = board_layouts(st$board)
+  )
+
+  members <- model_members(st)
+  st$client$rendered <- members
+  st$client$arr <- board_layouts(st$board)[["V"]]
+  st$client$pending <- NULL
+
+  st
+}
+
+# Classify every panel touched by the pair into exactly one semantics-table row,
+# and check the row matches what the board renders: placed <=> shown, while a
+# pending member, an inert ghost and an absent panel are all not shown.
+model_semantics_total <- function(st) {
+
+  members <- model_members(st)
+  stored <- model_stored(st)
+  shown <- model_shown(st)
+
+  arr_panels <- if (is.null(stored)) members else layout_panel_ids(stored)
+  universe <- union(model_panels(), union(members, arr_panels))
+
+  classify <- function(p) {
+    in_m <- p %in% members
+    in_a <- is.null(stored) || p %in% arr_panels
+    if (in_m && in_a) "placed" else if (in_m) "pending" else
+      if (p %in% arr_panels) "ghost" else "absent"
+  }
+
+  rows <- vapply(universe, classify, character(1L))
+
+  placed <- universe[rows == "placed"]
+  not_placed <- universe[rows != "placed"]
+
+  setequal(shown, placed) && !any(not_placed %in% shown)
+}
+
+# Every per-step invariant in one place, tagged for replay by seed / step.
+check_invariants <- function(st, commit, info) {
+
+  testthat::expect_no_error(validate_board(st$board))
+
+  shown <- model_shown(st)
+  members <- model_members(st)
+
+  # No ghost rendering: a panel absent from membership never reaches the grid.
+  testthat::expect_true(all(shown %in% members),
+                        info = paste(info, "| ghost render"))
+
+  # No un-landed member is rendered either: shown is exactly the placed set.
+  testthat::expect_true(model_semantics_total(st),
+                        info = paste(info, "| semantics"))
+
+  # One event, at most one board commit.
+  testthat::expect_lte(commit, 1L)
+  testthat::expect_gte(commit, 0L)
+}
+
+model_gesture <- function(st) {
+
+  rendered <- st$client$rendered
+
+  if (length(rendered) >= 2L) {
+    ord <- sample(rendered)
+    sizes <- runif(length(ord), 0.1, 1)
+    nested <- length(ord) >= 3L && runif(1L) < 0.3
+    st$client$arr <- client_layout(ord, sizes = sizes, nested = nested)
+  } else {
+    st$client$arr <- client_layout(rendered)
+  }
+
+  st$client$pending <- st$client$arr
+
+  list(st = st, commit = 0L)
+}
+
+model_add <- function(st) {
+
+  cand <- setdiff(model_panels(), model_members(st))
+
+  if (!length(cand)) {
+    return(list(st = st, commit = 0L))
+  }
+
+  p <- if (length(cand) == 1L) cand else sample(cand, 1L)
+  res <- model_set_members(st, c(model_members(st), p))
+
+  st <- res$st
+  st$client$rendered <- union(st$client$rendered, p)
+  st$client$arr <- client_layout(st$client$rendered)
+
+  list(st = st, commit = res$commit)
+}
+
+model_remove <- function(st) {
+
+  members <- model_members(st)
+
+  if (!length(members)) {
+    return(list(st = st, commit = 0L))
+  }
+
+  p <- if (length(members) == 1L) members else sample(members, 1L)
+  res <- model_set_members(st, setdiff(members, p))
+
+  st <- res$st
+  st$client$rendered <- setdiff(st$client$rendered, p)
+  st$client$arr <- client_layout(st$client$rendered)
+  # pending is left as-is: an in-flight echo may still carry p, which lands as a
+  # ghost until superseded -- the interleaving the flush lag is here to reach.
+
+  list(st = st, commit = res$commit)
+}
+
+test_that("a stale echo's ghost is pruned by compose, never rendered", {
+
+  st <- model_new()
+  cpan <- as.character(as_block_panel_id("c"))
+
+  # The client settles a drag over {a, b, c}; the snapshot is in flight.
+  st$client$arr <- client_layout(model_members(st), sizes = c(0.2, 0.3, 0.5))
+  st$client$pending <- st$client$arr
+
+  # Membership drops c before the echo lands.
+  st <- model_set_members(st, setdiff(model_members(st), cpan))$st
+
+  del <- model_deliver_echo(st)
+  st <- del$st
+
+  expect_identical(del$commit, 1L)
+  expect_true(cpan %in% layout_panel_ids(model_stored(st)))
+  expect_false(cpan %in% model_members(st))
+  expect_false(cpan %in% model_shown(st))
+  expect_no_error(validate_board(st$board))
+})
+
+test_that("an added member stays un-landed until its own echo arrives", {
+
+  st <- model_new()
+  dpan <- as.character(as_block_panel_id("d"))
+
+  st <- model_set_members(st, c(model_members(st), dpan))$st
+  st$client$rendered <- c(st$client$rendered, dpan)
+
+  # An echo that predates the add expresses an grid without d.
+  st$client$pending <- client_layout(
+    setdiff(st$client$rendered, dpan), sizes = c(0.4, 0.3, 0.3)
+  )
+  st <- model_deliver_echo(st)$st
+
+  expect_true(dpan %in% model_members(st))
+  expect_false(dpan %in% layout_panel_ids(model_stored(st)))
+  expect_false(dpan %in% model_shown(st))
+
+  # The client places d and echoes; now it is shown.
+  st$client$pending <- client_layout(
+    st$client$rendered, sizes = c(0.25, 0.25, 0.25, 0.25)
+  )
+  st <- model_deliver_echo(st)$st
+
+  expect_true(dpan %in% model_shown(st))
+})
+
+test_that("a settled gesture commits once; a re-echo commits nothing", {
+
+  st <- model_new()
+
+  st$client$arr <- client_layout(model_members(st), sizes = c(0.5, 0.3, 0.2))
+  st$client$pending <- st$client$arr
+
+  first <- model_deliver_echo(st)
+  st <- first$st
+  expect_identical(first$commit, 1L)
+
+  st$client$pending <- st$client$arr
+  second <- model_deliver_echo(st)
+  expect_identical(second$commit, 0L)
+
+  # Sub-tolerance jitter sits within the mirror's all.equal noise floor -> no
+  # commit, even though the stored sizes are kept verbatim (not quantised).
+  st$client$pending <- client_layout(
+    model_members(st), sizes = c(0.501, 0.299, 0.2)
+  )
+  expect_identical(model_deliver_echo(st)$commit, 0L)
+})
+
+test_that("restore rebuilds without resurrecting a pruned ghost", {
+
+  st <- model_new()
+  cpan <- as.character(as_block_panel_id("c"))
+
+  st$client$arr <- client_layout(model_members(st), sizes = c(0.2, 0.3, 0.5))
+  st$client$pending <- st$client$arr
+  st <- model_set_members(st, setdiff(model_members(st), cpan))$st
+  st <- model_deliver_echo(st)$st
+
+  expect_true(cpan %in% layout_panel_ids(model_stored(st)))
+
+  st <- model_restore(st)
+
+  expect_false(cpan %in% model_shown(st))
+  expect_false(cpan %in% model_members(st))
+  stored <- model_stored(st)
+  if (not_null(stored)) {
+    expect_false(cpan %in% layout_panel_ids(stored))
+  }
+  expect_no_error(validate_board(st$board))
+})
+
+test_that("restore rebuilds a view whose membership emptied under a ghost", {
+
+  # A committed board can legally hold empty membership beside a non-NULL
+  # grid that is now all ghosts (every member removed after the echo
+  # settled). Restoring it composes the grid down to nothing, which must
+  # round-trip rather than abort in the wire conversion.
+  st <- model_new()
+
+  st$client$arr <- client_layout(model_members(st), sizes = c(0.2, 0.3, 0.5))
+  st$client$pending <- st$client$arr
+  st <- model_deliver_echo(st)$st
+
+  for (p in model_members(st)) {
+    st <- model_set_members(st, setdiff(model_members(st), p))$st
+  }
+
+  expect_length(model_members(st), 0L)
+  expect_false(is.null(model_stored(st)))
+  expect_no_error(validate_board(st$board))
+
+  st <- model_restore(st)
+
+  expect_length(model_shown(st), 0L)
+  expect_length(model_members(st), 0L)
+  expect_no_error(validate_board(st$board))
+})
+
+test_that("seeded interleavings hold the invariants and converge", {
+
+  events <- c("gesture", "echo", "add", "remove", "restore")
+  probs <- c(0.30, 0.30, 0.16, 0.16, 0.08)
+
+  for (seed in seq_len(40L)) {
+
+    set.seed(seed)
+    st <- model_new()
+
+    for (i in seq_len(30L)) {
+
+      ev <- sample(events, 1L, prob = probs)
+
+      res <- switch(
+        ev,
+        gesture = model_gesture(st),
+        echo = model_deliver_echo(st),
+        add = model_add(st),
+        remove = model_remove(st),
+        restore = list(st = model_restore(st), commit = 0L)
+      )
+
+      st <- res$st
+      check_invariants(
+        st, res$commit, sprintf("seed=%d step=%d ev=%s", seed, i, ev)
+      )
+    }
+
+    # Quiescence: the client catches up to membership, echoes once, and the
+    # board must converge to what the client shows and hold as a fixed point.
+    members <- model_members(st)
+    n <- length(members)
+    st$client$rendered <- members
+    st$client$arr <- client_layout(members, sizes = if (n >= 2L) seq_len(n))
+    st$client$pending <- st$client$arr
+    st <- model_deliver_echo(st)$st
+
+    info <- sprintf("seed=%d quiescence", seed)
+
+    expect_true(
+      setequal(model_shown(st), members), info = paste(info, "content")
+    )
+    expect_true(
+      setequal(model_shown(st), st$client$rendered),
+      info = paste(info, "client agree")
+    )
+    expect_true(
+      isTRUE(all.equal(
+        model_stored(st), project_grid(st$client$arr),
+        tolerance = grid_size_tol()
+      )),
+      info = paste(info, "geometry")
+    )
+
+    st$client$pending <- st$client$arr
+    expect_identical(
+      model_deliver_echo(st)$commit, 0L,
+      info = paste(info, "fixed point")
+    )
+  }
+})

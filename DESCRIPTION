@@ -62,6 +62,7 @@ Collate:
     'board-plugins.R'
     'board-server.R'
     'board-ui.R'
+    'commit-budget.R'
     'dock-board.R'
     'dock-stack.R'
     'ext-class.R'
