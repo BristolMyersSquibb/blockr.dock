@@ -13,8 +13,10 @@ non-string -- yields \code{NULL}.}
 }
 \value{
 \code{NULL} when \code{status} carries no indicator, otherwise a list with
-components \code{color} (hex), \code{size} (pixel diameter), \code{placement} and
-\code{label}.
+components \code{color} (hex), \code{size} (the coloured dot's pixel diameter),
+\code{placement} and \code{label}. Each front-end draws the dot at this diameter
+with a 2px white ring around it, so the dock card icon and the DAG node
+badge match.
 }
 \description{
 Visual specification for the coloured dot that marks a block's eval status

@@ -212,7 +212,7 @@ test_that("block_status_style is the shared status-dot spec (#290)", {
 
   waiting <- block_status_style("waiting")
   expect_identical(waiting$color, "#f59e0b")
-  expect_identical(waiting$size, 12L)
+  expect_identical(waiting$size, 8L)
   expect_identical(waiting$placement, "right-bottom")
   expect_identical(waiting$label, "Waiting for a data input")
 

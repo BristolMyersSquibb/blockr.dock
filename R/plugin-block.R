@@ -730,8 +730,10 @@ create_issues_ui <- function(statuses, ns) {
 #'   non-string -- yields `NULL`.
 #'
 #' @return `NULL` when `status` carries no indicator, otherwise a list with
-#'   components `color` (hex), `size` (pixel diameter), `placement` and
-#'   `label`.
+#'   components `color` (hex), `size` (the coloured dot's pixel diameter),
+#'   `placement` and `label`. Each front-end draws the dot at this diameter
+#'   with a 2px white ring around it, so the dock card icon and the DAG node
+#'   badge match.
 #'
 #' @examples
 #' block_status_style("waiting")
@@ -755,7 +757,7 @@ block_status_style <- function(status) {
     return(NULL)
   }
 
-  c(spec, list(size = 12L, placement = "right-bottom"))
+  c(spec, list(size = 8L, placement = "right-bottom"))
 }
 
 block_status_indicator <- function(status) {

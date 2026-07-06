@@ -178,10 +178,13 @@
    The dot is layered onto the block icon's lower-right corner (iOS badge
    style), matching blockr.dag's node badge placement. Its size and colour are
    set inline from `block_status_style()` -- the source of truth both
-   front-ends share -- so only structure lives here. The dot output must stay
-   in flow when empty (never display:none) so it is not suspended while hidden
-   and left stuck ".recalculating", which would trip the busy-pulse scope; an
-   empty inline output takes no space on its own. */
+   front-ends share -- so only structure lives here. `size` is the coloured
+   dot's diameter; the 2px white ring is drawn *outside* it (box-shadow, not a
+   border) so the dot matches the DAG node badge, which rings its fill the same
+   way. The dot output must stay in flow when empty (never display:none) so it
+   is not suspended while hidden and left stuck ".recalculating", which would
+   trip the busy-pulse scope; an empty inline output takes no space on its
+   own. */
 .blockr-block-icon {
   position: relative;
   display: inline-flex;
@@ -190,12 +193,11 @@
 
 .blockr-status-dot {
   position: absolute;
-  right: -2px;
-  bottom: -2px;
+  right: 0;
+  bottom: 0;
   z-index: 1;
-  border: 2px solid #fff;
   border-radius: 50%;
-  box-sizing: border-box;
+  box-shadow: 0 0 0 2px #fff;
 }
 
 .blockr-status-note {
