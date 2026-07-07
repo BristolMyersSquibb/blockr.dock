@@ -64,10 +64,12 @@ extension_block_callback(x, ...)
   A function returning
   [`shiny::moduleServer()`](https://rdrr.io/pkg/shiny/man/moduleServer.html).
   Beyond `id`, it is called with the board handles `board`, `update`,
-  `dock` and `actions`, plus `extensions` – an environment exposing
+  `view_data` and `actions`, plus `extensions` – an environment exposing
   every extension's server result keyed by ID (each carrying its
   `state`), so one extension can read another's state via
-  `extensions[[id]]`.
+  `extensions[[id]]`. `view_data` is a reactive holding the live
+  all-views layout (the committed board is `board`); it is `NULL` until
+  every view has reported its layout once, so `req()` it.
 
 - ui:
 

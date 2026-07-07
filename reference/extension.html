@@ -113,10 +113,13 @@ can be combined into a <code>dock_extensions</code> object.</p>
 
 <dl><dt id="arg-server">server<a class="anchor" aria-label="anchor" href="#arg-server"></a></dt>
 <dd><p>A function returning <code><a href="https://rdrr.io/pkg/shiny/man/moduleServer.html" class="external-link">shiny::moduleServer()</a></code>. Beyond
-<code>id</code>, it is called with the board handles <code>board</code>, <code>update</code>, <code>dock</code>
-and <code>actions</code>, plus <code>extensions</code> – an environment exposing every
-extension's server result keyed by ID (each carrying its <code>state</code>),
-so one extension can read another's state via <code>extensions[[id]]</code>.</p></dd>
+<code>id</code>, it is called with the board handles <code>board</code>, <code>update</code>,
+<code>view_data</code> and <code>actions</code>, plus <code>extensions</code> – an environment
+exposing every extension's server result keyed by ID (each carrying
+its <code>state</code>), so one extension can read another's state via
+<code>extensions[[id]]</code>. <code>view_data</code> is a reactive holding the live
+all-views layout (the committed board is <code>board</code>); it is <code>NULL</code>
+until every view has reported its layout once, so <code>req()</code> it.</p></dd>
 
 
 <dt id="arg-ui">ui<a class="anchor" aria-label="anchor" href="#arg-ui"></a></dt>
