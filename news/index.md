@@ -16,6 +16,15 @@
   `waiting`, `unset` and `failed` blocks, so a board shows at a glance
   which blocks are not yet producing output.
 
+- Per-block condition UI (warnings, messages and errors) is now updated
+  surgically using the stable condition id blockr.core assigns each
+  condition, instead of tearing down and rebuilding the whole region on
+  every change
+  ([\#36](https://github.com/BristolMyersSquibb/blockr.dock/issues/36)).
+  An unchanged condition stays in place while a newly raised one is
+  inserted next to it and a resolved one is removed on its own, so a
+  persistent warning no longer flashes on each re-evaluation.
+
 - The busy pulse no longer flashes on a plain panel switch, only on real
   computation
   ([\#285](https://github.com/BristolMyersSquibb/blockr.dock/issues/285)).
