@@ -2,6 +2,26 @@
 
 ## blockr.dock (development version)
 
+- A board’s per-view layout is now split into two independent slots: a
+  `dock_views` collection of structure objects (each view’s ordered
+  panel-id set, name and id, plus the active view), read with
+  [`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md),
+  and a separate `NULL`-valid `dock_grids` slot of grid geometry, read
+  with
+  [`board_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  ([\#273](https://github.com/BristolMyersSquibb/blockr.dock/issues/273)).
+  Structure is server-authoritative and always current; a view’s grid
+  may be absent. A stored grid must reference only panels in its view’s
+  membership (`grid ⊆ membership`, checked in
+  [`validate_board()`](https://bristolmyerssquibb.github.io/blockr.core/reference/new_board.html)),
+  and a board is valid with no grids at all. The DSL is unchanged –
+  `new_dock_board(layouts = ...)` still takes fused
+  [`dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)s
+  and splits them at construction – and
+  [`board_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  composes the two slots back into the grid-bearing handle the update
+  lifecycle reads. The serialized form carries both fields.
+
 - Block eval status is now a first-class panel affordance instead of
   leaking through as an incidental warning
   ([\#290](https://github.com/BristolMyersSquibb/blockr.dock/issues/290)).

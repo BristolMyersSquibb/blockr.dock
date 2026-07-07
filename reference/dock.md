@@ -4,10 +4,15 @@ Using the docking layout manager provided by dockViewR, a `dock_board`
 extends
 [`blockr.core::new_board()`](https://bristolmyerssquibb.github.io/blockr.core/reference/new_board.html).
 In addition to the attributes contained in a core board, this also
-includes dock extensions (as `extensions`) and the panel arrangement (as
-`layouts`). The `layouts` field is always stored internally as a
-`dock_layouts` collection (multi-view); single-page boards are a
-degenerate case with one auto-named "Page" view.
+includes dock extensions (as `extensions`) and the per-view layout. At
+construction the `layouts` input is split into two board slots — view
+structure
+([`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md))
+and grid geometry
+([`board_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md));
+[`board_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+recomposes them. Single-page boards are a degenerate case with one
+auto-named "Page" view.
 
 ## Usage
 
@@ -69,7 +74,11 @@ dock_board_options()
 
   A named list of per-view arrangements (multi-view), a `dock_layout` /
   raw list (single-page), or an existing `dock_layouts` collection. All
-  forms are normalised to `dock_layouts`.
+  forms are resolved and split into the board's structure
+  ([`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md))
+  and grid
+  ([`board_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md))
+  slots.
 
 - active:
 
@@ -116,9 +125,9 @@ For multi-view boards, pass a named list to `layouts =` — each name
 becomes a view, each value is the panel arrangement (a
 [`dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
 or a raw list of block / extension IDs). For a single-page board, pass a
-`dock_layout` or raw list directly. Either way the input is normalised
-to a `dock_layouts`, with leaf IDs resolved against the board's blocks
-and extensions.
+`dock_layout` or raw list directly. Either way the input's leaf IDs are
+resolved against the board's blocks and extensions, then split into the
+structure and grid slots.
 
 ## Examples
 

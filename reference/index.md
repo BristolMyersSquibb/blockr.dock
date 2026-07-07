@@ -63,7 +63,18 @@ Multi-view (tabbed) boards. Each view is its own panel arrangement.
   [`` `board_layouts<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`board_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`as_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  : Dock views (layouts)
+  [`new_dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`is_dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`view_members()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`is_dock_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`validate_dock_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`` `board_views<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`is_dock_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`validate_dock_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`board_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`` `board_grids<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  : Dock views: structure and grid
 
 ## Board extensions
 
