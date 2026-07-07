@@ -153,6 +153,10 @@
   margin-top: 3px;
 }
 
+.blockr-issues:not(:has(.blockr-issue)) {
+  display: none;
+}
+
 .blockr-issues-toggle {
   cursor: pointer;
   color: var(--blockr-color-text-meta);
