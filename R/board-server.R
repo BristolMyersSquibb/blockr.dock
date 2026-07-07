@@ -248,7 +248,9 @@ observe_grid_echo <- function(id, dock, board, session,
       stored <- board_grids(board$board)[[id]]
       slot <- project_grid(echo)
 
-      if (identical(strip_provenance(stored), strip_provenance(slot))) {
+      # Same layout within the sash-position noise floor -> nothing to commit,
+      # so window-resize jitter is absorbed while a real drag still writes.
+      if (isTRUE(all.equal(stored, slot, tolerance = grid_size_tol()))) {
         return()
       }
 

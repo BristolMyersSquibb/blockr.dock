@@ -10,19 +10,47 @@ settle <- function(ms) {
   ms$elapse(300)
 }
 
-test_that("canonicalize_grid is idempotent and absorbs size jitter", {
+test_that("canonicalize_grid is idempotent and keeps sizes verbatim", {
 
-  ly <- dock_layout("a", "b", sizes = c(0.3, 0.7))
+  ly <- dock_layout("a", "b", sizes = c(0.301, 0.699))
 
   expect_identical(
     canonicalize_grid(ly),
     canonicalize_grid(canonicalize_grid(ly))
   )
 
-  jittered <- dock_layout("a", "b", sizes = c(0.301, 0.699))
-  expect_identical(
-    canonicalize_grid(ly),
-    canonicalize_grid(jittered)
+  # Sizes are stored faithfully now -- the jitter is not rounded away here, it
+  # is tolerated at the commit guard (see the `all.equal` test below).
+  expect_equal(grid_to_spec(canonicalize_grid(ly)[["grid"]])[["sizes"]],
+               c(0.301, 0.699))
+})
+
+test_that("all.equal.dock_layout absorbs sash jitter but not a real drag", {
+
+  base   <- dock_layout("a", "b", "c", sizes = c(0.30, 0.40, 0.30))
+  jitter <- dock_layout("a", "b", "c", sizes = c(0.303, 0.398, 0.299))
+  drag   <- dock_layout("a", "b", "c", sizes = c(0.45, 0.30, 0.25))
+
+  expect_true(isTRUE(all.equal(base, jitter, tolerance = grid_size_tol())))
+  expect_false(isTRUE(all.equal(base, drag, tolerance = grid_size_tol())))
+
+  # At R's default tolerance the comparison stays near-exact, so a plain
+  # `all.equal()` / `expect_equal()` on a layout is not silently fuzzed.
+  expect_false(isTRUE(all.equal(base, jitter)))
+
+  # Provenance is runtime bookkeeping, not layout identity.
+  stamped <- base
+  grid_provenance(stamped) <- "echo"
+  expect_true(isTRUE(all.equal(base, stamped, tolerance = grid_size_tol())))
+})
+
+test_that("the size tolerance is a tunable blockr_option", {
+
+  expect_equal(grid_size_tol(), 0.005)
+
+  withr::with_options(
+    list(blockr.dock_grid_size_tol = 0.02),
+    expect_equal(grid_size_tol(), 0.02)
   )
 })
 

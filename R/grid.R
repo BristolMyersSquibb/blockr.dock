@@ -1,69 +1,24 @@
-# The grid mirror stores a view's grid geometry as a one-directional
-# echo of the client's settled `_state`. Two properties make the echo a stable
-# fixed point, so a re-echoed but unchanged layout produces no board commit:
+# The grid mirror stores a view's grid geometry as a one-directional echo of
+# the client's settled `_state`. Canonicalisation round-trips through the wire
+# spec -- regenerating leaf ids, eliding a leaf's active-tab-is-first and the
+# load-default focus, dropping an even split's sizes -- so volatile detail never
+# triggers a write. Relative sizes are kept verbatim, faithful for serialization
+# and programmatic resize; the commit guard instead tolerates them via
+# `all.equal(tolerance = grid_size_tol())`, so the pixel-rounding jitter of a
+# window resize is absorbed while a deliberate sash drag still commits.
 #
-#   * Volatile detail is dropped by round-tripping through the wire spec, which
-#     regenerates leaf ids, elides a leaf's active-tab-is-first and the
-#     load-default focus, and drops an even split's sizes.
-#   * Relative sizes are quantised to a coarse grid, above the pixel-rounding
-#     jitter a window resize introduces (~1 per-mille) and below deliberate
-#     user intent (~1 per-cent), so two echoes of the same drag canonicalise
-#     identically.
-#
-# `project_grid()` elides a plain default (an even split of its own
-# panels, in order) to `NULL`. It does not restrict to membership: the mirror
-# stores the settled echo verbatim, and the two slots are related by total
-# semantics -- a member absent from the arrangement is an un-landed intent, a
-# panel absent from membership an inert ghost -- reconciled only at the compose
-# / restore boundary, never by a live writer.
-
-# 0.5% grid: coarse enough to absorb the sub-per-mille jitter of a window
-# resize, fine enough to preserve a deliberate sash drag.
-size_quantum_denom <- function() 200L
-
-quantize_sizes <- function(sizes) {
-
-  if (length(sizes) < 2L) {
-    return(sizes)
-  }
-
-  grid <- size_quantum_denom()
-  counts <- round(normalise_sizes(sizes) * grid)
-  counts[counts < 1L] <- 1L
-
-  top <- which.max(counts)
-  counts[top] <- counts[top] + (grid - sum(counts))
-
-  counts / grid
-}
-
-# Quantise every branch's sizes in a wire spec, dropping the sizes key when
-# quantisation lands on an even split. Leaves (bare strings, tabbed `panels`)
-# carry no sizes; the root branch and nested branches carry `children`.
-quantize_spec <- function(node) {
-
-  if (is.character(node) || not_null(node[["panels"]])) {
-    return(node)
-  }
-
-  if (not_null(node[["children"]])) {
-
-    node[["children"]] <- lapply(node[["children"]], quantize_spec)
-
-    if (not_null(node[["sizes"]])) {
-      quant <- quantize_sizes(node[["sizes"]])
-      node[["sizes"]] <- if (sizes_are_even(quant)) NULL else quant
-    }
-  }
-
-  node
-}
+# `project_grid()` elides a plain default (an even split of its own panels, in
+# order) to `NULL`. It does not restrict to membership: the mirror stores the
+# settled echo verbatim, and the two slots are related by total semantics -- a
+# member absent from the grid is an un-landed intent, a panel absent from
+# membership an inert ghost -- reconciled only at the compose / restore
+# boundary, never by a live writer.
 
 canonicalize_grid <- function(layout) {
-  spec_to_layout(quantize_spec(layout_to_spec(strip_provenance(layout))))
+  spec_to_layout(layout_to_spec(strip_provenance(layout)))
 }
 
-# Provenance records who wrote an arrangement value: `authored` for the
+# Provenance records who wrote a grid value: `authored` for the
 # constructor / deserialization push, `echo` for the settled-echo mirror. It
 # makes "the mirror is the sole echo writer" runtime-checkable and never
 # crosses the wire (stripped before serialization, re-stamped on read).
@@ -87,11 +42,37 @@ strip_provenance <- function(x) {
   x
 }
 
+# The sash-position noise floor, an absolute tolerance on the 0-1 size ratios: a
+# window resize re-derives ratios from integer pixels and jitters them well
+# under a per-cent, so half a per-cent absorbs that noise without eating a
+# deliberate drag. The default is a guess, so it is a `blockr_option()` -- tune
+# it with `options(blockr.dock_grid_size_tol = ...)`, no code change needed.
+grid_size_tol <- function() {
+  blockr_option("dock_grid_size_tol", 0.005)
+}
+
+# Approximate layout equality: structure exact, relative sizes within the
+# supplied `tolerance`. Deferring to `all.equal` keeps the stored sizes faithful
+# (only the comparison is fuzzy); comparing the unclassed list walks each pane's
+# size individually, `scale = 1` makes the tolerance absolute on the ratio
+# scale, and provenance is dropped as runtime bookkeeping. The R-default
+# tolerance stays near-exact, so `all.equal()` / `expect_equal()` on a layout is
+# unaffected unless a caller passes a tolerance (the mirror does).
+#' @export
+all.equal.dock_layout <- function(target, current, ..., scale = 1) {
+  all.equal(
+    unclass(strip_provenance(target)),
+    unclass(strip_provenance(current)),
+    ...,
+    scale = scale
+  )
+}
+
 # Canonicalise a raw layout (a client echo or a constructor / restore layout)
-# into a stored arrangement: quantise sizes, drop volatile ids / default tabs /
-# focus, and elide a plain default -- an even split of its own panels, in order
-# -- to NULL. Idempotent, so it is safe as both the mirror's write projection
-# and the fixed point the arrangement slot enforces.
+# into a stored grid: drop volatile ids / default tabs / focus, and elide a
+# plain default -- an even split of its own panels, in order -- to NULL. Sizes
+# ride through verbatim. Idempotent, so it is safe as both the mirror's write
+# projection and the fixed point the grid slot enforces.
 project_grid <- function(layout, provenance = "echo") {
 
   canon <- canonicalize_grid(layout)
@@ -111,17 +92,17 @@ is_default_grid <- function(layout) {
   )
 }
 
-# Restrict a stored arrangement to the panels a view actually holds, dropping
-# inert ghosts (arrangement panels no longer in membership). Boundary hygiene
+# Restrict a stored grid to the panels a view actually holds, dropping
+# inert ghosts (grid panels no longer in membership). Boundary hygiene
 # for `compose_layouts()` -- an un-landed member (in membership, absent from the
-# arrangement) is left out, so the composed handle shows the intersection.
+# grid) is left out, so the composed handle shows the intersection.
 restrict_grid <- function(arr, members) {
   drop_panels_from_layout(
     strip_provenance(arr), setdiff(layout_panel_ids(arr), members)
   )
 }
 
-# An arrangement value is well-formed when it is a canonical fixed point of the
+# A grid value is well-formed when it is a canonical fixed point of the
 # projection and carries a valid provenance. Checked on every committed board
 # (via validate_dock_grids), so a non-canonical or unstamped write is a
 # classed error rather than a source of re-echo churn.
