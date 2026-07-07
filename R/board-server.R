@@ -100,9 +100,10 @@ board_server_callback <- function(board, update, visible, ...,
   # RETURNS `dock`, `view_data`, `actions` and each extension's result to core,
   # which spreads them into every plugin's args. `view_data` + `actions` are in
   # both -- they are consumed on each side (serialization and the edit-block
-  # plugin read the returned pair). The gaps are deliberate: `dock`
-  # (active_dock) is returned for core's block insert / remove plugin but
-  # withheld from extensions, which read layout via `view_data`; `board` /
+  # plugin read the returned pair). `dock` (active_dock) is also handed to
+  # extensions for imperative panel ops that `view_data` (read-only layout)
+  # cannot do -- e.g. blockr.dag opens a block's panel on node-click via
+  # `show_panel(id, board, dock)`; it mirrors the active view's dock. `board` /
   # `update` are core's own inputs, not echoed back; the peer env stays
   # internal (core gets the resolved `ext_res`).
   ext_res <- lapply(
@@ -111,6 +112,7 @@ board_server_callback <- function(board, update, visible, ...,
     list(
       board = board,
       update = update,
+      dock = active_dock,
       view_data = view_data,
       actions = triggers,
       extensions = peers

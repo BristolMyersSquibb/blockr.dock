@@ -968,7 +968,7 @@ test_that("extension servers can read peer extension state", {
   )
 })
 
-test_that("extension servers receive view_data, not the active dock (#264)", {
+test_that("extension servers receive view_data and the active dock (#308)", {
 
   captured <- NULL
 
@@ -998,9 +998,12 @@ test_that("extension servers receive view_data, not the active dock (#264)", {
 
       expect_true(is.reactive(captured[["view_data"]]))
 
-      # `dock` (active_dock) is retired from the extension surface -- it is
-      # internal now (#264).
-      expect_false("dock" %in% names(captured))
+      # #264 withheld `dock` (active_dock) from extensions in favour of the
+      # read-only `view_data`. But `show_panel()` is exported, still takes the
+      # live dock (`dock$proxy`), and has no view_data-based replacement, so
+      # blockr.dag's node-click observer broke (#308). `dock` is back on the
+      # surface for those imperative panel ops; layout reads stay on view_data.
+      expect_true("dock" %in% names(captured))
     }
   )
 })
