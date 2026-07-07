@@ -258,6 +258,66 @@ test_that("renaming a block refreshes the dock panel title (#193)", {
   expect_identical(title_set, "Renamed")
 })
 
+test_that("rename skips views without the block's panel (#116)", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  # A board whose single view holds only `a`; `b` is parked with no panel in
+  # this view's dock. The per-view rename observer fires for every view, so it
+  # must skip the ones that do not hold the renamed block -- pushing a title to
+  # an absent panel reaches dockView with an unknown id and throws client-side.
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block("iris"), b = new_dataset_block("mtcars")),
+    layouts = list(v1 = dock_layout("a", name = "V1"))
+  )
+  upd <- reactiveVal()
+
+  with_mock_context(ms, {
+    manage_dock(
+      "dock_main", board_rv, update = upd,
+      layout = board_layouts(board_rv$board)[["v1"]]
+    )
+  })
+
+  ms$flushReact()
+
+  renamed <- character()
+
+  rename <- function(blk_id, name) {
+    with_mocked_bindings(
+      with_mocked_bindings(
+        {
+          with_mock_context(ms, {
+            upd(list(blocks = list(mod = set_names(
+              list(list(block_name = name)), blk_id
+            ))))
+          })
+          ms$flushReact()
+        },
+        set_panel_title = function(proxy, id, title, ...) {
+          renamed <<- c(renamed, as.character(id))
+          invisible(proxy)
+        },
+        .package = "dockViewR"
+      ),
+      get_dock_panel = function(id, ...) {
+        if (identical(as.character(id), as.character(as_block_panel_id("a")))) {
+          list(title = "iris")
+        } else {
+          NULL
+        }
+      }
+    )
+  }
+
+  rename("b", "Renamed b")
+  expect_identical(renamed, character())
+
+  rename("a", "Renamed a")
+  expect_identical(renamed, as.character(as_block_panel_id("a")))
+})
+
 test_that("live_view_data is NULL while any view layout is uninitialized", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
