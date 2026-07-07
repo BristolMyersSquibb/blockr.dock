@@ -661,24 +661,3 @@ sizes_are_even <- function(sizes) {
 
   isTRUE(all.equal(sizes, rep(1 / n, n)))
 }
-
-#' @export
-restore_board.dock_board <- function(x, new, result, ..., meta = NULL,
-                                     session = get_session()) {
-
-  des <- blockr_deser(new)
-
-  extra <- list(
-    extensions = dock_extensions(x),
-    options = board_options(x),
-    layouts = board_layouts(des)
-  )
-
-  res <- do.call(as_dock_board, c(list(des), extra))
-
-  if (is.null(meta)) {
-    result(res)
-  } else {
-    result(list(board = res, meta = meta))
-  }
-}
