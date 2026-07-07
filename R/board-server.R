@@ -47,7 +47,7 @@ board_server_callback <- function(board, update, visible, ...,
   docks <- reactiveValues()
   active_dock <- reactiveValues()
   client_active <- reactiveVal(NULL)
-  client_views <- reactiveVal(seed_view_state(board_layouts(initial_board)))
+  client_views <- reactiveVal(seed_view_state(board_views(initial_board)))
 
   switch_view_observer(session, update, client_active)
   add_view_observer(client_views, session, board, update)

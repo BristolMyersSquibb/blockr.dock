@@ -1,5 +1,19 @@
 # blockr.dock (development version)
 
+* A board's per-view layout is now split into two independent slots: a
+  `dock_views` collection of structure objects (each view's ordered
+  panel-id set, name and id, plus the active view), read with
+  `board_views()`, and a separate `NULL`-valid `dock_grids` slot of grid
+  geometry, read with `board_grids()` (#273). Structure is
+  server-authoritative and always current; a view's grid may be absent. A
+  stored grid must reference only panels in its view's membership
+  (`grid ⊆ membership`, checked in `validate_board()`), and a board is
+  valid with no grids at all. The DSL is unchanged --
+  `new_dock_board(layouts = ...)` still takes fused `dock_layout()`s and
+  splits them at construction -- and `board_layouts()` composes the two
+  slots back into the grid-bearing handle the update lifecycle reads. The
+  serialized form carries both fields.
+
 * Block eval status is now a first-class panel affordance instead of
   leaking through as an incidental warning (#290). Consuming the
   `board$eval[[id]]` status enum that blockr.core exposes, a `waiting`
@@ -62,6 +76,7 @@
   adjacent panel group is enough to re-emit the board, which is why #201
   surfaced this. The refresh now overlays the staged additions, edits and
   removals onto the refreshed applied state instead of clobbering them.
+
 * Dock extensions now receive `view_data`, the live all-views layout
   reactive (the same one serialization reads), so an extension can read
   the current arrangement of every view directly instead of folding it

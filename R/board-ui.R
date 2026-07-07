@@ -8,10 +8,11 @@ board_ui.dock_board <- function(
 ) {
   stopifnot(is_string(id))
 
-  views <- board_layouts(x)
+  views <- board_views(x)
 
   # View nav in the navbar -- always present, since boards always carry a
-  # `dock_layouts` (single-page boards have one auto-named "Page" view).
+  # `dock_views` collection (single-page boards have one auto-named "Page"
+  # view). The nav needs only structure (ids, names, active), not geometry.
   v_nav <- view_nav_ui(id, views)
 
   # One dock output per view, stacked inside the view container; visibility

@@ -30,10 +30,39 @@ test_that("dock_layouts serialization round-trip", {
   ser <- blockr_ser(brd)
   des <- blockr_deser(ser)
 
-  ly <- des[["layouts"]]
+  ly <- board_layouts(des)
   expect_s3_class(ly, "dock_layouts")
   expect_identical(unname(view_names(ly)), c("Tab1", "Tab2"))
   expect_identical(active_name(ly), "Tab2")
+})
+
+test_that("a pre-split board file (fused `layouts`) still deserializes", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(
+      A = dock_layout("a", "b", name = "Analysis"),
+      B = dock_layout("a", name = "Overview")
+    ),
+    active = "B"
+  )
+
+  # A file written before the structure / grid split carries a single
+  # fused `layouts` field instead of `views` + `grids`. Reconstruct
+  # that shape and check the deserializer's fallback path recombines it.
+  ser <- blockr_ser(brd)
+  ser[["payload"]][["views"]] <- NULL
+  ser[["payload"]][["grids"]] <- NULL
+  ser[["payload"]][["layouts"]] <- blockr_ser(board_layouts(brd))
+
+  des <- blockr_deser(ser)
+
+  expect_identical(board_views(des), board_views(brd))
+  expect_identical(active_view(des), "B")
+  expect_identical(
+    layout_panel_ids(board_layouts(des)[["A"]]),
+    c("block_panel-a", "block_panel-b")
+  )
 })
 
 test_that("a multi-view board round-trips identically through ser/des", {
@@ -57,14 +86,14 @@ test_that("a multi-view board round-trips identically through ser/des", {
   )
 
   before <- board_layouts(brd)
-  after <- blockr_deser(blockr_ser(brd))[["layouts"]]
+  after <- board_layouts(blockr_deser(blockr_ser(brd)))
 
   # ids (keys), display names, the active marker and every view's layout
   # survive a full serialize / deserialize cycle.
   expect_identical(after, before)
 })
 
-test_that("serialized dock_layouts records view id, name and active", {
+test_that("serialized dock_views records view id, name and active", {
 
   # Fixed ids (the list keys) keep the wire shape deterministic so the id
   # (object key) / name (field) / active split stays visible and
@@ -78,13 +107,15 @@ test_that("serialized dock_layouts records view id, name and active", {
     active = "view_two"
   )
 
-  layouts <- blockr_ser(brd)[["payload"]][["layouts"]]
+  views <- blockr_ser(brd)[["payload"]][["views"]][["payload"]]
 
-  expect_snapshot(
-    cat(
-      jsonlite::toJSON(layouts, pretty = TRUE, auto_unbox = TRUE,
-                       null = "null")
-    )
+  expect_identical(views[["active"]], "view_two")
+  expect_identical(names(views[["views"]]), c("view_one", "view_two"))
+  expect_identical(views[["views"]][["view_one"]][["name"]], "Analysis")
+  expect_identical(views[["views"]][["view_two"]][["name"]], "Overview")
+  expect_identical(
+    unlist(views[["views"]][["view_one"]][["payload"]]),
+    "block_panel-a"
   )
 })
 
@@ -95,9 +126,7 @@ test_that("serialized dock_layout uses the flattened wire spec", {
   )
 
   ser <- blockr_ser(brd)
-  payload <- ser[["payload"]][["layouts"]][["payload"]][["views"]][[1L]][[
-    "payload"
-  ]]
+  payload <- ser[["payload"]][["grids"]][["payload"]][[1L]]
 
   # Flattened: no `root` wrapper, branch fields hoisted to the top.
   expect_true("children" %in% names(payload))
@@ -146,9 +175,7 @@ test_that("grid_to_spec omits even sizes and default active tabs", {
   )
 
   ser <- blockr_ser(brd)
-  payload <- ser[["payload"]][["layouts"]][["payload"]][["views"]][[1L]][[
-    "payload"
-  ]]
+  payload <- ser[["payload"]][["grids"]][["payload"]][[1L]]
 
   # Two equal-share children: sizes field omitted entirely.
   expect_false("sizes" %in% names(payload))
@@ -381,7 +408,7 @@ test_that("layout survives a real JSON encode/decode round-trip", {
   json <- jsonlite::toJSON(ser, null = "null")
   back <- jsonlite::fromJSON(json, simplifyDataFrame = FALSE,
                              simplifyMatrix = FALSE)
-  ly <- blockr_deser(back)[["layouts"]][[1L]]
+  ly <- board_layouts(blockr_deser(back))[[1L]]
 
   expect_equal(ly$grid$root$data[[1L]]$size, 0.3)
   expect_equal(ly$grid$root$data[[2L]]$size, 0.7)
@@ -476,14 +503,14 @@ test_that("layout_panel_ids and panel_obj_ids are inverse-ish", {
 
 # Layout features encoded in the grid tree (sizes, activeView,
 # orientation, nested group sizes) must survive ser/des untouched —
-# otherwise a saved custom arrangement would degrade to defaults on
+# otherwise a saved custom grid would degrade to defaults on
 # load.
 test_that("dock_layout custom sizes round-trip through ser/des", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(Page = dock_layout("a", "b", sizes = c(0.3, 0.7)))
   )
-  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][[1L]]
+  ly <- board_layouts(blockr_deser(blockr_ser(brd)))[[1L]]
   expect_equal(ly$grid$root$data[[1L]]$size, 0.3)
   expect_equal(ly$grid$root$data[[2L]]$size, 0.7)
 })
@@ -499,7 +526,7 @@ test_that("panels(active = ...) round-trips through ser/des", {
       Page = dock_layout(panels("a", "b", "c", active = "b"))
     )
   )
-  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][[1L]]
+  ly <- board_layouts(blockr_deser(blockr_ser(brd)))[[1L]]
   expect_identical(
     ly$grid$root$data[[1L]]$data$activeView,
     "block_panel-b"
@@ -513,7 +540,7 @@ test_that("orientation round-trips through ser/des", {
       Page = dock_layout("a", "b", orientation = "vertical")
     )
   )
-  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][[1L]]
+  ly <- board_layouts(blockr_deser(blockr_ser(brd)))[[1L]]
   expect_identical(ly$grid$orientation, "VERTICAL")
 })
 
@@ -532,7 +559,7 @@ test_that("nested group() sizes round-trip through ser/des", {
       )
     )
   )
-  ly <- blockr_deser(blockr_ser(brd))[["layouts"]][[1L]]
+  ly <- board_layouts(blockr_deser(blockr_ser(brd)))[[1L]]
   outer <- ly$grid$root$data
   expect_equal(outer[[1L]]$size, 0.3)
   expect_equal(outer[[2L]]$size, 0.7)
@@ -655,11 +682,11 @@ test_that("producer version threads from the board down to layout reading", {
     as.character(utils::packageVersion("blockr.dock"))
   )
 
-  # Inject a stale dockview `grid` into the spec payload: the spec reader
+  # Inject a stale dockview `grid` into the grid spec: the spec reader
   # wins only if the board's producer version reaches the nested layout
   # reader, exercising the full threading path.
-  views <- ser[["payload"]][["layouts"]][["payload"]][["views"]]
-  views[[1L]][["payload"]][["grid"]] <- list(
+  gr <- ser[["payload"]][["grids"]][["payload"]]
+  gr[[1L]][["grid"]] <- list(
     root = list(
       type = "leaf",
       data = list(
@@ -671,8 +698,8 @@ test_that("producer version threads from the board down to layout reading", {
     ),
     orientation = "HORIZONTAL"
   )
-  ser[["payload"]][["layouts"]][["payload"]][["views"]] <- views
+  ser[["payload"]][["grids"]][["payload"]] <- gr
 
   des <- blockr_deser(ser)
-  expect_identical(layout_panel_ids(des[["layouts"]][[1L]]), "block_panel-a")
+  expect_identical(layout_panel_ids(board_layouts(des)[[1L]]), "block_panel-a")
 })

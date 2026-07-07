@@ -52,7 +52,7 @@ normalize_views_delta <- function(views, board) {
   if (length(views$add)) {
 
     add_keys <- names(views$add)
-    views$add <- mint_added_view_ids(views$add, names(board_layouts(board)))
+    views$add <- mint_added_view_ids(views$add, names(board_views(board)))
 
     # "Add a view and make it active" in one delta: a new view has no id
     # to name in `active` until it is minted just above, so `active` may
@@ -183,7 +183,7 @@ validate_views_delta <- function(views, board, upd) {
     )
   }
 
-  current_views <- names(board_layouts(board))
+  current_views <- names(board_views(board))
   unknown_mod <- setdiff(mod_ids, current_views)
   if (length(unknown_mod)) {
     blockr_abort(
