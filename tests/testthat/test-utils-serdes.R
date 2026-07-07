@@ -119,6 +119,88 @@ test_that("a multi-view board round-trips identically through ser/des", {
   expect_identical(after, before)
 })
 
+test_that("restore drops a member absent from an expressed grid", {
+
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(), b = new_head_block(), c = new_head_block()
+    ),
+    layouts = list(
+      A = dock_layout("a", "b", "c", sizes = c(0.2, 0.3, 0.5), name = "A")
+    )
+  )
+
+  # An export taken mid-add: membership still carries `c`, but the settled grid
+  # expresses only `a` and `b` (c's placement had not landed).
+  ser <- blockr_ser(brd)
+  grid_ab <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = dock_layout("a", "b", sizes = c(0.3, 0.7)))
+  )
+  ser[["payload"]][["grids"]][["payload"]][["A"]] <-
+    blockr_ser(grid_ab)[["payload"]][["grids"]][["payload"]][["A"]]
+
+  des <- blockr_deser(ser)
+
+  # Restore normalizes membership to the intersection: the un-landed member is
+  # dropped (as if never added) yet stays a board block for the picker.
+  expect_setequal(
+    view_members(board_views(des)[["A"]]), c("block_panel-a", "block_panel-b")
+  )
+  expect_true("c" %in% board_block_ids(des))
+  expect_false(
+    "block_panel-c" %in% layout_panel_ids(board_layouts(des)[["A"]])
+  )
+})
+
+test_that("restore prunes a grid ghost outside membership", {
+
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(), b = new_head_block(), c = new_head_block()
+    ),
+    layouts = list(
+      A = dock_layout("a", "b", "c", sizes = c(0.2, 0.3, 0.5), name = "A")
+    )
+  )
+
+  # Membership drops `c` while the grid still lists it -- a ghost.
+  ser <- blockr_ser(brd)
+  ser[["payload"]][["views"]][["payload"]][["views"]][["A"]][["payload"]] <-
+    list("block_panel-a", "block_panel-b")
+
+  des <- blockr_deser(ser)
+
+  expect_setequal(
+    view_members(board_views(des)[["A"]]), c("block_panel-a", "block_panel-b")
+  )
+  expect_false(
+    "block_panel-c" %in% layout_panel_ids(board_layouts(des)[["A"]])
+  )
+})
+
+test_that("restore renders unexpressed members via the default layout", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = dock_layout("a", "b", name = "A"))
+  )
+
+  # `dock_layout("a", "b")` is a plain default, so no grid is expressed.
+  ser <- blockr_ser(brd)
+  expect_length(ser[["payload"]][["grids"]][["payload"]], 0L)
+
+  des <- blockr_deser(ser)
+
+  # Distinct from the expressed case: with nothing expressed, every member
+  # renders via the default layout -- none is dropped.
+  expect_setequal(
+    layout_panel_ids(board_layouts(des)[["A"]]),
+    c("block_panel-a", "block_panel-b")
+  )
+  expect_null(board_grids(des)[["A"]])
+})
+
 test_that("serialized dock_views records view id, name and active", {
 
   # Fixed ids (the list keys) keep the wire shape deterministic so the id

@@ -493,6 +493,42 @@ test_that("board_server_callback seeds visibility before the client reports", {
   })
 })
 
+test_that("the visibility seed reads the active view's open tabs", {
+
+  # An expressed tab group hides its back tab: only the front panel of each
+  # group seeds visibility (the authored grid's open tabs at birth).
+  board_rv <- board_args(
+    blocks = c(
+      a = new_dataset_block(), b = new_head_block(), d = new_head_block()
+    ),
+    layouts = list(v = dock_layout(panels("a", "b", active = "b"), "d"))
+  )
+
+  with_mock_session({
+    visible <- reactiveVal()
+    board_server_callback(board_rv, update = reactiveVal(), visible = visible)
+
+    expect_setequal(isolate(visible()), c("b", "d"))
+  })
+})
+
+test_that("the visibility seed falls back to all members when unexpressed", {
+
+  # Separate single-panel leaves are a plain default -> NULL grid, so every
+  # member is on-screen (none is a hidden back tab).
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(page = dock_layout("a", "b"))
+  )
+
+  with_mock_session({
+    visible <- reactiveVal()
+    board_server_callback(board_rv, update = reactiveVal(), visible = visible)
+
+    expect_setequal(isolate(visible()), c("a", "b"))
+  })
+})
+
 test_that("view nav renders one labelled item per view (#189)", {
 
   board <- new_dock_board(
@@ -648,6 +684,60 @@ test_that("reconcile_views forwards the live board to created views (#194)", {
   # board_blocks() with `is_board(x) is not TRUE` on the next add-panel click.
   expect_true(is_dock_board(isolate(forwarded$board)))
   expect_silent(isolate(board_block_ids(forwarded$board)))
+})
+
+test_that("reconcile creates a view with its authored grid (#295)", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(), b = new_head_block(), c = new_head_block()
+    ),
+    layouts = list(
+      V = dock_layout("a", panels("b", "c", active = "c"), sizes = c(0.3, 0.7))
+    )
+  )
+  rv <- with_mock_context(ms, reactiveValues(board = brd))
+
+  captured <- NULL
+  capture_create <- function(v_id, layout, board, update, session, docks, ...) {
+    captured <<- layout
+    docks[[v_id]] <- list(layout = function() NULL)
+  }
+
+  docks <- with_mock_context(ms, reactiveValues())
+  client_views <- with_mock_context(ms, reactiveVal(list()))
+  client_active <- with_mock_context(ms, reactiveVal(NULL))
+  active_dock <- with_mock_context(ms, reactiveValues())
+  update <- with_mock_context(ms, reactiveVal())
+  rec_session <- list(
+    ns = identity,
+    sendInputMessage = function(...) invisible()
+  )
+
+  with_mocked_bindings(
+    with_mock_context(
+      ms,
+      reconcile_views(
+        rv, update, docks, active_dock, client_active, client_views,
+        rec_session
+      )
+    ),
+    create_view = capture_create,
+    switch_active_view = function(...) invisible(),
+    .package = "blockr.dock"
+  )
+
+  # A new dock is seeded with the composed authored grid -- the settled geometry
+  # the client replays once and then echoes back. reconcile reads it through the
+  # compose bridge, so ghosts are pruned and members normalized.
+  expect_identical(captured, board_layouts(brd)[["V"]])
+  expect_setequal(
+    layout_panel_ids(captured),
+    c("block_panel-a", "block_panel-b", "block_panel-c")
+  )
 })
 
 test_that("reconcile_views never pushes a layout back to a live dock (#259)", {

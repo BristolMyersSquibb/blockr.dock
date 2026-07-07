@@ -237,6 +237,26 @@ block_panel_tabs <- function(app, board_id = "my_board") {
   sort(sub(".*-tab-(block_panel-.+)$", "\\1", xml2::xml_attr(nodes, "id")))
 }
 
+# The block panels whose tab is the *front* (active) tab of its dockview
+# group -- the client-rendered geometry a server-side read cannot see. dockview
+# marks the active tab by toggling `dv-active-tab` on the `.dv-tab` wrapper of
+# the custom tab element (id `...-tab-block_panel-<id>`), so the front tab is
+# that wrapper's descendant tab id. A restored group shows exactly one front
+# tab; a collapse to separate leaves surfaces every panel as its own.
+active_block_panel_tabs <- function(app, board_id = "my_board") {
+  html <- xml2::read_html(
+    app$get_html(paste0("#", board_id, "-view_container"))
+  )
+  xpath <- paste0(
+    "//*[contains(@id, '-tab-block_panel-')]",
+    "[ancestor-or-self::*[contains(concat(' ', normalize-space(@class), ' '), ",
+    "' dv-active-tab ')]]"
+  )
+  nodes <- xml2::xml_find_all(html, xpath)
+  ids <- sub(".*-tab-(block_panel-.+)$", "\\1", xml2::xml_attr(nodes, "id"))
+  sort(unique(ids))
+}
+
 # Shared helpers for the edit-board extension e2e tests (links, stacks). The
 # extension namespaces its inputs under `my_board-edit_board_extension-`. The
 # extension panel stays active in those tests (pre-seeded fixtures, no block

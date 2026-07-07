@@ -238,3 +238,71 @@ test_that("the split board round-trips through serialization", {
   expect_identical(board_views(des), board_views(brd))
   expect_identical(board_grids(des), board_grids(brd))
 })
+
+test_that("a never-rendered board round-trips byte-identically", {
+
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(),
+      b = new_head_block(),
+      c = new_head_block()
+    ),
+    layouts = list(
+      analysis = dock_layout("a", panels("b", "c", active = "c"),
+                             sizes = c(0.3, 0.7), name = "Analysis"),
+      overview = dock_layout("a", name = "Overview")
+    ),
+    active = "overview"
+  )
+
+  wire <- blockr_ser(brd)
+  des <- blockr_deser(wire)
+
+  # An authored board that never met a client is a fixed point of the wire
+  # (ser == ser . deser . ser, so the JSON bytes are stable too): the expressed
+  # grid survives, the plain-default view carries none.
+  expect_identical(blockr_ser(des), wire)
+  expect_identical(
+    jsonlite::toJSON(blockr_ser(des), auto_unbox = TRUE, null = "null"),
+    jsonlite::toJSON(wire, auto_unbox = TRUE, null = "null")
+  )
+  expect_false(is.null(board_grids(des)[["analysis"]]))
+})
+
+test_that("a membership-only board round-trips with no grid", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(one = dock_layout("a"), two = dock_layout("b"))
+  )
+
+  # Every view is a plain default, so nothing is expressed: the wire carries an
+  # empty grids payload and restore rebuilds from membership alone.
+  expect_length(blockr_ser(brd)[["payload"]][["grids"]][["payload"]], 0L)
+
+  des <- blockr_deser(blockr_ser(brd))
+
+  expect_null(board_grids(des)[["one"]])
+  expect_null(board_grids(des)[["two"]])
+  expect_identical(board_views(des), board_views(brd))
+})
+
+test_that("a NULL grid survives a runtime active-view switch", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(one = dock_layout("a"), two = dock_layout("b")),
+    active = "one"
+  )
+
+  expect_null(board_grids(brd)[["two"]])
+
+  # Switching the active view round-trips through the compose bridge, which
+  # forges a default grid for the NULL slot and elides it straight back -- a
+  # never-rendered view stays grid-free rather than freezing a grid.
+  active_view(brd) <- "two"
+
+  expect_null(board_grids(brd)[["one"]])
+  expect_null(board_grids(brd)[["two"]])
+  expect_identical(active_view(board_views(brd)), "two")
+})
