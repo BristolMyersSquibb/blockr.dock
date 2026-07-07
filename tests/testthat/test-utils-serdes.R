@@ -17,6 +17,32 @@ test_that("ser/des utils", {
   )
 })
 
+# A dock board's option values -- board-owned (board_name) and block-
+# contributed (page_size, baked on by board_server's effective option set)
+# alike -- must come from the saved board, never leak in from the pre-restore
+# board. Restore deserializes the saved board and returns it as-is.
+test_that("restoring a dock board keeps the saved board-option values", {
+
+  saved <- new_dock_board(blocks = c(a = new_dataset_block()))
+  board_options(saved) <- new_board_options(
+    new_board_name_option(value = "Saved"),
+    new_page_size_option(value = 25L)
+  )
+
+  current <- new_dock_board(blocks = c(a = new_dataset_block()))
+  board_options(current) <- new_board_options(
+    new_board_name_option(value = "Current"),
+    new_page_size_option(value = 99L)
+  )
+
+  restored <- NULL
+  restore_board(current, blockr_ser(saved), function(x) restored <<- x)
+
+  opts <- board_options(restored)
+  expect_identical(board_option_value(opts[["board_name"]]), "Saved")
+  expect_identical(board_option_value(opts[["page_size"]]), 25L)
+})
+
 test_that("dock_layouts serialization round-trip", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
