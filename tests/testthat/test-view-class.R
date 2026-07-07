@@ -1,4 +1,4 @@
-test_that("new_dock_board splits the layout into structure and grid", {
+test_that("new_dock_board splits the layout into structure and arrangement", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -22,16 +22,16 @@ test_that("new_dock_board splits the layout into structure and grid", {
   )
   expect_identical(view_members(views[["B"]]), "block_panel-a")
 
+  # A plain default arrangement (even split over the members, in order) is
+  # elided to NULL; the structure slot alone reconstructs it.
   arr <- board_grids(brd)
   expect_s3_class(arr, "dock_grids")
   expect_identical(names(arr), c("A", "B"))
-  expect_identical(
-    layout_panel_ids(arr[["A"]]),
-    c("block_panel-a", "block_panel-b")
-  )
+  expect_null(arr[["A"]])
+  expect_null(arr[["B"]])
 })
 
-test_that("structure stays bit-stable through an grid round-trip", {
+test_that("structure stays bit-stable through an arrangement round-trip", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -67,29 +67,42 @@ test_that("board_layouts composes the two slots back into a dock_layouts", {
   )
 })
 
-test_that("grid must be a subset of membership", {
+test_that("an arrangement may hold a ghost panel outside membership", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(A = dock_layout("a", "b", name = "Analysis"))
   )
 
-  bad <- new_dock_grids(
-    list(A = dock_layout("a", "b", "block_panel-ghost"))
+  # Total semantics: an arrangement entry with no membership is an inert ghost,
+  # legal on a committed board and pruned only when the view is composed.
+  ghost <- canonicalize_grid(
+    dock_layout("block_panel-a", "block_panel-b", "block_panel-ghost")
   )
+  grid_provenance(ghost) <- "authored"
+  board_grids(brd) <- new_dock_grids(list(A = ghost))
 
-  expect_error(
-    validate_dock_grids(bad, board_views(brd)),
-    class = "dock_grid_not_subset"
-  )
-
-  expect_error(
-    board_grids(brd) <- bad,
-    class = "dock_grid_not_subset"
+  expect_s3_class(validate_board(brd), "dock_board")
+  expect_false(
+    "block_panel-ghost" %in% layout_panel_ids(board_layouts(brd)[["A"]])
   )
 })
 
-test_that("an grid keyed by an unknown view is rejected", {
+test_that("validate rejects a member with no backing block or extension", {
+
+  # Unlike a ghost arrangement entry, a member must reference a block or
+  # extension on the board (members subset-of blocks, referential integrity).
+  bad <- reconstruct_dock_views(
+    list(A = new_dock_view(c("block_panel-a", "block_panel-ghost")))
+  )
+
+  expect_error(
+    validate_view_membership(bad, "block_panel-a"),
+    class = "dock_view_membership_unknown"
+  )
+})
+
+test_that("an arrangement keyed by an unknown view is rejected", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
@@ -104,7 +117,7 @@ test_that("an grid keyed by an unknown view is rejected", {
   )
 })
 
-test_that("a board is valid with no grid at all", {
+test_that("a board is valid with no arrangement at all", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -130,7 +143,7 @@ test_that("a board is valid with no grid at all", {
   expect_identical(active_view(composed), active_view(board_views(brd)))
 })
 
-test_that("a single view's grid may be NULL", {
+test_that("a single view's arrangement may be NULL", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -161,7 +174,7 @@ test_that("board_views<- rejects a non-dock_views value", {
   )
 })
 
-test_that("rm_blocks drops the block from structure and grid", {
+test_that("rm_blocks drops the block from structure and arrangement", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -171,9 +184,37 @@ test_that("rm_blocks drops the block from structure and grid", {
   brd <- rm_blocks(brd, "a")
 
   expect_identical(view_members(board_views(brd)[["A"]]), "block_panel-b")
-  expect_identical(
-    layout_panel_ids(board_grids(brd)[["A"]]),
-    "block_panel-b"
+  # One surviving panel has no geometry, so its arrangement elides to NULL.
+  expect_null(board_grids(brd)[["A"]])
+})
+
+test_that("rm_blocks drops the member but leaves a legal arrangement ghost", {
+
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(), b = new_head_block(), c = new_head_block()
+    ),
+    layouts = list(
+      A = dock_layout("a", "b", "c", sizes = c(0.2, 0.3, 0.5), name = "A")
+    )
+  )
+
+  brd <- rm_blocks(brd, "b")
+
+  # Membership drops the block (a set op); the stored arrangement keeps it as an
+  # inert ghost -- legal under total semantics -- and the composed handle prunes
+  # it, so the view shows the intersection.
+  expect_setequal(
+    view_members(board_views(brd)[["A"]]),
+    c("block_panel-a", "block_panel-c")
+  )
+  expect_true(
+    "block_panel-b" %in% layout_panel_ids(board_grids(brd)[["A"]])
+  )
+  expect_s3_class(validate_board(brd), "dock_board")
+  expect_setequal(
+    layout_panel_ids(board_layouts(brd)[["A"]]),
+    c("block_panel-a", "block_panel-c")
   )
 })
 

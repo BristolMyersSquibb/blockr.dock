@@ -148,7 +148,7 @@ test_that("serialized dock_views records view id, name and active", {
 test_that("serialized dock_layout uses the flattened wire spec", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(Page = list("a", "b"))
+    layouts = list(Page = dock_layout("a", "b", sizes = c(0.3, 0.7)))
   )
 
   ser <- blockr_ser(brd)
@@ -697,8 +697,8 @@ test_that("layout_reader_for picks the newest applicable format, order-blind", {
 test_that("producer version threads from the board down to layout reading", {
 
   brd <- new_dock_board(
-    blocks = c(a = new_dataset_block()),
-    layouts = list(Page = dock_layout("a"))
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(Page = dock_layout("a", "b", sizes = c(0.3, 0.7)))
   )
 
   ser <- blockr_ser(brd)
@@ -727,5 +727,8 @@ test_that("producer version threads from the board down to layout reading", {
   ser[["payload"]][["grids"]][["payload"]] <- gr
 
   des <- blockr_deser(ser)
-  expect_identical(layout_panel_ids(board_layouts(des)[[1L]]), "block_panel-a")
+  expect_identical(
+    layout_panel_ids(board_layouts(des)[[1L]]),
+    c("block_panel-a", "block_panel-b")
+  )
 })

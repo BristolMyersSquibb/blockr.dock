@@ -116,6 +116,27 @@ validate_dock_views <- function(x) {
   x
 }
 
+# Members are panel ids; each must reference a block or extension on the board
+# (referential integrity, `members ⊆ blocks`). Ghost arrangement entries are
+# exempt -- inert and pruned at the boundary -- but a member with no backing
+# object is a dangling panel, so it is rejected.
+validate_view_membership <- function(views, ok_panels) {
+
+  for (id in names(views)) {
+
+    bad <- setdiff(view_members(views[[id]]), ok_panels)
+
+    if (length(bad)) {
+      blockr_abort(
+        "View {id} member{?s} {bad} reference no block or extension.",
+        class = "dock_view_membership_unknown"
+      )
+    }
+  }
+
+  invisible(views)
+}
+
 # Ids key the container and become DOM / namespace ids, so they must be safe
 # identifiers (no whitespace); free-form display labels live on the view as a
 # name. Shared by `validate_dock_views()` and `validate_dock_layouts()`.
@@ -289,21 +310,7 @@ validate_dock_grids <- function(x, views = NULL) {
     }
 
     validate_dock_layout(grid)
-
-    if (not_null(views)) {
-
-      extra <- setdiff(layout_panel_ids(grid), view_members(views[[id]]))
-
-      if (length(extra)) {
-        blockr_abort(
-          paste(
-            "Grid for view {id} references panel{?s} {extra} outside",
-            "its membership."
-          ),
-          class = "dock_grid_not_subset"
-        )
-      }
-    }
+    validate_grid_value(grid, id)
   }
 
   x
@@ -337,10 +344,15 @@ compose_layouts <- function(views, grids = NULL) {
 
     grid <- if (is.null(grids)) NULL else grids[[id]]
 
+    members <- view_members(views[[id]])
+
+    # Total semantics at the boundary: an unexpressed grid (NULL) renders its
+    # members via a default layout; an expressed one shows the intersection --
+    # ghosts pruned, un-landed members left out (restored as if never added).
     ly <- if (is.null(grid)) {
-      default_grid(view_members(views[[id]]))
+      default_grid(members)
     } else {
-      grid
+      restrict_grid(grid, members)
     }
 
     nm <- view_name(views[[id]])
@@ -383,11 +395,16 @@ decompose_layouts <- function(layouts) {
     active_view(views) <- active
   }
 
-  grids <- new_dock_grids(
-    set_names(lapply(unname(layouts), strip_view_name), ids)
-  )
+  grids <- new_dock_grids(lapply(layouts, authored_grid))
 
   list(views = views, grids = grids)
+}
+
+# Canonicalise a constructor / restore layout into an `authored` arrangement,
+# elided to `NULL` when it is a plain default. The stored form matches what the
+# client will echo, so loading a board produces no spurious mirror write.
+authored_grid <- function(layout) {
+  project_grid(strip_view_name(layout), provenance = "authored")
 }
 
 strip_view_name <- function(x) {

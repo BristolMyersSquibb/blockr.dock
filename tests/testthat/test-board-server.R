@@ -833,7 +833,7 @@ test_that("extensions mod state is applied via the update lifecycle", {
   expect_identical(isolate(content()), "# new")
 })
 
-test_that("a live-only panel add folds into board_layouts (#217)", {
+test_that("a live-only panel add folds into view membership (#217)", {
 
   board_rv <- board_args(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -853,9 +853,10 @@ test_that("a live-only panel add folds into board_layouts (#217)", {
   live_panels <- isolate(res$dock$live_panels)
   expect_false(is.null(live_panels))
 
-  # The add-panel modal / show_panel touch only the live dock; board_layouts
-  # must catch up in the same flush (via the fold observer), not the debounced
-  # echo, or a later reconcile would restore a layout missing the new panel.
+  # The add-panel modal / show_panel touch only the live dock; view membership
+  # must catch up in the same flush (via the fold observer), not the settled
+  # echo, or a later reconcile would restore a view missing the new panel. The
+  # fold carries a membership set, not geometry.
   cur <- isolate(live_panels())
   isolate(live_panels(c(cur, "block_panel-b")))
   ms$flushReact()
@@ -864,7 +865,7 @@ test_that("a live-only panel add folds into board_layouts (#217)", {
 
   expect_false(is.null(delta$views$mod))
   expect_setequal(
-    layout_panel_ids(delta$views$mod[[1L]]),
+    delta$views$mod[[1L]],
     c("block_panel-a", "block_panel-b")
   )
 })

@@ -207,6 +207,63 @@ report_visible_observer <- function(visible, client_active, docks) {
   )
 }
 
+# The arrangement mirror's observer, split from manage_dock for testability. It
+# reacts to the view's settled `_state` echo, ignores the echoes its own
+# restores provoke (`_state-source` == "server"), and commits the client layout
+# verbatim in canonical form, only when it differs from what is stored -- so a
+# sash drag or tab switch is at most one board commit and a re-echo after
+# quiescence is none. It does not restrict to membership: a panel absent from
+# the view is an inert ghost, pruned at the compose / restore boundary, never by
+# this writer.
+observe_grid_echo <- function(id, dock, board, session,
+                              commit_grid) {
+
+  # Bridge (#301): a server-side stand-in for the gesture-settled `_state`
+  # emission dockViewR does not yet ship. Current dockViewR streams per-frame
+  # states through a sash drag, so without this the mirror would commit per
+  # frame -- an interactive regression versus main's cadence. Unlike the
+  # pre-rework debounce (which raced a second writer and diffed specs), this
+  # mirror is the sole writer, commits verbatim canonical values, and diffs
+  # nothing: the only cost is 250 ms of bounded staleness on a slot whose
+  # readers are all boundaries. Remove once the settled `_state` chain lands.
+  settled <- debounce(reactive(dock$layout()), 250)
+
+  observeEvent(
+    settled(),
+    {
+      source <- isolate(session$input[[dock_input("state-source")]])
+
+      if (identical(source, "server")) {
+        return()
+      }
+
+      views <- board_views(board$board)
+
+      if (!id %in% names(views)) {
+        return()
+      }
+
+      echo <- dockview_to_layout(settled())
+
+      stored <- board_grids(board$board)[[id]]
+      slot <- project_grid(echo)
+
+      if (identical(strip_provenance(stored), strip_provenance(slot))) {
+        return()
+      }
+
+      # The wire is the canonical echo, stored verbatim; apply_views_grid
+      # elides a plain default to NULL in the slot -- which also keeps a
+      # reset-to-default off the NULL-lossy update channel.
+      wire <- canonicalize_grid(echo)
+      grid_provenance(wire) <- "echo"
+
+      commit_grid(wire)
+    },
+    ignoreInit = TRUE
+  )
+}
+
 # Returns NULL while any view is still pending — its dock not yet created by
 # reconcile, or its dockview layout not yet reported — so downstream observers
 # `req()` past the initial flush. Reading `docks[[v_id]]` (a reactiveValues)
@@ -501,18 +558,21 @@ manage_dock <- function(
     )
 
     # Fold live-only membership changes — the add-panel modal, a closed tab, an
-    # extension show / hide — back into board_layouts in the same flush, so the
-    # panel set stays authoritative server-side and a later board change never
-    # restores a layout that lags the live dock. Block add / remove fold through
-    # the update lifecycle already; this catches the dock-only paths.
+    # extension show / hide — into the view's membership set in the same flush,
+    # so the panel set stays authoritative server-side and a later board change
+    # never restores a view that lags the live dock. Block add / remove fold
+    # through the update lifecycle already; this catches the dock-only paths.
+    # Membership only — geometry rides the settled-echo mirror below.
     observeEvent(
       live_panels(),
       {
-        layouts <- board_layouts(board$board)
+        views <- board_views(board$board)
 
-        if (id %in% names(layouts)) {
+        if (id %in% names(views)) {
 
-          folded <- fold_live_membership(layouts[[id]], live_panels())
+          folded <- fold_live_membership(
+            view_members(views[[id]]), live_panels()
+          )
 
           if (!is.null(folded)) {
             update(list(views = list(mod = set_names(list(folded), id))))
@@ -521,6 +581,17 @@ manage_dock <- function(
       },
       ignoreInit = TRUE
     )
+
+    # The settled-echo grid mirror: the sole writer of this view's stored
+    # geometry. `commit_grid` is the write capability, held only by the
+    # observer below. dockViewR emits one settled `_state` per gesture (a
+    # gesture's layout mutations coalesce onto a microtask), so a re-echo after
+    # quiescence canonicalises identically and writes nothing.
+    commit_grid <- function(grid) {
+      update(list(views = list(grid = set_names(list(grid), id))))
+    }
+
+    observe_grid_echo(id, dock, board, session, commit_grid)
 
     if (get_log_level() >= debug_log_level) {
       observeEvent(

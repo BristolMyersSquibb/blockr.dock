@@ -42,7 +42,7 @@ test_that("apply_views_mod replaces a view's layout in board_layouts", {
   )
 
   upd <- augment_board_update(
-    list(views = list(mod = list(A = dock_layout("a", "b")))),
+    list(views = list(mod = list(A = c("block_panel-a", "block_panel-b")))),
     brd
   )
 
@@ -54,6 +54,24 @@ test_that("apply_views_mod replaces a view's layout in board_layouts", {
     c("block_panel-a", "block_panel-b")
   )
   expect_identical(active_name(out), "A")
+})
+
+test_that("a layout in views$mod is rejected at the update boundary", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"))
+  )
+
+  # Geometry belongs to the settled-echo mirror, not the membership lifecycle:
+  # a layout smuggled into `mod` is refused before it can be applied.
+  expect_error(
+    validate_board_update(
+      list(views = list(mod = list(A = dock_layout("a", "b")))),
+      brd
+    ),
+    class = "dock_views_mod_geometry_rejected"
+  )
 })
 
 test_that("apply_views: full delta round-trips through board_layouts", {
@@ -69,7 +87,7 @@ test_that("apply_views: full delta round-trips through board_layouts", {
     list(
       views = list(
         add = list(C = dock_layout("a")),
-        mod = list(A = dock_layout("a", "b")),
+        mod = list(A = c("block_panel-a", "block_panel-b")),
         rm = "B",
         active = "C"
       )
@@ -261,13 +279,10 @@ test_that("blocks$rm auto-augments views$mod for every affected view", {
   )
 
   expect_setequal(
-    layout_panel_ids(res$views$mod[[vid(brd, "Analysis")]]),
+    res$views$mod[[vid(brd, "Analysis")]],
     c("block_panel-a", "block_panel-c")
   )
-  expect_length(
-    layout_panel_ids(res$views$mod[[vid(brd, "Overview")]]),
-    0L
-  )
+  expect_length(res$views$mod[[vid(brd, "Overview")]], 0L)
   expect_null(res$views$mod[[vid(brd, "Other")]])
 })
 
@@ -299,16 +314,18 @@ test_that("augment merges user-submitted mod with block-removal cleanup", {
     layouts = list(Analysis = list("a", "b"))
   )
 
-  user_mod_layout <- dock_layout("a", "b", "c")
-
   upd <- list(
     blocks = list(rm = "b"),
-    views = list(mod = list(Analysis = user_mod_layout))
+    views = list(
+      mod = list(
+        Analysis = c("block_panel-a", "block_panel-b", "block_panel-c")
+      )
+    )
   )
   res <- augment_board_update(upd, brd)
 
   expect_setequal(
-    layout_panel_ids(res$views$mod[[vid(brd, "Analysis")]]),
+    res$views$mod[[vid(brd, "Analysis")]],
     c("block_panel-a", "block_panel-c")
   )
 })
@@ -323,13 +340,13 @@ test_that("blocks+views payload augments with refs to newly-added blocks", {
   new_blk <- as_blocks(list(new1 = new_head_block()))
   upd <- list(
     blocks = list(add = new_blk),
-    views = list(mod = list(A = dock_layout("a", "new1")))
+    views = list(mod = list(A = c("block_panel-a", "block_panel-new1")))
   )
 
   augmented <- augment_board_update(upd, brd)
 
   expect_setequal(
-    layout_panel_ids(augmented$views$mod[[vid(brd, "A")]]),
+    augmented$views$mod[[vid(brd, "A")]],
     c("block_panel-a", "block_panel-new1")
   )
 })
@@ -586,40 +603,18 @@ test_that("drop_panels_from_layout resets the active tab when it is dropped", {
   expect_identical(leaf[["activeView"]], "a")
 })
 
-test_that("append_panel_to_layout appends a tab to the last group", {
+test_that("fold_live_membership diffs membership against the live panel set", {
 
-  out <- append_panel_to_layout(dock_layout("a", "b"), "c")
+  members <- c("block_panel-a", "block_panel-b")
 
-  expect_setequal(layout_panel_ids(out), c("a", "b", "c"))
+  added <- fold_live_membership(members, c(members, "block_panel-c"))
+  expect_setequal(added, c(members, "block_panel-c"))
 
-  leaves <- grid_leaves(out[["grid"]])
-  last <- leaves[[length(leaves)]]
+  dropped <- fold_live_membership(members, "block_panel-a")
+  expect_setequal(dropped, "block_panel-a")
 
-  expect_true("c" %in% unlist(last[["views"]]))
-  expect_identical(last[["activeView"]], "c")
-})
-
-test_that("append_panel_to_layout seeds an empty view, keeps the name", {
-
-  empty <- append_panel_to_layout(new_dock_layout(), "a")
-  expect_setequal(layout_panel_ids(empty), "a")
-
-  named <- append_panel_to_layout(dock_layout("a", name = "Page 1"), "b")
-  expect_identical(view_name(named), "Page 1")
-})
-
-test_that("fold_live_membership matches the layout to the live panel set", {
-
-  ly <- dock_layout("a", "b")
-
-  added <- fold_live_membership(ly, c("a", "b", "c"))
-  expect_setequal(layout_panel_ids(added), c("a", "b", "c"))
-
-  dropped <- fold_live_membership(ly, "a")
-  expect_setequal(layout_panel_ids(dropped), "a")
-
-  # Already in sync -> NULL, so the caller skips a no-op update.
-  expect_null(fold_live_membership(ly, c("a", "b")))
+  # Already in sync (order-insensitive) -> NULL, so the caller skips a no-op.
+  expect_null(fold_live_membership(members, rev(members)))
 })
 
 test_that("empty views payload causes apply to be a no-op", {
@@ -647,7 +642,7 @@ test_that("board_update lifecycle resets to NULL after views-only payload", {
       session$flushReact()
 
       board_update(
-        list(views = list(mod = list(A = dock_layout("a", "b"))))
+        list(views = list(mod = list(A = c("block_panel-a", "block_panel-b"))))
       )
       session$flushReact()
 

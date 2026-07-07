@@ -1,8 +1,9 @@
-# Resolve bare IDs in submitted `add` / `mod` layouts to canonical
+# Resolve bare IDs in a submitted `add` layout to canonical
 # block_panel-/ext_panel- form (as `initialise_layout()` does at
 # construction). Uses the pre-rm block set (current + blocks$add) so a
 # layout referencing a to-be-removed block still resolves;
-# `merge_views_mod()` drops it before the post-state checks.
+# `merge_views_mod()` drops it before the post-state checks. `mod` no longer
+# carries geometry -- it is a membership set of already-canonical panel ids.
 resolve_views_layouts <- function(views, board, upd) {
 
   current_blocks <- board_blocks(board)
@@ -33,11 +34,31 @@ resolve_views_layouts <- function(views, board, upd) {
   if (length(views$add)) {
     views$add <- lapply(views$add, resolve_one)
   }
-  if (length(views$mod)) {
-    views$mod <- lapply(views$mod, resolve_one)
-  }
 
   views
+}
+
+# The update lifecycle owns membership, the settled-echo mirror owns geometry.
+# A `views$mod` value carrying a layout would smuggle geometry into a
+# membership write, so it is refused at the boundary with a pointer to the
+# mirror.
+reject_geometry_in_mod <- function(mod) {
+
+  for (v in names(mod)) {
+
+    if (is_dock_layout(mod[[v]])) {
+      blockr_abort(
+        paste0(
+          "`views$mod$", v, "` must be a panel-id set, not a layout: view ",
+          "geometry is owned by the settled-echo grid mirror, not the ",
+          "update lifecycle."
+        ),
+        class = "dock_views_mod_geometry_rejected"
+      )
+    }
+  }
+
+  invisible(mod)
 }
 
 # Normalise an inbound `views` delta to be keyed purely by stable view id.
@@ -103,7 +124,7 @@ validate_views_delta <- function(views, board, upd) {
   }
 
   unknown_keys <- setdiff(
-    names(views), c("add", "mod", "rm", "active", "rename")
+    names(views), c("add", "mod", "rm", "active", "rename", "grid")
   )
   if (length(unknown_keys)) {
     blockr_abort(
@@ -208,6 +229,18 @@ validate_views_delta <- function(views, board, upd) {
     )
   }
 
+  grid_ids <- names(views$grid) %||% character()
+  unknown_grid <- setdiff(grid_ids, current_views)
+  if (length(unknown_grid)) {
+    blockr_abort(
+      paste(
+        "View{?s} {unknown_grid} in `views$grid` do not exist on",
+        "the board."
+      ),
+      class = "dock_views_delta_arrange_unknown"
+    )
+  }
+
   add_clash <- intersect(add_ids, current_views)
   if (length(add_clash)) {
     blockr_abort(
@@ -266,14 +299,26 @@ validate_views_delta <- function(views, board, upd) {
 
   for (v in mod_ids) {
 
-    if (!is_dock_layout(views$mod[[v]])) {
+    members <- views$mod[[v]]
+
+    if (!is.character(members)) {
       blockr_abort(
-        "`views$mod${v}` must be a `dock_layout`.",
-        class = "dock_views_delta_layout_invalid"
+        "`views$mod${v}` must be a character vector of panel ids.",
+        class = "dock_views_delta_membership_invalid"
       )
     }
 
-    validate_layout_panel_refs(views$mod[[v]], ok_panels, v)
+    bad <- setdiff(members, as.character(ok_panels))
+
+    if (length(bad)) {
+      blockr_abort(
+        paste0(
+          "Panel ID(s) in view `", v, "` do not resolve to current blocks ",
+          "or extensions: ", paste(bad, collapse = ", "), "."
+        ),
+        class = "dock_views_delta_panel_ref_invalid"
+      )
+    }
   }
 
   invisible(views)
@@ -341,76 +386,26 @@ drop_panels_from_layout <- function(layout, panel_ids) {
   result
 }
 
-# Add a panel to a view's layout as a new tab in its last group (an empty view
-# gets a single-panel grid), making it the open tab. Mirrors the live
-# `determine_panel_pos()` placement closely enough for the structural sync; the
-# exact arrangement is reconciled by the debounced geometry echo.
-append_panel_to_layout <- function(layout, panel_id) {
-
-  nm <- view_name(layout)
-  grid <- layout[["grid"]]
-
-  if (!length(grid_panel_ids(grid))) {
-
-    out <- new_dock_layout(grid = build_grid_tree(list(panel_id)))
-
-  } else {
-
-    leaves <- grid_leaves(grid)
-    last_id <- leaves[[length(leaves)]][["id"]]
-
-    append_to_last <- function(leaf) {
-
-      if (identical(leaf[["data"]][["id"]], last_id)) {
-        leaf[["data"]][["views"]] <- c(
-          leaf[["data"]][["views"]], list(panel_id)
-        )
-        leaf[["data"]][["activeView"]] <- panel_id
-      }
-
-      leaf
-    }
-
-    out <- layout
-    out[["grid"]] <- grid_map_leaves(grid, append_to_last)
-  }
-
-  if (!is.null(nm)) {
-    view_name(out) <- nm
-  }
-
-  validate_dock_layout(out)
-}
-
-# Reconcile a view's stored layout to the panel set the live dock now holds,
-# dropping removed panels and appending added ones. Returns `NULL` when the
-# membership already matches, so the caller can skip a no-op update. Lets the
+# Fold the panel set the live dock now holds into a membership delta: the new
+# membership as a plain id set, or `NULL` when it already matches (so the
+# caller skips a no-op update). Geometry is not this path's concern -- the
+# settled-echo mirror owns it -- so this is a pure set comparison. Catches the
 # dock-only mutation paths (the add-panel modal, a closed tab, an extension
-# show/hide) fold their change into board_layouts without each re-deriving it.
-fold_live_membership <- function(layout, live_ids) {
+# show / hide) that never travel through block add / remove.
+fold_live_membership <- function(members, live_ids) {
 
-  current <- layout_panel_ids(layout)
-
-  added <- setdiff(live_ids, current)
-  removed <- setdiff(current, live_ids)
-
-  if (!length(added) && !length(removed)) {
+  if (setequal(members, live_ids)) {
     return(NULL)
   }
 
-  out <- drop_panels_from_layout(layout, removed)
-
-  for (pid in added) {
-    out <- append_panel_to_layout(out, pid)
-  }
-
-  out
+  as.character(live_ids)
 }
 
-# Merge user-supplied `views$mod` with the block-removal cleanup: when
-# both touch a view, the cleanup drops the removed block from whatever
-# layout the user submitted; otherwise the present one wins.
-merge_views_mod <- function(user_mod, layouts, rm_block_ids,
+# Merge a user-supplied `views$mod` (membership sets) with the block-removal
+# cleanup: drop each removed block's panel from whatever set the update carries
+# for a view, falling back to the view's current membership. Pure set algebra
+# -- geometry never enters.
+merge_views_mod <- function(user_mod, views, rm_block_ids,
                             skip_views = character()) {
 
   out <- user_mod %||% list()
@@ -421,84 +416,130 @@ merge_views_mod <- function(user_mod, layouts, rm_block_ids,
 
   rm_panels <- as.character(as_block_panel_id(rm_block_ids))
 
-  for (v in setdiff(names(layouts), skip_views)) {
+  for (v in setdiff(names(views), skip_views)) {
 
-    base <- out[[v]] %||% layouts[[v]]
-    pids <- layout_panel_ids(base)
+    base <- out[[v]] %||% view_members(views[[v]])
 
-    if (any(pids %in% rm_panels)) {
-      out[[v]] <- drop_panels_from_layout(base, rm_panels)
+    if (any(base %in% rm_panels)) {
+      out[[v]] <- setdiff(base, rm_panels)
     }
   }
 
   out
 }
 
-apply_views_rm <- function(rm_ids, board) {
+# Write a view's membership as a set. Geometry is untouched: a shrink can leave
+# an inert ghost in the arrangement and a grow an un-landed member, both legal
+# under total semantics and reconciled only at the compose / restore boundary.
+set_view_membership <- function(board, view_id, members) {
 
-  layouts <- board_layouts(board)
-  old_active <- active_view(layouts)
-  surviving <- setdiff(names(layouts), rm_ids)
+  views <- board_views(board)
 
-  layouts <- structure(
-    as.list(unclass(layouts))[surviving],
-    class = "dock_layouts"
+  views[[view_id]] <- new_dock_view(
+    as.character(members), view_name(views[[view_id]])
   )
 
-  if (length(surviving)) {
-    active_view(layouts) <- if (!is.null(old_active) &&
-                                  old_active %in% surviving) {
-      old_active
-    } else {
-      surviving[[1L]]
+  board_views(board) <- views
+
+  board
+}
+
+apply_views_rm <- function(rm_ids, board) {
+
+  views <- board_views(board)
+  old_active <- active_view(views)
+  surviving <- setdiff(names(views), rm_ids)
+
+  for (v in rm_ids) {
+    views[[v]] <- NULL
+  }
+
+  if (length(surviving) &&
+        (is.null(old_active) || !old_active %in% surviving)) {
+    active_view(views) <- surviving[[1L]]
+  }
+
+  arr <- board_grids(board)
+
+  if (not_null(arr)) {
+    for (v in rm_ids) {
+      arr[[v]] <- NULL
     }
   }
 
-  board_layouts(board) <- layouts
+  board_views(board) <- views
+  board_grids(board) <- arr
 
   board
 }
 
 apply_views_add <- function(add_views, board) {
 
-  layouts <- board_layouts(board)
+  views <- board_views(board)
+  arr <- as.list(board_grids(board) %||% list())
 
   # Adding a view never changes which one is active: that travels on the
   # delta's `active` slot (resolved to the new view's id in
   # `normalize_views_delta()` when it names an add) and is applied by
-  # `apply_views_active()` once the view exists. Here we only splice the
-  # new views into the container.
+  # `apply_views_active()` once the view exists. A new view's initial layout
+  # is authored, so it splits into a membership record and an authored
+  # arrangement -- the only geometry the lifecycle ever writes.
   for (v in names(add_views)) {
-    layouts[[v]] <- add_views[[v]]
+
+    ly <- add_views[[v]]
+
+    views[[v]] <- new_dock_view(layout_panel_ids(ly), view_name(ly))
+    arr[[v]] <- authored_grid(ly)
   }
 
-  board_layouts(board) <- layouts
+  board_views(board) <- views
+  board_grids(board) <- new_dock_grids(arr)
 
   board
 }
 
 apply_views_mod <- function(mod_views, board) {
 
-  layouts <- board_layouts(board)
-
   for (v in names(mod_views)) {
-
-    new <- mod_views[[v]]
-
-    # A mod replaces the arrangement, not the identity: keep the display
-    # name (the incoming layout carries it only on the live-sync path).
-    # Which view is active is a container field, unaffected by replacing a
-    # view's layout under the same id.
-    nm <- coal(view_name(mod_views[[v]]), view_name(layouts[[v]]),
-               fail_all = FALSE)
-    if (!is.null(nm)) {
-      view_name(new) <- nm
-    }
-
-    layouts[[v]] <- new
+    board <- set_view_membership(board, v, mod_views[[v]])
   }
 
-  board_layouts(board) <- layouts
+  board
+}
+
+# Apply the arrangement mirror's echo: store each view's settled layout verbatim
+# in canonical form, eliding a plain default to NULL. No membership projection
+# -- containment is boundary hygiene, not a write-time concern. `echo`
+# provenance is asserted; the mirror is the sole writer of this slice.
+apply_views_grid <- function(grid, board) {
+
+  arr <- as.list(board_grids(board) %||% list())
+  views <- board_views(board)
+
+  for (v in names(grid)) {
+
+    if (!v %in% names(views)) {
+      next
+    }
+
+    ly <- grid[[v]]
+
+    if (is.null(ly)) {
+      arr[[v]] <- NULL
+      next
+    }
+
+    if (!identical(grid_provenance(ly), "echo")) {
+      blockr_abort(
+        "Grid mirror writes must carry `echo` provenance.",
+        class = "dock_grid_not_echo"
+      )
+    }
+
+    arr[[v]] <- project_grid(strip_provenance(ly), provenance = "echo")
+  }
+
+  board_grids(board) <- new_dock_grids(arr)
 
   board
 }
@@ -506,27 +547,27 @@ apply_views_mod <- function(mod_views, board) {
 # Rename one or more views: a name-attribute write keyed by stable id.
 # `rename` is a named list mapping view id to its new display name. The
 # id is untouched, so the dock module, DOM element and registry key all
-# survive — no layout rebuild, no re-keying.
+# survive -- no rebuild, no re-keying.
 apply_views_rename <- function(rename, board) {
 
-  layouts <- board_layouts(board)
+  views <- board_views(board)
 
   for (id in names(rename)) {
-    if (id %in% names(layouts)) {
-      view_name(layouts[[id]]) <- rename[[id]]
+    if (id %in% names(views)) {
+      view_name(views[[id]]) <- rename[[id]]
     }
   }
 
-  board_layouts(board) <- layouts
+  board_views(board) <- views
 
   board
 }
 
 apply_views_active <- function(active, board) {
 
-  layouts <- board_layouts(board)
-  active_view(layouts) <- active
-  board_layouts(board) <- layouts
+  views <- board_views(board)
+  active_view(views) <- active
+  board_views(board) <- views
 
   board
 }

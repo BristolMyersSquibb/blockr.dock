@@ -33,10 +33,14 @@
 #' never of an individual layout. View CRUD is enabled unless the dock is
 #' locked (see `is_dock_locked()`).
 #'
-#' A stored grid must reference only panels in its view's membership
-#' (`grid ⊆ membership`); the board is valid with no grid at
-#' all. Users do not normally construct these objects directly; they pass a
-#' plain named list to `new_dock_board(layouts = ...)`, which resolves,
+#' Structure and grid are related by total semantics, not containment: a
+#' member with no grid entry is an un-landed intent, a grid entry with no
+#' membership an inert ghost. Both are legal on a committed board and
+#' reconciled only when a view is composed (ghosts pruned, un-landed members
+#' shown via a default) -- the board is valid with no grid at all. Referential
+#' integrity still holds: every member must reference a block or extension on
+#' the board. Users do not normally construct these objects directly; they
+#' pass a plain named list to `new_dock_board(layouts = ...)`, which resolves,
 #' validates and splits it.
 #'
 #' @return `board_views()` returns a `dock_views`, `board_grids()` a

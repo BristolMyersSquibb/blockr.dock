@@ -35,6 +35,7 @@ Imports:
 Remotes:
     BristolMyersSquibb/blockr.ui,
     BristolMyersSquibb/blockr.core,
+    cynkra/dockViewR,
     nbenn/shinytest2@wait-for-app-serving
 Suggests:
     testthat (>= 3.0.0),
@@ -55,6 +56,7 @@ Collate:
     'action-stack.R'
     'action-ui.R'
     'action-utils.R'
+    'grid.R'
     'block-meta.R'
     'block-ui.R'
     'board-plugins.R'

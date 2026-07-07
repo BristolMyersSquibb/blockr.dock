@@ -20,17 +20,10 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
     session
   )
 
-  # Geometry is client-owned until #294's mirror, so read the live layout for
-  # grid freshness and split it into the board's two slots. When the client
-  # has not reported yet, fall back to the stored slots (NULL data).
-  live <- view_data()
-
-  layout_parts <- if (is.null(live)) {
-    list(views = NULL, grids = NULL)
-  } else {
-    decompose_layouts(live)
-  }
-
+  # Structure and grid are board state now -- membership through the update
+  # lifecycle, geometry through the settled-echo mirror -- so both slots
+  # serialize straight from the last committed board, uniformly last-commit
+  # fresh like board_links. The live layout is no longer read here.
   do.call(
     blockr_ser,
     c(
@@ -39,8 +32,6 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
         board_id = id,
         blocks = Map(c, state, visible = lapply(visibility, list)),
         options = opts,
-        views = layout_parts[["views"]],
-        grids = layout_parts[["grids"]],
         extensions = lapply(
           list(...),
           function(x) lapply(x[["state"]], reval_if)
@@ -262,10 +253,14 @@ blockr_deser.dock_view <- function(x, data, ...) {
 
 #' @export
 blockr_deser.dock_grids <- function(x, data, ..., producer_version = NULL) {
-  new_dock_grids(
-    lapply(data[["payload"]], read_layout_payload,
-           producer_version = producer_version)
-  )
+
+  read_one <- function(payload) {
+    res <- canonicalize_grid(read_layout_payload(payload, producer_version))
+    grid_provenance(res) <- "authored"
+    res
+  }
+
+  new_dock_grids(lapply(data[["payload"]], read_one))
 }
 
 #' @export

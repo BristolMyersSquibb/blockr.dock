@@ -144,7 +144,13 @@ validate_board.dock_board <- function(x) {
 
   views <- board_views(x)
 
+  ok_panels <- c(
+    as.character(as_block_panel_id(board_block_ids(x))),
+    as.character(as_ext_panel_id(dock_ext_ids(x)))
+  )
+
   validate_dock_views(views)
+  validate_view_membership(views, ok_panels)
   validate_dock_grids(board_grids(x), views)
   validate_extensions(dock_extensions(x))
 
@@ -253,19 +259,17 @@ rm_blocks.dock_board <- function(x, rm, ...) {
     rm <- names(rm)
   }
 
-  layouts <- board_layouts(x)
   rm_panels <- as.character(as_block_panel_id(rm))
+  views <- board_views(x)
 
-  for (v in names(layouts)) {
+  for (v in names(views)) {
 
-    pids <- layout_panel_ids(layouts[[v]])
+    members <- view_members(views[[v]])
 
-    if (any(pids %in% rm_panels)) {
-      layouts[[v]] <- drop_panels_from_layout(layouts[[v]], rm_panels)
+    if (any(members %in% rm_panels)) {
+      x <- set_view_membership(x, v, setdiff(members, rm_panels))
     }
   }
-
-  board_layouts(x) <- layouts
 
   NextMethod(object = x)
 }
@@ -274,15 +278,19 @@ rm_blocks.dock_board <- function(x, rm, ...) {
 validate_board_update.dock_board <- function(payload, board, ...,
                                              session = get_session()) {
 
-  if ("views" %in% names(payload) && !is.null(payload$views) &&
-        !is.list(payload$views)) {
-    blockr_abort(
-      paste(
-        "`views` must be a list with optional",
-        "`add`/`mod`/`rm`/`active`/`rename`."
-      ),
-      class = "dock_views_delta_invalid"
-    )
+  if ("views" %in% names(payload) && !is.null(payload$views)) {
+
+    if (!is.list(payload$views)) {
+      blockr_abort(
+        paste(
+          "`views` must be a list with optional",
+          "`add`/`mod`/`rm`/`active`/`rename`."
+        ),
+        class = "dock_views_delta_invalid"
+      )
+    }
+
+    reject_geometry_in_mod(payload$views$mod)
   }
 
   if ("extensions" %in% names(payload) && !is.null(payload$extensions) &&
@@ -302,7 +310,7 @@ augment_board_update.dock_board <- function(upd, board, ...,
 
   upd <- NextMethod()
 
-  if (length(upd$views$add) || length(upd$views$mod)) {
+  if (length(upd$views$add)) {
     upd$views <- resolve_views_layouts(upd$views, board, upd)
   }
 
@@ -319,7 +327,7 @@ augment_board_update.dock_board <- function(upd, board, ...,
 
     merged <- merge_views_mod(
       upd$views$mod,
-      board_layouts(board),
+      board_views(board),
       rm_block_ids,
       skip_views = skip_views
     )
@@ -340,33 +348,24 @@ augment_board_update.dock_board <- function(upd, board, ...,
   upd
 }
 
-# Record added blocks' panels in the active view's layout, in the same update
-# that adds the blocks. insert_block_ui() places them in the live dock; folding
-# them into board_layouts here -- rather than waiting for the debounced live
-# sync -- keeps the panel set authoritative server-side, so reconcile never
-# restores a board_layouts that lags the dock (#196) and serialization never
-# drops an added panel.
+# Add newly-created blocks to the active view's membership, in the same update
+# that adds the blocks -- a pure set write, no geometry. insert_block_ui()
+# places the panels in the live dock and the settled-echo mirror stores their
+# arrangement; keeping membership authoritative server-side here means
+# reconcile never lags the dock (#196) and serialization never drops an added
+# panel. Where the client places the panel is the client's to decide.
 add_block_panels_to_view <- function(board, block_ids) {
 
-  layouts <- board_layouts(board)
-  active <- active_view(layouts)
+  active <- active_view(board)
 
   if (is.null(active)) {
     return(board)
   }
 
-  layout <- layouts[[active]]
+  members <- view_members(board_views(board)[[active]])
+  add_panels <- as.character(as_block_panel_id(block_ids))
 
-  for (bid in block_ids) {
-    layout <- append_panel_to_layout(
-      layout, as.character(as_block_panel_id(bid))
-    )
-  }
-
-  layouts[[active]] <- layout
-  board_layouts(board) <- layouts
-
-  board
+  set_view_membership(board, active, union(members, add_panels))
 }
 
 #' @export
@@ -390,6 +389,10 @@ apply_board_update.dock_board <- function(board, upd, ...) {
 
   if (length(upd$views$mod)) {
     board <- apply_views_mod(upd$views$mod, board)
+  }
+
+  if (length(upd$views$grid)) {
+    board <- apply_views_grid(upd$views$grid, board)
   }
 
   if (length(upd$views$rename)) {
