@@ -76,7 +76,7 @@ test_that("project_grid canonicalises and elides a plain default", {
   expect_identical(grid_provenance(kept), "echo")
 })
 
-test_that("arrangement mirror commits one echo, guards re-echoes", {
+test_that("grid mirror commits one echo, guards re-echoes", {
 
   brd <- new_dock_board(
     blocks = c(
@@ -95,21 +95,19 @@ test_that("arrangement mirror commits one echo, guards re-echoes", {
     board <- reactiveValues(board = brd)
     layout_rv <- reactiveVal(NULL)
 
-    ms$setInputs(`dock_state-source` = "client")
-
     observe_grid_echo(
-      "V", list(layout = layout_rv), board, ms,
-      commit_grid = function(arrangement) {
-        committed[[length(committed) + 1L]] <<- arrangement
+      "V", list(layout = layout_rv), board,
+      commit_grid = function(grid) {
+        committed[[length(committed) + 1L]] <<- grid
         board$board <- apply_board_update(
           board$board,
-          list(views = list(grid = setNames(list(arrangement), "V")))
+          list(views = list(grid = setNames(list(grid), "V")))
         )
       }
     )
     ms$flushReact()
 
-    # A settled sash drag: a non-default arrangement -> exactly one commit.
+    # A settled sash drag: a non-default grid -> exactly one commit.
     dragged <- dock_layout(
       "block_panel-a", "block_panel-b", "block_panel-d",
       sizes = c(0.2, 0.3, 0.5)
@@ -121,60 +119,13 @@ test_that("arrangement mirror commits one echo, guards re-echoes", {
     expect_identical(grid_provenance(committed[[1L]]), "echo")
     expect_false(is.null(board_grids(board$board)[["V"]]))
 
-    # A re-echo differing only by sub-quantum jitter has the same canonical
-    # form, so the identical() guard writes nothing.
+    # A re-echo differing only by sub-tolerance jitter is the same layout to the
+    # all.equal guard, so it writes nothing.
     jittered <- dock_layout(
       "block_panel-a", "block_panel-b", "block_panel-d",
       sizes = c(0.201, 0.299, 0.5)
     )
     layout_rv(echo_state(jittered))
-    settle(ms)
-
-    expect_length(committed, 1L)
-
-    # A server-driven echo (the restore the mirror itself provokes) is ignored.
-    ms$setInputs(`dock_state-source` = "server")
-    layout_rv(echo_state(dock_layout(
-      "block_panel-a", "block_panel-b", "block_panel-d",
-      sizes = c(0.6, 0.2, 0.2)
-    )))
-    settle(ms)
-
-    expect_length(committed, 1L)
-  })
-})
-
-test_that("an absent _state-source reads as client (works without the stack)", {
-
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(V = dock_layout("a", "b"))
-  )
-
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
-
-  committed <- list()
-
-  with_mock_context(ms, {
-
-    board <- reactiveValues(board = brd)
-    layout_rv <- reactiveVal(NULL)
-
-    # No `_state-source` input is set: current dockViewR (without the settled
-    # chain) never emits it, so the read is NULL and the server-skip self-
-    # disables -- the echo is treated as a client gesture and commits.
-    observe_grid_echo(
-      "V", list(layout = layout_rv), board, ms,
-      commit_grid = function(arrangement) {
-        committed[[length(committed) + 1L]] <<- arrangement
-      }
-    )
-    ms$flushReact()
-
-    layout_rv(echo_state(dock_layout(
-      "block_panel-a", "block_panel-b", sizes = c(0.3, 0.7)
-    )))
     settle(ms)
 
     expect_length(committed, 1L)
@@ -198,12 +149,10 @@ test_that("the debounce bridge coalesces per-frame echoes into one commit", {
     board <- reactiveValues(board = brd)
     layout_rv <- reactiveVal(NULL)
 
-    ms$setInputs(`dock_state-source` = "client")
-
     observe_grid_echo(
-      "V", list(layout = layout_rv), board, ms,
-      commit_grid = function(arrangement) {
-        committed[[length(committed) + 1L]] <<- arrangement
+      "V", list(layout = layout_rv), board,
+      commit_grid = function(grid) {
+        committed[[length(committed) + 1L]] <<- grid
       }
     )
     ms$flushReact()
@@ -248,15 +197,13 @@ test_that("the mirror stores an in-flight echo verbatim; compose prunes it", {
     board <- reactiveValues(board = brd)
     layout_rv <- reactiveVal(NULL)
 
-    ms$setInputs(`dock_state-source` = "client")
-
     observe_grid_echo(
-      "V", list(layout = layout_rv), board, ms,
-      commit_grid = function(arrangement) {
-        committed[[length(committed) + 1L]] <<- arrangement
+      "V", list(layout = layout_rv), board,
+      commit_grid = function(grid) {
+        committed[[length(committed) + 1L]] <<- grid
         board$board <- apply_board_update(
           board$board,
-          list(views = list(grid = setNames(list(arrangement), "V")))
+          list(views = list(grid = setNames(list(grid), "V")))
         )
       }
     )

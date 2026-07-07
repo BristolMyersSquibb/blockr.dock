@@ -207,16 +207,15 @@ report_visible_observer <- function(visible, client_active, docks) {
   )
 }
 
-# The arrangement mirror's observer, split from manage_dock for testability. It
-# reacts to the view's settled `_state` echo, ignores the echoes its own
-# restores provoke (`_state-source` == "server"), and commits the client layout
-# verbatim in canonical form, only when it differs from what is stored -- so a
-# sash drag or tab switch is at most one board commit and a re-echo after
-# quiescence is none. It does not restrict to membership: a panel absent from
-# the view is an inert ghost, pruned at the compose / restore boundary, never by
-# this writer.
-observe_grid_echo <- function(id, dock, board, session,
-                              commit_grid) {
+# The grid mirror's observer, split from manage_dock for testability. It reacts
+# to the view's settled `_state` echo and commits the client layout verbatim in
+# canonical form, only when it differs (beyond the sash-size tolerance) from
+# what is stored -- so a sash drag or tab switch is at most one board commit, a
+# re-echo after quiescence none, and the echo of the mirror's own restore
+# converges without churn (it matches what was pushed). It does not restrict to
+# membership: a panel absent from the view is an inert ghost, pruned at the
+# compose / restore boundary, never by this writer.
+observe_grid_echo <- function(id, dock, board, commit_grid) {
 
   # Bridge (#301): a server-side stand-in for the gesture-settled `_state`
   # emission dockViewR does not yet ship. Current dockViewR streams per-frame
@@ -231,12 +230,6 @@ observe_grid_echo <- function(id, dock, board, session,
   observeEvent(
     settled(),
     {
-      source <- isolate(session$input[[dock_input("state-source")]])
-
-      if (identical(source, "server")) {
-        return()
-      }
-
       views <- board_views(board$board)
 
       if (!id %in% names(views)) {
@@ -593,7 +586,7 @@ manage_dock <- function(
       update(list(views = list(grid = set_names(list(grid), id))))
     }
 
-    observe_grid_echo(id, dock, board, session, commit_grid)
+    observe_grid_echo(id, dock, board, commit_grid)
 
     if (get_log_level() >= debug_log_level) {
       observeEvent(
