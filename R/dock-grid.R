@@ -31,13 +31,15 @@ new_dock_grid <- function(x) {
 #' sizes normalised to 0-1 ratios and stable leaf ids, so two casts of the same
 #' layout compare `identical()`. It is a subclass of [dock_layout()] produced
 #' only by `as_dock_grid()`, which casts a `dock_layout` or dockView's `_state`
-#' shape (a client echo) into it and is idempotent. `is_dock_grid()` returns a
-#' boolean.
+#' shape (a client echo) into it and is idempotent. `is_dock_grid()` is the
+#' inheritance check; `validate_dock_grid()` returns its input and errors on a
+#' malformed or non-canonical grid.
 #'
-#' @param x Object to cast (a `dock_layout` or a dockView `_state` list) or to
-#'   test.
+#' @param x Object to cast (a `dock_layout` or a dockView `_state` list),
+#'   validate, or test.
 #' @param ... Passed on to methods.
-#' @return `as_dock_grid()` returns a `dock_grid`; `is_dock_grid()` a boolean.
+#' @return `as_dock_grid()` and `validate_dock_grid()` a `dock_grid`;
+#'   `is_dock_grid()` a boolean.
 #' @name dock-grid
 #' @export
 as_dock_grid <- function(x, ...) {
@@ -48,6 +50,29 @@ as_dock_grid <- function(x, ...) {
 #' @export
 is_dock_grid <- function(x) {
   inherits(x, "dock_grid")
+}
+
+#' @rdname dock-grid
+#' @export
+validate_dock_grid <- function(x) {
+
+  if (!is_dock_grid(x)) {
+    blockr_abort(
+      "Expecting a `dock_grid` object.",
+      class = "dock_grid_structure_invalid"
+    )
+  }
+
+  validate_dock_layout(x)
+
+  if (!identical(x, new_dock_grid(x))) {
+    blockr_abort(
+      "A `dock_grid` must be a canonical fixed point (see `as_dock_grid()`).",
+      class = "dock_grid_not_canonical"
+    )
+  }
+
+  invisible(x)
 }
 
 #' @export

@@ -488,7 +488,7 @@ apply_views_add <- function(add_views, board) {
 
     ly <- add_views[[v]]
 
-    views[[v]] <- new_dock_view(layout_panel_ids(ly), view_name(ly))
+    views[[v]] <- as_dock_view(ly)
     arr[[v]] <- project_grid(ly)
   }
 

@@ -227,3 +227,20 @@ test_that("the mirror stores an in-flight echo verbatim; compose prunes it", {
     )
   })
 })
+
+test_that("validate_dock_grid enforces the canonical invariant", {
+
+  g <- as_dock_grid(dock_layout("a", "b", sizes = c(0.3, 0.7)))
+  expect_identical(validate_dock_grid(g), g)
+
+  # A bare dock_layout is not a dock_grid.
+  expect_error(
+    validate_dock_grid(dock_layout("a", "b")),
+    class = "dock_grid_structure_invalid"
+  )
+
+  # A mis-tagged, non-canonical grid is rejected.
+  fake <- g
+  fake[["grid"]][["root"]][["data"]][[1L]][["size"]] <- 0.9
+  expect_error(validate_dock_grid(fake), class = "dock_grid_not_canonical")
+})

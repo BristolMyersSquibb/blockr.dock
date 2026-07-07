@@ -26,6 +26,50 @@ is_dock_view <- function(x) {
 
 #' @rdname view
 #' @export
+validate_dock_view <- function(x) {
+
+  if (!is_dock_view(x)) {
+    blockr_abort(
+      "Expecting a `dock_view` object.",
+      class = "dock_view_structure_invalid"
+    )
+  }
+
+  if (!is.character(view_members(x))) {
+    blockr_abort(
+      "A view's members must be a character vector of panel ids.",
+      class = "dock_view_members_invalid"
+    )
+  }
+
+  name <- view_name(x)
+
+  if (not_null(name) && !is_string(name)) {
+    blockr_abort(
+      "A view's name must be a string or `NULL`.",
+      class = "dock_view_name_invalid"
+    )
+  }
+
+  invisible(x)
+}
+
+#' @rdname view
+#' @export
+as_dock_view <- function(x, ...) {
+  UseMethod("as_dock_view")
+}
+
+#' @export
+as_dock_view.dock_view <- function(x, ...) x
+
+#' @export
+as_dock_view.dock_layout <- function(x, ...) {
+  new_dock_view(layout_panel_ids(x), view_name(x))
+}
+
+#' @rdname view
+#' @export
 view_members <- function(x) {
   stopifnot(is_dock_view(x))
   x[["members"]]
@@ -102,13 +146,7 @@ validate_dock_views <- function(x) {
   validate_view_ids(names(x))
 
   for (v in x) {
-
-    if (!is_dock_view(v)) {
-      blockr_abort(
-        "All elements of `dock_views` must be `dock_view` objects.",
-        class = "dock_views_element_invalid"
-      )
-    }
+    validate_dock_view(v)
   }
 
   validate_active_attr(x, names(x))
@@ -309,14 +347,7 @@ validate_dock_grids <- function(x, views = NULL) {
       next
     }
 
-    if (!is_dock_grid(grid)) {
-      blockr_abort(
-        "Grid for view {id} must be a `dock_grid` (see `as_dock_grid()`).",
-        class = "dock_grids_element_invalid"
-      )
-    }
-
-    validate_dock_layout(grid)
+    validate_dock_grid(grid)
   }
 
   x
@@ -395,11 +426,7 @@ as_dock_views <- function(x, ...) {
 #' @export
 as_dock_views.dock_layouts <- function(x, ...) {
 
-  as_view <- function(ly) {
-    new_dock_view(layout_panel_ids(ly), view_name(ly))
-  }
-
-  views <- reconstruct_dock_views(lapply(x, as_view))
+  views <- reconstruct_dock_views(lapply(x, as_dock_view))
 
   active <- active_view(x)
 

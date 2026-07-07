@@ -14,6 +14,8 @@
 \alias{as_dock_layouts}
 \alias{new_dock_view}
 \alias{is_dock_view}
+\alias{validate_dock_view}
+\alias{as_dock_view}
 \alias{view_members}
 \alias{is_dock_views}
 \alias{validate_dock_views}
@@ -52,6 +54,10 @@ as_dock_layouts(x, ...)
 new_dock_view(members = character(), name = NULL)
 
 is_dock_view(x)
+
+validate_dock_view(x)
+
+as_dock_view(x, ...)
 
 view_members(x)
 

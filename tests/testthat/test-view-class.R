@@ -269,3 +269,25 @@ test_that("as_dock_views / as_dock_grids invert compose_layouts", {
   expect_identical(views, board_views(brd))
   expect_identical(grids, board_grids(brd))
 })
+
+test_that("dock_view has a validator and a coercion", {
+
+  v <- new_dock_view(c("block_panel-a", "block_panel-b"), name = "X")
+
+  expect_identical(validate_dock_view(v), v)
+  expect_identical(as_dock_view(v), v)
+
+  # Coerce the view half out of a fused layout.
+  vv <- as_dock_view(dock_layout("a", "b", name = "Y"))
+  expect_identical(view_members(vv), c("a", "b"))
+  expect_identical(view_name(vv), "Y")
+
+  # Invariants: members a character vector, name a string or NULL.
+  expect_error(
+    validate_dock_view(structure(list(members = 1:2), class = "dock_view")),
+    class = "dock_view_members_invalid"
+  )
+  bad_name <- new_dock_view("block_panel-a")
+  attr(bad_name, "view_name") <- c("a", "b")
+  expect_error(validate_dock_view(bad_name), class = "dock_view_name_invalid")
+})
