@@ -309,8 +309,14 @@ validate_dock_grids <- function(x, views = NULL) {
       next
     }
 
+    if (!is_dock_grid(grid)) {
+      blockr_abort(
+        "Grid for view {id} must be a `dock_grid` (see `as_dock_grid()`).",
+        class = "dock_grids_element_invalid"
+      )
+    }
+
     validate_dock_layout(grid)
-    validate_grid_value(grid, id)
   }
 
   x

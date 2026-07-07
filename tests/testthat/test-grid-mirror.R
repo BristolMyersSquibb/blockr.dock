@@ -10,19 +10,25 @@ settle <- function(ms) {
   ms$elapse(300)
 }
 
-test_that("canonicalize_grid is idempotent and keeps sizes verbatim", {
+test_that("as_dock_grid casts to a canonical dock_grid, sizes verbatim", {
 
   ly <- dock_layout("a", "b", sizes = c(0.301, 0.699))
+  grid <- as_dock_grid(ly)
 
-  expect_identical(
-    canonicalize_grid(ly),
-    canonicalize_grid(canonicalize_grid(ly))
-  )
+  expect_s3_class(grid, "dock_grid")
+  expect_s3_class(grid, "dock_layout")
+  expect_true(is_dock_grid(grid))
 
-  # Sizes are stored faithfully now -- the jitter is not rounded away here, it
-  # is tolerated at the commit guard (see the `all.equal` test below).
-  expect_equal(grid_to_spec(canonicalize_grid(ly)[["grid"]])[["sizes"]],
-               c(0.301, 0.699))
+  # Canonical by construction, so the cast is idempotent -- the `.dock_grid`
+  # method returns it unchanged.
+  expect_identical(grid, as_dock_grid(grid))
+
+  # The dockView `_state` shape casts to the same grid as the layout it echoes.
+  expect_identical(grid, as_dock_grid(echo_state(ly)))
+
+  # Sizes are stored faithfully -- the jitter is not rounded away here, it is
+  # tolerated at the commit guard (see the `all.equal` test below).
+  expect_equal(grid_to_spec(grid[["grid"]])[["sizes"]], c(0.301, 0.699))
 })
 
 test_that("all.equal.dock_layout absorbs sash jitter but not a real drag", {

@@ -1,11 +1,15 @@
-# The grid mirror stores a view's grid geometry as a one-directional echo of
-# the client's settled `_state`. Canonicalisation round-trips through the wire
-# spec -- regenerating leaf ids, eliding a leaf's active-tab-is-first and the
-# load-default focus, dropping an even split's sizes -- so volatile detail never
-# triggers a write. Relative sizes are kept verbatim, faithful for serialization
-# and programmatic resize; the commit guard instead tolerates them via
-# `all.equal(tolerance = grid_size_tol())`, so the pixel-rounding jitter of a
-# window resize is absorbed while a deliberate sash drag still commits.
+# A view's geometry has two representations: dockView's `_state` (the client's
+# live grid, in volatile leaf ids and absolute pixel sizes) and ours, a
+# canonical `dock_grid`. `as_dock_grid()` is the cast between them -- it
+# round-trips through the wire spec, regenerating leaf ids, eliding a leaf's
+# active-tab-is-first and the load-default focus, and normalising sizes to 0-1
+# ratios -- so a `dock_grid` is canonical by construction and two casts of the
+# same layout are `identical()`. The mirror stores one on every settled echo.
+#
+# Relative sizes ride through verbatim (faithful for serialization and
+# programmatic resize); the commit guard tolerates their pixel-rounding jitter
+# via `all.equal(tolerance = grid_size_tol())`, so a window resize is absorbed
+# while a deliberate sash drag still commits.
 #
 # `project_grid()` elides a plain default (an even split of its own panels, in
 # order) to `NULL`. It does not restrict to membership: the mirror stores the
@@ -14,9 +18,46 @@
 # membership an inert ghost -- reconciled only at the compose / restore
 # boundary, never by a live writer.
 
-canonicalize_grid <- function(layout) {
-  spec_to_layout(layout_to_spec(layout))
+new_dock_grid <- function(x) {
+
+  grid <- spec_to_layout(layout_to_spec(x))
+
+  structure(grid, class = c("dock_grid", class(grid)))
 }
+
+#' Canonical view grid
+#'
+#' A `dock_grid` is a view's geometry in canonical form -- the panel tree with
+#' sizes normalised to 0-1 ratios and stable leaf ids, so two casts of the same
+#' layout compare `identical()`. It is a subclass of [dock_layout()] produced
+#' only by `as_dock_grid()`, which casts a `dock_layout` or dockView's `_state`
+#' shape (a client echo) into it and is idempotent. `is_dock_grid()` returns a
+#' boolean.
+#'
+#' @param x Object to cast (a `dock_layout` or a dockView `_state` list) or to
+#'   test.
+#' @param ... Passed on to methods.
+#' @return `as_dock_grid()` returns a `dock_grid`; `is_dock_grid()` a boolean.
+#' @name dock-grid
+#' @export
+as_dock_grid <- function(x, ...) {
+  UseMethod("as_dock_grid")
+}
+
+#' @rdname dock-grid
+#' @export
+is_dock_grid <- function(x) {
+  inherits(x, "dock_grid")
+}
+
+#' @export
+as_dock_grid.dock_grid <- function(x, ...) x
+
+#' @export
+as_dock_grid.dock_layout <- function(x, ...) new_dock_grid(x)
+
+#' @export
+as_dock_grid.list <- function(x, ...) new_dock_grid(dockview_to_layout(x))
 
 # The sash-position noise floor, an absolute tolerance on the 0-1 size ratios: a
 # window resize re-derives ratios from integer pixels and jitters them well
@@ -39,50 +80,42 @@ all.equal.dock_layout <- function(target, current, ..., scale = 1) {
   all.equal(unclass(target), unclass(current), ..., scale = scale)
 }
 
-# Canonicalise a raw layout (a client echo or a constructor / restore layout)
-# into a stored grid: drop volatile ids / default tabs / focus, and elide a
-# plain default -- an even split of its own panels, in order -- to NULL. Sizes
-# ride through verbatim. Idempotent, so it is safe as both the mirror's write
-# projection and the fixed point the grid slot enforces.
+# Cast a layout (a client echo, or a constructor / restore layout) to its stored
+# `dock_grid`, eliding a plain default -- an even split of its own panels, in
+# order -- to NULL. Idempotent (a `dock_grid` casts to itself), so it is safe as
+# both the mirror's write projection and the fixed point the grid slot enforces.
 project_grid <- function(layout) {
 
-  canon <- canonicalize_grid(layout)
+  grid <- as_dock_grid(layout)
 
-  if (is_default_grid(canon)) {
+  if (is_default_grid(grid)) {
     return(NULL)
   }
 
-  canon
+  grid
 }
 
-is_default_grid <- function(layout) {
+is_default_grid <- function(grid) {
   identical(
-    layout,
-    canonicalize_grid(default_grid(layout_panel_ids(layout)))
+    grid,
+    as_dock_grid(default_grid(layout_panel_ids(grid)))
   )
 }
 
 # Restrict a stored grid to the panels a view actually holds, dropping inert
-# ghosts (grid panels no longer in membership). Boundary hygiene for
-# `compose_layouts()` -- an un-landed member (in membership, absent from the
-# grid) is left out, so the composed handle shows the intersection.
+# ghosts (grid panels no longer in membership), and demote it to a plain
+# `dock_layout` -- the composed handle, no longer a canonical stored grid.
+# Boundary hygiene for `compose_layouts()`: an un-landed member (in membership,
+# absent from the grid) is left out, so the composed handle shows the
+# intersection.
 restrict_grid <- function(grid, members) {
-  drop_panels_from_layout(grid, setdiff(layout_panel_ids(grid), members))
-}
 
-# A stored grid must be a canonical fixed point of the projection. Checked on
-# every committed board (via validate_dock_grids), so a non-canonical write is a
-# classed error rather than a source of re-echo churn: a grid that does not
-# match its own canonical form would structurally differ from the next echo and
-# commit spuriously.
-validate_grid_value <- function(grid, id) {
+  restricted <- drop_panels_from_layout(
+    grid,
+    setdiff(layout_panel_ids(grid), members)
+  )
 
-  if (!identical(grid, canonicalize_grid(grid))) {
-    blockr_abort(
-      "Grid for view {id} is not a canonical fixed point.",
-      class = "dock_grid_not_canonical"
-    )
-  }
+  class(restricted) <- setdiff(class(restricted), "dock_grid")
 
-  invisible(grid)
+  restricted
 }

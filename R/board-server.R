@@ -236,10 +236,15 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
         return()
       }
 
-      echo <- dockview_to_layout(settled())
+      state <- settled()
 
+      if (is.null(state)) {
+        return()
+      }
+
+      grid <- as_dock_grid(state)
       stored <- board_grids(board$board)[[id]]
-      slot <- project_grid(echo)
+      slot <- project_grid(grid)
 
       # Same layout within the sash-position noise floor -> nothing to commit,
       # so window-resize jitter is absorbed while a real drag still writes.
@@ -247,10 +252,9 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
         return()
       }
 
-      # The wire is the canonical echo, stored verbatim; apply_views_grid
-      # elides a plain default to NULL in the slot -- which also keeps a
-      # reset-to-default off the NULL-lossy update channel.
-      commit_grid(canonicalize_grid(echo))
+      # apply_views_grid re-projects, eliding a plain default to NULL in the
+      # slot -- which also keeps a reset-to-default off the NULL-lossy channel.
+      commit_grid(grid)
     },
     ignoreInit = TRUE
   )

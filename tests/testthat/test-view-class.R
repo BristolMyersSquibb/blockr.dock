@@ -76,7 +76,7 @@ test_that("a grid may hold a ghost panel outside membership", {
 
   # Total semantics: a grid entry with no membership is an inert ghost, legal on
   # a committed board and pruned only when the view is composed.
-  ghost <- canonicalize_grid(
+  ghost <- as_dock_grid(
     dock_layout("block_panel-a", "block_panel-b", "block_panel-ghost")
   )
   board_grids(brd) <- new_dock_grids(list(A = ghost))

@@ -13,6 +13,10 @@ reference:
   desc: Tools for defining panel arrangements.
   contents:
     - dock_layout
+- title: Dock grid
+  desc: A view's geometry in canonical form.
+  contents:
+    - as_dock_grid
 - title: Layout serialization
   desc: Read, write and inspect the JSON wire form of a layout.
   contents:

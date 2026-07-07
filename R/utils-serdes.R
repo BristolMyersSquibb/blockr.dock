@@ -255,7 +255,7 @@ blockr_deser.dock_view <- function(x, data, ...) {
 blockr_deser.dock_grids <- function(x, data, ..., producer_version = NULL) {
 
   read_one <- function(payload) {
-    canonicalize_grid(read_layout_payload(payload, producer_version))
+    as_dock_grid(read_layout_payload(payload, producer_version))
   }
 
   new_dock_grids(lapply(data[["payload"]], read_one))
