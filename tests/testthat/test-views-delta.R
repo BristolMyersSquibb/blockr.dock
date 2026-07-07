@@ -34,7 +34,7 @@ test_that("apply_views_rm removes a view from board_layouts", {
   expect_identical(active_name(out), "A")
 })
 
-test_that("apply_views_mod replaces a view's layout in board_layouts", {
+test_that("apply_views_mod sets membership; the new panel is in-flight", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -48,10 +48,17 @@ test_that("apply_views_mod replaces a view's layout in board_layouts", {
 
   out <- apply_board_update(brd, upd)
 
-  views <- board_layouts(out)
+  # `mod` is a membership set op -- it does not touch geometry. The new panel
+  # is placed only by the client echo, so until then it is in-flight: carried
+  # by membership, absent from board_layouts (the placement, panels also in the
+  # grid).
   expect_setequal(
-    layout_panel_ids(views[[vid(views, "A")]]),
+    view_members(board_views(out)[["A"]]),
     c("block_panel-a", "block_panel-b")
+  )
+  expect_identical(
+    layout_panel_ids(board_layouts(out)[[vid(board_layouts(out), "A")]]),
+    "block_panel-a"
   )
   expect_identical(active_name(out), "A")
 })
@@ -100,9 +107,14 @@ test_that("apply_views: full delta round-trips through board_layouts", {
   views <- board_layouts(out)
   expect_setequal(unname(view_names(views)), c("A", "C"))
   expect_identical(active_name(out), "C")
+  # A's mod grows its membership; the added panel is in-flight until echoed, so
+  # board_layouts still shows the placed panel only.
   expect_setequal(
-    layout_panel_ids(views[[vid(views, "A")]]),
+    view_members(board_views(out)[["A"]]),
     c("block_panel-a", "block_panel-b")
+  )
+  expect_identical(
+    layout_panel_ids(views[[vid(views, "A")]]), "block_panel-a"
   )
 })
 
@@ -647,9 +659,15 @@ test_that("board_update lifecycle resets to NULL after views-only payload", {
       session$flushReact()
 
       expect_null(board_update())
+      # Membership carries the modded panel; it is in-flight until echoed, so
+      # board_layouts still shows the placed panel only.
       expect_setequal(
-        layout_panel_ids(board_layouts(rv$board)[[vid(rv$board, "A")]]),
+        view_members(board_views(rv$board)[["A"]]),
         c("block_panel-a", "block_panel-b")
+      )
+      expect_identical(
+        layout_panel_ids(board_layouts(rv$board)[[vid(rv$board, "A")]]),
+        "block_panel-a"
       )
     },
     args = list(

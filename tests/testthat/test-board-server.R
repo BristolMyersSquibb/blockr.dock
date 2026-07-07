@@ -743,13 +743,14 @@ test_that("apply_board_update folds an added block into the active view", {
     list(blocks = list(add = as_blocks(c(b = new_head_block()))))
   )
 
-  # The added block's panel lands in the active view synchronously -- not via
-  # the debounced live sync -- and nowhere else (#196, persistence gap).
-  expect_true(
-    "block_panel-b" %in% layout_panel_ids(board_layouts(out)[[active]])
-  )
+  # The added block joins the active view's membership synchronously, and no
+  # other view. Its grid placement follows from the client echo, so until then
+  # it is in-flight (membership only) -- board_layouts, the intersection, still
+  # shows just the placed panels.
+  expect_true("block_panel-b" %in% view_members(board_views(out)[[active]]))
+  expect_false("block_panel-b" %in% view_members(board_views(out)[[other]]))
   expect_false(
-    "block_panel-b" %in% layout_panel_ids(board_layouts(out)[[other]])
+    "block_panel-b" %in% layout_panel_ids(board_layouts(out)[[active]])
   )
 })
 

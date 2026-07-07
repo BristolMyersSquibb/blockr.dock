@@ -55,27 +55,6 @@ test_that("the size tolerance is a tunable blockr_option", {
   )
 })
 
-test_that("project_grid canonicalises and elides a plain default", {
-
-  # A plain default (even split of its own panels, in order) has no geometry.
-  expect_null(
-    project_grid(dock_layout("block_panel-a", "block_panel-b"))
-  )
-
-  # A non-default layout is kept verbatim in canonical form -- no membership
-  # projection, so every panel survives (a ghost is dealt with at the boundary).
-  kept <- project_grid(
-    dock_layout(
-      "block_panel-a", "block_panel-b", "block_panel-c",
-      sizes = c(0.2, 0.3, 0.5)
-    )
-  )
-  expect_setequal(
-    layout_panel_ids(kept),
-    c("block_panel-a", "block_panel-b", "block_panel-c")
-  )
-})
-
 test_that("grid mirror commits one echo, guards re-echoes", {
 
   brd <- new_dock_board(

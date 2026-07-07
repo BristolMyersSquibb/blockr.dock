@@ -22,13 +22,14 @@ test_that("new_dock_board splits the layout into structure and arrangement", {
   )
   expect_identical(view_members(views[["B"]]), "block_panel-a")
 
-  # A plain default arrangement (even split over the members, in order) is
-  # elided to NULL; the structure slot alone reconstructs it.
+  # Geometry is stored verbatim -- a default layout is not detected and elided;
+  # each view keeps its explicit grid, dropped to the intersection with
+  # membership only where placement is read.
   arr <- board_grids(brd)
   expect_s3_class(arr, "dock_grids")
   expect_identical(names(arr), c("A", "B"))
-  expect_null(arr[["A"]])
-  expect_null(arr[["B"]])
+  expect_true(is_dock_grid(arr[["A"]]))
+  expect_true(is_dock_grid(arr[["B"]]))
 })
 
 test_that("structure stays bit-stable through an arrangement round-trip", {
@@ -173,7 +174,7 @@ test_that("board_views<- rejects a non-dock_views value", {
   )
 })
 
-test_that("rm_blocks drops the block from structure and arrangement", {
+test_that("rm_blocks drops the member; the grid keeps it as a ghost", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -182,9 +183,15 @@ test_that("rm_blocks drops the block from structure and arrangement", {
 
   brd <- rm_blocks(brd, "a")
 
+  # Membership drops the block (a set op); geometry is mirror-owned, so the grid
+  # keeps the panel as an inert ghost, pruned only where placement is read.
   expect_identical(view_members(board_views(brd)[["A"]]), "block_panel-b")
-  # One surviving panel has no geometry, so its arrangement elides to NULL.
-  expect_null(board_grids(brd)[["A"]])
+  expect_true(
+    "block_panel-a" %in% layout_panel_ids(board_grids(brd)[["A"]])
+  )
+  expect_identical(
+    layout_panel_ids(board_layouts(brd)[["A"]]), "block_panel-b"
+  )
 })
 
 test_that("rm_blocks drops the member but leaves a legal arrangement ghost", {
@@ -261,9 +268,10 @@ test_that("as_dock_views / as_dock_grids invert compose_layouts", {
   expect_identical(view_name(views[["V1"]]), "Split")
   expect_identical(active_view(views), "V2")
 
-  # An expressed grid is a canonical dock_grid; a plain default elides to NULL.
+  # Both grids are stored verbatim as canonical dock_grids -- a default is no
+  # longer detected and elided.
   expect_true(is_dock_grid(grids[["V1"]]))
-  expect_null(grids[["V2"]])
+  expect_true(is_dock_grid(grids[["V2"]]))
 
   # The split inverts compose_layouts().
   expect_identical(views, board_views(brd))

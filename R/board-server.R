@@ -244,16 +244,13 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
 
       grid <- as_dock_grid(state)
       stored <- board_grids(board$board)[[id]]
-      slot <- project_grid(grid)
 
-      # Same layout within the sash-position noise floor -> nothing to commit,
+      # Same geometry within the sash-position noise floor -> nothing to commit,
       # so window-resize jitter is absorbed while a real drag still writes.
-      if (isTRUE(all.equal(stored, slot, tolerance = grid_size_tol()))) {
+      if (isTRUE(all.equal(stored, grid, tolerance = grid_size_tol()))) {
         return()
       }
 
-      # apply_views_grid re-projects, eliding a plain default to NULL in the
-      # slot -- which also keeps a reset-to-default off the NULL-lossy channel.
       commit_grid(grid)
     },
     ignoreInit = TRUE

@@ -489,7 +489,7 @@ apply_views_add <- function(add_views, board) {
     ly <- add_views[[v]]
 
     views[[v]] <- as_dock_view(ly)
-    arr[[v]] <- project_grid(ly)
+    arr[[v]] <- as_dock_grid(ly)
   }
 
   board_views(board) <- views
@@ -529,7 +529,7 @@ apply_views_grid <- function(grid, board) {
       next
     }
 
-    arr[[v]] <- project_grid(ly)
+    arr[[v]] <- as_dock_grid(ly)
   }
 
   board_grids(board) <- new_dock_grids(arr)

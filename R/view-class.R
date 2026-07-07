@@ -413,7 +413,7 @@ compose_layouts <- function(views, grids = NULL) {
 }
 
 # `as_dock_views()` and `as_dock_grids()` split a fused `dock_layouts` into the
-# board's two slots -- the inverse of `compose_layouts()`. `project_grid()`
+# board's two slots -- the inverse of `compose_layouts()`. `as_dock_grid()`
 # already drops the view name via its spec round-trip, so the grid side needs no
 # separate strip.
 
@@ -445,7 +445,7 @@ as_dock_grids <- function(x, ...) {
 
 #' @export
 as_dock_grids.dock_layouts <- function(x, ...) {
-  new_dock_grids(lapply(x, project_grid))
+  new_dock_grids(lapply(x, as_dock_grid))
 }
 
 default_grid <- function(members) {

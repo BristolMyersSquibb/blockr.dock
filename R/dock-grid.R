@@ -11,12 +11,12 @@
 # via `all.equal(tolerance = grid_size_tol())`, so a window resize is absorbed
 # while a deliberate sash drag still commits.
 #
-# `project_grid()` elides a plain default (an even split of its own panels, in
-# order) to `NULL`. It does not restrict to membership: the mirror stores the
-# settled echo verbatim, and the two slots are related by total semantics -- a
-# member absent from the grid is an un-landed intent, a panel absent from
-# membership an inert ghost -- reconciled only at the compose / restore
-# boundary, never by a live writer.
+# The grid stores geometry verbatim -- never a default detected after the fact
+# and projected away. A view's placement is the intersection of its membership
+# and its grid: a member absent from the grid is an in-flight add, a panel
+# absent from membership an inert ghost, and both are dropped where the
+# placement is read (`compose_layouts()`), not by a live writer. A view with no
+# grid at all falls back to `default_grid()` over its members.
 
 new_dock_grid <- function(x) {
 
@@ -103,28 +103,6 @@ grid_size_tol <- function() {
 #' @export
 all.equal.dock_layout <- function(target, current, ..., scale = 1) {
   all.equal(unclass(target), unclass(current), ..., scale = scale)
-}
-
-# Cast a layout (a client echo, or a constructor / restore layout) to its stored
-# `dock_grid`, eliding a plain default -- an even split of its own panels, in
-# order -- to NULL. Idempotent (a `dock_grid` casts to itself), so it is safe as
-# both the mirror's write projection and the fixed point the grid slot enforces.
-project_grid <- function(layout) {
-
-  grid <- as_dock_grid(layout)
-
-  if (is_default_grid(grid)) {
-    return(NULL)
-  }
-
-  grid
-}
-
-is_default_grid <- function(grid) {
-  identical(
-    grid,
-    as_dock_grid(default_grid(layout_panel_ids(grid)))
-  )
 }
 
 # Restrict a stored grid to the panels a view actually holds, dropping inert
