@@ -259,10 +259,11 @@ dock_panel_groups <- function(session = get_session()) {
 
 #' Swap the contents of the `active_dock` mirror to a different dock.
 #'
-#' Extensions hold a stable reference to the `active_dock` `reactiveValues`.
-#' When the user switches views, this function copies the new view's dock
-#' module result into it so extensions transparently see the new dock
-#' without needing to re-bind.
+#' `active_dock` is an internal `reactiveValues` mirror of whichever view is
+#' currently active. The board-level block insert / remove plugin places and
+#' removes panels through it, so it must always point at the active view. When
+#' the user switches views, this function copies the new view's dock module
+#' result into it so that handle follows the active dock without re-binding.
 #'
 #' @param rv The `active_dock` `reactiveValues` to update.
 #' @param dock A dock module result (list with `proxy`, `board_ns`,
