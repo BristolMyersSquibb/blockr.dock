@@ -395,16 +395,17 @@ decompose_layouts <- function(layouts) {
     active_view(views) <- active
   }
 
-  grids <- new_dock_grids(lapply(layouts, authored_grid))
+  grids <- new_dock_grids(lapply(layouts, grid_from_layout))
 
   list(views = views, grids = grids)
 }
 
-# Canonicalise a constructor / restore layout into an `authored` arrangement,
-# elided to `NULL` when it is a plain default. The stored form matches what the
-# client will echo, so loading a board produces no spurious mirror write.
-authored_grid <- function(layout) {
-  project_grid(strip_view_name(layout), provenance = "authored")
+# Canonicalise a constructor / restore layout into its stored grid (dropping the
+# view name, which lives on the view record), elided to `NULL` when it is a
+# plain default. The stored form matches what the client will echo, so loading a
+# board produces no spurious mirror write.
+grid_from_layout <- function(layout) {
+  project_grid(strip_view_name(layout))
 }
 
 strip_view_name <- function(x) {

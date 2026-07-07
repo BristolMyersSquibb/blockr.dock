@@ -250,10 +250,7 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
       # The wire is the canonical echo, stored verbatim; apply_views_grid
       # elides a plain default to NULL in the slot -- which also keeps a
       # reset-to-default off the NULL-lossy update channel.
-      wire <- canonicalize_grid(echo)
-      grid_provenance(wire) <- "echo"
-
-      commit_grid(wire)
+      commit_grid(canonicalize_grid(echo))
     },
     ignoreInit = TRUE
   )

@@ -15,31 +15,7 @@
 # boundary, never by a live writer.
 
 canonicalize_grid <- function(layout) {
-  spec_to_layout(layout_to_spec(strip_provenance(layout)))
-}
-
-# Provenance records who wrote a grid value: `authored` for the
-# constructor / deserialization push, `echo` for the settled-echo mirror. It
-# makes "the mirror is the sole echo writer" runtime-checkable and never
-# crosses the wire (stripped before serialization, re-stamped on read).
-grid_provenance <- function(x) {
-  attr(x, "provenance", exact = TRUE)
-}
-
-`grid_provenance<-` <- function(x, value) {
-  stopifnot(is_string(value), value %in% c("authored", "echo"))
-  attr(x, "provenance") <- value
-  x
-}
-
-strip_provenance <- function(x) {
-
-  if (is.null(x)) {
-    return(NULL)
-  }
-
-  attr(x, "provenance") <- NULL
-  x
+  spec_to_layout(layout_to_spec(layout))
 }
 
 # The sash-position noise floor, an absolute tolerance on the 0-1 size ratios: a
@@ -54,18 +30,13 @@ grid_size_tol <- function() {
 # Approximate layout equality: structure exact, relative sizes within the
 # supplied `tolerance`. Deferring to `all.equal` keeps the stored sizes faithful
 # (only the comparison is fuzzy); comparing the unclassed list walks each pane's
-# size individually, `scale = 1` makes the tolerance absolute on the ratio
-# scale, and provenance is dropped as runtime bookkeeping. The R-default
-# tolerance stays near-exact, so `all.equal()` / `expect_equal()` on a layout is
-# unaffected unless a caller passes a tolerance (the mirror does).
+# size individually, and `scale = 1` makes the tolerance absolute on the ratio
+# scale. The R-default tolerance stays near-exact, so `all.equal()` /
+# `expect_equal()` on a layout is unaffected unless a caller passes a tolerance
+# (the mirror does).
 #' @export
 all.equal.dock_layout <- function(target, current, ..., scale = 1) {
-  all.equal(
-    unclass(strip_provenance(target)),
-    unclass(strip_provenance(current)),
-    ...,
-    scale = scale
-  )
+  all.equal(unclass(target), unclass(current), ..., scale = scale)
 }
 
 # Canonicalise a raw layout (a client echo or a constructor / restore layout)
@@ -73,7 +44,7 @@ all.equal.dock_layout <- function(target, current, ..., scale = 1) {
 # plain default -- an even split of its own panels, in order -- to NULL. Sizes
 # ride through verbatim. Idempotent, so it is safe as both the mirror's write
 # projection and the fixed point the grid slot enforces.
-project_grid <- function(layout, provenance = "echo") {
+project_grid <- function(layout) {
 
   canon <- canonicalize_grid(layout)
 
@@ -81,48 +52,37 @@ project_grid <- function(layout, provenance = "echo") {
     return(NULL)
   }
 
-  grid_provenance(canon) <- provenance
   canon
 }
 
 is_default_grid <- function(layout) {
   identical(
-    strip_provenance(layout),
+    layout,
     canonicalize_grid(default_grid(layout_panel_ids(layout)))
   )
 }
 
-# Restrict a stored grid to the panels a view actually holds, dropping
-# inert ghosts (grid panels no longer in membership). Boundary hygiene
-# for `compose_layouts()` -- an un-landed member (in membership, absent from the
+# Restrict a stored grid to the panels a view actually holds, dropping inert
+# ghosts (grid panels no longer in membership). Boundary hygiene for
+# `compose_layouts()` -- an un-landed member (in membership, absent from the
 # grid) is left out, so the composed handle shows the intersection.
-restrict_grid <- function(arr, members) {
-  drop_panels_from_layout(
-    strip_provenance(arr), setdiff(layout_panel_ids(arr), members)
-  )
+restrict_grid <- function(grid, members) {
+  drop_panels_from_layout(grid, setdiff(layout_panel_ids(grid), members))
 }
 
-# A grid value is well-formed when it is a canonical fixed point of the
-# projection and carries a valid provenance. Checked on every committed board
-# (via validate_dock_grids), so a non-canonical or unstamped write is a
-# classed error rather than a source of re-echo churn.
-validate_grid_value <- function(arr, id) {
+# A stored grid must be a canonical fixed point of the projection. Checked on
+# every committed board (via validate_dock_grids), so a non-canonical write is a
+# classed error rather than a source of re-echo churn: a grid that does not
+# match its own canonical form would structurally differ from the next echo and
+# commit spuriously.
+validate_grid_value <- function(grid, id) {
 
-  prov <- grid_provenance(arr)
-
-  if (!is_string(prov) || !prov %in% c("authored", "echo")) {
-    blockr_abort(
-      "Grid for view {id} carries no valid provenance.",
-      class = "dock_grid_provenance_invalid"
-    )
-  }
-
-  if (!identical(strip_provenance(arr), canonicalize_grid(arr))) {
+  if (!identical(grid, canonicalize_grid(grid))) {
     blockr_abort(
       "Grid for view {id} is not a canonical fixed point.",
       class = "dock_grid_not_canonical"
     )
   }
 
-  invisible(arr)
+  invisible(grid)
 }

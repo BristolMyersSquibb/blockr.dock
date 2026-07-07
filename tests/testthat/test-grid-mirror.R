@@ -37,11 +37,6 @@ test_that("all.equal.dock_layout absorbs sash jitter but not a real drag", {
   # At R's default tolerance the comparison stays near-exact, so a plain
   # `all.equal()` / `expect_equal()` on a layout is not silently fuzzed.
   expect_false(isTRUE(all.equal(base, jitter)))
-
-  # Provenance is runtime bookkeeping, not layout identity.
-  stamped <- base
-  grid_provenance(stamped) <- "echo"
-  expect_true(isTRUE(all.equal(base, stamped, tolerance = grid_size_tol())))
 })
 
 test_that("the size tolerance is a tunable blockr_option", {
@@ -73,7 +68,6 @@ test_that("project_grid canonicalises and elides a plain default", {
     layout_panel_ids(kept),
     c("block_panel-a", "block_panel-b", "block_panel-c")
   )
-  expect_identical(grid_provenance(kept), "echo")
 })
 
 test_that("grid mirror commits one echo, guards re-echoes", {
@@ -116,7 +110,6 @@ test_that("grid mirror commits one echo, guards re-echoes", {
     settle(ms)
 
     expect_length(committed, 1L)
-    expect_identical(grid_provenance(committed[[1L]]), "echo")
     expect_false(is.null(board_grids(board$board)[["V"]]))
 
     # A re-echo differing only by sub-tolerance jitter is the same layout to the

@@ -482,14 +482,14 @@ apply_views_add <- function(add_views, board) {
   # delta's `active` slot (resolved to the new view's id in
   # `normalize_views_delta()` when it names an add) and is applied by
   # `apply_views_active()` once the view exists. A new view's initial layout
-  # is authored, so it splits into a membership record and an authored
-  # arrangement -- the only geometry the lifecycle ever writes.
+  # is authored, so it splits into a membership record and its stored grid --
+  # the only geometry the lifecycle ever writes.
   for (v in names(add_views)) {
 
     ly <- add_views[[v]]
 
     views[[v]] <- new_dock_view(layout_panel_ids(ly), view_name(ly))
-    arr[[v]] <- authored_grid(ly)
+    arr[[v]] <- grid_from_layout(ly)
   }
 
   board_views(board) <- views
@@ -507,10 +507,10 @@ apply_views_mod <- function(mod_views, board) {
   board
 }
 
-# Apply the arrangement mirror's echo: store each view's settled layout verbatim
-# in canonical form, eliding a plain default to NULL. No membership projection
-# -- containment is boundary hygiene, not a write-time concern. `echo`
-# provenance is asserted; the mirror is the sole writer of this slice.
+# Apply the grid mirror's echo: store each view's settled layout verbatim in
+# canonical form, eliding a plain default to NULL. No membership projection --
+# containment is boundary hygiene, not a write-time concern. The mirror is the
+# sole producer of this slice.
 apply_views_grid <- function(grid, board) {
 
   arr <- as.list(board_grids(board) %||% list())
@@ -529,14 +529,7 @@ apply_views_grid <- function(grid, board) {
       next
     }
 
-    if (!identical(grid_provenance(ly), "echo")) {
-      blockr_abort(
-        "Grid mirror writes must carry `echo` provenance.",
-        class = "dock_grid_not_echo"
-      )
-    }
-
-    arr[[v]] <- project_grid(strip_provenance(ly), provenance = "echo")
+    arr[[v]] <- project_grid(ly)
   }
 
   board_grids(board) <- new_dock_grids(arr)

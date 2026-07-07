@@ -67,19 +67,18 @@ test_that("board_layouts composes the two slots back into a dock_layouts", {
   )
 })
 
-test_that("an arrangement may hold a ghost panel outside membership", {
+test_that("a grid may hold a ghost panel outside membership", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     layouts = list(A = dock_layout("a", "b", name = "Analysis"))
   )
 
-  # Total semantics: an arrangement entry with no membership is an inert ghost,
-  # legal on a committed board and pruned only when the view is composed.
+  # Total semantics: a grid entry with no membership is an inert ghost, legal on
+  # a committed board and pruned only when the view is composed.
   ghost <- canonicalize_grid(
     dock_layout("block_panel-a", "block_panel-b", "block_panel-ghost")
   )
-  grid_provenance(ghost) <- "authored"
   board_grids(brd) <- new_dock_grids(list(A = ghost))
 
   expect_s3_class(validate_board(brd), "dock_board")
