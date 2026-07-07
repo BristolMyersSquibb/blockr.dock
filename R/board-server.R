@@ -102,9 +102,11 @@ board_server_callback <- function(board, update, visible, ...,
   # both -- they are consumed on each side (serialization and the edit-block
   # plugin read the returned pair). The gaps are deliberate: `dock`
   # (active_dock) is returned for core's block insert / remove plugin but
-  # withheld from extensions, which read layout via `view_data`; `board` /
-  # `update` are core's own inputs, not echoed back; the peer env stays
-  # internal (core gets the resolved `ext_res`).
+  # withheld from extensions -- they read layout via `view_data` and open
+  # panels via `show_panel()`, which routes the request through `update` to the
+  # show_panel observer rather than handing out the dock; `board` / `update`
+  # are core's own inputs, not echoed back; the peer env stays internal (core
+  # gets the resolved `ext_res`).
   ext_res <- lapply(
     exts,
     extension_server,
@@ -124,6 +126,18 @@ board_server_callback <- function(board, update, visible, ...,
   observeEvent(
     update()$extensions$mod,
     apply_extensions_mod(update()$extensions$mod, ext_res)
+  )
+
+  # A dock extension opens a panel by emitting `views$show_panel` on the update
+  # channel (via the exported show_panel()); it is realized here, where the
+  # active_dock mirror is in scope, so the extension never handles the dock.
+  observeEvent(
+    update()$views$show_panel,
+    {
+      panel <- update()$views$show_panel
+
+      open_panel(panel$id, isolate(board$board), active_dock, panel$type)
+    }
   )
 
   register_actions(actions, triggers, board, update, ext_res)

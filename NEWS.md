@@ -1,5 +1,14 @@
 # blockr.dock (development version)
 
+* A dock extension opens a panel with `show_panel(id, board, update)`, which
+  now emits the request on the board `update` channel instead of taking a live
+  `dock` handle; the dock realizes it against the active view internally.
+  Retiring the `dock` handle from the extension surface had left `blockr.dag`
+  -- which opens a block's panel on node click -- with no way to reach it,
+  breaking node-click-to-open-panel on every board with a DAG extension.
+  Routing the request through `update` restores that path while keeping the
+  dock internal (#308).
+
 * Renaming a block no longer crashes a board where that block is absent
   from some view -- a block placed in only one of several views, or
   parked in the offcanvas with no panel at all. The per-view rename

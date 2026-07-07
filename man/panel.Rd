@@ -4,16 +4,16 @@
 \alias{show_panel}
 \title{UI utilities}
 \usage{
-show_panel(id, board, dock, type = c("block", "extension"))
+show_panel(id, board, update, type = c("block", "extension"))
 }
 \arguments{
 \item{id}{Object ID}
 
 \item{board}{Board object}
 
-\item{dock}{Object available as \code{dock} in extensions}
+\item{update}{Board update signal, as received by an extension server}
 
-\item{type}{Either "block" or "extensions", depending on what kind of panel
+\item{type}{Either "block" or "extension", depending on what kind of panel
 should be shown}
 }
 \value{
@@ -21,4 +21,9 @@ should be shown}
 }
 \description{
 Exported utilities for manipulating dock panels (i.e. displaying panels).
+Called from a dock extension, \code{show_panel()} requests that a panel be
+opened (or focused, if already open) in the active view. It emits the
+request on the board \code{update} channel; the dock realizes it against the
+active view internally, so an extension supplies only the object \code{id}, the
+\code{board} and its \code{update} handle -- never the dock itself.
 }

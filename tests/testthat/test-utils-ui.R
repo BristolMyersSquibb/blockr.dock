@@ -33,3 +33,25 @@ test_that("determine_panel_pos places freely before the dock initialises", {
     list(direction = "right")
   )
 })
+
+test_that("show_panel() emits a views$show_panel intent on update", {
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  captured <- NULL
+  update <- function(x) captured <<- x
+
+  show_panel("a", brd, update)
+
+  expect_identical(
+    captured,
+    list(views = list(show_panel = list(id = "a", type = "block")))
+  )
+})
+
+test_that("show_panel() rejects an id absent from the board", {
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  expect_error(show_panel("missing", brd, function(x) NULL))
+})

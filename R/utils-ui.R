@@ -102,18 +102,23 @@ determine_panel_pos <- function(dock) {
 #' UI utilities
 #'
 #' Exported utilities for manipulating dock panels (i.e. displaying panels).
+#' Called from a dock extension, `show_panel()` requests that a panel be
+#' opened (or focused, if already open) in the active view. It emits the
+#' request on the board `update` channel; the dock realizes it against the
+#' active view internally, so an extension supplies only the object `id`, the
+#' `board` and its `update` handle -- never the dock itself.
 #'
 #' @param id Object ID
 #' @param board Board object
-#' @param dock Object available as `dock` in extensions
-#' @param type Either "block" or "extensions", depending on what kind of panel
+#' @param update Board update signal, as received by an extension server
+#' @param type Either "block" or "extension", depending on what kind of panel
 #'   should be shown
 #'
 #' @return `NULL`, invisibly
 #'
 #' @rdname panel
 #' @export
-show_panel <- function(id, board, dock, type = c("block", "extension")) {
+show_panel <- function(id, board, update, type = c("block", "extension")) {
 
   stopifnot(is_string(id))
 
@@ -123,6 +128,19 @@ show_panel <- function(id, board, dock, type = c("block", "extension")) {
     stopifnot(id %in% board_block_ids(board))
   } else {
     stopifnot(id %in% dock_ext_ids(board))
+  }
+
+  update(list(views = list(show_panel = list(id = id, type = type))))
+
+  invisible()
+}
+
+open_panel <- function(id, board, dock, type = c("block", "extension")) {
+
+  type <- match.arg(type)
+
+  if (is.null(dock$proxy)) {
+    return(invisible())
   }
 
   panels <- dock_panel_ids(dock$proxy)

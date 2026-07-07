@@ -1044,3 +1044,37 @@ test_that("New view modal confirm submits an add-and-activate delta", {
     }
   )
 })
+
+test_that("views$show_panel realizes against the active dock (#308)", {
+
+  captured <- NULL
+
+  local_mocked_bindings(
+    open_panel = function(id, board, dock, type) {
+      captured <<- list(id = id, type = type)
+      invisible()
+    }
+  )
+
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(Page = list("a"))
+  )
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  upd <- reactiveVal()
+  with_mock_context(
+    ms,
+    board_server_callback(board_rv, update = upd, visible = reactiveVal())
+  )
+  ms$flushReact()
+
+  isolate(
+    upd(list(views = list(show_panel = list(id = "a", type = "block"))))
+  )
+  ms$flushReact()
+
+  expect_identical(captured, list(id = "a", type = "block"))
+})
