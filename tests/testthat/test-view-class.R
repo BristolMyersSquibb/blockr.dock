@@ -238,3 +238,34 @@ test_that("the split board round-trips through serialization", {
   expect_identical(board_views(des), board_views(brd))
   expect_identical(board_grids(des), board_grids(brd))
 })
+
+test_that("as_dock_views / as_dock_grids invert compose_layouts", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(
+      V1 = dock_layout("a", "b", sizes = c(0.3, 0.7), name = "Split"),
+      V2 = dock_layout("a", "b", name = "Even")
+    ),
+    active = "V2"
+  )
+
+  fused <- board_layouts(brd)
+  views <- as_dock_views(fused)
+  grids <- as_dock_grids(fused)
+
+  expect_s3_class(views, "dock_views")
+  expect_s3_class(grids, "dock_grids")
+
+  # Membership, name and the active marker land on the views.
+  expect_identical(view_name(views[["V1"]]), "Split")
+  expect_identical(active_view(views), "V2")
+
+  # An expressed grid is a canonical dock_grid; a plain default elides to NULL.
+  expect_true(is_dock_grid(grids[["V1"]]))
+  expect_null(grids[["V2"]])
+
+  # The split inverts compose_layouts().
+  expect_identical(views, board_views(brd))
+  expect_identical(grids, board_grids(brd))
+})

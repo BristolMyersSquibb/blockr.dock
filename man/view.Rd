@@ -23,6 +23,8 @@
 \alias{validate_dock_grids}
 \alias{board_grids}
 \alias{board_grids<-}
+\alias{as_dock_views}
+\alias{as_dock_grids}
 \title{Dock views: structure and grid}
 \usage{
 new_dock_layouts(...)
@@ -68,6 +70,10 @@ validate_dock_grids(x, views = NULL)
 board_grids(x)
 
 board_grids(x) <- value
+
+as_dock_views(x, ...)
+
+as_dock_grids(x, ...)
 }
 \arguments{
 \item{...}{Generic consistency}

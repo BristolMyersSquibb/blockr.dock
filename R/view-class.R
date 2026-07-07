@@ -381,42 +381,44 @@ compose_layouts <- function(views, grids = NULL) {
   res
 }
 
-# Split a fused `dock_layouts` into the structure (`dock_views`) and geometry
-# (`dock_grids`) slots: panel set + display name become the view record, the
-# grid (sans name) becomes the stored grid. Inverse of compose_layouts() for
-# any membership-covering grid.
-decompose_layouts <- function(layouts) {
+# `as_dock_views()` and `as_dock_grids()` split a fused `dock_layouts` into the
+# board's two slots -- the inverse of `compose_layouts()`. `project_grid()`
+# already drops the view name via its spec round-trip, so the grid side needs no
+# separate strip.
 
-  ids <- names(layouts)
+#' @rdname view
+#' @export
+as_dock_views <- function(x, ...) {
+  UseMethod("as_dock_views")
+}
 
-  make_view <- function(id) {
-    new_dock_view(layout_panel_ids(layouts[[id]]), view_name(layouts[[id]]))
+#' @export
+as_dock_views.dock_layouts <- function(x, ...) {
+
+  as_view <- function(ly) {
+    new_dock_view(layout_panel_ids(ly), view_name(ly))
   }
 
-  views <- reconstruct_dock_views(set_names(lapply(ids, make_view), ids))
+  views <- reconstruct_dock_views(lapply(x, as_view))
 
-  active <- active_view(layouts)
+  active <- active_view(x)
 
   if (!is.null(active)) {
     active_view(views) <- active
   }
 
-  grids <- new_dock_grids(lapply(layouts, grid_from_layout))
-
-  list(views = views, grids = grids)
+  views
 }
 
-# Canonicalise a constructor / restore layout into its stored grid (dropping the
-# view name, which lives on the view record), elided to `NULL` when it is a
-# plain default. The stored form matches what the client will echo, so loading a
-# board produces no spurious mirror write.
-grid_from_layout <- function(layout) {
-  project_grid(strip_view_name(layout))
+#' @rdname view
+#' @export
+as_dock_grids <- function(x, ...) {
+  UseMethod("as_dock_grids")
 }
 
-strip_view_name <- function(x) {
-  attr(x, "view_name") <- NULL
-  x
+#' @export
+as_dock_grids.dock_layouts <- function(x, ...) {
+  new_dock_grids(lapply(x, project_grid))
 }
 
 default_grid <- function(members) {

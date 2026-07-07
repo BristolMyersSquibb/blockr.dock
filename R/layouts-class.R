@@ -338,9 +338,9 @@ views_can_crud <- function(x) {
 #' @export
 `board_layouts<-` <- function(x, value) {
   stopifnot(is_dock_board(x))
-  parts <- decompose_layouts(validate_dock_layouts(value))
-  board_views(x) <- parts[["views"]]
-  board_grids(x) <- parts[["grids"]]
+  value <- validate_dock_layouts(value)
+  board_views(x) <- as_dock_views(value)
+  board_grids(x) <- as_dock_grids(value)
   invisible(x)
 }
 

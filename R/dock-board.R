@@ -68,7 +68,7 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
 # into the board's structure (`views`) and geometry (`grids`) slots.
 # `as_dock_layouts()` homogenises a `dock_layouts`, a single `dock_layout`, a
 # multi-view list, or a bare panel-id list / vector into a resolved
-# `dock_layouts`; `decompose_layouts()` is the DSL-decomposition seam.
+# `dock_layouts`; `as_dock_views()` / `as_dock_grids()` are the split.
 initialise_layout <- function(layouts, blocks, extensions, active = NULL) {
 
   res <- as_dock_layouts(layouts, blocks = blocks, extensions = extensions)
@@ -77,7 +77,7 @@ initialise_layout <- function(layouts, blocks, extensions, active = NULL) {
     active_view(res) <- active
   }
 
-  decompose_layouts(res)
+  list(views = as_dock_views(res), grids = as_dock_grids(res))
 }
 
 resolve_views <- function(specs, c_blks, c_exts) {
