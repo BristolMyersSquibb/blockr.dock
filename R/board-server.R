@@ -559,11 +559,12 @@ manage_dock <- function(
     )
 
     # Fold live-only membership changes — the add-panel modal, a closed tab, an
-    # extension show / hide — into the view's membership set in the same flush,
-    # so the panel set stays authoritative server-side and a later board change
-    # never restores a view that lags the live dock. Block add / remove fold
-    # through the update lifecycle already; this catches the dock-only paths.
-    # Membership only — geometry rides the settled-echo mirror below.
+    # extension show / hide — into an `add` / `rm` panel-op for the view in the
+    # same flush, so the panel set stays authoritative server-side and a later
+    # board change never restores a view that lags the live dock. Block add /
+    # remove fold through the update lifecycle already; this catches the
+    # dock-only paths. Membership only — geometry rides the settled-echo mirror
+    # below.
     observeEvent(
       live_panels(),
       {
@@ -571,15 +572,33 @@ manage_dock <- function(
 
         if (id %in% names(views)) {
 
-          folded <- fold_live_membership(
+          mod <- fold_live_membership(
             view_members(views[[id]]), live_panels()
           )
 
-          if (!is.null(folded)) {
-            update(list(views = list(mod = set_names(list(folded), id))))
+          if (!is.null(mod)) {
+            update(list(views = list(mod = set_names(list(mod), id))))
           }
         }
       },
+      ignoreInit = TRUE
+    )
+
+    # The inverse of the fold: deliver server-initiated panel ops to this view's
+    # live dock. Keyed on the applied `views$mod` for the view (the
+    # `set_panel_title` precedent), never on a board diff — `move` / `select`
+    # write nothing to the board, so a state-diff observer would never see them.
+    # Each op is idempotent against the live panel set, so the fold's own
+    # capture echo (an add / rm this dock already reflects) settles without
+    # ping-pong.
+    observeEvent(
+      update()$views$mod[[id]],
+      deliver_panel_ops(
+        update()$views$mod[[id]],
+        dock,
+        board$board,
+        rm_blocks = update()$blocks$rm %||% character()
+      ),
       ignoreInit = TRUE
     )
 

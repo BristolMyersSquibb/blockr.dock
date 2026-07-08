@@ -1,5 +1,27 @@
 # blockr.dock (development version)
 
+* Panel operations are now first-class verbs in the update lifecycle's
+  `views$mod` payload, so an extension or plugin can rearrange a view's
+  panels through the same staging, validation and atomicity boundary
+  every other board change already speaks. Each `views$mod$<view-id>`
+  entry is a list of per-view verbs -- `add` and `rm` (which write
+  membership), plus `move` and `select` (pure client ops that write
+  nothing and are captured by the settled-echo grid mirror). Placement
+  rides the `add` and `move` entries as a `near` panel and a `side` in
+  dockView's drop vocabulary (`within` / `left` / `right` / `above` /
+  `below`). This is a **breaking** change: the old set-replace form,
+  where `views$mod$<view-id>` was a bare membership vector, is retired --
+  the membership fold now emits `add` / `rm` and the block-removal
+  cascade an `rm`. A first-class `move` awaits cynkra/dockViewR#85 and
+  meanwhile decomposes into remove + add-with-hint; `resize` joins the
+  grammar once the `set_size` dock proxy lands (#318).
+
+* New exported `reveal_panel()` builds the `views` delta that brings a
+  panel into view -- switching to a view that holds it and selecting its
+  tab. It is the supported way for a dock extension (which no longer
+  receives the live `dock`) to open a block's panel: a DAG node click
+  becomes `update(reveal_panel(board, node))` (#308, #318).
+
 * The block status badge is now derived in one exported helper,
   `block_status_badge()`, and reused by blockr.dag, so the dock card icon
   and the DAG node badge always render the same status, colour and

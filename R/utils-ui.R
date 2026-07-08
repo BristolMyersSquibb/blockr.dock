@@ -111,18 +111,84 @@ determine_panel_pos <- function(dock) {
   list(referenceGroup = grp, direction = "within")
 }
 
-#' UI utilities
+#' Panel utilities
 #'
-#' Exported utilities for manipulating dock panels (i.e. displaying panels).
+#' Utilities for revealing dock panels. `reveal_panel()` is a pure builder:
+#' it composes a `views` update delta that brings a panel into view --
+#' switching to a view that holds it (outer `active`) and selecting its tab
+#' (inner `select`) -- for a caller to pass straight to `update()`. Revealing
+#' is not a primitive verb but the composition of two, offered as a builder so
+#' the grammar stays minimal. This is the supported way for a dock extension --
+#' which no longer receives the live `dock` -- to open a block's panel: a DAG
+#' node click becomes `update(reveal_panel(board, node))`. `show_panel()` is
+#' the older live-mutation form, requiring the `dock` handle directly.
 #'
 #' @param id Object ID
 #' @param board Board object
 #' @param dock Object available as `dock` in extensions
 #' @param type Either "block" or "extensions", depending on what kind of panel
 #'   should be shown
+#' @param panel Panel to reveal: a canonical panel id, or a bare block /
+#'   extension id.
 #'
-#' @return `NULL`, invisibly
+#' @return `show_panel()` returns `NULL` invisibly, called for its effect on the
+#'   live dock. `reveal_panel()` returns a `views` update delta, or `NULL` when
+#'   no view holds the panel.
 #'
+#' @examples
+#' brd <- new_dock_board(
+#'   blocks = c(a = blockr.core::new_dataset_block()),
+#'   views = list(one = "a", two = "a")
+#' )
+#' reveal_panel(brd, "a")
+#'
+#' @rdname panel
+#' @export
+reveal_panel <- function(board, panel) {
+
+  stopifnot(is_dock_board(board), is_string(panel))
+
+  pid <- as.character(resolve_reveal_panel(board, panel))
+
+  views <- board_views(board)
+
+  holder <- Find(
+    function(v) pid %in% view_members(views[[v]]),
+    c(active_view(views), names(views))
+  )
+
+  if (is.null(holder)) {
+    return(NULL)
+  }
+
+  list(
+    views = list(
+      active = holder,
+      mod = set_names(list(list(select = pid)), holder)
+    )
+  )
+}
+
+resolve_reveal_panel <- function(board, panel) {
+
+  if (maybe_block_panel_id(panel) || maybe_ext_panel_id(panel)) {
+    return(as_dock_panel_id(panel))
+  }
+
+  if (panel %in% board_block_ids(board)) {
+    return(as_block_panel_id(panel))
+  }
+
+  if (panel %in% dock_ext_ids(board)) {
+    return(as_ext_panel_id(panel))
+  }
+
+  blockr_abort(
+    "Cannot reveal {panel}: no such panel, block or extension.",
+    class = "dock_reveal_panel_unknown"
+  )
+}
+
 #' @rdname panel
 #' @export
 show_panel <- function(id, board, dock, type = c("block", "extension")) {

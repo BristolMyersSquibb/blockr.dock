@@ -626,8 +626,8 @@ view_item_ui <- function(view_id, view_name, active_id = NULL,
 }
 
 # The update lifecycle owns membership, the settled-echo mirror owns geometry.
-# A `views$mod` value carrying a grid would smuggle geometry into a membership
-# write, so it is refused at the boundary with a pointer to the mirror.
+# A `views$mod` value carrying a grid would smuggle geometry into a panel-op
+# batch, so it is refused at the boundary with a pointer to the mirror.
 reject_geometry_in_mod <- function(mod) {
 
   for (v in names(mod)) {
@@ -635,8 +635,8 @@ reject_geometry_in_mod <- function(mod) {
     if (is_dock_grid(mod[[v]])) {
       blockr_abort(
         paste0(
-          "`views$mod$", v, "` must be a panel-id set, not a grid: view ",
-          "geometry is owned by the settled-echo grid mirror, not the ",
+          "`views$mod$", v, "` must be a list of panel-op verbs, not a grid: ",
+          "view geometry is owned by the settled-echo grid mirror, not the ",
           "update lifecycle."
         ),
         class = "dock_views_mod_geometry_rejected"
@@ -917,52 +917,241 @@ validate_views_delta <- function(views, board, upd) {
     validate_added_view(views$add[[v]], ok_panels, v)
   }
 
+  cur_views <- board_views(board)
+
   for (v in mod_ids) {
-
-    members <- views$mod[[v]]
-
-    if (!is.character(members)) {
-      blockr_abort(
-        "`views$mod${v}` must be a character vector of panel ids.",
-        class = "dock_views_delta_membership_invalid"
-      )
-    }
-
-    bad <- setdiff(members, as.character(ok_panels))
-
-    if (length(bad)) {
-      blockr_abort(
-        paste0(
-          "Panel ID(s) in view `", v, "` do not resolve to current blocks ",
-          "or extensions: ", paste(bad, collapse = ", "), "."
-        ),
-        class = "dock_views_delta_panel_ref_invalid"
-      )
-    }
+    validate_view_mod(
+      views$mod[[v]], v, view_members(cur_views[[v]]), ok_panels
+    )
   }
 
   invisible(views)
 }
 
-# Fold the panel set the live dock now holds into a membership delta: the new
-# membership as a plain id set, or `NULL` when it already matches (so the
-# caller skips a no-op update). Geometry is not this path's concern -- the
-# settled-echo mirror owns it -- so this is a pure set comparison. Catches the
+# The inner grammar of a `views$mod` entry: panel-op verbs on the panels of one
+# view, mirroring the user gesture set (`add` / `rm` / `move` / `select`).
+# Validation threads membership through the batch's application order (rm -> add
+# -> move -> select): `rm` targets a current member, `add` a non-member that
+# resolves to a block or extension, and `move` / `select` a member of the
+# post-add view. Hint refs (`near`) resolve against the same running membership.
+view_mod_verbs <- function() {
+  c("rm", "add", "move", "select")
+}
+
+valid_panel_sides <- function() {
+  c("within", "left", "right", "above", "below")
+}
+
+validate_view_mod <- function(mod, view_id, members, ok_panels) {
+
+  if (!is.list(mod)) {
+    blockr_abort(
+      "`views$mod${view_id}` must be a list of panel-op verbs.",
+      class = "dock_views_mod_invalid"
+    )
+  }
+
+  unknown <- setdiff(names(mod), view_mod_verbs())
+
+  if (length(unknown)) {
+    blockr_abort(
+      paste0(
+        "Unknown panel-op verb(s) in `views$mod$", view_id, "`: ",
+        paste(unknown, collapse = ", "), "."
+      ),
+      class = "dock_views_mod_verb_unknown"
+    )
+  }
+
+  rm_ids <- mod$rm %||% character()
+
+  if (!is.character(rm_ids)) {
+    blockr_abort(
+      "`views$mod${view_id}$rm` must be a character vector of panel ids.",
+      class = "dock_views_mod_invalid"
+    )
+  }
+
+  bad_rm <- setdiff(rm_ids, members)
+
+  if (length(bad_rm)) {
+    blockr_abort(
+      paste0(
+        "Panel(s) in `views$mod$", view_id, "$rm` are not view members: ",
+        paste(bad_rm, collapse = ", "), "."
+      ),
+      class = "dock_views_mod_rm_unknown"
+    )
+  }
+
+  post_rm <- setdiff(members, rm_ids)
+
+  add_ids <- validate_mod_map(mod$add, view_id, "add")
+
+  bad_add <- setdiff(add_ids, as.character(ok_panels))
+
+  if (length(bad_add)) {
+    blockr_abort(
+      paste0(
+        "Panel ID(s) in `views$mod$", view_id, "$add` do not resolve to ",
+        "current blocks or extensions: ", paste(bad_add, collapse = ", "), "."
+      ),
+      class = "dock_views_delta_panel_ref_invalid"
+    )
+  }
+
+  member_add <- intersect(add_ids, post_rm)
+
+  if (length(member_add)) {
+    blockr_abort(
+      paste0(
+        "Panel(s) in `views$mod$", view_id, "$add` are already view members: ",
+        paste(member_add, collapse = ", "), "."
+      ),
+      class = "dock_views_mod_add_existing"
+    )
+  }
+
+  post_add <- c(post_rm, add_ids)
+
+  for (pid in add_ids) {
+    validate_panel_hint(mod$add[[pid]], view_id, setdiff(post_add, pid))
+  }
+
+  move_ids <- validate_mod_map(mod$move, view_id, "move")
+
+  bad_move <- setdiff(move_ids, post_add)
+
+  if (length(bad_move)) {
+    blockr_abort(
+      paste0(
+        "Panel(s) in `views$mod$", view_id, "$move` are not view members: ",
+        paste(bad_move, collapse = ", "), "."
+      ),
+      class = "dock_views_mod_move_unknown"
+    )
+  }
+
+  for (pid in move_ids) {
+    validate_panel_hint(mod$move[[pid]], view_id, setdiff(post_add, pid))
+  }
+
+  sel <- mod$select
+
+  if (!is.null(sel)) {
+
+    if (!is_string(sel)) {
+      blockr_abort(
+        "`views$mod${view_id}$select` must be a single panel id.",
+        class = "dock_views_mod_invalid"
+      )
+    }
+
+    if (!sel %in% post_add) {
+      blockr_abort(
+        "Panel {sel} in `views$mod${view_id}$select` is not a view member.",
+        class = "dock_views_mod_select_unknown"
+      )
+    }
+  }
+
+  invisible(mod)
+}
+
+# A keyed panel-op map (`add` / `move`): a named list whose keys are panel ids
+# and whose values are placement hints. Returns the panel ids.
+validate_mod_map <- function(map, view_id, verb) {
+
+  if (is.null(map)) {
+    return(character())
+  }
+
+  nms <- names(map)
+
+  if (!is.list(map) || (length(map) && (is.null(nms) || any(!nzchar(nms))))) {
+    blockr_abort(
+      "`views$mod${view_id}${verb}` must be a list keyed by panel id.",
+      class = "dock_views_mod_invalid"
+    )
+  }
+
+  nms %||% character()
+}
+
+# A placement hint rides an `add` or `move` entry: an optional `near` panel to
+# anchor against (must be a member of the view -- the running `anchors` set) and
+# an optional `side` in dockview's drop vocabulary. Both absent falls back to
+# `determine_panel_pos()` at delivery.
+validate_panel_hint <- function(hint, view_id, anchors) {
+
+  if (is.null(hint) || !length(hint)) {
+    return(invisible())
+  }
+
+  if (!is.list(hint)) {
+    blockr_abort(
+      "A placement hint in `views$mod${view_id}` must be a list.",
+      class = "dock_views_mod_hint_invalid"
+    )
+  }
+
+  near <- hint$near
+
+  if (not_null(near) && !near %in% anchors) {
+    blockr_abort(
+      "Hint `near` {near} in `views$mod${view_id}` is not a view member.",
+      class = "dock_views_mod_hint_invalid"
+    )
+  }
+
+  side <- hint$side
+
+  if (not_null(side) && !isTRUE(side %in% valid_panel_sides())) {
+    blockr_abort(
+      paste0(
+        "Hint `side` ", side, " in `views$mod$", view_id, "` must be one of: ",
+        paste(valid_panel_sides(), collapse = ", "), "."
+      ),
+      class = "dock_views_mod_hint_invalid"
+    )
+  }
+
+  invisible()
+}
+
+# Fold the panel set the live dock now holds into a `views$mod` entry: the
+# panels gained become an `add` (with empty hints -- the panels are already
+# placed, the mirror owns their geometry) and those lost an `rm`. `NULL` when
+# the live set already matches, so the caller skips a no-op update. Catches the
 # dock-only mutation paths (the add-panel modal, a closed tab, an extension
-# show / hide) that never travel through block add / remove.
+# show / hide) that never travel through block add / remove; a server op that
+# wrote membership before delivery lands here as a no-op (set already in sync).
 fold_live_membership <- function(members, live_ids) {
 
-  if (setequal(members, live_ids)) {
+  added <- setdiff(live_ids, members)
+  removed <- setdiff(members, live_ids)
+
+  if (!length(added) && !length(removed)) {
     return(NULL)
   }
 
-  as.character(live_ids)
+  mod <- list()
+
+  if (length(added)) {
+    mod[["add"]] <- set_names(rep_len(list(list()), length(added)), added)
+  }
+
+  if (length(removed)) {
+    mod[["rm"]] <- as.character(removed)
+  }
+
+  mod
 }
 
-# Merge a user-supplied `views$mod` (membership sets) with the block-removal
-# cleanup: drop each removed block's panel from whatever set the update carries
-# for a view, falling back to the view's current membership. Pure set algebra
-# -- geometry never enters.
+# Merge the block-removal cleanup into a user-supplied `views$mod`: each removed
+# block's panel, wherever it is still a view member, joins that view's `rm`
+# verb. The removal cascade is an `rm`, composing by key with whatever the user
+# batched -- per-view, per-verb maps merge rather than clobber.
 merge_views_mod <- function(user_mod, views, rm_block_ids,
                             skip_views = character()) {
 
@@ -976,10 +1165,10 @@ merge_views_mod <- function(user_mod, views, rm_block_ids,
 
   for (v in setdiff(names(views), skip_views)) {
 
-    base <- out[[v]] %||% view_members(views[[v]])
+    present <- intersect(view_members(views[[v]]), rm_panels)
 
-    if (any(base %in% rm_panels)) {
-      out[[v]] <- setdiff(base, rm_panels)
+    if (length(present)) {
+      out[[v]][["rm"]] <- union(out[[v]][["rm"]] %||% character(), present)
     }
   }
 
@@ -1072,13 +1261,32 @@ apply_views_add <- function(add_views, board) {
   board
 }
 
+# Apply the panel-op batch for each modified view. Only `add` and `rm` are slot
+# writers -- they grow / shrink membership (rm then add, so a re-place works);
+# `move` and `select` write nothing (geometry and the active tab are client-
+# owned, captured by the settled-echo mirror). Placement hints are consumed at
+# delivery, never stored.
 apply_views_mod <- function(mod_views, board) {
 
   for (v in names(mod_views)) {
-    board <- set_view_membership(board, v, mod_views[[v]])
+    board <- apply_view_mod(board, v, mod_views[[v]])
   }
 
   board
+}
+
+apply_view_mod <- function(board, view_id, mod) {
+
+  if (is.null(mod[["add"]]) && is.null(mod[["rm"]])) {
+    return(board)
+  }
+
+  members <- view_members(board_views(board)[[view_id]])
+
+  members <- setdiff(members, mod[["rm"]] %||% character())
+  members <- union(members, names(mod[["add"]]) %||% character())
+
+  set_view_membership(board, view_id, members)
 }
 
 # Apply the grid mirror's echo: store each view's settled layout verbatim in

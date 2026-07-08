@@ -70,6 +70,7 @@ Collate:
     'ext-delta.R'
     'ext-edit.R'
     'ext-ui.R'
+    'panel-ops.R'
     'plugin-block.R'
     'plugin-serdes.R'
     'utils-dock.R'

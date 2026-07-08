@@ -915,7 +915,8 @@ test_that("a live-only panel add folds into view membership (#217)", {
   # The add-panel modal / show_panel touch only the live dock; view membership
   # must catch up in the same flush (via the fold observer), not the settled
   # echo, or a later reconcile would restore a view missing the new panel. The
-  # fold carries a membership set, not geometry.
+  # fold carries an `add` panel-op (with an empty hint -- the panel is already
+  # placed, the mirror owns its geometry), not a membership set.
   cur <- isolate(live_panels())
   isolate(live_panels(c(cur, "block_panel-b")))
   ms$flushReact()
@@ -923,10 +924,7 @@ test_that("a live-only panel add folds into view membership (#217)", {
   delta <- isolate(upd())
 
   expect_false(is.null(delta$views$mod))
-  expect_setequal(
-    delta$views$mod[[1L]],
-    c("block_panel-a", "block_panel-b")
-  )
+  expect_identical(names(delta$views$mod[[1L]]$add), "block_panel-b")
 })
 
 test_that("extension servers can read peer extension state", {
