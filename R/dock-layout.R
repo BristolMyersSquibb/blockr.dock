@@ -3,7 +3,7 @@
 #' A `dock_layout` is dockView's own layout representation -- the
 #' `{grid, panels, activeGroup}` payload it renders -- the wire form at the
 #' client boundary. It is distinct from our [dock_grid][dock-grid] (a view's
-#' canonical geometry) and [dock_view()][view] (a view's structure): a
+#' canonical geometry) and [dock_view()][dock_view] (a view's structure): a
 #' `dock_layout` is what the browser echoes and what a restore pushes back,
 #' geometry fused with resolved panel content in dockView's own shape. It is
 #' produced and consumed only at the dockView seam and is never stored on the
@@ -15,12 +15,11 @@
 #' Cast across the seam with `as_dock_layout()` (build the dockView payload
 #' from a [dock_grid][dock-grid] against the board's blocks and extensions),
 #' [as_dock_grid()] (canonical geometry from a layout) and
-#' [as_dock_view()][view] (membership from a layout).
+#' [as_dock_view()][dock_view] (membership from a layout).
 #'
 #' @param x Object to wrap, validate, test, or cast.
-#' @param blocks,extensions Board components used to resolve panel content
-#'   when casting a `dock_grid` to a `dock_layout`.
-#' @param ... Passed on to methods.
+#' @param ... Passed on to methods (e.g. `blocks` / `extensions` to resolve
+#'   panel content when casting a `dock_grid`).
 #'
 #' @return `new_dock_layout()`, `validate_dock_layout()` and `as_dock_layout()`
 #'   return a `dock_layout`; `is_dock_layout()` a boolean.

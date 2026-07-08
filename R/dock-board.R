@@ -8,8 +8,8 @@
 #' are a degenerate case with one auto-named "Page" view.
 #'
 #' Multi-view boards pass `views` (and optionally `grids`); see
-#' [dock_view()][view] and [dock_grid()][layout] for the input forms and
-#' [board_views()][view] for how they combine. Bare block / extension ids are
+#' [dock_view()][dock_view] and [dock_grid()][layout] for the input forms and
+#' [board_views()][dock_view] for how they combine. Bare block / extension ids are
 #' resolved against the board's blocks and extensions. With `views = NULL` the
 #' board gets a single default view.
 #'
