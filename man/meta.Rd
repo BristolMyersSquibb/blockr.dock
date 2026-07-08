@@ -5,6 +5,7 @@
 \alias{blk_color}
 \alias{blk_icon_data_uri}
 \alias{block_status_style}
+\alias{block_status_badge}
 \title{Get block metadata}
 \usage{
 blks_metadata(blocks)
@@ -14,6 +15,8 @@ blk_color(category)
 blk_icon_data_uri(icon_svg, color, size = 48, mode = c("uri", "inline"))
 
 block_status_style(status)
+
+block_status_badge(status, error_count = 0L)
 }
 \arguments{
 \item{blocks}{Blocks passed as \code{blocks} or \code{block} object}
@@ -30,16 +33,21 @@ block_status_style(status)
 
 \item{status}{A block eval status. Only \code{waiting}, \code{unset} and \code{failed}
 carry an indicator; any other value -- including \code{ready}, \code{dormant} or a
-non-string -- yields \code{NULL}. The returned \code{size} is the coloured dot's
-pixel diameter; each front-end draws it with a 2px white ring so the dock
-card icon and the DAG node badge match.}
+non-string -- yields \code{NULL}. \code{size} is the coloured dot's pixel diameter
+and \code{ring} its white outline width, both shared so the dock card icon and
+the DAG node badge render identically.}
+
+\item{error_count}{Number of error conditions the block has raised. A
+positive count promotes the badge to \code{failed}, catching render-phase
+errors that leave the eval status \code{ready}.}
 }
 \value{
 Metadata is returned from \code{blks_metadata()} as a \code{data.frame} with
 each row corresponding to a block. Both \code{blk_color()} and
 \code{blk_icon_data_uri()} return character vectors. \code{block_status_style()}
-returns a list with \code{color}, \code{size} and \code{label}, or \code{NULL} for a status
-with no indicator.
+returns a list with \code{color}, \code{label}, \code{size}, \code{ring} and \code{ring_color}, or
+\code{NULL} for a status with no indicator. \code{block_status_badge()} returns that
+same list, \code{NULL}, or \code{NA}.
 }
 \description{
 Returns various metadata for blocks or block categories, as well as styling
@@ -58,6 +66,11 @@ into square-shaped icons.
 indicator (the coloured dot) -- shared so front-ends render it
 consistently (the dock draws it on the block card icon, blockr.dag as a
 node badge).
+\item \code{block_status_badge()}: Derives the badge to draw from a block's eval
+status and error count -- the single derivation both front-ends consume
+so the dock card icon and the DAG node badge always agree. Returns the
+\code{block_status_style()} spec, \code{NULL} (no badge), or \code{NA} (indeterminate:
+the status is not computed, so leave any existing badge unchanged).
 }
 }
 \examples{

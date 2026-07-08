@@ -14,6 +14,11 @@
 #'   indicator (the coloured dot) -- shared so front-ends render it
 #'   consistently (the dock draws it on the block card icon, blockr.dag as a
 #'   node badge).
+#' - `block_status_badge()`: Derives the badge to draw from a block's eval
+#'   status and error count -- the single derivation both front-ends consume
+#'   so the dock card icon and the DAG node badge always agree. Returns the
+#'   `block_status_style()` spec, `NULL` (no badge), or `NA` (indeterminate:
+#'   the status is not computed, so leave any existing badge unchanged).
 #'
 #' @param blocks Blocks passed as `blocks` or `block` object
 #'
@@ -29,8 +34,9 @@
 #' @return Metadata is returned from `blks_metadata()` as a `data.frame` with
 #' each row corresponding to a block. Both `blk_color()` and
 #' `blk_icon_data_uri()` return character vectors. `block_status_style()`
-#' returns a list with `color`, `size` and `label`, or `NULL` for a status
-#' with no indicator.
+#' returns a list with `color`, `label`, `size`, `ring` and `ring_color`, or
+#' `NULL` for a status with no indicator. `block_status_badge()` returns that
+#' same list, `NULL`, or `NA`.
 #'
 #' @rdname meta
 #' @export

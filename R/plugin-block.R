@@ -527,8 +527,15 @@ edit_block_server <- function(callbacks = list()) {
 
         blk_status <- reactive(reval_if(board$eval[[block_id]]))
 
+        conds <- reactive(
+          {
+            req(block_id %in% names(board$blocks))
+            block_cond_buckets(board$blocks[[block_id]]$server$conditions())
+          }
+        )
+
         output$status_indicator <- renderUI(
-          block_status_indicator(blk_status())
+          block_status_indicator(blk_status(), sum(lengths(conds()$error)))
         )
 
         output$status_note <- renderUI(
@@ -542,13 +549,6 @@ edit_block_server <- function(callbacks = list()) {
             input$collapse_blk_sections,
             session
           )
-        )
-
-        conds <- reactive(
-          {
-            req(block_id %in% names(board$blocks))
-            block_cond_buckets(board$blocks[[block_id]]$server$conditions())
-          }
         )
 
         output$issues_count <- renderText(cond_issue_label(conds()))
@@ -729,9 +729,9 @@ block_issues_ui <- function(ns) {
 
 #' @param status A block eval status. Only `waiting`, `unset` and `failed`
 #'   carry an indicator; any other value -- including `ready`, `dormant` or a
-#'   non-string -- yields `NULL`. The returned `size` is the coloured dot's
-#'   pixel diameter; each front-end draws it with a 2px white ring so the dock
-#'   card icon and the DAG node badge match.
+#'   non-string -- yields `NULL`. `size` is the coloured dot's pixel diameter
+#'   and `ring` its white outline width, both shared so the dock card icon and
+#'   the DAG node badge render identically.
 #' @rdname meta
 #' @export
 block_status_style <- function(status) {
@@ -751,14 +751,35 @@ block_status_style <- function(status) {
     return(NULL)
   }
 
-  c(spec, list(size = 8L))
+  c(spec, list(size = 8L, ring = 2L, ring_color = "#ffffff"))
 }
 
-block_status_indicator <- function(status) {
+#' @param error_count Number of error conditions the block has raised. A
+#'   positive count promotes the badge to `failed`, catching render-phase
+#'   errors that leave the eval status `ready`.
+#' @rdname meta
+#' @export
+block_status_badge <- function(status, error_count = 0L) {
 
-  spec <- block_status_style(status)
+  if (error_count > 0L) {
+    status <- "failed"
+  }
 
-  if (is.null(spec)) {
+  # A dormant block has no computed status: return `NA` to signal "leave the
+  # badge as-is", so a persistent renderer (the DAG node) keeps its last-known
+  # badge rather than clearing it when the block drops out of the eval set.
+  if (isTRUE(status == "dormant")) {
+    return(NA)
+  }
+
+  block_status_style(status)
+}
+
+block_status_indicator <- function(status, error_count = 0L) {
+
+  spec <- block_status_badge(status, error_count)
+
+  if (!is.list(spec)) {
     return(NULL)
   }
 
@@ -767,7 +788,8 @@ block_status_indicator <- function(status) {
     style = htmltools::css(
       width = paste0(spec$size, "px"),
       height = paste0(spec$size, "px"),
-      `background-color` = spec$color
+      `background-color` = spec$color,
+      `box-shadow` = paste0("0 0 0 ", spec$ring, "px ", spec$ring_color)
     ),
     title = spec$label,
     role = "img",
