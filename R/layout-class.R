@@ -1,68 +1,44 @@
-#' Dock layout
+#' Dock grid authoring
 #'
-#' A `dock_layout` is the panel arrangement for a single view: a tree of
-#' block / extension IDs, with at most one leaf marked as initially
-#' active. A board holds a `dock_layouts` collection (one layout per
-#' view); panel content is derived on demand from the board's blocks and
-#' extensions, so only the arrangement is stored in a `dock_layout`. See
-#' [is_dock_layouts()] for the collection-level helpers.
+#' A [dock_grid][dock-grid] is a view's geometry: the arrangement of its
+#' panels into nested splits and tab groups, with sizes. `dock_grid()` is the
+#' authoring DSL that builds one; view *membership* (which panels belong) and
+#' the display *name* live on the view (see [dock_view()][view]), not the grid.
 #'
-#' Construct a layout with:
+#' Construct a grid with:
 #'
-#' * `dock_layout(...)`: the page-level container. Its `...` are the
+#' * `dock_grid(...)`: the page-level container. Its `...` are the
 #'   children of the root branch. Bare strings become single-panel
 #'   leaves, character vectors become tabbed leaves, lists become
 #'   nested branches. Use [panels()] for a tabbed leaf with an explicit
 #'   open tab, and [group()] for a branch with explicit sizes.
 #' * `panels(..., active = NULL)`: a tabbed leaf whose tab strip holds
-#'   the given panel IDs. `active` selects the initially-open tab; the
-#'   first ID wins by default. A single-panel `panels()` is permitted
+#'   the given panel ids. `active` selects the initially-open tab; the
+#'   first id wins by default. A single-panel `panels()` is permitted
 #'   but redundant (a bare string is equivalent).
 #' * `group(..., sizes = NULL)`: a branch container. `sizes` is a
 #'   numeric vector parallel to `...` that overrides the even split.
-#' * `default_layout(blocks, extensions)` produces the default two-row
-#'   arrangement (extensions on top, blocks below) for a board.
+#' * `default_layout(blocks, extensions)` produces the default board
+#'   arrangement (extensions on top, blocks below) as a `list(views, grids)`
+#'   the constructor consumes.
 #'
-#' `dock_layout()` accepts `orientation = "horizontal" | "vertical"`
-#' for the top-level split direction, `sizes` for the root-branch
-#' ratios, and `name` for the view's display label. In
-#' `new_dock_board(layouts = list(...))` the list name is the view's
-#' stable *id* (the container's key, like a block id), minted when
-#' absent; `name` sets the free-form display label on the view itself.
-#' When no name is given, one is derived from the id for display. Which
-#' view starts active is a property of the collection, not of any one
-#' layout: pass `new_dock_board(active = )` (a view id) to choose it,
-#' defaulting to the first.
+#' `dock_grid()` accepts `orientation = "horizontal" | "vertical"` for the
+#' top-level split direction and `sizes` for the root-branch ratios. The
+#' dockView-native `{grid, panels, activeGroup}` payload dockViewR consumes is a
+#' [dock_layout][dock-layout], built from a grid against the board's blocks and
+#' extensions. The JSON-string boundary is [layout_to_json()] /
+#' [layout_from_json()].
 #'
-#' A *view* is the conceptual page-level container; a *layout* is the
-#' panel arrangement inside a view. The dockview-shape `grid + panels`
-#' payload that dockViewR consumes is an internal projection of a
-#' `dock_layout` against the board's blocks and extensions; it is not a
-#' public type.
-#'
-#' `as_dock_layout()` coerces to a `dock_layout`: a `dock_layout`
-#' (identity), a `board` (its active layout), or a spec list (`as.list()`
-#' of a layout, or a parsed [layout_to_json()] string). Pass `blocks` /
-#' `extensions` to resolve bare IDs to canonical panel IDs and validate.
-#' `as.list()` of a `dock_layout` returns that spec list. The JSON-string
-#' boundary is [layout_to_json()] / [layout_from_json()].
-#'
-#' @param ... For `dock_layout()` and `group()`, layout children (bare
-#'   IDs, character vectors, lists, `panels()`, or `group()`). For
-#'   `panels()`, panel IDs. Otherwise reserved for generic consistency.
+#' @param ... For `dock_grid()` and `group()`, grid children (bare ids,
+#'   character vectors, lists, `panels()`, or `group()`). For `panels()`,
+#'   panel ids. Otherwise reserved for generic consistency.
 #' @param orientation Top-level split direction; one of `"horizontal"`
 #'   (default) or `"vertical"`.
-#' @param active For `panels()`, the ID of the tab to open by default.
+#' @param active For `panels()`, the id of the tab to open by default.
 #' @param sizes Numeric vector parallel to `...`, giving each child's
 #'   share of the parent (positive; need not sum to 1).
-#' @param name For `dock_layout()`, an optional display label for the
-#'   view (free-form). When omitted, a label is derived from the view's
-#'   id. The view's id is the list name in
-#'   `new_dock_board(layouts = list(...))`, minted when absent and unique
-#'   across the views of a `dock_layouts`.
-#' @param blocks,extensions Dock board components. For `default_layout()`
-#'   the components to arrange; for `as_dock_layout()`, optional, used to
-#'   resolve bare IDs and validate the result.
+#' @param blocks,extensions Dock board components to arrange (for
+#'   `default_layout()`).
 #'
 #' @examples
 #' blks <- c(
@@ -70,42 +46,32 @@
 #'   b = blockr.core::new_head_block()
 #' )
 #'
-#' exts <- list(
-#'   edit = new_edit_board_extension()
-#' )
-#'
-#' # The default arrangement for a given set of blocks and extensions
-#' default_layout(blks, exts)
-#'
 #' # Tabbed leaf with an explicit open tab
 #' panels("a", "b", "edit_board_extension", active = "edit_board_extension")
 #'
 #' # Branch with explicit child ratios
 #' group("a", "b", sizes = c(0.3, 0.7))
 #'
-#' # Composing them inside a layout
-#' dock_layout(
+#' # Composing them inside a grid
+#' dock_grid(
 #'   "a",
 #'   panels("b", "edit_board_extension", active = "edit_board_extension"),
 #'   sizes = c(0.3, 0.7)
 #' )
 #'
 #' # Vertical top-level split
-#' dock_layout("a", "b", orientation = "vertical")
+#' dock_grid("a", "b", orientation = "vertical")
 #'
-#' @return `dock_layout()` and `default_layout()` return a `dock_layout`
-#' object. `panels()` returns a `dock_panels` node and `group()` returns
-#' a `dock_group` node — both are layout sub-trees usable inside
-#' `dock_layout()` / `group()`. `as_dock_layout()` returns a
-#' `dock_layout` (from a board or a spec list); `as.list()` of a
-#' `dock_layout` returns the spec list. `is_dock_layout()` returns a
-#' boolean. `validate_dock_layout()` returns its input and throws on
-#' error.
+#' @return `dock_grid()` returns a [dock_grid][dock-grid] object. `panels()`
+#' returns a `dock_panels` node and `group()` returns a `dock_group` node --
+#' both are grid sub-trees usable inside `dock_grid()` / `group()`.
+#' `default_layout()` returns a `list` with `views` (a `dock_views`) and
+#' `grids` (a `dock_grids`).
 #'
 #' @rdname layout
 #' @export
-dock_layout <- function(..., orientation = c("horizontal", "vertical"),
-                        sizes = NULL, name = NULL) {
+dock_grid <- function(..., orientation = c("horizontal", "vertical"),
+                      sizes = NULL) {
 
   orientation <- match.arg(orientation)
   children <- list(...)
@@ -118,15 +84,7 @@ dock_layout <- function(..., orientation = c("horizontal", "vertical"),
     new_dock_group(children, sizes)
   }
 
-  res <- new_dock_layout(
-    grid = build_grid_tree(root_spec, orientation = orientation)
-  )
-
-  if (!is.null(name)) {
-    view_name(res) <- name
-  }
-
-  res
+  new_dock_grid(build_grid_tree(root_spec, orientation = orientation))
 }
 
 #' @rdname layout
@@ -138,7 +96,7 @@ panels <- function(..., active = NULL) {
 
     if (!is_string(active) || !active %in% ids) {
       blockr_abort(
-        "`active` must be one of the panel IDs.",
+        "`active` must be one of the panel ids.",
         class = "dock_panels_active_invalid"
       )
     }
@@ -200,83 +158,101 @@ validate_sizes <- function(sizes, children) {
   invisible(NULL)
 }
 
-new_dock_layout <- function(grid = NULL, active_group = NULL) {
-
-  if (is.null(grid)) {
-    grid <- build_grid_tree(NULL)
-  }
-
-  content <- list(grid = grid)
-
-  if (length(grid_panel_ids(grid))) {
-    content[["activeGroup"]] <- coal(active_group, "1")
-  }
-
-  validate_dock_layout(structure(content, class = "dock_layout"))
-}
-
-#' @param x Object
 #' @rdname layout
 #' @export
-is_dock_layout <- function(x) {
-  inherits(x, "dock_layout")
+default_layout <- function(blocks, extensions) {
+
+  blocks <- as_blocks(blocks)
+  ext_coll <- as_dock_extensions(extensions)
+
+  ext_pids <- as.character(as_ext_panel_id(ext_coll))
+  blk_pids <- as.character(as_block_panel_id(blocks))
+
+  spec <- list()
+  if (length(ext_pids)) spec <- c(spec, list(ext_pids))
+  if (length(blk_pids)) spec <- c(spec, list(blk_pids))
+
+  grid <- do.call(dock_grid, spec)
+
+  views <- new_dock_views(
+    mint_view_ids(list(new_dock_view(layout_panel_ids(grid))))
+  )
+
+  list(
+    views = views,
+    grids = new_dock_grids(set_names(list(grid), names(views)))
+  )
 }
 
-#' @rdname layout
-#' @export
-as_dock_layout <- function(x, ...) {
-  UseMethod("as_dock_layout")
-}
+# Rewrite a grid's bare leaf ids to canonical panel ids via `id_map`. Only
+# fully-bare grids are rewritten (see `resolve_panel_ids()`); a name clash
+# between an extension and a block falls back to a default two-group grid.
+resolve_grid <- function(grid, id_map) {
 
-#' @export
-as_dock_layout.dock_layout <- function(x, ...) x
+  grid <- as_dock_grid(grid)
 
-#' @export
-as_dock_layout.board <- function(x, ...) {
-  active_layout(x)
-}
+  panel_ids <- layout_panel_ids(grid)
 
-#' @export
-as_dock_layout.list <- function(x, blocks = NULL, extensions = NULL, ...) {
+  bare <- length(panel_ids) && all(panel_ids %in% names(id_map)) &&
+    any(!panel_ids %in% id_map)
 
-  if ("grid" %in% names(x) && !"children" %in% names(x)) {
-    blockr_abort(
-      paste(
-        "This looks like dockview's internal layout, which is not a public",
-        "input. Pass a layout spec (see `?layout_to_json`) instead."
-      ),
-      class = "dock_layout_dockview_input"
+  if (!bare) {
+    return(grid)
+  }
+
+  if (anyDuplicated(names(id_map)) > 0L) {
+
+    blockr_warn(
+      "Cannot use extension names that overlap with block names.",
+      class = "extension_block_name_clash"
     )
+
+    return(clash_default_grid(id_map))
   }
 
-  layout <- spec_to_layout(x)
+  grid[["grid"]] <- rewrite_grid_leaves(grid[["grid"]], id_map)
 
-  if (!is.null(blocks) || !is.null(extensions)) {
-    layout <- resolve_dock_layout(
-      blocks = coal(blocks, list()),
-      extensions = coal(extensions, list()),
-      layout = layout
+  grid
+}
+
+clash_default_grid <- function(id_map) {
+
+  ext_pids <- unique(id_map[maybe_ext_panel_id(id_map)])
+  blk_pids <- unique(id_map[maybe_block_panel_id(id_map)])
+
+  spec <- list()
+  if (length(ext_pids)) spec <- c(spec, list(as.character(ext_pids)))
+  if (length(blk_pids)) spec <- c(spec, list(as.character(blk_pids)))
+
+  do.call(dock_grid, spec)
+}
+
+rewrite_grid_leaves <- function(grid, id_map) {
+
+  rename_leaf <- function(leaf) {
+
+    views <- chr_ply(leaf[["data"]][["views"]], identity)
+    active <- leaf[["data"]][["activeView"]]
+
+    leaf[["data"]][["views"]] <- as.list(
+      chr_mply(coal, as.list(id_map)[views], views)
     )
+    leaf[["data"]][["activeView"]] <- coal(id_map[[active]], active)
+
+    leaf
   }
 
-  layout
+  grid_map_leaves(grid, rename_leaf)
 }
 
-#' @export
-as.list.dock_layout <- function(x, ...) {
-  layout_to_spec(x)
-}
+# Shared tree renderer for a `dock_grid`: read the wire spec off the geometry
+# and draw it under a `<label>` header.
+format_grid_tree <- function(x, label, bare) {
 
-#' @param bare For `format()` / `print()`, drop the `block_panel-` /
-#'   `ext_panel-` prefixes from panel IDs (see [panel_obj_ids()]).
-#' @rdname layout
-#' @export
-format.dock_layout <- function(x, ..., bare = TRUE) {
-
-  spec <- as.list(x)
+  spec <- layout_to_spec(x)
   orientation <- coal(spec[["orientation"]], "horizontal", fail_all = FALSE)
 
-  header <- paste0("<dock_layout> ", orientation)
+  header <- paste0("<", label, "> ", orientation)
   children <- spec[["children"]]
 
   if (!length(children)) {
@@ -292,30 +268,15 @@ format.dock_layout <- function(x, ..., bare = TRUE) {
   )
 }
 
-#' @rdname layout
-#' @export
-print.dock_layout <- function(x, ...) {
-  cat(format(x, ...), sep = "\n")
-  invisible(x)
-}
-
-#' @export
-str_value.dock_layout <- function(x, ...) {
+str_value_ids <- function(x, label) {
 
   ids <- panel_obj_ids(layout_panel_ids(x))
 
   if (!length(ids)) {
-    return("<dock_layout> (empty)")
+    return(paste0("<", label, "> (empty)"))
   }
 
-  paste0("<dock_layout> ", paste0(ids, collapse = ", "))
-}
-
-#' @importFrom utils str
-#' @export
-str.dock_layout <- function(object, ...) {
-  cat(" ", str_value(object), "\n", sep = "")
-  invisible(object)
+  paste0("<", label, "> ", paste0(ids, collapse = ", "))
 }
 
 flip_orientation <- function(x) {
@@ -371,7 +332,7 @@ format_dock_node <- function(node, orientation, size, focus, bare,
   } else {
 
     blockr_abort(
-      "Encountered an unknown layout node while formatting.",
+      "Encountered an unknown grid node while formatting.",
       class = "dock_layout_format_invalid"
     )
   }
@@ -445,84 +406,6 @@ dock_attrs <- function(...) {
   paste0(" (", paste(tokens, collapse = ", "), ")")
 }
 
-#' @rdname layout
-#' @export
-default_layout <- function(blocks, extensions) {
-
-  blks <- names(as_blocks(blocks))
-  exts <- names(as_dock_extensions(extensions))
-
-  spec <- list()
-  if (length(exts)) spec <- c(spec, list(exts))
-  if (length(blks)) spec <- c(spec, list(blks))
-
-  do.call(dock_layout, spec)
-}
-
-#' @rdname layout
-#' @export
-validate_dock_layout <- function(x, blocks = character()) {
-
-  if (is.null(x)) {
-    return(x)
-  }
-
-  if (is_blocks(blocks)) {
-    blocks <- names(blocks)
-  }
-
-  if (!is.list(x) || !is_dock_layout(x)) {
-    blockr_abort(
-      "Expecting the `layout` component of a `dock_board` to be a list ",
-      "inheriting from `dock_layout`.",
-      class = "dock_layout_invalid"
-    )
-  }
-
-  if (!"grid" %in% names(x)) {
-    blockr_abort(
-      "Expecting a `layout` to contain a `grid` component.",
-      class = "dock_layout_invalid"
-    )
-  }
-
-  unexpected <- setdiff(names(x), c("grid", "activeGroup"))
-
-  if (length(unexpected)) {
-    blockr_abort(
-      "Not expecting `layout` component{?s} {unexpected}.",
-      class = "dock_layout_invalid"
-    )
-  }
-
-  panel_ids <- layout_panel_ids(x)
-
-  is_blk_pn <- maybe_block_panel_id(panel_ids)
-  is_ext_pn <- maybe_ext_panel_id(panel_ids)
-
-  raw_ids <- !(is_blk_pn | is_ext_pn)
-
-  if (length(blocks) && any(raw_ids)) {
-    blockr_abort(
-      "Malformed layout panel ID{?s} {panel_ids[raw_ids]}.",
-      class = "dock_layout_invalid"
-    )
-  }
-
-  if (length(blocks)) {
-    extra <- setdiff(panel_ids[is_blk_pn], as_block_panel_id(blocks))
-
-    if (length(extra)) {
-      blockr_abort(
-        "Unknown layout panel{?s} {extra}.",
-        class = "dock_layout_invalid"
-      )
-    }
-  }
-
-  x
-}
-
 # Build the dockview-shape grid tree (`{root, orientation}`) from a
 # user-facing spec. Accepts:
 #   - NULL                       → empty branch root
@@ -577,14 +460,14 @@ build_grid_tree <- function(spec, orientation = "horizontal") {
 
     if (is_dock_group(node)) {
       n <- length(node[["children"]])
-      child_sizes <- coal(node[["sizes"]], empty_or_even(n))
+      child_sizes <- normalise_sizes(coal(node[["sizes"]], empty_or_even(n)))
       children <- Map(walk, node[["children"]], child_sizes)
       return(make_branch(children, size = size))
     }
 
     if (is.list(node)) {
       n <- length(node)
-      child_sizes <- empty_or_even(n)
+      child_sizes <- normalise_sizes(empty_or_even(n))
       children <- Map(walk, node, child_sizes)
       return(make_branch(children, size = size))
     }
@@ -626,82 +509,7 @@ grid_panel_ids <- function(grid) {
 #' @rdname layout-json
 #' @export
 layout_panel_ids <- function(layout) {
-  layout <- as_dock_layout(layout)
-  grid_panel_ids(layout[["grid"]])
-}
-
-resolve_dock_layout <- function(blocks = list(), extensions = list(),
-                                layout = default_layout(blocks, extensions)) {
-
-  blocks <- as_blocks(blocks)
-  ext_coll <- as_dock_extensions(extensions)
-
-  layout <- as_dock_layout(layout)
-  view_nm <- view_name(layout)
-
-  ext_pid <- as_ext_panel_id(ext_coll)
-  ext_key <- ext_alias_ids(ext_coll)
-  ext_cls <- names(ext_coll)
-
-  aliased <- ext_key != ext_cls
-
-  id_map <- set_names(
-    c(ext_pid, ext_pid[aliased], as_block_panel_id(blocks)),
-    c(ext_key, ext_cls[aliased], names(blocks))
-  )
-
-  panel_ids <- grid_panel_ids(layout[["grid"]])
-
-  if (length(panel_ids) &&
-        all(panel_ids %in% names(id_map)) &&
-        any(!panel_ids %in% id_map)) {
-
-    if (anyDuplicated(names(id_map)) > 0L) {
-
-      blockr_warn(
-        "Cannot use extension names that overlap with block names.",
-        class = "extension_block_name_clash"
-      )
-
-      spec <- list()
-      if (length(ext_coll)) {
-        spec <- c(spec, list(as.character(as_ext_panel_id(ext_coll))))
-      }
-      if (length(blocks)) {
-        spec <- c(spec, list(as.character(as_block_panel_id(blocks))))
-      }
-
-      layout <- do.call(dock_layout, spec)
-
-    } else {
-
-      layout[["grid"]] <- rewrite_grid_leaves(layout[["grid"]], id_map)
-    }
-  }
-
-  if (!is.null(view_nm)) {
-    view_name(layout) <- view_nm
-  }
-
-  validate_dock_layout(layout, blocks)
-}
-
-rewrite_grid_leaves <- function(grid, id_map) {
-
-  rename_leaf <- function(leaf) {
-
-    views <- chr_ply(leaf[["data"]][["views"]], identity)
-    active <- leaf[["data"]][["activeView"]]
-
-    leaf[["data"]][["views"]] <- as.list(
-      chr_mply(coal, as.list(id_map)[views], views)
-    )
-    leaf[["data"]][["activeView"]] <- coal(id_map[[active]], active)
-
-    leaf
-  }
-
-  grid_map_leaves(grid, rename_leaf)
+  grid_panel_ids(as_dock_grid(layout)[["grid"]])
 }
 
 create_layout_panel <- function(x) {
@@ -735,33 +543,4 @@ create_layout_panel <- function(x) {
       )
     )
   )
-}
-
-dockview_payload <- function(layout, blocks = list(), extensions = list()) {
-
-  layout <- as_dock_layout(layout)
-  blocks <- as_blocks(blocks)
-  ext_list <- as.list(as_dock_extensions(extensions))
-
-  panel_ids <- grid_panel_ids(layout[["grid"]])
-
-  blk_pids <- panel_ids[maybe_block_panel_id(panel_ids)]
-  ext_pids <- panel_ids[maybe_ext_panel_id(panel_ids)]
-
-  blk_ids <- as_obj_id(new_block_panel_id(blk_pids))
-  ext_ids <- as_obj_id(new_ext_panel_id(ext_pids))
-
-  blk_panels <- lapply(split(blocks[blk_ids], seq_along(blk_ids)), block_panel)
-  ext_panels <- lapply(ext_list[ext_ids], ext_panel)
-
-  panels <- lapply(c(blk_panels, ext_panels), create_layout_panel)
-  names(panels) <- chr_xtr(panels, "id")
-
-  out <- list(grid = layout[["grid"]], panels = panels)
-
-  if (!is.null(layout[["activeGroup"]])) {
-    out[["activeGroup"]] <- layout[["activeGroup"]]
-  }
-
-  out
 }

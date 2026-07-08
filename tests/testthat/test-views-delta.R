@@ -1,36 +1,106 @@
-test_that("apply_views_add adds new view to board_layouts", {
+# Placement grid for a view of a board (intersection of membership and grid).
+placement_ids <- function(board, id) {
+  layout_panel_ids(
+    view_grid(board_views(board)[[id]], board_grids(board)[[id]])
+  )
+}
+
+test_that("apply_views_add adds a new view", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   upd <- augment_board_update(
-    list(views = list(add = list(NewView = dock_layout("b")))),
+    list(views = list(add = list(NewView = dock_view("block_panel-b")))),
     brd
   )
 
   out <- apply_board_update(brd, upd)
 
-  views <- board_layouts(out)
+  views <- board_views(out)
   expect_setequal(unname(view_names(views)), c("A", "NewView"))
   expect_identical(
-    layout_panel_ids(views[[vid(views, "NewView")]]),
+    view_members(views[[vid(views, "NewView")]]),
     "block_panel-b"
   )
 })
 
-test_that("apply_views_rm removes a view from board_layouts", {
+test_that("a view add carrying a grid seeds geometry, rendering non-flat", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"), B = list("b"))
+    views = list(A = "a")
+  )
+
+  grid <- dock_grid("block_panel-a", "block_panel-b", sizes = c(0.25, 0.75))
+
+  upd <- augment_board_update(
+    list(views = list(add = list(Split = grid))),
+    brd
+  )
+
+  out <- apply_board_update(brd, upd)
+
+  views <- board_views(out)
+  new_id <- vid(views, "Split")
+
+  # Membership is the grid's panel ids; the grid seeds the geometry slot, so the
+  # placement renders the seeded 25/75 split rather than a flat default.
+  expect_setequal(
+    view_members(views[[new_id]]),
+    c("block_panel-a", "block_panel-b")
+  )
+
+  stored <- board_grids(out)[[new_id]]
+  expect_false(is.null(stored))
+
+  placement <- view_grid(views[[new_id]], stored)
+  expect_equal(grid_to_spec(placement[["grid"]])[["sizes"]], c(0.25, 0.75))
+})
+
+test_that("a view add with bare membership seeds no geometry (flat)", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a")
+  )
+
+  upd <- augment_board_update(
+    list(
+      views = list(
+        add = list(Flat = dock_view(c("block_panel-a", "block_panel-b")))
+      )
+    ),
+    brd
+  )
+
+  out <- apply_board_update(brd, upd)
+
+  views <- board_views(out)
+  new_id <- vid(views, "Flat")
+
+  # No grid entry -> the geometry slot stays empty and the placement falls back
+  # to a default flat grid over the members.
+  expect_null(board_grids(out)[[new_id]])
+  expect_setequal(
+    placement_ids(out, new_id),
+    c("block_panel-a", "block_panel-b")
+  )
+})
+
+test_that("apply_views_rm removes a view", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a", B = "b")
   )
 
   upd <- augment_board_update(list(views = list(rm = "B")), brd)
   out <- apply_board_update(brd, upd)
 
-  expect_identical(unname(view_names(board_layouts(out))), "A")
+  expect_identical(unname(view_names(board_views(out))), "A")
   expect_identical(active_name(out), "A")
 })
 
@@ -38,7 +108,8 @@ test_that("apply_views_mod sets membership; the new panel is in-flight", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a"),
+    grids = list(A = dock_grid("a"))
   )
 
   upd <- augment_board_update(
@@ -50,42 +121,39 @@ test_that("apply_views_mod sets membership; the new panel is in-flight", {
 
   # `mod` is a membership set op -- it does not touch geometry. The new panel
   # is placed only by the client echo, so until then it is in-flight: carried
-  # by membership, absent from board_layouts (the placement, panels also in the
-  # grid).
+  # by membership, absent from the placement grid.
   expect_setequal(
     view_members(board_views(out)[["A"]]),
     c("block_panel-a", "block_panel-b")
   )
-  expect_identical(
-    layout_panel_ids(board_layouts(out)[[vid(board_layouts(out), "A")]]),
-    "block_panel-a"
-  )
+  expect_identical(placement_ids(out, "A"), "block_panel-a")
   expect_identical(active_name(out), "A")
 })
 
-test_that("a layout in views$mod is rejected at the update boundary", {
+test_that("a grid in views$mod is rejected at the update boundary", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   # Geometry belongs to the settled-echo mirror, not the membership lifecycle:
-  # a layout smuggled into `mod` is refused before it can be applied.
+  # a grid smuggled into `mod` is refused before it can be applied.
   expect_error(
     validate_board_update(
-      list(views = list(mod = list(A = dock_layout("a", "b")))),
+      list(views = list(mod = list(A = dock_grid("a", "b")))),
       brd
     ),
     class = "dock_views_mod_geometry_rejected"
   )
 })
 
-test_that("apply_views: full delta round-trips through board_layouts", {
+test_that("apply_views: full delta round-trips through the board", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"), B = list("b"))
+    views = list(A = "a", B = "b"),
+    grids = list(A = dock_grid("a"))
   )
 
   # add C and make it active (a new view has no id yet, so `active` names
@@ -93,7 +161,7 @@ test_that("apply_views: full delta round-trips through board_layouts", {
   upd <- augment_board_update(
     list(
       views = list(
-        add = list(C = dock_layout("a")),
+        add = list(C = dock_view("block_panel-a")),
         mod = list(A = c("block_panel-a", "block_panel-b")),
         rm = "B",
         active = "C"
@@ -104,36 +172,34 @@ test_that("apply_views: full delta round-trips through board_layouts", {
 
   out <- apply_board_update(brd, upd)
 
-  views <- board_layouts(out)
+  views <- board_views(out)
   expect_setequal(unname(view_names(views)), c("A", "C"))
   expect_identical(active_name(out), "C")
   # A's mod grows its membership; the added panel is in-flight until echoed, so
-  # board_layouts still shows the placed panel only.
+  # the placement still shows the placed panel only.
   expect_setequal(
     view_members(board_views(out)[["A"]]),
     c("block_panel-a", "block_panel-b")
   )
-  expect_identical(
-    layout_panel_ids(views[[vid(views, "A")]]), "block_panel-a"
-  )
+  expect_identical(placement_ids(out, "A"), "block_panel-a")
 })
 
 test_that("apply_views_add adds a view, leaving the active one untouched", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"), B = list("b"))
+    views = list(A = "a", B = "b")
   )
-  expect_identical(active_view(board_layouts(brd)), "A")
+  expect_identical(active_view(board_views(brd)), "A")
 
   # Adding a view never changes which is active — that rides the `active`
   # slot, applied separately by `apply_views_active()`.
   out <- apply_views_add(
-    setNames(list(dock_layout("a")), "cid"),
+    setNames(list(dock_view("block_panel-a")), "cid"),
     brd
   )
 
-  views <- board_layouts(out)
+  views <- board_views(out)
   expect_setequal(names(views), c("A", "B", "cid"))
   expect_identical(active_view(views), "A")
 })
@@ -142,11 +208,13 @@ test_that("a delta can add a view and activate it by its add key", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"), B = list("b"))
+    views = list(A = "a", B = "b")
   )
 
   upd <- augment_board_update(
-    list(views = list(add = list(C = dock_layout("a")), active = "C")),
+    list(
+      views = list(add = list(C = dock_view("block_panel-a")), active = "C")
+    ),
     brd
   )
 
@@ -158,22 +226,22 @@ test_that("a delta can add a view and activate it by its add key", {
   out <- apply_board_update(brd, upd)
 
   expect_identical(active_name(out), "C")
-  expect_identical(active_view(board_layouts(out)), upd$views$active)
+  expect_identical(active_view(board_views(out)), upd$views$active)
 })
 
 test_that("apply_views_rename writes the display name, keeps the id", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(
-      view_one = dock_layout("a", name = "Old"),
-      view_two = list("a")
+    views = list(
+      view_one = dock_view("a", name = "Old"),
+      view_two = "a"
     )
   )
 
   out <- apply_views_rename(setNames(list("New"), "view_one"), brd)
 
-  views <- board_layouts(out)
+  views <- board_views(out)
   expect_identical(names(views), c("view_one", "view_two"))
   expect_identical(view_name(views[["view_one"]]), "New")
 })
@@ -182,7 +250,7 @@ test_that("rename flows through apply_board_update", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(v1 = dock_layout("a", name = "Old"), v2 = list("a"))
+    views = list(v1 = dock_view("a", name = "Old"), v2 = "a")
   )
 
   out <- apply_board_update(
@@ -190,7 +258,7 @@ test_that("rename flows through apply_board_update", {
     list(views = list(rename = setNames(list("New"), "v1")))
   )
 
-  expect_identical(view_name(board_layouts(out)[["v1"]]), "New")
+  expect_identical(view_name(board_views(out)[["v1"]]), "New")
 })
 
 test_that("augment_board_update is idempotent for a view add", {
@@ -201,11 +269,11 @@ test_that("augment_board_update is idempotent for a view add", {
   # an already-augmented add must be a no-op.
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(Page = list("a"))
+    views = list(Page = "a")
   )
 
   upd <- list(
-    views = list(add = setNames(list(dock_layout("a")), "Second"),
+    views = list(add = setNames(list(dock_view("block_panel-a")), "Second"),
                  active = "Second")
   )
 
@@ -220,7 +288,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(v1 = dock_layout("a", name = "Old"), v2 = list("a"))
+    views = list(v1 = dock_view("a", name = "Old"), v2 = "a")
   )
 
   sent <- list()
@@ -238,16 +306,16 @@ test_that("reconcile_views syncs the nav and live state on rename", {
   # the live layout is pending (NULL), so the layout check is a no-op and only
   # the rename fires.
   docks <- reactiveValues()
-  for (id in names(board_layouts(brd))) {
-    ids <- as.character(layout_panel_ids(board_layouts(brd)[[id]]))
+  for (id in names(board_views(brd))) {
+    ids <- as.character(view_members(board_views(brd)[[id]]))
     docks[[id]] <- list(
       layout = function() NULL,
       live_panels = reactiveVal(ids)
     )
   }
   active_dock <- reactiveValues()
-  client_active <- reactiveVal(active_view(board_layouts(brd)))
-  client_views <- reactiveVal(board_layouts(brd))
+  client_active <- reactiveVal(active_view(board_views(brd)))
+  client_views <- reactiveVal(seed_view_state(board_views(brd)))
 
   # The board carries the new name; the live state still has the old one, so
   # reconcile detects the rename and relabels the nav + client_views.
@@ -275,10 +343,10 @@ test_that("blocks$rm auto-augments views$mod for every affected view", {
       b = new_head_block(),
       c = new_head_block()
     ),
-    layouts = list(
-      Analysis = list("a", "b", "c"),
-      Overview = list("b"),
-      Other = list("a", "c")
+    views = list(
+      Analysis = c("a", "b", "c"),
+      Overview = "b",
+      Other = c("a", "c")
     )
   )
 
@@ -302,7 +370,7 @@ test_that("blocks$rm augment skips views in views$rm", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a", "b"), B = list("b"))
+    views = list(A = c("a", "b"), B = "b")
   )
 
   upd <- list(
@@ -323,7 +391,7 @@ test_that("augment merges user-submitted mod with block-removal cleanup", {
       b = new_head_block(),
       c = new_head_block()
     ),
-    layouts = list(Analysis = list("a", "b"))
+    views = list(Analysis = c("a", "b"))
   )
 
   upd <- list(
@@ -346,7 +414,7 @@ test_that("blocks+views payload augments with refs to newly-added blocks", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   new_blk <- as_blocks(list(new1 = new_head_block()))
@@ -367,7 +435,7 @@ test_that("add + rm of the same name replaces the view with a fresh id", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"), B = list("a"))
+    views = list(A = "a", B = "a")
   )
 
   old_b <- vid(brd, "B")
@@ -378,7 +446,7 @@ test_that("add + rm of the same name replaces the view with a fresh id", {
   upd <- augment_board_update(
     list(
       views = list(
-        add = list(B = dock_layout("a")),
+        add = list(B = dock_view("block_panel-a")),
         rm = "B"
       )
     ),
@@ -386,7 +454,7 @@ test_that("add + rm of the same name replaces the view with a fresh id", {
   )
 
   out <- apply_board_update(brd, upd)
-  views <- board_layouts(out)
+  views <- board_views(out)
 
   expect_setequal(unname(view_names(views)), c("A", "B"))
   expect_false(old_b %in% names(views))
@@ -396,14 +464,14 @@ test_that("validate_views_delta rejects an id in both add and rm", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"), B = list("a"))
+    views = list(A = "a", B = "a")
   )
 
   id <- vid(brd, "B")
 
   expect_error(
     validate_views_delta(
-      list(add = setNames(list(dock_layout("a")), id), rm = id),
+      list(add = setNames(list(dock_view("block_panel-a")), id), rm = id),
       brd,
       list()
     ),
@@ -415,14 +483,14 @@ test_that("validate_views_delta rejects mod referencing a name in rm", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"), B = list("a"))
+    views = list(A = "a", B = "a")
   )
 
   expect_error(
     augment_board_update(
       list(
         views = list(
-          mod = list(B = dock_layout("a")),
+          mod = list(B = "block_panel-a"),
           rm = "B"
         )
       ),
@@ -436,7 +504,7 @@ test_that("validate_views_delta rejects an id in both mod and add", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   id <- vid(brd, "A")
@@ -444,8 +512,8 @@ test_that("validate_views_delta rejects an id in both mod and add", {
   expect_error(
     validate_views_delta(
       list(
-        add = setNames(list(dock_layout("a")), id),
-        mod = setNames(list(dock_layout("a")), id)
+        add = setNames(list(dock_view("block_panel-a")), id),
+        mod = setNames(list("block_panel-a"), id)
       ),
       brd,
       list()
@@ -458,7 +526,7 @@ test_that("validate_views_delta rejects active not resolving", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   expect_error(
@@ -486,14 +554,14 @@ test_that("validate_views_delta rejects panel refs not in post-state", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   expect_error(
     augment_board_update(
       list(
         views = list(
-          add = list(B = dock_layout("ghost"))
+          add = list(B = dock_view("block_panel-ghost"))
         )
       ),
       brd
@@ -506,7 +574,7 @@ test_that("validate_views_delta rejects panel refs not in post-state", {
       list(
         blocks = list(rm = "a"),
         views = list(
-          add = list(B = dock_layout("a"))
+          add = list(B = dock_view("block_panel-a"))
         )
       ),
       brd
@@ -519,12 +587,12 @@ test_that("validate_views_delta rejects mod on unknown view", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   expect_error(
     augment_board_update(
-      list(views = list(mod = list(Ghost = dock_layout("a")))),
+      list(views = list(mod = list(Ghost = "block_panel-a"))),
       brd
     ),
     class = "dock_views_delta_mod_unknown"
@@ -543,14 +611,14 @@ test_that("validate_views_delta rejects adding an existing id", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   id <- vid(brd, "A")
 
   expect_error(
     validate_views_delta(
-      list(add = setNames(list(dock_layout("a")), id)),
+      list(add = setNames(list(dock_view("block_panel-a")), id)),
       brd,
       list()
     ),
@@ -562,7 +630,7 @@ test_that("validate_views_delta rejects an unknown rename id", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   expect_error(
@@ -579,12 +647,12 @@ test_that("validate_views_delta rejects unknown slice keys", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   expect_error(
     augment_board_update(
-      list(views = list(bogus = list(A = dock_layout("a")))),
+      list(views = list(bogus = list(A = "block_panel-a"))),
       brd
     ),
     class = "dock_views_delta_invalid"
@@ -593,22 +661,22 @@ test_that("validate_views_delta rejects unknown slice keys", {
 
 test_that("drop_panels_from_layout preserves remaining structure", {
 
-  ly <- dock_layout("a", "b", "c", sizes = c(1, 2, 1))
+  grid <- as_dock_grid(dock_grid("a", "b", "c", sizes = c(1, 2, 1)))
 
-  res <- drop_panels_from_layout(ly, "b")
+  res <- drop_panels_from_layout(grid, "b")
 
   expect_setequal(layout_panel_ids(res), c("a", "c"))
 
-  res_full <- drop_panels_from_layout(ly, c("a", "b", "c"))
+  res_full <- drop_panels_from_layout(grid, c("a", "b", "c"))
 
   expect_length(layout_panel_ids(res_full), 0L)
 })
 
 test_that("drop_panels_from_layout resets the active tab when it is dropped", {
 
-  ly <- dock_layout(panels("a", "b", active = "b"))
+  grid <- as_dock_grid(dock_grid(panels("a", "b", active = "b")))
 
-  res <- drop_panels_from_layout(ly, "b")
+  res <- drop_panels_from_layout(grid, "b")
   leaf <- res[["grid"]][["root"]][["data"]][[1L]][["data"]]
 
   expect_identical(unlist(leaf[["views"]]), "a")
@@ -633,19 +701,21 @@ test_that("empty views payload causes apply to be a no-op", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   out <- apply_board_update(brd, list())
 
-  expect_identical(board_layouts(out), board_layouts(brd))
+  expect_identical(board_views(out), board_views(brd))
+  expect_identical(board_grids(out), board_grids(brd))
 })
 
 test_that("board_update lifecycle resets to NULL after views-only payload", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"), B = list("b"))
+    views = list(A = "a", B = "b"),
+    grids = list(A = dock_grid("a"))
   )
 
   testServer(
@@ -660,15 +730,12 @@ test_that("board_update lifecycle resets to NULL after views-only payload", {
 
       expect_null(board_update())
       # Membership carries the modded panel; it is in-flight until echoed, so
-      # board_layouts still shows the placed panel only.
+      # the placement still shows the placed panel only.
       expect_setequal(
         view_members(board_views(rv$board)[["A"]]),
         c("block_panel-a", "block_panel-b")
       )
-      expect_identical(
-        layout_panel_ids(board_layouts(rv$board)[[vid(rv$board, "A")]]),
-        "block_panel-a"
-      )
+      expect_identical(placement_ids(rv$board, "A"), "block_panel-a")
     },
     args = list(
       x = brd,
@@ -681,7 +748,8 @@ test_that("blocks$rm augment carries through to apply for view cleanup", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a", "b"), B = list("b"))
+    views = list(A = c("a", "b"), B = "b"),
+    grids = list(A = dock_grid("a", "b"), B = dock_grid("b"))
   )
 
   upd <- augment_board_update(list(blocks = list(rm = "b")), brd)
@@ -690,14 +758,8 @@ test_that("blocks$rm augment carries through to apply for view cleanup", {
 
   out <- apply_views_mod(upd$views$mod, brd)
 
-  expect_identical(
-    layout_panel_ids(board_layouts(out)[[vid(brd, "A")]]),
-    "block_panel-a"
-  )
-  expect_length(
-    layout_panel_ids(board_layouts(out)[[vid(brd, "B")]]),
-    0L
-  )
+  expect_identical(placement_ids(out, vid(brd, "A")), "block_panel-a")
+  expect_length(placement_ids(out, vid(brd, "B")), 0L)
 })
 
 test_that("reconcile_views syncs the view_nav switcher on removal", {
@@ -706,10 +768,10 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
 
     brd <- new_dock_board(
       blocks = c(a = new_dataset_block(), b = new_head_block()),
-      layouts = list(A = list("a"), B = list("b"), C = list("a"))
+      views = list(A = "a", B = "b", C = "a")
     )
 
-    state <- board_layouts(brd)
+    state <- board_views(brd)
     name_to_id <- setNames(names(view_names(state)), unname(view_names(state)))
 
     sent <- list()
@@ -727,7 +789,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     # nav-sync, not the live teardown / switch.
     docks <- reactiveValues()
     for (id in names(state)) {
-      ids <- as.character(layout_panel_ids(state[[id]]))
+      ids <- as.character(view_members(state[[id]]))
       docks[[id]] <- list(
         layout = function() NULL,
         live_panels = reactiveVal(ids)
@@ -737,7 +799,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     client_active <- reactiveVal(name_to_id[[active_label]])
 
     active_view(state) <- name_to_id[[active_label]]
-    client_views <- reactiveVal(state)
+    client_views <- reactiveVal(seed_view_state(state))
 
     # Remove on the board (pure), then reconcile the live session against it.
     removed <- apply_views_rm(name_to_id[[rm_label]], brd)
@@ -787,9 +849,9 @@ test_that("apply_views_rm is a pure board transform", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"), B = list("b"))
+    views = list(A = "a", B = "b")
   )
 
   expect_silent(out <- apply_views_rm(vid(brd, "B"), brd))
-  expect_identical(unname(view_names(board_layouts(out))), "A")
+  expect_identical(unname(view_names(board_views(out))), "A")
 })

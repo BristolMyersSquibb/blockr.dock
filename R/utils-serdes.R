@@ -42,29 +42,6 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
 }
 
 #' @export
-blockr_ser.dock_layout <- function(x, data, ...) {
-  payload <- if (!missing(data)) coal(data, x) else x
-  payload <- as_dock_layout(payload)
-  list(
-    object = class(x),
-    payload = layout_to_spec(payload),
-    name = view_name(payload)
-  )
-}
-
-#' @export
-blockr_ser.dock_layouts <- function(x, data, ...) {
-  lys <- if (!missing(data) && is_dock_layouts(data)) data else x
-  list(
-    object = class(lys),
-    payload = list(
-      active = active_view(lys),
-      views = lapply(lys, blockr_ser)
-    )
-  )
-}
-
-#' @export
 blockr_ser.dock_views <- function(x, data, ...) {
   vws <- if (!missing(data) && is_dock_views(data)) data else x
   list(
@@ -130,19 +107,13 @@ blockr_deser.dock_board <- function(x, data, ...) {
     producer_version = data[["constructor"]][["version"]]
   )
 
-  # The split structure / grid slots recombine into the constructor's
-  # `layouts` argument, which re-decomposes them. Pre-split payloads carry a
-  # fused `layouts` field instead.
-  layouts <- if (not_null(des[["views"]])) {
-    compose_layouts(des[["views"]], des[["grids"]])
-  } else {
-    des[["layouts"]]
-  }
-
+  # The split structure / grid slots feed the constructor's `views` / `grids`
+  # arguments directly -- no fused round-trip.
   args <- c(
-    des[setdiff(names(des), c("views", "grids", "layouts"))],
+    des[setdiff(names(des), c("views", "grids"))],
     list(
-      layouts = layouts,
+      views = des[["views"]],
+      grids = des[["grids"]],
       ctor = coal(ctor_name(ctor), ctor_fun(ctor)),
       pkg = ctor_pkg(ctor)
     )
@@ -191,43 +162,10 @@ read_layout_payload <- function(payload, producer_version = NULL) {
   }
 
   if ("grid" %in% names(payload)) {
-    dockview_to_layout(payload)
+    as_dock_grid(new_dock_layout(payload))
   } else {
     spec_to_layout(payload)
   }
-}
-
-#' @export
-blockr_deser.dock_layout <- function(x, data, ..., producer_version = NULL) {
-
-  layout <- read_layout_payload(data[["payload"]], producer_version)
-
-  # Which view is active is restored at the container level from
-  # `dock_layouts`' `active` field; a per-view `active` boolean in older
-  # payloads is ignored here.
-  if (is_string(data[["name"]])) {
-    view_name(layout) <- data[["name"]]
-  }
-
-  layout
-}
-
-#' @export
-blockr_deser.dock_layouts <- function(x, data, ...) {
-  payload <- data[["payload"]]
-
-  # `views` is keyed by stable id; each carries its display name (when
-  # set). The active view is recorded once, at the container level, and
-  # restored by id below.
-  res <- reconstruct_dock_layouts(
-    lapply(payload[["views"]], blockr_deser, ...)
-  )
-
-  if (is_string(payload[["active"]]) && payload[["active"]] %in% names(res)) {
-    active_view(res) <- payload[["active"]]
-  }
-
-  res
 }
 
 #' @export
@@ -297,7 +235,7 @@ blockr_deser.dock_extensions <- function(x, data, ...) {
 # The persisted layout shape (the "spec") is a recursive tree,
 # deliberately distinct from dockview's internal grid format. The
 # top-level object is itself a
-# branch — it carries `children`, an optional `sizes`, and an
+# branch -- it carries `children`, an optional `sizes`, and an
 # `orientation`. A node within is either:
 #
 #   - a bare string: a single-panel leaf (the common case);
@@ -317,7 +255,7 @@ blockr_deser.dock_extensions <- function(x, data, ...) {
 # the pure structure; layout_to_spec()/spec_to_layout() add the focus.
 #
 # Dockview's internal fields (type tags, per-branch size, leaf id) are
-# not stored — they're regenerated on the way back in. Dockview emits
+# not stored -- they're regenerated on the way back in. Dockview emits
 # absolute pixel sizes from live state after a user resize; grid_to_spec()
 # normalises them to ratios on save. spec_to_grid() is robust to the
 # atomic-vector coercion `jsonlite::fromJSON(simplifyVector = TRUE)`
@@ -325,7 +263,7 @@ blockr_deser.dock_extensions <- function(x, data, ...) {
 
 # A whole-tree fold rather than a leaf map: branches become wire
 # `children`/`sizes` and leaves collapse to strings or `panels`, so the
-# leaf-only grid_map_leaves() can't express it — it keeps its own walk.
+# leaf-only grid_map_leaves() can't express it -- it keeps its own walk.
 grid_to_spec <- function(grid) {
 
   walk <- function(node) {
@@ -368,9 +306,20 @@ grid_to_spec <- function(grid) {
     )
   }
 
-  # The root is always a branch (the constructor wraps args in a group),
-  # so its `children` / `sizes` hoist to the top alongside orientation.
-  root_wire <- walk(grid[["root"]])
+  # The root is a branch (the constructor wraps args in a group), so its
+  # `children` / `sizes` hoist to the top alongside orientation. A grid with no
+  # root at all (an empty or not-yet-initialised echo) hoists empty children. A
+  # leaf root (a single-group page, which live dockView can echo) is wrapped as
+  # that branch's sole child, matching the constructor's always-a-branch root.
+  root <- grid[["root"]]
+
+  root_wire <- if (is.null(root) || !length(root)) {
+    list(children = list())
+  } else if (identical(root[["type"]], "branch")) {
+    walk(root)
+  } else {
+    list(children = list(walk(root)))
+  }
 
   c(
     list(orientation = tolower(coal(grid[["orientation"]], "horizontal"))),
@@ -456,14 +405,16 @@ normalise_sizes <- function(sizes) {
 }
 
 # Layout-level conversion: the grid <-> wire structure plus the
-# focused-panel pointer that lives on the `dock_layout`, not the grid.
+# focused-panel pointer carried on the `dock_grid`'s `activeGroup`.
 
-layout_to_spec <- function(layout) {
+layout_to_spec <- function(grid) {
 
-  layout <- as_dock_layout(layout)
-  wire <- grid_to_spec(layout[["grid"]])
+  grid <- as_dock_grid(grid)
+  tree <- grid[["grid"]]
 
-  focus <- focus_panel(layout[["grid"]], layout[["activeGroup"]])
+  wire <- grid_to_spec(tree)
+
+  focus <- focus_panel(tree, grid[["activeGroup"]])
   if (!is.null(focus)) {
     wire[["focus"]] <- focus
   }
@@ -475,24 +426,7 @@ spec_to_layout <- function(wire) {
 
   grid <- spec_to_grid(wire)
 
-  new_dock_layout(
-    grid = grid,
-    active_group = focus_group_id(grid, wire[["focus"]])
-  )
-}
-
-# Wrap a dockview-shaped list (its own `get_dock()` output, or an
-# unclassed `dock_layout`) back into a `dock_layout`. Internal only —
-# dockview's grid shape is not a public input; `as_dock_layout()` speaks
-# the spec, not this.
-dockview_to_layout <- function(x) {
-  new_dock_layout(
-    grid = x[["grid"]],
-    active_group = coal(
-      x[["activeGroup"]], x[["active_group"]],
-      fail_all = FALSE
-    )
-  )
+  new_dock_grid(grid, active_group = focus_group_id(grid, wire[["focus"]]))
 }
 
 grid_leaves <- function(grid) {
@@ -580,14 +514,14 @@ focus_group_id <- function(grid, focus) {
   NULL
 }
 
-#' Layout serialization and inspection
+#' Grid serialization and inspection
 #'
-#' Read and write the JSON form of a [dock_layout][layout], and inspect
+#' Read and write the JSON form of a [dock_grid][dock-grid], and inspect
 #' the panel IDs it references. These are the canonical accessors for the
-#' serialized layout format — downstream tooling should call them rather
+#' serialized grid format -- downstream tooling should call them rather
 #' than re-implement the format.
 #'
-#' `layout_to_json()` renders a layout as a JSON string; `layout_from_json()`
+#' `layout_to_json()` renders a grid as a JSON string; `layout_from_json()`
 #' is the inverse. The shape is a recursive tree: the top object carries
 #' `orientation`, `children`, an optional `sizes`, and an optional `focus`
 #' (the panel with current focus); a child is either a bare string
@@ -596,35 +530,34 @@ focus_group_id <- function(grid, focus) {
 #' branch). Sizes are ratios summing to 1, omitted when even.
 #'
 #' `layout_from_json()` accepts a JSON string or an already-parsed spec
-#' list and delegates to [as_dock_layout()][layout]; when `blocks` /
-#' `extensions` are supplied, bare IDs are resolved to canonical panel
-#' IDs and the result is validated (an unknown panel or malformed
-#' arrangement throws the usual classed error).
+#' list and returns a `dock_grid`; when `blocks` / `extensions` are
+#' supplied, bare IDs are resolved to canonical panel IDs and the result is
+#' validated (an unknown panel throws a classed error).
 #'
 #' `layout_panel_ids()` returns the canonical panel IDs
-#' (`block_panel-…` / `ext_panel-…`) referenced by a layout;
+#' (`block_panel-...` / `ext_panel-...`) referenced by a grid;
 #' `panel_obj_ids()` strips those prefixes back to bare block /
 #' extension IDs.
 #'
-#' @param x A `dock_layout` (for `layout_to_json()`), or a JSON string /
+#' @param x A `dock_grid` (for `layout_to_json()`), or a JSON string /
 #'   parsed spec list (for `layout_from_json()`).
-#' @param layout A `dock_layout` object.
+#' @param layout A `dock_grid` object.
 #' @param ids Character vector of panel IDs.
 #' @param blocks,extensions Optional board components used to resolve and
 #'   validate bare IDs in `layout_from_json()`.
 #' @param ... Forwarded to [jsonlite::toJSON()].
 #'
 #' @return `layout_to_json()` returns a JSON string; `layout_from_json()`
-#'   a `dock_layout`. `layout_panel_ids()` and `panel_obj_ids()` return
+#'   a `dock_grid`. `layout_panel_ids()` and `panel_obj_ids()` return
 #'   character vectors.
 #'
 #' @examples
-#' ly <- dock_layout("a", panels("b", "c", active = "c"), sizes = c(0.3, 0.7))
+#' grid <- dock_grid("a", panels("b", "c", active = "c"), sizes = c(0.3, 0.7))
 #'
-#' json <- layout_to_json(ly)
+#' json <- layout_to_json(grid)
 #' cat(json)
 #'
-#' identical(layout_from_json(json), ly)
+#' identical(layout_from_json(json), grid)
 #'
 #' @rdname layout-json
 #' @export
@@ -642,7 +575,51 @@ layout_from_json <- function(x, blocks = NULL, extensions = NULL) {
     x
   }
 
-  as_dock_layout(spec, blocks = blocks, extensions = extensions)
+  grid <- spec_to_layout(spec)
+
+  if (is.null(blocks) && is.null(extensions)) {
+    return(grid)
+  }
+
+  blocks <- coal(blocks, list())
+  extensions <- coal(extensions, list())
+
+  grid <- resolve_grid(grid, panel_id_map(blocks, extensions))
+
+  validate_grid_refs(
+    grid,
+    c(
+      as.character(as_block_panel_id(as_blocks(blocks))),
+      as.character(as_ext_panel_id(as_dock_extensions(extensions)))
+    )
+  )
+}
+
+# Panel-reference check for a resolved grid: every leaf id must be a canonical
+# block / extension panel id known to the board.
+validate_grid_refs <- function(grid, ok_panels) {
+
+  panel_ids <- layout_panel_ids(grid)
+
+  raw <- !(maybe_block_panel_id(panel_ids) | maybe_ext_panel_id(panel_ids))
+
+  if (any(raw)) {
+    blockr_abort(
+      "Malformed grid panel ID{?s} {panel_ids[raw]}.",
+      class = "dock_grid_refs_invalid"
+    )
+  }
+
+  extra <- setdiff(panel_ids, ok_panels)
+
+  if (length(extra)) {
+    blockr_abort(
+      "Unknown grid panel{?s} {extra}.",
+      class = "dock_grid_refs_invalid"
+    )
+  }
+
+  invisible(grid)
 }
 
 sizes_are_even <- function(sizes) {

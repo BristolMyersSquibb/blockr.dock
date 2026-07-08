@@ -10,7 +10,7 @@ board_args <- function(...) {
 # the id (labels are unique within the fixtures).
 vid <- function(x, name) {
   if (is_dock_board(x)) {
-    x <- board_layouts(x)
+    x <- board_views(x)
   }
   nms <- view_names(x)
   id <- names(nms)[match(name, nms)]
@@ -24,7 +24,7 @@ vid <- function(x, name) {
 # or NULL when none is active.
 active_name <- function(x) {
   if (is_dock_board(x)) {
-    x <- board_layouts(x)
+    x <- board_views(x)
   }
   av <- active_view(x)
   if (is.null(av)) {

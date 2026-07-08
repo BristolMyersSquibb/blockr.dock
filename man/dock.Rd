@@ -4,8 +4,6 @@
 \alias{new_dock_board}
 \alias{is_dock_board}
 \alias{as_dock_board}
-\alias{active_layout}
-\alias{active_layout<-}
 \alias{dock_extensions}
 \alias{dock_extensions<-}
 \alias{dock_ext_ids}
@@ -18,7 +16,8 @@ new_dock_board(
   stacks = list(),
   ...,
   extensions = new_dock_extensions(),
-  layouts = default_layout(blocks, extensions),
+  views = NULL,
+  grids = NULL,
   active = NULL,
   options = dock_board_options(),
   ctor = NULL,
@@ -29,10 +28,6 @@ new_dock_board(
 is_dock_board(x)
 
 as_dock_board(x, ...)
-
-active_layout(x)
-
-active_layout(x) <- value
 
 dock_extensions(x)
 
@@ -53,14 +48,18 @@ dock_board_options()
 
 \item{extensions}{Dock extensions}
 
-\item{layouts}{A named list of per-view arrangements (multi-view), a
-\code{dock_layout} / raw list (single-page), or an existing \code{dock_layouts}
-collection. All forms are resolved and split into the board's
-structure (\code{board_views()}) and grid (\code{board_grids()}) slots.}
+\item{views}{Per-view membership: a named list keyed by view id (minted
+when absent), each value a \code{\link[=dock_view]{dock_view()}}, a bare character vector of
+member panel ids, or a list of panel ids. \code{NULL} yields a single default
+view over the board's blocks and extensions.}
 
-\item{active}{Id of the initially active view (a key of \code{layouts}).
-Defaults to the first view. Which view is active is a property of the
-collection, not of an individual layout.}
+\item{grids}{Per-view geometry: a named list keyed by view id whose values
+are \code{\link[=dock_grid]{dock_grid()}}s, or a \code{dock_grids}. Optional -- a view with no grid
+entry falls back to a default grid over its members.}
+
+\item{active}{Id of the initially active view (a key of \code{views}). Defaults
+to the first view. Which view is active is a property of the collection,
+not of an individual view.}
 
 \item{options}{Board-level user settings}
 
@@ -75,33 +74,28 @@ collection, not of an individual layout.}
 \value{
 The constructor \code{new_dock_board()} returns a \code{board} object, as does
 the coercion function \code{as_dock_board()}. Inheritance can be checked using
-\code{is_dock_board()}, which returns a boolean. \code{board_layouts()} returns the
-board's \code{dock_layouts}; \code{active_layout()} returns the active view's
-\code{dock_layout} and \verb{active_layout<-()} writes into the active view. The
-\code{dock_extensions()} and \verb{dock_extensions<-()} accessors return / set the
-board's \code{dock_extension} objects. A character vector of IDs is returned by
-\code{dock_ext_ids()} and \code{dock_board_options()} returns a \code{board_options}
-object.
+\code{is_dock_board()}, which returns a boolean. The \code{dock_extensions()} and
+\verb{dock_extensions<-()} accessors return / set the board's \code{dock_extension}
+objects. A character vector of IDs is returned by \code{dock_ext_ids()} and
+\code{dock_board_options()} returns a \code{board_options} object.
 }
 \description{
 Using the docking layout manager provided by dockViewR, a \code{dock_board}
 extends \code{\link[blockr.core:new_board]{blockr.core::new_board()}}. In addition to the attributes contained
-in a core board, this also includes dock extensions (as \code{extensions})
-and the per-view layout. At construction the \code{layouts} input is split
-into two board slots — view structure (\code{\link[=board_views]{board_views()}}) and grid
-geometry (\code{\link[=board_grids]{board_grids()}}); \code{\link[=board_layouts]{board_layouts()}} recomposes them. Single-page
-boards are a degenerate case with one auto-named "Page" view.
+in a core board, this also includes dock extensions (as \code{extensions}) and
+the per-view layout, stored as two independent slots -- view structure
+(\code{\link[=board_views]{board_views()}}) and grid geometry (\code{\link[=board_grids]{board_grids()}}). Single-page boards
+are a degenerate case with one auto-named "Page" view.
 }
 \details{
-For multi-view boards, pass a named list to \verb{layouts =} — each name
-becomes a view, each value is the panel arrangement (a \code{\link[=dock_layout]{dock_layout()}}
-or a raw list of block / extension IDs). For a single-page board, pass
-a \code{dock_layout} or raw list directly. Either way the input's leaf IDs
-are resolved against the board's blocks and extensions, then split into
-the structure and grid slots.
+Multi-view boards pass \code{views} (and optionally \code{grids}); see
+\link[=view]{dock_view()} and \link[=layout]{dock_grid()} for the input forms and
+\link[=view]{board_views()} for how they combine. Bare block / extension ids are
+resolved against the board's blocks and extensions. With \code{views = NULL} the
+board gets a single default view.
 }
 \examples{
 brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
-str(active_layout(brd), max.level = 2)
+view_members(board_views(brd)[[1L]])
 
 }

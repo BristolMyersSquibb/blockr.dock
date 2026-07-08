@@ -14,7 +14,7 @@ is_dock_grid(x)
 validate_dock_grid(x)
 }
 \arguments{
-\item{x}{Object to cast (a \code{dock_layout} or a dockView \verb{_state} list),
+\item{x}{Object to cast (a \code{dock_grid} or a \link[=dock-layout]{dock_layout}),
 validate, or test.}
 
 \item{...}{Passed on to methods.}
@@ -26,9 +26,9 @@ validate, or test.}
 \description{
 A \code{dock_grid} is a view's geometry in canonical form -- the panel tree with
 sizes normalised to 0-1 ratios and stable leaf ids, so two casts of the same
-layout compare \code{identical()}. It is a subclass of \code{\link[=dock_layout]{dock_layout()}} produced
-only by \code{as_dock_grid()}, which casts a \code{dock_layout} or dockView's \verb{_state}
-shape (a client echo) into it and is idempotent. \code{is_dock_grid()} is the
-inheritance check; \code{validate_dock_grid()} returns its input and errors on a
-malformed or non-canonical grid.
+layout compare \code{identical()}. It is authored with \link[=layout]{dock_grid()} and
+produced by \code{as_dock_grid()}, which casts another \code{dock_grid} (identity) or a
+\link[=dock-layout]{dock_layout} (dockView's client echo) into it and is
+idempotent. \code{is_dock_grid()} is the class check; \code{validate_dock_grid()}
+returns its input and errors on a malformed or non-canonical grid.
 }

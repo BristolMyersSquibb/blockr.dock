@@ -46,6 +46,8 @@ move_dom_element <- function(from, to, session = get_session()) {
 
 determine_active_views <- function(layout) {
 
+  # Accepts a `dock_grid` or a raw dockView `_state` echo -- both carry the
+  # tree at `$grid`, so a single unwrap reaches the root.
   root <- layout[["grid"]][["root"]]
 
   if (is.null(root)) {

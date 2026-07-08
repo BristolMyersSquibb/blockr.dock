@@ -1,7 +1,7 @@
 test_that("board server", {
 
-  # Multi-view path is exercised by the default `dock_layouts(Page = ...)`
-  # layout — `board_server_callback` returns an extra `view_data` reactive.
+  # Multi-view path is exercised by the default single-view board --
+  # `board_server_callback` returns an extra `view_data` reactive.
   board_rv_1 <- board_args(
     blocks = c(a = new_dataset_block())
   )
@@ -268,7 +268,7 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
 
   res <- with_mock_context(ms, {
     client_views <- reactiveVal(
-      dock_layouts(A = new_dock_layout(), B = new_dock_layout())
+      reconstruct_dock_views(list(A = dock_view(), B = dock_view()))
     )
     ids <- names(client_views())
     docks <- reactiveValues()
@@ -286,9 +286,10 @@ test_that("live_view_data is NULL while any view layout is uninitialized", {
   with_mock_context(ms, layouts$B(list(grid = list(), panels = list())))
 
   lys <- isolate(res$vd())
-  expect_s3_class(lys, "dock_layouts")
-  expect_identical(unname(view_names(lys)), c("A", "B"))
-  expect_identical(active_name(lys), "A")
+  expect_named(lys, c("views", "grids"))
+  expect_s3_class(lys$views, "dock_views")
+  expect_identical(unname(view_names(lys$views)), c("A", "B"))
+  expect_identical(active_name(lys$views), "A")
 })
 
 test_that("live_view_data re-evaluates once docks are populated (#243)", {
@@ -305,7 +306,7 @@ test_that("live_view_data re-evaluates once docks are populated (#243)", {
   withr::defer(if (!ms$isClosed()) ms$close())
 
   res <- with_mock_context(ms, {
-    client_views <- reactiveVal(dock_layouts(A = new_dock_layout()))
+    client_views <- reactiveVal(reconstruct_dock_views(list(A = dock_view())))
     docks <- reactiveValues()
     client_active <- reactiveVal(NULL)
     list(
@@ -327,8 +328,8 @@ test_that("live_view_data re-evaluates once docks are populated (#243)", {
 
   lys <- isolate(res$vd())
 
-  expect_s3_class(lys, "dock_layouts")
-  expect_identical(unname(view_names(lys)), "A")
+  expect_named(lys, c("views", "grids"))
+  expect_identical(unname(view_names(lys$views)), "A")
 })
 
 test_that("view_data() tracks a reported layout despite flush order (#243)", {
@@ -341,7 +342,7 @@ test_that("view_data() tracks a reported layout despite flush order (#243)", {
   # up rather than staying frozen at the seed.
   board_rv <- board_args(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(Page = dock_layout("a", "b"))
+    views = list(Page = c("a", "b"))
   )
 
   ms <- new_mock_session()
@@ -362,43 +363,45 @@ test_that("view_data() tracks a reported layout despite flush order (#243)", {
   ms$flushReact()
 
   # The browser reports the live grid through the dock `_state` input, carrying
-  # the real `block_panel-*` ids reversed from the seeded order. It is built
-  # with the public dock_layout() constructor -- which dockview_to_layout()
-  # accepts unclassed -- rather than hand-rolled dockview JSON.
-  reported <- unclass(dock_layout("block_panel-b", "block_panel-a"))
+  # the real `block_panel-*` ids reversed from the seeded order. Its canonical
+  # `dock_grid`, unclassed, is exactly the dockView `_state` shape (grid tree +
+  # active group) -- built via the public constructors, not hand-rolled JSON.
+  reported <- unclass(
+    as_dock_grid(dock_grid("block_panel-b", "block_panel-a"))
+  )
   do.call(ms$setInputs, set_names(list(reported), "Page-dock_state"))
   ms$flushReact()
 
   vd <- isolate(res$view_data())
 
   # view_data() carries the reported order, not the frozen `[a, b]` default.
-  expect_s3_class(vd, "dock_layouts")
+  expect_named(vd, c("views", "grids"))
   expect_identical(
-    layout_panel_ids(vd[["Page"]]),
+    layout_panel_ids(vd$grids[["Page"]]),
     c("block_panel-b", "block_panel-a")
   )
 })
 
 test_that("visible_block_ids returns the front-tab block of each group", {
 
-  two_groups <- dock_layout(panels("block_panel-a"), panels("block_panel-b"))
+  two_groups <- dock_grid(panels("block_panel-a"), panels("block_panel-b"))
   expect_setequal(visible_block_ids(two_groups), c("a", "b"))
 
-  background_tab <- dock_layout(
+  background_tab <- dock_grid(
     panels("block_panel-a", "block_panel-b", active = "block_panel-a")
   )
   expect_identical(visible_block_ids(background_tab), "a")
 
-  ext_front <- dock_layout(panels("ext_panel-editor"))
+  ext_front <- dock_grid(panels("ext_panel-editor"))
   expect_identical(visible_block_ids(ext_front), character())
 
-  nested <- dock_layout(
+  nested <- dock_grid(
     panels("block_panel-a"),
     group(panels("block_panel-b"), panels("ext_panel-editor"))
   )
   expect_setequal(visible_block_ids(nested), c("a", "b"))
 
-  expect_identical(visible_block_ids(dock_layout()), character())
+  expect_identical(visible_block_ids(dock_grid()), character())
 })
 
 test_that("report_visible_observer publishes the active view's blocks", {
@@ -425,17 +428,17 @@ test_that("report_visible_observer publishes the active view's blocks", {
   expect_null(isolate(env$visible()))
 
   with_mock_context(ms, env$a(
-    dock_layout(panels("block_panel-a"), panels("block_panel-b"))
+    dock_grid(panels("block_panel-a"), panels("block_panel-b"))
   ))
   ms$flushReact()
   expect_setequal(isolate(env$visible()), c("a", "b"))
 
-  with_mock_context(ms, env$b(dock_layout(panels("block_panel-d"))))
+  with_mock_context(ms, env$b(dock_grid(panels("block_panel-d"))))
   ms$flushReact()
   expect_setequal(isolate(env$visible()), c("a", "b"))
 
   with_mock_context(ms, env$a(
-    dock_layout(panels("ext_panel-editor"), panels("block_panel-b"))
+    dock_grid(panels("ext_panel-editor"), panels("block_panel-b"))
   ))
   ms$flushReact()
   expect_identical(isolate(env$visible()), "b")
@@ -464,7 +467,7 @@ test_that("report_visible_observer coalesces set-equal reports", {
   })
 
   with_mock_context(ms, env$layout(
-    dock_layout(panels("block_panel-a"), panels("block_panel-b"))
+    dock_grid(panels("block_panel-a"), panels("block_panel-b"))
   ))
   ms$flushReact()
 
@@ -472,7 +475,7 @@ test_that("report_visible_observer coalesces set-equal reports", {
   expect_setequal(first, c("a", "b"))
 
   with_mock_context(ms, env$layout(
-    dock_layout(panels("block_panel-b"), panels("block_panel-a"))
+    dock_grid(panels("block_panel-b"), panels("block_panel-a"))
   ))
   ms$flushReact()
 
@@ -497,11 +500,11 @@ test_that("view nav renders one labelled item per view (#189)", {
 
   board <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(First = dock_layout("a"), Second = dock_layout("b")),
+    views = list(First = "a", Second = "b"),
     active = "First"
   )
 
-  ui <- view_nav_ui("brd", board_layouts(board))
+  ui <- view_nav_ui("brd", board_views(board))
 
   items <- htmltools::tagQuery(ui)$find(".blockr-view-item")$selectedTags()
   spans <- htmltools::tagQuery(ui)$find(".blockr-view-item-name")$selectedTags()
@@ -525,7 +528,7 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
 
   board <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(First = dock_layout("a"), Second = dock_layout("b")),
+    views = list(First = "a", Second = "b"),
     active = "First"
   )
 
@@ -550,7 +553,7 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
   docks <- with_mock_context(ms, reactiveValues())
   client_views <- with_mock_context(
     ms,
-    reactiveVal(seed_view_state(board_layouts(board)))
+    reactiveVal(seed_view_state(board_views(board)))
   )
   client_active <- with_mock_context(ms, reactiveVal(NULL))
   active_dock <- with_mock_context(ms, reactiveValues())
@@ -583,11 +586,7 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
   # exactly once, labelled from the id rather than the empty layout name.
   board <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(
-      First = dock_layout("a"),
-      Second = dock_layout("b"),
-      Third = dock_layout("a")
-    ),
+    views = list(First = "a", Second = "b", Third = "a"),
     active = "First"
   )
 
@@ -608,7 +607,7 @@ test_that("reconcile_views forwards the live board to created views (#194)", {
 
   board <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(Page = dock_layout())
+    views = list(Page = list())
   )
 
   rv <- with_mock_context(ms, reactiveValues(board = board))
@@ -661,25 +660,25 @@ test_that("reconcile_views never pushes a layout back to a live dock (#259)", {
     sendCustomMessage = function(type, message) invisible()
   )
 
-  # board_layouts carries `a` + `b` for view V while the live dock's tracked
+  # The board carries `a` + `b` for view V while the live dock's tracked
   # membership is only `a`: the committed board and the live dock have diverged.
   # A view's arrangement is client-owned and flows dock -> board only, so
-  # reconcile must never restore the dock from board_layouts. That board -> dock
-  # push -- restore_dock faithfully replaying a board_layouts that lagged the
-  # live dock -- is exactly the feedback loop that tore panels down on a slow
+  # reconcile must never restore the dock from the board. That board -> dock
+  # push -- restore_dock faithfully replaying a board that lagged the live
+  # dock -- is exactly the feedback loop that tore panels down on a slow
   # client (#252). Pre-#259 this divergence drove apply_layout_diff ->
   # restore_layout; now nothing pushes.
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(V = dock_layout("a", "b"))
+    views = list(V = c("a", "b"))
   )
   board <- with_mock_context(ms, reactiveValues(board = brd))
 
-  behind_ids <- layout_panel_ids(
-    board_layouts(
+  behind_ids <- view_members(
+    board_views(
       new_dock_board(
         blocks = c(a = new_dataset_block()),
-        layouts = list(V = dock_layout("a"))
+        views = list(V = "a")
       )
     )[["V"]]
   )
@@ -692,7 +691,7 @@ test_that("reconcile_views never pushes a layout back to a live dock (#259)", {
 
   client_views <- with_mock_context(
     ms,
-    reactiveVal(seed_view_state(board_layouts(brd)))
+    reactiveVal(seed_view_state(board_views(brd)))
   )
   client_active <- with_mock_context(ms, reactiveVal("V"))
   active_dock <- with_mock_context(ms, reactiveValues())
@@ -719,7 +718,7 @@ test_that("reconcile_views never pushes a layout back to a live dock (#259)", {
 test_that("apply_board_update.dock_board switches active view", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"), B = list("b"))
+    views = list(A = "a", B = "b")
   )
 
   out <- apply_board_update(brd, list(views = list(active = vid(brd, "B"))))
@@ -732,11 +731,12 @@ test_that("apply_board_update folds an added block into the active view", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(A = list("a"), B = list("a"))
+    views = list(A = "a", B = "a"),
+    grids = list(A = dock_grid("a"), B = dock_grid("a"))
   )
 
-  active <- active_view(board_layouts(brd))
-  other <- setdiff(names(board_layouts(brd)), active)
+  active <- active_view(board_views(brd))
+  other <- setdiff(names(board_views(brd)), active)
 
   out <- apply_board_update(
     brd,
@@ -745,12 +745,15 @@ test_that("apply_board_update folds an added block into the active view", {
 
   # The added block joins the active view's membership synchronously, and no
   # other view. Its grid placement follows from the client echo, so until then
-  # it is in-flight (membership only) -- board_layouts, the intersection, still
+  # it is in-flight (membership only) -- the placement, the intersection, still
   # shows just the placed panels.
   expect_true("block_panel-b" %in% view_members(board_views(out)[[active]]))
   expect_false("block_panel-b" %in% view_members(board_views(out)[[other]]))
   expect_false(
-    "block_panel-b" %in% layout_panel_ids(board_layouts(out)[[active]])
+    "block_panel-b" %in%
+      layout_panel_ids(
+        view_grid(board_views(out)[[active]], board_grids(out)[[active]])
+      )
   )
 })
 
@@ -766,7 +769,7 @@ test_that("validate_board_update.dock_board rejects malformed views slot", {
 test_that("views slot flows through full board_update lifecycle", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"), B = list("b"))
+    views = list(A = "a", B = "b")
   )
 
   testServer(
@@ -838,7 +841,7 @@ test_that("a live-only panel add folds into view membership (#217)", {
 
   board_rv <- board_args(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(Page = list("a"))
+    views = list(Page = "a")
   )
 
   ms <- new_mock_session()
@@ -951,14 +954,14 @@ test_that("New view modal confirm submits an add-and-activate delta", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(A = list("a"))
+    views = list(A = "a")
   )
 
   captured <- NULL
 
   testServer(
     function(input, output, session) {
-      client_views <- reactiveVal(board_layouts(brd))
+      client_views <- reactiveVal(seed_view_state(board_views(brd)))
       board <- reactiveValues(board = brd)
       add_view_observer(
         client_views,
@@ -982,7 +985,7 @@ test_that("New view modal confirm submits an add-and-activate delta", {
       expect_named(captured$views, c("add", "active"))
       expect_identical(captured$views$active, "Charts")
       expect_identical(names(captured$views$add), "Charts")
-      expect_true(is_dock_layout(captured$views$add[[1L]]))
+      expect_true(is_dock_view(captured$views$add[[1L]]))
     }
   )
 })

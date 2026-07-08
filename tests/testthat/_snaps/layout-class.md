@@ -192,22 +192,22 @@
       [1] "HORIZONTAL"
       
 
-# dock_layout has a tree-style print method
+# dock_grid has a tree-style print method
 
     Code
-      print(dock_layout("a", "b"))
+      print(dock_grid("a", "b"))
     Output
-      <dock_layout> horizontal
+      <dock_grid> horizontal
       ├─ a
       └─ b
 
 ---
 
     Code
-      print(dock_layout(group("data", "filt", "head"), "assistant_extension", sizes = c(
+      print(dock_grid(group("data", "filt", "head"), "assistant_extension", sizes = c(
         0.6, 0.4)))
     Output
-      <dock_layout> horizontal
+      <dock_grid> horizontal
       ├─ group (vertical, 60%)
       │  ├─ data
       │  ├─ filt
@@ -217,9 +217,9 @@
 ---
 
     Code
-      print(dock_layout("a", panels("b", "c", "edit", active = "c")))
+      print(dock_grid("a", panels("b", "c", "edit", active = "c")))
     Output
-      <dock_layout> horizontal
+      <dock_grid> horizontal
       ├─ a
       └─ tabs
          ├─ b
@@ -229,10 +229,10 @@
 ---
 
     Code
-      print(dock_layout("x", "y", "z", orientation = "vertical", sizes = c(0.5, 0.3,
+      print(dock_grid("x", "y", "z", orientation = "vertical", sizes = c(0.5, 0.3,
         0.2)))
     Output
-      <dock_layout> vertical
+      <dock_grid> vertical
       ├─ x (50%)
       ├─ y (30%)
       └─ z (20%)
@@ -240,9 +240,9 @@
 ---
 
     Code
-      print(dock_layout("top", group("a", group("b", "c"))))
+      print(dock_grid("top", group("a", group("b", "c"))))
     Output
-      <dock_layout> horizontal
+      <dock_grid> horizontal
       ├─ top
       └─ group (vertical)
          ├─ a
@@ -253,7 +253,7 @@
 ---
 
     Code
-      print(dock_layout())
+      print(dock_grid())
     Output
-      <dock_layout> horizontal (empty)
+      <dock_grid> horizontal (empty)
 

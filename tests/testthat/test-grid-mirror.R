@@ -1,6 +1,8 @@
-# A dockview `_state` echo as get_dock() surfaces it: grid + active group.
+# A dockview `_state` echo as get_dock() surfaces it: the grid tree + active
+# group, read off the layout's canonical `dock_grid`.
 echo_state <- function(layout) {
-  list(grid = layout[["grid"]], activeGroup = layout[["activeGroup"]])
+  grid <- as_dock_grid(layout)
+  list(grid = grid[["grid"]], activeGroup = grid[["activeGroup"]])
 }
 
 # Settle the mirror's 250 ms debounce bridge: flush so its internal observer
@@ -12,36 +14,36 @@ settle <- function(ms) {
 
 test_that("as_dock_grid casts to a canonical dock_grid, sizes verbatim", {
 
-  ly <- dock_layout("a", "b", sizes = c(0.301, 0.699))
+  ly <- dock_grid("a", "b", sizes = c(0.301, 0.699))
   grid <- as_dock_grid(ly)
 
   expect_s3_class(grid, "dock_grid")
-  expect_s3_class(grid, "dock_layout")
   expect_true(is_dock_grid(grid))
 
   # Canonical by construction, so the cast is idempotent -- the `.dock_grid`
   # method returns it unchanged.
   expect_identical(grid, as_dock_grid(grid))
 
-  # The dockView `_state` shape casts to the same grid as the layout it echoes.
-  expect_identical(grid, as_dock_grid(echo_state(ly)))
+  # The dockView `_state` shape, wrapped as a `dock_layout`, casts to the same
+  # grid as the layout it echoes.
+  expect_identical(grid, as_dock_grid(new_dock_layout(echo_state(ly))))
 
   # Sizes are stored faithfully -- the jitter is not rounded away here, it is
   # tolerated at the commit guard (see the `all.equal` test below).
   expect_equal(grid_to_spec(grid[["grid"]])[["sizes"]], c(0.301, 0.699))
 })
 
-test_that("all.equal.dock_layout absorbs sash jitter but not a real drag", {
+test_that("all.equal.dock_grid absorbs sash jitter but not a real drag", {
 
-  base   <- dock_layout("a", "b", "c", sizes = c(0.30, 0.40, 0.30))
-  jitter <- dock_layout("a", "b", "c", sizes = c(0.303, 0.398, 0.299))
-  drag   <- dock_layout("a", "b", "c", sizes = c(0.45, 0.30, 0.25))
+  base   <- dock_grid("a", "b", "c", sizes = c(0.30, 0.40, 0.30))
+  jitter <- dock_grid("a", "b", "c", sizes = c(0.303, 0.398, 0.299))
+  drag   <- dock_grid("a", "b", "c", sizes = c(0.45, 0.30, 0.25))
 
   expect_true(isTRUE(all.equal(base, jitter, tolerance = grid_size_tol())))
   expect_false(isTRUE(all.equal(base, drag, tolerance = grid_size_tol())))
 
   # At R's default tolerance the comparison stays near-exact, so a plain
-  # `all.equal()` / `expect_equal()` on a layout is not silently fuzzed.
+  # `all.equal()` / `expect_equal()` on a grid is not silently fuzzed.
   expect_false(isTRUE(all.equal(base, jitter)))
 })
 
@@ -61,7 +63,8 @@ test_that("grid mirror commits one echo, guards re-echoes", {
     blocks = c(
       a = new_dataset_block(), b = new_head_block(), d = new_head_block()
     ),
-    layouts = list(V = dock_layout("a", "b", "d"))
+    views = list(V = c("a", "b", "d")),
+    grids = list(V = dock_grid("a", "b", "d"))
   )
 
   ms <- new_mock_session()
@@ -87,7 +90,7 @@ test_that("grid mirror commits one echo, guards re-echoes", {
     ms$flushReact()
 
     # A settled sash drag: a non-default grid -> exactly one commit.
-    dragged <- dock_layout(
+    dragged <- dock_grid(
       "block_panel-a", "block_panel-b", "block_panel-d",
       sizes = c(0.2, 0.3, 0.5)
     )
@@ -99,7 +102,7 @@ test_that("grid mirror commits one echo, guards re-echoes", {
 
     # A re-echo differing only by sub-tolerance jitter is the same layout to the
     # all.equal guard, so it writes nothing.
-    jittered <- dock_layout(
+    jittered <- dock_grid(
       "block_panel-a", "block_panel-b", "block_panel-d",
       sizes = c(0.201, 0.299, 0.5)
     )
@@ -114,7 +117,8 @@ test_that("the debounce bridge coalesces per-frame echoes into one commit", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(V = dock_layout("a", "b"))
+    views = list(V = c("a", "b")),
+    grids = list(V = dock_grid("a", "b"))
   )
 
   ms <- new_mock_session()
@@ -140,7 +144,7 @@ test_that("the debounce bridge coalesces per-frame echoes into one commit", {
     # bridge commits only the settled frame -- one board write for the gesture,
     # not one per frame.
     for (w in c(0.25, 0.30, 0.35, 0.40)) {
-      layout_rv(echo_state(dock_layout(
+      layout_rv(echo_state(dock_grid(
         "block_panel-a", "block_panel-b", sizes = c(w, 1 - w)
       )))
       ms$flushReact()
@@ -158,11 +162,12 @@ test_that("the debounce bridge coalesces per-frame echoes into one commit", {
   })
 })
 
-test_that("the mirror stores an in-flight echo verbatim; compose prunes it", {
+test_that("the mirror stores an in-flight echo verbatim; placement prunes it", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    layouts = list(V = dock_layout("a", "b"))
+    views = list(V = c("a", "b")),
+    grids = list(V = dock_grid("a", "b"))
   )
 
   ms <- new_mock_session()
@@ -188,9 +193,9 @@ test_that("the mirror stores an in-flight echo verbatim; compose prunes it", {
     ms$flushReact()
 
     # An echo that still carries a panel dropped from membership is stored
-    # verbatim as an inert ghost (total semantics); the composed handle prunes
+    # verbatim as an inert ghost (total semantics); the placement grid prunes
     # it, so the view shows the intersection.
-    layout_rv(echo_state(dock_layout(
+    layout_rv(echo_state(dock_grid(
       "block_panel-a", "block_panel-b", "block_panel-gone",
       sizes = c(0.2, 0.3, 0.5)
     )))
@@ -200,21 +205,22 @@ test_that("the mirror stores an in-flight echo verbatim; compose prunes it", {
       "block_panel-gone" %in%
         layout_panel_ids(board_grids(board$board)[["V"]])
     )
-    expect_false(
-      "block_panel-gone" %in%
-        layout_panel_ids(board_layouts(board$board)[["V"]])
+
+    placement <- view_grid(
+      board_views(board$board)[["V"]], board_grids(board$board)[["V"]]
     )
+    expect_false("block_panel-gone" %in% layout_panel_ids(placement))
   })
 })
 
 test_that("validate_dock_grid enforces the canonical invariant", {
 
-  g <- as_dock_grid(dock_layout("a", "b", sizes = c(0.3, 0.7)))
+  g <- as_dock_grid(dock_grid("a", "b", sizes = c(0.3, 0.7)))
   expect_identical(validate_dock_grid(g), g)
 
-  # A bare dock_layout is not a dock_grid.
+  # A plain list is not a dock_grid.
   expect_error(
-    validate_dock_grid(dock_layout("a", "b")),
+    validate_dock_grid(list(grid = list())),
     class = "dock_grid_structure_invalid"
   )
 

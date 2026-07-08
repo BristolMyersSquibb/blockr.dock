@@ -6,7 +6,7 @@
 \alias{layout_panel_ids}
 \alias{layout_to_json}
 \alias{layout_from_json}
-\title{Layout serialization and inspection}
+\title{Grid serialization and inspection}
 \usage{
 panel_obj_ids(ids)
 
@@ -19,9 +19,9 @@ layout_from_json(x, blocks = NULL, extensions = NULL)
 \arguments{
 \item{ids}{Character vector of panel IDs.}
 
-\item{layout}{A \code{dock_layout} object.}
+\item{layout}{A \code{dock_grid} object.}
 
-\item{x}{A \code{dock_layout} (for \code{layout_to_json()}), or a JSON string /
+\item{x}{A \code{dock_grid} (for \code{layout_to_json()}), or a JSON string /
 parsed spec list (for \code{layout_from_json()}).}
 
 \item{...}{Forwarded to \code{\link[jsonlite:toJSON]{jsonlite::toJSON()}}.}
@@ -31,17 +31,17 @@ validate bare IDs in \code{layout_from_json()}.}
 }
 \value{
 \code{layout_to_json()} returns a JSON string; \code{layout_from_json()}
-a \code{dock_layout}. \code{layout_panel_ids()} and \code{panel_obj_ids()} return
+a \code{dock_grid}. \code{layout_panel_ids()} and \code{panel_obj_ids()} return
 character vectors.
 }
 \description{
-Read and write the JSON form of a \link[=layout]{dock_layout}, and inspect
+Read and write the JSON form of a \link[=dock-grid]{dock_grid}, and inspect
 the panel IDs it references. These are the canonical accessors for the
-serialized layout format — downstream tooling should call them rather
+serialized grid format -- downstream tooling should call them rather
 than re-implement the format.
 }
 \details{
-\code{layout_to_json()} renders a layout as a JSON string; \code{layout_from_json()}
+\code{layout_to_json()} renders a grid as a JSON string; \code{layout_from_json()}
 is the inverse. The shape is a recursive tree: the top object carries
 \code{orientation}, \code{children}, an optional \code{sizes}, and an optional \code{focus}
 (the panel with current focus); a child is either a bare string
@@ -50,22 +50,21 @@ is the inverse. The shape is a recursive tree: the top object carries
 branch). Sizes are ratios summing to 1, omitted when even.
 
 \code{layout_from_json()} accepts a JSON string or an already-parsed spec
-list and delegates to \link[=layout]{as_dock_layout()}; when \code{blocks} /
-\code{extensions} are supplied, bare IDs are resolved to canonical panel
-IDs and the result is validated (an unknown panel or malformed
-arrangement throws the usual classed error).
+list and returns a \code{dock_grid}; when \code{blocks} / \code{extensions} are
+supplied, bare IDs are resolved to canonical panel IDs and the result is
+validated (an unknown panel throws a classed error).
 
 \code{layout_panel_ids()} returns the canonical panel IDs
-(\verb{block_panel-…} / \verb{ext_panel-…}) referenced by a layout;
+(\code{block_panel-...} / \code{ext_panel-...}) referenced by a grid;
 \code{panel_obj_ids()} strips those prefixes back to bare block /
 extension IDs.
 }
 \examples{
-ly <- dock_layout("a", panels("b", "c", active = "c"), sizes = c(0.3, 0.7))
+grid <- dock_grid("a", panels("b", "c", active = "c"), sizes = c(0.3, 0.7))
 
-json <- layout_to_json(ly)
+json <- layout_to_json(grid)
 cat(json)
 
-identical(layout_from_json(json), ly)
+identical(layout_from_json(json), grid)
 
 }

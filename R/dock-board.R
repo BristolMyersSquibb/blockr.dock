@@ -2,59 +2,60 @@
 #'
 #' Using the docking layout manager provided by dockViewR, a `dock_board`
 #' extends [blockr.core::new_board()]. In addition to the attributes contained
-#' in a core board, this also includes dock extensions (as `extensions`)
-#' and the per-view layout. At construction the `layouts` input is split
-#' into two board slots — view structure ([board_views()]) and grid
-#' geometry ([board_grids()]); [board_layouts()] recomposes them. Single-page
-#' boards are a degenerate case with one auto-named "Page" view.
+#' in a core board, this also includes dock extensions (as `extensions`) and
+#' the per-view layout, stored as two independent slots -- view structure
+#' ([board_views()]) and grid geometry ([board_grids()]). Single-page boards
+#' are a degenerate case with one auto-named "Page" view.
 #'
-#' For multi-view boards, pass a named list to `layouts =` — each name
-#' becomes a view, each value is the panel arrangement (a [dock_layout()]
-#' or a raw list of block / extension IDs). For a single-page board, pass
-#' a `dock_layout` or raw list directly. Either way the input's leaf IDs
-#' are resolved against the board's blocks and extensions, then split into
-#' the structure and grid slots.
+#' Multi-view boards pass `views` (and optionally `grids`); see
+#' [dock_view()][view] and [dock_grid()][layout] for the input forms and
+#' [board_views()][view] for how they combine. Bare block / extension ids are
+#' resolved against the board's blocks and extensions. With `views = NULL` the
+#' board gets a single default view.
 #'
 #' @inheritParams blockr.core::new_board
 #' @param extensions Dock extensions
-#' @param layouts A named list of per-view arrangements (multi-view), a
-#'   `dock_layout` / raw list (single-page), or an existing `dock_layouts`
-#'   collection. All forms are resolved and split into the board's
-#'   structure (`board_views()`) and grid (`board_grids()`) slots.
-#' @param active Id of the initially active view (a key of `layouts`).
-#'   Defaults to the first view. Which view is active is a property of the
-#'   collection, not of an individual layout.
+#' @param views Per-view membership: a named list keyed by view id (minted
+#'   when absent), each value a [dock_view()], a bare character vector of
+#'   member panel ids, or a list of panel ids. `NULL` yields a single default
+#'   view over the board's blocks and extensions.
+#' @param grids Per-view geometry: a named list keyed by view id whose values
+#'   are [dock_grid()]s, or a `dock_grids`. Optional -- a view with no grid
+#'   entry falls back to a default grid over its members.
+#' @param active Id of the initially active view (a key of `views`). Defaults
+#'   to the first view. Which view is active is a property of the collection,
+#'   not of an individual view.
 #'
 #' @examples
 #' brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))
-#' str(active_layout(brd), max.level = 2)
+#' view_members(board_views(brd)[[1L]])
 #'
 #' @return The constructor `new_dock_board()` returns a `board` object, as does
 #' the coercion function `as_dock_board()`. Inheritance can be checked using
-#' `is_dock_board()`, which returns a boolean. `board_layouts()` returns the
-#' board's `dock_layouts`; `active_layout()` returns the active view's
-#' `dock_layout` and `active_layout<-()` writes into the active view. The
-#' `dock_extensions()` and `dock_extensions<-()` accessors return / set the
-#' board's `dock_extension` objects. A character vector of IDs is returned by
-#' `dock_ext_ids()` and `dock_board_options()` returns a `board_options`
-#' object.
+#' `is_dock_board()`, which returns a boolean. The `dock_extensions()` and
+#' `dock_extensions<-()` accessors return / set the board's `dock_extension`
+#' objects. A character vector of IDs is returned by `dock_ext_ids()` and
+#' `dock_board_options()` returns a `board_options` object.
 #'
 #' @rdname dock
 #' @export
 new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            ..., extensions = new_dock_extensions(),
-                           layouts = default_layout(blocks, extensions),
-                           active = NULL, options = dock_board_options(),
+                           views = NULL, grids = NULL, active = NULL,
+                           options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
-  parts <- initialise_layout(layouts, blocks, extensions, active)
+  blocks <- as_blocks(blocks)
+  extensions <- as_dock_extensions(extensions)
+
+  parts <- initialise_views(views, grids, blocks, extensions, active)
 
   new_board(
-    blocks = as_blocks(blocks),
+    blocks = blocks,
     links = as_links(links),
     stacks = as_dock_stacks(stacks),
     ...,
-    extensions = as_dock_extensions(extensions),
+    extensions = extensions,
     views = parts[["views"]],
     grids = parts[["grids"]],
     options = as_board_options(options),
@@ -64,48 +65,36 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
   )
 }
 
-# Build the fused `dock_layouts` from any accepted input form, then split it
-# into the board's structure (`views`) and geometry (`grids`) slots.
-# `as_dock_layouts()` homogenises a `dock_layouts`, a single `dock_layout`, a
-# multi-view list, or a bare panel-id list / vector into a resolved
-# `dock_layouts`; `as_dock_views()` / `as_dock_grids()` are the split.
-initialise_layout <- function(layouts, blocks, extensions, active = NULL) {
+# Coerce the `views` / `grids` inputs into the board's two slots. A NULL (or
+# empty) `views` yields the default single-view arrangement; otherwise each is
+# resolved against the board's blocks and extensions via a shared id map.
+initialise_views <- function(views, grids, blocks, extensions, active = NULL) {
 
-  res <- as_dock_layouts(layouts, blocks = blocks, extensions = extensions)
+  if (!length(views) && !length(grids)) {
+
+    parts <- default_layout(blocks, extensions)
+    dock_vws <- parts[["views"]]
+    dock_grds <- parts[["grids"]]
+
+  } else {
+
+    id_map <- panel_id_map(blocks, extensions)
+    dock_grds <- coerce_dock_grids(grids, id_map)
+
+    dock_vws <- if (length(views)) {
+      coerce_dock_views(views, id_map)
+    } else {
+      reconstruct_dock_views(
+        lapply(lapply(dock_grds, layout_panel_ids), new_dock_view)
+      )
+    }
+  }
 
   if (!is.null(active)) {
-    active_view(res) <- active
+    active_view(dock_vws) <- active
   }
 
-  list(views = as_dock_views(res), grids = as_dock_grids(res))
-}
-
-resolve_views <- function(specs, c_blks, c_exts) {
-
-  specs <- lapply(specs, coerce_view_spec)
-
-  ext_alias <- ext_alias_ids(c_exts)
-  ext_cls <- names(c_exts)
-  ext_list <- set_names(unclass(c_exts), ext_alias)
-
-  # Iterate by position: a view's key is its id and may be absent (minted
-  # later), so it cannot be used to index here.
-  for (i in seq_along(specs)) {
-
-    ly <- specs[[i]]
-
-    v_obj <- panel_obj_ids(layout_panel_ids(ly))
-
-    v_blks <- c_blks[intersect(v_obj, names(c_blks))]
-
-    # A view may address an extension by its key alias or its class id.
-    in_view <- ext_alias %in% v_obj | ext_cls %in% v_obj
-    v_exts <- as_dock_extensions(ext_list[in_view])
-
-    specs[[i]] <- resolve_dock_layout(v_blks, v_exts, ly)
-  }
-
-  reconstruct_dock_layouts(mint_view_ids(specs))
+  list(views = dock_vws, grids = dock_grds)
 }
 
 #' @rdname layout-json
@@ -116,25 +105,6 @@ panel_obj_ids <- function(ids) {
   ids[is_blk] <- as_obj_id(new_block_panel_id(ids[is_blk]))
   ids[is_ext] <- as_obj_id(new_ext_panel_id(ids[is_ext]))
   ids
-}
-
-coerce_view_spec <- function(v) {
-  if (is_dock_layout(v)) {
-    return(v)
-  }
-
-  if (is.list(v) && "grid" %in% names(v)) {
-    return(dockview_to_layout(v))
-  }
-
-  if (is.list(v)) {
-    return(do.call(dock_layout, unname(v)))
-  }
-
-  blockr_abort(
-    "Each layout slot must be a `dock_layout` or a list.",
-    class = "dock_layouts_element_invalid"
-  )
 }
 
 #' @export
@@ -189,37 +159,10 @@ as_dock_board.board <- function(x, ...) {
 str_value.dock_board <- function(x, ...) {
   paste(
     NextMethod(),
-    str_value(board_layouts(x)),
+    str_value(board_views(x)),
     str_value(dock_extensions(x)),
     sep = "\n"
   )
-}
-
-#' @rdname dock
-#' @export
-active_layout <- function(x) {
-  ly <- board_layouts(x)
-  validate_dock_layout(ly[[active_view(ly)]], board_block_ids(x))
-}
-
-#' @param value Replacement value
-#' @rdname dock
-#' @export
-`active_layout<-` <- function(x, value) {
-  ly <- board_layouts(x)
-  id <- active_view(ly)
-
-  new <- validate_dock_layout(value, board_block_ids(x))
-
-  nm <- view_name(ly[[id]])
-  if (!is.null(nm)) {
-    view_name(new) <- nm
-  }
-
-  ly[[id]] <- new
-  board_layouts(x) <- ly
-
-  invisible(x)
 }
 
 #' @rdname dock
@@ -309,10 +252,6 @@ augment_board_update.dock_board <- function(upd, board, ...,
                                             session = get_session()) {
 
   upd <- NextMethod()
-
-  if (length(upd$views$add)) {
-    upd$views <- resolve_views_layouts(upd$views, board, upd)
-  }
 
   # Mint ids for added views and resolve every name reference to an id, so
   # the rest of the pipeline (merge, validate, apply) is purely id-keyed.
