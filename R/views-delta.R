@@ -1,9 +1,11 @@
-# Resolve bare IDs in a submitted `add` layout to canonical
+# Resolve bare IDs in a submitted `add` / `relayout` layout to canonical
 # block_panel-/ext_panel- form (as `initialise_layout()` does at
 # construction). Uses the pre-rm block set (current + blocks$add) so a
 # layout referencing a to-be-removed block still resolves;
 # `merge_views_mod()` drops it before the post-state checks. `mod` no longer
 # carries geometry -- it is a membership set of already-canonical panel ids.
+# Resolution is idempotent on already-canonical ids, so an assistant that
+# stages a fused layout of `block_panel-` ids passes through untouched.
 resolve_views_layouts <- function(views, board, upd) {
 
   current_blocks <- board_blocks(board)
@@ -33,6 +35,10 @@ resolve_views_layouts <- function(views, board, upd) {
 
   if (length(views$add)) {
     views$add <- lapply(views$add, resolve_one)
+  }
+
+  if (length(views$relayout)) {
+    views$relayout <- lapply(views$relayout, resolve_one)
   }
 
   views
@@ -124,7 +130,7 @@ validate_views_delta <- function(views, board, upd) {
   }
 
   unknown_keys <- setdiff(
-    names(views), c("add", "mod", "rm", "active", "rename", "grid")
+    names(views), c("add", "mod", "rm", "active", "rename", "grid", "relayout")
   )
   if (length(unknown_keys)) {
     blockr_abort(
@@ -137,6 +143,7 @@ validate_views_delta <- function(views, board, upd) {
   mod_ids <- names(views$mod) %||% character()
   rm_ids <- views$rm %||% character()
   rename_ids <- names(views$rename) %||% character()
+  relayout_ids <- names(views$relayout) %||% character()
   active <- views$active
 
   add_unnamed <- length(views$add) &&
@@ -155,6 +162,16 @@ validate_views_delta <- function(views, board, upd) {
   if (mod_unnamed) {
     blockr_abort(
       "All entries of `views$mod` must carry a view id.",
+      class = "dock_views_delta_unnamed"
+    )
+  }
+
+  relayout_unnamed <- length(views$relayout) &&
+    (is.null(names(views$relayout)) || any(!nzchar(relayout_ids)))
+
+  if (relayout_unnamed) {
+    blockr_abort(
+      "All entries of `views$relayout` must carry a view id.",
       class = "dock_views_delta_unnamed"
     )
   }
@@ -204,6 +221,43 @@ validate_views_delta <- function(views, board, upd) {
     )
   }
 
+  # `relayout` is the authored full-view write (membership + geometry), so a
+  # view id may not also travel on another per-view slice in the same delta:
+  # `rm` would remove what it re-lays-out, `add` is for a view that does not
+  # exist yet, and `mod` would contradict the membership `relayout` writes.
+  relayout_in_rm <- intersect(relayout_ids, rm_ids)
+  if (length(relayout_in_rm)) {
+    blockr_abort(
+      paste(
+        "View{?s} {relayout_in_rm} cannot appear in both `views$relayout`",
+        "and `views$rm`."
+      ),
+      class = "dock_views_delta_relayout_rm_clash"
+    )
+  }
+
+  relayout_in_add <- intersect(relayout_ids, add_ids)
+  if (length(relayout_in_add)) {
+    blockr_abort(
+      paste(
+        "View{?s} {relayout_in_add} cannot appear in both `views$relayout`",
+        "and `views$add`; a new view's layout goes in `add`."
+      ),
+      class = "dock_views_delta_relayout_add_clash"
+    )
+  }
+
+  relayout_in_mod <- intersect(relayout_ids, mod_ids)
+  if (length(relayout_in_mod)) {
+    blockr_abort(
+      paste(
+        "View{?s} {relayout_in_mod} cannot appear in both `views$relayout`",
+        "and `views$mod`; `relayout` already writes membership."
+      ),
+      class = "dock_views_delta_relayout_mod_clash"
+    )
+  }
+
   current_views <- names(board_views(board))
   unknown_mod <- setdiff(mod_ids, current_views)
   if (length(unknown_mod)) {
@@ -238,6 +292,17 @@ validate_views_delta <- function(views, board, upd) {
         "the board."
       ),
       class = "dock_views_delta_arrange_unknown"
+    )
+  }
+
+  unknown_relayout <- setdiff(relayout_ids, current_views)
+  if (length(unknown_relayout)) {
+    blockr_abort(
+      paste(
+        "View{?s} {unknown_relayout} in `views$relayout` do not exist on",
+        "the board."
+      ),
+      class = "dock_views_delta_relayout_unknown"
     )
   }
 
@@ -295,6 +360,18 @@ validate_views_delta <- function(views, board, upd) {
     }
 
     validate_layout_panel_refs(views$add[[v]], ok_panels, v)
+  }
+
+  for (v in relayout_ids) {
+
+    if (!is_dock_layout(views$relayout[[v]])) {
+      blockr_abort(
+        "`views$relayout${v}` must be a `dock_layout`.",
+        class = "dock_views_delta_layout_invalid"
+      )
+    }
+
+    validate_layout_panel_refs(views$relayout[[v]], ok_panels, v)
   }
 
   for (v in mod_ids) {
@@ -489,6 +566,32 @@ apply_views_add <- function(add_views, board) {
     ly <- add_views[[v]]
 
     views[[v]] <- new_dock_view(layout_panel_ids(ly), view_name(ly))
+    arr[[v]] <- grid_from_layout(ly)
+  }
+
+  board_views(board) <- views
+  board_grids(board) <- new_dock_grids(arr)
+
+  board
+}
+
+# Apply a server-authored re-layout: the one write the lifecycle makes to both
+# an existing view's slots at once. The fused layout splits the same way an add
+# does -- membership record plus stored grid -- but the view already exists, so
+# the display name is a property of the view record, untouched here (a rename
+# travels on its own slice). `manage_dock` delivers the geometry to the live
+# dock with a one-shot push; a deferred or not-yet-created dock needs none,
+# picking the slots up when it first renders.
+apply_views_relayout <- function(relayout, board) {
+
+  views <- board_views(board)
+  arr <- as.list(board_grids(board) %||% list())
+
+  for (v in names(relayout)) {
+
+    ly <- relayout[[v]]
+
+    views[[v]] <- new_dock_view(layout_panel_ids(ly), view_name(views[[v]]))
     arr[[v]] <- grid_from_layout(ly)
   }
 

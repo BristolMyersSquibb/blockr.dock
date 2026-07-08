@@ -787,3 +787,224 @@ test_that("apply_views_rm is a pure board transform", {
   expect_silent(out <- apply_views_rm(vid(brd, "B"), brd))
   expect_identical(unname(view_names(board_layouts(out))), "A")
 })
+
+test_that("apply_views_relayout rewrites a view's membership and geometry", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"))
+  )
+
+  # A single-panel view is re-laid-out to a two-panel arrangement: the new
+  # member folds into membership and the authored geometry lands in the grid
+  # slot -- both slots written by one authored command.
+  upd <- augment_board_update(
+    list(
+      views = list(
+        relayout = list(A = dock_layout("a", "b", sizes = c(0.3, 0.7)))
+      )
+    ),
+    brd
+  )
+
+  out <- apply_board_update(brd, upd)
+  aid <- vid(brd, "A")
+
+  expect_setequal(
+    view_members(board_views(out)[[aid]]),
+    c("block_panel-a", "block_panel-b")
+  )
+  expect_setequal(
+    layout_panel_ids(board_grids(out)[[aid]]),
+    c("block_panel-a", "block_panel-b")
+  )
+  expect_identical(active_name(out), "A")
+})
+
+test_that("relayout flows through apply_board_update on an existing view", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a", "b"), B = list("b"))
+  )
+
+  # Reorder A to a single-panel {a}, addressing the view by id.
+  out <- apply_board_update(
+    brd,
+    augment_board_update(
+      list(
+        views = list(relayout = setNames(list(dock_layout("a")), vid(brd, "A")))
+      ),
+      brd
+    )
+  )
+
+  expect_identical(
+    layout_panel_ids(board_layouts(out)[[vid(brd, "A")]]),
+    "block_panel-a"
+  )
+  # A sibling view and the active marker are untouched.
+  expect_identical(
+    layout_panel_ids(board_layouts(out)[[vid(brd, "B")]]),
+    "block_panel-b"
+  )
+  expect_identical(active_name(out), "A")
+})
+
+test_that("relayout preserves the view's display name, never renames", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(v1 = dock_layout("a", name = "Analysis"))
+  )
+
+  # Even a name carried on the fused layout is ignored: the display name lives
+  # on the view record and only `rename` writes it.
+  out <- apply_board_update(
+    brd,
+    augment_board_update(
+      list(
+        views = list(
+          relayout = setNames(
+            list(dock_layout("a", "b", name = "Ignored")), "v1"
+          )
+        )
+      ),
+      brd
+    )
+  )
+
+  expect_identical(view_name(board_views(out)[["v1"]]), "Analysis")
+})
+
+test_that("augment resolves bare ids in a relayout layout and is idempotent", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"))
+  )
+  aid <- vid(brd, "A")
+
+  once <- augment_board_update(
+    list(views = list(relayout = setNames(list(dock_layout("a", "b")), aid))),
+    brd
+  )
+
+  expect_setequal(
+    layout_panel_ids(once$views$relayout[[aid]]),
+    c("block_panel-a", "block_panel-b")
+  )
+
+  # The lifecycle re-runs augment to a fixed point, so a second pass over an
+  # already-resolved relayout must be a no-op.
+  twice <- augment_board_update(once, brd)
+  expect_identical(once, twice)
+})
+
+test_that("relayout membership is validated against the board's blocks", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(A = list("a"))
+  )
+
+  expect_error(
+    augment_board_update(
+      list(
+        views = list(
+          relayout = setNames(list(dock_layout("ghost")), vid(brd, "A"))
+        )
+      ),
+      brd
+    ),
+    class = "dock_views_delta_panel_ref_invalid"
+  )
+})
+
+test_that("validate_views_delta rejects relayout on an unknown view", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(A = list("a"))
+  )
+
+  expect_error(
+    augment_board_update(
+      list(views = list(relayout = list(Ghost = dock_layout("a")))),
+      brd
+    ),
+    class = "dock_views_delta_relayout_unknown"
+  )
+})
+
+test_that("validate_views_delta rejects relayout clashing with rm/add/mod", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    layouts = list(A = list("a"), B = list("a"))
+  )
+  aid <- vid(brd, "A")
+
+  expect_error(
+    validate_views_delta(
+      list(relayout = setNames(list(dock_layout("a")), aid), rm = aid),
+      brd,
+      list()
+    ),
+    class = "dock_views_delta_relayout_rm_clash"
+  )
+
+  expect_error(
+    validate_views_delta(
+      list(
+        relayout = setNames(list(dock_layout("a")), "C"),
+        add = setNames(list(dock_layout("a")), "C")
+      ),
+      brd,
+      list()
+    ),
+    class = "dock_views_delta_relayout_add_clash"
+  )
+
+  expect_error(
+    validate_views_delta(
+      list(
+        relayout = setNames(list(dock_layout("a")), aid),
+        mod = setNames(list("block_panel-a"), aid)
+      ),
+      brd,
+      list()
+    ),
+    class = "dock_views_delta_relayout_mod_clash"
+  )
+})
+
+test_that("a serialize after a relayout reflects the new arrangement", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = list(A = list("a"))
+  )
+
+  out <- apply_board_update(
+    brd,
+    augment_board_update(
+      list(
+        views = list(
+          relayout = list(A = dock_layout("a", "b", sizes = c(0.25, 0.75)))
+        )
+      ),
+      brd
+    )
+  )
+
+  des <- blockr_deser(blockr_ser(out))
+  aid <- vid(des, "A")
+
+  expect_setequal(
+    layout_panel_ids(board_layouts(des)[[aid]]),
+    c("block_panel-a", "block_panel-b")
+  )
+  # The authored two-pane split survives as a stored grid, not the default.
+  expect_false(is.null(board_grids(des)[[aid]]))
+})

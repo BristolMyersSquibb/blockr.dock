@@ -310,7 +310,7 @@ augment_board_update.dock_board <- function(upd, board, ...,
 
   upd <- NextMethod()
 
-  if (length(upd$views$add)) {
+  if (length(upd$views$add) || length(upd$views$relayout)) {
     upd$views <- resolve_views_layouts(upd$views, board, upd)
   }
 
@@ -385,6 +385,10 @@ apply_board_update.dock_board <- function(board, upd, ...) {
 
   if (length(upd$views$add)) {
     board <- apply_views_add(upd$views$add, board)
+  }
+
+  if (length(upd$views$relayout)) {
+    board <- apply_views_relayout(upd$views$relayout, board)
   }
 
   if (length(upd$views$mod)) {

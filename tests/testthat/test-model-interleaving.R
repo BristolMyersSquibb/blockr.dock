@@ -248,6 +248,39 @@ model_remove <- function(st) {
   list(st = st, commit = res$commit)
 }
 
+# The server-authored re-layout (the modify_view command): membership and
+# geometry are written together in one board commit, then the client teleports
+# to the authored layout -- the one-shot push. Reproduced from
+# apply_views_relayout plus the delivery observer so the "one relayout ->
+# bounded commits + quiescence" bound is checkable under interleaving. The
+# pending echo is the push's ack; delivered next it matches the stored grid and
+# commits nothing.
+model_relayout <- function(st) {
+
+  pool <- model_panels()
+  k <- sample.int(min(4L, length(pool)), 1L)
+  authored <- client_layout(sample(pool, k), sizes = runif(k, 0.1, 1))
+
+  before_members <- model_members(st)
+  before_stored <- model_stored(st)
+
+  st$board <- apply_board_update(
+    st$board,
+    list(views = list(relayout = set_names(list(authored), "V")))
+  )
+
+  st$client$rendered <- model_members(st)
+  st$client$arr <- authored
+  st$client$pending <- authored
+
+  changed <- !setequal(before_members, model_members(st)) ||
+    !isTRUE(
+      all.equal(before_stored, model_stored(st), tolerance = grid_size_tol())
+    )
+
+  list(st = st, commit = as.integer(changed))
+}
+
 test_that("a stale echo's ghost is pruned by compose, never rendered", {
 
   st <- model_new()
@@ -320,6 +353,41 @@ test_that("a settled gesture commits once; a re-echo commits nothing", {
   expect_identical(model_deliver_echo(st)$commit, 0L)
 })
 
+test_that("a relayout writes both slots and its ack echo converges", {
+
+  st <- model_new()
+
+  # The server authors a new arrangement: drop c, a two-pane split of {b, a}.
+  authored <- client_layout(
+    as.character(as_block_panel_id(c("b", "a"))), sizes = c(0.4, 0.6)
+  )
+
+  st$board <- apply_board_update(
+    st$board,
+    list(views = list(relayout = set_names(list(authored), "V")))
+  )
+
+  # One commit writes both membership and geometry to the authored layout.
+  expect_setequal(
+    model_members(st), as.character(as_block_panel_id(c("a", "b")))
+  )
+  expect_setequal(
+    model_shown(st), as.character(as_block_panel_id(c("a", "b")))
+  )
+  expect_no_error(validate_board(st$board))
+
+  # The one-shot push's ack: the client echoes the authored layout, matching
+  # the stored grid within tolerance -> no convergence commit, and it holds as
+  # a fixed point.
+  st$client$rendered <- model_members(st)
+  st$client$arr <- authored
+  st$client$pending <- authored
+  expect_identical(model_deliver_echo(st)$commit, 0L)
+
+  st$client$pending <- authored
+  expect_identical(model_deliver_echo(st)$commit, 0L)
+})
+
 test_that("restore rebuilds without resurrecting a pruned ghost", {
 
   st <- model_new()
@@ -372,8 +440,8 @@ test_that("restore rebuilds a view whose membership emptied under a ghost", {
 
 test_that("seeded interleavings hold the invariants and converge", {
 
-  events <- c("gesture", "echo", "add", "remove", "restore")
-  probs <- c(0.30, 0.30, 0.16, 0.16, 0.08)
+  events <- c("gesture", "echo", "add", "remove", "restore", "relayout")
+  probs <- c(0.26, 0.26, 0.14, 0.14, 0.08, 0.12)
 
   for (seed in seq_len(40L)) {
 
@@ -390,7 +458,8 @@ test_that("seeded interleavings hold the invariants and converge", {
         echo = model_deliver_echo(st),
         add = model_add(st),
         remove = model_remove(st),
-        restore = list(st = model_restore(st), commit = 0L)
+        restore = list(st = model_restore(st), commit = 0L),
+        relayout = model_relayout(st)
       )
 
       st <- res$st

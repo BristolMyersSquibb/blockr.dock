@@ -508,6 +508,47 @@ reconcile_views <- function(board, update, docks, active_dock,
   invisible()
 }
 
+# Push a whole-view layout onto a live dock: restore the dockview geometry,
+# then re-home each panel's block / extension card into its group. The caller
+# must have parked the current cards in the offcanvas first (as the initial
+# render does), so the dockview rebuild does not tear live UI down with the old
+# panels. Shared by the initial restore and the server-authored relayout.
+push_dock_layout <- function(layout, dock, blocks, extensions) {
+
+  restore_layout(layout, dock$proxy, blocks = blocks, extensions = extensions)
+
+  for (pid in as_dock_panel_id(layout)) {
+    if (is_block_panel_id(pid)) {
+      show_block_panel(pid, add_panel = FALSE, dock = dock)
+    } else if (is_ext_panel_id(pid)) {
+      show_ext_panel(pid, add_panel = FALSE, dock = dock)
+    } else {
+      blockr_abort(
+        "Unknown panel type {class(pid)}.",
+        class = "dock_panel_invalid"
+      )
+    }
+  }
+
+  invisible()
+}
+
+# Park every one of a dock's live cards back in the offcanvas without touching
+# the dockview panels -- the offcanvas-first state a restore needs so the
+# rebuild cannot take the block / extension UI down with the old panels.
+park_dock_cards <- function(panel_ids, dock) {
+
+  for (pid in lapply(panel_ids, as_dock_panel_id)) {
+    if (is_block_panel_id(pid)) {
+      hide_block_panel(pid, rm_panel = FALSE, dock = dock)
+    } else if (is_ext_panel_id(pid)) {
+      hide_ext_panel(pid, rm_panel = FALSE, dock = dock)
+    }
+  }
+
+  invisible()
+}
+
 #' Run a single dockViewR instance as a Shiny module.
 #'
 #' Sets up the dock view, restores an initial layout, and handles panel
@@ -613,24 +654,36 @@ manage_dock <- function(
 
     observeEvent(
       req(input[[dock_input("initialized")]]),
-      {
-        restore_layout(init_layout, dock$proxy,
-                       blocks = init_blocks, extensions = init_exts)
-
-        for (pid in as_dock_panel_id(init_layout)) {
-          if (is_block_panel_id(pid)) {
-            show_block_panel(pid, add_panel = FALSE, dock = dock)
-          } else if (is_ext_panel_id(pid)) {
-            show_ext_panel(pid, add_panel = FALSE, dock = dock)
-          } else {
-            blockr_abort(
-              "Unknown panel type {class(pid)}.",
-              class = "dock_panel_invalid"
-            )
-          }
-        }
-      },
+      push_dock_layout(init_layout, dock, init_blocks, init_exts),
       once = TRUE
+    )
+
+    # Deliver a server-authored re-layout to this view's live dock: a one-shot
+    # push of the new arrangement (the assistant's `modify_view` command),
+    # driven off the update channel exactly as the panel-title observer below
+    # consumes `update()$blocks$mod`. The lifecycle has already written this
+    # view's membership and grid; here the client is teleported to match. Cards
+    # are parked in the offcanvas first so the dockview rebuild keeps the block
+    # UI alive, then re-homed by the push -- the arrangement the re-layout drops
+    # a member from simply leaves that card parked. A view whose dock is
+    # deferred or not yet created gets no push: it applies the slots when it
+    # first renders.
+    observeEvent(
+      update()$views$relayout[[id]],
+      {
+        relayout <- update()$views$relayout[[id]]
+
+        park_dock_cards(isolate(live_panels()), dock)
+
+        push_dock_layout(
+          relayout, dock,
+          board_blocks(board$board),
+          dock_extensions(board$board)
+        )
+
+        live_panels(as.character(layout_panel_ids(relayout)))
+      },
+      ignoreInit = TRUE
     )
 
     observeEvent(

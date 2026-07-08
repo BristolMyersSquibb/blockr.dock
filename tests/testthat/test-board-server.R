@@ -258,6 +258,74 @@ test_that("renaming a block refreshes the dock panel title (#193)", {
   expect_identical(title_set, "Renamed")
 })
 
+test_that("a relayout pushes the authored layout to the live dock (#312)", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  # The single view holds block `a`; `b` is on the board but unplaced. A
+  # relayout to {a, b} exercises the membership-growing path.
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    layouts = dock_layout("a")
+  )
+  upd <- reactiveVal()
+
+  dock <- with_mock_context(ms, {
+    manage_dock("dock_main", board_rv, update = upd)
+  })
+
+  ms$flushReact()
+
+  pushed <- NULL
+  parked <- character()
+
+  # A bare `update` reactiveVal bypasses augment (tested in test-views-delta),
+  # so the payload carries canonical panel ids keyed by the module id. Mock the
+  # DOM-touching push / show / hide so the observer's control flow is what is
+  # asserted, not the (headless) dockview render.
+  with_mocked_bindings(
+    {
+      with_mock_context(ms, {
+        upd(
+          list(
+            views = list(
+              relayout = setNames(
+                list(dock_layout("block_panel-a", "block_panel-b")),
+                "dock_main"
+              )
+            )
+          )
+        )
+      })
+      ms$flushReact()
+    },
+    restore_layout = function(layout, proxy, ...) {
+      pushed <<- as.character(layout_panel_ids(layout))
+      invisible(NULL)
+    },
+    show_block_panel = function(...) invisible(NULL),
+    hide_block_panel = function(id, ...) {
+      parked <<- c(parked, as.character(id))
+      invisible(NULL)
+    },
+    .package = "blockr.dock"
+  )
+
+  # The authored layout is pushed once, carrying both members.
+  expect_setequal(pushed, c("block_panel-a", "block_panel-b"))
+
+  # The live card was parked in the offcanvas before the restore, so the
+  # rebuild cannot tear it down.
+  expect_true("block_panel-a" %in% parked)
+
+  # live_panels now tracks the authored membership.
+  expect_setequal(
+    isolate(dock$live_panels()),
+    c("block_panel-a", "block_panel-b")
+  )
+})
+
 test_that("live_view_data is NULL while any view layout is uninitialized", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())

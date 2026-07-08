@@ -1,5 +1,17 @@
 # blockr.dock (development version)
 
+* Server code can now re-lay-out an existing view in one authored command,
+  through a new `relayout` slice on the `views` update channel (#312). The
+  slice carries a fused `dock_layout()` per view id; the update lifecycle
+  splits it into that view's membership and stored grid, and the live dock
+  is teleported to the new arrangement with a single push. This is the
+  server-to-client geometry path of the structure/grid split (#293) --
+  membership introduced by a relayout is validated against the board's
+  blocks, and it is a discrete command rather than a continuous sync, so
+  one relayout yields bounded board commits and then quiescence. A view
+  whose dock is deferred or not yet created applies the new arrangement
+  when it first renders.
+
 * A board's per-view layout is now split into two independent slots: a
   `dock_views` collection of structure objects (each view's ordered
   panel-id set, name and id, plus the active view), read with
