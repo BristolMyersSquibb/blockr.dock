@@ -555,9 +555,16 @@ test_that("dock panel move updates layout state and serialization (#234)", {
     )
   )
 
-  # Serialization: the dock-owned serializer reflects the split -- the spec
-  # round-trips to a layout that keeps every panel and still separates a and b.
-  reparsed <- layout_from_json(layout_to_json(layout))
+  # Serialization: our grid format round-trips through JSON and keeps every
+  # panel while still separating a and b.
+  grid <- as_dock_grid(layout)
+  restored <- as_dock_grid(
+    jsonlite::fromJSON(
+      jsonlite::toJSON(as.list(grid), null = "null"),
+      simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+    )
+  )
+  reparsed <- new_dock_layout(list(grid = grid_to_tree(restored)))
   expect_setequal(
     panel_obj_ids(layout_panel_ids(reparsed)),
     c("a", "b", "edit_board_extension")

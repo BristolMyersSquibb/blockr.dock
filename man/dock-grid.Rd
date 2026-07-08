@@ -24,11 +24,12 @@ validate, or test.}
 \code{is_dock_grid()} a boolean.
 }
 \description{
-A \code{dock_grid} is a view's geometry in canonical form -- the panel tree with
-sizes normalised to 0-1 ratios and stable leaf ids, so two casts of the same
-layout compare \code{identical()}. It is authored with \link[=layout]{dock_grid()} and
-produced by \code{as_dock_grid()}, which casts another \code{dock_grid} (identity) or a
-\link[=dock-layout]{dock_layout} (dockView's client echo) into it and is
-idempotent. \code{is_dock_grid()} is the class check; \code{validate_dock_grid()}
-returns its input and errors on a malformed or non-canonical grid.
+A \code{dock_grid} is a view's geometry in our compact, dockView-independent
+form -- nested splits and tab groups with sizes normalised to 0-1 ratios and
+no volatile ids, so two casts of the same layout compare \code{identical()}. It is
+authored with \link[=layout]{dock_grid()} and produced by \code{as_dock_grid()}, which
+casts another \code{dock_grid} (identity) or a \link[=dock-layout]{dock_layout}
+(dockView's client echo) into it and is idempotent. \code{is_dock_grid()} is the
+class check; \code{validate_dock_grid()} returns its input and errors on a
+malformed or non-canonical grid.
 }

@@ -21,10 +21,10 @@ reference:
   desc: dockView's native layout representation, the wire form at the client boundary.
   contents:
     - new_dock_layout
-- title: Layout serialization
-  desc: Read, write and inspect the JSON wire form of a layout.
+- title: Panel IDs
+  desc: The canonical panel IDs a grid or layout references.
   contents:
-    - layout_to_json
+    - layout_panel_ids
 - title: Dock views
   desc: Multi-view (tabbed) boards. Each view is its own panel arrangement.
   contents:

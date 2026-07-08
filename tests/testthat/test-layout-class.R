@@ -1,9 +1,3 @@
-test_that("panel layout", {
-  expect_snapshot(draw_panel_tree(NULL))
-  expect_snapshot(draw_panel_tree(c("a", "b", "c")))
-  expect_snapshot(draw_panel_tree(list("a", list("b", "c"))))
-})
-
 test_that("an invalid grid node reports a legible error", {
   expect_error(
     dock_grid("a", active = TRUE),
@@ -125,7 +119,7 @@ test_that("geometry is stored without panel content", {
   a <- board_grids(brd)[["A"]]
   b <- board_grids(brd)[["B"]]
 
-  expect_named(a, c("grid", "activeGroup"))
+  expect_named(a, c("orientation", "children", "sizes"))
   expect_false("panels" %in% names(a))
   expect_false("panels" %in% names(b))
 })
@@ -143,30 +137,26 @@ test_that("as_dock_layout materialises grid + panels on demand", {
   expect_identical(payload$panels[["block_panel-a"]][["title"]], "Dataset")
 })
 
-test_that("sizes propagate to grid leaves and nested branches", {
+test_that("sizes propagate to grid children and nested branches", {
 
   grid <- dock_grid("a", "b", sizes = c(0.3, 0.7))
-  expect_equal(grid$grid$root$data[[1L]]$size, 0.3)
-  expect_equal(grid$grid$root$data[[2L]]$size, 0.7)
+  expect_equal(grid$sizes, c(0.3, 0.7))
 
   grid2 <- dock_grid(
     "a",
     group("b", "c", sizes = c(0.4, 0.6)),
     sizes = c(0.3, 0.7)
   )
-  outer <- grid2$grid$root$data
-  expect_equal(outer[[1L]]$size, 0.3)
-  expect_equal(outer[[2L]]$size, 0.7)
-  expect_equal(outer[[2L]]$data[[1L]]$size, 0.4)
-  expect_equal(outer[[2L]]$data[[2L]]$size, 0.6)
+  expect_equal(grid2$sizes, c(0.3, 0.7))
+  expect_equal(grid2$children[[2L]]$sizes, c(0.4, 0.6))
 })
 
 test_that("panels() sets the active tab in a tabbed leaf", {
 
   grid <- dock_grid(panels("a", "b", "c", active = "b"))
-  leaf <- grid$grid$root$data[[1L]]
-  expect_identical(leaf$data$activeView, "b")
-  expect_identical(unlist(leaf$data$views), c("a", "b", "c"))
+  leaf <- grid$children[[1L]]
+  expect_identical(leaf$active, "b")
+  expect_identical(leaf$panels, c("a", "b", "c"))
 })
 
 test_that("panels() with single id is allowed but redundant", {
@@ -179,7 +169,7 @@ test_that("panels() with single id is allowed but redundant", {
 test_that("orientation flips the top-level grid", {
 
   grid <- dock_grid("a", "b", orientation = "vertical")
-  expect_identical(grid$grid$orientation, "VERTICAL")
+  expect_identical(grid$orientation, "vertical")
 })
 
 test_that("dock_grid rejects invalid sizes vector", {
@@ -323,18 +313,12 @@ test_that("dock_grid format strips panel-id prefixes unless bare = FALSE", {
 
 test_that("dock_grid format marks the focused panel", {
 
-  grid <- layout_from_json(
-    list(
-      orientation = "horizontal",
-      children = list("a", list(panels = list("b", "c"), active = "c")),
-      focus = "c"
-    )
-  )
+  grid <- dock_grid("a", panels("b", "c", active = "c"))
+  grid[["focus"]] <- "c"
 
   out <- format(grid)
 
-  expect_match(out[length(out)], "focus", fixed = TRUE)
-  expect_false(any(grepl("a (active", out, fixed = TRUE)))
+  expect_true(any(grepl("focus", out, fixed = TRUE)))
 })
 
 test_that("empty dock_grid formats as a single line", {

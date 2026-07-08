@@ -420,12 +420,11 @@ test_that("view_data() tracks a reported layout despite flush order (#243)", {
   ms$flushReact()
 
   # The browser reports the live grid through the dock `_state` input, carrying
-  # the real `block_panel-*` ids reversed from the seeded order. Its canonical
-  # `dock_grid`, unclassed, is exactly the dockView `_state` shape (grid tree +
-  # active group) -- built via the public constructors, not hand-rolled JSON.
-  reported <- unclass(
-    as_dock_grid(dock_grid("block_panel-b", "block_panel-a"))
-  )
+  # the real `block_panel-*` ids reversed from the seeded order. The dockView
+  # `_state` is the native grid tree plus active group, expanded from our grid
+  # via the internal cast -- not hand-rolled JSON.
+  g <- as_dock_grid(dock_grid("block_panel-b", "block_panel-a"))
+  reported <- list(grid = grid_to_tree(g), activeGroup = "1")
   do.call(ms$setInputs, set_names(list(reported), "Page-dock_state"))
   ms$flushReact()
 

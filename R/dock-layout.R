@@ -83,13 +83,18 @@ as_dock_layout <- function(x, ...) {
 as_dock_layout.dock_layout <- function(x, ...) x
 
 #' @export
+as_dock_layout.list <- function(x, ...) {
+  validate_dock_layout(new_dock_layout(x))
+}
+
+#' @export
 as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
                                      ...) {
 
   blocks <- as_blocks(blocks)
   ext_list <- as.list(as_dock_extensions(extensions))
 
-  panel_ids <- grid_panel_ids(x[["grid"]])
+  panel_ids <- grid_panel_ids(x)
 
   blk_pids <- panel_ids[maybe_block_panel_id(panel_ids)]
   ext_pids <- panel_ids[maybe_ext_panel_id(panel_ids)]
@@ -103,10 +108,14 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
   panels <- lapply(c(blk_panels, ext_panels), create_layout_panel)
   names(panels) <- chr_xtr(panels, "id")
 
-  out <- list(grid = x[["grid"]], panels = panels)
+  tree <- grid_to_tree(x)
 
-  if (!is.null(x[["activeGroup"]])) {
-    out[["activeGroup"]] <- x[["activeGroup"]]
+  out <- list(grid = tree, panels = panels)
+
+  if (length(panel_ids)) {
+    out[["activeGroup"]] <- coal(
+      focus_group_id(tree, x[["focus"]]), "1", fail_all = FALSE
+    )
   }
 
   new_dock_layout(out)
@@ -114,14 +123,15 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
 
 #' @export
 as_dock_grid.dock_layout <- function(x, ...) {
-
-  new_dock_grid(
+  tree_to_grid(
     x[["grid"]],
-    active_group = coal(
-      x[["activeGroup"]], x[["active_group"]],
-      fail_all = FALSE
-    )
+    coal(x[["activeGroup"]], x[["active_group"]], fail_all = FALSE)
   )
+}
+
+#' @export
+as.list.dock_layout <- function(x, ...) {
+  unclass(x)
 }
 
 #' @param ... Forwarded to methods.
@@ -136,5 +146,157 @@ as_dock_view.dock_view <- function(x, ...) x
 
 #' @export
 as_dock_view.dock_layout <- function(x, ...) {
-  new_dock_view(grid_panel_ids(x[["grid"]]))
+  new_dock_view(grid_panel_ids(as_dock_grid(x)))
+}
+
+# Expand our compact grid into dockView's native tree: assign type tags and
+# fresh deterministic group ids, hoisting the root branch under a
+# `{root, orientation}` wrapper. Inverse of `tree_to_grid()`.
+grid_to_tree <- function(grid) {
+
+  gid <- 0L
+
+  next_id <- function() {
+    gid <<- gid + 1L
+    as.character(gid)
+  }
+
+  to_tree <- function(node, size) {
+
+    if (is_grid_leaf(node)) {
+      return(
+        list(
+          type = "leaf",
+          data = list(
+            views = as.list(node[["panels"]]),
+            activeView = coal(node[["active"]], node[["panels"]][[1L]],
+                              fail_all = FALSE),
+            id = next_id()
+          ),
+          size = size
+        )
+      )
+    }
+
+    list(
+      type = "branch",
+      data = map(to_tree, node[["children"]], node[["sizes"]]),
+      size = size
+    )
+  }
+
+  list(
+    root = list(
+      type = "branch",
+      data = map(to_tree, grid[["children"]], grid[["sizes"]]),
+      size = 1
+    ),
+    orientation = toupper(
+      coal(grid[["orientation"]], "horizontal", fail_all = FALSE)
+    )
+  )
+}
+
+# Collapse dockView's native tree into our compact grid: drop type tags and
+# volatile ids, resolve the focused group to its panel. Inverse of
+# `grid_to_tree()`. A leaf root (a single-group page a live dock can echo) is
+# lifted to the sole child of the compact root.
+tree_to_grid <- function(tree, active_group = NULL) {
+
+  from_tree <- function(node) {
+
+    if (identical(node[["type"]], "leaf")) {
+
+      views <- as.character(unlst(node[["data"]][["views"]]))
+
+      return(
+        list(
+          panels = views,
+          active = coal(node[["data"]][["activeView"]], views[[1L]],
+                        fail_all = FALSE)
+        )
+      )
+    }
+
+    kids <- node[["data"]]
+
+    list(children = lapply(kids, from_tree), sizes = dbl_xtr(kids, "size"))
+  }
+
+  root <- tree[["root"]]
+
+  if (is.null(root) || !length(root)) {
+    return(new_dock_grid())
+  }
+
+  leaf_root <- identical(root[["type"]], "leaf")
+  kids <- if (leaf_root) list(root) else root[["data"]]
+
+  new_dock_grid(
+    children = lapply(kids, from_tree),
+    sizes = if (leaf_root) 1 else dbl_xtr(kids, "size"),
+    orientation = tolower(
+      coal(tree[["orientation"]], "horizontal", fail_all = FALSE)
+    ),
+    focus = focus_panel(tree, active_group)
+  )
+}
+
+# The open panel of a dockView group (`activeGroup` id -> its active view).
+# NULL for the load-default first group ("1").
+focus_panel <- function(tree, active_group) {
+
+  if (is.null(active_group) || identical(active_group, "1")) {
+    return(NULL)
+  }
+
+  for (leaf in grid_leaves(tree)) {
+    if (identical(leaf[["id"]], active_group)) {
+      return(leaf[["activeView"]])
+    }
+  }
+
+  NULL
+}
+
+# The dockView group holding `focus` (a panel id -> its `activeGroup` id), so
+# a focused panel can be restored as the active group.
+focus_group_id <- function(tree, focus) {
+
+  if (is.null(focus)) {
+    return(NULL)
+  }
+
+  for (leaf in grid_leaves(tree)) {
+    if (focus %in% unlist(leaf[["views"]])) {
+      return(leaf[["id"]])
+    }
+  }
+
+  NULL
+}
+
+# All leaf `data` records of a dockView tree, in reading order.
+grid_leaves <- function(tree) {
+
+  leaves <- list()
+
+  walk <- function(node) {
+
+    if (is.null(node) || !length(node)) {
+      return(invisible())
+    }
+
+    if (identical(node[["type"]], "leaf")) {
+      leaves[[length(leaves) + 1L]] <<- node[["data"]]
+    } else {
+      lapply(node[["data"]], walk)
+    }
+
+    invisible()
+  }
+
+  walk(tree[["root"]])
+
+  leaves
 }

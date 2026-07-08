@@ -109,7 +109,7 @@ initialise_views <- function(views, grids, blocks, extensions, active = NULL) {
   list(views = dock_vws, grids = dock_grds)
 }
 
-#' @rdname layout-json
+#' @rdname panel-ids
 #' @export
 panel_obj_ids <- function(ids) {
   is_blk <- maybe_block_panel_id(ids)

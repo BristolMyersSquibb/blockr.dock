@@ -1,8 +1,9 @@
 # A dockview `_state` echo as get_dock() surfaces it: the grid tree + active
-# group, read off the layout's canonical `dock_grid`.
+# group, expanded from the layout's canonical `dock_grid`.
 echo_state <- function(layout) {
   grid <- as_dock_grid(layout)
-  list(grid = grid[["grid"]], activeGroup = grid[["activeGroup"]])
+  tree <- grid_to_tree(grid)
+  list(grid = tree, activeGroup = focus_group_id(tree, grid[["focus"]]))
 }
 
 # Settle the mirror's 250 ms debounce bridge: flush so its internal observer
@@ -30,7 +31,7 @@ test_that("as_dock_grid casts to a canonical dock_grid, sizes verbatim", {
 
   # Sizes are stored faithfully -- the jitter is not rounded away here, it is
   # tolerated at the commit guard (see the `all.equal` test below).
-  expect_equal(grid_to_spec(grid[["grid"]])[["sizes"]], c(0.301, 0.699))
+  expect_equal(grid[["sizes"]], c(0.301, 0.699))
 })
 
 test_that("all.equal.dock_grid absorbs sash jitter but not a real drag", {
@@ -224,8 +225,8 @@ test_that("validate_dock_grid enforces the canonical invariant", {
     class = "dock_grid_structure_invalid"
   )
 
-  # A mis-tagged, non-canonical grid is rejected.
+  # A non-canonical grid -- branch sizes that no longer sum to 1 -- is rejected.
   fake <- g
-  fake[["grid"]][["root"]][["data"]][[1L]][["size"]] <- 0.9
+  fake[["sizes"]] <- c(0.9, 0.7)
   expect_error(validate_dock_grid(fake), class = "dock_grid_not_canonical")
 })

@@ -237,7 +237,7 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
         return()
       }
 
-      grid <- as_dock_grid(new_dock_layout(state))
+      grid <- as_dock_grid(as_dock_layout(state))
       stored <- board_grids(board$board)[[id]]
 
       # Same geometry within the sash-position noise floor -> nothing to commit,
@@ -302,7 +302,7 @@ live_view_grid <- function(v_id, docks) {
     return(NULL)
   }
 
-  as_dock_grid(new_dock_layout(ly))
+  as_dock_grid(as_dock_layout(ly))
 }
 
 live_view_membership <- function(grid, view) {

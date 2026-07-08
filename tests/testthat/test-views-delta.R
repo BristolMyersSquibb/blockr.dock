@@ -58,7 +58,7 @@ test_that("a view add carrying a grid seeds geometry, rendering non-flat", {
   expect_false(is.null(stored))
 
   placement <- view_grid(views[[new_id]], stored)
-  expect_equal(grid_to_spec(placement[["grid"]])[["sizes"]], c(0.25, 0.75))
+  expect_equal(placement[["sizes"]], c(0.25, 0.75))
 })
 
 test_that("a view add with bare membership seeds no geometry (flat)", {
@@ -660,28 +660,26 @@ test_that("validate_views_delta rejects unknown slice keys", {
   )
 })
 
-test_that("drop_panels_from_layout preserves remaining structure", {
+test_that("restrict_grid preserves remaining structure", {
 
-  grid <- as_dock_grid(dock_grid("a", "b", "c", sizes = c(1, 2, 1)))
+  grid <- dock_grid("a", "b", "c", sizes = c(1, 2, 1))
 
-  res <- drop_panels_from_layout(grid, "b")
-
+  res <- restrict_grid(grid, c("a", "c"))
   expect_setequal(layout_panel_ids(res), c("a", "c"))
 
-  res_full <- drop_panels_from_layout(grid, c("a", "b", "c"))
-
+  res_full <- restrict_grid(grid, character())
   expect_length(layout_panel_ids(res_full), 0L)
 })
 
-test_that("drop_panels_from_layout resets the active tab when it is dropped", {
+test_that("restrict_grid resets the active tab when it is dropped", {
 
-  grid <- as_dock_grid(dock_grid(panels("a", "b", active = "b")))
+  grid <- dock_grid(panels("a", "b", active = "b"))
 
-  res <- drop_panels_from_layout(grid, "b")
-  leaf <- res[["grid"]][["root"]][["data"]][[1L]][["data"]]
+  res <- restrict_grid(grid, "a")
+  leaf <- res[["children"]][[1L]]
 
-  expect_identical(unlist(leaf[["views"]]), "a")
-  expect_identical(leaf[["activeView"]], "a")
+  expect_identical(leaf[["panels"]], "a")
+  expect_identical(leaf[["active"]], "a")
 })
 
 test_that("fold_live_membership diffs membership against the live panel set", {
