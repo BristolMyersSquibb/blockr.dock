@@ -35,12 +35,10 @@
   membership (`grid ⊆ membership`, checked in
   [`validate_board()`](https://bristolmyerssquibb.github.io/blockr.core/reference/new_board.html)),
   and a board is valid with no grids at all. The DSL is unchanged –
-  `new_dock_board(layouts = ...)` still takes fused
-  [`dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)s
-  and splits them at construction – and
-  [`board_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  composes the two slots back into the grid-bearing handle the update
-  lifecycle reads. The serialized form carries both fields.
+  `new_dock_board(layouts = ...)` still takes fused `dock_layout()`s and
+  splits them at construction – and `board_layouts()` composes the two
+  slots back into the grid-bearing handle the update lifecycle reads.
+  The serialized form carries both fields.
 
 - Block eval status is now a first-class panel affordance instead of
   leaking through as an incidental warning
@@ -259,18 +257,17 @@
   ([\#153](https://github.com/BristolMyersSquibb/blockr.dock/issues/153)).
 
 - The dock “manager” object is gone. `apply_board_update.dock_board()`
-  is now a pure reducer over
-  [`board_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md);
-  all live view surgery (instantiate / tear down / restore / rename /
-  switch) runs in a single closure-resident reconcile pass driven by the
-  committed board, replacing the duplicated delta-driven and UI-driven
-  view CRUD. View init is just the empty-registry case of that pass
-  (create every view, show the active one), so there is no separate init
-  path. The per-session dock state is ordinary closure-private state
-  passed explicitly, not a handle threaded back from the board callback
-  through `dot_args`. Also makes `augment_board_update.dock_board()`
-  idempotent — a view id is minted once rather than re-minted on every
-  augment pass — fixing a view-add loop
+  is now a pure reducer over `board_layouts()`; all live view surgery
+  (instantiate / tear down / restore / rename / switch) runs in a single
+  closure-resident reconcile pass driven by the committed board,
+  replacing the duplicated delta-driven and UI-driven view CRUD. View
+  init is just the empty-registry case of that pass (create every view,
+  show the active one), so there is no separate init path. The
+  per-session dock state is ordinary closure-private state passed
+  explicitly, not a handle threaded back from the board callback through
+  `dot_args`. Also makes `augment_board_update.dock_board()` idempotent
+  — a view id is minted once rather than re-minted on every augment pass
+  — fixing a view-add loop
   ([\#164](https://github.com/BristolMyersSquibb/blockr.dock/issues/164)).
 
 - Views now carry a stable, immutable **id** decoupled from their
@@ -406,12 +403,16 @@ CRAN release: 2026-04-29
     panel definitions no longer duplicate across views.
   - Added `panels(..., active = NULL)` for tabbed leaves with an
     explicit open tab, and `group(..., sizes = NULL)` for nested
-    branches with explicit ratios.
-    [`dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-    itself also accepts `sizes =` for root-level ratios and
-    `orientation =` for the top-level split direction.
-  - Removed `dock_view()`, `dock_grid()`, `is_dock_grid()`, and
-    `as_dock_grid()`. Use `dock_layout(...)` (or the new
+    branches with explicit ratios. `dock_layout()` itself also accepts
+    `sizes =` for root-level ratios and `orientation =` for the
+    top-level split direction.
+  - Removed
+    [`dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md),
+    [`dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md),
+    [`is_dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-grid.md),
+    and
+    [`as_dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-grid.md).
+    Use `dock_layout(...)` (or the new
     [`panels()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
     /
     [`group()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md))
@@ -427,15 +428,11 @@ CRAN release: 2026-04-29
   - Unexported the `dock_layouts()` constructor. The user-facing input
     shape for `new_dock_board(layouts = ...)` is a plain named list —
     the `dock_layouts` type is the resolved collection that the board
-    holds internally.
-    [`is_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md),
-    [`as_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md),
-    and
-    [`validate_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-    remain exported.
-  - Unexported `new_dock_layout()`; use
-    [`dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-    instead.
+    holds internally. `is_dock_layouts()`, `as_dock_layouts()`, and
+    `validate_dock_layouts()` remain exported.
+  - Unexported
+    [`new_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-layout.md);
+    use `dock_layout()` instead.
   - Unexported `view_ids()` and `view_can_crud()`. Both were internal
     helpers exposed by accident; renamed to `layout_ids()` and
     `views_can_crud()` respectively to align with what they operate on.
@@ -456,26 +453,21 @@ CRAN release: 2026-04-29
     (depends on blockr.core forwarding `...` in `blockr_deser.list`).
   - Layout conversion API split by boundary. The R object ↔︎ R list
     boundary uses coercion:
-    [`as_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+    [`as_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-layout.md)
     coerces a `dock_layout` (identity), a `board` (its active layout),
     or a spec list to a `dock_layout`;
     [`as.list()`](https://rdrr.io/r/base/list.html) of a `dock_layout`
     returns that spec list. The R object ↔︎ JSON string boundary uses
-    explicit verbs:
-    [`layout_to_json()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)
+    explicit verbs: `layout_to_json()` / `layout_from_json()`. Both
+    `as_dock_layout(<list>)` and `layout_from_json()` take optional
+    `blocks` / `extensions` to resolve bare IDs and validate.
+    [`layout_panel_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ids.md)
     /
-    [`layout_from_json()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md).
-    Both `as_dock_layout(<list>)` and
-    [`layout_from_json()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)
-    take optional `blocks` / `extensions` to resolve bare IDs and
-    validate.
-    [`layout_panel_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)
-    /
-    [`panel_obj_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)
+    [`panel_obj_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ids.md)
     inspect the panel / object IDs a layout references. The dockview
     wire format and its converters are not part of the public API — only
     the `dock_layout` object, our JSON, and the spec list are;
-    [`as_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+    [`as_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-layout.md)
     rejects a dockview grid-shaped list.
 
 ## blockr.dock 0.1.0

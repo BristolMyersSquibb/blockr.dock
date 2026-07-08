@@ -135,8 +135,6 @@ extension object.
 - [`new_dock_board()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
   [`is_dock_board()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
   [`as_dock_board()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
-  [`active_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
-  [`` `active_layout<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
   [`dock_extensions()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
   [`` `dock_extensions<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
   [`dock_ext_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
@@ -154,53 +152,62 @@ extension object.
 
 Tools for defining panel arrangements.
 
-- [`dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+- [`dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   [`panels()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   [`group()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-  [`is_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-  [`as_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-  [`format(`*`<dock_layout>`*`)`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-  [`print(`*`<dock_layout>`*`)`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   [`default_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-  [`validate_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-  : Dock layout
+  : Dock grid authoring
 
-## Layout serialization
+## Dock grid
 
-Read, write and inspect the JSON wire form of a layout.
+A view’s geometry in canonical form.
 
-- [`panel_obj_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)
-  [`layout_panel_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)
-  [`layout_to_json()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)
-  [`layout_from_json()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout-json.md)
-  : Layout serialization and inspection
+- [`as_dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-grid.md)
+  [`is_dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-grid.md)
+  [`validate_dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-grid.md)
+  : Canonical view grid
+
+## Dock layout boundary
+
+dockView’s native layout representation, the wire form at the client
+boundary.
+
+- [`new_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-layout.md)
+  [`is_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-layout.md)
+  [`validate_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-layout.md)
+  [`as_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-layout.md)
+  : Dock layout: dockView's native representation
+
+## Panel IDs
+
+The canonical panel IDs a grid or layout references.
+
+- [`panel_obj_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ids.md)
+  [`layout_panel_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ids.md)
+  : Panel IDs of a grid or layout
 
 ## Dock views
 
 Multi-view (tabbed) boards. Each view is its own panel arrangement.
 
-- [`new_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`validate_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`is_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+- [`is_dock_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`validate_dock_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`board_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`` `board_grids<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`as_dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`is_dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`validate_dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`view_members()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`is_dock_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  [`validate_dock_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`view_name()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`` `view_name<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`view_names()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`active_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`` `active_view<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`` `board_layouts<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`board_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`as_dock_layouts()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`new_dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`is_dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`view_members()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`is_dock_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`validate_dock_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   [`` `board_views<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`is_dock_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`validate_dock_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`board_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  [`` `board_grids<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   : Dock views: structure and grid
 
 ## Board extensions
@@ -269,5 +276,5 @@ packages.
 
 ### All vignettes
 
-- [Defining dock
-  layouts](https://bristolmyerssquibb.github.io/blockr.dock/articles/layouts.md):
+- [Views and
+  grids](https://bristolmyerssquibb.github.io/blockr.dock/articles/layouts.md):

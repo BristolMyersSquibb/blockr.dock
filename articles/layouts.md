@@ -1,4 +1,4 @@
-# Defining dock layouts
+# Views and grids
 
 ``` r
 
@@ -6,107 +6,81 @@ library(blockr.core)
 library(blockr.dock)
 ```
 
-A `dock_board` exposes a single argument that controls panel
-arrangement: the `layouts`. This vignette walks through every shape
-`layouts` accepts, shows what UI each shape produces, and ends with
-patterns for the layouts you’ll build most often.
+A `dock_board`’s arrangement is two independent things, and it takes two
+constructor arguments to match:
+
+- **`views`** — the *structure*: which panels belong to each view (the
+  global tabs across the top of the app) and the view’s display name.
+  One `dock_view` per view.
+- **`grids`** — the *geometry*: how each view’s panels are split,
+  nested, tabbed and sized. One `dock_grid` per view.
+
+This vignette covers the grid syntax you use to describe geometry, how
+the two slots fit together at construction, and the patterns you’ll
+reach for most.
 
 ## The big picture
 
-Internally, every board carries a `dock_layouts` collection. This is a
-named list of one or more **views** (the global tabs you see at the top
-of the app). A view’s content is a `dock_layout`: the per-view panel
-arrangement, stored as a tree of block / extension IDs. Panel content is
-derived from the board’s blocks and extensions on demand — only the
-arrangement is stored.
+A board stores structure and geometry as two aligned slots, keyed by
+view id — read them with
+[`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+and
+[`board_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md).
+They are kept apart on purpose: membership is owned by the update
+lifecycle (add / remove a block), geometry by the client (you drag a
+sash, the board records it). A panel is *placed* in a view when it is in
+both slots; the two are reconciled only where the placement is read.
 
-Single-page boards are the degenerate case: a `dock_layouts` with one
-auto-named view called `"Page"`. The view-nav dropdown is always
-present; it just has one entry until you add more.
+There is a third representation you should know the name of but will
+rarely touch: **`dock_layout`**. It is *dockView’s own* form — the
+`{grid, panels, activeGroup}` payload the front end renders and echoes
+back. It is the wire type at the client boundary, not something you
+author with. Our model is `dock_view` + `dock_grid`; `dock_layout` is
+what crosses to dockView (`?dock_layout`).
 
-When you pass a `layouts =` argument to
-[`new_dock_board()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md),
-the constructor normalises it to a `dock_layouts`:
+The constructor is forgiving about which slot you fill:
 
-| You pass | Treated as | Final shape |
-|----|----|----|
-| A named `list(A = ..., B = ...)` | multi-view (each name is a view) | `dock_layouts` collection |
-| A `dock_layout` | single page | wrapped as `Page` slot |
-| A raw list (grid spec) | single-page raw grid, resolved on the way in | wrapped as `Page` slot |
+| You pass | Result |
+|----|----|
+| `grids` only | one view per grid (id = the list name), members taken from the grid’s panels |
+| `views` only | structure with no explicit geometry; each view renders a flat default over its members |
+| both | aligned by id: `views` sets membership + names, `grids` sets geometry |
+| neither | a single default view (sidebar + main when there are extensions) |
 
-![](mermaid/coercion-flow.svg)
+So for a layout with real geometry you usually just pass `grids`; the
+views come along for free. Reach for `views` when you want a display
+name that differs from the id, or a view without an explicit
+arrangement.
 
-The dispatch is name-driven: a list with top-level names becomes
-multi-view (one slot per name); an unnamed list (or a `dock_layout`) is
-treated as a single-page grid spec. To get multiple views, name the
-top-level entries.
+## Grid syntax
 
-So you only ever need to think about two things: the **grid syntax** for
-arranging panels inside a view, and **named-list syntax** for having
-more than one view.
+You describe geometry with
+[`dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+(and its helpers
+[`panels()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+and
+[`group()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)).
+Two rules cover everything:
 
-## Starting from scratch
-
-The simplest possible board: no blocks, no extensions, no `layouts`.
-Since
-[`new_dock_board()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
-defaults to `layouts = default_layout(blocks, extensions)` — which
-returns an empty `dock_layout` here — and the empty layout gets wrapped
-as a single `Page` view, the resulting collection is a `dock_layouts`
-with one empty `Page` slot:
-
-``` r
-
-new_dock_board()
-```
-
-    ┌────────────────────────────┐
-    │  Page  [+]                 │
-    ├────────────────────────────┤
-    │                            │
-    │             ⊕              │
-    │                            │
-    │   Start by adding a panel  │
-    │                            │
-    │       [ Add panel ]        │
-    │                            │
-    └────────────────────────────┘
-
-You get a single auto-named `Page` view holding the watermark prompt.
-Clicking **Add panel** would normally open the panel picker, but here
-the board has no blocks or extensions to choose from, so the picker says
-so and points you to add a block first. From this empty starting point
-you can grow the board interactively.
-
-When you do supply blocks or extensions but still no `layouts`, the
-default `Page` is auto-populated by
-[`default_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md):
-blocks alone become a single row of panels; blocks together with
-extensions become the familiar sidebar-and-main shape (extensions on the
-left, blocks on the right). Pass `layouts =` only to override that.
-
-## Single-page raw grid
-
-The simplest layout: a list (or character vector) of block/extension
-IDs. The shape of the list determines the grid.
-
-The two rules to internalise:
-
-1.  **List nesting alternates orientation.** The top level lays its
-    children out horizontally; one level of nesting flips to vertical;
-    another level flips back to horizontal, and so on.
-2.  **Character vectors create tabs.** A vector of IDs lives inside one
-    DockView panel; a list of IDs gets split into multiple panels.
+1.  **List nesting alternates orientation.**
+    [`dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)’s
+    top level lays its children out horizontally; one level of
+    [`list()`](https://rdrr.io/r/base/list.html) nesting flips to
+    vertical; another flips back, and so on.
+2.  **Character vectors create tabs.** A vector of IDs shares one
+    DockView panel as tabs; a
+    [`list()`](https://rdrr.io/r/base/list.html) of IDs is split into
+    separate panels.
 
 ### One panel
 
-A single ID gives one panel filling the whole view:
+A single ID fills the whole view:
 
 ``` r
 
 new_dock_board(
   blocks = c(a = new_dataset_block()),
-  layouts = list("a")
+  grids = list(Page = dock_grid("a"))
 )
 ```
 
@@ -118,15 +92,18 @@ new_dock_board(
     │                            │
     └────────────────────────────┘
 
+The view is named after the grid’s list name (`Page`), and its members
+are that grid’s panels (`a`).
+
 ### Two panels side by side
 
-Two top-level entries → two columns split horizontally:
+Two top-level children → two columns split horizontally:
 
 ``` r
 
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
-  layouts = list("a", "b")
+  grids = list(Page = dock_grid("a", "b"))
 )
 ```
 
@@ -140,7 +117,7 @@ new_dock_board(
 
 ### Two panels stacked vertically
 
-Wrap the entries in **one extra layer** of
+Wrap the children in **one extra layer** of
 [`list()`](https://rdrr.io/r/base/list.html) to introduce a vertical
 split:
 
@@ -148,7 +125,7 @@ split:
 
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
-  layouts = list(list("a", "b"))
+  grids = list(Page = dock_grid(list("a", "b")))
 )
 ```
 
@@ -160,21 +137,20 @@ new_dock_board(
     │            b               │
     └────────────────────────────┘
 
-The outer list still describes a horizontal split, but with only one
-child that “split” is a single full-width column. The inner
-`list("a", "b")` is at depth 1, so it splits **vertically**: `a` stacks
-on top of `b`.
+The outer level still describes a horizontal split, but with a single
+child that “split” is one full-width column. The inner `list("a", "b")`
+is at depth 1, so it splits **vertically**: `a` stacks on top of `b`.
 
-### Tabs (multiple views in one panel)
+### Tabs (multiple panels in one)
 
-Use a **character vector** (not a list) to put multiple panels in the
-same DockView panel as tabs:
+Use a **character vector** (not a list) to put several panels in one
+DockView panel as tabs:
 
 ``` r
 
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
-  layouts = list(c("a", "b"))
+  grids = list(Page = dock_grid(c("a", "b")))
 )
 ```
 
@@ -189,14 +165,14 @@ new_dock_board(
     │                            │
     └────────────────────────────┘
 
-`list("a", "b")` (panels split) and `list(c("a", "b"))` (panels tabbed)
-look almost identical in source but produce very different UIs. The
-list/vector distinction flips between *split a panel* and *tabify a
+`dock_grid(list("a", "b"))` (panels split) and `dock_grid(c("a", "b"))`
+(panels tabbed) read almost the same but produce very different UIs —
+the list/vector distinction flips between *split a panel* and *tabify a
 panel*.
 
 ## Nested grids
 
-Combine the two rules to build any layout.
+Combine the two rules to build any arrangement.
 
 ### Two columns, the right one stacked
 
@@ -208,7 +184,7 @@ new_dock_board(
     b = new_head_block(),
     c = new_head_block()
   ),
-  layouts = list("a", list("b", "c"))
+  grids = list(Page = dock_grid("a", list("b", "c")))
 )
 ```
 
@@ -231,7 +207,7 @@ new_dock_board(
     c = new_head_block(),
     d = new_head_block()
   ),
-  layouts = list(list("a", "b"), list("c", "d"))
+  grids = list(Page = dock_grid(list("a", "b"), list("c", "d")))
 )
 ```
 
@@ -245,9 +221,8 @@ new_dock_board(
 
 ### Three rows in one column
 
-Add a third level of nesting to flip back to horizontal inside the
-vertical stack. Useful when you want a row that holds two panels
-side-by-side:
+A third level of nesting flips back to horizontal inside the vertical
+stack — a row holding two panels side by side:
 
 ``` r
 
@@ -257,7 +232,7 @@ new_dock_board(
     b = new_head_block(),
     c = new_head_block()
   ),
-  layouts = list(list("a", list("b", "c")))
+  grids = list(Page = dock_grid(list("a", list("b", "c"))))
 )
 ```
 
@@ -272,14 +247,16 @@ new_dock_board(
 ### Sidebar + tabs
 
 A common dashboard shape: a narrow column on the left holding an
-extension, and a tabbed panel on the right with several blocks:
+extension, a tabbed panel on the right with several blocks:
 
 ``` r
 
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
-  layouts = list("edit_board_extension", c("a", "b"))
+  grids = list(
+    Page = dock_grid("edit_board_extension", c("a", "b"))
+  )
 )
 ```
 
@@ -293,29 +270,29 @@ new_dock_board(
     │         │   (tabs)         │
     └─────────┴──────────────────┘
 
-This is also what
-[`default_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-produces when both blocks and extensions are present: extensions on the
-left, blocks on the right.
+This is also the shape
+[`new_dock_board()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
+gives you by default when both blocks and extensions are present, and
+you pass neither slot: extensions on the left, blocks on the right.
 
 ## Multiple views (pages)
 
-Pass a named list. Each named entry becomes a separate page in the
-view-nav dropdown:
+Give `grids` more than one entry; each list name becomes a separate page
+in the view-nav dropdown, and each becomes its own view:
 
 ``` r
 
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
-  layouts = list(
-    Analysis = list("a", "b"),
-    Editor = list("edit_board_extension")
+  grids = list(
+    Analysis = dock_grid("a", "b"),
+    Editor = dock_grid("edit_board_extension")
   )
 )
 ```
 
-`Analysis` view (active by default, since the first view wins):
+`Analysis` view (active by default — the first view wins):
 
     ┌────────────────────────────┐
     │ Analysis  [+]   ← view nav │
@@ -333,23 +310,46 @@ Switching to `Editor` via the dropdown:
     │                            │
     └────────────────────────────┘
 
-Each slot value follows exactly the same grid syntax as the single-page
-form: character vectors for tabs, nested lists for splits.
+Each grid follows exactly the same syntax as the single-view form:
+character vectors for tabs, nested lists for splits.
+
+### Display names distinct from the id
+
+A grid’s list name is the view *id*, and it doubles as the display
+label. When you want a label that differs from the id — or a view with
+no geometry at all — fill the `views` slot too. A
+[`dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+carries the membership and the display name; align it to the grid by id:
+
+``` r
+
+new_dock_board(
+  blocks = c(a = new_dataset_block(), b = new_head_block()),
+  views = list(
+    main = dock_view(c("a", "b"), name = "Analysis")
+  ),
+  grids = list(
+    main = dock_grid("a", "b")
+  )
+)
+```
+
+The nav shows **Analysis**; the stable id `main` is what `active`,
+renames and updates address.
 
 ### Choosing the initially active view
 
-By default, the first layout is active. To start on a different one,
-name it with `new_dock_board(active = )`, using its view id (the
-`layouts` key):
+The first view is active by default. To start elsewhere, name it with
+`new_dock_board(active = )`, using its view id:
 
 ``` r
 
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
-  layouts = list(
-    Analysis = list("a", "b"),
-    Editor = dock_layout("edit_board_extension")
+  grids = list(
+    Analysis = dock_grid("a", "b"),
+    Editor = dock_grid("edit_board_extension")
   ),
   active = "Editor"
 )
@@ -361,33 +361,37 @@ new_dock_board(
     │           edit             │
     └────────────────────────────┘
 
-Which view is active is tracked as a single field on the `dock_layouts`
-collection, keyed by view id — like the id itself, it belongs to the
-collection, not to any one layout. So it is always exactly one: the id
-named in `active` (defaulting to the first view). Change it at runtime
-with `active_view(board) <- id`.
+Which view is active is a single field on the views collection, keyed by
+id — it belongs to the collection, not to any one view, so it is always
+exactly one. Change it at runtime with `active_view(board) <- id`, and
+read it back with `active_view(board)`; index `board_grids(board)[[id]]`
+if you then need that view’s geometry.
 
-### Empty views
+### Views without geometry
 
-A view with no panels is fine. Switching to it shows the same watermark
-prompt as the empty default board (see `Starting from scratch`), scoped
-to that tab.
+Pass `views` alone (bare member vectors coerce to `dock_view`s) for
+structure with no explicit arrangement. Each such view renders a flat
+default over its members until the client arranges it (which the board
+then records):
 
 ``` r
 
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
-  layouts = list(
-    Analysis = list("a", "b"),
-    Empty = list()
+  views = list(
+    Analysis = c("a", "b"),
+    Empty = character()
   )
 )
 ```
 
+An empty view shows the same watermark prompt as an empty board, scoped
+to that tab.
+
 ## Putting it all together
 
-A pot-pourri exercising every feature: multiple views, nested grids,
-tabbed panels, an extension as a sidebar, and an explicit active view.
+A pot-pourri: multiple views, nested grids, tabbed panels, an extension
+sidebar, and an explicit active view.
 
 ``` r
 
@@ -406,28 +410,27 @@ new_dock_board(
     new_link("cleaned", "plot1", "data"),
     new_link("cleaned", "plot2", "data")
   ),
-  layouts = list(
-    Data = dock_layout(
+  grids = list(
+    Data = dock_grid(
       "edit_board_extension",
       panels("raw", "cleaned", active = "cleaned"),
       sizes = c(0.25, 0.75)
     ),
-    Analysis = dock_layout(
+    Analysis = dock_grid(
       group("summary", "plot1", sizes = c(0.4, 0.6)),
       "plot2",
       sizes = c(0.55, 0.45)
     ),
-    Charts = dock_layout(panels("plot1", "plot2"))
+    Charts = dock_grid(panels("plot1", "plot2"))
   ),
   active = "Charts"
 )
 ```
 
-The board has three views. `Charts` is marked active, so the user lands
-there first.
+Three views; `Charts` is active, so the user lands there first.
 
-**Charts** (active on load): one tabbed panel with `plot1` shown and
-`plot2` selectable as a tab.
+**Charts** (active on load): one tabbed panel, `plot1` shown, `plot2` a
+tab.
 
     ┌────────────────────────────┐
     │  Charts  [+]               │
@@ -435,15 +438,12 @@ there first.
     │ ┌───────┐┌───────┐         │
     │ │ plot1 ││ plot2 │         │
     │ └───────┘└───────┘         │
-    │                            │
     │  (plot1 shown, plot2 tab)  │
-    │                            │
     └────────────────────────────┘
 
-**Data**: a slim extension sidebar on the left holding the editor, and a
-wide right column with `raw` / `cleaned` tabbed. `active = "cleaned"`
-opens the cleaned tab by default; `sizes = c(0.25, 0.75)` carves out the
-narrow sidebar.
+**Data**: a slim extension sidebar on the left, a wide right column with
+`raw` / `cleaned` tabbed. `active = "cleaned"` opens the cleaned tab;
+`sizes = c(0.25, 0.75)` carves out the narrow sidebar.
 
     ┌────────────────────────────┐
     │  Data  [+]                 │
@@ -455,49 +455,43 @@ narrow sidebar.
     └──────┴─────────────────────┘
       25%          75%
 
-**Analysis**: two top-level columns at 55/45. The left column is a
-nested
+**Analysis**: two columns at 55/45. The left is a nested
 [`group()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-with a 40/60 vertical split (summary on top, plot1 below); the right
-column is a single panel (`plot2`).
+with a 40/60 vertical split (summary over plot1); the right is `plot2`.
 
     ┌────────────────────────────┐
     │  Analysis  [+]             │
     ├─────────────┬──────────────┤
     │   summary   │              │   40% / 55%
     ├─────────────┤    plot2     │
-    │             │              │
     │    plot1    │              │   60% / 45%
-    │             │              │
     └─────────────┴──────────────┘
          55%             45%
 
 ## Custom split ratios and active tabs
 
-The list-of-IDs sugar splits space evenly and opens the first panel in a
-tabbed group. For non-default ratios or a non-default open tab, escalate
-to the typed constructors:
+The bare list-of-IDs form splits space evenly and opens the first tab.
+For non-default ratios or a non-default open tab, use the typed helpers:
 
-- `dock_layout(..., sizes = c(...))` — sizes parallel to the root
-  children. The numbers are relative; they don’t have to sum to `1`.
-- `group(..., sizes = c(...))` — same, for a nested branch (any level
-  below the root).
-- `panels(..., active = "...")` — tabbed leaf with an explicit open tab.
-  Equivalent to a character-vector child, except you also get to pick
-  the active tab.
+- `dock_grid(..., sizes = c(...))` — sizes parallel to the root
+  children. They are relative; they need not sum to `1` (they are
+  normalised for you).
+- `group(..., sizes = c(...))` — the same, for a nested branch below the
+  root.
+- `panels(..., active = "...")` — a tabbed leaf with an explicit open
+  tab.
 
 ### A 30/70 split
 
-`dock_layout(..., sizes =)` runs parallel to the children passed in
-`...`. With two children the layout splits horizontally; with two sizes
-it does so unevenly:
+`sizes` runs parallel to the children in `...`. Two children split
+horizontally; two sizes make the split uneven:
 
 ``` r
 
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
-  layouts = list(
-    Main = dock_layout("a", "b", sizes = c(0.3, 0.7))
+  grids = list(
+    Main = dock_grid("a", "b", sizes = c(0.3, 0.7))
   )
 )
 ```
@@ -513,17 +507,17 @@ new_dock_board(
 
 ### Stacking with sizes
 
-Same idea, vertical layout: pass `orientation = "vertical"` so the root
-split runs top-to-bottom instead of left-to-right.
+Same idea, vertical: `orientation = "vertical"` makes the root split run
+top-to-bottom.
 
 ``` r
 
 new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
-  layouts = list(
-    Main = dock_layout("a", "b",
-                       orientation = "vertical",
-                       sizes = c(0.25, 0.75))
+  grids = list(
+    Main = dock_grid("a", "b",
+                     orientation = "vertical",
+                     sizes = c(0.25, 0.75))
   )
 )
 ```
@@ -541,9 +535,8 @@ new_dock_board(
 ### Choosing the open tab
 
 [`panels()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-builds a tabbed leaf. Without `active`, the first ID opens by default —
-same behaviour as a bare character vector. Pass `active` to open a
-different tab on load:
+builds a tabbed leaf. Without `active`, the first ID opens — same as a
+bare character vector. Pass `active` to open a different tab:
 
 ``` r
 
@@ -553,8 +546,8 @@ new_dock_board(
     b = new_head_block(),
     c = new_head_block()
   ),
-  layouts = list(
-    Main = dock_layout(panels("a", "b", "c", active = "b"))
+  grids = list(
+    Main = dock_grid(panels("a", "b", "c", active = "b"))
   )
 )
 ```
@@ -567,14 +560,13 @@ new_dock_board(
     │ └────┘└──────┘└────┘       │
     │         ↑                  │
     │   b is open by default     │
-    │                            │
     └────────────────────────────┘
 
 ### Sizes inside a nested branch
 
 [`group()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-is the equivalent of an inner `list(...)` but with its own `sizes`. Use
-it whenever you need ratios on a non-root branch:
+is an inner `list(...)` with its own `sizes` — use it for ratios on any
+non-root branch:
 
 ``` r
 
@@ -584,8 +576,8 @@ new_dock_board(
     b = new_head_block(),
     c = new_head_block()
   ),
-  layouts = list(
-    Main = dock_layout(
+  grids = list(
+    Main = dock_grid(
       "a",
       group("b", "c", sizes = c(0.6, 0.4)),
       sizes = c(0.3, 0.7)
@@ -601,39 +593,52 @@ new_dock_board(
     │        ├───────────────────┤
     │   a    │      c            │   inner: 40% bottom
     │        │                   │
-    │        │                   │
     └────────┴───────────────────┘
        30%          70%
 
-Outer `sizes = c(0.3, 0.7)` controls the root split (left / right);
-inner `group(..., sizes = c(0.6, 0.4))` controls the right column’s
-internal stack.
+Outer `sizes = c(0.3, 0.7)` controls the root split; inner
+`group(..., sizes = c(0.6, 0.4))` controls the right column’s stack.
 
 ## Cheat-sheet
 
+Geometry (`dock_grid(...)`):
+
+| Goal                      | Syntax                                          |
+|---------------------------|-------------------------------------------------|
+| One panel                 | `dock_grid("a")`                                |
+| Two side-by-side          | `dock_grid("a", "b")`                           |
+| Two stacked               | `dock_grid(list("a", "b"))`                     |
+| Tabbed panel              | `dock_grid(c("a", "b"))`                        |
+| Sidebar + main            | `dock_grid("ext", "main")`                      |
+| Two columns, both stacked | `dock_grid(list("a", "b"), list("c", "d"))`     |
+| Custom split ratio        | `dock_grid("a", "b", sizes = c(0.3, 0.7))`      |
+| Custom open tab           | `dock_grid(panels("a", "b", active = "b"))`     |
+| Vertical top-level split  | `dock_grid("a", "b", orientation = "vertical")` |
+
+Board (`new_dock_board(...)`):
+
 | Goal | Syntax |
 |----|----|
-| One panel | `list("a")` |
-| Two side-by-side panels | `list("a", "b")` |
-| Two stacked panels | `list(list("a", "b"))` |
-| Tabbed single panel | `list(c("a", "b"))` |
-| Sidebar + main | `list("ext", "main")` |
-| Two columns, both stacked | `list(list("a", "b"), list("c", "d"))` |
-| Custom split ratio | `dock_layout("a", "b", sizes = c(0.3, 0.7))` |
-| Custom open tab | `dock_layout(panels("a", "b", active = "b"))` |
-| Vertical top-level split | `dock_layout("a", "b", orientation = "vertical")` |
-| Multiple views | `list(A = ..., B = ...)` |
-| Start on view `B` | `new_dock_board(layouts = list(A = ..., B = ...), active = "B")` |
-| Empty starter view | `list(Page = list())` |
+| One view with geometry | `grids = list(Page = dock_grid(...))` |
+| Several views | `grids = list(A = dock_grid(...), B = dock_grid(...))` |
+| A display name != id | `views = list(id = dock_view(members, name = "..."))` |
+| Structure, no geometry | `views = list(Page = c("a", "b"))` |
+| Start on view `B` | `new_dock_board(grids = list(A = ..., B = ...), active = "B")` |
+| Empty starter view | `views = list(Page = character())` |
 
 ## Where to go from here
 
-- See
-  [`?dock_layout`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
-  for the per-view layout type (including
+- [`?dock_grid`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+  for the geometry syntax (with
   [`panels()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   and
-  [`group()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md))
-  and
+  [`group()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)).
+- [`?dock_view`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
+  for the structure type, and
   [`?active_view`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
   for switching the active view at runtime.
+- `?dock_layout` for the dockView boundary form, and
+  [`as_dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-grid.md)
+  /
+  [`as_dock_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-layout.md)
+  for the casts across it.
