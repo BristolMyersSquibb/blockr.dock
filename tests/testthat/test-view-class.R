@@ -237,6 +237,48 @@ test_that("construction restricts a grid to its view's members", {
   expect_identical(layout_panel_ids(board_grids(brd)[["A"]]), "block_panel-a")
 })
 
+test_that("the default grid groups extensions left, blocks right, tabbed", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = new_edit_board_extension()
+  )
+
+  grid <- active_view_grid(brd)
+
+  expect_length(grid[["children"]], 2L)
+  expect_setequal(
+    grid[["children"]][[1L]][["panels"]],
+    "ext_panel-edit_board_extension"
+  )
+  expect_setequal(
+    grid[["children"]][[2L]][["panels"]],
+    c("block_panel-a", "block_panel-b")
+  )
+})
+
+test_that("a grid-less view falls back to the same ext / blocks default", {
+
+  # A view with no grid entry lays out identically to a fresh board.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = new_edit_board_extension(),
+    views = list(A = c("a", "b", "edit_board_extension"))
+  )
+
+  grid <- view_grid(board_views(brd)[["A"]], board_grids(brd)[["A"]])
+
+  expect_length(grid[["children"]], 2L)
+  expect_setequal(
+    grid[["children"]][[1L]][["panels"]],
+    "ext_panel-edit_board_extension"
+  )
+  expect_setequal(
+    grid[["children"]][[2L]][["panels"]],
+    c("block_panel-a", "block_panel-b")
+  )
+})
+
 test_that("rm_blocks drops the member but leaves a legal arrangement ghost", {
 
   brd <- new_dock_board(

@@ -458,8 +458,19 @@ active_view_grid <- function(board) {
   view_grid(board_views(board)[[id]], board_grids(board)[[id]])
 }
 
+# The default geometry over a set of members: an extensions group on the left
+# and a blocks group on the right, each tabbing its panels. A view with no grid
+# falls back to this, so a fresh board and a grid-less view lay out identically.
 default_grid <- function(members) {
-  new_dock_grid(children = lapply(members, default_leaf))
+
+  ext <- members[maybe_ext_panel_id(members)]
+  blk <- members[maybe_block_panel_id(members)]
+
+  spec <- list()
+  if (length(ext)) spec <- c(spec, list(ext))
+  if (length(blk)) spec <- c(spec, list(blk))
+
+  do.call(dock_grid, spec)
 }
 
 
@@ -655,25 +666,18 @@ validate_sizes <- function(sizes, children) {
 #' @export
 default_layout <- function(blocks, extensions) {
 
-  blocks <- as_blocks(blocks)
-  ext_coll <- as_dock_extensions(extensions)
-
-  ext_pids <- as.character(as_ext_panel_id(ext_coll))
-  blk_pids <- as.character(as_block_panel_id(blocks))
-
-  spec <- list()
-  if (length(ext_pids)) spec <- c(spec, list(ext_pids))
-  if (length(blk_pids)) spec <- c(spec, list(blk_pids))
-
-  grid <- do.call(dock_grid, spec)
-
-  views <- new_dock_views(
-    mint_view_ids(list(new_dock_view(layout_panel_ids(grid))))
+  members <- c(
+    as.character(as_ext_panel_id(as_dock_extensions(extensions))),
+    as.character(as_block_panel_id(as_blocks(blocks)))
   )
+
+  views <- new_dock_views(mint_view_ids(list(new_dock_view(members))))
 
   list(
     views = views,
-    grids = new_dock_grids(set_names(list(grid), names(views)))
+    grids = new_dock_grids(
+      set_names(list(default_grid(members)), names(views))
+    )
   )
 }
 
