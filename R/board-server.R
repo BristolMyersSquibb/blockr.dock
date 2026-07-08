@@ -126,7 +126,10 @@ board_server_callback <- function(board, update, visible, ...,
     apply_extensions_mod(update()$extensions$mod, ext_res)
   )
 
-  register_actions(actions, triggers, board, update, ext_res)
+  register_actions(
+    actions, triggers, board, update,
+    c(ext_res, list(dock = active_dock, docks = docks))
+  )
 
   # Returned to core, spread into every plugin's args (see the two-bundle note
   # above): `dock` for block placement, `view_data` for serialization, `actions`
@@ -612,16 +615,7 @@ manage_dock <- function(
                        blocks = init_blocks, extensions = init_exts)
 
         for (pid in as_dock_panel_id(as_dock_grid(init_layout))) {
-          if (is_block_panel_id(pid)) {
-            show_block_panel(pid, add_panel = FALSE, dock = dock)
-          } else if (is_ext_panel_id(pid)) {
-            show_ext_panel(pid, add_panel = FALSE, dock = dock)
-          } else {
-            blockr_abort(
-              "Unknown panel type {class(pid)}.",
-              class = "dock_panel_invalid"
-            )
-          }
+          select_dock_panel(pid, dock)
         }
       },
       once = TRUE
@@ -629,22 +623,7 @@ manage_dock <- function(
 
     observeEvent(
       input[[dock_input("panel-to-remove")]],
-      {
-        pid <- as_dock_panel_id(
-          input[[dock_input("panel-to-remove")]]
-        )
-
-        if (is_block_panel_id(pid)) {
-          hide_block_panel(pid, rm_panel = TRUE, dock = dock)
-        } else if (is_ext_panel_id(pid)) {
-          hide_ext_panel(pid, rm_panel = TRUE, dock = dock)
-        } else {
-          blockr_abort(
-            "Unknown panel type {class(pid)}.",
-            class = "dock_panel_invalid"
-          )
-        }
-      }
+      remove_dock_panel(input[[dock_input("panel-to-remove")]], dock)
     )
 
     observeEvent(
@@ -678,26 +657,7 @@ manage_dock <- function(
         }
 
         for (pid in input$add_dock_panel) {
-          if (maybe_block_panel_id(pid)) {
-            show_block_panel(
-              board_blocks(board$board)[as_obj_id(new_block_panel_id(pid))],
-              add_panel = pos,
-              dock = dock
-            )
-          } else if (maybe_ext_panel_id(pid)) {
-            exts <- as.list(dock_extensions(board$board))
-
-            show_ext_panel(
-              exts[[as_obj_id(new_ext_panel_id(pid))]],
-              add_panel = pos,
-              dock = dock
-            )
-          } else {
-            blockr_abort(
-              "Unknown panel specification {pid}.",
-              class = "dock_panel_invalid"
-            )
-          }
+          add_dock_panel(pid, board$board, dock, position = pos)
         }
 
         removeModal()

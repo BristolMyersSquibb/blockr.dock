@@ -1,5 +1,19 @@
 # blockr.dock (development version)
 
+* Panel placement is now available as ops through the action registry, so
+  an extension or API caller can add a panel to a live view at a chosen
+  position, remove one, or select one -- the same paths the add-panel
+  modal and a tab drag already drive. The add op carries a dockView
+  position hint (`referenceGroup` / `referencePanel` plus a `within` /
+  `left` / `right` / `above` / `below` direction), consumed once at
+  insertion and never stored. Like a user gesture, the op writes nothing
+  to the board: the view's membership fold and the settled grid mirror
+  capture the result afterwards, so a server-initiated placement is
+  indistinguishable from a hand-arranged one. Resize (needs the
+  `set_size` dock proxy) and a first-class move join the family once
+  their dockViewR floors land; a move meanwhile decomposes into
+  remove-then-add (#316).
+
 * The block status badge is now derived in one exported helper,
   `block_status_badge()`, and reused by blockr.dag, so the dock card icon
   and the DAG node badge always render the same status, colour and

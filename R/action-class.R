@@ -89,7 +89,10 @@ board_actions.dock_board <- function(x, ...) {
     remove_link_action,
     add_stack_action,
     edit_stack_action,
-    remove_stack_action
+    remove_stack_action,
+    add_panel_action,
+    remove_panel_action,
+    select_panel_action
   )
 }
 

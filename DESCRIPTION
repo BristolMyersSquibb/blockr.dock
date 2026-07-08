@@ -53,6 +53,7 @@ Collate:
     'action-class.R'
     'action-block.R'
     'action-link.R'
+    'action-panel.R'
     'action-stack.R'
     'action-ui.R'
     'action-utils.R'
