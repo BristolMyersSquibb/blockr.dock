@@ -446,120 +446,6 @@ board_views <- function(x) {
   invisible(x)
 }
 
-new_dock_grids <- function(x = list()) {
-  structure(x, class = "dock_grids")
-}
-
-#' @rdname view
-#' @export
-is_dock_grids <- function(x) {
-  inherits(x, "dock_grids")
-}
-
-#' @param views A `dock_views` collection, used to check that grids key
-#'   known views.
-#' @rdname view
-#' @export
-validate_dock_grids <- function(x, views = NULL) {
-
-  if (is.null(x)) {
-    return(x)
-  }
-
-  if (!is_dock_grids(x) || !is.list(x)) {
-    blockr_abort(
-      "Expecting a `dock_grids` object or `NULL`.",
-      class = "dock_grids_structure_invalid"
-    )
-  }
-
-  ids <- names(x)
-
-  if (length(x) && (is.null(ids) || any(ids == ""))) {
-    blockr_abort(
-      "All grids must be keyed by view id.",
-      class = "dock_grids_ids_missing"
-    )
-  }
-
-  if (not_null(views)) {
-
-    unknown <- setdiff(ids, names(views))
-
-    if (length(unknown)) {
-      blockr_abort(
-        "Grid{?s} {unknown} reference no known view.",
-        class = "dock_grids_unknown_view"
-      )
-    }
-  }
-
-  for (id in ids) {
-
-    grid <- x[[id]]
-
-    if (is.null(grid)) {
-      next
-    }
-
-    validate_dock_grid(grid)
-  }
-
-  x
-}
-
-#' @rdname view
-#' @export
-board_grids <- function(x) {
-  stopifnot(is_dock_board(x))
-  x[["grids"]]
-}
-
-#' @rdname view
-#' @export
-`board_grids<-` <- function(x, value) {
-  stopifnot(is_dock_board(x))
-  x[["grids"]] <- validate_dock_grids(value, board_views(x))
-  invisible(x)
-}
-
-# A view's placement geometry, member-driven: membership is authoritative for
-# which panels appear, the grid only for their arrangement. No grid (NULL, or
-# a member-less view) falls back to a default over the members; otherwise the
-# grid's arrangement is kept for the members it places, a member it omits is
-# given a default spot, and a ghost (grid panel no longer a member) is dropped.
-# This is where placement is resolved, on read.
-view_grid <- function(view, grid) {
-
-  members <- view_members(view)
-
-  if (is.null(grid) || !length(members)) {
-    default_grid(members)
-  } else {
-    place_members(grid, members)
-  }
-}
-
-# The active view's placement grid: which view is active is `active_view()`,
-# its geometry an index into `board_grids()` (NULL where unexpressed, so
-# `view_grid()` falls back to a default over the members).
-active_view_grid <- function(board) {
-
-  id <- active_view(board)
-
-  view_grid(board_views(board)[[id]], board_grids(board)[[id]])
-}
-
-default_grid <- function(members) {
-
-  if (!length(members)) {
-    return(new_dock_grid())
-  }
-
-  new_dock_grid(build_grid_tree(as.list(members)))
-}
-
-# Build the id map (bare block / extension id -> canonical panel id) that
 # resolves ergonomic `views` / `grids` inputs. Extension keys and class ids
 # both resolve to the extension's panel id.
 panel_id_map <- function(blocks, extensions) {
@@ -628,19 +514,6 @@ coerce_one_view <- function(view, id_map) {
   )
 }
 
-coerce_dock_grids <- function(grids, id_map) {
-
-  if (is.null(grids)) {
-    return(new_dock_grids())
-  }
-
-  if (is_dock_grids(grids)) {
-    return(grids)
-  }
-
-  new_dock_grids(lapply(grids, resolve_grid, id_map = id_map))
-}
-
 # Drop view members with no backing block or extension. The block / extension
 # set is authoritative, so a panel that references neither (e.g. a block
 # dropped since the board was saved) is silently pruned from membership at
@@ -659,21 +532,4 @@ drop_unknown_members <- function(views, ok_panels) {
   }
 
   views
-}
-
-# Restrict each grid to the (already cleaned) membership of the view it keys,
-# dropping ghosts and unknown panels so stored geometry never outlives the
-# board. Grids keyed by an unknown view are left for validation to reject.
-restrict_grids_to_views <- function(grids, views) {
-
-  for (id in names(grids)) {
-
-    grid <- grids[[id]]
-
-    if (not_null(grid) && id %in% names(views)) {
-      grids[[id]] <- restrict_grid(grid, view_members(views[[id]]))
-    }
-  }
-
-  grids
 }
