@@ -1,15 +1,14 @@
 # blockr.dock (development version)
 
-* The block status badge is now derived in one place, the exported
-  `block_status_badge()`, and reused by blockr.dag, so the dock card
-  icon and the DAG node badge always render the same status, colour and
-  styling instead of each front-end deriving it independently.
-  `block_status_style()` additionally carries the white ring width and
-  colour it previously left each front-end to hardcode. As a consequence
-  the dock's own status dot now reflects render-phase errors -- a block
-  that evaluates cleanly but errors while rendering its output, which the
-  eval status alone reports as `ready`; previously only the DAG badge
-  flagged those (#314).
+* The block status badge is now derived in one exported helper,
+  `block_status_badge()`, and reused by blockr.dag, so the dock card icon
+  and the DAG node badge always render the same status, colour and
+  geometry (including the white ring both previously hardcoded) instead
+  of each front-end deriving and styling it independently. As a
+  consequence the dock's own status dot now reflects render-phase errors
+  -- a block that evaluates cleanly but errors while rendering its
+  output, which the eval status alone reports as `ready`; previously only
+  the DAG badge flagged those (#314).
 
 * Renaming a block no longer crashes a board where that block is absent
   from some view -- a block placed in only one of several views, or
