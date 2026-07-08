@@ -12,7 +12,7 @@ blk_color(category)
 
 blk_icon_data_uri(icon_svg, color, size = 48, mode = c("uri", "inline"))
 
-block_status_style(status)
+block_status_badge(status, error_count = 0L)
 ```
 
 ## Arguments
@@ -43,19 +43,26 @@ block_status_style(status)
 
 - status:
 
-  A block eval status. Only `waiting`, `unset` and `failed` carry an
-  indicator; any other value – including `ready`, `dormant` or a
-  non-string – yields `NULL`. The returned `size` is the coloured dot's
-  pixel diameter; each front-end draws it with a 2px white ring so the
-  dock card icon and the DAG node badge match.
+  A block eval status. `waiting`, `unset` and `failed` carry a badge;
+  `ready` carries none; `dormant` is indeterminate; any other value
+  yields no badge. `size` is the coloured dot's pixel diameter and
+  `ring` its white outline width, both shared so the dock card icon and
+  the DAG node badge render identically.
+
+- error_count:
+
+  Number of error conditions the block has raised. A positive count
+  promotes the badge to `failed`, catching render-phase errors that
+  leave the eval status `ready`.
 
 ## Value
 
 Metadata is returned from `blks_metadata()` as a `data.frame` with each
 row corresponding to a block. Both `blk_color()` and
-`blk_icon_data_uri()` return character vectors. `block_status_style()`
-returns a list with `color`, `size` and `label`, or `NULL` for a status
-with no indicator.
+`blk_icon_data_uri()` return character vectors. `block_status_badge()`
+returns a list with `color`, `label`, `size`, `ring` and `ring_color`
+(the badge to draw), `NULL` for a status with no badge, or `NA` when the
+status is indeterminate.
 
 ## Details
 
@@ -69,10 +76,12 @@ with no indicator.
 - `blk_icon_data_uri()`: Processes block icons to add color and turn
   them into square-shaped icons.
 
-- `block_status_style()`: Returns the styling for a block's eval-status
-  indicator (the coloured dot) – shared so front-ends render it
-  consistently (the dock draws it on the block card icon, blockr.dag as
-  a node badge).
+- `block_status_badge()`: Derives a block's status badge from its eval
+  status and error count – the single derivation the dock card icon and
+  the blockr.dag node badge share, so they always render the same colour
+  and styling. Returns a styling list (draw the badge), `NULL` (no
+  badge), or `NA` (indeterminate: the status is not computed, so leave
+  any existing badge unchanged).
 
 ## Examples
 
@@ -84,7 +93,7 @@ col <- blk_color(meta$category)
 blk_icon_data_uri(meta$icon, col)
 #> [1] "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgICAgICAgd2lkdGg9\nIjQ4IiBoZWlnaHQ9IjQ4IiB2aWV3Qm94PSIwIDAgNDggNDgiPgogICAgICA8cmVjdCB3aWR0\naD0iNDgiIGhlaWdodD0iNDgiIHJ4PSI3LjIiIHJ5PSI3LjIiIGZpbGw9InJnYmEoMCwgMTE0\nLCAxNzgsIDAuMykiLz4KICAgICAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoOS42LCA5LjYp\nIiBmaWxsPSIjMDA3MkIyIj4KICAgICAgICA8c3ZnIHdpZHRoPSIyOC44IiBoZWlnaHQ9IjI4\nLjgiIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHBhdGggZD0iTTQuMzE4IDIuNjg3QzUuMjM0IDIu\nMjcxIDYuNTM2IDIgOCAyczIuNzY2LjI3IDMuNjgyLjY4N0MxMi42NDQgMy4xMjUgMTMgMy42\nMjcgMTMgNGMwIC4zNzQtLjM1Ni44NzUtMS4zMTggMS4zMTNDMTAuNzY2IDUuNzI5IDkuNDY0\nIDYgOCA2cy0yLjc2Ni0uMjctMy42ODItLjY4N0MzLjM1NiA0Ljg3NSAzIDQuMzczIDMgNGMw\nLS4zNzQuMzU2LS44NzUgMS4zMTgtMS4zMTNaTTEzIDUuNjk4VjdjMCAuMzc0LS4zNTYuODc1\nLTEuMzE4IDEuMzEzQzEwLjc2NiA4LjcyOSA5LjQ2NCA5IDggOXMtMi43NjYtLjI3LTMuNjgy\nLS42ODdDMy4zNTYgNy44NzUgMyA3LjM3MyAzIDdWNS42OThjLjI3MS4yMDIuNTguMzc4Ljkw\nNC41MjVDNC45NzggNi43MTEgNi40MjcgNyA4IDdzMy4wMjItLjI4OSA0LjA5Ni0uNzc3QTQu\nOTIgNC45MiAwIDAgMCAxMyA1LjY5OFpNMTQgNGMwLTEuMDA3LS44NzUtMS43NTUtMS45MDQt\nMi4yMjNDMTEuMDIyIDEuMjg5IDkuNTczIDEgOCAxcy0zLjAyMi4yODktNC4wOTYuNzc3QzIu\nODc1IDIuMjQ1IDIgMi45OTMgMiA0djljMCAxLjAwNy44NzUgMS43NTUgMS45MDQgMi4yMjND\nNC45NzggMTUuNzEgNi40MjcgMTYgOCAxNnMzLjAyMi0uMjg5IDQuMDk2LS43NzdDMTMuMTI1\nIDE0Ljc1NSAxNCAxNC4wMDcgMTQgMTNWNFptLTEgNC42OThWMTBjMCAuMzc0LS4zNTYuODc1\nLTEuMzE4IDEuMzEzQzEwLjc2NiAxMS43MjkgOS40NjQgMTIgOCAxMnMtMi43NjYtLjI3LTMu\nNjgyLS42ODdDMy4zNTYgMTAuODc1IDMgMTAuMzczIDMgMTBWOC42OThjLjI3MS4yMDIuNTgu\nMzc4LjkwNC41MjVDNC45NzggOS43MSA2LjQyNyAxMCA4IDEwczMuMDIyLS4yODkgNC4wOTYt\nLjc3N0E0LjkyIDQuOTIgMCAwIDAgMTMgOC42OThabTAgM1YxM2MwIC4zNzQtLjM1Ni44NzUt\nMS4zMTggMS4zMTNDMTAuNzY2IDE0LjcyOSA5LjQ2NCAxNSA4IDE1cy0yLjc2Ni0uMjctMy42\nODItLjY4N0MzLjM1NiAxMy44NzUgMyAxMy4zNzMgMyAxM3YtMS4zMDJjLjI3MS4yMDIuNTgu\nMzc4LjkwNC41MjVDNC45NzggMTIuNzEgNi40MjcgMTMgOCAxM3MzLjAyMi0uMjg5IDQuMDk2\nLS43NzdjLjMyNC0uMTQ3LjYzMy0uMzIzLjkwNC0uNTI1WiI+PC9wYXRoPjwvc3ZnPgogICAg\nICA8L2c+CiAgICA8L3N2Zz4="
 
-block_status_style("waiting")
+block_status_badge("waiting")
 #> $color
 #> [1] "#f59e0b"
 #> 
@@ -93,5 +102,11 @@ block_status_style("waiting")
 #> 
 #> $size
 #> [1] 8
+#> 
+#> $ring
+#> [1] 2
+#> 
+#> $ring_color
+#> [1] "#ffffff"
 #> 
 ```

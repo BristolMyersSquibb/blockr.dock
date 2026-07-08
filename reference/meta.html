@@ -58,7 +58,7 @@ for block icons.</p>
 <span></span>
 <span><span class="fu">blk_icon_data_uri</span><span class="op">(</span><span class="va">icon_svg</span>, <span class="va">color</span>, size <span class="op">=</span> <span class="fl">48</span>, mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"uri"</span>, <span class="st">"inline"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">block_status_style</span><span class="op">(</span><span class="va">status</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">block_status_badge</span><span class="op">(</span><span class="va">status</span>, error_count <span class="op">=</span> <span class="fl">0L</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -90,20 +90,27 @@ for block icons.</p>
 
 
 <dt id="arg-status">status<a class="anchor" aria-label="anchor" href="#arg-status"></a></dt>
-<dd><p>A block eval status. Only <code>waiting</code>, <code>unset</code> and <code>failed</code>
-carry an indicator; any other value – including <code>ready</code>, <code>dormant</code> or a
-non-string – yields <code>NULL</code>. The returned <code>size</code> is the coloured dot's
-pixel diameter; each front-end draws it with a 2px white ring so the dock
-card icon and the DAG node badge match.</p></dd>
+<dd><p>A block eval status. <code>waiting</code>, <code>unset</code> and <code>failed</code> carry a
+badge; <code>ready</code> carries none; <code>dormant</code> is indeterminate; any other value
+yields no badge. <code>size</code> is the coloured dot's pixel diameter and <code>ring</code>
+its white outline width, both shared so the dock card icon and the DAG
+node badge render identically.</p></dd>
+
+
+<dt id="arg-error-count">error_count<a class="anchor" aria-label="anchor" href="#arg-error-count"></a></dt>
+<dd><p>Number of error conditions the block has raised. A
+positive count promotes the badge to <code>failed</code>, catching render-phase
+errors that leave the eval status <code>ready</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Metadata is returned from <code>blks_metadata()</code> as a <code>data.frame</code> with
 each row corresponding to a block. Both <code>blk_color()</code> and
-<code>blk_icon_data_uri()</code> return character vectors. <code>block_status_style()</code>
-returns a list with <code>color</code>, <code>size</code> and <code>label</code>, or <code>NULL</code> for a status
-with no indicator.</p>
+<code>blk_icon_data_uri()</code> return character vectors. <code>block_status_badge()</code>
+returns a list with <code>color</code>, <code>label</code>, <code>size</code>, <code>ring</code> and <code>ring_color</code> (the
+badge to draw), <code>NULL</code> for a status with no badge, or <code>NA</code> when the status
+is indeterminate.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -115,10 +122,12 @@ registered and provides default values in that case.</p></li>
 palette for a character vector of block categories.</p></li>
 <li><p><code>blk_icon_data_uri()</code>: Processes block icons to add color and turn them
 into square-shaped icons.</p></li>
-<li><p><code>block_status_style()</code>: Returns the styling for a block's eval-status
-indicator (the coloured dot) – shared so front-ends render it
-consistently (the dock draws it on the block card icon, blockr.dag as a
-node badge).</p></li>
+<li><p><code>block_status_badge()</code>: Derives a block's status badge from its eval
+status and error count – the single derivation the dock card icon and
+the blockr.dag node badge share, so they always render the same colour
+and styling. Returns a styling list (draw the badge), <code>NULL</code> (no badge),
+or <code>NA</code> (indeterminate: the status is not computed, so leave any existing
+badge unchanged).</p></li>
 </ul></div>
 
     <div class="section level2">
@@ -130,7 +139,7 @@ node badge).</p></li>
 <span class="r-in"><span><span class="fu">blk_icon_data_uri</span><span class="op">(</span><span class="va">meta</span><span class="op">$</span><span class="va">icon</span>, <span class="va">col</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgICAgICAgd2lkdGg9\nIjQ4IiBoZWlnaHQ9IjQ4IiB2aWV3Qm94PSIwIDAgNDggNDgiPgogICAgICA8cmVjdCB3aWR0\naD0iNDgiIGhlaWdodD0iNDgiIHJ4PSI3LjIiIHJ5PSI3LjIiIGZpbGw9InJnYmEoMCwgMTE0\nLCAxNzgsIDAuMykiLz4KICAgICAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoOS42LCA5LjYp\nIiBmaWxsPSIjMDA3MkIyIj4KICAgICAgICA8c3ZnIHdpZHRoPSIyOC44IiBoZWlnaHQ9IjI4\nLjgiIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHBhdGggZD0iTTQuMzE4IDIuNjg3QzUuMjM0IDIu\nMjcxIDYuNTM2IDIgOCAyczIuNzY2LjI3IDMuNjgyLjY4N0MxMi42NDQgMy4xMjUgMTMgMy42\nMjcgMTMgNGMwIC4zNzQtLjM1Ni44NzUtMS4zMTggMS4zMTNDMTAuNzY2IDUuNzI5IDkuNDY0\nIDYgOCA2cy0yLjc2Ni0uMjctMy42ODItLjY4N0MzLjM1NiA0Ljg3NSAzIDQuMzczIDMgNGMw\nLS4zNzQuMzU2LS44NzUgMS4zMTgtMS4zMTNaTTEzIDUuNjk4VjdjMCAuMzc0LS4zNTYuODc1\nLTEuMzE4IDEuMzEzQzEwLjc2NiA4LjcyOSA5LjQ2NCA5IDggOXMtMi43NjYtLjI3LTMuNjgy\nLS42ODdDMy4zNTYgNy44NzUgMyA3LjM3MyAzIDdWNS42OThjLjI3MS4yMDIuNTguMzc4Ljkw\nNC41MjVDNC45NzggNi43MTEgNi40MjcgNyA4IDdzMy4wMjItLjI4OSA0LjA5Ni0uNzc3QTQu\nOTIgNC45MiAwIDAgMCAxMyA1LjY5OFpNMTQgNGMwLTEuMDA3LS44NzUtMS43NTUtMS45MDQt\nMi4yMjNDMTEuMDIyIDEuMjg5IDkuNTczIDEgOCAxcy0zLjAyMi4yODktNC4wOTYuNzc3QzIu\nODc1IDIuMjQ1IDIgMi45OTMgMiA0djljMCAxLjAwNy44NzUgMS43NTUgMS45MDQgMi4yMjND\nNC45NzggMTUuNzEgNi40MjcgMTYgOCAxNnMzLjAyMi0uMjg5IDQuMDk2LS43NzdDMTMuMTI1\nIDE0Ljc1NSAxNCAxNC4wMDcgMTQgMTNWNFptLTEgNC42OThWMTBjMCAuMzc0LS4zNTYuODc1\nLTEuMzE4IDEuMzEzQzEwLjc2NiAxMS43MjkgOS40NjQgMTIgOCAxMnMtMi43NjYtLjI3LTMu\nNjgyLS42ODdDMy4zNTYgMTAuODc1IDMgMTAuMzczIDMgMTBWOC42OThjLjI3MS4yMDIuNTgu\nMzc4LjkwNC41MjVDNC45NzggOS43MSA2LjQyNyAxMCA4IDEwczMuMDIyLS4yODkgNC4wOTYt\nLjc3N0E0LjkyIDQuOTIgMCAwIDAgMTMgOC42OThabTAgM1YxM2MwIC4zNzQtLjM1Ni44NzUt\nMS4zMTggMS4zMTNDMTAuNzY2IDE0LjcyOSA5LjQ2NCAxNSA4IDE1cy0yLjc2Ni0uMjctMy42\nODItLjY4N0MzLjM1NiAxMy44NzUgMyAxMy4zNzMgMyAxM3YtMS4zMDJjLjI3MS4yMDIuNTgu\nMzc4LjkwNC41MjVDNC45NzggMTIuNzEgNi40MjcgMTMgOCAxM3MzLjAyMi0uMjg5IDQuMDk2\nLS43NzdjLjMyNC0uMTQ3LjYzMy0uMzIzLjkwNC0uNTI1WiI+PC9wYXRoPjwvc3ZnPgogICAg\nICA8L2c+CiAgICA8L3N2Zz4="</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu">block_status_style</span><span class="op">(</span><span class="st">"waiting"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">block_status_badge</span><span class="op">(</span><span class="st">"waiting"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $color</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "#f59e0b"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -139,6 +148,12 @@ node badge).</p></li>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $size</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $ring</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $ring_color</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "#ffffff"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
@@ -152,7 +167,7 @@ node badge).</p></li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
