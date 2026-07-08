@@ -727,13 +727,6 @@ block_issues_ui <- function(ns) {
   )
 }
 
-#' @param status A block eval status. Only `waiting`, `unset` and `failed`
-#'   carry an indicator; any other value -- including `ready`, `dormant` or a
-#'   non-string -- yields `NULL`. `size` is the coloured dot's pixel diameter
-#'   and `ring` its white outline width, both shared so the dock card icon and
-#'   the DAG node badge render identically.
-#' @rdname meta
-#' @export
 block_status_style <- function(status) {
 
   if (!is_string(status)) {
@@ -754,6 +747,11 @@ block_status_style <- function(status) {
   c(spec, list(size = 8L, ring = 2L, ring_color = "#ffffff"))
 }
 
+#' @param status A block eval status. `waiting`, `unset` and `failed` carry a
+#'   badge; `ready` carries none; `dormant` is indeterminate; any other value
+#'   yields no badge. `size` is the coloured dot's pixel diameter and `ring`
+#'   its white outline width, both shared so the dock card icon and the DAG
+#'   node badge render identically.
 #' @param error_count Number of error conditions the block has raised. A
 #'   positive count promotes the badge to `failed`, catching render-phase
 #'   errors that leave the eval status `ready`.

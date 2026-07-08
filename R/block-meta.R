@@ -10,15 +10,12 @@
 #'   palette for a character vector of block categories.
 #' - `blk_icon_data_uri()`: Processes block icons to add color and turn them
 #'   into square-shaped icons.
-#' - `block_status_style()`: Returns the styling for a block's eval-status
-#'   indicator (the coloured dot) -- shared so front-ends render it
-#'   consistently (the dock draws it on the block card icon, blockr.dag as a
-#'   node badge).
-#' - `block_status_badge()`: Derives the badge to draw from a block's eval
-#'   status and error count -- the single derivation both front-ends consume
-#'   so the dock card icon and the DAG node badge always agree. Returns the
-#'   `block_status_style()` spec, `NULL` (no badge), or `NA` (indeterminate:
-#'   the status is not computed, so leave any existing badge unchanged).
+#' - `block_status_badge()`: Derives a block's status badge from its eval
+#'   status and error count -- the single derivation the dock card icon and
+#'   the blockr.dag node badge share, so they always render the same colour
+#'   and styling. Returns a styling list (draw the badge), `NULL` (no badge),
+#'   or `NA` (indeterminate: the status is not computed, so leave any existing
+#'   badge unchanged).
 #'
 #' @param blocks Blocks passed as `blocks` or `block` object
 #'
@@ -29,14 +26,14 @@
 #' col <- blk_color(meta$category)
 #' blk_icon_data_uri(meta$icon, col)
 #'
-#' block_status_style("waiting")
+#' block_status_badge("waiting")
 #'
 #' @return Metadata is returned from `blks_metadata()` as a `data.frame` with
 #' each row corresponding to a block. Both `blk_color()` and
-#' `blk_icon_data_uri()` return character vectors. `block_status_style()`
-#' returns a list with `color`, `label`, `size`, `ring` and `ring_color`, or
-#' `NULL` for a status with no indicator. `block_status_badge()` returns that
-#' same list, `NULL`, or `NA`.
+#' `blk_icon_data_uri()` return character vectors. `block_status_badge()`
+#' returns a list with `color`, `label`, `size`, `ring` and `ring_color` (the
+#' badge to draw), `NULL` for a status with no badge, or `NA` when the status
+#' is indeterminate.
 #'
 #' @rdname meta
 #' @export

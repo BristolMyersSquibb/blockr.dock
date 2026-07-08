@@ -4,7 +4,6 @@
 \alias{blks_metadata}
 \alias{blk_color}
 \alias{blk_icon_data_uri}
-\alias{block_status_style}
 \alias{block_status_badge}
 \title{Get block metadata}
 \usage{
@@ -13,8 +12,6 @@ blks_metadata(blocks)
 blk_color(category)
 
 blk_icon_data_uri(icon_svg, color, size = 48, mode = c("uri", "inline"))
-
-block_status_style(status)
 
 block_status_badge(status, error_count = 0L)
 }
@@ -31,11 +28,11 @@ block_status_badge(status, error_count = 0L)
 
 \item{mode}{Switch between URI and inline HTML mode}
 
-\item{status}{A block eval status. Only \code{waiting}, \code{unset} and \code{failed}
-carry an indicator; any other value -- including \code{ready}, \code{dormant} or a
-non-string -- yields \code{NULL}. \code{size} is the coloured dot's pixel diameter
-and \code{ring} its white outline width, both shared so the dock card icon and
-the DAG node badge render identically.}
+\item{status}{A block eval status. \code{waiting}, \code{unset} and \code{failed} carry a
+badge; \code{ready} carries none; \code{dormant} is indeterminate; any other value
+yields no badge. \code{size} is the coloured dot's pixel diameter and \code{ring}
+its white outline width, both shared so the dock card icon and the DAG
+node badge render identically.}
 
 \item{error_count}{Number of error conditions the block has raised. A
 positive count promotes the badge to \code{failed}, catching render-phase
@@ -44,10 +41,10 @@ errors that leave the eval status \code{ready}.}
 \value{
 Metadata is returned from \code{blks_metadata()} as a \code{data.frame} with
 each row corresponding to a block. Both \code{blk_color()} and
-\code{blk_icon_data_uri()} return character vectors. \code{block_status_style()}
-returns a list with \code{color}, \code{label}, \code{size}, \code{ring} and \code{ring_color}, or
-\code{NULL} for a status with no indicator. \code{block_status_badge()} returns that
-same list, \code{NULL}, or \code{NA}.
+\code{blk_icon_data_uri()} return character vectors. \code{block_status_badge()}
+returns a list with \code{color}, \code{label}, \code{size}, \code{ring} and \code{ring_color} (the
+badge to draw), \code{NULL} for a status with no badge, or \code{NA} when the status
+is indeterminate.
 }
 \description{
 Returns various metadata for blocks or block categories, as well as styling
@@ -62,15 +59,12 @@ registered and provides default values in that case.
 palette for a character vector of block categories.
 \item \code{blk_icon_data_uri()}: Processes block icons to add color and turn them
 into square-shaped icons.
-\item \code{block_status_style()}: Returns the styling for a block's eval-status
-indicator (the coloured dot) -- shared so front-ends render it
-consistently (the dock draws it on the block card icon, blockr.dag as a
-node badge).
-\item \code{block_status_badge()}: Derives the badge to draw from a block's eval
-status and error count -- the single derivation both front-ends consume
-so the dock card icon and the DAG node badge always agree. Returns the
-\code{block_status_style()} spec, \code{NULL} (no badge), or \code{NA} (indeterminate:
-the status is not computed, so leave any existing badge unchanged).
+\item \code{block_status_badge()}: Derives a block's status badge from its eval
+status and error count -- the single derivation the dock card icon and
+the blockr.dag node badge share, so they always render the same colour
+and styling. Returns a styling list (draw the badge), \code{NULL} (no badge),
+or \code{NA} (indeterminate: the status is not computed, so leave any existing
+badge unchanged).
 }
 }
 \examples{
@@ -80,6 +74,6 @@ meta <- blks_metadata(blk)
 col <- blk_color(meta$category)
 blk_icon_data_uri(meta$icon, col)
 
-block_status_style("waiting")
+block_status_badge("waiting")
 
 }
