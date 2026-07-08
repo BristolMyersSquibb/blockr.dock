@@ -267,6 +267,8 @@ test_that("block_status_style is the shared status-dot spec (#290)", {
   waiting <- block_status_style("waiting")
   expect_identical(waiting$color, "#f59e0b")
   expect_identical(waiting$size, 8L)
+  expect_identical(waiting$ring, 2L)
+  expect_identical(waiting$ring_color, "#ffffff")
   expect_identical(waiting$label, "Waiting for a data input")
 
   expect_identical(block_status_style("unset")$color, "#eab308")
@@ -278,6 +280,29 @@ test_that("block_status_style is the shared status-dot spec (#290)", {
   }
 })
 
+test_that("block_status_badge is the shared badge derivation (#314)", {
+
+  # Attention states pass through to the shared style spec.
+  expect_identical(block_status_badge("waiting"), block_status_style("waiting"))
+  expect_identical(block_status_badge("unset"), block_status_style("unset"))
+  expect_identical(block_status_badge("failed"), block_status_style("failed"))
+
+  # An error condition promotes the badge to `failed`, catching a render-phase
+  # error that leaves the eval status `ready`.
+  expect_identical(
+    block_status_badge("ready", 2L),
+    block_status_style("failed")
+  )
+
+  # `ready` and an absent status carry no badge.
+  expect_null(block_status_badge("ready"))
+  expect_null(block_status_badge(NULL))
+
+  # `dormant` is indeterminate: `NA` tells a persistent renderer to keep the
+  # existing badge rather than clear it.
+  expect_identical(block_status_badge("dormant"), NA)
+})
+
 test_that("block status indicator + note reflect eval status (#290)", {
 
   waiting_dot <- block_status_indicator("waiting")
@@ -285,6 +310,17 @@ test_that("block status indicator + note reflect eval status (#290)", {
   expect_match(as.character(waiting_dot), "blockr-status-dot", fixed = TRUE)
   expect_match(as.character(waiting_dot), "#f59e0b", fixed = TRUE)
   expect_match(as.character(waiting_dot), "Waiting for a data input")
+  # The white ring is carried inline from the shared spec, not the CSS.
+  expect_match(as.character(waiting_dot), "0 0 0 2px #ffffff", fixed = TRUE)
+
+  # An error condition reddens the dot even when the eval status is `ready`,
+  # matching the DAG node badge.
+  expect_match(
+    as.character(block_status_indicator("ready", 2L)),
+    "#dc2626",
+    fixed = TRUE
+  )
+  expect_null(block_status_indicator("ready"))
 
   expect_match(
     as.character(block_status_indicator("unset")),
@@ -321,9 +357,16 @@ test_that("edit block server surfaces eval status reactively (#290)", {
 
   status <- reactiveVal("waiting")
 
+  empty_conds <- data.frame(
+    block = character(), phase = character(), severity = character(),
+    message = character(), id = character()
+  )
+  block_conds <- reactiveVal(empty_conds)
+
   board <- reactiveValues(
     board = new_dock_board(blocks = c(a = new_dataset_block())),
-    eval = list(a = reactive(status()))
+    eval = list(a = reactive(status())),
+    blocks = list(a = list(server = list(conditions = block_conds)))
   )
 
   testServer(
@@ -349,9 +392,23 @@ test_that("edit block server surfaces eval status reactively (#290)", {
       status("ready")
       session$flushReact()
 
-      # A ready block carries no status affordance at all.
+      # A ready block with no conditions carries no status affordance at all.
       expect_identical(blk_status(), "ready")
       expect_identical(html(output$status_indicator), "")
+      expect_identical(html(output$status_note), "")
+
+      # A render-phase error leaves the eval status `ready` but still reddens
+      # the dot, matching the DAG node badge (the note stays empty).
+      block_conds(
+        data.frame(
+          block = "a", phase = "render", severity = "error",
+          message = "boom", id = "e1", stringsAsFactors = FALSE
+        )
+      )
+      session$flushReact()
+
+      expect_identical(blk_status(), "ready")
+      expect_match(html(output$status_indicator), "#dc2626", fixed = TRUE)
       expect_identical(html(output$status_note), "")
     },
     args = list(
