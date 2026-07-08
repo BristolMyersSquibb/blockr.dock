@@ -1,24 +1,23 @@
-# A view's geometry has two representations: dockView's `_state` (the client's
-# live grid, in volatile leaf ids and absolute pixel sizes, wrapped at the seam
-# as a `dock_layout`) and ours, a canonical `dock_grid`. `as_dock_grid()` is the
-# cast into ours -- from another `dock_grid` (identity) or from a `dock_layout`,
-# which it round-trips through the wire spec, regenerating leaf ids, eliding a
-# leaf's active-tab-is-first and the load-default focus, and normalising sizes
-# to 0-1 ratios. A `dock_grid` is therefore canonical by construction and two
-# casts of the same layout are `identical()`. The mirror stores one on every
-# settled echo.
+# A view's geometry has two representations: dockView's client grid (volatile
+# leaf ids and absolute pixel sizes, wrapped at the seam as a `dock_layout`)
+# and ours, a canonical `dock_grid`. `as_dock_grid()` casts into ours -- from
+# another `dock_grid` (identity) or from a `dock_layout` -- and the constructor
+# canonicalises: `new_dock_grid()` normalises each branch's sizes to 0-1 ratios
+# and reassigns leaf ids deterministically (no wire round-trip), so two casts
+# of the same layout are `identical()`. The mirror stores one on every settled
+# echo.
 #
 # Relative sizes ride through verbatim (faithful for serialization and
 # programmatic resize); the commit guard tolerates their pixel-rounding jitter
 # via `all.equal(tolerance = grid_size_tol())`, so a window resize is absorbed
 # while a deliberate sash drag still commits.
 #
-# The grid stores geometry verbatim -- never a default detected after the fact
-# and projected away. A view's placement is the intersection of its membership
-# and its grid: a member absent from the grid is an in-flight add, a panel
-# absent from membership an inert ghost, and both are dropped where the
-# placement is read (`view_grid()`), not by a live writer. A view with no grid
-# at all falls back to `default_grid()` over its members.
+# The grid holds geometry only. Which panels a view actually shows is its
+# membership's call, resolved when the placement is read (`view_grid()`): the
+# view's members drive, the grid supplies their arrangement, a member the grid
+# omits is appended a default spot, and a grid entry that is no longer a member
+# (a ghost) is dropped. Membership is authoritative; the grid never decides
+# existence.
 
 new_dock_grid <- function(grid = NULL, active_group = NULL) {
 
@@ -26,13 +25,66 @@ new_dock_grid <- function(grid = NULL, active_group = NULL) {
     grid <- build_grid_tree(NULL)
   }
 
+  canon <- canonicalize_grid(grid, active_group)
+  grid <- canon[["grid"]]
+
   content <- list(grid = grid)
 
   if (length(grid_panel_ids(grid))) {
-    content[["activeGroup"]] <- coal(active_group, "1")
+    content[["activeGroup"]] <- coal(
+      canon[["active_group"]], "1",
+      fail_all = FALSE
+    )
   }
 
   structure(content, class = "dock_grid")
+}
+
+# The canonical form, computed directly on the tree (never via the wire spec):
+# each branch's child sizes are normalised to ratios summing to 1 and leaf ids
+# are reassigned deterministically in walk order, so two grids of the same
+# shape compare `identical()`. `activeGroup` names a leaf, so the focused
+# group is tracked across the re-id by its old id and handed back.
+canonicalize_grid <- function(grid, active_group = NULL) {
+
+  if (is.null(grid) || is.null(grid[["root"]])) {
+    return(list(grid = grid, active_group = NULL))
+  }
+
+  gid <- 0L
+  new_active <- NULL
+
+  walk <- function(node) {
+
+    if (identical(node[["type"]], "leaf")) {
+
+      gid <<- gid + 1L
+      nid <- as.character(gid)
+
+      if (identical(node[["data"]][["id"]], active_group)) {
+        new_active <<- nid
+      }
+
+      node[["data"]][["id"]] <- nid
+
+      return(node)
+    }
+
+    kids <- lapply(node[["data"]], walk)
+    sizes <- normalise_sizes(dbl_xtr(kids, "size"))
+
+    for (i in seq_along(kids)) {
+      kids[[i]][["size"]] <- sizes[[i]]
+    }
+
+    node[["data"]] <- kids
+
+    node
+  }
+
+  grid[["root"]] <- walk(grid[["root"]])
+
+  list(grid = grid, active_group = new_active)
 }
 
 #' Canonical view grid
@@ -174,17 +226,64 @@ print.dock_grid <- function(x, ...) {
   invisible(x)
 }
 
-# Restrict a stored grid to the panels a view actually holds, dropping inert
-# ghosts (grid panels no longer in membership), then re-canonicalise so the
-# surviving branches' sizes sum to 1 again. Boundary hygiene for `view_grid()`:
-# an un-landed member (in membership, absent from the grid) is simply not in
-# the grid, so the placement shows the intersection.
-restrict_grid <- function(grid, members) {
+# The member-driven placement of a view: membership decides *which* panels
+# appear, the grid only *how*. A ghost (grid panel no longer a member) is
+# dropped; a member the grid omits is appended a default single-panel spot;
+# the constructor renormalises the surviving branches and re-ids. Membership
+# is authoritative -- the grid never adds or withholds a panel.
+place_members <- function(grid, members) {
 
   dropped <- drop_panels_from_layout(
     grid,
     setdiff(layout_panel_ids(grid), members)
   )
 
-  spec_to_layout(layout_to_spec(dropped))
+  missing <- setdiff(members, grid_panel_ids(dropped[["grid"]]))
+
+  new_dock_grid(
+    append_default_leaves(dropped[["grid"]], missing),
+    active_group = dropped[["activeGroup"]]
+  )
+}
+
+default_leaf <- function(pid, size = 1) {
+  list(
+    type = "leaf",
+    data = list(views = list(pid), activeView = pid, id = "0"),
+    size = size
+  )
+}
+
+# Append members the grid never placed as fresh single-panel leaves at the
+# root, each sized to the mean of the existing panes so a newcomer blends in
+# rather than dominating; the constructor renormalises and re-ids. The
+# "default a member the grid omits" half of `place_members()`.
+append_default_leaves <- function(tree, pids) {
+
+  if (!length(pids)) {
+    return(tree)
+  }
+
+  root <- tree[["root"]]
+
+  existing <- if (not_null(root) && identical(root[["type"]], "branch")) {
+    dbl_xtr(root[["data"]], "size")
+  } else {
+    numeric()
+  }
+
+  size <- if (length(existing)) mean(existing) else 1
+  leaves <- lapply(pids, default_leaf, size = size)
+
+  if (is.null(root) || !length(root)) {
+    root <- list(type = "branch", data = leaves, size = 1)
+  } else if (identical(root[["type"]], "leaf")) {
+    root <- list(type = "branch", data = c(list(root), leaves), size = 1)
+  } else {
+    root[["data"]] <- c(root[["data"]], leaves)
+  }
+
+  tree[["root"]] <- root
+
+  tree
 }

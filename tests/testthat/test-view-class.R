@@ -192,6 +192,24 @@ test_that("rm_blocks drops the member; the grid keeps it as a ghost", {
   )
 })
 
+test_that("view_grid renders a member the grid omits, defaulting its spot", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = dock_view(c("a", "b"), name = "Analysis")),
+    grids = list(A = dock_grid("a"))
+  )
+
+  # Membership is authoritative: b belongs to the view, so it is placed even
+  # though the grid mentions only a -- a default spot is appended, not dropped.
+  expect_setequal(
+    layout_panel_ids(
+      view_grid(board_views(brd)[["A"]], board_grids(brd)[["A"]])
+    ),
+    c("block_panel-a", "block_panel-b")
+  )
+})
+
 test_that("rm_blocks drops the member but leaves a legal arrangement ghost", {
 
   brd <- new_dock_board(

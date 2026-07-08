@@ -523,19 +523,20 @@ board_grids <- function(x) {
   invisible(x)
 }
 
-# A view's placement geometry: the intersection of its membership and its
-# grid, as a canonical `dock_grid`. An unexpressed grid (NULL) renders its
-# members via a default grid; an expressed one shows the intersection --
-# inert ghosts pruned, un-landed members (in membership, absent from the
-# grid) left out. This is where total semantics is resolved, on read.
+# A view's placement geometry, member-driven: membership is authoritative for
+# which panels appear, the grid only for their arrangement. No grid (NULL, or
+# a member-less view) falls back to a default over the members; otherwise the
+# grid's arrangement is kept for the members it places, a member it omits is
+# given a default spot, and a ghost (grid panel no longer a member) is dropped.
+# This is where placement is resolved, on read.
 view_grid <- function(view, grid) {
 
   members <- view_members(view)
 
-  if (is.null(grid)) {
+  if (is.null(grid) || !length(members)) {
     default_grid(members)
   } else {
-    restrict_grid(grid, members)
+    place_members(grid, members)
   }
 }
 

@@ -1,4 +1,5 @@
-# Placement grid for a view of a board (intersection of membership and grid).
+# Placement grid for a view of a board: member-driven -- membership decides
+# which panels appear, the grid only their arrangement.
 placement_ids <- function(board, id) {
   layout_panel_ids(
     view_grid(board_views(board)[[id]], board_grids(board)[[id]])
@@ -104,7 +105,7 @@ test_that("apply_views_rm removes a view", {
   expect_identical(active_name(out), "A")
 })
 
-test_that("apply_views_mod sets membership; the new panel is in-flight", {
+test_that("apply_views_mod grows membership; the new panel is placed", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -119,14 +120,14 @@ test_that("apply_views_mod sets membership; the new panel is in-flight", {
 
   out <- apply_board_update(brd, upd)
 
-  # `mod` is a membership set op -- it does not touch geometry. The new panel
-  # is placed only by the client echo, so until then it is in-flight: carried
-  # by membership, absent from the placement grid.
+  # `mod` is a membership set op -- it does not touch geometry. Membership is
+  # authoritative, so the new panel is placed with a default spot straight
+  # away; the client echo later supplies its real arrangement.
   expect_setequal(
     view_members(board_views(out)[["A"]]),
     c("block_panel-a", "block_panel-b")
   )
-  expect_identical(placement_ids(out, "A"), "block_panel-a")
+  expect_setequal(placement_ids(out, "A"), c("block_panel-a", "block_panel-b"))
   expect_identical(active_name(out), "A")
 })
 
@@ -175,13 +176,13 @@ test_that("apply_views: full delta round-trips through the board", {
   views <- board_views(out)
   expect_setequal(unname(view_names(views)), c("A", "C"))
   expect_identical(active_name(out), "C")
-  # A's mod grows its membership; the added panel is in-flight until echoed, so
-  # the placement still shows the placed panel only.
+  # A's mod grows its membership; membership is authoritative, so the placement
+  # shows the new panel too (defaulted until the client echoes an arrangement).
   expect_setequal(
     view_members(board_views(out)[["A"]]),
     c("block_panel-a", "block_panel-b")
   )
-  expect_identical(placement_ids(out, "A"), "block_panel-a")
+  expect_setequal(placement_ids(out, "A"), c("block_panel-a", "block_panel-b"))
 })
 
 test_that("apply_views_add adds a view, leaving the active one untouched", {
@@ -729,13 +730,16 @@ test_that("board_update lifecycle resets to NULL after views-only payload", {
       session$flushReact()
 
       expect_null(board_update())
-      # Membership carries the modded panel; it is in-flight until echoed, so
-      # the placement still shows the placed panel only.
+      # Membership carries the modded panel; it is authoritative, so the
+      # placement shows it too (a default spot until the client echoes one).
       expect_setequal(
         view_members(board_views(rv$board)[["A"]]),
         c("block_panel-a", "block_panel-b")
       )
-      expect_identical(placement_ids(rv$board, "A"), "block_panel-a")
+      expect_setequal(
+        placement_ids(rv$board, "A"),
+        c("block_panel-a", "block_panel-b")
+      )
     },
     args = list(
       x = brd,

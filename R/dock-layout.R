@@ -115,15 +115,13 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
 #' @export
 as_dock_grid.dock_layout <- function(x, ...) {
 
-  raw <- new_dock_grid(
+  new_dock_grid(
     x[["grid"]],
     active_group = coal(
       x[["activeGroup"]], x[["active_group"]],
       fail_all = FALSE
     )
   )
-
-  spec_to_layout(layout_to_spec(raw))
 }
 
 #' @param ... Forwarded to methods.

@@ -801,12 +801,11 @@ test_that("apply_board_update folds an added block into the active view", {
   )
 
   # The added block joins the active view's membership synchronously, and no
-  # other view. Its grid placement follows from the client echo, so until then
-  # it is in-flight (membership only) -- the placement, the intersection, still
-  # shows just the placed panels.
+  # other view. Membership is authoritative, so it is placed in the active
+  # view too -- a default spot until the client echo supplies its arrangement.
   expect_true("block_panel-b" %in% view_members(board_views(out)[[active]]))
   expect_false("block_panel-b" %in% view_members(board_views(out)[[other]]))
-  expect_false(
+  expect_true(
     "block_panel-b" %in%
       layout_panel_ids(
         view_grid(board_views(out)[[active]], board_grids(out)[[active]])
