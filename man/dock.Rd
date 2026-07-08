@@ -90,9 +90,9 @@ are a degenerate case with one auto-named "Page" view.
 \details{
 Multi-view boards pass \code{views} (and optionally \code{grids}); see
 \link[=dock_view]{dock_view()} and \link[=layout]{dock_grid()} for the input forms and
-\link[=dock_view]{board_views()} for how they combine. Bare block / extension ids are
-resolved against the board's blocks and extensions. With \code{views = NULL} the
-board gets a single default view.
+\link[=dock_view]{board_views()} for how they combine. Bare block / extension
+ids are resolved against the board's blocks and extensions. With
+\code{views = NULL} the board gets a single default view.
 }
 \examples{
 brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))

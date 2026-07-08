@@ -9,9 +9,9 @@
 #'
 #' Multi-view boards pass `views` (and optionally `grids`); see
 #' [dock_view()][dock_view] and [dock_grid()][layout] for the input forms and
-#' [board_views()][dock_view] for how they combine. Bare block / extension ids are
-#' resolved against the board's blocks and extensions. With `views = NULL` the
-#' board gets a single default view.
+#' [board_views()][dock_view] for how they combine. Bare block / extension
+#' ids are resolved against the board's blocks and extensions. With
+#' `views = NULL` the board gets a single default view.
 #'
 #' @inheritParams blockr.core::new_board
 #' @param extensions Dock extensions

@@ -42,7 +42,8 @@ both are grid sub-trees usable inside \code{dock_grid()} / \code{group()}.
 A \link[=dock-grid]{dock_grid} is a view's geometry: the arrangement of its
 panels into nested splits and tab groups, with sizes. \code{dock_grid()} is the
 authoring DSL that builds one; view \emph{membership} (which panels belong) and
-the display \emph{name} live on the view (see \link[=dock_view]{dock_view()}), not the grid.
+the display \emph{name} live on the view (see \link[=dock_view]{dock_view()}), not the
+grid.
 }
 \details{
 Construct a grid with:

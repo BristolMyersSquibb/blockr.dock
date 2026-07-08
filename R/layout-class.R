@@ -3,7 +3,8 @@
 #' A [dock_grid][dock-grid] is a view's geometry: the arrangement of its
 #' panels into nested splits and tab groups, with sizes. `dock_grid()` is the
 #' authoring DSL that builds one; view *membership* (which panels belong) and
-#' the display *name* live on the view (see [dock_view()][dock_view]), not the grid.
+#' the display *name* live on the view (see [dock_view()][dock_view]), not the
+#' grid.
 #'
 #' Construct a grid with:
 #'
