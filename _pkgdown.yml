@@ -12,11 +12,19 @@ reference:
 - title: Dock layout
   desc: Tools for defining panel arrangements.
   contents:
-    - dock_layout
-- title: Layout serialization
-  desc: Read, write and inspect the JSON wire form of a layout.
+    - dock_grid
+- title: Dock grid
+  desc: A view's geometry in canonical form.
   contents:
-    - layout_to_json
+    - as_dock_grid
+- title: Dock layout boundary
+  desc: dockView's native layout representation, the wire form at the client boundary.
+  contents:
+    - new_dock_layout
+- title: Panel IDs
+  desc: The canonical panel IDs a grid or layout references.
+  contents:
+    - layout_panel_ids
 - title: Dock views
   desc: Multi-view (tabbed) boards. Each view is its own panel arrangement.
   contents:

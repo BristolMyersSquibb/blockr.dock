@@ -35,6 +35,7 @@ Imports:
 Remotes:
     BristolMyersSquibb/blockr.ui,
     BristolMyersSquibb/blockr.core,
+    cynkra/dockViewR,
     nbenn/shinytest2@wait-for-app-serving
 Suggests:
     testthat (>= 3.0.0),
@@ -61,12 +62,14 @@ Collate:
     'board-server.R'
     'board-ui.R'
     'dock-board.R'
+    'dock-grid.R'
+    'dock-layout.R'
     'dock-stack.R'
+    'dock-view.R'
     'ext-class.R'
     'ext-delta.R'
     'ext-edit.R'
     'ext-ui.R'
-    'layout-class.R'
     'plugin-block.R'
     'plugin-serdes.R'
     'utils-dock.R'
@@ -76,9 +79,5 @@ Collate:
     'utils-serdes.R'
     'utils-serve.R'
     'utils-ui.R'
-    'layouts-class.R'
-    'view-class.R'
-    'view-ui.R'
-    'views-delta.R'
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.0.0

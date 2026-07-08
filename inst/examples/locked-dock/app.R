@@ -16,7 +16,7 @@ serve(
       new_link("b", "c", input = "data"),
       new_link("b", "d", input = "data")
     ),
-    layouts = list(list("a", "b"), list("c", "d"))
+    views = list(c("a", "b", "c", "d"))
   ),
   "my_board"
 )

@@ -67,15 +67,15 @@ board_server_callback <- function(board, update, visible, ...,
 
   # Gate off-screen blocks from the first flush, before the client reports its
   # layout (else core's all-visible default evaluates every block at startup).
-  visible(visible_block_ids(active_layout(initial_board)))
+  visible(visible_block_ids(active_view_grid(initial_board)))
 
   report_visible_observer(visible, client_active, docks)
 
-  # `view_data` is the live all-views layout -- the same reactive serialization
-  # reads. It is NULL until every view has reported its layout once (the
-  # all-or-nothing in live_view_data), so consumers req() it. A view's live
-  # arrangement is read on demand here; it no longer folds back into
-  # `board_layouts`.
+  # `view_data` is the live all-views layout, split into a `dock_views` +
+  # `dock_grids` pair. It is NULL until every view has reported its layout once
+  # (the all-or-nothing in live_view_data), so consumers req() it. A view's
+  # live arrangement is read on demand here; it no longer folds back into the
+  # board's slots.
   view_data <- live_view_data(client_views, docks, client_active)
 
   # Each extension can read the others' server results through the
@@ -141,25 +141,20 @@ board_server_callback <- function(board, update, visible, ...,
   )
 }
 
-# The initial `client_views`: one bare (empty) layout per view, carrying the
+# The initial `client_views`: one bare (empty) view per view id, carrying the
 # display name. Gives live_view_data and the nav the view set before any
 # dockview has reported its live layout; the dock modules themselves are
 # created by the reconcile pass (its empty-`docks` case). Which view is active
 # is tracked solely by `client_active`, not here.
 seed_view_state <- function(views) {
-  reconstruct_dock_layouts(lapply(views, bare_view))
+  reconstruct_dock_views(lapply(views, bare_view))
 }
 
-# An empty layout standing in for a view in `client_views`: carries the
-# view's display name so live_view_data / serialization keep the
-# id -> name mapping without duplicating the layout itself.
+# An empty view standing in for a view in `client_views`: carries the view's
+# display name so live_view_data / the nav keep the id -> name mapping without
+# its membership or geometry.
 bare_view <- function(x) {
-  ly <- new_dock_layout()
-  nm <- view_name(x)
-  if (!is.null(nm)) {
-    view_name(ly) <- nm
-  }
-  ly
+  new_dock_view(character(), view_name(x))
 }
 
 #' Observe view tab switches.
@@ -190,20 +185,70 @@ switch_view_observer <- function(session, update, client_active) {
 
 report_visible_observer <- function(visible, client_active, docks) {
 
-  active_layout <- reactive({
+  live_layout <- reactive({
     active <- req(client_active())
     req(docks[[active]])$layout()
   })
 
   observeEvent(
-    active_layout(),
+    live_layout(),
     {
-      ids <- visible_block_ids(active_layout())
+      ids <- visible_block_ids(live_layout())
 
       if (!setequal(ids, visible())) {
         visible(ids)
       }
     }
+  )
+}
+
+# The grid mirror's observer, split from manage_dock for testability. It reacts
+# to the view's settled `_state` echo and commits the client layout verbatim in
+# canonical form, only when it differs (beyond the sash-size tolerance) from
+# what is stored -- so a sash drag or tab switch is at most one board commit, a
+# re-echo after quiescence none, and the echo of the mirror's own restore
+# converges without churn (it matches what was pushed). It does not restrict to
+# membership: a panel absent from the view is an inert ghost, pruned at the
+# compose / restore boundary, never by this writer.
+observe_grid_echo <- function(id, dock, board, commit_grid) {
+
+  # Bridge (#301): a server-side stand-in for the gesture-settled `_state`
+  # emission dockViewR does not yet ship. Current dockViewR streams per-frame
+  # states through a sash drag, so without this the mirror would commit per
+  # frame -- an interactive regression versus main's cadence. Unlike the
+  # pre-rework debounce (which raced a second writer and diffed specs), this
+  # mirror is the sole writer, commits verbatim canonical values, and diffs
+  # nothing: the only cost is 250 ms of bounded staleness on a slot whose
+  # readers are all boundaries. Remove once the settled `_state` chain lands.
+  settled <- debounce(reactive(dock$layout()), 250)
+
+  observeEvent(
+    settled(),
+    {
+      views <- board_views(board$board)
+
+      if (!id %in% names(views)) {
+        return()
+      }
+
+      state <- settled()
+
+      if (is.null(state)) {
+        return()
+      }
+
+      grid <- as_dock_grid(as_dock_layout(state))
+      stored <- board_grids(board$board)[[id]]
+
+      # Same geometry within the sash-position noise floor -> nothing to commit,
+      # so window-resize jitter is absorbed while a real drag still writes.
+      if (isTRUE(all.equal(stored, grid, tolerance = grid_size_tol()))) {
+        return()
+      }
+
+      commit_grid(grid)
+    },
+    ignoreInit = TRUE
   )
 }
 
@@ -213,43 +258,55 @@ report_visible_observer <- function(visible, client_active, docks) {
 # takes a dependency on each view's entry, so this re-evaluates when reconcile
 # creates the dock — whatever the init flush order — rather than stranding on
 # the empty-`docks` early return. The active view comes from `client_active`,
-# not `client_views`.
+# not `client_views`. The live all-views layout is returned split into a
+# `dock_views` (membership + names + active) and a `dock_grids` (geometry) --
+# the same shape the board stores.
 live_view_data <- function(client_views, docks, client_active) {
   reactive({
-    state <- client_views()
-    v_list <- lapply(names(state), function(v_id) {
-      dk <- docks[[v_id]]
-      if (is.null(dk)) {
-        return(NULL)
-      }
-      ly <- dk$layout()
-      if (is.null(ly)) {
-        log_trace("view_data: view {v_id} has no live layout yet")
-        return(NULL)
-      }
-      out <- dockview_to_layout(ly)
-      log_trace(
-        "view_data: view {v_id} reports ",
-        "{length(layout_panel_ids(out))} live panel(s)"
-      )
-      nm <- view_name(state[[v_id]])
-      if (!is.null(nm)) {
-        view_name(out) <- nm
-      }
-      out
-    })
 
-    if (any(lgl_ply(v_list, is.null))) {
+    state <- client_views()
+
+    grids <- lapply(names(state), live_view_grid, docks = docks)
+
+    if (any(lgl_ply(grids, is.null))) {
       return(NULL)
     }
 
-    res <- reconstruct_dock_layouts(set_names(v_list, names(state)))
+    grids <- set_names(grids, names(state))
+
+    views <- reconstruct_dock_views(
+      set_names(map(live_view_membership, grids, state), names(state))
+    )
+
     ca <- client_active()
+
     if (!is.null(ca)) {
-      active_view(res) <- ca
+      active_view(views) <- ca
     }
-    res
+
+    list(views = views, grids = new_dock_grids(grids))
   })
+}
+
+live_view_grid <- function(v_id, docks) {
+
+  dk <- docks[[v_id]]
+
+  if (is.null(dk)) {
+    return(NULL)
+  }
+
+  ly <- dk$layout()
+
+  if (is.null(ly)) {
+    return(NULL)
+  }
+
+  as_dock_grid(as_dock_layout(ly))
+}
+
+live_view_membership <- function(grid, view) {
+  new_dock_view(layout_panel_ids(grid), view_name(view))
 }
 
 #' Hide all block and extension UI for a view.
@@ -361,7 +418,7 @@ remove_view <- function(v_id, session, docks) {
 # instantiate added views, tear down removed ones, relabel renamed ones, and
 # switch to the active view. The board owns which views exist, their names and
 # the active one; a view's per-view arrangement is client-owned, read live via
-# view_data() and never folded back into board_layouts, so reconcile never
+# view_data() and never folded back into the board, so reconcile never
 # pushes a layout to its live dock. Takes the reactive board handle (not a
 # snapshot) so the live list reaches manage_dock, whose interaction observers
 # read board$board after the fact (#194); the committed board is snapshotted
@@ -375,10 +432,11 @@ reconcile_views <- function(board, update, docks, active_dock,
 
   brd <- board$board
 
-  layouts <- board_layouts(brd)
-  want <- names(layouts)
-  labels <- view_names(layouts)
-  server_active <- active_view(layouts)
+  views <- board_views(brd)
+  grids <- board_grids(brd)
+  want <- names(views)
+  labels <- view_names(views)
+  server_active <- active_view(views)
   state <- isolate(client_views())
   have <- names(docks)
   shown <- names(state)
@@ -387,7 +445,7 @@ reconcile_views <- function(board, update, docks, active_dock,
 
     create_view(
       v,
-      layouts[[v]],
+      view_grid(views[[v]], if (is.null(grids)) NULL else grids[[v]]),
       board,
       update,
       session,
@@ -397,7 +455,7 @@ reconcile_views <- function(board, update, docks, active_dock,
       active = identical(v, server_active)
     )
 
-    state[[v]] <- bare_view(layouts[[v]])
+    state[[v]] <- bare_view(views[[v]])
   }
 
   # Add a nav item only for views the nav doesn't already show. `board_ui`
@@ -421,7 +479,7 @@ reconcile_views <- function(board, update, docks, active_dock,
 
   for (v in intersect(want, have)) {
 
-    new_nm <- view_name(layouts[[v]])
+    new_nm <- view_name(views[[v]])
 
     if (!identical(new_nm, view_name(state[[v]]))) {
       view_name(state[[v]]) <- new_nm
@@ -452,8 +510,8 @@ reconcile_views <- function(board, update, docks, active_dock,
 #'
 #' @param id Module ID.
 #' @param board,update Reactive board state and update signal.
-#' @param layout Optional initial `dock_layout`; defaults to the board's
-#'   `active_layout()`.
+#' @param layout Optional initial placement `dock_grid`; defaults to the
+#'   board's active view grid.
 #'
 #' @return The view's `dock` handle: a list holding the dockViewR `proxy`
 #'   alongside `board_ns`, `live_panels`, `layout` (reactive), `n_panels`,
@@ -469,7 +527,7 @@ manage_dock <- function(
   extensions = NULL
 ) {
   init_board <- isolate(board$board)
-  init_layout <- coal(layout, active_layout(init_board))
+  init_layout <- coal(layout, active_view_grid(init_board))
   init_blocks <- coal(blocks, board_blocks(init_board))
   init_exts <- coal(extensions, dock_extensions(init_board))
 
@@ -501,18 +559,21 @@ manage_dock <- function(
     )
 
     # Fold live-only membership changes — the add-panel modal, a closed tab, an
-    # extension show / hide — back into board_layouts in the same flush, so the
-    # panel set stays authoritative server-side and a later board change never
-    # restores a layout that lags the live dock. Block add / remove fold through
-    # the update lifecycle already; this catches the dock-only paths.
+    # extension show / hide — into the view's membership set in the same flush,
+    # so the panel set stays authoritative server-side and a later board change
+    # never restores a view that lags the live dock. Block add / remove fold
+    # through the update lifecycle already; this catches the dock-only paths.
+    # Membership only — geometry rides the settled-echo mirror below.
     observeEvent(
       live_panels(),
       {
-        layouts <- board_layouts(board$board)
+        views <- board_views(board$board)
 
-        if (id %in% names(layouts)) {
+        if (id %in% names(views)) {
 
-          folded <- fold_live_membership(layouts[[id]], live_panels())
+          folded <- fold_live_membership(
+            view_members(views[[id]]), live_panels()
+          )
 
           if (!is.null(folded)) {
             update(list(views = list(mod = set_names(list(folded), id))))
@@ -521,6 +582,17 @@ manage_dock <- function(
       },
       ignoreInit = TRUE
     )
+
+    # The settled-echo grid mirror: the sole writer of this view's stored
+    # geometry. `commit_grid` is the write capability, held only by the
+    # observer below. dockViewR emits one settled `_state` per gesture (a
+    # gesture's layout mutations coalesce onto a microtask), so a re-echo after
+    # quiescence canonicalises identically and writes nothing.
+    commit_grid <- function(grid) {
+      update(list(views = list(grid = set_names(list(grid), id))))
+    }
+
+    observe_grid_echo(id, dock, board, commit_grid)
 
     if (get_log_level() >= debug_log_level) {
       observeEvent(
@@ -539,7 +611,7 @@ manage_dock <- function(
         restore_layout(init_layout, dock$proxy,
                        blocks = init_blocks, extensions = init_exts)
 
-        for (pid in as_dock_panel_id(init_layout)) {
+        for (pid in as_dock_panel_id(as_dock_grid(init_layout))) {
           if (is_block_panel_id(pid)) {
             show_block_panel(pid, add_panel = FALSE, dock = dock)
           } else if (is_ext_panel_id(pid)) {
@@ -813,11 +885,11 @@ add_view_observer <- function(client_views, session, board, update) {
       coal(input$view_new_exts, character()),
       dock_ext_ids(brd)
     )
-    v_blks <- board_blocks(brd)[sel_blks]
-    v_exts <- as_dock_extensions(
-      as.list(dock_extensions(brd))[sel_exts]
+
+    members <- c(
+      as.character(as_ext_panel_id(sel_exts)),
+      as.character(as_block_panel_id(sel_blks))
     )
-    v_ly <- resolve_dock_layout(blocks = v_blks, extensions = v_exts)
 
     # Switch to the new view on creation. Its id is minted in augment, so
     # we point `active` at its `add` key (the display name); the dock
@@ -825,7 +897,7 @@ add_view_observer <- function(client_views, session, board, update) {
     update(
       list(
         views = list(
-          add = set_names(list(v_ly), new_name),
+          add = set_names(list(dock_view(members)), new_name),
           active = new_name
         )
       )

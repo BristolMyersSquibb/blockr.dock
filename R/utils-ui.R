@@ -46,22 +46,34 @@ move_dom_element <- function(from, to, session = get_session()) {
 
 determine_active_views <- function(layout) {
 
-  root <- layout[["grid"]][["root"]]
+  if (is.null(layout)) {
+    return(character())
+  }
+
+  # The dockView tree, keyed by group id: a compact `dock_grid` is expanded
+  # (assigning ids), while a raw dockView `_state` echo already carries its
+  # tree at `$grid`. A group's active view is its open tab.
+  tree <- if (is_dock_grid(layout)) grid_to_tree(layout) else layout[["grid"]]
+
+  root <- tree[["root"]]
 
   if (is.null(root)) {
     return(character())
   }
 
-  xtr_leaf_id <- function(x) {
+  xtr_leaf <- function(x) {
 
-    if (x$type == "leaf") {
-      return(set_names(coal(x$data$activeView, ""), x$data$id))
+    if (identical(x[["type"]], "leaf")) {
+      return(
+        set_names(coal(x[["data"]][["activeView"]], "", fail_all = FALSE),
+                  x[["data"]][["id"]])
+      )
     }
 
-    lapply(x$data, xtr_leaf_id)
+    lapply(x[["data"]], xtr_leaf)
   }
 
-  rapply(xtr_leaf_id(root), identity, "character")
+  rapply(xtr_leaf(root), identity, "character")
 }
 
 visible_block_ids <- function(layout) {

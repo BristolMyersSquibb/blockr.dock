@@ -17,13 +17,18 @@ serve(
     links = links(ab = new_link("a", "b", "data")),
     stacks = stacks(grp = c("a", "b")),
     extensions = new_edit_board_extension(),
-    layouts = list(
-      overview = dock_layout("c", name = "Overview"),
-      analysis = dock_layout(
+    views = list(
+      overview = dock_view("c", name = "Overview"),
+      analysis = dock_view(
+        c("edit_board_extension", "a", "b"),
+        name = "Analysis"
+      )
+    ),
+    grids = list(
+      analysis = dock_grid(
         "edit_board_extension",
         panels("a", "b", active = "b"),
-        sizes = c(0.3, 0.7),
-        name = "Analysis"
+        sizes = c(0.3, 0.7)
       )
     ),
     active = "analysis"

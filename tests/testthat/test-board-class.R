@@ -30,7 +30,7 @@ test_that("dock board", {
   expect_setequal(board_link_ids(board1), c("ad", "cd", "bc", "de"))
   expect_setequal(board_stack_ids(board1), "bc")
 
-  expect_length(layout_panel_ids(active_layout(board1)), 6L)
+  expect_length(layout_panel_ids(active_view_grid(board1)), 6L)
 
   empty <- clear_board(board1)
 
@@ -38,7 +38,7 @@ test_that("dock board", {
   expect_length(board_links(empty), 0L)
   expect_length(board_stacks(empty), 0L)
 
-  expect_length(layout_panel_ids(active_layout(empty)), 1L)
+  expect_length(layout_panel_ids(active_view_grid(empty)), 1L)
 
   expect_identical(
     board_options(board1),
@@ -54,7 +54,7 @@ test_that("str_value.dock_board renders every section", {
     stacks = list(
       grp = new_dock_stack(c("a", "b"), name = "Group A", color = "#ff0000")
     ),
-    layouts = list(one = dock_layout("a"), two = dock_layout("b")),
+    views = list(one = "a", two = "b"),
     active = "two",
     extensions = new_edit_board_extension()
   )
@@ -66,7 +66,7 @@ test_that("str_value.dock_board renders empty sections", {
 
   board <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(main = dock_layout("a"))
+    views = list(main = "a")
   )
 
   expect_snapshot(cat(str_value(board)))
@@ -76,7 +76,7 @@ test_that("str() on a dock_board displays via the inherited str.board", {
 
   board <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    layouts = list(main = dock_layout("a")),
+    views = list(main = "a"),
     extensions = new_edit_board_extension()
   )
 

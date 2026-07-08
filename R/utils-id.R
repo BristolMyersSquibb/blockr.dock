@@ -129,7 +129,7 @@ as_dock_panel_id.board <- function(x) {
 }
 
 #' @export
-as_dock_panel_id.dock_layout <- function(x) {
+as_dock_panel_id.dock_grid <- function(x) {
   lapply(layout_panel_ids(x), as_dock_panel_id)
 }
 
@@ -375,7 +375,7 @@ as_dock_handle_id.board <- function(x) {
 }
 
 #' @export
-as_dock_handle_id.dock_layout <- function(x) {
+as_dock_handle_id.dock_grid <- function(x) {
   lapply(layout_panel_ids(x), as_dock_handle_id)
 }
 

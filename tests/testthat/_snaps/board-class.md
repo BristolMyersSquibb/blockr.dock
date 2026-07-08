@@ -13,9 +13,9 @@
         grp: <dock_stack> "Group A": a, b Color: "#ff0000"
       <board_options[1]>
         board_name: NULL
-      <dock_layouts[2]>
-        one: <dock_layout> a
-        two: <dock_layout> b (active)
+      <dock_views[2]>
+        one: <dock_view> a
+        two: <dock_view> b (active)
       <dock_extensions[1]>
         edit_board_extension: <edit_board_extension>
 
@@ -31,8 +31,8 @@
       <stacks[0]>
       <board_options[1]>
         board_name: NULL
-      <dock_layouts[1]>
-        main: <dock_layout> a (active)
+      <dock_views[1]>
+        main: <dock_view> a (active)
       <dock_extensions[0]>
 
 # str() on a dock_board displays via the inherited str.board
@@ -47,8 +47,8 @@
       <stacks[0]>
       <board_options[1]>
         board_name: NULL
-      <dock_layouts[1]>
-        main: <dock_layout> a (active)
+      <dock_views[1]>
+        main: <dock_view> a (active)
       <dock_extensions[1]>
         edit_board_extension: <edit_board_extension>
 

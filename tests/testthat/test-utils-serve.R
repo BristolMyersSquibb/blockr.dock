@@ -121,7 +121,7 @@ test_that("adding a second block keeps both block panels (#196)", {
   add_block("dataset_block", "a")
   expect_identical(block_panel_tabs(app), "block_panel-a")
 
-  # Pre-fix, the second add fired reconcile_views against a board_layouts that
+  # Pre-fix, the second add fired reconcile_views against a board that
   # lagged the live dock, restoring it and wiping both block panels -- leaving
   # only the extension (#196). Both block tabs must survive.
   add_block("head_block", "b")
@@ -264,11 +264,11 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   expect_setequal(names(board_stacks(restored)), "grp")
   expect_length(dock_extensions(restored), 1L)
 
-  ly <- board_layouts(restored)
-  expect_identical(unname(view_names(ly)), c("Overview", "Analysis"))
-  expect_identical(active_view(ly), "analysis")
+  views <- board_views(restored)
+  expect_identical(unname(view_names(views)), c("Overview", "Analysis"))
+  expect_identical(active_view(views), "analysis")
   expect_setequal(
-    layout_panel_ids(ly[["analysis"]]),
+    view_members(views[["analysis"]]),
     c("ext_panel-edit_board_extension", "block_panel-a", "block_panel-b")
   )
 
@@ -495,10 +495,10 @@ test_that("dock panel move updates layout state and serialization (#234)", {
   dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
 
   # The dockview client reports its live arrangement through the `_state`
-  # input, which the dock converts into a `dock_layout` -- the resulting
-  # layout state. `group_of` resolves which dock group holds a panel.
+  # input, wrapped at the seam as a `dock_layout` (its verbatim grid tree).
+  # `group_of` resolves which dock group holds a panel.
   read_layout <- function() {
-    dockview_to_layout(app$get_value(input = paste0(dock, "_state")))
+    new_dock_layout(app$get_value(input = paste0(dock, "_state")))
   }
 
   group_of <- function(layout, panel) {
@@ -555,9 +555,16 @@ test_that("dock panel move updates layout state and serialization (#234)", {
     )
   )
 
-  # Serialization: the dock-owned serializer reflects the split -- the spec
-  # round-trips to a layout that keeps every panel and still separates a and b.
-  reparsed <- layout_from_json(layout_to_json(layout))
+  # Serialization: our grid format round-trips through JSON and keeps every
+  # panel while still separating a and b.
+  grid <- as_dock_grid(layout)
+  restored <- as_dock_grid(
+    jsonlite::fromJSON(
+      jsonlite::toJSON(as.list(grid), null = "null"),
+      simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+    )
+  )
+  reparsed <- new_dock_layout(list(grid = grid_to_tree(restored)))
   expect_setequal(
     panel_obj_ids(layout_panel_ids(reparsed)),
     c("a", "b", "edit_board_extension")
