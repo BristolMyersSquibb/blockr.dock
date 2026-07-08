@@ -210,6 +210,33 @@ test_that("view_grid renders a member the grid omits, defaulting its spot", {
   )
 })
 
+test_that("construction drops members with no backing block or extension", {
+
+  # The block / extension set is authoritative. A member referencing a block
+  # that is not on the board (e.g. dropped since the board was saved) is pruned
+  # at construction rather than rejected -- restore of a stale board self-heals.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    views = list(A = dock_view(c("block_panel-a", "block_panel-gone")))
+  )
+
+  expect_identical(view_members(board_views(brd)[["A"]]), "block_panel-a")
+  expect_s3_class(validate_board(brd), "dock_board")
+})
+
+test_that("construction restricts a grid to its view's members", {
+
+  # A grid entry for a panel the view does not hold (a ghost) is dropped at
+  # construction, so stored geometry never outlives the membership.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = dock_view("a")),
+    grids = list(A = dock_grid("a", "b"))
+  )
+
+  expect_identical(layout_panel_ids(board_grids(brd)[["A"]]), "block_panel-a")
+})
+
 test_that("rm_blocks drops the member but leaves a legal arrangement ghost", {
 
   brd <- new_dock_board(

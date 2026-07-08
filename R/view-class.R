@@ -640,3 +640,40 @@ coerce_dock_grids <- function(grids, id_map) {
 
   new_dock_grids(lapply(grids, resolve_grid, id_map = id_map))
 }
+
+# Drop view members with no backing block or extension. The block / extension
+# set is authoritative, so a panel that references neither (e.g. a block
+# dropped since the board was saved) is silently pruned from membership at
+# construction rather than rejected -- keeping restore of a stale board
+# robust. Each view's name and the collection's active view are preserved.
+drop_unknown_members <- function(views, ok_panels) {
+
+  for (id in names(views)) {
+
+    members <- view_members(views[[id]])
+    keep <- intersect(members, ok_panels)
+
+    if (length(keep) < length(members)) {
+      views[[id]] <- new_dock_view(keep, view_name(views[[id]]))
+    }
+  }
+
+  views
+}
+
+# Restrict each grid to the (already cleaned) membership of the view it keys,
+# dropping ghosts and unknown panels so stored geometry never outlives the
+# board. Grids keyed by an unknown view are left for validation to reject.
+restrict_grids_to_views <- function(grids, views) {
+
+  for (id in names(grids)) {
+
+    grid <- grids[[id]]
+
+    if (not_null(grid) && id %in% names(views)) {
+      grids[[id]] <- restrict_grid(grid, view_members(views[[id]]))
+    }
+  }
+
+  grids
+}

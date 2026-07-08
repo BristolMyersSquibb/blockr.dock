@@ -68,6 +68,10 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
 # Coerce the `views` / `grids` inputs into the board's two slots. A NULL (or
 # empty) `views` yields the default single-view arrangement; otherwise each is
 # resolved against the board's blocks and extensions via a shared id map.
+# Finally the presentation is reconciled to the authoritative block /
+# extension set: members with no backing panel are pruned from the views and
+# each grid is restricted to its view's members, so construction (and restore)
+# of a stale or inconsistent layout self-heals rather than aborting.
 initialise_views <- function(views, grids, blocks, extensions, active = NULL) {
 
   if (!length(views) && !length(grids)) {
@@ -89,6 +93,14 @@ initialise_views <- function(views, grids, blocks, extensions, active = NULL) {
       )
     }
   }
+
+  ok_panels <- c(
+    as.character(as_block_panel_id(blocks)),
+    as.character(as_ext_panel_id(extensions))
+  )
+
+  dock_vws <- drop_unknown_members(dock_vws, ok_panels)
+  dock_grds <- restrict_grids_to_views(dock_grds, dock_vws)
 
   if (!is.null(active)) {
     active_view(dock_vws) <- active

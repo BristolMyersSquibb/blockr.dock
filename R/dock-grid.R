@@ -226,6 +226,24 @@ print.dock_grid <- function(x, ...) {
   invisible(x)
 }
 
+# Drop from a grid every panel that is not one of `members`, returning the
+# raw (not-yet-canonical) structure. Shared by the read-time placement
+# (`place_members()`) and the construction-time cleaner (`restrict_grid()`).
+drop_non_members <- function(grid, members) {
+  drop_panels_from_layout(grid, setdiff(layout_panel_ids(grid), members))
+}
+
+# Restrict a grid to `members`, dropping ghosts and unknowns, as a canonical
+# `dock_grid`. The constructor's grid cleaner: it removes, never adds, so a
+# member the grid omits stays absent here (defaulted only where the placement
+# is read, in `place_members()`).
+restrict_grid <- function(grid, members) {
+
+  dropped <- drop_non_members(grid, members)
+
+  new_dock_grid(dropped[["grid"]], active_group = dropped[["activeGroup"]])
+}
+
 # The member-driven placement of a view: membership decides *which* panels
 # appear, the grid only *how*. A ghost (grid panel no longer a member) is
 # dropped; a member the grid omits is appended a default single-panel spot;
@@ -233,10 +251,7 @@ print.dock_grid <- function(x, ...) {
 # is authoritative -- the grid never adds or withholds a panel.
 place_members <- function(grid, members) {
 
-  dropped <- drop_panels_from_layout(
-    grid,
-    setdiff(layout_panel_ids(grid), members)
-  )
+  dropped <- drop_non_members(grid, members)
 
   missing <- setdiff(members, grid_panel_ids(dropped[["grid"]]))
 
