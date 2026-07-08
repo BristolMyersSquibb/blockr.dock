@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* Renaming a block no longer crashes a board where that block is absent
+  from some view -- a block placed in only one of several views, or
+  parked in the offcanvas with no panel at all. The per-view rename
+  observer fires for every view; it now skips the ones whose dock does
+  not hold the renamed block instead of pushing the new title to a panel
+  that view lacks, which reached dockView with an unknown id and threw
+  client-side (#116).
+
 * A board's per-view layout is now split into two independent slots: a
   `dock_views` collection of structure objects (each view's ordered
   panel-id set, name and id, plus the active view), read with

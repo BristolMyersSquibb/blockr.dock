@@ -73,6 +73,7 @@ test_that("edit board extension links blocks (e2e)", {
     seed = 42,
     load_timeout = 30 * 1000
   )
+  withr::defer(app$stop())
 
   set_in(app, "new_link_id", "ab")
   click(app, "add_link")
@@ -91,8 +92,6 @@ test_that("edit board extension links blocks (e2e)", {
   expect_identical(field(app, "ab_from"), "a")
   expect_identical(field(app, "ab_to"), "b")
   expect_identical(field(app, "ab_input"), "data")
-
-  app$stop()
 })
 
 test_that("adding a second block keeps both block panels (#196)", {
@@ -127,8 +126,6 @@ test_that("adding a second block keeps both block panels (#196)", {
   # only the extension (#196). Both block tabs must survive.
   add_block("head_block", "b")
   expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
-
-  app$stop()
 })
 
 test_that("edit board extension stacks (e2e)", {
@@ -141,6 +138,7 @@ test_that("edit board extension stacks (e2e)", {
     seed = 42,
     load_timeout = 30 * 1000
   )
+  withr::defer(app$stop())
 
   set_in(app, "new_stack_id", "grp")
   click(app, "add_stack")
@@ -177,8 +175,6 @@ test_that("edit board extension stacks (e2e)", {
   app$wait_for_idle()
 
   expect_null(field(app, "grp_name"))
-
-  app$stop()
 })
 
 test_that("multi-view nav renders one labelled entry per view (#189)", {

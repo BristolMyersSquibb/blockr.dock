@@ -730,9 +730,17 @@ manage_dock <- function(
             next
           }
 
-          new_name <- delta[["block_name"]]
           blk_panel_id <- as_block_panel_id(blk_id)
 
+          # This observer fires for every view; skip the docks that do not hold
+          # this block. live_panels() is the authoritative server-side
+          # membership set -- pushing a title to a panel absent from this dock
+          # reaches dockView with an unknown id and throws client-side.
+          if (!as.character(blk_panel_id) %in% live_panels()) {
+            next
+          }
+
+          new_name <- delta[["block_name"]]
           old_title <- get_dock_panel(blk_panel_id, dock$proxy)$title
 
           if (identical(new_name, old_title)) {
