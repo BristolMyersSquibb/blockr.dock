@@ -269,15 +269,12 @@ test_that("rename skips views without the block's panel (#116)", {
   # an absent panel reaches dockView with an unknown id and throws client-side.
   board_rv <- board_args(
     blocks = c(a = new_dataset_block("iris"), b = new_dataset_block("mtcars")),
-    layouts = list(v1 = dock_layout("a", name = "V1"))
+    views = list(v1 = dock_view("a", name = "V1"))
   )
   upd <- reactiveVal()
 
   with_mock_context(ms, {
-    manage_dock(
-      "dock_main", board_rv, update = upd,
-      layout = board_layouts(board_rv$board)[["v1"]]
-    )
+    manage_dock("dock_main", board_rv, update = upd)
   })
 
   ms$flushReact()
