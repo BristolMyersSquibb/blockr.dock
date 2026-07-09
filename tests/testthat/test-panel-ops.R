@@ -1,4 +1,4 @@
-# The panel-op delivery layer (panel-ops.R) drives the same show / hide / select
+# The panel-op apply layer (panel-ops.R) drives the same show / hide / select
 # boundary the add-panel modal and tab gestures use, so these tests mock that
 # boundary and assert the op fires the right dispatch with the right placement,
 # is idempotent against the live panel set, and -- for a block being removed in
@@ -243,15 +243,15 @@ test_that("the cascade rm delivers to inactive docks, skips the active", {
   mod <- list(rm = "block_panel-a")
 
   active <- fake_dock(live = "block_panel-a")
-  deliver_panel_ops(mod, active, brd, rm_blocks = "a", active = TRUE)
+  apply_panel_ops(mod, active, brd, rm_blocks = "a", active = TRUE)
 
   inactive <- fake_dock(live = "block_panel-a")
-  deliver_panel_ops(mod, inactive, brd, rm_blocks = "a", active = FALSE)
+  apply_panel_ops(mod, inactive, brd, rm_blocks = "a", active = FALSE)
 
   expect_identical(log, "rm:block_panel-a")
 })
 
-test_that("deliver_panel_ops applies rm -> add -> select, skipping block-rm", {
+test_that("apply_panel_ops applies rm -> add -> select, skipping block-rm", {
 
   log <- character()
 
@@ -279,7 +279,7 @@ test_that("deliver_panel_ops applies rm -> add -> select, skipping block-rm", {
   )
   dock <- fake_dock(live = c("block_panel-a", "block_panel-c"))
 
-  deliver_panel_ops(
+  apply_panel_ops(
     list(
       rm = c("block_panel-a", "block_panel-b"),
       add = list(`block_panel-b` = list()),
@@ -320,50 +320,4 @@ test_that("hint_to_position translates near / side, else the default spot", {
     hint_to_position(list(side = "left"), dock),
     list(direction = "left")
   )
-})
-
-test_that("reveal_panel composes active + select for a holding view", {
-
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block(), b = new_head_block()),
-    views = list(one = "a", two = c("a", "b"))
-  )
-
-  # In the active view already -> stays active, just selects.
-  a <- reveal_panel(brd, "a")
-  expect_identical(a$views$active, "one")
-  expect_identical(a$views$mod$one$select, "block_panel-a")
-
-  # Only in another view -> switches to it and selects.
-  b <- reveal_panel(brd, "b")
-  expect_identical(b$views$active, "two")
-  expect_identical(b$views$mod$two$select, "block_panel-b")
-
-  # A canonical panel id passes through unchanged.
-  expect_identical(reveal_panel(brd, "block_panel-a")$views$active, "one")
-
-  # An id that is neither panel, block nor extension is an error.
-  expect_error(reveal_panel(brd, "nope"), class = "dock_reveal_panel_unknown")
-})
-
-test_that("reveal_panel adds an unplaced panel to the active view", {
-
-  # A block that is a member of no view (a picker block the DAG still renders):
-  # revealing it must place it, not return NULL and silently do nothing (#308).
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block(), b = new_head_block()),
-    views = list(one = "a", two = "a")
-  )
-
-  rv <- reveal_panel(brd, "b")
-
-  # Composed into the active view (already active -> no outer `active` switch),
-  # a default-placement `add` plus a `select`, one batch.
-  expect_null(rv$views$active)
-  expect_identical(names(rv$views$mod$one$add), "block_panel-b")
-  expect_identical(rv$views$mod$one$add[["block_panel-b"]], list())
-  expect_identical(rv$views$mod$one$select, "block_panel-b")
-
-  # And it validates as a real delta against the board.
-  expect_silent(validate_views_delta(rv$views, brd, list()))
 })

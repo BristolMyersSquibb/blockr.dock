@@ -16,11 +16,12 @@
   meanwhile decomposes into remove + add-with-hint; `resize` joins the
   grammar once the `set_size` dock proxy lands (#318).
 
-* New exported `reveal_panel()` builds the `views` delta that brings a
-  panel into view -- switching to a view that holds it and selecting its
-  tab. It is the supported way for a dock extension (which no longer
-  receives the live `dock`) to open a block's panel: a DAG node click
-  becomes `update(reveal_panel(board, node))` (#308, #318).
+* The supported way for a dock extension to open a block's panel is now the
+  `views` update grammar itself -- compose `active` + `select` (with a `mod`
+  `add` first for a panel no view holds yet) and pass it to `update()`, with no
+  need for the live `dock` handle that is no longer on the extension server
+  surface. `show_panel()`, which required that handle, is deprecated (#308,
+  #318).
 
 * The block status badge is now derived in one exported helper,
   `block_status_badge()`, and reused by blockr.dag, so the dock card icon

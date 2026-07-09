@@ -1,10 +1,10 @@
-# Deliver a view's panel-op batch to its live dock. Server-initiated ops land
+# Apply a view's panel-op batch to its live dock. Server-initiated ops land
 # here through the applied `views$mod` payload (the `set_panel_title`
 # precedent), the mirror image of the membership fold: `add` / `rm` write the
 # board and this places / removes the panel, `move` / `select` write nothing and
-# exist only as this delivery. Every op is idempotent against the live panel
-# set, so the fold's own capture echo and a re-augmented payload are no-ops.
-# Application order matches the reducer: rm -> add -> move -> select.
+# exist only as this client-side apply. Every op is idempotent against the live
+# panel set, so the fold's own capture echo and a re-augmented payload are
+# no-ops. Application order matches the reducer: rm -> add -> move -> select.
 #
 # `active` marks whether this dock is the active view. A block / extension card
 # is a single board-level element, shown in whichever view is active, so only
@@ -12,11 +12,11 @@
 # its dockview panel wrappers alone (`add_*_panel` / `remove_*_panel`) and
 # leaves the card where it is -- activation re-parks it via `show_view_ui`.
 # Core's own block-removal cleans only the active dock, so the same-update
-# block-removal skip is active-only: an inactive dock delivers the cascade `rm`
+# block-removal skip is active-only: an inactive dock applies the cascade `rm`
 # to clear the wrapper core never reaches, and only the active dock defers to
-# core (delivering there too would double-remove and throw client-side).
-deliver_panel_ops <- function(mod, dock, board, rm_blocks = character(),
-                              active = TRUE) {
+# core (applying it there too would double-remove and throw client-side).
+apply_panel_ops <- function(mod, dock, board, rm_blocks = character(),
+                            active = TRUE) {
 
   skip <- if (active) {
     as.character(as_block_panel_id(rm_blocks))

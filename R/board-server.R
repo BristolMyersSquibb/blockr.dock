@@ -584,7 +584,7 @@ manage_dock <- function(
       ignoreInit = TRUE
     )
 
-    # The inverse of the fold: deliver server-initiated panel ops to this view's
+    # The inverse of the fold: apply server-initiated panel ops to this view's
     # live dock. Keyed on the applied `views$mod` for the view (the
     # `set_panel_title` precedent), never on a board diff — `move` / `select`
     # write nothing to the board, so a state-diff observer would never see them.
@@ -593,7 +593,7 @@ manage_dock <- function(
     # ping-pong.
     observeEvent(
       update()$views$mod[[id]],
-      deliver_panel_ops(
+      apply_panel_ops(
         update()$views$mod[[id]],
         dock,
         board$board,

@@ -111,108 +111,33 @@ determine_panel_pos <- function(dock) {
   list(referenceGroup = grp, direction = "within")
 }
 
-#' Panel utilities
+#' Show a panel
 #'
-#' Utilities for revealing dock panels. `reveal_panel()` is a pure builder:
-#' it composes a `views` update delta that brings a panel into view -- switching
-#' to a view that holds it (outer `active`) and selecting its tab (inner
-#' `select`), or, for a panel that no view holds yet, adding it to the active
-#' view at its default spot and selecting it -- for a caller to pass straight to
-#' `update()`. Revealing is not a primitive verb but the composition of a few,
-#' offered as a builder so the grammar stays minimal. This is the supported way
-#' for a dock extension -- which no longer receives the live `dock` -- to open a
-#' block's panel: a DAG node click becomes `update(reveal_panel(board, node))`,
-#' and it reveals an unplaced (picker) block just as well. `show_panel()` is the
-#' older live-mutation form, requiring the `dock` handle directly.
+#' `show_panel()` brings a block or extension panel into view in the live
+#' `dock`. It is **deprecated**: opening a panel is now expressed through the
+#' `views` update grammar, which an extension composes directly and passes to
+#' `update()` -- switching to a view that holds the panel and selecting its tab,
+#' `update(list(views = list(active = v, mod = list(v = list(select = p)))))`,
+#' with a `mod` `add` entry first for an unplaced panel. That path needs no live
+#' `dock` handle, which is no longer on the extension server surface.
 #'
 #' @param id Object ID
 #' @param board Board object
 #' @param dock Object available as `dock` in extensions
-#' @param type Either "block" or "extensions", depending on what kind of panel
-#'   should be shown
-#' @param panel Panel to reveal: a canonical panel id, or a bare block /
-#'   extension id.
+#' @param type Either "block" or "extension", the kind of panel to show
 #'
-#' @return `show_panel()` returns `NULL` invisibly, called for its effect on the
-#'   live dock. `reveal_panel()` returns a `views` update delta that brings the
-#'   panel into view (`NULL` only for the degenerate case of a board with no
-#'   active view).
+#' @return `NULL`, invisibly.
 #'
-#' @examples
-#' brd <- new_dock_board(
-#'   blocks = c(a = blockr.core::new_dataset_block()),
-#'   views = list(one = "a", two = "a")
-#' )
-#' reveal_panel(brd, "a")
-#'
-#' @rdname panel
-#' @export
-reveal_panel <- function(board, panel) {
-
-  stopifnot(is_dock_board(board), is_string(panel))
-
-  pid <- as.character(resolve_reveal_panel(board, panel))
-
-  views <- board_views(board)
-
-  holder <- Find(
-    function(v) pid %in% view_members(views[[v]]),
-    c(active_view(views), names(views))
-  )
-
-  if (not_null(holder)) {
-    return(
-      list(
-        views = list(
-          active = holder,
-          mod = set_names(list(list(select = pid)), holder)
-        )
-      )
-    )
-  }
-
-  # Unplaced -- a member of no view (e.g. a picker block the DAG still renders).
-  # Add it to the active view at its default spot and select it, one batch, so a
-  # node click reveals it rather than silently doing nothing.
-  active <- active_view(views)
-
-  if (is.null(active)) {
-    return(NULL)
-  }
-
-  list(
-    views = list(
-      mod = set_names(
-        list(list(add = set_names(list(list()), pid), select = pid)),
-        active
-      )
-    )
-  )
-}
-
-resolve_reveal_panel <- function(board, panel) {
-
-  if (maybe_block_panel_id(panel) || maybe_ext_panel_id(panel)) {
-    return(as_dock_panel_id(panel))
-  }
-
-  if (panel %in% board_block_ids(board)) {
-    return(as_block_panel_id(panel))
-  }
-
-  if (panel %in% dock_ext_ids(board)) {
-    return(as_ext_panel_id(panel))
-  }
-
-  blockr_abort(
-    "Cannot reveal {panel}: no such panel, block or extension.",
-    class = "dock_reveal_panel_unknown"
-  )
-}
-
 #' @rdname panel
 #' @export
 show_panel <- function(id, board, dock, type = c("block", "extension")) {
+
+  .Deprecated(
+    msg = paste(
+      "`show_panel()` is deprecated; open a panel through the `views` update",
+      "grammar instead (see `?show_panel`)."
+    )
+  )
 
   stopifnot(is_string(id))
 
