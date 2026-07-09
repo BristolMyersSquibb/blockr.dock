@@ -4,7 +4,7 @@ library(blockr.dock)
 serve(
   new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_dataset_block()),
-    views = list(First = "a", Second = "b"),
+    views = list(First = blk("a"), Second = blk("b")),
     active = "First"
   ),
   "my_board"

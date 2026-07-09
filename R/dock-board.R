@@ -14,11 +14,14 @@
 #' `views = NULL` the board gets a single default view.
 #'
 #' @inheritParams blockr.core::new_board
-#' @param extensions Dock extensions
+#' @param extensions Dock extensions. Each is keyed by its list name, or by
+#'   its class stripped of the `_extension` suffix when unnamed (so
+#'   `new_dag_extension()` becomes `dag`); that key names the extension's
+#'   panel and is what `ext()` resolves against.
 #' @param views Per-view membership: a named list keyed by view id (minted
-#'   when absent), each value a [dock_view()], a bare character vector of
-#'   member panel ids, or a list of panel ids. `NULL` yields a single default
-#'   view over the board's blocks and extensions.
+#'   when absent), each value a [dock_view()], or member panels named with
+#'   `blk()` / `ext()` references or bare ids (as a vector or list). `NULL`
+#'   yields a single default view over the board's blocks and extensions.
 #' @param grids Per-view geometry: a named list keyed by view id whose values
 #'   are [dock_grid()]s, or a `dock_grids`. Optional -- a view with no grid
 #'   entry falls back to a default grid over its members.

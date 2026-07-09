@@ -459,18 +459,16 @@ panel_id_map <- function(blocks, extensions) {
   )
 }
 
-# Map a vector of ids to canonical panel ids. Only bare object ids are
-# rewritten: already-canonical panel ids (not keys of the map) pass through,
-# and a mix is left untouched.
+# Map bare object ids to canonical panel ids, per element: a key of the map is
+# rewritten, an already-canonical panel id (or an unknown id) passes through.
+# Resolving element-wise lets a `blk()` / `ext()` ref (already canonical) sit
+# beside a bare id in the same view.
 resolve_panel_ids <- function(ids, id_map) {
 
-  bare <- length(ids) && all(ids %in% names(id_map)) && any(!ids %in% id_map)
+  hit <- ids %in% names(id_map)
+  ids[hit] <- unname(id_map[ids[hit]])
 
-  if (!bare) {
-    return(ids)
-  }
-
-  unname(id_map[ids])
+  ids
 }
 
 coerce_dock_views <- function(views, id_map) {
@@ -494,12 +492,20 @@ coerce_one_view <- function(view, id_map) {
     )
   }
 
+  if (is_panel_ref(view)) {
+    view <- as_panel_string(view)
+  }
+
   if (is.character(view)) {
     return(new_dock_view(resolve_panel_ids(view, id_map)))
   }
 
   if (is.list(view)) {
-    return(new_dock_view(resolve_panel_ids(chr_ply(view, identity), id_map)))
+    return(
+      new_dock_view(
+        resolve_panel_ids(chr_ply(view, as_panel_string), id_map)
+      )
+    )
   }
 
   blockr_abort(

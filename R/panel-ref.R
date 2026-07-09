@@ -88,3 +88,22 @@ print.panel_ref <- function(x, ...) {
 panel_ref_hint <- function(x) {
   drop_nulls(list(near = x[["near"]], side = x[["side"]], size = x[["size"]]))
 }
+
+# A ref used in the layout-authoring DSL (`panels()` / `dock_grid()` / a `views`
+# entry) contributes its canonical panel id; a bare string passes through. A
+# placement hint is meaningless where no `add` / `move` happens, so it errors.
+as_panel_string <- function(x) {
+
+  if (!is_panel_ref(x)) {
+    return(x)
+  }
+
+  if (length(panel_ref_hint(x))) {
+    blockr_abort(
+      "A panel reference in the layout DSL cannot carry a placement hint.",
+      class = "dock_layout_ref_hint"
+    )
+  }
+
+  as.character(x)
+}

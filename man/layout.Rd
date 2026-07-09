@@ -16,9 +16,11 @@ group(..., sizes = NULL)
 default_layout(blocks, extensions)
 }
 \arguments{
-\item{...}{For \code{dock_grid()} and \code{group()}, grid children (bare ids,
-character vectors, lists, \code{panels()}, or \code{group()}). For \code{panels()},
-panel ids. Otherwise reserved for generic consistency.}
+\item{...}{For \code{dock_grid()} and \code{group()}, grid children (\code{blk()} /
+\code{ext()} references, bare ids, character vectors, lists, \code{panels()}, or
+\code{group()}). For \code{panels()}, panel references or ids. A reference used
+here cannot carry a placement hint. Otherwise reserved for generic
+consistency.}
 
 \item{orientation}{Top-level split direction; one of \code{"horizontal"}
 (default) or \code{"vertical"}.}
@@ -76,20 +78,20 @@ blks <- c(
   b = blockr.core::new_head_block()
 )
 
-# Tabbed leaf with an explicit open tab
-panels("a", "b", "edit_board", active = "edit_board")
+# Panels named with typed references; bare id strings work too
+panels(blk("a"), blk("b"), active = blk("b"))
 
 # Branch with explicit child ratios
-group("a", "b", sizes = c(0.3, 0.7))
+group(blk("a"), blk("b"), sizes = c(0.3, 0.7))
 
-# Composing them inside a grid
+# An extension panel beside a tabbed block leaf
 dock_grid(
-  "a",
-  panels("b", "edit_board", active = "edit_board"),
+  ext("dag"),
+  panels(blk("a"), blk("b"), active = blk("b")),
   sizes = c(0.3, 0.7)
 )
 
 # Vertical top-level split
-dock_grid("a", "b", orientation = "vertical")
+dock_grid(blk("a"), blk("b"), orientation = "vertical")
 
 }

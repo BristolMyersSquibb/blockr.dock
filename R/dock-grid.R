@@ -535,9 +535,11 @@ restrict_grids_to_views <- function(grids, views) {
 #' [dock_layout][dock-layout], built from a grid against the board's blocks and
 #' extensions.
 #'
-#' @param ... For `dock_grid()` and `group()`, grid children (bare ids,
-#'   character vectors, lists, `panels()`, or `group()`). For `panels()`,
-#'   panel ids. Otherwise reserved for generic consistency.
+#' @param ... For `dock_grid()` and `group()`, grid children (`blk()` /
+#'   `ext()` references, bare ids, character vectors, lists, `panels()`, or
+#'   `group()`). For `panels()`, panel references or ids. A reference used
+#'   here cannot carry a placement hint. Otherwise reserved for generic
+#'   consistency.
 #' @param orientation Top-level split direction; one of `"horizontal"`
 #'   (default) or `"vertical"`.
 #' @param active For `panels()`, the id of the tab to open by default.
@@ -552,21 +554,21 @@ restrict_grids_to_views <- function(grids, views) {
 #'   b = blockr.core::new_head_block()
 #' )
 #'
-#' # Tabbed leaf with an explicit open tab
-#' panels("a", "b", "edit_board", active = "edit_board")
+#' # Panels named with typed references; bare id strings work too
+#' panels(blk("a"), blk("b"), active = blk("b"))
 #'
 #' # Branch with explicit child ratios
-#' group("a", "b", sizes = c(0.3, 0.7))
+#' group(blk("a"), blk("b"), sizes = c(0.3, 0.7))
 #'
-#' # Composing them inside a grid
+#' # An extension panel beside a tabbed block leaf
 #' dock_grid(
-#'   "a",
-#'   panels("b", "edit_board", active = "edit_board"),
+#'   ext("dag"),
+#'   panels(blk("a"), blk("b"), active = blk("b")),
 #'   sizes = c(0.3, 0.7)
 #' )
 #'
 #' # Vertical top-level split
-#' dock_grid("a", "b", orientation = "vertical")
+#' dock_grid(blk("a"), blk("b"), orientation = "vertical")
 #'
 #' @return `dock_grid()` returns a [dock_grid][dock-grid] object. `panels()`
 #' returns a `dock_panels` node and `group()` returns a `dock_group` node --
@@ -594,7 +596,11 @@ dock_grid <- function(..., orientation = c("horizontal", "vertical"),
 #' @rdname layout
 #' @export
 panels <- function(..., active = NULL) {
-  ids <- chr_ply(list(...), identity)
+  ids <- chr_ply(list(...), as_panel_string)
+
+  if (!is.null(active)) {
+    active <- as_panel_string(active)
+  }
 
   if (length(ids) && !is.null(active)) {
 
@@ -918,6 +924,10 @@ dock_attrs <- function(...) {
 #   - dock_group                   → branch with the given sizes
 #   - bare list                    → branch (even split)
 build_grid_node <- function(node) {
+
+  if (is_panel_ref(node)) {
+    node <- as_panel_string(node)
+  }
 
   if (is.character(node)) {
     return(list(panels = node, active = node[[1L]]))

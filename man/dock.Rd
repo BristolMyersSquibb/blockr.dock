@@ -46,12 +46,15 @@ dock_board_options()
 
 \item{...}{Further (metadata) attributes}
 
-\item{extensions}{Dock extensions}
+\item{extensions}{Dock extensions. Each is keyed by its list name, or by
+its class stripped of the \verb{_extension} suffix when unnamed (so
+\code{new_dag_extension()} becomes \code{dag}); that key names the extension's
+panel and is what \code{ext()} resolves against.}
 
 \item{views}{Per-view membership: a named list keyed by view id (minted
-when absent), each value a \code{\link[=dock_view]{dock_view()}}, a bare character vector of
-member panel ids, or a list of panel ids. \code{NULL} yields a single default
-view over the board's blocks and extensions.}
+when absent), each value a \code{\link[=dock_view]{dock_view()}}, or member panels named with
+\code{blk()} / \code{ext()} references or bare ids (as a vector or list). \code{NULL}
+yields a single default view over the board's blocks and extensions.}
 
 \item{grids}{Per-view geometry: a named list keyed by view id whose values
 are \code{\link[=dock_grid]{dock_grid()}}s, or a \code{dock_grids}. Optional -- a view with no grid

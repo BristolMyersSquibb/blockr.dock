@@ -124,3 +124,24 @@ test_that("a bare id in both namespaces is a loud clash", {
   add <- resolve_mod(brd, list(add = list(ext(clash))))
   expect_identical(names(add$add), paste0("ext_panel-", clash))
 })
+
+test_that("blk() / ext() are accepted in the layout-authoring DSL", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = list(dag = new_edit_board_extension()),
+    views = list(V = list(ext("dag"), blk("a"), "b")),
+    grids = list(V = dock_grid(ext("dag"), panels(blk("a"), "b")))
+  )
+
+  expect_setequal(
+    view_members(board_views(brd)[["V"]]),
+    c("ext_panel-dag", "block_panel-a", "block_panel-b")
+  )
+
+  # A placement hint is meaningless where no add / move happens.
+  expect_error(
+    panels(blk("a", side = "left")),
+    class = "dock_layout_ref_hint"
+  )
+})

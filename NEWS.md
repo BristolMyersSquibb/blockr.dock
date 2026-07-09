@@ -7,7 +7,9 @@
   exported typed references `blk()` / `ext()` -- by block or extension id,
   never the `block_panel-` / `ext_panel-` wire prefix (a bare id string is
   accepted as sugar, resolved block-first, with a loud error on a true
-  cross-namespace clash). The verbs are `add` / `rm` (which write
+  cross-namespace clash). The same references name panels in the
+  layout-authoring DSL too (`dock_grid()`, `panels()`, a `views` entry), so
+  a board definition reads as blocks and extensions rather than wire ids. The verbs are `add` / `rm` (which write
   membership) and `move` / `select` (pure client ops captured by the
   settled-echo grid mirror); a ref optionally absorbs its own placement
   hint (`near` / `side`, plus `size` for a future `resize`), valid only
