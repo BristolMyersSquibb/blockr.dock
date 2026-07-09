@@ -552,6 +552,42 @@ test_that("board_server_callback seeds visibility before the client reports", {
   })
 })
 
+test_that("the visibility seed reads the active view's open tabs", {
+
+  # An expressed tab group hides its back tab: only the front panel of each
+  # group seeds visibility (the active view's placed grid at birth).
+  board_rv <- board_args(
+    blocks = c(
+      a = new_dataset_block(), b = new_head_block(), d = new_head_block()
+    ),
+    grids = list(v = dock_grid(panels("a", "b", active = "b"), "d"))
+  )
+
+  with_mock_session({
+    visible <- reactiveVal()
+    board_server_callback(board_rv, update = reactiveVal(), visible = visible)
+
+    expect_setequal(isolate(visible()), c("b", "d"))
+  })
+})
+
+test_that("the visibility seed spans separate leaves", {
+
+  # Separate single-panel leaves each front their own tab, so every member is
+  # on-screen (none is a hidden back tab).
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    grids = list(page = dock_grid("a", "b"))
+  )
+
+  with_mock_session({
+    visible <- reactiveVal()
+    board_server_callback(board_rv, update = reactiveVal(), visible = visible)
+
+    expect_setequal(isolate(visible()), c("a", "b"))
+  })
+})
+
 test_that("view nav renders one labelled item per view (#189)", {
 
   board <- new_dock_board(
