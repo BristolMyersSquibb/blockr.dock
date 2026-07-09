@@ -97,7 +97,7 @@ board_server_callback <- function(board, update, visible, ...,
   # Two bundles of live handles, kept in step. Extension servers are called
   # (below) with `board` + `update` (read / mutate the board), `view_data` +
   # `actions` (the live products) and the `extensions` peer env. The callback
-  # RETURNS `dock`, `view_data`, `actions` and each extension's result to core,
+  # RETURNS `dock`, `view_data`, `actions` and the extensions' results to core,
   # which spreads them into every plugin's args. `view_data` + `actions` are in
   # both -- they are consumed on each side (serialization and the edit-block
   # plugin read the returned pair). The gaps are deliberate: `dock`
@@ -105,6 +105,12 @@ board_server_callback <- function(board, update, visible, ...,
   # withheld from extensions, which read layout via `view_data`; `board` /
   # `update` are core's own inputs, not echoed back; the peer env stays
   # internal (core gets the resolved `ext_res`).
+  #
+  # The extension results ride under a single `extensions` key rather than as
+  # bare per-extension entries: since core splats this return into every
+  # plugin's arg list, a container-owned extension key (`edit`, `ctrl`, ...)
+  # spread bare would partial-match a core formal (`edit_block`, `ctrl_block`)
+  # and hijack the block server. Nesting keeps the keys off that arg namespace.
   ext_res <- set_names(
     map(
       extension_server,
@@ -136,14 +142,12 @@ board_server_callback <- function(board, update, visible, ...,
 
   # Returned to core, spread into every plugin's args (see the two-bundle note
   # above): `dock` for block placement, `view_data` for serialization, `actions`
-  # for the edit-block plugin, and each extension's resolved result.
-  c(
-    list(
-      dock = active_dock,
-      actions = triggers,
-      view_data = view_data
-    ),
-    ext_res
+  # for the edit-block plugin, and the extensions' resolved results.
+  list(
+    dock = active_dock,
+    actions = triggers,
+    view_data = view_data,
+    extensions = ext_res
   )
 }
 

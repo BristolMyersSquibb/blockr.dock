@@ -15,7 +15,7 @@ test_that("board server", {
       )
 
       expect_type(res, "list")
-      expect_named(res, c("dock", "actions", "view_data"))
+      expect_named(res, c("dock", "actions", "view_data", "extensions"))
 
       # `dock` is the internal active-dock reactiveValues handle (the block
       # insert / remove plugin places panels through it), still returned to the
@@ -42,12 +42,12 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "edit_board")
+        c("dock", "actions", "view_data", "extensions")
       )
 
       expect_s3_class(res[["dock"]], "reactivevalues")
 
-      ext <- res[["edit_board"]]
+      ext <- res[["extensions"]][["edit_board"]]
 
       expect_type(ext, "list")
       expect_length(ext, 1L)
@@ -206,6 +206,31 @@ test_that("board server", {
   )
 
   expect_identical(panel_lookups, 1L)
+})
+
+test_that("an extension key never leaks into core's plugin args (#318)", {
+
+  # `edit` is a prefix of core's `edit_block` block-server formal; returned as
+  # a bare entry it would partial-match when core splats the callback result
+  # into every block server's args, hijacking the block server. The extension
+  # results ride nested under `extensions`, off that arg namespace.
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = list(edit = new_edit_board_extension())
+  )
+
+  with_mock_session(
+    {
+      res <- board_server_callback(
+        board_rv,
+        update = reactiveVal(),
+        visible = reactiveVal()
+      )
+
+      expect_false("edit" %in% names(res))
+      expect_named(res[["extensions"]], "edit")
+    }
+  )
 })
 
 test_that("renaming a block refreshes the dock panel title (#193)", {
@@ -909,9 +934,9 @@ test_that("extensions mod state is applied via the update lifecycle", {
 
   ms$flushReact()
 
-  # ext_res is spread into the callback result, so the extension's
-  # controllable state is reachable without a dock handle.
-  content <- res$doc$state$content
+  # ext_res rides under `extensions` in the callback result, so the
+  # extension's controllable state is reachable without a dock handle.
+  content <- res$extensions$doc$state$content
 
   expect_s3_class(content, "reactiveVal")
   expect_identical(isolate(content()), "# old")
