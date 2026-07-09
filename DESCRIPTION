@@ -72,6 +72,7 @@ Collate:
     'ext-ui.R'
     'panel-id.R'
     'panel-ops.R'
+    'panel-ref.R'
     'plugin-block.R'
     'plugin-serdes.R'
     'utils-dock.R'

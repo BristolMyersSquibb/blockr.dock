@@ -1,20 +1,22 @@
 # blockr.dock (development version)
 
 * Panel operations are now first-class verbs in the update lifecycle's
-  `views$mod` payload, so an extension or plugin can rearrange a view's
+  `views$mod` payload, so an extension or plugin rearranges a view's
   panels through the same staging, validation and atomicity boundary
-  every other board change already speaks. Each `views$mod$<view-id>`
-  entry is a list of per-view verbs -- `add` and `rm` (which write
-  membership), plus `move` and `select` (pure client ops that write
-  nothing and are captured by the settled-echo grid mirror). Placement
-  rides the `add` and `move` entries as a `near` panel and a `side` in
-  dockView's drop vocabulary (`within` / `left` / `right` / `above` /
-  `below`). This is a **breaking** change: the old set-replace form,
-  where `views$mod$<view-id>` was a bare membership vector, is retired --
-  the membership fold now emits `add` / `rm` and the block-removal
-  cascade an `rm`. A first-class `move` awaits cynkra/dockViewR#85 and
-  meanwhile decomposes into remove + add-with-hint; `resize` joins the
-  grammar once the `set_size` dock proxy lands (#318).
+  every other board change already speaks. Panels are named with the new
+  exported typed references `blk()` / `ext()` -- by block or extension id,
+  never the `block_panel-` / `ext_panel-` wire prefix (a bare id string is
+  accepted as sugar, resolved block-first, with a loud error on a true
+  cross-namespace clash). The verbs are `add` / `rm` (which write
+  membership) and `move` / `select` (pure client ops captured by the
+  settled-echo grid mirror); a ref optionally absorbs its own placement
+  hint (`near` / `side`, plus `size` for a future `resize`), valid only
+  where placement happens -- and since hints are constructor arguments, a
+  misspelled one fails at the call site. This is a **breaking** change:
+  the old set-replace form, where `views$mod$<view-id>` was a bare
+  membership vector, is retired. `move` decomposes into remove +
+  add-with-hint until cynkra/dockViewR#85; `resize` joins once the
+  `set_size` proxy lands (#320) (#318).
 
 * The supported way for a dock extension to open a block's panel is now the
   `views` update grammar itself -- compose `active` + `select` (with a `mod`

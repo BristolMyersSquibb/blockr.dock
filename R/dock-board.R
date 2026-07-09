@@ -271,6 +271,13 @@ augment_board_update.dock_board <- function(upd, board, ...,
     upd$views <- normalize_views_delta(upd$views, board)
   }
 
+  # Canonicalize the panel-op currency: typed refs (`blk()` / `ext()`) and bare
+  # id sugar become the internal named-hint form the cascade, validation and
+  # apply consume. Idempotent, so the re-augment loop converges.
+  if (length(upd$views$mod)) {
+    upd$views$mod <- resolve_views_mod(upd$views$mod, board, upd)
+  }
+
   rm_block_ids <- upd$blocks$rm %||% character()
   skip_views <- upd$views$rm %||% character()
 

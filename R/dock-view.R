@@ -942,6 +942,262 @@ valid_panel_sides <- function() {
   c("within", "left", "right", "above", "below")
 }
 
+# The `views$mod` currency is typed refs (`blk()` / `ext()`) and bare id sugar;
+# the prefix strings are the wire encoding. Augment canonicalizes each view's
+# mod into the internal named-hint form the reducer and delivery observers
+# consume: `add` / `move` become `list(<panel-id> = <hint>)`, `rm` a panel-id
+# vector, `select` a panel id. Bare strings resolve block-first (`rm` / `move` /
+# `select` / `near` against membership, `add` against the post-state block /
+# extension set); a true cross-namespace clash errors and demands a typed ref.
+# Idempotent -- an already-canonical mod (a re-augment pass, or the internal
+# gestures / block-removal cascade) passes through untouched.
+resolve_views_mod <- function(mod, board, upd) {
+
+  post_block_ids <- setdiff(
+    c(board_block_ids(board), names(upd$blocks$add) %||% character()),
+    upd$blocks$rm %||% character()
+  )
+
+  ext_ids <- dock_ext_ids(board)
+  views <- board_views(board)
+
+  for (v in names(mod)) {
+
+    if (!v %in% names(views)) {
+      next
+    }
+
+    mod[[v]] <- resolve_view_mod(
+      mod[[v]], v, view_members(views[[v]]), post_block_ids, ext_ids
+    )
+  }
+
+  mod
+}
+
+resolve_view_mod <- function(mod, view_id, members, post_block_ids, ext_ids) {
+
+  if (!is.list(mod)) {
+    return(mod)
+  }
+
+  post_blk <- function(x) x %in% post_block_ids
+  post_ext <- function(x) x %in% ext_ids
+  mem_blk <- function(x) as.character(as_block_panel_id(x)) %in% members
+  mem_ext <- function(x) as.character(as_ext_panel_id(x)) %in% members
+
+  resolve_near <- function(n) {
+
+    if (is.null(n)) {
+      return(NULL)
+    }
+
+    if (is_panel_ref(n)) {
+
+      if (length(panel_ref_hint(n))) {
+        blockr_abort(
+          "A `near` anchor in `views$mod${view_id}` cannot carry a hint.",
+          class = "dock_views_mod_hint_invalid"
+        )
+      }
+
+      return(as.character(n))
+    }
+
+    resolve_panel_str(n, mem_blk, mem_ext, view_id)
+  }
+
+  if (not_null(mod[["add"]])) {
+    mod[["add"]] <- resolve_placement_verb(
+      mod[["add"]], view_id, "add", post_blk, post_ext, resolve_near,
+      c("near", "side", "size")
+    )
+  }
+
+  if (not_null(mod[["move"]])) {
+    mod[["move"]] <- resolve_placement_verb(
+      mod[["move"]], view_id, "move", mem_blk, mem_ext, resolve_near,
+      c("near", "side")
+    )
+  }
+
+  if (not_null(mod[["rm"]])) {
+    mod[["rm"]] <- resolve_plain_verb(
+      mod[["rm"]], view_id, "rm", mem_blk, mem_ext
+    )
+  }
+
+  if (not_null(mod[["select"]])) {
+
+    sel <- resolve_plain_verb(
+      mod[["select"]], view_id, "select", mem_blk, mem_ext
+    )
+
+    if (length(sel) != 1L) {
+      blockr_abort(
+        "`views$mod${view_id}$select` must be a single panel.",
+        class = "dock_views_mod_invalid"
+      )
+    }
+
+    mod[["select"]] <- sel
+  }
+
+  mod
+}
+
+as_operand_list <- function(x) {
+
+  if (is_panel_ref(x)) {
+    return(list(x))
+  }
+
+  if (is.character(x)) {
+    return(as.list(x))
+  }
+
+  as.list(x)
+}
+
+is_ref_or_str <- function(x) {
+  is_panel_ref(x) || is_string(x)
+}
+
+# Canonicalize a bare id / already-canonical string to a panel id, block-first,
+# using the context predicates. A canonical string passes through; a true clash
+# (the id lives in both namespaces) errors and demands a typed ref; an unknown
+# bare id defaults to the block namespace and is caught by validate_view_mod.
+resolve_panel_str <- function(x, is_blk, is_ext, view_id) {
+
+  if (maybe_block_panel_id(x) || maybe_ext_panel_id(x)) {
+    return(x)
+  }
+
+  if (is_blk(x) && is_ext(x)) {
+    blockr_abort(
+      paste0(
+        "Id `", x, "` in `views$mod$", view_id, "` names both a block and an ",
+        "extension -- disambiguate with blk() or ext()."
+      ),
+      class = "dock_views_mod_ref_clash"
+    )
+  }
+
+  if (is_ext(x) && !is_blk(x)) {
+    return(as.character(as_ext_panel_id(x)))
+  }
+
+  as.character(as_block_panel_id(x))
+}
+
+# A placement verb (`add` / `move`): an unnamed list of refs / bare ids, each
+# canonicalized with its hint (only the verb's own hint fields), deduped by
+# panel with a loud error on a conflicting duplicate. An already-canonical named
+# hint map (values are hints, not refs) passes through.
+resolve_placement_verb <- function(ops, view_id, verb, is_blk, is_ext,
+                                   resolve_near, allowed) {
+
+  ops <- as_operand_list(ops)
+
+  if (!length(ops) || !all(lgl_ply(ops, is_ref_or_str))) {
+    return(ops)
+  }
+
+  entries <- lapply(
+    ops,
+    resolve_placement_operand, view_id, verb, is_blk, is_ext, resolve_near,
+    allowed
+  )
+
+  dedup_hint_entries(entries, view_id, verb)
+}
+
+resolve_placement_operand <- function(op, view_id, verb, is_blk, is_ext,
+                                      resolve_near, allowed) {
+
+  if (is_panel_ref(op)) {
+    pid <- as.character(op)
+    hint <- panel_ref_hint(op)
+  } else {
+    pid <- resolve_panel_str(op, is_blk, is_ext, view_id)
+    hint <- list()
+  }
+
+  bad <- setdiff(names(hint), allowed)
+
+  if (length(bad)) {
+    blockr_abort(
+      paste0(
+        "`", verb, "` in `views$mod$", view_id, "` does not accept hint(s): ",
+        paste(bad, collapse = ", "), "."
+      ),
+      class = "dock_views_mod_hint_invalid"
+    )
+  }
+
+  if (not_null(hint[["near"]])) {
+    hint[["near"]] <- resolve_near(hint[["near"]])
+  }
+
+  list(pid = pid, hint = hint)
+}
+
+dedup_hint_entries <- function(entries, view_id, verb) {
+
+  out <- list()
+
+  for (e in entries) {
+
+    if (e[["pid"]] %in% names(out)) {
+
+      if (!identical(out[[e[["pid"]]]], e[["hint"]])) {
+        blockr_abort(
+          paste0(
+            "Panel `", e[["pid"]], "` appears twice in `views$mod$", view_id,
+            "$", verb, "` with conflicting hints."
+          ),
+          class = "dock_views_mod_duplicate"
+        )
+      }
+
+    } else {
+      out[[e[["pid"]]]] <- e[["hint"]]
+    }
+  }
+
+  out
+}
+
+# A plain verb (`rm` / `select`): refs / bare ids, no hints, canonicalized to a
+# unique panel-id vector. A hinted ref here is a loud error.
+resolve_plain_verb <- function(ops, view_id, verb, is_blk, is_ext) {
+
+  pids <- chr_ply(
+    as_operand_list(ops),
+    function(op) {
+
+      if (is_panel_ref(op)) {
+
+        if (length(panel_ref_hint(op))) {
+          blockr_abort(
+            paste0(
+              "`", verb, "` in `views$mod$", view_id, "` takes plain refs; ",
+              "a placement hint is not meaningful here."
+            ),
+            class = "dock_views_mod_hint_invalid"
+          )
+        }
+
+        return(as.character(op))
+      }
+
+      resolve_panel_str(op, is_blk, is_ext, view_id)
+    }
+  )
+
+  unique(pids)
+}
+
 validate_view_mod <- function(mod, view_id, members, ok_panels) {
 
   if (!is.list(mod)) {
@@ -1083,36 +1339,16 @@ validate_mod_map <- function(map, view_id, verb) {
   nms %||% character()
 }
 
-# A placement hint rides an `add` or `move` entry: an optional `near` panel to
-# anchor against (must be a member of the view -- the running `anchors` set) and
-# an optional `side` in dockview's drop vocabulary. Both absent falls back to
+# Validate a resolved placement hint's values. The keys are already constrained
+# -- they come from the `blk()` / `ext()` constructor and the verb's contextual
+# whitelist in resolution -- so this checks only that `near` resolves to a
+# member (the running `anchors` set), `side` is in dockview's drop vocabulary,
+# and `size` is a ratio in (0, 1). No hint at all falls back to
 # `determine_panel_pos()` at delivery.
 validate_panel_hint <- function(hint, view_id, anchors) {
 
   if (is.null(hint) || !length(hint)) {
     return(invisible())
-  }
-
-  if (!is.list(hint)) {
-    blockr_abort(
-      "A placement hint in `views$mod${view_id}` must be a list.",
-      class = "dock_views_mod_hint_invalid"
-    )
-  }
-
-  unknown <- setdiff(names(hint), c("near", "side"))
-
-  if (length(unknown)) {
-    blockr_abort(
-      paste0(
-        "Unknown placement hint key(s) in `views$mod$", view_id, "`: ",
-        paste(unknown, collapse = ", "), ".",
-        if ("size" %in% unknown) {
-          " `size` is part of the deferred `resize` verb (#320)."
-        }
-      ),
-      class = "dock_views_mod_hint_invalid"
-    )
   }
 
   near <- hint[["near"]]
@@ -1132,6 +1368,15 @@ validate_panel_hint <- function(hint, view_id, anchors) {
         "Hint `side` ", side, " in `views$mod$", view_id, "` must be one of: ",
         paste(valid_panel_sides(), collapse = ", "), "."
       ),
+      class = "dock_views_mod_hint_invalid"
+    )
+  }
+
+  size <- hint[["size"]]
+
+  if (not_null(size) && !(is_number(size) && size > 0 && size < 1)) {
+    blockr_abort(
+      "Hint `size` in `views$mod${view_id}` must be a ratio in (0, 1).",
       class = "dock_views_mod_hint_invalid"
     )
   }

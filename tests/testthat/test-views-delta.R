@@ -765,19 +765,27 @@ test_that("an add hint cannot forward-reference a sibling add", {
   )
 })
 
-test_that("an unknown hint key is rejected; `size` points at the resize verb", {
+test_that("hint keys are structural; size is validated as a ratio", {
 
-  # #318 documents `size` on the add hint, but it needs the deferred `resize`
-  # floor -- rejected loud (like `resize` itself), never silently dropped.
-  err <- expect_error(
+  # Finding 4 dissolves into the ref constructors: a misspelled hint is R's own
+  # unused-argument error before a payload exists, not a runtime whitelist.
+  expect_error(blk("b", sise = 0.3), "unused argument")
+
+  # `size` is a valid add hint now (unifying resize as `blk(id, size = )`),
+  # validated as a ratio in (0, 1).
+  expect_silent(
     validate_view_mod(
       list(add = list(`block_panel-b` = list(size = 0.3))),
+      "A", "block_panel-a", c("block_panel-a", "block_panel-b")
+    )
+  )
+  expect_error(
+    validate_view_mod(
+      list(add = list(`block_panel-b` = list(size = 1.5))),
       "A", "block_panel-a", c("block_panel-a", "block_panel-b")
     ),
     class = "dock_views_mod_hint_invalid"
   )
-  expect_match(conditionMessage(err), "size", fixed = TRUE)
-  expect_match(conditionMessage(err), "#320", fixed = TRUE)
 })
 
 test_that("restrict_grid preserves remaining structure", {
