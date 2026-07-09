@@ -597,7 +597,8 @@ manage_dock <- function(
         update()$views$mod[[id]],
         dock,
         board$board,
-        rm_blocks = update()$blocks$rm %||% character()
+        rm_blocks = update()$blocks$rm %||% character(),
+        active = identical(active_view(board$board), id)
       ),
       ignoreInit = TRUE
     )

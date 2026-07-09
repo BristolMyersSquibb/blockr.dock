@@ -114,14 +114,16 @@ determine_panel_pos <- function(dock) {
 #' Panel utilities
 #'
 #' Utilities for revealing dock panels. `reveal_panel()` is a pure builder:
-#' it composes a `views` update delta that brings a panel into view --
-#' switching to a view that holds it (outer `active`) and selecting its tab
-#' (inner `select`) -- for a caller to pass straight to `update()`. Revealing
-#' is not a primitive verb but the composition of two, offered as a builder so
-#' the grammar stays minimal. This is the supported way for a dock extension --
-#' which no longer receives the live `dock` -- to open a block's panel: a DAG
-#' node click becomes `update(reveal_panel(board, node))`. `show_panel()` is
-#' the older live-mutation form, requiring the `dock` handle directly.
+#' it composes a `views` update delta that brings a panel into view -- switching
+#' to a view that holds it (outer `active`) and selecting its tab (inner
+#' `select`), or, for a panel that no view holds yet, adding it to the active
+#' view at its default spot and selecting it -- for a caller to pass straight to
+#' `update()`. Revealing is not a primitive verb but the composition of a few,
+#' offered as a builder so the grammar stays minimal. This is the supported way
+#' for a dock extension -- which no longer receives the live `dock` -- to open a
+#' block's panel: a DAG node click becomes `update(reveal_panel(board, node))`,
+#' and it reveals an unplaced (picker) block just as well. `show_panel()` is the
+#' older live-mutation form, requiring the `dock` handle directly.
 #'
 #' @param id Object ID
 #' @param board Board object
@@ -132,8 +134,9 @@ determine_panel_pos <- function(dock) {
 #'   extension id.
 #'
 #' @return `show_panel()` returns `NULL` invisibly, called for its effect on the
-#'   live dock. `reveal_panel()` returns a `views` update delta, or `NULL` when
-#'   no view holds the panel.
+#'   live dock. `reveal_panel()` returns a `views` update delta that brings the
+#'   panel into view (`NULL` only for the degenerate case of a board with no
+#'   active view).
 #'
 #' @examples
 #' brd <- new_dock_board(
@@ -157,14 +160,32 @@ reveal_panel <- function(board, panel) {
     c(active_view(views), names(views))
   )
 
-  if (is.null(holder)) {
+  if (not_null(holder)) {
+    return(
+      list(
+        views = list(
+          active = holder,
+          mod = set_names(list(list(select = pid)), holder)
+        )
+      )
+    )
+  }
+
+  # Unplaced -- a member of no view (e.g. a picker block the DAG still renders).
+  # Add it to the active view at its default spot and select it, one batch, so a
+  # node click reveals it rather than silently doing nothing.
+  active <- active_view(views)
+
+  if (is.null(active)) {
     return(NULL)
   }
 
   list(
     views = list(
-      active = holder,
-      mod = set_names(list(list(select = pid)), holder)
+      mod = set_names(
+        list(list(add = set_names(list(list()), pid), select = pid)),
+        active
+      )
     )
   )
 }

@@ -172,6 +172,85 @@ test_that("op_move_panel decomposes into remove + add-with-hint", {
   )
 })
 
+test_that("op_add_panel on an inactive view places the wrapper, not the card", {
+
+  # The card is a single board-level element shown in the active view; moving it
+  # into an inactive dock would yank it off-screen, so an inactive add touches
+  # the dockview wrapper only.
+  seen <- NULL
+
+  local_mocked_bindings(
+    show_block_panel = function(...) stop("card moved into an inactive view"),
+    add_block_panel = function(block, position, dock, ...) {
+      seen <<- list(block = block, pos = position)
+      track_add(dock, as_block_panel_id(block))
+      invisible()
+    }
+  )
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block())
+  )
+  dock <- fake_dock(live = "block_panel-a")
+
+  op_add_panel(
+    "block_panel-b", list(near = "block_panel-a", side = "right"), dock, brd,
+    active = FALSE
+  )
+
+  expect_named(seen$block, "b")
+  expect_identical(
+    seen$pos, list(referencePanel = "block_panel-a", direction = "right")
+  )
+})
+
+test_that("op_remove_panel on an inactive view removes the wrapper only", {
+
+  seen <- NULL
+
+  local_mocked_bindings(
+    hide_block_panel = function(...) stop("card parked from an inactive view"),
+    remove_block_panel = function(id, dock) {
+      seen <<- as.character(id)
+      track_rm(dock, id)
+      invisible()
+    }
+  )
+
+  dock <- fake_dock(live = "block_panel-a")
+  op_remove_panel("block_panel-a", dock, active = FALSE)
+
+  expect_identical(seen, "block_panel-a")
+})
+
+test_that("the cascade rm delivers to inactive docks, skips the active", {
+
+  # Core's block-removal cleans only the active dock, so an inactive dock must
+  # deliver the cascade `rm` to clear the wrapper core never reaches; the active
+  # dock skips it to avoid a double-remove.
+  log <- character()
+
+  local_mocked_bindings(
+    remove_block_panel = function(id, dock) {
+      log <<- c(log, paste0("rm:", as.character(id)))
+      track_rm(dock, id)
+      invisible()
+    },
+    hide_block_panel = function(...) stop("active dock double-removed")
+  )
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+  mod <- list(rm = "block_panel-a")
+
+  active <- fake_dock(live = "block_panel-a")
+  deliver_panel_ops(mod, active, brd, rm_blocks = "a", active = TRUE)
+
+  inactive <- fake_dock(live = "block_panel-a")
+  deliver_panel_ops(mod, inactive, brd, rm_blocks = "a", active = FALSE)
+
+  expect_identical(log, "rm:block_panel-a")
+})
+
 test_that("deliver_panel_ops applies rm -> add -> select, skipping block-rm", {
 
   log <- character()
@@ -263,13 +342,28 @@ test_that("reveal_panel composes active + select for a holding view", {
   # A canonical panel id passes through unchanged.
   expect_identical(reveal_panel(brd, "block_panel-a")$views$active, "one")
 
-  # Nothing to reveal for a panel no view holds.
-  brd2 <- new_dock_board(
-    blocks = c(a = new_dataset_block(), b = new_head_block()),
-    views = list(one = "a")
-  )
-  expect_null(reveal_panel(brd2, "b"))
-
   # An id that is neither panel, block nor extension is an error.
   expect_error(reveal_panel(brd, "nope"), class = "dock_reveal_panel_unknown")
+})
+
+test_that("reveal_panel adds an unplaced panel to the active view", {
+
+  # A block that is a member of no view (a picker block the DAG still renders):
+  # revealing it must place it, not return NULL and silently do nothing (#308).
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(one = "a", two = "a")
+  )
+
+  rv <- reveal_panel(brd, "b")
+
+  # Composed into the active view (already active -> no outer `active` switch),
+  # a default-placement `add` plus a `select`, one batch.
+  expect_null(rv$views$active)
+  expect_identical(names(rv$views$mod$one$add), "block_panel-b")
+  expect_identical(rv$views$mod$one$add[["block_panel-b"]], list())
+  expect_identical(rv$views$mod$one$select, "block_panel-b")
+
+  # And it validates as a real delta against the board.
+  expect_silent(validate_views_delta(rv$views, brd, list()))
 })

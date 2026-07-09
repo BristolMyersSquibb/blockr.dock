@@ -1014,8 +1014,13 @@ validate_view_mod <- function(mod, view_id, members, ok_panels) {
 
   post_add <- c(post_rm, add_ids)
 
+  # An add's `near` anchors against a pre-existing member (post-rm), never a
+  # sibling add: delivery walks the add map in payload order, so a forward
+  # reference to a not-yet-added panel would reach dockview as a dangling
+  # `referencePanel`. A move's `near` may target any post-add member (moves
+  # apply after every add).
   for (pid in add_ids) {
-    validate_panel_hint(mod$add[[pid]], view_id, setdiff(post_add, pid))
+    validate_panel_hint(mod$add[[pid]], view_id, post_rm)
   }
 
   move_ids <- validate_mod_map(mod$move, view_id, "move")
@@ -1095,7 +1100,22 @@ validate_panel_hint <- function(hint, view_id, anchors) {
     )
   }
 
-  near <- hint$near
+  unknown <- setdiff(names(hint), c("near", "side"))
+
+  if (length(unknown)) {
+    blockr_abort(
+      paste0(
+        "Unknown placement hint key(s) in `views$mod$", view_id, "`: ",
+        paste(unknown, collapse = ", "), ".",
+        if ("size" %in% unknown) {
+          " `size` is part of the deferred `resize` verb (#320)."
+        }
+      ),
+      class = "dock_views_mod_hint_invalid"
+    )
+  }
+
+  near <- hint[["near"]]
 
   if (not_null(near) && !near %in% anchors) {
     blockr_abort(
@@ -1104,7 +1124,7 @@ validate_panel_hint <- function(hint, view_id, anchors) {
     )
   }
 
-  side <- hint$side
+  side <- hint[["side"]]
 
   if (not_null(side) && !isTRUE(side %in% valid_panel_sides())) {
     blockr_abort(

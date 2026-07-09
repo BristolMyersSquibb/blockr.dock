@@ -4,24 +4,36 @@
 # board and this places / removes the panel, `move` / `select` write nothing and
 # exist only as this delivery. Every op is idempotent against the live panel
 # set, so the fold's own capture echo and a re-augmented payload are no-ops.
-# Application order matches the reducer: rm -> add -> move -> select. Panels
-# whose backing block is removed in the same update (`rm_blocks`) are left to
-# core's block-removal path, which owns the active dock -- delivering them here
-# too would double-remove and throw client-side.
-deliver_panel_ops <- function(mod, dock, board, rm_blocks = character()) {
+# Application order matches the reducer: rm -> add -> move -> select.
+#
+# `active` marks whether this dock is the active view. A block / extension card
+# is a single board-level element, shown in whichever view is active, so only
+# the active dock moves cards (`show_*` / `hide_*`); an inactive dock touches
+# its dockview panel wrappers alone (`add_*_panel` / `remove_*_panel`) and
+# leaves the card where it is -- activation re-parks it via `show_view_ui`.
+# Core's own block-removal cleans only the active dock, so the same-update
+# block-removal skip is active-only: an inactive dock delivers the cascade `rm`
+# to clear the wrapper core never reaches, and only the active dock defers to
+# core (delivering there too would double-remove and throw client-side).
+deliver_panel_ops <- function(mod, dock, board, rm_blocks = character(),
+                              active = TRUE) {
 
-  skip <- as.character(as_block_panel_id(rm_blocks))
+  skip <- if (active) {
+    as.character(as_block_panel_id(rm_blocks))
+  } else {
+    character()
+  }
 
   for (pid in setdiff(mod[["rm"]] %||% character(), skip)) {
-    op_remove_panel(pid, dock)
+    op_remove_panel(pid, dock, active)
   }
 
   for (pid in names(mod[["add"]])) {
-    op_add_panel(pid, mod[["add"]][[pid]], dock, board)
+    op_add_panel(pid, mod[["add"]][[pid]], dock, board, active)
   }
 
   for (pid in names(mod[["move"]])) {
-    op_move_panel(pid, mod[["move"]][[pid]], dock, board)
+    op_move_panel(pid, mod[["move"]][[pid]], dock, board, active)
   }
 
   if (not_null(mod[["select"]])) {
@@ -38,7 +50,7 @@ panel_is_live <- function(pid, dock) {
   as.character(pid) %in% as.character(isolate(dock$live_panels()))
 }
 
-op_add_panel <- function(pid, hint, dock, board) {
+op_add_panel <- function(pid, hint, dock, board, active = TRUE) {
 
   pid <- as_dock_panel_id(pid)
 
@@ -55,7 +67,13 @@ op_add_panel <- function(pid, hint, dock, board) {
       return(invisible())
     }
 
-    show_block_panel(board_blocks(board)[obj], add_panel = pos, dock = dock)
+    block <- board_blocks(board)[obj]
+
+    if (active) {
+      show_block_panel(block, add_panel = pos, dock = dock)
+    } else {
+      add_block_panel(block, position = pos, dock = dock)
+    }
 
   } else {
 
@@ -63,15 +81,19 @@ op_add_panel <- function(pid, hint, dock, board) {
       return(invisible())
     }
 
-    show_ext_panel(
-      as.list(dock_extensions(board))[[obj]], add_panel = pos, dock = dock
-    )
+    ext <- as.list(dock_extensions(board))[[obj]]
+
+    if (active) {
+      show_ext_panel(ext, add_panel = pos, dock = dock)
+    } else {
+      add_ext_panel(ext, position = pos, dock = dock)
+    }
   }
 
   invisible()
 }
 
-op_remove_panel <- function(pid, dock) {
+op_remove_panel <- function(pid, dock, active = TRUE) {
 
   pid <- as_dock_panel_id(pid)
 
@@ -80,9 +102,17 @@ op_remove_panel <- function(pid, dock) {
   }
 
   if (is_block_panel_id(pid)) {
-    hide_block_panel(pid, rm_panel = TRUE, dock = dock)
+    if (active) {
+      hide_block_panel(pid, rm_panel = TRUE, dock = dock)
+    } else {
+      remove_block_panel(pid, dock)
+    }
   } else {
-    hide_ext_panel(pid, rm_panel = TRUE, dock = dock)
+    if (active) {
+      hide_ext_panel(pid, rm_panel = TRUE, dock = dock)
+    } else {
+      remove_ext_panel(pid, dock)
+    }
   }
 
   invisible()
@@ -92,14 +122,14 @@ op_remove_panel <- function(pid, dock) {
 # into remove + add-with-hint. The block / extension card is parked in the
 # offcanvas and re-homed by the remove / add pair, so its server state and
 # rendered output survive -- only the dockview panel wrapper is re-created.
-op_move_panel <- function(pid, hint, dock, board) {
+op_move_panel <- function(pid, hint, dock, board, active = TRUE) {
 
   if (!panel_is_live(as_dock_panel_id(pid), dock)) {
     return(invisible())
   }
 
-  op_remove_panel(pid, dock)
-  op_add_panel(pid, hint, dock, board)
+  op_remove_panel(pid, dock, active)
+  op_add_panel(pid, hint, dock, board, active)
 
   invisible()
 }

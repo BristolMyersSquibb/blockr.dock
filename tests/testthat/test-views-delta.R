@@ -705,6 +705,81 @@ test_that("validate_views_delta rejects unknown slice keys", {
   )
 })
 
+test_that("validate_view_mod enforces the per-view panel-op grammar", {
+
+  members <- c("block_panel-a", "block_panel-b")
+  ok <- c("block_panel-a", "block_panel-b", "block_panel-c")
+
+  accepts <- function(mod) {
+    expect_silent(validate_view_mod(mod, "A", members, ok))
+  }
+  rejects <- function(mod, cls) {
+    expect_error(validate_view_mod(mod, "A", members, ok), class = cls)
+  }
+
+  accepts(
+    list(
+      add = list(`block_panel-c` = list(near = "block_panel-a", side = "left"))
+    )
+  )
+  accepts(list(rm = "block_panel-a", add = list(`block_panel-a` = list())))
+  accepts(list(move = list(`block_panel-a` = list(near = "block_panel-b"))))
+  accepts(list(select = "block_panel-b"))
+
+  rejects(list(bogus = 1), "dock_views_mod_verb_unknown")
+  rejects(list(rm = "block_panel-c"), "dock_views_mod_rm_unknown")
+  rejects(
+    list(add = list(`block_panel-a` = list())), "dock_views_mod_add_existing"
+  )
+  rejects(
+    list(add = list(`block_panel-ghost` = list())),
+    "dock_views_delta_panel_ref_invalid"
+  )
+  rejects(
+    list(move = list(`block_panel-c` = list())), "dock_views_mod_move_unknown"
+  )
+  rejects(list(select = "block_panel-c"), "dock_views_mod_select_unknown")
+  rejects(
+    list(add = list(`block_panel-c` = list(side = "sideways"))),
+    "dock_views_mod_hint_invalid"
+  )
+})
+
+test_that("an add hint cannot forward-reference a sibling add", {
+
+  # Validation anchors an add's `near` against pre-existing members only: a
+  # forward reference to a panel added later in the same batch would reach
+  # dockview as a `referencePanel` that does not exist yet at delivery.
+  expect_error(
+    validate_view_mod(
+      list(
+        add = list(
+          `block_panel-b` = list(near = "block_panel-c"),
+          `block_panel-c` = list()
+        )
+      ),
+      "A", "block_panel-a",
+      c("block_panel-a", "block_panel-b", "block_panel-c")
+    ),
+    class = "dock_views_mod_hint_invalid"
+  )
+})
+
+test_that("an unknown hint key is rejected; `size` points at the resize verb", {
+
+  # #318 documents `size` on the add hint, but it needs the deferred `resize`
+  # floor -- rejected loud (like `resize` itself), never silently dropped.
+  err <- expect_error(
+    validate_view_mod(
+      list(add = list(`block_panel-b` = list(size = 0.3))),
+      "A", "block_panel-a", c("block_panel-a", "block_panel-b")
+    ),
+    class = "dock_views_mod_hint_invalid"
+  )
+  expect_match(conditionMessage(err), "size", fixed = TRUE)
+  expect_match(conditionMessage(err), "#320", fixed = TRUE)
+})
+
 test_that("restrict_grid preserves remaining structure", {
 
   grid <- dock_grid("a", "b", "c", sizes = c(1, 2, 1))

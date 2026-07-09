@@ -24,19 +24,22 @@ should be shown}
 }
 \value{
 \code{show_panel()} returns \code{NULL} invisibly, called for its effect on the
-live dock. \code{reveal_panel()} returns a \code{views} update delta, or \code{NULL} when
-no view holds the panel.
+live dock. \code{reveal_panel()} returns a \code{views} update delta that brings the
+panel into view (\code{NULL} only for the degenerate case of a board with no
+active view).
 }
 \description{
 Utilities for revealing dock panels. \code{reveal_panel()} is a pure builder:
-it composes a \code{views} update delta that brings a panel into view --
-switching to a view that holds it (outer \code{active}) and selecting its tab
-(inner \code{select}) -- for a caller to pass straight to \code{update()}. Revealing
-is not a primitive verb but the composition of two, offered as a builder so
-the grammar stays minimal. This is the supported way for a dock extension --
-which no longer receives the live \code{dock} -- to open a block's panel: a DAG
-node click becomes \code{update(reveal_panel(board, node))}. \code{show_panel()} is
-the older live-mutation form, requiring the \code{dock} handle directly.
+it composes a \code{views} update delta that brings a panel into view -- switching
+to a view that holds it (outer \code{active}) and selecting its tab (inner
+\code{select}), or, for a panel that no view holds yet, adding it to the active
+view at its default spot and selecting it -- for a caller to pass straight to
+\code{update()}. Revealing is not a primitive verb but the composition of a few,
+offered as a builder so the grammar stays minimal. This is the supported way
+for a dock extension -- which no longer receives the live \code{dock} -- to open a
+block's panel: a DAG node click becomes \code{update(reveal_panel(board, node))},
+and it reveals an unplaced (picker) block just as well. \code{show_panel()} is the
+older live-mutation form, requiring the \code{dock} handle directly.
 }
 \examples{
 brd <- new_dock_board(
