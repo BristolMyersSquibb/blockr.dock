@@ -17,7 +17,7 @@
         one: <dock_view> a
         two: <dock_view> b (active)
       <dock_extensions[1]>
-        edit_board_extension: <edit_board_extension>
+        edit_board: <edit_board_extension>
 
 # str_value.dock_board renders empty sections
 
@@ -50,5 +50,5 @@
       <dock_views[1]>
         main: <dock_view> a (active)
       <dock_extensions[1]>
-        edit_board_extension: <edit_board_extension>
+        edit_board: <edit_board_extension>
 

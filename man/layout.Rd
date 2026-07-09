@@ -77,7 +77,7 @@ blks <- c(
 )
 
 # Tabbed leaf with an explicit open tab
-panels("a", "b", "edit_board_extension", active = "edit_board_extension")
+panels("a", "b", "edit_board", active = "edit_board")
 
 # Branch with explicit child ratios
 group("a", "b", sizes = c(0.3, 0.7))
@@ -85,7 +85,7 @@ group("a", "b", sizes = c(0.3, 0.7))
 # Composing them inside a grid
 dock_grid(
   "a",
-  panels("b", "edit_board_extension", active = "edit_board_extension"),
+  panels("b", "edit_board", active = "edit_board"),
   sizes = c(0.3, 0.7)
 )
 

@@ -101,7 +101,7 @@ op_add_panel <- function(pid, hint, dock, board, active = TRUE) {
       return(invisible())
     }
 
-    ext <- as.list(dock_extensions(board))[[obj]]
+    ext <- dock_extensions(board)[obj]
 
     if (active) {
       show_ext_panel(ext, add_panel = pos, dock = dock)

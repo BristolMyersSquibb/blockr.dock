@@ -145,7 +145,7 @@ as_dock_panel_id.dock_extensions <- function(x) {
 
 #' @export
 as_dock_panel_id.dock_extension <- function(x) {
-  as_ext_panel_id(extension_id(x))
+  as_ext_panel_id(extension_key(x))
 }
 
 #' @export
@@ -299,12 +299,12 @@ as_ext_panel_id.character <- function(x) {
 
 #' @export
 as_ext_panel_id.dock_extension <- function(x) {
-  as_ext_panel_id(extension_id(x))
+  as_ext_panel_id(extension_key(x))
 }
 
 #' @export
 as_ext_panel_id.dock_extensions <- function(x) {
-  as_ext_panel_id(chr_ply(x, extension_id))
+  as_ext_panel_id(names(x))
 }
 
 #' @export
@@ -391,7 +391,7 @@ as_dock_handle_id.dock_extensions <- function(x) {
 
 #' @export
 as_dock_handle_id.dock_extension <- function(x) {
-  as_ext_handle_id(extension_id(x))
+  as_ext_handle_id(extension_key(x))
 }
 
 #' @export
@@ -511,7 +511,12 @@ as_ext_handle_id.character <- function(x) {
 
 #' @export
 as_ext_handle_id.dock_extension <- function(x) {
-  as_ext_handle_id(extension_id(x))
+  as_ext_handle_id(extension_key(x))
+}
+
+#' @export
+as_ext_handle_id.dock_extensions <- function(x) {
+  as_ext_handle_id(names(x))
 }
 
 #' @export

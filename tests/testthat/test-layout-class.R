@@ -15,17 +15,17 @@ test_that("grid resolution accepts a bare dock_extension", {
 
   expect_setequal(
     view_members(board_views(brd)[[1L]]),
-    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board")
   )
 
   brd2 <- new_dock_board(
     blocks = blks,
     extensions = ext,
-    views = list(c("edit_board_extension", "a", "b"))
+    views = list(c("edit_board", "a", "b"))
   )
   expect_setequal(
     view_members(board_views(brd2)[[1L]]),
-    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board")
   )
 })
 
@@ -38,17 +38,17 @@ test_that("grid resolution accepts a named list of extensions", {
 
   expect_setequal(
     view_members(board_views(brd)[[1L]]),
-    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+    c("block_panel-a", "block_panel-b", "ext_panel-edit")
   )
 
   brd2 <- new_dock_board(
     blocks = blks,
     extensions = exts,
-    views = list(c("edit_board_extension", "a", "b"))
+    views = list(c("edit", "a", "b"))
   )
   expect_setequal(
     view_members(board_views(brd2)[[1L]]),
-    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+    c("block_panel-a", "block_panel-b", "ext_panel-edit")
   )
 })
 
@@ -64,7 +64,7 @@ test_that("a keyed extension is addressable in a view by its list key", {
   )
   expect_setequal(
     view_members(board_views(brd)[[1L]]),
-    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+    c("block_panel-a", "block_panel-b", "ext_panel-edit")
   )
 })
 
@@ -77,19 +77,19 @@ test_that("grid resolution accepts a dock_extensions collection", {
 
   expect_setequal(
     view_members(board_views(brd)[[1L]]),
-    c("block_panel-a", "block_panel-b", "ext_panel-edit_board_extension")
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board")
   )
 })
 
 test_that("default_layout uses class-name convention across input forms", {
 
   blks <- c(a = new_dataset_block())
-  expected <- dock_grid("ext_panel-edit_board_extension", "block_panel-a")
+  expected <- dock_grid("ext_panel-edit_board", "block_panel-a")
 
   grid_of <- function(x) default_layout(blks, x)[["grids"]][[1L]]
 
   expect_identical(grid_of(new_edit_board_extension()), expected)
-  expect_identical(grid_of(list(edit = new_edit_board_extension())), expected)
+  expect_identical(grid_of(list(new_edit_board_extension())), expected)
   expect_identical(
     grid_of(new_dock_extensions(list(new_edit_board_extension()))),
     expected
@@ -307,7 +307,7 @@ test_that("dock_grid format strips panel-id prefixes unless bare = FALSE", {
   full <- format(grid, bare = FALSE)
 
   expect_false(any(grepl("block_panel-|ext_panel-", bare)))
-  expect_true(any(grepl("ext_panel-edit_board_extension", full, fixed = TRUE)))
+  expect_true(any(grepl("ext_panel-edit", full, fixed = TRUE)))
   expect_true(any(grepl("block_panel-a", full, fixed = TRUE)))
 })
 
@@ -338,13 +338,13 @@ test_that("print.dock_grid returns its input invisibly", {
 
 test_that("str_value.dock_grid lists the panel object ids", {
 
-  grid <- dock_grid("ext_panel-edit_board_extension", "block_panel-a")
+  grid <- dock_grid("ext_panel-edit_board", "block_panel-a")
 
-  expect_identical(str_value(grid), "<dock_grid> edit_board_extension, a")
+  expect_identical(str_value(grid), "<dock_grid> edit_board, a")
 
   expect_output(
     str(grid),
-    "<dock_grid> edit_board_extension, a",
+    "<dock_grid> edit_board, a",
     fixed = TRUE
   )
 })

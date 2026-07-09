@@ -7,7 +7,7 @@ test_that("validate_extensions_delta accepts a controllable mod", {
 
   expect_silent(
     validate_extensions_delta(
-      list(mod = list(doc_extension = list(content = "# hi"))),
+      list(mod = list(doc = list(content = "# hi"))),
       brd
     )
   )
@@ -48,7 +48,7 @@ test_that("validate_extensions_delta rejects malformed or ungated deltas", {
 
   expect_error(
     validate_extensions_delta(
-      list(mod = list(doc_extension = list(bogus = 1))),
+      list(mod = list(doc = list(bogus = 1))),
       brd
     ),
     class = "dock_extensions_delta_not_ctrl"
@@ -56,7 +56,7 @@ test_that("validate_extensions_delta rejects malformed or ungated deltas", {
 
   expect_error(
     validate_extensions_delta(
-      list(mod = list(doc_extension = 1L)),
+      list(mod = list(doc = 1L)),
       brd
     ),
     class = "dock_extensions_delta_entry_invalid"
@@ -64,7 +64,7 @@ test_that("validate_extensions_delta rejects malformed or ungated deltas", {
 
   expect_error(
     validate_extensions_delta(
-      list(mod = list(doc_extension = list())),
+      list(mod = list(doc = list())),
       brd
     ),
     class = "dock_extensions_delta_entry_empty"
@@ -76,10 +76,10 @@ test_that("apply_extensions_mod writes changed controllable state", {
   isolate({
 
     content <- reactiveVal("# old")
-    ext_res <- list(doc_extension = list(state = list(content = content)))
+    ext_res <- list(doc = list(state = list(content = content)))
 
     apply_extensions_mod(
-      list(doc_extension = list(content = "# new")),
+      list(doc = list(content = "# new")),
       ext_res
     )
 
@@ -100,12 +100,12 @@ test_that("apply_extensions_mod skips writes when the value is unchanged", {
     val <<- x
   }
 
-  ext_res <- list(doc_extension = list(state = list(content = rv)))
+  ext_res <- list(doc = list(state = list(content = rv)))
 
-  apply_extensions_mod(list(doc_extension = list(content = "same")), ext_res)
+  apply_extensions_mod(list(doc = list(content = "same")), ext_res)
   expect_identical(writes, 0L)
 
-  apply_extensions_mod(list(doc_extension = list(content = "changed")), ext_res)
+  apply_extensions_mod(list(doc = list(content = "changed")), ext_res)
   expect_identical(writes, 1L)
   expect_identical(val, "changed")
 })

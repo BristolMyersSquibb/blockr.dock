@@ -18,6 +18,19 @@
   add-with-hint until cynkra/dockViewR#85; `resize` joins once the
   `set_size` proxy lands (#320) (#318).
 
+* **Breaking:** an extension's id is now owned by its container, not the
+  object -- mirroring blocks. `new_dock_board(extensions = )` names an
+  unnamed extension by its class with the `_extension` suffix stripped
+  (`new_dag_extension()` becomes `dag`), and an explicit list name
+  (`extensions = list(analysis = new_dag_extension())`) overrides it;
+  duplicate keys error rather than silently colliding. That key is the
+  single identity everywhere: the wire panel id (`ext_panel-dag`, was
+  `ext_panel-dag_extension`), the DOM handle, the Shiny module namespace,
+  `dock_ext_ids()`, and what `ext()` resolves against. Boards saved under
+  the old class-derived ids restore with the extension panel dropped from
+  its view -- the extension itself still loads -- rather than erroring
+  (#318).
+
 * The supported way for a dock extension to open a block's panel is now the
   `views` update grammar itself -- compose `active` + `select` (with a `mod`
   `add` first for a panel no view holds yet) and pass it to `update()`, with no

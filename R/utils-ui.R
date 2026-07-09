@@ -85,7 +85,7 @@ visible_block_ids <- function(layout) {
 }
 
 visible_exts <- function() {
-  blockr_option("visible_extensions", "dag_extension")
+  blockr_option("visible_extensions", "dag")
 }
 
 determine_panel_pos <- function(dock) {

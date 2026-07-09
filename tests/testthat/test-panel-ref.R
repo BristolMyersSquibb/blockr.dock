@@ -43,7 +43,7 @@ test_that("augment resolves refs and bare ids to the canonical hint form", {
   )
 
   # A bare extension alias still resolves (no block by that name).
-  eid <- "edit_board_extension"
+  eid <- "edit_board"
   ep <- paste0("ext_panel-", eid)
   expect_identical(names(resolve_mod(brd, list(add = list(eid)))$add), ep)
   expect_identical(names(resolve_mod(brd, list(add = list(ext(eid))))$add), ep)
@@ -108,7 +108,7 @@ test_that("a bare id in both namespaces is a loud clash", {
   # A block whose id collides with the extension's id: in the post-state
   # namespace (where `add` resolves) the bare form is ambiguous, so it errors
   # and demands blk() / ext().
-  clash <- "edit_board_extension"
+  clash <- "edit_board"
   brd <- new_dock_board(
     blocks = set_names(list(new_head_block()), clash),
     extensions = new_edit_board_extension(),

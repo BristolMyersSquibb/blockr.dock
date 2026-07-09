@@ -42,12 +42,12 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "edit_board_extension")
+        c("dock", "actions", "view_data", "edit_board")
       )
 
       expect_s3_class(res[["dock"]], "reactivevalues")
 
-      ext <- res[["edit_board_extension"]]
+      ext <- res[["edit_board"]]
 
       expect_type(ext, "list")
       expect_length(ext, 1L)
@@ -92,7 +92,7 @@ test_that("board server", {
   do.call(
     ms$setInputs,
     set_names(
-      list(as_ext_panel_id("edit_board_extension")),
+      list(as_ext_panel_id("edit_board")),
       mod_input(dock_input("panel-to-remove"))
     )
   )
@@ -106,7 +106,7 @@ test_that("board server", {
         1L,
         c(
           as_block_panel_id("a"),
-          as_ext_panel_id("edit_board_extension")
+          as_ext_panel_id("edit_board")
         )
       ),
       c(mod_input("confirm_add"), mod_input("add_dock_panel"))
@@ -911,7 +911,7 @@ test_that("extensions mod state is applied via the update lifecycle", {
 
   # ext_res is spread into the callback result, so the extension's
   # controllable state is reachable without a dock handle.
-  content <- res$doc_extension$state$content
+  content <- res$doc$state$content
 
   expect_s3_class(content, "reactiveVal")
   expect_identical(isolate(content()), "# old")
@@ -920,7 +920,7 @@ test_that("extensions mod state is applied via the update lifecycle", {
   # (now pure) apply hook.
   upd(
     list(
-      extensions = list(mod = list(doc_extension = list(content = "# new")))
+      extensions = list(mod = list(doc = list(content = "# new")))
     )
   )
   ms$flushReact()
@@ -958,9 +958,9 @@ test_that("extension servers can read peer extension state", {
         visible = reactiveVal()
       )
 
-      expect_true("doc_extension" %in% ls(peers))
+      expect_true("doc" %in% ls(peers))
       expect_identical(
-        isolate(peers[["doc_extension"]]$state$content()),
+        isolate(peers[["doc"]]$state$content()),
         "# hi"
       )
     }

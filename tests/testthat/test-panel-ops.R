@@ -78,8 +78,9 @@ test_that("op_add_panel routes an extension panel and skips an unknown one", {
   )
   dock <- fake_dock()
 
-  op_add_panel("ext_panel-edit_board_extension", list(), dock, brd)
-  expect_true(is_dock_extension(seen))
+  op_add_panel("ext_panel-edit_board", list(), dock, brd)
+  expect_true(is_dock_extensions(seen))
+  expect_identical(names(seen), "edit_board")
 
   # A panel whose object is not on the board is skipped rather than throwing.
   seen <- NULL

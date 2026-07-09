@@ -453,15 +453,9 @@ panel_id_map <- function(blocks, extensions) {
   blocks <- as_blocks(blocks)
   ext_coll <- as_dock_extensions(extensions)
 
-  ext_pid <- as_ext_panel_id(ext_coll)
-  ext_key <- ext_alias_ids(ext_coll)
-  ext_cls <- names(ext_coll)
-
-  aliased <- ext_key != ext_cls
-
   set_names(
-    c(ext_pid, ext_pid[aliased], as_block_panel_id(blocks)),
-    c(ext_key, ext_cls[aliased], names(blocks))
+    c(as_ext_panel_id(ext_coll), as_block_panel_id(blocks)),
+    c(names(ext_coll), names(blocks))
   )
 }
 

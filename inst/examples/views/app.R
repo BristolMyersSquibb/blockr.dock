@@ -9,13 +9,13 @@ board <- new_dock_board(
   ),
   links = new_link("dataset_1", "head_1"),
   views = list(
-    Analysis = c("dag_extension", "dataset_1", "head_1"),
-    Overview = "dag_extension",
+    Analysis = c("dag", "dataset_1", "head_1"),
+    Overview = "dag",
     Empty = list()
   ),
   grids = list(
     Analysis = dock_grid(
-      "dag_extension",
+      "dag",
       panels("dataset_1", "head_1", active = "head_1"),
       sizes = c(0.3, 0.7)
     )

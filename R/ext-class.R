@@ -151,9 +151,10 @@ validate_extension.dock_extension <- function(x, ...) {
 }
 
 #' @param id Namespace ID
+#' @param key Container-assigned extension id (list key)
 #' @rdname extension
 #' @export
-extension_ui <- function(x, id, ...) {
+extension_ui <- function(x, key, id, ...) {
 
   stopifnot(is_dock_extension(x))
 
@@ -164,14 +165,14 @@ extension_ui <- function(x, id, ...) {
   }
 
   div(
-    id = NS(id, as_ext_handle_id(x)),
-    fun(NS(id, extension_id(x)), ...)
+    id = NS(id, as_ext_handle_id(key)),
+    fun(NS(id, paste0("ext_", key)), ...)
   )
 }
 
 #' @rdname extension
 #' @export
-extension_server <- function(x, ...) {
+extension_server <- function(x, key, ...) {
 
   stopifnot(is_dock_extension(x))
 
@@ -183,7 +184,7 @@ extension_server <- function(x, ...) {
 
   validate_ext_srv_result(
     coal(
-      do.call(fun, c(list(id = extension_id(x)), ...)),
+      do.call(fun, c(list(id = paste0("ext_", key)), ...)),
       list(state = list())
     ),
     x
@@ -249,6 +250,15 @@ validate_ext_srv_result <- function(res, x) {
 extension_id <- function(x) {
   stopifnot(is_dock_extension(x))
   class(x)[1L]
+}
+
+# The type-derived default key: the container names an unnamed extension by its
+# class with the `_extension` suffix stripped (`dag_extension` -> `dag`). An
+# explicit list name in `new_dock_board(extensions = )` overrides it. This is
+# the addressing identity mirror of a block's list key -- owned by the
+# container, not the object.
+extension_key <- function(x) {
+  sub("_extension$", "", extension_id(x))
 }
 
 #' @rdname extension
@@ -323,8 +333,19 @@ str.dock_extension <- function(object, ...) {
 #' @export
 new_dock_extensions <- function(x = list()) {
   validate_extensions(
-    structure(x, class = "dock_extensions")
+    structure(stamp_extension_keys(x), class = "dock_extensions")
   )
+}
+
+stamp_extension_keys <- function(x) {
+
+  if (!length(x)) {
+    return(x)
+  }
+
+  keys <- names(x) %||% rep("", length(x))
+
+  set_names(x, ifelse(nzchar(keys), keys, chr_ply(x, extension_key)))
 }
 
 #' @rdname extension
@@ -345,9 +366,15 @@ validate_extensions <- function(x) {
     )
   }
 
-  if (anyDuplicated(names(x)) > 0L) {
+  dups <- unique(names(x)[duplicated(names(x))])
+
+  if (length(dups)) {
     blockr_abort(
-      "Expecting extensions to have unique IDs.",
+      paste0(
+        "Extension ids must be unique; duplicated: ",
+        paste(dups, collapse = ", "),
+        ". Name the extensions in the `extensions` list to disambiguate."
+      ),
       class = "dock_extensions_names_invalid"
     )
   }
@@ -384,39 +411,20 @@ as_dock_extensions.list <- function(x, ...) {
 }
 
 #' @export
-names.dock_extensions <- function(x) {
-  chr_ply(x, extension_id)
-}
-
-# The id by which a layout addresses an extension: the user's list key
-# where keyed, else the class-derived `extension_id()`. `names()` is
-# hard-overridden to the class id, so the transient key only survives on
-# the underlying (unclassed) list.
-ext_alias_ids <- function(x) {
-
-  x <- as_dock_extensions(x)
-
-  ids <- chr_ply(x, extension_id)
-  keys <- names(unclass(x))
-
-  if (is.null(keys)) {
-    return(ids)
-  }
-
-  ifelse(nzchar(keys), keys, ids)
+`[.dock_extensions` <- function(x, i, ...) {
+  new_dock_extensions(NextMethod())
 }
 
 #' @export
 as.list.dock_extensions <- function(x, ...) {
-  res <- unclass(x)
-  set_names(res, chr_ply(res, extension_id))
+  set_names(unclass(x), names(x))
 }
 
 #' @export
 str_value.dock_extensions <- function(x, ...) {
 
   items <- if (length(x)) {
-    paste0("  ", ext_alias_ids(x), ": ", chr_ply(x, str_value))
+    paste0("  ", names(x), ": ", chr_ply(x, str_value))
   }
 
   paste(

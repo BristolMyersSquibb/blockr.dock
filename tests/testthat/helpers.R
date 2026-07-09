@@ -262,10 +262,10 @@ active_block_panel_tabs <- function(app, view, board_id = "my_board") {
 }
 
 # Shared helpers for the edit-board extension e2e tests (links, stacks). The
-# extension namespaces its inputs under `my_board-edit_board_extension-`. The
+# extension namespaces its inputs under `my_board-ext_edit_board-`. The
 # extension panel stays active in those tests (pre-seeded fixtures, no block
 # adds), so plain set_inputs/click drive it reliably.
-nsid <- function(x) paste0("my_board-edit_board_extension-", x)
+nsid <- function(x) paste0("my_board-ext_edit_board-", x)
 
 # Staging inputs do not drive an output, so do not wait for one.
 set_in <- function(app, id, value) {

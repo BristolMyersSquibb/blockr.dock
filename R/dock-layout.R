@@ -92,7 +92,7 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
                                      ...) {
 
   blocks <- as_blocks(blocks)
-  ext_list <- as.list(as_dock_extensions(extensions))
+  ext_coll <- as_dock_extensions(extensions)
 
   panel_ids <- grid_panel_ids(x)
 
@@ -103,7 +103,7 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
   ext_ids <- as_obj_id(new_ext_panel_id(ext_pids))
 
   blk_panels <- lapply(split(blocks[blk_ids], seq_along(blk_ids)), block_panel)
-  ext_panels <- lapply(ext_list[ext_ids], ext_panel)
+  ext_panels <- lapply(split(ext_coll[ext_ids], seq_along(ext_ids)), ext_panel)
 
   panels <- lapply(c(blk_panels, ext_panels), create_layout_panel)
   names(panels) <- chr_xtr(panels, "id")

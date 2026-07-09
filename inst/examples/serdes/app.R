@@ -20,13 +20,13 @@ serve(
     views = list(
       overview = dock_view("c", name = "Overview"),
       analysis = dock_view(
-        c("edit_board_extension", "a", "b"),
+        c("edit_board", "a", "b"),
         name = "Analysis"
       )
     ),
     grids = list(
       analysis = dock_grid(
-        "edit_board_extension",
+        "edit_board",
         panels("a", "b", active = "b"),
         sizes = c(0.3, 0.7)
       )

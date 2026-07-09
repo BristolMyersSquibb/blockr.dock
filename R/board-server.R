@@ -105,17 +105,23 @@ board_server_callback <- function(board, update, visible, ...,
   # withheld from extensions, which read layout via `view_data`; `board` /
   # `update` are core's own inputs, not echoed back; the peer env stays
   # internal (core gets the resolved `ext_res`).
-  ext_res <- lapply(
-    exts,
-    extension_server,
-    list(
-      board = board,
-      update = update,
-      view_data = view_data,
-      actions = triggers,
-      extensions = peers
+  ext_res <- set_names(
+    map(
+      extension_server,
+      exts,
+      names(exts),
+      MoreArgs = list(
+        list(
+          board = board,
+          update = update,
+          view_data = view_data,
+          actions = triggers,
+          extensions = peers
+        ),
+        list(...)
+      )
     ),
-    list(...)
+    names(exts)
   )
 
   # Externally controllable extension state is applied here, in the closure

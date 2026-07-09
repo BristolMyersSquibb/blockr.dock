@@ -196,7 +196,7 @@ dock_extensions <- function(x) {
 #' @rdname dock
 #' @export
 dock_ext_ids <- function(x) {
-  chr_ply(dock_extensions(x), extension_id)
+  names(dock_extensions(x))
 }
 
 #' @rdname dock

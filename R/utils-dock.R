@@ -110,7 +110,7 @@ remove_ext_panel <- function(id, dock) {
 }
 
 add_ext_panel <- function(ext, ..., dock) {
-  stopifnot(is_dock_extension(ext))
+  stopifnot(is_dock_extensions(ext))
 
   pid <- as_ext_panel_id(ext)
 
@@ -137,7 +137,7 @@ ext_panel <- function(ext, ...) {
 
   log_debug("creating extension panel {eid}")
 
-  dock_panel(id = eid, title = extension_name(ext), ...)
+  dock_panel(id = eid, title = extension_name(ext[[1L]]), ...)
 }
 
 ext_panel_ids <- function(proxy = dock_proxy()) {
