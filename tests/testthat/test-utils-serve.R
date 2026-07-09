@@ -28,6 +28,40 @@ test_that("serve utils", {
   )
 })
 
+test_that("grids_stable holds when the live grid is the stored fixed point", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block()),
+    grids = list(V = dock_grid("a", "b", sizes = c(0.3, 0.7)))
+  )
+
+  stored <- board_grids(brd)
+
+  # A non-default authored grid is stored non-NULL, so the comparison is not
+  # vacuously true.
+  expect_false(is.null(stored[["V"]]))
+
+  # The live grid the client echoes, when it matches the stored grid, is stable.
+  expect_true(grids_stable(stored, stored))
+
+  # Sub-tolerance size jitter is still the fixed point -- grids_stable uses the
+  # mirror's own all.equal(tolerance = grid_size_tol()), so it doesn't commit.
+  jittered <- new_dock_grids(
+    list(
+      V = dock_grid("block_panel-a", "block_panel-b", sizes = c(0.301, 0.699))
+    )
+  )
+  expect_true(grids_stable(stored, jittered))
+
+  # A live grid whose sizes drifted past the tolerance is not the fixed point.
+  drifted <- new_dock_grids(
+    list(
+      V = dock_grid("block_panel-a", "block_panel-b", sizes = c(0.85, 0.15))
+    )
+  )
+  expect_false(grids_stable(stored, drifted))
+})
+
 test_that("dock app renders a block added via the extension (#191)", {
 
   skip_on_cran()
@@ -272,6 +306,11 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
     c("ext_panel-edit_board_extension", "block_panel-a", "block_panel-b")
   )
 
+  # Grid geometry survives deserialization, not just membership: the analysis
+  # view restores its authored a/b tab group with b fronted (a is the hidden
+  # back tab), so only b reads as visible.
+  expect_setequal(visible_block_ids(active_view_grid(restored)), "b")
+
   # Import the saved file. Restoring reloads the session: the probe, wiped by
   # the reload, both waits for and proves the reload fired.
   app$run_js("window.__serdes_probe = true;")
@@ -284,6 +323,41 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # The deserialize + reconcile + re-render rebuilds the dock-owned view
   # structure and the blocks identically.
   expect_identical(read_dock_state(app), before)
+
+  # The restored board carries the per-view grid forward, not just the nav and
+  # blocks: re-exporting after the reload reproduces the stored geometry (the
+  # tab group, its active tab, the custom sizes) byte-for-byte. This reads the
+  # committed board's slots -- proving the stage / reload cycle preserved them
+  # and that the fixture re-importing its own (colliding) view ids does not drop
+  # them. It cannot see the client render, so that leg is asserted below.
+  path2 <- app$get_download("my_board-preserve_board-serialize")
+  ser2 <- jsonlite::fromJSON(path2, simplifyDataFrame = FALSE,
+                             simplifyMatrix = FALSE)
+
+  expect_identical(ser2[["payload"]][["grids"]], ser[["payload"]][["grids"]])
+  expect_identical(ser2[["payload"]][["views"]], ser[["payload"]][["views"]])
+
+  # Client leg: the byte checks read the stored slots, so they cannot observe
+  # whether the dockview client actually applied the grid. Assert one rendered
+  # DOM fact -- the analysis view's a/b tab group restores with `b` as the front
+  # tab (its authored active tab, not `a` the first). A client-side
+  # restore_layout failure, or a collapse to separate leaves, changes this set.
+  tab_diag <- function() {
+    app$get_js(paste0(
+      "JSON.stringify(Array.from(document.querySelectorAll('.dv-tab'))",
+      ".map(t => ({tab: (t.querySelector('[id*=\"-tab-\"]') || {}).id, ",
+      "active: t.classList.contains('dv-active-tab')})))"
+    ))
+  }
+  wait_js(
+    app,
+    paste0(
+      "document.querySelector('.dv-tab.dv-active-tab ",
+      "[id*=\"-tab-block_panel-b\"]') !== null"
+    ),
+    tab_diag
+  )
+  expect_identical(active_block_panel_tabs(app, "analysis"), "block_panel-b")
 })
 
 test_that("deleting a block via its card menu drops the panel and its link", {
