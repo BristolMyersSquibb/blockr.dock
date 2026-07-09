@@ -20,8 +20,8 @@
   `views` update grammar itself -- compose `active` + `select` (with a `mod`
   `add` first for a panel no view holds yet) and pass it to `update()`, with no
   need for the live `dock` handle that is no longer on the extension server
-  surface. `show_panel()`, which required that handle, is deprecated (#308,
-  #318).
+  surface. The exported `show_panel()`, which required that handle, is removed
+  (#308, #318).
 
 * The block status badge is now derived in one exported helper,
   `block_status_badge()`, and reused by blockr.dag, so the dock card icon

@@ -111,78 +111,13 @@ determine_panel_pos <- function(dock) {
   list(referenceGroup = grp, direction = "within")
 }
 
-#' Show a panel
-#'
-#' `show_panel()` brings a block or extension panel into view in the live
-#' `dock`. It is **deprecated**: opening a panel is now expressed through the
-#' `views` update grammar, which an extension composes directly and passes to
-#' `update()` -- switching to a view that holds the panel and selecting its tab,
-#' `update(list(views = list(active = v, mod = list(v = list(select = p)))))`,
-#' with a `mod` `add` entry first for an unplaced panel. That path needs no live
-#' `dock` handle, which is no longer on the extension server surface.
-#'
-#' @param id Object ID
-#' @param board Board object
-#' @param dock Object available as `dock` in extensions
-#' @param type Either "block" or "extension", the kind of panel to show
-#'
-#' @return `NULL`, invisibly.
-#'
-#' @rdname panel
-#' @export
-show_panel <- function(id, board, dock, type = c("block", "extension")) {
-
-  .Deprecated(
-    msg = paste(
-      "`show_panel()` is deprecated; open a panel through the `views` update",
-      "grammar instead (see `?show_panel`)."
-    )
-  )
-
-  stopifnot(is_string(id))
-
-  type <- match.arg(type)
-
-  if (identical(type, "block")) {
-    stopifnot(id %in% board_block_ids(board))
-  } else {
-    stopifnot(id %in% dock_ext_ids(board))
-  }
-
-  panels <- dock_panel_ids(dock$proxy)
-
-  if (identical(type, "block")) {
-    panels <- panels[lgl_ply(panels, is_block_panel_id)]
-  } else {
-    panels <- panels[lgl_ply(panels, is_ext_panel_id)]
-  }
-
-  panels <- as_obj_id(panels)
-
-  if (id %in% panels) {
-    if (identical(type, "block")) {
-      select_block_panel(id, dock$proxy)
-    } else {
-      select_ext_panel(id, dock$proxy)
-    }
-
-    return(invisible())
-  }
-
-  pos <- determine_panel_pos(dock)
-
-  if (identical(type, "block")) {
-    blocks <- board_blocks(board)
-    add_block_panel(blocks[id], position = pos, dock = dock)
-    show_block_ui(id, dock$proxy$session, board_ns = dock_board_ns(dock))
-  } else {
-    exts <- dock_extensions(board)
-
-    add_ext_panel(exts[[id]], position = pos, dock = dock)
-    show_ext_ui(id, dock$proxy$session, board_ns = dock_board_ns(dock))
-  }
-
-  invisible()
+# The front (active) panel of a dockview group. The add-panel modal resolves the
+# `referenceGroup` the user clicked `+` on to a member panel here, because the
+# grammar addresses a group through a member panel (`near`), not a group id.
+# NULL when the group is absent from the settled layout.
+group_front_panel <- function(dock, group_id) {
+  fronts <- determine_active_views(dock$layout())
+  if (group_id %in% names(fronts)) fronts[[group_id]] else NULL
 }
 
 #' @noRd

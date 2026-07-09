@@ -1,3 +1,23 @@
+# Build a `views` update that adds panels to a view -- the payload the add-panel
+# modal emits at the click, in place of mutating the dock directly. Every panel
+# takes the same placement: `within` the group the user clicked `+` on, resolved
+# once to a member panel (`near`); an empty hint (empty dock) lets the apply
+# side fall back to the view's default spot.
+add_panel_delta <- function(view_id, panel_ids, near = NULL) {
+
+  hint <- if (not_null(near)) list(near = near, side = "within") else list()
+
+  add <- set_names(rep_len(list(hint), length(panel_ids)), panel_ids)
+
+  list(views = list(mod = set_names(list(list(add = add)), view_id)))
+}
+
+# Build a `views` update that removes a panel from a view -- the payload the tab
+# close (`x`) emits, in place of hiding the panel directly.
+remove_panel_delta <- function(view_id, panel_id) {
+  list(views = list(mod = set_names(list(list(rm = panel_id)), view_id)))
+}
+
 # Apply a view's panel-op batch to its live dock. Server-initiated ops land
 # here through the applied `views$mod` payload (the `set_panel_title`
 # precedent), the mirror image of the membership fold: `add` / `rm` write the

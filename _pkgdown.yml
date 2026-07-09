@@ -41,6 +41,5 @@ reference:
 - title: Utilities
   desc: Various utility functions that are exported for use in dependent packages.
   contents:
-    - show_panel
     - blks_metadata
     - dock_id

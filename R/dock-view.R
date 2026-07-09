@@ -1139,35 +1139,6 @@ validate_panel_hint <- function(hint, view_id, anchors) {
   invisible()
 }
 
-# Fold the panel set the live dock now holds into a `views$mod` entry: the
-# panels gained become an `add` (with empty hints -- the panels are already
-# placed, the mirror owns their geometry) and those lost an `rm`. `NULL` when
-# the live set already matches, so the caller skips a no-op update. Catches the
-# dock-only mutation paths (the add-panel modal, a closed tab, an extension
-# show / hide) that never travel through block add / remove; a server op that
-# wrote membership before delivery lands here as a no-op (set already in sync).
-fold_live_membership <- function(members, live_ids) {
-
-  added <- setdiff(live_ids, members)
-  removed <- setdiff(members, live_ids)
-
-  if (!length(added) && !length(removed)) {
-    return(NULL)
-  }
-
-  mod <- list()
-
-  if (length(added)) {
-    mod[["add"]] <- set_names(rep_len(list(list()), length(added)), added)
-  }
-
-  if (length(removed)) {
-    mod[["rm"]] <- as.character(removed)
-  }
-
-  mod
-}
-
 # Merge the block-removal cleanup into a user-supplied `views$mod`: each removed
 # block's panel, wherever it is still a view member, joins that view's `rm`
 # verb. The removal cascade is an `rm`, composing by key with whatever the user

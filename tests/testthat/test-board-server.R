@@ -892,41 +892,6 @@ test_that("extensions mod state is applied via the update lifecycle", {
   expect_identical(isolate(content()), "# new")
 })
 
-test_that("a live-only panel add folds into view membership (#217)", {
-
-  board_rv <- board_args(
-    blocks = c(a = new_dataset_block(), b = new_head_block()),
-    views = list(Page = "a")
-  )
-
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
-
-  upd <- reactiveVal()
-  res <- with_mock_context(
-    ms,
-    board_server_callback(board_rv, update = upd, visible = reactiveVal())
-  )
-  ms$flushReact()
-
-  live_panels <- isolate(res$dock$live_panels)
-  expect_false(is.null(live_panels))
-
-  # The add-panel modal / show_panel touch only the live dock; view membership
-  # must catch up in the same flush (via the fold observer), not the settled
-  # echo, or a later reconcile would restore a view missing the new panel. The
-  # fold carries an `add` panel-op (with an empty hint -- the panel is already
-  # placed, the mirror owns its geometry), not a membership set.
-  cur <- isolate(live_panels())
-  isolate(live_panels(c(cur, "block_panel-b")))
-  ms$flushReact()
-
-  delta <- isolate(upd())
-
-  expect_false(is.null(delta$views$mod))
-  expect_identical(names(delta$views$mod[[1L]]$add), "block_panel-b")
-})
-
 test_that("extension servers can read peer extension state", {
 
   peers <- NULL

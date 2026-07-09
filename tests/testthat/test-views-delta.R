@@ -802,25 +802,40 @@ test_that("restrict_grid resets the active tab when it is dropped", {
   expect_identical(leaf[["active"]], "a")
 })
 
-test_that("fold_live_membership diffs the live panel set into add / rm verbs", {
+test_that("the add / tab-close gestures emit authoritative deltas", {
 
-  members <- c("block_panel-a", "block_panel-b")
+  # The modal and tab close emit these payloads (in place of mutating the dock
+  # directly); the apply observer does the placement / removal. This is what
+  # keeps membership from lagging the live dock (#217) -- it is authoritative
+  # the moment the update applies, not after a fold.
+  add <- add_panel_delta(
+    "analysis", c("block_panel-b", "ext_panel-e"), near = "block_panel-a"
+  )
+  a_mod <- add$views$mod$analysis$add
+  expect_identical(names(a_mod), c("block_panel-b", "ext_panel-e"))
+  expect_identical(
+    a_mod[["block_panel-b"]], list(near = "block_panel-a", side = "within")
+  )
 
-  added <- fold_live_membership(members, c(members, "block_panel-c"))
-  expect_identical(names(added$add), "block_panel-c")
-  expect_null(added$rm)
+  # No group (empty dock) -> empty hint, so the apply side uses its default.
+  flat <- add_panel_delta("analysis", "block_panel-b")
+  expect_identical(flat$views$mod$analysis$add[["block_panel-b"]], list())
 
-  dropped <- fold_live_membership(members, "block_panel-a")
-  expect_identical(dropped$rm, "block_panel-b")
-  expect_null(dropped$add)
+  rm <- remove_panel_delta("analysis", "block_panel-b")
+  expect_identical(rm$views$mod$analysis$rm, "block_panel-b")
 
-  # A simultaneous gain and loss folds into one batch carrying both verbs.
-  both <- fold_live_membership(members, c("block_panel-a", "block_panel-c"))
-  expect_identical(names(both$add), "block_panel-c")
-  expect_identical(both$rm, "block_panel-b")
-
-  # Already in sync (order-insensitive) -> NULL, so the caller skips a no-op.
-  expect_null(fold_live_membership(members, rev(members)))
+  # The add payload round-trips through the reducer, growing membership.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(analysis = "a")
+  )
+  grown <- apply_board_update(
+    brd, augment_board_update(add_panel_delta("analysis", "block_panel-b"), brd)
+  )
+  expect_setequal(
+    view_members(board_views(grown)[["analysis"]]),
+    c("block_panel-a", "block_panel-b")
+  )
 })
 
 test_that("empty views payload causes apply to be a no-op", {
