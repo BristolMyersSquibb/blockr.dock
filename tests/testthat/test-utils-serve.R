@@ -28,6 +28,40 @@ test_that("serve utils", {
   )
 })
 
+test_that("grids_stable holds when the live grid is the stored fixed point", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block()),
+    grids = list(V = dock_grid("a", "b", sizes = c(0.3, 0.7)))
+  )
+
+  stored <- board_grids(brd)
+
+  # A non-default authored grid is stored non-NULL, so the comparison is not
+  # vacuously true.
+  expect_false(is.null(stored[["V"]]))
+
+  # The live grid the client echoes, when it matches the stored grid, is stable.
+  expect_true(grids_stable(stored, stored))
+
+  # Sub-tolerance size jitter is still the fixed point -- grids_stable uses the
+  # mirror's own all.equal(tolerance = grid_size_tol()), so it doesn't commit.
+  jittered <- new_dock_grids(
+    list(
+      V = dock_grid("block_panel-a", "block_panel-b", sizes = c(0.301, 0.699))
+    )
+  )
+  expect_true(grids_stable(stored, jittered))
+
+  # A live grid whose sizes drifted past the tolerance is not the fixed point.
+  drifted <- new_dock_grids(
+    list(
+      V = dock_grid("block_panel-a", "block_panel-b", sizes = c(0.85, 0.15))
+    )
+  )
+  expect_false(grids_stable(stored, drifted))
+})
+
 test_that("dock app renders a block added via the extension (#191)", {
 
   skip_on_cran()
