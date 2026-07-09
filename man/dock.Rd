@@ -7,6 +7,7 @@
 \alias{dock_extensions}
 \alias{dock_extensions<-}
 \alias{dock_ext_ids}
+\alias{extension_ids}
 \alias{dock_board_options}
 \title{Dock board}
 \usage{
@@ -34,6 +35,8 @@ dock_extensions(x)
 dock_extensions(x) <- value
 
 dock_ext_ids(x)
+
+extension_ids(x, class = NULL)
 
 dock_board_options()
 }
@@ -68,7 +71,8 @@ not of an individual view.}
 
 \item{ctor, pkg}{Constructor information (used for serialization)}
 
-\item{class}{Board sub-class}
+\item{class}{Optional extension subclass; when supplied, only ids of
+extensions inheriting from it are returned.}
 
 \item{x}{Board object}
 

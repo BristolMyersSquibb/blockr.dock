@@ -107,10 +107,13 @@ board_server_callback <- function(board, update, visible, ...,
   # internal (core gets the resolved `ext_res`).
   #
   # The extension results ride under a single `extensions` key rather than as
-  # bare per-extension entries: since core splats this return into every
-  # plugin's arg list, a container-owned extension key (`edit`, `ctrl`, ...)
-  # spread bare would partial-match a core formal (`edit_block`, `ctrl_block`)
-  # and hijack the block server. Nesting keeps the keys off that arg namespace.
+  # bare per-extension entries. Bare, they enter core's arg-matching namespace:
+  # a container-owned key (`edit`, `dag`, ...) would partial-match a formal
+  # (`edit_block`, or a consumer's `dag_extension`) and either hijack the block
+  # server or silently mis-deliver. Bundled, a consumer that wants an
+  # extension's result names it explicitly -- `extensions[[extension_ids(
+  # board$board, <class>)]]` -- keyed by id, resolved from the class it knows.
+  # `register_actions()` hands actions the same bundle for the same reason.
   ext_res <- set_names(
     map(
       extension_server,

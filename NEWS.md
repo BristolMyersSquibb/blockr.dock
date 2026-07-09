@@ -33,6 +33,16 @@
   its view -- the extension itself still loads -- rather than erroring
   (#318).
 
+* **Breaking (extension authors):** an extension's live result now reaches
+  actions, block-edit callbacks and peer extensions as a single
+  `extensions` bundle keyed by extension id, rather than splatted as a bare
+  argument named after the extension. A consumer names the result it wants
+  explicitly: `extensions[[extension_ids(board$board, "<class>")]]`. The new
+  exported `extension_ids()` resolves the class it knows to the runtime id(s)
+  the container assigned. This retires the partial-argument-matching the old
+  bare-argument delivery relied on -- which a short container-owned key would
+  otherwise mis-route (#318).
+
 * The supported way for a dock extension to open a block's panel is now the
   `views` update grammar itself -- compose `active` + `select` (with a `mod`
   `add` first for a panel no view holds yet) and pass it to `update()`, with no

@@ -202,6 +202,22 @@ dock_ext_ids <- function(x) {
   names(dock_extensions(x))
 }
 
+#' @param class Optional extension subclass; when supplied, only ids of
+#'   extensions inheriting from it are returned.
+#' @rdname dock
+#' @export
+extension_ids <- function(x, class = NULL) {
+
+  exts <- dock_extensions(x)
+  ids <- names(exts)
+
+  if (is.null(class)) {
+    return(ids)
+  }
+
+  ids[lgl_ply(exts, inherits, class)]
+}
+
 #' @rdname dock
 #' @export
 dock_board_options <- function() {
