@@ -84,6 +84,23 @@ visible_block_ids <- function(layout) {
   as_obj_id(new_block_panel_id(block_panels))
 }
 
+# The block object ids of a view's whole membership (front and tabbed alike).
+# `visible_block_ids` reads a grid for front panels only; this reads the
+# structural member set, for building all of a view's cards.
+view_block_ids <- function(view) {
+
+  members <- view_members(view)
+
+  as_obj_id(new_block_panel_id(members[maybe_block_panel_id(members)]))
+}
+
+active_view_block_ids <- function(x) {
+
+  views <- board_views(x)
+
+  view_block_ids(views[[active_view(views)]])
+}
+
 visible_exts <- function() {
   blockr_option("visible_extensions", "dag")
 }

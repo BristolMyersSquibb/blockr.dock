@@ -65,7 +65,8 @@ test_that("board server", {
   withr::defer(if (!ms$isClosed()) ms$close())
 
   res <- with_mock_context(ms, {
-    manage_dock("dock_main", board_rv_2, update = reactiveVal())
+    manage_dock("dock_main", board_rv_2, visible = reactiveVal(),
+                update = reactiveVal())
   })
 
   ms$flushReact()
@@ -119,7 +120,8 @@ test_that("board server", {
   withr::defer(if (!ms2$isClosed()) ms2$close())
 
   res2 <- with_mock_context(ms2, {
-    manage_dock("dock_main", board_rv_2, update = reactiveVal())
+    manage_dock("dock_main", board_rv_2, visible = reactiveVal(),
+                update = reactiveVal())
   })
 
   ms2$flushReact()
@@ -168,7 +170,8 @@ test_that("board server", {
   upd <- reactiveVal()
 
   with_mock_context(ms3, {
-    manage_dock("dock_main", board_rv_2, update = upd)
+    manage_dock("dock_main", board_rv_2, visible = reactiveVal(),
+                update = upd)
   })
 
   ms3$flushReact()
@@ -250,7 +253,8 @@ test_that("renaming a block refreshes the dock panel title (#193)", {
   upd <- reactiveVal()
 
   with_mock_context(ms, {
-    manage_dock("dock_main", board_rv, update = upd)
+    manage_dock("dock_main", board_rv, visible = reactiveVal(),
+                update = upd)
   })
 
   ms$flushReact()
@@ -299,7 +303,8 @@ test_that("rename skips views without the block's panel (#116)", {
   upd <- reactiveVal()
 
   with_mock_context(ms, {
-    manage_dock("dock_main", board_rv, update = upd)
+    manage_dock("dock_main", board_rv, visible = reactiveVal(),
+                update = upd)
   })
 
   ms$flushReact()
@@ -492,41 +497,70 @@ test_that("report_visible_observer publishes the active view's blocks", {
   env <- with_mock_context(ms, {
     layout_a <- reactiveVal(NULL)
     layout_b <- reactiveVal(NULL)
+    init_a <- reactiveVal(FALSE)
+    init_b <- reactiveVal(FALSE)
 
     docks <- new.env(parent = emptyenv())
-    docks[["A"]] <- list(layout = layout_a)
-    docks[["B"]] <- list(layout = layout_b)
+    docks[["A"]] <- list(layout = layout_a, initialized = init_a)
+    docks[["B"]] <- list(layout = layout_b, initialized = init_b)
 
-    visible <- reactiveVal()
+    # a, b and d are all built (the channel carries the ledger); a/b are A's
+    # fronts, d lives in B. Nothing placed yet, so all `parked`.
+    visible <- reactiveVal(c(a = "parked", b = "parked", d = "parked"))
     client_active <- reactiveVal("A")
 
     report_visible_observer(visible, client_active, docks)
 
-    list(a = layout_a, b = layout_b, active = client_active, visible = visible)
+    list(
+      a = layout_a, b = layout_b, ia = init_a,
+      active = client_active, visible = visible
+    )
   })
 
   ms$flushReact()
-  expect_null(isolate(env$visible()))
+  # Before any layout report the ledger stands; report only sets levels.
+  expect_identical(
+    isolate(env$visible()), c(a = "parked", b = "parked", d = "parked")
+  )
 
+  # A shows a and b (front of two groups); not arranged -> required, d parked.
   with_mock_context(ms, env$a(
     dock_grid(panels("block_panel-a"), panels("block_panel-b"))
   ))
   ms$flushReact()
-  expect_setequal(isolate(env$visible()), c("a", "b"))
+  expect_identical(
+    isolate(env$visible()), c(a = "required", b = "required", d = "parked")
+  )
 
+  # A's arrangement observer completes -> its on-screen blocks are rendered.
+  with_mock_context(ms, env$ia(TRUE))
+  ms$flushReact()
+  expect_identical(
+    isolate(env$visible()), c(a = "rendered", b = "rendered", d = "parked")
+  )
+
+  # A layout change on the inactive B does not move the reported set.
   with_mock_context(ms, env$b(dock_grid(panels("block_panel-d"))))
   ms$flushReact()
-  expect_setequal(isolate(env$visible()), c("a", "b"))
+  expect_identical(
+    isolate(env$visible()), c(a = "rendered", b = "rendered", d = "parked")
+  )
 
+  # A drops a (its slot is now an extension panel): a parks, b stays rendered.
   with_mock_context(ms, env$a(
     dock_grid(panels("ext_panel-editor"), panels("block_panel-b"))
   ))
   ms$flushReact()
-  expect_identical(isolate(env$visible()), "b")
+  expect_identical(
+    isolate(env$visible()), c(a = "parked", b = "rendered", d = "parked")
+  )
 
+  # Switching to the not-yet-arranged B reports its block required, a/b parked.
   with_mock_context(ms, env$active("B"))
   ms$flushReact()
-  expect_identical(isolate(env$visible()), "d")
+  expect_identical(
+    isolate(env$visible()), c(a = "parked", b = "parked", d = "required")
+  )
 })
 
 test_that("report_visible_observer coalesces set-equal reports", {
@@ -537,9 +571,10 @@ test_that("report_visible_observer coalesces set-equal reports", {
     layout <- reactiveVal(NULL)
 
     docks <- new.env(parent = emptyenv())
-    docks[["A"]] <- list(layout = layout)
+    docks[["A"]] <- list(layout = layout, initialized = reactiveVal(FALSE))
 
-    visible <- reactiveVal()
+    # a and b are built, both A's fronts; nothing off-screen so no parked.
+    visible <- reactiveVal(c(a = "parked", b = "parked"))
     client_active <- reactiveVal("A")
 
     report_visible_observer(visible, client_active, docks)
@@ -553,8 +588,10 @@ test_that("report_visible_observer coalesces set-equal reports", {
   ms$flushReact()
 
   first <- isolate(env$visible())
-  expect_setequal(first, c("a", "b"))
+  expect_identical(first, c(a = "required", b = "required"))
 
+  # Reordering the groups reports the same on-screen set; the sorted status is
+  # identical, so no spurious re-publish.
   with_mock_context(ms, env$layout(
     dock_grid(panels("block_panel-b"), panels("block_panel-a"))
   ))
@@ -573,7 +610,9 @@ test_that("board_server_callback seeds visibility before the client reports", {
     visible <- reactiveVal()
     board_server_callback(board_rv, update = reactiveVal(), visible = visible)
 
-    expect_identical(isolate(visible()), "a")
+    # a is the fronted tab (required, not yet arranged); b its parked back tab.
+    # Both are on the channel -- b as the dock's build-ledger bit core ignores.
+    expect_identical(isolate(visible()), c(a = "required", b = "parked"))
   })
 })
 
@@ -592,7 +631,12 @@ test_that("the visibility seed reads the active view's open tabs", {
     visible <- reactiveVal()
     board_server_callback(board_rv, update = reactiveVal(), visible = visible)
 
-    expect_setequal(isolate(visible()), c("b", "d"))
+    # b and d front their groups (required); a is b's parked back tab. All three
+    # are on the channel, a as the build-ledger bit.
+    status <- isolate(visible())
+    expect_setequal(names(status), c("a", "b", "d"))
+    expect_identical(status[["a"]], "parked")
+    expect_identical(status[c("b", "d")], c(b = "required", d = "required"))
   })
 })
 
@@ -609,7 +653,26 @@ test_that("the visibility seed spans separate leaves", {
     visible <- reactiveVal()
     board_server_callback(board_rv, update = reactiveVal(), visible = visible)
 
-    expect_setequal(isolate(visible()), c("a", "b"))
+    status <- isolate(visible())
+    expect_setequal(names(status), c("a", "b"))
+    expect_true(all(status == "required"))
+  })
+})
+
+test_that("board_server_callback seeds cleanly on an empty board", {
+
+  # No blocks -> an empty built set. The seed must not choke on the empty map
+  # (names() is NULL there), else the board server aborts at session start and
+  # the app never becomes stable -- the shinytest2 init hang this guards.
+  board_rv <- board_args(extensions = new_edit_board_extension())
+
+  with_mock_session({
+    visible <- reactiveVal()
+
+    expect_no_error(
+      board_server_callback(board_rv, update = reactiveVal(), visible = visible)
+    )
+    expect_length(isolate(visible()), 0L)
   })
 })
 

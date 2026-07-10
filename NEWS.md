@@ -1,5 +1,28 @@
 # blockr.dock (development version)
 
+* At startup the board now builds only the active view's block cards;
+  off-screen views' cards are built on first visit rather than all up
+  front (#272). `board_ui()` rendered an edit card for every block across
+  every view into the static offcanvas mount, so first paint scaled with
+  the total block count, not with what is on screen (~20s of `renderTags`
+  on a 99-block, 12-view board). It now renders only the active view's
+  cards and defers the rest; `switch_active_view()` (and the active-dock
+  panel-op path) inserts a view's cards the first time it is shown, and the
+  `visible` channel doubles as the build ledger so a revisit never doubles
+  a card.
+
+* The `visible` channel now carries a per-block status -- `parked` (built,
+  off screen), `required` (on screen, not yet arranged) or `rendered`
+  (arranged into its panel) -- rather than a flat on-screen set, and is the
+  single store for it: the dock reads it back as its build ledger, and
+  blockr.core keys its gates on `required` / `rendered` (a `parked` card
+  reads as off screen). `report_visible_observer()` is the sole writer of
+  the levels, deriving `rendered` from a per-view `initialized` flag set
+  once the arrangement observer has moved every card into its panel. This
+  gives blockr.core an explicit "the initial view is painted" signal to
+  gate its background block-server construction on, instead of inferring
+  readiness from result-quiescence.
+
 * Panel operations are now first-class verbs in the update lifecycle's
   `views$mod` payload, so an extension or plugin rearranges a view's
   panels through the same staging, validation and atomicity boundary

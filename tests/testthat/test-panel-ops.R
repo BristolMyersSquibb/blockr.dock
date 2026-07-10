@@ -34,7 +34,8 @@ test_that("op_add_panel places a non-member at the hint, skips a member", {
       track_add(dock, as_block_panel_id(block))
       invisible()
     },
-    show_ext_panel = function(...) stop("ext path taken")
+    show_ext_panel = function(...) stop("ext path taken"),
+    ensure_block_ui = function(...) NULL
   )
 
   brd <- new_dock_board(
@@ -151,7 +152,8 @@ test_that("op_move_panel decomposes into remove + add-with-hint", {
                             add_panel$referencePanel, "/", add_panel$direction))
       track_add(dock, pid)
       invisible()
-    }
+    },
+    ensure_block_ui = function(...) NULL
   )
 
   brd <- new_dock_board(
@@ -270,7 +272,8 @@ test_that("apply_panel_ops applies rm -> add -> select, skipping block-rm", {
     select_block_panel = function(id, proxy) {
       log <<- c(log, paste0("sel:", as.character(id)))
       invisible()
-    }
+    },
+    ensure_block_ui = function(...) NULL
   )
 
   brd <- new_dock_board(
