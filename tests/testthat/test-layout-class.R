@@ -137,6 +137,41 @@ test_that("as_dock_layout materialises grid + panels on demand", {
   expect_identical(payload$panels[["block_panel-a"]][["title"]], "Dataset")
 })
 
+test_that("resolve_grid resolves bare ids mixed with a pre-resolved ref", {
+
+  blks <- c(a = new_dataset_block(), b = new_head_block())
+  exts <- list(edit = new_edit_board_extension())
+  id_map <- panel_id_map(blks, exts)
+
+  mixed <- resolve_grid(dock_grid("a", "b", ext("edit")), id_map)
+
+  expect_identical(
+    layout_panel_ids(mixed),
+    c("block_panel-a", "block_panel-b", "ext_panel-edit")
+  )
+
+  expect_identical(mixed, resolve_grid(dock_grid("a", "b", "edit"), id_map))
+  expect_identical(
+    mixed,
+    resolve_grid(dock_grid(blk("a"), blk("b"), ext("edit")), id_map)
+  )
+})
+
+test_that("a grid mixing bare ids with a ref keeps every member on the board", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = list(edit = new_edit_board_extension()),
+    views = list(Setup = c("a", "b", "edit")),
+    grids = list(Setup = dock_grid("a", "b", ext("edit")))
+  )
+
+  expect_setequal(
+    layout_panel_ids(board_grids(brd)[["Setup"]]),
+    c("block_panel-a", "block_panel-b", "ext_panel-edit")
+  )
+})
+
 test_that("sizes propagate to grid children and nested branches", {
 
   grid <- dock_grid("a", "b", sizes = c(0.3, 0.7))
