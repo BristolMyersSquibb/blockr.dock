@@ -95,6 +95,27 @@ test_that("caller-supplied `options` flows into the rendered settings body", {
   expect_false(grepl('id="test-board_name"', html, fixed = TRUE))
 })
 
+test_that("board_ui builds only the active view's block cards", {
+
+  # The offcanvas mount carries an edit card for every block on screen at
+  # startup, but not for blocks that live only in an off-screen view -- those
+  # are inserted on first visit. This keeps first paint proportional to the
+  # active view, not the whole board.
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(), b = new_head_block(), c = new_head_block()
+    ),
+    views = list(A = c("a", "b"), B = "c"),
+    active = "A"
+  )
+
+  html <- as.character(board_ui("test", brd))
+
+  expect_match(html, 'id="test-block_handle-a"', fixed = TRUE)
+  expect_match(html, 'id="test-block_handle-b"', fixed = TRUE)
+  expect_false(grepl('id="test-block_handle-c"', html, fixed = TRUE))
+})
+
 test_that("locked mode renders a navbar lock indicator", {
 
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))

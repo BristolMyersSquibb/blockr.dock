@@ -268,7 +268,11 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   )
   withr::defer(app$stop())
 
-  wait_dock_loaded(app, n_blocks = 3)
+  # Only the active view's block cards are built at startup; off-screen views
+  # defer to first visit. So the DOM surfaces the two cards of the active
+  # Analysis view (a, b), not c -- which lives in the off-screen Overview view.
+  # The full three-block board is asserted against the exported artifact below.
+  wait_dock_loaded(app, n_blocks = 2)
   before <- read_dock_state(app)
 
   # The fixture seeds the dock-owned state the round-trip must preserve: two
@@ -276,7 +280,7 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   expect_setequal(before$nav$label, c("Overview", "Analysis"))
   expect_identical(before$nav$label[before$nav$active], "Analysis")
   expect_identical(before$active_view, "analysis")
-  expect_identical(before$blocks, c("a", "b", "c"))
+  expect_identical(before$blocks, c("a", "b"))
 
   # Export through the live download handler, then assert the server-produced
   # artifact carries the dock-owned state the DOM does not surface without the
@@ -318,7 +322,9 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   app$wait_for_js("typeof window.__serdes_probe === 'undefined'",
                   timeout = 30 * 1000)
 
-  wait_dock_loaded(app, n_blocks = 3)
+  # The reload restores Analysis as the active view, so again only its two
+  # cards are built (c stays deferred with the off-screen Overview view).
+  wait_dock_loaded(app, n_blocks = 2)
 
   # The deserialize + reconcile + re-render rebuilds the dock-owned view
   # structure and the blocks identically.

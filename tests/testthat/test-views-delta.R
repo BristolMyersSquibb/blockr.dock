@@ -1003,7 +1003,8 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
       },
       hide_view_ui = function(...) NULL,
       show_view_ui = function(...) NULL,
-      update_active_dock = function(...) NULL
+      update_active_dock = function(...) NULL,
+      ensure_block_ui = function(...) NULL
     )
 
     list(sent = sent, ids = name_to_id)

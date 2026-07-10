@@ -20,15 +20,19 @@ board_ui.dock_board <- function(
   dock_outputs <- dock_outputs_ui(id, views)
 
   tagList(
-    show_hide_block_dep(),
+    show_block_dep(),
     blockr_dock_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
+      # Only the active view's cards are built at startup; off-screen views'
+      # cards are inserted on first visit. The build dominates first paint and
+      # scales with total block count, not with what is on screen.
       block_ui(
         id,
         x,
         plugins[["edit_block"]],
+        blocks = board_blocks(x)[active_view_block_ids(x)],
         ctrl_ui = if ("ctrl_block" %in% names(plugins)) plugins[["ctrl_block"]]
       )
     ),

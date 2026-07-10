@@ -1588,7 +1588,7 @@ apply_views_active <- function(active, board) {
 # it. The board's active marker is set by the caller; this drives the
 # live session state.
 switch_active_view <- function(active, docks, active_dock, client_active,
-                               session) {
+                               brd, session) {
 
   old <- isolate(client_active())
 
@@ -1607,6 +1607,17 @@ switch_active_view <- function(active, docks, active_dock, client_active,
     )
 
     hide_view_ui(old, docks)
+
+    # Build the target view's cards if this is its first visit, before
+    # show_view_ui moves them into the now-active dock.
+    active_blocks <- board_blocks(brd)[
+      view_block_ids(board_views(brd)[[active]])
+    ]
+    ensure_block_ui(
+      session$ns(NULL), brd, active_blocks, active_dock$visible,
+      session = session
+    )
+
     show_view_ui(active, docks)
     update_active_dock(active_dock, docks[[active]])
   }

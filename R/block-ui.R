@@ -72,12 +72,12 @@ has_external_ctrl <- function(x) {
   isTRUE(ctrl) || (is.character(ctrl) && length(ctrl) > 0L)
 }
 
-show_hide_block_dep <- function() {
+show_block_dep <- function() {
   htmltools::htmlDependency(
-    "show-hide-block",
+    "show-block",
     pkg_version(),
     src = pkg_file("assets", "js"),
-    script = "show-hide-block.js"
+    script = "show-block.js"
   )
 }
 
@@ -99,6 +99,8 @@ remove_block_ui.dock_board <- function(id, x, blocks, dock, ...,
     )
   }
 
+  drop_cards(dock$visible, blocks)
+
   invisible(x)
 }
 
@@ -109,7 +111,74 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
 
   stopifnot(is_blocks(blocks))
 
+  build_block_ui(
+    id, x, blocks, dock$visible, ...,
+    edit_ui = edit_ui, ctrl_ui = ctrl_ui, session = session
+  )
+
   for (i in names(blocks)) {
+    show_block_panel(blocks[i], determine_panel_pos(dock), dock)
+  }
+
+  invisible(x)
+}
+
+# The per-block visibility map lives on the `visible` reactiveVal core hands the
+# board callback -- block id -> `parked` (built into the offcanvas pool, off
+# screen) | `required` (on screen, not yet arranged) | `rendered` (arranged into
+# its panel). A present key is a built card, so the dock reads this back as its
+# build ledger (`built_cards()`); there is no second copy. Core keys its gates
+# on required / rendered, so a `parked` entry reads as off screen there -- it is
+# the dock's build-ledger bit that core retains as the single store.
+
+# Recompute the map: every built card `parked`, except the on-screen fronts,
+# which are `rendered` (once the dock has arranged) else `required`. `on_screen`
+# is a subset of the built set (a shown card was built), so the intersect is a
+# guard, not a filter.
+card_visibility <- function(built, on_screen, arranged) {
+
+  status <- set_names(rep("parked", length(built)), built)
+
+  shown <- intersect(built, on_screen)
+
+  if (length(shown)) {
+    status[shown] <- if (arranged) "rendered" else "required"
+  }
+
+  status
+}
+
+# The blocks whose cards are built, read off the shared channel.
+built_cards <- function(visible) {
+  coal(names(isolate(visible())), character(), fail_all = FALSE)
+}
+
+# Record `new` cards as built -- `parked` until the report observer places them.
+mark_cards_built <- function(visible, new) {
+
+  cur <- coal(isolate(visible()), character(), fail_all = FALSE)
+  cur[new] <- "parked"
+
+  visible(cur)
+}
+
+# Drop cards whose blocks are gone from the map.
+drop_cards <- function(visible, gone) {
+
+  cur <- coal(isolate(visible()), character(), fail_all = FALSE)
+
+  visible(cur[setdiff(names(cur), gone)])
+}
+
+# Insert the not-yet-built cards in `blocks` and record them on the channel;
+# already-built blocks are skipped, so this is safe to call ahead of any path
+# that shows one.
+build_block_ui <- function(id, x, blocks, visible, ..., edit_ui, ctrl_ui = NULL,
+                           session = get_session()) {
+
+  new <- setdiff(names(blocks), built_cards(visible))
+
+  for (i in new) {
     insertUI(
       paste0("#", id, "-blocks_offcanvas"),
       "beforeEnd",
@@ -117,11 +186,32 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
       immediate = TRUE,
       session = session
     )
-
-    show_block_panel(blocks[i], determine_panel_pos(dock), dock)
   }
 
-  invisible(x)
+  mark_cards_built(visible, new)
+
+  invisible(new)
+}
+
+# build_block_ui for callers that hold the board but not the plugins (the view
+# switch, the add-panel modal), deriving edit / ctrl UI the way board_ui does.
+ensure_block_ui <- function(id, x, blocks, visible, session = get_session()) {
+
+  if (all(names(blocks) %in% built_cards(visible))) {
+    return(invisible(character()))
+  }
+
+  plugins <- board_plugins(x)
+
+  build_block_ui(
+    id,
+    x,
+    blocks,
+    visible,
+    edit_ui = plugins[["edit_block"]],
+    ctrl_ui = if ("ctrl_block" %in% names(plugins)) plugins[["ctrl_block"]],
+    session = session
+  )
 }
 
 show_block_panel <- function(block, add_panel = TRUE, dock, ...) {
