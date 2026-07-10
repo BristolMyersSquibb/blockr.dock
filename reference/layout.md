@@ -25,9 +25,14 @@ default_layout(blocks, extensions)
 
 - ...:
 
-  For `dock_grid()` and `group()`, grid children (bare ids, character
-  vectors, lists, `panels()`, or `group()`). For `panels()`, panel ids.
-  Otherwise reserved for generic consistency.
+  For `dock_grid()` and `group()`, grid children
+  ([`blk()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  /
+  [`ext()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  references, bare ids, character vectors, lists, `panels()`, or
+  `group()`). For `panels()`, panel references or ids. A reference used
+  here cannot carry a placement hint. Otherwise reserved for generic
+  consistency.
 
 - orientation:
 
@@ -93,33 +98,30 @@ blks <- c(
   b = blockr.core::new_head_block()
 )
 
-# Tabbed leaf with an explicit open tab
-panels("a", "b", "edit_board_extension", active = "edit_board_extension")
+# Panels named with typed references; bare id strings work too
+panels(blk("a"), blk("b"), active = blk("b"))
 #> $views
 #> $views[[1]]
-#> [1] "a"
+#> [1] "block_panel-a"
 #> 
 #> $views[[2]]
-#> [1] "b"
-#> 
-#> $views[[3]]
-#> [1] "edit_board_extension"
+#> [1] "block_panel-b"
 #> 
 #> 
 #> $active
-#> [1] "edit_board_extension"
+#> [1] "block_panel-b"
 #> 
 #> attr(,"class")
 #> [1] "dock_panels" "dock_node"  
 
 # Branch with explicit child ratios
-group("a", "b", sizes = c(0.3, 0.7))
+group(blk("a"), blk("b"), sizes = c(0.3, 0.7))
 #> $children
 #> $children[[1]]
-#> [1] "a"
+#> <panel_ref> block_panel-a 
 #> 
 #> $children[[2]]
-#> [1] "b"
+#> <panel_ref> block_panel-b 
 #> 
 #> 
 #> $sizes
@@ -128,20 +130,20 @@ group("a", "b", sizes = c(0.3, 0.7))
 #> attr(,"class")
 #> [1] "dock_group" "dock_node" 
 
-# Composing them inside a grid
+# An extension panel beside a tabbed block leaf
 dock_grid(
-  "a",
-  panels("b", "edit_board_extension", active = "edit_board_extension"),
+  ext("dag"),
+  panels(blk("a"), blk("b"), active = blk("b")),
   sizes = c(0.3, 0.7)
 )
 #> <dock_grid> horizontal
-#> ├─ a (30%)
+#> ├─ dag (30%)
 #> └─ tabs (70%)
-#>    ├─ b
-#>    └─ edit_board_extension (active)
+#>    ├─ a
+#>    └─ b (active)
 
 # Vertical top-level split
-dock_grid("a", "b", orientation = "vertical")
+dock_grid(blk("a"), blk("b"), orientation = "vertical")
 #> <dock_grid> vertical
 #> ├─ a (50%)
 #> └─ b (50%)

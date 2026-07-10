@@ -89,6 +89,8 @@ are a degenerate case with one auto-named "Page" view.</p>
 <span></span>
 <span><span class="fu">dock_ext_ids</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
+<span><span class="fu">extension_ids</span><span class="op">(</span><span class="va">x</span>, class <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu">dock_board_options</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -113,14 +115,17 @@ are a degenerate case with one auto-named "Page" view.</p>
 
 
 <dt id="arg-extensions">extensions<a class="anchor" aria-label="anchor" href="#arg-extensions"></a></dt>
-<dd><p>Dock extensions</p></dd>
+<dd><p>Dock extensions. Each is keyed by its list name, or by
+its class stripped of the <code>_extension</code> suffix when unnamed (so
+<code>new_dag_extension()</code> becomes <code>dag</code>); that key names the extension's
+panel and is what <code><a href="panel-ref.html">ext()</a></code> resolves against.</p></dd>
 
 
 <dt id="arg-views">views<a class="anchor" aria-label="anchor" href="#arg-views"></a></dt>
 <dd><p>Per-view membership: a named list keyed by view id (minted
-when absent), each value a <code><a href="view.html">dock_view()</a></code>, a bare character vector of
-member panel ids, or a list of panel ids. <code>NULL</code> yields a single default
-view over the board's blocks and extensions.</p></dd>
+when absent), each value a <code><a href="view.html">dock_view()</a></code>, or member panels named with
+<code><a href="panel-ref.html">blk()</a></code> / <code><a href="panel-ref.html">ext()</a></code> references or bare ids (as a vector or list). <code>NULL</code>
+yields a single default view over the board's blocks and extensions.</p></dd>
 
 
 <dt id="arg-grids">grids<a class="anchor" aria-label="anchor" href="#arg-grids"></a></dt>
@@ -144,7 +149,8 @@ not of an individual view.</p></dd>
 
 
 <dt id="arg-class">class<a class="anchor" aria-label="anchor" href="#arg-class"></a></dt>
-<dd><p>Board sub-class</p></dd>
+<dd><p>Optional extension subclass; when supplied, only ids of
+extensions inheriting from it are returned.</p></dd>
 
 
 <dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>

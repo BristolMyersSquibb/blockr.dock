@@ -11,6 +11,7 @@ extension object.
   [`dock_extensions()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
   [`` `dock_extensions<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
   [`dock_ext_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
+  [`extension_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
   [`dock_board_options()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
   : Dock board
 - [`new_dock_stack()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/stack.md)
@@ -58,6 +59,16 @@ The canonical panel IDs a grid or layout references.
 - [`panel_obj_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ids.md)
   [`layout_panel_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ids.md)
   : Panel IDs of a grid or layout
+
+## Panel references
+
+Typed references to block and extension panels for the update grammar.
+
+- [`blk()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  [`ext()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  [`is_panel_ref()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  [`as.character(`*`<panel_ref>`*`)`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  : Typed panel references
 
 ## Dock views
 
@@ -127,8 +138,6 @@ such as adding or removing a block.
 Various utility functions that are exported for use in dependent
 packages.
 
-- [`show_panel()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel.md)
-  : UI utilities
 - [`blks_metadata()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)
   [`blk_color()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)
   [`blk_icon_data_uri()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)

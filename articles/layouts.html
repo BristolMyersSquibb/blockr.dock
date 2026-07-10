@@ -328,7 +328,7 @@ extension, a tabbed panel on the right with several blocks:</p>
 <span>  blocks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_data_block.html" class="external-link">new_dataset_block</a></span><span class="op">(</span><span class="op">)</span>, b <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_transform_block.html" class="external-link">new_head_block</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  extensions <span class="op">=</span> <span class="fu"><a href="../reference/edit.html">new_edit_board_extension</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  grids <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    Page <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_grid</a></span><span class="op">(</span><span class="st">"edit_board_extension"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span><span class="op">)</span><span class="op">)</span></span>
+<span>    Page <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_grid</a></span><span class="op">(</span><span class="st">"edit_board"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <pre><code>┌────────────────────────────┐
@@ -357,7 +357,7 @@ view:</p>
 <span>  extensions <span class="op">=</span> <span class="fu"><a href="../reference/edit.html">new_edit_board_extension</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  grids <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    Analysis <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_grid</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span><span class="op">)</span>,</span>
-<span>    Editor <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_grid</a></span><span class="op">(</span><span class="st">"edit_board_extension"</span><span class="op">)</span></span>
+<span>    Editor <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_grid</a></span><span class="op">(</span><span class="st">"edit_board"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><code>Analysis</code> view (active by default — the first view
@@ -410,7 +410,7 @@ address.</p>
 <span>  extensions <span class="op">=</span> <span class="fu"><a href="../reference/edit.html">new_edit_board_extension</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  grids <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    Analysis <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_grid</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span><span class="op">)</span>,</span>
-<span>    Editor <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_grid</a></span><span class="op">(</span><span class="st">"edit_board_extension"</span><span class="op">)</span></span>
+<span>    Editor <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_grid</a></span><span class="op">(</span><span class="st">"edit_board"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  active <span class="op">=</span> <span class="st">"Editor"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -469,7 +469,7 @@ extension sidebar, and an explicit active view.</p>
 <span>  <span class="op">)</span>,</span>
 <span>  grids <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    Data <span class="op">=</span> <span class="fu"><a href="../reference/layout.html">dock_grid</a></span><span class="op">(</span></span>
-<span>      <span class="st">"edit_board_extension"</span>,</span>
+<span>      <span class="st">"edit_board"</span>,</span>
 <span>      <span class="fu"><a href="../reference/layout.html">panels</a></span><span class="op">(</span><span class="st">"raw"</span>, <span class="st">"cleaned"</span>, active <span class="op">=</span> <span class="st">"cleaned"</span><span class="op">)</span>,</span>
 <span>      sizes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.25</span>, <span class="fl">0.75</span><span class="op">)</span></span>
 <span>    <span class="op">)</span>,</span>

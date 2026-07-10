@@ -75,9 +75,11 @@ grid.</p>
 
 
 <dl><dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>For <code>dock_grid()</code> and <code>group()</code>, grid children (bare ids,
-character vectors, lists, <code>panels()</code>, or <code>group()</code>). For <code>panels()</code>,
-panel ids. Otherwise reserved for generic consistency.</p></dd>
+<dd><p>For <code>dock_grid()</code> and <code>group()</code>, grid children (<code><a href="panel-ref.html">blk()</a></code> /
+<code><a href="panel-ref.html">ext()</a></code> references, bare ids, character vectors, lists, <code>panels()</code>, or
+<code>group()</code>). For <code>panels()</code>, panel references or ids. A reference used
+here cannot carry a placement hint. Otherwise reserved for generic
+consistency.</p></dd>
 
 
 <dt id="arg-orientation">orientation<a class="anchor" aria-label="anchor" href="#arg-orientation"></a></dt>
@@ -137,33 +139,30 @@ extensions.</p>
 <span class="r-in"><span>  b <span class="op">=</span> <span class="fu">blockr.core</span><span class="fu">::</span><span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_transform_block.html" class="external-link">new_head_block</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Tabbed leaf with an explicit open tab</span></span></span>
-<span class="r-in"><span><span class="fu">panels</span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"edit_board_extension"</span>, active <span class="op">=</span> <span class="st">"edit_board_extension"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Panels named with typed references; bare id strings work too</span></span></span>
+<span class="r-in"><span><span class="fu">panels</span><span class="op">(</span><span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"a"</span><span class="op">)</span>, <span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"b"</span><span class="op">)</span>, active <span class="op">=</span> <span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"b"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $views</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $views[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "block_panel-a"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $views[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "b"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $views[[3]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "edit_board_extension"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "block_panel-b"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $active</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "edit_board_extension"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "block_panel-b"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dock_panels" "dock_node"  </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Branch with explicit child ratios</span></span></span>
-<span class="r-in"><span><span class="fu">group</span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, sizes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">group</span><span class="op">(</span><span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"a"</span><span class="op">)</span>, <span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"b"</span><span class="op">)</span>, sizes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $children</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $children[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;panel_ref&gt; block_panel-a </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $children[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "b"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;panel_ref&gt; block_panel-b </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $sizes</span>
@@ -172,20 +171,20 @@ extensions.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dock_group" "dock_node" </span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Composing them inside a grid</span></span></span>
+<span class="r-in"><span><span class="co"># An extension panel beside a tabbed block leaf</span></span></span>
 <span class="r-in"><span><span class="fu">dock_grid</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="st">"a"</span>,</span></span>
-<span class="r-in"><span>  <span class="fu">panels</span><span class="op">(</span><span class="st">"b"</span>, <span class="st">"edit_board_extension"</span>, active <span class="op">=</span> <span class="st">"edit_board_extension"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="fu"><a href="panel-ref.html">ext</a></span><span class="op">(</span><span class="st">"dag"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="fu">panels</span><span class="op">(</span><span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"a"</span><span class="op">)</span>, <span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"b"</span><span class="op">)</span>, active <span class="op">=</span> <span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"b"</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  sizes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;dock_grid&gt; horizontal</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ├─ a (30%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ├─ dag (30%)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> └─ tabs (70%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    ├─ b</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    └─ edit_board_extension (active)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    ├─ a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    └─ b (active)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Vertical top-level split</span></span></span>
-<span class="r-in"><span><span class="fu">dock_grid</span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, orientation <span class="op">=</span> <span class="st">"vertical"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">dock_grid</span><span class="op">(</span><span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"a"</span><span class="op">)</span>, <span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"b"</span><span class="op">)</span>, orientation <span class="op">=</span> <span class="st">"vertical"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;dock_grid&gt; vertical</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ├─ a (50%)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> └─ b (50%)</span>

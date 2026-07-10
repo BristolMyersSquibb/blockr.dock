@@ -25,9 +25,9 @@ is_dock_extension(x)
 
 validate_extension(x, ...)
 
-extension_ui(x, id, ...)
+extension_ui(x, key, id, ...)
 
-extension_server(x, ...)
+extension_server(x, key, ...)
 
 extension_id(x)
 
@@ -113,6 +113,10 @@ extension_block_callback(x, ...)
 - x:
 
   Extension object
+
+- key:
+
+  Container-assigned extension id (list key)
 
 - id:
 

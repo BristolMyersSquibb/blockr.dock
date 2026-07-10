@@ -2,6 +2,75 @@
 
 ## blockr.dock (development version)
 
+- Panel operations are now first-class verbs in the update lifecycle’s
+  `views$mod` payload, so an extension or plugin rearranges a view’s
+  panels through the same staging, validation and atomicity boundary
+  every other board change already speaks. Panels are named with the new
+  exported typed references
+  [`blk()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  /
+  [`ext()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  – by block or extension id, never the `block_panel-` / `ext_panel-`
+  wire prefix (a bare id string is accepted as sugar, resolved
+  block-first, with a loud error on a true cross-namespace clash). The
+  same references name panels in the layout-authoring DSL too
+  ([`dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md),
+  [`panels()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md),
+  a `views` entry), so a board definition reads as blocks and extensions
+  rather than wire ids. The verbs are `add` / `rm` (which write
+  membership) and `move` / `select` (pure client ops captured by the
+  settled-echo grid mirror); a ref optionally absorbs its own placement
+  hint (`near` / `side`, plus `size` for a future `resize`), valid only
+  where placement happens – and since hints are constructor arguments, a
+  misspelled one fails at the call site. This is a **breaking** change:
+  the old set-replace form, where `views$mod$<view-id>` was a bare
+  membership vector, is retired. `move` decomposes into remove +
+  add-with-hint until cynkra/dockViewR#85; `resize` joins once the
+  `set_size` proxy lands
+  ([\#320](https://github.com/BristolMyersSquibb/blockr.dock/issues/320))
+  ([\#318](https://github.com/BristolMyersSquibb/blockr.dock/issues/318)).
+
+- **Breaking:** an extension’s id is now owned by its container, not the
+  object – mirroring blocks. `new_dock_board(extensions = )` names an
+  unnamed extension by its class with the `_extension` suffix stripped
+  (`new_dag_extension()` becomes `dag`), and an explicit list name
+  (`extensions = list(analysis = new_dag_extension())`) overrides it;
+  duplicate keys error rather than silently colliding. That key is the
+  single identity everywhere: the wire panel id (`ext_panel-dag`, was
+  `ext_panel-dag_extension`), the DOM handle, the Shiny module
+  namespace,
+  [`dock_ext_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md),
+  and what
+  [`ext()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  resolves against. Boards saved under the old class-derived ids restore
+  with the extension panel dropped from its view – the extension itself
+  still loads – rather than erroring
+  ([\#318](https://github.com/BristolMyersSquibb/blockr.dock/issues/318)).
+
+- **Breaking (extension authors):** an extension’s live result now
+  reaches actions, block-edit callbacks and peer extensions as a single
+  `extensions` bundle keyed by extension id, rather than splatted as a
+  bare argument named after the extension. A consumer names the result
+  it wants explicitly:
+  `extensions[[extension_ids(board$board, "<class>")]]`. The new
+  exported
+  [`extension_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
+  resolves the class it knows to the runtime id(s) the container
+  assigned. This retires the partial-argument-matching the old
+  bare-argument delivery relied on – which a short container-owned key
+  would otherwise mis-route
+  ([\#318](https://github.com/BristolMyersSquibb/blockr.dock/issues/318)).
+
+- The supported way for a dock extension to open a block’s panel is now
+  the `views` update grammar itself – compose `active` + `select` (with
+  a `mod` `add` first for a panel no view holds yet) and pass it to
+  [`update()`](https://rdrr.io/r/stats/update.html), with no need for
+  the live `dock` handle that is no longer on the extension server
+  surface. The exported `show_panel()`, which required that handle, is
+  removed
+  ([\#308](https://github.com/BristolMyersSquibb/blockr.dock/issues/308),
+  [\#318](https://github.com/BristolMyersSquibb/blockr.dock/issues/318)).
+
 - The block status badge is now derived in one exported helper,
   [`block_status_badge()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md),
   and reused by blockr.dag, so the dock card icon and the DAG node badge

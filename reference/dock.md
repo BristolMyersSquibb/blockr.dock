@@ -40,6 +40,8 @@ dock_extensions(x) <- value
 
 dock_ext_ids(x)
 
+extension_ids(x, class = NULL)
+
 dock_board_options()
 ```
 
@@ -63,16 +65,24 @@ dock_board_options()
 
 - extensions:
 
-  Dock extensions
+  Dock extensions. Each is keyed by its list name, or by its class
+  stripped of the `_extension` suffix when unnamed (so
+  `new_dag_extension()` becomes `dag`); that key names the extension's
+  panel and is what
+  [`ext()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  resolves against.
 
 - views:
 
   Per-view membership: a named list keyed by view id (minted when
   absent), each value a
   [`dock_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md),
-  a bare character vector of member panel ids, or a list of panel ids.
-  `NULL` yields a single default view over the board's blocks and
-  extensions.
+  or member panels named with
+  [`blk()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  /
+  [`ext()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  references or bare ids (as a vector or list). `NULL` yields a single
+  default view over the board's blocks and extensions.
 
 - grids:
 
@@ -97,7 +107,8 @@ dock_board_options()
 
 - class:
 
-  Board sub-class
+  Optional extension subclass; when supplied, only ids of extensions
+  inheriting from it are returned.
 
 - x:
 

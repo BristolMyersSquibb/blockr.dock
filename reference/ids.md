@@ -77,7 +77,7 @@ as_dock_panel_id(blks)
 #> attr(,"class")
 #> [1] "block_panel_id" "dock_panel_id"  "dock_id"       
 as_dock_panel_id(ext)
-#> [1] "ext_panel-edit_board_extension"
+#> [1] "ext_panel-edit_board"
 #> attr(,"class")
 #> [1] "ext_panel_id"  "dock_panel_id" "dock_id"      
 
@@ -89,7 +89,7 @@ as_dock_handle_id(blks)
 #> attr(,"class")
 #> [1] "block_handle_id" "dock_handle_id"  "dock_id"        
 as_dock_handle_id(ext)
-#> [1] "ext_handle-edit_board_extension"
+#> [1] "ext_handle-edit_board"
 #> attr(,"class")
 #> [1] "ext_handle_id"  "dock_handle_id" "dock_id"       
 

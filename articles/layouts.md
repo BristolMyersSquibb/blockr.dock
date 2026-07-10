@@ -255,7 +255,7 @@ new_dock_board(
   blocks = c(a = new_dataset_block(), b = new_head_block()),
   extensions = new_edit_board_extension(),
   grids = list(
-    Page = dock_grid("edit_board_extension", c("a", "b"))
+    Page = dock_grid("edit_board", c("a", "b"))
   )
 )
 ```
@@ -287,7 +287,7 @@ new_dock_board(
   extensions = new_edit_board_extension(),
   grids = list(
     Analysis = dock_grid("a", "b"),
-    Editor = dock_grid("edit_board_extension")
+    Editor = dock_grid("edit_board")
   )
 )
 ```
@@ -349,7 +349,7 @@ new_dock_board(
   extensions = new_edit_board_extension(),
   grids = list(
     Analysis = dock_grid("a", "b"),
-    Editor = dock_grid("edit_board_extension")
+    Editor = dock_grid("edit_board")
   ),
   active = "Editor"
 )
@@ -412,7 +412,7 @@ new_dock_board(
   ),
   grids = list(
     Data = dock_grid(
-      "edit_board_extension",
+      "edit_board",
       panels("raw", "cleaned", active = "cleaned"),
       sizes = c(0.25, 0.75)
     ),
