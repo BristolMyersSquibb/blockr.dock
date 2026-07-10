@@ -687,19 +687,18 @@ default_layout <- function(blocks, extensions) {
   )
 }
 
-# Rewrite a grid's bare leaf ids to canonical panel ids via `id_map`. Only
-# fully-bare grids are rewritten (see `resolve_panel_ids()`); a name clash
-# between an extension and a block falls back to a default two-group grid.
+# Rewrite a grid's bare leaf ids to canonical panel ids via `id_map`, per
+# element (like `resolve_panel_ids()`): a bare key is mapped and an
+# already-canonical panel id passes through, so a `blk()` / `ext()` ref can sit
+# beside a bare id in the same grid. A name clash between an extension and a
+# block is ambiguous, so bare resolution falls back to a default two-group grid.
 resolve_grid <- function(grid, id_map) {
 
   grid <- as_dock_grid(grid)
 
   panel_ids <- layout_panel_ids(grid)
 
-  bare <- length(panel_ids) && all(panel_ids %in% names(id_map)) &&
-    any(!panel_ids %in% id_map)
-
-  if (!bare) {
+  if (!any(panel_ids %in% names(id_map))) {
     return(grid)
   }
 
@@ -730,7 +729,9 @@ clash_default_grid <- function(id_map) {
 
 rewrite_grid_leaves <- function(grid, id_map) {
 
-  rename1 <- function(id) coal(id_map[[id]], id, fail_all = FALSE)
+  rename1 <- function(id) {
+    if (length(id) == 1L && id %in% names(id_map)) id_map[[id]] else id
+  }
 
   rewrite_node <- function(node) {
 
