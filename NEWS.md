@@ -1,5 +1,22 @@
 # blockr.dock (development version)
 
+* At startup the board now builds only the active view's dockView;
+  off-screen views' docks are created on first visit rather than all up
+  front (#304), mirroring the card deferral below. Building every view's
+  dockView left the active group pointing at an off-screen view during the
+  startup restore burst, transiently dropping the visible view's blocks and
+  starving first paint. `reconcile_views()` now builds only the active
+  view's dock and defers the rest; a view without a live dock contributes
+  its board-stored grid to `view_data()` rather than blocking it.
+
+* The per-view `initialized` flag that drives the `rendered` status now
+  flips only once the client confirms it applied the view's restore
+  (dockViewR's `_restored` echo), rather than at the tail of the
+  server-side `show_block_panel()` loop (#304). blockr.core's background
+  block-server construction is gated on this, so it starts only after the
+  visible view is on screen instead of while the client is still settling
+  it.
+
 * At startup the board now builds only the active view's block cards;
   off-screen views' cards are built on first visit rather than all up
   front (#272). `board_ui()` rendered an edit card for every block across
@@ -17,11 +34,11 @@
   single store for it: the dock reads it back as its build ledger, and
   blockr.core keys its gates on `required` / `rendered` (a `parked` card
   reads as off screen). `report_visible_observer()` is the sole writer of
-  the levels, deriving `rendered` from a per-view `initialized` flag set
-  once the arrangement observer has moved every card into its panel. This
-  gives blockr.core an explicit "the initial view is painted" signal to
-  gate its background block-server construction on, instead of inferring
-  readiness from result-quiescence.
+  the levels, deriving `rendered` from a per-view `initialized` flag flipped
+  once the client confirms it applied the view's restore. This gives
+  blockr.core an explicit "the initial view is painted" signal to gate its
+  background block-server construction on, instead of inferring readiness
+  from result-quiescence.
 
 * Panel operations are now first-class verbs in the update lifecycle's
   `views$mod` payload, so an extension or plugin rearranges a view's

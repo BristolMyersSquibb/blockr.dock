@@ -491,13 +491,16 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
     sprintf("#my_board-view_nav .blockr-view-item[data-view-id=\"%s\"]", id)
   }
 
-  # First is active on load: its dock alone carries blockr-view-dock-active.
+  # First is active on load, and off-screen views' docks are deferred (#304),
+  # so only its dock is built -- carrying blockr-view-dock-active. Second's dock
+  # materialises on first visit (below).
   docks <- read_view_docks(app)
-  expect_setequal(docks$id, c(first, second))
-  expect_identical(docks$id[docks$active], first)
+  expect_identical(docks$id, first)
+  expect_true(docks$active)
 
   # Switch active view: clicking the Second nav item reports its id to
-  # `view_nav`; the reconcile swaps which dock is active.
+  # `view_nav`; the reconcile builds Second's deferred dock on this first visit
+  # and swaps which dock is active.
   app$run_js(
     paste0("document.querySelector('", item_sel(second), "').click()")
   )
@@ -506,7 +509,9 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   nav <- read_view_nav(app)
   expect_identical(nav$label[nav$active], "Second")
 
+  # Second's dock is now built and active; First's stays around, inactive.
   docks <- read_view_docks(app)
+  expect_setequal(docks$id, c(first, second))
   expect_identical(docks$id[docks$active], second)
 
   # Rename the active view through the pencil: it swaps the label span for an
