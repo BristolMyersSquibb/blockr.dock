@@ -85,7 +85,10 @@ blockr_ser.dock_extension <- function(x, data, ...) {
 blockr_ser.dock_extensions <- function(x, data, ...) {
   list(
     object = class(x),
-    payload = map(blockr_ser, x, coal(data, list())[names(x)])
+    payload = set_names(
+      map(blockr_ser, x, coal(data, list())[names(x)]),
+      names(x)
+    )
   )
 }
 

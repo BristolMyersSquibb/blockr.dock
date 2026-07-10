@@ -97,7 +97,7 @@ board_server_callback <- function(board, update, visible, ...,
   # Two bundles of live handles, kept in step. Extension servers are called
   # (below) with `board` + `update` (read / mutate the board), `view_data` +
   # `actions` (the live products) and the `extensions` peer env. The callback
-  # RETURNS `dock`, `view_data`, `actions` and each extension's result to core,
+  # RETURNS `dock`, `view_data`, `actions` and the extensions' results to core,
   # which spreads them into every plugin's args. `view_data` + `actions` are in
   # both -- they are consumed on each side (serialization and the edit-block
   # plugin read the returned pair). The gaps are deliberate: `dock`
@@ -105,17 +105,32 @@ board_server_callback <- function(board, update, visible, ...,
   # withheld from extensions, which read layout via `view_data`; `board` /
   # `update` are core's own inputs, not echoed back; the peer env stays
   # internal (core gets the resolved `ext_res`).
-  ext_res <- lapply(
-    exts,
-    extension_server,
-    list(
-      board = board,
-      update = update,
-      view_data = view_data,
-      actions = triggers,
-      extensions = peers
+  #
+  # The extension results ride under a single `extensions` key rather than as
+  # bare per-extension entries. Bare, they enter core's arg-matching namespace:
+  # a container-owned key (`edit`, `dag`, ...) would partial-match a formal
+  # (`edit_block`, or a consumer's `dag_extension`) and either hijack the block
+  # server or silently mis-deliver. Bundled, a consumer that wants an
+  # extension's result names it explicitly -- `extensions[[extension_ids(
+  # board$board, <class>)]]` -- keyed by id, resolved from the class it knows.
+  # `register_actions()` hands actions the same bundle for the same reason.
+  ext_res <- set_names(
+    map(
+      extension_server,
+      exts,
+      names(exts),
+      MoreArgs = list(
+        list(
+          board = board,
+          update = update,
+          view_data = view_data,
+          actions = triggers,
+          extensions = peers
+        ),
+        list(...)
+      )
     ),
-    list(...)
+    names(exts)
   )
 
   # Externally controllable extension state is applied here, in the closure
@@ -130,14 +145,12 @@ board_server_callback <- function(board, update, visible, ...,
 
   # Returned to core, spread into every plugin's args (see the two-bundle note
   # above): `dock` for block placement, `view_data` for serialization, `actions`
-  # for the edit-block plugin, and each extension's resolved result.
-  c(
-    list(
-      dock = active_dock,
-      actions = triggers,
-      view_data = view_data
-    ),
-    ext_res
+  # for the edit-block plugin, and the extensions' resolved results.
+  list(
+    dock = active_dock,
+    actions = triggers,
+    view_data = view_data,
+    extensions = ext_res
   )
 }
 
@@ -558,28 +571,23 @@ manage_dock <- function(
       active_group_trail = active_group_trail
     )
 
-    # Fold live-only membership changes — the add-panel modal, a closed tab, an
-    # extension show / hide — into the view's membership set in the same flush,
-    # so the panel set stays authoritative server-side and a later board change
-    # never restores a view that lags the live dock. Block add / remove fold
-    # through the update lifecycle already; this catches the dock-only paths.
-    # Membership only — geometry rides the settled-echo mirror below.
+    # Apply server-initiated panel ops to this view's live dock -- the sole
+    # mutator of the dock. Every membership change (the add-panel modal, a
+    # closed tab, an extension op) reaches the board via `update()` and lands
+    # here. Keyed on the applied `views$mod` for the view (the `set_panel_title`
+    # precedent), never on a board diff — `move` / `select` write nothing to the
+    # board, so a state-diff observer never sees them. Each op is idempotent
+    # against the live panel set, so a re-augmented payload settles without
+    # ping-pong.
     observeEvent(
-      live_panels(),
-      {
-        views <- board_views(board$board)
-
-        if (id %in% names(views)) {
-
-          folded <- fold_live_membership(
-            view_members(views[[id]]), live_panels()
-          )
-
-          if (!is.null(folded)) {
-            update(list(views = list(mod = set_names(list(folded), id))))
-          }
-        }
-      },
+      update()$views$mod[[id]],
+      apply_panel_ops(
+        update()$views$mod[[id]],
+        dock,
+        board$board,
+        rm_blocks = update()$blocks$rm %||% character(),
+        active = identical(active_view(board$board), id)
+      ),
       ignoreInit = TRUE
     )
 
@@ -627,24 +635,13 @@ manage_dock <- function(
       once = TRUE
     )
 
+    # A closed tab (dockview's remove plugin is `manual`, so it waits for the
+    # server) emits an `rm` panel-op; the apply observer above removes it.
+    # Membership is authoritative from the update, so no later reconcile can
+    # restore a view still listing the closed panel (#217).
     observeEvent(
       input[[dock_input("panel-to-remove")]],
-      {
-        pid <- as_dock_panel_id(
-          input[[dock_input("panel-to-remove")]]
-        )
-
-        if (is_block_panel_id(pid)) {
-          hide_block_panel(pid, rm_panel = TRUE, dock = dock)
-        } else if (is_ext_panel_id(pid)) {
-          hide_ext_panel(pid, rm_panel = TRUE, dock = dock)
-        } else {
-          blockr_abort(
-            "Unknown panel type {class(pid)}.",
-            class = "dock_panel_invalid"
-          )
-        }
-      }
+      update(remove_panel_delta(id, input[[dock_input("panel-to-remove")]]))
     )
 
     observeEvent(
@@ -663,6 +660,10 @@ manage_dock <- function(
       suggest_panels_to_add(dock, board, panels = list(), session = session)
     )
 
+    # The add-panel modal emits an `add` panel-op; the apply observer places the
+    # panels. The `+` was clicked on a group, so anchor the add `within` a
+    # member of that group (`near`); an empty dock has no group and falls back
+    # to the view's default spot.
     observeEvent(
       input$confirm_add,
       {
@@ -670,35 +671,11 @@ manage_dock <- function(
 
         ref_group <- input[[dock_input("panel-to-add")]]
 
-        pos <- if (!is.null(ref_group)) {
-          list(referenceGroup = ref_group, direction = "within")
-        } else {
-          # Empty dock — no reference group, let DockView place freely
-          TRUE
+        near <- if (not_null(ref_group)) {
+          group_front_panel(dock, ref_group)
         }
 
-        for (pid in input$add_dock_panel) {
-          if (maybe_block_panel_id(pid)) {
-            show_block_panel(
-              board_blocks(board$board)[as_obj_id(new_block_panel_id(pid))],
-              add_panel = pos,
-              dock = dock
-            )
-          } else if (maybe_ext_panel_id(pid)) {
-            exts <- as.list(dock_extensions(board$board))
-
-            show_ext_panel(
-              exts[[as_obj_id(new_ext_panel_id(pid))]],
-              add_panel = pos,
-              dock = dock
-            )
-          } else {
-            blockr_abort(
-              "Unknown panel specification {pid}.",
-              class = "dock_panel_invalid"
-            )
-          }
-        }
+        update(add_panel_delta(id, input$add_dock_panel, near))
 
         removeModal()
       }

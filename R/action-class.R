@@ -111,7 +111,7 @@ register_actions <- function(
   triggers,
   board,
   update,
-  args,
+  extensions,
   session = get_session()
 ) {
   ids <- chr_ply(actions, action_id)
@@ -121,15 +121,20 @@ register_actions <- function(
     setequal(names(triggers), ids)
   )
 
+  # The extension results ride as one `extensions` bundle (keyed by extension
+  # id) rather than splatted, so an action that wants an extension's result
+  # resolves the id with `extension_ids(board$board, <class>)` and indexes it
+  # explicitly -- no partial-match on a formal named after the extension.
   map(
     register_action,
     ids,
     actions,
     trigger = triggers[ids],
-    MoreArgs = c(
-      list(board = board, update = update),
-      args,
-      list(session = session)
+    MoreArgs = list(
+      board = board,
+      update = update,
+      extensions = extensions,
+      session = session
     )
   )
 

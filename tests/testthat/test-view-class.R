@@ -249,7 +249,7 @@ test_that("the default grid groups extensions left, blocks right, tabbed", {
   expect_length(grid[["children"]], 2L)
   expect_setequal(
     grid[["children"]][[1L]][["panels"]],
-    "ext_panel-edit_board_extension"
+    "ext_panel-edit_board"
   )
   expect_setequal(
     grid[["children"]][[2L]][["panels"]],
@@ -263,7 +263,7 @@ test_that("a grid-less view falls back to the same ext / blocks default", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     extensions = new_edit_board_extension(),
-    views = list(A = c("a", "b", "edit_board_extension"))
+    views = list(A = c("a", "b", "edit_board"))
   )
 
   grid <- view_grid(board_views(brd)[["A"]], board_grids(brd)[["A"]])
@@ -271,7 +271,7 @@ test_that("a grid-less view falls back to the same ext / blocks default", {
   expect_length(grid[["children"]], 2L)
   expect_setequal(
     grid[["children"]][[1L]][["panels"]],
-    "ext_panel-edit_board_extension"
+    "ext_panel-edit_board"
   )
   expect_setequal(
     grid[["children"]][[2L]][["panels"]],

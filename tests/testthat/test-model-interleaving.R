@@ -80,14 +80,28 @@ model_shown <- function(st) {
 }
 
 # Membership write through the pure reducer, reporting whether the set changed
-# (one board commit) or not (a no-op).
+# (one board commit) or not (a no-op). Expressed in the panel-op grammar: the
+# target set becomes an `add` of the gained panels and an `rm` of the lost ones.
 model_set_members <- function(st, members) {
 
   before <- model_members(st)
 
+  gained <- setdiff(members, before)
+  lost <- setdiff(before, members)
+
+  mod <- list()
+
+  if (length(gained)) {
+    mod[["add"]] <- set_names(rep_len(list(list()), length(gained)), gained)
+  }
+
+  if (length(lost)) {
+    mod[["rm"]] <- as.character(lost)
+  }
+
   st$board <- apply_board_update(
     st$board,
-    list(views = list(mod = set_names(list(as.character(members)), "V")))
+    list(views = list(mod = set_names(list(mod), "V")))
   )
 
   list(st = st, commit = as.integer(!setequal(before, model_members(st))))

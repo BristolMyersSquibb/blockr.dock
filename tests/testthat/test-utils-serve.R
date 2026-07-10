@@ -77,10 +77,10 @@ test_that("dock app renders a block added via the extension (#191)", {
 
   # The Edit board panel is active on load, so a plain click adds the block.
   app$set_inputs(
-    `my_board-edit_board_extension-registry_select` = "dataset_block",
-    `my_board-edit_board_extension-block_id` = "a"
+    `my_board-ext_edit_board-registry_select` = "dataset_block",
+    `my_board-ext_edit_board-block_id` = "a"
   )
-  app$click("my_board-edit_board_extension-confirm_add")
+  app$click("my_board-ext_edit_board-confirm_add")
 
   # The block card carries a stable `block_handle-<id>` DOM id; its presence
   # is the add-block -> dock-render seam -- the board update mounting a panel.
@@ -145,10 +145,10 @@ test_that("adding a second block keeps both block panels (#196)", {
 
   add_block <- function(registry, id) {
     app$set_inputs(
-      `my_board-edit_board_extension-registry_select` = registry,
-      `my_board-edit_board_extension-block_id` = id
+      `my_board-ext_edit_board-registry_select` = registry,
+      `my_board-ext_edit_board-block_id` = id
     )
-    app$click("my_board-edit_board_extension-confirm_add")
+    app$click("my_board-ext_edit_board-confirm_add")
     app$wait_for_idle()
   }
 
@@ -303,7 +303,7 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   expect_identical(active_view(views), "analysis")
   expect_setequal(
     view_members(views[["analysis"]]),
-    c("ext_panel-edit_board_extension", "block_panel-a", "block_panel-b")
+    c("ext_panel-edit_board", "block_panel-a", "block_panel-b")
   )
 
   # Grid geometry survives deserialization, not just membership: the analysis
@@ -641,7 +641,7 @@ test_that("dock panel move updates layout state and serialization (#234)", {
   reparsed <- new_dock_layout(list(grid = grid_to_tree(restored)))
   expect_setequal(
     panel_obj_ids(layout_panel_ids(reparsed)),
-    c("a", "b", "edit_board_extension")
+    c("a", "b", "edit_board")
   )
   expect_false(
     identical(

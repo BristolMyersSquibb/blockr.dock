@@ -75,11 +75,11 @@ board_ui.dock_board <- function(
       id = NS(id, "exts_offcanvas"),
       position = "bottom",
       title = "Offcanvas extensions",
-      lapply(
-        dock_extensions(x),
+      map(
         extension_ui,
-        id = id,
-        board = x
+        dock_extensions(x),
+        dock_ext_ids(x),
+        MoreArgs = list(id = id, board = x)
       )
     ),
     # Sidebar mounts. Ids are namespaced with `NS(id, ...)` so two

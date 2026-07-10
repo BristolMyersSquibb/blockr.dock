@@ -28,10 +28,10 @@ test_that("a settled gesture commits a bounded amount, quiescence adds none", {
   # active on load). The board update mounts the panel -- a stable
   # block_handle-<id> DOM id marks the commit landing.
   app$set_inputs(
-    `my_board-edit_board_extension-registry_select` = "dataset_block",
-    `my_board-edit_board_extension-block_id` = "a"
+    `my_board-ext_edit_board-registry_select` = "dataset_block",
+    `my_board-ext_edit_board-block_id` = "a"
   )
-  app$click("my_board-edit_board_extension-confirm_add")
+  app$click("my_board-ext_edit_board-confirm_add")
 
   app$wait_for_js("document.getElementById('my_board-block_handle-a') !== null")
   app$wait_for_idle()

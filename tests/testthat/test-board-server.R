@@ -15,7 +15,7 @@ test_that("board server", {
       )
 
       expect_type(res, "list")
-      expect_named(res, c("dock", "actions", "view_data"))
+      expect_named(res, c("dock", "actions", "view_data", "extensions"))
 
       # `dock` is the internal active-dock reactiveValues handle (the block
       # insert / remove plugin places panels through it), still returned to the
@@ -42,12 +42,12 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "edit_board_extension")
+        c("dock", "actions", "view_data", "extensions")
       )
 
       expect_s3_class(res[["dock"]], "reactivevalues")
 
-      ext <- res[["edit_board_extension"]]
+      ext <- res[["extensions"]][["edit_board"]]
 
       expect_type(ext, "list")
       expect_length(ext, 1L)
@@ -92,7 +92,7 @@ test_that("board server", {
   do.call(
     ms$setInputs,
     set_names(
-      list(as_ext_panel_id("edit_board_extension")),
+      list(as_ext_panel_id("edit_board")),
       mod_input(dock_input("panel-to-remove"))
     )
   )
@@ -106,7 +106,7 @@ test_that("board server", {
         1L,
         c(
           as_block_panel_id("a"),
-          as_ext_panel_id("edit_board_extension")
+          as_ext_panel_id("edit_board")
         )
       ),
       c(mod_input("confirm_add"), mod_input("add_dock_panel"))
@@ -206,6 +206,31 @@ test_that("board server", {
   )
 
   expect_identical(panel_lookups, 1L)
+})
+
+test_that("an extension key never leaks into core's plugin args (#318)", {
+
+  # `edit` is a prefix of core's `edit_block` block-server formal; returned as
+  # a bare entry it would partial-match when core splats the callback result
+  # into every block server's args, hijacking the block server. The extension
+  # results ride nested under `extensions`, off that arg namespace.
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = list(edit = new_edit_board_extension())
+  )
+
+  with_mock_session(
+    {
+      res <- board_server_callback(
+        board_rv,
+        update = reactiveVal(),
+        visible = reactiveVal()
+      )
+
+      expect_false("edit" %in% names(res))
+      expect_named(res[["extensions"]], "edit")
+    }
+  )
 })
 
 test_that("renaming a block refreshes the dock panel title (#193)", {
@@ -909,9 +934,9 @@ test_that("extensions mod state is applied via the update lifecycle", {
 
   ms$flushReact()
 
-  # ext_res is spread into the callback result, so the extension's
-  # controllable state is reachable without a dock handle.
-  content <- res$doc_extension$state$content
+  # ext_res rides under `extensions` in the callback result, so the
+  # extension's controllable state is reachable without a dock handle.
+  content <- res$extensions$doc$state$content
 
   expect_s3_class(content, "reactiveVal")
   expect_identical(isolate(content()), "# old")
@@ -920,49 +945,12 @@ test_that("extensions mod state is applied via the update lifecycle", {
   # (now pure) apply hook.
   upd(
     list(
-      extensions = list(mod = list(doc_extension = list(content = "# new")))
+      extensions = list(mod = list(doc = list(content = "# new")))
     )
   )
   ms$flushReact()
 
   expect_identical(isolate(content()), "# new")
-})
-
-test_that("a live-only panel add folds into view membership (#217)", {
-
-  board_rv <- board_args(
-    blocks = c(a = new_dataset_block(), b = new_head_block()),
-    views = list(Page = "a")
-  )
-
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
-
-  upd <- reactiveVal()
-  res <- with_mock_context(
-    ms,
-    board_server_callback(board_rv, update = upd, visible = reactiveVal())
-  )
-  ms$flushReact()
-
-  live_panels <- isolate(res$dock$live_panels)
-  expect_false(is.null(live_panels))
-
-  # The add-panel modal / show_panel touch only the live dock; view membership
-  # must catch up in the same flush (via the fold observer), not the settled
-  # echo, or a later reconcile would restore a view missing the new panel. The
-  # fold carries a membership set, not geometry.
-  cur <- isolate(live_panels())
-  isolate(live_panels(c(cur, "block_panel-b")))
-  ms$flushReact()
-
-  delta <- isolate(upd())
-
-  expect_false(is.null(delta$views$mod))
-  expect_setequal(
-    delta$views$mod[[1L]],
-    c("block_panel-a", "block_panel-b")
-  )
 })
 
 test_that("extension servers can read peer extension state", {
@@ -995,9 +983,9 @@ test_that("extension servers can read peer extension state", {
         visible = reactiveVal()
       )
 
-      expect_true("doc_extension" %in% ls(peers))
+      expect_true("doc" %in% ls(peers))
       expect_identical(
-        isolate(peers[["doc_extension"]]$state$content()),
+        isolate(peers[["doc"]]$state$content()),
         "# hi"
       )
     }

@@ -33,3 +33,19 @@ test_that("determine_panel_pos places freely before the dock initialises", {
     list(direction = "right")
   )
 })
+
+test_that("group_front_panel resolves a group to its front panel, else NULL", {
+
+  # The add-panel modal anchors an add `within` the clicked group by resolving
+  # it to a member panel (the group's front / active tab).
+  local_mocked_bindings(
+    determine_active_views = function(layout) {
+      c(grp1 = "block_panel-a", grp2 = "block_panel-b")
+    }
+  )
+
+  dock <- list(layout = function() NULL)
+
+  expect_identical(group_front_panel(dock, "grp2"), "block_panel-b")
+  expect_null(group_front_panel(dock, "absent"))
+})

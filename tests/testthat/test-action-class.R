@@ -34,7 +34,7 @@ test_that("action ctor", {
       trig,
       board = list(),
       update = list(),
-      args = list(),
+      extensions = list(),
       session = MockShinySession$new()
     )
   )

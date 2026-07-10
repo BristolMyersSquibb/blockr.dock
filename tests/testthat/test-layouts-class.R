@@ -38,7 +38,7 @@ test_that("multi-view addresses a keyed extension by its list key", {
 
   expect_setequal(
     view_members(views[["Edit"]]),
-    c("block_panel-a", "ext_panel-edit_board_extension")
+    c("block_panel-a", "ext_panel-edit")
   )
   expect_setequal(view_members(views[["Data"]]), "block_panel-b")
 })

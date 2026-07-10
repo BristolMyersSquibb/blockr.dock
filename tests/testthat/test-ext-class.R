@@ -82,8 +82,8 @@ test_that("dock extensions validation", {
     validate_extensions(
       structure(
         list(
-          structure(1L, name = "a", class = "dock_extension"),
-          structure(2L, name = "a", class = "dock_extension")
+          dup = structure(1L, name = "a", class = "dock_extension"),
+          dup = structure(2L, name = "a", class = "dock_extension")
         ),
         class = "dock_extensions"
       )
@@ -210,15 +210,15 @@ test_that("str_value.dock_extensions renders one line per extension", {
     str_value(exts),
     paste(
       "<dock_extensions[2]>",
-      "  doc_extension: <doc_extension> content*, select",
-      "  edit_board_extension: <edit_board_extension>",
+      "  doc: <doc_extension> content*, select",
+      "  edit_board: <edit_board_extension>",
       sep = "\n"
     )
   )
 
   expect_output(
     str(exts),
-    "doc_extension: <doc_extension> content*, select",
+    "doc: <doc_extension> content*, select",
     fixed = TRUE
   )
 })
@@ -229,7 +229,7 @@ test_that("str_value.dock_extensions keys lines by the container alias", {
     list(my_doc = ctrl_ext(ctor = function() NULL))
   )
 
-  expect_identical(names(exts), "doc_extension")
+  expect_identical(names(exts), "my_doc")
 
   expect_identical(
     str_value(exts),
@@ -244,4 +244,35 @@ test_that("str_value.dock_extensions keys lines by the container alias", {
 test_that("str_value.dock_extensions handles an empty container", {
 
   expect_identical(str_value(new_dock_extensions()), "<dock_extensions[0]>")
+})
+
+test_that("extension keys are container-owned: derived and overridable", {
+
+  expect_identical(
+    names(as_dock_extensions(new_edit_board_extension())),
+    "edit_board"
+  )
+
+  expect_identical(
+    names(as_dock_extensions(list(analysis = new_edit_board_extension()))),
+    "analysis"
+  )
+})
+
+test_that("extension keys survive serialization; stale ids degrade", {
+
+  exts <- as_dock_extensions(list(analysis = new_edit_board_extension()))
+  ser <- blockr_ser(exts, list())
+
+  expect_identical(names(ser[["payload"]]), "analysis")
+  expect_identical(names(blockr_deser(ser)), "analysis")
+
+  # A board saved before container-owned ids has an unnamed payload; deser
+  # re-derives the default key rather than erroring (the stale panel member
+  # no longer matches and is pruned at restore).
+  old <- list(
+    object = ser[["object"]],
+    payload = set_names(ser[["payload"]], NULL)
+  )
+  expect_identical(names(blockr_deser(old)), "edit_board")
 })

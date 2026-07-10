@@ -37,9 +37,9 @@ is_dock_extension(x)
 
 validate_extension(x, ...)
 
-extension_ui(x, id, ...)
+extension_ui(x, key, id, ...)
 
-extension_server(x, ...)
+extension_server(x, key, ...)
 
 extension_id(x)
 
@@ -97,6 +97,8 @@ externally controllable; a character vector names a subset of them.}
 \item{...}{Further attributes}
 
 \item{x}{Extension object}
+
+\item{key}{Container-assigned extension id (list key)}
 
 \item{id}{Namespace ID}
 }

@@ -14,11 +14,14 @@
 #' `views = NULL` the board gets a single default view.
 #'
 #' @inheritParams blockr.core::new_board
-#' @param extensions Dock extensions
+#' @param extensions Dock extensions. Each is keyed by its list name, or by
+#'   its class stripped of the `_extension` suffix when unnamed (so
+#'   `new_dag_extension()` becomes `dag`); that key names the extension's
+#'   panel and is what `ext()` resolves against.
 #' @param views Per-view membership: a named list keyed by view id (minted
-#'   when absent), each value a [dock_view()], a bare character vector of
-#'   member panel ids, or a list of panel ids. `NULL` yields a single default
-#'   view over the board's blocks and extensions.
+#'   when absent), each value a [dock_view()], or member panels named with
+#'   `blk()` / `ext()` references or bare ids (as a vector or list). `NULL`
+#'   yields a single default view over the board's blocks and extensions.
 #' @param grids Per-view geometry: a named list keyed by view id whose values
 #'   are [dock_grid()]s, or a `dock_grids`. Optional -- a view with no grid
 #'   entry falls back to a default grid over its members.
@@ -196,7 +199,23 @@ dock_extensions <- function(x) {
 #' @rdname dock
 #' @export
 dock_ext_ids <- function(x) {
-  chr_ply(dock_extensions(x), extension_id)
+  names(dock_extensions(x))
+}
+
+#' @param class Optional extension subclass; when supplied, only ids of
+#'   extensions inheriting from it are returned.
+#' @rdname dock
+#' @export
+extension_ids <- function(x, class = NULL) {
+
+  exts <- dock_extensions(x)
+  ids <- names(exts)
+
+  if (is.null(class)) {
+    return(ids)
+  }
+
+  ids[lgl_ply(exts, inherits, class)]
 }
 
 #' @rdname dock
@@ -269,6 +288,13 @@ augment_board_update.dock_board <- function(upd, board, ...,
   # the rest of the pipeline (merge, validate, apply) is purely id-keyed.
   if (length(upd$views)) {
     upd$views <- normalize_views_delta(upd$views, board)
+  }
+
+  # Canonicalize the panel-op currency: typed refs (`blk()` / `ext()`) and bare
+  # id sugar become the internal named-hint form the cascade, validation and
+  # apply consume. Idempotent, so the re-augment loop converges.
+  if (length(upd$views$mod)) {
+    upd$views$mod <- resolve_views_mod(upd$views$mod, board, upd)
   }
 
   rm_block_ids <- upd$blocks$rm %||% character()

@@ -25,6 +25,10 @@ reference:
   desc: The canonical panel IDs a grid or layout references.
   contents:
     - layout_panel_ids
+- title: Panel references
+  desc: Typed references to block and extension panels for the update grammar.
+  contents:
+    - blk
 - title: Dock views
   desc: Multi-view (tabbed) boards. Each view is its own panel arrangement.
   contents:
@@ -41,6 +45,5 @@ reference:
 - title: Utilities
   desc: Various utility functions that are exported for use in dependent packages.
   contents:
-    - show_panel
     - blks_metadata
     - dock_id

@@ -85,7 +85,7 @@ visible_block_ids <- function(layout) {
 }
 
 visible_exts <- function() {
-  blockr_option("visible_extensions", "dag_extension")
+  blockr_option("visible_extensions", "dag")
 }
 
 determine_panel_pos <- function(dock) {
@@ -111,66 +111,13 @@ determine_panel_pos <- function(dock) {
   list(referenceGroup = grp, direction = "within")
 }
 
-#' UI utilities
-#'
-#' Exported utilities for manipulating dock panels (i.e. displaying panels).
-#'
-#' @param id Object ID
-#' @param board Board object
-#' @param dock Object available as `dock` in extensions
-#' @param type Either "block" or "extensions", depending on what kind of panel
-#'   should be shown
-#'
-#' @return `NULL`, invisibly
-#'
-#' @rdname panel
-#' @export
-show_panel <- function(id, board, dock, type = c("block", "extension")) {
-
-  stopifnot(is_string(id))
-
-  type <- match.arg(type)
-
-  if (identical(type, "block")) {
-    stopifnot(id %in% board_block_ids(board))
-  } else {
-    stopifnot(id %in% dock_ext_ids(board))
-  }
-
-  panels <- dock_panel_ids(dock$proxy)
-
-  if (identical(type, "block")) {
-    panels <- panels[lgl_ply(panels, is_block_panel_id)]
-  } else {
-    panels <- panels[lgl_ply(panels, is_ext_panel_id)]
-  }
-
-  panels <- as_obj_id(panels)
-
-  if (id %in% panels) {
-    if (identical(type, "block")) {
-      select_block_panel(id, dock$proxy)
-    } else {
-      select_ext_panel(id, dock$proxy)
-    }
-
-    return(invisible())
-  }
-
-  pos <- determine_panel_pos(dock)
-
-  if (identical(type, "block")) {
-    blocks <- board_blocks(board)
-    add_block_panel(blocks[id], position = pos, dock = dock)
-    show_block_ui(id, dock$proxy$session, board_ns = dock_board_ns(dock))
-  } else {
-    exts <- dock_extensions(board)
-
-    add_ext_panel(exts[[id]], position = pos, dock = dock)
-    show_ext_ui(id, dock$proxy$session, board_ns = dock_board_ns(dock))
-  }
-
-  invisible()
+# The front (active) panel of a dockview group. The add-panel modal resolves the
+# `referenceGroup` the user clicked `+` on to a member panel here, because the
+# grammar addresses a group through a member panel (`near`), not a group id.
+# NULL when the group is absent from the settled layout.
+group_front_panel <- function(dock, group_id) {
+  fronts <- determine_active_views(dock$layout())
+  if (group_id %in% names(fronts)) fronts[[group_id]] else NULL
 }
 
 #' @noRd

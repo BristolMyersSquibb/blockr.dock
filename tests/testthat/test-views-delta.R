@@ -105,7 +105,7 @@ test_that("apply_views_rm removes a view", {
   expect_identical(active_name(out), "A")
 })
 
-test_that("apply_views_mod grows membership; the new panel is placed", {
+test_that("an add verb grows membership; the new panel is placed", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -114,13 +114,17 @@ test_that("apply_views_mod grows membership; the new panel is placed", {
   )
 
   upd <- augment_board_update(
-    list(views = list(mod = list(A = c("block_panel-a", "block_panel-b")))),
+    list(
+      views = list(
+        mod = list(A = list(add = list(`block_panel-b` = list())))
+      )
+    ),
     brd
   )
 
   out <- apply_board_update(brd, upd)
 
-  # `mod` is a membership set op -- it does not touch geometry. Membership is
+  # `add` is a membership op -- it does not touch geometry. Membership is
   # authoritative, so the new panel is placed with a default spot straight
   # away; the client echo later supplies its real arrangement.
   expect_setequal(
@@ -129,6 +133,40 @@ test_that("apply_views_mod grows membership; the new panel is placed", {
   )
   expect_setequal(placement_ids(out, "A"), c("block_panel-a", "block_panel-b"))
   expect_identical(active_name(out), "A")
+})
+
+test_that("an rm verb shrinks membership; move / select leave it untouched", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = c("a", "b"))
+  )
+
+  rmd <- apply_board_update(
+    brd,
+    list(views = list(mod = list(A = list(rm = "block_panel-b"))))
+  )
+  expect_identical(view_members(board_views(rmd)[["A"]]), "block_panel-a")
+
+  # `move` and `select` are pure payload messages: geometry and the active tab
+  # are client-owned, so the reducer writes nothing and the board is unchanged.
+  moved <- apply_board_update(
+    brd,
+    list(
+      views = list(
+        mod = list(
+          A = list(move = list(`block_panel-b` = list(near = "block_panel-a")))
+        )
+      )
+    )
+  )
+  expect_identical(board_views(moved), board_views(brd))
+
+  selected <- apply_board_update(
+    brd,
+    list(views = list(mod = list(A = list(select = "block_panel-b"))))
+  )
+  expect_identical(board_views(selected), board_views(brd))
 })
 
 test_that("a grid in views$mod is rejected at the update boundary", {
@@ -163,7 +201,7 @@ test_that("apply_views: full delta round-trips through the board", {
     list(
       views = list(
         add = list(C = dock_view("block_panel-a")),
-        mod = list(A = c("block_panel-a", "block_panel-b")),
+        mod = list(A = list(add = list(`block_panel-b` = list()))),
         rm = "B",
         active = "C"
       )
@@ -354,16 +392,21 @@ test_that("blocks$rm auto-augments views$mod for every affected view", {
   upd <- list(blocks = list(rm = "b"))
   res <- augment_board_update(upd, brd)
 
+  # The removal cascade is an `rm` verb for each view that still holds the
+  # removed block's panel; a view without it (Other) gets no entry.
   expect_setequal(
     names(res$views$mod),
     c(vid(brd, "Analysis"), vid(brd, "Overview"))
   )
 
-  expect_setequal(
-    res$views$mod[[vid(brd, "Analysis")]],
-    c("block_panel-a", "block_panel-c")
+  expect_identical(
+    res$views$mod[[vid(brd, "Analysis")]]$rm,
+    "block_panel-b"
   )
-  expect_length(res$views$mod[[vid(brd, "Overview")]], 0L)
+  expect_identical(
+    res$views$mod[[vid(brd, "Overview")]]$rm,
+    "block_panel-b"
+  )
   expect_null(res$views$mod[[vid(brd, "Other")]])
 })
 
@@ -381,6 +424,7 @@ test_that("blocks$rm augment skips views in views$rm", {
   res <- augment_board_update(upd, brd)
 
   expect_named(res$views$mod, vid(brd, "A"))
+  expect_identical(res$views$mod[[vid(brd, "A")]]$rm, "block_panel-b")
   expect_identical(res$views$rm, vid(brd, "B"))
 })
 
@@ -395,20 +439,19 @@ test_that("augment merges user-submitted mod with block-removal cleanup", {
     views = list(Analysis = c("a", "b"))
   )
 
+  # The user batches an `add` of c; the removal cascade folds an `rm` of b into
+  # the same view's ops -- per-view, per-verb maps compose rather than clobber.
   upd <- list(
     blocks = list(rm = "b"),
     views = list(
-      mod = list(
-        Analysis = c("block_panel-a", "block_panel-b", "block_panel-c")
-      )
+      mod = list(Analysis = list(add = list(`block_panel-c` = list())))
     )
   )
   res <- augment_board_update(upd, brd)
 
-  expect_setequal(
-    res$views$mod[[vid(brd, "Analysis")]],
-    c("block_panel-a", "block_panel-c")
-  )
+  mod <- res$views$mod[[vid(brd, "Analysis")]]
+  expect_identical(names(mod$add), "block_panel-c")
+  expect_identical(mod$rm, "block_panel-b")
 })
 
 test_that("blocks+views payload augments with refs to newly-added blocks", {
@@ -421,14 +464,16 @@ test_that("blocks+views payload augments with refs to newly-added blocks", {
   new_blk <- as_blocks(list(new1 = new_head_block()))
   upd <- list(
     blocks = list(add = new_blk),
-    views = list(mod = list(A = c("block_panel-a", "block_panel-new1")))
+    views = list(mod = list(A = list(add = list(`block_panel-new1` = list()))))
   )
 
   augmented <- augment_board_update(upd, brd)
 
-  expect_setequal(
-    augmented$views$mod[[vid(brd, "A")]],
-    c("block_panel-a", "block_panel-new1")
+  # The add verb references a block added in the same payload; the xref resolves
+  # against the post-state block set.
+  expect_identical(
+    names(augmented$views$mod[[vid(brd, "A")]]$add),
+    "block_panel-new1"
   )
 })
 
@@ -491,7 +536,7 @@ test_that("validate_views_delta rejects mod referencing a name in rm", {
     augment_board_update(
       list(
         views = list(
-          mod = list(B = "block_panel-a"),
+          mod = list(B = list(select = "block_panel-a")),
           rm = "B"
         )
       ),
@@ -514,7 +559,7 @@ test_that("validate_views_delta rejects an id in both mod and add", {
     validate_views_delta(
       list(
         add = setNames(list(dock_view("block_panel-a")), id),
-        mod = setNames(list("block_panel-a"), id)
+        mod = setNames(list(list(select = "block_panel-a")), id)
       ),
       brd,
       list()
@@ -593,7 +638,7 @@ test_that("validate_views_delta rejects mod on unknown view", {
 
   expect_error(
     augment_board_update(
-      list(views = list(mod = list(Ghost = "block_panel-a"))),
+      list(views = list(mod = list(Ghost = list(select = "block_panel-a")))),
       brd
     ),
     class = "dock_views_delta_mod_unknown"
@@ -660,6 +705,89 @@ test_that("validate_views_delta rejects unknown slice keys", {
   )
 })
 
+test_that("validate_view_mod enforces the per-view panel-op grammar", {
+
+  members <- c("block_panel-a", "block_panel-b")
+  ok <- c("block_panel-a", "block_panel-b", "block_panel-c")
+
+  accepts <- function(mod) {
+    expect_silent(validate_view_mod(mod, "A", members, ok))
+  }
+  rejects <- function(mod, cls) {
+    expect_error(validate_view_mod(mod, "A", members, ok), class = cls)
+  }
+
+  accepts(
+    list(
+      add = list(`block_panel-c` = list(near = "block_panel-a", side = "left"))
+    )
+  )
+  accepts(list(rm = "block_panel-a", add = list(`block_panel-a` = list())))
+  accepts(list(move = list(`block_panel-a` = list(near = "block_panel-b"))))
+  accepts(list(select = "block_panel-b"))
+
+  rejects(list(bogus = 1), "dock_views_mod_verb_unknown")
+  rejects(list(rm = "block_panel-c"), "dock_views_mod_rm_unknown")
+  rejects(
+    list(add = list(`block_panel-a` = list())), "dock_views_mod_add_existing"
+  )
+  rejects(
+    list(add = list(`block_panel-ghost` = list())),
+    "dock_views_delta_panel_ref_invalid"
+  )
+  rejects(
+    list(move = list(`block_panel-c` = list())), "dock_views_mod_move_unknown"
+  )
+  rejects(list(select = "block_panel-c"), "dock_views_mod_select_unknown")
+  rejects(
+    list(add = list(`block_panel-c` = list(side = "sideways"))),
+    "dock_views_mod_hint_invalid"
+  )
+})
+
+test_that("an add hint cannot forward-reference a sibling add", {
+
+  # Validation anchors an add's `near` against pre-existing members only: a
+  # forward reference to a panel added later in the same batch would reach
+  # dockview as a `referencePanel` that does not exist yet at delivery.
+  expect_error(
+    validate_view_mod(
+      list(
+        add = list(
+          `block_panel-b` = list(near = "block_panel-c"),
+          `block_panel-c` = list()
+        )
+      ),
+      "A", "block_panel-a",
+      c("block_panel-a", "block_panel-b", "block_panel-c")
+    ),
+    class = "dock_views_mod_hint_invalid"
+  )
+})
+
+test_that("hint keys are structural; size is validated as a ratio", {
+
+  # Finding 4 dissolves into the ref constructors: a misspelled hint is R's own
+  # unused-argument error before a payload exists, not a runtime whitelist.
+  expect_error(blk("b", sise = 0.3), "unused argument")
+
+  # `size` is a valid add hint now (unifying resize as `blk(id, size = )`),
+  # validated as a ratio in (0, 1).
+  expect_silent(
+    validate_view_mod(
+      list(add = list(`block_panel-b` = list(size = 0.3))),
+      "A", "block_panel-a", c("block_panel-a", "block_panel-b")
+    )
+  )
+  expect_error(
+    validate_view_mod(
+      list(add = list(`block_panel-b` = list(size = 1.5))),
+      "A", "block_panel-a", c("block_panel-a", "block_panel-b")
+    ),
+    class = "dock_views_mod_hint_invalid"
+  )
+})
+
 test_that("restrict_grid preserves remaining structure", {
 
   grid <- dock_grid("a", "b", "c", sizes = c(1, 2, 1))
@@ -682,18 +810,40 @@ test_that("restrict_grid resets the active tab when it is dropped", {
   expect_identical(leaf[["active"]], "a")
 })
 
-test_that("fold_live_membership diffs membership against the live panel set", {
+test_that("the add / tab-close gestures emit authoritative deltas", {
 
-  members <- c("block_panel-a", "block_panel-b")
+  # The modal and tab close emit these payloads (in place of mutating the dock
+  # directly); the apply observer does the placement / removal. This is what
+  # keeps membership from lagging the live dock (#217) -- it is authoritative
+  # the moment the update applies, not after a fold.
+  add <- add_panel_delta(
+    "analysis", c("block_panel-b", "ext_panel-e"), near = "block_panel-a"
+  )
+  a_mod <- add$views$mod$analysis$add
+  expect_identical(names(a_mod), c("block_panel-b", "ext_panel-e"))
+  expect_identical(
+    a_mod[["block_panel-b"]], list(near = "block_panel-a", side = "within")
+  )
 
-  added <- fold_live_membership(members, c(members, "block_panel-c"))
-  expect_setequal(added, c(members, "block_panel-c"))
+  # No group (empty dock) -> empty hint, so the apply side uses its default.
+  flat <- add_panel_delta("analysis", "block_panel-b")
+  expect_identical(flat$views$mod$analysis$add[["block_panel-b"]], list())
 
-  dropped <- fold_live_membership(members, "block_panel-a")
-  expect_setequal(dropped, "block_panel-a")
+  rm <- remove_panel_delta("analysis", "block_panel-b")
+  expect_identical(rm$views$mod$analysis$rm, "block_panel-b")
 
-  # Already in sync (order-insensitive) -> NULL, so the caller skips a no-op.
-  expect_null(fold_live_membership(members, rev(members)))
+  # The add payload round-trips through the reducer, growing membership.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(analysis = "a")
+  )
+  grown <- apply_board_update(
+    brd, augment_board_update(add_panel_delta("analysis", "block_panel-b"), brd)
+  )
+  expect_setequal(
+    view_members(board_views(grown)[["analysis"]]),
+    c("block_panel-a", "block_panel-b")
+  )
 })
 
 test_that("empty views payload causes apply to be a no-op", {
@@ -723,12 +873,16 @@ test_that("board_update lifecycle resets to NULL after views-only payload", {
       session$flushReact()
 
       board_update(
-        list(views = list(mod = list(A = c("block_panel-a", "block_panel-b"))))
+        list(
+          views = list(
+            mod = list(A = list(add = list(`block_panel-b` = list())))
+          )
+        )
       )
       session$flushReact()
 
       expect_null(board_update())
-      # Membership carries the modded panel; it is authoritative, so the
+      # Membership carries the added panel; it is authoritative, so the
       # placement shows it too (a default spot until the client echoes one).
       expect_setequal(
         view_members(board_views(rv$board)[["A"]]),
@@ -738,6 +892,37 @@ test_that("board_update lifecycle resets to NULL after views-only payload", {
         placement_ids(rv$board, "A"),
         c("block_panel-a", "block_panel-b")
       )
+    },
+    args = list(
+      x = brd,
+      plugins = list(blockr.core::manage_blocks())
+    )
+  )
+})
+
+test_that("a select-only mod flows through the lifecycle, writing nothing", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = c("a", "b"))
+  )
+
+  testServer(
+    blockr.core:::board_server.board,
+    {
+      session$flushReact()
+      before <- rv$board
+
+      # `select` is a pure payload message: it validates and applies cleanly,
+      # the reactive resets, and the board is left untouched (the tab change is
+      # client-owned, captured by the mirror).
+      board_update(
+        list(views = list(mod = list(A = list(select = "block_panel-b"))))
+      )
+      session$flushReact()
+
+      expect_null(board_update())
+      expect_identical(board_views(rv$board), board_views(before))
     },
     args = list(
       x = brd,
