@@ -14,6 +14,6 @@
 
 ## Notes
 
-* New release (see NEWS.md)
-* Fixes failing tests on CRAN: https://cran.r-project.org/web/checks/check_results_blockr.dock.html
-* Prepares a new release of blockr.dag which will follow right after
+* Release for fixing CRAN issues.
+* A corresponding update of blockr.dag will follow shortly to address
+  breaking changes.
