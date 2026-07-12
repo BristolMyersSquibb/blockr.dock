@@ -771,6 +771,16 @@ test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
         var container = document.querySelector('.blockr-view-container');
         html.classList.add('shiny-busy');
 
+        // The app's own outputs may still be settling -- a block card inside a
+        // view container can hold a lingering `.recalculating` well past
+        // wait_for_idle(). Neutralise every real in-container marker (the exact
+        // pulse-CSS scope) so only the synthetic markers below drive the
+        // reading, then restore them.
+        var real = Array.from(
+          document.querySelectorAll('.blockr-view-container .recalculating')
+        );
+        real.forEach(function (el) { el.classList.remove('recalculating'); });
+
         var hidden = mark(document.body);
         var bookkeeping = pulse();
         hidden.remove();
@@ -779,6 +789,7 @@ test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
         var computing = pulse();
         visible.remove();
 
+        real.forEach(function (el) { el.classList.add('recalculating'); });
         html.classList.remove('shiny-busy');
 
         return {
