@@ -70,7 +70,7 @@ next_color <- function(colors = character(), lum_var = TRUE) {
 }
 
 is_hex_color <- function(x) {
-  blockr.core::is_string(x) && grepl("^#(?:[0-9a-fA-F]{3}){1,2}$", x)
+  is_string(x) && grepl("^#(?:[0-9a-fA-F]{3}){1,2}$", x)
 }
 
 create_block_with_name <- function(reg_id, blk_nms, ...) {
