@@ -82,8 +82,7 @@ board_server_callback <- function(board, update, visible, ...,
   visible(
     card_visibility(
       active_view_block_ids(initial_board),
-      visible_block_ids(active_view_grid(initial_board)),
-      arranged = FALSE
+      visible_block_ids(active_view_grid(initial_board))
     )
   )
 
@@ -216,36 +215,20 @@ switch_view_observer <- function(session, update, client_active) {
 
 report_visible_observer <- function(visible, client_active, docks) {
 
-  # Sole writer of the channel's levels. Recomputes the map from the active
-  # view's layout over the built set the channel already carries -- front panels
-  # `rendered` once the dock's `initialized` flag flips (its arrangement
-  # observer has moved every card into its panel) else `required`, all else
-  # `parked`. Deriving `rendered` from the flag rather than writing it from the
-  # arrangement observer keeps one level-writer. `req(layout())` waits for the
-  # client's report (NULL before then).
-  active_view_state <- reactive({
+  # Owns the channel's membership axis: the active view's front panels are
+  # `required`, everything else built is `parked`. It leaves `rendered` alone --
+  # the per-view arrange observer promotes required -> rendered once the client
+  # has painted (mark_cards_rendered), so the two touch disjoint transitions.
+  # `req(layout())` waits for the client's report (NULL before then).
+  on_screen <- reactive({
     active <- req(client_active())
     dock <- req(docks[[active]])
     layout <- req(dock$layout())
 
-    list(
-      on_screen = sort(visible_block_ids(layout)),
-      arranged = isTRUE(dock$initialized())
-    )
+    sort(visible_block_ids(layout))
   })
 
-  observeEvent(
-    active_view_state(),
-    {
-      st <- active_view_state()
-
-      status <- card_visibility(built_cards(visible), st$on_screen, st$arranged)
-
-      if (!identical(status, isolate(visible()))) {
-        visible(status)
-      }
-    }
-  )
+  observeEvent(on_screen(), show_cards(visible, on_screen()))
 }
 
 # The grid mirror's observer, split from manage_dock for testability. It reacts
@@ -596,7 +579,6 @@ manage_dock <- function(
     prev_active_group <- reactiveVal()
     active_group_trail <- reactiveVal()
     n_panels <- reactive(length(live_panels()))
-    initialized <- reactiveVal(FALSE)
 
     dock <- list(
       proxy = proxy,
@@ -606,8 +588,7 @@ manage_dock <- function(
       n_panels = n_panels,
       prev_active_group = prev_active_group,
       active_group_trail = active_group_trail,
-      visible = visible,
-      initialized = initialized
+      visible = visible
     )
 
     # Apply server-initiated panel ops to this view's live dock -- the sole
@@ -672,9 +653,9 @@ manage_dock <- function(
         }
 
         # Every card the layout calls for is now moved into its panel: this
-        # view is arranged. report_visible_observer upgrades the active view's
-        # blocks to `rendered` off this flag.
-        initialized(TRUE)
+        # view is arranged. Mark its on-screen blocks `rendered` on the channel
+        # -- the client-confirmed paint core's construction gate waits for.
+        mark_cards_rendered(visible, visible_block_ids(init_layout))
       },
       once = TRUE
     )

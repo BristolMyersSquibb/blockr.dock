@@ -490,19 +490,17 @@ test_that("visible_block_ids returns the front-tab block of each group", {
   expect_identical(visible_block_ids(dock_grid()), character())
 })
 
-test_that("report_visible_observer publishes the active view's blocks", {
+test_that("report_visible_observer tracks membership, preserves rendered", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
 
   env <- with_mock_context(ms, {
     layout_a <- reactiveVal(NULL)
     layout_b <- reactiveVal(NULL)
-    init_a <- reactiveVal(FALSE)
-    init_b <- reactiveVal(FALSE)
 
     docks <- new.env(parent = emptyenv())
-    docks[["A"]] <- list(layout = layout_a, initialized = init_a)
-    docks[["B"]] <- list(layout = layout_b, initialized = init_b)
+    docks[["A"]] <- list(layout = layout_a)
+    docks[["B"]] <- list(layout = layout_b)
 
     # a, b and d are all built (the channel carries the ledger); a/b are A's
     # fronts, d lives in B. Nothing placed yet, so all `parked`.
@@ -511,19 +509,16 @@ test_that("report_visible_observer publishes the active view's blocks", {
 
     report_visible_observer(visible, client_active, docks)
 
-    list(
-      a = layout_a, b = layout_b, ia = init_a,
-      active = client_active, visible = visible
-    )
+    list(a = layout_a, b = layout_b, active = client_active, visible = visible)
   })
 
   ms$flushReact()
-  # Before any layout report the ledger stands; report only sets levels.
+  # Before any layout report the ledger stands; report only moves membership.
   expect_identical(
     isolate(env$visible()), c(a = "parked", b = "parked", d = "parked")
   )
 
-  # A shows a and b (front of two groups); not arranged -> required, d parked.
+  # A shows a and b (front of two groups): required. d (in B) stays parked.
   with_mock_context(ms, env$a(
     dock_grid(panels("block_panel-a"), panels("block_panel-b"))
   ))
@@ -532,21 +527,19 @@ test_that("report_visible_observer publishes the active view's blocks", {
     isolate(env$visible()), c(a = "required", b = "required", d = "parked")
   )
 
-  # A's arrangement observer completes -> its on-screen blocks are rendered.
-  with_mock_context(ms, env$ia(TRUE))
-  ms$flushReact()
-  expect_identical(
-    isolate(env$visible()), c(a = "rendered", b = "rendered", d = "parked")
-  )
+  # A's arrange observer fires -- that write (mark_cards_rendered, covered in
+  # test-block-ui) belongs to the dock, not report_visible. From here on the
+  # membership observer must leave those `rendered` tokens alone.
+  with_mock_context(ms, mark_cards_rendered(env$visible, c("a", "b")))
 
-  # A layout change on the inactive B does not move the reported set.
+  # A layout change on the inactive B does not touch A's reported set.
   with_mock_context(ms, env$b(dock_grid(panels("block_panel-d"))))
   ms$flushReact()
   expect_identical(
     isolate(env$visible()), c(a = "rendered", b = "rendered", d = "parked")
   )
 
-  # A drops a (its slot is now an extension panel): a parks, b stays rendered.
+  # A drops a (its slot is now an extension panel): a parks, b STAYS rendered.
   with_mock_context(ms, env$a(
     dock_grid(panels("ext_panel-editor"), panels("block_panel-b"))
   ))
@@ -555,7 +548,7 @@ test_that("report_visible_observer publishes the active view's blocks", {
     isolate(env$visible()), c(a = "parked", b = "rendered", d = "parked")
   )
 
-  # Switching to the not-yet-arranged B reports its block required, a/b parked.
+  # Switching to the not-yet-arranged B: its block required, a/b parked.
   with_mock_context(ms, env$active("B"))
   ms$flushReact()
   expect_identical(

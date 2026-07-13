@@ -60,26 +60,48 @@ test_that("dummy block ui test", {
   expect_s3_class(ui[[1L]], "shiny.tag")
 })
 
-test_that("card_visibility parks the built set, fronts what's on screen", {
+test_that("card_visibility seeds the built set: fronts required, rest parked", {
 
   # `b` is the active view's front panel; `a` a background tab, `c` off screen.
+  # Seed has nothing rendered yet -- the arrange observer promotes later.
   expect_identical(
-    card_visibility(c("a", "b", "c"), on_screen = "b", arranged = FALSE),
+    card_visibility(c("a", "b", "c"), on_screen = "b"),
     c(a = "parked", b = "required", c = "parked")
-  )
-
-  expect_identical(
-    card_visibility(c("a", "b", "c"), on_screen = "b", arranged = TRUE),
-    c(a = "parked", b = "rendered", c = "parked")
   )
 })
 
 test_that("card_visibility on an empty built set is empty (no order(NULL))", {
 
-  # An empty board has no built cards; the map must come back empty, not choke
-  # -- else the board server aborts at seed and the app never becomes stable.
-  expect_length(card_visibility(character(), character(), FALSE), 0L)
-  expect_silent(card_visibility(character(), character(), TRUE))
+  # An empty board has no built cards; the seed map must come back empty, not
+  # choke -- else the board server aborts at seed and the app never stabilises.
+  expect_length(card_visibility(character(), character()), 0L)
+})
+
+test_that("show_cards reconciles membership but never demotes rendered", {
+
+  visible <- reactiveVal(c(a = "rendered", b = "parked", c = "required"))
+
+  # b comes on screen, c leaves. a stays on screen AND stays rendered -- the
+  # arrange observer owns that promotion; membership must not undo it.
+  show_cards(visible, on_screen = c("a", "b"))
+
+  expect_identical(
+    isolate(visible()),
+    c(a = "rendered", b = "required", c = "parked")
+  )
+})
+
+test_that("mark_cards_rendered promotes the on-screen blocks only", {
+
+  visible <- reactiveVal(c(a = "required", b = "required", c = "parked"))
+
+  # The client arranged a's and b's view; c is off screen (another view).
+  mark_cards_rendered(visible, on_screen = c("a", "b"))
+
+  expect_identical(
+    isolate(visible()),
+    c(a = "rendered", b = "rendered", c = "parked")
+  )
 })
 
 test_that("built_cards reads the built set off the channel", {

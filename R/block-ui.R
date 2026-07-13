@@ -131,21 +131,49 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
 # on required / rendered, so a `parked` entry reads as off screen there -- it is
 # the dock's build-ledger bit that core retains as the single store.
 
-# Recompute the map: every built card `parked`, except the on-screen fronts,
-# which are `rendered` (once the dock has arranged) else `required`. `on_screen`
-# is a subset of the built set (a shown card was built), so the intersect is a
-# guard, not a filter.
-card_visibility <- function(built, on_screen, arranged) {
+# The initial map from a known built set: every card `parked`, the on-screen
+# fronts `required` (nothing is arranged yet). Used once, to seed the channel.
+card_visibility <- function(built, on_screen) {
+
+  status <- set_names(rep("parked", length(built)), built)
+
+  status[intersect(built, on_screen)] <- "required"
+
+  status
+}
+
+# Reconcile membership on the channel from the active view's on-screen set:
+# fronts `required`, everything else built `parked`. A card already `rendered`
+# stays rendered -- this observer owns the parked <-> required axis; the arrange
+# observer owns the promotion to `rendered` (mark_cards_rendered).
+show_cards <- function(visible, on_screen) {
+
+  cur <- coal(isolate(visible()), character(), fail_all = FALSE)
+  built <- names(cur)
 
   status <- set_names(rep("parked", length(built)), built)
 
   shown <- intersect(built, on_screen)
+  status[shown] <- ifelse(cur[shown] == "rendered", "rendered", "required")
 
-  if (length(shown)) {
-    status[shown] <- if (arranged) "rendered" else "required"
+  if (!identical(status, cur)) {
+    visible(status)
   }
+}
 
-  status
+# Promote a view's on-screen blocks to `rendered`: the client has arranged them
+# into their panels. This is the paint signal core's construction gate waits for
+# -- once every on-screen block is `rendered`, `visible_set_rendered()` fires.
+mark_cards_rendered <- function(visible, on_screen) {
+
+  cur <- coal(isolate(visible()), character(), fail_all = FALSE)
+
+  new <- cur
+  new[intersect(names(cur), on_screen)] <- "rendered"
+
+  if (!identical(new, cur)) {
+    visible(new)
+  }
 }
 
 # The blocks whose cards are built, read off the shared channel.
