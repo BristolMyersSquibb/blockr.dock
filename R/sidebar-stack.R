@@ -1,5 +1,3 @@
-# Vendored from blockr.ui for the CRAN release (blockr.ui is not on CRAN).
-# Internal to blockr.dock; keep in sync with blockr.ui if these change upstream.
 stack_menu_ui <- function(id, board, target = NULL) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
   stopifnot(
@@ -7,7 +5,7 @@ stack_menu_ui <- function(id, board, target = NULL) {
       (is.character(target) && length(target) == 1L && nzchar(target))
   )
 
-  ns <- shiny::NS(id)
+  ns <- NS(id)
   ctx <- resolve_stack_target(board, target)
   metas <- stack_menu_block_metas(board, ctx$pool, ctx$selected)
 
@@ -23,7 +21,7 @@ stack_menu_server <- function(id, board = NULL, target = NULL) {
   board_fn <- as_arg_reactive(board)
   target_fn <- as_arg_reactive(target)
 
-  shiny::moduleServer(
+  moduleServer(
     id,
     function(input, output, session) {
       # Live board sync: when a board reactive is supplied, refresh the
@@ -32,8 +30,8 @@ stack_menu_server <- function(id, board = NULL, target = NULL) {
       # `commit` input), so it no-ops harmlessly when the panel isn't
       # mounted - the consumer needs no ownership tracking. `ignoreInit`
       # because the initial render is already current.
-      if (shiny::is.reactive(board)) {
-        shiny::observeEvent(
+      if (is.reactive(board)) {
+        observeEvent(
           board_fn(),
           {
             brd <- board_fn()
@@ -46,7 +44,7 @@ stack_menu_server <- function(id, board = NULL, target = NULL) {
             # the panel root's id (passing `session$ns("commit")` would
             # double-prefix).
             if (is.null(tgt) ||
-                  tgt %in% blockr.core::board_stack_ids(brd)) {
+                  tgt %in% board_stack_ids(brd)) {
               session$sendInputMessage("commit", stack_sync_payload(brd, tgt))
             }
           },
@@ -54,7 +52,7 @@ stack_menu_server <- function(id, board = NULL, target = NULL) {
         )
       }
 
-      shiny::eventReactive(
+      eventReactive(
         input$commit,
         {
           spec <- list(
@@ -69,7 +67,7 @@ stack_menu_server <- function(id, board = NULL, target = NULL) {
           # the consumer needs no validators of its own. With `board =
           # NULL` (snapshot mode) validation is skipped for backward
           # compatibility.
-          if (shiny::is.reactive(board)) {
+          if (is.reactive(board)) {
             validate_stack_spec(spec, board_fn(), target_fn(), session)
           }
           stack_commit_value(spec, target_fn())
@@ -95,7 +93,7 @@ stack_commit_value <- function(spec, target) {
     name = spec$name,
     color = spec$color
   )
-  blockr.core::as_stacks(blockr.core::set_names(list(stk), id))
+  as_stacks(set_names(list(stk), id))
 }
 
 # Validate the committed stack spec against the current board. In create
@@ -104,24 +102,24 @@ stack_commit_value <- function(spec, target) {
 # are checked. Each failure notifies and `req(FALSE)`s, which propagates
 # up through the enclosing `eventReactive` and stops it firing.
 validate_stack_spec <- function(spec, board, target, session) {
-  existing_ids <- safe_ids(board, blockr.core::board_stack_ids)
+  existing_ids <- safe_ids(board, board_stack_ids)
   if (is.null(target) && !is_new_id(spec$id, existing_ids)) {
-    blockr.core::notify(
+    notify(
       "Please choose a valid stack ID.", type = "warning", session = session
     )
-    shiny::req(FALSE)
+    req(FALSE)
   }
-  if (!(blockr.core::is_string(spec$name) && nzchar(spec$name))) {
-    blockr.core::notify(
+  if (!(is_string(spec$name) && nzchar(spec$name))) {
+    notify(
       "Please choose a valid stack name.", type = "warning", session = session
     )
-    shiny::req(FALSE)
+    req(FALSE)
   }
   if (!is_hex_color(spec$color)) {
-    blockr.core::notify(
+    notify(
       "Please choose a valid stack color.", type = "warning", session = session
     )
-    shiny::req(FALSE)
+    req(FALSE)
   }
   invisible(TRUE)
 }
@@ -176,7 +174,7 @@ resolve_stack_target <- function(board, target) {
   }
 
   stack <- lookup_stack(board, target)
-  selected <- as.character(blockr.core::stack_blocks(stack))
+  selected <- as.character(stack_blocks(stack))
 
   list(
     mode = "edit",
@@ -184,16 +182,16 @@ resolve_stack_target <- function(board, target) {
     # deselect them; otherwise they'd be invisible (not in available).
     pool = union(pool, selected),
     selected = selected,
-    name = blockr.core::stack_name(stack) %||% "",
+    name = stack_name(stack) %||% "",
     color = attr(stack, "color", exact = TRUE) %||% default_stack_color(),
     stack_id = NULL
   )
 }
 
 lookup_stack <- function(board, target) {
-  stacks <- blockr.core::board_stacks(board)
+  stacks <- board_stacks(board)
   if (!(target %in% names(stacks))) {
-    blockr.core::blockr_abort(
+    blockr_abort(
       paste0(
         "No stack with id ", encodeString(target, quote = "'"),
         " on the board."
@@ -214,13 +212,13 @@ lookup_stack <- function(board, target) {
 stack_menu_block_metas <- function(board, pool, selected) {
   if (length(pool) == 0L) return(list())
 
-  blocks <- if (is.null(board)) list() else blockr.core::board_blocks(board)
-  registry <- blockr.core::available_blocks()
+  blocks <- if (is.null(board)) list() else board_blocks(board)
+  registry <- available_blocks()
 
   lapply(pool, function(blk_id) {
     blk <- blocks[[blk_id]]
     entry <- registry_entry_for(blk, registry)
-    label <- blockr.core::block_name(blk) %||% blk_id
+    label <- block_name(blk) %||% blk_id
     list(
       type = blk_id,
       name = if (nzchar(label)) label else blk_id,
@@ -235,7 +233,7 @@ stack_menu_block_metas <- function(board, pool, selected) {
 
 registry_entry_for <- function(blk, registry) {
   if (is.null(blk) || length(registry) == 0L) return(NULL)
-  uid <- blockr.core::registry_id_from_block(blk)
+  uid <- registry_id_from_block(blk)
   if (length(uid)) registry[[uid]] else NULL
 }
 
@@ -245,32 +243,32 @@ stack_menu_panel <- function(ns, metas, ctx) {
   groups <- category_groups(metas)
   is_edit <- identical(ctx$mode, "edit")
 
-  shiny::tags$div(
+  tags$div(
     id = ns("commit"),
     class = "blockr-stack-menu",
     `data-mode` = ctx$mode,
-    shiny::tags$h4(
+    tags$h4(
       class = "blockr-stack-menu-section-header",
       "Stack blocks"
     ),
-    shiny::tags$input(
+    tags$input(
       type = "search",
       class = "blockr-block-browser-search",
       placeholder = "Search...",
       `aria-label` = "Search blocks"
     ),
-    shiny::tags$div(
+    tags$div(
       class = "blockr-block-browser-categories",
       lapply(names(groups), function(cat) {
         category_section(cat, groups[[cat]], stack_block_card)
       })
     ),
-    shiny::tags$div(
+    tags$div(
       class = "blockr-block-browser-empty",
       "No blocks match your search."
     ),
     stack_menu_form(ns, ctx, is_edit),
-    shiny::tags$button(
+    tags$button(
       type = "button",
       class = "blockr-stack-menu-confirm",
       if (is_edit) "Update stack" else "Create stack"
@@ -300,23 +298,23 @@ stack_block_card <- function(meta) {
   }
 
   do.call(
-    shiny::tags$div,
+    tags$div,
     c(
       card_attrs,
       list(
-        shiny::tags$div(
+        tags$div(
           class = "blockr-block-browser-card-header",
-          shiny::tags$span(
+          tags$span(
             class = "blockr-block-browser-card-icon",
             if (nzchar(meta$icon)) htmltools::HTML(meta$icon) else NULL
           ),
-          shiny::tags$div(
+          tags$div(
             class = "blockr-stack-menu-card-titles",
-            shiny::tags$span(
+            tags$span(
               class = "blockr-block-browser-card-name",
               meta$name
             ),
-            shiny::tags$span(
+            tags$span(
               class = "blockr-stack-menu-card-id",
               paste0("id: ", meta$type)
             )
@@ -336,12 +334,12 @@ stack_block_card <- function(meta) {
 # subtly-tinted panel so the configuration block reads as distinct
 # from the picker.
 stack_menu_form <- function(ns, ctx, is_edit) {
-  shiny::tagList(
-    shiny::tags$h4(
+  tagList(
+    tags$h4(
       class = "blockr-stack-menu-section-header",
       "Stack settings"
     ),
-    shiny::tags$div(
+    tags$div(
       class = "blockr-stack-menu-form",
       text_field_tag(ns, "stack_name", "Stack name", ctx$name, "My stack"),
       color_field_tag(ns, ctx$color),
@@ -353,10 +351,10 @@ stack_menu_form <- function(ns, ctx, is_edit) {
 }
 
 text_field_tag <- function(ns, key, label, value, placeholder) {
-  shiny::tags$div(
+  tags$div(
     class = "blockr-stack-menu-field",
-    shiny::tags$label(`for` = ns(key), label),
-    shiny::tags$input(
+    tags$label(`for` = ns(key), label),
+    tags$input(
       id = ns(key),
       type = "text",
       value = value %||% "",
@@ -367,13 +365,13 @@ text_field_tag <- function(ns, key, label, value, placeholder) {
 
 color_field_tag <- function(ns, value) {
   hex <- value %||% default_stack_color()
-  shiny::tags$div(
+  tags$div(
     class = "blockr-stack-menu-field blockr-stack-menu-color",
-    shiny::tags$label(`for` = ns("stack_color"), "Stack color"),
-    shiny::tags$div(
+    tags$label(`for` = ns("stack_color"), "Stack color"),
+    tags$div(
       class = "blockr-stack-menu-color-preview",
-      shiny::tags$span(class = "blockr-stack-menu-color-swatch"),
-      shiny::tags$input(
+      tags$span(class = "blockr-stack-menu-color-swatch"),
+      tags$input(
         id = ns("stack_color"),
         type = "text",
         class = "blockr-stack-menu-hex",
@@ -383,7 +381,7 @@ color_field_tag <- function(ns, value) {
         `aria-label` = "Hex colour value"
       )
     ),
-    shiny::tags$input(
+    tags$input(
       type = "range",
       class = "blockr-stack-menu-hue",
       min = "0",
@@ -392,7 +390,7 @@ color_field_tag <- function(ns, value) {
       value = "0",
       `aria-label` = "Hue"
     ),
-    shiny::tags$input(
+    tags$input(
       type = "range",
       class = "blockr-stack-menu-lightness",
       min = "20",
@@ -414,7 +412,7 @@ default_stack_color <- function() {
 }
 
 seed_stack_id <- function(board) {
-  seed_ids(safe_board_ids(board, blockr.core::board_stack_ids), 1L)
+  seed_ids(safe_board_ids(board, board_stack_ids), 1L)
 }
 
 # A unique, human-readable default name for the create flow. Uses the
@@ -426,8 +424,8 @@ seed_stack_name <- function(board) {
     character()
   } else {
     vapply(
-      blockr.core::board_stacks(board),
-      function(s) blockr.core::stack_name(s) %||% "",
+      board_stacks(board),
+      function(s) stack_name(s) %||% "",
       character(1L),
       USE.NAMES = FALSE
     )
@@ -436,12 +434,12 @@ seed_stack_name <- function(board) {
 }
 
 # Block ids on the board that are not currently a member of any stack.
-# `blockr.core::available_stack_blocks()` computes exactly this when seeded
+# `available_stack_blocks()` computes exactly this when seeded
 # with the board's block ids (its default seeds with stack ids instead).
 stack_eligible_blocks <- function(board) {
   if (is.null(board)) return(character())
-  blockr.core::available_stack_blocks(
+  available_stack_blocks(
     board,
-    blocks = blockr.core::board_block_ids(board)
+    blocks = board_block_ids(board)
   )
 }

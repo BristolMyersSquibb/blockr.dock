@@ -1,5 +1,3 @@
-# Vendored from blockr.ui for the CRAN release (blockr.ui is not on CRAN).
-# Internal to blockr.dock; keep in sync with blockr.ui if these change upstream.
 sidebar_ui <- function(id, ui = NULL, title = NULL,
                        side = c("right", "left"), width = "420px",
                        mode = c("overlay", "push")) {
@@ -23,7 +21,7 @@ sidebar_ui <- function(id, ui = NULL, title = NULL,
     body_deps <- rendered$dependencies
   }
 
-  panel <- shiny::tags$div(
+  panel <- tags$div(
     id = id,
     class = "blockr-sidebar",
     `data-side` = side,
@@ -31,12 +29,12 @@ sidebar_ui <- function(id, ui = NULL, title = NULL,
     `aria-hidden` = "true",
     tabindex = "-1",
     style = paste0("--blockr-sidebar-panel-width: ", width, ";"),
-    shiny::tags$header(
+    tags$header(
       class = "blockr-sidebar-header",
-      shiny::tags$h2(class = "blockr-sidebar-title", title),
-      shiny::tags$div(
+      tags$h2(class = "blockr-sidebar-title", title),
+      tags$div(
         class = "blockr-sidebar-actions",
-        shiny::tags$button(
+        tags$button(
           type = "button",
           class = "blockr-sidebar-btn blockr-sidebar-pin",
           `aria-label` = "Pin sidebar",
@@ -44,7 +42,7 @@ sidebar_ui <- function(id, ui = NULL, title = NULL,
           title = "Pin",
           pin_icon()
         ),
-        shiny::tags$button(
+        tags$button(
           type = "button",
           class = "blockr-sidebar-btn blockr-sidebar-close",
           `aria-label` = "Close sidebar",
@@ -54,7 +52,7 @@ sidebar_ui <- function(id, ui = NULL, title = NULL,
       )
     ),
     do.call(
-      shiny::tags$div,
+      tags$div,
       c(
         list(
           class = "blockr-sidebar-body",
@@ -82,7 +80,7 @@ sidebar_dep <- function() {
 }
 
 show_sidebar <- function(id, ui = NULL, title = NULL,
-                         session = shiny::getDefaultReactiveDomain()) {
+                         session = getDefaultReactiveDomain()) {
   stopifnot(
     is.character(id), length(id) == 1L, nzchar(id),
     is.null(title) || (is.character(title) && length(title) == 1L)
@@ -101,7 +99,7 @@ show_sidebar <- function(id, ui = NULL, title = NULL,
     payload$html <- rendered$html
     payload$dependencies <- lapply(
       htmltools::resolveDependencies(rendered$dependencies),
-      shiny::createWebDependency
+      createWebDependency
     )
   }
   if (!is.null(title)) {
@@ -111,7 +109,7 @@ show_sidebar <- function(id, ui = NULL, title = NULL,
   invisible(NULL)
 }
 
-hide_sidebar <- function(id, session = shiny::getDefaultReactiveDomain()) {
+hide_sidebar <- function(id, session = getDefaultReactiveDomain()) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
   root <- root_session(session)
 
@@ -119,13 +117,13 @@ hide_sidebar <- function(id, session = shiny::getDefaultReactiveDomain()) {
   invisible(NULL)
 }
 
-sidebar_state <- function(id, session = shiny::getDefaultReactiveDomain()) {
+sidebar_state <- function(id, session = getDefaultReactiveDomain()) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
   root <- root_session(session)
 
   # Snapshot read: callers (typically `observeEvent` confirm handlers)
   # want the current value without creating a reactive dependency on it.
-  state <- shiny::isolate(root$input[[id]])
+  state <- isolate(root$input[[id]])
   if (is.null(state)) {
     list(open = FALSE, pinned = FALSE)
   } else {
@@ -134,7 +132,7 @@ sidebar_state <- function(id, session = shiny::getDefaultReactiveDomain()) {
 }
 
 keep_or_hide_sidebar <- function(id, ui, title = NULL,
-                                 session = shiny::getDefaultReactiveDomain()) {
+                                 session = getDefaultReactiveDomain()) {
   if (isTRUE(sidebar_state(id, session = session)$pinned)) {
     show_sidebar(id, ui = ui, title = title, session = session)
   } else {
@@ -148,12 +146,12 @@ keep_or_hide_sidebar <- function(id, ui, title = NULL,
 # no extra dep, and `fill="currentColor"` lets the existing pinned-state
 # colour rule (`.blockr-sidebar-pinned .blockr-sidebar-pin`) drive it.
 pin_icon <- function() {
-  shiny::tags$svg(
+  tags$svg(
     xmlns = "http://www.w3.org/2000/svg",
     viewBox = "0 0 16 16",
     fill = "currentColor",
     `aria-hidden` = "true",
-    shiny::tags$path(
+    tags$path(
       d = paste0(
         "M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707",
         "c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039",
@@ -175,7 +173,7 @@ pin_icon <- function() {
 # caller and is what `show_sidebar()` / `hide_sidebar()` target.
 root_session <- function(session) {
   if (is.null(session)) {
-    blockr.core::blockr_abort(
+    blockr_abort(
       paste(
         "`show_sidebar()` / `hide_sidebar()` must be called from",
         "within a Shiny session."

@@ -1,10 +1,8 @@
-# Vendored from blockr.ui for the CRAN release (blockr.ui is not on CRAN).
-# Internal to blockr.dock; keep in sync with blockr.ui if these change upstream.
 block_browser_ui <- function(id, board = NULL, target = NULL) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
   stopifnot(is.null(target) || inherits(target, "bb_target"))
 
-  ns <- shiny::NS(id)
+  ns <- NS(id)
   mode <- target_mode(target)
   # The card list is a pure function of the registry: no board-seeded
   # default ids are baked in (the server resolves a unique id at commit),
@@ -34,7 +32,7 @@ block_browser_server <- function(id, board = NULL, target = NULL) {
   board_fn <- as_arg_reactive(board)
   target_fn <- as_arg_reactive(target)
 
-  shiny::moduleServer(
+  moduleServer(
     id,
     function(input, output, session) {
       # `input$commit` is the binding's value; the `nonce` it carries
@@ -44,14 +42,14 @@ block_browser_server <- function(id, board = NULL, target = NULL) {
       # then returns a ready-to-apply value: a `blocks` object for the add
       # flow, or `list(blocks, links)` for append / prepend - parity with
       # link_menu_server() / stack_menu_server().
-      shiny::eventReactive(
+      eventReactive(
         input$commit,
         {
           spec <- input$commit
           spec[["nonce"]] <- NULL
           brd <- board_fn()
           tgt <- target_fn()
-          if (shiny::is.reactive(board)) {
+          if (is.reactive(board)) {
             validate_block_spec(spec, brd, tgt, session)
           }
           block_commit_value(spec, brd, tgt)
@@ -70,8 +68,8 @@ block_browser_server <- function(id, board = NULL, target = NULL) {
 # dock's former build_block_from_spec + block_input_select assembly.
 block_commit_value <- function(spec, board, target) {
   blk <- build_browser_block(spec)
-  blk_id <- resolve_browser_id(spec$id, board, blockr.core::board_block_ids)
-  blocks <- blockr.core::as_blocks(blockr.core::set_names(list(blk), blk_id))
+  blk_id <- resolve_browser_id(spec$id, board, board_block_ids)
+  blocks <- as_blocks(set_names(list(blk), blk_id))
 
   if (target_mode(target) == "add") {
     return(blocks)
@@ -90,7 +88,7 @@ block_commit_value <- function(spec, board, target) {
 block_commit_link <- function(spec, board, target, blk, blk_id) {
   links <- safe_board_links(board)
   link_id <- resolve_browser_id(
-    spec$link_id, board, blockr.core::board_link_ids
+    spec$link_id, board, board_link_ids
   )
 
   if (target$mode == "append") {
@@ -98,17 +96,17 @@ block_commit_link <- function(spec, board, target, blk, blk_id) {
     if (is.null(input) || !nzchar(input)) {
       input <- resolve_free_input(blk, blk_id, links)
     }
-    lnk <- blockr.core::new_link(from = target$id, to = blk_id, input = input)
+    lnk <- new_link(from = target$id, to = blk_id, input = input)
   } else {
     tgt_blk <- board_block(board, target$id)
     input <- spec$target_input
     if (is.null(input) || !nzchar(input)) {
       input <- resolve_free_input(tgt_blk, target$id, links)
     }
-    lnk <- blockr.core::new_link(from = blk_id, to = target$id, input = input)
+    lnk <- new_link(from = blk_id, to = target$id, input = input)
   }
 
-  blockr.core::as_links(blockr.core::set_names(list(lnk), link_id))
+  as_links(set_names(list(lnk), link_id))
 }
 
 # Construct the block instance. The user's title (when supplied) is the
@@ -117,9 +115,9 @@ block_commit_link <- function(spec, board, target, blk, blk_id) {
 # separately by resolve_browser_id().
 build_browser_block <- function(spec) {
   if (!is.null(spec$title) && nzchar(spec$title)) {
-    blockr.core::create_block(spec$type, block_name = spec$title)
+    create_block(spec$type, block_name = spec$title)
   } else {
-    blockr.core::create_block(spec$type)
+    create_block(spec$type)
   }
 }
 
@@ -130,7 +128,7 @@ resolve_browser_id <- function(spec_id, board, getter) {
   if (is_new_id(spec_id, existing)) {
     spec_id
   } else {
-    blockr.core::rand_names(old_names = existing, n = 1L)
+    rand_names(old_names = existing, n = 1L)
   }
 }
 
@@ -139,12 +137,12 @@ resolve_browser_id <- function(spec_id, board, getter) {
 # "assign one for me", resolved in block_commit_value().
 validate_block_spec <- function(spec, board, target, session) {
   reject_collision(
-    spec$id, safe_board_ids(board, blockr.core::board_block_ids),
+    spec$id, safe_board_ids(board, board_block_ids),
     "block", session
   )
   if (target_mode(target) %in% c("append", "prepend")) {
     reject_collision(
-      spec$link_id, safe_board_ids(board, blockr.core::board_link_ids),
+      spec$link_id, safe_board_ids(board, board_link_ids),
       "link", session
     )
   }
@@ -153,21 +151,21 @@ validate_block_spec <- function(spec, board, target, session) {
 
 reject_collision <- function(id, existing, what, session) {
   if (!is.null(id) && nzchar(id) && id %in% existing) {
-    blockr.core::notify(
+    notify(
       paste0("Please choose a valid ", what, " ID."),
       type = "warning", session = session
     )
-    shiny::req(FALSE)
+    req(FALSE)
   }
   invisible(TRUE)
 }
 
 # The board's links, or an empty links object for a NULL board.
 safe_board_links <- function(board) {
-  if (is.null(board)) return(blockr.core::links())
+  if (is.null(board)) return(links())
   tryCatch(
-    blockr.core::board_links(board),
-    error = function(e) blockr.core::links()
+    board_links(board),
+    error = function(e) links()
   )
 }
 
@@ -212,11 +210,11 @@ target_mode <- function(target) {
 # so we skip the work otherwise) to drive the linkable-block filter and
 # the in-card port picker.
 browser_block_metas <- function(mode) {
-  registry <- blockr.core::available_blocks()
+  registry <- available_blocks()
   metas <- lapply(seq_along(registry), function(i) {
     entry <- registry[[i]]
     # `type` is the registry uid (e.g. "dataset_block"), so consumers
-    # can do `blockr.core::create_block(spec$type, ...)` rather than
+    # can do `create_block(spec$type, ...)` rather than
     # rely on the constructor's function name being importable.
     list(
       type = names(registry)[[i]],
@@ -273,15 +271,15 @@ resolve_target <- function(board, target) {
 
   blk <- board_block(board, target$id)
   trigger_name <- if (!is.null(blk)) {
-    nm <- tryCatch(blockr.core::block_name(blk), error = function(e) NULL)
+    nm <- tryCatch(block_name(blk), error = function(e) NULL)
     if (is.null(nm) || !nzchar(nm)) target$id else nm
   } else {
     target$id
   }
   verb <- if (target$mode == "append") "Append from" else "Prepend to"
-  subtitle <- shiny::tags$p(
+  subtitle <- tags$p(
     class = "blockr-block-browser-context",
-    verb, " ", shiny::tags$strong(trigger_name)
+    verb, " ", tags$strong(trigger_name)
   )
 
   inputs <- character()
@@ -290,10 +288,10 @@ resolve_target <- function(board, target) {
     # Filter out slots already taken by incoming links to the target,
     # so the user is never offered a port they can't actually use.
     inputs <- setdiff(
-      blockr.core::block_inputs(blk),
+      block_inputs(blk),
       taken_inputs(board, target$id)
     )
-    arity <- blockr.core::block_arity(blk)
+    arity <- block_arity(blk)
     if (is.na(arity)) {
       attrs <- list(`data-target-arity` = "inf")
     } else if (is.numeric(arity) && length(arity) == 1L) {
@@ -320,18 +318,18 @@ browser_panel <- function(ns, metas, mode, tgt) {
   )
 
   do.call(
-    shiny::tags$div,
+    tags$div,
     c(
       root_attrs,
       list(
         tgt$subtitle,
-        shiny::tags$input(
+        tags$input(
           type = "search",
           class = "blockr-block-browser-search",
           placeholder = "Search...",
           `aria-label` = "Search blocks"
         ),
-        shiny::tags$div(
+        tags$div(
           class = "blockr-block-browser-categories",
           lapply(names(groups), function(cat) {
             category_section(
@@ -340,7 +338,7 @@ browser_panel <- function(ns, metas, mode, tgt) {
             )
           })
         ),
-        shiny::tags$div(
+        tags$div(
           class = "blockr-block-browser-empty",
           "No blocks match your search."
         )
@@ -353,11 +351,11 @@ browser_panel <- function(ns, metas, mode, tgt) {
 # only the per-entry card differs, so callers pass a `card_fn` that maps
 # one meta to its card tag.
 category_section <- function(category, entries, card_fn) {
-  shiny::tags$div(
+  tags$div(
     class = "blockr-block-browser-category",
     `data-category` = category,
-    shiny::tags$h3(category),
-    shiny::tags$div(
+    tags$h3(category),
+    tags$div(
       class = "blockr-block-browser-cards",
       lapply(entries, card_fn)
     )
@@ -365,7 +363,7 @@ category_section <- function(category, entries, card_fn) {
 }
 
 browser_block_card <- function(meta, ns, mode, target_inputs) {
-  shiny::tags$div(
+  tags$div(
     class = "blockr-block-browser-card",
     `data-block-type` = meta$type,
     `data-name` = meta$name,
@@ -382,21 +380,21 @@ browser_block_card <- function(meta, ns, mode, target_inputs) {
     # (icon · name · package badge · chevron). The description band and
     # form below stay hidden until the card is expanded, keeping the
     # resting list dense (the finalized "compact" density of the spec).
-    shiny::tags$div(
+    tags$div(
       class = "blockr-block-browser-card-header",
-      shiny::tags$span(
+      tags$span(
         class = "blockr-block-browser-card-icon",
         if (nzchar(meta$icon)) htmltools::HTML(meta$icon) else NULL
       ),
-      shiny::tags$div(
+      tags$div(
         class = "blockr-block-browser-card-body",
-        shiny::tags$div(
+        tags$div(
           class = "blockr-block-browser-card-titles",
-          shiny::tags$span(class = "blockr-block-browser-card-name", meta$name),
-          shiny::tags$span(
+          tags$span(class = "blockr-block-browser-card-name", meta$name),
+          tags$span(
             class = "blockr-block-browser-card-package", meta$package
           ),
-          shiny::tags$button(
+          tags$button(
             type = "button",
             class = "blockr-block-browser-card-chevron",
             `aria-label` = "Configure before adding",
@@ -409,7 +407,7 @@ browser_block_card <- function(meta, ns, mode, target_inputs) {
     # per spec), revealed only when the card expands into its elevated
     # panel. Dropped from the DOM when there is no description.
     if (nzchar(meta$description)) {
-      shiny::tags$p(
+      tags$p(
         class = "blockr-block-browser-card-descr-band",
         meta$description
       )
@@ -435,7 +433,7 @@ card_advanced <- function(meta, ns, mode, target_inputs) {
     prepend = "Prepend"
   )
 
-  shiny::tags$div(
+  tags$div(
     class = "blockr-block-browser-card-advanced",
     # Empty default: the server resolves a unique id at commit (avoiding
     # the board's ids). An explicit value here overrides that.
@@ -478,7 +476,7 @@ card_advanced <- function(meta, ns, mode, target_inputs) {
         options = target_inputs
       )
     },
-    shiny::tags$button(
+    tags$button(
       type = "button",
       class = "blockr-block-browser-card-add",
       plus_icon(),
@@ -488,11 +486,11 @@ card_advanced <- function(meta, ns, mode, target_inputs) {
 }
 
 field_wrapper <- function(class_suffix, id, label, control) {
-  shiny::tags$div(
+  tags$div(
     class = paste0(
       "blockr-block-browser-field blockr-block-browser-field-", class_suffix
     ),
-    shiny::tags$label(`for` = id, label),
+    tags$label(`for` = id, label),
     control
   )
 }
@@ -500,7 +498,7 @@ field_wrapper <- function(class_suffix, id, label, control) {
 field_text <- function(class_suffix, id, label, value, placeholder = NULL) {
   field_wrapper(
     class_suffix, id, label,
-    shiny::tags$input(
+    tags$input(
       type = "text",
       id = id,
       value = value,
@@ -512,22 +510,22 @@ field_text <- function(class_suffix, id, label, value, placeholder = NULL) {
 field_select <- function(class_suffix, id, label, options) {
   field_wrapper(
     class_suffix, id, label,
-    shiny::tags$select(
+    tags$select(
       id = id,
       lapply(options, function(opt) {
-        shiny::tags$option(value = opt, opt)
+        tags$option(value = opt, opt)
       })
     )
   )
 }
 
 chevron_icon <- function() {
-  shiny::tags$svg(
+  tags$svg(
     xmlns = "http://www.w3.org/2000/svg",
     viewBox = "0 0 16 16",
     fill = "currentColor",
     `aria-hidden` = "true",
-    shiny::tags$path(
+    tags$path(
       d = paste0(
         "M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1",
         " .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"
@@ -540,7 +538,7 @@ chevron_icon <- function() {
 # left of the label). Stroked rather than filled to match the button's
 # light, outline weight.
 plus_icon <- function() {
-  shiny::tags$svg(
+  tags$svg(
     xmlns = "http://www.w3.org/2000/svg",
     viewBox = "0 0 24 24",
     fill = "none",
@@ -549,7 +547,7 @@ plus_icon <- function() {
     `stroke-linecap` = "round",
     `stroke-linejoin` = "round",
     `aria-hidden` = "true",
-    shiny::tags$path(d = "M12 5v14M5 12h14")
+    tags$path(d = "M12 5v14M5 12h14")
   )
 }
 
@@ -580,7 +578,7 @@ category_groups <- function(metas) {
 # n unique ids avoiding `existing` (and each other); empty for n == 0.
 seed_ids <- function(existing, n) {
   if (n > 0L) {
-    blockr.core::rand_names(old_names = existing, n = n)
+    rand_names(old_names = existing, n = n)
   } else {
     character()
   }
@@ -592,7 +590,7 @@ safe_block_inputs <- function(ctor) {
   tryCatch(
     {
       blk <- ctor()
-      blockr.core::block_inputs(blk)
+      block_inputs(blk)
     },
     error = function(e) character()
   )
@@ -604,7 +602,7 @@ safe_block_inputs <- function(ctor) {
 # even though `block_inputs()` returns character(0).
 safe_block_variadic <- function(ctor) {
   tryCatch(
-    is.na(blockr.core::block_arity(ctor())),
+    is.na(block_arity(ctor())),
     error = function(e) FALSE
   )
 }
@@ -616,7 +614,7 @@ safe_board_ids <- function(board, getter) {
 
 board_block <- function(board, id) {
   if (is.null(board)) return(NULL)
-  blocks <- tryCatch(blockr.core::board_blocks(board), error = function(e) NULL)
+  blocks <- tryCatch(board_blocks(board), error = function(e) NULL)
   if (is.null(blocks)) return(NULL)
   blocks[[id]]
 }
@@ -627,7 +625,7 @@ board_block <- function(board, id) {
 taken_inputs <- function(board, block_id) {
   if (is.null(board)) return(character())
   links_df <- tryCatch(
-    as.data.frame(blockr.core::board_links(board)),
+    as.data.frame(board_links(board)),
     error = function(e) NULL
   )
   if (is.null(links_df) || !nrow(links_df) ||

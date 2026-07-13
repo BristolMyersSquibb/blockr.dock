@@ -1,5 +1,3 @@
-# Vendored from blockr.ui for the CRAN release (blockr.ui is not on CRAN).
-# Internal to blockr.dock; keep in sync with blockr.ui if these change upstream.
 link_menu_ui <- function(id, board, anchor) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
 
@@ -7,7 +5,7 @@ link_menu_ui <- function(id, board, anchor) {
   # link_menu_ui() so we don't double-validate.
   pools <- link_eligible_pools(board, anchor)
 
-  ns <- shiny::NS(id)
+  ns <- NS(id)
   htmltools::attachDependencies(
     link_menu_panel(ns, board, anchor, pools),
     list(block_browser_dep(), link_menu_dep())
@@ -20,22 +18,22 @@ link_menu_server <- function(id, board = NULL, anchor = NULL) {
   board_fn <- as_arg_reactive(board)
   anchor_fn <- as_arg_reactive(anchor)
 
-  shiny::moduleServer(
+  moduleServer(
     id,
     function(input, output, session) {
       # Live board sync: when a board reactive is supplied, refresh the
       # open menu in place on every board change by pushing a `menu:sync`
       # diff to our own binding. Self-scoped (bare "commit" - the module
       # session namespaces it), so it no-ops when the panel isn't mounted.
-      if (shiny::is.reactive(board)) {
-        shiny::observeEvent(
+      if (is.reactive(board)) {
+        observeEvent(
           board_fn(),
           {
             anc <- anchor_fn()
             brd <- board_fn()
             # The anchor block may have been removed; nothing to sync to.
             if (!is.null(anc) && nzchar(anc) &&
-                  anc %in% blockr.core::board_block_ids(brd)) {
+                  anc %in% board_block_ids(brd)) {
               session$sendInputMessage(
                 "commit", link_sync_payload(brd, anc, session$ns)
               )
@@ -45,7 +43,7 @@ link_menu_server <- function(id, board = NULL, anchor = NULL) {
         )
       }
 
-      shiny::eventReactive(
+      eventReactive(
         input$commit,
         {
           spec <- input$commit
@@ -53,7 +51,7 @@ link_menu_server <- function(id, board = NULL, anchor = NULL) {
           # The menu owns validation when the consumer opts in with a
           # board reactive: a duplicate / empty link id notifies and
           # `req()`s out, so the committed reactive never fires invalid.
-          if (shiny::is.reactive(board)) {
+          if (is.reactive(board)) {
             validate_link_spec(spec, board_fn(), session)
           }
           link_commit_value(spec, board_fn())
@@ -73,15 +71,15 @@ link_commit_value <- function(spec, board) {
   input <- spec$block_input
   if (is.null(input) || !nzchar(input)) {
     input <- resolve_free_input(
-      blockr.core::board_blocks(board)[[spec$target]],
+      board_blocks(board)[[spec$target]],
       spec$target,
-      blockr.core::board_links(board)
+      board_links(board)
     )
   }
-  lnk <- blockr.core::new_link(
+  lnk <- new_link(
     from = spec$source, to = spec$target, input = input
   )
-  blockr.core::as_links(blockr.core::set_names(list(lnk), spec$link_id))
+  as_links(set_names(list(lnk), spec$link_id))
 }
 
 # Pick the target's input slot for a new link, mirroring blockr.dock's
@@ -90,9 +88,9 @@ link_commit_value <- function(spec, board) {
 # generated numeric slot.
 resolve_free_input <- function(block, block_id, links) {
   curr <- links[links$to == block_id]$input
-  free <- setdiff(blockr.core::block_inputs(block), curr)
+  free <- setdiff(block_inputs(block), curr)
 
-  if (is.na(blockr.core::block_arity(block))) {
+  if (is.na(block_arity(block))) {
     num <- suppressWarnings(as.integer(curr))
     num <- num[!is.na(num)]
     slot <- if (!length(num)) {
@@ -111,12 +109,12 @@ resolve_free_input <- function(block, block_id, links) {
 # self-validation. The eligible-pool logic already guarantees a valid
 # source / target pair, so only the id needs checking here.
 validate_link_spec <- function(spec, board, session) {
-  existing <- safe_ids(board, blockr.core::board_link_ids)
+  existing <- safe_ids(board, board_link_ids)
   if (!is_new_id(spec$link_id, existing)) {
-    blockr.core::notify(
+    notify(
       "Please choose a valid link ID.", type = "warning", session = session
     )
-    shiny::req(FALSE)
+    req(FALSE)
   }
   invisible(TRUE)
 }
@@ -129,8 +127,8 @@ validate_link_spec <- function(spec, board, session) {
 # the initial render.
 link_sync_payload <- function(board, anchor, ns) {
   pools <- link_eligible_pools(board, anchor)
-  registry <- blockr.core::available_blocks()
-  blocks <- blockr.core::board_blocks(board)
+  registry <- available_blocks()
+  blocks <- board_blocks(board)
 
   cards <- c(
     link_sync_cards(
@@ -181,8 +179,8 @@ link_eligible_pools <- function(board, anchor) {
   stopifnot(is.character(anchor), length(anchor) == 1L, nzchar(anchor))
   validate_anchor(board, anchor)
 
-  blocks <- blockr.core::board_blocks(board)
-  links_df <- as.data.frame(blockr.core::board_links(board))
+  blocks <- board_blocks(board)
+  links_df <- as.data.frame(board_links(board))
 
   outgoing <- compute_outgoing_targets(blocks, anchor, links_df)
   incoming <- compute_incoming_sources(blocks, anchor, links_df)
@@ -192,7 +190,7 @@ link_eligible_pools <- function(board, anchor) {
   # anchor. The pool-update push reads this map to refresh each
   # visible card's block-input <select> options after a commit.
   targets <- unique(c(outgoing, if (length(incoming)) anchor))
-  free <- blockr.core::set_names(
+  free <- set_names(
     lapply(targets, function(id) free_named_inputs(blocks[[id]], id, links_df)),
     targets
   )
@@ -205,10 +203,10 @@ validate_anchor <- function(board, anchor) {
   ids <- if (is.null(board)) {
     character()
   } else {
-    blockr.core::board_block_ids(board)
+    board_block_ids(board)
   }
   if (!(anchor %in% ids)) {
-    blockr.core::blockr_abort(
+    blockr_abort(
       paste0(
         "No block with id ", encodeString(anchor, quote = "'"),
         " on the board."
@@ -283,7 +281,7 @@ walk_reachable <- function(start, links_df, from_col, to_col) {
 # otherwise.
 has_input_capacity <- function(blk, blk_id, links_df) {
   if (is.null(blk)) return(FALSE)
-  if (is.na(blockr.core::block_arity(blk))) return(TRUE)
+  if (is.na(block_arity(blk))) return(TRUE)
   length(free_named_inputs(blk, blk_id, links_df)) > 0L
 }
 
@@ -293,14 +291,14 @@ has_input_capacity <- function(blk, blk_id, links_df) {
 # so no port picker is shown for them.
 free_named_inputs <- function(blk, blk_id, links_df) {
   if (is.null(blk)) return(character())
-  if (is.na(blockr.core::block_arity(blk))) return(character())
+  if (is.na(block_arity(blk))) return(character())
   used <- if (is.null(links_df) || !nrow(links_df) ||
                 !all(c("to", "input") %in% names(links_df))) {
     character()
   } else {
     as.character(links_df$input[links_df$to == blk_id])
   }
-  setdiff(blockr.core::block_inputs(blk), used)
+  setdiff(block_inputs(blk), used)
 }
 
 # ---- panel assembly ----------------------------------------------------
@@ -318,17 +316,17 @@ link_menu_panel <- function(ns, board, anchor, pools) {
   )
 
   do.call(
-    shiny::tags$div,
+    tags$div,
     c(
       root_attrs,
       list(
-        shiny::tags$input(
+        tags$input(
           type = "search",
           class = "blockr-block-browser-search",
           placeholder = "Search...",
           `aria-label` = "Search blocks"
         ),
-        shiny::tags$div(
+        tags$div(
           class = "blockr-link-menu-directions",
           # Order follows the visual left-to-right data flow: sources
           # (INPUT FROM) feed the anchor, the anchor feeds targets
@@ -348,7 +346,7 @@ link_menu_panel <- function(ns, board, anchor, pools) {
             )
           }
         ),
-        shiny::tags$div(
+        tags$div(
           class = "blockr-block-browser-empty",
           paste0(
             "This block can't be linked: no other blocks have free ",
@@ -367,7 +365,7 @@ link_card_meta <- function(blk_id, blocks, registry, anchor, direction,
                            free_inputs) {
   blk <- blocks[[blk_id]]
   entry <- registry_entry_for(blk, registry)
-  label <- blockr.core::block_name(blk) %||% blk_id
+  label <- block_name(blk) %||% blk_id
   target_id <- if (direction == "outgoing") blk_id else anchor
   list(
     id = blk_id,
@@ -383,8 +381,8 @@ link_card_meta <- function(blk_id, blocks, registry, anchor, direction,
 
 direction_section <- function(ns, board, anchor, pool, direction, header,
                               free_inputs) {
-  registry <- blockr.core::available_blocks()
-  blocks <- blockr.core::board_blocks(board)
+  registry <- available_blocks()
+  blocks <- board_blocks(board)
 
   metas <- lapply(pool, function(blk_id) {
     link_card_meta(blk_id, blocks, registry, anchor, direction, free_inputs)
@@ -392,11 +390,11 @@ direction_section <- function(ns, board, anchor, pool, direction, header,
 
   groups <- category_groups(metas)
 
-  shiny::tags$div(
+  tags$div(
     class = "blockr-link-menu-direction",
     `data-direction` = direction,
-    shiny::tags$h4(class = "blockr-link-menu-section-header", header),
-    shiny::tags$div(
+    tags$h4(class = "blockr-link-menu-section-header", header),
+    tags$div(
       class = "blockr-block-browser-categories",
       lapply(names(groups), function(cat) {
         category_section(
@@ -409,7 +407,7 @@ direction_section <- function(ns, board, anchor, pool, direction, header,
 }
 
 link_block_card <- function(meta, ns, board, direction) {
-  shiny::tags$div(
+  tags$div(
     class = "blockr-block-browser-card blockr-link-menu-card",
     `data-block-type` = meta$id,
     `data-direction` = direction,
@@ -417,24 +415,24 @@ link_block_card <- function(meta, ns, board, direction) {
     `data-description` = meta$description,
     `data-package` = meta$package,
     `data-category` = meta_category(meta),
-    shiny::tags$div(
+    tags$div(
       class = "blockr-block-browser-card-header",
-      shiny::tags$span(
+      tags$span(
         class = "blockr-block-browser-card-icon",
         if (nzchar(meta$icon)) htmltools::HTML(meta$icon) else NULL
       ),
-      shiny::tags$div(
+      tags$div(
         class = "blockr-link-menu-card-titles",
-        shiny::tags$span(
+        tags$span(
           class = "blockr-block-browser-card-name",
           meta$name
         ),
-        shiny::tags$span(
+        tags$span(
           class = "blockr-link-menu-card-id",
           paste0("id: ", meta$id)
         )
       ),
-      shiny::tags$button(
+      tags$button(
         type = "button",
         class = "blockr-block-browser-card-chevron",
         `aria-label` = "Configure before adding",
@@ -452,7 +450,7 @@ link_card_advanced <- function(meta, ns, board) {
   link_id_default <- seed_link_id(board)
   show_port <- length(meta$target_inputs) > 1L
 
-  shiny::tags$div(
+  tags$div(
     class = "blockr-block-browser-card-advanced",
     field_text(
       class_suffix = "link-id",
@@ -468,7 +466,7 @@ link_card_advanced <- function(meta, ns, board) {
         options = meta$target_inputs
       )
     },
-    shiny::tags$button(
+    tags$button(
       type = "button",
       class = "blockr-block-browser-card-add",
       "Add link"
@@ -484,6 +482,6 @@ link_card_advanced <- function(meta, ns, board) {
 # the block browser, so the markup is identical.
 
 seed_link_id <- function(board) {
-  out <- seed_ids(blockr.core::board_link_ids(board), 1L)
+  out <- seed_ids(board_link_ids(board), 1L)
   if (length(out) == 0L) "" else out
 }
