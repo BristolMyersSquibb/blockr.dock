@@ -142,12 +142,12 @@ stack_sync_payload <- function(board, target) {
 
 stack_menu_dep <- function() {
   htmltools::htmlDependency(
-    name = "blockr-stack-menu",
+    name = "sidebar-stack",
     version = utils::packageVersion("blockr.dock"),
     package = "blockr.dock",
     src = "assets",
-    stylesheet = "css/blockr-stack-menu.css",
-    script = "js/blockr-stack-menu.js",
+    stylesheet = "css/sidebar-stack.css",
+    script = "js/sidebar-stack.js",
     all_files = FALSE
   )
 }

@@ -171,12 +171,12 @@ safe_board_links <- function(board) {
 
 block_browser_dep <- function() {
   htmltools::htmlDependency(
-    name = "blockr-block-browser",
+    name = "sidebar-block",
     version = utils::packageVersion("blockr.dock"),
     package = "blockr.dock",
     src = "assets",
-    stylesheet = "css/blockr-block-browser.css",
-    script = "js/blockr-block-browser.js",
+    stylesheet = "css/sidebar-block.css",
+    script = "js/sidebar-block.js",
     all_files = FALSE
   )
 }

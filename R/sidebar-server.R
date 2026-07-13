@@ -69,12 +69,12 @@ sidebar_ui <- function(id, ui = NULL, title = NULL,
 
 sidebar_dep <- function() {
   htmltools::htmlDependency(
-    name = "blockr-sidebar",
+    name = "sidebar-server",
     version = utils::packageVersion("blockr.dock"),
     package = "blockr.dock",
     src = "assets",
-    stylesheet = "css/blockr-sidebar.css",
-    script = "js/blockr-sidebar.js",
+    stylesheet = "css/sidebar-server.css",
+    script = "js/sidebar-server.js",
     all_files = FALSE
   )
 }

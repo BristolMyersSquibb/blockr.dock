@@ -165,12 +165,12 @@ link_sync_cards <- function(blocks, registry, pool, anchor, direction,
 
 link_menu_dep <- function() {
   htmltools::htmlDependency(
-    name = "blockr-link-menu",
+    name = "sidebar-link",
     version = utils::packageVersion("blockr.dock"),
     package = "blockr.dock",
     src = "assets",
-    stylesheet = "css/blockr-link-menu.css",
-    script = "js/blockr-link-menu.js",
+    stylesheet = "css/sidebar-link.css",
+    script = "js/sidebar-link.js",
     all_files = FALSE
   )
 }
