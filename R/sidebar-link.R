@@ -211,7 +211,7 @@ validate_anchor <- function(board, anchor) {
         "No block with id ", encodeString(anchor, quote = "'"),
         " on the board."
       ),
-      class = "blockr_ui_link_menu_unknown_anchor"
+      class = "blockr_dock_link_menu_unknown_anchor"
     )
   }
   invisible(anchor)

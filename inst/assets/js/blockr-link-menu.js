@@ -17,8 +17,8 @@
   // `link_menu_ui()` always attaches block_browser_dep() before
   // link_menu_dep(), so the namespace is in scope by the time this
   // binding runs.
-  var cardSearch = window.BlockrUI.cardSearch;
-  var cardSync = window.BlockrUI.cardSync;
+  var cardSearch = window.BlockrDock.cardSearch;
+  var cardSync = window.BlockrDock.cardSync;
 
   function getField(card, fieldClass) {
     return card.querySelector(
@@ -308,5 +308,5 @@
     }
   });
 
-  Shiny.inputBindings.register(binding, "blockr.ui.linkMenu");
+  Shiny.inputBindings.register(binding, "blockr.dock.linkMenu");
 })();

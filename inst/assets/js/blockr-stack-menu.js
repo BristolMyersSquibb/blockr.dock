@@ -12,12 +12,12 @@
   var COMMIT_EVENT = "blockr-stack-menu:commit";
   var commitSeq = 0;
 
-  // Shared card-list helpers live on `window.BlockrUI.cardSearch`, set
+  // Shared card-list helpers live on `window.BlockrDock.cardSearch`, set
   // up by `blockr-block-browser.js`. `stack_menu_ui()` always attaches
   // `block_browser_dep()` before `stack_menu_dep()`, so the namespace
   // is in scope by the time this binding runs.
-  var cardSearch = window.BlockrUI.cardSearch;
-  var cardSync = window.BlockrUI.cardSync;
+  var cardSearch = window.BlockrDock.cardSearch;
+  var cardSync = window.BlockrDock.cardSync;
 
   // The selection set lives on the root element. We keep it as an
   // ordered list of `data-block-type` strings (board block ids in this
@@ -294,5 +294,5 @@
     }
   });
 
-  Shiny.inputBindings.register(binding, "blockr.ui.stackMenu");
+  Shiny.inputBindings.register(binding, "blockr.dock.stackMenu");
 })();

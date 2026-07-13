@@ -15,12 +15,12 @@
   // render the same `.blockr-block-browser-card` markup and the same
   // `data-name` / `data-description` / `data-package` / `data-category`
   // search contract, so the filter and the card-iteration helper live
-  // on a tiny `window.BlockrUI.cardSearch` namespace. The stack-menu
+  // on a tiny `window.BlockrDock.cardSearch` namespace. The stack-menu
   // module depends on `block_browser_dep()` being attached first
   // (which it is wherever `stack_menu_ui()` is rendered) and just
   // calls into this API. Keep the surface deliberately small.
-  var BlockrUI = window.BlockrUI = window.BlockrUI || {};
-  BlockrUI.cardSearch = BlockrUI.cardSearch || {
+  var BlockrDock = window.BlockrDock = window.BlockrDock || {};
+  BlockrDock.cardSearch = BlockrDock.cardSearch || {
     getCards: function (root) {
       return Array.prototype.slice.call(
         root.querySelectorAll(".blockr-block-browser-card")
@@ -29,7 +29,7 @@
     applySearch: function (root, query) {
       var q = (query || "").trim().toLowerCase();
       var anyVisible = false;
-      BlockrUI.cardSearch.getCards(root).forEach(function (card) {
+      BlockrDock.cardSearch.getCards(root).forEach(function (card) {
         if (q.length === 0) {
           card.classList.remove("hidden");
           anyVisible = true;
@@ -92,7 +92,7 @@
     sec.appendChild(list);
     cats.appendChild(sec);
   }
-  BlockrUI.cardSync = BlockrUI.cardSync || function (cats, cards) {
+  BlockrDock.cardSync = BlockrDock.cardSync || function (cats, cards) {
     if (!cats) return;
     // `sendInputMessage` auto-unboxes a length-1 list to a scalar.
     if (!cards) cards = [];
@@ -134,7 +134,7 @@
 
   // Cards currently shown (not filtered out by search).
   function visibleCards(root) {
-    return BlockrUI.cardSearch.getCards(root).filter(function (card) {
+    return BlockrDock.cardSearch.getCards(root).filter(function (card) {
       return !card.classList.contains("hidden");
     });
   }
@@ -143,7 +143,7 @@
   // null) and scroll it into view. Selection is a purely visual marker
   // - `.card-selected` - distinct from the chevron's `.card-expanded`.
   function selectCard(root, card) {
-    BlockrUI.cardSearch.getCards(root).forEach(function (c) {
+    BlockrDock.cardSearch.getCards(root).forEach(function (c) {
       c.classList.toggle("card-selected", c === card);
     });
     if (card) card.scrollIntoView({ block: "nearest" });
@@ -198,7 +198,7 @@
     var search = root.querySelector(".blockr-block-browser-search");
     if (search) {
       search.addEventListener("input", function () {
-        BlockrUI.cardSearch.applySearch(root, search.value);
+        BlockrDock.cardSearch.applySearch(root, search.value);
         // Keep a valid card highlighted so Enter adds the top hit; drop
         // the highlight if the previously selected card was filtered out.
         var current = root.querySelector(
@@ -298,5 +298,5 @@
     // added with block_browser_server() in a follow-up change.
   });
 
-  Shiny.inputBindings.register(binding, "blockr.ui.blockBrowser");
+  Shiny.inputBindings.register(binding, "blockr.dock.blockBrowser");
 })();

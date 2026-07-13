@@ -196,7 +196,7 @@ lookup_stack <- function(board, target) {
         "No stack with id ", encodeString(target, quote = "'"),
         " on the board."
       ),
-      class = "blockr_ui_stack_menu_unknown_target"
+      class = "blockr_dock_stack_menu_unknown_target"
     )
   }
   stacks[[target]]

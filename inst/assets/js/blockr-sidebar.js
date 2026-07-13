@@ -350,7 +350,7 @@
     }
   });
 
-  Shiny.inputBindings.register(binding, "blockr.ui.sidebar");
+  Shiny.inputBindings.register(binding, "blockr.dock.sidebar");
 
   // Register the document-level trigger listener exactly once, even if
   // the bundle is loaded multiple times (e.g. via repeated dependency

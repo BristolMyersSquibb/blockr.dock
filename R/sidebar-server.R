@@ -178,7 +178,7 @@ root_session <- function(session) {
         "`show_sidebar()` / `hide_sidebar()` must be called from",
         "within a Shiny session."
       ),
-      class = "blockr_ui_no_session"
+      class = "blockr_dock_no_session"
     )
   }
   session$rootScope()

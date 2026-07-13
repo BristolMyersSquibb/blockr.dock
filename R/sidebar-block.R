@@ -306,7 +306,7 @@ browser_panel <- function(ns, metas, mode, tgt) {
   groups <- category_groups(metas)
 
   # The root element IS the Shiny input: its `id` is the commit input id
-  # the `blockr.ui.blockBrowser` InputBinding reports against, read by
+  # the `blockr.dock.blockBrowser` InputBinding reports against, read by
   # `block_browser_server()` as `input$commit`.
   root_attrs <- c(
     list(
