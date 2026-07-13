@@ -1,421 +1,112 @@
 # Changelog
 
-## blockr.dock (development version)
+## blockr.dock 0.1.2
 
-- Panel operations are now first-class verbs in the update lifecycle’s
-  `views$mod` payload, so an extension or plugin rearranges a view’s
-  panels through the same staging, validation and atomicity boundary
-  every other board change already speaks. Panels are named with the new
-  exported typed references
+- The block-browser, link-menu, stack-menu and sidebar UI components are
+  now bundled directly into blockr.dock instead of imported from the
+  (non-CRAN) blockr.ui package, so blockr.dock installs from CRAN with
+  no remote dependencies.
+- Panel operations are now first-class verbs in the `views$mod` update
+  payload (`add` / `rm` / `move` / `select`), with panels named by the
+  new typed references
   [`blk()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
   /
   [`ext()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
-  – by block or extension id, never the `block_panel-` / `ext_panel-`
-  wire prefix (a bare id string is accepted as sugar, resolved
-  block-first, with a loud error on a true cross-namespace clash). The
-  same references name panels in the layout-authoring DSL too
-  ([`dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md),
-  [`panels()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md),
-  a `views` entry), so a board definition reads as blocks and extensions
-  rather than wire ids. The verbs are `add` / `rm` (which write
-  membership) and `move` / `select` (pure client ops captured by the
-  settled-echo grid mirror); a ref optionally absorbs its own placement
-  hint (`near` / `side`, plus `size` for a future `resize`), valid only
-  where placement happens – and since hints are constructor arguments, a
-  misspelled one fails at the call site. This is a **breaking** change:
-  the old set-replace form, where `views$mod$<view-id>` was a bare
-  membership vector, is retired. `move` decomposes into remove +
-  add-with-hint until cynkra/dockViewR#85; `resize` joins once the
-  `set_size` proxy lands
-  ([\#320](https://github.com/BristolMyersSquibb/blockr.dock/issues/320))
-  ([\#318](https://github.com/BristolMyersSquibb/blockr.dock/issues/318)).
-
-- **Breaking:** an extension’s id is now owned by its container, not the
-  object – mirroring blocks. `new_dock_board(extensions = )` names an
-  unnamed extension by its class with the `_extension` suffix stripped
-  (`new_dag_extension()` becomes `dag`), and an explicit list name
-  (`extensions = list(analysis = new_dag_extension())`) overrides it;
-  duplicate keys error rather than silently colliding. That key is the
-  single identity everywhere: the wire panel id (`ext_panel-dag`, was
-  `ext_panel-dag_extension`), the DOM handle, the Shiny module
-  namespace,
-  [`dock_ext_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md),
-  and what
+  instead of wire-id prefixes. **Breaking:** the old set-replace
+  membership form is retired.
+- **Breaking:** an extension’s id is now owned by its container
+  (mirroring blocks), serving as its single identity everywhere – the
+  wire panel id, DOM handle, module namespace and
   [`ext()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
-  resolves against. Boards saved under the old class-derived ids restore
-  with the extension panel dropped from its view – the extension itself
-  still loads – rather than erroring
-  ([\#318](https://github.com/BristolMyersSquibb/blockr.dock/issues/318)).
-
+  target.
 - **Breaking (extension authors):** an extension’s live result now
-  reaches actions, block-edit callbacks and peer extensions as a single
-  `extensions` bundle keyed by extension id, rather than splatted as a
-  bare argument named after the extension. A consumer names the result
-  it wants explicitly:
-  `extensions[[extension_ids(board$board, "<class>")]]`. The new
-  exported
+  reaches actions, callbacks and peer extensions as an `extensions`
+  bundle keyed by extension id; the new exported
   [`extension_ids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
-  resolves the class it knows to the runtime id(s) the container
-  assigned. This retires the partial-argument-matching the old
-  bare-argument delivery relied on – which a short container-owned key
-  would otherwise mis-route
-  ([\#318](https://github.com/BristolMyersSquibb/blockr.dock/issues/318)).
-
-- The supported way for a dock extension to open a block’s panel is now
-  the `views` update grammar itself – compose `active` + `select` (with
-  a `mod` `add` first for a panel no view holds yet) and pass it to
-  [`update()`](https://rdrr.io/r/stats/update.html), with no need for
-  the live `dock` handle that is no longer on the extension server
-  surface. The exported `show_panel()`, which required that handle, is
-  removed
-  ([\#308](https://github.com/BristolMyersSquibb/blockr.dock/issues/308),
-  [\#318](https://github.com/BristolMyersSquibb/blockr.dock/issues/318)).
-
-- The block status badge is now derived in one exported helper,
+  resolves a class to the runtime id(s) the container assigned.
+- A dock extension opens a block’s panel through the `views` grammar
+  (compose `active` + `select`) rather than the retired live `dock`
+  handle; the exported `show_panel()` is removed.
+- The block status badge is now one exported helper,
   [`block_status_badge()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md),
-  and reused by blockr.dag, so the dock card icon and the DAG node badge
-  always render the same status, colour and geometry (including the
-  white ring both previously hardcoded) instead of each front-end
-  deriving and styling it independently. As a consequence the dock’s own
-  status dot now reflects render-phase errors – a block that evaluates
-  cleanly but errors while rendering its output, which the eval status
-  alone reports as `ready`; previously only the DAG badge flagged those
-  ([\#314](https://github.com/BristolMyersSquibb/blockr.dock/issues/314)).
-
+  shared with blockr.dag so the dock card icon and the DAG node badge
+  render identically; the dock dot now also reflects render-phase
+  errors.
 - Renaming a block no longer crashes a board where that block is absent
-  from some view – a block placed in only one of several views, or
-  parked in the offcanvas with no panel at all. The per-view rename
-  observer fires for every view; it now skips the ones whose dock does
-  not hold the renamed block instead of pushing the new title to a panel
-  that view lacks, which reached dockView with an unknown id and threw
-  client-side
-  ([\#116](https://github.com/BristolMyersSquibb/blockr.dock/issues/116)).
-
-- A board’s per-view layout is now split into two independent slots: a
-  `dock_views` collection of structure objects (each view’s ordered
-  panel-id set, name and id, plus the active view), read with
-  [`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md),
-  and a separate `NULL`-valid `dock_grids` slot of grid geometry, read
-  with
-  [`board_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  ([\#273](https://github.com/BristolMyersSquibb/blockr.dock/issues/273)).
-  Structure is server-authoritative and always current; a view’s grid
-  may be absent. A stored grid must reference only panels in its view’s
-  membership (`grid ⊆ membership`, checked in
-  [`validate_board()`](https://bristolmyerssquibb.github.io/blockr.core/reference/new_board.html)),
-  and a board is valid with no grids at all. The DSL is unchanged –
-  `new_dock_board(layouts = ...)` still takes fused `dock_layout()`s and
-  splits them at construction – and `board_layouts()` composes the two
-  slots back into the grid-bearing handle the update lifecycle reads.
-  The serialized form carries both fields.
-
-- Block eval status is now a first-class panel affordance instead of
-  leaking through as an incidental warning
-  ([\#290](https://github.com/BristolMyersSquibb/blockr.dock/issues/290)).
-  Consuming the `board$eval[[id]]` status enum that blockr.core exposes,
-  a `waiting` block (a required data input is unconnected) or an `unset`
-  block (a required user input is not yet provided) shows a dedicated
-  placeholder in its output region – “Waiting for a data input” / “Set
-  this block’s inputs” – rather than core’s status explanation being
-  painted as a generic warning alert. That `status`-phase condition is
-  now separated from genuine warnings so the two are no longer
-  conflated. A small colour-coded dot in the block card header marks
-  `waiting`, `unset` and `failed` blocks, so a board shows at a glance
-  which blocks are not yet producing output.
-
-- Per-block condition UI (warnings, messages and errors) is now updated
-  surgically using the stable condition id blockr.core assigns each
-  condition, instead of tearing down and rebuilding the whole region on
-  every change
-  ([\#36](https://github.com/BristolMyersSquibb/blockr.dock/issues/36)).
-  An unchanged condition stays in place while a newly raised one is
-  inserted next to it and a resolved one is removed on its own, so a
-  persistent warning no longer flashes on each re-evaluation.
-
-- The busy pulse no longer flashes on a plain panel switch, only on real
-  computation
-  ([\#285](https://github.com/BristolMyersSquibb/blockr.dock/issues/285)).
-  [`serve()`](https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html)
-  enables shiny’s page pulse (`useBusyIndicators(pulse = TRUE)`), which
-  shows on any server-busy flush – and a panel switch round-trips to the
-  server (the on-screen visibility report and the layout fold) without
-  recomputing a visible output, so the pulse fired for what is only
-  layout bookkeeping. A CSS rule now gates the pulse on a genuinely
-  recalculating output inside the visible view container: startup and
-  block evaluation still pulse, a bare panel switch does not. A block
-  still pending evaluation in the (hidden) offcanvas pool sits outside
-  the container, so it never forces the pulse either.
-
-- The “Edit board” extension now re-syncs its staged working copy only
-  when the board’s links or stacks actually change, not on every board
-  re-emit
-  ([\#281](https://github.com/BristolMyersSquibb/blockr.dock/issues/281)).
-  The two observers keying `upd$curr` / `stk$curr` off
-  [`board_links()`](https://bristolmyerssquibb.github.io/blockr.core/reference/board_blocks.html)
-  /
-  [`board_stacks()`](https://bristolmyerssquibb.github.io/blockr.core/reference/board_blocks.html)
-  fired on each board invalidation – `observeEvent` does not
-  value-dedupe – so a benign dock interaction (a panel switch or view
-  fold, which re-emits the board via
-  [\#201](https://github.com/BristolMyersSquibb/blockr.dock/issues/201))
-  churned the editor’s working copy even when no link or stack changed.
-  A `reactiveVal` +
-  [`identical()`](https://rdrr.io/r/base/identical.html) guard now gates
-  each re-sync on a real change, so the
-  [\#277](https://github.com/BristolMyersSquibb/blockr.dock/issues/277)
-  and
-  [\#279](https://github.com/BristolMyersSquibb/blockr.dock/issues/279)
-  guards become defensive rather than load-bearing.
-
-- The “Edit board” extension no longer flickers the manage-links table’s
-  cell selectize inputs on a board re-emit
-  ([\#279](https://github.com/BristolMyersSquibb/blockr.dock/issues/279)).
-  The observer that keeps the table in sync re-rendered every row
-  whenever `upd$curr` was reset – `observeEvent(names(upd$curr))` fires
-  on each invalidation, not only when the link ids change – and the
-  redundant
-  [`DT::replaceData`](https://rdrr.io/pkg/DT/man/replaceData.html)
-  unbound and rebound the From / To / Input inputs, briefly blanking a
-  selectize until the async redraw landed. A panel switch re-emits the
-  board (via
-  [\#201](https://github.com/BristolMyersSquibb/blockr.dock/issues/201)),
-  so plain navigation churned the table. The table now redraws only when
-  the set of link ids actually changes; value edits and no-op re-emits
-  are skipped, while applying staged changes still redraws through its
-  own path.
-
-- The “Edit board” extension no longer loses unsaved link and stack
-  edits when the board reactive re-emits
-  ([\#277](https://github.com/BristolMyersSquibb/blockr.dock/issues/277)).
-  Two observers reset the staged working copy (`upd$curr` / `stk$curr`)
-  to the board’s applied links and stacks on every re-emit, so a staged
-  row vanished from the table while its half-filled entry lingered in
-  `upd$add` and later failed apply with “Expecting all links to refer to
-  known block IDs”. A layout change in an adjacent panel group is enough
-  to re-emit the board, which is why
-  [\#201](https://github.com/BristolMyersSquibb/blockr.dock/issues/201)
-  surfaced this. The refresh now overlays the staged additions, edits
-  and removals onto the refreshed applied state instead of clobbering
-  them.
-
+  from some view – placed in only one view, or parked in the offcanvas
+  with no panel.
+- A board’s per-view layout splits into two independent slots: a
+  server-authoritative `dock_views` structure collection (read with
+  [`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md))
+  and a separate `NULL`-valid `dock_grids` geometry slot
+  ([`board_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)),
+  each grid validated as a subset of its view’s membership.
+- Block eval status is now a first-class panel affordance: a `waiting`
+  or `unset` block shows a dedicated placeholder instead of a generic
+  warning, and a colour-coded dot in the card header marks `waiting`,
+  `unset` and `failed` blocks at a glance.
+- Per-block condition UI (warnings, messages, errors) is updated
+  surgically by the stable condition id, so a persistent warning no
+  longer flashes on every re-evaluation.
+- The busy pulse no longer flashes on a plain panel switch: a CSS rule
+  gates it on a genuinely recomputing output, so startup and block
+  evaluation still pulse but bare navigation does not.
+- The “Edit board” extension no longer churns on a board re-emit – it
+  re-syncs its staged working copy only when links or stacks actually
+  change, stops flickering the manage-links cell inputs, and overlays
+  half-finished staged edits instead of clobbering them.
 - Dock extensions now receive `view_data`, the live all-views layout
-  reactive (the same one serialization reads), so an extension can read
-  the current arrangement of every view directly instead of folding it
-  through `board_layouts(board$board)`. `view_data()` is `NULL` until
-  every view has reported its layout once, so consumers should `req()`
-  it. The `dock` handle (the active-view `active_dock` mirror) is
-  retired from the extension surface at the same time: it is internal
-  now, used only by the board-level block insert / remove plugin
-  ([\#264](https://github.com/BristolMyersSquibb/blockr.dock/issues/264)).
-
+  reactive that serialization also reads (`NULL` until every view has
+  reported once, so `req()` it); the active-view `dock` handle is
+  retired from the extension surface.
 - Multi-view boards no longer emit a burst of redundant board updates at
-  startup
-  ([\#271](https://github.com/BristolMyersSquibb/blockr.dock/issues/271)).
-  Restoring a multi-group layout makes the dockview client transiently
-  activate each group in turn, and the dock -\> board arrangement fold
-  (`layouts_to_board_observer`) compared layouts through
-  `layout_to_spec`, whose `focus` field tracks the active group – so
-  each cross-group focus tick read as a layout change and committed an
-  `update(list(views = ...))`, on the order of ten redundant updates
-  before the board settled (worst on large boards, e.g. 12 views / 99
-  blocks / 30 groups). That fold is removed: a view’s live arrangement
-  is now read on demand – on save, or by an extension via `view_data()`
-  – instead of mirrored back into `board_layouts` on every dockview
-  tick, so the burst is gone. The removal is lossless, since
-  `serialize_board.dock_board` already reads the live layout from
-  `view_data()` and the fold had no remaining runtime reader;
-  `board_layouts` still carries the committed view set, names, active
-  view and panel membership, kept current by the membership fold
-  ([\#264](https://github.com/BristolMyersSquibb/blockr.dock/issues/264)).
-
-- The dock no longer loops forever or tears its panels down on a slow
-  client
-  ([\#252](https://github.com/BristolMyersSquibb/blockr.dock/issues/252)).
-  The live layout was held in two bindings that formed a cycle: the
-  live-sync fold pushed the dockview client’s state into `board_layouts`
-  (dock -\> board), and a reconcile step pushed `board_layouts` back to
-  the widget (board -\> dock). A board update that originated at the
-  dock still triggered a re-push, whose echo folded back; on a slow
-  client a partial client state folded an impoverished layout that the
-  push then faithfully restored. The board -\> dock arrangement push
-  (`reconcile_view_layout()` / `apply_layout_diff()`) is removed: a
-  view’s arrangement is client-owned and now flows dock -\> board only.
-  `reconcile_views()` still owns what the board is authoritative over –
-  which views exist, their names, the active view, and the initial
-  layout on load. With one direction live there is no echo to suppress
-  and no layout-tracking state to maintain.
-
-- Live panel rearrangements are no longer lost when a board is saved
-  ([\#243](https://github.com/BristolMyersSquibb/blockr.dock/issues/243)).
-  `view_data()`, the live dock layout that serialization reads, was
-  stuck at `NULL` for the whole session, so Export fell back to the
-  board’s default layout. The live dock registry is now a
-  `reactiveValues` rather than a plain environment, so `view_data()`
-  takes a dependency on each view’s entry and re-evaluates when
-  reconcile creates it – whatever the init flush order – instead of
-  relying on a reconcile observer priority to win that race.
-
-- The add and append block browsers are each pre-rendered once into a
-  dedicated sidebar (`add_block_sidebar` / `append_block_sidebar`) and
-  merely toggled open, instead of being rebuilt on every open (the
-  append rebuild was ~500 ms with a large registry, dominated by
-  instantiating every block to compute the linkable filter). The add /
-  append / prepend handlers are thin adapters over
-  [`blockr.ui::block_browser_server()`](https://rdrr.io/pkg/blockr.ui/man/block-browser.html),
-  which now returns ready-to-apply `blocks` / `links` objects (target
-  port resolved menu-side); the dock-side `build_block_from_spec()`,
-  `valid_block_id()` and `valid_link_id()` helpers are removed. Requires
-  the matching blockr.ui (`block_browser_server()` ready-objects
-  contract).
-
+  startup; the fold that mirrored every dockview focus tick back into
+  `board_layouts` is removed, and the live layout is read on demand
+  instead.
+- The dock no longer loops or tears its panels down on a slow client: a
+  view’s arrangement is now client-owned and flows dock -\> board only,
+  removing the reconcile push whose echo could restore an impoverished
+  layout.
+- Live panel rearrangements are no longer lost on save – `view_data()`,
+  the live layout serialization reads, no longer stays stuck at `NULL`
+  for the whole session.
 - Adding a block before the dock view has finished initialising no
-  longer throws `argument is of length zero`. While the dock is
-  uninitialised its layout is `NULL`; `determine_active_views()` now
-  treats that as an empty dock, so the block’s panel is placed freely
-  instead of being stranded in the offcanvas.
-
-- `add_link_action()` now mounts the `blockr.ui` link-menu module and is
-  bidirectional: right-clicking a downstream block now lets you pick an
-  upstream source, not just a target. The handler passes the board and
-  anchor as reactives, so the menu owns link-id validation and keeps a
-  pinned menu in sync with the board itself - removing a link frees a
-  target whose card reappears live, and removing a block drops its card,
-  both without a re-render. The per-field link inputs (`create_link` /
-  `add_link_input` / `add_link_id` / `add_link_confirm`) and the
-  dock-side `valid_link_id` validator are gone in favour of a single
-  committed-spec reactive from
-  [`blockr.ui::link_menu_server()`](https://rdrr.io/pkg/blockr.ui/man/link-menu.html).
-  `link_sidebar_body()` is removed (no in-tree callers remain;
-  out-of-tree consumers migrate to
-  [`blockr.ui::link_menu_ui()`](https://rdrr.io/pkg/blockr.ui/man/link-menu.html)
-  / `link_menu_server()`).
-
-- The add / edit stack action handlers now mount the `blockr.ui`
-  stack-menu module: a multi-select card-list block picker with search,
-  per-category icons, an inline hue / lightness colour picker, and a
-  panel-level form for the stack name / colour / id. The per-field Shiny
-  inputs (`stack_id` / `stack_name` / `stack_color` /
-  `stack_block_selection` / `stack_confirm` and the `edit_stack_*`
-  equivalents) are gone in favour of a single committed-stack reactive
-  returned by
-  [`blockr.ui::stack_menu_server()`](https://rdrr.io/pkg/blockr.ui/man/stack-menu.html).
-  `stack_sidebar_body()` is removed (no in-tree callers remain;
-  out-of-tree consumers migrate to
-  [`blockr.ui::stack_menu_ui()`](https://rdrr.io/pkg/blockr.ui/man/stack-menu.html)).
-  Drops the
-  [`shinyWidgets::colorPickr`](https://dreamrs.github.io/shinyWidgets/reference/colorPickr.html)
-  floating popover; the new colour picker renders inline in the sidebar.
-  The handlers now pass the board as a reactive, so a pinned stack menu
-  stays in sync with board changes (removing a block drops its card
-  live); spec validation moved into `blockr.ui` (the dock-side
-  `valid_stack_*` validators are gone). The menu builds `dock_stack`
-  objects itself via
-  [`blockr.dock::new_dock_stack()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/stack.md)
-  (gated behind `pkg_avail("blockr.dock")`, a Suggests back-edge), so
-  the handlers apply the committed `stacks` object as-is.
-
+  longer throws `argument is of length zero`.
+- The block, link and stack action handlers now mount the corresponding
+  `blockr.ui` menu modules (card-list pickers with search and inline
+  editing), replacing every per-field Shiny input; the link menu adds
+  bidirectional source / target picking and the stack menu an inline
+  colour picker. The block browsers are pre-rendered and toggled rather
+  than rebuilt on each open, and the dock-side `*_sidebar_body()` bodies
+  and spec helpers are removed.
 - Layout deserialization now routes on the producing blockr.dock version
-  rather than sniffing the payload shape. `blockr_deser.dock_board()`
-  reads the producer version off the saved `constructor$version` and
-  threads it down (through `blockr.core`’s `...`-forwarding
-  `blockr_deser.list()`) to `blockr_deser.dock_layout()`, which picks
-  the wire-format reader from a version-keyed registry. Shape
-  discrimination (legacy dockview `grid` vs. flattened spec) stays as
-  the fallback for version-less payloads — very old saves or
-  hand-crafted JSON
-  ([\#153](https://github.com/BristolMyersSquibb/blockr.dock/issues/153)).
-
-- The dock “manager” object is gone. `apply_board_update.dock_board()`
-  is now a pure reducer over `board_layouts()`; all live view surgery
-  (instantiate / tear down / restore / rename / switch) runs in a single
-  closure-resident reconcile pass driven by the committed board,
-  replacing the duplicated delta-driven and UI-driven view CRUD. View
-  init is just the empty-registry case of that pass (create every view,
-  show the active one), so there is no separate init path. The
-  per-session dock state is ordinary closure-private state passed
-  explicitly, not a handle threaded back from the board callback through
-  `dot_args`. Also makes `augment_board_update.dock_board()` idempotent
-  — a view id is minted once rather than re-minted on every augment pass
-  — fixing a view-add loop
-  ([\#164](https://github.com/BristolMyersSquibb/blockr.dock/issues/164)).
-
-- Views now carry a stable, immutable **id** decoupled from their
-  editable display **name**, mirroring the id / name split used for
-  blocks. `dock_layouts` (and the runtime `dock_mgr$docks` registry) are
-  keyed by id; the name is an attribute read / written via
+  (read off `constructor$version`) rather than sniffing the payload
+  shape, keeping shape discrimination only as the fallback for
+  version-less payloads.
+- The dock “manager” object is gone: `apply_board_update.dock_board()`
+  is a pure reducer and all live view surgery runs in one reconcile pass
+  driven by the committed board. `augment_board_update.dock_board()` is
+  now idempotent, fixing a view-add loop.
+- Views now carry a stable, immutable id decoupled from their editable
+  display name (mirroring blocks): `dock_layouts` is keyed by id, the
+  name is read and written via
   [`view_name()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  / `view_name<-()` (with
-  [`view_names()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  for a whole collection), and
-  [`active_view()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
-  now returns the active view’s id. Renaming a view is a pure
-  name-attribute write — the id, dock module and DOM element are
-  untouched, so no structure is ever re-keyed (and the live-sync rename
-  no longer leaks as remove-then-add). The dock module / DOM ids derive
-  deterministically from the view id (no random per-render minting), and
-  the `views` delta gains a `rename` slot. Naming constraints relax to
-  display concerns (non-empty, unique label). Serialization round-trips
-  ids. In `new_dock_board(layouts = list(...))` the **list name is the
-  view’s id** (the container’s key, like a block id — minted when
-  absent); the display name is set on the view via
-  `dock_layout(name = )` and falls back to a label derived from the id
-  when unset. The `views` delta addresses existing views by **id** (the
-  only stable handle) — `mod` / `rm` / `active` carry ids; `add`
-  supplies a display name and mints the id. Producers that addressed
-  views by name (e.g. `blockr.assistant`) must switch to ids
-  ([\#166](https://github.com/BristolMyersSquibb/blockr.dock/issues/166)).
-
-- `dock_layout` objects gain
+  / `view_name<-()`, and the `views` delta gains a `rename` slot. In
+  `new_dock_board(layouts = list(...))` the list name is the view’s id,
+  so producers that addressed views by name (e.g. blockr.assistant) must
+  switch to ids.
+- A `dock_layout` now has
   [`format()`](https://rdrr.io/r/base/format.html) /
-  [`print()`](https://rdrr.io/r/base/print.html) methods that render the
-  arrangement as an indented tree: orientation, nested groups with their
-  sizes, tabbed leaves with the active tab, and the focused panel. Panel
-  IDs print without their `block_panel-` / `ext_panel-` prefixes by
-  default; pass `bare = FALSE` for the canonical IDs
-  ([\#161](https://github.com/BristolMyersSquibb/blockr.dock/issues/161)).
-
-- The add / append / prepend block action handlers now mount the
-  `blockr.ui` block-browser module: a card-list block picker with
-  search, per-category icons, and a per-card expand for tweaking the id
-  / title / link / port before adding. Repeated single clicks on a card
-  produce distinct blocks (suggested ids are seeded against the board so
-  they never collide), replacing the old single-select selectize form.
-  The per-field Shiny inputs (`<mode>_block_selection` /
-  `<mode>_block_id` / `<mode>_block_name` / `<mode>_link_id` /
-  `<mode>_block_input` / `<mode>_block_confirm`) are gone in favour of a
-  single committed-block reactive returned by
-  [`blockr.ui::block_browser_server()`](https://rdrr.io/pkg/blockr.ui/man/block-browser.html).
-  `block_sidebar_body()` is removed (nothing in-tree calls it; link /
-  stack flows use `link_sidebar_body()` / `stack_sidebar_body()`
-  unchanged). Requires `blockr.ui` with the block-browser module.
-
-## blockr.dock 0.1.2
-
-- The `views` slot in the `board_update` payload is now a structured
-  delta (`add` / `mod` / `rm` / `active`) instead of a wholesale
-  `dock_layouts` replacement. Mentioned views are touched, omitted views
-  keep their current state, and the four sub-slots compose atomically
-  with `blocks` / `links` / `stacks` in the same lifecycle tick. See
-  `?dock_board_update_lifecycle` for the contract
-  ([\#150](https://github.com/BristolMyersSquibb/blockr.dock/issues/150)).
-
-- Removing a block no longer clears the active view’s layout. Instead,
-  every view containing the removed block has the block’s panel dropped
-  surgically from its layout, preserving the rest of the grid.
-  `augment_board_update.dock_board()` performs the cleanup for the
-  [`update()`](https://rdrr.io/r/stats/update.html) lifecycle path;
-  `rm_blocks.dock_board()` does the same surgically (rather than nuking
-  the active layout) for direct callers like
-  [`clear_board()`](https://bristolmyerssquibb.github.io/blockr.core/reference/board_blocks.html)
-  ([\#150](https://github.com/BristolMyersSquibb/blockr.dock/issues/150)).
-
-- `board_layouts(rv$board)` now stays in sync with UI-driven layout
-  changes (panel close/add, drag-resize/rearrange, view CRUD). UI-driven
-  mutations are routed through `update(list(views = ...))` and applied
-  via `validate_board_update.dock_board()` and
-  `apply_board_update.dock_board()`. Writes are debounced (250 ms) so
-  drag-resize doesn’t thrash. Requires `blockr.core (>= 0.1.3)` for the
-  update lifecycle generics.
+  [`print()`](https://rdrr.io/r/base/print.html) methods that render its
+  arrangement as an indented tree; panel ids print without their wire
+  prefixes unless `bare = FALSE`.
+- The `views` slot of the `board_update` payload is a structured delta
+  (`add` / `mod` / `rm` / `active`) instead of a wholesale
+  `dock_layouts` replacement, composing atomically with `blocks` /
+  `links` / `stacks`. UI-driven layout changes (panel close / add,
+  drag-resize, view CRUD) route through this lifecycle and are debounced
+  (250 ms), and removing a block drops its panel surgically rather than
+  clearing the active view. Requires `blockr.core (>= 0.1.3)`.
 
 ## blockr.dock 0.1.1
 
