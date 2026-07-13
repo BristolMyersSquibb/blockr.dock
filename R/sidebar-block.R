@@ -26,32 +26,28 @@ prepend_to <- function(block_id = NULL) {
   new_bb_target("prepend", block_id)
 }
 
-block_browser_server <- function(id, board = NULL, target = NULL) {
+block_browser_server <- function(id, board, target = NULL) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
 
-  board_fn <- as_accessor(board)
   target_fn <- as_accessor(target)
 
   moduleServer(
     id,
     function(input, output, session) {
-      # `input$commit` is the binding's value; the `nonce` it carries
-      # makes every add a fresh event, so eventReactive fires once per
-      # add. When a `board` reactive is supplied the module validates the
-      # committed ids (a non-empty duplicate notifies and `req()`s out),
-      # then returns a ready-to-apply value: a `blocks` object for the add
-      # flow, or `list(blocks, links)` for append / prepend - parity with
-      # link_menu_server() / stack_menu_server().
+      # `input$commit` is the binding's value; the `nonce` it carries makes
+      # every add a fresh event, so eventReactive fires once per add. The
+      # module validates the committed ids (a non-empty duplicate notifies
+      # and `req()`s out), then returns a ready-to-apply value: a `blocks`
+      # object for the add flow, or `list(blocks, links)` for append /
+      # prepend - parity with link_menu_server() / stack_menu_server().
       eventReactive(
         input$commit,
         {
           spec <- input$commit
           spec[["nonce"]] <- NULL
-          brd <- board_fn()
+          brd <- board()
           tgt <- target_fn()
-          if (is.reactive(board)) {
-            validate_block_spec(spec, brd, tgt, session)
-          }
+          validate_block_spec(spec, brd, tgt, session)
           block_commit_value(spec, brd, tgt)
         },
         ignoreNULL = TRUE

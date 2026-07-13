@@ -12,49 +12,41 @@ link_menu_ui <- function(id, board, anchor) {
   )
 }
 
-link_menu_server <- function(id, board = NULL, anchor = NULL) {
+link_menu_server <- function(id, board, anchor) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
-
-  board_fn <- as_accessor(board)
-  anchor_fn <- as_accessor(anchor)
 
   moduleServer(
     id,
     function(input, output, session) {
-      # Live board sync: when a board reactive is supplied, refresh the
-      # open menu in place on every board change by pushing a `menu:sync`
-      # diff to our own binding. Self-scoped (bare "commit" - the module
-      # session namespaces it), so it no-ops when the panel isn't mounted.
-      if (is.reactive(board)) {
-        observeEvent(
-          board_fn(),
-          {
-            anc <- anchor_fn()
-            brd <- board_fn()
-            # The anchor block may have been removed; nothing to sync to.
-            if (!is.null(anc) && nzchar(anc) &&
-                  anc %in% board_block_ids(brd)) {
-              session$sendInputMessage(
-                "commit", link_sync_payload(brd, anc, session$ns)
-              )
-            }
-          },
-          ignoreInit = TRUE
-        )
-      }
+      # Live board sync: refresh the open menu in place on every board
+      # change by pushing a `menu:sync` diff to our own binding. Self-scoped
+      # (bare "commit" - the module session namespaces it), so it no-ops
+      # when the panel isn't mounted.
+      observeEvent(
+        board(),
+        {
+          anc <- anchor()
+          brd <- board()
+          # The anchor block may have been removed; nothing to sync to.
+          if (!is.null(anc) && nzchar(anc) &&
+                anc %in% board_block_ids(brd)) {
+            session$sendInputMessage(
+              "commit", link_sync_payload(brd, anc, session$ns)
+            )
+          }
+        },
+        ignoreInit = TRUE
+      )
 
       eventReactive(
         input$commit,
         {
           spec <- input$commit
           spec[["nonce"]] <- NULL
-          # The menu owns validation when the consumer opts in with a
-          # board reactive: a duplicate / empty link id notifies and
-          # `req()`s out, so the committed reactive never fires invalid.
-          if (is.reactive(board)) {
-            validate_link_spec(spec, board_fn(), session)
-          }
-          link_commit_value(spec, board_fn())
+          # The menu owns validation: a duplicate / empty link id notifies
+          # and `req()`s out, so the committed reactive never fires invalid.
+          validate_link_spec(spec, board(), session)
+          link_commit_value(spec, board())
         },
         ignoreNULL = TRUE
       )
@@ -200,12 +192,7 @@ link_eligible_pools <- function(board, anchor) {
 # ---- eligibility -------------------------------------------------------
 
 validate_anchor <- function(board, anchor) {
-  ids <- if (is.null(board)) {
-    character()
-  } else {
-    board_block_ids(board)
-  }
-  if (!(anchor %in% ids)) {
+  if (!(anchor %in% board_block_ids(board))) {
     blockr_abort(
       paste0(
         "No block with id ", encodeString(anchor, quote = "'"),

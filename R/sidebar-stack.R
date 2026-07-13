@@ -15,42 +15,36 @@ stack_menu_ui <- function(id, board, target = NULL) {
   )
 }
 
-stack_menu_server <- function(id, board = NULL, target = NULL) {
+stack_menu_server <- function(id, board, target = NULL) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
 
-  board_fn <- as_accessor(board)
   target_fn <- as_accessor(target)
 
   moduleServer(
     id,
     function(input, output, session) {
-      # Live board sync: when a board reactive is supplied, refresh the
-      # open menu in place on every board change by pushing a `menu:sync`
-      # diff to our own binding. Self-scoped (addressed to this module's
-      # `commit` input), so it no-ops harmlessly when the panel isn't
-      # mounted - the consumer needs no ownership tracking. `ignoreInit`
-      # because the initial render is already current.
-      if (is.reactive(board)) {
-        observeEvent(
-          board_fn(),
-          {
-            brd <- board_fn()
-            tgt <- target_fn()
-            # In edit mode the stack being edited may have just been
-            # removed from the board; there's nothing left to sync to, so
-            # skip (the consumer decides whether to close the sidebar).
-            # Without this guard `stack_sync_payload()` -> `lookup_stack()`
-            # aborts. Bare "commit": the module session namespaces it to
-            # the panel root's id (passing `session$ns("commit")` would
-            # double-prefix).
-            if (is.null(tgt) ||
-                  tgt %in% board_stack_ids(brd)) {
-              session$sendInputMessage("commit", stack_sync_payload(brd, tgt))
-            }
-          },
-          ignoreInit = TRUE
-        )
-      }
+      # Live board sync: refresh the open menu in place on every board
+      # change by pushing a `menu:sync` diff to our own binding. Self-scoped
+      # (addressed to this module's `commit` input), so it no-ops harmlessly
+      # when the panel isn't mounted. `ignoreInit` because the initial render
+      # is already current.
+      observeEvent(
+        board(),
+        {
+          brd <- board()
+          tgt <- target_fn()
+          # In edit mode the stack being edited may have just been removed
+          # from the board; there's nothing left to sync to, so skip. Without
+          # this guard `stack_sync_payload()` -> `lookup_stack()` aborts. Bare
+          # "commit": the module session namespaces it to the panel root's id
+          # (passing `session$ns("commit")` would double-prefix).
+          if (is.null(tgt) ||
+                tgt %in% board_stack_ids(brd)) {
+            session$sendInputMessage("commit", stack_sync_payload(brd, tgt))
+          }
+        },
+        ignoreInit = TRUE
+      )
 
       eventReactive(
         input$commit,
@@ -61,15 +55,9 @@ stack_menu_server <- function(id, board = NULL, target = NULL) {
             color = input[["stack_color"]],
             id = input[["stack_id"]]
           )
-          # The menu owns validation when the consumer opts in by passing
-          # a board reactive: a rejected commit notifies and `req()`s out,
-          # so the committed reactive never fires with an invalid spec and
-          # the consumer needs no validators of its own. With `board =
-          # NULL` (snapshot mode) validation is skipped for backward
-          # compatibility.
-          if (is.reactive(board)) {
-            validate_stack_spec(spec, board_fn(), target_fn(), session)
-          }
+          # The menu owns validation: a rejected commit notifies and `req()`s
+          # out, so the committed reactive never fires with an invalid spec.
+          validate_stack_spec(spec, board(), target_fn(), session)
           stack_commit_value(spec, target_fn())
         },
         ignoreNULL = TRUE
