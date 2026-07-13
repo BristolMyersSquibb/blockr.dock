@@ -15,6 +15,21 @@ new_app_driver <- function(..., .attempts = 3L) {
   stop(res)
 }
 
+# get_download can transiently fail after a session reload: the download
+# link's href is filled only once outputs bind, and the server download
+# endpoint may briefly not answer ("Unable request data from server").
+# Retry a few times with a short pause; a persistent failure re-raises.
+retry_download <- function(app, output, .attempts = 6L) {
+  for (i in seq_len(.attempts)) {
+    res <- tryCatch(app$get_download(output), error = function(e) e)
+    if (!inherits(res, "error")) {
+      return(res)
+    }
+    Sys.sleep(0.5)
+  }
+  stop(res)
+}
+
 board_args <- function(...) {
   generate_plugin_args(
     new_dock_board(...),

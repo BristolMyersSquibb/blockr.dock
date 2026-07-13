@@ -282,7 +282,7 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # artifact carries the dock-owned state the DOM does not surface without the
   # dockview client -- the extension, the panel-level layout, the producer
   # version that routes deserialization -- alongside blocks, links and stacks.
-  path <- app$get_download("my_board-preserve_board-serialize")
+  path <- retry_download(app, "my_board-preserve_board-serialize")
   expect_gt(file.size(path), 0)
 
   ser <- jsonlite::fromJSON(path, simplifyDataFrame = FALSE,
@@ -331,15 +331,10 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # and that the fixture re-importing its own (colliding) view ids does not drop
   # them. It cannot see the client render, so that leg is asserted below.
   #
-  # get_download aborts on an empty href. Shiny renders the download link empty
-  # and fills the real URL only after outputs bind (later than wait_dock_loaded,
-  # which gates on the block handles), so wait for a non-empty href first.
-  dl <- "#my_board-preserve_board-serialize"
-  dl_href <- function() {
-    app$get_js(sprintf("JSON.stringify($('%s').attr('href') || null)", dl))
-  }
-  wait_js(app, sprintf("!!$('%s').attr('href')", dl), dl_href)
-  path2 <- app$get_download("my_board-preserve_board-serialize")
+  # get_download can transiently fail after the reload -- the link's href is
+  # filled only once outputs bind, and the download endpoint may briefly not
+  # answer ("Unable request data from server"); retry_download absorbs both.
+  path2 <- retry_download(app, "my_board-preserve_board-serialize")
   ser2 <- jsonlite::fromJSON(path2, simplifyDataFrame = FALSE,
                              simplifyMatrix = FALSE)
 
