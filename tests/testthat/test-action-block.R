@@ -16,8 +16,7 @@ test_that("add block action: commit creates one ready block", {
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
-    hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    hide_sidebar         = function(...) invisible(NULL)
   )
 
   testServer(
@@ -52,8 +51,7 @@ test_that("add block action: an empty id is auto-assigned", {
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
-    hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    hide_sidebar         = function(...) invisible(NULL)
   )
 
   testServer(
@@ -90,8 +88,7 @@ test_that("add block action: a non-empty duplicate id is rejected", {
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
-    hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    hide_sidebar         = function(...) invisible(NULL)
   )
 
   testServer(
@@ -123,8 +120,7 @@ test_that("append block action: NULL block_input falls back to the only slot", {
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
-    hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    hide_sidebar         = function(...) invisible(NULL)
   )
 
   testServer(
@@ -160,8 +156,7 @@ test_that("append block action: valid commit creates one block + one link", {
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
-    hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    hide_sidebar         = function(...) invisible(NULL)
   )
 
   testServer(
@@ -204,8 +199,7 @@ test_that("append block action: an empty link_id is auto-assigned", {
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
-    hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    hide_sidebar         = function(...) invisible(NULL)
   )
 
   testServer(
@@ -240,8 +234,7 @@ test_that("prepend block action: target_input picks the link slot", {
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
-    hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    hide_sidebar         = function(...) invisible(NULL)
   )
 
   testServer(
@@ -286,8 +279,7 @@ test_that("prepend: NULL target_input falls back to only slot", {
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
-    hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    hide_sidebar         = function(...) invisible(NULL)
   )
 
   testServer(
@@ -323,8 +315,7 @@ test_that("add block action toggles its pre-rendered sidebar on confirm", {
         list(id = id, args = list(...))
       invisible(NULL)
     },
-    hide_sidebar = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    hide_sidebar = function(...) invisible(NULL)
   )
 
   r_board <- reactiveValues(board = new_board(), board_id = "my_board")
@@ -366,8 +357,7 @@ test_that("append block action toggles its pre-rendered sidebar on confirm", {
         list(id = id, args = list(...))
       invisible(NULL)
     },
-    hide_sidebar = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    hide_sidebar = function(...) invisible(NULL)
   )
 
   r_board <- reactiveValues(

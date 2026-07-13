@@ -22,7 +22,6 @@ local_mocked_sidebar <- function(env = parent.frame()) {
     show_sidebar         = function(...) invisible(list(...)),
     keep_or_hide_sidebar = function(...) invisible(list(...)),
     hide_sidebar         = function(...) invisible(list(...)),
-    .package = "blockr.dock",
     .env = env
   )
 }
@@ -194,15 +193,13 @@ test_that("add link action: empty pool still opens the sidebar", {
       invisible(NULL)
     },
     hide_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
-    .package = "blockr.dock"
+    keep_or_hide_sidebar = function(...) invisible(NULL)
   )
   local_mocked_bindings(
     notify = function(message, ...) {
       notify_calls[[length(notify_calls) + 1L]] <<- message
       invisible(NULL)
-    },
-    .package = "blockr.dock"
+    }
   )
 
   r_board <- reactiveValues(
