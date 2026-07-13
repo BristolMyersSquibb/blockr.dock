@@ -1,5 +1,9 @@
 # blockr.dock 0.1.2
 
+* The block-browser, link-menu, stack-menu and sidebar UI components are now
+  bundled directly into blockr.dock instead of imported from the (non-CRAN)
+  blockr.ui package, so blockr.dock installs from CRAN with no remote
+  dependencies.
 * Panel operations are now first-class verbs in the `views$mod` update payload
   (`add` / `rm` / `move` / `select`), with panels named by the new typed
   references `blk()` / `ext()` instead of wire-id prefixes. **Breaking:** the

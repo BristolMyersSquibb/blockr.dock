@@ -17,7 +17,7 @@ test_that("add block action: commit creates one ready block", {
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   testServer(
@@ -53,7 +53,7 @@ test_that("add block action: an empty id is auto-assigned", {
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   testServer(
@@ -91,7 +91,7 @@ test_that("add block action: a non-empty duplicate id is rejected", {
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   testServer(
@@ -124,7 +124,7 @@ test_that("append block action: NULL block_input falls back to the only slot", {
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   testServer(
@@ -161,7 +161,7 @@ test_that("append block action: valid commit creates one block + one link", {
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   testServer(
@@ -205,7 +205,7 @@ test_that("append block action: an empty link_id is auto-assigned", {
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   testServer(
@@ -241,7 +241,7 @@ test_that("prepend block action: target_input picks the link slot", {
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   testServer(
@@ -287,7 +287,7 @@ test_that("prepend: NULL target_input falls back to only slot", {
     show_sidebar         = function(...) invisible(NULL),
     keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   testServer(
@@ -324,7 +324,7 @@ test_that("add block action toggles its pre-rendered sidebar on confirm", {
       invisible(NULL)
     },
     hide_sidebar = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   r_board <- reactiveValues(board = new_board(), board_id = "my_board")
@@ -367,7 +367,7 @@ test_that("append block action toggles its pre-rendered sidebar on confirm", {
       invisible(NULL)
     },
     hide_sidebar = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   r_board <- reactiveValues(

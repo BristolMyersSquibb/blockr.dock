@@ -109,7 +109,7 @@ board_ui.dock_board <- function(
     # silently swap a pinned panel's body, since the JS replaces content in
     # place and never inspects the pin class. Splitting by concern keeps
     # pin semantics intuitive without multi-pin machinery on the JS side.
-    blockr.ui::sidebar_ui(
+    sidebar_ui(
       NS(id, "actions_sidebar"),
       mode = "overlay",
       side = "right"
@@ -121,9 +121,9 @@ board_ui.dock_board <- function(
     # `add_block_action` server's namespace - that handler mounts
     # `block_browser_server("browser")` and just toggles this panel
     # (`show_sidebar()` with no `ui`), so opening it never re-renders.
-    blockr.ui::sidebar_ui(
+    sidebar_ui(
       NS(id, "add_block_sidebar"),
-      ui = blockr.ui::block_browser_ui(
+      ui = block_browser_ui(
         NS(NS(id, "add_block_action"), "browser")
       ),
       title = "Add new block",
@@ -137,17 +137,17 @@ board_ui.dock_board <- function(
     # action at commit; the "Append from X" context goes in the sidebar
     # title. Composed id so the markup lands under the
     # `append_block_action` server's namespace.
-    blockr.ui::sidebar_ui(
+    sidebar_ui(
       NS(id, "append_block_sidebar"),
-      ui = blockr.ui::block_browser_ui(
+      ui = block_browser_ui(
         NS(NS(id, "append_block_action"), "browser"),
-        target = blockr.ui::append_to()
+        target = append_to()
       ),
       title = "Append new block",
       mode = "overlay",
       side = "right"
     ),
-    blockr.ui::sidebar_ui(
+    sidebar_ui(
       NS(id, "settings_sidebar"),
       ui = settings_body(id, x, options = options),
       title = "Board options",
@@ -174,7 +174,7 @@ dock_outputs_ui <- function(id, views) {
 #' Returns a tagList containing the same options accordion that the
 #' Bootstrap offcanvas used to render. Called at server time from
 #' `board_server_callback()` when the user clicks the navbar gear, and
-#' passed to `blockr.ui::show_sidebar()`.
+#' passed to `show_sidebar()`.
 #'
 #' Caller-supplied `options` (threaded down from `serve(board, options =
 #' custom_options(...))` via `blockr_app_server.dock_board()` →

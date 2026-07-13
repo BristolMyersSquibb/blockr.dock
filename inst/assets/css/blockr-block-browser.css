@@ -1,0 +1,446 @@
+/* Block browser: a card-list block picker designed to live inside the
+   sidebar primitive. Search bar at top, scrollable category-grouped
+   card list below. Clicking a card adds the block immediately with
+   default settings; opening a card (chevron) reveals a small form and
+   an explicit add button for tweaking id / title / link / port first.
+   Bootstrap-free; namespaced under .blockr-block-browser-*.
+
+   Visual language follows the validated sidebar prototype
+   (blockr.dock@feat/sidebar-s3-dispatch): a borderless list where each
+   row highlights only on hover/focus, larger colour-tinted icon tiles,
+   and muted grey section headers. Palette below mirrors the prototype's
+   Tailwind-style grey/blue scale. */
+
+/* Design tokens for the card visuals. The stack and link menus reuse the
+   .blockr-block-browser-card* classes outside the .blockr-block-browser
+   root, so the tokens are declared on all three roots (rather than on
+   .blockr-block-browser alone) to keep them resolvable there without
+   leaking into the global :root namespace. */
+.blockr-block-browser,
+.blockr-stack-menu,
+.blockr-link-menu {
+  --bb-grey-50: #f9fafb;
+  --bb-grey-100: #f3f4f6;
+  --bb-grey-200: #e5e7eb;
+  --bb-grey-300: #d1d5db;
+  --bb-grey-400: #9ca3af;
+  --bb-grey-500: #6b7280;
+  --bb-grey-600: #4b5563;
+  --bb-grey-700: #374151;
+  --bb-grey-900: #111827;
+  --bb-blue-100: #dbeafe;
+  --bb-blue-500: #3b82f6;
+  --bb-blue-600: #2563eb;
+  --bb-blue-700: #1d4ed8;
+  /* Compact density (the spec's finalized default): 32px icon tile, the
+     glyph filling more of it (16px -> 0.5 ratio vs the airier 40/18). */
+  --bb-icon: 32px;
+  --bb-gap: 12px;
+}
+
+.blockr-block-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  margin: -16px;
+  padding: 16px;
+
+  /* Inherit the app/theme typeface (the prototype sets no font-family);
+     only the colour is fixed here. */
+  color: var(--bb-grey-900);
+}
+
+.blockr-block-browser-context {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--bb-grey-500);
+  margin: 0;
+}
+
+.blockr-block-browser-context strong {
+  color: var(--bb-grey-900);
+  font-weight: 600;
+}
+
+/* Search input. Soft grey field with a blue focus ring (prototype). */
+.blockr-block-browser-search {
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 10px 12px 10px 40px;
+  border: 1px solid var(--bb-grey-200);
+  border-radius: 8px;
+  background: var(--bb-grey-50)
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239ca3af'><path d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/></svg>")
+    no-repeat 14px center / 14px 14px;
+  font-size: 14px;
+  color: var(--bb-grey-900);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.blockr-block-browser-search::placeholder {
+  color: var(--bb-grey-400);
+}
+
+.blockr-block-browser-search:focus {
+  outline: none;
+  border-color: var(--bb-blue-500);
+  box-shadow: 0 0 0 3px var(--bb-blue-100);
+}
+
+/* Scrollable cards area. */
+.blockr-block-browser-categories {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+/* Section headers: muted grey, uppercase (prototype). */
+.blockr-block-browser-category h3 {
+  margin: 0 0 4px 0;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--bb-grey-500);
+}
+
+/* Collapse empty category sections via :has() - no JS needed. */
+.blockr-block-browser-category:not(:has(.blockr-block-browser-card:not(.hidden))) {
+  display: none;
+}
+
+.blockr-block-browser-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Card shell. Borderless by default; the whole row is a click target
+   (adds the block) and highlights subtly on hover / keyboard focus.
+   The chevron and the expanded form opt out of that behaviour in JS. */
+.blockr-block-browser-card {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease,
+    box-shadow 150ms ease, margin 150ms ease;
+}
+
+/* Resting rows are flush; only hover / keyboard focus gives a subtle
+   grey wash (the "quiet" separation from the spec). */
+.blockr-block-browser-card:hover,
+.blockr-block-browser-card:focus-within {
+  border-color: var(--bb-grey-200);
+  background: rgba(249, 250, 251, 0.6);
+}
+
+/* Expanded card: lifts out of the flush list as a contained white panel
+   with a soft elevation (spec "finalized expanded dropdown"). */
+.blockr-block-browser-card.card-expanded {
+  margin: 8px 0;
+  border-color: var(--bb-grey-200);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05),
+    0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* Keyboard selection (arrow keys): a clear blue marker, distinct from
+   the grey hover/expanded state. Driven by the JS keydown handler. */
+.blockr-block-browser-card.card-selected {
+  border-color: var(--bb-blue-500);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.blockr-block-browser-card.hidden {
+  display: none;
+}
+
+.blockr-block-browser-card-header {
+  display: flex;
+  /* Single title row, so the icon centres against it directly. */
+  align-items: center;
+  gap: var(--bb-gap);
+}
+
+/* Body column beside the icon: just the title row in the compact view. */
+.blockr-block-browser-card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.blockr-block-browser-card-titles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Colour-tinted icon tile. The tint comes from data-category below; the
+   glyph itself is an inline SVG / <img>. */
+.blockr-block-browser-card-icon {
+  flex: 0 0 auto;
+  width: var(--bb-icon);
+  height: var(--bb-icon);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(120, 120, 120, 0.12);
+  color: var(--bb-grey-500);
+}
+
+.blockr-block-browser-card-icon svg,
+.blockr-block-browser-card-icon img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Per-category icon tints (Okabe-Ito palette, matching blockr.dock's
+   blk_color()). Section headers stay grey, prototype-style; only the
+   tiles carry colour. Driven entirely by data-category. */
+.blockr-block-browser-card[data-category="input"] .blockr-block-browser-card-icon {
+  background: rgba(0, 114, 178, 0.15);
+  color: #0072b2;
+}
+.blockr-block-browser-card[data-category="transform"] .blockr-block-browser-card-icon {
+  background: rgba(0, 158, 115, 0.15);
+  color: #009e73;
+}
+.blockr-block-browser-card[data-category="structured"] .blockr-block-browser-card-icon {
+  background: rgba(86, 180, 233, 0.18);
+  color: #2b8fd0;
+}
+.blockr-block-browser-card[data-category="plot"] .blockr-block-browser-card-icon {
+  background: rgba(230, 159, 0, 0.18);
+  color: #b97c00;
+}
+.blockr-block-browser-card[data-category="table"] .blockr-block-browser-card-icon {
+  background: rgba(204, 121, 167, 0.18);
+  color: #cc79a7;
+}
+.blockr-block-browser-card[data-category="model"] .blockr-block-browser-card-icon {
+  background: rgba(240, 228, 66, 0.25);
+  color: #9a8f00;
+}
+.blockr-block-browser-card[data-category="output"] .blockr-block-browser-card-icon {
+  background: rgba(213, 94, 0, 0.16);
+  color: #d55e00;
+}
+.blockr-block-browser-card[data-category="utility"] .blockr-block-browser-card-icon {
+  background: rgba(120, 120, 120, 0.16);
+  color: var(--bb-grey-500);
+}
+
+.blockr-block-browser-card-name {
+  flex: 1 1 auto;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--bb-grey-900);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Package label as a soft pill (restored from main; the prototype used
+   plain monospace text, which read as less polished). */
+.blockr-block-browser-card-package {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  background: var(--bb-grey-100);
+  color: var(--bb-grey-500);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.blockr-block-browser-card-chevron {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--bb-grey-400);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.blockr-block-browser-card-chevron:hover {
+  background: var(--bb-grey-100);
+  color: var(--bb-grey-700);
+}
+
+.blockr-block-browser-card-chevron svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 200ms ease;
+}
+
+.blockr-block-browser-card.card-expanded .blockr-block-browser-card-chevron svg {
+  transform: rotate(180deg);
+}
+
+/* Description band: a full-width sibling of the header, hidden while the
+   row is compact and revealed when the card expands into its panel. Full
+   description (not clamped - the user opted in by expanding), 12px grey,
+   with a hairline separating it from the form below (spec). */
+.blockr-block-browser-card-descr-band {
+  display: none;
+  margin: 8px 0 0 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bb-grey-100);
+  font-size: 12px;
+  color: var(--bb-grey-500);
+  line-height: 1.45;
+}
+
+.blockr-block-browser-card.card-expanded .blockr-block-browser-card-descr-band {
+  display: block;
+}
+
+/* Expanded form area, hidden until the card is .card-expanded. Indented
+   to align under the title, on a faint grey panel (prototype). The form
+   fields are real <input>/<select> elements, not Shiny-bound; the JS
+   reads them when the add button is clicked. */
+.blockr-block-browser-card-advanced {
+  display: none;
+  margin-top: 12px;
+  flex-direction: column;
+  gap: 11px;
+  /* The expanded form opts out of the card's pointer affordance. */
+  cursor: default;
+}
+
+.blockr-block-browser-card.card-expanded .blockr-block-browser-card-advanced {
+  display: flex;
+}
+
+.blockr-block-browser-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.blockr-block-browser-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bb-grey-600);
+}
+
+.blockr-block-browser-field input,
+.blockr-block-browser-field select {
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--bb-grey-200);
+  border-radius: 8px;
+  background: var(--bb-grey-50);
+  color: var(--bb-grey-900);
+  font-size: 13px;
+  transition: border-color 150ms ease, background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+/* The block id is identifier-like; render it monospace (spec). */
+.blockr-block-browser-field-id input {
+  font-family: "SF Mono", "Fira Code", "Consolas", "Monaco", monospace;
+  font-size: 12.5px;
+}
+
+/* Native select arrow replaced with a grey chevron, room reserved for it. */
+.blockr-block-browser-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.blockr-block-browser-field input:focus,
+.blockr-block-browser-field select:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: var(--bb-blue-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* Field visibility is decided server-side: block_browser_ui() renders
+   only the fields a flow needs (id/title always; link/port per mode),
+   so no per-mode CSS hiding is required. */
+
+/* Per-card add / append / prepend action: a full-width ghost-outline
+   button (white fill, blue label, grey hairline) with a leading plus
+   glyph - the spec's finalized primary action, lighter than a solid fill
+   so it sits calmly at the foot of the open panel. */
+.blockr-block-browser-card-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  margin-top: 1px;
+  padding: 0 15px;
+  border: 1px solid var(--bb-grey-200);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--bb-blue-700);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.blockr-block-browser-card-add svg {
+  width: 13px;
+  height: 13px;
+}
+
+.blockr-block-browser-card-add:hover {
+  background: var(--bb-grey-50);
+  border-color: var(--bb-grey-300);
+}
+
+.blockr-block-browser-card-add:focus-visible {
+  outline: 2px solid var(--bb-blue-600);
+  outline-offset: 2px;
+}
+
+/* Empty-state shown when search filters out every card. */
+.blockr-block-browser-empty {
+  display: none;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  color: var(--bb-grey-400);
+  font-size: 14px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.blockr-block-browser.is-empty .blockr-block-browser-empty {
+  display: flex;
+}
+
+.blockr-block-browser.is-empty .blockr-block-browser-categories {
+  display: none;
+}

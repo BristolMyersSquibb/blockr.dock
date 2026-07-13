@@ -8,7 +8,7 @@ local_mocked_sidebar <- function(env = parent.frame()) {
     show_sidebar         = function(...) invisible(list(...)),
     keep_or_hide_sidebar = function(...) invisible(list(...)),
     hide_sidebar         = function(...) invisible(list(...)),
-    .package = "blockr.ui",
+    .package = "blockr.dock",
     .env = env
   )
 }
@@ -178,7 +178,7 @@ test_that("edit stack action: board change with no active edit is inert", {
       invisible(NULL)
     },
     sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   r_board <- reactiveValues(
@@ -224,7 +224,7 @@ test_that("edit stack action: removing the edited stack closes the sidebar", {
     },
     # The auto-close is gated on the sidebar being open.
     sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE),
-    .package = "blockr.ui"
+    .package = "blockr.dock"
   )
 
   r_board <- reactiveValues(

@@ -21,7 +21,6 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:
     blockr.core (>= 0.1.3),
-    blockr.ui,
     bsicons,
     shiny,
     shinyjs,
@@ -31,12 +30,8 @@ Imports:
     htmltools,
     cli,
     shinyWidgets,
-    jsonlite
-Remotes:
-    BristolMyersSquibb/blockr.ui,
-    BristolMyersSquibb/blockr.core,
-    cynkra/dockViewR,
-    nbenn/shinytest2@wait-for-app-serving
+    jsonlite,
+    utils
 Suggests:
     testthat (>= 3.0.0),
     DT,
@@ -81,5 +76,10 @@ Collate:
     'utils-serdes.R'
     'utils-serve.R'
     'utils-ui.R'
+    'menu-utils.R'
+    'sidebar.R'
+    'block-browser.R'
+    'link-menu.R'
+    'stack-menu.R'
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.0.0
