@@ -1,0 +1,278 @@
+/* Stack menu: a multi-select card-list block picker for stacks, sharing
+   the block-browser's card visuals. Only the bits unique to the stack
+   menu live here: the .card-selected visual confirmation, the
+   panel-level form (name / color / id), the inline colour palette, the
+   advanced toggle, and the bottom-pinned confirm button. */
+
+.blockr-stack-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  margin: -16px;
+  padding: 16px;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  color: #1f2937;
+}
+
+/* The search bar piggy-backs on the block-browser style. */
+.blockr-stack-menu .blockr-block-browser-search {
+  flex: 0 0 auto;
+}
+
+/* Cards area. flex-grow: 0 keeps it tight to its content (no growing
+   into leftover space, which would dilute the picker). flex-shrink: 1
+   + min-height: 0 lets it yield if the total exceeds the panel; the
+   existing overflow-y: auto on .blockr-block-browser-categories then
+   scrolls when content is taller than the allowed height. */
+.blockr-stack-menu .blockr-block-browser-categories {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: max-content;
+}
+
+/* Edit mode: the cards container height is set dynamically by JS to
+   match the 4th card's bottom (see blockr-stack-menu.js / capToFour).
+   We only declare flex-shrink: 0 here so the form below cannot
+   squeeze the explicit height the JS sets. */
+.blockr-stack-menu[data-mode="edit"] .blockr-block-browser-categories {
+  flex: 0 0 auto;
+}
+
+/* Selection state. The card sits in a permanent "selected" look (ring +
+   tinted background) until clicked again. */
+.blockr-stack-menu .blockr-block-browser-card.card-selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.blockr-stack-menu .blockr-block-browser-card.card-selected
+  .blockr-block-browser-card-name::after {
+  content: "✓";
+  margin-left: 6px;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+/* Empty-state - reuse the browser's pattern. */
+.blockr-stack-menu .blockr-block-browser-empty {
+  display: none;
+}
+
+.blockr-stack-menu.is-empty .blockr-block-browser-empty {
+  display: flex;
+}
+
+.blockr-stack-menu.is-empty .blockr-block-browser-categories {
+  display: none;
+}
+
+/* Section headers (above the search bar and above the panel-level
+   form). Same uppercase / tracking treatment as the category labels
+   inside the card list, but a notch bigger and darker so the two
+   top-level sections out-rank the sub-category dividers. */
+.blockr-stack-menu-section-header {
+  flex: 0 0 auto;
+  margin: 4px 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+/* Panel-level form: name + colour + id. The "Stack settings" section
+   header above provides the visual break - no background tint, no
+   border-box; keep the chrome quiet. */
+.blockr-stack-menu-form {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.blockr-stack-menu-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.blockr-stack-menu-field > label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.blockr-stack-menu-field input[type="text"] {
+  padding: 6px 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 12px;
+}
+
+.blockr-stack-menu-field input[type="text"]:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+
+/* Inline colour picker: hex preview + text input + hue/lightness
+   sliders. The hex `<input>` is the value carrier (a normal Shiny
+   text input); sliders write the hex on input, the JS keeps the
+   preview swatch and slider positions in sync with the hex. */
+.blockr-stack-menu-color-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.blockr-stack-menu-color-swatch {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 4px;
+  background: #66c2a5;
+}
+
+.blockr-stack-menu-color-preview input.blockr-stack-menu-hex {
+  flex: 1 1 auto;
+}
+
+/* Hue + lightness sliders. Styled as CSS-gradient tracks so the user
+   gets the "rainbow" affordance without canvas or extra markup. */
+.blockr-stack-menu-color input[type="range"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  background: transparent;
+  cursor: pointer;
+  margin: 4px 0 0 0;
+}
+
+.blockr-stack-menu-color input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+}
+
+.blockr-stack-menu-color input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+}
+
+.blockr-stack-menu-hue::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    #ff5050 0%, #ffdf50 17%, #50ff50 33%, #50ffff 50%,
+    #5050ff 67%, #ff50ff 83%, #ff5050 100%
+  );
+}
+
+.blockr-stack-menu-hue::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    #ff5050 0%, #ffdf50 17%, #50ff50 33%, #50ffff 50%,
+    #5050ff 67%, #ff50ff 83%, #ff5050 100%
+  );
+}
+
+.blockr-stack-menu-lightness::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #000, #888, #fff);
+}
+
+.blockr-stack-menu-lightness::-moz-range-track {
+  background: linear-gradient(to right, #000, #888, #fff);
+}
+
+.blockr-stack-menu-color input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #2563eb;
+  cursor: pointer;
+}
+
+.blockr-stack-menu-color input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #2563eb;
+  cursor: pointer;
+}
+
+.blockr-stack-menu-color input[type="range"]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Trimmed stack-menu card: drop the description and package badge,
+   stack block name + block id vertically. */
+.blockr-stack-menu .blockr-stack-menu-card {
+  padding: 8px 10px;
+}
+
+.blockr-stack-menu .blockr-stack-menu-card-titles {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.blockr-stack-menu .blockr-stack-menu-card-id {
+  font-size: 11px;
+  color: #6b7280;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The card name is what users glance at - keep the strong colour. */
+.blockr-stack-menu .blockr-block-browser-card-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Confirm button. Pinned at the bottom of the sidebar via margin-top:
+   auto. */
+.blockr-stack-menu-confirm {
+  flex: 0 0 auto;
+  align-self: stretch;
+  margin-top: auto;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.blockr-stack-menu-confirm:hover {
+  background: #1d4ed8;
+}
+
+.blockr-stack-menu-confirm:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.blockr-stack-menu-confirm:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}

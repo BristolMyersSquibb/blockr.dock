@@ -1,0 +1,158 @@
+.blockr-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: var(--blockr-sidebar-panel-width, 420px);
+  max-width: 100vw;
+  z-index: 1050;
+
+  display: flex;
+  flex-direction: column;
+
+  background: #ffffff;
+  color: #1f2937;
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.08);
+  border-left: 1px solid rgba(15, 23, 42, 0.08);
+
+  /* No font-family override: inherit the app/theme typeface. */
+
+  transform: translateX(100%);
+  transition: transform 200ms ease;
+  visibility: hidden;
+}
+
+.blockr-sidebar[data-side="right"] {
+  right: 0;
+  transform: translateX(100%);
+}
+
+.blockr-sidebar[data-side="left"] {
+  left: 0;
+  right: auto;
+  border-left: none;
+  border-right: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 8px 0 24px rgba(15, 23, 42, 0.08);
+  transform: translateX(-100%);
+}
+
+.blockr-sidebar.blockr-sidebar-open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.blockr-sidebar-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: #ffffff;
+}
+
+.blockr-sidebar-title {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-sidebar-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blockr-sidebar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.blockr-sidebar-btn:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: #111827;
+}
+
+.blockr-sidebar-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.blockr-sidebar-btn svg {
+  width: 10px;
+  height: 10px;
+  display: block;
+  transition: transform 180ms ease;
+}
+
+/* Visual feedback for the pin toggle: the path's head sits naturally
+   at top-right (head tilted, tip at bottom-left). Unpinned keeps that
+   slight side tilt; pinned rotates -45° so the head is straight up and
+   the tip points straight down - "stuck in". */
+.blockr-sidebar.blockr-sidebar-pinned .blockr-sidebar-pin svg {
+  transform: rotate(-45deg);
+}
+
+.blockr-sidebar.blockr-sidebar-pinned .blockr-sidebar-pin {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+}
+
+.blockr-sidebar-body {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 16px;
+}
+
+.blockr-sidebar-body:focus {
+  outline: none;
+}
+
+.blockr-sidebar[aria-hidden="true"] {
+  pointer-events: none;
+}
+
+.blockr-sidebar.blockr-sidebar-open[aria-hidden="false"] {
+  pointer-events: auto;
+}
+
+/* Push mode: shift the page content aside when an open push-mode sidebar
+   exists. The class + variable are managed by the JS bundle. We push by
+   shrinking `<html>` via padding (not `<body>`) because bslib's page-fill
+   layouts pin body to 100% of html and zero its padding inline, so any
+   body-level padding/margin is either overridden or simply doesn't shrink
+   the visible viewport. Padding on html shrinks html's content area, and
+   body (sized 100% of that) shrinks with it.
+
+   The push itself is instant (no transition on padding). Animating the
+   padding interacts poorly with child widgets that cache their layout
+   and only re-measure via `ResizeObserver` (dockViewR, some htmlwidgets):
+   during the 200ms transition their internal content sits at stale
+   coordinates while their outer container shrinks, producing a visible
+   "bounce". A one-frame snap is below human perception while the sidebar
+   itself still slides smoothly via its own `translateX` transition. */
+html.blockr-html-pushed-right {
+  padding-right: var(--blockr-sidebar-width-right, 0px);
+  box-sizing: border-box;
+}
+
+html.blockr-html-pushed-left {
+  padding-left: var(--blockr-sidebar-width-left, 0px);
+  box-sizing: border-box;
+}

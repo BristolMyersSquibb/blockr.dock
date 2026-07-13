@@ -22,7 +22,6 @@ local_mocked_sidebar <- function(env = parent.frame()) {
     show_sidebar         = function(...) invisible(list(...)),
     keep_or_hide_sidebar = function(...) invisible(list(...)),
     hide_sidebar         = function(...) invisible(list(...)),
-    .package = "blockr.ui",
     .env = env
   )
 }
@@ -146,7 +145,7 @@ test_that("add link action: INCOMING commit targets the anchor", {
 })
 
 test_that("add link action: duplicate link id is rejected by the menu", {
-  # Validation now lives in the blockr.ui link menu (which the dock mounts
+  # Validation now lives in the vendored link menu (which the dock mounts
   # with the board reactive), so a duplicate link id is rejected upstream:
   # the committed reactive never fires and no update is issued. The dock
   # no longer runs its own validator.
@@ -194,15 +193,13 @@ test_that("add link action: empty pool still opens the sidebar", {
       invisible(NULL)
     },
     hide_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
-    .package = "blockr.ui"
+    keep_or_hide_sidebar = function(...) invisible(NULL)
   )
   local_mocked_bindings(
     notify = function(message, ...) {
       notify_calls[[length(notify_calls) + 1L]] <<- message
       invisible(NULL)
-    },
-    .package = "blockr.dock"
+    }
   )
 
   r_board <- reactiveValues(

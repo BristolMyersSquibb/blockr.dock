@@ -66,7 +66,7 @@ test_that("dock app renders a block added via the extension (#191)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "empty", "app.R", package = "blockr.dock"),
     name = "dock",
     seed = 42,
@@ -101,7 +101,7 @@ test_that("edit board extension links blocks (e2e)", {
   # A board pre-seeded with a source and a transform block so the test drives
   # only link operations -- adding blocks would deactivate the extension panel
   # and race shinytest2. The same bare fixture serves the stacks test below.
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-add", "app.R", package = "blockr.dock"),
     name = "edit-link",
     seed = 42,
@@ -132,7 +132,7 @@ test_that("adding a second block keeps both block panels (#196)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "empty", "app.R", package = "blockr.dock"),
     name = "panel-visibility",
     seed = 42,
@@ -166,7 +166,7 @@ test_that("edit board extension stacks (e2e)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-add", "app.R", package = "blockr.dock"),
     name = "edit-stacks",
     seed = 42,
@@ -215,7 +215,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
     name = "multi-view",
     seed = 42,
@@ -259,7 +259,7 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "serdes", "app.R", package = "blockr.dock"),
     name = "serdes",
     seed = 42,
@@ -282,7 +282,7 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # artifact carries the dock-owned state the DOM does not surface without the
   # dockview client -- the extension, the panel-level layout, the producer
   # version that routes deserialization -- alongside blocks, links and stacks.
-  path <- app$get_download("my_board-preserve_board-serialize")
+  path <- retry_download(app, "my_board-preserve_board-serialize")
   expect_gt(file.size(path), 0)
 
   ser <- jsonlite::fromJSON(path, simplifyDataFrame = FALSE,
@@ -330,7 +330,11 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # committed board's slots -- proving the stage / reload cycle preserved them
   # and that the fixture re-importing its own (colliding) view ids does not drop
   # them. It cannot see the client render, so that leg is asserted below.
-  path2 <- app$get_download("my_board-preserve_board-serialize")
+  #
+  # get_download can transiently fail after the reload -- the link's href is
+  # filled only once outputs bind, and the download endpoint may briefly not
+  # answer ("Unable request data from server"); retry_download absorbs both.
+  path2 <- retry_download(app, "my_board-preserve_board-serialize")
   ser2 <- jsonlite::fromJSON(path2, simplifyDataFrame = FALSE,
                              simplifyMatrix = FALSE)
 
@@ -364,7 +368,7 @@ test_that("deleting a block via its card menu drops the panel and its link", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
     name = "remove-block",
     seed = 42,
@@ -399,7 +403,7 @@ test_that("removing a link via the edit extension updates the board", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
     name = "remove-link",
     seed = 42,
@@ -430,7 +434,7 @@ test_that("removing a stack via the edit extension updates the board", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
     name = "remove-stack",
     seed = 42,
@@ -461,7 +465,7 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
     name = "view-lifecycle",
     seed = 42,
@@ -556,7 +560,7 @@ test_that("dock panel move updates layout state and serialization (#234)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
     name = "layout-edit",
     seed = 42,
@@ -655,7 +659,7 @@ test_that("locked board hides block actions, shows lock indicator (#236)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "locked-dock", "app.R", package = "blockr.dock"),
     name = "locked-board",
     seed = 42,
@@ -702,7 +706,7 @@ test_that("single-page board renders one auto-named view (#236)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "single-page", "app.R", package = "blockr.dock"),
     name = "single-page",
     seed = 42,
@@ -732,7 +736,7 @@ test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
     name = "busy-pulse",
     seed = 42,
@@ -771,6 +775,16 @@ test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
         var container = document.querySelector('.blockr-view-container');
         html.classList.add('shiny-busy');
 
+        // The app's own outputs may still be settling -- a block card inside a
+        // view container can hold a lingering `.recalculating` well past
+        // wait_for_idle(). Neutralise every real in-container marker (the exact
+        // pulse-CSS scope) so only the synthetic markers below drive the
+        // reading, then restore them.
+        var real = Array.from(
+          document.querySelectorAll('.blockr-view-container .recalculating')
+        );
+        real.forEach(function (el) { el.classList.remove('recalculating'); });
+
         var hidden = mark(document.body);
         var bookkeeping = pulse();
         hidden.remove();
@@ -779,6 +793,7 @@ test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
         var computing = pulse();
         visible.remove();
 
+        real.forEach(function (el) { el.classList.add('recalculating'); });
         html.classList.remove('shiny-busy');
 
         return {

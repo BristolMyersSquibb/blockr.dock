@@ -9,14 +9,14 @@ add_link_action <- function(trigger, board, update, ...) {
       # board (a freed-up target reappears, a removed block's card drops),
       # so this handler is a thin adapter - no dock-side validator, no
       # manual pool-update.
-      committed <- blockr.ui::link_menu_server(
+      committed <- link_menu_server(
         "menu",
         board = reactive(board$board),
         anchor = reactive(trigger())
       )
 
       menu_ui <- function() {
-        blockr.ui::link_menu_ui(
+        link_menu_ui(
           session$ns("menu"), board$board, anchor = trigger()
         )
       }
@@ -30,7 +30,7 @@ add_link_action <- function(trigger, board, update, ...) {
         # The link menu owns its own empty-state, so there's no pre-flight
         # NULL-check / notification here anymore: a block that can't be
         # linked still opens the sidebar with an in-place empty message.
-        blockr.ui::show_sidebar(
+        show_sidebar(
           sidebar_id, title = sidebar_title(), ui = menu_ui()
         )
       })
@@ -46,8 +46,8 @@ add_link_action <- function(trigger, board, update, ...) {
         session$onFlushed(
           function() {
             isolate(
-              if (!isTRUE(blockr.ui::sidebar_state(sidebar_id)$pinned)) {
-                blockr.ui::hide_sidebar(sidebar_id)
+              if (!isTRUE(sidebar_state(sidebar_id)$pinned)) {
+                hide_sidebar(sidebar_id)
               }
             )
           },

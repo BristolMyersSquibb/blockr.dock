@@ -6,14 +6,14 @@ add_block_action <- function(trigger, board, update, ...) {
       # under this action's namespace. Opening it is a pure toggle - no
       # re-render, no server round-trip for the markup.
       sidebar_id <- NS(isolate(board$board_id), "add_block_sidebar")
-      added <- blockr.ui::block_browser_server(
+      added <- block_browser_server(
         "browser",
         board = reactive(board$board)
       )
 
       observeEvent(trigger(), {
         log_debug("opening pre-rendered add block sidebar")
-        blockr.ui::show_sidebar(sidebar_id, title = "Add new block")
+        show_sidebar(sidebar_id, title = "Add new block")
       })
 
       observeEvent(added(), {
@@ -23,7 +23,7 @@ add_block_action <- function(trigger, board, update, ...) {
 
         # Re-open without `ui` keeps the pre-rendered body in place (no
         # re-render) when the user pinned the panel; otherwise it hides.
-        blockr.ui::keep_or_hide_sidebar(
+        keep_or_hide_sidebar(
           sidebar_id, ui = NULL, title = "Add new block"
         )
       })
@@ -44,16 +44,16 @@ append_block_action <- function(trigger, board, update, ...) {
       # reactive and resolved into the link at commit; the "Append from X"
       # context goes in the sidebar title.
       sidebar_id <- NS(isolate(board$board_id), "append_block_sidebar")
-      added <- blockr.ui::block_browser_server(
+      added <- block_browser_server(
         "browser",
         board = reactive(board$board),
-        target = reactive(blockr.ui::append_to(trigger()))
+        target = reactive(append_to(trigger()))
       )
 
       title <- function() paste0("Append from ", trigger())
 
       observeEvent(trigger(), {
-        blockr.ui::show_sidebar(sidebar_id, title = title())
+        show_sidebar(sidebar_id, title = title())
       })
 
       observeEvent(added(), {
@@ -65,7 +65,7 @@ append_block_action <- function(trigger, board, update, ...) {
           links = list(add = res$links)
         ))
 
-        blockr.ui::keep_or_hide_sidebar(
+        keep_or_hide_sidebar(
           sidebar_id, ui = NULL, title = title()
         )
       })
@@ -80,21 +80,21 @@ prepend_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-      added <- blockr.ui::block_browser_server(
+      added <- block_browser_server(
         "browser",
         board = reactive(board$board),
-        target = reactive(blockr.ui::prepend_to(trigger()))
+        target = reactive(prepend_to(trigger()))
       )
 
       browser_ui <- function() {
-        blockr.ui::block_browser_ui(
+        block_browser_ui(
           session$ns("browser"), board$board,
-          blockr.ui::prepend_to(trigger())
+          prepend_to(trigger())
         )
       }
 
       observeEvent(trigger(), {
-        blockr.ui::show_sidebar(
+        show_sidebar(
           sidebar_id, title = "Prepend new block", ui = browser_ui()
         )
       })
@@ -106,7 +106,7 @@ prepend_block_action <- function(trigger, board, update, ...) {
           links = list(add = res$links)
         ))
 
-        blockr.ui::keep_or_hide_sidebar(
+        keep_or_hide_sidebar(
           sidebar_id, title = "Prepend new block", ui = browser_ui()
         )
       })

@@ -1,0 +1,110 @@
+/* Link menu: a bidirectional card-list link picker designed to live
+   inside the sidebar primitive. Reuses the .blockr-block-browser-*
+   card classes and the .blockr-stack-menu-section-header class
+   (parallel to the stack menu). Only the bits unique to the link
+   menu live here: the OUTGOING / INCOMING section grouping, the
+   trimmed card chrome shared with the stack menu, and the
+   per-direction collapse rule. */
+
+.blockr-link-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  margin: -16px;
+  padding: 16px;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  color: #1f2937;
+}
+
+.blockr-link-menu .blockr-block-browser-search {
+  flex: 0 0 auto;
+}
+
+/* Cards area. flex-grow: 0 keeps it tight to its content (no growing
+   into leftover space); flex-shrink: 1 + min-height: 0 lets it yield
+   to siblings if the total exceeds the panel. The existing
+   overflow-y: auto on .blockr-block-browser-categories then scrolls
+   when the content is taller than the allowed height. */
+.blockr-link-menu .blockr-block-browser-categories {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: max-content;
+}
+
+/* Each direction (.blockr-link-menu-direction) wraps a section-header
+   + a categories container. Collapse the whole direction wrapper
+   when every card inside it is hidden (search filter or pool-update
+   drained it). */
+.blockr-link-menu-direction {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+.blockr-link-menu-direction:not(:has(.blockr-block-browser-card:not(.hidden))) {
+  display: none;
+}
+
+/* Section headers (CONNECT TO / CONNECT FROM) - same visual treatment
+   as the stack-menu's section header so all three card-list modules
+   share one wayfinding language. Mirrored here (rather than reused
+   cross-module) because the link menu doesn't attach
+   `stack_menu_dep()`. */
+.blockr-link-menu-section-header {
+  flex: 0 0 auto;
+  margin: 4px 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+/* Trimmed link-menu card: drop the description and package badge,
+   stack block name + block id vertically. Matches the stack-menu
+   card chrome so the visual language is shared. */
+.blockr-link-menu .blockr-link-menu-card {
+  padding: 8px 10px;
+}
+
+.blockr-link-menu .blockr-link-menu-card-titles {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.blockr-link-menu .blockr-link-menu-card-id {
+  font-size: 11px;
+  color: #6b7280;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-link-menu .blockr-block-browser-card-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Empty-state: shown when both pools are empty OR when search drains
+   every card. Reuses .blockr-block-browser-empty visuals; the
+   .is-empty toggle on the root controls visibility. */
+.blockr-link-menu .blockr-block-browser-empty {
+  display: none;
+}
+
+.blockr-link-menu.is-empty .blockr-block-browser-empty {
+  display: flex;
+}
+
+.blockr-link-menu.is-empty .blockr-link-menu-direction {
+  display: none;
+}

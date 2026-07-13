@@ -6,16 +6,16 @@ add_stack_action <- function(trigger, board, update, ...) {
       # spec (id / name / colour) itself and keeps an open panel in sync
       # with the board (cards added / removed live), so this handler is a
       # thin adapter - no dock-side validators, no manual refresh.
-      committed <- blockr.ui::stack_menu_server(
+      committed <- stack_menu_server(
         "menu", board = reactive(board$board)
       )
 
       menu_ui <- function() {
-        blockr.ui::stack_menu_ui(session$ns("menu"), board$board)
+        stack_menu_ui(session$ns("menu"), board$board)
       }
 
       observeEvent(trigger(), {
-        blockr.ui::show_sidebar(
+        show_sidebar(
           sidebar_id, title = "Create new stack", ui = menu_ui()
         )
       })
@@ -34,7 +34,7 @@ add_stack_action <- function(trigger, board, update, ...) {
         session$onFlushed(
           function() {
             isolate(
-              blockr.ui::keep_or_hide_sidebar(
+              keep_or_hide_sidebar(
                 sidebar_id, title = "Create new stack", ui = menu_ui()
               )
             )
@@ -53,14 +53,14 @@ edit_stack_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-      committed <- blockr.ui::stack_menu_server(
+      committed <- stack_menu_server(
         "menu",
         board = reactive(board$board),
         target = reactive(trigger())
       )
 
       menu_ui <- function() {
-        blockr.ui::stack_menu_ui(
+        stack_menu_ui(
           session$ns("menu"), board$board, target = trigger()
         )
       }
@@ -71,7 +71,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
       sidebar_title <- function() paste0("Edit stack ", trigger())
 
       observeEvent(trigger(), {
-        blockr.ui::show_sidebar(
+        show_sidebar(
           sidebar_id, title = sidebar_title(), ui = menu_ui()
         )
       })
@@ -90,8 +90,8 @@ edit_stack_action <- function(trigger, board, update, ...) {
         # mutates the board) and the membership test would error.
         if (length(id) == 1L && !is.na(id) && nzchar(id) &&
               !id %in% board_stack_ids(board$board) &&
-              isTRUE(blockr.ui::sidebar_state(sidebar_id)$open)) {
-          blockr.ui::hide_sidebar(sidebar_id)
+              isTRUE(sidebar_state(sidebar_id)$open)) {
+          hide_sidebar(sidebar_id)
         }
       }, ignoreInit = TRUE)
 
@@ -104,7 +104,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
         # look it up). Bail and close unless `id` is a present stack.
         if (!(length(id) == 1L && !is.na(id) && nzchar(id) &&
                 id %in% board_stack_ids(board$board))) {
-          blockr.ui::hide_sidebar(sidebar_id)
+          hide_sidebar(sidebar_id)
           return()
         }
 
@@ -137,7 +137,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
         session$onFlushed(
           function() {
             isolate(
-              blockr.ui::keep_or_hide_sidebar(
+              keep_or_hide_sidebar(
                 sidebar_id, title = sidebar_title(), ui = menu_ui()
               )
             )
