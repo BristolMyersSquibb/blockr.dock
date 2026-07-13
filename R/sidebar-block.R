@@ -29,8 +29,8 @@ prepend_to <- function(block_id = NULL) {
 block_browser_server <- function(id, board = NULL, target = NULL) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
 
-  board_fn <- as_arg_reactive(board)
-  target_fn <- as_arg_reactive(target)
+  board_fn <- as_accessor(board)
+  target_fn <- as_accessor(target)
 
   moduleServer(
     id,
@@ -125,7 +125,7 @@ build_browser_block <- function(spec) {
 # a collision) a fresh unique id is generated against the board.
 resolve_browser_id <- function(spec_id, board, getter) {
   existing <- safe_board_ids(board, getter)
-  if (is_new_id(spec_id, existing)) {
+  if (id_available(spec_id, existing)) {
     spec_id
   } else {
     rand_names(old_names = existing, n = 1L)

@@ -74,7 +74,6 @@ Collate:
     'sidebar-block.R'
     'sidebar-link.R'
     'sidebar-stack.R'
-    'sidebar-utils.R'
     'utils-dock.R'
     'utils-misc.R'
     'utils-pkg.R'

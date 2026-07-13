@@ -15,8 +15,8 @@ link_menu_ui <- function(id, board, anchor) {
 link_menu_server <- function(id, board = NULL, anchor = NULL) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
 
-  board_fn <- as_arg_reactive(board)
-  anchor_fn <- as_arg_reactive(anchor)
+  board_fn <- as_accessor(board)
+  anchor_fn <- as_accessor(anchor)
 
   moduleServer(
     id,
@@ -110,7 +110,7 @@ resolve_free_input <- function(block, block_id, links) {
 # source / target pair, so only the id needs checking here.
 validate_link_spec <- function(spec, board, session) {
   existing <- board_link_ids(board)
-  if (!is_new_id(spec$link_id, existing)) {
+  if (!id_available(spec$link_id, existing)) {
     notify(
       "Please choose a valid link ID.", type = "warning", session = session
     )

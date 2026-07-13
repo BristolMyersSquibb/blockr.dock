@@ -183,3 +183,17 @@ root_session <- function(session) {
   }
   session$rootScope()
 }
+
+# A usable candidate id: a non-empty string not already in `existing`.
+id_available <- function(id, existing) {
+  is_string(id) && nzchar(id) && !(id %in% existing)
+}
+
+# Uniform reader for a menu-server argument: a reactive is returned as-is,
+# a plain value / `NULL` is wrapped so it reads the same way via `x()`.
+as_accessor <- function(x) {
+  if (is.reactive(x)) {
+    return(x)
+  }
+  function() x
+}

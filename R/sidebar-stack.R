@@ -18,8 +18,8 @@ stack_menu_ui <- function(id, board, target = NULL) {
 stack_menu_server <- function(id, board = NULL, target = NULL) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
 
-  board_fn <- as_arg_reactive(board)
-  target_fn <- as_arg_reactive(target)
+  board_fn <- as_accessor(board)
+  target_fn <- as_accessor(target)
 
   moduleServer(
     id,
@@ -103,7 +103,7 @@ stack_commit_value <- function(spec, target) {
 # up through the enclosing `eventReactive` and stops it firing.
 validate_stack_spec <- function(spec, board, target, session) {
   existing_ids <- board_stack_ids(board)
-  if (is.null(target) && !is_new_id(spec$id, existing_ids)) {
+  if (is.null(target) && !id_available(spec$id, existing_ids)) {
     notify(
       "Please choose a valid stack ID.", type = "warning", session = session
     )
