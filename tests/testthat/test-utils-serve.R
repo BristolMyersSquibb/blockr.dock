@@ -330,6 +330,15 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # committed board's slots -- proving the stage / reload cycle preserved them
   # and that the fixture re-importing its own (colliding) view ids does not drop
   # them. It cannot see the client render, so that leg is asserted below.
+  #
+  # get_download aborts on an empty href. Shiny renders the download link empty
+  # and fills the real URL only after outputs bind (later than wait_dock_loaded,
+  # which gates on the block handles), so wait for a non-empty href first.
+  dl <- "#my_board-preserve_board-serialize"
+  dl_href <- function() {
+    app$get_js(sprintf("JSON.stringify($('%s').attr('href') || null)", dl))
+  }
+  wait_js(app, sprintf("!!$('%s').attr('href')", dl), dl_href)
   path2 <- app$get_download("my_board-preserve_board-serialize")
   ser2 <- jsonlite::fromJSON(path2, simplifyDataFrame = FALSE,
                              simplifyMatrix = FALSE)
