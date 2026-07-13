@@ -43,6 +43,8 @@ Suggests:
     xml2,
     knitr,
     rmarkdown
+Remotes:
+    nbenn/shinytest2@wait-for-app-serving
 Config/testthat/edition: 3
 Collate:
     'action-class.R'
