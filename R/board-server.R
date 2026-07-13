@@ -240,7 +240,26 @@ report_visible_observer <- function(visible, client_active, docks) {
     {
       st <- active_view_state()
 
-      status <- card_visibility(built_cards(visible), st$on_screen, st$arranged)
+      built <- built_cards(visible)
+
+      # An empty on-screen set from a dock that has not arranged yet means "the
+      # layout has not reported its panels yet", NOT "nothing is on screen".
+      # Publishing it parks every built card, and core reads a parked card as off
+      # screen: its needed set empties, the results in flight become unavailable,
+      # every block's output blanks -- and a tick later the real report lands, the
+      # board re-evaluates and redraws. That is the double render every block shows
+      # on a cold start: the right content, a blink of nothing, then the right
+      # content again.
+      #
+      # `arranged` is what separates the two cases: a view that is legitimately
+      # empty (every panel closed) reports arranged = TRUE, and still parks its
+      # cards as it should. Only the not-yet-arranged empty read is suppressed,
+      # and only while cards are built -- there is nothing to say before that.
+      if (!length(st$on_screen) && !isTRUE(st$arranged) && length(built)) {
+        return()
+      }
+
+      status <- card_visibility(built, st$on_screen, st$arranged)
 
       if (!identical(status, isolate(visible()))) {
         visible(status)
