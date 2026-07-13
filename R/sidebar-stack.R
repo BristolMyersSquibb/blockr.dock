@@ -102,7 +102,7 @@ stack_commit_value <- function(spec, target) {
 # are checked. Each failure notifies and `req(FALSE)`s, which propagates
 # up through the enclosing `eventReactive` and stops it firing.
 validate_stack_spec <- function(spec, board, target, session) {
-  existing_ids <- safe_ids(board, board_stack_ids)
+  existing_ids <- board_stack_ids(board)
   if (is.null(target) && !is_new_id(spec$id, existing_ids)) {
     notify(
       "Please choose a valid stack ID.", type = "warning", session = session

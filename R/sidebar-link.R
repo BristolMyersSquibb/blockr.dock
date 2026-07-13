@@ -109,7 +109,7 @@ resolve_free_input <- function(block, block_id, links) {
 # self-validation. The eligible-pool logic already guarantees a valid
 # source / target pair, so only the id needs checking here.
 validate_link_spec <- function(spec, board, session) {
-  existing <- safe_ids(board, board_link_ids)
+  existing <- board_link_ids(board)
   if (!is_new_id(spec$link_id, existing)) {
     notify(
       "Please choose a valid link ID.", type = "warning", session = session

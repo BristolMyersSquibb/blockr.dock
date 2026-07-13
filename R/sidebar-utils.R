@@ -1,8 +1,4 @@
-# Shared helpers for the instance-backed menus (stack, link). These
-# menus own validation of their committed payload and keep themselves in
-# sync with the board, so the consumer (e.g. blockr.dock) shrinks to a
-# thin adapter. We reuse blockr.core where it already has a helper
-# (`is_string()`, `notify()`) and only add what it lacks.
+# Shared helpers for the block / link / stack menus.
 
 # A fresh id: a non-empty string not already taken by `existing`. Shared
 # by the stack-id and link-id validators.
@@ -19,10 +15,4 @@ as_arg_reactive <- function(x) {
     return(x)
   }
   function() x
-}
-
-# `board_*_ids()` guarded against a `NULL` board (the snapshot / no-sync
-# path passes `board = NULL`).
-safe_ids <- function(board, fun) {
-  if (is.null(board)) character() else fun(board)
 }
