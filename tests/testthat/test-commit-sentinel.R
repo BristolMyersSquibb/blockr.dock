@@ -10,7 +10,7 @@ test_that("a settled gesture commits a bounded amount, quiescence adds none", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "empty", "app.R", package = "blockr.dock"),
     name = "commit-sentinel",
     seed = 42,
@@ -56,7 +56,7 @@ test_that("the authored layout round-trips to its stored form", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "sized-grid", "app.R", package = "blockr.dock"),
     name = "roundtrip-sentinel",
     seed = 42,

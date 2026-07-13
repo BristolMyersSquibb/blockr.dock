@@ -1,3 +1,20 @@
+# Stock shinytest2 (the CRAN build) lacks the wait-for-app-serving patch:
+# on a loaded CI runner shiny prints "Listening on ..." before it binds the
+# socket, so AppDriver$new can navigate too early and the app never
+# stabilises ("jQuery not found"). Retry a bounded number of times -- each
+# attempt gets a fresh port; a genuine startup error still fails every
+# attempt and is re-raised.
+new_app_driver <- function(..., .attempts = 3L) {
+  for (i in seq_len(.attempts)) {
+    res <- tryCatch(shinytest2::AppDriver$new(...), error = function(e) e)
+    if (!inherits(res, "error")) {
+      return(res)
+    }
+    try(res$app$stop(), silent = TRUE)
+  }
+  stop(res)
+}
+
 board_args <- function(...) {
   generate_plugin_args(
     new_dock_board(...),
