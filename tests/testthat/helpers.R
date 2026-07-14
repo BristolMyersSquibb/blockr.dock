@@ -13,6 +13,23 @@ retry_download <- function(app, output, .attempts = 6L) {
   stop(res)
 }
 
+# The dockview `_state` a grid serialises from carries a transient `focus`
+# marker (which group holds UI focus) the client sets after render, independent
+# of the authored geometry -- so it is present or absent depending on when the
+# export samples the client, not on the layout the round-trip must preserve.
+# Strip it (anywhere in the nested grid) before a byte-for-byte grid compare.
+drop_focus <- function(x) {
+  if (!is.list(x)) {
+    return(x)
+  }
+
+  if (!is.null(names(x))) {
+    x <- x[names(x) != "focus"]
+  }
+
+  lapply(x, drop_focus)
+}
+
 board_args <- function(...) {
   generate_plugin_args(
     new_dock_board(...),

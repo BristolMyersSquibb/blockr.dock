@@ -353,7 +353,10 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   ser2 <- jsonlite::fromJSON(path2, simplifyDataFrame = FALSE,
                              simplifyMatrix = FALSE)
 
-  expect_identical(ser2[["payload"]][["grids"]], ser[["payload"]][["grids"]])
+  expect_identical(
+    drop_focus(ser2[["payload"]][["grids"]]),
+    drop_focus(ser[["payload"]][["grids"]])
+  )
   expect_identical(ser2[["payload"]][["views"]], ser[["payload"]][["views"]])
 
   # Client leg: the byte checks read the stored slots, so they cannot observe
