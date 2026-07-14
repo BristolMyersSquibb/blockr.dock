@@ -53,7 +53,7 @@ apply_panel_ops <- function(mod, dock, board, rm_blocks = character(),
   }
 
   for (pid in names(mod[["move"]])) {
-    op_move_panel(pid, mod[["move"]][[pid]], dock, board, active)
+    op_move_panel(pid, mod[["move"]][[pid]], dock)
   }
 
   if (not_null(mod[["select"]])) {
@@ -145,18 +145,19 @@ op_remove_panel <- function(pid, dock, active = TRUE) {
   invisible()
 }
 
-# A first-class move awaits cynkra/dockViewR#85; until then a move decomposes
-# into remove + add-with-hint. The block / extension card is parked in the
-# offcanvas and re-homed by the remove / add pair, so its server state and
-# rendered output survive -- only the dockview panel wrapper is re-created.
-op_move_panel <- function(pid, hint, dock, board, active = TRUE) {
+# A first-class move: dockViewR relocates the panel next to the hint in one
+# step, carrying its block / extension card along, in place of the former
+# remove + add-with-hint decomposition. The move is server-driven, so the grid
+# mirror's server-source skip ignores the `_state` echo it provokes.
+op_move_panel <- function(pid, hint, dock) {
 
-  if (!panel_is_live(as_dock_panel_id(pid), dock)) {
+  pid <- as_dock_panel_id(pid)
+
+  if (!panel_is_live(pid, dock)) {
     return(invisible())
   }
 
-  op_remove_panel(pid, dock, active)
-  op_add_panel(pid, hint, dock, board, active)
+  move_dock_panel(pid, hint_to_position(hint, dock), dock$proxy)
 
   invisible()
 }
