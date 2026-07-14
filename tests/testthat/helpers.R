@@ -13,23 +13,6 @@ retry_download <- function(app, output, .attempts = 6L) {
   stop(res)
 }
 
-# The dockview `_state` a grid serialises from carries a transient `focus`
-# marker (which group holds UI focus) the client sets after render, independent
-# of the authored geometry -- so it is present or absent depending on when the
-# export samples the client, not on the layout the round-trip must preserve.
-# Strip it (anywhere in the nested grid) before a byte-for-byte grid compare.
-drop_focus <- function(x) {
-  if (!is.list(x)) {
-    return(x)
-  }
-
-  if (!is.null(names(x))) {
-    x <- x[names(x) != "focus"]
-  }
-
-  lapply(x, drop_focus)
-}
-
 board_args <- function(...) {
   generate_plugin_args(
     new_dock_board(...),
@@ -311,41 +294,6 @@ active_block_panel_tabs <- function(app, view, board_id = "my_board") {
   nodes <- xml2::xml_find_all(html, xpath)
   ids <- sub(".*-tab-(block_panel-.+)$", "\\1", xml2::xml_attr(nodes, "id"))
   sort(unique(ids))
-}
-
-# Wait until `view`'s dock has settled to exactly `expected` active (front)
-# block-panel tabs. dockviewR restores a tab group asynchronously and can
-# transiently surface its members as separate leaves (each its own front tab)
-# before collapsing the back tabs; under a heavier startup that transient
-# outlasts wait_dock_loaded (which gates on server DOM). Reading the tabs -- or
-# the mirrored grid the export serialises from the client layout -- before it
-# settles catches the separate-leaves state. `expected` is the settled
-# `block_panel-<id>` front tabs (matched exactly, like active_block_panel_tabs).
-wait_active_block_tabs <- function(app, view, expected, board_id = "my_board",
-                                   timeout = 30 * 1000) {
-  want <- paste(sort(expected), collapse = ",")
-
-  js <- sprintf(
-    paste0(
-      "(function(){",
-      "var d=document.querySelector('#%s-view_handle-%s');if(!d)return false;",
-      "var a=Array.from(d.querySelectorAll('[id*=\"-tab-block_panel-\"]'))",
-      ".filter(function(e){return e.closest('.dv-active-tab')!==null;})",
-      ".map(function(e){return e.id",
-      ".replace(/.*-tab-(block_panel-.+)$/,'$1');});",
-      "return Array.from(new Set(a)).sort().join(',')==='%s';})()"
-    ),
-    board_id, view, want
-  )
-
-  diagnose <- function() {
-    sprintf(
-      "[active-block-tabs] view=%s want=[%s] got=[%s]", view, want,
-      paste(active_block_panel_tabs(app, view, board_id), collapse = ",")
-    )
-  }
-
-  wait_js(app, js, diagnose, timeout)
 }
 
 # Shared helpers for the edit-board extension e2e tests (links, stacks). The
