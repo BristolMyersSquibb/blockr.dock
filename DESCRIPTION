@@ -45,7 +45,7 @@ Suggests:
     rmarkdown
 Remotes:
     nbenn/shinytest2@wait-for-app-serving,
-    BristolMyersSquibb/blockr.core@273-visible-pull
+    BristolMyersSquibb/blockr.core
 Config/testthat/edition: 3
 Collate:
     'action-class.R'
