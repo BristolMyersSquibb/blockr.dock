@@ -6,13 +6,6 @@ echo_state <- function(layout) {
   list(grid = tree, activeGroup = focus_group_id(tree, grid[["focus"]]))
 }
 
-# Settle the mirror's 250 ms debounce bridge: flush so its internal observer
-# schedules the timer, then advance the mock clock past the window to fire it.
-settle <- function(ms) {
-  ms$flushReact()
-  ms$elapse(300)
-}
-
 test_that("as_dock_grid casts to a canonical dock_grid, sizes verbatim", {
 
   ly <- dock_grid("a", "b", sizes = c(0.301, 0.699))
@@ -78,8 +71,10 @@ test_that("grid mirror commits one echo, guards re-echoes", {
     board <- reactiveValues(board = brd)
     layout_rv <- reactiveVal(NULL)
 
+    ms$setInputs(`dock_state-source` = "client")
+
     observe_grid_echo(
-      "V", list(layout = layout_rv), board,
+      "V", list(layout = layout_rv), board, ms,
       commit_grid = function(grid) {
         committed[[length(committed) + 1L]] <<- grid
         board$board <- apply_board_update(
@@ -96,7 +91,7 @@ test_that("grid mirror commits one echo, guards re-echoes", {
       sizes = c(0.2, 0.3, 0.5)
     )
     layout_rv(echo_state(dragged))
-    settle(ms)
+    ms$flushReact()
 
     expect_length(committed, 1L)
     expect_false(is.null(board_grids(board$board)[["V"]]))
@@ -108,13 +103,23 @@ test_that("grid mirror commits one echo, guards re-echoes", {
       sizes = c(0.201, 0.299, 0.5)
     )
     layout_rv(echo_state(jittered))
-    settle(ms)
+    ms$flushReact()
+
+    expect_length(committed, 1L)
+
+    # A server-driven echo (the restore the mirror itself provokes) is ignored.
+    ms$setInputs(`dock_state-source` = "server")
+    layout_rv(echo_state(dock_grid(
+      "block_panel-a", "block_panel-b", "block_panel-d",
+      sizes = c(0.6, 0.2, 0.2)
+    )))
+    ms$flushReact()
 
     expect_length(committed, 1L)
   })
 })
 
-test_that("the debounce bridge coalesces per-frame echoes into one commit", {
+test_that("an absent _state-source reads as client (works without the stack)", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -132,34 +137,23 @@ test_that("the debounce bridge coalesces per-frame echoes into one commit", {
     board <- reactiveValues(board = brd)
     layout_rv <- reactiveVal(NULL)
 
+    # No `_state-source` input is set: a dockViewR without the settled chain
+    # never emits it, so the read is NULL and the server-skip self-disables --
+    # the echo is treated as a client gesture and commits.
     observe_grid_echo(
-      "V", list(layout = layout_rv), board,
+      "V", list(layout = layout_rv), board, ms,
       commit_grid = function(grid) {
         committed[[length(committed) + 1L]] <<- grid
       }
     )
     ms$flushReact()
 
-    # A sash drag streams several per-frame states before settling. Each frame
-    # arrives within the debounce window (no clock advance between them), so the
-    # bridge commits only the settled frame -- one board write for the gesture,
-    # not one per frame.
-    for (w in c(0.25, 0.30, 0.35, 0.40)) {
-      layout_rv(echo_state(dock_grid(
-        "block_panel-a", "block_panel-b", sizes = c(w, 1 - w)
-      )))
-      ms$flushReact()
-    }
-
-    expect_length(committed, 0L)
-
-    settle(ms)
+    layout_rv(echo_state(dock_grid(
+      "block_panel-a", "block_panel-b", sizes = c(0.3, 0.7)
+    )))
+    ms$flushReact()
 
     expect_length(committed, 1L)
-    expect_setequal(
-      layout_panel_ids(committed[[1L]]),
-      c("block_panel-a", "block_panel-b")
-    )
   })
 })
 
@@ -181,8 +175,10 @@ test_that("the mirror stores an in-flight echo verbatim; placement prunes it", {
     board <- reactiveValues(board = brd)
     layout_rv <- reactiveVal(NULL)
 
+    ms$setInputs(`dock_state-source` = "client")
+
     observe_grid_echo(
-      "V", list(layout = layout_rv), board,
+      "V", list(layout = layout_rv), board, ms,
       commit_grid = function(grid) {
         committed[[length(committed) + 1L]] <<- grid
         board$board <- apply_board_update(
@@ -200,7 +196,7 @@ test_that("the mirror stores an in-flight echo verbatim; placement prunes it", {
       "block_panel-a", "block_panel-b", "block_panel-gone",
       sizes = c(0.2, 0.3, 0.5)
     )))
-    settle(ms)
+    ms$flushReact()
 
     expect_true(
       "block_panel-gone" %in%

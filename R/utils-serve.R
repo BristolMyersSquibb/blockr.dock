@@ -60,7 +60,7 @@ blockr_app_server.dock_board <- function(id, x, plugins, options, ...) {
 }
 
 # Round-trip stability: every view's stored grid must be the fixed point the
-# client echoes back, so the debounced echo the restore push provokes is
+# client echoes back, so the settled echo the restore push provokes is
 # absorbed by the mirror's `all.equal(tolerance = grid_size_tol())` guard rather
 # than committing. It holds when, for every view, the stored grid is
 # that-tolerance-equal to the live grid the client reports -- the comparison the
