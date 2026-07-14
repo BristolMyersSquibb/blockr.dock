@@ -72,12 +72,12 @@ has_external_ctrl <- function(x) {
   isTRUE(ctrl) || (is.character(ctrl) && length(ctrl) > 0L)
 }
 
-show_hide_block_dep <- function() {
+show_block_dep <- function() {
   htmltools::htmlDependency(
-    "show-hide-block",
+    "show-block",
     pkg_version(),
     src = pkg_file("assets", "js"),
-    script = "show-hide-block.js"
+    script = "show-block.js"
   )
 }
 
@@ -109,7 +109,82 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
 
   stopifnot(is_blocks(blocks))
 
+  build_block_ui(
+    id, x, blocks, dock$visibility, ...,
+    edit_ui = edit_ui, ctrl_ui = ctrl_ui, session = session
+  )
+
   for (i in names(blocks)) {
+    show_block_panel(blocks[i], determine_panel_pos(dock), dock)
+  }
+
+  invisible(x)
+}
+
+# The dock's build ledger and per-block visibility both live on the `visibility`
+# channel core hands the board callback: two per-block reactiveVal environments
+# (`required`, `visible`), one slot per board block, all core-owned. A card is
+# built once the dock writes its `required` slot (non-NA), so `built_cards()`
+# reads the built set straight off it -- there is no second ledger. The dock
+# writes `required[[id]]` FALSE when it builds a card (off screen) and TRUE when
+# on screen, and `visible[[id]]` the view id once the client paints it. Block
+# removal needs no dock write: core drops the slot, dropping the card too.
+
+# The blocks whose cards are built: those with a non-NA required slot.
+built_cards <- function(visibility) {
+  ids <- ls(visibility$required)
+  ids[lgl_ply(ids, slot_built, visibility$required)]
+}
+
+slot_built <- function(id, required) {
+  !is.na(isolate(required[[id]]()))
+}
+
+# Record `new` cards as built: their required slot goes FALSE (off screen until
+# the report observer places them). Slots pre-exist -- core seeds every block's
+# slots before any block plugin runs.
+mark_cards_built <- function(visibility, new) {
+  for (id in new) {
+    visibility$required[[id]](FALSE)
+  }
+}
+
+# Reconcile the required axis over `built` from an on-screen set: on screen ->
+# TRUE, off screen -> FALSE. A card leaving the screen also clears its visible
+# slot (no longer painted); the arrange observer owns setting it. Seeds the
+# channel too, with `built` the active view's membership.
+show_cards <- function(visibility, built, on_screen) {
+  for (id in built) {
+    on <- id %in% on_screen
+
+    if (!identical(isolate(visibility$required[[id]]()), on)) {
+      visibility$required[[id]](on)
+    }
+
+    if (!on && !is.na(isolate(visibility$visible[[id]]()))) {
+      visibility$visible[[id]](NA_character_)
+    }
+  }
+}
+
+# Mark a view's on-screen blocks painted: write the view id into their visible
+# slot -- the client-confirmed paint core's construction gate waits for.
+mark_cards_rendered <- function(visibility, on_screen, view) {
+  for (id in on_screen) {
+    if (!identical(isolate(visibility$visible[[id]]()), view)) {
+      visibility$visible[[id]](view)
+    }
+  }
+}
+
+# Insert the not-yet-built cards in `blocks` and mark them built; already-built
+# blocks are skipped, so this is safe to call ahead of any path that shows one.
+build_block_ui <- function(id, x, blocks, visibility, ..., edit_ui,
+                           ctrl_ui = NULL, session = get_session()) {
+
+  new <- setdiff(names(blocks), built_cards(visibility))
+
+  for (i in new) {
     insertUI(
       paste0("#", id, "-blocks_offcanvas"),
       "beforeEnd",
@@ -117,11 +192,33 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
       immediate = TRUE,
       session = session
     )
-
-    show_block_panel(blocks[i], determine_panel_pos(dock), dock)
   }
 
-  invisible(x)
+  mark_cards_built(visibility, new)
+
+  invisible(new)
+}
+
+# build_block_ui for callers that hold the board but not the plugins (the view
+# switch, the add-panel modal), deriving edit / ctrl UI the way board_ui does.
+ensure_block_ui <- function(id, x, blocks, visibility,
+                            session = get_session()) {
+
+  if (all(names(blocks) %in% built_cards(visibility))) {
+    return(invisible(character()))
+  }
+
+  plugins <- board_plugins(x)
+
+  build_block_ui(
+    id,
+    x,
+    blocks,
+    visibility,
+    edit_ui = plugins[["edit_block"]],
+    ctrl_ui = if ("ctrl_block" %in% names(plugins)) plugins[["ctrl_block"]],
+    session = session
+  )
 }
 
 show_block_panel <- function(block, add_panel = TRUE, dock, ...) {

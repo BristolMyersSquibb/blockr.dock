@@ -7,8 +7,9 @@
 #'
 #' @param board Reactive board state (list with `$board`).
 #' @param update Reactive update signal from blockr.core.
-#' @param visible Reactive write-channel from blockr.core, fed the set of
-#'   on-screen block ids so core can gate off-screen blocks.
+#' @param visibility Per-block visibility channel from blockr.core: a list of
+#'   two reactiveVal environments (`required`, `visible`) the dock writes to
+#'   gate off-screen blocks.
 #' @param ... Extension server arguments.
 #' @param session Shiny session.
 #'
@@ -16,7 +17,7 @@
 #'   results.
 #'
 #' @noRd
-board_server_callback <- function(board, update, visible, ...,
+board_server_callback <- function(board, update, visibility, ...,
                                   session = get_session()) {
   initial_board <- isolate(board$board)
 
@@ -49,6 +50,13 @@ board_server_callback <- function(board, update, visible, ...,
   client_active <- reactiveVal(NULL)
   client_views <- reactiveVal(seed_view_state(board_views(initial_board)))
 
+  # The `visibility` channel core hands us (per-block `required` / `visible`
+  # reactiveVal slots) is the single store: its `required` axis doubles as the
+  # dock's build ledger, read back via built_cards(). Stash it on active_dock --
+  # the dock handle every card-touching path receives (view switch, panel-op
+  # apply, core insert / remove) -- so they read and write the one channel.
+  active_dock$visibility <- visibility
+
   switch_view_observer(session, update, client_active)
   add_view_observer(client_views, session, board, update)
   remove_view_observer(client_views, session, update)
@@ -67,9 +75,18 @@ board_server_callback <- function(board, update, visible, ...,
 
   # Gate off-screen blocks from the first flush, before the client reports its
   # layout (else core's all-visible default evaluates every block at startup).
-  visible(visible_block_ids(active_view_grid(initial_board)))
+  # Seed the channel to what board_ui rendered: the active view's whole
+  # membership is built (required non-NA), its front panels required TRUE and
+  # its background tabs FALSE. Off-screen views' cards are built on first visit
+  # by switch_active_view. Core holds its background-construction gate until the
+  # active view reports its blocks rendered on the visible axis.
+  show_cards(
+    visibility,
+    active_view_block_ids(initial_board),
+    visible_block_ids(active_view_grid(initial_board))
+  )
 
-  report_visible_observer(visible, client_active, docks)
+  report_visible_observer(visibility, client_active, docks)
 
   # `view_data` is the live all-views layout, split into a `dock_views` +
   # `dock_grids` pair. It is NULL until every view has reported its layout once
@@ -196,22 +213,24 @@ switch_view_observer <- function(session, update, client_active) {
   )
 }
 
-report_visible_observer <- function(visible, client_active, docks) {
+report_visible_observer <- function(visibility, client_active, docks) {
 
-  live_layout <- reactive({
+  # Owns the required axis: over the built cards, the active view's front panels
+  # go required TRUE and everything else built FALSE. It leaves the visible axis
+  # alone -- the per-view arrange observer writes it once the client has painted
+  # (mark_cards_rendered), so the two touch disjoint slots. `req(layout())`
+  # waits for the client's report (NULL before then).
+  on_screen <- reactive({
     active <- req(client_active())
-    req(docks[[active]])$layout()
+    dock <- req(docks[[active]])
+    layout <- req(dock$layout())
+
+    sort(visible_block_ids(layout))
   })
 
   observeEvent(
-    live_layout(),
-    {
-      ids <- visible_block_ids(live_layout())
-
-      if (!setequal(ids, visible())) {
-        visible(ids)
-      }
-    }
+    on_screen(),
+    show_cards(visibility, built_cards(visibility), on_screen())
   )
 }
 
@@ -371,7 +390,7 @@ show_view_ui <- function(view_id, docks) {
 # Insert a view's dock container, start its manage_dock module, and register
 # the result in `docks` under the view id. `active` stamps the active CSS
 # class at insert so the initially-shown view needs no switch round-trip.
-create_view <- function(v_id, layout, board, update, session, docks,
+create_view <- function(v_id, layout, board, update, session, docks, visibility,
                         blocks = NULL, extensions = NULL, active = FALSE) {
 
   ns <- session$ns
@@ -397,7 +416,7 @@ create_view <- function(v_id, layout, board, update, session, docks,
   )
 
   docks[[v_id]] <- manage_dock(
-    v_id, board, update,
+    v_id, board, update, visibility,
     layout = layout,
     blocks = blocks,
     extensions = extensions
@@ -453,6 +472,7 @@ reconcile_views <- function(board, update, docks, active_dock,
   state <- isolate(client_views())
   have <- names(docks)
   shown <- names(state)
+  visibility <- isolate(active_dock$visibility)
 
   for (v in setdiff(want, have)) {
 
@@ -463,6 +483,7 @@ reconcile_views <- function(board, update, docks, active_dock,
       update,
       session,
       docks,
+      visibility,
       blocks = board_blocks(brd),
       extensions = dock_extensions(brd),
       active = identical(v, server_active)
@@ -508,7 +529,7 @@ reconcile_views <- function(board, update, docks, active_dock,
   if (!is.null(server_active) &&
         !identical(server_active, isolate(client_active()))) {
     switch_active_view(
-      server_active, docks, active_dock, client_active, session
+      server_active, docks, active_dock, client_active, brd, session
     )
   }
 
@@ -535,6 +556,7 @@ manage_dock <- function(
   id,
   board,
   update,
+  visibility,
   layout = NULL,
   blocks = NULL,
   extensions = NULL
@@ -568,7 +590,8 @@ manage_dock <- function(
       layout = reactive(dockViewR::get_dock(proxy)),
       n_panels = n_panels,
       prev_active_group = prev_active_group,
-      active_group_trail = active_group_trail
+      active_group_trail = active_group_trail,
+      visibility = visibility
     )
 
     # Apply server-initiated panel ops to this view's live dock -- the sole
@@ -631,6 +654,11 @@ manage_dock <- function(
             )
           }
         }
+
+        # Every card the layout calls for is now moved into its panel: the view
+        # is arranged. Write this view id into its on-screen blocks' visible
+        # slot -- the client-confirmed paint core's construction gate waits for.
+        mark_cards_rendered(visibility, visible_block_ids(init_layout), id)
       },
       once = TRUE
     )

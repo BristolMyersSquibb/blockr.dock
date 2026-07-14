@@ -90,6 +90,13 @@ op_add_panel <- function(pid, hint, dock, board, active = TRUE) {
     block <- board_blocks(board)[obj]
 
     if (active) {
+      # The block may have lived only in an off-screen view, so its card was
+      # never built; build it before the show moves it into the panel. The
+      # inactive branch only wraps a panel (no card move), so it needs none.
+      ensure_block_ui(
+        dock_board_ns(dock)(NULL), board, block,
+        dock$visibility, session = dock$proxy$session
+      )
       show_block_panel(block, add_panel = pos, dock = dock)
     } else {
       add_block_panel(block, position = pos, dock = dock)

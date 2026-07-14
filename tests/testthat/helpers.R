@@ -1,20 +1,3 @@
-# Stock shinytest2 (the CRAN build) lacks the wait-for-app-serving patch:
-# on a loaded CI runner shiny prints "Listening on ..." before it binds the
-# socket, so AppDriver$new can navigate too early and the app never
-# stabilises ("jQuery not found"). Retry a bounded number of times -- each
-# attempt gets a fresh port; a genuine startup error still fails every
-# attempt and is re-raised.
-new_app_driver <- function(..., .attempts = 3L) {
-  for (i in seq_len(.attempts)) {
-    res <- tryCatch(shinytest2::AppDriver$new(...), error = function(e) e)
-    if (!inherits(res, "error")) {
-      return(res)
-    }
-    try(res$app$stop(), silent = TRUE)
-  }
-  stop(res)
-}
-
 # get_download can transiently fail after a session reload: the download
 # link's href is filled only once outputs bind, and the server download
 # endpoint may briefly not answer ("Unable request data from server").
@@ -35,6 +18,26 @@ board_args <- function(...) {
     new_dock_board(...),
     mode = "read"
   )[["board"]]
+}
+
+# Stand-in for the `visibility` channel blockr.core hands the board callback:
+# two environments of per-block reactiveVals (`required`, `visible`), one slot
+# per block, mirroring core's add_vis_slots at construction (which seeds every
+# board block before the callback runs). The dock writes values into these
+# slots; core owns their lifecycle in the real thing. Pass the block ids to
+# seed, or a board handle to seed from its blocks.
+fake_visibility <- function(x = character()) {
+  ids <- if (is.character(x)) x else board_block_ids(shiny::isolate(x$board))
+
+  vis <- list(
+    required = new.env(parent = emptyenv()),
+    visible = new.env(parent = emptyenv())
+  )
+  for (id in ids) {
+    vis$required[[id]] <- shiny::reactiveVal(NA)
+    vis$visible[[id]] <- shiny::reactiveVal(NA_character_)
+  }
+  vis
 }
 
 # Resolve a view's stable id from its display label. Views are keyed by
