@@ -215,11 +215,16 @@ switch_view_observer <- function(session, update, client_active) {
 
 report_visible_observer <- function(visibility, client_active, docks) {
 
-  # Owns the required axis: over the built cards, the active view's front panels
-  # go required TRUE and everything else built FALSE. It leaves the visible axis
-  # alone -- the per-view `_restored` observer writes it once the client
-  # confirms it painted the view (mark_cards_rendered), so the two touch
-  # disjoint slots.
+  # Drives both visibility axes off one live client signal: the active view's
+  # settled `_state` layout echo (`dock$layout()`), the arrangement dockView
+  # actually painted. Over the built cards, the front panels go required TRUE
+  # and are marked painted on the visible axis (the client-confirmed paint
+  # core's render gate waits for); everything else built goes required FALSE
+  # with its visible slot cleared. Sourcing the visible mark here, off the same
+  # live echo the required axis tracks, is what lets it follow a front tab the
+  # client owns -- which can differ from the grid's stored active -- and re-mark
+  # when the user switches tabs, instead of naming a one-shot `init_layout`
+  # snapshot that never recovers.
   # `req(layout())` waits for the client's report (NULL before then).
   on_screen <- reactive({
     active <- req(client_active())
@@ -231,7 +236,12 @@ report_visible_observer <- function(visibility, client_active, docks) {
 
   observeEvent(
     on_screen(),
-    show_cards(visibility, built_cards(visibility), on_screen())
+    {
+      view <- req(client_active())
+
+      show_cards(visibility, built_cards(visibility), on_screen())
+      mark_cards_rendered(visibility, on_screen(), view)
+    }
   )
 }
 
@@ -679,20 +689,6 @@ manage_dock <- function(
           }
         }
       },
-      once = TRUE
-    )
-
-    # The view is arranged only once the client confirms it. dockViewR fires
-    # `_restored` (event priority) after applying the restore, and the client
-    # flushes it back only after running the card moves batched with that push
-    # -- so it stands for the visible view being on screen, not merely
-    # dispatched. Writing each on-screen block's `visible` slot here, off that
-    # client-confirmed signal rather than the tail of the server-side restore
-    # loop, gives core the paint its background-construction gate waits for
-    # (#304).
-    observeEvent(
-      input[[dock_input("restored")]],
-      mark_cards_rendered(visibility, visible_block_ids(init_layout), id),
       once = TRUE
     )
 
