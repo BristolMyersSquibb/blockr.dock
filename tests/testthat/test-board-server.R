@@ -588,12 +588,12 @@ test_that("reconcile builds only the active view's dock (#304)", {
   expect_false(flags[[visited]])
 })
 
-test_that("rendered is reported only on client-confirmed restore (#304)", {
+test_that("visible axis follows the client's painted front tab (#328)", {
 
-  # The active view's blocks go `required` (on screen) through the server-side
-  # restore loop, but their `visible` slot -- the client-confirmed paint core's
-  # gate waits for -- is written only on the client's `_restored` echo, not the
-  # loop tail.
+  # The visible slot -- the client-confirmed paint core's render gate waits for
+  # -- rides the live `_state` layout echo, so it marks whichever tab dockView
+  # actually fronts. The grid's stored active tab is not that source: a group's
+  # front tab is client-owned (the last-added tab wins) and can disagree.
   local_mocked_bindings(
     restore_layout = function(...) invisible(),
     show_block_panel = function(...) invisible(),
@@ -601,11 +601,14 @@ test_that("rendered is reported only on client-confirmed restore (#304)", {
     .package = "blockr.dock"
   )
 
-  # Separate leaves so both a and b front their own group (both on screen);
-  # the default grid would tab them together, hiding b as a back tab.
+  # a and b tab together in one group; the stored grid fronts a.
   board_rv <- board_args(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
-    grids = list(Page = dock_grid("a", "b"))
+    grids = list(
+      Page = dock_grid(
+        panels("block_panel-a", "block_panel-b", active = "block_panel-a")
+      )
+    )
   )
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
@@ -617,28 +620,46 @@ test_that("rendered is reported only on client-confirmed restore (#304)", {
   )
   ms$flushReact()
 
-  # The client reports its live layout and that the dock initialized: the
-  # restore loop runs, placing a and b on screen (required TRUE), but nothing
-  # has confirmed the paint, so their visible slots stay NA.
-  g <- as_dock_grid(dock_grid("block_panel-a", "block_panel-b"))
-  reported <- list(grid = grid_to_tree(g), activeGroup = "1")
-  do.call(ms$setInputs, set_names(list(reported), "Page-dock_state"))
-  do.call(ms$setInputs, set_names(list(TRUE), "Page-dock_initialized"))
-  ms$flushReact()
+  page <- with_mock_context(ms, vid(board_rv$board, "Page"))
 
-  expect_identical(isolate(vis$required[["a"]]()), TRUE)
-  expect_identical(isolate(vis$required[["b"]]()), TRUE)
+  # Before the client reports a painted layout, the server side alone marks
+  # nothing on the visible axis.
   expect_true(is.na(isolate(vis$visible[["a"]]())))
   expect_true(is.na(isolate(vis$visible[["b"]]())))
 
-  # The client acknowledges the restore -- now the blocks are painted, their
-  # visible slot carrying the active view id.
-  do.call(ms$setInputs, set_names(list(TRUE), "Page-dock_restored"))
+  reported_front <- function(active) {
+    grid <- as_dock_grid(
+      dock_grid(panels("block_panel-a", "block_panel-b", active = active))
+    )
+    list(grid = grid_to_tree(grid), activeGroup = "1")
+  }
+
+  # The client paints b as the group's front tab -- disagreeing with the grid's
+  # stored active (a). b is on screen, so b is the block that must render.
+  do.call(
+    ms$setInputs,
+    set_names(list(reported_front("block_panel-b")), "Page-dock_state")
+  )
+  do.call(ms$setInputs, set_names(list(TRUE), "Page-dock_initialized"))
   ms$flushReact()
 
-  page <- with_mock_context(ms, vid(board_rv$board, "Page"))
-  expect_identical(isolate(vis$visible[["a"]]()), page)
   expect_identical(isolate(vis$visible[["b"]]()), page)
+  expect_identical(isolate(vis$required[["b"]]()), TRUE)
+  expect_true(is.na(isolate(vis$visible[["a"]]())))
+  expect_identical(isolate(vis$required[["a"]]()), FALSE)
+
+  # Switching the front tab to a re-marks the visible axis -- the mark is live,
+  # not a one-shot that leaves the newly fronted tab blank.
+  do.call(
+    ms$setInputs,
+    set_names(list(reported_front("block_panel-a")), "Page-dock_state")
+  )
+  ms$flushReact()
+
+  expect_identical(isolate(vis$visible[["a"]]()), page)
+  expect_identical(isolate(vis$required[["a"]]()), TRUE)
+  expect_true(is.na(isolate(vis$visible[["b"]]())))
+  expect_identical(isolate(vis$required[["b"]]()), FALSE)
 })
 
 test_that("visible_block_ids returns the front-tab block of each group", {
@@ -700,12 +721,13 @@ test_that("report_visible_observer drives the required axis over built cards", {
   expect_identical(isolate(env$vis$required[["b"]]()), TRUE)
   expect_identical(isolate(env$vis$required[["d"]]()), FALSE)
 
-  # A's arrange observer paints a and b (mark_cards_rendered, covered in
-  # test-block-ui) -- that write is the dock's, not report_visible's.
-  with_mock_context(ms, mark_cards_rendered(env$vis, c("a", "b"), "A"))
+  # Driving a and b required also paints them: report_visible marks the active
+  # view's on-screen fronts on the visible axis off the same layout report.
+  expect_identical(isolate(env$vis$visible[["a"]]()), "A")
+  expect_identical(isolate(env$vis$visible[["b"]]()), "A")
 
-  # A layout change on inactive B leaves A's required set alone, and the
-  # membership observer must not clear the paint of on-screen a/b.
+  # A layout change on inactive B leaves A's required set alone, and must not
+  # clear the paint of on-screen a/b (report_visible tracks only A's layout).
   with_mock_context(ms, env$b(dock_grid(panels("block_panel-d"))))
   ms$flushReact()
   expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
@@ -758,10 +780,13 @@ test_that("report_visible_observer coalesces set-equal reports", {
   expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
   expect_identical(isolate(env$vis$required[["b"]]()), TRUE)
 
-  # Paint a and b, then re-report a set-equal (reordered) layout. The sorted
-  # on-screen set is identical, so on_screen does not re-emit -- and even were
-  # it to, show_cards leaves an on-screen block's paint be. The paint survives.
-  with_mock_context(ms, mark_cards_rendered(env$vis, c("a", "b"), "A"))
+  # report_visible painted a and b as it drove them required.
+  expect_identical(isolate(env$vis$visible[["a"]]()), "A")
+
+  # Re-report a set-equal (reordered) layout: the observer re-runs (reactive()
+  # does not dedupe), but the on-screen set is unchanged -- the required axis
+  # stands, show_cards leaves an on-screen block's paint be, and the re-mark is
+  # idempotent -- so the paint survives.
   with_mock_context(ms, env$layout(
     dock_grid(panels("block_panel-b"), panels("block_panel-a"))
   ))

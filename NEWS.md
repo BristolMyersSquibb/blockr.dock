@@ -10,11 +10,15 @@
   its board-stored grid to `view_data()` rather than blocking it.
 
 * A view's `visible`-axis mark -- the client-confirmed paint blockr.core's
-  background-construction gate waits for -- now fires on dockViewR's
-  `_restored` echo rather than at the tail of the server-side restore loop
-  (#304). It thus tracks the client actually applying the restore, so the
-  gate holds background construction until the visible view is on screen
-  instead of releasing it while the client is still settling.
+  background-construction gate waits for -- now rides the active view's live
+  dockView layout echo, the same signal the `required` axis already tracks,
+  rather than a one-shot snapshot of the grid's stored active tab (#304,
+  #328). A group's front tab is client-owned (the last-added tab wins) and
+  can disagree with the grid, so marking the snapshot left the on-screen
+  block suspended and blank on first load while a hidden back tab was marked
+  painted. Sourcing the mark from the painted layout follows whichever tab
+  dockView actually fronts and re-marks on a tab switch, so the on-screen
+  block renders.
 
 * At startup the board now builds only the active view's block cards;
   off-screen views' cards are built on first visit rather than all up
