@@ -148,6 +148,16 @@ ext_panel_ids <- function(proxy = dock_proxy()) {
   )
 }
 
+move_dock_panel <- function(id, position, proxy = dock_proxy()) {
+  pid <- as_dock_panel_id(id)
+
+  log_debug("moving panel {pid}")
+
+  dockViewR::move_panel(proxy, pid, position)
+
+  invisible(NULL)
+}
+
 restore_layout <- function(layout, proxy, blocks = list(),
                            extensions = list()) {
   log_debug("restoring dockview layout")
