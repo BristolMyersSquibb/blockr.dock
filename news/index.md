@@ -2,6 +2,27 @@
 
 ## blockr.dock (development version)
 
+- At startup the board now builds only the active view’s dockView;
+  off-screen views’ docks are created on first visit rather than all up
+  front
+  ([\#304](https://github.com/BristolMyersSquibb/blockr.dock/issues/304)),
+  mirroring the card deferral below. Building every view’s dockView left
+  the active group pointing at an off-screen view during the startup
+  restore burst, transiently dropping the visible view’s blocks and
+  starving first paint. `reconcile_views()` now builds only the active
+  view’s dock and defers the rest; a view without a live dock
+  contributes its board-stored grid to `view_data()` rather than
+  blocking it.
+
+- A view’s `visible`-axis mark – the client-confirmed paint
+  blockr.core’s background-construction gate waits for – now fires on
+  dockViewR’s `_restored` echo rather than at the tail of the
+  server-side restore loop
+  ([\#304](https://github.com/BristolMyersSquibb/blockr.dock/issues/304)).
+  It thus tracks the client actually applying the restore, so the gate
+  holds background construction until the visible view is on screen
+  instead of releasing it while the client is still settling.
+
 - At startup the board now builds only the active view’s block cards;
   off-screen views’ cards are built on first visit rather than all up
   front
