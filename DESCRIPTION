@@ -26,7 +26,7 @@ Imports:
     shinyjs,
     bslib,
     glue,
-    dockViewR (>= 0.2.1),
+    dockViewR (>= 0.3.0),
     htmltools,
     cli,
     shinyWidgets,
@@ -45,7 +45,8 @@ Suggests:
     rmarkdown
 Remotes:
     nbenn/shinytest2@wait-for-app-serving,
-    BristolMyersSquibb/blockr.core
+    BristolMyersSquibb/blockr.core,
+    cynkra/dockViewR@85-move-panel
 Config/testthat/edition: 3
 Collate:
     'action-class.R'
