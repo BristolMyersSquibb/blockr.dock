@@ -40,7 +40,8 @@ test_that("insert/remove panel test", {
         proxy = dockViewR::dock_view_proxy(
           dock_id(),
           session = MockShinySession$new()
-        )
+        ),
+        visibility = fake_visibility("a")
       )
     )
   )

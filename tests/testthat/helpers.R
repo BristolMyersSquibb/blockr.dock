@@ -296,6 +296,41 @@ active_block_panel_tabs <- function(app, view, board_id = "my_board") {
   sort(unique(ids))
 }
 
+# Wait until `view`'s dock has settled to exactly `expected` active (front)
+# block-panel tabs. dockviewR restores a tab group asynchronously and can
+# transiently surface its members as separate leaves (each its own front tab)
+# before collapsing the back tabs; under a heavier startup that transient
+# outlasts wait_dock_loaded (which gates on server DOM). Reading the tabs -- or
+# the mirrored grid the export serialises from the client layout -- before it
+# settles catches the separate-leaves state. `expected` is the settled
+# `block_panel-<id>` front tabs (matched exactly, like active_block_panel_tabs).
+wait_active_block_tabs <- function(app, view, expected, board_id = "my_board",
+                                   timeout = 30 * 1000) {
+  want <- paste(sort(expected), collapse = ",")
+
+  js <- sprintf(
+    paste0(
+      "(function(){",
+      "var d=document.querySelector('#%s-view_handle-%s');if(!d)return false;",
+      "var a=Array.from(d.querySelectorAll('[id*=\"-tab-block_panel-\"]'))",
+      ".filter(function(e){return e.closest('.dv-active-tab')!==null;})",
+      ".map(function(e){return e.id",
+      ".replace(/.*-tab-(block_panel-.+)$/,'$1');});",
+      "return Array.from(new Set(a)).sort().join(',')==='%s';})()"
+    ),
+    board_id, view, want
+  )
+
+  diagnose <- function() {
+    sprintf(
+      "[active-block-tabs] view=%s want=[%s] got=[%s]", view, want,
+      paste(active_block_panel_tabs(app, view, board_id), collapse = ",")
+    )
+  }
+
+  wait_js(app, js, diagnose, timeout)
+}
+
 # Shared helpers for the edit-board extension e2e tests (links, stacks). The
 # extension namespaces its inputs under `my_board-ext_edit_board-`. The
 # extension panel stays active in those tests (pre-seeded fixtures, no block

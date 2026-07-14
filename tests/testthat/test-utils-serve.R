@@ -273,6 +273,15 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # Analysis view (a, b), not c -- which lives in the off-screen Overview view.
   # The full three-block board is asserted against the exported artifact below.
   wait_dock_loaded(app, n_blocks = 2)
+
+  # wait_dock_loaded gates on the server-rendered cards; the dockview client
+  # restores the a/b tab group asynchronously. Wait for it to settle (b fronted,
+  # a a hidden back tab) and for the mirror to commit that layout before reading
+  # the exported grid, or the export can capture a transient separate-leaves
+  # state (the grid mirror commits whatever the client last reported).
+  wait_active_block_tabs(app, "analysis", "block_panel-b")
+  app$wait_for_idle(duration = 500)
+
   before <- read_dock_state(app)
 
   # The fixture seeds the dock-owned state the round-trip must preserve: two
@@ -325,6 +334,8 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # The reload restores Analysis as the active view, so again only its two
   # cards are built (c stays deferred with the off-screen Overview view).
   wait_dock_loaded(app, n_blocks = 2)
+  wait_active_block_tabs(app, "analysis", "block_panel-b")
+  app$wait_for_idle(duration = 500)
 
   # The deserialize + reconcile + re-render rebuilds the dock-owned view
   # structure and the blocks identically.
@@ -350,23 +361,9 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # Client leg: the byte checks read the stored slots, so they cannot observe
   # whether the dockview client actually applied the grid. Assert one rendered
   # DOM fact -- the analysis view's a/b tab group restores with `b` as the front
-  # tab (its authored active tab, not `a` the first). A client-side
-  # restore_layout failure, or a collapse to separate leaves, changes this set.
-  tab_diag <- function() {
-    app$get_js(paste0(
-      "JSON.stringify(Array.from(document.querySelectorAll('.dv-tab'))",
-      ".map(t => ({tab: (t.querySelector('[id*=\"-tab-\"]') || {}).id, ",
-      "active: t.classList.contains('dv-active-tab')})))"
-    ))
-  }
-  wait_js(
-    app,
-    paste0(
-      "document.querySelector('.dv-tab.dv-active-tab ",
-      "[id*=\"-tab-block_panel-b\"]') !== null"
-    ),
-    tab_diag
-  )
+  # tab (its authored active tab, not `a` the first). The post-import settle
+  # wait above already held for exactly this state, so a client-side
+  # restore_layout failure or a collapse to separate leaves surfaces there.
   expect_identical(active_block_panel_tabs(app, "analysis"), "block_panel-b")
 })
 
