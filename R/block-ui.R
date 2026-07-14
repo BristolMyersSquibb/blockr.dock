@@ -99,8 +99,6 @@ remove_block_ui.dock_board <- function(id, x, blocks, dock, ...,
     )
   }
 
-  drop_cards(dock$visible, blocks)
-
   invisible(x)
 }
 
@@ -112,7 +110,7 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
   stopifnot(is_blocks(blocks))
 
   build_block_ui(
-    id, x, blocks, dock$visible, ...,
+    id, x, blocks, dock$visibility, ...,
     edit_ui = edit_ui, ctrl_ui = ctrl_ui, session = session
   )
 
@@ -123,88 +121,68 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
   invisible(x)
 }
 
-# The per-block visibility map lives on the `visible` reactiveVal core hands the
-# board callback -- block id -> `parked` (built into the offcanvas pool, off
-# screen) | `required` (on screen, not yet arranged) | `rendered` (arranged into
-# its panel). A present key is a built card, so the dock reads this back as its
-# build ledger (`built_cards()`); there is no second copy. Core keys its gates
-# on required / rendered, so a `parked` entry reads as off screen there -- it is
-# the dock's build-ledger bit that core retains as the single store.
+# The dock's build ledger and per-block visibility both live on the `visibility`
+# channel core hands the board callback: two per-block reactiveVal environments
+# (`required`, `visible`), one slot per board block, all core-owned. A card is
+# built once the dock writes its `required` slot (non-NA), so `built_cards()`
+# reads the built set straight off it -- there is no second ledger. The dock
+# writes `required[[id]]` FALSE when it builds a card (off screen) and TRUE when
+# on screen, and `visible[[id]]` the view id once the client paints it. Block
+# removal needs no dock write: core drops the slot, dropping the card too.
 
-# The initial map from a known built set: every card `parked`, the on-screen
-# fronts `required` (nothing is arranged yet). Used once, to seed the channel.
-card_visibility <- function(built, on_screen) {
-
-  status <- set_names(rep("parked", length(built)), built)
-
-  status[intersect(built, on_screen)] <- "required"
-
-  status
+# The blocks whose cards are built: those with a non-NA required slot.
+built_cards <- function(visibility) {
+  ids <- ls(visibility$required)
+  ids[lgl_ply(ids, slot_built, visibility$required)]
 }
 
-# Reconcile membership on the channel from the active view's on-screen set:
-# fronts `required`, everything else built `parked`. A card already `rendered`
-# stays rendered -- this observer owns the parked <-> required axis; the arrange
-# observer owns the promotion to `rendered` (mark_cards_rendered).
-show_cards <- function(visible, on_screen) {
+slot_built <- function(id, required) {
+  !is.na(isolate(required[[id]]()))
+}
 
-  cur <- coal(isolate(visible()), character(), fail_all = FALSE)
-  built <- names(cur)
-
-  status <- set_names(rep("parked", length(built)), built)
-
-  shown <- intersect(built, on_screen)
-  status[shown] <- ifelse(cur[shown] == "rendered", "rendered", "required")
-
-  if (!identical(status, cur)) {
-    visible(status)
+# Record `new` cards as built: their required slot goes FALSE (off screen until
+# the report observer places them). Slots pre-exist -- core seeds every block's
+# slots before any block plugin runs.
+mark_cards_built <- function(visibility, new) {
+  for (id in new) {
+    visibility$required[[id]](FALSE)
   }
 }
 
-# Promote a view's on-screen blocks to `rendered`: the client has arranged them
-# into their panels. This is the paint signal core's construction gate waits for
-# -- once every on-screen block is `rendered`, `visible_set_rendered()` fires.
-mark_cards_rendered <- function(visible, on_screen) {
+# Reconcile the required axis over `built` from an on-screen set: on screen ->
+# TRUE, off screen -> FALSE. A card leaving the screen also clears its visible
+# slot (no longer painted); the arrange observer owns setting it. Seeds the
+# channel too, with `built` the active view's membership.
+show_cards <- function(visibility, built, on_screen) {
+  for (id in built) {
+    on <- id %in% on_screen
 
-  cur <- coal(isolate(visible()), character(), fail_all = FALSE)
+    if (!identical(isolate(visibility$required[[id]]()), on)) {
+      visibility$required[[id]](on)
+    }
 
-  new <- cur
-  new[intersect(names(cur), on_screen)] <- "rendered"
-
-  if (!identical(new, cur)) {
-    visible(new)
+    if (!on && !is.na(isolate(visibility$visible[[id]]()))) {
+      visibility$visible[[id]](NA_character_)
+    }
   }
 }
 
-# The blocks whose cards are built, read off the shared channel.
-built_cards <- function(visible) {
-  coal(names(isolate(visible())), character(), fail_all = FALSE)
+# Mark a view's on-screen blocks painted: write the view id into their visible
+# slot -- the client-confirmed paint core's construction gate waits for.
+mark_cards_rendered <- function(visibility, on_screen, view) {
+  for (id in on_screen) {
+    if (!identical(isolate(visibility$visible[[id]]()), view)) {
+      visibility$visible[[id]](view)
+    }
+  }
 }
 
-# Record `new` cards as built -- `parked` until the report observer places them.
-mark_cards_built <- function(visible, new) {
+# Insert the not-yet-built cards in `blocks` and mark them built; already-built
+# blocks are skipped, so this is safe to call ahead of any path that shows one.
+build_block_ui <- function(id, x, blocks, visibility, ..., edit_ui,
+                           ctrl_ui = NULL, session = get_session()) {
 
-  cur <- coal(isolate(visible()), character(), fail_all = FALSE)
-  cur[new] <- "parked"
-
-  visible(cur)
-}
-
-# Drop cards whose blocks are gone from the map.
-drop_cards <- function(visible, gone) {
-
-  cur <- coal(isolate(visible()), character(), fail_all = FALSE)
-
-  visible(cur[setdiff(names(cur), gone)])
-}
-
-# Insert the not-yet-built cards in `blocks` and record them on the channel;
-# already-built blocks are skipped, so this is safe to call ahead of any path
-# that shows one.
-build_block_ui <- function(id, x, blocks, visible, ..., edit_ui, ctrl_ui = NULL,
-                           session = get_session()) {
-
-  new <- setdiff(names(blocks), built_cards(visible))
+  new <- setdiff(names(blocks), built_cards(visibility))
 
   for (i in new) {
     insertUI(
@@ -216,16 +194,17 @@ build_block_ui <- function(id, x, blocks, visible, ..., edit_ui, ctrl_ui = NULL,
     )
   }
 
-  mark_cards_built(visible, new)
+  mark_cards_built(visibility, new)
 
   invisible(new)
 }
 
 # build_block_ui for callers that hold the board but not the plugins (the view
 # switch, the add-panel modal), deriving edit / ctrl UI the way board_ui does.
-ensure_block_ui <- function(id, x, blocks, visible, session = get_session()) {
+ensure_block_ui <- function(id, x, blocks, visibility,
+                            session = get_session()) {
 
-  if (all(names(blocks) %in% built_cards(visible))) {
+  if (all(names(blocks) %in% built_cards(visibility))) {
     return(invisible(character()))
   }
 
@@ -235,7 +214,7 @@ ensure_block_ui <- function(id, x, blocks, visible, session = get_session()) {
     id,
     x,
     blocks,
-    visible,
+    visibility,
     edit_ui = plugins[["edit_block"]],
     ctrl_ui = if ("ctrl_block" %in% names(plugins)) plugins[["ctrl_block"]],
     session = session
