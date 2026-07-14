@@ -276,11 +276,10 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
 
   # wait_dock_loaded gates on the server-rendered cards; the dockview client
   # restores the a/b tab group asynchronously. Wait for it to settle (b fronted,
-  # a a hidden back tab) and for the mirror to commit that layout before reading
-  # the exported grid, or the export can capture a transient separate-leaves
-  # state (the grid mirror commits whatever the client last reported).
+  # a a hidden back tab) before reading the exported grid, or the export can
+  # capture a transient separate-leaves state -- the grid mirror commits
+  # whatever the client last reported.
   wait_active_block_tabs(app, "analysis", "block_panel-b")
-  app$wait_for_idle(duration = 500)
 
   before <- read_dock_state(app)
 
@@ -335,7 +334,6 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # cards are built (c stays deferred with the off-screen Overview view).
   wait_dock_loaded(app, n_blocks = 2)
   wait_active_block_tabs(app, "analysis", "block_panel-b")
-  app$wait_for_idle(duration = 500)
 
   # The deserialize + reconcile + re-render rebuilds the dock-owned view
   # structure and the blocks identically.
