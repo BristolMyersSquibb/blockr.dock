@@ -41,6 +41,20 @@ test_that("all.equal.dock_grid absorbs sash jitter but not a real drag", {
   expect_false(isTRUE(all.equal(base, jitter)))
 })
 
+test_that("all.equal.dock_grid ignores the transient focus marker", {
+
+  # The client's echo carries a `focus` (the active group) the authored seed
+  # grid never has; a focus-only difference is not a geometry change, so the
+  # mirror's guard -- and the round-trip probe -- must read the two as equal
+  # (else a restore echo commits and the round-trip destabilises).
+  plain <- dock_grid("block_panel-a", "block_panel-b", sizes = c(0.3, 0.7))
+  focused <- plain
+  focused[["focus"]] <- "block_panel-b"
+
+  expect_true(isTRUE(all.equal(plain, focused)))
+  expect_true(isTRUE(all.equal(plain, focused, tolerance = grid_size_tol())))
+})
+
 test_that("the size tolerance is a tunable blockr_option", {
 
   expect_equal(grid_size_tol(), 0.005)

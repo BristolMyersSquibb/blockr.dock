@@ -229,13 +229,21 @@ grid_size_tol <- function() {
 }
 
 # Approximate grid equality: structure exact, relative sizes within the supplied
-# `tolerance`. Deferring to `all.equal` keeps the stored sizes faithful (only
-# the comparison is fuzzy); comparing the unclassed list walks each pane's size
-# individually, and `scale = 1` makes the tolerance absolute on the ratio scale.
-# The R-default tolerance stays near-exact, so `all.equal()` / `expect_equal()`
-# on a grid is unaffected unless a caller passes a tolerance (the mirror does).
+# `tolerance`, ignoring the transient `focus` marker. Deferring to `all.equal`
+# keeps the stored sizes faithful (only the comparison is fuzzy); comparing the
+# unclassed list walks each pane's size individually, and `scale = 1` makes the
+# tolerance absolute on the ratio scale. The R-default tolerance stays near-
+# exact, so `all.equal()` / `expect_equal()` on a grid is unaffected unless a
+# caller passes a tolerance (the mirror does). `focus` -- which group holds UI
+# focus, set by the client after render -- is not authored geometry: the seed
+# grid carries none while the client's echo always does, so it is dropped
+# before the compare, keeping a focus-only echo from provoking a mirror commit
+# and the round-trip stable across a restore.
 #' @export
 all.equal.dock_grid <- function(target, current, ..., scale = 1) {
+  target[["focus"]] <- NULL
+  current[["focus"]] <- NULL
+
   all.equal(unclass(target), unclass(current), ..., scale = scale)
 }
 
