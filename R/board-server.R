@@ -89,11 +89,11 @@ board_server_callback <- function(board, update, visibility, ...,
   report_visible_observer(visibility, client_active, docks)
 
   # `view_data` is the live all-views layout, split into a `dock_views` +
-  # `dock_grids` pair. It is NULL until every view has reported its layout once
-  # (the all-or-nothing in live_view_data), so consumers req() it. A view's
-  # live arrangement is read on demand here; it no longer folds back into the
-  # board's slots.
-  view_data <- live_view_data(client_views, docks, client_active)
+  # `dock_grids` pair. Each view is live where its dock has reported, else its
+  # board-stored grid, so a deferred off-screen view is represented without
+  # blocking (see live_view_data). A view's live arrangement is read on demand
+  # here; it no longer folds back into the board's slots.
+  view_data <- live_view_data(client_views, docks, board, client_active)
 
   # Each extension can read the others' server results through the
   # `extensions` environment: one active binding per id, each resolving to
@@ -217,9 +217,10 @@ report_visible_observer <- function(visibility, client_active, docks) {
 
   # Owns the required axis: over the built cards, the active view's front panels
   # go required TRUE and everything else built FALSE. It leaves the visible axis
-  # alone -- the per-view arrange observer writes it once the client has painted
-  # (mark_cards_rendered), so the two touch disjoint slots. `req(layout())`
-  # waits for the client's report (NULL before then).
+  # alone -- the per-view `_restored` observer writes it once the client
+  # confirms it painted the view (mark_cards_rendered), so the two touch
+  # disjoint slots.
+  # `req(layout())` waits for the client's report (NULL before then).
   on_screen <- reactive({
     active <- req(client_active())
     dock <- req(docks[[active]])
@@ -284,21 +285,24 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
   )
 }
 
-# Returns NULL while any view is still pending — its dock not yet created by
-# reconcile, or its dockview layout not yet reported — so downstream observers
-# `req()` past the initial flush. Reading `docks[[v_id]]` (a reactiveValues)
-# takes a dependency on each view's entry, so this re-evaluates when reconcile
-# creates the dock — whatever the init flush order — rather than stranding on
-# the empty-`docks` early return. The active view comes from `client_active`,
-# not `client_views`. The live all-views layout is returned split into a
-# `dock_views` (membership + names + active) and a `dock_grids` (geometry) --
-# the same shape the board stores.
-live_view_data <- function(client_views, docks, client_active) {
+# The live all-views layout, split into a `dock_views` (membership + names +
+# active) and a `dock_grids` (geometry) pair -- the same shape the board stores.
+# Each view contributes its live dockview grid once its dock has reported, and
+# its board-stored grid otherwise, so an off-screen view whose dock is deferred
+# (never created this session, #304) is represented by what it would restore to
+# rather than blocking every consumer on a layout that never arrives. Reading
+# `docks[[v_id]]` (a reactiveValues) takes a dependency on each view's entry, so
+# a view upgrades from stored to live when reconcile creates its dock and it
+# reports -- whatever the flush order. NULL now only stands for a view briefly
+# in the nav model but not yet on the board (a sub-flush removal transient),
+# which consumers `req()` past. The active view comes from `client_active`, not
+# `client_views`.
+live_view_data <- function(client_views, docks, board, client_active) {
   reactive({
 
     state <- client_views()
 
-    grids <- lapply(names(state), live_view_grid, docks = docks)
+    grids <- lapply(names(state), live_view_grid, docks = docks, board = board)
 
     if (any(lgl_ply(grids, is.null))) {
       return(NULL)
@@ -320,21 +324,28 @@ live_view_data <- function(client_views, docks, client_active) {
   })
 }
 
-live_view_grid <- function(v_id, docks) {
+# A view's live grid once its dock has reported, else its board-stored grid
+# (composed from the view's membership and grid slot) -- the #304 fallback that
+# keeps a deferred off-screen view from blocking view_data. NULL only when the
+# view is not on the board.
+live_view_grid <- function(v_id, docks, board) {
 
   dk <- docks[[v_id]]
 
-  if (is.null(dk)) {
+  if (!is.null(dk)) {
+    ly <- dk$layout()
+    if (!is.null(ly)) {
+      return(as_dock_grid(as_dock_layout(ly)))
+    }
+  }
+
+  views <- board_views(board$board)
+
+  if (!(v_id %in% names(views))) {
     return(NULL)
   }
 
-  ly <- dk$layout()
-
-  if (is.null(ly)) {
-    return(NULL)
-  }
-
-  as_dock_grid(as_dock_layout(ly))
+  as_dock_grid(view_grid(views[[v_id]], board_grids(board$board)[[v_id]]))
 }
 
 live_view_membership <- function(grid, view) {
@@ -446,11 +457,14 @@ remove_view <- function(v_id, session, docks) {
   invisible()
 }
 
-# Make the live dock session match the committed board's view set:
-# instantiate added views, tear down removed ones, relabel renamed ones, and
-# switch to the active view. The board owns which views exist, their names and
-# the active one; a view's per-view arrangement is client-owned, read live via
-# view_data() and never folded back into the board, so reconcile never
+# Make the live dock session match the committed board's view set. The nav model
+# (`client_views`) tracks every view -- added, removed, renamed -- but only the
+# active view's dock is instantiated; off-screen views are deferred and their
+# dock built on first visit, when a later reconcile finds them active (#304).
+# This mirrors board_ui's card deferral: the nav lists every view, the heavy
+# per-view machinery follows the user. The board owns which views exist, their
+# names and the active one; a view's per-view arrangement is client-owned, read
+# live via view_data() and never folded back into the board, so reconcile never
 # pushes a layout to its live dock. Takes the reactive board handle (not a
 # snapshot) so the live list reaches manage_dock, whose interaction observers
 # read board$board after the fact (#194); the committed board is snapshotted
@@ -472,46 +486,26 @@ reconcile_views <- function(board, update, docks, active_dock,
   state <- isolate(client_views())
   have <- names(docks)
   shown <- names(state)
-  visibility <- isolate(active_dock$visibility)
 
-  for (v in setdiff(want, have)) {
-
-    create_view(
-      v,
-      view_grid(views[[v]], if (is.null(grids)) NULL else grids[[v]]),
-      board,
-      update,
-      session,
-      docks,
-      visibility,
-      blocks = board_blocks(brd),
-      extensions = dock_extensions(brd),
-      active = identical(v, server_active)
-    )
-
-    state[[v]] <- bare_view(views[[v]])
-  }
-
-  # Add a nav item only for views the nav doesn't already show. `board_ui`
-  # renders every seeded view statically, so this set is empty on init;
-  # gating on `docks` (also empty on init) instead re-adds each as a
+  # Nav + client_views model: every view, built or deferred. `board_ui` seeds
+  # the nav statically, so `shown` already lists every view on init and this add
+  # loop is empty then; keying it on `docks` instead re-adds each as a
   # blank-labelled duplicate (#189). Label from the container `view_names()`,
   # which resolves whether the name sits on the layout or is derived from id.
   for (v in setdiff(want, shown)) {
+    state[[v]] <- bare_view(views[[v]])
     session$sendInputMessage(
       "view_nav",
       list(add = list(id = v, name = labels[[v]]))
     )
   }
 
-  for (v in setdiff(have, want)) {
-
-    remove_view(v, session, docks)
+  for (v in setdiff(shown, want)) {
     session$sendInputMessage("view_nav", list(remove = v))
     state[[v]] <- NULL
   }
 
-  for (v in intersect(want, have)) {
+  for (v in intersect(want, shown)) {
 
     new_nm <- view_name(views[[v]])
 
@@ -522,6 +516,36 @@ reconcile_views <- function(board, update, docks, active_dock,
         list(rename = list(id = v, to = new_nm))
       )
     }
+  }
+
+  # Dock lifecycle: tear down docks whose view the board dropped, then build the
+  # active view's dock if it is not up yet -- deferring every other view to the
+  # reconcile its first visit triggers. `active` stamps the active CSS class at
+  # insert only at startup (no view shown yet) so the first paint needs no
+  # switch; a mid-session first visit is activated by switch_active_view below.
+  for (v in setdiff(have, want)) {
+    remove_view(v, session, docks)
+  }
+
+  if (!is.null(server_active) && !(server_active %in% names(docks))) {
+
+    active_grid <- view_grid(
+      views[[server_active]],
+      if (is.null(grids)) NULL else grids[[server_active]]
+    )
+
+    create_view(
+      server_active,
+      active_grid,
+      board,
+      update,
+      session,
+      docks,
+      isolate(active_dock$visibility),
+      blocks = board_blocks(brd),
+      extensions = dock_extensions(brd),
+      active = is.null(isolate(client_active()))
+    )
   }
 
   client_views(state)
@@ -654,12 +678,21 @@ manage_dock <- function(
             )
           }
         }
-
-        # Every card the layout calls for is now moved into its panel: the view
-        # is arranged. Write this view id into its on-screen blocks' visible
-        # slot -- the client-confirmed paint core's construction gate waits for.
-        mark_cards_rendered(visibility, visible_block_ids(init_layout), id)
       },
+      once = TRUE
+    )
+
+    # The view is arranged only once the client confirms it. dockViewR fires
+    # `_restored` (event priority) after applying the restore, and the client
+    # flushes it back only after running the card moves batched with that push
+    # -- so it stands for the visible view being on screen, not merely
+    # dispatched. Writing each on-screen block's `visible` slot here, off that
+    # client-confirmed signal rather than the tail of the server-side restore
+    # loop, gives core the paint its background-construction gate waits for
+    # (#304).
+    observeEvent(
+      input[[dock_input("restored")]],
+      mark_cards_rendered(visibility, visible_block_ids(init_layout), id),
       once = TRUE
     )
 

@@ -345,38 +345,59 @@ test_that("rename skips views without the block's panel (#116)", {
   expect_identical(renamed, as.character(as_block_panel_id("a")))
 })
 
-test_that("live_view_data is NULL while any view layout is uninitialized", {
+test_that("live_view_data uses a view's stored grid until it reports (#304)", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
 
-  layouts <- with_mock_context(ms, {
-    list(A = reactiveVal(NULL), B = reactiveVal(NULL))
-  })
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a", B = "b")
+  )
 
   res <- with_mock_context(ms, {
-    client_views <- reactiveVal(
-      reconstruct_dock_views(list(A = dock_view(), B = dock_view()))
-    )
+    board <- reactiveValues(board = brd)
+    client_views <- reactiveVal(seed_view_state(board_views(brd)))
     ids <- names(client_views())
+    layouts <- list(A = reactiveVal(NULL), B = reactiveVal(NULL))
     docks <- reactiveValues()
     docks[[ids[[1L]]]] <- list(layout = layouts$A)
     docks[[ids[[2L]]]] <- list(layout = layouts$B)
     client_active <- reactiveVal(ids[[1L]])
-    list(vd = live_view_data(client_views, docks, client_active))
+    list(
+      vd = live_view_data(client_views, docks, board, client_active),
+      layouts = layouts,
+      ids = ids
+    )
   })
 
-  expect_null(isolate(res$vd()))
+  # Neither dock has reported a live layout, so every view falls back to its
+  # board-stored grid: view_data is populated (no all-or-nothing block) rather
+  # than NULL.
+  vd0 <- isolate(res$vd())
+  expect_named(vd0, c("views", "grids"))
+  expect_s3_class(vd0$views, "dock_views")
+  expect_identical(unname(view_names(vd0$views)), c("A", "B"))
+  expect_identical(
+    layout_panel_ids(vd0$grids[[res$ids[[1L]]]]), "block_panel-a"
+  )
+  expect_identical(
+    layout_panel_ids(vd0$grids[[res$ids[[2L]]]]), "block_panel-b"
+  )
+  expect_identical(active_name(vd0$views), "A")
 
-  with_mock_context(ms, layouts$A(list(grid = list(), panels = list())))
-  expect_null(isolate(res$vd()))
+  # A view reporting a live layout upgrades to it; the other stays stored.
+  g <- as_dock_grid(dock_grid("block_panel-b", "block_panel-a"))
+  reported <- list(grid = grid_to_tree(g), activeGroup = "1")
+  with_mock_context(ms, res$layouts$A(reported))
 
-  with_mock_context(ms, layouts$B(list(grid = list(), panels = list())))
-
-  lys <- isolate(res$vd())
-  expect_named(lys, c("views", "grids"))
-  expect_s3_class(lys$views, "dock_views")
-  expect_identical(unname(view_names(lys$views)), c("A", "B"))
-  expect_identical(active_name(lys$views), "A")
+  vd1 <- isolate(res$vd())
+  expect_identical(
+    layout_panel_ids(vd1$grids[[res$ids[[1L]]]]),
+    c("block_panel-b", "block_panel-a")
+  )
+  expect_identical(
+    layout_panel_ids(vd1$grids[[res$ids[[2L]]]]), "block_panel-b"
+  )
 })
 
 test_that("live_view_data re-evaluates once docks are populated (#243)", {
@@ -392,31 +413,46 @@ test_that("live_view_data re-evaluates once docks are populated (#243)", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
 
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = c("a", "b"))
+  )
+
   res <- with_mock_context(ms, {
-    client_views <- reactiveVal(reconstruct_dock_views(list(A = dock_view())))
+    board <- reactiveValues(board = brd)
+    client_views <- reactiveVal(seed_view_state(board_views(brd)))
     docks <- reactiveValues()
     client_active <- reactiveVal(NULL)
     list(
-      vd = live_view_data(client_views, docks, client_active),
+      vd = live_view_data(client_views, docks, board, client_active),
       docks = docks,
       view = names(client_views())[[1L]]
     )
   })
 
-  # First read with empty docks: NULL, but the absent-key read has subscribed.
-  expect_null(isolate(res$vd()))
+  # First read with empty docks: the view falls back to its stored grid (seeded
+  # order), and the absent-key read has subscribed.
+  vd0 <- isolate(res$vd())
+  expect_named(vd0, c("views", "grids"))
+  expect_identical(
+    layout_panel_ids(vd0$grids[[res$view]]),
+    c("block_panel-a", "block_panel-b")
+  )
 
-  # Mimic reconcile creating the dock: the reactiveValues write alone
-  # re-triggers live_view_data.
+  # Mimic reconcile creating the dock and the client reporting a reordered live
+  # layout: the reactiveValues write re-triggers live_view_data, upgrading from
+  # stored to the live order.
+  g <- as_dock_grid(dock_grid("block_panel-b", "block_panel-a"))
   layout <- with_mock_context(
-    ms, reactiveVal(list(grid = list(), panels = list()))
+    ms, reactiveVal(list(grid = grid_to_tree(g), activeGroup = "1"))
   )
   with_mock_context(ms, res$docks[[res$view]] <- list(layout = layout))
 
-  lys <- isolate(res$vd())
-
-  expect_named(lys, c("views", "grids"))
-  expect_identical(unname(view_names(lys$views)), "A")
+  vd1 <- isolate(res$vd())
+  expect_identical(
+    layout_panel_ids(vd1$grids[[res$view]]),
+    c("block_panel-b", "block_panel-a")
+  )
 })
 
 test_that("view_data() tracks a reported layout despite flush order (#243)", {
@@ -444,8 +480,14 @@ test_that("view_data() tracks a reported layout despite flush order (#243)", {
     )
   )
 
-  # Force the first read before reconcile runs: docks empty, so NULL.
-  expect_null(isolate(res$view_data()))
+  # Before reconcile runs the dock is not up, so view_data falls back to Page's
+  # board-stored grid (seeded order) rather than blocking.
+  vd0 <- isolate(res$view_data())
+  expect_named(vd0, c("views", "grids"))
+  expect_identical(
+    layout_panel_ids(vd0$grids[["Page"]]),
+    c("block_panel-a", "block_panel-b")
+  )
 
   ms$flushReact()
 
@@ -466,6 +508,137 @@ test_that("view_data() tracks a reported layout despite flush order (#243)", {
     layout_panel_ids(vd$grids[["Page"]]),
     c("block_panel-b", "block_panel-a")
   )
+})
+
+test_that("reconcile builds only the active view's dock (#304)", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(), b = new_head_block(), c = new_head_block()
+    ),
+    views = list(A = "a", B = "b", C = "c"),
+    active = "B"
+  )
+  active_id <- active_view(board_views(brd))
+
+  created <- character()
+  flags <- list()
+
+  # Stand in for create_view: record which views are built (and the no-flash
+  # `active` stamp) without the DOM / module machinery.
+  stub_create <- function(v_id, layout, board, update, session, docks,
+                          visibility, ..., active = FALSE) {
+    created <<- c(created, v_id)
+    flags[[v_id]] <<- active
+    docks[[v_id]] <- list(layout = function() NULL)
+  }
+
+  docks <- with_mock_context(ms, reactiveValues())
+  client_views <- with_mock_context(
+    ms, reactiveVal(seed_view_state(board_views(brd)))
+  )
+  client_active <- with_mock_context(ms, reactiveVal(NULL))
+  active_dock <- with_mock_context(
+    ms, reactiveValues(visibility = fake_visibility(board_block_ids(brd)))
+  )
+  update <- with_mock_context(ms, reactiveVal())
+  session <- list(
+    ns = identity,
+    sendInputMessage = function(...) invisible(),
+    sendCustomMessage = function(...) invisible()
+  )
+
+  reconcile <- function(board_obj) {
+    with_mocked_bindings(
+      with_mock_context(
+        ms,
+        reconcile_views(
+          board_obj, update, docks, active_dock, client_active, client_views,
+          session
+        )
+      ),
+      create_view = stub_create,
+      # Mimic the client acknowledging the switch so a later reconcile sees the
+      # new active view.
+      switch_active_view = function(active, ...) client_active(active),
+      .package = "blockr.dock"
+    )
+  }
+
+  board_obj <- with_mock_context(ms, reactiveValues(board = brd))
+  reconcile(board_obj)
+
+  # Only the active view's dock is built; the other two are deferred. It is
+  # stamped active at insert (no view shown yet) so the first paint needs no
+  # switch round-trip.
+  expect_identical(created, active_id)
+  expect_identical(with_mock_context(ms, names(docks)), active_id)
+  expect_true(flags[[active_id]])
+
+  # Visiting a deferred view (the board makes it active) builds its dock on
+  # demand -- inactive, since switch_active_view activates it.
+  visited <- setdiff(names(board_views(brd)), active_id)[[1L]]
+  board_obj$board <- apply_views_active(visited, brd)
+  reconcile(board_obj)
+
+  expect_setequal(with_mock_context(ms, names(docks)), c(active_id, visited))
+  expect_false(flags[[visited]])
+})
+
+test_that("rendered is reported only on client-confirmed restore (#304)", {
+
+  # The active view's blocks go `required` (on screen) through the server-side
+  # restore loop, but their `visible` slot -- the client-confirmed paint core's
+  # gate waits for -- is written only on the client's `_restored` echo, not the
+  # loop tail.
+  local_mocked_bindings(
+    restore_layout = function(...) invisible(),
+    show_block_panel = function(...) invisible(),
+    show_ext_panel = function(...) invisible(),
+    .package = "blockr.dock"
+  )
+
+  # Separate leaves so both a and b front their own group (both on screen);
+  # the default grid would tab them together, hiding b as a back tab.
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    grids = list(Page = dock_grid("a", "b"))
+  )
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  vis <- with_mock_context(ms, fake_visibility(board_rv))
+  with_mock_context(
+    ms,
+    board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
+  )
+  ms$flushReact()
+
+  # The client reports its live layout and that the dock initialized: the
+  # restore loop runs, placing a and b on screen (required TRUE), but nothing
+  # has confirmed the paint, so their visible slots stay NA.
+  g <- as_dock_grid(dock_grid("block_panel-a", "block_panel-b"))
+  reported <- list(grid = grid_to_tree(g), activeGroup = "1")
+  do.call(ms$setInputs, set_names(list(reported), "Page-dock_state"))
+  do.call(ms$setInputs, set_names(list(TRUE), "Page-dock_initialized"))
+  ms$flushReact()
+
+  expect_identical(isolate(vis$required[["a"]]()), TRUE)
+  expect_identical(isolate(vis$required[["b"]]()), TRUE)
+  expect_true(is.na(isolate(vis$visible[["a"]]())))
+  expect_true(is.na(isolate(vis$visible[["b"]]())))
+
+  # The client acknowledges the restore -- now the blocks are painted, their
+  # visible slot carrying the active view id.
+  do.call(ms$setInputs, set_names(list(TRUE), "Page-dock_restored"))
+  ms$flushReact()
+
+  page <- with_mock_context(ms, vid(board_rv$board, "Page"))
+  expect_identical(isolate(vis$visible[["a"]]()), page)
+  expect_identical(isolate(vis$visible[["b"]]()), page)
 })
 
 test_that("visible_block_ids returns the front-tab block of each group", {
