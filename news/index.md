@@ -1,6 +1,32 @@
 # Changelog
 
+## blockr.dock (development version)
+
+- At startup the board now builds only the active view’s block cards;
+  off-screen views’ cards are built on first visit rather than all up
+  front
+  ([\#272](https://github.com/BristolMyersSquibb/blockr.dock/issues/272)).
+  [`board_ui()`](https://bristolmyerssquibb.github.io/blockr.core/reference/board_ui.html)
+  rendered an edit card for every block across every view into the
+  static offcanvas mount, so first paint scaled with the total block
+  count, not with what is on screen (~20s of `renderTags` on a 99-block,
+  12-view board). It now renders only the active view’s cards and defers
+  the rest; `switch_active_view()` (and the active-dock panel-op path)
+  inserts a view’s cards the first time it is shown, and core’s
+  `required` channel doubles as the build ledger so a revisit never
+  doubles a card.
+
+- Block visibility is coordinated with blockr.core (\>= 0.1.4) over its
+  two-channel `visibility` interface: a per-block `required` channel the
+  dock drives (`TRUE` on screen, `FALSE` built but off screen) and a
+  `visible` channel it writes with a view id once the client has painted
+  that view. This gives blockr.core an explicit “the initial view is
+  painted” signal to gate its background block-server construction on,
+  instead of inferring readiness from result-quiescence.
+
 ## blockr.dock 0.1.2
+
+CRAN release: 2026-07-13
 
 - The block-browser, link-menu, stack-menu and sidebar UI components are
   now bundled directly into blockr.dock instead of imported from the
