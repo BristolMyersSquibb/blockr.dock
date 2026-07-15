@@ -14,6 +14,23 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
     reval_if
   )
 
+  # Deferred construction (core's needed-slot gate, background_construction_delay)
+  # leaves off-screen blocks unbuilt, so `blocks` only carries the constructed
+  # ones -- a PARTIAL snapshot. blockr_ser.blocks asserts one entry per board
+  # block (`length(blocks) == length(x)`), so a partial snapshot aborts the whole
+  # save with "length(blocks) == length(x) is not TRUE". Pad to every board block
+  # keyed by id, exactly like core's serialize_board.board does: an unbuilt block
+  # maps to NULL, which blockr_ser.block serializes from its constructor scope
+  # (its restored state is preserved, not blanked).
+  bid <- board_block_ids(x)
+  blocks <- set_names(
+    lapply(bid, function(i) {
+      st <- state[[i]]
+      if (is.null(st)) NULL else c(st, visible = list(visibility[[i]]))
+    }),
+    bid
+  )
+
   opts <- lapply(
     set_names(nm = names(as_board_options(x))),
     get_board_option_or_null,
@@ -30,7 +47,7 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
       list(
         x,
         board_id = id,
-        blocks = Map(c, state, visible = lapply(visibility, list)),
+        blocks = blocks,
         options = opts,
         extensions = lapply(
           list(...),
