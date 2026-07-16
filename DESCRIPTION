@@ -22,7 +22,7 @@ Roxygen: list(markdown = TRUE)
 Imports:
     blockr.core (>= 0.1.4),
     bsicons,
-    shiny,
+    shiny (>= 1.14.0),
     shinyjs,
     bslib,
     glue,
@@ -45,7 +45,7 @@ Suggests:
     rmarkdown
 Remotes:
     nbenn/shinytest2@wait-for-app-serving,
-    BristolMyersSquibb/blockr.core
+    BristolMyersSquibb/blockr.core@202-session-destroy
 Config/testthat/edition: 3
 Collate:
     'action-class.R'
