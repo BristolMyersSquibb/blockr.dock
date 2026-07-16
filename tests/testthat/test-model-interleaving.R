@@ -107,15 +107,22 @@ model_set_members <- function(st, members) {
   list(st = st, commit = as.integer(!setequal(before, model_members(st))))
 }
 
-# The grid mirror, reproduced from observe_grid_echo(): cast the pending echo to
-# a `dock_grid`, skip the commit when it is within the size tolerance of what is
-# stored (the all.equal guard), else store it verbatim. Returns the commit count
-# so the "one gesture, at most one commit" bound is checkable.
-model_deliver_echo <- function(st) {
+# The grid mirror, reproduced from observe_grid_echo(): a server-sourced echo --
+# an intermediate frame dockviewR streams while applying a restore -- is dropped
+# by the `_state-source` skip and never commits; a client echo casts to a
+# `dock_grid` and commits only when it falls outside the size tolerance of what
+# is stored (the all.equal guard), else no-ops. Returns the commit count so the
+# "one gesture, at most one commit" bound is checkable.
+model_deliver_echo <- function(st, source = "client") {
 
   echo <- st$client$pending
 
   if (is.null(echo)) {
+    return(list(st = st, commit = 0L))
+  }
+
+  if (identical(source, "server")) {
+    st$client$pending <- NULL
     return(list(st = st, commit = 0L))
   }
 
@@ -356,6 +363,66 @@ test_that("restore rebuilds a view whose membership emptied under a ghost", {
   expect_length(model_shown(st), 0L)
   expect_length(model_members(st), 0L)
   expect_no_error(validate_board(st$board))
+})
+
+test_that("a restore's staged frames never overwrite the authored grid", {
+
+  # dockviewR applies a restored grid incrementally, streaming intermediate
+  # `_state` frames -- a tab group transiently split into separate leaves before
+  # the back tabs collapse. Each is server-sourced (the mirror's own restore
+  # push provoked it), so the `_state-source` skip drops it and the committed
+  # grid holds at the authored value: an export mid-load persists the pushed
+  # arrangement, not a frame that was never anyone's intent. The invariant --
+  # between a boundary push and its client ack the committed grid never diverges
+  # from authored absent a membership change -- is why the skip is a cause
+  # filter where the old debounce was only a (defeatable) time filter.
+  st <- model_new()
+  members <- model_members(st)
+
+  # Authored: the members grouped into one tab (a leaf beside a group). The
+  # restore push settles it as the stored, authoritative grid.
+  st$client$pending <- client_grid(members, nested = TRUE)
+  st <- model_deliver_echo(st)$st
+  st <- model_restore(st)
+  authored <- model_stored(st)
+  expect_false(is.null(authored))
+
+  # The restore application streams the group as separate leaves, in shifting
+  # orders and sizes -- flat frames, structurally unlike the grouped authored,
+  # so only the `_state-source` skip (not the all.equal tolerance) holds them.
+  staged <- list(
+    client_grid(members),
+    client_grid(rev(members)),
+    client_grid(members, sizes = c(0.7, 0.2, 0.1))
+  )
+
+  for (i in seq_along(staged)) {
+
+    st$client$pending <- staged[[i]]
+
+    expect_false(
+      isTRUE(all.equal(authored, as_dock_grid(staged[[i]]),
+                       tolerance = grid_size_tol())),
+      info = sprintf("frame %d differs from authored", i)
+    )
+
+    res <- model_deliver_echo(st, source = "server")
+    st <- res$st
+
+    expect_identical(res$commit, 0L, info = sprintf("frame %d no commit", i))
+    expect_true(
+      isTRUE(all.equal(
+        model_stored(st), authored, tolerance = grid_size_tol()
+      )),
+      info = sprintf("frame %d holds authored", i)
+    )
+  }
+
+  # The user's own reorder is the ack: a client-sourced echo commits, exactly as
+  # a gesture always has.
+  st$client$pending <- client_grid(rev(members))
+
+  expect_identical(model_deliver_echo(st, source = "client")$commit, 1L)
 })
 
 test_that("seeded interleavings hold the invariants and converge", {
