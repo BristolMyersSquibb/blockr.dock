@@ -89,6 +89,44 @@ test_that("op_add_panel routes an extension panel and skips an unknown one", {
   expect_null(seen)
 })
 
+test_that("op_add_panel builds an off-screen card with served ctrl (#331)", {
+
+  # A block that lived only in an off-screen view has no card yet; op_add_panel
+  # builds it before the show. It must build with the served ctrl plugin (which
+  # board_plugins() drops), so the control toggle is present -- a served
+  # ctrl_block whose UI drops a marker proves it rode through.
+  card <- NULL
+  local_mocked_bindings(
+    insertUI = function(selector, where, ui, ...) {
+      card <<- c(card, list(as.character(ui)))
+      invisible()
+    },
+    show_block_panel = function(...) invisible()
+  )
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block("iris")))
+
+  served <- custom_plugins(
+    ctrl_block(ui = function(id, x) htmltools::span(class = "ctrl-sentinel"))
+  )(brd)
+
+  dock <- list(
+    proxy = list(session = MockShinySession$new()),
+    board_ns = NS("board"),
+    live_panels = shiny::reactiveVal(character()),
+    layout = function() NULL,
+    prev_active_group = shiny::reactiveVal(NULL),
+    visibility = fake_visibility("a"),
+    plugins = served
+  )
+
+  op_add_panel("block_panel-a", list(), dock, brd)
+
+  expect_match(
+    paste(unlist(card), collapse = ""), "ctrl-sentinel", fixed = TRUE
+  )
+})
+
 test_that("op_remove_panel removes a live panel, skips an absent one", {
 
   removed <- NULL

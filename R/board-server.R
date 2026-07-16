@@ -11,6 +11,10 @@
 #'   two reactiveVal environments (`required`, `visible`) the dock writes to
 #'   gate off-screen blocks.
 #' @param ... Extension server arguments.
+#' @param plugins Served board plugins. Core threads these to its own block
+#'   server but not to callbacks, so `blockr_app_server.dock_board()` captures
+#'   and forwards them here; stashed on `active_dock` so the deferred card-build
+#'   paths see the served ctrl / edit UI. Defaults to the board default set.
 #' @param session Shiny session.
 #'
 #' @return List with `dock`, `actions`, `view_data`, and extension
@@ -18,6 +22,7 @@
 #'
 #' @noRd
 board_server_callback <- function(board, update, visibility, ...,
+                                  plugins = board_plugins(isolate(board$board)),
                                   session = get_session()) {
   initial_board <- isolate(board$board)
 
@@ -56,6 +61,11 @@ board_server_callback <- function(board, update, visibility, ...,
   # the dock handle every card-touching path receives (view switch, panel-op
   # apply, core insert / remove) -- so they read and write the one channel.
   active_dock$visibility <- visibility
+
+  # The served plugin set rides the same handle so those deferred card-build
+  # paths build with the ctrl / edit UI serve() installed, not board_plugins()'s
+  # default (which carries no served ctrl_block).
+  active_dock$plugins <- plugins
 
   switch_view_observer(session, update, client_active)
   add_view_observer(client_views, session, board, update)
@@ -412,6 +422,7 @@ show_view_ui <- function(view_id, docks) {
 # the result in `docks` under the view id. `active` stamps the active CSS
 # class at insert so the initially-shown view needs no switch round-trip.
 create_view <- function(v_id, layout, board, update, session, docks, visibility,
+                        plugins = board_plugins(isolate(board$board)),
                         blocks = NULL, extensions = NULL, active = FALSE) {
 
   ns <- session$ns
@@ -437,7 +448,7 @@ create_view <- function(v_id, layout, board, update, session, docks, visibility,
   )
 
   docks[[v_id]] <- manage_dock(
-    v_id, board, update, visibility,
+    v_id, board, update, visibility, plugins,
     layout = layout,
     blocks = blocks,
     extensions = extensions
@@ -552,6 +563,7 @@ reconcile_views <- function(board, update, docks, active_dock,
       session,
       docks,
       isolate(active_dock$visibility),
+      isolate(active_dock$plugins),
       blocks = board_blocks(brd),
       extensions = dock_extensions(brd),
       active = is.null(isolate(client_active()))
@@ -591,6 +603,7 @@ manage_dock <- function(
   board,
   update,
   visibility,
+  plugins = board_plugins(isolate(board$board)),
   layout = NULL,
   blocks = NULL,
   extensions = NULL
@@ -625,7 +638,8 @@ manage_dock <- function(
       n_panels = n_panels,
       prev_active_group = prev_active_group,
       active_group_trail = active_group_trail,
-      visibility = visibility
+      visibility = visibility,
+      plugins = plugins
     )
 
     # Apply server-initiated panel ops to this view's live dock -- the sole

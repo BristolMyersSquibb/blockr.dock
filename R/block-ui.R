@@ -200,15 +200,16 @@ build_block_ui <- function(id, x, blocks, visibility, ..., edit_ui,
 }
 
 # build_block_ui for callers that hold the board but not the plugins (the view
-# switch, the add-panel modal), deriving edit / ctrl UI the way board_ui does.
+# switch, the add-panel modal). Takes the served plugin set, since
+# board_plugins(x) is only the board default and drops any served ctrl_block;
+# serve() threads the real set via active_dock, falling back to that default.
 ensure_block_ui <- function(id, x, blocks, visibility,
+                            plugins = board_plugins(x),
                             session = get_session()) {
 
   if (all(names(blocks) %in% built_cards(visibility))) {
     return(invisible(character()))
   }
-
-  plugins <- board_plugins(x)
 
   build_block_ui(
     id,

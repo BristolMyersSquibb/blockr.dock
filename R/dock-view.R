@@ -1615,7 +1615,7 @@ switch_active_view <- function(active, docks, active_dock, client_active,
     ]
     ensure_block_ui(
       session$ns(NULL), brd, active_blocks, active_dock$visibility,
-      session = session
+      plugins = active_dock$plugins, session = session
     )
 
     show_view_ui(active, docks)
