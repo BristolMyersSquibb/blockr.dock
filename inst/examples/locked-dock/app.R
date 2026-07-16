@@ -1,7 +1,7 @@
 library(blockr.dock)
 library(blockr.core)
 
-options(blockr.dock_is_locked = TRUE)
+options(blockr.locked = TRUE)
 
 serve(
   new_dock_board(

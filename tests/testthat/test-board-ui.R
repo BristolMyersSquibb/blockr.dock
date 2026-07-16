@@ -121,13 +121,13 @@ test_that("locked mode renders a navbar lock indicator", {
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))
 
   unlocked_html <- withr::with_options(
-    list(blockr.dock_is_locked = NULL),
+    list(blockr.locked = NULL),
     as.character(board_ui("test", brd))
   )
   expect_false(grepl("blockr-lock-indicator", unlocked_html, fixed = TRUE))
 
   locked_html <- withr::with_options(
-    list(blockr.dock_is_locked = TRUE),
+    list(blockr.locked = TRUE),
     as.character(board_ui("test", brd))
   )
   expect_match(locked_html, "blockr-lock-indicator", fixed = TRUE)
@@ -135,4 +135,22 @@ test_that("locked mode renders a navbar lock indicator", {
   expect_match(locked_html, "blockr-lock-indicator-label", fixed = TRUE)
   # Visible label, not just the aria-label / tooltip.
   expect_match(locked_html, ">Read-only<", fixed = TRUE)
+})
+
+test_that("locked mode drops the board-options accordion (#135)", {
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  html <- withr::with_options(
+    list(blockr.locked = TRUE),
+    as.character(board_ui("test", brd))
+  )
+
+  # The editable board_name input and the options accordion are gone -- both
+  # write board state, which core's gate refuses while locked.
+  expect_false(grepl('id="test-board_name"', html, fixed = TRUE))
+  expect_false(grepl('id="test-board_options"', html, fixed = TRUE))
+
+  # The read-only generated-code export stays available.
+  expect_match(html, 'id="generate_code"', fixed = TRUE)
 })

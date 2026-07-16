@@ -8,8 +8,9 @@
 #' @param board Reactive board state (list with `$board`).
 #' @param update Reactive update signal from blockr.core.
 #' @param visibility Per-block visibility channel from blockr.core: a list of
-#'   two reactiveVal environments (`required`, `visible`) the dock writes to
-#'   gate off-screen blocks.
+#'   three reactiveVal environments (`required`, `visible`, `frozen`) the dock
+#'   writes to gate off-screen blocks and to freeze the inputs of blocks whose
+#'   controls are hidden.
 #' @param ... Extension server arguments.
 #' @param plugins Served board plugins. Core threads these to its own block
 #'   server but not to callbacks, so `blockr_app_server.dock_board()` captures
@@ -55,11 +56,12 @@ board_server_callback <- function(board, update, visibility, ...,
   client_active <- reactiveVal(NULL)
   client_views <- reactiveVal(seed_view_state(board_views(initial_board)))
 
-  # The `visibility` channel core hands us (per-block `required` / `visible`
-  # reactiveVal slots) is the single store: its `required` axis doubles as the
-  # dock's build ledger, read back via built_cards(). Stash it on active_dock --
-  # the dock handle every card-touching path receives (view switch, panel-op
-  # apply, core insert / remove) -- so they read and write the one channel.
+  # The `visibility` channel core hands us (per-block `required` / `visible` /
+  # `frozen` reactiveVal slots) is the single store: its `required` axis doubles
+  # as the dock's build ledger, read back via built_cards(). Stash it on
+  # active_dock -- the dock handle every card-touching path receives (view
+  # switch, panel-op apply, core insert / remove) -- so they read and write the
+  # one channel.
   active_dock$visibility <- visibility
 
   # The served plugin set rides the same handle so those deferred card-build
@@ -67,10 +69,17 @@ board_server_callback <- function(board, update, visibility, ...,
   # default (which carries no served ctrl_block).
   active_dock$plugins <- plugins
 
-  switch_view_observer(session, update, client_active)
+  switch_view_observer(
+    session, update, client_active, board, docks, active_dock
+  )
   add_view_observer(client_views, session, board, update)
   remove_view_observer(client_views, session, update)
   rename_view_observer(client_views, session, update)
+
+  # Freeze the inputs of every block whose controls are hidden -- and every
+  # block on a locked board -- so a forged input behind the hidden / read-only
+  # controls reaches nothing server-side (#127).
+  freeze_hidden_inputs(board, visibility)
 
   # Reconcile the live dock session against the committed board (create /
   # destroy / restore / rename / switch views), keeping apply_board_update a
@@ -202,20 +211,38 @@ bare_view <- function(x) {
 #' A tab click (`input$view_nav` carries the target view id) requests an
 #' active-view change through the update lifecycle; the reconcile pass does
 #' the DOM switch. Guarded so a no-op (e.g. the nav echoing a programmatic
-#' `value` set back) does not re-enter the lifecycle.
+#' `value` set back) does not re-enter the lifecycle. On a locked board core's
+#' update gate rejects the active-view update, so the switch is driven directly
+#' against the DOM instead, keeping navigation live on a read-only board.
 #'
 #' @param session Shiny session.
 #' @param update Board update signal.
 #' @param client_active Reactive holding the client-shown active view id.
+#' @param board Reactive board state, read to detect the locked case.
+#' @param docks,active_dock Live dock registry and active-dock handle, driving
+#'   the client-side switch when locked.
 #'
 #' @noRd
-switch_view_observer <- function(session, update, client_active) {
+switch_view_observer <- function(session, update, client_active, board, docks,
+                                 active_dock) {
   observeEvent(
     session$input$view_nav,
     {
       target <- session$input$view_nav
 
-      if (!identical(target, isolate(client_active()))) {
+      if (identical(target, isolate(client_active()))) {
+        return()
+      }
+
+      # On a locked board the active view is ephemeral client state, not a
+      # board mutation: core's update gate rejects every board_update while
+      # locked, so drive the DOM switch directly instead of via the lifecycle.
+      if (is_board_locked(isolate(board$board))) {
+        switch_active_view(
+          target, docks, active_dock, client_active, isolate(board$board),
+          session
+        )
+      } else {
         update(list(views = list(active = target)))
       }
     },
@@ -253,6 +280,46 @@ report_visible_observer <- function(visibility, client_active, docks) {
       mark_cards_rendered(visibility, on_screen(), view)
     }
   )
+}
+
+# Drive blockr.core's per-block `frozen` channel off the block-card section
+# toggles. A block whose "inputs" section is hidden -- and every block on a
+# locked board, whose controls are read-only -- is frozen: core pins its
+# expression and stops consuming its inputs, so a forged `Shiny.setInputValue`
+# behind the hidden controls reaches nothing. Upstream data still flows, and
+# showing the section again (or unlocking) thaws it.
+#
+# Freeze only once a block has reported its section state (`visible()` non-NULL,
+# which the client sends only after the card paints). A block must evaluate
+# while still editable, so core's expression pin captures its published value;
+# freezing one from birth would hold a blank. A block without the edit-block
+# plugin (no `visible`) never reports, hence is never frozen.
+freeze_hidden_inputs <- function(board, visibility) {
+
+  observe({
+
+    brd <- board$board
+    locked <- is_board_locked(brd)
+
+    for (id in board_block_ids(brd)) {
+
+      slot <- visibility$frozen[[id]]
+
+      if (is.null(slot)) {
+        next
+      }
+
+      vis <- board$blocks[[id]]$server$visible
+      sections <- if (not_null(vis)) vis()
+      reported <- not_null(sections)
+
+      frozen <- reported && (locked || !("inputs" %in% sections))
+
+      if (!identical(isolate(slot()), frozen)) {
+        slot(frozen)
+      }
+    }
+  })
 }
 
 # The grid mirror's observer, split from manage_dock for testability. It reacts

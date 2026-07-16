@@ -49,3 +49,19 @@ test_that("group_front_panel resolves a group to its front panel, else NULL", {
   expect_identical(group_front_panel(dock, "grp2"), "block_panel-b")
   expect_null(group_front_panel(dock, "absent"))
 })
+
+test_that("empty_dock_prompt offers no add control when locked (#136)", {
+
+  unlocked <- withr::with_options(
+    list(blockr.locked = NULL),
+    as.character(empty_dock_prompt(NS("x")))
+  )
+  expect_match(unlocked, 'id="x-empty_dock_add"', fixed = TRUE)
+
+  locked <- withr::with_options(
+    list(blockr.locked = TRUE),
+    as.character(empty_dock_prompt(NS("x")))
+  )
+  expect_false(grepl("empty_dock_add", locked, fixed = TRUE))
+  expect_match(locked, "lock-fill", fixed = TRUE)
+})

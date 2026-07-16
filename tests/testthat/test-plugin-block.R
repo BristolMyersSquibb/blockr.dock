@@ -218,7 +218,7 @@ test_that("locked dock keeps block_card_toggles hidden (#122)", {
 
   # Unlocked: widget renders visible, with `selected` matching saved attr
   unlocked <- withr::with_options(
-    list(blockr.dock_is_locked = NULL),
+    list(blockr.locked = NULL),
     block_card_toggles(blk, NS("x"))
   )
   expect_s3_class(unlocked, "shiny.tag.list")
@@ -229,7 +229,7 @@ test_that("locked dock keeps block_card_toggles hidden (#122)", {
   # Locked: widget still renders (so input$collapse_blk_sections seeds
   # accordion_panel_set) but is hidden and the tooltip script is dropped
   locked <- withr::with_options(
-    list(blockr.dock_is_locked = TRUE),
+    list(blockr.locked = TRUE),
     block_card_toggles(blk, NS("x"))
   )
   expect_s3_class(locked, "shiny.tag")

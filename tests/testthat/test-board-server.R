@@ -1419,3 +1419,188 @@ test_that("switch_active_view first-visit card uses served ctrl (#331)", {
     paste(unlist(card), collapse = ""), "ctrl-sentinel", fixed = TRUE
   )
 })
+
+test_that("locked board switches views client-side, no board update (#127)", {
+
+  withr::local_options(blockr.locked = TRUE)
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a", B = "b")
+  )
+
+  client_active <- reactiveVal("A")
+  captured <- NULL
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        function(input, output, session) {
+          switch_view_observer(
+            session,
+            update = function(x) captured <<- x,
+            client_active = client_active,
+            board = reactiveValues(board = brd),
+            docks = reactiveValues(),
+            active_dock = reactiveValues()
+          )
+        }
+      )
+    },
+    {
+      session$setInputs(view_nav = "A")
+      session$setInputs(view_nav = "B")
+      session$flushReact()
+
+      # The active view advances in session state, but nothing travels the
+      # update channel: on a locked board core's gate rejects every board
+      # update, so navigation switches the DOM directly.
+      expect_identical(client_active(), "B")
+      expect_null(captured)
+    }
+  )
+})
+
+test_that("unlocked board switches views through the update channel", {
+
+  withr::local_options(blockr.locked = FALSE)
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a", B = "b")
+  )
+
+  client_active <- reactiveVal("A")
+  captured <- NULL
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        function(input, output, session) {
+          switch_view_observer(
+            session,
+            update = function(x) captured <<- x,
+            client_active = client_active,
+            board = reactiveValues(board = brd),
+            docks = reactiveValues(),
+            active_dock = reactiveValues()
+          )
+        }
+      )
+    },
+    {
+      session$setInputs(view_nav = "A")
+      session$setInputs(view_nav = "B")
+      session$flushReact()
+
+      # The switch rides the update lifecycle; flipping client_active is the
+      # reconcile pass's job, so the observer leaves it untouched.
+      expect_identical(captured, list(views = list(active = "B")))
+      expect_identical(client_active(), "A")
+    }
+  )
+})
+
+test_that("hiding a block's input section freezes it on the channel (#127)", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block())
+  )
+
+  vis_a <- reactiveVal(c("inputs", "outputs"))
+  vis_b <- reactiveVal(c("inputs", "outputs"))
+
+  board <- reactiveValues(
+    board = brd,
+    blocks = list(
+      a = list(server = list(visible = vis_a)),
+      b = list(server = list(visible = vis_b))
+    )
+  )
+
+  visibility <- fake_visibility(c("a", "b"))
+
+  is_frozen <- function(id) isolate(visibility$frozen[[id]]())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        function(input, output, session) {
+          freeze_hidden_inputs(board, visibility)
+        }
+      )
+    },
+    {
+      session$flushReact()
+
+      # Both sections shown on an unlocked board: nothing frozen.
+      expect_false(is_frozen("a"))
+      expect_false(is_frozen("b"))
+
+      # Hide b's input section -> only b freezes.
+      vis_b("outputs")
+      session$flushReact()
+      expect_false(is_frozen("a"))
+      expect_true(is_frozen("b"))
+
+      # Show it again -> thaw.
+      vis_b(c("inputs", "outputs"))
+      session$flushReact()
+      expect_false(is_frozen("b"))
+    }
+  )
+})
+
+test_that("a locked board freezes every block once it reports (#127)", {
+
+  withr::local_options(blockr.locked = TRUE)
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block())
+  )
+
+  # `a` has reported its sections (its card painted); `b` has not yet.
+  vis_a <- reactiveVal(c("inputs", "outputs"))
+  vis_b <- reactiveVal(NULL)
+
+  board <- reactiveValues(
+    board = brd,
+    blocks = list(
+      a = list(server = list(visible = vis_a)),
+      b = list(server = list(visible = vis_b))
+    )
+  )
+
+  visibility <- fake_visibility(c("a", "b"))
+
+  is_frozen <- function(id) isolate(visibility$frozen[[id]]())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        function(input, output, session) {
+          freeze_hidden_inputs(board, visibility)
+        }
+      )
+    },
+    {
+      session$flushReact()
+
+      # `a` shows its inputs, yet the locked board freezes it anyway -- a forged
+      # input can no longer steer it. `b` has not painted (no reported
+      # sections), so it stays editable, letting its expression evaluate and pin
+      # before the freeze lands.
+      expect_true(is_frozen("a"))
+      expect_false(is_frozen("b"))
+
+      # `b` paints -> it freezes too.
+      vis_b(c("inputs", "outputs"))
+      session$flushReact()
+      expect_true(is_frozen("b"))
+    }
+  )
+})
