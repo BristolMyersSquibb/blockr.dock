@@ -154,11 +154,12 @@ as_dock_view.dock_layout <- function(x, ...) {
 # `{root, orientation}` wrapper. Inverse of `tree_to_grid()`.
 grid_to_tree <- function(grid) {
 
-  gid <- 0L
+  counter <- new.env(parent = emptyenv())
+  counter$n <- 0L
 
   next_id <- function() {
-    gid <<- gid + 1L
-    as.character(gid)
+    counter$n <- counter$n + 1L
+    as.character(counter$n)
   }
 
   to_tree <- function(node, size) {

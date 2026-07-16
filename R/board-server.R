@@ -456,7 +456,7 @@ remove_view <- function(v_id, session, docks) {
   }
 
   hide_view_ui(v_id, docks)
-  destroy_module(v_id, session = session)
+  session$destroy(v_id)
   removeUI(
     selector = paste0("#", session$ns(as_view_handle_id(v_id))),
     immediate = TRUE,

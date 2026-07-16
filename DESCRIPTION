@@ -22,7 +22,7 @@ Roxygen: list(markdown = TRUE)
 Imports:
     blockr.core (>= 0.1.4),
     bsicons,
-    shiny,
+    shiny (>= 1.14.0),
     shinyjs,
     bslib,
     glue,
