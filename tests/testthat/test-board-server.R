@@ -1604,3 +1604,60 @@ test_that("a locked board freezes every block once it reports (#127)", {
     }
   )
 })
+
+test_that("the grid-echo mirror is wired only when unlocked (#339)", {
+
+  board_rv <- board_args(blocks = c(a = new_dataset_block()))
+
+  echo_wired <- 0L
+  local_mocked_bindings(
+    observe_grid_echo = function(...) {
+      echo_wired <<- echo_wired + 1L
+      invisible()
+    }
+  )
+
+  wire_mirror <- function() {
+    ms <- new_mock_session()
+    with_mock_context(ms, {
+      manage_dock("dock_main", board_rv, visibility = fake_visibility("a"),
+                  update = reactiveVal())
+    })
+    ms$flushReact()
+    if (!ms$isClosed()) ms$close()
+  }
+
+  echo_wired <- 0L
+  withr::with_options(list(blockr.locked = NULL), wire_mirror())
+  expect_identical(echo_wired, 1L)
+
+  # Locked: the futile geometry write-back is skipped, so the mirror is never
+  # wired -- no commit-then-reject per view visit.
+  echo_wired <- 0L
+  withr::with_options(list(blockr.locked = TRUE), wire_mirror())
+  expect_identical(echo_wired, 0L)
+})
+
+test_that("a locked board still wires the render path (#339)", {
+
+  board_rv <- board_args(blocks = c(a = new_dataset_block()))
+
+  render_wired <- 0L
+  local_mocked_bindings(
+    report_visible_observer = function(...) {
+      render_wired <<- render_wired + 1L
+      invisible()
+    }
+  )
+
+  withr::local_options(blockr.locked = TRUE)
+
+  with_mock_session({
+    board_server_callback(board_rv, update = reactiveVal(),
+                          visibility = fake_visibility("a"))
+  })
+
+  # The grid mirror is gated when locked, but the visible-axis writer that
+  # paints the front tab must not be -- gating it would blank a locked board.
+  expect_identical(render_wired, 1L)
+})

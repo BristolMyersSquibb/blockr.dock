@@ -13,6 +13,19 @@ retry_download <- function(app, output, .attempts = 6L) {
   stop(res)
 }
 
+# Every e2e AppDriver goes through here so the chromote command timeout is
+# hardened in one place. A loaded CI runner (Windows especially) can take longer
+# than chromote's 10s default to bind the app's port, so AppDriver's first
+# `Page.navigate` times out at init (rstudio/shinytest2#448). The chromote
+# session inherits its command timeout from the default chromote object, so
+# raise that before the session is spawned -- via `default_chromote_object()`,
+# the same object AppDriver draws its session from.
+new_app_driver <- function(...) {
+  chrome <- chromote::default_chromote_object()
+  chrome$default_timeout <- 60
+  shinytest2::AppDriver$new(...)
+}
+
 board_args <- function(...) {
   generate_plugin_args(
     new_dock_board(...),

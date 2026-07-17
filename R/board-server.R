@@ -734,11 +734,22 @@ manage_dock <- function(
     # observer below. dockViewR emits one settled `_state` per gesture (a
     # gesture's layout mutations coalesce onto a microtask), so a re-echo after
     # quiescence canonicalises identically and writes nothing.
-    commit_grid <- function(grid) {
-      update(list(views = list(grid = set_names(list(grid), id))))
-    }
+    #
+    # A locked board takes no geometry write-back: `commit_grid` rides the
+    # `update()` gate blockr.core rejects while locked, and dockViewR echoes
+    # `_state` on every view visit, so a live mirror would commit-then-reject
+    # each visit. Skip wiring it -- locking is a static deploy option, decided
+    # once here. Do NOT extend this to the render path: report_visible_observer
+    # also reacts to `dock$layout()`, but it writes the visibility channel (what
+    # paints the front tab), not the board, and must stay live when locked.
+    if (!is_dock_locked()) {
 
-    observe_grid_echo(id, dock, board, commit_grid)
+      commit_grid <- function(grid) {
+        update(list(views = list(grid = set_names(list(grid), id))))
+      }
+
+      observe_grid_echo(id, dock, board, commit_grid)
+    }
 
     if (get_log_level() >= debug_log_level) {
       observeEvent(

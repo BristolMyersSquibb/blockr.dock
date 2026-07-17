@@ -66,7 +66,7 @@ test_that("dock app renders a block added via the extension (#191)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "empty", "app.R", package = "blockr.dock"),
     name = "dock",
     seed = 42,
@@ -101,7 +101,7 @@ test_that("edit board extension links blocks (e2e)", {
   # A board pre-seeded with a source and a transform block so the test drives
   # only link operations -- adding blocks would deactivate the extension panel
   # and race shinytest2. The same bare fixture serves the stacks test below.
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-add", "app.R", package = "blockr.dock"),
     name = "edit-link",
     seed = 42,
@@ -132,7 +132,7 @@ test_that("adding a second block keeps both block panels (#196)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "empty", "app.R", package = "blockr.dock"),
     name = "panel-visibility",
     seed = 42,
@@ -166,7 +166,7 @@ test_that("edit board extension stacks (e2e)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-add", "app.R", package = "blockr.dock"),
     name = "edit-stacks",
     seed = 42,
@@ -215,7 +215,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
     name = "multi-view",
     seed = 42,
@@ -259,7 +259,7 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "serdes", "app.R", package = "blockr.dock"),
     name = "serdes",
     seed = 42,
@@ -352,7 +352,7 @@ test_that("deleting a block via its card menu drops the panel and its link", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
     name = "remove-block",
     seed = 42,
@@ -387,7 +387,7 @@ test_that("removing a link via the edit extension updates the board", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
     name = "remove-link",
     seed = 42,
@@ -418,7 +418,7 @@ test_that("removing a stack via the edit extension updates the board", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
     name = "remove-stack",
     seed = 42,
@@ -449,7 +449,7 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
     name = "view-lifecycle",
     seed = 42,
@@ -549,7 +549,7 @@ test_that("dock panel move updates layout state and serialization (#234)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
     name = "layout-edit",
     seed = 42,
@@ -648,7 +648,7 @@ test_that("locked board hides block actions, shows lock indicator (#236)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "locked-dock", "app.R", package = "blockr.dock"),
     name = "locked-board",
     seed = 42,
@@ -695,7 +695,7 @@ test_that("single-page board renders one auto-named view (#236)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "single-page", "app.R", package = "blockr.dock"),
     name = "single-page",
     seed = 42,
@@ -725,7 +725,7 @@ test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
 
   skip_on_cran()
 
-  app <- shinytest2::AppDriver$new(
+  app <- new_app_driver(
     system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
     name = "busy-pulse",
     seed = 42,
