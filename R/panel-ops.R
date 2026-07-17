@@ -95,7 +95,7 @@ op_add_panel <- function(pid, hint, dock, board, active = TRUE) {
       # inactive branch only wraps a panel (no card move), so it needs none.
       ensure_block_ui(
         dock_board_ns(dock)(NULL), board, block,
-        dock$visibility, session = dock$proxy$session
+        dock$visibility, plugins = dock$plugins, session = dock$proxy$session
       )
       show_block_panel(block, add_panel = pos, dock = dock)
     } else {

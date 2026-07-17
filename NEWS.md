@@ -8,6 +8,16 @@
   blockr.io's Download/Export blocks name files and Excel sheets by the
   link input verbatim, which surfaced as `1.csv` / `2.csv` exports.
 
+* Off-screen views' block cards -- built on first visit rather than at
+  startup (#272) -- are now built with the plugin set passed to `serve()`,
+  not the board default (#331). `ensure_block_ui()` re-derived the edit /
+  control UI from `board_plugins()`, which omits any custom `ctrl_block`,
+  so a block's control toggle (the AI "sparkle" when the served plugin is
+  `blockr.ai::ai_ctrl_block`) showed on the initially-active view but was
+  absent on every other view's cards. The served plugin set now rides
+  `active_dock` alongside the visibility channel, so the deferred build --
+  the view switch and the add-panel path -- sees the served `ctrl_block`.
+
 * At startup the board now builds only the active view's dockView;
   off-screen views' docks are created on first visit rather than all up
   front (#304), mirroring the card deferral below. Building every view's

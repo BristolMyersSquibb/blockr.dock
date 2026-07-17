@@ -253,6 +253,36 @@ test_that("ensure_block_ui derives the edit plugin from the board", {
   expect_identical(seen$edit_ui, board_plugins(board)[["edit_block"]])
 })
 
+test_that("ensure_block_ui builds the card with the served ctrl (#331)", {
+
+  # A served ctrl_block whose UI drops a recognizable marker. board_plugins()
+  # carries no ctrl_block, so the marker rides the deferred card only when the
+  # served set -- not the board default -- reaches the build.
+  card <- NULL
+  local_mocked_bindings(
+    insertUI = function(selector, where, ui, ...) {
+      card <<- c(card, list(as.character(ui)))
+      invisible()
+    }
+  )
+
+  board <- new_dock_board(blocks = c(a = new_dataset_block("iris")))
+  vis <- fake_visibility("a")
+
+  served <- custom_plugins(
+    ctrl_block(ui = function(id, x) htmltools::span(class = "ctrl-sentinel"))
+  )(board)
+
+  ensure_block_ui(
+    "board", board, board_blocks(board), vis,
+    plugins = served, session = MockShinySession$new()
+  )
+
+  expect_match(
+    paste(unlist(card), collapse = ""), "ctrl-sentinel", fixed = TRUE
+  )
+})
+
 test_that("remove_block_ui removes the card, leaving the slot to core", {
 
   removed <- character()

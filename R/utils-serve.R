@@ -46,7 +46,16 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
 
 #' @export
 blockr_app_server.dock_board <- function(id, x, plugins, options, ...) {
-  board_server(id, x, plugins, options, callbacks = board_server_callback,
+
+  # Core threads `plugins` to its own block server but not to board callbacks,
+  # so capture them for the callback to stash on active_dock -- the deferred
+  # card-build paths need the served set, since board_plugins() drops any served
+  # ctrl_block.
+  callback <- function(...) {
+    board_server_callback(..., plugins = plugins)
+  }
+
+  board_server(id, x, plugins, options, callbacks = callback,
                callback_location = "start", ...)
 }
 

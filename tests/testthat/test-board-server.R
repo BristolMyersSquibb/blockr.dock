@@ -1331,3 +1331,91 @@ test_that("New view modal confirm submits an add-and-activate delta", {
     }
   )
 })
+
+test_that("board_server_callback stashes served plugins on the dock (#331)", {
+
+  board_rv <- board_args(blocks = c(a = new_dataset_block()))
+
+  served <- custom_plugins(ctrl_block())(isolate(board_rv$board))
+
+  with_mock_session(
+    {
+      res <- board_server_callback(
+        board_rv,
+        update = reactiveVal(),
+        visibility = fake_visibility("a"),
+        plugins = served
+      )
+
+      # The deferred card-build paths read the served set off this handle, so
+      # its ctrl_block -- absent from board_plugins() -- must survive here.
+      expect_true("ctrl_block" %in% names(res[["dock"]]$plugins))
+      expect_identical(res[["dock"]]$plugins, served)
+    }
+  )
+})
+
+test_that("manage_dock carries the served plugins on its view dock (#331)", {
+
+  board_rv <- board_args(blocks = c(a = new_dataset_block()))
+  served <- custom_plugins(ctrl_block())(isolate(board_rv$board))
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  res <- with_mock_context(ms, {
+    manage_dock(
+      "dock_main", board_rv, update = reactiveVal(),
+      visibility = fake_visibility("a"), plugins = served
+    )
+  })
+
+  ms$flushReact()
+
+  expect_identical(res$plugins, served)
+})
+
+test_that("switch_active_view first-visit card uses served ctrl (#331)", {
+
+  # The issue's repro: a block living only in an off-screen view has its card
+  # built on first visit, by switch_active_view. It must build with the served
+  # ctrl plugin (dropped by board_plugins()), so the control toggle is present.
+  card <- NULL
+  local_mocked_bindings(
+    insertUI = function(selector, where, ui, ...) {
+      card <<- c(card, list(as.character(ui)))
+      invisible()
+    },
+    hide_view_ui = function(...) invisible(),
+    show_view_ui = function(...) invisible(),
+    update_active_dock = function(...) invisible()
+  )
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block("iris"), b = new_dataset_block("mtcars")),
+    grids  = list(one = dock_grid("a"), two = dock_grid("b"))
+  )
+
+  served <- custom_plugins(
+    ctrl_block(ui = function(id, x) htmltools::span(class = "ctrl-sentinel"))
+  )(brd)
+
+  docks <- list(two = list(layout = function() NULL))
+  active_dock <- list(
+    visibility = fake_visibility(c("a", "b")),
+    plugins = served
+  )
+  session <- list(
+    ns = NS("board"),
+    sendCustomMessage = function(...) invisible(),
+    sendInputMessage = function(...) invisible()
+  )
+
+  switch_active_view(
+    "two", docks, active_dock, reactiveVal("one"), brd, session
+  )
+
+  expect_match(
+    paste(unlist(card), collapse = ""), "ctrl-sentinel", fixed = TRUE
+  )
+})
