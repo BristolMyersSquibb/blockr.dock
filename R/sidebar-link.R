@@ -494,10 +494,15 @@ seed_link_id <- function(board) {
 
 # The edit menu is the single-link counterpart to the connect menu: it
 # edits one existing link rather than offering a pool of new ones. `from`
-# and `to` are block pickers, the input port / name field re-renders for
+# and `to` are block pickers (the block-browser selectize, so they read
+# like the add-panel picker), the input port / name field re-renders for
 # the currently selected target, and the same eligibility, acyclicity and
 # uniqueness rules as `add_link_action` are enforced at commit. The commit
-# is a `links$mod` delta so the link id survives the edit.
+# removes and re-adds the link under the same id, so the id survives.
+#
+# The endpoints and input field are `uiOutput`s so the open sidebar tracks
+# the board live: a block renamed / added / removed elsewhere (e.g. while
+# the sidebar is pinned) refreshes the pickers, keeping the selection.
 
 edit_link_menu_ui <- function(id, board, link_id) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
@@ -511,10 +516,9 @@ edit_link_menu_ui <- function(id, board, link_id) {
       "This link is no longer on the board."
     )
   } else {
-    choices <- edit_link_block_choices(board_blocks(board))
     tagList(
-      selectInput(ns("from"), "Source block", choices, selected = row$from),
-      selectInput(ns("to"), "Target block", choices, selected = row$to),
+      css_block_selectize(),
+      uiOutput(ns("endpoints")),
       uiOutput(ns("input_field")),
       actionButton(
         ns("confirm"), "Update link",
@@ -538,13 +542,54 @@ edit_link_menu_server <- function(id, board, link_id) {
     id,
     function(input, output, session) {
 
+      # Authoritative source / target selection. Switching the edited link
+      # resets it to that link's committed endpoints - the persisted
+      # `input$from/to` still hold the previously edited link's pick until
+      # the client re-reports, so relying on them would leak one edit into
+      # the next (and mis-key the input control on a variadic vs finite
+      # target). Within an edit it tracks the user's picks.
+      sel <- reactiveValues(from = NULL, to = NULL)
+
+      observeEvent(link_id_fn(), {
+        row <- edit_link_row(isolate(board()), link_id_fn())
+        sel$from <- if (is.null(row)) NULL else row$from
+        sel$to <- if (is.null(row)) NULL else row$to
+      }, ignoreNULL = FALSE)
+
+      observeEvent(input$from, sel$from <- input$from, ignoreInit = TRUE)
+      observeEvent(input$to, sel$to <- input$to, ignoreInit = TRUE)
+
+      # Source / target pickers, seeded from the link's committed endpoints
+      # and re-rendered on the link switching or any board change - so a
+      # rename / add / remove elsewhere refreshes the options and labels
+      # while the sidebar stays open. The selectize is client-owned once
+      # rendered, so this does not depend on `sel` (which would re-init it
+      # on every pick).
+      output$endpoints <- renderUI({
+        lid <- link_id_fn()
+        req(length(lid) == 1L, !is.na(lid), nzchar(lid))
+        brd <- board()
+        row <- edit_link_row(brd, lid)
+        req(row)
+
+        ids <- board_block_ids(brd)
+        tagList(
+          edit_link_block_select(
+            session$ns("from"), "Source block", brd, ids, row$from
+          ),
+          edit_link_block_select(
+            session$ns("to"), "Target block", brd, ids, row$to
+          )
+        )
+      })
+
       output$input_field <- renderUI({
         lid <- link_id_fn()
         req(length(lid) == 1L, !is.na(lid), nzchar(lid))
         brd <- board()
         row <- edit_link_row(brd, lid)
         req(row)
-        edit_link_input_field(session$ns, brd, lid, input$to %||% row$to, row)
+        edit_link_input_field(session$ns, brd, lid, sel$to %||% row$to, row)
       })
 
       eventReactive(
@@ -555,10 +600,22 @@ edit_link_menu_server <- function(id, board, link_id) {
           brd <- board()
           req(lid %in% board_link_ids(brd))
 
-          spec <- gather_edit_link_spec(input, brd, lid)
+          spec <- gather_edit_link_spec(input, brd, lid, sel$from, sel$to)
           validate_edit_link_spec(spec, brd, lid, session)
 
-          list(delta = edit_link_delta(spec, brd, lid), nonce = input$confirm)
+          # An edit is committed as a remove + re-add under the *same* id,
+          # not a `links$mod` delta: the id survives and the full link is
+          # re-applied (mirroring the edit-board table's link edits). NULL
+          # when nothing changed, so the action issues no update.
+          link <- if (length(edit_link_delta(spec, brd, lid))) {
+            as_links(
+              set_names(
+                list(new_link(spec$from, spec$to, spec$input)), lid
+              )
+            )
+          }
+
+          list(link = link, nonce = input$confirm)
         },
         ignoreNULL = TRUE,
         ignoreInit = TRUE
@@ -609,10 +666,14 @@ edit_link_input_field <- function(ns, board, link_id, to_id, row) {
   )
 }
 
-gather_edit_link_spec <- function(input, board, link_id) {
+# `from` / `to` are the authoritative selections tracked by the server
+# (reset on a link switch); they fall back to the link's committed
+# endpoints when the pickers have not reported yet.
+gather_edit_link_spec <- function(input, board, link_id, from = NULL,
+                                  to = NULL) {
   row <- edit_link_row(board, link_id)
-  from <- input$from %||% row$from
-  to <- input$to %||% row$to
+  from <- from %||% row$from
+  to <- to %||% row$to
   to_blk <- board_blocks(board)[[to]]
 
   # An untouched field falls back to what the rendered control pre-selects
@@ -705,8 +766,8 @@ validate_edit_link_spec <- function(spec, board, link_id, session) {
   invisible(TRUE)
 }
 
-# The subset of `from` / `to` / `input` that actually changed, keyed for a
-# `links$mod` delta. Empty when the user confirmed without editing.
+# The subset of `from` / `to` / `input` that actually changed. Empty when
+# the user confirmed without editing (the commit is then skipped).
 edit_link_delta <- function(spec, board, link_id) {
   row <- edit_link_row(board, link_id)
   fields <- c("from", "to", "input")
@@ -741,14 +802,23 @@ links_without <- function(board, link_id) {
   lnks[setdiff(board_link_ids(board), link_id)]
 }
 
-edit_link_block_choices <- function(blocks) {
-  set_names(
-    names(blocks),
-    chr_mply(edit_link_block_label, names(blocks), as.list(blocks))
+# A single-select block picker rendered with the block-browser selectize
+# (icon, name, package badge, id) - the same look as the add-panel picker
+# - preselected to `selected`. `build_block_options()` /
+# `js_blk_selectize_render()` are the shared block-browser helpers.
+edit_link_block_select <- function(id, label, board, blk_ids, selected) {
+  selectizeInput(
+    id,
+    label = label,
+    choices = NULL,
+    options = list(
+      options = build_block_options(board, blk_ids),
+      items = list(selected),
+      maxItems = 1L,
+      valueField = "value",
+      labelField = "label",
+      searchField = c("label", "description", "searchtext"),
+      render = js_blk_selectize_render()
+    )
   )
-}
-
-edit_link_block_label <- function(id, blk) {
-  nm <- block_name(blk) %||% id
-  if (nzchar(nm) && !identical(nm, id)) paste0(nm, " (", id, ")") else id
 }

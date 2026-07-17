@@ -451,23 +451,33 @@ test_that("remove link action", {
 # the link's current value.
 edit_link_menu <- function(session, from = NULL, to = NULL,
                            input_port = NULL, input_name = NULL, confirm = 1L) {
-  vals <- list(`menu-confirm` = confirm)
+  vals <- list()
   if (!is.null(from)) vals[["menu-from"]] <- from
   if (!is.null(to)) vals[["menu-to"]] <- to
   if (!is.null(input_port)) vals[["menu-input_port"]] <- input_port
   if (!is.null(input_name)) vals[["menu-input_name"]] <- input_name
-  do.call(session$setInputs, vals)
+
+  # Set the pickers first and let the selection observers settle (the user
+  # picks, then clicks), then commit - mirroring the real two-step flow.
+  if (length(vals)) {
+    do.call(session$setInputs, vals)
+    session$flushReact()
+  }
+  session$setInputs(`menu-confirm` = confirm)
 }
 
-expect_link_mod <- function(upd, id, delta) {
-  testthat::expect_length(upd, 1L)
+# An edit is committed as a remove + re-add of the same id (not a
+# `links$mod` delta): the id survives and the full link is re-applied.
+expect_link_edit <- function(upd, id, from, to, input) {
   testthat::expect_named(upd, "links")
-  testthat::expect_named(upd$links, "mod")
-  testthat::expect_named(upd$links$mod, id)
-  # `mod` entries are partial-arg deltas (a named list of `new_link()`
-  # argument values), not a full `links` object.
-  testthat::expect_false(inherits(upd$links$mod, "links"))
-  testthat::expect_identical(upd$links$mod[[id]], delta)
+  testthat::expect_setequal(names(upd$links), c("rm", "add"))
+  testthat::expect_identical(upd$links$rm, id)
+  testthat::expect_s3_class(upd$links$add, "links")
+  df <- as.data.frame(upd$links$add)
+  testthat::expect_identical(df$id, id)
+  testthat::expect_identical(df$from, from)
+  testthat::expect_identical(df$to, to)
+  testthat::expect_identical(df$input, input)
 }
 
 edit_link_env <- function(links, board_id = "b") {
@@ -505,7 +515,7 @@ test_that("edit link action: redirecting the target commits a mod delta", {
       # Re-point a -> h onto the merge block's `y` port; from is untouched.
       edit_link_menu(session, to = "m", input_port = "y")
 
-      expect_link_mod(r_update(), "l1", list(to = "m", input = "y"))
+      expect_link_edit(r_update(), "l1", from = "a", to = "m", input = "y")
     }
   )
 })
@@ -528,7 +538,7 @@ test_that("edit link action: switching the input slot commits only input", {
       session$flushReact()
       edit_link_menu(session, input_port = "y")
 
-      expect_link_mod(r_update(), "l1", list(input = "y"))
+      expect_link_edit(r_update(), "l1", from = "a", to = "m", input = "y")
     }
   )
 })
@@ -552,7 +562,7 @@ test_that("edit link action: naming a variadic positional slot", {
       # The variadic target renders a name field; a blank slot becomes named.
       edit_link_menu(session, input_name = "left")
 
-      expect_link_mod(r_update(), "l1", list(input = "left"))
+      expect_link_edit(r_update(), "l1", from = "a", to = "r", input = "left")
     }
   )
 })
@@ -575,7 +585,7 @@ test_that("edit link action: redirecting the source commits only from", {
       session$flushReact()
       edit_link_menu(session, from = "b")
 
-      expect_link_mod(r_update(), "l1", list(from = "b"))
+      expect_link_edit(r_update(), "l1", from = "b", to = "h", input = "data")
     }
   )
 })
@@ -694,7 +704,7 @@ test_that("edit link action: removing the edited link closes the sidebar", {
   )
 })
 
-test_that("edit link menu renders source / target pickers and a confirm", {
+test_that("edit link menu ui holds the endpoint / input slots and confirm", {
   board <- new_board(
     c(a = new_dataset_block("iris"), m = new_merge_block()),
     links = links(l1 = new_link("a", "m", "x"))
@@ -705,9 +715,9 @@ test_that("edit link menu renders source / target pickers and a confirm", {
     xml2::xml_find_first(doc, paste0("//*[@id='mid-", suffix, "']"))
   }
 
-  expect_false(is.na(xml2::xml_attr(by_id("from"), "id")))
-  expect_false(is.na(xml2::xml_attr(by_id("to"), "id")))
-  # The port / name control is server-rendered into this uiOutput slot.
+  # From / to and the port / name control are server-rendered into these
+  # uiOutput slots (so a board change refreshes them live).
+  expect_false(is.na(xml2::xml_attr(by_id("endpoints"), "id")))
   expect_false(is.na(xml2::xml_attr(by_id("input_field"), "id")))
   confirm <- xml2::xml_find_first(
     doc,
@@ -717,6 +727,74 @@ test_that("edit link menu renders source / target pickers and a confirm", {
     )
   )
   expect_false(is.na(xml2::xml_attr(confirm, "class")))
+})
+
+test_that("edit link menu renders rich source / target pickers", {
+  r_board <- reactiveValues(
+    board = new_board(
+      c(a = new_dataset_block("iris"), m = new_merge_block()),
+      links = links(l1 = new_link("a", "m", "x"))
+    ),
+    board_id = "b"
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(id, function(input, output, session) {
+        edit_link_menu_server(
+          "menu", board = reactive(r_board$board), link_id = reactive("l1")
+        )
+      })
+    },
+    {
+      session$flushReact()
+      ep <- as.character(output$`menu-endpoints`$html)
+      # Both pickers, rendered with the block-browser selectize (the
+      # add-panel look), not a bare <select>.
+      expect_true(grepl("menu-from", ep, fixed = TRUE))
+      expect_true(grepl("menu-to", ep, fixed = TRUE))
+      expect_true(grepl("selectize", ep))
+    }
+  )
+})
+
+test_that("edit link input field follows the switched link, not stale input", {
+  # Editing one link then another through the persistent menu module must
+  # not let the first link's target leak into the second: switching to a
+  # variadic-target link has to render the NAME control even though
+  # `input$to` still holds the previous (finite) target.
+  r_board <- reactiveValues(
+    board = new_board(
+      c(a = new_dataset_block("iris"), m = new_merge_block(),
+        r = new_rbind_block()),
+      links = links(l1 = new_link("a", "m", "x"), l2 = new_link("a", "r", ""))
+    ),
+    board_id = "b"
+  )
+  lid <- reactiveVal("l1")
+
+  testServer(
+    function(id, ...) {
+      moduleServer(id, function(input, output, session) {
+        edit_link_menu_server(
+          "menu", board = reactive(r_board$board), link_id = lid
+        )
+      })
+    },
+    {
+      session$flushReact()
+      session$setInputs(`menu-to` = "m")
+      session$flushReact()
+      port <- as.character(output$`menu-input_field`$html)
+      expect_true(grepl("menu-input_port", port, fixed = TRUE))
+
+      lid("l2")
+      session$flushReact()
+      name <- as.character(output$`menu-input_field`$html)
+      expect_true(grepl("menu-input_name", name, fixed = TRUE))
+      expect_false(grepl("menu-input_port", name, fixed = TRUE))
+    }
+  )
 })
 
 test_that("edit link menu ui is empty for an unknown link", {

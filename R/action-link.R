@@ -115,13 +115,13 @@ edit_link_action <- function(trigger, board, update, ...) {
           return()
         }
 
-        # `links$mod` deltas are applied via core's `update_link()`, which
-        # keeps the link id (a rm + add would drop it). An empty delta means
-        # the user confirmed without editing anything - nothing to apply.
-        delta <- committed()$delta
+        # The menu returns the edited link keyed by its (unchanged) id, or
+        # NULL when nothing changed. Commit it as a remove + re-add of that
+        # id in one update, which keeps the id and re-applies every field.
+        link <- committed()$link
 
-        if (length(delta)) {
-          update(list(links = list(mod = set_names(list(delta), id))))
+        if (!is.null(link)) {
+          update(list(links = list(rm = id, add = link)))
         }
 
         session$onFlushed(
