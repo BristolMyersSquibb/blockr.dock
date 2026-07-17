@@ -110,6 +110,54 @@ test_that("add link action: OUTGOING commit honours an explicit port", {
   )
 })
 
+test_that("add link action: variadic target resolves to a positional slot", {
+  local_mocked_sidebar()
+  r_board <- reactiveValues(
+    board = new_board(
+      c(a = new_dataset_block("iris"), r = new_rbind_block())
+    ),
+    board_id = "my_board"
+  )
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_link_action(
+          trigger = reactive("a"),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # Variadic target renders no port picker, so block_input arrives
+      # NULL; core's name-or-position model treats an integer name as a
+      # *named* argument, so the resolved slot must be positional ("").
+      commit_menu(session, source = "a", target = "r", link_id = "ar")
+
+      expect_added_link(
+        r_update(), id = "ar", from = "a", to = "r", input = ""
+      )
+    }
+  )
+})
+
+test_that("resolve_free_input gives a variadic target a positional slot", {
+  blocks <- board_blocks(
+    new_board(c(a = new_dataset_block("iris"), r = new_rbind_block()))
+  )
+
+  expect_identical(resolve_free_input(blocks[["r"]], "r", links()), "")
+
+  # A variadic target already carrying a positional link resolves to
+  # another positional slot, never a generated integer name.
+  wired <- links(id = "ar", from = "a", to = "r", input = "1")
+  expect_identical(resolve_free_input(blocks[["r"]], "r", wired), "")
+})
+
 test_that("add link action: INCOMING commit targets the anchor", {
   local_mocked_sidebar()
   # Anchor `h` (head) has a free input; the INCOMING section offers `a`

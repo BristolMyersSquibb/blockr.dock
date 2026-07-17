@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* `resolve_free_input()` now resolves a variadic link target to an empty
+  (positional) slot instead of a generated `"1"`, `"2"`, ... name, aligning
+  the "Connect ..." sidebar with blockr.core's name-or-position variadic
+  model (and with blockr.ui's link menu). An integer input name is treated
+  by core as a *named* argument, and downstream consumers such as
+  blockr.io's Download/Export blocks name files and Excel sheets by the
+  link input verbatim, which surfaced as `1.csv` / `2.csv` exports.
+
 * Off-screen views' block cards -- built on first visit rather than at
   startup (#272) -- are now built with the plugin set passed to `serve()`,
   not the board default (#331). `ensure_block_ui()` re-derived the edit /
