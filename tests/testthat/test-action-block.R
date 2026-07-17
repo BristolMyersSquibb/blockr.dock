@@ -267,6 +267,169 @@ test_that("prepend block action: target_input picks the link slot", {
   )
 })
 
+test_that("append block action: a name field names the variadic slot", {
+  r_board <- reactiveValues(
+    board = new_board(blocks = c(a = new_dataset_block())),
+    board_id = "b"
+  )
+  r_update <- reactiveVal(list())
+  local_mocked_bindings(
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL)
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        append_block_action(
+          trigger = reactive("a"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # Appending a variadic rbind: the name field arrives as block_input
+      # and names the new block's fresh slot.
+      session$setInputs(`browser-commit` = commit_spec(
+        type = "rbind_block", id = "r1", title = NULL,
+        link_id = "lnk1", block_input = "controls", nonce = 1
+      ))
+
+      df <- as.data.frame(r_update()$links$add)
+      expect_identical(df$to, "r1")
+      expect_identical(df$input, "controls")
+    }
+  )
+})
+
+test_that("prepend block action: a name field names the target slot", {
+  r_board <- reactiveValues(
+    board = new_board(blocks = c(r = new_rbind_block())),
+    board_id = "b"
+  )
+  r_update <- reactiveVal(list())
+  local_mocked_bindings(
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL)
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        prepend_block_action(
+          trigger = reactive("r"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # Prepending a source into a variadic target: target_input carries
+      # the typed name for the target's fresh slot.
+      session$setInputs(`browser-commit` = commit_spec(
+        type = "dataset_block", id = "d1", title = NULL,
+        link_id = "lnk1", target_input = "controls", nonce = 1
+      ))
+
+      df <- as.data.frame(r_update()$links$add)
+      expect_identical(df$to, "r")
+      expect_identical(df$input, "controls")
+    }
+  )
+})
+
+test_that("prepend block action: a duplicate target name is rejected", {
+  r_board <- reactiveValues(
+    board = new_board(
+      blocks = c(a = new_dataset_block(), r = new_rbind_block()),
+      links = links(id = "ar", from = "a", to = "r", input = "controls")
+    ),
+    board_id = "b"
+  )
+  r_update <- reactiveVal(list())
+  local_mocked_bindings(
+    show_sidebar         = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL)
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        prepend_block_action(
+          trigger = reactive("r"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      session$setInputs(`browser-commit` = commit_spec(
+        type = "dataset_block", id = "d1", title = NULL,
+        link_id = "lnk1", target_input = "controls", nonce = 1
+      ))
+
+      expect_identical(r_update(), list())
+    }
+  )
+})
+
+test_that("block browser renders a name field for variadic ends", {
+  board <- new_board(
+    c(a = new_dataset_block("iris"), r = new_rbind_block(),
+      m = new_merge_block())
+  )
+  by_class <- function(tok) {
+    sprintf(
+      "//*[contains(concat(' ', normalize-space(@class), ' '), ' %s ')]", tok
+    )
+  }
+  field_input <- function(html, block_type, cls) {
+    doc <- xml2::read_html(html)
+    card <- xml2::xml_find_first(
+      doc,
+      paste0(
+        by_class("blockr-block-browser-card"),
+        "[@data-block-type='", block_type, "']"
+      )
+    )
+    xml2::xml_find_first(card, paste0(".", by_class(cls), "//input"))
+  }
+
+  # Append a variadic rbind -> block-input becomes a free-text name field;
+  # a finite merge keeps its port <select> (no text input).
+  append_html <- as.character(block_browser_ui("b", board, append_to("a")))
+  rbind_name <- field_input(
+    append_html, "rbind_block", "blockr-block-browser-field-block-input"
+  )
+  expect_false(is.na(rbind_name))
+  expect_identical(
+    xml2::xml_attr(rbind_name, "placeholder"),
+    "leave blank for an unnamed input"
+  )
+  expect_true(
+    is.na(
+      field_input(
+        append_html, "merge_block", "blockr-block-browser-field-block-input"
+      )
+    )
+  )
+
+  # Prepend into a variadic target -> target-input becomes a name field.
+  prepend_html <- as.character(block_browser_ui("b", board, prepend_to("r")))
+  expect_false(
+    is.na(
+      field_input(
+        prepend_html, "dataset_block",
+        "blockr-block-browser-field-target-input"
+      )
+    )
+  )
+})
+
 test_that("prepend: NULL target_input falls back to only slot", {
   # head_block has arity 1 (input "data"); the browser hides the
   # target_input picker, so spec$target_input arrives as NULL. The

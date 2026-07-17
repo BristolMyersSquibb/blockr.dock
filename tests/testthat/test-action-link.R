@@ -152,10 +152,136 @@ test_that("resolve_free_input gives a variadic target a positional slot", {
 
   expect_identical(resolve_free_input(blocks[["r"]], "r", links()), "")
 
-  # A variadic target already carrying a positional link resolves to
-  # another positional slot, never a generated integer name.
-  wired <- links(id = "ar", from = "a", to = "r", input = "1")
-  expect_identical(resolve_free_input(blocks[["r"]], "r", wired), "")
+  # A variadic target already carrying a positional ("") link still
+  # resolves to another positional slot.
+  positional <- links(id = "ar", from = "a", to = "r", input = "")
+  expect_identical(resolve_free_input(blocks[["r"]], "r", positional), "")
+
+  # A legacy integer-named link never makes the resolver generate another
+  # integer name; the fresh slot is positional.
+  named <- links(id = "ar", from = "a", to = "r", input = "1")
+  expect_identical(resolve_free_input(blocks[["r"]], "r", named), "")
+})
+
+test_that("add link action: variadic target honours a user-supplied name", {
+  local_mocked_sidebar()
+  r_board <- reactiveValues(
+    board = new_board(
+      c(a = new_dataset_block("iris"), r = new_rbind_block())
+    ),
+    board_id = "my_board"
+  )
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_link_action(
+          trigger = reactive("a"),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # The variadic name field carries a typed slot name through as
+      # block_input, so the link is created as a named argument.
+      commit_menu(
+        session, source = "a", target = "r", link_id = "ar",
+        block_input = "controls"
+      )
+
+      expect_added_link(
+        r_update(), id = "ar", from = "a", to = "r", input = "controls"
+      )
+    }
+  )
+})
+
+test_that("add link action: a duplicate variadic input name is rejected", {
+  local_mocked_sidebar()
+  r_board <- reactiveValues(
+    board = new_board(
+      c(a = new_dataset_block("iris"), b = new_dataset_block("mtcars"),
+        r = new_rbind_block()),
+      links = links(id = "br", from = "b", to = "r", input = "controls")
+    ),
+    board_id = "my_board"
+  )
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_link_action(
+          trigger = reactive("a"),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # `r` already carries a "controls" input from `b`; core forbids a
+      # second identically named input, so the menu rejects the commit.
+      commit_menu(
+        session, source = "a", target = "r", link_id = "ar",
+        block_input = "controls"
+      )
+
+      expect_identical(r_update(), list())
+    }
+  )
+})
+
+test_that("link menu renders a name field only for variadic targets", {
+  board <- new_board(
+    c(a = new_dataset_block("iris"), r = new_rbind_block(),
+      m = new_merge_block())
+  )
+
+  doc <- xml2::read_html(as.character(link_menu_ui("mid", board, "a")))
+  by_class <- function(tok) {
+    sprintf(
+      "//*[contains(concat(' ', normalize-space(@class), ' '), ' %s ')]", tok
+    )
+  }
+  card <- function(id) {
+    xml2::xml_find_first(
+      doc,
+      paste0(by_class("blockr-link-menu-card"), "[@data-block-type='", id, "']")
+    )
+  }
+  has_field <- function(node, tok) {
+    length(xml2::xml_find_all(node, paste0(".", by_class(tok)))) > 0L
+  }
+
+  expect_true(
+    has_field(card("r"), "blockr-block-browser-field-input-name")
+  )
+  expect_false(
+    has_field(card("r"), "blockr-block-browser-field-block-input")
+  )
+  expect_false(
+    has_field(card("m"), "blockr-block-browser-field-input-name")
+  )
+  expect_true(
+    has_field(card("m"), "blockr-block-browser-field-block-input")
+  )
+
+  placeholder <- xml2::xml_attr(
+    xml2::xml_find_first(
+      card("r"),
+      paste0(
+        ".", by_class("blockr-block-browser-field-input-name"), "//input"
+      )
+    ),
+    "placeholder"
+  )
+  expect_identical(placeholder, "leave blank for an unnamed input")
 })
 
 test_that("add link action: INCOMING commit targets the anchor", {

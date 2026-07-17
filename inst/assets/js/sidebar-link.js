@@ -43,9 +43,11 @@
       source: direction === "outgoing" ? anchor : other,
       target: direction === "outgoing" ? other : anchor,
       link_id: getFieldValue(card, "blockr-block-browser-field-link-id"),
-      block_input: getFieldValue(
-        card, "blockr-block-browser-field-block-input"
-      ),
+      // Finite targets render a port <select>; variadic targets render a
+      // free-text name field instead. Only one is present per card.
+      block_input:
+        getFieldValue(card, "blockr-block-browser-field-block-input") ||
+        getFieldValue(card, "blockr-block-browser-field-input-name"),
       nonce: ++commitSeq
     };
     return spec;
