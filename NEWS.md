@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* `resolve_free_input()` now resolves a variadic link target to an empty
+  (positional) slot instead of a generated `"1"`, `"2"`, ... name, aligning
+  the "Connect ..." sidebar with blockr.core's name-or-position variadic
+  model (and with blockr.ui's link menu). An integer input name is treated
+  by core as a *named* argument, and downstream consumers such as
+  blockr.io's Download/Export blocks name files and Excel sheets by the
+  link input verbatim, which surfaced as `1.csv` / `2.csv` exports.
+
 * At startup the board now builds only the active view's dockView;
   off-screen views' docks are created on first visit rather than all up
   front (#304), mirroring the card deferral below. Building every view's

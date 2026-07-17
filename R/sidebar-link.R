@@ -76,22 +76,14 @@ link_commit_value <- function(spec, board) {
 
 # Pick the target's input slot for a new link, mirroring blockr.dock's
 # `block_input_select(mode = "inputs")` with only blockr.core primitives:
-# the first free named input, or - for a variadic target - a freshly
-# generated numeric slot.
+# the first free named input, or - for a variadic target - an empty
+# (positional) slot, per core's name-or-position input model.
 resolve_free_input <- function(block, block_id, links) {
   curr <- links[links$to == block_id]$input
   free <- setdiff(block_inputs(block), curr)
 
   if (is.na(block_arity(block))) {
-    num <- suppressWarnings(as.integer(curr))
-    num <- num[!is.na(num)]
-    slot <- if (!length(num)) {
-      "1"
-    } else {
-      mis <- setdiff(seq_len(max(num)), num)
-      as.character(if (length(mis)) min(mis) else max(num) + 1L)
-    }
-    free <- c(free, slot)
+    free <- c(free, "")
   }
 
   free[1L]
