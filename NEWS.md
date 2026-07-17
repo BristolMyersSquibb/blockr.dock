@@ -18,6 +18,19 @@
   `active_dock` alongside the visibility channel, so the deferred build --
   the view switch and the add-panel path -- sees the served `ctrl_block`.
 
+* Locked mode is now a server-side trust boundary, not just UI hiding (#127,
+  #135, #136). `is_dock_locked()` reads blockr.core's `blockr.locked` option
+  (renamed from `blockr.dock_is_locked`), so one flag drives both core's update
+  / option gate and dock's UI hides; a deployment setting the old option must
+  switch to `blockr.locked`. Hiding a block's input section -- and every block
+  on a locked board -- now drives core's per-block `frozen` channel: the
+  block's expression is pinned and its inputs are no longer consumed, so a
+  forged `Shiny.setInputValue` behind the hidden or read-only controls reaches
+  nothing (upstream data still flows, and showing the section again thaws it).
+  View switching on a locked board is driven client-side, as core's gate
+  rejects the active-view update; the board-options accordion (#135) and the
+  empty view's "Add panel" prompt (#136) are dropped when locked.
+
 * At startup the board now builds only the active view's dockView;
   off-screen views' docks are created on first visit rather than all up
   front (#304), mirroring the card deferral below. Building every view's
