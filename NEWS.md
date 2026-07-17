@@ -1,5 +1,14 @@
 # blockr.dock (development version)
 
+* New `edit_link_action`: a sidebar editor for a single existing link. It can
+  rename the link's input (turning an unnamed positional slot into a named
+  one, or changing an existing name), switch the input slot on a finite
+  target, and redirect the link's source or target - under the same
+  acyclicity, eligibility and input-name uniqueness rules the "Connect ..."
+  menu enforces. The edit commits as a `links` `mod` delta, so the link id
+  survives (a remove-and-recreate would drop it). Surfaces such as
+  blockr.dag can trigger it for a selected edge.
+
 * The "Connect ..." sidebar and the block browser's append / prepend forms
   now let a link into a variadic block carry a name: an optional "Input
   name" field appears for variadic targets (leave it blank for a positional

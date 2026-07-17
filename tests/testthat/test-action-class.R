@@ -21,11 +21,11 @@ test_that("action ctor", {
   db_act <- board_actions(new_dock_board())
 
   expect_type(db_act, "list")
-  expect_length(db_act, 9L)
+  expect_length(db_act, 10L)
 
   trig <- action_triggers(db_act)
 
-  expect_length(trig, 9L)
+  expect_length(trig, 10L)
   expect_named(trig, chr_ply(db_act, action_id))
 
   expect_null(

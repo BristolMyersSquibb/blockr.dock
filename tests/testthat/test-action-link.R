@@ -443,3 +443,334 @@ test_that("remove link action", {
     }
   )
 })
+
+# The edit menu's fields are real Shiny inputs at `menu-from`, `menu-to`,
+# `menu-input_port` / `menu-input_name`, committed by the `menu-confirm`
+# button. Drive them directly to simulate a user editing a link. Only the
+# fields the user touches need setting; an untouched field falls back to
+# the link's current value.
+edit_link_menu <- function(session, from = NULL, to = NULL,
+                           input_port = NULL, input_name = NULL, confirm = 1L) {
+  vals <- list(`menu-confirm` = confirm)
+  if (!is.null(from)) vals[["menu-from"]] <- from
+  if (!is.null(to)) vals[["menu-to"]] <- to
+  if (!is.null(input_port)) vals[["menu-input_port"]] <- input_port
+  if (!is.null(input_name)) vals[["menu-input_name"]] <- input_name
+  do.call(session$setInputs, vals)
+}
+
+expect_link_mod <- function(upd, id, delta) {
+  testthat::expect_length(upd, 1L)
+  testthat::expect_named(upd, "links")
+  testthat::expect_named(upd$links, "mod")
+  testthat::expect_named(upd$links$mod, id)
+  # `mod` entries are partial-arg deltas (a named list of `new_link()`
+  # argument values), not a full `links` object.
+  testthat::expect_false(inherits(upd$links$mod, "links"))
+  testthat::expect_identical(upd$links$mod[[id]], delta)
+}
+
+edit_link_env <- function(links, board_id = "b") {
+  reactiveValues(
+    board = new_board(
+      c(
+        a = new_dataset_block("iris"),
+        b = new_dataset_block("mtcars"),
+        h = new_head_block(),
+        m = new_merge_block(),
+        r = new_rbind_block()
+      ),
+      links = links
+    ),
+    board_id = board_id
+  )
+}
+
+test_that("edit link action: redirecting the target commits a mod delta", {
+  local_mocked_sidebar()
+  r_board <- edit_link_env(links(l1 = new_link("a", "h", "data")))
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_link_action(
+          trigger = reactive("l1"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # Re-point a -> h onto the merge block's `y` port; from is untouched.
+      edit_link_menu(session, to = "m", input_port = "y")
+
+      expect_link_mod(r_update(), "l1", list(to = "m", input = "y"))
+    }
+  )
+})
+
+test_that("edit link action: switching the input slot commits only input", {
+  local_mocked_sidebar()
+  r_board <- edit_link_env(links(l1 = new_link("a", "m", "x")))
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_link_action(
+          trigger = reactive("l1"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      edit_link_menu(session, input_port = "y")
+
+      expect_link_mod(r_update(), "l1", list(input = "y"))
+    }
+  )
+})
+
+test_that("edit link action: naming a variadic positional slot", {
+  local_mocked_sidebar()
+  r_board <- edit_link_env(links(l1 = new_link("a", "r", "")))
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_link_action(
+          trigger = reactive("l1"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # The variadic target renders a name field; a blank slot becomes named.
+      edit_link_menu(session, input_name = "left")
+
+      expect_link_mod(r_update(), "l1", list(input = "left"))
+    }
+  )
+})
+
+test_that("edit link action: redirecting the source commits only from", {
+  local_mocked_sidebar()
+  r_board <- edit_link_env(links(l1 = new_link("a", "h", "data")))
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_link_action(
+          trigger = reactive("l1"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      edit_link_menu(session, from = "b")
+
+      expect_link_mod(r_update(), "l1", list(from = "b"))
+    }
+  )
+})
+
+test_that("edit link action: an unchanged confirm issues no update", {
+  local_mocked_sidebar()
+  r_board <- edit_link_env(links(l1 = new_link("a", "m", "x")))
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_link_action(
+          trigger = reactive("l1"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # Confirm without touching a field: the delta is empty, so no
+      # `links$mod` is emitted (which would needlessly re-evaluate).
+      edit_link_menu(session)
+
+      expect_length(r_update(), 0L)
+    }
+  )
+})
+
+test_that("edit link action: a redirect that closes a cycle is rejected", {
+  local_mocked_sidebar()
+  r_board <- edit_link_env(
+    links(l1 = new_link("a", "h", "data"), l2 = new_link("h", "m", "x"))
+  )
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_link_action(
+          trigger = reactive("l1"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      # l1 is a -> h; `m` already reaches h via l2 (h -> m), so re-pointing
+      # l1's source to `m` makes m -> h, which closes a cycle and is
+      # rejected (m != h, so it is not caught as a self-link).
+      edit_link_menu(session, from = "m")
+
+      expect_length(r_update(), 0L)
+    }
+  )
+})
+
+test_that("edit link action: a self-link is rejected", {
+  local_mocked_sidebar()
+  r_board <- edit_link_env(links(l1 = new_link("a", "m", "x")))
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_link_action(
+          trigger = reactive("l1"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      edit_link_menu(session, from = "m")
+
+      expect_length(r_update(), 0L)
+    }
+  )
+})
+
+test_that("edit link action: removing the edited link closes the sidebar", {
+  hide_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(id, ...) {
+      hide_calls[[length(hide_calls) + 1L]] <<- id
+      invisible(NULL)
+    },
+    sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE)
+  )
+
+  r_board <- edit_link_env(links(l1 = new_link("a", "h", "data")))
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_link_action(
+          trigger = reactive("l1"), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      expect_length(hide_calls, 0L)
+
+      # Remove the edited link elsewhere -> sidebar closes live.
+      r_board$board <- new_board(board_blocks(r_board$board))
+      session$flushReact()
+
+      expect_gte(length(hide_calls), 1L)
+      expect_identical(hide_calls[[1L]], "b-actions_sidebar")
+    }
+  )
+})
+
+test_that("edit link menu renders source / target pickers and a confirm", {
+  board <- new_board(
+    c(a = new_dataset_block("iris"), m = new_merge_block()),
+    links = links(l1 = new_link("a", "m", "x"))
+  )
+
+  doc <- xml2::read_html(as.character(edit_link_menu_ui("mid", board, "l1")))
+  by_id <- function(suffix) {
+    xml2::xml_find_first(doc, paste0("//*[@id='mid-", suffix, "']"))
+  }
+
+  expect_false(is.na(xml2::xml_attr(by_id("from"), "id")))
+  expect_false(is.na(xml2::xml_attr(by_id("to"), "id")))
+  # The port / name control is server-rendered into this uiOutput slot.
+  expect_false(is.na(xml2::xml_attr(by_id("input_field"), "id")))
+  confirm <- xml2::xml_find_first(
+    doc,
+    paste0(
+      "//*[contains(concat(' ', normalize-space(@class), ' '),",
+      " ' blockr-link-edit-confirm ')]"
+    )
+  )
+  expect_false(is.na(xml2::xml_attr(confirm, "class")))
+})
+
+test_that("edit link menu ui is empty for an unknown link", {
+  board <- new_board(c(a = new_dataset_block("iris")))
+  doc <- xml2::read_html(as.character(edit_link_menu_ui("mid", board, "gone")))
+  notice <- xml2::xml_find_first(
+    doc,
+    paste0(
+      "//*[contains(concat(' ', normalize-space(@class), ' '),",
+      " ' blockr-block-browser-empty ')]"
+    )
+  )
+  expect_match(xml2::xml_text(notice), "no longer on the board")
+})
+
+test_that("edit link input field switches on target arity", {
+  board <- new_board(
+    c(a = new_dataset_block("iris"), m = new_merge_block(),
+      r = new_rbind_block()),
+    links = links(l1 = new_link("a", "m", "x"))
+  )
+  row <- edit_link_row(board, "l1")
+  ns <- function(x) paste0("mid-", x)
+
+  finite <- as.character(edit_link_input_field(ns, board, "l1", "m", row))
+  expect_true(grepl("mid-input_port", finite, fixed = TRUE))
+  # The edited link's own slot reads as free, so both merge ports appear.
+  expect_true(grepl(">x<", finite) && grepl(">y<", finite))
+
+  variadic <- as.character(edit_link_input_field(ns, board, "l1", "r", row))
+  expect_true(grepl("mid-input_name", variadic, fixed = TRUE))
+})
+
+test_that("edit link helpers: row lookup, exclusion and delta", {
+  board <- new_board(
+    c(a = new_dataset_block("iris"), m = new_merge_block()),
+    links = links(l1 = new_link("a", "m", "x"), l2 = new_link("a", "m", "y"))
+  )
+
+  expect_identical(
+    edit_link_row(board, "l1"),
+    list(from = "a", to = "m", input = "x")
+  )
+  expect_null(edit_link_row(board, "nope"))
+  expect_null(edit_link_row(board, NULL))
+
+  expect_identical(names(links_without(board, "l1")), "l2")
+
+  expect_length(
+    edit_link_delta(list(from = "a", to = "m", input = "x"), board, "l1"),
+    0L
+  )
+  expect_identical(
+    edit_link_delta(list(from = "m", to = "m", input = "z"), board, "l1"),
+    list(from = "m", input = "z")
+  )
+})

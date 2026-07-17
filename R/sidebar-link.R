@@ -489,3 +489,266 @@ seed_link_id <- function(board) {
   out <- seed_ids(board_link_ids(board), 1L)
   if (length(out) == 0L) "" else out
 }
+
+# ---- edit-link menu ----------------------------------------------------
+
+# The edit menu is the single-link counterpart to the connect menu: it
+# edits one existing link rather than offering a pool of new ones. `from`
+# and `to` are block pickers, the input port / name field re-renders for
+# the currently selected target, and the same eligibility, acyclicity and
+# uniqueness rules as `add_link_action` are enforced at commit. The commit
+# is a `links$mod` delta so the link id survives the edit.
+
+edit_link_menu_ui <- function(id, board, link_id) {
+  stopifnot(is.character(id), length(id) == 1L, nzchar(id))
+
+  ns <- NS(id)
+  row <- edit_link_row(board, link_id)
+
+  body <- if (is.null(row)) {
+    tags$p(
+      class = "blockr-block-browser-empty",
+      "This link is no longer on the board."
+    )
+  } else {
+    choices <- edit_link_block_choices(board_blocks(board))
+    tagList(
+      selectInput(ns("from"), "Source block", choices, selected = row$from),
+      selectInput(ns("to"), "Target block", choices, selected = row$to),
+      uiOutput(ns("input_field")),
+      actionButton(
+        ns("confirm"), "Update link",
+        class = "btn-primary blockr-link-edit-confirm"
+      )
+    )
+  }
+
+  htmltools::attachDependencies(
+    tags$div(class = "blockr-link-edit", body),
+    list(link_menu_dep())
+  )
+}
+
+edit_link_menu_server <- function(id, board, link_id) {
+  stopifnot(is.character(id), length(id) == 1L, nzchar(id))
+
+  link_id_fn <- as_accessor(link_id)
+
+  moduleServer(
+    id,
+    function(input, output, session) {
+
+      output$input_field <- renderUI({
+        lid <- link_id_fn()
+        req(length(lid) == 1L, !is.na(lid), nzchar(lid))
+        brd <- board()
+        row <- edit_link_row(brd, lid)
+        req(row)
+        edit_link_input_field(session$ns, brd, lid, input$to %||% row$to, row)
+      })
+
+      eventReactive(
+        input$confirm,
+        {
+          lid <- link_id_fn()
+          req(length(lid) == 1L, !is.na(lid), nzchar(lid))
+          brd <- board()
+          req(lid %in% board_link_ids(brd))
+
+          spec <- gather_edit_link_spec(input, brd, lid)
+          validate_edit_link_spec(spec, brd, lid, session)
+
+          list(delta = edit_link_delta(spec, brd, lid), nonce = input$confirm)
+        },
+        ignoreNULL = TRUE,
+        ignoreInit = TRUE
+      )
+    }
+  )
+}
+
+# The input slot control for the currently selected target: a free-text
+# name for a variadic target (pre-filled only when the target is
+# unchanged, since a fresh target has no current slot), else a port picker
+# over the target's free named inputs. The edited link is excluded from
+# the occupancy so its own slot reads as free.
+edit_link_input_field <- function(ns, board, link_id, to_id, row) {
+  to_blk <- board_blocks(board)[[to_id]]
+
+  if (is.null(to_blk)) {
+    return(NULL)
+  }
+
+  links_df <- as.data.frame(links_without(board, link_id))
+
+  if (is.na(block_arity(to_blk))) {
+    return(
+      textInput(
+        ns("input_name"),
+        "Input name (optional)",
+        value = default_variadic_name(to_id, row),
+        placeholder = "leave blank for an unnamed input"
+      )
+    )
+  }
+
+  free <- free_named_inputs(to_blk, to_id, links_df)
+
+  if (!length(free)) {
+    return(
+      tags$p(
+        class = "blockr-block-browser-empty",
+        "This target block has no free input port."
+      )
+    )
+  }
+
+  selectInput(
+    ns("input_port"), "Input port", free,
+    selected = default_finite_slot(free, to_id, row)
+  )
+}
+
+gather_edit_link_spec <- function(input, board, link_id) {
+  row <- edit_link_row(board, link_id)
+  from <- input$from %||% row$from
+  to <- input$to %||% row$to
+  to_blk <- board_blocks(board)[[to]]
+
+  # An untouched field falls back to what the rendered control pre-selects
+  # (the current slot when the target is unchanged), so a no-op confirm
+  # produces no delta - never a switch to a different free slot.
+  slot <- if (is.null(to_blk)) {
+    ""
+  } else if (is.na(block_arity(to_blk))) {
+    input$input_name %||% default_variadic_name(to, row)
+  } else {
+    free <- free_named_inputs(
+      to_blk, to, as.data.frame(links_without(board, link_id))
+    )
+    input$input_port %||% default_finite_slot(free, to, row)
+  }
+
+  list(
+    from = as.character(from),
+    to = as.character(to),
+    input = as.character(slot)
+  )
+}
+
+# The slot a target's input control defaults to: the link's current slot
+# when the target is unchanged (and still free), else the first free port
+# / an unnamed variadic slot. Shared by the renderer and the commit
+# gather so an untouched control and its server-side fallback agree.
+default_finite_slot <- function(free, to_id, row) {
+  if (identical(to_id, row$to) && row$input %in% free) row$input else free[1L]
+}
+
+default_variadic_name <- function(to_id, row) {
+  if (identical(to_id, row$to)) row$input else ""
+}
+
+# Reject a self-link, a redirect that closes a cycle, or an input slot
+# that is taken / out of range - mirroring the eligibility the connect
+# menu enforces up front by filtering. Each failure notifies and
+# `req(FALSE)`s, stopping the enclosing `eventReactive`.
+validate_edit_link_spec <- function(spec, board, link_id, session) {
+  blocks <- board_blocks(board)
+
+  if (!(spec$from %in% names(blocks) && spec$to %in% names(blocks))) {
+    notify(
+      "Please choose valid blocks to link.", type = "warning",
+      session = session
+    )
+    req(FALSE)
+  }
+
+  if (identical(spec$from, spec$to)) {
+    notify(
+      "A link's source and target must differ.", type = "warning",
+      session = session
+    )
+    req(FALSE)
+  }
+
+  links_df <- as.data.frame(links_without(board, link_id))
+
+  if (spec$from %in% descendants_of(spec$to, links_df)) {
+    notify(
+      "This would create a cycle.", type = "warning", session = session
+    )
+    req(FALSE)
+  }
+
+  to_blk <- blocks[[spec$to]]
+
+  if (is.na(block_arity(to_blk))) {
+    used <- links_df$input[links_df$to == spec$to]
+    if (nzchar(spec$input) && spec$input %in% used) {
+      notify(
+        "This input name is already used on the target block.",
+        type = "warning", session = session
+      )
+      req(FALSE)
+    }
+  } else {
+    free <- free_named_inputs(to_blk, spec$to, links_df)
+    if (!(nzchar(spec$input) && spec$input %in% free)) {
+      notify(
+        "Please choose a free input port on the target block.",
+        type = "warning", session = session
+      )
+      req(FALSE)
+    }
+  }
+
+  invisible(TRUE)
+}
+
+# The subset of `from` / `to` / `input` that actually changed, keyed for a
+# `links$mod` delta. Empty when the user confirmed without editing.
+edit_link_delta <- function(spec, board, link_id) {
+  row <- edit_link_row(board, link_id)
+  fields <- c("from", "to", "input")
+  unchanged <- lgl_mply(identical, spec[fields], row[fields])
+  spec[fields][!unchanged]
+}
+
+# The edited link's current fields as a plain list, or NULL when the id is
+# absent (removed elsewhere mid-edit).
+edit_link_row <- function(board, link_id) {
+  if (is.null(board) ||
+        !(length(link_id) == 1L && !is.na(link_id) && nzchar(link_id))) {
+    return(NULL)
+  }
+
+  df <- as.data.frame(board_links(board))
+  pos <- match(link_id, df$id)
+
+  if (is.na(pos)) {
+    return(NULL)
+  }
+
+  list(
+    from = as.character(df$from[pos]),
+    to = as.character(df$to[pos]),
+    input = as.character(df$input[pos])
+  )
+}
+
+links_without <- function(board, link_id) {
+  lnks <- board_links(board)
+  lnks[setdiff(board_link_ids(board), link_id)]
+}
+
+edit_link_block_choices <- function(blocks) {
+  set_names(
+    names(blocks),
+    chr_mply(edit_link_block_label, names(blocks), as.list(blocks))
+  )
+}
+
+edit_link_block_label <- function(id, blk) {
+  nm <- block_name(blk) %||% id
+  if (nzchar(nm) && !identical(nm, id)) paste0(nm, " (", id, ")") else id
+}
