@@ -2,6 +2,12 @@
 
 ## blockr.dock (development version)
 
+- The “Connect …” sidebar and the block browser’s append / prepend forms
+  now let a link into a variadic block carry a name: an optional “Input
+  name” field appears for variadic targets (leave it blank for a
+  positional slot). A supplied name must be unique among the target’s
+  inputs, per blockr.core’s name-or-position model.
+
 - `resolve_free_input()` now resolves a variadic link target to an empty
   (positional) slot instead of a generated `"1"`, `"2"`, … name,
   aligning the “Connect …” sidebar with blockr.core’s name-or-position
