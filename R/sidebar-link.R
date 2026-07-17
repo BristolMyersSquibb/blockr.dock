@@ -100,6 +100,21 @@ validate_link_spec <- function(spec, board, session) {
     )
     req(FALSE)
   }
+
+  # core rejects two identically named inputs on one block, so a
+  # user-supplied variadic slot name has to be free on the target.
+  name <- spec$block_input
+  if (!is.null(name) && nzchar(name)) {
+    links <- board_links(board)
+    if (name %in% links[links$to == spec$target]$input) {
+      notify(
+        "This input name is already used on the target block.",
+        type = "warning", session = session
+      )
+      req(FALSE)
+    }
+  }
+
   invisible(TRUE)
 }
 
@@ -354,7 +369,8 @@ link_card_meta <- function(blk_id, blocks, registry, anchor, direction,
     package = entry_attr(entry, "package", "local"),
     description = entry_attr(entry, "description", ""),
     target_id = target_id,
-    target_inputs = free_inputs[[target_id]] %||% character()
+    target_inputs = free_inputs[[target_id]] %||% character(),
+    target_variadic = is.na(block_arity(blocks[[target_id]]))
   )
 }
 
@@ -443,6 +459,15 @@ link_card_advanced <- function(meta, ns, board) {
         id = card_ns("block_input"),
         label = "Block input port",
         options = meta$target_inputs
+      )
+    },
+    if (meta$target_variadic) {
+      field_text(
+        class_suffix = "input-name",
+        id = card_ns("input_name"),
+        label = "Input name (optional)",
+        value = "",
+        placeholder = "leave blank for an unnamed input"
       )
     },
     tags$button(

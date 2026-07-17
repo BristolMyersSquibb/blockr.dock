@@ -142,6 +142,24 @@ validate_block_spec <- function(spec, board, target, session) {
       "link", session
     )
   }
+
+  # A prepend into a variadic target may carry a user-supplied slot name;
+  # core rejects two identically named inputs on one block. Appended
+  # blocks are new, so their first input never collides.
+  if (target_mode(target) == "prepend") {
+    name <- spec$target_input
+    if (!is.null(name) && nzchar(name)) {
+      links <- safe_board_links(board)
+      if (name %in% links[links$to == target$id]$input) {
+        notify(
+          "This input name is already used on the target block.",
+          type = "warning", session = session
+        )
+        req(FALSE)
+      }
+    }
+  }
+
   invisible(TRUE)
 }
 
@@ -262,7 +280,12 @@ resolve_target <- function(board, target) {
   # from, so the panel is rendered context-free (the consumer supplies
   # the "Append from X" context via the sidebar title).
   if (is.null(target) || is.null(target$id)) {
-    return(list(subtitle = NULL, inputs = character(), attrs = list()))
+    return(
+      list(
+        subtitle = NULL, inputs = character(), attrs = list(),
+        variadic = FALSE
+      )
+    )
   }
 
   blk <- board_block(board, target$id)
@@ -280,6 +303,7 @@ resolve_target <- function(board, target) {
 
   inputs <- character()
   attrs <- list()
+  variadic <- FALSE
   if (target$mode == "prepend" && !is.null(blk)) {
     # Filter out slots already taken by incoming links to the target,
     # so the user is never offered a port they can't actually use.
@@ -288,14 +312,15 @@ resolve_target <- function(board, target) {
       taken_inputs(board, target$id)
     )
     arity <- block_arity(blk)
-    if (is.na(arity)) {
+    variadic <- is.na(arity)
+    if (variadic) {
       attrs <- list(`data-target-arity` = "inf")
     } else if (is.numeric(arity) && length(arity) == 1L) {
       attrs <- list(`data-target-arity` = as.character(arity))
     }
   }
 
-  list(subtitle = subtitle, inputs = inputs, attrs = attrs)
+  list(subtitle = subtitle, inputs = inputs, attrs = attrs, variadic = variadic)
 }
 
 browser_panel <- function(ns, metas, mode, tgt) {
@@ -330,7 +355,9 @@ browser_panel <- function(ns, metas, mode, tgt) {
           lapply(names(groups), function(cat) {
             category_section(
               cat, groups[[cat]],
-              function(m) browser_block_card(m, ns, mode, tgt$inputs)
+              function(m) {
+                browser_block_card(m, ns, mode, tgt$inputs, tgt$variadic)
+              }
             )
           })
         ),
@@ -358,7 +385,8 @@ category_section <- function(category, entries, card_fn) {
   )
 }
 
-browser_block_card <- function(meta, ns, mode, target_inputs) {
+browser_block_card <- function(meta, ns, mode, target_inputs,
+                               target_variadic = FALSE) {
   tags$div(
     class = "blockr-block-browser-card",
     `data-block-type` = meta$type,
@@ -408,14 +436,15 @@ browser_block_card <- function(meta, ns, mode, target_inputs) {
         meta$description
       )
     },
-    card_advanced(meta, ns, mode, target_inputs)
+    card_advanced(meta, ns, mode, target_inputs, target_variadic)
   )
 }
 
 # Render only the fields the flow needs (mode is fixed per render, so
 # there is no need to render every field and hide the inapplicable ones
 # via CSS). `htmltools` drops the NULL children for the omitted fields.
-card_advanced <- function(meta, ns, mode, target_inputs) {
+card_advanced <- function(meta, ns, mode, target_inputs,
+                          target_variadic = FALSE) {
   field_id <- function(suffix) ns(paste0(meta$type, "_", suffix))
   show_link <- mode %in% c("append", "prepend")
   # Only ask the user to pick a slot when there is an actual choice
@@ -423,6 +452,14 @@ card_advanced <- function(meta, ns, mode, target_inputs) {
   # forced; the dock falls back to `block_inputs(blk)[1L]`.
   show_block_input <- mode == "append" && length(meta$inputs) > 1L
   show_target_input <- mode == "prepend" && length(target_inputs) > 1L
+
+  # A variadic end has no fixed ports to pick from: offer an optional
+  # name instead (blank commits a positional slot). The field carries
+  # the mode's slot class so the browser JS reports it verbatim.
+  name_variadic <- (mode == "append" && isTRUE(meta$variadic)) ||
+    (mode == "prepend" && isTRUE(target_variadic))
+  name_suffix <- if (mode == "append") "block-input" else "target-input"
+  name_id_suffix <- if (mode == "append") "block_input" else "target_input"
   add_label <- switch(mode,
     add = "Add",
     append = "Append",
@@ -470,6 +507,15 @@ card_advanced <- function(meta, ns, mode, target_inputs) {
         id = field_id("target_input"),
         label = "Target input port",
         options = target_inputs
+      )
+    },
+    if (name_variadic) {
+      field_text(
+        class_suffix = name_suffix,
+        id = field_id(name_id_suffix),
+        label = "Input name (optional)",
+        value = "",
+        placeholder = "leave blank for an unnamed input"
       )
     },
     tags$button(
