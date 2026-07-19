@@ -39,7 +39,7 @@ as.character(x, ...)
 - size:
 
   Target size ratio in (0, 1) – consumed by `resize`, and recorded on
-  `add` for when the `set_size` floor lands (#320).
+  `add` for a later size-on-create pass.
 
 - x:
 
