@@ -18,7 +18,7 @@ commit_menu <- function(session, source, target, link_id,
 }
 
 local_mocked_sidebar <- function(env = parent.frame()) {
-  testthat::local_mocked_bindings(
+  local_mocked_bindings(
     show_sidebar         = function(...) invisible(list(...)),
     keep_or_hide_sidebar = function(...) invisible(list(...)),
     hide_sidebar         = function(...) invisible(list(...)),
@@ -27,15 +27,15 @@ local_mocked_sidebar <- function(env = parent.frame()) {
 }
 
 expect_added_link <- function(upd, id, from, to, input) {
-  testthat::expect_length(upd, 1L)
-  testthat::expect_named(upd, "links")
-  testthat::expect_named(upd$links, "add")
-  testthat::expect_s3_class(upd$links$add, "links")
+  expect_length(upd, 1L)
+  expect_named(upd, "links")
+  expect_named(upd$links, "add")
+  expect_s3_class(upd$links$add, "links")
   df <- as.data.frame(upd$links$add)
-  testthat::expect_identical(df$id, id)
-  testthat::expect_identical(df$from, from)
-  testthat::expect_identical(df$to, to)
-  testthat::expect_identical(df$input, input)
+  expect_identical(df$id, id)
+  expect_identical(df$from, from)
+  expect_identical(df$to, to)
+  expect_identical(df$input, input)
 }
 
 test_that("add link action: OUTGOING commit uses the default port", {
@@ -469,12 +469,12 @@ edit_link_menu <- function(session, from = NULL, to = NULL,
 # An edit is committed as a `links$mod` delta: a named list of the changed
 # constructor-argument values, keyed by the (unchanged) link id.
 expect_link_mod <- function(upd, id, delta) {
-  testthat::expect_named(upd, "links")
-  testthat::expect_named(upd$links, "mod")
-  testthat::expect_named(upd$links$mod, id)
+  expect_named(upd, "links")
+  expect_named(upd$links, "mod")
+  expect_named(upd$links$mod, id)
   # A `mod` entry is a partial-arg delta, not a full `links` object.
-  testthat::expect_false(inherits(upd$links$mod, "links"))
-  testthat::expect_identical(upd$links$mod[[id]], delta)
+  expect_false(inherits(upd$links$mod, "links"))
+  expect_identical(upd$links$mod[[id]], delta)
 }
 
 edit_link_env <- function(links, board_id = "b") {
