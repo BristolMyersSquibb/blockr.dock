@@ -325,35 +325,39 @@ freeze_hidden_inputs <- function(board, visibility) {
 # The grid mirror's observer, split from manage_dock for testability. It reacts
 # to the view's settled `_state` echo and commits the client layout verbatim in
 # canonical form, only when it differs (beyond the sash-size tolerance) from
-# what is stored -- so a sash drag or tab switch is at most one board commit, a
-# re-echo after quiescence none, and the echo of the mirror's own restore
-# converges without churn (it matches what was pushed). It does not restrict to
-# membership: a panel absent from the view is an inert ghost, pruned at the
-# compose / restore boundary, never by this writer.
-observe_grid_echo <- function(id, dock, board, commit_grid) {
-
-  # Bridge (#301): a server-side stand-in for the gesture-settled `_state`
-  # emission dockViewR does not yet ship. Current dockViewR streams per-frame
-  # states through a sash drag, so without this the mirror would commit per
-  # frame -- an interactive regression versus main's cadence. Unlike the
-  # pre-rework debounce (which raced a second writer and diffed specs), this
-  # mirror is the sole writer, commits verbatim canonical values, and diffs
-  # nothing: the only cost is 250 ms of bounded staleness on a slot whose
-  # readers are all boundaries. Remove once the settled `_state` chain lands.
-  settled <- debounce(reactive(dock$layout()), 250)
+# what is stored -- so a sash drag, a programmatic move / resize, or a tab
+# switch is at most one board commit and a re-echo after quiescence none.
+#
+# The one echo it must not commit is the initial restore's: manage_dock replays
+# this view's stored layout, and that echo is a replay of what we already hold,
+# not a client gesture -- committing its in-flight frames would persist a
+# transient mid-restore layout. `restoring` is the one-shot latch manage_dock
+# raises around that restore; the mirror consumes it on the next echo and skips
+# exactly that one. Move / resize / add echoes never raise it, so they fall
+# through and persist the geometry the client realised -- the only record of
+# where a moved or resized panel landed.
+#
+# It does not restrict to membership: a panel absent from the view is an inert
+# ghost, pruned at the compose / restore boundary, never by this writer.
+observe_grid_echo <- function(id, dock, board, restoring, commit_grid) {
 
   observeEvent(
-    settled(),
+    dock$layout(),
     {
-      views <- board_views(board$board)
+      state <- dock$layout()
 
-      if (!id %in% names(views)) {
+      if (is.null(state)) {
         return()
       }
 
-      state <- settled()
+      if (isTRUE(isolate(restoring()))) {
+        restoring(FALSE)
+        return()
+      }
 
-      if (is.null(state)) {
+      views <- board_views(board$board)
+
+      if (!id %in% names(views)) {
         return()
       }
 
@@ -695,6 +699,7 @@ manage_dock <- function(
     live_panels <- reactiveVal(as.character(layout_panel_ids(init_layout)))
     prev_active_group <- reactiveVal()
     active_group_trail <- reactiveVal()
+    restoring <- reactiveVal(FALSE)
     n_panels <- reactive(length(live_panels()))
 
     dock <- list(
@@ -748,7 +753,7 @@ manage_dock <- function(
         update(list(views = list(grid = set_names(list(grid), id))))
       }
 
-      observe_grid_echo(id, dock, board, commit_grid)
+      observe_grid_echo(id, dock, board, restoring, commit_grid)
     }
 
     if (get_log_level() >= debug_log_level) {
@@ -765,6 +770,8 @@ manage_dock <- function(
     observeEvent(
       req(input[[dock_input("initialized")]]),
       {
+        restoring(TRUE)
+
         restore_layout(init_layout, dock$proxy,
                        blocks = init_blocks, extensions = init_exts)
 

@@ -27,7 +27,7 @@ block_panel_ids <- function(proxy = dock_proxy()) {
 # Maintain the authoritative server-side panel-membership set. Every panel add /
 # remove flows through add_*_panel() / remove_*_panel(), so updating here keeps
 # `live_panels` in lockstep with the live dock without waiting for the browser's
-# debounced state echo -- which is what lets reconcile tell a just-added panel
+# settled state echo -- which is what lets reconcile tell a just-added panel
 # from a stale layout. `live_panels` is NULL for a dock with no tracker (a bare
 # test stub), in which case tracking is a no-op.
 track_panel_added <- function(live_panels, id) {
@@ -146,6 +146,26 @@ ext_panel_ids <- function(proxy = dock_proxy()) {
   as_ext_panel_id(
     res[lgl_ply(res, is_ext_panel_id)]
   )
+}
+
+move_dock_panel <- function(id, position, proxy = dock_proxy()) {
+  pid <- as_dock_panel_id(id)
+
+  log_debug("moving panel {pid}")
+
+  dockViewR::move_panel(proxy, pid, position)
+
+  invisible(NULL)
+}
+
+resize_dock_panel <- function(id, size, proxy = dock_proxy()) {
+  pid <- as_dock_panel_id(id)
+
+  log_debug("resizing panel {pid}")
+
+  dockViewR::set_size(proxy, pid, size)
+
+  invisible(NULL)
 }
 
 restore_layout <- function(layout, proxy, blocks = list(),

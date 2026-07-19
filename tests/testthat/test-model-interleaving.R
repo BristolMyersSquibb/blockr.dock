@@ -107,15 +107,23 @@ model_set_members <- function(st, members) {
   list(st = st, commit = as.integer(!setequal(before, model_members(st))))
 }
 
-# The grid mirror, reproduced from observe_grid_echo(): cast the pending echo to
-# a `dock_grid`, skip the commit when it is within the size tolerance of what is
-# stored (the all.equal guard), else store it verbatim. Returns the commit count
-# so the "one gesture, at most one commit" bound is checkable.
-model_deliver_echo <- function(st) {
+# The grid mirror, reproduced from observe_grid_echo(): the restore push raises
+# a one-shot latch, and the settled echo it provokes -- a replay of what we
+# already hold -- is consumed and dropped, never committing; every other echo
+# (a client gesture, a server-driven move / resize) casts to a `dock_grid` and
+# commits only when it falls outside the size tolerance of what is stored (the
+# all.equal guard), else no-ops. Returns the commit count so the "one gesture,
+# at most one commit" bound is checkable.
+model_deliver_echo <- function(st, restoring = FALSE) {
 
   echo <- st$client$pending
 
   if (is.null(echo)) {
+    return(list(st = st, commit = 0L))
+  }
+
+  if (isTRUE(restoring)) {
+    st$client$pending <- NULL
     return(list(st = st, commit = 0L))
   }
 
@@ -356,6 +364,55 @@ test_that("restore rebuilds a view whose membership emptied under a ghost", {
   expect_length(model_shown(st), 0L)
   expect_length(model_members(st), 0L)
   expect_no_error(validate_board(st$board))
+})
+
+test_that("the restore echo never overwrites the authored grid", {
+
+  # dockviewR coalesces a restore into one settled `_state` echo (its
+  # onDidLayoutChange is buffered), and that echo replays what the mirror just
+  # pushed -- often the composed, ghost-pruned layout, structurally unlike the
+  # authored grid the board holds. The one-shot restore latch marks it, so the
+  # mirror skips exactly that echo and the committed grid holds at authored: an
+  # export mid-load persists the pushed arrangement, not a restore frame that
+  # was never anyone's intent. The latch is a cause filter where the old
+  # debounce was only a (defeatable) time filter, and -- unlike the blanket
+  # server-skip it replaces -- it frees a later move / resize echo to commit.
+  st <- model_new()
+  members <- model_members(st)
+
+  # Authored: the members grouped into one tab (a leaf beside a group). The
+  # restore push settles it as the stored, authoritative grid.
+  st$client$pending <- client_grid(members, nested = TRUE)
+  st <- model_deliver_echo(st)$st
+  st <- model_restore(st)
+  authored <- model_stored(st)
+  expect_false(is.null(authored))
+
+  # The restore's settled echo: the members as separate leaves, flat and
+  # structurally unlike the grouped authored, so only the latch (not the
+  # all.equal tolerance) holds it.
+  frame <- client_grid(members, sizes = c(0.7, 0.2, 0.1))
+  st$client$pending <- frame
+
+  expect_false(
+    isTRUE(
+      all.equal(authored, as_dock_grid(frame), tolerance = grid_size_tol())
+    )
+  )
+
+  res <- model_deliver_echo(st, restoring = TRUE)
+  st <- res$st
+
+  expect_identical(res$commit, 0L)
+  expect_true(
+    isTRUE(all.equal(model_stored(st), authored, tolerance = grid_size_tol()))
+  )
+
+  # The user's own reorder is the ack: a latch-down echo commits, exactly as a
+  # gesture always has.
+  st$client$pending <- client_grid(rev(members))
+
+  expect_identical(model_deliver_echo(st)$commit, 1L)
 })
 
 test_that("seeded interleavings hold the invariants and converge", {

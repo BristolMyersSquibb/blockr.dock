@@ -21,10 +21,12 @@ remove_panel_delta <- function(view_id, panel_id) {
 # Apply a view's panel-op batch to its live dock. Server-initiated ops land
 # here through the applied `views$mod` payload (the `set_panel_title`
 # precedent), the mirror image of the membership fold: `add` / `rm` write the
-# board and this places / removes the panel, `move` / `select` write nothing and
-# exist only as this client-side apply. Every op is idempotent against the live
-# panel set, so the fold's own capture echo and a re-augmented payload are
-# no-ops. Application order matches the reducer: rm -> add -> move -> select.
+# board and this places / removes the panel; `move` / `resize` / `select` write
+# nothing here and only deliver to the live dock -- the grid mirror then
+# captures the resulting geometry from the client echo, which is what persists
+# a move or resize. Every op is idempotent against the live panel set, so the
+# fold's own capture echo and a re-augmented payload are no-ops. Application
+# order matches the reducer: rm -> add -> move -> resize -> select.
 #
 # `active` marks whether this dock is the active view. A block / extension card
 # is a single board-level element, shown in whichever view is active, so only
@@ -53,7 +55,11 @@ apply_panel_ops <- function(mod, dock, board, rm_blocks = character(),
   }
 
   for (pid in names(mod[["move"]])) {
-    op_move_panel(pid, mod[["move"]][[pid]], dock, board, active)
+    op_move_panel(pid, mod[["move"]][[pid]], dock)
+  }
+
+  for (pid in names(mod[["resize"]])) {
+    op_resize_panel(pid, mod[["resize"]][[pid]], dock)
   }
 
   if (not_null(mod[["select"]])) {
@@ -145,18 +151,37 @@ op_remove_panel <- function(pid, dock, active = TRUE) {
   invisible()
 }
 
-# A first-class move awaits cynkra/dockViewR#85; until then a move decomposes
-# into remove + add-with-hint. The block / extension card is parked in the
-# offcanvas and re-homed by the remove / add pair, so its server state and
-# rendered output survive -- only the dockview panel wrapper is re-created.
-op_move_panel <- function(pid, hint, dock, board, active = TRUE) {
+# A first-class move: dockViewR relocates the panel next to the hint in one
+# step, carrying its block / extension card along, in place of the former
+# remove + add-with-hint decomposition. It writes nothing to the board directly;
+# the settled `_state` echo the move provokes is committed by the grid mirror,
+# which is what persists the panel's new position.
+op_move_panel <- function(pid, hint, dock) {
 
-  if (!panel_is_live(as_dock_panel_id(pid), dock)) {
+  pid <- as_dock_panel_id(pid)
+
+  if (!panel_is_live(pid, dock)) {
     return(invisible())
   }
 
-  op_remove_panel(pid, dock, active)
-  op_add_panel(pid, hint, dock, board, active)
+  move_dock_panel(pid, hint_to_position(hint, dock), dock$proxy)
+
+  invisible()
+}
+
+# A resize sets the size of the panel's group along its splitview axis. It
+# writes nothing to the board directly; the settled `_state` echo it provokes
+# is committed by the grid mirror, which is what persists the new ratio.
+# Idempotent against the settled ratio, so a re-augmented payload is a no-op.
+op_resize_panel <- function(pid, hint, dock) {
+
+  pid <- as_dock_panel_id(pid)
+
+  if (!panel_is_live(pid, dock)) {
+    return(invisible())
+  }
+
+  resize_dock_panel(pid, hint[["size"]], dock$proxy)
 
   invisible()
 }

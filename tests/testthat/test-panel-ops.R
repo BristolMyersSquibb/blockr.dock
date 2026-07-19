@@ -8,7 +8,7 @@
 
 # A dock stub carrying only what the ops read: an authoritative live-panel set
 # the idempotency guards key on, and a placeholder proxy. The show / hide mocks
-# keep `live_panels` in step so a decomposed move behaves like the real thing.
+# keep `live_panels` in step so the idempotency guards see the real membership.
 fake_dock <- function(live = character()) {
   list(proxy = "PROXY", board_ns = identity, layout = function() NULL,
        live_panels = shiny::reactiveVal(as.character(live)))
@@ -174,43 +174,61 @@ test_that("op_select_panel selects a live member, skips an absent one", {
   expect_null(selected)
 })
 
-test_that("op_move_panel decomposes into remove + add-with-hint", {
+test_that("op_move_panel relocates a live panel to the hint in one step", {
 
-  log <- character()
+  seen <- NULL
 
   local_mocked_bindings(
-    hide_block_panel = function(id, rm_panel, dock, ...) {
-      log <<- c(log, paste0("hide:", as.character(id)))
-      track_rm(dock, id)
+    move_dock_panel = function(id, position, proxy) {
+      seen <<- list(id = as.character(id), position = position)
       invisible()
-    },
-    show_block_panel = function(block, add_panel, dock, ...) {
-      pid <- as_block_panel_id(block)
-      log <<- c(log, paste0("show:", as.character(pid), "@",
-                            add_panel$referencePanel, "/", add_panel$direction))
-      track_add(dock, pid)
-      invisible()
-    },
-    ensure_block_ui = function(...) NULL
+    }
   )
 
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block(), b = new_head_block())
-  )
   dock <- fake_dock(live = c("block_panel-a", "block_panel-b"))
 
   op_move_panel(
-    "block_panel-a", list(near = "block_panel-b", side = "right"), dock, brd
+    "block_panel-a", list(near = "block_panel-b", side = "right"), dock
   )
 
-  # Remove then re-add at the hint; membership is unchanged (still both live).
+  # A first-class move: one dockview relocation to the hint, no remove / re-add,
+  # and membership is unchanged (the panel stays live).
+  expect_identical(seen$id, "block_panel-a")
   expect_identical(
-    log,
-    c("hide:block_panel-a", "show:block_panel-a@block_panel-b/right")
+    seen$position,
+    list(referencePanel = "block_panel-b", direction = "right")
   )
   expect_setequal(
     isolate(dock$live_panels()), c("block_panel-a", "block_panel-b")
   )
+
+  # A panel not live (a captured gesture already applied) -> no-op.
+  seen <- NULL
+  op_move_panel("block_panel-ghost", list(near = "block_panel-b"), dock)
+  expect_null(seen)
+})
+
+test_that("op_resize_panel sizes a live panel, skips an absent one", {
+
+  seen <- NULL
+
+  local_mocked_bindings(
+    resize_dock_panel = function(id, size, proxy) {
+      seen <<- list(id = as.character(id), size = size)
+      invisible()
+    }
+  )
+
+  dock <- fake_dock(live = c("block_panel-a", "block_panel-b"))
+
+  op_resize_panel("block_panel-a", list(size = 0.3), dock)
+  expect_identical(seen$id, "block_panel-a")
+  expect_identical(seen$size, 0.3)
+
+  # A panel not live -> no-op.
+  seen <- NULL
+  op_resize_panel("block_panel-ghost", list(size = 0.3), dock)
+  expect_null(seen)
 })
 
 test_that("op_add_panel on an inactive view places the wrapper, not the card", {

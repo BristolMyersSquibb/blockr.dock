@@ -86,6 +86,11 @@
   (`add` / `rm` / `move` / `select`), with panels named by the new typed
   references `blk()` / `ext()` instead of wire-id prefixes. **Breaking:** the
   old set-replace membership form is retired.
+* The `views$mod` grammar gains a `resize` verb --
+  `resize = list(blk("a", size = 0.3))` sets a panel's group size along its
+  splitview axis (a ratio in `(0, 1)`), delivered through dockViewR's `set_size`
+  proxy. Like `move` / `select` it is client-owned geometry: pure delivery,
+  captured by the grid mirror, no board write (#320).
 * **Breaking:** an extension's id is now owned by its container (mirroring
   blocks), serving as its single identity everywhere -- the wire panel id, DOM
   handle, module namespace and `ext()` target.
