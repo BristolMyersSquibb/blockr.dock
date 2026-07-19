@@ -115,13 +115,13 @@ edit_link_action <- function(trigger, board, update, ...) {
           return()
         }
 
-        # The menu returns the edited link keyed by its (unchanged) id, or
-        # NULL when nothing changed. Commit it as a remove + re-add of that
-        # id in one update, which keeps the id and re-applies every field.
-        link <- committed()$link
+        # The menu returns just the changed fields (or an empty delta when
+        # nothing changed). Apply them as a `links$mod` on the unchanged id;
+        # core merges the delta onto the current link via `update_link()`.
+        delta <- committed()$delta
 
-        if (!is.null(link)) {
-          update(list(links = list(rm = id, add = link)))
+        if (length(delta)) {
+          update(list(links = list(mod = set_names(list(delta), id))))
         }
 
         session$onFlushed(

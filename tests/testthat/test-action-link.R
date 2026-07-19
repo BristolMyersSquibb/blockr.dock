@@ -466,18 +466,15 @@ edit_link_menu <- function(session, from = NULL, to = NULL,
   session$setInputs(`menu-confirm` = confirm)
 }
 
-# An edit is committed as a remove + re-add of the same id (not a
-# `links$mod` delta): the id survives and the full link is re-applied.
-expect_link_edit <- function(upd, id, from, to, input) {
+# An edit is committed as a `links$mod` delta: a named list of the changed
+# constructor-argument values, keyed by the (unchanged) link id.
+expect_link_mod <- function(upd, id, delta) {
   testthat::expect_named(upd, "links")
-  testthat::expect_setequal(names(upd$links), c("rm", "add"))
-  testthat::expect_identical(upd$links$rm, id)
-  testthat::expect_s3_class(upd$links$add, "links")
-  df <- as.data.frame(upd$links$add)
-  testthat::expect_identical(df$id, id)
-  testthat::expect_identical(df$from, from)
-  testthat::expect_identical(df$to, to)
-  testthat::expect_identical(df$input, input)
+  testthat::expect_named(upd$links, "mod")
+  testthat::expect_named(upd$links$mod, id)
+  # A `mod` entry is a partial-arg delta, not a full `links` object.
+  testthat::expect_false(inherits(upd$links$mod, "links"))
+  testthat::expect_identical(upd$links$mod[[id]], delta)
 }
 
 edit_link_env <- function(links, board_id = "b") {
@@ -515,7 +512,7 @@ test_that("edit link action: redirecting the target commits a mod delta", {
       # Re-point a -> h onto the merge block's `y` port; from is untouched.
       edit_link_menu(session, to = "m", input_port = "y")
 
-      expect_link_edit(r_update(), "l1", from = "a", to = "m", input = "y")
+      expect_link_mod(r_update(), "l1", list(to = "m", input = "y"))
     }
   )
 })
@@ -538,7 +535,7 @@ test_that("edit link action: switching the input slot commits only input", {
       session$flushReact()
       edit_link_menu(session, input_port = "y")
 
-      expect_link_edit(r_update(), "l1", from = "a", to = "m", input = "y")
+      expect_link_mod(r_update(), "l1", list(input = "y"))
     }
   )
 })
@@ -562,7 +559,7 @@ test_that("edit link action: naming a variadic positional slot", {
       # The variadic target renders a name field; a blank slot becomes named.
       edit_link_menu(session, input_name = "left")
 
-      expect_link_edit(r_update(), "l1", from = "a", to = "r", input = "left")
+      expect_link_mod(r_update(), "l1", list(input = "left"))
     }
   )
 })
@@ -585,7 +582,7 @@ test_that("edit link action: redirecting the source commits only from", {
       session$flushReact()
       edit_link_menu(session, from = "b")
 
-      expect_link_edit(r_update(), "l1", from = "b", to = "h", input = "data")
+      expect_link_mod(r_update(), "l1", list(from = "b"))
     }
   )
 })

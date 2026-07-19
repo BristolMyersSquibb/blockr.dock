@@ -603,19 +603,11 @@ edit_link_menu_server <- function(id, board, link_id) {
           spec <- gather_edit_link_spec(input, brd, lid, sel$from, sel$to)
           validate_edit_link_spec(spec, brd, lid, session)
 
-          # An edit is committed as a remove + re-add under the *same* id,
-          # not a `links$mod` delta: the id survives and the full link is
-          # re-applied (mirroring the edit-board table's link edits). NULL
-          # when nothing changed, so the action issues no update.
-          link <- if (length(edit_link_delta(spec, brd, lid))) {
-            as_links(
-              set_names(
-                list(new_link(spec$from, spec$to, spec$input)), lid
-              )
-            )
-          }
-
-          list(link = link, nonce = input$confirm)
+          # Return only the changed fields as a `links$mod` delta: the link
+          # keeps its id (and its untouched fields), which core merges via
+          # `update_link()`. Empty when nothing changed, so the action then
+          # issues no update.
+          list(delta = edit_link_delta(spec, brd, lid), nonce = input$confirm)
         },
         ignoreNULL = TRUE,
         ignoreInit = TRUE
