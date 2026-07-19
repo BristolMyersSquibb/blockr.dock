@@ -158,6 +158,16 @@ move_dock_panel <- function(id, position, proxy = dock_proxy()) {
   invisible(NULL)
 }
 
+resize_dock_panel <- function(id, size, proxy = dock_proxy()) {
+  pid <- as_dock_panel_id(id)
+
+  log_debug("resizing panel {pid}")
+
+  dockViewR::set_size(proxy, pid, size)
+
+  invisible(NULL)
+}
+
 restore_layout <- function(layout, proxy, blocks = list(),
                            extensions = list()) {
   log_debug("restoring dockview layout")

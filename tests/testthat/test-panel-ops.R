@@ -208,6 +208,29 @@ test_that("op_move_panel relocates a live panel to the hint in one step", {
   expect_null(seen)
 })
 
+test_that("op_resize_panel sizes a live panel, skips an absent one", {
+
+  seen <- NULL
+
+  local_mocked_bindings(
+    resize_dock_panel = function(id, size, proxy) {
+      seen <<- list(id = as.character(id), size = size)
+      invisible()
+    }
+  )
+
+  dock <- fake_dock(live = c("block_panel-a", "block_panel-b"))
+
+  op_resize_panel("block_panel-a", list(size = 0.3), dock)
+  expect_identical(seen$id, "block_panel-a")
+  expect_identical(seen$size, 0.3)
+
+  # A panel not live -> no-op.
+  seen <- NULL
+  op_resize_panel("block_panel-ghost", list(size = 0.3), dock)
+  expect_null(seen)
+})
+
 test_that("op_add_panel on an inactive view places the wrapper, not the card", {
 
   # The card is a single board-level element shown in the active view; moving it

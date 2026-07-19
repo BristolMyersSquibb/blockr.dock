@@ -26,7 +26,7 @@
 #' @param side Placement direction relative to `near`: one of `within`, `left`,
 #'   `right`, `above`, `below`.
 #' @param size Target size ratio in (0, 1) -- consumed by `resize`, and recorded
-#'   on `add` for when the `set_size` floor lands (#320).
+#'   on `add` for a later size-on-create pass.
 #' @param x An object.
 #' @param ... Ignored.
 #'

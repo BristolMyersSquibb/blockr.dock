@@ -24,7 +24,7 @@ is_panel_ref(x)
 \code{right}, \code{above}, \code{below}.}
 
 \item{size}{Target size ratio in (0, 1) -- consumed by \code{resize}, and recorded
-on \code{add} for when the \code{set_size} floor lands (#320).}
+on \code{add} for a later size-on-create pass.}
 
 \item{x}{An object.}
 

@@ -56,6 +56,10 @@ apply_panel_ops <- function(mod, dock, board, rm_blocks = character(),
     op_move_panel(pid, mod[["move"]][[pid]], dock)
   }
 
+  for (pid in names(mod[["resize"]])) {
+    op_resize_panel(pid, mod[["resize"]][[pid]], dock)
+  }
+
   if (not_null(mod[["select"]])) {
     op_select_panel(mod[["select"]], dock)
   }
@@ -158,6 +162,23 @@ op_move_panel <- function(pid, hint, dock) {
   }
 
   move_dock_panel(pid, hint_to_position(hint, dock), dock$proxy)
+
+  invisible()
+}
+
+# A resize sets the size of the panel's group along its splitview axis. Geometry
+# is client-owned and captured by the grid mirror, so -- like move / select --
+# it writes nothing to the board and exists only as this delivery, idempotent
+# against the settled ratio.
+op_resize_panel <- function(pid, hint, dock) {
+
+  pid <- as_dock_panel_id(pid)
+
+  if (!panel_is_live(pid, dock)) {
+    return(invisible())
+  }
+
+  resize_dock_panel(pid, hint[["size"]], dock$proxy)
 
   invisible()
 }

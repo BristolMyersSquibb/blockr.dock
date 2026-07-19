@@ -929,13 +929,14 @@ validate_views_delta <- function(views, board, upd) {
 }
 
 # The inner grammar of a `views$mod` entry: panel-op verbs on the panels of one
-# view, mirroring the user gesture set (`add` / `rm` / `move` / `select`).
-# Validation threads membership through the batch's application order (rm -> add
-# -> move -> select): `rm` targets a current member, `add` a non-member that
-# resolves to a block or extension, and `move` / `select` a member of the
-# post-add view. Hint refs (`near`) resolve against the same running membership.
+# view, mirroring the user gesture set (`add` / `rm` / `move` / `resize` /
+# `select`). Validation threads membership through the batch's application order
+# (rm -> add -> move -> resize -> select): `rm` targets a current member, `add`
+# a non-member that resolves to a block or extension, and `move` / `resize` /
+# `select` a member of the post-add view. Hint refs (`near`) resolve against the
+# same running membership.
 view_mod_verbs <- function() {
-  c("rm", "add", "move", "select")
+  c("rm", "add", "move", "resize", "select")
 }
 
 valid_panel_sides <- function() {
@@ -1018,6 +1019,13 @@ resolve_view_mod <- function(mod, view_id, members, post_block_ids, ext_ids) {
     mod[["move"]] <- resolve_placement_verb(
       mod[["move"]], view_id, "move", mem_blk, mem_ext, resolve_near,
       c("near", "side")
+    )
+  }
+
+  if (not_null(mod[["resize"]])) {
+    mod[["resize"]] <- resolve_placement_verb(
+      mod[["resize"]], view_id, "resize", mem_blk, mem_ext, resolve_near,
+      c("size")
     )
   }
 
@@ -1295,6 +1303,36 @@ validate_view_mod <- function(mod, view_id, members, ok_panels) {
 
   for (pid in move_ids) {
     validate_panel_hint(mod$move[[pid]], view_id, setdiff(post_add, pid))
+  }
+
+  resize_ids <- validate_mod_map(mod$resize, view_id, "resize")
+
+  bad_resize <- setdiff(resize_ids, post_add)
+
+  if (length(bad_resize)) {
+    blockr_abort(
+      paste0(
+        "Panel(s) in `views$mod$", view_id, "$resize` are not view members: ",
+        paste(bad_resize, collapse = ", "), "."
+      ),
+      class = "dock_views_mod_resize_unknown"
+    )
+  }
+
+  for (pid in resize_ids) {
+
+    hint <- mod$resize[[pid]]
+    validate_panel_hint(hint, view_id, character())
+
+    if (is.null(hint[["size"]])) {
+      blockr_abort(
+        paste0(
+          "`views$mod$", view_id, "$resize` for ", pid,
+          " needs a `size` ratio in (0, 1)."
+        ),
+        class = "dock_views_mod_resize_invalid"
+      )
+    }
   }
 
   sel <- mod$select

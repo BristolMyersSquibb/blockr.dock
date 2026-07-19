@@ -169,6 +169,68 @@ test_that("an rm verb shrinks membership; move / select leave it untouched", {
   expect_identical(board_views(selected), board_views(brd))
 })
 
+test_that("resize augments a size ref and stays a pure payload message", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = c("a", "b"))
+  )
+
+  # The wire form is a ref carrying `size`; augment canonicalizes it to the
+  # panel-keyed hint map, exactly as `move` / `add` do.
+  upd <- augment_board_update(
+    list(views = list(mod = list(
+      A = list(resize = list(blk("a", size = 0.3)))
+    ))),
+    brd
+  )
+  expect_identical(
+    upd$views$mod$A$resize, list(`block_panel-a` = list(size = 0.3))
+  )
+
+  # Like move / select, resize is client-owned geometry: the reducer writes
+  # nothing, so membership is untouched.
+  expect_identical(board_views(apply_board_update(brd, upd)), board_views(brd))
+})
+
+test_that("resize rejects a non-member, a missing size, and a bad ratio", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = c("a", "b"))
+  )
+
+  expect_error(
+    validate_board_update(
+      list(views = list(mod = list(
+        A = list(resize = list(`block_panel-c` = list(size = 0.3)))
+      ))),
+      brd
+    ),
+    class = "dock_views_mod_resize_unknown"
+  )
+
+  expect_error(
+    validate_board_update(
+      list(views = list(mod = list(
+        A = list(resize = list(`block_panel-a` = list()))
+      ))),
+      brd
+    ),
+    class = "dock_views_mod_resize_invalid"
+  )
+
+  expect_error(
+    validate_board_update(
+      list(views = list(mod = list(
+        A = list(resize = list(`block_panel-a` = list(size = 1.5)))
+      ))),
+      brd
+    ),
+    class = "dock_views_mod_hint_invalid"
+  )
+})
+
 test_that("a grid in views$mod is rejected at the update boundary", {
 
   brd <- new_dock_board(
