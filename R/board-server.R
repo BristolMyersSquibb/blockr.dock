@@ -323,33 +323,41 @@ freeze_hidden_inputs <- function(board, visibility) {
 }
 
 # The grid mirror's observer, split from manage_dock for testability. It reacts
-# to the view's settled `_state` echo, ignores the echoes its own restores
-# provoke (`_state-source` == "server"), and commits the client layout verbatim
-# in canonical form, only when it differs (beyond the sash-size tolerance) from
-# what is stored -- so a sash drag or tab switch is at most one board commit and
-# a re-echo after quiescence none. It does not restrict to membership: a panel
-# absent from the view is an inert ghost, pruned at the compose / restore
-# boundary, never by this writer.
-observe_grid_echo <- function(id, dock, board, session, commit_grid) {
+# to the view's settled `_state` echo and commits the client layout verbatim in
+# canonical form, only when it differs (beyond the sash-size tolerance) from
+# what is stored -- so a sash drag, a programmatic move / resize, or a tab
+# switch is at most one board commit and a re-echo after quiescence none.
+#
+# The one echo it must not commit is the initial restore's: manage_dock replays
+# this view's stored layout, and that echo is a replay of what we already hold,
+# not a client gesture -- committing its in-flight frames would persist a
+# transient mid-restore layout. `restoring` is the one-shot latch manage_dock
+# raises around that restore; the mirror consumes it on the next echo and skips
+# exactly that one. Move / resize / add echoes never raise it, so they fall
+# through and persist the geometry the client realised -- the only record of
+# where a moved or resized panel landed.
+#
+# It does not restrict to membership: a panel absent from the view is an inert
+# ghost, pruned at the compose / restore boundary, never by this writer.
+observe_grid_echo <- function(id, dock, board, restoring, commit_grid) {
 
   observeEvent(
     dock$layout(),
     {
-      source <- isolate(session$input[[dock_input("state-source")]])
+      state <- dock$layout()
 
-      if (identical(source, "server")) {
+      if (is.null(state)) {
+        return()
+      }
+
+      if (isTRUE(isolate(restoring()))) {
+        restoring(FALSE)
         return()
       }
 
       views <- board_views(board$board)
 
       if (!id %in% names(views)) {
-        return()
-      }
-
-      state <- dock$layout()
-
-      if (is.null(state)) {
         return()
       }
 
@@ -691,6 +699,7 @@ manage_dock <- function(
     live_panels <- reactiveVal(as.character(layout_panel_ids(init_layout)))
     prev_active_group <- reactiveVal()
     active_group_trail <- reactiveVal()
+    restoring <- reactiveVal(FALSE)
     n_panels <- reactive(length(live_panels()))
 
     dock <- list(
@@ -744,7 +753,7 @@ manage_dock <- function(
         update(list(views = list(grid = set_names(list(grid), id))))
       }
 
-      observe_grid_echo(id, dock, board, session, commit_grid)
+      observe_grid_echo(id, dock, board, restoring, commit_grid)
     }
 
     if (get_log_level() >= debug_log_level) {
@@ -761,6 +770,8 @@ manage_dock <- function(
     observeEvent(
       req(input[[dock_input("initialized")]]),
       {
+        restoring(TRUE)
+
         restore_layout(init_layout, dock$proxy,
                        blocks = init_blocks, extensions = init_exts)
 

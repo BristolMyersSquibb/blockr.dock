@@ -21,10 +21,12 @@ remove_panel_delta <- function(view_id, panel_id) {
 # Apply a view's panel-op batch to its live dock. Server-initiated ops land
 # here through the applied `views$mod` payload (the `set_panel_title`
 # precedent), the mirror image of the membership fold: `add` / `rm` write the
-# board and this places / removes the panel, `move` / `select` write nothing and
-# exist only as this client-side apply. Every op is idempotent against the live
-# panel set, so the fold's own capture echo and a re-augmented payload are
-# no-ops. Application order matches the reducer: rm -> add -> move -> select.
+# board and this places / removes the panel; `move` / `resize` / `select` write
+# nothing here and only deliver to the live dock -- the grid mirror then
+# captures the resulting geometry from the client echo, which is what persists
+# a move or resize. Every op is idempotent against the live panel set, so the
+# fold's own capture echo and a re-augmented payload are no-ops. Application
+# order matches the reducer: rm -> add -> move -> resize -> select.
 #
 # `active` marks whether this dock is the active view. A block / extension card
 # is a single board-level element, shown in whichever view is active, so only
@@ -151,8 +153,9 @@ op_remove_panel <- function(pid, dock, active = TRUE) {
 
 # A first-class move: dockViewR relocates the panel next to the hint in one
 # step, carrying its block / extension card along, in place of the former
-# remove + add-with-hint decomposition. The move is server-driven, so the grid
-# mirror's server-source skip ignores the `_state` echo it provokes.
+# remove + add-with-hint decomposition. It writes nothing to the board directly;
+# the settled `_state` echo the move provokes is committed by the grid mirror,
+# which is what persists the panel's new position.
 op_move_panel <- function(pid, hint, dock) {
 
   pid <- as_dock_panel_id(pid)
@@ -166,10 +169,10 @@ op_move_panel <- function(pid, hint, dock) {
   invisible()
 }
 
-# A resize sets the size of the panel's group along its splitview axis. Geometry
-# is client-owned and captured by the grid mirror, so -- like move / select --
-# it writes nothing to the board and exists only as this delivery, idempotent
-# against the settled ratio.
+# A resize sets the size of the panel's group along its splitview axis. It
+# writes nothing to the board directly; the settled `_state` echo it provokes
+# is committed by the grid mirror, which is what persists the new ratio.
+# Idempotent against the settled ratio, so a re-augmented payload is a no-op.
 op_resize_panel <- function(pid, hint, dock) {
 
   pid <- as_dock_panel_id(pid)
