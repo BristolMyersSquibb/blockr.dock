@@ -753,13 +753,13 @@ test_that("single-page board renders one auto-named view (#236)", {
   expect_identical(docks$id, nav$id)
 })
 
-test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
+test_that("navbar spinner tracks real work, not bookkeeping (#285, #345)", {
 
   skip_on_cran()
 
   app <- new_app_driver(
     system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
-    name = "busy-pulse",
+    name = "navbar-spinner",
     seed = 42,
     load_timeout = 30 * 1000,
     timeout = 20 * 1000
@@ -768,22 +768,25 @@ test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
 
   app$wait_for_idle()
 
-  # serve() opts the dock into shiny's page pulse. A panel switch marks the
+  # The navbar spinner (a ring next to the gear) replaces shiny's page pulse: it
+  # turns while the session does real block evaluation. A panel switch marks the
   # session busy (the visibility report and layout fold round-trips) without
-  # recomputing a visible output, so the pulse would fire for what is only
-  # layout bookkeeping; block evaluation marks its output `.recalculating`
-  # inside the view container. The live pulse is a sub-second transient, racy
-  # to sample, so drive the two busy states directly and read the pulse
-  # pseudo-element's computed display (fixed positioning blockifies it when
-  # shown, so a visible pulse is "block"). The recalculating element is placed
-  # outside the view container (a hidden block still pending evaluation in the
-  # offcanvas pool) versus inside it (real visible work) to pin the scope.
+  # recomputing a visible output, so gating on `.shiny-busy` alone would spin
+  # for what is only layout bookkeeping; block evaluation marks its output
+  # `.recalculating` inside the view container. The live transition is a
+  # sub-second transient, racy to sample, so drive the two busy states directly
+  # and read the spinner's computed display (`none` when idle-scoped; a shown
+  # value otherwise -- `block`, since the flex navbar blockifies the shown flex
+  # item). The recalculating element is placed outside the view container (a
+  # hidden block still pending evaluation in the offcanvas pool) versus inside
+  # it (real visible work) to pin the scope.
   probe <- jsonlite::fromJSON(
     app$get_js(
       r"(JSON.stringify((function () {
         var html = document.documentElement;
-        var pulse = function () {
-          return getComputedStyle(html, '::after').display;
+        var spinner = document.querySelector('.blockr-navbar-spinner');
+        var display = function () {
+          return spinner ? getComputedStyle(spinner).display : null;
         };
         var mark = function (parent) {
           var el = document.createElement('div');
@@ -792,14 +795,14 @@ test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
           return el;
         };
 
-        var enabled = html.dataset.shinyBusyPulse === 'true';
+        var pulseOff = html.dataset.shinyBusyPulse !== 'true';
         var container = document.querySelector('.blockr-view-container');
         html.classList.add('shiny-busy');
 
         // The app's own outputs may still be settling -- a block card inside a
         // view container can hold a lingering `.recalculating` well past
         // wait_for_idle(). Neutralise every real in-container marker (the exact
-        // pulse-CSS scope) so only the synthetic markers below drive the
+        // spinner-CSS scope) so only the synthetic markers below drive the
         // reading, then restore them.
         var real = Array.from(
           document.querySelectorAll('.blockr-view-container .recalculating')
@@ -807,33 +810,35 @@ test_that("busy pulse tracks real work, not layout bookkeeping (#285)", {
         real.forEach(function (el) { el.classList.remove('recalculating'); });
 
         var hidden = mark(document.body);
-        var bookkeeping = pulse();
+        var bookkeeping = display();
         hidden.remove();
 
         var visible = mark(container);
-        var computing = pulse();
+        var computing = display();
         visible.remove();
 
         real.forEach(function (el) { el.classList.add('recalculating'); });
         html.classList.remove('shiny-busy');
 
         return {
-          enabled: enabled, hasContainer: container !== null,
+          pulseOff: pulseOff, hasSpinner: spinner !== null,
+          hasContainer: container !== null,
           bookkeeping: bookkeeping, computing: computing
         };
       })()))"
     )
   )
 
-  # The dock opts into the pulse, and the view container the scope keys on is
-  # present.
-  expect_true(probe$enabled)
+  # The page pulse is off, and the navbar spinner and the view container the
+  # scope keys on are both present.
+  expect_true(probe$pulseOff)
+  expect_true(probe$hasSpinner)
   expect_true(probe$hasContainer)
 
   # Busy with a recalculating output only outside the view container (a bare
-  # panel switch, or a hidden block still pending in the offcanvas) hides the
-  # pulse; busy with a recalculating output inside it (block evaluation) shows
-  # it.
+  # panel switch, or a hidden block still pending in the offcanvas) keeps the
+  # spinner hidden; busy with a recalculating output inside it (block
+  # evaluation) shows it.
   expect_identical(probe$bookkeeping, "none")
   expect_identical(probe$computing, "block")
 })

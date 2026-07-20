@@ -137,6 +137,37 @@ test_that("locked mode renders a navbar lock indicator", {
   expect_match(locked_html, ">Read-only<", fixed = TRUE)
 })
 
+test_that("navbar renders a busy spinner beside the gear (#345)", {
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  spinner_of <- function(html) {
+    xml2::xml_find_all(
+      xml2::read_html(html),
+      paste0(
+        ".//span[contains(concat(' ', normalize-space(@class), ' '), ",
+        "' blockr-navbar-spinner ')]"
+      )
+    )
+  }
+
+  spinner <- spinner_of(as.character(board_ui("test", brd)))
+
+  # A CSS-only busy ring driven off `.shiny-busy`, announced like the lock
+  # indicator beside it.
+  expect_length(spinner, 1)
+  expect_identical(xml2::xml_attr(spinner, "role"), "status")
+  expect_identical(xml2::xml_attr(spinner, "aria-label"), "Busy")
+
+  # Blocks still evaluate while read-only, so the spinner survives locked mode
+  # (unlike the editing chrome it sits beside).
+  locked <- withr::with_options(
+    list(blockr.locked = TRUE),
+    spinner_of(as.character(board_ui("test", brd)))
+  )
+  expect_length(locked, 1)
+})
+
 test_that("locked mode drops the board-options accordion (#135)", {
 
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))

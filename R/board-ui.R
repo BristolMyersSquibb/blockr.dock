@@ -60,6 +60,16 @@ board_ui.dock_board <- function(
             )
           )
         },
+        # Busy spinner. Shown/hidden purely by CSS off the `.shiny-busy` class
+        # Shiny toggles on <html> during a flush -- no server observer -- and
+        # scoped to real block evaluation so a bare panel switch does not spin
+        # it. Sits just before the gear so its show/hide never nudges that
+        # (right-anchored) button. Announced like the lock indicator beside it.
+        tags$span(
+          class = "blockr-navbar-spinner",
+          role = "status",
+          `aria-label` = "Busy"
+        ),
         # Pure-JS open trigger via `data-blockr-sidebar-target`. The
         # settings sidebar's body is pre-rendered into its mount below, so
         # no server observer is needed: clicking the gear toggles the
