@@ -109,11 +109,8 @@ model_set_members <- function(st, members) {
 
 # The grid mirror's commit logic, reproduced from observe_grid_echo(): an echo
 # casts to a `dock_grid` and commits only when it falls outside the size
-# tolerance of what is stored (the all.equal guard), else no-ops. (The empty-
-# frame guard the real observer also carries -- an empty grid is a re-init
-# transient, never mirrored -- is an edge case exercised in test-grid-mirror.R,
-# not modelled here.) Returns the commit count so the "one gesture, at most one
-# commit" bound is checkable.
+# tolerance of what is stored (the all.equal guard), else no-ops. Returns the
+# commit count so the "one gesture, at most one commit" bound is checkable.
 model_deliver_echo <- function(st) {
 
   echo <- st$client$pending

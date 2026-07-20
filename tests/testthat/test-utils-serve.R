@@ -357,9 +357,8 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
 
   # wait_dock_loaded gates on the server-rendered cards; the dockview client
   # restores the a/b tab group asynchronously. Wait for it to settle (b fronted,
-  # a a hidden back tab) before reading the exported grid, or the export can
-  # capture a transient separate-leaves state -- the grid mirror commits
-  # whatever the client last reported.
+  # a a hidden back tab) before reading the exported grid, so the read sees the
+  # restored layout the mirror commits rather than racing the async restore.
   wait_active_block_tabs(app, "analysis", "block_panel-b")
 
   before <- read_dock_state(app)
@@ -427,10 +426,10 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   # and that the fixture re-importing its own (colliding) view ids does not drop
   # them. It cannot see the client render, so that leg is asserted below.
   #
-  # Byte-exact holds because the mirror skips the restore's "restore"-tagged
-  # replay, so the stored grid is never overwritten by the sizes dockview
-  # renders (which jitter sub-tolerance run to run); a single post-restore focus
-  # settles deterministically rather than churning them.
+  # Byte-exact holds because dockViewR surfaces `_state` only once a restore has
+  # settled: the mirror commits that single settled layout, never the
+  # intermediate frames (separate leaves, zero-geometry) a restore used to
+  # stream, so the stored grid does not drift run to run.
   #
   # get_download can transiently fail after the reload -- the link's href is
   # filled only once outputs bind, and the download endpoint may briefly not
