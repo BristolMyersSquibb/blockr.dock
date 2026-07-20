@@ -84,10 +84,9 @@ test_that("grid mirror commits a client echo, guards re-echoes", {
 
     board <- reactiveValues(board = brd)
     layout_rv <- reactiveVal(NULL)
-    restoring <- reactiveVal(FALSE)
 
     observe_grid_echo(
-      "V", list(layout = layout_rv), board, restoring,
+      "V", list(layout = layout_rv), board,
       commit_grid = function(grid) {
         committed[[length(committed) + 1L]] <<- grid
         board$board <- apply_board_update(
@@ -119,10 +118,20 @@ test_that("grid mirror commits a client echo, guards re-echoes", {
     ms$flushReact()
 
     expect_length(committed, 1L)
+
+    # A later distinct settled echo -- a move / resize / add the client
+    # realises -- commits like the first.
+    layout_rv(echo_state(dock_grid(
+      "block_panel-a", "block_panel-b", "block_panel-d",
+      sizes = c(0.6, 0.2, 0.2)
+    )))
+    ms$flushReact()
+
+    expect_length(committed, 2L)
   })
 })
 
-test_that("the restore latch skips one echo; a later echo commits", {
+test_that("the mirror skips an empty-grid echo (a mid-load transient)", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -139,31 +148,24 @@ test_that("the restore latch skips one echo; a later echo commits", {
 
     board <- reactiveValues(board = brd)
     layout_rv <- reactiveVal(NULL)
-    restoring <- reactiveVal(FALSE)
 
     observe_grid_echo(
-      "V", list(layout = layout_rv), board, restoring,
+      "V", list(layout = layout_rv), board,
       commit_grid = function(grid) {
         committed[[length(committed) + 1L]] <<- grid
       }
     )
     ms$flushReact()
 
-    # The restore push raises the latch: the settled echo it provokes replays a
-    # layout we already hold (often the composed, ghost-pruned grid), so it is
-    # consumed and skipped however much it differs from what is stored.
-    restoring(TRUE)
-    layout_rv(echo_state(dock_grid(
-      "block_panel-a", "block_panel-b", sizes = c(0.85, 0.15)
-    )))
+    # A re-init frame with no panels carries no geometry, so it is not committed
+    # however much it differs from the stored grid -- the reload transient that
+    # would otherwise strand an empty grid.
+    layout_rv(echo_state(dock_grid()))
     ms$flushReact()
 
     expect_length(committed, 0L)
-    expect_false(isolate(restoring()))
 
-    # One-shot: the next echo is not a restore replay -- a real drag or a
-    # server-driven move / resize -- so it commits. This is what persists a
-    # programmatic resize the blanket server-skip used to drop.
+    # A later non-empty echo commits as usual.
     layout_rv(echo_state(dock_grid(
       "block_panel-a", "block_panel-b", sizes = c(0.3, 0.7)
     )))
@@ -191,10 +193,8 @@ test_that("the mirror stores an in-flight echo verbatim; placement prunes it", {
     board <- reactiveValues(board = brd)
     layout_rv <- reactiveVal(NULL)
 
-    restoring <- reactiveVal(FALSE)
-
     observe_grid_echo(
-      "V", list(layout = layout_rv), board, restoring,
+      "V", list(layout = layout_rv), board,
       commit_grid = function(grid) {
         committed[[length(committed) + 1L]] <<- grid
         board$board <- apply_board_update(
