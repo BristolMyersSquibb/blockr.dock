@@ -164,9 +164,12 @@ CRAN release: 2026-07-13
 - Per-block condition UI (warnings, messages, errors) is updated
   surgically by the stable condition id, so a persistent warning no
   longer flashes on every re-evaluation.
-- The busy pulse no longer flashes on a plain panel switch: a CSS rule
-  gates it on a genuinely recomputing output, so startup and block
-  evaluation still pulse but bare navigation does not.
+- The intrusive page-wide busy pulse is replaced by a small, unobtrusive
+  spinner in the navbar, next to the board-options gear. It turns while
+  the session does real block evaluation and disappears otherwise –
+  scoped (as the pulse was) to a genuinely recomputing output in the
+  visible view, so startup and block evaluation spin it while a bare
+  panel switch does not.
 - The “Edit board” extension no longer churns on a board re-emit – it
   re-syncs its staged working copy only when links or stacks actually
   change, stops flickering the manage-links cell inputs, and overlays
