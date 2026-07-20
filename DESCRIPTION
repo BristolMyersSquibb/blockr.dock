@@ -51,6 +51,7 @@ Config/testthat/edition: 3
 Collate:
     'action-class.R'
     'action-block.R'
+    'action-inputs.R'
     'action-link.R'
     'action-stack.R'
     'action-ui.R'
@@ -77,6 +78,7 @@ Collate:
     'plugin-serdes.R'
     'sidebar-server.R'
     'sidebar-block.R'
+    'sidebar-inputs.R'
     'sidebar-link.R'
     'sidebar-stack.R'
     'utils-dock.R'
