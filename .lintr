@@ -1,0 +1,1 @@
+exclusions: list("tests/testthat/*.R" = list(object_usage_linter = Inf))

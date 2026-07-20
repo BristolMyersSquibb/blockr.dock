@@ -108,3 +108,28 @@
 .blockr-link-menu.is-empty .blockr-link-menu-direction {
   display: none;
 }
+
+/* ---- edit-link form ---------------------------------------------------
+   The single-link editor uses plain Shiny inputs (a source / target
+   picker and a re-rendered input-slot field) rather than the card grid,
+   so it only needs light layout: full-width controls, a spaced primary
+   action, and a visible empty-state (the shared notice class defaults to
+   display:none, shown here since the form has no .is-empty toggle). */
+.blockr-link-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.blockr-link-edit .shiny-input-container {
+  width: 100%;
+}
+
+.blockr-link-edit .blockr-block-browser-empty {
+  display: flex;
+}
+
+.blockr-link-edit-confirm {
+  margin-top: 12px;
+  align-self: flex-start;
+}

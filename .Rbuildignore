@@ -6,4 +6,5 @@
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
 ^\.claude
+^\.lintr$
 ^vignettes/mermaid/.*\.mmd$

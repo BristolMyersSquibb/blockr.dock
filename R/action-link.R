@@ -61,6 +61,87 @@ add_link_action <- function(trigger, board, update, ...) {
   )
 }
 
+edit_link_action <- function(trigger, board, update, ...) {
+  new_action(
+    function(input, output, session) {
+
+      sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
+
+      # The menu validates its own commit (block eligibility, acyclicity,
+      # input-name uniqueness) and returns only the fields that changed, so
+      # this handler is a thin adapter over a `links$mod` update.
+      committed <- edit_link_menu_server(
+        "menu",
+        board = reactive(board$board),
+        link_id = reactive(trigger())
+      )
+
+      menu_ui <- function() {
+        edit_link_menu_ui(
+          session$ns("menu"), board$board, link_id = trigger()
+        )
+      }
+
+      sidebar_title <- function() paste0("Edit link ", trigger())
+
+      observeEvent(trigger(), {
+        show_sidebar(
+          sidebar_id, title = sidebar_title(), ui = menu_ui()
+        )
+      })
+
+      # Close the sidebar the moment the edited link leaves the board
+      # (removed elsewhere): editing a link that no longer exists makes no
+      # sense, so don't wait for an "Update" click. Guarded on the sidebar
+      # being open and on an edit actually being in progress.
+      observeEvent(board$board, {
+        id <- trigger()
+        if (length(id) == 1L && !is.na(id) && nzchar(id) &&
+              !id %in% board_link_ids(board$board) &&
+              isTRUE(sidebar_state(sidebar_id)$open)) {
+          hide_sidebar(sidebar_id)
+        }
+      }, ignoreInit = TRUE)
+
+      observeEvent(committed(), {
+        id <- trigger()
+
+        # Safety net for a race (board change not yet observed when the user
+        # clicks): committing for a link that's gone would error, so bail and
+        # close unless `id` is still a present link.
+        if (!(length(id) == 1L && !is.na(id) && nzchar(id) &&
+                id %in% board_link_ids(board$board))) {
+          hide_sidebar(sidebar_id)
+          return()
+        }
+
+        # The menu returns just the changed fields (or an empty delta when
+        # nothing changed). Apply them as a `links$mod` on the unchanged id;
+        # core merges the delta onto the current link via `update_link()`.
+        delta <- committed()$delta
+
+        if (length(delta)) {
+          update(list(links = list(mod = set_names(list(delta), id))))
+        }
+
+        session$onFlushed(
+          function() {
+            isolate(
+              keep_or_hide_sidebar(
+                sidebar_id, title = sidebar_title(), ui = menu_ui()
+              )
+            )
+          },
+          once = TRUE
+        )
+      })
+
+      NULL
+    },
+    id = "edit_link_action"
+  )
+}
+
 remove_link_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {

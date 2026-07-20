@@ -169,22 +169,22 @@ model_placement_total <- function(st) {
 # Every per-step invariant in one place, tagged for replay by seed / step.
 check_invariants <- function(st, commit, info) {
 
-  testthat::expect_no_error(validate_board(st$board))
+  expect_no_error(validate_board(st$board))
 
   shown <- model_shown(st)
   members <- model_members(st)
 
   # No ghost rendering: a panel absent from membership never reaches placement.
-  testthat::expect_true(all(shown %in% members),
-                        info = paste(info, "| ghost render"))
+  expect_true(all(shown %in% members),
+              info = paste(info, "| ghost render"))
 
   # Membership authoritative: the view shows exactly its members.
-  testthat::expect_true(model_placement_total(st),
-                        info = paste(info, "| placement"))
+  expect_true(model_placement_total(st),
+              info = paste(info, "| placement"))
 
   # One event, at most one board commit.
-  testthat::expect_lte(commit, 1L)
-  testthat::expect_gte(commit, 0L)
+  expect_lte(commit, 1L)
+  expect_gte(commit, 0L)
 }
 
 model_gesture <- function(st) {

@@ -35,6 +35,6 @@ local({
         force = TRUE
       )
     },
-    testthat::teardown_env()
+    teardown_env()
   )
 })
