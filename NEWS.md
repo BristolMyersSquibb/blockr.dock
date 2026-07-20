@@ -91,6 +91,11 @@
   splitview axis (a ratio in `(0, 1)`), delivered through dockViewR's `set_size`
   proxy. Like `move` / `select` it is client-owned geometry: pure delivery,
   captured by the grid mirror, no board write (#320).
+* A saved dock layout now round-trips exactly through an export / import cycle
+  -- the reloaded board re-exports the same tab groups, active tabs and sizes.
+  Previously a transient frame the client reports while a restore is still
+  settling could be captured into the stored geometry, flattening a tab group
+  to separate leaves or emptying a view (#343).
 * **Breaking:** an extension's id is now owned by its container (mirroring
   blocks), serving as its single identity everywhere -- the wire panel id, DOM
   handle, module namespace and `ext()` target.

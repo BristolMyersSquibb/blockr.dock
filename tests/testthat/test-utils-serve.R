@@ -341,16 +341,15 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
 
   # The restored board carries the per-view grid forward, not just the nav and
   # blocks: re-exporting after the reload reproduces the stored geometry (the
-  # tab group, its active tab, the sizes). This reads the committed board's
-  # slots -- proving the stage / reload cycle preserved them and that the
-  # fixture re-importing its own (colliding) view ids does not drop them. It
-  # cannot see the client render, so that leg is asserted below.
+  # tab group, its active tab, the custom sizes) byte-for-byte. This reads the
+  # committed board's slots -- proving the stage / reload cycle preserved them
+  # and that the fixture re-importing its own (colliding) view ids does not drop
+  # them. It cannot see the client render, so that leg is asserted below.
   #
-  # Structure and membership match exactly; the sizes match within
-  # `grid_size_tol()`. Under the restore latch the stored grid tracks the ratios
-  # dockview renders -- a post-restore select echoes them -- which jitter
-  # sub-tolerance run to run, so the byte-exact form the blanket server-skip
-  # allowed no longer holds. It returns with the dockViewR restore tag.
+  # Byte-exact holds because the mirror skips the restore's "restore"-tagged
+  # replay, so the stored grid is never overwritten by the sizes dockview
+  # renders (which jitter sub-tolerance run to run); a single post-restore focus
+  # settles deterministically rather than churning them.
   #
   # get_download can transiently fail after the reload -- the link's href is
   # filled only once outputs bind, and the download endpoint may briefly not
@@ -359,15 +358,9 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   ser2 <- jsonlite::fromJSON(path2, simplifyDataFrame = FALSE,
                              simplifyMatrix = FALSE)
 
-  expect_true(
-    isTRUE(
-      all.equal(
-        drop_focus(ser2[["payload"]][["grids"]]),
-        drop_focus(ser[["payload"]][["grids"]]),
-        tolerance = grid_size_tol(),
-        scale = 1
-      )
-    )
+  expect_identical(
+    drop_focus(ser2[["payload"]][["grids"]]),
+    drop_focus(ser[["payload"]][["grids"]])
   )
   expect_identical(ser2[["payload"]][["views"]], ser[["payload"]][["views"]])
 
