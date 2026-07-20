@@ -187,8 +187,8 @@
    border) so the dot matches the DAG node badge, which rings its fill the same
    way. The dot output must stay in flow when empty (never display:none) so it
    is not suspended while hidden and left stuck ".recalculating", which would
-   trip the busy-pulse scope; an empty inline output takes no space on its
-   own. */
+   trip the navbar busy-spinner scope; an empty inline output takes no space on
+   its own. */
 .blockr-block-icon {
   position: relative;
   display: inline-flex;
@@ -1156,20 +1156,46 @@ label:has(input[type="file"]) {
 }
 
 /* ============================================
-   Busy pulse — scope to real computation
+   Navbar busy spinner — scope to real computation
    ============================================ */
 
-/* Shiny's page pulse (enabled in serve() via useBusyIndicators(pulse = TRUE))
-   shows whenever the session is busy, i.e. on any observer flush. A plain panel
-   switch round-trips to the server -- the on-screen visibility report and the
-   layout fold -- without recomputing any visible output, so the pulse would
-   fire for what is only layout bookkeeping. Gate it on a genuinely
-   recalculating output inside the visible view container: block evaluation
-   marks its output "recalculating" there, bookkeeping does not. Scoping to the
-   view container is deliberate -- an off-screen block parked in the (hidden)
-   offcanvas pool stays "recalculating" while it waits for evaluation, and that
-   pool sits outside the container, so a pending hidden block never forces the
-   pulse. Startup and real recompute still pulse; a bare panel switch does not. */
-html[data-shiny-busy-pulse].shiny-busy:not(:has(.blockr-view-container .recalculating))::after {
+/* A small ring next to the board-options gear that spins while the session
+   does real block evaluation, replacing bslib's page-wide busy pulse. Driven
+   purely off the `.shiny-busy` class Shiny puts on <html> during a flush -- no
+   server observer, no page darkening.
+
+   Scoped exactly as the old pulse was: a plain panel switch round-trips to the
+   server -- the on-screen visibility report and the layout fold -- without
+   recomputing any visible output, so gating on `.shiny-busy` alone would spin
+   for what is only layout bookkeeping. Require a genuinely recalculating output
+   inside the visible view container: block evaluation marks its output
+   "recalculating" there, bookkeeping does not. Scoping to the container is
+   deliberate -- an off-screen block parked in the (hidden) offcanvas pool stays
+   "recalculating" while it waits for evaluation, and that pool sits outside the
+   container, so a pending hidden block never spins the navbar. Startup and real
+   recompute spin; a bare panel switch does not. */
+.blockr-navbar-spinner {
   display: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--blockr-color-text-muted);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: blockr-navbar-spin 0.7s linear infinite;
+}
+
+html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
+  display: inline-block;
+}
+
+@keyframes blockr-navbar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blockr-navbar-spinner {
+    animation: none;
+  }
 }
