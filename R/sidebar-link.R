@@ -577,8 +577,12 @@ edit_link_menu_server <- function(id, board, link_id) {
           edit_link_block_select(
             session$ns("from"), "Source block", brd, ids, row$from
           ),
+          # Only blocks that can still receive a link (a free named input,
+          # or variadic arity) are offered as targets; the edited link's own
+          # slot is freed first, so its current target stays selectable.
           edit_link_block_select(
-            session$ns("to"), "Target block", brd, ids, row$to
+            session$ns("to"), "Target block", brd,
+            edit_link_target_ids(brd, lid), row$to
           )
         )
       })
@@ -792,6 +796,22 @@ edit_link_row <- function(board, link_id) {
 links_without <- function(board, link_id) {
   lnks <- board_links(board)
   lnks[setdiff(board_link_ids(board), link_id)]
+}
+
+# Block ids eligible as the link's target: those with input capacity (a
+# free named input, or variadic arity), computed with the edited link
+# removed so its current target - whose slot then frees up - stays in the
+# list. Reuses the connect menu's `has_input_capacity()`.
+edit_link_target_ids <- function(board, link_id) {
+  blocks <- board_blocks(board)
+  links_df <- as.data.frame(links_without(board, link_id))
+  ids <- names(blocks)
+  keep <- vapply(
+    ids,
+    function(id) has_input_capacity(blocks[[id]], id, links_df),
+    logical(1L)
+  )
+  ids[keep]
 }
 
 # A single-select block picker rendered with the block-browser selectize

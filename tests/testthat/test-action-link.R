@@ -825,6 +825,20 @@ test_that("edit link input field switches on target arity", {
   expect_true(grepl("mid-input_name", variadic, fixed = TRUE))
 })
 
+test_that("edit link target picker offers only blocks with free capacity", {
+  board <- new_board(
+    c(a = new_dataset_block("iris"), b = new_dataset_block("mtcars"),
+      m = new_merge_block(), r = new_rbind_block(), h = new_head_block()),
+    links = links(l1 = new_link("a", "m", "x"), l3 = new_link("m", "h", "data"))
+  )
+
+  # Editing l3 (m -> h): source-only datasets a / b (arity 0) are dropped;
+  # m (free y port), r (variadic) and h (its own slot freed) are offered.
+  expect_setequal(edit_link_target_ids(board, "l3"), c("m", "r", "h"))
+  expect_false("a" %in% edit_link_target_ids(board, "l3"))
+  expect_true("h" %in% edit_link_target_ids(board, "l3"))
+})
+
 test_that("edit link helpers: row lookup, exclusion and delta", {
   board <- new_board(
     c(a = new_dataset_block("iris"), m = new_merge_block()),
