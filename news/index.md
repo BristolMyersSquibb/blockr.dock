@@ -2,6 +2,12 @@
 
 ## blockr.dock (development version)
 
+- A served board now honours a `?view=<id>` URL query parameter: it
+  opens on the named view instead of the board’s default active view
+  (matching by stable view id, the immutable handle). An absent or
+  unknown id falls back to the default, so existing links are unaffected
+  ([\#323](https://github.com/BristolMyersSquibb/blockr.dock/issues/323)).
+
 - New `edit_link_action`: a sidebar editor for a single existing link.
   It can rename the link’s input (turning an unnamed positional slot
   into a named one, or changing an existing name), switch the input slot

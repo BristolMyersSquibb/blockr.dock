@@ -95,7 +95,9 @@ dock_board_options()
 
   Id of the initially active view (a key of `views`). Defaults to the
   first view. Which view is active is a property of the collection, not
-  of an individual view.
+  of an individual view. A served board also honours a `?view=<id>` URL
+  query parameter naming a view id, which opens the board on that view
+  and overrides this default for that request.
 
 - options:
 
