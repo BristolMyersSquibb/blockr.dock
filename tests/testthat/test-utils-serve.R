@@ -420,16 +420,20 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   expect_identical(read_dock_state(app), before)
 
   # The restored board carries the per-view grid forward, not just the nav and
-  # blocks: re-exporting after the reload reproduces the stored geometry (the
-  # tab group, its active tab, the custom sizes) byte-for-byte. This reads the
-  # committed board's slots -- proving the stage / reload cycle preserved them
-  # and that the fixture re-importing its own (colliding) view ids does not drop
-  # them. It cannot see the client render, so that leg is asserted below.
+  # blocks: re-exporting after the reload reproduces the stored geometry -- the
+  # tab group and its active tab exactly, the split sizes within the sash
+  # tolerance. This reads the committed board's slots -- proving the stage /
+  # reload cycle preserved them and that the fixture re-importing its own
+  # (colliding) view ids does not drop them. It cannot see the client render, so
+  # that leg is asserted below.
   #
-  # Byte-exact holds because dockViewR surfaces `_state` only once a restore has
-  # settled: the mirror commits that single settled layout, never the
-  # intermediate frames (separate leaves, zero-geometry) a restore used to
-  # stream, so the stored grid does not drift run to run.
+  # The grid compare is `all.equal(tolerance = grid_size_tol(), scale = 1)`:
+  # structure and the active tab match exactly, the sizes within the sash
+  # tolerance. dockView renders sash sizes with sub-pixel run-to-run jitter, so
+  # the first-load export and the post-import re-export land the ratios a
+  # fraction apart -- below what the mirror commits as a change, not a layout
+  # difference. The `views` slot carries no geometry, so it round-trips
+  # byte-for-byte.
   #
   # get_download can transiently fail after the reload -- the link's href is
   # filled only once outputs bind, and the download endpoint may briefly not
@@ -438,9 +442,15 @@ test_that("a board survives the live Export/Import round-trip (#233)", {
   ser2 <- jsonlite::fromJSON(path2, simplifyDataFrame = FALSE,
                              simplifyMatrix = FALSE)
 
-  expect_identical(
-    drop_focus(ser2[["payload"]][["grids"]]),
-    drop_focus(ser[["payload"]][["grids"]])
+  expect_true(
+    isTRUE(
+      all.equal(
+        drop_focus(ser2[["payload"]][["grids"]]),
+        drop_focus(ser[["payload"]][["grids"]]),
+        tolerance = grid_size_tol(),
+        scale = 1
+      )
+    )
   )
   expect_identical(ser2[["payload"]][["views"]], ser[["payload"]][["views"]])
 
