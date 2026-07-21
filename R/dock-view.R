@@ -177,6 +177,23 @@ finalize_views_active <- function(views) {
   res
 }
 
+# Resequence a `dock_views` by a total permutation of its ids. Bare `[` on the
+# list drops the class and the `active` attribute, and routing through
+# `finalize_views_active()` would reset active to whatever now sits first -- so
+# re-stamp the active view explicitly, keeping the active page put across a
+# reorder.
+reorder_dock_views <- function(x, order) {
+
+  active <- active_view(x)
+  res <- structure(x[order], class = "dock_views")
+
+  if (not_null(active)) {
+    active_view(res) <- active
+  }
+
+  res
+}
+
 # Assemble a keyed list of views into a `dock_views`, minting an id for each
 # keyless entry (like an unnamed block) with blockr.core's `rand_names()` --
 # the same generator block / stack / link ids use. `reserved` lists ids
@@ -603,6 +620,18 @@ view_item_ui <- function(view_id, view_name, active_id = NULL,
     actions <- tags$span(
       class = "blockr-view-item-actions",
       tags$span(
+        class = "blockr-view-action blockr-view-up",
+        role = "button",
+        title = "Move up",
+        bsicons::bs_icon("chevron-up")
+      ),
+      tags$span(
+        class = "blockr-view-action blockr-view-down",
+        role = "button",
+        title = "Move down",
+        bsicons::bs_icon("chevron-down")
+      ),
+      tags$span(
         class = "blockr-view-action blockr-view-edit",
         role = "button",
         title = "Rename",
@@ -752,7 +781,7 @@ validate_views_delta <- function(views, board, upd) {
   }
 
   unknown_keys <- setdiff(
-    names(views), c("add", "mod", "rm", "active", "rename", "grid")
+    names(views), c("add", "mod", "rm", "active", "rename", "grid", "order")
   )
   if (length(unknown_keys)) {
     blockr_abort(
@@ -899,6 +928,19 @@ validate_views_delta <- function(views, board, upd) {
       blockr_abort(
         "Active view {active} does not resolve to an existing view.",
         class = "dock_views_delta_active_invalid"
+      )
+    }
+  }
+
+  if (not_null(views$order)) {
+
+    order <- views$order
+
+    if (!is.character(order) || anyDuplicated(order) ||
+          !setequal(order, post_views)) {
+      blockr_abort(
+        "`views$order` must be a total permutation of the post-state view ids.",
+        class = "dock_views_delta_order_invalid"
       )
     }
   }
@@ -1531,6 +1573,16 @@ apply_views_add <- function(add_views, board) {
   if (seeded) {
     board_grids(board) <- new_dock_grids(grids)
   }
+
+  board
+}
+
+# Reorder the board's views by a total permutation of their ids -- the sequence
+# the nav dropdown and serialization walk. `board_grids()` is id-keyed and so
+# order-independent, needing no change.
+apply_views_order <- function(order, board) {
+
+  board_views(board) <- reorder_dock_views(board_views(board), order)
 
   board
 }

@@ -940,6 +940,16 @@ label:has(input[type="file"]) {
   color: var(--blockr-color-danger, #dc3545);
 }
 
+/* Reorder is bounded: the first view can't move up, the last can't move down.
+   Only view items are `<div>` children of the nav (divider is `<hr>`, add is a
+   `<button>`), so `:first/last-of-type` track the ends and re-evaluate live as
+   the order push re-sequences nodes -- no JS state to maintain. */
+.blockr-view-item:first-of-type .blockr-view-up,
+.blockr-view-item:last-of-type .blockr-view-down {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
 /* Inline rename input */
 .blockr-view-rename-input {
   flex: 1;

@@ -1105,3 +1105,138 @@ test_that("apply_views_rm is a pure board transform", {
   expect_silent(out <- apply_views_rm(vid(brd, "B"), brd))
   expect_identical(unname(view_names(board_views(out))), "A")
 })
+
+test_that("reorder_by_move swaps a neighbour and clamps at the ends", {
+
+  o <- c("A", "B", "C")
+
+  expect_identical(reorder_by_move(o, "B", "up"), c("B", "A", "C"))
+  expect_identical(reorder_by_move(o, "B", "down"), c("A", "C", "B"))
+
+  # A boundary nudge or an unknown id yields the same order (the observer then
+  # emits nothing).
+  expect_identical(reorder_by_move(o, "A", "up"), o)
+  expect_identical(reorder_by_move(o, "C", "down"), o)
+  expect_identical(reorder_by_move(o, "Z", "up"), o)
+})
+
+test_that("apply_views_order reorders views, keeping the active one", {
+
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(),
+      b = new_head_block(),
+      c = new_head_block()
+    ),
+    views = list(A = "a", B = "b", C = "c")
+  )
+  active_view(brd) <- "B"
+
+  out <- apply_views_order(c("C", "A", "B"), brd)
+
+  expect_identical(names(board_views(out)), c("C", "A", "B"))
+  # Routing through finalize_views_active() would reset active to the new first
+  # view ("C"); a reorder must leave the active page put.
+  expect_identical(active_view(board_views(out)), "B")
+})
+
+test_that("a views$order delta reorders the board through apply_board_update", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a", B = "b")
+  )
+
+  upd <- augment_board_update(list(views = list(order = c("B", "A"))), brd)
+  out <- apply_board_update(brd, upd)
+
+  expect_identical(names(board_views(out)), c("B", "A"))
+})
+
+test_that("order permutes the post-rm ids when combined with rm", {
+
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(),
+      b = new_head_block(),
+      c = new_head_block()
+    ),
+    views = list(A = "a", B = "b", C = "c")
+  )
+
+  upd <- augment_board_update(
+    list(views = list(rm = "B", order = c("C", "A"))),
+    brd
+  )
+  out <- apply_board_update(brd, upd)
+
+  expect_identical(names(board_views(out)), c("C", "A"))
+})
+
+test_that("validate_views_delta rejects a non-permutation order", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a", B = "b")
+  )
+
+  expect_error(
+    augment_board_update(list(views = list(order = c("A", "A"))), brd),
+    class = "dock_views_delta_order_invalid"
+  )
+  expect_error(
+    augment_board_update(list(views = list(order = "A")), brd),
+    class = "dock_views_delta_order_invalid"
+  )
+  expect_error(
+    augment_board_update(list(views = list(order = c("A", "B", "Z"))), brd),
+    class = "dock_views_delta_order_invalid"
+  )
+})
+
+test_that("reconcile_views pushes the settled order to the nav", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a", B = "b")
+  )
+
+  sent <- list()
+  session <- list(
+    ns = identity,
+    sendInputMessage = function(input_id, message) {
+      sent[[length(sent) + 1L]] <<- message
+      invisible()
+    },
+    sendCustomMessage = function(type, message) invisible()
+  )
+
+  docks <- reactiveValues()
+  for (id in names(board_views(brd))) {
+    ids <- as.character(view_members(board_views(brd)[[id]]))
+    docks[[id]] <- list(
+      layout = function() NULL,
+      live_panels = reactiveVal(ids)
+    )
+  }
+  active_dock <- reactiveValues()
+  client_active <- reactiveVal(active_view(board_views(brd)))
+  client_views <- reactiveVal(seed_view_state(board_views(brd)))
+
+  # The board now carries [B, A]; the client still shows [A, B], so reconcile
+  # detects the reorder, pushes the order and re-sequences client_views.
+  reordered <- apply_views_order(c("B", "A"), brd)
+  board <- reactiveValues(board = reordered)
+
+  isolate(
+    reconcile_views(board, function(...) NULL, docks, active_dock,
+                    client_active, client_views, session)
+  )
+
+  expect_true(
+    any(lgl_ply(sent, function(m) {
+      identical(as.character(unlist(m$order)), c("B", "A"))
+    }))
+  )
+  expect_identical(names(isolate(client_views())), c("B", "A"))
+})

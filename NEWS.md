@@ -1,5 +1,12 @@
 # blockr.dock (development version)
 
+* Views (pages) can now be reordered from the nav dropdown: each item carries
+  up / down controls beside its rename and remove actions. Order is board
+  content, so the move travels through the update lifecycle as a new
+  `views$order` delta (a total permutation of the view ids) and survives save /
+  restore; the server applies it and pushes the settled order back to the nav
+  (#351).
+
 * A served board now honours a `?view=<id>` URL query parameter: it opens on
   the named view instead of the board's default active view (matching by
   stable view id, the immutable handle). An absent or unknown id falls back

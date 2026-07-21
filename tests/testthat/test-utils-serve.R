@@ -623,6 +623,49 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_true(docks$active)
 })
 
+test_that("a view moves down via the nav reorder control (#351)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-reorder",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  # Two seeded views, First active and on top.
+  nav <- read_view_nav(app)
+  expect_identical(nav$label, c("First", "Second"))
+  expect_identical(nav$label[nav$active], "First")
+
+  first <- nav$id[nav$label == "First"]
+
+  # Nudge First down via its chevron: the gesture sends a relative
+  # `view_nav_reorder`, the server applies the order and pushes it back, and the
+  # binding re-sequences the nav. Order is board content, so the active view
+  # rides along rather than snapping to the new first entry.
+  app$run_js(
+    paste0(
+      "document.querySelector('",
+      sprintf(
+        "#my_board-view_nav .blockr-view-item[data-view-id=\"%s\"]", first
+      ),
+      " .blockr-view-down').click()"
+    )
+  )
+  app$wait_for_idle()
+
+  nav <- read_view_nav(app)
+  expect_identical(nav$label, c("Second", "First"))
+  expect_false(anyDuplicated(nav$id) > 0L)
+  expect_identical(nav$label[nav$active], "First")
+})
+
 test_that("dock panel move updates layout state and serialization (#234)", {
 
   skip_on_cran()

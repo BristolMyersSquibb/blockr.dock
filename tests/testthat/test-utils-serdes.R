@@ -88,6 +88,28 @@ test_that("a multi-view board round-trips identically through ser/des", {
   expect_identical(board_grids(des), board_grids(brd))
 })
 
+test_that("dock_views preserve a non-alphabetical key order through ser/des", {
+
+  # View order is implicit in the list's key sequence -- no separate slot -- so
+  # it survives save / restore only by JSON key ordering. Pin that with ids in
+  # reverse-alphabetical order (and a non-first active): a layer that sorted
+  # keys would reorder these and fail.
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(),
+      b = new_head_block(),
+      c = new_head_block()
+    ),
+    views = list(zebra = "a", mango = "b", apple = "c"),
+    active = "mango"
+  )
+
+  des <- blockr_deser(blockr_ser(brd))
+
+  expect_identical(names(board_views(des)), c("zebra", "mango", "apple"))
+  expect_identical(active_view(board_views(des)), "mango")
+})
+
 test_that("serialized dock_views records view id, name and active", {
 
   # Fixed ids (the list keys) keep the wire shape deterministic so the id

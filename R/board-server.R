@@ -75,6 +75,7 @@ board_server_callback <- function(board, update, visibility, ...,
   add_view_observer(client_views, session, board, update)
   remove_view_observer(client_views, session, update)
   rename_view_observer(client_views, session, update)
+  reorder_view_observer(client_views, session, update)
 
   # Freeze the inputs of every block whose controls are hidden -- and every
   # block on a locked board -- so a forged input behind the hidden / read-only
@@ -610,6 +611,14 @@ reconcile_views <- function(board, update, docks, active_dock,
         list(rename = list(id = v, to = new_nm))
       )
     }
+  }
+
+  # A pure reorder is invisible to the set-diffing loops above (same members,
+  # same names), so re-sequence the nav explicitly when the board order and the
+  # client's differ. `as.list()` forces a JSON array even for a single id.
+  if (!identical(names(state), want)) {
+    state <- reorder_dock_views(state, want)
+    session$sendInputMessage("view_nav", list(order = as.list(want)))
   }
 
   # Dock lifecycle: tear down docks whose view the board dropped, then build the
@@ -1163,6 +1172,50 @@ rename_view_observer <- function(client_views, session, update) {
     update(
       list(views = list(rename = set_names(list(rename$to), rename$id)))
     )
+  })
+}
+
+# Translate a relative up / down nudge of one view into the total order it
+# yields. Clamped: nudging the first view up or the last down is a no-op, as is
+# an unknown id.
+reorder_by_move <- function(order, id, dir) {
+
+  idx <- match(id, order)
+
+  if (is.na(idx)) {
+    return(order)
+  }
+
+  swap <- switch(dir, up = idx - 1L, down = idx + 1L, NA_integer_)
+
+  if (is.na(swap) || swap < 1L || swap > length(order)) {
+    return(order)
+  }
+
+  order[c(idx, swap)] <- order[c(swap, idx)]
+
+  order
+}
+
+# View order is board content, not client-owned geometry: the up / down gesture
+# carries only a relative `{id, dir}` intent. The order the client shows is
+# authoritative here, so the total permutation is derived from
+# `names(client_views())` and travels the update lifecycle as a `views$order`
+# delta; reconcile then pushes the settled order back to the nav. A boundary
+# nudge yields the same order and emits nothing.
+reorder_view_observer <- function(client_views, session, update) {
+  input <- session$input
+
+  observeEvent(input$view_nav_reorder, {
+    req(views_can_crud(client_views()))
+
+    move <- input$view_nav_reorder
+    order <- names(client_views())
+    reordered <- reorder_by_move(order, move$id, move$dir)
+
+    if (!identical(reordered, order)) {
+      update(list(views = list(order = reordered)))
+    }
   })
 }
 
