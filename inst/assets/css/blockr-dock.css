@@ -1185,29 +1185,30 @@ label:has(input[type="file"]) {
    container, so a pending hidden block never spins the navbar. Startup and real
    recompute spin; a bare panel switch does not.
 
-   Reveal is by `visibility`/`opacity`, not `display`, so the slot is always
-   laid out (leftmost in the navbar's right-hand group, absorbed at that group's
-   left edge) and showing it never reflows a neighbour. The show transition
-   carries `transition-delay: var(--blockr-spinner-delay)` -- set on
-   `.blockr-navbar` from the `spinner_delay_ms` option -- while the hide has no
-   delay. So the ring appears only once the session has stayed busy for the full
-   delay (a flush that clears sooner is interrupted mid-delay and never shows)
-   and it clears the instant work finishes. */
+   The slot is always laid out and always painted -- there is no show/hide, so
+   nothing ever blinks in or out and it reflows no neighbour wherever it sits;
+   it rests just left of the navbar gear. Idle it is a dim, static ring; a busy
+   flush raises it to full contrast and spins it. Both the contrast raise (a 0s
+   `opacity` transition) and the spin (an `animation-delay`) are held by
+   `var(--blockr-spinner-delay)` -- set on `.blockr-navbar` from the
+   `spinner_delay_ms` option -- while the return to the dim idle ring carries no
+   delay. So the ring livens only once the session has stayed busy for the full
+   delay (a flush that clears sooner is interrupted mid-delay and never livens)
+   and it settles back the instant work finishes. */
 .blockr-navbar-spinner {
-  visibility: hidden;
-  opacity: 0;
   width: 16px;
   height: 16px;
   border: 2px solid var(--blockr-color-text-muted);
   border-right-color: transparent;
   border-radius: 50%;
-  animation: blockr-navbar-spin 0.7s linear infinite;
-  transition: opacity 0s, visibility 0s;
+  opacity: 0.35;
+  transition: opacity 0s;
 }
 
 html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
-  visibility: visible;
   opacity: 1;
+  animation: blockr-navbar-spin 0.7s linear infinite;
+  animation-delay: var(--blockr-spinner-delay, 0ms);
   transition-delay: var(--blockr-spinner-delay, 0ms);
 }
 
@@ -1218,7 +1219,7 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .blockr-navbar-spinner {
+  html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
     animation: none;
   }
 }

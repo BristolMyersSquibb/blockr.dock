@@ -137,7 +137,7 @@ test_that("locked mode renders a navbar lock indicator", {
   expect_match(locked_html, ">Read-only<", fixed = TRUE)
 })
 
-test_that("navbar busy spinner is leftmost and announced (#345, #355)", {
+test_that("navbar busy spinner sits left of the gear (#345, #355, #360)", {
 
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))
 
@@ -161,15 +161,11 @@ test_that("navbar busy spinner is leftmost and announced (#345, #355)", {
   expect_identical(xml2::xml_attr(spinner, "role"), "status")
   expect_identical(xml2::xml_attr(spinner, "aria-label"), "Busy")
 
-  # Leftmost in the right-anchored navbar group: the group packs rightward, so
-  # a leftmost item's width is absorbed at its left edge and revealing the
-  # spinner shifts no visible control (#355).
-  navbar_right <- by_class(doc, "blockr-navbar-right")[[1]]
-  expect_match(
-    xml2::xml_attr(xml2::xml_children(navbar_right)[[1]], "class"),
-    "blockr-navbar-spinner",
-    fixed = TRUE
-  )
+  # Sits immediately left of the board-options gear. It no longer toggles on
+  # and off (always painted, dim when idle), so it need not hide at the group's
+  # left edge -- it rests beside the gear instead.
+  gear <- xml2::xml_find_first(spinner[[1]], "following-sibling::*[1]")
+  expect_identical(xml2::xml_attr(gear, "aria-label"), "Board options")
 
   # Blocks still evaluate while read-only, so the spinner survives locked mode
   # (unlike the editing chrome it sits beside).

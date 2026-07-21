@@ -842,7 +842,7 @@ test_that("single-page board renders one auto-named view (#236)", {
   expect_identical(docks$id, nav$id)
 })
 
-test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355)", {
+test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
 
   skip_on_cran()
 
@@ -862,13 +862,14 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355)", {
   # visibility report and layout fold round-trips) without recomputing a visible
   # output, so gating on `.shiny-busy` alone would spin for what is only layout
   # bookkeeping; block evaluation marks its output `.recalculating` inside the
-  # view container. The reveal toggles `visibility` (not `display`) and is held
-  # by a `transition-delay`, so drive the two busy states directly and read the
-  # spinner's computed `visibility` (`hidden` when idle-scoped, `visible` when
-  # computing) with transitions disabled -- otherwise the delayed reveal would
-  # not have landed by the time the synchronous probe reads it. The
-  # recalculating element is placed outside the view container (a hidden block
-  # still pending evaluation in the offcanvas pool) versus inside it (real
+  # view container. The ring is always visible: the busy scope raises its
+  # contrast (dim when idle, full opacity when busy) rather than toggling its
+  # presence, and the raise is held by a `transition-delay`, so drive the two
+  # busy states directly and read the spinner's computed `opacity` (dim when
+  # idle-scoped, full when computing) with transitions disabled -- otherwise the
+  # delayed raise would not have landed by the time the synchronous probe reads
+  # it. The recalculating element is placed outside the view container (a hidden
+  # block still pending evaluation in the offcanvas pool) versus inside it (real
   # visible work) to pin the scope.
   probe <- jsonlite::fromJSON(
     app$get_js(
@@ -876,8 +877,8 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355)", {
         var html = document.documentElement;
         var spinner = document.querySelector('.blockr-navbar-spinner');
         if (spinner) spinner.style.transition = 'none';
-        var vis = function () {
-          return spinner ? getComputedStyle(spinner).visibility : null;
+        var opacity = function () {
+          return spinner ? parseFloat(getComputedStyle(spinner).opacity) : null;
         };
         var mark = function (parent) {
           var el = document.createElement('div');
@@ -901,11 +902,11 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355)", {
         real.forEach(function (el) { el.classList.remove('recalculating'); });
 
         var hidden = mark(document.body);
-        var bookkeeping = vis();
+        var bookkeeping = opacity();
         hidden.remove();
 
         var visible = mark(container);
-        var computing = vis();
+        var computing = opacity();
         visible.remove();
 
         real.forEach(function (el) { el.classList.add('recalculating'); });
@@ -928,9 +929,11 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355)", {
   expect_true(probe$hasContainer)
 
   # Busy with a recalculating output only outside the view container (a bare
-  # panel switch, or a hidden block still pending in the offcanvas) keeps the
-  # spinner hidden; busy with a recalculating output inside it (block
-  # evaluation) shows it.
-  expect_identical(probe$bookkeeping, "hidden")
-  expect_identical(probe$computing, "visible")
+  # panel switch, or a hidden block still pending in the offcanvas) leaves the
+  # always-present ring painted but dim; busy with a recalculating output inside
+  # it (block evaluation) lifts it to full contrast. The idle ring stays visible
+  # (opacity > 0) rather than toggling off -- the always-on behaviour.
+  expect_gt(probe$bookkeeping, 0)
+  expect_lt(probe$bookkeeping, 1)
+  expect_equal(probe$computing, 1)
 })

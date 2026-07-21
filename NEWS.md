@@ -145,14 +145,15 @@
   the stable condition id, so a persistent warning no longer flashes on every
   re-evaluation.
 * The intrusive page-wide busy pulse is replaced by a small, unobtrusive
-  spinner in the navbar. It turns while the session does real block evaluation
-  and disappears otherwise -- scoped (as the pulse was) to a genuinely
-  recomputing output in the visible view, so startup and block evaluation spin
-  it while a bare panel switch does not. It is anchored at the left of the
-  navbar's right-hand controls, so revealing or clearing it never shifts them,
-  and a configurable minimum-busy delay (`blockr.spinner_delay_ms`, default
-  200 ms; `0` to disable) holds the reveal so a sub-threshold flush no longer
-  flashes it (#345, #355).
+  spinner in the navbar, just left of the board-options gear. It always
+  occupies its slot as a dim, static ring and, while the session does real
+  block evaluation, rises to full contrast and spins -- scoped (as the pulse
+  was) to a genuinely recomputing output in the visible view, so startup and
+  block evaluation liven it while a bare panel switch does not. Because it is
+  always present it never shifts its neighbours and never blinks in or out; a
+  configurable minimum-busy delay (`blockr.spinner_delay_ms`, default 200 ms;
+  `0` to disable) holds the transition to the busy state so a sub-threshold
+  flush no longer flashes it (#345, #355, #360).
 * The "Edit board" extension no longer churns on a board re-emit -- it re-syncs
   its staged working copy only when links or stacks actually change, stops
   flickering the manage-links cell inputs, and overlays half-finished staged
