@@ -27,7 +27,9 @@
 #'   entry falls back to a default grid over its members.
 #' @param active Id of the initially active view (a key of `views`). Defaults
 #'   to the first view. Which view is active is a property of the collection,
-#'   not of an individual view.
+#'   not of an individual view. A served board also honours a `?view=<id>` URL
+#'   query parameter naming a view id, which opens the board on that view and
+#'   overrides this default for that request.
 #'
 #' @examples
 #' brd <- new_dock_board(c(a = blockr.core::new_dataset_block()))

@@ -65,7 +65,9 @@ entry falls back to a default grid over its members.}
 
 \item{active}{Id of the initially active view (a key of \code{views}). Defaults
 to the first view. Which view is active is a property of the collection,
-not of an individual view.}
+not of an individual view. A served board also honours a \verb{?view=<id>} URL
+query parameter naming a view id, which opens the board on that view and
+overrides this default for that request.}
 
 \item{options}{Board-level user settings}
 

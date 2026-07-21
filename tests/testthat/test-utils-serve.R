@@ -28,6 +28,59 @@ test_that("serve utils", {
   )
 })
 
+test_that("resolve_url_view matches the ?view= param to a view id", {
+
+  views <- board_views(
+    new_dock_board(
+      blocks = c(a = new_dataset_block(), b = new_dataset_block()),
+      views = list(First = blk("a"), Second = blk("b")),
+      active = "First"
+    )
+  )
+
+  expect_identical(resolve_url_view(views, "?view=Second"), "Second")
+  expect_identical(resolve_url_view(views, "?view=First"), "First")
+
+  # Absent, empty, unknown, or no query string all decline to select.
+  expect_null(resolve_url_view(views, "?other=1"))
+  expect_null(resolve_url_view(views, "?view="))
+  expect_null(resolve_url_view(views, "?view=nope"))
+  expect_null(resolve_url_view(views, ""))
+  expect_null(resolve_url_view(views, NULL))
+})
+
+test_that("select_url_view opens the board on the ?view= view (#323)", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block()),
+    views = list(First = blk("a"), Second = blk("b")),
+    active = "First"
+  )
+
+  fake_session <- function(search) {
+    list(clientData = list(url_search = search))
+  }
+
+  # The default active view is "First", so flipping to "Second" is a real
+  # (non-vacuous) change driven purely by the query param.
+  expect_identical(active_view(brd), "First")
+  expect_identical(
+    active_view(select_url_view(brd, fake_session("?view=Second"))),
+    "Second"
+  )
+
+  # An unknown id, an absent param, or no session leaves the default active.
+  expect_identical(
+    active_view(select_url_view(brd, fake_session("?view=nope"))),
+    "First"
+  )
+  expect_identical(
+    active_view(select_url_view(brd, fake_session(""))),
+    "First"
+  )
+  expect_identical(active_view(select_url_view(brd, NULL)), "First")
+})
+
 test_that("grids_stable holds when the live grid is the stored fixed point", {
 
   brd <- new_dock_board(
