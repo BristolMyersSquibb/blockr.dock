@@ -46,6 +46,11 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
 #' @export
 blockr_app_server.dock_board <- function(id, x, plugins, options, ...) {
 
+  # A `?view=<id>` deep link opens the board on that view. Applied here, before
+  # board_server snapshots the board, so the first reconcile builds that view's
+  # dock directly -- no default-view dock built then switched away.
+  x <- select_url_view(x)
+
   # Core threads `plugins` to its own block server but not to board callbacks,
   # so capture them for the callback to stash on active_dock -- the deferred
   # card-build paths need the served set, since board_plugins() drops any served
@@ -56,6 +61,38 @@ blockr_app_server.dock_board <- function(id, x, plugins, options, ...) {
 
   board_server(id, x, plugins, options, callbacks = callback,
                callback_location = "start", ...)
+}
+
+view_url_param <- "view"
+
+select_url_view <- function(board, session = get_session()) {
+
+  if (is.null(session)) {
+    return(board)
+  }
+
+  target <- resolve_url_view(
+    board_views(board), isolate(session$clientData$url_search)
+  )
+
+  if (not_null(target)) {
+    active_view(board) <- target
+  }
+
+  board
+}
+
+# Matched by stable view id -- the immutable handle -- not the editable display
+# name; NULL when the param is absent, empty, or names no view.
+resolve_url_view <- function(views, search) {
+
+  sel <- parseQueryString(coal(search, ""))[[view_url_param]]
+
+  if (is.null(sel) || !nzchar(sel) || !sel %in% names(views)) {
+    return(NULL)
+  }
+
+  sel
 }
 
 # Round-trip stability: every view's stored grid must be the fixed point the
