@@ -16,8 +16,10 @@
 #' @param ui A function with a single argument (`ns`) returning a `shiny.tag`
 #' @param name Name for extension
 #' @param class Extension subclass
-#' @param description Optional free-text description of the extension, surfaced
-#' as consumer-neutral metadata (e.g. to the AI assistant)
+#' @param description Optional extension metadata, surfaced as consumer-neutral
+#' documentation (e.g. to the AI assistant): either a free-text string or a
+#' structured [new_ext_meta()] object carrying per-variable documentation for a
+#' client driving the extension through `modify_extension`
 #' @param ctor Constructor function name
 #' @param pkg Package to look up `ctor`
 #' @param options Board options supplied by an extension
@@ -118,14 +120,17 @@ validate_extension.dock_extension <- function(x, ...) {
     )
   }
 
-  desc <- extension_description(x)
+  desc <- attr(x, "description")
 
-  if (!is.null(desc) && !is_string(desc)) {
+  if (!is.null(desc) && !is_string(desc) && !is_ext_meta(desc)) {
     blockr_abort(
-      "Expecting extension description to be a string or `NULL`.",
+      "Expecting extension description to be a string, an `ext_meta` object ",
+      "or `NULL`.",
       class = "dock_extension_description_invalid"
     )
   }
+
+  validate_ext_meta(ext_meta(x), external_ctrl_vars(x))
 
   ui <- extension_ui(x)
 
@@ -271,8 +276,7 @@ extension_name <- function(x) {
 #' @rdname extension
 #' @export
 extension_description <- function(x) {
-  stopifnot(is_dock_extension(x))
-  attr(x, "description")
+  ext_meta(x)[["description"]]
 }
 
 #' @rdname extension

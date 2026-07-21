@@ -81,8 +81,10 @@ until every view has reported its layout once, so \code{req()} it.}
 
 \item{class}{Extension subclass}
 
-\item{description}{Optional free-text description of the extension, surfaced
-as consumer-neutral metadata (e.g. to the AI assistant)}
+\item{description}{Optional extension metadata, surfaced as consumer-neutral
+documentation (e.g. to the AI assistant): either a free-text string or a
+structured \code{\link[=new_ext_meta]{new_ext_meta()}} object carrying per-variable documentation for a
+client driving the extension through \code{modify_extension}}
 
 \item{ctor}{Constructor function name}
 
