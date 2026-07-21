@@ -370,6 +370,10 @@ apply_board_update.dock_board <- function(board, upd, ...) {
     board <- apply_views_mod(upd$views$mod, board)
   }
 
+  if (length(upd$views$order)) {
+    board <- apply_views_order(upd$views$order, board)
+  }
+
   if (length(upd$views$grid)) {
     board <- apply_views_grid(upd$views$grid, board)
   }

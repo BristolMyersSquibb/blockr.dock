@@ -183,6 +183,24 @@ $(function () {
         Shiny.setInputValue(navId + '_remove', viewId, { priority: 'event' });
       });
 
+      // Reorder click: view order is board state, so the gesture carries only a
+      // relative move intent. The server applies it and pushes the settled
+      // order back via receiveMessage; the DOM never moves optimistically.
+      $(el).on('click.viewBinding', '.blockr-view-up, .blockr-view-down', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        var $item = $(this).closest('.blockr-view-item');
+        var $nav = $item.closest('.blockr-view-nav');
+        var navId = $nav.attr('id');
+        var dir = $(this).hasClass('blockr-view-up') ? 'up' : 'down';
+
+        Shiny.setInputValue(navId + '_reorder', {
+          id: $item.attr('data-view-id'),
+          dir: dir
+        }, { priority: 'event' });
+      });
+
       // Add click
       $(el).on('click.viewBinding', '.blockr-view-add', function (e) {
         e.stopPropagation();
@@ -216,12 +234,24 @@ $(function () {
           );
 
         if (canCrud) {
+          var chevronUpSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-up" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"></path></svg>';
+          var chevronDownSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-down" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"></path></svg>';
           var pencilSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-pencil" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"></path></svg>';
           var xLgSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-x-lg" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"></path></svg>';
           newItem.append(
             $('<span>')
               .addClass('blockr-view-item-actions')
               .append(
+                $('<span>')
+                  .addClass('blockr-view-action blockr-view-up')
+                  .attr('role', 'button')
+                  .attr('title', 'Move up')
+                  .html(chevronUpSvg),
+                $('<span>')
+                  .addClass('blockr-view-action blockr-view-down')
+                  .attr('role', 'button')
+                  .attr('title', 'Move down')
+                  .html(chevronDownSvg),
                 $('<span>')
                   .addClass('blockr-view-action blockr-view-edit')
                   .attr('role', 'button')
@@ -265,6 +295,23 @@ $(function () {
         if ($target.hasClass('active')) {
           setToggleLabel($(el), data.rename.to);
         }
+      }
+
+      if (data.hasOwnProperty('order')) {
+        var $nav = $(el);
+        var $anchor = $nav.find('.dropdown-divider');
+        // Re-append each item in the server's order; re-appending an existing
+        // node moves it, so iterating in order lands the DOM in that order.
+        data.order.forEach(function (viewId) {
+          var $item = $nav.find(
+            '.blockr-view-item[data-view-id="' + viewId + '"]'
+          );
+          if ($anchor.length) {
+            $anchor.before($item);
+          } else {
+            $nav.append($item);
+          }
+        });
       }
 
       $(el).trigger('change');
