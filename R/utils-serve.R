@@ -9,9 +9,15 @@ blockr_app_options.dock_board <- function(x, ...) {
 }
 
 #' @export
-blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
+blockr_app_ui.dock_board <- function(id, x, plugins, options, ...,
+                                     query = list()) {
 
   args <- list(...)
+
+  # A `?view=<id>` deep link renders the GET navbar highlight and the
+  # prioritized offcanvas card shells for that view directly rather than the
+  # default one's, so the first paint already shows the requested view.
+  x <- apply_url_view(x, query)
 
   # `options` is forwarded to `board_ui()` so the settings sidebar's
   # pre-rendered body reflects `serve(board, options = custom_options(...))`
@@ -44,12 +50,13 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...) {
 }
 
 #' @export
-blockr_app_server.dock_board <- function(id, x, plugins, options, ...) {
+blockr_app_server.dock_board <- function(id, x, plugins, options, ...,
+                                         query = list()) {
 
   # A `?view=<id>` deep link opens the board on that view. Applied here, before
   # board_server snapshots the board, so the first reconcile builds that view's
   # dock directly -- no default-view dock built then switched away.
-  x <- select_url_view(x)
+  x <- apply_url_view(x, query)
 
   # Core threads `plugins` to its own block server but not to board callbacks,
   # so capture them for the callback to stash on active_dock -- the deferred
@@ -65,15 +72,9 @@ blockr_app_server.dock_board <- function(id, x, plugins, options, ...) {
 
 view_url_param <- "view"
 
-select_url_view <- function(board, session = get_session()) {
+apply_url_view <- function(board, query) {
 
-  if (is.null(session)) {
-    return(board)
-  }
-
-  target <- resolve_url_view(
-    board_views(board), isolate(session$clientData$url_search)
-  )
+  target <- resolve_url_view(board_views(board), query)
 
   if (not_null(target)) {
     active_view(board) <- target
@@ -84,9 +85,9 @@ select_url_view <- function(board, session = get_session()) {
 
 # Matched by stable view id -- the immutable handle -- not the editable display
 # name; NULL when the param is absent, empty, or names no view.
-resolve_url_view <- function(views, search) {
+resolve_url_view <- function(views, query) {
 
-  sel <- parseQueryString(coal(search, ""))[[view_url_param]]
+  sel <- query[[view_url_param]]
 
   if (is.null(sel) || !nzchar(sel) || !sel %in% names(views)) {
     return(NULL)

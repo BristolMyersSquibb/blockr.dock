@@ -45,7 +45,7 @@ Suggests:
     rmarkdown
 Remotes:
     rstudio/shinytest2,
-    BristolMyersSquibb/blockr.core,
+    BristolMyersSquibb/blockr.core@291-apply-query-params,
     cynkra/dockViewR
 Config/testthat/edition: 3
 Collate:
