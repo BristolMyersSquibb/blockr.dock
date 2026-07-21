@@ -137,35 +137,94 @@ test_that("locked mode renders a navbar lock indicator", {
   expect_match(locked_html, ">Read-only<", fixed = TRUE)
 })
 
-test_that("navbar renders a busy spinner beside the gear (#345)", {
+test_that("navbar busy spinner is leftmost and announced (#345, #355)", {
 
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))
 
-  spinner_of <- function(html) {
+  by_class <- function(node, token) {
     xml2::xml_find_all(
-      xml2::read_html(html),
+      node,
       paste0(
-        ".//span[contains(concat(' ', normalize-space(@class), ' '), ",
-        "' blockr-navbar-spinner ')]"
+        ".//*[contains(concat(' ', normalize-space(@class), ' '), ' ",
+        token,
+        " ')]"
       )
     )
   }
 
-  spinner <- spinner_of(as.character(board_ui("test", brd)))
+  doc <- xml2::read_html(as.character(board_ui("test", brd)))
+  spinner <- by_class(doc, "blockr-navbar-spinner")
 
   # A CSS-only busy ring driven off `.shiny-busy`, announced like the lock
-  # indicator beside it.
+  # indicator.
   expect_length(spinner, 1)
   expect_identical(xml2::xml_attr(spinner, "role"), "status")
   expect_identical(xml2::xml_attr(spinner, "aria-label"), "Busy")
+
+  # Leftmost in the right-anchored navbar group: the group packs rightward, so
+  # a leftmost item's width is absorbed at its left edge and revealing the
+  # spinner shifts no visible control (#355).
+  navbar_right <- by_class(doc, "blockr-navbar-right")[[1]]
+  expect_match(
+    xml2::xml_attr(xml2::xml_children(navbar_right)[[1]], "class"),
+    "blockr-navbar-spinner",
+    fixed = TRUE
+  )
 
   # Blocks still evaluate while read-only, so the spinner survives locked mode
   # (unlike the editing chrome it sits beside).
   locked <- withr::with_options(
     list(blockr.locked = TRUE),
-    spinner_of(as.character(board_ui("test", brd)))
+    by_class(
+      xml2::read_html(as.character(board_ui("test", brd))),
+      "blockr-navbar-spinner"
+    )
   )
   expect_length(locked, 1)
+})
+
+test_that("navbar carries the spinner display delay from the option (#355)", {
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  navbar_style <- function(opts) {
+    html <- withr::with_options(opts, as.character(board_ui("test", brd)))
+    navbar <- xml2::xml_find_first(
+      xml2::read_html(html),
+      paste0(
+        ".//div[contains(concat(' ', normalize-space(@class), ' '), ",
+        "' blockr-navbar ')]"
+      )
+    )
+    xml2::xml_attr(navbar, "style")
+  }
+
+  # A 200 ms minimum-busy delay by default, fed into the CSS custom property
+  # the spinner's show transition reads.
+  expect_match(
+    navbar_style(list(blockr.spinner_delay_ms = NULL)),
+    "--blockr-spinner-delay: 200ms",
+    fixed = TRUE
+  )
+
+  # A caller-set delay flows through as-is; 0 restores immediate display.
+  expect_match(
+    navbar_style(list(blockr.spinner_delay_ms = 50L)),
+    "--blockr-spinner-delay: 50ms",
+    fixed = TRUE
+  )
+  expect_match(
+    navbar_style(list(blockr.spinner_delay_ms = 0L)),
+    "--blockr-spinner-delay: 0ms",
+    fixed = TRUE
+  )
+
+  # A nonsense value falls back to the default rather than emitting broken CSS.
+  expect_match(
+    navbar_style(list(blockr.spinner_delay_ms = -5L)),
+    "--blockr-spinner-delay: 200ms",
+    fixed = TRUE
+  )
 })
 
 test_that("locked mode drops the board-options accordion (#135)", {

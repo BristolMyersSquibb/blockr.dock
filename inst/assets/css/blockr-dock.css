@@ -1166,13 +1166,13 @@ label:has(input[type="file"]) {
 }
 
 /* ============================================
-   Navbar busy spinner — scope to real computation
+   Navbar busy spinner
    ============================================ */
 
-/* A small ring next to the board-options gear that spins while the session
-   does real block evaluation, replacing bslib's page-wide busy pulse. Driven
-   purely off the `.shiny-busy` class Shiny puts on <html> during a flush -- no
-   server observer, no page darkening.
+/* A small ring in the navbar that spins while the session does real block
+   evaluation, replacing bslib's page-wide busy pulse. Driven purely off the
+   `.shiny-busy` class Shiny puts on <html> during a flush -- no server
+   observer, no page darkening.
 
    Scoped exactly as the old pulse was: a plain panel switch round-trips to the
    server -- the on-screen visibility report and the layout fold -- without
@@ -1183,19 +1183,32 @@ label:has(input[type="file"]) {
    deliberate -- an off-screen block parked in the (hidden) offcanvas pool stays
    "recalculating" while it waits for evaluation, and that pool sits outside the
    container, so a pending hidden block never spins the navbar. Startup and real
-   recompute spin; a bare panel switch does not. */
+   recompute spin; a bare panel switch does not.
+
+   Reveal is by `visibility`/`opacity`, not `display`, so the slot is always
+   laid out (leftmost in the navbar's right-hand group, absorbed at that group's
+   left edge) and showing it never reflows a neighbour. The show transition
+   carries `transition-delay: var(--blockr-spinner-delay)` -- set on
+   `.blockr-navbar` from the `spinner_delay_ms` option -- while the hide has no
+   delay. So the ring appears only once the session has stayed busy for the full
+   delay (a flush that clears sooner is interrupted mid-delay and never shows)
+   and it clears the instant work finishes. */
 .blockr-navbar-spinner {
-  display: none;
+  visibility: hidden;
+  opacity: 0;
   width: 16px;
   height: 16px;
   border: 2px solid var(--blockr-color-text-muted);
   border-right-color: transparent;
   border-radius: 50%;
   animation: blockr-navbar-spin 0.7s linear infinite;
+  transition: opacity 0s, visibility 0s;
 }
 
 html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
-  display: inline-block;
+  visibility: visible;
+  opacity: 1;
+  transition-delay: var(--blockr-spinner-delay, 0ms);
 }
 
 @keyframes blockr-navbar-spin {
