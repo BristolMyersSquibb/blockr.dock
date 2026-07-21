@@ -842,7 +842,7 @@ test_that("single-page board renders one auto-named view (#236)", {
   expect_identical(docks$id, nav$id)
 })
 
-test_that("navbar spinner tracks real work, not bookkeeping (#285, #345)", {
+test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355)", {
 
   skip_on_cran()
 
@@ -857,25 +857,27 @@ test_that("navbar spinner tracks real work, not bookkeeping (#285, #345)", {
 
   app$wait_for_idle()
 
-  # The navbar spinner (a ring next to the gear) replaces shiny's page pulse: it
-  # turns while the session does real block evaluation. A panel switch marks the
-  # session busy (the visibility report and layout fold round-trips) without
-  # recomputing a visible output, so gating on `.shiny-busy` alone would spin
-  # for what is only layout bookkeeping; block evaluation marks its output
-  # `.recalculating` inside the view container. The live transition is a
-  # sub-second transient, racy to sample, so drive the two busy states directly
-  # and read the spinner's computed display (`none` when idle-scoped; a shown
-  # value otherwise -- `block`, since the flex navbar blockifies the shown flex
-  # item). The recalculating element is placed outside the view container (a
-  # hidden block still pending evaluation in the offcanvas pool) versus inside
-  # it (real visible work) to pin the scope.
+  # The navbar spinner replaces shiny's page pulse: it turns while the session
+  # does real block evaluation. A panel switch marks the session busy (the
+  # visibility report and layout fold round-trips) without recomputing a visible
+  # output, so gating on `.shiny-busy` alone would spin for what is only layout
+  # bookkeeping; block evaluation marks its output `.recalculating` inside the
+  # view container. The reveal toggles `visibility` (not `display`) and is held
+  # by a `transition-delay`, so drive the two busy states directly and read the
+  # spinner's computed `visibility` (`hidden` when idle-scoped, `visible` when
+  # computing) with transitions disabled -- otherwise the delayed reveal would
+  # not have landed by the time the synchronous probe reads it. The
+  # recalculating element is placed outside the view container (a hidden block
+  # still pending evaluation in the offcanvas pool) versus inside it (real
+  # visible work) to pin the scope.
   probe <- jsonlite::fromJSON(
     app$get_js(
       r"(JSON.stringify((function () {
         var html = document.documentElement;
         var spinner = document.querySelector('.blockr-navbar-spinner');
-        var display = function () {
-          return spinner ? getComputedStyle(spinner).display : null;
+        if (spinner) spinner.style.transition = 'none';
+        var vis = function () {
+          return spinner ? getComputedStyle(spinner).visibility : null;
         };
         var mark = function (parent) {
           var el = document.createElement('div');
@@ -899,15 +901,16 @@ test_that("navbar spinner tracks real work, not bookkeeping (#285, #345)", {
         real.forEach(function (el) { el.classList.remove('recalculating'); });
 
         var hidden = mark(document.body);
-        var bookkeeping = display();
+        var bookkeeping = vis();
         hidden.remove();
 
         var visible = mark(container);
-        var computing = display();
+        var computing = vis();
         visible.remove();
 
         real.forEach(function (el) { el.classList.add('recalculating'); });
         html.classList.remove('shiny-busy');
+        if (spinner) spinner.style.transition = '';
 
         return {
           pulseOff: pulseOff, hasSpinner: spinner !== null,
@@ -928,6 +931,6 @@ test_that("navbar spinner tracks real work, not bookkeeping (#285, #345)", {
   # panel switch, or a hidden block still pending in the offcanvas) keeps the
   # spinner hidden; busy with a recalculating output inside it (block
   # evaluation) shows it.
-  expect_identical(probe$bookkeeping, "none")
-  expect_identical(probe$computing, "block")
+  expect_identical(probe$bookkeeping, "hidden")
+  expect_identical(probe$computing, "visible")
 })

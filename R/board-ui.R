@@ -38,6 +38,7 @@ board_ui.dock_board <- function(
     ),
     div(
       class = "blockr-navbar",
+      style = sprintf("--blockr-spinner-delay: %dms;", spinner_delay_ms()),
       div(
         class = "blockr-navbar-left",
         if ("preserve_board" %in% names(plugins)) {
@@ -46,6 +47,20 @@ board_ui.dock_board <- function(
       ),
       div(
         class = "blockr-navbar-right",
+        # Busy spinner. Shown/hidden purely by CSS off the `.shiny-busy` class
+        # Shiny toggles on <html> during a flush -- no server observer -- and
+        # scoped to real block evaluation so a bare panel switch does not spin
+        # it. Placed leftmost in this right-anchored group: the group packs
+        # rightward, so its always-present (visibility-toggled) slot is absorbed
+        # at the group's left edge, in the empty navbar middle -- no visible
+        # control shifts when it reveals. The reveal is held for
+        # `--blockr-spinner-delay` ms (set on the navbar above) so a sub-
+        # threshold flush never flashes it. Announced like the lock indicator.
+        tags$span(
+          class = "blockr-navbar-spinner",
+          role = "status",
+          `aria-label` = "Busy"
+        ),
         v_nav,
         if (is_dock_locked()) {
           tags$span(
@@ -60,16 +75,6 @@ board_ui.dock_board <- function(
             )
           )
         },
-        # Busy spinner. Shown/hidden purely by CSS off the `.shiny-busy` class
-        # Shiny toggles on <html> during a flush -- no server observer -- and
-        # scoped to real block evaluation so a bare panel switch does not spin
-        # it. Sits just before the gear so its show/hide never nudges that
-        # (right-anchored) button. Announced like the lock indicator beside it.
-        tags$span(
-          class = "blockr-navbar-spinner",
-          role = "status",
-          `aria-label` = "Busy"
-        ),
         # Pure-JS open trigger via `data-blockr-sidebar-target`. The
         # settings sidebar's body is pre-rendered into its mount below, so
         # no server observer is needed: clicking the gear toggles the
@@ -260,6 +265,13 @@ settings_body <- function(
       )
     )
   )
+}
+
+spinner_delay_ms <- function() {
+
+  ms <- suppressWarnings(as.integer(blockr_option("spinner_delay_ms", 200L)))
+
+  if (length(ms) != 1L || is.na(ms) || ms < 0L) 200L else ms
 }
 
 blockr_dock_dep <- function() {
