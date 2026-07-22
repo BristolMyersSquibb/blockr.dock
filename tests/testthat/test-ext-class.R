@@ -291,7 +291,7 @@ test_that("new_ext_meta assembles and validates its fields", {
   expect_true(is_ext_meta(meta))
   expect_identical(meta[["description"]], "Workflow diagram.")
   expect_identical(meta[["guidance"]], "Drive via modify_extension.")
-  expect_s3_class(meta[["arguments"]], "block_args")
+  expect_true(is_arg_specs(meta[["arguments"]]))
   expect_identical(names(meta[["arguments"]]), "positions")
 
   expect_error(
@@ -313,8 +313,8 @@ test_that("new_ext_meta normalizes the arguments field", {
   expect_identical(names(new_ext_meta()[["arguments"]]), NULL)
   expect_length(new_ext_meta()[["arguments"]], 0L)
 
-  spec <- new_block_args(
-    positions = new_block_arg("Coords.", type = arg_string())
+  spec <- new_arg_specs(
+    positions = new_arg_spec("Coords.", type = arg_string())
   )
   expect_identical(new_ext_meta(arguments = spec)[["arguments"]], spec)
 
@@ -342,7 +342,7 @@ test_that("per-component accessors read the extension metadata", {
 
   bare <- ctrl_ext()
   expect_null(ext_guidance(bare))
-  expect_s3_class(ext_args(bare), "block_args")
+  expect_true(is_arg_specs(ext_args(bare)))
   expect_length(ext_args(bare), 0L)
   expect_identical(ext_examples(bare), list())
 

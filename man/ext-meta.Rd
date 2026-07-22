@@ -38,7 +38,7 @@ extension_description(x)
 
 \item{arguments}{Per-variable documentation for the externally controllable
 variables, either a named character vector (variable to description) or a
-\code{\link[blockr.core:new_block_args]{new_block_args()}} object; keyed by controllable variable}
+\code{\link[blockr.core:new_arg_specs]{new_arg_specs()}} object; keyed by controllable variable}
 
 \item{examples}{List of worked configurations, each a named list keyed by
 controllable variable (a \code{modify_extension}-shaped payload)}
@@ -54,7 +54,7 @@ from the human-facing \code{description}}
 \code{description}, \code{arguments}, \code{examples} and \code{guidance}), \code{is_ext_meta()} a
 boolean and \code{ext_meta()} the normalized \code{ext_meta} an extension carries. The
 per-component accessors return that component: \code{ext_desc()} a string or
-\code{NULL}, \code{ext_args()} a \code{block_args}, \code{ext_examples()} a list and
+\code{NULL}, \code{ext_args()} an \code{arg_specs}, \code{ext_examples()} a list and
 \code{ext_guidance()} a string or \code{NULL}.
 }
 \description{
@@ -74,7 +74,7 @@ components are read with \code{ext_desc()}, \code{ext_args()}, \code{ext_example
 \details{
 Per-variable \code{arguments} reuse blockr.core's block-argument specification:
 pass a named character vector (variable to description) for the common case,
-or a \code{\link[blockr.core:new_block_args]{new_block_args()}} object to attach a machine-readable \code{type} (via the
+or a \code{\link[blockr.core:new_arg_specs]{new_arg_specs()}} object to attach a machine-readable \code{type} (via the
 \verb{arg_*()} constructors) and a worked \code{example} to each variable.
 }
 \examples{
