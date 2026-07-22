@@ -115,12 +115,12 @@ test_that("new_dock_extension validates external_ctrl", {
 
 test_that("extension description defaults to NULL and is accessible", {
 
-  expect_null(extension_description(ctrl_ext()))
+  expect_null(ext_desc(ctrl_ext()))
 
   desc <- "References block results via blockr://<block_id>."
 
   expect_identical(
-    extension_description(new_edit_board_extension(description = desc)),
+    ext_desc(new_edit_board_extension(description = desc)),
     desc
   )
 })
@@ -330,12 +330,48 @@ test_that("ext_meta reads a bare string or a structured description", {
 
   string_ext <- ctrl_ext(description = "Plain summary.")
   expect_true(is_ext_meta(ext_meta(string_ext)))
-  expect_identical(extension_description(string_ext), "Plain summary.")
+  expect_identical(ext_desc(string_ext), "Plain summary.")
 
   meta <- new_ext_meta("Rich summary.", arguments = c(content = "The text."))
   rich_ext <- ctrl_ext(description = meta)
   expect_identical(ext_meta(rich_ext), meta)
-  expect_identical(extension_description(rich_ext), "Rich summary.")
+  expect_identical(ext_desc(rich_ext), "Rich summary.")
+})
+
+test_that("per-component accessors read the extension metadata", {
+
+  bare <- ctrl_ext()
+  expect_null(ext_guidance(bare))
+  expect_s3_class(ext_args(bare), "block_args")
+  expect_length(ext_args(bare), 0L)
+  expect_identical(ext_examples(bare), list())
+
+  ext <- ctrl_ext(
+    description = new_ext_meta(
+      "Doc.",
+      arguments = c(content = "The text."),
+      examples = list(list(content = "hello")),
+      guidance = "Drive via modify_extension."
+    )
+  )
+
+  expect_identical(names(ext_args(ext)), "content")
+  expect_identical(ext_examples(ext), list(list(content = "hello")))
+  expect_identical(ext_guidance(ext), "Drive via modify_extension.")
+})
+
+test_that("extension_description is a deprecated alias of ext_desc", {
+
+  withr::local_options(rlib_warning_verbosity = "verbose")
+
+  ext <- ctrl_ext(description = "Summary.")
+
+  expect_warning(
+    result <- extension_description(ext),
+    class = "deprecated_extension_description"
+  )
+
+  expect_identical(result, "Summary.")
 })
 
 test_that("validate_extension gates ext_meta docs against controllable vars", {

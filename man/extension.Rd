@@ -8,7 +8,6 @@
 \alias{extension_server}
 \alias{extension_id}
 \alias{extension_name}
-\alias{extension_description}
 \alias{extension_ctor}
 \alias{new_dock_extensions}
 \alias{is_dock_extensions}
@@ -44,8 +43,6 @@ extension_server(x, key, ...)
 extension_id(x)
 
 extension_name(x)
-
-extension_description(x)
 
 extension_ctor(x)
 
@@ -115,8 +112,10 @@ and a \code{dock_extensions} object using \code{validate_extensions()}, which re
 the input object invisibly and throw errors as side-effects. Several getter
 functions return extension attributes, including \code{extension_ui()} (a
 function), \code{extension_server()} (a function), \code{extension_id()} (a string),
-\code{extension_name()} (a string), \code{extension_description()} (a string or
-\code{NULL}) and \code{extension_ctor()} (an object that inherits from \code{blockr_ctor}).
+\code{extension_name()} (a string) and \code{extension_ctor()} (an object that
+inherits from \code{blockr_ctor}). The extension's metadata is carried as an
+\code{\link[=ext_meta]{ext_meta()}} and read per component with \code{ext_desc()}, \code{ext_args()},
+\code{ext_examples()} and \code{ext_guidance()}.
 }
 \description{
 Functionality of a \code{dock_board} can be extended by supplying one or more

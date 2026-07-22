@@ -42,8 +42,10 @@
 #' the input object invisibly and throw errors as side-effects. Several getter
 #' functions return extension attributes, including `extension_ui()` (a
 #' function), `extension_server()` (a function), `extension_id()` (a string),
-#' `extension_name()` (a string), `extension_description()` (a string or
-#' `NULL`) and `extension_ctor()` (an object that inherits from `blockr_ctor`).
+#' `extension_name()` (a string) and `extension_ctor()` (an object that
+#' inherits from `blockr_ctor`). The extension's metadata is carried as an
+#' [ext_meta()] and read per component with `ext_desc()`, `ext_args()`,
+#' `ext_examples()` and `ext_guidance()`.
 #'
 #' @rdname extension
 #' @export
@@ -271,12 +273,6 @@ extension_key <- function(x) {
 extension_name <- function(x) {
   stopifnot(is_dock_extension(x))
   attr(x, "name")
-}
-
-#' @rdname extension
-#' @export
-extension_description <- function(x) {
-  ext_meta(x)[["description"]]
 }
 
 #' @rdname extension

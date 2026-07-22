@@ -6,9 +6,12 @@
 #' extension through `modify_extension`: a free-text `description`, per-variable
 #' `arguments` documentation keyed by externally controllable variable (see
 #' [external_ctrl_vars()]), worked `examples` and free-text `guidance` on how to
-#' drive it. `is_ext_meta()` checks the class and `ext_meta()` reads the
+#' drive it. `is_ext_meta()` checks the class and `ext_meta()` reads the whole
 #' metadata off an extension, coercing a bare-string description to an
-#' `ext_meta` whose only populated slot is `description`.
+#' `ext_meta` whose only populated slot is `description`; the individual
+#' components are read with `ext_desc()`, `ext_args()`, `ext_examples()` and
+#' `ext_guidance()`. `extension_description()` remains as a deprecated alias of
+#' `ext_desc()`.
 #'
 #' Per-variable `arguments` reuse blockr.core's block-argument specification:
 #' pass a named character vector (variable to description) for the common case,
@@ -24,7 +27,7 @@
 #' @param guidance Free-text steering on how to drive the extension, distinct
 #'   from the human-facing `description`
 #' @param x An `ext_meta` object for `is_ext_meta()`, a `dock_extension` for
-#'   `ext_meta()`
+#'   `ext_meta()` and the per-component accessors
 #'
 #' @examples
 #' new_ext_meta(
@@ -36,7 +39,10 @@
 #'
 #' @return `new_ext_meta()` returns an `ext_meta` object (a list with entries
 #' `description`, `arguments`, `examples` and `guidance`), `is_ext_meta()` a
-#' boolean and `ext_meta()` the normalized `ext_meta` an extension carries.
+#' boolean and `ext_meta()` the normalized `ext_meta` an extension carries. The
+#' per-component accessors return that component: `ext_desc()` a string or
+#' `NULL`, `ext_args()` a `block_args`, `ext_examples()` a list and
+#' `ext_guidance()` a string or `NULL`.
 #'
 #' @name ext-meta
 #' @export
@@ -94,6 +100,44 @@ ext_meta <- function(x) {
   } else {
     new_ext_meta(description = meta)
   }
+}
+
+#' @rdname ext-meta
+#' @export
+ext_desc <- function(x) {
+  ext_meta(x)[["description"]]
+}
+
+#' @rdname ext-meta
+#' @export
+ext_args <- function(x) {
+  ext_meta(x)[["arguments"]]
+}
+
+#' @rdname ext-meta
+#' @export
+ext_examples <- function(x) {
+  ext_meta(x)[["examples"]]
+}
+
+#' @rdname ext-meta
+#' @export
+ext_guidance <- function(x) {
+  ext_meta(x)[["guidance"]]
+}
+
+#' @rdname ext-meta
+#' @export
+extension_description <- function(x) {
+
+  blockr_warn(
+    "`extension_description()` is deprecated; use `ext_desc()` instead.",
+    class = "deprecated_extension_description",
+    frequency = "once",
+    frequency_id = "blockr_deprecated_extension_description"
+  )
+
+  ext_desc(x)
 }
 
 as_ext_arguments <- function(x) {

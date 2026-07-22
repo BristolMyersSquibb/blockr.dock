@@ -5,6 +5,11 @@
 \alias{new_ext_meta}
 \alias{is_ext_meta}
 \alias{ext_meta}
+\alias{ext_desc}
+\alias{ext_args}
+\alias{ext_examples}
+\alias{ext_guidance}
+\alias{extension_description}
 \title{Extension metadata}
 \usage{
 new_ext_meta(
@@ -17,6 +22,16 @@ new_ext_meta(
 is_ext_meta(x)
 
 ext_meta(x)
+
+ext_desc(x)
+
+ext_args(x)
+
+ext_examples(x)
+
+ext_guidance(x)
+
+extension_description(x)
 }
 \arguments{
 \item{description}{Free-text summary of what the extension is}
@@ -32,12 +47,15 @@ controllable variable (a \code{modify_extension}-shaped payload)}
 from the human-facing \code{description}}
 
 \item{x}{An \code{ext_meta} object for \code{is_ext_meta()}, a \code{dock_extension} for
-\code{ext_meta()}}
+\code{ext_meta()} and the per-component accessors}
 }
 \value{
 \code{new_ext_meta()} returns an \code{ext_meta} object (a list with entries
 \code{description}, \code{arguments}, \code{examples} and \code{guidance}), \code{is_ext_meta()} a
-boolean and \code{ext_meta()} the normalized \code{ext_meta} an extension carries.
+boolean and \code{ext_meta()} the normalized \code{ext_meta} an extension carries. The
+per-component accessors return that component: \code{ext_desc()} a string or
+\code{NULL}, \code{ext_args()} a \code{block_args}, \code{ext_examples()} a list and
+\code{ext_guidance()} a string or \code{NULL}.
 }
 \description{
 The \code{description} argument of \code{\link[=new_dock_extension]{new_dock_extension()}} accepts either a bare
@@ -46,9 +64,12 @@ structured form carries model-facing documentation for a client driving the
 extension through \code{modify_extension}: a free-text \code{description}, per-variable
 \code{arguments} documentation keyed by externally controllable variable (see
 \code{\link[blockr.core:external_ctrl_vars]{external_ctrl_vars()}}), worked \code{examples} and free-text \code{guidance} on how to
-drive it. \code{is_ext_meta()} checks the class and \code{ext_meta()} reads the
+drive it. \code{is_ext_meta()} checks the class and \code{ext_meta()} reads the whole
 metadata off an extension, coercing a bare-string description to an
-\code{ext_meta} whose only populated slot is \code{description}.
+\code{ext_meta} whose only populated slot is \code{description}; the individual
+components are read with \code{ext_desc()}, \code{ext_args()}, \code{ext_examples()} and
+\code{ext_guidance()}. \code{extension_description()} remains as a deprecated alias of
+\code{ext_desc()}.
 }
 \details{
 Per-variable \code{arguments} reuse blockr.core's block-argument specification:
