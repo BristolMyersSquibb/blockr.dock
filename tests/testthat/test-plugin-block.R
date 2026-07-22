@@ -239,6 +239,54 @@ test_that("locked dock keeps block_card_toggles hidden (#122)", {
   expect_false(grepl("<script", locked_html, fixed = TRUE))
 })
 
+test_that("block card sections carry the css-styling contract (#214)", {
+
+  has_class <- function(token) {
+    sprintf(
+      "contains(concat(' ', normalize-space(@class), ' '), ' %s ')",
+      token
+    )
+  }
+
+  card <- block_card_content(
+    NS("blk"),
+    expr_ui = div(id = "blk-expr"),
+    block_ui = div(id = "blk-out")
+  )
+
+  root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+  # The stylesheet keys the per-panel styling off this class and the stable
+  # panel data-value, so both must be present for the cards to render styled.
+  acc <- xml2::xml_find_all(
+    root,
+    paste0("//div[", has_class("blockr-block-accordion"), "]")
+  )
+  expect_length(acc, 1L)
+
+  values <- xml2::xml_attr(
+    xml2::xml_find_all(acc, "./div[@data-value]"),
+    "data-value"
+  )
+  expect_setequal(values, c("inputs", "outputs"))
+
+  # The header-hide and body frame now live in the stylesheet: the panel's own
+  # header and body must not inline the styles tagQuery used to bake in per card
+  # (a revert to that would silently detach them from the css contract above).
+  inputs_item <- "./div[@data-value='inputs']"
+
+  header <- xml2::xml_find_first(
+    acc,
+    paste0(inputs_item, "/div[", has_class("accordion-header"), "]")
+  )
+  body <- xml2::xml_find_first(
+    acc,
+    paste0(inputs_item, "//div[", has_class("accordion-body"), "]")
+  )
+  expect_true(is.na(xml2::xml_attr(header, "style")))
+  expect_true(is.na(xml2::xml_attr(body, "style")))
+})
+
 test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {
 
   df <- data.frame(
