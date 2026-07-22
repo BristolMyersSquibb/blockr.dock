@@ -329,13 +329,10 @@ freeze_hidden_inputs <- function(board, visibility) {
 # what is stored -- so a sash drag, a programmatic move / resize, or a tab
 # switch is at most one board commit and a re-echo after quiescence none.
 #
-# A restore streams intermediate `_state` frames before the layout settles (a
-# tab group momentarily split into separate leaves, or an empty frame). Those
-# must not be committed as user edits (#327). Rather than filter them by a
-# provenance tag, the mirror lets the settle converge: the empty-frame guard
-# drops the no-geometry transients, the restore's single focus collapses the
-# groups to their settled arrangement, and the `all.equal` guard absorbs the
-# rest -- so the committed grid tracks only the settled layout.
+# dockViewR surfaces `_state` only once a layout has settled: the intermediate
+# frames a restore once streamed -- a tab group momentarily split into separate
+# leaves, or an empty re-init frame (#327) -- never reach the mirror, so every
+# echo it sees is a settled layout to commit, gated only by the tolerance below.
 #
 # It does not restrict to membership: a panel absent from the view is an inert
 # ghost, pruned at the compose / restore boundary, never by this writer.
@@ -357,13 +354,6 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
       }
 
       grid <- as_dock_grid(as_dock_layout(state))
-
-      # An empty grid carries no geometry: it is a mid-(re)load transient (the
-      # dock momentarily reports no panels while restoring), never a layout to
-      # mirror. Membership stays authoritative, so skipping it strands nothing.
-      if (!length(grid_panel_ids(grid))) {
-        return()
-      }
 
       stored <- board_grids(board$board)[[id]]
 
@@ -795,24 +785,6 @@ manage_dock <- function(
               "Unknown panel type {class(pid)}.",
               class = "dock_panel_invalid"
             )
-          }
-        }
-
-        # Front the view's active panel once, after the UIs are in place. The
-        # old loop fronted every panel in turn -- N `select_panel` echoes whose
-        # churn jittered the rendered sizes off the authored grid. A single
-        # focus instead settles the async restore to one determinate layout, so
-        # the mirror sees the authored geometry (not a transient separate-leaves
-        # frame) and the round-trip stays byte-exact. The last-placed panel is
-        # the arrangement's active tab (a tab group's open panel).
-        if (length(panels)) {
-
-          active <- panels[[length(panels)]]
-
-          if (is_block_panel_id(active)) {
-            select_block_panel(active, dock$proxy)
-          } else {
-            select_ext_panel(active, dock$proxy)
           }
         }
       },

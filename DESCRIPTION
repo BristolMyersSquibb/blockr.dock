@@ -46,7 +46,7 @@ Suggests:
 Remotes:
     rstudio/shinytest2,
     BristolMyersSquibb/blockr.core,
-    cynkra/dockViewR
+    cynkra/dockViewR@92-retire-state-source
 Config/testthat/edition: 3
 Collate:
     'action-class.R'

@@ -131,50 +131,6 @@ test_that("grid mirror commits a client echo, guards re-echoes", {
   })
 })
 
-test_that("the mirror skips an empty-grid echo (a mid-load transient)", {
-
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block(), b = new_head_block()),
-    views = list(V = c("a", "b")),
-    grids = list(V = dock_grid("a", "b"))
-  )
-
-  ms <- new_mock_session()
-  withr::defer(if (!ms$isClosed()) ms$close())
-
-  committed <- list()
-
-  with_mock_context(ms, {
-
-    board <- reactiveValues(board = brd)
-    layout_rv <- reactiveVal(NULL)
-
-    observe_grid_echo(
-      "V", list(layout = layout_rv), board,
-      commit_grid = function(grid) {
-        committed[[length(committed) + 1L]] <<- grid
-      }
-    )
-    ms$flushReact()
-
-    # A re-init frame with no panels carries no geometry, so it is not committed
-    # however much it differs from the stored grid -- the reload transient that
-    # would otherwise strand an empty grid.
-    layout_rv(echo_state(dock_grid()))
-    ms$flushReact()
-
-    expect_length(committed, 0L)
-
-    # A later non-empty echo commits as usual.
-    layout_rv(echo_state(dock_grid(
-      "block_panel-a", "block_panel-b", sizes = c(0.3, 0.7)
-    )))
-    ms$flushReact()
-
-    expect_length(committed, 1L)
-  })
-})
-
 test_that("the mirror stores an in-flight echo verbatim; placement prunes it", {
 
   brd <- new_dock_board(
