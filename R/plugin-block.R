@@ -351,59 +351,21 @@ block_card_dropdown <- function(ns, info, blk_id) {
 
 block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
 
-  inputs_panel <- htmltools::tagQuery(
-    accordion_panel(
-      icon = icon("sliders"),
-      title = "Block inputs",
-      value = "inputs"
-    )
-  )$find(
-    ".accordion-header"
-  )$addAttrs(
-    style = "display: none;"
-  )$reset(
-  )$find(
-    ".accordion-body"
-  )$addAttrs(
-    style = paste0(
-      "background-color: white;",
-      "border-radius: 0;",
-      "margin: 0 -16px 10px -16px;",
-      "padding: 16px 16px 10px 16px;",
-      "border-top: 1px solid var(--blockr-grey-300);",
-      "border-bottom: 1px solid var(--blockr-grey-300);"
-    )
-  )$append(
+  inputs_panel <- accordion_panel(
+    icon = icon("sliders"),
+    title = "Block inputs",
+    value = "inputs",
     expr_ui
-  )$allTags()
+  )
 
-  inputs_panel$attribs$style <- "border: none; border-radius: 0;"
-
-  outputs_panel <- htmltools::tagQuery(
-    accordion_panel(
-      icon = icon("chart-simple"),
-      title = "Block output(s)",
-      value = "outputs",
-      style = "max-width: 100%; overflow-x: auto;"
-    )
-  )$find(
-    ".accordion-header"
-  )$addAttrs(
-    style = "display: none;"
-  )$reset(
-  )$find(
-    ".accordion-body"
-  )$addAttrs(
-    style = "padding: 0;"
-  )$append(
-    tagList(
-      block_ui,
-      uiOutput(ns("status_note")),
-      block_issues_ui(ns)
-    )
-  )$allTags()
-
-  outputs_panel$attribs$style <- "border: none; border-radius: 0;"
+  outputs_panel <- accordion_panel(
+    icon = icon("chart-simple"),
+    title = "Block output(s)",
+    value = "outputs",
+    block_ui,
+    uiOutput(ns("status_note")),
+    block_issues_ui(ns)
+  )
 
   ctrl_panel <- if (!is.null(ctrl_ui)) build_ctrl_panel(ctrl_ui)
 
@@ -411,6 +373,7 @@ block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
     div(id = ns("errors_block"), class = "mt-4"),
     accordion(
       id = ns("blk_accordion"),
+      class = "blockr-block-accordion",
       multiple = TRUE,
       open = c("inputs", "outputs"),
       ctrl_panel,
@@ -421,35 +384,11 @@ block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
 }
 
 build_ctrl_panel <- function(ctrl_ui) {
-
-  panel <- htmltools::tagQuery(
-    accordion_panel(
-      title = "Control",
-      value = "ctrl"
-    )
-  )$find(
-    ".accordion-header"
-  )$addAttrs(
-    style = "display: none;"
-  )$reset(
-  )$find(
-    ".accordion-body"
-  )$addAttrs(
-    style = paste0(
-      "background-color: white;",
-      "border-radius: 0;",
-      "margin: 0 -16px 10px -16px;",
-      "padding: 16px 16px 10px 16px;",
-      "border-top: 1px solid var(--blockr-grey-300);",
-      "border-bottom: 1px solid var(--blockr-grey-300);"
-    )
-  )$append(
+  accordion_panel(
+    title = "Control",
+    value = "ctrl",
     ctrl_ui
-  )$allTags()
-
-  panel$attribs$style <- "border: none; border-radius: 0;"
-
-  panel
+  )
 }
 
 ctrl_btn_label <- function(fn) coal(attr(fn, "ctrl_label"), "Control")

@@ -533,6 +533,37 @@ label:has(input[type="file"]) {
   box-shadow: none;
 }
 
+/* Block card sections (inputs / outputs / control) render as an always-open,
+   header-less accordion. These selectors carry the per-panel styling that used
+   to be applied per card at build time. Keyed on the stable panel data-value
+   and scoped with child combinators so they never reach a block's own nested
+   accordions -- and unscoped by .offcanvas so they hold once a card is moved
+   into a dock panel. */
+.blockr-block-accordion > .accordion-item {
+  border: none;
+  border-radius: 0;
+}
+
+.blockr-block-accordion > .accordion-item > .accordion-header {
+  display: none;
+}
+
+.blockr-block-accordion > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body,
+.blockr-block-accordion > .accordion-item[data-value="ctrl"] > .accordion-collapse > .accordion-body {
+  background-color: white;
+  border-radius: 0;
+  margin: 0 -16px 10px -16px;
+  padding: 16px 16px 10px 16px;
+  border-top: 1px solid var(--blockr-grey-300);
+  border-bottom: 1px solid var(--blockr-grey-300);
+}
+
+.blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0;
+}
+
 /* Export button adjustments */
 .offcanvas .shiny-download-link i,
 .offcanvas .shiny-download-link svg,
