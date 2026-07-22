@@ -179,6 +179,44 @@ test_that("navbar busy spinner sits left of the gear (#345, #355, #360)", {
   expect_length(locked, 1)
 })
 
+test_that("the busy spinner still turns under reduced motion", {
+
+  # A stylesheet assertion because nothing else can catch this: the spinner is
+  # only ever seen mid-flush, and CI never runs with the preference set. When
+  # the reduced-motion block killed the animation outright, the ring rendered
+  # perfectly and sat frozen -- indistinguishable from a hung session -- for
+  # every user whose OS reports the preference (Windows does so whenever
+  # "Animation effects" is off). Slower is fine here; stopped is not.
+  css <- paste(
+    readLines(
+      system.file(
+        "assets", "css", "blockr-dock.css",
+        package = "blockr.dock",
+        mustWork = TRUE
+      ),
+      warn = FALSE
+    ),
+    collapse = "\n"
+  )
+
+  reduced <- regmatches(
+    css,
+    regexpr(
+      "(?s)@media \\(prefers-reduced-motion: reduce\\).*?\\n\\}",
+      css,
+      perl = TRUE
+    )
+  )
+
+  expect_length(reduced, 1L)
+
+  # Must slow the busy selector that carries the spin; on the bare
+  # `.blockr-navbar-spinner` the override is outspecified and does nothing.
+  expect_match(reduced, "html.shiny-busy:has", fixed = TRUE)
+  expect_match(reduced, "animation-duration: 1.6s", fixed = TRUE)
+  expect_no_match(reduced, "animation:\\s*none")
+})
+
 test_that("navbar carries the spinner display delay from the option (#355)", {
 
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))

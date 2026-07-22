@@ -1218,8 +1218,19 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   }
 }
 
+/* Reduced motion slows the ring, it does not stop it. Stopping it leaves a
+   fully styled ring frozen in the navbar, which reads as a hung session --
+   the exact opposite of what a busy indicator is for -- and it is the only
+   state the indicator can be seen in, since it is hidden when idle. A 16px
+   ring turning in place carries none of the vestibular risk the preference
+   exists to avoid (it is not page-level or parallax motion), so the honest
+   reading of the preference here is "calmer", not "gone".
+
+   This is not a rare corner: Windows maps "Animation effects: off" (a common
+   managed / VDI default) onto `prefers-reduced-motion: reduce`, so on those
+   machines every Edge user saw a spinner that never moved. */
 @media (prefers-reduced-motion: reduce) {
   html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
-    animation: none;
+    animation-duration: 1.6s;
   }
 }

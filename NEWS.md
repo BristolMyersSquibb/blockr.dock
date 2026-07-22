@@ -18,6 +18,13 @@
   as the free-text summary; the earlier `extension_description()` accessor is
   deprecated in favour of `ext_desc()` (#359).
 
+* The navbar busy spinner keeps turning when the browser reports
+  `prefers-reduced-motion: reduce`, at a slower 1.6s turn instead of 0.7s.
+  It previously dropped the animation entirely, which left a fully styled
+  ring frozen in the navbar and reading as a hung session. Windows maps its
+  "Animation effects: off" setting (a common managed / VDI default) onto that
+  preference, so on those machines the spinner never moved.
+
 * Views (pages) can now be reordered from the nav dropdown: each item carries
   up / down controls beside its rename and remove actions. Order is board
   content, so the move travels through the update lifecycle as a new
