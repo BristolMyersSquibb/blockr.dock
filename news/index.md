@@ -2,6 +2,15 @@
 
 ## blockr.dock (development version)
 
+- Block card sections (inputs / outputs / control) are styled from the
+  stylesheet, keyed on each panel’s stable `data-value`, rather than
+  rebuilt per card with
+  [`htmltools::tagQuery()`](https://rstudio.github.io/htmltools/reference/tagQuery.html)
+  at UI-build time. The markup renders identically but the cards build
+  about a third faster – a cost that scales with the number of blocks on
+  the active view, so it cuts noticeably into the initial app render
+  ([\#214](https://github.com/BristolMyersSquibb/blockr.dock/issues/214)).
+
 - Blocks on a dock group’s background tabs render again. dockView mounts
   a group’s non-front tabs lazily, so a block card’s `move-element`
   could arrive before its panel existed and be dropped, stranding the
