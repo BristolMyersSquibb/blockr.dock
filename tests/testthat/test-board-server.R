@@ -693,8 +693,8 @@ test_that("report_visible_observer drives the required axis over built cards", {
     layout_b <- reactiveVal(NULL)
 
     docks <- new.env(parent = emptyenv())
-    docks[["A"]] <- list(layout = layout_a)
-    docks[["B"]] <- list(layout = layout_b)
+    docks[["A"]] <- list(layout = layout_a, active_panel = reactiveVal(NULL))
+    docks[["B"]] <- list(layout = layout_b, active_panel = reactiveVal(NULL))
 
     # a, b and d are all built (required non-NA); a/b are A's fronts, d lives
     # in B. Nothing reported on screen yet, so all parked (required FALSE).
@@ -760,7 +760,7 @@ test_that("report_visible_observer coalesces set-equal reports", {
     layout <- reactiveVal(NULL)
 
     docks <- new.env(parent = emptyenv())
-    docks[["A"]] <- list(layout = layout)
+    docks[["A"]] <- list(layout = layout, active_panel = reactiveVal(NULL))
 
     # a and b are built, both A's fronts.
     vis <- fake_visibility(c("a", "b"))
@@ -794,6 +794,60 @@ test_that("report_visible_observer coalesces set-equal reports", {
 
   expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
   expect_identical(isolate(env$vis$visible[["a"]]()), "A")
+})
+
+test_that("report_visible_observer follows the live active panel (#361)", {
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  # A settled `_state` echo fronting a; `views` lists the group's tab members so
+  # a live active panel can override its front without a fresh echo.
+  leaf <- function(id, active, members) {
+    list(
+      type = "leaf",
+      data = list(id = id, activeView = active, views = members)
+    )
+  }
+  layout_ab <- list(
+    grid = list(
+      root = list(
+        type = "branch",
+        data = list(
+          leaf("1", "block_panel-a", c("block_panel-a", "block_panel-b"))
+        )
+      )
+    )
+  )
+
+  env <- with_mock_context(ms, {
+    layout <- reactiveVal(NULL)
+    active_panel <- reactiveVal(NULL)
+
+    docks <- new.env(parent = emptyenv())
+    docks[["A"]] <- list(layout = layout, active_panel = active_panel)
+
+    vis <- fake_visibility(c("a", "b"))
+    mark_cards_built(vis, c("a", "b"))
+    client_active <- reactiveVal("A")
+
+    report_visible_observer(vis, client_active, docks)
+
+    list(layout = layout, active_panel = active_panel, vis = vis)
+  })
+
+  with_mock_context(ms, env$layout(layout_ab))
+  ms$flushReact()
+  expect_identical(isolate(env$vis$visible[["a"]]()), "A")
+  expect_true(is.na(isolate(env$vis$visible[["b"]]())))
+
+  # The client switches to b with no fresh layout echo (`layout` unchanged): the
+  # active-panel signal alone must front b and park a -- the tab-switch repaint.
+  with_mock_context(ms, env$active_panel("block_panel-b"))
+  ms$flushReact()
+  expect_identical(isolate(env$vis$required[["b"]]()), TRUE)
+  expect_identical(isolate(env$vis$visible[["b"]]()), "A")
+  expect_identical(isolate(env$vis$required[["a"]]()), FALSE)
+  expect_true(is.na(isolate(env$vis$visible[["a"]]())))
 })
 
 test_that("board_server_callback seeds visibility before the client reports", {

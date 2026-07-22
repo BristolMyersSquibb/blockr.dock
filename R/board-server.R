@@ -253,23 +253,23 @@ switch_view_observer <- function(session, update, client_active, board, docks,
 
 report_visible_observer <- function(visibility, client_active, docks) {
 
-  # Drives both visibility axes off one live client signal: the active view's
-  # settled `_state` layout echo (`dock$layout()`), the arrangement dockView
-  # actually painted. Over the built cards, the front panels go required TRUE
-  # and are marked painted on the visible axis (the client-confirmed paint
-  # core's render gate waits for); everything else built goes required FALSE
-  # with its visible slot cleared. Sourcing the visible mark here, off the same
-  # live echo the required axis tracks, is what lets it follow a front tab the
-  # client owns -- which can differ from the grid's stored active -- and re-mark
-  # when the user switches tabs, instead of naming a one-shot `init_layout`
-  # snapshot that never recovers.
-  # `req(layout())` waits for the client's report (NULL before then).
+  # Drives both visibility axes off two live client signals: the active view's
+  # settled `_state` layout echo (`dock$layout()`, the arrangement dockView
+  # painted) and its live active panel (`dock$active_panel()`). Over the built
+  # cards, the front panels go required TRUE and are marked painted on the
+  # visible axis (the client-confirmed paint core's render gate waits for);
+  # everything else built goes required FALSE with its visible slot cleared.
+  # A bare tab switch does not reliably re-echo `_state` (only structural
+  # gestures do), so the active panel is folded in as the front of its group --
+  # otherwise a newly-fronted tab is never marked visible and its block stays
+  # blank until a structural change. `req(layout())` waits for the client's
+  # first report (NULL before then); `active_panel()` is NULL until a switch.
   on_screen <- reactive({
     active <- req(client_active())
     dock <- req(docks[[active]])
     layout <- req(dock$layout())
 
-    sort(visible_block_ids(layout))
+    sort(visible_block_ids(layout, dock$active_panel()))
   })
 
   observeEvent(
@@ -707,6 +707,7 @@ manage_dock <- function(
       board_ns = board_ns,
       live_panels = live_panels,
       layout = reactive(dockViewR::get_dock(proxy)),
+      active_panel = reactive(input[[dock_input("active-panel")]]),
       n_panels = n_panels,
       prev_active_group = prev_active_group,
       active_group_trail = active_group_trail,

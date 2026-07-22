@@ -44,7 +44,7 @@ move_dom_element <- function(from, to, session = get_session()) {
   )
 }
 
-determine_active_views <- function(layout) {
+determine_active_views <- function(layout, active_panel = NULL) {
 
   if (is.null(layout)) {
     return(character())
@@ -52,7 +52,9 @@ determine_active_views <- function(layout) {
 
   # The dockView tree, keyed by group id: a compact `dock_grid` is expanded
   # (assigning ids), while a raw dockView `_state` echo already carries its
-  # tree at `$grid`. A group's active view is its open tab.
+  # tree at `$grid`. A group's active view is its open tab -- but a bare tab
+  # switch does not always refresh the echo's `activeView`, so the client's
+  # live `active_panel` overrides the front of whichever group lists it.
   tree <- if (is_dock_grid(layout)) grid_to_tree(layout) else layout[["grid"]]
 
   root <- tree[["root"]]
@@ -64,10 +66,15 @@ determine_active_views <- function(layout) {
   xtr_leaf <- function(x) {
 
     if (identical(x[["type"]], "leaf")) {
-      return(
-        set_names(coal(x[["data"]][["activeView"]], "", fail_all = FALSE),
-                  x[["data"]][["id"]])
-      )
+
+      front <- if (not_null(active_panel) &&
+                     active_panel %in% x[["data"]][["views"]]) {
+        active_panel
+      } else {
+        coal(x[["data"]][["activeView"]], "", fail_all = FALSE)
+      }
+
+      return(set_names(front, x[["data"]][["id"]]))
     }
 
     lapply(x[["data"]], xtr_leaf)
@@ -76,9 +83,9 @@ determine_active_views <- function(layout) {
   rapply(xtr_leaf(root), identity, "character")
 }
 
-visible_block_ids <- function(layout) {
+visible_block_ids <- function(layout, active_panel = NULL) {
 
-  front_panels <- as.character(determine_active_views(layout))
+  front_panels <- as.character(determine_active_views(layout, active_panel))
   block_panels <- front_panels[maybe_block_panel_id(front_panels)]
 
   as_obj_id(new_block_panel_id(block_panels))
