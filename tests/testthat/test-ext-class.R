@@ -92,13 +92,15 @@ test_that("dock extensions validation", {
   )
 })
 
-ctrl_ext <- function(external_ctrl = TRUE, ctor = function(content = "") NULL) {
+ctrl_ext <- function(external_ctrl = TRUE, ctor = function(content = "") NULL,
+                     description = NULL) {
   new_dock_extension(
     server = function(id, ...) NULL,
     ui = function(id) tagList(),
     name = "Document",
     class = "doc_extension",
     ctor = ctor,
+    description = description,
     external_ctrl = external_ctrl
   )
 }
@@ -113,12 +115,12 @@ test_that("new_dock_extension validates external_ctrl", {
 
 test_that("extension description defaults to NULL and is accessible", {
 
-  expect_null(extension_description(ctrl_ext()))
+  expect_null(ext_desc(ctrl_ext()))
 
   desc <- "References block results via blockr://<block_id>."
 
   expect_identical(
-    extension_description(new_edit_board_extension(description = desc)),
+    ext_desc(new_edit_board_extension(description = desc)),
     desc
   )
 })
@@ -275,4 +277,134 @@ test_that("extension keys survive serialization; stale ids degrade", {
     payload = set_names(ser[["payload"]], NULL)
   )
   expect_identical(names(blockr_deser(old)), "edit_board")
+})
+
+test_that("new_ext_meta assembles and validates its fields", {
+
+  meta <- new_ext_meta(
+    "Workflow diagram.",
+    arguments = c(positions = "Block coordinates."),
+    examples = list(list(positions = list(a = 1))),
+    guidance = "Drive via modify_extension."
+  )
+
+  expect_true(is_ext_meta(meta))
+  expect_identical(meta[["description"]], "Workflow diagram.")
+  expect_identical(meta[["guidance"]], "Drive via modify_extension.")
+  expect_s3_class(meta[["arguments"]], "block_args")
+  expect_identical(names(meta[["arguments"]]), "positions")
+
+  expect_error(
+    new_ext_meta(description = 1L),
+    class = "ext_meta_description_invalid"
+  )
+  expect_error(
+    new_ext_meta(guidance = 1L),
+    class = "ext_meta_guidance_invalid"
+  )
+  expect_error(
+    new_ext_meta(examples = "x"),
+    class = "ext_meta_examples_invalid"
+  )
+})
+
+test_that("new_ext_meta normalizes the arguments field", {
+
+  expect_identical(names(new_ext_meta()[["arguments"]]), NULL)
+  expect_length(new_ext_meta()[["arguments"]], 0L)
+
+  spec <- new_block_args(
+    positions = new_block_arg("Coords.", type = arg_string())
+  )
+  expect_identical(new_ext_meta(arguments = spec)[["arguments"]], spec)
+
+  expect_error(
+    new_ext_meta(arguments = c("unnamed")),
+    class = "ext_meta_arguments_invalid"
+  )
+})
+
+test_that("ext_meta reads a bare string or a structured description", {
+
+  expect_identical(ext_meta(ctrl_ext())[["description"]], NULL)
+
+  string_ext <- ctrl_ext(description = "Plain summary.")
+  expect_true(is_ext_meta(ext_meta(string_ext)))
+  expect_identical(ext_desc(string_ext), "Plain summary.")
+
+  meta <- new_ext_meta("Rich summary.", arguments = c(content = "The text."))
+  rich_ext <- ctrl_ext(description = meta)
+  expect_identical(ext_meta(rich_ext), meta)
+  expect_identical(ext_desc(rich_ext), "Rich summary.")
+})
+
+test_that("per-component accessors read the extension metadata", {
+
+  bare <- ctrl_ext()
+  expect_null(ext_guidance(bare))
+  expect_s3_class(ext_args(bare), "block_args")
+  expect_length(ext_args(bare), 0L)
+  expect_identical(ext_examples(bare), list())
+
+  ext <- ctrl_ext(
+    description = new_ext_meta(
+      "Doc.",
+      arguments = c(content = "The text."),
+      examples = list(list(content = "hello")),
+      guidance = "Drive via modify_extension."
+    )
+  )
+
+  expect_identical(names(ext_args(ext)), "content")
+  expect_identical(ext_examples(ext), list(list(content = "hello")))
+  expect_identical(ext_guidance(ext), "Drive via modify_extension.")
+})
+
+test_that("extension_description is a deprecated alias of ext_desc", {
+
+  withr::local_options(rlib_warning_verbosity = "verbose")
+
+  ext <- ctrl_ext(description = "Summary.")
+
+  expect_warning(
+    result <- extension_description(ext),
+    class = "deprecated_extension_description"
+  )
+
+  expect_identical(result, "Summary.")
+})
+
+test_that("validate_extension gates ext_meta docs against controllable vars", {
+
+  expect_silent(
+    ctrl_ext(
+      external_ctrl = "content",
+      description = new_ext_meta(arguments = c(content = "The text."))
+    )
+  )
+
+  expect_error(
+    ctrl_ext(
+      external_ctrl = "content",
+      ctor = function(content = "", select = "") NULL,
+      description = new_ext_meta(arguments = c(select = "Not controllable."))
+    ),
+    class = "ext_meta_arguments_not_ctrl"
+  )
+
+  expect_error(
+    ctrl_ext(
+      external_ctrl = "content",
+      description = new_ext_meta(examples = list(list(other = 1)))
+    ),
+    class = "ext_meta_example_not_ctrl"
+  )
+
+  expect_error(
+    ctrl_ext(
+      external_ctrl = "content",
+      description = new_ext_meta(examples = list(list(1)))
+    ),
+    class = "ext_meta_example_invalid"
+  )
 })

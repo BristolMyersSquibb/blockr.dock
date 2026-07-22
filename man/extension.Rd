@@ -8,7 +8,6 @@
 \alias{extension_server}
 \alias{extension_id}
 \alias{extension_name}
-\alias{extension_description}
 \alias{extension_ctor}
 \alias{new_dock_extensions}
 \alias{is_dock_extensions}
@@ -45,8 +44,6 @@ extension_id(x)
 
 extension_name(x)
 
-extension_description(x)
-
 extension_ctor(x)
 
 new_dock_extensions(x = list())
@@ -81,8 +78,10 @@ until every view has reported its layout once, so \code{req()} it.}
 
 \item{class}{Extension subclass}
 
-\item{description}{Optional free-text description of the extension, surfaced
-as consumer-neutral metadata (e.g. to the AI assistant)}
+\item{description}{Optional extension metadata, surfaced as consumer-neutral
+documentation (e.g. to the AI assistant): either a free-text string or a
+structured \code{\link[=new_ext_meta]{new_ext_meta()}} object carrying per-variable documentation for a
+client driving the extension through \code{modify_extension}}
 
 \item{ctor}{Constructor function name}
 
@@ -113,8 +112,10 @@ and a \code{dock_extensions} object using \code{validate_extensions()}, which re
 the input object invisibly and throw errors as side-effects. Several getter
 functions return extension attributes, including \code{extension_ui()} (a
 function), \code{extension_server()} (a function), \code{extension_id()} (a string),
-\code{extension_name()} (a string), \code{extension_description()} (a string or
-\code{NULL}) and \code{extension_ctor()} (an object that inherits from \code{blockr_ctor}).
+\code{extension_name()} (a string) and \code{extension_ctor()} (an object that
+inherits from \code{blockr_ctor}). The extension's metadata is carried as an
+\code{\link[=ext_meta]{ext_meta()}} and read per component with \code{ext_desc()}, \code{ext_args()},
+\code{ext_examples()} and \code{ext_guidance()}.
 }
 \description{
 Functionality of a \code{dock_board} can be extended by supplying one or more

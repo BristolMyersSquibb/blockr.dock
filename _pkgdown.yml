@@ -37,6 +37,7 @@ reference:
   desc: Board extensions allow for adding components that interact with and modify board state.
   contents:
     - new_dock_extension
+    - new_ext_meta
     - new_edit_board_extension
 - title: Board actions
   desc: Actions are intended as re-usable, narrowly scoped board interactions, such as adding or removing a block.

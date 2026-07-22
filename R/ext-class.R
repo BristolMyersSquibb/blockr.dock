@@ -16,8 +16,10 @@
 #' @param ui A function with a single argument (`ns`) returning a `shiny.tag`
 #' @param name Name for extension
 #' @param class Extension subclass
-#' @param description Optional free-text description of the extension, surfaced
-#' as consumer-neutral metadata (e.g. to the AI assistant)
+#' @param description Optional extension metadata, surfaced as consumer-neutral
+#' documentation (e.g. to the AI assistant): either a free-text string or a
+#' structured [new_ext_meta()] object carrying per-variable documentation for a
+#' client driving the extension through `modify_extension`
 #' @param ctor Constructor function name
 #' @param pkg Package to look up `ctor`
 #' @param options Board options supplied by an extension
@@ -40,8 +42,10 @@
 #' the input object invisibly and throw errors as side-effects. Several getter
 #' functions return extension attributes, including `extension_ui()` (a
 #' function), `extension_server()` (a function), `extension_id()` (a string),
-#' `extension_name()` (a string), `extension_description()` (a string or
-#' `NULL`) and `extension_ctor()` (an object that inherits from `blockr_ctor`).
+#' `extension_name()` (a string) and `extension_ctor()` (an object that
+#' inherits from `blockr_ctor`). The extension's metadata is carried as an
+#' [ext_meta()] and read per component with `ext_desc()`, `ext_args()`,
+#' `ext_examples()` and `ext_guidance()`.
 #'
 #' @rdname extension
 #' @export
@@ -118,14 +122,17 @@ validate_extension.dock_extension <- function(x, ...) {
     )
   }
 
-  desc <- extension_description(x)
+  desc <- attr(x, "description")
 
-  if (!is.null(desc) && !is_string(desc)) {
+  if (!is.null(desc) && !is_string(desc) && !is_ext_meta(desc)) {
     blockr_abort(
-      "Expecting extension description to be a string or `NULL`.",
+      "Expecting extension description to be a string, an `ext_meta` object ",
+      "or `NULL`.",
       class = "dock_extension_description_invalid"
     )
   }
+
+  validate_ext_meta(ext_meta(x), external_ctrl_vars(x))
 
   ui <- extension_ui(x)
 
@@ -266,13 +273,6 @@ extension_key <- function(x) {
 extension_name <- function(x) {
   stopifnot(is_dock_extension(x))
   attr(x, "name")
-}
-
-#' @rdname extension
-#' @export
-extension_description <- function(x) {
-  stopifnot(is_dock_extension(x))
-  attr(x, "description")
 }
 
 #' @rdname extension

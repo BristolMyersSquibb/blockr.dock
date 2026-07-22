@@ -1,5 +1,14 @@
 # blockr.dock (development version)
 
+* Dock extensions can now carry structured, model-facing metadata: the
+  `description` argument of `new_dock_extension()` accepts a `new_ext_meta()`
+  object documenting each externally controllable variable (with an optional
+  type schema and worked examples) and how to drive the extension, read back
+  with `ext_meta()` and the per-component `ext_desc()`, `ext_args()`,
+  `ext_examples()` and `ext_guidance()` accessors. A bare string keeps working
+  as the free-text summary; the earlier `extension_description()` accessor is
+  deprecated in favour of `ext_desc()` (#359).
+
 * Views (pages) can now be reordered from the nav dropdown: each item carries
   up / down controls beside its rename and remove actions. Order is board
   content, so the move travels through the update lifecycle as a new
