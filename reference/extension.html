@@ -83,8 +83,6 @@ can be combined into a <code>dock_extensions</code> object.</p>
 <span></span>
 <span><span class="fu">extension_name</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">extension_description</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
-<span></span>
 <span><span class="fu">extension_ctor</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">new_dock_extensions</span><span class="op">(</span>x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
@@ -135,8 +133,10 @@ until every view has reported its layout once, so <code>req()</code> it.</p></dd
 
 
 <dt id="arg-description">description<a class="anchor" aria-label="anchor" href="#arg-description"></a></dt>
-<dd><p>Optional free-text description of the extension, surfaced
-as consumer-neutral metadata (e.g. to the AI assistant)</p></dd>
+<dd><p>Optional extension metadata, surfaced as consumer-neutral
+documentation (e.g. to the AI assistant): either a free-text string or a
+structured <code><a href="ext-meta.html">new_ext_meta()</a></code> object carrying per-variable documentation for a
+client driving the extension through <code>modify_extension</code></p></dd>
 
 
 <dt id="arg-ctor">ctor<a class="anchor" aria-label="anchor" href="#arg-ctor"></a></dt>
@@ -185,8 +185,10 @@ and a <code>dock_extensions</code> object using <code>validate_extensions()</cod
 the input object invisibly and throw errors as side-effects. Several getter
 functions return extension attributes, including <code>extension_ui()</code> (a
 function), <code>extension_server()</code> (a function), <code>extension_id()</code> (a string),
-<code>extension_name()</code> (a string), <code>extension_description()</code> (a string or
-<code>NULL</code>) and <code>extension_ctor()</code> (an object that inherits from <code>blockr_ctor</code>).</p>
+<code>extension_name()</code> (a string) and <code>extension_ctor()</code> (an object that
+inherits from <code>blockr_ctor</code>). The extension's metadata is carried as an
+<code><a href="ext-meta.html">ext_meta()</a></code> and read per component with <code><a href="ext-meta.html">ext_desc()</a></code>, <code><a href="ext-meta.html">ext_args()</a></code>,
+<code><a href="ext-meta.html">ext_examples()</a></code> and <code><a href="ext-meta.html">ext_guidance()</a></code>.</p>
     </div>
 
     <div class="section level2">

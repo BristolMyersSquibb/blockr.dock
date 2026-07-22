@@ -106,7 +106,6 @@ modify board state.
   [`extension_server()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
   [`extension_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
   [`extension_name()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
-  [`extension_description()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
   [`extension_ctor()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
   [`new_dock_extensions()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
   [`is_dock_extensions()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
@@ -114,6 +113,15 @@ modify board state.
   [`as_dock_extensions()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
   [`extension_block_callback()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
   : Dock extensions
+- [`new_ext_meta()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  [`is_ext_meta()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  [`ext_meta()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  [`ext_desc()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  [`ext_args()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  [`ext_examples()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  [`ext_guidance()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  [`extension_description()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  : Extension metadata
 - [`new_edit_board_extension()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/edit.md)
   : Edit board extension
 

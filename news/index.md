@@ -2,6 +2,28 @@
 
 ## blockr.dock (development version)
 
+- Dock extensions can now carry structured, model-facing metadata: the
+  `description` argument of
+  [`new_dock_extension()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
+  accepts a
+  [`new_ext_meta()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  object documenting each externally controllable variable (with an
+  optional type schema and worked examples) and how to drive the
+  extension, read back with
+  [`ext_meta()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  and the per-component
+  [`ext_desc()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md),
+  [`ext_args()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md),
+  [`ext_examples()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  and
+  [`ext_guidance()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  accessors. A bare string keeps working as the free-text summary; the
+  earlier
+  [`extension_description()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  accessor is deprecated in favour of
+  [`ext_desc()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  ([\#359](https://github.com/BristolMyersSquibb/blockr.dock/issues/359)).
+
 - Views (pages) can now be reordered from the nav dropdown: each item
   carries up / down controls beside its rename and remove actions. Order
   is board content, so the move travels through the update lifecycle as

@@ -33,8 +33,6 @@ extension_id(x)
 
 extension_name(x)
 
-extension_description(x)
-
 extension_ctor(x)
 
 new_dock_extensions(x = list())
@@ -85,8 +83,12 @@ extension_block_callback(x, ...)
 
 - description:
 
-  Optional free-text description of the extension, surfaced as
-  consumer-neutral metadata (e.g. to the AI assistant)
+  Optional extension metadata, surfaced as consumer-neutral
+  documentation (e.g. to the AI assistant): either a free-text string or
+  a structured
+  [`new_ext_meta()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+  object carrying per-variable documentation for a client driving the
+  extension through `modify_extension`
 
 - ctor:
 
@@ -135,9 +137,15 @@ both return a boolean. A `dock_extension` can be validated using
 throw errors as side-effects. Several getter functions return extension
 attributes, including `extension_ui()` (a function),
 `extension_server()` (a function), `extension_id()` (a string),
-`extension_name()` (a string), `extension_description()` (a string or
-`NULL`) and `extension_ctor()` (an object that inherits from
-`blockr_ctor`).
+`extension_name()` (a string) and `extension_ctor()` (an object that
+inherits from `blockr_ctor`). The extension's metadata is carried as an
+[`ext_meta()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+and read per component with
+[`ext_desc()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md),
+[`ext_args()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md),
+[`ext_examples()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
+and
+[`ext_guidance()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md).
 
 ## Examples
 
