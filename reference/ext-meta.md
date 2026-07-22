@@ -51,7 +51,7 @@ extension_description(x)
 
   Per-variable documentation for the externally controllable variables,
   either a named character vector (variable to description) or a
-  [`new_block_args()`](https://bristolmyerssquibb.github.io/blockr.core/reference/new_block_arg.html)
+  [`new_arg_specs()`](https://bristolmyerssquibb.github.io/blockr.core/reference/new_arg_spec.html)
   object; keyed by controllable variable
 
 - examples:
@@ -75,7 +75,7 @@ extension_description(x)
 `description`, `arguments`, `examples` and `guidance`), `is_ext_meta()`
 a boolean and `ext_meta()` the normalized `ext_meta` an extension
 carries. The per-component accessors return that component: `ext_desc()`
-a string or `NULL`, `ext_args()` a `block_args`, `ext_examples()` a list
+a string or `NULL`, `ext_args()` an `arg_specs`, `ext_examples()` a list
 and `ext_guidance()` a string or `NULL`.
 
 ## Details
@@ -83,7 +83,7 @@ and `ext_guidance()` a string or `NULL`.
 Per-variable `arguments` reuse blockr.core's block-argument
 specification: pass a named character vector (variable to description)
 for the common case, or a
-[`new_block_args()`](https://bristolmyerssquibb.github.io/blockr.core/reference/new_block_arg.html)
+[`new_arg_specs()`](https://bristolmyerssquibb.github.io/blockr.core/reference/new_arg_spec.html)
 object to attach a machine-readable `type` (via the `arg_*()`
 constructors) and a worked `example` to each variable.
 
@@ -109,10 +109,10 @@ new_ext_meta(
 #> NULL
 #> 
 #> attr(,"class")
-#> [1] "block_arg"
+#> [1] "arg_spec"
 #> 
 #> attr(,"class")
-#> [1] "block_args"
+#> [1] "arg_specs"
 #> 
 #> $examples
 #> list()
@@ -130,7 +130,7 @@ ext_meta(new_edit_board_extension())
 #> $arguments
 #> list()
 #> attr(,"class")
-#> [1] "block_args"
+#> [1] "arg_specs"
 #> 
 #> $examples
 #> list()

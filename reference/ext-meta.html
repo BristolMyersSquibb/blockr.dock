@@ -115,7 +115,7 @@ components are read with <code>ext_desc()</code>, <code>ext_args()</code>, <code
 <dt id="arg-arguments">arguments<a class="anchor" aria-label="anchor" href="#arg-arguments"></a></dt>
 <dd><p>Per-variable documentation for the externally controllable
 variables, either a named character vector (variable to description) or a
-<code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_block_arg.html" class="external-link">new_block_args()</a></code> object; keyed by controllable variable</p></dd>
+<code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_arg_spec.html" class="external-link">new_arg_specs()</a></code> object; keyed by controllable variable</p></dd>
 
 
 <dt id="arg-examples">examples<a class="anchor" aria-label="anchor" href="#arg-examples"></a></dt>
@@ -139,14 +139,14 @@ from the human-facing <code>description</code></p></dd>
 <code>description</code>, <code>arguments</code>, <code>examples</code> and <code>guidance</code>), <code>is_ext_meta()</code> a
 boolean and <code>ext_meta()</code> the normalized <code>ext_meta</code> an extension carries. The
 per-component accessors return that component: <code>ext_desc()</code> a string or
-<code>NULL</code>, <code>ext_args()</code> a <code>block_args</code>, <code>ext_examples()</code> a list and
+<code>NULL</code>, <code>ext_args()</code> an <code>arg_specs</code>, <code>ext_examples()</code> a list and
 <code>ext_guidance()</code> a string or <code>NULL</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Per-variable <code>arguments</code> reuse blockr.core's block-argument specification:
 pass a named character vector (variable to description) for the common case,
-or a <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_block_arg.html" class="external-link">new_block_args()</a></code> object to attach a machine-readable <code>type</code> (via the
+or a <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_arg_spec.html" class="external-link">new_arg_specs()</a></code> object to attach a machine-readable <code>type</code> (via the
 <code>arg_*()</code> constructors) and a worked <code>example</code> to each variable.</p>
     </div>
 
@@ -171,10 +171,10 @@ or a <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/n
 <span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "block_arg"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "arg_spec"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "block_args"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "arg_specs"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $examples</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> list()</span>
@@ -192,7 +192,7 @@ or a <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/n
 <span class="r-out co"><span class="r-pr">#&gt;</span> $arguments</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> list()</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "block_args"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "arg_specs"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $examples</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> list()</span>
