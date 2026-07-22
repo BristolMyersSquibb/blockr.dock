@@ -15,13 +15,13 @@
 #'
 #' Per-variable `arguments` reuse blockr.core's block-argument specification:
 #' pass a named character vector (variable to description) for the common case,
-#' or a [new_block_args()] object to attach a machine-readable `type` (via the
+#' or a [new_arg_specs()] object to attach a machine-readable `type` (via the
 #' `arg_*()` constructors) and a worked `example` to each variable.
 #'
 #' @param description Free-text summary of what the extension is
 #' @param arguments Per-variable documentation for the externally controllable
 #'   variables, either a named character vector (variable to description) or a
-#'   [new_block_args()] object; keyed by controllable variable
+#'   [new_arg_specs()] object; keyed by controllable variable
 #' @param examples List of worked configurations, each a named list keyed by
 #'   controllable variable (a `modify_extension`-shaped payload)
 #' @param guidance Free-text steering on how to drive the extension, distinct
@@ -41,7 +41,7 @@
 #' `description`, `arguments`, `examples` and `guidance`), `is_ext_meta()` a
 #' boolean and `ext_meta()` the normalized `ext_meta` an extension carries. The
 #' per-component accessors return that component: `ext_desc()` a string or
-#' `NULL`, `ext_args()` a `block_args`, `ext_examples()` a list and
+#' `NULL`, `ext_args()` an `arg_specs`, `ext_examples()` a list and
 #' `ext_guidance()` a string or `NULL`.
 #'
 #' @name ext-meta
@@ -143,25 +143,22 @@ extension_description <- function(x) {
 as_ext_arguments <- function(x) {
 
   if (is.null(x)) {
-    return(new_block_args())
+    return(new_arg_specs())
   }
 
-  if (inherits(x, "block_args")) {
+  if (is_arg_specs(x)) {
     return(x)
   }
 
   if (!is.character(x) || is.null(names(x)) || any(!nzchar(names(x)))) {
     blockr_abort(
-      "`ext_meta` arguments must be a named character vector or a ",
-      "`block_args` object.",
+      "`ext_meta` arguments must be a named character vector or an ",
+      "`arg_specs` object.",
       class = "ext_meta_arguments_invalid"
     )
   }
 
-  do.call(
-    new_block_args,
-    set_names(lapply(x, new_block_arg), names(x))
-  )
+  as_arg_specs(x)
 }
 
 validate_ext_meta <- function(x, ctrl) {
