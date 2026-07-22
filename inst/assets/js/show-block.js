@@ -7,6 +7,13 @@ $(function () {
   // content element mounts, before paint.
   var pending = [];
 
+  // A stashed move is dead once its card has left the DOM: the block was removed
+  // before its target panel ever mounted. Drop those so `pending` holds only
+  // moves that can still land, rather than growing with every removed block.
+  function alive(m) {
+    return $(m.from).length > 0;
+  }
+
   function applyMove(m) {
     var $to = $(m.to);
 
@@ -34,6 +41,7 @@ $(function () {
 
   Shiny.addCustomMessageHandler(
     'move-element', (m) => {
+      pending = pending.filter(alive);
       if (!applyMove(m)) {
         pending.push(m);
       }
@@ -42,8 +50,8 @@ $(function () {
 
   // dockViewR re-broadcasts panel activation as this bubbling DOM event; the
   // panel's content element exists by the time it fires, so replay any stashed
-  // move whose target has now appeared.
+  // move whose target has now appeared, dropping any whose block was removed.
   document.addEventListener('dockview:active-panel', () => {
-    pending = pending.filter((m) => !applyMove(m));
+    pending = pending.filter((m) => alive(m) && !applyMove(m));
   })
 })
