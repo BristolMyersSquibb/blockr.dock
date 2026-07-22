@@ -2,6 +2,17 @@
 
 ## blockr.dock (development version)
 
+- Blocks on a dock group’s background tabs render again. dockView mounts
+  a group’s non-front tabs lazily, so a block card’s `move-element`
+  could arrive before its panel existed and be dropped, stranding the
+  card in the offcanvas; and a bare tab switch did not mark the
+  newly-fronted block visible. Both left non-front tabs blank. A dropped
+  move is now stashed and replayed when dockView reports the panel
+  active (dockViewR’s `dockview:active-panel` event), and the visible
+  mark follows the client’s live active-panel signal, so selecting a tab
+  paints its block
+  ([\#361](https://github.com/BristolMyersSquibb/blockr.dock/issues/361)).
+
 - Dock extensions can now carry structured, model-facing metadata: the
   `description` argument of
   [`new_dock_extension()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/extension.md)
