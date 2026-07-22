@@ -38,18 +38,17 @@ test_that("resolve_url_view matches the ?view= param to a view id", {
     )
   )
 
-  expect_identical(resolve_url_view(views, "?view=Second"), "Second")
-  expect_identical(resolve_url_view(views, "?view=First"), "First")
+  expect_identical(resolve_url_view(views, list(view = "Second")), "Second")
+  expect_identical(resolve_url_view(views, list(view = "First")), "First")
 
-  # Absent, empty, unknown, or no query string all decline to select.
-  expect_null(resolve_url_view(views, "?other=1"))
-  expect_null(resolve_url_view(views, "?view="))
-  expect_null(resolve_url_view(views, "?view=nope"))
-  expect_null(resolve_url_view(views, ""))
-  expect_null(resolve_url_view(views, NULL))
+  # Absent, empty, or unknown all decline to select.
+  expect_null(resolve_url_view(views, list(other = "1")))
+  expect_null(resolve_url_view(views, list(view = "")))
+  expect_null(resolve_url_view(views, list(view = "nope")))
+  expect_null(resolve_url_view(views, list()))
 })
 
-test_that("select_url_view opens the board on the ?view= view (#323)", {
+test_that("apply_url_view opens the board on the ?view= view (#323)", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_dataset_block()),
@@ -57,28 +56,57 @@ test_that("select_url_view opens the board on the ?view= view (#323)", {
     active = "First"
   )
 
-  fake_session <- function(search) {
-    list(clientData = list(url_search = search))
-  }
-
   # The default active view is "First", so flipping to "Second" is a real
   # (non-vacuous) change driven purely by the query param.
   expect_identical(active_view(brd), "First")
   expect_identical(
-    active_view(select_url_view(brd, fake_session("?view=Second"))),
+    active_view(apply_url_view(brd, list(view = "Second"))),
     "Second"
   )
 
-  # An unknown id, an absent param, or no session leaves the default active.
+  # An unknown id or an absent param leaves the default active.
   expect_identical(
-    active_view(select_url_view(brd, fake_session("?view=nope"))),
+    active_view(apply_url_view(brd, list(view = "nope"))),
     "First"
   )
-  expect_identical(
-    active_view(select_url_view(brd, fake_session(""))),
-    "First"
+  expect_identical(active_view(apply_url_view(brd, list())), "First")
+})
+
+test_that("blockr_app_ui threads the ?view= query into the GET nav (#357)", {
+
+  skip_if_not_installed("xml2")
+
+  board <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block()),
+    views = list(First = blk("a"), Second = blk("b")),
+    active = "First"
   )
-  expect_identical(active_view(select_url_view(brd, NULL)), "First")
+
+  item_xpath <- sprintf(
+    "//*[contains(concat(' ', normalize-space(@class), ' '), ' %s ')]",
+    "blockr-view-item"
+  )
+
+  active_nav_id <- function(query) {
+
+    ui <- blockr_app_ui(
+      "test", board, blockr_app_plugins(board), blockr_app_options(board),
+      query = query
+    )
+
+    items <- xml2::xml_find_all(xml2::read_html(as.character(ui)), item_xpath)
+    is_active <- grepl("(^| )active( |$)", xml2::xml_attr(items, "class"))
+
+    xml2::xml_attr(items, "data-view-id")[is_active]
+  }
+
+  # Absent the param, the GET nav highlights the board's default active view.
+  expect_identical(active_nav_id(list()), "First")
+
+  # `?view=Second` pre-sets active_view before board_ui, so the GET nav
+  # highlights Second -- the query is consumed by the method, not splatted into
+  # page_fillable (without the `query` formal it would leak through `...`).
+  expect_identical(active_nav_id(list(view = "Second")), "Second")
 })
 
 test_that("grids_stable holds when the live grid is the stored fixed point", {
