@@ -899,12 +899,13 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
   # visibility report and layout fold round-trips) without recomputing a visible
   # output, so gating on `.shiny-busy` alone would spin for what is only layout
   # bookkeeping; block evaluation marks its output `.recalculating` inside the
-  # view container. The ring is always visible: the busy scope raises its
-  # contrast (dim when idle, full opacity when busy) rather than toggling its
-  # presence, and the raise is held by a `transition-delay`, so drive the two
-  # busy states directly and read the spinner's computed `opacity` (dim when
-  # idle-scoped, full when computing) with transitions disabled -- otherwise the
-  # delayed raise would not have landed by the time the synchronous probe reads
+  # view container. The ring is always painted: the busy scope adds a darker arc
+  # (a `border-top-color` distinct from the faint track the other sides carry)
+  # rather than toggling its presence, and the arc is held by a
+  # `transition-delay`, so drive the two busy states directly and read whether
+  # the top border differs from a side border (arc present when computing,
+  # absent when only bookkeeping) with transitions disabled -- otherwise the
+  # delayed arc would not have landed by the time the synchronous probe reads
   # it. The recalculating element is placed outside the view container (a hidden
   # block still pending evaluation in the offcanvas pool) versus inside it (real
   # visible work) to pin the scope.
@@ -914,8 +915,10 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
         var html = document.documentElement;
         var spinner = document.querySelector('.blockr-navbar-spinner');
         if (spinner) spinner.style.transition = 'none';
-        var opacity = function () {
-          return spinner ? parseFloat(getComputedStyle(spinner).opacity) : null;
+        var arc = function () {
+          if (!spinner) return null;
+          var cs = getComputedStyle(spinner);
+          return { top: cs.borderTopColor, side: cs.borderRightColor };
         };
         var mark = function (parent) {
           var el = document.createElement('div');
@@ -939,21 +942,25 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
         real.forEach(function (el) { el.classList.remove('recalculating'); });
 
         var hidden = mark(document.body);
-        var bookkeeping = opacity();
+        var bookkeeping = arc();
         hidden.remove();
 
         var visible = mark(container);
-        var computing = opacity();
+        var computing = arc();
         visible.remove();
 
         real.forEach(function (el) { el.classList.add('recalculating'); });
         html.classList.remove('shiny-busy');
         if (spinner) spinner.style.transition = '';
 
+        var painted = bookkeeping && bookkeeping.side !== 'rgba(0, 0, 0, 0)';
+        var bkArc = bookkeeping && bookkeeping.top !== bookkeeping.side;
+        var coArc = computing && computing.top !== computing.side;
+
         return {
           pulseOff: pulseOff, hasSpinner: spinner !== null,
           hasContainer: container !== null,
-          bookkeeping: bookkeeping, computing: computing
+          trackPainted: painted, bookkeepingArc: bkArc, computingArc: coArc
         };
       })()))"
     )
@@ -967,10 +974,10 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
 
   # Busy with a recalculating output only outside the view container (a bare
   # panel switch, or a hidden block still pending in the offcanvas) leaves the
-  # always-present ring painted but dim; busy with a recalculating output inside
-  # it (block evaluation) lifts it to full contrast. The idle ring stays visible
-  # (opacity > 0) rather than toggling off -- the always-on behaviour.
-  expect_gt(probe$bookkeeping, 0)
-  expect_lt(probe$bookkeeping, 1)
-  expect_equal(probe$computing, 1)
+  # ring as a bare track -- no arc; busy with a recalculating output inside it
+  # (block evaluation) paints the darker arc on. The track itself stays painted
+  # rather than toggling off -- the always-on behaviour.
+  expect_true(probe$trackPainted)
+  expect_false(probe$bookkeepingArc)
+  expect_true(probe$computingArc)
 })

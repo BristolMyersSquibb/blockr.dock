@@ -1187,26 +1187,24 @@ label:has(input[type="file"]) {
 
    The slot is always laid out and always painted -- there is no show/hide, so
    nothing ever blinks in or out and it reflows no neighbour wherever it sits;
-   it rests just left of the navbar gear. Idle it is a dim, static ring; a busy
-   flush raises it to full contrast and spins it. Both the contrast raise (a 0s
-   `opacity` transition) and the spin (an `animation-delay`) are held by
-   `var(--blockr-spinner-delay)` -- set on `.blockr-navbar` from the
-   `spinner_delay_ms` option -- while the return to the dim idle ring carries no
-   delay. So the ring livens only once the session has stayed busy for the full
-   delay (a flush that clears sooner is interrupted mid-delay and never livens)
-   and it settles back the instant work finishes. */
+   it rests just left of the navbar gear. Idle it is a faint, closed ring (a
+   track in one muted colour); a busy flush paints a darker arc onto that ring
+   and spins it. Both the arc (a 0s `border-top-color` transition) and the spin
+   (an `animation-delay`) are held by `var(--blockr-spinner-delay)` -- set on
+   `.blockr-navbar` from the `spinner_delay_ms` option -- while the return to the
+   bare idle ring carries no delay. So the arc appears only once the session has
+   stayed busy for the full delay (a flush that clears sooner is interrupted
+   mid-delay and never shows one) and it clears the instant work finishes. */
 .blockr-navbar-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid var(--blockr-color-text-muted);
-  border-right-color: transparent;
+  border: 2px solid color-mix(in srgb, var(--blockr-color-text-muted) 30%, transparent);
   border-radius: 50%;
-  opacity: 0.35;
-  transition: opacity 0s;
+  transition: border-top-color 0s;
 }
 
 html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
-  opacity: 1;
+  border-top-color: var(--blockr-color-text-muted);
   animation: blockr-navbar-spin 0.7s linear infinite;
   animation-delay: var(--blockr-spinner-delay, 0ms);
   transition-delay: var(--blockr-spinner-delay, 0ms);

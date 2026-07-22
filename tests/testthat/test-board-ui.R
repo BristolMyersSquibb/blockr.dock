@@ -217,6 +217,43 @@ test_that("the busy spinner still turns under reduced motion", {
   expect_no_match(reduced, "animation:\\s*none")
 })
 
+test_that("the idle navbar spinner is a closed ring, the arc is busy-only", {
+
+  # Same rationale as the reduced-motion assertion: the spinner's states are
+  # only ever seen mid-flush. Idle must be a full ring -- no transparent gap,
+  # or it reads as an oversized "C" -- and the darker arc that signals motion
+  # belongs on the busy selector, not the base rule.
+  css <- paste(
+    readLines(
+      system.file(
+        "assets", "css", "blockr-dock.css",
+        package = "blockr.dock",
+        mustWork = TRUE
+      ),
+      warn = FALSE
+    ),
+    collapse = "\n"
+  )
+
+  base <- regmatches(
+    css,
+    regexpr("(?m)^\\.blockr-navbar-spinner \\{[^}]*\\}", css, perl = TRUE)
+  )
+
+  busy <- regmatches(
+    css,
+    regexpr(
+      "(?s)html\\.shiny-busy:has[^{]*\\.blockr-navbar-spinner \\{[^}]*\\}",
+      css,
+      perl = TRUE
+    )
+  )
+
+  expect_length(base, 1L)
+  expect_no_match(base, "border-\\w+-color:\\s*transparent")
+  expect_match(busy, "border-top-color", fixed = TRUE)
+})
+
 test_that("navbar carries the spinner display delay from the option (#355)", {
 
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))
