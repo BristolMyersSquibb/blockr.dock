@@ -687,6 +687,17 @@ manage_dock <- function(
   init_blocks <- coal(blocks, board_blocks(init_board))
   init_exts <- coal(extensions, dock_extensions(init_board))
 
+  # A pending `select` for this view rides the grid: fold it into the layout the
+  # first build restores from, so `restore_layout()` fronts that tab and the
+  # settled-echo mirror then persists it -- the path a tab click already takes.
+  # The panel-op observer skips this select as its `ignoreInit` value, and there
+  # is no live dock yet to set active on.
+  init_select <- isolate(update()$views$mod[[id]][["select"]])
+
+  if (not_null(init_select)) {
+    init_layout <- set_grid_active(init_layout, init_select)
+  }
+
   # Block/ext cards live at the board (parent) namespace level
   board_ns <- get_session()$ns
 
