@@ -2,6 +2,19 @@
 
 ## blockr.dock (development version)
 
+- New `edit_inputs_action`: a per-block sidebar listing every incoming
+  link as an ordered list, so a block’s inputs can be managed together
+  rather than one edge at a time. For a variadic block each row is a
+  positional slot - drag to reorder (each row’s source and name move
+  together to its new slot via `links$mod`, so `...args` comes out in
+  the new order), rename inline (positional \<-\> named), or remove; an
+  “Add input” block picker below the list appends another positional
+  slot when a source is chosen. A finite block’s rows are its declared
+  ports, each a block-browser selectize that picks, redirects or
+  disconnects that port’s source. Reorder keeps every link’s id, so
+  there is no id churn and no new core verb. Surfaces such as blockr.dag
+  can trigger it for a selected node.
+
 - A panel id in a
   [`dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   or view that resolves to no block or extension on the board now aborts
