@@ -121,38 +121,42 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
   invisible(x)
 }
 
-# The dock's build ledger and per-block visibility both live on the `visibility`
-# channel core hands the board callback: two per-block reactiveVal environments
-# (`required`, `visible`), one slot per board block, all core-owned. A card is
-# built once the dock writes its `required` slot (non-NA), so `built_cards()`
-# reads the built set straight off it -- there is no second ledger. The dock
-# writes `required[[id]]` FALSE when it builds a card (off screen) and TRUE when
-# on screen, and `visible[[id]]` the view id once the client paints it. Block
-# removal needs no dock write: core drops the slot, dropping the card too.
-
-# The blocks whose cards are built: those with a non-NA required slot.
+# The dock's build ledger is core's `visible` axis: a per-block reactiveVal,
+# logical (NA never built / FALSE built off screen / TRUE painted now) like
+# `required`, so `built_cards()` reads `!is.na(visible)`. It once read
+# `required` non-NA, but that axis is a multi-writer construction-demand
+# channel -- core's "Show code" marks every block required to export the whole
+# script -- so a demand with no card masqueraded as built and blanked the view
+# on its first visit. `visible` is written only where the dock builds, paints
+# or reconciles a card. The dock still writes `required[[id]]` FALSE off screen
+# / TRUE on screen (construction demand); block removal needs no dock write --
+# core drops the slot, dropping the card from the ledger too.
 built_cards <- function(visibility) {
-  ids <- ls(visibility$required)
-  ids[lgl_ply(ids, slot_built, visibility$required)]
+  ids <- ls(visibility$visible)
+  ids[lgl_ply(ids, slot_built, visibility$visible)]
 }
 
-slot_built <- function(id, required) {
-  !is.na(isolate(required[[id]]()))
+slot_built <- function(id, visible) {
+  !is.na(isolate(visible[[id]]()))
 }
 
-# Record `new` cards as built: their required slot goes FALSE (off screen until
-# the report observer places them). Slots pre-exist -- core seeds every block's
-# slots before any block plugin runs.
+# Record `new` cards as built off screen: `visible` FALSE enters them in the
+# ledger (built, not yet painted), `required` FALSE holds no construction
+# demand until a view switch or the report observer places them. Slots
+# pre-exist: core seeds every block's before any block plugin runs.
 mark_cards_built <- function(visibility, new) {
   for (id in new) {
+    visibility$visible[[id]](FALSE)
     visibility$required[[id]](FALSE)
   }
 }
 
 # Reconcile the required axis over `built` from an on-screen set: on screen ->
-# TRUE, off screen -> FALSE. A card leaving the screen also clears its visible
-# slot (no longer painted); the arrange observer owns setting it. Seeds the
-# channel too, with `built` the active view's membership.
+# TRUE, off screen -> FALSE. A card leaving the screen keeps its ledger entry --
+# `visible` goes FALSE (built, off screen), never NA (never built), or its view
+# blanks on the next visit. The arrange observer owns marking a card painted
+# (visible TRUE). Seeds the required axis too, with `built` the active view's
+# membership.
 show_cards <- function(visibility, built, on_screen) {
   for (id in built) {
     on <- id %in% on_screen
@@ -161,18 +165,18 @@ show_cards <- function(visibility, built, on_screen) {
       visibility$required[[id]](on)
     }
 
-    if (!on && !is.na(isolate(visibility$visible[[id]]()))) {
-      visibility$visible[[id]](NA_character_)
+    if (!on && isTRUE(isolate(visibility$visible[[id]]()))) {
+      visibility$visible[[id]](FALSE)
     }
   }
 }
 
-# Mark a view's on-screen blocks painted: write the view id into their visible
-# slot -- the client-confirmed paint core's construction gate waits for.
-mark_cards_rendered <- function(visibility, on_screen, view) {
+# Mark a view's on-screen blocks painted: `visible` TRUE -- the client-confirmed
+# paint core's render gate (is_visible = isTRUE) waits for.
+mark_cards_rendered <- function(visibility, on_screen) {
   for (id in on_screen) {
-    if (!identical(isolate(visibility$visible[[id]]()), view)) {
-      visibility$visible[[id]](view)
+    if (!isTRUE(isolate(visibility$visible[[id]]()))) {
+      visibility$visible[[id]](TRUE)
     }
   }
 }

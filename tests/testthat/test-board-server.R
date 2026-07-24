@@ -701,12 +701,10 @@ test_that("visible axis follows the client's painted front tab (#328)", {
   )
   ms$flushReact()
 
-  page <- with_mock_context(ms, vid(board_rv$board, "Page"))
-
-  # Before the client reports a painted layout, the server side alone marks
-  # nothing on the visible axis.
-  expect_true(is.na(isolate(vis$visible[["a"]]())))
-  expect_true(is.na(isolate(vis$visible[["b"]]())))
+  # Before the client reports a painted layout, the seed marks the active view's
+  # cards built but not yet painted (visible FALSE) -- none TRUE yet.
+  expect_identical(isolate(vis$visible[["a"]]()), FALSE)
+  expect_identical(isolate(vis$visible[["b"]]()), FALSE)
 
   reported_front <- function(active) {
     grid <- as_dock_grid(
@@ -724,22 +722,23 @@ test_that("visible axis follows the client's painted front tab (#328)", {
   do.call(ms$setInputs, set_names(list(TRUE), "Page-dock_initialized"))
   ms$flushReact()
 
-  expect_identical(isolate(vis$visible[["b"]]()), page)
+  expect_identical(isolate(vis$visible[["b"]]()), TRUE)
   expect_identical(isolate(vis$required[["b"]]()), TRUE)
-  expect_true(is.na(isolate(vis$visible[["a"]]())))
+  expect_identical(isolate(vis$visible[["a"]]()), FALSE)
   expect_identical(isolate(vis$required[["a"]]()), FALSE)
 
   # Switching the front tab to a re-marks the visible axis -- the mark is live,
-  # not a one-shot that leaves the newly fronted tab blank.
+  # not a one-shot that leaves the newly fronted tab blank. b parks: built, off
+  # screen (visible FALSE), not erased.
   do.call(
     ms$setInputs,
     set_names(list(reported_front("block_panel-a")), "Page-dock_state")
   )
   ms$flushReact()
 
-  expect_identical(isolate(vis$visible[["a"]]()), page)
+  expect_identical(isolate(vis$visible[["a"]]()), TRUE)
   expect_identical(isolate(vis$required[["a"]]()), TRUE)
-  expect_true(is.na(isolate(vis$visible[["b"]]())))
+  expect_identical(isolate(vis$visible[["b"]]()), FALSE)
   expect_identical(isolate(vis$required[["b"]]()), FALSE)
 })
 
@@ -803,27 +802,27 @@ test_that("report_visible_observer drives the required axis over built cards", {
   expect_identical(isolate(env$vis$required[["d"]]()), FALSE)
 
   # Driving a and b required also paints them: report_visible marks the active
-  # view's on-screen fronts on the visible axis off the same layout report.
-  expect_identical(isolate(env$vis$visible[["a"]]()), "A")
-  expect_identical(isolate(env$vis$visible[["b"]]()), "A")
+  # view's on-screen fronts painted (visible TRUE) off the same layout report.
+  expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
+  expect_identical(isolate(env$vis$visible[["b"]]()), TRUE)
 
   # A layout change on inactive B leaves A's required set alone, and must not
   # clear the paint of on-screen a/b (report_visible tracks only A's layout).
   with_mock_context(ms, env$b(dock_grid(panels("block_panel-d"))))
   ms$flushReact()
   expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
-  expect_identical(isolate(env$vis$visible[["a"]]()), "A")
+  expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
 
   # A drops a (its slot is now an extension panel): a parks (required FALSE, its
-  # paint cleared), b stays required TRUE with its paint intact.
+  # paint cleared to FALSE = built, off screen), b required TRUE, painted.
   with_mock_context(ms, env$a(
     dock_grid(panels("ext_panel-editor"), panels("block_panel-b"))
   ))
   ms$flushReact()
   expect_identical(isolate(env$vis$required[["a"]]()), FALSE)
-  expect_true(is.na(isolate(env$vis$visible[["a"]]())))
+  expect_identical(isolate(env$vis$visible[["a"]]()), FALSE)
   expect_identical(isolate(env$vis$required[["b"]]()), TRUE)
-  expect_identical(isolate(env$vis$visible[["b"]]()), "A")
+  expect_identical(isolate(env$vis$visible[["b"]]()), TRUE)
 
   # Switching to the not-yet-arranged B: its block required, a/b off screen.
   with_mock_context(ms, env$active("B"))
@@ -862,7 +861,7 @@ test_that("report_visible_observer coalesces set-equal reports", {
   expect_identical(isolate(env$vis$required[["b"]]()), TRUE)
 
   # report_visible painted a and b as it drove them required.
-  expect_identical(isolate(env$vis$visible[["a"]]()), "A")
+  expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
 
   # Re-report a set-equal (reordered) layout: the observer re-runs (reactive()
   # does not dedupe), but the on-screen set is unchanged -- the required axis
@@ -874,7 +873,7 @@ test_that("report_visible_observer coalesces set-equal reports", {
   ms$flushReact()
 
   expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
-  expect_identical(isolate(env$vis$visible[["a"]]()), "A")
+  expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
 })
 
 test_that("report_visible_observer follows the live active panel (#361)", {
@@ -918,17 +917,17 @@ test_that("report_visible_observer follows the live active panel (#361)", {
 
   with_mock_context(ms, env$layout(layout_ab))
   ms$flushReact()
-  expect_identical(isolate(env$vis$visible[["a"]]()), "A")
-  expect_true(is.na(isolate(env$vis$visible[["b"]]())))
+  expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
+  expect_identical(isolate(env$vis$visible[["b"]]()), FALSE)
 
   # The client switches to b with no fresh layout echo (`layout` unchanged): the
   # active-panel signal alone must front b and park a -- the tab-switch repaint.
   with_mock_context(ms, env$active_panel("block_panel-b"))
   ms$flushReact()
   expect_identical(isolate(env$vis$required[["b"]]()), TRUE)
-  expect_identical(isolate(env$vis$visible[["b"]]()), "A")
+  expect_identical(isolate(env$vis$visible[["b"]]()), TRUE)
   expect_identical(isolate(env$vis$required[["a"]]()), FALSE)
-  expect_true(is.na(isolate(env$vis$visible[["a"]]())))
+  expect_identical(isolate(env$vis$visible[["a"]]()), FALSE)
 })
 
 test_that("board_server_callback seeds visibility before the client reports", {
@@ -942,7 +941,7 @@ test_that("board_server_callback seeds visibility before the client reports", {
     board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
 
     # a is the fronted tab (required TRUE); b its back tab, built but off screen
-    # (required FALSE). Both are built (on the required channel as the ledger).
+    # (required FALSE). Both are in the dock's build ledger (visible non-NA).
     expect_setequal(built_cards(vis), c("a", "b"))
     expect_identical(isolate(vis$required[["a"]]()), TRUE)
     expect_identical(isolate(vis$required[["b"]]()), FALSE)
@@ -965,7 +964,7 @@ test_that("the visibility seed reads the active view's open tabs", {
     board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
 
     # b and d front their groups (required TRUE); a is b's back tab (FALSE). All
-    # three are built (on the required channel as the ledger).
+    # three are in the dock's build ledger (visible non-NA).
     expect_setequal(built_cards(vis), c("a", "b", "d"))
     expect_identical(isolate(vis$required[["a"]]()), FALSE)
     expect_identical(isolate(vis$required[["b"]]()), TRUE)
