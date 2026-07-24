@@ -1,5 +1,17 @@
 # blockr.dock (development version)
 
+* "Show code" on a deferred board
+  (`background_construction_delay = Inf`) no longer permanently blanks
+  the cards of a view first visited after it. The exporter marks every
+  block required so the script covers the whole board, and the dock's
+  card ledger -- read off that same `required` channel -- mistook the
+  export's demand for a built card, so the first visit to the view
+  skipped the build and left its panels empty. The dock now reads its
+  build ledger off core's `visible` channel, which blockr.core makes a
+  logical three-state axis (`NA` never built / `FALSE` built off screen
+  / `TRUE` painted), so a `required` write can no longer masquerade as a
+  built card. Needs the matching blockr.core (`visible` logical) (#377).
+
 * A panel id in a `dock_grid()` or view that resolves to no block or
   extension on the board now aborts at `new_dock_board()` rather than
   being dropped in silence. Such an id -- a typo, or an extension's old
