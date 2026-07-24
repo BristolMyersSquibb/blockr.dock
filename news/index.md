@@ -65,6 +65,20 @@
   [`ext_desc()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ext-meta.md)
   ([\#359](https://github.com/BristolMyersSquibb/blockr.dock/issues/359)).
 
+- The navbar busy spinner keeps turning when the browser reports
+  `prefers-reduced-motion: reduce`, at a slower 1.6s turn instead of
+  0.7s. It previously dropped the animation entirely, which left a fully
+  styled ring frozen in the navbar and reading as a hung session.
+  Windows maps its “Animation effects: off” setting (a common managed /
+  VDI default) onto that preference, so on those machines the spinner
+  never moved.
+
+- Idle, the navbar busy spinner is now a faint, closed ring rather than
+  a gapped three-quarter circle that read as an oversized “C” wherever
+  it sits. The darker arc that signals motion is painted on only while
+  the board is busy; at rest the ring is a single muted colour and
+  recedes into the navbar.
+
 - Views (pages) can now be reordered from the nav dropdown: each item
   carries up / down controls beside its rename and remove actions. Order
   is board content, so the move travels through the update lifecycle as
