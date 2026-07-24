@@ -137,7 +137,7 @@ test_that("locked mode renders a navbar lock indicator", {
   expect_match(locked_html, ">Read-only<", fixed = TRUE)
 })
 
-test_that("navbar busy spinner sits left of the gear (#345, #355, #360)", {
+test_that("navbar busy spinner leads the right group (#345, #355, #360)", {
 
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))
 
@@ -161,14 +161,18 @@ test_that("navbar busy spinner sits left of the gear (#345, #355, #360)", {
   expect_identical(xml2::xml_attr(spinner, "role"), "status")
   expect_identical(xml2::xml_attr(spinner, "aria-label"), "Busy")
 
-  # Sits immediately left of the board-options gear. It no longer toggles on
-  # and off (always painted, dim when idle), so it need not hide at the group's
-  # left edge -- it rests beside the gear instead.
-  gear <- xml2::xml_find_first(spinner[[1]], "following-sibling::*[1]")
-  expect_identical(xml2::xml_attr(gear, "aria-label"), "Board options")
+  # The ring sits in a static slot (which carries the hover tooltip); the slot
+  # leads the navbar's right group, ahead of the view nav, so the ring is not
+  # juxtaposed against the smaller gear. Always painted, no edge to hide at.
+  slot <- by_class(doc, "blockr-navbar-spinner-slot")
+  expect_length(slot, 1)
+  expect_length(by_class(slot[[1]], "blockr-navbar-spinner"), 1)
+  expect_length(xml2::xml_find_all(slot[[1]], "preceding-sibling::*"), 0)
+  group_class <- xml2::xml_attr(xml2::xml_parent(slot[[1]]), "class")
+  expect_match(group_class, "blockr-navbar-right", fixed = TRUE)
 
   # Blocks still evaluate while read-only, so the spinner survives locked mode
-  # (unlike the editing chrome it sits beside).
+  # (unlike the editing chrome in that group).
   locked <- withr::with_options(
     list(blockr.locked = TRUE),
     by_class(
@@ -252,6 +256,43 @@ test_that("the idle navbar spinner is a closed ring, the arc is busy-only", {
   expect_length(base, 1L)
   expect_no_match(base, "border-\\w+-color:\\s*transparent")
   expect_match(busy, "border-top-color", fixed = TRUE)
+})
+
+test_that("the spinner's hover tooltip names its state", {
+
+  # CSS-only, like the ring: on hover the slot names its state, switching from
+  # "Idle" to "Computing" on the busy scope -- on the busy selector, not the
+  # base rule.
+  css <- paste(
+    readLines(
+      system.file(
+        "assets", "css", "blockr-dock.css",
+        package = "blockr.dock",
+        mustWork = TRUE
+      ),
+      warn = FALSE
+    ),
+    collapse = "\n"
+  )
+
+  idle <- regmatches(
+    css,
+    regexpr(
+      "(?m)^\\.blockr-navbar-spinner-slot::after \\{[^}]*\\}",
+      css, perl = TRUE
+    )
+  )
+
+  busy <- regmatches(
+    css,
+    regexpr(
+      "(?s)html\\.shiny-busy:has[^{]*-slot::after \\{[^}]*\\}",
+      css, perl = TRUE
+    )
+  )
+
+  expect_match(idle, "content: \"Idle\"", fixed = TRUE)
+  expect_match(busy, "content: \"Computing\"", fixed = TRUE)
 })
 
 test_that("navbar carries the spinner display delay from the option (#355)", {

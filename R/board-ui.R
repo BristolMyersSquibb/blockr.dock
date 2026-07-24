@@ -47,6 +47,26 @@ board_ui.dock_board <- function(
       ),
       div(
         class = "blockr-navbar-right",
+        # Busy spinner. Always rendered and always visible, driven purely by CSS
+        # off the `.shiny-busy` class Shiny toggles on <html> during a flush --
+        # no server observer. Idle it is a faint, closed ring; a flush scoped to
+        # real block evaluation (a bare panel switch does not qualify) paints a
+        # darker arc onto it and spins it. It leads this right group (ahead of
+        # the view nav), where its 16px ring is not juxtaposed against the
+        # smaller gear; because it is always painted (never shown/hidden) its
+        # constant slot shifts no neighbour. The busy appearance is held for
+        # `--blockr-spinner-delay` ms (set on the navbar above), so a
+        # sub-threshold flush never flickers it. The ring spins inside a static
+        # slot that carries a hover tooltip naming the state (idle / computing),
+        # so the label does not turn with it. Announced like the lock indicator.
+        tags$span(
+          class = "blockr-navbar-spinner-slot",
+          tags$span(
+            class = "blockr-navbar-spinner",
+            role = "status",
+            `aria-label` = "Busy"
+          )
+        ),
         v_nav,
         if (is_dock_locked()) {
           tags$span(
@@ -61,20 +81,6 @@ board_ui.dock_board <- function(
             )
           )
         },
-        # Busy spinner. Always rendered and always visible, driven purely by CSS
-        # off the `.shiny-busy` class Shiny toggles on <html> during a flush --
-        # no server observer. Idle it is a dim, static ring; a flush scoped to
-        # real block evaluation (a bare panel switch does not qualify) raises it
-        # to full contrast and spins it. It sits just left of the gear; because
-        # it is always painted (never shown/hidden) its constant slot shifts no
-        # neighbour. The switch to the busy appearance is held for
-        # `--blockr-spinner-delay` ms (set on the navbar above) so a sub-
-        # threshold flush never flickers it. Announced like the lock indicator.
-        tags$span(
-          class = "blockr-navbar-spinner",
-          role = "status",
-          `aria-label` = "Busy"
-        ),
         # Pure-JS open trigger via `data-blockr-sidebar-target`. The
         # settings sidebar's body is pre-rendered into its mount below, so
         # no server observer is needed: clicking the gear toggles the

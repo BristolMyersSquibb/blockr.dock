@@ -1187,7 +1187,8 @@ label:has(input[type="file"]) {
 
    The slot is always laid out and always painted -- there is no show/hide, so
    nothing ever blinks in or out and it reflows no neighbour wherever it sits;
-   it rests just left of the navbar gear. Idle it is a faint, closed ring (a
+   it leads the navbar's right group, ahead of the view nav. Idle it is a
+   faint, closed ring (a
    track in one muted colour); a busy flush paints a darker arc onto that ring
    and spins it. Both the arc (a 0s `border-top-color` transition) and the spin
    (an `animation-delay`) are held by `var(--blockr-spinner-delay)` -- set on
@@ -1208,6 +1209,43 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   animation: blockr-navbar-spin 0.7s linear infinite;
   animation-delay: var(--blockr-spinner-delay, 0ms);
   transition-delay: var(--blockr-spinner-delay, 0ms);
+}
+
+/* Hover tooltip. The ring spins, so its label hangs off the static slot that
+   wraps it -- on the ring itself the spin transform would turn the text too.
+   CSS-only, like the ring: the label switches on the same busy scope that paints
+   the arc, so it needs no server observer. */
+.blockr-navbar-spinner-slot {
+  display: inline-flex;
+  position: relative;
+}
+
+.blockr-navbar-spinner-slot::after {
+  content: "Idle";
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--blockr-grey-900);
+  color: #fff;
+  font-size: var(--blockr-font-size-xs);
+  line-height: 1.5;
+  white-space: nowrap;
+  box-shadow: var(--blockr-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 1080;
+}
+
+html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner-slot::after {
+  content: "Computing";
+}
+
+.blockr-navbar-spinner-slot:hover::after {
+  opacity: 1;
 }
 
 @keyframes blockr-navbar-spin {
