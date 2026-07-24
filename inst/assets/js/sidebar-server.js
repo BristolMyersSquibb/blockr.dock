@@ -112,6 +112,14 @@
     var handler = function (event) {
       if (!isOpen(panel) || isPinned(panel)) return;
       if (panel.contains(event.target)) return;
+      // A selectize dropdown opened by a control inside the panel is rendered
+      // on <body> (dropdownParent), so its options sit outside the panel DOM.
+      // A click on one is not really "outside", so don't close (and unbind)
+      // the panel out from under an in-progress selection.
+      if (event.target.closest &&
+            event.target.closest(".selectize-dropdown")) {
+        return;
+      }
       hidePanel(panel);
     };
     panel._blockrSidebarOutsideHandler = handler;
