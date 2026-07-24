@@ -16,6 +16,12 @@
   a cost that scales with the number of blocks on the active view, so it
   cuts noticeably into the initial app render (#214).
 
+* Closing a dock panel no longer aborts the board update when the same tab is
+  closed twice in quick succession. The manual-close plugin leaves a tab's `x`
+  in place until the server round-trip removes it, so a rapid double click
+  re-fires the close for a panel that is already gone; that stale removal is
+  now dropped rather than failing view-membership validation (#362).
+
 * Blocks on a dock group's background tabs render again. dockView mounts a
   group's non-front tabs lazily, so a block card's `move-element` could arrive
   before its panel existed and be dropped, stranding the card in the offcanvas;

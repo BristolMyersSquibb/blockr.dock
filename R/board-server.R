@@ -796,9 +796,21 @@ manage_dock <- function(
     # server) emits an `rm` panel-op; the apply observer above removes it.
     # Membership is authoritative from the update, so no later reconcile can
     # restore a view still listing the closed panel (#217).
+    #
+    # The emit carries `priority = "event"`, and the manual plugin leaves the
+    # tab `x` in place until the server round-trip removes it, so rapid clicks
+    # re-fire the same panel id. Skip an emit whose panel is no longer live:
+    # its `rm` would validate against the already-reduced membership and abort
+    # the whole update.
     observeEvent(
       input[[dock_input("panel-to-remove")]],
-      update(remove_panel_delta(id, input[[dock_input("panel-to-remove")]]))
+      {
+        pid <- input[[dock_input("panel-to-remove")]]
+
+        if (panel_is_live(pid, dock)) {
+          update(remove_panel_delta(id, pid))
+        }
+      }
     )
 
     observeEvent(

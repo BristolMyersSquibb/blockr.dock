@@ -211,6 +211,87 @@ test_that("board server", {
   expect_identical(panel_lookups, 1L)
 })
 
+test_that("re-closing a removed panel aborts the reducer (#362)", {
+
+  # The symptom the gesture guard below prevents: once a close has reduced a
+  # view's membership, a duplicate `rm` of the same panel no longer matches a
+  # member and the delta grammar rejects the whole update.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = c("a", "b"))
+  )
+
+  reduced <- apply_board_update(
+    brd, augment_board_update(remove_panel_delta("A", "block_panel-b"), brd)
+  )
+  expect_identical(view_members(board_views(reduced)[["A"]]), "block_panel-a")
+
+  expect_error(
+    augment_board_update(remove_panel_delta("A", "block_panel-b"), reduced),
+    class = "dock_views_mod_rm_unknown"
+  )
+})
+
+test_that("a stale close of an already-removed panel emits no rm (#362)", {
+
+  # Rapid clicks on a manual-close tab re-fire `panel-to-remove` (an
+  # event-priority emit) before the server round-trip removes the tab, so the
+  # duplicate arrives after the panel has left the live set. Forwarding it as an
+  # `rm` would abort the update (see the reducer test above); the gesture must
+  # drop it instead.
+  brd <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = new_edit_board_extension()
+  )
+
+  mod_input <- function(name) paste0("dock_main-", name)
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  upd <- reactiveVal()
+
+  res <- with_mock_context(ms, {
+    manage_dock("dock_main", brd, visibility = fake_visibility("a"),
+                update = upd)
+  })
+
+  ms$flushReact()
+
+  do.call(
+    ms$setInputs,
+    set_names(list(TRUE), mod_input(dock_input("initialized")))
+  )
+
+  close_tab <- function(pid) {
+    do.call(
+      ms$setInputs,
+      set_names(list(pid), mod_input(dock_input("panel-to-remove")))
+    )
+  }
+
+  expect_identical(isolate(res$n_panels()), 2L)
+
+  close_tab(as_block_panel_id("a"))
+
+  expect_identical(isolate(res$n_panels()), 1L)
+  expect_identical(
+    as.character(isolate(upd())$views$mod$dock_main$rm), "block_panel-a"
+  )
+
+  upd(NULL)
+  close_tab(as_ext_panel_id("edit_board"))
+
+  expect_identical(isolate(res$n_panels()), 0L)
+
+  # The dead block tab is closed a second time (its `x` outlives the panel under
+  # the manual plugin). Its panel has left the live set, so no `rm` goes out.
+  upd(NULL)
+  close_tab(as_block_panel_id("a"))
+
+  expect_null(isolate(upd()))
+})
+
 test_that("an extension key never leaks into core's plugin args (#318)", {
 
   # `edit` is a prefix of core's `edit_block` block-server formal; returned as
