@@ -463,8 +463,10 @@ board_views <- function(x) {
   invisible(x)
 }
 
-# resolves ergonomic `views` / `grids` inputs. Extension keys and class ids
-# both resolve to the extension's panel id.
+# The id map that resolves ergonomic `views` / `grids` inputs: each block name
+# and each extension mount key maps to its canonical panel id. An extension is
+# keyed by its mount name, not its class, so a class-derived name no longer
+# resolves.
 panel_id_map <- function(blocks, extensions) {
 
   blocks <- as_blocks(blocks)
@@ -477,15 +479,46 @@ panel_id_map <- function(blocks, extensions) {
 }
 
 # Map bare object ids to canonical panel ids, per element: a key of the map is
-# rewritten, an already-canonical panel id (or an unknown id) passes through.
-# Resolving element-wise lets a `blk()` / `ext()` ref (already canonical) sit
-# beside a bare id in the same view.
+# rewritten, an already-canonical panel id passes through. Resolving element-
+# wise lets a `blk()` / `ext()` ref (already canonical) sit beside a bare id in
+# the same view. An id resolving to no panel on the board is an authoring bug --
+# `check_panel_refs()` makes it loud rather than dropping it in silence.
 resolve_panel_ids <- function(ids, id_map) {
 
   hit <- ids %in% names(id_map)
   ids[hit] <- unname(id_map[ids[hit]])
 
+  check_panel_refs(ids, id_map)
+
   ids
+}
+
+# Every panel a view or grid names must back a block or extension on the board.
+# Bare object ids resolve through `id_map`; a `blk()` / `ext()` reference is
+# already canonical and passes through. An id resolving to neither -- a typo, or
+# a stale class-derived extension name (an extension is keyed by its mount name
+# now, not its class) -- would otherwise be dropped in silence, emptying the
+# view; it is an authoring bug in every case, so it aborts here. Restore takes a
+# separate route: it feeds already-typed `dock_views` / `dock_grids` that skip
+# this resolution, so a genuinely stale saved id still self-heals (via
+# `drop_unknown_members()`) rather than aborting.
+check_panel_refs <- function(ids, id_map) {
+
+  bad <- setdiff(ids, unname(id_map))
+
+  if (!length(bad)) {
+    return(invisible(ids))
+  }
+
+  bad <- panel_obj_ids(bad)
+
+  blockr_abort(
+    paste(
+      "{cli::qty(bad)}Layout references unknown panel{?s} {bad}.",
+      "Available: {names(id_map)}."
+    ),
+    class = "dock_layout_panel_unknown"
+  )
 }
 
 coerce_dock_views <- function(views, id_map) {

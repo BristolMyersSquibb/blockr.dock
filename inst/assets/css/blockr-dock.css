@@ -1218,29 +1218,65 @@ label:has(input[type="file"]) {
 
    The slot is always laid out and always painted -- there is no show/hide, so
    nothing ever blinks in or out and it reflows no neighbour wherever it sits;
-   it rests just left of the navbar gear. Idle it is a dim, static ring; a busy
-   flush raises it to full contrast and spins it. Both the contrast raise (a 0s
-   `opacity` transition) and the spin (an `animation-delay`) are held by
-   `var(--blockr-spinner-delay)` -- set on `.blockr-navbar` from the
-   `spinner_delay_ms` option -- while the return to the dim idle ring carries no
-   delay. So the ring livens only once the session has stayed busy for the full
-   delay (a flush that clears sooner is interrupted mid-delay and never livens)
-   and it settles back the instant work finishes. */
+   it leads the navbar's right group, ahead of the view nav. Idle it is a
+   faint, closed ring (a
+   track in one muted colour); a busy flush paints a darker arc onto that ring
+   and spins it. Both the arc (a 0s `border-top-color` transition) and the spin
+   (an `animation-delay`) are held by `var(--blockr-spinner-delay)` -- set on
+   `.blockr-navbar` from the `spinner_delay_ms` option -- while the return to the
+   bare idle ring carries no delay. So the arc appears only once the session has
+   stayed busy for the full delay (a flush that clears sooner is interrupted
+   mid-delay and never shows one) and it clears the instant work finishes. */
 .blockr-navbar-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid var(--blockr-color-text-muted);
-  border-right-color: transparent;
+  border: 2px solid color-mix(in srgb, var(--blockr-color-text-muted) 30%, transparent);
   border-radius: 50%;
-  opacity: 0.35;
-  transition: opacity 0s;
+  transition: border-top-color 0s;
 }
 
 html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
-  opacity: 1;
+  border-top-color: var(--blockr-color-text-muted);
   animation: blockr-navbar-spin 0.7s linear infinite;
   animation-delay: var(--blockr-spinner-delay, 0ms);
   transition-delay: var(--blockr-spinner-delay, 0ms);
+}
+
+/* Hover tooltip. The ring spins, so its label hangs off the static slot that
+   wraps it -- on the ring itself the spin transform would turn the text too.
+   CSS-only, like the ring: the label switches on the same busy scope that paints
+   the arc, so it needs no server observer. */
+.blockr-navbar-spinner-slot {
+  display: inline-flex;
+  position: relative;
+}
+
+.blockr-navbar-spinner-slot::after {
+  content: "Idle";
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--blockr-grey-900);
+  color: #fff;
+  font-size: var(--blockr-font-size-xs);
+  line-height: 1.5;
+  white-space: nowrap;
+  box-shadow: var(--blockr-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 1080;
+}
+
+html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner-slot::after {
+  content: "Computing";
+}
+
+.blockr-navbar-spinner-slot:hover::after {
+  opacity: 1;
 }
 
 @keyframes blockr-navbar-spin {
@@ -1249,8 +1285,19 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   }
 }
 
+/* Reduced motion slows the ring, it does not stop it. Stopping it leaves a
+   fully styled ring frozen in the navbar, which reads as a hung session --
+   the exact opposite of what a busy indicator is for -- and it is the only
+   state the indicator can be seen in, since it is hidden when idle. A 16px
+   ring turning in place carries none of the vestibular risk the preference
+   exists to avoid (it is not page-level or parallax motion), so the honest
+   reading of the preference here is "calmer", not "gone".
+
+   This is not a rare corner: Windows maps "Animation effects: off" (a common
+   managed / VDI default) onto `prefers-reduced-motion: reduce`, so on those
+   machines every Edge user saw a spinner that never moved. */
 @media (prefers-reduced-motion: reduce) {
   html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
-    animation: none;
+    animation-duration: 1.6s;
   }
 }

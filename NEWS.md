@@ -1,11 +1,26 @@
 # blockr.dock (development version)
 
+* A panel id in a `dock_grid()` or view that resolves to no block or
+  extension on the board now aborts at `new_dock_board()` rather than
+  being dropped in silence. Such an id -- a typo, or an extension's old
+  class-derived name (extensions are keyed by their mount name since the
+  ids became container-owned) -- used to empty the view, booting the
+  board blank with no error, warning, or log entry. Restoring a saved
+  board is unchanged: a member or grid leaf whose block is genuinely gone
+  still self-heals (#375).
+
 * Block card sections (inputs / outputs / control) are styled from the
   stylesheet, keyed on each panel's stable `data-value`, rather than
   rebuilt per card with `htmltools::tagQuery()` at UI-build time. The
   markup renders identically but the cards build about a third faster --
   a cost that scales with the number of blocks on the active view, so it
   cuts noticeably into the initial app render (#214).
+
+* Closing a dock panel no longer aborts the board update when the same tab is
+  closed twice in quick succession. The manual-close plugin leaves a tab's `x`
+  in place until the server round-trip removes it, so a rapid double click
+  re-fires the close for a panel that is already gone; that stale removal is
+  now dropped rather than failing view-membership validation (#362).
 
 * Blocks on a dock group's background tabs render again. dockView mounts a
   group's non-front tabs lazily, so a block card's `move-element` could arrive
@@ -24,6 +39,18 @@
   `ext_examples()` and `ext_guidance()` accessors. A bare string keeps working
   as the free-text summary; the earlier `extension_description()` accessor is
   deprecated in favour of `ext_desc()` (#359).
+
+* The navbar busy spinner keeps turning when the browser reports
+  `prefers-reduced-motion: reduce`, at a slower 1.6s turn instead of 0.7s.
+  It previously dropped the animation entirely, which left a fully styled
+  ring frozen in the navbar and reading as a hung session. Windows maps its
+  "Animation effects: off" setting (a common managed / VDI default) onto that
+  preference, so on those machines the spinner never moved.
+
+* Idle, the navbar busy spinner is now a faint, closed ring rather than a
+  gapped three-quarter circle that read as an oversized "C" wherever it sits.
+  The darker arc that signals motion is painted on only while the board is
+  busy; at rest the ring is a single muted colour and recedes into the navbar.
 
 * Views (pages) can now be reordered from the nav dropdown: each item carries
   up / down controls beside its rename and remove actions. Order is board
