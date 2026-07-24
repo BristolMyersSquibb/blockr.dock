@@ -1,0 +1,182 @@
+/* Edit-inputs menu: an ordered list of one block's incoming links,
+   living inside the sidebar primitive. A variadic block's rows carry a
+   drag handle (reorder), an inline name field (rename) and a remove
+   button; a finite block's rows are read-only port -> source pairs. */
+
+.blockr-inputs-edit {
+  height: 100%;
+  min-height: 0;
+}
+
+.blockr-inputs-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  margin: -16px;
+  padding: 16px;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  color: var(--blockr-color-text-primary, #1f2937);
+}
+
+.blockr-inputs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.blockr-inputs-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+
+  background: var(--blockr-color-bg-subtle, #f8fafc);
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 6px;
+}
+
+.blockr-inputs-row.is-dragging {
+  opacity: 0.6;
+  box-shadow: var(--blockr-shadow-lg, 0 8px 24px rgba(15, 23, 42, 0.16));
+}
+
+.blockr-inputs-drag-handle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  cursor: grab;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+}
+
+.blockr-inputs-drag-handle:active {
+  cursor: grabbing;
+}
+
+.blockr-inputs-source {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.blockr-inputs-source-name {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--blockr-font-size-sm, 13px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-inputs-source-id {
+  font-size: var(--blockr-font-size-xs, 11px);
+  color: var(--blockr-color-text-meta, #9ca3af);
+}
+
+.blockr-inputs-source-empty {
+  font-size: var(--blockr-font-size-sm, 13px);
+  font-style: italic;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+
+.blockr-inputs-port-label {
+  flex: 0 0 auto;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--blockr-font-size-sm, 13px);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.blockr-inputs-row.is-readonly .blockr-inputs-source {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.blockr-inputs-name-input {
+  flex: 0 0 34%;
+  min-width: 0;
+  padding: 4px 8px;
+
+  font-size: var(--blockr-font-size-sm, 13px);
+  color: var(--blockr-color-text-primary, #1f2937);
+  background: var(--blockr-color-bg-input, #fff);
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 4px;
+}
+
+.blockr-inputs-name-input:focus {
+  outline: none;
+  border-color: var(--blockr-color-primary, #3b82f6);
+}
+
+.blockr-inputs-remove {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+
+  font-size: 18px;
+  line-height: 1;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.blockr-inputs-remove:hover {
+  color: var(--blockr-color-error, #dc2626);
+  background: var(--blockr-color-bg-hover, #f1f5f9);
+}
+
+
+.blockr-inputs-port-label {
+  min-width: 64px;
+}
+
+.blockr-inputs-source-picker {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The block-browser selectize sits flush in the row: drop Shiny's default
+   form-group spacing and let it span the picker width. */
+.blockr-inputs-source-picker .form-group,
+.blockr-inputs-source-picker .shiny-input-container {
+  margin-bottom: 0;
+  width: 100% !important;
+}
+
+/* The picker dropdown is rendered on <body> (dropdownParent) so the panel's
+   scroll container cannot clip it; lift it above the sidebar overlay
+   (z-index 1050) so it is not hidden behind the panel. `!important` because
+   selectize sets its own z-index (1000) that otherwise wins. */
+.selectize-dropdown {
+  z-index: 1200 !important;
+}
+
+.blockr-inputs-add-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--blockr-color-border, #e5e7eb);
+}
+
+.blockr-inputs-add-label {
+  flex: 0 0 auto;
+  font-size: var(--blockr-font-size-sm, 13px);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-secondary, #4b5563);
+}
