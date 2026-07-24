@@ -57,9 +57,9 @@ board_server_callback <- function(board, update, visibility, ...,
   client_views <- reactiveVal(seed_view_state(board_views(initial_board)))
 
   # The `visibility` channel core hands us (per-block `required` / `visible` /
-  # `frozen` reactiveVal slots) is the single store: its `required` axis doubles
-  # as the dock's build ledger, read back via built_cards(). Stash it on
-  # active_dock -- the dock handle every card-touching path receives (view
+  # `frozen` reactiveVal slots) is the single store: its `visible` axis is the
+  # dock's build ledger (!is.na = ever built), read via built_cards(). Stash it
+  # on active_dock -- the dock handle every card-touching path receives (view
   # switch, panel-op apply, core insert / remove) -- so they read and write the
   # one channel.
   active_dock$visibility <- visibility
@@ -95,11 +95,13 @@ board_server_callback <- function(board, update, visibility, ...,
 
   # Gate off-screen blocks from the first flush, before the client reports its
   # layout (else core's all-visible default evaluates every block at startup).
-  # Seed the channel to what board_ui rendered: the active view's whole
-  # membership is built (required non-NA), its front panels required TRUE and
-  # its background tabs FALSE. Off-screen views' cards are built on first visit
-  # by switch_active_view. Core holds its background-construction gate until the
-  # active view reports its blocks rendered on the visible axis.
+  # Seed to what board_ui rendered: the active view's whole membership is built
+  # (visible FALSE -- built, not yet painted), its front panels required TRUE
+  # and background tabs FALSE. Off-screen views' cards are built on first visit
+  # by switch_active_view. Core holds its render gate (is_visible = isTRUE)
+  # until the active view reports its blocks painted (visible TRUE).
+  mark_cards_built(visibility, active_view_block_ids(initial_board))
+
   show_cards(
     visibility,
     active_view_block_ids(initial_board),
@@ -275,10 +277,10 @@ report_visible_observer <- function(visibility, client_active, docks) {
   observeEvent(
     on_screen(),
     {
-      view <- req(client_active())
+      req(client_active())
 
       show_cards(visibility, built_cards(visibility), on_screen())
-      mark_cards_rendered(visibility, on_screen(), view)
+      mark_cards_rendered(visibility, on_screen())
     }
   )
 }
