@@ -133,7 +133,11 @@ board_server_callback <- function(board, update, visibility, ...,
 
   # Two bundles of live handles, kept in step. Extension servers are called
   # (below) with `board` + `update` (read / mutate the board), `view_data` +
-  # `actions` (the live products) and the `extensions` peer env. The callback
+  # `actions` (the live products), the `extensions` peer env and core's
+  # `visibility` channel -- the latter so a whole-board surface (the outline's
+  # report render, say) can demand construction of blocks no view has shown
+  # yet via `visibility$required[[id]](TRUE)`, exactly like core's own
+  # generate_code plugin. The callback
   # RETURNS `dock`, `view_data`, `actions` and the extensions' results to core,
   # which spreads them into every plugin's args. `view_data` + `actions` are in
   # both -- they are consumed on each side (serialization and the edit-block
@@ -162,7 +166,8 @@ board_server_callback <- function(board, update, visibility, ...,
           update = update,
           view_data = view_data,
           actions = triggers,
-          extensions = peers
+          extensions = peers,
+          visibility = visibility
         ),
         list(...)
       )
