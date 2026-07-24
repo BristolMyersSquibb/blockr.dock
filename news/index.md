@@ -2,6 +2,19 @@
 
 ## blockr.dock (development version)
 
+- A panel id in a
+  [`dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+  or view that resolves to no block or extension on the board now aborts
+  at
+  [`new_dock_board()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
+  rather than being dropped in silence. Such an id – a typo, or an
+  extension’s old class-derived name (extensions are keyed by their
+  mount name since the ids became container-owned) – used to empty the
+  view, booting the board blank with no error, warning, or log entry.
+  Restoring a saved board is unchanged: a member or grid leaf whose
+  block is genuinely gone still self-heals
+  ([\#375](https://github.com/BristolMyersSquibb/blockr.dock/issues/375)).
+
 - Block card sections (inputs / outputs / control) are styled from the
   stylesheet, keyed on each panel’s stable `data-value`, rather than
   rebuilt per card with
