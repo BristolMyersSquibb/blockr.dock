@@ -145,3 +145,46 @@ test_that("blk() / ext() are accepted in the layout-authoring DSL", {
     class = "dock_layout_ref_hint"
   )
 })
+
+test_that("as_panel_ref resolves a bare id block-first, erroring on a clash", {
+
+  expect_identical(as_panel_ref("a", block_ids = c("a", "b")), blk("a"))
+  expect_identical(
+    as_panel_ref("dag", block_ids = "a", ext_ids = "dag"), ext("dag")
+  )
+
+  # Unknown to both sets defaults to the block namespace.
+  expect_identical(as_panel_ref("ghost"), blk("ghost"))
+
+  # An id in both namespaces is a loud clash demanding a typed ref.
+  expect_error(
+    as_panel_ref("x", block_ids = "x", ext_ids = "x"),
+    class = "dock_panel_ref_clash"
+  )
+
+  # Placement hints ride along onto the resolved ref.
+  expect_identical(
+    as_panel_ref("a", block_ids = "a", near = "b", side = "right"),
+    blk("a", near = "b", side = "right")
+  )
+})
+
+test_that("as_panel_ref passes typed input through unchanged", {
+
+  # An already wire-prefixed panel id round-trips regardless of the id sets.
+  expect_identical(as.character(as_panel_ref("block_panel-a")), "block_panel-a")
+  expect_identical(
+    as.character(as_panel_ref("ext_panel-dag", block_ids = "dag")),
+    "ext_panel-dag"
+  )
+  expect_true(is_panel_ref(as_panel_ref("ext_panel-dag")))
+
+  # A prefixed id still keeps its hint.
+  expect_identical(
+    as_panel_ref("block_panel-a", size = 0.4), blk("a", size = 0.4)
+  )
+
+  # An existing ref is returned as-is.
+  r <- ext("dag", near = "a")
+  expect_identical(as_panel_ref(r), r)
+})

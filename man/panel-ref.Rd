@@ -4,6 +4,7 @@
 \alias{blk}
 \alias{ext}
 \alias{is_panel_ref}
+\alias{as_panel_ref}
 \alias{as.character.panel_ref}
 \title{Typed panel references}
 \usage{
@@ -13,10 +14,21 @@ ext(id, near = NULL, side = NULL, size = NULL)
 
 is_panel_ref(x)
 
+as_panel_ref(
+  id,
+  block_ids = character(),
+  ext_ids = character(),
+  near = NULL,
+  side = NULL,
+  size = NULL
+)
+
 \method{as.character}{panel_ref}(x, ...)
 }
 \arguments{
-\item{id}{A block or extension id (not the wire-prefixed panel id).}
+\item{id}{A block or extension id. For \code{blk()} / \code{ext()} a bare id (not the
+wire-prefixed panel id); \code{as_panel_ref()} additionally accepts an already
+wire-prefixed panel id or a \code{panel_ref}.}
 
 \item{near}{A ref or bare id to anchor placement against.}
 
@@ -28,11 +40,15 @@ on \code{add} for a later size-on-create pass.}
 
 \item{x}{An object.}
 
+\item{block_ids, ext_ids}{Character vectors partitioning the id namespace that
+\code{as_panel_ref()} resolves a bare \code{id} against.}
+
 \item{...}{Ignored.}
 }
 \value{
-\code{blk()} / \code{ext()} return a \code{panel_ref}. \code{as.character()} on one
-returns its canonical panel id, and \code{is_panel_ref()} returns a boolean.
+\code{blk()}, \code{ext()} and \code{as_panel_ref()} return a \code{panel_ref}.
+\code{as.character()} on one returns its canonical panel id, and
+\code{is_panel_ref()} returns a boolean.
 }
 \description{
 \code{blk()} and \code{ext()} construct references to a block or extension panel for
@@ -56,10 +72,20 @@ with R's own unused-argument error, before any payload exists.
 Bare id strings are accepted as sugar wherever a ref is, resolved block-first
 with a hard error only on a true cross-namespace clash (an id that is both a
 block and an extension), which then demands a typed ref.
+
+\code{as_panel_ref()} is the programmatic form of that sugar: given a bare \code{id}
+and the \code{block_ids} / \code{ext_ids} partitioning a board's namespace, it returns
+the correctly-typed \code{blk()} / \code{ext()} ref (carrying any placement hint),
+applying the same block-first precedence and the same cross-namespace clash
+error. An already wire-prefixed panel id, or an existing \code{panel_ref},
+resolves to the matching ref unchanged.
 }
 \examples{
 blk("my_block", near = "other_block", side = "right")
 ext("dag")
 as.character(blk("my_block"))
+
+as_panel_ref("my_block", block_ids = "my_block")
+as_panel_ref("dag", block_ids = "my_block", ext_ids = "dag")
 
 }

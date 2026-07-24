@@ -45,7 +45,10 @@
 #' `as_dock_panel_id()`). If a mix of sub-classes is returned, this will be
 #' represented by a list of classed character vectors. `as_view_handle_id()`
 #' maps a view id to its DOM container id (a `view_handle_id`). Finally,
-#' `as_obj_id()` returns a character vector, as does `dock_id()`.
+#' `as_obj_id()` returns a character vector, as does `dock_id()`. The predicates
+#' `is_dock_panel_id()`, `is_block_panel_id()` and `is_ext_panel_id()` return a
+#' boolean, testing whether an object inherits from `dock_panel_id` (and, for
+#' the latter two, its `block_panel_id` / `ext_panel_id` sub-class).
 #' @rdname ids
 #' @export
 dock_id <- function(ns = NULL) {
@@ -72,6 +75,8 @@ new_dock_panel_id <- function(x, class = character()) {
   new_dock_id(x, c(class, "dock_panel_id"))
 }
 
+#' @rdname ids
+#' @export
 is_dock_panel_id <- function(x) {
   inherits(x, "dock_panel_id")
 }
@@ -184,6 +189,8 @@ new_block_panel_id <- function(x) {
   new_dock_panel_id(x, "block_panel_id")
 }
 
+#' @rdname ids
+#' @export
 is_block_panel_id <- function(x) {
   inherits(x, "block_panel_id")
 }
@@ -253,6 +260,8 @@ new_ext_panel_id <- function(x) {
   new_dock_panel_id(x, "ext_panel_id")
 }
 
+#' @rdname ids
+#' @export
 is_ext_panel_id <- function(x) {
   inherits(x, "ext_panel_id")
 }

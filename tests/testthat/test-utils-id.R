@@ -121,3 +121,16 @@ test_that("view handle ids round-trip", {
   expect_identical(hndl, as_view_handle_id(hndl))
   expect_identical(view_id, as_obj_id(hndl))
 })
+
+test_that("panel-id predicates are class checks, not string matches", {
+
+  expect_true(is_block_panel_id(as_block_panel_id("a")))
+  expect_true(is_ext_panel_id(as_ext_panel_id("dag")))
+  expect_true(is_dock_panel_id(as_block_panel_id("a")))
+
+  # A bare wire-prefixed string is not a classed panel id -- the string-shape
+  # test is `maybe_*_panel_id()`, kept distinct on purpose.
+  expect_false(is_block_panel_id("block_panel-a"))
+  expect_false(is_ext_panel_id("ext_panel-dag"))
+  expect_false(is_dock_panel_id("block_panel-a"))
+})

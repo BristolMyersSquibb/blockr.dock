@@ -2,9 +2,12 @@
 % Please edit documentation in R/panel-id.R
 \name{dock_id}
 \alias{dock_id}
+\alias{is_dock_panel_id}
 \alias{as_dock_panel_id}
 \alias{as_obj_id}
+\alias{is_block_panel_id}
 \alias{as_block_panel_id}
+\alias{is_ext_panel_id}
 \alias{as_ext_panel_id}
 \alias{as_dock_handle_id}
 \alias{as_block_handle_id}
@@ -14,11 +17,17 @@
 \usage{
 dock_id(ns = NULL)
 
+is_dock_panel_id(x)
+
 as_dock_panel_id(x)
 
 as_obj_id(x)
 
+is_block_panel_id(x)
+
 as_block_panel_id(x)
+
+is_ext_panel_id(x)
 
 as_ext_panel_id(x)
 
@@ -46,7 +55,10 @@ a sub-class such as \code{block_panel_id} or \code{ext_panel_id} (in the case of
 \code{as_dock_panel_id()}). If a mix of sub-classes is returned, this will be
 represented by a list of classed character vectors. \code{as_view_handle_id()}
 maps a view id to its DOM container id (a \code{view_handle_id}). Finally,
-\code{as_obj_id()} returns a character vector, as does \code{dock_id()}.
+\code{as_obj_id()} returns a character vector, as does \code{dock_id()}. The predicates
+\code{is_dock_panel_id()}, \code{is_block_panel_id()} and \code{is_ext_panel_id()} return a
+boolean, testing whether an object inherits from \code{dock_panel_id} (and, for
+the latter two, its \code{block_panel_id} / \code{ext_panel_id} sub-class).
 }
 \description{
 Objects, such as blocks and dock extensions carry their own IDs. These
