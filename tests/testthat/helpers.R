@@ -53,9 +53,10 @@ board_args <- function(...) {
 # Stand-in for the `visibility` channel blockr.core hands the board callback:
 # three environments of per-block reactiveVals (`required`, `visible`,
 # `frozen`), one slot per block, mirroring core's add_vis_slots at construction
-# (which seeds every board block before the callback runs). The dock writes
-# values into these slots; core owns their lifecycle in the real thing. Pass the
-# block ids to seed, or a board handle to seed from its blocks.
+# (which seeds every board block before the callback runs). `visible` is logical
+# (the dock's build ledger: !is.na = ever built), matching core's slot. The dock
+# writes values into these slots; core owns their lifecycle in the real thing.
+# Pass the block ids to seed, or a board handle to seed from its blocks.
 fake_visibility <- function(x = character()) {
   ids <- if (is.character(x)) x else board_block_ids(shiny::isolate(x$board))
 
@@ -66,7 +67,7 @@ fake_visibility <- function(x = character()) {
   )
   for (id in ids) {
     vis$required[[id]] <- shiny::reactiveVal(NA)
-    vis$visible[[id]] <- shiny::reactiveVal(NA_character_)
+    vis$visible[[id]] <- shiny::reactiveVal(NA)
     vis$frozen[[id]] <- shiny::reactiveVal(FALSE)
   }
   vis
