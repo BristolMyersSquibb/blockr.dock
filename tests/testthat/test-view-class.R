@@ -210,18 +210,103 @@ test_that("view_grid renders a member the grid omits, defaulting its spot", {
   )
 })
 
-test_that("construction drops members with no backing block or extension", {
+test_that("restore self-heals a member with no backing block or extension", {
 
-  # The block / extension set is authoritative. A member referencing a block
-  # that is not on the board (e.g. dropped since the board was saved) is pruned
-  # at construction rather than rejected -- restore of a stale board self-heals.
-  brd <- new_dock_board(
-    blocks = c(a = new_dataset_block()),
-    views = list(A = dock_view(c("block_panel-a", "block_panel-gone")))
+  # Restore hands the constructor already-typed `dock_views`, which skip
+  # ergonomic resolution. A member referencing a block not on the board (e.g.
+  # dropped since the board was saved) is pruned at construction rather than
+  # rejected, so a stale saved board self-heals. An unresolved *authoring*
+  # reference aborts instead (below).
+  views <- reconstruct_dock_views(
+    list(A = dock_view(c("block_panel-a", "block_panel-gone")))
   )
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()), views = views)
 
   expect_identical(view_members(board_views(brd)[["A"]]), "block_panel-a")
   expect_s3_class(validate_board(brd), "dock_board")
+})
+
+test_that("restore self-heals a grid leaf with no backing block", {
+
+  # A typed `dock_grids` (the restore currency) likewise skips resolution: a
+  # leaf for a since-removed block is restricted away, not aborted.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    views = reconstruct_dock_views(list(A = dock_view("block_panel-a"))),
+    grids = new_dock_grids(
+      list(A = as_dock_grid(dock_grid("block_panel-a", "block_panel-gone")))
+    )
+  )
+
+  expect_identical(layout_panel_ids(board_grids(brd)[["A"]]), "block_panel-a")
+  expect_s3_class(validate_board(brd), "dock_board")
+})
+
+test_that("an unresolvable grid panel id aborts at construction", {
+
+  # The regression: an extension is keyed by its mount name (`edit_board`), so
+  # the old class-derived name no longer resolves. It used to be dropped in
+  # silence, booting the view empty; now it is a loud authoring error.
+  expect_error(
+    new_dock_board(
+      extensions = new_edit_board_extension(),
+      grids = list(Main = dock_grid("edit_board_extension"))
+    ),
+    class = "dock_layout_panel_unknown"
+  )
+})
+
+test_that("an unresolvable view member aborts at construction", {
+
+  expect_error(
+    new_dock_board(
+      blocks = c(a = new_dataset_block()),
+      views = list(A = dock_view("gone"))
+    ),
+    class = "dock_layout_panel_unknown"
+  )
+})
+
+test_that("a typo in an ext() / blk() reference aborts at construction", {
+
+  # The endorsed reference form is not exempt: `ext("edit_typo")` is a canonical
+  # but unbacked panel id, so it aborts rather than silently emptying the view.
+  expect_error(
+    new_dock_board(
+      extensions = new_edit_board_extension(),
+      grids = list(Main = dock_grid(ext("edit_typo")))
+    ),
+    class = "dock_layout_panel_unknown"
+  )
+})
+
+test_that("the unknown-panel error names the bad id and the available ones", {
+
+  expect_error(
+    new_dock_board(
+      blocks = c(a = new_dataset_block(), b = new_head_block()),
+      views = list(A = dock_view(c("a", "nope")))
+    ),
+    regexp = "unknown panel nope.+Available.+a.+b",
+    class = "dock_layout_panel_unknown"
+  )
+})
+
+test_that("bare ids and blk() / ext() references coexist in one view", {
+
+  # A valid mix must still construct -- the check rejects only ids that back
+  # nothing, never the canonical reference forms.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = new_edit_board_extension(),
+    views = list(V = list(blk("a"), "b", ext("edit_board")))
+  )
+
+  expect_setequal(
+    view_members(board_views(brd)[["V"]]),
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board")
+  )
 })
 
 test_that("construction restricts a grid to its view's members", {
