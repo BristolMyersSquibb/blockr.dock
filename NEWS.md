@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* New exports for downstream consumers that translate between bare
+  block / extension ids and dock's panel-id scheme: the class predicates
+  `is_dock_panel_id()`, `is_block_panel_id()` and `is_ext_panel_id()`,
+  and `as_panel_ref()`, which resolves a bare id (or an already
+  wire-prefixed one) to a `blk()` / `ext()` ref against a board's block /
+  extension id sets, block-first with a hard error on a cross-namespace
+  clash (#374).
+
 * "Show code" on a deferred board
   (`background_construction_delay = Inf`) no longer permanently blanks
   the cards of a view first visited after it. The exporter marks every

@@ -21,7 +21,18 @@
 #' with a hard error only on a true cross-namespace clash (an id that is both a
 #' block and an extension), which then demands a typed ref.
 #'
-#' @param id A block or extension id (not the wire-prefixed panel id).
+#' `as_panel_ref()` is the programmatic form of that sugar: given a bare `id`
+#' and the `block_ids` / `ext_ids` partitioning a board's namespace, it returns
+#' the correctly-typed `blk()` / `ext()` ref (carrying any placement hint),
+#' applying the same block-first precedence and the same cross-namespace clash
+#' error. An already wire-prefixed panel id, or an existing `panel_ref`,
+#' resolves to the matching ref unchanged.
+#'
+#' @param id A block or extension id. For `blk()` / `ext()` a bare id (not the
+#'   wire-prefixed panel id); `as_panel_ref()` additionally accepts an already
+#'   wire-prefixed panel id or a `panel_ref`.
+#' @param block_ids,ext_ids Character vectors partitioning the id namespace that
+#'   `as_panel_ref()` resolves a bare `id` against.
 #' @param near A ref or bare id to anchor placement against.
 #' @param side Placement direction relative to `near`: one of `within`, `left`,
 #'   `right`, `above`, `below`.
@@ -30,13 +41,17 @@
 #' @param x An object.
 #' @param ... Ignored.
 #'
-#' @return `blk()` / `ext()` return a `panel_ref`. `as.character()` on one
-#'   returns its canonical panel id, and `is_panel_ref()` returns a boolean.
+#' @return `blk()`, `ext()` and `as_panel_ref()` return a `panel_ref`.
+#'   `as.character()` on one returns its canonical panel id, and
+#'   `is_panel_ref()` returns a boolean.
 #'
 #' @examples
 #' blk("my_block", near = "other_block", side = "right")
 #' ext("dag")
 #' as.character(blk("my_block"))
+#'
+#' as_panel_ref("my_block", block_ids = "my_block")
+#' as_panel_ref("dag", block_ids = "my_block", ext_ids = "dag")
 #'
 #' @rdname panel-ref
 #' @export
@@ -64,6 +79,48 @@ new_panel_ref <- function(id, type, near = NULL, side = NULL, size = NULL) {
 #' @export
 is_panel_ref <- function(x) {
   inherits(x, "panel_ref")
+}
+
+#' @rdname panel-ref
+#' @export
+as_panel_ref <- function(id, block_ids = character(), ext_ids = character(),
+                         near = NULL, side = NULL, size = NULL) {
+
+  if (is_panel_ref(id)) {
+    return(id)
+  }
+
+  stopifnot(is_string(id))
+
+  if (maybe_block_panel_id(id) || maybe_ext_panel_id(id)) {
+
+    pid <- as_dock_panel_id(id)
+    id <- as_obj_id(pid)
+    use_ext <- is_ext_panel_id(pid)
+
+  } else {
+
+    in_blk <- id %in% block_ids
+    in_ext <- id %in% ext_ids
+
+    if (in_blk && in_ext) {
+      blockr_abort(
+        paste0(
+          "Id `", id, "` names both a block and an extension -- disambiguate ",
+          "with blk() or ext()."
+        ),
+        class = "dock_panel_ref_clash"
+      )
+    }
+
+    use_ext <- in_ext && !in_blk
+  }
+
+  if (use_ext) {
+    ext(id, near = near, side = side, size = size)
+  } else {
+    blk(id, near = near, side = side, size = size)
+  }
 }
 
 #' @rdname panel-ref
