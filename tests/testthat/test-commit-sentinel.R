@@ -25,15 +25,15 @@ test_that("a settled gesture commits a bounded amount, quiescence adds none", {
   expect_false(is.na(baseline))
 
   # One gesture: add a block through the edit-board extension (its panel is
-  # active on load). The board update mounts the panel -- a stable
-  # block_handle-<id> DOM id marks the commit landing.
+  # active on load). The board update mounts the panel into the dock -- its
+  # client-confirmed tab marks the commit landing.
   app$set_inputs(
     `my_board-ext_edit_board-registry_select` = "dataset_block",
     `my_board-ext_edit_board-block_id` = "a"
   )
   app$click("my_board-ext_edit_board-confirm_add")
 
-  app$wait_for_js("document.getElementById('my_board-block_handle-a') !== null")
+  wait_block_panel_tabs(app, "block_panel-a")
   app$wait_for_idle()
 
   after_gesture <- app$get_value(export = "commit_count")

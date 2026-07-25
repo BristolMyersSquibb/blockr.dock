@@ -163,9 +163,11 @@ test_that("dock app renders a block added via the extension (#191)", {
   )
   app$click("my_board-ext_edit_board-confirm_add")
 
-  # The block card carries a stable `block_handle-<id>` DOM id; its presence
-  # is the add-block -> dock-render seam -- the board update mounting a panel.
-  app$wait_for_js("document.getElementById('my_board-block_handle-a') !== null")
+  # The add-block -> dock-render seam is the panel mounting into the dock, with
+  # its tab client-confirmed; the block card then lives inside that panel. The
+  # `block_handle-<id>` card alone is inserted into the offcanvas pool ahead of
+  # (and regardless of) the mount, so the tab is the signal that it landed.
+  wait_block_panel_tabs(app, "block_panel-a")
 
   expect_equal(
     app$get_js(
@@ -218,7 +220,7 @@ test_that("adding a second block keeps both block panels (#196)", {
     name = "panel-visibility",
     seed = 42,
     load_timeout = 30 * 1000,
-    timeout = 20 * 1000
+    timeout = 30 * 1000
   )
   withr::defer(app$stop())
 
@@ -234,12 +236,16 @@ test_that("adding a second block keeps both block panels (#196)", {
   }
 
   add_block("dataset_block", "a")
+  wait_block_panel_tabs(app, "block_panel-a")
   expect_identical(block_panel_tabs(app), "block_panel-a")
 
   # Pre-fix, the second add fired reconcile_views against a board that
   # lagged the live dock, restoring it and wiping both block panels -- leaving
-  # only the extension (#196). Both block tabs must survive.
+  # only the extension (#196). Both block tabs must survive; gating on the
+  # settled strip first makes the assertion deterministic (a permanent wipe
+  # never reaches the target set, so the wait times out and still catches it).
   add_block("head_block", "b")
+  wait_block_panel_tabs(app, c("block_panel-a", "block_panel-b"))
   expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
 })
 
@@ -472,12 +478,13 @@ test_that("deleting a block via its card menu drops the panel and its link", {
     name = "remove-block",
     seed = 42,
     load_timeout = 30 * 1000,
-    timeout = 20 * 1000
+    timeout = 30 * 1000
   )
   withr::defer(app$stop())
 
   app$wait_for_idle()
 
+  wait_block_panel_tabs(app, c("block_panel-a", "block_panel-b"))
   expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
   expect_identical(field(app, "ab_from"), "a")
 
@@ -493,7 +500,11 @@ test_that("deleting a block via its card menu drops the panel and its link", {
   app$wait_for_idle()
 
   # The board update removes b's dock panel and cascade-removes the dependent
-  # link, whose row then leaves the extension's links table.
+  # link, whose row then leaves the extension's links table. Gate on the panel
+  # actually dropping (client-confirmed) before asserting the strip and reading
+  # the link field: the same board update has cleared both by the time the tab
+  # is gone.
+  wait_block_panel_tabs(app, "block_panel-a")
   expect_identical(block_panel_tabs(app), "block_panel-a")
   expect_null(field(app, "ab_from"))
 })
