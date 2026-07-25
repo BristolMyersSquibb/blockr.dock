@@ -364,6 +364,50 @@ wait_active_block_tabs <- function(app, view, expected, board_id = "my_board",
   wait_js(app, js, diagnose, timeout)
 }
 
+# Wait until the dock's block-panel tab strip has settled to exactly `expected`
+# `block_panel-<id>` tabs. A block add / remove commits server-side, then the
+# dockview client mounts (or drops) the panel's tab asynchronously -- so a bare
+# `block_panel_tabs()` read straight after `wait_for_idle()` (server idle, the
+# client render still in flight) can sample an empty or stale strip and eject a
+# green PR. The tab element is created when the panel is added, independent of
+# the card's lazy content mount, so it is the client-confirmed "panel is in the
+# dock" signal the tab-identity assertions actually need -- unlike the
+# `block_handle-<id>` card, which is inserted synchronously into the offcanvas
+# pool (present before, and regardless of, its panel mounting). Poll it with a
+# generous bounded budget so a slow-runner post-connect assembly window is
+# ridden out rather than timing out on a fixed one; a residual timeout dumps the
+# shell state so it is actionable -- zero block handles is the add never
+# landing, a handle with no tab is the panel mount lagging. `expected` is the
+# settled `block_panel-<id>` set, matched exactly and sorted (like
+# active_block_panel_tabs).
+wait_block_panel_tabs <- function(app, expected, board_id = "my_board",
+                                  timeout = 45 * 1000) {
+  want <- paste(sort(expected), collapse = ",")
+
+  js <- sprintf(
+    paste0(
+      "(function(){",
+      "var c=document.querySelector('#%s-view_container');if(!c)return false;",
+      "var a=Array.from(c.querySelectorAll('[id*=\"-tab-block_panel-\"]'))",
+      ".map(function(e){return e.id",
+      ".replace(/.*-tab-(block_panel-.+)$/,'$1');});",
+      "return Array.from(new Set(a)).sort().join(',')==='%s';})()"
+    ),
+    board_id, want
+  )
+
+  diagnose <- function() {
+    sprintf(
+      "[block-panel-tabs] want=[%s] got=[%s] shell=%s",
+      want,
+      paste(block_panel_tabs(app, board_id), collapse = ","),
+      dock_shell_diag(app, board_id)
+    )
+  }
+
+  wait_js(app, js, diagnose, timeout)
+}
+
 # Shared helpers for the edit-board extension e2e tests (links, stacks). The
 # extension namespaces its inputs under `my_board-ext_edit_board-`. The
 # extension panel stays active in those tests (pre-seeded fixtures, no block
