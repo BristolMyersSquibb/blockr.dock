@@ -350,6 +350,9 @@ add_block_panels_to_view <- function(board, block_ids) {
 #' @export
 apply_board_update.dock_board <- function(board, upd, ...) {
 
+  # Apply the core delta (blocks, links, stacks) first, then layer views on top.
+  board <- NextMethod()
+
   if (length(upd$blocks$add)) {
     board <- add_block_panels_to_view(board, names(upd$blocks$add))
   }
