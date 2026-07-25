@@ -17,6 +17,15 @@ ext(id, near = NULL, side = NULL, size = NULL)
 
 is_panel_ref(x)
 
+as_panel_ref(
+  id,
+  block_ids = character(),
+  ext_ids = character(),
+  near = NULL,
+  side = NULL,
+  size = NULL
+)
+
 # S3 method for class 'panel_ref'
 as.character(x, ...)
 ```
@@ -25,7 +34,9 @@ as.character(x, ...)
 
 - id:
 
-  A block or extension id (not the wire-prefixed panel id).
+  A block or extension id. For `blk()` / `ext()` a bare id (not the
+  wire-prefixed panel id); `as_panel_ref()` additionally accepts an
+  already wire-prefixed panel id or a `panel_ref`.
 
 - near:
 
@@ -45,13 +56,18 @@ as.character(x, ...)
 
   An object.
 
+- block_ids, ext_ids:
+
+  Character vectors partitioning the id namespace that `as_panel_ref()`
+  resolves a bare `id` against.
+
 - ...:
 
   Ignored.
 
 ## Value
 
-`blk()` / `ext()` return a `panel_ref`.
+`blk()`, `ext()` and `as_panel_ref()` return a `panel_ref`.
 [`as.character()`](https://rdrr.io/r/base/character.html) on one returns
 its canonical panel id, and `is_panel_ref()` returns a boolean.
 
@@ -75,6 +91,13 @@ block-first with a hard error only on a true cross-namespace clash (an
 id that is both a block and an extension), which then demands a typed
 ref.
 
+`as_panel_ref()` is the programmatic form of that sugar: given a bare
+`id` and the `block_ids` / `ext_ids` partitioning a board's namespace,
+it returns the correctly-typed `blk()` / `ext()` ref (carrying any
+placement hint), applying the same block-first precedence and the same
+cross-namespace clash error. An already wire-prefixed panel id, or an
+existing `panel_ref`, resolves to the matching ref unchanged.
+
 ## Examples
 
 ``` r
@@ -84,4 +107,9 @@ ext("dag")
 #> <panel_ref> ext_panel-dag 
 as.character(blk("my_block"))
 #> [1] "block_panel-my_block"
+
+as_panel_ref("my_block", block_ids = "my_block")
+#> <panel_ref> block_panel-my_block 
+as_panel_ref("dag", block_ids = "my_block", ext_ids = "dag")
+#> <panel_ref> ext_panel-dag 
 ```

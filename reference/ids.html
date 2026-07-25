@@ -90,11 +90,17 @@ The utility function <code>dock_id()</code> returns a (possibly namespaced) ID o
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">dock_id</span><span class="op">(</span>ns <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
+<span><span class="fu">is_dock_panel_id</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu">as_dock_panel_id</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">as_obj_id</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
+<span><span class="fu">is_block_panel_id</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu">as_block_panel_id</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">is_ext_panel_id</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">as_ext_panel_id</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
@@ -131,7 +137,10 @@ a sub-class such as <code>block_panel_id</code> or <code>ext_panel_id</code> (in
 <code>as_dock_panel_id()</code>). If a mix of sub-classes is returned, this will be
 represented by a list of classed character vectors. <code>as_view_handle_id()</code>
 maps a view id to its DOM container id (a <code>view_handle_id</code>). Finally,
-<code>as_obj_id()</code> returns a character vector, as does <code>dock_id()</code>.</p>
+<code>as_obj_id()</code> returns a character vector, as does <code>dock_id()</code>. The predicates
+<code>is_dock_panel_id()</code>, <code>is_block_panel_id()</code> and <code>is_ext_panel_id()</code> return a
+boolean, testing whether an object inherits from <code>dock_panel_id</code> (and, for
+the latter two, its <code>block_panel_id</code> / <code>ext_panel_id</code> sub-class).</p>
     </div>
 
     <div class="section level2">

@@ -20,11 +20,17 @@ all visible panels.
 ``` r
 dock_id(ns = NULL)
 
+is_dock_panel_id(x)
+
 as_dock_panel_id(x)
 
 as_obj_id(x)
 
+is_block_panel_id(x)
+
 as_block_panel_id(x)
+
+is_ext_panel_id(x)
 
 as_ext_panel_id(x)
 
@@ -60,7 +66,10 @@ sub-class such as `block_panel_id` or `ext_panel_id` (in the case of
 represented by a list of classed character vectors.
 `as_view_handle_id()` maps a view id to its DOM container id (a
 `view_handle_id`). Finally, `as_obj_id()` returns a character vector, as
-does `dock_id()`.
+does `dock_id()`. The predicates `is_dock_panel_id()`,
+`is_block_panel_id()` and `is_ext_panel_id()` return a boolean, testing
+whether an object inherits from `dock_panel_id` (and, for the latter
+two, its `block_panel_id` / `ext_panel_id` sub-class).
 
 ## Examples
 

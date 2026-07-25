@@ -194,6 +194,7 @@ Typed references to block and extension panels for the update grammar.
 - [`blk()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
   [`ext()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
   [`is_panel_ref()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  [`as_panel_ref()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
   [`as.character(`*`<panel_ref>`*`)`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
   : Typed panel references
 
@@ -279,9 +280,12 @@ packages.
   [`block_status_badge()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)
   : Get block metadata
 - [`dock_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
+  [`is_dock_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
   [`as_dock_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
   [`as_obj_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
+  [`is_block_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
   [`as_block_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
+  [`is_ext_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
   [`as_ext_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
   [`as_dock_handle_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
   [`as_block_handle_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)

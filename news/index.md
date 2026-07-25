@@ -2,6 +2,22 @@
 
 ## blockr.dock (development version)
 
+- New exports for downstream consumers that translate between bare block
+  / extension ids and dock’s panel-id scheme: the class predicates
+  [`is_dock_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md),
+  [`is_block_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md)
+  and
+  [`is_ext_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md),
+  and
+  [`as_panel_ref()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md),
+  which resolves a bare id (or an already wire-prefixed one) to a
+  [`blk()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  /
+  [`ext()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
+  ref against a board’s block / extension id sets, block-first with a
+  hard error on a cross-namespace clash
+  ([\#374](https://github.com/BristolMyersSquibb/blockr.dock/issues/374)).
+
 - “Show code” on a deferred board
   (`background_construction_delay = Inf`) no longer permanently blanks
   the cards of a view first visited after it. The exporter marks every
