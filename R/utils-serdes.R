@@ -32,8 +32,22 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
         board_id = id,
         blocks = Map(c, state, visible = lapply(visibility, list)),
         options = opts,
+        # The extensions arrive as ONE named plugin argument holding all of
+        # them (`list(outline = list(state = ...))`), not spread one per
+        # extension: board_server returns `extensions = ext_res` and core
+        # flattens that list into the plugin args by one level, so `...` holds
+        # `actions` and `extensions`, not `dag` and `outline`.
+        #
+        # Mapping over `list(...)` therefore walked one level too high. Every
+        # `x[["state"]]` was NULL, so EVERY extension serialized an empty
+        # payload while still writing its object and constructor -- a saved
+        # board looked complete and carried none of its extensions' state.
+        # Restores rebuilt each extension from constructor defaults: an
+        # outline came back with no annotations, so every block fell to
+        # `report = TRUE` and the descriptions, title and block order were
+        # gone.
         extensions = lapply(
-          list(...),
+          list(...)[["extensions"]],
           function(x) lapply(x[["state"]], reval_if)
         )
       )
