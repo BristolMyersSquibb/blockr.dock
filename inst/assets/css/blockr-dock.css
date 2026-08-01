@@ -27,6 +27,27 @@
   --blockr-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --blockr-shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 
+  /* ===========================================
+     Data marks (bars, boxes, lanes)
+     =========================================== */
+  /* Cosmetic ONLY. This radius carries no information: it exists so a mark
+     does not read as a raw div, and nothing may ever be inferred from its
+     presence. Two rules keep it honest:
+       - it applies to the SILHOUETTE, never to sub-marks (median ticks,
+         whiskers, fence caps are 1-2px and a radius turns them into dots);
+       - an end stays SQUARE if it sits on an axis (a bar's zero end) or
+         abuts a sibling segment (a stack's inner joins). Rounding a baseline
+         lifts the bar off its axis, and zero is shared structure, not data.
+     It must also never approach half the mark's thickness, because a capsule
+     is a SEPARATE and semantic signal meaning "soft boundary" (the
+     point-range band). Clamp with min(radius, thickness / 4) on thin lanes;
+     at 12-14px the token applies unchanged. */
+  --blockr-mark-radius: 2px;
+  /* Weight for a mark that supports a CHOICE rather than carrying the answer:
+     the crossfilter's bars rank options in a picker, they are not the
+     analysis output. Marks that are the content stay at full weight. */
+  --blockr-mark-weight-supporting: 0.6;
+
   /* Font Sizes */
   --blockr-font-size-base: 0.875rem;      /* 14px - base for body/inputs */
   --blockr-font-size-sm: 0.8125rem;       /* 13px - helper text */
