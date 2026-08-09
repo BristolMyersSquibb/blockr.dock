@@ -274,10 +274,17 @@ $(function () {
           $(el).append(newItem);
         }
 
-        // Activate the new item and update toggle label
-        $(el).find('.blockr-view-item').removeClass('active');
-        newItem.addClass('active');
-        setToggleLabel($(el), addName);
+        // Deliberately NOT activated here. `getValue()` reads whichever item
+        // carries `.active`, and this handler ends with a `change` trigger,
+        // so activating a freshly added item made the client REPORT it as the
+        // active view -- which `switch_view_observer` then honoured by
+        // switching the board to it. An add that carries no `active` in its
+        // delta (an extension creating a view without navigating to it) got
+        // switched anyway, landing the user on an empty page.
+        //
+        // The server owns which view is active. When an add does mean to
+        // navigate, its delta says so and the resulting `value` message
+        // activates the item through `setValue()` a moment later.
       }
 
       if (data.hasOwnProperty('remove')) {
