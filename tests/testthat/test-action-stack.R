@@ -538,53 +538,6 @@ test_that("stack menu ui defers the form to a server-rendered slot", {
   expect_length(xml2::xml_find_all(doc, "//input[@id='mid-stack_name']"), 0L)
 })
 
-test_that("stack menu seeds the colour picker positions server-side", {
-  # The form is re-rendered on every board change, so the swatch and the
-  # two slider positions ship with the markup rather than being computed
-  # by a client-side init pass that would have to re-run each time.
-  doc <- xml2::read_html(
-    as.character(color_field_tag(NS("mid"), "#66c2a5"))
-  )
-  by_class <- function(tok) {
-    sprintf(
-      "//*[contains(concat(' ', normalize-space(@class), ' '), ' %s ')]", tok
-    )
-  }
-
-  expect_match(
-    xml2::xml_attr(
-      xml2::xml_find_first(doc, by_class("blockr-stack-menu-color-swatch")),
-      "style"
-    ),
-    "#66c2a5"
-  )
-  expect_identical(
-    xml2::xml_attr(
-      xml2::xml_find_first(doc, by_class("blockr-stack-menu-hue")), "value"
-    ),
-    "161"
-  )
-  expect_identical(
-    xml2::xml_attr(
-      xml2::xml_find_first(doc, by_class("blockr-stack-menu-lightness")),
-      "value"
-    ),
-    "58"
-  )
-})
-
-test_that("hex_to_hsl mirrors the picker's hue / lightness model", {
-  expect_identical(hex_to_hsl("#ff0000"), list(hue = 0, lightness = 50))
-  expect_identical(hex_to_hsl("#00ff00"), list(hue = 120, lightness = 50))
-  expect_identical(hex_to_hsl("#0000ff"), list(hue = 240, lightness = 50))
-  expect_identical(hex_to_hsl("#ffffff"), list(hue = 0, lightness = 100))
-
-  # Shorthand expands; an unusable value falls back to the seed colour.
-  expect_identical(hex_to_hsl("#abc"), hex_to_hsl("#aabbcc"))
-  expect_identical(hex_to_hsl("nope"), hex_to_hsl(default_stack_color()))
-  expect_identical(hex_to_hsl(NULL), hex_to_hsl(default_stack_color()))
-})
-
 test_that("remove stack action", {
   r_board <- reactiveValues(
     board = new_dock_board(

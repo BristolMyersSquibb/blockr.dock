@@ -99,10 +99,9 @@
   // Shiny.setInputValue ourselves. Typing in the hex field goes the
   // other way: hex -> HSL -> slider positions + preview swatch.
   //
-  // Both directions are delegated on the panel root, which outlives the
-  // form: the form is server-rendered into a `uiOutput` so it tracks the
-  // board, and per-element listeners would die with each render. Slider
-  // positions and the swatch arrive seeded from R for the same reason.
+  // Everything is delegated on the panel root, which outlives the form:
+  // the form is server-rendered into a `uiOutput` so it tracks the board,
+  // and per-element listeners would die with each render.
 
   function clamp(v, lo, hi) {
     return Math.max(lo, Math.min(hi, v));
@@ -198,6 +197,16 @@
   }
 
   function initColorPicker(root) {
+    // Seed the slider positions and the swatch from the hex whenever the
+    // field is (re-)bound, which covers both the form's first arrival and
+    // every later re-render. Seeding is the same operation a typed hex
+    // triggers, so there is no second copy of it to keep in step.
+    $(root).on("shiny:bound", function (event) {
+      if (event.target.classList.contains("blockr-stack-menu-hex")) {
+        moveSlidersToHex(root);
+      }
+    });
+
     root.addEventListener("input", function (event) {
       var el = event.target;
       if (!el || !el.classList) return;

@@ -132,8 +132,8 @@
 
 /* Inline colour picker: hex preview + text input + hue/lightness
    sliders. The hex `<input>` is the value carrier (a normal Shiny
-   text input); R seeds the swatch and slider positions from it, and
-   the JS keeps the three in sync as the user drags / types. */
+   text input); sliders write the hex on input, the JS keeps the
+   preview swatch and slider positions in sync with the hex. */
 .blockr-stack-menu-color-preview {
   display: flex;
   align-items: center;

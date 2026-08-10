@@ -374,22 +374,14 @@ text_field_tag <- function(ns, key, label, value, placeholder) {
   )
 }
 
-# The swatch and the two slider positions are seeded here rather than by
-# the binding on mount: the form is re-rendered whenever the board changes,
-# and a client-side seeding pass would have to be re-run on every render.
 color_field_tag <- function(ns, value) {
   hex <- value %||% default_stack_color()
-  hsl <- hex_to_hsl(hex)
-
   tags$div(
     class = "blockr-stack-menu-field blockr-stack-menu-color",
     tags$label(`for` = ns("stack_color"), "Stack color"),
     tags$div(
       class = "blockr-stack-menu-color-preview",
-      tags$span(
-        class = "blockr-stack-menu-color-swatch",
-        style = paste0("background: ", hex, ";")
-      ),
+      tags$span(class = "blockr-stack-menu-color-swatch"),
       tags$input(
         id = ns("stack_color"),
         type = "text",
@@ -406,7 +398,7 @@ color_field_tag <- function(ns, value) {
       min = "0",
       max = "360",
       step = "1",
-      value = as.character(hsl$hue),
+      value = "0",
       `aria-label` = "Hue"
     ),
     tags$input(
@@ -415,44 +407,10 @@ color_field_tag <- function(ns, value) {
       min = "20",
       max = "85",
       step = "1",
-      value = as.character(hsl$lightness),
+      value = "60",
       `aria-label` = "Lightness"
     )
   )
-}
-
-# Hue (0-360) and lightness (0-100) of a hex colour, mirroring the
-# picker's `hexToHsl()`. Saturation is fixed by the slider model, so it
-# is not read back. An unparseable colour falls back to the seed colour.
-hex_to_hsl <- function(hex) {
-  if (!is_hex_color(hex)) {
-    hex <- default_stack_color()
-  }
-
-  digits <- substring(hex, 2L, nchar(hex))
-  if (nchar(digits) == 3L) {
-    digits <- paste0(rep(strsplit(digits, "")[[1L]], each = 2L), collapse = "")
-  }
-
-  channels <- strtoi(substring(digits, c(1L, 3L, 5L), c(2L, 4L, 6L)), 16L) / 255
-  r <- channels[[1L]]
-  g <- channels[[2L]]
-  b <- channels[[3L]]
-
-  hi <- max(channels)
-  lo <- min(channels)
-
-  hue <- if (hi == lo) {
-    0
-  } else if (hi == r) {
-    (g - b) / (hi - lo) + if (g < b) 6 else 0
-  } else if (hi == g) {
-    (b - r) / (hi - lo) + 2
-  } else {
-    (r - g) / (hi - lo) + 4
-  }
-
-  list(hue = round(hue * 60), lightness = round((hi + lo) / 2 * 100))
 }
 
 # ---- small helpers ----------------------------------------------------
