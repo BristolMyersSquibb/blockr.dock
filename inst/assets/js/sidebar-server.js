@@ -236,14 +236,9 @@
     }
 
     // Owner is stamped before opening so the state event that `openPanel`
-    // dispatches already carries it. A `null` owner clears the stamp: the
-    // writer did not declare itself, so the previous one no longer holds.
+    // dispatches already carries it.
     if (typeof data.owner !== "undefined") {
-      if (data.owner === null) {
-        panel.removeAttribute(OWNER_ATTR);
-      } else {
-        panel.setAttribute(OWNER_ATTR, String(data.owner));
-      }
+      panel.setAttribute(OWNER_ATTR, String(data.owner));
     }
 
     openPanel(panel);

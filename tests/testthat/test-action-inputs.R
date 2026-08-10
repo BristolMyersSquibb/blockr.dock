@@ -158,7 +158,7 @@ test_that("edit inputs action: reorder commits a from-permutation mod", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -191,7 +191,7 @@ test_that("edit inputs action: an identity reorder issues no update", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -214,7 +214,7 @@ test_that("edit inputs action: rename commits an input mod", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -244,7 +244,7 @@ test_that("edit inputs action: a duplicate input name is rejected", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -269,7 +269,7 @@ test_that("edit inputs action: remove commits a links rm", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -307,7 +307,7 @@ test_that("edit inputs action: removing the block closes the sidebar", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -346,7 +346,7 @@ test_that("edit inputs action: a form written by another action stays open", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"),
           board = r_board,
@@ -365,11 +365,15 @@ test_that("edit inputs action: a form written by another action stays open", {
   )
 })
 
-test_that("edit inputs action stamps itself as the panel owner", {
-  show_calls <- list()
+test_that("edit inputs action writes the sidebar from its own module", {
+  # `show_sidebar()` reads the panel's owner off the session it is called
+  # with, so a write has to happen in the action's own reactive domain. A
+  # write deferred into a flush callback would run under the root session
+  # and stamp that instead, which this records.
+  wrote_from <- list()
   local_mocked_bindings(
-    show_sidebar = function(id, ..., owner = NULL) {
-      show_calls[[length(show_calls) + 1L]] <<- owner
+    show_sidebar = function(...) {
+      wrote_from[[length(wrote_from) + 1L]] <<- get_session()$ns(NULL)
       invisible(NULL)
     },
     keep_or_hide_sidebar = function(...) invisible(NULL),
@@ -378,7 +382,7 @@ test_that("edit inputs action stamps itself as the panel owner", {
 
   fire_action(edit_inputs_action, "r", inputs_board(variadic_links()))
 
-  expect_identical(show_calls, list("edit_inputs_action"))
+  expect_identical(wrote_from, list("edit_inputs_action"))
 })
 
 test_that("edit inputs menu server renders the row list", {
@@ -591,7 +595,7 @@ test_that("edit inputs action: a redirect that would cycle is rejected", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("m"), board = r_board, update = r_update
         )
@@ -638,7 +642,7 @@ test_that("edit inputs action: an add command commits a new link", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )

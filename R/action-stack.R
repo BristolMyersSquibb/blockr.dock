@@ -1,7 +1,4 @@
 add_stack_action <- function(trigger, board, update, ...) {
-
-  action <- "add_stack_action"
-
   new_action(
     function(input, output, session) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
@@ -19,8 +16,7 @@ add_stack_action <- function(trigger, board, update, ...) {
 
       observeEvent(trigger(), {
         show_sidebar(
-          sidebar_id, title = "Create new stack", ui = menu_ui(),
-          owner = action
+          sidebar_id, title = "Create new stack", ui = menu_ui()
         )
       })
 
@@ -37,14 +33,11 @@ add_stack_action <- function(trigger, board, update, ...) {
 
       NULL
     },
-    id = action
+    id = "add_stack_action"
   )
 }
 
 edit_stack_action <- function(trigger, board, update, ...) {
-
-  action <- "edit_stack_action"
-
   new_action(
     function(input, output, session) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
@@ -67,7 +60,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
 
       observeEvent(trigger(), {
         show_sidebar(
-          sidebar_id, title = sidebar_title(), ui = menu_ui(), owner = action
+          sidebar_id, title = sidebar_title(), ui = menu_ui()
         )
       })
 
@@ -84,7 +77,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
         # mutates the board) and the membership test would error.
         if (length(id) == 1L && !is.na(id) && nzchar(id) &&
               !id %in% board_stack_ids(board$board) &&
-              owns_open_sidebar(sidebar_id, action)) {
+              owns_open_sidebar(sidebar_id)) {
           hide_sidebar(sidebar_id)
         }
       }, ignoreInit = TRUE)
@@ -129,7 +122,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
 
       NULL
     },
-    id = action
+    id = "edit_stack_action"
   )
 }
 

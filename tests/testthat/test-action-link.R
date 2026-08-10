@@ -546,7 +546,7 @@ test_that("edit link action: redirecting the target commits a mod delta", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -570,7 +570,7 @@ test_that("edit link action: switching the input slot commits only input", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -593,7 +593,7 @@ test_that("edit link action: naming a variadic positional slot", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -617,7 +617,7 @@ test_that("edit link action: redirecting the source commits only from", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -640,7 +640,7 @@ test_that("edit link action: an unchanged confirm issues no update", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -667,7 +667,7 @@ test_that("edit link action: a redirect that closes a cycle is rejected", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -693,7 +693,7 @@ test_that("edit link action: a self-link is rejected", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -769,7 +769,7 @@ test_that("edit link action: removing the edited link closes the sidebar", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -808,7 +808,7 @@ test_that("edit link action: a form written by another action stays open", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"),
           board = r_board,
@@ -827,11 +827,15 @@ test_that("edit link action: a form written by another action stays open", {
   )
 })
 
-test_that("link actions stamp themselves as the panel owner", {
-  show_calls <- list()
+test_that("link actions write the sidebar from their own module", {
+  # `show_sidebar()` reads the panel's owner off the session it is called
+  # with, so a write has to happen in the action's own reactive domain. A
+  # write deferred into a flush callback would run under the root session
+  # and stamp that instead, which this records.
+  wrote_from <- list()
   local_mocked_bindings(
-    show_sidebar = function(id, ..., owner = NULL) {
-      show_calls[[length(show_calls) + 1L]] <<- owner
+    show_sidebar = function(...) {
+      wrote_from[[length(wrote_from) + 1L]] <<- get_session()$ns(NULL)
       invisible(NULL)
     },
     keep_or_hide_sidebar = function(...) invisible(NULL),
@@ -843,7 +847,7 @@ test_that("link actions stamp themselves as the panel owner", {
   fire_action(add_link_action, "a", r_board)
   fire_action(edit_link_action, "l1", r_board)
 
-  expect_identical(show_calls, list("add_link_action", "edit_link_action"))
+  expect_identical(wrote_from, list("add_link_action", "edit_link_action"))
 })
 
 test_that("edit link menu ui holds the endpoint / input slots and confirm", {

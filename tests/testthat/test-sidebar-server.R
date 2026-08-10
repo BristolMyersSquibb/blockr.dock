@@ -2,8 +2,10 @@
 # to the panel's input binding, the panel's own value echoed back in. Both
 # ends are stubbed here so the payload a show ships and the state a handler
 # reads can be asserted without a browser; the round trip itself is covered
-# end-to-end at the bottom of this file.
-fake_sidebar_session <- function(state = NULL) {
+# end-to-end at the bottom of this file. `ns` stands in for the writing
+# module, which is where the owner stamp is read from.
+fake_sidebar_session <- function(state = NULL,
+                                 ns = "my_board-edit_stack_action") {
 
   sent <- new.env(parent = emptyenv())
   sent$msgs <- list()
@@ -16,37 +18,25 @@ fake_sidebar_session <- function(state = NULL) {
     }
   )
 
-  list(rootScope = function() root, messages = function() sent$msgs)
+  list(
+    ns = NS(ns),
+    rootScope = function() root,
+    messages = function() sent$msgs
+  )
 }
 
-test_that("a show stamps the writing action as the panel's owner", {
+test_that("a show stamps the writing module as the panel's owner", {
   session <- fake_sidebar_session()
 
-  show_sidebar(
-    "panel",
-    title = "Edit stack s1",
-    owner = "edit_stack_action",
-    session = session
-  )
+  show_sidebar("panel", title = "Edit stack s1", session = session)
 
   msgs <- session$messages()
 
   expect_length(msgs, 1L)
   expect_identical(msgs[[1L]][["id"]], "panel")
-  expect_identical(msgs[[1L]][["message"]][["owner"]], "edit_stack_action")
-})
-
-test_that("a show without an owner clears the stamp", {
-  # Ownership rides on every show, so a writer that does not declare itself
-  # takes the previous owner off the panel rather than leaving it stale.
-  session <- fake_sidebar_session()
-
-  show_sidebar("panel", session = session)
-
-  msg <- session$messages()[[1L]][["message"]]
-
-  expect_true("owner" %in% names(msg))
-  expect_null(msg[["owner"]])
+  expect_identical(
+    msgs[[1L]][["message"]][["owner"]], "my_board-edit_stack_action"
+  )
 })
 
 test_that("a hide leaves the stamp alone", {
@@ -65,7 +55,9 @@ test_that("panel state reports the owner beside open and pinned", {
     list(open = FALSE, pinned = FALSE, owner = NULL)
   )
 
-  echoed <- list(open = TRUE, pinned = TRUE, owner = "add_link_action")
+  echoed <- list(
+    open = TRUE, pinned = TRUE, owner = "my_board-add_link_action"
+  )
 
   expect_identical(
     sidebar_state("panel", session = fake_sidebar_session(echoed)),
@@ -74,36 +66,33 @@ test_that("panel state reports the owner beside open and pinned", {
 })
 
 test_that("ownership requires an open panel and a matching stamp", {
+  # Asked from `my_board-edit_stack_action`, the fake session's module.
   owns <- function(...) {
-    owns_open_sidebar(
-      "panel", "edit_stack_action",
-      session = fake_sidebar_session(list(...))
-    )
+    owns_open_sidebar("panel", session = fake_sidebar_session(list(...)))
   }
 
-  expect_true(owns(open = TRUE, owner = "edit_stack_action"))
-  expect_false(owns(open = TRUE, owner = "add_link_action"))
-  expect_false(owns(open = FALSE, owner = "edit_stack_action"))
+  expect_true(owns(open = TRUE, owner = "my_board-edit_stack_action"))
+  expect_false(owns(open = TRUE, owner = "my_board-add_link_action"))
+  expect_false(owns(open = FALSE, owner = "my_board-edit_stack_action"))
   expect_false(owns(open = TRUE))
 })
 
 test_that("re-showing a pinned panel restamps its owner", {
   session <- fake_sidebar_session(
-    list(open = TRUE, pinned = TRUE, owner = "edit_stack_action")
+    list(open = TRUE, pinned = TRUE, owner = "my_board-edit_stack_action")
   )
 
   keep_or_hide_sidebar(
     "panel",
     ui = NULL,
     title = "Edit stack s1",
-    owner = "edit_stack_action",
     session = session
   )
 
   msg <- session$messages()[[1L]][["message"]]
 
   expect_identical(msg[["action"]], "show")
-  expect_identical(msg[["owner"]], "edit_stack_action")
+  expect_identical(msg[["owner"]], "my_board-edit_stack_action")
 })
 
 # The stamp is only useful if it survives the trip through the browser: R
@@ -143,17 +132,24 @@ test_that("a panel reports the action that wrote its body", {
   expect_null(app$get_value(input = panel)$owner)
   expect_true(is.na(stamped_owner()))
 
+  # The stamp is the writing module's namespaced id, which for a board action
+  # is `NS(<board id>, <action id>)` -- the composition a consumer matching
+  # its own entries against the owner has to make.
   app$click("my_board-ext_fire-add_link")
   app$wait_for_idle()
 
-  expect_identical(app$get_value(input = panel)$owner, "add_link_action")
-  expect_identical(stamped_owner(), "add_link_action")
+  expect_identical(
+    app$get_value(input = panel)$owner, "my_board-add_link_action"
+  )
+  expect_identical(stamped_owner(), "my_board-add_link_action")
 
   # A second surface fills the same panel. Nothing declared which panel it
   # writes, so a stale stamp here is what a consumer would re-fire into.
   app$click("my_board-ext_fire-edit_stack")
   app$wait_for_idle()
 
-  expect_identical(app$get_value(input = panel)$owner, "edit_stack_action")
-  expect_identical(stamped_owner(), "edit_stack_action")
+  expect_identical(
+    app$get_value(input = panel)$owner, "my_board-edit_stack_action"
+  )
+  expect_identical(stamped_owner(), "my_board-edit_stack_action")
 })

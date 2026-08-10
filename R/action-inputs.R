@@ -1,7 +1,4 @@
 edit_inputs_action <- function(trigger, board, update, ...) {
-
-  action <- "edit_inputs_action"
-
   new_action(
     function(input, output, session) {
 
@@ -24,9 +21,7 @@ edit_inputs_action <- function(trigger, board, update, ...) {
       sidebar_title <- function() paste0("Edit inputs ", trigger())
 
       observeEvent(trigger(), {
-        show_sidebar(
-          sidebar_id, title = sidebar_title(), ui = menu_ui(), owner = action
-        )
+        show_sidebar(sidebar_id, title = sidebar_title(), ui = menu_ui())
       })
 
       # Close the sidebar the moment the block leaves the board (removed
@@ -36,7 +31,7 @@ edit_inputs_action <- function(trigger, board, update, ...) {
         id <- trigger()
         if (length(id) == 1L && !is.na(id) && nzchar(id) &&
               !id %in% board_block_ids(board$board) &&
-              owns_open_sidebar(sidebar_id, action)) {
+              owns_open_sidebar(sidebar_id)) {
           hide_sidebar(sidebar_id)
         }
       }, ignoreInit = TRUE)
@@ -50,6 +45,6 @@ edit_inputs_action <- function(trigger, board, update, ...) {
 
       NULL
     },
-    id = action
+    id = "edit_inputs_action"
   )
 }

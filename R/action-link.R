@@ -1,7 +1,5 @@
 add_link_action <- function(trigger, board, update, ...) {
 
-  action <- "add_link_action"
-
   new_action(
     function(input, output, session) {
 
@@ -33,7 +31,7 @@ add_link_action <- function(trigger, board, update, ...) {
         # NULL-check / notification here anymore: a block that can't be
         # linked still opens the sidebar with an in-place empty message.
         show_sidebar(
-          sidebar_id, title = sidebar_title(), ui = menu_ui(), owner = action
+          sidebar_id, title = sidebar_title(), ui = menu_ui()
         )
       })
 
@@ -50,14 +48,11 @@ add_link_action <- function(trigger, board, update, ...) {
 
       NULL
     },
-    id = action
+    id = "add_link_action"
   )
 }
 
 edit_link_action <- function(trigger, board, update, ...) {
-
-  action <- "edit_link_action"
-
   new_action(
     function(input, output, session) {
 
@@ -82,7 +77,7 @@ edit_link_action <- function(trigger, board, update, ...) {
 
       observeEvent(trigger(), {
         show_sidebar(
-          sidebar_id, title = sidebar_title(), ui = menu_ui(), owner = action
+          sidebar_id, title = sidebar_title(), ui = menu_ui()
         )
       })
 
@@ -95,7 +90,7 @@ edit_link_action <- function(trigger, board, update, ...) {
         id <- trigger()
         if (length(id) == 1L && !is.na(id) && nzchar(id) &&
               !id %in% board_link_ids(board$board) &&
-              owns_open_sidebar(sidebar_id, action)) {
+              owns_open_sidebar(sidebar_id)) {
           hide_sidebar(sidebar_id)
         }
       }, ignoreInit = TRUE)
@@ -129,7 +124,7 @@ edit_link_action <- function(trigger, board, update, ...) {
 
       NULL
     },
-    id = action
+    id = "edit_link_action"
   )
 }
 

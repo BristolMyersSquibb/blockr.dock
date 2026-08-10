@@ -267,11 +267,15 @@ test_that("prepend block action: target_input picks the link slot", {
   )
 })
 
-test_that("block actions stamp themselves as the panel owner", {
-  show_calls <- list()
+test_that("block actions write the sidebar from their own module", {
+  # `show_sidebar()` reads the panel's owner off the session it is called
+  # with, so a write has to happen in the action's own reactive domain. A
+  # write deferred into a flush callback would run under the root session
+  # and stamp that instead, which this records.
+  wrote_from <- list()
   local_mocked_bindings(
-    show_sidebar = function(id, ..., owner = NULL) {
-      show_calls[[length(show_calls) + 1L]] <<- owner
+    show_sidebar = function(...) {
+      wrote_from[[length(wrote_from) + 1L]] <<- get_session()$ns(NULL)
       invisible(NULL)
     },
     keep_or_hide_sidebar = function(...) invisible(NULL),
@@ -288,7 +292,7 @@ test_that("block actions stamp themselves as the panel owner", {
   fire_action(prepend_block_action, "m", r_board)
 
   expect_identical(
-    show_calls,
+    wrote_from,
     list("add_block_action", "append_block_action", "prepend_block_action")
   )
 })

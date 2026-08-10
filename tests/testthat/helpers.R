@@ -53,12 +53,14 @@ board_args <- function(...) {
 # Run an action generator's server against a fixed trigger value, long enough
 # for its trigger-driven observers to fire once. For assertions on what an
 # action does on the way in (opening a sidebar, stamping its owner) rather
-# than on what it commits.
+# than on what it commits. Mounted under the action's own id, the way
+# `register_action()` mounts it, so the module namespace the sidebar owner is
+# read from matches production.
 fire_action <- function(gen, trigger, board) {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        action_id(gen),
         gen(
           trigger = reactive(trigger),
           board = board,

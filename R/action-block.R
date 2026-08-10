@@ -1,7 +1,4 @@
 add_block_action <- function(trigger, board, update, ...) {
-
-  action <- "add_block_action"
-
   new_action(
     function(input, output, session) {
       # The add browser's catalogue never varies, so its body is
@@ -16,7 +13,7 @@ add_block_action <- function(trigger, board, update, ...) {
 
       observeEvent(trigger(), {
         log_debug("opening pre-rendered add block sidebar")
-        show_sidebar(sidebar_id, title = "Add new block", owner = action)
+        show_sidebar(sidebar_id, title = "Add new block")
       })
 
       observeEvent(added(), {
@@ -27,20 +24,17 @@ add_block_action <- function(trigger, board, update, ...) {
         # Re-open without `ui` keeps the pre-rendered body in place (no
         # re-render) when the user pinned the panel; otherwise it hides.
         keep_or_hide_sidebar(
-          sidebar_id, ui = NULL, title = "Add new block", owner = action
+          sidebar_id, ui = NULL, title = "Add new block"
         )
       })
 
       NULL
     },
-    id = action
+    id = "add_block_action"
   )
 }
 
 append_block_action <- function(trigger, board, update, ...) {
-
-  action <- "append_block_action"
-
   new_action(
     function(input, output, session) {
       # The append catalogue (linkable blocks) is registry-based, not
@@ -59,7 +53,7 @@ append_block_action <- function(trigger, board, update, ...) {
       title <- function() paste0("Append from ", trigger())
 
       observeEvent(trigger(), {
-        show_sidebar(sidebar_id, title = title(), owner = action)
+        show_sidebar(sidebar_id, title = title())
       })
 
       observeEvent(added(), {
@@ -72,20 +66,17 @@ append_block_action <- function(trigger, board, update, ...) {
         ))
 
         keep_or_hide_sidebar(
-          sidebar_id, ui = NULL, title = title(), owner = action
+          sidebar_id, ui = NULL, title = title()
         )
       })
 
       NULL
     },
-    id = action
+    id = "append_block_action"
   )
 }
 
 prepend_block_action <- function(trigger, board, update, ...) {
-
-  action <- "prepend_block_action"
-
   new_action(
     function(input, output, session) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
@@ -104,8 +95,7 @@ prepend_block_action <- function(trigger, board, update, ...) {
 
       observeEvent(trigger(), {
         show_sidebar(
-          sidebar_id, title = "Prepend new block", ui = browser_ui(),
-          owner = action
+          sidebar_id, title = "Prepend new block", ui = browser_ui()
         )
       })
 
@@ -117,14 +107,13 @@ prepend_block_action <- function(trigger, board, update, ...) {
         ))
 
         keep_or_hide_sidebar(
-          sidebar_id, title = "Prepend new block", ui = browser_ui(),
-          owner = action
+          sidebar_id, title = "Prepend new block", ui = browser_ui()
         )
       })
 
       NULL
     },
-    id = action
+    id = "prepend_block_action"
   )
 }
 

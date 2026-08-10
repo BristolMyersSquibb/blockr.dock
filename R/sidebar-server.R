@@ -79,12 +79,11 @@ sidebar_dep <- function() {
   )
 }
 
-show_sidebar <- function(id, ui = NULL, title = NULL, owner = NULL,
+show_sidebar <- function(id, ui = NULL, title = NULL,
                          session = get_session()) {
   stopifnot(
     is.character(id), length(id) == 1L, nzchar(id),
-    is.null(title) || (is.character(title) && length(title) == 1L),
-    is.null(owner) || is_string(owner)
+    is.null(title) || (is.character(title) && length(title) == 1L)
   )
   root <- root_session(session)
 
@@ -107,12 +106,13 @@ show_sidebar <- function(id, ui = NULL, title = NULL, owner = NULL,
     payload$title <- title
   }
 
-  # Ownership rides along unconditionally (`[` assignment, so `NULL` stays
-  # in the payload and serializes as JSON null rather than dropping out):
-  # a show sets the panel's owner to whoever declared it and clears it
-  # otherwise. Undeclared writers therefore leave no stale stamp behind,
-  # which is the point of stamping here rather than at the trigger.
-  payload["owner"] <- list(owner)
+  # The panel's owner is whoever wrote the body: the module this call runs
+  # in, read off the calling session before the walk to the root. Every write
+  # therefore stamps by construction, with nothing declared at the call site
+  # and nothing to keep in step with the action's id. It does bind the stamp
+  # to where the call is written -- a write deferred into a flush callback
+  # would run under the root session and stamp that instead.
+  payload$owner <- session$ns(NULL)
 
   root$sendInputMessage(id, payload)
   invisible(NULL)
@@ -140,19 +140,20 @@ sidebar_state <- function(id, session = get_session()) {
   }
 }
 
-# Whether `owner` still holds an open panel. The auto-close handlers gate on
-# this so a handler whose target vanished closes its own form and not the one
-# another action has since written into the shared slot.
-owns_open_sidebar <- function(id, owner, session = get_session()) {
+# Whether the calling module still holds an open panel, asked the same way a
+# write stamps it. The auto-close handlers gate on this so a handler whose
+# target vanished closes its own form and not the one another action has
+# since written into the shared slot.
+owns_open_sidebar <- function(id, session = get_session()) {
   state <- sidebar_state(id, session = session)
 
-  isTRUE(state$open) && identical(state$owner, owner)
+  isTRUE(state$open) && identical(state$owner, session$ns(NULL))
 }
 
-keep_or_hide_sidebar <- function(id, ui, title = NULL, owner = NULL,
+keep_or_hide_sidebar <- function(id, ui, title = NULL,
                                  session = get_session()) {
   if (isTRUE(sidebar_state(id, session = session)$pinned)) {
-    show_sidebar(id, ui = ui, title = title, owner = owner, session = session)
+    show_sidebar(id, ui = ui, title = title, session = session)
   } else {
     hide_sidebar(id, session = session)
   }
