@@ -2,6 +2,16 @@
 
 ## blockr.dock (development version)
 
+- A `select` verb in a view’s `views$mod` update is now applied when
+  that view’s dock is built for the first time in the same update that
+  carries the select – for instance an update that activates a
+  never-opened view. Previously the panel-op observer took the select as
+  its `ignoreInit` value and dropped it, so the board switched to the
+  view but the requested tab was not brought to the front. The pending
+  select is now folded into the grid the fresh dock restores from, so
+  the tab is fronted on first paint
+  ([\#324](https://github.com/BristolMyersSquibb/blockr.dock/issues/324)).
+
 - New exports for downstream consumers that translate between bare block
   / extension ids and dock’s panel-id scheme: the class predicates
   [`is_dock_panel_id()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/ids.md),
