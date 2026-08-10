@@ -261,6 +261,36 @@ wait_dock_loaded <- function(app, n_blocks, board_id = "my_board") {
   )
 }
 
+# Wait until the view nav has settled to `n` entries. `board_ui` draws the nav
+# statically and the reconcile pass then adds, removes and re-sequences items,
+# so a read taken before that pass lands samples an intermediate nav. Gating on
+# the settled count states the precondition the nav assertions depend on, in
+# place of an idle wait: the app takes several seconds of back-to-back mount
+# round-trips to go quiescent, so it offers no early quiet window to gate on.
+# A permanent miscount never reaches the target, so the wait times out and
+# still catches it, with the nav dumped.
+wait_view_nav <- function(app, n, board_id = "my_board", timeout = 30 * 1000) {
+
+  sel <- sprintf("#%s-view_nav .blockr-view-item", board_id)
+
+  diagnose <- function() {
+    nav <- read_view_nav(app, board_id)
+    sprintf(
+      "[view-nav] want=%d got=%d ids=[%s] labels=[%s]",
+      n, nrow(nav),
+      paste(nav$id, collapse = ","),
+      paste(nav$label, collapse = ",")
+    )
+  }
+
+  wait_js(
+    app,
+    sprintf("document.querySelectorAll('%s').length === %d", sel, n),
+    diagnose,
+    timeout
+  )
+}
+
 # The dock-owned board state observable in server-rendered DOM: the view nav
 # (one row per view, including which is active), and every block's card id. The
 # serialization e2e captures this before and after a save / restore reload to
@@ -422,7 +452,11 @@ set_in <- function(app, id, value) {
   )
 }
 
-click <- function(app, id) app$click(nsid(id))
+# `wait = FALSE` for the same reason as set_in: a staging click drives an
+# `updateActionButton` message, not an output value, so a waiting click spends
+# its whole budget before reporting that nothing changed. Callers that pass it
+# gate on the staged effect themselves (wait_enabled / wait_gone).
+click <- function(app, id, wait = TRUE) app$click(nsid(id), wait_ = wait)
 
 # A DataTables redraw (e.g. after adding a row) re-renders the cell inputs,
 # which the table's `drawCallback` re-binds via `Shiny.bindAll` once the async
@@ -468,6 +502,60 @@ wait_bound <- function(app, id, timeout = 30 * 1000) {
   wait_js(
     app,
     "window.__blockrWaitBound && window.__blockrWaitBound.done === true",
+    diagnose,
+    timeout
+  )
+}
+
+# The extension gates its controls on staged state through
+# `updateActionButton(disabled = )`: `rm_link` / `rm_stack` follow the
+# DataTable's row selection, `apply_changes` follows whether anything is
+# staged. Clicking a disabled button is a silent no-op that leaves the test
+# asserting against an unchanged board, so a driver has to wait for the
+# enabling round-trip -- the precondition it actually depends on.
+wait_enabled <- function(app, id, timeout = 30 * 1000) {
+
+  target <- nsid(id)
+
+  probe <- sprintf(
+    paste0(
+      "(function(){var e=document.getElementById('%s');",
+      "return {present: e !== null, disabled: e ? e.disabled : null};})()"
+    ),
+    target
+  )
+
+  diagnose <- function() {
+    sprintf(
+      "[wait_enabled] id=%s state=%s",
+      target,
+      app$get_js(paste0("JSON.stringify(", probe, ")"))
+    )
+  }
+
+  wait_js(app, paste0(probe, ".disabled === false"), diagnose, timeout)
+}
+
+# The mirror of wait_bound: an applied removal drops the link / stack row from
+# the DataTable, taking its cell inputs out of the DOM. That travels board
+# update -> DT re-render -> rebind, several round-trips the app does not
+# quiesce between, so gate the assertion on the element leaving rather than on
+# an idle wait that samples a lull partway through.
+wait_gone <- function(app, id, timeout = 30 * 1000) {
+
+  target <- nsid(id)
+
+  diagnose <- function() {
+    sprintf(
+      "[wait_gone] id=%s tables=%s",
+      target,
+      app$get_js("document.querySelectorAll('table.dataTable').length")
+    )
+  }
+
+  wait_js(
+    app,
+    sprintf("document.getElementById('%s') === null", target),
     diagnose,
     timeout
   )
