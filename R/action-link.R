@@ -43,16 +43,7 @@ add_link_action <- function(trigger, board, update, ...) {
         # Close after a single link unless the user pinned the sidebar.
         # When pinned, the menu's own board observer drops the just-wired
         # card in place (no re-render) so the user can add another link.
-        session$onFlushed(
-          function() {
-            isolate(
-              if (!isTRUE(sidebar_state(sidebar_id)$pinned)) {
-                hide_sidebar(sidebar_id)
-              }
-            )
-          },
-          once = TRUE
-        )
+        hide_unless_pinned(sidebar_id)
       })
 
       NULL
@@ -124,16 +115,10 @@ edit_link_action <- function(trigger, board, update, ...) {
           update(list(links = list(mod = set_names(list(delta), id))))
         }
 
-        session$onFlushed(
-          function() {
-            isolate(
-              keep_or_hide_sidebar(
-                sidebar_id, title = sidebar_title(), ui = menu_ui()
-              )
-            )
-          },
-          once = TRUE
-        )
+        # The endpoint pickers and the input-slot control are `uiOutput`s on
+        # the board, so a pinned panel re-renders itself against the merged
+        # state - nothing here has to rebuild it.
+        hide_unless_pinned(sidebar_id)
       })
 
       NULL

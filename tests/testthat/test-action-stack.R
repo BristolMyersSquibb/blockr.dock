@@ -21,6 +21,23 @@ set_menu <- function(session, blocks, name, color, id, nonce) {
   )
 }
 
+# The form is server-rendered into the menu's `form` slot, so its current
+# state is read off that output rather than off the panel markup.
+form_field <- function(html, key) {
+  doc <- xml2::read_html(as.character(html))
+  node <- xml2::xml_find_first(
+    doc, paste0("//input[contains(@id, 'menu-", key, "')]")
+  )
+  xml2::xml_attr(node, "value")
+}
+
+board_with_stack <- function(board, id, blocks) {
+  new_dock_board(
+    board_blocks(board),
+    stacks = do.call(stacks, set_names(list(blocks), id))
+  )
+}
+
 test_that("add stack action: valid commit creates one stack", {
   local_mocked_sidebar()
   r_board <- reactiveValues(
@@ -300,6 +317,272 @@ test_that("edit stack action: invalid colour / block id short-circuit", {
       expect_length(r_update(), 0L)
     }
   )
+})
+
+test_that("add stack action: a commit re-seeds the id the board just took", {
+  # A pinned panel stays open across creates, so the form has to move off
+  # the id it just used - otherwise the next commit is rejected as a
+  # duplicate. The seed comes from the merged board, which the form reads
+  # by being bound to it rather than rebuilt after the commit.
+  local_mocked_sidebar()
+  r_board <- reactiveValues(
+    board = new_dock_board(
+      c(a = new_dataset_block("iris"), b = new_head_block())
+    ),
+    board_id = "b"
+  )
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_stack_action(
+          trigger = reactive(TRUE),
+          board = r_board,
+          update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      seeded <- form_field(output$`menu-form`$html, "stack_id")
+      seeded_name <- form_field(output$`menu-form`$html, "stack_name")
+      expect_true(nzchar(seeded))
+
+      set_menu(
+        session,
+        blocks = "a", name = seeded_name, color = "#ff0000", id = seeded,
+        nonce = 1L
+      )
+      expect_named(r_update()$stacks$add, seeded)
+
+      r_board$board <- board_with_stack(r_board$board, seeded, "a")
+      session$flushReact()
+
+      # The whole form re-seeds for the next stack: `rand_names()` excludes
+      # what the board already carries, so neither value can repeat.
+      expect_false(
+        form_field(output$`menu-form`$html, "stack_id") %in%
+          board_stack_ids(r_board$board)
+      )
+      expect_false(
+        identical(
+          form_field(output$`menu-form`$html, "stack_name"), seeded_name
+        )
+      )
+    }
+  )
+})
+
+test_that("add stack action: a foreign board change keeps the entered form", {
+  # Create-mode fields are the user's, not the board's: an unrelated board
+  # change must not swap a typed id / name for another random suggestion,
+  # nor a picked colour for the default.
+  local_mocked_sidebar()
+  r_board <- reactiveValues(
+    board = new_dock_board(c(a = new_dataset_block("iris"))),
+    board_id = "b"
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        add_stack_action(
+          trigger = reactive(TRUE),
+          board = r_board,
+          update = reactiveVal(list())
+        )
+      )
+    },
+    {
+      session$flushReact()
+      session$setInputs(
+        `menu-stack_id` = "mine",
+        `menu-stack_name` = "My stack",
+        `menu-stack_color` = "#3366cc"
+      )
+
+      # Another action adds a block; the suggested id is still free, so
+      # nothing was created from this form.
+      r_board$board <- new_dock_board(
+        c(a = new_dataset_block("iris"), b = new_head_block())
+      )
+      session$flushReact()
+
+      expect_identical(form_field(output$`menu-form`$html, "stack_id"), "mine")
+      expect_identical(
+        form_field(output$`menu-form`$html, "stack_name"), "My stack"
+      )
+      expect_identical(
+        form_field(output$`menu-form`$html, "stack_color"), "#3366cc"
+      )
+    }
+  )
+})
+
+test_that("edit stack action: the form follows the edited stack", {
+  # In edit mode the fields show board state, so a rename landing from
+  # anywhere refreshes them in place - no id field, since the id is fixed.
+  local_mocked_sidebar()
+  r_board <- reactiveValues(
+    board = new_dock_board(
+      c(a = new_dataset_block("iris")),
+      stacks = stacks(
+        s1 = new_dock_stack("a", name = "First", color = "#ff0000")
+      )
+    ),
+    board_id = "b"
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_stack_action(
+          trigger = reactive("s1"),
+          board = r_board,
+          update = reactiveVal(list())
+        )
+      )
+    },
+    {
+      session$flushReact()
+      expect_identical(
+        form_field(output$`menu-form`$html, "stack_name"), "First"
+      )
+      expect_identical(
+        form_field(output$`menu-form`$html, "stack_color"), "#ff0000"
+      )
+      expect_true(is.na(form_field(output$`menu-form`$html, "stack_id")))
+
+      r_board$board <- new_dock_board(
+        board_blocks(r_board$board),
+        stacks = stacks(
+          s1 = new_dock_stack("a", name = "Renamed", color = "#00ff00")
+        )
+      )
+      session$flushReact()
+
+      expect_identical(
+        form_field(output$`menu-form`$html, "stack_name"), "Renamed"
+      )
+      expect_identical(
+        form_field(output$`menu-form`$html, "stack_color"), "#00ff00"
+      )
+    }
+  )
+})
+
+test_that("add stack action: a commit closes an unpinned panel only", {
+  # The panel body is never re-pushed after a commit - the menu tracks the
+  # board itself - so all the action does is close an unpinned panel.
+  calls <- function(pinned) {
+    seen <- list(show = 0L, hide = 0L)
+    local_mocked_bindings(
+      show_sidebar = function(...) seen$show <<- seen$show + 1L,
+      hide_sidebar = function(...) seen$hide <<- seen$hide + 1L,
+      keep_or_hide_sidebar = function(...) {
+        stop("the panel must not be rebuilt after a commit")
+      },
+      sidebar_state = function(id, ...) list(open = TRUE, pinned = pinned)
+    )
+
+    r_board <- reactiveValues(
+      board = new_dock_board(c(a = new_dataset_block("iris"))),
+      board_id = "b"
+    )
+
+    testServer(
+      function(id, ...) {
+        moduleServer(
+          id,
+          add_stack_action(
+            trigger = reactive(TRUE),
+            board = r_board,
+            update = reactiveVal(list())
+          )
+        )
+      },
+      {
+        session$flushReact()
+        set_menu(
+          session,
+          blocks = "a", name = "N", color = "#ffffff", id = "s1", nonce = 1L
+        )
+      }
+    )
+
+    seen
+  }
+
+  expect_identical(calls(pinned = FALSE), list(show = 1L, hide = 1L))
+  expect_identical(calls(pinned = TRUE), list(show = 1L, hide = 0L))
+})
+
+test_that("stack menu ui defers the form to a server-rendered slot", {
+  board <- new_dock_board(c(a = new_dataset_block("iris")))
+  doc <- xml2::read_html(as.character(stack_menu_ui("mid", board)))
+
+  slot <- xml2::xml_find_first(
+    doc,
+    paste0(
+      "//*[contains(concat(' ', normalize-space(@class), ' '),",
+      " ' blockr-stack-menu-form-slot ')]"
+    )
+  )
+  expect_identical(xml2::xml_attr(slot, "id"), "mid-form")
+  # No field is snapshotted into the panel markup, so nothing can go stale.
+  expect_length(xml2::xml_find_all(doc, "//input[@id='mid-stack_id']"), 0L)
+  expect_length(xml2::xml_find_all(doc, "//input[@id='mid-stack_name']"), 0L)
+})
+
+test_that("stack menu seeds the colour picker positions server-side", {
+  # The form is re-rendered on every board change, so the swatch and the
+  # two slider positions ship with the markup rather than being computed
+  # by a client-side init pass that would have to re-run each time.
+  doc <- xml2::read_html(
+    as.character(color_field_tag(NS("mid"), "#66c2a5"))
+  )
+  by_class <- function(tok) {
+    sprintf(
+      "//*[contains(concat(' ', normalize-space(@class), ' '), ' %s ')]", tok
+    )
+  }
+
+  expect_match(
+    xml2::xml_attr(
+      xml2::xml_find_first(doc, by_class("blockr-stack-menu-color-swatch")),
+      "style"
+    ),
+    "#66c2a5"
+  )
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(doc, by_class("blockr-stack-menu-hue")), "value"
+    ),
+    "161"
+  )
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(doc, by_class("blockr-stack-menu-lightness")),
+      "value"
+    ),
+    "58"
+  )
+})
+
+test_that("hex_to_hsl mirrors the picker's hue / lightness model", {
+  expect_identical(hex_to_hsl("#ff0000"), list(hue = 0, lightness = 50))
+  expect_identical(hex_to_hsl("#00ff00"), list(hue = 120, lightness = 50))
+  expect_identical(hex_to_hsl("#0000ff"), list(hue = 240, lightness = 50))
+  expect_identical(hex_to_hsl("#ffffff"), list(hue = 0, lightness = 100))
+
+  # Shorthand expands; an unusable value falls back to the seed colour.
+  expect_identical(hex_to_hsl("#abc"), hex_to_hsl("#aabbcc"))
+  expect_identical(hex_to_hsl("nope"), hex_to_hsl(default_stack_color()))
+  expect_identical(hex_to_hsl(NULL), hex_to_hsl(default_stack_color()))
 })
 
 test_that("remove stack action", {

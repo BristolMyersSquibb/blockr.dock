@@ -94,10 +94,15 @@
   // Inline colour picker: hue + lightness sliders + hex text input.
   // The hex `<input>` is the canonical value carrier (a normal Shiny
   // text input). Slider input recomputes HSL -> hex and writes the hex
-  // field, dispatching a native "input" event so Shiny's built-in
+  // field, dispatching a native "change" event so Shiny's built-in
   // text-input binding picks the change up - we never call
   // Shiny.setInputValue ourselves. Typing in the hex field goes the
   // other way: hex -> HSL -> slider positions + preview swatch.
+  //
+  // Both directions are delegated on the panel root, which outlives the
+  // form: the form is server-rendered into a `uiOutput` so it tracks the
+  // board, and per-element listeners would die with each render. Slider
+  // positions and the swatch arrive seeded from R for the same reason.
 
   function clamp(v, lo, hi) {
     return Math.max(lo, Math.min(hi, v));
@@ -161,39 +166,47 @@
     }
   }
 
-  function initColorPicker(root) {
+  function colorFields(root) {
     var hex = root.querySelector(".blockr-stack-menu-hex");
     var hue = root.querySelector(".blockr-stack-menu-hue");
     var lit = root.querySelector(".blockr-stack-menu-lightness");
-    if (!hex || !hue || !lit) return;
+    return hex && hue && lit ? { hex: hex, hue: hue, lit: lit } : null;
+  }
 
-    // Seed slider positions from the initial hex value (so an edit
-    // flow with a pre-filled colour shows the correct slider state).
-    var initial = hexToHsl(hex.value || "");
-    if (initial) {
-      hue.value = String(initial.h);
-      lit.value = String(initial.l);
+  function writeHexFromSliders(root) {
+    var f = colorFields(root);
+    if (!f) return;
+    f.hex.value = hslToHex(
+      parseInt(f.hue.value, 10), parseInt(f.lit.value, 10)
+    );
+    // "change" only: Shiny's text binding sends it immediately, and the
+    // delegated listener below watches "input", so writing the hex here
+    // cannot bounce back and fight the slider the user is dragging.
+    f.hex.dispatchEvent(new Event("change", { bubbles: true }));
+    updatePreview(root);
+  }
+
+  function moveSlidersToHex(root) {
+    var f = colorFields(root);
+    if (!f) return;
+    var parsed = hexToHsl((f.hex.value || "").trim());
+    if (parsed) {
+      f.hue.value = String(parsed.h);
+      f.lit.value = String(parsed.l);
     }
     updatePreview(root);
+  }
 
-    var onSlider = function () {
-      var h = parseInt(hue.value, 10);
-      var l = parseInt(lit.value, 10);
-      hex.value = hslToHex(h, l);
-      hex.dispatchEvent(new Event("input", { bubbles: true }));
-      hex.dispatchEvent(new Event("change", { bubbles: true }));
-      updatePreview(root);
-    };
-    hue.addEventListener("input", onSlider);
-    lit.addEventListener("input", onSlider);
-
-    hex.addEventListener("input", function () {
-      var parsed = hexToHsl((hex.value || "").trim());
-      if (parsed) {
-        hue.value = String(parsed.h);
-        lit.value = String(parsed.l);
+  function initColorPicker(root) {
+    root.addEventListener("input", function (event) {
+      var el = event.target;
+      if (!el || !el.classList) return;
+      if (el.classList.contains("blockr-stack-menu-hue") ||
+          el.classList.contains("blockr-stack-menu-lightness")) {
+        writeHexFromSliders(root);
+      } else if (el.classList.contains("blockr-stack-menu-hex")) {
+        moveSlidersToHex(root);
       }
-      updatePreview(root);
     });
   }
 

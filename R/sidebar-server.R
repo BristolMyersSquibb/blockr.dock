@@ -140,6 +140,16 @@ keep_or_hide_sidebar <- function(id, ui, title = NULL,
   }
 }
 
+# Post-commit close for a panel whose menu tracks the board on its own: an
+# unpinned panel closes after the commit, a pinned one is left alone so the
+# menu refreshes itself in place.
+hide_unless_pinned <- function(id, session = getDefaultReactiveDomain()) {
+  if (!isTRUE(sidebar_state(id, session = session)$pinned)) {
+    hide_sidebar(id, session = session)
+  }
+  invisible(NULL)
+}
+
 # Inline SVG pushpin (Bootstrap-icons "pin"). Swapped in for an earlier
 # `▣` ("WHITE SQUARE WITH ROUNDED CORNERS") that no font rendered as
 # a recognisable pin. SVG keeps the icon legible across platforms with
