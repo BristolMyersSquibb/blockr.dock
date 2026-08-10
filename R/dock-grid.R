@@ -362,6 +362,40 @@ append_default_leaves <- function(grid, pids) {
   )
 }
 
+# Front `pid`'s tab in the grid: set the `active` of the leaf that holds it and
+# focus its group, so a restore opens on that tab. A no-op when `pid` is not
+# placed -- a pending select may name a panel the view does not carry.
+set_grid_active <- function(grid, pid) {
+
+  pid <- as.character(pid)
+
+  if (!pid %in% grid_panel_ids(grid)) {
+    return(grid)
+  }
+
+  front <- function(node) {
+
+    if (is_grid_leaf(node)) {
+
+      if (pid %in% node[["panels"]]) {
+        node[["active"]] <- pid
+      }
+
+      return(node)
+    }
+
+    node[["children"]] <- lapply(node[["children"]], front)
+    node
+  }
+
+  new_dock_grid(
+    children = lapply(grid[["children"]], front),
+    sizes = grid[["sizes"]],
+    orientation = grid[["orientation"]],
+    focus = pid
+  )
+}
+
 new_dock_grids <- function(x = list()) {
   structure(x, class = "dock_grids")
 }
