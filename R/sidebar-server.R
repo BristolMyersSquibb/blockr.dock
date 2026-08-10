@@ -80,7 +80,7 @@ sidebar_dep <- function() {
 }
 
 show_sidebar <- function(id, ui = NULL, title = NULL,
-                         session = getDefaultReactiveDomain()) {
+                         session = get_session()) {
   stopifnot(
     is.character(id), length(id) == 1L, nzchar(id),
     is.null(title) || (is.character(title) && length(title) == 1L)
@@ -109,7 +109,7 @@ show_sidebar <- function(id, ui = NULL, title = NULL,
   invisible(NULL)
 }
 
-hide_sidebar <- function(id, session = getDefaultReactiveDomain()) {
+hide_sidebar <- function(id, session = get_session()) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
   root <- root_session(session)
 
@@ -117,7 +117,7 @@ hide_sidebar <- function(id, session = getDefaultReactiveDomain()) {
   invisible(NULL)
 }
 
-sidebar_state <- function(id, session = getDefaultReactiveDomain()) {
+sidebar_state <- function(id, session = get_session()) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
   root <- root_session(session)
 
@@ -132,7 +132,7 @@ sidebar_state <- function(id, session = getDefaultReactiveDomain()) {
 }
 
 keep_or_hide_sidebar <- function(id, ui, title = NULL,
-                                 session = getDefaultReactiveDomain()) {
+                                 session = get_session()) {
   if (isTRUE(sidebar_state(id, session = session)$pinned)) {
     show_sidebar(id, ui = ui, title = title, session = session)
   } else {
@@ -143,7 +143,7 @@ keep_or_hide_sidebar <- function(id, ui, title = NULL,
 # Post-commit close for a panel whose menu tracks the board on its own: an
 # unpinned panel closes after the commit, a pinned one is left alone so the
 # menu refreshes itself in place.
-hide_unless_pinned <- function(id, session = getDefaultReactiveDomain()) {
+hide_unless_pinned <- function(id, session = get_session()) {
   if (!isTRUE(sidebar_state(id, session = session)$pinned)) {
     hide_sidebar(id, session = session)
   }
