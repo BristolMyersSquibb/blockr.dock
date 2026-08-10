@@ -179,8 +179,21 @@ show_cards <- function(visibility, built, on_screen) {
 # paint core's render gate (is_visible = isTRUE) waits for.
 mark_cards_rendered <- function(visibility, on_screen) {
   for (id in on_screen) {
-    if (!isTRUE(isolate(visibility$visible[[id]]()))) {
-      visibility$visible[[id]](TRUE)
+
+    # `on_screen` is the CLIENT's list and the registry is the server's, so
+    # they disagree for one tick after a block is removed: the echo still
+    # names a panel whose entry has already gone, and `NULL()` is an
+    # "attempt to apply non-function" that takes the session down. Removing
+    # several visible blocks at once -- cutting a whole stack -- hits it
+    # reliably, a single removal only sometimes.
+    vis <- visibility$visible[[id]]
+
+    if (is.null(vis)) {
+      next
+    }
+
+    if (!isTRUE(isolate(vis()))) {
+      vis(TRUE)
     }
   }
 }
