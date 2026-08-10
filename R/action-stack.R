@@ -1,4 +1,7 @@
 add_stack_action <- function(trigger, board, update, ...) {
+
+  action <- "add_stack_action"
+
   new_action(
     function(input, output, session) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
@@ -16,7 +19,8 @@ add_stack_action <- function(trigger, board, update, ...) {
 
       observeEvent(trigger(), {
         show_sidebar(
-          sidebar_id, title = "Create new stack", ui = menu_ui()
+          sidebar_id, title = "Create new stack", ui = menu_ui(),
+          owner = action
         )
       })
 
@@ -33,11 +37,14 @@ add_stack_action <- function(trigger, board, update, ...) {
 
       NULL
     },
-    id = "add_stack_action"
+    id = action
   )
 }
 
 edit_stack_action <- function(trigger, board, update, ...) {
+
+  action <- "edit_stack_action"
+
   new_action(
     function(input, output, session) {
       sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
@@ -60,17 +67,16 @@ edit_stack_action <- function(trigger, board, update, ...) {
 
       observeEvent(trigger(), {
         show_sidebar(
-          sidebar_id, title = sidebar_title(), ui = menu_ui()
+          sidebar_id, title = sidebar_title(), ui = menu_ui(), owner = action
         )
       })
 
       # Close the sidebar the moment the edited stack leaves the board
       # (removed elsewhere): editing a stack that no longer exists makes
-      # no sense, so don't wait for an "Update" click. Guarded on the
-      # sidebar being open. (If another action had since taken over the
-      # shared slot this could close that form too - a rare
-      # edit-then-switch-then-remove sequence; revisit with sidebar
-      # ownership if it ever bites.)
+      # no sense, so don't wait for an "Update" click. Guarded on this
+      # action still owning the open panel, so an edit-then-switch-then-
+      # remove sequence closes nothing another action has since written
+      # into the shared slot.
       observeEvent(board$board, {
         id <- trigger()
         # No-op unless an edit is actually in progress (a valid stack id);
@@ -78,7 +84,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
         # mutates the board) and the membership test would error.
         if (length(id) == 1L && !is.na(id) && nzchar(id) &&
               !id %in% board_stack_ids(board$board) &&
-              isTRUE(sidebar_state(sidebar_id)$open)) {
+              owns_open_sidebar(sidebar_id, action)) {
           hide_sidebar(sidebar_id)
         }
       }, ignoreInit = TRUE)
@@ -123,7 +129,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
 
       NULL
     },
-    id = "edit_stack_action"
+    id = action
   )
 }
 

@@ -1,5 +1,18 @@
 # blockr.dock (development version)
 
+* A sidebar panel now reports which action wrote the body it is showing.
+  Every `show_sidebar()` stamps the writing action's id on the panel, so
+  the stamp follows the write rather than the gesture: it covers paths no
+  consumer can observe, such as a holder of the trigger bundle firing a
+  shared-panel action directly. The stamp comes back as `owner` beside
+  `open` and `pinned` in the panel's input value, letting a consumer that
+  re-fires an editor on a selection tell whether the content it put there
+  is still on screen. Filling a panel takes it over, so nothing has to
+  declare which panel it writes to release it. dock's own auto-close
+  handlers (edit stack / link / inputs, which close when their target
+  leaves the board) now gate on this, and no longer close a form another
+  action has since written into the shared panel (#391).
+
 * A pinned stack / link sidebar now refreshes in place after a commit
   rather than being torn down and rebuilt, so search text, scroll
   position and anything the user entered that the commit did not consume

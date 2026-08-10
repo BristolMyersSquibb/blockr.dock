@@ -79,11 +79,12 @@ sidebar_dep <- function() {
   )
 }
 
-show_sidebar <- function(id, ui = NULL, title = NULL,
+show_sidebar <- function(id, ui = NULL, title = NULL, owner = NULL,
                          session = get_session()) {
   stopifnot(
     is.character(id), length(id) == 1L, nzchar(id),
-    is.null(title) || (is.character(title) && length(title) == 1L)
+    is.null(title) || (is.character(title) && length(title) == 1L),
+    is.null(owner) || is_string(owner)
   )
   root <- root_session(session)
 
@@ -105,6 +106,14 @@ show_sidebar <- function(id, ui = NULL, title = NULL,
   if (!is.null(title)) {
     payload$title <- title
   }
+
+  # Ownership rides along unconditionally (`[` assignment, so `NULL` stays
+  # in the payload and serializes as JSON null rather than dropping out):
+  # a show sets the panel's owner to whoever declared it and clears it
+  # otherwise. Undeclared writers therefore leave no stale stamp behind,
+  # which is the point of stamping here rather than at the trigger.
+  payload["owner"] <- list(owner)
+
   root$sendInputMessage(id, payload)
   invisible(NULL)
 }
@@ -125,16 +134,25 @@ sidebar_state <- function(id, session = get_session()) {
   # want the current value without creating a reactive dependency on it.
   state <- isolate(root$input[[id]])
   if (is.null(state)) {
-    list(open = FALSE, pinned = FALSE)
+    list(open = FALSE, pinned = FALSE, owner = NULL)
   } else {
     state
   }
 }
 
-keep_or_hide_sidebar <- function(id, ui, title = NULL,
+# Whether `owner` still holds an open panel. The auto-close handlers gate on
+# this so a handler whose target vanished closes its own form and not the one
+# another action has since written into the shared slot.
+owns_open_sidebar <- function(id, owner, session = get_session()) {
+  state <- sidebar_state(id, session = session)
+
+  isTRUE(state$open) && identical(state$owner, owner)
+}
+
+keep_or_hide_sidebar <- function(id, ui, title = NULL, owner = NULL,
                                  session = get_session()) {
   if (isTRUE(sidebar_state(id, session = session)$pinned)) {
-    show_sidebar(id, ui = ui, title = title, session = session)
+    show_sidebar(id, ui = ui, title = title, owner = owner, session = session)
   } else {
     hide_sidebar(id, session = session)
   }

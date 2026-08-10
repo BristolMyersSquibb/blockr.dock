@@ -757,7 +757,10 @@ test_that("edit link action: removing the edited link closes the sidebar", {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
     },
-    sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE)
+    # The auto-close is gated on this action owning the open panel.
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "edit_link_action")
+    }
   )
 
   r_board <- edit_link_env(links(l1 = new_link("a", "h", "data")))
@@ -784,6 +787,63 @@ test_that("edit link action: removing the edited link closes the sidebar", {
       expect_identical(hide_calls[[1L]], "b-actions_sidebar")
     }
   )
+})
+
+test_that("edit link action: a form written by another action stays open", {
+  hide_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(id, ...) {
+      hide_calls[[length(hide_calls) + 1L]] <<- id
+      invisible(NULL)
+    },
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "edit_stack_action")
+    }
+  )
+
+  r_board <- edit_link_env(links(l1 = new_link("a", "h", "data")))
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_link_action(
+          trigger = reactive("l1"),
+          board = r_board,
+          update = reactiveVal(list())
+        )
+      )
+    },
+    {
+      session$flushReact()
+
+      r_board$board <- new_board(board_blocks(r_board$board))
+      session$flushReact()
+
+      expect_length(hide_calls, 0L)
+    }
+  )
+})
+
+test_that("link actions stamp themselves as the panel owner", {
+  show_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(id, ..., owner = NULL) {
+      show_calls[[length(show_calls) + 1L]] <<- owner
+      invisible(NULL)
+    },
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(...) invisible(NULL)
+  )
+
+  r_board <- edit_link_env(links(l1 = new_link("a", "h", "data")))
+
+  fire_action(add_link_action, "a", r_board)
+  fire_action(edit_link_action, "l1", r_board)
+
+  expect_identical(show_calls, list("add_link_action", "edit_link_action"))
 })
 
 test_that("edit link menu ui holds the endpoint / input slots and confirm", {

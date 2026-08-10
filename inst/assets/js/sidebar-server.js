@@ -12,6 +12,11 @@
 
   var STATE_EVENT = "blockr-sidebar:state";
   var INIT_FLAG = "blockrSidebarInit";
+  // Who wrote the body currently in the panel, stamped by
+  // `show_sidebar(owner = )` and reported back in the input value. Kept as
+  // an attribute rather than a JS property so it survives in the DOM and is
+  // readable by anything inspecting the panel.
+  var OWNER_ATTR = "data-blockr-sidebar-owner";
 
   function getBody(panel) {
     return panel.querySelector(".blockr-sidebar-body");
@@ -230,6 +235,17 @@
       }
     }
 
+    // Owner is stamped before opening so the state event that `openPanel`
+    // dispatches already carries it. A `null` owner clears the stamp: the
+    // writer did not declare itself, so the previous one no longer holds.
+    if (typeof data.owner !== "undefined") {
+      if (data.owner === null) {
+        panel.removeAttribute(OWNER_ATTR);
+      } else {
+        panel.setAttribute(OWNER_ATTR, String(data.owner));
+      }
+    }
+
     openPanel(panel);
   }
 
@@ -329,7 +345,8 @@
     getValue: function (el) {
       return {
         open: el.classList.contains("blockr-sidebar-open"),
-        pinned: el.classList.contains("blockr-sidebar-pinned")
+        pinned: el.classList.contains("blockr-sidebar-pinned"),
+        owner: el.getAttribute(OWNER_ATTR)
       };
     },
     receiveMessage: function (el, data) {

@@ -193,7 +193,9 @@ test_that("edit stack action: board change with no active edit is inert", {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
     },
-    sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE)
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "edit_stack_action")
+    }
   )
 
   r_board <- reactiveValues(
@@ -237,8 +239,10 @@ test_that("edit stack action: removing the edited stack closes the sidebar", {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
     },
-    # The auto-close is gated on the sidebar being open.
-    sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE)
+    # The auto-close is gated on this action owning the open panel.
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "edit_stack_action")
+    }
   )
 
   r_board <- reactiveValues(
@@ -273,6 +277,78 @@ test_that("edit stack action: removing the edited stack closes the sidebar", {
       expect_identical(hide_calls[[1L]], "b-actions_sidebar")
     }
   )
+})
+
+test_that("edit stack action: a form written by another action stays open", {
+  # Same removal, but the shared panel has since been filled by another
+  # action: closing it here would take down a form this handler no longer
+  # has anything in.
+  hide_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(id, ...) {
+      hide_calls[[length(hide_calls) + 1L]] <<- id
+      invisible(NULL)
+    },
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "add_link_action")
+    }
+  )
+
+  r_board <- reactiveValues(
+    board = new_dock_board(
+      c(a = new_dataset_block("iris"), b = new_head_block()),
+      stacks = stacks(s1 = "a")
+    ),
+    board_id = "b"
+  )
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_stack_action(
+          trigger = reactive("s1"),
+          board = r_board,
+          update = reactiveVal(list())
+        )
+      )
+    },
+    {
+      session$flushReact()
+
+      r_board$board <- new_dock_board(board_blocks(r_board$board))
+      session$flushReact()
+
+      expect_length(hide_calls, 0L)
+    }
+  )
+})
+
+test_that("stack actions stamp themselves as the panel owner", {
+  show_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(id, ..., owner = NULL) {
+      show_calls[[length(show_calls) + 1L]] <<- owner
+      invisible(NULL)
+    },
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(...) invisible(NULL)
+  )
+
+  r_board <- reactiveValues(
+    board = new_dock_board(
+      c(a = new_dataset_block("iris")),
+      stacks = stacks(s1 = "a")
+    ),
+    board_id = "b"
+  )
+
+  fire_action(add_stack_action, TRUE, r_board)
+  fire_action(edit_stack_action, "s1", r_board)
+
+  expect_identical(show_calls, list("add_stack_action", "edit_stack_action"))
 })
 
 test_that("edit stack action: invalid colour / block id short-circuit", {

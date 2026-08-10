@@ -295,7 +295,10 @@ test_that("edit inputs action: removing the block closes the sidebar", {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
     },
-    sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE)
+    # The auto-close is gated on this action owning the open panel.
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "edit_inputs_action")
+    }
   )
 
   r_board <- inputs_board(variadic_links())
@@ -322,6 +325,60 @@ test_that("edit inputs action: removing the block closes the sidebar", {
       expect_identical(hide_calls[[1L]], "b-actions_sidebar")
     }
   )
+})
+
+test_that("edit inputs action: a form written by another action stays open", {
+  hide_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(id, ...) {
+      hide_calls[[length(hide_calls) + 1L]] <<- id
+      invisible(NULL)
+    },
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "edit_stack_action")
+    }
+  )
+
+  r_board <- inputs_board(variadic_links())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        edit_inputs_action(
+          trigger = reactive("r"),
+          board = r_board,
+          update = reactiveVal(list())
+        )
+      )
+    },
+    {
+      session$flushReact()
+
+      r_board$board <- new_board(board_blocks(r_board$board)["a"])
+      session$flushReact()
+
+      expect_length(hide_calls, 0L)
+    }
+  )
+})
+
+test_that("edit inputs action stamps itself as the panel owner", {
+  show_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(id, ..., owner = NULL) {
+      show_calls[[length(show_calls) + 1L]] <<- owner
+      invisible(NULL)
+    },
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(...) invisible(NULL)
+  )
+
+  fire_action(edit_inputs_action, "r", inputs_board(variadic_links()))
+
+  expect_identical(show_calls, list("edit_inputs_action"))
 })
 
 test_that("edit inputs menu server renders the row list", {

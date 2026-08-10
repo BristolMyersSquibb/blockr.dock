@@ -267,6 +267,32 @@ test_that("prepend block action: target_input picks the link slot", {
   )
 })
 
+test_that("block actions stamp themselves as the panel owner", {
+  show_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(id, ..., owner = NULL) {
+      show_calls[[length(show_calls) + 1L]] <<- owner
+      invisible(NULL)
+    },
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL)
+  )
+
+  r_board <- reactiveValues(
+    board = new_board(c(a = new_dataset_block("iris"), m = new_merge_block())),
+    board_id = "b"
+  )
+
+  fire_action(add_block_action, TRUE, r_board)
+  fire_action(append_block_action, "a", r_board)
+  fire_action(prepend_block_action, "m", r_board)
+
+  expect_identical(
+    show_calls,
+    list("add_block_action", "append_block_action", "prepend_block_action")
+  )
+})
+
 test_that("append block action: a name field names the variadic slot", {
   r_board <- reactiveValues(
     board = new_board(blocks = c(a = new_dataset_block())),
