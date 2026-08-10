@@ -1,5 +1,14 @@
 # blockr.dock (development version)
 
+* A pinned stack / link sidebar now refreshes in place after a commit
+  rather than being torn down and rebuilt, so search text, scroll
+  position and anything the user entered that the commit did not consume
+  survive it. The stack menu's name / colour / id form is server-rendered
+  against the board to make that possible -- it still offers a fresh
+  stack id after each create -- and with nothing left to rebuild, none of
+  the four post-commit paths defers its close to `session$onFlushed()`
+  (#393).
+
 * A `select` verb in a view's `views$mod` update is now applied when
   that view's dock is built for the first time in the same update that
   carries the select -- for instance an update that activates a

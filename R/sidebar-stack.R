@@ -46,6 +46,35 @@ stack_menu_server <- function(id, board, target = NULL) {
         ignoreInit = TRUE
       )
 
+      # The name / colour / id form is bound to the board rather than
+      # snapshotted when the panel opens, so a commit refreshes it in place:
+      # edit mode re-reads the stack's committed values, create mode suggests
+      # an id the board has not taken.
+      output$form <- renderUI({
+        brd <- board()
+        tgt <- target_fn()
+        req(is.null(tgt) || (is_string(tgt) && tgt %in% board_stack_ids(brd)))
+
+        ctx <- resolve_stack_target(brd, tgt)
+
+        # Create mode fills the form with suggestions rather than board
+        # state, so a re-render must not discard what the user entered. The
+        # suggested id is the sentinel: while the board has not taken it,
+        # nothing was created from this form and every field is kept. Once it
+        # is taken - which is precisely what creating the stack does - the
+        # whole form is re-seeded for the next stack.
+        held_id <- isolate(input[["stack_id"]])
+
+        if (identical(ctx$mode, "create") &&
+              id_available(held_id, board_stack_ids(brd))) {
+          ctx$stack_id <- held_id
+          ctx$name <- isolate(input[["stack_name"]]) %||% ctx$name
+          ctx$color <- isolate(input[["stack_color"]]) %||% ctx$color
+        }
+
+        stack_menu_form(session$ns, ctx)
+      })
+
       eventReactive(
         input$commit,
         {
@@ -229,7 +258,6 @@ registry_entry_for <- function(blk, registry) {
 
 stack_menu_panel <- function(ns, metas, ctx) {
   groups <- category_groups(metas)
-  is_edit <- identical(ctx$mode, "edit")
 
   tags$div(
     id = ns("commit"),
@@ -255,11 +283,15 @@ stack_menu_panel <- function(ns, metas, ctx) {
       class = "blockr-block-browser-empty",
       "No blocks match your search."
     ),
-    stack_menu_form(ns, ctx, is_edit),
+    tags$h4(
+      class = "blockr-stack-menu-section-header",
+      "Stack settings"
+    ),
+    uiOutput(ns("form"), class = "blockr-stack-menu-form-slot"),
     tags$button(
       type = "button",
       class = "blockr-stack-menu-confirm",
-      if (is_edit) "Update stack" else "Create stack"
+      if (identical(ctx$mode, "edit")) "Update stack" else "Create stack"
     )
   )
 }
@@ -317,24 +349,15 @@ stack_block_card <- function(meta) {
 # top-level in create mode - the sidebar has room for them and the
 # auto-seeded id is still useful chrome (users can rename it). Edit
 # mode omits the id input entirely (the id is immutable once a stack
-# is created). The form is preceded by a small uppercase section
-# header (matching the category labels above) and rendered inside a
-# subtly-tinted panel so the configuration block reads as distinct
-# from the picker.
-stack_menu_form <- function(ns, ctx, is_edit) {
-  tagList(
-    tags$h4(
-      class = "blockr-stack-menu-section-header",
-      "Stack settings"
-    ),
-    tags$div(
-      class = "blockr-stack-menu-form",
-      text_field_tag(ns, "stack_name", "Stack name", ctx$name, "My stack"),
-      color_field_tag(ns, ctx$color),
-      if (!is_edit) {
-        text_field_tag(ns, "stack_id", "Stack id", ctx$stack_id, "stack_id")
-      }
-    )
+# is created).
+stack_menu_form <- function(ns, ctx) {
+  tags$div(
+    class = "blockr-stack-menu-form",
+    text_field_tag(ns, "stack_name", "Stack name", ctx$name, "My stack"),
+    color_field_tag(ns, ctx$color),
+    if (identical(ctx$mode, "create")) {
+      text_field_tag(ns, "stack_id", "Stack id", ctx$stack_id, "stack_id")
+    }
   )
 }
 

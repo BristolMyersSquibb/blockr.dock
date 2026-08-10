@@ -403,6 +403,51 @@ test_that("add link action: empty pool still opens the sidebar", {
   )
 })
 
+test_that("add link action: a commit closes an unpinned panel only", {
+  # The connect menu syncs its own cards off the board, so a commit never
+  # re-pushes the panel body - it only closes an unpinned panel.
+  calls <- function(pinned) {
+    seen <- list(show = 0L, hide = 0L)
+    local_mocked_bindings(
+      show_sidebar = function(...) seen$show <<- seen$show + 1L,
+      hide_sidebar = function(...) seen$hide <<- seen$hide + 1L,
+      keep_or_hide_sidebar = function(...) {
+        stop("the panel must not be rebuilt after a commit")
+      },
+      sidebar_state = function(id, ...) list(open = TRUE, pinned = pinned)
+    )
+
+    r_board <- reactiveValues(
+      board = new_board(
+        c(a = new_dataset_block("iris"), b = new_head_block())
+      ),
+      board_id = "b"
+    )
+
+    testServer(
+      function(id, ...) {
+        moduleServer(
+          id,
+          add_link_action(
+            trigger = reactive("a"),
+            board = r_board,
+            update = reactiveVal(list())
+          )
+        )
+      },
+      {
+        session$flushReact()
+        commit_menu(session, source = "a", target = "b", link_id = "ab")
+      }
+    )
+
+    seen
+  }
+
+  expect_identical(calls(pinned = FALSE), list(show = 1L, hide = 1L))
+  expect_identical(calls(pinned = TRUE), list(show = 1L, hide = 0L))
+})
+
 test_that("remove link action", {
 
   r_board <- reactiveValues(
@@ -661,6 +706,46 @@ test_that("edit link action: a self-link is rejected", {
       expect_length(r_update(), 0L)
     }
   )
+})
+
+test_that("edit link action: a commit closes an unpinned panel only", {
+  # The endpoint pickers and the input-slot control are `uiOutput`s on the
+  # board, so a pinned panel refreshes itself instead of being rebuilt.
+  calls <- function(pinned) {
+    seen <- list(show = 0L, hide = 0L)
+    local_mocked_bindings(
+      show_sidebar = function(...) seen$show <<- seen$show + 1L,
+      hide_sidebar = function(...) seen$hide <<- seen$hide + 1L,
+      keep_or_hide_sidebar = function(...) {
+        stop("the panel must not be rebuilt after a commit")
+      },
+      sidebar_state = function(id, ...) list(open = TRUE, pinned = pinned)
+    )
+
+    r_board <- edit_link_env(links(l1 = new_link("a", "h", "data")))
+
+    testServer(
+      function(id, ...) {
+        moduleServer(
+          id,
+          edit_link_action(
+            trigger = reactive("l1"),
+            board = r_board,
+            update = reactiveVal(list())
+          )
+        )
+      },
+      {
+        session$flushReact()
+        edit_link_menu(session, to = "m", input_port = "y")
+      }
+    )
+
+    seen
+  }
+
+  expect_identical(calls(pinned = FALSE), list(show = 1L, hide = 1L))
+  expect_identical(calls(pinned = TRUE), list(show = 1L, hide = 0L))
 })
 
 test_that("edit link action: removing the edited link closes the sidebar", {

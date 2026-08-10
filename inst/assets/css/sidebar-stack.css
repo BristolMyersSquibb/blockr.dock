@@ -85,6 +85,13 @@
   color: #6b7280;
 }
 
+/* The form is server-rendered into this slot so it tracks the board. The
+   slot is a flex item of the panel column, so it carries the same
+   `flex: 0 0 auto` the form itself would have. */
+.blockr-stack-menu-form-slot {
+  flex: 0 0 auto;
+}
+
 /* Panel-level form: name + colour + id. The "Stack settings" section
    header above provides the visual break - no background tint, no
    border-box; keep the chrome quiet. */
