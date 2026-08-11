@@ -267,6 +267,36 @@ test_that("prepend block action: target_input picks the link slot", {
   )
 })
 
+test_that("block actions write the sidebar from their own module", {
+  # `show_sidebar()` reads the panel's owner off the session it is called
+  # with, so a write has to happen in the action's own reactive domain. A
+  # write deferred into a flush callback would run under the root session
+  # and stamp that instead, which this records.
+  wrote_from <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) {
+      wrote_from[[length(wrote_from) + 1L]] <<- get_session()$ns(NULL)
+      invisible(NULL)
+    },
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar         = function(...) invisible(NULL)
+  )
+
+  r_board <- reactiveValues(
+    board = new_board(c(a = new_dataset_block("iris"), m = new_merge_block())),
+    board_id = "b"
+  )
+
+  fire_action(add_block_action, TRUE, r_board)
+  fire_action(append_block_action, "a", r_board)
+  fire_action(prepend_block_action, "m", r_board)
+
+  expect_identical(
+    wrote_from,
+    list("add_block_action", "append_block_action", "prepend_block_action")
+  )
+})
+
 test_that("append block action: a name field names the variadic slot", {
   r_board <- reactiveValues(
     board = new_board(blocks = c(a = new_dataset_block())),

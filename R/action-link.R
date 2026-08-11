@@ -83,13 +83,14 @@ edit_link_action <- function(trigger, board, update, ...) {
 
       # Close the sidebar the moment the edited link leaves the board
       # (removed elsewhere): editing a link that no longer exists makes no
-      # sense, so don't wait for an "Update" click. Guarded on the sidebar
-      # being open and on an edit actually being in progress.
+      # sense, so don't wait for an "Update" click. Guarded on an edit
+      # actually being in progress and on this action still owning the
+      # open panel.
       observeEvent(board$board, {
         id <- trigger()
         if (length(id) == 1L && !is.na(id) && nzchar(id) &&
               !id %in% board_link_ids(board$board) &&
-              isTRUE(sidebar_state(sidebar_id)$open)) {
+              owns_open_sidebar(sidebar_id)) {
           hide_sidebar(sidebar_id)
         }
       }, ignoreInit = TRUE)

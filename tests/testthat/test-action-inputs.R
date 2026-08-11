@@ -158,7 +158,7 @@ test_that("edit inputs action: reorder commits a from-permutation mod", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -191,7 +191,7 @@ test_that("edit inputs action: an identity reorder issues no update", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -214,7 +214,7 @@ test_that("edit inputs action: rename commits an input mod", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -244,7 +244,7 @@ test_that("edit inputs action: a duplicate input name is rejected", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -269,7 +269,7 @@ test_that("edit inputs action: remove commits a links rm", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -295,7 +295,10 @@ test_that("edit inputs action: removing the block closes the sidebar", {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
     },
-    sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE)
+    # The auto-close is gated on this action owning the open panel.
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "edit_inputs_action")
+    }
   )
 
   r_board <- inputs_board(variadic_links())
@@ -304,7 +307,7 @@ test_that("edit inputs action: removing the block closes the sidebar", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )
@@ -322,6 +325,64 @@ test_that("edit inputs action: removing the block closes the sidebar", {
       expect_identical(hide_calls[[1L]], "b-actions_sidebar")
     }
   )
+})
+
+test_that("edit inputs action: a form written by another action stays open", {
+  hide_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(id, ...) {
+      hide_calls[[length(hide_calls) + 1L]] <<- id
+      invisible(NULL)
+    },
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "edit_stack_action")
+    }
+  )
+
+  r_board <- inputs_board(variadic_links())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        "edit_inputs_action",
+        edit_inputs_action(
+          trigger = reactive("r"),
+          board = r_board,
+          update = reactiveVal(list())
+        )
+      )
+    },
+    {
+      session$flushReact()
+
+      r_board$board <- new_board(board_blocks(r_board$board)["a"])
+      session$flushReact()
+
+      expect_length(hide_calls, 0L)
+    }
+  )
+})
+
+test_that("edit inputs action writes the sidebar from its own module", {
+  # `show_sidebar()` reads the panel's owner off the session it is called
+  # with, so a write has to happen in the action's own reactive domain. A
+  # write deferred into a flush callback would run under the root session
+  # and stamp that instead, which this records.
+  wrote_from <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) {
+      wrote_from[[length(wrote_from) + 1L]] <<- get_session()$ns(NULL)
+      invisible(NULL)
+    },
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(...) invisible(NULL)
+  )
+
+  fire_action(edit_inputs_action, "r", inputs_board(variadic_links()))
+
+  expect_identical(wrote_from, list("edit_inputs_action"))
 })
 
 test_that("edit inputs menu server renders the row list", {
@@ -534,7 +595,7 @@ test_that("edit inputs action: a redirect that would cycle is rejected", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("m"), board = r_board, update = r_update
         )
@@ -581,7 +642,7 @@ test_that("edit inputs action: an add command commits a new link", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_inputs_action",
         edit_inputs_action(
           trigger = reactive("r"), board = r_board, update = r_update
         )

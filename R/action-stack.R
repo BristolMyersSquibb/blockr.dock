@@ -66,11 +66,10 @@ edit_stack_action <- function(trigger, board, update, ...) {
 
       # Close the sidebar the moment the edited stack leaves the board
       # (removed elsewhere): editing a stack that no longer exists makes
-      # no sense, so don't wait for an "Update" click. Guarded on the
-      # sidebar being open. (If another action had since taken over the
-      # shared slot this could close that form too - a rare
-      # edit-then-switch-then-remove sequence; revisit with sidebar
-      # ownership if it ever bites.)
+      # no sense, so don't wait for an "Update" click. Guarded on this
+      # action still owning the open panel, so an edit-then-switch-then-
+      # remove sequence closes nothing another action has since written
+      # into the shared slot.
       observeEvent(board$board, {
         id <- trigger()
         # No-op unless an edit is actually in progress (a valid stack id);
@@ -78,7 +77,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
         # mutates the board) and the membership test would error.
         if (length(id) == 1L && !is.na(id) && nzchar(id) &&
               !id %in% board_stack_ids(board$board) &&
-              isTRUE(sidebar_state(sidebar_id)$open)) {
+              owns_open_sidebar(sidebar_id)) {
           hide_sidebar(sidebar_id)
         }
       }, ignoreInit = TRUE)

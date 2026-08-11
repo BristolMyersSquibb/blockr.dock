@@ -546,7 +546,7 @@ test_that("edit link action: redirecting the target commits a mod delta", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -570,7 +570,7 @@ test_that("edit link action: switching the input slot commits only input", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -593,7 +593,7 @@ test_that("edit link action: naming a variadic positional slot", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -617,7 +617,7 @@ test_that("edit link action: redirecting the source commits only from", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -640,7 +640,7 @@ test_that("edit link action: an unchanged confirm issues no update", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -667,7 +667,7 @@ test_that("edit link action: a redirect that closes a cycle is rejected", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -693,7 +693,7 @@ test_that("edit link action: a self-link is rejected", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -757,7 +757,10 @@ test_that("edit link action: removing the edited link closes the sidebar", {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
     },
-    sidebar_state = function(id, ...) list(open = TRUE, pinned = TRUE)
+    # The auto-close is gated on this action owning the open panel.
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "edit_link_action")
+    }
   )
 
   r_board <- edit_link_env(links(l1 = new_link("a", "h", "data")))
@@ -766,7 +769,7 @@ test_that("edit link action: removing the edited link closes the sidebar", {
   testServer(
     function(id, ...) {
       moduleServer(
-        id,
+        "edit_link_action",
         edit_link_action(
           trigger = reactive("l1"), board = r_board, update = r_update
         )
@@ -784,6 +787,67 @@ test_that("edit link action: removing the edited link closes the sidebar", {
       expect_identical(hide_calls[[1L]], "b-actions_sidebar")
     }
   )
+})
+
+test_that("edit link action: a form written by another action stays open", {
+  hide_calls <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) invisible(NULL),
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(id, ...) {
+      hide_calls[[length(hide_calls) + 1L]] <<- id
+      invisible(NULL)
+    },
+    sidebar_state = function(id, ...) {
+      list(open = TRUE, pinned = TRUE, owner = "edit_stack_action")
+    }
+  )
+
+  r_board <- edit_link_env(links(l1 = new_link("a", "h", "data")))
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        "edit_link_action",
+        edit_link_action(
+          trigger = reactive("l1"),
+          board = r_board,
+          update = reactiveVal(list())
+        )
+      )
+    },
+    {
+      session$flushReact()
+
+      r_board$board <- new_board(board_blocks(r_board$board))
+      session$flushReact()
+
+      expect_length(hide_calls, 0L)
+    }
+  )
+})
+
+test_that("link actions write the sidebar from their own module", {
+  # `show_sidebar()` reads the panel's owner off the session it is called
+  # with, so a write has to happen in the action's own reactive domain. A
+  # write deferred into a flush callback would run under the root session
+  # and stamp that instead, which this records.
+  wrote_from <- list()
+  local_mocked_bindings(
+    show_sidebar = function(...) {
+      wrote_from[[length(wrote_from) + 1L]] <<- get_session()$ns(NULL)
+      invisible(NULL)
+    },
+    keep_or_hide_sidebar = function(...) invisible(NULL),
+    hide_sidebar = function(...) invisible(NULL)
+  )
+
+  r_board <- edit_link_env(links(l1 = new_link("a", "h", "data")))
+
+  fire_action(add_link_action, "a", r_board)
+  fire_action(edit_link_action, "l1", r_board)
+
+  expect_identical(wrote_from, list("add_link_action", "edit_link_action"))
 })
 
 test_that("edit link menu ui holds the endpoint / input slots and confirm", {
