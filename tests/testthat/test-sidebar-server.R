@@ -3,15 +3,18 @@
 # ends are stubbed here so the payload a show ships and the state a handler
 # reads can be asserted without a browser; the round trip itself is covered
 # end-to-end at the bottom of this file. `ns` stands in for the writing
-# module, which is where the owner stamp is read from.
+# module, which is where the owner stamp is read from. `inputs` is the root
+# input the echo comes back in: a single panel for the handlers that target
+# one by id, or a whole input set for the ownership query, which searches it.
 fake_sidebar_session <- function(state = NULL,
-                                 ns = "my_board-edit_stack_action") {
+                                 ns = "my_board-edit_stack_action",
+                                 inputs = list(panel = state)) {
 
   sent <- new.env(parent = emptyenv())
   sent$msgs <- list()
 
   root <- list(
-    input = list(panel = state),
+    input = do.call(reactiveValues, inputs),
     sendInputMessage = function(id, message) {
       sent$msgs <- c(sent$msgs, list(list(id = id, message = message)))
       invisible(NULL)
@@ -77,6 +80,65 @@ test_that("ownership requires an open panel and a matching stamp", {
   expect_false(owns(open = TRUE))
 })
 
+test_that("a query reports the panel an action currently holds", {
+
+  session <- fake_sidebar_session(
+    inputs = list(
+      # A plain input, and one whose value is the very string a stamp would
+      # be: only a panel's value can answer for a panel. Sorts ahead of the
+      # panels, so a query that took it would be caught here.
+      `my_board-a_text_input` = "my_board-edit_stack_action",
+      `my_board-actions_sidebar` = list(
+        open = TRUE, pinned = TRUE, owner = "my_board-edit_stack_action"
+      ),
+      `my_board-add_block_sidebar` = list(
+        open = FALSE, pinned = FALSE, owner = "my_board-add_block_action"
+      )
+    )
+  )
+
+  owned_by <- function(action, board_id = "my_board") {
+    sidebar_owned_by(action, board_id, session = session)
+  }
+
+  expect_identical(
+    owned_by("edit_stack_action"),
+    list(panel = "my_board-actions_sidebar", open = TRUE, pinned = TRUE)
+  )
+
+  # A panel it wrote and left closed is still its own: ownership is the stamp,
+  # the flags are what the consumer gates on.
+  expect_identical(
+    owned_by("add_block_action"),
+    list(panel = "my_board-add_block_sidebar", open = FALSE, pinned = FALSE)
+  )
+
+  expect_null(owned_by("add_link_action"))
+
+  # Keyed by board as well: the same action id on another board matches
+  # nothing, which is what composing the stamp here buys.
+  expect_null(owned_by("edit_stack_action", "other_board"))
+})
+
+test_that("a panel outside the board's own mounts answers the same way", {
+  # An extension mounting its own sidebar and writing to it from its module.
+  # The panel is not one `board_ui()` places and its id follows no scheme the
+  # query knows, but the stamp is composed the same way, so it is found the
+  # same way -- the set of panels is not something to enumerate.
+  session <- fake_sidebar_session(
+    inputs = list(
+      `my_board-ext_notes-scratch` = list(
+        open = TRUE, pinned = FALSE, owner = "my_board-ext_notes"
+      )
+    )
+  )
+
+  expect_identical(
+    sidebar_owned_by("ext_notes", "my_board", session = session),
+    list(panel = "my_board-ext_notes-scratch", open = TRUE, pinned = FALSE)
+  )
+})
+
 test_that("re-showing a pinned panel restamps its owner", {
   session <- fake_sidebar_session(
     list(open = TRUE, pinned = TRUE, owner = "my_board-edit_stack_action")
@@ -97,11 +159,13 @@ test_that("re-showing a pinned panel restamps its owner", {
 
 # The stamp is only useful if it survives the trip through the browser: R
 # ships it with the body swap, the binding parks it on the panel and reports
-# it back in the panel's value. No unit test sees that seam, and a consumer
-# reading a stamp that never arrives cannot tell the difference between "no
-# owner" and "the mechanism is dead", so drive it through a real app. The
-# fixture fires the actions straight off the trigger bundle, which is the
-# path a consumer's context menu takes and the one that declares nothing.
+# it back in the panel's value, and the query has to compose an id that
+# matches what came back. No unit test sees that seam, and a consumer reading
+# a stamp that never arrives cannot tell the difference between "no owner"
+# and "the mechanism is dead", so drive it through a real app. The fixture
+# fires the actions straight off the trigger bundle, which is the path a
+# consumer's context menu takes and the one that declares nothing; it reports
+# what the query says for the action about to fire, read just before it does.
 test_that("a panel reports the action that wrote its body", {
 
   skip_on_cran()
@@ -129,12 +193,17 @@ test_that("a panel reports the action that wrote its body", {
     )
   }
 
+  # The fixture exports the query result from its extension module, so the
+  # export name is namespaced the same way the module's inputs are.
+  owned <- function() app$get_value(export = "my_board-ext_fire-owned")
+
   expect_null(app$get_value(input = panel)$owner)
   expect_true(is.na(stamped_owner()))
+  expect_null(owned())
 
   # The stamp is the writing module's namespaced id, which for a board action
-  # is `NS(<board id>, <action id>)` -- the composition a consumer matching
-  # its own entries against the owner has to make.
+  # is `NS(<board id>, <action id>)` -- the composition `sidebar_owned_by()`
+  # makes so that a consumer does not have to.
   app$click("my_board-ext_fire-add_link")
   app$wait_for_idle()
 
@@ -143,8 +212,21 @@ test_that("a panel reports the action that wrote its body", {
   )
   expect_identical(stamped_owner(), "my_board-add_link_action")
 
+  # Pin it, so the panel survives the clicks that follow and the flag a
+  # re-target gates on is the one the query has to carry back.
+  app$click(selector = paste0("#", panel, " .blockr-sidebar-pin"))
+  app$wait_for_idle()
+
+  expect_true(app$get_value(input = panel)$pinned)
+
+  app$click("my_board-ext_fire-add_link")
+  app$wait_for_idle()
+
+  expect_identical(owned(), list(panel = panel, open = TRUE, pinned = TRUE))
+
   # A second surface fills the same panel. Nothing declared which panel it
-  # writes, so a stale stamp here is what a consumer would re-fire into.
+  # writes, so a stale stamp here is what a consumer would re-fire into --
+  # and the query says so: at the moment it fires, edit_stack holds nothing.
   app$click("my_board-ext_fire-edit_stack")
   app$wait_for_idle()
 
@@ -152,4 +234,19 @@ test_that("a panel reports the action that wrote its body", {
     app$get_value(input = panel)$owner, "my_board-edit_stack_action"
   )
   expect_identical(stamped_owner(), "my_board-edit_stack_action")
+  expect_null(owned())
+
+  # Ownership moved with the write, so the query follows it: edit_stack now
+  # answers for the panel...
+  app$click("my_board-ext_fire-edit_stack")
+  app$wait_for_idle()
+
+  expect_identical(owned(), list(panel = panel, open = TRUE, pinned = TRUE))
+
+  # ... and add_link, which filled the very same panel earlier, no longer
+  # does. That flip is what a consumer re-fires (or does not) on.
+  app$click("my_board-ext_fire-add_link")
+  app$wait_for_idle()
+
+  expect_null(owned())
 })

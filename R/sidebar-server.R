@@ -150,6 +150,46 @@ owns_open_sidebar <- function(id, session = get_session()) {
   isTRUE(state$open) && identical(state$owner, session$ns(NULL))
 }
 
+#' @param action Action ID
+#' @param board_id ID of the board module the action is registered with
+#' @param session Shiny session
+#'
+#' @rdname action
+#' @export
+sidebar_owned_by <- function(action, board_id, session = get_session()) {
+
+  stopifnot(is_string(action), is_string(board_id))
+
+  root <- root_session(session)
+
+  # A panel's stamp is the writing module's namespaced id, which for a board
+  # action is `NS(<board id>, <action id>)`. Composing it here is what keeps
+  # that assumption -- the board module sits at the top level -- from leaking
+  # into every consumer.
+  owner <- NS(board_id, action)
+
+  holds <- function(state) {
+    is.list(state) && identical(state[["owner"]], owner)
+  }
+
+  # A panel is found by its stamp, not by matching a known set of panel ids:
+  # which panels exist is open (an extension mounts its own), and a panel
+  # missing from such a set would quietly answer "owns nothing".
+  held <- Filter(holds, isolate(reactiveValuesToList(root$input)))
+
+  if (!length(held)) {
+    return(NULL)
+  }
+
+  state <- held[[1L]]
+
+  list(
+    panel = names(held)[1L],
+    open = isTRUE(state[["open"]]),
+    pinned = isTRUE(state[["pinned"]])
+  )
+}
+
 keep_or_hide_sidebar <- function(id, ui, title = NULL,
                                  session = get_session()) {
   if (isTRUE(sidebar_state(id, session = session)$pinned)) {
