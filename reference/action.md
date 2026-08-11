@@ -30,6 +30,8 @@ block_input_select(
 block_registry_selectize(id, blocks = list_blocks())
 
 board_select(id, blocks, selected = NULL, ...)
+
+sidebar_owned_by(action, board_id, session = get_session())
 ```
 
 ## Arguments
@@ -75,6 +77,18 @@ board_select(id, blocks, selected = NULL, ...)
 
   Character vector of pre-selected block (registry) IDs
 
+- action:
+
+  Action ID
+
+- board_id:
+
+  ID of the board module the action is registered with
+
+- session:
+
+  Shiny session
+
 ## Value
 
 The constructor `new_action` returns a classed function that inherits
@@ -83,7 +97,9 @@ from `action`. Inheritance can be checked with functions `is_action()`,
 returns an `action` object. String-value action IDs can be retrieved
 with `action_id()` and the set of actions associated with a board can be
 enumerated via `board_actions()`. Finally, `action_triggers()` returns a
-named list of objects suitable for use as action triggers.
+named list of objects suitable for use as action triggers. For an action
+that currently holds a sidebar panel, `sidebar_owned_by()` returns a
+list with components `panel`, `open` and `pinned`, and `NULL` otherwise.
 
 For utilities `block_input_select()`, `block_registry_selectize()` and
 `board_select`, see the respective sections.
@@ -98,6 +114,16 @@ functions, they each have a unique ID and a
 trigger object (inheriting from `action_trigger`). Action trigger
 objects implement their own counter-based invalidation mechanism (on top
 of how reactive values behave).
+
+An action that fills a sidebar panel records itself on it as it writes,
+so the panel reports the writing action as its owner alongside whether
+it is open and pinned. `sidebar_owned_by()` reads that back for a given
+action: a consumer re-firing an action on a new selection can ask
+whether the form it previously opened is still the one on screen,
+without knowing which panel that action fills. The read is a snapshot
+and creates no reactive dependency, as called for in an
+[`shiny::observeEvent()`](https://rdrr.io/pkg/shiny/man/observeEvent.html)
+handler.
 
 ## `block_input_select()`
 

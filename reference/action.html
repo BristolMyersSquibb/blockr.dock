@@ -43,7 +43,7 @@ are classed shiny server functions.'></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Board actions</h1>
-      <small class="dont-index">Source: <a href="https://github.com/BristolMyersSquibb/blockr.dock/blob/main/R/action-class.R" class="external-link"><code>R/action-class.R</code></a>, <a href="https://github.com/BristolMyersSquibb/blockr.dock/blob/main/R/action-utils.R" class="external-link"><code>R/action-utils.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/BristolMyersSquibb/blockr.dock/blob/main/R/action-class.R" class="external-link"><code>R/action-class.R</code></a>, <a href="https://github.com/BristolMyersSquibb/blockr.dock/blob/main/R/action-utils.R" class="external-link"><code>R/action-utils.R</code></a>, <a href="https://github.com/BristolMyersSquibb/blockr.dock/blob/main/R/sidebar-server.R" class="external-link"><code>R/sidebar-server.R</code></a></small>
       <div class="d-none name"><code>action.Rd</code></div>
     </div>
 
@@ -77,7 +77,9 @@ are classed shiny server functions.</p>
 <span></span>
 <span><span class="fu">block_registry_selectize</span><span class="op">(</span><span class="va">id</span>, blocks <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/register_block.html" class="external-link">list_blocks</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">board_select</span><span class="op">(</span><span class="va">id</span>, <span class="va">blocks</span>, selected <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">board_select</span><span class="op">(</span><span class="va">id</span>, <span class="va">blocks</span>, selected <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">sidebar_owned_by</span><span class="op">(</span><span class="va">action</span>, <span class="va">board_id</span>, session <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/get_session.html" class="external-link">get_session</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -124,6 +126,18 @@ are classed shiny server functions.</p>
 <dt id="arg-selected">selected<a class="anchor" aria-label="anchor" href="#arg-selected"></a></dt>
 <dd><p>Character vector of pre-selected block (registry) IDs</p></dd>
 
+
+<dt id="arg-action">action<a class="anchor" aria-label="anchor" href="#arg-action"></a></dt>
+<dd><p>Action ID</p></dd>
+
+
+<dt id="arg-board-id">board_id<a class="anchor" aria-label="anchor" href="#arg-board-id"></a></dt>
+<dd><p>ID of the board module the action is registered with</p></dd>
+
+
+<dt id="arg-session">session<a class="anchor" aria-label="anchor" href="#arg-session"></a></dt>
+<dd><p>Shiny session</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -133,7 +147,9 @@ inherits from <code>action</code>. Inheritance can be checked with functions
 function that returns an <code>action</code> object. String-value action IDs can be
 retrieved with <code>action_id()</code> and the set of actions associated with a board
 can be enumerated via <code>board_actions()</code>. Finally, <code>action_triggers()</code> returns
-a named list of objects suitable for use as action triggers.</p>
+a named list of objects suitable for use as action triggers. For an action
+that currently holds a sidebar panel, <code>sidebar_owned_by()</code> returns a list
+with components <code>panel</code>, <code>open</code> and <code>pinned</code>, and <code>NULL</code> otherwise.</p>
 <p>For utilities <code>block_input_select()</code>, <code>block_registry_selectize()</code>
 and <code>board_select</code>, see the respective sections.</p>
     </div>
@@ -146,6 +162,13 @@ functions, they each have a unique ID and a <code><a href="https://rdrr.io/pkg/s
 trigger object (inheriting from <code>action_trigger</code>). Action trigger objects
 implement their own counter-based invalidation mechanism (on top of how
 reactive values behave).</p>
+<p>An action that fills a sidebar panel records itself on it as it writes, so
+the panel reports the writing action as its owner alongside whether it is
+open and pinned. <code>sidebar_owned_by()</code> reads that back for a given action:
+a consumer re-firing an action on a new selection can ask whether the form
+it previously opened is still the one on screen, without knowing which
+panel that action fills. The read is a snapshot and creates no reactive
+dependency, as called for in an <code><a href="https://rdrr.io/pkg/shiny/man/observeEvent.html" class="external-link">shiny::observeEvent()</a></code> handler.</p>
     </div>
     <div class="section level2">
     <h2 id="block-input-select-"><code>block_input_select()</code><a class="anchor" aria-label="anchor" href="#block-input-select-"></a></h2>

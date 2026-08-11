@@ -140,6 +140,7 @@ such as adding or removing a block.
   [`block_input_select()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
   [`block_registry_selectize()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
   [`board_select()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
+  [`sidebar_owned_by()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
   : Board actions
 
 ## Utilities

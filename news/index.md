@@ -2,6 +2,18 @@
 
 ## blockr.dock (development version)
 
+- New export
+  [`sidebar_owned_by()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md),
+  which reports whether a given action currently holds one of the
+  board’s sidebar panels – `NULL` when it does not, otherwise the panel
+  plus whether it is open and pinned. It composes the ownership stamp
+  itself, so a consumer that re-fires an action on a new selection can
+  ask “is the form I opened still on screen?” without knowing which
+  panel that action fills, which panels a board mounts, or how a stamp
+  is spelled. Previously the only way in was to read the panel’s input
+  value directly, which meant naming dock’s panels in the consumer
+  ([\#399](https://github.com/BristolMyersSquibb/blockr.dock/issues/399)).
+
 - A sidebar panel now reports which module wrote the body it is showing.
   Every `show_sidebar()` stamps the writing module’s namespaced id on
   the panel – `NS(<board id>, <action id>)` for a board action – taken
