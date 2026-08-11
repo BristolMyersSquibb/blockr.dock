@@ -150,6 +150,59 @@ owns_open_sidebar <- function(id, session = get_session()) {
   isTRUE(state$open) && identical(state$owner, session$ns(NULL))
 }
 
+# The sidebar panels a board mounts, as ids relative to the board module.
+# `board_ui.dock_board()` composes every mount from this set and
+# `sidebar_owned_by()` scans it, so neither can name a panel the other does
+# not know about.
+board_sidebar_ids <- function() {
+  c(
+    "actions_sidebar",
+    "add_block_sidebar",
+    "append_block_sidebar",
+    "settings_sidebar"
+  )
+}
+
+board_sidebar_id <- function(board_id, which) {
+  stopifnot(is_string(which), which %in% board_sidebar_ids())
+
+  NS(board_id, which)
+}
+
+#' @param action Action ID
+#' @param board_id ID of the board module the action is registered with
+#' @param session Shiny session
+#'
+#' @rdname action
+#' @export
+sidebar_owned_by <- function(action, board_id, session = get_session()) {
+
+  stopifnot(is_string(action), is_string(board_id))
+
+  # A panel's stamp is the writing module's namespaced id, which for a board
+  # action is `NS(<board id>, <action id>)`. Composing it here is what keeps
+  # that assumption -- the board module sits at the top level -- from leaking
+  # into every consumer.
+  owner <- NS(board_id, action)
+
+  for (panel in NS(board_id, board_sidebar_ids())) {
+
+    state <- sidebar_state(panel, session = session)
+
+    if (identical(state[["owner"]], owner)) {
+      return(
+        list(
+          panel = panel,
+          open = isTRUE(state[["open"]]),
+          pinned = isTRUE(state[["pinned"]])
+        )
+      )
+    }
+  }
+
+  NULL
+}
+
 keep_or_hide_sidebar <- function(id, ui, title = NULL,
                                  session = get_session()) {
   if (isTRUE(sidebar_state(id, session = session)$pinned)) {

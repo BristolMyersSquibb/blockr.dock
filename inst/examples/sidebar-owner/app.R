@@ -17,8 +17,19 @@ fire_srv <- function(id, board, update, actions, ...) {
     id,
     function(input, output, session) {
 
-      observeEvent(input$add_link, actions[["add_link_action"]]("a"))
-      observeEvent(input$edit_stack, actions[["edit_stack_action"]]("s1"))
+      # What a re-targeting consumer asks on each gesture, read before the
+      # action fires: is the form I last opened still the one on screen?
+      owned <- reactiveVal()
+
+      fire <- function(action, value) {
+        owned(sidebar_owned_by(action, "my_board"))
+        actions[[action]](value)
+      }
+
+      observeEvent(input$add_link, fire("add_link_action", "a"))
+      observeEvent(input$edit_stack, fire("edit_stack_action", "s1"))
+
+      exportTestValues(owned = owned())
 
       list(state = list())
     }
