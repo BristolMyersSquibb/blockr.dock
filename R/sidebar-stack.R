@@ -374,14 +374,23 @@ text_field_tag <- function(ns, key, label, value, placeholder) {
   )
 }
 
+# The hex text field is the value carrier - it is what Shiny binds as
+# `input$stack_color`, and what a pasted brand colour goes into. The
+# native colour input beside it carries no id and no binding; the two
+# are rendered from the same value and follow each other client-side.
 color_field_tag <- function(ns, value) {
   hex <- value %||% default_stack_color()
   tags$div(
-    class = "blockr-stack-menu-field blockr-stack-menu-color",
+    class = "blockr-stack-menu-field",
     tags$label(`for` = ns("stack_color"), "Stack color"),
     tags$div(
-      class = "blockr-stack-menu-color-preview",
-      tags$span(class = "blockr-stack-menu-color-swatch"),
+      class = "blockr-stack-menu-color-fields",
+      tags$input(
+        type = "color",
+        class = "blockr-stack-menu-swatch",
+        value = expand_hex_color(hex),
+        `aria-label` = "Stack color picker"
+      ),
       tags$input(
         id = ns("stack_color"),
         type = "text",
@@ -391,24 +400,6 @@ color_field_tag <- function(ns, value) {
         autocomplete = "off",
         `aria-label` = "Hex colour value"
       )
-    ),
-    tags$input(
-      type = "range",
-      class = "blockr-stack-menu-hue",
-      min = "0",
-      max = "360",
-      step = "1",
-      value = "0",
-      `aria-label` = "Hue"
-    ),
-    tags$input(
-      type = "range",
-      class = "blockr-stack-menu-lightness",
-      min = "20",
-      max = "85",
-      step = "1",
-      value = "60",
-      `aria-label` = "Lightness"
     )
   )
 }

@@ -1,8 +1,8 @@
 /* Stack menu: a multi-select card-list block picker for stacks, sharing
    the block-browser's card visuals. Only the bits unique to the stack
    menu live here: the .card-selected visual confirmation, the
-   panel-level form (name / color / id), the inline colour palette, the
-   advanced toggle, and the bottom-pinned confirm button. */
+   panel-level form (name / color / id), the advanced toggle, and the
+   bottom-pinned confirm button. */
 
 .blockr-stack-menu {
   display: flex;
@@ -130,100 +130,48 @@
 }
 
 
-/* Inline colour picker: hex preview + text input + hue/lightness
-   sliders. The hex `<input>` is the value carrier (a normal Shiny
-   text input); sliders write the hex on input, the JS keeps the
-   preview swatch and slider positions in sync with the hex. */
-.blockr-stack-menu-color-preview {
+/* Colour field: native colour input + hex text input, side by side. */
+.blockr-stack-menu-color-fields {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 2px;
 }
 
-.blockr-stack-menu-color-swatch {
-  flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  border: 1px solid rgba(15, 23, 42, 0.15);
-  border-radius: 4px;
-  background: #66c2a5;
-}
-
-.blockr-stack-menu-color-preview input.blockr-stack-menu-hex {
+.blockr-stack-menu-color-fields input.blockr-stack-menu-hex {
   flex: 1 1 auto;
 }
 
-/* Hue + lightness sliders. Styled as CSS-gradient tracks so the user
-   gets the "rainbow" affordance without canvas or extra markup. */
-.blockr-stack-menu-color input[type="range"] {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 12px;
-  background: transparent;
-  cursor: pointer;
-  margin: 4px 0 0 0;
-}
-
-.blockr-stack-menu-color input[type="range"]::-webkit-slider-runnable-track {
-  height: 8px;
+.blockr-stack-menu-swatch {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 32px;
+  padding: 2px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 4px;
-}
-
-.blockr-stack-menu-color input[type="range"]::-moz-range-track {
-  height: 8px;
-  border-radius: 4px;
-}
-
-.blockr-stack-menu-hue::-webkit-slider-runnable-track {
-  background: linear-gradient(
-    to right,
-    #ff5050 0%, #ffdf50 17%, #50ff50 33%, #50ffff 50%,
-    #5050ff 67%, #ff50ff 83%, #ff5050 100%
-  );
-}
-
-.blockr-stack-menu-hue::-moz-range-track {
-  background: linear-gradient(
-    to right,
-    #ff5050 0%, #ffdf50 17%, #50ff50 33%, #50ffff 50%,
-    #5050ff 67%, #ff50ff 83%, #ff5050 100%
-  );
-}
-
-.blockr-stack-menu-lightness::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, #000, #888, #fff);
-}
-
-.blockr-stack-menu-lightness::-moz-range-track {
-  background: linear-gradient(to right, #000, #888, #fff);
-}
-
-.blockr-stack-menu-color input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  margin-top: -3px;
-  border-radius: 50%;
   background: #ffffff;
-  border: 2px solid #2563eb;
   cursor: pointer;
 }
 
-.blockr-stack-menu-color input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: 2px solid #2563eb;
-  cursor: pointer;
+/* The default chrome around the colour well is a thick inset border that
+   leaves the colour a small dot; trim it so the well reads as a swatch. */
+.blockr-stack-menu-swatch::-webkit-color-swatch-wrapper {
+  padding: 0;
 }
 
-.blockr-stack-menu-color input[type="range"]:focus-visible {
+.blockr-stack-menu-swatch::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+.blockr-stack-menu-swatch::-moz-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+.blockr-stack-menu-swatch:focus-visible {
   outline: 2px solid #2563eb;
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 /* Trimmed stack-menu card: drop the description and package badge,

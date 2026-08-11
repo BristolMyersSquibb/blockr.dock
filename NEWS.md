@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* The stack sidebar picks a colour with a native `<input type="color">`
+  beside the hex field, in place of the hand-rolled hue / lightness
+  sliders. The sliders reached only a fixed-saturation slice of the colour
+  space -- no black, no white, nothing muted or fully saturated -- and a
+  hex value typed from outside that slice was accepted but then silently
+  rewritten by the next drag. The native input gives the full gamut, plus
+  the platform's own dialog, eyedropper and keyboard handling (#396).
+
 * New export `sidebar_owned_by()`, which reports whether a given action
   currently holds one of the board's sidebar panels -- `NULL` when it
   does not, otherwise the panel plus whether it is open and pinned. It
