@@ -26,25 +26,40 @@ hide_ext_panel <- function(id, rm_panel = TRUE, dock, ...) {
   invisible(NULL)
 }
 
-hide_ext_ui <- function(id, session, board_ns = session$ns) {
+hide_ext_ui <- function(ids, session, board_ns = session$ns) {
 
-  eid <- board_ns(as_ext_handle_id(id))
+  hid <- as_ext_handle_id(ids)
+
+  if (!length(hid)) {
+    return(invisible(NULL))
+  }
+
+  eid <- board_ns(hid)
   oid <- paste0(board_ns("exts_offcanvas"), " .offcanvas-body")
 
-  log_debug("hiding extension {eid} in {oid}")
+  log_debug("hiding {cli::qty(length(eid))}extension{?s} {eid} in {oid}")
 
-  move_dom_element(paste0("#", eid), paste0("#", oid), session)
+  move_dom_elements(paste0("#", eid), paste0("#", oid), session)
 }
 
-show_ext_ui <- function(id, session, board_ns = session$ns) {
+show_ext_ui <- function(ids, session, board_ns = session$ns) {
+
+  hid <- as_ext_handle_id(ids)
+
+  if (!length(hid)) {
+    return(invisible(NULL))
+  }
 
   # board_ns: board-level namespace for DOM element IDs (handles, offcanvas).
   # session$ns: dock-module namespace for dock panel IDs.
   # These differ when called from a nested dock module (views).
-  eid <- board_ns(as_ext_handle_id(id))
-  pid <- paste(dock_id(session$ns), as_ext_panel_id(id), sep = "-")
+  eid <- board_ns(hid)
+  pid <- paste(dock_id(session$ns), as_ext_panel_id(ids), sep = "-")
 
-  log_debug("showing extension {eid} in panel {pid}")
+  log_debug(
+    "showing {cli::qty(length(eid))}extension{?s} {eid} in ",
+    "{cli::qty(length(pid))}panel{?s} {pid}"
+  )
 
-  move_dom_element(paste0("#", eid), paste0("#", pid), session)
+  move_dom_elements(paste0("#", eid), paste0("#", pid), session)
 }

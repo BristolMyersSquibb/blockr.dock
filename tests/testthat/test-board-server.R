@@ -1848,3 +1848,37 @@ test_that("a locked board still wires the render path (#339)", {
   # paints the front tab must not be -- gating it would blank a locked board.
   expect_identical(render_wired, 1L)
 })
+
+test_that("a view sweep sends one move-element message per card kind (#397)", {
+
+  sent <- list()
+  session <- list(
+    ns = NS("my_board"),
+    sendCustomMessage = function(type, message) {
+      sent[[length(sent) + 1L]] <<- message
+      invisible()
+    }
+  )
+
+  local_mocked_bindings(
+    block_panel_ids = function(...) as_block_panel_id(c("a", "b", "c")),
+    ext_panel_ids = function(...) as_ext_panel_id("edit_board")
+  )
+
+  docks <- list(v1 = list(proxy = list(session = session)))
+
+  show_view_ui("v1", docks)
+
+  # Three block cards and one extension card cross over as two messages, not
+  # four: each card relocated in its own message would be its own client task.
+  expect_length(sent, 2L)
+  expect_length(sent[[1L]], 3L)
+  expect_length(sent[[2L]], 1L)
+
+  sent <- list()
+  hide_view_ui("v1", docks)
+
+  expect_length(sent, 2L)
+  expect_length(sent[[1L]], 3L)
+  expect_length(sent[[2L]], 1L)
+})
