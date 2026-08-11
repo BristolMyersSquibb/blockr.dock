@@ -142,7 +142,7 @@ board_ui.dock_board <- function(
     # input value, so a holder of a trigger bundle can tell whose form is
     # currently on screen.
     sidebar_ui(
-      board_sidebar_id(id, "actions_sidebar"),
+      NS(id, "actions_sidebar"),
       mode = "overlay",
       side = "right"
     ),
@@ -154,7 +154,7 @@ board_ui.dock_board <- function(
     # `block_browser_server("browser")` and just toggles this panel
     # (`show_sidebar()` with no `ui`), so opening it never re-renders.
     sidebar_ui(
-      board_sidebar_id(id, "add_block_sidebar"),
+      NS(id, "add_block_sidebar"),
       ui = block_browser_ui(
         NS(NS(id, "add_block_action"), "browser")
       ),
@@ -170,7 +170,7 @@ board_ui.dock_board <- function(
     # title. Composed id so the markup lands under the
     # `append_block_action` server's namespace.
     sidebar_ui(
-      board_sidebar_id(id, "append_block_sidebar"),
+      NS(id, "append_block_sidebar"),
       ui = block_browser_ui(
         NS(NS(id, "append_block_action"), "browser"),
         target = append_to()
@@ -180,7 +180,7 @@ board_ui.dock_board <- function(
       side = "right"
     ),
     sidebar_ui(
-      board_sidebar_id(id, "settings_sidebar"),
+      NS(id, "settings_sidebar"),
       ui = settings_body(id, x, options = options),
       title = "Board options",
       mode = "overlay",

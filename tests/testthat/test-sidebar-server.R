@@ -3,19 +3,18 @@
 # ends are stubbed here so the payload a show ships and the state a handler
 # reads can be asserted without a browser; the round trip itself is covered
 # end-to-end at the bottom of this file. `ns` stands in for the writing
-# module, which is where the owner stamp is read from. `panels` is the root
+# module, which is where the owner stamp is read from. `inputs` is the root
 # input the echo comes back in: a single panel for the handlers that target
-# one, several (keyed by the ids a board mounts) for the ownership query,
-# which reads across them.
+# one by id, or a whole input set for the ownership query, which searches it.
 fake_sidebar_session <- function(state = NULL,
                                  ns = "my_board-edit_stack_action",
-                                 panels = list(panel = state)) {
+                                 inputs = list(panel = state)) {
 
   sent <- new.env(parent = emptyenv())
   sent$msgs <- list()
 
   root <- list(
-    input = panels,
+    input = do.call(reactiveValues, inputs),
     sendInputMessage = function(id, message) {
       sent$msgs <- c(sent$msgs, list(list(id = id, message = message)))
       invisible(NULL)
@@ -84,7 +83,11 @@ test_that("ownership requires an open panel and a matching stamp", {
 test_that("a query reports the panel an action currently holds", {
 
   session <- fake_sidebar_session(
-    panels = list(
+    inputs = list(
+      # A plain input, and one whose value is the very string a stamp would
+      # be: only a panel's value can answer for a panel. Sorts ahead of the
+      # panels, so a query that took it would be caught here.
+      `my_board-a_text_input` = "my_board-edit_stack_action",
       `my_board-actions_sidebar` = list(
         open = TRUE, pinned = TRUE, owner = "my_board-edit_stack_action"
       ),
@@ -117,23 +120,22 @@ test_that("a query reports the panel an action currently holds", {
   expect_null(owned_by("edit_stack_action", "other_board"))
 })
 
-test_that("the query covers every sidebar a board mounts", {
-  # Both sides compose from `board_sidebar_ids()`, so a panel added to the
-  # mounts is one the query already scans -- assert they cannot drift apart.
-  html <- xml2::read_html(
-    as.character(board_ui("my_board", new_dock_board()))
-  )
-  panels <- xml2::xml_find_all(
-    html,
-    paste0(
-      "//div[contains(concat(' ', normalize-space(@class), ' '),",
-      " ' blockr-sidebar ')]"
+test_that("a panel outside the board's own mounts answers the same way", {
+  # An extension mounting its own sidebar and writing to it from its module.
+  # The panel is not one `board_ui()` places and its id follows no scheme the
+  # query knows, but the stamp is composed the same way, so it is found the
+  # same way -- the set of panels is not something to enumerate.
+  session <- fake_sidebar_session(
+    inputs = list(
+      `my_board-ext_notes-scratch` = list(
+        open = TRUE, pinned = FALSE, owner = "my_board-ext_notes"
+      )
     )
   )
 
-  expect_setequal(
-    xml2::xml_attr(panels, "id"),
-    NS("my_board", board_sidebar_ids())
+  expect_identical(
+    sidebar_owned_by("ext_notes", "my_board", session = session),
+    list(panel = "my_board-ext_notes-scratch", open = TRUE, pinned = FALSE)
   )
 })
 
