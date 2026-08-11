@@ -224,7 +224,7 @@ test_that("adding a second block keeps both block panels (#196)", {
   )
   withr::defer(app$stop())
 
-  app$wait_for_idle()
+  wait_bound(app, "registry_select")
 
   add_block <- function(registry, id) {
     app$set_inputs(
@@ -232,7 +232,6 @@ test_that("adding a second block keeps both block panels (#196)", {
       `my_board-ext_edit_board-block_id` = id
     )
     app$click("my_board-ext_edit_board-confirm_add")
-    app$wait_for_idle()
   }
 
   add_block("dataset_block", "a")
@@ -311,7 +310,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   )
   withr::defer(app$stop())
 
-  app$wait_for_idle()
+  wait_view_nav(app, 2)
 
   # The bug rendered 2N entries: board_ui drew N items statically and the
   # reconcile pass re-added each as a blank-labelled duplicate sharing the
@@ -332,7 +331,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
 
   app$set_inputs(`my_board-view_new_name` = "Third")
   app$click("my_board-confirm_view_add")
-  app$wait_for_idle()
+  wait_view_nav(app, 3)
 
   nav <- read_view_nav(app)
 
@@ -482,9 +481,11 @@ test_that("deleting a block via its card menu drops the panel and its link", {
   )
   withr::defer(app$stop())
 
-  app$wait_for_idle()
-
+  # Two independent client settlements: dockview mounts the panel tabs, and the
+  # extension's links table renders and binds its cell inputs. Neither implies
+  # the other, so gate on both before reading them.
   wait_block_panel_tabs(app, c("block_panel-a", "block_panel-b"))
+  wait_bound(app, "ab_from")
   expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
   expect_identical(field(app, "ab_from"), "a")
 
@@ -497,14 +498,14 @@ test_that("deleting a block via its card menu drops the panel and its link", {
       "'my_board-block_b-edit_block-delete_block', 1, {priority: 'event'});"
     )
   )
-  app$wait_for_idle()
 
   # The board update removes b's dock panel and cascade-removes the dependent
-  # link, whose row then leaves the extension's links table. Gate on the panel
-  # actually dropping (client-confirmed) before asserting the strip and reading
-  # the link field: the same board update has cleared both by the time the tab
-  # is gone.
+  # link, whose row then leaves the extension's links table. One update, but
+  # again two settlements landing on their own schedules -- the panel drop is
+  # client-confirmed by the tab going, the row removal by the cell input
+  # leaving the DOM.
   wait_block_panel_tabs(app, "block_panel-a")
+  wait_gone(app, "ab_from")
   expect_identical(block_panel_tabs(app), "block_panel-a")
   expect_null(field(app, "ab_from"))
 })
@@ -521,7 +522,7 @@ test_that("removing a link via the edit extension updates the board", {
   )
   withr::defer(app$stop())
 
-  app$wait_for_idle()
+  wait_bound(app, "ab_from")
   expect_identical(field(app, "ab_from"), "a")
 
   app$run_js(
@@ -530,12 +531,12 @@ test_that("removing a link via the edit extension updates the board", {
       "', [1], {priority: 'event'});"
     )
   )
-  app$wait_for_idle()
+  wait_enabled(app, "rm_link")
 
-  click(app, "rm_link")
-  app$wait_for_idle()
+  click(app, "rm_link", wait = FALSE)
+  wait_enabled(app, "apply_changes")
   click(app, "apply_changes")
-  app$wait_for_idle()
+  wait_gone(app, "ab_from")
 
   expect_null(field(app, "ab_from"))
 })
@@ -552,7 +553,7 @@ test_that("removing a stack via the edit extension updates the board", {
   )
   withr::defer(app$stop())
 
-  app$wait_for_idle()
+  wait_bound(app, "grp_name")
   expect_identical(field(app, "grp_name"), "Group A")
 
   app$run_js(
@@ -561,12 +562,12 @@ test_that("removing a stack via the edit extension updates the board", {
       "', [1], {priority: 'event'});"
     )
   )
-  app$wait_for_idle()
+  wait_enabled(app, "rm_stack")
 
-  click(app, "rm_stack")
-  app$wait_for_idle()
+  click(app, "rm_stack", wait = FALSE)
+  wait_enabled(app, "apply_changes")
   click(app, "apply_changes")
-  app$wait_for_idle()
+  wait_gone(app, "grp_name")
 
   expect_null(field(app, "grp_name"))
 })
@@ -684,7 +685,7 @@ test_that("a view moves down via the nav reorder control (#351)", {
   )
   withr::defer(app$stop())
 
-  app$wait_for_idle()
+  wait_view_nav(app, 2)
 
   # Two seeded views, First active and on top.
   nav <- read_view_nav(app)
