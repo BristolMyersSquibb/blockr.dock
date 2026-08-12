@@ -674,6 +674,10 @@ block_status_style <- function(status) {
 
   spec <- switch(
     status,
+    stale = list(
+      color = "#6b7280",
+      label = "Inputs changed since this block last ran"
+    ),
     waiting = list(color = "#f59e0b", label = "Waiting for a data input"),
     unset = list(color = "#eab308", label = "Set this block's inputs"),
     failed = list(color = "#dc2626", label = "Evaluation failed")
@@ -686,11 +690,11 @@ block_status_style <- function(status) {
   c(spec, list(size = 8L, ring = 2L, ring_color = "#ffffff"))
 }
 
-#' @param status A block eval status. `waiting`, `unset` and `failed` carry a
-#'   badge; `ready` carries none; `dormant` is indeterminate; any other value
-#'   yields no badge. `size` is the coloured dot's pixel diameter and `ring`
-#'   its white outline width, both shared so the dock card icon and the DAG
-#'   node badge render identically.
+#' @param status A block eval status: `stale`, `waiting`, `unset` and `failed`
+#'   carry a badge; `ready` carries none; `dormant` is indeterminate; any other
+#'   value yields no badge. The `size` field is the coloured dot's pixel
+#'   diameter and `ring` its white outline width, both shared so the dock card
+#'   icon and the DAG node badge render identically.
 #' @param error_count Number of error conditions the block has raised. A
 #'   positive count promotes the badge to `failed`, catching render-phase
 #'   errors that leave the eval status `ready`.
