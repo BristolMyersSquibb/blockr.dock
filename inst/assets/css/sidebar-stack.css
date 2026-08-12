@@ -142,9 +142,15 @@
   flex: 1 1 auto;
 }
 
+/* `height: auto` is load-bearing: WebKit / Blink give `input[type="color"]`
+   a definite height in their UA stylesheet, and `align-self: stretch` only
+   applies to an auto cross-size -- so without it the swatch renders shorter
+   than the hex field beside it there (Gecko sets no such height, which is
+   why it looks right untouched). */
 .blockr-stack-menu-swatch {
   flex: 0 0 auto;
   align-self: stretch;
+  height: auto;
   width: 32px;
   padding: 2px;
   border: 1px solid rgba(15, 23, 42, 0.12);
