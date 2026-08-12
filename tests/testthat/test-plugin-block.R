@@ -375,9 +375,15 @@ test_that("a stale block carries a muted badge (#408)", {
     fixed = TRUE
   )
 
-  # Error conditions still win: a stale block that raised errors reads `failed`.
+  # Recorded errors do not survive the input change that made the block stale:
+  # they were raised against inputs it no longer has, and it has not re-run, so
+  # a red dot would assert a failure nobody has observed on the current inputs.
+  expect_identical(block_status_badge("stale", 2L), stale)
+
+  # A dormant block keeps its error badge -- nothing about its inputs changed,
+  # so the last-known failure still describes them.
   expect_identical(
-    block_status_badge("stale", 2L),
+    block_status_badge("dormant", 2L),
     block_status_style("failed")
   )
 

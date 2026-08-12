@@ -36,7 +36,8 @@ icon and the DAG node badge render identically.}
 
 \item{error_count}{Number of error conditions the block has raised. A
 positive count promotes the badge to \code{failed}, catching render-phase
-errors that leave the eval status \code{ready}.}
+errors that leave the eval status \code{ready}. A \code{stale} block is exempt:
+its conditions were raised against inputs it no longer has.}
 }
 \value{
 Metadata is returned from \code{blks_metadata()} as a \code{data.frame} with

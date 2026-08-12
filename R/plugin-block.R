@@ -697,10 +697,18 @@ block_status_style <- function(status) {
 #'   icon and the DAG node badge render identically.
 #' @param error_count Number of error conditions the block has raised. A
 #'   positive count promotes the badge to `failed`, catching render-phase
-#'   errors that leave the eval status `ready`.
+#'   errors that leave the eval status `ready`. A `stale` block is exempt:
+#'   its conditions were raised against inputs it no longer has.
 #' @rdname meta
 #' @export
 block_status_badge <- function(status, error_count = 0L) {
+
+  # A stale block's conditions predate the upstream change that made it stale,
+  # and it has not re-run since, so they say nothing about whether it would
+  # still fail on its current inputs.
+  if (isTRUE(status == "stale")) {
+    return(block_status_style("stale"))
+  }
 
   if (error_count > 0L) {
     status <- "failed"
