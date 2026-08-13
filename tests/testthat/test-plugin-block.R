@@ -351,6 +351,46 @@ test_that("block_status_badge is the shared badge derivation (#314)", {
   expect_identical(block_status_badge("dormant"), NA)
 })
 
+test_that("a stale block carries a muted badge (#408)", {
+
+  stale <- block_status_style("stale")
+
+  expect_identical(stale$color, "#6b7280")
+  expect_identical(stale$label, "Inputs changed since this block last ran")
+  expect_identical(stale$size, 8L)
+  expect_identical(stale$ring, 2L)
+  expect_identical(stale$ring_color, "#ffffff")
+
+  # The muted treatment is its own, not a reuse of an attention colour.
+  attention <- lapply(c("waiting", "unset", "failed"), block_status_style)
+  expect_false(stale$color %in% chr_xtr(attention, "color"))
+
+  # A stale block flags as out of date rather than falling through to "no
+  # badge", which is what made it indistinguishable from a healthy one.
+  expect_type(block_status_badge("stale"), "list")
+  expect_identical(block_status_badge("stale"), stale)
+  expect_match(
+    as.character(block_status_indicator("stale")),
+    "#6b7280",
+    fixed = TRUE
+  )
+
+  # Recorded errors do not survive the input change that made the block stale:
+  # they were raised against inputs it no longer has, and it has not re-run, so
+  # a red dot would assert a failure nobody has observed on the current inputs.
+  expect_identical(block_status_badge("stale", 2L), stale)
+
+  # A dormant block keeps its error badge -- nothing about its inputs changed,
+  # so the last-known failure still describes them.
+  expect_identical(
+    block_status_badge("dormant", 2L),
+    block_status_style("failed")
+  )
+
+  # The body keeps its last-known output, so no placeholder note replaces it.
+  expect_null(block_status_note("stale"))
+})
+
 test_that("block status indicator + note reflect eval status (#290)", {
 
   waiting_dot <- block_status_indicator("waiting")
