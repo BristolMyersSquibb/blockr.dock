@@ -39,12 +39,17 @@ $(function () {
     return true;
   }
 
+  // A whole sweep arrives as one message, so every append lands in this task
+  // and the moved outputs' observer callbacks share one debounce window --
+  // one clientdata batch for the sweep rather than one per card.
   Shiny.addCustomMessageHandler(
-    'move-element', (m) => {
+    'move-element', (moves) => {
       pending = pending.filter(alive);
-      if (!applyMove(m)) {
-        pending.push(m);
-      }
+      moves.forEach((m) => {
+        if (!applyMove(m)) {
+          pending.push(m);
+        }
+      });
     }
   )
 

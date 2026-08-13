@@ -438,50 +438,36 @@ live_view_membership <- function(grid, view) {
   new_dock_view(layout_panel_ids(grid), view_name(view))
 }
 
-#' Hide all block and extension UI for a view.
-#'
-#' Moves block/extension cards off-screen (back to offcanvas) so they are
-#' not visible while the view is inactive.
-#'
-#' @param view_id View id (string).
-#' @param docks `reactiveValues` of dock module results, keyed by view id.
-#'
-#' @noRd
 hide_view_ui <- function(view_id, docks) {
+
   if (is.null(view_id) || !(view_id %in% names(docks))) {
     return()
   }
+
   dock <- docks[[view_id]]
   bns <- dock_board_ns(dock)
-  for (bid in as_obj_id(block_panel_ids(dock$proxy))) {
-    hide_block_ui(bid, dock$proxy$session, board_ns = bns)
-  }
-  for (eid in as_obj_id(ext_panel_ids(dock$proxy))) {
-    hide_ext_ui(eid, dock$proxy$session, board_ns = bns)
-  }
+
+  hide_block_ui(as_obj_id(block_panel_ids(dock$proxy)), dock$proxy$session,
+                board_ns = bns)
+
+  hide_ext_ui(as_obj_id(ext_panel_ids(dock$proxy)), dock$proxy$session,
+              board_ns = bns)
 }
 
-#' Show all block and extension UI for a view.
-#'
-#' Restores block/extension cards into the viewport when a view
-#' becomes active.
-#'
-#' @param view_id View id (string).
-#' @param docks `reactiveValues` of dock module results, keyed by view id.
-#'
-#' @noRd
 show_view_ui <- function(view_id, docks) {
+
   if (is.null(view_id) || !(view_id %in% names(docks))) {
     return()
   }
+
   dock <- docks[[view_id]]
   bns <- dock_board_ns(dock)
-  for (bid in as_obj_id(block_panel_ids(dock$proxy))) {
-    show_block_ui(bid, dock$proxy$session, board_ns = bns)
-  }
-  for (eid in as_obj_id(ext_panel_ids(dock$proxy))) {
-    show_ext_ui(eid, dock$proxy$session, board_ns = bns)
-  }
+
+  show_block_ui(as_obj_id(block_panel_ids(dock$proxy)), dock$proxy$session,
+                board_ns = bns)
+
+  show_ext_ui(as_obj_id(ext_panel_ids(dock$proxy)), dock$proxy$session,
+              board_ns = bns)
 }
 
 # Insert a view's dock container, start its manage_dock module, and register
@@ -789,18 +775,15 @@ manage_dock <- function(
         restore_layout(init_layout, dock$proxy,
                        blocks = init_blocks, extensions = init_exts)
 
-        for (pid in panels) {
-          if (is_block_panel_id(pid)) {
-            show_block_ui(pid, session, board_ns = board_ns)
-          } else if (is_ext_panel_id(pid)) {
-            show_ext_ui(pid, session, board_ns = board_ns)
-          } else {
-            blockr_abort(
-              "Unknown panel type {class(pid)}.",
-              class = "dock_panel_invalid"
-            )
-          }
-        }
+        show_block_ui(
+          as_obj_id(Filter(is_block_panel_id, panels)), session,
+          board_ns = board_ns
+        )
+
+        show_ext_ui(
+          as_obj_id(Filter(is_ext_panel_id, panels)), session,
+          board_ns = board_ns
+        )
       },
       once = TRUE
     )

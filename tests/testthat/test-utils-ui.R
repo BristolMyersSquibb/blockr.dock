@@ -107,3 +107,44 @@ test_that("empty_dock_prompt offers no add control when locked (#136)", {
   expect_false(grepl("empty_dock_add", locked, fixed = TRUE))
   expect_match(locked, "lock-fill", fixed = TRUE)
 })
+
+test_that("move_dom_elements batches a sweep into one message", {
+
+  sent <- list()
+  session <- list(
+    sendCustomMessage = function(type, message) {
+      sent[[length(sent) + 1L]] <<- list(type = type, message = message)
+      invisible()
+    }
+  )
+
+  move_dom_elements(c("#a", "#b", "#c"), "#off", session)
+
+  expect_length(sent, 1L)
+  expect_identical(sent[[1L]]$type, "move-element")
+  expect_identical(
+    sent[[1L]]$message,
+    list(
+      list(from = "#a", to = "#off"),
+      list(from = "#b", to = "#off"),
+      list(from = "#c", to = "#off")
+    )
+  )
+
+  sent <- list()
+  move_dom_elements(c("#a", "#b"), c("#p-a", "#p-b"), session)
+
+  expect_length(sent, 1L)
+  expect_identical(
+    sent[[1L]]$message,
+    list(
+      list(from = "#a", to = "#p-a"),
+      list(from = "#b", to = "#p-b")
+    )
+  )
+
+  sent <- list()
+  move_dom_elements(character(), "#off", session)
+
+  expect_length(sent, 0L)
+})
