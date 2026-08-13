@@ -2,6 +2,16 @@
 
 ## blockr.dock (development version)
 
+- The stack sidebar picks a colour with a native `<input type="color">`
+  beside the hex field, in place of the hand-rolled hue / lightness
+  sliders. The sliders reached only a fixed-saturation slice of the
+  colour space – no black, no white, nothing muted or fully saturated –
+  and a hex value typed from outside that slice was accepted but then
+  silently rewritten by the next drag. The native input gives the full
+  gamut, plus the platform’s own dialog, eyedropper and keyboard
+  handling
+  ([\#396](https://github.com/BristolMyersSquibb/blockr.dock/issues/396)).
+
 - A block whose inputs changed while it was dormant now carries a muted
   grey status badge instead of none. Core’s sixth eval status, `stale`,
   fell through
