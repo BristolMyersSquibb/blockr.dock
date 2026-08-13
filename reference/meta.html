@@ -90,17 +90,18 @@ for block icons.</p>
 
 
 <dt id="arg-status">status<a class="anchor" aria-label="anchor" href="#arg-status"></a></dt>
-<dd><p>A block eval status. <code>waiting</code>, <code>unset</code> and <code>failed</code> carry a
-badge; <code>ready</code> carries none; <code>dormant</code> is indeterminate; any other value
-yields no badge. <code>size</code> is the coloured dot's pixel diameter and <code>ring</code>
-its white outline width, both shared so the dock card icon and the DAG
-node badge render identically.</p></dd>
+<dd><p>A block eval status: <code>stale</code>, <code>waiting</code>, <code>unset</code> and <code>failed</code>
+carry a badge; <code>ready</code> carries none; <code>dormant</code> is indeterminate; any other
+value yields no badge. The <code>size</code> field is the coloured dot's pixel
+diameter and <code>ring</code> its white outline width, both shared so the dock card
+icon and the DAG node badge render identically.</p></dd>
 
 
 <dt id="arg-error-count">error_count<a class="anchor" aria-label="anchor" href="#arg-error-count"></a></dt>
 <dd><p>Number of error conditions the block has raised. A
 positive count promotes the badge to <code>failed</code>, catching render-phase
-errors that leave the eval status <code>ready</code>.</p></dd>
+errors that leave the eval status <code>ready</code>. A <code>stale</code> block is exempt:
+its conditions were raised against inputs it no longer has.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -2,6 +2,18 @@
 
 ## blockr.dock (development version)
 
+- A block whose inputs changed while it was dormant now carries a muted
+  grey status badge instead of none. Core’s sixth eval status, `stale`,
+  fell through
+  [`block_status_badge()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)
+  to “no badge”, so a block holding an out-of-date result looked
+  identical to a healthy one on both the dock card icon and the
+  blockr.dag node. A stale block also drops the red `failed` badge it
+  would otherwise keep from error conditions recorded before the change:
+  those describe inputs it no longer has, and it has not re-run since,
+  so the upstream edit may equally have fixed the failure as caused it
+  ([\#408](https://github.com/BristolMyersSquibb/blockr.dock/issues/408)).
+
 - New export
   [`sidebar_owned_by()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md),
   which reports whether a given action currently holds one of the

@@ -43,17 +43,18 @@ block_status_badge(status, error_count = 0L)
 
 - status:
 
-  A block eval status. `waiting`, `unset` and `failed` carry a badge;
-  `ready` carries none; `dormant` is indeterminate; any other value
-  yields no badge. `size` is the coloured dot's pixel diameter and
-  `ring` its white outline width, both shared so the dock card icon and
-  the DAG node badge render identically.
+  A block eval status: `stale`, `waiting`, `unset` and `failed` carry a
+  badge; `ready` carries none; `dormant` is indeterminate; any other
+  value yields no badge. The `size` field is the coloured dot's pixel
+  diameter and `ring` its white outline width, both shared so the dock
+  card icon and the DAG node badge render identically.
 
 - error_count:
 
   Number of error conditions the block has raised. A positive count
   promotes the badge to `failed`, catching render-phase errors that
-  leave the eval status `ready`.
+  leave the eval status `ready`. A `stale` block is exempt: its
+  conditions were raised against inputs it no longer has.
 
 ## Value
 
