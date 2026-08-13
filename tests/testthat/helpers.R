@@ -13,15 +13,101 @@ retry_download <- function(app, output, .attempts = 6L) {
   stop(res)
 }
 
+# Chrome's own account of why it never announced its debugging port. The
+# launcher writes the browser's stderr to a `tempdir()` scratch file and reads
+# it back only on the `!p$is_alive()` branch; the port-open timeout aborts
+# without ever touching it, so the one artifact that says what went wrong dies
+# with the R session. That is why the CI failure carries no reason. Recover it
+# by diffing the scratch dir across the attempt.
+#
+# The three outcomes separate the candidate causes. No `DevTools listening`
+# line at all means Chrome never got that far -- a cold first start, or a
+# debugging port it could not bind, which the head of the log names. That line
+# present but on another port is the launcher's `output_port != port` mismatch.
+# Present on the right port leaves the HTTP probe of `/json/protocol` as what
+# actually failed. Startup errors are written first, so report the head.
+chrome_stderr <- function(before, n = 20L) {
+
+  logs <- setdiff(
+    list.files(tempdir(), pattern = "^chrome-.*-stderr\\.log$",
+               full.names = TRUE),
+    before
+  )
+
+  if (!length(logs)) {
+    return("[e2e-chrome] no chrome stderr log for this attempt")
+  }
+
+  txt <- readLines(logs[[1L]], warn = FALSE)
+
+  if (!length(txt)) {
+    return("[e2e-chrome] chrome stderr is empty -- it announced nothing")
+  }
+
+  announced <- grep("^DevTools listening on ws://", txt, value = TRUE)
+
+  paste(
+    c(
+      sprintf("[e2e-chrome] chrome stderr (%d lines, first %d):", length(txt),
+              min(n, length(txt))),
+      head(txt, n),
+      if (length(announced)) {
+        paste("[e2e-chrome] announced:", announced)
+      } else {
+        "[e2e-chrome] no 'DevTools listening' line was ever written"
+      }
+    ),
+    collapse = "\n"
+  )
+}
+
+# The chromote package launches the shared browser lazily, inside the first
+# `default_chromote_object()`, and on a loaded runner (Windows especially)
+# Chrome can miss the `chromote.timeout` window for opening its debugging port
+# -- an `error_stop_port_search` abort raised before `AppDriver$new()` is
+# reached, so retrying the driver never sees it. Retry the launch instead. The
+# failure observed in CI was the run's first launch, with two later launches in
+# the same job succeeding, so a second attempt is what the evidence supports;
+# it also re-samples the random debugging port, which a longer timeout cannot.
+# Each failure reports Chrome's stderr, since which of those two it was is
+# still unestablished. A timed-out attempt leaves its process running
+# (`launch_chrome_impl()` aborts without killing it) and processx only reaps it
+# from the `cleanup = TRUE` finalizer, so collect between attempts rather than
+# leaking a browser -- and the `$TMPDIR` scratch it holds -- per retry.
+retry_chrome_launch <- function(attempts = 3L) {
+
+  pat <- "^chrome-.*-stderr\\.log$"
+
+  for (i in seq_len(attempts)) {
+
+    before <- list.files(tempdir(), pattern = pat, full.names = TRUE)
+    res <- tryCatch(chromote::default_chromote_object(), error = function(e) e)
+
+    if (!inherits(res, "error")) {
+      return(res)
+    }
+
+    message(
+      "[e2e-chrome] launch ", i, "/", attempts, " failed: ",
+      conditionMessage(res), "\n", chrome_stderr(before)
+    )
+
+    gc()
+    Sys.sleep(1)
+  }
+  stop(res)
+}
+
 # Every e2e AppDriver goes through here so the chromote command timeout is
 # hardened in one place. A loaded CI runner (Windows especially) can take longer
 # than chromote's 10s default to bind the app's port, so AppDriver's first
 # `Page.navigate` times out at init (rstudio/shinytest2#448). The chromote
 # session inherits its command timeout from the default chromote object, so
-# raise that before the session is spawned -- via `default_chromote_object()`,
-# the same object AppDriver draws its session from.
+# raise that before the session is spawned -- on the object
+# `retry_chrome_launch()` returns, the same one AppDriver draws its session
+# from.
 new_app_driver <- function(...) {
-  chrome <- chromote::default_chromote_object()
+  chrome <- retry_chrome_launch()
   chrome$default_timeout <- 60
   shinytest2::AppDriver$new(...)
 }
