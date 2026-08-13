@@ -91,132 +91,50 @@
     cardSearch.applySearch(root, search ? search.value : "");
   }
 
-  // Inline colour picker: hue + lightness sliders + hex text input.
-  // The hex `<input>` is the canonical value carrier (a normal Shiny
-  // text input). Slider input recomputes HSL -> hex and writes the hex
-  // field, dispatching a native "change" event so Shiny's built-in
-  // text-input binding picks the change up - we never call
-  // Shiny.setInputValue ourselves. Typing in the hex field goes the
-  // other way: hex -> HSL -> slider positions + preview swatch.
+  // Colour field: a hex text input - the canonical value, and the only
+  // one Shiny binds - beside a native `<input type="color">`. R renders
+  // both from the same value, so there is nothing to seed; they only
+  // have to follow each other.
   //
-  // Everything is delegated on the panel root, which outlives the form:
+  // The sync is delegated on the panel root, which outlives the form:
   // the form is server-rendered into a `uiOutput` so it tracks the board,
   // and per-element listeners would die with each render.
 
-  function clamp(v, lo, hi) {
-    return Math.max(lo, Math.min(hi, v));
+  // `<input type="color">` takes only the 6-digit form; the R side
+  // accepts the 3-digit shorthand too. Returns null for anything the
+  // colour input cannot hold.
+  function expandHex(value) {
+    var v = (value || "").trim();
+    if (/^#[0-9a-fA-F]{3}$/.test(v)) {
+      return "#" + v.slice(1).replace(/./g, "$&$&");
+    }
+    return /^#[0-9a-fA-F]{6}$/.test(v) ? v : null;
   }
 
-  // HSL with S fixed at 60% (matches the dock's default chroma feel)
-  // and L variable. h in [0, 360], l in [0, 100].
-  function hslToHex(h, l) {
-    var s = 60;
-    h = ((h % 360) + 360) % 360;
-    l = clamp(l, 0, 100);
-    var sN = s / 100;
-    var lN = l / 100;
-    var c = (1 - Math.abs(2 * lN - 1)) * sN;
-    var x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    var m = lN - c / 2;
-    var r1 = 0, g1 = 0, b1 = 0;
-    if (h < 60)        { r1 = c; g1 = x; b1 = 0; }
-    else if (h < 120)  { r1 = x; g1 = c; b1 = 0; }
-    else if (h < 180)  { r1 = 0; g1 = c; b1 = x; }
-    else if (h < 240)  { r1 = 0; g1 = x; b1 = c; }
-    else if (h < 300)  { r1 = x; g1 = 0; b1 = c; }
-    else               { r1 = c; g1 = 0; b1 = x; }
-    var to255 = function (v) {
-      var n = Math.round((v + m) * 255);
-      var s = clamp(n, 0, 255).toString(16);
-      return s.length === 1 ? "0" + s : s;
-    };
-    return "#" + to255(r1) + to255(g1) + to255(b1);
-  }
+  function syncColorFields(root, event) {
+    var hex = root.querySelector(".blockr-stack-menu-hex");
+    var swatch = root.querySelector(".blockr-stack-menu-swatch");
+    if (!hex || !swatch) return;
 
-  function hexToHsl(hex) {
-    if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return null;
-    var r = parseInt(hex.slice(1, 3), 16) / 255;
-    var g = parseInt(hex.slice(3, 5), 16) / 255;
-    var b = parseInt(hex.slice(5, 7), 16) / 255;
-    var max = Math.max(r, g, b);
-    var min = Math.min(r, g, b);
-    var l = (max + min) / 2;
-    var h = 0, s = 0;
-    if (max !== min) {
-      var d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      switch (max) {
-        case r: h = ((g - b) / d) + (g < b ? 6 : 0); break;
-        case g: h = ((b - r) / d) + 2; break;
-        case b: h = ((r - g) / d) + 4; break;
+    if (event.target === swatch) {
+      hex.value = swatch.value;
+      // Only once the picker commits: it fires "input" throughout a drag,
+      // and Shiny's text binding sends "change" immediately.
+      if (event.type === "change") {
+        hex.dispatchEvent(new Event("change", { bubbles: true }));
       }
-      h *= 60;
+    } else if (event.target === hex) {
+      var expanded = expandHex(hex.value);
+      if (expanded) {
+        swatch.value = expanded;
+      }
     }
-    return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
-  }
-
-  function updatePreview(root) {
-    var hex = root.querySelector(".blockr-stack-menu-hex");
-    var sw = root.querySelector(".blockr-stack-menu-color-swatch");
-    if (!hex || !sw) return;
-    var v = (hex.value || "").trim();
-    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
-      sw.style.background = v;
-    }
-  }
-
-  function colorFields(root) {
-    var hex = root.querySelector(".blockr-stack-menu-hex");
-    var hue = root.querySelector(".blockr-stack-menu-hue");
-    var lit = root.querySelector(".blockr-stack-menu-lightness");
-    return hex && hue && lit ? { hex: hex, hue: hue, lit: lit } : null;
-  }
-
-  function writeHexFromSliders(root) {
-    var f = colorFields(root);
-    if (!f) return;
-    f.hex.value = hslToHex(
-      parseInt(f.hue.value, 10), parseInt(f.lit.value, 10)
-    );
-    // "change" only: Shiny's text binding sends it immediately, and the
-    // delegated listener below watches "input", so writing the hex here
-    // cannot bounce back and fight the slider the user is dragging.
-    f.hex.dispatchEvent(new Event("change", { bubbles: true }));
-    updatePreview(root);
-  }
-
-  function moveSlidersToHex(root) {
-    var f = colorFields(root);
-    if (!f) return;
-    var parsed = hexToHsl((f.hex.value || "").trim());
-    if (parsed) {
-      f.hue.value = String(parsed.h);
-      f.lit.value = String(parsed.l);
-    }
-    updatePreview(root);
   }
 
   function initColorPicker(root) {
-    // Seed the slider positions and the swatch from the hex whenever the
-    // field is (re-)bound, which covers both the form's first arrival and
-    // every later re-render. Seeding is the same operation a typed hex
-    // triggers, so there is no second copy of it to keep in step.
-    $(root).on("shiny:bound", function (event) {
-      if (event.target.classList.contains("blockr-stack-menu-hex")) {
-        moveSlidersToHex(root);
-      }
-    });
-
-    root.addEventListener("input", function (event) {
-      var el = event.target;
-      if (!el || !el.classList) return;
-      if (el.classList.contains("blockr-stack-menu-hue") ||
-          el.classList.contains("blockr-stack-menu-lightness")) {
-        writeHexFromSliders(root);
-      } else if (el.classList.contains("blockr-stack-menu-hex")) {
-        moveSlidersToHex(root);
-      }
-    });
+    var handler = function (event) { syncColorFields(root, event); };
+    root.addEventListener("input", handler);
+    root.addEventListener("change", handler);
   }
 
   // Edit mode caps the cards container so exactly four cards are

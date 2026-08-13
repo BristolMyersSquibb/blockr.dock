@@ -618,6 +618,96 @@ test_that("stack menu ui defers the form to a server-rendered slot", {
   expect_length(xml2::xml_find_all(doc, "//input[@id='mid-stack_name']"), 0L)
 })
 
+test_that("the colour field pairs a native picker with the bound hex input", {
+  doc <- xml2::read_html(
+    as.character(color_field_tag(NS("mid"), "#abc"))
+  )
+
+  hex <- xml2::xml_find_first(doc, "//input[@id='mid-stack_color']")
+  expect_identical(xml2::xml_attr(hex, "type"), "text")
+  expect_identical(xml2::xml_attr(hex, "value"), "#abc")
+
+  # The picker carries no id: `input$stack_color` stays the hex field, so
+  # the spec the menu commits is unchanged. It does need the expanded form
+  # of the same colour - `<input type="color">` cannot hold the shorthand.
+  swatch <- xml2::xml_find_first(doc, "//input[@type='color']")
+  expect_identical(xml2::xml_attr(swatch, "value"), "#aabbcc")
+  expect_identical(xml2::xml_attr(swatch, "id"), NA_character_)
+
+  expect_length(xml2::xml_find_all(doc, "//input[@type='range']"), 0L)
+})
+
+# The picker only reports through the hex field beside it, and `type="color"`
+# is not matched by Shiny's text-input binding, so the chain that carries a
+# picked colour to the server -- picker writes the hex field, the hex field's
+# "change" reaches the binding, the binding sends `stack_color` -- exists
+# nowhere but in the browser. A break there is silent: the form still renders
+# and still commits, just never the colour the user picked.
+test_that("a picked colour reaches the server through the hex field", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "sidebar-owner", "app.R", package = "blockr.dock"),
+    name = "stack-color",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+  app$click("my_board-ext_fire-edit_stack")
+
+  swatch <- ".blockr-stack-menu-swatch"
+  wait_js(
+    app,
+    sprintf("document.querySelector('%s') !== null", swatch),
+    function() paste("sidebar html:", app$get_html("#my_board-actions_sidebar"))
+  )
+
+  doc <- xml2::read_html(
+    app$get_html("#my_board-edit_stack_action-menu-form")
+  )
+  field_value <- function(xpath) {
+    xml2::xml_attr(xml2::xml_find_first(doc, xpath), "value")
+  }
+
+  expect_identical(
+    field_value("//input[@type='color']"),
+    field_value("//input[contains(@id, 'stack_color')]")
+  )
+
+  # Black is the case the sliders could not express at all: saturation was
+  # pinned at 60% and lightness floored at 20.
+  app$run_js(
+    paste0(
+      "var sw = document.querySelector('", swatch, "');",
+      "sw.value = '#000000';",
+      "sw.dispatchEvent(new Event('input', {bubbles: true}));",
+      "sw.dispatchEvent(new Event('change', {bubbles: true}));"
+    )
+  )
+  app$wait_for_idle()
+
+  expect_identical(
+    app$get_value(input = "my_board-edit_stack_action-menu-stack_color"),
+    "#000000"
+  )
+
+  # And back the other way, so a pasted brand colour shows in the picker.
+  app$run_js(
+    "var hex = document.querySelector('.blockr-stack-menu-hex');
+     hex.value = '#abc';
+     hex.dispatchEvent(new Event('input', {bubbles: true}));"
+  )
+
+  expect_identical(
+    app$get_js(paste0("document.querySelector('", swatch, "').value")),
+    "#aabbcc"
+  )
+})
+
 test_that("remove stack action", {
   r_board <- reactiveValues(
     board = new_dock_board(
