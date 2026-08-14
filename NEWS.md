@@ -1,5 +1,14 @@
 # blockr.dock (development version)
 
+* Extension state now reaches the saved board. Every extension serialized
+  an empty payload while still writing its object and constructor, so a
+  save looked complete yet carried none of its extensions' state and a
+  restore rebuilt each extension from constructor defaults. An outline
+  came back with no annotations, so every block fell to the
+  `report = TRUE` default -- a board saved with one block in the report
+  came back with all of them in -- and a hand-arranged dag lost its node
+  positions (#386).
+
 * The stack sidebar picks a colour with a native `<input type="color">`
   beside the hex field, in place of the hand-rolled hue / lightness
   sliders. The sliders reached only a fixed-saturation slice of the colour
