@@ -21,6 +21,7 @@ board_ui.dock_board <- function(
 
   tagList(
     show_block_dep(),
+    attr_output_dep(),
     blockr_dock_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),

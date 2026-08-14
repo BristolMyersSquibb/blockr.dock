@@ -241,13 +241,6 @@ test_that("locked dock keeps block_card_toggles hidden (#122)", {
 
 test_that("block card sections carry the css-styling contract (#214)", {
 
-  has_class <- function(token) {
-    sprintf(
-      "contains(concat(' ', normalize-space(@class), ' '), ' %s ')",
-      token
-    )
-  }
-
   card <- block_card_content(
     NS("blk"),
     expr_ui = div(id = "blk-expr"),
@@ -285,6 +278,209 @@ test_that("block card sections carry the css-styling contract (#214)", {
   )
   expect_true(is.na(xml2::xml_attr(header, "style")))
   expect_true(is.na(xml2::xml_attr(body, "style")))
+})
+
+test_that("block card carries no html output (#403)", {
+
+  blk <- new_dataset_block()
+
+  card <- edit_block_ui(
+    "blk",
+    blk,
+    "a",
+    expr_ui = div(id = "blk-expr"),
+    block_ui = div(id = "blk-out")
+  )
+
+  root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+  # Each html output value costs a rebind of its scope plus two whole-page
+  # clientdata walks, and the card's status dot, status note and title were
+  # three of them per card. All three are written in place instead.
+  expect_length(
+    xml2::xml_find_all(
+      root,
+      paste0("//*[", has_class("shiny-html-output"), "]")
+    ),
+    0L
+  )
+
+  dot <- xml2::xml_find_all(
+    root,
+    paste0(
+      "//span[", has_class("blockr-status-dot"),
+      " and ", has_class("blockr-attr-output"), "]"
+    )
+  )
+  expect_length(dot, 1L)
+  expect_identical(xml2::xml_attr(dot, "id"), "blk-status_indicator")
+
+  slot <- xml2::xml_find_all(
+    root,
+    paste0(
+      "//div[", has_class("blockr-status-note-slot"),
+      " and ", has_class("blockr-attr-output"), "]"
+    )
+  )
+  expect_length(slot, 1L)
+  expect_identical(xml2::xml_attr(slot, "id"), "blk-status_note")
+
+  # Both notes ship with the card and the stylesheet reveals the one the slot's
+  # data-status names, so a status change writes an attribute rather than
+  # sending markup.
+  notes <- xml2::xml_find_all(
+    slot,
+    paste0("./div[", has_class("blockr-status-note"), "]")
+  )
+  expect_setequal(xml2::xml_attr(notes, "data-status"), c("waiting", "unset"))
+
+  # The title is seeded from the block and kept in sync client-side off the
+  # rename input, so it needs no output of its own.
+  title <- xml2::xml_find_all(
+    root,
+    paste0("//span[", has_class("blockr-title"), "]")
+  )
+  expect_length(title, 1L)
+  expect_identical(xml2::xml_text(title), block_name(blk))
+})
+
+test_that("card status and title land in the browser (e2e, #403)", {
+
+  skip_on_cran()
+
+  # The fixture renders both cards, with `b` waiting on a data input it has no
+  # link for and `a` evaluating.
+  app <- new_app_driver(
+    system.file("examples", "block-status", "app.R", package = "blockr.dock"),
+    name = "card-status",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, 2)
+
+  el <- function(blk, part) {
+    sprintf("my_board-block_%s-edit_block-%s", blk, part)
+  }
+
+  attr_js <- function(id, name) {
+    sprintf("document.getElementById('%s').getAttribute('%s')", id, name)
+  }
+
+  read <- function(js) coal(app$get_js(js), "<null>", fail_all = FALSE)
+
+  diagnose <- function() {
+    sprintf(
+      "[card-status] b dot style=%s note=%s title=%s",
+      read(attr_js(el("b", "status_indicator"), "style")),
+      read(attr_js(el("b", "status_note"), "data-status")),
+      read(
+        sprintf(
+          "document.querySelector('#%s .blockr-title').textContent",
+          el("a", "title_display")
+        )
+      )
+    )
+  }
+
+  # The binding writes the shared spec straight onto the dot, so the colour and
+  # the tooltip arrive without any markup travelling.
+  wait_js(
+    app,
+    paste0(attr_js(el("b", "status_indicator"), "style"), " !== null"),
+    diagnose
+  )
+
+  expect_match(
+    app$get_js(attr_js(el("b", "status_indicator"), "style")),
+    "#f59e0b",
+    fixed = TRUE
+  )
+  expect_identical(
+    app$get_js(attr_js(el("b", "status_indicator"), "title")),
+    "Waiting for a data input"
+  )
+
+  # An evaluated block clears the attributes rather than keeping a stale spec.
+  # Its note slot naming `ready` is what says the value landed at all, so the
+  # bare dot below is a cleared one and not an unrendered one.
+  wait_js(
+    app,
+    paste0(attr_js(el("a", "status_note"), "data-status"), " === 'ready'"),
+    diagnose
+  )
+  expect_null(app$get_js(attr_js(el("a", "status_indicator"), "style")))
+  expect_null(app$get_js(attr_js(el("a", "status_indicator"), "title")))
+
+  # Both notes ship with the card and the stylesheet reveals exactly the one
+  # the slot's data-status names.
+  expect_identical(
+    app$get_js(attr_js(el("b", "status_note"), "data-status")),
+    "waiting"
+  )
+  expect_identical(
+    app$get_js(
+      sprintf(
+        paste0(
+          "Array.from(document.querySelectorAll('#%s > .blockr-status-note'))",
+          ".filter((n) => getComputedStyle(n).display !== 'none')",
+          ".map((n) => n.dataset.status).join(',')"
+        ),
+        el("b", "status_note")
+      )
+    ),
+    "waiting"
+  )
+
+  # A card built only on first visit still ends up with its status. These stay
+  # Shiny outputs precisely for that: they suspend while off screen and render
+  # when the card is inserted, where a custom message sent before the insert
+  # would simply be dropped.
+  expect_false(
+    app$get_js(
+      sprintf(
+        "document.getElementById('%s') !== null",
+        el("c", "status_indicator")
+      )
+    )
+  )
+
+  app$run_js(
+    paste0(
+      "document.querySelector('#my_board-view_nav ",
+      ".blockr-view-item[data-view-id=\"later\"]').click()"
+    )
+  )
+
+  wait_js(
+    app,
+    sprintf(
+      paste(
+        "document.getElementById('%s') !== null &&",
+        "%s === 'Waiting for a data input'"
+      ),
+      el("c", "status_indicator"),
+      attr_js(el("c", "status_indicator"), "title")
+    ),
+    diagnose
+  )
+
+  # Renaming drives the displayed title from the rename input itself, so no
+  # output sits between the two.
+  title_js <- sprintf(
+    "document.querySelector('#%s .blockr-title').textContent",
+    el("a", "title_display")
+  )
+  expect_identical(app$get_js(title_js), "Dataset")
+
+  do.call(
+    app$set_inputs,
+    set_names(list("Renamed"), el("a", "block_name_in"))
+  )
+
+  wait_js(app, paste0(title_js, " === 'Renamed'"), diagnose)
 })
 
 test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {
@@ -369,11 +565,7 @@ test_that("a stale block carries a muted badge (#408)", {
   # badge", which is what made it indistinguishable from a healthy one.
   expect_type(block_status_badge("stale"), "list")
   expect_identical(block_status_badge("stale"), stale)
-  expect_match(
-    as.character(block_status_indicator("stale")),
-    "#6b7280",
-    fixed = TRUE
-  )
+  expect_match(block_status_dot_attrs("stale")$style, "#6b7280", fixed = TRUE)
 
   # Recorded errors do not survive the input change that made the block stale:
   # they were raised against inputs it no longer has, and it has not re-run, so
@@ -393,33 +585,24 @@ test_that("a stale block carries a muted badge (#408)", {
 
 test_that("block status indicator + note reflect eval status (#290)", {
 
-  waiting_dot <- block_status_indicator("waiting")
-  expect_s3_class(waiting_dot, "shiny.tag")
-  expect_match(as.character(waiting_dot), "blockr-status-dot", fixed = TRUE)
-  expect_match(as.character(waiting_dot), "#f59e0b", fixed = TRUE)
-  expect_match(as.character(waiting_dot), "Waiting for a data input")
-  # The white ring is carried inline from the shared spec, not the CSS.
-  expect_match(as.character(waiting_dot), "0 0 0 2px #ffffff", fixed = TRUE)
+  waiting_dot <- block_status_dot_attrs("waiting")
+  expect_match(waiting_dot$style, "#f59e0b", fixed = TRUE)
+  expect_identical(waiting_dot$title, "Waiting for a data input")
+  expect_identical(waiting_dot[["aria-label"]], "Waiting for a data input")
+  # The white ring is carried in the written style from the shared spec, not
+  # the CSS.
+  expect_match(waiting_dot$style, "0 0 0 2px #ffffff", fixed = TRUE)
 
   # An error condition reddens the dot even when the eval status is `ready`,
   # matching the DAG node badge.
   expect_match(
-    as.character(block_status_indicator("ready", 2L)),
+    block_status_dot_attrs("ready", 2L)$style,
     "#dc2626",
     fixed = TRUE
   )
-  expect_null(block_status_indicator("ready"))
 
-  expect_match(
-    as.character(block_status_indicator("unset")),
-    "#eab308",
-    fixed = TRUE
-  )
-  expect_match(
-    as.character(block_status_indicator("failed")),
-    "#dc2626",
-    fixed = TRUE
-  )
+  expect_match(block_status_dot_attrs("unset")$style, "#eab308", fixed = TRUE)
+  expect_match(block_status_dot_attrs("failed")$style, "#dc2626", fixed = TRUE)
 
   expect_match(
     as.character(block_status_note("waiting")),
@@ -434,11 +617,23 @@ test_that("block status indicator + note reflect eval status (#290)", {
   # `failed` keeps the error styling, so no placeholder note.
   expect_null(block_status_note("failed"))
 
-  # `ready`, `dormant` and an absent status carry no affordance.
+  # A `ready` or `dormant` block, and an absent status, carry no affordance:
+  # the dot's attributes are all cleared rather than left stale from the last
+  # status.
+  blank <- list(style = "", title = "", role = "", `aria-label` = "")
+
   for (st in list("ready", "dormant", NULL, character(), c("a", "b"))) {
-    expect_null(block_status_indicator(st))
+    expect_identical(block_status_dot_attrs(st), blank)
     expect_null(block_status_note(st))
   }
+
+  # The slot keys on the raw status and the stylesheet reveals a note only for
+  # the two that have one, so a status without a note matches nothing.
+  expect_identical(
+    block_status_note_attrs("ready"),
+    list(`data-status` = "ready")
+  )
+  expect_identical(block_status_note_attrs(NULL), list(`data-status` = ""))
 })
 
 test_that("edit block server surfaces eval status reactively (#290)", {
@@ -460,33 +655,31 @@ test_that("edit block server surfaces eval status reactively (#290)", {
   testServer(
     edit_block_server(),
     {
-      html <- function(out) paste0(as.character(out$html), collapse = "")
-
       session$flushReact()
 
       expect_identical(blk_status(), "waiting")
-      expect_match(html(output$status_indicator), "#f59e0b", fixed = TRUE)
-      expect_match(html(output$status_note), "Waiting for a data input")
+      expect_match(output$status_indicator$style, "#f59e0b", fixed = TRUE)
+      expect_identical(output$status_note, list(`data-status` = "waiting"))
 
       status("failed")
       session$flushReact()
 
-      # `failed` shows the dot but leaves the note empty -- the raised error
+      # A `failed` block shows the dot but reveals no note -- the raised error
       # uses the error styling instead of a status placeholder.
       expect_identical(blk_status(), "failed")
-      expect_match(html(output$status_indicator), "#dc2626", fixed = TRUE)
-      expect_identical(html(output$status_note), "")
+      expect_match(output$status_indicator$style, "#dc2626", fixed = TRUE)
+      expect_identical(output$status_note, list(`data-status` = "failed"))
 
       status("ready")
       session$flushReact()
 
       # A ready block with no conditions carries no status affordance at all.
       expect_identical(blk_status(), "ready")
-      expect_identical(html(output$status_indicator), "")
-      expect_identical(html(output$status_note), "")
+      expect_identical(output$status_indicator$style, "")
+      expect_identical(output$status_indicator$title, "")
 
       # A render-phase error leaves the eval status `ready` but still reddens
-      # the dot, matching the DAG node badge (the note stays empty).
+      # the dot, matching the DAG node badge (the note stays hidden).
       block_conds(
         data.frame(
           block = "a", phase = "render", severity = "error",
@@ -496,8 +689,8 @@ test_that("edit block server surfaces eval status reactively (#290)", {
       session$flushReact()
 
       expect_identical(blk_status(), "ready")
-      expect_match(html(output$status_indicator), "#dc2626", fixed = TRUE)
-      expect_identical(html(output$status_note), "")
+      expect_match(output$status_indicator$style, "#dc2626", fixed = TRUE)
+      expect_identical(output$status_note, list(`data-status` = "ready"))
     },
     args = list(
       block_id = "a",
