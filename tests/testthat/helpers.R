@@ -686,3 +686,11 @@ field <- function(app, id) {
     )
   )
 }
+
+# An xpath predicate matching one class token exactly. The xml2 package has no
+# CSS selector, and a bare `contains(@class, 'x')` would also match a class
+# that merely starts with the token (`blockr-view-item` inside
+# `blockr-view-item-name`), so pad both sides and match the padded token.
+has_class <- function(token) {
+  sprintf("contains(concat(' ', normalize-space(@class), ' '), ' %s ')", token)
+}
