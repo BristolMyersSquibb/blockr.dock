@@ -12,6 +12,14 @@
 #' implement their own counter-based invalidation mechanism (on top of how
 #' reactive values behave).
 #'
+#' An action that fills a sidebar panel records itself on it as it writes, so
+#' the panel reports the writing action as its owner alongside whether it is
+#' open and pinned. `sidebar_owned_by()` reads that back for a given action:
+#' a consumer re-firing an action on a new selection can ask whether the form
+#' it previously opened is still the one on screen, without knowing which
+#' panel that action fills. The read is a snapshot and creates no reactive
+#' dependency, as called for in an [shiny::observeEvent()] handler.
+#'
 #' @param func A function which will be used to create a
 #' [shiny::moduleServer()].
 #' @param id Action ID
@@ -22,7 +30,9 @@
 #' function that returns an `action` object. String-value action IDs can be
 #' retrieved with `action_id()` and the set of actions associated with a board
 #' can be enumerated via `board_actions()`. Finally, `action_triggers()` returns
-#' a named list of objects suitable for use as action triggers.
+#' a named list of objects suitable for use as action triggers. For an action
+#' that currently holds a sidebar panel, `sidebar_owned_by()` returns a list
+#' with components `panel`, `open` and `pinned`, and `NULL` otherwise.
 #'
 #' @rdname action
 #' @export

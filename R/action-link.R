@@ -43,16 +43,7 @@ add_link_action <- function(trigger, board, update, ...) {
         # Close after a single link unless the user pinned the sidebar.
         # When pinned, the menu's own board observer drops the just-wired
         # card in place (no re-render) so the user can add another link.
-        session$onFlushed(
-          function() {
-            isolate(
-              if (!isTRUE(sidebar_state(sidebar_id)$pinned)) {
-                hide_sidebar(sidebar_id)
-              }
-            )
-          },
-          once = TRUE
-        )
+        hide_unless_pinned(sidebar_id)
       })
 
       NULL
@@ -92,13 +83,14 @@ edit_link_action <- function(trigger, board, update, ...) {
 
       # Close the sidebar the moment the edited link leaves the board
       # (removed elsewhere): editing a link that no longer exists makes no
-      # sense, so don't wait for an "Update" click. Guarded on the sidebar
-      # being open and on an edit actually being in progress.
+      # sense, so don't wait for an "Update" click. Guarded on an edit
+      # actually being in progress and on this action still owning the
+      # open panel.
       observeEvent(board$board, {
         id <- trigger()
         if (length(id) == 1L && !is.na(id) && nzchar(id) &&
               !id %in% board_link_ids(board$board) &&
-              isTRUE(sidebar_state(sidebar_id)$open)) {
+              owns_open_sidebar(sidebar_id)) {
           hide_sidebar(sidebar_id)
         }
       }, ignoreInit = TRUE)
@@ -124,16 +116,10 @@ edit_link_action <- function(trigger, board, update, ...) {
           update(list(links = list(mod = set_names(list(delta), id))))
         }
 
-        session$onFlushed(
-          function() {
-            isolate(
-              keep_or_hide_sidebar(
-                sidebar_id, title = sidebar_title(), ui = menu_ui()
-              )
-            )
-          },
-          once = TRUE
-        )
+        # The endpoint pickers and the input-slot control are `uiOutput`s on
+        # the board, so a pinned panel re-renders itself against the merged
+        # state - nothing here has to rebuild it.
+        hide_unless_pinned(sidebar_id)
       })
 
       NULL

@@ -73,6 +73,17 @@ is_hex_color <- function(x) {
   is_string(x) && grepl("^#(?:[0-9a-fA-F]{3}){1,2}$", x)
 }
 
+# `<input type="color">` accepts only the 6-digit form: fed the shorthand
+# it silently falls back to black, so expand before handing a colour to
+# one.
+expand_hex_color <- function(x) {
+  if (grepl("^#[0-9a-fA-F]{3}$", x)) {
+    paste0("#", gsub("(.)", "\\1\\1", substring(x, 2L)))
+  } else {
+    x
+  }
+}
+
 create_block_with_name <- function(reg_id, blk_nms, ...) {
   name_fun <- function(nms) {
     function(class) {

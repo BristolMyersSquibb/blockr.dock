@@ -1,5 +1,66 @@
 # blockr.dock (development version)
 
+* The stack sidebar picks a colour with a native `<input type="color">`
+  beside the hex field, in place of the hand-rolled hue / lightness
+  sliders. The sliders reached only a fixed-saturation slice of the colour
+  space -- no black, no white, nothing muted or fully saturated -- and a
+  hex value typed from outside that slice was accepted but then silently
+  rewritten by the next drag. The native input gives the full gamut, plus
+  the platform's own dialog, eyedropper and keyboard handling (#396).
+
+* A block whose inputs changed while it was dormant now carries a muted
+  grey status badge instead of none. Core's sixth eval status, `stale`,
+  fell through `block_status_badge()` to "no badge", so a block holding
+  an out-of-date result looked identical to a healthy one on both the
+  dock card icon and the blockr.dag node. A stale block also drops the
+  red `failed` badge it would otherwise keep from error conditions
+  recorded before the change: those describe inputs it no longer has,
+  and it has not re-run since, so the upstream edit may equally have
+  fixed the failure as caused it (#408).
+
+* New export `sidebar_owned_by()`, which reports whether a given action
+  currently holds one of the board's sidebar panels -- `NULL` when it
+  does not, otherwise the panel plus whether it is open and pinned. It
+  composes the ownership stamp itself, so a consumer that re-fires an
+  action on a new selection can ask "is the form I opened still on
+  screen?" without knowing which panel that action fills, which panels a
+  board mounts, or how a stamp is spelled. Previously the only way in was
+  to read the panel's input value directly, which meant naming dock's
+  panels in the consumer (#399).
+
+* A sidebar panel now reports which module wrote the body it is showing.
+  Every `show_sidebar()` stamps the writing module's namespaced id on the
+  panel -- `NS(<board id>, <action id>)` for a board action -- taken from
+  the session the call runs in, so the stamp follows the write rather than
+  the gesture and covers paths no consumer can observe, such as a holder
+  of the trigger bundle firing a shared-panel action directly. It comes
+  back as `owner` beside `open` and `pinned` in the panel's input value,
+  letting a consumer that re-fires an editor on a selection tell whether
+  the content it put there is still on screen. Filling a panel takes it
+  over, so nothing has to declare which panel it writes to release it.
+  dock's own auto-close handlers (edit stack / link / inputs, which close
+  when their target leaves the board) now gate on this, and no longer
+  close a form another action has since written into the shared panel
+  (#391).
+
+* A pinned stack / link sidebar now refreshes in place after a commit
+  rather than being torn down and rebuilt, so search text, scroll
+  position and anything the user entered that the commit did not consume
+  survive it. The stack menu's name / colour / id form is server-rendered
+  against the board to make that possible -- it still offers a fresh
+  stack id after each create -- and with nothing left to rebuild, none of
+  the four post-commit paths defers its close to `session$onFlushed()`
+  (#393).
+
+* A `select` verb in a view's `views$mod` update is now applied when
+  that view's dock is built for the first time in the same update that
+  carries the select -- for instance an update that activates a
+  never-opened view. Previously the panel-op observer took the select as
+  its `ignoreInit` value and dropped it, so the board switched to the
+  view but the requested tab was not brought to the front. The pending
+  select is now folded into the grid the fresh dock restores from, so the
+  tab is fronted on first paint (#324).
+
 * New exports for downstream consumers that translate between bare
   block / extension ids and dock's panel-id scheme: the class predicates
   `is_dock_panel_id()`, `is_block_panel_id()` and `is_ext_panel_id()`,

@@ -80,7 +80,7 @@ sidebar_dep <- function() {
 }
 
 show_sidebar <- function(id, ui = NULL, title = NULL,
-                         session = getDefaultReactiveDomain()) {
+                         session = get_session()) {
   stopifnot(
     is.character(id), length(id) == 1L, nzchar(id),
     is.null(title) || (is.character(title) && length(title) == 1L)
@@ -105,11 +105,20 @@ show_sidebar <- function(id, ui = NULL, title = NULL,
   if (!is.null(title)) {
     payload$title <- title
   }
+
+  # The panel's owner is whoever wrote the body: the module this call runs
+  # in, read off the calling session before the walk to the root. Every write
+  # therefore stamps by construction, with nothing declared at the call site
+  # and nothing to keep in step with the action's id. It does bind the stamp
+  # to where the call is written -- a write deferred into a flush callback
+  # would run under the root session and stamp that instead.
+  payload$owner <- session$ns(NULL)
+
   root$sendInputMessage(id, payload)
   invisible(NULL)
 }
 
-hide_sidebar <- function(id, session = getDefaultReactiveDomain()) {
+hide_sidebar <- function(id, session = get_session()) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
   root <- root_session(session)
 
@@ -117,7 +126,7 @@ hide_sidebar <- function(id, session = getDefaultReactiveDomain()) {
   invisible(NULL)
 }
 
-sidebar_state <- function(id, session = getDefaultReactiveDomain()) {
+sidebar_state <- function(id, session = get_session()) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
   root <- root_session(session)
 
@@ -125,19 +134,79 @@ sidebar_state <- function(id, session = getDefaultReactiveDomain()) {
   # want the current value without creating a reactive dependency on it.
   state <- isolate(root$input[[id]])
   if (is.null(state)) {
-    list(open = FALSE, pinned = FALSE)
+    list(open = FALSE, pinned = FALSE, owner = NULL)
   } else {
     state
   }
 }
 
+# Whether the calling module still holds an open panel, asked the same way a
+# write stamps it. The auto-close handlers gate on this so a handler whose
+# target vanished closes its own form and not the one another action has
+# since written into the shared slot.
+owns_open_sidebar <- function(id, session = get_session()) {
+  state <- sidebar_state(id, session = session)
+
+  isTRUE(state$open) && identical(state$owner, session$ns(NULL))
+}
+
+#' @param action Action ID
+#' @param board_id ID of the board module the action is registered with
+#' @param session Shiny session
+#'
+#' @rdname action
+#' @export
+sidebar_owned_by <- function(action, board_id, session = get_session()) {
+
+  stopifnot(is_string(action), is_string(board_id))
+
+  root <- root_session(session)
+
+  # A panel's stamp is the writing module's namespaced id, which for a board
+  # action is `NS(<board id>, <action id>)`. Composing it here is what keeps
+  # that assumption -- the board module sits at the top level -- from leaking
+  # into every consumer.
+  owner <- NS(board_id, action)
+
+  holds <- function(state) {
+    is.list(state) && identical(state[["owner"]], owner)
+  }
+
+  # A panel is found by its stamp, not by matching a known set of panel ids:
+  # which panels exist is open (an extension mounts its own), and a panel
+  # missing from such a set would quietly answer "owns nothing".
+  held <- Filter(holds, isolate(reactiveValuesToList(root$input)))
+
+  if (!length(held)) {
+    return(NULL)
+  }
+
+  state <- held[[1L]]
+
+  list(
+    panel = names(held)[1L],
+    open = isTRUE(state[["open"]]),
+    pinned = isTRUE(state[["pinned"]])
+  )
+}
+
 keep_or_hide_sidebar <- function(id, ui, title = NULL,
-                                 session = getDefaultReactiveDomain()) {
+                                 session = get_session()) {
   if (isTRUE(sidebar_state(id, session = session)$pinned)) {
     show_sidebar(id, ui = ui, title = title, session = session)
   } else {
     hide_sidebar(id, session = session)
   }
+}
+
+# Post-commit close for a panel whose menu tracks the board on its own: an
+# unpinned panel closes after the commit, a pinned one is left alone so the
+# menu refreshes itself in place.
+hide_unless_pinned <- function(id, session = get_session()) {
+  if (!isTRUE(sidebar_state(id, session = session)$pinned)) {
+    hide_sidebar(id, session = session)
+  }
+  invisible(NULL)
 }
 
 # Inline SVG pushpin (Bootstrap-icons "pin"). Swapped in for an earlier

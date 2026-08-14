@@ -27,9 +27,7 @@
   --blockr-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --blockr-shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 
-  /* ===========================================
-     Data marks (bars, boxes, lanes)
-     =========================================== */
+  /* Data marks - bars, boxes, lanes */
   /* Cosmetic ONLY. This radius carries no information: it exists so a mark
      does not read as a raw div, and nothing may ever be inferred from its
      presence. Two rules keep it honest:
@@ -43,6 +41,7 @@
      point-range band). Clamp with min(radius, thickness / 4) on thin lanes;
      at 12-14px the token applies unchanged. */
   --blockr-mark-radius: 2px;
+
   /* Weight for a mark that supports a CHOICE rather than carrying the answer:
      the crossfilter's bars rank options in a picker, they are not the
      analysis output. Marks that are the content stay at full weight. */
@@ -199,17 +198,17 @@
   transform: rotate(180deg);
 }
 
-/* Block eval status: on-icon status dot + empty-output placeholder.
+/* Block eval status: on-icon status dot.
    The dot is layered onto the block icon's lower-right corner (iOS badge
    style), matching blockr.dag's node badge placement. Its size and colour are
-   set inline from `block_status_style()` -- the source of truth both
-   front-ends share -- so only structure lives here. `size` is the coloured
-   dot's diameter; the 2px white ring is drawn *outside* it (box-shadow, not a
-   border) so the dot matches the DAG node badge, which rings its fill the same
-   way. The dot output must stay in flow when empty (never display:none) so it
-   is not suspended while hidden and left stuck ".recalculating", which would
-   trip the navbar busy-spinner scope; an empty inline output takes no space on
-   its own. */
+   written onto this element as a `style` attribute from `block_status_style()`
+   -- the source of truth both front-ends share -- so only structure lives
+   here. `size` is the coloured dot's diameter; the 2px white ring is drawn
+   *outside* it (box-shadow, not a border) so the dot matches the DAG node
+   badge, which rings its fill the same way. The dot must stay in flow when it
+   carries no status (never display:none) so it is not suspended while hidden
+   and left stuck ".recalculating", which would trip the navbar busy-spinner
+   scope; with no size written it takes no space on its own. */
 .blockr-block-icon {
   position: relative;
   display: inline-flex;
@@ -224,13 +223,21 @@
   border-radius: 50%;
 }
 
+/* Both notes are built into every card and the active one is revealed by the
+   slot's `data-status`, so a status change writes one attribute instead of
+   sending markup through an HTML output. */
 .blockr-status-note {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 8px;
   padding: 16px;
   color: var(--blockr-color-text-muted);
   font-size: var(--blockr-font-size-base);
+}
+
+.blockr-status-note-slot[data-status="waiting"] > [data-status="waiting"],
+.blockr-status-note-slot[data-status="unset"] > [data-status="unset"] {
+  display: flex;
 }
 
 .blockr-status-note-icon {

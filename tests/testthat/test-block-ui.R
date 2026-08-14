@@ -20,7 +20,7 @@ test_that("insert/remove panel test", {
         session$flushReact(),
         determine_panel_pos = function(dock) {
           expect_s3_class(dock$proxy, "dock_view_proxy")
-          TRUE
+          list(direction = "right")
         }
       )
 
@@ -355,4 +355,43 @@ test_that("remove_block_ui removes the card, leaving the slot to core", {
   # (dropping it from the ledger); the dock must not touch the channel.
   expect_length(removed, 1L)
   expect_setequal(built_cards(vis), c("a", "b"))
+})
+
+test_that("a card sweep is one move-element message, not one per card (#397)", {
+
+  sent <- list()
+  session <- list(
+    ns = NS("my_board"),
+    sendCustomMessage = function(type, message) {
+      sent[[length(sent) + 1L]] <<- message
+      invisible()
+    }
+  )
+
+  show_block_ui(c("a", "b", "c"), session)
+
+  expect_length(sent, 1L)
+  expect_identical(
+    chr_xtr(sent[[1L]], "from"),
+    paste0("#my_board-block_handle-", c("a", "b", "c"))
+  )
+  expect_identical(
+    chr_xtr(sent[[1L]], "to"),
+    paste0("#my_board-dock-block_panel-", c("a", "b", "c"))
+  )
+
+  sent <- list()
+  hide_block_ui(c("a", "b", "c"), session)
+
+  expect_length(sent, 1L)
+  expect_identical(
+    chr_xtr(sent[[1L]], "to"),
+    rep("#my_board-blocks_offcanvas .offcanvas-body", 3L)
+  )
+
+  sent <- list()
+  show_block_ui(character(), session)
+  hide_block_ui(character(), session)
+
+  expect_length(sent, 0L)
 })

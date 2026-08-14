@@ -26,21 +26,9 @@ add_stack_action <- function(trigger, board, update, ...) {
         # apply as-is.
         update(list(stacks = list(add = committed())))
 
-        # `update()` only sets a reactiveVal; the board state is mutated
-        # on the next reactive flush, so defer the sidebar rebuild until
-        # after the flush. Otherwise `menu_ui()` reads `board$board` from
-        # the pre-add snapshot and re-suggests the just-used stack id.
-        # `onFlushed` runs outside a reactive context, hence `isolate()`.
-        session$onFlushed(
-          function() {
-            isolate(
-              keep_or_hide_sidebar(
-                sidebar_id, title = "Create new stack", ui = menu_ui()
-              )
-            )
-          },
-          once = TRUE
-        )
+        # The form is a `uiOutput` on the board, so a pinned panel re-renders
+        # itself against the merged state and suggests a fresh stack id.
+        hide_unless_pinned(sidebar_id)
       })
 
       NULL
@@ -78,11 +66,10 @@ edit_stack_action <- function(trigger, board, update, ...) {
 
       # Close the sidebar the moment the edited stack leaves the board
       # (removed elsewhere): editing a stack that no longer exists makes
-      # no sense, so don't wait for an "Update" click. Guarded on the
-      # sidebar being open. (If another action had since taken over the
-      # shared slot this could close that form too - a rare
-      # edit-then-switch-then-remove sequence; revisit with sidebar
-      # ownership if it ever bites.)
+      # no sense, so don't wait for an "Update" click. Guarded on this
+      # action still owning the open panel, so an edit-then-switch-then-
+      # remove sequence closes nothing another action has since written
+      # into the shared slot.
       observeEvent(board$board, {
         id <- trigger()
         # No-op unless an edit is actually in progress (a valid stack id);
@@ -90,7 +77,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
         # mutates the board) and the membership test would error.
         if (length(id) == 1L && !is.na(id) && nzchar(id) &&
               !id %in% board_stack_ids(board$board) &&
-              isTRUE(sidebar_state(sidebar_id)$open)) {
+              owns_open_sidebar(sidebar_id)) {
           hide_sidebar(sidebar_id)
         }
       }, ignoreInit = TRUE)
@@ -99,9 +86,9 @@ edit_stack_action <- function(trigger, board, update, ...) {
         id <- trigger()
 
         # Safety net for a race (board change not yet observed when the
-        # user clicks): committing for a stack that's gone would error
-        # (the `mod` update and the post-commit `menu_ui()` rebuild both
-        # look it up). Bail and close unless `id` is a present stack.
+        # user clicks): committing for a stack that's gone would error in
+        # the `mod` update, which looks it up. Bail and close unless `id`
+        # is a present stack.
         if (!(length(id) == 1L && !is.na(id) && nzchar(id) &&
                 id %in% board_stack_ids(board$board))) {
           hide_sidebar(sidebar_id)
@@ -130,20 +117,7 @@ edit_stack_action <- function(trigger, board, update, ...) {
           )
         ))
 
-        # Defer the sidebar rebuild to the next reactive flush so
-        # `menu_ui()` reads the merged board state. Without this, the
-        # rebuilt form shows the pre-edit selection (e.g. a block the
-        # user just removed still appears selected).
-        session$onFlushed(
-          function() {
-            isolate(
-              keep_or_hide_sidebar(
-                sidebar_id, title = sidebar_title(), ui = menu_ui()
-              )
-            )
-          },
-          once = TRUE
-        )
+        hide_unless_pinned(sidebar_id)
       })
 
       NULL

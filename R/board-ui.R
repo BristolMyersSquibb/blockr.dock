@@ -21,6 +21,7 @@ board_ui.dock_board <- function(
 
   tagList(
     show_block_dep(),
+    attr_output_dep(),
     blockr_dock_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
@@ -134,6 +135,13 @@ board_ui.dock_board <- function(
     # silently swap a pinned panel's body, since the JS replaces content in
     # place and never inspects the pin class. Splitting by concern keeps
     # pin semantics intuitive without multi-pin machinery on the JS side.
+    # For "actions_sidebar", which cannot be split (its handlers ship
+    # trigger-dependent forms), the equivalent guarantee is the ownership
+    # stamp: every `show_sidebar()` records the writing module's namespaced
+    # id on the panel -- `NS(<board id>, <action id>)` for a board action --
+    # reported back as `owner` alongside `open` / `pinned` in the panel's
+    # input value, so a holder of a trigger bundle can tell whose form is
+    # currently on screen.
     sidebar_ui(
       NS(id, "actions_sidebar"),
       mode = "overlay",

@@ -872,6 +872,20 @@ test_that("restrict_grid resets the active tab when it is dropped", {
   expect_identical(leaf[["active"]], "a")
 })
 
+test_that("set_grid_active fronts a panel's leaf and focuses its group", {
+
+  grid <- dock_grid(panels("a", "b"), panels("c", "d"))
+
+  res <- set_grid_active(grid, "d")
+
+  expect_identical(res[["children"]][[1L]][["active"]], "a")
+  expect_identical(res[["children"]][[2L]][["active"]], "d")
+  expect_identical(res[["focus"]], "d")
+
+  # A select for a panel the grid doesn't place leaves it untouched.
+  expect_identical(set_grid_active(grid, "z"), grid)
+})
+
 test_that("the add / tab-close gestures emit authoritative deltas", {
 
   # The modal and tab close emit these payloads (in place of mutating the dock

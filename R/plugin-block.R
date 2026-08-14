@@ -14,7 +14,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
           title = blk_info$description,
           blk_icon_data_uri(blk_info$icon, blk_info$color, mode = "inline")
         ),
-        uiOutput(ns("status_indicator"), inline = TRUE)
+        block_status_dot(ns)
       ),
       div(
         class = paste(
@@ -80,7 +80,7 @@ block_card_title <- function(block, id, info) {
             ),
             ns("title_edit")
           ),
-          uiOutput(ns("block_name_out"), inline = TRUE),
+          tags$span(class = "blockr-title", block_name(block)),
           icon(
             "pen-to-square",
             class = "edit-icon",
@@ -102,7 +102,10 @@ block_card_title <- function(block, id, info) {
             label = NULL,
             value = block_name(block)
           ),
-          # JS to handle blur and enter key
+          # The displayed title mirrors this input, so it is kept in sync here
+          # rather than by a server-rendered output: `updateTextInput()` fires
+          # 'change', so a rename decided by the board lands the same way a
+          # keystroke does, with no render round-trip.
           tags$script(HTML(sprintf(
             "$(document).ready(function() {
               var input = $('#%s');
@@ -116,6 +119,9 @@ block_card_title <- function(block, id, info) {
                 if (e.key === 'Enter') {
                   $(this).blur();
                 }
+              });
+              input.on('input change', function() {
+                display.find('.blockr-title').text($(this).val());
               });
             });",
             input_id, ns("title_display"), ns("title_edit")
@@ -363,7 +369,7 @@ block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
     title = "Block output(s)",
     value = "outputs",
     block_ui,
-    uiOutput(ns("status_note")),
+    block_status_notes(ns),
     block_issues_ui(ns)
   )
 
@@ -457,13 +463,6 @@ edit_block_server <- function(callbacks = list()) {
           }
         )
 
-        output$block_name_out <- renderUI(
-          span(
-            input$block_name_in,
-            class = "blockr-title"
-          )
-        )
-
         blk_status <- reactive(reval_if(board$eval[[block_id]]))
 
         conds <- reactive(
@@ -473,12 +472,12 @@ edit_block_server <- function(callbacks = list()) {
           }
         )
 
-        output$status_indicator <- renderUI(
-          block_status_indicator(blk_status(), sum(lengths(conds()$error)))
+        output$status_indicator <- render_attrs(
+          block_status_dot_attrs(blk_status(), sum(lengths(conds()$error)))
         )
 
-        output$status_note <- renderUI(
-          block_status_note(blk_status())
+        output$status_note <- render_attrs(
+          block_status_note_attrs(blk_status())
         )
 
         observeEvent(
@@ -674,6 +673,10 @@ block_status_style <- function(status) {
 
   spec <- switch(
     status,
+    stale = list(
+      color = "#6b7280",
+      label = "Inputs changed since this block last ran"
+    ),
     waiting = list(color = "#f59e0b", label = "Waiting for a data input"),
     unset = list(color = "#eab308", label = "Set this block's inputs"),
     failed = list(color = "#dc2626", label = "Evaluation failed")
@@ -686,17 +689,25 @@ block_status_style <- function(status) {
   c(spec, list(size = 8L, ring = 2L, ring_color = "#ffffff"))
 }
 
-#' @param status A block eval status. `waiting`, `unset` and `failed` carry a
-#'   badge; `ready` carries none; `dormant` is indeterminate; any other value
-#'   yields no badge. `size` is the coloured dot's pixel diameter and `ring`
-#'   its white outline width, both shared so the dock card icon and the DAG
-#'   node badge render identically.
+#' @param status A block eval status: `stale`, `waiting`, `unset` and `failed`
+#'   carry a badge; `ready` carries none; `dormant` is indeterminate; any other
+#'   value yields no badge. The `size` field is the coloured dot's pixel
+#'   diameter and `ring` its white outline width, both shared so the dock card
+#'   icon and the DAG node badge render identically.
 #' @param error_count Number of error conditions the block has raised. A
 #'   positive count promotes the badge to `failed`, catching render-phase
-#'   errors that leave the eval status `ready`.
+#'   errors that leave the eval status `ready`. A `stale` block is exempt:
+#'   its conditions were raised against inputs it no longer has.
 #' @rdname meta
 #' @export
 block_status_badge <- function(status, error_count = 0L) {
+
+  # A stale block's conditions predate the upstream change that made it stale,
+  # and it has not re-run since, so they say nothing about whether it would
+  # still fail on its current inputs.
+  if (isTRUE(status == "stale")) {
+    return(block_status_style("stale"))
+  }
 
   if (error_count > 0L) {
     status <- "failed"
@@ -712,16 +723,22 @@ block_status_badge <- function(status, error_count = 0L) {
   block_status_style(status)
 }
 
-block_status_indicator <- function(status, error_count = 0L) {
+block_status_dot <- function(ns) {
+  tags$span(
+    id = ns("status_indicator"),
+    class = "blockr-status-dot blockr-attr-output"
+  )
+}
+
+block_status_dot_attrs <- function(status, error_count = 0L) {
 
   spec <- block_status_badge(status, error_count)
 
   if (!is.list(spec)) {
-    return(NULL)
+    return(list(style = "", title = "", role = "", `aria-label` = ""))
   }
 
-  tags$span(
-    class = "blockr-status-dot",
+  list(
     style = htmltools::css(
       width = paste0(spec$size, "px"),
       height = paste0(spec$size, "px"),
@@ -734,26 +751,51 @@ block_status_indicator <- function(status, error_count = 0L) {
   )
 }
 
+block_status_note_icons <- c(waiting = "diagram-3", unset = "sliders")
+
+block_status_notes <- function(ns) {
+  div(
+    id = ns("status_note"),
+    class = "blockr-status-note-slot blockr-attr-output",
+    lapply(names(block_status_note_icons), block_status_note)
+  )
+}
+
+block_status_note_attrs <- function(status) {
+  list(
+    `data-status` = if (is_string(status)) status else ""
+  )
+}
+
 block_status_note <- function(status) {
 
-  if (!is_string(status)) {
-    return(NULL)
-  }
-
-  icon <- switch(
-    status,
-    waiting = "diagram-3",
-    unset = "sliders"
-  )
-
-  if (is.null(icon)) {
+  if (!is_string(status) || !status %in% names(block_status_note_icons)) {
     return(NULL)
   }
 
   div(
     class = "blockr-status-note",
-    bsicons::bs_icon(icon, class = "blockr-status-note-icon"),
+    `data-status` = status,
+    bsicons::bs_icon(
+      block_status_note_icons[[status]],
+      class = "blockr-status-note-icon"
+    ),
     tags$span(block_status_style(status)$label)
+  )
+}
+
+render_attrs <- function(expr, env = parent.frame(), quoted = FALSE) {
+  createRenderFunction(
+    installExprFunction(expr, "func", env, quoted)
+  )
+}
+
+attr_output_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-attr-output",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "attr-output.js"
   )
 }
 

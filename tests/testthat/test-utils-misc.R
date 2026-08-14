@@ -36,3 +36,10 @@ test_that("suggest_new_colors falls back when colorspace is unavailable", {
     pkg_avail = function(...) FALSE
   )
 })
+
+test_that("expand_hex_color", {
+  expect_identical(expand_hex_color("#abc"), "#aabbcc")
+  expect_identical(expand_hex_color("#ABC"), "#AABBCC")
+  expect_identical(expand_hex_color("#66c2a5"), "#66c2a5")
+  expect_identical(expand_hex_color("#66c2a"), "#66c2a")
+})

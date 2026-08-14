@@ -115,8 +115,12 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
   )
 
   for (i in names(blocks)) {
-    show_block_panel(blocks[i], determine_panel_pos(dock), dock)
+    add_block_panel(blocks[i], position = determine_panel_pos(dock),
+                    dock = dock)
   }
+
+  show_block_ui(names(blocks), dock$proxy$session,
+                board_ns = dock_board_ns(dock))
 
   invisible(x)
 }
@@ -267,25 +271,40 @@ hide_block_panel <- function(id, rm_panel = TRUE, dock, ...) {
   invisible(NULL)
 }
 
-hide_block_ui <- function(id, session, board_ns = session$ns) {
+hide_block_ui <- function(ids, session, board_ns = session$ns) {
 
-  bid <- board_ns(as_block_handle_id(id))
+  hid <- as_block_handle_id(ids)
+
+  if (!length(hid)) {
+    return(invisible(NULL))
+  }
+
+  bid <- board_ns(hid)
   oid <- paste0(board_ns("blocks_offcanvas"), " .offcanvas-body")
 
-  log_debug("hiding block {bid} in {oid}")
+  log_debug("hiding {cli::qty(length(bid))}block{?s} {bid} in {oid}")
 
-  move_dom_element(paste0("#", bid), paste0("#", oid), session)
+  move_dom_elements(paste0("#", bid), paste0("#", oid), session)
 }
 
-show_block_ui <- function(id, session, board_ns = session$ns) {
+show_block_ui <- function(ids, session, board_ns = session$ns) {
+
+  hid <- as_block_handle_id(ids)
+
+  if (!length(hid)) {
+    return(invisible(NULL))
+  }
 
   # board_ns: board-level namespace for DOM element IDs (handles, offcanvas).
   # session$ns: dock-module namespace for dock panel IDs.
   # These differ when called from a nested dock module (views).
-  bid <- board_ns(as_block_handle_id(id))
-  pid <- paste(dock_id(session$ns), as_block_panel_id(id), sep = "-")
+  bid <- board_ns(hid)
+  pid <- paste(dock_id(session$ns), as_block_panel_id(ids), sep = "-")
 
-  log_debug("showing block {bid} in panel {pid}")
+  log_debug(
+    "showing {cli::qty(length(bid))}block{?s} {bid} in ",
+    "{cli::qty(length(pid))}panel{?s} {pid}"
+  )
 
-  move_dom_element(paste0("#", bid), paste0("#", pid), session)
+  move_dom_elements(paste0("#", bid), paste0("#", pid), session)
 }

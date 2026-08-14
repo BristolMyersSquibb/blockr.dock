@@ -13,15 +13,101 @@ retry_download <- function(app, output, .attempts = 6L) {
   stop(res)
 }
 
+# Chrome's own account of why it never announced its debugging port. The
+# launcher writes the browser's stderr to a `tempdir()` scratch file and reads
+# it back only on the `!p$is_alive()` branch; the port-open timeout aborts
+# without ever touching it, so the one artifact that says what went wrong dies
+# with the R session. That is why the CI failure carries no reason. Recover it
+# by diffing the scratch dir across the attempt.
+#
+# The three outcomes separate the candidate causes. No `DevTools listening`
+# line at all means Chrome never got that far -- a cold first start, or a
+# debugging port it could not bind, which the head of the log names. That line
+# present but on another port is the launcher's `output_port != port` mismatch.
+# Present on the right port leaves the HTTP probe of `/json/protocol` as what
+# actually failed. Startup errors are written first, so report the head.
+chrome_stderr <- function(before, n = 20L) {
+
+  logs <- setdiff(
+    list.files(tempdir(), pattern = "^chrome-.*-stderr\\.log$",
+               full.names = TRUE),
+    before
+  )
+
+  if (!length(logs)) {
+    return("[e2e-chrome] no chrome stderr log for this attempt")
+  }
+
+  txt <- readLines(logs[[1L]], warn = FALSE)
+
+  if (!length(txt)) {
+    return("[e2e-chrome] chrome stderr is empty -- it announced nothing")
+  }
+
+  announced <- grep("^DevTools listening on ws://", txt, value = TRUE)
+
+  paste(
+    c(
+      sprintf("[e2e-chrome] chrome stderr (%d lines, first %d):", length(txt),
+              min(n, length(txt))),
+      head(txt, n),
+      if (length(announced)) {
+        paste("[e2e-chrome] announced:", announced)
+      } else {
+        "[e2e-chrome] no 'DevTools listening' line was ever written"
+      }
+    ),
+    collapse = "\n"
+  )
+}
+
+# The chromote package launches the shared browser lazily, inside the first
+# `default_chromote_object()`, and on a loaded runner (Windows especially)
+# Chrome can miss the `chromote.timeout` window for opening its debugging port
+# -- an `error_stop_port_search` abort raised before `AppDriver$new()` is
+# reached, so retrying the driver never sees it. Retry the launch instead. The
+# failure observed in CI was the run's first launch, with two later launches in
+# the same job succeeding, so a second attempt is what the evidence supports;
+# it also re-samples the random debugging port, which a longer timeout cannot.
+# Each failure reports Chrome's stderr, since which of those two it was is
+# still unestablished. A timed-out attempt leaves its process running
+# (`launch_chrome_impl()` aborts without killing it) and processx only reaps it
+# from the `cleanup = TRUE` finalizer, so collect between attempts rather than
+# leaking a browser -- and the `$TMPDIR` scratch it holds -- per retry.
+retry_chrome_launch <- function(attempts = 3L) {
+
+  pat <- "^chrome-.*-stderr\\.log$"
+
+  for (i in seq_len(attempts)) {
+
+    before <- list.files(tempdir(), pattern = pat, full.names = TRUE)
+    res <- tryCatch(chromote::default_chromote_object(), error = function(e) e)
+
+    if (!inherits(res, "error")) {
+      return(res)
+    }
+
+    message(
+      "[e2e-chrome] launch ", i, "/", attempts, " failed: ",
+      conditionMessage(res), "\n", chrome_stderr(before)
+    )
+
+    gc()
+    Sys.sleep(1)
+  }
+  stop(res)
+}
+
 # Every e2e AppDriver goes through here so the chromote command timeout is
 # hardened in one place. A loaded CI runner (Windows especially) can take longer
 # than chromote's 10s default to bind the app's port, so AppDriver's first
 # `Page.navigate` times out at init (rstudio/shinytest2#448). The chromote
 # session inherits its command timeout from the default chromote object, so
-# raise that before the session is spawned -- via `default_chromote_object()`,
-# the same object AppDriver draws its session from.
+# raise that before the session is spawned -- on the object
+# `retry_chrome_launch()` returns, the same one AppDriver draws its session
+# from.
 new_app_driver <- function(...) {
-  chrome <- chromote::default_chromote_object()
+  chrome <- retry_chrome_launch()
   chrome$default_timeout <- 60
   shinytest2::AppDriver$new(...)
 }
@@ -48,6 +134,28 @@ board_args <- function(...) {
     new_dock_board(...),
     mode = "read"
   )[["board"]]
+}
+
+# Run an action generator's server against a fixed trigger value, long enough
+# for its trigger-driven observers to fire once. For assertions on what an
+# action does on the way in (opening a sidebar, stamping its owner) rather
+# than on what it commits. Mounted under the action's own id, the way
+# `register_action()` mounts it, so the module namespace the sidebar owner is
+# read from matches production.
+fire_action <- function(gen, trigger, board) {
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        action_id(gen),
+        gen(
+          trigger = reactive(trigger),
+          board = board,
+          update = reactiveVal(list())
+        )
+      )
+    },
+    session$flushReact()
+  )
 }
 
 # Stand-in for the `visibility` channel blockr.core hands the board callback:
@@ -261,6 +369,36 @@ wait_dock_loaded <- function(app, n_blocks, board_id = "my_board") {
   )
 }
 
+# Wait until the view nav has settled to `n` entries. `board_ui` draws the nav
+# statically and the reconcile pass then adds, removes and re-sequences items,
+# so a read taken before that pass lands samples an intermediate nav. Gating on
+# the settled count states the precondition the nav assertions depend on, in
+# place of an idle wait: the app takes several seconds of back-to-back mount
+# round-trips to go quiescent, so it offers no early quiet window to gate on.
+# A permanent miscount never reaches the target, so the wait times out and
+# still catches it, with the nav dumped.
+wait_view_nav <- function(app, n, board_id = "my_board", timeout = 30 * 1000) {
+
+  sel <- sprintf("#%s-view_nav .blockr-view-item", board_id)
+
+  diagnose <- function() {
+    nav <- read_view_nav(app, board_id)
+    sprintf(
+      "[view-nav] want=%d got=%d ids=[%s] labels=[%s]",
+      n, nrow(nav),
+      paste(nav$id, collapse = ","),
+      paste(nav$label, collapse = ",")
+    )
+  }
+
+  wait_js(
+    app,
+    sprintf("document.querySelectorAll('%s').length === %d", sel, n),
+    diagnose,
+    timeout
+  )
+}
+
 # The dock-owned board state observable in server-rendered DOM: the view nav
 # (one row per view, including which is active), and every block's card id. The
 # serialization e2e captures this before and after a save / restore reload to
@@ -422,7 +560,11 @@ set_in <- function(app, id, value) {
   )
 }
 
-click <- function(app, id) app$click(nsid(id))
+# `wait = FALSE` for the same reason as set_in: a staging click drives an
+# `updateActionButton` message, not an output value, so a waiting click spends
+# its whole budget before reporting that nothing changed. Callers that pass it
+# gate on the staged effect themselves (wait_enabled / wait_gone).
+click <- function(app, id, wait = TRUE) app$click(nsid(id), wait_ = wait)
 
 # A DataTables redraw (e.g. after adding a row) re-renders the cell inputs,
 # which the table's `drawCallback` re-binds via `Shiny.bindAll` once the async
@@ -473,6 +615,96 @@ wait_bound <- function(app, id, timeout = 30 * 1000) {
   )
 }
 
+# The extension gates its controls on staged state through
+# `updateActionButton(disabled = )`: `rm_link` / `rm_stack` follow the
+# DataTable's row selection, `apply_changes` follows whether anything is
+# staged. Clicking a disabled button is a silent no-op that leaves the test
+# asserting against an unchanged board, so a driver has to wait for the
+# enabling round-trip -- the precondition it actually depends on.
+wait_enabled <- function(app, id, timeout = 30 * 1000) {
+
+  target <- nsid(id)
+
+  probe <- sprintf(
+    paste0(
+      "(function(){var e=document.getElementById('%s');",
+      "return {present: e !== null, disabled: e ? e.disabled : null};})()"
+    ),
+    target
+  )
+
+  diagnose <- function() {
+    sprintf(
+      "[wait_enabled] id=%s state=%s",
+      target,
+      app$get_js(paste0("JSON.stringify(", probe, ")"))
+    )
+  }
+
+  wait_js(app, paste0(probe, ".disabled === false"), diagnose, timeout)
+}
+
+# The mirror of wait_bound: an applied removal drops the link / stack row from
+# the DataTable, taking its cell inputs out of the DOM. That travels board
+# update -> DT re-render -> rebind, several round-trips the app does not
+# quiesce between, so gate the assertion on the element leaving rather than on
+# an idle wait that samples a lull partway through.
+wait_gone <- function(app, id, timeout = 30 * 1000) {
+
+  target <- nsid(id)
+
+  diagnose <- function() {
+    sprintf(
+      "[wait_gone] id=%s tables=%s",
+      target,
+      app$get_js("document.querySelectorAll('table.dataTable').length")
+    )
+  }
+
+  wait_js(
+    app,
+    sprintf("document.getElementById('%s') === null", target),
+    diagnose,
+    timeout
+  )
+}
+
+# A confirmed add re-seeds the id box with a fresh `rand_names()` suggestion
+# for the next block, and nothing orders that message against a following
+# `set_inputs()`: landing late it overwrites the id the test staged, so the
+# `confirm_add` after it reads the suggestion and the block arrives under a
+# random name -- a wrong-id board, not a slow one, so the panel wait that
+# follows can only time out. Exactly one re-seed is emitted per add and it
+# never repeats an id already on the board, so waiting for the field to leave
+# `added` absorbs it before the next add is staged. The binding applies the
+# value and queues its echo in one synchronous block, so a field that has moved
+# on has already sent it -- and a `set_inputs` issued afterwards is ordered
+# behind that echo.
+wait_reseeded <- function(app, added, timeout = 30 * 1000) {
+
+  target <- nsid("block_id")
+
+  diagnose <- function() {
+    sprintf(
+      "[wait_reseeded] id=%s added=%s value=%s",
+      target, added, field(app, "block_id")
+    )
+  }
+
+  wait_js(
+    app,
+    sprintf(
+      paste0(
+        "(function(){var e=document.getElementById('%s');",
+        "return e !== null && e.value !== '%s';})()"
+      ),
+      target, added
+    ),
+    diagnose,
+    timeout
+  )
+}
+
 set_color <- function(app, id, hex) {
   app$run_js(
     paste0(
@@ -489,4 +721,12 @@ field <- function(app, id) {
       "'); return e ? e.value : null;})()"
     )
   )
+}
+
+# An xpath predicate matching one class token exactly. The xml2 package has no
+# CSS selector, and a bare `contains(@class, 'x')` would also match a class
+# that merely starts with the token (`blockr-view-item` inside
+# `blockr-view-item-name`), so pad both sides and match the padded token.
+has_class <- function(token) {
+  sprintf("contains(concat(' ', normalize-space(@class), ' '), ' %s ')", token)
 }

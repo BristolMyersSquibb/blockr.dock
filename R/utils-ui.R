@@ -34,13 +34,21 @@ collapse_container <- function(id, ...) {
   tags$div(class = "collapse", id = id, ...)
 }
 
-move_dom_element <- function(from, to, session = get_session()) {
+# One message per sweep, not one per card: `sendCustomMessage()` writes a
+# websocket frame per call, so N cards would arrive as N frames in N client
+# tasks, each relocating DOM that re-fires the moved outputs' resize and
+# intersection observers, whose clientdata writes then go up in their own input
+# batch. Batched, a sweep is one frame and one batch however many cards it
+# moves. `to` is recycled: a sweep into the offcanvas shares one target.
+move_dom_elements <- function(from, to, session = get_session()) {
+
+  if (!length(from)) {
+    return(invisible(NULL))
+  }
+
   session$sendCustomMessage(
     "move-element",
-    list(
-      from = from,
-      to = to
-    )
+    map(list, from = from, to = to)
   )
 }
 

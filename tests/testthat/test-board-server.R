@@ -292,6 +292,59 @@ test_that("a stale close of an already-removed panel emits no rm (#362)", {
   expect_null(isolate(upd()))
 })
 
+test_that("a pending select fronts its tab on the first dock build (#324)", {
+
+  # A deferred view's dock is built during the reconcile that activates it, so
+  # the update carrying `active <- view` also carries its `select`. The panel-op
+  # observer can't apply that select (it is its `ignoreInit` value) and there is
+  # no live dock yet, so it is folded into the grid the first build restores
+  # from -- restore then fronts the tab.
+  brd <- board_args(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block())
+  )
+
+  mod_input <- function(name) paste0("dock_main-", name)
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  upd <- reactiveVal(
+    list(
+      views = list(
+        mod = list(dock_main = list(select = as_block_panel_id("b")))
+      )
+    )
+  )
+
+  restored <- NULL
+
+  local_mocked_bindings(
+    restore_layout = function(layout, proxy, ...) {
+      restored <<- as_dock_grid(layout)
+      invisible()
+    }
+  )
+
+  with_mock_context(ms, {
+    manage_dock("dock_main", brd, visibility = fake_visibility(c("a", "b")),
+                update = upd)
+  })
+
+  ms$flushReact()
+
+  # restore_layout runs only once the client reports the dock initialized.
+  expect_null(restored)
+
+  do.call(
+    ms$setInputs,
+    set_names(list(TRUE), mod_input(dock_input("initialized")))
+  )
+
+  # The default two-block grid tabs a and b in one group, fronting a; the
+  # pending select fronts b instead.
+  expect_identical(restored[["children"]][[1L]][["active"]], "block_panel-b")
+})
+
 test_that("an extension key never leaks into core's plugin args (#318)", {
 
   # `edit` is a prefix of core's `edit_block` block-server formal; returned as
@@ -1794,4 +1847,38 @@ test_that("a locked board still wires the render path (#339)", {
   # The grid mirror is gated when locked, but the visible-axis writer that
   # paints the front tab must not be -- gating it would blank a locked board.
   expect_identical(render_wired, 1L)
+})
+
+test_that("a view sweep sends one move-element message per card kind (#397)", {
+
+  sent <- list()
+  session <- list(
+    ns = NS("my_board"),
+    sendCustomMessage = function(type, message) {
+      sent[[length(sent) + 1L]] <<- message
+      invisible()
+    }
+  )
+
+  local_mocked_bindings(
+    block_panel_ids = function(...) as_block_panel_id(c("a", "b", "c")),
+    ext_panel_ids = function(...) as_ext_panel_id("edit_board")
+  )
+
+  docks <- list(v1 = list(proxy = list(session = session)))
+
+  show_view_ui("v1", docks)
+
+  # Three block cards and one extension card cross over as two messages, not
+  # four: each card relocated in its own message would be its own client task.
+  expect_length(sent, 2L)
+  expect_length(sent[[1L]], 3L)
+  expect_length(sent[[2L]], 1L)
+
+  sent <- list()
+  hide_view_ui("v1", docks)
+
+  expect_length(sent, 2L)
+  expect_length(sent[[1L]], 3L)
+  expect_length(sent[[2L]], 1L)
 })
