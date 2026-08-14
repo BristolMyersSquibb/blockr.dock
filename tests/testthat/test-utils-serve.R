@@ -226,12 +226,16 @@ test_that("adding a second block keeps both block panels (#196)", {
 
   wait_bound(app, "registry_select")
 
+  # Each add leaves the extension's own re-seed of the id box in flight, which
+  # a later one would otherwise stage its id against; take it here so the
+  # helper hands back a field no pending message still writes to.
   add_block <- function(registry, id) {
     app$set_inputs(
       `my_board-ext_edit_board-registry_select` = registry,
       `my_board-ext_edit_board-block_id` = id
     )
     app$click("my_board-ext_edit_board-confirm_add")
+    wait_reseeded(app, id)
   }
 
   add_block("dataset_block", "a")

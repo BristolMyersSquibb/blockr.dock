@@ -669,6 +669,42 @@ wait_gone <- function(app, id, timeout = 30 * 1000) {
   )
 }
 
+# A confirmed add re-seeds the id box with a fresh `rand_names()` suggestion
+# for the next block, and nothing orders that message against a following
+# `set_inputs()`: landing late it overwrites the id the test staged, so the
+# `confirm_add` after it reads the suggestion and the block arrives under a
+# random name -- a wrong-id board, not a slow one, so the panel wait that
+# follows can only time out. Exactly one re-seed is emitted per add and it
+# never repeats an id already on the board, so waiting for the field to leave
+# `added` absorbs it before the next add is staged. The binding applies the
+# value and queues its echo in one synchronous block, so a field that has moved
+# on has already sent it -- and a `set_inputs` issued afterwards is ordered
+# behind that echo.
+wait_reseeded <- function(app, added, timeout = 30 * 1000) {
+
+  target <- nsid("block_id")
+
+  diagnose <- function() {
+    sprintf(
+      "[wait_reseeded] id=%s added=%s value=%s",
+      target, added, field(app, "block_id")
+    )
+  }
+
+  wait_js(
+    app,
+    sprintf(
+      paste0(
+        "(function(){var e=document.getElementById('%s');",
+        "return e !== null && e.value !== '%s';})()"
+      ),
+      target, added
+    ),
+    diagnose,
+    timeout
+  )
+}
+
 set_color <- function(app, id, hex) {
   app$run_js(
     paste0(
