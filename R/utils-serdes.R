@@ -32,8 +32,10 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
         board_id = id,
         blocks = Map(c, state, visible = lapply(visibility, list)),
         options = opts,
+        # Extension results ride under one `extensions` plugin arg, beside
+        # siblings such as `actions`, so `...` sits a level above them.
         extensions = lapply(
-          list(...),
+          list(...)[["extensions"]],
           function(x) lapply(x[["state"]], reval_if)
         )
       )

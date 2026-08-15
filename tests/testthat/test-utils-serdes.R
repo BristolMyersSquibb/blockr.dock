@@ -285,3 +285,111 @@ test_that("layout_panel_ids and panel_obj_ids are inverse-ish", {
   expect_setequal(pids, c("block_panel-a", "block_panel-b"))
   expect_setequal(panel_obj_ids(pids), c("a", "b"))
 })
+
+probe_ext <- function(report = TRUE, title = "Untitled", ...) {
+  new_dock_extension(
+    server = function(id, ...) function(input, output, session) list(),
+    ui = function(id) tagList(),
+    name = "Outline",
+    class = "probe_extension",
+    report = report,
+    title = title,
+    ...
+  )
+}
+
+probe_ext_board <- function() {
+  new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    extensions = list(outline = probe_ext())
+  )
+}
+
+ser_dock_board <- function(board, ...) {
+  serialize_board(
+    board,
+    blocks = list(),
+    id = NULL,
+    dock = NULL,
+    view_data = NULL,
+    ...,
+    session = NULL
+  )
+}
+
+ext_payload <- function(ser, name) {
+  ser[["payload"]][["extensions"]][["payload"]][[name]][["payload"]]
+}
+
+test_that("extension state reaches the serialized board", {
+
+  ser <- ser_dock_board(
+    probe_ext_board(),
+    actions = list(),
+    extensions = list(
+      outline = list(state = list(report = FALSE, title = "Q3"))
+    )
+  )
+
+  expect_identical(
+    ext_payload(ser, "outline"),
+    list(report = FALSE, title = "Q3")
+  )
+})
+
+test_that("sibling plugin arguments are not walked as extensions", {
+
+  ser <- ser_dock_board(
+    probe_ext_board(),
+    actions = list(state = list(title = "not an extension")),
+    extensions = list(outline = list(state = list(title = "mine")))
+  )
+
+  expect_identical(ext_payload(ser, "outline"), list(title = "mine"))
+  expect_null(ser[["payload"]][["extensions"]][["payload"]][["actions"]])
+})
+
+test_that("reactive extension state is evaluated on serialization", {
+
+  isolate({
+    ser <- ser_dock_board(
+      probe_ext_board(),
+      actions = list(),
+      extensions = list(
+        outline = list(state = list(title = reactiveVal("live")))
+      )
+    )
+    expect_identical(ext_payload(ser, "outline"), list(title = "live"))
+  })
+})
+
+test_that("extension state round-trips back into a restored extension", {
+
+  ser <- ser_dock_board(
+    probe_ext_board(),
+    actions = list(),
+    extensions = list(
+      outline = list(state = list(report = FALSE, title = "Q3"))
+    )
+  )
+
+  des <- blockr_deser(ser[["payload"]][["extensions"]])
+
+  expect_s3_class(des[["outline"]], "probe_extension")
+  expect_false(des[["outline"]][["report"]])
+  expect_identical(des[["outline"]][["title"]], "Q3")
+})
+
+test_that("a stateless extension still serializes its constructor", {
+
+  brd <- probe_ext_board()
+
+  expect_ctor_only <- function(ser) {
+    node <- ser[["payload"]][["extensions"]][["payload"]][["outline"]]
+    expect_length(node[["payload"]], 0L)
+    expect_false(is.null(node[["constructor"]]))
+  }
+
+  expect_ctor_only(ser_dock_board(brd, actions = list(), extensions = list()))
+  expect_ctor_only(ser_dock_board(brd, actions = list()))
+})
