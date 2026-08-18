@@ -500,6 +500,20 @@ edit_block_server <- function(callbacks = list()) {
           )
         )
 
+        # Hiding the last section reports NULL, which the setter above drops as
+        # its `ignoreNULL` default -- and could not carry anyway, since the set
+        # message rejects an empty selection. Closing all is its own message,
+        # observed separately so the setter keeps seeding a restored card from
+        # its init run (#122). A card paints with its sections open, so the
+        # init NULL closes nothing.
+        observeEvent(
+          is.null(input$collapse_blk_sections),
+          if (is.null(input$collapse_blk_sections)) {
+            accordion_panel_close("blk_accordion", TRUE, session)
+          },
+          ignoreInit = TRUE
+        )
+
         output$issues_count <- renderText(cond_issue_label(conds()))
         outputOptions(output, "issues_count", suspendWhenHidden = FALSE)
 

@@ -239,6 +239,51 @@ test_that("locked dock keeps block_card_toggles hidden (#122)", {
   expect_false(grepl("<script", locked_html, fixed = TRUE))
 })
 
+test_that("hiding the last section closes it (#69)", {
+
+  sent <- character()
+
+  local_mocked_bindings(
+    accordion_panel_set = function(id, values, session) {
+      vals <- paste(values, collapse = ",")
+      sent[[length(sent) + 1L]] <<- paste0("set:", vals)
+    },
+    accordion_panel_close = function(id, values, session) {
+      sent[[length(sent) + 1L]] <<- paste0("close:", values)
+    }
+  )
+
+  testServer(
+    edit_block_server(),
+    {
+      session$flushReact()
+
+      # A card paints with its sections open, so the init NULL closes nothing.
+      expect_identical(sent, character())
+
+      session$setInputs(collapse_blk_sections = c("inputs", "outputs"))
+      session$setInputs(collapse_blk_sections = "outputs")
+
+      expect_identical(sent, c("set:inputs,outputs", "set:outputs"))
+
+      # The last toggle off reports NULL, which `accordion_panel_set()` cannot
+      # carry -- it rejects an empty selection -- so this closes all instead.
+      session$setInputs(collapse_blk_sections = NULL)
+
+      expect_identical(sent[[3L]], "close:TRUE")
+
+      session$setInputs(collapse_blk_sections = "outputs")
+
+      expect_identical(sent[[4L]], "set:outputs")
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_rbind_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("the block plugin reports whether its card offers inputs (#69)", {
 
   reported <- function(blk) {
