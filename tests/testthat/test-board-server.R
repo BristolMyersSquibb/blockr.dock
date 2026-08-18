@@ -1741,6 +1741,49 @@ test_that("hiding a block's input section freezes it on the channel (#127)", {
   )
 })
 
+test_that("a block with no controls is not frozen for hiding them (#69)", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_rbind_block(), b = new_dataset_block())
+  )
+
+  # Neither card offers an inputs section: `a` has no controls to put in one,
+  # `b` has them collapsed.
+  vis_a <- reactiveVal("outputs")
+  vis_b <- reactiveVal("outputs")
+
+  board <- reactiveValues(
+    board = brd,
+    blocks = list(
+      a = list(server = list(visible = vis_a, has_inputs = FALSE)),
+      b = list(server = list(visible = vis_b, has_inputs = TRUE))
+    )
+  )
+
+  visibility <- fake_visibility(c("a", "b"))
+
+  is_frozen <- function(id) isolate(visibility$frozen[[id]]())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        function(input, output, session) {
+          freeze_hidden_inputs(board, visibility)
+        }
+      )
+    },
+    {
+      session$flushReact()
+
+      # Freezing `a` would pin the expression it built from the links it held
+      # when it painted, so a link added later would never reach its rbind call.
+      expect_false(is_frozen("a"))
+      expect_true(is_frozen("b"))
+    }
+  )
+})
+
 test_that("a locked board freezes every block once it reports (#127)", {
 
   withr::local_options(blockr.locked = TRUE)

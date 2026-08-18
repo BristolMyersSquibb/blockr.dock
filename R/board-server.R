@@ -297,6 +297,12 @@ report_visible_observer <- function(visibility, client_active, docks) {
 # while still editable, so core's expression pin captures its published value;
 # freezing one from birth would hold a blank. A block without the edit-block
 # plugin (no `visible`) never reports, hence is never frozen.
+#
+# A card offers an inputs section only where its block contributes controls
+# (`has_inputs`), so for the rest a missing section hides nothing and must not
+# freeze: an `rbind_block` builds its expression from its link set alone, and a
+# pin would strand it on the links it held when it painted. A foreign
+# edit-block plugin reports no `has_inputs`, and is read as offering one.
 freeze_hidden_inputs <- function(board, visibility) {
 
   observe({
@@ -312,11 +318,14 @@ freeze_hidden_inputs <- function(board, visibility) {
         next
       }
 
-      vis <- board$blocks[[id]]$server$visible
-      sections <- if (not_null(vis)) vis()
+      srv <- board$blocks[[id]]$server
+      sections <- if (not_null(srv$visible)) srv$visible()
       reported <- not_null(sections)
 
-      frozen <- reported && (locked || !("inputs" %in% sections))
+      has_inputs <- coal(srv$has_inputs, TRUE, fail_all = FALSE)
+      hidden <- has_inputs && !("inputs" %in% sections)
+
+      frozen <- reported && (locked || hidden)
 
       if (!identical(isolate(slot()), frozen)) {
         slot(frozen)

@@ -239,6 +239,99 @@ test_that("locked dock keeps block_card_toggles hidden (#122)", {
   expect_false(grepl("<script", locked_html, fixed = TRUE))
 })
 
+test_that("the block plugin reports whether its card offers inputs (#69)", {
+
+  reported <- function(blk) {
+
+    res <- NULL
+
+    testServer(
+      edit_block_server(),
+      res <<- session$returned,
+      args = list(
+        block_id = "a",
+        board = board_args(blocks = c(a = blk)),
+        update = reactiveVal()
+      )
+    )
+
+    edit_block_validator(res)
+
+    res[["has_inputs"]]
+  }
+
+  expect_false(reported(new_rbind_block()))
+  expect_true(reported(new_dataset_block()))
+})
+
+test_that("an input-free block card drops the inputs section (#69)", {
+
+  card_parts <- function(blk) {
+
+    card <- edit_block_ui(
+      "blk",
+      blk,
+      "a",
+      expr_ui = expr_ui("blk", blk),
+      block_ui = div(id = "blk-out")
+    )
+
+    root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+    list(
+      panels = xml2::xml_attr(
+        xml2::xml_find_all(
+          root,
+          paste0(
+            "//div[", has_class("blockr-block-accordion"), "]/div[@data-value]"
+          )
+        ),
+        "data-value"
+      ),
+      toggles = xml2::xml_attr(
+        xml2::xml_find_all(
+          root,
+          paste0(
+            "//div[", has_class("blockr-section-toggle"), "]",
+            "//input[@type='checkbox']"
+          )
+        ),
+        "value"
+      )
+    )
+  }
+
+  # An rbind block is configured entirely by its links, so its section would
+  # come up empty and its toggle would open nothing.
+  rbnd <- card_parts(new_rbind_block())
+
+  expect_identical(rbnd$panels, "outputs")
+  expect_identical(rbnd$toggles, "outputs")
+
+  dataset <- card_parts(new_dataset_block())
+
+  expect_identical(dataset$panels, c("inputs", "outputs"))
+  expect_identical(dataset$toggles, c("inputs", "outputs"))
+})
+
+test_that("a board saved before #69 restores an input-free card", {
+
+  blk <- new_rbind_block()
+  attr(blk, "visible") <- c("inputs", "outputs")
+
+  toggles <- xml2::xml_find_all(
+    xml2::read_html(
+      as.character(
+        htmltools::tagList(block_card_toggles(blk, NS("x"), has_inputs = FALSE))
+      )
+    ),
+    "//input[@type='checkbox']"
+  )
+
+  expect_identical(xml2::xml_attr(toggles, "value"), "outputs")
+  expect_identical(xml2::xml_attr(toggles, "checked"), "checked")
+})
+
 test_that("block card sections carry the css-styling contract (#214)", {
 
   card <- block_card_content(
