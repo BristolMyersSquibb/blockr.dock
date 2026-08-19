@@ -395,3 +395,36 @@ test_that("a card sweep is one move-element message, not one per card (#397)", {
 
   expect_length(sent, 0L)
 })
+
+test_that("has_expr_ui separates controls from an empty document (#69)", {
+
+  expect_true(has_expr_ui(new_dataset_block()))
+  expect_true(has_expr_ui(new_merge_block()))
+
+  # Core's `new_block()` ui default; nothing to configure on an rbind block.
+  expect_false(has_expr_ui(new_rbind_block()))
+
+  # A UI carrying html dependencies alone still renders no markup.
+  new_dep_only_block <- function() {
+    new_transform_block(
+      function(id, data) {
+        moduleServer(
+          id,
+          function(input, output, session) {
+            list(
+              expr = reactive(quote(identity(data))),
+              state = list()
+            )
+          }
+        )
+      },
+      function(id) {
+        tagList(show_block_dep())
+      },
+      block_metadata = list(),
+      class = "dep_only_block"
+    )
+  }
+
+  expect_false(has_expr_ui(new_dep_only_block()))
+})

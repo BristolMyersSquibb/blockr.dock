@@ -72,6 +72,17 @@ has_external_ctrl <- function(x) {
   isTRUE(ctrl) || (is.character(ctrl) && length(ctrl) > 0L)
 }
 
+# Whether a block contributes any controls, decided by rendering its expression
+# UI and asking whether that produced markup: core's `new_block()` default is
+# `function(id) tagList()`, so a block with nothing to configure (`rbind_block`,
+# whose only variation is its link set) yields an empty document. Rendering
+# rather than inspecting the tags also catches a UI carrying html dependencies
+# alone.
+has_expr_ui <- function(x) {
+  markup <- htmltools::renderTags(expr_ui("block", x))[["html"]]
+  nzchar(trimws(as.character(markup)))
+}
+
 show_block_dep <- function() {
   htmltools::htmlDependency(
     "show-block",

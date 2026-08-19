@@ -3,6 +3,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
 
   blk_info <- blks_metadata(blk)
   ns <- NS(id)
+  has_inputs <- has_expr_ui(blk)
 
   div(
     class = "card-body",
@@ -26,13 +27,13 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
           block_card_title(blk, id, blk_info),
           div(
             class = "d-flex align-items-center gap-1 flex-shrink-0",
-            block_card_toggles(blk, ns, ctrl_meta),
+            block_card_toggles(blk, ns, ctrl_meta, has_inputs),
             block_card_dropdown(ns, blk_info, blk_id)
           )
         )
       )
     ),
-    block_card_content(ns, expr_ui, block_ui, ctrl_ui)
+    block_card_content(ns, expr_ui, block_ui, ctrl_ui, has_inputs)
   )
 }
 
@@ -147,7 +148,7 @@ block_card_title <- function(block, id, info) {
   )
 }
 
-block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
+block_card_toggles <- function(blk, ns, ctrl_meta = NULL, has_inputs = TRUE) {
 
   vals <- c("inputs", "outputs")
   icon_labels <- list(
@@ -155,6 +156,13 @@ block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
     as.character(icon("eye"))
   )
   tooltip_titles <- c("Controls", "Preview")
+
+  if (!has_inputs) {
+    keep <- vals != "inputs"
+    vals <- vals[keep]
+    icon_labels <- icon_labels[keep]
+    tooltip_titles <- tooltip_titles[keep]
+  }
 
   if (!is.null(ctrl_meta)) {
     vals <- c(vals, "ctrl")
@@ -355,14 +363,17 @@ block_card_dropdown <- function(ns, info, blk_id) {
   )
 }
 
-block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
+block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL,
+                               has_inputs = TRUE) {
 
-  inputs_panel <- accordion_panel(
-    icon = icon("sliders"),
-    title = "Block inputs",
-    value = "inputs",
-    expr_ui
-  )
+  inputs_panel <- if (has_inputs) {
+    accordion_panel(
+      icon = icon("sliders"),
+      title = "Block inputs",
+      value = "inputs",
+      expr_ui
+    )
+  }
 
   outputs_panel <- accordion_panel(
     icon = icon("chart-simple"),
@@ -489,6 +500,20 @@ edit_block_server <- function(callbacks = list()) {
           )
         )
 
+        # Hiding the last section reports NULL, which the setter above drops as
+        # its `ignoreNULL` default -- and could not carry anyway, since the set
+        # message rejects an empty selection. Closing all is its own message,
+        # observed separately so the setter keeps seeding a restored card from
+        # its init run (#122). A card paints with its sections open, so the
+        # init NULL closes nothing.
+        observeEvent(
+          is.null(input$collapse_blk_sections),
+          if (is.null(input$collapse_blk_sections)) {
+            accordion_panel_close("blk_accordion", TRUE, session)
+          },
+          ignoreInit = TRUE
+        )
+
         output$issues_count <- renderText(cond_issue_label(conds()))
         outputOptions(output, "issues_count", suspendWhenHidden = FALSE)
 
@@ -526,8 +551,14 @@ edit_block_server <- function(callbacks = list()) {
           }
         }
 
+        # Read once rather than per board commit: building a block's controls
+        # to answer costs ~10ms, and core re-runs this server whenever the
+        # block is modified, so the answer cannot go stale under it.
+        blk <- board_blocks(isolate(board$board))[[block_id]]
+
         list(
-          visible = reactive(input$collapse_blk_sections)
+          visible = reactive(input$collapse_blk_sections),
+          has_inputs = has_expr_ui(blk)
         )
       }
     )
@@ -803,8 +834,9 @@ edit_block_validator <- function(x) {
 
   stopifnot(
     is.list(x),
-    setequal(names(x), "visible"),
-    is.reactive(x[["visible"]])
+    setequal(names(x), c("visible", "has_inputs")),
+    is.reactive(x[["visible"]]),
+    is_bool(x[["has_inputs"]])
   )
 
   invisible(x)
