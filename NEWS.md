@@ -1,5 +1,23 @@
 # blockr.dock (development version)
 
+* The dock now states its evaluation demand as a claim in blockr.core's
+  one multi-owner set, in place of the per-block `required` channel core
+  has retired. It declares itself the front-end driving visibility by
+  writing an owner label into the new board-wide `visibility$gate`, and
+  what it has on screen travels as a `sustain` claim held under that
+  label -- one payload per view switch where the retired channel took a
+  write per slot, and a card that leaves the screen is released by its
+  absence from the set rather than by a second write. Requires
+  blockr.core with the unified claim set (#417).
+
+* A card the dock has built but is not showing no longer carries
+  construction demand of its own. The retired `required` channel had a
+  third state for it, which paced those blocks into core's priority
+  construction lane; nothing replaces it, so the blocks behind an
+  unvisited tab are built by core's background pass in its own order and
+  fronting one claims it. First paint therefore waits on fewer blocks
+  than before (#417).
+
 * A block with nothing to configure no longer carries an empty "Block
   inputs" section, nor the toggle that opens it. Core's `new_block()` ui
   default renders no markup at all, so a card for a block configured
