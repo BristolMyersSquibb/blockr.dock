@@ -748,9 +748,10 @@ test_that("visible axis follows the client's painted front tab (#328)", {
   withr::defer(if (!ms$isClosed()) ms$close())
 
   vis <- with_mock_context(ms, fake_visibility(board_rv))
+  upd <- reactiveVal()
   with_mock_context(
     ms,
-    board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
+    board_server_callback(board_rv, update = upd, visibility = vis)
   )
   ms$flushReact()
 
@@ -776,13 +777,19 @@ test_that("visible axis follows the client's painted front tab (#328)", {
   ms$flushReact()
 
   expect_identical(isolate(vis$visible[["b"]]()), TRUE)
-  expect_identical(isolate(vis$required[["b"]]()), TRUE)
   expect_identical(isolate(vis$visible[["a"]]()), FALSE)
-  expect_identical(isolate(vis$required[["a"]]()), FALSE)
+  expect_identical(claimed_blocks(upd), "b")
+
+  # That echo also moved the front tab off the stored grid, so the geometry
+  # mirror committed in the same flush. Both rode one payload: core drains the
+  # channel once, and a plain second write would have dropped whichever came
+  # first -- leaving the dock claiming nothing while it shows b.
+  expect_named(isolate(upd()), c("views", "sustain"), ignore.order = TRUE)
 
   # Switching the front tab to a re-marks the visible axis -- the mark is live,
   # not a one-shot that leaves the newly fronted tab blank. b parks: built, off
-  # screen (visible FALSE), not erased.
+  # screen (visible FALSE), not erased, and is released from the claim by its
+  # absence from the new set.
   do.call(
     ms$setInputs,
     set_names(list(reported_front("block_panel-a")), "Page-dock_state")
@@ -790,9 +797,8 @@ test_that("visible axis follows the client's painted front tab (#328)", {
   ms$flushReact()
 
   expect_identical(isolate(vis$visible[["a"]]()), TRUE)
-  expect_identical(isolate(vis$required[["a"]]()), TRUE)
   expect_identical(isolate(vis$visible[["b"]]()), FALSE)
-  expect_identical(isolate(vis$required[["b"]]()), FALSE)
+  expect_identical(claimed_blocks(upd), "a")
 })
 
 test_that("visible_block_ids returns the front-tab block of each group", {
@@ -817,7 +823,7 @@ test_that("visible_block_ids returns the front-tab block of each group", {
   expect_identical(visible_block_ids(dock_grid()), character())
 })
 
-test_that("report_visible_observer drives the required axis over built cards", {
+test_that("report_visible_observer claims what the client reports on screen", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
 
@@ -829,60 +835,58 @@ test_that("report_visible_observer drives the required axis over built cards", {
     docks[["A"]] <- list(layout = layout_a, active_panel = reactiveVal(NULL))
     docks[["B"]] <- list(layout = layout_b, active_panel = reactiveVal(NULL))
 
-    # a, b and d are all built (required non-NA); a/b are A's fronts, d lives
-    # in B. Nothing reported on screen yet, so all parked (required FALSE).
+    # a, b and d all have cards; a/b are A's fronts, d lives in B. Nothing
+    # reported on screen yet, so nothing claimed.
     vis <- fake_visibility(c("a", "b", "d"))
     mark_cards_built(vis, c("a", "b", "d"))
     client_active <- reactiveVal("A")
+    upd <- reactiveVal()
 
-    report_visible_observer(vis, client_active, docks)
+    report_visible_observer(vis, block_claim(upd, "dock"), client_active,
+                            docks)
 
-    list(a = layout_a, b = layout_b, active = client_active, vis = vis)
+    list(a = layout_a, b = layout_b, active = client_active, vis = vis,
+         upd = upd)
   })
 
   ms$flushReact()
-  # Before any layout report the built ledger stands; everything off screen.
+  # Before any layout report the built ledger stands; nothing claimed yet.
   expect_setequal(built_cards(env$vis), c("a", "b", "d"))
-  expect_identical(isolate(env$vis$required[["a"]]()), FALSE)
+  expect_null(isolate(env$upd()))
 
-  # A shows a and b (fronts of two groups): required TRUE. d (in B) stays FALSE.
+  # A shows a and b (fronts of two groups): both claimed. d (in B) is not.
   with_mock_context(ms, env$a(
     dock_grid(panels("block_panel-a"), panels("block_panel-b"))
   ))
   ms$flushReact()
-  expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
-  expect_identical(isolate(env$vis$required[["b"]]()), TRUE)
-  expect_identical(isolate(env$vis$required[["d"]]()), FALSE)
+  expect_identical(claimed_blocks(env$upd), c("a", "b"))
 
-  # Driving a and b required also paints them: report_visible marks the active
-  # view's on-screen fronts painted (visible TRUE) off the same layout report.
+  # Claiming a and b also paints them: report_visible marks the active view's
+  # on-screen fronts painted (visible TRUE) off the same layout report.
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
   expect_identical(isolate(env$vis$visible[["b"]]()), TRUE)
 
-  # A layout change on inactive B leaves A's required set alone, and must not
-  # clear the paint of on-screen a/b (report_visible tracks only A's layout).
+  # A layout change on inactive B leaves A's claim alone, and must not clear
+  # the paint of on-screen a/b (report_visible tracks only A's layout).
   with_mock_context(ms, env$b(dock_grid(panels("block_panel-d"))))
   ms$flushReact()
-  expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
+  expect_identical(claimed_blocks(env$upd), c("a", "b"))
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
 
-  # A drops a (its slot is now an extension panel): a parks (required FALSE, its
-  # paint cleared to FALSE = built, off screen), b required TRUE, painted.
+  # A drops a (its slot is now an extension panel): a is released by its absence
+  # from the set and parks in the ledger (visible FALSE = built, off screen).
   with_mock_context(ms, env$a(
     dock_grid(panels("ext_panel-editor"), panels("block_panel-b"))
   ))
   ms$flushReact()
-  expect_identical(isolate(env$vis$required[["a"]]()), FALSE)
+  expect_identical(claimed_blocks(env$upd), "b")
   expect_identical(isolate(env$vis$visible[["a"]]()), FALSE)
-  expect_identical(isolate(env$vis$required[["b"]]()), TRUE)
   expect_identical(isolate(env$vis$visible[["b"]]()), TRUE)
 
-  # Switching to the not-yet-arranged B: its block required, a/b off screen.
+  # Switching to the not-yet-arranged B: its block is claimed, a/b released.
   with_mock_context(ms, env$active("B"))
   ms$flushReact()
-  expect_identical(isolate(env$vis$required[["d"]]()), TRUE)
-  expect_identical(isolate(env$vis$required[["a"]]()), FALSE)
-  expect_identical(isolate(env$vis$required[["b"]]()), FALSE)
+  expect_identical(claimed_blocks(env$upd), "d")
 })
 
 test_that("report_visible_observer coalesces set-equal reports", {
@@ -899,10 +903,12 @@ test_that("report_visible_observer coalesces set-equal reports", {
     vis <- fake_visibility(c("a", "b"))
     mark_cards_built(vis, c("a", "b"))
     client_active <- reactiveVal("A")
+    upd <- reactiveVal()
 
-    report_visible_observer(vis, client_active, docks)
+    report_visible_observer(vis, block_claim(upd, "dock"), client_active,
+                            docks)
 
-    list(layout = layout, vis = vis)
+    list(layout = layout, vis = vis, upd = upd)
   })
 
   with_mock_context(ms, env$layout(
@@ -910,22 +916,21 @@ test_that("report_visible_observer coalesces set-equal reports", {
   ))
   ms$flushReact()
 
-  expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
-  expect_identical(isolate(env$vis$required[["b"]]()), TRUE)
+  expect_identical(claimed_blocks(env$upd), c("a", "b"))
 
-  # report_visible painted a and b as it drove them required.
+  # report_visible painted a and b as it claimed them.
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
 
   # Re-report a set-equal (reordered) layout: the observer re-runs (reactive()
-  # does not dedupe), but the on-screen set is unchanged -- the required axis
-  # stands, show_cards leaves an on-screen block's paint be, and the re-mark is
-  # idempotent -- so the paint survives.
+  # does not dedupe), but the on-screen set is unchanged -- so no second claim
+  # payload goes out, and the paint (idempotently re-marked) survives.
+  with_mock_context(ms, env$upd(NULL))
   with_mock_context(ms, env$layout(
     dock_grid(panels("block_panel-b"), panels("block_panel-a"))
   ))
   ms$flushReact()
 
-  expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
+  expect_null(isolate(env$upd()))
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
 })
 
@@ -942,10 +947,12 @@ test_that("report_visible_observer survives an echo naming a dropped block", {
     vis <- fake_visibility(c("a", "b", "gone"))
     mark_cards_built(vis, c("a", "b", "gone"))
     client_active <- reactiveVal("A")
+    upd <- reactiveVal()
 
-    report_visible_observer(vis, client_active, docks)
+    report_visible_observer(vis, block_claim(upd, "dock"), client_active,
+                            docks)
 
-    list(layout = layout, vis = vis)
+    list(layout = layout, vis = vis, upd = upd)
   })
 
   with_mock_context(ms, env$layout(
@@ -963,7 +970,6 @@ test_that("report_visible_observer survives an echo naming a dropped block", {
   # ledger -- the dock writes nothing on removal. The client's echo is a moment
   # behind and still names the panel.
   rm("gone", envir = env$vis$visible)
-  rm("gone", envir = env$vis$required)
 
   with_mock_context(ms, env$layout(
     dock_grid(panels("block_panel-a"), panels("block_panel-gone"))
@@ -971,10 +977,13 @@ test_that("report_visible_observer survives an echo naming a dropped block", {
   expect_no_error(ms$flushReact())
 
   # The survivors are still driven off that same stale report: `a` is a front,
-  # `b` is not.
-  expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
+  # `b` is not. The dropped block is absent from the claim too, which matters
+  # more than it looks: core rejects a whole payload naming an unknown block
+  # ("requested evaluation of unknown block"), so an unreconciled echo would
+  # cost the survivors their claim, not just the block that went away.
+  expect_identical(claimed_blocks(env$upd), "a")
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
-  expect_identical(isolate(env$vis$required[["b"]]()), FALSE)
+  expect_identical(isolate(env$vis$visible[["b"]]()), FALSE)
   expect_setequal(built_cards(env$vis), c("a", "b"))
 })
 
@@ -1011,10 +1020,12 @@ test_that("report_visible_observer follows the live active panel (#361)", {
     vis <- fake_visibility(c("a", "b"))
     mark_cards_built(vis, c("a", "b"))
     client_active <- reactiveVal("A")
+    upd <- reactiveVal()
 
-    report_visible_observer(vis, client_active, docks)
+    report_visible_observer(vis, block_claim(upd, "dock"), client_active,
+                            docks)
 
-    list(layout = layout, active_panel = active_panel, vis = vis)
+    list(layout = layout, active_panel = active_panel, vis = vis, upd = upd)
   })
 
   with_mock_context(ms, env$layout(layout_ab))
@@ -1026,10 +1037,72 @@ test_that("report_visible_observer follows the live active panel (#361)", {
   # active-panel signal alone must front b and park a -- the tab-switch repaint.
   with_mock_context(ms, env$active_panel("block_panel-b"))
   ms$flushReact()
-  expect_identical(isolate(env$vis$required[["b"]]()), TRUE)
+  expect_identical(claimed_blocks(env$upd), "b")
   expect_identical(isolate(env$vis$visible[["b"]]()), TRUE)
-  expect_identical(isolate(env$vis$required[["a"]]()), FALSE)
   expect_identical(isolate(env$vis$visible[["a"]]()), FALSE)
+})
+
+test_that("block_claim sends one set payload under the gate owner", {
+
+  upd <- reactiveVal()
+  claim_blocks <- block_claim(upd, "board-dock")
+
+  claim_blocks(c("b", "a"))
+
+  # One `sustain` delta, keyed by the owner the dock declared as its gate. The
+  # `set` verb carries the whole claim, sorted so a re-report of the same set in
+  # another order is not a change.
+  expect_identical(
+    isolate(upd()),
+    list(sustain = list(`board-dock` = list(set = c("a", "b"))))
+  )
+})
+
+test_that("block_claim resends only when the claimed set changes", {
+
+  upd <- reactiveVal()
+  claim_blocks <- block_claim(upd, "board-dock")
+
+  # The opening claim always goes out, empty active view included: core holds
+  # background construction until the gating owner has claimed once.
+  claim_blocks(character())
+  expect_identical(claimed_blocks(upd), character())
+
+  upd(NULL)
+  claim_blocks(c("a", "b"))
+  expect_identical(claimed_blocks(upd), c("a", "b"))
+
+  # A layout echo re-reporting the same set (in either order) is not a change,
+  # and every payload is a board-update round trip.
+  upd(NULL)
+  claim_blocks(c("b", "a"))
+  expect_null(isolate(upd()))
+
+  upd(NULL)
+  claim_blocks("a")
+  expect_identical(claimed_blocks(upd), "a")
+})
+
+test_that("a second writer in the same flush folds, never replaces", {
+
+  upd <- reactiveVal()
+  claim_blocks <- block_claim(upd, "board-dock")
+
+  claim_blocks("a")
+  fold_update(upd, list(views = list(grid = list(page = "GRID"))))
+
+  # Core drains the channel once per flush, so a plain write here would replace
+  # the claim outright and the dock would hold nothing while it shows a.
+  expect_identical(claimed_blocks(upd), "a")
+  expect_identical(isolate(upd())$views$grid$page, "GRID")
+
+  # Folding is symmetric: whichever of the two runs last keeps the other.
+  upd(NULL)
+  fold_update(upd, list(views = list(grid = list(page = "GRID"))))
+  claim_blocks("b")
+
+  expect_identical(claimed_blocks(upd), "b")
+  expect_identical(isolate(upd())$views$grid$page, "GRID")
 })
 
 test_that("board_server_callback seeds visibility before the client reports", {
@@ -1040,13 +1113,37 @@ test_that("board_server_callback seeds visibility before the client reports", {
 
   with_mock_session({
     vis <- fake_visibility(board_rv)
-    board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
+    upd <- reactiveVal()
+    board_server_callback(board_rv, update = upd, visibility = vis)
 
-    # a is the fronted tab (required TRUE); b its back tab, built but off screen
-    # (required FALSE). Both are in the dock's build ledger (visible non-NA).
+    # a is the fronted tab, so a is claimed; b is its back tab, carded but off
+    # screen. Both are in the dock's build ledger (visible non-NA).
     expect_setequal(built_cards(vis), c("a", "b"))
-    expect_identical(isolate(vis$required[["a"]]()), TRUE)
-    expect_identical(isolate(vis$required[["b"]]()), FALSE)
+    expect_identical(claimed_blocks(upd), "a")
+  })
+})
+
+test_that("the seed declares the gate synchronously, before any flush", {
+
+  # The gate is a capability declaration, not demand: core reads it while
+  # deciding what the first flush constructs, and a payload only applies at the
+  # tail of that flush. Riding one would let flush 1 build the whole board.
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block(), b = new_head_block())
+  )
+
+  with_mock_session({
+    vis <- fake_visibility(board_rv)
+    upd <- reactiveVal()
+    board_server_callback(board_rv, update = upd, visibility = vis)
+
+    owner <- isolate(vis$gate())
+
+    expect_true(is_string(owner))
+    # The claim is held under the very label declared as the gate: core scopes
+    # its paint check to the gating owner's claim, so a mismatch would stall
+    # background construction for the session.
+    expect_identical(claimed_blocks(upd, owner), "a")
   })
 })
 
@@ -1063,14 +1160,13 @@ test_that("the visibility seed reads the active view's open tabs", {
 
   with_mock_session({
     vis <- fake_visibility(board_rv)
-    board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
+    upd <- reactiveVal()
+    board_server_callback(board_rv, update = upd, visibility = vis)
 
-    # b and d front their groups (required TRUE); a is b's back tab (FALSE). All
+    # b and d front their groups, so both are claimed; a is b's back tab. All
     # three are in the dock's build ledger (visible non-NA).
     expect_setequal(built_cards(vis), c("a", "b", "d"))
-    expect_identical(isolate(vis$required[["a"]]()), FALSE)
-    expect_identical(isolate(vis$required[["b"]]()), TRUE)
-    expect_identical(isolate(vis$required[["d"]]()), TRUE)
+    expect_identical(claimed_blocks(upd), c("b", "d"))
   })
 })
 
@@ -1085,11 +1181,11 @@ test_that("the visibility seed spans separate leaves", {
 
   with_mock_session({
     vis <- fake_visibility(board_rv)
-    board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
+    upd <- reactiveVal()
+    board_server_callback(board_rv, update = upd, visibility = vis)
 
     expect_setequal(built_cards(vis), c("a", "b"))
-    expect_identical(isolate(vis$required[["a"]]()), TRUE)
-    expect_identical(isolate(vis$required[["b"]]()), TRUE)
+    expect_identical(claimed_blocks(upd), c("a", "b"))
   })
 })
 
@@ -1102,11 +1198,17 @@ test_that("board_server_callback seeds cleanly on an empty board", {
 
   with_mock_session({
     vis <- fake_visibility(board_rv)
+    upd <- reactiveVal()
 
     expect_no_error(
-      board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
+      board_server_callback(board_rv, update = upd, visibility = vis)
     )
     expect_identical(built_cards(vis), character())
+
+    # The opening claim still goes out, empty: core holds background
+    # construction until the gating owner has claimed once, so an empty active
+    # view that says nothing never lets the backlog start.
+    expect_identical(claimed_blocks(upd), character())
   })
 })
 
