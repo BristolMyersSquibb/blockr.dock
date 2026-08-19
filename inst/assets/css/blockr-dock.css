@@ -1329,3 +1329,112 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
     animation-duration: 1.6s;
   }
 }
+
+/* ---- block card: the AI control beside the block, not stacked above it ----
+ * `block_card_content()` builds the card as an accordion (ctrl / inputs /
+ * outputs), and an accordion stacks -- which puts the chat above the block's
+ * own controls. When the card is wide enough, lay those panels out as a grid
+ * instead: chat on the left, the block and its output on the right. Falls back
+ * to the stacked accordion on a narrow dock panel, so nothing changes there.
+ * A container query, not a media query: what matters is the width of the
+ * PANEL, not of the window. */
+/* Scoped by content rather than by an ancestor class: there is no
+ * `.blockr-dock` wrapper, and plain `.card-body` would catch every bslib card
+ * on the page. */
+.card-body:has(> .blockr-block-accordion) {
+  container-type: inline-size;
+}
+
+/* 1000px, not 700: a 50/50 split of a half-window dock panel leaves the
+ * editor around 400px, where every line of R soft-wraps and the side-by-side
+ * costs more than the scrolling it saves. Below this the card stays stacked.
+ * The code side gets the larger share -- the chat is an input plus prose. */
+@container (min-width: 1000px) {
+  .blockr-block-accordion {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.15fr);
+    column-gap: 16px;
+    /* stretch, not start: the chat column takes the height of the block column
+     * beside it, and the conversation scrolls INSIDE that. Otherwise a long
+     * conversation grows the card and pushes the block's controls down the
+     * page, which is the problem this layout exists to solve. */
+    align-items: stretch;
+  }
+  .blockr-block-accordion > .accordion-item[data-value="ctrl"] {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .blockr-block-accordion > .accordion-item[data-value="inputs"] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .blockr-block-accordion > .accordion-item[data-value="outputs"] {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  /* The control panel is closed unless the sparkle is on, which is the common
+   * case; without this the block would sit in the right half of the card with
+   * dead space beside it. */
+  .blockr-block-accordion:not(:has(> [data-value="ctrl"] .accordion-collapse.show)) {
+    display: block;
+  }
+}
+
+/* The chat column is bounded by the block column, so the history has to scroll
+ * within it. Bootstrap's accordion gives no height to its descendants, so the
+ * bound has to be handed down the chain explicitly; `min-height: 0` at every
+ * step is what lets a flex child shrink below its content and actually scroll.
+ * The input and the Clear/Report row sit below the scroller and stay put. */
+@container (min-width: 1000px) {
+  /* The chat must contribute NOTHING to the grid's row heights, or a long
+   * conversation grows the card instead of scrolling -- `align-items: stretch`
+   * equalises the columns but does not cap them, and a spanning item still
+   * feeds its content height back into the rows. Taking the panel body out of
+   * flow makes the row height depend on the block column alone; the chat then
+   * fills whatever that turns out to be. The ctrl accordion header is
+   * `display: none` here, so `inset: 0` covers the whole cell. */
+  .blockr-block-accordion > .accordion-item[data-value="ctrl"] {
+    position: relative;
+    overflow: hidden;
+  }
+  .blockr-block-accordion > [data-value="ctrl"] > .accordion-collapse.show {
+    position: absolute;
+    inset: 0;
+  }
+  .blockr-block-accordion > [data-value="ctrl"] > .accordion-collapse.show,
+  .blockr-block-accordion > [data-value="ctrl"] > .accordion-collapse > .accordion-body,
+  .blockr-block-accordion > [data-value="ctrl"] .blockr-ctrl-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  /* shinychat's own tree: container > .shiny-chat-wrapper >
+   * .shiny-chat-messages-wrapper > .shiny-chat-messages (already
+   * `overflow-y: auto`, it just never had a bounded height to scroll within)
+   * followed by .shiny-chat-input. */
+  .blockr-block-accordion > [data-value="ctrl"] shiny-chat-container,
+  .blockr-block-accordion > [data-value="ctrl"] .shiny-chat-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+  }
+  .blockr-block-accordion > [data-value="ctrl"] .shiny-chat-messages-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .blockr-block-accordion > [data-value="ctrl"] .shiny-chat-messages {
+    max-height: 100%;
+    overflow-y: auto;
+  }
+  /* The input sits below the scroller and stays put. */
+  .blockr-block-accordion > [data-value="ctrl"] .shiny-chat-input {
+    flex: 0 0 auto;
+  }
+  /* Never scrolls away: it is the thing you are reaching for. */
+  .blockr-block-accordion > [data-value="ctrl"] .blockr-report-wrapper {
+    flex: 0 0 auto;
+  }
+}
