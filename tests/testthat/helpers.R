@@ -159,26 +159,40 @@ fire_action <- function(gen, trigger, board) {
 }
 
 # Stand-in for the `visibility` channel blockr.core hands the board callback:
-# three environments of per-block reactiveVals (`required`, `visible`,
-# `frozen`), one slot per block, mirroring core's add_vis_slots at construction
-# (which seeds every board block before the callback runs). `visible` is logical
-# (the dock's build ledger: !is.na = ever built), matching core's slot. The dock
-# writes values into these slots; core owns their lifecycle in the real thing.
-# Pass the block ids to seed, or a board handle to seed from its blocks.
+# the board-wide `gate` reactiveVal plus two environments of per-block
+# reactiveVals (`visible`, `frozen`), one slot per block, mirroring core's
+# add_vis_slots at construction (which seeds every board block before the
+# callback runs). The `visible` slot is logical (the dock's build ledger:
+# !is.na = ever built), matching core's. The dock writes values into these
+# slots; core owns their lifecycle in the real thing. Pass the block ids to
+# seed, or a board handle to seed from its blocks.
 fake_visibility <- function(x = character()) {
   ids <- if (is.character(x)) x else board_block_ids(shiny::isolate(x$board))
 
   vis <- list(
-    required = new.env(parent = emptyenv()),
+    gate = shiny::reactiveVal(NULL),
     visible = new.env(parent = emptyenv()),
     frozen = new.env(parent = emptyenv())
   )
   for (id in ids) {
-    vis$required[[id]] <- shiny::reactiveVal(NA)
     vis$visible[[id]] <- shiny::reactiveVal(NA)
     vis$frozen[[id]] <- shiny::reactiveVal(FALSE)
   }
   vis
+}
+
+# The blocks the dock claims in `update`'s pending payload, as core would read
+# them: one `sustain` delta, keyed by the owner label the dock declared as the
+# gate. The claim is a `set`, so this is the whole of what the dock holds.
+claimed_blocks <- function(update, owner = NULL) {
+  claim <- shiny::isolate(update())[["sustain"]]
+
+  if (is.null(owner)) {
+    testthat::expect_length(claim, 1L)
+    owner <- names(claim)
+  }
+
+  claim[[owner]][["set"]]
 }
 
 # Resolve a view's stable id from its display label. Views are keyed by
