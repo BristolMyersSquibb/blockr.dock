@@ -309,17 +309,18 @@ report_visible_observer <- function(visibility, claim_blocks, client_active,
 # holds background construction until the gating owner has claimed once.
 block_claim <- function(update, owner) {
 
-  claimed <- NULL
+  sent <- new.env(parent = emptyenv())
+  sent$ids <- NULL
 
   function(on_screen) {
 
     ids <- sort(on_screen)
 
-    if (identical(claimed, ids)) {
+    if (identical(sent$ids, ids)) {
       return(invisible())
     }
 
-    claimed <<- ids
+    sent$ids <- ids
 
     fold_update(update, list(sustain = set_names(list(list(set = ids)), owner)))
 
