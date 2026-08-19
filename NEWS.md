@@ -1,5 +1,16 @@
 # blockr.dock (development version)
 
+* A restored block card paints its saved sections open straight away,
+  instead of opening every section and collapsing the hidden ones a
+  moment later. The card rendered its accordion open unconditionally and
+  left a server observer to correct it, which it could only do once the
+  client had reported the toggle widget's value back -- on a four-block
+  board that correction landed some five seconds after the card
+  appeared, so the user watched the board settle into its saved shape
+  rather than opening in it. A locked dock now renders no toggle widget
+  at all: it was there purely to drive that correction, hidden behind
+  `display: none` yet still a live input a client could set (#418).
+
 * A block with nothing to configure no longer carries an empty "Block
   inputs" section, nor the toggle that opens it. Core's `new_block()` ui
   default renders no markup at all, so a card for a block configured
