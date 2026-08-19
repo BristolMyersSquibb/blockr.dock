@@ -61,23 +61,6 @@ test_that("dummy block ui test", {
   expect_s3_class(ui[[1L]], "shiny.tag")
 })
 
-test_that("built_cards reads the dock ledger, not raw required writes (#377)", {
-
-  vis <- fake_visibility(c("a", "b", "c"))
-  expect_identical(built_cards(vis), character())
-
-  # A non-dock writer (core's "Show code") marks blocks required without ever
-  # building a card. That must not read back as a built card -- else the first
-  # visit to their view skips the build and leaves the panels blank.
-  vis$required[["a"]](FALSE)
-  vis$required[["b"]](TRUE)
-  expect_identical(built_cards(vis), character())
-
-  # The dock's own build is what enters the ledger.
-  mark_cards_built(vis, c("a", "b"))
-  expect_setequal(built_cards(vis), c("a", "b"))
-})
-
 test_that("built_cards on an empty bundle is empty (no crash)", {
 
   # An empty board has no slots; the built set comes back empty, not a choke --
@@ -95,49 +78,34 @@ test_that("mark_cards_built enters new cards in the ledger (visible FALSE)", {
   expect_identical(isolate(vis$visible[["a"]]()), FALSE)
   expect_identical(isolate(vis$visible[["b"]]()), FALSE)
   expect_setequal(built_cards(vis), c("a", "b"))
-  # Demand goes FALSE too; an untouched slot stays NA (never built).
-  expect_identical(isolate(vis$required[["a"]]()), FALSE)
+  # An untouched slot stays NA (never built).
   expect_true(is.na(isolate(vis$visible[["c"]]())))
 })
 
-test_that("show_cards sets required TRUE on screen, FALSE off, over built", {
-
-  vis <- fake_visibility(c("a", "b", "c"))
-
-  # a, b, c built; only b is on screen.
-  show_cards(vis, built = c("a", "b", "c"), on_screen = "b")
-
-  expect_identical(isolate(vis$required[["a"]]()), FALSE)
-  expect_identical(isolate(vis$required[["b"]]()), TRUE)
-  expect_identical(isolate(vis$required[["c"]]()), FALSE)
-})
-
-test_that("show_cards keeps built-ness when a block leaves the screen (#377)", {
+test_that("mark_cards_hidden keeps built-ness when a card leaves (#377)", {
 
   vis <- fake_visibility(c("a", "b"))
   # a was painted into a view; it now leaves the screen.
-  vis$required[["a"]](TRUE)
   vis$visible[["a"]](TRUE)
+  vis$visible[["b"]](FALSE)
 
-  show_cards(vis, built = c("a", "b"), on_screen = "b")
+  mark_cards_hidden(vis, "a")
 
-  expect_identical(isolate(vis$required[["a"]]()), FALSE)
   # visible goes FALSE (built, off screen), never NA -- erasing it would blank
   # the view on its next visit.
   expect_identical(isolate(vis$visible[["a"]]()), FALSE)
   expect_true("a" %in% built_cards(vis))
 })
 
-test_that("show_cards leaves the visible axis alone for on-screen blocks", {
+test_that("mark_cards_hidden leaves a never-built card unbuilt", {
 
-  vis <- fake_visibility("a")
-  vis$required[["a"]](TRUE)
-  vis$visible[["a"]](TRUE)
+  vis <- fake_visibility(c("a", "b"))
 
-  # a stays on screen: its paint (visible) is the arrange observer's to own.
-  show_cards(vis, built = "a", on_screen = "a")
+  # b has no card yet (visible NA). Parking it must not enter it in the ledger,
+  # else its view skips the build and paints blank on the first visit.
+  mark_cards_hidden(vis, c("a", "b"))
 
-  expect_identical(isolate(vis$visible[["a"]]()), TRUE)
+  expect_identical(built_cards(vis), character())
 })
 
 test_that("mark_cards_rendered marks on-screen slots painted (visible TRUE)", {
@@ -175,7 +143,6 @@ test_that("build_block_ui inserts the unbuilt cards and marks them built", {
 
   expect_setequal(new, c("a", "b"))
   expect_setequal(built_cards(vis), c("a", "b"))
-  expect_identical(isolate(vis$required[["a"]]()), FALSE)
   expect_length(inserted, 2L)
 
   # A card already built is not re-inserted: the visible ledger is the guard.
@@ -205,7 +172,6 @@ test_that("build_block_ui inserts the incremental card only", {
   )
   vis <- fake_visibility(c("a", "b"))
   # a is already built and painted on screen.
-  vis$required[["a"]](TRUE)
   vis$visible[["a"]](TRUE)
 
   new <- build_block_ui(
@@ -215,43 +181,11 @@ test_that("build_block_ui inserts the incremental card only", {
 
   expect_identical(new, "b")
   expect_setequal(built_cards(vis), c("a", "b"))
-  # The pre-existing card keeps its state; only the new one is added.
-  expect_identical(isolate(vis$required[["a"]]()), TRUE)
+  # The pre-existing card keeps its paint; only the new one is added, off
+  # screen.
   expect_identical(isolate(vis$visible[["a"]]()), TRUE)
-  expect_identical(isolate(vis$required[["b"]]()), FALSE)
+  expect_identical(isolate(vis$visible[["b"]]()), FALSE)
   expect_length(inserted, 1L)
-})
-
-test_that("a bare required write does not suppress the card build (#377)", {
-
-  # Reproduces the "Show code" blank-view bug: core force-marks every block
-  # required (to export the whole script) though the dock built no card for the
-  # off-screen ones. The first visit to their view must still build the cards --
-  # a required write is not a ledger entry.
-  inserted <- character()
-
-  local_mocked_bindings(
-    insertUI = function(selector, ...) {
-      inserted <<- c(inserted, as.character(selector))
-      invisible()
-    }
-  )
-
-  board <- new_dock_board(
-    blocks = c(a = new_dataset_block(), b = new_head_block())
-  )
-  vis <- fake_visibility(c("a", "b"))
-
-  vis$required[["a"]](TRUE)
-  vis$required[["b"]](TRUE)
-
-  new <- build_block_ui(
-    "test", board, board_blocks(board), vis,
-    edit_ui = edit_block_ui, session = MockShinySession$new()
-  )
-
-  expect_setequal(new, c("a", "b"))
-  expect_length(inserted, 2L)
 })
 
 test_that("ensure_block_ui short-circuits when every card is built", {
