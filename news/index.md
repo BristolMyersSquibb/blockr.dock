@@ -2,6 +2,14 @@
 
 ## blockr.dock (development version)
 
+- A block with nothing to configure no longer carries an empty “Block
+  inputs” section, nor the toggle that opens it. Core’s
+  [`new_block()`](https://bristolmyerssquibb.github.io/blockr.core/reference/new_block.html)
+  ui default renders no markup at all, so a card for a block configured
+  entirely by its links – `rbind_block`, say – offered a control that
+  opened onto a blank panel
+  ([\#69](https://github.com/BristolMyersSquibb/blockr.dock/issues/69)).
+
 - Extension state now reaches the saved board. Every extension
   serialized an empty payload while still writing its object and
   constructor, so a save looked complete yet carried none of its
