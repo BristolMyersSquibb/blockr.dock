@@ -1,5 +1,16 @@
 # blockr.dock (development version)
 
+* Switching to another view before the previous one has settled no longer
+  puts the board in an endless switching loop. The view nav reported the
+  server's own `sendInputMessage("view_nav", ...)` back as an input, and with
+  two switches in flight the first push's echo landed after the second had been
+  applied, missed `switch_view_observer()`'s `client_active` guard and was
+  applied as a fresh switch -- whose push echoed in turn. The board then
+  ping-ponged between the visited views indefinitely, re-evaluating every block
+  on each hop. The nav no longer echoes a programmatic update; it forgets
+  Shiny's cached input value instead, so a later click on the view the server
+  pushed away from is still reported (#424).
+
 * Extension state now reaches the saved board. Every extension serialized
   an empty payload while still writing its object and constructor, so a
   save looked complete yet carried none of its extensions' state and a
