@@ -58,7 +58,8 @@ $(function () {
     },
 
     subscribe: function (el, callback) {
-      // Programmatic updates (receiveMessage) trigger 'change'
+      // A real DOM change event on the nav. Programmatic updates do NOT come
+      // through here: receiveMessage no longer triggers 'change' (see there).
       $(el).on('change.viewBinding', function () {
         callback(true);
       });
@@ -314,7 +315,19 @@ $(function () {
         });
       }
 
-      $(el).trigger('change');
+      // Do NOT report the value back. The server drives the active view on
+      // every path (a switch, an add, the removal of the active view), so it
+      // already knows what it just pushed -- and an echo is not merely
+      // redundant. With two switches in flight (a section clicked before the
+      // previous one settled) the first push's echo lands after the second has
+      // been applied, misses the server's `client_active` guard and is applied
+      // as a fresh switch, whose push echoes in turn: the board then ping-pongs
+      // between the visited views forever. Shiny's no-resend dedup does not
+      // absorb it either, since the alternating values always differ.
+      //
+      // Forget the cached value instead, so a later real click on the view the
+      // server pushed away from is still sent (the dedup would swallow it).
+      Shiny.forgetLastInputValue(el.id);
     }
   });
 

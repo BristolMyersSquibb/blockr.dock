@@ -1,6 +1,6 @@
 Package: blockr.dock
 Title: A Docking Layout Manager for 'blockr'
-Version: 0.1.8
+Version: 0.1.9
 Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",
