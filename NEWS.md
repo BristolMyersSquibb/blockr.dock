@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* A locked board lets panels be resized again. Locking passed dockview
+  both `disableDnd` and the component-level `locked` flag, and the latter
+  disables every sash, so a reader could not widen a panel to see a wide
+  table. Only `disableDnd` is passed now: panels still cannot be dragged
+  between groups, closed or added, but the drag borders are live. The
+  resize is per-session -- the settled-echo grid mirror is not wired while
+  locked, so nothing is written back to the board (#421).
+
 * Extension state now reaches the saved board. Every extension serialized
   an empty payload while still writing its object and constructor, so a
   save looked complete yet carried none of its extensions' state and a

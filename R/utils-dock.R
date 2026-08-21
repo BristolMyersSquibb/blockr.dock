@@ -242,7 +242,17 @@ dock_panel <- function(...) {
 set_dock_view_output <- function(..., session = get_session()) {
   args <- c(
     list(...),
-    if (is_dock_locked()) list(locked = TRUE, disableDnd = TRUE),
+    # Locking is about board *structure*, not the reader's viewport. dockview
+    # splits the two: `disableDnd` stops panels being dragged between groups
+    # (a membership change, which is structure), while the component-level
+    # `locked` flag disables every sash -- it sets `gridview.locked`, which
+    # walks the branch nodes and disables their splitviews. Leaving `locked`
+    # off keeps the sashes draggable, so a reader can widen a panel to see a
+    # wide table without being able to restructure the board. The resize is
+    # ephemeral: the settled-echo grid mirror is not wired while locked (see
+    # `manage_dock()`), so nothing is written back and a reload restores the
+    # deployed geometry.
+    if (is_dock_locked()) list(disableDnd = TRUE),
     list(
       defaultRenderer = "always",
       add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked())

@@ -74,3 +74,44 @@ test_that("panel-id accessors are empty-safe", {
   expect_length(block_panel_ids(proxy = NULL), 0L)
   expect_length(ext_panel_ids(proxy = NULL), 0L)
 })
+
+test_that("locking disables DnD but leaves sashes draggable (#421)", {
+
+  captured <- NULL
+
+  local_mocked_bindings(
+    dock_view = function(...) {
+      captured <<- list(...)
+      structure(list(), class = "htmlwidget")
+    },
+    render_dock_view = function(expr, ...) expr,
+    .package = "dockViewR"
+  )
+  local_mocked_bindings(dock_proxy = function(...) NULL)
+
+  session <- list(output = list(), ns = NS("board"))
+
+  unlocked <- withr::with_options(
+    list(blockr.locked = NULL),
+    {
+      set_dock_view_output(session = session)
+      captured
+    }
+  )
+  expect_false("disableDnd" %in% names(unlocked))
+  expect_false("locked" %in% names(unlocked))
+
+  locked <- withr::with_options(
+    list(blockr.locked = TRUE),
+    {
+      set_dock_view_output(session = session)
+      captured
+    }
+  )
+  # Panels cannot be dragged between groups ...
+  expect_true(isTRUE(locked$disableDnd))
+  # ... but the component-level `locked` flag, which disables every sash, is
+  # deliberately not set: resizing a panel is a viewport gesture, not a board
+  # mutation.
+  expect_false("locked" %in% names(locked))
+})
