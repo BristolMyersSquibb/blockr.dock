@@ -164,7 +164,8 @@ board_server_callback <- function(board, update, visibility, ...,
           update = update,
           view_data = view_data,
           actions = triggers,
-          extensions = peers
+          extensions = peers,
+          visibility = visibility
         ),
         list(...)
       )
