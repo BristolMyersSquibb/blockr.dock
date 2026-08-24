@@ -58,7 +58,8 @@ $(function () {
     },
 
     subscribe: function (el, callback) {
-      // Programmatic updates (receiveMessage) trigger 'change'
+      // A real DOM change event on the nav. Programmatic updates do NOT come
+      // through here: receiveMessage no longer triggers 'change' (see there).
       $(el).on('change.viewBinding', function () {
         callback(true);
       });
@@ -274,10 +275,12 @@ $(function () {
           $(el).append(newItem);
         }
 
-        // Activate the new item and update toggle label
-        $(el).find('.blockr-view-item').removeClass('active');
-        newItem.addClass('active');
-        setToggleLabel($(el), addName);
+        // Deliberately not activated here. The server owns which view is
+        // active: an add that means to navigate carries `active` in its delta
+        // and lands as a `value` message a moment later. Activating on the
+        // client would leave the nav pointing at a view the board never
+        // switched to -- and with the echo below dropped, nothing corrects
+        // it.
       }
 
       if (data.hasOwnProperty('remove')) {
@@ -314,7 +317,19 @@ $(function () {
         });
       }
 
-      $(el).trigger('change');
+      // Do NOT report the value back. The server drives the active view on
+      // every path (a switch, an add, the removal of the active view), so it
+      // already knows what it just pushed -- and an echo is not merely
+      // redundant. With two switches in flight (a section clicked before the
+      // previous one settled) the first push's echo lands after the second has
+      // been applied, misses the server's `client_active` guard and is applied
+      // as a fresh switch, whose push echoes in turn: the board then ping-pongs
+      // between the visited views forever. Shiny's no-resend dedup does not
+      // absorb it either, since the alternating values always differ.
+      //
+      // Forget the cached value instead, so a later real click on the view the
+      // server pushed away from is still sent (the dedup would swallow it).
+      Shiny.forgetLastInputValue(el.id);
     }
   });
 
