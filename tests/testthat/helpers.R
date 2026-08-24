@@ -291,6 +291,100 @@ read_view_docks <- function(app, board_id = "my_board") {
   )
 }
 
+# Click a view's nav entry the way a user does. The item is a plain div behind
+# a delegated handler, not a Shiny input, so a synthetic DOM click is the
+# gesture -- `app$click()` drives inputs.
+click_view <- function(app, view, board_id = "my_board") {
+  app$run_js(
+    sprintf(
+      paste0(
+        "document.querySelector('#%s-view_nav ",
+        ".blockr-view-item[data-view-id=\"%s\"]').click()"
+      ),
+      board_id, view
+    )
+  )
+}
+
+# Start recording what the view nav does, discarding anything recorded before:
+# every value it reports to the server, and every message the server pushes
+# into it. Reports are read off `shiny:inputchanged`, which sits ahead of
+# Shiny's no-resend dedup in the input pipeline, so it observes the report the
+# binding made rather than only those that survive dedup -- the level a nav
+# echo lives at, since a deduped echo never reaches the server yet is still a
+# report. The push log is what makes the report tally exact: `receiveMessage`
+# is wrapped so a push is logged only once applied, so a push whose value has
+# shown up has already contributed any report it was going to.
+watch_view_nav <- function(app, board_id = "my_board") {
+  app$run_js(
+    sprintf(
+      paste0(
+        "window.__viewNavReports = [];",
+        "window.__viewNavPushes = [];",
+        "$(document).off('shiny:inputchanged.viewNavProbe');",
+        "$(document).on('shiny:inputchanged.viewNavProbe', function (e) {",
+        "  if (e.name === '%s-view_nav') {",
+        "    window.__viewNavReports.push(e.value);",
+        "  }",
+        "});",
+        "var b = Shiny.inputBindings.bindingNames['blockr.view'].binding;",
+        "if (!b.__viewNavProbed) {",
+        "  var orig = b.receiveMessage;",
+        "  b.receiveMessage = function (el, data) {",
+        "    var res = orig.call(this, el, data);",
+        "    window.__viewNavPushes.push(data.value || null);",
+        "    return res;",
+        "  };",
+        "  b.__viewNavProbed = true;",
+        "}"
+      ),
+      board_id
+    )
+  )
+}
+
+view_nav_reports <- function(app) {
+  as.character(unlist(app$get_js("window.__viewNavReports")))
+}
+
+# Wait until the server has pushed `view` into the nav and the binding has
+# applied it. `insertUI(immediate = TRUE)` puts a view's dock container on the
+# wire ahead of the flush that carries the input message, so the dock landing
+# says nothing about the push; this waits on the push itself.
+wait_view_nav_push <- function(app, view, timeout = 30 * 1000) {
+  diagnose <- function() {
+    sprintf(
+      "[view-nav-push] want=%s got=%s", view,
+      app$get_js("JSON.stringify(window.__viewNavPushes)")
+    )
+  }
+
+  wait_js(
+    app,
+    sprintf("window.__viewNavPushes.indexOf('%s') !== -1", view),
+    diagnose,
+    timeout
+  )
+}
+
+# Deliver a message to the nav binding exactly as `sendInputMessage("view_nav",
+# ...)` does, but without the server: `payload` is the JSON the server would
+# send (`{"value": ...}`, `{"add": {...}}`). What the nav must not do with a
+# programmatic update is a client-side round trip -- receiveMessage reporting
+# the pushed value straight back through subscribe() -- so driving
+# receiveMessage directly states that contract with no timing in it.
+push_view_nav <- function(app, payload, board_id = "my_board") {
+  app$run_js(
+    sprintf(
+      paste0(
+        "Shiny.inputBindings.bindingNames['blockr.view'].binding",
+        ".receiveMessage(document.getElementById('%s-view_nav'), %s);"
+      ),
+      board_id, payload
+    )
+  )
+}
+
 # Wrap `wait_for_js` so a timeout dumps the page state before failing. The
 # queue-only e2e flakes never reproduce locally, so a residual timeout has to
 # carry enough context to be actionable rather than an opaque "JS did not
@@ -395,6 +489,46 @@ wait_view_nav <- function(app, n, board_id = "my_board", timeout = 30 * 1000) {
     app,
     sprintf("document.querySelectorAll('%s').length === %d", sel, n),
     diagnose,
+    timeout
+  )
+}
+
+# Wait until `view`'s dock container has been inserted. Off-screen views are
+# deferred, so the handle lands when the server processes that view's first
+# visit -- which makes it the gate for "the server acted on this switch",
+# without reading the client-toggled active class wait_dock_loaded warns
+# about. It says nothing about the nav push that follows in the same flush,
+# which goes out behind this `immediate = TRUE` insert: use
+# wait_view_nav_push() for that.
+wait_view_handle <- function(app, view, board_id = "my_board",
+                             timeout = 30 * 1000) {
+  wait_js(
+    app,
+    sprintf(
+      "document.querySelector('#%s-view_handle-%s') !== null", board_id, view
+    ),
+    function() dock_shell_diag(app, board_id),
+    timeout
+  )
+}
+
+# Wait until `view`'s dock is the shown one. `blockr-view-dock-active` is
+# toggled by the `switch-view` handler, whose retry budget can lapse while the
+# target dock is still being inserted -- so this is only sound once the handle
+# is up (wait_view_handle), where the handler applies the class on its first
+# attempt. Use it for a return visit, never for a first one.
+wait_view_dock_active <- function(app, view, board_id = "my_board",
+                                  timeout = 30 * 1000) {
+  wait_js(
+    app,
+    sprintf(
+      paste0(
+        "document.querySelector(",
+        "'#%s-view_handle-%s.blockr-view-dock-active') !== null"
+      ),
+      board_id, view
+    ),
+    function() dock_shell_diag(app, board_id),
     timeout
   )
 }
