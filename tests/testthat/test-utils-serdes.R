@@ -321,6 +321,46 @@ ext_payload <- function(ser, name) {
   ser[["payload"]][["extensions"]][["payload"]][[name]][["payload"]]
 }
 
+test_that("an all-hidden card survives the save as hidden (#426)", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    views = list(Page = "a")
+  )
+
+  restored <- function(reported) {
+
+    ser <- isolate(
+      serialize_board(
+        brd,
+        blocks = list(a = list(server = list(visible = reactiveVal(reported)))),
+        id = NULL,
+        dock = NULL,
+        view_data = NULL,
+        session = NULL
+      )
+    )
+
+    back <- jsonlite::fromJSON(
+      jsonlite::toJSON(ser, null = "null"),
+      simplifyDataFrame = FALSE,
+      simplifyMatrix = FALSE
+    )
+
+    visible_sections(board_blocks(blockr_deser(back))[["a"]])
+  }
+
+  # JSON carries an empty selection as `[]`, which decodes to an empty list --
+  # so the answer is normalised to the character shape every reader expects.
+  expect_identical(restored(character()), character())
+
+  expect_identical(restored("outputs"), "outputs")
+
+  # A card that has not reported yet stores a value indistinguishable from an
+  # absent attribute, and reads back as unset: both sections open.
+  expect_setequal(restored(NULL), c("inputs", "outputs"))
+})
+
 test_that("extension state reaches the serialized board", {
 
   ser <- ser_dock_board(

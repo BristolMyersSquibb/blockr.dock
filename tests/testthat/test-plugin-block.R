@@ -345,6 +345,57 @@ test_that("hiding the last section closes it (#69)", {
   )
 })
 
+test_that("a card tells an empty selection from no report yet (#426)", {
+
+  testServer(
+    edit_block_server(),
+    {
+      session$flushReact()
+
+      # Still painting. `freeze_hidden_inputs()` reads this as "has not
+      # reported in" and leaves the block editable until the card lands.
+      expect_null(session$returned$visible())
+
+      session$setInputs(collapse_blk_sections = "outputs")
+
+      expect_identical(session$returned$visible(), "outputs")
+
+      # The toggle reports NULL once the last section goes off. The user hid
+      # everything, so that has to arrive as an empty set -- reported, and
+      # with the inputs section among what is hidden.
+      session$setInputs(collapse_blk_sections = NULL)
+
+      expect_identical(session$returned$visible(), character())
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
+test_that("a card whose first report is empty still counts as one (#426)", {
+
+  testServer(
+    edit_block_server(),
+    {
+      session$flushReact()
+
+      # A restored all-hidden card reports NULL first thing, with nothing
+      # before it to distinguish it from the pre-report NULL above.
+      session$setInputs(collapse_blk_sections = NULL)
+
+      expect_identical(session$returned$visible(), character())
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("a locked card reports its sections without a widget (#418)", {
 
   sent <- character()
