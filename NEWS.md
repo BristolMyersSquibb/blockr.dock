@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* Removing blocks that are on screen no longer kills the session with
+  "attempt to apply non-function". Cutting a whole stack hit it every time.
+  The visible-axis observer drove both card axes straight off the client's
+  layout echo, which still names a panel for a tick after core has dropped
+  its block, and `mark_cards_rendered()` called the dropped slot. The echo is
+  now reconciled against core's visibility slots once, where it is read, so no
+  consumer sees a block the server has already dropped (#387).
+
 * A block card whose sections the user has all hidden now comes back hidden,
   and freezes while its controls are off screen. The toggle widget reports
   `NULL` for an empty selection, which is the same value the server holds
