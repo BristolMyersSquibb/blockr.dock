@@ -1784,6 +1784,58 @@ test_that("a block with no controls is not frozen for hiding them (#69)", {
   )
 })
 
+test_that("hiding every section freezes the block too (#426)", {
+
+  # Driven through the real card server rather than a hand-fed reactive: the
+  # gate reads an empty set correctly on its own, and the card reports one
+  # correctly on its own, so only their composition shows the defect.
+  board <- isolate(board_args(blocks = c(a = new_dataset_block())))
+
+  visibility <- fake_visibility("a")
+
+  is_frozen <- function() isolate(visibility$frozen[["a"]]())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        function(input, output, session) {
+
+          card <- edit_block_server()(
+            "blk", "a", board, reactiveVal(), list()
+          )
+
+          blocks <- board$blocks
+          blocks$a$server[names(card)] <- card
+          board$blocks <- blocks
+
+          freeze_hidden_inputs(board, visibility)
+        }
+      )
+    },
+    {
+      session$flushReact()
+
+      # Still painting -- the card has reported nothing, so it stays editable.
+      expect_false(is_frozen())
+
+      session$setInputs(`blk-collapse_blk_sections` = c("inputs", "outputs"))
+
+      expect_false(is_frozen())
+
+      # Hiding every section hides the controls, so the block freezes rather
+      # than being left steerable through a card the user cannot see.
+      session$setInputs(`blk-collapse_blk_sections` = NULL)
+
+      expect_true(is_frozen())
+
+      session$setInputs(`blk-collapse_blk_sections` = "inputs")
+
+      expect_false(is_frozen())
+    }
+  )
+})
+
 test_that("a locked board freezes every block once it reports (#127)", {
 
   withr::local_options(blockr.locked = TRUE)

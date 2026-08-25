@@ -39,7 +39,21 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
 }
 
 visible_sections <- function(blk) {
-  coal(attr(blk, "visible"), c("inputs", "outputs"))
+  as.character(coal(attr(blk, "visible"), c("inputs", "outputs")))
+}
+
+# The toggle reports `NULL` for "every section hidden", which is also what the
+# input holds before the card has reported at all -- and the freeze gate has
+# to tell those apart. Shiny registers the key on the first report even when
+# the value is `NULL`, so the key discriminates; the unconditional read is
+# what takes the dependency that wakes a caller still on the other branch.
+reported_sections <- function(input) {
+
+  sections <- input$collapse_blk_sections
+
+  if ("collapse_blk_sections" %in% names(input)) {
+    coal(sections, character())
+  }
 }
 
 block_card_title <- function(block, id, info) {
@@ -568,7 +582,7 @@ edit_block_server <- function(callbacks = list()) {
         visible <- if (is_dock_locked()) {
           reactive(visible_sections(blk))
         } else {
-          reactive(input$collapse_blk_sections)
+          reactive(reported_sections(input))
         }
 
         list(
