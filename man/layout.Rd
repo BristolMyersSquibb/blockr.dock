@@ -9,7 +9,7 @@
 \usage{
 dock_grid(..., orientation = c("horizontal", "vertical"), sizes = NULL)
 
-panels(..., active = NULL)
+panels(..., active = NULL, header = c("top", "bottom", "left", "right"))
 
 group(..., sizes = NULL)
 
@@ -29,6 +29,10 @@ consistency.}
 share of the parent (positive; need not sum to 1).}
 
 \item{active}{For \code{panels()}, the id of the tab to open by default.}
+
+\item{header}{For \code{panels()}, the edge its tab strip sits on; one of
+\code{"top"} (default), \code{"bottom"}, \code{"left"} or \code{"right"}. A \code{"left"} or
+\code{"right"} header renders the tab strip vertically.}
 
 \item{blocks, extensions}{Dock board components to arrange (for
 \code{default_layout()}).}
@@ -55,15 +59,17 @@ children of the root branch. Bare strings become single-panel
 leaves, character vectors become tabbed leaves, lists become
 nested branches. Use \code{\link[=panels]{panels()}} for a tabbed leaf with an explicit
 open tab, and \code{\link[=group]{group()}} for a branch with explicit sizes.
-\item \code{panels(..., active = NULL)}: a tabbed leaf whose tab strip holds
-the given panel ids. \code{active} selects the initially-open tab; the
-first id wins by default. A single-panel \code{panels()} is permitted
-but redundant (a bare string is equivalent).
+\item \code{panels(..., active = NULL, header = "top")}: a tabbed leaf whose
+tab strip holds the given panel ids. \code{active} selects the
+initially-open tab; the first id wins by default. The \code{header}
+argument moves the strip off the top edge -- \code{"left"} or \code{"right"}
+runs it down the side, vertically. A single-panel \code{panels()} is
+permitted but redundant (a bare string is equivalent).
 \item \code{group(..., sizes = NULL)}: a branch container. \code{sizes} is a
 numeric vector parallel to \code{...} that overrides the even split.
 \item \code{default_layout(blocks, extensions)} produces the default board
-arrangement (extensions on top, blocks below) as a \code{list(views, grids)}
-the constructor consumes.
+arrangement (an extension rail on the left, blocks tabbed on the
+right) as a \code{list(views, grids)} the constructor consumes.
 }
 
 \code{dock_grid()} accepts \code{orientation = "horizontal" | "vertical"} for the
@@ -89,6 +95,13 @@ dock_grid(
   ext("dag"),
   panels(blk("a"), blk("b"), active = blk("b")),
   sizes = c(0.3, 0.7)
+)
+
+# An extension rail: tabs running down the left edge of their group
+dock_grid(
+  panels(ext("dag"), ext("edit_board"), header = "left"),
+  blk("a"),
+  sizes = c(0.2, 0.8)
 )
 
 # Vertical top-level split

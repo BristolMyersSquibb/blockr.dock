@@ -928,6 +928,82 @@ test_that("dock panel move updates layout state and serialization (#234)", {
   )
 })
 
+test_that("the extension group renders a vertical tab strip (e2e, #431)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "ext-rail",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+
+  # The declarative side header rides the restore payload into dockview and
+  # never touches the server again, so nothing below the client observes
+  # whether it landed: the default grid seeds the extension leaf with a left
+  # header, dockview flips that group's strip vertical, and the position
+  # comes back on the echoed leaf. A unit test sees the payload leave and
+  # stops there.
+  diagnose <- function() dock_shell_diag(app, "my_board")
+
+  wait_js(
+    app,
+    paste0(
+      "document.querySelector('#", dock,
+      " .dv-groupview-header-left') !== null"
+    ),
+    diagnose
+  )
+  app$wait_for_idle()
+
+  html <- xml2::read_html(app$get_html(paste0("#", dock)))
+
+  # The side header spreads over three dockview elements: the group carries
+  # `dv-groupview-header-left`, and the strip inside it turns vertical.
+  rail <- xml2::xml_find_all(
+    html, paste0("//*[", has_class("dv-groupview-header-left"), "]")
+  )
+  expect_length(rail, 1L)
+
+  vertical <- c("dv-groupview-header-vertical", "dv-tabs-container-vertical")
+
+  for (token in vertical) {
+    expect_length(
+      xml2::xml_find_all(rail, paste0(".//*[", has_class(token), "]")),
+      1L
+    )
+  }
+
+  # The rail is the extension's group; the blocks keep a top header.
+  tabs <- xml2::xml_find_all(rail, ".//*[contains(@id, '-dock-tab-')]")
+  expect_identical(
+    sub(".*-dock-tab-", "", xml2::xml_attr(tabs, "id")),
+    "ext_panel-edit_board"
+  )
+  expect_length(
+    xml2::xml_find_all(
+      html, paste0("//*[", has_class("dv-groupview-header-top"), "]")
+    ),
+    1L
+  )
+
+  # Round-tripping the position back on the leaf is what keeps the live grid
+  # comparing equal to the stored one -- an echo that dropped it would leave
+  # the mirror committing on every render.
+  layout <- new_dock_layout(app$get_value(input = paste0(dock, "_state")))
+  ext_leaf <- Filter(
+    function(leaf) "ext_panel-edit_board" %in% unlist(leaf[["views"]]),
+    grid_leaves(layout[["grid"]])
+  )
+  expect_identical(ext_leaf[[1L]][["headerPosition"]], "left")
+})
+
 test_that("locked board hides block actions, shows lock indicator (#236)", {
 
   skip_on_cran()

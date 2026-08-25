@@ -177,6 +177,25 @@ test_that("panels(active = ...) round-trips through ser/des", {
   expect_identical(grid[["children"]][[1L]][["active"]], "block_panel-b")
 })
 
+test_that("a leaf header round-trips through ser/des and real JSON", {
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(Page = c("a", "b")),
+    grids = list(Page = dock_grid(panels("a", "b", header = "left")))
+  )
+  ser <- blockr_ser(brd)
+  json <- jsonlite::toJSON(ser, null = "null")
+  back <- jsonlite::fromJSON(json, simplifyDataFrame = FALSE,
+                             simplifyMatrix = FALSE)
+
+  header_of <- function(x) {
+    board_grids(blockr_deser(x))[[1L]][["children"]][[1L]][["header"]]
+  }
+
+  expect_identical(header_of(ser), "left")
+  expect_identical(header_of(back), "left")
+})
+
 test_that("orientation round-trips through ser/des", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),

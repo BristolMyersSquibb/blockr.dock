@@ -1,5 +1,17 @@
 # blockr.dock (development version)
 
+* A grid leaf can now sit its tab strip on any edge of its group, through a
+  `header` argument to `panels()` -- `"left"` or `"right"` runs the strip
+  down the side, vertically, which is dockview 8's own group
+  `headerPosition`. The default arrangement puts the extension group on a
+  left header, so extension tab titles read as a rail rather than competing
+  with the panel for that column's width. An absent header and an explicit
+  `"top"` canonicalise to the same grid, so a stored grid written before
+  this change compares equal to a new one and never dirties the mirror.
+  Changing a header live is not available yet: it needs dockview's
+  `setHeaderPosition()`, which dockViewR does not expose, so this lands the
+  declarative placement only (#431).
+
 * A block card whose sections the user has all hidden now comes back hidden,
   and freezes while its controls are off screen. The toggle widget reports
   `NULL` for an empty selection, which is the same value the server holds

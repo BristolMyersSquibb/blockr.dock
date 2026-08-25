@@ -10,8 +10,9 @@
 # unaffected.
 #
 # Shape: a `dock_grid` carries an `orientation`, `children`, `sizes` and an
-# optional `focus`. A leaf holds its `panels` (a character vector) and its open
-# `active` tab; a branch holds `children` (nodes) and their `sizes`.
+# optional `focus`. A leaf holds its `panels` (a character vector), its open
+# `active` tab and, where its tab strip does not sit on top, the `header` side
+# it runs down; a branch holds `children` (nodes) and their `sizes`.
 # `children` and `sizes` are parallel; `sizes` are 0-1 ratios summing to 1;
 # `focus` is a panel id or NULL. A branch nests, and its split direction
 # alternates with depth (as dockView does), so only the root orientation is
@@ -28,6 +29,14 @@
 # existence.
 
 is_grid_leaf <- function(node) not_null(node[["panels"]])
+
+# The value set of a leaf's `header`, which is dockView's own group
+# `headerPosition` (mirrored in the `panels()` default). The side values render
+# the strip vertically, so a leaf reads as a rail rather than a pane whose tab
+# titles compete with its content for width.
+header_positions <- function() {
+  c("top", "bottom", "left", "right")
+}
 
 even_sizes <- function(n) if (n) rep(1 / n, n) else numeric()
 
@@ -56,8 +65,9 @@ new_dock_grid <- function(children = list(), sizes = NULL,
 
 # The canonical form, computed directly on our shape: every branch's sizes are
 # normalised to ratios summing to 1 (defaulting to an even split when absent),
-# and a `focus` that no longer names a placed panel is dropped. There are no
-# volatile ids to reassign, so two grids of the same shape are `identical()`.
+# a `focus` that no longer names a placed panel is dropped, and a leaf `header`
+# of `"top"` is dropped as the default side. There are no volatile ids to
+# reassign, so two grids of the same shape are `identical()`.
 canonicalize_grid <- function(grid) {
 
   norm_children <- function(children, sizes) {
@@ -71,7 +81,7 @@ canonicalize_grid <- function(grid) {
   norm_node <- function(node) {
 
     if (is_grid_leaf(node)) {
-      return(node)
+      return(drop_default_header(node))
     }
 
     norm_children(node[["children"]], node[["sizes"]])
@@ -89,18 +99,37 @@ canonicalize_grid <- function(grid) {
   grid
 }
 
-# All panel ids in a grid, in reading order (root children first, depth-first).
-grid_panel_ids <- function(grid) {
+# A leaf's tab strip sits on top unless it says otherwise, so an absent header
+# and an explicit "top" describe the same group. Collapsing them to one leaf
+# keeps a client echo that spells the default out from dirtying the mirror
+# against a seed grid that leaves it unset.
+drop_default_header <- function(node) {
+
+  if (is.null(node[["header"]]) || identical(node[["header"]], "top")) {
+    node[["header"]] <- NULL
+  }
+
+  node
+}
+
+# A leaf-level field of a grid, in reading order (root children first,
+# depth-first), skipping the leaves that do not carry it.
+grid_leaf_field <- function(grid, field) {
 
   collect <- function(node) {
     if (is_grid_leaf(node)) {
-      node[["panels"]]
+      node[[field]]
     } else {
       unlst(lapply(node[["children"]], collect))
     }
   }
 
   as.character(unlst(lapply(grid[["children"]], collect)))
+}
+
+# All panel ids in a grid, in reading order (root children first, depth-first).
+grid_panel_ids <- function(grid) {
+  grid_leaf_field(grid, "panels")
 }
 
 #' Canonical view grid
@@ -158,6 +187,15 @@ validate_dock_grid <- function(x) {
     blockr_abort(
       "Unexpected `dock_grid` component{?s} {unexpected}.",
       class = "dock_grid_structure_invalid"
+    )
+  }
+
+  headers <- setdiff(grid_leaf_field(x, "header"), header_positions())
+
+  if (length(headers)) {
+    blockr_abort(
+      "Unexpected leaf header position{?s} {headers}.",
+      class = "dock_grid_header_invalid"
     )
   }
 
@@ -301,7 +339,8 @@ restrict_grid <- function(grid, members) {
 
       list(
         panels = kept,
-        active = if (keep_active) active else kept[[1L]]
+        active = if (keep_active) active else kept[[1L]],
+        header = node[["header"]]
       )
     } else {
 
@@ -500,17 +539,30 @@ active_view_grid <- function(board) {
   view_grid(board_views(board)[[id]], board_grids(board)[[id]])
 }
 
-# The default geometry over a set of members: an extensions group on the left
-# and a blocks group on the right, each tabbing its panels. A view with no grid
-# falls back to this, so a fresh board and a grid-less view lay out identically.
+# The default geometry over a set of members. A view with no grid falls back to
+# this, so a fresh board and a grid-less view lay out identically.
 default_grid <- function(members) {
+  ext_blk_grid(
+    members[maybe_ext_panel_id(members)],
+    members[maybe_block_panel_id(members)]
+  )
+}
 
-  ext <- members[maybe_ext_panel_id(members)]
-  blk <- members[maybe_block_panel_id(members)]
+# The two-group default shape: extensions left, blocks right, each tabbing its
+# panels. The extension group's header runs down its left edge, so its tab
+# titles read as a rail instead of competing with the panel for that column's
+# width.
+ext_blk_grid <- function(ext, blk) {
 
   spec <- list()
-  if (length(ext)) spec <- c(spec, list(ext))
-  if (length(blk)) spec <- c(spec, list(blk))
+
+  if (length(ext)) {
+    spec <- c(spec, list(new_dock_panels(as.character(ext), header = "left")))
+  }
+
+  if (length(blk)) {
+    spec <- c(spec, list(as.character(blk)))
+  }
 
   do.call(dock_grid, spec)
 }
@@ -561,15 +613,17 @@ restrict_grids_to_views <- function(grids, views) {
 #'   leaves, character vectors become tabbed leaves, lists become
 #'   nested branches. Use [panels()] for a tabbed leaf with an explicit
 #'   open tab, and [group()] for a branch with explicit sizes.
-#' * `panels(..., active = NULL)`: a tabbed leaf whose tab strip holds
-#'   the given panel ids. `active` selects the initially-open tab; the
-#'   first id wins by default. A single-panel `panels()` is permitted
-#'   but redundant (a bare string is equivalent).
+#' * `panels(..., active = NULL, header = "top")`: a tabbed leaf whose
+#'   tab strip holds the given panel ids. `active` selects the
+#'   initially-open tab; the first id wins by default. The `header`
+#'   argument moves the strip off the top edge -- `"left"` or `"right"`
+#'   runs it down the side, vertically. A single-panel `panels()` is
+#'   permitted but redundant (a bare string is equivalent).
 #' * `group(..., sizes = NULL)`: a branch container. `sizes` is a
 #'   numeric vector parallel to `...` that overrides the even split.
 #' * `default_layout(blocks, extensions)` produces the default board
-#'   arrangement (extensions on top, blocks below) as a `list(views, grids)`
-#'   the constructor consumes.
+#'   arrangement (an extension rail on the left, blocks tabbed on the
+#'   right) as a `list(views, grids)` the constructor consumes.
 #'
 #' `dock_grid()` accepts `orientation = "horizontal" | "vertical"` for the
 #' top-level split direction and `sizes` for the root-branch ratios. The
@@ -585,6 +639,9 @@ restrict_grids_to_views <- function(grids, views) {
 #' @param orientation Top-level split direction; one of `"horizontal"`
 #'   (default) or `"vertical"`.
 #' @param active For `panels()`, the id of the tab to open by default.
+#' @param header For `panels()`, the edge its tab strip sits on; one of
+#'   `"top"` (default), `"bottom"`, `"left"` or `"right"`. A `"left"` or
+#'   `"right"` header renders the tab strip vertically.
 #' @param sizes Numeric vector parallel to `...`, giving each child's
 #'   share of the parent (positive; need not sum to 1).
 #' @param blocks,extensions Dock board components to arrange (for
@@ -607,6 +664,13 @@ restrict_grids_to_views <- function(grids, views) {
 #'   ext("dag"),
 #'   panels(blk("a"), blk("b"), active = blk("b")),
 #'   sizes = c(0.3, 0.7)
+#' )
+#'
+#' # An extension rail: tabs running down the left edge of their group
+#' dock_grid(
+#'   panels(ext("dag"), ext("edit_board"), header = "left"),
+#'   blk("a"),
+#'   sizes = c(0.2, 0.8)
 #' )
 #'
 #' # Vertical top-level split
@@ -637,7 +701,10 @@ dock_grid <- function(..., orientation = c("horizontal", "vertical"),
 
 #' @rdname layout
 #' @export
-panels <- function(..., active = NULL) {
+panels <- function(..., active = NULL,
+                   header = c("top", "bottom", "left", "right")) {
+
+  header <- match.arg(header)
   ids <- chr_ply(list(...), as_panel_string)
 
   if (!is.null(active)) {
@@ -654,7 +721,7 @@ panels <- function(..., active = NULL) {
     }
   }
 
-  new_dock_panels(ids, active = active)
+  new_dock_panels(ids, active = active, header = header)
 }
 
 #' @rdname layout
@@ -665,9 +732,9 @@ group <- function(..., sizes = NULL) {
   new_dock_group(children, sizes)
 }
 
-new_dock_panels <- function(ids, active = NULL) {
+new_dock_panels <- function(ids, active = NULL, header = "top") {
   structure(
-    list(views = as.list(ids), active = active),
+    list(views = as.list(ids), active = active, header = header),
     class = c("dock_panels", "dock_node")
   )
 }
@@ -762,15 +829,10 @@ resolve_grid <- function(grid, id_map) {
 }
 
 clash_default_grid <- function(id_map) {
-
-  ext_pids <- unique(id_map[maybe_ext_panel_id(id_map)])
-  blk_pids <- unique(id_map[maybe_block_panel_id(id_map)])
-
-  spec <- list()
-  if (length(ext_pids)) spec <- c(spec, list(as.character(ext_pids)))
-  if (length(blk_pids)) spec <- c(spec, list(as.character(blk_pids)))
-
-  do.call(dock_grid, spec)
+  ext_blk_grid(
+    unique(id_map[maybe_ext_panel_id(id_map)]),
+    unique(id_map[maybe_block_panel_id(id_map)])
+  )
 }
 
 rewrite_grid_leaves <- function(grid, id_map) {
@@ -784,7 +846,8 @@ rewrite_grid_leaves <- function(grid, id_map) {
     if (is_grid_leaf(node)) {
       return(
         list(panels = chr_ply(node[["panels"]], rename1),
-             active = rename1(node[["active"]]))
+             active = rename1(node[["active"]]),
+             header = node[["header"]])
       )
     }
 
@@ -874,7 +937,11 @@ format_dock_node <- function(node, orientation, size, focus, bare,
       paste0(
         line_prefix,
         dock_panel_label(id, bare),
-        dock_attrs(dock_size_label(size), dock_focus_label(id, focus))
+        dock_attrs(
+          dock_size_label(size),
+          dock_header_label(node[["header"]]),
+          dock_focus_label(id, focus)
+        )
       )
 
     } else {
@@ -937,7 +1004,10 @@ format_dock_tabs <- function(node, size, focus, bare, line_prefix,
   }
 
   c(
-    paste0(line_prefix, "tabs", dock_attrs(dock_size_label(size))),
+    paste0(
+      line_prefix, "tabs",
+      dock_attrs(dock_size_label(size), dock_header_label(node[["header"]]))
+    ),
     unlst(lapply(seq_len(n), render_tab))
   )
 }
@@ -948,6 +1018,10 @@ dock_panel_label <- function(id, bare) {
 
 dock_size_label <- function(size) {
   if (is.null(size)) NULL else paste0(round(100 * size), "%")
+}
+
+dock_header_label <- function(header) {
+  if (is.null(header)) NULL else paste0(header, " header")
 }
 
 dock_focus_label <- function(id, focus) {
@@ -987,7 +1061,8 @@ build_grid_node <- function(node) {
     return(
       list(
         panels = ids,
-        active = coal(node[["active"]], ids[[1L]], fail_all = FALSE)
+        active = coal(node[["active"]], ids[[1L]], fail_all = FALSE),
+        header = node[["header"]]
       )
     )
   }

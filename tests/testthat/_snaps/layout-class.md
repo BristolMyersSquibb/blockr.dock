@@ -59,6 +59,17 @@
 ---
 
     Code
+      print(dock_grid(panels("dag", "edit", header = "left"), "a", sizes = c(0.2, 0.8)))
+    Output
+      <dock_grid> horizontal
+      ├─ tabs (20%, left header)
+      │  ├─ dag (active)
+      │  └─ edit
+      └─ a (80%)
+
+---
+
+    Code
       print(dock_grid())
     Output
       <dock_grid> horizontal (empty)

@@ -151,7 +151,8 @@ as_dock_view.dock_layout <- function(x, ...) {
 
 # Expand our compact grid into dockView's native tree: assign type tags and
 # fresh deterministic group ids, hoisting the root branch under a
-# `{root, orientation}` wrapper. Inverse of `tree_to_grid()`.
+# `{root, orientation}` wrapper, and spell a leaf `header` out as dockView's
+# group `headerPosition`. Inverse of `tree_to_grid()`.
 grid_to_tree <- function(grid) {
 
   counter <- new.env(parent = emptyenv())
@@ -162,18 +163,29 @@ grid_to_tree <- function(grid) {
     as.character(counter$n)
   }
 
+  # A leaf that leaves its header on top sends no `headerPosition` at all: the
+  # key is dockView's own default, and an explicit `NULL` would reach it as an
+  # empty object rather than as an omission.
+  leaf_data <- function(node) {
+
+    c(
+      list(
+        views = as.list(node[["panels"]]),
+        activeView = coal(node[["active"]], node[["panels"]][[1L]],
+                          fail_all = FALSE),
+        id = next_id()
+      ),
+      if (not_null(node[["header"]])) list(headerPosition = node[["header"]])
+    )
+  }
+
   to_tree <- function(node, size) {
 
     if (is_grid_leaf(node)) {
       return(
         list(
           type = "leaf",
-          data = list(
-            views = as.list(node[["panels"]]),
-            activeView = coal(node[["active"]], node[["panels"]][[1L]],
-                              fail_all = FALSE),
-            id = next_id()
-          ),
+          data = leaf_data(node),
           size = size
         )
       )
@@ -199,9 +211,10 @@ grid_to_tree <- function(grid) {
 }
 
 # Collapse dockView's native tree into our compact grid: drop type tags and
-# volatile ids, resolve the focused group to its panel. Inverse of
-# `grid_to_tree()`. A leaf root (a single-group page a live dock can echo) is
-# lifted to the sole child of the compact root.
+# volatile ids, read each group's `headerPosition` back onto its leaf, and
+# resolve the focused group to its panel. Inverse of `grid_to_tree()`. A leaf
+# root (a single-group page a live dock can echo) is lifted to the sole child
+# of the compact root.
 tree_to_grid <- function(tree, active_group = NULL) {
 
   from_tree <- function(node) {
@@ -214,7 +227,8 @@ tree_to_grid <- function(tree, active_group = NULL) {
         list(
           panels = views,
           active = coal(node[["data"]][["activeView"]], views[[1L]],
-                        fail_all = FALSE)
+                        fail_all = FALSE),
+          header = node[["data"]][["headerPosition"]]
         )
       )
     }

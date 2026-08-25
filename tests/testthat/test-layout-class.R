@@ -84,7 +84,9 @@ test_that("grid resolution accepts a dock_extensions collection", {
 test_that("default_layout uses class-name convention across input forms", {
 
   blks <- c(a = new_dataset_block())
-  expected <- dock_grid("ext_panel-edit_board", "block_panel-a")
+  expected <- dock_grid(
+    panels("ext_panel-edit_board", header = "left"), "block_panel-a"
+  )
 
   grid_of <- function(x) default_layout(blks, x)[["grids"]][[1L]]
 
@@ -192,6 +194,75 @@ test_that("panels() sets the active tab in a tabbed leaf", {
   leaf <- grid$children[[1L]]
   expect_identical(leaf$active, "b")
   expect_identical(leaf$panels, c("a", "b", "c"))
+})
+
+test_that("panels(header =) sets the side its tab strip runs down", {
+
+  grid <- dock_grid(panels("a", "b", header = "left"))
+
+  expect_identical(grid[["children"]][[1L]][["header"]], "left")
+  expect_error(panels("a", header = "sideways"), "should be one of")
+})
+
+test_that("an unset header and an explicit top are the same grid", {
+
+  top <- dock_grid(panels("a", "b", header = "top"))
+
+  expect_identical(top, dock_grid(panels("a", "b")))
+  expect_null(top[["children"]][[1L]][["header"]])
+})
+
+test_that("a leaf header survives every walk that rebuilds a leaf (#431)", {
+
+  grid <- dock_grid(panels("a", "b", header = "left"), "c")
+  members <- c("a", "b", "c")
+
+  header_of <- function(x) x[["children"]][[1L]][["header"]]
+
+  expect_identical(header_of(canonicalize_grid(grid)), "left")
+  expect_identical(header_of(restrict_grid(grid, members)), "left")
+  expect_identical(header_of(place_members(grid, members)), "left")
+  expect_identical(header_of(tree_to_grid(grid_to_tree(grid))), "left")
+  expect_identical(
+    header_of(rewrite_grid_leaves(grid, c(a = "block_panel-a"))),
+    "left"
+  )
+  expect_identical(
+    header_of(view_grid(new_dock_view(members), grid)),
+    "left"
+  )
+})
+
+test_that("a leaf header crosses the dockView boundary as headerPosition", {
+
+  leaves <- grid_leaves(
+    grid_to_tree(dock_grid(panels("a", "b", header = "right"), "c"))
+  )
+
+  expect_identical(leaves[[1L]][["headerPosition"]], "right")
+
+  # A top header is dockView's own default, so the payload omits the key
+  # rather than sending a `NULL` that would reach it as an empty object.
+  expect_false("headerPosition" %in% names(leaves[[2L]]))
+})
+
+test_that("a grid rejects an unknown leaf header position", {
+
+  grid <- dock_grid("a")
+  grid[["children"]][[1L]][["header"]] <- "sideways"
+
+  expect_error(
+    validate_dock_grid(grid),
+    class = "dock_grid_header_invalid"
+  )
+})
+
+test_that("the default grid gives the extension group a left header", {
+
+  grid <- default_grid(c("ext_panel-edit", "block_panel-a"))
+
+  expect_identical(grid[["children"]][[1L]][["header"]], "left")
+  expect_null(grid[["children"]][[2L]][["header"]])
 })
 
 test_that("panels() with single id is allowed but redundant", {
@@ -325,6 +396,15 @@ test_that("dock_grid has a tree-style print method", {
   )
 
   expect_snapshot(print(dock_grid("top", group("a", group("b", "c")))))
+
+  expect_snapshot(
+    print(
+      dock_grid(
+        panels("dag", "edit", header = "left"), "a",
+        sizes = c(0.2, 0.8)
+      )
+    )
+  )
 
   expect_snapshot(print(dock_grid()))
 })
