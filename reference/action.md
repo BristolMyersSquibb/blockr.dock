@@ -27,9 +27,15 @@ block_input_select(
   ...
 )
 
-block_registry_selectize(id, blocks = list_blocks())
-
-board_select(id, blocks, selected = NULL, ...)
+board_block_select(
+  id,
+  board,
+  blk_ids = board_block_ids(board),
+  selected = NULL,
+  max_items = 1L,
+  label = NULL,
+  options = list()
+)
 
 sidebar_owned_by(action, board_id, session = get_session())
 ```
@@ -69,13 +75,32 @@ sidebar_owned_by(action, board_id, session = get_session())
 
   Switch for determining the return object
 
-- blocks:
+- board:
 
-  Character vector of block registry IDs
+  Board object
+
+- blk_ids:
+
+  Character vector of block IDs to offer for selection
 
 - selected:
 
-  Character vector of pre-selected block (registry) IDs
+  Character vector of pre-selected block IDs
+
+- max_items:
+
+  Maximum number of blocks that can be selected at once, or `NULL` for
+  no limit
+
+- label:
+
+  Input label
+
+- options:
+
+  Passed to
+  [`shiny::selectizeInput()`](https://rdrr.io/pkg/shiny/man/selectInput.html)
+  as `options`, merged over the defaults that make up the picker
 
 - action:
 
@@ -101,8 +126,8 @@ named list of objects suitable for use as action triggers. For an action
 that currently holds a sidebar panel, `sidebar_owned_by()` returns a
 list with components `panel`, `open` and `pinned`, and `NULL` otherwise.
 
-For utilities `block_input_select()`, `block_registry_selectize()` and
-`board_select`, see the respective sections.
+For utilities `block_input_select()` and `board_block_select()`, see the
+respective sections.
 
 ## Details
 
@@ -136,16 +161,13 @@ call and for "update", the return value of a
 [`shiny::updateSelectizeInput()`](https://rdrr.io/pkg/shiny/man/updateSelectInput.html)
 call.
 
-## `block_registry_selectize()`
+## `board_block_select()`
 
-This creates UI for a block registry selector via
+Block selection UI over the blocks of a board is available as
+`board_block_select()`, which returns an object inheriting from
+`shiny.tag.list`: the result of a
 [`shiny::selectizeInput()`](https://rdrr.io/pkg/shiny/man/selectInput.html)
-and returns an object that inherits from `shiny.tag`.
-
-## `board_select()`
-
-Block selection UI, enumerating all blocks in a board is available as
-`board_select()`. An object that inherits from `shiny.tag` is returned,
-which contains the result from a
-[`shiny::selectizeInput()`](https://rdrr.io/pkg/shiny/man/selectInput.html)
-call.
+call together with the styling its option rendering requires. This is
+the picker the board itself uses wherever a block is chosen, listing
+each block by icon, name, ID and defining package, and searchable over
+all of those.

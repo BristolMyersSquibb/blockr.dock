@@ -75,9 +75,15 @@ are classed shiny server functions.</p>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">block_registry_selectize</span><span class="op">(</span><span class="va">id</span>, blocks <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/register_block.html" class="external-link">list_blocks</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">board_select</span><span class="op">(</span><span class="va">id</span>, <span class="va">blocks</span>, selected <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">board_block_select</span><span class="op">(</span></span>
+<span>  <span class="va">id</span>,</span>
+<span>  <span class="va">board</span>,</span>
+<span>  blk_ids <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/board_blocks.html" class="external-link">board_block_ids</a></span><span class="op">(</span><span class="va">board</span><span class="op">)</span>,</span>
+<span>  selected <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_items <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  label <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">sidebar_owned_by</span><span class="op">(</span><span class="va">action</span>, <span class="va">board_id</span>, session <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/get_session.html" class="external-link">get_session</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -119,12 +125,30 @@ are classed shiny server functions.</p>
 <dd><p>Switch for determining the return object</p></dd>
 
 
-<dt id="arg-blocks">blocks<a class="anchor" aria-label="anchor" href="#arg-blocks"></a></dt>
-<dd><p>Character vector of block registry IDs</p></dd>
+<dt id="arg-board">board<a class="anchor" aria-label="anchor" href="#arg-board"></a></dt>
+<dd><p>Board object</p></dd>
+
+
+<dt id="arg-blk-ids">blk_ids<a class="anchor" aria-label="anchor" href="#arg-blk-ids"></a></dt>
+<dd><p>Character vector of block IDs to offer for selection</p></dd>
 
 
 <dt id="arg-selected">selected<a class="anchor" aria-label="anchor" href="#arg-selected"></a></dt>
-<dd><p>Character vector of pre-selected block (registry) IDs</p></dd>
+<dd><p>Character vector of pre-selected block IDs</p></dd>
+
+
+<dt id="arg-max-items">max_items<a class="anchor" aria-label="anchor" href="#arg-max-items"></a></dt>
+<dd><p>Maximum number of blocks that can be selected at once, or
+<code>NULL</code> for no limit</p></dd>
+
+
+<dt id="arg-label">label<a class="anchor" aria-label="anchor" href="#arg-label"></a></dt>
+<dd><p>Input label</p></dd>
+
+
+<dt id="arg-options">options<a class="anchor" aria-label="anchor" href="#arg-options"></a></dt>
+<dd><p>Passed to <code><a href="https://rdrr.io/pkg/shiny/man/selectInput.html" class="external-link">shiny::selectizeInput()</a></code> as <code>options</code>, merged
+over the defaults that make up the picker</p></dd>
 
 
 <dt id="arg-action">action<a class="anchor" aria-label="anchor" href="#arg-action"></a></dt>
@@ -150,8 +174,8 @@ can be enumerated via <code>board_actions()</code>. Finally, <code>action_trigge
 a named list of objects suitable for use as action triggers. For an action
 that currently holds a sidebar panel, <code>sidebar_owned_by()</code> returns a list
 with components <code>panel</code>, <code>open</code> and <code>pinned</code>, and <code>NULL</code> otherwise.</p>
-<p>For utilities <code>block_input_select()</code>, <code>block_registry_selectize()</code>
-and <code>board_select</code>, see the respective sections.</p>
+<p>For utilities <code>block_input_select()</code> and <code>board_block_select()</code>,
+see the respective sections.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -181,19 +205,15 @@ and also takes into account some edge-cases, such as variadic blocks. If
 "update", the return value of a <code><a href="https://rdrr.io/pkg/shiny/man/updateSelectInput.html" class="external-link">shiny::updateSelectizeInput()</a></code> call.</p>
     </div>
     <div class="section level2">
-    <h2 id="block-registry-selectize-"><code>block_registry_selectize()</code><a class="anchor" aria-label="anchor" href="#block-registry-selectize-"></a></h2>
+    <h2 id="board-block-select-"><code>board_block_select()</code><a class="anchor" aria-label="anchor" href="#board-block-select-"></a></h2>
 
 
-<p>This creates UI for a block registry selector via <code><a href="https://rdrr.io/pkg/shiny/man/selectInput.html" class="external-link">shiny::selectizeInput()</a></code>
-and returns an object that inherits from <code>shiny.tag</code>.</p>
-    </div>
-    <div class="section level2">
-    <h2 id="board-select-"><code>board_select()</code><a class="anchor" aria-label="anchor" href="#board-select-"></a></h2>
-
-
-<p>Block selection UI, enumerating all blocks in a board is available as
-<code>board_select()</code>. An object that inherits from <code>shiny.tag</code> is returned, which
-contains the result from a <code><a href="https://rdrr.io/pkg/shiny/man/selectInput.html" class="external-link">shiny::selectizeInput()</a></code> call.</p>
+<p>Block selection UI over the blocks of a board is available as
+<code>board_block_select()</code>, which returns an object inheriting from
+<code>shiny.tag.list</code>: the result of a <code><a href="https://rdrr.io/pkg/shiny/man/selectInput.html" class="external-link">shiny::selectizeInput()</a></code> call together
+with the styling its option rendering requires. This is the picker the
+board itself uses wherever a block is chosen, listing each block by icon,
+name, ID and defining package, and searchable over all of those.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

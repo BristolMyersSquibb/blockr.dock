@@ -265,8 +265,7 @@ such as adding or removing a block.
   [`board_actions()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
   [`action_triggers()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
   [`block_input_select()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
-  [`block_registry_selectize()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
-  [`board_select()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
+  [`board_block_select()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
   [`sidebar_owned_by()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
   : Board actions
 
