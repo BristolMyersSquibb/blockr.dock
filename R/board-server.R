@@ -956,7 +956,7 @@ add_view_observer <- function(client_views, session, board, update) {
     default_name <- paste("Page", n)
 
     brd <- board$board
-    blk_options <- build_block_options(brd, board_block_ids(brd))
+    blk_ids <- board_block_ids(brd)
     ext_options <- build_ext_options(brd, dock_ext_ids(brd))
 
     showModal(
@@ -972,43 +972,23 @@ add_view_observer <- function(client_views, session, board, update) {
             "View name",
             value = default_name
           ),
-          if (length(blk_options)) {
-            tagList(
-              css_block_selectize(),
-              selectizeInput(
-                ns("view_new_blocks"),
-                label = "Blocks to show",
-                choices = NULL,
-                multiple = TRUE,
-                options = list(
-                  options = blk_options,
-                  valueField = "value",
-                  labelField = "label",
-                  searchField = c("label", "description", "searchtext"),
-                  placeholder = "Select blocks...",
-                  openOnFocus = FALSE,
-                  plugins = list("remove_button"),
-                  render = js_blk_selectize_render()
-                )
-              )
+          if (length(blk_ids)) {
+            board_block_select(
+              ns("view_new_blocks"),
+              brd,
+              blk_ids,
+              max_items = NULL,
+              label = "Blocks to show",
+              options = multi_select_opts("Select blocks...")
             )
           },
           if (length(ext_options)) {
-            selectizeInput(
+            blk_selectize(
               ns("view_new_exts"),
+              ext_options,
+              max_items = NULL,
               label = "Extensions to show",
-              choices = NULL,
-              multiple = TRUE,
-              options = list(
-                options = ext_options,
-                valueField = "value",
-                labelField = "label",
-                searchField = c("label", "description", "searchtext"),
-                placeholder = "Select extensions...",
-                openOnFocus = FALSE,
-                plugins = list("remove_button"),
-                render = js_blk_selectize_render()
-              )
+              options = multi_select_opts("Select extensions...")
             )
           },
           uiOutput(ns("view_name_validation")),
@@ -1276,22 +1256,12 @@ suggest_panels_to_add <- function(
         footer = NULL,
         tagList(
           css_modal(),
-          css_block_selectize(),
-          selectizeInput(
+          blk_selectize(
             ns("add_dock_panel"),
+            options_data,
+            max_items = NULL,
             label = "Select panel to add",
-            choices = NULL,
-            multiple = TRUE,
-            options = list(
-              options = options_data,
-              valueField = "value",
-              labelField = "label",
-              searchField = c("label", "description", "searchtext"),
-              placeholder = "Type to search...",
-              openOnFocus = FALSE,
-              plugins = list("remove_button"),
-              render = js_blk_selectize_render()
-            )
+            options = multi_select_opts("Type to search...")
           ),
           confirm_button(ns("confirm_add"), label = "Add Panel"),
           auto_focus_script(ns("add_dock_panel"))

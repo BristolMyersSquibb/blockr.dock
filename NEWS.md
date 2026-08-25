@@ -8,6 +8,17 @@
   now reconciled against the block registry once, where it is read, so no
   consumer sees an id the server no longer knows (#387).
 
+* Two selectize widgets that had lost their callers are gone. Adopting
+  blockr.ui's link-menu module in the add-link flow deleted the only call to
+  `board_select()`, and `block_registry_selectize()` had no caller either.
+  Exported in their place is `board_block_select()`, the block picker the
+  board itself uses wherever a block is chosen -- the rich selectize listing
+  each block by icon, name, ID and defining package -- returned with the
+  styling its option rendering requires already attached. Every board-block
+  picker in the package now builds through that one function, so a consumer
+  outside it gets the widget the product uses rather than a reconstruction
+  of it (#427).
+
 * Switching to a view before the board has settled no longer leaves it
   hopping between views for good. The nav reported the server's own
   `sendInputMessage("view_nav", ...)` straight back as a gesture, and with
