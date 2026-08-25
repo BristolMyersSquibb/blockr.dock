@@ -211,32 +211,93 @@ test_that("condition UI updates surgically by condition id (#36)", {
   )
 })
 
-test_that("locked dock keeps block_card_toggles hidden (#122)", {
-
-  blk <- new_dataset_block()
-  attr(blk, "visible") <- "outputs"
+test_that("locked dock drops block_card_toggles entirely (#122, #418)", {
 
   # Unlocked: widget renders visible, with `selected` matching saved attr
   unlocked <- withr::with_options(
     list(blockr.locked = NULL),
-    block_card_toggles(blk, NS("x"))
+    block_card_toggles("outputs", NS("x"))
   )
   expect_s3_class(unlocked, "shiny.tag.list")
   unlocked_html <- as.character(htmltools::tagList(unlocked))
   expect_match(unlocked_html, 'value="outputs".*checked', fixed = FALSE)
   expect_false(grepl("display: none", unlocked_html, fixed = TRUE))
 
-  # Locked: widget still renders (so input$collapse_blk_sections seeds
-  # accordion_panel_set) but is hidden and the tooltip script is dropped
+  # Locked: no widget at all. It used to render hidden purely to seed the
+  # accordion, which the card now paints correct without.
   locked <- withr::with_options(
     list(blockr.locked = TRUE),
-    block_card_toggles(blk, NS("x"))
+    block_card_toggles("outputs", NS("x"))
   )
-  expect_s3_class(locked, "shiny.tag")
-  locked_html <- as.character(locked)
-  expect_match(locked_html, "display: none", fixed = TRUE)
-  expect_match(locked_html, 'value="outputs".*checked', fixed = FALSE)
-  expect_false(grepl("<script", locked_html, fixed = TRUE))
+  expect_null(locked)
+})
+
+test_that("a restored card paints its saved sections open (#418)", {
+
+  open_panels <- function(blk) {
+
+    card <- edit_block_ui(
+      "blk",
+      blk,
+      "a",
+      expr_ui = expr_ui("blk", blk),
+      block_ui = div(id = "blk-out")
+    )
+
+    root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+    panels <- xml2::xml_find_all(
+      root,
+      paste0(
+        "//div[", has_class("blockr-block-accordion"), "]/div[@data-value]"
+      )
+    )
+
+    open <- xml2::xml_find_lgl(
+      panels,
+      paste0("count(.//div[", has_class("show"), "]) > 0")
+    )
+
+    xml2::xml_attr(panels, "data-value")[open]
+  }
+
+  blk <- new_dataset_block()
+
+  # No saved state: both sections paint open, as before.
+  expect_setequal(open_panels(blk), c("inputs", "outputs"))
+
+  attr(blk, "visible") <- "outputs"
+
+  # The hidden section must never paint open -- correcting it after the fact
+  # takes a client round trip, which the user watches happen.
+  expect_identical(open_panels(blk), "outputs")
+
+  attr(blk, "visible") <- "inputs"
+
+  expect_identical(open_panels(blk), "inputs")
+})
+
+test_that("a card with every section hidden paints none open (#418)", {
+
+  # `open = character()` would reach bslib as an absent `open` and pop the
+  # first panel back open.
+  card <- block_card_content(
+    NS("blk"),
+    expr_ui = div(id = "blk-expr"),
+    block_ui = div(id = "blk-out"),
+    visible = character()
+  )
+
+  root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+  expect_length(
+    xml2::xml_find_all(
+      root,
+      paste0("//div[", has_class("accordion-collapse"), " and ",
+             has_class("show"), "]")
+    ),
+    0L
+  )
 })
 
 test_that("hiding the last section closes it (#69)", {
@@ -280,6 +341,50 @@ test_that("hiding the last section closes it (#69)", {
       block_id = "a",
       board = board_args(blocks = c(a = new_rbind_block())),
       update = reactiveVal()
+    )
+  )
+})
+
+test_that("a locked card reports its sections without a widget (#418)", {
+
+  sent <- character()
+
+  local_mocked_bindings(
+    accordion_panel_set = function(id, values, session) {
+      sent[[length(sent) + 1L]] <<- "set"
+    },
+    accordion_panel_close = function(id, values, session) {
+      sent[[length(sent) + 1L]] <<- "close"
+    }
+  )
+
+  blk <- new_dataset_block()
+  attr(blk, "visible") <- "outputs"
+
+  withr::with_options(
+    list(blockr.locked = TRUE),
+    testServer(
+      edit_block_server(),
+      {
+        session$flushReact()
+
+        # There is no toggle to read this back from, and serialization stores
+        # it -- so a locked board saves the sections its cards painted with
+        # rather than dropping them.
+        expect_identical(session$returned$visible(), "outputs")
+
+        # Neither observer is wired, so a forged input moves no accordion.
+        session$setInputs(collapse_blk_sections = "inputs")
+        session$setInputs(collapse_blk_sections = NULL)
+
+        expect_identical(sent, character())
+        expect_identical(session$returned$visible(), "outputs")
+      },
+      args = list(
+        block_id = "a",
+        board = board_args(blocks = c(a = blk)),
+        update = reactiveVal()
+      )
     )
   )
 })
@@ -367,7 +472,13 @@ test_that("a board saved before #69 restores an input-free card", {
   toggles <- xml2::xml_find_all(
     xml2::read_html(
       as.character(
-        htmltools::tagList(block_card_toggles(blk, NS("x"), has_inputs = FALSE))
+        htmltools::tagList(
+          block_card_toggles(
+            visible_sections(blk),
+            NS("x"),
+            has_inputs = FALSE
+          )
+        )
       )
     ),
     "//input[@type='checkbox']"
@@ -382,7 +493,8 @@ test_that("block card sections carry the css-styling contract (#214)", {
   card <- block_card_content(
     NS("blk"),
     expr_ui = div(id = "blk-expr"),
-    block_ui = div(id = "blk-out")
+    block_ui = div(id = "blk-out"),
+    visible = c("inputs", "outputs")
   )
 
   root <- xml2::read_html(as.character(htmltools::tagList(card)))
