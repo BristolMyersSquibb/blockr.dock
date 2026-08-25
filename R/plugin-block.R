@@ -4,6 +4,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
   blk_info <- blks_metadata(blk)
   ns <- NS(id)
   has_inputs <- has_expr_ui(blk)
+  visible <- visible_sections(blk)
 
   div(
     class = "card-body",
@@ -27,14 +28,18 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
           block_card_title(blk, id, blk_info),
           div(
             class = "d-flex align-items-center gap-1 flex-shrink-0",
-            block_card_toggles(blk, ns, ctrl_meta, has_inputs),
+            block_card_toggles(visible, ns, ctrl_meta, has_inputs),
             block_card_dropdown(ns, blk_info, blk_id)
           )
         )
       )
     ),
-    block_card_content(ns, expr_ui, block_ui, ctrl_ui, has_inputs)
+    block_card_content(ns, expr_ui, block_ui, visible, ctrl_ui, has_inputs)
   )
+}
+
+visible_sections <- function(blk) {
+  coal(attr(blk, "visible"), c("inputs", "outputs"))
 }
 
 block_card_title <- function(block, id, info) {
@@ -148,7 +153,8 @@ block_card_title <- function(block, id, info) {
   )
 }
 
-block_card_toggles <- function(blk, ns, ctrl_meta = NULL, has_inputs = TRUE) {
+block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
+                               has_inputs = TRUE) {
 
   vals <- c("inputs", "outputs")
   icon_labels <- list(
@@ -183,7 +189,7 @@ block_card_toggles <- function(blk, ns, ctrl_meta = NULL, has_inputs = TRUE) {
     choiceNames = icon_labels,
     choiceValues = vals,
     individual = TRUE,
-    selected = coal(attr(blk, "visible"), c("inputs", "outputs"))
+    selected = visible
   )
 
   section_toggles$attribs$class <- paste(
@@ -191,20 +197,12 @@ block_card_toggles <- function(blk, ns, ctrl_meta = NULL, has_inputs = TRUE) {
     trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
   )
 
-  # Locked dock: render the widget hidden so `input$collapse_blk_sections`
-  # still seeds the accordion via the observer below and honors any saved
-  # `attr(blk, "visible")` on restore (#122). The tooltip wiring is skipped
-  # because nothing is hoverable.
-  #
-  # NOTE: this is a UI-only hide, not a real lock. `display: none` removes the
-  # widget from view but the checkbox group is still a live Shiny input — a
-  # client can flip it via `Shiny.setInputValue()` and the observer below will
-  # happily mutate accordion state. "Lock" here is a UX affordance, not a
-  # server-side trust boundary. The principled fix is to drop the hidden
-  # widget entirely and seed the accordion directly from `attr(blk, "visible")`
-  # on startup, so the observer can be gated on `!is_dock_locked()`. TODO(#TBD).
+  # A locked card offers no toggle at all: the accordion is seeded from
+  # `visible` at render, so nothing here has to report back to place it. The
+  # widget used to be rendered hidden for exactly that seeding, which left a
+  # live Shiny input a client could flip via `Shiny.setInputValue()`.
   if (is_dock_locked()) {
-    return(div(style = "display: none;", section_toggles))
+    return(NULL)
   }
 
   tagList(
@@ -363,8 +361,8 @@ block_card_dropdown <- function(ns, info, blk_id) {
   )
 }
 
-block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL,
-                               has_inputs = TRUE) {
+block_card_content <- function(ns, expr_ui, block_ui, visible,
+                               ctrl_ui = NULL, has_inputs = TRUE) {
 
   inputs_panel <- if (has_inputs) {
     accordion_panel(
@@ -392,7 +390,9 @@ block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL,
       id = ns("blk_accordion"),
       class = "blockr-block-accordion",
       multiple = TRUE,
-      open = c("inputs", "outputs"),
+      # An empty set has to travel as FALSE: bslib reads `character()` the same
+      # as an absent `open` and falls back to opening the first panel.
+      open = if (length(visible)) visible else FALSE,
       ctrl_panel,
       inputs_panel,
       outputs_panel
@@ -491,28 +491,33 @@ edit_block_server <- function(callbacks = list()) {
           block_status_note_attrs(blk_status())
         )
 
-        observeEvent(
-          input$collapse_blk_sections,
-          accordion_panel_set(
-            "blk_accordion",
-            input$collapse_blk_sections,
-            session
-          )
-        )
+        # These carry user toggles only -- the card paints with its saved
+        # sections already open -- so a locked dock, which renders no toggle
+        # widget, wires neither and a forged `collapse_blk_sections` moves
+        # nothing.
+        if (!is_dock_locked()) {
 
-        # Hiding the last section reports NULL, which the setter above drops as
-        # its `ignoreNULL` default -- and could not carry anyway, since the set
-        # message rejects an empty selection. Closing all is its own message,
-        # observed separately so the setter keeps seeding a restored card from
-        # its init run (#122). A card paints with its sections open, so the
-        # init NULL closes nothing.
-        observeEvent(
-          is.null(input$collapse_blk_sections),
-          if (is.null(input$collapse_blk_sections)) {
-            accordion_panel_close("blk_accordion", TRUE, session)
-          },
-          ignoreInit = TRUE
-        )
+          observeEvent(
+            input$collapse_blk_sections,
+            accordion_panel_set(
+              "blk_accordion",
+              input$collapse_blk_sections,
+              session
+            )
+          )
+
+          # Hiding the last section reports NULL, which the setter above drops
+          # as its `ignoreNULL` default -- and could not carry anyway, since the
+          # set message rejects an empty selection. Closing all is its own
+          # message, observed separately.
+          observeEvent(
+            is.null(input$collapse_blk_sections),
+            if (is.null(input$collapse_blk_sections)) {
+              accordion_panel_close("blk_accordion", TRUE, session)
+            },
+            ignoreInit = TRUE
+          )
+        }
 
         output$issues_count <- renderText(cond_issue_label(conds()))
         outputOptions(output, "issues_count", suspendWhenHidden = FALSE)
@@ -556,8 +561,18 @@ edit_block_server <- function(callbacks = list()) {
         # block is modified, so the answer cannot go stale under it.
         blk <- board_blocks(isolate(board$board))[[block_id]]
 
+        # A locked card has no toggle to report from, and its sections cannot
+        # move from what it painted with -- so report that set instead. It is
+        # what serialization stores, and what freeze_hidden_inputs() reads to
+        # tell a card that has reported in from one still painting.
+        visible <- if (is_dock_locked()) {
+          reactive(visible_sections(blk))
+        } else {
+          reactive(input$collapse_blk_sections)
+        }
+
         list(
-          visible = reactive(input$collapse_blk_sections),
+          visible = visible,
           has_inputs = has_expr_ui(blk)
         )
       }
