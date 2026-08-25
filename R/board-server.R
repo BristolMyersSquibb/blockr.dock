@@ -213,10 +213,12 @@ bare_view <- function(x) {
 #'
 #' A tab click (`input$view_nav` carries the target view id) requests an
 #' active-view change through the update lifecycle; the reconcile pass does
-#' the DOM switch. Guarded so a no-op (e.g. the nav echoing a programmatic
-#' `value` set back) does not re-enter the lifecycle. On a locked board core's
-#' update gate rejects the active-view update, so the switch is driven directly
-#' against the DOM instead, keeping navigation live on a read-only board.
+#' the DOM switch. Guarded so a no-op does not re-enter the lifecycle: a click
+#' on the already-active view reports it like any other, and once a
+#' programmatic push has cleared the client's no-resend cache that repeat does
+#' reach here. On a locked board core's update gate rejects the active-view
+#' update, so the switch is driven directly against the DOM instead, keeping
+#' navigation live on a read-only board.
 #'
 #' @param session Shiny session.
 #' @param update Board update signal.

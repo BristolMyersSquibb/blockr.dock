@@ -1,5 +1,20 @@
 # blockr.dock (development version)
 
+* Switching to a view before the board has settled no longer leaves it
+  hopping between views for good. The nav reported the server's own
+  `sendInputMessage("view_nav", ...)` straight back as a gesture, and with
+  two switches in flight the first push's echo landed after the second had
+  been applied, missed `switch_view_observer()`'s `client_active` guard and
+  was taken for a fresh switch -- whose push echoed in turn. Every hop
+  re-evaluated and repainted the whole view, so the board looked like it
+  was reloading itself and only a page reload got out of it. The nav no
+  longer reports a programmatic update at all: it forgets Shiny's cached
+  input value instead, so a later click on the view the server pushed away
+  from is still reported. A newly added view is no longer marked active on
+  the client either, which the echo was the only thing correcting: an add
+  whose delta does not ask to navigate -- an extension creating a view in
+  the background -- now leaves the active view alone (#424).
+
 * A block with nothing to configure no longer carries an empty "Block
   inputs" section, nor the toggle that opens it. Core's `new_block()` ui
   default renders no markup at all, so a card for a block configured

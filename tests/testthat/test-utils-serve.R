@@ -345,6 +345,118 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   expect_false(any(nav$label == ""))
 })
 
+test_that("the view nav does not report the server's own push back (#424)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-nav-echo",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_view_nav(app, 2)
+
+  nav <- read_view_nav(app)
+  first <- nav$id[nav$label == "First"]
+  second <- nav$id[nav$label == "Second"]
+
+  watch_view_nav(app)
+
+  # A click reports once, and only once. `switch_active_view()` answers it by
+  # pushing the new active view back with `sendInputMessage("view_nav", ...)`,
+  # and that push used to arrive as a second report -- the loop's fuel: with
+  # two switches in flight the first push's echo lands after the second has
+  # been applied, so it misses `switch_view_observer()`'s `client_active` guard
+  # and is taken for a fresh switch, whose own push echoes in turn. Waiting on
+  # the push means an echo of it would already be in the tally.
+  click_view(app, second)
+  wait_view_nav_push(app, second)
+
+  expect_identical(view_nav_reports(app), second)
+
+  # The push alone, delivered as the server sends it. It must move the nav and
+  # report nothing at all.
+  watch_view_nav(app)
+  push_view_nav(app, sprintf('{"value": "%s"}', first))
+
+  expect_identical(view_nav_reports(app), character())
+
+  nav <- read_view_nav(app)
+  expect_identical(nav$id[nav$active], first)
+
+  # An `add` push must not move the active view either. The server owns that
+  # and says so with a `value` message when an add means to navigate; a
+  # client-side activation would report a view the board never switched to --
+  # and with the echo gone, nothing would correct it.
+  watch_view_nav(app)
+  push_view_nav(app, '{"add": {"id": "ghost", "name": "Ghost"}}')
+
+  expect_identical(view_nav_reports(app), character())
+
+  nav <- read_view_nav(app)
+  expect_identical(nrow(nav), 3L)
+  expect_identical(nav$id[nav$active], first)
+})
+
+test_that("a click on the view the server left still switches (#424)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-nav-forget",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_view_nav(app, 2)
+
+  nav <- read_view_nav(app)
+  second <- nav$id[nav$label == "Second"]
+
+  # Second becomes the last value the client sent, and so the one Shiny's
+  # no-resend dedup holds for the nav.
+  click_view(app, second)
+  wait_view_handle(app, second)
+
+  # Add a third view. The server activates it and pushes that back, so the
+  # board leaves Second without the client having sent anything -- the dedup's
+  # cached value is now stale. Dropping the echo is what makes it stale, so
+  # `receiveMessage()` clears it with `forgetLastInputValue()`.
+  app$run_js(
+    "document.querySelector('#my_board-view_nav .blockr-view-add').click()"
+  )
+  wait_js(
+    app,
+    paste0(
+      "(function(){var e=document.getElementById('my_board-view_new_name');",
+      "return e !== null && e.classList.contains('shiny-bound-input');})()"
+    ),
+    function() dock_shell_diag(app, "my_board")
+  )
+
+  app$set_inputs(`my_board-view_new_name` = "Third")
+  app$click("my_board-confirm_view_add")
+  wait_view_nav(app, 3)
+
+  nav <- read_view_nav(app)
+  expect_identical(nav$label[nav$active], "Third")
+
+  # Clicking Second again has to reach the server. Left cached, the dedup
+  # would swallow the report as a repeat and the board would sit on Third.
+  click_view(app, second)
+  wait_view_dock_active(app, second)
+
+  docks <- read_view_docks(app)
+  expect_identical(docks$id[docks$active], second)
+})
+
 test_that("a board survives the live Export/Import round-trip (#233)", {
 
   skip_on_cran()
@@ -614,9 +726,7 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   # Switch active view: clicking the Second nav item reports its id to
   # `view_nav`; the reconcile builds Second's deferred dock on this first visit
   # and swaps which dock is active.
-  app$run_js(
-    paste0("document.querySelector('", item_sel(second), "').click()")
-  )
+  click_view(app, second)
   app$wait_for_idle()
 
   nav <- read_view_nav(app)
