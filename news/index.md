@@ -2,6 +2,20 @@
 
 ## blockr.dock (development version)
 
+- A block card whose sections the user has all hidden now comes back
+  hidden, and freezes while its controls are off screen. The toggle
+  widget reports `NULL` for an empty selection, which is the same value
+  the server holds before the card has reported at all, so “the user hid
+  everything” was stored as – and read back as – “nothing saved”: the
+  card reopened both sections. The same conflation left the block
+  unfrozen, since the freeze gate reads a non-`NULL` report to mean the
+  card has landed. The card now reports an empty selection as
+  [`character()`](https://rdrr.io/r/base/character.html), telling it
+  from a card that has yet to report, and both halves follow. A board
+  saved before this change carries a genuine `NULL` and still restores
+  with both sections open
+  ([\#426](https://github.com/BristolMyersSquibb/blockr.dock/issues/426)).
+
 - A restored block card paints its saved sections open straight away,
   instead of opening every section and collapsing the hidden ones a
   moment later. The card rendered its accordion open unconditionally and
