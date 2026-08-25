@@ -187,7 +187,9 @@ show_cards <- function(visibility, built, on_screen) {
 }
 
 # Mark a view's on-screen blocks painted: `visible` TRUE -- the client-confirmed
-# paint core's render gate (is_visible = isTRUE) waits for.
+# paint core's render gate (is_visible = isTRUE) waits for. Unlike show_cards()
+# this walks the caller's set and dereferences each slot, so that set must
+# already be reconciled against the registry -- see report_visible_observer().
 mark_cards_rendered <- function(visibility, on_screen) {
   for (id in on_screen) {
     if (!isTRUE(isolate(visibility$visible[[id]]()))) {

@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* Removing blocks that are on screen no longer kills the session with
+  "attempt to apply non-function". Cutting a whole stack hit it every time.
+  The visible-axis observer drove both card axes straight off the client's
+  layout echo, which still names a panel for a tick after core has dropped
+  its block, and `mark_cards_rendered()` called the dropped slot. The echo is
+  now reconciled against the block registry once, where it is read, so no
+  consumer sees an id the server no longer knows (#387).
+
 * Switching to a view before the board has settled no longer leaves it
   hopping between views for good. The nav reported the server's own
   `sendInputMessage("view_nav", ...)` straight back as a gesture, and with

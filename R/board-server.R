@@ -268,12 +268,25 @@ report_visible_observer <- function(visibility, client_active, docks) {
   # otherwise a newly-fronted tab is never marked visible and its block stays
   # blank until a structural change. `req(layout())` waits for the client's
   # first report (NULL before then); `active_panel()` is NULL until a switch.
+  #
+  # The echo is the client's account and the registry is the server's, so they
+  # disagree for one tick after a removal: the echo still names a panel whose
+  # slot core has already dropped. Intersecting here reconciles the two once,
+  # for every consumer, rather than leaving each to guard a lookup -- and a
+  # consumer that dereferences the slot rather than testing membership (as
+  # `mark_cards_rendered()` does) would otherwise call `NULL()` and take the
+  # session down.
   on_screen <- reactive({
     active <- req(client_active())
     dock <- req(docks[[active]])
     layout <- req(dock$layout())
 
-    sort(visible_block_ids(layout, dock$active_panel()))
+    sort(
+      intersect(
+        visible_block_ids(layout, dock$active_panel()),
+        ls(visibility$visible)
+      )
+    )
   })
 
   observeEvent(
