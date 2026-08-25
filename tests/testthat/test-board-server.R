@@ -929,6 +929,55 @@ test_that("report_visible_observer coalesces set-equal reports", {
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
 })
 
+test_that("report_visible_observer survives an echo naming a dropped block", {
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  env <- with_mock_context(ms, {
+    layout <- reactiveVal(NULL)
+
+    docks <- new.env(parent = emptyenv())
+    docks[["A"]] <- list(layout = layout, active_panel = reactiveVal(NULL))
+
+    vis <- fake_visibility(c("a", "b", "gone"))
+    mark_cards_built(vis, c("a", "b", "gone"))
+    client_active <- reactiveVal("A")
+
+    report_visible_observer(vis, client_active, docks)
+
+    list(layout = layout, vis = vis)
+  })
+
+  with_mock_context(ms, env$layout(
+    dock_grid(
+      panels("block_panel-a"),
+      panels("block_panel-b"),
+      panels("block_panel-gone")
+    )
+  ))
+  ms$flushReact()
+
+  expect_identical(isolate(env$vis$visible[["gone"]]()), TRUE)
+
+  # Core drops a removed block's slots outright, which is what takes it off the
+  # ledger -- the dock writes nothing on removal. The client's echo is a moment
+  # behind and still names the panel.
+  rm("gone", envir = env$vis$visible)
+  rm("gone", envir = env$vis$required)
+
+  with_mock_context(ms, env$layout(
+    dock_grid(panels("block_panel-a"), panels("block_panel-gone"))
+  ))
+  expect_no_error(ms$flushReact())
+
+  # The survivors are still driven off that same stale report: `a` is a front,
+  # `b` is not.
+  expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
+  expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
+  expect_identical(isolate(env$vis$required[["b"]]()), FALSE)
+  expect_setequal(built_cards(env$vis), c("a", "b"))
+})
+
 test_that("report_visible_observer follows the live active panel (#361)", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
