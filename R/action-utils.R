@@ -11,8 +11,8 @@
 #' @param mode Switch for determining the return object
 #' @param ... Forwarded to other methods
 #'
-#' @return For utilities `block_input_select()`, `block_registry_selectize()`
-#' and `board_select`, see the respective sections.
+#' @return For utilities `block_input_select()` and `board_block_select()`,
+#' see the respective sections.
 #'
 #' @rdname action
 #' @export
@@ -83,167 +83,36 @@ block_input_select <- function(block = NULL, block_id = NULL, links = NULL,
   inps
 }
 
-#' @section `block_registry_selectize()`:
-#' This creates UI for a block registry selector via [shiny::selectizeInput()]
-#' and returns an object that inherits from `shiny.tag`.
+#' @section `board_block_select()`:
+#' Block selection UI over the blocks of a board is available as
+#' `board_block_select()`, which returns an object inheriting from
+#' `shiny.tag.list`: the result of a [shiny::selectizeInput()] call together
+#' with the styling its option rendering requires. This is the picker the
+#' board itself uses wherever a block is chosen, listing each block by icon,
+#' name, ID and defining package, and searchable over all of those.
 #'
 #' @param id Input ID
-#' @param blocks Character vector of block registry IDs
+#' @param board Board object
+#' @param blk_ids Character vector of block IDs to offer for selection
+#' @param selected Character vector of pre-selected block IDs
+#' @param max_items Maximum number of blocks that can be selected at once, or
+#' `NULL` for no limit
+#' @param label Input label
+#' @param options Passed to [shiny::selectizeInput()] as `options`, merged
+#' over the defaults that make up the picker
 #'
 #' @rdname action
 #' @export
-block_registry_selectize <- function(id, blocks = list_blocks()) {
+board_block_select <- function(id, board, blk_ids = board_block_ids(board),
+                               selected = NULL, max_items = 1L, label = NULL,
+                               options = list()) {
 
-  meta <- registry_metadata(blocks)
-
-  options_data <- map(
-    list,
-    value = meta[["id"]],
-    label = meta[["name"]],
-    description = meta[["description"]],
-    category = meta[["category"]],
-    package = meta[["package"]],
-    icon = meta[["icon"]],
-    color = blk_color(meta[["category"]]),
-    searchtext = paste(
-      meta[["name"]],
-      meta[["description"]],
-      meta[["package"]]
-    )
-  )
-
-  tagList(
-    css_block_selectize(),
-    selectizeInput(
-      id,
-      label = "Select block to add",
-      choices = NULL,
-      options = list(
-        options = options_data,
-        valueField = "value",
-        labelField = "label",
-        searchField = c("label", "description", "searchtext"),
-        placeholder = "Type to search",
-        openOnFocus = FALSE,
-        render = js_blk_selectize_render()
-      )
-    )
-  )
-}
-
-#' @section `board_select()`:
-#' Block selection UI, enumerating all blocks in a board is available as
-#' `board_select()`. An object that inherits from `shiny.tag` is returned, which
-#' contains the result from a [shiny::selectizeInput()] call.
-#'
-#' @param selected Character vector of pre-selected block (registry) IDs
-#'
-#' @rdname action
-#' @export
-board_select <- function(id, blocks, selected = NULL, ...) {
-
-  meta <- blks_metadata(blocks)
-
-  bid <- names(blocks)
-  bnm <- chr_ply(blocks, block_name)
-
-  options_data <- map(
-    list,
-    value = bid,
-    label = bnm,
-    block_id = bid,
-    block_name = bnm,
-    block_type = meta$name,
-    package = meta$package,
-    category = meta$category,
-    icon = meta$icon,
-    color = meta$color,
-    searchtext = paste(bnm, bid, meta$package)
-  )
-
-  options <- list(
-    options = options_data,
-    valueField = "value",
-    labelField = "label",
-    searchField = c("label", "description", "searchtext"),
-    placeholder = "Type to search blocks...",
-    openOnFocus = FALSE,
-    plugins = list("remove_button", "drag_drop"),
-    render = js_blk_selectize_render()
-  )
-
-  if (!is.null(selected) && length(selected) > 0) {
-    options$items <- as.list(selected)
-  }
-
-  tagList(
-    css_block_selectize(),
-    tags$style(
-      HTML(
-        "/* Style the remove button */
-        .selectize-input .remove {
-          text-decoration: none !important;
-          color: #6c757d !important;
-          font-weight: normal !important;
-          border: none !important;
-          margin-left: 8px !important;
-          padding: 2px 6px !important;
-          border-radius: 3px !important;
-          transition: background-color 0.2s ease, color 0.2s ease;
-        }
-        .selectize-input .remove:hover {
-          background-color: rgba(108, 117, 125, 0.1) !important;
-          color: #495057 !important;
-        }"
-      )
-    ),
-    selectizeInput(
-      id,
-      ...,
-      selected = selected,
-      options = options
-    ),
-    if (!is.null(selected) && length(selected) > 0) {
-      tags$script(
-        HTML(
-          sprintf(
-            "$(document).ready(
-              function() {
-                function setSelectedValues() {
-                  var $select = $('#%s');
-                  if ($select.length) {
-                    var selectize = $select[0].selectize;
-                    if (selectize) {
-                      try {
-                        selectize.setValue(%s, true);
-                        return true;
-                      } catch(e) {
-                        console.log('Error setting values:', e);
-                        return false;
-                      }
-                    }
-                  }
-                  return false;
-                }
-                // Try multiple times with increasing delays
-                var attempts = 0;
-                var maxAttempts = 10;
-                var interval = setInterval(
-                  function() {
-                    attempts++;
-                    if (setSelectedValues() || attempts >= maxAttempts) {
-                      clearInterval(interval);
-                    }
-                  },
-                  300
-                );
-              }
-            );",
-            id,
-            paste0("['", paste(selected, collapse = "','"), "']")
-          )
-        )
-      )
-    }
+  blk_selectize(
+    id,
+    build_block_options(board, blk_ids),
+    selected,
+    max_items,
+    label,
+    options
   )
 }

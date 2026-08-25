@@ -305,6 +305,44 @@ js_blk_selectize_render <- function() {
   )
 }
 
+blk_selectize <- function(id, options_data, selected = NULL, max_items = 1L,
+                          label = NULL, options = list()) {
+
+  items <- selected[!is.na(selected) & nzchar(selected)]
+
+  opts <- list(
+    options = options_data,
+    items = as.list(items),
+    valueField = "value",
+    labelField = "label",
+    searchField = c("label", "description", "searchtext"),
+    render = js_blk_selectize_render()
+  )
+
+  if (not_null(max_items)) {
+    opts[["maxItems"]] <- max_items
+  }
+
+  tagList(
+    css_block_selectize(),
+    selectizeInput(
+      id,
+      label = label,
+      choices = NULL,
+      multiple = !isTRUE(max_items == 1L),
+      options = utils::modifyList(opts, options)
+    )
+  )
+}
+
+multi_select_opts <- function(placeholder) {
+  list(
+    placeholder = placeholder,
+    openOnFocus = FALSE,
+    plugins = list("remove_button")
+  )
+}
+
 auto_focus_script <- function(id) {
   tags$script(
     HTML(

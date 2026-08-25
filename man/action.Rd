@@ -9,8 +9,7 @@
 \alias{board_actions}
 \alias{action_triggers}
 \alias{block_input_select}
-\alias{block_registry_selectize}
-\alias{board_select}
+\alias{board_block_select}
 \alias{sidebar_owned_by}
 \title{Board actions}
 \usage{
@@ -34,9 +33,15 @@ block_input_select(
   ...
 )
 
-block_registry_selectize(id, blocks = list_blocks())
-
-board_select(id, blocks, selected = NULL, ...)
+board_block_select(
+  id,
+  board,
+  blk_ids = board_block_ids(board),
+  selected = NULL,
+  max_items = 1L,
+  label = NULL,
+  options = list()
+)
 
 sidebar_owned_by(action, board_id, session = get_session())
 }
@@ -58,9 +63,19 @@ sidebar_owned_by(action, board_id, session = get_session())
 
 \item{mode}{Switch for determining the return object}
 
-\item{blocks}{Character vector of block registry IDs}
+\item{board}{Board object}
 
-\item{selected}{Character vector of pre-selected block (registry) IDs}
+\item{blk_ids}{Character vector of block IDs to offer for selection}
+
+\item{selected}{Character vector of pre-selected block IDs}
+
+\item{max_items}{Maximum number of blocks that can be selected at once, or
+\code{NULL} for no limit}
+
+\item{label}{Input label}
+
+\item{options}{Passed to \code{\link[shiny:selectizeInput]{shiny::selectizeInput()}} as \code{options}, merged
+over the defaults that make up the picker}
 
 \item{action}{Action ID}
 
@@ -79,8 +94,8 @@ a named list of objects suitable for use as action triggers. For an action
 that currently holds a sidebar panel, \code{sidebar_owned_by()} returns a list
 with components \code{panel}, \code{open} and \code{pinned}, and \code{NULL} otherwise.
 
-For utilities \code{block_input_select()}, \code{block_registry_selectize()}
-and \code{board_select}, see the respective sections.
+For utilities \code{block_input_select()} and \code{board_block_select()},
+see the respective sections.
 }
 \description{
 Logic including a modal-based UI for board actions such as "append block"
@@ -113,16 +128,13 @@ and also takes into account some edge-cases, such as variadic blocks. If
 "update", the return value of a \code{\link[shiny:updateSelectizeInput]{shiny::updateSelectizeInput()}} call.
 }
 
-\section{\code{block_registry_selectize()}}{
+\section{\code{board_block_select()}}{
 
-This creates UI for a block registry selector via \code{\link[shiny:selectizeInput]{shiny::selectizeInput()}}
-and returns an object that inherits from \code{shiny.tag}.
-}
-
-\section{\code{board_select()}}{
-
-Block selection UI, enumerating all blocks in a board is available as
-\code{board_select()}. An object that inherits from \code{shiny.tag} is returned, which
-contains the result from a \code{\link[shiny:selectizeInput]{shiny::selectizeInput()}} call.
+Block selection UI over the blocks of a board is available as
+\code{board_block_select()}, which returns an object inheriting from
+\code{shiny.tag.list}: the result of a \code{\link[shiny:selectizeInput]{shiny::selectizeInput()}} call together
+with the styling its option rendering requires. This is the picker the
+board itself uses wherever a block is chosen, listing each block by icon,
+name, ID and defining package, and searchable over all of those.
 }
 
