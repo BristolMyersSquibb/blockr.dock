@@ -5,8 +5,8 @@
   The visible-axis observer drove both card axes straight off the client's
   layout echo, which still names a panel for a tick after core has dropped
   its block, and `mark_cards_rendered()` called the dropped slot. The echo is
-  now reconciled against the block registry once, where it is read, so no
-  consumer sees an id the server no longer knows (#387).
+  now reconciled against core's visibility slots once, where it is read, so no
+  consumer sees a block the server has already dropped (#387).
 
 * A restored block card paints its saved sections open straight away,
   instead of opening every section and collapsing the hidden ones a

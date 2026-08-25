@@ -269,11 +269,12 @@ report_visible_observer <- function(visibility, client_active, docks) {
   # blank until a structural change. `req(layout())` waits for the client's
   # first report (NULL before then); `active_panel()` is NULL until a switch.
   #
-  # The echo is the client's account and the registry is the server's, so they
-  # disagree for one tick after a removal: the echo still names a panel whose
-  # slot core has already dropped. Intersecting here reconciles the two once,
-  # for every consumer, rather than leaving each to guard a lookup -- and a
-  # consumer that dereferences the slot rather than testing membership (as
+  # The echo is the client's account of what is on screen and core's visibility
+  # slots are the server's account of which blocks exist, so the two disagree
+  # for one tick after a removal: the echo still names a panel whose slot core
+  # has already dropped. Intersecting here reconciles them once, for every
+  # consumer, rather than leaving each to guard its own lookup -- and a
+  # consumer that dereferences a slot rather than testing membership (as
   # `mark_cards_rendered()` does) would otherwise call `NULL()` and take the
   # session down.
   on_screen <- reactive({
