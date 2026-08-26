@@ -874,8 +874,8 @@ test_that("dock panel move updates layout state and serialization (#234)", {
     app$wait_for_idle()
   }
 
-  # The fixture seeds blocks a and b tabbed together in a single dock group
-  # (the extension panel sits in its own group).
+  # The fixture seeds blocks a and b tabbed together in a single dock group;
+  # the extension panel rides the left rail, which is a group of its own.
   await_groups(2L)
   before <- read_layout()
   expect_identical(
@@ -907,7 +907,8 @@ test_that("dock panel move updates layout state and serialization (#234)", {
   )
 
   # Serialization: our grid format round-trips through JSON and keeps every
-  # panel while still separating a and b.
+  # panel while still separating a and b. The extension is not among them --
+  # it sits in the rail, which the grid tree does not carry.
   grid <- as_dock_grid(layout)
   restored <- as_dock_grid(
     jsonlite::fromJSON(
@@ -916,9 +917,9 @@ test_that("dock panel move updates layout state and serialization (#234)", {
     )
   )
   reparsed <- new_dock_layout(list(grid = grid_to_tree(restored)))
-  expect_setequal(
-    panel_obj_ids(layout_panel_ids(reparsed)),
-    c("a", "b", "edit_board")
+  expect_setequal(panel_obj_ids(layout_panel_ids(reparsed)), c("a", "b"))
+  expect_identical(
+    rail_panel_ids(as_dock_rails(layout)), "ext_panel-edit_board"
   )
   expect_false(
     identical(
@@ -1106,4 +1107,173 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
   expect_true(probe$trackPainted)
   expect_false(probe$bookkeepingArc)
   expect_true(probe$computingArc)
+})
+
+test_that("the extension rides a left rail, shown only while it holds it", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "rail-derived",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+  api <- paste0("HTMLWidgets.find('#", dock, "').getWidget()")
+
+  # Optional-chain in the polls: the widget can still be null early in startup,
+  # and the condition must yield `false` rather than abort on a null deref.
+  rail_visible <- function(state) {
+    paste0(
+      "HTMLWidgets.find('#", dock, "')?.getWidget()",
+      "?.isEdgeGroupVisible('left') === ", state
+    )
+  }
+
+  app$wait_for_js(rail_visible("true"), timeout = 15 * 1000)
+  app$wait_for_idle()
+
+  # A rail is a real dockview edge group carrying its tabs vertically, keyed by
+  # the group id the payload names it with.
+  rail_html <- xml2::read_html(app$get_html(".dv-groupview-edge"))
+
+  has_class <- function(token) {
+    paste0(
+      "//*[contains(concat(' ', normalize-space(@class), ' '), ' ",
+      token, " ')]"
+    )
+  }
+
+  expect_length(
+    xml2::xml_find_all(rail_html, has_class("dv-groupview-edge")), 1L
+  )
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(rail_html, has_class("dv-groupview-edge")),
+      "data-testid"
+    ),
+    "dv-edge-group-rail-left"
+  )
+  expect_length(
+    xml2::xml_find_all(rail_html, has_class("dv-tabs-container-vertical")), 1L
+  )
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_all(rail_html, has_class("dv-tab")), "data-tab-panel-id"
+    ),
+    "ext_panel-edit_board"
+  )
+
+  read_state <- function() {
+    new_dock_layout(app$get_value(input = paste0(dock, "_state")))
+  }
+
+  read_rails <- function() as_dock_rails(read_state())
+
+  expect_identical(rail_panel_ids(read_rails()), "ext_panel-edit_board")
+
+  # Emptying the rail hides it: visibility is derived from what it holds, not
+  # stored, so nothing has to remember to turn it off.
+  app$run_js(
+    paste0(
+      "var api = ", api, ";",
+      "var grid = api.groups.filter(",
+      "function (g) { return g.api.location.type === 'grid' })[0];",
+      "api.getPanel('ext_panel-edit_board').api.moveTo(",
+      "{group: grid, position: 'within'});"
+    )
+  )
+
+  app$wait_for_js(rail_visible("false"), timeout = 15 * 1000)
+  app$wait_for_idle()
+
+  expect_identical(rail_panel_ids(read_rails()), character())
+  expect_true(
+    "ext_panel-edit_board" %in% layout_panel_ids(as_dock_grid(read_state()))
+  )
+})
+
+test_that("a drag toward the edge reveals a hidden rail, collapsed", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "rail-reveal",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+  api <- paste0("HTMLWidgets.find('#", dock, "').getWidget()")
+
+  rail_visible <- function(state) {
+    paste0(
+      "HTMLWidgets.find('#", dock, "')?.getWidget()",
+      "?.isEdgeGroupVisible('left') === ", state
+    )
+  }
+
+  app$wait_for_js(rail_visible("true"), timeout = 15 * 1000)
+
+  # Empty the rail so it is hidden, which is the state a reveal has to rescue:
+  # with no hit area, a drag toward that edge would otherwise have nothing to
+  # aim at.
+  app$run_js(
+    paste0(
+      "var api = ", api, ";",
+      "var grid = api.groups.filter(",
+      "function (g) { return g.api.location.type === 'grid' })[0];",
+      "api.getPanel('ext_panel-edit_board').api.moveTo(",
+      "{group: grid, position: 'within'});"
+    )
+  )
+
+  app$wait_for_js(rail_visible("false"), timeout = 15 * 1000)
+
+  # Start a real dockview drag and hold the pointer in the band the collapsed
+  # strip would occupy. dockview's own `dragstart` handler arms the drag, so
+  # this exercises the same path a user's gesture takes.
+  app$run_js(
+    paste0(
+      "var el = document.querySelector('#", dock, "');",
+      "var tab = document.querySelector(",
+      "'[data-tab-panel-id=\"block_panel-b\"]');",
+      "var dt = new DataTransfer();",
+      "tab.dispatchEvent(new DragEvent('dragstart',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt}));",
+      "var r = el.getBoundingClientRect();",
+      "el.dispatchEvent(new DragEvent('dragover',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt,",
+      " clientX: r.left + 5, clientY: r.top + r.height / 2}));"
+    )
+  )
+
+  app$wait_for_js(rail_visible("true"), timeout = 15 * 1000)
+
+  # Revealed collapsed: an empty rail shows its strip, not a full-width pane.
+  expect_true(
+    isTRUE(app$get_js(paste0(api, ".getEdgeGroup('left').isCollapsed()")))
+  )
+
+  # A drag that ends without dropping into the rail leaves the derived rule to
+  # hide it again.
+  app$run_js(
+    paste0(
+      "document.querySelector('[data-tab-panel-id=\"block_panel-b\"]')",
+      ".dispatchEvent(new DragEvent('dragend', {bubbles: true}));"
+    )
+  )
+
+  app$wait_for_js(rail_visible("false"), timeout = 15 * 1000)
+
+  expect_false(isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('left')"))))
 })

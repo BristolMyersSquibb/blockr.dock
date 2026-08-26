@@ -322,7 +322,7 @@ test_that("construction restricts a grid to its view's members", {
   expect_identical(layout_panel_ids(board_grids(brd)[["A"]]), "block_panel-a")
 })
 
-test_that("the default grid groups extensions left, blocks right, tabbed", {
+test_that("the default board rails extensions left, tabs blocks in the grid", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -330,15 +330,21 @@ test_that("the default grid groups extensions left, blocks right, tabbed", {
   )
 
   grid <- active_view_grid(brd)
+  rails <- active_view_rails(brd)
 
-  expect_length(grid[["children"]], 2L)
+  expect_length(grid[["children"]], 1L)
   expect_setequal(
     grid[["children"]][[1L]][["panels"]],
-    "ext_panel-edit_board"
-  )
-  expect_setequal(
-    grid[["children"]][[2L]][["panels"]],
     c("block_panel-a", "block_panel-b")
+  )
+
+  expect_named(rails, "left")
+  expect_identical(rails[["left"]][["panels"]], "ext_panel-edit_board")
+
+  # Membership still carries both -- the rail says where, not whether.
+  expect_setequal(
+    view_members(board_views(brd)[[active_view(brd)]]),
+    c("ext_panel-edit_board", "block_panel-a", "block_panel-b")
   )
 })
 

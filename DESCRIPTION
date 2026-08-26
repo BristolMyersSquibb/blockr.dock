@@ -64,6 +64,7 @@ Collate:
     'dock-board.R'
     'dock-grid.R'
     'dock-layout.R'
+    'dock-rail.R'
     'dock-stack.R'
     'dock-view.R'
     'ext-class.R'

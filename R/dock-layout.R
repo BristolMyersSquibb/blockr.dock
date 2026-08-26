@@ -14,8 +14,9 @@
 #' `validate_dock_layout()` returns its input and errors on a malformed shape.
 #' Cast across the seam with `as_dock_layout()` (build the dockView payload
 #' from a [dock_grid][dock-grid] against the board's blocks and extensions),
-#' [as_dock_grid()] (canonical geometry from a layout) and
-#' [as_dock_view()][dock_view] (membership from a layout).
+#' [as_dock_grid()] (canonical geometry from a layout), `as_dock_rails()` (the
+#' rails a layout pins to its edges) and [as_dock_view()][dock_view]
+#' (membership from a layout, the union of its grid and its rails).
 #'
 #' @param x Object to wrap, validate, test, or cast.
 #' @param ... Passed on to methods (e.g. `blocks` / `extensions` to resolve
@@ -89,12 +90,12 @@ as_dock_layout.list <- function(x, ...) {
 
 #' @export
 as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
-                                     ...) {
+                                     rails = list(), ...) {
 
   blocks <- as_blocks(blocks)
   ext_coll <- as_dock_extensions(extensions)
 
-  panel_ids <- grid_panel_ids(x)
+  panel_ids <- c(grid_panel_ids(x), rail_panel_ids(rails))
 
   blk_pids <- panel_ids[maybe_block_panel_id(panel_ids)]
   ext_pids <- panel_ids[maybe_ext_panel_id(panel_ids)]
@@ -118,6 +119,10 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
     )
   }
 
+  if (length(rails)) {
+    out[["edgeGroups"]] <- rails_to_edges(rails)
+  }
+
   new_dock_layout(out)
 }
 
@@ -127,6 +132,78 @@ as_dock_grid.dock_layout <- function(x, ...) {
     x[["grid"]],
     coal(x[["activeGroup"]], x[["active_group"]], fail_all = FALSE)
   )
+}
+
+#' @rdname dock-layout
+#' @export
+as_dock_rails <- function(x, ...) {
+  UseMethod("as_dock_rails")
+}
+
+#' @export
+as_dock_rails.dock_layout <- function(x, ...) {
+
+  edges <- x[["edgeGroups"]]
+
+  if (!length(edges)) {
+    return(list())
+  }
+
+  set_names(map(edge_to_rail, edges, names(edges)), names(edges))
+}
+
+# The dockView `edgeGroups` payload: one entry per rail, keyed by the edge it
+# pins to. Visibility is derived here rather than stored -- a rail holding
+# panels is shown, an empty one hidden -- so a restore lands on exactly the
+# rule the client re-asserts on every panel add, remove and move.
+rails_to_edges <- function(rails) {
+  set_names(lapply(rails, rail_to_edge), chr_xtr(rails, "position"))
+}
+
+rail_to_edge <- function(rail) {
+
+  panels <- rail[["panels"]]
+
+  group <- list(
+    views = as.list(panels),
+    id = rail_group_id(rail[["position"]])
+  )
+
+  if (length(panels)) {
+    group[["activeView"]] <- coal(
+      rail[["active"]], panels[[1L]], fail_all = FALSE
+    )
+  }
+
+  c(
+    list(visible = length(panels) > 0L, group = group),
+    if (not_null(rail[["size"]])) {
+      list(size = rail[["size"]])
+    },
+    if (not_null(rail[["collapsed_size"]])) {
+      list(collapsedSize = rail[["collapsed_size"]])
+    }
+  )
+}
+
+edge_to_rail <- function(edge, position) {
+
+  group <- edge[["group"]]
+
+  new_dock_rail(
+    position,
+    as.character(unlst(group[["views"]])),
+    active = group[["activeView"]],
+    size = edge[["size"]],
+    collapsed_size = edge[["collapsedSize"]]
+  )
+}
+
+# A rail's dockView group id. The grid's ids are minted as consecutive integers
+# by `grid_to_tree()`, so keying off the edge keeps the two apart and lets a
+# `position = list(referenceGroup = )` name a rail without consulting the tree.
+rail_group_id <- function(position) {
+  paste0("rail-", position)
 }
 
 #' @export
@@ -146,7 +223,9 @@ as_dock_view.dock_view <- function(x, ...) x
 
 #' @export
 as_dock_view.dock_layout <- function(x, ...) {
-  new_dock_view(grid_panel_ids(as_dock_grid(x)))
+  new_dock_view(
+    c(grid_panel_ids(as_dock_grid(x)), rail_panel_ids(as_dock_rails(x)))
+  )
 }
 
 # Expand our compact grid into dockView's native tree: assign type tags and

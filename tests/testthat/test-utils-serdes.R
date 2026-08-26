@@ -88,6 +88,45 @@ test_that("a multi-view board round-trips identically through ser/des", {
   expect_identical(board_grids(des), board_grids(brd))
 })
 
+test_that("rails round-trip through ser/des", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = new_edit_board_extension(),
+    views = list(V = c("a", "b", "edit_board")),
+    grids = list(V = dock_grid("a", "b")),
+    rails = list(
+      V = rail(ext("edit_board"), position = "right", size = 300,
+               collapsed_size = 20)
+    )
+  )
+
+  des <- blockr_deser(blockr_ser(brd))
+
+  expect_identical(board_rails(des), board_rails(brd))
+  expect_identical(board_grids(des), board_grids(brd))
+  expect_identical(board_views(des), board_views(brd))
+})
+
+test_that("a rail survives a real JSON encode/decode round-trip", {
+
+  # The stored form goes out through core's `write_json` settings, so a rail's
+  # panel list must survive being read back as a length-one JSON array.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    extensions = new_edit_board_extension(),
+    views = list(V = c("a", "edit_board")),
+    rails = list(V = rail(ext("edit_board")))
+  )
+
+  reparsed <- jsonlite::fromJSON(
+    jsonlite::toJSON(blockr_ser(brd), null = "null"),
+    simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+  )
+
+  expect_identical(board_rails(blockr_deser(reparsed)), board_rails(brd))
+})
+
 test_that("dock_views preserve a non-alphabetical key order through ser/des", {
 
   # View order is implicit in the list's key sequence -- no separate slot -- so

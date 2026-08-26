@@ -474,14 +474,16 @@ board_grids <- function(x) {
 }
 
 # A view's placement geometry, member-driven: membership is authoritative for
-# which panels appear, the grid only for their arrangement. No grid (NULL, or
-# a member-less view) falls back to a default over the members; otherwise the
-# grid's arrangement is kept for the members it places, a member it omits is
-# given a default spot, and a ghost (grid panel no longer a member) is dropped.
-# This is where placement is resolved, on read.
-view_grid <- function(view, grid) {
+# which panels appear, the grid only for their arrangement. The members a rail
+# holds are placed by that rail and so are absent here -- the two slots
+# partition the membership. No grid (NULL, or a member-less view) falls back to
+# a default over the members; otherwise the grid's arrangement is kept for the
+# members it places, a member it omits is given a default spot, and a ghost
+# (grid panel no longer a member) is dropped. This is where placement is
+# resolved, on read.
+view_grid <- function(view, grid, rails = NULL) {
 
-  members <- view_members(view)
+  members <- grid_members(view, view_rails(view, rails))
 
   if (is.null(grid) || !length(members)) {
     default_grid(members)
@@ -497,12 +499,18 @@ active_view_grid <- function(board) {
 
   id <- active_view(board)
 
-  view_grid(board_views(board)[[id]], board_grids(board)[[id]])
+  view_grid(
+    board_views(board)[[id]],
+    board_grids(board)[[id]],
+    board_rails(board)[[id]]
+  )
 }
 
-# The default geometry over a set of members: an extensions group on the left
-# and a blocks group on the right, each tabbing its panels. A view with no grid
-# falls back to this, so a fresh board and a grid-less view lay out identically.
+# The default geometry over the members the grid places: an extensions group on
+# the left and a blocks group on the right, each tabbing its panels. A view with
+# no grid falls back to this, so a fresh board and a grid-less view lay out
+# identically. Whatever a rail holds never reaches here -- the default board
+# rails its extensions, so this sees only its blocks.
 default_grid <- function(members) {
 
   ext <- members[maybe_ext_panel_id(members)]
@@ -530,16 +538,19 @@ coerce_dock_grids <- function(grids, id_map) {
 }
 
 # Restrict each grid to the (already cleaned) membership of the view it keys,
-# dropping ghosts and unknown panels so stored geometry never outlives the
-# board. Grids keyed by an unknown view are left for validation to reject.
-restrict_grids_to_views <- function(grids, views) {
+# less whatever that view's rails hold, dropping ghosts and unknown panels so
+# stored geometry never outlives the board and no panel sits in both a rail and
+# the grid. Grids keyed by an unknown view are left for validation to reject.
+restrict_grids_to_views <- function(grids, views, rails = list()) {
 
   for (id in names(grids)) {
 
     grid <- grids[[id]]
 
     if (not_null(grid) && id %in% names(views)) {
-      grids[[id]] <- restrict_grid(grid, view_members(views[[id]]))
+      grids[[id]] <- restrict_grid(
+        grid, grid_members(views[[id]], rails[[id]])
+      )
     }
   }
 
@@ -567,9 +578,13 @@ restrict_grids_to_views <- function(grids, views) {
 #'   but redundant (a bare string is equivalent).
 #' * `group(..., sizes = NULL)`: a branch container. `sizes` is a
 #'   numeric vector parallel to `...` that overrides the even split.
+#' * `rail(..., position = "left")`: a rail, that is a tab group pinned
+#'   to one edge of the view rather than placed in the grid. Rails are
+#'   not grid children: they go to `new_dock_board(rails = )`, keyed by
+#'   view id, and the members a rail names leave the grid tree.
 #' * `default_layout(blocks, extensions)` produces the default board
-#'   arrangement (extensions on top, blocks below) as a `list(views, grids)`
-#'   the constructor consumes.
+#'   arrangement (an extension rail on the left, blocks tabbed in the
+#'   grid) as a `list(views, grids, rails)` the constructor consumes.
 #'
 #' `dock_grid()` accepts `orientation = "horizontal" | "vertical"` for the
 #' top-level split direction and `sizes` for the root-branch ratios. The
@@ -584,7 +599,13 @@ restrict_grids_to_views <- function(grids, views) {
 #'   consistency.
 #' @param orientation Top-level split direction; one of `"horizontal"`
 #'   (default) or `"vertical"`.
-#' @param active For `panels()`, the id of the tab to open by default.
+#' @param active For `panels()` and `rail()`, the id of the tab to open by
+#'   default.
+#' @param position For `rail()`, the edge the rail pins to; one of `"left"`
+#'   (default), `"right"`, `"top"` or `"bottom"`.
+#' @param size,collapsed_size For `rail()`, its width (or height, on a
+#'   horizontal edge) in pixels when open and when collapsed to its bare tab
+#'   strip.
 #' @param sizes Numeric vector parallel to `...`, giving each child's
 #'   share of the parent (positive; need not sum to 1).
 #' @param blocks,extensions Dock board components to arrange (for
@@ -612,11 +633,15 @@ restrict_grids_to_views <- function(grids, views) {
 #' # Vertical top-level split
 #' dock_grid(blk("a"), blk("b"), orientation = "vertical")
 #'
+#' # An extension parked on the left edge, out of the grid
+#' rail(ext("dag"), position = "left")
+#'
 #' @return `dock_grid()` returns a [dock_grid][dock-grid] object. `panels()`
 #' returns a `dock_panels` node and `group()` returns a `dock_group` node --
-#' both are grid sub-trees usable inside `dock_grid()` / `group()`.
-#' `default_layout()` returns a `list` with `views` (a `dock_views`) and
-#' `grids` (a `dock_grids`).
+#' both are grid sub-trees usable inside `dock_grid()` / `group()`. A `rail()`
+#' is a `dock_rail`, which goes to `new_dock_board(rails = )` rather than into
+#' a grid. Finally `default_layout()` returns a `list` with `views` (a
+#' `dock_views`), `grids` (a `dock_grids`) and `rails` (a `dock_rails`).
 #'
 #' @rdname layout
 #' @export
@@ -714,18 +739,16 @@ validate_sizes <- function(sizes, children) {
 #' @export
 default_layout <- function(blocks, extensions) {
 
-  members <- c(
-    as.character(as_ext_panel_id(as_dock_extensions(extensions))),
-    as.character(as_block_panel_id(as_blocks(blocks)))
-  )
+  ext <- as.character(as_ext_panel_id(as_dock_extensions(extensions)))
+  blk <- as.character(as_block_panel_id(as_blocks(blocks)))
 
-  views <- new_dock_views(mint_view_ids(list(new_dock_view(members))))
+  views <- new_dock_views(mint_view_ids(list(new_dock_view(c(ext, blk)))))
+  id <- names(views)
 
   list(
     views = views,
-    grids = new_dock_grids(
-      set_names(list(default_grid(members)), names(views))
-    )
+    grids = new_dock_grids(set_names(list(default_grid(blk)), id)),
+    rails = new_dock_rails(set_names(list(default_rails(ext)), id))
   )
 }
 

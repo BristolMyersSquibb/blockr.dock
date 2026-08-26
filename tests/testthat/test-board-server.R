@@ -508,7 +508,7 @@ test_that("live_view_data uses a view's stored grid until it reports (#304)", {
   # board-stored grid: view_data is populated (no all-or-nothing block) rather
   # than NULL.
   vd0 <- isolate(res$vd())
-  expect_named(vd0, c("views", "grids"))
+  expect_named(vd0, c("views", "grids", "rails"))
   expect_s3_class(vd0$views, "dock_views")
   expect_identical(unname(view_names(vd0$views)), c("A", "B"))
   expect_identical(
@@ -567,7 +567,7 @@ test_that("live_view_data re-evaluates once docks are populated (#243)", {
   # First read with empty docks: the view falls back to its stored grid (seeded
   # order), and the absent-key read has subscribed.
   vd0 <- isolate(res$vd())
-  expect_named(vd0, c("views", "grids"))
+  expect_named(vd0, c("views", "grids", "rails"))
   expect_identical(
     layout_panel_ids(vd0$grids[[res$view]]),
     c("block_panel-a", "block_panel-b")
@@ -617,7 +617,7 @@ test_that("view_data() tracks a reported layout despite flush order (#243)", {
   # Before reconcile runs the dock is not up, so view_data falls back to Page's
   # board-stored grid (seeded order) rather than blocking.
   vd0 <- isolate(res$view_data())
-  expect_named(vd0, c("views", "grids"))
+  expect_named(vd0, c("views", "grids", "rails"))
   expect_identical(
     layout_panel_ids(vd0$grids[["Page"]]),
     c("block_panel-a", "block_panel-b")
@@ -637,7 +637,7 @@ test_that("view_data() tracks a reported layout despite flush order (#243)", {
   vd <- isolate(res$view_data())
 
   # view_data() carries the reported order, not the frozen `[a, b]` default.
-  expect_named(vd, c("views", "grids"))
+  expect_named(vd, c("views", "grids", "rails"))
   expect_identical(
     layout_panel_ids(vd$grids[["Page"]]),
     c("block_panel-b", "block_panel-a")

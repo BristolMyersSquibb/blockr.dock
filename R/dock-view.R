@@ -1,13 +1,15 @@
 #' Dock views: structure and grid
 #'
-#' A `dock_board` stores its views as two independent slots. **Structure**
+#' A `dock_board` stores its views as three independent slots. **Structure**
 #' -- which panels belong to each view, plus the view names, ids and the
 #' active view -- is a `dock_views` collection of `dock_view` objects, read
 #' with `board_views()`. **Grid** -- the geometry of each view (nesting, tab
 #' groups, sizes) -- is a separate, `NULL`-valid `dock_grids` slot, read with
-#' `board_grids()`. Single-page boards are a degenerate case: one auto-named
-#' "Page" view. Blocks and extensions are shared across views via the board's
-#' DAG; view membership is a layout concern only.
+#' `board_grids()`. **Rails** -- the tab groups pinned to a view's edges,
+#' holding members the grid therefore does not place -- are a `dock_rails`
+#' slot read with `board_rails()`. Single-page boards are a degenerate case:
+#' one auto-named "Page" view. Blocks and extensions are shared across views
+#' via the board's DAG; view membership is a layout concern only.
 #'
 #' Each view carries a stable, immutable **id** (its key in the collection)
 #' distinct from its editable display **name**. This mirrors the id / name
@@ -32,23 +34,27 @@
 #' individual view. View CRUD is enabled unless the dock is locked (see
 #' `is_dock_locked()`).
 #'
-#' Structure and grid are related by total semantics, not containment: a
+#' Structure and geometry are related by total semantics, not containment: a
 #' member with no grid entry is an un-landed intent, a grid entry with no
 #' membership an inert ghost. Both are legal on a committed board and
 #' reconciled only where placement is read (`view_grid()` prunes ghosts and
 #' shows un-landed members via a default) -- the board is valid with no grid
-#' at all. Referential integrity still holds: every member must reference a
-#' block or extension on the board.
+#' at all. The rails partition that placement rather than adding to it: a
+#' member a rail names is placed by the rail and so is absent from the grid,
+#' and a view's membership is the union of the two. Referential integrity
+#' still holds: every member must reference a block or extension on the board.
 #'
 #' @param members Ordered character vector of panel ids.
 #' @param name Optional display name for the view.
 #'
 #' @return `board_views()` returns a `dock_views`, `board_grids()` a
-#'   `dock_grids` or `NULL`, and their setters the modified board
-#'   invisibly. `dock_view()` returns a `dock_view` and `view_members()` a
-#'   character vector. `is_dock_view()` / `is_dock_views()` /
-#'   `is_dock_grids()` return a boolean; `validate_dock_view()`,
-#'   `validate_dock_views()` and `validate_dock_grids()` return their
+#'   `dock_grids` or `NULL`, `board_rails()` a `dock_rails` or `NULL`, and
+#'   their setters the modified board invisibly. A `dock_view()` is a
+#'   `dock_view` and `view_members()` a character vector. The predicates
+#'   `is_dock_view()` / `is_dock_views()` / `is_dock_grids()` /
+#'   `is_dock_rails()` return a boolean, while `validate_dock_view()`,
+#'   `validate_dock_views()`,
+#'   `validate_dock_grids()` and `validate_dock_rails()` return their
 #'   (validated) input and throw on error. `active_view()` returns the active
 #'   view's id, or `NULL` when no view is active, and `active_view<-()` the
 #'   modified collection (or `dock_board`) invisibly. `view_name()` returns a
@@ -814,7 +820,8 @@ validate_views_delta <- function(views, board, upd) {
   }
 
   unknown_keys <- setdiff(
-    names(views), c("add", "mod", "rm", "active", "rename", "grid", "order")
+    names(views),
+    c("add", "mod", "rm", "active", "rename", "grid", "rails", "order")
   )
   if (length(unknown_keys)) {
     blockr_abort(
@@ -1563,8 +1570,17 @@ apply_views_rm <- function(rm_ids, board) {
     }
   }
 
+  rls <- board_rails(board)
+
+  if (not_null(rls)) {
+    for (v in rm_ids) {
+      rls[[v]] <- NULL
+    }
+  }
+
   board_views(board) <- views
   board_grids(board) <- arr
+  board_rails(board) <- rls
 
   board
 }
@@ -1674,6 +1690,36 @@ apply_views_grid <- function(grid, board) {
   }
 
   board_grids(board) <- new_dock_grids(arr)
+
+  board
+}
+
+# The rails half of the settled-echo mirror's write, keyed by view id exactly
+# as `apply_views_grid()` is. A `NULL` entry clears a view's rails; anything
+# else is re-keyed by edge on the way in, so the client echo and a hand-written
+# list of `rail()`s land identically.
+apply_views_rails <- function(rails, board) {
+
+  arr <- as.list(board_rails(board) %||% list())
+  views <- board_views(board)
+
+  for (v in names(rails)) {
+
+    if (!v %in% names(views)) {
+      next
+    }
+
+    rls <- rails[[v]]
+
+    if (is.null(rls)) {
+      arr[[v]] <- NULL
+      next
+    }
+
+    arr[[v]] <- view_rail_set(rls)
+  }
+
+  board_rails(board) <- new_dock_rails(arr)
 
   board
 }

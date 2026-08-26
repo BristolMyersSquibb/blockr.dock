@@ -84,15 +84,27 @@ test_that("grid resolution accepts a dock_extensions collection", {
 test_that("default_layout uses class-name convention across input forms", {
 
   blks <- c(a = new_dataset_block())
-  expected <- dock_grid("ext_panel-edit_board", "block_panel-a")
+  expected <- dock_grid("block_panel-a")
 
-  grid_of <- function(x) default_layout(blks, x)[["grids"]][[1L]]
+  layout_of <- function(x) default_layout(blks, x)
+  grid_of <- function(x) layout_of(x)[["grids"]][[1L]]
+  rails_of <- function(x) rail_panel_ids(layout_of(x)[["rails"]][[1L]])
 
   expect_identical(grid_of(new_edit_board_extension()), expected)
   expect_identical(grid_of(list(new_edit_board_extension())), expected)
   expect_identical(
     grid_of(new_dock_extensions(list(new_edit_board_extension()))),
     expected
+  )
+
+  # The class-name convention names the rail's panel just the same.
+  expect_identical(rails_of(new_edit_board_extension()), "ext_panel-edit_board")
+  expect_identical(
+    rails_of(list(new_edit_board_extension())), "ext_panel-edit_board"
+  )
+  expect_identical(
+    rails_of(new_dock_extensions(list(new_edit_board_extension()))),
+    "ext_panel-edit_board"
   )
 })
 
@@ -342,8 +354,8 @@ test_that("dock_grid format strips panel-id prefixes unless bare = FALSE", {
   full <- format(grid, bare = FALSE)
 
   expect_false(any(grepl("block_panel-|ext_panel-", bare)))
-  expect_true(any(grepl("ext_panel-edit", full, fixed = TRUE)))
   expect_true(any(grepl("block_panel-a", full, fixed = TRUE)))
+  expect_true(any(grepl("block_panel-b", full, fixed = TRUE)))
 })
 
 test_that("dock_grid format marks the focused panel", {

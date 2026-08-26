@@ -25,6 +25,10 @@
 #' @param grids Per-view geometry: a named list keyed by view id whose values
 #'   are [dock_grid()]s, or a `dock_grids`. Optional -- a view with no grid
 #'   entry falls back to a default grid over its members.
+#' @param rails Per-view edge rails: a named list keyed by view id whose values
+#'   are [rail()][layout]s (one per edge), or a `dock_rails`. Optional -- a
+#'   view with no rail entry has none. A member a rail names sits in that rail
+#'   rather than in the grid.
 #' @param active Id of the initially active view (a key of `views`). Defaults
 #'   to the first view. Which view is active is a property of the collection,
 #'   not of an individual view. A served board also honours a `?view=<id>` URL
@@ -46,14 +50,14 @@
 #' @export
 new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
                            ..., extensions = new_dock_extensions(),
-                           views = NULL, grids = NULL, active = NULL,
-                           options = dock_board_options(),
+                           views = NULL, grids = NULL, rails = NULL,
+                           active = NULL, options = dock_board_options(),
                            ctor = NULL, pkg = NULL, class = character()) {
 
   blocks <- as_blocks(blocks)
   extensions <- as_dock_extensions(extensions)
 
-  parts <- initialise_views(views, grids, blocks, extensions, active)
+  parts <- initialise_views(views, grids, rails, blocks, extensions, active)
 
   new_board(
     blocks = blocks,
@@ -63,6 +67,7 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
     extensions = extensions,
     views = parts[["views"]],
     grids = parts[["grids"]],
+    rails = parts[["rails"]],
     options = as_board_options(options),
     ctor = forward_ctor(ctor),
     pkg = pkg,
@@ -70,32 +75,34 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
   )
 }
 
-# Coerce the `views` / `grids` inputs into the board's two slots. A NULL (or
-# empty) `views` yields the default single-view arrangement; otherwise each is
-# resolved against the board's blocks and extensions via a shared id map.
-# Finally the presentation is reconciled to the authoritative block /
-# extension set: members with no backing panel are pruned from the views and
-# each grid is restricted to its view's members, so construction (and restore)
-# of a stale or inconsistent layout self-heals rather than aborting.
-initialise_views <- function(views, grids, blocks, extensions, active = NULL) {
+# Coerce the `views` / `grids` / `rails` inputs into the board's three slots. A
+# NULL (or empty) `views` yields the default single-view arrangement; otherwise
+# each is resolved against the board's blocks and extensions via a shared id
+# map. Finally the presentation is reconciled to the authoritative block /
+# extension set: members with no backing panel are pruned from the views, each
+# rail is restricted to its view's members and each grid to the members no rail
+# claims, so construction (and restore) of a stale or inconsistent layout
+# self-heals rather than aborting.
+initialise_views <- function(views, grids, rails, blocks, extensions,
+                             active = NULL) {
 
-  if (!length(views) && !length(grids)) {
+  if (!length(views) && !length(grids) && !length(rails)) {
 
     parts <- default_layout(blocks, extensions)
     dock_vws <- parts[["views"]]
     dock_grds <- parts[["grids"]]
+    dock_rls <- parts[["rails"]]
 
   } else {
 
     id_map <- panel_id_map(blocks, extensions)
     dock_grds <- coerce_dock_grids(grids, id_map)
+    dock_rls <- coerce_dock_rails(rails, id_map)
 
     dock_vws <- if (length(views)) {
       coerce_dock_views(views, id_map)
     } else {
-      reconstruct_dock_views(
-        lapply(lapply(dock_grds, layout_panel_ids), new_dock_view)
-      )
+      reconstruct_dock_views(views_from_layout(dock_grds, dock_rls))
     }
   }
 
@@ -105,13 +112,36 @@ initialise_views <- function(views, grids, blocks, extensions, active = NULL) {
   )
 
   dock_vws <- drop_unknown_members(dock_vws, ok_panels)
-  dock_grds <- restrict_grids_to_views(dock_grds, dock_vws)
+  dock_rls <- restrict_rails_to_views(dock_rls, dock_vws)
+  dock_grds <- restrict_grids_to_views(dock_grds, dock_vws, dock_rls)
 
   if (!is.null(active)) {
     active_view(dock_vws) <- active
   }
 
-  list(views = dock_vws, grids = dock_grds)
+  list(views = dock_vws, grids = dock_grds, rails = dock_rls)
+}
+
+# The view set implied by geometry alone, for a board given `grids` / `rails`
+# but no `views`: a view exists wherever either slot names it, and its members
+# are the union of what its grid places and what its rails hold.
+views_from_layout <- function(grids, rails) {
+
+  ids <- union(names(grids), names(rails))
+
+  set_names(lapply(ids, view_from_layout, grids = grids, rails = rails), ids)
+}
+
+view_from_layout <- function(id, grids, rails) {
+
+  grid <- grids[[id]]
+
+  new_dock_view(
+    c(
+      if (not_null(grid)) layout_panel_ids(grid) else character(),
+      rail_panel_ids(rails[[id]])
+    )
+  )
 }
 
 #' @rdname panel-ids
@@ -139,6 +169,7 @@ validate_board.dock_board <- function(x) {
   validate_dock_views(views)
   validate_view_membership(views, ok_panels)
   validate_dock_grids(board_grids(x), views)
+  validate_dock_rails(board_rails(x), views)
   validate_extensions(dock_extensions(x))
 
   x
@@ -379,6 +410,10 @@ apply_board_update.dock_board <- function(board, upd, ...) {
 
   if (length(upd$views$grid)) {
     board <- apply_views_grid(upd$views$grid, board)
+  }
+
+  if (length(upd$views$rails)) {
+    board <- apply_views_rails(upd$views$rails, board)
   }
 
   if (length(upd$views$rename)) {
