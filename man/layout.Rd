@@ -53,9 +53,9 @@ strip.}
 \value{
 \code{dock_grid()} returns a \link[=dock-grid]{dock_grid} object. \code{panels()}
 returns a \code{dock_panels} node and \code{group()} returns a \code{dock_group} node --
-both are grid sub-trees usable inside \code{dock_grid()} / \code{group()}. \code{rail()}
-returns a \code{dock_rail}, which goes to \code{new_dock_board(rails = )} rather than
-into a grid. \code{default_layout()} returns a \code{list} with \code{views} (a
+both are grid sub-trees usable inside \code{dock_grid()} / \code{group()}. A \code{rail()}
+is a \code{dock_rail}, which goes to \code{new_dock_board(rails = )} rather than into
+a grid. Finally \code{default_layout()} returns a \code{list} with \code{views} (a
 \code{dock_views}), \code{grids} (a \code{dock_grids}) and \code{rails} (a \code{dock_rails}).
 }
 \description{

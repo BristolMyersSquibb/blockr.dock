@@ -53,9 +53,9 @@
 #'   `dock_view` and `view_members()` a character vector. The predicates
 #'   `is_dock_view()` / `is_dock_views()` / `is_dock_grids()` /
 #'   `is_dock_rails()` return a boolean, while `validate_dock_view()`,
-#'   `validate_dock_views()`,
-#'   `validate_dock_grids()` and `validate_dock_rails()` return their
-#'   (validated) input and throw on error. `active_view()` returns the active
+#'   `validate_dock_views()`, `validate_dock_grids()` and
+#'   `validate_dock_rails()` return their (validated) input and throw on
+#'   error. `active_view()` returns the active
 #'   view's id, or `NULL` when no view is active, and `active_view<-()` the
 #'   modified collection (or `dock_board`) invisibly. `view_name()` returns a
 #'   view's explicit display name (or `NULL`), `view_name<-()` the modified

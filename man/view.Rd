@@ -90,12 +90,13 @@ known views.}
 \value{
 \code{board_views()} returns a \code{dock_views}, \code{board_grids()} a
 \code{dock_grids} or \code{NULL}, \code{board_rails()} a \code{dock_rails} or \code{NULL}, and
-their setters the modified board invisibly. \code{dock_view()} returns a
-\code{dock_view} and \code{view_members()} a character vector. \code{is_dock_view()} /
-\code{is_dock_views()} / \code{is_dock_grids()} / \code{is_dock_rails()} return a
-boolean; \code{validate_dock_view()}, \code{validate_dock_views()},
-\code{validate_dock_grids()} and \code{validate_dock_rails()} return their
-(validated) input and throw on error. \code{active_view()} returns the active
+their setters the modified board invisibly. A \code{dock_view()} is a
+\code{dock_view} and \code{view_members()} a character vector. The predicates
+\code{is_dock_view()} / \code{is_dock_views()} / \code{is_dock_grids()} /
+\code{is_dock_rails()} return a boolean, while \code{validate_dock_view()},
+\code{validate_dock_views()}, \code{validate_dock_grids()} and
+\code{validate_dock_rails()} return their (validated) input and throw on
+error. \code{active_view()} returns the active
 view's id, or \code{NULL} when no view is active, and \verb{active_view<-()} the
 modified collection (or \code{dock_board}) invisibly. \code{view_name()} returns a
 view's explicit display name (or \code{NULL}), \verb{view_name<-()} the modified
