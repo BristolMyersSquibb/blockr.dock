@@ -46,7 +46,7 @@ Suggests:
 Remotes:
     rstudio/shinytest2,
     BristolMyersSquibb/blockr.core,
-    cynkra/dockViewR@95-panel-mount-event
+    cynkra/dockViewR
 Config/testthat/edition: 3
 Collate:
     'action-class.R'
