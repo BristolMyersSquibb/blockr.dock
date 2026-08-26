@@ -31,8 +31,9 @@ $(function () {
 
   // The derived rule, plus the one thing a reveal owes the user: a rail that a
   // drag revealed came up collapsed, so expand it once a panel has landed in
-  // it. dockview's `collapse(false)` and both `setSize()` forms are no-ops on a
-  // collapsed edge group; `expand()` is the counterpart that works.
+  // it. Note the pair is `collapse()` / `expand()`, both zero-arity -- there is
+  // no `collapse(bool)`, so a `collapse(false)` reads as a no-op rather than as
+  // an expand. `setSize()` is also a no-op while collapsed.
   var sync = function (dock) {
     // A removed view takes its dock's container with it. Reclaim the entry
     // rather than driving an api whose element is gone -- views come and go
@@ -77,7 +78,7 @@ $(function () {
 
     var group = edgeGroup(dock.api, position);
 
-    if (group && !group.api.isCollapsed()) group.api.collapse(true);
+    if (group && !group.api.isCollapsed()) group.api.collapse();
   };
 
   // The hot zone is the strip's own footprint, so what the user aims at and
