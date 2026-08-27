@@ -2,6 +2,18 @@
 
 ## blockr.dock (development version)
 
+- The `--blockr-*` design tokens and the host-app-wide theme layer now
+  live in blockr.ui, which this package imports and attaches through
+  [`blockr.ui::theme_dep()`](https://rdrr.io/pkg/blockr.ui/man/theme_dep.html).
+  Nine other packages style themselves from that vocabulary, two of them
+  without declaring a dependency here, and the theme layer restyled the
+  whole Bootstrap surface – typography, labels, form controls,
+  selectize, buttons, tooltips, popovers and the DataTables chrome – of
+  every app that loaded a docking layout manager. Neither the vocabulary
+  nor the theme is this package’s to own. What stays is the docking
+  chrome, every rule of it scoped to markup generated here
+  ([\#407](https://github.com/BristolMyersSquibb/blockr.dock/issues/407)).
+
 - Block card chrome that was built on every render and then hidden by
   the stylesheet is gone: the icons and titles fed into the block card’s
   accordion headers, which `display: none` also keeps out of the
