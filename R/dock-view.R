@@ -819,7 +819,7 @@ validate_views_delta <- function(views, board, upd) {
 
   unknown_keys <- setdiff(
     names(views),
-    c("add", "mod", "rm", "active", "rename", "grid", "rails", "order")
+    c("add", "mod", "rm", "active", "rename", "grid", "order")
   )
   if (length(unknown_keys)) {
     blockr_abort(
@@ -1015,13 +1015,9 @@ validate_views_delta <- function(views, board, upd) {
 # a non-member that resolves to a block or extension, and `move` / `resize` /
 # `select` a member of the post-add view. Hint refs (`near`) resolve against the
 # same running membership.
-view_mod_verbs <- function() {
-  c("rm", "add", "move", "resize", "select")
-}
+view_mod_verbs <- c("rm", "add", "move", "resize", "select")
 
-valid_panel_sides <- function() {
-  c("within", "left", "right", "above", "below")
-}
+valid_panel_sides <- c("within", "left", "right", "above", "below")
 
 # The `views$mod` currency is typed refs (`blk()` / `ext()`) and bare id sugar;
 # the prefix strings are the wire encoding. Augment canonicalizes each view's
@@ -1295,7 +1291,7 @@ validate_view_mod <- function(mod, view_id, members, ok_panels) {
     )
   }
 
-  unknown <- setdiff(names(mod), view_mod_verbs())
+  unknown <- setdiff(names(mod), view_mod_verbs)
 
   if (length(unknown)) {
     blockr_abort(
@@ -1480,11 +1476,11 @@ validate_panel_hint <- function(hint, view_id, anchors) {
 
   side <- hint[["side"]]
 
-  if (not_null(side) && !isTRUE(side %in% valid_panel_sides())) {
+  if (not_null(side) && !isTRUE(side %in% valid_panel_sides)) {
     blockr_abort(
       paste0(
         "Hint `side` ", side, " in `views$mod$", view_id, "` must be one of: ",
-        paste(valid_panel_sides(), collapse = ", "), "."
+        paste(valid_panel_sides, collapse = ", "), "."
       ),
       class = "dock_views_mod_hint_invalid"
     )

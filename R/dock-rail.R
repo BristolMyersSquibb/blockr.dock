@@ -27,9 +27,7 @@
 # its reveal band overlaps the one place an ordinary tab drag always passes --
 # workable (arm the band only once the pointer has left it since the drag
 # began), but not worth carrying for an edge nobody has asked for.
-rail_positions <- function() {
-  c("left", "right")
-}
+rail_positions <- c("left", "right")
 
 new_dock_rail <- function(position = "left", panels = character(),
                           active = NULL, collapsed = FALSE, size = 260,
@@ -91,9 +89,9 @@ validate_dock_rail <- function(x) {
 
   pos <- x[["position"]]
 
-  if (!is_string(pos) || !pos %in% rail_positions()) {
+  if (!is_string(pos) || !pos %in% rail_positions) {
     blockr_abort(
-      "A `dock_rail` must be pinned to one of {rail_positions()}.",
+      "A `dock_rail` must be pinned to one of {rail_positions}.",
       class = "dock_rail_position_invalid"
     )
   }
@@ -284,7 +282,7 @@ validate_grid_rails <- function(rails) {
 # both offer the same edges without a migration.
 with_default_rails <- function(rails) {
 
-  out <- set_names(lapply(rail_positions(), new_dock_rail), rail_positions())
+  out <- set_names(lapply(rail_positions, new_dock_rail), rail_positions)
   out[names(rails)] <- rails
 
   out
