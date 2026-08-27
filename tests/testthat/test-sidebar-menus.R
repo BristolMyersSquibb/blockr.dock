@@ -4,14 +4,14 @@
 # `testServer`, so these cases drive the real board. The fixture fires the
 # action triggers directly, which is the path a consumer's context menu takes.
 
-app_path <- function() {
-  system.file("examples", "sidebar-menus", "app.R", package = "blockr.dock")
+app_path <- function(example) {
+  system.file("examples", example, "app.R", package = "blockr.dock")
 }
 
-menus_app <- function(name) {
+menus_app <- function(name, example = "sidebar-menus") {
 
   app <- new_app_driver(
-    app_path(),
+    app_path(example),
     name = name,
     seed = 42,
     load_timeout = 30 * 1000,
@@ -111,19 +111,22 @@ wait_panel <- function(app, panel, open, timeout = 30 * 1000) {
   wait_js(app, cond, diagnose, timeout)
 }
 
-wait_sel <- function(app, selector, present = TRUE, timeout = 30 * 1000) {
+wait_sel <- function(app, selector, present = TRUE, diagnose = NULL,
+                     timeout = 30 * 1000) {
 
   cond <- sprintf(
     "(document.querySelector(%s) !== null) === %s",
     shQuote(selector), if (present) "true" else "false"
   )
 
-  diagnose <- function() {
-    sprintf(
-      "[selector] %s cards=%s",
-      selector,
-      js_count(app, ".blockr-block-browser-card")
-    )
+  if (is.null(diagnose)) {
+    diagnose <- function() {
+      sprintf(
+        "[selector] %s cards=%s",
+        selector,
+        js_count(app, ".blockr-block-browser-card")
+      )
+    }
   }
 
   wait_js(app, cond, diagnose, timeout)
@@ -686,4 +689,177 @@ test_that("the edit flow arrives with the stack's members selected", {
   wait_panel(app, actions_panel, open = FALSE)
 
   expect_setequal(unlst(exported(app, "stacks")[["s1"]]), "s")
+})
+
+# The inputs menu is the one that keeps its panel open across commits, so there
+# is no close to gate on. Its rows are a `uiOutput` re-rendered from the board
+# after every commit, which makes the row list itself the client-visible proof
+# that an edit landed. Its board is a fixture of its own: only a variadic block
+# grows rows carrying a remove button and a name field, and only fixed link ids
+# let an assertion name the slot that moved.
+inputs_app <- function(name) menus_app(name, "sidebar-inputs")
+
+inputs_row <- function(link_id) {
+  paste0(".blockr-inputs-row[data-link-id=", link_id, "]")
+}
+
+name_field <- function(link_id) {
+  paste0(inputs_row(link_id), " .blockr-inputs-name-input")
+}
+
+row_ids <- function(app) {
+  unlst(
+    app$get_js(
+      paste0(
+        "Array.from(document.querySelectorAll('.blockr-inputs-row'))",
+        ".map(function (r) { return r.getAttribute('data-link-id') })"
+      )
+    )
+  )
+}
+
+rows_diag <- function(app) {
+  sprintf("[inputs] rows=%s", paste(row_ids(app), collapse = ","))
+}
+
+# The row list arrives on a round trip of its own, so an open panel does not
+# yet mean a row to drive.
+wait_inputs_row <- function(app, link_id, present = TRUE) {
+  wait_sel(app, inputs_row(link_id), present, function() rows_diag(app))
+}
+
+open_inputs_menu <- function(app) {
+  app$click(fixture("edit_inputs"))
+  wait_panel(app, actions_panel, open = TRUE)
+  wait_inputs_row(app, "l1")
+}
+
+# A re-render rebuilds the field from the board, so the `value` attribute is
+# what says the rename came back -- the client-side `.value` the commit was
+# typed into never touches it.
+wait_input_name <- function(app, link_id, name, timeout = 30 * 1000) {
+
+  probe <- sprintf("document.querySelector(%s)", shQuote(name_field(link_id)))
+
+  cond <- sprintf(
+    paste0(
+      "(function(){var e=%s;",
+      "return e !== null && e.getAttribute('value') === %s})()"
+    ),
+    probe, shQuote(name)
+  )
+
+  wait_js(app, cond, function() rows_diag(app), timeout)
+}
+
+focus_field <- function(app, selector) {
+  app$run_js(sprintf("document.querySelector(%s).focus()", shQuote(selector)))
+}
+
+field_focused <- function(app, selector) {
+  app$get_js(
+    sprintf(
+      "document.activeElement === document.querySelector(%s)",
+      shQuote(selector)
+    )
+  )
+}
+
+# Chrome raises `change` only for a value the user themselves edited, so a
+# scripted `e.value = ...` reaches the rename handler but leaves Enter with
+# nothing to commit. Typing through CDP sets that flag, and `insertText` fires
+# `input` alone -- nothing reaches the server until the key press.
+type_into <- function(app, selector, text) {
+  focus_field(app, selector)
+  app$get_chromote_session()$Input$insertText(text = text)
+}
+
+press_enter <- function(app) {
+  app$get_chromote_session()$Input$dispatchKeyEvent(
+    type = "keyDown",
+    key = "Enter",
+    code = "Enter",
+    windowsVirtualKeyCode = 13,
+    nativeVirtualKeyCode = 13,
+    text = "\r"
+  )
+}
+
+test_that("a remove click commits the row it was clicked on", {
+
+  skip_on_cran()
+
+  app <- inputs_app("inputs-remove")
+  withr::defer(app$stop())
+
+  open_inputs_menu(app)
+
+  expect_identical(row_ids(app), c("l1", "l2", "l3"))
+
+  click_sel(app, paste0(inputs_row("l2"), " .blockr-inputs-remove"))
+  wait_inputs_row(app, "l2", present = FALSE)
+
+  expect_identical(row_ids(app), c("l1", "l3"))
+  expect_identical(exported(app, "links"), c("l1:a>", "l3:c>"))
+
+  # Unlike the other menus, this one is built to take several edits in a row,
+  # so a commit leaves the panel where it is.
+  expect_true(panel_open(app, actions_panel))
+})
+
+test_that("a name committed on a row renames that row's input", {
+
+  skip_on_cran()
+
+  app <- inputs_app("inputs-rename")
+  withr::defer(app$stop())
+
+  open_inputs_menu(app)
+
+  expect_identical(exported(app, "links"), c("l1:a>", "l2:b>", "l3:c>"))
+
+  set_field(app, name_field("l2"), "middle")
+  wait_input_name(app, "l2", "middle")
+
+  expect_identical(exported(app, "links"), c("l1:a>", "l2:b>middle", "l3:c>"))
+})
+
+# Enter is the one commit path with no server-side counterpart: a user who
+# types a name and never clicks away is carried entirely by the keydown
+# listener. What that listener adds is the focus change rather than the commit
+# -- Chrome raises `change` on Enter of its own accord (measured on a bare
+# input: one `change`, focus kept). The handler suppresses that round with
+# `preventDefault()` and blurs instead, so one `change` still arrives and the
+# field is released with it.
+test_that("Enter commits the typed name and takes focus out of the field", {
+
+  skip_on_cran()
+
+  app <- inputs_app("inputs-enter")
+  withr::defer(app$stop())
+
+  open_inputs_menu(app)
+
+  focus_field(app, name_field("l3"))
+  expect_true(field_focused(app, name_field("l3")))
+
+  # An untouched field has nothing to commit, so the release stands on its own
+  # here -- no round trip follows to re-render the field out from under it.
+  press_enter(app)
+
+  expect_false(field_focused(app, name_field("l3")))
+
+  app$wait_for_idle()
+
+  expect_identical(exported(app, "links"), c("l1:a>", "l2:b>", "l3:c>"))
+
+  type_into(app, name_field("l3"), "typed")
+  app$wait_for_idle()
+
+  expect_identical(exported(app, "links"), c("l1:a>", "l2:b>", "l3:c>"))
+
+  press_enter(app)
+  wait_input_name(app, "l3", "typed")
+
+  expect_identical(exported(app, "links"), c("l1:a>", "l2:b>", "l3:c>typed"))
 })
