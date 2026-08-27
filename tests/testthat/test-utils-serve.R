@@ -1413,3 +1413,99 @@ test_that("a drop elsewhere hides the rail it emptied (#431)", {
     )
   )
 })
+
+test_that("a panel landing in a revealed rail expands it (#431)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "rail-expand-on-drop",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+  api <- paste0("HTMLWidgets.find('#", dock, "').getWidget()")
+
+  state <- function(prop, want) {
+    paste0(
+      "HTMLWidgets.find('#", dock, "')?.getWidget()", prop, " === ", want
+    )
+  }
+
+  app$wait_for_js(state("?.isEdgeGroupVisible('left')", "true"),
+                  timeout = 15 * 1000)
+
+  # Empty the rail so it hides, which is the state a reveal has to rescue.
+  app$run_js(
+    paste0(
+      "var api = ", api, ";",
+      "var grid = api.groups.filter(",
+      "function (g) { return g.api.location.type === 'grid' })[0];",
+      "api.getPanel('ext_panel-edit_board').api.moveTo(",
+      "{group: grid, position: 'within'});"
+    )
+  )
+  app$wait_for_js(state("?.isEdgeGroupVisible('left')", "false"),
+                  timeout = 15 * 1000)
+
+  # Reveal it by dwelling in the band the collapsed strip would occupy. It
+  # comes up collapsed, so an empty rail shows its strip rather than a
+  # full-width empty pane.
+  app$run_js(
+    paste0(
+      "var el = document.querySelector('#", dock, "');",
+      "var tab = document.querySelector(",
+      "'[data-tab-panel-id=\"block_panel-a\"]');",
+      "var dt = new DataTransfer();",
+      "tab.dispatchEvent(new DragEvent('dragstart',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt}));",
+      "var r = el.getBoundingClientRect();",
+      "el.dispatchEvent(new DragEvent('dragover',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt,",
+      " clientX: r.left + 5, clientY: r.top + r.height / 2}));"
+    )
+  )
+  # Gate on visibility, not on `isCollapsed()`: a hidden empty rail already
+  # reports itself collapsed, so waiting on that would pass before the reveal
+  # had happened at all.
+  app$wait_for_js(state("?.isEdgeGroupVisible('left')", "true"),
+                  timeout = 15 * 1000)
+  expect_true(
+    isTRUE(app$get_js(paste0(api, ".getEdgeGroup('left').isCollapsed()")))
+  )
+
+  # Land a panel in it. `addPanel()` stands in for the drop because dockview's
+  # `moveTo()` refuses a collapsed edge group outright ("Invalid grid element")
+  # -- but what reaches our code is the same, a panel arriving in a rail that a
+  # drag revealed, and the same `onDidAddPanel` that a real drop fires.
+  app$run_js(
+    paste0(
+      api, ".addPanel({id: 'rail-drop-probe', component: 'default',",
+      " title: 'Probe', params: {content: {html: 'probe'}},",
+      " position: {referenceGroup: 'rail-left'}});"
+    )
+  )
+
+  # The rail expands: content has arrived, so the bare strip is no longer what
+  # the user wants to see.
+  app$wait_for_js(state("?.getEdgeGroup('left')?.isCollapsed()", "false"),
+                  timeout = 15 * 1000)
+
+  expect_true(isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('left')"))))
+  expect_equal(
+    app$get_js(
+      paste0(
+        "(", api, ".groups.filter(function (g) {",
+        "var l = g.api.location;",
+        "return l.type === 'edge' && l.position === 'left' })[0]",
+        " || {panels: []}).panels.length"
+      )
+    ),
+    1
+  )
+})
