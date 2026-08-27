@@ -581,6 +581,59 @@ test_that("block card sections carry the css-styling contract (#214)", {
   expect_true(is.na(xml2::xml_attr(body, "style")))
 })
 
+test_that("block card accordions carry no header content (#72)", {
+
+  card <- block_card_content(
+    NS("blk"),
+    expr_ui = div(id = "blk-expr"),
+    block_ui = div(id = "blk-out"),
+    visible = c("inputs", "outputs"),
+    ctrl_ui = div(id = "blk-ctrl")
+  )
+
+  root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+  headers <- xml2::xml_find_all(
+    root,
+    paste0("//div[", has_class("accordion-header"), "]")
+  )
+  expect_length(headers, 3L)
+
+  # Every one of these headers is hidden by the stylesheet, which also takes
+  # the titles out of the accessibility tree, so an icon or title rendered
+  # into one is built per card and then read by nobody.
+  slots <- xml2::xml_find_all(
+    headers,
+    paste0(
+      ".//div[", has_class("accordion-icon"), " or ",
+      has_class("accordion-title"), "]"
+    )
+  )
+  expect_length(slots, 6L)
+  expect_length(xml2::xml_children(slots), 0L)
+  expect_identical(unique(xml2::xml_text(slots)), "")
+})
+
+test_that("block card popover renders no header (#72)", {
+
+  card <- edit_block_ui(
+    "blk",
+    new_dataset_block(),
+    "a",
+    expr_ui = div(id = "blk-expr"),
+    block_ui = div(id = "blk-out")
+  )
+
+  root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+  # The second template slot is where bslib picks the popover header up from.
+  # Nothing fills it, which is what made the `.popover-header` hide rule safe
+  # to drop -- a title added here would now render Bootstrap's own header.
+  slots <- xml2::xml_find_all(root, "//bslib-popover/template/div")
+  expect_length(slots, 2L)
+  expect_identical(trimws(xml2::xml_text(slots[[2]])), "")
+})
+
 test_that("block card carries no html output (#403)", {
 
   blk <- new_dataset_block()
