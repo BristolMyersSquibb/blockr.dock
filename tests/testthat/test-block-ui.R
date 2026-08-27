@@ -61,28 +61,28 @@ test_that("dummy block ui test", {
   expect_s3_class(ui[[1L]], "shiny.tag")
 })
 
-test_that("built_cards reads the dock ledger, not raw required writes (#377)", {
+test_that("the ledger reads visible, not raw required writes (#377)", {
 
   vis <- fake_visibility(c("a", "b", "c"))
-  expect_identical(built_cards(vis), character())
+  expect_identical(built_block_ids(vis), character())
 
   # A non-dock writer (core's "Show code") marks blocks required without ever
   # building a card. That must not read back as a built card -- else the first
   # visit to their view skips the build and leaves the panels blank.
   vis$required[["a"]](FALSE)
   vis$required[["b"]](TRUE)
-  expect_identical(built_cards(vis), character())
+  expect_identical(built_block_ids(vis), character())
 
   # The dock's own build is what enters the ledger.
   mark_cards_built(vis, c("a", "b"))
-  expect_setequal(built_cards(vis), c("a", "b"))
+  expect_setequal(built_block_ids(vis), c("a", "b"))
 })
 
-test_that("built_cards on an empty bundle is empty (no crash)", {
+test_that("the ledger on an empty bundle is empty (no crash)", {
 
   # An empty board has no slots; the built set comes back empty, not a choke --
   # else the board server aborts at seed and the app never stabilises.
-  expect_identical(built_cards(fake_visibility()), character())
+  expect_identical(built_block_ids(fake_visibility()), character())
 })
 
 test_that("mark_cards_built enters new cards in the ledger (visible FALSE)", {
@@ -94,7 +94,7 @@ test_that("mark_cards_built enters new cards in the ledger (visible FALSE)", {
   # The ledger is the `visible` axis: built off screen -> FALSE, not painted.
   expect_identical(isolate(vis$visible[["a"]]()), FALSE)
   expect_identical(isolate(vis$visible[["b"]]()), FALSE)
-  expect_setequal(built_cards(vis), c("a", "b"))
+  expect_setequal(built_block_ids(vis), c("a", "b"))
   # Demand goes FALSE too; an untouched slot stays NA (never built).
   expect_identical(isolate(vis$required[["a"]]()), FALSE)
   expect_true(is.na(isolate(vis$visible[["c"]]())))
@@ -125,7 +125,7 @@ test_that("show_cards keeps built-ness when a block leaves the screen (#377)", {
   # visible goes FALSE (built, off screen), never NA -- erasing it would blank
   # the view on its next visit.
   expect_identical(isolate(vis$visible[["a"]]()), FALSE)
-  expect_true("a" %in% built_cards(vis))
+  expect_true("a" %in% built_block_ids(vis))
 })
 
 test_that("show_cards leaves the visible axis alone for on-screen blocks", {
@@ -174,7 +174,7 @@ test_that("build_block_ui inserts the unbuilt cards and marks them built", {
   )
 
   expect_setequal(new, c("a", "b"))
-  expect_setequal(built_cards(vis), c("a", "b"))
+  expect_setequal(built_block_ids(vis), c("a", "b"))
   expect_identical(isolate(vis$required[["a"]]()), FALSE)
   expect_length(inserted, 2L)
 
@@ -214,7 +214,7 @@ test_that("build_block_ui inserts the incremental card only", {
   )
 
   expect_identical(new, "b")
-  expect_setequal(built_cards(vis), c("a", "b"))
+  expect_setequal(built_block_ids(vis), c("a", "b"))
   # The pre-existing card keeps its state; only the new one is added.
   expect_identical(isolate(vis$required[["a"]]()), TRUE)
   expect_identical(isolate(vis$visible[["a"]]()), TRUE)
@@ -354,7 +354,7 @@ test_that("remove_block_ui removes the card, leaving the slot to core", {
   # The dock removes the DOM card only. Core's rm_vis_slots prunes the slot
   # (dropping it from the ledger); the dock must not touch the channel.
   expect_length(removed, 1L)
-  expect_setequal(built_cards(vis), c("a", "b"))
+  expect_setequal(built_block_ids(vis), c("a", "b"))
 })
 
 test_that("a card sweep is one move-element message, not one per card (#397)", {

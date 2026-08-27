@@ -842,7 +842,7 @@ test_that("report_visible_observer drives the required axis over built cards", {
 
   ms$flushReact()
   # Before any layout report the built ledger stands; everything off screen.
-  expect_setequal(built_cards(env$vis), c("a", "b", "d"))
+  expect_setequal(built_block_ids(env$vis), c("a", "b", "d"))
   expect_identical(isolate(env$vis$required[["a"]]()), FALSE)
 
   # A shows a and b (fronts of two groups): required TRUE. d (in B) stays FALSE.
@@ -975,7 +975,7 @@ test_that("report_visible_observer survives an echo naming a dropped block", {
   expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
   expect_identical(isolate(env$vis$required[["b"]]()), FALSE)
-  expect_setequal(built_cards(env$vis), c("a", "b"))
+  expect_setequal(built_block_ids(env$vis), c("a", "b"))
 })
 
 test_that("report_visible_observer follows the live active panel (#361)", {
@@ -1044,9 +1044,31 @@ test_that("board_server_callback seeds visibility before the client reports", {
 
     # a is the fronted tab (required TRUE); b its back tab, built but off screen
     # (required FALSE). Both are in the dock's build ledger (visible non-NA).
-    expect_setequal(built_cards(vis), c("a", "b"))
+    expect_setequal(built_block_ids(vis), c("a", "b"))
     expect_identical(isolate(vis$required[["a"]]()), TRUE)
     expect_identical(isolate(vis$required[["b"]]()), FALSE)
+  })
+})
+
+test_that("an off-screen view's blocks stay out of the build ledger", {
+
+  board_rv <- board_args(
+    blocks = c(
+      a = new_dataset_block(), b = new_head_block(), c = new_head_block()
+    ),
+    views = list(A = c("a", "b"), B = "c"),
+    active = "A"
+  )
+
+  with_mock_session({
+    vis <- fake_visibility(board_rv)
+    board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
+
+    # c lives only in view B, so board_ui painted no card for it and it must
+    # read as never built -- else the first visit to B short-circuits the
+    # build and leaves the view blank.
+    expect_setequal(built_block_ids(vis), c("a", "b"))
+    expect_true(is.na(isolate(vis$visible[["c"]]())))
   })
 })
 
@@ -1067,7 +1089,7 @@ test_that("the visibility seed reads the active view's open tabs", {
 
     # b and d front their groups (required TRUE); a is b's back tab (FALSE). All
     # three are in the dock's build ledger (visible non-NA).
-    expect_setequal(built_cards(vis), c("a", "b", "d"))
+    expect_setequal(built_block_ids(vis), c("a", "b", "d"))
     expect_identical(isolate(vis$required[["a"]]()), FALSE)
     expect_identical(isolate(vis$required[["b"]]()), TRUE)
     expect_identical(isolate(vis$required[["d"]]()), TRUE)
@@ -1087,7 +1109,7 @@ test_that("the visibility seed spans separate leaves", {
     vis <- fake_visibility(board_rv)
     board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
 
-    expect_setequal(built_cards(vis), c("a", "b"))
+    expect_setequal(built_block_ids(vis), c("a", "b"))
     expect_identical(isolate(vis$required[["a"]]()), TRUE)
     expect_identical(isolate(vis$required[["b"]]()), TRUE)
   })
@@ -1106,7 +1128,7 @@ test_that("board_server_callback seeds cleanly on an empty board", {
     expect_no_error(
       board_server_callback(board_rv, update = reactiveVal(), visibility = vis)
     )
-    expect_identical(built_cards(vis), character())
+    expect_identical(built_block_ids(vis), character())
   })
 })
 

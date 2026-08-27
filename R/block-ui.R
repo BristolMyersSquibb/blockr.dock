@@ -136,29 +136,15 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
   invisible(x)
 }
 
-# The dock's build ledger is core's `visible` axis: a per-block reactiveVal,
-# logical (NA never built / FALSE built off screen / TRUE painted now) like
-# `required`, so `built_cards()` reads `!is.na(visible)`. It once read
-# `required` non-NA, but that axis is a multi-writer construction-demand
-# channel -- core's "Show code" marks every block required to export the whole
-# script -- so a demand with no card masqueraded as built and blanked the view
-# on its first visit. `visible` is written only where the dock builds, paints
-# or reconciles a card. The dock still writes `required[[id]]` FALSE off screen
-# / TRUE on screen (construction demand); block removal needs no dock write --
-# core drops the slot, dropping the card from the ledger too.
-built_cards <- function(visibility) {
-  ids <- ls(visibility$visible)
-  ids[lgl_ply(ids, slot_built, visibility$visible)]
-}
-
-slot_built <- function(id, visible) {
-  !is.na(isolate(visible[[id]]()))
-}
-
-# Record `new` cards as built off screen: `visible` FALSE enters them in the
-# ledger (built, not yet painted), `required` FALSE holds no construction
-# demand until a view switch or the report observer places them. Slots
-# pre-exist: core seeds every block's before any block plugin runs.
+# Record `new` cards as built off screen in core's build ledger -- the `visible`
+# axis, read back with built_block_ids(). Core enters what board_ui painted and
+# what it inserts itself, leaving this for the cards the dock builds on a first
+# visit: `visible` FALSE enters them in the ledger (built, not yet painted),
+# `required` FALSE holds no construction demand until a view switch or the
+# report observer places them. The dock keeps writing `required[[id]]` FALSE
+# off screen / TRUE on screen (construction demand); block removal needs no
+# dock write -- core drops the slot, dropping the card from the ledger too.
+# Slots pre-exist: core seeds every block's before any block plugin runs.
 mark_cards_built <- function(visibility, new) {
   for (id in new) {
     visibility$visible[[id]](FALSE)
@@ -204,7 +190,7 @@ mark_cards_rendered <- function(visibility, on_screen) {
 build_block_ui <- function(id, x, blocks, visibility, ..., edit_ui,
                            ctrl_ui = NULL, session = get_session()) {
 
-  new <- setdiff(names(blocks), built_cards(visibility))
+  new <- setdiff(names(blocks), built_block_ids(visibility))
 
   for (i in new) {
     insertUI(
@@ -229,7 +215,7 @@ ensure_block_ui <- function(id, x, blocks, visibility,
                             plugins = board_plugins(x),
                             session = get_session()) {
 
-  if (all(names(blocks) %in% built_cards(visibility))) {
+  if (all(names(blocks) %in% built_block_ids(visibility))) {
     return(invisible(character()))
   }
 
