@@ -148,3 +148,26 @@ test_that("move_dom_elements batches a sweep into one message", {
 
   expect_length(sent, 0L)
 })
+
+test_that("determine_panel_pos takes a narrow view's only group", {
+
+  # That group fronts the DAG, which the wide path reserves -- leaving no
+  # candidate, so the add would split a second group off and undo the collapse.
+  local_mocked_bindings(
+    determine_active_views = function(layout, ...) c(grp1 = "ext_panel-dag")
+  )
+
+  dock <- list(
+    layout = function() NULL,
+    prev_active_group = function() NULL
+  )
+
+  expect_identical(determine_panel_pos(dock), list(direction = "right"))
+
+  dock[["narrow"]] <- TRUE
+
+  expect_identical(
+    determine_panel_pos(dock),
+    list(referenceGroup = "grp1", direction = "within")
+  )
+})

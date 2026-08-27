@@ -577,6 +577,47 @@ block_panel_tabs <- function(app, board_id = "my_board") {
   sort(sub(".*-tab-(block_panel-.+)$", "\\1", xml2::xml_attr(nodes, "id")))
 }
 
+# The dockview groups one board's views render. A narrow board collapses each
+# view to a single group holding every panel as a tab, so this count is what
+# separates the collapsed render from the nested one. There is no CSS
+# selector in `xml2`, and the same bundle ships a `dv-group-view` class
+# alongside `dv-groupview`, so the token is matched exactly.
+dock_group_count <- function(app, board_id = "my_board") {
+  html <- xml2::read_html(
+    app$get_html(paste0("#", board_id, "-view_container"))
+  )
+  xpath <- paste0(
+    "//*[contains(concat(' ', normalize-space(@class), ' '), ",
+    "' dv-groupview ')]"
+  )
+  length(xml2::xml_find_all(html, xpath))
+}
+
+# Wait until the view container has settled to exactly `n` dockview groups.
+# A restore mounts asynchronously and transiently surfaces a tab group's
+# members as separate leaves, so reading the count straight after
+# `wait_for_idle()` (server idle, client render in flight) samples that
+# transient and ejects a green PR.
+wait_dock_groups <- function(app, n, board_id = "my_board",
+                             timeout = 30 * 1000) {
+  js <- sprintf(
+    paste0(
+      "document.querySelectorAll(",
+      "'#%s-view_container .dv-groupview').length === %d"
+    ),
+    board_id, n
+  )
+
+  diagnose <- function() {
+    sprintf(
+      "[dock-groups] want=%d got=%d shell=%s",
+      n, dock_group_count(app, board_id), dock_shell_diag(app, board_id)
+    )
+  }
+
+  wait_js(app, js, diagnose, timeout)
+}
+
 # The block panels whose tab is the *front* (active) tab of its dockview group,
 # scoped to one `view`'s dock (every view's dock is in the DOM, so an unscoped
 # read would mix in another view's front tabs). The client-rendered geometry a

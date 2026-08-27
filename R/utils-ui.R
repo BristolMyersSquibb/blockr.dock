@@ -124,9 +124,15 @@ determine_panel_pos <- function(dock) {
 
   active <- determine_active_views(dock$layout())
 
-  keep_visible <- as_ext_panel_id(visible_exts())
-
-  cands <- names(active)[!active %in% keep_visible]
+  # A narrow view is one group, so it is always the target. The reservation
+  # below -- which keeps an add off the group fronting a kept-visible extension
+  # -- would leave no candidate there and split a second group off, undoing the
+  # collapse on the first block a user adds.
+  cands <- if (isTRUE(dock$narrow)) {
+    names(active)
+  } else {
+    names(active)[!active %in% as_ext_panel_id(visible_exts())]
+  }
 
   if (!length(cands)) {
     return(list(direction = "right"))

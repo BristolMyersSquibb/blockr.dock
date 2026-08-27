@@ -74,3 +74,33 @@ test_that("panel-id accessors are empty-safe", {
   expect_length(block_panel_ids(proxy = NULL), 0L)
   expect_length(ext_panel_ids(proxy = NULL), 0L)
 })
+
+test_that("is_narrow_viewport reads the reported width against a breakpoint", {
+
+  expect_true(is_narrow_viewport(500))
+  expect_false(is_narrow_viewport(1400))
+
+  # Exactly at the breakpoint is wide: the collapse is for what falls below it.
+  expect_false(is_narrow_viewport(narrow_breakpoint()))
+
+  # A width that never arrived -- board_ui built after Shiny bound its inputs,
+  # so the probe missed the initial batch -- renders the desktop grid.
+  expect_false(is_narrow_viewport(NULL))
+  expect_false(is_narrow_viewport(NA_real_))
+  expect_false(is_narrow_viewport(c(500, 900)))
+})
+
+test_that("the breakpoint is tunable, and survives a string from the env", {
+
+  withr::local_options(blockr.narrow_breakpoint = 600)
+
+  expect_identical(narrow_breakpoint(), 600)
+  expect_false(is_narrow_viewport(700))
+  expect_true(is_narrow_viewport(500))
+
+  withr::local_options(blockr.narrow_breakpoint = "600")
+  expect_identical(narrow_breakpoint(), 600)
+
+  withr::local_options(blockr.narrow_breakpoint = "wide-ish")
+  expect_identical(narrow_breakpoint(), 900)
+})

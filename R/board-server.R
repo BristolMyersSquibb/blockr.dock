@@ -69,6 +69,15 @@ board_server_callback <- function(board, update, visibility, ...,
   # default (which carries no served ctrl_block).
   active_dock$plugins <- plugins
 
+  # The narrow-viewport decision. The width `viewport_probe_ui()` reports rides
+  # this session's first input batch, so it is settled before the reconcile
+  # below inserts the first dock; taken once, since the probe never re-fires
+  # and reflowing takes a reload. It travels on the same handle for the same
+  # reason `plugins` does -- core's block insert plugin places panels through
+  # it, and a narrow board takes every add as a tab.
+  narrow <- is_narrow_viewport(isolate(session$input$viewport_width))
+  active_dock$narrow <- narrow
+
   switch_view_observer(
     session, update, client_active, board, docks, active_dock
   )
@@ -102,10 +111,19 @@ board_server_callback <- function(board, update, visibility, ...,
   # until the active view reports its blocks painted (visible TRUE).
   mark_cards_built(visibility, active_view_block_ids(initial_board))
 
+  # Seed from what the client will actually render: a narrow board fronts one
+  # tab where the nested grid fronted one per group, so seeding off the nested
+  # grid would mark blocks required that the phone never shows.
+  init_grid <- active_view_grid(initial_board)
+
+  if (narrow) {
+    init_grid <- flatten_grid(init_grid)
+  }
+
   show_cards(
     visibility,
     active_view_block_ids(initial_board),
-    visible_block_ids(active_view_grid(initial_board))
+    visible_block_ids(init_grid)
   )
 
   report_visible_observer(visibility, client_active, docks)
@@ -443,7 +461,12 @@ live_view_grid <- function(v_id, docks, board) {
 
   dk <- docks[[v_id]]
 
-  if (!is.null(dk)) {
+  # A narrow view renders flat, so its echo describes the phone, not the board:
+  # taking it here would put the collapsed grid in front of serialization and
+  # save away the geometry a wide viewport restores to. Read the stored grid
+  # instead -- the same member-driven fallback a deferred view takes, so
+  # membership still tracks every add and remove.
+  if (!is.null(dk) && !isTRUE(dk$narrow)) {
     ly <- dk$layout()
     if (!is.null(ly)) {
       return(as_dock_grid(as_dock_layout(ly)))
@@ -500,7 +523,8 @@ show_view_ui <- function(view_id, docks) {
 # class at insert so the initially-shown view needs no switch round-trip.
 create_view <- function(v_id, layout, board, update, session, docks, visibility,
                         plugins = board_plugins(isolate(board$board)),
-                        blocks = NULL, extensions = NULL, active = FALSE) {
+                        blocks = NULL, extensions = NULL, active = FALSE,
+                        narrow = FALSE) {
 
   ns <- session$ns
 
@@ -528,7 +552,8 @@ create_view <- function(v_id, layout, board, update, session, docks, visibility,
     v_id, board, update, visibility, plugins,
     layout = layout,
     blocks = blocks,
-    extensions = extensions
+    extensions = extensions,
+    narrow = narrow
   )
 
   invisible()
@@ -651,7 +676,8 @@ reconcile_views <- function(board, update, docks, active_dock,
       isolate(active_dock$plugins),
       blocks = board_blocks(brd),
       extensions = dock_extensions(brd),
-      active = is.null(isolate(client_active()))
+      active = is.null(isolate(client_active())),
+      narrow = isTRUE(isolate(active_dock$narrow))
     )
   }
 
@@ -677,6 +703,8 @@ reconcile_views <- function(board, update, docks, active_dock,
 #' @param board,update Reactive board state and update signal.
 #' @param layout Optional initial placement `dock_grid`; defaults to the
 #'   board's active view grid.
+#' @param narrow Whether the client reported a narrow viewport, in which case
+#'   the view renders as one tabbed group and takes no geometry write-back.
 #'
 #' @return The view's `dock` handle: a list holding the dockViewR `proxy`
 #'   alongside `board_ns`, `live_panels`, `layout` (reactive), `n_panels`,
@@ -691,7 +719,8 @@ manage_dock <- function(
   plugins = board_plugins(isolate(board$board)),
   layout = NULL,
   blocks = NULL,
-  extensions = NULL
+  extensions = NULL,
+  narrow = FALSE
 ) {
   init_board <- isolate(board$board)
   init_layout <- coal(layout, active_view_grid(init_board))
@@ -707,6 +736,15 @@ manage_dock <- function(
 
   if (not_null(init_select)) {
     init_layout <- set_grid_active(init_layout, init_select)
+  }
+
+  # Narrow viewport: one tabbed group instead of the nested grid, so the board
+  # is a tab strip rather than columns running off-screen. Applied here, at the
+  # dockView seam, and nowhere else -- `board_grids()` keeps the geometry a
+  # wide viewport restores to. Folded in after the select so a pending tab
+  # still decides which one opens.
+  if (narrow) {
+    init_layout <- flatten_grid(init_layout)
   }
 
   # Block/ext cards live at the board (parent) namespace level
@@ -736,7 +774,8 @@ manage_dock <- function(
       prev_active_group = prev_active_group,
       active_group_trail = active_group_trail,
       visibility = visibility,
-      plugins = plugins
+      plugins = plugins,
+      narrow = narrow
     )
 
     # Apply server-initiated panel ops to this view's live dock -- the sole
@@ -772,7 +811,12 @@ manage_dock <- function(
     # once here. Do NOT extend this to the render path: report_visible_observer
     # also reacts to `dock$layout()`, but it writes the visibility channel (what
     # paints the front tab), not the board, and must stay live when locked.
-    if (!is_dock_locked()) {
+    #
+    # A narrow board takes none either, for a different reason: what it echoes
+    # is the collapsed render, so committing would overwrite every view's
+    # authored geometry with one flat group -- one phone visit and the desktop
+    # layout is gone for everyone who loads that board next.
+    if (!is_dock_locked() && !narrow) {
 
       commit_grid <- function(grid) {
         update(list(views = list(grid = set_names(list(grid), id))))

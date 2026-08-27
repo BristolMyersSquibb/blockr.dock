@@ -23,6 +23,7 @@ board_ui.dock_board <- function(
     show_block_dep(),
     attr_output_dep(),
     blockr_dock_dep(),
+    viewport_probe_ui(id),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
@@ -286,6 +287,29 @@ spinner_delay_ms <- function() {
   ms <- suppressWarnings(as.integer(blockr_option("spinner_delay_ms", 200L)))
 
   if (length(ms) != 1L || is.na(ms) || ms < 0L) 200L else ms
+}
+
+# The viewport-width probe: a hidden element whose input binding reports
+# `window.innerWidth` at Shiny's input initialisation, so the width lands in
+# the session's first input batch and `is_narrow_viewport()` can be answered
+# before the first dock is inserted. It never reports again -- the narrow
+# decision is taken once per session.
+viewport_probe_ui <- function(id) {
+  div(
+    id = NS(id, "viewport_width"),
+    class = "blockr-viewport-probe",
+    style = "display: none;",
+    viewport_probe_dep()
+  )
+}
+
+viewport_probe_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-viewport-probe",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "viewport-probe.js"
+  )
 }
 
 blockr_dock_dep <- function() {

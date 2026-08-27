@@ -1107,3 +1107,35 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
   expect_false(probe$bookkeepingArc)
   expect_true(probe$computingArc)
 })
+
+test_that("a narrow viewport collapses a view into one tabbed group (#413)", {
+
+  skip_on_cran()
+
+  # The same authored two-column board the round-trip sentinel serves wide,
+  # where it renders as two groups: the width is the only thing that differs.
+  app <- new_app_driver(
+    system.file("examples", "sized-grid", "app.R", package = "blockr.dock"),
+    name = "narrow-viewport",
+    seed = 42,
+    width = 500,
+    height = 900,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_block_panel_tabs(app, c("block_panel-a", "block_panel-b"))
+  wait_dock_groups(app, 1L)
+
+  expect_identical(dock_group_count(app), 1L)
+  expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
+
+  app$wait_for_idle()
+
+  # The collapse is a render, not a commit. The mirror is left unwired, so the
+  # flat echo writes nothing back, and `view_data` still reports the authored
+  # 30/70 grid -- what a save persists and a wide viewport restores to.
+  expect_equal(app$get_value(export = "commit_count"), 0)
+  expect_true(isTRUE(app$get_value(export = "roundtrip_stable")))
+})

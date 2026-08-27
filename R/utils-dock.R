@@ -267,6 +267,26 @@ is_dock_locked <- function() {
   isTRUE(blockr_option("locked", FALSE))
 }
 
+# The narrow-viewport decision, taken once per session from the width the
+# client reports at input initialisation (see `viewport_probe_ui()`). Below the
+# breakpoint every view renders as one tabbed group rather than a nested grid,
+# so a board on a phone is a tab strip instead of columns running off-screen. A
+# width that never arrived -- a `board_ui()` built after Shiny bound its inputs,
+# so the probe missed the initial batch -- reads as wide, the desktop render.
+is_narrow_viewport <- function(width) {
+  is_number(width) && width < narrow_breakpoint()
+}
+
+# The viewport width below which a view collapses, in CSS pixels. The default
+# is a guess, so it is a `blockr_option()` -- tune it with
+# `options(blockr.narrow_breakpoint = ...)`, no code change needed.
+narrow_breakpoint <- function() {
+
+  px <- suppressWarnings(as.numeric(blockr_option("narrow_breakpoint", 900)))
+
+  if (length(px) != 1L || is.na(px)) 900 else px
+}
+
 dock_panel_groups <- function(session = get_session()) {
   xtr_leaf_id <- function(x) {
     if (x$type == "leaf") {

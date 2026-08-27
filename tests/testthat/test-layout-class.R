@@ -388,3 +388,95 @@ test_that("str_value.dock_grid marks an empty grid", {
 
   expect_identical(str_value(dock_grid()), "<dock_grid> (empty)")
 })
+
+test_that("flatten_grid collapses a nested grid into one tabbed leaf", {
+
+  grid <- dock_grid(
+    "ext_panel-dag",
+    panels("block_panel-a", "block_panel-b", active = "block_panel-b"),
+    sizes = c(0.3, 0.7)
+  )
+
+  flat <- flatten_grid(grid)
+
+  expect_length(flat[["children"]], 1L)
+  expect_identical(flat[["sizes"]], 1)
+  expect_identical(
+    flat[["children"]][[1L]][["panels"]],
+    c("ext_panel-dag", "block_panel-a", "block_panel-b")
+  )
+
+  # Every panel survives, and a second pass changes nothing.
+  expect_setequal(grid_panel_ids(flat), grid_panel_ids(grid))
+  expect_equal(flatten_grid(flat), flat)
+})
+
+test_that("flatten_grid flattens nested branches depth-first", {
+
+  grid <- dock_grid(
+    "ext_panel-dag",
+    group("block_panel-a", panels("block_panel-b", "block_panel-c"))
+  )
+
+  expect_identical(
+    flatten_grid(grid)[["children"]][[1L]][["panels"]],
+    c("ext_panel-dag", "block_panel-a", "block_panel-b", "block_panel-c")
+  )
+})
+
+test_that("flatten_grid opens on a fronted block, not a fronted extension", {
+
+  # Collapsing leaves one panel visible, and the front panel is what gates
+  # block evaluation -- opening the default grid on its leading DAG group
+  # would show a phone a graph and compute nothing.
+  grid <- dock_grid(
+    "ext_panel-dag",
+    panels("block_panel-a", "block_panel-b", active = "block_panel-b")
+  )
+
+  expect_identical(
+    flatten_grid(grid)[["children"]][[1L]][["active"]],
+    "block_panel-b"
+  )
+})
+
+test_that("flatten_grid opens on the focused panel where one is named", {
+
+  grid <- set_grid_active(
+    dock_grid("ext_panel-dag", panels("block_panel-a", "block_panel-b")),
+    "ext_panel-dag"
+  )
+
+  expect_identical(
+    flatten_grid(grid)[["children"]][[1L]][["active"]],
+    "ext_panel-dag"
+  )
+})
+
+test_that("flatten_grid falls back to the first front panel", {
+
+  expect_identical(
+    flatten_grid(
+      dock_grid("ext_panel-dag", "ext_panel-edit")
+    )[["children"]][[1L]][["active"]],
+    "ext_panel-dag"
+  )
+
+  expect_equal(flatten_grid(new_dock_grid()), new_dock_grid())
+})
+
+test_that("a flattened grid is the fixed point of the dockView round trip", {
+
+  # The mirror is off on a narrow board, but the flat grid still has to be
+  # what the client echoes back, or `view_data` and the restore push disagree.
+  blks <- c(a = new_dataset_block(), b = new_head_block())
+
+  flat <- flatten_grid(
+    resolve_grid(
+      dock_grid("a", "b", sizes = c(0.3, 0.7)),
+      panel_id_map(blks, list())
+    )
+  )
+
+  expect_equal(as_dock_grid(as_dock_layout(flat, blks, list())), flat)
+})

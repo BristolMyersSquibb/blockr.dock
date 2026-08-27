@@ -209,7 +209,9 @@ op_select_panel <- function(pid, dock) {
 # view's own default spot.
 hint_to_position <- function(hint, dock) {
 
-  if (is.null(hint) || !length(hint)) {
+  # A `side` hint splits the group it anchors on, which a narrow view has no
+  # room for: fall through to its single group, so every add arrives as a tab.
+  if (is.null(hint) || !length(hint) || isTRUE(dock$narrow)) {
     return(determine_panel_pos(dock))
   }
 

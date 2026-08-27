@@ -89,18 +89,35 @@ canonicalize_grid <- function(grid) {
   grid
 }
 
-# All panel ids in a grid, in reading order (root children first, depth-first).
-grid_panel_ids <- function(grid) {
+# Concatenate what `f` reads off each leaf, in reading order (root children
+# first, depth-first). The one walk over a grid's leaves.
+grid_leaf_chr <- function(grid, f) {
 
   collect <- function(node) {
+
     if (is_grid_leaf(node)) {
-      node[["panels"]]
+      f(node)
     } else {
       unlst(lapply(node[["children"]], collect))
     }
   }
 
   as.character(unlst(lapply(grid[["children"]], collect)))
+}
+
+# All panel ids in a grid, in reading order.
+grid_panel_ids <- function(grid) {
+  grid_leaf_chr(grid, function(node) node[["panels"]])
+}
+
+# Each leaf's open tab, in the same order `grid_panel_ids()` lists its panels.
+grid_active_panels <- function(grid) {
+  grid_leaf_chr(
+    grid,
+    function(node) {
+      coal(node[["active"]], node[["panels"]][[1L]], fail_all = FALSE)
+    }
+  )
 }
 
 #' Canonical view grid
@@ -394,6 +411,44 @@ set_grid_active <- function(grid, pid) {
     orientation = grid[["orientation"]],
     focus = pid
   )
+}
+
+# Collapse a grid into a single tabbed leaf: every panel becomes a tab, in the
+# grid's reading order, opening on the tab `flat_open_panel()` picks. This is
+# the narrow-viewport render, applied at the dockView seam and nowhere else, so
+# the board keeps the authored geometry a wide viewport restores to. No `focus`
+# is carried: a lone group is dockView's `activeGroup` default and the client's
+# echo drops it again, so the flat grid is its own round trip.
+flatten_grid <- function(grid) {
+
+  pids <- grid_panel_ids(grid)
+
+  if (!length(pids)) {
+    return(grid)
+  }
+
+  new_dock_grid(
+    children = list(list(panels = pids, active = flat_open_panel(grid))),
+    sizes = 1,
+    orientation = grid[["orientation"]]
+  )
+}
+
+# The tab a collapsed view opens on. Collapsing leaves one panel visible where
+# the nested render showed one per group, and the front panel is what gates
+# block evaluation, so a fronted block beats a fronted extension -- else the
+# default grid (extensions leading) opens a phone on the DAG with nothing
+# computed. A named focus outranks both: it is a deliberate pick.
+flat_open_panel <- function(grid) {
+
+  if (not_null(grid[["focus"]])) {
+    return(grid[["focus"]])
+  }
+
+  front <- grid_active_panels(grid)
+  blks <- front[maybe_block_panel_id(front)]
+
+  if (length(blks)) blks[[1L]] else front[[1L]]
 }
 
 new_dock_grids <- function(x = list()) {

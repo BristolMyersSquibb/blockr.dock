@@ -381,3 +381,24 @@ test_that("hint_to_position translates near / side, else the default spot", {
     list(direction = "left")
   )
 })
+
+test_that("a narrow view takes an add as a tab, ignoring the side hint", {
+
+  local_mocked_bindings(
+    determine_panel_pos = function(dock) {
+      list(referenceGroup = "grp1", direction = "within")
+    }
+  )
+
+  dock <- fake_dock()
+  dock[["narrow"]] <- TRUE
+
+  expect_identical(
+    hint_to_position(list(near = "block_panel-a", side = "below"), dock),
+    list(referenceGroup = "grp1", direction = "within")
+  )
+  expect_identical(
+    hint_to_position(list(side = "left"), dock),
+    list(referenceGroup = "grp1", direction = "within")
+  )
+})

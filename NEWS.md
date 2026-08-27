@@ -1,5 +1,14 @@
 # blockr.dock (development version)
 
+* On a narrow viewport, each view now renders as a single tabbed group rather
+  than as its nested grid, so a board on a phone is one panel with a tab strip
+  instead of columns running off-screen. The viewport width is read once, at
+  startup, so reflowing takes a reload; the breakpoint is tunable through
+  `blockr.narrow_breakpoint` (900 px by default). The collapse is a render and
+  nothing more -- a narrow session writes no geometry back, so the board keeps
+  the layout a wide viewport restores to and a save from a phone still
+  persists it (#413).
+
 * Block card chrome that was built on every render and then hidden by the
   stylesheet is gone: the icons and titles fed into the block card's accordion
   headers, which `display: none` also keeps out of the accessibility tree, and
