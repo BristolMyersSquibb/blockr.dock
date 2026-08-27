@@ -4,6 +4,16 @@
 
   A rail's visibility is derived rather than stored: a rail holding panels is shown, an empty one is hidden. That rule replaces a pin concept and a persisted flag, and it matches the invariant the grid already keeps. Since a hidden rail has no hit area, dragging toward its edge reveals it -- collapsed, so an empty rail shows its bare strip rather than a full-width empty pane -- and the drop expands it. A drag that ends anywhere else leaves the derived rule to hide it again. Whether a rail is collapsed *is* stored, since unlike visibility it cannot be derived -- an expanded rail and a collapsed one hold the same panels -- so a board comes back the way it was left.
 
+* Block card chrome that was built on every render and then hidden by the
+  stylesheet is gone: the icons and titles fed into the block card's accordion
+  headers, which `display: none` also keeps out of the accessibility tree, and
+  the export button's icon in the board offcanvas. Dropped with them is a
+  `.popover-header` rule that hid a header no popover here renders -- and, the
+  stylesheet being host-app-wide, any header a consumer's own popover rendered
+  too. The companion `.popover .btn-close` rule stays: bslib injects that button
+  into any popover whose trigger does not include "focus", so it is built on the
+  client and cannot be dropped at the source (#72).
+
 * Removing blocks that are on screen no longer kills the session with
   "attempt to apply non-function". Cutting a whole stack hit it every time.
   The visible-axis observer drove both card axes straight off the client's
