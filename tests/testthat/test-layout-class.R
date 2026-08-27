@@ -84,11 +84,13 @@ test_that("grid resolution accepts a dock_extensions collection", {
 test_that("default_layout uses class-name convention across input forms", {
 
   blks <- c(a = new_dataset_block())
-  expected <- dock_grid("block_panel-a")
+  expected <- dock_grid(
+    "block_panel-a", rail(ext("edit_board"), position = "left")
+  )
 
   layout_of <- function(x) default_layout(blks, x)
   grid_of <- function(x) layout_of(x)[["grids"]][[1L]]
-  rails_of <- function(x) rail_panel_ids(layout_of(x)[["rails"]][[1L]])
+  rails_of <- function(x) rail_panel_ids(grid_of(x)[["rails"]])
 
   expect_identical(grid_of(new_edit_board_extension()), expected)
   expect_identical(grid_of(list(new_edit_board_extension())), expected)

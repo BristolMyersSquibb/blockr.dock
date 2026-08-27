@@ -75,19 +75,6 @@ blockr_ser.dock_grids <- function(x, data, ...) {
 }
 
 #' @export
-blockr_ser.dock_rails <- function(x, data, ...) {
-  arr <- if (!missing(data) && is_dock_rails(data)) data else x
-  list(
-    object = class(arr),
-    payload = lapply(Filter(Negate(is.null), as.list(arr)), rails_as_list)
-  )
-}
-
-rails_as_list <- function(rails) {
-  lapply(rails, unclass)
-}
-
-#' @export
 blockr_ser.dock_extension <- function(x, data, ...) {
   list(
     object = class(x),
@@ -125,14 +112,13 @@ blockr_deser.dock_board <- function(x, data, ...) {
     producer_version = data[["constructor"]][["version"]]
   )
 
-  # The split structure / grid / rail slots feed the constructor's `views` /
-  # `grids` / `rails` arguments directly -- no fused round-trip.
+  # The split structure / grid slots feed the constructor's `views` / `grids`
+  # arguments directly -- no fused round-trip.
   args <- c(
-    des[setdiff(names(des), c("views", "grids", "rails"))],
+    des[setdiff(names(des), c("views", "grids"))],
     list(
       views = des[["views"]],
       grids = des[["grids"]],
-      rails = des[["rails"]],
       ctor = coal(ctor_name(ctor), ctor_fun(ctor)),
       pkg = ctor_pkg(ctor)
     )
@@ -169,11 +155,6 @@ blockr_deser.dock_view <- function(x, data, ...) {
 #' @export
 blockr_deser.dock_grids <- function(x, data, ...) {
   new_dock_grids(lapply(data[["payload"]], as_dock_grid))
-}
-
-#' @export
-blockr_deser.dock_rails <- function(x, data, ...) {
-  new_dock_rails(lapply(data[["payload"]], view_rail_set))
 }
 
 #' @export

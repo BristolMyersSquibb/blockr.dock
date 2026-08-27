@@ -169,10 +169,10 @@ resize_dock_panel <- function(id, size, proxy = dock_proxy()) {
 }
 
 restore_layout <- function(layout, proxy, blocks = list(),
-                           extensions = list(), rails = list()) {
+                           extensions = list()) {
   log_debug("restoring dockview layout")
 
-  payload <- as_dock_layout(as_dock_grid(layout), blocks, extensions, rails)
+  payload <- as_dock_layout(as_dock_grid(layout), blocks, extensions)
 
   # Coerce each panel's closability to match the *current* lock state.
   # Without this, a board saved unlocked (panels have tabComponent = "manual")

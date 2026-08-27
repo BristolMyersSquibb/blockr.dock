@@ -116,14 +116,6 @@ grids_stable <- function(stored, live) {
   slot_stable(stored, live, grid_size_tol())
 }
 
-# The rails half. The mirror commits when either half of the placement differs,
-# so a sentinel watching only the grid would miss exactly the loop it exists to
-# catch. Rails carry pixel sizes rather than ratios, so they compare at
-# `all.equal()`'s own tolerance -- the echo either round-trips or it does not.
-rails_stable <- function(stored, live) {
-  slot_stable(stored, live, sqrt(.Machine$double.eps))
-}
-
 # Test-only server exports for the loop-safety sentinel, via blockr.core's
 # `blockr_test_exports` hook. `shiny::exportTestValues()` is gated by Shiny's
 # test mode (which shinytest2 and `testServer()` set), so a running app
@@ -136,7 +128,7 @@ rails_stable <- function(stored, live) {
 #     once and quiescence adds none; a count still climbing after the app goes
 #     idle is the loop.
 #   * `roundtrip_stable` -- `TRUE` once every view's stored placement matches
-#     what the client echoes, grid and rails both (`NA` until every view has
+#     what the client echoes, tree and rails alike (`NA` until every view has
 #     reported a layout), so a restore push provokes no spurious commit.
 #' @exportS3Method blockr.core::blockr_test_exports
 blockr_test_exports.dock_board <- function(x, rv, ...) {
@@ -148,10 +140,7 @@ blockr_test_exports.dock_board <- function(x, rv, ...) {
       if (is.null(vd)) {
         NA
       } else {
-        brd <- rv[["board"]]$board
-
-        grids_stable(board_grids(brd), vd[["grids"]]) &&
-          rails_stable(board_rails(brd), vd[["rails"]])
+        grids_stable(board_grids(rv[["board"]]$board), vd[["grids"]])
       }
     }
   )

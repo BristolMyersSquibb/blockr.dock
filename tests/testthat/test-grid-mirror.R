@@ -87,16 +87,11 @@ test_that("grid mirror commits a client echo, guards re-echoes", {
 
     observe_grid_echo(
       "V", list(layout = layout_rv), board,
-      commit_grid = function(grid, rails) {
+      commit_grid = function(grid) {
         committed[[length(committed) + 1L]] <<- grid
         board$board <- apply_board_update(
           board$board,
-          list(
-            views = list(
-              grid = setNames(list(grid), "V"),
-              rails = setNames(list(rails), "V")
-            )
-          )
+          list(views = list(grid = setNames(list(grid), "V")))
         )
       }
     )
@@ -156,16 +151,11 @@ test_that("the mirror stores an in-flight echo verbatim; placement prunes it", {
 
     observe_grid_echo(
       "V", list(layout = layout_rv), board,
-      commit_grid = function(grid, rails) {
+      commit_grid = function(grid) {
         committed[[length(committed) + 1L]] <<- grid
         board$board <- apply_board_update(
           board$board,
-          list(
-            views = list(
-              grid = setNames(list(grid), "V"),
-              rails = setNames(list(rails), "V")
-            )
-          )
+          list(views = list(grid = setNames(list(grid), "V")))
         )
       }
     )

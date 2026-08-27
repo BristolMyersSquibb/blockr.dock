@@ -30,10 +30,13 @@ test_that("dock board", {
   expect_setequal(board_link_ids(board1), c("ad", "cd", "bc", "de"))
   expect_setequal(board_stack_ids(board1), "bc")
 
-  # The extension rides the left rail, so the grid places the five blocks.
-  expect_length(layout_panel_ids(active_view_grid(board1)), 5L)
+  # The extension rides the left rail, so the splitview arranges the five
+  # blocks while the grid still places all six.
+  expect_length(grid_tree_ids(active_view_grid(board1)), 5L)
+  expect_length(layout_panel_ids(active_view_grid(board1)), 6L)
   expect_identical(
-    rail_panel_ids(active_view_rails(board1)), "ext_panel-edit_board"
+    rail_panel_ids(active_view_grid(board1)[["rails"]]),
+    "ext_panel-edit_board"
   )
 
   empty <- clear_board(board1)
@@ -42,9 +45,10 @@ test_that("dock board", {
   expect_length(board_links(empty), 0L)
   expect_length(board_stacks(empty), 0L)
 
-  expect_length(layout_panel_ids(active_view_grid(empty)), 0L)
+  expect_length(grid_tree_ids(active_view_grid(empty)), 0L)
   expect_identical(
-    rail_panel_ids(active_view_rails(empty)), "ext_panel-edit_board"
+    rail_panel_ids(active_view_grid(empty)[["rails"]]),
+    "ext_panel-edit_board"
   )
 
   expect_identical(

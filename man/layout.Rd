@@ -59,9 +59,9 @@ strip.}
 \code{dock_grid()} returns a \link[=dock-grid]{dock_grid} object. \code{panels()}
 returns a \code{dock_panels} node and \code{group()} returns a \code{dock_group} node --
 both are grid sub-trees usable inside \code{dock_grid()} / \code{group()}. A \code{rail()}
-is a \code{dock_rail}, which goes to \code{new_dock_board(rails = )} rather than into
-a grid. Finally \code{default_layout()} returns a \code{list} with \code{views} (a
-\code{dock_views}), \code{grids} (a \code{dock_grids}) and \code{rails} (a \code{dock_rails}).
+is a \code{dock_rail}, written among a grid's children but pinned outside the
+splitview. Finally \code{default_layout()} returns a \code{list} with \code{views} (a
+\code{dock_views}) and \code{grids} (a \code{dock_grids}).
 }
 \description{
 A \link[=dock-grid]{dock_grid} is a view's geometry: the arrangement of its
@@ -84,13 +84,13 @@ first id wins by default. A single-panel \code{panels()} is permitted
 but redundant (a bare string is equivalent).
 \item \code{group(..., sizes = NULL)}: a branch container. \code{sizes} is a
 numeric vector parallel to \code{...} that overrides the even split.
-\item \code{rail(..., position = "left")}: a rail, that is a tab group pinned
-to one edge of the view rather than placed in the grid. Rails are
-not grid children: they go to \code{new_dock_board(rails = )}, keyed by
-view id, and the members a rail names leave the grid tree.
+\item \code{rail(..., position = "left")}: a tab group pinned to one edge of
+the view rather than arranged by the splitview. Write it among the
+grid's children; it is not one, so it never counts towards \code{sizes},
+and the members it names leave the grid tree.
 \item \code{default_layout(blocks, extensions)} produces the default board
 arrangement (an extension rail on the left, blocks tabbed in the
-grid) as a \code{list(views, grids, rails)} the constructor consumes.
+grid) as a \code{list(views, grids)} the constructor consumes.
 }
 
 \code{dock_grid()} accepts \code{orientation = "horizontal" | "vertical"} for the
@@ -121,7 +121,7 @@ dock_grid(
 # Vertical top-level split
 dock_grid(blk("a"), blk("b"), orientation = "vertical")
 
-# An extension parked on the left edge, out of the grid
-rail(ext("dag"), position = "left")
+# An extension parked on the left edge, out of the splitview
+dock_grid(blk("a"), rail(ext("dag"), position = "left"))
 
 }

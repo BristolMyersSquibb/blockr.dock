@@ -45,8 +45,12 @@ test_that("a rail and the grid partition a view's membership", {
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     extensions = new_edit_board_extension(),
     views = list(V = c("a", "b", "edit_board")),
-    grids = list(V = dock_grid("a", "b")),
-    rails = list(V = rail(ext("edit_board"), position = "right", size = 300))
+    grids = list(
+      V = dock_grid(
+        "a", "b",
+        rail(ext("edit_board"), position = "right", size = 300)
+      )
+    )
   )
 
   expect_setequal(
@@ -54,16 +58,22 @@ test_that("a rail and the grid partition a view's membership", {
     c("block_panel-a", "block_panel-b", "ext_panel-edit_board")
   )
 
+  # `grid_tree_ids()` is the splitview half; `layout_panel_ids()` is everything
+  # the grid places, tree and rails alike.
   expect_identical(
-    layout_panel_ids(board_grids(brd)[["V"]]),
+    grid_tree_ids(board_grids(brd)[["V"]]),
     c("block_panel-a", "block_panel-b")
   )
-
-  expect_identical(
-    rail_panel_ids(board_rails(brd)[["V"]]), "ext_panel-edit_board"
+  expect_setequal(
+    layout_panel_ids(board_grids(brd)[["V"]]),
+    c("block_panel-a", "block_panel-b", "ext_panel-edit_board")
   )
 
-  expect_identical(board_rails(brd)[["V"]][["right"]][["size"]], 300)
+  expect_identical(
+    rail_panel_ids(board_grids(brd)[["V"]][["rails"]]), "ext_panel-edit_board"
+  )
+
+  expect_identical(board_grids(brd)[["V"]][["rails"]][["right"]][["size"]], 300)
 })
 
 test_that("a rail claims a member the grid also names", {
@@ -74,33 +84,41 @@ test_that("a rail claims a member the grid also names", {
     blocks = c(a = new_dataset_block()),
     extensions = new_edit_board_extension(),
     views = list(V = c("a", "edit_board")),
-    grids = list(V = dock_grid("a", "edit_board")),
-    rails = list(V = rail(ext("edit_board")))
+    grids = list(V = dock_grid("a", "edit_board", rail(ext("edit_board"))))
   )
 
-  expect_identical(layout_panel_ids(board_grids(brd)[["V"]]), "block_panel-a")
+  expect_identical(grid_tree_ids(board_grids(brd)[["V"]]), "block_panel-a")
   expect_identical(
-    rail_panel_ids(board_rails(brd)[["V"]]), "ext_panel-edit_board"
+    rail_panel_ids(board_grids(brd)[["V"]][["rails"]]), "ext_panel-edit_board"
   )
 })
 
-test_that("a rail declared empty survives, and drops a ghost on read", {
+test_that("an empty rail is implied, and a ghost drops on read", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
     views = list(V = "a"),
-    rails = list(V = rail(position = "bottom"))
+    grids = list(V = dock_grid("a", rail(position = "bottom")))
   )
 
-  expect_named(board_rails(brd)[["V"]], "bottom")
-  expect_identical(rail_panel_ids(board_rails(brd)[["V"]]), character())
+  # Storing it would be noise: every dock offers every edge, so an empty rail
+  # at its defaults says nothing the read does not already supply.
+  expect_null(board_grids(brd)[["V"]][["rails"]])
+  expect_named(
+    active_view_grid(brd)[["rails"]], c("left", "right", "top", "bottom")
+  )
+  expect_identical(
+    rail_panel_ids(active_view_grid(brd)[["rails"]]), character()
+  )
 
   # A rail naming a panel the view no longer carries reports it gone, exactly
   # as `view_grid()` prunes a grid ghost.
-  ghosted <- list(bottom = new_dock_rail("bottom", "block_panel-gone"))
+  ghosted <- dock_grid("a", rail(blk("gone"), position = "bottom"))
 
   expect_identical(
-    rail_panel_ids(view_rails(board_views(brd)[["V"]], ghosted)),
+    rail_panel_ids(
+      restrict_grid(ghosted, view_members(board_views(brd)[["V"]]))[["rails"]]
+    ),
     character()
   )
 })
@@ -109,14 +127,16 @@ test_that("a board given only rails infers the view and its members", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
-    rails = list(V = rail(blk("a")))
+    grids = list(V = dock_grid(rail(blk("a"))))
   )
 
   expect_named(board_views(brd), "V")
   expect_identical(view_members(board_views(brd)[["V"]]), "block_panel-a")
 
-  # The sole member is railed, so the placement grid it falls back to is empty.
-  expect_identical(layout_panel_ids(active_view_grid(brd)), character())
+  # The sole member is railed, so the splitview half is empty while the grid
+  # still places it.
+  expect_identical(grid_tree_ids(active_view_grid(brd)), character())
+  expect_identical(layout_panel_ids(active_view_grid(brd)), "block_panel-a")
 })
 
 test_that("rails reach dockView as edgeGroups, visibility derived", {
@@ -125,14 +145,15 @@ test_that("rails reach dockView as edgeGroups, visibility derived", {
     blocks = c(a = new_dataset_block()),
     extensions = new_edit_board_extension(),
     views = list(V = c("a", "edit_board")),
-    rails = list(V = rail(ext("edit_board"), size = 300, collapsed_size = 20))
+    grids = list(
+      V = dock_grid(
+        "a", rail(ext("edit_board"), size = 300, collapsed_size = 20)
+      )
+    )
   )
 
   lay <- as_dock_layout(
-    active_view_grid(brd),
-    board_blocks(brd),
-    dock_extensions(brd),
-    active_view_rails(brd)
+    active_view_grid(brd), board_blocks(brd), dock_extensions(brd)
   )
 
   edge <- lay[["edgeGroups"]][["left"]]
@@ -148,18 +169,24 @@ test_that("rails reach dockView as edgeGroups, visibility derived", {
   # tree, which is what puts it in the rail rather than in a grid cell.
   expect_true("ext_panel-edit_board" %in% names(lay[["panels"]]))
   expect_false(
-    "ext_panel-edit_board" %in% layout_panel_ids(as_dock_grid(lay))
+    "ext_panel-edit_board" %in% grid_tree_ids(as_dock_grid(lay))
   )
 
   # An empty rail is declared all the same, and hidden. This is the server half
   # of the derived-visibility rule -- what the dock is born as. The client half
   # (`sync()` re-asserting it as panels move) is covered by the e2e in
   # test-utils-serve.R; the two must agree.
+  # The payload declares every edge, because it is what creates them client
+  # side -- a rail has to exist before a drag can reveal it. The read supplies
+  # the ones the grid does not store.
   empty <- as_dock_layout(
-    dock_grid("block_panel-a"),
+    view_grid(dock_view("block_panel-a"), dock_grid("block_panel-a")),
     board_blocks(brd),
-    dock_extensions(brd),
-    list(left = new_dock_rail("left"))
+    dock_extensions(brd)
+  )
+
+  expect_named(
+    empty[["edgeGroups"]], c("left", "right", "top", "bottom")
   )
 
   empty_edge <- empty[["edgeGroups"]][["left"]]
@@ -177,17 +204,17 @@ test_that("a collapsed rail round-trips, so a restore comes back as left", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     views = list(V = c("a", "b")),
-    grids = list(V = dock_grid("a")),
-    rails = list(V = rail(blk("b"), position = "right", collapsed = TRUE))
+    grids = list(
+      V = dock_grid("a", rail(blk("b"), position = "right", collapsed = TRUE))
+    )
   )
 
-  expect_true(board_rails(brd)[["V"]][["right"]][["collapsed"]])
-  expect_identical(board_rails(blockr_deser(blockr_ser(brd))), board_rails(brd))
+  expect_true(board_grids(brd)[["V"]][["rails"]][["right"]][["collapsed"]])
+  expect_identical(board_grids(blockr_deser(blockr_ser(brd))), board_grids(brd))
 
   # It reaches dockView, and comes back off the echo.
   lay <- as_dock_layout(
-    active_view_grid(brd), board_blocks(brd), dock_extensions(brd),
-    active_view_rails(brd)
+    active_view_grid(brd), board_blocks(brd), dock_extensions(brd)
   )
 
   expect_true(lay[["edgeGroups"]][["right"]][["collapsed"]])
@@ -240,7 +267,7 @@ test_that("a client echo casts back to rails and a union membership", {
   expect_identical(as_dock_rails(new_dock_layout(list(grid = list()))), list())
 })
 
-test_that("the rails slot rides the views delta", {
+test_that("a rail move rides the grid through the views delta", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -248,36 +275,35 @@ test_that("the rails slot rides the views delta", {
     grids = list(V = dock_grid("a", "b"))
   )
 
-  # The mirror's write, as the settled echo of a panel dragged onto the right
-  # edge produces it: the grid loses the panel and the rail gains it, in one
-  # commit, keyed by view id.
+  # The settled echo of a panel dragged onto the right edge: one grid, carrying
+  # both halves, in one commit. Before the fold this needed a second delta key.
   moved <- apply_board_update(
     brd,
     list(
       views = list(
-        grid = list(V = dock_grid("block_panel-a")),
-        rails = list(V = list(right = new_dock_rail("right", "block_panel-b")))
+        grid = list(
+          V = dock_grid(
+            "block_panel-a", rail(blk("b"), position = "right")
+          )
+        )
       )
     )
   )
 
-  expect_identical(layout_panel_ids(board_grids(moved)[["V"]]), "block_panel-a")
-  expect_identical(rail_panel_ids(board_rails(moved)[["V"]]), "block_panel-b")
+  grid <- board_grids(moved)[["V"]]
+
+  expect_identical(grid_tree_ids(grid), "block_panel-a")
+  expect_identical(rail_panel_ids(grid[["rails"]]), "block_panel-b")
+  expect_setequal(layout_panel_ids(grid), c("block_panel-a", "block_panel-b"))
   expect_setequal(
     view_members(board_views(moved)[["V"]]),
     c("block_panel-a", "block_panel-b")
   )
 
-  cleared <- apply_board_update(
-    moved, list(views = list(rails = list(V = NULL)))
-  )
-
-  expect_null(board_rails(cleared)[["V"]])
-
-  # Removing the view takes its rails with it.
+  # Removing the view takes its grid, and so its rails, with it.
   gone <- apply_board_update(moved, list(views = list(rm = "V")))
 
-  expect_length(board_rails(gone), 0L)
+  expect_null(board_grids(gone)[["V"]])
 })
 
 test_that("an unknown views slice key is still rejected", {
@@ -290,26 +316,71 @@ test_that("an unknown views slice key is still rejected", {
   )
 })
 
-test_that("rails validate against the board's views", {
+test_that("a second rail on the same edge is rejected everywhere", {
 
-  brd <- new_dock_board(c(a = new_dataset_block()))
-
+  # Dockview allows one group per edge, so every route in has to say so --
+  # including validation, where keying by position makes a duplicate look
+  # well-formed (names and positions agree).
   expect_error(
-    validate_dock_rails(new_dock_rails(list(nope = list())), board_views(brd)),
-    class = "dock_rails_unknown_view"
+    dock_grid(rail(blk("a")), rail(blk("b"))),
+    class = "dock_rails_position_clash"
+  )
+  expect_error(
+    new_dock_grid(
+      rails = list(
+        new_dock_rail("left", "block_panel-a"),
+        new_dock_rail("left", "block_panel-b")
+      )
+    ),
+    class = "dock_rails_position_clash"
+  )
+  expect_error(
+    validate_dock_grid(
+      structure(
+        list(
+          orientation = "horizontal", children = list(), sizes = numeric(),
+          rails = list(
+            left = new_dock_rail("left", "block_panel-a"),
+            left = new_dock_rail("left", "block_panel-b")
+          )
+        ),
+        class = "dock_grid"
+      )
+    ),
+    class = "dock_rails_position_clash"
   )
 
+  # Distinct edges are fine.
+  expect_named(
+    dock_grid(rail(blk("a")), rail(blk("b"), position = "right"))[["rails"]],
+    c("left", "right")
+  )
+})
+
+test_that("a grid gates its rails", {
+
   expect_error(
-    validate_dock_rails(new_dock_rails(list(list()))),
+    validate_dock_grid(
+      structure(
+        list(orientation = "horizontal", children = list(), sizes = numeric(),
+             rails = list(left = "not a rail")),
+        class = "dock_grid"
+      )
+    ),
+    class = "dock_rail_structure_invalid"
+  )
+
+  # Keyed by the edge each pins to, so a hand-written grid cannot drift.
+  expect_error(
+    validate_dock_grid(
+      structure(
+        list(orientation = "horizontal", children = list(), sizes = numeric(),
+             rails = list(right = new_dock_rail("left"))),
+        class = "dock_grid"
+      )
+    ),
     class = "dock_rails_ids_missing"
   )
-
-  expect_error(
-    validate_dock_rails(list()),
-    class = "dock_rails_structure_invalid"
-  )
-
-  expect_null(validate_dock_rails(NULL))
 })
 
 test_that("a railed panel counts as on screen while the rail is expanded", {

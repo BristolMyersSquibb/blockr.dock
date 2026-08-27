@@ -1369,3 +1369,23 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   border-bottom-right-radius: 0 !important;
   border-top-left-radius: var(--dv-border-radius) !important;
 }
+
+/* A bottom-mounted strip sits *below* its content, so the same rotation applies
+   on the vertical axis: square where it meets the content above, rounded on the
+   outer edge below. The theme rounds a strip's top corners whichever edge it is
+   on, which is why a collapsed bottom rail -- where the strip is the whole rail
+   -- reads with its corners on the wrong side. A top-mounted strip needs
+   nothing: content below it is exactly what the theme was written for. */
+.dv-groupview-header-bottom .dv-tabs-and-actions-container {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: var(--dv-border-radius) !important;
+  border-bottom-right-radius: var(--dv-border-radius) !important;
+}
+
+.dv-groupview-header-bottom .dv-content-container {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-top-left-radius: var(--dv-border-radius) !important;
+  border-top-right-radius: var(--dv-border-radius) !important;
+}

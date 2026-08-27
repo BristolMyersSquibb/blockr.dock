@@ -186,7 +186,7 @@ print.dock_rail <- function(x, ...) {
   invisible(x)
 }
 
-# One view's rails, keyed by the edge each is pinned to: dockView allows at most
+# A grid's rails, keyed by the edge each is pinned to: dockView allows at most
 # one group per edge, so the edge is the key and a second rail claiming it is an
 # authoring error rather than something to merge.
 view_rail_set <- function(x) {
@@ -214,65 +214,22 @@ view_rail_set <- function(x) {
   set_names(rails, pos)
 }
 
+# Whether a rail records anything a grid needs to store: its panels, or geometry
+# an author set. An empty rail at its defaults is implied by every dock offering
+# every edge, so storing it would be noise that round-trips forever.
+rail_is_default <- function(rail) {
+  identical(rail, new_dock_rail(rail[["position"]]))
+}
+
 # All panel ids held by one view's rails, in edge order.
 rail_panel_ids <- function(rails) {
   as.character(unlst(lapply(rails, `[[`, "panels")))
 }
 
-new_dock_rails <- function(x = list()) {
-  structure(x, class = "dock_rails")
-}
-
-#' @rdname view
-#' @export
-is_dock_rails <- function(x) {
-  inherits(x, "dock_rails")
-}
-
-#' @rdname view
-#' @export
-validate_dock_rails <- function(x, views = NULL) {
-
-  if (is.null(x)) {
-    return(x)
-  }
-
-  if (!is_dock_rails(x) || !is.list(x)) {
-    blockr_abort(
-      "Expecting a `dock_rails` object or `NULL`.",
-      class = "dock_rails_structure_invalid"
-    )
-  }
-
-  ids <- names(x)
-
-  if (length(x) && (is.null(ids) || any(ids == ""))) {
-    blockr_abort(
-      "All rails must be keyed by view id.",
-      class = "dock_rails_ids_missing"
-    )
-  }
-
-  if (not_null(views)) {
-
-    unknown <- setdiff(ids, names(views))
-
-    if (length(unknown)) {
-      blockr_abort(
-        "Rail{?s} {unknown} reference no known view.",
-        class = "dock_rails_unknown_view"
-      )
-    }
-  }
-
-  for (id in ids) {
-    validate_view_rails(x[[id]], id)
-  }
-
-  x
-}
-
-validate_view_rails <- function(rails, view_id) {
+# One view's rails, keyed by the edge each is pinned to: dockView allows at most
+# one group per edge, so the edge is the key and a second rail claiming it is an
+# authoring error rather than something to merge.
+validate_grid_rails <- function(rails) {
 
   if (is.null(rails)) {
     return(invisible(rails))
@@ -280,7 +237,7 @@ validate_view_rails <- function(rails, view_id) {
 
   if (!is.list(rails) || is_dock_rail(rails)) {
     blockr_abort(
-      "The rails of view {view_id} must be a list of `dock_rail` objects.",
+      "A `dock_grid` `rails` component must be a list of `dock_rail` objects.",
       class = "dock_rails_structure_invalid"
     )
   }
@@ -289,104 +246,53 @@ validate_view_rails <- function(rails, view_id) {
     validate_dock_rail(rail)
   }
 
-  keys <- names(rails)
-
-  if (length(rails) && !identical(keys, chr_xtr(rails, "position"))) {
+  if (length(rails) && !identical(names(rails), chr_xtr(rails, "position"))) {
     blockr_abort(
-      "The rails of view {view_id} must be keyed by the edge they pin to.",
+      "A `dock_grid` `rails` component must be keyed by the edge each pins to.",
       class = "dock_rails_ids_missing"
+    )
+  }
+
+  # Keying by position makes duplicates look well-formed to the check above --
+  # two left rails carry names and positions that agree. Dockview allows one
+  # group per edge, so a second claim on the same edge is malformed however it
+  # was built, and the validator has to say so as loudly as the constructor.
+  dup <- unique(names(rails)[duplicated(names(rails))])
+
+  if (length(dup)) {
+    blockr_abort(
+      "At most one rail per edge, but {dup} {?is/are} claimed twice.",
+      class = "dock_rails_position_clash"
     )
   }
 
   invisible(rails)
 }
 
-#' @rdname view
-#' @export
-board_rails <- function(x) {
-  stopifnot(is_dock_board(x))
-  x[["rails"]]
-}
-
-#' @rdname view
-#' @export
-`board_rails<-` <- function(x, value) {
-  stopifnot(is_dock_board(x))
-  x[["rails"]] <- validate_dock_rails(value, board_views(x))
-  invisible(x)
-}
-
-# A view's rails, member-driven in the same way `view_grid()` is: a rail holds
-# the members it names and nothing else, so a ghost left behind by a removed
-# block drops out on read. A declared rail survives emptying -- it is the
-# reveal target a drag aims at, and emptiness is what hides it.
-#
-# The default edges are supplied here whatever the stored slot holds, exactly as
-# `view_grid()` falls back to `default_grid()`. Whether a board *has* rails is a
-# capability of the dock, not a property of what was saved: an empty rail is
-# invisible and costs nothing, and it has to exist before a drag can reveal it.
-# Deriving it on read means a board stored before rails existed, and a view
-# added at runtime, both get the edges without a migration.
-view_rails <- function(view, rails) {
-
-  rails <- with_default_rails(coal(rails, list(), fail_all = FALSE))
-
-  lapply(rails, restrict_rail, members = view_members(view))
-}
-
-# The declared edges, with anything the board actually stores taking precedence.
-# An edge the stored set names but the default does not is kept, so an author
-# who asks for a bottom rail keeps it alongside the usual two.
+# Every edge, with whatever the grid stores taking precedence. All four are
+# always available: which rails a dock *offers* is a constant of the dock, not
+# something a constructor call or a saved layout gets to vary, so a grid only
+# ever records which are populated. An empty rail is invisible and costs
+# nothing, and it has to exist before a drag can reveal it -- deriving the set
+# here means a grid stored before rails existed, and a view added at runtime,
+# both offer the same edges without a migration.
 with_default_rails <- function(rails) {
 
-  out <- default_rails()
+  out <- set_names(lapply(rail_positions(), new_dock_rail), rail_positions())
   out[names(rails)] <- rails
 
   out
 }
 
-# The rails of the active view, the counterpart of `active_view_grid()`.
-active_view_rails <- function(board) {
+# Front `pid` in the rail that holds it, the rail half of `set_grid_active()`.
+front_rail <- function(rail, pid) {
 
-  id <- active_view(board)
-
-  view_rails(board_views(board)[[id]], board_rails(board)[[id]])
-}
-
-# Restrict each stored rail to the membership of the view it keys, dropping
-# ghosts. Deliberately not `view_rails()`: that supplies the default edges,
-# which belong to the read rather than to storage. Materialising them here
-# would make a board that declares one rail store three, while a board that
-# declares none stores none -- the slot should hold what was set, no more.
-restrict_rails_to_views <- function(rails, views) {
-
-  for (id in names(rails)) {
-
-    if (id %in% names(views)) {
-      rails[[id]] <- lapply(
-        rails[[id]], restrict_rail, members = view_members(views[[id]])
-      )
-    }
+  if (!pid %in% rail[["panels"]]) {
+    return(rail)
   }
 
-  rails
-}
-
-coerce_dock_rails <- function(rails, id_map) {
-
-  if (is.null(rails)) {
-    return(new_dock_rails())
-  }
-
-  if (is_dock_rails(rails)) {
-    return(rails)
-  }
-
-  new_dock_rails(lapply(rails, resolve_view_rails, id_map = id_map))
-}
-
-resolve_view_rails <- function(rails, id_map) {
-  lapply(view_rail_set(rails), resolve_rail, id_map = id_map)
+  rail[["active"]] <- pid
+  rail
 }
 
 resolve_rail <- function(rail, id_map) {
@@ -408,29 +314,16 @@ resolve_rail <- function(rail, id_map) {
   )
 }
 
-# The default board's rails: extensions park on the left edge, and the right
-# edge is declared empty. Declaring an edge is what makes it a reveal target, so
-# the empty one is the whole reason a user can park a block on an edge at all --
-# and since visibility is derived, it stays invisible until something lands in
-# it. The left rail is likewise declared whether or not the board has any
-# extensions.
-#
-# The top and bottom edges are deliberately left out. Each group's tab strip
-# sits along its top, so an ordinary drag across the tabs would sweep the top
-# reveal band, and a rail running the full width reads as a drawer rather than
-# as the side rail this is for.
+# The default board populates one edge: extensions park on the left. The other
+# three are offered by `with_default_rails()` like they are on every board, so
+# there is nothing to declare here.
 default_rails <- function(ext = character()) {
-  list(
-    left = new_dock_rail("left", ext),
-    right = new_dock_rail("right")
-  )
-}
 
-# The members the grid places: everything a rail does not hold. A panel in a
-# rail is absent from the grid tree, so the two slots partition the membership
-# and no panel is ever placed twice.
-grid_members <- function(view, rails) {
-  setdiff(view_members(view), rail_panel_ids(rails))
+  if (!length(ext)) {
+    return(list())
+  }
+
+  list(left = new_dock_rail("left", ext))
 }
 
 #' @rdname layout

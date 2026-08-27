@@ -875,9 +875,10 @@ test_that("dock panel move updates layout state and serialization (#234)", {
   }
 
   # The fixture seeds blocks a and b tabbed together in a single dock group.
-  # The extension panel rides the left rail, and the right rail is declared
-  # empty as a place to park a panel -- three groups, two of them rails.
-  await_groups(3L)
+  # Every board offers all four edges, so `api.groups` carries those four
+  # alongside it whether or not they hold anything -- five in total, and six
+  # once the split below makes a second grid group.
+  await_groups(5L)
   before <- read_layout()
   expect_identical(
     group_of(before, "block_panel-a"),
@@ -895,7 +896,7 @@ test_that("dock panel move updates layout state and serialization (#234)", {
       "b.api.moveTo({group: b.api.group, position: 'right'});"
     )
   )
-  await_groups(4L)
+  await_groups(6L)
 
   layout <- read_layout()
 
@@ -1286,4 +1287,129 @@ test_that("a drag toward the edge reveals a hidden rail, collapsed", {
   app$wait_for_js(rail_visible("false"), timeout = 15 * 1000)
 
   expect_false(isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('left')"))))
+})
+
+test_that("a rail's seam squares against its content on every edge", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "rails", "app.R", package = "blockr.dock"),
+    name = "rail-seams",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 3)
+  # Four edge groups exist -- the fixture populates three, and the fourth is
+  # offered like it is on every board, rendering at zero width.
+  app$wait_for_js(
+    'document.querySelectorAll(".dv-groupview-edge").length === 4',
+    timeout = 15 * 1000
+  )
+
+  # Dockview's spaced themes round a strip's *top* corners and its content's
+  # *bottom* corners whichever edge the header is on, which notches the seam
+  # once it moves. Rotating them is CSS, so the assertion is the computed
+  # radius: square where strip meets content, rounded on the outer edge.
+  radii <- function(position, part) {
+    unlist(
+      app$get_js(
+        paste0(
+          "(function(){var t=document.querySelector('",
+          "[data-testid=\"dv-edge-group-rail-", position, "\"] ", part,
+          "');if(!t)return 'none';var c=getComputedStyle(t);return [",
+          "c.borderTopLeftRadius,c.borderTopRightRadius,",
+          "c.borderBottomRightRadius,c.borderBottomLeftRadius].join('/')})()"
+        )
+      )
+    )
+  }
+
+  strip <- ".dv-tabs-and-actions-container"
+  content <- ".dv-content-container"
+
+  # A left strip meets its content on the right, a bottom strip on top.
+  expect_identical(radii("left", strip), "12px/0px/0px/12px")
+  expect_identical(radii("left", content), "0px/12px/12px/0px")
+  expect_identical(radii("bottom", strip), "0px/0px/12px/12px")
+  expect_identical(radii("bottom", content), "12px/12px/0px/0px")
+
+  # A top strip sits above its content, which is what the theme was written
+  # for, so it is deliberately left alone.
+  expect_identical(radii("top", strip), "12px/12px/0px/0px")
+  expect_identical(radii("top", content), "0px/0px/12px/12px")
+})
+
+test_that("a drop elsewhere hides the rail it emptied (#431)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "rails", "app.R", package = "blockr.dock"),
+    name = "rail-empty-on-drop",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 3)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+  api <- paste0("HTMLWidgets.find('#", dock, "').getWidget()")
+
+  visible <- function(position, state) {
+    paste0(
+      "HTMLWidgets.find('#", dock, "')?.getWidget()",
+      "?.isEdgeGroupVisible('", position, "') === ", state
+    )
+  }
+
+  app$wait_for_js(visible("top", "true"), timeout = 15 * 1000)
+
+  # Drag the top rail's only panel out. The gesture starts inside the top
+  # reveal band -- every group's tab strip runs along its own top -- so the
+  # band is swept on the way, and the drop lands in the grid.
+  app$run_js(
+    paste0(
+      "var el = document.querySelector('#", dock, "');",
+      "var tab = document.querySelector(",
+      "'[data-tab-panel-id=\"block_panel-b\"]');",
+      "var dt = new DataTransfer();",
+      "tab.dispatchEvent(new DragEvent('dragstart',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt}));",
+      "var r = el.getBoundingClientRect();",
+      "el.dispatchEvent(new DragEvent('dragover',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt,",
+      " clientX: r.left + r.width / 2, clientY: r.top + 5}));"
+    )
+  )
+
+  # Dockview detaches the dragged tab as the panel lands, and a detached node's
+  # `dragend` propagates nowhere -- so the panel event, not the DOM event, is
+  # what has to resolve the drag. Reproduce that exactly: detach, then move.
+  app$run_js(
+    paste0(
+      "var api = ", api, ";",
+      "var grid = api.groups.filter(",
+      "function (g) { return g.api.location.type === 'grid' })[0];",
+      "document.querySelector('[data-tab-panel-id=\"block_panel-b\"]')",
+      ".remove();",
+      "api.getPanel('block_panel-b').api.moveTo(",
+      "{group: grid, position: 'within'});"
+    )
+  )
+
+  app$wait_for_js(visible("top", "false"), timeout = 15 * 1000)
+
+  expect_false(isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('top')"))))
+  expect_true(
+    "block_panel-b" %in% grid_tree_ids(
+      as_dock_grid(
+        new_dock_layout(app$get_value(input = paste0(dock, "_state")))
+      )
+    )
+  )
 })

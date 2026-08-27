@@ -330,7 +330,7 @@ test_that("the default board rails extensions left, tabs blocks in the grid", {
   )
 
   grid <- active_view_grid(brd)
-  rails <- active_view_rails(brd)
+  rails <- active_view_grid(brd)[["rails"]]
 
   expect_length(grid[["children"]], 1L)
   expect_setequal(
@@ -338,11 +338,16 @@ test_that("the default board rails extensions left, tabs blocks in the grid", {
     c("block_panel-a", "block_panel-b")
   )
 
-  # The right edge is declared empty so a user has somewhere to park a block;
-  # being empty, it is hidden until something lands in it.
-  expect_named(rails, c("left", "right"))
+  # Every dock offers every edge, so a user always has somewhere to park a
+  # panel; the three the default board does not populate are empty and hidden.
+  expect_named(rails, c("left", "right", "top", "bottom"))
   expect_identical(rails[["left"]][["panels"]], "ext_panel-edit_board")
-  expect_identical(rails[["right"]][["panels"]], character())
+  expect_identical(
+    rail_panel_ids(rails[c("right", "top", "bottom")]), character()
+  )
+
+  # Only the populated edge is stored -- the rest are implied.
+  expect_named(board_grids(brd)[[active_view(brd)]][["rails"]], "left")
 
   # Membership still carries both -- the rail says where, not whether.
   expect_setequal(

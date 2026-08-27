@@ -14,9 +14,8 @@
 #' `validate_dock_layout()` returns its input and errors on a malformed shape.
 #' Cast across the seam with `as_dock_layout()` (build the dockView payload
 #' from a [dock_grid][dock-grid] against the board's blocks and extensions),
-#' [as_dock_grid()] (canonical geometry from a layout), `as_dock_rails()` (the
-#' rails a layout pins to its edges) and [as_dock_view()][dock_view]
-#' (membership from a layout, the union of its grid and its rails).
+#' [as_dock_grid()] (canonical geometry from a layout, rails included) and
+#' [as_dock_view()][dock_view] (membership from a layout).
 #'
 #' @param x Object to wrap, validate, test, or cast.
 #' @param ... Passed on to methods (e.g. `blocks` / `extensions` to resolve
@@ -90,12 +89,13 @@ as_dock_layout.list <- function(x, ...) {
 
 #' @export
 as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
-                                     rails = list(), ...) {
+                                     ...) {
 
   blocks <- as_blocks(blocks)
   ext_coll <- as_dock_extensions(extensions)
 
-  panel_ids <- c(grid_panel_ids(x), rail_panel_ids(rails))
+  rails <- x[["rails"]]
+  panel_ids <- grid_panel_ids(x)
 
   blk_pids <- panel_ids[maybe_block_panel_id(panel_ids)]
   ext_pids <- panel_ids[maybe_ext_panel_id(panel_ids)]
@@ -130,18 +130,15 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
 as_dock_grid.dock_layout <- function(x, ...) {
   tree_to_grid(
     x[["grid"]],
-    coal(x[["activeGroup"]], x[["active_group"]], fail_all = FALSE)
+    coal(x[["activeGroup"]], x[["active_group"]], fail_all = FALSE),
+    as_dock_rails(x)
   )
 }
 
-#' @rdname dock-layout
-#' @export
-as_dock_rails <- function(x, ...) {
-  UseMethod("as_dock_rails")
-}
-
-#' @export
-as_dock_rails.dock_layout <- function(x, ...) {
+# The rails a layout pins to its edges. A plain function rather than a generic:
+# only a `dock_layout` carries `edgeGroups`, and a `dock_grid` already hands
+# back its rails.
+as_dock_rails <- function(x) {
 
   edges <- x[["edgeGroups"]]
 
@@ -237,7 +234,7 @@ as_dock_view.dock_view <- function(x, ...) x
 #' @export
 as_dock_view.dock_layout <- function(x, ...) {
   new_dock_view(
-    c(grid_panel_ids(as_dock_grid(x)), rail_panel_ids(as_dock_rails(x)))
+    grid_panel_ids(as_dock_grid(x))
   )
 }
 
@@ -294,7 +291,7 @@ grid_to_tree <- function(grid) {
 # volatile ids, resolve the focused group to its panel. Inverse of
 # `grid_to_tree()`. A leaf root (a single-group page a live dock can echo) is
 # lifted to the sole child of the compact root.
-tree_to_grid <- function(tree, active_group = NULL) {
+tree_to_grid <- function(tree, active_group = NULL, rails = NULL) {
 
   from_tree <- function(node) {
 
@@ -319,7 +316,7 @@ tree_to_grid <- function(tree, active_group = NULL) {
   root <- tree[["root"]]
 
   if (is.null(root) || !length(root)) {
-    return(new_dock_grid())
+    return(new_dock_grid(rails = rails))
   }
 
   leaf_root <- identical(root[["type"]], "leaf")
@@ -331,7 +328,8 @@ tree_to_grid <- function(tree, active_group = NULL) {
     orientation = tolower(
       coal(tree[["orientation"]], "horizontal", fail_all = FALSE)
     ),
-    focus = focus_panel(tree, active_group)
+    focus = focus_panel(tree, active_group),
+    rails = rails
   )
 }
 

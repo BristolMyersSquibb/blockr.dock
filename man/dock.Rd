@@ -19,7 +19,6 @@ new_dock_board(
   extensions = new_dock_extensions(),
   views = NULL,
   grids = NULL,
-  rails = NULL,
   active = NULL,
   options = dock_board_options(),
   ctor = NULL,
@@ -63,11 +62,6 @@ yields a single default view over the board's blocks and extensions.}
 \item{grids}{Per-view geometry: a named list keyed by view id whose values
 are \code{\link[=dock_grid]{dock_grid()}}s, or a \code{dock_grids}. Optional -- a view with no grid
 entry falls back to a default grid over its members.}
-
-\item{rails}{Per-view edge rails: a named list keyed by view id whose values
-are \link[=layout]{rail()}s (one per edge), or a \code{dock_rails}. Optional -- a
-view with no rail entry has none. A member a rail names sits in that rail
-rather than in the grid.}
 
 \item{active}{Id of the initially active view (a key of \code{views}). Defaults
 to the first view. Which view is active is a property of the collection,

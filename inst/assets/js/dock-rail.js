@@ -57,11 +57,6 @@ $(function () {
 
       var wanted = group.panels.length > 0;
 
-      // Mid-drag, a rail we revealed is deliberately empty and visible. Leave
-      // it alone until the drag resolves, or we would hide the target the user
-      // is currently aiming at.
-      if (!wanted && dock.revealed[position] && drag) return;
-
       if (dock.api.isEdgeGroupVisible(position) !== wanted) {
         dock.api.setEdgeGroupVisible(position, wanted);
       }
@@ -191,7 +186,14 @@ $(function () {
 
     docks[id] = dock;
 
+    // A panel landing resolves the drag, whether or not `dragend` ever reaches
+    // us: dockview detaches the dragged tab as the panel moves, and a detached
+    // node's `dragend` propagates to nothing -- not to the container, not to
+    // the document. Keying off the panel event instead means a revealed rail
+    // that nothing was dropped into is hidden by the drop that happened
+    // elsewhere, rather than sitting open until the next drag.
     var onChange = function () {
+      drag = null;
       sync(dock);
     };
 
@@ -207,20 +209,22 @@ $(function () {
       })
     );
 
-    $(el)
-      .on('dragover.blockrRail', function (e) {
-        onDragOver(dock, e.originalEvent || e);
-      })
-      .on('drop.blockrRail dragend.blockrRail', endDrag);
+    $(el).on('dragover.blockrRail', function (e) {
+      onDragOver(dock, e.originalEvent || e);
+    });
 
     sync(dock);
 
     return true;
   };
 
-  // Escape cancels an HTML5 drag, which fires `dragend` on the source -- but
-  // the source may sit in a dock whose container the pointer has long left, so
-  // key off the document as well.
+  // A drag that ends without moving anything -- cancelled, or dropped nowhere
+  // -- fires no panel event, so it is closed here instead. Bound to the
+  // document rather than the dock container because the pointer may have left
+  // it long before. Escape cancels a drag and fires `dragend` too, so the
+  // keydown below is only for the case where neither event arrives.
+  $(document).on('drop.blockrRail dragend.blockrRail', endDrag);
+
   $(document).on('keydown.blockrRail', function (e) {
     if (e.key === 'Escape') endDrag();
   });

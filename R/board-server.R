@@ -380,31 +380,20 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
         return()
       }
 
-      layout <- as_dock_layout(state)
-
-      grid <- as_dock_grid(layout)
-      rails <- as_dock_rails(layout)
+      grid <- as_dock_grid(as_dock_layout(state))
 
       stored <- board_grids(board$board)[[id]]
 
       # Same geometry within the sash-position noise floor -> nothing to commit,
       # so window-resize jitter is absorbed while a real drag still writes. The
-      # rails ride the same compare and the same commit: dragging a panel into
-      # a rail leaves the grid changed too (the panel left the tree), so a rail
-      # move never needs a write the grid does not already provoke.
-      grid_same <- isTRUE(
-        all.equal(stored, grid, tolerance = grid_size_tol())
-      )
-
-      rails_same <- isTRUE(
-        all.equal(board_rails(board$board)[[id]], rails)
-      )
-
-      if (grid_same && rails_same) {
+      # rails ride inside the grid and so inside the same compare -- their pixel
+      # sizes are held to an exact match by `all.equal.dock_grid()`, which only
+      # applies the ratio noise floor to the tree.
+      if (isTRUE(all.equal(stored, grid, tolerance = grid_size_tol()))) {
         return()
       }
 
-      commit_grid(grid, rails)
+      commit_grid(grid)
     },
     ignoreInit = TRUE
   )
@@ -427,21 +416,16 @@ live_view_data <- function(client_views, docks, board, client_active) {
 
     state <- client_views()
 
-    places <- lapply(
-      names(state), live_view_place, docks = docks, board = board
-    )
+    grids <- lapply(names(state), live_view_grid, docks = docks, board = board)
 
-    if (any(lgl_ply(places, is.null))) {
+    if (any(lgl_ply(grids, is.null))) {
       return(NULL)
     }
 
-    places <- set_names(places, names(state))
-
-    grids <- lapply(places, `[[`, "grid")
-    rails <- lapply(places, `[[`, "rails")
+    grids <- set_names(grids, names(state))
 
     views <- reconstruct_dock_views(
-      set_names(map(live_view_membership, places, state), names(state))
+      set_names(map(live_view_membership, grids, state), names(state))
     )
 
     ca <- client_active()
@@ -450,27 +434,22 @@ live_view_data <- function(client_views, docks, board, client_active) {
       active_view(views) <- ca
     }
 
-    list(
-      views = views,
-      grids = new_dock_grids(grids),
-      rails = new_dock_rails(rails)
-    )
+    list(views = views, grids = new_dock_grids(grids))
   })
 }
 
-# A view's live placement -- its grid and its rails -- once its dock has
-# reported, else what the board stores (composed from the view's membership and
-# its grid / rails slots) -- the #304 fallback that keeps a deferred off-screen
-# view from blocking view_data. NULL only when the view is not on the board.
-live_view_place <- function(v_id, docks, board) {
+# A view's live grid once its dock has reported, else its board-stored grid
+# (composed from the view's membership and grid slot) -- the #304 fallback that
+# keeps a deferred off-screen view from blocking view_data. NULL only when the
+# view is not on the board.
+live_view_grid <- function(v_id, docks, board) {
 
   dk <- docks[[v_id]]
 
   if (!is.null(dk)) {
     ly <- dk$layout()
     if (!is.null(ly)) {
-      layout <- as_dock_layout(ly)
-      return(list(grid = as_dock_grid(layout), rails = as_dock_rails(layout)))
+      return(as_dock_grid(as_dock_layout(ly)))
     }
   }
 
@@ -480,28 +459,15 @@ live_view_place <- function(v_id, docks, board) {
     return(NULL)
   }
 
-  rails <- view_rails(views[[v_id]], board_rails(board$board)[[v_id]])
-
-  list(
-    grid = as_dock_grid(
-      view_grid(
-        views[[v_id]],
-        board_grids(board$board)[[v_id]],
-        board_rails(board$board)[[v_id]]
-      )
-    ),
-    rails = rails
-  )
+  as_dock_grid(view_grid(views[[v_id]], board_grids(board$board)[[v_id]]))
 }
 
-# A view's live membership: everything its grid places plus everything its rails
-# hold. Moving a panel between the two changes where it sits, never whether it
-# is a member, so reading only the grid would report a railed panel as removed.
-live_view_membership <- function(place, view) {
-  new_dock_view(
-    c(layout_panel_ids(place[["grid"]]), rail_panel_ids(place[["rails"]])),
-    view_name(view)
-  )
+# A view's live membership: everything its grid places, tree and rails alike.
+# Moving a panel between the two changes where it sits, never whether it is a
+# member, so `grid_panel_ids()` spanning both is what keeps a railed panel from
+# reading as removed.
+live_view_membership <- function(grid, view) {
+  new_dock_view(layout_panel_ids(grid), view_name(view))
 }
 
 hide_view_ui <- function(view_id, docks) {
@@ -541,8 +507,7 @@ show_view_ui <- function(view_id, docks) {
 # class at insert so the initially-shown view needs no switch round-trip.
 create_view <- function(v_id, layout, board, update, session, docks, visibility,
                         plugins = board_plugins(isolate(board$board)),
-                        blocks = NULL, extensions = NULL, active = FALSE,
-                        rails = NULL) {
+                        blocks = NULL, extensions = NULL, active = FALSE) {
 
   ns <- session$ns
 
@@ -570,8 +535,7 @@ create_view <- function(v_id, layout, board, update, session, docks, visibility,
     v_id, board, update, visibility, plugins,
     layout = layout,
     blocks = blocks,
-    extensions = extensions,
-    rails = rails
+    extensions = extensions
   )
 
   invisible()
@@ -621,7 +585,6 @@ reconcile_views <- function(board, update, docks, active_dock,
 
   views <- board_views(brd)
   grids <- board_grids(brd)
-  rails <- board_rails(brd)
   want <- names(views)
   labels <- view_names(views)
   server_active <- active_view(views)
@@ -679,15 +642,9 @@ reconcile_views <- function(board, update, docks, active_dock,
 
   if (!is.null(server_active) && !(server_active %in% names(docks))) {
 
-    active_rails <- view_rails(
-      views[[server_active]],
-      if (is.null(rails)) NULL else rails[[server_active]]
-    )
-
     active_grid <- view_grid(
       views[[server_active]],
-      if (is.null(grids)) NULL else grids[[server_active]],
-      active_rails
+      if (is.null(grids)) NULL else grids[[server_active]]
     )
 
     create_view(
@@ -701,8 +658,7 @@ reconcile_views <- function(board, update, docks, active_dock,
       isolate(active_dock$plugins),
       blocks = board_blocks(brd),
       extensions = dock_extensions(brd),
-      active = is.null(isolate(client_active())),
-      rails = active_rails
+      active = is.null(isolate(client_active()))
     )
   }
 
@@ -742,14 +698,12 @@ manage_dock <- function(
   plugins = board_plugins(isolate(board$board)),
   layout = NULL,
   blocks = NULL,
-  extensions = NULL,
-  rails = NULL
+  extensions = NULL
 ) {
   init_board <- isolate(board$board)
   init_layout <- coal(layout, active_view_grid(init_board))
   init_blocks <- coal(blocks, board_blocks(init_board))
   init_exts <- coal(extensions, dock_extensions(init_board))
-  init_rails <- coal(rails, active_view_rails(init_board), fail_all = FALSE)
 
   # A pending `select` for this view rides the grid: fold it into the layout the
   # first build restores from, so `restore_layout()` fronts that tab and the
@@ -774,9 +728,7 @@ manage_dock <- function(
     # derives from the membership set, so the empty-dock prompt no longer waits
     # on the browser's `n-panels` echo.
     proxy <- set_dock_view_output(session = session)
-    live_panels <- reactiveVal(
-      as.character(c(layout_panel_ids(init_layout), rail_panel_ids(init_rails)))
-    )
+    live_panels <- reactiveVal(as.character(layout_panel_ids(init_layout)))
     prev_active_group <- reactiveVal()
     active_group_trail <- reactiveVal()
     n_panels <- reactive(length(live_panels()))
@@ -829,15 +781,8 @@ manage_dock <- function(
     # paints the front tab), not the board, and must stay live when locked.
     if (!is_dock_locked()) {
 
-      commit_grid <- function(grid, rails) {
-        update(
-          list(
-            views = list(
-              grid = set_names(list(grid), id),
-              rails = set_names(list(rails), id)
-            )
-          )
-        )
+      commit_grid <- function(grid) {
+        update(list(views = list(grid = set_names(list(grid), id))))
       }
 
       observe_grid_echo(id, dock, board, commit_grid)
@@ -861,16 +806,12 @@ manage_dock <- function(
         # bare character vector it hands back one classed id rather than a
         # list when there is only one panel, and `Filter()` would then test
         # its unclassed element and drop it.
-        panels <- lapply(
-          c(layout_panel_ids(init_layout), rail_panel_ids(init_rails)),
-          as_dock_panel_id
-        )
+        panels <- lapply(layout_panel_ids(init_layout), as_dock_panel_id)
 
         restore_layout(init_layout, dock$proxy,
-                       blocks = init_blocks, extensions = init_exts,
-                       rails = init_rails)
+                       blocks = init_blocks, extensions = init_exts)
 
-        send_rail_config(init_rails, session)
+        send_rail_config(init_layout[["rails"]], session)
 
         show_block_ui(
           as_obj_id(Filter(is_block_panel_id, panels)), session,
