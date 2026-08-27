@@ -320,13 +320,29 @@ board_rails <- function(x) {
 # the members it names and nothing else, so a ghost left behind by a removed
 # block drops out on read. A declared rail survives emptying -- it is the
 # reveal target a drag aims at, and emptiness is what hides it.
+#
+# The default edges are supplied here whatever the stored slot holds, exactly as
+# `view_grid()` falls back to `default_grid()`. Whether a board *has* rails is a
+# capability of the dock, not a property of what was saved: an empty rail is
+# invisible and costs nothing, and it has to exist before a drag can reveal it.
+# Deriving it on read means a board stored before rails existed, and a view
+# added at runtime, both get the edges without a migration.
 view_rails <- function(view, rails) {
 
-  if (is.null(rails)) {
-    return(list())
-  }
+  rails <- with_default_rails(coal(rails, list(), fail_all = FALSE))
 
   lapply(rails, restrict_rail, members = view_members(view))
+}
+
+# The declared edges, with anything the board actually stores taking precedence.
+# An edge the stored set names but the default does not is kept, so an author
+# who asks for a bottom rail keeps it alongside the usual two.
+with_default_rails <- function(rails) {
+
+  out <- default_rails()
+  out[names(rails)] <- rails
+
+  out
 }
 
 # The rails of the active view, the counterpart of `active_view_grid()`.
@@ -337,12 +353,19 @@ active_view_rails <- function(board) {
   view_rails(board_views(board)[[id]], board_rails(board)[[id]])
 }
 
+# Restrict each stored rail to the membership of the view it keys, dropping
+# ghosts. Deliberately not `view_rails()`: that supplies the default edges,
+# which belong to the read rather than to storage. Materialising them here
+# would make a board that declares one rail store three, while a board that
+# declares none stores none -- the slot should hold what was set, no more.
 restrict_rails_to_views <- function(rails, views) {
 
   for (id in names(rails)) {
 
     if (id %in% names(views)) {
-      rails[[id]] <- view_rails(views[[id]], rails[[id]])
+      rails[[id]] <- lapply(
+        rails[[id]], restrict_rail, members = view_members(views[[id]])
+      )
     }
   }
 

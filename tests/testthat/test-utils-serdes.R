@@ -108,6 +108,45 @@ test_that("rails round-trip through ser/des", {
   expect_identical(board_views(des), board_views(brd))
 })
 
+test_that("a board saved before rails existed still restores", {
+
+  # The pre-rails format carries `views` and `grids` and no `rails` key at all,
+  # with the extension placed in the grid like any other panel. Two things have
+  # to hold at once. The saved *layout* is reproduced -- the extension stays in
+  # the grid rather than being quietly re-homed into a rail -- while the rail
+  # *capability* is still there, because whether a dock offers an edge to pin a
+  # panel to must never depend on what a save happened to carry.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = new_edit_board_extension(),
+    views = list(V = c("a", "b", "edit_board")),
+    grids = list(
+      V = dock_grid("ext_panel-edit_board", "block_panel-a", "block_panel-b")
+    )
+  )
+
+  old <- blockr_ser(brd)
+  old[["payload"]][["rails"]] <- NULL
+
+  des <- blockr_deser(old)
+
+  # Nothing is written into the slot the save did not carry.
+  expect_length(board_rails(des), 0L)
+  expect_identical(board_grids(des), board_grids(brd))
+  expect_identical(board_views(des), board_views(brd))
+  expect_s3_class(validate_board(des), "dock_board")
+
+  # But the edges are there to drag to, empty and so hidden, and the saved
+  # layout is untouched: the extension is still placed by the grid.
+  rails <- active_view_rails(des)
+
+  expect_named(rails, c("left", "right"))
+  expect_identical(rail_panel_ids(rails), character())
+  expect_true(
+    "ext_panel-edit_board" %in% layout_panel_ids(active_view_grid(des))
+  )
+})
+
 test_that("a rail survives a real JSON encode/decode round-trip", {
 
   # The stored form goes out through core's `write_json` settings, so a rail's
