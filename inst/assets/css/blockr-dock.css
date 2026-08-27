@@ -593,12 +593,6 @@ label:has(input[type="file"]) {
 }
 
 /* Export button adjustments */
-.offcanvas .shiny-download-link i,
-.offcanvas .shiny-download-link svg,
-.offcanvas .shiny-download-link .bsicon {
-  display: none;
-}
-
 .offcanvas .shiny-download-link {
   margin-top: -5px;
 }
@@ -658,7 +652,9 @@ label:has(input[type="file"]) {
   padding: 12px 14px;
 }
 
-.popover-header,
+/* The package's one popover is hover-triggered, and bslib injects a close
+   button into any popover whose trigger does not include "focus" -- so this
+   button is built on the client and can only be dropped from here. */
 .popover .btn-close {
   display: none;
 }

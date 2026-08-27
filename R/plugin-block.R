@@ -380,23 +380,23 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
 
   inputs_panel <- if (has_inputs) {
     accordion_panel(
-      icon = icon("sliders"),
-      title = "Block inputs",
+      title = NULL,
       value = "inputs",
       expr_ui
     )
   }
 
   outputs_panel <- accordion_panel(
-    icon = icon("chart-simple"),
-    title = "Block output(s)",
+    title = NULL,
     value = "outputs",
     block_ui,
     block_status_notes(ns),
     block_issues_ui(ns)
   )
 
-  ctrl_panel <- if (!is.null(ctrl_ui)) build_ctrl_panel(ctrl_ui)
+  ctrl_panel <- if (!is.null(ctrl_ui)) {
+    accordion_panel(title = NULL, value = "ctrl", ctrl_ui)
+  }
 
   tagList(
     div(id = ns("errors_block"), class = "mt-4"),
@@ -411,14 +411,6 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
       inputs_panel,
       outputs_panel
     )
-  )
-}
-
-build_ctrl_panel <- function(ctrl_ui) {
-  accordion_panel(
-    title = "Control",
-    value = "ctrl",
-    ctrl_ui
   )
 }
 
