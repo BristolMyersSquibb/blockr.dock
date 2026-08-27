@@ -11,9 +11,16 @@ test_that("rail() builds a rail and gates its arguments", {
   expect_identical(rail(blk("a"), blk("b"))[["active"]], "block_panel-a")
   expect_null(rail()[["active"]])
 
+  expect_false(rail(blk("a"))[["collapsed"]])
+  expect_true(rail(blk("a"), collapsed = TRUE)[["collapsed"]])
+
   expect_error(
     rail(blk("a"), active = blk("b")),
     class = "dock_rail_active_invalid"
+  )
+  expect_error(
+    rail(blk("a"), collapsed = "yes"),
+    class = "dock_rail_collapsed_invalid"
   )
   expect_error(rail(blk("a"), position = "diagonal"))
   expect_error(rail(blk("a"), size = -1), class = "dock_rail_size_invalid")
@@ -157,6 +164,37 @@ test_that("rails reach dockView as edgeGroups, visibility derived", {
   expect_false(empty_edge[["visible"]])
   expect_identical(empty_edge[["group"]][["views"]], list())
   expect_null(empty_edge[["group"]][["activeView"]])
+})
+
+test_that("a collapsed rail round-trips, so a restore comes back as left", {
+
+  # Collapsing is a user gesture (a click on the rail's open tab), and unlike
+  # visibility it is not derivable from anything -- an expanded rail and a
+  # collapsed one hold the same panels. So it is stored.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(V = c("a", "b")),
+    grids = list(V = dock_grid("a")),
+    rails = list(V = rail(blk("b"), position = "right", collapsed = TRUE))
+  )
+
+  expect_true(board_rails(brd)[["V"]][["right"]][["collapsed"]])
+  expect_identical(board_rails(blockr_deser(blockr_ser(brd))), board_rails(brd))
+
+  # It reaches dockView, and comes back off the echo.
+  lay <- as_dock_layout(
+    active_view_grid(brd), board_blocks(brd), dock_extensions(brd),
+    active_view_rails(brd)
+  )
+
+  expect_true(lay[["edgeGroups"]][["right"]][["collapsed"]])
+  expect_true(
+    as_dock_rails(
+      new_dock_layout(
+        list(grid = list(), edgeGroups = lay[["edgeGroups"]])
+      )
+    )[["right"]][["collapsed"]]
+  )
 })
 
 test_that("a client echo casts back to rails and a union membership", {

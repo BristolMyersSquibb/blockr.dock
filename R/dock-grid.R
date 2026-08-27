@@ -603,6 +603,9 @@ restrict_grids_to_views <- function(grids, views, rails = list()) {
 #'   default.
 #' @param position For `rail()`, the edge the rail pins to; one of `"left"`
 #'   (default), `"right"`, `"top"` or `"bottom"`.
+#' @param collapsed For `rail()`, whether it opens collapsed to its bare tab
+#'   strip. A user collapses a rail by clicking its open tab, and that choice
+#'   is stored, so a restored board comes back the way it was left.
 #' @param size,collapsed_size For `rail()`, its width (or height, on a
 #'   horizontal edge) in pixels when open and when collapsed to its bare tab
 #'   strip.

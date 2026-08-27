@@ -8,7 +8,8 @@
 # the grid and the rails only say where.
 #
 # Shape: a `dock_rail` carries the `position` it is pinned to, the `panels` it
-# holds, its open `active` tab, and its `size` and `collapsed_size` in pixels.
+# holds, its open `active` tab, whether it is `collapsed` to its bare strip, and
+# its `size` and `collapsed_size` in pixels.
 # The `size` rides the settled echo like a branch's sizes do, so a sash drag
 # persists; the two size fields are pixels rather than ratios because a rail is
 # sized against the dock, not against a share of a split.
@@ -25,7 +26,8 @@ rail_positions <- function() {
 }
 
 new_dock_rail <- function(position = "left", panels = character(),
-                          active = NULL, size = 260, collapsed_size = 35) {
+                          active = NULL, collapsed = FALSE, size = 260,
+                          collapsed_size = 35) {
 
   panels <- as.character(panels)
 
@@ -40,6 +42,7 @@ new_dock_rail <- function(position = "left", panels = character(),
       position = position,
       panels = panels,
       active = active,
+      collapsed = collapsed,
       size = rail_size(size),
       collapsed_size = rail_size(collapsed_size)
     ),
@@ -69,7 +72,8 @@ validate_dock_rail <- function(x) {
   }
 
   unexpected <- setdiff(
-    names(x), c("position", "panels", "active", "size", "collapsed_size")
+    names(x),
+    c("position", "panels", "active", "collapsed", "size", "collapsed_size")
   )
 
   if (length(unexpected)) {
@@ -101,6 +105,13 @@ validate_dock_rail <- function(x) {
     blockr_abort(
       "A `dock_rail` `active` tab must be one of its panels.",
       class = "dock_rail_active_invalid"
+    )
+  }
+
+  if (!is_bool(x[["collapsed"]])) {
+    blockr_abort(
+      "A `dock_rail` `collapsed` must be `TRUE` or `FALSE`.",
+      class = "dock_rail_collapsed_invalid"
     )
   }
 
@@ -137,6 +148,7 @@ as_dock_rail <- function(x) {
     position = coal(x[["position"]], "left", fail_all = FALSE),
     panels = coal(unlst(x[["panels"]]), character(), fail_all = FALSE),
     active = x[["active"]],
+    collapsed = isTRUE(x[["collapsed"]]),
     size = x[["size"]],
     collapsed_size = x[["collapsed_size"]]
   )
@@ -148,6 +160,7 @@ restrict_rail <- function(rail, members) {
     rail[["position"]],
     intersect(rail[["panels"]], members),
     active = rail[["active"]],
+    collapsed = rail[["collapsed"]],
     size = rail[["size"]],
     collapsed_size = rail[["collapsed_size"]]
   )
@@ -366,16 +379,28 @@ resolve_rail <- function(rail, id_map) {
     rail[["position"]],
     panels,
     active = active,
+    collapsed = rail[["collapsed"]],
     size = rail[["size"]],
     collapsed_size = rail[["collapsed_size"]]
   )
 }
 
-# The default board's rails: extensions park on the left edge. The rail is
-# declared whether or not anything is in it, so a board with no extensions still
-# offers the edge as somewhere to drag a block.
+# The default board's rails: extensions park on the left edge, and the right
+# edge is declared empty. Declaring an edge is what makes it a reveal target, so
+# the empty one is the whole reason a user can park a block on an edge at all --
+# and since visibility is derived, it stays invisible until something lands in
+# it. The left rail is likewise declared whether or not the board has any
+# extensions.
+#
+# The top and bottom edges are deliberately left out. Each group's tab strip
+# sits along its top, so an ordinary drag across the tabs would sweep the top
+# reveal band, and a rail running the full width reads as a drawer rather than
+# as the side rail this is for.
 default_rails <- function(ext = character()) {
-  list(left = new_dock_rail("left", ext))
+  list(
+    left = new_dock_rail("left", ext),
+    right = new_dock_rail("right")
+  )
 }
 
 # The members the grid places: everything a rail does not hold. A panel in a
@@ -388,7 +413,8 @@ grid_members <- function(view, rails) {
 #' @rdname layout
 #' @export
 rail <- function(..., position = c("left", "right", "top", "bottom"),
-                 active = NULL, size = 260, collapsed_size = 35) {
+                 active = NULL, collapsed = FALSE, size = 260,
+                 collapsed_size = 35) {
 
   position <- match.arg(position)
   ids <- chr_ply(list(...), as_panel_string)
@@ -408,6 +434,7 @@ rail <- function(..., position = c("left", "right", "top", "bottom"),
     new_dock_rail(
       position, ids,
       active = active,
+      collapsed = collapsed,
       size = size,
       collapsed_size = collapsed_size
     )

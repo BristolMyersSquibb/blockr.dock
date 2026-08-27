@@ -338,8 +338,11 @@ test_that("the default board rails extensions left, tabs blocks in the grid", {
     c("block_panel-a", "block_panel-b")
   )
 
-  expect_named(rails, "left")
+  # The right edge is declared empty so a user has somewhere to park a block;
+  # being empty, it is hidden until something lands in it.
+  expect_named(rails, c("left", "right"))
   expect_identical(rails[["left"]][["panels"]], "ext_panel-edit_board")
+  expect_identical(rails[["right"]][["panels"]], character())
 
   # Membership still carries both -- the rail says where, not whether.
   expect_setequal(

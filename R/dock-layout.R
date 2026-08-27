@@ -176,7 +176,11 @@ rail_to_edge <- function(rail) {
   }
 
   c(
-    list(visible = length(panels) > 0L, group = group),
+    list(
+      visible = length(panels) > 0L,
+      collapsed = isTRUE(rail[["collapsed"]]),
+      group = group
+    ),
     if (not_null(rail[["size"]])) {
       list(size = rail[["size"]])
     },
@@ -194,6 +198,7 @@ edge_to_rail <- function(edge, position) {
     position,
     as.character(unlst(group[["views"]])),
     active = group[["activeView"]],
+    collapsed = isTRUE(edge[["collapsed"]]),
     size = edge[["size"]],
     collapsed_size = edge[["collapsedSize"]]
   )

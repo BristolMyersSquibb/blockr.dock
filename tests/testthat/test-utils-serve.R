@@ -874,9 +874,10 @@ test_that("dock panel move updates layout state and serialization (#234)", {
     app$wait_for_idle()
   }
 
-  # The fixture seeds blocks a and b tabbed together in a single dock group;
-  # the extension panel rides the left rail, which is a group of its own.
-  await_groups(2L)
+  # The fixture seeds blocks a and b tabbed together in a single dock group.
+  # The extension panel rides the left rail, and the right rail is declared
+  # empty as a place to park a panel -- three groups, two of them rails.
+  await_groups(3L)
   before <- read_layout()
   expect_identical(
     group_of(before, "block_panel-a"),
@@ -894,7 +895,7 @@ test_that("dock panel move updates layout state and serialization (#234)", {
       "b.api.moveTo({group: b.api.group, position: 'right'});"
     )
   )
-  await_groups(3L)
+  await_groups(4L)
 
   layout <- read_layout()
 
@@ -1140,7 +1141,11 @@ test_that("the extension rides a left rail, shown only while it holds it", {
 
   # A rail is a real dockview edge group carrying its tabs vertically, keyed by
   # the group id the payload names it with.
-  rail_html <- xml2::read_html(app$get_html(".dv-groupview-edge"))
+  # Both declared rails are in the DOM; the empty right one renders at zero
+  # width. Address the left one by the group id its payload names it with.
+  rail_html <- xml2::read_html(
+    app$get_html('[data-testid="dv-edge-group-rail-left"]')
+  )
 
   has_class <- function(token) {
     paste0(
@@ -1151,13 +1156,6 @@ test_that("the extension rides a left rail, shown only while it holds it", {
 
   expect_length(
     xml2::xml_find_all(rail_html, has_class("dv-groupview-edge")), 1L
-  )
-  expect_identical(
-    xml2::xml_attr(
-      xml2::xml_find_first(rail_html, has_class("dv-groupview-edge")),
-      "data-testid"
-    ),
-    "dv-edge-group-rail-left"
   )
   expect_length(
     xml2::xml_find_all(rail_html, has_class("dv-tabs-container-vertical")), 1L
@@ -1176,6 +1174,15 @@ test_that("the extension rides a left rail, shown only while it holds it", {
   read_rails <- function() as_dock_rails(read_state())
 
   expect_identical(rail_panel_ids(read_rails()), "ext_panel-edit_board")
+
+  # The right rail is declared but empty, so it is hidden -- which is what
+  # gives a drag toward that edge something to reveal.
+  expect_false(
+    isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('right')")))
+  )
+  expect_true(
+    isTRUE(app$get_js(paste0("!!", api, ".getEdgeGroup('right')")))
+  )
 
   # Emptying the rail hides it: visibility is derived from what it holds, not
   # stored, so nothing has to remember to turn it off.

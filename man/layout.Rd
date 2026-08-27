@@ -20,6 +20,7 @@ rail(
   ...,
   position = c("left", "right", "top", "bottom"),
   active = NULL,
+  collapsed = FALSE,
   size = 260,
   collapsed_size = 35
 )
@@ -45,6 +46,10 @@ default.}
 
 \item{position}{For \code{rail()}, the edge the rail pins to; one of \code{"left"}
 (default), \code{"right"}, \code{"top"} or \code{"bottom"}.}
+
+\item{collapsed}{For \code{rail()}, whether it opens collapsed to its bare tab
+strip. A user collapses a rail by clicking its open tab, and that choice
+is stored, so a restored board comes back the way it was left.}
 
 \item{size, collapsed_size}{For \code{rail()}, its width (or height, on a
 horizontal edge) in pixels when open and when collapsed to its bare tab
