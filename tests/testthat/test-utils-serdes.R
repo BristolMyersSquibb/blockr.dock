@@ -233,6 +233,64 @@ test_that("a grid survives a real JSON encode/decode round-trip", {
   )
 })
 
+test_that("a single-tab leaf reaches dockView as a JSON array", {
+  # dockView reads a leaf's `views` as an array; handed a bare string it throws
+  # `Cannot read properties of undefined (reading 'id')` and blanks the page.
+  # Shiny encodes the restore payload with `auto_unbox = TRUE`, which collapses
+  # a length-1 character vector to a scalar, so `views` has to reach the seam
+  # as a list. Every outbound path runs through `grid_to_tree()`, which is what
+  # guarantees that.
+  blks <- as_blocks(list(a = new_dataset_block(), b = new_head_block()))
+
+  wire_views <- function(grid) {
+    leaf <- grid_leaves(unclass(as_dock_layout(grid, blocks = blks))[["grid"]])
+    as.character(
+      jsonlite::toJSON(leaf[[1L]][["views"]], auto_unbox = TRUE)
+    )
+  }
+
+  expect_identical(wire_views(dock_grid("block_panel-a")), '["block_panel-a"]')
+  expect_identical(
+    wire_views(dock_grid(panels("block_panel-a", "block_panel-b"))),
+    '["block_panel-a","block_panel-b"]'
+  )
+
+  # A live echo arrives back through `fromJSON`, which does collapse the
+  # single-element array to a bare character vector -- re-expanding has to
+  # restore the array before the payload goes out again.
+  lay <- as_dock_layout(dock_grid("block_panel-a"), blocks = blks)
+  echo <- jsonlite::fromJSON(
+    jsonlite::toJSON(unclass(lay), auto_unbox = TRUE),
+    simplifyDataFrame = FALSE,
+    simplifyMatrix = FALSE
+  )
+
+  expect_type(grid_leaves(echo[["grid"]])[[1L]][["views"]], "character")
+  expect_identical(
+    wire_views(as_dock_grid(as_dock_layout(echo))),
+    '["block_panel-a"]'
+  )
+
+  # The persistence path: a saved board decodes through the same collapse.
+  brd <- new_dock_board(
+    blocks = blks,
+    views = list(Page = "a"),
+    grids = list(Page = dock_grid("a"))
+  )
+  back <- blockr_deser(
+    jsonlite::fromJSON(
+      jsonlite::toJSON(blockr_ser(brd), null = "null"),
+      simplifyDataFrame = FALSE,
+      simplifyMatrix = FALSE
+    )
+  )
+
+  expect_identical(
+    wire_views(board_grids(back)[[1L]]),
+    '["block_panel-a"]'
+  )
+})
+
 test_that("focus round-trips through the dockView seam", {
   blks <- as_blocks(
     list(a = new_dataset_block(), b = new_head_block(), c = new_head_block())
