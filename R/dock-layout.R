@@ -154,8 +154,16 @@ as_dock_rails.dock_layout <- function(x, ...) {
 
 # The dockView `edgeGroups` payload: one entry per rail, keyed by the edge it
 # pins to. Visibility is derived here rather than stored -- a rail holding
-# panels is shown, an empty one hidden -- so a restore lands on exactly the
-# rule the client re-asserts on every panel add, remove and move.
+# panels is shown, an empty one hidden.
+#
+# TWIN: `sync()` in inst/assets/js/dock-rail.js applies the same rule at
+# runtime. Change one and you must change the other. The split is not
+# redundancy: each half owns a moment the other cannot reach. This one decides
+# what the dock is *born* as, and it has to, because the client cannot correct
+# a payload before the first paint -- measured, dropping this rule paints a
+# declared-empty rail at its full 253px for one frame on load. The client owns
+# every moment after, because a panel leaving a rail is a client gesture and
+# waiting for the echo would leave the rail standing empty for a round-trip.
 rails_to_edges <- function(rails) {
   set_names(lapply(rails, rail_to_edge), chr_xtr(rails, "position"))
 }

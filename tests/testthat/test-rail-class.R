@@ -151,7 +151,10 @@ test_that("rails reach dockView as edgeGroups, visibility derived", {
     "ext_panel-edit_board" %in% layout_panel_ids(as_dock_grid(lay))
   )
 
-  # An empty rail is declared all the same, and hidden.
+  # An empty rail is declared all the same, and hidden. This is the server half
+  # of the derived-visibility rule -- what the dock is born as. The client half
+  # (`sync()` re-asserting it as panels move) is covered by the e2e in
+  # test-utils-serve.R; the two must agree.
   empty <- as_dock_layout(
     dock_grid("block_panel-a"),
     board_blocks(brd),

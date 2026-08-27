@@ -2,9 +2,15 @@ $(function () {
   // Rails (dockview edge groups) are declared once per dock and never removed:
   // removing one disposes the panels it holds. What varies is whether a rail is
   // shown, and that is derived rather than stored -- a rail holding panels is
-  // visible, an empty one is not. The server writes that rule into the restore
-  // payload; this re-asserts it on every panel add, remove and move, which is
-  // the only place it can change.
+  // visible, an empty one is not.
+  //
+  // TWIN: `rail_to_edge()` in R/dock-layout.R applies the same rule when it
+  // builds the restore payload. Change one and you must change the other. The
+  // split is not redundancy: the server decides what the dock is born as,
+  // because nothing here can correct a payload before the first paint, and
+  // this half owns every moment after, because a panel leaving a rail is a
+  // client gesture and a server round-trip would leave the rail standing empty
+  // until the echo came back.
   //
   // The other half is reveal-on-drag. A hidden rail has no hit area, so a drag
   // toward the edge has nothing to aim at. Dragging into the band the collapsed

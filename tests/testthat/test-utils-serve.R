@@ -1185,7 +1185,10 @@ test_that("the extension rides a left rail, shown only while it holds it", {
   )
 
   # Emptying the rail hides it: visibility is derived from what it holds, not
-  # stored, so nothing has to remember to turn it off.
+  # stored, so nothing has to remember to turn it off. This is the client half
+  # of the rule; the server half (the same rule in the restore payload) is
+  # covered in test-rail-class.R. The two assertions above and below pin both
+  # ends: born hidden when empty, and hidden again once emptied.
   app$run_js(
     paste0(
       "var api = ", api, ";",
