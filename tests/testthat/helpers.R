@@ -162,11 +162,21 @@ fire_action <- function(gen, trigger, board) {
 # three environments of per-block reactiveVals (`required`, `visible`,
 # `frozen`), one slot per block, mirroring core's add_vis_slots at construction
 # (which seeds every board block before the callback runs). `visible` is logical
-# (the dock's build ledger: !is.na = ever built), matching core's slot. The dock
-# writes values into these slots; core owns their lifecycle in the real thing.
-# Pass the block ids to seed, or a board handle to seed from its blocks.
+# (core's build ledger: !is.na = ever built). The dock writes values into these
+# slots; core owns their lifecycle in the real thing. Pass a board handle to
+# mirror a board's whole start state -- core also enters what `board_ui()`
+# painted in the ledger, so the callback sees those blocks built (FALSE)
+# already. Pass bare block ids for an unseeded bundle.
 fake_visibility <- function(x = character()) {
-  ids <- if (is.character(x)) x else board_block_ids(shiny::isolate(x$board))
+
+  if (is.character(x)) {
+    ids <- x
+    built <- character()
+  } else {
+    brd <- shiny::isolate(x$board)
+    ids <- board_block_ids(brd)
+    built <- blockr.core::initial_block_ids(brd)
+  }
 
   vis <- list(
     required = new.env(parent = emptyenv()),
@@ -178,6 +188,11 @@ fake_visibility <- function(x = character()) {
     vis$visible[[id]] <- shiny::reactiveVal(NA)
     vis$frozen[[id]] <- shiny::reactiveVal(FALSE)
   }
+
+  for (id in built) {
+    vis$visible[[id]](FALSE)
+  }
+
   vis
 }
 

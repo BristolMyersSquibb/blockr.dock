@@ -111,6 +111,8 @@ test_that("board_ui builds only the active view's block cards", {
 
   html <- as.character(board_ui("test", brd))
 
+  expect_setequal(initial_block_ids(brd), c("a", "b"))
+
   expect_match(html, 'id="test-block_handle-a"', fixed = TRUE)
   expect_match(html, 'id="test-block_handle-b"', fixed = TRUE)
   expect_false(grepl('id="test-block_handle-c"', html, fixed = TRUE))

@@ -26,14 +26,11 @@ board_ui.dock_board <- function(
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
-      # Only the active view's cards are built at startup; off-screen views'
-      # cards are inserted on first visit. The build dominates first paint and
-      # scales with total block count, not with what is on screen.
       block_ui(
         id,
         x,
         plugins[["edit_block"]],
-        blocks = board_blocks(x)[active_view_block_ids(x)],
+        blocks = board_blocks(x)[initial_block_ids(x)],
         ctrl_ui = if ("ctrl_block" %in% names(plugins)) plugins[["ctrl_block"]]
       )
     ),
@@ -188,6 +185,15 @@ board_ui.dock_board <- function(
       side = "right"
     )
   )
+}
+
+# Only the active view's cards are built at startup; off-screen views' cards
+# are inserted on first visit. The build dominates first paint and scales with
+# total block count, not with what is on screen. Core seeds its build ledger
+# from this declaration, so the set is named only here.
+#' @export
+initial_block_ids.dock_board <- function(x, ...) {
+  active_view_block_ids(x)
 }
 
 # View container -- one dock output per view is inserted into this element

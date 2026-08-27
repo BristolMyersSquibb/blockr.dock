@@ -58,7 +58,7 @@ board_server_callback <- function(board, update, visibility, ...,
 
   # The `visibility` channel core hands us (per-block `required` / `visible` /
   # `frozen` reactiveVal slots) is the single store: its `visible` axis is the
-  # dock's build ledger (!is.na = ever built), read via built_cards(). Stash it
+  # dock's build ledger, read via core's built_block_ids(). Stash it
   # on active_dock -- the dock handle every card-touching path receives (view
   # switch, panel-op apply, core insert / remove) -- so they read and write the
   # one channel.
@@ -95,16 +95,15 @@ board_server_callback <- function(board, update, visibility, ...,
 
   # Gate off-screen blocks from the first flush, before the client reports its
   # layout (else core's all-visible default evaluates every block at startup).
-  # Seed to what board_ui rendered: the active view's whole membership is built
-  # (visible FALSE -- built, not yet painted), its front panels required TRUE
-  # and background tabs FALSE. Off-screen views' cards are built on first visit
-  # by switch_active_view. Core holds its render gate (is_visible = isTRUE)
-  # until the active view reports its blocks painted (visible TRUE).
-  mark_cards_built(visibility, active_view_block_ids(initial_board))
-
+  # Core has already entered what board_ui rendered in the ledger (visible
+  # FALSE -- built, not yet painted), so reconciling over that set marks the
+  # active view's front panels required TRUE and its background tabs FALSE.
+  # Off-screen views' cards are built on first visit by switch_active_view.
+  # Core holds its render gate (is_visible = isTRUE) until the active view
+  # reports its blocks painted (visible TRUE).
   show_cards(
     visibility,
-    active_view_block_ids(initial_board),
+    built_block_ids(visibility),
     visible_block_ids(active_view_grid(initial_board))
   )
 
@@ -295,7 +294,7 @@ report_visible_observer <- function(visibility, client_active, docks) {
     {
       req(client_active())
 
-      show_cards(visibility, built_cards(visibility), on_screen())
+      show_cards(visibility, built_block_ids(visibility), on_screen())
       mark_cards_rendered(visibility, on_screen())
     }
   )

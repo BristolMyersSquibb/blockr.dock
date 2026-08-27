@@ -1,5 +1,11 @@
 # blockr.dock (development version)
 
+* Which blocks the offcanvas mount carries at startup is now declared through
+  blockr.core's `initial_block_ids()` generic rather than hardcoded inside
+  `board_ui.dock_board()`. Core seeds its build ledger from the same
+  declaration, so the board callback no longer restates the set server-side,
+  and the dock reads the ledger back through core's `built_block_ids()`
+  instead of its own copy (blockr.core#349).
 * Block card chrome that was built on every render and then hidden by the
   stylesheet is gone: the icons and titles fed into the block card's accordion
   headers, which `display: none` also keeps out of the accessibility tree, and
