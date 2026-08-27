@@ -594,6 +594,14 @@ test_that("a repeat commit through one card takes the next free port", {
   expect_setequal(exported(app, "links"), c("a>m>x", "a>m>y"))
 })
 
+# The name / colour / id fields are a `uiOutput` the server fills on a later
+# round trip, so an open panel does not yet mean a usable form. Confirming
+# before it lands commits a NULL name, which the validator rejects without
+# closing anything -- so the close wait then spends its whole budget.
+wait_stack_form <- function(app, action) {
+  wait_sel(app, paste0("#my_board-", action, "-menu-stack_name"))
+}
+
 stack_card_selected <- function(app, id) {
   app$get_js(
     sprintf(
@@ -615,6 +623,7 @@ test_that("the stack menu holds its selection across a search that hides it", {
 
   app$click(fixture("add_stack"))
   wait_panel(app, actions_panel, open = TRUE)
+  wait_stack_form(app, "add_stack_action")
 
   scope <- paste0("#", actions_panel)
   selected <- function() {
@@ -663,6 +672,7 @@ test_that("the edit flow arrives with the stack's members selected", {
 
   app$click(fixture("edit_stack"))
   wait_panel(app, actions_panel, open = TRUE)
+  wait_stack_form(app, "edit_stack_action")
 
   expect_true(stack_card_selected(app, "r"))
   expect_true(stack_card_selected(app, "s"))
