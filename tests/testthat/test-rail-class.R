@@ -23,6 +23,7 @@ test_that("rail() builds a rail and gates its arguments", {
     class = "dock_rail_collapsed_invalid"
   )
   expect_error(rail(blk("a"), position = "diagonal"))
+  expect_error(rail(blk("a"), position = "top"))
   expect_error(rail(blk("a"), size = -1), class = "dock_rail_size_invalid")
 })
 
@@ -98,22 +99,20 @@ test_that("an empty rail is implied, and a ghost drops on read", {
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
     views = list(V = "a"),
-    grids = list(V = dock_grid("a", rail(position = "bottom")))
+    grids = list(V = dock_grid("a", rail(position = "right")))
   )
 
   # Storing it would be noise: every dock offers every edge, so an empty rail
   # at its defaults says nothing the read does not already supply.
   expect_null(board_grids(brd)[["V"]][["rails"]])
-  expect_named(
-    active_view_grid(brd)[["rails"]], c("left", "right", "top", "bottom")
-  )
+  expect_named(active_view_grid(brd)[["rails"]], c("left", "right"))
   expect_identical(
     rail_panel_ids(active_view_grid(brd)[["rails"]]), character()
   )
 
   # A rail naming a panel the view no longer carries reports it gone, exactly
   # as `view_grid()` prunes a grid ghost.
-  ghosted <- dock_grid("a", rail(blk("gone"), position = "bottom"))
+  ghosted <- dock_grid("a", rail(blk("gone"), position = "right"))
 
   expect_identical(
     rail_panel_ids(
@@ -185,9 +184,7 @@ test_that("rails reach dockView as edgeGroups, visibility derived", {
     dock_extensions(brd)
   )
 
-  expect_named(
-    empty[["edgeGroups"]], c("left", "right", "top", "bottom")
-  )
+  expect_named(empty[["edgeGroups"]], c("left", "right"))
 
   empty_edge <- empty[["edgeGroups"]][["left"]]
 

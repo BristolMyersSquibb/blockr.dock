@@ -18,7 +18,7 @@ default_layout(blocks, extensions)
 
 rail(
   ...,
-  position = c("left", "right", "top", "bottom"),
+  position = c("left", "right"),
   active = NULL,
   collapsed = FALSE,
   size = 260,
@@ -44,8 +44,8 @@ default.}
 \item{blocks, extensions}{Dock board components to arrange (for
 \code{default_layout()}).}
 
-\item{position}{For \code{rail()}, the edge the rail pins to; one of \code{"left"}
-(default), \code{"right"}, \code{"top"} or \code{"bottom"}.}
+\item{position}{For \code{rail()}, the edge the rail pins to; \code{"left"} (the
+default) or \code{"right"}.}
 
 \item{collapsed}{For \code{rail()}, whether it opens collapsed to its bare tab
 strip. A user collapses a rail by clicking its open tab, and that choice

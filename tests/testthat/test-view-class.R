@@ -338,13 +338,11 @@ test_that("the default board rails extensions left, tabs blocks in the grid", {
     c("block_panel-a", "block_panel-b")
   )
 
-  # Every dock offers every edge, so a user always has somewhere to park a
-  # panel; the three the default board does not populate are empty and hidden.
-  expect_named(rails, c("left", "right", "top", "bottom"))
+  # Every dock offers both edges, so a user always has somewhere to park a
+  # panel; the one the default board does not populate is empty and hidden.
+  expect_named(rails, c("left", "right"))
   expect_identical(rails[["left"]][["panels"]], "ext_panel-edit_board")
-  expect_identical(
-    rail_panel_ids(rails[c("right", "top", "bottom")]), character()
-  )
+  expect_identical(rails[["right"]][["panels"]], character())
 
   # Only the populated edge is stored -- the rest are implied.
   expect_named(board_grids(brd)[[active_view(brd)]][["rails"]], "left")

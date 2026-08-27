@@ -21,8 +21,14 @@
 # `removeEdgeGroup()` disposes the panels the rail holds, and a declared rail
 # stays put as a target a drag can reveal.
 
+# The edges a dock offers. Left and right only: a rail is a side thing, and a
+# full-width band across the top or bottom reads as a drawer rather than as the
+# rail this is for. The top edge is also where every group's tab strip sits, so
+# its reveal band overlaps the one place an ordinary tab drag always passes --
+# workable (arm the band only once the pointer has left it since the drag
+# began), but not worth carrying for an edge nobody has asked for.
 rail_positions <- function() {
-  c("left", "right", "top", "bottom")
+  c("left", "right")
 }
 
 new_dock_rail <- function(position = "left", panels = character(),
@@ -328,7 +334,7 @@ default_rails <- function(ext = character()) {
 
 #' @rdname layout
 #' @export
-rail <- function(..., position = c("left", "right", "top", "bottom"),
+rail <- function(..., position = c("left", "right"),
                  active = NULL, collapsed = FALSE, size = 260,
                  collapsed_size = 35) {
 

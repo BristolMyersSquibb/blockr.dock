@@ -875,10 +875,10 @@ test_that("dock panel move updates layout state and serialization (#234)", {
   }
 
   # The fixture seeds blocks a and b tabbed together in a single dock group.
-  # Every board offers all four edges, so `api.groups` carries those four
-  # alongside it whether or not they hold anything -- five in total, and six
-  # once the split below makes a second grid group.
-  await_groups(5L)
+  # Every board offers both edges, so `api.groups` carries the two alongside it
+  # whether or not they hold anything -- three in total, and four once the
+  # split below makes a second grid group.
+  await_groups(3L)
   before <- read_layout()
   expect_identical(
     group_of(before, "block_panel-a"),
@@ -896,7 +896,7 @@ test_that("dock panel move updates layout state and serialization (#234)", {
       "b.api.moveTo({group: b.api.group, position: 'right'});"
     )
   )
-  await_groups(6L)
+  await_groups(4L)
 
   layout <- read_layout()
 
@@ -1303,10 +1303,8 @@ test_that("a rail's seam squares against its content on every edge", {
   withr::defer(app$stop())
 
   wait_dock_loaded(app, n_blocks = 3)
-  # Four edge groups exist -- the fixture populates three, and the fourth is
-  # offered like it is on every board, rendering at zero width.
   app$wait_for_js(
-    'document.querySelectorAll(".dv-groupview-edge").length === 4',
+    'document.querySelectorAll(".dv-groupview-edge").length === 2',
     timeout = 15 * 1000
   )
 
@@ -1331,16 +1329,11 @@ test_that("a rail's seam squares against its content on every edge", {
   strip <- ".dv-tabs-and-actions-container"
   content <- ".dv-content-container"
 
-  # A left strip meets its content on the right, a bottom strip on top.
+  # A left strip meets its content on its right, a right strip on its left.
   expect_identical(radii("left", strip), "12px/0px/0px/12px")
   expect_identical(radii("left", content), "0px/12px/12px/0px")
-  expect_identical(radii("bottom", strip), "0px/0px/12px/12px")
-  expect_identical(radii("bottom", content), "12px/12px/0px/0px")
-
-  # A top strip sits above its content, which is what the theme was written
-  # for, so it is deliberately left alone.
-  expect_identical(radii("top", strip), "12px/12px/0px/0px")
-  expect_identical(radii("top", content), "0px/0px/12px/12px")
+  expect_identical(radii("right", strip), "0px/12px/12px/0px")
+  expect_identical(radii("right", content), "12px/0px/0px/12px")
 })
 
 test_that("a drop elsewhere hides the rail it emptied (#431)", {
@@ -1367,11 +1360,10 @@ test_that("a drop elsewhere hides the rail it emptied (#431)", {
     )
   }
 
-  app$wait_for_js(visible("top", "true"), timeout = 15 * 1000)
+  app$wait_for_js(visible("right", "true"), timeout = 15 * 1000)
 
-  # Drag the top rail's only panel out. The gesture starts inside the top
-  # reveal band -- every group's tab strip runs along its own top -- so the
-  # band is swept on the way, and the drop lands in the grid.
+  # Drag the right rail's only panel out, sweeping its reveal band on the way,
+  # and drop it in the grid.
   app$run_js(
     paste0(
       "var el = document.querySelector('#", dock, "');",
@@ -1383,7 +1375,7 @@ test_that("a drop elsewhere hides the rail it emptied (#431)", {
       "var r = el.getBoundingClientRect();",
       "el.dispatchEvent(new DragEvent('dragover',",
       "{bubbles: true, cancelable: true, dataTransfer: dt,",
-      " clientX: r.left + r.width / 2, clientY: r.top + 5}));"
+      " clientX: r.right - 5, clientY: r.top + r.height / 2}));"
     )
   )
 
@@ -1402,9 +1394,9 @@ test_that("a drop elsewhere hides the rail it emptied (#431)", {
     )
   )
 
-  app$wait_for_js(visible("top", "false"), timeout = 15 * 1000)
+  app$wait_for_js(visible("right", "false"), timeout = 15 * 1000)
 
-  expect_false(isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('top')"))))
+  expect_false(isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('right')"))))
   expect_true(
     "block_panel-b" %in% grid_tree_ids(
       as_dock_grid(

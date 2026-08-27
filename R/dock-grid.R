@@ -673,8 +673,8 @@ restrict_grids_to_views <- function(grids, views) {
 #'   (default) or `"vertical"`.
 #' @param active For `panels()` and `rail()`, the id of the tab to open by
 #'   default.
-#' @param position For `rail()`, the edge the rail pins to; one of `"left"`
-#'   (default), `"right"`, `"top"` or `"bottom"`.
+#' @param position For `rail()`, the edge the rail pins to; `"left"` (the
+#'   default) or `"right"`.
 #' @param collapsed For `rail()`, whether it opens collapsed to its bare tab
 #'   strip. A user collapses a rail by clicking its open tab, and that choice
 #'   is stored, so a restored board comes back the way it was left.

@@ -141,7 +141,7 @@ test_that("a board saved before rails existed still restores", {
   # layout is untouched: the extension is still placed by the grid.
   rails <- active_view_grid(des)[["rails"]]
 
-  expect_named(rails, c("left", "right", "top", "bottom"))
+  expect_named(rails, c("left", "right"))
   expect_identical(rail_panel_ids(rails), character())
   expect_true(
     "ext_panel-edit_board" %in% grid_tree_ids(active_view_grid(des))

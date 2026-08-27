@@ -1,9 +1,9 @@
 library(blockr.core)
 library(blockr.dock)
 
-# Every board offers all four edges; populating one is what makes it visible.
-# This fixture fills each, so a test can see a rail on every edge at once --
-# the side ones tabbed vertically, the top and bottom horizontally.
+# Every board offers both edges; populating one is what makes it visible. This
+# fixture fills each, so a test can see a rail on either side at once, and the
+# seam where a vertically-tabbed strip meets its content.
 serve(
   new_dock_board(
     blocks = c(
@@ -21,8 +21,7 @@ serve(
       main = dock_grid(
         "a",
         rail(ext("edit_board"), position = "left"),
-        rail(blk("b"), position = "top"),
-        rail(blk("c"), position = "bottom")
+        rail(blk("b"), position = "right")
       )
     )
   ),
