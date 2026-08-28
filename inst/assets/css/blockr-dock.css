@@ -594,7 +594,7 @@
 }
 
 .blockr-view-remove:hover {
-  color: var(--blockr-color-danger, #dc3545);
+  color: var(--blockr-color-error, #dc2626);
 }
 
 /* Reorder is bounded: the first view can't move up, the last can't move down.
@@ -678,7 +678,7 @@
 
 .blockr-empty-dock-prompt p {
   margin: 0;
-  font-size: var(--blockr-font-size-sm, 14px);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
 }
 
 /* ============================================
