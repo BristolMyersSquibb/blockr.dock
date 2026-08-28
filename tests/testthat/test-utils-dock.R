@@ -77,19 +77,27 @@ test_that("panel-id accessors are empty-safe", {
 
 test_that("the collapse is off until a breakpoint is configured", {
 
-  # Opt-in: an existing deployment keeps its authored grid at every width, and
-  # only a finite positive number turns the collapse on. Anything else reads as
-  # off rather than falling back to a default -- a typo must not silently
-  # restack every phone, and `Inf` must not restack every desktop.
-  unusable <- list(NULL, 0, -1, NA, Inf, -Inf, NaN, "wide-ish", c(600, 900))
+  # Opt-in, and an absent option is the only thing that reads as off: an
+  # existing deployment keeps its authored grid at every width without saying
+  # anything, and one that does set a breakpoint has an intent to honour.
+  withr::local_options(blockr.narrow_breakpoint = NULL)
 
-  for (value in unusable) {
+  expect_null(narrow_breakpoint())
+  expect_false(is_narrow_viewport(400))
+  expect_false(is_narrow_viewport(1400))
+})
+
+test_that("an unusable breakpoint aborts rather than falling back", {
+
+  # Silently rendering the other layout would hide the typo until someone
+  # opened the board on a phone. Below the floor counts as unusable: no
+  # viewport is 50 px wide, so that is a mistake rather than a layout, and
+  # "never collapse" is spelled by leaving the option unset.
+  for (value in list(0, -1, 10, NA, NaN, "wide-ish", c(600, 900))) {
 
     withr::local_options(blockr.narrow_breakpoint = value)
 
-    expect_null(narrow_breakpoint())
-    expect_false(is_narrow_viewport(400))
-    expect_false(is_narrow_viewport(1400))
+    expect_error(narrow_breakpoint(), class = "narrow_breakpoint_invalid")
   }
 })
 
@@ -111,6 +119,16 @@ test_that("a configured breakpoint reads the width against it", {
   expect_false(is_narrow_viewport(c(500, 900)))
 })
 
+test_that("an infinite breakpoint always collapses", {
+
+  # How a board meant only for phones asks to stack at every width.
+  withr::local_options(blockr.narrow_breakpoint = Inf)
+
+  expect_identical(narrow_breakpoint(), Inf)
+  expect_true(is_narrow_viewport(400))
+  expect_true(is_narrow_viewport(4000))
+})
+
 test_that("a breakpoint survives arriving as a string from the environment", {
 
   withr::local_options(blockr.narrow_breakpoint = "600")
@@ -120,8 +138,9 @@ test_that("a breakpoint survives arriving as a string from the environment", {
   expect_false(is_narrow_viewport(700))
 })
 
-test_that("the group fraction is clamped to (0, 1], else the default", {
+test_that("the group fraction defaults to 0.8, and aborts when unusable", {
 
+  withr::local_options(blockr.narrow_group_fraction = NULL)
   expect_identical(narrow_group_fraction(), 0.8)
 
   withr::local_options(blockr.narrow_group_fraction = 0.5)
@@ -130,14 +149,19 @@ test_that("the group fraction is clamped to (0, 1], else the default", {
   withr::local_options(blockr.narrow_group_fraction = "0.5")
   expect_identical(narrow_group_fraction(), 0.5)
 
-  for (bad in list(0, -1, 1.5, "half")) {
-    withr::local_options(blockr.narrow_group_fraction = bad)
-    expect_identical(narrow_group_fraction(), 0.8)
-  }
-
   # A fraction of exactly 1 is a group per screenful, which is meaningful.
   withr::local_options(blockr.narrow_group_fraction = 1)
   expect_identical(narrow_group_fraction(), 1)
+
+  for (value in list(0, -1, 1.5, Inf, NA, "half")) {
+
+    withr::local_options(blockr.narrow_group_fraction = value)
+
+    expect_error(
+      narrow_group_fraction(),
+      class = "narrow_group_fraction_invalid"
+    )
+  }
 })
 
 test_that("the stacked container is as tall as the rows it carries", {

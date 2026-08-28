@@ -320,31 +320,65 @@ is_narrow_viewport <- function(width) {
   is_number(width) && not_null(breakpoint) && width < breakpoint
 }
 
+# A breakpoint under this is a typo rather than a layout: no viewport is 50 px
+# wide, and the value that reads as "never collapse" is an absent option.
+narrow_breakpoint_floor <- 50
+
 # The viewport width below which a view collapses, in CSS pixels, or NULL when
 # the collapse is off. Opt-in: a board renders its authored grid at every width
-# until a deployment sets `options(blockr.narrow_breakpoint = ...)`, and only a
-# finite positive number turns it on. Zero, a negative, `Inf`, `NA` and an
-# unparseable string all read as off rather than as "fall back to some
-# default", so a typo cannot silently restack every phone -- or, in `Inf`'s
-# case, every desktop.
+# until a deployment sets `options(blockr.narrow_breakpoint = ...)`. `Inf` is
+# meaningful and allowed -- it collapses at every width, which is how a board
+# meant only for phones asks to always stack. Anything else unusable aborts
+# rather than falling back to a default: a deployment that sets a breakpoint
+# has an intent, and silently rendering the other layout hides the typo until
+# someone opens the board on a phone.
 narrow_breakpoint <- function() {
 
-  px <- suppressWarnings(as.numeric(blockr_option("narrow_breakpoint", NULL)))
+  opt <- blockr_option("narrow_breakpoint", NULL)
 
-  if (is_number(px) && px > 0) px else NULL
+  if (is.null(opt)) {
+    return(NULL)
+  }
+
+  px <- suppressWarnings(as.numeric(opt))
+
+  if (!is_scalar(px) || is.na(px) || px < narrow_breakpoint_floor) {
+    blockr_abort(
+      paste(
+        "`blockr.narrow_breakpoint` must be a single number of at least",
+        "{narrow_breakpoint_floor} px, or `Inf` to always collapse;",
+        "got {opt}."
+      ),
+      class = "narrow_breakpoint_invalid"
+    )
+  }
+
+  px
 }
 
 # The most of the viewport one row of the collapsed stack may take, as a
 # fraction in (0, 1]. At the 0.8 default a tall panel fills most of the screen
 # and the page scrolls from one to the next; lower it to fit more rows at once.
-# Tune with `options(blockr.narrow_group_fraction = ...)`.
+# Tune with `options(blockr.narrow_group_fraction = ...)`; an unusable value
+# aborts, for the same reason the breakpoint does.
 narrow_group_fraction <- function() {
 
-  frac <- suppressWarnings(
-    as.numeric(blockr_option("narrow_group_fraction", 0.8))
-  )
+  opt <- blockr_option("narrow_group_fraction", NULL)
 
-  if (length(frac) != 1L || is.na(frac) || frac <= 0 || frac > 1) 0.8 else frac
+  if (is.null(opt)) {
+    return(0.8)
+  }
+
+  frac <- suppressWarnings(as.numeric(opt))
+
+  if (!is_number(frac) || frac <= 0 || frac > 1) {
+    blockr_abort(
+      "`blockr.narrow_group_fraction` must be a fraction in (0, 1]; got {opt}.",
+      class = "narrow_group_fraction_invalid"
+    )
+  }
+
+  frac
 }
 
 # The stacked container's height: the sum of the rows' viewport shares, so the

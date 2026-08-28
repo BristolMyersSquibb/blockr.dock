@@ -1,22 +1,38 @@
 # blockr.dock (development version)
 
 * On a narrow viewport, a view's nested grid now flattens into a single
-  vertical stack: every tab group survives as its own row and the page scrolls
-  from one to the next, instead of columns running off-screen. A row keeps the
-  height the wide layout gave it -- so a group the author sized down stays
-  short rather than being padded out -- capped at
-  `blockr.narrow_group_fraction` of the viewport (0.8 by default, a fraction in
-  (0, 1]). The viewport width is read once, at startup, so reflowing takes a
-  reload. The collapse is opt-in and off until a deployment sets
-  `blockr.narrow_breakpoint`, which only a finite positive number turns on:
-  zero, a negative, `Inf`, `NA` and an unparseable value all read as off rather
-  than falling back to a default. The stack is a render and nothing more -- a
-  narrow session writes no geometry back, so the board keeps the layout a wide
-  viewport restores to and a save from a phone still persists it (#413).
+  vertical stack: every tab group survives as its own row, railed ones
+  included, and the page scrolls from one to the next instead of columns
+  running off-screen. A row keeps the height the wide layout gave it -- so a
+  group the author sized down stays short rather than being padded out --
+  capped at `blockr.narrow_group_fraction` of the viewport (0.8 by default, a
+  fraction in (0, 1]). The width is read once, at startup, so reflowing takes
+  a reload.
+
+  The collapse is opt-in and off until a deployment sets
+  `blockr.narrow_breakpoint`. Setting it to `Inf` collapses at every width,
+  which is how a board meant only for phones asks to always stack. An unusable
+  value aborts rather than falling back to a default -- anything under 50 px,
+  `NA`, or a string that is not a number -- since a deployment that sets a
+  breakpoint has an intent, and silently rendering the other layout would hide
+  the typo until someone opened the board on a phone.
+
+  The stack is a render and nothing more: a narrow session writes no geometry
+  back, so the board keeps the layout a wide viewport restores to and a save
+  from a phone still persists it (#413).
 
 * Blocks and extensions can now sit in a **rail** -- a tab group pinned to one edge of a view, out of the splitview, rather than a grid cell competing with the panels for width. Every board offers a left and a right edge; a rail is written among a view's grid children with `rail()`, and the default board parks the extensions on the left. Which rails a dock *offers* is a constant, so a grid only records which are *populated* -- an empty rail is invisible, and a board stored before rails existed offers the same edges as any other. A railed panel is absent from the grid tree, so the placement walks are untouched and a view's members are the union of the two, with membership still authoritative for which panels exist while the tree and the rails only say where. Dragging a panel into or out of a rail is stock dockview, and the arrangement rides the settled-echo mirror and `save_dock()` / `restore_dock()` like the rest of the grid does (#431).
 
-  A rail's visibility is derived rather than stored: a rail holding panels is shown, an empty one is hidden. That rule replaces a pin concept and a persisted flag, and it matches the invariant the grid already keeps. Since a hidden rail has no hit area, dragging toward its edge reveals it -- collapsed, so an empty rail shows its bare strip rather than a full-width empty pane -- and the drop expands it. A drag that ends anywhere else leaves the derived rule to hide it again. Whether a rail is collapsed *is* stored, since unlike visibility it cannot be derived -- an expanded rail and a collapsed one hold the same panels -- so a board comes back the way it was left.
+  A rail's visibility is derived rather than stored: a rail holding panels
+  is shown, an empty one is hidden. That rule replaces a pin concept and a
+  persisted flag, and it matches the invariant the grid already keeps. Since
+  a hidden rail has no hit area, dragging toward its edge reveals it --
+  collapsed, so an empty rail shows its bare strip rather than a full-width
+  empty pane -- and the drop expands it. A drag that ends anywhere else
+  leaves the derived rule to hide it again. Whether a rail is collapsed *is*
+  stored, since unlike visibility it cannot be derived -- an expanded rail
+  and a collapsed one hold the same panels -- so a board comes back the way
+  it was left.
 
 * The `--blockr-*` design tokens and the host-app-wide theme layer now live in
   blockr.ui, which this package imports and attaches through
