@@ -6,9 +6,9 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 9 base elements + the viewport probe + the two pre-rendered block-browser
+  # 10 base elements + the viewport probe + the two pre-rendered block-browser
   # sidebars (add_block_sidebar, append_block_sidebar).
-  expect_length(ui, 12L)
+  expect_length(ui, 13L)
 })
 
 # Settings sidebar is mounted with pre-rendered content + a JS-trigger gear
@@ -374,5 +374,47 @@ test_that("board_ui mounts the viewport probe with its binding", {
   expect_true(
     "blockr-viewport-probe" %in%
       chr_xtr(htmltools::findDependencies(ui), "name")
+  )
+})
+
+test_that("the shared stylesheet layer is blockr.ui's, not this package's", {
+
+  ui <- board_ui(
+    "test",
+    new_dock_board(blocks = c(a = new_dataset_block()))
+  )
+
+  deps <- chr_xtr(htmltools::findDependencies(ui), "name")
+
+  expect_true("blockr-theme" %in% deps)
+
+  # Source order settles which side wins where the two sheets overlap, so the
+  # shared layer has to resolve ahead of this package's own.
+  expect_lt(match("blockr-theme", deps), match("blockr-fab", deps))
+
+  css <- paste(
+    readLines(
+      system.file(
+        "assets", "css", "blockr-dock.css",
+        package = "blockr.dock",
+        mustWork = TRUE
+      ),
+      warn = FALSE
+    ),
+    collapse = "\n"
+  )
+
+  expect_no_match(css, "(?m)^:root", perl = TRUE)
+  expect_no_match(css, "(?m)^\\s*--blockr-[a-z0-9-]+\\s*:", perl = TRUE)
+
+  unscoped <- c(
+    "body", "label", "\\.form-control", "\\.btn-primary", "\\.tooltip",
+    "\\.popover", "table\\.dataTable", "\\.g6-toolbar"
+  )
+
+  expect_no_match(
+    css,
+    paste0("(?m)^(", paste(unscoped, collapse = "|"), ")[ ,{:]"),
+    perl = TRUE
   )
 })
