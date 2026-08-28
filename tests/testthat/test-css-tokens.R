@@ -3,7 +3,8 @@
 # without the token block -- reachable, since `inputs_menu_dep()` and the
 # other sidebar dependencies attach independently of `board_ui()`. Nothing
 # else compares a fallback against the token it backs, so a copy-pasted
-# literal drifts from the palette in silence.
+# literal drifts from the palette in silence. The vocabulary itself lives in
+# blockr.ui, which owns it for the whole stack.
 
 css_files <- function() {
   dir(
@@ -50,7 +51,13 @@ root_declarations <- function(path) {
 
 token_values <- function() {
 
-  decl <- unlst(lapply(css_files(), root_declarations))
+  decl <- root_declarations(
+    system.file(
+      "assets", "css", "blockr-tokens.css",
+      package = "blockr.ui",
+      mustWork = TRUE
+    )
+  )
 
   set_names(
     trimws(sub("^[^:]+:", "", decl)),
