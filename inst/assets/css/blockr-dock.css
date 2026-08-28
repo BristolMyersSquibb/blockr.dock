@@ -645,6 +645,14 @@
    ============================================ */
 
 .blockr-view-container {
+  position: relative;
+  /* A narrow board stacks its groups and stamps a taller height from the
+     server, so the page scrolls the stack; a wide one stamps nothing and keeps
+     the viewport-height box dockView divides between side-by-side groups.
+     The clip stays on either way: every background tab's render overlay is
+     parked below the grid by dockView, and un-clipping them would trail a
+     blank screenful past the last panel. */
+  height: var(--blockr-stack-height, calc(100vh - 48px));
   overflow: hidden;
 }
 

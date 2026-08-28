@@ -389,7 +389,7 @@ test_that("str_value.dock_grid marks an empty grid", {
   expect_identical(str_value(dock_grid()), "<dock_grid> (empty)")
 })
 
-test_that("flatten_grid collapses a nested grid into one tabbed leaf", {
+test_that("stack_grid flattens nesting into one vertical stack of groups", {
 
   grid <- dock_grid(
     "ext_panel-dag",
@@ -397,86 +397,90 @@ test_that("flatten_grid collapses a nested grid into one tabbed leaf", {
     sizes = c(0.3, 0.7)
   )
 
-  flat <- flatten_grid(grid)
+  stacked <- stack_grid(grid)
 
-  expect_length(flat[["children"]], 1L)
-  expect_identical(flat[["sizes"]], 1)
-  expect_identical(
-    flat[["children"]][[1L]][["panels"]],
-    c("ext_panel-dag", "block_panel-a", "block_panel-b")
-  )
+  expect_identical(stacked[["orientation"]], "vertical")
+  expect_length(stacked[["children"]], 2L)
 
   # Every panel survives, and a second pass changes nothing.
-  expect_setequal(grid_panel_ids(flat), grid_panel_ids(grid))
-  expect_equal(flatten_grid(flat), flat)
+  expect_setequal(grid_panel_ids(stacked), grid_panel_ids(grid))
+  expect_equal(stack_grid(stacked), stacked)
 })
 
-test_that("flatten_grid flattens nested branches depth-first", {
+test_that("stack_grid keeps each group's panels and its open tab", {
 
+  # The point of stacking over merging: a dashboard's authored grouping is
+  # what makes ten panels navigable, so the tab groups have to survive.
   grid <- dock_grid(
     "ext_panel-dag",
-    group("block_panel-a", panels("block_panel-b", "block_panel-c"))
+    group("block_panel-a", panels("block_panel-b", "block_panel-c")),
+    panels("block_panel-d", "block_panel-e", active = "block_panel-e")
   )
 
-  expect_identical(
-    flatten_grid(grid)[["children"]][[1L]][["panels"]],
-    c("ext_panel-dag", "block_panel-a", "block_panel-b", "block_panel-c")
+  kids <- stack_grid(grid)[["children"]]
+
+  expect_length(kids, 4L)
+  expect_identical(kids[[1L]][["panels"]], "ext_panel-dag")
+  expect_identical(kids[[2L]][["panels"]], "block_panel-a")
+  expect_identical(kids[[3L]][["panels"]], c("block_panel-b", "block_panel-c"))
+  expect_identical(kids[[3L]][["active"]], "block_panel-b")
+  expect_identical(kids[[4L]][["active"]], "block_panel-e")
+})
+
+test_that("grid_leaf_heights reads a leaf's height share off the wide grid", {
+
+  # A horizontal split divides width and leaves height alone; only the
+  # vertical ones on a leaf's path reduce it. Direction alternates with depth,
+  # so the root orientation fixes every level below.
+  expect_equal(grid_leaf_heights(dock_grid("a", "b", "c")), c(1, 1, 1))
+
+  expect_equal(
+    grid_leaf_heights(dock_grid("a", "b", orientation = "vertical")),
+    c(0.5, 0.5)
+  )
+
+  # Root horizontal, so `a` keeps full height while the branch beside it
+  # splits vertically, and the pair inside that splits horizontally again.
+  expect_equal(
+    grid_leaf_heights(
+      dock_grid("a", group("b", group("c", "d"), sizes = c(0.25, 0.75)))
+    ),
+    c(1, 0.25, 0.75, 0.75)
   )
 })
 
-test_that("flatten_grid opens on a fronted block, not a fronted extension", {
+test_that("stack rows keep the height the wide layout gave them, capped", {
 
-  # Collapsing leaves one panel visible, and the front panel is what gates
-  # block evaluation -- opening the default grid on its leading DAG group
-  # would show a phone a graph and compute nothing.
-  grid <- dock_grid(
-    "ext_panel-dag",
-    panels("block_panel-a", "block_panel-b", active = "block_panel-b")
+  withr::local_options(blockr.narrow_group_fraction = 0.8)
+
+  grid <- dock_grid("a", group("b", group("c", "d"), sizes = c(0.25, 0.75)))
+
+  # The full-height column is capped; the quarter-height row stays a quarter
+  # rather than being padded out to a uniform row.
+  expect_equal(stack_row_heights(grid), c(0.8, 0.25, 0.75, 0.75))
+
+  # The grid carries those normalised, so each row lands back on its share
+  # once the container is their sum.
+  expect_equal(
+    stack_grid(grid)[["sizes"]],
+    c(0.8, 0.25, 0.75, 0.75) / 2.55
   )
 
-  expect_identical(
-    flatten_grid(grid)[["children"]][[1L]][["active"]],
-    "block_panel-b"
-  )
+  expect_equal(stack_grid(new_dock_grid()), new_dock_grid())
 })
 
-test_that("flatten_grid opens on the focused panel where one is named", {
+test_that("a stacked grid is the fixed point of the dockView round trip", {
 
-  grid <- set_grid_active(
-    dock_grid("ext_panel-dag", panels("block_panel-a", "block_panel-b")),
-    "ext_panel-dag"
-  )
-
-  expect_identical(
-    flatten_grid(grid)[["children"]][[1L]][["active"]],
-    "ext_panel-dag"
-  )
-})
-
-test_that("flatten_grid falls back to the first front panel", {
-
-  expect_identical(
-    flatten_grid(
-      dock_grid("ext_panel-dag", "ext_panel-edit")
-    )[["children"]][[1L]][["active"]],
-    "ext_panel-dag"
-  )
-
-  expect_equal(flatten_grid(new_dock_grid()), new_dock_grid())
-})
-
-test_that("a flattened grid is the fixed point of the dockView round trip", {
-
-  # The mirror is off on a narrow board, but the flat grid still has to be
+  # The mirror is off on a narrow board, but the stacked grid still has to be
   # what the client echoes back, or `view_data` and the restore push disagree.
   blks <- c(a = new_dataset_block(), b = new_head_block())
 
-  flat <- flatten_grid(
+  stacked <- stack_grid(
     resolve_grid(
       dock_grid("a", "b", sizes = c(0.3, 0.7)),
       panel_id_map(blks, list())
     )
   )
 
-  expect_equal(as_dock_grid(as_dock_layout(flat, blks, list())), flat)
+  expect_equal(as_dock_grid(as_dock_layout(stacked, blks, list())), stacked)
 })

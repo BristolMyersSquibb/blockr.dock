@@ -90,6 +90,51 @@ test_that("is_narrow_viewport reads the reported width against a breakpoint", {
   expect_false(is_narrow_viewport(c(500, 900)))
 })
 
+test_that("the group fraction is clamped to (0, 1], else the default", {
+
+  expect_identical(narrow_group_fraction(), 0.8)
+
+  withr::local_options(blockr.narrow_group_fraction = 0.5)
+  expect_identical(narrow_group_fraction(), 0.5)
+
+  withr::local_options(blockr.narrow_group_fraction = "0.5")
+  expect_identical(narrow_group_fraction(), 0.5)
+
+  for (bad in list(0, -1, 1.5, "half")) {
+    withr::local_options(blockr.narrow_group_fraction = bad)
+    expect_identical(narrow_group_fraction(), 0.8)
+  }
+
+  # A fraction of exactly 1 is a group per screenful, which is meaningful.
+  withr::local_options(blockr.narrow_group_fraction = 1)
+  expect_identical(narrow_group_fraction(), 1)
+})
+
+test_that("the stacked container is as tall as the rows it carries", {
+
+  withr::local_options(blockr.narrow_group_fraction = 0.5)
+
+  # Three full-height columns, each capped to half a viewport.
+  expect_identical(
+    narrow_stack_attrs(
+      dock_grid("ext_panel-dag", "block_panel-a", "block_panel-b")
+    ),
+    list(style = "--blockr-stack-height: 150vh;")
+  )
+
+  # A short row shortens the stack rather than taking a uniform slot: the
+  # quarter-height leaf contributes 25vh, not the 50vh cap the other two hit.
+  expect_identical(
+    narrow_stack_attrs(
+      dock_grid("a", group("b", "c", sizes = c(0.25, 0.75)))
+    ),
+    list(style = "--blockr-stack-height: 125vh;")
+  )
+
+  # An empty view still needs a box, not a zero-height one.
+  expect_match(narrow_stack_attrs(new_dock_grid())$style, "50vh", fixed = TRUE)
+})
+
 test_that("the breakpoint is tunable, and survives a string from the env", {
 
   withr::local_options(blockr.narrow_breakpoint = 600)

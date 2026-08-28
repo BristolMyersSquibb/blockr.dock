@@ -287,6 +287,39 @@ narrow_breakpoint <- function() {
   if (length(px) != 1L || is.na(px)) 900 else px
 }
 
+# The most of the viewport one row of the collapsed stack may take, as a
+# fraction in (0, 1]. At the 0.8 default a tall panel fills most of the screen
+# and the page scrolls from one to the next; lower it to fit more rows at once.
+# Tune with `options(blockr.narrow_group_fraction = ...)`.
+narrow_group_fraction <- function() {
+
+  frac <- suppressWarnings(
+    as.numeric(blockr_option("narrow_group_fraction", 0.8))
+  )
+
+  if (length(frac) != 1L || is.na(frac) || frac <= 0 || frac > 1) 0.8 else frac
+}
+
+# The stacked container's height: the sum of the rows' viewport shares, so the
+# page scrolls the stack rather than dockView dividing a viewport-height box
+# among the rows and squeezing every one of them. Takes the *wide* grid, the
+# one `stack_row_heights()` reads the authored heights off; the stacked grid
+# carries those normalised to ratios, which no longer say how tall the stack
+# is. Written as the custom property the stylesheet reads, so a wide viewport
+# (which stamps nothing) keeps the viewport-height default rather than needing
+# it cleared. Height only -- the container keeps its clip, or the parked
+# background-tab overlays trail a blank screenful past the last panel.
+narrow_stack_attrs <- function(grid) {
+
+  total <- sum(stack_row_heights(grid))
+
+  if (!isTRUE(total > 0)) {
+    total <- narrow_group_fraction()
+  }
+
+  list(style = paste0("--blockr-stack-height: ", total * 100, "vh;"))
+}
+
 dock_panel_groups <- function(session = get_session()) {
   xtr_leaf_id <- function(x) {
     if (x$type == "leaf") {

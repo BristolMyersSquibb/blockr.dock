@@ -1,13 +1,16 @@
 # blockr.dock (development version)
 
-* On a narrow viewport, each view now renders as a single tabbed group rather
-  than as its nested grid, so a board on a phone is one panel with a tab strip
-  instead of columns running off-screen. The viewport width is read once, at
-  startup, so reflowing takes a reload; the breakpoint is tunable through
-  `blockr.narrow_breakpoint` (900 px by default). The collapse is a render and
-  nothing more -- a narrow session writes no geometry back, so the board keeps
-  the layout a wide viewport restores to and a save from a phone still
-  persists it (#413).
+* On a narrow viewport, a view's nested grid now flattens into a single
+  vertical stack: every tab group survives as its own row and the page scrolls
+  from one to the next, instead of columns running off-screen. A row keeps the
+  height the wide layout gave it -- so a group the author sized down stays
+  short rather than being padded out -- capped at
+  `blockr.narrow_group_fraction` of the viewport (0.8 by default, a fraction in
+  (0, 1]). The viewport width is read once, at startup, so reflowing takes a
+  reload; the breakpoint is `blockr.narrow_breakpoint` (900 px). The stack is a
+  render and nothing more -- a narrow session writes no geometry back, so the
+  board keeps the layout a wide viewport restores to and a save from a phone
+  still persists it (#413).
 
 * The `--blockr-*` design tokens and the host-app-wide theme layer now live in
   blockr.ui, which this package imports and attaches through

@@ -111,22 +111,33 @@ board_server_callback <- function(board, update, visibility, ...,
   # until the active view reports its blocks painted (visible TRUE).
   mark_cards_built(visibility, active_view_block_ids(initial_board))
 
-  # Seed from what the client will actually render: a narrow board fronts one
-  # tab where the nested grid fronted one per group, so seeding off the nested
-  # grid would mark blocks required that the phone never shows.
-  init_grid <- active_view_grid(initial_board)
-
-  if (narrow) {
-    init_grid <- flatten_grid(init_grid)
-  }
-
   show_cards(
     visibility,
     active_view_block_ids(initial_board),
-    visible_block_ids(init_grid)
+    visible_block_ids(active_view_grid(initial_board))
   )
 
   report_visible_observer(visibility, client_active, docks)
+
+  # One row per group of the active view, restamped on a view switch since a
+  # different view stacks a different number of groups. The container is an
+  # attr output, so this writes a custom property onto it and nothing else --
+  # no re-render of the docks it holds.
+  #
+  # Wired on a wide board too, where it renders nothing. An output element with
+  # no renderer never clears the `recalculating` class Shiny stamps while it
+  # waits, and Shiny greys a recalculating output to 30% opacity -- on the
+  # element wrapping the whole dock, that is the entire board behind a
+  # translucent veil, permanently. Rendering an empty style clears the class,
+  # and the binding reads "" as "drop the attribute", leaving the stylesheet's
+  # viewport-height default in charge.
+  session$output$view_container <- render_attrs(
+    if (narrow) {
+      narrow_stack_attrs(active_view_grid(board$board))
+    } else {
+      list(style = "")
+    }
+  )
 
   # `view_data` is the live all-views layout, split into a `dock_views` +
   # `dock_grids` pair. Each view is live where its dock has reported, else its
@@ -738,13 +749,13 @@ manage_dock <- function(
     init_layout <- set_grid_active(init_layout, init_select)
   }
 
-  # Narrow viewport: one tabbed group instead of the nested grid, so the board
-  # is a tab strip rather than columns running off-screen. Applied here, at the
-  # dockView seam, and nowhere else -- `board_grids()` keeps the geometry a
-  # wide viewport restores to. Folded in after the select so a pending tab
-  # still decides which one opens.
+  # Narrow viewport: the nesting flattens into one vertical stack, so the board
+  # scrolls top to bottom rather than running columns off-screen. Applied here,
+  # at the dockView seam, and nowhere else -- `board_grids()` keeps the
+  # geometry a wide viewport restores to. Folded in after the select so a
+  # pending tab still opens in whichever group carries it.
   if (narrow) {
-    init_layout <- flatten_grid(init_layout)
+    init_layout <- stack_grid(init_layout)
   }
 
   # Block/ext cards live at the board (parent) namespace level

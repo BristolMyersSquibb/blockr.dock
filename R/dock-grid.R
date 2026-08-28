@@ -89,35 +89,18 @@ canonicalize_grid <- function(grid) {
   grid
 }
 
-# Concatenate what `f` reads off each leaf, in reading order (root children
-# first, depth-first). The one walk over a grid's leaves.
-grid_leaf_chr <- function(grid, f) {
+# All panel ids in a grid, in reading order (root children first, depth-first).
+grid_panel_ids <- function(grid) {
 
   collect <- function(node) {
-
     if (is_grid_leaf(node)) {
-      f(node)
+      node[["panels"]]
     } else {
       unlst(lapply(node[["children"]], collect))
     }
   }
 
   as.character(unlst(lapply(grid[["children"]], collect)))
-}
-
-# All panel ids in a grid, in reading order.
-grid_panel_ids <- function(grid) {
-  grid_leaf_chr(grid, function(node) node[["panels"]])
-}
-
-# Each leaf's open tab, in the same order `grid_panel_ids()` lists its panels.
-grid_active_panels <- function(grid) {
-  grid_leaf_chr(
-    grid,
-    function(node) {
-      coal(node[["active"]], node[["panels"]][[1L]], fail_all = FALSE)
-    }
-  )
 }
 
 #' Canonical view grid
@@ -413,42 +396,86 @@ set_grid_active <- function(grid, pid) {
   )
 }
 
-# Collapse a grid into a single tabbed leaf: every panel becomes a tab, in the
-# grid's reading order, opening on the tab `flat_open_panel()` picks. This is
-# the narrow-viewport render, applied at the dockView seam and nowhere else, so
-# the board keeps the authored geometry a wide viewport restores to. No `focus`
-# is carried: a lone group is dockView's `activeGroup` default and the client's
-# echo drops it again, so the flat grid is its own round trip.
-flatten_grid <- function(grid) {
+# Flatten a grid's nesting into one vertical stack: every tab group survives as
+# its own row, in reading order, splits between them dropped. The narrow-
+# viewport render, applied at the dockView seam and nowhere else, so the board
+# keeps the authored geometry a wide viewport restores to. Merging the leaves
+# instead would put a whole dashboard's panels in one tab strip, where naming
+# one of ten tabs is hopeless; a stack keeps the author's grouping and lets the
+# page scroll through it.
+stack_grid <- function(grid) {
 
-  pids <- grid_panel_ids(grid)
+  leaves <- grid_leaves_in_order(grid)
 
-  if (!length(pids)) {
+  if (!length(leaves)) {
     return(grid)
   }
 
   new_dock_grid(
-    children = list(list(panels = pids, active = flat_open_panel(grid))),
-    sizes = 1,
-    orientation = grid[["orientation"]]
+    children = leaves,
+    sizes = stack_row_heights(grid),
+    orientation = "vertical",
+    focus = grid[["focus"]]
   )
 }
 
-# The tab a collapsed view opens on. Collapsing leaves one panel visible where
-# the nested render showed one per group, and the front panel is what gates
-# block evaluation, so a fronted block beats a fronted extension -- else the
-# default grid (extensions leading) opens a phone on the DAG with nothing
-# computed. A named focus outranks both: it is a deliberate pick.
-flat_open_panel <- function(grid) {
+# What each row of the stack gets, as a share of the viewport height: the
+# height the author gave that group in the wide render, capped by
+# `narrow_group_fraction()`. Carrying the wide heights over means a group the
+# author sized down stays short instead of being padded out to a uniform row,
+# and the cap keeps a full-height group from filling more than a screenful.
+# These are absolute viewport shares, not ratios -- `new_dock_grid()`
+# normalises them for the grid, and the container's height is their sum
+# (`narrow_stack_attrs()`), so each row lands back on the share computed here.
+stack_row_heights <- function(grid) {
+  pmin(grid_leaf_heights(grid), narrow_group_fraction())
+}
 
-  if (not_null(grid[["focus"]])) {
-    return(grid[["focus"]])
+# Each leaf's share of the viewport height in the wide render: the product of
+# the sizes of the vertical splits on its path, a horizontal split dividing
+# width and leaving height alone. Split direction alternates with depth in
+# dockView, so only the root orientation is stored and every level below
+# follows from it.
+grid_leaf_heights <- function(grid) {
+
+  descend <- function(node, orientation, share) {
+
+    if (is_grid_leaf(node)) {
+      return(share)
+    }
+
+    kids <- node[["children"]]
+
+    shares <- if (identical(orientation, "vertical")) {
+      share * node[["sizes"]]
+    } else {
+      rep(share, length(kids))
+    }
+
+    unlst(map(descend, kids, flip_orientation(orientation), shares))
   }
 
-  front <- grid_active_panels(grid)
-  blks <- front[maybe_block_panel_id(front)]
+  descend(
+    list(children = grid[["children"]], sizes = grid[["sizes"]]),
+    coal(grid[["orientation"]], "horizontal", fail_all = FALSE),
+    1
+  )
+}
 
-  if (length(blks)) blks[[1L]] else front[[1L]]
+# Every leaf of a grid, in reading order (root children first, depth-first),
+# each keeping the panels and open tab it carried.
+grid_leaves_in_order <- function(grid) {
+
+  collect <- function(node) {
+
+    if (is_grid_leaf(node)) {
+      list(node)
+    } else {
+      unlst(lapply(node[["children"]], collect))
+    }
+  }
+
+  unlst(lapply(grid[["children"]], collect))
 }
 
 new_dock_grids <- function(x = list()) {

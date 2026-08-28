@@ -201,8 +201,7 @@ board_ui.dock_board <- function(
 dock_outputs_ui <- function(id, views) {
   div(
     id = NS(id, "view_container"),
-    class = "blockr-view-container",
-    style = "position: relative; height: calc(100vh - 48px);"
+    class = "blockr-view-container blockr-attr-output"
   )
 }
 
