@@ -32,7 +32,7 @@
 
 - The `--blockr-*` design tokens and the host-app-wide theme layer now
   live in blockr.ui, which this package imports and attaches through
-  [`blockr.ui::theme_dep()`](https://rdrr.io/pkg/blockr.ui/man/theme_dep.html).
+  [`blockr.ui::theme_dep()`](https://bristolmyerssquibb.github.io/blockr.ui/reference/theme_dep.html).
   Nine other packages style themselves from that vocabulary, two of them
   without declaring a dependency here, and the theme layer restyled the
   whole Bootstrap surface – typography, labels, form controls,
