@@ -493,7 +493,16 @@ live_view_grid <- function(v_id, docks, board) {
     return(NULL)
   }
 
-  as_dock_grid(view_grid(views[[v_id]], board_grids(board$board)[[v_id]]))
+  # Canonicalised, because `view_grid()` stamps the whole offered rail set on
+  # its result -- the client has to be told which edges exist -- while a stored
+  # grid records only the populated ones. The echo branch above comes back
+  # through `new_dock_grid()`, which drops the empty ones, so without this the
+  # two branches report different shapes for the same geometry and every
+  # consumer comparing against the board (`grids_stable()`, serialization) sees
+  # a difference that is not one.
+  canonicalize_grid(
+    view_grid(views[[v_id]], board_grids(board$board)[[v_id]])
+  )
 }
 
 # A view's live membership: everything its grid places, tree and rails alike.
