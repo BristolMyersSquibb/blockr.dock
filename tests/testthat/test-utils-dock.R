@@ -74,3 +74,117 @@ test_that("panel-id accessors are empty-safe", {
   expect_length(block_panel_ids(proxy = NULL), 0L)
   expect_length(ext_panel_ids(proxy = NULL), 0L)
 })
+
+test_that("the collapse is off until a breakpoint is configured", {
+
+  # Opt-in, and an absent option is the only thing that reads as off: an
+  # existing deployment keeps its authored grid at every width without saying
+  # anything, and one that does set a breakpoint has an intent to honour.
+  withr::local_options(blockr.narrow_breakpoint = NULL)
+
+  expect_null(narrow_breakpoint())
+  expect_false(is_narrow_viewport(400))
+  expect_false(is_narrow_viewport(1400))
+})
+
+test_that("an unusable breakpoint aborts rather than falling back", {
+
+  # Silently rendering the other layout would hide the typo until someone
+  # opened the board on a phone. Below the floor counts as unusable: no
+  # viewport is 50 px wide, so that is a mistake rather than a layout, and
+  # "never collapse" is spelled by leaving the option unset.
+  for (value in list(0, -1, 10, NA, NaN, "wide-ish", c(600, 900))) {
+
+    withr::local_options(blockr.narrow_breakpoint = value)
+
+    expect_error(narrow_breakpoint(), class = "narrow_breakpoint_invalid")
+  }
+})
+
+test_that("a configured breakpoint reads the width against it", {
+
+  withr::local_options(blockr.narrow_breakpoint = 900)
+
+  expect_identical(narrow_breakpoint(), 900)
+  expect_true(is_narrow_viewport(500))
+  expect_false(is_narrow_viewport(1400))
+
+  # Exactly at the breakpoint is wide: the collapse is for what falls below it.
+  expect_false(is_narrow_viewport(900))
+
+  # A width that never arrived -- board_ui() built after Shiny bound its
+  # inputs, so the probe missed the initial batch -- renders the desktop grid.
+  expect_false(is_narrow_viewport(NULL))
+  expect_false(is_narrow_viewport(NA_real_))
+  expect_false(is_narrow_viewport(c(500, 900)))
+})
+
+test_that("an infinite breakpoint always collapses", {
+
+  # How a board meant only for phones asks to stack at every width.
+  withr::local_options(blockr.narrow_breakpoint = Inf)
+
+  expect_identical(narrow_breakpoint(), Inf)
+  expect_true(is_narrow_viewport(400))
+  expect_true(is_narrow_viewport(4000))
+})
+
+test_that("a breakpoint survives arriving as a string from the environment", {
+
+  withr::local_options(blockr.narrow_breakpoint = "600")
+
+  expect_identical(narrow_breakpoint(), 600)
+  expect_true(is_narrow_viewport(500))
+  expect_false(is_narrow_viewport(700))
+})
+
+test_that("the group fraction defaults to 0.8, and aborts when unusable", {
+
+  withr::local_options(blockr.narrow_group_fraction = NULL)
+  expect_identical(narrow_group_fraction(), 0.8)
+
+  withr::local_options(blockr.narrow_group_fraction = 0.5)
+  expect_identical(narrow_group_fraction(), 0.5)
+
+  withr::local_options(blockr.narrow_group_fraction = "0.5")
+  expect_identical(narrow_group_fraction(), 0.5)
+
+  # A fraction of exactly 1 is a group per screenful, which is meaningful.
+  withr::local_options(blockr.narrow_group_fraction = 1)
+  expect_identical(narrow_group_fraction(), 1)
+
+  for (value in list(0, -1, 1.5, Inf, NA, "half")) {
+
+    withr::local_options(blockr.narrow_group_fraction = value)
+
+    expect_error(
+      narrow_group_fraction(),
+      class = "narrow_group_fraction_invalid"
+    )
+  }
+})
+
+test_that("the stacked container is as tall as the rows it carries", {
+
+  withr::local_options(blockr.narrow_group_fraction = 0.5)
+
+  # Three full-height columns, each capped to half a viewport.
+  expect_identical(
+    narrow_stack_attrs(
+      dock_grid("ext_panel-dag", "block_panel-a", "block_panel-b")
+    ),
+    list(style = "--blockr-stack-height: 150vh;")
+  )
+
+  # A short row shortens the stack rather than taking a uniform slot: the
+  # quarter-height leaf contributes 25vh, not the 50vh cap the other two hit.
+  expect_identical(
+    narrow_stack_attrs(
+      dock_grid("a", group("b", "c", sizes = c(0.25, 0.75)))
+    ),
+    list(style = "--blockr-stack-height: 125vh;")
+  )
+
+  # An empty view still needs a box, not a zero-height one.
+  expect_match(narrow_stack_attrs(new_dock_grid())$style, "50vh", fixed = TRUE)
+})

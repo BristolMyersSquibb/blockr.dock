@@ -577,6 +577,69 @@ block_panel_tabs <- function(app, board_id = "my_board") {
   sort(sub(".*-tab-(block_panel-.+)$", "\\1", xml2::xml_attr(nodes, "id")))
 }
 
+# The dockview groups one board's views render, as their laid-out rectangles.
+# A narrow board stacks its groups into one scrolling column, so what separates
+# the collapsed render from the nested one is the geometry, not the count: the
+# rows share a left edge and a width and differ in `top`. There is no CSS
+# selector in `xml2`, and the same bundle ships a `dv-group-view` class
+# alongside `dv-groupview`, so this reads the rects from the live DOM instead.
+dock_group_rects <- function(app, board_id = "my_board") {
+  jsonlite::fromJSON(
+    app$get_js(
+      sprintf(
+        paste0(
+          "JSON.stringify(Array.from(document.querySelectorAll(",
+          "'#%s-view_container .dv-groupview')).map(function(e){",
+          "var r=e.getBoundingClientRect();",
+          "return {top:Math.round(r.top), left:Math.round(r.left),",
+          " width:Math.round(r.width), height:Math.round(r.height)};}))"
+        ),
+        board_id
+      )
+    )
+  )
+}
+
+# Whether the page itself scrolls, and by how much -- the property the stack
+# depends on. A squeezed stack (dockView dividing a viewport-height box) leaves
+# the document exactly the viewport's height.
+page_scroll_extent <- function(app) {
+  jsonlite::fromJSON(
+    app$get_js(
+      paste0(
+        "JSON.stringify({docH: document.documentElement.scrollHeight,",
+        " viewH: window.innerHeight})"
+      )
+    )
+  )
+}
+
+# Wait until the view container has settled to exactly `n` dockview groups.
+# A restore mounts asynchronously and transiently surfaces a tab group's
+# members as separate leaves, so reading the count straight after
+# `wait_for_idle()` (server idle, client render in flight) samples that
+# transient and ejects a green PR.
+wait_dock_groups <- function(app, n, board_id = "my_board",
+                             timeout = 30 * 1000) {
+  js <- sprintf(
+    paste0(
+      "document.querySelectorAll(",
+      "'#%s-view_container .dv-groupview').length === %d"
+    ),
+    board_id, n
+  )
+
+  diagnose <- function() {
+    sprintf(
+      "[dock-groups] want=%d got=%d shell=%s",
+      n, nrow(dock_group_rects(app, board_id)),
+      dock_shell_diag(app, board_id)
+    )
+  }
+
+  wait_js(app, js, diagnose, timeout)
+}
+
 # The block panels whose tab is the *front* (active) tab of its dockview group,
 # scoped to one `view`'s dock (every view's dock is in the DOM, so an unscoped
 # read would mix in another view's front tabs). The client-rendered geometry a

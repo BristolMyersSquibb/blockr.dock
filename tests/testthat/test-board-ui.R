@@ -6,9 +6,9 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 11 base elements + the two pre-rendered block-browser sidebars
-  # (add_block_sidebar, append_block_sidebar).
-  expect_length(ui, 13L)
+  # 11 base elements + the viewport probe + the two pre-rendered block-browser
+  # sidebars (add_block_sidebar, append_block_sidebar).
+  expect_length(ui, 14L)
 })
 
 # Settings sidebar is mounted with pre-rendered content + a JS-trigger gear
@@ -355,6 +355,26 @@ test_that("locked mode drops the board-options accordion (#135)", {
 
   # The read-only generated-code export stays available.
   expect_match(html, 'id="generate_code"', fixed = TRUE)
+})
+
+test_that("board_ui mounts the viewport probe with its binding", {
+
+  ui <- board_ui(
+    "test",
+    new_dock_board(blocks = c(a = new_dataset_block()))
+  )
+
+  html <- as.character(ui)
+
+  # The DOM id is namespaced (two boards on one page must not collide) and
+  # carries the class the binding finds; the input name is `viewport_width`.
+  expect_match(html, 'id="test-viewport_width"', fixed = TRUE)
+  expect_match(html, "blockr-viewport-probe", fixed = TRUE)
+
+  expect_true(
+    "blockr-viewport-probe" %in%
+      chr_xtr(htmltools::findDependencies(ui), "name")
+  )
 })
 
 test_that("the shared stylesheet layer is blockr.ui's, not this package's", {

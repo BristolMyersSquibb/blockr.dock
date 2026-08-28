@@ -468,6 +468,120 @@ set_grid_active <- function(grid, pid) {
   )
 }
 
+# Flatten a grid's nesting into one vertical stack: every tab group survives as
+# its own row -- railed ones included -- in reading order, splits dropped. The
+# narrow-viewport render, applied at the dockView seam and nowhere else, so the
+# keeps the authored geometry a wide viewport restores to. Merging the leaves
+# instead would put a whole dashboard's panels in one tab strip, where naming
+# one of ten tabs is hopeless; a stack keeps the author's grouping and lets the
+# page scroll through it.
+stack_grid <- function(grid) {
+
+  leaves <- stack_rows(grid)
+
+  if (!length(leaves)) {
+    return(grid)
+  }
+
+  new_dock_grid(
+    children = leaves,
+    sizes = stack_row_heights(grid),
+    orientation = "vertical",
+    focus = grid[["focus"]]
+  )
+}
+
+# The rows of the stack: the tree's leaves in reading order, then whatever the
+# rails hold, matching how `grid_panel_ids()` orders the two halves. A rail is
+# already a tab group and a narrow viewport has no edge to spare for it, so it
+# becomes a row like any leaf -- and it has to, since the tree and the rails
+# partition the placed panels and a dropped rail would strand its members.
+stack_rows <- function(grid) {
+  c(grid_leaves_in_order(grid), rail_rows(grid[["rails"]]))
+}
+
+rail_rows <- function(rails) {
+
+  held <- rails[lgl_ply(rails, rail_holds_panels)]
+
+  lapply(held, rail_row)
+}
+
+rail_holds_panels <- function(rail) {
+  length(rail[["panels"]]) > 0L
+}
+
+rail_row <- function(rail) {
+  list(panels = rail[["panels"]], active = rail[["active"]])
+}
+
+# What each row of the stack gets, as a share of the viewport height: the
+# height the author gave that group in the wide render, capped by
+# `narrow_group_fraction()`. Carrying the wide heights over means a group the
+# author sized down stays short instead of being padded out to a uniform row,
+# and the cap keeps a full-height group from filling more than a screenful.
+# These are absolute viewport shares, not ratios -- `new_dock_grid()`
+# normalises them for the grid, and the container's height is their sum
+# (`narrow_stack_attrs()`), so each row lands back on the share computed here.
+stack_row_heights <- function(grid) {
+
+  cap <- narrow_group_fraction()
+
+  # A rail's stored size is a width along the edge it was pinned to, so it
+  # carries no height to bring over and takes a full row.
+  c(
+    pmin(grid_leaf_heights(grid), cap),
+    rep(cap, length(rail_rows(grid[["rails"]])))
+  )
+}
+
+# Each leaf's share of the viewport height in the wide render: the product of
+# the sizes of the vertical splits on its path, a horizontal split dividing
+# width and leaving height alone. Split direction alternates with depth in
+# dockView, so only the root orientation is stored and every level below
+# follows from it.
+grid_leaf_heights <- function(grid) {
+
+  descend <- function(node, orientation, share) {
+
+    if (is_grid_leaf(node)) {
+      return(share)
+    }
+
+    kids <- node[["children"]]
+
+    shares <- if (identical(orientation, "vertical")) {
+      share * node[["sizes"]]
+    } else {
+      rep(share, length(kids))
+    }
+
+    unlst(map(descend, kids, flip_orientation(orientation), shares))
+  }
+
+  descend(
+    list(children = grid[["children"]], sizes = grid[["sizes"]]),
+    coal(grid[["orientation"]], "horizontal", fail_all = FALSE),
+    1
+  )
+}
+
+# Every leaf of a grid, in reading order (root children first, depth-first),
+# each keeping the panels and open tab it carried.
+grid_leaves_in_order <- function(grid) {
+
+  collect <- function(node) {
+
+    if (is_grid_leaf(node)) {
+      list(node)
+    } else {
+      unlst(lapply(node[["children"]], collect))
+    }
+  }
+
+  unlst(lapply(grid[["children"]], collect))
+}
+
 new_dock_grids <- function(x = list()) {
   structure(x, class = "dock_grids")
 }

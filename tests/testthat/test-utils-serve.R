@@ -1111,6 +1111,56 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
   expect_true(probe$computingArc)
 })
 
+test_that("a narrow viewport stacks a view into a scrolling column (#413)", {
+
+  skip_on_cran()
+
+  # An authored two-group board, one group tabbed: side by side when wide, and
+  # the tabbed group means the stack carries a parked background-tab overlay.
+  app <- new_app_driver(
+    system.file("examples", "narrow-stack", "app.R", package = "blockr.dock"),
+    name = "narrow-viewport",
+    seed = 42,
+    width = 500,
+    height = 900,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_block_panel_tabs(
+    app, c("block_panel-a", "block_panel-b", "block_panel-c")
+  )
+  wait_dock_groups(app, 2L)
+
+  rects <- dock_group_rects(app)
+
+  # Stacked, not side by side: the rows share a left edge and a width, and the
+  # second starts below the first. Authored wide, these differ in `left`.
+  expect_identical(nrow(rects), 2L)
+  expect_identical(length(unique(rects$left)), 1L)
+  expect_identical(length(unique(rects$width)), 1L)
+  expect_gt(rects$top[[2L]], rects$top[[1L]])
+
+  # The page carries the stack rather than dockView squeezing it into the
+  # viewport, which is what `narrow_group_fraction()` buys.
+  scroll <- page_scroll_extent(app)
+  expect_gt(scroll$docH, scroll$viewH)
+
+  # And it ends with the stack. Every background tab's render overlay is
+  # parked below the grid by dockView, each a full container tall, so a
+  # container that does not clip trails a blank screenful past the last panel.
+  expect_lt(scroll$docH - max(rects$top + rects$height), 60)
+
+  app$wait_for_idle()
+
+  # The stack is a render, not a commit. The mirror is left unwired, so the
+  # echo writes nothing back, and `view_data` still reports the authored 40/60
+  # grid -- what a save persists and a wide viewport restores to.
+  expect_equal(app$get_value(export = "commit_count"), 0)
+  expect_true(isTRUE(app$get_value(export = "roundtrip_stable")))
+})
+
 test_that("the extension rides a left rail, shown only while it holds it", {
 
   skip_on_cran()
