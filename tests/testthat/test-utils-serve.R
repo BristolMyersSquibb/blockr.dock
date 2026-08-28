@@ -1501,3 +1501,77 @@ test_that("a panel landing in a revealed rail expands it (#431)", {
     1
   )
 })
+
+test_that("a rail collapse round-trips with no following gesture (#436)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "rails", "app.R", package = "blockr.dock"),
+    name = "rail-collapse",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 3)
+  view <- read_dock_state(app)$active_view
+  dock <- paste0("my_board-", view, "-dock")
+  api <- paste0("HTMLWidgets.find('#", dock, "').getWidget()")
+
+  # Optional-chain the polls from `window` down: early in startup neither the
+  # widget nor htmlwidgets itself is on the page yet, and the poll has to wait
+  # that window out (yield `false`) rather than abort on a null dereference or
+  # an undefined global.
+  rail_is <- function(collapsed) {
+    paste0(
+      "window.HTMLWidgets?.find('#", dock, "')?.getWidget()",
+      "?.getEdgeGroup('left')?.isCollapsed() === ", collapsed
+    )
+  }
+
+  # A click on a rail's active tab toggles it collapsed and changes nothing
+  # else -- no move, no add, no activation change. Every other rail gesture
+  # rides an event the dockView client already reports, which is what hid this
+  # one (cynkra/dockViewR#109): the rail rendered collapsed while the board
+  # went on recording the state it had before, until an unrelated click
+  # happened to flush. So the assertions below deliberately follow the toggle
+  # with nothing at all.
+  toggle_rail <- function(collapsed) {
+    app$run_js(
+      paste0(
+        api, ".groups.find(function (g) {",
+        "var l = g.api.location;",
+        "return l.type === 'edge' && l.position === 'left' })",
+        ".element.querySelector('.dv-tab').click();"
+      )
+    )
+    app$wait_for_js(rail_is(collapsed), timeout = 15 * 1000)
+    app$wait_for_idle()
+  }
+
+  # The board as a save finds it: exported through the live plugin, so the read
+  # goes through the mirror that commits the client echo rather than through
+  # the echo itself. A stale value is harmless in a live session -- the next
+  # click corrects it -- and wrong exactly here, where the toggle is the last
+  # thing the user did before the board was written out.
+  stored_collapsed <- function() {
+    board <- blockr_deser(
+      jsonlite::fromJSON(
+        retry_download(app, "my_board-preserve_board-serialize"),
+        simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+      )
+    )
+    isTRUE(board_grids(board)[[view]][["rails"]][["left"]][["collapsed"]])
+  }
+
+  app$wait_for_js(rail_is("false"), timeout = 15 * 1000)
+  expect_false(stored_collapsed())
+
+  toggle_rail("true")
+  expect_true(stored_collapsed())
+
+  toggle_rail("false")
+  expect_false(stored_collapsed())
+})
