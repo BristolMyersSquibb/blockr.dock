@@ -2,6 +2,29 @@
 
 ## blockr.dock (development version)
 
+- On a narrow viewport, a view’s nested grid now flattens into a single
+  vertical stack: every tab group survives as its own row, railed ones
+  included, and the page scrolls from one to the next instead of columns
+  running off-screen. A row keeps the height the wide layout gave it –
+  so a group the author sized down stays short rather than being padded
+  out – capped at `blockr.narrow_group_fraction` of the viewport (0.8 by
+  default, a fraction in (0, 1\]). The width is read once, at startup,
+  so reflowing takes a reload.
+
+  The collapse is opt-in and off until a deployment sets
+  `blockr.narrow_breakpoint`. Setting it to `Inf` collapses at every
+  width, which is how a board meant only for phones asks to always
+  stack. An unusable value aborts rather than falling back to a default
+  – anything under 50 px, `NA`, or a string that is not a number – since
+  a deployment that sets a breakpoint has an intent, and silently
+  rendering the other layout would hide the typo until someone opened
+  the board on a phone.
+
+  The stack is a render and nothing more: a narrow session writes no
+  geometry back, so the board keeps the layout a wide viewport restores
+  to and a save from a phone still persists it
+  ([\#413](https://github.com/BristolMyersSquibb/blockr.dock/issues/413)).
+
 - Blocks and extensions can now sit in a **rail** – a tab group pinned
   to one edge of a view, out of the splitview, rather than a grid cell
   competing with the panels for width. Every board offers a left and a
