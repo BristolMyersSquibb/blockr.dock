@@ -1,85 +1,4 @@
 /* ============================================
-   CSS Design System - Variables (Figma-aligned)
-   ============================================ */
-:root {
-  /* ===========================================
-     Grey Scale (Tailwind-style)
-     =========================================== */
-  --blockr-grey-50: #f9fafb;   /* Page bg, subtle backgrounds */
-  --blockr-grey-100: #f3f4f6;  /* Hover states, input bg */
-  --blockr-grey-200: #e5e7eb;  /* Borders */
-  --blockr-grey-300: #d1d5db;  /* Darker borders, dividers */
-  --blockr-grey-400: #9ca3af;  /* Placeholder text */
-  --blockr-grey-500: #6b7280;  /* Muted text */
-  --blockr-grey-600: #4b5563;  /* Secondary icons */
-  --blockr-grey-700: #374151;  /* Secondary text */
-  --blockr-grey-800: #1f2937;  /* Dark text */
-  --blockr-grey-900: #111827;  /* Primary text */
-
-  /* Primary Blue */
-  --blockr-blue-50: #eff6ff;
-  --blockr-blue-100: #dbeafe;
-  --blockr-blue-500: #3b82f6;
-  --blockr-blue-600: #2563eb;
-  --blockr-blue-700: #1d4ed8;
-
-  /* Shadow - elevated dropdowns */
-  --blockr-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --blockr-shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-
-  /* Data marks - bars, boxes, lanes */
-  /* Cosmetic ONLY. This radius carries no information: it exists so a mark
-     does not read as a raw div, and nothing may ever be inferred from its
-     presence. Two rules keep it honest:
-       - it applies to the SILHOUETTE, never to sub-marks (median ticks,
-         whiskers, fence caps are 1-2px and a radius turns them into dots);
-       - an end stays SQUARE if it sits on an axis (a bar's zero end) or
-         abuts a sibling segment (a stack's inner joins). Rounding a baseline
-         lifts the bar off its axis, and zero is shared structure, not data.
-     It must also never approach half the mark's thickness, because a capsule
-     is a SEPARATE and semantic signal meaning "soft boundary" (the
-     point-range band). Clamp with min(radius, thickness / 4) on thin lanes;
-     at 12-14px the token applies unchanged. */
-  --blockr-mark-radius: 2px;
-
-  /* Weight for a mark that supports a CHOICE rather than carrying the answer:
-     the crossfilter's bars rank options in a picker, they are not the
-     analysis output. Marks that are the content stay at full weight. */
-  --blockr-mark-weight-supporting: 0.6;
-
-  /* Font Sizes */
-  --blockr-font-size-base: 0.875rem;      /* 14px - base for body/inputs */
-  --blockr-font-size-sm: 0.8125rem;       /* 13px - helper text */
-  --blockr-font-size-xs: 0.75rem;         /* 12px - meta, toggles, subtitle */
-  --blockr-font-size-title: 1.25rem;      /* 20px - block title */
-  --blockr-font-size-section: 1rem;       /* 16px - section headers */
-
-  /* Font Weights */
-  --blockr-font-weight-normal: 400;
-  --blockr-font-weight-medium: 500;
-  --blockr-font-weight-semibold: 600;
-
-  /* Colors - Text (Figma-aligned) */
-  --blockr-color-text-primary: var(--blockr-grey-900);
-  --blockr-color-text-secondary: var(--blockr-grey-700);
-  --blockr-color-text-muted: var(--blockr-grey-500);
-  --blockr-color-text-subtle: var(--blockr-grey-400);
-  --blockr-color-text-meta: var(--blockr-grey-500);
-
-  /* Colors - UI */
-  --blockr-color-border: var(--blockr-grey-200);
-  --blockr-color-border-hover: var(--blockr-grey-300);
-  --blockr-color-bg-subtle: var(--blockr-grey-50);
-  --blockr-color-bg-hover: var(--blockr-grey-100);
-  --blockr-color-bg-input: var(--blockr-grey-50);
-  --blockr-color-primary: var(--blockr-blue-600);
-  --blockr-color-primary-hover: var(--blockr-blue-700);
-  --blockr-color-primary-bg: var(--blockr-blue-50);
-  --blockr-color-error: #dc2626;
-  --blockr-color-success: #16a34a;
-}
-
-/* ============================================
    Typography Classes
    ============================================ */
 .blockr-title {
@@ -315,210 +234,6 @@
 }
 
 /* ============================================
-   Bootstrap Base Overrides
-   ============================================ */
-
-/* --- Typography --- */
-body {
-  font-size: var(--blockr-font-size-base);
-}
-
-h4, .h4 {
-  font-size: var(--blockr-font-size-section);
-  font-weight: var(--blockr-font-weight-medium);
-  font-variant-caps: all-small-caps;
-  color: var(--blockr-color-text-secondary);
-  letter-spacing: 0.5px;
-}
-
-h5, .h5 {
-  font-size: var(--blockr-font-size-section);
-  font-weight: var(--blockr-font-weight-medium);
-}
-
-h6, .h6 {
-  font-size: var(--blockr-font-size-base);
-  font-weight: var(--blockr-font-weight-medium);
-}
-
-small, .small {
-  font-size: var(--blockr-font-size-sm);
-}
-
-/* --- Labels --- */
-label,
-.form-label,
-.shiny-input-container .control-label {
-  font-size: var(--blockr-font-size-xs);
-  color: var(--blockr-color-text-secondary);
-  margin-bottom: 0.25rem;
-}
-
-label:has(input[type="file"]) {
-  margin-bottom: 0;
-}
-
-/* --- Form Controls (Figma-aligned) --- */
-.form-control,
-.form-select {
-  font-size: var(--blockr-font-size-base);
-  background-color: var(--blockr-color-bg-input);
-  border: 1px solid var(--blockr-color-border);
-  border-radius: 8px;
-  padding: 10px 14px;
-  color: var(--blockr-color-text-primary);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-}
-
-.form-control:focus,
-.form-select:focus {
-  background-color: #ffffff;
-  border-color: var(--blockr-color-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  outline: none;
-}
-
-.form-control::placeholder {
-  color: var(--blockr-grey-400);
-}
-
-.input-group-sm > .form-control,
-.input-group-sm > .form-select,
-.input-group-sm > .input-group-text,
-.input-group-sm > .btn {
-  font-size: var(--blockr-font-size-sm);
-  padding: 6px 10px;
-}
-
-/* Selectize - Figma-aligned */
-.selectize-control,
-.selectize-input,
-.selectize-dropdown {
-  font-size: var(--blockr-font-size-base);
-}
-
-.selectize-input {
-  background-color: var(--blockr-color-bg-input) !important;
-  border: 1px solid var(--blockr-color-border) !important;
-  border-radius: 8px !important;
-  padding: 0 12px !important;
-  min-height: 42px !important;
-  display: flex !important;
-  align-items: center !important;
-  flex-wrap: wrap !important;
-  box-shadow: none !important;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-}
-
-.selectize-input.focus {
-  background-color: #ffffff !important;
-  border-color: var(--blockr-color-primary) !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-}
-
-.selectize-dropdown {
-  border: 1px solid var(--blockr-color-border) !important;
-  border-radius: 8px !important;
-  box-shadow: var(--blockr-shadow-lg) !important;
-  margin-top: 4px !important;
-}
-
-.selectize-dropdown-content .option {
-  padding: 10px 14px !important;
-  color: var(--blockr-color-text-primary);
-}
-
-.selectize-dropdown-content .option.active {
-  background-color: var(--blockr-color-bg-hover) !important;
-  color: var(--blockr-color-text-primary) !important;
-}
-
-/* --- Buttons (Figma-aligned) --- */
-.btn {
-  font-size: var(--blockr-font-size-base);
-  font-weight: var(--blockr-font-weight-medium);
-  border-radius: 6px;
-  padding: 8px 16px;
-  transition: all 0.15s ease;
-}
-
-.btn-sm {
-  font-size: var(--blockr-font-size-sm);
-  padding: 6px 12px;
-}
-
-/* File input: stretch button to match form-control height */
-.input-group .input-group-btn {
-  display: flex;
-}
-
-/* Primary button - blue */
-.btn-primary {
-  background-color: var(--blockr-color-primary);
-  border-color: var(--blockr-color-primary);
-  color: #ffffff;
-}
-
-.btn-primary:hover,
-.btn-primary:focus {
-  background-color: var(--blockr-color-primary-hover);
-  border-color: var(--blockr-color-primary-hover);
-  color: #ffffff;
-}
-
-/* Secondary/Outline button - gray */
-.btn-secondary,
-.btn-outline-secondary,
-.btn-light {
-  background-color: var(--blockr-grey-100);
-  border: 1px solid var(--blockr-color-border);
-  color: var(--blockr-color-text-primary);
-}
-
-.btn-secondary:hover,
-.btn-secondary:focus,
-.btn-outline-secondary:hover,
-.btn-outline-secondary:focus,
-.btn-light:hover,
-.btn-light:focus {
-  background-color: var(--blockr-color-border);
-  border-color: var(--blockr-color-border-hover);
-  color: var(--blockr-color-text-primary);
-}
-
-/* Default/outline button */
-.btn-default,
-.btn-outline-default {
-  background-color: var(--blockr-grey-100);
-  border: 1px solid var(--blockr-color-border);
-  color: var(--blockr-color-text-primary);
-}
-
-.btn-default:hover,
-.btn-default:focus,
-.btn-outline-default:hover,
-.btn-outline-default:focus {
-  background-color: var(--blockr-color-border);
-  border-color: var(--blockr-color-border-hover);
-}
-
-/* Icon-only action buttons (remove row, etc.) */
-.btn-link.text-muted {
-  background: transparent !important;
-  border: none !important;
-  border-radius: 4px !important;
-  color: var(--blockr-grey-400) !important;
-  transition: background-color 0.15s ease, color 0.15s ease !important;
-}
-
-.btn-link.text-muted:hover,
-.btn-link.text-muted:focus {
-  background-color: var(--blockr-grey-100) !important;
-  color: var(--blockr-grey-600) !important;
-  text-decoration: none !important;
-}
-
-/* ============================================
    Offcanvas / Sidebar Styling (Figma-aligned)
    ============================================ */
 .offcanvas {
@@ -609,119 +324,6 @@ label:has(input[type="file"]) {
   margin-right: -20px;
   border-color: var(--blockr-color-border);
   opacity: 1;
-}
-
-/* ============================================
-   Tooltip & Popover Styling (Figma-aligned)
-   ============================================ */
-.tooltip {
-  --bs-tooltip-bg: white;
-  --bs-tooltip-color: var(--blockr-color-text-secondary);
-  --bs-tooltip-opacity: 1;
-}
-
-.tooltip-inner {
-  font-size: var(--blockr-font-size-sm);
-  font-weight: var(--blockr-font-weight-normal);
-  padding: 8px 12px;
-  border-radius: 8px;
-  box-shadow: var(--blockr-shadow-lg);
-  border: 1px solid var(--blockr-color-border);
-  max-width: 250px;
-  text-align: left;
-}
-
-.tooltip-arrow::before {
-  border-top-color: white !important;
-  border-bottom-color: white !important;
-}
-
-/* Popover - light style matching tooltips */
-.popover {
-  --bs-popover-bg: white;
-  --bs-popover-border-color: var(--blockr-color-border);
-  --bs-popover-body-color: var(--blockr-color-text-secondary);
-  border-radius: 12px;
-  box-shadow: var(--blockr-shadow-lg);
-  border: 1px solid var(--blockr-color-border);
-  max-width: 280px;
-}
-
-.popover-body {
-  font-size: var(--blockr-font-size-sm);
-  padding: 12px 14px;
-}
-
-/* The package's one popover is hover-triggered, and bslib injects a close
-   button into any popover whose trigger does not include "focus" -- so this
-   button is built on the client and can only be dropped from here. */
-.popover .btn-close {
-  display: none;
-}
-
-.popover-arrow::before {
-  border-top-color: var(--blockr-color-border) !important;
-  border-bottom-color: var(--blockr-color-border) !important;
-}
-
-.popover-arrow::after {
-  border-top-color: white !important;
-  border-bottom-color: white !important;
-}
-
-/* ============================================
-   DataTables Styling (Figma-aligned)
-   ============================================ */
-
-/* Grey stripes */
-.table-striped {
-  --bs-table-striped-bg: var(--blockr-color-bg-subtle);
-}
-
-.table {
-  border-color: var(--blockr-color-border);
-}
-
-.table > thead {
-  background: var(--blockr-color-bg-subtle);
-}
-
-.table > thead > tr > th {
-  font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-color-text-secondary);
-  border-bottom: 2px solid var(--blockr-color-border);
-  padding: 12px 16px;
-}
-
-.table > tbody > tr > td {
-  color: var(--blockr-color-text-primary);
-  border-bottom: 1px solid var(--blockr-grey-100);
-  padding: 12px 16px;
-}
-
-.table > tbody > tr:hover {
-  background-color: var(--blockr-color-bg-subtle);
-}
-
-/* Info text - small and muted */
-.dataTables_wrapper .dataTables_info {
-  font-size: var(--blockr-font-size-sm) !important;
-  color: var(--blockr-color-text-muted) !important;
-  padding-top: 0.5rem;
-}
-
-/* Smaller paginator */
-.dataTables_wrapper .dataTables_paginate .page-link {
-  padding: 0.2rem 0.5rem;
-  font-size: var(--blockr-font-size-xs);
-  border-radius: 6px;
-}
-
-/* ============================================
-   G6 Graph Toolbar Override
-   ============================================ */
-.g6-toolbar {
-  box-shadow: none !important;
 }
 
 /* ============================================
@@ -1325,3 +927,44 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
     animation-duration: 1.6s;
   }
 }
+
+/* A side-mounted tab strip meets its content on a vertical seam, not a
+   horizontal one, so the corners that should stay square are the ones facing
+   the content -- the right pair on a left header, the left pair on a right
+   header.
+
+   Dockview's spaced themes round the strip's *top* corners and the content's
+   *bottom* corners unconditionally, which is right for the top header they
+   were written for and wrong once the header moves to a side: the strip stays
+   rounded on the edge that butts against the content, notching the seam. The
+   theme already carries a `.dv-groupview-header-vertical` variant, but it only
+   flips the padding axis and leaves the radii alone, so this rotates them to
+   match. Rails are why it shows up here, but the rule keys off where the header
+   sits, so a side-headered grid group gets it too.
+
+   `!important` rather than a more specific selector: the theme ships inside
+   the widget's JS bundle and is injected as an inline <style> when dockview
+   loads, so it lands after this file however the dependencies are ordered.
+   Out-specifying it would mean racing a vendor selector that a future dockview
+   could lengthen. The radius stays `var(--dv-border-radius)`, so a theme that
+   sets it to 0 still renders square. */
+.dv-groupview-header-left .dv-tabs-and-actions-container {
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: var(--dv-border-radius) !important;
+}
+
+.dv-groupview-header-left .dv-content-container {
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: var(--dv-border-radius) !important;
+}
+
+.dv-groupview-header-right .dv-tabs-and-actions-container {
+  border-top-left-radius: 0 !important;
+  border-bottom-right-radius: var(--dv-border-radius) !important;
+}
+
+.dv-groupview-header-right .dv-content-container {
+  border-bottom-right-radius: 0 !important;
+  border-top-left-radius: var(--dv-border-radius) !important;
+}
+

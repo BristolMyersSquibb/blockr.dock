@@ -322,7 +322,7 @@ test_that("construction restricts a grid to its view's members", {
   expect_identical(layout_panel_ids(board_grids(brd)[["A"]]), "block_panel-a")
 })
 
-test_that("the default grid groups extensions left, blocks right, tabbed", {
+test_that("the default board rails extensions left, tabs blocks in the grid", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -330,15 +330,27 @@ test_that("the default grid groups extensions left, blocks right, tabbed", {
   )
 
   grid <- active_view_grid(brd)
+  rails <- active_view_grid(brd)[["rails"]]
 
-  expect_length(grid[["children"]], 2L)
+  expect_length(grid[["children"]], 1L)
   expect_setequal(
     grid[["children"]][[1L]][["panels"]],
-    "ext_panel-edit_board"
-  )
-  expect_setequal(
-    grid[["children"]][[2L]][["panels"]],
     c("block_panel-a", "block_panel-b")
+  )
+
+  # Every dock offers both edges, so a user always has somewhere to park a
+  # panel; the one the default board does not populate is empty and hidden.
+  expect_named(rails, c("left", "right"))
+  expect_identical(rails[["left"]][["panels"]], "ext_panel-edit_board")
+  expect_identical(rails[["right"]][["panels"]], character())
+
+  # Only the populated edge is stored -- the rest are implied.
+  expect_named(board_grids(brd)[[active_view(brd)]][["rails"]], "left")
+
+  # Membership still carries both -- the rail says where, not whether.
+  expect_setequal(
+    view_members(board_views(brd)[[active_view(brd)]]),
+    c("ext_panel-edit_board", "block_panel-a", "block_panel-b")
   )
 })
 
