@@ -75,19 +75,49 @@ test_that("panel-id accessors are empty-safe", {
   expect_length(ext_panel_ids(proxy = NULL), 0L)
 })
 
-test_that("is_narrow_viewport reads the reported width against a breakpoint", {
+test_that("the collapse is off until a breakpoint is configured", {
 
+  # Opt-in: an existing deployment keeps its authored grid at every width, and
+  # only a finite positive number turns the collapse on. Anything else reads as
+  # off rather than falling back to a default -- a typo must not silently
+  # restack every phone, and `Inf` must not restack every desktop.
+  unusable <- list(NULL, 0, -1, NA, Inf, -Inf, NaN, "wide-ish", c(600, 900))
+
+  for (value in unusable) {
+
+    withr::local_options(blockr.narrow_breakpoint = value)
+
+    expect_null(narrow_breakpoint())
+    expect_false(is_narrow_viewport(400))
+    expect_false(is_narrow_viewport(1400))
+  }
+})
+
+test_that("a configured breakpoint reads the width against it", {
+
+  withr::local_options(blockr.narrow_breakpoint = 900)
+
+  expect_identical(narrow_breakpoint(), 900)
   expect_true(is_narrow_viewport(500))
   expect_false(is_narrow_viewport(1400))
 
   # Exactly at the breakpoint is wide: the collapse is for what falls below it.
-  expect_false(is_narrow_viewport(narrow_breakpoint()))
+  expect_false(is_narrow_viewport(900))
 
-  # A width that never arrived -- board_ui built after Shiny bound its inputs,
-  # so the probe missed the initial batch -- renders the desktop grid.
+  # A width that never arrived -- board_ui() built after Shiny bound its
+  # inputs, so the probe missed the initial batch -- renders the desktop grid.
   expect_false(is_narrow_viewport(NULL))
   expect_false(is_narrow_viewport(NA_real_))
   expect_false(is_narrow_viewport(c(500, 900)))
+})
+
+test_that("a breakpoint survives arriving as a string from the environment", {
+
+  withr::local_options(blockr.narrow_breakpoint = "600")
+
+  expect_identical(narrow_breakpoint(), 600)
+  expect_true(is_narrow_viewport(500))
+  expect_false(is_narrow_viewport(700))
 })
 
 test_that("the group fraction is clamped to (0, 1], else the default", {
@@ -133,19 +163,4 @@ test_that("the stacked container is as tall as the rows it carries", {
 
   # An empty view still needs a box, not a zero-height one.
   expect_match(narrow_stack_attrs(new_dock_grid())$style, "50vh", fixed = TRUE)
-})
-
-test_that("the breakpoint is tunable, and survives a string from the env", {
-
-  withr::local_options(blockr.narrow_breakpoint = 600)
-
-  expect_identical(narrow_breakpoint(), 600)
-  expect_false(is_narrow_viewport(700))
-  expect_true(is_narrow_viewport(500))
-
-  withr::local_options(blockr.narrow_breakpoint = "600")
-  expect_identical(narrow_breakpoint(), 600)
-
-  withr::local_options(blockr.narrow_breakpoint = "wide-ish")
-  expect_identical(narrow_breakpoint(), 900)
 })

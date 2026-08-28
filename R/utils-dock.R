@@ -308,22 +308,30 @@ is_dock_locked <- function() {
 
 # The narrow-viewport decision, taken once per session from the width the
 # client reports at input initialisation (see `viewport_probe_ui()`). Below the
-# breakpoint every view renders as one tabbed group rather than a nested grid,
-# so a board on a phone is a tab strip instead of columns running off-screen. A
-# width that never arrived -- a `board_ui()` built after Shiny bound its inputs,
-# so the probe missed the initial batch -- reads as wide, the desktop render.
+# breakpoint a view's groups stack into one scrolling column rather than a
+# nested grid, so a board on a phone reads top to bottom instead of running
+# columns off-screen. A width that never arrived -- a `board_ui()` built after
+# Shiny bound its inputs, so the probe missed the initial batch -- reads as
+# wide, the desktop render, as does an unset or unusable breakpoint.
 is_narrow_viewport <- function(width) {
-  is_number(width) && width < narrow_breakpoint()
+
+  breakpoint <- narrow_breakpoint()
+
+  is_number(width) && not_null(breakpoint) && width < breakpoint
 }
 
-# The viewport width below which a view collapses, in CSS pixels. The default
-# is a guess, so it is a `blockr_option()` -- tune it with
-# `options(blockr.narrow_breakpoint = ...)`, no code change needed.
+# The viewport width below which a view collapses, in CSS pixels, or NULL when
+# the collapse is off. Opt-in: a board renders its authored grid at every width
+# until a deployment sets `options(blockr.narrow_breakpoint = ...)`, and only a
+# finite positive number turns it on. Zero, a negative, `Inf`, `NA` and an
+# unparseable string all read as off rather than as "fall back to some
+# default", so a typo cannot silently restack every phone -- or, in `Inf`'s
+# case, every desktop.
 narrow_breakpoint <- function() {
 
-  px <- suppressWarnings(as.numeric(blockr_option("narrow_breakpoint", 900)))
+  px <- suppressWarnings(as.numeric(blockr_option("narrow_breakpoint", NULL)))
 
-  if (length(px) != 1L || is.na(px)) 900 else px
+  if (is_number(px) && px > 0) px else NULL
 }
 
 # The most of the viewport one row of the collapsed stack may take, as a

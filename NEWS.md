@@ -7,10 +7,12 @@
   short rather than being padded out -- capped at
   `blockr.narrow_group_fraction` of the viewport (0.8 by default, a fraction in
   (0, 1]). The viewport width is read once, at startup, so reflowing takes a
-  reload; the breakpoint is `blockr.narrow_breakpoint` (900 px). The stack is a
-  render and nothing more -- a narrow session writes no geometry back, so the
-  board keeps the layout a wide viewport restores to and a save from a phone
-  still persists it (#413).
+  reload. The collapse is opt-in and off until a deployment sets
+  `blockr.narrow_breakpoint`, which only a finite positive number turns on:
+  zero, a negative, `Inf`, `NA` and an unparseable value all read as off rather
+  than falling back to a default. The stack is a render and nothing more -- a
+  narrow session writes no geometry back, so the board keeps the layout a wide
+  viewport restores to and a save from a phone still persists it (#413).
 
 * Blocks and extensions can now sit in a **rail** -- a tab group pinned to one edge of a view, out of the splitview, rather than a grid cell competing with the panels for width. Every board offers a left and a right edge; a rail is written among a view's grid children with `rail()`, and the default board parks the extensions on the left. Which rails a dock *offers* is a constant, so a grid only records which are *populated* -- an empty rail is invisible, and a board stored before rails existed offers the same edges as any other. A railed panel is absent from the grid tree, so the placement walks are untouched and a view's members are the union of the two, with membership still authoritative for which panels exist while the tree and the rails only say where. Dragging a panel into or out of a rail is stock dockview, and the arrangement rides the settled-echo mirror and `save_dock()` / `restore_dock()` like the rest of the grid does (#431).
 

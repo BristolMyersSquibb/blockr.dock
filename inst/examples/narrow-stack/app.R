@@ -8,6 +8,11 @@ library(blockr.dock)
 # single-panel-per-group board never grows an overlay and would pass either
 # way. The authored 40/60 split also keeps the geometry write-back assertions
 # meaningful, as a plain default grid would not.
+
+# The collapse is opt-in, so a fixture that drives it has to ask for it; a
+# board that sets no breakpoint renders its authored grid at every width.
+options(blockr.narrow_breakpoint = 900)
+
 serve(
   new_dock_board(
     blocks = c(
