@@ -26,6 +26,7 @@ board_ui.dock_board <- function(
     show_block_dep(),
     attr_output_dep(),
     blockr_dock_dep(),
+    rail_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",

@@ -1,13 +1,15 @@
 #' Dock views: structure and grid
 #'
-#' A `dock_board` stores its views as two independent slots. **Structure**
+#' A `dock_board` stores its views as three independent slots. **Structure**
 #' -- which panels belong to each view, plus the view names, ids and the
 #' active view -- is a `dock_views` collection of `dock_view` objects, read
 #' with `board_views()`. **Grid** -- the geometry of each view (nesting, tab
 #' groups, sizes) -- is a separate, `NULL`-valid `dock_grids` slot, read with
-#' `board_grids()`. Single-page boards are a degenerate case: one auto-named
-#' "Page" view. Blocks and extensions are shared across views via the board's
-#' DAG; view membership is a layout concern only.
+#' `board_grids()`; a grid also carries the **rails** pinned to the view's
+#' edges, holding members the splitview therefore does not arrange. Single-page
+#' boards are a degenerate case:
+#' one auto-named "Page" view. Blocks and extensions are shared across views
+#' via the board's DAG; view membership is a layout concern only.
 #'
 #' Each view carries a stable, immutable **id** (its key in the collection)
 #' distinct from its editable display **name**. This mirrors the id / name
@@ -32,24 +34,26 @@
 #' individual view. View CRUD is enabled unless the dock is locked (see
 #' `is_dock_locked()`).
 #'
-#' Structure and grid are related by total semantics, not containment: a
+#' Structure and geometry are related by total semantics, not containment: a
 #' member with no grid entry is an un-landed intent, a grid entry with no
 #' membership an inert ghost. Both are legal on a committed board and
 #' reconciled only where placement is read (`view_grid()` prunes ghosts and
 #' shows un-landed members via a default) -- the board is valid with no grid
-#' at all. Referential integrity still holds: every member must reference a
-#' block or extension on the board.
+#' at all. The rails partition that placement rather than adding to it: a
+#' member a rail names is placed by the rail and so is absent from the grid,
+#' and a view's membership is the union of the two. Referential integrity
+#' still holds: every member must reference a block or extension on the board.
 #'
 #' @param members Ordered character vector of panel ids.
 #' @param name Optional display name for the view.
 #'
 #' @return `board_views()` returns a `dock_views`, `board_grids()` a
-#'   `dock_grids` or `NULL`, and their setters the modified board
-#'   invisibly. `dock_view()` returns a `dock_view` and `view_members()` a
-#'   character vector. `is_dock_view()` / `is_dock_views()` /
-#'   `is_dock_grids()` return a boolean; `validate_dock_view()`,
-#'   `validate_dock_views()` and `validate_dock_grids()` return their
-#'   (validated) input and throw on error. `active_view()` returns the active
+#'   `dock_grids` or `NULL`, and their setters the modified board invisibly. A
+#'   `dock_view()` is a `dock_view` and `view_members()` a character vector.
+#'   The predicates `is_dock_view()` / `is_dock_views()` / `is_dock_grids()`
+#'   return a boolean, while `validate_dock_view()`, `validate_dock_views()`
+#'   and `validate_dock_grids()` return their (validated) input and throw on
+#'   error. `active_view()` returns the active
 #'   view's id, or `NULL` when no view is active, and `active_view<-()` the
 #'   modified collection (or `dock_board`) invisibly. `view_name()` returns a
 #'   view's explicit display name (or `NULL`), `view_name<-()` the modified
@@ -814,7 +818,8 @@ validate_views_delta <- function(views, board, upd) {
   }
 
   unknown_keys <- setdiff(
-    names(views), c("add", "mod", "rm", "active", "rename", "grid", "order")
+    names(views),
+    c("add", "mod", "rm", "active", "rename", "grid", "order")
   )
   if (length(unknown_keys)) {
     blockr_abort(
@@ -1010,13 +1015,9 @@ validate_views_delta <- function(views, board, upd) {
 # a non-member that resolves to a block or extension, and `move` / `resize` /
 # `select` a member of the post-add view. Hint refs (`near`) resolve against the
 # same running membership.
-view_mod_verbs <- function() {
-  c("rm", "add", "move", "resize", "select")
-}
+view_mod_verbs <- c("rm", "add", "move", "resize", "select")
 
-valid_panel_sides <- function() {
-  c("within", "left", "right", "above", "below")
-}
+valid_panel_sides <- c("within", "left", "right", "above", "below")
 
 # The `views$mod` currency is typed refs (`blk()` / `ext()`) and bare id sugar;
 # the prefix strings are the wire encoding. Augment canonicalizes each view's
@@ -1290,7 +1291,7 @@ validate_view_mod <- function(mod, view_id, members, ok_panels) {
     )
   }
 
-  unknown <- setdiff(names(mod), view_mod_verbs())
+  unknown <- setdiff(names(mod), view_mod_verbs)
 
   if (length(unknown)) {
     blockr_abort(
@@ -1475,11 +1476,11 @@ validate_panel_hint <- function(hint, view_id, anchors) {
 
   side <- hint[["side"]]
 
-  if (not_null(side) && !isTRUE(side %in% valid_panel_sides())) {
+  if (not_null(side) && !isTRUE(side %in% valid_panel_sides)) {
     blockr_abort(
       paste0(
         "Hint `side` ", side, " in `views$mod$", view_id, "` must be one of: ",
-        paste(valid_panel_sides(), collapse = ", "), "."
+        paste(valid_panel_sides, collapse = ", "), "."
       ),
       class = "dock_views_mod_hint_invalid"
     )

@@ -6,9 +6,9 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 10 base elements + the two pre-rendered block-browser sidebars
+  # 11 base elements + the two pre-rendered block-browser sidebars
   # (add_block_sidebar, append_block_sidebar).
-  expect_length(ui, 12L)
+  expect_length(ui, 13L)
 })
 
 # Settings sidebar is mounted with pre-rendered content + a JS-trigger gear

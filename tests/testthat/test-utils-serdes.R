@@ -88,6 +88,85 @@ test_that("a multi-view board round-trips identically through ser/des", {
   expect_identical(board_grids(des), board_grids(brd))
 })
 
+test_that("rails round-trip through ser/des", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = new_edit_board_extension(),
+    views = list(V = c("a", "b", "edit_board")),
+    grids = list(
+      V = dock_grid(
+        "a", "b",
+        rail(ext("edit_board"), position = "right", size = 300,
+             collapsed_size = 20)
+      )
+    )
+  )
+
+  des <- blockr_deser(blockr_ser(brd))
+
+  expect_identical(board_grids(des), board_grids(brd))
+  expect_identical(board_views(des), board_views(brd))
+})
+
+test_that("a board saved before rails existed still restores", {
+
+  # The pre-rails format carries `views` and `grids` and no `rails` key at all,
+  # with the extension placed in the grid like any other panel. Two things have
+  # to hold at once. The saved *layout* is reproduced -- the extension stays in
+  # the grid rather than being quietly re-homed into a rail -- while the rail
+  # *capability* is still there, because whether a dock offers an edge to pin a
+  # panel to must never depend on what a save happened to carry.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    extensions = new_edit_board_extension(),
+    views = list(V = c("a", "b", "edit_board")),
+    grids = list(
+      V = dock_grid("ext_panel-edit_board", "block_panel-a", "block_panel-b")
+    )
+  )
+
+  old <- blockr_ser(brd)
+  old[["payload"]][["grids"]][["payload"]][["V"]][["rails"]] <- NULL
+
+  des <- blockr_deser(old)
+
+  # Nothing is written into the grid the save did not carry.
+  expect_null(board_grids(des)[["V"]][["rails"]])
+  expect_identical(board_grids(des), board_grids(brd))
+  expect_identical(board_views(des), board_views(brd))
+  expect_s3_class(validate_board(des), "dock_board")
+
+  # But the edges are there to drag to, empty and so hidden, and the saved
+  # layout is untouched: the extension is still placed by the grid.
+  rails <- active_view_grid(des)[["rails"]]
+
+  expect_named(rails, c("left", "right"))
+  expect_identical(rail_panel_ids(rails), character())
+  expect_true(
+    "ext_panel-edit_board" %in% grid_tree_ids(active_view_grid(des))
+  )
+})
+
+test_that("a rail survives a real JSON encode/decode round-trip", {
+
+  # The stored form goes out through core's `write_json` settings, so a rail's
+  # panel list must survive being read back as a length-one JSON array.
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    extensions = new_edit_board_extension(),
+    views = list(V = c("a", "edit_board")),
+    grids = list(V = dock_grid("a", rail(ext("edit_board"))))
+  )
+
+  reparsed <- jsonlite::fromJSON(
+    jsonlite::toJSON(blockr_ser(brd), null = "null"),
+    simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+  )
+
+  expect_identical(board_grids(blockr_deser(reparsed)), board_grids(brd))
+})
+
 test_that("dock_views preserve a non-alphabetical key order through ser/des", {
 
   # View order is implicit in the list's key sequence -- no separate slot -- so
