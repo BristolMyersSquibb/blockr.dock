@@ -220,6 +220,45 @@ dock_proxy <- function(session = get_session()) {
   dockViewR::dock_view_proxy(dock_id(), session = session)
 }
 
+# Hand the client the edges this dock carries a rail on, once the restore that
+# creates them has gone out. The client owns two things the server cannot see in
+# time: revealing a hidden rail mid-drag, which has no server round-trip to
+# spare, and re-asserting the derived visibility rule as panels are added,
+# removed and moved. Both need to know which edges are rails and how wide the
+# collapsed strip is, which is all this carries.
+send_rail_config <- function(rails, session = get_session()) {
+
+  if (!length(rails)) {
+    return(invisible(NULL))
+  }
+
+  session$sendCustomMessage(
+    "blockr-dock-rails",
+    list(
+      id = session$ns(dock_id()),
+      rails = unname(lapply(rails, rail_client_config))
+    )
+  )
+
+  invisible(NULL)
+}
+
+rail_client_config <- function(rail) {
+  list(
+    position = rail[["position"]],
+    collapsedSize = coal(rail[["collapsed_size"]], 35, fail_all = FALSE)
+  )
+}
+
+rail_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-dock-rail",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "dock-rail.js"
+  )
+}
+
 dock_board_ns <- function(dock) {
   coal(dock$board_ns, dock$proxy$session$ns)
 }

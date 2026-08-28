@@ -84,15 +84,29 @@ test_that("grid resolution accepts a dock_extensions collection", {
 test_that("default_layout uses class-name convention across input forms", {
 
   blks <- c(a = new_dataset_block())
-  expected <- dock_grid("ext_panel-edit_board", "block_panel-a")
+  expected <- dock_grid(
+    "block_panel-a", rail(ext("edit_board"), position = "left")
+  )
 
-  grid_of <- function(x) default_layout(blks, x)[["grids"]][[1L]]
+  layout_of <- function(x) default_layout(blks, x)
+  grid_of <- function(x) layout_of(x)[["grids"]][[1L]]
+  rails_of <- function(x) rail_panel_ids(grid_of(x)[["rails"]])
 
   expect_identical(grid_of(new_edit_board_extension()), expected)
   expect_identical(grid_of(list(new_edit_board_extension())), expected)
   expect_identical(
     grid_of(new_dock_extensions(list(new_edit_board_extension()))),
     expected
+  )
+
+  # The class-name convention names the rail's panel just the same.
+  expect_identical(rails_of(new_edit_board_extension()), "ext_panel-edit_board")
+  expect_identical(
+    rails_of(list(new_edit_board_extension())), "ext_panel-edit_board"
+  )
+  expect_identical(
+    rails_of(new_dock_extensions(list(new_edit_board_extension()))),
+    "ext_panel-edit_board"
   )
 })
 
@@ -342,8 +356,8 @@ test_that("dock_grid format strips panel-id prefixes unless bare = FALSE", {
   full <- format(grid, bare = FALSE)
 
   expect_false(any(grepl("block_panel-|ext_panel-", bare)))
-  expect_true(any(grepl("ext_panel-edit", full, fixed = TRUE)))
   expect_true(any(grepl("block_panel-a", full, fixed = TRUE)))
+  expect_true(any(grepl("block_panel-b", full, fixed = TRUE)))
 })
 
 test_that("dock_grid format marks the focused panel", {
@@ -467,6 +481,39 @@ test_that("stack rows keep the height the wide layout gave them, capped", {
   )
 
   expect_equal(stack_grid(new_dock_grid()), new_dock_grid())
+})
+
+test_that("stack_grid folds a rail in as a row rather than stranding it", {
+
+  withr::local_options(blockr.narrow_group_fraction = 0.8)
+
+  # The tree and the rails partition the placed panels, so a rail dropped on
+  # the way into the stack would strand its members: they are absent from the
+  # tree, and nothing downstream would mount them.
+  grid <- dock_grid(
+    "block_panel-a",
+    group("block_panel-b", "block_panel-c", sizes = c(0.25, 0.75)),
+    rail("ext_panel-dag", "ext_panel-edit", position = "left")
+  )
+
+  stacked <- stack_grid(grid)
+
+  expect_setequal(grid_panel_ids(stacked), grid_panel_ids(grid))
+  expect_null(stacked[["rails"]])
+
+  # The rail arrives after the tree's rows, keeping its panels and open tab.
+  expect_length(stacked[["children"]], 4L)
+  expect_identical(
+    stacked[["children"]][[4L]],
+    list(
+      panels = c("ext_panel-dag", "ext_panel-edit"),
+      active = "ext_panel-dag"
+    )
+  )
+
+  # It has no authored height -- its stored size is a width along its edge --
+  # so it takes a full row at the cap.
+  expect_equal(stack_row_heights(grid), c(0.8, 0.25, 0.75, 0.8))
 })
 
 test_that("a stacked grid is the fixed point of the dockView round trip", {

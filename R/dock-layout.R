@@ -14,7 +14,7 @@
 #' `validate_dock_layout()` returns its input and errors on a malformed shape.
 #' Cast across the seam with `as_dock_layout()` (build the dockView payload
 #' from a [dock_grid][dock-grid] against the board's blocks and extensions),
-#' [as_dock_grid()] (canonical geometry from a layout) and
+#' [as_dock_grid()] (canonical geometry from a layout, rails included) and
 #' [as_dock_view()][dock_view] (membership from a layout).
 #'
 #' @param x Object to wrap, validate, test, or cast.
@@ -94,6 +94,7 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
   blocks <- as_blocks(blocks)
   ext_coll <- as_dock_extensions(extensions)
 
+  rails <- x[["rails"]]
   panel_ids <- grid_panel_ids(x)
 
   blk_pids <- panel_ids[maybe_block_panel_id(panel_ids)]
@@ -118,6 +119,10 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
     )
   }
 
+  if (length(rails)) {
+    out[["edgeGroups"]] <- rails_to_edges(rails)
+  }
+
   new_dock_layout(out)
 }
 
@@ -125,8 +130,90 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
 as_dock_grid.dock_layout <- function(x, ...) {
   tree_to_grid(
     x[["grid"]],
-    coal(x[["activeGroup"]], x[["active_group"]], fail_all = FALSE)
+    coal(x[["activeGroup"]], x[["active_group"]], fail_all = FALSE),
+    as_dock_rails(x)
   )
+}
+
+# The rails a layout pins to its edges. A plain function rather than a generic:
+# only a `dock_layout` carries `edgeGroups`, and a `dock_grid` already hands
+# back its rails.
+as_dock_rails <- function(x) {
+
+  edges <- x[["edgeGroups"]]
+
+  if (!length(edges)) {
+    return(list())
+  }
+
+  set_names(map(edge_to_rail, edges, names(edges)), names(edges))
+}
+
+# The dockView `edgeGroups` payload: one entry per rail, keyed by the edge it
+# pins to. Visibility is derived here rather than stored -- a rail holding
+# panels is shown, an empty one hidden.
+#
+# TWIN: `sync()` in inst/assets/js/dock-rail.js applies the same rule at
+# runtime. Change one and you must change the other. The split is not
+# redundancy: each half owns a moment the other cannot reach. This one decides
+# what the dock is *born* as, and it has to, because the client cannot correct
+# a payload before the first paint -- measured, dropping this rule paints a
+# declared-empty rail at its full 253px for one frame on load. The client owns
+# every moment after, because a panel leaving a rail is a client gesture and
+# waiting for the echo would leave the rail standing empty for a round-trip.
+rails_to_edges <- function(rails) {
+  set_names(lapply(rails, rail_to_edge), chr_xtr(rails, "position"))
+}
+
+rail_to_edge <- function(rail) {
+
+  panels <- rail[["panels"]]
+
+  group <- list(
+    views = as.list(panels),
+    id = rail_group_id(rail[["position"]])
+  )
+
+  if (length(panels)) {
+    group[["activeView"]] <- coal(
+      rail[["active"]], panels[[1L]], fail_all = FALSE
+    )
+  }
+
+  c(
+    list(
+      visible = length(panels) > 0L,
+      collapsed = isTRUE(rail[["collapsed"]]),
+      group = group
+    ),
+    if (not_null(rail[["size"]])) {
+      list(size = rail[["size"]])
+    },
+    if (not_null(rail[["collapsed_size"]])) {
+      list(collapsedSize = rail[["collapsed_size"]])
+    }
+  )
+}
+
+edge_to_rail <- function(edge, position) {
+
+  group <- edge[["group"]]
+
+  new_dock_rail(
+    position,
+    as.character(unlst(group[["views"]])),
+    active = group[["activeView"]],
+    collapsed = isTRUE(edge[["collapsed"]]),
+    size = edge[["size"]],
+    collapsed_size = edge[["collapsedSize"]]
+  )
+}
+
+# A rail's dockView group id. The grid's ids are minted as consecutive integers
+# by `grid_to_tree()`, so keying off the edge keeps the two apart and lets a
+# `position = list(referenceGroup = )` name a rail without consulting the tree.
+rail_group_id <- function(position) {
+  paste0("rail-", position)
 }
 
 #' @export
@@ -146,7 +233,9 @@ as_dock_view.dock_view <- function(x, ...) x
 
 #' @export
 as_dock_view.dock_layout <- function(x, ...) {
-  new_dock_view(grid_panel_ids(as_dock_grid(x)))
+  new_dock_view(
+    grid_panel_ids(as_dock_grid(x))
+  )
 }
 
 # Expand our compact grid into dockView's native tree: assign type tags and
@@ -202,7 +291,7 @@ grid_to_tree <- function(grid) {
 # volatile ids, resolve the focused group to its panel. Inverse of
 # `grid_to_tree()`. A leaf root (a single-group page a live dock can echo) is
 # lifted to the sole child of the compact root.
-tree_to_grid <- function(tree, active_group = NULL) {
+tree_to_grid <- function(tree, active_group = NULL, rails = NULL) {
 
   from_tree <- function(node) {
 
@@ -227,7 +316,7 @@ tree_to_grid <- function(tree, active_group = NULL) {
   root <- tree[["root"]]
 
   if (is.null(root) || !length(root)) {
-    return(new_dock_grid())
+    return(new_dock_grid(rails = rails))
   }
 
   leaf_root <- identical(root[["type"]], "leaf")
@@ -239,7 +328,8 @@ tree_to_grid <- function(tree, active_group = NULL) {
     orientation = tolower(
       coal(tree[["orientation"]], "horizontal", fail_all = FALSE)
     ),
-    focus = focus_panel(tree, active_group)
+    focus = focus_panel(tree, active_group),
+    rails = rails
   )
 }
 

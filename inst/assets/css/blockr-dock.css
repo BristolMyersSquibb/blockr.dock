@@ -935,3 +935,44 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
     animation-duration: 1.6s;
   }
 }
+
+/* A side-mounted tab strip meets its content on a vertical seam, not a
+   horizontal one, so the corners that should stay square are the ones facing
+   the content -- the right pair on a left header, the left pair on a right
+   header.
+
+   Dockview's spaced themes round the strip's *top* corners and the content's
+   *bottom* corners unconditionally, which is right for the top header they
+   were written for and wrong once the header moves to a side: the strip stays
+   rounded on the edge that butts against the content, notching the seam. The
+   theme already carries a `.dv-groupview-header-vertical` variant, but it only
+   flips the padding axis and leaves the radii alone, so this rotates them to
+   match. Rails are why it shows up here, but the rule keys off where the header
+   sits, so a side-headered grid group gets it too.
+
+   `!important` rather than a more specific selector: the theme ships inside
+   the widget's JS bundle and is injected as an inline <style> when dockview
+   loads, so it lands after this file however the dependencies are ordered.
+   Out-specifying it would mean racing a vendor selector that a future dockview
+   could lengthen. The radius stays `var(--dv-border-radius)`, so a theme that
+   sets it to 0 still renders square. */
+.dv-groupview-header-left .dv-tabs-and-actions-container {
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: var(--dv-border-radius) !important;
+}
+
+.dv-groupview-header-left .dv-content-container {
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: var(--dv-border-radius) !important;
+}
+
+.dv-groupview-header-right .dv-tabs-and-actions-container {
+  border-top-left-radius: 0 !important;
+  border-bottom-right-radius: var(--dv-border-radius) !important;
+}
+
+.dv-groupview-header-right .dv-content-container {
+  border-bottom-right-radius: 0 !important;
+  border-top-left-radius: var(--dv-border-radius) !important;
+}
+

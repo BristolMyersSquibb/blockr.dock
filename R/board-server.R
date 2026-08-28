@@ -414,7 +414,10 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
       stored <- board_grids(board$board)[[id]]
 
       # Same geometry within the sash-position noise floor -> nothing to commit,
-      # so window-resize jitter is absorbed while a real drag still writes.
+      # so window-resize jitter is absorbed while a real drag still writes. The
+      # rails ride inside the grid and so inside the same compare -- their pixel
+      # sizes are held to an exact match by `all.equal.dock_grid()`, which only
+      # applies the ratio noise floor to the tree.
       if (isTRUE(all.equal(stored, grid, tolerance = grid_size_tol()))) {
         return()
       }
@@ -493,6 +496,10 @@ live_view_grid <- function(v_id, docks, board) {
   as_dock_grid(view_grid(views[[v_id]], board_grids(board$board)[[v_id]]))
 }
 
+# A view's live membership: everything its grid places, tree and rails alike.
+# Moving a panel between the two changes where it sits, never whether it is a
+# member, so `grid_panel_ids()` spanning both is what keeps a railed panel from
+# reading as removed.
 live_view_membership <- function(grid, view) {
   new_dock_view(layout_panel_ids(grid), view_name(view))
 }
@@ -850,10 +857,16 @@ manage_dock <- function(
     observeEvent(
       req(input[[dock_input("initialized")]]),
       {
-        panels <- as_dock_panel_id(as_dock_grid(init_layout))
+        # Always a list, as `as_dock_panel_id()` on a `dock_grid` was: on a
+        # bare character vector it hands back one classed id rather than a
+        # list when there is only one panel, and `Filter()` would then test
+        # its unclassed element and drop it.
+        panels <- lapply(layout_panel_ids(init_layout), as_dock_panel_id)
 
         restore_layout(init_layout, dock$proxy,
                        blocks = init_blocks, extensions = init_exts)
+
+        send_rail_config(init_layout[["rails"]], session)
 
         show_block_ui(
           as_obj_id(Filter(is_block_panel_id, panels)), session,
