@@ -439,7 +439,10 @@ test_that("an overlay panel reflows the board only once pinned", {
 
   expect_true(pushed())
   expect_gt(width(), 0)
-  expect_equal(width(), panel_width())
+
+  # The variable is snapshotted at pin time and re-measured after the pin has
+  # reflowed the board, so the two agree only to layout's sub-pixel rounding.
+  expect_equal(width(), panel_width(), tolerance = 1e-6)
 
   click_sel(app, paste0("#", add_panel, " .blockr-sidebar-pin"))
   app$wait_for_idle()

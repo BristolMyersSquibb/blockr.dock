@@ -1,5 +1,19 @@
 # blockr.dock (development version)
 
+* Blocks and extensions can now sit in a **rail** -- a tab group pinned to one edge of a view, out of the splitview, rather than a grid cell competing with the panels for width. Every board offers a left and a right edge; a rail is written among a view's grid children with `rail()`, and the default board parks the extensions on the left. Which rails a dock *offers* is a constant, so a grid only records which are *populated* -- an empty rail is invisible, and a board stored before rails existed offers the same edges as any other. A railed panel is absent from the grid tree, so the placement walks are untouched and a view's members are the union of the two, with membership still authoritative for which panels exist while the tree and the rails only say where. Dragging a panel into or out of a rail is stock dockview, and the arrangement rides the settled-echo mirror and `save_dock()` / `restore_dock()` like the rest of the grid does (#431).
+
+  A rail's visibility is derived rather than stored: a rail holding panels is shown, an empty one is hidden. That rule replaces a pin concept and a persisted flag, and it matches the invariant the grid already keeps. Since a hidden rail has no hit area, dragging toward its edge reveals it -- collapsed, so an empty rail shows its bare strip rather than a full-width empty pane -- and the drop expands it. A drag that ends anywhere else leaves the derived rule to hide it again. Whether a rail is collapsed *is* stored, since unlike visibility it cannot be derived -- an expanded rail and a collapsed one hold the same panels -- so a board comes back the way it was left.
+
+* The `--blockr-*` design tokens and the host-app-wide theme layer now live in
+  blockr.ui, which this package imports and attaches through
+  `blockr.ui::theme_dep()`. Nine other packages style themselves from that
+  vocabulary, two of them without declaring a dependency here, and the theme
+  layer restyled the whole Bootstrap surface -- typography, labels, form
+  controls, selectize, buttons, tooltips, popovers and the DataTables chrome
+  -- of every app that loaded a docking layout manager. Neither the vocabulary
+  nor the theme is this package's to own. What stays is the docking chrome,
+  every rule of it scoped to markup generated here (#407).
+
 * Block card chrome that was built on every render and then hidden by the
   stylesheet is gone: the icons and titles fed into the block card's accordion
   headers, which `display: none` also keeps out of the accessibility tree, and

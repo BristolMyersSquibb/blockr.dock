@@ -96,19 +96,24 @@ resolve_url_view <- function(views, query) {
   sel
 }
 
-# Round-trip stability: every view's stored grid must be the fixed point the
-# client echoes back, so the settled echo the restore push provokes is
-# absorbed by the mirror's `all.equal(tolerance = grid_size_tol())` guard rather
-# than committing. It holds when, for every view, the stored grid is
-# that-tolerance-equal to the live grid the client reports -- the comparison the
-# mirror commits on. `stored` and `live` are both `dock_grids`.
-grids_stable <- function(stored, live) {
+# Round-trip stability: every view's stored placement must be the fixed point
+# the client echoes back, so the settled echo the restore push provokes is
+# absorbed by the mirror's `all.equal()` guard rather than committing. It holds
+# when, for every view, the stored slot is `tolerance`-equal to the live one the
+# client reports -- the comparison the mirror commits on.
+slot_stable <- function(stored, live, tolerance) {
 
   view_stable <- function(v) {
-    isTRUE(all.equal(stored[[v]], live[[v]], tolerance = grid_size_tol()))
+    isTRUE(all.equal(stored[[v]], live[[v]], tolerance = tolerance))
   }
 
   all(lgl_ply(names(live), view_stable))
+}
+
+# The grid half, over two `dock_grids`: sizes are 0-1 ratios a window resize
+# jitters, so the sash noise floor applies.
+grids_stable <- function(stored, live) {
+  slot_stable(stored, live, grid_size_tol())
 }
 
 # Test-only server exports for the loop-safety sentinel, via blockr.core's
@@ -116,15 +121,15 @@ grids_stable <- function(stored, live) {
 # test mode (which shinytest2 and `testServer()` set), so a running app
 # registers nothing -- no output, no DOM, no trace. `rv` is the board server's
 # return: `rv$board` the read-only board reactives, `rv$view_data` the dock's
-# live views + grids reactive.
+# live views + grids + rails reactive.
 #
 #   * `commit_count` -- blockr.core's monotonic per-session update tally
 #     (`last_update$seq`). The sentinel drives one gesture and asserts it ticks
 #     once and quiescence adds none; a count still climbing after the app goes
 #     idle is the loop.
-#   * `roundtrip_stable` -- `TRUE` once every view's stored grid matches the
-#     grid the client echoes (`NA` until every view has reported a layout), so
-#     a restore push provokes no spurious commit.
+#   * `roundtrip_stable` -- `TRUE` once every view's stored placement matches
+#     what the client echoes, tree and rails alike (`NA` until every view has
+#     reported a layout), so a restore push provokes no spurious commit.
 #' @exportS3Method blockr.core::blockr_test_exports
 blockr_test_exports.dock_board <- function(x, rv, ...) {
 

@@ -70,14 +70,16 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
   )
 }
 
-# Coerce the `views` / `grids` inputs into the board's two slots. A NULL (or
-# empty) `views` yields the default single-view arrangement; otherwise each is
-# resolved against the board's blocks and extensions via a shared id map.
-# Finally the presentation is reconciled to the authoritative block /
-# extension set: members with no backing panel are pruned from the views and
-# each grid is restricted to its view's members, so construction (and restore)
-# of a stale or inconsistent layout self-heals rather than aborting.
-initialise_views <- function(views, grids, blocks, extensions, active = NULL) {
+# Coerce the `views` / `grids` / `rails` inputs into the board's three slots. A
+# NULL (or empty) `views` yields the default single-view arrangement; otherwise
+# each is resolved against the board's blocks and extensions via a shared id
+# map. Finally the presentation is reconciled to the authoritative block /
+# extension set: members with no backing panel are pruned from the views, each
+# rail is restricted to its view's members and each grid to the members no rail
+# claims, so construction (and restore) of a stale or inconsistent layout
+# self-heals rather than aborting.
+initialise_views <- function(views, grids, blocks, extensions,
+                             active = NULL) {
 
   if (!length(views) && !length(grids)) {
 

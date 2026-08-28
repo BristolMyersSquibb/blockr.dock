@@ -63,12 +63,24 @@ determine_active_views <- function(layout, active_panel = NULL) {
   # tree at `$grid`. A group's active view is its open tab -- but a bare tab
   # switch does not always refresh the echo's `activeView`, so the client's
   # live `active_panel` overrides the front of whichever group lists it.
-  tree <- if (is_dock_grid(layout)) grid_to_tree(layout) else layout[["grid"]]
+  #
+  # A rail is a group too, serialised beside the grid rather than inside it, so
+  # its open tab folds in here. Without that, a block a user parks on an edge
+  # reads as off screen and its card never paints. A bare `dock_grid` carries
+  # no rails, so only an echo contributes any.
+  compact <- is_dock_grid(layout)
+  tree <- if (compact) grid_to_tree(layout) else layout[["grid"]]
+
+  rails <- if (compact) {
+    character()
+  } else {
+    rail_active_views(layout[["edgeGroups"]], active_panel)
+  }
 
   root <- tree[["root"]]
 
   if (is.null(root)) {
-    return(character())
+    return(rails)
   }
 
   xtr_leaf <- function(x) {
@@ -88,7 +100,42 @@ determine_active_views <- function(layout, active_panel = NULL) {
     lapply(x[["data"]], xtr_leaf)
   }
 
-  rapply(xtr_leaf(root), identity, "character")
+  c(rapply(xtr_leaf(root), identity, "character"), rails)
+}
+
+# The open tab of each rail that is actually on screen, keyed by group id like
+# the grid's fronts. A rail counts only while it is both shown and expanded: a
+# collapsed rail is a bare strip with no content pane, exactly as a background
+# tab has none.
+rail_active_views <- function(edges, active_panel = NULL) {
+
+  shown <- Filter(rail_on_screen, edges)
+
+  if (!length(shown)) {
+    return(character())
+  }
+
+  groups <- lapply(shown, `[[`, "group")
+
+  set_names(
+    chr_ply(groups, rail_front_panel, active_panel = active_panel),
+    chr_xtr(groups, "id")
+  )
+}
+
+rail_on_screen <- function(edge) {
+  isTRUE(edge[["visible"]]) && !isTRUE(edge[["collapsed"]])
+}
+
+rail_front_panel <- function(group, active_panel) {
+
+  views <- as.character(unlst(group[["views"]]))
+
+  if (not_null(active_panel) && active_panel %in% views) {
+    return(active_panel)
+  }
+
+  coal(group[["activeView"]], "", fail_all = FALSE)
 }
 
 visible_block_ids <- function(layout, active_panel = NULL) {

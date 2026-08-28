@@ -20,9 +20,13 @@ board_ui.dock_board <- function(
   dock_outputs <- dock_outputs_ui(id, views)
 
   tagList(
+    # Ahead of blockr_dock_dep(), so the shared tokens and theme land first
+    # and this package's own rules override them by source order.
+    blockr.ui::theme_dep(),
     show_block_dep(),
     attr_output_dep(),
     blockr_dock_dep(),
+    rail_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
