@@ -50,6 +50,6 @@ payload from a
 [dock_grid](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-grid.md)
 against the board's blocks and extensions),
 [`as_dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-grid.md)
-(canonical geometry from a layout) and
+(canonical geometry from a layout, rails included) and
 [as_dock_view()](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)
 (membership from a layout).

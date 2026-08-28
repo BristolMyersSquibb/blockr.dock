@@ -1,13 +1,15 @@
 # Dock views: structure and grid
 
-A `dock_board` stores its views as two independent slots. **Structure**
-– which panels belong to each view, plus the view names, ids and the
-active view – is a `dock_views` collection of `dock_view` objects, read
-with `board_views()`. **Grid** – the geometry of each view (nesting, tab
-groups, sizes) – is a separate, `NULL`-valid `dock_grids` slot, read
-with `board_grids()`. Single-page boards are a degenerate case: one
-auto-named "Page" view. Blocks and extensions are shared across views
-via the board's DAG; view membership is a layout concern only.
+A `dock_board` stores its views as three independent slots.
+**Structure** – which panels belong to each view, plus the view names,
+ids and the active view – is a `dock_views` collection of `dock_view`
+objects, read with `board_views()`. **Grid** – the geometry of each view
+(nesting, tab groups, sizes) – is a separate, `NULL`-valid `dock_grids`
+slot, read with `board_grids()`; a grid also carries the **rails**
+pinned to the view's edges, holding members the splitview therefore does
+not arrange. Single-page boards are a degenerate case: one auto-named
+"Page" view. Blocks and extensions are shared across views via the
+board's DAG; view membership is a layout concern only.
 
 ## Usage
 
@@ -81,11 +83,11 @@ board_views(x) <- value
 ## Value
 
 `board_views()` returns a `dock_views`, `board_grids()` a `dock_grids`
-or `NULL`, and their setters the modified board invisibly. `dock_view()`
-returns a `dock_view` and `view_members()` a character vector.
-`is_dock_view()` / `is_dock_views()` / `is_dock_grids()` return a
-boolean; `validate_dock_view()`, `validate_dock_views()` and
-`validate_dock_grids()` return their (validated) input and throw on
+or `NULL`, and their setters the modified board invisibly. A
+`dock_view()` is a `dock_view` and `view_members()` a character vector.
+The predicates `is_dock_view()` / `is_dock_views()` / `is_dock_grids()`
+return a boolean, while `validate_dock_view()`, `validate_dock_views()`
+and `validate_dock_grids()` return their (validated) input and throw on
 error. `active_view()` returns the active view's id, or `NULL` when no
 view is active, and `active_view<-()` the modified collection (or
 `dock_board`) invisibly. `view_name()` returns a view's explicit display
@@ -125,13 +127,16 @@ by `new_dock_board(active = )` (a view id), defaulting to the first; it
 is a property of the collection, never of an individual view. View CRUD
 is enabled unless the dock is locked (see `is_dock_locked()`).
 
-Structure and grid are related by total semantics, not containment: a
-member with no grid entry is an un-landed intent, a grid entry with no
+Structure and geometry are related by total semantics, not containment:
+a member with no grid entry is an un-landed intent, a grid entry with no
 membership an inert ghost. Both are legal on a committed board and
 reconciled only where placement is read (`view_grid()` prunes ghosts and
 shows un-landed members via a default) – the board is valid with no grid
-at all. Referential integrity still holds: every member must reference a
-block or extension on the board.
+at all. The rails partition that placement rather than adding to it: a
+member a rail names is placed by the rail and so is absent from the
+grid, and a view's membership is the union of the two. Referential
+integrity still holds: every member must reference a block or extension
+on the board.
 
 ## Examples
 

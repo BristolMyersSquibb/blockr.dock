@@ -47,7 +47,7 @@ grid."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Dock grid authoring</h1>
-      <small class="dont-index">Source: <a href="https://github.com/BristolMyersSquibb/blockr.dock/blob/main/R/dock-grid.R" class="external-link"><code>R/dock-grid.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/BristolMyersSquibb/blockr.dock/blob/main/R/dock-grid.R" class="external-link"><code>R/dock-grid.R</code></a>, <a href="https://github.com/BristolMyersSquibb/blockr.dock/blob/main/R/dock-rail.R" class="external-link"><code>R/dock-rail.R</code></a></small>
       <div class="d-none name"><code>layout.Rd</code></div>
     </div>
 
@@ -67,7 +67,16 @@ grid.</p>
 <span></span>
 <span><span class="fu">group</span><span class="op">(</span><span class="va">...</span>, sizes <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">default_layout</span><span class="op">(</span><span class="va">blocks</span>, <span class="va">extensions</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">default_layout</span><span class="op">(</span><span class="va">blocks</span>, <span class="va">extensions</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">rail</span><span class="op">(</span></span>
+<span>  <span class="va">...</span>,</span>
+<span>  position <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"left"</span>, <span class="st">"right"</span><span class="op">)</span>,</span>
+<span>  active <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  collapsed <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  size <span class="op">=</span> <span class="fl">260</span>,</span>
+<span>  collapsed_size <span class="op">=</span> <span class="fl">35</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -93,21 +102,40 @@ share of the parent (positive; need not sum to 1).</p></dd>
 
 
 <dt id="arg-active">active<a class="anchor" aria-label="anchor" href="#arg-active"></a></dt>
-<dd><p>For <code>panels()</code>, the id of the tab to open by default.</p></dd>
+<dd><p>For <code>panels()</code> and <code>rail()</code>, the id of the tab to open by
+default.</p></dd>
 
 
 <dt id="arg-blocks-extensions">blocks, extensions<a class="anchor" aria-label="anchor" href="#arg-blocks-extensions"></a></dt>
 <dd><p>Dock board components to arrange (for
 <code>default_layout()</code>).</p></dd>
 
+
+<dt id="arg-position">position<a class="anchor" aria-label="anchor" href="#arg-position"></a></dt>
+<dd><p>For <code>rail()</code>, the edge the rail pins to; <code>"left"</code> (the
+default) or <code>"right"</code>.</p></dd>
+
+
+<dt id="arg-collapsed">collapsed<a class="anchor" aria-label="anchor" href="#arg-collapsed"></a></dt>
+<dd><p>For <code>rail()</code>, whether it opens collapsed to its bare tab
+strip. A user collapses a rail by clicking its open tab, and that choice
+is stored, so a restored board comes back the way it was left.</p></dd>
+
+
+<dt id="arg-size-collapsed-size">size, collapsed_size<a class="anchor" aria-label="anchor" href="#arg-size-collapsed-size"></a></dt>
+<dd><p>For <code>rail()</code>, its width (or height, on a
+horizontal edge) in pixels when open and when collapsed to its bare tab
+strip.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><code>dock_grid()</code> returns a <a href="dock-grid.html">dock_grid</a> object. <code>panels()</code>
 returns a <code>dock_panels</code> node and <code>group()</code> returns a <code>dock_group</code> node –
-both are grid sub-trees usable inside <code>dock_grid()</code> / <code>group()</code>.
-<code>default_layout()</code> returns a <code>list</code> with <code>views</code> (a <code>dock_views</code>) and
-<code>grids</code> (a <code>dock_grids</code>).</p>
+both are grid sub-trees usable inside <code>dock_grid()</code> / <code>group()</code>. A <code>rail()</code>
+is a <code>dock_rail</code>, written among a grid's children but pinned outside the
+splitview. Finally <code>default_layout()</code> returns a <code>list</code> with <code>views</code> (a
+<code>dock_views</code>) and <code>grids</code> (a <code>dock_grids</code>).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -122,9 +150,13 @@ first id wins by default. A single-panel <code>panels()</code> is permitted
 but redundant (a bare string is equivalent).</p></li>
 <li><p><code>group(..., sizes = NULL)</code>: a branch container. <code>sizes</code> is a
 numeric vector parallel to <code>...</code> that overrides the even split.</p></li>
+<li><p><code>rail(..., position = "left")</code>: a tab group pinned to one edge of
+the view rather than arranged by the splitview. Write it among the
+grid's children; it is not one, so it never counts towards <code>sizes</code>,
+and the members it names leave the grid tree.</p></li>
 <li><p><code>default_layout(blocks, extensions)</code> produces the default board
-arrangement (extensions on top, blocks below) as a <code>list(views, grids)</code>
-the constructor consumes.</p></li>
+arrangement (an extension rail on the left, blocks tabbed in the
+grid) as a <code>list(views, grids)</code> the constructor consumes.</p></li>
 </ul><p><code>dock_grid()</code> accepts <code>orientation = "horizontal" | "vertical"</code> for the
 top-level split direction and <code>sizes</code> for the root-branch ratios. The
 dockView-native <code>{grid, panels, activeGroup}</code> payload dockViewR consumes is a
@@ -188,6 +220,11 @@ extensions.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;dock_grid&gt; vertical</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ├─ a (50%)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> └─ b (50%)</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># An extension parked on the left edge, out of the splitview</span></span></span>
+<span class="r-in"><span><span class="fu">dock_grid</span><span class="op">(</span><span class="fu"><a href="panel-ref.html">blk</a></span><span class="op">(</span><span class="st">"a"</span><span class="op">)</span>, <span class="fu">rail</span><span class="op">(</span><span class="fu"><a href="panel-ref.html">ext</a></span><span class="op">(</span><span class="st">"dag"</span><span class="op">)</span>, position <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;dock_grid&gt; horizontal</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> └─ a (100%)</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

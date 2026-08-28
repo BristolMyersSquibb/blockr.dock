@@ -157,6 +157,7 @@ Tools for defining panel arrangements.
   [`panels()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   [`group()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   [`default_layout()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
+  [`rail()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
   : Dock grid authoring
 
 ## Dock grid

@@ -19,6 +19,15 @@ panels(..., active = NULL)
 group(..., sizes = NULL)
 
 default_layout(blocks, extensions)
+
+rail(
+  ...,
+  position = c("left", "right"),
+  active = NULL,
+  collapsed = FALSE,
+  size = 260,
+  collapsed_size = 35
+)
 ```
 
 ## Arguments
@@ -46,11 +55,27 @@ default_layout(blocks, extensions)
 
 - active:
 
-  For `panels()`, the id of the tab to open by default.
+  For `panels()` and `rail()`, the id of the tab to open by default.
 
 - blocks, extensions:
 
   Dock board components to arrange (for `default_layout()`).
+
+- position:
+
+  For `rail()`, the edge the rail pins to; `"left"` (the default) or
+  `"right"`.
+
+- collapsed:
+
+  For `rail()`, whether it opens collapsed to its bare tab strip. A user
+  collapses a rail by clicking its open tab, and that choice is stored,
+  so a restored board comes back the way it was left.
+
+- size, collapsed_size:
+
+  For `rail()`, its width (or height, on a horizontal edge) in pixels
+  when open and when collapsed to its bare tab strip.
 
 ## Value
 
@@ -58,8 +83,10 @@ default_layout(blocks, extensions)
 [dock_grid](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-grid.md)
 object. `panels()` returns a `dock_panels` node and `group()` returns a
 `dock_group` node – both are grid sub-trees usable inside `dock_grid()`
-/ `group()`. `default_layout()` returns a `list` with `views` (a
-`dock_views`) and `grids` (a `dock_grids`).
+/ `group()`. A `rail()` is a `dock_rail`, written among a grid's
+children but pinned outside the splitview. Finally `default_layout()`
+returns a `list` with `views` (a `dock_views`) and `grids` (a
+`dock_grids`).
 
 ## Details
 
@@ -79,9 +106,14 @@ Construct a grid with:
 - `group(..., sizes = NULL)`: a branch container. `sizes` is a numeric
   vector parallel to `...` that overrides the even split.
 
+- `rail(..., position = "left")`: a tab group pinned to one edge of the
+  view rather than arranged by the splitview. Write it among the grid's
+  children; it is not one, so it never counts towards `sizes`, and the
+  members it names leave the grid tree.
+
 - `default_layout(blocks, extensions)` produces the default board
-  arrangement (extensions on top, blocks below) as a
-  `list(views, grids)` the constructor consumes.
+  arrangement (an extension rail on the left, blocks tabbed in the grid)
+  as a `list(views, grids)` the constructor consumes.
 
 `dock_grid()` accepts `orientation = "horizontal" | "vertical"` for the
 top-level split direction and `sizes` for the root-branch ratios. The
@@ -147,4 +179,9 @@ dock_grid(blk("a"), blk("b"), orientation = "vertical")
 #> <dock_grid> vertical
 #> ├─ a (50%)
 #> └─ b (50%)
+
+# An extension parked on the left edge, out of the splitview
+dock_grid(blk("a"), rail(ext("dag"), position = "left"))
+#> <dock_grid> horizontal
+#> └─ a (100%)
 ```
