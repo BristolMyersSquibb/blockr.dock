@@ -1012,3 +1012,193 @@ test_that("edit link helpers: row lookup, exclusion and delta", {
     list(from = "m", input = "z")
   )
 })
+
+# --- insert block action --------------------------------------------------
+#
+# Triggered with a link id. The browser publishes its commit as
+# `browser-commit` (as for the add / append flows) and the action turns it
+# into one update that drops the split link and adds the two new ones.
+
+insert_board <- function(...) {
+  reactiveValues(
+    board = new_board(
+      c(a = new_dataset_block("iris"), b = new_head_block()),
+      links = c(l1 = new_link("a", "b", "data"))
+    ),
+    board_id = "my_board",
+    ...
+  )
+}
+
+# The update has to be read while the session is alive: a `reactiveVal` is
+# destroyed with it, so capture inside the block rather than returning it.
+run_insert <- function(r_board, r_update, spec, link = "l1") {
+
+  out <- NULL
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        insert_block_action(
+          trigger = reactive(link), board = r_board, update = r_update
+        )
+      )
+    },
+    {
+      session$flushReact()
+      session$setInputs(`browser-commit` = spec)
+      out <<- r_update()
+    }
+  )
+
+  out
+}
+
+wiring <- function(links) {
+  df <- as.data.frame(links)
+  paste0(df$from, ">", df$to, ">", df$input)
+}
+
+test_that("insert block action: the split link goes, two links replace it", {
+  local_mocked_sidebar()
+
+  upd <- run_insert(
+    insert_board(),
+    reactiveVal(list()),
+    list(type = "head_block", id = "c", nonce = 1L)
+  )
+
+  expect_named(upd, c("blocks", "links"))
+  expect_named(upd$blocks, "add")
+  expect_named(upd$blocks$add, "c")
+
+  # Removal and addition travel together: `modify_board_links()` drops
+  # before it adds, so the far end's slot is free when `c > b` claims it.
+  expect_named(upd$links, c("add", "rm"))
+  expect_identical(upd$links$rm, "l1")
+  expect_setequal(wiring(upd$links$add), c("a>c>data", "c>b>data"))
+})
+
+test_that("insert block action: the far end keeps the slot it had", {
+  local_mocked_sidebar()
+
+  # A variadic target names its incoming entries, so the slot is the
+  # entry's identity: inheriting it is what makes this an insertion rather
+  # than a rewire. Only the split link's own slot may be reused.
+  r_board <- reactiveValues(
+    board = new_board(
+      c(a = new_dataset_block("iris"), z = new_dataset_block("mtcars"),
+        m = new_rbind_block()),
+      links = c(
+        l1 = new_link("a", "m", "first"), l2 = new_link("z", "m", "second")
+      )
+    ),
+    board_id = "my_board"
+  )
+
+  upd <- run_insert(
+    r_board, reactiveVal(list()),
+    list(type = "head_block", id = "c", nonce = 1L)
+  )
+
+  expect_identical(upd$links$rm, "l1")
+  expect_setequal(wiring(upd$links$add), c("a>c>data", "c>m>first"))
+})
+
+test_that("insert block action: an explicit slot on the new block wins", {
+  local_mocked_sidebar()
+
+  upd <- run_insert(
+    insert_board(), reactiveVal(list()),
+    list(type = "merge_block", id = "c", block_input = "y", nonce = 1L)
+  )
+
+  expect_setequal(wiring(upd$links$add), c("a>c>y", "c>b>data"))
+})
+
+test_that("insert block action: the two link ids are fresh", {
+  local_mocked_sidebar()
+
+  upd <- run_insert(
+    insert_board(), reactiveVal(list()),
+    list(type = "head_block", id = "c", nonce = 1L)
+  )
+
+  ids <- names(upd$links$add)
+
+  expect_length(ids, 2L)
+  expect_length(unique(ids), 2L)
+  expect_false("l1" %in% ids)
+})
+
+test_that("insert block action: a link that has gone commits nothing", {
+  local_mocked_sidebar()
+
+  # The panel was opened on a link that has since been removed. Applying
+  # the block alone would strand it off the graph.
+  upd <- run_insert(
+    insert_board(), reactiveVal(list()),
+    list(type = "head_block", id = "c", nonce = 1L),
+    link = "gone"
+  )
+
+  expect_identical(upd, list())
+})
+
+test_that("insert panel: cards, an Insert button, and the wire's two ends", {
+
+  board <- new_board(
+    c(a = new_dataset_block("iris"), b = new_head_block()),
+    links = c(l1 = new_link("a", "b", "data"))
+  )
+
+  html <- as.character(block_browser_ui("b", board, insert_into("l1")))
+  doc <- xml2::read_html(html)
+
+  cards <- xml2::xml_find_all(
+    doc, "//*[contains(@class, 'blockr-block-browser-card')]"
+  )
+  types <- xml2::xml_attr(cards, "data-block-type")
+
+  # Eligibility matches append: the inserted block has to receive from the
+  # link's source, so a source-only block is not on offer.
+  expect_true("head_block" %in% types)
+  expect_false("dataset_block" %in% types)
+
+  # The context names both ends of the wire being split, so the user can see
+  # what they are inserting into.
+  context <- xml2::xml_text(
+    xml2::xml_find_first(
+      doc, "//*[contains(@class, 'blockr-block-browser-context')]"
+    )
+  )
+  # Both ends are named the way the user sees them, which is the block name
+  # rather than the id.
+  expect_match(context, "Insert into")
+  expect_match(context, "Dataset")
+  expect_match(context, "Head")
+
+  expect_match(html, "Insert", fixed = TRUE)
+
+  # Both new link ids are generated, so the panel asks for neither.
+  expect_true(
+    is.na(
+      xml2::xml_attr(
+        xml2::xml_find_first(
+          doc, "//*[contains(@class, 'blockr-block-browser-field-link-id')]"
+        ),
+        "class"
+      )
+    )
+  )
+})
+
+test_that("insert panel: a link that has gone renders without context", {
+
+  board <- new_board(c(a = new_dataset_block("iris")))
+
+  html <- as.character(block_browser_ui("b", board, insert_into("gone")))
+
+  expect_false(grepl("Insert into", html, fixed = TRUE))
+})

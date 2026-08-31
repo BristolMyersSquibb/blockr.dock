@@ -1,5 +1,20 @@
 # blockr.dock (development version)
 
+* A new `insert_block_action` puts a block into an existing link
+  ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
+  Triggered with a link id, it offers the same block browser as the add and
+  append flows; committing a block C for `A -> B` drops that link and wires
+  `A -> C -> B` in one update. The far end inherits the slot the split link
+  occupied rather than being reassigned one, which is what makes it an
+  insertion: for a variadic target the slot name is the identity of the
+  incoming entry, so a rebuilt link on a fresh slot would silently re-order
+  its inputs. The near end lands on a free slot of the new block, with the
+  usual picker when there is more than one to choose from. Candidates are
+  filtered as for append, since the new block has to be able to receive from
+  the source, and the two new link ids are generated rather than asked for.
+  Unlike append, the panel closes even when pinned: the gesture consumes the
+  link it was triggered with, so there is nothing left to repeat it against.
+
 * On a narrow viewport, a view's nested grid now flattens into a single
   vertical stack: every tab group survives as its own row, railed ones
   included, and the page scrolls from one to the next instead of columns
