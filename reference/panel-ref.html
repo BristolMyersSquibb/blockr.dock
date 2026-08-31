@@ -64,9 +64,9 @@ codec, and <code><a href="https://rdrr.io/r/base/character.html" class="external
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">blk</span><span class="op">(</span><span class="va">id</span>, near <span class="op">=</span> <span class="cn">NULL</span>, side <span class="op">=</span> <span class="cn">NULL</span>, size <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">blk</span><span class="op">(</span><span class="va">id</span>, near <span class="op">=</span> <span class="cn">NULL</span>, side <span class="op">=</span> <span class="cn">NULL</span>, size <span class="op">=</span> <span class="cn">NULL</span>, rail <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">ext</span><span class="op">(</span><span class="va">id</span>, near <span class="op">=</span> <span class="cn">NULL</span>, side <span class="op">=</span> <span class="cn">NULL</span>, size <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu">ext</span><span class="op">(</span><span class="va">id</span>, near <span class="op">=</span> <span class="cn">NULL</span>, side <span class="op">=</span> <span class="cn">NULL</span>, size <span class="op">=</span> <span class="cn">NULL</span>, rail <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">is_panel_ref</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
@@ -76,7 +76,8 @@ codec, and <code><a href="https://rdrr.io/r/base/character.html" class="external
 <span>  ext_ids <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  near <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  side <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  size <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  size <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  rail <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'panel_ref'</span></span>
@@ -107,6 +108,11 @@ wire-prefixed panel id or a <code>panel_ref</code>.</p></dd>
 on <code>add</code> for a later size-on-create pass.</p></dd>
 
 
+<dt id="arg-rail">rail<a class="anchor" aria-label="anchor" href="#arg-rail"></a></dt>
+<dd><p>The edge to park the panel on, <code>left</code> or <code>right</code>. Mutually
+exclusive with <code>near</code> / <code>side</code>.</p></dd>
+
+
 <dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>An object.</p></dd>
 
@@ -132,11 +138,16 @@ on <code>add</code> for a later size-on-create pass.</p></dd>
 an unnamed list of self-describing refs:
 <code>add = list(blk("a", near = "b", side = "right"), ext("dag"))</code>. Which hint
 fields are meaningful depends on the verb – <code>add</code> consumes <code>near</code> / <code>side</code> /
-<code>size</code>, <code>move</code> consumes <code>near</code> / <code>side</code> – and a hint on a ref used where no
-placement happens (<code>rm</code>, <code>select</code>, a <code>near</code> anchor, or the <code><a href="layout.html">dock_grid()</a></code> /
-<code><a href="layout.html">panels()</a></code> authoring DSL) is a loud error. Because the hints are constructor
-arguments, a misspelled one (<code>blk("a", sise = 0.4)</code>) fails at the call site
-with R's own unused-argument error, before any payload exists.</p>
+<code>size</code> / <code>rail</code>, <code>move</code> consumes <code>near</code> / <code>side</code> / <code>rail</code> – and a hint on a
+ref used where no placement happens (<code>rm</code>, <code>select</code>, a <code>near</code> anchor, or the
+<code><a href="layout.html">dock_grid()</a></code> / <code><a href="layout.html">panels()</a></code> authoring DSL) is a loud error. Because the hints
+are constructor arguments, a misspelled one (<code>blk("a", sise = 0.4)</code>) fails at
+the call site with R's own unused-argument error, before any payload exists.</p>
+<p>The <code>rail</code> hint parks a panel on one of the view's edges (see <code><a href="layout.html">rail()</a></code>),
+which is the one destination the tree cannot express, so it excludes <code>near</code>
+and <code>side</code>. Keeping the two apart matters beyond the pairing: <code>side</code> is a
+direction relative to a <code>near</code> anchor <em>inside</em> the splitview, a rail position
+is an edge of the whole view, and both spell <code>left</code> and <code>right</code>.</p>
 <p>Bare id strings are accepted as sugar wherever a ref is, resolved block-first
 with a hard error only on a true cross-namespace clash (an id that is both a
 block and an extension), which then demands a typed ref.</p>
@@ -152,7 +163,7 @@ resolves to the matching ref unchanged.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">blk</span><span class="op">(</span><span class="st">"my_block"</span>, near <span class="op">=</span> <span class="st">"other_block"</span>, side <span class="op">=</span> <span class="st">"right"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;panel_ref&gt; block_panel-my_block </span>
-<span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="st">"dag"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="st">"dag"</span>, rail <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;panel_ref&gt; ext_panel-dag </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu">blk</span><span class="op">(</span><span class="st">"my_block"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "block_panel-my_block"</span>

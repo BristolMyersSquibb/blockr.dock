@@ -11,9 +11,9 @@ on one yields the canonical panel-id encoding.
 ## Usage
 
 ``` r
-blk(id, near = NULL, side = NULL, size = NULL)
+blk(id, near = NULL, side = NULL, size = NULL, rail = NULL)
 
-ext(id, near = NULL, side = NULL, size = NULL)
+ext(id, near = NULL, side = NULL, size = NULL, rail = NULL)
 
 is_panel_ref(x)
 
@@ -23,7 +23,8 @@ as_panel_ref(
   ext_ids = character(),
   near = NULL,
   side = NULL,
-  size = NULL
+  size = NULL,
+  rail = NULL
 )
 
 # S3 method for class 'panel_ref'
@@ -52,6 +53,11 @@ as.character(x, ...)
   Target size ratio in (0, 1) – consumed by `resize`, and recorded on
   `add` for a later size-on-create pass.
 
+- rail:
+
+  The edge to park the panel on, `left` or `right`. Mutually exclusive
+  with `near` / `side`.
+
 - x:
 
   An object.
@@ -77,14 +83,23 @@ Each ref optionally carries its own placement hint, so a verb's operands
 are an unnamed list of self-describing refs:
 `add = list(blk("a", near = "b", side = "right"), ext("dag"))`. Which
 hint fields are meaningful depends on the verb – `add` consumes `near` /
-`side` / `size`, `move` consumes `near` / `side` – and a hint on a ref
-used where no placement happens (`rm`, `select`, a `near` anchor, or the
+`side` / `size` / `rail`, `move` consumes `near` / `side` / `rail` – and
+a hint on a ref used where no placement happens (`rm`, `select`, a
+`near` anchor, or the
 [`dock_grid()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
 /
 [`panels()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)
 authoring DSL) is a loud error. Because the hints are constructor
 arguments, a misspelled one (`blk("a", sise = 0.4)`) fails at the call
 site with R's own unused-argument error, before any payload exists.
+
+The `rail` hint parks a panel on one of the view's edges (see
+[`rail()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/layout.md)),
+which is the one destination the tree cannot express, so it excludes
+`near` and `side`. Keeping the two apart matters beyond the pairing:
+`side` is a direction relative to a `near` anchor *inside* the
+splitview, a rail position is an edge of the whole view, and both spell
+`left` and `right`.
 
 Bare id strings are accepted as sugar wherever a ref is, resolved
 block-first with a hard error only on a true cross-namespace clash (an
@@ -103,7 +118,7 @@ existing `panel_ref`, resolves to the matching ref unchanged.
 ``` r
 blk("my_block", near = "other_block", side = "right")
 #> <panel_ref> block_panel-my_block 
-ext("dag")
+ext("dag", rail = "left")
 #> <panel_ref> ext_panel-dag 
 as.character(blk("my_block"))
 #> [1] "block_panel-my_block"
