@@ -41,6 +41,12 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...,
         # off the `.shiny-busy` class Shiny sets on <html> instead -- see the
         # `.blockr-navbar-spinner` slot in board_ui.dock_board() and its CSS.
         useBusyIndicators(spinners = FALSE, pulse = FALSE),
+        # Attached at the page rather than from board_ui()'s theme_dep(),
+        # because it has to reach every dock board whether or not the host
+        # opted into blockr styling. It deletes Shiny's `:has(> *)`
+        # pass-through rules, which cost this board 36ms of style recalc per
+        # DOM mutation against 4ms without them.
+        blockr.ui::shiny_has_perf_dep(),
         shinyjs::useShinyjs(),
         board_ui(id, x, plugins, options = options)
       ),
