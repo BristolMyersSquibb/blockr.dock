@@ -304,8 +304,9 @@ browser_block_metas <- function(mode) {
 
   need_inputs <- mode %in% c("append", "insert")
 
-  # For append and insert, the new block has to receive a link from the source, so
-  # candidates need either a named input slot or variadic arity (`NA`)
+  # For append and insert, the new block has to receive a link from the
+  # source, so candidates need either a named input slot or variadic arity
+  # (`NA`)
   # which accepts arbitrary fresh slots. Source-only blocks (arity 0,
   # e.g. dataset_block) can't be appended and are filtered out.
   # Variadic blocks (e.g. rbind_block) return character(0) from
@@ -576,12 +577,11 @@ card_advanced <- function(meta, ns, mode, target_inputs,
   # A variadic end has no fixed ports to pick from: offer an optional
   # name instead (blank commits a positional slot). The field carries
   # the mode's slot class so the browser JS reports it verbatim.
-  name_variadic <- (mode %in% c("append", "insert") &&
-    isTRUE(meta$variadic)) ||
+  new_block_mode <- mode %in% c("append", "insert")
+  name_variadic <- (new_block_mode && isTRUE(meta$variadic)) ||
     (mode == "prepend" && isTRUE(target_variadic))
-  new_block_slot <- mode %in% c("append", "insert")
-  name_suffix <- if (new_block_slot) "block-input" else "target-input"
-  name_id_suffix <- if (new_block_slot) "block_input" else "target_input"
+  name_suffix <- if (new_block_mode) "block-input" else "target-input"
+  name_id_suffix <- if (new_block_mode) "block_input" else "target_input"
   add_label <- switch(mode,
     add = "Add",
     append = "Append",
