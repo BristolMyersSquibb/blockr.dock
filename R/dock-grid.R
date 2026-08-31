@@ -155,7 +155,8 @@ grid_tree_ids <- function(grid) {
 #' casts another `dock_grid` (identity) or a [dock_layout][dock-layout]
 #' (dockView's client echo) into it and is idempotent. `is_dock_grid()` is the
 #' class check; `validate_dock_grid()` returns its input and errors on a
-#' malformed or non-canonical grid.
+#' malformed or non-canonical grid, or on one that places a panel more than
+#' once.
 #'
 #' @param x Object to cast (a `dock_grid` or a [dock_layout][dock-layout]),
 #'   validate, or test.
@@ -210,6 +211,26 @@ validate_dock_grid <- function(x) {
     blockr_abort(
       "A `dock_grid` must be canonical: each branch's sizes sum to 1.",
       class = "dock_grid_not_canonical"
+    )
+  }
+
+  # A grid says where each panel goes, so a panel it places twice -- twice in
+  # the tree, twice in one rail, or once in each of two rails -- has no
+  # arrangement to express. The tree/rail overlap `canonicalize_grid()` prunes
+  # has a principled winner (the rail claims the panel); two occurrences of the
+  # same kind have none, so first-wins would apply an arbitrary choice quietly
+  # to someone's layout. Hence a rejection here rather than a dedup there.
+  # Without it the duplicate travels to `as_dock_layout()` and dies in core's
+  # vocabulary ("Block IDs are required to be unique.") at render time, far
+  # from whatever wrote the grid.
+  placed <- grid_panel_ids(x)
+  dup <- unique(placed[duplicated(placed)])
+
+  if (length(dup)) {
+    blockr_abort(
+      "A `dock_grid` places each panel once, but {dup} {?is/are} placed more \\
+       than once.",
+      class = "dock_grid_panel_duplicated"
     )
   }
 
