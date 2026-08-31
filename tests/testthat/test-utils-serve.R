@@ -1613,15 +1613,17 @@ test_that("a panel landing in a revealed rail expands it (#431)", {
     isTRUE(app$get_js(paste0(api, ".getEdgeGroup('left').isCollapsed()")))
   )
 
-  # Land a panel in it. `addPanel()` stands in for the drop because dockview's
-  # `moveTo()` refuses a collapsed edge group outright ("Invalid grid element")
-  # -- but what reaches our code is the same, a panel arriving in a rail that a
-  # drag revealed, and the same `onDidAddPanel` that a real drop fires.
+  # Land a panel in it by moving the one the drag picked up, which is what a
+  # real drop does -- it relocates a panel rather than creating one. A rail
+  # being collapsed is no obstacle to that: the panel lands and the strip
+  # expands.
   app$run_js(
     paste0(
-      api, ".addPanel({id: 'rail-drop-probe', component: 'default',",
-      " title: 'Probe', params: {content: {html: 'probe'}},",
-      " position: {referenceGroup: 'rail-left'}});"
+      api, ".getPanel('block_panel-a').api.moveTo({group: ", api,
+      ".groups.filter(function (g) {",
+      "var l = g.api.location;",
+      "return l.type === 'edge' && l.position === 'left' })[0],",
+      " position: 'center'});"
     )
   )
 
