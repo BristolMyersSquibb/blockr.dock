@@ -31,5 +31,6 @@ authored with \link[=layout]{dock_grid()} and produced by \code{as_dock_grid()},
 casts another \code{dock_grid} (identity) or a \link[=dock-layout]{dock_layout}
 (dockView's client echo) into it and is idempotent. \code{is_dock_grid()} is the
 class check; \code{validate_dock_grid()} returns its input and errors on a
-malformed or non-canonical grid.
+malformed or non-canonical grid, or on one that places a panel more than
+once.
 }

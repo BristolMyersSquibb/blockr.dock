@@ -244,6 +244,47 @@ test_that("validate_dock_grid enforces the canonical invariant", {
   expect_error(validate_dock_grid(fake), class = "dock_grid_not_canonical")
 })
 
+test_that("a grid places each panel once", {
+
+  # Twice in the tree. A grid says where each panel goes, so two spots for one
+  # panel express nothing, and neither spot wins on principle -- hence a
+  # rejection rather than a quiet first-wins dedup.
+  expect_error(
+    validate_dock_grid(dock_grid("block_panel-a", "block_panel-a")),
+    class = "dock_grid_panel_duplicated"
+  )
+
+  # The rails place panels too, so the invariant spans them: twice inside one
+  # rail, or once in each of two.
+  expect_error(
+    validate_dock_grid(dock_grid(rail(blk("a"), blk("a")))),
+    class = "dock_grid_panel_duplicated"
+  )
+  expect_error(
+    validate_dock_grid(
+      dock_grid(rail(blk("a")), rail(blk("a"), position = "right"))
+    ),
+    class = "dock_grid_panel_duplicated"
+  )
+
+  # Every repeated panel is named, not just the first one found.
+  expect_error(
+    validate_dock_grid(
+      dock_grid(
+        "block_panel-a", "block_panel-a", "block_panel-b", "block_panel-b"
+      )
+    ),
+    "block_panel-a and block_panel-b"
+  )
+
+  # The one overlap that does have a winner stays a prune, not a rejection: a
+  # rail claims its panel out of the tree in `canonicalize_grid()`, so what
+  # reaches the check already places it once.
+  ov <- dock_grid("block_panel-a", "block_panel-b", rail(blk("a")))
+  expect_identical(validate_dock_grid(ov), ov)
+  expect_setequal(layout_panel_ids(ov), c("block_panel-a", "block_panel-b"))
+})
+
 test_that("the mirror ignores the empty dock it echoes before its restore", {
 
   brd <- railed_board()
