@@ -11,11 +11,17 @@
 #' an unnamed list of self-describing refs:
 #' `add = list(blk("a", near = "b", side = "right"), ext("dag"))`. Which hint
 #' fields are meaningful depends on the verb -- `add` consumes `near` / `side` /
-#' `size`, `move` consumes `near` / `side` -- and a hint on a ref used where no
-#' placement happens (`rm`, `select`, a `near` anchor, or the `dock_grid()` /
-#' `panels()` authoring DSL) is a loud error. Because the hints are constructor
-#' arguments, a misspelled one (`blk("a", sise = 0.4)`) fails at the call site
-#' with R's own unused-argument error, before any payload exists.
+#' `size` / `rail`, `move` consumes `near` / `side` / `rail` -- and a hint on a
+#' ref used where no placement happens (`rm`, `select`, a `near` anchor, or the
+#' `dock_grid()` / `panels()` authoring DSL) is a loud error. Because the hints
+#' are constructor arguments, a misspelled one (`blk("a", sise = 0.4)`) fails at
+#' the call site with R's own unused-argument error, before any payload exists.
+#'
+#' The `rail` hint parks a panel on one of the view's edges (see [rail()]),
+#' which is the one destination the tree cannot express, so it excludes `near`
+#' and `side`. Keeping the two apart matters beyond the pairing: `side` is a
+#' direction relative to a `near` anchor *inside* the splitview, a rail position
+#' is an edge of the whole view, and both spell `left` and `right`.
 #'
 #' Bare id strings are accepted as sugar wherever a ref is, resolved block-first
 #' with a hard error only on a true cross-namespace clash (an id that is both a
@@ -38,6 +44,8 @@
 #'   `right`, `above`, `below`.
 #' @param size Target size ratio in (0, 1) -- consumed by `resize`, and recorded
 #'   on `add` for a later size-on-create pass.
+#' @param rail The edge to park the panel on, `left` or `right`. Mutually
+#'   exclusive with `near` / `side`.
 #' @param x An object.
 #' @param ... Ignored.
 #'
@@ -47,7 +55,7 @@
 #'
 #' @examples
 #' blk("my_block", near = "other_block", side = "right")
-#' ext("dag")
+#' ext("dag", rail = "left")
 #' as.character(blk("my_block"))
 #'
 #' as_panel_ref("my_block", block_ids = "my_block")
@@ -55,22 +63,25 @@
 #'
 #' @rdname panel-ref
 #' @export
-blk <- function(id, near = NULL, side = NULL, size = NULL) {
-  new_panel_ref(id, "block", near, side, size)
+blk <- function(id, near = NULL, side = NULL, size = NULL, rail = NULL) {
+  new_panel_ref(id, "block", near, side, size, rail)
 }
 
 #' @rdname panel-ref
 #' @export
-ext <- function(id, near = NULL, side = NULL, size = NULL) {
-  new_panel_ref(id, "ext", near, side, size)
+ext <- function(id, near = NULL, side = NULL, size = NULL, rail = NULL) {
+  new_panel_ref(id, "ext", near, side, size, rail)
 }
 
-new_panel_ref <- function(id, type, near = NULL, side = NULL, size = NULL) {
+new_panel_ref <- function(id, type, near = NULL, side = NULL, size = NULL,
+                          rail = NULL) {
 
   stopifnot(is_string(id))
 
   structure(
-    list(id = id, type = type, near = near, side = side, size = size),
+    list(
+      id = id, type = type, near = near, side = side, size = size, rail = rail
+    ),
     class = "panel_ref"
   )
 }
@@ -84,7 +95,7 @@ is_panel_ref <- function(x) {
 #' @rdname panel-ref
 #' @export
 as_panel_ref <- function(id, block_ids = character(), ext_ids = character(),
-                         near = NULL, side = NULL, size = NULL) {
+                         near = NULL, side = NULL, size = NULL, rail = NULL) {
 
   if (is_panel_ref(id)) {
     return(id)
@@ -117,9 +128,9 @@ as_panel_ref <- function(id, block_ids = character(), ext_ids = character(),
   }
 
   if (use_ext) {
-    ext(id, near = near, side = side, size = size)
+    ext(id, near = near, side = side, size = size, rail = rail)
   } else {
-    blk(id, near = near, side = side, size = size)
+    blk(id, near = near, side = side, size = size, rail = rail)
   }
 }
 
@@ -143,7 +154,14 @@ print.panel_ref <- function(x, ...) {
 # The placement hint a ref carries, NULLs dropped. `near` is still a ref / bare
 # id here; augment resolves it to a canonical panel id alongside the ref itself.
 panel_ref_hint <- function(x) {
-  drop_nulls(list(near = x[["near"]], side = x[["side"]], size = x[["size"]]))
+  drop_nulls(
+    list(
+      near = x[["near"]],
+      side = x[["side"]],
+      size = x[["size"]],
+      rail = x[["rail"]]
+    )
+  )
 }
 
 # A ref used in the layout-authoring DSL (`panels()` / `dock_grid()` / a `views`

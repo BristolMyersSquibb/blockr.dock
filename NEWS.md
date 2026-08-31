@@ -1,5 +1,7 @@
 # blockr.dock (development version)
 
+* The `blk()` / `ext()` placement hint gained a `rail` key, so the `add` and `move` panel-op verbs can park a panel on a view's left or right edge. A rail used to be authorable only as a view's birth geometry, through `rail()` inside a `dock_grid()`, which left the user's own drag as the only route into one on a view already on screen. The key names an edge rather than an anchor, so it excludes `near` / `side`: a `side` is a direction relative to a `near` anchor *inside* the splitview while a rail position is an edge of the whole view, and both spell `left` and `right` (#461).
+
 * A block panel opened from an extension -- a node click in the DAG, a row click in an outline -- no longer lands as a tab on top of the extension it was opened from. An add that carries no placement hint now reserves every group holding an extension panel, read off the panel id rather than off the hardcoded `dag` key behind the undocumented `blockr.visible_extensions` option, so an extension mounted under any other key is reserved too. The reservation tests membership rather than the front tab, which is what made the misplacement look intermittent -- the same click placed correctly or not depending on which tab of the extension's group happened to be open. The option is gone, and nothing has to opt in (#250).
 
 * A rail's width now survives a viewport too narrow to render it. A rail is
