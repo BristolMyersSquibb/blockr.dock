@@ -395,6 +395,33 @@ restrict_grid <- function(grid, members) {
   )
 }
 
+# A copy of `grid` in which every rail wears the width `stored` records for it.
+# A rail's width is pixels, and dockView grinds a low-priority edge group down
+# whenever the dock is too narrow to hold it -- then leaves it there once the
+# dock widens again, handing the regained space to the centre instead.
+# Committing that width would replace what the user set with the narrowest
+# viewport the board was ever opened at, and every restore after it would come
+# back at that. The mirror therefore takes a rail's width from the client only
+# across an echo that left the dock's own width alone, and rides the stored one
+# through every other.
+keep_rail_sizes <- function(grid, stored) {
+
+  rails <- grid[["rails"]]
+
+  if (!length(rails)) {
+    return(grid)
+  }
+
+  kept <- coal(stored[["rails"]], list(), fail_all = FALSE)
+
+  grid[["rails"]] <- set_names(
+    map(keep_rail_size, rails, kept[names(rails)]),
+    names(rails)
+  )
+
+  canonicalize_grid(grid)
+}
+
 # The member-driven placement of a view: membership decides *which* panels
 # appear, the grid only *how*. A ghost (grid panel no longer a member) is
 # dropped by `restrict_grid()`; a member the grid omits is appended a default

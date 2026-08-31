@@ -149,6 +149,38 @@ as_dock_rails <- function(x) {
   set_names(map(edge_to_rail, edges, names(edges)), names(edges))
 }
 
+# The dock's width, as the client's echo accounts for it: the centre grid plus
+# what each visible rail takes. A rail's sash moves the boundary between the two
+# and leaves the total alone, while a viewport change moves it -- which is what
+# tells a width the user dragged from one the layout forced on the rail. NULL
+# when the echo carries no measurement (an authored layout has none), which the
+# mirror reads as "not comparable".
+layout_dock_width <- function(x) {
+
+  width <- x[["grid"]][["width"]]
+
+  if (!is_number(width)) {
+    return(NULL)
+  }
+
+  width + sum(dbl_ply(x[["edgeGroups"]], edge_width))
+}
+
+edge_width <- function(edge) {
+
+  if (!isTRUE(edge[["visible"]])) {
+    return(0)
+  }
+
+  size <- if (isTRUE(edge[["collapsed"]])) {
+    edge[["collapsedSize"]]
+  } else {
+    edge[["size"]]
+  }
+
+  coal(size, 0, fail_all = FALSE)
+}
+
 # The dockView `edgeGroups` payload: one entry per rail, keyed by the edge it
 # pins to. Visibility is derived here rather than stored -- a rail holding
 # panels is shown, an empty one hidden.
