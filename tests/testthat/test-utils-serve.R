@@ -1259,6 +1259,71 @@ test_that("the extension rides a left rail, shown only while it holds it", {
   )
 })
 
+test_that("a viewport too narrow for a rail keeps its stored width (#457)", {
+
+  skip_on_cran()
+
+  # Narrow enough that the rail cannot have the 260px the fixture stores for it.
+  # A rail is the low-priority view of dockView's shell splitview, so the layout
+  # squeezes it rather than the centre, and hands the space back to the centre
+  # rather than the rail once there is room again -- the width it reports from
+  # here on is the viewport's, and committing it would leave the board holding
+  # the narrowest one it was ever opened at.
+  app <- new_app_driver(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "rail-narrow-viewport",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000,
+    width = 520,
+    height = 900
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+
+  rail_width <- function() {
+    app$get_js(
+      paste0(
+        "document.querySelector(",
+        "'[data-testid=\"dv-edge-group-rail-left\"]')",
+        "?.getBoundingClientRect().width"
+      )
+    )
+  }
+
+  stored_rail_width <- function() {
+    ser <- jsonlite::fromJSON(
+      retry_download(app, "my_board-preserve_board-serialize"),
+      simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+    )
+    grids <- ser[["payload"]][["grids"]][["payload"]]
+    grids[[1L]][["rails"]][["left"]][["size"]]
+  }
+
+  app$wait_for_js(
+    paste0(
+      "document.querySelector(",
+      "'[data-testid=\"dv-edge-group-rail-left\"]')",
+      "?.getBoundingClientRect().width > 0"
+    ),
+    timeout = 15 * 1000
+  )
+  app$wait_for_idle()
+
+  # The DOM read is what keeps this from passing vacuously: it has to observe
+  # the squeeze for the stored width to be asserting anything.
+  expect_lt(rail_width(), 200)
+  expect_equal(stored_rail_width(), 260)
+
+  # And a viewport with room again leaves the stored width where it was, so a
+  # later restore has the authored geometry to come back to.
+  app$set_window_size(width = 1600, height = 900)
+  app$wait_for_idle()
+
+  expect_equal(stored_rail_width(), 260)
+})
+
 test_that("a drag toward the edge reveals a hidden rail, collapsed", {
 
   skip_on_cran()

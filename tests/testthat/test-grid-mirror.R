@@ -1,9 +1,54 @@
 # A dockview `_state` echo as get_dock() surfaces it: the grid tree + active
-# group, expanded from the layout's canonical `dock_grid`.
-echo_state <- function(layout) {
+# group, expanded from the layout's canonical `dock_grid`. The `width` argument
+# is the measurement dockView puts on the centre grid, which the mirror reads
+# (with the rails) as the dock's own width -- pass it wherever a test turns on
+# whether the viewport moved.
+echo_state <- function(layout, width = NULL) {
   grid <- as_dock_grid(layout)
   tree <- grid_to_tree(grid)
-  list(grid = tree, activeGroup = focus_group_id(tree, grid[["focus"]]))
+  edges <- rails_to_edges(grid[["rails"]])
+
+  if (not_null(width)) {
+    tree[["width"]] <- width - sum(dbl_ply(edges, edge_width))
+    tree[["height"]] <- 800
+  }
+
+  c(
+    list(grid = tree, activeGroup = focus_group_id(tree, grid[["focus"]])),
+    if (length(edges)) list(edgeGroups = edges)
+  )
+}
+
+# The mirror wired to a board, returning the echo channel and the commit log --
+# the harness three tests below share.
+mirror_on <- function(brd, view) {
+  board <- reactiveValues(board = brd)
+  layout_rv <- reactiveVal(NULL)
+  log <- new.env(parent = emptyenv())
+  log$grids <- list()
+
+  observe_grid_echo(
+    view, list(layout = layout_rv), board,
+    commit_grid = function(grid) {
+      log$grids <- c(log$grids, list(grid))
+      board$board <- apply_board_update(
+        board$board,
+        list(views = list(grid = setNames(list(grid), view)))
+      )
+    }
+  )
+
+  list(board = board, echo = layout_rv, log = log)
+}
+
+railed_board <- function() {
+  new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(V = c("a", "b")),
+    grids = list(
+      V = dock_grid("a", rail(blk("b"), position = "right", size = 420))
+    )
+  )
 }
 
 test_that("as_dock_grid casts to a canonical dock_grid, sizes verbatim", {
@@ -197,4 +242,109 @@ test_that("validate_dock_grid enforces the canonical invariant", {
   fake <- g
   fake[["sizes"]] <- c(0.9, 0.7)
   expect_error(validate_dock_grid(fake), class = "dock_grid_not_canonical")
+})
+
+test_that("the mirror ignores the empty dock it echoes before its restore", {
+
+  brd <- railed_board()
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  with_mock_context(ms, {
+
+    mir <- mirror_on(brd, "V")
+    ms$flushReact()
+
+    # A dock is rendered empty and holds nothing until the restore reaches it,
+    # and the flush that opens dockViewR's `_state` gate can beat that restore
+    # to the server. Committing what it echoes would blank the stored grid --
+    # and with it the only record of the rail's width, which the restore echo
+    # then cannot bring back if the dock is too narrow to render it.
+    mir$echo(echo_state(dock_grid(), width = 1180))
+    ms$flushReact()
+
+    expect_length(mir$log$grids, 0L)
+    expect_identical(
+      board_grids(mir$board$board)[["V"]], board_grids(brd)[["V"]]
+    )
+  })
+})
+
+test_that("a viewport too narrow for a rail keeps the stored width (#457)", {
+
+  brd <- railed_board()
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  rail_width <- function(board) {
+    board_grids(board)[["V"]][["rails"]][["right"]][["size"]]
+  }
+
+  with_mock_context(ms, {
+
+    mir <- mirror_on(brd, "V")
+    ms$flushReact()
+
+    stored <- board_grids(brd)[["V"]]
+
+    mir$echo(echo_state(stored, width = 1180))
+    ms$flushReact()
+
+    expect_length(mir$log$grids, 0L)
+
+    # The layout shrinks a rail the dock is too narrow to hold, and hands the
+    # space back to the centre rather than the rail once it widens again -- so
+    # this width is the viewport talking, and committing it would leave the
+    # board holding the narrowest one it was ever opened at.
+    squeezed <- stored
+    squeezed[["rails"]][["right"]][["size"]] <- 120
+
+    mir$echo(echo_state(squeezed, width = 700))
+    ms$flushReact()
+
+    expect_length(mir$log$grids, 0L)
+    expect_equal(rail_width(mir$board$board), 420)
+
+    # Widening again reports the width dockView left the rail at, still not one
+    # the user chose.
+    mir$echo(echo_state(squeezed, width = 1180))
+    ms$flushReact()
+
+    expect_length(mir$log$grids, 0L)
+    expect_equal(rail_width(mir$board$board), 420)
+  })
+})
+
+test_that("a rail sash drag commits, the dock width being what it was", {
+
+  brd <- railed_board()
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  with_mock_context(ms, {
+
+    mir <- mirror_on(brd, "V")
+    ms$flushReact()
+
+    stored <- board_grids(brd)[["V"]]
+
+    mir$echo(echo_state(stored, width = 1180))
+    ms$flushReact()
+
+    # A rail's sash moves the boundary between the rail and the centre and
+    # leaves the dock's width alone, which is what separates it from a squeeze.
+    dragged <- stored
+    dragged[["rails"]][["right"]][["size"]] <- 690
+
+    mir$echo(echo_state(dragged, width = 1180))
+    ms$flushReact()
+
+    expect_length(mir$log$grids, 1L)
+    expect_equal(
+      board_grids(mir$board$board)[["V"]][["rails"]][["right"]][["size"]], 690
+    )
+  })
 })

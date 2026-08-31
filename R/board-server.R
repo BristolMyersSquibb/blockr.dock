@@ -385,14 +385,17 @@ freeze_hidden_inputs <- function(board, visibility) {
 # what is stored -- so a sash drag, a programmatic move / resize, or a tab
 # switch is at most one board commit and a re-echo after quiescence none.
 #
-# dockViewR surfaces `_state` only once a layout has settled: the intermediate
-# frames a restore once streamed -- a tab group momentarily split into separate
-# leaves, or an empty re-init frame (#327) -- never reach the mirror, so every
-# echo it sees is a settled layout to commit, gated only by the tolerance below.
+# A settled layout is all dockViewR surfaces through `_state`, so the frames a
+# restore streams -- a tab group momentarily split into separate leaves -- never
+# reach the mirror. The two echoes it does see that are not layouts to commit
+# are guarded below: the empty dock before its restore, and a rail width the
+# dock was too narrow to hold.
 #
 # It does not restrict to membership: a panel absent from the view is an inert
 # ghost, pruned at the compose / restore boundary, never by this writer.
 observe_grid_echo <- function(id, dock, board, commit_grid) {
+
+  dock_width <- reactiveVal()
 
   observeEvent(
     dock$layout(),
@@ -409,9 +412,38 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
         return()
       }
 
-      grid <- as_dock_grid(as_dock_layout(state))
+      layout <- as_dock_layout(state)
+      grid <- as_dock_grid(layout)
+
+      # A dock is rendered empty and holds nothing until `restore_layout()`
+      # reaches it, and the flush that opens dockViewR's `_state` gate -- the
+      # first geometry its ResizeObserver reports -- can beat that restore to
+      # the server. What it echoes places nothing, so committing it blanks the
+      # view's stored geometry and leaves the arrangement to be rebuilt from
+      # whatever the client renders next. The tree survives that, since the
+      # restore echo carries the same one back; a rail's width does not, being
+      # pixels -- what comes back is whatever width the dock had room for.
+      if (!length(layout_panel_ids(grid))) {
+        return()
+      }
+
+      previous <- dock_width()
+      width <- layout_dock_width(layout)
+
+      dock_width(width)
 
       stored <- board_grids(board$board)[[id]]
+
+      # A rail's width is pixels against the dock, and dockView shrinks a rail
+      # the dock is too narrow to hold -- so an echo the dock's own width
+      # provoked reports a width the layout forced rather than one the user
+      # dragged, and the two are indistinguishable once the grid is cast. Ride
+      # the stored widths through such an echo; the tree needs none of this, its
+      # ratios being scale-free. The first echo has no width to compare against
+      # and no gesture behind it either.
+      if (!is_same_width(previous, width)) {
+        grid <- keep_rail_sizes(grid, stored)
+      }
 
       # Same geometry within the sash-position noise floor -> nothing to commit,
       # so window-resize jitter is absorbed while a real drag still writes. The
@@ -426,6 +458,15 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
     },
     ignoreInit = TRUE
   )
+}
+
+is_same_width <- function(previous, current) {
+
+  if (is.null(previous) || is.null(current)) {
+    return(FALSE)
+  }
+
+  isTRUE(all.equal(previous, current))
 }
 
 # The live all-views layout, split into a `dock_views` (membership + names +
