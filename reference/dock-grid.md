@@ -9,7 +9,8 @@ by `as_dock_grid()`, which casts another `dock_grid` (identity) or a
 [dock_layout](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock-layout.md)
 (dockView's client echo) into it and is idempotent. `is_dock_grid()` is
 the class check; `validate_dock_grid()` returns its input and errors on
-a malformed or non-canonical grid.
+a malformed or non-canonical grid, or on one that places a panel more
+than once.
 
 ## Usage
 

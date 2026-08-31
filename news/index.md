@@ -2,6 +2,21 @@
 
 ## blockr.dock (development version)
 
+- A grid that places the same panel more than once is now rejected when
+  validated, rather than surviving to the render cast. A grid says where
+  each panel goes, so two spots for one panel express nothing, and the
+  check spans both halves of one: twice in the tree, twice inside a
+  single rail, or once in each of two rails. The tree/rail overlap that
+  canonicalisation prunes has a principled winner – the rail claims the
+  panel – while two such spots have none, so this rejects rather than
+  quietly dropping one. Previously the duplicate reached the render cast
+  and aborted with blockr.core’s “Block IDs are required to be unique.”,
+  which names blocks rather than the layout and fires far from whatever
+  wrote the grid. Every producer routing through the views delta – a
+  hand-written grid, a restored board, a `views$grid` write, a
+  `views$add` entry – inherits the check
+  ([\#464](https://github.com/BristolMyersSquibb/blockr.dock/issues/464)).
+
 - The
   [`blk()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/panel-ref.md)
   /

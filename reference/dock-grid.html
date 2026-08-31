@@ -6,14 +6,16 @@ authored with dock_grid() and produced by as_dock_grid(), which
 casts another dock_grid (identity) or a dock_layout
 (dockView's client echo) into it and is idempotent. is_dock_grid() is the
 class check; validate_dock_grid() returns its input and errors on a
-malformed or non-canonical grid."><meta property="og:description" content="A dock_grid is a view's geometry in our compact, dockView-independent
+malformed or non-canonical grid, or on one that places a panel more than
+once."><meta property="og:description" content="A dock_grid is a view's geometry in our compact, dockView-independent
 form – nested splits and tab groups with sizes normalised to 0-1 ratios and
 no volatile ids, so two casts of the same layout compare identical(). It is
 authored with dock_grid() and produced by as_dock_grid(), which
 casts another dock_grid (identity) or a dock_layout
 (dockView's client echo) into it and is idempotent. is_dock_grid() is the
 class check; validate_dock_grid() returns its input and errors on a
-malformed or non-canonical grid."></head><body>
+malformed or non-canonical grid, or on one that places a panel more than
+once."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -65,7 +67,8 @@ authored with <a href="https://rdrr.io/r/graphics/layout.html" class="external-l
 casts another <code>dock_grid</code> (identity) or a <a href="dock-layout.html">dock_layout</a>
 (dockView's client echo) into it and is idempotent. <code>is_dock_grid()</code> is the
 class check; <code>validate_dock_grid()</code> returns its input and errors on a
-malformed or non-canonical grid.</p>
+malformed or non-canonical grid, or on one that places a panel more than
+once.</p>
     </div>
 
     <div class="section level2">
