@@ -143,6 +143,33 @@ test_that("grids_stable holds when the live grid is the stored fixed point", {
   expect_false(grids_stable(stored, drifted))
 })
 
+test_that("grids_stable reads a squeezed rail as the fixed point (#457)", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block()),
+    views = list(V = c("a", "b")),
+    grids = list(
+      V = dock_grid("a", rail(blk("b"), position = "right", size = 420))
+    )
+  )
+
+  stored <- board_grids(brd)
+
+  # A viewport too narrow to render the rail reports a width the layout forced,
+  # which the mirror declines to commit -- so the round trip is settled, and the
+  # sentinel has to say so rather than reading the divergence as a pending
+  # write. Anything else in the grid still moves it off the fixed point.
+  squeezed <- stored[["V"]]
+  squeezed[["rails"]][["right"]][["size"]] <- 120
+
+  expect_true(grids_stable(stored, new_dock_grids(list(V = squeezed))))
+
+  moved <- squeezed
+  moved[["rails"]][["right"]][["collapsed"]] <- TRUE
+
+  expect_false(grids_stable(stored, new_dock_grids(list(V = moved))))
+})
+
 test_that("dock app renders a block added via the extension (#191)", {
 
   skip_on_cran()

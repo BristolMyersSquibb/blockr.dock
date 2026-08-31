@@ -423,7 +423,13 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
       # whatever the client renders next. The tree survives that, since the
       # restore echo carries the same one back; a rail's width does not, being
       # pixels -- what comes back is whatever width the dock had room for.
-      if (!length(layout_panel_ids(grid))) {
+      #
+      # Membership is what separates that dock from a view the user has emptied,
+      # which echoes nothing because there is nothing left to place and whose
+      # empty grid is a layout to commit like any other. Testing the echo alone
+      # would hold a stale grid for every emptied view.
+      if (!length(layout_panel_ids(grid)) &&
+            length(view_members(views[[id]]))) {
         return()
       }
 

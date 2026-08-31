@@ -271,6 +271,41 @@ test_that("the mirror ignores the empty dock it echoes before its restore", {
   })
 })
 
+test_that("an emptied view's echo still commits, membership being gone", {
+
+  brd <- apply_board_update(
+    new_dock_board(
+      blocks = c(a = new_dataset_block(), b = new_head_block()),
+      views = list(V = c("a", "b")),
+      grids = list(V = dock_grid("a", "b"))
+    ),
+    list(blocks = list(rm = c("a", "b")))
+  )
+
+  # The removal leaves the view with no members and its stored grid holding
+  # both panels as ghosts -- the state the echo below is the settlement of.
+  expect_length(view_members(board_views(brd)[["V"]]), 0L)
+  expect_length(layout_panel_ids(board_grids(brd)[["V"]]), 2L)
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  with_mock_context(ms, {
+
+    mir <- mirror_on(brd, "V")
+    ms$flushReact()
+
+    # This dock echoes nothing because there is nothing left to place, which is
+    # a layout to commit -- the guard that ignores an empty echo is about a dock
+    # whose restore has not landed, and that dock has members it is not showing.
+    mir$echo(echo_state(dock_grid(), width = 1180))
+    ms$flushReact()
+
+    expect_length(mir$log$grids, 1L)
+    expect_length(layout_panel_ids(board_grids(mir$board$board)[["V"]]), 0L)
+  })
+})
+
 test_that("a viewport too narrow for a rail keeps the stored width (#457)", {
 
   brd <- railed_board()
