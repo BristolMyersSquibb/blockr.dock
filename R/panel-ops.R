@@ -203,16 +203,25 @@ op_select_panel <- function(pid, dock) {
   invisible()
 }
 
-# Translate a grammar placement hint (`near` panel + `side`) into a dockview
-# panel position (`referencePanel` + `direction`). Dockview addresses a group
-# through a member panel, so `near` is a panel id, not a group. No hint -> the
-# view's own default spot.
+# Translate a grammar placement hint (`near` panel + `side`, or a `rail` edge)
+# into a dockview panel position. Dockview addresses a splitview group through a
+# member panel, so `near` is a panel id, not a group; a rail is instead named
+# directly, which is what `rail_group_id()` mints its stable id for. No hint ->
+# the view's own default spot.
 hint_to_position <- function(hint, dock) {
 
   # A `side` hint splits the group it anchors on, which a narrow view has no
-  # room for: fall through to its single group, so every add arrives as a tab.
+  # room for, and a narrow render folds each rail into the stack rather than
+  # pinning it to an edge, so there is no rail to name either: fall through to
+  # its single group, so every add arrives as a tab.
   if (is.null(hint) || !length(hint) || isTRUE(dock$narrow)) {
     return(determine_panel_pos(dock))
+  }
+
+  rail <- hint[["rail"]]
+
+  if (not_null(rail)) {
+    return(list(referenceGroup = rail_group_id(rail), direction = "within"))
   }
 
   near <- hint[["near"]]

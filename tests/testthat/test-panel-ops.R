@@ -382,6 +382,27 @@ test_that("hint_to_position translates near / side, else the default spot", {
   )
 })
 
+test_that("a rail hint names the edge group rather than a member panel", {
+
+  local_mocked_bindings(
+    determine_panel_pos = function(dock) list(direction = "right")
+  )
+
+  dock <- fake_dock()
+
+  # `rail_group_id()` mints the stable id, so the position names the rail
+  # without having to resolve it through a panel already sitting there -- which
+  # is what lets the first panel into an empty one.
+  expect_identical(
+    hint_to_position(list(rail = "left"), dock),
+    list(referenceGroup = "rail-left", direction = "within")
+  )
+  expect_identical(
+    hint_to_position(list(rail = "right"), dock),
+    list(referenceGroup = "rail-right", direction = "within")
+  )
+})
+
 test_that("a narrow view takes an add as a tab, ignoring the side hint", {
 
   local_mocked_bindings(
@@ -400,5 +421,36 @@ test_that("a narrow view takes an add as a tab, ignoring the side hint", {
   expect_identical(
     hint_to_position(list(side = "left"), dock),
     list(referenceGroup = "grp1", direction = "within")
+  )
+
+  # A narrow render folds each rail into the stack, so there is no edge group
+  # to name and the hint falls through with the rest.
+  expect_identical(
+    hint_to_position(list(rail = "left"), dock),
+    list(referenceGroup = "grp1", direction = "within")
+  )
+})
+
+test_that("op_move_panel routes a rail hint to the edge group", {
+
+  seen <- NULL
+
+  local_mocked_bindings(
+    move_dock_panel = function(pid, position, proxy) {
+      seen <<- list(pid = as.character(pid), pos = position)
+      invisible()
+    }
+  )
+
+  dock <- fake_dock(live = "block_panel-a")
+
+  op_move_panel("block_panel-a", list(rail = "right"), dock)
+
+  expect_identical(
+    seen,
+    list(
+      pid = "block_panel-a",
+      pos = list(referenceGroup = "rail-right", direction = "within")
+    )
   )
 })

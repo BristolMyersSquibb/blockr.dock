@@ -103,6 +103,61 @@ test_that("hints are contextual and duplicates / clashes are loud", {
   )
 })
 
+test_that("a rail hint parks a panel on an edge, on add and on move", {
+
+  brd <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(), b = new_head_block(), c = new_head_block()
+    ),
+    views = list(V = c("a", "b"))
+  )
+
+  expect_identical(
+    resolve_mod(brd, list(add = list(blk("c", rail = "left"))))$add,
+    list(`block_panel-c` = list(rail = "left"))
+  )
+  expect_identical(
+    resolve_mod(brd, list(move = list(blk("a", rail = "right"))))$move,
+    list(`block_panel-a` = list(rail = "right"))
+  )
+
+  # Only the placing verbs take it -- a resize is a size, not a destination.
+  expect_error(
+    resolve_mod(brd, list(resize = list(blk("a", rail = "left")))),
+    class = "dock_views_mod_hint_invalid"
+  )
+  expect_error(
+    resolve_mod(brd, list(rm = list(blk("a", rail = "left")))),
+    class = "dock_views_mod_hint_invalid"
+  )
+})
+
+test_that("a rail hint takes an edge and excludes near / side", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(V = c("a", "b"))
+  )
+
+  expect_error(
+    resolve_mod(brd, list(move = list(blk("a", rail = "top")))),
+    class = "dock_views_mod_hint_invalid"
+  )
+
+  # `side` and a rail position both spell left / right and mean different
+  # things, so a hint carrying both is rejected rather than silently ranked.
+  expect_error(
+    resolve_mod(
+      brd, list(move = list(blk("a", rail = "left", side = "right")))
+    ),
+    class = "dock_views_mod_hint_invalid"
+  )
+  expect_error(
+    resolve_mod(brd, list(move = list(blk("a", rail = "left", near = "b")))),
+    class = "dock_views_mod_hint_invalid"
+  )
+})
+
 test_that("a bare id in both namespaces is a loud clash", {
 
   # A block whose id collides with the extension's id: in the post-state
@@ -166,6 +221,10 @@ test_that("as_panel_ref resolves a bare id block-first, erroring on a clash", {
   expect_identical(
     as_panel_ref("a", block_ids = "a", near = "b", side = "right"),
     blk("a", near = "b", side = "right")
+  )
+  expect_identical(
+    as_panel_ref("dag", ext_ids = "dag", rail = "left"),
+    ext("dag", rail = "left")
   )
 })
 
