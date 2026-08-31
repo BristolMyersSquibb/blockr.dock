@@ -26,6 +26,12 @@ prepend_to <- function(block_id = NULL) {
   new_bb_target("prepend", block_id)
 }
 
+# Unlike append / prepend, the id here is a LINK id: an insert is scoped to
+# the wire it splits, and both of its endpoints are read off that link.
+insert_into <- function(link_id = NULL) {
+  new_bb_target("insert", link_id)
+}
+
 block_browser_server <- function(id, board, target = NULL) {
   stopifnot(is.character(id), length(id) == 1L, nzchar(id))
 
@@ -71,9 +77,51 @@ block_commit_value <- function(spec, board, target) {
     return(blocks)
   }
 
+  if (target$mode == "insert") {
+    return(
+      list(
+        blocks = blocks,
+        links = block_commit_insert_links(spec, board, target, blk, blk_id)
+      )
+    )
+  }
+
   list(
     blocks = blocks,
     links = block_commit_link(spec, board, target, blk, blk_id)
+  )
+}
+
+# The two links that put the new block into an existing wire. The near end
+# lands on a free slot of the new block, like an append. The far end
+# inherits the slot the split link already occupied: for a variadic target
+# that slot name IS the identity of the incoming entry, so reusing it is
+# what makes this an insertion rather than a rewire.
+#
+# Dropping the split link is the action's business, not the menu's: it
+# already holds the id it was triggered with.
+block_commit_insert_links <- function(spec, board, target, blk, blk_id) {
+
+  ends <- link_ends(board, target$id)
+
+  if (is.null(ends)) {
+    return(as_links(list()))
+  }
+
+  input <- new_block_slot(spec, blk, blk_id, safe_board_links(board))
+
+  ids <- rand_names(
+    old_names = safe_board_ids(board, board_link_ids), n = 2L
+  )
+
+  as_links(
+    set_names(
+      list(
+        new_link(from = ends$from, to = blk_id, input = input),
+        new_link(from = blk_id, to = ends$to, input = ends$input)
+      ),
+      ids
+    )
   )
 }
 
@@ -88,10 +136,7 @@ block_commit_link <- function(spec, board, target, blk, blk_id) {
   )
 
   if (target$mode == "append") {
-    input <- spec$block_input
-    if (is.null(input) || !nzchar(input)) {
-      input <- resolve_free_input(blk, blk_id, links)
-    }
+    input <- new_block_slot(spec, blk, blk_id, links)
     lnk <- new_link(from = target$id, to = blk_id, input = input)
   } else {
     tgt_blk <- board_block(board, target$id)
@@ -103,6 +148,21 @@ block_commit_link <- function(spec, board, target, blk, blk_id) {
   }
 
   as_links(set_names(list(lnk), link_id))
+}
+
+# Which slot of the NEW block receives the incoming link: the user's pick
+# where the panel offered one (>= 2 slots, or a variadic name), else its
+# first free slot. Shared by append and insert, whose near end is the same
+# problem.
+new_block_slot <- function(spec, blk, blk_id, links) {
+
+  input <- spec$block_input
+
+  if (is.null(input) || !nzchar(input)) {
+    return(resolve_free_input(blk, blk_id, links))
+  }
+
+  input
 }
 
 # Construct the block instance. The user's title (when supplied) is the
@@ -197,13 +257,14 @@ block_browser_dep <- function() {
 
 # ---- target descriptor -------------------------------------------------
 
-new_bb_target <- function(mode, block_id = NULL) {
+# `id` is a block id for append / prepend and a link id for insert; each
+# mode's own branch knows which it is holding.
+new_bb_target <- function(mode, id = NULL) {
   stopifnot(
-    is.null(block_id) ||
-      (is.character(block_id) && length(block_id) == 1L && nzchar(block_id))
+    is.null(id) || (is.character(id) && length(id) == 1L && nzchar(id))
   )
   structure(
-    list(mode = mode, id = block_id),
+    list(mode = mode, id = id),
     class = c(paste0("bb_target_", mode), "bb_target")
   )
 }
@@ -241,10 +302,11 @@ browser_block_metas <- function(mode) {
     )
   })
 
-  need_inputs <- mode == "append"
+  need_inputs <- mode %in% c("append", "insert")
 
-  # For append, the new block has to receive a link from the source, so
-  # candidates need either a named input slot or variadic arity (`NA`)
+  # For append and insert, the new block has to receive a link from the
+  # source, so candidates need either a named input slot or variadic arity
+  # (`NA`)
   # which accepts arbitrary fresh slots. Source-only blocks (arity 0,
   # e.g. dataset_block) can't be appended and are filtered out.
   # Variadic blocks (e.g. rbind_block) return character(0) from
@@ -288,13 +350,20 @@ resolve_target <- function(board, target) {
     )
   }
 
-  blk <- board_block(board, target$id)
-  trigger_name <- if (!is.null(blk)) {
-    nm <- tryCatch(block_name(blk), error = function(e) NULL)
-    if (is.null(nm) || !nzchar(nm)) target$id else nm
-  } else {
-    target$id
+  # An insert's id names a link, not a block, so it resolves its own
+  # context: the wire's two ends, read off the link. No port picker, since
+  # the far end keeps the slot the link already occupies.
+  if (target$mode == "insert") {
+    return(
+      list(
+        subtitle = insert_subtitle(board, target$id),
+        inputs = character(), attrs = list(), variadic = FALSE
+      )
+    )
   }
+
+  blk <- board_block(board, target$id)
+  trigger_name <- block_label(board, target$id)
   verb <- if (target$mode == "append") "Append from" else "Prepend to"
   subtitle <- tags$p(
     class = "blockr-block-browser-context",
@@ -321,6 +390,57 @@ resolve_target <- function(board, target) {
   }
 
   list(subtitle = subtitle, inputs = inputs, attrs = attrs, variadic = variadic)
+}
+
+# "Insert into A -> B", naming the ends the way the user sees them: the
+# block name where there is one, the id otherwise. A link that has since
+# left the board yields no subtitle rather than a broken one.
+insert_subtitle <- function(board, link_id) {
+
+  ends <- link_ends(board, link_id)
+
+  if (is.null(ends)) {
+    return(NULL)
+  }
+
+  tags$p(
+    class = "blockr-block-browser-context",
+    "Insert into ", tags$strong(block_label(board, ends$from)),
+    " \u2192 ", tags$strong(block_label(board, ends$to))
+  )
+}
+
+# The link's two ends plus the slot it lands on, or NULL when the id names
+# no link on the board. One lookup, so callers cannot disagree about it.
+link_ends <- function(board, link_id) {
+
+  if (is.null(link_id) || !length(link_id) || is.na(link_id) ||
+        !nzchar(link_id)) {
+    return(NULL)
+  }
+
+  links <- as.data.frame(safe_board_links(board))
+
+  if (!nrow(links) || !link_id %in% links$id) {
+    return(NULL)
+  }
+
+  row <- links[links$id == link_id, ]
+
+  list(from = row$from, to = row$to, input = row$input)
+}
+
+block_label <- function(board, id) {
+
+  blk <- board_block(board, id)
+
+  if (is.null(blk)) {
+    return(id)
+  }
+
+  nm <- tryCatch(block_name(blk), error = function(e) NULL)
+
+  if (is.null(nm) || !nzchar(nm)) id else nm
 }
 
 browser_panel <- function(ns, metas, mode, tgt) {
@@ -450,20 +570,23 @@ card_advanced <- function(meta, ns, mode, target_inputs,
   # Only ask the user to pick a slot when there is an actual choice
   # (>= 2 slots). With a single slot the new-block input port is
   # forced; the dock falls back to `block_inputs(blk)[1L]`.
-  show_block_input <- mode == "append" && length(meta$inputs) > 1L
+  show_block_input <- mode %in% c("append", "insert") &&
+    length(meta$inputs) > 1L
   show_target_input <- mode == "prepend" && length(target_inputs) > 1L
 
   # A variadic end has no fixed ports to pick from: offer an optional
   # name instead (blank commits a positional slot). The field carries
   # the mode's slot class so the browser JS reports it verbatim.
-  name_variadic <- (mode == "append" && isTRUE(meta$variadic)) ||
+  new_block_mode <- mode %in% c("append", "insert")
+  name_variadic <- (new_block_mode && isTRUE(meta$variadic)) ||
     (mode == "prepend" && isTRUE(target_variadic))
-  name_suffix <- if (mode == "append") "block-input" else "target-input"
-  name_id_suffix <- if (mode == "append") "block_input" else "target_input"
+  name_suffix <- if (new_block_mode) "block-input" else "target-input"
+  name_id_suffix <- if (new_block_mode) "block_input" else "target_input"
   add_label <- switch(mode,
     add = "Add",
     append = "Append",
-    prepend = "Prepend"
+    prepend = "Prepend",
+    insert = "Insert"
   )
 
   tags$div(
