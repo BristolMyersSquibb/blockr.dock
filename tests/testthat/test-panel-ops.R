@@ -4,7 +4,9 @@
 # is idempotent against the live panel set, and -- for a block being removed in
 # the same update -- defers to core's block-removal path. The validation and
 # reducer sides (validate_view_mod / apply_view_mod) are covered in
-# test-views-delta.R alongside the wider delta.
+# test-views-delta.R alongside the wider delta. Below the mocked ones, a browser
+# pass drives the placement hints against a live dock, which is the only place
+# the client's acceptance of what a hint names can be observed.
 
 # A dock stub carrying only what the ops read: an authoritative live-panel set
 # the idempotency guards key on, and a placeholder proxy. The show / hide mocks
@@ -453,4 +455,260 @@ test_that("op_move_panel routes a rail hint to the edge group", {
       pos = list(referenceGroup = "rail-right", direction = "within")
     )
   )
+})
+
+# ---- end to end -------------------------------------------------------------
+
+# Mocking the proxy stops one hop short. It says which dispatch a hint produces,
+# never whether dockView accepts what that dispatch names, nor whether the
+# result comes back through the grid mirror onto the board. The `rail` hint most
+# wants the difference -- it targets a dockView edge group rather than a
+# splitview position, and whether the client accepts that target was the open
+# question in #461 -- and one fixture carries `near` / `side` / `size` alongside
+# it, so a single browser pass retires the gap for the whole grammar. Without
+# one, a dockViewR bump reintroducing the edge-group refusal lands silently.
+#
+# No UI gesture emits a server-side `move` or `resize`, and the add-panel modal
+# only ever emits an `add` anchored `within` the group clicked, so nothing in a
+# dock can drive the rest of the grammar by being clicked. The `panel-ops`
+# fixture supplies what can: an extension emitting one `views$mod` payload per
+# button, which also exports the board's own committed grid. Read in place of
+# the client echo, that export is what separates a panel that merely landed from
+# one that persisted.
+
+ops_dock <- "my_board-main-dock"
+
+ops_app <- function(name) {
+
+  app <- new_app_driver(
+    system.file("examples", "panel-ops", "app.R", package = "blockr.dock"),
+    name = name,
+    seed = 42,
+    load_timeout = 60 * 1000,
+    timeout = 30 * 1000
+  )
+
+  # Blocks `c` and `d` sit outside the view so that an `add` has something to
+  # place, which leaves only `a` and `b` carrying a card at load.
+  wait_dock_loaded(app, n_blocks = 2)
+
+  # The first thing asserted is that both rails are empty and hidden, and a
+  # dock that has not mounted yet reads exactly that way -- no widget to ask,
+  # no echoed state to find rails in. Gating on the client-confirmed tab set is
+  # what keeps that precondition, and so every step resting on it, non-vacuous.
+  wait_block_panel_tabs(app, c("block_panel-a", "block_panel-b"))
+
+  app
+}
+
+# Fire and return. A payload that only mutates the dock updates no output
+# value, so `click()`'s default wait has nothing to gate on and would spend its
+# whole budget before timing out; `expect_settles()` below is the real gate.
+ops_click <- function(app, btn) {
+  app$click(paste0("my_board-ext_ops-", btn), wait_ = FALSE)
+}
+
+# An apply reaches the dock, the dock settles, and only then does the echo come
+# back for the mirror to commit -- a round trip the app can look idle in the
+# middle of, so a fixed wait either flakes or is slower than it has to be. Poll
+# what the step is about instead, then assert it, so that a timeout surfaces as
+# the mismatch itself: what was wanted against whatever the dock settled at.
+expect_settles <- function(read, want, label, timeout = 30 * 1000) {
+
+  deadline <- Sys.time() + timeout / 1000
+
+  repeat {
+
+    got <- read()
+
+    if (identical(got, want) || Sys.time() > deadline) {
+      break
+    }
+
+    Sys.sleep(0.2)
+  }
+
+  expect_identical(got, want, label = label)
+}
+
+# What the client makes of a rail: the panels off the echoed dock state, the
+# visibility off the widget, which is where the derived rule (a rail holding
+# panels is shown, an empty one hidden) actually runs. Optional-chained so the
+# read yields NULL rather than aborting while the widget is still null.
+rail_state <- function(app, edge) {
+
+  rails <- as_dock_rails(
+    new_dock_layout(app$get_value(input = paste0(ops_dock, "_state")))
+  )
+
+  visible <- app$get_js(
+    sprintf(
+      "HTMLWidgets.find('#%s')?.getWidget()?.isEdgeGroupVisible('%s')",
+      ops_dock, edge
+    )
+  )
+
+  list(
+    panels = as.character(rails[[edge]][["panels"]]),
+    visible = isTRUE(visible)
+  )
+}
+
+# What the board committed for one edge. An emptied rail may keep its entry
+# (the client echoed it a width, so it is no longer the default one
+# canonicalisation drops) or lose it, and both spell the same membership --
+# so read the panels rather than the presence of the entry.
+stored_rail <- function(app, edge) {
+  as.character(app$get_value(export = "my_board-ext_ops-stored_rails")[[edge]])
+}
+
+stored_grid <- function(app) {
+  app$get_value(export = "my_board-ext_ops-stored_grid")
+}
+
+# The stored tree, one root child at a time, each as the panels it holds. The
+# fixture never nests deeper than a leaf below the root, and the grouping is
+# the whole point of a `side` hint -- a flattened id list reads the same
+# whether a panel joined a group or split it.
+root_groups <- function(app) {
+  lapply(
+    stored_grid(app)[["children"]],
+    function(node) {
+      if (is_grid_leaf(node)) node[["panels"]] else grid_tree_ids(node)
+    }
+  )
+}
+
+test_that("a rail hint parks a panel on an edge and takes it back off", {
+
+  skip_on_cran()
+
+  app <- ops_app("panel-ops-rail")
+  withr::defer(app$stop())
+
+  # Born empty and hidden on both edges: a rail's visibility is derived from
+  # what it holds, so the fixture declares neither and the first payload is
+  # what reveals one. A rail already showing would make the step below vacuous.
+  expect_settles(
+    function() rail_state(app, "right"),
+    list(panels = character(), visible = FALSE),
+    "the right rail at load"
+  )
+  expect_identical(stored_rail(app, "right"), character())
+
+  # A `move` carrying `rail` is the hop #461 left open: it routes through
+  # dockView's `moveTo`, and its target here is an empty rail, which the
+  # derived rule leaves hidden.
+  ops_click(app, "rail_move_b")
+  expect_settles(
+    function() rail_state(app, "right"),
+    list(panels = "block_panel-b", visible = TRUE),
+    "b moved onto the right edge"
+  )
+  expect_settles(
+    function() stored_rail(app, "right"), "block_panel-b",
+    "the board recording b on the right edge"
+  )
+
+  # An `add` carrying `rail` places a non-member there. Block `c` is on the
+  # board but outside the view, so it arrives by the `addPanel` route rather
+  # than by `moveTo`, and its card is built on the way in.
+  ops_click(app, "rail_add_c")
+  expect_settles(
+    function() rail_state(app, "right"),
+    list(panels = c("block_panel-b", "block_panel-c"), visible = TRUE),
+    "c added to the right edge"
+  )
+  expect_settles(
+    function() stored_rail(app, "right"),
+    c("block_panel-b", "block_panel-c"),
+    "the board recording both on the right edge"
+  )
+
+  # Out again, one at a time. A rail still holding a panel stays up.
+  ops_click(app, "grid_move_b")
+  expect_settles(
+    function() rail_state(app, "right"),
+    list(panels = "block_panel-c", visible = TRUE),
+    "b moved back into the tree"
+  )
+  expect_settles(
+    function() stored_rail(app, "right"), "block_panel-c",
+    "the board dropping b from the right edge"
+  )
+
+  # Emptying it hides it again, by the same derived rule the fixture was born
+  # under, now driven from the server rather than by a drag.
+  ops_click(app, "grid_move_c")
+  expect_settles(
+    function() rail_state(app, "right"),
+    list(panels = character(), visible = FALSE),
+    "the right rail emptied"
+  )
+  expect_settles(
+    function() stored_rail(app, "right"), character(),
+    "the board recording an empty right edge"
+  )
+
+  # The hint named an edge, and only that edge moved. Every board offers both,
+  # so a left rail that stayed empty and hidden throughout is what says the
+  # payload picked its target rather than any rail at all.
+  expect_identical(stored_rail(app, "left"), character())
+  expect_identical(
+    rail_state(app, "left"), list(panels = character(), visible = FALSE)
+  )
+
+  # Nothing was lost on the way out: a rail and the tree partition the panels a
+  # grid places, so both moved panels are back in the tree and placed once.
+  expect_setequal(
+    grid_tree_ids(stored_grid(app)),
+    c("ext_panel-ops", "block_panel-a", "block_panel-b", "block_panel-c")
+  )
+
+  # No commit loop: the payload path settles rather than re-committing what it
+  # has just echoed.
+  expect_true(isTRUE(app$get_value(export = "roundtrip_stable")))
+})
+
+test_that("the near, side and size hints place and scale inside the tree", {
+
+  skip_on_cran()
+
+  app <- ops_app("panel-ops-tree")
+  withr::defer(app$stop())
+
+  # The authored grid: the emitter, then a tab group holding a and b.
+  expect_settles(
+    function() root_groups(app),
+    list("ext_panel-ops", c("block_panel-a", "block_panel-b")),
+    "the authored root"
+  )
+  expect_settles(
+    function() round(stored_grid(app)[["sizes"]], 3), c(0.35, 0.65),
+    "the authored sizes"
+  )
+
+  # Together `near` and `side` split the group the anchor sits in rather than
+  # joining it, so `d` becomes a sibling to the right of the group holding `a`
+  # where a `within` would have made it another of that group's tabs.
+  ops_click(app, "grid_add_d")
+  expect_settles(
+    function() root_groups(app),
+    list(
+      "ext_panel-ops", c("block_panel-a", "block_panel-b"), "block_panel-d"
+    ),
+    "d added right of a"
+  )
+
+  # The `size` hint is a ratio of the split its panel's group sits in, and the
+  # `resize` verb is what consumes it -- on `add` it is only recorded. That
+  # group lands on the requested 0.3, the rest share what is left, and the
+  # board stores the result, so a reload comes back to it.
+  ops_click(app, "grid_resize_a")
+  expect_settles(
+    function() round(stored_grid(app)[["sizes"]], 3), c(0.35, 0.3, 0.35),
+    "a's group resized to 0.3"
+  )
+
+  expect_true(isTRUE(app$get_value(export = "roundtrip_stable")))
 })
