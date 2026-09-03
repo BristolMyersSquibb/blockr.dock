@@ -670,7 +670,10 @@
   opacity: 1;
 }
 
-/* Empty dock prompt — overlays the dockview when no panels are present */
+/* Empty dock prompt — overlays the dockview when the splitview is empty. The
+   overlay spans the whole dock, rails included, so it stays click-through and
+   only its button takes the pointer; otherwise a populated rail would sit
+   under an inert sheet and stop responding. */
 .blockr-empty-dock-prompt {
   position: absolute;
   inset: 0;
@@ -681,6 +684,10 @@
   justify-content: center;
   gap: 12px;
   color: var(--blockr-color-text-muted, #6b7280);
+  pointer-events: none;
+}
+
+.blockr-empty-dock-prompt .btn {
   pointer-events: auto;
 }
 

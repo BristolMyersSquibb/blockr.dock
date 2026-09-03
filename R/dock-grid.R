@@ -146,6 +146,13 @@ grid_tree_ids <- function(grid) {
   as.character(unlst(lapply(grid[["children"]], collect)))
 }
 
+# The members a grid leaves to its splitview. Driven by membership rather than
+# by the tree, because a member the grid does not place still lands there --
+# `view_grid()` gives it a default spot -- while a railed one never does.
+unrailed_members <- function(members, grid) {
+  setdiff(members, rail_panel_ids(grid[["rails"]]))
+}
+
 #' Canonical view grid
 #'
 #' A `dock_grid` is a view's geometry in our compact, dockView-independent

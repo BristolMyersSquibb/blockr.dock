@@ -836,7 +836,16 @@ manage_dock <- function(
     live_panels <- reactiveVal(as.character(layout_panel_ids(init_layout)))
     prev_active_group <- reactiveVal()
     active_group_trail <- reactiveVal()
-    n_panels <- reactive(length(live_panels()))
+
+    # The empty-dock prompt is the splitview's empty state, so what it counts is
+    # membership less the rails: a view whose only panels are railed arranges
+    # nothing, and counting the union would leave it with neither a tab strip
+    # nor a prompt to add through. The railed set comes off the view's stored
+    # grid, the same server-side copy `observe_grid_echo()` compares against, so
+    # the count still owes the browser nothing.
+    n_panels <- reactive(
+      length(unrailed_members(live_panels(), board_grids(board$board)[[id]]))
+    )
 
     dock <- list(
       proxy = proxy,

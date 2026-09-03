@@ -1286,6 +1286,84 @@ test_that("the extension rides a left rail, shown only while it holds it", {
   )
 })
 
+test_that("a dock with every panel railed prompts to add one (#470)", {
+
+  skip_on_cran()
+
+  # The `empty` fixture rails its one extension and carries no blocks, so the
+  # splitview arranges nothing. No group means no tab strip and so no `+`,
+  # which leaves the empty-dock prompt as the only way back to a populated
+  # board -- the seam this covers is that the prompt fires at all, and that
+  # overlaying it does not cost the rail its clicks.
+  app <- new_app_driver(
+    system.file("examples", "empty", "app.R", package = "blockr.dock"),
+    name = "empty-railed-prompt",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+
+  app$wait_for_js(
+    paste0(
+      "HTMLWidgets.find('#", dock, "')?.getWidget()",
+      "?.isEdgeGroupVisible('left') === true"
+    ),
+    timeout = 15 * 1000
+  )
+  app$wait_for_idle()
+
+  # The precondition the rest rests on: the rail holds the extension and the
+  # splitview holds nothing, so a prompt gated on total membership would count
+  # one panel and stay away.
+  rails <- as_dock_rails(
+    new_dock_layout(app$get_value(input = paste0(dock, "_state")))
+  )
+
+  expect_identical(rail_panel_ids(rails), "ext_panel-edit_board")
+  expect_equal(
+    app$get_js("document.querySelectorAll('.dv-grid-view .dv-view').length"), 0
+  )
+
+  prompt <- xml2::read_html(app$get_html("[id$='-empty_prompt']"))
+  button <- xml2::xml_find_all(prompt, "//button")
+
+  expect_length(button, 1L)
+  expect_match(xml2::xml_attr(button, "id"), "-empty_dock_add$")
+
+  # The overlay spans the whole dock, rails included, so both halves have to
+  # hold: a hit test in the middle of the rail reaches the rail, and one on the
+  # button still reaches the button.
+  rail_hit <- app$get_js(
+    r"((() => {
+      const sel = '[data-testid="dv-edge-group-rail-left"]';
+      const box = document.querySelector(sel).getBoundingClientRect();
+      const el = document.elementFromPoint(box.left + box.width / 2,
+                                           box.top + box.height / 2);
+      if (el === null) return 'none';
+      return el.closest('.blockr-empty-dock-prompt') ? 'prompt' : 'rail';
+    })())"
+  )
+
+  expect_identical(rail_hit, "rail")
+
+  button_hit <- app$get_js(
+    r"((() => {
+      const btn = document.querySelector('[id$="-empty_dock_add"]');
+      const box = btn.getBoundingClientRect();
+      const el = document.elementFromPoint(box.left + box.width / 2,
+                                           box.top + box.height / 2);
+      return el !== null && btn.contains(el) ? 'button' : 'blocked';
+    })())"
+  )
+
+  expect_identical(button_hit, "button")
+})
+
 test_that("a viewport too narrow for a rail keeps its stored width (#457)", {
 
   skip_on_cran()

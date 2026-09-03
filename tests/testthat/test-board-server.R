@@ -211,6 +211,67 @@ test_that("board server", {
   expect_identical(panel_lookups, 1L)
 })
 
+test_that("an all-railed view reads as an empty dock (#470)", {
+
+  # The default board rails its extensions, so a board with no blocks arranges
+  # nothing in the splitview -- exactly the case the empty-dock prompt exists
+  # for. Membership spans the rails too, so counting it would report a panel
+  # the centre never shows and leave the dock inert, with neither a tab strip
+  # nor a prompt to add anything through.
+  railed <- board_args(extensions = new_edit_board_extension())
+  v_id <- active_view(isolate(railed$board))
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  res <- with_mock_context(ms, {
+    manage_dock(v_id, railed, visibility = fake_visibility(),
+                update = reactiveVal())
+  })
+
+  ms$flushReact()
+
+  expect_identical(isolate(res$live_panels()), "ext_panel-edit_board")
+  expect_identical(isolate(res$n_panels()), 0L)
+
+  # The counterpart: a block lands in the tree, so it counts while the railed
+  # extension beside it still does not.
+  mixed <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = new_edit_board_extension()
+  )
+  m_id <- active_view(isolate(mixed$board))
+
+  ms2 <- new_mock_session()
+  withr::defer(if (!ms2$isClosed()) ms2$close())
+
+  res2 <- with_mock_context(ms2, {
+    manage_dock(m_id, mixed, visibility = fake_visibility("a"),
+                update = reactiveVal())
+  })
+
+  ms2$flushReact()
+
+  expect_setequal(
+    isolate(res2$live_panels()),
+    c("block_panel-a", "ext_panel-edit_board")
+  )
+  expect_identical(isolate(res2$n_panels()), 1L)
+
+  # Closing that block empties the splitview at runtime, the same dead end a
+  # board reaches by starting with none.
+  do.call(
+    ms2$setInputs,
+    set_names(
+      list(as_block_panel_id("a")),
+      paste0(m_id, "-", dock_input("panel-to-remove"))
+    )
+  )
+
+  expect_identical(isolate(res2$live_panels()), "ext_panel-edit_board")
+  expect_identical(isolate(res2$n_panels()), 0L)
+})
+
 test_that("re-closing a removed panel aborts the reducer (#362)", {
 
   # The symptom the gesture guard below prevents: once a close has reduced a
