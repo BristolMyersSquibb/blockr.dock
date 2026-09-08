@@ -93,13 +93,23 @@ block_commit_value <- function(spec, board, target) {
 }
 
 # The two links that put the new block into an existing wire. The near end
-# lands on a free slot of the new block, like an append. The far end
-# inherits the slot the split link already occupied: for a variadic target
-# that slot name IS the identity of the incoming entry, so reusing it is
-# what makes this an insertion rather than a rewire.
+# lands on a free slot of the new block, like an append.
 #
-# Dropping the split link is the action's business, not the menu's: it
-# already holds the id it was triggered with.
+# The far end keeps both halves of the split link's identity: its input slot
+# and its id. The slot matters for a named variadic entry. The id matters for
+# a blank one, whose identity is instead its position in the board's link
+# list, which `sync_dot_args()` walks in order to hand out positional
+# arguments. `resolve_free_input()` gives every variadic target a blank slot,
+# so blank is the common case, not the exotic one.
+#
+# Reusing the id is what preserves that position: `modify_board_links()`
+# replaces an id present in both `add` and `rm` in place, where a fresh id
+# would drop the link and append its replacement at the end, sliding every
+# later sibling up one. An `rbind_block` fed by two blank links would swap
+# its rows.
+#
+# Dropping the split link is still the action's business: it holds the id it
+# was triggered with, and passing that same id here is what pairs the two.
 block_commit_insert_links <- function(spec, board, target, blk, blk_id) {
 
   ends <- link_ends(board, target$id)
@@ -110,8 +120,8 @@ block_commit_insert_links <- function(spec, board, target, blk, blk_id) {
 
   input <- new_block_slot(spec, blk, blk_id, safe_board_links(board))
 
-  ids <- rand_names(
-    old_names = safe_board_ids(board, board_link_ids), n = 2L
+  near <- rand_names(
+    old_names = safe_board_ids(board, board_link_ids), n = 1L
   )
 
   as_links(
@@ -120,7 +130,7 @@ block_commit_insert_links <- function(spec, board, target, blk, blk_id) {
         new_link(from = ends$from, to = blk_id, input = input),
         new_link(from = blk_id, to = ends$to, input = ends$input)
       ),
-      ids
+      c(near, target$id)
     )
   )
 }

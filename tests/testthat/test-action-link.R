@@ -1060,6 +1060,23 @@ wiring <- function(links) {
   paste0(df$from, ">", df$to, ">", df$input)
 }
 
+# A blank slot's identity is its position in the board's link list, so the
+# board has to be read in order, not as a set.
+incoming <- function(board, to) {
+  df <- as.data.frame(board_links(board))
+  df <- df[df$to == to, ]
+  paste0(df$from, ifelse(nzchar(df$input), paste0("(", df$input, ")"), ""))
+}
+
+# What the board looks like once core has applied the delta the action emitted.
+applied <- function(board, upd) {
+  blocks <- board_blocks(board)
+  board_blocks(board) <- c(blocks, upd$blocks$add)
+  blockr.core:::modify_board_links(
+    board, add = upd$links$add, rm = upd$links$rm
+  )
+}
+
 test_that("insert block action: the split link goes, two links replace it", {
   local_mocked_sidebar()
 
@@ -1080,22 +1097,25 @@ test_that("insert block action: the split link goes, two links replace it", {
   expect_setequal(wiring(upd$links$add), c("a>c>data", "c>b>data"))
 })
 
-test_that("insert block action: the far end keeps the slot it had", {
-  local_mocked_sidebar()
-
-  # A variadic target names its incoming entries, so the slot is the
-  # entry's identity: inheriting it is what makes this an insertion rather
-  # than a rewire. Only the split link's own slot may be reused.
-  r_board <- reactiveValues(
+variadic_board <- function(first = "first", second = "second") {
+  reactiveValues(
     board = new_board(
       c(a = new_dataset_block("iris"), z = new_dataset_block("mtcars"),
         m = new_rbind_block()),
       links = c(
-        l1 = new_link("a", "m", "first"), l2 = new_link("z", "m", "second")
+        l1 = new_link("a", "m", first), l2 = new_link("z", "m", second)
       )
     ),
     board_id = "my_board"
   )
+}
+
+test_that("insert block action: a named far end keeps the slot it had", {
+  local_mocked_sidebar()
+
+  # Where the entries are named, the name is the identity, so the only thing
+  # that has to survive is the slot.
+  r_board <- variadic_board()
 
   upd <- run_insert(
     r_board, reactiveVal(list()),
@@ -1104,6 +1124,37 @@ test_that("insert block action: the far end keeps the slot it had", {
 
   expect_identical(upd$links$rm, "l1")
   expect_setequal(wiring(upd$links$add), c("a>c>data", "c>m>first"))
+
+  # And the sibling is untouched, read off the board in order rather than as
+  # a set, so a re-order could fail this.
+  expect_identical(
+    incoming(applied(isolate(r_board$board), upd), "m"),
+    c("c(first)", "z(second)")
+  )
+})
+
+test_that("insert block action: a blank far end keeps its position", {
+  local_mocked_sidebar()
+
+  # `resolve_free_input()` hands every variadic target a blank slot, so this
+  # is the common shape, not an edge case. A blank slot carries no name: its
+  # identity is where it sits in the link list, which `sync_dot_args()` walks
+  # in order to hand out positional arguments. Drop the split link and append
+  # its replacement and the sibling slides up one, swapping an rbind's rows.
+  r_board <- variadic_board("", "")
+
+  before <- incoming(isolate(r_board$board), "m")
+  expect_identical(before, c("a", "z"))
+
+  upd <- run_insert(
+    r_board, reactiveVal(list()),
+    list(type = "head_block", id = "c", nonce = 1L)
+  )
+
+  expect_identical(
+    incoming(applied(isolate(r_board$board), upd), "m"),
+    c("c", "z")
+  )
 })
 
 test_that("insert block action: an explicit slot on the new block wins", {
@@ -1117,7 +1168,7 @@ test_that("insert block action: an explicit slot on the new block wins", {
   expect_setequal(wiring(upd$links$add), c("a>c>y", "c>b>data"))
 })
 
-test_that("insert block action: the two link ids are fresh", {
+test_that("insert block action: the far end reuses the split link's id", {
   local_mocked_sidebar()
 
   upd <- run_insert(
@@ -1129,7 +1180,15 @@ test_that("insert block action: the two link ids are fresh", {
 
   expect_length(ids, 2L)
   expect_length(unique(ids), 2L)
-  expect_false("l1" %in% ids)
+
+  # The far end is the split link re-pointed, not a new one: carrying its id
+  # is what makes `modify_board_links()` replace it in place rather than drop
+  # it and append, which is what holds a blank slot's position. The near end
+  # is genuinely new, so it takes a fresh id.
+  far <- as.data.frame(upd$links$add)
+  expect_identical(far$id[far$from == "c"], "l1")
+  expect_true(far$id[far$to == "c"] %in% setdiff(ids, "l1"))
+  expect_identical(upd$links$rm, "l1")
 })
 
 test_that("insert block action: a link that has gone commits nothing", {
