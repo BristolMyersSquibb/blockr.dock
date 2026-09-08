@@ -1087,14 +1087,14 @@ resolve_view_mod <- function(mod, view_id, members, post_block_ids, ext_ids) {
   if (not_null(mod[["add"]])) {
     mod[["add"]] <- resolve_placement_verb(
       mod[["add"]], view_id, "add", post_blk, post_ext, resolve_near,
-      c("near", "side", "size")
+      c("near", "side", "size", "rail")
     )
   }
 
   if (not_null(mod[["move"]])) {
     mod[["move"]] <- resolve_placement_verb(
       mod[["move"]], view_id, "move", mem_blk, mem_ext, resolve_near,
-      c("near", "side")
+      c("near", "side", "rail")
     )
   }
 
@@ -1457,12 +1457,36 @@ validate_mod_map <- function(map, view_id, verb) {
 # -- they come from the `blk()` / `ext()` constructor and the verb's contextual
 # whitelist in resolution -- so this checks only that `near` resolves to a
 # member (the running `anchors` set), `side` is in dockview's drop vocabulary,
-# and `size` is a ratio in (0, 1). No hint at all falls back to
+# `size` is a ratio in (0, 1), and `rail` names an edge the view offers without
+# also anchoring inside the tree. No hint at all falls back to
 # `determine_panel_pos()` at delivery.
 validate_panel_hint <- function(hint, view_id, anchors) {
 
   if (is.null(hint) || !length(hint)) {
     return(invisible())
+  }
+
+  rail <- hint[["rail"]]
+
+  if (not_null(rail)) {
+
+    if (!is_string(rail) || !rail %in% rail_positions) {
+      blockr_abort(
+        "Hint `rail` in `views$mod${view_id}` must be one of {rail_positions}.",
+        class = "dock_views_mod_hint_invalid"
+      )
+    }
+
+    # A rail is an edge of the whole view, `near` / `side` a spot inside its
+    # splitview: a hint naming both asks for two destinations at once.
+    clash <- intersect(names(hint), c("near", "side"))
+
+    if (length(clash)) {
+      blockr_abort(
+        "Hint `rail` in `views$mod${view_id}` cannot combine with {clash}.",
+        class = "dock_views_mod_hint_invalid"
+      )
+    }
   }
 
   near <- hint[["near"]]

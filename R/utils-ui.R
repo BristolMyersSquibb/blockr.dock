@@ -54,88 +54,69 @@ move_dom_elements <- function(from, to, session = get_session()) {
 
 determine_active_views <- function(layout, active_panel = NULL) {
 
-  if (is.null(layout)) {
+  groups <- layout_groups(layout)
+
+  if (!length(groups)) {
     return(character())
   }
 
-  # The dockView tree, keyed by group id: a compact `dock_grid` is expanded
-  # (assigning ids), while a raw dockView `_state` echo already carries its
-  # tree at `$grid`. A group's active view is its open tab -- but a bare tab
-  # switch does not always refresh the echo's `activeView`, so the client's
-  # live `active_panel` overrides the front of whichever group lists it.
-  #
-  # A rail is a group too, serialised beside the grid rather than inside it, so
-  # its open tab folds in here. Without that, a block a user parks on an edge
-  # reads as off screen and its card never paints. A bare `dock_grid` carries
-  # no rails, so only an echo contributes any.
+  set_names(
+    chr_ply(groups, group_active_view, active_panel = active_panel),
+    chr_xtr(groups, "id")
+  )
+}
+
+# A group's active view is its open tab -- but a bare tab switch does not always
+# refresh the echo's `activeView`, so the client's live `active_panel` overrides
+# the front of whichever group lists it.
+group_active_view <- function(group, active_panel) {
+
+  if (not_null(active_panel) && active_panel %in% group[["views"]]) {
+    return(active_panel)
+  }
+
+  group[["activeView"]]
+}
+
+# Every on-screen dock group, normalised to `list(id, views, activeView)`. The
+# dockView tree contributes its leaves: a compact `dock_grid` is expanded
+# (assigning ids), while a raw dockView `_state` echo already carries its tree
+# at `$grid`.
+#
+# A rail is a group too, serialised beside the grid rather than inside it, so it
+# folds in here. Without that, a block a user parks on an edge reads as off
+# screen and its card never paints. A rail counts only while it is both shown
+# and expanded: a collapsed rail is a bare strip with no content pane, exactly
+# as a background tab has none. A bare `dock_grid` carries no rails, so only an
+# echo contributes any.
+layout_groups <- function(layout) {
+
+  if (is.null(layout)) {
+    return(list())
+  }
+
   compact <- is_dock_grid(layout)
   tree <- if (compact) grid_to_tree(layout) else layout[["grid"]]
 
   rails <- if (compact) {
-    character()
+    list()
   } else {
-    rail_active_views(layout[["edgeGroups"]], active_panel)
+    lapply(Filter(rail_on_screen, layout[["edgeGroups"]]), `[[`, "group")
   }
 
-  root <- tree[["root"]]
-
-  if (is.null(root)) {
-    return(rails)
-  }
-
-  xtr_leaf <- function(x) {
-
-    if (identical(x[["type"]], "leaf")) {
-
-      front <- if (not_null(active_panel) &&
-                     active_panel %in% x[["data"]][["views"]]) {
-        active_panel
-      } else {
-        coal(x[["data"]][["activeView"]], "", fail_all = FALSE)
-      }
-
-      return(set_names(front, x[["data"]][["id"]]))
-    }
-
-    lapply(x[["data"]], xtr_leaf)
-  }
-
-  c(rapply(xtr_leaf(root), identity, "character"), rails)
+  lapply(c(grid_leaves(tree), rails), new_layout_group)
 }
 
-# The open tab of each rail that is actually on screen, keyed by group id like
-# the grid's fronts. A rail counts only while it is both shown and expanded: a
-# collapsed rail is a bare strip with no content pane, exactly as a background
-# tab has none.
-rail_active_views <- function(edges, active_panel = NULL) {
-
-  shown <- Filter(rail_on_screen, edges)
-
-  if (!length(shown)) {
-    return(character())
-  }
-
-  groups <- lapply(shown, `[[`, "group")
-
-  set_names(
-    chr_ply(groups, rail_front_panel, active_panel = active_panel),
-    chr_xtr(groups, "id")
+new_layout_group <- function(group) {
+  list(
+    id = as.character(group[["id"]]),
+    views = as.character(unlst(group[["views"]])),
+    activeView = coal(group[["activeView"]], "", fail_all = FALSE)
   )
 }
 
 rail_on_screen <- function(edge) {
   isTRUE(edge[["visible"]]) && !isTRUE(edge[["collapsed"]])
-}
-
-rail_front_panel <- function(group, active_panel) {
-
-  views <- as.character(unlst(group[["views"]]))
-
-  if (not_null(active_panel) && active_panel %in% views) {
-    return(active_panel)
-  }
-
-  coal(group[["activeView"]], "", fail_all = FALSE)
 }
 
 visible_block_ids <- function(layout, active_panel = NULL) {
@@ -163,22 +144,28 @@ active_view_block_ids <- function(x) {
   view_block_ids(views[[active_view(views)]])
 }
 
-visible_exts <- function() {
-  blockr_option("visible_extensions", "dag")
+# A group holding an extension is reserved. A hint-less add landing there tabs
+# over the extension and takes focus, which is how a block panel ends up
+# covering the DAG it was opened from. The test is membership rather than the
+# front tab -- an extension parked behind a fronted sibling is covered just the
+# same -- and it reads the panel id, so every extension is reserved, not a
+# hardcoded few.
+holds_ext_panel <- function(group) {
+  any(maybe_ext_panel_id(group[["views"]]))
 }
 
 determine_panel_pos <- function(dock) {
 
-  active <- determine_active_views(dock$layout())
+  groups <- layout_groups(dock$layout())
+  ids <- chr_xtr(groups, "id")
 
   # A narrow view is one group, so it is always the target. The reservation
-  # below -- which keeps an add off the group fronting a kept-visible extension
-  # -- would leave no candidate there and split a second group off, undoing the
+  # would leave no candidate there and split a second group off, undoing the
   # collapse on the first block a user adds.
   cands <- if (isTRUE(dock$narrow)) {
-    names(active)
+    ids
   } else {
-    names(active)[!active %in% as_ext_panel_id(visible_exts())]
+    ids[!lgl_ply(groups, holds_ext_panel)]
   }
 
   if (!length(cands)) {

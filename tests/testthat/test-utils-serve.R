@@ -143,6 +143,33 @@ test_that("grids_stable holds when the live grid is the stored fixed point", {
   expect_false(grids_stable(stored, drifted))
 })
 
+test_that("grids_stable reads a squeezed rail as the fixed point (#457)", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block()),
+    views = list(V = c("a", "b")),
+    grids = list(
+      V = dock_grid("a", rail(blk("b"), position = "right", size = 420))
+    )
+  )
+
+  stored <- board_grids(brd)
+
+  # A viewport too narrow to render the rail reports a width the layout forced,
+  # which the mirror declines to commit -- so the round trip is settled, and the
+  # sentinel has to say so rather than reading the divergence as a pending
+  # write. Anything else in the grid still moves it off the fixed point.
+  squeezed <- stored[["V"]]
+  squeezed[["rails"]][["right"]][["size"]] <- 120
+
+  expect_true(grids_stable(stored, new_dock_grids(list(V = squeezed))))
+
+  moved <- squeezed
+  moved[["rails"]][["right"]][["collapsed"]] <- TRUE
+
+  expect_false(grids_stable(stored, new_dock_grids(list(V = moved))))
+})
+
 test_that("dock app renders a block added via the extension (#191)", {
 
   skip_on_cran()
@@ -1259,6 +1286,71 @@ test_that("the extension rides a left rail, shown only while it holds it", {
   )
 })
 
+test_that("a viewport too narrow for a rail keeps its stored width (#457)", {
+
+  skip_on_cran()
+
+  # Narrow enough that the rail cannot have the 260px the fixture stores for it.
+  # A rail is the low-priority view of dockView's shell splitview, so the layout
+  # squeezes it rather than the centre, and hands the space back to the centre
+  # rather than the rail once there is room again -- the width it reports from
+  # here on is the viewport's, and committing it would leave the board holding
+  # the narrowest one it was ever opened at.
+  app <- new_app_driver(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "rail-narrow-viewport",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000,
+    width = 520,
+    height = 900
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+
+  rail_width <- function() {
+    app$get_js(
+      paste0(
+        "document.querySelector(",
+        "'[data-testid=\"dv-edge-group-rail-left\"]')",
+        "?.getBoundingClientRect().width"
+      )
+    )
+  }
+
+  stored_rail_width <- function() {
+    ser <- jsonlite::fromJSON(
+      retry_download(app, "my_board-preserve_board-serialize"),
+      simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+    )
+    grids <- ser[["payload"]][["grids"]][["payload"]]
+    grids[[1L]][["rails"]][["left"]][["size"]]
+  }
+
+  app$wait_for_js(
+    paste0(
+      "document.querySelector(",
+      "'[data-testid=\"dv-edge-group-rail-left\"]')",
+      "?.getBoundingClientRect().width > 0"
+    ),
+    timeout = 15 * 1000
+  )
+  app$wait_for_idle()
+
+  # The DOM read is what keeps this from passing vacuously: it has to observe
+  # the squeeze for the stored width to be asserting anything.
+  expect_lt(rail_width(), 200)
+  expect_equal(stored_rail_width(), 260)
+
+  # And a viewport with room again leaves the stored width where it was, so a
+  # later restore has the authored geometry to come back to.
+  app$set_window_size(width = 1600, height = 900)
+  app$wait_for_idle()
+
+  expect_equal(stored_rail_width(), 260)
+})
+
 test_that("a drag toward the edge reveals a hidden rail, collapsed", {
 
   skip_on_cran()
@@ -1521,15 +1613,17 @@ test_that("a panel landing in a revealed rail expands it (#431)", {
     isTRUE(app$get_js(paste0(api, ".getEdgeGroup('left').isCollapsed()")))
   )
 
-  # Land a panel in it. `addPanel()` stands in for the drop because dockview's
-  # `moveTo()` refuses a collapsed edge group outright ("Invalid grid element")
-  # -- but what reaches our code is the same, a panel arriving in a rail that a
-  # drag revealed, and the same `onDidAddPanel` that a real drop fires.
+  # Land a panel in it by moving the one the drag picked up, which is what a
+  # real drop does -- it relocates a panel rather than creating one. A rail
+  # being collapsed is no obstacle to that: the panel lands and the strip
+  # expands.
   app$run_js(
     paste0(
-      api, ".addPanel({id: 'rail-drop-probe', component: 'default',",
-      " title: 'Probe', params: {content: {html: 'probe'}},",
-      " position: {referenceGroup: 'rail-left'}});"
+      api, ".getPanel('block_panel-a').api.moveTo({group: ", api,
+      ".groups.filter(function (g) {",
+      "var l = g.api.location;",
+      "return l.type === 'edge' && l.position === 'left' })[0],",
+      " position: 'center'});"
     )
   )
 

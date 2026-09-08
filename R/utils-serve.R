@@ -111,9 +111,18 @@ slot_stable <- function(stored, live, tolerance) {
 }
 
 # The grid half, over two `dock_grids`: sizes are 0-1 ratios a window resize
-# jitters, so the sash noise floor applies.
+# jitters, so the sash noise floor applies. Rail widths ride the stored value
+# into the compare the way the mirror carries them through an echo it cannot
+# attribute to a sash, so a viewport too narrow to render a rail still reads as
+# a stable round trip -- which it is, the mirror committing nothing there. This
+# is the mirror's rule in its no-history form, so it also reads a sash drag the
+# mirror *would* commit as stable; what this sentinel watches for is a re-echo
+# after quiescence, which carries no gesture at all.
 grids_stable <- function(stored, live) {
-  slot_stable(stored, live, grid_size_tol())
+
+  held <- map(keep_rail_sizes, as.list(live), as.list(stored)[names(live)])
+
+  slot_stable(stored, set_names(held, names(live)), grid_size_tol())
 }
 
 # Test-only server exports for the loop-safety sentinel, via blockr.core's

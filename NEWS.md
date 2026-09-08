@@ -15,9 +15,32 @@
   split. The near end lands on a free slot of the new block, with the
   usual picker when there is more than one to choose from. Candidates are
   filtered as for append, since the new block has to be able to receive from
-  the source, and the two new link ids are generated rather than asked for.
+  the source, and the near end's link id is generated rather than asked for.
   Unlike append, the panel closes even when pinned: the gesture consumes the
   link it was triggered with, so there is nothing left to repeat it against.
+* A grid that places the same panel more than once is now rejected when validated, rather than surviving to the render cast. A grid says where each panel goes, so two spots for one panel express nothing, and the check spans both halves of one: twice in the tree, twice inside a single rail, or once in each of two rails. The tree/rail overlap that canonicalisation prunes has a principled winner -- the rail claims the panel -- while two such spots have none, so this rejects rather than quietly dropping one. Previously the duplicate reached the render cast and aborted with blockr.core's "Block IDs are required to be unique.", which names blocks rather than the layout and fires far from whatever wrote the grid. Every producer routing through the views delta -- a hand-written grid, a restored board, a `views$grid` write, a `views$add` entry -- inherits the check (#464).
+
+* The `blk()` / `ext()` placement hint gained a `rail` key, so the `add` and `move` panel-op verbs can park a panel on a view's left or right edge. A rail used to be authorable only as a view's birth geometry, through `rail()` inside a `dock_grid()`, which left the user's own drag as the only route into one on a view already on screen. The key names an edge rather than an anchor, so it excludes `near` / `side`: a `side` is a direction relative to a `near` anchor *inside* the splitview while a rail position is an edge of the whole view, and both spell `left` and `right` (#461).
+
+* A block panel opened from an extension -- a node click in the DAG, a row click in an outline -- no longer lands as a tab on top of the extension it was opened from. An add that carries no placement hint now reserves every group holding an extension panel, read off the panel id rather than off the hardcoded `dag` key behind the undocumented `blockr.visible_extensions` option, so an extension mounted under any other key is reserved too. The reservation tests membership rather than the front tab, which is what made the misplacement look intermittent -- the same click placed correctly or not depending on which tab of the extension's group happened to be open. The option is gone, and nothing has to opt in (#250).
+
+* A rail's width now survives a viewport too narrow to render it. A rail is
+  sized in pixels and is the low-priority view of dockView's shell splitview,
+  so a dock that cannot fit it squeezes the rail rather than the centre -- and
+  hands the space back to the centre, not the rail, once there is room again.
+  The settled-echo mirror used to commit that width, which left the board
+  holding the narrowest viewport it had ever been opened at, and every later
+  restore came back at that. It now takes a rail's width from the client only
+  across an echo that left the dock's own width alone -- a rail sash moves the
+  boundary between the rail and the centre and leaves that total untouched,
+  while a viewport change moves it -- so a sash drag still persists and a
+  resize no longer rewrites what the user set.
+
+  The mirror also ignores the empty dock a view echoes before its restore
+  reaches it. That echo places nothing, and committing it blanked the view's
+  stored geometry, leaving the arrangement to be rebuilt from whatever the
+  client rendered next -- which for a rail is a width, not the same width back
+  (#457).
 
 * On a narrow viewport, a view's nested grid now flattens into a single
   vertical stack: every tab group survives as its own row, railed ones

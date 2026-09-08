@@ -8,9 +8,9 @@
 \alias{as.character.panel_ref}
 \title{Typed panel references}
 \usage{
-blk(id, near = NULL, side = NULL, size = NULL)
+blk(id, near = NULL, side = NULL, size = NULL, rail = NULL)
 
-ext(id, near = NULL, side = NULL, size = NULL)
+ext(id, near = NULL, side = NULL, size = NULL, rail = NULL)
 
 is_panel_ref(x)
 
@@ -20,7 +20,8 @@ as_panel_ref(
   ext_ids = character(),
   near = NULL,
   side = NULL,
-  size = NULL
+  size = NULL,
+  rail = NULL
 )
 
 \method{as.character}{panel_ref}(x, ...)
@@ -37,6 +38,9 @@ wire-prefixed panel id or a \code{panel_ref}.}
 
 \item{size}{Target size ratio in (0, 1) -- consumed by \code{resize}, and recorded
 on \code{add} for a later size-on-create pass.}
+
+\item{rail}{The edge to park the panel on, \code{left} or \code{right}. Mutually
+exclusive with \code{near} / \code{side}.}
 
 \item{x}{An object.}
 
@@ -63,11 +67,17 @@ Each ref optionally carries its own placement hint, so a verb's operands are
 an unnamed list of self-describing refs:
 \code{add = list(blk("a", near = "b", side = "right"), ext("dag"))}. Which hint
 fields are meaningful depends on the verb -- \code{add} consumes \code{near} / \code{side} /
-\code{size}, \code{move} consumes \code{near} / \code{side} -- and a hint on a ref used where no
-placement happens (\code{rm}, \code{select}, a \code{near} anchor, or the \code{dock_grid()} /
-\code{panels()} authoring DSL) is a loud error. Because the hints are constructor
-arguments, a misspelled one (\code{blk("a", sise = 0.4)}) fails at the call site
-with R's own unused-argument error, before any payload exists.
+\code{size} / \code{rail}, \code{move} consumes \code{near} / \code{side} / \code{rail} -- and a hint on a
+ref used where no placement happens (\code{rm}, \code{select}, a \code{near} anchor, or the
+\code{dock_grid()} / \code{panels()} authoring DSL) is a loud error. Because the hints
+are constructor arguments, a misspelled one (\code{blk("a", sise = 0.4)}) fails at
+the call site with R's own unused-argument error, before any payload exists.
+
+The \code{rail} hint parks a panel on one of the view's edges (see \code{\link[=rail]{rail()}}),
+which is the one destination the tree cannot express, so it excludes \code{near}
+and \code{side}. Keeping the two apart matters beyond the pairing: \code{side} is a
+direction relative to a \code{near} anchor \emph{inside} the splitview, a rail position
+is an edge of the whole view, and both spell \code{left} and \code{right}.
 
 Bare id strings are accepted as sugar wherever a ref is, resolved block-first
 with a hard error only on a true cross-namespace clash (an id that is both a
@@ -82,7 +92,7 @@ resolves to the matching ref unchanged.
 }
 \examples{
 blk("my_block", near = "other_block", side = "right")
-ext("dag")
+ext("dag", rail = "left")
 as.character(blk("my_block"))
 
 as_panel_ref("my_block", block_ids = "my_block")

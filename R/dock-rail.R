@@ -170,6 +170,24 @@ restrict_rail <- function(rail, members) {
   )
 }
 
+# A rail wearing the width `stored` records for it, or the default width when
+# the board records none -- an edge every dock offers but no grid has stored.
+# The rail half of `keep_rail_sizes()`, which says why the client's width is not
+# always the one to keep.
+keep_rail_size <- function(rail, stored) {
+
+  stored <- coal(stored, new_dock_rail(rail[["position"]]))
+
+  new_dock_rail(
+    rail[["position"]],
+    rail[["panels"]],
+    active = rail[["active"]],
+    collapsed = rail[["collapsed"]],
+    size = stored[["size"]],
+    collapsed_size = rail[["collapsed_size"]]
+  )
+}
+
 #' @export
 str_value.dock_rail <- function(x, ...) {
 

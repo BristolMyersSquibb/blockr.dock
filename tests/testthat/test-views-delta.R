@@ -249,6 +249,30 @@ test_that("a grid in views$mod is rejected at the update boundary", {
   )
 })
 
+test_that("a grid-seeded add cannot place a panel twice", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a")
+  )
+
+  # Seeding geometry validates the grid while the update is staged, so every
+  # producer that routes through the delta inherits the check. Without it the
+  # duplicate survives to the render cast and aborts there in core's
+  # block-id vocabulary, far from whatever wrote the grid.
+  expect_error(
+    validate_board_update(
+      list(
+        views = list(
+          add = list(Split = dock_grid("block_panel-a", "block_panel-a"))
+        )
+      ),
+      brd
+    ),
+    class = "dock_grid_panel_duplicated"
+  )
+})
+
 test_that("apply_views: full delta round-trips through the board", {
 
   brd <- new_dock_board(
