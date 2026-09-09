@@ -976,3 +976,33 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   border-top-left-radius: var(--dv-border-radius) !important;
 }
 
+
+/* No-edit chrome ---------------------------------------------------------
+   `blockr.simplified` and `blockr.locked` both put `.blockr-no-edit` on <html>
+   (see no_edit_mode_dep()), alongside a `.blockr-simplified` / `.blockr-locked`
+   class naming which one is in force. Everything dock builds itself is dropped
+   in R; this rule covers the one surface it does not own, the per-block gear.
+
+   Gears are built by a dozen block packages -- half of them in JavaScript, in
+   the widget constructor, before any payload arrives -- so no R-side gate can
+   reach them. They do all share these class names, including the ones that
+   layer a local modifier on top (blockr.admiral's `.admiral-gear-below`) and
+   the ones that deliberately reuse the shared selectors (blockr.outline), so
+   this reaches every gear in the ecosystem with no block-side change.
+
+   The button classes are listed alongside the headers because a gear built
+   without a header wrapper would otherwise survive. `.blockr-settings--open`
+   is belt and braces: the band is a sibling of the header rather than a child
+   in several blocks, so hiding the header alone would strand a band that
+   somehow restored open, with no gear left to close it.
+
+   Not a lock. This hides affordances; it refuses nothing. See
+   `blockr.locked` for the mode that refuses. */
+.blockr-no-edit .blockr-gear-header,
+.blockr-no-edit .blockr-gear-editor,
+.blockr-no-edit .blockr-gear-btn,
+.blockr-no-edit .jscf-gear-header,
+.blockr-no-edit .jscf-gear-btn,
+.blockr-no-edit .blockr-settings--open {
+  display: none !important;
+}

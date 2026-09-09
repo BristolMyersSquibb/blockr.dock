@@ -422,7 +422,7 @@ active_view.dock_board <- function(x) {
 
 views_can_crud <- function(x) {
   stopifnot(is_dock_views(x))
-  !is_dock_locked()
+  !dock_no_edit()
 }
 
 #' @export

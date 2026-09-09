@@ -180,7 +180,7 @@ restore_layout <- function(layout, proxy, blocks = list(),
   # dock-level locked / disableDnd / add_tab config is already set from the
   # current state at `set_dock_view_output()`; we just need the per-panel
   # tabComponent to follow suit (#124).
-  payload <- lock_panels(payload, locked = is_dock_locked())
+  payload <- lock_panels(payload, locked = dock_no_edit())
 
   dockViewR::restore_dock(proxy, unclass(payload))
   invisible(NULL)
@@ -268,7 +268,7 @@ dock_panel <- function(...) {
     ...,
     content = tagList(),
     remove = dockViewR::new_remove_tab_plugin(
-      !is_dock_locked(),
+      !dock_no_edit(),
       mode = "manual"
     ),
     style = list(
@@ -281,10 +281,18 @@ dock_panel <- function(...) {
 set_dock_view_output <- function(..., session = get_session()) {
   args <- c(
     list(...),
-    if (is_dock_locked()) list(locked = TRUE, disableDnd = TRUE),
+    # Two dockview flags, two different questions. `disableDnd` stops panels
+    # being dragged between groups, which is a membership change, so both modes
+    # take it. The component-level `locked` flag sets `gridview.locked`, which
+    # walks the branch nodes and disables their splitviews -- every sash dies
+    # with it -- so only a truly locked board takes that. A simplified board
+    # keeps its borders draggable: a reader on a narrow screen has to be able
+    # to widen a panel to read a wide table, and doing so edits nothing.
+    if (dock_no_edit()) list(disableDnd = TRUE),
+    if (is_dock_locked()) list(locked = TRUE),
     list(
       defaultRenderer = "always",
-      add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked())
+      add_tab = dockViewR::new_add_tab_plugin(!dock_no_edit())
     )
   )
 
@@ -304,6 +312,72 @@ is_dock_locked <- function() {
   # consults via is_board_locked(), so one deployment option drives both core's
   # update / option gate and dock's UI hides.
   isTRUE(blockr_option("locked", FALSE))
+}
+
+# Simplified mode: a *simpler* board, not a locked one. It hides the authoring
+# affordances -- gears, the block card's section toggles and action menu, view
+# and panel CRUD, the board-options accordion -- so a reader is not offered
+# controls they have no use for. It forbids nothing.
+#
+# Deliberately a separate option from `blockr.locked`, not a level of it. Core
+# never sees a locked board, so `is_board_locked()` stays FALSE and neither the
+# update gate nor `freeze_hidden_inputs()` engages: a block whose builder left
+# its inputs *shown* stays usable, and only one whose inputs are *hidden*
+# freezes. That is the whole point -- a crossfilter or value filter still
+# filters here, where a locked board would pin it.
+#
+# Not a security boundary and does not pretend to be. Everything it does is a
+# UI hide, so a forged `Shiny.setInputValue()` still reaches the observers
+# behind it. Reach for `blockr.locked` when refusal, not simplification, is
+# what is wanted.
+is_dock_simplified <- function() {
+  isTRUE(blockr_option("simplified", FALSE))
+}
+
+# The predicate every "offer no editing chrome" decision hangs off, as opposed
+# to the enforcement decisions, which stay on `is_dock_locked()`: the dockview
+# `locked` flag (which kills the sashes), the read-only indicator, and the grid
+# mirror.
+dock_no_edit <- function() {
+  is_dock_locked() || is_dock_simplified()
+}
+
+# Mark the document for the CSS half of both modes: the per-block gears, which
+# dock does not build and so cannot omit. They are built by a dozen block
+# packages, half of them in JavaScript at widget-construction time, but all of
+# them behind the same shared class names, so one rule in blockr-dock.css keyed
+# on `.blockr-no-edit` reaches every one without a single block edit.
+#
+# `.blockr-no-edit` carries the gear rule and rides both modes -- a locked board
+# hiding fewer controls than a simplified one would be backwards, and its gears
+# are the worst case of all, since the freeze leaves them opening onto controls
+# that reach nothing. The mode's own class goes on beside it, unused for now, so
+# a rule that has to tell the two apart later has something to hang off.
+#
+# The class goes on <html> from a <head> script rather than on a wrapper
+# element. In <head> it runs before the body paints, so no gear is ever drawn
+# and then taken away, and page_fillable()'s children are flex items, so a
+# wrapper would steal a row of the board's height. Being a class rather than an
+# emitted stylesheet also leaves the door open to toggling it at runtime, which
+# is what letting a power user ask for the advanced controls back would need.
+no_edit_mode_dep <- function() {
+
+  if (!dock_no_edit()) {
+    return(NULL)
+  }
+
+  mode <- if (is_dock_locked()) "blockr-locked" else "blockr-simplified"
+
+  tags$head(
+    tags$script(
+      HTML(
+        sprintf(
+          "document.documentElement.classList.add('blockr-no-edit', '%s');",
+          mode
+        )
+      )
+    )
+  )
 }
 
 # The narrow-viewport decision, taken once per session from the width the

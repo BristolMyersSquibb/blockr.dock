@@ -188,3 +188,87 @@ test_that("the stacked container is as tall as the rows it carries", {
   # An empty view still needs a box, not a zero-height one.
   expect_match(narrow_stack_attrs(new_dock_grid())$style, "50vh", fixed = TRUE)
 })
+
+test_that("simplified mode drops editing chrome but not the sashes (#TBD)", {
+
+  captured <- NULL
+
+  local_mocked_bindings(
+    dock_view = function(...) {
+      captured <<- list(...)
+      structure(list(), class = "htmlwidget")
+    },
+    render_dock_view = function(expr, ...) expr,
+    .package = "dockViewR"
+  )
+  local_mocked_bindings(dock_proxy = function(...) NULL)
+
+  session <- list(output = list(), ns = NS("board"))
+
+  args_with <- function(opts) {
+    withr::with_options(opts, {
+      set_dock_view_output(session = session)
+      captured
+    })
+  }
+
+  plain <- args_with(list(blockr.locked = NULL, blockr.simplified = NULL))
+  expect_false("disableDnd" %in% names(plain))
+  expect_false("locked" %in% names(plain))
+
+  # Locked keeps both flags: no dragging between groups, and no sashes either.
+  locked <- args_with(list(blockr.locked = TRUE))
+  expect_true(isTRUE(locked$disableDnd))
+  expect_true(isTRUE(locked$locked))
+
+  # Simplified takes only `disableDnd`. Omitting dockview's `locked` is the
+  # whole point: it would disable every sash, and a reader has to be able to
+  # widen a panel without that counting as editing the board.
+  simple <- args_with(list(blockr.simplified = TRUE))
+  expect_true(isTRUE(simple$disableDnd))
+  expect_false("locked" %in% names(simple))
+})
+
+test_that("both no-edit modes mark the document, plain does not (#TBD)", {
+
+  rendered <- function(opts) {
+    withr::with_options(
+      opts,
+      as.character(htmltools::renderTags(no_edit_mode_dep())$head)
+    )
+  }
+
+  expect_null(
+    withr::with_options(
+      list(blockr.locked = NULL, blockr.simplified = NULL),
+      no_edit_mode_dep()
+    )
+  )
+
+  # `.blockr-no-edit` carries the gear rule and rides both modes: a locked board
+  # hiding fewer controls than a simplified one would be backwards, and its
+  # gears are the worse case, opening onto controls the freeze has cut off.
+  simple <- rendered(list(blockr.simplified = TRUE))
+  expect_match(simple, "blockr-no-edit", fixed = TRUE)
+  expect_match(simple, "blockr-simplified", fixed = TRUE)
+  expect_match(simple, "documentElement", fixed = TRUE)
+
+  locked <- rendered(list(blockr.locked = TRUE))
+  expect_match(locked, "blockr-no-edit", fixed = TRUE)
+  expect_match(locked, "blockr-locked", fixed = TRUE)
+  expect_false(grepl("blockr-simplified", locked, fixed = TRUE))
+})
+
+test_that("simplified mode leaves core's board lock alone (#TBD)", {
+
+  # The load-bearing property of making this a separate option: core never sees
+  # a locked board, so neither the update gate nor freeze_hidden_inputs()
+  # engages. A block whose builder left its inputs shown stays usable.
+  withr::with_options(
+    list(blockr.locked = NULL, blockr.simplified = TRUE),
+    {
+      expect_true(dock_no_edit())
+      expect_false(blockr.core::is_board_locked(new_dock_board()))
+    }
+  )
+})
