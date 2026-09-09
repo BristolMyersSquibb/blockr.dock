@@ -985,24 +985,28 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
 
    Gears are built by a dozen block packages -- half of them in JavaScript, in
    the widget constructor, before any payload arrives -- so no R-side gate can
-   reach them. They do all share these class names, including the ones that
-   layer a local modifier on top (blockr.admiral's `.admiral-gear-below`) and
-   the ones that deliberately reuse the shared selectors (blockr.outline), so
-   this reaches every gear in the ecosystem with no block-side change.
+   reach them. They do all share these class names, so this reaches every gear
+   in the ecosystem with no block-side change.
 
-   The button classes are listed alongside the headers because a gear built
-   without a header wrapper would otherwise survive. `.blockr-settings--open`
-   is belt and braces: the band is a sibling of the header rather than a child
-   in several blocks, so hiding the header alone would strand a band that
-   somehow restored open, with no gear left to close it.
+   Target the gear BUTTON, not the `.blockr-gear-header` row it sits in. That
+   row is shared: blockr.dm's crossfilter puts "Filter by", the matched-row
+   count and the Reset button on it, and blockr.viz hangs the download and
+   search controls off it. All of those are for the reader, so hiding the row
+   took away working controls along with the gear. An empty header row is the
+   price, and the cheaper mistake.
+
+   `.blockr-gear-editor` is hidden whole because blockr.extra's wrapper holds
+   nothing but the gear and the code editor it opens, both authoring.
+   `.blockr-settings--open` is belt and braces: the band is a sibling of the
+   header rather than a child in several blocks, so hiding the button alone
+   would strand a band that somehow restored open, with no gear left to close
+   it.
 
    Not a lock. This hides affordances; it refuses nothing. See
    `blockr.locked` for the mode that refuses. */
-.blockr-no-edit .blockr-gear-header,
-.blockr-no-edit .blockr-gear-editor,
 .blockr-no-edit .blockr-gear-btn,
-.blockr-no-edit .jscf-gear-header,
 .blockr-no-edit .jscf-gear-btn,
+.blockr-no-edit .blockr-gear-editor,
 .blockr-no-edit .blockr-settings--open {
   display: none !important;
 }

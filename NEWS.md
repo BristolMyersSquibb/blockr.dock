@@ -12,7 +12,16 @@
   not written back to the board. The gears, which dock does not build, are
   reached by one CSS rule keyed on a `.blockr-no-edit` class that both modes
   set, so no block package changes and a locked board stops offering gears it
-  had frozen. Both options default off (#TBD).
+  had frozen. The rule targets the gear button rather than the header row it
+  sits in, which blocks share with reader controls -- the crossfilter's row
+  count and Reset, blockr.viz's download and search. Both options default off
+  (#TBD).
+
+* `BLOCKR_LOCKED=true` now locks a board. `blockr_option()` returns an
+  environment variable verbatim, as a string, and `is_dock_locked()` tested it
+  with `isTRUE()`, which is always FALSE for a string -- so the one route to
+  locking that does not require editing R code silently did nothing. Both
+  `blockr.locked` and `blockr.simplified` coerce the variable now (#TBD).
 
 * A grid that places the same panel more than once is now rejected when validated, rather than surviving to the render cast. A grid says where each panel goes, so two spots for one panel express nothing, and the check spans both halves of one: twice in the tree, twice inside a single rail, or once in each of two rails. The tree/rail overlap that canonicalisation prunes has a principled winner -- the rail claims the panel -- while two such spots have none, so this rejects rather than quietly dropping one. Previously the duplicate reached the render cast and aborted with blockr.core's "Block IDs are required to be unique.", which names blocks rather than the layout and fires far from whatever wrote the grid. Every producer routing through the views delta -- a hand-written grid, a restored board, a `views$grid` write, a `views$add` entry -- inherits the check (#464).
 

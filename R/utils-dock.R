@@ -306,12 +306,30 @@ set_dock_view_output <- function(..., session = get_session()) {
   dock_proxy(session)
 }
 
+# A boolean deployment flag, read through blockr.core's option/env pair.
+#
+# `blockr_option()` hands back the environment variable verbatim, as a string,
+# so `isTRUE()` on it is always FALSE and `BLOCKR_LOCKED=true` used to leave a
+# deployment silently unlocked -- the one route that does not require editing
+# R code, and the one most likely to be used to lock something. Coerce here so
+# the option and the variable mean the same thing.
+blockr_flag <- function(name) {
+
+  res <- blockr_option(name, FALSE)
+
+  if (is.character(res)) {
+    return(isTRUE(tolower(trimws(res)) %in% c("true", "yes", "1")))
+  }
+
+  isTRUE(res)
+}
+
 is_dock_locked <- function() {
 
   # Read blockr.core's `blockr.locked`, the same flag the server-side gate
   # consults via is_board_locked(), so one deployment option drives both core's
   # update / option gate and dock's UI hides.
-  isTRUE(blockr_option("locked", FALSE))
+  blockr_flag("locked")
 }
 
 # Simplified mode: a *simpler* board, not a locked one. It hides the authoring
@@ -331,7 +349,7 @@ is_dock_locked <- function() {
 # behind it. Reach for `blockr.locked` when refusal, not simplification, is
 # what is wanted.
 is_dock_simplified <- function() {
-  isTRUE(blockr_option("simplified", FALSE))
+  blockr_flag("simplified")
 }
 
 # The predicate every "offer no editing chrome" decision hangs off, as opposed

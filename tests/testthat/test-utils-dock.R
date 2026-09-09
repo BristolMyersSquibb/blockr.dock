@@ -272,3 +272,28 @@ test_that("simplified mode leaves core's board lock alone (#TBD)", {
     }
   )
 })
+
+test_that("the lock / simplify flags read the env var too (#TBD)", {
+
+  # blockr_option() returns an environment variable verbatim, as a string, so
+  # `isTRUE()` on it is FALSE: `BLOCKR_LOCKED=true` used to leave a deployment
+  # silently unlocked. Both flags coerce now.
+  withr::with_envvar(c(BLOCKR_LOCKED = "true"), {
+    expect_true(is_dock_locked())
+    expect_true(dock_no_edit())
+  })
+
+  withr::with_envvar(c(BLOCKR_SIMPLIFIED = "TRUE"), {
+    expect_true(is_dock_simplified())
+    expect_true(dock_no_edit())
+  })
+
+  withr::with_envvar(c(BLOCKR_SIMPLIFIED = "false"), {
+    expect_false(is_dock_simplified())
+  })
+
+  # The R option keeps working, logical and unchanged.
+  withr::with_options(list(blockr.simplified = TRUE), {
+    expect_true(is_dock_simplified())
+  })
+})
