@@ -28,6 +28,8 @@ board_ui.dock_board <- function(
     blockr_dock_dep(),
     viewport_probe_ui(id),
     rail_dep(),
+    # Empty unless debug logging is on -- see `probe_restores()`.
+    if (probe_restores()) restore_probe_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",

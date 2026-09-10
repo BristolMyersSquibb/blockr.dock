@@ -188,3 +188,120 @@ test_that("the stacked container is as tall as the rows it carries", {
   # An empty view still needs a box, not a zero-height one.
   expect_match(narrow_stack_attrs(new_dock_grid())$style, "50vh", fixed = TRUE)
 })
+
+test_that("a restore is instrumented only under debug logging (#473)", {
+
+  sent <- list()
+
+  session <- list(
+    ns = NS("my_board"),
+    sendCustomMessage = function(type, message) {
+      sent[[length(sent) + 1L]] <<- list(type = type, message = message)
+      invisible()
+    }
+  )
+
+  proxy <- list(id = "dock", session = session)
+
+  rails <- rails_to_edges(
+    list(
+      new_dock_rail("left", "ext_panel-edit_board"),
+      new_dock_rail("right", "block_panel-b", size = 420)
+    )
+  )
+
+  # Silence at the level a deployment runs at is the whole of what keeps a
+  # diagnostic out of production: nothing goes out, and `board_ui()` attaches
+  # no client half that could answer it.
+  send_restore_probe(list(edgeGroups = rails), proxy)
+
+  expect_length(sent, 0L)
+
+  withr::local_options(blockr.log_level = "debug")
+
+  send_restore_probe(list(edgeGroups = rails), proxy)
+
+  expect_length(sent, 1L)
+  expect_identical(sent[[1L]][["type"]], "blockr-dock-restore-probe")
+
+  probe <- sent[[1L]][["message"]]
+
+  expect_identical(probe[["id"]], "my_board-dock")
+
+  # Enough for a reader to see the floor without knowing the fixture: it is
+  # `collapsed_size + 50`, so the collapsed width belongs next to the declared
+  # one rather than only in the source of whatever board failed.
+  expect_identical(
+    probe[["asked"]],
+    list(
+      left = list(size = 260, collapsedSize = 35),
+      right = list(size = 420, collapsedSize = 35)
+    )
+  )
+
+  # Rails are what the record is about, so a dock declaring none says nothing
+  # rather than saying nothing at length.
+  sent <- list()
+
+  send_restore_probe(list(edgeGroups = list()), proxy)
+  send_restore_probe(list(), proxy)
+
+  expect_length(sent, 0L)
+})
+
+test_that("a restore probe reads as one line per read (#473)", {
+
+  probe <- list(
+    id = "my_board-main-dock",
+    at = "created",
+    viewport = 500,
+    container = list(width = 485, height = 852),
+    dock = list(width = 93.33333, height = 832),
+    rails = list(
+      left = list(
+        width = 98.328125, panels = 1L, visible = TRUE, collapsed = FALSE
+      ),
+      right = list(
+        width = 253.328125, panels = 1L, visible = TRUE, collapsed = FALSE
+      )
+    ),
+    asked = list(
+      left = list(size = 260, collapsedSize = 35),
+      right = list(size = 260, collapsedSize = 35)
+    )
+  )
+
+  # What it got over what it asked for, so the squeeze is legible without the
+  # fixture, and rounded because the fraction dockView reports never carries
+  # the argument.
+  expect_identical(
+    format_restore_probe(probe),
+    paste0(
+      "restore probe my_board-main-dock at created: viewport 500, ",
+      "container 485x852, grid 93x832, rails left 98/260, right 253/260"
+    )
+  )
+
+  # The read taken ahead of `fromJSON` finds no rails, which is the point of
+  # it -- a rail that is absent and one that measures zero are not the same
+  # finding, and the line has to keep them apart.
+  probe[["at"]] <- "restore"
+  probe[["rails"]] <- list(left = NULL, right = NULL)
+
+  expect_match(
+    format_restore_probe(probe), "rails left absent, right absent",
+    fixed = TRUE
+  )
+
+  # A dock whose widget the read did not reach measures nothing rather than
+  # zero, and that is itself a finding -- a restore that arrived before the
+  # widget did.
+  probe[["container"]] <- NULL
+  probe[["dock"]] <- NULL
+  probe[["rails"]] <- NULL
+
+  expect_match(
+    format_restore_probe(probe), "container absent, grid absent",
+    fixed = TRUE
+  )
+})

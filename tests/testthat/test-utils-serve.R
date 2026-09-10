@@ -1351,6 +1351,88 @@ test_that("a viewport too narrow for a rail keeps its stored width (#457)", {
   expect_equal(stored_rail_width(), 260)
 })
 
+test_that("a restore reports the geometry it started from (#473)", {
+
+  skip_on_cran()
+
+  # Loaded into a window with no room for both rails, which is the one variant
+  # of the squeeze that reproduces away from a `macos-latest` runner. It is also
+  # what keeps this from passing vacuously: the lines have to carry the narrow
+  # container and the short rail together, since a failing run is read for
+  # exactly that pairing -- a rail on its floor beside a container that was
+  # never narrow is what would put the unseeded grid in the frame instead.
+  #
+  # The log level goes in as an option on the app's own process, which is both
+  # how a developer would turn this on and the gate that keeps it off everywhere
+  # else.
+  app <- new_app_driver(
+    system.file("examples", "rails", "app.R", package = "blockr.dock"),
+    name = "rail-restore-probe",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000,
+    width = 500,
+    height = 900,
+    options = list(blockr.log_level = "debug")
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 3)
+
+  # The third read is taken half a second clear of the restore, so it can still
+  # be in flight when the dock has finished loading.
+  probe_lines <- function() {
+    logs <- app$get_logs()
+    grep("restore probe", logs[["message"]], value = TRUE)
+  }
+
+  for (attempt in seq_len(20L)) {
+    lines <- probe_lines()
+    if (length(lines) >= 3L) {
+      break
+    }
+    app$wait_for_idle(duration = 200)
+  }
+
+  expect_length(lines, 3L)
+
+  # One line per read, in the order they were taken, each naming the dock it
+  # came from.
+  expect_true(all(grepl("restore probe my_board-main-dock at ", lines,
+                        fixed = TRUE)))
+  expect_match(lines[[1L]], "at restore:", fixed = TRUE)
+  expect_match(lines[[2L]], "at created:", fixed = TRUE)
+  expect_match(lines[[3L]], "at settled:", fixed = TRUE)
+
+  # The first read runs ahead of `fromJSON`, which is the point of it -- the
+  # rails it names do not exist yet, and the container and grid it measures are
+  # the ones the restore is about to lay out against.
+  expect_match(lines[[1L]], "rails left absent, right absent", fixed = TRUE)
+
+  # The second is taken the frame a rail appears, so it says what the rail was
+  # born at rather than repeating the read before it -- which is what a fixed
+  # two-frame delay did, since the rails do not exist that early.
+  expect_no_match(lines[[2L]], "absent", fixed = TRUE)
+
+  container <- as.numeric(sub("^.* container ([0-9]+)x.*$", "\\1", lines[[1L]]))
+
+  expect_gt(container, 0)
+  expect_lt(container, 600)
+
+  # Which of the two the layout draws from is its own business, so this asks
+  # only that a rail came out short of the 260px it asked for.
+  widths <- as.numeric(
+    regmatches(
+      lines[[3L]],
+      gregexpr("(?<= )[0-9]+(?=/260)", lines[[3L]], perl = TRUE)
+    )[[1L]]
+  )
+
+  expect_length(widths, 2L)
+  expect_true(all(widths > 0))
+  expect_true(any(widths < 200))
+})
+
 test_that("a drag toward the edge reveals a hidden rail, collapsed", {
 
   skip_on_cran()

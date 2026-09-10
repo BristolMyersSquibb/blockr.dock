@@ -6,9 +6,28 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 11 base elements + the viewport probe + the two pre-rendered block-browser
-  # sidebars (add_block_sidebar, append_block_sidebar).
-  expect_length(ui, 14L)
+  # 11 base elements + the viewport probe + the restore-probe slot + the two
+  # pre-rendered block-browser sidebars (add_block_sidebar,
+  # append_block_sidebar). The probe slot is empty at this log level;
+  # `tagList()` keeps the NULL and htmltools drops it at render.
+  expect_length(ui, 15L)
+})
+
+test_that("the restore probe ships only under debug logging (#473)", {
+
+  board <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  deps <- function() {
+    chr_xtr(htmltools::findDependencies(board_ui("test", board)), "name")
+  }
+
+  # A diagnostic that reaches a deployment is a diagnostic nobody asked for, so
+  # the gate is the dependency itself rather than a dormant script.
+  expect_false("blockr-dock-restore-probe" %in% deps())
+
+  withr::local_options(blockr.log_level = "debug")
+
+  expect_true("blockr-dock-restore-probe" %in% deps())
 })
 
 # Settings sidebar is mounted with pre-rendered content + a JS-trigger gear

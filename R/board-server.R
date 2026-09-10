@@ -908,6 +908,20 @@ manage_dock <- function(
           log_debug("active group is now {ag}")
         }
       )
+
+      # The client half of the #473 instrumentation reports here rather than to
+      # a browser console: three reads per restore, each its own event, written
+      # out in the order they were taken. Unwrapped, because `write_log()`
+      # otherwise `strwrap()`s a line this long across two log entries, and a
+      # geometry split down the middle is one nobody can grep a CI run for.
+      observeEvent(
+        input[[dock_input("restore-probe")]],
+        {
+          # nolint next: object_usage_linter.
+          probe <- format_restore_probe(input[[dock_input("restore-probe")]])
+          log_debug("{probe}", asis = TRUE)
+        }
+      )
     }
 
     observeEvent(
