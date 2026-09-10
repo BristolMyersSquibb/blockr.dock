@@ -171,6 +171,12 @@
       id: getFieldValue(card, "blockr-block-browser-field-id"),
       title: getFieldValue(card, "blockr-block-browser-field-title"),
       link_id: getFieldValue(card, "blockr-block-browser-field-link-id"),
+      near_link_id: getFieldValue(
+        card, "blockr-block-browser-field-near-link-id"
+      ),
+      far_link_id: getFieldValue(
+        card, "blockr-block-browser-field-far-link-id"
+      ),
       block_input: getFieldValue(
         card, "blockr-block-browser-field-block-input"
       ),

@@ -98,6 +98,7 @@ board_actions.dock_board <- function(x, ...) {
     add_link_action,
     edit_link_action,
     remove_link_action,
+    insert_block_action,
     edit_inputs_action,
     add_stack_action,
     edit_stack_action,
