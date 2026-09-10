@@ -182,6 +182,8 @@ restore_layout <- function(layout, proxy, blocks = list(),
   # tabComponent to follow suit (#124).
   payload <- lock_panels(payload, locked = is_dock_locked())
 
+  send_restore_probe(payload, proxy)
+
   dockViewR::restore_dock(proxy, unclass(payload))
   invisible(NULL)
 }
@@ -256,6 +258,125 @@ rail_dep <- function() {
     pkg_version(),
     src = pkg_file("assets", "js"),
     script = "dock-rail.js"
+  )
+}
+
+# Whether a restore is instrumented for #473. Off unless debug logging is on,
+# because this is a diagnostic and not a feature: it costs a message out and
+# three input round trips back per restore, and it writes to a console nothing
+# prints to at the default level anyway. The same gate has to hold at both ends
+# -- `board_ui()` attaches the client half only under it, and no handler is
+# registered to receive what an ungated send would emit.
+probe_restores <- function() {
+  get_log_level() >= debug_log_level
+}
+
+# Record what a restore starts from, for #473. A rail there renders at the floor
+# dockView puts under an edge group instead of the width it asked for, on a dock
+# with several times the room it needs, and the two candidate triggers are told
+# apart by the dock container's width at the moment `fromJSON` runs. Sent
+# immediately ahead of `restore_dock()` so it rides the same batch and lands
+# before the restore, which is what makes the read the state the restore itself
+# sees; `restore-probe.js` carries the argument for what it collects and why the
+# reading has to happen out there.
+#
+# Rails are what the record is about, so a dock declaring none is not
+# instrumented. The sizes go along because the floor is derived from
+# `collapsed_size` -- a rail sitting exactly on `collapsed_size + 50` is the
+# reported failure, and a reader should not have to know the fixture to see it.
+send_restore_probe <- function(payload, proxy) {
+
+  edges <- payload[["edgeGroups"]]
+
+  if (!probe_restores() || !length(edges)) {
+    return(invisible(NULL))
+  }
+
+  session <- proxy[["session"]]
+
+  session$sendCustomMessage(
+    "blockr-dock-restore-probe",
+    list(
+      id = session$ns(proxy[["id"]]),
+      asked = lapply(edges, restore_probe_sizes)
+    )
+  )
+
+  invisible(NULL)
+}
+
+restore_probe_sizes <- function(edge) {
+  edge[intersect(c("size", "collapsedSize"), names(edge))]
+}
+
+# One line per read, because a console is read top to bottom and a nested dump
+# is not. Every number that separates the two candidate triggers sits on it: the
+# container the restore laid out against, the grid dockView held at that moment,
+# and what each rail got beside what it asked for.
+format_restore_probe <- function(x) {
+
+  paste0(
+    "restore probe ", x[["id"]], " at ", x[["at"]],
+    ": viewport ", probe_px(x[["viewport"]]),
+    ", container ", probe_box(x[["container"]]),
+    ", grid ", probe_box(x[["dock"]]),
+    ", rails ", probe_rails(x[["rails"]], x[["asked"]])
+  )
+}
+
+# A rail is reported as what it got over what it asked for, so a reader can see
+# a squeeze without holding the fixture in their head, and "none" where the read
+# ran before the restore that creates it.
+probe_rails <- function(rails, asked) {
+
+  if (!length(asked)) {
+    return("none declared")
+  }
+
+  paste0(
+    names(asked), " ",
+    chr_ply(
+      names(asked),
+      function(pos) {
+        rail <- rails[[pos]]
+
+        if (is.null(rail)) {
+          return("absent")
+        }
+
+        paste0(probe_px(rail[["width"]]), "/", probe_px(asked[[pos]][["size"]]))
+      }
+    ),
+    collapse = ", "
+  )
+}
+
+probe_box <- function(box) {
+
+  if (is.null(box)) {
+    return("absent")
+  }
+
+  paste0(probe_px(box[["width"]]), "x", probe_px(box[["height"]]))
+}
+
+# Sub-pixel widths are what dockView reports and what a floor lands on, but the
+# fraction never carries the argument, so round rather than print 98.328125.
+probe_px <- function(x) {
+
+  if (!is_number(x)) {
+    return("?")
+  }
+
+  format(round(as.numeric(x)), trim = TRUE)
+}
+
+restore_probe_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-dock-restore-probe",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "restore-probe.js"
   )
 }
 
