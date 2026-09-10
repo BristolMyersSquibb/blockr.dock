@@ -2,6 +2,30 @@
 
 ## blockr.dock (development version)
 
+- A new `insert_block_action` puts a block into an existing link
+  ([\#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
+  Triggered with a link id, it offers the same block browser as the add
+  and append flows; committing a block C for `A -> B` drops that link
+  and wires `A -> C -> B` in one update. The far end takes the split
+  link’s place, not merely its slot, which is what makes this an
+  insertion rather than a rewire. Position is what matters, for named
+  and blank entries alike: `sync_dot_args()` drops every key and re-adds
+  them in the board’s link order, so a link merely appended lands last
+  and slides every sibling after the split one up a place.
+  `rbind(first = a, second = z)` came back as
+  `rbind(second = z, first = c)`, rows swapped, even though the name was
+  preserved. The far end is therefore placed with the `before` component
+  `blockr.core` gained for this, and it keeps inheriting the split
+  link’s input on top, which preserves a named entry’s binding as well
+  as its position. The near end lands on a free slot of the new block,
+  with the usual picker when there is more than one to choose from.
+  Candidates are filtered as for append, since the new block has to be
+  able to receive from the source, and both new links offer an id field
+  with an auto default, as the add, append and prepend flows do. Unlike
+  append, the panel closes even when pinned: the gesture consumes the
+  link it was triggered with, so there is nothing left to repeat it
+  against.
+
 - A grid that places the same panel more than once is now rejected when
   validated, rather than surviving to the render cast. A grid says where
   each panel goes, so two spots for one panel express nothing, and the
