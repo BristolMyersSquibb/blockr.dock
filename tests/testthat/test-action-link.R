@@ -1073,7 +1073,7 @@ applied <- function(board, upd) {
   blocks <- board_blocks(board)
   board_blocks(board) <- c(blocks, upd$blocks$add)
   blockr.core:::modify_board_links(
-    board, add = upd$links$add, rm = upd$links$rm
+    board, add = upd$links$add, rm = upd$links$rm, before = upd$links$before
   )
 }
 
@@ -1092,7 +1092,7 @@ test_that("insert block action: the split link goes, two links replace it", {
 
   # Removal and addition travel together: `modify_board_links()` drops
   # before it adds, so the far end's slot is free when `c > b` claims it.
-  expect_named(upd$links, c("add", "rm"))
+  expect_named(upd$links, c("add", "rm", "before"))
   expect_identical(upd$links$rm, "l1")
   expect_setequal(wiring(upd$links$add), c("a>c>data", "c>b>data"))
 })
@@ -1157,6 +1157,67 @@ test_that("insert block action: a blank far end keeps its position", {
   )
 })
 
+test_that("insert block action: splitting a middle link holds every position", {
+  local_mocked_sidebar()
+
+  # Two links cannot tell a correct placement from a plain swap, so this
+  # splits the middle of three. Position follows the board's link order for
+  # named and blank entries alike, since `sync_dot_args()` re-adds every key
+  # in that order, so both are checked.
+  three <- function(i1, i2, i3) {
+    reactiveValues(
+      board = new_board(
+        c(a = new_dataset_block("iris"), z = new_dataset_block("iris"),
+          q = new_dataset_block("iris"), m = new_rbind_block()),
+        links = c(
+          l1 = new_link("a", "m", i1), l2 = new_link("z", "m", i2),
+          l3 = new_link("q", "m", i3)
+        )
+      ),
+      board_id = "my_board"
+    )
+  }
+
+  named <- three("one", "two", "three")
+  upd <- run_insert(
+    named, reactiveVal(list()),
+    list(type = "head_block", id = "c", nonce = 1L), link = "l2"
+  )
+
+  expect_identical(
+    incoming(applied(isolate(named$board), upd), "m"),
+    c("a(one)", "c(two)", "q(three)")
+  )
+
+  blank <- three("", "", "")
+  upd <- run_insert(
+    blank, reactiveVal(list()),
+    list(type = "head_block", id = "c", nonce = 1L), link = "l2"
+  )
+
+  expect_identical(
+    incoming(applied(isolate(blank$board), upd), "m"),
+    c("a", "c", "q")
+  )
+})
+
+test_that("insert block action: splitting the last link needs no placement", {
+  local_mocked_sidebar()
+
+  # Placement is inert at the end, but the payload carries it anyway rather
+  # than branching on where the split link happened to sit.
+  r_board <- variadic_board("", "")
+  upd <- run_insert(
+    r_board, reactiveVal(list()),
+    list(type = "head_block", id = "c", nonce = 1L), link = "l2"
+  )
+
+  expect_identical(
+    incoming(applied(isolate(r_board$board), upd), "m"),
+    c("a", "c")
+  )
+})
+
 test_that("insert block action: an explicit slot on the new block wins", {
   local_mocked_sidebar()
 
@@ -1168,7 +1229,7 @@ test_that("insert block action: an explicit slot on the new block wins", {
   expect_setequal(wiring(upd$links$add), c("a>c>y", "c>b>data"))
 })
 
-test_that("insert block action: the far end reuses the split link's id", {
+test_that("insert block action: both link ids are fresh, the far one placed", {
   local_mocked_sidebar()
 
   upd <- run_insert(
@@ -1177,18 +1238,30 @@ test_that("insert block action: the far end reuses the split link's id", {
   )
 
   ids <- names(upd$links$add)
-
-  expect_length(ids, 2L)
-  expect_length(unique(ids), 2L)
-
-  # The far end is the split link re-pointed, not a new one: carrying its id
-  # is what makes `modify_board_links()` replace it in place rather than drop
-  # it and append, which is what holds a blank slot's position. The near end
-  # is genuinely new, so it takes a fresh id.
   far <- as.data.frame(upd$links$add)
-  expect_identical(far$id[far$from == "c"], "l1")
-  expect_true(far$id[far$to == "c"] %in% setdiff(ids, "l1"))
-  expect_identical(upd$links$rm, "l1")
+
+  expect_length(unique(ids), 2L)
+  expect_false("l1" %in% ids)
+
+  # The far end no longer borrows the split link's id to hold its position:
+  # `before` names where it goes, so both links are simply new.
+  expect_identical(
+    upd$links$before,
+    set_names("l1", far$id[far$from == "c"])
+  )
+})
+
+test_that("insert block action: link ids can be given", {
+  local_mocked_sidebar()
+
+  upd <- run_insert(
+    insert_board(), reactiveVal(list()),
+    list(type = "head_block", id = "c", near_link_id = "in",
+         far_link_id = "out", nonce = 1L)
+  )
+
+  expect_setequal(names(upd$links$add), c("in", "out"))
+  expect_identical(upd$links$before, c(out = "l1"))
 })
 
 test_that("insert block action: a link that has gone commits nothing", {
@@ -1240,17 +1313,23 @@ test_that("insert panel: cards, an Insert button, and the wire's two ends", {
 
   expect_match(html, "Insert", fixed = TRUE)
 
-  # Both new link ids are generated, so the panel asks for neither.
-  expect_true(
-    is.na(
-      xml2::xml_attr(
-        xml2::xml_find_first(
-          doc, "//*[contains(@class, 'blockr-block-browser-field-link-id')]"
-        ),
-        "class"
+  # An insert makes two links, so it offers an id for each rather than the
+  # single field the one-link flows render.
+  for (cls in c("near-link-id", "far-link-id")) {
+    expect_false(
+      is.na(
+        xml2::xml_attr(
+          xml2::xml_find_first(
+            doc,
+            paste0(
+              "//*[contains(@class, 'blockr-block-browser-field-", cls, "')]"
+            )
+          ),
+          "class"
+        )
       )
     )
-  )
+  }
 })
 
 test_that("insert panel: a link that has gone renders without context", {

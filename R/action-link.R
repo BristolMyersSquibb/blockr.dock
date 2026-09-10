@@ -198,13 +198,17 @@ insert_block_action <- function(trigger, board, update, ...) {
           return()
         }
 
-        # One update: `modify_board_links()` drops the split link before it
+        # One update. `modify_board_links()` drops the split link before it
         # adds, so the far end's slot is free by the time the second new link
-        # claims it.
+        # claims it, and `before` puts that link where the split one sat: an
+        # entry's argument position follows the board's link order, so a link
+        # merely appended would slide every sibling after it up a place. The
+        # anchor is resolved before `rm` is applied, which is what lets it
+        # name the link this same payload removes.
         update(
           list(
             blocks = list(add = res$blocks),
-            links = list(add = res$links, rm = trigger())
+            links = list(add = res$links, rm = trigger(), before = res$before)
           )
         )
 

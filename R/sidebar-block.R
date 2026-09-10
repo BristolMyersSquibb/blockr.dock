@@ -79,9 +79,9 @@ block_commit_value <- function(spec, board, target) {
 
   if (target$mode == "insert") {
     return(
-      list(
-        blocks = blocks,
-        links = block_commit_insert_links(spec, board, target, blk, blk_id)
+      c(
+        list(blocks = blocks),
+        block_commit_insert(spec, board, target, blk, blk_id)
       )
     )
   }
@@ -89,49 +89,6 @@ block_commit_value <- function(spec, board, target) {
   list(
     blocks = blocks,
     links = block_commit_link(spec, board, target, blk, blk_id)
-  )
-}
-
-# The two links that put the new block into an existing wire. The near end
-# lands on a free slot of the new block, like an append.
-#
-# The far end keeps both halves of the split link's identity: its input slot
-# and its id. The slot matters for a named variadic entry. The id matters for
-# a blank one, whose identity is instead its position in the board's link
-# list, which `sync_dot_args()` walks in order to hand out positional
-# arguments. `resolve_free_input()` gives every variadic target a blank slot,
-# so blank is the common case, not the exotic one.
-#
-# Reusing the id is what preserves that position: `modify_board_links()`
-# replaces an id present in both `add` and `rm` in place, where a fresh id
-# would drop the link and append its replacement at the end, sliding every
-# later sibling up one. An `rbind_block` fed by two blank links would swap
-# its rows.
-#
-# Dropping the split link is still the action's business: it holds the id it
-# was triggered with, and passing that same id here is what pairs the two.
-block_commit_insert_links <- function(spec, board, target, blk, blk_id) {
-
-  ends <- link_ends(board, target$id)
-
-  if (is.null(ends)) {
-    return(as_links(list()))
-  }
-
-  input <- new_block_slot(spec, blk, blk_id, safe_board_links(board))
-
-  near <- rand_names(
-    old_names = safe_board_ids(board, board_link_ids), n = 1L
-  )
-
-  as_links(
-    set_names(
-      list(
-        new_link(from = ends$from, to = blk_id, input = input),
-        new_link(from = blk_id, to = ends$to, input = ends$input)
-      ),
-      c(near, target$id)
-    )
   )
 }
 
@@ -158,6 +115,67 @@ block_commit_link <- function(spec, board, target, blk, blk_id) {
   }
 
   as_links(set_names(list(lnk), link_id))
+}
+
+# The two links that put the new block into an existing wire, and where the
+# far one goes.
+#
+# The near end lands on a free slot of the new block, like an append. The far
+# end inherits the split link's input, which keeps a named entry's binding.
+#
+# That is not enough on its own: `sync_dot_args()` drops every key and re-adds
+# them in link order, so an entry's argument position follows the board's link
+# order whether it is named or blank. A link merely appended lands last, which
+# slides every sibling after the split one up a place. So the far end is placed
+# where the split link was, with `before`. The anchor resolves against the links
+# as they are on entry, before `rm` is applied, which is what lets it name the
+# very link this payload removes.
+#
+# Returning the placement rather than letting the action rebuild it keeps the
+# decision with the part that made it: the menu is what knows which of the two
+# links is the far end.
+block_commit_insert <- function(spec, board, target, blk, blk_id) {
+
+  ends <- link_ends(board, target$id)
+
+  if (is.null(ends)) {
+    return(list(links = as_links(list())))
+  }
+
+  input <- new_block_slot(spec, blk, blk_id, safe_board_links(board))
+
+  ids <- insert_link_ids(spec, board)
+
+  list(
+    links = as_links(
+      set_names(
+        list(
+          new_link(from = ends$from, to = blk_id, input = input),
+          new_link(from = blk_id, to = ends$to, input = ends$input)
+        ),
+        c(ids$near, ids$far)
+      )
+    ),
+    before = set_names(target$id, ids$far)
+  )
+}
+
+# Ids for the two new links: whatever the user typed, else generated. Both are
+# resolved against the board at once so a pair of blank fields cannot collide
+# with each other.
+insert_link_ids <- function(spec, board) {
+
+  taken <- safe_board_ids(board, board_link_ids)
+  out <- list(near = spec$near_link_id, far = spec$far_link_id)
+
+  for (end in names(out)) {
+    if (is.null(out[[end]]) || !nzchar(out[[end]])) {
+      out[[end]] <- rand_names(old_names = taken, n = 1L)
+    }
+    taken <- c(taken, out[[end]])
+  }
+
+  out
 }
 
 # Which slot of the NEW block receives the incoming link: the user's pick
@@ -211,6 +229,24 @@ validate_block_spec <- function(spec, board, target, session) {
       spec$link_id, safe_board_ids(board, board_link_ids),
       "link", session
     )
+  }
+
+  if (target_mode(target) == "insert") {
+    taken <- safe_board_ids(board, board_link_ids)
+    for (id in c(spec$near_link_id, spec$far_link_id)) {
+      reject_collision(id, taken, "link", session)
+    }
+    # Two blank fields resolve to distinct generated ids, but two identical
+    # typed ones would not.
+    if (length(spec$near_link_id) && length(spec$far_link_id) &&
+          nzchar(spec$near_link_id) &&
+          identical(spec$near_link_id, spec$far_link_id)) {
+      notify(
+        "The two link IDs must differ.",
+        type = "warning", session = session
+      )
+      req(FALSE)
+    }
   }
 
   # A prepend into a variadic target may carry a user-supplied slot name;
@@ -624,6 +660,26 @@ card_advanced <- function(meta, ns, mode, target_inputs,
         label = "Link ID",
         value = "",
         placeholder = "auto"
+      )
+    },
+    # An insert makes two links, so it offers an id for each rather than the
+    # single field the one-link flows use.
+    if (mode == "insert") {
+      list(
+        field_text(
+          class_suffix = "near-link-id",
+          id = field_id("near_link_id"),
+          label = "Incoming link ID",
+          value = "",
+          placeholder = "auto"
+        ),
+        field_text(
+          class_suffix = "far-link-id",
+          id = field_id("far_link_id"),
+          label = "Outgoing link ID",
+          value = "",
+          placeholder = "auto"
+        )
       )
     },
     if (show_block_input) {

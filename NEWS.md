@@ -4,20 +4,23 @@
   ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
   Triggered with a link id, it offers the same block browser as the add and
   append flows; committing a block C for `A -> B` drops that link and wires
-  `A -> C -> B` in one update. The far end keeps both halves of the split
-  link's identity, which is what makes this an insertion rather than a
-  rewire. Its slot, because a named variadic entry is identified by name.
-  Its id, because a blank entry is identified by its position in the link
-  list instead, and reusing the id makes `modify_board_links()` replace the
-  link in place rather than append its replacement at the end. Blank is the
-  common case: it is what a variadic target is given. Without both, an
-  `rbind_block` fed by two links would swap its rows when one of them was
-  split. The near end lands on a free slot of the new block, with the
+  `A -> C -> B` in one update. The far end takes the split link's place, not
+  merely its slot, which is what makes this an insertion rather than a
+  rewire. Position is what matters, for named and blank entries alike:
+  `sync_dot_args()` drops every key and re-adds them in the board's link
+  order, so a link merely appended lands last and slides every sibling after
+  the split one up a place. `rbind(first = a, second = z)` came back as
+  `rbind(second = z, first = c)`, rows swapped, even though the name was
+  preserved. The far end is therefore placed with the `before` component
+  `blockr.core` gained for this, and it keeps inheriting the split link's
+  input on top, which preserves a named entry's binding as well as its
+  position. The near end lands on a free slot of the new block, with the
   usual picker when there is more than one to choose from. Candidates are
   filtered as for append, since the new block has to be able to receive from
-  the source, and the near end's link id is generated rather than asked for.
-  Unlike append, the panel closes even when pinned: the gesture consumes the
-  link it was triggered with, so there is nothing left to repeat it against.
+  the source, and both new links offer an id field with an auto default, as
+  the add, append and prepend flows do. Unlike append, the panel closes even
+  when pinned: the gesture consumes the link it was triggered with, so there
+  is nothing left to repeat it against.
 * A grid that places the same panel more than once is now rejected when validated, rather than surviving to the render cast. A grid says where each panel goes, so two spots for one panel express nothing, and the check spans both halves of one: twice in the tree, twice inside a single rail, or once in each of two rails. The tree/rail overlap that canonicalisation prunes has a principled winner -- the rail claims the panel -- while two such spots have none, so this rejects rather than quietly dropping one. Previously the duplicate reached the render cast and aborted with blockr.core's "Block IDs are required to be unique.", which names blocks rather than the layout and fires far from whatever wrote the grid. Every producer routing through the views delta -- a hand-written grid, a restored board, a `views$grid` write, a `views$add` entry -- inherits the check (#464).
 
 * The `blk()` / `ext()` placement hint gained a `rail` key, so the `add` and `move` panel-op verbs can park a panel on a view's left or right edge. A rail used to be authorable only as a view's birth geometry, through `rail()` inside a `dock_grid()`, which left the user's own drag as the only route into one on a view already on screen. The key names an edge rather than an anchor, so it excludes `near` / `side`: a `side` is a direction relative to a `near` anchor *inside* the splitview while a rail position is an edge of the whole view, and both spell `left` and `right` (#461).
