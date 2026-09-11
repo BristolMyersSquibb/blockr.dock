@@ -835,8 +835,14 @@ test_that("report_visible_observer holds the client's on-screen blocks eager", {
     layout_b <- reactiveVal(NULL)
 
     docks <- new.env(parent = emptyenv())
-    docks[["A"]] <- list(layout = layout_a, active_panel = reactiveVal(NULL))
-    docks[["B"]] <- list(layout = layout_b, active_panel = reactiveVal(NULL))
+    docks[["A"]] <- list(
+      layout = layout_a, active_panel = reactiveVal(NULL),
+      live_panels = reactiveVal(c("block_panel-a", "block_panel-b"))
+    )
+    docks[["B"]] <- list(
+      layout = layout_b, active_panel = reactiveVal(NULL),
+      live_panels = reactiveVal("block_panel-d")
+    )
 
     # Blocks a, b and d all have cards; a/b are A's fronts, d lives in B.
     # Nothing is reported on screen yet, so nothing is held eager.
@@ -900,7 +906,10 @@ test_that("report_visible_observer coalesces set-equal reports", {
     layout <- reactiveVal(NULL)
 
     docks <- new.env(parent = emptyenv())
-    docks[["A"]] <- list(layout = layout, active_panel = reactiveVal(NULL))
+    docks[["A"]] <- list(
+      layout = layout, active_panel = reactiveVal(NULL),
+      live_panels = reactiveVal(c("block_panel-a", "block_panel-b"))
+    )
 
     # a and b are built, both A's fronts.
     vis <- fake_visibility(c("a", "b"))
@@ -945,7 +954,10 @@ test_that("report_visible_observer survives an echo naming a dropped block", {
     layout <- reactiveVal(NULL)
 
     docks <- new.env(parent = emptyenv())
-    docks[["A"]] <- list(layout = layout, active_panel = reactiveVal(NULL))
+    docks[["A"]] <- list(
+      layout = layout, active_panel = reactiveVal(NULL),
+      live_panels = reactiveVal(c("block_panel-a", "block_panel-b"))
+    )
 
     vis <- fake_visibility(c("a", "b", "gone"))
     mark_cards_built(vis, c("a", "b", "gone"))
@@ -1019,7 +1031,10 @@ test_that("report_visible_observer follows the live active panel (#361)", {
     active_panel <- reactiveVal(NULL)
 
     docks <- new.env(parent = emptyenv())
-    docks[["A"]] <- list(layout = layout, active_panel = active_panel)
+    docks[["A"]] <- list(
+      layout = layout, active_panel = active_panel,
+      live_panels = reactiveVal(c("block_panel-a", "block_panel-b"))
+    )
 
     vis <- fake_visibility(c("a", "b"))
     mark_cards_built(vis, c("a", "b"))
@@ -2195,4 +2210,114 @@ test_that("a view sweep sends one move-element message per card kind (#397)", {
   expect_length(sent, 2L)
   expect_length(sent[[1L]], 3L)
   expect_length(sent[[2L]], 1L)
+})
+
+test_that("report_visible_observer holds through a dock's pre-restore echo", {
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  env <- with_mock_context(ms, {
+    layout_a <- reactiveVal(NULL)
+    layout_b <- reactiveVal(NULL)
+    members_b <- reactiveVal("block_panel-d")
+
+    docks <- new.env(parent = emptyenv())
+    docks[["A"]] <- list(
+      layout = layout_a, active_panel = reactiveVal(NULL),
+      live_panels = reactiveVal("block_panel-a")
+    )
+    docks[["B"]] <- list(
+      layout = layout_b, active_panel = reactiveVal(NULL),
+      live_panels = members_b
+    )
+
+    vis <- fake_visibility(c("a", "d"))
+    mark_cards_built(vis, c("a", "d"))
+    client_active <- reactiveVal("A")
+
+    report_visible_observer(vis, client_active, docks)
+
+    list(a = layout_a, b = layout_b, members_b = members_b,
+         active = client_active, vis = vis)
+  })
+
+  with_mock_context(ms, env$a(dock_grid(panels("block_panel-a"))))
+  ms$flushReact()
+  expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
+  expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
+
+  # Switch to B, whose fresh dock echoes an empty state before its restore
+  # lands. That is "not reported yet": a stays painted, d is not yet required,
+  # nothing is parked.
+  with_mock_context(ms, {
+    env$active("B")
+    env$b(dock_grid())
+  })
+  ms$flushReact()
+  expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
+  expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
+  expect_identical(isolate(env$vis$required[["d"]]()), FALSE)
+
+  # The restore echo lands: d fronts and a parks, one transition each.
+  with_mock_context(ms, env$b(dock_grid(panels("block_panel-d"))))
+  ms$flushReact()
+  expect_identical(isolate(env$vis$required[["d"]]()), TRUE)
+  expect_identical(isolate(env$vis$visible[["d"]]()), TRUE)
+  expect_identical(isolate(env$vis$required[["a"]]()), FALSE)
+
+  # A view the user emptied echoes nothing and holds no members: that empty
+  # set is real, and its card parks.
+  with_mock_context(ms, {
+    env$members_b(character())
+    env$b(dock_grid())
+  })
+  ms$flushReact()
+  expect_identical(isolate(env$vis$required[["d"]]()), FALSE)
+  expect_identical(isolate(env$vis$visible[["d"]]()), FALSE)
+})
+
+test_that("a view switch carries the tab parked on the view it leaves", {
+
+  withr::local_options(blockr.locked = FALSE)
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = c("a", "b"), B = "b")
+  )
+
+  parked <- dock_grid(panels(blk("a"), blk("b"), active = blk("b")))
+  client_active <- reactiveVal("A")
+  docks <- reactiveValues(A = list(pending_grid = reactiveVal(parked)))
+  captured <- NULL
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        id,
+        function(input, output, session) {
+          switch_view_observer(
+            session,
+            update = function(x) captured <<- x,
+            client_active = client_active,
+            board = reactiveValues(board = brd),
+            docks = docks,
+            active_dock = reactiveValues()
+          )
+        }
+      )
+    },
+    {
+      session$setInputs(view_nav = "A")
+      session$setInputs(view_nav = "B")
+      session$flushReact()
+
+      # One commit for the gesture, carrying both the switch and the tab the
+      # mirror parked on A; the parked slot is spent.
+      expect_identical(
+        captured,
+        list(views = list(active = "B", grid = list(A = parked)))
+      )
+      expect_null(isolate(docks$A$pending_grid()))
+    }
+  )
 })

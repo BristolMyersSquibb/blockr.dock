@@ -64,6 +64,11 @@ board_server_callback <- function(board, update, visibility, ...,
   # one channel.
   active_dock$visibility <- visibility
 
+  # The registry rides the same handle for the save path: `serialize_board()`
+  # folds in the tab each view's dock holds parked (see `observe_grid_echo()`)
+  # before it writes the stored geometry out.
+  active_dock$docks <- docks
+
   # The served plugin set rides the same handle so those deferred card-build
   # paths build with the ctrl / edit UI serve() installed, not board_plugins()'s
   # default (which carries no served ctrl_block).
@@ -268,7 +273,9 @@ switch_view_observer <- function(session, update, client_active, board, docks,
     {
       target <- session$input$view_nav
 
-      if (identical(target, isolate(client_active()))) {
+      old <- isolate(client_active())
+
+      if (identical(target, old)) {
         return()
       }
 
@@ -281,7 +288,12 @@ switch_view_observer <- function(session, update, client_active, board, docks,
           session
         )
       } else {
-        update(list(views = list(active = target)))
+        # The tab the user fronted on the view being left rides this commit
+        # (the mirror parks it rather than writing it, see
+        # `observe_grid_echo()`): one board write for the gesture, as before.
+        update(
+          list(views = c(list(active = target), take_pending_grid(old, docks)))
+        )
       }
     },
     ignoreInit = TRUE
@@ -316,6 +328,19 @@ report_visible_observer <- function(visibility, hold_eager, client_active,
     active <- req(client_active())
     dock <- req(docks[[active]])
     layout <- req(dock$layout())
+
+    # A dock built for a first visit can echo before its restore reaches it: a
+    # `_state` placing nothing, for a view that has members. Read literally,
+    # that parks every card on the board, and the real echo 300 ms later
+    # brings the view's cards back -- every block on the incoming view
+    # unmounted and remounted for one view switch. The grid mirror skips that
+    # echo on the same test (`observe_grid_echo()`), and so does this: nothing
+    # placed while the dock holds members is "not reported yet", not "nothing
+    # on screen". A view the user emptied holds no members and falls through
+    # to the empty set it should report.
+    if (layout_places_nothing(layout) && length(dock$live_panels())) {
+      req(FALSE)
+    }
 
     sort(
       intersect(
@@ -516,10 +541,51 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
         return()
       }
 
+      # A bare tab click echoes a grid that differs from the stored one only in
+      # which tab a group fronts. Nothing has to redraw for that, but a board
+      # commit wakes every observer reading `board$board` -- on a large board
+      # the outline, the DAG and every drill status, for one click. Park it on
+      # the dock instead: `switch_view_observer()` folds it into the commit
+      # that leaves the view and `serialize_board()` into a save, so a reopened
+      # board still fronts the tab the user left on. A structural echo carries
+      # the fronted tab with it, so a commit clears whatever was parked.
+      if (same_grid_but_active(stored, grid, grid_size_tol())) {
+        dock$pending_grid(grid)
+        return()
+      }
+
       commit_grid(grid)
+      dock$pending_grid(NULL)
     },
     ignoreInit = TRUE
   )
+}
+
+# The grid the mirror parked on `view`'s dock (a tab-only echo, see
+# `observe_grid_echo()`), as the `grid` slot of a views delta -- empty when
+# nothing is parked or the view has no dock. Reading it clears it: the caller
+# is about to commit it.
+take_pending_grid <- function(view, docks) {
+
+  if (is.null(view)) {
+    return(list())
+  }
+
+  dock <- isolate(docks[[view]])
+
+  if (is.null(dock)) {
+    return(list())
+  }
+
+  grid <- isolate(dock$pending_grid())
+
+  if (is.null(grid)) {
+    return(list())
+  }
+
+  dock$pending_grid(NULL)
+
+  list(grid = set_names(list(grid), view))
 }
 
 is_same_width <- function(previous, current) {
@@ -837,7 +903,8 @@ reconcile_views <- function(board, update, docks, active_dock,
 #'   the view renders as one tabbed group and takes no geometry write-back.
 #'
 #' @return The view's `dock` handle: a list holding the dockViewR `proxy`
-#'   alongside `board_ns`, `live_panels`, `layout` (reactive), `n_panels`,
+#'   alongside `board_ns`, `live_panels`, `pending_grid` (the tab-only echo
+#'   the grid mirror parked, if any), `layout` (reactive), `n_panels`,
 #'   `prev_active_group`, and `active_group_trail`.
 #'
 #' @noRd
@@ -890,6 +957,7 @@ manage_dock <- function(
     # on the browser's `n-panels` echo.
     proxy <- set_dock_view_output(session = session)
     live_panels <- reactiveVal(as.character(layout_panel_ids(init_layout)))
+    pending_grid <- reactiveVal(NULL)
     prev_active_group <- reactiveVal()
     active_group_trail <- reactiveVal()
     n_panels <- reactive(length(live_panels()))
@@ -898,6 +966,7 @@ manage_dock <- function(
       proxy = proxy,
       board_ns = board_ns,
       live_panels = live_panels,
+      pending_grid = pending_grid,
       layout = reactive(dockViewR::get_dock(proxy)),
       active_panel = reactive(input[[dock_input("active-panel")]]),
       n_panels = n_panels,

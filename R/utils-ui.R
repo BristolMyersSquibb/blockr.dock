@@ -119,6 +119,22 @@ rail_on_screen <- function(edge) {
   isTRUE(edge[["visible"]]) && !isTRUE(edge[["collapsed"]])
 }
 
+# Whether a layout places no panel at all: none in its tree and none on a
+# rail, collapsed or not. A compact `dock_grid` answers directly; a dockView
+# `_state` echo is read the way `layout_groups()` reads it, without the cast
+# (a hand-built echo need not carry sizes).
+layout_places_nothing <- function(layout) {
+
+  if (is_dock_grid(layout)) {
+    return(!length(grid_panel_ids(layout)))
+  }
+
+  rails <- lapply(layout[["edgeGroups"]], `[[`, "group")
+
+  !length(grid_leaves(layout[["grid"]])) &&
+    !any(lgl_ply(rails, function(g) length(g[["views"]]) > 0L))
+}
+
 visible_block_ids <- function(layout, active_panel = NULL) {
 
   front_panels <- as.character(determine_active_views(layout, active_panel))

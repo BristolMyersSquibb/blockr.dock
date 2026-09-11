@@ -570,3 +570,37 @@ test_that("a stateless extension still serializes its constructor", {
   expect_ctor_only(ser_dock_board(brd, actions = list(), extensions = list()))
   expect_ctor_only(ser_dock_board(brd, actions = list()))
 })
+
+test_that("a save folds in the tab each dock holds parked", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(V = c("a", "b")),
+    grids = list(V = dock_grid(panels(blk("a"), blk("b"))))
+  )
+
+  parked <- dock_grid(panels(blk("a"), blk("b"), active = blk("b")))
+
+  dock <- reactiveValues(
+    docks = reactiveValues(V = list(pending_grid = reactiveVal(parked)))
+  )
+
+  ser <- serialize_board(
+    brd, blocks = list(), id = NULL, dock = dock, view_data = NULL,
+    session = NULL
+  )
+
+  expect_identical(board_grids(blockr_deser(ser))[["V"]], as_dock_grid(parked))
+
+  # Nothing parked, or no dock handle at all: the stored grid is what saves.
+  isolate(dock$docks$V)$pending_grid(NULL)
+
+  ser <- serialize_board(
+    brd, blocks = list(), id = NULL, dock = dock, view_data = NULL,
+    session = NULL
+  )
+
+  expect_identical(board_grids(blockr_deser(ser)), board_grids(brd))
+  expect_identical(board_grids(blockr_deser(ser_dock_board(brd))),
+                   board_grids(brd))
+})

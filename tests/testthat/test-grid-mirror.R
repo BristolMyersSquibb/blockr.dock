@@ -24,11 +24,12 @@ echo_state <- function(layout, width = NULL) {
 mirror_on <- function(brd, view) {
   board <- reactiveValues(board = brd)
   layout_rv <- reactiveVal(NULL)
+  pending <- reactiveVal(NULL)
   log <- new.env(parent = emptyenv())
   log$grids <- list()
 
   observe_grid_echo(
-    view, list(layout = layout_rv), board,
+    view, list(layout = layout_rv, pending_grid = pending), board,
     commit_grid = function(grid) {
       log$grids <- c(log$grids, list(grid))
       board$board <- apply_board_update(
@@ -38,7 +39,7 @@ mirror_on <- function(brd, view) {
     }
   )
 
-  list(board = board, echo = layout_rv, log = log)
+  list(board = board, echo = layout_rv, log = log, pending = pending)
 }
 
 railed_board <- function() {
@@ -131,7 +132,7 @@ test_that("grid mirror commits a client echo, guards re-echoes", {
     layout_rv <- reactiveVal(NULL)
 
     observe_grid_echo(
-      "V", list(layout = layout_rv), board,
+      "V", list(layout = layout_rv, pending_grid = reactiveVal(NULL)), board,
       commit_grid = function(grid) {
         committed[[length(committed) + 1L]] <<- grid
         board$board <- apply_board_update(
@@ -195,7 +196,7 @@ test_that("the mirror stores an in-flight echo verbatim; placement prunes it", {
     layout_rv <- reactiveVal(NULL)
 
     observe_grid_echo(
-      "V", list(layout = layout_rv), board,
+      "V", list(layout = layout_rv, pending_grid = reactiveVal(NULL)), board,
       commit_grid = function(grid) {
         committed[[length(committed) + 1L]] <<- grid
         board$board <- apply_board_update(
@@ -423,4 +424,63 @@ test_that("a rail sash drag commits, the dock width being what it was", {
       board_grids(mir$board$board)[["V"]][["rails"]][["right"]][["size"]], 690
     )
   })
+})
+
+test_that("a tab-only echo is parked on the dock, not committed", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(V = c("a", "b")),
+    grids = list(V = dock_grid(panels(blk("a"), blk("b"))))
+  )
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  with_mock_context(ms, {
+
+    m <- mirror_on(brd, "V")
+    ms$flushReact()
+
+    # Fronting b: the same geometry with one leaf's open tab changed. Not a
+    # commit -- the grid waits on the dock, and the stored one still fronts a.
+    fronted <- dock_grid(panels(blk("a"), blk("b"), active = blk("b")))
+    m$echo(echo_state(fronted))
+    ms$flushReact()
+
+    expect_length(m$log$grids, 0L)
+    expect_identical(m$pending(), as_dock_grid(fronted))
+    expect_identical(
+      board_grids(m$board$board)[["V"]][["children"]][[1L]][["active"]],
+      "block_panel-a"
+    )
+
+    # A later structural echo (a split) commits as before, and carries the
+    # fronted tab with it, so nothing stays parked.
+    split <- dock_grid(blk("b"), blk("a"))
+    m$echo(echo_state(split))
+    ms$flushReact()
+
+    expect_length(m$log$grids, 1L)
+    expect_null(m$pending())
+    expect_identical(board_grids(m$board$board)[["V"]], as_dock_grid(split))
+  })
+
+  # The same holds for the tab a rail fronts.
+  tol <- grid_size_tol()
+  rail_a <- dock_grid(blk("d"), rail(blk("a"), blk("b"), position = "right"))
+  rail_b <- dock_grid(
+    blk("d"), rail(blk("a"), blk("b"), position = "right", active = blk("b"))
+  )
+
+  expect_true(same_grid_but_active(rail_a, rail_b, tol))
+  expect_false(same_grid_but_active(rail_a, dock_grid(blk("d")), tol))
+  expect_false(same_grid_but_active(NULL, rail_a, tol))
+
+  # Collapsing a rail is geometry (#436), not a tab: it commits.
+  rail_shut <- dock_grid(
+    blk("d"), rail(blk("a"), blk("b"), position = "right", collapsed = TRUE)
+  )
+
+  expect_false(same_grid_but_active(rail_a, rail_shut, tol))
 })

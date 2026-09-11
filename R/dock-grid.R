@@ -329,6 +329,55 @@ all.equal.dock_grid <- function(target, current, ..., scale = 1) {
                                                  rails[!isTRUE(rails)])
 }
 
+# Whether two grids differ only in which tab each group fronts. The fronted
+# tab (`active` on a leaf or a rail) rides every dockView echo, so a bare tab
+# click echoes a grid that differs from the stored one in that field alone.
+# The mirror parks such an echo rather than committing it (see
+# `observe_grid_echo()`), and this is the test it parks on. Sizes compare at
+# the caller's tolerance, as `all.equal.dock_grid()` does. No stored grid to
+# compare against is a difference, not a match: the first echo of a view that
+# never had geometry is a commit.
+same_grid_but_active <- function(stored, grid, tolerance) {
+
+  if (is.null(stored)) {
+    return(FALSE)
+  }
+
+  isTRUE(
+    all.equal(
+      drop_grid_active(stored), drop_grid_active(grid), tolerance = tolerance
+    )
+  )
+}
+
+drop_grid_active <- function(grid) {
+
+  drop <- function(node) {
+
+    if (is_grid_leaf(node)) {
+      node[["active"]] <- NULL
+      return(node)
+    }
+
+    node[["children"]] <- lapply(node[["children"]], drop)
+    node
+  }
+
+  grid[["children"]] <- lapply(grid[["children"]], drop)
+
+  if (length(grid[["rails"]])) {
+    grid[["rails"]][] <- lapply(
+      grid[["rails"]],
+      function(rail) {
+        rail[["active"]] <- NULL
+        rail
+      }
+    )
+  }
+
+  grid
+}
+
 #' @export
 str_value.dock_grid <- function(x, ...) {
   str_value_ids(x, "dock_grid")

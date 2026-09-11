@@ -23,7 +23,12 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
   # Structure and grid are board state now -- membership through the update
   # lifecycle, geometry through the settled-echo mirror -- so both slots
   # serialize straight from the last committed board, uniformly last-commit
-  # fresh like board_links. The live layout is no longer read here.
+  # fresh like board_links. The live layout is no longer read here. What the
+  # mirror parked rather than committed -- the tab a group fronts, which it
+  # holds back so a click is not a board write -- is folded in first, so a
+  # reopened board fronts the tab the user left on.
+  x <- fold_pending_grids(x, dock)
+
   do.call(
     blockr_ser,
     c(
@@ -41,6 +46,33 @@ serialize_board.dock_board <- function(x, blocks, id = NULL, dock,
       )
     )
   )
+}
+
+# The grids each view's dock holds parked (see `observe_grid_echo()`), applied
+# to the board as a views grid delta. `dock` is the `active_dock` handle the
+# board callback returns, carrying the dock registry; a caller without one (a
+# board serialized outside a session) has nothing parked.
+fold_pending_grids <- function(board, dock) {
+
+  docks <- if (is.null(dock)) NULL else isolate(dock$docks)
+
+  if (is.null(docks)) {
+    return(board)
+  }
+
+  pending <- Filter(
+    not_null,
+    lapply(
+      set_names(nm = isolate(names(docks))),
+      function(v) isolate(docks[[v]]$pending_grid())
+    )
+  )
+
+  if (!length(pending)) {
+    return(board)
+  }
+
+  apply_views_grid(pending, board)
 }
 
 #' @export
