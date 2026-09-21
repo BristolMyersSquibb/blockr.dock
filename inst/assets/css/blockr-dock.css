@@ -31,14 +31,14 @@
   height: auto;
   width: auto;
   min-width: 150px;
-  border: 2px dashed #bbb;
+  border: 2px dashed var(--blockr-color-border-hover, #d1d5db);
   border-radius: 8px;
-  background: white;
+  background: var(--blockr-color-bg-surface, #fff);
   box-shadow: none;
 }
 
 .blockr-title-edit .form-control:focus {
-  border-color: #aaa;
+  border-color: var(--blockr-color-text-subtle, #9ca3af);
   box-shadow: none;
   outline: none;
 }
@@ -115,6 +115,136 @@
 
 .blockr-issues-toggle[aria-expanded="true"] svg {
   transform: rotate(180deg);
+}
+
+/* ============================================================
+   Block header
+   ============================================================
+   The header row of a block card: icon (with status dot), editable title and
+   subtitle, section toggles, overflow menu. It used to be Bootstrap utility
+   classes plus inline `style=` attributes written in R, which made it the one
+   part of the board no stylesheet could restyle -- an inline declaration wins
+   against any sheet a theme attaches, short of `!important` on every rule.
+
+   Every part now has an owned class, and each dimension a density variant
+   would want is a token with the current value as its fallback. A compact
+   header is then a handful of token overrides on an ancestor rather than a
+   second copy of these rules:
+
+     .blockr-compact {
+       --blockr-block-header-gap: 8px;
+       --blockr-block-header-row-gap: 4px;
+       --blockr-block-title-size: var(--blockr-font-size-base);
+     }
+
+   The fallbacks are deliberate. blockr.ui's token sheet defines the semantic
+   colours and type scale but says nothing about this header, so the defaults
+   have to live where the component does. */
+.blockr-block-header {
+  display: flex;
+  align-items: stretch;
+  gap: var(--blockr-block-header-gap, 1rem);
+}
+
+.blockr-block-header-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.blockr-block-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: var(--blockr-block-header-row-gap, 0.5rem);
+}
+
+.blockr-block-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--blockr-block-header-actions-gap, 0.25rem);
+  flex-shrink: 0;
+}
+
+/* The icon is an inline <svg> built in R with width/height baked in at 48, so
+   a density variant cannot reach it through the R side without re-rendering
+   the card. Overriding the presentation attributes here costs one rule and
+   makes the icon a token like everything else beside it. */
+.blockr-block-icon svg {
+  width: var(--blockr-block-icon-size, 48px);
+  height: var(--blockr-block-icon-size, 48px);
+}
+
+.blockr-block-title-wrap {
+  flex-grow: 1;
+  min-width: 0;
+  padding-right: var(--blockr-block-title-pad-end, 1rem);
+}
+
+/* Was Bootstrap's `.card-title.mb-0` plus `line-height: 1.0` inline. Size,
+   weight and colour are not repeated here: `.blockr-title` inside already sets
+   all three off tokens, so a density variant changes the title by overriding
+   `--blockr-font-size-title` and nothing in this rule moves. The line-height
+   is what keeps the title and the subtitle under it reading as one two-line
+   unit; at Bootstrap's 1.5 they drift apart. */
+.blockr-block-title {
+  margin-bottom: 0;
+  line-height: var(--blockr-block-title-line-height, 1);
+}
+
+/* The rename affordance. The 2px dashed border is present and transparent at
+   rest so revealing it on hover shifts nothing; the row is pulled back out by
+   a negative margin equal to its padding, so the title sits where it would
+   without the hit area. */
+.blockr-title-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  border: 2px dashed transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.blockr-title-display:hover {
+  border-color: var(--blockr-color-border-hover, #d1d5db);
+}
+
+.blockr-title-display .blockr-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-title-display .edit-icon {
+  flex-shrink: 0;
+  opacity: 0;
+  font-size: 0.7em;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+  transition: opacity 0.15s ease;
+}
+
+.blockr-title-display:hover .edit-icon {
+  opacity: 1;
+}
+
+/* Inside the block-description popover. */
+.blockr-block-meta-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.blockr-block-meta-desc {
+  margin-bottom: 0;
 }
 
 /* Block eval status: on-icon status dot.
@@ -255,7 +385,7 @@
 .offcanvas-body {
   font-size: var(--blockr-font-size-sm);
   padding: 20px;
-  background: #ffffff;
+  background: var(--blockr-color-bg-surface, #ffffff);
 }
 
 .offcanvas .accordion {
@@ -293,7 +423,7 @@
 
 .blockr-block-accordion > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body,
 .blockr-block-accordion > .accordion-item[data-value="ctrl"] > .accordion-collapse > .accordion-body {
-  background-color: white;
+  background-color: var(--blockr-color-bg-surface, #ffffff);
   border-radius: 0;
   margin: 0 -16px 10px -16px;
   padding: 16px 16px 10px 16px;
@@ -431,7 +561,7 @@
   gap: 8px;
   height: 48px;
   padding: 0 16px;
-  background-color: white;
+  background-color: var(--blockr-color-bg-surface, #ffffff);
   border-bottom: 1px solid var(--blockr-grey-300);
 }
 
@@ -794,40 +924,40 @@
 .blockr-ext-edit .btn-primary {
   background-color: var(--blockr-color-primary);
   border-color: var(--blockr-color-primary);
-  color: #ffffff;
+  color: var(--blockr-color-on-primary, #ffffff);
 }
 
 .blockr-ext-edit .btn-primary:hover,
 .blockr-ext-edit .btn-primary:focus {
   background-color: var(--blockr-color-primary-hover);
   border-color: var(--blockr-color-primary-hover);
-  color: #ffffff;
+  color: var(--blockr-color-on-primary, #ffffff);
 }
 
 .blockr-ext-edit .btn-danger {
   background-color: var(--blockr-color-error);
   border-color: var(--blockr-color-error);
-  color: #ffffff;
+  color: var(--blockr-color-on-primary, #ffffff);
 }
 
 .blockr-ext-edit .btn-danger:hover,
 .blockr-ext-edit .btn-danger:focus {
   background-color: #b91c1c;
   border-color: #b91c1c;
-  color: #ffffff;
+  color: var(--blockr-color-on-primary, #ffffff);
 }
 
 .blockr-ext-edit .btn-success {
   background-color: var(--blockr-color-success);
   border-color: var(--blockr-color-success);
-  color: #ffffff;
+  color: var(--blockr-color-on-primary, #ffffff);
 }
 
 .blockr-ext-edit .btn-success:hover,
 .blockr-ext-edit .btn-success:focus {
   background-color: #15803d;
   border-color: #15803d;
-  color: #ffffff;
+  color: var(--blockr-color-on-primary, #ffffff);
 }
 
 /* ============================================
@@ -894,7 +1024,7 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   padding: 2px 8px;
   border-radius: 4px;
   background: var(--blockr-grey-900);
-  color: #fff;
+  color: var(--blockr-grey-50);
   font-size: var(--blockr-font-size-xs);
   line-height: 1.5;
   white-space: nowrap;
