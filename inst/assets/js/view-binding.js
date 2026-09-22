@@ -682,17 +682,15 @@ $(function () {
               );
             }
             $header.append($('<span>').addClass('blockr-view-chapter-label'));
-            if (sidebar) {
-              $header.append(
-                $('<span>').addClass('blockr-view-chapter-count')
-              );
-            }
             // Built, not cloned from a sibling header: the FIRST chapter on a
             // board has no sibling to clone from, and a header without its
             // pencil cannot be renamed. CRUD is read off the view rows, which
             // the server already gates -- a nav with no item actions is a
             // locked or simplified board, and a chapter is no more editable
             // there than a view is.
+            //
+            // Order matters: beside the label, ahead of the count, so the
+            // counts line up down the column whether or not a row is hovered.
             if ($nav.find('.blockr-view-item-actions').length) {
               $header.append(
                 $('<span>')
@@ -704,6 +702,11 @@ $(function () {
                       .attr('title', 'Rename chapter')
                       .html(pencilSvg)
                   )
+              );
+            }
+            if (sidebar) {
+              $header.append(
+                $('<span>').addClass('blockr-view-chapter-count')
               );
             }
           }

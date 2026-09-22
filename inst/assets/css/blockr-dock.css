@@ -706,14 +706,22 @@
   color: var(--blockr-color-text-primary);
 }
 
-/* A chapter header's own actions, revealed on hover like a view item's. The
-   header is a collapse toggle in the sidebar, so these sit at its right edge
-   where a click on them is unambiguous. */
+/* A chapter header's own actions, revealed on hover like a view item's.
+   They sit beside the label rather than out at the right edge, which the
+   count owns: a column of counts that does not line up, because some rows
+   carry an action and others do not, is harder to read than the action is to
+   find.
+
+   Zero width, so the icon costs nothing at rest and overflows into the gap
+   between the label and the count when the row is hovered. Nothing moves --
+   the same reason the view rows' actions are positioned rather than flowed. */
 .blockr-view-chapter-actions {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  margin-left: 6px;
+  width: 0;
+  padding-left: 6px;
+  overflow: visible;
   opacity: 0;
   transition: opacity 0.1s ease;
 }
@@ -722,10 +730,10 @@
   opacity: 1;
 }
 
-/* The count sits at `margin-left: auto`, so without this the actions hang off
-   the far right and the count floats in the middle of the row. */
+/* The count owns the right edge and keeps it, hovered or not. */
 .blockr-view-nav-sidebar .blockr-view-chapter-count {
   margin-left: auto;
+  padding-left: 8px;
 }
 
 .blockr-view-chapter-rename-input {

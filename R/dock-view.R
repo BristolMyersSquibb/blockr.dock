@@ -1061,13 +1061,14 @@ chapter_header_ui <- function(node, depth, has_active = FALSE,
       )
     },
     tags$span(class = "blockr-view-chapter-label", node[["label"]]),
-    if (sidebar) {
-      tags$span(class = "blockr-view-chapter-count", length(ids))
-    },
     # Rename. A chapter has no object to rename, so this rewrites the label on
     # every view under it -- which is exactly why it cannot be reached through
     # the per-view move menu, where a new label would file one view somewhere
     # else and leave its siblings behind.
+    #
+    # Beside the label, not out at the right edge: the count owns that edge,
+    # and a row of counts that does not line up because some rows carry an
+    # action and others do not is harder to read than the action is to find.
     if (can_crud) {
       tags$span(
         class = "blockr-view-chapter-actions",
@@ -1078,6 +1079,9 @@ chapter_header_ui <- function(node, depth, has_active = FALSE,
           bsicons::bs_icon("pencil")
         )
       )
+    },
+    if (sidebar) {
+      tags$span(class = "blockr-view-chapter-count", length(ids))
     }
   )
 }
