@@ -33,7 +33,10 @@
   keeps a breadcrumb of the active view's path, where it cannot scroll away.
   This sidebar is not a dock rail: a rail holds panels of the current view
   and is arranged by dockView, while this sits outside the dock and survives
-  every view switch.
+  every view switch. The two head a different number of chapter levels: the
+  sidebar heads all of them, since a header there is a collapse control with
+  a count and a nested one earns its line, while the dropdown heads only the
+  top level and states deeper ones through the indent.
 
 * The nav's reorder push became an arrangement push. It used to carry the
   view order alone; it now carries the chapter headers interleaved with the

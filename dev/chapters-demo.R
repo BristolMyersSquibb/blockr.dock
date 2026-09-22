@@ -16,7 +16,7 @@ view_of <- function(i, nm, ch = NULL) {
 }
 
 brd <- new_dock_board(
-  blocks = do.call(c, blk(9)),
+  blocks = do.call(c, blk(11)),
   views = list(
     demog = view_of(1, "Demographics", "Setup"),
     dispo = view_of(2, "Disposition", "Setup"),
@@ -24,9 +24,11 @@ brd <- new_dock_board(
     ae    = view_of(4, "AE overview", "Safety"),
     soc   = view_of(5, "AE by SOC", "Safety"),
     labs  = view_of(6, "Lab overview", "Safety"),
-    hep   = view_of(7, "Hepatic", c("Safety", "Lab overview")),
-    resp  = view_of(8, "Response", "Efficacy"),
-    appx  = view_of(9, "Appendix")
+    hep   = view_of(7, "Hepatic", c("Safety", "Liver")),
+    renal = view_of(8, "Renal", c("Safety", "Liver")),
+    resp  = view_of(9, "Response", "Efficacy"),
+    dor   = view_of(10, "Duration of response", "Efficacy"),
+    appx  = view_of(11, "Appendix")
   ),
   active = "labs"
 )

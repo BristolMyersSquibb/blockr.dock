@@ -37,21 +37,25 @@ by_class <- function(doc, token) {
   )
 }
 
-test_that("the dropdown heads each chapter and leaves a flat board flat", {
+test_that("the dropdown heads one chapter level and leaves a flat board flat", {
 
   doc <- nav_html(view_nav_ui("brd", board_views(chaptered_board())))
   headers <- by_class(doc, "blockr-view-chapter")
 
+  # One level only. A sub-chapter header in a menu sits directly under its
+  # parent's last item with no gesture attached, so it reads as a repeat of
+  # the page above rather than as a level; the indent states the nesting
+  # instead. The sidebar, where a header is a control, heads all of them.
   expect_identical(
     xml2::xml_text(by_class(doc, "blockr-view-chapter-label")),
-    c("Setup", "Safety", "Lab overview")
+    c("Setup", "Safety")
   )
 
   # A chapter is keyed by its whole path, never by its last label: two
   # chapters may end in the same word under different parents.
   expect_identical(
     xml2::xml_attr(headers, "data-chapter-key"),
-    c("Setup", "Safety", "Safety / Lab overview")
+    c("Setup", "Safety")
   )
 
   # Headers and items are siblings in one flat list, so every gesture the
@@ -102,9 +106,11 @@ test_that("the sidebar is the same nav in another place", {
   expect_identical(nav_id(side), nav_id(drop))
   expect_identical(view_ids(side), view_ids(drop))
 
-  # A header is a collapse control here, so it renders a twisty and a count;
-  # in the dropdown it is an inert label and renders neither.
+  # A header is a collapse control here, so it renders a twisty and a count,
+  # and every level is worth a line; in the dropdown it is an inert label,
+  # renders neither, and only the top level is headed.
   expect_length(by_class(side, "blockr-view-chapter-twisty"), 3L)
+  expect_length(by_class(drop, "blockr-view-chapter"), 2L)
   expect_identical(
     xml2::xml_text(by_class(side, "blockr-view-chapter-count")),
     c("1", "3", "1")

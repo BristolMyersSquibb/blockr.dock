@@ -776,11 +776,19 @@ view_binding_dep <- function() {
 # dropping one the sequence no longer names -- which is how a chapter that
 # lost its last view disappears without anything having to delete it.
 #' @noRd
-nav_structure <- function(views) {
-  nav_structure_nodes(view_tree(views), views, depth = 1L)
+nav_structure <- function(views, sidebar = NULL) {
+
+  if (is.null(sidebar)) {
+    sidebar <- identical(view_nav_mode(), "sidebar")
+  }
+
+  nav_structure_nodes(
+    view_tree(views), views,
+    depth = 1L, max_header = nav_header_depth(sidebar)
+  )
 }
 
-nav_structure_nodes <- function(nodes, views, depth) {
+nav_structure_nodes <- function(nodes, views, depth, max_header) {
 
   do.call(
     c,
@@ -801,7 +809,7 @@ nav_structure_nodes <- function(nodes, views, depth) {
           )
         }
 
-        c(
+        header <- if (depth <= max_header) {
           list(
             list(
               kind = "chapter",
@@ -810,8 +818,14 @@ nav_structure_nodes <- function(nodes, views, depth) {
               depth = depth,
               count = length(node_view_ids(node))
             )
-          ),
-          nav_structure_nodes(node[["children"]], views, depth + 1L)
+          )
+        }
+
+        c(
+          header,
+          nav_structure_nodes(
+            node[["children"]], views, depth + 1L, max_header
+          )
         )
       }
     )
@@ -963,10 +977,23 @@ view_nav_ui <- function(id, views) {
 }
 
 #' @noRd
+# How many levels of chapter a surface heads. The sidebar heads all of them:
+# a header there is a collapse control with a count, so a nested one earns its
+# line and the tree is the point of the thing. The dropdown heads one. A
+# sub-chapter header in a menu sits directly under its parent's last item with
+# no gesture attached and nothing between the two, so it reads as a repeat of
+# the page above it rather than as a level -- and it reads worst exactly where
+# a sub-chapter is named after the page it drills into, which is the common
+# case. The views below it still carry their depth, so the indent states the
+# nesting without a line of its own.
+nav_header_depth <- function(sidebar) {
+  if (isTRUE(sidebar)) Inf else 1L
+}
+
 # Render a level of the view tree: a chapter becomes a header followed by its
 # children, a view becomes an item. Depth rides along as a data attribute and
-# an indent class, so a nested chapter reads as one without the menu growing
-# a second interaction to open it.
+# an indent class either way, so a level the surface does not head is still
+# visible as one.
 nav_item_ui <- function(nodes, views, active_id = NULL, can_crud = FALSE,
                         depth = 1L, sidebar = FALSE) {
 
@@ -989,14 +1016,18 @@ nav_item_ui <- function(nodes, views, active_id = NULL, can_crud = FALSE,
           )
         }
 
-        c(
+        header <- if (depth <= nav_header_depth(sidebar)) {
           list(
             chapter_header_ui(
               node, depth,
               has_active = active_id %in% node_view_ids(node),
               sidebar = sidebar
             )
-          ),
+          )
+        }
+
+        c(
+          header,
           nav_item_ui(
             node[["children"]], views,
             active_id = active_id, can_crud = can_crud, depth = depth + 1L,
