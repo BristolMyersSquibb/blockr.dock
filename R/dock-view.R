@@ -11,6 +11,15 @@
 #' one auto-named "Page" view. Blocks and extensions are shared across views
 #' via the board's DAG; view membership is a layout concern only.
 #'
+#' A view may also carry an optional **chapter**: a character path naming the
+#' place it occupies in the nav's hierarchy, read with `view_chapter()` and
+#' written with `view_chapter<-()`. It is display metadata and nothing else --
+#' membership, geometry and the active view are untouched by it, a chapter is
+#' never an object in its own right (only a label several views share), and a
+#' collection where no view carries one renders exactly as it did before
+#' chapters existed. `view_tree()` turns a collection into the nested
+#' chapter / view structure the nav and the view sidebar both render.
+#'
 #' Each view carries a stable, immutable **id** (its key in the collection)
 #' distinct from its editable display **name**. This mirrors the id / name
 #' separation used for blocks (an immutable id keys the collection;
@@ -46,6 +55,9 @@
 #'
 #' @param members Ordered character vector of panel ids.
 #' @param name Optional display name for the view.
+#' @param chapter Optional character path grouping the view in the nav, one
+#'   element per level (`"Safety"`, or `c("Safety", "Labs")`). `NULL` leaves
+#'   the view ungrouped, at the top level of the nav.
 #'
 #' @return `board_views()` returns a `dock_views`, `board_grids()` a
 #'   `dock_grids` or `NULL`, and their setters the modified board invisibly. A
@@ -59,6 +71,10 @@
 #'   view's explicit display name (or `NULL`), `view_name<-()` the modified
 #'   view, and `view_names()` a character vector of display labels keyed by
 #'   view id (derived from the id where a view has no explicit name).
+#'   `view_chapter()` returns a view's chapter path (or `NULL`),
+#'   `view_chapter<-()` the modified view, and `view_chapters()` a list of
+#'   paths keyed by view id. `view_tree()` returns a list of nodes, each
+#'   either a view (`kind = "view"`) or a chapter holding `children`.
 #'   `as_dock_view()` returns a `dock_view`: identity on a `dock_view`, or a
 #'   view whose members are a [dock_layout][dock-layout]'s panel ids.
 #'
@@ -79,11 +95,12 @@
 #'
 #' @rdname view
 #' @export
-dock_view <- function(members = character(), name = NULL) {
-  new_dock_view(members, name)
+dock_view <- function(members = character(), name = NULL, chapter = NULL) {
+  new_dock_view(members, name, chapter)
 }
 
-new_dock_view <- function(members = character(), name = NULL) {
+new_dock_view <- function(members = character(), name = NULL,
+                          chapter = NULL) {
 
   res <- structure(
     list(members = as.character(members)),
@@ -94,7 +111,22 @@ new_dock_view <- function(members = character(), name = NULL) {
     view_name(res) <- name
   }
 
+  if (!is.null(chapter)) {
+    view_chapter(res) <- chapter
+  }
+
   res
+}
+
+# Rebuild a view over a different member set, keeping every display attribute
+# the original carried. Placement walks respec views constantly (a prune, a
+# grid echo, a membership write); going through here rather than
+# `new_dock_view()` means display metadata survives them all without being
+# threaded through each call site one attribute at a time.
+respec_view <- function(x, members) {
+  stopifnot(is_dock_view(x))
+  x[["members"]] <- as.character(members)
+  x
 }
 
 #' @rdname view
@@ -130,7 +162,25 @@ validate_dock_view <- function(x) {
     )
   }
 
+  chapter <- view_chapter(x)
+
+  if (not_null(chapter) && !is_chapter_path(chapter)) {
+    blockr_abort(
+      "A view's chapter must be a character path of non-empty labels, or
+       `NULL`.",
+      class = "dock_view_chapter_invalid"
+    )
+  }
+
   invisible(x)
+}
+
+# A chapter path: one or more non-empty, non-NA labels, outermost first. The
+# empty vector is not a path -- clearing a chapter writes `NULL`, so that a
+# view is either grouped or it is not, with no third state for the nav to
+# interpret.
+is_chapter_path <- function(x) {
+  is.character(x) && length(x) && !anyNA(x) && all(nzchar(trimws(x)))
 }
 
 #' @rdname view
@@ -352,6 +402,129 @@ view_names <- function(x) {
   set_names(chr_mply(view_label, x, names(x)), names(x))
 }
 
+#' @rdname view
+#' @export
+view_chapter <- function(x) {
+
+  # Stored under "view_chapter" for the same reason `view_name` is not
+  # "name": `attr()` matches partially, and a bare "chapter" would be found
+  # by a lookup of any attribute whose name it prefixes.
+  attr(x, "view_chapter", exact = TRUE)
+}
+
+#' @rdname view
+#' @export
+`view_chapter<-` <- function(x, value) {
+
+  stopifnot(is_dock_view(x))
+
+  if (is.null(value)) {
+    attr(x, "view_chapter") <- NULL
+    return(x)
+  }
+
+  value <- trimws(as.character(value))
+
+  stopifnot(is_chapter_path(value))
+
+  attr(x, "view_chapter") <- value
+  x
+}
+
+#' @rdname view
+#' @export
+view_chapters <- function(x) {
+  stopifnot(is_dock_views(x))
+  set_names(lapply(x, view_chapter), names(x))
+}
+
+# Is any view in this collection grouped? The nav asks before it builds, so
+# that a board with no chapters takes the flat path it always took -- no
+# headers, no wrappers, no new markup to trip over.
+has_chapters <- function(x) {
+  any(lgl_ply(x, function(v) not_null(view_chapter(v))))
+}
+
+#' @rdname view
+#' @export
+view_tree <- function(x) {
+  stopifnot(is_dock_views(x))
+  view_nodes(names(x), view_names(x), view_chapters(x), depth = 1L)
+}
+
+# Group a set of view ids by the chapter label they carry at `depth`, one
+# level at a time.
+#
+# Order is taken from the views themselves: a chapter sits where its first
+# view sits, and a later view carrying the same label joins that chapter
+# rather than opening a second one. There is therefore no chapter ordering to
+# store, nothing to keep in sync with the collection, and no way for the two
+# to disagree. A view whose path is exhausted (or absent) is a leaf right
+# here, which is what puts an ungrouped view at the top level, in its own
+# position, beside the chapters.
+view_nodes <- function(ids, labels, paths, depth) {
+
+  nodes <- list()
+  at <- list()
+
+  for (id in ids) {
+
+    path <- paths[[id]]
+
+    if (length(path) < depth) {
+      nodes <- c(nodes, list(list(kind = "view", id = id, label = labels[[id]])))
+      next
+    }
+
+    key <- path[[depth]]
+    idx <- at[[key]]
+
+    if (is.null(idx)) {
+      nodes <- c(
+        nodes,
+        list(
+          list(
+            kind = "chapter",
+            label = key,
+            path = path[seq_len(depth)],
+            ids = id
+          )
+        )
+      )
+      at[[key]] <- length(nodes)
+      next
+    }
+
+    nodes[[idx]][["ids"]] <- c(nodes[[idx]][["ids"]], id)
+  }
+
+  for (i in seq_along(nodes)) {
+
+    if (!identical(nodes[[i]][["kind"]], "chapter")) {
+      next
+    }
+
+    nodes[[i]][["children"]] <- view_nodes(
+      nodes[[i]][["ids"]], labels, paths, depth + 1L
+    )
+
+    nodes[[i]][["ids"]] <- NULL
+  }
+
+  nodes
+}
+
+# Every view id under a node, in render order. The nav uses it to find the
+# chapter holding the active view; the sidebar, to count a chapter's pages.
+node_view_ids <- function(node) {
+
+  if (identical(node[["kind"]], "view")) {
+    return(node[["id"]])
+  }
+
+  as.character(unlst(lapply(node[["children"]], node_view_ids)))
+}
+
 # A view's display label: its explicit name, or -- when unset -- one derived
 # from the id, the same way blockr.core derives a default block name from its
 # class (underscores to spaces, capitalise the first letter). The id is the
@@ -540,9 +713,7 @@ coerce_one_view <- function(view, id_map) {
 
   if (is_dock_view(view)) {
     return(
-      new_dock_view(
-        resolve_panel_ids(view_members(view), id_map), view_name(view)
-      )
+      respec_view(view, resolve_panel_ids(view_members(view), id_map))
     )
   }
 
@@ -581,7 +752,7 @@ drop_unknown_members <- function(views, ok_panels) {
     keep <- intersect(members, ok_panels)
 
     if (length(keep) < length(members)) {
-      views[[id]] <- new_dock_view(keep, view_name(views[[id]]))
+      views[[id]] <- respec_view(views[[id]], keep)
     }
   }
 
@@ -599,6 +770,140 @@ view_binding_dep <- function() {
   )
 }
 
+# The nav's arrangement as a flat render sequence: the chapter headers and the
+# view items in the order they appear, each tagged with its depth. The client
+# re-sequences the nav from it, creating a header it does not have and
+# dropping one the sequence no longer names -- which is how a chapter that
+# lost its last view disappears without anything having to delete it.
+#' @noRd
+nav_structure <- function(views) {
+  nav_structure_nodes(view_tree(views), views, depth = 1L)
+}
+
+nav_structure_nodes <- function(nodes, views, depth) {
+
+  do.call(
+    c,
+    lapply(
+      nodes,
+      function(node) {
+
+        if (identical(node[["kind"]], "view")) {
+          return(
+            list(
+              list(
+                kind = "view",
+                id = node[["id"]],
+                chapter = chapter_label(view_chapter(views[[node[["id"]]]])),
+                depth = depth - 1L
+              )
+            )
+          )
+        }
+
+        c(
+          list(
+            list(
+              kind = "chapter",
+              key = chapter_key(node[["path"]]),
+              label = node[["label"]],
+              depth = depth,
+              count = length(node_view_ids(node))
+            )
+          ),
+          nav_structure_nodes(node[["children"]], views, depth + 1L)
+        )
+      }
+    )
+  ) %||% list()
+}
+
+# Where the view nav is rendered. "dropdown" puts it in the navbar, as it has
+# always been; "sidebar" puts it down the left of the page instead, where a
+# chapter can be collapsed and a nested one is legible. The two read the same
+# `view_tree()` and carry the same markup, so they are one nav in two places
+# rather than two navs -- the binding, the server's pushes and every gesture
+# are shared. An app author picks one for the deployment; it is not board
+# state, and switching it changes no board.
+view_nav_mode <- function() {
+
+  mode <- blockr_option("view_nav", "dropdown")
+
+  if (!is_string(mode) || !mode %in% c("dropdown", "sidebar")) {
+    blockr_abort(
+      "Option `view_nav` must be \"dropdown\" or \"sidebar\".",
+      class = "dock_view_nav_mode_invalid"
+    )
+  }
+
+  mode
+}
+
+# The page's left-hand view nav. Carries the same `blockr-view-nav` class the
+# dropdown's menu does and the same `view_nav` id, so the input binding finds
+# it, the server's add / remove / rename / structure pushes land in it, and
+# none of the view-lifecycle code knows which surface is on screen. Only one
+# of the two is ever rendered.
+#' @noRd
+view_sidebar_ui <- function(id, views) {
+
+  ns <- NS(id)
+  active <- active_view(views)
+  can_crud <- views_can_crud(views)
+
+  tags$div(
+    class = "blockr-view-sidebar",
+    view_binding_dep(),
+    tags$div(class = "blockr-view-sidebar-title", "Pages"),
+    tags$div(
+      class = "blockr-view-nav blockr-view-nav-sidebar",
+      id = ns("view_nav"),
+      nav_item_ui(
+        view_tree(views), views,
+        active_id = active, can_crud = can_crud, sidebar = TRUE
+      ),
+      # Inside the nav, like the dropdown's: the add gesture is delegated off
+      # the nav element, and a button outside it is never reached. The divider
+      # is also the anchor an arrangement push inserts before, so both
+      # surfaces keep the same "everything before the divider" contract.
+      if (can_crud) tags$hr(class = "dropdown-divider"),
+      if (can_crud) {
+        tags$button(
+          class = "blockr-view-add blockr-view-sidebar-add",
+          bsicons::bs_icon("plus-lg"),
+          "New page"
+        )
+      }
+    )
+  )
+}
+
+# The active view's place, for the navbar, when the nav itself sits in the
+# sidebar. The sidebar shows where you are in context, but it collapses and it
+# can be scrolled away from, so the path is also stated where it cannot move.
+#' @noRd
+view_crumb_ui <- function(id, views) {
+
+  active <- active_view(views)
+
+  if (is.null(active)) {
+    return(NULL)
+  }
+
+  tags$span(
+    class = "blockr-view-crumb",
+    id = NS(id, "view_crumb"),
+    tags$span(
+      class = "blockr-view-crumb-chapter",
+      chapter_label(view_chapter(views[[active]]))
+    ),
+    tags$span(
+      class = "blockr-view-crumb-name",
+      unname(view_names(views)[active])
+    )
+  )
+}
+
 #' @noRd
 view_nav_ui <- function(id, views) {
 
@@ -608,11 +913,14 @@ view_nav_ui <- function(id, views) {
   active_nm <- unname(view_names(views)[active])
   can_crud <- views_can_crud(views)
 
-  items <- map(
-    view_item_ui,
-    names(views),
-    view_names(views),
-    MoreArgs = list(active_id = active, can_crud = can_crud)
+  # Chapter headers and view items are siblings in one flat list, the way the
+  # divider and the add button already are. Nothing wraps an item, so every
+  # gesture the binding delegates (switch, rename, remove, reorder) keeps
+  # finding the same nodes at the same depth, and a board with no chapters
+  # renders the list it always rendered.
+  items <- nav_item_ui(
+    view_tree(views), views,
+    active_id = active, can_crud = can_crud
   )
 
   add_btn <- NULL
@@ -633,6 +941,15 @@ view_nav_ui <- function(id, views) {
       `data-bs-toggle` = "dropdown",
       `aria-expanded` = "false",
       bsicons::bs_icon("journals"),
+      # The chapter of the active view, ahead of its name. Once views are
+      # grouped the name alone stops identifying the page -- two chapters may
+      # each hold an "Overview" -- so the closed toggle carries the path. It
+      # collapses to nothing when the active view is ungrouped, which is every
+      # view on a board that has no chapters.
+      tags$span(
+        class = "blockr-view-toggle-chapter",
+        chapter_label(if (is.null(active)) NULL else view_chapter(views[[active]]))
+      ),
       tags$span(class = "blockr-view-toggle-label", active_nm)
     ),
     div(
@@ -646,8 +963,95 @@ view_nav_ui <- function(id, views) {
 }
 
 #' @noRd
-view_item_ui <- function(view_id, view_name, active_id = NULL,
-                         can_crud = FALSE) {
+# Render a level of the view tree: a chapter becomes a header followed by its
+# children, a view becomes an item. Depth rides along as a data attribute and
+# an indent class, so a nested chapter reads as one without the menu growing
+# a second interaction to open it.
+nav_item_ui <- function(nodes, views, active_id = NULL, can_crud = FALSE,
+                        depth = 1L, sidebar = FALSE) {
+
+  do.call(
+    c,
+    lapply(
+      nodes,
+      function(node) {
+
+        if (identical(node[["kind"]], "view")) {
+          return(
+            list(
+              view_item_ui(
+                node[["id"]], node[["label"]],
+                chapter = view_chapter(views[[node[["id"]]]]),
+                active_id = active_id, can_crud = can_crud,
+                sidebar = sidebar
+              )
+            )
+          )
+        }
+
+        c(
+          list(
+            chapter_header_ui(
+              node, depth,
+              has_active = active_id %in% node_view_ids(node),
+              sidebar = sidebar
+            )
+          ),
+          nav_item_ui(
+            node[["children"]], views,
+            active_id = active_id, can_crud = can_crud, depth = depth + 1L,
+            sidebar = sidebar
+          )
+        )
+      }
+    )
+  )
+}
+
+chapter_header_ui <- function(node, depth, has_active = FALSE,
+                              sidebar = FALSE) {
+
+  ids <- node_view_ids(node)
+
+  tags$div(
+    class = paste0(
+      "blockr-view-chapter blockr-view-chapter-", depth,
+      if (isTRUE(has_active)) " has-active" else ""
+    ),
+    `data-chapter-key` = chapter_key(node[["path"]]),
+    `data-chapter-depth` = depth,
+    # In the sidebar a header is a collapse toggle; in the dropdown it is a
+    # label with no state, so the twisty and the count are rendered only where
+    # something can be done with them.
+    if (sidebar) {
+      tags$span(
+        class = "blockr-view-chapter-twisty",
+        bsicons::bs_icon("caret-down-fill")
+      )
+    },
+    tags$span(class = "blockr-view-chapter-label", node[["label"]]),
+    if (sidebar) {
+      tags$span(class = "blockr-view-chapter-count", length(ids))
+    }
+  )
+}
+
+# A chapter's identity in the DOM is its whole path, not its last label: two
+# chapters may end in the same word under different parents, and keying on the
+# label alone would let the nav merge them. The separator is the one the
+# label uses, so the attribute stays readable in the DOM; a chapter whose own
+# name contains it is the one case two paths can collide.
+chapter_key <- function(path) {
+  chapter_label(path)
+}
+
+# A chapter path as the user reads it.
+chapter_label <- function(path, sep = " / ") {
+  if (is.null(path)) "" else paste0(path, collapse = sep)
+}
+
+view_item_ui <- function(view_id, view_name, chapter = NULL, active_id = NULL,
+                         can_crud = FALSE, sidebar = FALSE) {
 
   cls <- paste("dropdown-item blockr-view-item",
                if (identical(view_id, active_id)) "active" else "")
@@ -686,6 +1090,11 @@ view_item_ui <- function(view_id, view_name, active_id = NULL,
   tags$div(
     class = cls,
     `data-view-id` = view_id,
+    # The item is what a click lands on, so it carries the path the toggle has
+    # to show. Reading it off the item keeps the switch a pure client gesture:
+    # no server roundtrip just to relabel the button.
+    `data-view-chapter` = chapter_label(chapter),
+    `data-chapter-depth` = length(chapter),
     tags$span(class = "blockr-view-item-name", view_name),
     actions
   )
@@ -762,7 +1171,9 @@ mint_added_view_ids <- function(add, reserved) {
 
 # Carry the desired display name onto an added-view entry as the attribute
 # `view_name()` reads. A `dock_grid` add (seeding geometry) has no `view_name<-`
-# method, so the attribute is written directly for both entry forms.
+# method, so the attribute is written directly for both entry forms. A chapter
+# is not minted here: an added view starts ungrouped, at the nav's top level,
+# and is filed under a chapter by a later `views$chapter` write.
 name_added_view <- function(entry, name) {
   attr(entry, "view_name") <- name
   entry
@@ -811,7 +1222,7 @@ validate_views_delta <- function(views, board, upd) {
     blockr_abort(
       paste(
         "`views` must be a list with optional",
-        "`add`/`mod`/`rm`/`active`/`rename`."
+        "`add`/`mod`/`rm`/`active`/`rename`/`chapter`."
       ),
       class = "dock_views_delta_invalid"
     )
@@ -819,7 +1230,7 @@ validate_views_delta <- function(views, board, upd) {
 
   unknown_keys <- setdiff(
     names(views),
-    c("add", "mod", "rm", "active", "rename", "grid", "order")
+    c("add", "mod", "rm", "active", "rename", "chapter", "grid", "order")
   )
   if (length(unknown_keys)) {
     blockr_abort(
@@ -832,6 +1243,7 @@ validate_views_delta <- function(views, board, upd) {
   mod_ids <- names(views$mod) %||% character()
   rm_ids <- views$rm %||% character()
   rename_ids <- names(views$rename) %||% character()
+  chapter_ids <- names(views$chapter) %||% character()
   active <- views$active
 
   add_unnamed <- length(views$add) &&
@@ -868,6 +1280,23 @@ validate_views_delta <- function(views, board, upd) {
   if (rename_unnamed) {
     blockr_abort(
       "`views$rename` must map view ids to single display names.",
+      class = "dock_views_delta_invalid"
+    )
+  }
+
+  # A chapter write is keyed by view id like a rename, and carries either a
+  # path or `NULL` -- the latter meaning "ungroup this view", which is the only
+  # way a chapter is ever removed. There is no chapter object to delete.
+  chapter_malformed <- length(views$chapter) &&
+    (is.null(names(views$chapter)) || any(!nzchar(chapter_ids)) ||
+       !all(lgl_ply(views$chapter, is_chapter_write)))
+
+  if (chapter_malformed) {
+    blockr_abort(
+      paste(
+        "`views$chapter` must map view ids to a chapter path, or to `NULL`",
+        "to ungroup."
+      ),
       class = "dock_views_delta_invalid"
     )
   }
@@ -921,6 +1350,17 @@ validate_views_delta <- function(views, board, upd) {
     blockr_abort(
       "View{?s} {unknown_rename} in `views$rename` do not exist on the board.",
       class = "dock_views_delta_rename_unknown"
+    )
+  }
+
+  unknown_chapter <- setdiff(chapter_ids, current_views)
+  if (length(unknown_chapter)) {
+    blockr_abort(
+      paste(
+        "View{?s} {unknown_chapter} in `views$chapter` do not exist on",
+        "the board."
+      ),
+      class = "dock_views_delta_chapter_unknown"
     )
   }
 
@@ -1556,9 +1996,7 @@ set_view_membership <- function(board, view_id, members) {
 
   views <- board_views(board)
 
-  views[[view_id]] <- new_dock_view(
-    as.character(members), view_name(views[[view_id]])
-  )
+  views[[view_id]] <- respec_view(views[[view_id]], members)
 
   board_views(board) <- views
 
@@ -1614,9 +2052,12 @@ apply_views_add <- function(add_views, board) {
 
     if (is_dock_grid(entry)) {
 
-      views[[v]] <- new_dock_view(layout_panel_ids(entry), view_name(entry))
+      views[[v]] <- new_dock_view(
+        layout_panel_ids(entry), view_name(entry), view_chapter(entry)
+      )
 
       attr(entry, "view_name") <- NULL
+      attr(entry, "view_chapter") <- NULL
       grids[[v]] <- entry
       seeded <- TRUE
 
@@ -1720,6 +2161,55 @@ apply_views_rename <- function(rename, board) {
   board_views(board) <- views
 
   board
+}
+
+# File one or more views under a chapter, or ungroup them. Like a rename this
+# is an attribute write keyed by stable id: no view is rebuilt, no membership
+# or geometry moves, and the dock module, DOM element and registry key all
+# survive untouched. `chapter` maps view id to a path, or to `NULL` / `""` to
+# clear. A chapter left with no views simply stops being rendered -- it was
+# never anything but a label its views shared.
+apply_views_chapter <- function(chapter, board) {
+
+  views <- board_views(board)
+
+  for (id in names(chapter)) {
+    if (id %in% names(views)) {
+      view_chapter(views[[id]]) <- as_chapter_path(chapter[[id]])
+    }
+  }
+
+  board_views(board) <- views
+
+  board
+}
+
+# What a `views$chapter` entry may carry: a path, or an explicit clear. JSON
+# has no `NULL` inside an object, so a clear arrives over the wire as an empty
+# string or an empty array, and both are read here as "ungroup".
+is_chapter_write <- function(x) {
+
+  if (is.null(x)) {
+    return(TRUE)
+  }
+
+  if (is.list(x)) {
+    return(all(lgl_ply(x, is_string)))
+  }
+
+  is.character(x) && !anyNA(x)
+}
+
+as_chapter_path <- function(x) {
+
+  if (is.null(x)) {
+    return(NULL)
+  }
+
+  res <- trimws(as.character(unlst(x)))
+  res <- res[nzchar(res)]
+
+  if (!length(res)) NULL else res
 }
 
 apply_views_active <- function(active, board) {

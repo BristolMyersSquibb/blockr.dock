@@ -570,3 +570,52 @@ test_that("a stateless extension still serializes its constructor", {
   expect_ctor_only(ser_dock_board(brd, actions = list(), extensions = list()))
   expect_ctor_only(ser_dock_board(brd, actions = list()))
 })
+
+test_that("a view's chapter round-trips, and its absence writes nothing", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(
+      labs = dock_view("a", "Lab overview", "Safety"),
+      hep  = dock_view("b", "Hepatic", c("Safety", "Labs")),
+      appx = dock_view("a", "Appendix")
+    )
+  )
+
+  ser <- blockr_ser(brd)
+  views <- ser[["payload"]][["views"]][["payload"]][["views"]]
+
+  expect_identical(views[["labs"]][["chapter"]], list("Safety"))
+  expect_identical(views[["hep"]][["chapter"]], list("Safety", "Labs"))
+
+  # An ungrouped view writes no field at all, so a board saved before chapters
+  # existed and one saved after with nothing grouped are the same JSON.
+  expect_false("chapter" %in% names(views[["appx"]]))
+
+  des <- blockr_deser(ser)
+
+  expect_identical(
+    view_chapters(board_views(des)),
+    view_chapters(board_views(brd))
+  )
+})
+
+test_that("a stored view with no chapter field deserialises ungrouped", {
+
+  # The shape every board saved before this feature has.
+  old <- list(
+    object = "dock_view",
+    payload = list("block_panel-a"),
+    name = "Lab overview"
+  )
+
+  v <- blockr_deser(old)
+
+  expect_identical(view_name(v), "Lab overview")
+  expect_null(view_chapter(v))
+
+  # And a field that survived a round trip through JSON as an empty array
+  # reads as ungrouped rather than as an empty path.
+  empty <- blockr_deser(c(old, list(chapter = list())))
+  expect_null(view_chapter(empty))
+})

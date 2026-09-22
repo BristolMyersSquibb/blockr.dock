@@ -1232,7 +1232,20 @@ test_that("validate_views_delta rejects a non-permutation order", {
   )
 })
 
-test_that("reconcile_views pushes the settled order to the nav", {
+# The view ids of an arrangement push, in render order, ignoring the chapter
+# headers interleaved with them.
+structure_view_ids <- function(structure) {
+
+  if (is.null(structure)) {
+    return(NULL)
+  }
+
+  views <- Filter(function(e) identical(e[["kind"]], "view"), structure)
+
+  chr_ply(views, `[[`, "id")
+}
+
+test_that("reconcile_views pushes the settled arrangement to the nav", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -1262,7 +1275,7 @@ test_that("reconcile_views pushes the settled order to the nav", {
   client_views <- reactiveVal(seed_view_state(board_views(brd)))
 
   # The board now carries [B, A]; the client still shows [A, B], so reconcile
-  # detects the reorder, pushes the order and re-sequences client_views.
+  # detects the reorder, pushes the arrangement and re-sequences client_views.
   reordered <- apply_views_order(c("B", "A"), brd)
   board <- reactiveValues(board = reordered)
 
@@ -1271,10 +1284,136 @@ test_that("reconcile_views pushes the settled order to the nav", {
                     client_active, client_views, session)
   )
 
+  # The arrangement push carries headers and items together; with no view
+  # grouped it is the view sequence alone.
   expect_true(
     any(lgl_ply(sent, function(m) {
-      identical(as.character(unlist(m$order)), c("B", "A"))
+      identical(structure_view_ids(m$structure), c("B", "A"))
     }))
   )
   expect_identical(names(isolate(client_views())), c("B", "A"))
+})
+
+
+test_that("views$chapter files a view under a chapter and ungroups it", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(
+      labs = dock_view("a", "Lab overview", "Safety"),
+      appx = dock_view("b", "Appendix")
+    )
+  )
+
+  filed <- apply_board_update(
+    brd, list(views = list(chapter = list(appx = "Safety")))
+  )
+
+  expect_identical(view_chapter(board_views(filed)[["appx"]]), "Safety")
+
+  # Membership and geometry are untouched: filing a view is a label write, not
+  # a move.
+  expect_identical(
+    view_members(board_views(filed)[["appx"]]),
+    view_members(board_views(brd)[["appx"]])
+  )
+  expect_identical(board_grids(filed), board_grids(brd))
+
+  # A path arrives over the wire as a JSON array, so a list of strings is a
+  # chapter just as a character vector is.
+  deep <- apply_board_update(
+    brd, list(views = list(chapter = list(labs = list("Safety", "Labs"))))
+  )
+  expect_identical(view_chapter(board_views(deep)[["labs"]]), c("Safety", "Labs"))
+
+  # Ungrouping. JSON carries no NULL inside an object, so an empty string is
+  # the wire form of a clear and reads the same as one.
+  for (clear in list(NULL, "", list())) {
+    ungrouped <- apply_board_update(
+      brd, list(views = list(chapter = stats::setNames(list(clear), "labs")))
+    )
+    expect_null(view_chapter(board_views(ungrouped)[["labs"]]))
+  }
+})
+
+test_that("a chapter write is validated against the board", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    views = list(labs = dock_view("a", "Lab overview"))
+  )
+
+  expect_error(
+    augment_board_update(list(views = list(chapter = list(zzz = "S"))), brd),
+    class = "dock_views_delta_chapter_unknown"
+  )
+  expect_error(
+    augment_board_update(list(views = list(chapter = list("S"))), brd),
+    class = "dock_views_delta_invalid"
+  )
+  expect_error(
+    augment_board_update(list(views = list(chapter = list(labs = 1L))), brd),
+    class = "dock_views_delta_invalid"
+  )
+})
+
+test_that("reconcile_views pushes an arrangement when only a chapter moves", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(
+      A = dock_view("a", "Alpha", "Safety"),
+      B = dock_view("b", "Beta")
+    )
+  )
+
+  sent <- list()
+  session <- list(
+    ns = identity,
+    sendInputMessage = function(input_id, message) {
+      sent[[length(sent) + 1L]] <<- message
+      invisible()
+    },
+    sendCustomMessage = function(type, message) invisible()
+  )
+
+  docks <- reactiveValues()
+  for (id in names(board_views(brd))) {
+    ids <- as.character(view_members(board_views(brd)[[id]]))
+    docks[[id]] <- list(
+      layout = function() NULL,
+      live_panels = reactiveVal(ids)
+    )
+  }
+  active_dock <- reactiveValues()
+  client_active <- reactiveVal(active_view(board_views(brd)))
+  client_views <- reactiveVal(seed_view_state(board_views(brd)))
+
+  # B joins Safety. No view moves and nothing is renamed, so this is invisible
+  # to every other diff reconcile makes.
+  regrouped <- apply_views_chapter(list(B = "Safety"), brd)
+  board <- reactiveValues(board = regrouped)
+
+  isolate(
+    reconcile_views(board, function(...) NULL, docks, active_dock,
+                    client_active, client_views, session)
+  )
+
+  pushed <- Filter(function(m) !is.null(m$structure), sent)
+
+  expect_length(pushed, 1L)
+  expect_identical(structure_view_ids(pushed[[1L]]$structure), c("A", "B"))
+
+  # One chapter header now, holding both views, and the client's copy of the
+  # chapters tracks the board's.
+  headers <- Filter(
+    function(e) identical(e[["kind"]], "chapter"), pushed[[1L]]$structure
+  )
+  expect_length(headers, 1L)
+  expect_identical(headers[[1L]][["label"]], "Safety")
+  expect_identical(headers[[1L]][["count"]], 2L)
+
+  expect_identical(
+    view_chapter(isolate(client_views())[["B"]]), "Safety"
+  )
 })

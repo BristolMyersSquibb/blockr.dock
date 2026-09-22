@@ -15,6 +15,10 @@
 \alias{view_name}
 \alias{view_name<-}
 \alias{view_names}
+\alias{view_chapter}
+\alias{view_chapter<-}
+\alias{view_chapters}
+\alias{view_tree}
 \alias{active_view}
 \alias{active_view<-}
 \alias{board_views}
@@ -31,7 +35,7 @@ board_grids(x) <- value
 
 as_dock_view(x, ...)
 
-dock_view(members = character(), name = NULL)
+dock_view(members = character(), name = NULL, chapter = NULL)
 
 is_dock_view(x)
 
@@ -48,6 +52,14 @@ view_name(x)
 view_name(x) <- value
 
 view_names(x)
+
+view_chapter(x)
+
+view_chapter(x) <- value
+
+view_chapters(x)
+
+view_tree(x)
 
 active_view(x)
 
@@ -73,6 +85,10 @@ known views.}
 \item{members}{Ordered character vector of panel ids.}
 
 \item{name}{Optional display name for the view.}
+
+\item{chapter}{Optional character path grouping the view in the nav, one
+element per level (\code{"Safety"}, or \code{c("Safety", "Labs")}). \code{NULL} leaves
+the view ungrouped, at the top level of the nav.}
 }
 \value{
 \code{board_views()} returns a \code{dock_views}, \code{board_grids()} a
@@ -87,6 +103,10 @@ modified collection (or \code{dock_board}) invisibly. \code{view_name()} returns
 view's explicit display name (or \code{NULL}), \verb{view_name<-()} the modified
 view, and \code{view_names()} a character vector of display labels keyed by
 view id (derived from the id where a view has no explicit name).
+\code{view_chapter()} returns a view's chapter path (or \code{NULL}),
+\verb{view_chapter<-()} the modified view, and \code{view_chapters()} a list of
+paths keyed by view id. \code{view_tree()} returns a list of nodes, each
+either a view (\code{kind = "view"}) or a chapter holding \code{children}.
 \code{as_dock_view()} returns a \code{dock_view}: identity on a \code{dock_view}, or a
 view whose members are a \link[=dock-layout]{dock_layout}'s panel ids.
 }
@@ -103,6 +123,15 @@ one auto-named "Page" view. Blocks and extensions are shared across views
 via the board's DAG; view membership is a layout concern only.
 }
 \details{
+A view may also carry an optional \strong{chapter}: a character path naming the
+place it occupies in the nav's hierarchy, read with \code{view_chapter()} and
+written with \verb{view_chapter<-()}. It is display metadata and nothing else --
+membership, geometry and the active view are untouched by it, a chapter is
+never an object in its own right (only a label several views share), and a
+collection where no view carries one renders exactly as it did before
+chapters existed. \code{view_tree()} turns a collection into the nested
+chapter / view structure the nav and the view sidebar both render.
+
 Each view carries a stable, immutable \strong{id} (its key in the collection)
 distinct from its editable display \strong{name}. This mirrors the id / name
 separation used for blocks (an immutable id keys the collection;

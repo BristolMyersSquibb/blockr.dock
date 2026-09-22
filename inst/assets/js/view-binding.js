@@ -29,11 +29,84 @@ $(function () {
     return $item.find('.blockr-view-item-name').text();
   };
 
-  var setToggleLabel = function ($el, text) {
-    $el
-      .closest('.blockr-view-dropdown')
-      .find('.blockr-view-toggle-label')
-      .text(text);
+  // The toggle (and, when the nav sits in the sidebar, the navbar
+  // breadcrumb) states the active view's place: its chapter path ahead of its
+  // name. Both are read off the item that was clicked, so a switch relabels
+  // them without a server roundtrip. The chapter span collapses to nothing
+  // when the view is ungrouped, which is every view on a board with no
+  // chapters.
+  var itemChapter = function ($item) {
+    return $item.attr('data-view-chapter') || '';
+  };
+
+  var setToggleLabel = function ($el, text, chapter) {
+    var $dd = $el.closest('.blockr-view-dropdown');
+    $dd.find('.blockr-view-toggle-label').text(text);
+    if (chapter !== undefined) {
+      $dd.find('.blockr-view-toggle-chapter').text(chapter);
+    }
+    // Sidebar mode has no dropdown to label; the navbar crumb stands in for
+    // it. Scoped to the document because the crumb is not inside the nav.
+    var $crumb = $('.blockr-view-crumb');
+    if ($crumb.length) {
+      $crumb.find('.blockr-view-crumb-name').text(text);
+      if (chapter !== undefined) {
+        $crumb.find('.blockr-view-crumb-chapter').text(chapter);
+      }
+    }
+  };
+
+  // A chapter header is a sibling of the items it heads, not a wrapper, so
+  // "the views under this chapter" is the run of following siblings up to the
+  // next header at the same depth or shallower. Keeping the list flat is what
+  // lets every other gesture -- switch, rename, remove, reorder -- keep
+  // finding the same nodes it always did.
+  var chapterMembers = function ($header) {
+    var depth = parseInt($header.attr('data-chapter-depth'), 10);
+    var members = [];
+    $header.nextAll().each(function () {
+      var $el = $(this);
+      if ($el.hasClass('blockr-view-chapter')) {
+        if (parseInt($el.attr('data-chapter-depth'), 10) <= depth) {
+          return false;
+        }
+      } else if (!$el.hasClass('blockr-view-item')) {
+        return false;
+      }
+      members.push(this);
+    });
+    return $(members);
+  };
+
+  var setChapterCollapsed = function ($header, collapsed) {
+    $header.toggleClass('collapsed', collapsed);
+    chapterMembers($header).toggleClass('blockr-view-hidden', collapsed);
+    // A nested header that was collapsed in its own right stays collapsed, so
+    // re-opening a parent must not re-show its children.
+    if (!collapsed) {
+      chapterMembers($header)
+        .filter('.blockr-view-chapter.collapsed')
+        .each(function () {
+          chapterMembers($(this)).addClass('blockr-view-hidden');
+        });
+    }
+  };
+
+  // Mark the chapters holding the active view, so a collapsed one still says
+  // where you are. Every header on the ancestor path is marked, not just the
+  // innermost, because any of them may be the one that is collapsed.
+  var markActiveChapters = function ($nav) {
+    $nav.find('.blockr-view-chapter').removeClass('has-active');
+    var $active = $nav.find('.blockr-view-item.active');
+    if (!$active.length) return;
+    var chapter = itemChapter($active);
+    if (!chapter) return;
+    $nav.find('.blockr-view-chapter').each(function () {
+      var key = $(this).attr('data-chapter-key') || '';
+      if (chapter === key || chapter.indexOf(key + ' / ') === 0) {
+        $(this).addClass('has-active');
+      }
+    });
   };
 
   var viewBinding = new Shiny.InputBinding();
@@ -53,8 +126,9 @@ $(function () {
         .find('.blockr-view-item[data-view-id="' + value + '"]')
         .addClass('active');
       if ($item.length) {
-        setToggleLabel($(el), itemName($item));
+        setToggleLabel($(el), itemName($item), itemChapter($item));
       }
+      markActiveChapters($(el));
     },
 
     subscribe: function (el, callback) {
@@ -78,9 +152,24 @@ $(function () {
         $nav.find('.blockr-view-item').removeClass('active');
         $item.addClass('active');
 
-        setToggleLabel($nav, itemName($item));
+        setToggleLabel($nav, itemName($item), itemChapter($item));
+        markActiveChapters($nav);
 
         callback(true);
+      });
+
+      // Collapse a chapter. Purely local: which chapters are open is a
+      // property of this browser tab, not of the board, so it is never
+      // reported and never persisted. A header in the dropdown is inert, so
+      // the handler only fires where a twisty is rendered.
+      $(el).on('click.viewBinding', '.blockr-view-chapter', function (e) {
+        var $header = $(this);
+        if (!$header.closest('.blockr-view-nav-sidebar').length) {
+          return;
+        }
+        e.stopPropagation();
+        e.preventDefault();
+        setChapterCollapsed($header, !$header.hasClass('collapsed'));
       });
 
       // Edit click: swap name span for inline input
@@ -132,7 +221,11 @@ $(function () {
           if (newName !== currentName) {
             // The id is stable across a rename; only the label changes.
             if ($item.hasClass('active')) {
-              setToggleLabel($item.closest('.blockr-view-dropdown'), newName);
+              setToggleLabel(
+                $item.closest('.blockr-view-dropdown'),
+                newName,
+                itemChapter($item)
+              );
             }
 
             var $nav = $item.closest('.blockr-view-nav');
@@ -227,9 +320,12 @@ $(function () {
         var addId = data.add.id;
         var addName = data.add.name;
         var canCrud = data.canCrud !== false;
+        var addChapter = data.add.chapter || '';
         var newItem = $('<div>')
           .addClass('dropdown-item blockr-view-item')
           .attr('data-view-id', addId)
+          .attr('data-view-chapter', addChapter)
+          .attr('data-chapter-depth', addChapter ? addChapter.split(' / ').length : 0)
           .append(
             $('<span>').addClass('blockr-view-item-name').text(addName)
           );
@@ -296,25 +392,96 @@ $(function () {
         $target.find('.blockr-view-item-name').text(data.rename.to);
 
         if ($target.hasClass('active')) {
-          setToggleLabel($(el), data.rename.to);
+          setToggleLabel($(el), data.rename.to, itemChapter($target));
         }
       }
 
-      if (data.hasOwnProperty('order')) {
+      // The nav's whole arrangement, restated: chapter headers and view items
+      // in render order. Re-appending an existing node moves it, so walking
+      // the sequence in order lands the DOM in that order. Headers are
+      // created on demand and any header the sequence no longer names is
+      // dropped, which is how a chapter that lost its last view disappears --
+      // there was never an object to delete, only a label its views shared.
+      if (data.hasOwnProperty('structure')) {
         var $nav = $(el);
         var $anchor = $nav.find('.dropdown-divider');
-        // Re-append each item in the server's order; re-appending an existing
-        // node moves it, so iterating in order lands the DOM in that order.
-        data.order.forEach(function (viewId) {
-          var $item = $nav.find(
-            '.blockr-view-item[data-view-id="' + viewId + '"]'
-          );
+        var sidebar = $nav.hasClass('blockr-view-nav-sidebar');
+        var seen = {};
+
+        var place = function ($node) {
           if ($anchor.length) {
-            $anchor.before($item);
+            $anchor.before($node);
           } else {
-            $nav.append($item);
+            $nav.append($node);
+          }
+        };
+
+        data.structure.forEach(function (entry) {
+          if (entry.kind === 'view') {
+            var $item = $nav.find(
+              '.blockr-view-item[data-view-id="' + entry.id + '"]'
+            );
+            $item
+              .attr('data-view-chapter', entry.chapter || '')
+              .attr('data-chapter-depth', entry.depth);
+            place($item);
+            return;
+          }
+
+          seen[entry.key] = true;
+          var $header = $nav.find(
+            '.blockr-view-chapter[data-chapter-key="' +
+              entry.key.replace(/"/g, '\\"') + '"]'
+          );
+
+          if (!$header.length) {
+            $header = $('<div>')
+              .addClass('blockr-view-chapter')
+              .attr('data-chapter-key', entry.key);
+            if (sidebar) {
+              $header.append(
+                $('<span>').addClass('blockr-view-chapter-twisty')
+              );
+            }
+            $header.append($('<span>').addClass('blockr-view-chapter-label'));
+            if (sidebar) {
+              $header.append(
+                $('<span>').addClass('blockr-view-chapter-count')
+              );
+            }
+          }
+
+          $header
+            .attr('data-chapter-depth', entry.depth)
+            .attr(
+              'class',
+              'blockr-view-chapter blockr-view-chapter-' + entry.depth +
+                ($header.hasClass('collapsed') ? ' collapsed' : '')
+            );
+          $header.find('.blockr-view-chapter-label').text(entry.label);
+          $header.find('.blockr-view-chapter-count').text(entry.count);
+          place($header);
+        });
+
+        $nav.find('.blockr-view-chapter').each(function () {
+          if (!seen[$(this).attr('data-chapter-key')]) {
+            $(this).remove();
           }
         });
+
+        // A regroup can move the active view under a different header, and a
+        // collapsed chapter must not hide a view that has just been placed
+        // outside it.
+        $nav.find('.blockr-view-item').removeClass('blockr-view-hidden');
+        $nav.find('.blockr-view-chapter.collapsed').each(function () {
+          setChapterCollapsed($(this), true);
+        });
+        markActiveChapters($nav);
+
+        var $active = $nav.find('.blockr-view-item.active');
+        if ($active.length) {
+          setToggleLabel($nav, itemName($active), itemChapter($active));
+        }
       }
 
       // Do NOT report the value back. The server drives the active view on

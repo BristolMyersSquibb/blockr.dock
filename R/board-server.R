@@ -232,10 +232,10 @@ seed_view_state <- function(views) {
 }
 
 # An empty view standing in for a view in `client_views`: carries the view's
-# display name so live_view_data / the nav keep the id -> name mapping without
-# its membership or geometry.
+# display attributes so live_view_data / the nav keep the id -> name and
+# id -> chapter mappings without its membership or geometry.
 bare_view <- function(x) {
-  new_dock_view(character(), view_name(x))
+  respec_view(x, character())
 }
 
 #' Observe view tab switches.
@@ -557,7 +557,7 @@ live_view_grid <- function(v_id, docks, board) {
 # member, so `grid_panel_ids()` spanning both is what keeps a railed panel from
 # reading as removed.
 live_view_membership <- function(grid, view) {
-  new_dock_view(layout_panel_ids(grid), view_name(view))
+  respec_view(view, layout_panel_ids(grid))
 }
 
 hide_view_ui <- function(view_id, docks) {
@@ -693,7 +693,13 @@ reconcile_views <- function(board, update, docks, active_dock,
     state[[v]] <- bare_view(views[[v]])
     session$sendInputMessage(
       "view_nav",
-      list(add = list(id = v, name = labels[[v]]))
+      list(
+        add = list(
+          id = v,
+          name = labels[[v]],
+          chapter = chapter_label(view_chapter(views[[v]]))
+        )
+      )
     )
   }
 
@@ -701,6 +707,8 @@ reconcile_views <- function(board, update, docks, active_dock,
     session$sendInputMessage("view_nav", list(remove = v))
     state[[v]] <- NULL
   }
+
+  regrouped <- FALSE
 
   for (v in intersect(want, shown)) {
 
@@ -713,14 +721,31 @@ reconcile_views <- function(board, update, docks, active_dock,
         list(rename = list(id = v, to = new_nm))
       )
     }
+
+    # A chapter write moves no view and renames nothing, so it is invisible to
+    # every other diff here. Syncing it onto `state` is also what erases the
+    # evidence, so the fact that it happened is carried out of the loop
+    # explicitly rather than re-derived from `state` afterwards.
+    new_ch <- view_chapter(views[[v]])
+
+    if (!identical(new_ch, view_chapter(state[[v]]))) {
+      view_chapter(state[[v]]) <- new_ch
+      regrouped <- TRUE
+    }
   }
 
-  # A pure reorder is invisible to the set-diffing loops above (same members,
-  # same names), so re-sequence the nav explicitly when the board order and the
-  # client's differ. `as.list()` forces a JSON array even for a single id.
-  if (!identical(names(state), want)) {
+  # A pure reorder or a pure regroup is invisible to the set-diffing loops
+  # above (same members, same names), so re-state the nav's arrangement
+  # whenever the board's and the client's differ. `structure` carries the
+  # chapter headers and the view order together because they are one
+  # arrangement: a view that changes chapter also changes position among the
+  # headers, and pushing the order alone would leave it under the wrong one.
+  if (!identical(names(state), want) || regrouped) {
     state <- reorder_dock_views(state, want)
-    session$sendInputMessage("view_nav", list(order = as.list(want)))
+    session$sendInputMessage(
+      "view_nav",
+      list(structure = nav_structure(views))
+    )
   }
 
   # Dock lifecycle: tear down docks whose view the board dropped, then build the

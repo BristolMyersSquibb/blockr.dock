@@ -641,6 +641,241 @@
 }
 
 /* ============================================
+   View chapters
+   ============================================ */
+
+/* A chapter header is a sibling of the items it heads, never a wrapper: the
+   flat list is what lets the binding keep finding items at the same depth.
+   In the dropdown it is an inert label. */
+.blockr-view-chapter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 10px 4px;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--blockr-color-text-muted);
+  user-select: none;
+}
+
+/* A nested chapter is indented rather than given a second interaction to
+   open it: the dropdown states the hierarchy, the sidebar navigates it. */
+.blockr-view-chapter-2 {
+  padding-left: 22px;
+}
+
+.blockr-view-chapter-3 {
+  padding-left: 34px;
+}
+
+.blockr-view-nav .blockr-view-item[data-chapter-depth="2"] {
+  padding-left: 22px;
+}
+
+.blockr-view-nav .blockr-view-item[data-chapter-depth="3"] {
+  padding-left: 34px;
+}
+
+/* The active view's chapter path, ahead of its name on the toggle. Empty for
+   an ungrouped view, and the separator lives in CSS so the span holds only
+   the path -- nothing to strip when the text is rewritten on a switch. */
+.blockr-view-toggle-chapter:not(:empty),
+.blockr-view-crumb-chapter:not(:empty) {
+  color: var(--blockr-color-text-muted);
+  font-weight: var(--blockr-font-weight-normal);
+}
+
+.blockr-view-toggle-chapter:not(:empty)::after,
+.blockr-view-crumb-chapter:not(:empty)::after {
+  content: "/";
+  margin: 0 5px;
+  color: var(--blockr-grey-300);
+}
+
+.blockr-view-crumb {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-secondary);
+}
+
+.blockr-view-crumb-name {
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-primary);
+}
+
+/* ============================================
+   View sidebar
+   ============================================ */
+
+.blockr-view-layout {
+  display: flex;
+  align-items: stretch;
+}
+
+.blockr-view-layout .blockr-view-container {
+  flex: 1;
+  min-width: 0;
+}
+
+.blockr-view-sidebar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 218px;
+  height: var(--blockr-stack-height, calc(100vh - 48px));
+  padding: 10px 8px;
+  overflow-y: auto;
+  background: var(--blockr-color-bg-surface);
+  border-right: 1px solid var(--blockr-color-border);
+}
+
+.blockr-view-sidebar-title {
+  padding: 4px 8px 8px;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-view-sidebar .blockr-view-nav-sidebar {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* The divider floats the add button to the bottom of the column, so the two
+   sit together however short the page list is. */
+.blockr-view-nav-sidebar .dropdown-divider {
+  margin-top: auto;
+}
+
+.blockr-view-sidebar-add {
+  background: transparent;
+  border: none;
+}
+
+/* In the sidebar a header is a control: it collapses its run of items. It
+   keeps the chapter's own casing here, where it heads a list rather than
+   labelling a section of a menu. */
+.blockr-view-nav-sidebar .blockr-view-chapter {
+  padding: 5px 8px;
+  margin-top: 6px;
+  border-radius: 4px;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-semibold);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--blockr-color-text-secondary);
+  cursor: pointer;
+}
+
+.blockr-view-nav-sidebar .blockr-view-chapter:first-child {
+  margin-top: 0;
+}
+
+.blockr-view-nav-sidebar .blockr-view-chapter:hover {
+  background-color: var(--blockr-grey-100);
+}
+
+.blockr-view-chapter-twisty {
+  display: flex;
+  flex: none;
+  width: 11px;
+  font-size: 9px;
+  color: var(--blockr-color-text-muted);
+  transition: transform 0.12s ease;
+}
+
+.blockr-view-chapter.collapsed .blockr-view-chapter-twisty {
+  transform: rotate(-90deg);
+}
+
+.blockr-view-chapter-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-view-chapter-count {
+  margin-left: auto;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-muted);
+}
+
+/* A collapsed chapter still says whether you are inside it. */
+.blockr-view-chapter.collapsed.has-active .blockr-view-chapter-label {
+  color: var(--blockr-blue-700);
+}
+
+/* Qualified by the nav and the row class, so it outweighs the
+   `.blockr-view-item.dropdown-item { display: flex }` the item already
+   carries. A bare `.blockr-view-hidden` loses that cascade and a collapsed
+   chapter keeps showing its pages. */
+.blockr-view-nav .blockr-view-item.blockr-view-hidden,
+.blockr-view-nav .blockr-view-chapter.blockr-view-hidden {
+  display: none;
+}
+
+/* A nested chapter is indented under its parent. These follow the shorthand
+   above deliberately: same specificity, later wins, so the padding the
+   shorthand sets is the depth-1 case and each deeper level overrides it. */
+.blockr-view-nav-sidebar .blockr-view-chapter-2 {
+  padding-left: 22px;
+}
+
+.blockr-view-nav-sidebar .blockr-view-chapter-3 {
+  padding-left: 36px;
+}
+
+/* Sidebar items sit under their header rather than beside it, so the indent
+   is per level and the depth attribute carries it. */
+.blockr-view-nav-sidebar .blockr-view-item {
+  position: relative;
+  padding: 5px 8px;
+  color: var(--blockr-color-text-secondary);
+}
+
+/* The CRUD actions lift out of the flow here. In a 218px column their
+   reserved width, held even at `opacity: 0`, is what truncates a name that
+   would otherwise fit; over the row they cost nothing until the row is
+   hovered. The backdrop is the row's own hover fill, so the actions read as
+   sitting on the row rather than over the text they cover. */
+.blockr-view-nav-sidebar .blockr-view-item-actions {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  padding-left: 8px;
+  background: linear-gradient(
+    to right, transparent, var(--blockr-grey-100) 8px
+  );
+}
+
+.blockr-view-nav-sidebar .blockr-view-item.active .blockr-view-item-actions {
+  background: linear-gradient(
+    to right, transparent, var(--blockr-blue-100) 8px
+  );
+}
+
+.blockr-view-nav-sidebar .blockr-view-item[data-chapter-depth="1"] {
+  padding-left: 27px;
+}
+
+.blockr-view-nav-sidebar .blockr-view-item[data-chapter-depth="2"] {
+  padding-left: 41px;
+}
+
+.blockr-view-nav-sidebar .blockr-view-item[data-chapter-depth="3"] {
+  padding-left: 55px;
+}
+
+/* ============================================
    Multi-dock stacking (views)
    ============================================ */
 

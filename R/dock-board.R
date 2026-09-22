@@ -262,7 +262,7 @@ validate_board_update.dock_board <- function(payload, board, ...,
       blockr_abort(
         paste(
           "`views` must be a list with optional",
-          "`add`/`mod`/`rm`/`active`/`rename`."
+          "`add`/`mod`/`rm`/`active`/`rename`/`chapter`."
         ),
         class = "dock_views_delta_invalid"
       )
@@ -385,6 +385,14 @@ apply_board_update.dock_board <- function(board, upd, ...) {
 
   if (length(upd$views$rename)) {
     board <- apply_views_rename(upd$views$rename, board)
+  }
+
+  # After `rename`, so a delta that both renames a view and files it under a
+  # chapter of the same name lands in a predictable order. Before `active`,
+  # for the same reason every other view write is: the active view is a
+  # property of the settled collection.
+  if (length(upd$views$chapter)) {
+    board <- apply_views_chapter(upd$views$chapter, board)
   }
 
   if (!is.null(upd$views$active)) {

@@ -58,10 +58,18 @@ blockr_ser.dock_views <- function(x, data, ...) {
 #' @export
 blockr_ser.dock_view <- function(x, data, ...) {
   view <- if (!missing(data) && is_dock_view(data)) data else x
-  list(
-    object = class(view),
-    payload = as.list(view_members(view)),
-    name = view_name(view)
+  chapter <- view_chapter(view)
+  c(
+    list(
+      object = class(view),
+      payload = as.list(view_members(view)),
+      name = view_name(view)
+    ),
+    # Written only when the view carries one, so a board saved before
+    # chapters existed and one saved after with nothing grouped serialise
+    # to the same JSON. A reader that does not know the field ignores it
+    # and gets the flat nav it already rendered.
+    if (not_null(chapter)) list(chapter = as.list(chapter))
   )
 }
 
@@ -148,8 +156,20 @@ blockr_deser.dock_views <- function(x, data, ...) {
 
 #' @export
 blockr_deser.dock_view <- function(x, data, ...) {
+
   name <- if (is_string(data[["name"]])) data[["name"]] else NULL
-  new_dock_view(as.character(unlst(data[["payload"]])), name = name)
+
+  chapter <- as.character(unlst(data[["chapter"]]))
+
+  if (!is_chapter_path(chapter)) {
+    chapter <- NULL
+  }
+
+  new_dock_view(
+    as.character(unlst(data[["payload"]])),
+    name = name,
+    chapter = chapter
+  )
 }
 
 #' @export

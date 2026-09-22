@@ -446,3 +446,129 @@ test_that("dock_view has a constructor and a validator", {
   attr(bad_name, "view_name") <- c("a", "b")
   expect_error(validate_dock_view(bad_name), class = "dock_view_name_invalid")
 })
+
+test_that("a view carries an optional chapter", {
+
+  v <- dock_view("block_panel-a", name = "Labs", chapter = "Safety")
+
+  expect_identical(view_chapter(v), "Safety")
+  expect_identical(validate_dock_view(v), v)
+
+  # A path is a vector, one element per level.
+  deep <- dock_view("block_panel-a", chapter = c("Safety", "Labs"))
+  expect_identical(view_chapter(deep), c("Safety", "Labs"))
+
+  # Absent by default, and NULL is how a view is ungrouped again: a chapter is
+  # never an object, so there is nothing else to delete.
+  plain <- dock_view("block_panel-a")
+  expect_null(view_chapter(plain))
+
+  view_chapter(plain) <- "Safety"
+  expect_identical(view_chapter(plain), "Safety")
+  view_chapter(plain) <- NULL
+  expect_null(view_chapter(plain))
+
+  # Whitespace is trimmed, since the label is also the key a nav groups by.
+  padded <- dock_view("block_panel-a", chapter = "  Safety ")
+  expect_identical(view_chapter(padded), "Safety")
+
+  expect_error(dock_view("block_panel-a", chapter = ""))
+  expect_error(dock_view("block_panel-a", chapter = NA_character_))
+
+  bad <- dock_view("block_panel-a")
+  attr(bad, "view_chapter") <- 1L
+  expect_error(
+    validate_dock_view(bad),
+    class = "dock_view_chapter_invalid"
+  )
+})
+
+test_that("a chapter survives every rebuild a view goes through", {
+
+  v <- dock_view(c("block_panel-a", "block_panel-b"), "Labs", "Safety")
+
+  # Placement walks respec a view constantly. Display metadata is not
+  # placement, so none of them may drop it.
+  re <- blockr.dock:::respec_view(v, "block_panel-a")
+
+  expect_identical(view_members(re), "block_panel-a")
+  expect_identical(view_name(re), "Labs")
+  expect_identical(view_chapter(re), "Safety")
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(labs = dock_view(c("a", "b"), "Labs", "Safety"))
+  )
+
+  # Construction resolves bare ids to panel ids, which rebuilds the view.
+  expect_identical(view_chapter(board_views(brd)[["labs"]]), "Safety")
+
+  # So does pruning a member whose block is gone.
+  pruned <- rm_blocks(brd, "b")
+  expect_identical(view_chapter(board_views(pruned)[["labs"]]), "Safety")
+})
+
+test_that("view_tree groups views by the chapter they carry", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(
+      demog = dock_view("a", "Demographics", "Setup"),
+      ae    = dock_view("b", "AE overview", "Safety"),
+      labs  = dock_view("a", "Lab overview", "Safety"),
+      hep   = dock_view("b", "Hepatic", c("Safety", "Lab overview")),
+      appx  = dock_view("a", "Appendix")
+    )
+  )
+
+  tree <- view_tree(board_views(brd))
+
+  expect_identical(
+    chr_ply(tree, `[[`, "kind"),
+    c("chapter", "chapter", "view")
+  )
+  expect_identical(tree[[1L]][["label"]], "Setup")
+  expect_identical(tree[[2L]][["label"]], "Safety")
+
+  # An ungrouped view stays at the top level, in its own position.
+  expect_identical(tree[[3L]][["id"]], "appx")
+
+  # A nested path opens a chapter inside its parent.
+  safety <- tree[[2L]][["children"]]
+  expect_identical(chr_ply(safety, `[[`, "kind"), c("view", "view", "chapter"))
+  expect_identical(
+    blockr.dock:::node_view_ids(tree[[2L]]),
+    c("ae", "labs", "hep")
+  )
+
+  # A collection with nothing grouped is one flat run of views, which is what
+  # makes the whole thing optional.
+  flat <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    views = list(one = dock_view("a", "One"), two = dock_view("a", "Two"))
+  )
+  expect_identical(
+    chr_ply(view_tree(board_views(flat)), `[[`, "kind"),
+    c("view", "view")
+  )
+})
+
+test_that("a chapter sits where its first view sits", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    views = list(
+      ae   = dock_view("a", "AE", "Safety"),
+      resp = dock_view("a", "Response", "Efficacy"),
+      labs = dock_view("a", "Labs", "Safety")
+    )
+  )
+
+  tree <- view_tree(board_views(brd))
+
+  # Safety opened first, so it comes first, and the straggler joins it rather
+  # than opening a second chapter of the same name. There is no chapter order
+  # stored anywhere to disagree with this.
+  expect_identical(chr_ply(tree, `[[`, "label"), c("Safety", "Efficacy"))
+  expect_identical(blockr.dock:::node_view_ids(tree[[1L]]), c("ae", "labs"))
+})

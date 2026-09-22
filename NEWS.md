@@ -1,5 +1,46 @@
 # blockr.dock (development version)
 
+* A view may now carry a `chapter`: an optional character path, one element
+  per level, that groups it in the nav. It is display metadata and nothing
+  else. Membership, geometry, the active view and the deep-link handle are
+  untouched by it, a chapter is never an object in its own right (only a
+  label several views share), and a board where no view carries one renders
+  exactly the flat nav it rendered before. There is therefore no chapter
+  order to store and keep in sync with the view collection: a chapter sits
+  where its first view sits, a later view carrying the same label joins it
+  rather than opening a second, an ungrouped view stays at the top level in
+  its own position, and a chapter that loses its last view stops being
+  rendered with nothing to clean up. Write one with
+  `dock_view(chapter = )` or `view_chapter<-()`, read it with
+  `view_chapter()` / `view_chapters()`, and get the nested structure a nav
+  renders from `view_tree()`. A board saved before this exists deserialises
+  unchanged, and an ungrouped view still serialises to exactly the JSON it
+  did before, since the field is written only where there is one.
+
+* The views delta gained a `chapter` slot, keyed by view id like `rename`
+  and applied the same way: an attribute write that rebuilds no view, moves
+  no membership and touches no geometry, so the dock module, DOM element and
+  registry key all survive it. An entry carries a path, or `NULL` (an empty
+  string or empty array over the wire) to ungroup.
+
+* The view nav can now be rendered down the left of the page instead of as a
+  navbar dropdown, via `options(blockr.view_nav = "sidebar")`. Both surfaces
+  read the same `view_tree()` and carry the same `blockr-view-nav` class and
+  `view_nav` id, so they are one nav in two places: the input binding, the
+  server's pushes and every gesture are shared, and exactly one is ever
+  rendered. In the sidebar a chapter header is a collapse toggle (a local,
+  per-tab state that is never reported and never persisted) and the navbar
+  keeps a breadcrumb of the active view's path, where it cannot scroll away.
+  This sidebar is not a dock rail: a rail holds panels of the current view
+  and is arranged by dockView, while this sits outside the dock and survives
+  every view switch.
+
+* The nav's reorder push became an arrangement push. It used to carry the
+  view order alone; it now carries the chapter headers interleaved with the
+  views, because the two are one arrangement -- a view that changes chapter
+  also changes position among the headers, and an order alone would leave it
+  under the wrong one.
+
 * A grid that places the same panel more than once is now rejected when validated, rather than surviving to the render cast. A grid says where each panel goes, so two spots for one panel express nothing, and the check spans both halves of one: twice in the tree, twice inside a single rail, or once in each of two rails. The tree/rail overlap that canonicalisation prunes has a principled winner -- the rail claims the panel -- while two such spots have none, so this rejects rather than quietly dropping one. Previously the duplicate reached the render cast and aborted with blockr.core's "Block IDs are required to be unique.", which names blocks rather than the layout and fires far from whatever wrote the grid. Every producer routing through the views delta -- a hand-written grid, a restored board, a `views$grid` write, a `views$add` entry -- inherits the check (#464).
 
 * The `blk()` / `ext()` placement hint gained a `rail` key, so the `add` and `move` panel-op verbs can park a panel on a view's left or right edge. A rail used to be authorable only as a view's birth geometry, through `rail()` inside a `dock_grid()`, which left the user's own drag as the only route into one on a view already on screen. The key names an edge rather than an anchor, so it excludes `near` / `side`: a `side` is a direction relative to a `near` anchor *inside* the splitview while a rail position is an edge of the whole view, and both spell `left` and `right` (#461).

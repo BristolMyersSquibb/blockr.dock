@@ -10,14 +10,36 @@ board_ui.dock_board <- function(
 
   views <- board_views(x)
 
-  # View nav in the navbar -- always present, since boards always carry a
-  # `dock_views` collection (single-page boards have one auto-named "Page"
-  # view). The nav needs only structure (ids, names, active), not geometry.
-  v_nav <- view_nav_ui(id, views)
+  # Where the view nav goes. Boards always carry a `dock_views` collection
+  # (single-page boards have one auto-named "Page" view), so a nav is always
+  # present; the deployment decides whether it hangs off the navbar as a
+  # dropdown or runs down the left of the page. The nav needs only structure
+  # (ids, names, chapters, active), not geometry.
+  nav_mode <- view_nav_mode()
+
+  # Exactly one nav is rendered. With the nav in the sidebar the navbar keeps
+  # a breadcrumb in its place: the sidebar scrolls and collapses, the navbar
+  # does not, so the active view's path is stated where it cannot move.
+  v_nav <- if (identical(nav_mode, "sidebar")) {
+    view_crumb_ui(id, views)
+  } else {
+    view_nav_ui(id, views)
+  }
 
   # One dock output per view, stacked inside the view container; visibility
   # is toggled by CSS based on the active view.
   dock_outputs <- dock_outputs_ui(id, views)
+
+  # The sidebar is board chrome beside the dock, not a dock rail: a rail holds
+  # panels of the current view and is arranged by dockView, while this sits
+  # outside the dock entirely and survives every view switch.
+  if (identical(nav_mode, "sidebar")) {
+    dock_outputs <- div(
+      class = "blockr-view-layout",
+      view_sidebar_ui(id, views),
+      dock_outputs
+    )
+  }
 
   tagList(
     # Ahead of blockr_dock_dep(), so the shared tokens and theme land first
