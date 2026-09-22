@@ -236,6 +236,17 @@ $(function () {
     }
   });
 
+  // Inline icon markup, for the rows this binding builds itself: a view
+  // added mid-session, and a chapter header the arrangement push creates.
+  // The R renderer draws the same icons through bsicons; these are the
+  // client-side copy, in one place rather than one per builder.
+  var caretDownSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-caret-down-fill" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"></path></svg>';
+  var chevronUpSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-up" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"></path></svg>';
+  var chevronDownSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-down" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"></path></svg>';
+  var pencilSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-pencil" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"></path></svg>';
+  var folderSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-folder" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139q.323-.119.684-.12h5.396z"></path></svg>';
+  var xLgSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-x-lg" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"></path></svg>';
+
   var viewBinding = new Shiny.InputBinding();
 
   $.extend(viewBinding, {
@@ -291,6 +302,10 @@ $(function () {
       // the handler only fires where a twisty is rendered.
       $(el).on('click.viewBinding', '.blockr-view-chapter', function (e) {
         var $header = $(this);
+        if ($(e.target).closest('.blockr-view-chapter-actions').length) {
+          e.stopPropagation();
+          return;
+        }
         if (!$header.closest('.blockr-view-nav-sidebar').length) {
           return;
         }
@@ -391,6 +406,82 @@ $(function () {
         });
       });
 
+      // Rename a chapter: swap its label for an inline input, the way the
+      // per-view rename does. What is sent is the chapter's whole path and
+      // the new label for its last level -- the server finds the views to
+      // rewrite, because a chapter is a label they share and the client's
+      // copy of that set is not the authority.
+      $(el).on('click.viewBinding', '.blockr-view-chapter-edit', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        var $header = $(this).closest('.blockr-view-chapter');
+        var $label = $header.find('.blockr-view-chapter-label');
+        var from = $header.attr('data-chapter-key') || '';
+        var current = $label.text();
+
+        if (!$label.length) {
+          return;
+        }
+
+        var $input = $('<input>')
+          .addClass('blockr-view-chapter-rename-input')
+          .val(current)
+          .attr('type', 'text');
+
+        $label.replaceWith($input);
+        $input.focus().select();
+
+        var done = false;
+        var restore = function (text) {
+          if (done) return;
+          done = true;
+          $input.replaceWith(
+            $('<span>').addClass('blockr-view-chapter-label').text(text)
+          );
+        };
+
+        var commit = function () {
+          if (done) return;
+          var to = $input.val().trim();
+          if (!to.length) {
+            showNotification('Chapter name cannot be empty.');
+            restore(current);
+            return;
+          }
+          // Restore to the OLD label, not the new one: the server's
+          // arrangement push is what relabels the header, so the nav never
+          // shows a chapter the board does not hold. A rename that the
+          // server rejects therefore leaves nothing stale behind.
+          restore(current);
+          if (to !== current) {
+            var $nav = $header.closest('.blockr-view-nav');
+            Shiny.setInputValue($nav.attr('id') + '_chapter_rename', {
+              from: from,
+              to: to
+            }, { priority: 'event' });
+          }
+        };
+
+        // The header is a collapse toggle in the sidebar, so keystrokes and
+        // clicks inside the input must not reach it.
+        $input.on('click', function (ev) {
+          ev.stopPropagation();
+        });
+
+        $input.on('keydown', function (ev) {
+          ev.stopPropagation();
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            commit();
+          } else if (ev.key === 'Escape') {
+            restore(current);
+          }
+        });
+
+        $input.on('blur', commit);
+      });
+
       // Move to chapter
       $(el).on('click.viewBinding', '.blockr-view-chapter-move', function (e) {
         e.stopPropagation();
@@ -475,11 +566,6 @@ $(function () {
           );
 
         if (canCrud) {
-          var chevronUpSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-up" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"></path></svg>';
-          var chevronDownSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-down" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"></path></svg>';
-          var pencilSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-pencil" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"></path></svg>';
-          var folderSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-folder" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139q.323-.119.684-.12h5.396z"></path></svg>';
-          var xLgSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-x-lg" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"></path></svg>';
           newItem.append(
             $('<span>')
               .addClass('blockr-view-item-actions')
@@ -590,13 +676,34 @@ $(function () {
               .attr('data-chapter-key', entry.key);
             if (sidebar) {
               $header.append(
-                $('<span>').addClass('blockr-view-chapter-twisty')
+                $('<span>')
+                  .addClass('blockr-view-chapter-twisty')
+                  .html(caretDownSvg)
               );
             }
             $header.append($('<span>').addClass('blockr-view-chapter-label'));
             if (sidebar) {
               $header.append(
                 $('<span>').addClass('blockr-view-chapter-count')
+              );
+            }
+            // Built, not cloned from a sibling header: the FIRST chapter on a
+            // board has no sibling to clone from, and a header without its
+            // pencil cannot be renamed. CRUD is read off the view rows, which
+            // the server already gates -- a nav with no item actions is a
+            // locked or simplified board, and a chapter is no more editable
+            // there than a view is.
+            if ($nav.find('.blockr-view-item-actions').length) {
+              $header.append(
+                $('<span>')
+                  .addClass('blockr-view-chapter-actions')
+                  .append(
+                    $('<span>')
+                      .addClass('blockr-view-action blockr-view-chapter-edit')
+                      .attr('role', 'button')
+                      .attr('title', 'Rename chapter')
+                      .html(pencilSvg)
+                  )
               );
             }
           }

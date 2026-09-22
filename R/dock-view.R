@@ -1021,7 +1021,7 @@ nav_item_ui <- function(nodes, views, active_id = NULL, can_crud = FALSE,
             chapter_header_ui(
               node, depth,
               has_active = active_id %in% node_view_ids(node),
-              sidebar = sidebar
+              sidebar = sidebar, can_crud = can_crud
             )
           )
         }
@@ -1040,7 +1040,7 @@ nav_item_ui <- function(nodes, views, active_id = NULL, can_crud = FALSE,
 }
 
 chapter_header_ui <- function(node, depth, has_active = FALSE,
-                              sidebar = FALSE) {
+                              sidebar = FALSE, can_crud = FALSE) {
 
   ids <- node_view_ids(node)
 
@@ -1063,6 +1063,21 @@ chapter_header_ui <- function(node, depth, has_active = FALSE,
     tags$span(class = "blockr-view-chapter-label", node[["label"]]),
     if (sidebar) {
       tags$span(class = "blockr-view-chapter-count", length(ids))
+    },
+    # Rename. A chapter has no object to rename, so this rewrites the label on
+    # every view under it -- which is exactly why it cannot be reached through
+    # the per-view move menu, where a new label would file one view somewhere
+    # else and leave its siblings behind.
+    if (can_crud) {
+      tags$span(
+        class = "blockr-view-chapter-actions",
+        tags$span(
+          class = "blockr-view-action blockr-view-chapter-edit",
+          role = "button",
+          title = "Rename chapter",
+          bsicons::bs_icon("pencil")
+        )
+      )
     }
   )
 }
@@ -2238,6 +2253,41 @@ is_chapter_write <- function(x) {
   }
 
   is.character(x) && !anyNA(x)
+}
+
+# Every view whose chapter lies at or under `from`, with that prefix's last
+# label rewritten to `to` -- the `views$chapter` payload a chapter rename
+# becomes.
+#
+# A chapter is a label its views share, never an object, so renaming one is a
+# write to each of them. The match is on the whole prefix rather than on the
+# label alone, so a chapter does not drag along an unrelated one that happens
+# to end in the same word under a different parent, and rewriting the prefix
+# rather than the whole path is what carries the nested chapters with it:
+# renaming "Safety" moves "Safety / Liver" to "<new> / Liver" without naming
+# it.
+#
+# Renaming onto a sibling's label merges the two. That is not a clash to
+# reject: two views carrying the same label ARE one chapter, by definition,
+# and the nav has no other way to read them.
+rename_chapter_writes <- function(views, from, to) {
+
+  out <- list()
+
+  for (id in names(views)) {
+
+    path <- view_chapter(views[[id]])
+
+    if (length(path) < length(from) ||
+          !identical(path[seq_along(from)], from)) {
+      next
+    }
+
+    path[[length(from)]] <- to
+    out[[id]] <- as.list(path)
+  }
+
+  out
 }
 
 as_chapter_path <- function(x) {

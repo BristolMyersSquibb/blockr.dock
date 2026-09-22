@@ -85,6 +85,7 @@ board_server_callback <- function(board, update, visibility, ...,
   remove_view_observer(client_views, session, update)
   rename_view_observer(client_views, session, update)
   chapter_view_observer(client_views, session, update)
+  rename_chapter_observer(client_views, session, update)
   reorder_view_observer(client_views, session, update)
 
   # Freeze the inputs of every block whose controls are hidden -- and every
@@ -1385,6 +1386,48 @@ chapter_view_observer <- function(client_views, session, update) {
         )
       )
     )
+  })
+}
+
+#' Observe a chapter being renamed.
+#'
+#' `input$view_nav_chapter_rename` carries the chapter's whole path and the
+#' new label for its last level. A chapter is a label its views share and
+#' never an object, so the rename is a write to each of them: the affected
+#' views are found here, against the board rather than the client, and the
+#' whole set travels as one `views$chapter` delta so the nav re-renders once.
+#'
+#' Nested chapters come along without being named -- the prefix is rewritten,
+#' not the path -- and renaming onto a sibling's label merges the two, which
+#' is the only reading available to a nav that groups by label.
+#'
+#' @param client_views Reactive record of the client-shown views.
+#' @param session Shiny session.
+#' @param update Board update signal.
+#'
+#' @noRd
+rename_chapter_observer <- function(client_views, session, update) {
+  input <- session$input
+
+  observeEvent(input$view_nav_chapter_rename, {
+    req(views_can_crud(client_views()))
+
+    move <- input$view_nav_chapter_rename
+
+    from <- as_chapter_path(strsplit(move$from %||% "", " / ", fixed = TRUE))
+    to <- trimws(move$to %||% "")
+
+    if (is.null(from) || !nzchar(to) || identical(from[[length(from)]], to)) {
+      return()
+    }
+
+    writes <- rename_chapter_writes(client_views(), from, to)
+
+    if (!length(writes)) {
+      return()
+    }
+
+    update(list(views = list(chapter = writes)))
   })
 }
 

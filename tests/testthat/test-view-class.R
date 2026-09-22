@@ -572,3 +572,65 @@ test_that("a chapter sits where its first view sits", {
   expect_identical(chr_ply(tree, `[[`, "label"), c("Safety", "Efficacy"))
   expect_identical(blockr.dock:::node_view_ids(tree[[1L]]), c("ae", "labs"))
 })
+
+test_that("renaming a chapter rewrites every view under it", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(
+      ae    = dock_view("a", "AE overview", "Safety"),
+      hep   = dock_view("b", "Hepatic", c("Safety", "Liver")),
+      renal = dock_view("a", "Renal", c("Safety", "Liver")),
+      resp  = dock_view("b", "Response", "Efficacy"),
+      appx  = dock_view("a", "Appendix")
+    )
+  )
+
+  views <- board_views(brd)
+
+  writes <- blockr.dock:::rename_chapter_writes(views, "Safety", "Harms")
+
+  # Every view under the chapter, and only those: a chapter is a label they
+  # share, so renaming it is a write to each of them.
+  expect_setequal(names(writes), c("ae", "hep", "renal"))
+
+  # A nested chapter comes along without being named -- the matched prefix is
+  # rewritten, not the whole path.
+  expect_identical(writes[["ae"]], list("Harms"))
+  expect_identical(writes[["hep"]], list("Harms", "Liver"))
+
+  renamed <- apply_views_chapter(writes, brd)
+
+  expect_identical(
+    view_chapters(board_views(renamed))[["hep"]], c("Harms", "Liver")
+  )
+  expect_identical(
+    view_chapters(board_views(renamed))[["resp"]], "Efficacy"
+  )
+  expect_null(view_chapters(board_views(renamed))[["appx"]])
+
+  # Renaming the nested one touches only its own views, and leaves the parent
+  # alone.
+  inner <- blockr.dock:::rename_chapter_writes(
+    views, c("Safety", "Liver"), "Hepatobiliary"
+  )
+  expect_setequal(names(inner), c("hep", "renal"))
+  expect_identical(inner[["hep"]], list("Safety", "Hepatobiliary"))
+
+  # The match is on the whole prefix, so a chapter never drags along one that
+  # merely ends in the same label under a different parent.
+  expect_length(
+    blockr.dock:::rename_chapter_writes(views, "Liver", "Hepatobiliary"), 0L
+  )
+
+  # Renaming onto a sibling's label merges the two. Two views carrying the
+  # same label ARE one chapter -- the nav has no other reading -- so this is
+  # an outcome rather than a clash to reject.
+  merged <- apply_views_chapter(
+    blockr.dock:::rename_chapter_writes(views, "Efficacy", "Safety"), brd
+  )
+  expect_identical(
+    blockr.dock:::node_view_ids(view_tree(board_views(merged))[[1L]]),
+    c("ae", "hep", "renal", "resp")
+  )
+})

@@ -1814,6 +1814,25 @@ test_that("a view is filed under a chapter through the nav", {
   expect_identical(chapters(), "Safety")
   expect_identical(view_chapter_attr(second), "Safety")
 
+  # Rename the chapter through the header's pencil. It has no object to
+  # rename, so this rewrites the label on both views at once, and the nav
+  # re-renders from the settled board.
+  app$run_js(
+    paste0(
+      "var h = document.querySelector('#my_board-view_nav ",
+      ".blockr-view-chapter[data-chapter-key=\"Safety\"]');",
+      "h.querySelector('.blockr-view-chapter-edit').click();",
+      "var inp = h.querySelector('.blockr-view-chapter-rename-input');",
+      "inp.value = 'Harms';",
+      "$(inp).trigger($.Event('keydown', {key: 'Enter'}));"
+    )
+  )
+  app$wait_for_idle()
+
+  expect_identical(chapters(), "Harms")
+  expect_identical(view_chapter_attr(first), "Harms")
+  expect_identical(view_chapter_attr(second), "Harms")
+
   # Ungrouping is the only way a chapter is ever removed: file its last view
   # out and the header stops being rendered, with nothing to clean up.
   for (id in c(first, second)) {

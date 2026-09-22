@@ -706,6 +706,43 @@
   color: var(--blockr-color-text-primary);
 }
 
+/* A chapter header's own actions, revealed on hover like a view item's. The
+   header is a collapse toggle in the sidebar, so these sit at its right edge
+   where a click on them is unambiguous. */
+.blockr-view-chapter-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 6px;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.blockr-view-chapter:hover .blockr-view-chapter-actions {
+  opacity: 1;
+}
+
+/* The count sits at `margin-left: auto`, so without this the actions hang off
+   the far right and the count floats in the middle of the row. */
+.blockr-view-nav-sidebar .blockr-view-chapter-count {
+  margin-left: auto;
+}
+
+.blockr-view-chapter-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 1px 5px;
+  border: 1px solid var(--blockr-color-primary);
+  border-radius: 4px;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-normal);
+  letter-spacing: normal;
+  text-transform: none;
+  background-color: var(--blockr-color-bg-input);
+  color: var(--blockr-color-text-primary);
+  outline: none;
+}
+
 /* The move-to-chapter menu. Anchored to the item it will move, so the pick
    is made where the thing being moved is, and positioned rather than flowed
    so it never changes the height of the list behind it. */

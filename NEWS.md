@@ -28,6 +28,16 @@
   name is a free-form label, and a slash someone means literally must not
   restructure the nav.
 
+* A chapter can be renamed in place: a pencil on its header swaps the label
+  for an inline input. A chapter has no object to rename, so this is a write
+  to every view carrying it, found on the server and sent as one delta. The
+  match is on the whole path rather than on the label, so a chapter never
+  drags along an unrelated one ending in the same word under a different
+  parent, and rewriting the matched prefix is what carries the nested
+  chapters along: renaming "Safety" moves "Safety / Liver" to "<new> / Liver"
+  without naming it. Renaming onto a sibling's label merges the two, which is
+  the only reading available to a nav that groups by label.
+
 * The views delta gained a `chapter` slot, keyed by view id like `rename`
   and applied the same way: an attribute write that rebuilds no view, moves
   no membership and touches no geometry, so the dock module, DOM element and
