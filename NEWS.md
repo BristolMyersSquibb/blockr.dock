@@ -17,6 +17,17 @@
   unchanged, and an ungrouped view still serialises to exactly the JSON it
   did before, since the field is written only where there is one.
 
+* A view can now be filed under a chapter from the running app: a folder
+  action beside the rename pencil opens a menu of the chapters already on the
+  board, plus "No chapter" to ungroup and "New chapter" for one that does not
+  exist yet (typed with `" / "` between levels for a nested one). The menu is
+  built from the nav's own items, so listing the chapters needs no server
+  roundtrip, and the pick is only reported -- the arrangement push that comes
+  back is what moves the row, so the nav never shows a grouping the board does
+  not hold. It is deliberately not a slash typed into the rename box: a view's
+  name is a free-form label, and a slash someone means literally must not
+  restructure the nav.
+
 * The views delta gained a `chapter` slot, keyed by view id like `rename`
   and applied the same way: an attribute write that rebuilds no view, moves
   no membership and touches no geometry, so the dock module, DOM element and

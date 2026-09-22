@@ -84,6 +84,7 @@ board_server_callback <- function(board, update, visibility, ...,
   add_view_observer(client_views, session, board, update)
   remove_view_observer(client_views, session, update)
   rename_view_observer(client_views, session, update)
+  chapter_view_observer(client_views, session, update)
   reorder_view_observer(client_views, session, update)
 
   # Freeze the inputs of every block whose controls are hidden -- and every
@@ -1338,6 +1339,55 @@ reorder_by_move <- function(order, id, dir) {
 # `names(client_views())` and travels the update lifecycle as a `views$order`
 # delta; reconcile then pushes the settled order back to the nav. A boundary
 # nudge yields the same order and emits nothing.
+#' Observe a view being filed under a chapter.
+#'
+#' Like a rename, this is a pure attribute write: `input$view_nav_chapter`
+#' carries the stable view id and the chapter path to file it under, or an
+#' empty string to ungroup. It travels the update lifecycle as a `chapter`
+#' delta, and the reconcile pass restates the nav's arrangement from the
+#' settled board. No view is rebuilt and no membership or geometry moves, so
+#' the dock module, DOM element and registry key are untouched.
+#'
+#' The path arrives as one string with `" / "` between levels, which is how
+#' the nav writes it onto each item and how the menu lists it back. The
+#' separator is only a transport convention here, not storage: the board holds
+#' a character vector, and `as_chapter_path()` is what turns one into the
+#' other. This is also why the chapter is its own field rather than a slash
+#' typed into the rename box -- a view's name is a free-form label, and a
+#' slash someone means literally must not restructure the nav.
+#'
+#' @param client_views Reactive record of the client-shown views.
+#' @param session Shiny session.
+#' @param update Board update signal.
+#'
+#' @noRd
+chapter_view_observer <- function(client_views, session, update) {
+  input <- session$input
+
+  observeEvent(input$view_nav_chapter, {
+    req(views_can_crud(client_views()))
+
+    move <- input$view_nav_chapter
+
+    if (!move$id %in% names(client_views())) {
+      return()
+    }
+
+    path <- as_chapter_path(strsplit(move$to %||% "", " / ", fixed = TRUE))
+
+    # `list()` rather than `list(NULL)`: assigning NULL into a list drops the
+    # element, and an empty `chapter` slot would make the delta a no-op
+    # instead of an ungroup. The delta reads an empty string as a clear.
+    update(
+      list(
+        views = list(
+          chapter = set_names(list(path %||% ""), move$id)
+        )
+      )
+    )
+  })
+}
+
 reorder_view_observer <- function(client_views, session, update) {
   input <- session$input
 

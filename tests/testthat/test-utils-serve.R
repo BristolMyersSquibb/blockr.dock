@@ -1719,3 +1719,120 @@ test_that("a rail collapse round-trips with no following gesture (#436)", {
   toggle_rail("false")
   expect_false(stored_collapsed())
 })
+
+test_that("a view is filed under a chapter through the nav", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-chapter",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_view_nav(app, 2)
+
+  ids <- read_view_nav(app)$id
+  first <- ids[[1L]]
+  second <- ids[[2L]]
+
+  item_sel <- function(id) {
+    sprintf("#my_board-view_nav .blockr-view-item[data-view-id=\"%s\"]", id)
+  }
+
+  # A JS array arrives as a list, so flatten it: what is asserted is the
+  # headers the nav shows, in order.
+  chapters <- function() {
+    as.character(
+      unlist(
+        app$get_js(
+          paste0(
+            "Array.from(document.querySelectorAll('#my_board-view_nav ",
+            ".blockr-view-chapter-label')).map(e => e.innerText)"
+          )
+        )
+      )
+    )
+  }
+
+  view_chapter_attr <- function(id) {
+    app$get_js(
+      sprintf(
+        "document.querySelector('%s').getAttribute('data-view-chapter')",
+        item_sel(id)
+      )
+    )
+  }
+
+  # Nothing is grouped on load, so the nav is the flat list it has always
+  # been: no headers, and every item ungrouped.
+  expect_length(chapters(), 0L)
+  expect_identical(view_chapter_attr(first), "")
+
+  # File the first view under a new chapter. The folder action opens a menu
+  # whose "New chapter" option swaps itself for an inline input; Enter sends
+  # `view_nav_chapter` and the server's arrangement push is what puts the
+  # header in -- nothing is grouped optimistically on the client.
+  app$run_js(
+    paste0(
+      "var it = document.querySelector('", item_sel(first), "');",
+      "it.querySelector('.blockr-view-chapter-move').click();",
+      "it.querySelector('.blockr-view-chapter-new').click();",
+      "var inp = it.querySelector('.blockr-view-chapter-input');",
+      "inp.value = 'Safety';",
+      "$(inp).trigger($.Event('keydown', {key: 'Enter'}));"
+    )
+  )
+  app$wait_for_idle()
+
+  expect_identical(chapters(), "Safety")
+  expect_identical(view_chapter_attr(first), "Safety")
+
+  # The second view is untouched, and a chapter is only a label its views
+  # share -- so it stays at the top level until it is filed too.
+  expect_identical(view_chapter_attr(second), "")
+
+  nav <- read_view_nav(app)
+  expect_identical(nrow(nav), 2L)
+  expect_setequal(nav$id, c(first, second))
+
+  # An existing chapter is offered as a pick, so the second view joins the
+  # first rather than opening a chapter of the same name.
+  app$run_js(
+    paste0(
+      "var it = document.querySelector('", item_sel(second), "');",
+      "it.querySelector('.blockr-view-chapter-move').click();",
+      "it.querySelector('.blockr-view-chapter-option[data-chapter=\"Safety\"]')",
+      "  .click();"
+    )
+  )
+  app$wait_for_idle()
+
+  expect_identical(chapters(), "Safety")
+  expect_identical(view_chapter_attr(second), "Safety")
+
+  # Ungrouping is the only way a chapter is ever removed: file its last view
+  # out and the header stops being rendered, with nothing to clean up.
+  for (id in c(first, second)) {
+    app$run_js(
+      paste0(
+        "var it = document.querySelector('", item_sel(id), "');",
+        "it.querySelector('.blockr-view-chapter-move').click();",
+        "it.querySelector('.blockr-view-chapter-none').click();"
+      )
+    )
+    app$wait_for_idle()
+  }
+
+  expect_length(chapters(), 0L)
+  expect_identical(view_chapter_attr(first), "")
+
+  # The views themselves survived all of it: filing is a label write, so no
+  # view was rebuilt and no dock moved.
+  nav <- read_view_nav(app)
+  expect_identical(nrow(nav), 2L)
+  expect_setequal(nav$id, c(first, second))
+})

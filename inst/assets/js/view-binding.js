@@ -109,6 +109,133 @@ $(function () {
     });
   };
 
+  // The chapters currently on the board, in board order, read off the items
+  // rather than off the headers: every item carries its full path, while the
+  // dropdown heads only the top level, so the items are the one place both
+  // surfaces agree on the whole set. No server roundtrip to list them.
+  var chapterOptions = function ($nav) {
+    var seen = {};
+    var out = [];
+    $nav.find('.blockr-view-item').each(function () {
+      var path = itemChapter($(this));
+      if (path && !seen[path]) {
+        seen[path] = true;
+        out.push(path);
+      }
+    });
+    return out;
+  };
+
+  var closeChapterMenu = function () {
+    $('.blockr-view-chapter-menu').remove();
+  };
+
+  var sendChapter = function ($item, to) {
+    var $nav = $item.closest('.blockr-view-nav');
+    Shiny.setInputValue($nav.attr('id') + '_chapter', {
+      id: $item.attr('data-view-id'),
+      to: to
+    }, { priority: 'event' });
+  };
+
+  // The menu of places a view can go: the chapters that exist, a way out of
+  // all of them, and a way to name a new one. Nothing is applied on the
+  // client -- the pick is reported and the server's arrangement push is what
+  // moves the row, so the nav never shows a grouping the board does not hold.
+  var openChapterMenu = function ($item) {
+    closeChapterMenu();
+
+    var $nav = $item.closest('.blockr-view-nav');
+    var current = itemChapter($item);
+    var $menu = $('<div>').addClass('blockr-view-chapter-menu');
+
+    var option = function (label, value, extraClass) {
+      return $('<div>')
+        .addClass('blockr-view-chapter-option ' + (extraClass || ''))
+        .toggleClass('active', value === current)
+        .attr('data-chapter', value)
+        .text(label);
+    };
+
+    chapterOptions($nav).forEach(function (path) {
+      $menu.append(option(path, path));
+    });
+
+    if (chapterOptions($nav).length) {
+      $menu.append($('<hr>').addClass('blockr-view-chapter-menu-divider'));
+    }
+
+    $menu.append(option('No chapter', '', 'blockr-view-chapter-none'));
+    $menu.append(
+      $('<div>')
+        .addClass('blockr-view-chapter-option blockr-view-chapter-new')
+        .text('New chapter\u2026')
+    );
+
+    $item.append($menu);
+
+    $menu.on('click', '.blockr-view-chapter-option', function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+
+      var $opt = $(this);
+
+      // "New chapter" swaps the menu for an input rather than opening a
+      // second surface. A path is typed with " / " between levels, the same
+      // separator the nav prints, so a nested chapter needs no other gesture.
+      if ($opt.hasClass('blockr-view-chapter-new')) {
+        var $input = $('<input>')
+          .addClass('blockr-view-chapter-input')
+          .attr('type', 'text')
+          .attr('placeholder', 'Chapter, or Parent / Child')
+          .val(current);
+
+        $menu.empty().append($input);
+        $input.focus().select();
+
+        $input.on('keydown', function (ev) {
+          ev.stopPropagation();
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            var val = $input.val().trim();
+            closeChapterMenu();
+            if (val !== current) {
+              sendChapter($item, val);
+            }
+          } else if (ev.key === 'Escape') {
+            closeChapterMenu();
+          }
+        });
+
+        $input.on('click', function (ev) {
+          ev.stopPropagation();
+        });
+
+        $input.on('blur', closeChapterMenu);
+        return;
+      }
+
+      var to = $opt.attr('data-chapter');
+      closeChapterMenu();
+      if (to !== current) {
+        sendChapter($item, to);
+      }
+    });
+
+    $menu.on('click', function (e) {
+      e.stopPropagation();
+    });
+  };
+
+  // Anywhere else closes it. Bound once on the document because the menu
+  // lives inside the nav and a click on the nav's own rows must dismiss it
+  // before that row's handler runs.
+  $(document).on('click.viewChapterMenu', function (e) {
+    if (!$(e.target).closest('.blockr-view-chapter-menu').length) {
+      closeChapterMenu();
+    }
+  });
+
   var viewBinding = new Shiny.InputBinding();
 
   $.extend(viewBinding, {
@@ -264,6 +391,23 @@ $(function () {
         });
       });
 
+      // Move to chapter
+      $(el).on('click.viewBinding', '.blockr-view-chapter-move', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        var $item = $(this).closest('.blockr-view-item');
+
+        // A second click on the same action closes it, so the gesture is its
+        // own way out.
+        if ($item.find('.blockr-view-chapter-menu').length) {
+          closeChapterMenu();
+          return;
+        }
+
+        openChapterMenu($item);
+      });
+
       // Remove click
       $(el).on('click.viewBinding', '.blockr-view-remove', function (e) {
         e.stopPropagation();
@@ -334,6 +478,7 @@ $(function () {
           var chevronUpSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-up" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"></path></svg>';
           var chevronDownSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-down" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"></path></svg>';
           var pencilSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-pencil" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"></path></svg>';
+          var folderSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-folder" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139q.323-.119.684-.12h5.396z"></path></svg>';
           var xLgSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-x-lg" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"></path></svg>';
           newItem.append(
             $('<span>')
@@ -354,6 +499,11 @@ $(function () {
                   .attr('role', 'button')
                   .attr('title', 'Rename')
                   .html(pencilSvg),
+                $('<span>')
+                  .addClass('blockr-view-action blockr-view-chapter-move')
+                  .attr('role', 'button')
+                  .attr('title', 'Move to chapter')
+                  .html(folderSvg),
                 $('<span>')
                   .addClass('blockr-view-action blockr-view-remove')
                   .attr('role', 'button')

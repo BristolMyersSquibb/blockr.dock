@@ -1109,6 +1109,15 @@ view_item_ui <- function(view_id, view_name, chapter = NULL, active_id = NULL,
         title = "Rename",
         bsicons::bs_icon("pencil")
       ),
+      # Filing a view under a chapter is its own action rather than a slash
+      # typed into the rename box: a view's name is a free-form label, and a
+      # slash someone means literally must not restructure the nav.
+      tags$span(
+        class = "blockr-view-action blockr-view-chapter-move",
+        role = "button",
+        title = "Move to chapter",
+        bsicons::bs_icon("folder")
+      ),
       tags$span(
         class = "blockr-view-action blockr-view-remove",
         role = "button",
