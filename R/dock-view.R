@@ -1137,6 +1137,15 @@ view_item_ui <- function(view_id, view_name, chapter = NULL, active_id = NULL,
         title = "Move to chapter",
         bsicons::bs_icon("folder")
       ),
+      # Duplicating copies the arrangement and names the same panels; it
+      # copies no block. Splitting one workflow across views is this twice
+      # over, then closing the tabs each copy should not show.
+      tags$span(
+        class = "blockr-view-action blockr-view-duplicate",
+        role = "button",
+        title = "Duplicate",
+        bsicons::bs_icon("copy")
+      ),
       tags$span(
         class = "blockr-view-action blockr-view-remove",
         role = "button",
@@ -1205,6 +1214,16 @@ normalize_views_delta <- function(views, board) {
     # deterministically in favour of the freshly added view.
     if (is_string(views$active) && views$active %in% add_keys) {
       views$active <- names(views$add)[match(views$active, add_keys)]
+    }
+
+    # And the same for `order`, so an add can say where the new view goes.
+    # Without it a delta cannot place one: `order` must be a total
+    # permutation of the post-state ids, and the id does not exist until the
+    # line above mints it, so the only order a caller could write is one that
+    # leaves the view wherever the add happened to append it -- the end.
+    if (length(views$order)) {
+      hit <- match(views$order, add_keys)
+      views$order[!is.na(hit)] <- names(views$add)[hit[!is.na(hit)]]
     }
   }
 

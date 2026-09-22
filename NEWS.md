@@ -38,6 +38,30 @@
   without naming it. Renaming onto a sibling's label merges the two, which is
   the only reading available to a nav that groups by label.
 
+* A view can be duplicated from the nav. A duplicate is a pure layout
+  operation: blocks are shared across views through the board's DAG and
+  membership is a layout concern only, so the copy names the same panels
+  rather than copying anything -- no block cloned, no link rewired, no id
+  minted but the view's own. It comes up arranged like its source, rails
+  included, keeps its chapter, and lands directly after the view it came
+  from. This is the gesture behind splitting one workflow across views:
+  duplicate, then close the tabs each copy should not show, which removes
+  the panel from that view alone and never from the board, so the blocks
+  keep feeding each other across the split.
+
+* The views delta's `order` slot now resolves an `add` key to the id minted
+  for it, the way `active` already did. Without that an add could not say
+  where its view goes: `order` must be a total permutation of the post-state
+  ids, and the id does not exist until augment mints it, so the only order a
+  caller could write was the one that left the view where the add appended
+  it.
+
+* A view added to, or removed from, a board that has chapters now restates
+  the nav's arrangement. Both leave the client's view set in step with the
+  board's, so neither read as a reorder, and an added view carrying a chapter
+  was appended at the nav's top level and never moved under its header. A
+  flat nav's message traffic is unchanged.
+
 * The views delta gained a `chapter` slot, keyed by view id like `rename`
   and applied the same way: an attribute write that rebuilds no view, moves
   no membership and touches no geometry, so the dock module, DOM element and

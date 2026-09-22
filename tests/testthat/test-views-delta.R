@@ -1417,3 +1417,110 @@ test_that("reconcile_views pushes an arrangement when only a chapter moves", {
     view_chapter(isolate(client_views())[["B"]]), "Safety"
   )
 })
+
+test_that("an add can say where the new view goes", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a", B = "b")
+  )
+
+  # The key stands in for the id: it is minted during augment, so a delta
+  # cannot name the new view in `order` yet. Without this resolution an add
+  # can only ever land where it was appended, at the end.
+  upd <- augment_board_update(
+    list(
+      views = list(
+        add = list(Middle = dock_view("block_panel-a")),
+        order = c("A", "Middle", "B"),
+        active = "Middle"
+      )
+    ),
+    brd
+  )
+
+  new_id <- setdiff(names(upd$views$add), names(board_views(brd)))
+
+  expect_length(new_id, 1L)
+  expect_identical(upd$views$order, c("A", new_id, "B"))
+  expect_identical(upd$views$active, new_id)
+
+  out <- apply_board_update(brd, upd)
+
+  expect_identical(names(board_views(out)), c("A", new_id, "B"))
+  expect_identical(view_names(board_views(out))[[new_id]], "Middle")
+
+  # An order naming only existing ids is untouched, so nothing about the
+  # ordinary reorder path changes.
+  plain <- augment_board_update(
+    list(views = list(order = c("B", "A"))), brd
+  )
+  expect_identical(plain$views$order, c("B", "A"))
+})
+
+test_that("a duplicate names the same panels and keeps its chapter", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(labs = dock_view(c("a", "b"), "Lab overview", "Safety"))
+  )
+
+  views <- board_views(brd)
+  src <- "labs"
+  view <- views[[src]]
+
+  # What the duplicate observer builds: the source's resolved grid, carrying
+  # its chapter, added under a free name.
+  grid <- blockr.dock:::view_grid(view, board_grids(brd)[[src]])
+  attr(grid, "view_chapter") <- view_chapter(view)
+  nm <- blockr.dock:::copy_view_name(
+    blockr.dock:::view_label(view, src), view_names(views)
+  )
+
+  out <- apply_board_update(
+    brd,
+    augment_board_update(
+      list(views = list(add = set_names(list(grid), nm), active = nm)), brd
+    )
+  )
+
+  copy_id <- setdiff(names(board_views(out)), names(views))
+
+  expect_length(copy_id, 1L)
+  expect_identical(view_names(board_views(out))[[copy_id]], "Lab overview (copy)")
+
+  # The same panels, named again -- not copied. Blocks are shared through the
+  # DAG and membership is a layout concern, so duplicating a view clones
+  # nothing and rewires nothing.
+  expect_identical(
+    view_members(board_views(out)[[copy_id]]),
+    view_members(view)
+  )
+  expect_identical(board_blocks(out), board_blocks(brd))
+  expect_identical(board_links(out), board_links(brd))
+
+  # A copy stays in its source's chapter: it is the same page twice over.
+  expect_identical(view_chapter(board_views(out)[[copy_id]]), "Safety")
+
+  # And it comes up arranged, not flat.
+  expect_false(is.null(board_grids(out)[[copy_id]]))
+
+  # The chapter rides on the grid entry only as far as the add; it must not
+  # be left behind on the stored geometry.
+  expect_null(view_chapter(board_grids(out)[[copy_id]]))
+})
+
+test_that("a copy's name counts rather than nesting", {
+
+  cvn <- blockr.dock:::copy_view_name
+
+  expect_identical(cvn("Labs", character()), "Labs (copy)")
+  expect_identical(cvn("Labs", "Labs (copy)"), "Labs (copy 2)")
+  expect_identical(
+    cvn("Labs", c("Labs (copy)", "Labs (copy 2)")), "Labs (copy 3)"
+  )
+
+  # Duplicating a duplicate does not accumulate "(copy) (copy)".
+  expect_identical(cvn("Labs (copy)", "Labs (copy)"), "Labs (copy 2)")
+  expect_identical(cvn("Labs (copy 2)", "Labs (copy)"), "Labs (copy 2)")
+})

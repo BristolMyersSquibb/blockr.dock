@@ -1720,6 +1720,77 @@ test_that("a rail collapse round-trips with no following gesture (#436)", {
   expect_false(stored_collapsed())
 })
 
+test_that("a view is duplicated through the nav", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-duplicate",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_view_nav(app, 2)
+
+  before <- read_view_nav(app)
+  first <- before$id[[1L]]
+
+  app$run_js(
+    sprintf(
+      paste0(
+        "document.querySelector('#my_board-view_nav ",
+        ".blockr-view-item[data-view-id=\"%s\"] .blockr-view-duplicate')",
+        ".click()"
+      ),
+      first
+    )
+  )
+  app$wait_for_idle()
+
+  nav <- read_view_nav(app)
+  copy_id <- setdiff(nav$id, before$id)
+
+  expect_length(copy_id, 1L)
+  expect_identical(nav$label[nav$id == copy_id], "First (copy)")
+
+  # Right after its source, not at the end: a duplicate is made to be worked
+  # on beside the thing it came from.
+  expect_identical(nav$id, c(first, copy_id, before$id[[2L]]))
+
+  # And it is the view you are now on.
+  expect_identical(nav$id[nav$active], copy_id)
+
+  # Its dock is built and shows the same panel the source does -- named
+  # again, not copied: the board still holds exactly the blocks it did.
+  docks <- read_view_docks(app)
+  expect_true(copy_id %in% docks$id)
+  expect_identical(docks$id[docks$active], copy_id)
+
+  expect_identical(
+    app$get_js(
+      sprintf(
+        paste0(
+          "document.querySelectorAll('#my_board-view_handle-%s ",
+          ".dv-default-tab').length"
+        ),
+        copy_id
+      )
+    ),
+    app$get_js(
+      sprintf(
+        paste0(
+          "document.querySelectorAll('#my_board-view_handle-%s ",
+          ".dv-default-tab').length"
+        ),
+        first
+      )
+    )
+  )
+})
+
 test_that("a view is filed under a chapter through the nav", {
 
   skip_on_cran()

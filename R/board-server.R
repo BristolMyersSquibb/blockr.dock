@@ -82,6 +82,7 @@ board_server_callback <- function(board, update, visibility, ...,
     session, update, client_active, board, docks, active_dock
   )
   add_view_observer(client_views, session, board, update)
+  duplicate_view_observer(client_views, session, board, update)
   remove_view_observer(client_views, session, update)
   rename_view_observer(client_views, session, update)
   chapter_view_observer(client_views, session, update)
@@ -691,7 +692,10 @@ reconcile_views <- function(board, update, docks, active_dock,
   # loop is empty then; keying it on `docks` instead re-adds each as a
   # blank-labelled duplicate (#189). Label from the container `view_names()`,
   # which resolves whether the name sits on the layout or is derived from id.
-  for (v in setdiff(want, shown)) {
+  added <- setdiff(want, shown)
+  removed <- setdiff(shown, want)
+
+  for (v in added) {
     state[[v]] <- bare_view(views[[v]])
     session$sendInputMessage(
       "view_nav",
@@ -705,7 +709,7 @@ reconcile_views <- function(board, update, docks, active_dock,
     )
   }
 
-  for (v in setdiff(shown, want)) {
+  for (v in removed) {
     session$sendInputMessage("view_nav", list(remove = v))
     state[[v]] <- NULL
   }
@@ -742,7 +746,16 @@ reconcile_views <- function(board, update, docks, active_dock,
   # chapter headers and the view order together because they are one
   # arrangement: a view that changes chapter also changes position among the
   # headers, and pushing the order alone would leave it under the wrong one.
-  if (!identical(names(state), want) || regrouped) {
+  # An add or a remove leaves `names(state)` equal to `want` -- both loops
+  # above keep the two in step -- so neither shows up as a reorder. That is
+  # fine for a flat nav, where the client's own append and remove are the
+  # whole change, and wrong the moment chapters exist: an added view carrying
+  # one is appended at the top level and never moved under its header, and a
+  # chapter that just lost its last view keeps rendering. So a changed id set
+  # restates the arrangement too, but only on a board that has chapters, which
+  # leaves a flat nav's message traffic exactly as it was.
+  if (!identical(names(state), want) || regrouped ||
+        (length(c(added, removed)) && has_chapters(views))) {
     state <- reorder_dock_views(state, want)
     session$sendInputMessage(
       "view_nav",
@@ -1201,6 +1214,108 @@ add_view_observer <- function(client_views, session, board, update) {
       )
     )
   })
+}
+
+#' Observe a view being duplicated.
+#'
+#' A duplicate is a pure layout operation. Blocks are shared across views
+#' through the board's DAG and view membership is a layout concern only, so
+#' the copy names the same panels rather than copying anything: no block is
+#' cloned, no link rewired, no id minted but the view's own. The pipeline is
+#' untouched, and a panel in two views renders in whichever is active,
+#' because only one view is on screen at a time and a card's element moves
+#' with it.
+#'
+#' The add carries a `dock_grid` rather than a `dock_view` so the copy comes
+#' up arranged like its source instead of flat: that path already takes the
+#' grid's panel ids as membership and seeds `board_grids()` with it. Reading
+#' the grid through `view_grid()` is what makes the two agree -- it resolves
+#' un-landed members and prunes ghosts, and its panel ids span the tree and
+#' the rails, so a railed panel is copied rather than quietly dropped.
+#'
+#' This is the gesture behind splitting one workflow across views: duplicate,
+#' then close the tabs each copy should not show. A tab close removes the
+#' panel from that view alone, never from the board, so the blocks keep
+#' feeding each other across the split.
+#'
+#' @param client_views Reactive record of the client-shown views.
+#' @param session Shiny session.
+#' @param board Board reactive values.
+#' @param update Board update signal.
+#'
+#' @noRd
+duplicate_view_observer <- function(client_views, session, board, update) {
+  input <- session$input
+
+  observeEvent(input$view_nav_duplicate, {
+    req(views_can_crud(client_views()))
+
+    src <- input$view_nav_duplicate
+    state <- client_views()
+
+    if (!src %in% names(state)) {
+      return()
+    }
+
+    brd <- board$board
+    views <- board_views(brd)
+
+    if (!src %in% names(views)) {
+      return()
+    }
+
+    view <- views[[src]]
+    grid <- view_grid(view, board_grids(brd)[[src]])
+
+    # The add key is the display name, so it has to be free: it is what the
+    # minting pass turns into the new view's name, and two views with the
+    # same name are indistinguishable in the nav.
+    new_name <- copy_view_name(view_label(view, src), view_names(views))
+
+    # A copy stays in its source's chapter. It is the same page twice over;
+    # filing it somewhere else is a separate decision, and the move menu is
+    # where that decision is made.
+    chapter <- view_chapter(view)
+
+    if (not_null(chapter)) {
+      attr(grid, "view_chapter") <- chapter
+    }
+
+    # Placed right after its source rather than at the end of the list. A
+    # duplicate is made to be worked on next to the thing it came from --
+    # splitting one workflow across views is this gesture twice, then closing
+    # tabs -- and hunting for the copy at the bottom of a ten-view board is
+    # not that. The key stands in for the id here the way it does in
+    # `active`: the id is minted in augment, so the delta cannot name it yet.
+    order <- append(names(views), new_name, after = match(src, names(views)))
+
+    update(
+      list(
+        views = list(
+          add = set_names(list(grid), new_name),
+          order = order,
+          active = new_name
+        )
+      )
+    )
+  })
+}
+
+# A free name for a copy: "X (copy)", then "X (copy 2)" and on. The suffix
+# counts rather than nesting, so duplicating a duplicate does not accumulate
+# "(copy) (copy)".
+copy_view_name <- function(name, existing) {
+
+  base <- sub(" \\(copy( [0-9]+)?\\)$", "", name)
+  candidate <- paste0(base, " (copy)")
+  n <- 1L
+
+  while (candidate %in% existing) {
+    n <- n + 1L
+    candidate <- sprintf("%s (copy %d)", base, n)
+  }
+
+  candidate
 }
 
 #' Observe view removal requests.
