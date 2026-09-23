@@ -562,7 +562,7 @@
   height: 48px;
   padding: 0 16px;
   background-color: var(--blockr-color-bg-surface, #ffffff);
-  border-bottom: 1px solid var(--blockr-grey-300);
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 
 .blockr-navbar-left {
@@ -1106,3 +1106,54 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   border-top-left-radius: var(--dv-border-radius) !important;
 }
 
+
+/* ============================================
+   Dockview reads the design tokens
+   ============================================
+   dockview paints the shell (the canvas between panels, the tab strips, the
+   tabs) from its own `.dockview-theme-light-spaced` variables, so without
+   this block the frame stays light under the dark scheme and ignores a
+   theme. Each variable here points at a meaning token.
+
+   `.dv-shell.dv-shell` is deliberate: dockview's stylesheet is injected by
+   its JS after the page's <link>s, so at equal specificity it wins on source
+   order. The repeated class buys one point. (A `className` on the
+   DockviewTheme, cynkra/dockViewR#102, would make this unnecessary.)
+
+   Tabs follow the design system: the front tab of the active group takes
+   the accent tint, the front tab of every other group the grey
+   `bg-selected-inactive`, background tabs are text on the strip. */
+.dv-shell.dv-shell {
+  --dv-group-view-background-color: var(--blockr-color-bg-page);
+  --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface);
+
+  --dv-activegroup-visiblepanel-tab-background-color: var(--blockr-color-bg-selected);
+  --dv-activegroup-visiblepanel-tab-color: var(--blockr-color-text-accent);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--blockr-color-bg-selected-inactive);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--blockr-color-text-default);
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-activegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted);
+
+  --dv-separator-border: transparent;
+  --dv-sash-color: transparent;
+  --dv-tab-divider-color: transparent;
+  --dv-active-sash-color: var(--blockr-color-border-accent);
+
+  --dv-border-radius: var(--blockr-radius-lg);
+  --dv-tab-border-radius: var(--blockr-radius-sm);
+}
+
+/* dockview's light values for these are black at low alpha, which vanishes
+   on a dark surface; white at the same weight reads the same. */
+[data-bs-theme="dark"] .dv-shell {
+  --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
+  --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
+}
+
+/* The board canvas behind the dock. */
+body {
+  background-color: var(--blockr-color-bg-page);
+  color: var(--blockr-color-text-default);
+}
