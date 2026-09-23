@@ -64,6 +64,11 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
     )
   )
 
+  # A fill container: inside a dock panel the card takes the panel's height
+  # (blockr-dock.css) and hands it down to a renderer that opts in with
+  # htmltools::bindFillRole(item = TRUE). See block_card_content().
+  card_tag <- htmltools::bindFillRole(card_tag, container = TRUE)
+
   tagAppendAttributes(card_tag, class = "border border-0 shadow-none")
 }
 

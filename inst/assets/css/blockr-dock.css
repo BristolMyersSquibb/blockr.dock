@@ -287,6 +287,29 @@
   border-radius: 0;
 }
 
+/* In a dock panel the card is as tall as the panel. The htmltools fill classes
+   (block-ui.R, plugin-block.R) carry that height down through the card body
+   and the open sections to a renderer that marks itself a fill item; one that
+   does not keeps its own height. The panel scrolls when the content will not
+   shrink to fit. Outside a panel (the offcanvas) the height stays auto and
+   nothing fills. */
+.dockview-panel > .card.html-fill-container {
+  height: 100%;
+}
+
+/* A floor for an open fill section, so a tall sibling section cannot squeeze
+   a table to nothing; past it the panel scrolls. */
+.blockr-block-accordion > .accordion-item.html-fill-item:has(> .accordion-collapse.show) {
+  min-height: 240px;
+}
+
+/* A fill section with no open section under it runs to the foot of the card,
+   so its bottom rule would sit under nothing. */
+.blockr-block-accordion > .accordion-item.html-fill-item:not(:has(~ .accordion-item > .accordion-collapse.show)) > .accordion-collapse > .accordion-body {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
 .blockr-block-accordion > .accordion-item > .accordion-header {
   display: none;
 }

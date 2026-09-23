@@ -581,6 +581,57 @@ test_that("block card sections carry the css-styling contract (#214)", {
   expect_true(is.na(xml2::xml_attr(body, "style")))
 })
 
+test_that("only a section whose UI opted in joins the card fill", {
+
+  card <- block_card_content(
+    NS("blk"),
+    expr_ui = div(id = "blk-expr"),
+    block_ui = htmltools::bindFillRole(div(id = "blk-out"), item = TRUE),
+    visible = c("inputs", "outputs")
+  )
+
+  root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+  acc <- xml2::xml_find_first(
+    root,
+    paste0("//div[", has_class("blockr-block-accordion"), "]")
+  )
+  expect_true(grepl("html-fill-container", xml2::xml_attr(acc, "class")))
+
+  # The item, its collapse and its body all have to carry the fill, or the
+  # height stops at whichever step does not.
+  fill_steps <- function(value) {
+    item <- paste0("./div[@data-value='", value, "']")
+    xml2::xml_find_all(
+      acc,
+      paste0(
+        item, "[", has_class("html-fill-item"), "] | ",
+        item, "/div[", has_class("accordion-collapse"), "][",
+        has_class("html-fill-item"), "] | ",
+        item, "/div/div[", has_class("accordion-body"), "][",
+        has_class("html-fill-item"), "]"
+      )
+    )
+  }
+
+  expect_length(fill_steps("outputs"), 3L)
+  expect_length(fill_steps("inputs"), 0L)
+})
+
+test_that("is_fill_item() looks through tag lists only", {
+
+  fill <- htmltools::bindFillRole(div(), item = TRUE)
+
+  expect_true(is_fill_item(fill))
+  expect_true(is_fill_item(tagList(div(), fill)))
+  expect_true(is_fill_item(list(tagList(fill))))
+
+  expect_false(is_fill_item(div()))
+  expect_false(is_fill_item(div(fill)))
+  expect_false(is_fill_item(NULL))
+  expect_false(is_fill_item("html-fill-item"))
+})
+
 test_that("block card accordions carry no header content (#72)", {
 
   card <- block_card_content(

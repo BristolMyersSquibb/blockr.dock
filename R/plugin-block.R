@@ -6,7 +6,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
   has_inputs <- has_expr_ui(blk)
   visible <- visible_sections(blk)
 
-  div(
+  card_body <- div(
     class = "card-body",
     div(
       class = "d-flex align-items-stretch gap-3",
@@ -36,6 +36,8 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
     ),
     block_card_content(ns, expr_ui, block_ui, visible, ctrl_ui, has_inputs)
   )
+
+  htmltools::bindFillRole(card_body, container = TRUE, item = TRUE)
 }
 
 visible_sections <- function(blk) {
@@ -379,19 +381,25 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
                                ctrl_ui = NULL, has_inputs = TRUE) {
 
   inputs_panel <- if (has_inputs) {
-    accordion_panel(
-      title = NULL,
-      value = "inputs",
-      expr_ui
+    fill_accordion_panel(
+      accordion_panel(
+        title = NULL,
+        value = "inputs",
+        expr_ui
+      ),
+      is_fill_item(expr_ui)
     )
   }
 
-  outputs_panel <- accordion_panel(
-    title = NULL,
-    value = "outputs",
-    block_ui,
-    block_status_notes(ns),
-    block_issues_ui(ns)
+  outputs_panel <- fill_accordion_panel(
+    accordion_panel(
+      title = NULL,
+      value = "outputs",
+      block_ui,
+      block_status_notes(ns),
+      block_issues_ui(ns)
+    ),
+    is_fill_item(block_ui)
   )
 
   ctrl_panel <- if (!is.null(ctrl_ui)) {
@@ -400,18 +408,55 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
 
   tagList(
     div(id = ns("errors_block"), class = "mt-4"),
-    accordion(
-      id = ns("blk_accordion"),
-      class = "blockr-block-accordion",
-      multiple = TRUE,
-      # An empty set has to travel as FALSE: bslib reads `character()` the same
-      # as an absent `open` and falls back to opening the first panel.
-      open = if (length(visible)) visible else FALSE,
-      ctrl_panel,
-      inputs_panel,
-      outputs_panel
+    htmltools::bindFillRole(
+      accordion(
+        id = ns("blk_accordion"),
+        class = "blockr-block-accordion",
+        multiple = TRUE,
+        # An empty set has to travel as FALSE: bslib reads `character()` the
+        # same as an absent `open` and falls back to opening the first panel.
+        open = if (length(visible)) visible else FALSE,
+        ctrl_panel,
+        inputs_panel,
+        outputs_panel
+      ),
+      container = TRUE, item = TRUE
     )
   )
+}
+
+# Carry the card's fill through one section (the item, its collapse and its
+# body), for a section whose content opted in by being a fill item. Any other
+# section keeps its natural height, so a block that was never built to shrink
+# is not squeezed; when the sections outgrow the panel, the panel scrolls. Two
+# open fill sections share the height. Child steps only, so a block's own
+# nested accordions are left alone.
+fill_accordion_panel <- function(panel, fill) {
+
+  if (!isTRUE(fill)) {
+    return(panel)
+  }
+
+  cls <- "html-fill-container html-fill-item"
+
+  tq <- htmltools::tagQuery(panel)$addClass(cls)
+  tq <- tq$children(".accordion-collapse")$addClass(cls)
+  tq <- tq$children(".accordion-body")$addClass(cls)
+
+  tq$allTags()
+}
+
+# Whether a block's UI opted into filling: one of its top-level tags (looking
+# through tag lists) was bound with htmltools::bindFillRole(item = TRUE).
+is_fill_item <- function(x) {
+
+  if (inherits(x, "shiny.tag")) {
+    cls <- coal(htmltools::tagGetAttribute(x, "class"), "")
+    return("html-fill-item" %in% strsplit(cls, " +")[[1L]])
+  }
+
+  is.list(x) && !inherits(x, "html_dependency") &&
+    any(lgl_ply(x, is_fill_item))
 }
 
 ctrl_btn_label <- function(fn) coal(attr(fn, "ctrl_label"), "Control")
