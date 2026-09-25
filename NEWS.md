@@ -2,25 +2,23 @@
 
 * The dock reads its colours, radii and surfaces from blockr.ui's design
   tokens, so a board follows blockr.ui's dark scheme: the dockview frame and
-  tabs, block headers, sidebars, the block browser and the block menu.
+  tabs, block headers, sidebars, the block browser and the block menu. Font
+  sizes, weights and families read the type tokens.
   `dock_board_options()` now includes the light/dark switch, light by
-  default. Requires blockr.ui >= 0.0.1.9001.
+  default.
 
-* The block header follows the design system: a 48px mark in the block's
-  category colour carries the status dot and, as its tooltip, the block type
-  and package, which were the subtitle. A block is renamed with a double-click
-  on its title or "Rename" in its menu, in place: Enter or a click elsewhere
-  commits, Escape restores, an empty name is refused. The controls and
-  preview toggles are bare grey tools that show their icon in the accent
-  colour when on. The "unset" status dot takes the warning amber and a
-  waiting block shows a hollow ring. Text sizes and weights read the type
-  tokens.
+* A block is renamed with a double-click on its title or "Rename" in its
+  menu, in place: the title takes a hover wash, the field the accent edge and
+  focus ring; Enter or a click elsewhere commits, Escape restores, an empty
+  name is refused. The controls and preview toggles are bare grey tools that
+  show a light accent when on. The status dot reads the tokens; "unset" takes
+  the warning amber and a waiting block shows a hollow ring.
 
-* The dock's chrome (block header, navbar, view menu, sidebars) shows the
-  design system's light-card tooltip in place of the browser's native one:
-  after 300ms, at once on keyboard focus, in the tokens' colours in light and
-  dark. Every icon-only button there has one, including the block's "…" menu
-  and the board options gear. The block title no longer has one.
+* The dock's chrome (block header, navbar, view menu, sidebars) shows
+  blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
+  native one. The block icon's tooltip is its type with the package as a
+  badge; the "…" menu and the board options gear have one. Requires blockr.ui
+  from `feat/shared-controls` (>= 0.0.1.9005).
 
 * A new `insert_block_action` puts a block into an existing link
   ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).

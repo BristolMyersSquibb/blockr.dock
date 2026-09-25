@@ -23,6 +23,7 @@ board_ui.dock_board <- function(
     # Ahead of blockr_dock_dep(), so the shared tokens and theme land first
     # and this package's own rules override them by source order.
     blockr.ui::theme_dep(),
+    blockr.ui::controls_dep(),
     show_block_dep(),
     attr_output_dep(),
     blockr_dock_dep(),
@@ -328,13 +329,13 @@ blockr_dock_dep <- function() {
   )
 }
 
-# The light-card tooltip for the dock's chrome (see tooltip.js). Page level,
-# like the stylesheet: one set of document listeners serves every card.
+# The dock chrome's tooltips go to Blockr.tooltip, blockr.ui's light card,
+# which `blockr.ui::controls_dep()` brings (see block-tooltips.js).
 tooltip_dep <- function() {
   htmltools::htmlDependency(
-    "blockr-dock-tooltip",
+    "blockr-dock-tooltips",
     pkg_version(),
     src = pkg_file("assets", "js"),
-    script = "tooltip.js"
+    script = "block-tooltips.js"
   )
 }

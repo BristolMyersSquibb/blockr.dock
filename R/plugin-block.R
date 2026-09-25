@@ -16,7 +16,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
       class = "blockr-block-header",
       div(
         class = "blockr-block-icon",
-        block_mark(blk, blk_info),
+        block_icon(blk, blk_info),
         block_status_dot(ns)
       ),
       div(
@@ -54,22 +54,19 @@ reported_sections <- function(input) {
   }
 }
 
-# The block's mark: its category colour as a tinted square with the glyph in
-# that colour. The colour is handed to the stylesheet as a custom property
-# rather than painted inline, so the tint, the size and the radius stay a
-# theme's to change. The block type and package, which the header no longer
-# prints as a subtitle, are the mark's tooltip.
-block_mark <- function(blk, info) {
+# The block's icon. Its tooltip is the block type with the package as a
+# badge (Blockr.tooltip, set by block-tooltips.js from these attributes).
+block_icon <- function(blk, info) {
 
-  tip <- paste(gsub("_", " ", class(blk)[1L]), info$package, sep = " \u00b7 ")
+  type <- gsub("_", " ", class(blk)[1L])
 
   span(
-    class = "blockr-block-mark",
-    style = paste0("--blockr-dock-cat: ", info$color, ";"),
-    title = tip,
-    `aria-label` = tip,
+    class = "blockr-block-icon-glyph",
+    `data-blockr-tip` = type,
+    `data-blockr-tip-badge` = info$package,
+    `aria-label` = paste(type, info$package, sep = ", "),
     role = "img",
-    HTML(info$icon)
+    blk_icon_data_uri(info$icon, info$color, mode = "inline")
   )
 }
 
@@ -168,6 +165,21 @@ block_card_title <- function(block, id, info) {
           )))
         )
       )
+    ),
+    popover(
+      span(
+        class = "blockr-subtitle",
+        info$name
+      ),
+      # Title + package badge
+      div(
+        class = "blockr-block-meta-head",
+        tags$strong(info$name),
+        span(class = "badge-two-tone", info$package)
+      ),
+      # Description
+      p(class = "blockr-block-meta-desc", info$description),
+      options = list(trigger = "hover")
     )
   )
 }
