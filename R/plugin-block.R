@@ -260,49 +260,40 @@ ctrl_button_label <- function(meta) {
 # that changes the board.
 block_card_dropdown <- function(ns, info, blk_id) {
 
-  svg <- function(name) as.character(bsicons::bs_icon(name))
-
   locked <- is_dock_locked()
 
+  # Plain actions have no icon; Remove, which destroys something, has the
+  # bin and sits in a group of its own (design system, Menus). The block's
+  # type and package are the tooltip on its mark, not a head here.
   items <- c(
     if (!locked) {
       list(
         list(
-          label = "Rename", icon = svg("pencil"),
-          action = "rename", target = ns("title_display")
+          label = "Rename", action = "rename", target = ns("title_display")
         ),
         list(
-          label = "Append block", icon = svg("plus-lg"),
-          action = "input", target = ns("append_block")
+          label = "Append block", action = "input", target = ns("append_block")
         )
       )
     },
     list(
       list(
-        label = "Copy block ID", icon = svg("copy"), meta = blk_id,
-        mono = TRUE, action = "copy", target = blk_id
+        label = "Copy block ID", meta = blk_id, action = "copy",
+        target = blk_id
       )
     ),
     if (!locked) {
       list(
-        list(divider = TRUE),
+        list(gap = TRUE),
         list(
-          label = "Remove block", icon = svg("trash"), danger = TRUE,
+          label = "Remove block", icon = "trash", danger = TRUE,
           action = "input", target = ns("delete_block")
         )
       )
     }
   )
 
-  config <- list(
-    head = list(
-      title = info$name,
-      badge = info$package,
-      text = info$description
-    ),
-    align = "end",
-    items = items
-  )
+  config <- list(align = "end", items = items)
 
   tags$button(
     class = "btn btn-light blockr-header-icon blockr-block-menu-btn",

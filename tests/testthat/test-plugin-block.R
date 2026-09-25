@@ -680,8 +680,7 @@ test_that("the block menu lists its actions for Blockr.menu", {
   }
 
   cfg <- menu_config()
-  expect_identical(cfg$head$title, "dataset block")
-  expect_identical(cfg$head$badge, "blockr.core")
+  expect_null(cfg$head)
   expect_identical(cfg$align, "end")
 
   labels <- vapply(cfg$items, function(x) x$label %||% "", character(1L))
@@ -689,6 +688,10 @@ test_that("the block menu lists its actions for Blockr.menu", {
     labels,
     c("Rename", "Append block", "Copy block ID", "", "Remove block")
   )
+  expect_true(cfg$items[[4L]]$gap)
+  # Only Remove carries an icon.
+  icons <- vapply(cfg$items, function(x) x$icon %||% "", character(1L))
+  expect_identical(icons, c("", "", "", "", "trash"))
   # The picks send the events the server already observes.
   targets <- vapply(cfg$items, function(x) x$target %||% "", character(1L))
   expect_true(all(c("blk-append_block", "blk-delete_block") %in% targets))

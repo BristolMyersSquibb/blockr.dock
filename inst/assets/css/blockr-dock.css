@@ -590,51 +590,104 @@
 }
 
 /* The menu itself is blockr.ui's menu (`.blockr-menu`, `.blockr-menu__item`
-   on the Bootstrap dropdown): surface, 32px rows, the current view in weight
-   600 with no fill. Only what is particular to views is here. */
+   on the Bootstrap dropdown): surface, 34px rows. Only what is particular to
+   views is here: the check on the current page, and manage mode
+   (`.is-managing`, set by view-binding.js), where each row shows a grip and
+   an x and the name is a field to click into. */
 .blockr-view-nav.dropdown-menu {
-  min-width: 200px;
+  min-width: 220px;
 }
 
 .blockr-view-item.dropdown-item {
-  justify-content: space-between;
+  gap: 8px;
 }
 
-/* Item name */
 .blockr-view-item-name {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* CRUD action buttons — use opacity instead of display to prevent layout jump */
-.blockr-view-item-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.1s ease;
+/* The current page: weight 600 (blockr.ui) and a check at the end, no fill. */
+.blockr-view-item .blockr-menu__check {
+  visibility: hidden;
 }
 
-.blockr-view-item.dropdown-item:hover .blockr-view-item-actions {
-  opacity: 1;
+.blockr-view-item.active .blockr-menu__check {
+  visibility: visible;
+}
+
+.blockr-view-grip,
+.blockr-view-remove,
+.blockr-view-foot {
+  display: none;
+}
+
+.blockr-view-nav.is-managing .blockr-view-browse,
+.blockr-view-nav.is-managing .blockr-menu__check {
+  display: none;
+}
+
+.blockr-view-nav.is-managing .blockr-view-foot {
+  display: block;
+}
+
+/* Manage mode: rows are not picks any more, so no hover wash and no bold;
+   the name shows a field edge under the pointer instead. */
+.blockr-view-nav.is-managing .blockr-view-item.dropdown-item,
+.blockr-view-nav.is-managing .blockr-view-item.dropdown-item:hover {
+  background: transparent;
+  font-weight: var(--blockr-font-weight-normal);
+  cursor: default;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.blockr-view-nav.is-managing .blockr-view-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 22px;
+  color: var(--blockr-color-text-disabled);
+  cursor: grab;
+}
+
+.blockr-view-nav.is-managing .blockr-view-item:hover .blockr-view-grip {
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-view-nav.is-managing .blockr-view-item-name {
+  padding: 2px 7px;
+  border: 1px solid transparent;
+  border-radius: var(--blockr-radius-sm);
+  cursor: text;
+}
+
+.blockr-view-nav.is-managing .blockr-view-item-name:hover {
+  border-color: var(--blockr-color-border-default);
+  background: var(--blockr-color-bg-field);
+}
+
+.blockr-view-nav.is-managing .blockr-view-remove {
+  display: flex;
+}
+
+.blockr-view-item.is-dragging {
+  opacity: 0.4;
 }
 
 .blockr-view-action {
-  display: flex;
   align-items: center;
   justify-content: center;
   width: 22px;
   height: 22px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: var(--blockr-radius-sm, 4px);
+  flex-shrink: 0;
+  border-radius: var(--blockr-radius-sm);
   color: var(--blockr-color-text-muted);
   cursor: pointer;
-  font-size: 11px;
 }
 
 .blockr-view-action:hover {
@@ -646,36 +699,65 @@
   color: var(--blockr-color-text-danger);
 }
 
-/* Reorder is bounded: the first view can't move up, the last can't move down.
-   Only view items are `<div>` children of the nav (divider is `<hr>`, add is a
-   `<button>`), so `:first/last-of-type` track the ends and re-evaluate live as
-   the order push re-sequences nodes -- no JS state to maintain. */
-.blockr-view-item:first-of-type .blockr-view-up,
-.blockr-view-item:last-of-type .blockr-view-down {
-  opacity: 0.3;
-  pointer-events: none;
-}
-
-/* Inline rename input */
+/* Inline rename field, at the row's own size. `width: 0` with `flex: 1`
+   takes the space the name had, so the menu does not widen. */
 .blockr-view-rename-input {
   flex: 1;
-  padding: 2px 6px;
-  border: 1px solid var(--blockr-color-primary);
-  border-radius: var(--blockr-radius-sm, 4px);
-  font-size: var(--blockr-font-size-sm);
-  background-color: var(--blockr-color-bg-input);
-  color: var(--blockr-color-text-primary);
+  width: 0;
+  min-width: 0;
+  height: 26px;
+  padding: 0 7px;
+  border: 1px solid var(--blockr-color-border-accent);
+  border-radius: var(--blockr-radius-sm);
+  font: inherit;
+  background-color: var(--blockr-color-bg-surface);
+  color: var(--blockr-color-text-default);
+  box-shadow: var(--blockr-focus-ring);
   outline: none;
 }
 
-.blockr-view-rename-input:focus {
-  border-color: var(--blockr-color-primary);
-  box-shadow: var(--blockr-focus-ring);
+/* The foot in manage mode: New page on the left, Done on the right. */
+.blockr-view-foot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 0 10px;
 }
 
-/* Add button: a menu row with a muted label. */
-.blockr-view-add.dropdown-item {
+.blockr-view-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
   color: var(--blockr-color-text-muted);
+  cursor: pointer;
+}
+
+.blockr-view-add:hover {
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-view-done {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--blockr-color-border-accent-subtle);
+  border-radius: var(--blockr-radius-sm);
+  background: var(--blockr-color-bg-accent-subtle);
+  color: var(--blockr-color-text-accent);
+  font: inherit;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-medium);
+  cursor: pointer;
+}
+
+.blockr-view-done:hover {
+  background: var(--blockr-color-bg-accent-subtle-hover);
+  border-color: var(--blockr-color-border-accent);
 }
 
 /* ============================================

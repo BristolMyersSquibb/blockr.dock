@@ -36,6 +36,177 @@ $(function () {
       .text(text);
   };
 
+  // The small icons of a page row, the same as view_icons in R.
+  var ICONS = {
+    grip: '<svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor"><circle cx="2" cy="2" r="1"></circle><circle cx="6" cy="2" r="1"></circle><circle cx="2" cy="6" r="1"></circle><circle cx="6" cy="6" r="1"></circle><circle cx="2" cy="10" r="1"></circle><circle cx="6" cy="10" r="1"></circle></svg>',
+    check: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg>',
+    x: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M2.5 2.5l5 5M7.5 2.5l-5 5"></path></svg>'
+  };
+
+  // A page row as view_item_ui() draws it.
+  var buildItem = function (id, name, canCrud) {
+    var $item = $('<div>')
+      .addClass('dropdown-item blockr-menu__item blockr-view-item')
+      .attr('data-view-id', id);
+    if (canCrud) {
+      $item.append(
+        $('<span>').addClass('blockr-view-grip')
+          .attr('aria-label', 'Drag to reorder').html(ICONS.grip)
+      );
+    }
+    $item.append(
+      $('<span>').addClass('blockr-view-item-name').text(name),
+      $('<span>').addClass('blockr-menu__check').html(ICONS.check)
+    );
+    if (canCrud) {
+      $item.append(
+        $('<span>').addClass('blockr-view-action blockr-view-remove')
+          .attr('role', 'button').attr('title', 'Remove page').html(ICONS.x)
+      );
+    }
+    return $item;
+  };
+
+  var closeMenu = function ($el) {
+    var toggle = $el.closest('.blockr-view-dropdown')
+      .find('[data-bs-toggle="dropdown"]')[0];
+    if (toggle) bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+  };
+
+  var isManaging = function ($el) {
+    return $el.closest('.blockr-view-nav').hasClass('is-managing');
+  };
+
+  // Swap a page's name for a field. Enter and blur commit, Escape restores.
+  // Only in manage mode, which stays open, so a commit never closes the menu.
+  var startRename = function ($item) {
+    var $name = $item.find('.blockr-view-item-name');
+    if (!$name.length) return;
+    var currentName = $name.text();
+
+    var $input = $('<input>')
+      .addClass('blockr-view-rename-input')
+      .val(currentName)
+      .attr('type', 'text');
+
+    $name.replaceWith($input);
+    $input.focus().select();
+
+    var committed = false;
+    var restore = function (text) {
+      $input.replaceWith(
+        $('<span>').addClass('blockr-view-item-name').text(text)
+      );
+    };
+    var commit = function () {
+      if (committed) return;
+      committed = true;
+
+      var rawName = $input.val().trim();
+      // The name is a free-form display label: the only checks are
+      // non-empty and not a duplicate of another view's name.
+      var errorMsg = null;
+      if (rawName.length === 0) {
+        errorMsg = 'View name cannot be empty.';
+      } else {
+        var $siblings = $item.closest('.blockr-view-nav').find('.blockr-view-item');
+        $siblings.each(function () {
+          if (this !== $item[0] && itemName($(this)) === rawName) {
+            errorMsg = 'A view with this name already exists.';
+            return false; // break
+          }
+        });
+      }
+      if (errorMsg) {
+        showNotification(errorMsg);
+      }
+      var newName = errorMsg ? currentName : rawName;
+      restore(newName);
+
+      if (newName !== currentName) {
+        // The id is stable across a rename; only the label changes.
+        if ($item.hasClass('active')) {
+          setToggleLabel($item.closest('.blockr-view-dropdown'), newName);
+        }
+        var navId = $item.closest('.blockr-view-nav').attr('id');
+        Shiny.setInputValue(navId + '_rename', {
+          id: $item.attr('data-view-id'),
+          to: newName
+        }, { priority: 'event' });
+      }
+    };
+
+    $input.on('click', function (e) { e.stopPropagation(); });
+    $input.on('keydown', function (e) {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        committed = true;
+        restore(currentName);
+      }
+    });
+    $input.on('blur', commit);
+  };
+
+  // Native drag to reorder, from the grip only (so clicking into a name
+  // never starts a drag). The row moves as the pointer passes other rows;
+  // on drop the resulting order goes to the server, which applies it and
+  // pushes it back through `order`.
+  var enableDrag = function (el) {
+    var list = el.querySelector('.blockr-view-list');
+    if (!list) return;
+    var dragging = null;
+    var before = null;
+
+    list.addEventListener('mousedown', function (e) {
+      var row = e.target.closest('.blockr-view-item');
+      if (!row) return;
+      if (e.target.closest('.blockr-view-grip') && isManaging($(el))) {
+        row.setAttribute('draggable', 'true');
+      } else {
+        row.removeAttribute('draggable');
+      }
+    });
+    list.addEventListener('dragstart', function (e) {
+      var row = e.target.closest && e.target.closest('.blockr-view-item');
+      if (!row) return;
+      dragging = row;
+      before = $(list).children('.blockr-view-item').map(function () {
+        return this.getAttribute('data-view-id');
+      }).get().join('|');
+      row.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      // Firefox does not start a drag without data being set.
+      e.dataTransfer.setData('text/plain', row.getAttribute('data-view-id'));
+    });
+    list.addEventListener('dragover', function (e) {
+      if (!dragging) return;
+      e.preventDefault();
+      var over = e.target.closest && e.target.closest('.blockr-view-item');
+      if (!over || over === dragging) return;
+      var r = over.getBoundingClientRect();
+      var after = e.clientY > r.top + r.height / 2;
+      list.insertBefore(dragging, after ? over.nextSibling : over);
+    });
+    list.addEventListener('drop', function (e) {
+      if (dragging) e.preventDefault();
+    });
+    list.addEventListener('dragend', function () {
+      if (!dragging) return;
+      dragging.classList.remove('is-dragging');
+      dragging.removeAttribute('draggable');
+      dragging = null;
+      var ids = $(list).children('.blockr-view-item').map(function () {
+        return this.getAttribute('data-view-id');
+      }).get();
+      if (ids.join('|') === before) return;
+      Shiny.setInputValue(el.id + '_reorder', { order: ids }, { priority: 'event' });
+    });
+  };
+
   var viewBinding = new Shiny.InputBinding();
 
   $.extend(viewBinding, {
@@ -64,111 +235,49 @@ $(function () {
         callback(true);
       });
 
-      // View switch: click on item (but not on action buttons)
+      // View switch: a click on a page, unless the menu is managing pages
+      // (then a click on the name renames it) or the click hit a tool.
       $(el).on('click.viewBinding', '.blockr-view-item', function (e) {
-        if ($(e.target).closest('.blockr-view-item-actions').length) {
-          e.stopPropagation();
+        if ($(e.target).closest('.blockr-view-remove, .blockr-view-grip').length) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        var $item = $(this);
+
+        if (isManaging($item)) {
+          if ($(e.target).closest('.blockr-view-item-name').length) {
+            startRename($item);
+          }
           return;
         }
 
-        e.preventDefault();
-        var $item = $(this);
         var $nav = $(el);
-
         $nav.find('.blockr-view-item').removeClass('active');
         $item.addClass('active');
-
         setToggleLabel($nav, itemName($item));
-
         callback(true);
+        closeMenu($nav);
       });
 
-      // Edit click: swap name span for inline input
-      $(el).on('click.viewBinding', '.blockr-view-edit', function (e) {
-        e.stopPropagation();
+      // Manage pages: the same list becomes an editor, and back with Done.
+      $(el).on('click.viewBinding', '.blockr-view-manage', function (e) {
         e.preventDefault();
-
-        var $item = $(this).closest('.blockr-view-item');
-        var $name = $item.find('.blockr-view-item-name');
-        var currentName = $name.text();
-
-        var $input = $('<input>')
-          .addClass('blockr-view-rename-input')
-          .val(currentName)
-          .attr('type', 'text');
-
-        $name.replaceWith($input);
-        $input.focus().select();
-
-        var committed = false;
-        var commit = function (closeMenu) {
-          if (committed) return;
-          committed = true;
-
-          var rawName = $input.val().trim();
-          // The name is a free-form display label: the only checks are
-          // non-empty and not a duplicate of another view's name.
-          var errorMsg = null;
-          if (rawName.length === 0) {
-            errorMsg = 'View name cannot be empty.';
-          } else {
-            var $siblings = $item.closest('.blockr-view-nav').find('.blockr-view-item');
-            $siblings.each(function () {
-              if (this !== $item[0] && itemName($(this)) === rawName) {
-                errorMsg = 'A view with this name already exists.';
-                return false; // break
-              }
-            });
-          }
-          if (errorMsg) {
-            showNotification(errorMsg);
-          }
-          var newName = errorMsg ? currentName : rawName;
-          var $newName = $('<span>')
-            .addClass('blockr-view-item-name')
-            .text(newName);
-          $input.replaceWith($newName);
-
-          if (newName !== currentName) {
-            // The id is stable across a rename; only the label changes.
-            if ($item.hasClass('active')) {
-              setToggleLabel($item.closest('.blockr-view-dropdown'), newName);
-            }
-
-            var $nav = $item.closest('.blockr-view-nav');
-            var navId = $nav.attr('id');
-            Shiny.setInputValue(navId + '_rename', {
-              id: $item.attr('data-view-id'),
-              to: newName
-            }, { priority: 'event' });
-          }
-
-          if (closeMenu) {
-            var toggle = $item.closest('.blockr-view-dropdown')
-              .find('[data-bs-toggle="dropdown"]')[0];
-            if (toggle) {
-              var dd = bootstrap.Dropdown.getOrCreateInstance(toggle);
-              dd.hide();
-            }
-          }
-        };
-
-        $input.on('keydown', function (e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            commit(true);
-          } else if (e.key === 'Escape') {
-            committed = true;
-            var $newName = $('<span>')
-              .addClass('blockr-view-item-name')
-              .text(currentName);
-            $input.replaceWith($newName);
-          }
-        });
-
-        $input.on('blur', function () {
-          commit(false);
-        });
+        e.stopPropagation();
+        $(el).addClass('is-managing');
+      });
+      $(el).on('click.viewBinding', '.blockr-view-done', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var active = document.activeElement;
+        if (active && $(active).is('.blockr-view-rename-input')) active.blur();
+        $(el).removeClass('is-managing');
+      });
+      // Closing the menu leaves manage mode, so it always opens on the list.
+      $(el).closest('.blockr-view-dropdown').on('hidden.bs.dropdown.viewBinding', function () {
+        var active = document.activeElement;
+        if (active && $(active).is('.blockr-view-rename-input')) active.blur();
+        $(el).removeClass('is-managing');
       });
 
       // Remove click
@@ -177,45 +286,25 @@ $(function () {
         e.preventDefault();
 
         var $item = $(this).closest('.blockr-view-item');
-        var viewId = $item.attr('data-view-id');
-        var $nav = $item.closest('.blockr-view-nav');
-        var navId = $nav.attr('id');
-
-        Shiny.setInputValue(navId + '_remove', viewId, { priority: 'event' });
+        Shiny.setInputValue(el.id + '_remove', $item.attr('data-view-id'), {
+          priority: 'event'
+        });
       });
 
-      // Reorder click: view order is board state, so the gesture carries only a
-      // relative move intent. The server applies it and pushes the settled
-      // order back via receiveMessage; the DOM never moves optimistically.
-      $(el).on('click.viewBinding', '.blockr-view-up, .blockr-view-down', function (e) {
-        e.stopPropagation();
-        e.preventDefault();
-
-        var $item = $(this).closest('.blockr-view-item');
-        var $nav = $item.closest('.blockr-view-nav');
-        var navId = $nav.attr('id');
-        var dir = $(this).hasClass('blockr-view-up') ? 'up' : 'down';
-
-        Shiny.setInputValue(navId + '_reorder', {
-          id: $item.attr('data-view-id'),
-          dir: dir
-        }, { priority: 'event' });
-      });
-
-      // Add click
+      // Add click: the server asks for the new page's name and blocks in a
+      // dialog; the page arrives through receiveMessage.
       $(el).on('click.viewBinding', '.blockr-view-add', function (e) {
         e.stopPropagation();
         e.preventDefault();
-
-        var $nav = $(this).closest('.blockr-view-nav');
-        var navId = $nav.attr('id');
-
-        Shiny.setInputValue(navId + '_add', Date.now(), { priority: 'event' });
+        Shiny.setInputValue(el.id + '_add', Date.now(), { priority: 'event' });
       });
+
+      enableDrag(el);
     },
 
     unsubscribe: function (el) {
       $(el).off('.viewBinding');
+      $(el).closest('.blockr-view-dropdown').off('.viewBinding');
     },
 
     receiveMessage: function (el, data) {
@@ -224,56 +313,9 @@ $(function () {
       }
 
       if (data.hasOwnProperty('add')) {
-        var addId = data.add.id;
-        var addName = data.add.name;
         var canCrud = data.canCrud !== false;
-        var newItem = $('<div>')
-          .addClass('dropdown-item blockr-menu__item blockr-view-item')
-          .attr('data-view-id', addId)
-          .append(
-            $('<span>').addClass('blockr-view-item-name').text(addName)
-          );
-
-        if (canCrud) {
-          var chevronUpSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-up" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"></path></svg>';
-          var chevronDownSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-down" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"></path></svg>';
-          var pencilSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-pencil" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"></path></svg>';
-          var xLgSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-x-lg" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"></path></svg>';
-          newItem.append(
-            $('<span>')
-              .addClass('blockr-view-item-actions')
-              .append(
-                $('<span>')
-                  .addClass('blockr-view-action blockr-view-up')
-                  .attr('role', 'button')
-                  .attr('title', 'Move up')
-                  .html(chevronUpSvg),
-                $('<span>')
-                  .addClass('blockr-view-action blockr-view-down')
-                  .attr('role', 'button')
-                  .attr('title', 'Move down')
-                  .html(chevronDownSvg),
-                $('<span>')
-                  .addClass('blockr-view-action blockr-view-edit')
-                  .attr('role', 'button')
-                  .attr('title', 'Rename')
-                  .html(pencilSvg),
-                $('<span>')
-                  .addClass('blockr-view-action blockr-view-remove')
-                  .attr('role', 'button')
-                  .attr('title', 'Remove')
-                  .html(xLgSvg)
-              )
-          );
-        }
-
-        // Insert before the divider (if present) or at end
-        var $divider = $(el).find('.dropdown-divider');
-        if ($divider.length) {
-          $divider.before(newItem);
-        } else {
-          $(el).append(newItem);
-        }
+        var $new = buildItem(data.add.id, data.add.name, canCrud);
+        $(el).find('.blockr-view-list').append($new);
 
         // Deliberately not activated here. The server owns which view is
         // active: an add that means to navigate carries `active` in its delta
@@ -301,19 +343,13 @@ $(function () {
       }
 
       if (data.hasOwnProperty('order')) {
-        var $nav = $(el);
-        var $anchor = $nav.find('.dropdown-divider');
+        var $list = $(el).find('.blockr-view-list');
         // Re-append each item in the server's order; re-appending an existing
         // node moves it, so iterating in order lands the DOM in that order.
         data.order.forEach(function (viewId) {
-          var $item = $nav.find(
-            '.blockr-view-item[data-view-id="' + viewId + '"]'
+          $list.append(
+            $list.find('.blockr-view-item[data-view-id="' + viewId + '"]')
           );
-          if ($anchor.length) {
-            $anchor.before($item);
-          } else {
-            $nav.append($item);
-          }
         });
       }
 
