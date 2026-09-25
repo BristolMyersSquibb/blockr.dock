@@ -6,6 +6,16 @@
   `dock_board_options()` now includes the light/dark switch, light by
   default. Requires blockr.ui >= 0.0.1.9001.
 
+* The block header follows the design system: a 48px mark in the block's
+  category colour carries the status dot and, as its tooltip, the block type
+  and package, which were the subtitle. A block is renamed with a double-click
+  on its title or "Rename" in its menu, in place: Enter or a click elsewhere
+  commits, Escape restores, an empty name is refused. The controls and
+  preview toggles are bare grey tools that show their icon in the accent
+  colour when on. The "unset" status dot takes the warning amber and a
+  waiting block shows a hollow ring. Text sizes and weights read the type
+  tokens.
+
 * A new `insert_block_action` puts a block into an existing link
   ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
   Triggered with a link id, it offers the same block browser as the add and

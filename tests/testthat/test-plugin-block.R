@@ -614,7 +614,7 @@ test_that("block card accordions carry no header content (#72)", {
   expect_identical(unique(xml2::xml_text(slots)), "")
 })
 
-test_that("block card popover renders no header (#72)", {
+test_that("the header names the block type on its mark", {
 
   card <- edit_block_ui(
     "blk",
@@ -626,12 +626,16 @@ test_that("block card popover renders no header (#72)", {
 
   root <- xml2::read_html(as.character(htmltools::tagList(card)))
 
-  # The second template slot is where bslib picks the popover header up from.
-  # Nothing fills it, which is what made the `.popover-header` hide rule safe
-  # to drop -- a title added here would now render Bootstrap's own header.
-  slots <- xml2::xml_find_all(root, "//bslib-popover/template/div")
-  expect_length(slots, 2L)
-  expect_identical(trimws(xml2::xml_text(slots[[2]])), "")
+  # One header in both sizes: no subtitle, the type and package are the
+  # mark's tooltip.
+  expect_length(xml2::xml_find_all(root, "//bslib-popover"), 0L)
+  mark <- xml2::xml_find_first(root, "//span[@class='blockr-block-mark']")
+  expect_identical(
+    xml2::xml_attr(mark, "title"),
+    "dataset block \u00b7 blockr.core"
+  )
+  expect_match(xml2::xml_attr(mark, "style"), "--blockr-dock-cat: #",
+               fixed = TRUE)
 })
 
 test_that("block card carries no html output (#403)", {
@@ -869,7 +873,8 @@ test_that("block_status_style is the shared status-dot spec (#290)", {
   expect_identical(waiting$ring_color, "#ffffff")
   expect_identical(waiting$label, "Waiting for a data input")
 
-  expect_identical(block_status_style("unset")$color, "#eab308")
+  # Unset shares the amber of the empty field's cue (design system).
+  expect_identical(block_status_style("unset")$color, "#f59e0b")
   expect_identical(block_status_style("failed")$color, "#dc2626")
 
   # `ready`, `dormant` and non-strings carry no indicator.
@@ -943,9 +948,19 @@ test_that("block status indicator + note reflect eval status (#290)", {
   expect_match(waiting_dot$style, "#f59e0b", fixed = TRUE)
   expect_identical(waiting_dot$title, "Waiting for a data input")
   expect_identical(waiting_dot[["aria-label"]], "Waiting for a data input")
-  # The white ring is carried in the written style from the shared spec, not
-  # the CSS.
-  expect_match(waiting_dot$style, "0 0 0 2px #ffffff", fixed = TRUE)
+  # The ring around the dot is the surface colour, with the shared spec's
+  # white as its fallback. A waiting block draws a hollow amber ring, so the
+  # solid amber dot stays with the block that needs input.
+  expect_match(
+    waiting_dot$style,
+    "0 0 0 2px var(--blockr-color-bg-surface, #ffffff)",
+    fixed = TRUE
+  )
+  expect_match(
+    waiting_dot$style,
+    "inset 0 0 0 1.5px var(--blockr-color-border-warning, #f59e0b)",
+    fixed = TRUE
+  )
 
   # An error condition reddens the dot even when the eval status is `ready`,
   # matching the DAG node badge.
@@ -955,7 +970,7 @@ test_that("block status indicator + note reflect eval status (#290)", {
     fixed = TRUE
   )
 
-  expect_match(block_status_dot_attrs("unset")$style, "#eab308", fixed = TRUE)
+  expect_match(block_status_dot_attrs("unset")$style, "#f59e0b", fixed = TRUE)
   expect_match(block_status_dot_attrs("failed")$style, "#dc2626", fixed = TRUE)
 
   expect_match(
