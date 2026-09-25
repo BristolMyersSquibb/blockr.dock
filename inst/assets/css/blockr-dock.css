@@ -316,7 +316,11 @@
 .blockr-section-toggle .btn.btn-light.active,
 .blockr-section-toggle .btn-check:checked + .btn.btn-light {
   background-color: transparent !important;
-  color: var(--blockr-color-text-accent, #2563eb) !important;
+  /* Lighter than text-accent: the toggles are on in almost every block and
+     were the loudest thing in the header. Hover goes back to text-accent.
+     Mixed from the accent rather than a blue literal, so a theme's accent
+     and the dark scheme carry through. */
+  color: color-mix(in srgb, var(--blockr-color-text-accent) 70%, var(--blockr-color-bg-surface)) !important;
   box-shadow: none !important;
 }
 
