@@ -7,7 +7,7 @@
   `dock_board_options()` now includes the light/dark switch, light by
   default.
 
-* The block header drops its subtitle: a 38px mark in the block's category
+* The block header drops its subtitle: a 42px mark in the block's category
   colour carries the status dot, and the block type, with the package as a
   badge, is the mark's tooltip. The controls sit just under the header with
   no rules around them; one rule separates them from the preview while both
