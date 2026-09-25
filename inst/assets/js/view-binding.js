@@ -228,7 +228,7 @@ $(function () {
         var addName = data.add.name;
         var canCrud = data.canCrud !== false;
         var newItem = $('<div>')
-          .addClass('dropdown-item blockr-view-item')
+          .addClass('dropdown-item blockr-menu__item blockr-view-item')
           .attr('data-view-id', addId)
           .append(
             $('<span>').addClass('blockr-view-item-name').text(addName)

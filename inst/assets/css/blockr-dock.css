@@ -471,80 +471,6 @@
 }
 
 /* ============================================
-   Block Dropdown Menu Styling (Figma-aligned)
-   ============================================ */
-.blockr-block-dropdown {
-  font-size: var(--blockr-font-size-base) !important;
-  border-radius: var(--blockr-radius-xl, 12px) !important;
-  border: 1px solid var(--blockr-color-border) !important;
-  box-shadow: var(--blockr-shadow-lg) !important;
-  padding: 12px 8px 8px !important;
-  margin-top: 8px !important;
-  --bs-dropdown-bg: var(--blockr-color-bg-raised);
-}
-
-/* Arrow pointing up toward the trigger button */
-.blockr-block-dropdown::before,
-.blockr-block-dropdown::after {
-  content: "";
-  position: absolute;
-  right: 16px;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-}
-
-.blockr-block-dropdown::before {
-  top: -9px;
-  border-bottom: 9px solid var(--blockr-color-border);
-}
-
-.blockr-block-dropdown::after {
-  top: -8px;
-  border-bottom: 8px solid var(--blockr-color-bg-raised);
-}
-
-.blockr-block-dropdown .dropdown-header,
-.blockr-block-dropdown h6.dropdown-header {
-  font-size: var(--blockr-font-size-xs) !important;
-  font-weight: var(--blockr-font-weight-medium) !important;
-  color: var(--blockr-color-text-muted) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-variant-caps: normal;
-  padding: 8px 12px 4px;
-}
-
-.blockr-block-dropdown .dropdown-item {
-  font-size: var(--blockr-font-size-sm) !important;
-  padding: 10px 12px 10px 2.5rem !important;
-  border-radius: var(--blockr-radius-lg, 8px) !important;
-  color: var(--blockr-color-text-primary) !important;
-}
-
-.blockr-block-dropdown .dropdown-item:hover,
-.blockr-block-dropdown .dropdown-item:focus {
-  background-color: var(--blockr-color-bg-hover) !important;
-  color: var(--blockr-color-text-primary) !important;
-}
-
-.blockr-block-dropdown .text-muted,
-.blockr-block-dropdown span.text-muted {
-  color: var(--blockr-color-text-muted) !important;
-  font-size: var(--blockr-font-size-sm) !important;
-}
-
-.blockr-block-dropdown .small,
-.blockr-block-dropdown span.small {
-  font-size: var(--blockr-font-size-sm) !important;
-}
-
-.blockr-block-dropdown .fw-medium,
-.blockr-block-dropdown span.fw-medium {
-  font-weight: var(--blockr-font-weight-medium) !important;
-  font-size: var(--blockr-font-size-sm) !important;
-}
-
-/* ============================================
    Dockview Left Actions (Plus Button)
    ============================================ */
 .dv-left-actions-container {
@@ -663,37 +589,15 @@
   margin-left: 2px;
 }
 
-/* Dropdown menu */
+/* The menu itself is blockr.ui's menu (`.blockr-menu`, `.blockr-menu__item`
+   on the Bootstrap dropdown): surface, 32px rows, the current view in weight
+   600 with no fill. Only what is particular to views is here. */
 .blockr-view-nav.dropdown-menu {
   min-width: 200px;
-  padding: 4px;
 }
 
-/* View item */
 .blockr-view-item.dropdown-item {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: var(--blockr-radius-sm, 4px);
-  font-size: var(--blockr-font-size-sm);
-  color: var(--blockr-color-text-primary);
-  cursor: pointer;
-}
-
-.blockr-view-item.dropdown-item.active {
-  background-color: var(--blockr-blue-100);
-  color: var(--blockr-blue-700);
-  font-weight: var(--blockr-font-weight-semibold);
-}
-
-.blockr-view-item.dropdown-item:hover {
-  background-color: var(--blockr-grey-100);
-}
-
-.blockr-view-item.dropdown-item.active:hover {
-  background-color: var(--blockr-blue-100);
 }
 
 /* Item name */
@@ -734,12 +638,12 @@
 }
 
 .blockr-view-action:hover {
-  background-color: var(--blockr-grey-300);
-  color: var(--blockr-color-text-secondary);
+  background-color: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-default);
 }
 
 .blockr-view-remove:hover {
-  color: var(--blockr-color-error, #dc2626);
+  color: var(--blockr-color-text-danger);
 }
 
 /* Reorder is bounded: the first view can't move up, the last can't move down.
@@ -769,20 +673,9 @@
   box-shadow: var(--blockr-focus-ring);
 }
 
-/* Add button */
-.blockr-view-add {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: var(--blockr-radius-sm, 4px);
-  font-size: var(--blockr-font-size-sm);
+/* Add button: a menu row with a muted label. */
+.blockr-view-add.dropdown-item {
   color: var(--blockr-color-text-muted);
-}
-
-.blockr-view-add:hover {
-  background-color: var(--blockr-grey-100);
-  color: var(--blockr-color-text-primary);
 }
 
 /* ============================================

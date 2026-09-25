@@ -984,22 +984,19 @@ test_that("locked board hides block actions, shows lock indicator (#236)", {
     "Read-only"
   )
 
-  # Block cards and their dropdown menus render, but the locked dock suppresses
-  # the mutating actions: no append / delete buttons anywhere.
-  expect_gte(count(".blockr-block-dropdown"), 1)
-  expect_equal(count("[id$=\"-append_block\"]"), 0)
-  expect_equal(count("[id$=\"-delete_block\"]"), 0)
-
-  # The dropdown's "Block Actions" section is gone; "Block Details" remains.
-  headers <- app$get_js(
+  # Block cards and their "…" menus render, but the locked dock suppresses
+  # the mutating actions: the menu config on each trigger (block-menu.js
+  # draws it with Blockr.menu) sends no append / delete event.
+  expect_gte(count(".blockr-block-menu-btn"), 1)
+  menus <- app$get_js(
     paste0(
-      "Array.from(document.querySelectorAll(",
-      "'.blockr-block-dropdown .dropdown-header'",
-      ")).map(function(e) { return e.innerText; }).join('|')"
+      "Array.from(document.querySelectorAll('.blockr-block-menu-btn'))",
+      ".map(function(e) { return e.getAttribute('data-blockr-menu'); })",
+      ".join('|')"
     )
   )
-  expect_match(headers, "Block Details")
-  expect_false(grepl("Block Actions", headers))
+  expect_match(menus, "Copy block ID")
+  expect_false(grepl("append_block|delete_block", menus))
 
   # View CRUD is locked too: no "New page" add control.
   expect_equal(count(".blockr-view-add"), 0)

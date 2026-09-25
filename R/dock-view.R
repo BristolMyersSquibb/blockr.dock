@@ -618,7 +618,7 @@ view_nav_ui <- function(id, views) {
   add_btn <- NULL
   if (can_crud) {
     add_btn <- tags$button(
-      class = "dropdown-item blockr-view-add",
+      class = "dropdown-item blockr-menu__item blockr-view-add",
       bsicons::bs_icon("plus-lg"),
       "New page"
     )
@@ -636,7 +636,7 @@ view_nav_ui <- function(id, views) {
       tags$span(class = "blockr-view-toggle-label", active_nm)
     ),
     div(
-      class = "dropdown-menu blockr-view-nav",
+      class = "dropdown-menu blockr-menu blockr-view-nav",
       id = nav_id,
       items,
       if (can_crud) tags$hr(class = "dropdown-divider"),
@@ -649,7 +649,7 @@ view_nav_ui <- function(id, views) {
 view_item_ui <- function(view_id, view_name, active_id = NULL,
                          can_crud = FALSE) {
 
-  cls <- paste("dropdown-item blockr-view-item",
+  cls <- paste("dropdown-item blockr-menu__item blockr-view-item",
                if (identical(view_id, active_id)) "active" else "")
 
   actions <- NULL

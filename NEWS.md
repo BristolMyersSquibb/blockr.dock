@@ -20,10 +20,17 @@
   show a light accent when on. The status dot reads the tokens; "unset" takes
   the warning amber and a waiting block shows a hollow ring.
 
+* The block's "…" menu is blockr.ui's `Blockr.menu`: a head with the block
+  type, its package as a badge and its description, then Rename, Append
+  block, Copy block ID (the ID as meta text) and, after a divider, Remove
+  block in red. It is driven from the keyboard. The views menu takes the
+  same look through the menu classes, the current view in bold instead of a
+  blue fill.
+
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
   native one. The "…" menu and the board options gear have one. Requires
-  blockr.ui from `feat/shared-controls` (>= 0.0.1.9005).
+  blockr.ui from `feat/menu` (>= 0.0.1.9006).
 
 * A new `insert_block_action` puts a block into an existing link
   ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
