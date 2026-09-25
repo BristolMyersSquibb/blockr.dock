@@ -8,11 +8,10 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
 
   div(
     class = "card-body",
-    # Header parts each carry an owned class, and every dimension that a
-    # density variant would change (gap, padding, icon size, title size) is a
-    # token read by the stylesheet. Nothing here is styled inline: an inline
-    # declaration outranks any sheet a theme can attach, so a single
-    # `style=` attribute on a part is enough to make that part unthemable.
+    # Header parts each carry an owned class and nothing here is styled
+    # inline: an inline declaration outranks any sheet a theme can attach, so
+    # a single `style=` attribute on a part is enough to make that part
+    # unthemable.
     div(
       class = "blockr-block-header",
       div(
