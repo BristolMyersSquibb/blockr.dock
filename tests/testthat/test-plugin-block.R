@@ -614,7 +614,7 @@ test_that("block card accordions carry no header content (#72)", {
   expect_identical(unique(xml2::xml_text(slots)), "")
 })
 
-test_that("block card popover renders no header (#72)", {
+test_that("the header names the block type on its mark", {
 
   card <- edit_block_ui(
     "blk",
@@ -626,33 +626,16 @@ test_that("block card popover renders no header (#72)", {
 
   root <- xml2::read_html(as.character(htmltools::tagList(card)))
 
-  # The second template slot is where bslib picks the popover header up from.
-  # Nothing fills it, which is what made the `.popover-header` hide rule safe
-  # to drop -- a title added here would now render Bootstrap's own header.
-  slots <- xml2::xml_find_all(root, "//bslib-popover/template/div")
-  expect_length(slots, 2L)
-  expect_identical(trimws(xml2::xml_text(slots[[2]])), "")
-})
-
-test_that("the block icon's tooltip is its type with the package as badge", {
-
-  card <- edit_block_ui(
-    "blk",
-    blk = new_dataset_block(),
-    blk_id = "a",
-    expr_ui = div(),
-    block_ui = div()
-  )
-
-  root <- xml2::read_html(as.character(htmltools::tagList(card)))
-  icon <- xml2::xml_find_first(
-    root, "//span[@class='blockr-block-icon-glyph']"
-  )
-
+  # One header in both sizes: no subtitle, the type and package are the
+  # mark's tooltip.
+  expect_length(xml2::xml_find_all(root, "//bslib-popover"), 0L)
   # block-tooltips.js hands these to Blockr.tooltip; no native title.
-  expect_identical(xml2::xml_attr(icon, "data-blockr-tip"), "dataset block")
-  expect_identical(xml2::xml_attr(icon, "data-blockr-tip-badge"), "blockr.core")
-  expect_true(is.na(xml2::xml_attr(icon, "title")))
+  mark <- xml2::xml_find_first(root, "//span[@class='blockr-block-mark']")
+  expect_identical(xml2::xml_attr(mark, "data-blockr-tip"), "dataset block")
+  expect_identical(xml2::xml_attr(mark, "data-blockr-tip-badge"), "blockr.core")
+  expect_true(is.na(xml2::xml_attr(mark, "title")))
+  expect_match(xml2::xml_attr(mark, "style"), "--blockr-dock-cat: #",
+               fixed = TRUE)
 })
 
 test_that("block card carries no html output (#403)", {

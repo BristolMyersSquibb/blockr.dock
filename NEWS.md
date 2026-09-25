@@ -7,6 +7,10 @@
   `dock_board_options()` now includes the light/dark switch, light by
   default.
 
+* The block header drops its subtitle: a 48px mark in the block's category
+  colour carries the status dot, and the block type, with the package as a
+  badge, is the mark's tooltip.
+
 * A block is renamed with a double-click on its title or "Rename" in its
   menu, in place: the title takes a hover wash, the field the accent edge and
   focus ring; Enter or a click elsewhere commits, Escape restores, an empty
@@ -16,9 +20,8 @@
 
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
-  native one. The block icon's tooltip is its type with the package as a
-  badge; the "…" menu and the board options gear have one. Requires blockr.ui
-  from `feat/shared-controls` (>= 0.0.1.9005).
+  native one. The "…" menu and the board options gear have one. Requires
+  blockr.ui from `feat/shared-controls` (>= 0.0.1.9005).
 
 * A new `insert_block_action` puts a block into an existing link
   ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).

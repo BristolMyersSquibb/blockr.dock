@@ -61,13 +61,6 @@
   border-color: var(--blockr-color-border-danger);
 }
 
-.blockr-subtitle {
-  font-size: var(--blockr-font-size-sm);
-  font-weight: var(--blockr-font-weight-normal);
-  color: var(--blockr-color-text-muted);
-  margin-left: 3px;
-}
-
 .blockr-section-header {
   font-size: var(--blockr-font-size-section);
   font-weight: var(--blockr-font-weight-medium);
@@ -138,13 +131,20 @@
 /* ============================================================
    Block header
    ============================================================
-   The header row of a block card: icon (with status dot), editable title and
-   subtitle, section toggles, overflow menu. Every part carries an owned class
-   and no inline `style=`, so a stylesheet can restyle any of it. */
+   The header row of a block card: the block's mark (with status dot), the
+   editable title, section toggles, overflow menu. It used to be Bootstrap utility
+   classes plus inline `style=` attributes written in R, which made it the one
+   part of the board no stylesheet could restyle -- an inline declaration wins
+   against any sheet a theme attaches, short of `!important` on every rule.
+
+   Every part now has an owned class. The values are plain here because this
+   sheet declares no `--blockr-*` variables; blockr.ui owns the shared
+   vocabulary. */
 .blockr-block-header {
   display: flex;
-  align-items: stretch;
-  gap: 1rem;
+  align-items: center;
+  gap: 14px;
+  min-height: 48px;
 }
 
 .blockr-block-header-main {
@@ -170,13 +170,25 @@
   flex-shrink: 0;
 }
 
-/* The icon is an inline <svg> built in R with width/height baked in at 48, so
-   a density variant cannot reach it through the R side without re-rendering
-   the card. Overriding the presentation attributes here costs one rule and
-   makes the icon a token like everything else beside it. */
-.blockr-block-icon svg {
+/* The block's mark: the category colour at 18% on the surface, the glyph in
+   the category colour. 48px here (24px in list rows, 16px in a tab, drawn
+   elsewhere). */
+.blockr-block-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 48px;
   height: 48px;
+  border-radius: 10px;
+  color: var(--blockr-dock-cat, #999999);
+  background: color-mix(in srgb, var(--blockr-dock-cat, #999999) 18%, var(--blockr-color-bg-surface, #ffffff));
+}
+
+/* The glyph is a bsicons SVG sized `1em` inline, so it follows the mark's
+   font size. */
+.blockr-block-mark {
+  font-size: 24px;
+  line-height: 1;
 }
 
 .blockr-block-title-wrap {
@@ -185,19 +197,22 @@
   padding-right: 1rem;
 }
 
-/* Was Bootstrap's `.card-title.mb-0` plus `line-height: 1.0` inline. Size,
-   weight and colour are not repeated here: `.blockr-title` inside already sets
-   all three off tokens, so a density variant changes the title by overriding
-   `--blockr-font-size-title` and nothing in this rule moves. The line-height
-   is what keeps the title and the subtitle under it reading as one two-line
-   unit; at Bootstrap's 1.5 they drift apart. */
+/* Was Bootstrap's `.card-title.mb-0` plus `line-height: 1.0` inline. */
 .blockr-block-title {
   margin-bottom: 0;
-  line-height: 1;
+  line-height: 1.3;
 }
 
-/* The rename affordance: a hover wash, pulled back out by a negative margin
-   equal to its padding, so the title sits where it would without it. */
+/* The block title: 20px, weight 600. */
+.blockr-block-title .blockr-title {
+  font-size: var(--blockr-font-size-xl, 1.25rem);
+  color: var(--blockr-color-text-default, #111827);
+}
+
+/* The rename affordance. The 2px dashed border is present and transparent at
+   rest so revealing it on hover shifts nothing; the row is pulled back out by
+   a negative margin equal to its padding, so the title sits where it would
+   without the hit area. */
 .blockr-title-display {
   display: inline-flex;
   align-items: center;
@@ -220,19 +235,6 @@
 }
 
 
-/* Inside the block-description popover. */
-.blockr-block-meta-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.blockr-block-meta-desc {
-  margin-bottom: 0;
-}
-
 /* Block eval status: on-icon status dot.
    The dot is layered onto the block icon's lower-right corner (iOS badge
    style), matching blockr.dag's node badge placement. Its size and colour are
@@ -252,8 +254,8 @@
 
 .blockr-status-dot {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  right: -2px;
+  top: -2px;
   z-index: 1;
   border-radius: 50%;
 }
@@ -340,20 +342,6 @@
 
 .blockr-section-toggle .btn-group {
   gap: 2px;
-}
-
-
-/* Package badge - Figma-aligned subtle style */
-.badge-two-tone {
-  display: inline-block;
-  padding: 2px 8px;
-  font-size: 0.625rem;
-  border-radius: var(--blockr-radius-sm, 4px);
-  background-color: var(--blockr-grey-100);
-  color: var(--blockr-color-text-muted);
-  border: 1px solid var(--blockr-color-border);
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 /* ============================================
