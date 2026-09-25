@@ -1,5 +1,11 @@
 # blockr.dock (development version)
 
+* The dock reads its colours, radii and surfaces from blockr.ui's design
+  tokens, so a board follows blockr.ui's dark scheme: the dockview frame and
+  tabs, block headers, sidebars, the block browser and the block menu.
+  `dock_board_options()` now includes the light/dark switch, light by
+  default. Requires blockr.ui >= 0.0.1.9001.
+
 * A new `insert_block_action` puts a block into an existing link
   ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
   Triggered with a link id, it offers the same block browser as the add and
