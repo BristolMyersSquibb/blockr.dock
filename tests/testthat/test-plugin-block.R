@@ -539,6 +539,32 @@ test_that("a board saved before #69 restores an input-free card", {
   expect_identical(xml2::xml_attr(toggles, "checked"), "checked")
 })
 
+test_that("the card's accordion names its open sections for the stylesheet", {
+
+  data_open <- function(visible) {
+    card <- block_card_content(
+      NS("blk"),
+      expr_ui = div(id = "blk-expr"),
+      block_ui = div(id = "blk-out"),
+      visible = visible
+    )
+    root <- xml2::read_html(as.character(htmltools::tagList(card)))
+    xml2::xml_attr(
+      xml2::xml_find_first(
+        root,
+        paste0("//div[", has_class("blockr-block-accordion"), "]")
+      ),
+      "data-open"
+    )
+  }
+
+  # The rule above the preview shows only while controls are open, so the
+  # attribute has to be right on first paint, before any toggle runs the JS.
+  expect_identical(data_open(c("inputs", "outputs")), "inputs outputs")
+  expect_identical(data_open("outputs"), "outputs")
+  expect_identical(data_open(character()), "")
+})
+
 test_that("block card sections carry the css-styling contract (#214)", {
 
   card <- block_card_content(
