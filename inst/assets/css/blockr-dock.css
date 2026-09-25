@@ -1133,3 +1133,34 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
   --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
 }
+
+/* The tab's close button: the thin x every small icon uses (blockr.ui's
+   `remove` icon, 1px stroke) in place of the Font Awesome xmark dockViewR
+   puts there, drawn as a mask so it takes the text colour. */
+.dv-tab .dv-default-tab .dv-default-tab-action {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: var(--blockr-radius-sm);
+  color: var(--blockr-color-text-muted);
+}
+
+.dv-tab .dv-default-tab .dv-default-tab-action > i,
+.dv-tab .dv-default-tab .dv-default-tab-action > svg {
+  display: none;
+}
+
+.dv-tab .dv-default-tab .dv-default-tab-action::before {
+  content: "";
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1' stroke-linecap='round'%3E%3Cline x1='2.5' y1='2.5' x2='7.5' y2='7.5'/%3E%3Cline x1='7.5' y1='2.5' x2='2.5' y2='7.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1' stroke-linecap='round'%3E%3Cline x1='2.5' y1='2.5' x2='7.5' y2='7.5'/%3E%3Cline x1='7.5' y1='2.5' x2='2.5' y2='7.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat;
+}
+
+.dv-tab .dv-default-tab .dv-default-tab-action:hover {
+  background-color: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-default);
+}
