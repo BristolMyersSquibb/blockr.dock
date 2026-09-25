@@ -93,7 +93,6 @@ block_card_title <- function(block, id, info) {
         div(
           id = ns("title_display"),
           class = "blockr-title-display",
-          title = "Double-click to rename",
           ondblclick = sprintf(
             paste0(
               "this.style.visibility='hidden';",
@@ -324,6 +323,7 @@ block_card_dropdown <- function(ns, info, blk_id) {
     tags$button(
       class = "btn btn-light blockr-header-icon",
       type = "button",
+      title = "More actions",
       `data-bs-toggle` = "dropdown",
       `aria-expanded` = "false",
       icon("ellipsis-vertical")

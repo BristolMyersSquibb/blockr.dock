@@ -1133,3 +1133,22 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
   --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
 }
+
+/* The light-card tooltip (tooltip.js): bg-raised, 1px border-default,
+   shadow-md, radius 8, 12px text-default, 5px 9px, as the design system's
+   "Tooltips" and blockr.ui's Blockr.tooltip draw it. */
+.blockr-tooltip {
+  position: fixed;
+  z-index: 1080;
+  max-width: 320px;
+  padding: 5px 9px;
+  background: var(--blockr-color-bg-raised);
+  border: 1px solid var(--blockr-color-border-default);
+  border-radius: var(--blockr-radius-lg);
+  box-shadow: var(--blockr-shadow-md);
+  font-size: var(--blockr-font-size-xs);
+  line-height: 1.4;
+  color: var(--blockr-color-text-default);
+  pointer-events: none;
+  overflow-wrap: anywhere;
+}

@@ -16,6 +16,12 @@
   waiting block shows a hollow ring. Text sizes and weights read the type
   tokens.
 
+* The dock's chrome (block header, navbar, view menu, sidebars) shows the
+  design system's light-card tooltip in place of the browser's native one:
+  after 300ms, at once on keyboard focus, in the tokens' colours in light and
+  dark. Every icon-only button there has one, including the block's "…" menu
+  and the board options gear. The block title no longer has one.
+
 * A new `insert_block_action` puts a block into an existing link
   ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
   Triggered with a link id, it offers the same block browser as the add and

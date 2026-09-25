@@ -6,11 +6,11 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 11 base elements + the viewport probe + the restore-probe slot + the two
-  # pre-rendered block-browser sidebars (add_block_sidebar,
-  # append_block_sidebar). The probe slot is empty at this log level;
-  # `tagList()` keeps the NULL and htmltools drops it at render.
-  expect_length(ui, 15L)
+  # 12 base elements (the tooltip dependency among them) + the viewport probe
+  # + the restore-probe slot + the two pre-rendered block-browser sidebars
+  # (add_block_sidebar, append_block_sidebar). The probe slot is empty at this
+  # log level; `tagList()` keeps the NULL and htmltools drops it at render.
+  expect_length(ui, 16L)
 })
 
 test_that("the restore probe ships only under debug logging (#473)", {

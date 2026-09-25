@@ -26,6 +26,7 @@ board_ui.dock_board <- function(
     show_block_dep(),
     attr_output_dep(),
     blockr_dock_dep(),
+    tooltip_dep(),
     viewport_probe_ui(id),
     rail_dep(),
     # Empty unless debug logging is on -- see `probe_restores()`.
@@ -99,6 +100,7 @@ board_ui.dock_board <- function(
           class = "btn action-button blockr-navbar-icon-btn",
           `data-blockr-sidebar-target` = NS(id, "settings_sidebar"),
           `aria-label` = "Board options",
+          title = "Board options",
           bsicons::bs_icon("gear")
         )
       )
@@ -323,5 +325,16 @@ blockr_dock_dep <- function() {
     pkg_version(),
     src = pkg_file("assets", "css"),
     stylesheet = "blockr-dock.css"
+  )
+}
+
+# The light-card tooltip for the dock's chrome (see tooltip.js). Page level,
+# like the stylesheet: one set of document listeners serves every card.
+tooltip_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-dock-tooltip",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "tooltip.js"
   )
 }
