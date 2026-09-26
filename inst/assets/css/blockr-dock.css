@@ -875,7 +875,7 @@
      The clip stays on either way: every background tab's render overlay is
      parked below the grid by dockView, and un-clipping them would trail a
      blank screenful past the last panel. */
-  height: var(--blockr-stack-height, calc(100vh - 48px));
+  height: var(--blockr-stack-height, calc(100vh - var(--blockr-navbar-height, 48px)));
   overflow: hidden;
 }
 
@@ -1348,4 +1348,90 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-brand:
 .blockr-view-toggle:focus:not(:focus-visible) {
   outline: none;
   box-shadow: none;
+}
+
+
+/* ------------------------------------------------------------------
+   Pages as tabs (board option `page_nav`)
+   ------------------------------------------------------------------
+   With "tabs" the navbar wraps onto a second line: a rule, then a tab per
+   page (page-tabs.js mirrors the page menu), with the page menu kept at the
+   end of the row for adding and managing pages. With "path" the row is not
+   shown and the page is the last step of the path. */
+.blockr-navbar [data-navbar-slot="break"],
+.blockr-navbar [data-navbar-slot="pagetabs"] {
+  display: none;
+}
+
+.blockr-navbar[data-page-nav="tabs"] {
+  flex-wrap: wrap;
+  height: auto;
+  padding-top: 9px;
+  row-gap: 0;
+}
+
+.blockr-navbar[data-page-nav="tabs"] [data-navbar-slot="break"] {
+  display: block;
+  order: 85;
+  flex: 0 0 calc(100% + 24px);
+  height: 1px;
+  margin: 9px -12px 0;
+  background: var(--blockr-color-border-default);
+}
+
+.blockr-navbar[data-page-nav="tabs"] [data-navbar-slot="pagetabs"] {
+  display: flex;
+  order: 90;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 38px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.blockr-navbar[data-page-nav="tabs"] [data-navbar-slot="page"] {
+  order: 95;
+}
+
+/* In the tab row the page menu is only the way to manage pages: no
+   separator, no name, a chevron alone */
+.blockr-navbar[data-page-nav="tabs"] [data-navbar-slot="page"]::before,
+.blockr-navbar[data-page-nav="tabs"] .blockr-view-toggle-label {
+  display: none;
+}
+
+.blockr-navbar[data-page-nav="tabs"] .blockr-view-toggle.blockr-navbar-icon-btn {
+  width: 30px;
+  padding: 0;
+  justify-content: center;
+}
+
+.blockr-page-tab {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--blockr-color-text-muted);
+  font: inherit;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blockr-page-tab:hover {
+  color: var(--blockr-color-text-default);
+  background: var(--blockr-color-bg-hover);
+}
+
+.blockr-page-tab.is-active {
+  color: var(--blockr-color-text-default);
+  font-weight: var(--blockr-font-weight-semibold);
+  box-shadow: inset 0 -2px 0 var(--blockr-color-border-accent);
+}
+
+.blockr-page-tab:focus:not(:focus-visible) {
+  outline: none;
 }

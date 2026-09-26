@@ -59,6 +59,7 @@ board_ui.dock_board <- function(
     div(
       class = "blockr-navbar",
       style = sprintf("--blockr-spinner-delay: %dms;", spinner_delay_ms()),
+      `data-page-nav` = page_nav_mode(options),
       navbar_brand_ui(plg$menu),
       div(
         class = "blockr-navbar-left",
@@ -67,6 +68,9 @@ board_ui.dock_board <- function(
       div(
         class = "blockr-navbar-right",
         tagAppendAttributes(v_nav, `data-navbar-slot` = "page"),
+        # With the page_nav option at "tabs", the pages also show as a tab row
+        # on a second line of the navbar
+        page_tabs_ui(),
         # Everything after this sits on the right. The navbar is one row of
         # slots (see blockr-dock.css), so a plugin's pieces and the dock's can
         # interleave: mark / name / page ... actions, status, tools, account.
