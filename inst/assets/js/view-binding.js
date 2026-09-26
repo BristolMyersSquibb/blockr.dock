@@ -80,6 +80,21 @@ $(function () {
     return $el.closest('.blockr-view-nav').hasClass('is-managing');
   };
 
+  // In manage mode a page's name is edited in place with a click, so it
+  // carries blockr.ui's editable marker: the text cursor and a "Click to
+  // rename" tooltip. Outside the mode a click switches pages, so it goes.
+  var markEditable = function ($scope, on) {
+    $scope.find('.blockr-view-item-name').each(function () {
+      if (on) this.setAttribute('data-blockr-editable', 'Click to rename');
+      else this.removeAttribute('data-blockr-editable');
+    });
+  };
+
+  var setManaging = function (el, on) {
+    $(el).toggleClass('is-managing', on);
+    markEditable($(el), on);
+  };
+
   // Swap a page's name for a field. Enter and blur commit, Escape restores.
   // Only in manage mode, which stays open, so a commit never closes the menu.
   var startRename = function ($item) {
@@ -97,9 +112,9 @@ $(function () {
 
     var committed = false;
     var restore = function (text) {
-      $input.replaceWith(
-        $('<span>').addClass('blockr-view-item-name').text(text)
-      );
+      var $back = $('<span>').addClass('blockr-view-item-name').text(text);
+      if (isManaging($input)) $back.attr('data-blockr-editable', 'Click to rename');
+      $input.replaceWith($back);
     };
     var commit = function () {
       if (committed) return;
@@ -267,7 +282,7 @@ $(function () {
       $(el).on('click.viewBinding', '.blockr-view-manage', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        $(el).addClass('is-managing');
+        setManaging(el, true);
       });
       $(el).on('click.viewBinding', '.blockr-view-done', function (e) {
         e.preventDefault();
@@ -275,13 +290,13 @@ $(function () {
         var active = document.activeElement;
         if (active && $(active).is('.blockr-view-rename-input')) active.blur();
         cancelConfirm();
-        $(el).removeClass('is-managing');
+        setManaging(el, false);
       });
       // Closing the menu leaves manage mode, so it always opens on the list.
       $(el).closest('.blockr-view-dropdown').on('hidden.bs.dropdown.viewBinding', function () {
         var active = document.activeElement;
         if (active && $(active).is('.blockr-view-rename-input')) active.blur();
-        $(el).removeClass('is-managing');
+        setManaging(el, false);
       });
 
       // Remove asks in place: the x turns the row into "Remove this page?"
@@ -368,7 +383,10 @@ $(function () {
         var $new = buildItem(data.add.id, data.add.name, canCrud);
         $(el).find('.blockr-view-list').append($new);
         // "New page" in manage mode: the new row's name opens for renaming.
-        if ($(el).hasClass('is-managing')) startRename($new);
+        if ($(el).hasClass('is-managing')) {
+          markEditable($new, true);
+          startRename($new);
+        }
 
         // Deliberately not activated here. The server owns which view is
         // active: an add that means to navigate carries `active` in its delta
