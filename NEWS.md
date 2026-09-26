@@ -24,6 +24,14 @@
   Copy block ID (the ID as grey text) and, after a small gap, Remove block
   with a bin, red only under the pointer. It is driven from the keyboard.
 
+* Adding, appending, prepending and inserting a block open one menu in
+  place (the design system's "Picking a block"): a caption, a filter box,
+  category titles and one row per block type with its mark, name and
+  package badge. The block browser sidebar is no longer used for it. "Add
+  panel" is the same menu over the board's blocks not on the page; its
+  dialog is gone. "New page" adds an empty "Page N" and opens its name for
+  renaming, without a dialog; removing a page asks in its row.
+
 * The views menu switches pages, the current one marked by weight and a
   check. "Manage pages" at its foot turns the list into an editor: drag a
   page by its grip to reorder, click a name to rename it, an x to remove,

@@ -353,22 +353,19 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   expect_setequal(nav$label, c("First", "Second"))
   expect_identical(nav$label[nav$active], "First")
 
-  # Drive a runtime add through the nav UI: the client `add` handler must
-  # render the new view once, correctly labelled.
+  # Drive a runtime add through the nav UI ("New page" adds "Page 3", no
+  # dialog): the client `add` handler must render the new view once,
+  # correctly labelled.
   app$run_js(
     "document.querySelector('#my_board-view_nav .blockr-view-add').click()"
   )
-  app$wait_for_idle()
-
-  app$set_inputs(`my_board-view_new_name` = "Third")
-  app$click("my_board-confirm_view_add")
   wait_view_nav(app, 3)
 
   nav <- read_view_nav(app)
 
   expect_identical(nrow(nav), 3L)
   expect_false(anyDuplicated(nav$id) > 0L)
-  expect_true("Third" %in% nav$label)
+  expect_true("Page 3" %in% nav$label)
   expect_false(any(nav$label == ""))
 })
 
@@ -459,21 +456,10 @@ test_that("a click on the view the server left still switches (#424)", {
   app$run_js(
     "document.querySelector('#my_board-view_nav .blockr-view-add').click()"
   )
-  wait_js(
-    app,
-    paste0(
-      "(function(){var e=document.getElementById('my_board-view_new_name');",
-      "return e !== null && e.classList.contains('shiny-bound-input');})()"
-    ),
-    function() dock_shell_diag(app, "my_board")
-  )
-
-  app$set_inputs(`my_board-view_new_name` = "Third")
-  app$click("my_board-confirm_view_add")
   wait_view_nav(app, 3)
 
   nav <- read_view_nav(app)
-  expect_identical(nav$label[nav$active], "Third")
+  expect_identical(nav$label[nav$active], "Page 3")
 
   # Clicking Second again has to reach the server. Left cached, the dedup
   # would swallow the report as a repeat and the board would sit on Third.
@@ -792,18 +778,18 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_setequal(docks$id, c(first, second))
   expect_identical(docks$id[docks$active], second)
 
-  # Remove the (non-active) First view: the x button sends `view_nav_remove`
-  # and the confirmation modal's button drives the delete. The reconcile drops
+  # Remove the (non-active) First view: the x asks in place, and its Remove
+  # button sends `view_nav_remove`; there is no dialog. The reconcile drops
   # both its nav entry and its dock container, leaving the renamed survivor.
   app$run_js(
     paste0(
       "document.querySelector('", item_sel(first),
-      " .blockr-view-remove').click()"
+      " .blockr-view-remove').click();",
+      "document.querySelector('", item_sel(first),
+      " .blockr-view-remove-confirm').click();"
     )
   )
   app$wait_for_idle()
-
-  app$click("my_board-confirm_view_remove")
   app$wait_for_idle()
 
   nav <- read_view_nav(app)
