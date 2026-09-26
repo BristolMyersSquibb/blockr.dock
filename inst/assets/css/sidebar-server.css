@@ -49,7 +49,7 @@
   gap: 12px;
   box-sizing: border-box;
   height: 48px;
-  padding: 0 12px 0 16px;
+  padding: 0 14px 0 20px;
   border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
   background: var(--blockr-color-bg-surface);
 }
@@ -118,10 +118,13 @@
   color: var(--blockr-color-text-accent-strong);
 }
 
+/* Content starts 20px from the panel's edge, the same as the header title;
+   the panels that draw their own background undo this with a matching
+   negative margin. */
 .blockr-sidebar-body {
   flex: 1 1 auto;
   overflow: auto;
-  padding: 16px;
+  padding: 16px 20px;
 }
 
 .blockr-sidebar-body:focus {
@@ -175,11 +178,12 @@ html.blockr-html-pushed-left {
    summary in 12px muted. While a page is open the sidebar carries
    `.blockr-sidebar-paged` and a back arrow leads its header. */
 .blockr-options-list {
-  margin: -8px;
+  margin: -8px -10px;
 }
 
+/* Row text at 20px from the edge, like the title; the hover wash 10px in. */
 .blockr-options-row.blockr-menu__item {
-  padding: 7px 10px;
+  padding: 9px 10px;
   white-space: normal;
 }
 
@@ -219,7 +223,7 @@ html.blockr-html-pushed-left {
   gap: 10px;
   width: 100%;
   min-height: 34px;
-  padding: 7px 10px;
+  padding: 9px 10px;
   border: none;
   border-radius: var(--blockr-radius-md);
   background: transparent;
@@ -267,7 +271,7 @@ html.blockr-html-pushed-left {
 }
 
 .blockr-sidebar-paged .blockr-sidebar-header {
-  padding-left: 8px;
+  padding-left: 12px;
   gap: 6px;
 }
 
