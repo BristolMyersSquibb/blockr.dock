@@ -220,7 +220,6 @@
   padding: 4px 8px;
   margin: -4px -8px;
   border-radius: var(--blockr-radius-md, 6px);
-  cursor: default;
   transition: background-color var(--blockr-transition, 0.15s ease);
 }
 
