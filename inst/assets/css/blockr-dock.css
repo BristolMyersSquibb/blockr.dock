@@ -27,7 +27,7 @@
    with the accent edge and the focus ring of every field. */
 .blockr-title-edit .form-control,
 .blockr-title-edit .form-control:focus {
-  font-size: var(--blockr-font-size-xl, 1.25rem);
+  font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: var(--blockr-font-weight-semibold);
   line-height: 1.3;
   color: var(--blockr-color-text-default, #111827);
@@ -143,8 +143,8 @@
 .blockr-block-header {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 42px;
+  gap: 10px;
+  min-height: 32px;
 }
 
 .blockr-block-header-main {
@@ -171,14 +171,14 @@
 }
 
 /* The block's mark: the category colour at 18% on the surface, the glyph in
-   the category colour. 42px here (24px in list rows, 16px in a tab, drawn
-   elsewhere). */
+   the category colour. 32px here (24px in list rows, 16px in a tab, drawn
+   elsewhere). One size at every card width. */
 .blockr-block-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--blockr-radius-lg, 8px);
   color: var(--blockr-dock-cat, #999999);
   background: color-mix(in srgb, var(--blockr-dock-cat, #999999) 18%, var(--blockr-color-bg-surface, #ffffff));
@@ -187,14 +187,14 @@
 /* The glyph is a bsicons SVG sized `1em` inline, so it follows the mark's
    font size. */
 .blockr-block-mark {
-  font-size: 21px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .blockr-block-title-wrap {
   flex-grow: 1;
   min-width: 0;
-  padding-right: 1rem;
+  padding-right: 8px;
 }
 
 /* Was Bootstrap's `.card-title.mb-0` plus `line-height: 1.0` inline. */
@@ -203,9 +203,9 @@
   line-height: 1.3;
 }
 
-/* The block title: 20px, weight 600. */
+/* The block title: 16px, weight 600. */
 .blockr-block-title .blockr-title {
-  font-size: var(--blockr-font-size-xl, 1.25rem);
+  font-size: var(--blockr-font-size-lg, 1rem);
   color: var(--blockr-color-text-default, #111827);
 }
 
@@ -214,7 +214,7 @@
    a negative margin equal to its padding, so the title sits where it would
    without the hit area. */
 .blockr-title-display {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   max-width: 100%;
   padding: 4px 8px;
@@ -228,55 +228,14 @@
   background-color: var(--blockr-color-bg-hover, #f3f4f6);
 }
 
+/* A long name wraps to a second line and is cut after it, instead of
+   shrinking to a few letters beside the actions. */
 .blockr-title-display .blockr-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-
-/* A narrow card (a block in a side panel) steps its header down instead of
-   cutting the name to a few letters: a 32px mark and a 16px title that may
-   wrap to a second line. The header is the query container, not
-   the card, so fixed-position content inside a block keeps the viewport as
-   its containing block. 350px of header is a card of about 380px. */
-.blockr-block-header {
-  container: blockr-head / inline-size;
-}
-
-@container blockr-head (max-width: 350px) {
-  .blockr-block-header {
-    gap: 10px;
-  }
-
-  .blockr-block-mark {
-    width: 32px;
-    height: 32px;
-    font-size: 16px;
-  }
-
-  .blockr-block-title-wrap {
-    padding-right: 8px;
-  }
-
-  .blockr-block-title .blockr-title,
-  .blockr-title-edit .form-control,
-  .blockr-title-edit .form-control:focus {
-    font-size: var(--blockr-font-size-lg, 1rem);
-  }
-
-  .blockr-title-display {
-    display: flex;
-  }
-
-  .blockr-title-display .blockr-title {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
+  overflow-wrap: anywhere;
 }
 
 /* The controls and preview toggles are the "…" menu's first group, as rows
