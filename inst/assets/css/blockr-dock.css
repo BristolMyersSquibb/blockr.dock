@@ -279,11 +279,12 @@
 
 }
 
-/* The header's one tool is the "…" menu: the section toggles (controls,
-   preview, a block's own control) are its first group, as rows with their
-   icons and a check when on (block-menu.js). The toggle buttons stay in the
-   markup, hidden, because they are the Shiny input the rows flip. */
-.blockr-block-header-actions .blockr-section-toggle {
+/* The controls and preview toggles are the "…" menu's first group, as rows
+   with their icons and a check when on (block-menu.js); their buttons stay in
+   the markup, hidden, because they are the Shiny input the rows flip. A
+   block's own control (the AI assistant) keeps its button next to "…" at
+   every width, and is not in the menu. */
+.blockr-block-header-actions .blockr-section-toggle .btn-check:not([value="ctrl"]) + .btn {
   display: none;
 }
 
