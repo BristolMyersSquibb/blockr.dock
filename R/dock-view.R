@@ -664,8 +664,8 @@ view_nav_ui <- function(id, views) {
       `data-bs-toggle` = "dropdown",
       `data-bs-auto-close` = "outside",
       `aria-expanded` = "false",
-      bsicons::bs_icon("journals"),
-      tags$span(class = "blockr-view-toggle-label", active_nm)
+      tags$span(class = "blockr-view-toggle-label", active_nm),
+      bsicons::bs_icon("chevron-down", class = "blockr-view-toggle-chev")
     ),
     div(
       class = "dropdown-menu blockr-menu blockr-view-nav",
