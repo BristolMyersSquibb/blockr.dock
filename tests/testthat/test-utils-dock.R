@@ -304,6 +304,8 @@ test_that("a restore probe reads as one line per read (#473)", {
     format_restore_probe(probe), "container absent, grid absent",
     fixed = TRUE
   )
+})
+
 test_that("simplified mode drops editing chrome but not the sashes (#TBD)", {
 
   captured <- NULL
