@@ -3,6 +3,7 @@
 \alias{option_summary}
 \alias{option_summary.default}
 \alias{option_summary.dark_mode_option}
+\alias{option_summary.compact_option}
 \title{One-line summary of a board option's value}
 \usage{
 option_summary(x, value, ...)
@@ -10,6 +11,8 @@ option_summary(x, value, ...)
 \method{option_summary}{default}(x, value, ...)
 
 \method{option_summary}{dark_mode_option}(x, value, ...)
+
+\method{option_summary}{compact_option}(x, value, ...)
 }
 \arguments{
 \item{x}{A board option (see \code{\link[blockr.core:new_board_options]{blockr.core::new_board_option()}}).}
