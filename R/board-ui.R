@@ -176,8 +176,8 @@ dock_outputs_ui <- function(id, views) {
 
 #' Build the body of the board-options sidebar.
 #'
-#' Returns a tagList containing the same options accordion that the
-#' Bootstrap offcanvas used to render. Called at server time from
+#' Returns the options sidebar's body: a list of option categories, each
+#' opening a page with that category's options (see `options_sidebar_ui()`). Called at server time from
 #' `board_server_callback()` when the user clicks the navbar gear, and
 #' passed to `show_sidebar()`.
 #'
@@ -225,32 +225,7 @@ settings_body <- function(
 
   stopifnot(is_board_options(options))
 
-  opts <- split(options, chr_ply(options, attr, "category"))
-
-  tagList(
-    generate_code,
-    hr(),
-    do.call(
-      accordion,
-      c(
-        list(
-          id = NS(id, "board_options"),
-          multiple = TRUE,
-          open = FALSE,
-          class = "accordion-flush"
-        ),
-        map(
-          do.call,
-          rep(list(accordion_panel), length(opts)),
-          map(
-            list,
-            title = names(opts),
-            lapply(opts, lapply, board_option_ui, id)
-          )
-        )
-      )
-    )
-  )
+  options_sidebar_ui(id, options, generate_code = generate_code)
 }
 
 spinner_delay_ms <- function() {

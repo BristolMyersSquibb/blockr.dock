@@ -75,6 +75,7 @@ Collate:
     'ext-edit.R'
     'ext-meta.R'
     'ext-ui.R'
+    'options-sidebar.R'
     'panel-id.R'
     'panel-ops.R'
     'panel-ref.R'

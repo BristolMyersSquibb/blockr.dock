@@ -35,7 +35,7 @@ test_that("the restore probe ships only under debug logging (#473)", {
 # live server-side (settings_observer → show_sidebar → settings_body) is
 # replaced by markup, so the assertions move to the rendered tag tree.
 
-test_that("settings sidebar mount is pre-rendered with the options accordion", {
+test_that("settings sidebar mount is pre-rendered with the options list", {
   ui <- board_ui(
     "test",
     new_dock_board(blocks = c(a = new_dataset_block()))
@@ -48,7 +48,7 @@ test_that("settings sidebar mount is pre-rendered with the options accordion", {
   expect_match(html, 'id="test-settings_sidebar"', fixed = TRUE)
   expect_match(html, 'data-mode="overlay"', fixed = TRUE)
 
-  # Its body slot carries the rendered options accordion. We probe by
+  # Its body slot carries the rendered options list and pages. We probe by
   # looking for the inputId of the default `board_name` option, which is
   # always present (contributed by blockr.core for any board).
   expect_match(html, 'id="test-board_name"', fixed = TRUE)

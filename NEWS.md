@@ -39,6 +39,16 @@
   sends the whole order, which the server takes only as a permutation of
   the current one.
 
+* The board options sidebar is a list of option categories: each row the
+  category's name ("Board", "Theme", "Study", ...) with a one-line summary
+  of its current values under it, kept current as they change. A row opens
+  the category's page; the header then shows a back arrow and the
+  category's name, and the arrow or Escape returns to the list. The
+  Bootstrap accordion and the rule above it are gone; "Show code" is the
+  list's last row. The summary is read from the option values;
+  `option_summary()` lets a package give its option class a better line
+  (a unit, a noun) without changes to blockr.core.
+
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
   native one. The "…" menu and the board options gear have one. Requires
