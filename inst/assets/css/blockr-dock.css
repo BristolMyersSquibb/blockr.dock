@@ -140,14 +140,14 @@
    Every part now has an owned class. The values are plain here because this
    sheet declares no `--blockr-*` variables; blockr.ui owns the shared
    vocabulary. */
-/* The header is an eyebrow over the block's content: the block's glyph in
-   its category colour and the name in small capitals, the sparkle and "…" on
+/* The header is an eyebrow over the block's content: the block's mark, a
+   small tinted square, and the name in small capitals, the sparkle and "…" on
    the right. It labels the block without competing with the content's own
    title. */
 .blockr-block-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 26px;
 }
 
@@ -174,15 +174,20 @@
   flex-shrink: 0;
 }
 
-/* The block's mark in the header is the bare glyph in the category colour,
-   with no tile (list rows and tabs draw their own marks elsewhere). The
-   glyph is a bsicons SVG sized `1em` inline, so it follows the font size. */
+/* The block's mark: the category colour at 18% on the surface, the glyph in
+   the category colour. 20px here, beside the eyebrow (list rows and tabs
+   draw their own marks elsewhere). The glyph is a bsicons SVG sized `1em`
+   inline, so it follows the font size. */
 .blockr-block-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
   color: var(--blockr-dock-cat, #999999);
-  font-size: 13px;
+  background: color-mix(in srgb, var(--blockr-dock-cat, #999999) 18%, var(--blockr-color-bg-surface, #ffffff));
+  font-size: 12px;
   line-height: 1;
 }
 
