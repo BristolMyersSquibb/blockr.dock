@@ -988,14 +988,15 @@ manage_dock <- function(
       suggest_panels_to_add(dock, board, panels = list(), session = session)
     )
 
-    # The add-panel modal emits an `add` panel-op; the apply observer places the
-    # panels. The `+` was clicked on a group, so anchor the add `within` a
-    # member of that group (`near`); an empty dock has no group and falls back
-    # to the view's default spot.
+    # A pick in the add-panel menu emits an `add` panel-op; the apply observer
+    # places the panel. The `+` was clicked on a group, so anchor the add
+    # `within` a member of that group (`near`); an empty dock has no group and
+    # falls back to the view's default spot.
     observeEvent(
-      input$confirm_add,
+      input$add_dock_panel_pick,
       {
-        req(input$add_dock_panel)
+        pick <- input$add_dock_panel_pick$value
+        req(is_string(pick), nzchar(pick))
 
         ref_group <- input[[dock_input("panel-to-add")]]
 
@@ -1003,9 +1004,7 @@ manage_dock <- function(
           group_front_panel(dock, ref_group)
         }
 
-        update(add_panel_delta(id, input$add_dock_panel, near))
-
-        removeModal()
+        update(add_panel_delta(id, pick, near))
       }
     )
 
@@ -1364,10 +1363,12 @@ reorder_view_observer <- function(client_views, session, update) {
   })
 }
 
-#' Show a modal for adding panels to the dock.
+#' Open the menu for adding a panel to the dock.
 #'
-#' Lists blocks and extensions not yet shown in the dock. If none are
-#' available, either triggers `suggest_new` or notifies the user.
+#' The "+" menu (Blockr.menu, add-block-menu.js), listing the blocks and
+#' extensions not yet shown in the dock: mark, title and the block type as
+#' meta text. A pick is `add_dock_panel_pick`. If none are available,
+#' either triggers `suggest_new` or notifies the user.
 #'
 #' @param dock Dock proxy.
 #' @param board Reactive board state.
@@ -1402,30 +1403,15 @@ suggest_panels_to_add <- function(
     as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
   )
 
-  options_data <- c(
-    build_block_options(board$board, blk_opts, value_fun = as_block_panel_id),
-    build_ext_options(board$board, ext_opts, value_fun = as_ext_panel_id)
-  )
+  items <- add_panel_menu_items(board$board, blk_opts, ext_opts)
 
-  if (length(options_data)) {
-    showModal(
-      modalDialog(
-        title = "Add panel",
-        size = "l",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          css_modal(),
-          blk_selectize(
-            ns("add_dock_panel"),
-            options_data,
-            max_items = NULL,
-            label = "Select panel to add",
-            options = multi_select_opts("Type to search...")
-          ),
-          confirm_button(ns("confirm_add"), label = "Add Panel"),
-          auto_focus_script(ns("add_dock_panel"))
-        )
+  if (length(items)) {
+    session$sendCustomMessage(
+      "blockr-add-panel-menu",
+      list(
+        pick = ns("add_dock_panel_pick"),
+        caption = "Show on this page",
+        items = items
       )
     )
   } else if (!isFALSE(suggest_new)) {
