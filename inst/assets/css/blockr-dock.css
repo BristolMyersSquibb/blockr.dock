@@ -235,6 +235,54 @@
 }
 
 
+/* A narrow card (a block in a side panel) steps its header down instead of
+   cutting the name to a few letters: a 32px mark, a 16px title that may wrap
+   to a second line, and the section toggles fold into the "…" menu
+   (block-menu.js lists them there). The header is the query container, not
+   the card, so fixed-position content inside a block keeps the viewport as
+   its containing block. 350px of header is a card of about 380px. */
+.blockr-block-header {
+  container: blockr-head / inline-size;
+}
+
+@container blockr-head (max-width: 350px) {
+  .blockr-block-header {
+    gap: 10px;
+  }
+
+  .blockr-block-mark {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .blockr-block-title-wrap {
+    padding-right: 8px;
+  }
+
+  .blockr-block-title .blockr-title,
+  .blockr-title-edit .form-control,
+  .blockr-title-edit .form-control:focus {
+    font-size: var(--blockr-font-size-lg, 1rem);
+  }
+
+  .blockr-title-display {
+    display: flex;
+  }
+
+  .blockr-title-display .blockr-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .blockr-block-header-actions .blockr-section-toggle {
+    display: none;
+  }
+}
+
 /* Block eval status: on-icon status dot.
    The dot is layered onto the block icon's lower-right corner (iOS badge
    style), matching blockr.dag's node badge placement. Its size and colour are

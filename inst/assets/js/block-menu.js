@@ -32,12 +32,35 @@
     return undefined;
   }
 
+  // In a narrow card the section toggles are hidden (blockr-dock.css) and
+  // listed here instead, first, each with its on state; a pick flips the
+  // same checkbox the toggle button would.
+  function toggleItems(trigger) {
+    var header = trigger.closest('.blockr-block-header');
+    var group = header && header.querySelector('.blockr-section-toggle');
+    if (!group || window.getComputedStyle(group).display !== 'none') return [];
+    var items = [];
+    group.querySelectorAll('input[type="checkbox"]').forEach(function (input) {
+      var label = group.querySelector('label[for="' + CSS.escape(input.id) + '"]') ||
+        input.nextElementSibling;
+      var name = label && (label.getAttribute('title') ||
+        label.getAttribute('data-blockr-tip') ||
+        label.getAttribute('aria-label') || label.textContent.trim());
+      items.push({
+        label: name || input.value,
+        checked: input.checked,
+        onSelect: function () { input.click(); }
+      });
+    });
+    return items.length ? items.concat([{ divider: true }]) : [];
+  }
+
   function config(trigger) {
     var cfg = JSON.parse(trigger.getAttribute('data-blockr-menu'));
-    cfg.items = (cfg.items || []).map(function (item) {
+    cfg.items = toggleItems(trigger).concat((cfg.items || []).map(function (item) {
       if (item.action) item.onSelect = onSelect(item);
       return item;
-    });
+    }));
     cfg.onClose = function () {
       if (current && current.trigger === trigger) current = null;
     };
