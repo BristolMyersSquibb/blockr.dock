@@ -54,11 +54,34 @@
     }
     p.title.textContent = page.getAttribute('data-label');
     backButton(p, root);
+    widen(p.sidebar, page);
     p.sidebar.classList.add('blockr-sidebar-paged');
     // Shiny outputs inside a page that was hidden at render wake up on show.
     if (window.jQuery) window.jQuery(page).trigger('shown');
     var first = page.querySelector('input, select, textarea, button');
     if (first) first.focus({ preventScroll: true });
+  }
+
+  // A page may ask for more width while it is open: an element in it with
+  // `data-blockr-page-width` (px), such as blockr.theme's scale map editor.
+  // The sidebar never gets narrower for it, and gets its width back on the
+  // list.
+  var WIDTH = '--blockr-sidebar-panel-width';
+  function widen(sidebar, page) {
+    var ask = page.querySelector('[data-blockr-page-width]');
+    var px = ask ? parseInt(ask.getAttribute('data-blockr-page-width'), 10) : 0;
+    if (!px || px <= sidebar.getBoundingClientRect().width) return;
+    if (!sidebar.hasAttribute('data-list-width')) {
+      sidebar.setAttribute('data-list-width', sidebar.style.getPropertyValue(WIDTH));
+    }
+    sidebar.style.setProperty(WIDTH, px + 'px');
+  }
+  function unwiden(sidebar) {
+    if (!sidebar.hasAttribute('data-list-width')) return;
+    var was = sidebar.getAttribute('data-list-width');
+    if (was) sidebar.style.setProperty(WIDTH, was);
+    else sidebar.style.removeProperty(WIDTH);
+    sidebar.removeAttribute('data-list-width');
   }
 
   function showList(root) {
@@ -73,6 +96,7 @@
     }
     // Only when set: classList.remove() rewrites the class attribute even for
     // an absent class, and the watcher below would take that for a change.
+    unwiden(p.sidebar);
     if (p.sidebar.classList.contains('blockr-sidebar-paged')) {
       p.sidebar.classList.remove('blockr-sidebar-paged');
     }
