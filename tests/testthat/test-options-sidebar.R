@@ -30,6 +30,14 @@ test_that("the dark mode summary names the appearance", {
   expect_identical(option_summary(opt, NULL), "System")
 })
 
+test_that("the compact summary shows only when it is on", {
+
+  opt <- new_compact_option()
+
+  expect_identical(option_summary(opt, TRUE), "Compact")
+  expect_null(option_summary(opt, FALSE))
+})
+
 test_that("a category's summary joins its options' lines", {
 
   opts <- list(new_board_name_option(), new_dark_mode_option())
