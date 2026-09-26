@@ -87,6 +87,29 @@
   the add, append and prepend flows do. Unlike append, the panel closes even
   when pinned: the gesture consumes the link it was triggered with, so there
   is nothing left to repeat it against.
+* New `blockr.simplified` option: a simpler board, not a locked one. It hides
+  the authoring affordances -- the per-block gears, the block card's section
+  toggles and action menu, view and panel CRUD, the board-options accordion --
+  so a reader is not offered controls they have no use for, and it forbids
+  nothing. Unlike `blockr.locked` it leaves core's board lock untouched, so
+  neither the update gate nor the input freeze engages: a block whose builder
+  left its inputs shown stays usable, and a crossfilter or value filter still
+  filters. Panel borders stay draggable, so a reader on a narrow screen can
+  widen a panel to read a wide table; that rearranging is theirs alone and is
+  not written back to the board. The gears, which dock does not build, are
+  reached by one CSS rule keyed on a `.blockr-no-edit` class that both modes
+  set, so no block package changes and a locked board stops offering gears it
+  had frozen. The rule targets the gear button rather than the header row it
+  sits in, which blocks share with reader controls -- the crossfilter's row
+  count and Reset, blockr.viz's download and search. Both options default off
+  (#TBD).
+
+* `BLOCKR_LOCKED=true` now locks a board. `blockr_option()` returns an
+  environment variable verbatim, as a string, and `is_dock_locked()` tested it
+  with `isTRUE()`, which is always FALSE for a string -- so the one route to
+  locking that does not require editing R code silently did nothing. Both
+  `blockr.locked` and `blockr.simplified` coerce the variable now (#TBD).
+
 * A grid that places the same panel more than once is now rejected when validated, rather than surviving to the render cast. A grid says where each panel goes, so two spots for one panel express nothing, and the check spans both halves of one: twice in the tree, twice inside a single rail, or once in each of two rails. The tree/rail overlap that canonicalisation prunes has a principled winner -- the rail claims the panel -- while two such spots have none, so this rejects rather than quietly dropping one. Previously the duplicate reached the render cast and aborted with blockr.core's "Block IDs are required to be unique.", which names blocks rather than the layout and fires far from whatever wrote the grid. Every producer routing through the views delta -- a hand-written grid, a restored board, a `views$grid` write, a `views$add` entry -- inherits the check (#464).
 
 * The `blk()` / `ext()` placement hint gained a `rail` key, so the `add` and `move` panel-op verbs can park a panel on a view's left or right edge. A rail used to be authorable only as a view's birth geometry, through `rail()` inside a `dock_grid()`, which left the user's own drag as the only route into one on a view already on screen. The key names an edge rather than an anchor, so it excludes `near` / `side`: a `side` is a direction relative to a `near` anchor *inside* the splitview while a rail position is an edge of the whole view, and both spell `left` and `right` (#461).
