@@ -95,6 +95,8 @@ block_card_title <- function(block, id, info) {
         div(
           id = ns("title_display"),
           class = "blockr-title-display",
+          # Text cursor and the "Double-click to edit" tooltip (blockr.ui).
+          `data-blockr-editable` = "",
           ondblclick = sprintf(
             paste0(
               "this.style.visibility='hidden';",
