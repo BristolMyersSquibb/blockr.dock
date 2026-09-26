@@ -16,22 +16,22 @@
 .blockr-title-edit {
   position: absolute;
   top: -5px;
-  left: -7px;
+  left: -9px;
 }
 
 .blockr-title-edit .form-group {
   margin: 0;
 }
 
-/* Renaming in place: the name becomes a field in plain case at 13px, with the
-   accent edge and the focus ring of every field. */
+/* Renaming in place: the name becomes a field at its own size and weight,
+   with the accent edge and the focus ring of every field. */
 .blockr-title-edit .form-control,
 .blockr-title-edit .form-control:focus {
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: var(--blockr-font-weight-semibold);
   line-height: 1.3;
   color: var(--blockr-color-text-default, #111827);
-  padding: 2px 6px;
+  padding: 4px 8px;
   height: auto;
   width: auto;
   min-width: 200px;
@@ -140,15 +140,11 @@
    Every part now has an owned class. The values are plain here because this
    sheet declares no `--blockr-*` variables; blockr.ui owns the shared
    vocabulary. */
-/* The header is an eyebrow over the block's content: the block's mark, a
-   small tinted square, and the name in small capitals, the sparkle and "…" on
-   the right. It labels the block without competing with the content's own
-   title. */
 .blockr-block-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 26px;
+  gap: 10px;
+  min-height: 32px;
 }
 
 .blockr-block-header-main {
@@ -175,19 +171,23 @@
 }
 
 /* The block's mark: the category colour at 18% on the surface, the glyph in
-   the category colour. 20px here, beside the eyebrow (list rows and tabs
-   draw their own marks elsewhere). The glyph is a bsicons SVG sized `1em`
-   inline, so it follows the font size. */
+   the category colour. 32px here (24px in list rows, 16px in a tab, drawn
+   elsewhere). One size at every card width. */
 .blockr-block-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--blockr-radius-lg, 8px);
   color: var(--blockr-dock-cat, #999999);
   background: color-mix(in srgb, var(--blockr-dock-cat, #999999) 18%, var(--blockr-color-bg-surface, #ffffff));
-  font-size: 12px;
+}
+
+/* The glyph is a bsicons SVG sized `1em` inline, so it follows the mark's
+   font size. */
+.blockr-block-mark {
+  font-size: 16px;
   line-height: 1;
 }
 
@@ -203,13 +203,10 @@
   line-height: 1.3;
 }
 
-/* The block name: 11px capitals, weight 600, tracked, muted. */
+/* The block title: 16px, weight 600. */
 .blockr-block-title .blockr-title {
-  font-size: 11px;
-  font-weight: var(--blockr-font-weight-semibold, 600);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--blockr-color-text-muted, #6b7280);
+  font-size: var(--blockr-font-size-lg, 1rem);
+  color: var(--blockr-color-text-default, #111827);
 }
 
 /* The rename affordance. The 2px dashed border is present and transparent at
@@ -220,8 +217,8 @@
   display: flex;
   align-items: center;
   max-width: 100%;
-  padding: 2px 6px;
-  margin: -2px -6px;
+  padding: 4px 8px;
+  margin: -4px -8px;
   border-radius: var(--blockr-radius-md, 6px);
   cursor: default;
   transition: background-color var(--blockr-transition, 0.15s ease);
@@ -231,12 +228,65 @@
   background-color: var(--blockr-color-bg-hover, #f3f4f6);
 }
 
-/* One line; a long name ends in an ellipsis. */
+/* A long name wraps to a second line and is cut after it, instead of
+   shrinking to a few letters beside the actions. */
 .blockr-title-display .blockr-title {
-  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* Compact (the "Compact" board option, `.blockr-compact` on the root): the
+   header becomes an eyebrow over the block's content. The mark shrinks to a
+   20px tinted square with a 12px glyph, the name to 11px muted capitals on
+   one line, so it labels the block without competing with the content's own
+   title. Renaming uses a 13px field in plain case. */
+.blockr-compact .blockr-block-header {
+  gap: 8px;
+  min-height: 26px;
+}
+
+.blockr-compact .blockr-block-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.blockr-compact .blockr-block-title .blockr-title {
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+
+.blockr-compact .blockr-title-display {
+  padding: 2px 6px;
+  margin: -2px -6px;
+}
+
+.blockr-compact .blockr-title-display .blockr-title {
+  display: block;
+  min-width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.blockr-compact .blockr-title-edit {
+  left: -7px;
+}
+
+.blockr-compact .blockr-title-edit .form-control,
+.blockr-compact .blockr-title-edit .form-control:focus {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  padding: 2px 6px;
+}
+
+.blockr-compact .blockr-block-errors {
+  margin-top: 6px;
 }
 
 /* The controls and preview toggles are the "…" menu's first group, as rows
@@ -418,7 +468,7 @@
 /* The slot a block's errors render into, between the header and the
    sections. Its top margin is the gap under the header. */
 .blockr-block-errors {
-  margin-top: 6px;
+  margin-top: 12px;
 }
 
 /* The controls sit under the header with no rule above or below them, on the

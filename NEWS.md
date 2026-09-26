@@ -13,6 +13,11 @@
   no rules around them; one rule separates them from the preview while both
   are open.
 
+* A "Compact" board option (`new_compact_option()`, in `dock_board_options()`,
+  off by default) turns every block header into an eyebrow line: a 20px
+  tinted mark and the name in 11px muted capitals. The regular header keeps
+  a 32px mark and a 16px title that may wrap to two lines.
+
 * A block is renamed with a double-click on its title or "Rename" in its
   menu, in place: the title takes a hover wash, the field the accent edge and
   focus ring; Enter or a click elsewhere commits, Escape restores, an empty
