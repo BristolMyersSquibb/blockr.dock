@@ -199,7 +199,13 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
     )
     tooltip_titles <- c(
       tooltip_titles,
-      coal(ctrl_meta$tooltip, ctrl_meta$label, "Control")
+      # The first of tooltip and label that says something: an empty string
+      # is no name, and the button is icon-only.
+      Find(
+        function(x) is_string(x) && nzchar(x),
+        list(ctrl_meta$tooltip, ctrl_meta$label),
+        nomatch = "Control"
+      )
     )
   }
 
