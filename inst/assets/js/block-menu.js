@@ -32,13 +32,14 @@
     return undefined;
   }
 
-  // In a narrow card the section toggles are hidden (blockr-dock.css) and
-  // listed here instead, first, each with its on state; a pick flips the
-  // same checkbox the toggle button would.
+  // The section toggles (controls, preview, a block's own control such as
+  // the AI assistant) are the menu's first group: each row with the toggle's
+  // icon and a check when on. Their buttons are hidden (blockr-dock.css);
+  // a pick flips the same checkbox the button would.
   function toggleItems(trigger) {
     var header = trigger.closest('.blockr-block-header');
     var group = header && header.querySelector('.blockr-section-toggle');
-    if (!group || window.getComputedStyle(group).display !== 'none') return [];
+    if (!group) return [];
     var items = [];
     group.querySelectorAll('input[type="checkbox"]').forEach(function (input) {
       var label = group.querySelector('label[for="' + CSS.escape(input.id) + '"]') ||
@@ -47,7 +48,8 @@
         label.getAttribute('data-blockr-tip') ||
         label.getAttribute('aria-label') || label.textContent.trim());
       items.push({
-        label: name || input.value,
+        label: name || 'Control',
+        icon: label ? label.innerHTML : undefined,
         checked: input.checked,
         onSelect: function () { input.click(); }
       });

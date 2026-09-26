@@ -366,6 +366,7 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
 ctrl_btn_label <- function(fn) coal(attr(fn, "ctrl_label"), "Control")
 ctrl_btn_icon  <- function(fn) attr(fn, "ctrl_icon")
 ctrl_btn_class <- function(fn) attr(fn, "ctrl_class")
+ctrl_btn_tooltip <- function(fn) attr(fn, "ctrl_tooltip")
 
 edit_block_server <- function(callbacks = list()) {
 

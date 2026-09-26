@@ -236,9 +236,8 @@
 
 
 /* A narrow card (a block in a side panel) steps its header down instead of
-   cutting the name to a few letters: a 32px mark, a 16px title that may wrap
-   to a second line, and the section toggles fold into the "…" menu
-   (block-menu.js lists them there). The header is the query container, not
+   cutting the name to a few letters: a 32px mark and a 16px title that may
+   wrap to a second line. The header is the query container, not
    the card, so fixed-position content inside a block keeps the viewport as
    its containing block. 350px of header is a card of about 380px. */
 .blockr-block-header {
@@ -278,9 +277,14 @@
     overflow-wrap: anywhere;
   }
 
-  .blockr-block-header-actions .blockr-section-toggle {
-    display: none;
-  }
+}
+
+/* The header's one tool is the "…" menu: the section toggles (controls,
+   preview, a block's own control) are its first group, as rows with their
+   icons and a check when on (block-menu.js). The toggle buttons stay in the
+   markup, hidden, because they are the Shiny input the rows flip. */
+.blockr-block-header-actions .blockr-section-toggle {
+  display: none;
 }
 
 /* Block eval status: on-icon status dot.
