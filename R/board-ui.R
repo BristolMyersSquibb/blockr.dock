@@ -30,6 +30,7 @@ board_ui.dock_board <- function(
     block_sections_dep(),
     blockr_dock_dep(),
     tooltip_dep(),
+    compact_dep(),
     viewport_probe_ui(id),
     rail_dep(),
     off_canvas(
