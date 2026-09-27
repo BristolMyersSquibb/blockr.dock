@@ -1,6 +1,6 @@
 Package: blockr.dock
 Title: A Docking Layout Manager for 'blockr'
-Version: 0.1.4.9013
+Version: 0.1.4.9014
 Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",
@@ -66,7 +66,6 @@ Collate:
     'board-server.R'
     'board-ui.R'
     'compact-option.R'
-    'font-option.R'
     'dock-board.R'
     'dock-grid.R'
     'dock-layout.R'

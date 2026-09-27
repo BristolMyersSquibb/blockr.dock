@@ -43,9 +43,7 @@
 #' `dock_board_options()` returns a `board_options` object: the board name and
 #' a light/dark switch, light unless the `dark_mode` blockr option says
 #' otherwise, and the "Compact" header switch ([new_compact_option()]), off
-#' unless the `compact` blockr option says otherwise, and the "Font" choice
-#' ([new_font_option()]), Open Sans unless the `font` blockr option says
-#' otherwise.
+#' unless the `compact` blockr option says otherwise.
 #'
 #' @rdname dock
 #' @export
@@ -234,8 +232,7 @@ dock_board_options <- function() {
     new_board_name_option(),
     new_dark_mode_option(value = blockr_option("dark_mode", "light")),
     new_compact_option(),
-    new_view_tabs_option(),
-    new_font_option()
+    new_view_tabs_option()
   )
 }
 

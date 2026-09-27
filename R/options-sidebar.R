@@ -85,12 +85,6 @@ option_summary.compact_option <- function(x, value, ...) {
   if (isTRUE(value)) "Compact" else NULL
 }
 
-#' @rdname option_summary
-#' @export
-option_summary.font_option <- function(x, value, ...) {
-  if (identical(value, "inter")) "Inter" else NULL
-}
-
 is_scalar_value <- function(x) {
   is.atomic(x) && length(x) == 1L && !is.na(x)
 }
