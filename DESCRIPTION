@@ -66,6 +66,7 @@ Collate:
     'board-server.R'
     'board-ui.R'
     'compact-option.R'
+    'font-option.R'
     'dock-board.R'
     'dock-grid.R'
     'dock-layout.R'

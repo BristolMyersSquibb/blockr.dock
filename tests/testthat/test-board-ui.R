@@ -10,7 +10,7 @@ test_that("dummy board ui test", {
   # section tracker, the "+" menu and the compact switch among them) + the
   # viewport probe + the restore-probe slot. The probe slot is empty at this log level;
   # `tagList()` keeps the NULL and htmltools drops it at render.
-  expect_length(ui, 18L)
+  expect_length(ui, 19L)
 })
 
 test_that("the restore probe ships only under debug logging (#473)", {
