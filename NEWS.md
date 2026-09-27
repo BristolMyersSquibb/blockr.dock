@@ -1,5 +1,10 @@
 # blockr.dock (development version)
 
+* Removing a block that has exactly one input links its parent to its
+  children, so a chain stays connected. `bridge_links()` computes the links
+  to add alongside a removal and `bridges_block()` says whether a block
+  would be bridged, for extensions that remove blocks themselves.
+
 * The dock page attaches `blockr.ui::shiny_input_batch_dep()`, which drops the
   empty input message Shiny 1.14.0 sends after every deferred input. A first
   visit to a 15-block view sent 177 of them, each a full input cycle on the
