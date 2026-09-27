@@ -1,5 +1,11 @@
 # blockr.dock (development version)
 
+* Cards and extensions parked off screen (views you have left) are no longer
+  styled or laid out by the browser (`content-visibility: hidden` on the
+  closed offcanvas pools). On the CEDX board they are half the document; one
+  DOM insertion goes from 106 to 11 ms and a return view switch spends 0.8 s
+  instead of 2.1 s on style (loaded container, same page A/B).
+
 * The navbar leads with the blockr mark, which is also the busy indicator:
   while blocks compute, its squares empty and fill in the order the R is
   drawn. It replaces the spinner ring. A plugin can hang a menu on the mark
