@@ -1,5 +1,19 @@
 # blockr.dock (development version)
 
+* The navbar leads with the blockr mark, which is also the busy indicator:
+  while blocks compute, its squares empty and fill in the order the R is
+  drawn. It replaces the spinner ring. A plugin can hang a menu on the mark
+  with an element of class `blockr-navbar-brand-menu`. The busy delay
+  (`blockr.spinner_delay_ms`) now defaults to 500 ms, so work that finishes
+  sooner shows nothing.
+
+* The views menu sits on the right of the navbar. `new_view_tabs_option()`
+  ("Views as tabs" under Theme options, off by default, saved with the
+  workflow) also shows the views as a line of tabs under the navbar; "Show
+  views as tabs" in the views menu sets the same option. Pages are views in
+  the menus too: "Manage views", "New view", and a new view is named
+  "View N".
+
 * New `blockr.simplified` option: a simpler board, not a locked one. It hides
   the authoring affordances -- the per-block gears, the block card's section
   toggles and action menu, view and panel CRUD, the board-options accordion --
