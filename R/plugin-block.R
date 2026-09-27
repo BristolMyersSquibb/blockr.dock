@@ -8,19 +8,15 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
 
   div(
     class = "card-body",
-    # Header parts each carry an owned class, and every dimension that a
-    # density variant would change (gap, padding, icon size, title size) is a
-    # token read by the stylesheet. Nothing here is styled inline: an inline
-    # declaration outranks any sheet a theme can attach, so a single
-    # `style=` attribute on a part is enough to make that part unthemable.
+    # Header parts each carry an owned class and nothing here is styled
+    # inline: an inline declaration outranks any sheet a theme can attach, so
+    # a single `style=` attribute on a part is enough to make that part
+    # unthemable.
     div(
       class = "blockr-block-header",
       div(
         class = "blockr-block-icon",
-        span(
-          title = blk_info$description,
-          blk_icon_data_uri(blk_info$icon, blk_info$color, mode = "inline")
-        ),
+        block_mark(blk, blk_info),
         block_status_dot(ns)
       ),
       div(
@@ -58,6 +54,27 @@ reported_sections <- function(input) {
   }
 }
 
+# The block's mark: its category colour as a tinted square with the glyph in
+# that colour. The colour is handed to the stylesheet as a custom property
+# rather than painted inline, so the tint, the size and the radius stay a
+# theme's to change. The header prints no subtitle; the block type, with the
+# package as a badge, is the mark's tooltip (Blockr.tooltip, handed over by
+# block-tooltips.js from these attributes).
+block_mark <- function(blk, info) {
+
+  type <- gsub("_", " ", class(blk)[1L])
+
+  span(
+    class = "blockr-block-mark",
+    style = paste0("--blockr-dock-cat: ", info$color, ";"),
+    `data-blockr-tip` = type,
+    `data-blockr-tip-badge` = info$package,
+    `aria-label` = paste(type, info$package, sep = ", "),
+    role = "img",
+    HTML(info$icon)
+  )
+}
+
 block_card_title <- function(block, id, info) {
   ns <- NS(id)
   input_id <- ns("block_name_in")
@@ -69,20 +86,18 @@ block_card_title <- function(block, id, info) {
       # Inline editable title container
       div(
         class = "blockr-inline-edit",
-        # Display mode - click to edit. The rename affordance (dashed ring,
-        # revealed pencil) is a `:hover` rule in blockr-dock.css, not a pair of
-        # `onmouseover`/`onmouseout` handlers writing `this.style`: a handler
-        # that writes an inline declaration cannot be overridden by any sheet,
-        # so it took the affordance out of a theme's reach and hardcoded two
-        # greys on the way. The `onclick` stays, because swapping the two modes
-        # and focusing the field is behaviour rather than appearance.
+        # Display mode. A double-click (or "Rename" in the block's menu)
+        # starts editing, so a single click is free to select the panel. The
+        # affordance is a hover wash in blockr-dock.css; the handler only
+        # swaps the two modes and focuses the field. The name is hidden with
+        # `visibility`, not `display`: it keeps its box, so the row keeps its
+        # height and the field, positioned against it, lands on the name.
         div(
           id = ns("title_display"),
           class = "blockr-title-display",
-          title = "Click to rename",
-          onclick = sprintf(
+          ondblclick = sprintf(
             paste0(
-              "this.style.display='none';",
+              "this.style.visibility='hidden';",
               "var editWrap = document.getElementById('%s');",
               "editWrap.style.display='block';",
               "var input = editWrap.querySelector('input');",
@@ -91,8 +106,7 @@ block_card_title <- function(block, id, info) {
             ),
             ns("title_edit")
           ),
-          tags$span(class = "blockr-title", block_name(block)),
-          icon("pen-to-square", class = "edit-icon")
+          tags$span(class = "blockr-title", block_name(block))
         ),
         # Edit mode - hidden by default
         div(
@@ -104,28 +118,51 @@ block_card_title <- function(block, id, info) {
             label = NULL,
             value = block_name(block)
           ),
+          div(class = "blockr-title-error", "A block needs a name"),
           # The displayed title mirrors this input, so it is kept in sync here
           # rather than by a server-rendered output: `updateTextInput()` fires
           # 'change', so a rename decided by the board lands the same way a
-          # keystroke does, with no render round-trip.
+          # keystroke does, with no render round-trip. Enter and a click
+          # elsewhere commit, Escape restores the name editing began with. An
+          # empty name is refused in place on Enter and dropped on blur; the
+          # server ignores it either way.
           tags$script(HTML(sprintf(
             "$(document).ready(function() {
               var input = $('#%s');
               var display = $('#%s');
               var editWrap = $('#%s');
+              var before = input.val();
+              input.on('focus', function() {
+                before = input.val();
+                editWrap.removeClass('is-invalid');
+              });
               input.on('blur', function() {
+                if (!$.trim(input.val())) {
+                  input.val(before).trigger('change');
+                }
+                editWrap.removeClass('is-invalid');
                 editWrap.hide();
-                // Clear the inline display the onclick wrote, rather than
-                // setting one: the class owns how the row lays out, so a
-                // density variant can change it.
-                display.css('display', '');
+                // Clear the inline visibility the handler wrote, rather than
+                // setting one: the class owns how the row looks.
+                display.css('visibility', '');
               });
               input.on('keydown', function(e) {
                 if (e.key === 'Enter') {
+                  if (!$.trim(input.val())) {
+                    editWrap.addClass('is-invalid');
+                    return;
+                  }
+                  $(this).blur();
+                }
+                if (e.key === 'Escape') {
+                  $(this).val(before).trigger('change');
                   $(this).blur();
                 }
               });
               input.on('input change', function() {
+                if ($.trim(input.val())) {
+                  editWrap.removeClass('is-invalid');
+                }
                 display.find('.blockr-title').text($(this).val());
               });
             });",
@@ -133,21 +170,6 @@ block_card_title <- function(block, id, info) {
           )))
         )
       )
-    ),
-    popover(
-      span(
-        class = "blockr-subtitle",
-        info$name
-      ),
-      # Title + package badge
-      div(
-        class = "blockr-block-meta-head",
-        tags$strong(info$name),
-        span(class = "badge-two-tone", info$package)
-      ),
-      # Description
-      p(class = "blockr-block-meta-desc", info$description),
-      options = list(trigger = "hover")
     )
   )
 }
@@ -269,6 +291,31 @@ block_card_dropdown <- function(ns, info, blk_id) {
     )
   }
 
+  # Starts the same in-place rename as a double-click on the title. The
+  # timeout lets the dropdown finish closing first, so its focus handling does
+  # not blur the field it just opened.
+  dd_rename <- function(display_id, symbol) {
+    tags$li(
+      tags$button(
+        class = "dropdown-item py-2 position-relative",
+        type = "button",
+        onclick = sprintf(
+          paste0(
+            "setTimeout(function() {",
+            "document.getElementById('%s').dispatchEvent(",
+            "new MouseEvent('dblclick', {bubbles: true})); }, 0);"
+          ),
+          display_id
+        ),
+        span(
+          class = "position-absolute start-0 top-50 translate-middle-y ms-3",
+          symbol
+        ),
+        "Rename"
+      )
+    )
+  }
+
   dd_divider <- function() {
     tags$li(tags$hr(class = "dropdown-divider my-2"))
   }
@@ -278,6 +325,7 @@ block_card_dropdown <- function(ns, info, blk_id) {
     tags$button(
       class = "btn btn-light blockr-header-icon",
       type = "button",
+      title = "More actions",
       `data-bs-toggle` = "dropdown",
       `aria-expanded` = "false",
       icon("ellipsis-vertical")
@@ -291,6 +339,10 @@ block_card_dropdown <- function(ns, info, blk_id) {
       if (!is_dock_locked()) {
         tagList(
           dd_header("Block Actions"),
+          dd_rename(
+            ns("title_display"),
+            bsicons::bs_icon("pencil", class = "text-muted", size = "1.1em")
+          ),
           dd_action(
             "Append block",
             ns("append_block"),
@@ -715,7 +767,7 @@ block_status_style <- function(status) {
       label = "Inputs changed since this block last ran"
     ),
     waiting = list(color = "#f59e0b", label = "Waiting for a data input"),
-    unset = list(color = "#eab308", label = "Set this block's inputs"),
+    unset = list(color = "#f59e0b", label = "Set this block's inputs"),
     failed = list(color = "#dc2626", label = "Evaluation failed")
   )
 
@@ -775,12 +827,36 @@ block_status_dot_attrs <- function(status, error_count = 0L) {
     return(list(style = "", title = "", role = "", `aria-label` = ""))
   }
 
+  # The fill reads a blockr.ui meaning token with the shared literal as its
+  # fallback, so the dot follows the scheme and a theme while the DAG keeps
+  # using the literal. A waiting block draws a ring instead of a dot: the
+  # solid amber stays for the block that needs input, not for every block
+  # downstream of it.
+  key <- if (error_count > 0L) "failed" else status
+  token <- switch(
+    key,
+    stale = "--blockr-color-text-muted",
+    failed = "--blockr-color-border-danger",
+    "--blockr-color-border-warning"
+  )
+  fill <- sprintf("var(%s, %s)", token, spec$color)
+  ring <- sprintf(
+    "0 0 0 %dpx var(--blockr-color-bg-surface, %s)", spec$ring, spec$ring_color
+  )
+
+  if (identical(key, "waiting")) {
+    shadow <- paste0("inset 0 0 0 1.5px ", fill, ", ", ring)
+    fill <- sprintf("var(--blockr-color-bg-surface, %s)", spec$ring_color)
+  } else {
+    shadow <- ring
+  }
+
   list(
     style = htmltools::css(
       width = paste0(spec$size, "px"),
       height = paste0(spec$size, "px"),
-      `background-color` = spec$color,
-      `box-shadow` = paste0("0 0 0 ", spec$ring, "px ", spec$ring_color)
+      `background-color` = fill,
+      `box-shadow` = shadow
     ),
     title = spec$label,
     role = "img",
