@@ -1,5 +1,11 @@
 # blockr.dock (development version)
 
+* The page attaches blockr.ui's `shiny_input_batch_dep()`, which skips the
+  empty input messages Shiny 1.14 sends after every deferred input
+  (rstudio/shiny#4436). On a first visit to a large view about 180 of them
+  queued ahead of the dock's `initialized` report, 2 to 4 s. Needs a
+  blockr.ui with BristolMyersSquibb/blockr.ui#73.
+
 * The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
   and Remove block after a divider. The preview and a block's own control

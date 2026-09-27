@@ -41,6 +41,11 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...,
         # off the `.shiny-busy` class Shiny sets on <html> instead -- see the
         # `.blockr-navbar-spinner` slot in board_ui.dock_board() and its CSS.
         useBusyIndicators(spinners = FALSE, pulse = FALSE),
+        # Shiny 1.14.0 sends an empty input message after every deferred
+        # input, and the server runs a full input cycle for each. A card mount
+        # sets about a dozen inputs, so a first view visit queued ~180 empty
+        # messages ahead of the dock's own `initialized` report.
+        blockr.ui::shiny_input_batch_dep(),
         shinyjs::useShinyjs(),
         board_ui(id, x, plugins, options = options)
       ),
