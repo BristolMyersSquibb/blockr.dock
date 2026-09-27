@@ -699,6 +699,56 @@
   color: var(--blockr-color-text-danger);
 }
 
+/* Remove asks in place: the row turns into the question and a Remove
+   button on the danger wash. */
+.blockr-view-item.is-confirming > :not(.blockr-view-confirm) {
+  display: none !important;
+}
+
+.blockr-view-nav.is-managing .blockr-view-item.dropdown-item.is-confirming,
+.blockr-view-nav.is-managing .blockr-view-item.dropdown-item.is-confirming:hover {
+  background: var(--blockr-color-bg-danger);
+}
+
+.blockr-view-confirm {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: var(--blockr-color-text-danger);
+}
+
+.blockr-view-confirm-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-view-remove-confirm {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--blockr-color-border-danger-subtle);
+  border-radius: var(--blockr-radius-sm);
+  background: var(--blockr-color-bg-surface);
+  color: var(--blockr-color-text-danger);
+  font: inherit;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-medium);
+  cursor: pointer;
+}
+
+.blockr-view-remove-confirm:hover {
+  border-color: var(--blockr-color-border-danger);
+}
+
+.blockr-view-remove-confirm:focus-visible {
+  outline: var(--blockr-focus-outline);
+  outline-offset: var(--blockr-focus-offset);
+}
+
 /* Inline rename field, at the row's own size. `width: 0` with `flex: 1`
    takes the space the name had, so the menu does not widen. */
 .blockr-view-rename-input {

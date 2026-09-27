@@ -1054,9 +1054,10 @@ manage_dock <- function(
 
 #' Observe view addition requests.
 #'
-#' Shows a modal to name the new view and pick blocks/extensions, then emits
-#' an `add` + `active` views delta; the reconcile pass instantiates the dock
-#' and switches to it.
+#' "New page" in the views menu's manage mode: adds an empty page with the
+#' next free "Page N" name and switches to it, with no dialog. The client
+#' opens the new row's name for renaming, and its blocks are added from the
+#' page's "+" menu.
 #'
 #' @param client_views Reactive record of the client-shown views.
 #' @param session Shiny session.
@@ -1066,100 +1067,14 @@ manage_dock <- function(
 #' @noRd
 add_view_observer <- function(client_views, session, board, update) {
   input <- session$input
-  output <- session$output
-  ns <- session$ns
 
-  # Show modal for view creation
+  # lifecycle: a stable id is minted in `augment_board_update.dock_board()`
+  # and `apply_views_add()` instantiates the dock -- the same path a
+  # delta-driven add takes, so id assignment happens in exactly one place.
   observeEvent(input$view_nav_add, {
     req(views_can_crud(client_views()))
 
-    state <- client_views()
-    existing <- view_names(state)
-    n <- length(state) + 1L
-    while (paste("Page", n) %in% existing) n <- n + 1L
-    default_name <- paste("Page", n)
-
-    brd <- board$board
-    blk_ids <- board_block_ids(brd)
-    ext_options <- build_ext_options(brd, dock_ext_ids(brd))
-
-    showModal(
-      modalDialog(
-        title = "New view",
-        size = "l",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          css_modal(),
-          textInput(
-            ns("view_new_name"),
-            "View name",
-            value = default_name
-          ),
-          if (length(blk_ids)) {
-            board_block_select(
-              ns("view_new_blocks"),
-              brd,
-              blk_ids,
-              max_items = NULL,
-              label = "Blocks to show",
-              options = multi_select_opts("Select blocks...")
-            )
-          },
-          if (length(ext_options)) {
-            blk_selectize(
-              ns("view_new_exts"),
-              ext_options,
-              max_items = NULL,
-              label = "Extensions to show",
-              options = multi_select_opts("Select extensions...")
-            )
-          },
-          uiOutput(ns("view_name_validation")),
-          confirm_button(ns("confirm_view_add"), label = "Create view")
-        )
-      )
-    )
-  })
-
-  # Name validation feedback
-  output$view_name_validation <- renderUI({
-    req(input$view_new_name)
-    msg <- validate_view_name(
-      trimws(input$view_new_name),
-      view_names(client_views())
-    )
-    if (!is.null(msg)) tags$div(class = "text-danger", msg)
-  })
-
-  # Confirm view creation. The new view is created through the update
-  # lifecycle: a stable id is minted in `augment_board_update.dock_board()`
-  # and `apply_views_add()` instantiates the dock — the same path a
-  # delta-driven add takes, so id assignment happens in exactly one place.
-  observeEvent(input$confirm_view_add, {
-    state <- client_views()
-    new_name <- trimws(input$view_new_name)
-
-    if (!is.null(validate_view_name(new_name, view_names(state)))) {
-      return()
-    }
-
-    removeModal()
-
-    brd <- board$board
-    sel_blks <- intersect(
-      coal(input$view_new_blocks, character()),
-      board_block_ids(brd)
-    )
-    sel_exts <- intersect(
-      coal(input$view_new_exts, character()),
-      dock_ext_ids(brd)
-    )
-
-    members <- c(
-      as.character(as_ext_panel_id(sel_exts)),
-      as.character(as_block_panel_id(sel_blks))
-    )
+    name <- next_page_name(view_names(client_views()))
 
     # Switch to the new view on creation. Its id is minted in augment, so
     # we point `active` at its `add` key (the display name); the dock
@@ -1167,19 +1082,27 @@ add_view_observer <- function(client_views, session, board, update) {
     update(
       list(
         views = list(
-          add = set_names(list(dock_view(members)), new_name),
-          active = new_name
+          add = set_names(list(dock_view(character())), name),
+          active = name
         )
       )
     )
   })
 }
 
+# "Page N", N one more than the pages there are, or the first free one after.
+next_page_name <- function(existing) {
+  n <- length(existing) + 1L
+  while (paste("Page", n) %in% existing) n <- n + 1L
+  paste("Page", n)
+}
+
 #' Observe view removal requests.
 #'
-#' Shows a confirmation modal, then emits an `rm` views delta; the reconcile
-#' pass destroys the dock module, removes the DOM container, and switches to
-#' another view if the removed one was active.
+#' The views menu asks in place ("Remove this page?") before it sends
+#' `view_nav_remove`, so the request is final here: it emits an `rm` views
+#' delta; the reconcile pass destroys the dock module, removes the DOM
+#' container, and switches to another view if the removed one was active.
 #'
 #' @param client_views Reactive record of the client-shown views.
 #' @param session Shiny session.
@@ -1188,10 +1111,7 @@ add_view_observer <- function(client_views, session, board, update) {
 #' @noRd
 remove_view_observer <- function(client_views, session, update) {
   input <- session$input
-  ns <- session$ns
 
-  # Show confirmation modal. `input$view_nav_remove` carries the view id;
-  # the modal shows the display name.
   observeEvent(input$view_nav_remove, {
     req(views_can_crud(client_views()))
 
@@ -1203,49 +1123,7 @@ remove_view_observer <- function(client_views, session, update) {
     }
 
     if (length(state) <= 1L) {
-      notify("Cannot remove the last view.")
-      return()
-    }
-
-    rm_name <- coal(view_name(state[[rm_id]]), rm_id, fail_all = FALSE)
-
-    showModal(
-      modalDialog(
-        title = "Remove view",
-        size = "s",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          tags$p(
-            "Are you sure you want to remove view ",
-            tags$strong(rm_name),
-            "?"
-          ),
-          div(
-            style = "display: flex; justify-content: flex-end; gap: 8px;
-              margin-top: 20px;",
-            modalButton("Cancel"),
-            actionButton(
-              ns("confirm_view_remove"),
-              "Remove",
-              class = "btn-danger"
-            )
-          )
-        )
-      )
-    )
-  })
-
-  # Removal flows through the update lifecycle: `apply_views_rm()` tears
-  # down the dock module, drops the view from the board and the live
-  # state, and re-syncs the nav switcher.
-  observeEvent(input$confirm_view_remove, {
-    removeModal()
-
-    rm_id <- input$view_nav_remove
-    state <- client_views()
-
-    if (!rm_id %in% names(state) || length(state) <= 1L) {
+      notify("Cannot remove the last page.")
       return()
     }
 
