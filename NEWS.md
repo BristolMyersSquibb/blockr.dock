@@ -1,5 +1,27 @@
 # blockr.dock (development version)
 
+* The dock page attaches `blockr.ui::shiny_input_batch_dep()`, which drops the
+  empty input message Shiny 1.14.0 sends after every deferred input. A first
+  visit to a 15-block view sent 177 of them, each a full input cycle on the
+  server, and the dock's `initialized` report waited 2 to 4 seconds behind them.
+  Needs blockr.ui 0.0.1.9042.
+
+* A first visit to a view no longer re-checks every block's frozen state per
+  card mount. A card's reported sections depended on the session's whole input
+  name set, so every new input on the board woke every block's `visible`, and
+  `freeze_hidden_inputs()` re-read all of them: 21 to 43 runs over ~90 blocks
+  per first visit. The key test now runs under `isolate()`; reading the section
+  input itself already fires when the card first reports.
+
+* Cards and extensions parked off screen (views you have left) are no longer
+  styled or laid out by the browser (`content-visibility: hidden` on the closed
+  offcanvas pools). On a 90-block board they are half the document; one DOM
+  insertion goes from 106 to 11 ms and a return view switch spends 0.8 s instead
+  of 2.1 s on style (loaded container, same page A/B).
+
+* `all.equal()` on a dock grid dispatches to its method again; a roxygen run
+  had registered it for `all()`.
+
 * The navbar leads with the blockr mark, which is also the busy indicator:
   while blocks compute, its squares empty and fill in the order the R is
   drawn. It replaces the spinner ring. A plugin can hang a menu on the mark
