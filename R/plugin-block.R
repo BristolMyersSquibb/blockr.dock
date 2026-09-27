@@ -252,163 +252,65 @@ ctrl_button_label <- function(meta) {
   span(class = meta$class, inner)
 }
 
+# The block's "…" menu, drawn by Blockr.menu (blockr.ui) from the config on
+# the trigger; block-menu.js opens it and turns each item's `action` into a
+# pick: `input` sends the same event the old dropdown buttons did, so the
+# server's observers are unchanged; `rename` starts the in-place rename;
+# `copy` puts the block ID on the clipboard. A locked dock lists no action
+# that changes the board.
 block_card_dropdown <- function(ns, info, blk_id) {
 
-  dd_header <- function(title) {
-    tags$li(
-      h6(class = "dropdown-header", title)
-    )
-  }
+  locked <- is_dock_locked()
 
-  dd_action <- function(title, id, symbol, class = character()) {
-
-    cls <- c(
-      "dropdown-item action-button py-2 position-relative",
-      class
-    )
-
-    tags$li(
-      tags$button(
-        class = cls,
-        type = "button",
-        id = id,
-        if (not_null(symbol)) {
-          span(
-            class = "position-absolute start-0 top-50 translate-middle-y ms-3",
-            symbol
-          )
-        },
-        title
-      )
-    )
-  }
-
-  dd_info <- function(key, val) {
-    div(
-      class = "d-flex justify-content-between align-items-center mb-3",
-      span(key, class = "text-muted small"),
-      span(val, class = "small fw-medium")
-    )
-  }
-
-  # Starts the same in-place rename as a double-click on the title. The
-  # timeout lets the dropdown finish closing first, so its focus handling does
-  # not blur the field it just opened.
-  dd_rename <- function(display_id, symbol) {
-    tags$li(
-      tags$button(
-        class = "dropdown-item py-2 position-relative",
-        type = "button",
-        onclick = sprintf(
-          paste0(
-            "setTimeout(function() {",
-            "document.getElementById('%s').dispatchEvent(",
-            "new MouseEvent('dblclick', {bubbles: true})); }, 0);"
-          ),
-          display_id
+  # Plain actions have no icon; Remove, which destroys something, has the
+  # bin and sits in a group of its own (design system, Menus). The block's
+  # type and package are the tooltip on its mark, not a head here.
+  items <- c(
+    if (!locked) {
+      list(
+        list(
+          label = "Rename", action = "rename", target = ns("title_display")
         ),
-        span(
-          class = "position-absolute start-0 top-50 translate-middle-y ms-3",
-          symbol
-        ),
-        "Rename"
+        list(
+          label = "Append block", action = "input", target = ns("append_block")
+        )
       )
-    )
-  }
-
-  dd_divider <- function() {
-    tags$li(tags$hr(class = "dropdown-divider my-2"))
-  }
-
-  div(
-    class = "dropdown",
-    tags$button(
-      class = "btn btn-light blockr-header-icon",
-      type = "button",
-      title = "More actions",
-      `data-bs-toggle` = "dropdown",
-      `aria-expanded` = "false",
-      icon("ellipsis-vertical")
+    },
+    list(
+      list(
+        label = "Copy block ID", meta = blk_id, action = "copy",
+        target = blk_id
+      )
     ),
-    tags$ul(
-      class = paste(
-        "dropdown-menu dropdown-menu-end blockr-block-dropdown",
-        "shadow-sm rounded-3 border-1"
-      ),
-      style = "min-width: 250px;",
-      if (!is_dock_locked()) {
-        tagList(
-          dd_header("Block Actions"),
-          dd_rename(
-            ns("title_display"),
-            bsicons::bs_icon("pencil", class = "text-muted", size = "1.1em")
-          ),
-          dd_action(
-            "Append block",
-            ns("append_block"),
-            bsicons::bs_icon("plus", class = "text-success", size = "1.1em")
-          ),
-          dd_action(
-            "Delete block",
-            ns("delete_block"),
-            bsicons::bs_icon("trash", class = "text-danger", size = "1.1em")
-          ),
-          dd_divider()
-        )
-      },
-      dd_header("Block Details"),
-      tags$li(
-        div(
-          class = "px-3 py-2",
-          div(
-            class = "d-flex justify-content-between align-items-center mb-3",
-            span("Package", class = "text-muted small"),
-            span(class = "badge-two-tone", info$package)
-          ),
-          dd_info("Type", info$category),
-          div(
-            class = "d-flex justify-content-between align-items-center",
-            span("ID", class = "text-muted small"),
-            div(
-              class = "d-flex align-items-center gap-2",
-              tags$code(
-                blk_id,
-                style = "font-size: var(--blockr-font-size-xs);"
-              ),
-              tags$button(
-                class = "btn btn-link p-0 border-0 text-muted",
-                style = "line-height: 1; text-decoration: none;",
-                onclick = sprintf(
-                  paste0(
-                    "event.stopPropagation(); ",
-                    "navigator.clipboard.writeText('%s'); ",
-                    "var btn = this; ",
-                    "var copyIcon = btn.querySelector('.copy-icon'); ",
-                    "var checkIcon = btn.querySelector('.check-icon'); ",
-                    "copyIcon.style.display = 'none'; ",
-                    "checkIcon.style.display = ''; ",
-                    "setTimeout(function() { ",
-                    "checkIcon.style.display = 'none'; ",
-                    "copyIcon.style.display = ''; }, 1500);"
-                  ),
-                  blk_id
-                ),
-                title = "Copy to clipboard",
-                span(
-                  class = "copy-icon",
-                  bsicons::bs_icon("copy", size = "0.9em")
-                ),
-                span(
-                  class = "check-icon text-success",
-                  style = "display: none;",
-                  bsicons::bs_icon("check", size = "0.9em")
-                )
-              )
-            )
-          )
+    if (!locked) {
+      list(
+        list(gap = TRUE),
+        list(
+          label = "Remove block", icon = "trash", danger = TRUE,
+          action = "input", target = ns("delete_block")
         )
       )
-    )
+    }
+  )
+
+  config <- list(align = "end", items = items)
+
+  tags$button(
+    class = "btn btn-light blockr-header-icon blockr-block-menu-btn",
+    type = "button",
+    title = "More actions",
+    `data-blockr-menu` = jsonlite::toJSON(config, auto_unbox = TRUE),
+    icon("ellipsis-vertical"),
+    block_menu_dep()
+  )
+}
+
+block_menu_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-block-menu",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "block-menu.js"
   )
 }
 

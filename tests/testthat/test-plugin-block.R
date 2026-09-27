@@ -664,6 +664,47 @@ test_that("the header names the block type on its mark", {
                fixed = TRUE)
 })
 
+test_that("the block menu lists its actions for Blockr.menu", {
+
+  menu_config <- function() {
+    btn <- block_card_dropdown(
+      NS("blk"),
+      list(name = "dataset block", package = "blockr.core",
+           description = "Choose a dataset"),
+      "a"
+    )
+    jsonlite::fromJSON(
+      htmltools::tagGetAttribute(btn, "data-blockr-menu"),
+      simplifyVector = FALSE
+    )
+  }
+
+  cfg <- menu_config()
+  expect_null(cfg$head)
+  expect_identical(cfg$align, "end")
+
+  labels <- vapply(cfg$items, function(x) x$label %||% "", character(1L))
+  expect_identical(
+    labels,
+    c("Rename", "Append block", "Copy block ID", "", "Remove block")
+  )
+  expect_true(cfg$items[[4L]]$gap)
+  # Only Remove carries an icon.
+  icons <- vapply(cfg$items, function(x) x$icon %||% "", character(1L))
+  expect_identical(icons, c("", "", "", "", "trash"))
+  # The picks send the events the server already observes.
+  targets <- vapply(cfg$items, function(x) x$target %||% "", character(1L))
+  expect_true(all(c("blk-append_block", "blk-delete_block") %in% targets))
+  expect_true(cfg$items[[5L]]$danger)
+  expect_identical(cfg$items[[3L]]$meta, "a")
+
+  # A locked dock lists nothing that changes the board.
+  withr::local_options(blockr.locked = TRUE)
+  labels <- vapply(menu_config()$items, function(x) x$label %||% "",
+                   character(1L))
+  expect_identical(labels, "Copy block ID")
+})
+
 test_that("block card carries no html output (#403)", {
 
   blk <- new_dataset_block()

@@ -764,13 +764,16 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_setequal(docks$id, c(first, second))
   expect_identical(docks$id[docks$active], second)
 
-  # Rename the active view through the pencil: it swaps the label span for an
-  # inline input that commits on Enter, sending `view_nav_rename`. The id is
-  # stable, so the label moves but the dock container (keyed by id) does not.
+  # Rename the active view in manage mode: a click on the name swaps the label
+  # span for an inline input that commits on Enter, sending `view_nav_rename`.
+  # The id is stable, so the label moves but the dock container (keyed by id)
+  # does not.
   app$run_js(
     paste0(
+      "document.querySelector('#my_board-view_nav .blockr-view-manage')",
+      ".click();",
       "var it = document.querySelector('", item_sel(second), "');",
-      "it.querySelector('.blockr-view-edit').click();",
+      "it.querySelector('.blockr-view-item-name').click();",
       "var inp = it.querySelector('.blockr-view-rename-input');",
       "inp.value = 'Renamed';",
       "$(inp).trigger($.Event('keydown', {key: 'Enter'}));"
@@ -813,7 +816,7 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_true(docks$active)
 })
 
-test_that("a view moves down via the nav reorder control (#351)", {
+test_that("a view moves down via a reorder from the nav (#351)", {
 
   skip_on_cran()
 
@@ -835,17 +838,20 @@ test_that("a view moves down via the nav reorder control (#351)", {
 
   first <- nav$id[nav$label == "First"]
 
-  # Nudge First down via its chevron: the gesture sends a relative
-  # `view_nav_reorder`, the server applies the order and pushes it back, and the
-  # binding re-sequences the nav. Order is board content, so the active view
-  # rides along rather than snapping to the new first entry.
+  # Drop First below Second: a drag in manage mode sends the order it left
+  # the list in as `view_nav_reorder` (sent directly here; the drag itself is
+  # native HTML5 and not driven by the harness). The server applies the order
+  # and pushes it back, and the binding re-sequences the nav. Order is board
+  # content, so the active view rides along rather than snapping to the new
+  # first entry.
+  second <- nav$id[nav$label == "Second"]
   app$run_js(
-    paste0(
-      "document.querySelector('",
-      sprintf(
-        "#my_board-view_nav .blockr-view-item[data-view-id=\"%s\"]", first
+    sprintf(
+      paste0(
+        "Shiny.setInputValue('my_board-view_nav_reorder', ",
+        "{order: ['%s', '%s']}, {priority: 'event'})"
       ),
-      " .blockr-view-down').click()"
+      second, first
     )
   )
   app$wait_for_idle()
@@ -984,22 +990,19 @@ test_that("locked board hides block actions, shows lock indicator (#236)", {
     "Read-only"
   )
 
-  # Block cards and their dropdown menus render, but the locked dock suppresses
-  # the mutating actions: no append / delete buttons anywhere.
-  expect_gte(count(".blockr-block-dropdown"), 1)
-  expect_equal(count("[id$=\"-append_block\"]"), 0)
-  expect_equal(count("[id$=\"-delete_block\"]"), 0)
-
-  # The dropdown's "Block Actions" section is gone; "Block Details" remains.
-  headers <- app$get_js(
+  # Block cards and their "…" menus render, but the locked dock suppresses
+  # the mutating actions: the menu config on each trigger (block-menu.js
+  # draws it with Blockr.menu) sends no append / delete event.
+  expect_gte(count(".blockr-block-menu-btn"), 1)
+  menus <- app$get_js(
     paste0(
-      "Array.from(document.querySelectorAll(",
-      "'.blockr-block-dropdown .dropdown-header'",
-      ")).map(function(e) { return e.innerText; }).join('|')"
+      "Array.from(document.querySelectorAll('.blockr-block-menu-btn'))",
+      ".map(function(e) { return e.getAttribute('data-blockr-menu'); })",
+      ".join('|')"
     )
   )
-  expect_match(headers, "Block Details")
-  expect_false(grepl("Block Actions", headers))
+  expect_match(menus, "Copy block ID")
+  expect_false(grepl("append_block|delete_block", menus))
 
   # View CRUD is locked too: no "New page" add control.
   expect_equal(count(".blockr-view-add"), 0)
