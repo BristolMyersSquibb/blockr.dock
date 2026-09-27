@@ -195,7 +195,7 @@ group_front_panel <- function(dock, group_id) {
 #' @noRd
 empty_dock_prompt <- function(ns) {
 
-  if (is_dock_locked()) {
+  if (dock_no_edit()) {
     return(
       div(
         class = "blockr-empty-dock-prompt",
