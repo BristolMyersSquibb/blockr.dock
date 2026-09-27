@@ -22,15 +22,4 @@
 
   document.addEventListener('show.bs.collapse', function (e) { update(e, true); });
   document.addEventListener('hide.bs.collapse', function (e) { update(e, false); });
-
-  // The preview lip (plugin-block.R) flips the card's hidden "outputs"
-  // checkbox, the same input the "…" menu row clicks, so the server sees one
-  // input whichever toggle was used.
-  document.addEventListener('click', function (e) {
-    var btn = e.target instanceof Element ? e.target.closest('.blockr-preview-lip-btn') : null;
-    if (!btn) return;
-    var group = document.getElementById(btn.getAttribute('data-blockr-sections'));
-    var input = group && group.querySelector('input[value="outputs"]');
-    if (input) input.click();
-  });
 })();

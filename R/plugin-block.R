@@ -32,40 +32,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
         )
       )
     ),
-    block_card_content(ns, expr_ui, block_ui, visible, ctrl_ui, has_inputs),
-    block_preview_lip(ns)
-  )
-}
-
-# The preview's own toggle, outside the "…" menu: a lip that hangs from a
-# line under the block's content and shows while the pointer is over the
-# block (or on keyboard focus, and always on a touch screen). It clicks the
-# same hidden "outputs" checkbox the menu row does (block-sections.js), so the
-# server sees one input either way. Its words follow the accordion's
-# `data-open` in the stylesheet. A locked card has no section toggles, so no
-# lip either.
-block_preview_lip <- function(ns) {
-
-  if (dock_no_edit()) {
-    return(NULL)
-  }
-
-  div(
-    class = "blockr-preview-lip",
-    tags$button(
-      type = "button",
-      class = "blockr-preview-lip-btn",
-      `data-blockr-sections` = ns("collapse_blk_sections"),
-      HTML(paste0(
-        '<svg class="blockr-preview-lip-chev" width="10" height="10" ',
-        'viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">',
-        '<path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 ',
-        '10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 ',
-        '0l-6-6a.5.5 0 0 1 0-.708"/></svg>'
-      )),
-      span(class = "blockr-preview-lip-show", "Preview"),
-      span(class = "blockr-preview-lip-hide", "Hide preview")
-    )
+    block_card_content(ns, expr_ui, block_ui, visible, ctrl_ui, has_inputs)
   )
 }
 
