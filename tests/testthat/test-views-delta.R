@@ -1144,6 +1144,28 @@ test_that("apply_views_rm is a pure board transform", {
   expect_identical(unname(view_names(board_views(out))), "A")
 })
 
+test_that("reorder_from_client takes a drag's order only as a permutation", {
+
+  o <- c("A", "B", "C")
+
+  expect_identical(
+    reorder_from_client(o, list(order = list("C", "A", "B"))),
+    c("C", "A", "B")
+  )
+  # Stale or malformed: a missing, an extra or a repeated id changes nothing.
+  expect_identical(reorder_from_client(o, list(order = list("C", "A"))), o)
+  expect_identical(
+    reorder_from_client(o, list(order = list("C", "A", "B", "D"))), o
+  )
+  expect_identical(
+    reorder_from_client(o, list(order = list("C", "C", "A"))), o
+  )
+  # The relative nudge still works.
+  expect_identical(
+    reorder_from_client(o, list(id = "B", dir = "up")), c("B", "A", "C")
+  )
+})
+
 test_that("reorder_by_move swaps a neighbour and clamps at the ends", {
 
   o <- c("A", "B", "C")
