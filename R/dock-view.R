@@ -669,7 +669,7 @@ view_nav_ui <- function(id, views) {
       `data-bs-auto-close` = "outside",
       `aria-expanded` = "false",
       tags$span(class = "blockr-view-toggle-label", active_nm),
-      bsicons::bs_icon("chevron-down", class = "blockr-view-toggle-chev")
+      span(class = "blockr-view-toggle-chev", HTML(view_icons[["chevron"]]))
     ),
     div(
       class = "dropdown-menu dropdown-menu-end blockr-menu blockr-view-nav",
@@ -740,6 +740,14 @@ view_icons <- list(
     '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" ',
     'stroke="currentColor" stroke-width="1" stroke-linecap="round">',
     '<path d="M2.5 2.5l5 5M7.5 2.5l-5 5"></path></svg>'
+  ),
+  # The design system's one chevron (blockr.ui's Blockr.icons.chevron)
+  chevron = paste0(
+    '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" ',
+    'stroke="currentColor" stroke-width="1.4" stroke-linecap="round" ',
+    'stroke-linejoin="round" aria-hidden="true">',
+    '<polyline points="3 4.5 6 7.5 9 4.5" vector-effect="non-scaling-stroke">',
+    '</polyline></svg>'
   ),
   plus = paste0(
     '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
