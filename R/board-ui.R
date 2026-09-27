@@ -214,7 +214,7 @@ settings_body <- function(
   # Locked board: the options accordion writes board state via
   # set_board_option_value(), which core's gate rejects while locked. Drop it
   # so the settings sidebar offers only the read-only generated-code export.
-  if (is_dock_locked()) {
+  if (dock_no_edit()) {
     return(generate_code)
   }
 

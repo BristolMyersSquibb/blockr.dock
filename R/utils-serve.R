@@ -42,6 +42,7 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...,
         # `.blockr-navbar-spinner` slot in board_ui.dock_board() and its CSS.
         useBusyIndicators(spinners = FALSE, pulse = FALSE),
         shinyjs::useShinyjs(),
+        no_edit_mode_dep(),
         board_ui(id, x, plugins, options = options)
       ),
       unname(args)
@@ -66,7 +67,7 @@ blockr_app_server.dock_board <- function(id, x, plugins, options, ...,
     res <- board_server_callback(..., plugins = plugins)
     # The options sidebar's summaries follow the option values. Same option
     # set as the sidebar was built from: the caller's, else the default.
-    if (!is_dock_locked()) {
+    if (!dock_no_edit()) {
       options_summary_observer(coal(options, blockr_app_options(x)))
     }
     # The callback's value is what core hands on to block plugins (the dock
