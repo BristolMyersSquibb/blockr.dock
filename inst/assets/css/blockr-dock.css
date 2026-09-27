@@ -144,7 +144,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  min-height: 48px;
+  min-height: 42px;
 }
 
 .blockr-block-header-main {
@@ -171,15 +171,15 @@
 }
 
 /* The block's mark: the category colour at 18% on the surface, the glyph in
-   the category colour. 48px here (24px in list rows, 16px in a tab, drawn
+   the category colour. 42px here (24px in list rows, 16px in a tab, drawn
    elsewhere). */
 .blockr-block-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--blockr-radius-lg, 8px);
   color: var(--blockr-dock-cat, #999999);
   background: color-mix(in srgb, var(--blockr-dock-cat, #999999) 18%, var(--blockr-color-bg-surface, #ffffff));
 }
@@ -187,7 +187,7 @@
 /* The glyph is a bsicons SVG sized `1em` inline, so it follows the mark's
    font size. */
 .blockr-block-mark {
-  font-size: 24px;
+  font-size: 21px;
   line-height: 1;
 }
 
@@ -402,20 +402,53 @@
   display: none;
 }
 
+/* The slot a block's errors render into, between the header and the
+   sections. Its top margin is the gap under the header. */
+.blockr-block-errors {
+  margin-top: 12px;
+}
+
+/* The controls sit under the header with no rule above or below them, on the
+   card's own surface. The one rule left separates the controls from the
+   preview, edge to edge, and only while both are open: it lives in the
+   preview's panel, so it opens and closes with the preview, and `data-open`
+   (block-sections.js) says whether controls are open above it. The rule is a
+   background line rather than a border so the space above it sits inside
+   the collapsing panel and animates with it. */
 .blockr-block-accordion > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body,
 .blockr-block-accordion > .accordion-item[data-value="ctrl"] > .accordion-collapse > .accordion-body {
-  background-color: var(--blockr-color-bg-surface, #ffffff);
-  border-radius: 0;
-  margin: 0 -16px 10px -16px;
-  padding: 16px 16px 10px 16px;
-  border-top: 1px solid var(--blockr-grey-300);
-  border-bottom: 1px solid var(--blockr-grey-300);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.blockr-block-accordion[data-open~="ctrl"] > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body {
+  padding-top: 12px;
 }
 
 .blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
   max-width: 100%;
   overflow-x: auto;
   padding: 0;
+}
+
+/* The edge-to-edge margin sits on the collapsing element, not the body: that
+   element clips while it animates, so a margin inside it would cut the rule
+   and the preview short at both ends during the roll. */
+.blockr-block-accordion[data-open~="inputs"] > .accordion-item[data-value="outputs"] > .accordion-collapse,
+.blockr-block-accordion[data-open~="ctrl"] > .accordion-item[data-value="outputs"] > .accordion-collapse {
+  margin: 0 calc(-1 * var(--bs-card-spacer-x));
+}
+
+.blockr-block-accordion[data-open~="inputs"] > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body,
+.blockr-block-accordion[data-open~="ctrl"] > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
+  max-width: none;
+  padding: 33px var(--bs-card-spacer-x) 0;
+  background: linear-gradient(var(--blockr-color-border-default), var(--blockr-color-border-default)) 0 16px / 100% 1px no-repeat;
+}
+
+.blockr-block-accordion > .accordion-item > .collapsing {
+  transition-duration: 0.22s;
 }
 
 /* Export button adjustments */
@@ -1132,4 +1165,35 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
 [data-bs-theme="dark"] .dv-shell {
   --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
   --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
+}
+
+/* The tab's close button: the thin x every small icon uses (blockr.ui's
+   `remove` icon, 1px stroke) in place of the Font Awesome xmark dockViewR
+   puts there, drawn as a mask so it takes the text colour. */
+.dv-tab .dv-default-tab .dv-default-tab-action {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: var(--blockr-radius-sm);
+  color: var(--blockr-color-text-muted);
+}
+
+.dv-tab .dv-default-tab .dv-default-tab-action > i,
+.dv-tab .dv-default-tab .dv-default-tab-action > svg {
+  display: none;
+}
+
+.dv-tab .dv-default-tab .dv-default-tab-action::before {
+  content: "";
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1' stroke-linecap='round'%3E%3Cline x1='2.5' y1='2.5' x2='7.5' y2='7.5'/%3E%3Cline x1='7.5' y1='2.5' x2='2.5' y2='7.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1' stroke-linecap='round'%3E%3Cline x1='2.5' y1='2.5' x2='7.5' y2='7.5'/%3E%3Cline x1='7.5' y1='2.5' x2='2.5' y2='7.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat;
+}
+
+.dv-tab .dv-default-tab .dv-default-tab-action:hover {
+  background-color: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-default);
 }
