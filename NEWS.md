@@ -1,5 +1,26 @@
 # blockr.dock (development version)
 
+* New `blockr.simplified` option: a simpler board, not a locked one. It hides
+  the authoring affordances -- the per-block gears, the block card's section
+  toggles and action menu, view and panel CRUD, the board-options accordion --
+  so a reader is not offered controls they have no use for, and it forbids
+  nothing. Unlike `blockr.locked` it leaves core's board lock untouched, so
+  neither the update gate nor the input freeze engages: a block whose builder
+  left its inputs shown stays usable, and a crossfilter or value filter still
+  filters. Panel borders stay draggable, so a reader on a narrow screen can
+  widen a panel to read a wide table; that rearranging is theirs alone and is
+  not written back to the board. The gears, which dock does not build, are
+  reached by one CSS rule keyed on a `.blockr-no-edit` class that both modes
+  set, so no block package changes and a locked board stops offering gears it
+  had frozen. The rule targets the gear button rather than the header row it
+  sits in, which blocks share with reader controls -- the crossfilter's row
+  count and Reset, blockr.viz's download and search. Both options default off.
+
+* `BLOCKR_LOCKED=true` now locks a board. `blockr_option()` returns an
+  environment variable verbatim, as a string, and `is_dock_locked()` tested it
+  with `isTRUE()`, which is always FALSE for a string -- so the one route to
+  locking that does not require editing R code silently did nothing. Both
+  `blockr.locked` and `blockr.simplified` coerce the variable now.
 * A first visit to a view no longer re-checks every block's frozen state per
   card mount. A card's reported sections depended on the session's whole input
   name set, so every new input on the board woke every block's `visible`, and
