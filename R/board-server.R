@@ -1061,10 +1061,10 @@ manage_dock <- function(
 
 #' Observe view addition requests.
 #'
-#' "New page" in the views menu's manage mode: adds an empty page with the
-#' next free "Page N" name and switches to it, with no dialog. The client
+#' "New view" in the views menu's manage mode: adds an empty view with the
+#' next free "View N" name and switches to it, with no dialog. The client
 #' opens the new row's name for renaming, and its blocks are added from the
-#' page's "+" menu.
+#' view's "+" menu.
 #'
 #' @param client_views Reactive record of the client-shown views.
 #' @param session Shiny session.
@@ -1081,7 +1081,7 @@ add_view_observer <- function(client_views, session, board, update) {
   observeEvent(input$view_nav_add, {
     req(views_can_crud(client_views()))
 
-    name <- next_page_name(view_names(client_views()))
+    name <- next_view_name(view_names(client_views()))
 
     # Switch to the new view on creation. Its id is minted in augment, so
     # we point `active` at its `add` key (the display name); the dock
@@ -1097,16 +1097,16 @@ add_view_observer <- function(client_views, session, board, update) {
   })
 }
 
-# "Page N", N one more than the pages there are, or the first free one after.
-next_page_name <- function(existing) {
+# "View N", N one more than the views there are, or the first free one after.
+next_view_name <- function(existing) {
   n <- length(existing) + 1L
-  while (paste("Page", n) %in% existing) n <- n + 1L
-  paste("Page", n)
+  while (paste("View", n) %in% existing) n <- n + 1L
+  paste("View", n)
 }
 
 #' Observe view removal requests.
 #'
-#' The views menu asks in place ("Remove this page?") before it sends
+#' The views menu asks in place ("Remove this view?") before it sends
 #' `view_nav_remove`, so the request is final here: it emits an `rm` views
 #' delta; the reconcile pass destroys the dock module, removes the DOM
 #' container, and switches to another view if the removed one was active.
@@ -1130,7 +1130,7 @@ remove_view_observer <- function(client_views, session, update) {
     }
 
     if (length(state) <= 1L) {
-      notify("Cannot remove the last page.")
+      notify("Cannot remove the last view.")
       return()
     }
 
@@ -1281,7 +1281,7 @@ suggest_panels_to_add <- function(
       "blockr-add-panel-menu",
       list(
         pick = ns("add_dock_panel_pick"),
-        caption = "Show on this page",
+        caption = "Show in this view",
         items = items
       )
     )

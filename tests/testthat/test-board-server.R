@@ -1546,7 +1546,7 @@ test_that("New view modal confirm submits an add-and-activate delta", {
       )
     },
     {
-      # "New page" adds an empty page, no dialog.
+      # "New view" adds an empty view, no dialog.
       session$setInputs(view_nav_add = 1L)
       session$flushReact()
 
@@ -1554,19 +1554,19 @@ test_that("New view modal confirm submits an add-and-activate delta", {
       # add key in both slots; the dock resolves it to the minted id in
       # normalize_views_delta().
       expect_named(captured$views, c("add", "active"))
-      expect_identical(captured$views$active, "Page 2")
-      expect_identical(names(captured$views$add), "Page 2")
+      expect_identical(captured$views$active, "View 2")
+      expect_identical(names(captured$views$add), "View 2")
       expect_true(is_dock_view(captured$views$add[[1L]]))
       expect_length(view_members(captured$views$add[[1L]]), 0L)
     }
   )
 })
 
-test_that("next_page_name takes the next free Page N", {
-  expect_identical(next_page_name(character()), "Page 1")
-  expect_identical(next_page_name(c("A", "B")), "Page 3")
-  expect_identical(next_page_name(c("A", "Page 2")), "Page 3")
-  expect_identical(next_page_name(c("Page 2", "Page 3")), "Page 4")
+test_that("next_view_name takes the next free View N", {
+  expect_identical(next_view_name(character()), "View 1")
+  expect_identical(next_view_name(c("A", "B")), "View 3")
+  expect_identical(next_view_name(c("A", "View 2")), "View 3")
+  expect_identical(next_view_name(c("View 2", "View 3")), "View 4")
 })
 
 test_that("board_server_callback stashes served plugins on the dock (#331)", {
