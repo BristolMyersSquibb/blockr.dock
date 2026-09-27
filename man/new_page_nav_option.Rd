@@ -4,22 +4,20 @@
 \alias{new_page_nav_option}
 \title{Retired: where the board's pages were listed}
 \usage{
-new_page_nav_option(value = "path", category = "Board options", ...)
+new_page_nav_option(value = "path", ...)
 }
 \arguments{
-\item{value}{Ignored.}
+\item{value}{\code{"path"} or \code{"tabs"}.}
 
-\item{category}{Board options category.}
-
-\item{...}{Passed to \code{\link[blockr.core:new_board_options]{blockr.core::new_board_option()}}.}
+\item{...}{Ignored.}
 }
 \value{
-A board option.
+A \code{board_option} object, from \code{\link[=new_view_tabs_option]{new_view_tabs_option()}}.
 }
 \description{
-Showing views as tabs is now each user's own choice, made in the views
-menu and kept in the browser. This board option did the same for everyone
-and is kept only so that boards saved with it still restore. It has no UI
-and no effect, and new boards do not carry it.
+The \code{page_nav} board option ("path" or "tabs") is replaced by
+\code{\link[=new_view_tabs_option]{new_view_tabs_option()}}. This constructor is kept so boards saved with it
+still restore: it returns the new option, on for "tabs", so a board saved
+again carries \code{view_tabs} instead.
 }
 \keyword{internal}

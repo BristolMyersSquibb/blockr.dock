@@ -1,8 +1,9 @@
-// Views as tabs: a second navbar line, turned on and off by each user with
-// "Show views as tabs" in the views menu. The choice
-// lives in localStorage and shows as `.blockr-view-tabs` on <html>, which an
-// inline script in the page sets before the navbar paints (see
-// view_tabs_init()).
+// Views as tabs: a second navbar line, the board option `view_tabs` (see
+// view-tabs.R). The option shows as `.blockr-view-tabs` on <html>: an inline
+// script sets it before the navbar paints, and the option's server pushes
+// every change ('blockr-view-tabs'). "Show views as tabs" in the views menu
+// clicks the option's switch in the options sidebar, so the menu and the
+// sidebar set the same option.
 //
 // The tabs mirror the views menu (`.blockr-view-nav`): one tab per
 // `.blockr-view-item`, the active one marked. A click on a tab clicks the
@@ -12,7 +13,6 @@
 // renames, reorders and the server moving the active view.
 (function () {
 
-  var KEY = 'blockr-view-tabs';
   var root = document.documentElement;
 
   var navbar = function () {
@@ -74,10 +74,15 @@
 
   var setOn = function (on) {
     root.classList.toggle('blockr-view-tabs', on);
-    try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
     syncToggle();
     render();
     syncHeight();
+  };
+
+  // The option's switch; a board saved before the option existed has none,
+  // and then the menu has no row for it either.
+  var optionSwitch = function () {
+    return document.querySelector('.blockr-view-tabs-option input[type="checkbox"]');
   };
 
   var init = function () {
@@ -89,6 +94,12 @@
     syncToggle();
     syncHeight();
 
+    if (!optionSwitch()) {
+      document.querySelectorAll('.blockr-view-tabs-toggle').forEach(function (b) {
+        b.hidden = true;
+      });
+    }
+
     new MutationObserver(render).observe(nav, {
       subtree: true,
       childList: true,
@@ -99,7 +110,8 @@
 
     bar.addEventListener('click', function (e) {
       if (e.target.closest('.blockr-view-tabs-toggle')) {
-        setOn(!isOn());
+        var sw = optionSwitch();
+        if (sw) sw.click();
         return;
       }
       var tab = e.target.closest('.blockr-view-tab');
@@ -111,6 +123,12 @@
       if (item) $(item).trigger('click');
     });
   };
+
+  $(document).on('shiny:connected', function () {
+    Shiny.addCustomMessageHandler('blockr-view-tabs', function (on) {
+      setOn(on === true);
+    });
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
