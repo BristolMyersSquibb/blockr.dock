@@ -452,6 +452,39 @@ test_that("a card whose first report is empty still counts as one (#426)", {
   )
 })
 
+test_that("a card's sections ignore other inputs appearing", {
+
+  testServer(
+    edit_block_server(),
+    {
+      runs <- 0L
+
+      observe({
+        session$returned$visible()
+        runs <<- runs + 1L
+      })
+
+      session$flushReact()
+      session$setInputs(collapse_blk_sections = "outputs")
+
+      before <- runs
+
+      # Every card mount registers new inputs on the session. They say nothing
+      # about this card, and `freeze_hidden_inputs()` reads every card's
+      # `visible`, so each one waking it would redo the whole board.
+      session$setInputs(some_other_input = 1, and_another = "x")
+
+      expect_identical(runs, before)
+      expect_identical(session$returned$visible(), "outputs")
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("a locked card reports its sections without a widget (#418)", {
 
   sent <- character()
