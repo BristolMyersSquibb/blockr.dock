@@ -436,10 +436,14 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
   }
 
   tagList(
-    div(id = ns("errors_block"), class = "mt-4"),
+    div(id = ns("errors_block"), class = "blockr-block-errors"),
     accordion(
       id = ns("blk_accordion"),
       class = "blockr-block-accordion",
+      # The open sections, kept current by block-sections.js. The stylesheet
+      # reads it to draw the rule above the preview only when controls are
+      # open above it, which the preview's own panel cannot see.
+      `data-open` = paste(visible, collapse = " "),
       multiple = TRUE,
       # An empty set has to travel as FALSE: bslib reads `character()` the same
       # as an absent `open` and falls back to opening the first panel.
@@ -909,6 +913,15 @@ attr_output_dep <- function() {
     pkg_version(),
     src = pkg_file("assets", "js"),
     script = "attr-output.js"
+  )
+}
+
+block_sections_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-block-sections",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "block-sections.js"
   )
 }
 
