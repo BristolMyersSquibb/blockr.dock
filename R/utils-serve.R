@@ -42,6 +42,7 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...,
         # `.blockr-navbar-spinner` slot in board_ui.dock_board() and its CSS.
         useBusyIndicators(spinners = FALSE, pulse = FALSE),
         shinyjs::useShinyjs(),
+        no_edit_mode_dep(),
         board_ui(id, x, plugins, options = options)
       ),
       unname(args)

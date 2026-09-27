@@ -601,7 +601,7 @@ view_nav_ui <- function(id, views) {
   nav_id <- ns("view_nav")
   active <- active_view(views)
   active_nm <- unname(view_names(views)[active])
-  can_crud <- !is_dock_locked()
+  can_crud <- !dock_no_edit()
 
   items <- map(
     view_item_ui,
