@@ -199,7 +199,13 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
     )
     tooltip_titles <- c(
       tooltip_titles,
-      coal(ctrl_meta$tooltip, ctrl_meta$label, "Control")
+      # The first of tooltip and label that says something: an empty string
+      # is no name, and the button is icon-only.
+      Find(
+        function(x) is_string(x) && nzchar(x),
+        list(ctrl_meta$tooltip, ctrl_meta$label),
+        nomatch = "Control"
+      )
     )
   }
 
@@ -360,6 +366,7 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
 ctrl_btn_label <- function(fn) coal(attr(fn, "ctrl_label"), "Control")
 ctrl_btn_icon  <- function(fn) attr(fn, "ctrl_icon")
 ctrl_btn_class <- function(fn) attr(fn, "ctrl_class")
+ctrl_btn_tooltip <- function(fn) attr(fn, "ctrl_tooltip")
 
 edit_block_server <- function(callbacks = list()) {
 

@@ -235,6 +235,59 @@
 }
 
 
+/* A narrow card (a block in a side panel) steps its header down instead of
+   cutting the name to a few letters: a 32px mark and a 16px title that may
+   wrap to a second line. The header is the query container, not
+   the card, so fixed-position content inside a block keeps the viewport as
+   its containing block. 350px of header is a card of about 380px. */
+.blockr-block-header {
+  container: blockr-head / inline-size;
+}
+
+@container blockr-head (max-width: 350px) {
+  .blockr-block-header {
+    gap: 10px;
+  }
+
+  .blockr-block-mark {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .blockr-block-title-wrap {
+    padding-right: 8px;
+  }
+
+  .blockr-block-title .blockr-title,
+  .blockr-title-edit .form-control,
+  .blockr-title-edit .form-control:focus {
+    font-size: var(--blockr-font-size-lg, 1rem);
+  }
+
+  .blockr-title-display {
+    display: flex;
+  }
+
+  .blockr-title-display .blockr-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+}
+
+/* The controls and preview toggles are the "…" menu's first group, as rows
+   with their icons and a check when on (block-menu.js); their buttons stay in
+   the markup, hidden, because they are the Shiny input the rows flip. A
+   block's own control (the AI assistant) keeps its button next to "…" at
+   every width, and is not in the menu. */
+.blockr-block-header-actions .blockr-section-toggle .btn-check:not([value="ctrl"]) + .btn {
+  display: none;
+}
+
 /* Block eval status: on-icon status dot.
    The dot is layered onto the block icon's lower-right corner (iOS badge
    style), matching blockr.dag's node badge placement. Its size and colour are
