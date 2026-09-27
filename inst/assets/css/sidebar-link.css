@@ -17,7 +17,7 @@
 
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
-  color: #1f2937;
+  color: var(--blockr-color-text-default);
 }
 
 .blockr-link-menu .blockr-block-browser-search {
@@ -63,7 +63,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #6b7280;
+  color: var(--blockr-color-text-muted);
 }
 
 /* Trimmed link-menu card: drop the description and package badge,
@@ -82,7 +82,7 @@
 
 .blockr-link-menu .blockr-link-menu-card-id {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--blockr-color-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   overflow: hidden;
   text-overflow: ellipsis;
