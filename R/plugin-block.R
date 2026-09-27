@@ -45,11 +45,15 @@ visible_sections <- function(blk) {
 # to tell those apart. Shiny registers the key on the first report even when
 # the value is `NULL`, so the key discriminates; the unconditional read is
 # what takes the dependency that wakes a caller still on the other branch.
+# The key test runs under isolate(): `names()` on a module's input depends on
+# the session's whole name set, so every new input anywhere on the board
+# would invalidate every block's `visible` -- and freeze_hidden_inputs(),
+# which reads all of them, would redo the whole board per card mount.
 reported_sections <- function(input) {
 
   sections <- input$collapse_blk_sections
 
-  if ("collapse_blk_sections" %in% names(input)) {
+  if ("collapse_blk_sections" %in% isolate(names(input))) {
     coal(sections, character())
   }
 }
