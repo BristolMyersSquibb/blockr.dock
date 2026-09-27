@@ -100,19 +100,16 @@ test_that("board server", {
 
   expect_identical(isolate(n_panels()), 0L)
 
-  do.call(
-    ms$setInputs,
-    set_names(
-      list(
-        1L,
-        c(
-          as_block_panel_id("a"),
-          as_ext_panel_id("edit_board")
-        )
-      ),
-      c(mod_input("confirm_add"), mod_input("add_dock_panel"))
+  # Two picks from the add-panel menu, one panel each.
+  for (pick in list(
+    list(value = as.character(as_block_panel_id("a")), nonce = 1L),
+    list(value = as.character(as_ext_panel_id("edit_board")), nonce = 2L)
+  )) {
+    do.call(
+      ms$setInputs,
+      set_names(list(pick), mod_input("add_dock_panel_pick"))
     )
-  )
+  }
 
   expect_identical(isolate(n_panels()), 2L)
 
@@ -1549,23 +1546,27 @@ test_that("New view modal confirm submits an add-and-activate delta", {
       )
     },
     {
-      session$setInputs(
-        view_new_name = "Charts",
-        view_new_blocks = "a",
-        view_new_exts = character(),
-        confirm_view_add = 1L
-      )
+      # "New page" adds an empty page, no dialog.
+      session$setInputs(view_nav_add = 1L)
       session$flushReact()
 
       # The new view has no id yet, so "add and activate" travels as the
       # add key in both slots; the dock resolves it to the minted id in
       # normalize_views_delta().
       expect_named(captured$views, c("add", "active"))
-      expect_identical(captured$views$active, "Charts")
-      expect_identical(names(captured$views$add), "Charts")
+      expect_identical(captured$views$active, "Page 2")
+      expect_identical(names(captured$views$add), "Page 2")
       expect_true(is_dock_view(captured$views$add[[1L]]))
+      expect_length(view_members(captured$views$add[[1L]]), 0L)
     }
   )
+})
+
+test_that("next_page_name takes the next free Page N", {
+  expect_identical(next_page_name(character()), "Page 1")
+  expect_identical(next_page_name(c("A", "B")), "Page 3")
+  expect_identical(next_page_name(c("A", "Page 2")), "Page 3")
+  expect_identical(next_page_name(c("Page 2", "Page 3")), "Page 4")
 })
 
 test_that("board_server_callback stashes served plugins on the dock (#331)", {

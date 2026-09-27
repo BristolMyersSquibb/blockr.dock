@@ -25,8 +25,11 @@ $(function () {
   // Views are addressed by a stable id (`data-view-id`); the visible
   // text (`.blockr-view-item-name`) is a free-form display label. Switch,
   // remove and rename all travel by id, so a rename never re-keys.
+  // While a name is being edited, the field stands in for it.
   var itemName = function ($item) {
-    return $item.find('.blockr-view-item-name').text();
+    var $name = $item.find('.blockr-view-item-name');
+    if ($name.length) return $name.text();
+    return $item.find('.blockr-view-rename-input').val() || '';
   };
 
   var setToggleLabel = function ($el, text) {
@@ -271,6 +274,7 @@ $(function () {
         e.stopPropagation();
         var active = document.activeElement;
         if (active && $(active).is('.blockr-view-rename-input')) active.blur();
+        cancelConfirm();
         $(el).removeClass('is-managing');
       });
       // Closing the menu leaves manage mode, so it always opens on the list.
@@ -280,19 +284,62 @@ $(function () {
         $(el).removeClass('is-managing');
       });
 
-      // Remove click
-      $(el).on('click.viewBinding', '.blockr-view-remove', function (e) {
+      // Remove asks in place: the x turns the row into "Remove this page?"
+      // with a Remove button; only that button sends the request, and the
+      // server removes the page without a dialog. A click anywhere else in
+      // the menu, or Escape, takes the question back.
+      var cancelConfirm = function () {
+        $(el).find('.blockr-view-item.is-confirming').each(function () {
+          $(this).removeClass('is-confirming').find('.blockr-view-confirm').remove();
+        });
+      };
+
+      $(el).on('click.viewBinding', '.blockr-view-remove-confirm', function (e) {
         e.stopPropagation();
         e.preventDefault();
-
         var $item = $(this).closest('.blockr-view-item');
         Shiny.setInputValue(el.id + '_remove', $item.attr('data-view-id'), {
           priority: 'event'
         });
       });
 
-      // Add click: the server asks for the new page's name and blocks in a
-      // dialog; the page arrives through receiveMessage.
+      $(el).on('click.viewBinding', '.blockr-view-remove', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        var $item = $(this).closest('.blockr-view-item');
+        cancelConfirm();
+        $item.addClass('is-confirming').append(
+          $('<span>').addClass('blockr-view-confirm').append(
+            $('<span>').addClass('blockr-view-confirm-text')
+              .text('Remove \u201c' + itemName($item) + '\u201d?'),
+            $('<button>').attr('type', 'button')
+              .addClass('blockr-view-remove-confirm').text('Remove')
+          )
+        );
+        $item.find('.blockr-view-remove-confirm').trigger('focus');
+      });
+
+      $(el).on('click.viewBinding', function (e) {
+        if (!$(e.target).closest('.blockr-view-confirm, .blockr-view-remove').length) {
+          cancelConfirm();
+        }
+      });
+
+      // Escape takes a pending question back instead of closing the menu.
+      // Capture phase on the window: Bootstrap handles the dropdown's keys in
+      // the capture phase on the document, and the window's runs first.
+      if (!el._blockrConfirmEscape) {
+        el._blockrConfirmEscape = function (e) {
+          if (e.key !== 'Escape' || !$(el).find('.is-confirming').length) return;
+          e.preventDefault();
+          e.stopPropagation();
+          cancelConfirm();
+        };
+        window.addEventListener('keydown', el._blockrConfirmEscape, true);
+      }
+
+      // Add click: the server adds an empty "Page N" and switches to it; the
+      // page arrives through receiveMessage, its name open for renaming.
       $(el).on('click.viewBinding', '.blockr-view-add', function (e) {
         e.stopPropagation();
         e.preventDefault();
@@ -304,6 +351,10 @@ $(function () {
 
     unsubscribe: function (el) {
       $(el).off('.viewBinding');
+      if (el._blockrConfirmEscape) {
+        window.removeEventListener('keydown', el._blockrConfirmEscape, true);
+        el._blockrConfirmEscape = null;
+      }
       $(el).closest('.blockr-view-dropdown').off('.viewBinding');
     },
 
@@ -316,6 +367,8 @@ $(function () {
         var canCrud = data.canCrud !== false;
         var $new = buildItem(data.add.id, data.add.name, canCrud);
         $(el).find('.blockr-view-list').append($new);
+        // "New page" in manage mode: the new row's name opens for renaming.
+        if ($(el).hasClass('is-managing')) startRename($new);
 
         // Deliberately not activated here. The server owns which view is
         // active: an add that means to navigate carries `active` in its delta
