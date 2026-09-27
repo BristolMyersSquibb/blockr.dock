@@ -406,7 +406,11 @@ test_that("the shared stylesheet layer is blockr.ui's, not this package's", {
   )
 
   expect_no_match(css, "(?m)^:root", perl = TRUE)
-  expect_no_match(css, "(?m)^\\s*--blockr-[a-z0-9-]+\\s*:", perl = TRUE)
+  # The one exception is the card's inset, which blockr.ui's table preview
+  # reads to run a table to the card edges.
+  expect_no_match(
+    css, "(?m)^\\s*--blockr-(?!card-inset\\b)[a-z0-9-]+\\s*:", perl = TRUE
+  )
 
   unscoped <- c(
     "body", "label", "\\.form-control", "\\.btn-primary", "\\.tooltip",

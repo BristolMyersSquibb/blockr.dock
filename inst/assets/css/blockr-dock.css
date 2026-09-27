@@ -488,23 +488,30 @@
   padding-top: 12px;
 }
 
-.blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 0;
+/* The card's side inset, for an output that runs to the card edges (a
+   table): it pulls itself out by this much and pads its text back in, so
+   its rules and scroll area reach the edges while its text keeps the
+   card's alignment. */
+.blockr-block-accordion {
+  --blockr-card-inset: var(--bs-card-spacer-x);
 }
 
-/* The edge-to-edge margin sits on the collapsing element, not the body: that
-   element clips while it animates, so a margin inside it would cut the rule
-   and the preview short at both ends during the roll. */
-.blockr-block-accordion[data-open~="inputs"] > .accordion-item[data-value="outputs"] > .accordion-collapse,
-.blockr-block-accordion[data-open~="ctrl"] > .accordion-item[data-value="outputs"] > .accordion-collapse {
+/* The preview's panel runs edge to edge and pads its content back in, with
+   the controls open or closed, so an output pulled out by the inset stays
+   inside the scroll box. The margin sits on the collapsing element, not the
+   body: that element clips while it animates, so a margin inside it would
+   cut the rule and the preview short at both ends during the roll. */
+.blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse {
   margin: 0 calc(-1 * var(--bs-card-spacer-x));
+}
+
+.blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
+  overflow-x: auto;
+  padding: 0 var(--bs-card-spacer-x);
 }
 
 .blockr-block-accordion[data-open~="inputs"] > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body,
 .blockr-block-accordion[data-open~="ctrl"] > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
-  max-width: none;
   padding: 33px var(--bs-card-spacer-x) 0;
   background: linear-gradient(var(--blockr-color-border-default), var(--blockr-color-border-default)) 0 16px / 100% 1px no-repeat;
 }
