@@ -63,7 +63,15 @@ blockr_app_server.dock_board <- function(id, x, plugins, options, ...,
   # card-build paths need the served set, since board_plugins() drops any served
   # ctrl_block.
   callback <- function(...) {
-    board_server_callback(..., plugins = plugins)
+    res <- board_server_callback(..., plugins = plugins)
+    # The options sidebar's summaries follow the option values. Same option
+    # set as the sidebar was built from: the caller's, else the default.
+    if (!is_dock_locked()) {
+      options_summary_observer(coal(options, blockr_app_options(x)))
+    }
+    # The callback's value is what core hands on to block plugins (the dock
+    # extensions among it), so it has to stay the last thing returned.
+    res
   }
 
   board_server(id, x, plugins, options, callbacks = callback,

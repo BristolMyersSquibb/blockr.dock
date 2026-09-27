@@ -50,8 +50,8 @@
   gap: 12px;
   height: 100%;
   min-height: 0;
-  margin: -16px;
-  padding: 16px;
+  margin: -16px -20px;
+  padding: 16px 20px;
 
   /* Inherit the app/theme typeface (the prototype sets no font-family);
      only the colour is fixed here. */
