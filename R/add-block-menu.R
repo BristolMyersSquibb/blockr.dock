@@ -51,7 +51,9 @@ add_block_menu_item <- function(meta) {
     label = meta$name,
     type = meta$type,
     badge = meta$package,
-    keywords = paste(meta$description, meta$type),
+    # The type id ("filter_block"), not the description: a description
+    # mentions other blocks' words and would match half the list.
+    keywords = meta$type,
     mark = list(
       icon = meta$icon,
       color = unname(blk_color(meta$category))
