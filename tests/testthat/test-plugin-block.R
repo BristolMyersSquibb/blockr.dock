@@ -232,6 +232,22 @@ test_that("locked dock drops block_card_toggles entirely (#122, #418)", {
   expect_null(locked)
 })
 
+test_that("the preview lip clicks the card's section input, and a locked card has none", {
+
+  unlocked <- withr::with_options(
+    list(blockr.locked = NULL),
+    as.character(block_preview_lip(NS("blk")))
+  )
+  expect_match(unlocked, 'class="blockr-preview-lip-btn"', fixed = TRUE)
+  expect_match(unlocked, 'data-blockr-sections="blk-collapse_blk_sections"', fixed = TRUE)
+
+  locked <- withr::with_options(
+    list(blockr.locked = TRUE),
+    block_preview_lip(NS("blk"))
+  )
+  expect_null(locked)
+})
+
 test_that("a restored card paints its saved sections open (#418)", {
 
   open_panels <- function(blk) {
