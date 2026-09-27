@@ -317,9 +317,7 @@ remove_block_observer <- function(input, board, update, session) {
         return()
       }
 
-      update(
-        list(blocks = list(rm = sel))
-      )
+      update(remove_blocks_update(board$board, sel))
     }
   )
 }

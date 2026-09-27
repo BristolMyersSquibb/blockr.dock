@@ -59,6 +59,7 @@ Collate:
     'action-ui.R'
     'action-utils.R'
     'add-block-menu.R'
+    'block-bridge.R'
     'block-meta.R'
     'block-ui.R'
     'board-plugins.R'
