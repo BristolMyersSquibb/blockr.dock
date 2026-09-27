@@ -599,13 +599,14 @@ view_binding_dep <- function() {
   )
 }
 
-# The views menu. It switches pages; on a board that allows it, "Manage
-# pages" turns the same list into an editor (view-binding.js puts
-# `.is-managing` on the menu): a grip to drag each page, the name to click
-# into and rename, an x to remove, "New page" and "Done" at the foot. The
-# menu takes blockr.ui's menu classes for its look; a click inside leaves it
-# open (`data-bs-auto-close = "outside"`), and the binding closes it after a
-# switch.
+# The views menu. It switches views; on a board that allows it, "Manage
+# views" turns the same list into an editor (view-binding.js puts
+# `.is-managing` on the menu): a grip to drag each view, the name to click
+# into and rename, an x to remove, "New view" and "Done" at the foot. "Show
+# views as tabs" at the foot of the list is each user's own switch for the tab
+# line (view-tabs.R). The menu takes blockr.ui's menu classes for its look; a
+# click inside leaves it open (`data-bs-auto-close = "outside"`), and the
+# binding closes it after a switch.
 #' @noRd
 view_nav_ui <- function(id, views) {
 
@@ -622,35 +623,37 @@ view_nav_ui <- function(id, views) {
     MoreArgs = list(active_id = active, can_crud = can_crud)
   )
 
-  manage <- NULL
+  browse <- div(
+    class = "blockr-view-browse",
+    div(class = "blockr-menu__divider"),
+    if (can_crud) {
+      tags$button(
+        type = "button",
+        class = paste(
+          "dropdown-item blockr-menu__item blockr-menu__item--quiet",
+          "blockr-view-manage"
+        ),
+        span(class = "blockr-menu__icon", HTML(view_icons[["sliders"]])),
+        span(class = "blockr-menu__label", "Manage views")
+      )
+    },
+    view_tabs_toggle_ui()
+  )
+
+  foot <- NULL
   if (can_crud) {
-    manage <- tagList(
+    foot <- div(
+      class = "blockr-view-foot",
+      div(class = "blockr-menu__divider"),
       div(
-        class = "blockr-view-browse",
-        div(class = "blockr-menu__divider"),
+        class = "blockr-view-foot-row",
         tags$button(
           type = "button",
-          class = paste(
-            "dropdown-item blockr-menu__item blockr-menu__item--quiet",
-            "blockr-view-manage"
-          ),
-          span(class = "blockr-menu__icon", HTML(view_icons[["sliders"]])),
-          span(class = "blockr-menu__label", "Manage pages")
-        )
-      ),
-      div(
-        class = "blockr-view-foot",
-        div(class = "blockr-menu__divider"),
-        div(
-          class = "blockr-view-foot-row",
-          tags$button(
-            type = "button",
-            class = "blockr-view-add",
-            HTML(view_icons[["plus"]]),
-            "New page"
-          ),
-          tags$button(type = "button", class = "blockr-view-done", "Done")
-        )
+          class = "blockr-view-add",
+          HTML(view_icons[["plus"]]),
+          "New view"
+        ),
+        tags$button(type = "button", class = "blockr-view-done", "Done")
       )
     )
   }
@@ -661,17 +664,20 @@ view_nav_ui <- function(id, views) {
     tags$button(
       class = "blockr-navbar-icon-btn dropdown-toggle blockr-view-toggle",
       type = "button",
+      title = "Views",
       `data-bs-toggle` = "dropdown",
       `data-bs-auto-close` = "outside",
       `aria-expanded` = "false",
+      bsicons::bs_icon("journals", class = "blockr-view-toggle-icon"),
       tags$span(class = "blockr-view-toggle-label", active_nm),
       bsicons::bs_icon("chevron-down", class = "blockr-view-toggle-chev")
     ),
     div(
-      class = "dropdown-menu blockr-menu blockr-view-nav",
+      class = "dropdown-menu dropdown-menu-end blockr-menu blockr-view-nav",
       id = nav_id,
       div(class = "blockr-view-list", items),
-      manage
+      browse,
+      foot
     )
   )
 }
@@ -699,7 +705,7 @@ view_item_ui <- function(view_id, view_name, active_id = NULL,
       tags$span(
         class = "blockr-view-action blockr-view-remove",
         role = "button",
-        title = "Remove page",
+        title = "Remove view",
         HTML(view_icons[["x"]])
       )
     }
@@ -707,7 +713,7 @@ view_item_ui <- function(view_id, view_name, active_id = NULL,
 }
 
 # The small icons of the views menu, drawn like blockr.ui's (Blockr.icons):
-# thin strokes and small dots. view-binding.js draws the same ones for a page
+# thin strokes and small dots. view-binding.js draws the same ones for a view
 # added on the client.
 view_icons <- list(
   sliders = paste0(

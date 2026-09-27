@@ -14,7 +14,7 @@
       <board_options[3]>
         board_name: NULL
         dark_mode: light
-        page_nav: path
+        compact: FALSE
       <dock_views[2]>
         one: <dock_view> a
         two: <dock_view> b (active)
@@ -34,7 +34,7 @@
       <board_options[3]>
         board_name: NULL
         dark_mode: light
-        page_nav: path
+        compact: FALSE
       <dock_views[1]>
         main: <dock_view> a (active)
       <dock_extensions[0]>
@@ -52,7 +52,7 @@
       <board_options[3]>
         board_name: NULL
         dark_mode: light
-        page_nav: path
+        compact: FALSE
       <dock_views[1]>
         main: <dock_view> a (active)
       <dock_extensions[1]>
