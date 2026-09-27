@@ -58,6 +58,7 @@ Collate:
     'action-stack.R'
     'action-ui.R'
     'action-utils.R'
+    'add-block-menu.R'
     'block-meta.R'
     'block-ui.R'
     'board-plugins.R'

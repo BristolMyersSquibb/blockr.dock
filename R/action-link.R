@@ -148,39 +148,21 @@ insert_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
 
-      sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-
       # The catalogue is registry-based (any block that can receive from the
-      # link's source), but the panel's context names the wire's two ends, so
-      # the body is rendered per open rather than pre-rendered once.
+      # link's source); the menu's caption names the wire's two ends.
       added <- block_browser_server(
         "browser",
         board = reactive(board$board),
         target = reactive(insert_into(trigger()))
       )
 
-      browser_ui <- function() {
-        block_browser_ui(
-          session$ns("browser"), board$board, insert_into(trigger())
-        )
-      }
-
       observeEvent(trigger(), {
-        show_sidebar(
-          sidebar_id, title = "Insert new block", ui = browser_ui()
+        open_add_block_menu(
+          "insert",
+          insert_caption(board$board, trigger()),
+          session = session
         )
       })
-
-      # Splitting a link that has since been removed makes no sense, so close
-      # rather than wait for a commit that could not be applied.
-      observeEvent(board$board, {
-        id <- trigger()
-        if (length(id) == 1L && !is.na(id) && nzchar(id) &&
-              !id %in% board_link_ids(board$board) &&
-              owns_open_sidebar(sidebar_id)) {
-          hide_sidebar(sidebar_id)
-        }
-      }, ignoreInit = TRUE)
 
       observeEvent(added(), {
 
@@ -194,7 +176,6 @@ insert_block_action <- function(trigger, board, update, ...) {
             "That link is no longer on the board.",
             type = "warning", session = session
           )
-          hide_sidebar(sidebar_id)
           return()
         }
 
@@ -212,11 +193,6 @@ insert_block_action <- function(trigger, board, update, ...) {
           )
         )
 
-        # Closed even when pinned, unlike the append flow: a pin keeps a
-        # panel open to repeat the gesture, and this gesture consumed its own
-        # subject. Re-opening on a dead link id would render a panel that
-        # cannot commit.
-        hide_sidebar(sidebar_id)
       })
 
       NULL
