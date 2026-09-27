@@ -522,13 +522,8 @@
    a touch screen; at rest nothing is there. Closed it reads "Preview", open
    "Hide preview" with the chevron turned up, from the accordion's
    `data-open`. It takes the same 24px whether shown or not, so nothing
-   moves when it appears. When the content runs past the panel (a long
-   preview), it sticks to the bottom of what is visible, so "Hide preview"
-   never needs a scroll to the end. */
+   moves when it appears. */
 .blockr-preview-lip {
-  position: sticky;
-  bottom: 0;
-  z-index: 3;
   display: flex;
   justify-content: center;
   height: 24px;
