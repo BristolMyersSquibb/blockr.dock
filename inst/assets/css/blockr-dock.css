@@ -67,12 +67,6 @@
   color: var(--blockr-color-text-secondary);
 }
 
-.blockr-label {
-  font-size: var(--blockr-font-size-sm);
-  font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-color-text-secondary);
-}
-
 .blockr-helper {
   font-size: var(--blockr-font-size-sm);
   font-weight: var(--blockr-font-weight-normal);
