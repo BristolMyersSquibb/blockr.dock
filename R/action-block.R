@@ -94,9 +94,11 @@ prepend_block_action <- function(trigger, board, update, ...) {
 remove_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
+      # A block with exactly one input is bridged: its parent takes over
+      # its output links (see `bridge_links()`).
       observeEvent(
         trigger(),
-        update(list(blocks = list(rm = trigger())))
+        update(remove_blocks_update(board$board, trigger()))
       )
       NULL
     },
