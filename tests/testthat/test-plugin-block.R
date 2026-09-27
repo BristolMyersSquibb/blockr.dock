@@ -53,10 +53,13 @@ test_that("edit block server", {
 test_that("renaming a block does not loop (#181)", {
 
   pushed <- character()
+  labels <- list()
 
   local_mocked_bindings(
-    updateTextInput = function(session, input_id, label, value) {
+    updateTextInput = function(session, input_id, label = NULL, value = NULL,
+                               ...) {
       pushed <<- c(pushed, value)
+      labels <<- c(labels, list(label))
     }
   )
 
@@ -102,6 +105,9 @@ test_that("renaming a block does not loop (#181)", {
 
       # A rename originating elsewhere still flows into the text input.
       expect_identical(pushed, c("Dataset", "External"))
+
+      # The field has no label, and a sync must not give it one.
+      expect_true(all(vapply(labels, is.null, logical(1L))))
     },
     args = list(
       block_id = "a",
