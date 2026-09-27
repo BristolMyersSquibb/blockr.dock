@@ -267,19 +267,18 @@ test_that("prepend block action: target_input picks the link slot", {
   )
 })
 
-test_that("block actions write the sidebar from their own module", {
-  # `show_sidebar()` reads the panel's owner off the session it is called
-  # with, so a write has to happen in the action's own reactive domain. A
-  # write deferred into a flush callback would run under the root session
-  # and stamp that instead, which this records.
-  wrote_from <- list()
+test_that("block actions open the + menu from their own module", {
+  # The pick comes back as the module's own `browser-commit`, so the menu
+  # has to be opened with the action's session: its namespace names the
+  # input the pick is sent to.
+  opened <- list()
   local_mocked_bindings(
-    show_sidebar = function(...) {
-      wrote_from[[length(wrote_from) + 1L]] <<- get_session()$ns(NULL)
+    open_add_block_menu = function(mode, caption, session = get_session()) {
+      opened[[length(opened) + 1L]] <<- list(
+        ns = session$ns(NULL), mode = mode, caption = caption
+      )
       invisible(NULL)
-    },
-    keep_or_hide_sidebar = function(...) invisible(NULL),
-    hide_sidebar         = function(...) invisible(NULL)
+    }
   )
 
   r_board <- reactiveValues(
@@ -292,9 +291,16 @@ test_that("block actions write the sidebar from their own module", {
   fire_action(prepend_block_action, "m", r_board)
 
   expect_identical(
-    wrote_from,
+    lapply(opened, `[[`, "ns"),
     list("add_block_action", "append_block_action", "prepend_block_action")
   )
+  expect_identical(
+    chr_ply(opened, `[[`, "mode"),
+    c("add", "append", "prepend")
+  )
+  expect_identical(opened[[1L]]$caption, "Add a block")
+  expect_match(opened[[2L]]$caption, "^Append to ")
+  expect_match(opened[[3L]]$caption, "^Prepend to ")
 })
 
 test_that("append block action: a name field names the variadic slot", {
@@ -498,17 +504,9 @@ test_that("prepend: NULL target_input falls back to only slot", {
   )
 })
 
-test_that("add block action toggles its pre-rendered sidebar on confirm", {
-  keep_calls <- list()
-
+test_that("a pick from the + menu adds the block", {
   local_mocked_bindings(
-    show_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(id, ...) {
-      keep_calls[[length(keep_calls) + 1L]] <<-
-        list(id = id, args = list(...))
-      invisible(NULL)
-    },
-    hide_sidebar = function(...) invisible(NULL)
+    open_add_block_menu = function(...) invisible(NULL)
   )
 
   r_board <- reactiveValues(board = new_board(), board_id = "my_board")
@@ -525,32 +523,22 @@ test_that("add block action toggles its pre-rendered sidebar on confirm", {
     },
     {
       session$flushReact()
+      # What add-block-menu.js sends: the type, no ids.
       session$setInputs(`browser-commit` = commit_spec(
-        type = "dataset_block", id = "x", title = "X block", nonce = 1
+        type = "dataset_block", nonce = 1
       ))
 
-      expect_length(r_update(), 1L)
-      expect_length(keep_calls, 1L)
-      # Add now targets its dedicated, pre-rendered sidebar and re-opens
-      # without `ui` (no re-render).
-      expect_identical(keep_calls[[1L]]$id, "my_board-add_block_sidebar")
-      expect_identical(keep_calls[[1L]]$args$title, "Add new block")
-      expect_null(keep_calls[[1L]]$args$ui)
+      upd <- r_update()
+      expect_named(upd, "blocks")
+      expect_length(upd$blocks$add, 1L)
+      expect_s3_class(upd$blocks$add[[1L]], "dataset_block")
     }
   )
 })
 
-test_that("append block action toggles its pre-rendered sidebar on confirm", {
-  keep_calls <- list()
-
+test_that("a pick from the append menu adds the block and its link", {
   local_mocked_bindings(
-    show_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(id, ...) {
-      keep_calls[[length(keep_calls) + 1L]] <<-
-        list(id = id, args = list(...))
-      invisible(NULL)
-    },
-    hide_sidebar = function(...) invisible(NULL)
+    open_add_block_menu = function(...) invisible(NULL)
   )
 
   r_board <- reactiveValues(
@@ -571,19 +559,35 @@ test_that("append block action toggles its pre-rendered sidebar on confirm", {
     {
       session$flushReact()
       session$setInputs(`browser-commit` = commit_spec(
-        type = "head_block", id = "h1", title = NULL,
-        link_id = "lnk1", block_input = "data", nonce = 1
+        type = "head_block", nonce = 1
       ))
 
-      expect_named(r_update(), c("blocks", "links"))
-      expect_length(keep_calls, 1L)
-      # Append also targets its dedicated, pre-rendered sidebar and
-      # re-opens without `ui` (no re-render); the source goes in the title.
-      expect_identical(keep_calls[[1L]]$id, "my_board-append_block_sidebar")
-      expect_identical(keep_calls[[1L]]$args$title, "Append from a")
-      expect_null(keep_calls[[1L]]$args$ui)
+      upd <- r_update()
+      expect_named(upd, c("blocks", "links"))
+      lnk <- as.data.frame(upd$links$add)
+      expect_identical(lnk$from, "a")
+      expect_identical(lnk$to, names(upd$blocks$add))
+      expect_identical(lnk$input, "data")
     }
   )
+})
+
+test_that("the + menu lists block types by category, append only receivers", {
+
+  items <- add_block_menu_items("add")
+  rows <- Filter(function(x) !is.null(x$type), items)
+  titles <- Filter(function(x) !is.null(x$title), items)
+
+  expect_true(length(titles) > 0L)
+  expect_true("dataset_block" %in% chr_ply(rows, `[[`, "type"))
+  ds <- Filter(function(x) identical(x$type, "dataset_block"), rows)[[1L]]
+  expect_identical(ds$badge, "blockr.core")
+  expect_match(ds$mark$color, "^#")
+
+  # A source-only block cannot receive a link, so append does not offer it.
+  app <- Filter(function(x) !is.null(x$type), add_block_menu_items("append"))
+  expect_false("dataset_block" %in% chr_ply(app, `[[`, "type"))
+  expect_true("head_block" %in% chr_ply(app, `[[`, "type"))
 })
 
 test_that("remove block action", {

@@ -132,165 +132,7 @@ wait_sel <- function(app, selector, present = TRUE, diagnose = NULL,
   wait_js(app, cond, diagnose, timeout)
 }
 
-add_panel <- "my_board-add_block_sidebar"
 actions_panel <- "my_board-actions_sidebar"
-
-test_that("the add browser filters its cards as the user types", {
-
-  skip_on_cran()
-
-  app <- menus_app("browser-search")
-  withr::defer(app$stop())
-
-  app$click(fixture("add_block"))
-  wait_panel(app, add_panel, open = TRUE)
-
-  scope <- paste0("#", add_panel)
-  all_cards <- js_count(app, paste0(scope, " .blockr-block-browser-card"))
-  expect_gt(all_cards, 1L)
-
-  visible <- function() {
-    js_count(app, paste0(scope, " .blockr-block-browser-card:not(.hidden)"))
-  }
-
-  expect_identical(visible(), all_cards)
-
-  type_search(app, scope, "head")
-  filtered <- visible()
-
-  expect_gt(filtered, 0L)
-  expect_lt(filtered, all_cards)
-
-  type_search(app, scope, "zzz_matches_nothing")
-  expect_identical(visible(), 0L)
-
-  type_search(app, scope, "")
-  expect_identical(visible(), all_cards)
-})
-
-test_that("a card-body click adds the block without expanding its form", {
-
-  skip_on_cran()
-
-  app <- menus_app("browser-click-add")
-  withr::defer(app$stop())
-
-  expect_setequal(exported(app, "blocks"), c("a", "b", "m", "r", "s"))
-
-  app$click(fixture("add_block"))
-  wait_panel(app, add_panel, open = TRUE)
-
-  click_sel(
-    app,
-    paste0(card("dataset_block"), " .blockr-block-browser-card-header")
-  )
-
-  # The commit closes the unpinned panel, which is the board's own signal that
-  # the update landed.
-  wait_panel(app, add_panel, open = FALSE)
-
-  added <- setdiff(exported(app, "blocks"), c("a", "b", "m", "r", "s"))
-
-  expect_length(added, 1L)
-  expect_true(nzchar(added))
-})
-
-test_that("the chevron opens a card's form and the in-card button commits it", {
-
-  skip_on_cran()
-
-  app <- menus_app("browser-edit-add")
-  withr::defer(app$stop())
-
-  app$click(fixture("add_block"))
-  wait_panel(app, add_panel, open = TRUE)
-
-  head_card <- card("head_block")
-  click_sel(app, paste0(head_card, " .blockr-block-browser-card-chevron"))
-
-  expect_true(
-    app$get_js(
-      sprintf(
-        "document.querySelector(%s).classList.contains('card-expanded')",
-        shQuote(head_card)
-      )
-    )
-  )
-
-  # Expanding is client-only: nothing has been committed yet.
-  expect_setequal(exported(app, "blocks"), c("a", "b", "m", "r", "s"))
-
-  set_field(
-    app,
-    paste0(head_card, " .blockr-block-browser-field-id input"),
-    "my_custom_id"
-  )
-  click_sel(app, paste0(head_card, " .blockr-block-browser-card-add"))
-
-  wait_panel(app, add_panel, open = FALSE)
-
-  expect_setequal(
-    exported(app, "blocks"),
-    c("a", "b", "m", "r", "s", "my_custom_id")
-  )
-})
-
-test_that("a click inside a card's form does not commit the block", {
-
-  skip_on_cran()
-
-  app <- menus_app("browser-form-noadd")
-  withr::defer(app$stop())
-
-  app$click(fixture("add_block"))
-  wait_panel(app, add_panel, open = TRUE)
-
-  data_card <- card("dataset_block")
-  click_sel(app, paste0(data_card, " .blockr-block-browser-card-chevron"))
-  click_sel(app, paste0(data_card, " .blockr-block-browser-field-id input"))
-
-  app$wait_for_idle()
-
-  expect_true(panel_open(app, add_panel))
-  expect_setequal(exported(app, "blocks"), c("a", "b", "m", "r", "s"))
-})
-
-# The add catalogue is pre-rendered once in `board_ui()` and the action only
-# toggles the panel, so a reopen must not rebuild it. Tagging the live node and
-# finding the tag intact afterwards is what distinguishes a toggle from a
-# re-render; nothing server-side can tell them apart.
-test_that("reopening the add browser does not rebuild it", {
-
-  skip_on_cran()
-
-  app <- menus_app("browser-prerender")
-  withr::defer(app$stop())
-
-  browser_sel <- paste0("#", add_panel, " .blockr-block-browser")
-
-  app$click(fixture("add_block"))
-  wait_panel(app, add_panel, open = TRUE)
-
-  app$run_js(
-    sprintf("document.querySelector(%s).dataset.persist='yes'",
-            shQuote(browser_sel))
-  )
-
-  click_sel(app, paste0("#", add_panel, " .blockr-sidebar-close"))
-  wait_panel(app, add_panel, open = FALSE)
-
-  app$click(fixture("add_block"))
-  wait_panel(app, add_panel, open = TRUE)
-
-  expect_identical(
-    app$get_js(
-      sprintf(
-        "document.querySelector(%s).dataset.persist", shQuote(browser_sel)
-      )
-    ),
-    "yes"
-  )
-})
 
 press_esc <- function(app) {
   app$run_js(
@@ -325,29 +167,29 @@ test_that("Escape and an outside click close an unpinned panel", {
   withr::defer(app$stop())
 
   expect_identical(
-    panel_state(app, add_panel),
+    panel_state(app, actions_panel),
     list(open = FALSE, pinned = FALSE)
   )
 
-  app$click(fixture("add_block"))
-  wait_panel(app, add_panel, open = TRUE)
+  app$click(fixture("add_stack"))
+  wait_panel(app, actions_panel, open = TRUE)
 
   expect_identical(
-    panel_state(app, add_panel),
+    panel_state(app, actions_panel),
     list(open = TRUE, pinned = FALSE)
   )
 
   press_esc(app)
-  wait_panel(app, add_panel, open = FALSE)
+  wait_panel(app, actions_panel, open = FALSE)
 
-  app$click(fixture("add_block"))
-  wait_panel(app, add_panel, open = TRUE)
+  app$click(fixture("add_stack"))
+  wait_panel(app, actions_panel, open = TRUE)
 
   click_outside(app)
-  wait_panel(app, add_panel, open = FALSE)
+  wait_panel(app, actions_panel, open = FALSE)
 
   expect_identical(
-    panel_state(app, add_panel),
+    panel_state(app, actions_panel),
     list(open = FALSE, pinned = FALSE)
   )
 })
@@ -359,14 +201,14 @@ test_that("a pinned panel survives Escape and an outside click", {
   app <- menus_app("sidebar-pinned")
   withr::defer(app$stop())
 
-  app$click(fixture("add_block"))
-  wait_panel(app, add_panel, open = TRUE)
+  app$click(fixture("add_stack"))
+  wait_panel(app, actions_panel, open = TRUE)
 
-  click_sel(app, paste0("#", add_panel, " .blockr-sidebar-pin"))
+  click_sel(app, paste0("#", actions_panel, " .blockr-sidebar-pin"))
   app$wait_for_idle()
 
   expect_identical(
-    panel_state(app, add_panel),
+    panel_state(app, actions_panel),
     list(open = TRUE, pinned = TRUE)
   )
 
@@ -375,15 +217,15 @@ test_that("a pinned panel survives Escape and an outside click", {
   app$wait_for_idle()
 
   expect_identical(
-    panel_state(app, add_panel),
+    panel_state(app, actions_panel),
     list(open = TRUE, pinned = TRUE)
   )
 
   # The close button is the one dismissal that overrides a pin.
-  click_sel(app, paste0("#", add_panel, " .blockr-sidebar-close"))
-  wait_panel(app, add_panel, open = FALSE)
+  click_sel(app, paste0("#", actions_panel, " .blockr-sidebar-close"))
+  wait_panel(app, actions_panel, open = FALSE)
 
-  expect_false(panel_state(app, add_panel)$open)
+  expect_false(panel_state(app, actions_panel)$open)
 })
 
 # An overlay panel floats on open and only reflows the board once pinned, which
@@ -424,17 +266,17 @@ test_that("an overlay panel reflows the board only once pinned", {
     app$get_js(
       sprintf(
         "document.getElementById('%s').getBoundingClientRect().width",
-        add_panel
+        actions_panel
       )
     )
   }
 
-  app$click(fixture("add_block"))
-  wait_panel(app, add_panel, open = TRUE)
+  app$click(fixture("add_stack"))
+  wait_panel(app, actions_panel, open = TRUE)
 
   expect_false(pushed())
 
-  click_sel(app, paste0("#", add_panel, " .blockr-sidebar-pin"))
+  click_sel(app, paste0("#", actions_panel, " .blockr-sidebar-pin"))
   app$wait_for_idle()
 
   expect_true(pushed())
@@ -444,7 +286,7 @@ test_that("an overlay panel reflows the board only once pinned", {
   # reflowed the board, so the two agree only to layout's sub-pixel rounding.
   expect_equal(width(), panel_width(), tolerance = 1e-6)
 
-  click_sel(app, paste0("#", add_panel, " .blockr-sidebar-pin"))
+  click_sel(app, paste0("#", actions_panel, " .blockr-sidebar-pin"))
   app$wait_for_idle()
 
   expect_false(pushed())
