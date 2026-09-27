@@ -1,5 +1,46 @@
 # blockr.dock (development version)
 
+* The block's "…" menu is blockr.ui's `Blockr.menu`: Rename, Append block,
+  Copy block ID (the ID as grey text) and, after a small gap, Remove block
+  with a bin, red only under the pointer. It is driven from the keyboard.
+
+* Adding, appending, prepending and inserting a block open one menu in
+  place (the design system's "Picking a block"): a caption, a filter box,
+  category titles and one row per block type with its mark, name and
+  package badge. The block browser sidebar is no longer used for it. "Add
+  panel" is the same menu over the board's blocks not on the page; its
+  dialog is gone. "New page" adds an empty "Page N" and opens its name for
+  renaming, without a dialog; removing a page asks in its row.
+
+* The views menu switches pages, the current one marked by weight and a
+  check. "Manage pages" at its foot turns the list into an editor: drag a
+  page by its grip to reorder, click a name to rename it, an x to remove,
+  "New page", "Done". The up and down arrows and the pencil are gone; a drag
+  sends the whole order, which the server takes only as a permutation of
+  the current one.
+
+* The board options sidebar is a list of option categories: each row the
+  category's name ("Board", "Theme", "Study", ...) with a one-line summary
+  of its current values under it, kept current as they change. A row opens
+  the category's page; the header then shows a back arrow and the
+  category's name, and the arrow or Escape returns to the list. The
+  Bootstrap accordion and the rule above it are gone; "Show code" is the
+  list's last row. The summary is read from the option values;
+  `option_summary()` lets a package give its option class a better line
+  (a unit, a noun) without changes to blockr.core.
+
+* A block is renamed with a double-click on its title or "Rename" in its
+  menu, in place: the title takes a hover wash, the field the accent edge and
+  focus ring; Enter or a click elsewhere commits, Escape restores, an empty
+  name is refused. The controls and preview toggles are bare grey tools that
+  show a light accent when on. The status dot reads the tokens; "unset" takes
+  the warning amber and a waiting block shows a hollow ring.
+
+* A "Compact" board option (`new_compact_option()`, in `dock_board_options()`,
+  off by default) turns every block header into an eyebrow line: a 20px
+  tinted mark and the name in 11px muted capitals. The regular header keeps
+  a 32px mark and a 16px title that may wrap to two lines.
+
 * The dock reads its colours, radii and surfaces from blockr.ui's design
   tokens, so a board follows blockr.ui's dark scheme: the dockview frame and
   tabs, block headers, sidebars, the block browser and the block menu. Font
