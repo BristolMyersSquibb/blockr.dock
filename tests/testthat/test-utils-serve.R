@@ -353,7 +353,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   expect_setequal(nav$label, c("First", "Second"))
   expect_identical(nav$label[nav$active], "First")
 
-  # Drive a runtime add through the nav UI ("New page" adds "Page 3", no
+  # Drive a runtime add through the nav UI ("New view" adds "View 3", no
   # dialog): the client `add` handler must render the new view once,
   # correctly labelled.
   app$run_js(
@@ -365,7 +365,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
 
   expect_identical(nrow(nav), 3L)
   expect_false(anyDuplicated(nav$id) > 0L)
-  expect_true("Page 3" %in% nav$label)
+  expect_true("View 3" %in% nav$label)
   expect_false(any(nav$label == ""))
 })
 
@@ -459,7 +459,7 @@ test_that("a click on the view the server left still switches (#424)", {
   wait_view_nav(app, 3)
 
   nav <- read_view_nav(app)
-  expect_identical(nav$label[nav$active], "Page 3")
+  expect_identical(nav$label[nav$active], "View 3")
 
   # Clicking Second again has to reach the server. Left cached, the dedup
   # would swallow the report as a repeat and the board would sit on Third.
@@ -990,7 +990,7 @@ test_that("locked board hides block actions, shows lock indicator (#236)", {
   expect_match(menus, "Copy block ID")
   expect_false(grepl("append_block|delete_block", menus))
 
-  # View CRUD is locked too: no "New page" add control.
+  # View CRUD is locked too: no "New view" add control.
   expect_equal(count(".blockr-view-add"), 0)
 })
 

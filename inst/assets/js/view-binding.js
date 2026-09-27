@@ -39,14 +39,14 @@ $(function () {
       .text(text);
   };
 
-  // The small icons of a page row, the same as view_icons in R.
+  // The small icons of a view row, the same as view_icons in R.
   var ICONS = {
     grip: '<svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor"><circle cx="2" cy="2" r="1"></circle><circle cx="6" cy="2" r="1"></circle><circle cx="2" cy="6" r="1"></circle><circle cx="6" cy="6" r="1"></circle><circle cx="2" cy="10" r="1"></circle><circle cx="6" cy="10" r="1"></circle></svg>',
     check: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg>',
     x: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M2.5 2.5l5 5M7.5 2.5l-5 5"></path></svg>'
   };
 
-  // A page row as view_item_ui() draws it.
+  // A view row as view_item_ui() draws it.
   var buildItem = function (id, name, canCrud) {
     var $item = $('<div>')
       .addClass('dropdown-item blockr-menu__item blockr-view-item')
@@ -64,7 +64,7 @@ $(function () {
     if (canCrud) {
       $item.append(
         $('<span>').addClass('blockr-view-action blockr-view-remove')
-          .attr('role', 'button').attr('title', 'Remove page').html(ICONS.x)
+          .attr('role', 'button').attr('title', 'Remove view').html(ICONS.x)
       );
     }
     return $item;
@@ -80,9 +80,9 @@ $(function () {
     return $el.closest('.blockr-view-nav').hasClass('is-managing');
   };
 
-  // In manage mode a page's name is edited in place with a click, so it
+  // In manage mode a view's name is edited in place with a click, so it
   // carries blockr.ui's editable marker: the text cursor and a "Click to
-  // rename" tooltip. Outside the mode a click switches pages, so it goes.
+  // rename" tooltip. Outside the mode a click switches views, so it goes.
   var markEditable = function ($scope, on) {
     $scope.find('.blockr-view-item-name').each(function () {
       if (on) this.setAttribute('data-blockr-editable', 'Click to rename');
@@ -95,7 +95,7 @@ $(function () {
     markEditable($(el), on);
   };
 
-  // Swap a page's name for a field. Enter and blur commit, Escape restores.
+  // Swap a view's name for a field. Enter and blur commit, Escape restores.
   // Only in manage mode, which stays open, so a commit never closes the menu.
   var startRename = function ($item) {
     var $name = $item.find('.blockr-view-item-name');
@@ -253,7 +253,7 @@ $(function () {
         callback(true);
       });
 
-      // View switch: a click on a page, unless the menu is managing pages
+      // View switch: a click on a view, unless the menu is managing views
       // (then a click on the name renames it) or the click hit a tool.
       $(el).on('click.viewBinding', '.blockr-view-item', function (e) {
         if ($(e.target).closest('.blockr-view-remove, .blockr-view-grip').length) {
@@ -278,7 +278,7 @@ $(function () {
         closeMenu($nav);
       });
 
-      // Manage pages: the same list becomes an editor, and back with Done.
+      // Manage views: the same list becomes an editor, and back with Done.
       $(el).on('click.viewBinding', '.blockr-view-manage', function (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -299,9 +299,9 @@ $(function () {
         setManaging(el, false);
       });
 
-      // Remove asks in place: the x turns the row into "Remove this page?"
+      // Remove asks in place: the x turns the row into "Remove this view?"
       // with a Remove button; only that button sends the request, and the
-      // server removes the page without a dialog. A click anywhere else in
+      // server removes the view without a dialog. A click anywhere else in
       // the menu, or Escape, takes the question back.
       var cancelConfirm = function () {
         $(el).find('.blockr-view-item.is-confirming').each(function () {
@@ -353,8 +353,8 @@ $(function () {
         window.addEventListener('keydown', el._blockrConfirmEscape, true);
       }
 
-      // Add click: the server adds an empty "Page N" and switches to it; the
-      // page arrives through receiveMessage, its name open for renaming.
+      // Add click: the server adds an empty "View N" and switches to it; the
+      // view arrives through receiveMessage, its name open for renaming.
       $(el).on('click.viewBinding', '.blockr-view-add', function (e) {
         e.stopPropagation();
         e.preventDefault();
@@ -382,7 +382,7 @@ $(function () {
         var canCrud = data.canCrud !== false;
         var $new = buildItem(data.add.id, data.add.name, canCrud);
         $(el).find('.blockr-view-list').append($new);
-        // "New page" in manage mode: the new row's name opens for renaming.
+        // "New view" in manage mode: the new row's name opens for renaming.
         if ($(el).hasClass('is-managing')) {
           markEditable($new, true);
           startRename($new);
