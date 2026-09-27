@@ -310,6 +310,7 @@ grid_size_tol <- function() {
 # grid carries none while the client's echo always does, so it is dropped
 # before the compare, keeping a focus-only echo from provoking a mirror commit
 # and the round-trip stable across a restore.
+#' @method all.equal dock_grid
 #' @export
 all.equal.dock_grid <- function(target, current, ..., scale = 1) {
   target[["focus"]] <- NULL
