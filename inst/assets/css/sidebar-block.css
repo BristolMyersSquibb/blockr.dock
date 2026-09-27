@@ -60,14 +60,14 @@
 
 .blockr-block-browser-context {
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: var(--blockr-font-size-xs);
   color: var(--bb-grey-500);
   margin: 0;
 }
 
 .blockr-block-browser-context strong {
   color: var(--bb-grey-900);
-  font-weight: 600;
+  font-weight: var(--blockr-font-weight-semibold);
 }
 
 /* Search input. Soft grey field with a blue focus ring (prototype). */
@@ -80,7 +80,7 @@
   background: var(--bb-grey-50)
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239ca3af'><path d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/></svg>")
     no-repeat 14px center / 14px 14px;
-  font-size: 14px;
+  font-size: var(--blockr-font-size-base);
   color: var(--bb-grey-900);
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
@@ -110,8 +110,8 @@
 .blockr-block-browser-category h3 {
   margin: 0 0 4px 0;
   padding: 0 12px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-medium);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--bb-grey-500);
@@ -251,8 +251,8 @@
 
 .blockr-block-browser-card-name {
   flex: 1 1 auto;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--blockr-font-size-base);
+  font-weight: var(--blockr-font-weight-medium);
   color: var(--bb-grey-900);
   line-height: 1.4;
   overflow: hidden;
@@ -268,8 +268,8 @@
   background: var(--bb-grey-100);
   color: var(--bb-grey-500);
   border-radius: 999px;
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-medium);
   white-space: nowrap;
 }
 
@@ -313,7 +313,7 @@
   margin: 8px 0 0 0;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--bb-grey-100);
-  font-size: 12px;
+  font-size: var(--blockr-font-size-xs);
   color: var(--bb-grey-500);
   line-height: 1.45;
 }
@@ -346,8 +346,8 @@
 }
 
 .blockr-block-browser-field label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-semibold);
   color: var(--bb-grey-600);
 }
 
@@ -360,15 +360,15 @@
   border-radius: 8px;
   background: var(--bb-grey-50);
   color: var(--bb-grey-900);
-  font-size: 13px;
+  font-size: var(--blockr-font-size-sm);
   transition: border-color 150ms ease, background 150ms ease,
     box-shadow 150ms ease;
 }
 
 /* The block id is identifier-like; render it monospace (spec). */
 .blockr-block-browser-field-id input {
-  font-family: "SF Mono", "Fira Code", "Consolas", "Monaco", monospace;
-  font-size: 12.5px;
+  font-family: var(--blockr-font-mono);
+  font-size: var(--blockr-font-size-sm);
 }
 
 /* Native select arrow replaced with a grey chevron, room reserved for it. */
@@ -410,8 +410,8 @@
   border-radius: 8px;
   background: var(--blockr-color-bg-surface);
   color: var(--bb-blue-700);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-semibold);
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
 }
@@ -438,7 +438,7 @@
   align-items: center;
   justify-content: center;
   color: var(--bb-grey-400);
-  font-size: 14px;
+  font-size: var(--blockr-font-size-base);
   padding: 32px 16px;
   text-align: center;
 }

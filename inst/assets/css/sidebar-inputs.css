@@ -17,8 +17,6 @@
   margin: -16px;
   padding: 16px;
 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
   color: var(--blockr-color-text-primary, #111827);
 }
 
@@ -89,7 +87,7 @@
   flex: 0 0 auto;
   font-weight: var(--blockr-font-weight-semibold, 600);
   font-size: var(--blockr-font-size-sm, 0.8125rem);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--blockr-font-mono);
 }
 
 .blockr-inputs-row.is-readonly .blockr-inputs-source {

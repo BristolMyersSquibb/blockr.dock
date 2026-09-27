@@ -53,8 +53,8 @@
 .blockr-sidebar-title {
   flex: 1 1 auto;
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--blockr-font-size-lg);
+  font-weight: var(--blockr-font-weight-semibold);
   color: var(--blockr-color-text-default);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -80,7 +80,7 @@
   color: var(--blockr-color-text-muted);
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--blockr-font-size-base);
   line-height: 1;
 }
 
