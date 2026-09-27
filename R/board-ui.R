@@ -39,6 +39,7 @@ board_ui.dock_board <- function(
     blockr_dock_dep(),
     tooltip_dep(),
     compact_dep(),
+    font_dep(),
     viewport_probe_ui(id),
     rail_dep(),
     # Empty unless debug logging is on -- see `probe_restores()`.

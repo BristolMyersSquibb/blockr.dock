@@ -1,6 +1,6 @@
 Package: blockr.dock
 Title: A Docking Layout Manager for 'blockr'
-Version: 0.1.4.9009
+Version: 0.1.4.9004
 Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",
@@ -98,3 +98,4 @@ Collate:
     'utils-ui.R'
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.0.0
+RoxygenNote: 7.3.3
