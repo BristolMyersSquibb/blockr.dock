@@ -8,8 +8,13 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
 
   div(
     class = "card-body",
+    # Header parts each carry an owned class, and every dimension that a
+    # density variant would change (gap, padding, icon size, title size) is a
+    # token read by the stylesheet. Nothing here is styled inline: an inline
+    # declaration outranks any sheet a theme can attach, so a single
+    # `style=` attribute on a part is enough to make that part unthemable.
     div(
-      class = "d-flex align-items-stretch gap-3",
+      class = "blockr-block-header",
       div(
         class = "blockr-block-icon",
         span(
@@ -19,15 +24,12 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
         block_status_dot(ns)
       ),
       div(
-        class = paste(
-          "d-flex flex-column justify-content-center",
-          "flex-grow-1 min-height-0"
-        ),
+        class = "blockr-block-header-main",
         div(
-          class = "d-flex align-items-center justify-content-between w-100",
+          class = "blockr-block-header-row",
           block_card_title(blk, id, blk_info),
           div(
-            class = "d-flex align-items-center gap-1 flex-shrink-0",
+            class = "blockr-block-header-actions",
             block_card_toggles(visible, ns, ctrl_meta, has_inputs),
             block_card_dropdown(ns, blk_info, blk_id)
           )
@@ -61,34 +63,23 @@ block_card_title <- function(block, id, info) {
   input_id <- ns("block_name_in")
 
   div(
-    class = "flex-grow-1 pe-3",
+    class = "blockr-block-title-wrap",
     div(
-      class = "card-title mb-0",
-      style = "line-height: 1.0;",
+      class = "blockr-block-title",
       # Inline editable title container
       div(
         class = "blockr-inline-edit",
-        # Display mode - click to edit
+        # Display mode - click to edit. The rename affordance (dashed ring,
+        # revealed pencil) is a `:hover` rule in blockr-dock.css, not a pair of
+        # `onmouseover`/`onmouseout` handlers writing `this.style`: a handler
+        # that writes an inline declaration cannot be overridden by any sheet,
+        # so it took the affordance out of a theme's reach and hardcoded two
+        # greys on the way. The `onclick` stays, because swapping the two modes
+        # and focusing the field is behaviour rather than appearance.
         div(
           id = ns("title_display"),
-          class = "blockr-title-display d-inline-flex align-items-center gap-2",
+          class = "blockr-title-display",
           title = "Click to rename",
-          style = paste(
-            "padding: 4px 8px;",
-            "margin: -4px -8px;",
-            "border-radius: 4px;",
-            "cursor: pointer;",
-            "border: 2px dashed transparent;",
-            "transition: border-color 0.15s ease;"
-          ),
-          onmouseover = paste0(
-            "this.style.borderColor='#ddd';",
-            "this.querySelector('.edit-icon').style.opacity='1';"
-          ),
-          onmouseout = paste0(
-            "this.style.borderColor='transparent';",
-            "this.querySelector('.edit-icon').style.opacity='0';"
-          ),
           onclick = sprintf(
             paste0(
               "this.style.display='none';",
@@ -101,16 +92,7 @@ block_card_title <- function(block, id, info) {
             ns("title_edit")
           ),
           tags$span(class = "blockr-title", block_name(block)),
-          icon(
-            "pen-to-square",
-            class = "edit-icon",
-            style = paste(
-              "opacity: 0;",
-              "font-size: 0.7em;",
-              "color: #bbb;",
-              "transition: opacity 0.15s ease;"
-            )
-          )
+          icon("pen-to-square", class = "edit-icon")
         ),
         # Edit mode - hidden by default
         div(
@@ -133,7 +115,10 @@ block_card_title <- function(block, id, info) {
               var editWrap = $('#%s');
               input.on('blur', function() {
                 editWrap.hide();
-                display.css('display', 'flex');
+                // Clear the inline display the onclick wrote, rather than
+                // setting one: the class owns how the row lays out, so a
+                // density variant can change it.
+                display.css('display', '');
               });
               input.on('keydown', function(e) {
                 if (e.key === 'Enter') {
@@ -156,12 +141,12 @@ block_card_title <- function(block, id, info) {
       ),
       # Title + package badge
       div(
-        class = "d-flex align-items-center justify-content-between gap-2 mb-2",
+        class = "blockr-block-meta-head",
         tags$strong(info$name),
         span(class = "badge-two-tone", info$package)
       ),
       # Description
-      p(class = "mb-0", info$description),
+      p(class = "blockr-block-meta-desc", info$description),
       options = list(trigger = "hover")
     )
   )

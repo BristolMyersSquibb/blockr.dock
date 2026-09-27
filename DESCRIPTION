@@ -21,7 +21,7 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:
     blockr.core (>= 0.1.4),
-    blockr.ui,
+    blockr.ui (>= 0.0.1.9041),
     bsicons,
     shiny (>= 1.14.0),
     shinyjs,
@@ -47,7 +47,7 @@ Suggests:
 Remotes:
     rstudio/shinytest2,
     BristolMyersSquibb/blockr.core,
-    BristolMyersSquibb/blockr.ui,
+    BristolMyersSquibb/blockr.ui@feat/design-system-2,
     cynkra/dockViewR
 Config/testthat/edition: 3
 Collate:

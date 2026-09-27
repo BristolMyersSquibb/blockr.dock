@@ -31,14 +31,14 @@
   height: auto;
   width: auto;
   min-width: 150px;
-  border: 2px dashed #bbb;
-  border-radius: 8px;
-  background: white;
+  border: 2px dashed var(--blockr-color-border-hover, #d1d5db);
+  border-radius: var(--blockr-radius-lg, 8px);
+  background: var(--blockr-color-bg-surface, #ffffff);
   box-shadow: none;
 }
 
 .blockr-title-edit .form-control:focus {
-  border-color: #aaa;
+  border-color: var(--blockr-color-text-subtle, #9ca3af);
   box-shadow: none;
   outline: none;
 }
@@ -80,7 +80,7 @@
   gap: 10px;
   padding: 12px 16px;
   margin: 0 -16px;
-  background-color: rgba(220, 38, 38, 0.08);
+  background-color: var(--blockr-color-bg-danger);
   color: var(--blockr-color-error);
   font-size: var(--blockr-font-size-base);
 }
@@ -101,7 +101,7 @@
   color: var(--blockr-color-text-meta);
   font-size: var(--blockr-font-size-base);
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: var(--blockr-radius-md, 6px);
   transition: background-color 0.15s ease;
 }
 
@@ -115,6 +115,119 @@
 
 .blockr-issues-toggle[aria-expanded="true"] svg {
   transform: rotate(180deg);
+}
+
+/* ============================================================
+   Block header
+   ============================================================
+   The header row of a block card: icon (with status dot), editable title and
+   subtitle, section toggles, overflow menu. Every part carries an owned class
+   and no inline `style=`, so a stylesheet can restyle any of it. */
+.blockr-block-header {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.blockr-block-header-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.blockr-block-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.blockr-block-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+/* The icon is an inline <svg> built in R with width/height baked in at 48, so
+   a density variant cannot reach it through the R side without re-rendering
+   the card. Overriding the presentation attributes here costs one rule and
+   makes the icon a token like everything else beside it. */
+.blockr-block-icon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.blockr-block-title-wrap {
+  flex-grow: 1;
+  min-width: 0;
+  padding-right: 1rem;
+}
+
+/* Was Bootstrap's `.card-title.mb-0` plus `line-height: 1.0` inline. Size,
+   weight and colour are not repeated here: `.blockr-title` inside already sets
+   all three off tokens, so a density variant changes the title by overriding
+   `--blockr-font-size-title` and nothing in this rule moves. The line-height
+   is what keeps the title and the subtitle under it reading as one two-line
+   unit; at Bootstrap's 1.5 they drift apart. */
+.blockr-block-title {
+  margin-bottom: 0;
+  line-height: 1;
+}
+
+/* The rename affordance. The 2px dashed border is present and transparent at
+   rest so revealing it on hover shifts nothing; the row is pulled back out by
+   a negative margin equal to its padding, so the title sits where it would
+   without the hit area. */
+.blockr-title-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  border: 2px dashed transparent;
+  border-radius: var(--blockr-radius-sm, 4px);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.blockr-title-display:hover {
+  border-color: var(--blockr-color-border-hover, #d1d5db);
+}
+
+.blockr-title-display .blockr-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-title-display .edit-icon {
+  flex-shrink: 0;
+  opacity: 0;
+  font-size: 0.7em;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+  transition: opacity 0.15s ease;
+}
+
+.blockr-title-display:hover .edit-icon {
+  opacity: 1;
+}
+
+/* Inside the block-description popover. */
+.blockr-block-meta-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.blockr-block-meta-desc {
+  margin-bottom: 0;
 }
 
 /* Block eval status: on-icon status dot.
@@ -171,7 +284,7 @@
 .blockr-section-toggle .btn.btn-light {
   background-color: transparent !important;
   border: none !important;
-  border-radius: 8px;
+  border-radius: var(--blockr-radius-lg, 8px);
   color: var(--blockr-grey-300) !important;
   font-size: 12px;
   padding: 6px 7px;
@@ -225,7 +338,7 @@
   display: inline-block;
   padding: 2px 8px;
   font-size: 0.625rem;
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   background-color: var(--blockr-grey-100);
   color: var(--blockr-color-text-muted);
   border: 1px solid var(--blockr-color-border);
@@ -255,7 +368,7 @@
 .offcanvas-body {
   font-size: var(--blockr-font-size-sm);
   padding: 20px;
-  background: #ffffff;
+  background: var(--blockr-color-bg-surface, #ffffff);
 }
 
 .offcanvas .accordion {
@@ -293,7 +406,7 @@
 
 .blockr-block-accordion > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body,
 .blockr-block-accordion > .accordion-item[data-value="ctrl"] > .accordion-collapse > .accordion-body {
-  background-color: white;
+  background-color: var(--blockr-color-bg-surface, #ffffff);
   border-radius: 0;
   margin: 0 -16px 10px -16px;
   padding: 16px 16px 10px 16px;
@@ -331,11 +444,12 @@
    ============================================ */
 .blockr-block-dropdown {
   font-size: var(--blockr-font-size-base) !important;
-  border-radius: 12px !important;
+  border-radius: var(--blockr-radius-xl, 12px) !important;
   border: 1px solid var(--blockr-color-border) !important;
   box-shadow: var(--blockr-shadow-lg) !important;
   padding: 12px 8px 8px !important;
   margin-top: 8px !important;
+  --bs-dropdown-bg: var(--blockr-color-bg-raised);
 }
 
 /* Arrow pointing up toward the trigger button */
@@ -355,7 +469,7 @@
 
 .blockr-block-dropdown::after {
   top: -8px;
-  border-bottom: 8px solid #fff;
+  border-bottom: 8px solid var(--blockr-color-bg-raised);
 }
 
 .blockr-block-dropdown .dropdown-header,
@@ -372,7 +486,7 @@
 .blockr-block-dropdown .dropdown-item {
   font-size: var(--blockr-font-size-sm) !important;
   padding: 10px 12px 10px 2.5rem !important;
-  border-radius: 8px !important;
+  border-radius: var(--blockr-radius-lg, 8px) !important;
   color: var(--blockr-color-text-primary) !important;
 }
 
@@ -412,7 +526,7 @@
   color: var(--blockr-color-text-muted);
   padding: 8px 8px;
   margin-left: -4px;
-  border-radius: 8px;
+  border-radius: var(--blockr-radius-lg, 8px);
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -431,8 +545,8 @@
   gap: 8px;
   height: 48px;
   padding: 0 16px;
-  background-color: white;
-  border-bottom: 1px solid var(--blockr-grey-300);
+  background-color: var(--blockr-color-bg-surface, #ffffff);
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 
 .blockr-navbar-left {
@@ -457,7 +571,7 @@
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--blockr-radius-md, 6px);
   color: var(--blockr-color-text-muted);
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
@@ -477,7 +591,7 @@
   gap: 6px;
   padding: 4px 10px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--blockr-radius-pill, 999px);
   color: var(--blockr-color-text-secondary);
   background-color: var(--blockr-color-bg-subtle);
   border: 1px solid var(--blockr-color-border);
@@ -531,7 +645,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   font-size: var(--blockr-font-size-sm);
   color: var(--blockr-color-text-primary);
   cursor: pointer;
@@ -582,7 +696,7 @@
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   color: var(--blockr-color-text-muted);
   cursor: pointer;
   font-size: 11px;
@@ -612,7 +726,7 @@
   flex: 1;
   padding: 2px 6px;
   border: 1px solid var(--blockr-color-primary);
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   font-size: var(--blockr-font-size-sm);
   background-color: var(--blockr-color-bg-input);
   color: var(--blockr-color-text-primary);
@@ -621,7 +735,7 @@
 
 .blockr-view-rename-input:focus {
   border-color: var(--blockr-color-primary);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  box-shadow: var(--blockr-focus-ring);
 }
 
 /* Add button */
@@ -630,7 +744,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   font-size: var(--blockr-font-size-sm);
   color: var(--blockr-color-text-muted);
 }
@@ -722,7 +836,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #6b7280;
+  color: var(--blockr-color-text-muted);
 }
 
 /* The single, global apply button sits in its own footer, right-aligned. */
@@ -794,40 +908,40 @@
 .blockr-ext-edit .btn-primary {
   background-color: var(--blockr-color-primary);
   border-color: var(--blockr-color-primary);
-  color: #ffffff;
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 .blockr-ext-edit .btn-primary:hover,
 .blockr-ext-edit .btn-primary:focus {
   background-color: var(--blockr-color-primary-hover);
   border-color: var(--blockr-color-primary-hover);
-  color: #ffffff;
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 .blockr-ext-edit .btn-danger {
   background-color: var(--blockr-color-error);
   border-color: var(--blockr-color-error);
-  color: #ffffff;
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 .blockr-ext-edit .btn-danger:hover,
 .blockr-ext-edit .btn-danger:focus {
-  background-color: #b91c1c;
-  border-color: #b91c1c;
-  color: #ffffff;
+  background-color: var(--blockr-color-text-danger);
+  border-color: var(--blockr-color-text-danger);
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 .blockr-ext-edit .btn-success {
   background-color: var(--blockr-color-success);
   border-color: var(--blockr-color-success);
-  color: #ffffff;
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 .blockr-ext-edit .btn-success:hover,
 .blockr-ext-edit .btn-success:focus {
-  background-color: #15803d;
-  border-color: #15803d;
-  color: #ffffff;
+  background-color: var(--blockr-color-text-success);
+  border-color: var(--blockr-color-text-success);
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 /* ============================================
@@ -892,9 +1006,9 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   left: 50%;
   transform: translateX(-50%);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   background: var(--blockr-grey-900);
-  color: #fff;
+  color: var(--blockr-grey-50);
   font-size: var(--blockr-font-size-xs);
   line-height: 1.5;
   white-space: nowrap;
@@ -976,3 +1090,48 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   border-top-left-radius: var(--dv-border-radius) !important;
 }
 
+
+/* ============================================
+   Dockview reads the design tokens
+   ============================================
+   dockview paints the shell (the canvas between panels, the tab strips, the
+   tabs) from its own `.dockview-theme-light-spaced` variables, so without
+   this block the frame stays light under the dark scheme and ignores a
+   theme. Each variable here points at a meaning token.
+
+   `.dv-shell.dv-shell` is deliberate: dockview's stylesheet is injected by
+   its JS after the page's <link>s, so at equal specificity it wins on source
+   order. The repeated class buys one point. (A `className` on the
+   DockviewTheme, cynkra/dockViewR#102, would make this unnecessary.)
+
+   Tabs follow the design system: the front tab of the active group takes
+   the accent tint, the front tab of every other group the grey
+   `bg-selected-inactive`, background tabs are text on the strip. */
+.dv-shell.dv-shell {
+  --dv-group-view-background-color: var(--blockr-color-bg-page);
+  --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface);
+
+  --dv-activegroup-visiblepanel-tab-background-color: var(--blockr-color-bg-selected);
+  --dv-activegroup-visiblepanel-tab-color: var(--blockr-color-text-accent);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--blockr-color-bg-selected-inactive);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--blockr-color-text-default);
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-activegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted);
+
+  --dv-separator-border: transparent;
+  --dv-sash-color: transparent;
+  --dv-tab-divider-color: transparent;
+  --dv-active-sash-color: var(--blockr-color-border-accent);
+
+  --dv-border-radius: var(--blockr-radius-xl);
+  --dv-tab-border-radius: var(--blockr-radius-lg);
+}
+
+/* dockview's light values for these are black at low alpha, which vanishes
+   on a dark surface; white at the same weight reads the same. */
+[data-bs-theme="dark"] .dv-shell {
+  --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
+  --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
+}
