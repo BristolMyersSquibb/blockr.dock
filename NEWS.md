@@ -1,5 +1,9 @@
 # blockr.dock (development version)
 
+* The dock page attaches `blockr.ui::shiny_input_batch_dep()`, which drops the empty input message Shiny 1.14.0 sends after every deferred input. A first visit to a 15-block view sent 177 of them, each a full input cycle on the server, and the dock's `initialized` report waited 2 to 4 seconds behind them. Needs blockr.ui 0.0.1.9002.
+
+* A first visit to a view no longer re-checks every block's frozen state per card mount. A card's reported sections depended on the session's whole input name set, so every new input on the board woke every block's `visible`, and `freeze_hidden_inputs()` re-read all of them: 21 to 43 runs over ~90 blocks per first visit on the CEDX board. The key test now runs under `isolate()`; reading the section input itself already fires when the card first reports.
+
 * Cards and extensions parked off screen (views you have left) are no longer
   styled or laid out by the browser (`content-visibility: hidden` on the
   closed offcanvas pools). On the CEDX board they are half the document; one
