@@ -288,12 +288,12 @@
   margin-top: 6px;
 }
 
-/* The controls and preview toggles are the "…" menu's first group, as rows
-   with their icons and a check when on (block-menu.js); their buttons stay in
-   the markup, hidden, because they are the Shiny input the rows flip. A
-   block's own control (the AI assistant) keeps its button next to "…" at
-   every width, and is not in the menu. */
-.blockr-block-header-actions .blockr-section-toggle .btn-check:not([value="ctrl"]) + .btn {
+/* The controls toggle is the "…" menu's first row, with its icon and a check
+   when on (block-menu.js); its button stays in the markup, hidden, because it
+   is the Shiny input the row flips. The preview's eye stays in the header,
+   and so does a block's own control (the AI assistant), left of "…" at every
+   width: the preview is what a builder switches most, while editing. */
+.blockr-block-header-actions .blockr-section-toggle .btn-check[value="inputs"] + .btn {
   display: none;
 }
 
