@@ -1,5 +1,5 @@
-// Views as tabs: a second navbar line, turned on by each user with "Show
-// views as tabs" in the views menu and off with the x at its end. The choice
+// Views as tabs: a second navbar line, turned on and off by each user with
+// "Show views as tabs" in the views menu. The choice
 // lives in localStorage and shows as `.blockr-view-tabs` on <html>, which an
 // inline script in the page sets before the navbar paints (see
 // view_tabs_init()).
@@ -100,10 +100,6 @@
     bar.addEventListener('click', function (e) {
       if (e.target.closest('.blockr-view-tabs-toggle')) {
         setOn(!isOn());
-        return;
-      }
-      if (e.target.closest('.blockr-view-tabs-close')) {
-        setOn(false);
         return;
       }
       var tab = e.target.closest('.blockr-view-tab');
