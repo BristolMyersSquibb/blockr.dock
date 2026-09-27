@@ -1,7 +1,8 @@
 # Views as tabs: a second navbar line with one tab per view. Each user turns it
-# on or off with "Show views as tabs" in the views menu. The choice is kept in
-# the browser (localStorage), so it neither changes the workflow nor marks it
-# unsaved, and each person keeps their own. `blockr_option("view_tabs")` is the
+# on with "Show views as tabs" in the views menu and off with the x at the end
+# of the tab line. The choice is kept in the browser (localStorage), so it
+# neither changes the workflow nor marks it unsaved, and each person keeps
+# their own. `blockr_option("view_tabs")` is the
 # default for someone who has not chosen yet.
 
 view_tabs_key <- "blockr-view-tabs"
@@ -46,6 +47,14 @@ view_tabs_ui <- function() {
       role = "tablist",
       `aria-label` = "Views",
       `data-navbar-slot` = "viewtabs"
+    ),
+    # The x at the end of the tab line turns the tabs off again
+    tags$button(
+      type = "button",
+      class = "blockr-navbar-icon-btn blockr-view-tabs-close",
+      `aria-label` = "Hide the view tabs",
+      `data-navbar-slot` = "viewtabsclose",
+      HTML(view_icons[["x"]])
     )
   )
 }

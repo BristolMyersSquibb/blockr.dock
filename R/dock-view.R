@@ -664,11 +664,10 @@ view_nav_ui <- function(id, views) {
     tags$button(
       class = "blockr-navbar-icon-btn dropdown-toggle blockr-view-toggle",
       type = "button",
-      title = "Views",
+      `aria-label` = "Views",
       `data-bs-toggle` = "dropdown",
       `data-bs-auto-close` = "outside",
       `aria-expanded` = "false",
-      bsicons::bs_icon("journals", class = "blockr-view-toggle-icon"),
       tags$span(class = "blockr-view-toggle-label", active_nm),
       bsicons::bs_icon("chevron-down", class = "blockr-view-toggle-chev")
     ),
