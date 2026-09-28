@@ -176,7 +176,8 @@ dock_outputs_ui <- function(id, views) {
 #' Build the body of the board-options sidebar.
 #'
 #' Returns the options sidebar's body: a list of option categories, each
-#' opening a page with that category's options (see `options_sidebar_ui()`). Called at server time from
+#' opening a page with that category's options (see
+#' `options_sidebar_ui()`). Called at server time from
 #' `board_server_callback()` when the user clicks the navbar gear, and
 #' passed to `show_sidebar()`.
 #'

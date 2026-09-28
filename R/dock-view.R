@@ -714,10 +714,13 @@ view_icons <- list(
     '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
     'stroke="currentColor" stroke-width="1.25" stroke-linecap="round">',
     '<path d="M2 4h12M2 8h12M2 12h12"></path>',
-    '<circle cx="5" cy="4" r="1.6" fill="var(--blockr-color-bg-raised)"></circle>',
-    '<circle cx="10" cy="8" r="1.6" fill="var(--blockr-color-bg-raised)"></circle>',
-    '<circle cx="6" cy="12" r="1.6" fill="var(--blockr-color-bg-raised)"></circle>',
-    '</svg>'
+    '<circle cx="5" cy="4" r="1.6" ',
+    'fill="var(--blockr-color-bg-raised)"></circle>',
+    '<circle cx="10" cy="8" r="1.6" ',
+    'fill="var(--blockr-color-bg-raised)"></circle>',
+    '<circle cx="6" cy="12" r="1.6" ',
+    'fill="var(--blockr-color-bg-raised)"></circle>',
+    "</svg>"
   ),
   check = paste0(
     '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
@@ -726,10 +729,13 @@ view_icons <- list(
   ),
   grip = paste0(
     '<svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">',
-    '<circle cx="2" cy="2" r="1"></circle><circle cx="6" cy="2" r="1"></circle>',
-    '<circle cx="2" cy="6" r="1"></circle><circle cx="6" cy="6" r="1"></circle>',
-    '<circle cx="2" cy="10" r="1"></circle><circle cx="6" cy="10" r="1"></circle>',
-    '</svg>'
+    '<circle cx="2" cy="2" r="1"></circle>',
+    '<circle cx="6" cy="2" r="1"></circle>',
+    '<circle cx="2" cy="6" r="1"></circle>',
+    '<circle cx="6" cy="6" r="1"></circle>',
+    '<circle cx="2" cy="10" r="1"></circle>',
+    '<circle cx="6" cy="10" r="1"></circle>',
+    "</svg>"
   ),
   x = paste0(
     '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" ',

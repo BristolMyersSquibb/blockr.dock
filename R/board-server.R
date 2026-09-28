@@ -1206,11 +1206,12 @@ reorder_from_client <- function(order, move) {
 }
 
 # View order is board content, not client-owned geometry: the gesture
-# carries only an intent (a drag's resulting order, or an `{id, dir}` nudge). The order the client shows is
-# authoritative here, so the total permutation is derived from
-# `names(client_views())` and travels the update lifecycle as a `views$order`
-# delta; reconcile then pushes the settled order back to the nav. A drop in
-# place or a boundary nudge yields the same order and emits nothing.
+# carries only an intent (a drag's resulting order, or an `{id, dir}`
+# nudge). The order the client shows is authoritative here, so the total
+# permutation is derived from `names(client_views())` and travels the
+# update lifecycle as a `views$order` delta; reconcile then pushes the
+# settled order back to the nav. A drop in place or a boundary nudge yields
+# the same order and emits nothing.
 reorder_view_observer <- function(client_views, session, update) {
   input <- session$input
 

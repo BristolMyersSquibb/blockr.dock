@@ -52,8 +52,10 @@ test_that("a category's summary joins its options' lines", {
   )
 
   # A method that errors does not take the sidebar down.
-  bad <- structure(new_board_name_option(), class = c("bad_option",
-    class(new_board_name_option())))
+  bad <- structure(
+    new_board_name_option(),
+    class = c("bad_option", class(new_board_name_option()))
+  )
   local_mocked_bindings(
     option_summary = function(x, value, ...) {
       if (inherits(x, "bad_option")) stop("boom") else "ok"
@@ -73,18 +75,24 @@ test_that("the sidebar lists categories and holds one page each", {
   ui <- options_sidebar_ui("brd", options)
   html <- xml2::read_html(as.character(htmltools::tagList(ui)))
 
-  rows <- xml2::xml_find_all(html, "//button[contains(@class, 'blockr-options-row')]")
+  rows <- xml2::xml_find_all(
+    html, "//button[contains(@class, 'blockr-options-row')]"
+  )
   expect_identical(
     xml2::xml_attr(rows, "data-category"),
     c("Board options", "Theme options")
   )
   # The row shows the category's noun and its summary.
   expect_identical(
-    xml2::xml_text(xml2::xml_find_all(rows, ".//span[@class='blockr-options-row-name']")),
+    xml2::xml_text(
+      xml2::xml_find_all(rows, ".//span[@class='blockr-options-row-name']")
+    ),
     c("Board", "Theme")
   )
   expect_identical(
-    xml2::xml_text(xml2::xml_find_all(rows, ".//span[@class='blockr-options-row-summary']")),
+    xml2::xml_text(xml2::xml_find_all(
+      rows, ".//span[@class='blockr-options-row-summary']"
+    )),
     c("Test board", "Light")
   )
 
