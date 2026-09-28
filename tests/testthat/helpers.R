@@ -159,18 +159,16 @@ fire_action <- function(gen, trigger, board) {
 }
 
 # Stand-in for the `visibility` channel blockr.core hands the board callback:
-# the board-wide `gate` reactiveVal plus two environments of per-block
-# reactiveVals (`visible`, `frozen`), one slot per block, mirroring core's
-# add_vis_slots at construction (which seeds every board block before the
-# callback runs). The `visible` slot is logical (the dock's build ledger:
-# !is.na = ever built), matching core's. The dock writes values into these
-# slots; core owns their lifecycle in the real thing. Pass the block ids to
-# seed, or a board handle to seed from its blocks.
+# two environments of per-block reactiveVals (`visible`, `frozen`), one slot
+# per block, mirroring core's add_vis_slots at construction (which seeds every
+# board block before the callback runs). The `visible` slot is logical (the
+# dock's build ledger: !is.na = ever built), matching core's. The dock writes
+# values into these slots; core owns their lifecycle in the real thing. Pass
+# the block ids to seed, or a board handle to seed from its blocks.
 fake_visibility <- function(x = character()) {
   ids <- if (is.character(x)) x else board_block_ids(shiny::isolate(x$board))
 
   vis <- list(
-    gate = shiny::reactiveVal(NULL),
     visible = new.env(parent = emptyenv()),
     frozen = new.env(parent = emptyenv())
   )

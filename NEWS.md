@@ -2,9 +2,10 @@
 
 * The dock now states its evaluation demand as a claim in blockr.core's
   one multi-owner set, in place of the per-block `required` channel core
-  has retired. It declares itself the front-end driving visibility by
-  writing an owner label into the new board-wide `visibility$gate`, and
-  what it has on screen travels as a `sustain` claim held under that
+  has retired. Its board callback declares it the gating front-end by
+  returning a `gate_claim()` whose opening claim is the active view's
+  front panels, which core seeds before the first flush. From there, what
+  the dock has on screen travels as a `sustain` claim under the same owner
   label -- one payload per view switch where the retired channel took a
   write per slot, and a card that leaves the screen is released by its
   absence from the set rather than by a second write. Requires

@@ -7,10 +7,9 @@
 #'
 #' @param board Reactive board state (list with `$board`).
 #' @param update Reactive update signal from blockr.core.
-#' @param visibility Visibility channel bundle from blockr.core: the board-wide
-#'   `gate` reactiveVal through which the dock declares itself the front-end
-#'   driving visibility, plus the per-block reactiveVal environments `visible`
-#'   (which cards it has painted) and `frozen` (whose inputs it has hidden).
+#' @param visibility Visibility channel bundle from blockr.core: the per-block
+#'   reactiveVal environments `visible` (which cards it has painted) and
+#'   `frozen` (whose inputs it has hidden).
 #' @param ... Extension server arguments.
 #' @param plugins Served board plugins. Core threads these to its own block
 #'   server but not to callbacks, so `blockr_app_server.dock_board()` captures
@@ -19,7 +18,8 @@
 #' @param session Shiny session.
 #'
 #' @return List with `dock`, `actions`, `view_data`, and extension
-#'   results.
+#'   results, plus the `gate_claim()` that declares the dock the gating
+#'   front-end, which core reads and strips before plugins see the list.
 #'
 #' @noRd
 board_server_callback <- function(board, update, visibility, ...,
@@ -56,12 +56,12 @@ board_server_callback <- function(board, update, visibility, ...,
   client_active <- reactiveVal(NULL)
   client_views <- reactiveVal(seed_view_state(board_views(initial_board)))
 
-  # The `visibility` channel core hands us (the board-wide `gate` plus per-block
-  # `visible` / `frozen` reactiveVal slots) is the single store: its `visible`
-  # axis is the dock's build ledger (!is.na = ever built), read via
-  # built_cards(). Stash it on active_dock -- the dock handle every
-  # card-touching path receives (view switch, panel-op apply, core insert /
-  # remove) -- so they read and write the one channel.
+  # The `visibility` channel core hands us (per-block `visible` / `frozen`
+  # reactiveVal slots) is the single store: its `visible` axis is the dock's
+  # build ledger (!is.na = ever built), read via built_cards(). Stash it on
+  # active_dock -- the dock handle every card-touching path receives (view
+  # switch, panel-op apply, core insert / remove) -- so they read and write the
+  # one channel.
   active_dock$visibility <- visibility
 
   # The served plugin set rides the same handle so those deferred card-build
@@ -102,26 +102,22 @@ board_server_callback <- function(board, update, visibility, ...,
     )
   )
 
-  # Declare the dock the front-end driving visibility. Synchronous, and not a
-  # payload: an update applies at the tail of the flush it is written in, by
-  # which time that flush has already decided what to construct, so a gate
-  # arriving that way lets the first flush build the whole board.
+  # The dock is the gating front-end, and what board_ui rendered is its opening
+  # claim: the active view's front panels. The declaration travels in the
+  # returned list rather than as a payload, since a payload applies at the tail
+  # of the flush it is written in, after that flush has decided what to
+  # construct. Core seeds the claim as it runs the callbacks, so the layout
+  # echo only has to report a change.
   owner <- dock_id(session$ns)
+  opening <- visible_block_ids(active_view_grid(initial_board))
 
-  visibility$gate(owner)
+  claim_blocks <- block_claim(update, owner, opening)
 
-  claim_blocks <- block_claim(update, owner)
-
-  # Gate off-screen blocks from the first flush, before the client reports its
-  # layout (else core's ungated default evaluates every block at startup). Seed
-  # to what board_ui rendered: the active view's whole membership is built
-  # (visible FALSE -- built, not yet painted) and its front panels are claimed.
-  # Off-screen views' cards are built on first visit by switch_active_view.
-  # Core holds its render gate (is_visible = isTRUE) until the active view
-  # reports its blocks painted (visible TRUE).
+  # The active view's whole membership is built (visible FALSE -- built, not yet
+  # painted). Off-screen views' cards are built on first visit by
+  # switch_active_view. Core holds its render gate (is_visible = isTRUE) until
+  # the active view reports its blocks painted (visible TRUE).
   mark_cards_built(visibility, active_view_block_ids(initial_board))
-
-  claim_blocks(visible_block_ids(active_view_grid(initial_board)))
 
   report_visible_observer(visibility, claim_blocks, client_active, docks)
 
@@ -219,12 +215,14 @@ board_server_callback <- function(board, update, visibility, ...,
 
   # Returned to core, spread into every plugin's args (see the two-bundle note
   # above): `dock` for block placement, `view_data` for serialization, `actions`
-  # for the edit-block plugin, and the extensions' resolved results.
+  # for the edit-block plugin, and the extensions' resolved results. The `gate`
+  # declaration is core's to read, and never reaches a plugin.
   list(
     dock = active_dock,
     actions = triggers,
     view_data = view_data,
-    extensions = ext_res
+    extensions = ext_res,
+    gate = gate_claim(owner, opening)
   )
 }
 
@@ -348,14 +346,13 @@ report_visible_observer <- function(visibility, claim_blocks, client_active,
 # it declared as the gate, naming the blocks it has on screen. The `set` verb
 # carries the whole claim, so a card that left the screen is released by its
 # absence -- one payload per switch where the retired `required` channel took a
-# write per slot. Resent only when the set changes, since a layout echo
-# re-reports the same set and every payload is a board-update round trip; the
-# opening claim goes out regardless, empty active view included, because core
-# holds background construction until the gating owner has claimed once.
-block_claim <- function(update, owner) {
+# write per slot. Sent only when the set changes from what core holds, which
+# starts as the declared opening claim, since a layout echo re-reports the same
+# set and every payload is a board-update round trip.
+block_claim <- function(update, owner, opening) {
 
   sent <- new.env(parent = emptyenv())
-  sent$ids <- NULL
+  sent$ids <- sort(opening)
 
   function(on_screen) {
 

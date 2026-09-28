@@ -15,7 +15,10 @@ test_that("board server", {
       )
 
       expect_type(res, "list")
-      expect_named(res, c("dock", "actions", "view_data", "extensions"))
+      expect_named(
+        res,
+        c("dock", "actions", "view_data", "extensions", "gate")
+      )
 
       # `dock` is the internal active-dock reactiveValues handle (the block
       # insert / remove plugin places panels through it), still returned to the
@@ -42,7 +45,7 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "extensions")
+        c("dock", "actions", "view_data", "extensions", "gate")
       )
 
       expect_s3_class(res[["dock"]], "reactivevalues")
@@ -842,8 +845,8 @@ test_that("report_visible_observer claims what the client reports on screen", {
     client_active <- reactiveVal("A")
     upd <- reactiveVal()
 
-    report_visible_observer(vis, block_claim(upd, "dock"), client_active,
-                            docks)
+    report_visible_observer(vis, block_claim(upd, "dock", character()),
+                            client_active, docks)
 
     list(a = layout_a, b = layout_b, active = client_active, vis = vis,
          upd = upd)
@@ -905,8 +908,8 @@ test_that("report_visible_observer coalesces set-equal reports", {
     client_active <- reactiveVal("A")
     upd <- reactiveVal()
 
-    report_visible_observer(vis, block_claim(upd, "dock"), client_active,
-                            docks)
+    report_visible_observer(vis, block_claim(upd, "dock", character()),
+                            client_active, docks)
 
     list(layout = layout, vis = vis, upd = upd)
   })
@@ -949,8 +952,8 @@ test_that("report_visible_observer survives an echo naming a dropped block", {
     client_active <- reactiveVal("A")
     upd <- reactiveVal()
 
-    report_visible_observer(vis, block_claim(upd, "dock"), client_active,
-                            docks)
+    report_visible_observer(vis, block_claim(upd, "dock", character()),
+                            client_active, docks)
 
     list(layout = layout, vis = vis, upd = upd)
   })
@@ -1022,8 +1025,8 @@ test_that("report_visible_observer follows the live active panel (#361)", {
     client_active <- reactiveVal("A")
     upd <- reactiveVal()
 
-    report_visible_observer(vis, block_claim(upd, "dock"), client_active,
-                            docks)
+    report_visible_observer(vis, block_claim(upd, "dock", character()),
+                            client_active, docks)
 
     list(layout = layout, active_panel = active_panel, vis = vis, upd = upd)
   })
@@ -1045,7 +1048,7 @@ test_that("report_visible_observer follows the live active panel (#361)", {
 test_that("block_claim sends one set payload under the gate owner", {
 
   upd <- reactiveVal()
-  claim_blocks <- block_claim(upd, "board-dock")
+  claim_blocks <- block_claim(upd, "board-dock", character())
 
   claim_blocks(c("b", "a"))
 
@@ -1058,35 +1061,33 @@ test_that("block_claim sends one set payload under the gate owner", {
   )
 })
 
-test_that("block_claim resends only when the claimed set changes", {
+test_that("block_claim sends only a change from what core holds", {
 
   upd <- reactiveVal()
-  claim_blocks <- block_claim(upd, "board-dock")
+  claim_blocks <- block_claim(upd, "board-dock", c("b", "a"))
 
-  # The opening claim always goes out, empty active view included: core holds
-  # background construction until the gating owner has claimed once.
-  claim_blocks(character())
-  expect_identical(claimed_blocks(upd), character())
-
-  upd(NULL)
+  # Core seeds the declared opening claim itself, so the first echo reporting
+  # that same set (in either order) has nothing to say.
   claim_blocks(c("a", "b"))
-  expect_identical(claimed_blocks(upd), c("a", "b"))
-
-  # A layout echo re-reporting the same set (in either order) is not a change,
-  # and every payload is a board-update round trip.
-  upd(NULL)
-  claim_blocks(c("b", "a"))
   expect_null(isolate(upd()))
 
-  upd(NULL)
   claim_blocks("a")
   expect_identical(claimed_blocks(upd), "a")
+
+  # A layout echo re-reporting the same set is not a change, and every payload
+  # is a board-update round trip.
+  upd(NULL)
+  claim_blocks("a")
+  expect_null(isolate(upd()))
+
+  claim_blocks(character())
+  expect_identical(claimed_blocks(upd), character())
 })
 
 test_that("a second writer in the same flush folds, never replaces", {
 
   upd <- reactiveVal()
-  claim_blocks <- block_claim(upd, "board-dock")
+  claim_blocks <- block_claim(upd, "board-dock", character())
 
   claim_blocks("a")
   fold_update(upd, list(views = list(grid = list(page = "GRID"))))
@@ -1113,38 +1114,66 @@ test_that("board_server_callback seeds visibility before the client reports", {
 
   with_mock_session({
     vis <- fake_visibility(board_rv)
-    upd <- reactiveVal()
-    board_server_callback(board_rv, update = upd, visibility = vis)
+    res <- board_server_callback(board_rv, update = reactiveVal(),
+                                 visibility = vis)
 
-    # a is the fronted tab, so a is claimed; b is its back tab, carded but off
-    # screen. Both are in the dock's build ledger (visible non-NA).
+    # Block a is the fronted tab, so it opens the claim; b is its back tab,
+    # carded but off screen. Both are in the dock's build ledger (visible
+    # non-NA).
     expect_setequal(built_cards(vis), c("a", "b"))
-    expect_identical(claimed_blocks(upd), "a")
+    expect_identical(res$gate$blocks, "a")
   })
 })
 
-test_that("the seed declares the gate synchronously, before any flush", {
+test_that("the callback returns the gate declaration and sends nothing", {
 
   # The gate is a capability declaration, not demand: core reads it while
   # deciding what the first flush constructs, and a payload only applies at the
-  # tail of that flush. Riding one would let flush 1 build the whole board.
+  # tail of that flush. Returned, it is in core's hands before any flush.
   board_rv <- board_args(
     blocks = c(a = new_dataset_block(), b = new_head_block())
   )
 
   with_mock_session({
-    vis <- fake_visibility(board_rv)
     upd <- reactiveVal()
-    board_server_callback(board_rv, update = upd, visibility = vis)
+    res <- board_server_callback(board_rv, update = upd,
+                                 visibility = fake_visibility(board_rv))
 
-    owner <- isolate(vis$gate())
+    expect_s3_class(res$gate, "gate_claim")
+    expect_true(is_string(res$gate$owner))
 
-    expect_true(is_string(owner))
-    # The claim is held under the very label declared as the gate: core scopes
-    # its paint check to the gating owner's claim, so a mismatch would stall
-    # background construction for the session.
-    expect_identical(claimed_blocks(upd, owner), "a")
+    # Core seeds the opening claim from the declaration, so nothing needs to
+    # travel through `update` to open it.
+    expect_null(isolate(upd()))
   })
+})
+
+test_that("core seeds the dock's opening claim before the first flush", {
+
+  # The seam the unit tests above stand in for: through core's own board
+  # server, the returned declaration becomes the gate and the gate owner's
+  # claim before any flush has run, with nothing sent to get there.
+  board <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    links = c(ab = new_link("a", "b"))
+  )
+
+  testServer(
+    board_server,
+    {
+      owner <- isolate(vis$gate())
+
+      expect_true(is_string(owner))
+      expect_identical(isolate(rv$claims()), set_names(list("a"), owner))
+    },
+    args = list(
+      x = board,
+      plugins = blockr_app_plugins(board),
+      options = blockr_app_options(board),
+      callbacks = board_server_callback,
+      callback_location = "start"
+    )
+  )
 })
 
 test_that("the visibility seed reads the active view's open tabs", {
@@ -1160,13 +1189,13 @@ test_that("the visibility seed reads the active view's open tabs", {
 
   with_mock_session({
     vis <- fake_visibility(board_rv)
-    upd <- reactiveVal()
-    board_server_callback(board_rv, update = upd, visibility = vis)
+    res <- board_server_callback(board_rv, update = reactiveVal(),
+                                 visibility = vis)
 
-    # b and d front their groups, so both are claimed; a is b's back tab. All
-    # three are in the dock's build ledger (visible non-NA).
+    # Blocks b and d front their groups, so both open the claim; a is b's back
+    # tab. All three are in the dock's build ledger (visible non-NA).
     expect_setequal(built_cards(vis), c("a", "b", "d"))
-    expect_identical(claimed_blocks(upd), c("b", "d"))
+    expect_setequal(res$gate$blocks, c("b", "d"))
   })
 })
 
@@ -1181,11 +1210,11 @@ test_that("the visibility seed spans separate leaves", {
 
   with_mock_session({
     vis <- fake_visibility(board_rv)
-    upd <- reactiveVal()
-    board_server_callback(board_rv, update = upd, visibility = vis)
+    res <- board_server_callback(board_rv, update = reactiveVal(),
+                                 visibility = vis)
 
     expect_setequal(built_cards(vis), c("a", "b"))
-    expect_identical(claimed_blocks(upd), c("a", "b"))
+    expect_setequal(res$gate$blocks, c("a", "b"))
   })
 })
 
@@ -1201,14 +1230,14 @@ test_that("board_server_callback seeds cleanly on an empty board", {
     upd <- reactiveVal()
 
     expect_no_error(
-      board_server_callback(board_rv, update = upd, visibility = vis)
+      res <- board_server_callback(board_rv, update = upd, visibility = vis)
     )
     expect_identical(built_cards(vis), character())
 
-    # The opening claim still goes out, empty: core holds background
-    # construction until the gating owner has claimed once, so an empty active
-    # view that says nothing never lets the backlog start.
-    expect_identical(claimed_blocks(upd), character())
+    # An empty active view still declares the gate, with an empty opening
+    # claim: the board is gated, it just has nothing on screen to evaluate.
+    expect_identical(res$gate$blocks, character())
+    expect_null(isolate(upd()))
   })
 })
 
