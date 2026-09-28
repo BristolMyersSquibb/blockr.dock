@@ -243,8 +243,10 @@ js_blk_selectize_render <- function() {
 
               var containerStyle =
                 'display: inline-flex; align-items: center; gap: 8px; ' +
-                'padding: 4px 8px; background-color: var(--blockr-color-bg-subtle); ' +
-                'border-radius: 6px; border: 1px solid var(--blockr-color-border-default);';
+                'padding: 4px 8px; ' +
+                'background-color: var(--blockr-color-bg-subtle); ' +
+                'border-radius: 6px; ' +
+                'border: 1px solid var(--blockr-color-border-default);';
               var iconWrapperStyle =
                 'background-color: ' + bgColor + '; width: 24px; ' +
                 'height: 24px; border-radius: 4px; display: flex; ' +
