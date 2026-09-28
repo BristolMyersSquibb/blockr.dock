@@ -47,7 +47,7 @@ Suggests:
 Remotes:
     rstudio/shinytest2,
     BristolMyersSquibb/blockr.core@321-unified-demand,
-    BristolMyersSquibb/blockr.ui,
+    BristolMyersSquibb/blockr.ui@321-unified-demand,
     cynkra/dockViewR
 Config/testthat/edition: 3
 Collate:
