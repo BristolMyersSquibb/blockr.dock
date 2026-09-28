@@ -1,6 +1,6 @@
 Package: blockr.dock
 Title: A Docking Layout Manager for 'blockr'
-Version: 0.1.4.9018
+Version: 0.1.4.9022
 Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",
@@ -47,7 +47,7 @@ Suggests:
 Remotes:
     rstudio/shinytest2,
     BristolMyersSquibb/blockr.core,
-    BristolMyersSquibb/blockr.ui@feat/menu,
+    BristolMyersSquibb/blockr.ui@fix/shiny-empty-input-sends,
     cynkra/dockViewR
 Config/testthat/edition: 3
 Collate:
@@ -98,4 +98,3 @@ Collate:
     'view-tabs.R'
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.0.0
-RoxygenNote: 7.3.3

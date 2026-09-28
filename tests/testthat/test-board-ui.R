@@ -7,28 +7,9 @@ test_that("dummy board ui test", {
 
   expect_s3_class(ui, "shiny.tag.list")
   # 17 base elements (blockr.ui's controls, the dock's tooltip hand-off, the
-  # section tracker, the "+" menu, the compact switch and the view-tabs
-  # script among them) + the viewport probe + the restore-probe slot. The
-  # probe slot is empty at this log level; `tagList()` keeps the NULL and
-  # htmltools drops it at render.
-  expect_length(ui, 19L)
-})
-
-test_that("the restore probe ships only under debug logging (#473)", {
-
-  board <- new_dock_board(blocks = c(a = new_dataset_block()))
-
-  deps <- function() {
-    chr_xtr(htmltools::findDependencies(board_ui("test", board)), "name")
-  }
-
-  # A diagnostic that reaches a deployment is a diagnostic nobody asked for, so
-  # the gate is the dependency itself rather than a dormant script.
-  expect_false("blockr-dock-restore-probe" %in% deps())
-
-  withr::local_options(blockr.log_level = "debug")
-
-  expect_true("blockr-dock-restore-probe" %in% deps())
+  # section tracker, the "+" menu, the compact switch and the view-tabs script
+  # among them) + the viewport probe.
+  expect_length(ui, 18L)
 })
 
 # Settings sidebar is mounted with pre-rendered content + a JS-trigger gear
@@ -428,7 +409,11 @@ test_that("the shared stylesheet layer is blockr.ui's, not this package's", {
   )
 
   expect_no_match(css, "(?m)^:root", perl = TRUE)
-  expect_no_match(css, "(?m)^\\s*--blockr-[a-z0-9-]+\\s*:", perl = TRUE)
+  # The one exception is the card's inset, which blockr.ui's table preview
+  # reads to run a table to the card edges.
+  expect_no_match(
+    css, "(?m)^\\s*--blockr-(?!card-inset\\b)[a-z0-9-]+\\s*:", perl = TRUE
+  )
 
   unscoped <- c(
     "body", "label", "\\.form-control", "\\.btn-primary", "\\.tooltip",

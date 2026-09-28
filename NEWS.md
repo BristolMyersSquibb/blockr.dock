@@ -1,14 +1,31 @@
 # blockr.dock (development version)
 
-* The dock page attaches `blockr.ui::shiny_input_batch_dep()`, which drops the empty input message Shiny 1.14.0 sends after every deferred input. A first visit to a 15-block view sent 177 of them, each a full input cycle on the server, and the dock's `initialized` report waited 2 to 4 seconds behind them. Needs blockr.ui 0.0.1.9002.
+* Removing a block that has exactly one input links its parent to its
+  children, so a chain stays connected. `bridge_links()` computes the links
+  to add alongside a removal and `bridges_block()` says whether a block
+  would be bridged, for extensions that remove blocks themselves.
 
-* A first visit to a view no longer re-checks every block's frozen state per card mount. A card's reported sections depended on the session's whole input name set, so every new input on the board woke every block's `visible`, and `freeze_hidden_inputs()` re-read all of them: 21 to 43 runs over ~90 blocks per first visit on the CEDX board. The key test now runs under `isolate()`; reading the section input itself already fires when the card first reports.
+* The dock page attaches `blockr.ui::shiny_input_batch_dep()`, which drops the
+  empty input message Shiny 1.14.0 sends after every deferred input. A first
+  visit to a 15-block view sent 177 of them, each a full input cycle on the
+  server, and the dock's `initialized` report waited 2 to 4 seconds behind them.
+  Needs blockr.ui 0.0.1.9042.
+
+* A first visit to a view no longer re-checks every block's frozen state per
+  card mount. A card's reported sections depended on the session's whole input
+  name set, so every new input on the board woke every block's `visible`, and
+  `freeze_hidden_inputs()` re-read all of them: 21 to 43 runs over ~90 blocks
+  per first visit. The key test now runs under `isolate()`; reading the section
+  input itself already fires when the card first reports.
 
 * Cards and extensions parked off screen (views you have left) are no longer
-  styled or laid out by the browser (`content-visibility: hidden` on the
-  closed offcanvas pools). On the CEDX board they are half the document; one
-  DOM insertion goes from 106 to 11 ms and a return view switch spends 0.8 s
-  instead of 2.1 s on style (loaded container, same page A/B).
+  styled or laid out by the browser (`content-visibility: hidden` on the closed
+  offcanvas pools). On a 90-block board they are half the document; one DOM
+  insertion goes from 106 to 11 ms and a return view switch spends 0.8 s instead
+  of 2.1 s on style (loaded container, same page A/B).
+
+* `all.equal()` on a dock grid dispatches to its method again; a roxygen run
+  had registered it for `all()`.
 
 * The navbar leads with the blockr mark, which is also the busy indicator:
   while blocks compute, its squares empty and fill in the order the R is
@@ -17,30 +34,35 @@
   (`blockr.spinner_delay_ms`) now defaults to 500 ms, so work that finishes
   sooner shows nothing.
 
-* The dock reads its colours, radii and surfaces from blockr.ui's design
-  tokens, so a board follows blockr.ui's dark scheme: the dockview frame and
-  tabs, block headers, sidebars, the block browser and the block menu. Font
-  sizes, weights and families read the type tokens.
-  `dock_board_options()` now includes the light/dark switch, light by
-  default.
+* The views menu sits on the right of the navbar. `new_view_tabs_option()`
+  ("Views as tabs" under Theme options, off by default, saved with the
+  workflow) also shows the views as a line of tabs under the navbar; "Show
+  views as tabs" in the views menu sets the same option. Pages are views in
+  the menus too: "Manage views", "New view", and a new view is named
+  "View N".
 
-* The block header drops its subtitle: a 42px mark in the block's category
-  colour carries the status dot, and the block type, with the package as a
-  badge, is the mark's tooltip. The controls sit just under the header with
-  no rules around them; one rule separates them from the preview while both
-  are open.
+* New `blockr.simplified` option: a simpler board, not a locked one. It hides
+  the authoring affordances -- the per-block gears, the block card's section
+  toggles and action menu, view and panel CRUD, the board-options accordion --
+  so a reader is not offered controls they have no use for, and it forbids
+  nothing. Unlike `blockr.locked` it leaves core's board lock untouched, so
+  neither the update gate nor the input freeze engages: a block whose builder
+  left its inputs shown stays usable, and a crossfilter or value filter still
+  filters. Panel borders stay draggable, so a reader on a narrow screen can
+  widen a panel to read a wide table; that rearranging is theirs alone and is
+  not written back to the board. The gears, which dock does not build, are
+  reached by one CSS rule keyed on a `.blockr-no-edit` class that both modes
+  set, so no block package changes and a locked board stops offering gears it
+  had frozen. The rule targets the gear button rather than the header row it
+  sits in, which blocks share with reader controls -- the crossfilter's row
+  count and Reset, blockr.viz's download and search. Both options default off
+  (#TBD).
 
-* A "Compact" board option (`new_compact_option()`, in `dock_board_options()`,
-  off by default) turns every block header into an eyebrow line: a 20px
-  tinted mark and the name in 11px muted capitals. The regular header keeps
-  a 32px mark and a 16px title that may wrap to two lines.
-
-* A block is renamed with a double-click on its title or "Rename" in its
-  menu, in place: the title takes a hover wash, the field the accent edge and
-  focus ring; Enter or a click elsewhere commits, Escape restores, an empty
-  name is refused. The controls and preview toggles are bare grey tools that
-  show a light accent when on. The status dot reads the tokens; "unset" takes
-  the warning amber and a waiting block shows a hollow ring.
+* `BLOCKR_LOCKED=true` now locks a board. `blockr_option()` returns an
+  environment variable verbatim, as a string, and `is_dock_locked()` tested it
+  with `isTRUE()`, which is always FALSE for a string -- so the one route to
+  locking that does not require editing R code silently did nothing. Both
+  `blockr.locked` and `blockr.simplified` coerce the variable now (#TBD).
 
 * The block's "…" menu is blockr.ui's `Blockr.menu`: Rename, Append block,
   Copy block ID (the ID as grey text) and, after a small gap, Remove block
@@ -71,10 +93,35 @@
   `option_summary()` lets a package give its option class a better line
   (a unit, a noun) without changes to blockr.core.
 
+* A block is renamed with a double-click on its title or "Rename" in its
+  menu, in place: the title takes a hover wash, the field the accent edge and
+  focus ring; Enter or a click elsewhere commits, Escape restores, an empty
+  name is refused. The controls and preview toggles are bare grey tools that
+  show a light accent when on. The status dot reads the tokens; "unset" takes
+  the warning amber and a waiting block shows a hollow ring.
+
+* A "Compact" board option (`new_compact_option()`, in `dock_board_options()`,
+  off by default) turns every block header into an eyebrow line: a 20px
+  tinted mark and the name in 11px muted capitals. The regular header keeps
+  a 32px mark and a 16px title that may wrap to two lines.
+
+* The dock reads its colours, radii and surfaces from blockr.ui's design
+  tokens, so a board follows blockr.ui's dark scheme: the dockview frame and
+  tabs, block headers, sidebars, the block browser and the block menu. Font
+  sizes, weights and families read the type tokens.
+  `dock_board_options()` now includes the light/dark switch, light by
+  default.
+
+* The block header drops its subtitle: a 42px mark in the block's category
+  colour carries the status dot, and the block type, with the package as a
+  badge, is the mark's tooltip. The controls sit just under the header with
+  no rules around them; one rule separates them from the preview while both
+  are open.
+
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
   native one. The "…" menu and the board options gear have one. Requires
-  blockr.ui from `feat/menu` (>= 0.0.1.9007).
+  blockr.ui >= 0.0.1.9041.
 
 * A new `insert_block_action` puts a block into an existing link
   ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
@@ -97,29 +144,6 @@
   the add, append and prepend flows do. Unlike append, the panel closes even
   when pinned: the gesture consumes the link it was triggered with, so there
   is nothing left to repeat it against.
-* New `blockr.simplified` option: a simpler board, not a locked one. It hides
-  the authoring affordances -- the per-block gears, the block card's section
-  toggles and action menu, view and panel CRUD, the board-options accordion --
-  so a reader is not offered controls they have no use for, and it forbids
-  nothing. Unlike `blockr.locked` it leaves core's board lock untouched, so
-  neither the update gate nor the input freeze engages: a block whose builder
-  left its inputs shown stays usable, and a crossfilter or value filter still
-  filters. Panel borders stay draggable, so a reader on a narrow screen can
-  widen a panel to read a wide table; that rearranging is theirs alone and is
-  not written back to the board. The gears, which dock does not build, are
-  reached by one CSS rule keyed on a `.blockr-no-edit` class that both modes
-  set, so no block package changes and a locked board stops offering gears it
-  had frozen. The rule targets the gear button rather than the header row it
-  sits in, which blocks share with reader controls -- the crossfilter's row
-  count and Reset, blockr.viz's download and search. Both options default off
-  (#TBD).
-
-* `BLOCKR_LOCKED=true` now locks a board. `blockr_option()` returns an
-  environment variable verbatim, as a string, and `is_dock_locked()` tested it
-  with `isTRUE()`, which is always FALSE for a string -- so the one route to
-  locking that does not require editing R code silently did nothing. Both
-  `blockr.locked` and `blockr.simplified` coerce the variable now (#TBD).
-
 * A grid that places the same panel more than once is now rejected when validated, rather than surviving to the render cast. A grid says where each panel goes, so two spots for one panel express nothing, and the check spans both halves of one: twice in the tree, twice inside a single rail, or once in each of two rails. The tree/rail overlap that canonicalisation prunes has a principled winner -- the rail claims the panel -- while two such spots have none, so this rejects rather than quietly dropping one. Previously the duplicate reached the render cast and aborted with blockr.core's "Block IDs are required to be unique.", which names blocks rather than the layout and fires far from whatever wrote the grid. Every producer routing through the views delta -- a hand-written grid, a restored board, a `views$grid` write, a `views$add` entry -- inherits the check (#464).
 
 * The `blk()` / `ext()` placement hint gained a `rail` key, so the `add` and `move` panel-op verbs can park a panel on a view's left or right edge. A rail used to be authorable only as a view's birth geometry, through `rail()` inside a `dock_grid()`, which left the user's own drag as the only route into one on a view already on screen. The key names an edge rather than an anchor, so it excludes `near` / `side`: a `side` is a direction relative to a `near` anchor *inside* the splitview while a rail position is an edge of the whole view, and both spell `left` and `right` (#461).
