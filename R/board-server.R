@@ -890,7 +890,14 @@ manage_dock <- function(
     # is the collapsed render, so committing would overwrite every view's
     # authored geometry with one flat group -- one phone visit and the desktop
     # layout is gone for everyone who loads that board next.
-    if (!is_dock_locked() && !narrow) {
+    #
+    # A simplified board is the narrow case again, and the reason it is here
+    # rather than on the lock predicate: nothing rejects its commits, so a
+    # reader dragging a sash to read a wide table would write that geometry
+    # back as the board's authored layout, for everyone who opens it next.
+    # Its rearranging is meant to be its own, so the mirror stays unwired and
+    # the drag lives and dies with the session.
+    if (!dock_no_edit() && !narrow) {
 
       commit_grid <- function(grid) {
         update(list(views = list(grid = set_names(list(grid), id))))

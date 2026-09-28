@@ -230,7 +230,7 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
   # `visible` at render, so nothing here has to report back to place it. The
   # widget used to be rendered hidden for exactly that seeding, which left a
   # live Shiny input a client could flip via `Shiny.setInputValue()`.
-  if (is_dock_locked()) {
+  if (dock_no_edit()) {
     return(NULL)
   }
 
@@ -268,7 +268,7 @@ ctrl_button_label <- function(meta) {
 # that changes the board.
 block_card_dropdown <- function(ns, info, blk_id) {
 
-  locked <- is_dock_locked()
+  locked <- dock_no_edit()
 
   # Plain actions have no icon; Remove, which destroys something, has the
   # bin and sits in a group of its own (design system, Menus). The block's
@@ -451,7 +451,7 @@ edit_block_server <- function(callbacks = list()) {
         # sections already open -- so a locked dock, which renders no toggle
         # widget, wires neither and a forged `collapse_blk_sections` moves
         # nothing.
-        if (!is_dock_locked()) {
+        if (!dock_no_edit()) {
 
           observeEvent(
             input$collapse_blk_sections,
@@ -521,7 +521,7 @@ edit_block_server <- function(callbacks = list()) {
         # move from what it painted with -- so report that set instead. It is
         # what serialization stores, and what freeze_hidden_inputs() reads to
         # tell a card that has reported in from one still painting.
-        visible <- if (is_dock_locked()) {
+        visible <- if (dock_no_edit()) {
           reactive(visible_sections(blk))
         } else {
           reactive(reported_sections(input))
