@@ -15,8 +15,7 @@
 
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
-  native one. The "…" menu and the board options gear have one. Requires
-  blockr.ui >= 0.0.1.9041.
+  native one. The "…" menu and the board options gear have one.
 
 * A new `insert_block_action` puts a block into an existing link
   ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
