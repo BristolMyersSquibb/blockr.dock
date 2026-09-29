@@ -4,8 +4,9 @@
   tokens, so a board follows blockr.ui's dark scheme: the dockview frame and
   tabs, block headers, sidebars, the block browser and the block menu. Font
   sizes, weights and families read the type tokens.
-  `dock_board_options()` now includes the light/dark switch, light by
-  default.
+  The options of `dock_board_options()` now include the light/dark switch,
+  light by default, and core's thematic switch, off by default, which lets
+  plots take the board's colours.
 
 * The block header drops its subtitle: a 42px mark in the block's category
   colour carries the status dot, and the block type, with the package as a
