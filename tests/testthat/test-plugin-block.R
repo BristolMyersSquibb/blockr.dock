@@ -259,26 +259,33 @@ test_that("locked dock drops block_card_toggles entirely (#122, #418)", {
 
 test_that("a locked board's block title offers no rename", {
 
-  display <- function(locked) {
-    title <- withr::with_options(
-      list(blockr.locked = locked),
-      block_card_title(new_dataset_block(), "x", NULL)
-    )
-    xml2::xml_find_first(
-      xml2::read_html(as.character(title)),
-      "//div[@id='x-title_display']"
+  title <- function(locked) {
+    xml2::read_html(
+      as.character(
+        withr::with_options(
+          list(blockr.locked = locked),
+          block_card_title(new_dataset_block(), "x", NULL)
+        )
+      )
     )
   }
 
-  unlocked <- display(NULL)
-  expect_false(is.na(xml2::xml_attr(unlocked, "ondblclick")))
-  expect_identical(xml2::xml_attr(unlocked, "data-blockr-editable"), "")
+  editable <- function(root) {
+    xml2::xml_attr(
+      xml2::xml_find_first(root, "//div[@id='x-title_display']"),
+      "data-blockr-editable"
+    )
+  }
+
+  # The rename script starts the edit from this attribute alone, so a card
+  # carries no script or handler of its own.
+  unlocked <- title(NULL)
+  expect_identical(editable(unlocked), "")
+  expect_length(xml2::xml_find_all(unlocked, "//script | //*[@ondblclick]"), 0L)
 
   # The board refuses a rename while locked, so the gesture goes, and with
   # it blockr.ui's text cursor and tooltip.
-  locked <- display(TRUE)
-  expect_true(is.na(xml2::xml_attr(locked, "ondblclick")))
-  expect_true(is.na(xml2::xml_attr(locked, "data-blockr-editable")))
+  expect_true(is.na(editable(title(TRUE))))
 })
 
 test_that("a restored card paints its saved sections open (#418)", {
@@ -918,6 +925,95 @@ test_that("card status and title land in the browser (e2e, #403)", {
   )
 
   wait_js(app, paste0(title_js, " === 'Renamed'"), diagnose)
+})
+
+test_that("a title renames in place and refuses an empty name (e2e)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "block-status", "app.R", package = "blockr.dock"),
+    name = "card-rename",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, 2)
+
+  id <- function(part) sprintf("my_board-block_a-edit_block-%s", part)
+  jq <- function(part) sprintf("$('#%s')", id(part))
+
+  start <- function() {
+    app$run_js(
+      sprintf(
+        paste(
+          "document.getElementById('%s')",
+          ".dispatchEvent(new MouseEvent('dblclick', {bubbles: true}))"
+        ),
+        id("title_display")
+      )
+    )
+  }
+
+  type <- function(text) {
+    app$run_js(
+      sprintf("%s.val('%s').trigger('input')", jq("block_name_in"), text)
+    )
+  }
+
+  press <- function(key) {
+    app$run_js(
+      sprintf(
+        "%s.trigger($.Event('keydown', {key: '%s'}))",
+        jq("block_name_in"),
+        key
+      )
+    )
+  }
+
+  # Open, marked invalid, field value, displayed title.
+  state <- function() {
+    app$get_js(
+      sprintf(
+        paste0(
+          "[%s.is(':visible'), %s.hasClass('is-invalid'), %s.val(), %s]",
+          ".join('|')"
+        ),
+        jq("title_edit"),
+        jq("title_edit"),
+        jq("block_name_in"),
+        paste0(jq("title_display"), ".find('.blockr-title').text()")
+      )
+    )
+  }
+
+  start()
+  expect_identical(state(), "true|false|Dataset|Dataset")
+
+  type("")
+  press("Enter")
+  expect_identical(state(), "true|true||")
+
+  press("Escape")
+  expect_identical(state(), "false|false|Dataset|Dataset")
+
+  start()
+  type("Renamed")
+  press("Enter")
+  expect_identical(state(), "false|false|Renamed|Renamed")
+
+  # The field is the card's Shiny input, so the board takes the name and the
+  # dock tab shows it.
+  wait_js(
+    app,
+    paste(
+      "Array.from(document.querySelectorAll('.dv-tab'))",
+      ".some(function (t) { return t.textContent.trim() === 'Renamed'; })"
+    ),
+    function() "[card-rename] no tab reads 'Renamed'"
+  )
 })
 
 test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {

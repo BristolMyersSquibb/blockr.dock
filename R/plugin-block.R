@@ -83,28 +83,14 @@ block_card_title <- function(block, id, info) {
       # Inline editable title container
       div(
         class = "blockr-inline-edit",
-        # A double-click (or "Rename" in the block's menu) starts editing, so
-        # a single click stays free to select the panel. The name hides with
-        # `visibility`, not `display`: it keeps its box, so the row keeps its
-        # height and the field, positioned against it, lands on the name. A
-        # locked board refuses renames, so its title offers none.
+        # A double-click (or "Rename" in the block's menu) starts editing,
+        # which block-rename.js does, so a single click stays free to select
+        # the panel. A locked board refuses renames, so its title is not
+        # marked editable.
         div(
           id = ns("title_display"),
           class = "blockr-title-display",
           `data-blockr-editable` = if (editable) "",
-          ondblclick = if (editable) {
-            sprintf(
-              paste0(
-                "this.style.visibility='hidden';",
-                "var editWrap = document.getElementById('%s');",
-                "editWrap.style.display='block';",
-                "var input = editWrap.querySelector('input');",
-                "input.focus();",
-                "input.select();"
-              ),
-              ns("title_edit")
-            )
-          },
           tags$span(class = "blockr-title", block_name(block))
         ),
         # Edit mode - hidden by default
@@ -112,61 +98,15 @@ block_card_title <- function(block, id, info) {
           id = ns("title_edit"),
           class = "blockr-title-edit",
           style = "display: none;",
+          # The displayed title mirrors this input (block-rename.js), so a
+          # rename decided by the board, which `updateTextInput()` delivers,
+          # lands the way a keystroke does, with no render round-trip.
           textInput(
             input_id,
             label = NULL,
             value = block_name(block)
           ),
-          div(class = "blockr-title-error", "A block needs a name"),
-          # The displayed title mirrors this input, so it is kept in sync here
-          # rather than by a server-rendered output: `updateTextInput()` fires
-          # 'change', so a rename decided by the board lands the same way a
-          # keystroke does, with no render round-trip. Enter and a click
-          # elsewhere commit, Escape restores the name editing began with. An
-          # empty name is refused in place on Enter and dropped on blur; the
-          # server ignores it either way.
-          tags$script(HTML(sprintf(
-            "$(document).ready(function() {
-              var input = $('#%s');
-              var display = $('#%s');
-              var editWrap = $('#%s');
-              var before = input.val();
-              input.on('focus', function() {
-                before = input.val();
-                editWrap.removeClass('is-invalid');
-              });
-              input.on('blur', function() {
-                if (!$.trim(input.val())) {
-                  input.val(before).trigger('change');
-                }
-                editWrap.removeClass('is-invalid');
-                editWrap.hide();
-                // Clear the inline visibility the handler wrote, rather than
-                // setting one: the class owns how the row looks.
-                display.css('visibility', '');
-              });
-              input.on('keydown', function(e) {
-                if (e.key === 'Enter') {
-                  if (!$.trim(input.val())) {
-                    editWrap.addClass('is-invalid');
-                    return;
-                  }
-                  $(this).blur();
-                }
-                if (e.key === 'Escape') {
-                  $(this).val(before).trigger('change');
-                  $(this).blur();
-                }
-              });
-              input.on('input change', function() {
-                if ($.trim(input.val())) {
-                  editWrap.removeClass('is-invalid');
-                }
-                display.find('.blockr-title').text($(this).val());
-              });
-            });",
-            input_id, ns("title_display"), ns("title_edit")
-          )))
+          div(class = "blockr-title-error", "A block needs a name")
         )
       )
     )
@@ -921,6 +861,15 @@ attr_output_dep <- function() {
     pkg_version(),
     src = pkg_file("assets", "js"),
     script = "attr-output.js"
+  )
+}
+
+block_rename_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-block-rename",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "block-rename.js"
   )
 }
 
