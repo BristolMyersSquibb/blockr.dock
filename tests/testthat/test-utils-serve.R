@@ -1182,9 +1182,29 @@ test_that("a narrow viewport stacks a view into a scrolling column (#413)", {
   app$wait_for_idle()
 
   # The stack is a render, not a commit. The mirror is left unwired, so the
-  # echo writes nothing back, and `view_data` still reports the authored 40/60
-  # grid -- what a save persists and a wide viewport restores to.
-  expect_equal(app$get_value(export = "commit_count"), 0)
+  # echo writes nothing back, and the stored grid is still the authored 40/60
+  # one -- what a save persists and a wide viewport restores to. It is read
+  # directly because nothing else here can tell: a narrow view reports its
+  # stored grid as its live one, so `roundtrip_stable` holds trivially, and the
+  # update tally also counts the dock's `eager` payloads. The authored board is
+  # the one `inst/examples/narrow-stack/app.R` serves.
+  authored <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(),
+      b = new_dataset_block("mtcars"),
+      c = new_dataset_block("airquality")
+    ),
+    grids = list(
+      Main = dock_grid("a", panels("b", "c", active = "b"), sizes = c(0.4, 0.6))
+    )
+  )
+
+  expect_true(
+    grids_stable(
+      board_grids(authored),
+      app$get_value(export = "stored_grids")
+    )
+  )
   expect_true(isTRUE(app$get_value(export = "roundtrip_stable")))
 })
 
