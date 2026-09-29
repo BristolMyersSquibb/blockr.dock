@@ -209,7 +209,6 @@ hide_unless_pinned <- function(id, session = get_session()) {
   invisible(NULL)
 }
 
-# The close x: the thin 1px stroke of every small icon, as on the dock tabs.
 close_icon <- function() {
   HTML(paste0(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" fill="none" ',

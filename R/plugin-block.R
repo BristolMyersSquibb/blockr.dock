@@ -8,11 +8,9 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
 
   div(
     class = "card-body",
-    # Header parts each carry an owned class and take their look from the
-    # sheet: an inline declaration outranks any sheet a theme can attach, so
-    # a single `style=` attribute on a part is enough to make that part
-    # unthemable. The status dot is the exception: its binding writes the
-    # spec it shares with the DAG node badge.
+    # Header parts take their look from the stylesheet, never from a `style=`
+    # attribute, which would outrank any sheet a theme attaches. The status
+    # dot is the exception: its binding writes the spec it shares with the DAG.
     div(
       class = "blockr-block-header",
       div(
@@ -55,12 +53,9 @@ reported_sections <- function(input) {
   }
 }
 
-# The block's mark: its category colour as a tinted square with the glyph in
-# that colour. The colour is handed to the stylesheet as a custom property
-# rather than painted inline, so the tint, the size and the radius stay a
-# theme's to change. The header prints no subtitle; the block type, with the
-# package as a badge, is the mark's tooltip (Blockr.tooltip, handed over by
-# block-tooltips.js from these attributes).
+# The category colour goes to the stylesheet as a custom property rather than
+# being painted inline, so the tint, size and radius stay a theme's to change.
+# Type and package become the mark's tooltip through block-tooltips.js.
 block_mark <- function(blk, info) {
 
   type <- gsub("_", " ", class(blk)[1L])
@@ -88,14 +83,11 @@ block_card_title <- function(block, id, info) {
       # Inline editable title container
       div(
         class = "blockr-inline-edit",
-        # Display mode. A double-click (or "Rename" in the block's menu)
-        # starts editing, so a single click is free to select the panel. The
-        # affordance is blockr.ui's editable text (text cursor, "Double-click
-        # to edit" tooltip) and a hover wash in blockr-dock.css; the handler
-        # only swaps the two modes and focuses the field. The name is hidden
-        # with `visibility`, not `display`: it keeps its box, so the row keeps
-        # its height and the field, positioned against it, lands on the name.
-        # A locked board refuses the rename, so its title offers none.
+        # A double-click (or "Rename" in the block's menu) starts editing, so
+        # a single click stays free to select the panel. The name hides with
+        # `visibility`, not `display`: it keeps its box, so the row keeps its
+        # height and the field, positioned against it, lands on the name. A
+        # locked board refuses renames, so its title offers none.
         div(
           id = ns("title_display"),
           class = "blockr-title-display",
@@ -298,9 +290,8 @@ block_card_dropdown <- function(ns, info, blk_id) {
     )
   }
 
-  # Starts the same in-place rename as a double-click on the title. The
-  # timeout lets the dropdown finish closing first, so its focus handling does
-  # not blur the field it just opened.
+  # The timeout lets the dropdown finish closing, so its focus handling does
+  # not blur the field the rename just opened.
   dd_rename <- function(display_id, symbol) {
     tags$li(
       tags$button(

@@ -19,13 +19,9 @@
 .blockr-block-browser,
 .blockr-stack-menu,
 .blockr-link-menu {
-  /* Each value below is byte-identical to the `--blockr-*` ramp it names, so
-     this was a second copy of the vocabulary rather than a palette of its
-     own -- and a copy is unreachable: a theme, or a dark scheme, redefines
-     `--blockr-grey-200` and the block browser carries on painting #e5e7eb.
-     The literals stay as fallbacks, so the file is still readable on its own
-     with blockr.ui's token sheet absent. The blues name the accent ramp, so a
-     theme that changes the accent reaches them too. */
+  /* Aliases for blockr.ui's ramps, so the dark scheme and a theme reach
+     these menus; the literals are the fallback without the token sheet. The
+     blues name the accent ramp, so an accent theme reaches them too. */
   --bb-grey-50: var(--blockr-grey-50, #f9fafb);
   --bb-grey-100: var(--blockr-grey-100, #f3f4f6);
   --bb-grey-200: var(--blockr-grey-200, #e5e7eb);

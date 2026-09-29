@@ -23,8 +23,6 @@
   margin: 0;
 }
 
-/* Renaming in place: the name becomes a field at its own size and weight,
-   with the accent edge and the focus ring of every field. */
 .blockr-title-edit .form-control,
 .blockr-title-edit .form-control:focus {
   font-size: var(--blockr-font-size-xl, 1.25rem);
@@ -42,8 +40,6 @@
   outline: none;
 }
 
-/* An empty name is refused in place: the field takes the danger edge and a
-   one-line message sits under it. */
 .blockr-title-error {
   display: none;
   margin-top: 4px;
@@ -131,15 +127,8 @@
 /* ============================================================
    Block header
    ============================================================
-   The header row of a block card: the block's mark (with status dot), the
-   editable title, section toggles, overflow menu. It used to be Bootstrap utility
-   classes plus inline `style=` attributes written in R, which made it the one
-   part of the board no stylesheet could restyle -- an inline declaration wins
-   against any sheet a theme attaches, short of `!important` on every rule.
-
-   Every part now has an owned class. Colours, radii and type read blockr.ui's
-   tokens, with the light value as the fallback; this sheet declares no
-   `--blockr-*` variables, as blockr.ui owns the shared vocabulary. */
+   Colours, radii and type read blockr.ui's tokens, with the light value as
+   the fallback; this sheet declares no `--blockr-*` variables of its own. */
 .blockr-block-header {
   display: flex;
   align-items: center;
@@ -170,9 +159,6 @@
   flex-shrink: 0;
 }
 
-/* The block's mark: the category colour at 18% on the surface, the glyph in
-   the category colour. 42px here (24px in list rows, 16px in a tab, drawn
-   elsewhere). */
 .blockr-block-mark {
   display: inline-flex;
   align-items: center;
@@ -182,11 +168,7 @@
   border-radius: var(--blockr-radius-lg, 8px);
   color: var(--blockr-dock-cat, #999999);
   background: color-mix(in srgb, var(--blockr-dock-cat, #999999) 18%, var(--blockr-color-bg-surface, #ffffff));
-}
-
-/* The glyph is a bsicons SVG sized `1em` inline, so it follows the mark's
-   font size. */
-.blockr-block-mark {
+  /* The glyph is a bsicons SVG sized `1em` inline, so this sizes it. */
   font-size: 21px;
   line-height: 1;
 }
@@ -197,23 +179,19 @@
   padding-right: 1rem;
 }
 
-/* Was Bootstrap's `.card-title.mb-0` plus `line-height: 1.0` inline. */
 .blockr-block-title {
   margin-bottom: 0;
   line-height: 1.3;
 }
 
-/* The block title: 20px, weight 600. */
 .blockr-block-title .blockr-title {
   font-size: var(--blockr-font-size-xl, 1.25rem);
   color: var(--blockr-color-text-default, #111827);
 }
 
-/* The rename affordance: a hover wash on a title that can be renamed, which
-   carries `data-blockr-editable` for blockr.ui's text cursor and tooltip (a
-   locked board's does not). The row is pulled back out by a negative margin
-   equal to its padding, so the title sits where it would without the hit
-   area. */
+/* The negative margin pulls the padded hit area back out, so the title sits
+   where it would without it. Only a title that can be renamed
+   (`data-blockr-editable`) takes the hover wash. */
 .blockr-title-display {
   display: inline-flex;
   align-items: center;
@@ -284,12 +262,10 @@
   color: var(--blockr-color-text-subtle);
 }
 
-/* Header tools: bare, one step quieter than a tool elsewhere, so the header
-   reads as the block's name: `text-disabled` at rest, `text-muted` on hover. A
-   border colour would be quieter still in light, but the dark scheme keeps its
-   borders faint on purpose, and there an icon in one all but vanishes. A
-   section toggle that is on shows its icon in the accent colour, with no fill
-   or frame. Keyboard focus shows the focus outline. */
+/* Header tools sit one step quieter than a tool elsewhere, so the header
+   reads as the block's name. A border colour would be quieter still, but the
+   dark scheme keeps its borders faint on purpose, and an icon in one all but
+   vanishes there. */
 .blockr-header-icon.btn.btn-light,
 .blockr-section-toggle .btn.btn-light {
   display: inline-flex;
@@ -319,10 +295,8 @@
 .blockr-section-toggle .btn.btn-light.active,
 .blockr-section-toggle .btn-check:checked + .btn.btn-light {
   background-color: transparent !important;
-  /* Lighter than text-accent: the toggles are on in almost every block and
-     were the loudest thing in the header. Hover goes back to text-accent.
-     Mixed from the accent rather than a blue literal, so a theme's accent
-     and the dark scheme carry through. */
+  /* Lighter than text-accent, since the toggles are on in almost every
+     block; hover goes back to text-accent. */
   color: color-mix(in srgb, var(--blockr-color-text-accent) 70%, var(--blockr-color-bg-surface)) !important;
   box-shadow: none !important;
 }
@@ -405,21 +379,16 @@
   display: none;
 }
 
-/* The slot a block's errors render into, between the header and the
-   sections. Its top margin is the gap under the header. */
 .blockr-block-errors {
   margin-top: 12px;
 }
 
-/* The controls sit under the header with no rule above or below them, on the
-   card's own surface. The one rule left separates the controls from the
-   preview, edge to edge, and only while both are open: it lives in the
-   preview's panel, so it opens and closes with the preview, and `:has()`
-   reads whether controls are open above it off the panels' hidden accordion
-   buttons, which Bootstrap marks `.collapsed` as a panel starts to close, so
-   the rule moves with the animation rather than after it. The rule is a
-   background line rather than a border so the space above it sits inside
-   the collapsing panel and animates with it. */
+/* One rule separates controls and preview, only while both are open. It
+   lives in the preview's panel, so it opens and closes with the preview;
+   `:has()` reads whether controls are open off the panels' hidden accordion
+   buttons, which Bootstrap marks `.collapsed` as a panel starts to close. It
+   is a background line, not a border, so the space above it animates with
+   the collapsing panel. */
 .blockr-block-accordion > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body,
 .blockr-block-accordion > .accordion-item[data-value="ctrl"] > .accordion-collapse > .accordion-body {
   margin: 0;
@@ -1128,19 +1097,12 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
 /* ============================================
    Dockview reads the design tokens
    ============================================
-   dockview paints the shell (the canvas between panels, the tab strips, the
-   tabs) from its own `.dockview-theme-light-spaced` variables, so without
-   this block the frame stays light under the dark scheme and ignores a
-   theme. Each variable here points at a meaning token.
-
-   `.dv-shell.dv-shell` is deliberate: dockview's stylesheet is injected by
-   its JS after the page's <link>s, so at equal specificity it wins on source
-   order. The repeated class buys one point. (A `className` on the
-   DockviewTheme, cynkra/dockViewR#102, would make this unnecessary.)
-
-   Tabs follow the design system: the front tab of the active group takes
-   the accent tint, the front tab of every other group the grey
-   `bg-selected-inactive`, background tabs are text on the strip. */
+   Dockview paints its frame and tabs from its own theme variables, so
+   without this block the frame stays light under the dark scheme and
+   ignores a theme. The doubled `.dv-shell` is deliberate: dockview injects
+   its stylesheet after the page's, so it wins at equal specificity. (A
+   `className` on the DockviewTheme, cynkra/dockViewR#102, would make this
+   unnecessary.) */
 .dv-shell.dv-shell {
   --dv-group-view-background-color: var(--blockr-color-bg-page);
   --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface);
@@ -1163,7 +1125,7 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   --dv-tab-border-radius: var(--blockr-radius-lg);
 }
 
-/* dockview's light values for these are black at low alpha, which vanishes
+/* Dockview's light values for these are black at low alpha, which vanishes
    on a dark surface; white at the same weight reads the same. */
 [data-bs-theme="dark"] .dv-shell {
   --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
