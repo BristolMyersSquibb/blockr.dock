@@ -265,48 +265,53 @@
 /* Header tools sit one step quieter than a tool elsewhere, so the header
    reads as the block's name. A border colour would be quieter still, but the
    dark scheme keeps its borders faint on purpose, and an icon in one all but
-   vanishes there. */
-.blockr-header-icon.btn.btn-light,
-.blockr-section-toggle .btn.btn-light {
+   vanishes there. The look is set through Bootstrap's button variables.
+   Scoped to the header's actions, the rules tie blockr.ui's `.btn-light`
+   rule, which sets the same ones, and win on source order. Every state reads
+   the rest pair and hover swaps that pair, so an open menu, a focused tool
+   and a toggle that is on keep their look off the pointer and take the hover
+   look under it. */
+.blockr-block-header-actions .blockr-header-icon.btn.btn-light,
+.blockr-block-header-actions .blockr-section-toggle .btn.btn-light {
+  --bs-btn-padding-x: 0;
+  --bs-btn-padding-y: 0;
+  --bs-btn-font-size: var(--blockr-font-size-sm);
+  --bs-btn-line-height: 1;
+  --bs-btn-border-width: 0;
+  --bs-btn-border-radius: var(--blockr-radius-sm, 4px);
+  --bs-btn-color: var(--blockr-color-text-disabled, #9ca3af);
+  --bs-btn-bg: transparent;
+  --bs-btn-hover-color: var(--bs-btn-color);
+  --bs-btn-hover-bg: var(--bs-btn-bg);
+  --bs-btn-active-color: var(--bs-btn-color);
+  --bs-btn-active-bg: var(--bs-btn-bg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: var(--blockr-control-h-xs, 26px);
   min-width: var(--blockr-control-h-xs, 26px);
   height: var(--blockr-control-h-xs, 26px);
-  padding: 0;
   margin: 0;
-  font-size: var(--blockr-font-size-sm);
-  line-height: 1;
-  border: none !important;
-  border-radius: var(--blockr-radius-sm, 4px) !important;
-  background-color: transparent !important;
-  color: var(--blockr-color-text-disabled, #9ca3af) !important;
-  box-shadow: none !important;
-  transition: background-color var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
 }
 
-.blockr-header-icon.btn.btn-light:hover,
-.blockr-section-toggle .btn.btn-light:hover {
-  background-color: var(--blockr-color-bg-hover, #f3f4f6) !important;
-  color: var(--blockr-color-text-muted, #6b7280) !important;
+.blockr-block-header-actions .blockr-header-icon.btn.btn-light:hover,
+.blockr-block-header-actions .blockr-section-toggle .btn.btn-light:hover {
+  --bs-btn-color: var(--blockr-color-text-muted, #6b7280);
+  --bs-btn-bg: var(--blockr-color-bg-hover, #f3f4f6);
 }
 
-.blockr-section-toggle .btn.btn-light.active,
-.blockr-section-toggle .btn-check:checked + .btn.btn-light {
-  background-color: transparent !important;
-  /* Lighter than text-accent, since the toggles are on in almost every
-     block; hover goes back to text-accent. */
-  color: color-mix(in srgb, var(--blockr-color-text-accent) 70%, var(--blockr-color-bg-surface)) !important;
-  box-shadow: none !important;
+/* Lighter than text-accent, since the toggles are on in almost every block;
+   hover goes back to text-accent. */
+.blockr-block-header-actions .blockr-section-toggle .btn.btn-light {
+  --bs-btn-active-color: color-mix(in srgb, var(--blockr-color-text-accent) 70%, var(--blockr-color-bg-surface));
 }
 
-.blockr-section-toggle .btn-check:checked + .btn.btn-light:hover {
-  background-color: var(--blockr-color-bg-hover, #f3f4f6) !important;
-  color: var(--blockr-color-text-accent, #2563eb) !important;
+.blockr-block-header-actions .blockr-section-toggle .btn.btn-light:hover {
+  --bs-btn-active-color: var(--blockr-color-text-accent, #2563eb);
 }
 
-.blockr-header-icon.btn.btn-light:focus-visible,
+/* The focus lands on the toggle's hidden checkbox, so its label draws the
+   ring blockr.ui gives a focused button. */
 .blockr-section-toggle .btn-check:focus-visible + .btn.btn-light {
   outline: var(--blockr-focus-outline, 2px solid var(--blockr-color-border-accent));
   outline-offset: var(--blockr-focus-offset, 2px);
