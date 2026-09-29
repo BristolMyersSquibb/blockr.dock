@@ -139,6 +139,9 @@ grids_stable <- function(stored, live) {
 #   * `roundtrip_stable` -- `TRUE` once every view's stored placement matches
 #     what the client echoes, tree and rails alike (`NA` until every view has
 #     reported a layout), so a restore push provokes no spurious commit.
+#   * `stored_grids` -- the board's stored placement, for asserting that no
+#     write-back happened. The update tally cannot say that on its own: the
+#     dock's `eager` payloads ride the same channel as its commits.
 #' @exportS3Method blockr.core::blockr_test_exports
 blockr_test_exports.dock_board <- function(x, rv, ...) {
 
@@ -151,6 +154,7 @@ blockr_test_exports.dock_board <- function(x, rv, ...) {
       } else {
         grids_stable(board_grids(rv[["board"]]$board), vd[["grids"]])
       }
-    }
+    },
+    stored_grids = board_grids(rv[["board"]]$board)
   )
 }

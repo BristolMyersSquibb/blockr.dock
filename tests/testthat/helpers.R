@@ -159,26 +159,38 @@ fire_action <- function(gen, trigger, board) {
 }
 
 # Stand-in for the `visibility` channel blockr.core hands the board callback:
-# three environments of per-block reactiveVals (`required`, `visible`,
-# `frozen`), one slot per block, mirroring core's add_vis_slots at construction
-# (which seeds every board block before the callback runs). `visible` is logical
-# (the dock's build ledger: !is.na = ever built), matching core's slot. The dock
-# writes values into these slots; core owns their lifecycle in the real thing.
-# Pass the block ids to seed, or a board handle to seed from its blocks.
+# two environments of per-block reactiveVals (`visible`, `frozen`), one slot
+# per block, mirroring core's add_vis_slots at construction (which seeds every
+# board block before the callback runs). The `visible` slot is logical (the
+# dock's build ledger: !is.na = ever built), matching core's. The dock writes
+# values into these slots; core owns their lifecycle in the real thing. Pass
+# the block ids to seed, or a board handle to seed from its blocks.
 fake_visibility <- function(x = character()) {
   ids <- if (is.character(x)) x else board_block_ids(shiny::isolate(x$board))
 
   vis <- list(
-    required = new.env(parent = emptyenv()),
     visible = new.env(parent = emptyenv()),
     frozen = new.env(parent = emptyenv())
   )
   for (id in ids) {
-    vis$required[[id]] <- shiny::reactiveVal(NA)
     vis$visible[[id]] <- shiny::reactiveVal(NA)
     vis$frozen[[id]] <- shiny::reactiveVal(FALSE)
   }
   vis
+}
+
+# The blocks the dock holds eager in `update`'s pending payload, as core would
+# read them: one `eager` delta, keyed by the owner label the dock declared. The
+# delta is a `set`, so this is the whole of what the dock holds.
+held_eager <- function(update, owner = NULL) {
+  held <- shiny::isolate(update())[["eager"]]
+
+  if (is.null(owner)) {
+    testthat::expect_length(held, 1L)
+    owner <- names(held)
+  }
+
+  held[[owner]][["set"]]
 }
 
 # Resolve a view's stable id from its display label. Views are keyed by

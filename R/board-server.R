@@ -7,10 +7,9 @@
 #'
 #' @param board Reactive board state (list with `$board`).
 #' @param update Reactive update signal from blockr.core.
-#' @param visibility Per-block visibility channel from blockr.core: a list of
-#'   three reactiveVal environments (`required`, `visible`, `frozen`) the dock
-#'   writes to gate off-screen blocks and to freeze the inputs of blocks whose
-#'   controls are hidden.
+#' @param visibility Visibility channel bundle from blockr.core: the per-block
+#'   reactiveVal environments `visible` (which cards it has painted) and
+#'   `frozen` (whose inputs it has hidden).
 #' @param ... Extension server arguments.
 #' @param plugins Served board plugins. Core threads these to its own block
 #'   server but not to callbacks, so `blockr_app_server.dock_board()` captures
@@ -19,7 +18,8 @@
 #' @param session Shiny session.
 #'
 #' @return List with `dock`, `actions`, `view_data`, and extension
-#'   results.
+#'   results, plus the `eager()` declaration that makes the board lazy, which
+#'   core reads and strips before plugins see the list.
 #'
 #' @noRd
 board_server_callback <- function(board, update, visibility, ...,
@@ -56,10 +56,10 @@ board_server_callback <- function(board, update, visibility, ...,
   client_active <- reactiveVal(NULL)
   client_views <- reactiveVal(seed_view_state(board_views(initial_board)))
 
-  # The `visibility` channel core hands us (per-block `required` / `visible` /
-  # `frozen` reactiveVal slots) is the single store: its `visible` axis is the
-  # dock's build ledger (!is.na = ever built), read via built_cards(). Stash it
-  # on active_dock -- the dock handle every card-touching path receives (view
+  # The `visibility` channel core hands us (per-block `visible` / `frozen`
+  # reactiveVal slots) is the single store: its `visible` axis is the dock's
+  # build ledger (!is.na = ever built), read via built_cards(). Stash it on
+  # active_dock -- the dock handle every card-touching path receives (view
   # switch, panel-op apply, core insert / remove) -- so they read and write the
   # one channel.
   active_dock$visibility <- visibility
@@ -102,22 +102,24 @@ board_server_callback <- function(board, update, visibility, ...,
     )
   )
 
-  # Gate off-screen blocks from the first flush, before the client reports its
-  # layout (else core's all-visible default evaluates every block at startup).
-  # Seed to what board_ui rendered: the active view's whole membership is built
-  # (visible FALSE -- built, not yet painted), its front panels required TRUE
-  # and background tabs FALSE. Off-screen views' cards are built on first visit
-  # by switch_active_view. Core holds its render gate (is_visible = isTRUE)
-  # until the active view reports its blocks painted (visible TRUE).
+  # The dock makes the board lazy, and what board_ui rendered is its opening
+  # eager set: the active view's front panels. The declaration travels in the
+  # returned list rather than as a payload, since a payload applies at the tail
+  # of the flush it is written in, after that flush has decided what to
+  # construct. Core seeds the set as it runs the callbacks, so the layout echo
+  # only has to report a change.
+  owner <- dock_id(session$ns)
+  opening <- visible_block_ids(active_view_grid(initial_board))
+
+  hold_eager <- eager_holder(update, owner, opening)
+
+  # The active view's whole membership is built (visible FALSE -- built, not yet
+  # painted). Off-screen views' cards are built on first visit by
+  # switch_active_view. Core holds its render gate (is_visible = isTRUE) until
+  # the active view reports its blocks painted (visible TRUE).
   mark_cards_built(visibility, active_view_block_ids(initial_board))
 
-  show_cards(
-    visibility,
-    active_view_block_ids(initial_board),
-    visible_block_ids(active_view_grid(initial_board))
-  )
-
-  report_visible_observer(visibility, client_active, docks)
+  report_visible_observer(visibility, hold_eager, client_active, docks)
 
   # One row per group of the active view, restamped on a view switch since a
   # different view stacks a different number of groups. The container is an
@@ -213,12 +215,14 @@ board_server_callback <- function(board, update, visibility, ...,
 
   # Returned to core, spread into every plugin's args (see the two-bundle note
   # above): `dock` for block placement, `view_data` for serialization, `actions`
-  # for the edit-block plugin, and the extensions' resolved results.
+  # for the edit-block plugin, and the extensions' resolved results. The `eager`
+  # declaration is core's to read, and never reaches a plugin.
   list(
     dock = active_dock,
     actions = triggers,
     view_data = view_data,
-    extensions = ext_res
+    extensions = ext_res,
+    eager = eager(owner, opening)
   )
 }
 
@@ -284,19 +288,21 @@ switch_view_observer <- function(session, update, client_active, board, docks,
   )
 }
 
-report_visible_observer <- function(visibility, client_active, docks) {
+report_visible_observer <- function(visibility, hold_eager, client_active,
+                                    docks) {
 
-  # Drives both visibility axes off two live client signals: the active view's
-  # settled `_state` layout echo (`dock$layout()`, the arrangement dockView
-  # painted) and its live active panel (`dock$active_panel()`). Over the built
-  # cards, the front panels go required TRUE and are marked painted on the
-  # visible axis (the client-confirmed paint core's render gate waits for);
-  # everything else built goes required FALSE with its visible slot cleared.
-  # A bare tab switch does not reliably re-echo `_state` (only structural
-  # gestures do), so the active panel is folded in as the front of its group --
-  # otherwise a newly-fronted tab is never marked visible and its block stays
-  # blank until a structural change. `req(layout())` waits for the client's
-  # first report (NULL before then); `active_panel()` is NULL until a switch.
+  # Drives the dock's demand and its paint report off two live client signals:
+  # the active view's settled `_state` layout echo (`dock$layout()`, the
+  # arrangement dockView painted) and its live active panel
+  # (`dock$active_panel()`). The front panels are held eager and marked painted
+  # on the visible axis (the client-confirmed paint core's render gate waits
+  # for); everything else built is released by its absence from the eager set
+  # and parked in the ledger. A bare tab switch does not reliably re-echo
+  # `_state` (only structural gestures do), so the active panel is folded in as
+  # the front of its group -- otherwise a newly-fronted tab is never marked
+  # visible and its block stays blank until a structural change.
+  # The `req(layout())` guard waits for the client's first report (NULL before
+  # then); `active_panel()` is NULL until a switch.
   #
   # The echo is the client's account of what is on screen and core's visibility
   # slots are the server's account of which blocks exist, so the two disagree
@@ -324,9 +330,59 @@ report_visible_observer <- function(visibility, client_active, docks) {
     {
       req(client_active())
 
-      show_cards(visibility, built_cards(visibility), on_screen())
+      hold_eager(on_screen())
+
+      mark_cards_hidden(
+        visibility,
+        setdiff(built_cards(visibility), on_screen())
+      )
+
       mark_cards_rendered(visibility, on_screen())
     }
+  )
+}
+
+# The dock's evaluation demand: the blocks it has on screen, held eager under
+# the owner label it declared. The `set` verb carries the whole eager set, so a
+# card that left the screen is released by its absence -- one payload per
+# switch where the retired `required` channel took a write per slot. Sent only
+# when the set changes from what core holds, which starts as the declared
+# opening set, since a layout echo re-reports the same set and every payload is
+# a board-update round trip.
+eager_holder <- function(update, owner, opening) {
+
+  sent <- new.env(parent = emptyenv())
+  sent$ids <- sort(opening)
+
+  function(on_screen) {
+
+    ids <- sort(on_screen)
+
+    if (identical(sent$ids, ids)) {
+      return(invisible())
+    }
+
+    sent$ids <- ids
+
+    fold_update(update, list(eager = set_names(list(list(set = ids)), owner)))
+
+    invisible()
+  }
+}
+
+# Core drains the update channel once per flush, so a second writer before that
+# apply replaces the first payload whole rather than adding to it. The settled
+# `_state` echo drives two of them -- the geometry mirror and the eager holder
+# above -- and either can run first, so both fold into what is already pending
+# instead of overwriting it. Folding an `eager` component into a state-carrying
+# payload cannot cost it its lock exemption: the mirror is only wired on an
+# unlocked board.
+fold_update <- function(update, payload) {
+  update(
+    utils::modifyList(
+      coal(isolate(update()), list(), fail_all = FALSE),
+      payload
+    )
   )
 }
 
@@ -893,7 +949,10 @@ manage_dock <- function(
     if (!is_dock_locked() && !narrow) {
 
       commit_grid <- function(grid) {
-        update(list(views = list(grid = set_names(list(grid), id))))
+        fold_update(
+          update,
+          list(views = list(grid = set_names(list(grid), id)))
+        )
       }
 
       observe_grid_echo(id, dock, board, commit_grid)
