@@ -24,7 +24,8 @@
      own -- and a copy is unreachable: a theme, or a dark scheme, redefines
      `--blockr-grey-200` and the block browser carries on painting #e5e7eb.
      The literals stay as fallbacks, so the file is still readable on its own
-     with blockr.ui's token sheet absent. */
+     with blockr.ui's token sheet absent. The blues name the accent ramp, so a
+     theme that changes the accent reaches them too. */
   --bb-grey-50: var(--blockr-grey-50, #f9fafb);
   --bb-grey-100: var(--blockr-grey-100, #f3f4f6);
   --bb-grey-200: var(--blockr-grey-200, #e5e7eb);
@@ -34,10 +35,10 @@
   --bb-grey-600: var(--blockr-grey-600, #4b5563);
   --bb-grey-700: var(--blockr-grey-700, #374151);
   --bb-grey-900: var(--blockr-grey-900, #111827);
-  --bb-blue-100: var(--blockr-blue-100, #dbeafe);
-  --bb-blue-500: var(--blockr-blue-500, #3b82f6);
-  --bb-blue-600: var(--blockr-blue-600, #2563eb);
-  --bb-blue-700: var(--blockr-blue-700, #1d4ed8);
+  --bb-blue-100: var(--blockr-accent-100, #dbeafe);
+  --bb-blue-500: var(--blockr-accent-500, #3b82f6);
+  --bb-blue-600: var(--blockr-accent-600, #2563eb);
+  --bb-blue-700: var(--blockr-accent-700, #1d4ed8);
   /* Compact density (the spec's finalized default): 32px icon tile, the
      glyph filling more of it (16px -> 0.5 ratio vs the airier 40/18). */
   --bb-icon: 32px;
