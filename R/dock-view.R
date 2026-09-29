@@ -753,7 +753,7 @@ view_icons <- list(
     'stroke="currentColor" stroke-width="1.4" stroke-linecap="round" ',
     'stroke-linejoin="round" aria-hidden="true">',
     '<polyline points="3 4.5 6 7.5 9 4.5" vector-effect="non-scaling-stroke">',
-    '</polyline></svg>'
+    "</polyline></svg>"
   ),
   plus = paste0(
     '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',

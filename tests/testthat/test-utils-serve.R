@@ -1058,7 +1058,8 @@ test_that("navbar mark: real work vs bookkeeping (#285, #345, #355, #360)", {
     app$get_js(
       r"(JSON.stringify((function () {
         var html = document.documentElement;
-        var spinner = document.querySelector('.blockr-navbar-brand .blockr-mark rect');
+        var spinner =
+          document.querySelector('.blockr-navbar-brand .blockr-mark rect');
         var arc = function () {
           if (!spinner) return null;
           return getComputedStyle(spinner).animationName;
@@ -1095,7 +1096,8 @@ test_that("navbar mark: real work vs bookkeeping (#285, #345, #355, #360)", {
         real.forEach(function (el) { el.classList.add('recalculating'); });
         html.classList.remove('shiny-busy');
 
-        var painted = spinner !== null && getComputedStyle(spinner).fill !== 'none';
+        var painted = spinner !== null &&
+          getComputedStyle(spinner).fill !== 'none';
         var bkArc = bookkeeping !== 'none';
         var coArc = computing === 'blockr-mark-fill';
 

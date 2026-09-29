@@ -76,7 +76,10 @@ board_ui.dock_board <- function(
         # The navbar is one row of slots (see blockr-dock.css), so a plugin's
         # pieces and the dock's can interleave: mark, workflow, save ...
         # views, actions, status, tools, account.
-        tags$span(class = "blockr-navbar-spacer", `data-navbar-slot` = "spacer"),
+        tags$span(
+          class = "blockr-navbar-spacer",
+          `data-navbar-slot` = "spacer"
+        ),
         if (is_dock_locked()) {
           tags$span(
             class = "blockr-lock-indicator",

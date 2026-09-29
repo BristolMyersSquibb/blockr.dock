@@ -289,7 +289,10 @@ test_that("the busy mark names its state on hover", {
   shown <- regmatches(
     css,
     regexpr(
-      "(?m)^html\\.shiny-busy:has[^{]*\\.blockr-navbar-brand:hover::after \\{[^}]*\\}",
+      paste0(
+        "(?m)^html\\.shiny-busy:has[^{]*",
+        "\\.blockr-navbar-brand:hover::after \\{[^}]*\\}"
+      ),
       css, perl = TRUE
     )
   )
