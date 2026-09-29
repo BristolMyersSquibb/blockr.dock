@@ -78,6 +78,7 @@ block_mark <- function(blk, info) {
 block_card_title <- function(block, id, info) {
   ns <- NS(id)
   input_id <- ns("block_name_in")
+  editable <- !is_dock_locked()
 
   div(
     class = "blockr-block-title-wrap",
@@ -88,24 +89,29 @@ block_card_title <- function(block, id, info) {
         class = "blockr-inline-edit",
         # Display mode. A double-click (or "Rename" in the block's menu)
         # starts editing, so a single click is free to select the panel. The
-        # affordance is a hover wash in blockr-dock.css; the handler only
-        # swaps the two modes and focuses the field. The name is hidden with
-        # `visibility`, not `display`: it keeps its box, so the row keeps its
-        # height and the field, positioned against it, lands on the name.
+        # affordance is blockr.ui's editable text (text cursor, "Double-click
+        # to edit" tooltip) and a hover wash in blockr-dock.css; the handler
+        # only swaps the two modes and focuses the field. The name is hidden
+        # with `visibility`, not `display`: it keeps its box, so the row keeps
+        # its height and the field, positioned against it, lands on the name.
+        # A locked board refuses the rename, so its title offers none.
         div(
           id = ns("title_display"),
           class = "blockr-title-display",
-          ondblclick = sprintf(
-            paste0(
-              "this.style.visibility='hidden';",
-              "var editWrap = document.getElementById('%s');",
-              "editWrap.style.display='block';",
-              "var input = editWrap.querySelector('input');",
-              "input.focus();",
-              "input.select();"
-            ),
-            ns("title_edit")
-          ),
+          `data-blockr-editable` = if (editable) "",
+          ondblclick = if (editable) {
+            sprintf(
+              paste0(
+                "this.style.visibility='hidden';",
+                "var editWrap = document.getElementById('%s');",
+                "editWrap.style.display='block';",
+                "var input = editWrap.querySelector('input');",
+                "input.focus();",
+                "input.select();"
+              ),
+              ns("title_edit")
+            )
+          },
           tags$span(class = "blockr-title", block_name(block))
         ),
         # Edit mode - hidden by default

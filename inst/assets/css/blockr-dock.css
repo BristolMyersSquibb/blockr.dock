@@ -209,10 +209,11 @@
   color: var(--blockr-color-text-default, #111827);
 }
 
-/* The rename affordance. The 2px dashed border is present and transparent at
-   rest so revealing it on hover shifts nothing; the row is pulled back out by
-   a negative margin equal to its padding, so the title sits where it would
-   without the hit area. */
+/* The rename affordance: a hover wash on a title that can be renamed, which
+   carries `data-blockr-editable` for blockr.ui's text cursor and tooltip (a
+   locked board's does not). The row is pulled back out by a negative margin
+   equal to its padding, so the title sits where it would without the hit
+   area. */
 .blockr-title-display {
   display: inline-flex;
   align-items: center;
@@ -220,11 +221,10 @@
   padding: 4px 8px;
   margin: -4px -8px;
   border-radius: var(--blockr-radius-md, 6px);
-  cursor: default;
   transition: background-color var(--blockr-transition, 0.15s ease);
 }
 
-.blockr-title-display:hover {
+.blockr-title-display[data-blockr-editable]:hover {
   background-color: var(--blockr-color-bg-hover, #f3f4f6);
 }
 

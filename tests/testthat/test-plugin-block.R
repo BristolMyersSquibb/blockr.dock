@@ -257,6 +257,30 @@ test_that("locked dock drops block_card_toggles entirely (#122, #418)", {
   expect_null(locked)
 })
 
+test_that("a locked board's block title offers no rename", {
+
+  display <- function(locked) {
+    title <- withr::with_options(
+      list(blockr.locked = locked),
+      block_card_title(new_dataset_block(), "x", NULL)
+    )
+    xml2::xml_find_first(
+      xml2::read_html(as.character(title)),
+      "//div[@id='x-title_display']"
+    )
+  }
+
+  unlocked <- display(NULL)
+  expect_false(is.na(xml2::xml_attr(unlocked, "ondblclick")))
+  expect_identical(xml2::xml_attr(unlocked, "data-blockr-editable"), "")
+
+  # The board refuses a rename while locked, so the gesture goes, and with
+  # it blockr.ui's text cursor and tooltip.
+  locked <- display(TRUE)
+  expect_true(is.na(xml2::xml_attr(locked, "ondblclick")))
+  expect_true(is.na(xml2::xml_attr(locked, "data-blockr-editable")))
+})
+
 test_that("a restored card paints its saved sections open (#418)", {
 
   open_panels <- function(blk) {
