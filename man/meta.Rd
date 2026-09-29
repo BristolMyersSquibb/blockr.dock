@@ -29,8 +29,8 @@ block_status_badge(status, error_count = 0L)
 \item{mode}{Switch between URI and inline HTML mode}
 
 \item{status}{A block eval status: \code{stale}, \code{waiting}, \code{unset} and \code{failed}
-carry a badge; \code{ready} carries none; \code{dormant} is indeterminate; any other
-value yields no badge. The \code{size} field is the coloured dot's pixel
+carry a badge; \code{ready} and \code{unevaluated} carry none; any other value
+yields no badge. The \code{size} field is the coloured dot's pixel
 diameter and \code{ring} its white outline width, both shared so the dock card
 icon and the DAG node badge render identically.}
 
@@ -44,8 +44,7 @@ Metadata is returned from \code{blks_metadata()} as a \code{data.frame} with
 each row corresponding to a block. Both \code{blk_color()} and
 \code{blk_icon_data_uri()} return character vectors. \code{block_status_badge()}
 returns a list with \code{color}, \code{label}, \code{size}, \code{ring} and \code{ring_color} (the
-badge to draw), \code{NULL} for a status with no badge, or \code{NA} when the status
-is indeterminate.
+badge to draw), or \code{NULL} for a status with no badge.
 }
 \description{
 Returns various metadata for blocks or block categories, as well as styling
@@ -63,9 +62,8 @@ into square-shaped icons.
 \item \code{block_status_badge()}: Derives a block's status badge from its eval
 status and error count -- the single derivation the dock card icon and
 the blockr.dag node badge share, so they always render the same colour
-and styling. Returns a styling list (draw the badge), \code{NULL} (no badge),
-or \code{NA} (indeterminate: the status is not computed, so leave any existing
-badge unchanged).
+and styling. Returns a styling list (draw the badge) or \code{NULL} (no
+badge).
 }
 }
 \examples{

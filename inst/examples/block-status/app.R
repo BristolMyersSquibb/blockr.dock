@@ -4,7 +4,7 @@ library(blockr.dock)
 # Two blocks in separate groups so both cards render: `a` evaluates and carries
 # no status affordance, while `b` has no data input and settles on `waiting` --
 # the one status that draws both a status dot and a status note. Tabbed panels
-# would leave the background one `dormant`, which draws neither, so the grid
+# would leave the background one `unevaluated`, which draws neither, so the grid
 # splits them. The second view holds a third waiting block, whose card is built
 # only on first visit -- the deferred case a card's status has to survive.
 serve(
