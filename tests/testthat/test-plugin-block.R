@@ -50,6 +50,31 @@ test_that("edit block server", {
   )
 })
 
+test_that("a blank block name does not reach the board", {
+
+  testServer(
+    edit_block_server(),
+    {
+      # The field sends as the user types, so a name cleared or replaced by
+      # spaces arrives before the card refuses it on Enter or restores it on
+      # blur.
+      session$setInputs(block_name_in = "   ")
+      expect_null(update())
+
+      session$setInputs(block_name_in = "")
+      expect_null(update())
+
+      session$setInputs(block_name_in = "Renamed")
+      expect_identical(update()$blocks$mod$a, list(block_name = "Renamed"))
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("renaming a block does not loop (#181)", {
 
   pushed <- character()

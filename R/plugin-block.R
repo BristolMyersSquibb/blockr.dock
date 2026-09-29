@@ -507,8 +507,10 @@ edit_block_server <- function(callbacks = list()) {
         observeEvent(
           input$block_name_in,
           {
+            # The field reports every keystroke, and the card refuses a name of
+            # spaces the same as an empty one.
             req(
-              input$block_name_in,
+              trimws(input$block_name_in),
               block_id %in% board_block_ids(board$board)
             )
 
