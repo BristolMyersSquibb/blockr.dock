@@ -442,23 +442,11 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
     accordion_panel(title = NULL, value = "ctrl", ctrl_ui)
   }
 
-  sections <- c(
-    if (!is.null(ctrl_ui)) "ctrl",
-    if (has_inputs) "inputs",
-    "outputs"
-  )
-
   tagList(
     div(id = ns("errors_block"), class = "blockr-block-errors"),
     accordion(
       id = ns("blk_accordion"),
       class = "blockr-block-accordion",
-      # The open sections, kept current by block-sections.js. The stylesheet
-      # reads it to draw the rule above the preview only when controls are
-      # open above it, which the preview's own panel cannot see. Only sections
-      # the card has count: a block without inputs still lists "inputs" among
-      # its visible sections by default.
-      `data-open` = paste(intersect(visible, sections), collapse = " "),
       multiple = TRUE,
       # An empty set has to travel as FALSE: bslib reads `character()` the same
       # as an absent `open` and falls back to opening the first panel.
@@ -942,15 +930,6 @@ attr_output_dep <- function() {
     pkg_version(),
     src = pkg_file("assets", "js"),
     script = "attr-output.js"
-  )
-}
-
-block_sections_dep <- function() {
-  htmltools::htmlDependency(
-    "blockr-block-sections",
-    pkg_version(),
-    src = pkg_file("assets", "js"),
-    script = "block-sections.js"
   )
 }
 

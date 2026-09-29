@@ -6,11 +6,10 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 14 base elements (blockr.ui's controls, the dock's tooltip hand-off and
-  # the section tracker among them) + the viewport probe + the two
-  # pre-rendered block-browser sidebars (add_block_sidebar,
-  # append_block_sidebar).
-  expect_length(ui, 17L)
+  # 13 base elements (blockr.ui's controls and the dock's tooltip hand-off
+  # among them) + the viewport probe + the two pre-rendered block-browser
+  # sidebars (add_block_sidebar, append_block_sidebar).
+  expect_length(ui, 16L)
 })
 
 # Settings sidebar is mounted with pre-rendered content + a JS-trigger gear

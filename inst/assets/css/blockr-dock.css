@@ -414,8 +414,10 @@
 /* The controls sit under the header with no rule above or below them, on the
    card's own surface. The one rule left separates the controls from the
    preview, edge to edge, and only while both are open: it lives in the
-   preview's panel, so it opens and closes with the preview, and `data-open`
-   (block-sections.js) says whether controls are open above it. The rule is a
+   preview's panel, so it opens and closes with the preview, and `:has()`
+   reads whether controls are open above it off the panels' hidden accordion
+   buttons, which Bootstrap marks `.collapsed` as a panel starts to close, so
+   the rule moves with the animation rather than after it. The rule is a
    background line rather than a border so the space above it sits inside
    the collapsing panel and animates with it. */
 .blockr-block-accordion > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body,
@@ -425,7 +427,7 @@
   border: none;
 }
 
-.blockr-block-accordion[data-open~="ctrl"] > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body {
+.blockr-block-accordion:has(> .accordion-item[data-value="ctrl"] > .accordion-header .accordion-button:not(.collapsed)) > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body {
   padding-top: 12px;
 }
 
@@ -438,13 +440,11 @@
 /* The edge-to-edge margin sits on the collapsing element, not the body: that
    element clips while it animates, so a margin inside it would cut the rule
    and the preview short at both ends during the roll. */
-.blockr-block-accordion[data-open~="inputs"] > .accordion-item[data-value="outputs"] > .accordion-collapse,
-.blockr-block-accordion[data-open~="ctrl"] > .accordion-item[data-value="outputs"] > .accordion-collapse {
+.blockr-block-accordion:has(> .accordion-item:is([data-value="inputs"], [data-value="ctrl"]) > .accordion-header .accordion-button:not(.collapsed)) > .accordion-item[data-value="outputs"] > .accordion-collapse {
   margin: 0 calc(-1 * var(--bs-card-spacer-x));
 }
 
-.blockr-block-accordion[data-open~="inputs"] > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body,
-.blockr-block-accordion[data-open~="ctrl"] > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
+.blockr-block-accordion:has(> .accordion-item:is([data-value="inputs"], [data-value="ctrl"]) > .accordion-header .accordion-button:not(.collapsed)) > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
   max-width: none;
   padding: 33px var(--bs-card-spacer-x) 0;
   background: linear-gradient(var(--blockr-color-border-default), var(--blockr-color-border-default)) 0 16px / 100% 1px no-repeat;

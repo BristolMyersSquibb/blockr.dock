@@ -26,7 +26,6 @@ board_ui.dock_board <- function(
     blockr.ui::controls_dep(),
     show_block_dep(),
     attr_output_dep(),
-    block_sections_dep(),
     blockr_dock_dep(),
     tooltip_dep(),
     viewport_probe_ui(id),

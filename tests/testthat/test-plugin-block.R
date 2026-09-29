@@ -588,39 +588,34 @@ test_that("a board saved before #69 restores an input-free card", {
   expect_identical(xml2::xml_attr(toggles, "checked"), "checked")
 })
 
-test_that("the card's accordion names its open sections for the stylesheet", {
+test_that("a closed section's accordion button is collapsed on first paint", {
 
-  data_open <- function(visible, has_inputs = TRUE) {
+  # The rule above the preview reads these hidden buttons (blockr-dock.css),
+  # so they have to be right before any toggle runs.
+  collapsed <- function(visible) {
     card <- block_card_content(
       NS("blk"),
       expr_ui = div(id = "blk-expr"),
       block_ui = div(id = "blk-out"),
-      visible = visible,
-      has_inputs = has_inputs
+      visible = visible
     )
     root <- xml2::read_html(as.character(htmltools::tagList(card)))
-    xml2::xml_attr(
-      xml2::xml_find_first(
-        root,
-        paste0("//div[", has_class("blockr-block-accordion"), "]")
-      ),
-      "data-open"
+    items <- xml2::xml_find_all(root, "//div[@data-value]")
+    closed <- xml2::xml_find_first(
+      items,
+      paste0(".//button[", has_class("collapsed"), "]")
+    )
+    set_names(
+      !is.na(xml2::xml_name(closed)),
+      xml2::xml_attr(items, "data-value")
     )
   }
 
-  # The rule above the preview shows only while controls are open, so the
-  # attribute has to be right on first paint, before any toggle runs the JS.
-  expect_identical(data_open(c("inputs", "outputs")), "inputs outputs")
-  expect_identical(data_open("outputs"), "outputs")
-  expect_identical(data_open(character()), "")
-
-  # A block without inputs keeps the default "inputs" among its visible
-  # sections, but has no panel for it: naming it would draw the rule under
-  # the header with nothing above it.
   expect_identical(
-    data_open(c("inputs", "outputs"), has_inputs = FALSE),
-    "outputs"
+    collapsed(c("inputs", "outputs")),
+    c(inputs = FALSE, outputs = FALSE)
   )
+  expect_identical(collapsed("outputs"), c(inputs = TRUE, outputs = FALSE))
 })
 
 test_that("block card sections carry the css-styling contract (#214)", {
