@@ -284,7 +284,10 @@
   color: var(--blockr-color-text-subtle);
 }
 
-/* Header tools: bare, a light grey icon at rest that darkens on hover. A
+/* Header tools: bare, one step quieter than a tool elsewhere, so the header
+   reads as the block's name: `text-disabled` at rest, `text-muted` on hover. A
+   border colour would be quieter still in light, but the dark scheme keeps its
+   borders faint on purpose, and there an icon in one all but vanishes. A
    section toggle that is on shows its icon in the accent colour, with no fill
    or frame. Keyboard focus shows the focus outline. */
 .blockr-header-icon.btn.btn-light,
@@ -302,7 +305,7 @@
   border: none !important;
   border-radius: var(--blockr-radius-sm, 4px) !important;
   background-color: transparent !important;
-  color: var(--blockr-color-border-strong, #d1d5db) !important;
+  color: var(--blockr-color-text-disabled, #9ca3af) !important;
   box-shadow: none !important;
   transition: background-color var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
 }
@@ -310,7 +313,7 @@
 .blockr-header-icon.btn.btn-light:hover,
 .blockr-section-toggle .btn.btn-light:hover {
   background-color: var(--blockr-color-bg-hover, #f3f4f6) !important;
-  color: var(--blockr-color-text-disabled, #9ca3af) !important;
+  color: var(--blockr-color-text-muted, #6b7280) !important;
 }
 
 .blockr-section-toggle .btn.btn-light.active,
