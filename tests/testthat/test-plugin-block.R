@@ -541,12 +541,13 @@ test_that("a board saved before #69 restores an input-free card", {
 
 test_that("the card's accordion names its open sections for the stylesheet", {
 
-  data_open <- function(visible) {
+  data_open <- function(visible, has_inputs = TRUE) {
     card <- block_card_content(
       NS("blk"),
       expr_ui = div(id = "blk-expr"),
       block_ui = div(id = "blk-out"),
-      visible = visible
+      visible = visible,
+      has_inputs = has_inputs
     )
     root <- xml2::read_html(as.character(htmltools::tagList(card)))
     xml2::xml_attr(
@@ -563,6 +564,14 @@ test_that("the card's accordion names its open sections for the stylesheet", {
   expect_identical(data_open(c("inputs", "outputs")), "inputs outputs")
   expect_identical(data_open("outputs"), "outputs")
   expect_identical(data_open(character()), "")
+
+  # A block without inputs keeps the default "inputs" among its visible
+  # sections, but has no panel for it: naming it would draw the rule under
+  # the header with nothing above it.
+  expect_identical(
+    data_open(c("inputs", "outputs"), has_inputs = FALSE),
+    "outputs"
+  )
 })
 
 test_that("block card sections carry the css-styling contract (#214)", {
