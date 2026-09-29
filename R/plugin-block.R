@@ -780,29 +780,57 @@ block_status_style <- function(status) {
     return(NULL)
   }
 
+  # Each colour is named by the blockr.ui token it reads, next to that token's
+  # light value, which a renderer that cannot read CSS (the DAG's canvas) or a
+  # page without the token sheet falls back to.
   spec <- switch(
     status,
     stale = list(
       color = "#6b7280",
+      token = "--blockr-color-text-muted",
       label = "Inputs changed since this block last ran"
     ),
-    waiting = list(color = "#f59e0b", label = "Waiting for a data input"),
-    unset = list(color = "#f59e0b", label = "Set this block's inputs"),
-    failed = list(color = "#dc2626", label = "Evaluation failed")
+    waiting = list(
+      color = "#f59e0b",
+      token = "--blockr-color-border-warning",
+      label = "Waiting for a data input"
+    ),
+    unset = list(
+      color = "#f59e0b",
+      token = "--blockr-color-border-warning",
+      label = "Set this block's inputs"
+    ),
+    failed = list(
+      color = "#dc2626",
+      token = "--blockr-color-border-danger",
+      label = "Evaluation failed"
+    )
   )
 
   if (is.null(spec)) {
     return(NULL)
   }
 
-  c(spec, list(size = 8L, ring = 2L, ring_color = "#ffffff"))
+  # A waiting block is drawn hollow: the solid amber stays for the block that
+  # needs input, not for every block downstream of it.
+  c(
+    spec,
+    list(
+      hollow = identical(status, "waiting"),
+      outline = 1.5,
+      size = 8L,
+      ring = 2L,
+      ring_color = "#ffffff",
+      ring_token = "--blockr-color-bg-surface"
+    )
+  )
 }
 
 #' @param status A block eval status: `stale`, `waiting`, `unset` and `failed`
 #'   carry a badge; `ready` carries none; `dormant` is indeterminate; any other
 #'   value yields no badge. The `size` field is the coloured dot's pixel
-#'   diameter and `ring` its white outline width, both shared so the dock card
-#'   icon and the DAG node badge render identically.
+#'   diameter and `ring` the width of the ring around it, both shared by the
+#'   dock card icon and the DAG node badge.
 #' @param error_count Number of error conditions the block has raised. A
 #'   positive count promotes the badge to `failed`, catching render-phase
 #'   errors that leave the eval status `ready`. A `stale` block is exempt:
@@ -847,36 +875,20 @@ block_status_dot_attrs <- function(status, error_count = 0L) {
     return(list(style = "", title = "", role = "", `aria-label` = ""))
   }
 
-  # The fill reads a blockr.ui meaning token with the shared literal as its
-  # fallback, so the dot follows the scheme and a theme while the DAG keeps
-  # using the literal. A waiting block draws a ring instead of a dot: the
-  # solid amber stays for the block that needs input, not for every block
-  # downstream of it.
-  key <- if (error_count > 0L) "failed" else status
-  token <- switch(
-    key,
-    stale = "--blockr-color-text-muted",
-    failed = "--blockr-color-border-danger",
-    "--blockr-color-border-warning"
-  )
-  fill <- sprintf("var(%s, %s)", token, spec$color)
-  ring <- sprintf(
-    "0 0 0 %dpx var(--blockr-color-bg-surface, %s)", spec$ring, spec$ring_color
-  )
-
-  if (identical(key, "waiting")) {
-    shadow <- paste0("inset 0 0 0 1.5px ", fill, ", ", ring)
-    fill <- sprintf("var(--blockr-color-bg-surface, %s)", spec$ring_color)
-  } else {
-    shadow <- ring
-  }
+  fill <- sprintf("var(%s, %s)", spec$token, spec$color)
+  surface <- sprintf("var(%s, %s)", spec$ring_token, spec$ring_color)
+  ring <- sprintf("0 0 0 %dpx %s", spec$ring, surface)
 
   list(
     style = htmltools::css(
       width = paste0(spec$size, "px"),
       height = paste0(spec$size, "px"),
-      `background-color` = fill,
-      `box-shadow` = shadow
+      `background-color` = if (spec$hollow) surface else fill,
+      `box-shadow` = if (spec$hollow) {
+        sprintf("inset 0 0 0 %gpx %s, %s", spec$outline, fill, ring)
+      } else {
+        ring
+      }
     ),
     title = spec$label,
     role = "img",

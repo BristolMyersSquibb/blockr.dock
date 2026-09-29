@@ -961,6 +961,15 @@ test_that("block_status_style is the shared status-dot spec (#290)", {
   expect_identical(block_status_style("unset")$color, "#f59e0b")
   expect_identical(block_status_style("failed")$color, "#dc2626")
 
+  # The spec names the blockr.ui tokens and the shape too, so the DAG can draw
+  # the dot the dock draws: a waiting block is the one hollow badge.
+  expect_identical(waiting$token, "--blockr-color-border-warning")
+  expect_identical(waiting$ring_token, "--blockr-color-bg-surface")
+  expect_true(waiting$hollow)
+  expect_identical(waiting$outline, 1.5)
+  others <- lapply(c("stale", "unset", "failed"), block_status_style)
+  expect_false(any(lgl_xtr(others, "hollow")))
+
   # `ready`, `dormant` and non-strings carry no indicator.
   for (st in list("ready", "dormant", NULL, character(), c("a", "b"))) {
     expect_null(block_status_style(st))
@@ -1014,6 +1023,11 @@ test_that("a stale block carries a muted badge (#408)", {
   # they were raised against inputs it no longer has, and it has not re-run, so
   # a red dot would assert a failure nobody has observed on the current inputs.
   expect_identical(block_status_badge("stale", 2L), stale)
+  expect_match(
+    block_status_dot_attrs("stale", 2L)$style,
+    "background-color:var(--blockr-color-text-muted, #6b7280)",
+    fixed = TRUE
+  )
 
   # A dormant block keeps its error badge -- nothing about its inputs changed,
   # so the last-known failure still describes them.

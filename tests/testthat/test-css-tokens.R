@@ -149,6 +149,29 @@ test_that("every var() fallback carries the value its token resolves to", {
   )
 })
 
+test_that("the status dot's literals are its tokens' light values", {
+
+  # The DAG draws the literals on a canvas that cannot read the tokens, so a
+  # literal drifting from its token would split the two front-ends in silence.
+  specs <- lapply(c("stale", "waiting", "unset", "failed"), block_status_style)
+
+  token <- c(chr_xtr(specs, "token"), chr_xtr(specs, "ring_token"))
+  literal <- c(chr_xtr(specs, "color"), chr_xtr(specs, "ring_color"))
+
+  resolved <- chr_ply(
+    paste0("var(", token, ")"),
+    resolve_token,
+    tokens = token_values()
+  )
+
+  expect_identical(
+    paste(token, "resolves to", resolved, "but the spec says", literal)[
+      tolower(resolved) != tolower(literal)
+    ],
+    character()
+  )
+})
+
 test_that("a var() fallback only stands in for a token something sets", {
 
   # An unbacked name is not a fallback at all, it is the value: no `:root`
