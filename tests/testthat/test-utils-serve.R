@@ -1186,8 +1186,8 @@ test_that("a narrow viewport stacks a view into a scrolling column (#413)", {
   # one -- what a save persists and a wide viewport restores to. It is read
   # directly because nothing else here can tell: a narrow view reports its
   # stored grid as its live one, so `roundtrip_stable` holds trivially, and the
-  # update tally also counts the dock's claims. The authored board is the one
-  # `inst/examples/narrow-stack/app.R` serves.
+  # update tally also counts the dock's `eager` payloads. The authored board is
+  # the one `inst/examples/narrow-stack/app.R` serves.
   authored <- new_dock_board(
     blocks = c(
       a = new_dataset_block(),

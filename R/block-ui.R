@@ -139,11 +139,11 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
 # The dock's build ledger is core's `visible` axis: a per-block reactiveVal,
 # logical (NA never built / FALSE built off screen / TRUE painted now), so
 # `built_cards()` reads `!is.na(visible)`. It is written only where the dock
-# builds, paints or parks a card, which is what keeps it a ledger: evaluation
-# demand travels the `sustain` claim instead, where a peer owner (core's "Show
-# code") can hold a block the dock never carded without that reading back as
-# built. Block removal needs no dock write -- core drops the slot, dropping the
-# card from the ledger too.
+# builds, paints or parks a card, which is what keeps it a ledger: demand
+# travels as `update` payloads instead, the dock's `eager` set among them, so a
+# block that core builds for another consumer (core's "Show code" asks for
+# every block) never reads back as a card the dock built. Block removal needs
+# no dock write -- core drops the slot, dropping the card from the ledger too.
 built_cards <- function(visibility) {
   ids <- ls(visibility$visible)
   ids[lgl_ply(ids, slot_built, visibility$visible)]

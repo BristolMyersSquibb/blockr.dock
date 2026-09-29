@@ -179,18 +179,18 @@ fake_visibility <- function(x = character()) {
   vis
 }
 
-# The blocks the dock claims in `update`'s pending payload, as core would read
-# them: one `sustain` delta, keyed by the owner label the dock declared as the
-# gate. The claim is a `set`, so this is the whole of what the dock holds.
-claimed_blocks <- function(update, owner = NULL) {
-  claim <- shiny::isolate(update())[["sustain"]]
+# The blocks the dock holds eager in `update`'s pending payload, as core would
+# read them: one `eager` delta, keyed by the owner label the dock declared. The
+# delta is a `set`, so this is the whole of what the dock holds.
+held_eager <- function(update, owner = NULL) {
+  held <- shiny::isolate(update())[["eager"]]
 
   if (is.null(owner)) {
-    testthat::expect_length(claim, 1L)
-    owner <- names(claim)
+    testthat::expect_length(held, 1L)
+    owner <- names(held)
   }
 
-  claim[[owner]][["set"]]
+  held[[owner]][["set"]]
 }
 
 # Resolve a view's stable id from its display label. Views are keyed by

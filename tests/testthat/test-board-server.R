@@ -17,7 +17,7 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "extensions", "gate")
+        c("dock", "actions", "view_data", "extensions", "eager")
       )
 
       # `dock` is the internal active-dock reactiveValues handle (the block
@@ -45,7 +45,7 @@ test_that("board server", {
       expect_type(res, "list")
       expect_named(
         res,
-        c("dock", "actions", "view_data", "extensions", "gate")
+        c("dock", "actions", "view_data", "extensions", "eager")
       )
 
       expect_s3_class(res[["dock"]], "reactivevalues")
@@ -781,18 +781,18 @@ test_that("visible axis follows the client's painted front tab (#328)", {
 
   expect_identical(isolate(vis$visible[["b"]]()), TRUE)
   expect_identical(isolate(vis$visible[["a"]]()), FALSE)
-  expect_identical(claimed_blocks(upd), "b")
+  expect_identical(held_eager(upd), "b")
 
   # That echo also moved the front tab off the stored grid, so the geometry
   # mirror committed in the same flush. Both rode one payload: core drains the
   # channel once, and a plain second write would have dropped whichever came
-  # first -- leaving the dock claiming nothing while it shows b.
-  expect_named(isolate(upd()), c("views", "sustain"), ignore.order = TRUE)
+  # first -- leaving the dock holding nothing eager while it shows b.
+  expect_named(isolate(upd()), c("views", "eager"), ignore.order = TRUE)
 
   # Switching the front tab to a re-marks the visible axis -- the mark is live,
   # not a one-shot that leaves the newly fronted tab blank. b parks: built, off
-  # screen (visible FALSE), not erased, and is released from the claim by its
-  # absence from the new set.
+  # screen (visible FALSE), not erased, and is released from the eager set by
+  # its absence from the new one.
   do.call(
     ms$setInputs,
     set_names(list(reported_front("block_panel-a")), "Page-dock_state")
@@ -801,7 +801,7 @@ test_that("visible axis follows the client's painted front tab (#328)", {
 
   expect_identical(isolate(vis$visible[["a"]]()), TRUE)
   expect_identical(isolate(vis$visible[["b"]]()), FALSE)
-  expect_identical(claimed_blocks(upd), "a")
+  expect_identical(held_eager(upd), "a")
 })
 
 test_that("visible_block_ids returns the front-tab block of each group", {
@@ -826,7 +826,7 @@ test_that("visible_block_ids returns the front-tab block of each group", {
   expect_identical(visible_block_ids(dock_grid()), character())
 })
 
-test_that("report_visible_observer claims what the client reports on screen", {
+test_that("report_visible_observer holds the client's on-screen blocks eager", {
   ms <- new_mock_session()
   withr::defer(if (!ms$isClosed()) ms$close())
 
@@ -838,14 +838,14 @@ test_that("report_visible_observer claims what the client reports on screen", {
     docks[["A"]] <- list(layout = layout_a, active_panel = reactiveVal(NULL))
     docks[["B"]] <- list(layout = layout_b, active_panel = reactiveVal(NULL))
 
-    # a, b and d all have cards; a/b are A's fronts, d lives in B. Nothing
-    # reported on screen yet, so nothing claimed.
+    # Blocks a, b and d all have cards; a/b are A's fronts, d lives in B.
+    # Nothing is reported on screen yet, so nothing is held eager.
     vis <- fake_visibility(c("a", "b", "d"))
     mark_cards_built(vis, c("a", "b", "d"))
     client_active <- reactiveVal("A")
     upd <- reactiveVal()
 
-    report_visible_observer(vis, block_claim(upd, "dock", character()),
+    report_visible_observer(vis, eager_holder(upd, "dock", character()),
                             client_active, docks)
 
     list(a = layout_a, b = layout_b, active = client_active, vis = vis,
@@ -853,27 +853,27 @@ test_that("report_visible_observer claims what the client reports on screen", {
   })
 
   ms$flushReact()
-  # Before any layout report the built ledger stands; nothing claimed yet.
+  # Before any layout report the built ledger stands; nothing held eager yet.
   expect_setequal(built_cards(env$vis), c("a", "b", "d"))
   expect_null(isolate(env$upd()))
 
-  # A shows a and b (fronts of two groups): both claimed. d (in B) is not.
+  # A shows a and b (fronts of two groups): both held eager, but not d (in B).
   with_mock_context(ms, env$a(
     dock_grid(panels("block_panel-a"), panels("block_panel-b"))
   ))
   ms$flushReact()
-  expect_identical(claimed_blocks(env$upd), c("a", "b"))
+  expect_identical(held_eager(env$upd), c("a", "b"))
 
-  # Claiming a and b also paints them: report_visible marks the active view's
-  # on-screen fronts painted (visible TRUE) off the same layout report.
+  # Holding a and b eager also paints them: report_visible marks the active
+  # view's on-screen fronts painted (visible TRUE) off the same layout report.
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
   expect_identical(isolate(env$vis$visible[["b"]]()), TRUE)
 
-  # A layout change on inactive B leaves A's claim alone, and must not clear
-  # the paint of on-screen a/b (report_visible tracks only A's layout).
+  # A layout change on inactive B leaves A's eager set alone, and must not
+  # clear the paint of on-screen a/b (report_visible tracks only A's layout).
   with_mock_context(ms, env$b(dock_grid(panels("block_panel-d"))))
   ms$flushReact()
-  expect_identical(claimed_blocks(env$upd), c("a", "b"))
+  expect_identical(held_eager(env$upd), c("a", "b"))
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
 
   # A drops a (its slot is now an extension panel): a is released by its absence
@@ -882,14 +882,14 @@ test_that("report_visible_observer claims what the client reports on screen", {
     dock_grid(panels("ext_panel-editor"), panels("block_panel-b"))
   ))
   ms$flushReact()
-  expect_identical(claimed_blocks(env$upd), "b")
+  expect_identical(held_eager(env$upd), "b")
   expect_identical(isolate(env$vis$visible[["a"]]()), FALSE)
   expect_identical(isolate(env$vis$visible[["b"]]()), TRUE)
 
-  # Switching to the not-yet-arranged B: its block is claimed, a/b released.
+  # Switching to the not-yet-arranged B: its block is held eager, a/b released.
   with_mock_context(ms, env$active("B"))
   ms$flushReact()
-  expect_identical(claimed_blocks(env$upd), "d")
+  expect_identical(held_eager(env$upd), "d")
 })
 
 test_that("report_visible_observer coalesces set-equal reports", {
@@ -908,7 +908,7 @@ test_that("report_visible_observer coalesces set-equal reports", {
     client_active <- reactiveVal("A")
     upd <- reactiveVal()
 
-    report_visible_observer(vis, block_claim(upd, "dock", character()),
+    report_visible_observer(vis, eager_holder(upd, "dock", character()),
                             client_active, docks)
 
     list(layout = layout, vis = vis, upd = upd)
@@ -919,13 +919,13 @@ test_that("report_visible_observer coalesces set-equal reports", {
   ))
   ms$flushReact()
 
-  expect_identical(claimed_blocks(env$upd), c("a", "b"))
+  expect_identical(held_eager(env$upd), c("a", "b"))
 
-  # report_visible painted a and b as it claimed them.
+  # The observer painted a and b as it held them eager.
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
 
   # Re-report a set-equal (reordered) layout: the observer re-runs (reactive()
-  # does not dedupe), but the on-screen set is unchanged -- so no second claim
+  # does not dedupe), but the on-screen set is unchanged -- so no second `eager`
   # payload goes out, and the paint (idempotently re-marked) survives.
   with_mock_context(ms, env$upd(NULL))
   with_mock_context(ms, env$layout(
@@ -952,7 +952,7 @@ test_that("report_visible_observer survives an echo naming a dropped block", {
     client_active <- reactiveVal("A")
     upd <- reactiveVal()
 
-    report_visible_observer(vis, block_claim(upd, "dock", character()),
+    report_visible_observer(vis, eager_holder(upd, "dock", character()),
                             client_active, docks)
 
     list(layout = layout, vis = vis, upd = upd)
@@ -980,11 +980,12 @@ test_that("report_visible_observer survives an echo naming a dropped block", {
   expect_no_error(ms$flushReact())
 
   # The survivors are still driven off that same stale report: `a` is a front,
-  # `b` is not. The dropped block is absent from the claim too, which matters
-  # more than it looks: core rejects a whole payload naming an unknown block
-  # ("requested evaluation of unknown block"), so an unreconciled echo would
-  # cost the survivors their claim, not just the block that went away.
-  expect_identical(claimed_blocks(env$upd), "a")
+  # `b` is not. The dropped block is absent from the eager set too, which
+  # matters more than it looks: core rejects a whole payload naming an unknown
+  # block ("requested evaluation of unknown block"), so an unreconciled echo
+  # would cost the survivors their place in the set, not just the block that
+  # went away.
+  expect_identical(held_eager(env$upd), "a")
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
   expect_identical(isolate(env$vis$visible[["b"]]()), FALSE)
   expect_setequal(built_cards(env$vis), c("a", "b"))
@@ -1025,7 +1026,7 @@ test_that("report_visible_observer follows the live active panel (#361)", {
     client_active <- reactiveVal("A")
     upd <- reactiveVal()
 
-    report_visible_observer(vis, block_claim(upd, "dock", character()),
+    report_visible_observer(vis, eager_holder(upd, "dock", character()),
                             client_active, docks)
 
     list(layout = layout, active_panel = active_panel, vis = vis, upd = upd)
@@ -1040,69 +1041,69 @@ test_that("report_visible_observer follows the live active panel (#361)", {
   # active-panel signal alone must front b and park a -- the tab-switch repaint.
   with_mock_context(ms, env$active_panel("block_panel-b"))
   ms$flushReact()
-  expect_identical(claimed_blocks(env$upd), "b")
+  expect_identical(held_eager(env$upd), "b")
   expect_identical(isolate(env$vis$visible[["b"]]()), TRUE)
   expect_identical(isolate(env$vis$visible[["a"]]()), FALSE)
 })
 
-test_that("block_claim sends one set payload under the gate owner", {
+test_that("eager_holder sends one set payload under the declared owner", {
 
   upd <- reactiveVal()
-  claim_blocks <- block_claim(upd, "board-dock", character())
+  hold_eager <- eager_holder(upd, "board-dock", character())
 
-  claim_blocks(c("b", "a"))
+  hold_eager(c("b", "a"))
 
-  # One `sustain` delta, keyed by the owner the dock declared as its gate. The
-  # `set` verb carries the whole claim, sorted so a re-report of the same set in
+  # One `eager` delta, keyed by the owner the dock declared. The `set` verb
+  # carries the whole eager set, sorted so a re-report of the same set in
   # another order is not a change.
   expect_identical(
     isolate(upd()),
-    list(sustain = list(`board-dock` = list(set = c("a", "b"))))
+    list(eager = list(`board-dock` = list(set = c("a", "b"))))
   )
 })
 
-test_that("block_claim sends only a change from what core holds", {
+test_that("eager_holder sends only a change from what core holds", {
 
   upd <- reactiveVal()
-  claim_blocks <- block_claim(upd, "board-dock", c("b", "a"))
+  hold_eager <- eager_holder(upd, "board-dock", c("b", "a"))
 
-  # Core seeds the declared opening claim itself, so the first echo reporting
+  # Core seeds the declared opening set itself, so the first echo reporting
   # that same set (in either order) has nothing to say.
-  claim_blocks(c("a", "b"))
+  hold_eager(c("a", "b"))
   expect_null(isolate(upd()))
 
-  claim_blocks("a")
-  expect_identical(claimed_blocks(upd), "a")
+  hold_eager("a")
+  expect_identical(held_eager(upd), "a")
 
   # A layout echo re-reporting the same set is not a change, and every payload
   # is a board-update round trip.
   upd(NULL)
-  claim_blocks("a")
+  hold_eager("a")
   expect_null(isolate(upd()))
 
-  claim_blocks(character())
-  expect_identical(claimed_blocks(upd), character())
+  hold_eager(character())
+  expect_identical(held_eager(upd), character())
 })
 
 test_that("a second writer in the same flush folds, never replaces", {
 
   upd <- reactiveVal()
-  claim_blocks <- block_claim(upd, "board-dock", character())
+  hold_eager <- eager_holder(upd, "board-dock", character())
 
-  claim_blocks("a")
+  hold_eager("a")
   fold_update(upd, list(views = list(grid = list(page = "GRID"))))
 
   # Core drains the channel once per flush, so a plain write here would replace
-  # the claim outright and the dock would hold nothing while it shows a.
-  expect_identical(claimed_blocks(upd), "a")
+  # the eager set outright and the dock would hold nothing while it shows a.
+  expect_identical(held_eager(upd), "a")
   expect_identical(isolate(upd())$views$grid$page, "GRID")
 
   # Folding is symmetric: whichever of the two runs last keeps the other.
   upd(NULL)
   fold_update(upd, list(views = list(grid = list(page = "GRID"))))
-  claim_blocks("b")
+  hold_eager("b")
 
-  expect_identical(claimed_blocks(upd), "b")
+  expect_identical(held_eager(upd), "b")
   expect_identical(isolate(upd())$views$grid$page, "GRID")
 })
 
@@ -1117,19 +1118,19 @@ test_that("board_server_callback seeds visibility before the client reports", {
     res <- board_server_callback(board_rv, update = reactiveVal(),
                                  visibility = vis)
 
-    # Block a is the fronted tab, so it opens the claim; b is its back tab,
+    # Block a is the fronted tab, so it opens the eager set; b is its back tab,
     # carded but off screen. Both are in the dock's build ledger (visible
     # non-NA).
     expect_setequal(built_cards(vis), c("a", "b"))
-    expect_identical(res$gate$blocks, "a")
+    expect_identical(res$eager$blocks, "a")
   })
 })
 
-test_that("the callback returns the gate declaration and sends nothing", {
+test_that("the callback returns the eager declaration and sends nothing", {
 
-  # The gate is a capability declaration, not demand: core reads it while
-  # deciding what the first flush constructs, and a payload only applies at the
-  # tail of that flush. Returned, it is in core's hands before any flush.
+  # The declaration is returned rather than sent: core reads it while deciding
+  # what the first flush constructs, and a payload only applies at the tail of
+  # that flush. Returned, it is in core's hands before any flush.
   board_rv <- board_args(
     blocks = c(a = new_dataset_block(), b = new_head_block())
   )
@@ -1139,20 +1140,21 @@ test_that("the callback returns the gate declaration and sends nothing", {
     res <- board_server_callback(board_rv, update = upd,
                                  visibility = fake_visibility(board_rv))
 
-    expect_s3_class(res$gate, "gate_claim")
-    expect_true(is_string(res$gate$owner))
+    expect_s3_class(res$eager, "eager_blocks")
+    expect_true(is_string(res$eager$owner))
 
-    # Core seeds the opening claim from the declaration, so nothing needs to
+    # Core seeds the opening eager set from the declaration, so nothing needs to
     # travel through `update` to open it.
     expect_null(isolate(upd()))
   })
 })
 
-test_that("core seeds the dock's opening claim before the first flush", {
+test_that("core seeds the dock's opening eager set before the first flush", {
 
   # The seam the unit tests above stand in for: through core's own board
-  # server, the returned declaration becomes the gate and the gate owner's
-  # claim before any flush has run, with nothing sent to get there.
+  # server, the returned declaration's owner becomes the gate and its blocks
+  # that owner's eager set before any flush has run, with nothing sent to get
+  # there.
   board <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
     links = c(ab = new_link("a", "b"))
@@ -1164,13 +1166,50 @@ test_that("core seeds the dock's opening claim before the first flush", {
       owner <- isolate(vis$gate())
 
       expect_true(is_string(owner))
-      expect_identical(isolate(rv$claims()), set_names(list("a"), owner))
+      expect_identical(isolate(rv$eager_blocks()), set_names(list("a"), owner))
     },
     args = list(
       x = board,
       plugins = blockr_app_plugins(board),
       options = blockr_app_options(board),
       callbacks = board_server_callback,
+      callback_location = "start"
+    )
+  )
+})
+
+test_that("core applies the eager payload the dock sends", {
+
+  # The unit tests above check the payload against names the tests spell out,
+  # not against what core reads. Core passes unknown top-level keys through for
+  # board subclasses: a payload under a name core does not read is accepted and
+  # changes nothing. Only core's own eager sets can tell.
+  board <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    links = c(ab = new_link("a", "b"))
+  )
+
+  captured <- new.env(parent = emptyenv())
+
+  testServer(
+    board_server,
+    {
+      owner <- isolate(vis$gate())
+
+      hold_eager <- eager_holder(captured$update, owner, "a")
+      hold_eager("b")
+      session$flushReact()
+
+      expect_identical(isolate(rv$eager_blocks()), set_names(list("b"), owner))
+    },
+    args = list(
+      x = board,
+      plugins = blockr_app_plugins(board),
+      options = blockr_app_options(board),
+      callbacks = function(board, update, ...) {
+        captured$update <- update
+        board_server_callback(board, update, ...)
+      },
       callback_location = "start"
     )
   )
@@ -1192,10 +1231,10 @@ test_that("the visibility seed reads the active view's open tabs", {
     res <- board_server_callback(board_rv, update = reactiveVal(),
                                  visibility = vis)
 
-    # Blocks b and d front their groups, so both open the claim; a is b's back
-    # tab. All three are in the dock's build ledger (visible non-NA).
+    # Blocks b and d front their groups, so both open the eager set; a is b's
+    # back tab. All three are in the dock's build ledger (visible non-NA).
     expect_setequal(built_cards(vis), c("a", "b", "d"))
-    expect_setequal(res$gate$blocks, c("b", "d"))
+    expect_setequal(res$eager$blocks, c("b", "d"))
   })
 })
 
@@ -1214,7 +1253,7 @@ test_that("the visibility seed spans separate leaves", {
                                  visibility = vis)
 
     expect_setequal(built_cards(vis), c("a", "b"))
-    expect_setequal(res$gate$blocks, c("a", "b"))
+    expect_setequal(res$eager$blocks, c("a", "b"))
   })
 })
 
@@ -1234,9 +1273,9 @@ test_that("board_server_callback seeds cleanly on an empty board", {
     )
     expect_identical(built_cards(vis), character())
 
-    # An empty active view still declares the gate, with an empty opening
-    # claim: the board is gated, it just has nothing on screen to evaluate.
-    expect_identical(res$gate$blocks, character())
+    # An empty active view still returns the declaration, with an empty opening
+    # eager set: the board is lazy, it just has nothing on screen to evaluate.
+    expect_identical(res$eager$blocks, character())
     expect_null(isolate(upd()))
   })
 })

@@ -18,8 +18,8 @@
 #' @param session Shiny session.
 #'
 #' @return List with `dock`, `actions`, `view_data`, and extension
-#'   results, plus the `gate_claim()` that declares the dock the gating
-#'   front-end, which core reads and strips before plugins see the list.
+#'   results, plus the `eager()` declaration that makes the board lazy, which
+#'   core reads and strips before plugins see the list.
 #'
 #' @noRd
 board_server_callback <- function(board, update, visibility, ...,
@@ -102,16 +102,16 @@ board_server_callback <- function(board, update, visibility, ...,
     )
   )
 
-  # The dock is the gating front-end, and what board_ui rendered is its opening
-  # claim: the active view's front panels. The declaration travels in the
+  # The dock makes the board lazy, and what board_ui rendered is its opening
+  # eager set: the active view's front panels. The declaration travels in the
   # returned list rather than as a payload, since a payload applies at the tail
   # of the flush it is written in, after that flush has decided what to
-  # construct. Core seeds the claim as it runs the callbacks, so the layout
-  # echo only has to report a change.
+  # construct. Core seeds the set as it runs the callbacks, so the layout echo
+  # only has to report a change.
   owner <- dock_id(session$ns)
   opening <- visible_block_ids(active_view_grid(initial_board))
 
-  claim_blocks <- block_claim(update, owner, opening)
+  hold_eager <- eager_holder(update, owner, opening)
 
   # The active view's whole membership is built (visible FALSE -- built, not yet
   # painted). Off-screen views' cards are built on first visit by
@@ -119,7 +119,7 @@ board_server_callback <- function(board, update, visibility, ...,
   # the active view reports its blocks painted (visible TRUE).
   mark_cards_built(visibility, active_view_block_ids(initial_board))
 
-  report_visible_observer(visibility, claim_blocks, client_active, docks)
+  report_visible_observer(visibility, hold_eager, client_active, docks)
 
   # One row per group of the active view, restamped on a view switch since a
   # different view stacks a different number of groups. The container is an
@@ -215,14 +215,14 @@ board_server_callback <- function(board, update, visibility, ...,
 
   # Returned to core, spread into every plugin's args (see the two-bundle note
   # above): `dock` for block placement, `view_data` for serialization, `actions`
-  # for the edit-block plugin, and the extensions' resolved results. The `gate`
+  # for the edit-block plugin, and the extensions' resolved results. The `eager`
   # declaration is core's to read, and never reaches a plugin.
   list(
     dock = active_dock,
     actions = triggers,
     view_data = view_data,
     extensions = ext_res,
-    gate = gate_claim(owner, opening)
+    eager = eager(owner, opening)
   )
 }
 
@@ -288,21 +288,21 @@ switch_view_observer <- function(session, update, client_active, board, docks,
   )
 }
 
-report_visible_observer <- function(visibility, claim_blocks, client_active,
+report_visible_observer <- function(visibility, hold_eager, client_active,
                                     docks) {
 
   # Drives the dock's demand and its paint report off two live client signals:
   # the active view's settled `_state` layout echo (`dock$layout()`, the
   # arrangement dockView painted) and its live active panel
-  # (`dock$active_panel()`). The front panels are claimed and marked painted on
-  # the visible axis (the client-confirmed paint core's render gate waits for);
-  # everything else built is released by its absence from the claim and parked
-  # in the ledger. A bare tab switch does not reliably re-echo `_state` (only
-  # structural gestures do), so the active panel is folded in as the front of
-  # its group -- otherwise a newly-fronted tab is never marked visible and its
-  # block stays blank until a structural change. The `req(layout())` guard
-  # waits for the client's first report (NULL before then); `active_panel()` is
-  # NULL until a switch.
+  # (`dock$active_panel()`). The front panels are held eager and marked painted
+  # on the visible axis (the client-confirmed paint core's render gate waits
+  # for); everything else built is released by its absence from the eager set
+  # and parked in the ledger. A bare tab switch does not reliably re-echo
+  # `_state` (only structural gestures do), so the active panel is folded in as
+  # the front of its group -- otherwise a newly-fronted tab is never marked
+  # visible and its block stays blank until a structural change.
+  # The `req(layout())` guard waits for the client's first report (NULL before
+  # then); `active_panel()` is NULL until a switch.
   #
   # The echo is the client's account of what is on screen and core's visibility
   # slots are the server's account of which blocks exist, so the two disagree
@@ -330,7 +330,7 @@ report_visible_observer <- function(visibility, claim_blocks, client_active,
     {
       req(client_active())
 
-      claim_blocks(on_screen())
+      hold_eager(on_screen())
 
       mark_cards_hidden(
         visibility,
@@ -342,14 +342,14 @@ report_visible_observer <- function(visibility, claim_blocks, client_active,
   )
 }
 
-# The dock's evaluation demand: one `sustain` claim, held under the owner label
-# it declared as the gate, naming the blocks it has on screen. The `set` verb
-# carries the whole claim, so a card that left the screen is released by its
-# absence -- one payload per switch where the retired `required` channel took a
-# write per slot. Sent only when the set changes from what core holds, which
-# starts as the declared opening claim, since a layout echo re-reports the same
-# set and every payload is a board-update round trip.
-block_claim <- function(update, owner, opening) {
+# The dock's evaluation demand: the blocks it has on screen, held eager under
+# the owner label it declared. The `set` verb carries the whole eager set, so a
+# card that left the screen is released by its absence -- one payload per
+# switch where the retired `required` channel took a write per slot. Sent only
+# when the set changes from what core holds, which starts as the declared
+# opening set, since a layout echo re-reports the same set and every payload is
+# a board-update round trip.
+eager_holder <- function(update, owner, opening) {
 
   sent <- new.env(parent = emptyenv())
   sent$ids <- sort(opening)
@@ -364,7 +364,7 @@ block_claim <- function(update, owner, opening) {
 
     sent$ids <- ids
 
-    fold_update(update, list(sustain = set_names(list(list(set = ids)), owner)))
+    fold_update(update, list(eager = set_names(list(list(set = ids)), owner)))
 
     invisible()
   }
@@ -372,10 +372,11 @@ block_claim <- function(update, owner, opening) {
 
 # Core drains the update channel once per flush, so a second writer before that
 # apply replaces the first payload whole rather than adding to it. The settled
-# `_state` echo drives two of them -- the geometry mirror and the claim above --
-# and either can run first, so both fold into what is already pending instead of
-# overwriting it. Folding a claim into a state-carrying payload cannot cost it
-# its lock exemption: the mirror is only wired on an unlocked board.
+# `_state` echo drives two of them -- the geometry mirror and the eager holder
+# above -- and either can run first, so both fold into what is already pending
+# instead of overwriting it. Folding an `eager` component into a state-carrying
+# payload cannot cost it its lock exemption: the mirror is only wired on an
+# unlocked board.
 fold_update <- function(update, payload) {
   update(
     utils::modifyList(

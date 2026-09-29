@@ -1,22 +1,21 @@
 # blockr.dock (development version)
 
-* The dock now states its evaluation demand as a claim in blockr.core's
-  one multi-owner set, in place of the per-block `required` channel core
-  has retired. Its board callback declares it the gating front-end by
-  returning a `gate_claim()` whose opening claim is the active view's
-  front panels, which core seeds before the first flush. From there, what
-  the dock has on screen travels as a `sustain` claim under the same owner
-  label -- one payload per view switch where the retired channel took a
-  write per slot, and a card that leaves the screen is released by its
-  absence from the set rather than by a second write. Requires
-  blockr.core with the unified claim set (#417).
+* The dock now states its evaluation demand as the blocks it holds eager,
+  in place of the per-block `required` channel blockr.core has retired.
+  Its board callback makes the board lazy by returning `eager()` with the
+  active view's front panels, which core seeds as the dock's eager set
+  before the first flush. From there, what the dock has on screen travels
+  as an `eager` update under the same owner label -- one payload per view
+  switch where the retired channel took a write per slot, and a card that
+  leaves the screen is released by its absence from the set rather than
+  by a second write. Requires blockr.core with `eager()` (#417).
 
 * A card the dock has built but is not showing no longer carries
   construction demand of its own. The retired `required` channel had a
   third state for it, which paced those blocks into core's priority
   construction lane; nothing replaces it, so the blocks behind an
   unvisited tab are built by core's background pass in its own order and
-  fronting one claims it. First paint therefore waits on fewer blocks
+  fronting one holds it eager. First paint therefore waits on fewer blocks
   than before (#417).
 
 * A new `insert_block_action` puts a block into an existing link
