@@ -137,9 +137,9 @@
    part of the board no stylesheet could restyle -- an inline declaration wins
    against any sheet a theme attaches, short of `!important` on every rule.
 
-   Every part now has an owned class. The values are plain here because this
-   sheet declares no `--blockr-*` variables; blockr.ui owns the shared
-   vocabulary. */
+   Every part now has an owned class. Colours, radii and type read blockr.ui's
+   tokens, with the light value as the fallback; this sheet declares no
+   `--blockr-*` variables, as blockr.ui owns the shared vocabulary. */
 .blockr-block-header {
   display: flex;
   align-items: center;
@@ -236,16 +236,16 @@
 
 
 /* Block eval status: on-icon status dot.
-   The dot is layered onto the block icon's lower-right corner (iOS badge
-   style), matching blockr.dag's node badge placement. Its size and colour are
-   written onto this element as a `style` attribute from `block_status_style()`
-   -- the source of truth both front-ends share -- so only structure lives
-   here. `size` is the coloured dot's diameter; the 2px white ring is drawn
-   *outside* it (box-shadow, not a border) so the dot matches the DAG node
-   badge, which rings its fill the same way. The dot must stay in flow when it
-   carries no status (never display:none) so it is not suspended while hidden
-   and left stuck ".recalculating", which would trip the navbar busy-spinner
-   scope; with no size written it takes no space on its own. */
+   The dot sits on the block mark's upper-right corner. Its size, colours and
+   shape are written onto this element as a `style` attribute from
+   `block_status_style()` -- the spec blockr.dag's node badge draws from too --
+   so only structure lives here. The spec's `size` is the coloured dot's
+   diameter; the 2px ring is drawn *outside* it (box-shadow, not a border) in
+   `bg-surface`. The fill reads a blockr.ui token with its light value as the
+   fallback, and a waiting block draws a hollow ring. The dot must stay in flow
+   when it carries no status (never display:none) so it is not suspended while
+   hidden and left stuck ".recalculating", which would trip the navbar
+   busy-spinner scope; with no size written it takes no space on its own. */
 .blockr-block-icon {
   position: relative;
   display: inline-flex;

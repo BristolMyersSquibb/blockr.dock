@@ -8,10 +8,11 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
 
   div(
     class = "card-body",
-    # Header parts each carry an owned class and nothing here is styled
-    # inline: an inline declaration outranks any sheet a theme can attach, so
+    # Header parts each carry an owned class and take their look from the
+    # sheet: an inline declaration outranks any sheet a theme can attach, so
     # a single `style=` attribute on a part is enough to make that part
-    # unthemable.
+    # unthemable. The status dot is the exception: its binding writes the
+    # spec it shares with the DAG node badge.
     div(
       class = "blockr-block-header",
       div(
