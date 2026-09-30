@@ -11,8 +11,10 @@
         ab: <link> a -> b (data)
       <stacks[1]>
         grp: <dock_stack> "Group A": a, b Color: "#ff0000"
-      <board_options[1]>
+      <board_options[3]>
         board_name: NULL
+        thematic: NULL
+        dark_mode: light
       <dock_views[2]>
         one: <dock_view> a
         two: <dock_view> b (active)
@@ -29,8 +31,10 @@
         a: <dataset_block> dataset*, package
       <links[0]>
       <stacks[0]>
-      <board_options[1]>
+      <board_options[3]>
         board_name: NULL
+        thematic: NULL
+        dark_mode: light
       <dock_views[1]>
         main: <dock_view> a (active)
       <dock_extensions[0]>
@@ -45,8 +49,10 @@
         a: <dataset_block> dataset*, package
       <links[0]>
       <stacks[0]>
-      <board_options[1]>
+      <board_options[3]>
         board_name: NULL
+        thematic: NULL
+        dark_mode: light
       <dock_views[1]>
         main: <dock_view> a (active)
       <dock_extensions[1]>

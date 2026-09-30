@@ -50,6 +50,31 @@ test_that("edit block server", {
   )
 })
 
+test_that("a blank block name does not reach the board", {
+
+  testServer(
+    edit_block_server(),
+    {
+      # The field sends as the user types, so a name cleared or replaced by
+      # spaces arrives before the card refuses it on Enter or restores it on
+      # blur.
+      session$setInputs(block_name_in = "   ")
+      expect_null(update())
+
+      session$setInputs(block_name_in = "")
+      expect_null(update())
+
+      session$setInputs(block_name_in = "Renamed")
+      expect_identical(update()$blocks$mod$a, list(block_name = "Renamed"))
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("renaming a block does not loop (#181)", {
 
   pushed <- character()
@@ -230,6 +255,37 @@ test_that("locked dock drops block_card_toggles entirely (#122, #418)", {
     block_card_toggles("outputs", NS("x"))
   )
   expect_null(locked)
+})
+
+test_that("a locked board's block title offers no rename", {
+
+  title <- function(locked) {
+    xml2::read_html(
+      as.character(
+        withr::with_options(
+          list(blockr.locked = locked),
+          block_card_title(new_dataset_block(), "x", NULL)
+        )
+      )
+    )
+  }
+
+  editable <- function(root) {
+    xml2::xml_attr(
+      xml2::xml_find_first(root, "//div[@id='x-title_display']"),
+      "data-blockr-editable"
+    )
+  }
+
+  # The rename script starts the edit from this attribute alone, so a card
+  # carries no script or handler of its own.
+  unlocked <- title(NULL)
+  expect_identical(editable(unlocked), "")
+  expect_length(xml2::xml_find_all(unlocked, "//script | //*[@ondblclick]"), 0L)
+
+  # The board refuses a rename while locked, so the gesture goes, and with
+  # it blockr.ui's text cursor and tooltip.
+  expect_true(is.na(editable(title(TRUE))))
 })
 
 test_that("a restored card paints its saved sections open (#418)", {
@@ -539,6 +595,36 @@ test_that("a board saved before #69 restores an input-free card", {
   expect_identical(xml2::xml_attr(toggles, "checked"), "checked")
 })
 
+test_that("a closed section's accordion button is collapsed on first paint", {
+
+  # The rule above the preview reads these hidden buttons (blockr-dock.css),
+  # so they have to be right before any toggle runs.
+  collapsed <- function(visible) {
+    card <- block_card_content(
+      NS("blk"),
+      expr_ui = div(id = "blk-expr"),
+      block_ui = div(id = "blk-out"),
+      visible = visible
+    )
+    root <- xml2::read_html(as.character(htmltools::tagList(card)))
+    items <- xml2::xml_find_all(root, "//div[@data-value]")
+    closed <- xml2::xml_find_first(
+      items,
+      paste0(".//button[", has_class("collapsed"), "]")
+    )
+    set_names(
+      !is.na(xml2::xml_name(closed)),
+      xml2::xml_attr(items, "data-value")
+    )
+  }
+
+  expect_identical(
+    collapsed(c("inputs", "outputs")),
+    c(inputs = FALSE, outputs = FALSE)
+  )
+  expect_identical(collapsed("outputs"), c(inputs = TRUE, outputs = FALSE))
+})
+
 test_that("block card sections carry the css-styling contract (#214)", {
 
   card <- block_card_content(
@@ -614,7 +700,7 @@ test_that("block card accordions carry no header content (#72)", {
   expect_identical(unique(xml2::xml_text(slots)), "")
 })
 
-test_that("block card popover renders no header (#72)", {
+test_that("the header names the block type on its mark", {
 
   card <- edit_block_ui(
     "blk",
@@ -626,12 +712,16 @@ test_that("block card popover renders no header (#72)", {
 
   root <- xml2::read_html(as.character(htmltools::tagList(card)))
 
-  # The second template slot is where bslib picks the popover header up from.
-  # Nothing fills it, which is what made the `.popover-header` hide rule safe
-  # to drop -- a title added here would now render Bootstrap's own header.
-  slots <- xml2::xml_find_all(root, "//bslib-popover/template/div")
-  expect_length(slots, 2L)
-  expect_identical(trimws(xml2::xml_text(slots[[2]])), "")
+  # One header in both sizes: no subtitle, the type and package are the
+  # mark's tooltip.
+  expect_length(xml2::xml_find_all(root, "//bslib-popover"), 0L)
+  # block-tooltips.js hands these to Blockr.tooltip; no native title.
+  mark <- xml2::xml_find_first(root, "//span[@class='blockr-block-mark']")
+  expect_identical(xml2::xml_attr(mark, "data-blockr-tip"), "dataset block")
+  expect_identical(xml2::xml_attr(mark, "data-blockr-tip-badge"), "blockr.core")
+  expect_true(is.na(xml2::xml_attr(mark, "title")))
+  expect_match(xml2::xml_attr(mark, "style"), "--blockr-dock-cat: #",
+               fixed = TRUE)
 })
 
 test_that("block card carries no html output (#403)", {
@@ -749,7 +839,7 @@ test_that("card status and title land in the browser (e2e, #403)", {
 
   expect_match(
     app$get_js(attr_js(el("b", "status_indicator"), "style")),
-    "#f59e0b",
+    "#d97706",
     fixed = TRUE
   )
   expect_identical(
@@ -837,6 +927,100 @@ test_that("card status and title land in the browser (e2e, #403)", {
   wait_js(app, paste0(title_js, " === 'Renamed'"), diagnose)
 })
 
+test_that("a title renames in place and refuses an empty name (e2e)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "block-status", "app.R", package = "blockr.dock"),
+    name = "card-rename",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  # Escape and Enter end the edit by blurring the field, and headless Chrome
+  # fires no blur in a tab that lacks the focus, as when another test's tab
+  # was opened after this one.
+  app$get_chromote_session()$Emulation$setFocusEmulationEnabled(enabled = TRUE)
+
+  wait_dock_loaded(app, 2)
+
+  id <- function(part) sprintf("my_board-block_a-edit_block-%s", part)
+  jq <- function(part) sprintf("$('#%s')", id(part))
+
+  start <- function() {
+    app$run_js(
+      sprintf(
+        paste(
+          "document.getElementById('%s')",
+          ".dispatchEvent(new MouseEvent('dblclick', {bubbles: true}))"
+        ),
+        id("title_display")
+      )
+    )
+  }
+
+  type <- function(text) {
+    app$run_js(
+      sprintf("%s.val('%s').trigger('input')", jq("block_name_in"), text)
+    )
+  }
+
+  press <- function(key) {
+    app$run_js(
+      sprintf(
+        "%s.trigger($.Event('keydown', {key: '%s'}))",
+        jq("block_name_in"),
+        key
+      )
+    )
+  }
+
+  # Open, marked invalid, field value, displayed title.
+  state <- function() {
+    app$get_js(
+      sprintf(
+        paste0(
+          "[%s.is(':visible'), %s.hasClass('is-invalid'), %s.val(), %s]",
+          ".join('|')"
+        ),
+        jq("title_edit"),
+        jq("title_edit"),
+        jq("block_name_in"),
+        paste0(jq("title_display"), ".find('.blockr-title').text()")
+      )
+    )
+  }
+
+  start()
+  expect_identical(state(), "true|false|Dataset|Dataset")
+
+  type("")
+  press("Enter")
+  expect_identical(state(), "true|true||")
+
+  press("Escape")
+  expect_identical(state(), "false|false|Dataset|Dataset")
+
+  start()
+  type("Renamed")
+  press("Enter")
+  expect_identical(state(), "false|false|Renamed|Renamed")
+
+  # The field is the card's Shiny input, so the board takes the name and the
+  # dock tab shows it.
+  wait_js(
+    app,
+    paste(
+      "Array.from(document.querySelectorAll('.dv-tab'))",
+      ".some(function (t) { return t.textContent.trim() === 'Renamed'; })"
+    ),
+    function() "[card-rename] no tab reads 'Renamed'"
+  )
+})
+
 test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {
 
   df <- data.frame(
@@ -863,14 +1047,24 @@ test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {
 test_that("block_status_style is the shared status-dot spec (#290)", {
 
   waiting <- block_status_style("waiting")
-  expect_identical(waiting$color, "#f59e0b")
+  expect_identical(waiting$color, "#d97706")
   expect_identical(waiting$size, 8L)
   expect_identical(waiting$ring, 2L)
   expect_identical(waiting$ring_color, "#ffffff")
   expect_identical(waiting$label, "Waiting for a data input")
 
-  expect_identical(block_status_style("unset")$color, "#eab308")
+  # Unset shares the amber of the empty field's cue (design system).
+  expect_identical(block_status_style("unset")$color, "#d97706")
   expect_identical(block_status_style("failed")$color, "#dc2626")
+
+  # The spec names the blockr.ui tokens and the shape too, so the DAG can draw
+  # the dot the dock draws: a waiting block is the one hollow badge.
+  expect_identical(waiting$token, "--blockr-color-border-warning")
+  expect_identical(waiting$ring_token, "--blockr-color-bg-surface")
+  expect_true(waiting$hollow)
+  expect_identical(waiting$outline, 1.5)
+  others <- lapply(c("stale", "unset", "failed"), block_status_style)
+  expect_false(any(lgl_xtr(others, "hollow")))
 
   # The `ready` and `unevaluated` statuses and non-strings carry no indicator.
   for (st in list("ready", "unevaluated", NULL, character(), c("a", "b"))) {
@@ -922,6 +1116,11 @@ test_that("a stale block carries a muted badge (#408)", {
   # they were raised against inputs it no longer has, and it has not re-run, so
   # a red dot would assert a failure nobody has observed on the current inputs.
   expect_identical(block_status_badge("stale", 2L), stale)
+  expect_match(
+    block_status_dot_attrs("stale", 2L)$style,
+    "background-color:var(--blockr-color-text-muted, #6b7280)",
+    fixed = TRUE
+  )
 
   # Errors on an unevaluated block cannot predate a check it never had, so
   # unlike a stale block's they still promote the badge to `failed`.
@@ -981,12 +1180,22 @@ test_that("a parked block draws the badge of its last check (#485)", {
 test_that("block status indicator + note reflect eval status (#290)", {
 
   waiting_dot <- block_status_dot_attrs("waiting")
-  expect_match(waiting_dot$style, "#f59e0b", fixed = TRUE)
+  expect_match(waiting_dot$style, "#d97706", fixed = TRUE)
   expect_identical(waiting_dot$title, "Waiting for a data input")
   expect_identical(waiting_dot[["aria-label"]], "Waiting for a data input")
-  # The white ring is carried in the written style from the shared spec, not
-  # the CSS.
-  expect_match(waiting_dot$style, "0 0 0 2px #ffffff", fixed = TRUE)
+  # The ring around the dot is the surface colour, with the shared spec's
+  # white as its fallback. A waiting block draws a hollow amber ring, so the
+  # solid amber dot stays with the block that needs input.
+  expect_match(
+    waiting_dot$style,
+    "0 0 0 2px var(--blockr-color-bg-surface, #ffffff)",
+    fixed = TRUE
+  )
+  expect_match(
+    waiting_dot$style,
+    "inset 0 0 0 1.5px var(--blockr-color-border-warning, #d97706)",
+    fixed = TRUE
+  )
 
   # An error condition reddens the dot even when the eval status is `ready`,
   # matching the DAG node badge.
@@ -996,7 +1205,7 @@ test_that("block status indicator + note reflect eval status (#290)", {
     fixed = TRUE
   )
 
-  expect_match(block_status_dot_attrs("unset")$style, "#eab308", fixed = TRUE)
+  expect_match(block_status_dot_attrs("unset")$style, "#d97706", fixed = TRUE)
   expect_match(block_status_dot_attrs("failed")$style, "#dc2626", fixed = TRUE)
 
   expect_match(
@@ -1053,7 +1262,7 @@ test_that("edit block server surfaces eval status reactively (#290)", {
       session$flushReact()
 
       expect_identical(blk_status(), "waiting")
-      expect_match(output$status_indicator$style, "#f59e0b", fixed = TRUE)
+      expect_match(output$status_indicator$style, "#d97706", fixed = TRUE)
       expect_identical(output$status_note, list(`data-status` = "waiting"))
 
       status("failed")

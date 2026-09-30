@@ -12,9 +12,8 @@
 #'   into square-shaped icons.
 #' - `block_status_badge()`: Derives a block's status badge from its eval
 #'   status and error count -- the single derivation the dock card icon and
-#'   the blockr.dag node badge share, so they always render the same colour
-#'   and styling. Returns a styling list (draw the badge) or `NULL` (no
-#'   badge).
+#'   the blockr.dag node badge share, so both show the same status. Returns a
+#'   styling list (draw the badge) or `NULL` (no badge).
 #'
 #' @param blocks Blocks passed as `blocks` or `block` object
 #'
@@ -29,9 +28,12 @@
 #'
 #' @return Metadata is returned from `blks_metadata()` as a `data.frame` with
 #' each row corresponding to a block. Both `blk_color()` and
-#' `blk_icon_data_uri()` return character vectors. `block_status_badge()`
-#' returns a list with `color`, `label`, `size`, `ring` and `ring_color` (the
-#' badge to draw), or `NULL` for a status with no badge.
+#' `blk_icon_data_uri()` return character vectors. The badge
+#' `block_status_badge()` draws is a list with its `label`; its fill as the
+#' blockr.ui `token` and that token's light value `color`; `hollow` and
+#' `outline`, for a badge drawn as an `outline`-wide ring in its fill; and the
+#' dot's `size` and the width of the `ring` around it, in `ring_token` with the
+#' light value `ring_color`. It is `NULL` for a status with no badge.
 #'
 #' @rdname meta
 #' @export

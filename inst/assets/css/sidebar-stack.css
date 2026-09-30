@@ -13,9 +13,7 @@
   margin: -16px;
   padding: 16px;
 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  color: #1f2937;
+  color: var(--blockr-color-text-default);
 }
 
 /* The search bar piggy-backs on the block-browser style. */
@@ -45,17 +43,17 @@
 /* Selection state. The card sits in a permanent "selected" look (ring +
    tinted background) until clicked again. */
 .blockr-stack-menu .blockr-block-browser-card.card-selected {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
-  background: rgba(37, 99, 235, 0.04);
+  border-color: var(--blockr-color-border-accent);
+  box-shadow: 0 0 0 2px var(--blockr-color-border-accent-subtle);
+  background: var(--blockr-color-bg-selected);
 }
 
 .blockr-stack-menu .blockr-block-browser-card.card-selected
   .blockr-block-browser-card-name::after {
   content: "✓";
   margin-left: 6px;
-  color: #2563eb;
-  font-weight: 700;
+  color: var(--blockr-color-text-accent);
+  font-weight: var(--blockr-font-weight-semibold);
 }
 
 /* Empty-state - reuse the browser's pattern. */
@@ -78,11 +76,11 @@
 .blockr-stack-menu-section-header {
   flex: 0 0 auto;
   margin: 4px 0;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #6b7280;
+  color: var(--blockr-color-text-muted);
 }
 
 /* The form is server-rendered into this slot so it tracks the board. The
@@ -110,21 +108,21 @@
 
 .blockr-stack-menu-field > label {
   font-size: 11px;
-  font-weight: 500;
-  color: #4b5563;
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-muted);
 }
 
 .blockr-stack-menu-field input[type="text"] {
   padding: 6px 8px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--blockr-color-border-default);
   border-radius: 4px;
-  background: #ffffff;
-  color: #1f2937;
-  font-size: 12px;
+  background: var(--blockr-color-bg-surface);
+  color: var(--blockr-color-text-default);
+  font-size: var(--blockr-font-size-xs);
 }
 
 .blockr-stack-menu-field input[type="text"]:focus {
-  outline: 2px solid #2563eb;
+  outline: var(--blockr-focus-outline);
   outline-offset: -1px;
   border-color: transparent;
 }
@@ -153,9 +151,9 @@
   height: auto;
   width: 32px;
   padding: 2px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--blockr-color-border-default);
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--blockr-color-bg-surface);
   cursor: pointer;
 }
 
@@ -176,7 +174,7 @@
 }
 
 .blockr-stack-menu-swatch:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: var(--blockr-focus-outline);
   outline-offset: 1px;
 }
 
@@ -195,8 +193,8 @@
 
 .blockr-stack-menu .blockr-stack-menu-card-id {
   font-size: 11px;
-  color: #6b7280;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--blockr-color-text-muted);
+  font-family: var(--blockr-font-mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -204,8 +202,8 @@
 
 /* The card name is what users glance at - keep the strong colour. */
 .blockr-stack-menu .blockr-block-browser-card-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-semibold);
 }
 
 /* Confirm button. Pinned at the bottom of the sidebar via margin-top:
@@ -217,23 +215,23 @@
   padding: 8px 14px;
   border: none;
   border-radius: 4px;
-  background: #2563eb;
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 500;
+  background: var(--blockr-color-bg-accent);
+  color: var(--blockr-color-text-on-accent);
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
   cursor: pointer;
 }
 
 .blockr-stack-menu-confirm:hover {
-  background: #1d4ed8;
+  background: var(--blockr-color-bg-accent-hover);
 }
 
 .blockr-stack-menu-confirm:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: var(--blockr-focus-outline);
   outline-offset: 2px;
 }
 
 .blockr-stack-menu-confirm:disabled {
-  background: #cbd5e1;
+  background: var(--blockr-color-border-strong);
   cursor: not-allowed;
 }

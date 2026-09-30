@@ -15,39 +15,46 @@
 
 .blockr-title-edit {
   position: absolute;
-  top: -9px;
-  left: -8px;
+  top: -5px;
+  left: -9px;
 }
 
 .blockr-title-edit .form-group {
   margin: 0;
 }
 
-.blockr-title-edit .form-control {
-  font-size: var(--blockr-font-size-title);
+.blockr-title-edit .form-control,
+.blockr-title-edit .form-control:focus {
+  font-size: var(--blockr-font-size-xl, 1.25rem);
   font-weight: var(--blockr-font-weight-semibold);
-  color: var(--blockr-color-text-primary);
+  line-height: 1.3;
+  color: var(--blockr-color-text-default, #111827);
   padding: 4px 8px;
   height: auto;
   width: auto;
-  min-width: 150px;
-  border: 2px dashed #bbb;
-  border-radius: 8px;
-  background: white;
-  box-shadow: none;
-}
-
-.blockr-title-edit .form-control:focus {
-  border-color: #aaa;
-  box-shadow: none;
+  min-width: 200px;
+  border: 1px solid var(--blockr-color-border-accent, #2563eb);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-color-bg-surface, #ffffff);
+  box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
   outline: none;
 }
 
-.blockr-subtitle {
-  font-size: var(--blockr-font-size-sm);
-  font-weight: var(--blockr-font-weight-normal);
-  color: var(--blockr-color-text-muted);
-  margin-left: 3px;
+.blockr-title-error {
+  display: none;
+  margin-top: 4px;
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-danger);
+  white-space: nowrap;
+}
+
+.blockr-title-edit.is-invalid .blockr-title-error {
+  display: block;
+}
+
+.blockr-title-edit.is-invalid .form-control,
+.blockr-title-edit.is-invalid .form-control:focus {
+  border-color: var(--blockr-color-border-danger);
 }
 
 .blockr-section-header {
@@ -80,7 +87,7 @@
   gap: 10px;
   padding: 12px 16px;
   margin: 0 -16px;
-  background-color: rgba(220, 38, 38, 0.08);
+  background-color: var(--blockr-color-bg-danger);
   color: var(--blockr-color-error);
   font-size: var(--blockr-font-size-base);
 }
@@ -101,7 +108,7 @@
   color: var(--blockr-color-text-meta);
   font-size: var(--blockr-font-size-base);
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: var(--blockr-radius-md, 6px);
   transition: background-color 0.15s ease;
 }
 
@@ -117,17 +124,106 @@
   transform: rotate(180deg);
 }
 
+/* ============================================================
+   Block header
+   ============================================================
+   Colours, radii and type read blockr.ui's tokens, with the light value as
+   the fallback; this sheet declares no `--blockr-*` variables of its own. */
+.blockr-block-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 42px;
+}
+
+.blockr-block-header-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.blockr-block-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.blockr-block-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.blockr-block-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--blockr-radius-lg, 8px);
+  color: var(--blockr-dock-cat, #999999);
+  background: color-mix(in srgb, var(--blockr-dock-cat, #999999) 18%, var(--blockr-color-bg-surface, #ffffff));
+  /* The glyph is a bsicons SVG sized `1em` inline, so this sizes it. */
+  font-size: 21px;
+  line-height: 1;
+}
+
+.blockr-block-title-wrap {
+  flex-grow: 1;
+  min-width: 0;
+  padding-right: 1rem;
+}
+
+.blockr-block-title {
+  margin-bottom: 0;
+  line-height: 1.3;
+}
+
+.blockr-block-title .blockr-title {
+  font-size: var(--blockr-font-size-xl, 1.25rem);
+  color: var(--blockr-color-text-default, #111827);
+}
+
+/* The negative margin pulls the padded hit area back out, so the title sits
+   where it would without it. Only a title that can be renamed
+   (`data-blockr-editable`) takes the hover wash. */
+.blockr-title-display {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  border-radius: var(--blockr-radius-md, 6px);
+  transition: background-color var(--blockr-transition, 0.15s ease);
+}
+
+.blockr-title-display[data-blockr-editable]:hover {
+  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+}
+
+.blockr-title-display .blockr-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
 /* Block eval status: on-icon status dot.
-   The dot is layered onto the block icon's lower-right corner (iOS badge
-   style), matching blockr.dag's node badge placement. Its size and colour are
-   written onto this element as a `style` attribute from `block_status_style()`
-   -- the source of truth both front-ends share -- so only structure lives
-   here. `size` is the coloured dot's diameter; the 2px white ring is drawn
-   *outside* it (box-shadow, not a border) so the dot matches the DAG node
-   badge, which rings its fill the same way. The dot must stay in flow when it
-   carries no status (never display:none) so it is not suspended while hidden
-   and left stuck ".recalculating", which would trip the navbar busy-spinner
-   scope; with no size written it takes no space on its own. */
+   The dot sits on the block mark's upper-right corner. Its size, colours and
+   shape are written onto this element as a `style` attribute from
+   `block_status_style()` -- the spec blockr.dag's node badge draws from too --
+   so only structure lives here. The spec's `size` is the coloured dot's
+   diameter; the 2px ring is drawn *outside* it (box-shadow, not a border) in
+   `bg-surface`. The fill reads a blockr.ui token with its light value as the
+   fallback, and a waiting block draws a hollow ring. The dot must stay in flow
+   when it carries no status (never display:none) so it is not suspended while
+   hidden and left stuck ".recalculating", which would trip the navbar
+   busy-spinner scope; with no size written it takes no space on its own. */
 .blockr-block-icon {
   position: relative;
   display: inline-flex;
@@ -136,8 +232,8 @@
 
 .blockr-status-dot {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  right: -2px;
+  top: -2px;
   z-index: 1;
   border-radius: 50%;
 }
@@ -166,51 +262,59 @@
   color: var(--blockr-color-text-subtle);
 }
 
-/* Shared header icon button — ghost style */
-.blockr-header-icon.btn.btn-light,
-.blockr-section-toggle .btn.btn-light {
-  background-color: transparent !important;
-  border: none !important;
-  border-radius: 8px;
-  color: var(--blockr-grey-300) !important;
-  font-size: 12px;
-  padding: 6px 7px;
-  margin: 0;
-  transition: all 0.15s ease;
-  line-height: 1;
-  box-shadow: none !important;
-}
-
-.blockr-header-icon.btn.btn-light:hover,
-.blockr-section-toggle .btn.btn-light:hover {
-  background-color: var(--blockr-grey-100) !important;
-  color: var(--blockr-grey-400) !important;
-}
-
-.blockr-section-toggle .btn-check:checked + .btn.btn-light:hover {
-  background-color: var(--blockr-blue-50) !important;
-  color: var(--blockr-blue-500) !important;
-}
-
-.blockr-section-toggle .btn.btn-light.active,
-.blockr-section-toggle .btn-check:checked + .btn.btn-light {
-  background-color: transparent !important;
-  color: var(--blockr-blue-500) !important;
-  box-shadow: none !important;
-}
-
-/* Ensure all header icons have consistent square hit area */
-.blockr-header-icon.btn.btn-light,
-.blockr-section-toggle .btn.btn-light {
-  min-width: 28px;
-  height: 28px;
-  text-align: center;
+/* Header tools look like blockr.ui's other tools: bare, `text-muted`, and
+   `text-default` on the hover wash. The look is set through Bootstrap's
+   button variables. Scoped to the header's actions, the rules tie
+   blockr.ui's `.btn-light` rule, which sets the same ones, and win on source
+   order. Every state reads the rest pair and hover swaps that pair, so an
+   open menu, a focused tool and a toggle that is on keep their look off the
+   pointer and take the hover look under it. */
+.blockr-block-header-actions .blockr-header-icon.btn.btn-light,
+.blockr-block-header-actions .blockr-section-toggle .btn.btn-light {
+  --bs-btn-padding-x: 0;
+  --bs-btn-padding-y: 0;
+  --bs-btn-font-size: var(--blockr-font-size-sm);
+  --bs-btn-line-height: 1;
+  --bs-btn-border-width: 0;
+  --bs-btn-border-radius: var(--blockr-radius-sm, 4px);
+  --bs-btn-color: var(--blockr-color-text-muted, #6b7280);
+  --bs-btn-bg: transparent;
+  --bs-btn-hover-color: var(--bs-btn-color);
+  --bs-btn-hover-bg: var(--bs-btn-bg);
+  --bs-btn-active-color: var(--bs-btn-color);
+  --bs-btn-active-bg: var(--bs-btn-bg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: var(--blockr-control-h-xs, 26px);
+  min-width: var(--blockr-control-h-xs, 26px);
+  height: var(--blockr-control-h-xs, 26px);
+  margin: 0;
 }
 
-/* Constrain any SVG inside toggle buttons to match icon size */
+.blockr-block-header-actions .blockr-header-icon.btn.btn-light:hover,
+.blockr-block-header-actions .blockr-section-toggle .btn.btn-light:hover {
+  --bs-btn-color: var(--blockr-color-text-default, #111827);
+  --bs-btn-bg: var(--blockr-color-bg-hover, #f3f4f6);
+}
+
+/* Lighter than text-accent, since the toggles are on in almost every block;
+   hover goes back to text-accent. */
+.blockr-block-header-actions .blockr-section-toggle .btn.btn-light {
+  --bs-btn-active-color: color-mix(in srgb, var(--blockr-color-text-accent) 70%, var(--blockr-color-bg-surface));
+}
+
+.blockr-block-header-actions .blockr-section-toggle .btn.btn-light:hover {
+  --bs-btn-active-color: var(--blockr-color-text-accent, #2563eb);
+}
+
+/* The focus lands on the toggle's hidden checkbox, so its label draws the
+   ring blockr.ui gives a focused button. */
+.blockr-section-toggle .btn-check:focus-visible + .btn.btn-light {
+  outline: var(--blockr-focus-outline, 2px solid var(--blockr-color-border-accent));
+  outline-offset: var(--blockr-focus-offset, 2px);
+}
+
 .blockr-section-toggle .btn.btn-light svg {
   width: 14px;
   height: 14px;
@@ -218,19 +322,6 @@
 
 .blockr-section-toggle .btn-group {
   gap: 2px;
-}
-
-/* Package badge - Figma-aligned subtle style */
-.badge-two-tone {
-  display: inline-block;
-  padding: 2px 8px;
-  font-size: 0.625rem;
-  border-radius: 4px;
-  background-color: var(--blockr-grey-100);
-  color: var(--blockr-color-text-muted);
-  border: 1px solid var(--blockr-color-border);
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 /* ============================================
@@ -247,7 +338,7 @@
 }
 
 .offcanvas-title {
-  font-size: 1.125rem;
+  font-size: var(--blockr-font-size-lg);
   font-weight: var(--blockr-font-weight-semibold);
   color: var(--blockr-color-text-primary);
 }
@@ -255,7 +346,7 @@
 .offcanvas-body {
   font-size: var(--blockr-font-size-sm);
   padding: 20px;
-  background: #ffffff;
+  background: var(--blockr-color-bg-surface, #ffffff);
 }
 
 .offcanvas .accordion {
@@ -291,20 +382,48 @@
   display: none;
 }
 
+.blockr-block-errors {
+  margin-top: 12px;
+}
+
+/* One rule separates controls and preview, only while both are open. It
+   lives in the preview's panel, so it opens and closes with the preview;
+   `:has()` reads whether controls are open off the panels' hidden accordion
+   buttons, which Bootstrap marks `.collapsed` as a panel starts to close. It
+   is a background line, not a border, so the space above it animates with
+   the collapsing panel. */
 .blockr-block-accordion > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body,
 .blockr-block-accordion > .accordion-item[data-value="ctrl"] > .accordion-collapse > .accordion-body {
-  background-color: white;
-  border-radius: 0;
-  margin: 0 -16px 10px -16px;
-  padding: 16px 16px 10px 16px;
-  border-top: 1px solid var(--blockr-grey-300);
-  border-bottom: 1px solid var(--blockr-grey-300);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.blockr-block-accordion:has(> .accordion-item[data-value="ctrl"] > .accordion-header .accordion-button:not(.collapsed)) > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body {
+  padding-top: 12px;
 }
 
 .blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
   max-width: 100%;
   overflow-x: auto;
   padding: 0;
+}
+
+/* The edge-to-edge margin sits on the collapsing element, not the body: that
+   element clips while it animates, so a margin inside it would cut the rule
+   and the preview short at both ends during the roll. */
+.blockr-block-accordion:has(> .accordion-item:is([data-value="inputs"], [data-value="ctrl"]) > .accordion-header .accordion-button:not(.collapsed)) > .accordion-item[data-value="outputs"] > .accordion-collapse {
+  margin: 0 calc(-1 * var(--bs-card-spacer-x));
+}
+
+.blockr-block-accordion:has(> .accordion-item:is([data-value="inputs"], [data-value="ctrl"]) > .accordion-header .accordion-button:not(.collapsed)) > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
+  max-width: none;
+  padding: 33px var(--bs-card-spacer-x) 0;
+  background: linear-gradient(var(--blockr-color-border-default), var(--blockr-color-border-default)) 0 16px / 100% 1px no-repeat;
+}
+
+.blockr-block-accordion > .accordion-item > .collapsing {
+  transition-duration: 0.22s;
 }
 
 /* Export button adjustments */
@@ -331,11 +450,12 @@
    ============================================ */
 .blockr-block-dropdown {
   font-size: var(--blockr-font-size-base) !important;
-  border-radius: 12px !important;
+  border-radius: var(--blockr-radius-xl, 12px) !important;
   border: 1px solid var(--blockr-color-border) !important;
   box-shadow: var(--blockr-shadow-lg) !important;
   padding: 12px 8px 8px !important;
   margin-top: 8px !important;
+  --bs-dropdown-bg: var(--blockr-color-bg-raised);
 }
 
 /* Arrow pointing up toward the trigger button */
@@ -355,7 +475,7 @@
 
 .blockr-block-dropdown::after {
   top: -8px;
-  border-bottom: 8px solid #fff;
+  border-bottom: 8px solid var(--blockr-color-bg-raised);
 }
 
 .blockr-block-dropdown .dropdown-header,
@@ -372,7 +492,7 @@
 .blockr-block-dropdown .dropdown-item {
   font-size: var(--blockr-font-size-sm) !important;
   padding: 10px 12px 10px 2.5rem !important;
-  border-radius: 8px !important;
+  border-radius: var(--blockr-radius-lg, 8px) !important;
   color: var(--blockr-color-text-primary) !important;
 }
 
@@ -408,11 +528,11 @@
 }
 
 .dv-left-actions-container .fa-plus {
-  font-size: 12px;
+  font-size: var(--blockr-font-size-xs);
   color: var(--blockr-color-text-muted);
   padding: 8px 8px;
   margin-left: -4px;
-  border-radius: 8px;
+  border-radius: var(--blockr-radius-lg, 8px);
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -431,8 +551,8 @@
   gap: 8px;
   height: 48px;
   padding: 0 16px;
-  background-color: white;
-  border-bottom: 1px solid var(--blockr-grey-300);
+  background-color: var(--blockr-color-bg-surface, #ffffff);
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 
 .blockr-navbar-left {
@@ -457,7 +577,7 @@
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--blockr-radius-md, 6px);
   color: var(--blockr-color-text-muted);
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
@@ -477,7 +597,7 @@
   gap: 6px;
   padding: 4px 10px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--blockr-radius-pill, 999px);
   color: var(--blockr-color-text-secondary);
   background-color: var(--blockr-color-bg-subtle);
   border: 1px solid var(--blockr-color-border);
@@ -531,7 +651,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   font-size: var(--blockr-font-size-sm);
   color: var(--blockr-color-text-primary);
   cursor: pointer;
@@ -582,7 +702,7 @@
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   color: var(--blockr-color-text-muted);
   cursor: pointer;
   font-size: 11px;
@@ -612,7 +732,7 @@
   flex: 1;
   padding: 2px 6px;
   border: 1px solid var(--blockr-color-primary);
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   font-size: var(--blockr-font-size-sm);
   background-color: var(--blockr-color-bg-input);
   color: var(--blockr-color-text-primary);
@@ -621,7 +741,7 @@
 
 .blockr-view-rename-input:focus {
   border-color: var(--blockr-color-primary);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  box-shadow: var(--blockr-focus-ring);
 }
 
 /* Add button */
@@ -630,7 +750,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   font-size: var(--blockr-font-size-sm);
   color: var(--blockr-color-text-muted);
 }
@@ -718,11 +838,11 @@
 
 .blockr-ext-edit-title {
   margin: 0;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #6b7280;
+  color: var(--blockr-color-text-muted);
 }
 
 /* The single, global apply button sits in its own footer, right-aligned. */
@@ -794,40 +914,40 @@
 .blockr-ext-edit .btn-primary {
   background-color: var(--blockr-color-primary);
   border-color: var(--blockr-color-primary);
-  color: #ffffff;
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 .blockr-ext-edit .btn-primary:hover,
 .blockr-ext-edit .btn-primary:focus {
   background-color: var(--blockr-color-primary-hover);
   border-color: var(--blockr-color-primary-hover);
-  color: #ffffff;
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 .blockr-ext-edit .btn-danger {
   background-color: var(--blockr-color-error);
   border-color: var(--blockr-color-error);
-  color: #ffffff;
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 .blockr-ext-edit .btn-danger:hover,
 .blockr-ext-edit .btn-danger:focus {
-  background-color: #b91c1c;
-  border-color: #b91c1c;
-  color: #ffffff;
+  background-color: var(--blockr-color-text-danger);
+  border-color: var(--blockr-color-text-danger);
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 .blockr-ext-edit .btn-success {
   background-color: var(--blockr-color-success);
   border-color: var(--blockr-color-success);
-  color: #ffffff;
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 .blockr-ext-edit .btn-success:hover,
 .blockr-ext-edit .btn-success:focus {
-  background-color: #15803d;
-  border-color: #15803d;
-  color: #ffffff;
+  background-color: var(--blockr-color-text-success);
+  border-color: var(--blockr-color-text-success);
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 
 /* ============================================
@@ -892,9 +1012,9 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   left: 50%;
   transform: translateX(-50%);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--blockr-radius-sm, 4px);
   background: var(--blockr-grey-900);
-  color: #fff;
+  color: var(--blockr-grey-50);
   font-size: var(--blockr-font-size-xs);
   line-height: 1.5;
   white-space: nowrap;
@@ -976,3 +1096,72 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   border-top-left-radius: var(--dv-border-radius) !important;
 }
 
+
+/* ============================================
+   Dockview reads the design tokens
+   ============================================
+   Dockview paints its frame and tabs from its own theme variables, so
+   without this block the frame stays light under the dark scheme and
+   ignores a theme. The doubled `.dv-shell` is deliberate: dockview injects
+   its stylesheet after the page's, so it wins at equal specificity. (A
+   `className` on the DockviewTheme, cynkra/dockViewR#102, would make this
+   unnecessary.) */
+.dv-shell.dv-shell {
+  --dv-group-view-background-color: var(--blockr-color-bg-page);
+  --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface);
+
+  --dv-activegroup-visiblepanel-tab-background-color: var(--blockr-color-bg-selected);
+  --dv-activegroup-visiblepanel-tab-color: var(--blockr-color-text-accent);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--blockr-color-bg-selected-inactive);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--blockr-color-text-default);
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-activegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted);
+
+  --dv-separator-border: transparent;
+  --dv-sash-color: transparent;
+  --dv-tab-divider-color: transparent;
+  --dv-active-sash-color: var(--blockr-color-border-accent);
+
+  --dv-border-radius: var(--blockr-radius-xl);
+  --dv-tab-border-radius: var(--blockr-radius-lg);
+}
+
+/* Dockview's light values for these are black at low alpha, which vanishes
+   on a dark surface; white at the same weight reads the same. */
+[data-bs-theme="dark"] .dv-shell {
+  --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
+  --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
+}
+
+/* The tab's close button: the thin x every small icon uses (blockr.ui's
+   `remove` icon, 1px stroke) in place of the Font Awesome xmark dockViewR
+   puts there, drawn as a mask so it takes the text colour. */
+.dv-tab .dv-default-tab .dv-default-tab-action {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: var(--blockr-radius-sm);
+  color: var(--blockr-color-text-muted);
+}
+
+.dv-tab .dv-default-tab .dv-default-tab-action > i,
+.dv-tab .dv-default-tab .dv-default-tab-action > svg {
+  display: none;
+}
+
+.dv-tab .dv-default-tab .dv-default-tab-action::before {
+  content: "";
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1' stroke-linecap='round'%3E%3Cline x1='2.5' y1='2.5' x2='7.5' y2='7.5'/%3E%3Cline x1='7.5' y1='2.5' x2='2.5' y2='7.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1' stroke-linecap='round'%3E%3Cline x1='2.5' y1='2.5' x2='7.5' y2='7.5'/%3E%3Cline x1='7.5' y1='2.5' x2='2.5' y2='7.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat;
+}
+
+.dv-tab .dv-default-tab .dv-default-tab-action:hover {
+  background-color: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-default);
+}

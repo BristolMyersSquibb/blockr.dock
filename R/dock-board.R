@@ -40,7 +40,10 @@
 #' `is_dock_board()`, which returns a boolean. The `dock_extensions()` and
 #' `dock_extensions<-()` accessors return / set the board's `dock_extension`
 #' objects. A character vector of IDs is returned by `dock_ext_ids()` and
-#' `dock_board_options()` returns a `board_options` object.
+#' `dock_board_options()` returns a `board_options` object: the board name, a
+#' thematic switch, off unless the `thematic` blockr option says otherwise, so
+#' that plots can take the board's colours, and a light/dark switch, light
+#' unless the `dark_mode` blockr option says otherwise.
 #'
 #' @rdname dock
 #' @export
@@ -226,7 +229,9 @@ extension_ids <- function(x, class = NULL) {
 #' @export
 dock_board_options <- function() {
   new_board_options(
-    new_board_name_option()
+    new_board_name_option(),
+    new_thematic_option(),
+    new_dark_mode_option(value = blockr_option("dark_mode", "light"))
   )
 }
 

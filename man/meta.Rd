@@ -31,8 +31,8 @@ block_status_badge(status, error_count = 0L)
 \item{status}{A block eval status: \code{stale}, \code{waiting}, \code{unset} and \code{failed}
 carry a badge; \code{ready} and \code{unevaluated} carry none; any other value
 yields no badge. The \code{size} field is the coloured dot's pixel
-diameter and \code{ring} its white outline width, both shared so the dock card
-icon and the DAG node badge render identically.}
+diameter and \code{ring} the width of the ring around it, both shared by the
+dock card icon and the DAG node badge.}
 
 \item{error_count}{Number of error conditions the block has raised. A
 positive count promotes the badge to \code{failed}, catching render-phase
@@ -42,9 +42,12 @@ its conditions were raised against inputs it no longer has.}
 \value{
 Metadata is returned from \code{blks_metadata()} as a \code{data.frame} with
 each row corresponding to a block. Both \code{blk_color()} and
-\code{blk_icon_data_uri()} return character vectors. \code{block_status_badge()}
-returns a list with \code{color}, \code{label}, \code{size}, \code{ring} and \code{ring_color} (the
-badge to draw), or \code{NULL} for a status with no badge.
+\code{blk_icon_data_uri()} return character vectors. The badge
+\code{block_status_badge()} draws is a list with its \code{label}; its fill as the
+blockr.ui \code{token} and that token's light value \code{color}; \code{hollow} and
+\code{outline}, for a badge drawn as an \code{outline}-wide ring in its fill; and the
+dot's \code{size} and the width of the \code{ring} around it, in \code{ring_token} with the
+light value \code{ring_color}. It is \code{NULL} for a status with no badge.
 }
 \description{
 Returns various metadata for blocks or block categories, as well as styling
@@ -61,9 +64,8 @@ palette for a character vector of block categories.
 into square-shaped icons.
 \item \code{block_status_badge()}: Derives a block's status badge from its eval
 status and error count -- the single derivation the dock card icon and
-the blockr.dag node badge share, so they always render the same colour
-and styling. Returns a styling list (draw the badge) or \code{NULL} (no
-badge).
+the blockr.dag node badge share, so both show the same status. Returns a
+styling list (draw the badge) or \code{NULL} (no badge).
 }
 }
 \examples{
