@@ -872,8 +872,8 @@ test_that("block_status_style is the shared status-dot spec (#290)", {
   expect_identical(block_status_style("unset")$color, "#eab308")
   expect_identical(block_status_style("failed")$color, "#dc2626")
 
-  # `ready`, `dormant` and non-strings carry no indicator.
-  for (st in list("ready", "dormant", NULL, character(), c("a", "b"))) {
+  # The `ready` and `unevaluated` statuses and non-strings carry no indicator.
+  for (st in list("ready", "unevaluated", NULL, character(), c("a", "b"))) {
     expect_null(block_status_style(st))
   }
 })
@@ -892,13 +892,10 @@ test_that("block_status_badge is the shared badge derivation (#314)", {
     block_status_style("failed")
   )
 
-  # `ready` and an absent status carry no badge.
+  # The `ready` and `unevaluated` statuses and an absent one carry no badge.
   expect_null(block_status_badge("ready"))
+  expect_null(block_status_badge("unevaluated"))
   expect_null(block_status_badge(NULL))
-
-  # `dormant` is indeterminate: `NA` tells a persistent renderer to keep the
-  # existing badge rather than clear it.
-  expect_identical(block_status_badge("dormant"), NA)
 })
 
 test_that("a stale block carries a muted badge (#408)", {
@@ -926,15 +923,59 @@ test_that("a stale block carries a muted badge (#408)", {
   # a red dot would assert a failure nobody has observed on the current inputs.
   expect_identical(block_status_badge("stale", 2L), stale)
 
-  # A dormant block keeps its error badge -- nothing about its inputs changed,
-  # so the last-known failure still describes them.
+  # Errors on an unevaluated block cannot predate a check it never had, so
+  # unlike a stale block's they still promote the badge to `failed`.
   expect_identical(
-    block_status_badge("dormant", 2L),
+    block_status_badge("unevaluated", 2L),
     block_status_style("failed")
   )
 
   # The body keeps its last-known output, so no placeholder note replaces it.
   expect_null(block_status_note("stale"))
+})
+
+test_that("a parked block draws the badge of its last check (#485)", {
+
+  withr::local_options(blockr.background_construction_delay = 0)
+
+  # The tests above hand the badge statuses they spell out. Through core's own
+  # board server, a block checked off screen by an `evaluate` request goes on
+  # reporting what that check found once it is parked again, so it shows the
+  # failure without ever having been on screen.
+  board <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block("iris"),
+      b = new_subset_block(subset = "no_such_column > 1")
+    ),
+    links = c(ab = new_link("a", "b"))
+  )
+
+  testServer(
+    board_server,
+    {
+      session$flushReact()
+
+      expect_identical(rv$eval[["b"]](), "unevaluated")
+      expect_null(block_status_badge(rv$eval[["b"]]()))
+
+      board_update(list(evaluate = "b"))
+      session$flushReact()
+
+      expect_length(rv$evaluating(), 0L)
+      expect_identical(rv$eval[["b"]](), "failed")
+      expect_identical(
+        block_status_badge(rv$eval[["b"]]()),
+        block_status_style("failed")
+      )
+    },
+    args = list(
+      x = board,
+      plugins = blockr_app_plugins(board),
+      options = blockr_app_options(board),
+      callbacks = board_server_callback,
+      callback_location = "start"
+    )
+  )
 })
 
 test_that("block status indicator + note reflect eval status (#290)", {
@@ -971,12 +1012,12 @@ test_that("block status indicator + note reflect eval status (#290)", {
   # `failed` keeps the error styling, so no placeholder note.
   expect_null(block_status_note("failed"))
 
-  # A `ready` or `dormant` block, and an absent status, carry no affordance:
-  # the dot's attributes are all cleared rather than left stale from the last
-  # status.
+  # A `ready` or `unevaluated` block, and an absent status, carry no
+  # affordance: the dot's attributes are all cleared rather than left stale
+  # from the last status.
   blank <- list(style = "", title = "", role = "", `aria-label` = "")
 
-  for (st in list("ready", "dormant", NULL, character(), c("a", "b"))) {
+  for (st in list("ready", "unevaluated", NULL, character(), c("a", "b"))) {
     expect_identical(block_status_dot_attrs(st), blank)
     expect_null(block_status_note(st))
   }

@@ -13,9 +13,8 @@
 #' - `block_status_badge()`: Derives a block's status badge from its eval
 #'   status and error count -- the single derivation the dock card icon and
 #'   the blockr.dag node badge share, so they always render the same colour
-#'   and styling. Returns a styling list (draw the badge), `NULL` (no badge),
-#'   or `NA` (indeterminate: the status is not computed, so leave any existing
-#'   badge unchanged).
+#'   and styling. Returns a styling list (draw the badge) or `NULL` (no
+#'   badge).
 #'
 #' @param blocks Blocks passed as `blocks` or `block` object
 #'
@@ -32,8 +31,7 @@
 #' each row corresponding to a block. Both `blk_color()` and
 #' `blk_icon_data_uri()` return character vectors. `block_status_badge()`
 #' returns a list with `color`, `label`, `size`, `ring` and `ring_color` (the
-#' badge to draw), `NULL` for a status with no badge, or `NA` when the status
-#' is indeterminate.
+#' badge to draw), or `NULL` for a status with no badge.
 #'
 #' @rdname meta
 #' @export
