@@ -262,15 +262,13 @@
   color: var(--blockr-color-text-subtle);
 }
 
-/* Header tools sit one step quieter than a tool elsewhere, so the header
-   reads as the block's name. A border colour would be quieter still, but the
-   dark scheme keeps its borders faint on purpose, and an icon in one all but
-   vanishes there. The look is set through Bootstrap's button variables.
-   Scoped to the header's actions, the rules tie blockr.ui's `.btn-light`
-   rule, which sets the same ones, and win on source order. Every state reads
-   the rest pair and hover swaps that pair, so an open menu, a focused tool
-   and a toggle that is on keep their look off the pointer and take the hover
-   look under it. */
+/* Header tools look like blockr.ui's other tools: bare, `text-muted`, and
+   `text-default` on the hover wash. The look is set through Bootstrap's
+   button variables. Scoped to the header's actions, the rules tie
+   blockr.ui's `.btn-light` rule, which sets the same ones, and win on source
+   order. Every state reads the rest pair and hover swaps that pair, so an
+   open menu, a focused tool and a toggle that is on keep their look off the
+   pointer and take the hover look under it. */
 .blockr-block-header-actions .blockr-header-icon.btn.btn-light,
 .blockr-block-header-actions .blockr-section-toggle .btn.btn-light {
   --bs-btn-padding-x: 0;
@@ -279,7 +277,7 @@
   --bs-btn-line-height: 1;
   --bs-btn-border-width: 0;
   --bs-btn-border-radius: var(--blockr-radius-sm, 4px);
-  --bs-btn-color: var(--blockr-color-text-disabled, #9ca3af);
+  --bs-btn-color: var(--blockr-color-text-muted, #6b7280);
   --bs-btn-bg: transparent;
   --bs-btn-hover-color: var(--bs-btn-color);
   --bs-btn-hover-bg: var(--bs-btn-bg);
@@ -296,7 +294,7 @@
 
 .blockr-block-header-actions .blockr-header-icon.btn.btn-light:hover,
 .blockr-block-header-actions .blockr-section-toggle .btn.btn-light:hover {
-  --bs-btn-color: var(--blockr-color-text-muted, #6b7280);
+  --bs-btn-color: var(--blockr-color-text-default, #111827);
   --bs-btn-bg: var(--blockr-color-bg-hover, #f3f4f6);
 }
 
