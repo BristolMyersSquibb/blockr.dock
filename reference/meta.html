@@ -9,7 +9,7 @@ for block icons."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">blockr.dock</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -91,10 +91,10 @@ for block icons.</p>
 
 <dt id="arg-status">status<a class="anchor" aria-label="anchor" href="#arg-status"></a></dt>
 <dd><p>A block eval status: <code>stale</code>, <code>waiting</code>, <code>unset</code> and <code>failed</code>
-carry a badge; <code>ready</code> carries none; <code>dormant</code> is indeterminate; any other
-value yields no badge. The <code>size</code> field is the coloured dot's pixel
-diameter and <code>ring</code> its white outline width, both shared so the dock card
-icon and the DAG node badge render identically.</p></dd>
+carry a badge; <code>ready</code> and <code>unevaluated</code> carry none; any other value
+yields no badge. The <code>size</code> field is the coloured dot's pixel
+diameter and <code>ring</code> the width of the ring around it, both shared by the
+dock card icon and the DAG node badge.</p></dd>
 
 
 <dt id="arg-error-count">error_count<a class="anchor" aria-label="anchor" href="#arg-error-count"></a></dt>
@@ -108,10 +108,12 @@ its conditions were raised against inputs it no longer has.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Metadata is returned from <code>blks_metadata()</code> as a <code>data.frame</code> with
 each row corresponding to a block. Both <code>blk_color()</code> and
-<code>blk_icon_data_uri()</code> return character vectors. <code>block_status_badge()</code>
-returns a list with <code>color</code>, <code>label</code>, <code>size</code>, <code>ring</code> and <code>ring_color</code> (the
-badge to draw), <code>NULL</code> for a status with no badge, or <code>NA</code> when the status
-is indeterminate.</p>
+<code>blk_icon_data_uri()</code> return character vectors. The badge
+<code>block_status_badge()</code> draws is a list with its <code>label</code>; its fill as the
+blockr.ui <code>token</code> and that token's light value <code>color</code>; <code>hollow</code> and
+<code>outline</code>, for a badge drawn as an <code>outline</code>-wide ring in its fill; and the
+dot's <code>size</code> and the width of the <code>ring</code> around it, in <code>ring_token</code> with the
+light value <code>ring_color</code>. It is <code>NULL</code> for a status with no badge.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -125,10 +127,8 @@ palette for a character vector of block categories.</p></li>
 into square-shaped icons.</p></li>
 <li><p><code>block_status_badge()</code>: Derives a block's status badge from its eval
 status and error count – the single derivation the dock card icon and
-the blockr.dag node badge share, so they always render the same colour
-and styling. Returns a styling list (draw the badge), <code>NULL</code> (no badge),
-or <code>NA</code> (indeterminate: the status is not computed, so leave any existing
-badge unchanged).</p></li>
+the blockr.dag node badge share, so both show the same status. Returns a
+styling list (draw the badge) or <code>NULL</code> (no badge).</p></li>
 </ul></div>
 
     <div class="section level2">
@@ -142,10 +142,19 @@ badge unchanged).</p></li>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">block_status_badge</span><span class="op">(</span><span class="st">"waiting"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $color</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "#f59e0b"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "#d97706"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $token</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "--blockr-color-border-warning"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $label</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Waiting for a data input"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hollow</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $outline</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1.5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $size</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 8</span>
@@ -155,6 +164,9 @@ badge unchanged).</p></li>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $ring_color</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "#ffffff"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $ring_token</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "--blockr-color-bg-surface"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

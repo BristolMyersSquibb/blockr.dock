@@ -128,7 +128,10 @@ coercion function `as_dock_board()`. Inheritance can be checked using
 `dock_extensions<-()` accessors return / set the board's
 `dock_extension` objects. A character vector of IDs is returned by
 `dock_ext_ids()` and `dock_board_options()` returns a `board_options`
-object.
+object: the board name, a thematic switch, off unless the `thematic`
+blockr option says otherwise, so that plots can take the board's
+colours, and a light/dark switch, light unless the `dark_mode` blockr
+option says otherwise.
 
 ## Details
 

@@ -44,10 +44,10 @@ block_status_badge(status, error_count = 0L)
 - status:
 
   A block eval status: `stale`, `waiting`, `unset` and `failed` carry a
-  badge; `ready` carries none; `dormant` is indeterminate; any other
-  value yields no badge. The `size` field is the coloured dot's pixel
-  diameter and `ring` its white outline width, both shared so the dock
-  card icon and the DAG node badge render identically.
+  badge; `ready` and `unevaluated` carry none; any other value yields no
+  badge. The `size` field is the coloured dot's pixel diameter and
+  `ring` the width of the ring around it, both shared by the dock card
+  icon and the DAG node badge.
 
 - error_count:
 
@@ -60,10 +60,13 @@ block_status_badge(status, error_count = 0L)
 
 Metadata is returned from `blks_metadata()` as a `data.frame` with each
 row corresponding to a block. Both `blk_color()` and
-`blk_icon_data_uri()` return character vectors. `block_status_badge()`
-returns a list with `color`, `label`, `size`, `ring` and `ring_color`
-(the badge to draw), `NULL` for a status with no badge, or `NA` when the
-status is indeterminate.
+`blk_icon_data_uri()` return character vectors. The badge
+`block_status_badge()` draws is a list with its `label`; its fill as the
+blockr.ui `token` and that token's light value `color`; `hollow` and
+`outline`, for a badge drawn as an `outline`-wide ring in its fill; and
+the dot's `size` and the width of the `ring` around it, in `ring_token`
+with the light value `ring_color`. It is `NULL` for a status with no
+badge.
 
 ## Details
 
@@ -79,10 +82,8 @@ status is indeterminate.
 
 - `block_status_badge()`: Derives a block's status badge from its eval
   status and error count – the single derivation the dock card icon and
-  the blockr.dag node badge share, so they always render the same colour
-  and styling. Returns a styling list (draw the badge), `NULL` (no
-  badge), or `NA` (indeterminate: the status is not computed, so leave
-  any existing badge unchanged).
+  the blockr.dag node badge share, so both show the same status. Returns
+  a styling list (draw the badge) or `NULL` (no badge).
 
 ## Examples
 
@@ -96,10 +97,19 @@ blk_icon_data_uri(meta$icon, col)
 
 block_status_badge("waiting")
 #> $color
-#> [1] "#f59e0b"
+#> [1] "#d97706"
+#> 
+#> $token
+#> [1] "--blockr-color-border-warning"
 #> 
 #> $label
 #> [1] "Waiting for a data input"
+#> 
+#> $hollow
+#> [1] TRUE
+#> 
+#> $outline
+#> [1] 1.5
 #> 
 #> $size
 #> [1] 8
@@ -109,5 +119,8 @@ block_status_badge("waiting")
 #> 
 #> $ring_color
 #> [1] "#ffffff"
+#> 
+#> $ring_token
+#> [1] "--blockr-color-bg-surface"
 #> 
 ```

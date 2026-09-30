@@ -2,6 +2,39 @@
 
 ## blockr.dock (development version)
 
+- The dock reads its colours, radii and surfaces from blockr.ui’s design
+  tokens, so a board follows blockr.ui’s dark scheme: the dockview frame
+  and tabs, block headers, sidebars, the block browser and the block
+  menu. Font sizes, weights and families read the type tokens. The
+  options of
+  [`dock_board_options()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md)
+  now include the light/dark switch, light by default, and core’s
+  thematic switch, off by default, which lets plots take the board’s
+  colours.
+
+- The block header drops its subtitle: a 42px mark in the block’s
+  category colour carries the status dot, and the block type, with the
+  package as a badge, is the mark’s tooltip. The controls sit just under
+  the header with no rules around them; one rule separates them from the
+  preview while both are open.
+
+- The dock’s chrome (block header, navbar, view menu, sidebars) shows
+  blockr.ui’s light-card tooltip (`Blockr.tooltip`) in place of the
+  browser’s native one. The “…” menu and the board options gear have
+  one.
+
+- A parked block’s status badge is drawn from the status blockr.core now
+  reports for it in place of `dormant`: the outcome of the block’s last
+  check, `stale` once that is out of date, or `unevaluated` without one.
+  The
+  [`block_status_badge()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)
+  helper no longer returns `NA`, which it gave for `dormant` to tell a
+  persistent renderer such as the blockr.dag node to keep the badge it
+  drew last. A parked block that failed shows the failed badge without
+  being visited, and `unevaluated`, like `ready`, carries none. Requires
+  blockr.core with the `unevaluated` status
+  ([\#485](https://github.com/BristolMyersSquibb/blockr.dock/issues/485)).
+
 - The dock now states its evaluation demand as the blocks it holds
   eager, in place of the per-block `required` channel blockr.core has
   retired. Its board callback makes the board lazy by returning
@@ -282,7 +315,7 @@
   handling
   ([\#396](https://github.com/BristolMyersSquibb/blockr.dock/issues/396)).
 
-- A block whose inputs changed while it was dormant now carries a muted
+- A block whose inputs changed while it was parked now carries a muted
   grey status badge instead of none. Core’s sixth eval status, `stale`,
   fell through
   [`block_status_badge()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/meta.md)
