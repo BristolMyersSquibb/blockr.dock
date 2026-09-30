@@ -18,6 +18,15 @@
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
   native one. The "…" menu and the board options gear have one.
 
+* A parked block's status badge is drawn from the status blockr.core now
+  reports for it in place of `dormant`: the outcome of the block's last
+  check, `stale` once that is out of date, or `unevaluated` without one.
+  The `block_status_badge()` helper no longer returns `NA`, which it gave
+  for `dormant` to tell a persistent renderer such as the blockr.dag node
+  to keep the badge it drew last. A parked block that failed shows the
+  failed badge without being visited, and `unevaluated`, like `ready`,
+  carries none. Requires blockr.core with the `unevaluated` status (#485).
+
 * The dock now states its evaluation demand as the blocks it holds eager,
   in place of the per-block `required` channel blockr.core has retired.
   Its board callback makes the board lazy by returning `eager()` with the
@@ -214,7 +223,7 @@
   rewritten by the next drag. The native input gives the full gamut, plus
   the platform's own dialog, eyedropper and keyboard handling (#396).
 
-* A block whose inputs changed while it was dormant now carries a muted
+* A block whose inputs changed while it was parked now carries a muted
   grey status badge instead of none. Core's sixth eval status, `stale`,
   fell through `block_status_badge()` to "no badge", so a block holding
   an out-of-date result looked identical to a healthy one on both the

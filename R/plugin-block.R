@@ -747,8 +747,8 @@ block_status_style <- function(status) {
 }
 
 #' @param status A block eval status: `stale`, `waiting`, `unset` and `failed`
-#'   carry a badge; `ready` carries none; `dormant` is indeterminate; any other
-#'   value yields no badge. The `size` field is the coloured dot's pixel
+#'   carry a badge; `ready` and `unevaluated` carry none; any other value
+#'   yields no badge. The `size` field is the coloured dot's pixel
 #'   diameter and `ring` the width of the ring around it, both shared by the
 #'   dock card icon and the DAG node badge.
 #' @param error_count Number of error conditions the block has raised. A
@@ -759,7 +759,7 @@ block_status_style <- function(status) {
 #' @export
 block_status_badge <- function(status, error_count = 0L) {
 
-  # A stale block's conditions predate the upstream change that made it stale,
+  # A stale block's conditions predate the change that made it stale,
   # and it has not re-run since, so they say nothing about whether it would
   # still fail on its current inputs.
   if (isTRUE(status == "stale")) {
@@ -768,13 +768,6 @@ block_status_badge <- function(status, error_count = 0L) {
 
   if (error_count > 0L) {
     status <- "failed"
-  }
-
-  # A dormant block has no computed status: return `NA` to signal "leave the
-  # badge as-is", so a persistent renderer (the DAG node) keeps its last-known
-  # badge rather than clearing it when the block drops out of the eval set.
-  if (isTRUE(status == "dormant")) {
-    return(NA)
   }
 
   block_status_style(status)

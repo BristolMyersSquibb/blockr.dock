@@ -13,8 +13,7 @@
 #' - `block_status_badge()`: Derives a block's status badge from its eval
 #'   status and error count -- the single derivation the dock card icon and
 #'   the blockr.dag node badge share, so both show the same status. Returns a
-#'   styling list (draw the badge), `NULL` (no badge), or `NA` (indeterminate:
-#'   the status is not computed, so leave any existing badge unchanged).
+#'   styling list (draw the badge) or `NULL` (no badge).
 #'
 #' @param blocks Blocks passed as `blocks` or `block` object
 #'
@@ -34,8 +33,7 @@
 #' blockr.ui `token` and that token's light value `color`; `hollow` and
 #' `outline`, for a badge drawn as an `outline`-wide ring in its fill; and the
 #' dot's `size` and the width of the `ring` around it, in `ring_token` with the
-#' light value `ring_color`. It is `NULL` for a status with no badge, or `NA`
-#' when the status is indeterminate.
+#' light value `ring_color`. It is `NULL` for a status with no badge.
 #'
 #' @rdname meta
 #' @export
