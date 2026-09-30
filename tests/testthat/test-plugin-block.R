@@ -940,6 +940,11 @@ test_that("a title renames in place and refuses an empty name (e2e)", {
   )
   withr::defer(app$stop())
 
+  # Escape and Enter end the edit by blurring the field, and headless Chrome
+  # fires no blur in a tab that lacks the focus, as when another test's tab
+  # was opened after this one.
+  app$get_chromote_session()$Emulation$setFocusEmulationEnabled(enabled = TRUE)
+
   wait_dock_loaded(app, 2)
 
   id <- function(part) sprintf("my_board-block_a-edit_block-%s", part)
