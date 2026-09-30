@@ -32,7 +32,9 @@ Imports:
     cli,
     shinyWidgets,
     jsonlite,
-    utils
+    utils,
+    stats,
+    reactives
 Suggests:
     testthat (>= 3.0.0),
     DT,
@@ -48,7 +50,8 @@ Remotes:
     rstudio/shinytest2,
     BristolMyersSquibb/blockr.core,
     BristolMyersSquibb/blockr.ui,
-    cynkra/dockViewR
+    cynkra/dockViewR,
+    nbenn/reactives
 Config/testthat/edition: 3
 Collate:
     'action-class.R'

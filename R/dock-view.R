@@ -420,11 +420,6 @@ active_view.dock_board <- function(x) {
   invisible(x)
 }
 
-views_can_crud <- function(x) {
-  stopifnot(is_dock_views(x))
-  !is_dock_locked()
-}
-
 #' @export
 str_value.dock_views <- function(x, ...) {
 
@@ -606,7 +601,7 @@ view_nav_ui <- function(id, views) {
   nav_id <- ns("view_nav")
   active <- active_view(views)
   active_nm <- unname(view_names(views)[active])
-  can_crud <- views_can_crud(views)
+  can_crud <- !is_dock_locked()
 
   items <- map(
     view_item_ui,
@@ -1767,7 +1762,7 @@ switch_active_view <- function(active, docks, active_dock, client_active,
     )
 
     show_view_ui(active, docks)
-    update_active_dock(active_dock, docks[[active]])
+    update_active_dock(active_dock, docks[[active]]())
   }
 
   client_active(active)
