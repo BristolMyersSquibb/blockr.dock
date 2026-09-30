@@ -711,12 +711,12 @@ block_status_style <- function(status) {
       label = "Inputs changed since this block last ran"
     ),
     waiting = list(
-      color = "#f59e0b",
+      color = "#d97706",
       token = "--blockr-color-border-warning",
       label = "Waiting for a data input"
     ),
     unset = list(
-      color = "#f59e0b",
+      color = "#d97706",
       token = "--blockr-color-border-warning",
       label = "Set this block's inputs"
     ),

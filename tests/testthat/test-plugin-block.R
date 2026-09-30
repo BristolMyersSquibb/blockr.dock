@@ -839,7 +839,7 @@ test_that("card status and title land in the browser (e2e, #403)", {
 
   expect_match(
     app$get_js(attr_js(el("b", "status_indicator"), "style")),
-    "#f59e0b",
+    "#d97706",
     fixed = TRUE
   )
   expect_identical(
@@ -1042,14 +1042,14 @@ test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {
 test_that("block_status_style is the shared status-dot spec (#290)", {
 
   waiting <- block_status_style("waiting")
-  expect_identical(waiting$color, "#f59e0b")
+  expect_identical(waiting$color, "#d97706")
   expect_identical(waiting$size, 8L)
   expect_identical(waiting$ring, 2L)
   expect_identical(waiting$ring_color, "#ffffff")
   expect_identical(waiting$label, "Waiting for a data input")
 
   # Unset shares the amber of the empty field's cue (design system).
-  expect_identical(block_status_style("unset")$color, "#f59e0b")
+  expect_identical(block_status_style("unset")$color, "#d97706")
   expect_identical(block_status_style("failed")$color, "#dc2626")
 
   # The spec names the blockr.ui tokens and the shape too, so the DAG can draw
@@ -1175,7 +1175,7 @@ test_that("a parked block draws the badge of its last check (#485)", {
 test_that("block status indicator + note reflect eval status (#290)", {
 
   waiting_dot <- block_status_dot_attrs("waiting")
-  expect_match(waiting_dot$style, "#f59e0b", fixed = TRUE)
+  expect_match(waiting_dot$style, "#d97706", fixed = TRUE)
   expect_identical(waiting_dot$title, "Waiting for a data input")
   expect_identical(waiting_dot[["aria-label"]], "Waiting for a data input")
   # The ring around the dot is the surface colour, with the shared spec's
@@ -1188,7 +1188,7 @@ test_that("block status indicator + note reflect eval status (#290)", {
   )
   expect_match(
     waiting_dot$style,
-    "inset 0 0 0 1.5px var(--blockr-color-border-warning, #f59e0b)",
+    "inset 0 0 0 1.5px var(--blockr-color-border-warning, #d97706)",
     fixed = TRUE
   )
 
@@ -1200,7 +1200,7 @@ test_that("block status indicator + note reflect eval status (#290)", {
     fixed = TRUE
   )
 
-  expect_match(block_status_dot_attrs("unset")$style, "#f59e0b", fixed = TRUE)
+  expect_match(block_status_dot_attrs("unset")$style, "#d97706", fixed = TRUE)
   expect_match(block_status_dot_attrs("failed")$style, "#dc2626", fixed = TRUE)
 
   expect_match(
@@ -1257,7 +1257,7 @@ test_that("edit block server surfaces eval status reactively (#290)", {
       session$flushReact()
 
       expect_identical(blk_status(), "waiting")
-      expect_match(output$status_indicator$style, "#f59e0b", fixed = TRUE)
+      expect_match(output$status_indicator$style, "#d97706", fixed = TRUE)
       expect_identical(output$status_note, list(`data-status` = "waiting"))
 
       status("failed")
