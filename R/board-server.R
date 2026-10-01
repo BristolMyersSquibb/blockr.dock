@@ -302,7 +302,7 @@ report_visible_observer <- function(visibility, hold_eager, client_active,
   # session down.
   on_screen <- reactive({
     active <- req(client_active())
-    dock <- req(docks[[active]])()
+    dock <- req(docks[[active]])
     layout <- req(dock$layout())
 
     sort(
@@ -534,7 +534,7 @@ is_same_width <- function(previous, current) {
 live_view_data <- function(client_views, docks, board, client_active) {
   reactive({
 
-    labels <- reactives::slot_values(client_views)
+    labels <- reactives::as_values(client_views)
     ids <- names(labels)
 
     grids <- lapply(ids, live_view_grid, docks = docks, board = board)
@@ -565,8 +565,7 @@ live_view_data <- function(client_views, docks, board, client_active) {
 # view is not on the board.
 live_view_grid <- function(v_id, docks, board) {
 
-  slot <- docks[[v_id]]
-  dk <- if (not_null(slot)) slot()
+  dk <- docks[[v_id]]
 
   # A narrow view renders flat, so its echo describes the phone, not the board:
   # taking it here would put the collapsed grid in front of serialization and
@@ -612,7 +611,7 @@ hide_view_ui <- function(view_id, docks) {
     return()
   }
 
-  dock <- docks[[view_id]]()
+  dock <- docks[[view_id]]
   bns <- dock_board_ns(dock)
 
   hide_block_ui(as_obj_id(block_panel_ids(dock$proxy)), dock$proxy$session,
@@ -628,7 +627,7 @@ show_view_ui <- function(view_id, docks) {
     return()
   }
 
-  dock <- docks[[view_id]]()
+  dock <- docks[[view_id]]
   bns <- dock_board_ns(dock)
 
   show_block_ui(as_obj_id(block_panel_ids(dock$proxy)), dock$proxy$session,
@@ -668,14 +667,12 @@ create_view <- function(v_id, layout, board, update, session, docks, visibility,
     session = session
   )
 
-  docks[[v_id]] <- reactiveVal(
-    manage_dock(
-      v_id, board, update, visibility, plugins,
-      layout = layout,
-      blocks = blocks,
-      extensions = extensions,
-      narrow = narrow
-    )
+  docks[[v_id]] <- manage_dock(
+    v_id, board, update, visibility, plugins,
+    layout = layout,
+    blocks = blocks,
+    extensions = extensions,
+    narrow = narrow
   )
 
   invisible()
@@ -697,7 +694,7 @@ remove_view <- function(v_id, session, docks) {
     immediate = TRUE,
     session = session
   )
-  docks[[v_id]] <- NULL
+  docks[v_id] <- NULL
 
   invisible()
 }
@@ -737,7 +734,7 @@ reconcile_views <- function(board, update, docks, active_dock,
   # blank-labelled duplicate (#189). Label from the container `view_names()`,
   # which resolves whether the name sits on the layout or is derived from id.
   for (v in setdiff(want, shown)) {
-    client_views[[v]] <- reactiveVal(labels[[v]])
+    client_views[[v]] <- labels[[v]]
     session$sendInputMessage(
       "view_nav",
       list(add = list(id = v, name = labels[[v]]))
@@ -746,13 +743,13 @@ reconcile_views <- function(board, update, docks, active_dock,
 
   for (v in setdiff(shown, want)) {
     session$sendInputMessage("view_nav", list(remove = v))
-    client_views[[v]] <- NULL
+    client_views[v] <- NULL
   }
 
   for (v in intersect(want, shown)) {
 
-    if (!identical(isolate(client_views[[v]]()), labels[[v]])) {
-      client_views[[v]](labels[[v]])
+    if (!identical(isolate(client_views[[v]]), labels[[v]])) {
+      client_views[[v]] <- labels[[v]]
       session$sendInputMessage(
         "view_nav",
         list(rename = list(id = v, to = labels[[v]]))
@@ -1120,7 +1117,7 @@ add_view_observer <- function(client_views, session, board, update) {
   observeEvent(input$view_nav_add, {
     req(!is_dock_locked())
 
-    existing <- unlst(reactives::slot_values(client_views))
+    existing <- unlst(reactives::as_values(client_views))
     n <- length(existing) + 1L
     while (paste("Page", n) %in% existing) n <- n + 1L
     default_name <- paste("Page", n)
@@ -1173,7 +1170,7 @@ add_view_observer <- function(client_views, session, board, update) {
     req(input$view_new_name)
     msg <- validate_view_name(
       trimws(input$view_new_name),
-      unlst(reactives::slot_values(client_views))
+      unlst(reactives::as_values(client_views))
     )
     if (!is.null(msg)) tags$div(class = "text-danger", msg)
   })
@@ -1183,7 +1180,7 @@ add_view_observer <- function(client_views, session, board, update) {
   # and `apply_views_add()` instantiates the dock — the same path a
   # delta-driven add takes, so id assignment happens in exactly one place.
   observeEvent(input$confirm_view_add, {
-    existing <- unlst(reactives::slot_values(client_views))
+    existing <- unlst(reactives::as_values(client_views))
     new_name <- trimws(input$view_new_name)
 
     if (!is.null(validate_view_name(new_name, existing))) {
@@ -1252,7 +1249,7 @@ remove_view_observer <- function(client_views, session, update) {
       return()
     }
 
-    rm_name <- client_views[[rm_id]]()
+    rm_name <- client_views[[rm_id]]
 
     showModal(
       modalDialog(

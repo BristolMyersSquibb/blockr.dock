@@ -1762,7 +1762,7 @@ switch_active_view <- function(active, docks, active_dock, client_active,
     )
 
     show_view_ui(active, docks)
-    update_active_dock(active_dock, docks[[active]]())
+    update_active_dock(active_dock, docks[[active]])
   }
 
   client_active(active)

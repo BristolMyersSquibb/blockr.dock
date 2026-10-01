@@ -497,8 +497,8 @@ test_that("live_view_data uses a view's stored grid until it reports (#304)", {
     ids <- names(client_views)
     layouts <- list(A = reactiveVal(NULL), B = reactiveVal(NULL))
     docks <- reactives::reactive_vals()
-    docks[[ids[[1L]]]] <- reactiveVal(list(layout = layouts$A))
-    docks[[ids[[2L]]]] <- reactiveVal(list(layout = layouts$B))
+    docks[[ids[[1L]]]] <- list(layout = layouts$A)
+    docks[[ids[[2L]]]] <- list(layout = layouts$B)
     client_active <- reactiveVal(ids[[1L]])
     list(
       vd = live_view_data(client_views, docks, board, client_active),
@@ -583,10 +583,7 @@ test_that("live_view_data re-evaluates once docks are populated (#243)", {
   layout <- with_mock_context(
     ms, reactiveVal(list(grid = grid_to_tree(g), activeGroup = "1"))
   )
-  with_mock_context(
-    ms,
-    res$docks[[res$view]] <- reactiveVal(list(layout = layout))
-  )
+  with_mock_context(ms, res$docks[[res$view]] <- list(layout = layout))
 
   vd1 <- isolate(res$vd())
   expect_identical(
@@ -673,7 +670,7 @@ test_that("reconcile builds only the active view's dock (#304)", {
                           visibility, ..., active = FALSE) {
     created <<- c(created, v_id)
     flags[[v_id]] <<- active
-    docks[[v_id]] <- reactiveVal(list(layout = function() NULL))
+    docks[[v_id]] <- list(layout = function() NULL)
   }
 
   docks <- with_mock_context(ms, reactives::reactive_vals())
@@ -836,12 +833,8 @@ test_that("report_visible_observer holds the client's on-screen blocks eager", {
     layout_b <- reactiveVal(NULL)
 
     docks <- reactives::reactive_vals()
-    docks[["A"]] <- reactiveVal(
-      list(layout = layout_a, active_panel = reactiveVal(NULL))
-    )
-    docks[["B"]] <- reactiveVal(
-      list(layout = layout_b, active_panel = reactiveVal(NULL))
-    )
+    docks[["A"]] <- list(layout = layout_a, active_panel = reactiveVal(NULL))
+    docks[["B"]] <- list(layout = layout_b, active_panel = reactiveVal(NULL))
 
     # Blocks a, b and d all have cards; a/b are A's fronts, d lives in B.
     # Nothing is reported on screen yet, so nothing is held eager.
@@ -905,9 +898,7 @@ test_that("report_visible_observer coalesces set-equal reports", {
     layout <- reactiveVal(NULL)
 
     docks <- reactives::reactive_vals()
-    docks[["A"]] <- reactiveVal(
-      list(layout = layout, active_panel = reactiveVal(NULL))
-    )
+    docks[["A"]] <- list(layout = layout, active_panel = reactiveVal(NULL))
 
     # a and b are built, both A's fronts.
     vis <- fake_visibility(c("a", "b"))
@@ -952,9 +943,7 @@ test_that("report_visible_observer survives an echo naming a dropped block", {
     layout <- reactiveVal(NULL)
 
     docks <- reactives::reactive_vals()
-    docks[["A"]] <- reactiveVal(
-      list(layout = layout, active_panel = reactiveVal(NULL))
-    )
+    docks[["A"]] <- list(layout = layout, active_panel = reactiveVal(NULL))
 
     vis <- fake_visibility(c("a", "b", "gone"))
     mark_cards_built(vis, c("a", "b", "gone"))
@@ -1028,9 +1017,7 @@ test_that("report_visible_observer follows the live active panel (#361)", {
     active_panel <- reactiveVal(NULL)
 
     docks <- reactives::reactive_vals()
-    docks[["A"]] <- reactiveVal(
-      list(layout = layout, active_panel = active_panel)
-    )
+    docks[["A"]] <- list(layout = layout, active_panel = active_panel)
 
     vis <- fake_visibility(c("a", "b"))
     mark_cards_built(vis, c("a", "b"))
@@ -1342,7 +1329,7 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
       layout = function() NULL,
       live_panels = reactiveVal(as.character(layout_panel_ids(layout)))
     )
-    docks[[v_id]] <- reactiveVal(dock)
+    docks[[v_id]] <- dock
   }
 
   docks <- with_mock_context(ms, reactives::reactive_vals())
@@ -1391,7 +1378,7 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
   expect_identical(rt[[1L]]$add$id, "Third")
   expect_identical(rt[[1L]]$add$name, "Third")
   expect_identical(names(client_views), c("First", "Second", "Third"))
-  expect_identical(isolate(client_views[["Third"]]()), "Third")
+  expect_identical(isolate(client_views[["Third"]]), "Third")
 })
 
 test_that("reconcile_views forwards the live board to created views (#194)", {
@@ -1409,7 +1396,7 @@ test_that("reconcile_views forwards the live board to created views (#194)", {
   forwarded <- NULL
   capture_create <- function(v_id, layout, board, update, session, docks, ...) {
     forwarded <<- board
-    docks[[v_id]] <- reactiveVal(list(layout = function() NULL))
+    docks[[v_id]] <- list(layout = function() NULL)
   }
 
   docks <- with_mock_context(ms, reactives::reactive_vals())
@@ -1478,11 +1465,9 @@ test_that("reconcile_views never pushes a layout back to a live dock (#259)", {
   )
 
   docks <- with_mock_context(ms, reactives::reactive_vals())
-  docks[["V"]] <- reactiveVal(
-    list(
-      layout = function() NULL,
-      live_panels = with_mock_context(ms, reactiveVal(behind_ids))
-    )
+  docks[["V"]] <- list(
+    layout = function() NULL,
+    live_panels = with_mock_context(ms, reactiveVal(behind_ids))
   )
 
   client_views <- with_mock_context(ms, new_client_views(board_views(brd)))
@@ -1506,6 +1491,29 @@ test_that("reconcile_views never pushes a layout back to a live dock (#259)", {
   )
 
   expect_identical(restored, 0L)
+})
+
+test_that("remove_view drops the view's slot from the registry", {
+
+  docks <- reactives::reactive_vals(
+    A = list(layout = function() NULL),
+    B = list(layout = function() NULL)
+  )
+
+  destroyed <- character()
+  session <- list(
+    ns = identity,
+    destroy = function(id) destroyed <<- c(destroyed, id),
+    sendRemoveUI = function(...) invisible()
+  )
+
+  with_mocked_bindings(
+    remove_view("A", session, docks),
+    hide_view_ui = function(...) NULL
+  )
+
+  expect_identical(names(docks), "B")
+  expect_identical(destroyed, "A")
 })
 
 test_that("apply_board_update.dock_board switches active view", {

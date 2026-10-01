@@ -433,8 +433,9 @@ test_that("reconcile_views syncs the nav and live state on rename", {
   docks <- reactives::reactive_vals()
   for (id in names(board_views(brd))) {
     ids <- as.character(view_members(board_views(brd)[[id]]))
-    docks[[id]] <- reactiveVal(
-      list(layout = function() NULL, live_panels = reactiveVal(ids))
+    docks[[id]] <- list(
+      layout = function() NULL,
+      live_panels = reactiveVal(ids)
     )
   }
   active_dock <- reactiveValues()
@@ -456,7 +457,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
       identical(m$rename$id, "v1") && identical(m$rename$to, "New")
     }))
   )
-  expect_identical(isolate(client_views[["v1"]]()), "New")
+  expect_identical(isolate(client_views[["v1"]]), "New")
 })
 
 test_that("blocks$rm auto-augments views$mod for every affected view", {
@@ -1076,8 +1077,9 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     docks <- reactives::reactive_vals()
     for (id in names(state)) {
       ids <- as.character(view_members(state[[id]]))
-      docks[[id]] <- reactiveVal(
-        list(layout = function() NULL, live_panels = reactiveVal(ids))
+      docks[[id]] <- list(
+        layout = function() NULL,
+        live_panels = reactiveVal(ids)
       )
     }
     active_dock <- reactiveValues()
@@ -1095,7 +1097,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
                         client_active, client_views, session)
       ),
       remove_view = function(view_id, session, docks) {
-        docks[[view_id]] <- NULL
+        docks[view_id] <- NULL
         invisible()
       },
       hide_view_ui = function(...) NULL,
@@ -1250,8 +1252,9 @@ test_that("reconcile_views pushes the settled order to the nav", {
   docks <- reactives::reactive_vals()
   for (id in names(board_views(brd))) {
     ids <- as.character(view_members(board_views(brd)[[id]]))
-    docks[[id]] <- reactiveVal(
-      list(layout = function() NULL, live_panels = reactiveVal(ids))
+    docks[[id]] <- list(
+      layout = function() NULL,
+      live_panels = reactiveVal(ids)
     )
   }
   active_dock <- reactiveValues()
