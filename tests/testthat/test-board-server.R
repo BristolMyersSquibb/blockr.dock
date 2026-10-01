@@ -783,11 +783,10 @@ test_that("visible axis follows the client's painted front tab (#328)", {
   expect_identical(isolate(vis$visible[["a"]]()), FALSE)
   expect_identical(held_eager(upd), "b")
 
-  # That echo also moved the front tab off the stored grid, so the geometry
-  # mirror committed in the same flush. Both rode one payload: core drains the
-  # channel once, and a plain second write would have dropped whichever came
-  # first -- leaving the dock holding nothing eager while it shows b.
-  expect_named(isolate(upd()), c("views", "eager"), ignore.order = TRUE)
+  # That echo also moved the front tab off the stored grid. A tab-only change
+  # is parked on the dock rather than committed (`observe_grid_echo()`), so
+  # only the eager set rides the payload.
+  expect_named(isolate(upd()), "eager")
 
   # Switching the front tab to a re-marks the visible axis -- the mark is live,
   # not a one-shot that leaves the newly fronted tab blank. b parks: built, off
@@ -2234,8 +2233,10 @@ test_that("report_visible_observer holds through a dock's pre-restore echo", {
     vis <- fake_visibility(c("a", "d"))
     mark_cards_built(vis, c("a", "d"))
     client_active <- reactiveVal("A")
+    upd <- reactiveVal()
 
-    report_visible_observer(vis, client_active, docks)
+    report_visible_observer(vis, eager_holder(upd, "dock", character()),
+                            client_active, docks)
 
     list(a = layout_a, b = layout_b, members_b = members_b,
          active = client_active, vis = vis)
@@ -2243,27 +2244,24 @@ test_that("report_visible_observer holds through a dock's pre-restore echo", {
 
   with_mock_context(ms, env$a(dock_grid(panels("block_panel-a"))))
   ms$flushReact()
-  expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
 
   # Switch to B, whose fresh dock echoes an empty state before its restore
-  # lands. That is "not reported yet": a stays painted, d is not yet required,
+  # lands. That is "not reported yet": a stays painted, d is not yet shown,
   # nothing is parked.
   with_mock_context(ms, {
     env$active("B")
     env$b(dock_grid())
   })
   ms$flushReact()
-  expect_identical(isolate(env$vis$required[["a"]]()), TRUE)
   expect_identical(isolate(env$vis$visible[["a"]]()), TRUE)
-  expect_identical(isolate(env$vis$required[["d"]]()), FALSE)
+  expect_identical(isolate(env$vis$visible[["d"]]()), FALSE)
 
   # The restore echo lands: d fronts and a parks, one transition each.
   with_mock_context(ms, env$b(dock_grid(panels("block_panel-d"))))
   ms$flushReact()
-  expect_identical(isolate(env$vis$required[["d"]]()), TRUE)
   expect_identical(isolate(env$vis$visible[["d"]]()), TRUE)
-  expect_identical(isolate(env$vis$required[["a"]]()), FALSE)
+  expect_identical(isolate(env$vis$visible[["a"]]()), FALSE)
 
   # A view the user emptied echoes nothing and holds no members: that empty
   # set is real, and its card parks.
@@ -2272,7 +2270,6 @@ test_that("report_visible_observer holds through a dock's pre-restore echo", {
     env$b(dock_grid())
   })
   ms$flushReact()
-  expect_identical(isolate(env$vis$required[["d"]]()), FALSE)
   expect_identical(isolate(env$vis$visible[["d"]]()), FALSE)
 })
 
