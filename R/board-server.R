@@ -764,7 +764,7 @@ reconcile_views <- function(board, update, docks, active_dock,
   # same names), so re-sequence the nav explicitly when the board order and the
   # client's differ. `as.list()` forces a JSON array even for a single id.
   if (!identical(names(client_views), want)) {
-    stats::reorder(client_views, want)
+    reactives::reorder(client_views, want)
     session$sendInputMessage("view_nav", list(order = as.list(want)))
   }
 

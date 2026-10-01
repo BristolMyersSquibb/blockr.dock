@@ -33,7 +33,6 @@ Imports:
     shinyWidgets,
     jsonlite,
     utils,
-    stats,
     reactives
 Suggests:
     testthat (>= 3.0.0),
