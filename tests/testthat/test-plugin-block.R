@@ -955,16 +955,16 @@ test_that("a parked block draws the badge of its last check (#485)", {
     {
       session$flushReact()
 
-      expect_identical(rv$eval[["b"]](), "unevaluated")
-      expect_null(block_status_badge(rv$eval[["b"]]()))
+      expect_identical(reval_if(rv$eval[["b"]]), "unevaluated")
+      expect_null(block_status_badge(reval_if(rv$eval[["b"]])))
 
       board_update(list(evaluate = "b"))
       session$flushReact()
 
       expect_length(rv$evaluating(), 0L)
-      expect_identical(rv$eval[["b"]](), "failed")
+      expect_identical(reval_if(rv$eval[["b"]]), "failed")
       expect_identical(
-        block_status_badge(rv$eval[["b"]]()),
+        block_status_badge(reval_if(rv$eval[["b"]])),
         block_status_style("failed")
       )
     },
