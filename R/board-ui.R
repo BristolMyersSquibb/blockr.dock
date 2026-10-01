@@ -27,7 +27,7 @@ board_ui.dock_board <- function(
     show_block_dep(),
     attr_output_dep(),
     add_block_menu_dep(),
-    block_sections_dep(),
+    block_rename_dep(),
     blockr_dock_dep(),
     tooltip_dep(),
     compact_dep(),

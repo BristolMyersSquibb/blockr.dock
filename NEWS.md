@@ -45,8 +45,9 @@
   tokens, so a board follows blockr.ui's dark scheme: the dockview frame and
   tabs, block headers, sidebars, the block browser and the block menu. Font
   sizes, weights and families read the type tokens.
-  `dock_board_options()` now includes the light/dark switch, light by
-  default.
+  The options of `dock_board_options()` now include the light/dark switch,
+  light by default, and core's thematic switch, off by default, which lets
+  plots take the board's colours.
 
 * The block header drops its subtitle: a 42px mark in the block's category
   colour carries the status dot, and the block type, with the package as a
@@ -56,8 +57,34 @@
 
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
-  native one. The "…" menu and the board options gear have one. Requires
-  blockr.ui >= 0.0.1.9041.
+  native one. The "…" menu and the board options gear have one.
+
+* A parked block's status badge is drawn from the status blockr.core now
+  reports for it in place of `dormant`: the outcome of the block's last
+  check, `stale` once that is out of date, or `unevaluated` without one.
+  The `block_status_badge()` helper no longer returns `NA`, which it gave
+  for `dormant` to tell a persistent renderer such as the blockr.dag node
+  to keep the badge it drew last. A parked block that failed shows the
+  failed badge without being visited, and `unevaluated`, like `ready`,
+  carries none. Requires blockr.core with the `unevaluated` status (#485).
+
+* The dock now states its evaluation demand as the blocks it holds eager,
+  in place of the per-block `required` channel blockr.core has retired.
+  Its board callback makes the board lazy by returning `eager()` with the
+  active view's front panels, which core seeds as the dock's eager set
+  before the first flush. From there, what the dock has on screen travels
+  as an `eager` update under the same owner label -- one payload per view
+  switch where the retired channel took a write per slot, and a card that
+  leaves the screen is released by its absence from the set rather than
+  by a second write. Requires blockr.core with `eager()` (#417).
+
+* A card the dock has built but is not showing no longer carries
+  construction demand of its own. The retired `required` channel had a
+  third state for it, which paced those blocks into core's priority
+  construction lane; nothing replaces it, so the blocks behind an
+  unvisited tab are built by core's background pass in its own order and
+  fronting one holds it eager. First paint therefore waits on fewer blocks
+  than before (#417).
 
 * A new `insert_block_action` puts a block into an existing link
   ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
@@ -237,7 +264,7 @@
   rewritten by the next drag. The native input gives the full gamut, plus
   the platform's own dialog, eyedropper and keyboard handling (#396).
 
-* A block whose inputs changed while it was dormant now carries a muted
+* A block whose inputs changed while it was parked now carries a muted
   grey status badge instead of none. Core's sixth eval status, `stale`,
   fell through `block_status_badge()` to "no badge", so a block holding
   an out-of-date result looked identical to a healthy one on both the

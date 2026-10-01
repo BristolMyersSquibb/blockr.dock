@@ -8,10 +8,9 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
 
   div(
     class = "card-body",
-    # Header parts each carry an owned class and nothing here is styled
-    # inline: an inline declaration outranks any sheet a theme can attach, so
-    # a single `style=` attribute on a part is enough to make that part
-    # unthemable.
+    # Header parts take their look from the stylesheet, never from a `style=`
+    # attribute, which would outrank any sheet a theme attaches. The status
+    # dot is the exception: its binding writes the spec it shares with the DAG.
     div(
       class = "blockr-block-header",
       div(
@@ -54,12 +53,9 @@ reported_sections <- function(input) {
   }
 }
 
-# The block's mark: its category colour as a tinted square with the glyph in
-# that colour. The colour is handed to the stylesheet as a custom property
-# rather than painted inline, so the tint, the size and the radius stay a
-# theme's to change. The header prints no subtitle; the block type, with the
-# package as a badge, is the mark's tooltip (Blockr.tooltip, handed over by
-# block-tooltips.js from these attributes).
+# The category colour goes to the stylesheet as a custom property rather than
+# being painted inline, so the tint, size and radius stay a theme's to change.
+# Type and package become the mark's tooltip through block-tooltips.js.
 block_mark <- function(blk, info) {
 
   type <- gsub("_", " ", class(blk)[1L])
@@ -78,6 +74,7 @@ block_mark <- function(blk, info) {
 block_card_title <- function(block, id, info) {
   ns <- NS(id)
   input_id <- ns("block_name_in")
+  editable <- !is_dock_locked()
 
   div(
     class = "blockr-block-title-wrap",
@@ -86,28 +83,14 @@ block_card_title <- function(block, id, info) {
       # Inline editable title container
       div(
         class = "blockr-inline-edit",
-        # Display mode. A double-click (or "Rename" in the block's menu)
-        # starts editing, so a single click is free to select the panel. The
-        # affordance is a hover wash in blockr-dock.css; the handler only
-        # swaps the two modes and focuses the field. The name is hidden with
-        # `visibility`, not `display`: it keeps its box, so the row keeps its
-        # height and the field, positioned against it, lands on the name.
+        # A double-click (or "Rename" in the block's menu) starts editing,
+        # which block-rename.js does, so a single click stays free to select
+        # the panel. A locked board refuses renames, so its title is not
+        # marked editable.
         div(
           id = ns("title_display"),
           class = "blockr-title-display",
-          # Text cursor and the "Double-click to edit" tooltip (blockr.ui).
-          `data-blockr-editable` = "",
-          ondblclick = sprintf(
-            paste0(
-              "this.style.visibility='hidden';",
-              "var editWrap = document.getElementById('%s');",
-              "editWrap.style.display='block';",
-              "var input = editWrap.querySelector('input');",
-              "input.focus();",
-              "input.select();"
-            ),
-            ns("title_edit")
-          ),
+          `data-blockr-editable` = if (editable) "",
           tags$span(class = "blockr-title", block_name(block))
         ),
         # Edit mode - hidden by default
@@ -115,61 +98,15 @@ block_card_title <- function(block, id, info) {
           id = ns("title_edit"),
           class = "blockr-title-edit",
           style = "display: none;",
+          # The displayed title mirrors this input (block-rename.js), so a
+          # rename decided by the board, which `updateTextInput()` delivers,
+          # lands the way a keystroke does, with no render round-trip.
           textInput(
             input_id,
             label = NULL,
             value = block_name(block)
           ),
-          div(class = "blockr-title-error", "A block needs a name"),
-          # The displayed title mirrors this input, so it is kept in sync here
-          # rather than by a server-rendered output: `updateTextInput()` fires
-          # 'change', so a rename decided by the board lands the same way a
-          # keystroke does, with no render round-trip. Enter and a click
-          # elsewhere commit, Escape restores the name editing began with. An
-          # empty name is refused in place on Enter and dropped on blur; the
-          # server ignores it either way.
-          tags$script(HTML(sprintf(
-            "$(document).ready(function() {
-              var input = $('#%s');
-              var display = $('#%s');
-              var editWrap = $('#%s');
-              var before = input.val();
-              input.on('focus', function() {
-                before = input.val();
-                editWrap.removeClass('is-invalid');
-              });
-              input.on('blur', function() {
-                if (!$.trim(input.val())) {
-                  input.val(before).trigger('change');
-                }
-                editWrap.removeClass('is-invalid');
-                editWrap.hide();
-                // Clear the inline visibility the handler wrote, rather than
-                // setting one: the class owns how the row looks.
-                display.css('visibility', '');
-              });
-              input.on('keydown', function(e) {
-                if (e.key === 'Enter') {
-                  if (!$.trim(input.val())) {
-                    editWrap.addClass('is-invalid');
-                    return;
-                  }
-                  $(this).blur();
-                }
-                if (e.key === 'Escape') {
-                  $(this).val(before).trigger('change');
-                  $(this).blur();
-                }
-              });
-              input.on('input change', function() {
-                if ($.trim(input.val())) {
-                  editWrap.removeClass('is-invalid');
-                }
-                display.find('.blockr-title').text($(this).val());
-              });
-            });",
-            input_id, ns("title_display"), ns("title_edit")
-          )))
+          div(class = "blockr-title-error", "A block needs a name")
         )
       )
     )
@@ -350,10 +287,6 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
     accordion(
       id = ns("blk_accordion"),
       class = "blockr-block-accordion",
-      # The open sections, kept current by block-sections.js. The stylesheet
-      # reads it to draw the rule above the preview only when controls are
-      # open above it, which the preview's own panel cannot see.
-      `data-open` = paste(visible, collapse = " "),
       multiple = TRUE,
       # An empty set has to travel as FALSE: bslib reads `character()` the same
       # as an absent `open` and falls back to opening the first panel.
@@ -408,8 +341,10 @@ edit_block_server <- function(callbacks = list()) {
         observeEvent(
           input$block_name_in,
           {
+            # The field reports every keystroke, and the card refuses a name of
+            # spaces the same as an empty one.
             req(
-              input$block_name_in,
+              trimws(input$block_name_in),
               block_id %in% board_block_ids(board$board)
             )
 
@@ -673,29 +608,57 @@ block_status_style <- function(status) {
     return(NULL)
   }
 
+  # Each colour is named by the blockr.ui token it reads, next to that token's
+  # light value, which a renderer that cannot read CSS (the DAG's canvas) or a
+  # page without the token sheet falls back to.
   spec <- switch(
     status,
     stale = list(
       color = "#6b7280",
+      token = "--blockr-color-text-muted",
       label = "Inputs changed since this block last ran"
     ),
-    waiting = list(color = "#f59e0b", label = "Waiting for a data input"),
-    unset = list(color = "#f59e0b", label = "Set this block's inputs"),
-    failed = list(color = "#dc2626", label = "Evaluation failed")
+    waiting = list(
+      color = "#d97706",
+      token = "--blockr-color-border-warning",
+      label = "Waiting for a data input"
+    ),
+    unset = list(
+      color = "#d97706",
+      token = "--blockr-color-border-warning",
+      label = "Set this block's inputs"
+    ),
+    failed = list(
+      color = "#dc2626",
+      token = "--blockr-color-border-danger",
+      label = "Evaluation failed"
+    )
   )
 
   if (is.null(spec)) {
     return(NULL)
   }
 
-  c(spec, list(size = 8L, ring = 2L, ring_color = "#ffffff"))
+  # A waiting block is drawn hollow: the solid amber stays for the block that
+  # needs input, not for every block downstream of it.
+  c(
+    spec,
+    list(
+      hollow = identical(status, "waiting"),
+      outline = 1.5,
+      size = 8L,
+      ring = 2L,
+      ring_color = "#ffffff",
+      ring_token = "--blockr-color-bg-surface"
+    )
+  )
 }
 
 #' @param status A block eval status: `stale`, `waiting`, `unset` and `failed`
-#'   carry a badge; `ready` carries none; `dormant` is indeterminate; any other
-#'   value yields no badge. The `size` field is the coloured dot's pixel
-#'   diameter and `ring` its white outline width, both shared so the dock card
-#'   icon and the DAG node badge render identically.
+#'   carry a badge; `ready` and `unevaluated` carry none; any other value
+#'   yields no badge. The `size` field is the coloured dot's pixel
+#'   diameter and `ring` the width of the ring around it, both shared by the
+#'   dock card icon and the DAG node badge.
 #' @param error_count Number of error conditions the block has raised. A
 #'   positive count promotes the badge to `failed`, catching render-phase
 #'   errors that leave the eval status `ready`. A `stale` block is exempt:
@@ -704,7 +667,7 @@ block_status_style <- function(status) {
 #' @export
 block_status_badge <- function(status, error_count = 0L) {
 
-  # A stale block's conditions predate the upstream change that made it stale,
+  # A stale block's conditions predate the change that made it stale,
   # and it has not re-run since, so they say nothing about whether it would
   # still fail on its current inputs.
   if (isTRUE(status == "stale")) {
@@ -713,13 +676,6 @@ block_status_badge <- function(status, error_count = 0L) {
 
   if (error_count > 0L) {
     status <- "failed"
-  }
-
-  # A dormant block has no computed status: return `NA` to signal "leave the
-  # badge as-is", so a persistent renderer (the DAG node) keeps its last-known
-  # badge rather than clearing it when the block drops out of the eval set.
-  if (isTRUE(status == "dormant")) {
-    return(NA)
   }
 
   block_status_style(status)
@@ -740,36 +696,20 @@ block_status_dot_attrs <- function(status, error_count = 0L) {
     return(list(style = "", title = "", role = "", `aria-label` = ""))
   }
 
-  # The fill reads a blockr.ui meaning token with the shared literal as its
-  # fallback, so the dot follows the scheme and a theme while the DAG keeps
-  # using the literal. A waiting block draws a ring instead of a dot: the
-  # solid amber stays for the block that needs input, not for every block
-  # downstream of it.
-  key <- if (error_count > 0L) "failed" else status
-  token <- switch(
-    key,
-    stale = "--blockr-color-text-muted",
-    failed = "--blockr-color-border-danger",
-    "--blockr-color-border-warning"
-  )
-  fill <- sprintf("var(%s, %s)", token, spec$color)
-  ring <- sprintf(
-    "0 0 0 %dpx var(--blockr-color-bg-surface, %s)", spec$ring, spec$ring_color
-  )
-
-  if (identical(key, "waiting")) {
-    shadow <- paste0("inset 0 0 0 1.5px ", fill, ", ", ring)
-    fill <- sprintf("var(--blockr-color-bg-surface, %s)", spec$ring_color)
-  } else {
-    shadow <- ring
-  }
+  fill <- sprintf("var(%s, %s)", spec$token, spec$color)
+  surface <- sprintf("var(%s, %s)", spec$ring_token, spec$ring_color)
+  ring <- sprintf("0 0 0 %dpx %s", spec$ring, surface)
 
   list(
     style = htmltools::css(
       width = paste0(spec$size, "px"),
       height = paste0(spec$size, "px"),
-      `background-color` = fill,
-      `box-shadow` = shadow
+      `background-color` = if (spec$hollow) surface else fill,
+      `box-shadow` = if (spec$hollow) {
+        sprintf("inset 0 0 0 %gpx %s, %s", spec$outline, fill, ring)
+      } else {
+        ring
+      }
     ),
     title = spec$label,
     role = "img",
@@ -825,12 +765,12 @@ attr_output_dep <- function() {
   )
 }
 
-block_sections_dep <- function() {
+block_rename_dep <- function() {
   htmltools::htmlDependency(
-    "blockr-block-sections",
+    "blockr-block-rename",
     pkg_version(),
     src = pkg_file("assets", "js"),
-    script = "block-sections.js"
+    script = "block-rename.js"
   )
 }
 

@@ -16,7 +16,7 @@ new_compact_option(
 
 \item{category}{Options sidebar category.}
 
-\item{...}{Passed to \code{\link[blockr.core:new_board_options]{blockr.core::new_board_option()}}.}
+\item{...}{Passed to \code{\link[blockr.core:new_board_option]{blockr.core::new_board_option()}}.}
 }
 \value{
 A \code{board_option} object.
