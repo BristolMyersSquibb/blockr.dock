@@ -247,19 +247,28 @@ settings_body <- function(
     opt_ui_or_null("generate_code", plugins, x)
   )
 
-  # Locked board: the options accordion writes board state via
-  # set_board_option_value(), which core's gate rejects while locked. Drop it
-  # so the settings sidebar offers only the read-only generated-code export.
-  if (dock_no_edit()) {
-    return(generate_code)
-  }
-
   # Caller-supplied `options` (threaded from `serve()` through
   # `blockr_app_server.dock_board()` / `settings_observer()`) wins; fall
   # back to the recomputed default only when the caller has nothing to say.
   options <- coal(options, blockr.core::blockr_app_options(x))
 
   stopifnot(is_board_options(options))
+
+  # Locked board: the options accordion writes board state via
+  # set_board_option_value(), which core's gate rejects while locked. Drop it
+  # so the settings sidebar offers only the read-only generated-code export.
+  # The options' JS dependencies stay: their servers still run, and the board
+  # name option's server sets the browser tab title through a message handler
+  # that ships with its UI. Without the handler Shiny drops the message and
+  # the tab shows the host name.
+  if (dock_no_edit()) {
+    return(
+      tagList(
+        generate_code,
+        htmltools::findDependencies(lapply(options, board_option_ui, id))
+      )
+    )
+  }
 
   opts <- split(options, chr_ply(options, attr, "category"))
 
