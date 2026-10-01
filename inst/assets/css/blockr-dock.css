@@ -1103,9 +1103,10 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
    Dockview paints its frame and tabs from its own theme variables, so
    without this block the frame stays light under the dark scheme and
    ignores a theme. The doubled `.dv-shell` is deliberate: dockview injects
-   its stylesheet after the page's, so it wins at equal specificity. (A
-   `className` on the DockviewTheme, cynkra/dockViewR#102, would make this
-   unnecessary.) */
+   its stylesheet after the page's, so it wins at equal specificity. A
+   theme class of our own would lose the same way, since dockview's theme
+   class has to stay on the shell for the variables this block leaves
+   alone. */
 .dv-shell.dv-shell {
   --dv-group-view-background-color: var(--blockr-color-bg-page);
   --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface);
