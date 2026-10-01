@@ -659,6 +659,15 @@
    an x and the name is a field to click into. */
 .blockr-view-nav.dropdown-menu {
   min-width: 220px;
+  max-height: none;
+  overflow: visible;
+}
+
+/* Only the list scrolls, so "Manage views", "Show views as tabs" and the
+   manage foot stay in sight on a board with many views */
+.blockr-view-list {
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .blockr-view-item.dropdown-item {
@@ -673,7 +682,7 @@
   white-space: nowrap;
 }
 
-/* The current page: weight 600 (blockr.ui) and a check at the end, no fill. */
+/* The current view: weight 600 (blockr.ui) and a check at the end, no fill. */
 .blockr-view-item .blockr-menu__check {
   visibility: hidden;
 }
@@ -885,7 +894,7 @@
      The clip stays on either way: every background tab's render overlay is
      parked below the grid by dockView, and un-clipping them would trail a
      blank screenful past the last panel. */
-  height: var(--blockr-stack-height, calc(100vh - 48px));
+  height: var(--blockr-stack-height, calc(100vh - var(--blockr-navbar-height, 48px)));
   overflow: hidden;
 }
 
@@ -1064,66 +1073,86 @@
 }
 
 /* ============================================
-   Navbar busy spinner
+   Navbar mark: the logo and the busy indicator
    ============================================ */
 
-/* A small ring in the navbar that spins while the session does real block
-   evaluation, replacing bslib's page-wide busy pulse. Driven purely off the
-   `.shiny-busy` class Shiny puts on <html> during a flush -- no server
-   observer, no page darkening.
+/* The blockr mark leads the navbar and doubles as the busy indicator. Idle it
+   is the green logo. While the session does real block evaluation its seven
+   squares fill and empty in the order the R is drawn (each square's place is
+   its `--i`), and the moment work ends the animation is removed, so the mark
+   snaps back to the whole logo instead of freezing half drawn.
 
-   Scoped exactly as the old pulse was: a plain panel switch round-trips to the
-   server -- the on-screen visibility report and the layout fold -- without
-   recomputing any visible output, so gating on `.shiny-busy` alone would spin
-   for what is only layout bookkeeping. Require a genuinely recalculating output
-   inside the visible view container: block evaluation marks its output
-   "recalculating" there, bookkeeping does not. Scoping to the container is
-   deliberate -- an off-screen block parked in the (hidden) offcanvas pool stays
-   "recalculating" while it waits for evaluation, and that pool sits outside the
-   container, so a pending hidden block never spins the navbar. Startup and real
-   recompute spin; a bare panel switch does not.
-
-   The slot is always laid out and always painted -- there is no show/hide, so
-   nothing ever blinks in or out and it reflows no neighbour wherever it sits;
-   it leads the navbar's right group, ahead of the view nav. Idle it is a
-   faint, closed ring (a
-   track in one muted colour); a busy flush paints a darker arc onto that ring
-   and spins it. Both the arc (a 0s `border-top-color` transition) and the spin
-   (an `animation-delay`) are held by `var(--blockr-spinner-delay)` -- set on
-   `.blockr-navbar` from the `spinner_delay_ms` option -- while the return to the
-   bare idle ring carries no delay. So the arc appears only once the session has
-   stayed busy for the full delay (a flush that clears sooner is interrupted
-   mid-delay and never shows one) and it clears the instant work finishes. */
-.blockr-navbar-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid color-mix(in srgb, var(--blockr-color-text-muted) 30%, transparent);
-  border-radius: 50%;
-  transition: border-top-color 0s;
-}
-
-html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
-  border-top-color: var(--blockr-color-text-muted);
-  animation: blockr-navbar-spin 0.7s linear infinite;
-  animation-delay: var(--blockr-spinner-delay, 0ms);
-  transition-delay: var(--blockr-spinner-delay, 0ms);
-}
-
-/* Hover tooltip. The ring spins, so its label hangs off the static slot that
-   wraps it -- on the ring itself the spin transform would turn the text too.
-   CSS-only, like the ring: the label switches on the same busy scope that paints
-   the arc, so it needs no server observer. */
-.blockr-navbar-spinner-slot {
+   Scoped as the old ring was: `.shiny-busy` alone also covers a bare panel
+   switch, which round-trips only layout bookkeeping, so the rule also needs a
+   recalculating output inside the visible view container. Off-screen blocks
+   waiting in the offcanvas pool sit outside the container and never trigger
+   it. The animation waits `--blockr-spinner-delay` (the `spinner_delay_ms`
+   option), so a flush that clears sooner shows nothing. */
+.blockr-navbar-brand {
   display: inline-flex;
+  align-items: center;
   position: relative;
 }
 
-.blockr-navbar-spinner-slot::after {
-  content: "Idle";
+.blockr-navbar-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #089E76;
+}
+
+.blockr-navbar-mark-btn {
+  cursor: pointer;
+}
+
+.blockr-navbar-mark-btn:hover,
+.blockr-navbar-mark-btn[aria-expanded="true"] {
+  background: var(--blockr-color-bg-hover);
+}
+
+.blockr-navbar-mark-btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.blockr-navbar-mark-btn:focus-visible {
+  outline: var(--blockr-focus-outline);
+  outline-offset: var(--blockr-focus-offset);
+}
+
+.blockr-navbar-mark .blockr-mark {
+  display: block;
+}
+
+.blockr-navbar-mark .blockr-mark rect {
+  fill: currentColor;
+}
+
+html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-mark .blockr-mark rect {
+  animation: blockr-mark-fill 1.96s linear infinite;
+  animation-delay: calc(var(--blockr-spinner-delay, 0ms) + var(--i) * 140ms);
+}
+
+/* A square is pale for the first half of its cycle and green for the second,
+   so the R comes down and builds up again in stroke order. Pale first, so the
+   first square changes as soon as the delay is over; until its turn each
+   square keeps the logo's green. */
+@keyframes blockr-mark-fill {
+  0%, 47% { fill: color-mix(in srgb, currentColor 16%, var(--blockr-color-bg-surface)); }
+  53%, 100% { fill: currentColor; }
+}
+
+/* Hover label while busy, as the ring had. Idle the mark says nothing: its
+   hover is the menu's. */
+.blockr-navbar-brand::after {
+  content: "Computing";
   position: absolute;
   top: calc(100% + 7px);
-  left: 50%;
-  transform: translateX(-50%);
+  left: 4px;
   padding: 2px 8px;
   border-radius: var(--blockr-radius-sm, 4px);
   background: var(--blockr-grey-900);
@@ -1131,41 +1160,23 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   font-size: var(--blockr-font-size-xs);
   line-height: 1.5;
   white-space: nowrap;
-  box-shadow: var(--blockr-shadow);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease;
   z-index: 1080;
 }
 
-html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner-slot::after {
-  content: "Computing";
-}
-
-.blockr-navbar-spinner-slot:hover::after {
+html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-brand:hover::after {
   opacity: 1;
 }
 
-@keyframes blockr-navbar-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Reduced motion slows the ring, it does not stop it. Stopping it leaves a
-   fully styled ring frozen in the navbar, which reads as a hung session --
-   the exact opposite of what a busy indicator is for -- and it is the only
-   state the indicator can be seen in, since it is hidden when idle. A 16px
-   ring turning in place carries none of the vestibular risk the preference
-   exists to avoid (it is not page-level or parallax motion), so the honest
-   reading of the preference here is "calmer", not "gone".
-
-   This is not a rare corner: Windows maps "Animation effects: off" (a common
-   managed / VDI default) onto `prefers-reduced-motion: reduce`, so on those
-   machines every Edge user saw a spinner that never moved. */
+/* Reduced motion slows the mark, it does not stop it: a still logo during a
+   long computation reads as nothing happening, and Windows' "Animation
+   effects: off" (common on managed machines) maps onto this preference. */
 @media (prefers-reduced-motion: reduce) {
-  html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
-    animation-duration: 1.6s;
+  html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-mark .blockr-mark rect {
+    animation-duration: 3.9s;
+    animation-delay: calc(var(--blockr-spinner-delay, 0ms) + var(--i) * 280ms);
   }
 }
 
@@ -1284,6 +1295,189 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
 .dv-tab .dv-default-tab .dv-default-tab-action:hover {
   background-color: var(--blockr-color-bg-hover);
   color: var(--blockr-color-text-default);
+}
+
+/* ------------------------------------------------------------------
+   The navbar as one row of slots
+   ------------------------------------------------------------------
+   The dock's own pieces and a plugin's (blockr.session's workflow name, save
+   menu and avatar) carry `data-navbar-slot`. The group wrappers step out of
+   layout so every piece is an item of .blockr-navbar and takes its order from
+   its slot: the mark, the workflow and its save menu on the left; the views,
+   actions, status, tools and the account on the right. A piece without a slot
+   on the right (an app's help menu) lands just before the tools. */
+.blockr-navbar {
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.blockr-navbar-left,
+.blockr-navbar-right,
+.blockr-navbar-left > div:not([data-navbar-slot]),
+.manage-project-navbar {
+  display: contents;
+}
+
+.blockr-navbar-right > :not([data-navbar-slot]) { order: 65; }
+.blockr-navbar [data-navbar-slot="brand"]   { order: 10; }
+.blockr-navbar [data-navbar-slot="title"]   { order: 20; }
+.blockr-navbar [data-navbar-slot="save"]    { order: 25; margin-left: -4px; }
+.blockr-navbar [data-navbar-slot="spacer"]  { order: 40; flex: 1 1 auto; }
+.blockr-navbar [data-navbar-slot="views"]   { order: 45; }
+.blockr-navbar [data-navbar-slot="actions"] { order: 50; }
+.blockr-navbar [data-navbar-slot="status"]  { order: 60; }
+.blockr-navbar [data-navbar-slot="tools"]   { order: 70; }
+.blockr-navbar [data-navbar-slot="account"] { order: 80; margin-left: 4px; }
+
+/* The views: the current view's name and a chevron, set apart from the
+   tools after it by a short rule */
+.blockr-navbar [data-navbar-slot="views"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blockr-navbar [data-navbar-slot="views"]::after {
+  content: "";
+  width: 1px;
+  height: 20px;
+  margin: 0 2px 0 4px;
+  background: var(--blockr-color-border-default);
+}
+
+.blockr-view-toggle.blockr-navbar-icon-btn {
+  width: auto;
+  height: 30px;
+  gap: 6px;
+  padding: 0 8px;
+  font-weight: 500;
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-view-toggle[aria-expanded="true"] {
+  background-color: var(--blockr-color-bg-hover);
+}
+
+.blockr-view-toggle::after {
+  display: none;
+}
+
+/* The design system's chevron: muted, default on hover, turned while the
+   menu is open */
+.blockr-view-toggle-chev {
+  display: inline-flex;
+  color: var(--blockr-color-text-muted);
+  transition: transform var(--blockr-transition), color var(--blockr-transition);
+}
+
+.blockr-view-toggle:hover .blockr-view-toggle-chev {
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-view-toggle[aria-expanded="true"] .blockr-view-toggle-chev {
+  transform: rotate(180deg);
+}
+
+.blockr-view-toggle:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* "Show views as tabs": a check while the tab line is on */
+.blockr-view-tabs-toggle .blockr-menu__check {
+  visibility: hidden;
+  margin-left: auto;
+}
+
+html.blockr-view-tabs .blockr-view-tabs-toggle .blockr-menu__check {
+  visibility: visible;
+}
+
+
+/* ------------------------------------------------------------------
+   Views as tabs (each user's "Show views as tabs", view-tabs.js)
+   ------------------------------------------------------------------
+   With `.blockr-view-tabs` on <html> the navbar wraps onto a second line: a
+   rule, then a tab per view (view-tabs.js mirrors the views menu), then the
+   views menu as a chevron, for managing views and turning the tabs off. */
+.blockr-navbar [data-navbar-slot="break"],
+.blockr-navbar [data-navbar-slot="viewtabs"] {
+  display: none;
+}
+
+html.blockr-view-tabs .blockr-navbar {
+  flex-wrap: wrap;
+  height: auto;
+  padding-top: 9px;
+  row-gap: 0;
+}
+
+html.blockr-view-tabs .blockr-navbar [data-navbar-slot="break"] {
+  display: block;
+  order: 85;
+  flex: 0 0 calc(100% + 24px);
+  height: 1px;
+  margin: 9px -12px 0;
+  background: var(--blockr-color-border-default);
+}
+
+html.blockr-view-tabs .blockr-navbar [data-navbar-slot="viewtabs"] {
+  display: flex;
+  order: 90;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 38px;
+  margin-left: -4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+html.blockr-view-tabs .blockr-navbar [data-navbar-slot="views"] {
+  order: 95;
+}
+
+/* In the tab line the views menu is only for managing views: no name, no
+   rule, a chevron alone */
+html.blockr-view-tabs .blockr-navbar [data-navbar-slot="views"]::after,
+html.blockr-view-tabs .blockr-view-toggle-label {
+  display: none;
+}
+
+html.blockr-view-tabs .blockr-view-toggle.blockr-navbar-icon-btn {
+  width: 30px;
+  padding: 0;
+  justify-content: center;
+}
+
+.blockr-view-tab {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--blockr-color-text-muted);
+  font: inherit;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blockr-view-tab:hover {
+  color: var(--blockr-color-text-default);
+  background: var(--blockr-color-bg-hover);
+}
+
+.blockr-view-tab.is-active {
+  color: var(--blockr-color-text-default);
+  font-weight: var(--blockr-font-weight-semibold);
+  box-shadow: inset 0 -2px 0 var(--blockr-color-border-accent);
+}
+
+.blockr-view-tab:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* No-edit chrome ---------------------------------------------------------

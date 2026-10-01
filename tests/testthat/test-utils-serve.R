@@ -353,7 +353,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   expect_setequal(nav$label, c("First", "Second"))
   expect_identical(nav$label[nav$active], "First")
 
-  # Drive a runtime add through the nav UI ("New page" adds "Page 3", no
+  # Drive a runtime add through the nav UI ("New view" adds "View 3", no
   # dialog): the client `add` handler must render the new view once,
   # correctly labelled.
   app$run_js(
@@ -365,7 +365,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
 
   expect_identical(nrow(nav), 3L)
   expect_false(anyDuplicated(nav$id) > 0L)
-  expect_true("Page 3" %in% nav$label)
+  expect_true("View 3" %in% nav$label)
   expect_false(any(nav$label == ""))
 })
 
@@ -459,7 +459,7 @@ test_that("a click on the view the server left still switches (#424)", {
   wait_view_nav(app, 3)
 
   nav <- read_view_nav(app)
-  expect_identical(nav$label[nav$active], "Page 3")
+  expect_identical(nav$label[nav$active], "View 3")
 
   # Clicking Second again has to reach the server. Left cached, the dedup
   # would swallow the report as a repeat and the board would sit on Third.
@@ -990,7 +990,7 @@ test_that("locked board hides block actions, shows lock indicator (#236)", {
   expect_match(menus, "Copy block ID")
   expect_false(grepl("append_block|delete_block", menus))
 
-  # View CRUD is locked too: no "New page" add control.
+  # View CRUD is locked too: no "New view" add control.
   expect_equal(count(".blockr-view-add"), 0)
 })
 
@@ -1024,7 +1024,7 @@ test_that("single-page board renders one auto-named view (#236)", {
   expect_identical(docks$id, nav$id)
 })
 
-test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
+test_that("navbar mark: real work vs bookkeeping (#285, #345, #355, #360)", {
 
   skip_on_cran()
 
@@ -1058,12 +1058,11 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
     app$get_js(
       r"(JSON.stringify((function () {
         var html = document.documentElement;
-        var spinner = document.querySelector('.blockr-navbar-spinner');
-        if (spinner) spinner.style.transition = 'none';
+        var spinner =
+          document.querySelector('.blockr-navbar-brand .blockr-mark rect');
         var arc = function () {
           if (!spinner) return null;
-          var cs = getComputedStyle(spinner);
-          return { top: cs.borderTopColor, side: cs.borderRightColor };
+          return getComputedStyle(spinner).animationName;
         };
         var mark = function (parent) {
           var el = document.createElement('div');
@@ -1096,11 +1095,11 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
 
         real.forEach(function (el) { el.classList.add('recalculating'); });
         html.classList.remove('shiny-busy');
-        if (spinner) spinner.style.transition = '';
 
-        var painted = bookkeeping && bookkeeping.side !== 'rgba(0, 0, 0, 0)';
-        var bkArc = bookkeeping && bookkeeping.top !== bookkeeping.side;
-        var coArc = computing && computing.top !== computing.side;
+        var painted = spinner !== null &&
+          getComputedStyle(spinner).fill !== 'none';
+        var bkArc = bookkeeping !== 'none';
+        var coArc = computing === 'blockr-mark-fill';
 
         return {
           pulseOff: pulseOff, hasSpinner: spinner !== null,

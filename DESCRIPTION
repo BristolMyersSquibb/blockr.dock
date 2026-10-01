@@ -1,6 +1,6 @@
 Package: blockr.dock
 Title: A Docking Layout Manager for 'blockr'
-Version: 0.1.4.9000
+Version: 0.1.4.9010
 Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",
@@ -76,6 +76,7 @@ Collate:
     'ext-edit.R'
     'ext-meta.R'
     'ext-ui.R'
+    'navbar-brand.R'
     'options-sidebar.R'
     'panel-id.R'
     'panel-ops.R'
@@ -93,5 +94,6 @@ Collate:
     'utils-serdes.R'
     'utils-serve.R'
     'utils-ui.R'
+    'view-tabs.R'
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.0.0
