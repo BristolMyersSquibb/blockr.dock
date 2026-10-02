@@ -8,7 +8,9 @@ off_canvas <- function(
   label <- paste0(id, "-title")
 
   div(
-    class = glue("offcanvas offcanvas-{match.arg(position)} {width}"),
+    class = glue(
+      "offcanvas offcanvas-{match.arg(position)} {width} blockr-offcanvas-pool"
+    ),
     tabindex = "-1",
     id = id,
     `aria-labelledby` = label,
