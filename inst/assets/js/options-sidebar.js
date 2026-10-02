@@ -2,8 +2,7 @@
 // categories; a row opens that category's page. While a page is open the
 // sidebar header shows a back arrow and the category's name; the arrow or
 // Escape returns to the list, and closing the sidebar returns it there too,
-// so it always opens on the list. The server keeps the rows' summaries
-// current through the "blockr-options-summary" message.
+// so it always opens on the list.
 (function () {
   var BACK_SVG =
     '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
@@ -52,7 +51,7 @@
     if (!p.title.hasAttribute('data-list-title')) {
       p.title.setAttribute('data-list-title', p.title.textContent);
     }
-    p.title.textContent = page.getAttribute('data-label');
+    p.title.textContent = category;
     backButton(p, root);
     widen(p.sidebar, page);
     p.sidebar.classList.add('blockr-sidebar-paged');
@@ -143,17 +142,4 @@
     watch();
   }
   document.addEventListener('click', watch, true);
-
-  if (window.Shiny) {
-    Shiny.addCustomMessageHandler('blockr-options-summary', function (m) {
-      var sidebar = document.getElementById(m.sidebar);
-      if (!sidebar) return;
-      sidebar.querySelectorAll('.blockr-options-row').forEach(function (row) {
-        var text = m.rows[row.getAttribute('data-category')];
-        if (text == null) return;
-        var el = row.querySelector('.blockr-options-row-summary');
-        if (el) el.textContent = text;
-      });
-    });
-  }
 })();

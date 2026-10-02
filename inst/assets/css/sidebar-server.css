@@ -174,33 +174,17 @@ html.blockr-html-pushed-left {
    Board options: category list and pages
    ============================================
    options_sidebar_ui() and options-sidebar.js. The list rows are blockr.ui
-   menu rows (`.blockr-menu__item`) with a second line: the category's
-   summary in 12px muted. While a page is open the sidebar carries
+   menu rows (`.blockr-menu__item`). While a page is open the sidebar carries
    `.blockr-sidebar-paged` and a back arrow leads its header. */
 .blockr-options-list {
   margin: -8px -10px;
 }
 
-/* Row text at 20px from the edge, like the title; the hover wash 10px in. */
-.blockr-options-row.blockr-menu__item {
-  padding: 9px 10px;
-  white-space: normal;
-}
-
-.blockr-options-row-text {
-  display: flex;
-  flex-direction: column;
+.blockr-options-row-name {
   flex: 1 1 auto;
   min-width: 0;
-  line-height: 1.35;
-}
-
-.blockr-options-row-summary {
-  font-size: var(--blockr-font-size-xs);
-  color: var(--blockr-color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .blockr-options-row:focus-visible,
