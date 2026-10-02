@@ -266,7 +266,8 @@ test_that("block actions open the + menu from their own module", {
   # input the pick is sent to.
   opened <- list()
   local_mocked_bindings(
-    open_add_block_menu = function(mode, caption, session = get_session()) {
+    open_add_block_menu = function(mode, caption, at = NULL,
+                                   session = get_session()) {
       opened[[length(opened) + 1L]] <<- list(
         ns = session$ns(NULL), mode = mode, caption = caption
       )
@@ -490,6 +491,54 @@ test_that("prepend: NULL target_input falls back to only slot", {
       expect_length(upd$links$add, 1L)
       expect_identical(as.data.frame(upd$links$add)$input, "data")
     }
+  )
+})
+
+test_that("the + menu opens where the trigger's gesture happened", {
+
+  opened <- list()
+  local_mocked_bindings(
+    open_add_block_menu = function(mode, caption, at = NULL,
+                                   session = get_session()) {
+      opened[[length(opened) + 1L]] <<- list(at = at)
+      invisible(NULL)
+    }
+  )
+
+  r_board <- reactiveValues(
+    board = new_board(c(a = new_dataset_block())),
+    board_id = "my_board"
+  )
+
+  trigger <- new_trigger()
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        action_id(append_block_action),
+        append_block_action(
+          trigger = trigger,
+          board = r_board,
+          update = reactiveVal(list())
+        )
+      )
+    },
+    {
+      trigger("a", at = list(id = "my_board-block_a-edit_block-block_menu"))
+      session$flushReact()
+
+      # Fired from code, with nowhere named.
+      trigger("a")
+      session$flushReact()
+    }
+  )
+
+  expect_identical(
+    opened,
+    list(
+      list(at = list(id = "my_board-block_a-edit_block-block_menu")),
+      list(at = NULL)
+    )
   )
 })
 

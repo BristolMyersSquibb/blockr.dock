@@ -1,22 +1,11 @@
 // The "+" menu (add-block-menu.R). The add, append, prepend and insert
-// actions run on the server, so the menu opens on a message; it opens where
-// the gesture happened: at the button that was clicked if it is still on
-// screen, else at the point of the last click or right-click (a context
-// menu's item, say, which is gone by now), else near the top of the page.
-// A pick sends the block type as the browser's commit; the server generates
-// the block's id and resolves the link's port.
+// actions run on the server, so the menu opens on a message, at what the
+// action's trigger named (`at`): an element while it is on screen, or a
+// point. Without either, as for an action fired from code, it opens near the
+// top of the page. A pick sends the block type as the browser's commit; the
+// server generates the block's id and resolves the link's port.
 (function () {
-  var last = null;
   var nonce = 0;
-
-  function remember(e) {
-    var el = e.target instanceof Element
-      ? e.target.closest('button, a, [role="button"], [role="menuitem"]')
-      : null;
-    last = { x: e.clientX, y: e.clientY, el: el };
-  }
-  document.addEventListener('pointerdown', remember, true);
-  document.addEventListener('contextmenu', remember, true);
 
   function visible(el) {
     if (!el || !el.isConnected) return false;
@@ -24,7 +13,7 @@
     return r.width > 0 && r.height > 0;
   }
 
-  // A zero-size box to hang the menu from when the trigger is gone.
+  // A zero-size box to hang the menu from a point.
   function pointAnchor(x, y) {
     var a = document.createElement('div');
     a.className = 'blockr-add-menu-anchor';
@@ -33,20 +22,17 @@
     return a;
   }
 
-  function anchorFor() {
-    if (last && visible(last.el) && !last.el.closest('.blockr-menu')) {
-      return { anchor: last.el, temp: null };
-    }
-    var a = last
-      ? pointAnchor(last.x, last.y)
+  function anchorFor(at) {
+    var el = at && at.id ? document.getElementById(at.id) : null;
+    if (visible(el)) return { anchor: el, temp: null };
+    var a = at && at.x != null
+      ? pointAnchor(at.x, at.y)
       : pointAnchor(Math.round(window.innerWidth / 2) - 150, 64);
     return { anchor: a, temp: a };
   }
 
   function open(m) {
-    if (!window.Blockr || !Blockr.menu) return;
-    var at = anchorFor();
-    var anchor = at.anchor, temp = at.temp;
+    var at = anchorFor(m.at);
 
     var items = (m.items || []).map(function (it) {
       if (!it.type) return it;
@@ -60,13 +46,13 @@
       });
     });
 
-    Blockr.menu(anchor, {
+    Blockr.menu(at.anchor, {
       caption: m.caption,
       filter: 'Search blocks',
       minWidth: 300,
       items: items,
       onClose: function () {
-        if (temp) temp.remove();
+        if (at.temp) at.temp.remove();
       }
     });
   }
@@ -74,8 +60,7 @@
   // Adding a panel to the page: the board's blocks and extensions that are
   // not on it yet; a pick sends the panel id.
   function openPanels(m) {
-    if (!window.Blockr || !Blockr.menu) return;
-    var at = anchorFor();
+    var at = anchorFor(m.at);
     var items = (m.items || []).map(function (it) {
       if (!it.value) return it;
       var value = it.value;
@@ -97,8 +82,6 @@
     });
   }
 
-  if (window.Shiny) {
-    Shiny.addCustomMessageHandler('blockr-add-block-menu', open);
-    Shiny.addCustomMessageHandler('blockr-add-panel-menu', openPanels);
-  }
+  Shiny.addCustomMessageHandler('blockr-add-block-menu', open);
+  Shiny.addCustomMessageHandler('blockr-add-panel-menu', openPanels);
 })();

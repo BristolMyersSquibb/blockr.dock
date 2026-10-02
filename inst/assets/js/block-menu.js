@@ -4,7 +4,8 @@
 //   section toggle `section` on the card's section input (`target`,
 //           section-toggle.js), checked while the section is open
 //   input   send `target` as a Shiny event, as the old dropdown's action
-//           buttons did, so the server's observeEvent()s are unchanged
+//           buttons did, naming the menu's trigger as where it happened
+//           (`at`), so a menu the action opens hangs off the same button
 //   rename  start the in-place rename of the title (`target` is its display)
 //   copy    put `target`, the block ID, on the clipboard
 // Cards come and go with the dock, so the triggers are handled from the
@@ -13,7 +14,7 @@
 (function () {
   var current = null;
 
-  function onSelect(item) {
+  function onSelect(item, trigger) {
     var target = item.target;
     if (item.action === 'section') {
       return function () {
@@ -27,7 +28,9 @@
     }
     if (item.action === 'input') {
       return function () {
-        Shiny.setInputValue(target, Date.now(), { priority: 'event' });
+        Shiny.setInputValue(target, { at: { id: trigger.id } }, {
+          priority: 'event'
+        });
       };
     }
     if (item.action === 'rename') {
@@ -54,7 +57,7 @@
     var cfg = JSON.parse(trigger.getAttribute('data-blockr-menu'));
     cfg.items.forEach(function (item) {
       if (item.action === 'section') item.checked = isOpen(item);
-      if (item.action) item.onSelect = onSelect(item);
+      if (item.action) item.onSelect = onSelect(item, trigger);
     });
     cfg.onClose = function () {
       if (current && current.trigger === trigger) current = null;

@@ -243,6 +243,7 @@ block_card_dropdown <- function(ns, blk_id, has_inputs = FALSE) {
   config <- list(align = "end", items = items)
 
   tags$button(
+    id = ns("block_menu"),
     class = "btn btn-light blockr-header-icon blockr-block-menu-btn",
     type = "button",
     title = "More actions",
@@ -419,7 +420,10 @@ edit_block_server <- function(callbacks = list()) {
 
         observeEvent(
           input$append_block,
-          actions[["append_block_action"]](block_id)
+          actions[["append_block_action"]](
+            block_id,
+            at = input$append_block$at
+          )
         )
 
         observeEvent(

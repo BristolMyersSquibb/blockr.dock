@@ -160,6 +160,7 @@ insert_block_action <- function(trigger, board, update, ...) {
         open_add_block_menu(
           "insert",
           insert_caption(board$board, trigger()),
+          at = trigger_at(trigger),
           session = session
         )
       })

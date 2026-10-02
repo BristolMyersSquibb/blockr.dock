@@ -62,14 +62,17 @@ add_block_menu_item <- function(meta) {
   )
 }
 
-# Open the menu for one flow. `session` is the action module's session, so
-# the commit lands on its `browser` module's input.
-open_add_block_menu <- function(mode, caption, session = get_session()) {
+# Open the menu for one flow, at what the gesture named (`at`, see
+# new_action()). `session` is the action module's session, so the commit
+# lands on its `browser` module's input.
+open_add_block_menu <- function(mode, caption, at = NULL,
+                                session = get_session()) {
   session$sendCustomMessage(
     "blockr-add-block-menu",
     list(
       commit = session$ns(NS("browser", "commit")),
       caption = caption,
+      at = at,
       items = add_block_menu_items(mode)
     )
   )

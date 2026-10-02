@@ -1037,7 +1037,11 @@ manage_dock <- function(
 
     observeEvent(
       input$empty_dock_add,
-      suggest_panels_to_add(dock, board, panels = list(), session = session)
+      suggest_panels_to_add(
+        dock, board, panels = list(),
+        at = list(id = session$ns("empty_dock_add")),
+        session = session
+      )
     )
 
     # A pick in the add-panel menu emits an `add` panel-op; the apply observer
@@ -1273,6 +1277,7 @@ reorder_view_observer <- function(client_views, session, update) {
 #' @param suggest_new If truthy, called when no panels are available
 #'   (used to prompt adding a new block).
 #' @param panels Currently visible panels (auto-detected if `NULL`).
+#' @param at Where the menu opens (see [new_action()]).
 #' @param session Shiny session.
 #'
 #' @noRd
@@ -1281,6 +1286,7 @@ suggest_panels_to_add <- function(
   board,
   suggest_new = FALSE,
   panels = NULL,
+  at = NULL,
   session = get_session()
 ) {
   ns <- session$ns
@@ -1309,6 +1315,7 @@ suggest_panels_to_add <- function(
       list(
         pick = ns("add_dock_panel_pick"),
         caption = "Show on this page",
+        at = at,
         items = items
       )
     )

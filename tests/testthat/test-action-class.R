@@ -39,3 +39,21 @@ test_that("action ctor", {
     )
   )
 })
+
+test_that("a trigger names where its gesture happened, for that firing", {
+
+  trigger <- new_trigger()
+
+  isolate({
+    trigger("a", at = list(x = 10, y = 20))
+    expect_identical(trigger(), "a")
+    expect_identical(trigger_at(trigger), list(x = 10, y = 20))
+
+    trigger("b")
+    expect_identical(trigger(), "b")
+    expect_null(trigger_at(trigger))
+  })
+
+  # A plain reactive used as a trigger names nowhere.
+  expect_null(trigger_at(reactive("a")))
+})
