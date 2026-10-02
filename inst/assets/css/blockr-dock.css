@@ -210,11 +210,8 @@
   overflow-wrap: anywhere;
 }
 
-/* Compact (the "Compact" board option, `.blockr-compact` on the root): the
-   header becomes an eyebrow over the block's content. The mark shrinks to a
-   20px tinted square with a 12px glyph, the name to 11px muted capitals on
-   one line, so it labels the block without competing with the content's own
-   title. Renaming uses a 13px field in plain case. */
+/* The "Compact" board option puts `.blockr-compact` on the root, which
+   turns the header into an eyebrow over the block's content. */
 .blockr-compact .blockr-block-header {
   gap: 8px;
   min-height: 26px;
@@ -614,11 +611,8 @@
   margin-left: 2px;
 }
 
-/* The menu itself is blockr.ui's menu (`.blockr-menu`, `.blockr-menu__item`
-   on the Bootstrap dropdown): surface, 34px rows. Only what is particular to
-   views is here: the check on the current page, and manage mode
-   (`.is-managing`, set by view-binding.js), where each row shows a grip and
-   an x and the name is a field to click into. */
+/* The menu takes its look from blockr.ui's menu classes; these are the
+   views' own parts, and manage mode (`.is-managing`). */
 .blockr-view-nav.dropdown-menu {
   min-width: 220px;
 }
@@ -635,7 +629,6 @@
   white-space: nowrap;
 }
 
-/* The current page: weight 600 (blockr.ui) and a check at the end, no fill. */
 .blockr-view-item .blockr-menu__check {
   visibility: hidden;
 }
@@ -796,7 +789,6 @@
   outline: none;
 }
 
-/* The foot in manage mode: New page on the left, Done on the right. */
 .blockr-view-foot-row {
   display: flex;
   align-items: center;

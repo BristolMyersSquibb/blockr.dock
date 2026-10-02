@@ -334,9 +334,9 @@ edit_block_server <- function(callbacks = list()) {
               return()
             }
 
-            # `value` by name: the third positional argument is the label,
-            # and the rename field has none (it would push the field off the
-            # name it sits on).
+            # The value goes by name: the third positional argument is the
+            # label, and the rename field has none (it would push the field
+            # off the name it sits on).
             updateTextInput(session, "block_name_in", value = cur_name())
           }
         )

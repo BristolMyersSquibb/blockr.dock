@@ -52,9 +52,8 @@ $(function () {
     return $el.closest('.blockr-view-nav').hasClass('is-managing');
   };
 
-  // In manage mode a page's name is edited in place with a click, so it
-  // carries blockr.ui's editable marker: the text cursor and a "Click to
-  // rename" tooltip. Outside the mode a click switches pages, so it goes.
+  // In manage mode a click on a name renames it, which blockr.ui's editable
+  // marker says with the text cursor and a tooltip.
   var markEditable = function ($scope, on) {
     $scope.find('.blockr-view-item-name').each(function () {
       if (on) this.setAttribute('data-blockr-editable', 'Click to rename');
@@ -259,7 +258,6 @@ $(function () {
         closeMenu($nav);
       });
 
-      // Manage pages: the same list becomes an editor, and back with Done.
       $(el).on('click.viewBinding', '.blockr-view-manage', function (e) {
         e.preventDefault();
         e.stopPropagation();

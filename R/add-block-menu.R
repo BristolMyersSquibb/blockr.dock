@@ -1,12 +1,7 @@
-# The "+" menu (design system, "Picking a block"): adding, appending,
-# prepending and inserting a block all open one menu, in place, instead of the
-# block browser sidebar. Blockr.menu (blockr.ui) draws it: a caption saying
-# what the pick does, a filter box, category titles, one row per block type
-# with its mark, name and package badge. A pick sends the same commit the
-# browser's cards sent (`<action>-browser-commit`, the block type and no ids),
-# so block_browser_server() builds the block, generates its id and resolves
-# the link's port exactly as before. add-block-menu.js opens the menu where
-# the gesture happened.
+# The "+" menu that adding, appending, prepending and inserting a block open.
+# A pick sends the block browser's commit with the block type alone, so
+# block_browser_server() builds the block, generates its id and resolves the
+# link's port.
 
 # The rows for one flow: every registered block type for add and prepend,
 # only the ones that can receive a link for append and insert (the filter
@@ -63,8 +58,8 @@ add_block_menu_item <- function(meta) {
 }
 
 # Open the menu for one flow, at what the gesture named (`at`, see
-# new_action()). `session` is the action module's session, so the commit
-# lands on its `browser` module's input.
+# new_action()). The session is the action module's, so the commit lands on
+# its `browser` module's input.
 open_add_block_menu <- function(mode, caption, at = NULL,
                                 session = get_session()) {
   session$sendCustomMessage(
@@ -87,8 +82,6 @@ add_block_menu_dep <- function() {
   )
 }
 
-# "Insert between A and B", naming the wire's ends the way the user sees
-# them; a link that has left the board gets the plain caption.
 insert_caption <- function(board, link_id) {
 
   ends <- link_ends(board, link_id)
@@ -103,9 +96,6 @@ insert_caption <- function(board, link_id) {
   )
 }
 
-# The rows of the add-panel menu: the board's blocks not on the page (mark,
-# title, the block type as meta text) and its extensions, each group under a
-# title when both are there.
 add_panel_menu_items <- function(board, blk_ids, ext_ids) {
 
   blocks <- list()

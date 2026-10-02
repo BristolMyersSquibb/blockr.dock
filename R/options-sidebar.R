@@ -1,6 +1,6 @@
 # The board options sidebar: a list of option categories, each row opening
-# a page with that category's options. options-sidebar.js switches between
-# the list and the pages.
+# a page with that category's options. The script options-sidebar.js
+# switches between the list and the pages.
 
 # The categories, in the order the options come, with their options.
 option_categories <- function(options) {

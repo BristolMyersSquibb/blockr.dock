@@ -594,13 +594,9 @@ view_binding_dep <- function() {
   )
 }
 
-# The views menu. It switches pages; on a board that allows it, "Manage
-# pages" turns the same list into an editor (view-binding.js puts
-# `.is-managing` on the menu): a grip to drag each page, the name to click
-# into and rename, an x to remove, "New page" and "Done" at the foot. The
-# menu takes blockr.ui's menu classes for its look; a click inside leaves it
-# open (`data-bs-auto-close = "outside"`), and the binding closes it after a
-# switch.
+# A click inside the views menu leaves it open (`data-bs-auto-close =
+# "outside"`), so managing pages does not close it; the binding closes it
+# after a switch.
 #' @noRd
 view_nav_ui <- function(id, views) {
 

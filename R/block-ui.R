@@ -43,8 +43,6 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
       label = ctrl_btn_label(ctrl),
       icon  = ctrl_btn_icon(ctrl),
       class = ctrl_btn_class(ctrl),
-      # Its name where the button shows only an icon (blockr.ai's
-      # "AI Assistant"): the toggle's tooltip and its row in the "…" menu.
       tooltip = ctrl_btn_tooltip(ctrl)
     )
   } else {

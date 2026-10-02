@@ -172,10 +172,7 @@ html.blockr-html-pushed-left {
 
 /* ============================================
    Board options: category list and pages
-   ============================================
-   options_sidebar_ui() and options-sidebar.js. The list rows are blockr.ui
-   menu rows (`.blockr-menu__item`). While a page is open the sidebar carries
-   `.blockr-sidebar-paged` and a back arrow leads its header. */
+   ============================================ */
 .blockr-options-list {
   margin: -8px -10px;
 }
@@ -231,14 +228,12 @@ html.blockr-html-pushed-left {
   text-align: center;
 }
 
-/* A page: the category's own options, full width. */
 .blockr-options-page .shiny-input-container,
 .blockr-options-page .form-group {
   width: 100%;
   margin-bottom: 16px;
 }
 
-/* The back arrow shows only on a page, and leads the header. */
 .blockr-sidebar-back {
   display: none;
 }
