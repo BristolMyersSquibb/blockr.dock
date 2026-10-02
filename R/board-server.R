@@ -1221,68 +1221,35 @@ rename_view_observer <- function(client_views, session, update) {
   })
 }
 
-# Translate a relative up / down nudge of one view into the total order it
-# yields. Clamped: nudging the first view up or the last down is a no-op, as is
-# an unknown id.
-reorder_by_move <- function(order, id, dir) {
+# The order a drag left the views menu in, if it is a permutation of the
+# current one; NULL for a stale or malformed one.
+dragged_order <- function(order, dragged) {
 
-  idx <- match(id, order)
+  dragged <- as.character(unlist(dragged))
 
-  if (is.na(idx)) {
-    return(order)
+  if (length(dragged) == length(order) && setequal(dragged, order) &&
+        !anyDuplicated(dragged)) {
+    dragged
   }
-
-  swap <- switch(dir, up = idx - 1L, down = idx + 1L, NA_integer_)
-
-  if (is.na(swap) || swap < 1L || swap > length(order)) {
-    return(order)
-  }
-
-  order[c(idx, swap)] <- order[c(swap, idx)]
-
-  order
 }
 
-# A reorder from the views menu: a drag sends the whole `order` it left the
-# list in, an older client a relative `{id, dir}` nudge. A drag's order is
-# taken only if it is a permutation of the current one, so a stale or
-# malformed message changes nothing.
-reorder_from_client <- function(order, move) {
-
-  if (!is.null(move$order)) {
-
-    want <- as.character(unlist(move$order))
-
-    if (length(want) == length(order) && setequal(want, order) &&
-          !anyDuplicated(want)) {
-      return(want)
-    }
-
-    return(order)
-  }
-
-  reorder_by_move(order, move$id, move$dir)
-}
-
-# View order is board content, not client-owned geometry: the gesture
-# carries only an intent (a drag's resulting order, or an `{id, dir}`
-# nudge). The order the client shows is authoritative here, so the total
-# permutation is derived from `names(client_views())` and travels the
-# update lifecycle as a `views$order` delta; reconcile then pushes the
-# settled order back to the nav. A drop in place or a boundary nudge yields
-# the same order and emits nothing.
+# View order is board content, not client-owned geometry, so a drag's order
+# travels the update lifecycle as a `views$order` delta, and reconcile pushes
+# the settled order back to the nav. The drag has moved the rows already, so
+# an order refused is pushed back at once.
 reorder_view_observer <- function(client_views, session, update) {
   input <- session$input
 
   observeEvent(input$view_nav_reorder, {
     req(views_can_crud(client_views()))
 
-    move <- input$view_nav_reorder
     order <- names(client_views())
-    reordered <- reorder_from_client(order, move)
+    dragged <- dragged_order(order, input$view_nav_reorder$order)
 
-    if (!identical(reordered, order)) {
-      update(list(views = list(order = reordered)))
+    if (is.null(dragged)) {
+      session$sendInputMessage("view_nav", list(order = as.list(order)))
+    } else if (!identical(dragged, order)) {
+      update(list(views = list(order = dragged)))
     }
   })
 }

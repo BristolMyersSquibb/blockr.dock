@@ -1144,40 +1144,57 @@ test_that("apply_views_rm is a pure board transform", {
   expect_identical(unname(view_names(board_views(out))), "A")
 })
 
-test_that("reorder_from_client takes a drag's order only as a permutation", {
+test_that("a drag's order is taken only as a permutation of the current one", {
 
   o <- c("A", "B", "C")
 
-  expect_identical(
-    reorder_from_client(o, list(order = list("C", "A", "B"))),
-    c("C", "A", "B")
-  )
-  # Stale or malformed: a missing, an extra or a repeated id changes nothing.
-  expect_identical(reorder_from_client(o, list(order = list("C", "A"))), o)
-  expect_identical(
-    reorder_from_client(o, list(order = list("C", "A", "B", "D"))), o
-  )
-  expect_identical(
-    reorder_from_client(o, list(order = list("C", "C", "A"))), o
-  )
-  # The relative nudge still works.
-  expect_identical(
-    reorder_from_client(o, list(id = "B", dir = "up")), c("B", "A", "C")
-  )
+  expect_identical(dragged_order(o, list("C", "A", "B")), c("C", "A", "B"))
+
+  # Stale or malformed: a missing, an extra or a repeated id.
+  expect_null(dragged_order(o, list("C", "A")))
+  expect_null(dragged_order(o, list("C", "A", "B", "D")))
+  expect_null(dragged_order(o, list("C", "C", "A")))
 })
 
-test_that("reorder_by_move swaps a neighbour and clamps at the ends", {
+test_that("a refused drag gets the current order pushed back", {
 
-  o <- c("A", "B", "C")
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a", B = "b")
+  )
 
-  expect_identical(reorder_by_move(o, "B", "up"), c("B", "A", "C"))
-  expect_identical(reorder_by_move(o, "B", "down"), c("A", "C", "B"))
+  ids <- names(board_views(brd))
+  updates <- list()
+  pushed <- list()
 
-  # A boundary nudge or an unknown id yields the same order (the observer then
-  # emits nothing).
-  expect_identical(reorder_by_move(o, "A", "up"), o)
-  expect_identical(reorder_by_move(o, "C", "down"), o)
-  expect_identical(reorder_by_move(o, "Z", "up"), o)
+  testServer(
+    function(input, output, session) {
+      reorder_view_observer(
+        reactiveVal(seed_view_state(board_views(brd))),
+        list(
+          input = input,
+          sendInputMessage = function(id, msg) {
+            pushed[[length(pushed) + 1L]] <<- msg
+          }
+        ),
+        update = function(x) updates[[length(updates) + 1L]] <<- x
+      )
+    },
+    {
+      session$setInputs(view_nav_reorder = list(order = as.list(rev(ids))))
+
+      expect_identical(updates, list(list(views = list(order = rev(ids)))))
+      expect_length(pushed, 0L)
+
+      # The client still lists one page the server has since dropped.
+      session$setInputs(
+        view_nav_reorder = list(order = as.list(c(rev(ids), "gone")))
+      )
+
+      expect_length(updates, 1L)
+      expect_identical(pushed, list(list(order = as.list(ids))))
+    }
+  )
 })
 
 test_that("apply_views_order reorders views, keeping the active one", {
