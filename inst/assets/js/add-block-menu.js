@@ -3,8 +3,8 @@
 // the gesture happened: at the button that was clicked if it is still on
 // screen, else at the point of the last click or right-click (a context
 // menu's item, say, which is gone by now), else near the top of the page.
-// A pick sends the block type as the browser's commit, with no ids, so the
-// server builds the block as it always has.
+// A pick sends the block type as the browser's commit; the server generates
+// the block's id and resolves the link's port.
 (function () {
   var last = null;
   var nonce = 0;
@@ -53,17 +53,9 @@
       var type = it.type;
       return Object.assign({}, it, {
         onSelect: function () {
-          Shiny.setInputValue(m.commit, {
-            type: type,
-            id: null,
-            title: null,
-            link_id: null,
-            near_link_id: null,
-            far_link_id: null,
-            block_input: null,
-            target_input: null,
-            nonce: ++nonce
-          }, { priority: 'event' });
+          Shiny.setInputValue(m.commit, { type: type, nonce: ++nonce }, {
+            priority: 'event'
+          });
         }
       });
     });
