@@ -715,6 +715,11 @@
   display: flex;
 }
 
+/* A board keeps at least one page, so the last one offers no removal. */
+.blockr-view-nav.is-managing .blockr-view-item:only-child .blockr-view-remove {
+  display: none;
+}
+
 .blockr-view-item.is-dragging {
   opacity: 0.4;
 }
