@@ -26,7 +26,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
           div(
             class = "blockr-block-header-actions",
             block_card_toggles(visible, ns, ctrl_meta, has_inputs),
-            block_card_dropdown(ns, blk_id)
+            block_card_dropdown(ns, blk_id, has_inputs)
           )
         )
       )
@@ -113,55 +113,11 @@ block_card_title <- function(block, id, info) {
   )
 }
 
+# The card's open sections, as the `collapse_blk_sections` input
+# (section-toggle.js). The preview and a block's own control have a button
+# each; the controls are toggled from the card's "…" menu.
 block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
                                has_inputs = TRUE) {
-
-  vals <- c("inputs", "outputs")
-  icon_labels <- list(
-    as.character(icon("sliders")),
-    as.character(icon("eye"))
-  )
-  tooltip_titles <- c("Controls", "Preview")
-
-  if (!has_inputs) {
-    keep <- vals != "inputs"
-    vals <- vals[keep]
-    icon_labels <- icon_labels[keep]
-    tooltip_titles <- tooltip_titles[keep]
-  }
-
-  if (!is.null(ctrl_meta)) {
-    vals <- c(vals, "ctrl")
-    icon_labels <- c(
-      icon_labels,
-      list(as.character(ctrl_button_label(ctrl_meta)))
-    )
-    tooltip_titles <- c(
-      tooltip_titles,
-      # The first of tooltip and label that says something: an empty string
-      # is no name, and the button is icon-only.
-      Find(
-        function(x) is_string(x) && nzchar(x),
-        list(ctrl_meta$tooltip, ctrl_meta$label),
-        nomatch = "Control"
-      )
-    )
-  }
-
-  section_toggles <- shinyWidgets::checkboxGroupButtons(
-    inputId = ns("collapse_blk_sections"),
-    status = "light",
-    size = "sm",
-    choiceNames = icon_labels,
-    choiceValues = vals,
-    individual = TRUE,
-    selected = visible
-  )
-
-  section_toggles$attribs$class <- paste(
-    "blockr-section-toggle",
-    trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
-  )
 
   # A locked card offers no toggle at all: the accordion is seeded from
   # `visible` at render, so nothing here has to report back to place it. The
@@ -171,17 +127,54 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
     return(NULL)
   }
 
-  tagList(
-    section_toggles,
-    tags$script(HTML(sprintf(
-      "$(function() {
-        var btns = $('#%s').find('.btn');
-        var titles = %s;
-        btns.each(function(i) { $(this).attr('title', titles[i]); });
-      });",
-      ns("collapse_blk_sections"),
-      jsonlite::toJSON(tooltip_titles)
-    )))
+  sections <- c(
+    if (has_inputs) "inputs",
+    "outputs",
+    if (!is.null(ctrl_meta)) "ctrl"
+  )
+
+  open <- intersect(visible, sections)
+
+  toggle <- function(section, title, label) {
+    on <- section %in% open
+    tags$button(
+      type = "button",
+      class = paste("btn btn-light", if (on) "active"),
+      `data-section` = section,
+      `aria-pressed` = tolower(on),
+      title = title,
+      label
+    )
+  }
+
+  div(
+    id = ns("collapse_blk_sections"),
+    class = "blockr-section-toggle",
+    `data-sections` = paste(open, collapse = " "),
+    toggle("outputs", "Preview", icon("eye")),
+    if (!is.null(ctrl_meta)) {
+      toggle(
+        "ctrl",
+        # The first of tooltip and label that says something: an empty
+        # string is no name, and the button is icon-only.
+        Find(
+          function(x) is_string(x) && nzchar(x),
+          list(ctrl_meta$tooltip, ctrl_meta$label),
+          nomatch = "Control"
+        ),
+        ctrl_button_label(ctrl_meta)
+      )
+    },
+    section_toggle_dep()
+  )
+}
+
+section_toggle_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-section-toggle",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "section-toggle.js"
   )
 }
 
@@ -199,11 +192,11 @@ ctrl_button_label <- function(meta) {
 
 # The block's "…" menu, drawn by Blockr.menu (blockr.ui) from the config on
 # the trigger; block-menu.js opens it and turns each item's `action` into a
-# pick: `input` sends the same event the old dropdown buttons did, so the
-# server's observers are unchanged; `rename` starts the in-place rename;
-# `copy` puts the block ID on the clipboard. A locked dock lists no action
-# that changes the board.
-block_card_dropdown <- function(ns, blk_id) {
+# pick: `section` toggles one of the card's sections, `input` sends the same
+# event the old dropdown buttons did, so the server's observers are
+# unchanged, `rename` starts the in-place rename and `copy` puts the block
+# ID on the clipboard. A locked dock lists no action that changes the board.
+block_card_dropdown <- function(ns, blk_id, has_inputs = FALSE) {
 
   locked <- is_dock_locked()
 
@@ -211,6 +204,15 @@ block_card_dropdown <- function(ns, blk_id) {
   # bin and sits after a divider (design system, "The block's '…' menu").
   # The block's type and package are the tooltip on its mark, not a head.
   items <- c(
+    if (has_inputs && !locked) {
+      list(
+        list(
+          label = "Controls", icon = "sliders", action = "section",
+          section = "inputs", target = ns("collapse_blk_sections")
+        ),
+        list(divider = TRUE)
+      )
+    },
     if (!locked) {
       list(
         list(

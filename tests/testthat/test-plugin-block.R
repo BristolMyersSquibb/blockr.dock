@@ -244,15 +244,16 @@ test_that("condition UI updates surgically by condition id (#36)", {
 
 test_that("locked dock drops block_card_toggles entirely (#122, #418)", {
 
-  # Unlocked: widget renders visible, with `selected` matching saved attr
+  # Unlocked: the toggle renders, open on the saved sections.
   unlocked <- withr::with_options(
     list(blockr.locked = NULL),
     block_card_toggles("outputs", NS("x"))
   )
-  expect_s3_class(unlocked, "shiny.tag.list")
-  unlocked_html <- as.character(htmltools::tagList(unlocked))
-  expect_match(unlocked_html, 'value="outputs".*checked', fixed = FALSE)
-  expect_false(grepl("display: none", unlocked_html, fixed = TRUE))
+  expect_s3_class(unlocked, "shiny.tag")
+  expect_identical(
+    htmltools::tagGetAttribute(unlocked, "data-sections"),
+    "outputs"
+  )
 
   # Locked: no widget at all. It used to render hidden purely to seed the
   # accordion, which the card now paints correct without.
@@ -551,15 +552,23 @@ test_that("an input-free block card drops the inputs section (#69)", {
         ),
         "data-value"
       ),
-      toggles = xml2::xml_attr(
-        xml2::xml_find_all(
+      open = xml2::xml_attr(
+        xml2::xml_find_first(
           root,
-          paste0(
-            "//div[", has_class("blockr-section-toggle"), "]",
-            "//input[@type='checkbox']"
-          )
+          paste0("//div[", has_class("blockr-section-toggle"), "]")
         ),
-        "value"
+        "data-sections"
+      ),
+      menu = vapply(
+        jsonlite::fromJSON(
+          xml2::xml_attr(
+            xml2::xml_find_first(root, "//button[@data-blockr-menu]"),
+            "data-blockr-menu"
+          ),
+          simplifyVector = FALSE
+        )$items,
+        function(x) x$label %||% "",
+        character(1L)
       )
     )
   }
@@ -569,12 +578,14 @@ test_that("an input-free block card drops the inputs section (#69)", {
   rbnd <- card_parts(new_rbind_block())
 
   expect_identical(rbnd$panels, "outputs")
-  expect_identical(rbnd$toggles, "outputs")
+  expect_identical(rbnd$open, "outputs")
+  expect_false("Controls" %in% rbnd$menu)
 
   dataset <- card_parts(new_dataset_block())
 
   expect_identical(dataset$panels, c("inputs", "outputs"))
-  expect_identical(dataset$toggles, c("inputs", "outputs"))
+  expect_identical(dataset$open, "inputs outputs")
+  expect_identical(dataset$menu[[1L]], "Controls")
 })
 
 test_that("a board saved before #69 restores an input-free card", {
@@ -582,7 +593,7 @@ test_that("a board saved before #69 restores an input-free card", {
   blk <- new_rbind_block()
   attr(blk, "visible") <- c("inputs", "outputs")
 
-  toggles <- xml2::xml_find_all(
+  toggles <- xml2::xml_find_first(
     xml2::read_html(
       as.character(
         htmltools::tagList(
@@ -594,11 +605,10 @@ test_that("a board saved before #69 restores an input-free card", {
         )
       )
     ),
-    "//input[@type='checkbox']"
+    "//div[@data-sections]"
   )
 
-  expect_identical(xml2::xml_attr(toggles, "value"), "outputs")
-  expect_identical(xml2::xml_attr(toggles, "checked"), "checked")
+  expect_identical(xml2::xml_attr(toggles, "data-sections"), "outputs")
 })
 
 test_that("a closed section's accordion button is collapsed on first paint", {
@@ -733,7 +743,7 @@ test_that("the header names the block type on its mark", {
 test_that("the block menu lists its actions for Blockr.menu", {
 
   menu_config <- function() {
-    btn <- block_card_dropdown(NS("blk"), "a")
+    btn <- block_card_dropdown(NS("blk"), "a", has_inputs = TRUE)
     jsonlite::fromJSON(
       htmltools::tagGetAttribute(btn, "data-blockr-menu"),
       simplifyVector = FALSE
@@ -747,18 +757,23 @@ test_that("the block menu lists its actions for Blockr.menu", {
   labels <- vapply(cfg$items, function(x) x$label %||% "", character(1L))
   expect_identical(
     labels,
-    c("Rename", "Append block", "Copy block ID", "", "Remove block")
+    c("Controls", "", "Rename", "Append block", "Copy block ID", "",
+      "Remove block")
   )
-  expect_true(cfg$items[[4L]]$divider)
-  # Only Remove carries an icon.
+  expect_true(cfg$items[[2L]]$divider)
+  expect_true(cfg$items[[6L]]$divider)
+  # Only the controls toggle and Remove carry an icon.
   icons <- vapply(cfg$items, function(x) x$icon %||% "", character(1L))
-  expect_identical(icons, c("", "", "", "", "trash"))
-  # The picks send the events the server already observes.
+  expect_identical(icons, c("sliders", "", "", "", "", "", "trash"))
+  # The toggle flips the card's section input; the other picks send the
+  # events the server already observes.
+  expect_identical(cfg$items[[1L]]$target, "blk-collapse_blk_sections")
+  expect_identical(cfg$items[[1L]]$section, "inputs")
   targets <- vapply(cfg$items, function(x) x$target %||% "", character(1L))
   expect_true(all(c("blk-append_block", "blk-delete_block") %in% targets))
-  expect_true(cfg$items[[5L]]$danger)
-  expect_identical(cfg$items[[3L]]$meta, "a")
-  expect_true(cfg$items[[3L]]$mono)
+  expect_true(cfg$items[[7L]]$danger)
+  expect_identical(cfg$items[[5L]]$meta, "a")
+  expect_true(cfg$items[[5L]]$mono)
 
   # A locked dock lists nothing that changes the board.
   withr::local_options(blockr.locked = TRUE)

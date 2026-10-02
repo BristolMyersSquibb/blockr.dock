@@ -30,7 +30,6 @@ Imports:
     dockViewR (>= 0.4.0),
     htmltools,
     cli,
-    shinyWidgets,
     jsonlite,
     rlang,
     utils

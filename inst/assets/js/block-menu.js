@@ -1,6 +1,8 @@
 // Opens a block's "…" menu with Blockr.menu (blockr.ui). The trigger carries
 // the menu as JSON in `data-blockr-menu` (block_card_dropdown() in R); an
 // item's `action` becomes its pick:
+//   section toggle `section` on the card's section input (`target`,
+//           section-toggle.js), checked while the section is open
 //   input   send `target` as a Shiny event, as the old dropdown's action
 //           buttons did, so the server's observeEvent()s are unchanged
 //   rename  start the in-place rename of the title (`target` is its display)
@@ -13,6 +15,16 @@
 
   function onSelect(item) {
     var target = item.target;
+    if (item.action === 'section') {
+      return function () {
+        var el = document.getElementById(target);
+        if (el) {
+          el.dispatchEvent(
+            new CustomEvent('blockr-section:toggle', { detail: item.section })
+          );
+        }
+      };
+    }
     if (item.action === 'input') {
       return function () {
         Shiny.setInputValue(target, Date.now(), { priority: 'event' });
@@ -32,38 +44,18 @@
     return undefined;
   }
 
-  // The controls toggle is the menu's first row, with its icon and a check
-  // when on. Its button is hidden (blockr-dock.css); a pick flips the same
-  // checkbox the button would. The preview's eye and a block's own control
-  // (the AI assistant) keep their buttons in the header and are left out
-  // here.
-  function toggleItems(trigger) {
-    var header = trigger.closest('.blockr-block-header');
-    var group = header && header.querySelector('.blockr-section-toggle');
-    if (!group) return [];
-    var items = [];
-    group.querySelectorAll('input[type="checkbox"][value="inputs"]').forEach(function (input) {
-      var label = group.querySelector('label[for="' + CSS.escape(input.id) + '"]') ||
-        input.nextElementSibling;
-      var name = label && (label.getAttribute('title') ||
-        label.getAttribute('data-blockr-tip') ||
-        label.getAttribute('aria-label') || label.textContent.trim());
-      items.push({
-        label: name || 'Control',
-        icon: label ? label.innerHTML : undefined,
-        checked: input.checked,
-        onSelect: function () { input.click(); }
-      });
-    });
-    return items.length ? items.concat([{ divider: true }]) : [];
+  function isOpen(item) {
+    var el = document.getElementById(item.target);
+    return !!el &&
+      el.getAttribute('data-sections').split(' ').indexOf(item.section) >= 0;
   }
 
   function config(trigger) {
     var cfg = JSON.parse(trigger.getAttribute('data-blockr-menu'));
-    cfg.items = toggleItems(trigger).concat((cfg.items || []).map(function (item) {
+    cfg.items.forEach(function (item) {
+      if (item.action === 'section') item.checked = isOpen(item);
       if (item.action) item.onSelect = onSelect(item);
-      return item;
-    }));
+    });
     cfg.onClose = function () {
       if (current && current.trigger === trigger) current = null;
     };

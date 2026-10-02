@@ -261,15 +261,6 @@
   margin-top: 6px;
 }
 
-/* The controls toggle is the "…" menu's first row, with its icon and a check
-   when on (block-menu.js); its button stays in the markup, hidden, because it
-   is the Shiny input the row flips. The preview's eye stays in the header,
-   and so does a block's own control (the AI assistant), left of "…" at every
-   width: the preview is what a builder switches most, while editing. */
-.blockr-block-header-actions .blockr-section-toggle .btn-check[value="inputs"] + .btn {
-  display: none;
-}
-
 /* Block eval status: on-icon status dot.
    The dot sits on the block mark's upper-right corner. Its size, colours and
    shape are written onto this element as a `style` attribute from
@@ -365,19 +356,13 @@
   --bs-btn-active-color: var(--blockr-color-text-accent, #2563eb);
 }
 
-/* The focus lands on the toggle's hidden checkbox, so its label draws the
-   ring blockr.ui gives a focused button. */
-.blockr-section-toggle .btn-check:focus-visible + .btn.btn-light {
-  outline: var(--blockr-focus-outline, 2px solid var(--blockr-color-border-accent));
-  outline-offset: var(--blockr-focus-offset, 2px);
-}
-
 .blockr-section-toggle .btn.btn-light svg {
   width: 14px;
   height: 14px;
 }
 
-.blockr-section-toggle .btn-group {
+.blockr-section-toggle {
+  display: inline-flex;
   gap: 2px;
 }
 
