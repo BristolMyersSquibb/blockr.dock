@@ -280,3 +280,47 @@ test_that("determine_panel_pos reserves every extension's group (#250)", {
     list(referenceGroup = "grp2", direction = "within")
   )
 })
+
+test_that("only the offcanvas pools skip rendering their contents (e2e)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "pool-content-visibility",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  # Bootstrap adds `.show` only once an offcanvas has slid in, so one that is
+  # opening carries `.showing` alone, as the probe's offcanvas does.
+  probe <- jsonlite::fromJSON(
+    app$get_js(
+      r"(JSON.stringify((function () {
+        var cv = function (el) {
+          return getComputedStyle(el).contentVisibility;
+        };
+        var body = function (id) {
+          return document.querySelector('#' + id + ' > .offcanvas-body');
+        };
+        var other = document.createElement('div');
+        other.className = 'offcanvas offcanvas-end showing';
+        other.innerHTML = '<div class="offcanvas-body"></div>';
+        document.body.appendChild(other);
+        var res = {
+          blocks: cv(body('my_board-blocks_offcanvas')),
+          exts: cv(body('my_board-exts_offcanvas')),
+          opening: cv(other.firstChild)
+        };
+        other.remove();
+        return res;
+      })()))"
+    )
+  )
+
+  expect_identical(probe$blocks, "hidden")
+  expect_identical(probe$exts, "hidden")
+  expect_identical(probe$opening, "visible")
+})

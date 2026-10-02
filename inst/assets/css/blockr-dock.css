@@ -862,6 +862,19 @@
   opacity: 1;
 }
 
+/* Cards and extensions of views not on screen are parked in the two offcanvas
+   pools (`hide_block_ui()`, `hide_ext_ui()`). A closed offcanvas is only
+   `visibility: hidden`, so the browser kept styling and laying out every
+   parked card: on a 90-block board, half the document once all views had been
+   visited. Setting `content-visibility: hidden` skips that work. Unlike
+   `display: none`, it leaves the cards' sizes readable, so Shiny does not
+   suspend their outputs and charts get no resize to zero. The rule keys on the
+   pools' own class rather than `.offcanvas`: Bootstrap adds `.show` only once
+   an offcanvas has slid in, so any other offcanvas would slide in blank. */
+.blockr-offcanvas-pool:not(.show) > .offcanvas-body {
+  content-visibility: hidden;
+}
+
 /* Empty dock prompt — overlays the dockview when no panels are present */
 .blockr-empty-dock-prompt {
   position: absolute;

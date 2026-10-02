@@ -27,6 +27,24 @@
   off by default) turns every block header into an eyebrow line: a small
   tinted mark and the name in muted capitals.
 
+* A first visit to a view no longer re-checks every block's frozen state per
+  card mount. A card's reported sections depended on the session's whole input
+  name set, so every new input on the board woke every block's `visible`, and
+  `freeze_hidden_inputs()` re-read all of them: 21 to 43 runs over ~90 blocks
+  per first visit. The key test now runs under `isolate()`; reading the section
+  input itself already fires when the card first reports.
+
+* Testing a block for controls renders their markup without resolving their
+  html dependencies, which cost more than the markup once every control
+  carried its own set (`resolveDependencies` 1.4 s to 0.8 s over a short
+  session).
+
+* Cards and extensions parked off screen (views you have left) are no longer
+  styled or laid out by the browser (`content-visibility: hidden` on the closed
+  offcanvas pools). On a 90-block board they are half the document; one DOM
+  insertion goes from 106 to 11 ms and a return view switch spends 0.8 s instead
+  of 2.1 s on style (loaded container, same page A/B).
+
 * The dock reads its colours, radii and surfaces from blockr.ui's design
   tokens, so a board follows blockr.ui's dark scheme: the dockview frame and
   tabs, block headers, sidebars, the block browser and the block menu. Font
