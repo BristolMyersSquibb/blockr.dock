@@ -185,7 +185,7 @@ html.blockr-html-pushed-left {
 }
 
 .blockr-options-row:focus-visible,
-.blockr-options-code .btn:focus-visible {
+.blockr-options-code:focus-visible {
   outline: var(--blockr-focus-outline);
   outline-offset: -2px;
 }
@@ -194,38 +194,6 @@ html.blockr-html-pushed-left {
   display: inline-flex;
   flex-shrink: 0;
   color: var(--blockr-color-text-muted);
-}
-
-/* "Show code": core's button, drawn as the list's last row, quiet, with its
-   icon (it opens a dialog). */
-.blockr-options-code .btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 34px;
-  padding: 9px 10px;
-  border: none;
-  border-radius: var(--blockr-radius-md);
-  background: transparent;
-  box-shadow: none;
-  color: var(--blockr-color-text-muted);
-  font-size: var(--blockr-font-size-base);
-  font-weight: var(--blockr-font-weight-normal);
-  text-align: left;
-}
-
-.blockr-options-code .btn:hover,
-.blockr-options-code .btn:focus-visible {
-  background: var(--blockr-color-bg-hover);
-  color: var(--blockr-color-text-default);
-}
-
-.blockr-options-code .btn .fa,
-.blockr-options-code .btn svg {
-  width: 16px;
-  font-size: 13px;
-  text-align: center;
 }
 
 .blockr-options-page .shiny-input-container,

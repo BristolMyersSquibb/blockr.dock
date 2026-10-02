@@ -986,6 +986,24 @@ test_that("the options sidebar pages back to its list", {
   )
 })
 
+test_that("Show code in the options sidebar opens the code dialog", {
+
+  skip_on_cran()
+
+  app <- menus_app("show-code")
+  withr::defer(app$stop())
+
+  click_sel(app, "button[aria-label=\"Board options\"]")
+  wait_panel(app, "my_board-settings_sidebar", open = TRUE)
+  click_sel(app, "#my_board-settings_sidebar .blockr-options-code")
+
+  wait_sel(app, ".modal .modal-title")
+  expect_identical(
+    app$get_js("document.querySelector('.modal .modal-title').textContent"),
+    "Generated code"
+  )
+})
+
 test_that("the compact switch turns the headers into eyebrows", {
 
   skip_on_cran()

@@ -186,7 +186,7 @@ dock_outputs_ui <- function(id, views) {
 #' custom_options(...))` via `blockr_app_server.dock_board()` →
 #' `board_server_callback()` → `settings_observer()`) wins. When the
 #' caller passed nothing, falls back to `blockr.core::blockr_app_options(x)`
-#' so the accordion still includes options contributed by blocks on the
+#' so the sidebar still includes options contributed by blocks on the
 #' board and by registered block constructors, the same set `serve()`
 #' would have computed on the default path.
 #'
@@ -212,8 +212,8 @@ settings_body <- function(
     opt_ui_or_null("generate_code", plugins, x)
   )
 
-  # Locked board: the options accordion writes board state via
-  # set_board_option_value(), which core's gate rejects while locked. Drop it
+  # Locked board: the options pages write board state via
+  # set_board_option_value(), which core's gate rejects while locked. Drop them
   # so the settings sidebar offers only the read-only generated-code export.
   if (is_dock_locked()) {
     return(generate_code)

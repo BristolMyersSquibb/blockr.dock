@@ -1,13 +1,10 @@
 #' @export
 board_plugins.dock_board <- function(x, which = NULL, ...) {
 
-  core_plugins <- c("generate_code")
-  core_plugins <- coal(intersect(which, core_plugins), core_plugins)
+  plugins <- plugins()
 
-  if (length(core_plugins)) {
-    plugins <- NextMethod(which = core_plugins)
-  } else {
-    plugins <- plugins()
+  if (is.null(which) || "generate_code" %in% which) {
+    plugins <- c(plugins, generate_code(ui = show_code_ui))
   }
 
   # Save / restore stays available in locked mode: locking is about

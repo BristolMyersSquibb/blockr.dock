@@ -58,3 +58,29 @@ test_that("an option without a category goes under Other options", {
     1L
   )
 })
+
+test_that("Show code ends the list as a row of its own", {
+
+  html <- xml2::read_html(
+    as.character(htmltools::tagList(settings_body("brd", new_dock_board())))
+  )
+
+  row <- xml2::xml_find_all(
+    html,
+    "//div[@class='blockr-options-list']/*[last()]/button"
+  )
+
+  expect_length(row, 1L)
+  expect_identical(xml2::xml_attr(row, "id"), "brd-generate_code-code_mod")
+  expect_match(
+    xml2::xml_attr(row, "class"),
+    "action-button blockr-menu__item",
+    fixed = TRUE
+  )
+  expect_identical(
+    xml2::xml_text(
+      xml2::xml_find_all(row, ".//span[@class='blockr-menu__label']")
+    ),
+    "Show code"
+  )
+})

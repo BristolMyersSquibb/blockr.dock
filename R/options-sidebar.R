@@ -47,10 +47,7 @@ options_sidebar_ui <- function(id, options, generate_code = NULL) {
 
   code_row <- NULL
   if (not_null(generate_code)) {
-    code_row <- tagList(
-      div(class = "blockr-menu__gap"),
-      div(class = "blockr-options-code", generate_code)
-    )
+    code_row <- tagList(div(class = "blockr-menu__gap"), generate_code)
   }
 
   div(
