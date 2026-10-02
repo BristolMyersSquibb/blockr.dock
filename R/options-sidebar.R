@@ -20,7 +20,10 @@ options_sidebar_ui <- function(id, options, generate_code = NULL) {
         class = "blockr-menu__item blockr-options-row",
         `data-category` = cat,
         tags$span(class = "blockr-options-row-name", cat),
-        tags$span(class = "blockr-options-chevron", HTML(options_icons$chev))
+        tags$span(
+          class = "blockr-options-chevron",
+          blockr.ui::small_icon("chevron")
+        )
       )
     }
   )
@@ -53,15 +56,6 @@ options_sidebar_ui <- function(id, options, generate_code = NULL) {
     unname(pages)
   )
 }
-
-options_icons <- list(
-  chev = paste0(
-    '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" ',
-    'stroke="currentColor" stroke-width="1.25" stroke-linecap="round" ',
-    'stroke-linejoin="round" aria-hidden="true"><path d="M4.5 3l3 3-3 3">',
-    "</path></svg>"
-  )
-)
 
 options_sidebar_dep <- function() {
   htmltools::htmlDependency(

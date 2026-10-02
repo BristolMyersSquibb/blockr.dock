@@ -1,6 +1,6 @@
 sidebar_ui <- function(id, ui = NULL, title = NULL,
                        side = c("right", "left"), width = "420px",
-                       mode = c("overlay", "push")) {
+                       mode = c("overlay", "push"), back = FALSE) {
   stopifnot(
     is.character(id), length(id) == 1L, nzchar(id),
     is.character(width), length(width) == 1L, nzchar(width),
@@ -31,6 +31,16 @@ sidebar_ui <- function(id, ui = NULL, title = NULL,
     style = paste0("--blockr-sidebar-panel-width: ", width, ";"),
     tags$header(
       class = "blockr-sidebar-header",
+      # Shown while the body shows one of its pages (`.blockr-sidebar-paged`).
+      if (back) {
+        tags$button(
+          type = "button",
+          class = "blockr-sidebar-btn blockr-sidebar-back",
+          `aria-label` = "Back",
+          title = "Back",
+          blockr.ui::small_icon("chevron")
+        )
+      },
       tags$h2(class = "blockr-sidebar-title", title),
       tags$div(
         class = "blockr-sidebar-actions",

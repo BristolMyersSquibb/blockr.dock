@@ -259,7 +259,12 @@ html.blockr-html-pushed-left {
   gap: 6px;
 }
 
+/* blockr.ui's one chevron points down: turned left for the way back, and
+   right for a row that opens a page. */
 .blockr-sidebar-back svg {
-  width: 14px;
-  height: 14px;
+  transform: rotate(90deg);
+}
+
+.blockr-options-chevron svg {
+  transform: rotate(-90deg);
 }

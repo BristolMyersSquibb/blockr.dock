@@ -157,7 +157,8 @@ board_ui.dock_board <- function(
       ui = settings_body(id, x, options = options),
       title = "Board options",
       mode = "overlay",
-      side = "right"
+      side = "right",
+      back = TRUE
     )
   )
 }
