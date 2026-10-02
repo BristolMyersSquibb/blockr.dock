@@ -1,23 +1,21 @@
 # blockr.dock (development version)
 
-* The block's "…" menu is blockr.ui's `Blockr.menu`: Rename, Append block,
-  Copy block ID (the ID in the code face) and, after a divider, Remove block
-  with a bin, red only under the pointer. It is driven from the keyboard.
+* The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
+  keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
+  and Remove block after a divider. The preview and a block's own control
+  keep their buttons in the header. The dock no longer depends on
+  shinyWidgets.
 
-* Adding, appending, prepending and inserting a block open one menu in
-  place (the design system's "Picking a block"): a caption, a filter box,
-  category titles and one row per block type with its mark, name and
-  package badge. The block browser sidebar is no longer used for it. "Add
-  panel" is the same menu over the board's blocks not on the page; its
-  dialog is gone. "New page" adds an empty "Page N" and opens its name for
-  renaming, without a dialog; removing a page asks in its row.
+* Adding, appending, prepending and inserting a block open one menu in place,
+  with a filter box and one row per block type, instead of the block browser
+  sidebar. "Add panel" is the same menu over the board's blocks not on the
+  page, and its dialog is gone. An action's trigger can name where its
+  gesture happened (`at`, see `new_action()`): the menu opens there, and
+  under the navbar when nothing is named.
 
-* The views menu switches pages, the current one marked by weight and a
-  check. "Manage pages" at its foot turns the list into an editor: drag a
-  page by its grip to reorder, click a name to rename it, an x to remove,
-  "New page", "Done". The up and down arrows and the pencil are gone; a drag
-  sends the whole order, which the server takes only as a permutation of
-  the current one.
+* "Manage pages" turns the views menu into an editor: drag a page by its grip
+  to reorder, click a name to rename it, remove a page after a question in
+  its row, and add an empty "Page N" with "New page", all without a dialog.
 
 * The board options sidebar lists the option categories, and a row opens
   that category's page. The header then shows a back arrow and the
@@ -25,17 +23,9 @@
   Bootstrap accordion and the rule above it are gone; "Show code" is the
   list's last row.
 
-* A block is renamed with a double-click on its title or "Rename" in its
-  menu, in place: the title takes a hover wash, the field the accent edge and
-  focus ring; Enter or a click elsewhere commits, Escape restores, an empty
-  name is refused. The controls and preview toggles are bare grey tools that
-  show a light accent when on. The status dot reads the tokens; "unset" takes
-  the warning amber and a waiting block shows a hollow ring.
-
 * A "Compact" board option (`new_compact_option()`, in `dock_board_options()`,
-  off by default) turns every block header into an eyebrow line: a 20px
-  tinted mark and the name in 11px muted capitals. The regular header keeps
-  a 32px mark and a 16px title that may wrap to two lines.
+  off by default) turns every block header into an eyebrow line: a small
+  tinted mark and the name in muted capitals.
 
 * The dock reads its colours, radii and surfaces from blockr.ui's design
   tokens, so a board follows blockr.ui's dark scheme: the dockview frame and
@@ -45,11 +35,11 @@
   light by default, and core's thematic switch, off by default, which lets
   plots take the board's colours.
 
-* The block header drops its subtitle: a 42px mark in the block's category
+* The block header drops its subtitle: a 32px mark in the block's category
   colour carries the status dot, and the block type, with the package as a
-  badge, is the mark's tooltip. The controls sit just under the header with
-  no rules around them; one rule separates them from the preview while both
-  are open.
+  badge, is the mark's tooltip. The title is 16px and wraps to two lines.
+  The controls sit just under the header with no rules around them; one rule
+  separates them from the preview while both are open.
 
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
