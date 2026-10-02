@@ -139,24 +139,6 @@ test_that("a panel outside the board's own mounts answers the same way", {
   )
 })
 
-test_that("re-showing a pinned panel restamps its owner", {
-  session <- fake_sidebar_session(
-    list(open = TRUE, pinned = TRUE, owner = "my_board-edit_stack_action")
-  )
-
-  keep_or_hide_sidebar(
-    "panel",
-    ui = NULL,
-    title = "Edit stack s1",
-    session = session
-  )
-
-  msg <- session$messages()[[1L]][["message"]]
-
-  expect_identical(msg[["action"]], "show")
-  expect_identical(msg[["owner"]], "my_board-edit_stack_action")
-})
-
 # The stamp is only useful if it survives the trip through the browser: R
 # ships it with the body swap, the binding parks it on the panel and reports
 # it back in the panel's value, and the query has to compose an id that

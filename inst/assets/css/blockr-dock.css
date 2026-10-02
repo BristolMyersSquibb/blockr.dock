@@ -741,8 +741,8 @@
 
 /* Remove asks in place: the row turns into the question and a Remove
    button on the danger wash. */
-.blockr-view-item.is-confirming > :not(.blockr-view-confirm) {
-  display: none !important;
+.blockr-view-nav .blockr-view-item.is-confirming > :not(.blockr-view-confirm) {
+  display: none;
 }
 
 .blockr-view-nav.is-managing .blockr-view-item.dropdown-item.is-confirming,

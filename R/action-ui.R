@@ -337,30 +337,6 @@ blk_selectize <- function(id, options_data, selected = NULL, max_items = 1L,
   )
 }
 
-multi_select_opts <- function(placeholder) {
-  list(
-    placeholder = placeholder,
-    openOnFocus = FALSE,
-    plugins = list("remove_button")
-  )
-}
-
-auto_focus_script <- function(id) {
-  tags$script(
-    HTML(
-      sprintf(
-        "$('#shiny-modal').on(
-          'shown.bs.modal',
-          function() {
-            $('#%s')[0].selectize.focus();
-          }
-        );",
-        id
-      )
-    )
-  )
-}
-
 toggle_button <- function(opt_id, tog_id) {
   div(
     class = "modal-advanced-toggle text-muted",
@@ -375,12 +351,5 @@ toggle_button <- function(opt_id, tog_id) {
     ),
     tags$span(class = "modal-chevron", "\u203A"),
     "Show advanced options"
-  )
-}
-
-confirm_button <- function(...) {
-  div(
-    style = "display: flex; justify-content: flex-end; margin-top: 20px;",
-    actionButton(..., class = "btn-primary")
   )
 }

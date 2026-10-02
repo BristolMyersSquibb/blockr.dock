@@ -238,13 +238,6 @@ html.blockr-html-pushed-left {
   margin-bottom: 16px;
 }
 
-.blockr-options-page .control-label {
-  margin-bottom: 4px;
-  font-size: var(--blockr-font-size-xs);
-  font-weight: var(--blockr-font-weight-normal);
-  color: var(--blockr-color-text-muted);
-}
-
 /* The back arrow shows only on a page, and leads the header. */
 .blockr-sidebar-back {
   display: none;

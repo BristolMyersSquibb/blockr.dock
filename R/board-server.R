@@ -1337,8 +1337,6 @@ extension_default_icon <- function() {
 
 #' Build a single selectize option entry.
 #'
-#' Shared structure for block and extension options in panel pickers.
-#'
 #' @param value Option value (ID, possibly prefixed).
 #' @param label Display label.
 #' @param id Raw object ID.
@@ -1365,15 +1363,11 @@ build_one_option <- function(value, label, id, package, icon, color) {
 #'
 #' @param board Board object.
 #' @param blk_ids Character vector of block IDs to include.
-#' @param value_fun Coercion applied to each ID to form the option value;
-#'   defaults to `identity` (bare IDs, for a block-only selectize). The
-#'   panel picker passes `as_block_panel_id` so a single mixed selectize
-#'   can be disambiguated on read-back.
 #'
 #' @return A list of option lists suitable for `selectizeInput`.
 #'
 #' @noRd
-build_block_options <- function(board, blk_ids, value_fun = identity) {
+build_block_options <- function(board, blk_ids) {
   if (!length(blk_ids)) {
     return(list())
   }
@@ -1384,7 +1378,7 @@ build_block_options <- function(board, blk_ids, value_fun = identity) {
   lapply(seq_along(blk_ids), function(i) {
     id <- blk_ids[i]
     build_one_option(
-      value = as.character(value_fun(id)),
+      value = id,
       label = block_name(blks[[id]]),
       id = id,
       package = meta$package[i],
@@ -1392,61 +1386,4 @@ build_block_options <- function(board, blk_ids, value_fun = identity) {
       color = meta$color[i]
     )
   })
-}
-
-#' Build selectize option entries for extensions.
-#'
-#' @param board Board object.
-#' @param ext_ids Character vector of extension IDs to include.
-#' @param value_fun Coercion applied to each ID to form the option value;
-#'   defaults to `identity` (bare IDs, for an extension-only selectize). The
-#'   panel picker passes `as_ext_panel_id` so a single mixed selectize
-#'   can be disambiguated on read-back.
-#'
-#' @return A list of option lists suitable for `selectizeInput`.
-#'
-#' @noRd
-build_ext_options <- function(board, ext_ids, value_fun = identity) {
-  if (!length(ext_ids)) {
-    return(list())
-  }
-
-  all_exts <- as.list(dock_extensions(board))
-
-  lapply(ext_ids, function(ext_id) {
-    ext <- all_exts[[ext_id]]
-    ext_name <- extension_name(ext)
-    ext_pkg <- ctor_pkg(extension_ctor(ext))
-
-    build_one_option(
-      value = as.character(value_fun(ext_id)),
-      label = ext_name,
-      id = ext_id,
-      package = coal(ext_pkg, "local"),
-      icon = extension_default_icon(),
-      color = "#999999"
-    )
-  })
-}
-
-#' Validate a view name.
-#'
-#' With identity carried by a stable id, the name is a free-form display
-#' label: the only remaining rules are display concerns — non-empty and
-#' (to keep tabs unambiguous) not a duplicate of another view's name.
-#'
-#' @param name Trimmed view name string.
-#' @param existing Character vector of existing view names.
-#'
-#' @return Error message string, or `NULL` if valid.
-#'
-#' @noRd
-validate_view_name <- function(name, existing) {
-  if (nchar(name) == 0L) {
-    "Name cannot be empty."
-  } else if (name %in% existing) {
-    "A view with this name already exists."
-  } else {
-    NULL
-  }
 }

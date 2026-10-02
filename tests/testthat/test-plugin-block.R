@@ -733,12 +733,7 @@ test_that("the header names the block type on its mark", {
 test_that("the block menu lists its actions for Blockr.menu", {
 
   menu_config <- function() {
-    btn <- block_card_dropdown(
-      NS("blk"),
-      list(name = "dataset block", package = "blockr.core",
-           description = "Choose a dataset"),
-      "a"
-    )
+    btn <- block_card_dropdown(NS("blk"), "a")
     jsonlite::fromJSON(
       htmltools::tagGetAttribute(btn, "data-blockr-menu"),
       simplifyVector = FALSE

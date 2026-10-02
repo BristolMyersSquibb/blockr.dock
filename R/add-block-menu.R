@@ -130,7 +130,10 @@ add_panel_menu_items <- function(board, blk_ids, ext_ids) {
         label = extension_name(all_exts[[ext_id]]),
         value = as.character(as_ext_panel_id(ext_id)),
         keywords = ext_id,
-        mark = list(icon = extension_default_icon(), color = "#999999")
+        mark = list(
+          icon = extension_default_icon(),
+          color = unname(blk_color("uncategorized"))
+        )
       )
     })
   }

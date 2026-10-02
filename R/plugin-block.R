@@ -26,7 +26,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
           div(
             class = "blockr-block-header-actions",
             block_card_toggles(visible, ns, ctrl_meta, has_inputs),
-            block_card_dropdown(ns, blk_info, blk_id)
+            block_card_dropdown(ns, blk_id)
           )
         )
       )
@@ -203,7 +203,7 @@ ctrl_button_label <- function(meta) {
 # server's observers are unchanged; `rename` starts the in-place rename;
 # `copy` puts the block ID on the clipboard. A locked dock lists no action
 # that changes the board.
-block_card_dropdown <- function(ns, info, blk_id) {
+block_card_dropdown <- function(ns, blk_id) {
 
   locked <- is_dock_locked()
 

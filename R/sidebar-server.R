@@ -200,15 +200,6 @@ sidebar_owned_by <- function(action, board_id, session = get_session()) {
   )
 }
 
-keep_or_hide_sidebar <- function(id, ui, title = NULL,
-                                 session = get_session()) {
-  if (isTRUE(sidebar_state(id, session = session)$pinned)) {
-    show_sidebar(id, ui = ui, title = title, session = session)
-  } else {
-    hide_sidebar(id, session = session)
-  }
-}
-
 # Post-commit close for a panel whose menu tracks the board on its own: an
 # unpinned panel closes after the commit, a pinned one is left alone so the
 # menu refreshes itself in place.

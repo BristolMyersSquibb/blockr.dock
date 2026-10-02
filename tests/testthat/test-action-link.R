@@ -20,7 +20,6 @@ commit_menu <- function(session, source, target, link_id,
 local_mocked_sidebar <- function(env = parent.frame()) {
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
     hide_sidebar         = function(...) invisible(list(...)),
     .env = env
   )
@@ -366,8 +365,7 @@ test_that("add link action: empty pool still opens the sidebar", {
       show_calls[[length(show_calls) + 1L]] <<- id
       invisible(NULL)
     },
-    hide_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL)
+    hide_sidebar = function(...) invisible(NULL)
   )
   local_mocked_bindings(
     notify = function(message, ...) {
@@ -411,9 +409,6 @@ test_that("add link action: a commit closes an unpinned panel only", {
     local_mocked_bindings(
       show_sidebar = function(...) seen$show <<- seen$show + 1L,
       hide_sidebar = function(...) seen$hide <<- seen$hide + 1L,
-      keep_or_hide_sidebar = function(...) {
-        stop("the panel must not be rebuilt after a commit")
-      },
       sidebar_state = function(id, ...) list(open = TRUE, pinned = pinned)
     )
 
@@ -716,9 +711,6 @@ test_that("edit link action: a commit closes an unpinned panel only", {
     local_mocked_bindings(
       show_sidebar = function(...) seen$show <<- seen$show + 1L,
       hide_sidebar = function(...) seen$hide <<- seen$hide + 1L,
-      keep_or_hide_sidebar = function(...) {
-        stop("the panel must not be rebuilt after a commit")
-      },
       sidebar_state = function(id, ...) list(open = TRUE, pinned = pinned)
     )
 
@@ -752,7 +744,6 @@ test_that("edit link action: removing the edited link closes the sidebar", {
   hide_calls <- list()
   local_mocked_bindings(
     show_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar = function(id, ...) {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
@@ -793,7 +784,6 @@ test_that("edit link action: a form written by another action stays open", {
   hide_calls <- list()
   local_mocked_bindings(
     show_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar = function(id, ...) {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
@@ -838,7 +828,6 @@ test_that("link actions write the sidebar from their own module", {
       wrote_from[[length(wrote_from) + 1L]] <<- get_session()$ns(NULL)
       invisible(NULL)
     },
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar = function(...) invisible(NULL)
   )
 

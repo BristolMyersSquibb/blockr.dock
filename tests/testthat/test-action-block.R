@@ -15,7 +15,6 @@ test_that("add block action: commit creates one ready block", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
@@ -50,7 +49,6 @@ test_that("add block action: an empty id is auto-assigned", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
@@ -87,7 +85,6 @@ test_that("add block action: a non-empty duplicate id is rejected", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
@@ -119,7 +116,6 @@ test_that("append block action: NULL block_input falls back to the only slot", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
@@ -155,7 +151,6 @@ test_that("append block action: valid commit creates one block + one link", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
@@ -198,7 +193,6 @@ test_that("append block action: an empty link_id is auto-assigned", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
@@ -233,7 +227,6 @@ test_that("prepend block action: target_input picks the link slot", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
@@ -311,7 +304,6 @@ test_that("append block action: a name field names the variadic slot", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
@@ -348,7 +340,6 @@ test_that("prepend block action: a name field names the target slot", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
@@ -388,7 +379,6 @@ test_that("prepend block action: a duplicate target name is rejected", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
@@ -477,7 +467,6 @@ test_that("prepend: NULL target_input falls back to only slot", {
   r_update <- reactiveVal(list())
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar         = function(...) invisible(NULL)
   )
 
