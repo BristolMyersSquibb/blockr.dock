@@ -1,7 +1,7 @@
 # blockr.dock (development version)
 
 * The block's "…" menu is blockr.ui's `Blockr.menu`: Rename, Append block,
-  Copy block ID (the ID as grey text) and, after a small gap, Remove block
+  Copy block ID (the ID in the code face) and, after a divider, Remove block
   with a bin, red only under the pointer. It is driven from the keyboard.
 
 * Adding, appending, prepending and inserting a block open one menu in

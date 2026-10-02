@@ -749,7 +749,7 @@ test_that("the block menu lists its actions for Blockr.menu", {
     labels,
     c("Rename", "Append block", "Copy block ID", "", "Remove block")
   )
-  expect_true(cfg$items[[4L]]$gap)
+  expect_true(cfg$items[[4L]]$divider)
   # Only Remove carries an icon.
   icons <- vapply(cfg$items, function(x) x$icon %||% "", character(1L))
   expect_identical(icons, c("", "", "", "", "trash"))
@@ -758,6 +758,7 @@ test_that("the block menu lists its actions for Blockr.menu", {
   expect_true(all(c("blk-append_block", "blk-delete_block") %in% targets))
   expect_true(cfg$items[[5L]]$danger)
   expect_identical(cfg$items[[3L]]$meta, "a")
+  expect_true(cfg$items[[3L]]$mono)
 
   # A locked dock lists nothing that changes the board.
   withr::local_options(blockr.locked = TRUE)

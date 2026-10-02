@@ -208,8 +208,8 @@ block_card_dropdown <- function(ns, blk_id) {
   locked <- is_dock_locked()
 
   # Plain actions have no icon; Remove, which destroys something, has the
-  # bin and sits in a group of its own (design system, Menus). The block's
-  # type and package are the tooltip on its mark, not a head here.
+  # bin and sits after a divider (design system, "The block's '…' menu").
+  # The block's type and package are the tooltip on its mark, not a head.
   items <- c(
     if (!locked) {
       list(
@@ -223,13 +223,13 @@ block_card_dropdown <- function(ns, blk_id) {
     },
     list(
       list(
-        label = "Copy block ID", meta = blk_id, action = "copy",
+        label = "Copy block ID", meta = blk_id, mono = TRUE, action = "copy",
         target = blk_id
       )
     ),
     if (!locked) {
       list(
-        list(gap = TRUE),
+        list(divider = TRUE),
         list(
           label = "Remove block", icon = "trash", danger = TRUE,
           action = "input", target = ns("delete_block")
