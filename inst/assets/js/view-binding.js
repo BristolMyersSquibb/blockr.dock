@@ -296,17 +296,21 @@ $(function () {
       $(el).closest('.blockr-view-dropdown').on('hidden.bs.dropdown.viewBinding', function () {
         var active = document.activeElement;
         if (active && $(active).is('.blockr-view-rename-input')) active.blur();
+        cancelConfirm();
         setManaging(el, false);
       });
 
       // Remove asks in place: the x turns the row into "Remove this page?"
       // with a Remove button; only that button sends the request, and the
-      // server removes the page without a dialog. A click anywhere else in
-      // the menu, or Escape, takes the question back.
+      // server removes the page without a dialog. The question is a layer
+      // (Blockr.layer), so Escape or a click anywhere outside its row takes
+      // it back.
+      var confirming = null;
       var cancelConfirm = function () {
-        $(el).find('.blockr-view-item.is-confirming').each(function () {
-          $(this).removeClass('is-confirming').find('.blockr-view-confirm').remove();
-        });
+        if (!confirming) return;
+        confirming.layer.remove();
+        $(confirming.item).removeClass('is-confirming').find('.blockr-view-confirm').remove();
+        confirming = null;
       };
 
       $(el).on('click.viewBinding', '.blockr-view-remove-confirm', function (e) {
@@ -331,27 +335,15 @@ $(function () {
               .addClass('blockr-view-remove-confirm').text('Remove')
           )
         );
+        confirming = {
+          item: $item[0],
+          layer: Blockr.layer($item[0], {
+            escape: cancelConfirm,
+            outside: cancelConfirm
+          })
+        };
         $item.find('.blockr-view-remove-confirm').trigger('focus');
       });
-
-      $(el).on('click.viewBinding', function (e) {
-        if (!$(e.target).closest('.blockr-view-confirm, .blockr-view-remove').length) {
-          cancelConfirm();
-        }
-      });
-
-      // Escape takes a pending question back instead of closing the menu.
-      // Capture phase on the window: Bootstrap handles the dropdown's keys in
-      // the capture phase on the document, and the window's runs first.
-      if (!el._blockrConfirmEscape) {
-        el._blockrConfirmEscape = function (e) {
-          if (e.key !== 'Escape' || !$(el).find('.is-confirming').length) return;
-          e.preventDefault();
-          e.stopPropagation();
-          cancelConfirm();
-        };
-        window.addEventListener('keydown', el._blockrConfirmEscape, true);
-      }
 
       // Add click: the server adds an empty "Page N" and switches to it; the
       // page arrives through receiveMessage, its name open for renaming.
@@ -366,10 +358,6 @@ $(function () {
 
     unsubscribe: function (el) {
       $(el).off('.viewBinding');
-      if (el._blockrConfirmEscape) {
-        window.removeEventListener('keydown', el._blockrConfirmEscape, true);
-        el._blockrConfirmEscape = null;
-      }
       $(el).closest('.blockr-view-dropdown').off('.viewBinding');
     },
 
