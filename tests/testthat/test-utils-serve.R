@@ -417,7 +417,18 @@ test_that("the view nav does not report the server's own push back (#424)", {
   # client-side activation would report a view the board never switched to --
   # and with the echo gone, nothing would correct it.
   watch_view_nav(app)
-  push_view_nav(app, '{"add": {"id": "ghost", "name": "Ghost"}}')
+  push_view_nav(
+    app,
+    jsonlite::toJSON(
+      list(
+        add = list(
+          id = "ghost",
+          html = as.character(view_item_ui("ghost", "Ghost", can_crud = TRUE))
+        )
+      ),
+      auto_unbox = TRUE
+    )
+  )
 
   expect_identical(view_nav_reports(app), character())
 
