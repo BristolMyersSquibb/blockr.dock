@@ -828,6 +828,37 @@ test_that("append opens the + menu at the block's menu button", {
   expect_identical(app$get_js("document.activeElement.id"), btn)
 })
 
+test_that("Rename in the block menu opens the title's field", {
+
+  skip_on_cran()
+
+  app <- menus_app("menu-rename")
+  withr::defer(app$stop())
+
+  btn <- app$get_js(paste0(shown_menu_btn, ".id"))
+  field <- sub("block_menu$", "block_name_in", btn)
+
+  app$run_js(sprintf("document.getElementById('%s').click()", btn))
+  wait_sel(app, menu_sel)
+
+  app$run_js(
+    paste0(
+      "[...document.querySelectorAll('body > .blockr-menu .blockr-menu__item')]",
+      ".find(r => r.textContent.trim() === 'Rename').click()"
+    )
+  )
+
+  wait_js(
+    app,
+    sprintf("document.activeElement.id === '%s'", field),
+    function() {
+      paste("[rename] focus on", app$get_js("document.activeElement.id"))
+    }
+  )
+
+  expect_identical(app$get_js("document.activeElement.id"), field)
+})
+
 test_that("the controls toggle in the block menu flips the card's section", {
 
   skip_on_cran()

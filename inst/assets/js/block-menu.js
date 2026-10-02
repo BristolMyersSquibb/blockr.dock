@@ -36,7 +36,9 @@
     if (item.action === 'rename') {
       return function () {
         var el = document.getElementById(target);
-        if (el) el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        if (el) {
+          el.dispatchEvent(new CustomEvent('blockr-rename:start', { bubbles: true }));
+        }
       };
     }
     if (item.action === 'copy') {
