@@ -708,3 +708,275 @@ test_that("Enter commits the typed name and takes focus out of the field", {
 
   expect_identical(exported(app, "links"), c("l1:a>", "l2:b>", "l3:c>typed"))
 })
+
+# The "+" menu, the block's "…" menu, the section toggles and the options
+# pages are client code over a server round trip, so these drive the board.
+
+menu_sel <- "body > .blockr-menu"
+
+# The open menu's caption and box, and the box of the element it should hang
+# off when one is named.
+menu_box <- function(app, anchor = NULL) {
+  app$get_js(
+    sprintf(
+      paste0(
+        "(function(){",
+        "var m = document.querySelector('body > .blockr-menu');",
+        "var r = m.getBoundingClientRect();",
+        "var a = %s;",
+        "var b = a ? a.getBoundingClientRect() : null;",
+        "var c = m.querySelector('.blockr-menu__caption');",
+        "return {caption: c ? c.textContent : null, top: r.top,",
+        "  center: r.left + r.width / 2, viewport: window.innerWidth,",
+        "  anchorBottom: b ? b.bottom : null};",
+        "})()"
+      ),
+      if (is.null(anchor)) "null" else anchor
+    )
+  )
+}
+
+press <- function(app, key, target = "document.activeElement") {
+  app$run_js(
+    sprintf(
+      paste0(
+        "%s.dispatchEvent(",
+        "new KeyboardEvent('keydown', {key: '%s', bubbles: true}))"
+      ),
+      target, key
+    )
+  )
+}
+
+# The first block menu button on screen; cards behind a tab have no box.
+shown_menu_btn <- paste0(
+  "[...document.querySelectorAll('.blockr-block-menu-btn')]",
+  ".find(b => b.getBoundingClientRect().width > 0)"
+)
+
+test_that("a pick from the + menu adds the block", {
+
+  skip_on_cran()
+
+  app <- menus_app("plus-menu-pick")
+  withr::defer(app$stop())
+
+  app$click(fixture("add_block"))
+  wait_sel(app, paste(menu_sel, ".blockr-menu__filter-input"))
+
+  # An action fired from code names no gesture, so the menu takes the fixed
+  # spot: centred, under the navbar.
+  box <- menu_box(app)
+  expect_identical(box$caption, "Add a block")
+  expect_lt(abs(box$center - box$viewport / 2), 2)
+  expect_lt(box$top, 100)
+
+  app$run_js(
+    paste0(
+      "var f = document.querySelector('body > .blockr-menu ",
+      ".blockr-menu__filter-input');",
+      "f.value = 'head';",
+      "f.dispatchEvent(new Event('input', {bubbles: true}));"
+    )
+  )
+  press(app, "Enter")
+
+  app$wait_for_value(
+    export = fixture("blocks"),
+    ignore = list(c("a", "b", "m", "r", "s"))
+  )
+
+  added <- setdiff(exported(app, "blocks"), c("a", "b", "m", "r", "s"))
+  expect_length(added, 1L)
+})
+
+test_that("append opens the + menu at the block's menu button", {
+
+  skip_on_cran()
+
+  app <- menus_app("plus-menu-anchor")
+  withr::defer(app$stop())
+
+  btn <- app$get_js(paste0(shown_menu_btn, ".id"))
+
+  # From the keyboard, as the one path the pointer cannot stand in for: the
+  # down arrow opens the "…" menu on its first row, Controls.
+  app$run_js(sprintf("document.getElementById('%s').focus()", btn))
+  press(app, "ArrowDown")
+  wait_sel(app, menu_sel)
+  press(app, "ArrowDown")
+  press(app, "ArrowDown")
+  press(app, "Enter")
+
+  wait_js(
+    app,
+    paste0(
+      "(function(){var c = document.querySelector(",
+      "'body > .blockr-menu .blockr-menu__caption');",
+      "return c !== null && c.textContent.indexOf('Append to') === 0;})()"
+    ),
+    function() "[plus-menu] no append menu"
+  )
+
+  box <- menu_box(app, sprintf("document.getElementById('%s')", btn))
+  expect_gte(box$top, box$anchorBottom)
+  expect_lt(box$top - box$anchorBottom, 12)
+
+  # Escape hands the focus back to the button the gesture started on.
+  press(app, "Escape")
+  wait_sel(app, menu_sel, present = FALSE)
+  expect_identical(app$get_js("document.activeElement.id"), btn)
+})
+
+test_that("the controls toggle in the block menu flips the card's section", {
+
+  skip_on_cran()
+
+  app <- menus_app("section-toggle")
+  withr::defer(app$stop())
+
+  btn <- app$get_js(paste0(shown_menu_btn, ".id"))
+  sections <- sub("block_menu$", "collapse_blk_sections", btn)
+
+  open <- function() {
+    app$get_js(
+      sprintf(
+        "document.getElementById('%s').getAttribute('data-sections')",
+        sections
+      )
+    )
+  }
+
+  reported <- function() {
+    app$get_js(
+      sprintf(
+        "JSON.stringify(Shiny.shinyapp.$inputValues['%s'])",
+        sections
+      )
+    )
+  }
+
+  expect_identical(open(), "inputs outputs")
+
+  app$run_js(sprintf("document.getElementById('%s').click()", btn))
+  wait_sel(app, menu_sel)
+
+  expect_identical(
+    app$get_js(
+      paste0(
+        "document.querySelector('body > .blockr-menu .blockr-menu__item')",
+        ".getAttribute('aria-checked')"
+      )
+    ),
+    "true"
+  )
+
+  wait_reported <- function(value) {
+    wait_js(
+      app,
+      sprintf(
+        "JSON.stringify(Shiny.shinyapp.$inputValues['%s']) === '%s'",
+        sections, value
+      ),
+      function() paste("[sections] reported", reported())
+    )
+  }
+
+  click_sel(app, paste(menu_sel, ".blockr-menu__item"))
+
+  expect_identical(open(), "outputs")
+  wait_reported("[\"outputs\"]")
+
+  # The preview keeps its own button.
+  click_sel(app, sprintf("#%s [data-section=outputs]", sections))
+
+  expect_identical(open(), "")
+  wait_reported("null")
+})
+
+test_that("the options sidebar pages back to its list", {
+
+  skip_on_cran()
+
+  app <- menus_app("options-pages")
+  withr::defer(app$stop())
+
+  sidebar <- "my_board-settings_sidebar"
+  theme_row <- ".blockr-options-row[data-category=\"Theme options\"]"
+
+  state <- function() {
+    app$get_js(
+      sprintf(
+        paste0(
+          "(function(){var s = document.getElementById('%s');",
+          "return {open: s.classList.contains('blockr-sidebar-open'),",
+          "paged: s.classList.contains('blockr-sidebar-paged'),",
+          "title: s.querySelector('.blockr-sidebar-title').textContent,",
+          "focus: document.activeElement.getAttribute('data-category')};})()"
+        ),
+        sidebar
+      )
+    )
+  }
+
+  click_sel(app, "button[aria-label=\"Board options\"]")
+  wait_panel(app, sidebar, open = TRUE)
+
+  click_sel(app, theme_row)
+  expect_mapequal(
+    state()[c("open", "paged", "title")],
+    list(open = TRUE, paged = TRUE, title = "Theme options")
+  )
+
+  # Escape on a page goes back to the list, onto the row it came from, so
+  # the next Escape closes the sidebar.
+  press(app, "Escape")
+  expect_mapequal(
+    state(),
+    list(
+      open = TRUE, paged = FALSE, title = "Board options",
+      focus = "Theme options"
+    )
+  )
+
+  press(app, "Escape")
+  wait_panel(app, sidebar, open = FALSE)
+
+  # Closing on a page opens on the list next time.
+  click_sel(app, "button[aria-label=\"Board options\"]")
+  wait_panel(app, sidebar, open = TRUE)
+  click_sel(app, theme_row)
+  click_sel(app, paste0("#", sidebar, " .blockr-sidebar-close"))
+  wait_panel(app, sidebar, open = FALSE)
+
+  expect_mapequal(
+    state()[c("paged", "title")],
+    list(paged = FALSE, title = "Board options")
+  )
+})
+
+test_that("the compact switch turns the headers into eyebrows", {
+
+  skip_on_cran()
+
+  app <- menus_app("compact-switch")
+  withr::defer(app$stop())
+
+  compact <- function() {
+    app$get_js("document.documentElement.classList.contains('blockr-compact')")
+  }
+
+  expect_false(compact())
+
+  click_sel(app, "button[aria-label=\"Board options\"]")
+  wait_panel(app, "my_board-settings_sidebar", open = TRUE)
+  click_sel(app, ".blockr-options-row[data-category=\"Theme options\"]")
+  click_sel(app, "#my_board-compact")
+
+  wait_js(
+    app,
+    "document.documentElement.classList.contains('blockr-compact')",
+    function() "[compact] the root never took .blockr-compact"
+  )
+  expect_true(compact())
+})

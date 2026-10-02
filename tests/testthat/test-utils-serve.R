@@ -1739,3 +1739,117 @@ test_that("a rail collapse round-trips with no following gesture (#436)", {
   toggle_rail("false")
   expect_false(stored_collapsed())
 })
+
+test_that("New page opens the name of the page it added, and only that", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-new-page-rename",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  app$run_js(
+    paste0(
+      "document.querySelector('#my_board-view_nav')",
+      ".closest('.blockr-view-dropdown')",
+      ".querySelector('.blockr-view-toggle').click();",
+      "document.querySelector('#my_board-view_nav .blockr-view-manage')",
+      ".click();",
+      "document.querySelector('#my_board-view_nav .blockr-view-add').click();"
+    )
+  )
+  wait_view_nav(app, 3)
+
+  wait_js(
+    app,
+    paste0(
+      "document.activeElement !== null && ",
+      "document.activeElement.classList.contains('blockr-view-rename-input')"
+    ),
+    function() "[view-nav] the new page's name never opened for renaming"
+  )
+  expect_identical(
+    app$get_js("document.activeElement.value"),
+    "Page 3"
+  )
+
+  # Escape gives the name back and leaves the menu open, in manage mode.
+  app$run_js(
+    paste0(
+      "document.activeElement.dispatchEvent(",
+      "new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))"
+    )
+  )
+
+  expect_identical(
+    app$get_js(
+      paste0(
+        "(function(){var n = document.querySelector('#my_board-view_nav');",
+        "return [n.classList.contains('show'), ",
+        "n.classList.contains('is-managing'), ",
+        "n.querySelectorAll('.blockr-view-rename-input').length];})()"
+      )
+    ),
+    list(TRUE, TRUE, 0L)
+  )
+})
+
+test_that("the last page offers no removal", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-last-page",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  removable <- function() {
+    app$get_js(
+      paste0(
+        "[...document.querySelectorAll(",
+        "'#my_board-view_nav .blockr-view-item')]",
+        ".map(r => getComputedStyle(r.querySelector('.blockr-view-remove'))",
+        ".display !== 'none')"
+      )
+    )
+  }
+
+  app$run_js(
+    paste0(
+      "document.querySelector('#my_board-view_nav')",
+      ".closest('.blockr-view-dropdown')",
+      ".querySelector('.blockr-view-toggle').click();",
+      "document.querySelector('#my_board-view_nav .blockr-view-manage')",
+      ".click();"
+    )
+  )
+
+  expect_identical(removable(), list(TRUE, TRUE))
+
+  # The in-place question, then its Remove button.
+  app$run_js(
+    paste0(
+      "document.querySelectorAll('#my_board-view_nav .blockr-view-remove')[1]",
+      ".click();",
+      "document.querySelector(",
+      "'#my_board-view_nav .blockr-view-remove-confirm')",
+      ".click();"
+    )
+  )
+  wait_view_nav(app, 1)
+
+  expect_identical(removable(), list(FALSE))
+})
