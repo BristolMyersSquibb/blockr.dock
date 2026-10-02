@@ -22,7 +22,7 @@ add_block_menu_items <- function(mode) {
     Map(
       function(category, metas) {
         c(
-          list(list(title = upper_first(category))),
+          list(list(title = category)),
           lapply(metas, add_block_menu_item)
         )
       },
@@ -37,10 +37,6 @@ add_block_menu_items <- function(mode) {
 }
 
 add_block_menu_cache <- new.env(parent = emptyenv())
-
-upper_first <- function(x) {
-  paste0(toupper(substr(x, 1L, 1L)), substring(x, 2L))
-}
 
 add_block_menu_item <- function(meta) {
   list(
