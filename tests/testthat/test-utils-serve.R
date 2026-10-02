@@ -1799,6 +1799,42 @@ test_that("New page opens the name of the page it added, and only that", {
     ),
     list(TRUE, TRUE, 0L)
   )
+
+  # A page added by other means, such as the assistant, keeps its name shut,
+  # even while the server is making one for "New page".
+  renaming <- function() {
+    app$get_js(
+      paste0(
+        "[...document.querySelectorAll(",
+        "'#my_board-view_nav .blockr-view-rename-input')]",
+        ".map(i => i.value)"
+      )
+    )
+  }
+
+  push_row <- function(id, name) {
+    push_view_nav(
+      app,
+      jsonlite::toJSON(
+        list(
+          add = list(
+            id = id,
+            html = as.character(view_item_ui(id, name, can_crud = TRUE))
+          )
+        ),
+        auto_unbox = TRUE
+      )
+    )
+  }
+
+  push_view_nav(app, '{"rename_new": "Page 9"}')
+  push_row("ghost", "Ghost")
+
+  expect_identical(renaming(), list())
+
+  push_row("page-9", "Page 9")
+
+  expect_identical(renaming(), list("Page 9"))
 })
 
 test_that("the last page offers no removal", {

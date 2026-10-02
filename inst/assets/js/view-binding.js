@@ -39,8 +39,9 @@ $(function () {
       .text(text);
   };
 
-  // The navs that asked for a new page with "New page" and wait for it.
-  var askedForPage = new WeakSet();
+  // The name of the page each nav's "New page" made, until the page arrives
+  // (`rename_new` from the server).
+  var renameNew = new WeakMap();
 
   var closeMenu = function ($el) {
     var toggle = $el.closest('.blockr-view-dropdown')
@@ -64,7 +65,7 @@ $(function () {
   var setManaging = function (el, on) {
     $(el).toggleClass('is-managing', on);
     markEditable($(el), on);
-    if (!on) askedForPage.delete(el);
+    if (!on) renameNew.delete(el);
   };
 
   // Swap a page's name for a field. Enter and blur commit, Escape restores.
@@ -329,7 +330,6 @@ $(function () {
       $(el).on('click.viewBinding', '.blockr-view-add', function (e) {
         e.stopPropagation();
         e.preventDefault();
-        askedForPage.add(el);
         Shiny.setInputValue(el.id + '_add', Date.now(), { priority: 'event' });
       });
 
@@ -346,14 +346,18 @@ $(function () {
         this.setValue(el, data.value);
       }
 
+      if (data.hasOwnProperty('rename_new')) {
+        renameNew.set(el, data.rename_new);
+      }
+
       if (data.hasOwnProperty('add')) {
         var $new = $(data.add.html);
         $(el).find('.blockr-view-list').append($new);
+        var asked = renameNew.get(el) === itemName($new);
+        if (asked) renameNew.delete(el);
         if (isManaging($(el))) {
           markEditable($new, true);
-          // The page "New page" asked for opens its name for renaming; one
-          // added by other means, such as the assistant, does not.
-          if (askedForPage.delete(el)) startRename($new);
+          if (asked) startRename($new);
         }
 
         // Deliberately not activated here. The server owns which view is

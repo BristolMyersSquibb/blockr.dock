@@ -1122,9 +1122,10 @@ manage_dock <- function(
 add_view_observer <- function(client_views, session, board, update) {
   input <- session$input
 
-  # lifecycle: a stable id is minted in `augment_board_update.dock_board()`
-  # and `apply_views_add()` instantiates the dock -- the same path a
-  # delta-driven add takes, so id assignment happens in exactly one place.
+  # The new view is created through the update lifecycle: a stable id is
+  # minted in `augment_board_update.dock_board()` and `apply_views_add()`
+  # instantiates the dock -- the same path a delta-driven add takes, so id
+  # assignment happens in exactly one place.
   observeEvent(input$view_nav_add, {
     req(!is_dock_locked())
 
@@ -1141,6 +1142,10 @@ add_view_observer <- function(client_views, session, board, update) {
         )
       )
     )
+
+    # Names the page for the nav, which opens its name for renaming once the
+    # page arrives; no other page does, wherever it comes from.
+    session$sendInputMessage("view_nav", list(rename_new = name))
   })
 }
 

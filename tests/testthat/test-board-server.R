@@ -1727,7 +1727,7 @@ test_that("extension servers receive view_data, not the active dock (#264)", {
   )
 })
 
-test_that("New view modal confirm submits an add-and-activate delta", {
+test_that("New page submits an add-and-activate delta and names the page", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -1735,6 +1735,7 @@ test_that("New view modal confirm submits an add-and-activate delta", {
   )
 
   captured <- NULL
+  sent <- list()
 
   testServer(
     function(input, output, session) {
@@ -1742,7 +1743,12 @@ test_that("New view modal confirm submits an add-and-activate delta", {
       board <- reactiveValues(board = brd)
       add_view_observer(
         client_views,
-        session,
+        list(
+          input = session$input,
+          sendInputMessage = function(input_id, message) {
+            sent[[length(sent) + 1L]] <<- list(input_id, message)
+          }
+        ),
         board = board,
         update = function(x) captured <<- x
       )
@@ -1760,6 +1766,12 @@ test_that("New view modal confirm submits an add-and-activate delta", {
       expect_identical(names(captured$views$add), "Page 2")
       expect_true(is_dock_view(captured$views$add[[1L]]))
       expect_length(view_members(captured$views$add[[1L]]), 0L)
+
+      # The nav opens this page's name for renaming when it arrives.
+      expect_identical(
+        sent,
+        list(list("view_nav", list(rename_new = "Page 2")))
+      )
     }
   )
 })
