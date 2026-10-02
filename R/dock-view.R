@@ -634,7 +634,7 @@ view_nav_ui <- function(id, views) {
             "dropdown-item blockr-menu__item blockr-menu__item--quiet",
             "blockr-view-manage"
           ),
-          span(class = "blockr-menu__icon", HTML(view_icons[["sliders"]])),
+          span(class = "blockr-menu__icon", blockr.ui::small_icon("sliders")),
           span(class = "blockr-menu__label", "Manage pages")
         )
       ),
@@ -646,7 +646,7 @@ view_nav_ui <- function(id, views) {
           tags$button(
             type = "button",
             class = "blockr-view-add",
-            HTML(view_icons[["plus"]]),
+            blockr.ui::small_icon("plus"),
             "New page"
           ),
           tags$button(type = "button", class = "blockr-view-done", "Done")
@@ -690,64 +690,21 @@ view_item_ui <- function(view_id, view_name, active_id = NULL,
       tags$span(
         class = "blockr-view-grip",
         `aria-label` = "Drag to reorder",
-        HTML(view_icons[["grip"]])
+        blockr.ui::small_icon("grip")
       )
     },
     tags$span(class = "blockr-view-item-name", view_name),
-    tags$span(class = "blockr-menu__check", HTML(view_icons[["check"]])),
+    tags$span(class = "blockr-menu__check", blockr.ui::small_icon("check")),
     if (can_crud) {
       tags$span(
         class = "blockr-view-action blockr-view-remove",
         role = "button",
         title = "Remove page",
-        HTML(view_icons[["x"]])
+        blockr.ui::small_icon("remove")
       )
     }
   )
 }
-
-# The small icons of the views menu, drawn like blockr.ui's (Blockr.icons):
-# thin strokes and small dots. view-binding.js draws the same ones for a page
-# added on the client.
-view_icons <- list(
-  sliders = paste0(
-    '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
-    'stroke="currentColor" stroke-width="1.25" stroke-linecap="round">',
-    '<path d="M2 4h12M2 8h12M2 12h12"></path>',
-    '<circle cx="5" cy="4" r="1.6" ',
-    'fill="var(--blockr-color-bg-raised)"></circle>',
-    '<circle cx="10" cy="8" r="1.6" ',
-    'fill="var(--blockr-color-bg-raised)"></circle>',
-    '<circle cx="6" cy="12" r="1.6" ',
-    'fill="var(--blockr-color-bg-raised)"></circle>',
-    "</svg>"
-  ),
-  check = paste0(
-    '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
-    'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" ',
-    'stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg>'
-  ),
-  grip = paste0(
-    '<svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">',
-    '<circle cx="2" cy="2" r="1"></circle>',
-    '<circle cx="6" cy="2" r="1"></circle>',
-    '<circle cx="2" cy="6" r="1"></circle>',
-    '<circle cx="6" cy="6" r="1"></circle>',
-    '<circle cx="2" cy="10" r="1"></circle>',
-    '<circle cx="6" cy="10" r="1"></circle>',
-    "</svg>"
-  ),
-  x = paste0(
-    '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" ',
-    'stroke="currentColor" stroke-width="1" stroke-linecap="round">',
-    '<path d="M2.5 2.5l5 5M7.5 2.5l-5 5"></path></svg>'
-  ),
-  plus = paste0(
-    '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
-    'stroke="currentColor" stroke-width="1.25" stroke-linecap="round">',
-    '<path d="M8 3v10M3 8h10"></path></svg>'
-  )
-)
 
 # The update lifecycle owns membership, the settled-echo mirror owns geometry.
 # A `views$mod` value carrying a grid would smuggle geometry into a panel-op

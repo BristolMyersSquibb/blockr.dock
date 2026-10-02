@@ -39,36 +39,8 @@ $(function () {
       .text(text);
   };
 
-  // The small icons of a page row, the same as view_icons in R.
-  var ICONS = {
-    grip: '<svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor"><circle cx="2" cy="2" r="1"></circle><circle cx="6" cy="2" r="1"></circle><circle cx="2" cy="6" r="1"></circle><circle cx="6" cy="6" r="1"></circle><circle cx="2" cy="10" r="1"></circle><circle cx="6" cy="10" r="1"></circle></svg>',
-    check: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg>',
-    x: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M2.5 2.5l5 5M7.5 2.5l-5 5"></path></svg>'
-  };
-
-  // A page row as view_item_ui() draws it.
-  var buildItem = function (id, name, canCrud) {
-    var $item = $('<div>')
-      .addClass('dropdown-item blockr-menu__item blockr-view-item')
-      .attr('data-view-id', id);
-    if (canCrud) {
-      $item.append(
-        $('<span>').addClass('blockr-view-grip')
-          .attr('aria-label', 'Drag to reorder').html(ICONS.grip)
-      );
-    }
-    $item.append(
-      $('<span>').addClass('blockr-view-item-name').text(name),
-      $('<span>').addClass('blockr-menu__check').html(ICONS.check)
-    );
-    if (canCrud) {
-      $item.append(
-        $('<span>').addClass('blockr-view-action blockr-view-remove')
-          .attr('role', 'button').attr('title', 'Remove page').html(ICONS.x)
-      );
-    }
-    return $item;
-  };
+  // The navs that asked for a new page with "New page" and wait for it.
+  var askedForPage = new WeakSet();
 
   var closeMenu = function ($el) {
     var toggle = $el.closest('.blockr-view-dropdown')
@@ -93,6 +65,7 @@ $(function () {
   var setManaging = function (el, on) {
     $(el).toggleClass('is-managing', on);
     markEditable($(el), on);
+    if (!on) askedForPage.delete(el);
   };
 
   // Swap a page's name for a field. Enter and blur commit, Escape restores.
@@ -350,6 +323,7 @@ $(function () {
       $(el).on('click.viewBinding', '.blockr-view-add', function (e) {
         e.stopPropagation();
         e.preventDefault();
+        askedForPage.add(el);
         Shiny.setInputValue(el.id + '_add', Date.now(), { priority: 'event' });
       });
 
@@ -367,13 +341,13 @@ $(function () {
       }
 
       if (data.hasOwnProperty('add')) {
-        var canCrud = data.canCrud !== false;
-        var $new = buildItem(data.add.id, data.add.name, canCrud);
+        var $new = $(data.add.html);
         $(el).find('.blockr-view-list').append($new);
-        // "New page" in manage mode: the new row's name opens for renaming.
-        if ($(el).hasClass('is-managing')) {
+        if (isManaging($(el))) {
           markEditable($new, true);
-          startRename($new);
+          // The page "New page" asked for opens its name for renaming; one
+          // added by other means, such as the assistant, does not.
+          if (askedForPage.delete(el)) startRename($new);
         }
 
         // Deliberately not activated here. The server owns which view is

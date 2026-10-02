@@ -749,7 +749,14 @@ reconcile_views <- function(board, update, docks, active_dock,
     state[[v]] <- bare_view(views[[v]])
     session$sendInputMessage(
       "view_nav",
-      list(add = list(id = v, name = labels[[v]]))
+      list(
+        add = list(
+          id = v,
+          html = as.character(
+            view_item_ui(v, labels[[v]], can_crud = views_can_crud(views))
+          )
+        )
+      )
     )
   }
 

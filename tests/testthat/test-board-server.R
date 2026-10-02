@@ -1378,7 +1378,22 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
 
   expect_length(rt, 1L)
   expect_identical(rt[[1L]]$add$id, "Third")
-  expect_identical(rt[[1L]]$add$name, "Third")
+
+  row <- xml2::read_html(rt[[1L]]$add$html)
+
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(row, "//div[@data-view-id]"),
+      "data-view-id"
+    ),
+    "Third"
+  )
+  expect_identical(
+    xml2::xml_text(
+      xml2::xml_find_first(row, "//span[@class='blockr-view-item-name']")
+    ),
+    "Third"
+  )
 })
 
 test_that("reconcile_views forwards the live board to created views (#194)", {
