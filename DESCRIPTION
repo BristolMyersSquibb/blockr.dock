@@ -32,6 +32,7 @@ Imports:
     cli,
     shinyWidgets,
     jsonlite,
+    rlang,
     utils
 Suggests:
     testthat (>= 3.0.0),

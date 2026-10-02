@@ -590,6 +590,30 @@ test_that("the + menu lists block types by category, append only receivers", {
   expect_true("head_block" %in% chr_ply(app, `[[`, "type"))
 })
 
+test_that("the + menu takes in a block registered anew under its uid", {
+
+  uid <- "menu_probe_block"
+  withr::defer(unregister_blocks(uid))
+
+  labels <- function() {
+    rows <- Filter(
+      function(x) identical(x$type, uid),
+      add_block_menu_items("add")
+    )
+    chr_xtr(rows, "label")
+  }
+
+  register_block(new_dataset_block, "Probe", "A probe block", uid = uid)
+  expect_identical(labels(), "Probe")
+
+  # Same uid, so the registry keeps its size.
+  register_block(
+    new_dataset_block, "Renamed probe", "A probe block", uid = uid,
+    overwrite = TRUE
+  )
+  expect_identical(labels(), "Renamed probe")
+})
+
 test_that("remove block action", {
   r_board <- reactiveValues(
     board = new_board(blocks = c(a = new_dataset_block()))

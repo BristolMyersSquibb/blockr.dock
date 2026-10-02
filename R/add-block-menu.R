@@ -10,11 +10,12 @@
 
 # The rows for one flow: every registered block type for add and prepend,
 # only the ones that can receive a link for append and insert (the filter
-# browser_block_metas() applies). Built once per flow and registry size: for
-# append and insert it instantiates each block to read its inputs.
+# browser_block_metas() applies). Built once per flow and registry, since
+# for append and insert it instantiates each block to read its inputs; the
+# key hashes the registry's entries, so registering a block anew rebuilds.
 add_block_menu_items <- function(mode) {
 
-  key <- paste(mode, length(available_blocks()))
+  key <- paste(mode, rlang::hash(available_blocks()))
 
   if (!is.null(add_block_menu_cache[[key]])) {
     return(add_block_menu_cache[[key]])
