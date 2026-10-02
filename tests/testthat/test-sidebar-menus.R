@@ -843,7 +843,7 @@ test_that("Rename in the block menu opens the title's field", {
 
   app$run_js(
     paste0(
-      "[...document.querySelectorAll('body > .blockr-menu .blockr-menu__item')]",
+      "[...document.querySelectorAll('", menu_sel, " .blockr-menu__item')]",
       ".find(r => r.textContent.trim() === 'Rename').click()"
     )
   )
