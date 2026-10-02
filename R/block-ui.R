@@ -77,9 +77,9 @@ has_external_ctrl <- function(x) {
 # `function(id) tagList()`, so a block with nothing to configure (`rbind_block`,
 # whose only variation is its link set) yields an empty document. Rendering
 # rather than inspecting the tags also catches a UI carrying html dependencies
-# alone. doRenderTags() gives the markup without resolving those dependencies,
-# which renderTags() does and which cost more than the markup itself once every
-# control carried its own set.
+# alone. Rendering with doRenderTags() gives the markup without resolving those
+# dependencies, which renderTags() does and which cost more than the markup
+# itself once every control carried its own set.
 has_expr_ui <- function(x) {
   markup <- htmltools::doRenderTags(expr_ui("block", x))
   nzchar(trimws(as.character(markup)))
