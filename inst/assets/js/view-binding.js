@@ -84,7 +84,9 @@ $(function () {
     $input.focus().select();
 
     var committed = false;
+    var layer = null;
     var restore = function (text) {
+      layer.remove();
       var $back = $('<span>').addClass('blockr-view-item-name').text(text);
       if (isManaging($input)) $back.attr('data-blockr-editable', 'Click to rename');
       $input.replaceWith($back);
@@ -127,16 +129,22 @@ $(function () {
       }
     };
 
+    // An edit not yet committed is a layer (Blockr.layer): Escape restores
+    // the name and leaves the menu open.
+    layer = Blockr.layer($input[0], {
+      inPage: true,
+      escape: function () {
+        committed = true;
+        restore(currentName);
+      }
+    });
+
     $input.on('click', function (e) { e.stopPropagation(); });
     $input.on('keydown', function (e) {
       e.stopPropagation();
       if (e.key === 'Enter') {
         e.preventDefault();
         commit();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        committed = true;
-        restore(currentName);
       }
     });
     $input.on('blur', commit);
