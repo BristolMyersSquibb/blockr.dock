@@ -2,9 +2,13 @@
 # a page with that category's options. The script options-sidebar.js
 # switches between the list and the pages.
 
-# The categories, in the order the options come, with their options.
+# The categories, in the order the options come, with their options. An
+# option need not have a category, and goes under "Other options" without.
 option_categories <- function(options) {
-  cats <- chr_ply(options, board_option_category)
+  cats <- chr_ply(
+    options,
+    function(x) coal(board_option_category(x), "Other options")
+  )
   split(as.list(options), factor(cats, levels = unique(cats)))
 }
 

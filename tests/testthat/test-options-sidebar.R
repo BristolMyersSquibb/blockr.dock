@@ -34,3 +34,27 @@ test_that("the sidebar lists categories and holds one page each", {
     1L
   )
 })
+
+test_that("an option without a category goes under Other options", {
+
+  options <- new_board_options(
+    new_board_name_option(value = "Test board", category = NULL),
+    new_dark_mode_option(value = "light")
+  )
+
+  expect_named(
+    option_categories(options),
+    c("Other options", "Theme options")
+  )
+
+  html <- xml2::read_html(
+    as.character(htmltools::tagList(options_sidebar_ui("brd", options)))
+  )
+  expect_length(
+    xml2::xml_find_all(
+      html,
+      "//div[@data-category='Other options']//input[@id='brd-board_name']"
+    ),
+    1L
+  )
+})
