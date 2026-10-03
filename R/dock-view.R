@@ -869,7 +869,7 @@ validate_views_delta <- function(views, board, upd) {
 
   rename_unnamed <- length(views$rename) &&
     (is.null(names(views$rename)) || any(!nzchar(rename_ids)) ||
-       !all(lgl_ply(views$rename, is_string)))
+       !all(lgl_ply(views$rename, function(x) is_string(x) && nzchar(x))))
 
   if (rename_unnamed) {
     blockr_abort(

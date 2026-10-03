@@ -1,5 +1,8 @@
 # blockr.dock (development version)
 
+* `views$rename` rejects an empty display name before applying an update
+  ([#517](https://github.com/BristolMyersSquibb/blockr.dock/issues/517)).
+
 * The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
   and Remove block after a divider. The preview and a block's own control
