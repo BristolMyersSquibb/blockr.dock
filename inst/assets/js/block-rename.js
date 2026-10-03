@@ -2,8 +2,9 @@
 // document, whenever the card was inserted. A title marked
 // `data-blockr-editable` starts editing on a double-click, or on the
 // `blockr-rename:start` event the block menu's "Rename" sends. The field is
-// the card's Shiny text input, so a name reaches the server the way a
-// keystroke does. Enter and a click elsewhere commit, Escape restores the
+// the card's Shiny text input, set to report on Enter and blur only, so the
+// server sees the finished name, not each keystroke; the title here follows
+// every keystroke. Enter and a click elsewhere commit, Escape restores the
 // name editing began with; an empty name is refused on Enter and dropped on
 // blur.
 (function () {

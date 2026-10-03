@@ -1,5 +1,9 @@
 # blockr.dock (development version)
 
+* Renaming a block sends the new name to the server on Enter or when the
+  field loses focus, not on every keystroke. Each keystroke was a board
+  update, and while typing those piled up on the server.
+
 * The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
   and Remove block after a divider. The preview and a block's own control

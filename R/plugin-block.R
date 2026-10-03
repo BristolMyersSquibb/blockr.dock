@@ -105,10 +105,15 @@ block_card_title <- function(block, id, info) {
           # The displayed title mirrors this input (block-rename.js), so a
           # rename decided by the board, which `updateTextInput()` delivers,
           # lands the way a keystroke does, with no render round-trip.
+          # `updateOn = "blur"`: the name reaches the server on Enter or when
+          # the field loses focus. Every keystroke was a board update, about
+          # half a second of server time each on a large board, for a title
+          # the browser already shows as typed.
           textInput(
             input_id,
             label = NULL,
-            value = block_name(block)
+            value = block_name(block),
+            updateOn = "blur"
           ),
           div(class = "blockr-title-error", "A block needs a name")
         )
