@@ -403,6 +403,14 @@ edit_block_server <- function(callbacks = list()) {
         output$issues_count <- renderText(cond_issue_label(conds()))
         outputOptions(output, "issues_count", suspendWhenHidden = FALSE)
 
+        output$outputs_issues <- render_attrs(
+          {
+            n <- length(conds()$warning) + length(conds()$message)
+            list(`data-issues` = if (n > 0L) n else "")
+          }
+        )
+        outputOptions(output, "outputs_issues", suspendWhenHidden = FALSE)
+
         update_blk_cond_observer(conds, session)
 
         observeEvent(
@@ -569,9 +577,13 @@ block_issues_ui <- function(ns) {
 
   collapse_id <- ns("outputs_issues_collapse")
 
+  # An attribute output: the server writes `data-issues` while the card has
+  # warnings or messages, and the CSS hides the list without it. A
+  # `:not(:has(.blockr-issue))` test did the same, but Chrome re-ran it on
+  # every change inside the card.
   div(
     id = ns("outputs_issues"),
-    class = "mt-3 blockr-issues",
+    class = "mt-3 blockr-issues blockr-attr-output",
     tags$div(
       class = paste(
         "d-flex align-items-center justify-content-between",
