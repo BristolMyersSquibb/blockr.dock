@@ -217,7 +217,7 @@ test_that("the busy spinner still turns under reduced motion", {
 
   # Must slow the busy selector that carries the spin; on the bare
   # `.blockr-navbar-spinner` the override is outspecified and does nothing.
-  expect_match(reduced, "html.shiny-busy:has", fixed = TRUE)
+  expect_match(reduced, "html.blockr-computing", fixed = TRUE)
   expect_match(reduced, "animation-duration: 1.6s", fixed = TRUE)
   expect_no_match(reduced, "animation:\\s*none")
 })
@@ -248,7 +248,7 @@ test_that("the idle navbar spinner is a closed ring, the arc is busy-only", {
   busy <- regmatches(
     css,
     regexpr(
-      "(?s)html\\.shiny-busy:has[^{]*\\.blockr-navbar-spinner \\{[^}]*\\}",
+      "(?s)html\\.blockr-computing \\.blockr-navbar-spinner \\{[^}]*\\}",
       css,
       perl = TRUE
     )
@@ -287,7 +287,7 @@ test_that("the spinner's hover tooltip names its state", {
   busy <- regmatches(
     css,
     regexpr(
-      "(?s)html\\.shiny-busy:has[^{]*-slot::after \\{[^}]*\\}",
+      "(?s)html\\.blockr-computing \\.blockr-navbar-spinner-slot::after \\{[^}]*\\}",
       css, perl = TRUE
     )
   )

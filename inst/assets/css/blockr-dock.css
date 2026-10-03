@@ -93,7 +93,7 @@
   margin-top: 3px;
 }
 
-.blockr-issues:not(:has(.blockr-issue)) {
+.blockr-issues:not([data-issues]) {
   display: none;
 }
 
@@ -1048,7 +1048,9 @@
    server -- the on-screen visibility report and the layout fold -- without
    recomputing any visible output, so gating on `.shiny-busy` alone would spin
    for what is only layout bookkeeping. Require a genuinely recalculating output
-   inside the visible view container: block evaluation marks its output
+   inside the visible view container (navbar-busy.js sets `.blockr-computing`
+   on <html> for that; a `:has()` on <html> made Chrome search the whole page
+   on every change inside it): block evaluation marks its output
    "recalculating" there, bookkeeping does not. Scoping to the container is
    deliberate -- an off-screen block parked in the (hidden) offcanvas pool stays
    "recalculating" while it waits for evaluation, and that pool sits outside the
@@ -1074,7 +1076,7 @@
   transition: border-top-color 0s;
 }
 
-html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
+html.blockr-computing .blockr-navbar-spinner {
   border-top-color: var(--blockr-color-text-muted);
   animation: blockr-navbar-spin 0.7s linear infinite;
   animation-delay: var(--blockr-spinner-delay, 0ms);
@@ -1110,7 +1112,7 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
   z-index: 1080;
 }
 
-html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner-slot::after {
+html.blockr-computing .blockr-navbar-spinner-slot::after {
   content: "Computing";
 }
 
@@ -1136,7 +1138,7 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinne
    managed / VDI default) onto `prefers-reduced-motion: reduce`, so on those
    machines every Edge user saw a spinner that never moved. */
 @media (prefers-reduced-motion: reduce) {
-  html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
+  html.blockr-computing .blockr-navbar-spinner {
     animation-duration: 1.6s;
   }
 }

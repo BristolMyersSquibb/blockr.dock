@@ -76,7 +76,8 @@ board_ui.dock_board <- function(
             class = "blockr-navbar-spinner",
             role = "status",
             `aria-label` = "Busy"
-          )
+          ),
+          navbar_busy_dep()
         ),
         v_nav,
         if (is_dock_locked()) {
@@ -256,6 +257,17 @@ viewport_probe_dep <- function() {
     pkg_version(),
     src = pkg_file("assets", "js"),
     script = "viewport-probe.js"
+  )
+}
+
+# Sets `.blockr-computing` on <html> while a visible output recalculates, for
+# the navbar spinner's CSS.
+navbar_busy_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-navbar-busy",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "navbar-busy.js"
   )
 }
 
