@@ -156,18 +156,10 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
     class = "blockr-section-toggle",
     `data-sections` = paste(open, collapse = " "),
     toggle("outputs", "Preview", icon("eye")),
+    # A block's own control is drawn as the preview is: its icon, or its
+    # label where it has none, and named by its label.
     if (!is.null(ctrl_meta)) {
-      toggle(
-        "ctrl",
-        # The first of tooltip and label that says something: an empty
-        # string is no name, and the button is icon-only.
-        Find(
-          function(x) is_string(x) && nzchar(x),
-          list(ctrl_meta$tooltip, ctrl_meta$label),
-          nomatch = "Control"
-        ),
-        ctrl_button_label(ctrl_meta)
-      )
+      toggle("ctrl", ctrl_meta$label, coal(ctrl_meta$icon, ctrl_meta$label))
     },
     section_toggle_dep()
   )
@@ -180,18 +172,6 @@ section_toggle_dep <- function() {
     src = pkg_file("assets", "js"),
     script = "section-toggle.js"
   )
-}
-
-ctrl_button_label <- function(meta) {
-
-  label <- if (nzchar(coal(meta$label, ""))) meta$label
-  inner <- if (is.null(meta$icon)) label else tagList(meta$icon, label)
-
-  if (is.null(meta$class)) {
-    return(inner)
-  }
-
-  span(class = meta$class, inner)
 }
 
 # The block's "…" menu, drawn by Blockr.menu (blockr.ui) from the config on
@@ -305,10 +285,13 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
   )
 }
 
-ctrl_btn_label <- function(fn) coal(attr(fn, "ctrl_label"), "Control")
-ctrl_btn_icon  <- function(fn) attr(fn, "ctrl_icon")
-ctrl_btn_class <- function(fn) attr(fn, "ctrl_class")
-ctrl_btn_tooltip <- function(fn) attr(fn, "ctrl_tooltip")
+# A control without a label, or with an empty one, is named "Control".
+ctrl_btn_label <- function(fn) {
+  label <- attr(fn, "ctrl_label")
+  if (is_string(label) && nzchar(label)) label else "Control"
+}
+
+ctrl_btn_icon <- function(fn) attr(fn, "ctrl_icon")
 
 edit_block_server <- function(callbacks = list()) {
 

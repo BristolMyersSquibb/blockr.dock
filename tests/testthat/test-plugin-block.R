@@ -264,6 +264,50 @@ test_that("locked dock drops block_card_toggles entirely (#122, #418)", {
   expect_null(locked)
 })
 
+test_that("a block's own control is drawn as its icon, named by its label", {
+
+  toggle <- function(ctrl_meta) {
+    xml2::xml_find_first(
+      xml2::read_html(
+        as.character(
+          htmltools::tagList(block_card_toggles("outputs", NS("x"), ctrl_meta))
+        )
+      ),
+      "//button[@data-section='ctrl']"
+    )
+  }
+
+  with_icon <- toggle(
+    list(label = "AI Assistant", icon = tags$svg(class = "probe-icon"))
+  )
+  expect_identical(xml2::xml_attr(with_icon, "title"), "AI Assistant")
+  expect_length(
+    xml2::xml_find_all(with_icon, ".//svg[@class='probe-icon']"),
+    1L
+  )
+  expect_identical(trimws(xml2::xml_text(with_icon)), "")
+
+  # Without an icon, the label is the button's text.
+  without <- toggle(list(label = "Settings", icon = NULL))
+  expect_identical(xml2::xml_attr(without, "title"), "Settings")
+  expect_identical(trimws(xml2::xml_text(without)), "Settings")
+})
+
+test_that("a control without a label is named Control", {
+
+  ctrl <- function(id, x) NULL
+
+  expect_identical(ctrl_btn_label(ctrl), "Control")
+  expect_identical(
+    ctrl_btn_label(structure(ctrl, ctrl_label = "")),
+    "Control"
+  )
+  expect_identical(
+    ctrl_btn_label(structure(ctrl, ctrl_label = "AI Assistant")),
+    "AI Assistant"
+  )
+})
+
 test_that("a locked board's block title offers no rename", {
 
   title <- function(locked) {
