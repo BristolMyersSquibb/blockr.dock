@@ -3,8 +3,9 @@
 * The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
   and Remove block after a divider. The preview and a block's own control
-  keep their buttons in the header. The dock no longer depends on
-  shinyWidgets.
+  keep their buttons in the header. A control's button is its icon, named by
+  its `ctrl_label` ("Control" without one), and the dock no longer applies a
+  control's `ctrl_class` to it. The dock no longer depends on shinyWidgets.
 
 * Adding, appending, prepending and inserting a block open one menu in place,
   with a filter box and one row per block type, instead of the block browser
