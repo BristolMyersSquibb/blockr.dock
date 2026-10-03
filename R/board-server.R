@@ -737,7 +737,14 @@ reconcile_views <- function(board, update, docks, active_dock,
     client_views[[v]] <- labels[[v]]
     session$sendInputMessage(
       "view_nav",
-      list(add = list(id = v, name = labels[[v]]))
+      list(
+        add = list(
+          id = v,
+          html = as.character(
+            view_item_ui(v, labels[[v]], can_crud = !is_dock_locked())
+          )
+        )
+      )
     )
   }
 
@@ -1014,17 +1021,22 @@ manage_dock <- function(
 
     observeEvent(
       input$empty_dock_add,
-      suggest_panels_to_add(dock, board, panels = list(), session = session)
+      suggest_panels_to_add(
+        dock, board, panels = list(),
+        at = list(id = session$ns("empty_dock_add")),
+        session = session
+      )
     )
 
-    # The add-panel modal emits an `add` panel-op; the apply observer places the
-    # panels. The `+` was clicked on a group, so anchor the add `within` a
-    # member of that group (`near`); an empty dock has no group and falls back
-    # to the view's default spot.
+    # A pick in the add-panel menu emits an `add` panel-op; the apply observer
+    # places the panel. The `+` was clicked on a group, so anchor the add
+    # `within` a member of that group (`near`); an empty dock has no group and
+    # falls back to the view's default spot.
     observeEvent(
-      input$confirm_add,
+      input$add_dock_panel_pick,
       {
-        req(input$add_dock_panel)
+        pick <- input$add_dock_panel_pick$value
+        req(is_string(pick), nzchar(pick))
 
         ref_group <- input[[dock_input("panel-to-add")]]
 
@@ -1032,9 +1044,7 @@ manage_dock <- function(
           group_front_panel(dock, ref_group)
         }
 
-        update(add_panel_delta(id, input$add_dock_panel, near))
-
-        removeModal()
+        update(add_panel_delta(id, pick, near))
       }
     )
 
@@ -1098,9 +1108,10 @@ manage_dock <- function(
 
 #' Observe view addition requests.
 #'
-#' Shows a modal to name the new view and pick blocks/extensions, then emits
-#' an `add` + `active` views delta; the reconcile pass instantiates the dock
-#' and switches to it.
+#' "New page" in the views menu's manage mode: adds an empty page with the
+#' next free "Page N" name and switches to it, with no dialog. The client
+#' opens the new row's name for renaming, and its blocks are added from the
+#' page's "+" menu.
 #'
 #' @param client_views Reactive record of the client-shown views.
 #' @param session Shiny session.
@@ -1110,99 +1121,15 @@ manage_dock <- function(
 #' @noRd
 add_view_observer <- function(client_views, session, board, update) {
   input <- session$input
-  output <- session$output
-  ns <- session$ns
 
-  # Show modal for view creation
+  # The new view is created through the update lifecycle: a stable id is
+  # minted in `augment_board_update.dock_board()` and `apply_views_add()`
+  # instantiates the dock -- the same path a delta-driven add takes, so id
+  # assignment happens in exactly one place.
   observeEvent(input$view_nav_add, {
     req(!is_dock_locked())
 
-    existing <- unlst(reactives::as_values(client_views))
-    n <- length(existing) + 1L
-    while (paste("Page", n) %in% existing) n <- n + 1L
-    default_name <- paste("Page", n)
-
-    brd <- board$board
-    blk_ids <- board_block_ids(brd)
-    ext_options <- build_ext_options(brd, dock_ext_ids(brd))
-
-    showModal(
-      modalDialog(
-        title = "New view",
-        size = "l",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          css_modal(),
-          textInput(
-            ns("view_new_name"),
-            "View name",
-            value = default_name
-          ),
-          if (length(blk_ids)) {
-            board_block_select(
-              ns("view_new_blocks"),
-              brd,
-              blk_ids,
-              max_items = NULL,
-              label = "Blocks to show",
-              options = multi_select_opts("Select blocks...")
-            )
-          },
-          if (length(ext_options)) {
-            blk_selectize(
-              ns("view_new_exts"),
-              ext_options,
-              max_items = NULL,
-              label = "Extensions to show",
-              options = multi_select_opts("Select extensions...")
-            )
-          },
-          uiOutput(ns("view_name_validation")),
-          confirm_button(ns("confirm_view_add"), label = "Create view")
-        )
-      )
-    )
-  })
-
-  # Name validation feedback
-  output$view_name_validation <- renderUI({
-    req(input$view_new_name)
-    msg <- validate_view_name(
-      trimws(input$view_new_name),
-      unlst(reactives::as_values(client_views))
-    )
-    if (!is.null(msg)) tags$div(class = "text-danger", msg)
-  })
-
-  # Confirm view creation. The new view is created through the update
-  # lifecycle: a stable id is minted in `augment_board_update.dock_board()`
-  # and `apply_views_add()` instantiates the dock — the same path a
-  # delta-driven add takes, so id assignment happens in exactly one place.
-  observeEvent(input$confirm_view_add, {
-    existing <- unlst(reactives::as_values(client_views))
-    new_name <- trimws(input$view_new_name)
-
-    if (!is.null(validate_view_name(new_name, existing))) {
-      return()
-    }
-
-    removeModal()
-
-    brd <- board$board
-    sel_blks <- intersect(
-      coal(input$view_new_blocks, character()),
-      board_block_ids(brd)
-    )
-    sel_exts <- intersect(
-      coal(input$view_new_exts, character()),
-      dock_ext_ids(brd)
-    )
-
-    members <- c(
-      as.character(as_ext_panel_id(sel_exts)),
-      as.character(as_block_panel_id(sel_blks))
-    )
+    name <- next_page_name(unlst(reactives::as_values(client_views)))
 
     # Switch to the new view on creation. Its id is minted in augment, so
     # we point `active` at its `add` key (the display name); the dock
@@ -1210,19 +1137,31 @@ add_view_observer <- function(client_views, session, board, update) {
     update(
       list(
         views = list(
-          add = set_names(list(dock_view(members)), new_name),
-          active = new_name
+          add = set_names(list(dock_view(character())), name),
+          active = name
         )
       )
     )
+
+    # Names the page for the nav, which opens its name for renaming once the
+    # page arrives; no other page does, wherever it comes from.
+    session$sendInputMessage("view_nav", list(rename_new = name))
   })
+}
+
+# "Page N", N one more than the pages there are, or the first free one after.
+next_page_name <- function(existing) {
+  n <- length(existing) + 1L
+  while (paste("Page", n) %in% existing) n <- n + 1L
+  paste("Page", n)
 }
 
 #' Observe view removal requests.
 #'
-#' Shows a confirmation modal, then emits an `rm` views delta; the reconcile
-#' pass destroys the dock module, removes the DOM container, and switches to
-#' another view if the removed one was active.
+#' The views menu asks in place ("Remove this page?") before it sends
+#' `view_nav_remove`, so the request is final here: it emits an `rm` views
+#' delta; the reconcile pass destroys the dock module, removes the DOM
+#' container, and switches to another view if the removed one was active.
 #'
 #' @param client_views Reactive record of the client-shown views.
 #' @param session Shiny session.
@@ -1231,10 +1170,7 @@ add_view_observer <- function(client_views, session, board, update) {
 #' @noRd
 remove_view_observer <- function(client_views, session, update) {
   input <- session$input
-  ns <- session$ns
 
-  # Show confirmation modal. `input$view_nav_remove` carries the view id;
-  # the modal shows the display name.
   observeEvent(input$view_nav_remove, {
     req(!is_dock_locked())
 
@@ -1245,48 +1181,7 @@ remove_view_observer <- function(client_views, session, update) {
     }
 
     if (length(client_views) <= 1L) {
-      notify("Cannot remove the last view.")
-      return()
-    }
-
-    rm_name <- client_views[[rm_id]]
-
-    showModal(
-      modalDialog(
-        title = "Remove view",
-        size = "s",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          tags$p(
-            "Are you sure you want to remove view ",
-            tags$strong(rm_name),
-            "?"
-          ),
-          div(
-            style = "display: flex; justify-content: flex-end; gap: 8px;
-              margin-top: 20px;",
-            modalButton("Cancel"),
-            actionButton(
-              ns("confirm_view_remove"),
-              "Remove",
-              class = "btn-danger"
-            )
-          )
-        )
-      )
-    )
-  })
-
-  # Removal flows through the update lifecycle: `apply_views_rm()` tears
-  # down the dock module, drops the view from the board and the live
-  # state, and re-syncs the nav switcher.
-  observeEvent(input$confirm_view_remove, {
-    removeModal()
-
-    rm_id <- input$view_nav_remove
-
-    if (!rm_id %in% names(client_views) || length(client_views) <= 1L) {
+      notify("Cannot remove the last page.")
       return()
     }
 
@@ -1325,60 +1220,52 @@ rename_view_observer <- function(client_views, session, update) {
   })
 }
 
-# Translate a relative up / down nudge of one view into the total order it
-# yields. Clamped: nudging the first view up or the last down is a no-op, as is
-# an unknown id.
-reorder_by_move <- function(order, id, dir) {
+# The order a drag left the views menu in, if it is a permutation of the
+# current one; NULL for a stale or malformed one.
+dragged_order <- function(order, dragged) {
 
-  idx <- match(id, order)
+  dragged <- as.character(unlist(dragged))
 
-  if (is.na(idx)) {
-    return(order)
+  if (length(dragged) == length(order) && setequal(dragged, order) &&
+        !anyDuplicated(dragged)) {
+    dragged
   }
-
-  swap <- switch(dir, up = idx - 1L, down = idx + 1L, NA_integer_)
-
-  if (is.na(swap) || swap < 1L || swap > length(order)) {
-    return(order)
-  }
-
-  order[c(idx, swap)] <- order[c(swap, idx)]
-
-  order
 }
 
-# View order is board content, not client-owned geometry: the up / down gesture
-# carries only a relative `{id, dir}` intent. The order the client shows is
-# authoritative here, so the total permutation is derived from
-# `names(client_views)` and travels the update lifecycle as a `views$order`
-# delta; reconcile then pushes the settled order back to the nav. A boundary
-# nudge yields the same order and emits nothing.
+# View order is board content, not client-owned geometry, so a drag's order
+# travels the update lifecycle as a `views$order` delta, and reconcile pushes
+# the settled order back to the nav. The drag has moved the rows already, so
+# an order refused is pushed back at once.
 reorder_view_observer <- function(client_views, session, update) {
   input <- session$input
 
   observeEvent(input$view_nav_reorder, {
     req(!is_dock_locked())
 
-    move <- input$view_nav_reorder
     order <- names(client_views)
-    reordered <- reorder_by_move(order, move$id, move$dir)
+    dragged <- dragged_order(order, input$view_nav_reorder$order)
 
-    if (!identical(reordered, order)) {
-      update(list(views = list(order = reordered)))
+    if (is.null(dragged)) {
+      session$sendInputMessage("view_nav", list(order = as.list(order)))
+    } else if (!identical(dragged, order)) {
+      update(list(views = list(order = dragged)))
     }
   })
 }
 
-#' Show a modal for adding panels to the dock.
+#' Open the menu for adding a panel to the dock.
 #'
-#' Lists blocks and extensions not yet shown in the dock. If none are
-#' available, either triggers `suggest_new` or notifies the user.
+#' The "+" menu (Blockr.menu, add-block-menu.js), listing the blocks and
+#' extensions not yet shown in the dock: mark, title and the block type as
+#' meta text. A pick is `add_dock_panel_pick`. If none are available,
+#' either triggers `suggest_new` or notifies the user.
 #'
 #' @param dock Dock proxy.
 #' @param board Reactive board state.
 #' @param suggest_new If truthy, called when no panels are available
 #'   (used to prompt adding a new block).
 #' @param panels Currently visible panels (auto-detected if `NULL`).
+#' @param at Where the menu opens (see [new_action()]).
 #' @param session Shiny session.
 #'
 #' @noRd
@@ -1387,6 +1274,7 @@ suggest_panels_to_add <- function(
   board,
   suggest_new = FALSE,
   panels = NULL,
+  at = NULL,
   session = get_session()
 ) {
   ns <- session$ns
@@ -1407,30 +1295,16 @@ suggest_panels_to_add <- function(
     as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
   )
 
-  options_data <- c(
-    build_block_options(board$board, blk_opts, value_fun = as_block_panel_id),
-    build_ext_options(board$board, ext_opts, value_fun = as_ext_panel_id)
-  )
+  items <- add_panel_menu_items(board$board, blk_opts, ext_opts)
 
-  if (length(options_data)) {
-    showModal(
-      modalDialog(
-        title = "Add panel",
-        size = "l",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          css_modal(),
-          blk_selectize(
-            ns("add_dock_panel"),
-            options_data,
-            max_items = NULL,
-            label = "Select panel to add",
-            options = multi_select_opts("Type to search...")
-          ),
-          confirm_button(ns("confirm_add"), label = "Add Panel"),
-          auto_focus_script(ns("add_dock_panel"))
-        )
+  if (length(items)) {
+    session$sendCustomMessage(
+      "blockr-add-panel-menu",
+      list(
+        pick = ns("add_dock_panel_pick"),
+        caption = "Show on this page",
+        at = at,
+        items = items
       )
     )
   } else if (!isFALSE(suggest_new)) {
@@ -1458,8 +1332,6 @@ extension_default_icon <- function() {
 
 #' Build a single selectize option entry.
 #'
-#' Shared structure for block and extension options in panel pickers.
-#'
 #' @param value Option value (ID, possibly prefixed).
 #' @param label Display label.
 #' @param id Raw object ID.
@@ -1486,15 +1358,11 @@ build_one_option <- function(value, label, id, package, icon, color) {
 #'
 #' @param board Board object.
 #' @param blk_ids Character vector of block IDs to include.
-#' @param value_fun Coercion applied to each ID to form the option value;
-#'   defaults to `identity` (bare IDs, for a block-only selectize). The
-#'   panel picker passes `as_block_panel_id` so a single mixed selectize
-#'   can be disambiguated on read-back.
 #'
 #' @return A list of option lists suitable for `selectizeInput`.
 #'
 #' @noRd
-build_block_options <- function(board, blk_ids, value_fun = identity) {
+build_block_options <- function(board, blk_ids) {
   if (!length(blk_ids)) {
     return(list())
   }
@@ -1505,7 +1373,7 @@ build_block_options <- function(board, blk_ids, value_fun = identity) {
   lapply(seq_along(blk_ids), function(i) {
     id <- blk_ids[i]
     build_one_option(
-      value = as.character(value_fun(id)),
+      value = id,
       label = block_name(blks[[id]]),
       id = id,
       package = meta$package[i],
@@ -1513,61 +1381,4 @@ build_block_options <- function(board, blk_ids, value_fun = identity) {
       color = meta$color[i]
     )
   })
-}
-
-#' Build selectize option entries for extensions.
-#'
-#' @param board Board object.
-#' @param ext_ids Character vector of extension IDs to include.
-#' @param value_fun Coercion applied to each ID to form the option value;
-#'   defaults to `identity` (bare IDs, for an extension-only selectize). The
-#'   panel picker passes `as_ext_panel_id` so a single mixed selectize
-#'   can be disambiguated on read-back.
-#'
-#' @return A list of option lists suitable for `selectizeInput`.
-#'
-#' @noRd
-build_ext_options <- function(board, ext_ids, value_fun = identity) {
-  if (!length(ext_ids)) {
-    return(list())
-  }
-
-  all_exts <- as.list(dock_extensions(board))
-
-  lapply(ext_ids, function(ext_id) {
-    ext <- all_exts[[ext_id]]
-    ext_name <- extension_name(ext)
-    ext_pkg <- ctor_pkg(extension_ctor(ext))
-
-    build_one_option(
-      value = as.character(value_fun(ext_id)),
-      label = ext_name,
-      id = ext_id,
-      package = coal(ext_pkg, "local"),
-      icon = extension_default_icon(),
-      color = "#999999"
-    )
-  })
-}
-
-#' Validate a view name.
-#'
-#' With identity carried by a stable id, the name is a free-form display
-#' label: the only remaining rules are display concerns — non-empty and
-#' (to keep tabs unambiguous) not a duplicate of another view's name.
-#'
-#' @param name Trimmed view name string.
-#' @param existing Character vector of existing view names.
-#'
-#' @return Error message string, or `NULL` if valid.
-#'
-#' @noRd
-validate_view_name <- function(name, existing) {
-  if (nchar(name) == 0L) {
-    "Name cannot be empty."
-  } else if (name %in% existing) {
-    "A view with this name already exists."
-  } else {
-    NULL
-  }
 }

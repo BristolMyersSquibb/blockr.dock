@@ -109,7 +109,11 @@ module function. Actions are typically created by action generator
 functions, they each have a unique ID and a \code{\link[shiny:reactiveVal]{shiny::reactiveVal()}}-based
 trigger object (inheriting from \code{action_trigger}). Action trigger objects
 implement their own counter-based invalidation mechanism (on top of how
-reactive values behave).
+reactive values behave). A trigger fires with its target, such as the ID
+of the block to append to, and may name where the gesture happened as
+\code{at}: a list holding the \code{id} of an element, or the \code{x} and \code{y} of a point
+in the viewport. An action that opens a menu in place opens it there, and
+in a fixed spot when the trigger names none.
 
 An action that fills a sidebar panel records itself on it as it writes, so
 the panel reports the writing action as its owner alongside whether it is

@@ -88,8 +88,10 @@ the coercion function \code{as_dock_board()}. Inheritance can be checked using
 objects. A character vector of IDs is returned by \code{dock_ext_ids()} and
 \code{dock_board_options()} returns a \code{board_options} object: the board name, a
 thematic switch, off unless the \code{thematic} blockr option says otherwise, so
-that plots can take the board's colours, and a light/dark switch, light
-unless the \code{dark_mode} blockr option says otherwise.
+that plots can take the board's colours, a light/dark switch, light unless
+the \code{dark_mode} blockr option says otherwise, and the "Compact" header
+switch (\code{\link[=new_compact_option]{new_compact_option()}}), off unless the \code{compact} blockr option says
+otherwise.
 }
 \description{
 Using the docking layout manager provided by dockViewR, a \code{dock_board}

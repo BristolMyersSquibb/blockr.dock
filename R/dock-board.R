@@ -42,8 +42,10 @@
 #' objects. A character vector of IDs is returned by `dock_ext_ids()` and
 #' `dock_board_options()` returns a `board_options` object: the board name, a
 #' thematic switch, off unless the `thematic` blockr option says otherwise, so
-#' that plots can take the board's colours, and a light/dark switch, light
-#' unless the `dark_mode` blockr option says otherwise.
+#' that plots can take the board's colours, a light/dark switch, light unless
+#' the `dark_mode` blockr option says otherwise, and the "Compact" header
+#' switch ([new_compact_option()]), off unless the `compact` blockr option says
+#' otherwise.
 #'
 #' @rdname dock
 #' @export
@@ -231,7 +233,8 @@ dock_board_options <- function() {
   new_board_options(
     new_board_name_option(),
     new_thematic_option(),
-    new_dark_mode_option(value = blockr_option("dark_mode", "light"))
+    new_dark_mode_option(value = blockr_option("dark_mode", "light")),
+    new_compact_option()
   )
 }
 

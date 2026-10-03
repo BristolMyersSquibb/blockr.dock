@@ -25,7 +25,7 @@
 
 .blockr-title-edit .form-control,
 .blockr-title-edit .form-control:focus {
-  font-size: var(--blockr-font-size-xl, 1.25rem);
+  font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: var(--blockr-font-weight-semibold);
   line-height: 1.3;
   color: var(--blockr-color-text-default, #111827);
@@ -59,12 +59,6 @@
 
 .blockr-section-header {
   font-size: var(--blockr-font-size-section);
-  font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-color-text-secondary);
-}
-
-.blockr-label {
-  font-size: var(--blockr-font-size-sm);
   font-weight: var(--blockr-font-weight-medium);
   color: var(--blockr-color-text-secondary);
 }
@@ -132,8 +126,8 @@
 .blockr-block-header {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 42px;
+  gap: 10px;
+  min-height: 32px;
 }
 
 .blockr-block-header-main {
@@ -163,20 +157,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--blockr-radius-lg, 8px);
   color: var(--blockr-dock-cat, #999999);
   background: color-mix(in srgb, var(--blockr-dock-cat, #999999) 18%, var(--blockr-color-bg-surface, #ffffff));
   /* The glyph is a bsicons SVG sized `1em` inline, so this sizes it. */
-  font-size: 21px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .blockr-block-title-wrap {
   flex-grow: 1;
   min-width: 0;
-  padding-right: 1rem;
+  padding-right: 8px;
 }
 
 .blockr-block-title {
@@ -185,7 +179,7 @@
 }
 
 .blockr-block-title .blockr-title {
-  font-size: var(--blockr-font-size-xl, 1.25rem);
+  font-size: var(--blockr-font-size-lg, 1rem);
   color: var(--blockr-color-text-default, #111827);
 }
 
@@ -193,7 +187,7 @@
    where it would without it. Only a title that can be renamed
    (`data-blockr-editable`) takes the hover wash. */
 .blockr-title-display {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   max-width: 100%;
   padding: 4px 8px;
@@ -206,12 +200,63 @@
   background-color: var(--blockr-color-bg-hover, #f3f4f6);
 }
 
+/* A long name wraps to a second line and is cut after it, instead of
+   shrinking to a few letters beside the actions. */
 .blockr-title-display .blockr-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* The "Compact" board option puts `.blockr-compact` on the root, which
+   turns the header into an eyebrow over the block's content. */
+.blockr-compact .blockr-block-header {
+  gap: 8px;
+  min-height: 26px;
+}
+
+.blockr-compact .blockr-block-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.blockr-compact .blockr-block-title .blockr-title {
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+
+.blockr-compact .blockr-title-display {
+  padding: 2px 6px;
+  margin: -2px -6px;
+}
+
+.blockr-compact .blockr-title-display .blockr-title {
+  display: block;
+  min-width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.blockr-compact .blockr-title-edit {
+  left: -7px;
+}
+
+.blockr-compact .blockr-title-edit .form-control,
+.blockr-compact .blockr-title-edit .form-control:focus {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  padding: 2px 6px;
+}
+
+.blockr-compact .blockr-block-errors {
+  margin-top: 6px;
+}
 
 /* Block eval status: on-icon status dot.
    The dot sits on the block mark's upper-right corner. Its size, colours and
@@ -308,19 +353,13 @@
   --bs-btn-active-color: var(--blockr-color-text-accent, #2563eb);
 }
 
-/* The focus lands on the toggle's hidden checkbox, so its label draws the
-   ring blockr.ui gives a focused button. */
-.blockr-section-toggle .btn-check:focus-visible + .btn.btn-light {
-  outline: var(--blockr-focus-outline, 2px solid var(--blockr-color-border-accent));
-  outline-offset: var(--blockr-focus-offset, 2px);
-}
-
 .blockr-section-toggle .btn.btn-light svg {
   width: 14px;
   height: 14px;
 }
 
-.blockr-section-toggle .btn-group {
+.blockr-section-toggle {
+  display: inline-flex;
   gap: 2px;
 }
 
@@ -403,21 +442,29 @@
   padding-top: 12px;
 }
 
-.blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 0;
+/* The card's side inset, for an output that runs to the card edges (a
+   table): it pulls itself out by this much and pads its text back in, so
+   its rules and scroll area reach the edges while its text keeps the
+   card's alignment. */
+.blockr-block-accordion {
+  --blockr-card-inset: var(--bs-card-spacer-x);
 }
 
-/* The edge-to-edge margin sits on the collapsing element, not the body: that
-   element clips while it animates, so a margin inside it would cut the rule
-   and the preview short at both ends during the roll. */
-.blockr-block-accordion:has(> .accordion-item:is([data-value="inputs"], [data-value="ctrl"]) > .accordion-header .accordion-button:not(.collapsed)) > .accordion-item[data-value="outputs"] > .accordion-collapse {
+/* The preview's panel runs edge to edge and pads its content back in, with
+   the controls open or closed, so an output pulled out by the inset stays
+   inside the scroll box. The margin sits on the collapsing element, not the
+   body: that element clips while it animates, so a margin inside it would
+   cut the rule and the preview short at both ends during the roll. */
+.blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse {
   margin: 0 calc(-1 * var(--bs-card-spacer-x));
 }
 
+.blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
+  overflow-x: auto;
+  padding: 0 var(--bs-card-spacer-x);
+}
+
 .blockr-block-accordion:has(> .accordion-item:is([data-value="inputs"], [data-value="ctrl"]) > .accordion-header .accordion-button:not(.collapsed)) > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
-  max-width: none;
   padding: 33px var(--bs-card-spacer-x) 0;
   background: linear-gradient(var(--blockr-color-border-default), var(--blockr-color-border-default)) 0 16px / 100% 1px no-repeat;
 }
@@ -443,80 +490,6 @@
   margin-right: -20px;
   border-color: var(--blockr-color-border);
   opacity: 1;
-}
-
-/* ============================================
-   Block Dropdown Menu Styling (Figma-aligned)
-   ============================================ */
-.blockr-block-dropdown {
-  font-size: var(--blockr-font-size-base) !important;
-  border-radius: var(--blockr-radius-xl, 12px) !important;
-  border: 1px solid var(--blockr-color-border) !important;
-  box-shadow: var(--blockr-shadow-lg) !important;
-  padding: 12px 8px 8px !important;
-  margin-top: 8px !important;
-  --bs-dropdown-bg: var(--blockr-color-bg-raised);
-}
-
-/* Arrow pointing up toward the trigger button */
-.blockr-block-dropdown::before,
-.blockr-block-dropdown::after {
-  content: "";
-  position: absolute;
-  right: 16px;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-}
-
-.blockr-block-dropdown::before {
-  top: -9px;
-  border-bottom: 9px solid var(--blockr-color-border);
-}
-
-.blockr-block-dropdown::after {
-  top: -8px;
-  border-bottom: 8px solid var(--blockr-color-bg-raised);
-}
-
-.blockr-block-dropdown .dropdown-header,
-.blockr-block-dropdown h6.dropdown-header {
-  font-size: var(--blockr-font-size-xs) !important;
-  font-weight: var(--blockr-font-weight-medium) !important;
-  color: var(--blockr-color-text-muted) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-variant-caps: normal;
-  padding: 8px 12px 4px;
-}
-
-.blockr-block-dropdown .dropdown-item {
-  font-size: var(--blockr-font-size-sm) !important;
-  padding: 10px 12px 10px 2.5rem !important;
-  border-radius: var(--blockr-radius-lg, 8px) !important;
-  color: var(--blockr-color-text-primary) !important;
-}
-
-.blockr-block-dropdown .dropdown-item:hover,
-.blockr-block-dropdown .dropdown-item:focus {
-  background-color: var(--blockr-color-bg-hover) !important;
-  color: var(--blockr-color-text-primary) !important;
-}
-
-.blockr-block-dropdown .text-muted,
-.blockr-block-dropdown span.text-muted {
-  color: var(--blockr-color-text-muted) !important;
-  font-size: var(--blockr-font-size-sm) !important;
-}
-
-.blockr-block-dropdown .small,
-.blockr-block-dropdown span.small {
-  font-size: var(--blockr-font-size-sm) !important;
-}
-
-.blockr-block-dropdown .fw-medium,
-.blockr-block-dropdown span.fw-medium {
-  font-weight: var(--blockr-font-weight-medium) !important;
-  font-size: var(--blockr-font-size-sm) !important;
 }
 
 /* ============================================
@@ -638,126 +611,225 @@
   margin-left: 2px;
 }
 
-/* Dropdown menu */
+/* The menu takes its look from blockr.ui's menu classes; these are the
+   views' own parts, and manage mode (`.is-managing`). */
 .blockr-view-nav.dropdown-menu {
-  min-width: 200px;
-  padding: 4px;
+  min-width: 220px;
 }
 
-/* View item */
 .blockr-view-item.dropdown-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  padding: 6px 10px;
-  border-radius: var(--blockr-radius-sm, 4px);
-  font-size: var(--blockr-font-size-sm);
-  color: var(--blockr-color-text-primary);
-  cursor: pointer;
 }
 
-.blockr-view-item.dropdown-item.active {
-  background-color: var(--blockr-blue-100);
-  color: var(--blockr-blue-700);
-  font-weight: var(--blockr-font-weight-semibold);
-}
-
-.blockr-view-item.dropdown-item:hover {
-  background-color: var(--blockr-grey-100);
-}
-
-.blockr-view-item.dropdown-item.active:hover {
-  background-color: var(--blockr-blue-100);
-}
-
-/* Item name */
 .blockr-view-item-name {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* CRUD action buttons — use opacity instead of display to prevent layout jump */
-.blockr-view-item-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.1s ease;
+.blockr-view-item .blockr-menu__check {
+  visibility: hidden;
 }
 
-.blockr-view-item.dropdown-item:hover .blockr-view-item-actions {
-  opacity: 1;
+.blockr-view-item.active .blockr-menu__check {
+  visibility: visible;
+}
+
+.blockr-view-grip,
+.blockr-view-remove,
+.blockr-view-foot {
+  display: none;
+}
+
+.blockr-view-nav.is-managing .blockr-view-browse,
+.blockr-view-nav.is-managing .blockr-menu__check {
+  display: none;
+}
+
+.blockr-view-nav.is-managing .blockr-view-foot {
+  display: block;
+}
+
+/* Manage mode: rows are not picks any more, so no hover wash and no bold;
+   the name shows a field edge under the pointer instead. */
+.blockr-view-nav.is-managing .blockr-view-item.dropdown-item,
+.blockr-view-nav.is-managing .blockr-view-item.dropdown-item:hover {
+  background: transparent;
+  font-weight: var(--blockr-font-weight-normal);
+  cursor: default;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.blockr-view-nav.is-managing .blockr-view-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 22px;
+  color: var(--blockr-color-text-disabled);
+  cursor: grab;
+}
+
+.blockr-view-nav.is-managing .blockr-view-item:hover .blockr-view-grip {
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-view-nav.is-managing .blockr-view-item-name {
+  padding: 2px 7px;
+  border: 1px solid transparent;
+  border-radius: var(--blockr-radius-sm);
+  cursor: text;
+}
+
+.blockr-view-nav.is-managing .blockr-view-item-name:hover {
+  border-color: var(--blockr-color-border-default);
+  background: var(--blockr-color-bg-field);
+}
+
+.blockr-view-nav.is-managing .blockr-view-remove {
+  display: flex;
+}
+
+/* A board keeps at least one page, so the last one offers no removal. */
+.blockr-view-nav.is-managing .blockr-view-item:only-child .blockr-view-remove {
+  display: none;
+}
+
+.blockr-view-item.is-dragging {
+  opacity: 0.4;
 }
 
 .blockr-view-action {
-  display: flex;
   align-items: center;
   justify-content: center;
   width: 22px;
   height: 22px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: var(--blockr-radius-sm, 4px);
+  flex-shrink: 0;
+  border-radius: var(--blockr-radius-sm);
   color: var(--blockr-color-text-muted);
   cursor: pointer;
-  font-size: 11px;
 }
 
 .blockr-view-action:hover {
-  background-color: var(--blockr-grey-300);
-  color: var(--blockr-color-text-secondary);
+  background-color: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-default);
 }
 
 .blockr-view-remove:hover {
-  color: var(--blockr-color-error, #dc2626);
+  color: var(--blockr-color-text-danger);
 }
 
-/* Reorder is bounded: the first view can't move up, the last can't move down.
-   Only view items are `<div>` children of the nav (divider is `<hr>`, add is a
-   `<button>`), so `:first/last-of-type` track the ends and re-evaluate live as
-   the order push re-sequences nodes -- no JS state to maintain. */
-.blockr-view-item:first-of-type .blockr-view-up,
-.blockr-view-item:last-of-type .blockr-view-down {
-  opacity: 0.3;
-  pointer-events: none;
+/* Remove asks in place: the row turns into the question and a Remove
+   button on the danger wash. */
+.blockr-view-nav .blockr-view-item.is-confirming > :not(.blockr-view-confirm) {
+  display: none;
 }
 
-/* Inline rename input */
+.blockr-view-nav.is-managing .blockr-view-item.dropdown-item.is-confirming,
+.blockr-view-nav.is-managing .blockr-view-item.dropdown-item.is-confirming:hover {
+  background: var(--blockr-color-bg-danger);
+}
+
+.blockr-view-confirm {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: var(--blockr-color-text-danger);
+}
+
+.blockr-view-confirm-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-view-remove-confirm {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--blockr-color-border-danger-subtle);
+  border-radius: var(--blockr-radius-sm);
+  background: var(--blockr-color-bg-surface);
+  color: var(--blockr-color-text-danger);
+  font: inherit;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-medium);
+  cursor: pointer;
+}
+
+.blockr-view-remove-confirm:hover {
+  border-color: var(--blockr-color-border-danger);
+}
+
+.blockr-view-remove-confirm:focus-visible {
+  outline: var(--blockr-focus-outline);
+  outline-offset: var(--blockr-focus-offset);
+}
+
+/* Inline rename field, at the row's own size. `width: 0` with `flex: 1`
+   takes the space the name had, so the menu does not widen. */
 .blockr-view-rename-input {
   flex: 1;
-  padding: 2px 6px;
-  border: 1px solid var(--blockr-color-primary);
-  border-radius: var(--blockr-radius-sm, 4px);
-  font-size: var(--blockr-font-size-sm);
-  background-color: var(--blockr-color-bg-input);
-  color: var(--blockr-color-text-primary);
+  width: 0;
+  min-width: 0;
+  height: 26px;
+  padding: 0 7px;
+  border: 1px solid var(--blockr-color-border-accent);
+  border-radius: var(--blockr-radius-sm);
+  font: inherit;
+  background-color: var(--blockr-color-bg-surface);
+  color: var(--blockr-color-text-default);
+  box-shadow: var(--blockr-focus-ring);
   outline: none;
 }
 
-.blockr-view-rename-input:focus {
-  border-color: var(--blockr-color-primary);
-  box-shadow: var(--blockr-focus-ring);
-}
-
-/* Add button */
-.blockr-view-add {
+.blockr-view-foot-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 0 10px;
+}
+
+.blockr-view-add {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  border-radius: var(--blockr-radius-sm, 4px);
-  font-size: var(--blockr-font-size-sm);
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
   color: var(--blockr-color-text-muted);
+  cursor: pointer;
 }
 
 .blockr-view-add:hover {
-  background-color: var(--blockr-grey-100);
-  color: var(--blockr-color-text-primary);
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-view-done {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--blockr-color-border-accent-subtle);
+  border-radius: var(--blockr-radius-sm);
+  background: var(--blockr-color-bg-accent-subtle);
+  color: var(--blockr-color-text-accent);
+  font: inherit;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-medium);
+  cursor: pointer;
+}
+
+.blockr-view-done:hover {
+  background: var(--blockr-color-bg-accent-subtle-hover);
+  border-color: var(--blockr-color-border-accent);
 }
 
 /* ============================================

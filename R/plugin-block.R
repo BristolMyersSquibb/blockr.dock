@@ -26,7 +26,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
           div(
             class = "blockr-block-header-actions",
             block_card_toggles(visible, ns, ctrl_meta, has_inputs),
-            block_card_dropdown(ns, blk_info, blk_id)
+            block_card_dropdown(ns, blk_id, has_inputs)
           )
         )
       )
@@ -117,49 +117,11 @@ block_card_title <- function(block, id, info) {
   )
 }
 
+# The card's open sections, as the `collapse_blk_sections` input
+# (section-toggle.js). The preview and a block's own control have a button
+# each; the controls are toggled from the card's "…" menu.
 block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
                                has_inputs = TRUE) {
-
-  vals <- c("inputs", "outputs")
-  icon_labels <- list(
-    as.character(icon("sliders")),
-    as.character(icon("eye"))
-  )
-  tooltip_titles <- c("Controls", "Preview")
-
-  if (!has_inputs) {
-    keep <- vals != "inputs"
-    vals <- vals[keep]
-    icon_labels <- icon_labels[keep]
-    tooltip_titles <- tooltip_titles[keep]
-  }
-
-  if (!is.null(ctrl_meta)) {
-    vals <- c(vals, "ctrl")
-    icon_labels <- c(
-      icon_labels,
-      list(as.character(ctrl_button_label(ctrl_meta)))
-    )
-    tooltip_titles <- c(
-      tooltip_titles,
-      coal(ctrl_meta$tooltip, ctrl_meta$label, "Control")
-    )
-  }
-
-  section_toggles <- shinyWidgets::checkboxGroupButtons(
-    inputId = ns("collapse_blk_sections"),
-    status = "light",
-    size = "sm",
-    choiceNames = icon_labels,
-    choiceValues = vals,
-    individual = TRUE,
-    selected = visible
-  )
-
-  section_toggles$attribs$class <- paste(
-    "blockr-section-toggle",
-    trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
-  )
 
   # A locked card offers no toggle at all: the accordion is seeded from
   # `visible` at render, so nothing here has to report back to place it. The
@@ -169,188 +131,118 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
     return(NULL)
   }
 
-  tagList(
-    section_toggles,
-    tags$script(HTML(sprintf(
-      "$(function() {
-        var btns = $('#%s').find('.btn');
-        var titles = %s;
-        btns.each(function(i) { $(this).attr('title', titles[i]); });
-      });",
-      ns("collapse_blk_sections"),
-      jsonlite::toJSON(tooltip_titles)
-    )))
+  sections <- c(
+    if (has_inputs) "inputs",
+    "outputs",
+    if (!is.null(ctrl_meta)) "ctrl"
   )
-}
 
-ctrl_button_label <- function(meta) {
+  open <- intersect(visible, sections)
 
-  label <- if (nzchar(coal(meta$label, ""))) meta$label
-  inner <- if (is.null(meta$icon)) label else tagList(meta$icon, label)
-
-  if (is.null(meta$class)) {
-    return(inner)
-  }
-
-  span(class = meta$class, inner)
-}
-
-block_card_dropdown <- function(ns, info, blk_id) {
-
-  dd_header <- function(title) {
-    tags$li(
-      h6(class = "dropdown-header", title)
+  toggle <- function(section, title, label) {
+    on <- section %in% open
+    tags$button(
+      type = "button",
+      class = paste("btn btn-light", if (on) "active"),
+      `data-section` = section,
+      `aria-pressed` = tolower(on),
+      title = title,
+      label
     )
-  }
-
-  dd_action <- function(title, id, symbol, class = character()) {
-
-    cls <- c(
-      "dropdown-item action-button py-2 position-relative",
-      class
-    )
-
-    tags$li(
-      tags$button(
-        class = cls,
-        type = "button",
-        id = id,
-        if (not_null(symbol)) {
-          span(
-            class = "position-absolute start-0 top-50 translate-middle-y ms-3",
-            symbol
-          )
-        },
-        title
-      )
-    )
-  }
-
-  dd_info <- function(key, val) {
-    div(
-      class = "d-flex justify-content-between align-items-center mb-3",
-      span(key, class = "text-muted small"),
-      span(val, class = "small fw-medium")
-    )
-  }
-
-  # The timeout lets the dropdown finish closing, so its focus handling does
-  # not blur the field the rename just opened.
-  dd_rename <- function(display_id, symbol) {
-    tags$li(
-      tags$button(
-        class = "dropdown-item py-2 position-relative",
-        type = "button",
-        onclick = sprintf(
-          paste0(
-            "setTimeout(function() {",
-            "document.getElementById('%s').dispatchEvent(",
-            "new MouseEvent('dblclick', {bubbles: true})); }, 0);"
-          ),
-          display_id
-        ),
-        span(
-          class = "position-absolute start-0 top-50 translate-middle-y ms-3",
-          symbol
-        ),
-        "Rename"
-      )
-    )
-  }
-
-  dd_divider <- function() {
-    tags$li(tags$hr(class = "dropdown-divider my-2"))
   }
 
   div(
-    class = "dropdown",
-    tags$button(
-      class = "btn btn-light blockr-header-icon",
-      type = "button",
-      title = "More actions",
-      `data-bs-toggle` = "dropdown",
-      `aria-expanded` = "false",
-      icon("ellipsis-vertical")
-    ),
-    tags$ul(
-      class = paste(
-        "dropdown-menu dropdown-menu-end blockr-block-dropdown",
-        "shadow-sm rounded-3 border-1"
-      ),
-      style = "min-width: 250px;",
-      if (!is_dock_locked()) {
-        tagList(
-          dd_header("Block Actions"),
-          dd_rename(
-            ns("title_display"),
-            bsicons::bs_icon("pencil", class = "text-muted", size = "1.1em")
-          ),
-          dd_action(
-            "Append block",
-            ns("append_block"),
-            bsicons::bs_icon("plus", class = "text-success", size = "1.1em")
-          ),
-          dd_action(
-            "Delete block",
-            ns("delete_block"),
-            bsicons::bs_icon("trash", class = "text-danger", size = "1.1em")
-          ),
-          dd_divider()
-        )
-      },
-      dd_header("Block Details"),
-      tags$li(
-        div(
-          class = "px-3 py-2",
-          div(
-            class = "d-flex justify-content-between align-items-center mb-3",
-            span("Package", class = "text-muted small"),
-            span(class = "badge-two-tone", info$package)
-          ),
-          dd_info("Type", info$category),
-          div(
-            class = "d-flex justify-content-between align-items-center",
-            span("ID", class = "text-muted small"),
-            div(
-              class = "d-flex align-items-center gap-2",
-              tags$code(
-                blk_id,
-                style = "font-size: var(--blockr-font-size-xs);"
-              ),
-              tags$button(
-                class = "btn btn-link p-0 border-0 text-muted",
-                style = "line-height: 1; text-decoration: none;",
-                onclick = sprintf(
-                  paste0(
-                    "event.stopPropagation(); ",
-                    "navigator.clipboard.writeText('%s'); ",
-                    "var btn = this; ",
-                    "var copyIcon = btn.querySelector('.copy-icon'); ",
-                    "var checkIcon = btn.querySelector('.check-icon'); ",
-                    "copyIcon.style.display = 'none'; ",
-                    "checkIcon.style.display = ''; ",
-                    "setTimeout(function() { ",
-                    "checkIcon.style.display = 'none'; ",
-                    "copyIcon.style.display = ''; }, 1500);"
-                  ),
-                  blk_id
-                ),
-                title = "Copy to clipboard",
-                span(
-                  class = "copy-icon",
-                  bsicons::bs_icon("copy", size = "0.9em")
-                ),
-                span(
-                  class = "check-icon text-success",
-                  style = "display: none;",
-                  bsicons::bs_icon("check", size = "0.9em")
-                )
-              )
-            )
-          )
+    id = ns("collapse_blk_sections"),
+    class = "blockr-section-toggle",
+    `data-sections` = paste(open, collapse = " "),
+    toggle("outputs", "Preview", icon("eye")),
+    # A block's own control is drawn as the preview is: its icon, or its
+    # label where it has none, and named by its label.
+    if (!is.null(ctrl_meta)) {
+      toggle("ctrl", ctrl_meta$label, coal(ctrl_meta$icon, ctrl_meta$label))
+    },
+    section_toggle_dep()
+  )
+}
+
+section_toggle_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-section-toggle",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "section-toggle.js"
+  )
+}
+
+# The block's "…" menu, drawn by Blockr.menu (blockr.ui) from the config on
+# the trigger; block-menu.js opens it and turns each item's `action` into a
+# pick: `section` toggles one of the card's sections, `input` sends the same
+# event the old dropdown buttons did, so the server's observers are
+# unchanged, `rename` starts the in-place rename and `copy` puts the block
+# ID on the clipboard. A locked dock lists no action that changes the board.
+block_card_dropdown <- function(ns, blk_id, has_inputs = FALSE) {
+
+  locked <- is_dock_locked()
+
+  # Plain actions have no icon; Remove, which destroys something, has the
+  # bin and sits after a divider (design system, "The block's '…' menu").
+  # The block's type and package are the tooltip on its mark, not a head.
+  items <- c(
+    if (has_inputs && !locked) {
+      list(
+        list(
+          label = "Controls", icon = "sliders", action = "section",
+          section = "inputs", target = ns("collapse_blk_sections")
+        ),
+        list(divider = TRUE)
+      )
+    },
+    if (!locked) {
+      list(
+        list(
+          label = "Rename", action = "rename", target = ns("title_display")
+        ),
+        list(
+          label = "Append block", action = "input", target = ns("append_block")
         )
       )
-    )
+    },
+    list(
+      list(
+        label = "Copy block ID", meta = blk_id, mono = TRUE, action = "copy",
+        target = blk_id
+      )
+    ),
+    if (!locked) {
+      list(
+        list(divider = TRUE),
+        list(
+          label = "Remove block", icon = "trash", danger = TRUE,
+          action = "input", target = ns("delete_block")
+        )
+      )
+    }
+  )
+
+  config <- list(align = "end", items = items)
+
+  tags$button(
+    id = ns("block_menu"),
+    class = "btn btn-light blockr-header-icon blockr-block-menu-btn",
+    type = "button",
+    title = "More actions",
+    `data-blockr-menu` = jsonlite::toJSON(config, auto_unbox = TRUE),
+    icon("ellipsis-vertical"),
+    block_menu_dep()
+  )
+}
+
+block_menu_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-block-menu",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "block-menu.js"
   )
 }
 
@@ -393,9 +285,13 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
   )
 }
 
-ctrl_btn_label <- function(fn) coal(attr(fn, "ctrl_label"), "Control")
-ctrl_btn_icon  <- function(fn) attr(fn, "ctrl_icon")
-ctrl_btn_class <- function(fn) attr(fn, "ctrl_class")
+# A control without a label, or with an empty one, is named "Control".
+ctrl_btn_label <- function(fn) {
+  label <- attr(fn, "ctrl_label")
+  if (is_string(label) && nzchar(label)) label else "Control"
+}
+
+ctrl_btn_icon <- function(fn) attr(fn, "ctrl_icon")
 
 edit_block_server <- function(callbacks = list()) {
 
@@ -425,12 +321,10 @@ edit_block_server <- function(callbacks = list()) {
               return()
             }
 
-            updateTextInput(
-              session,
-              "block_name_in",
-              "Block name",
-              cur_name()
-            )
+            # The value goes by name: the third positional argument is the
+            # label, and the rename field has none (it would push the field
+            # off the name it sits on).
+            updateTextInput(session, "block_name_in", value = cur_name())
           }
         )
 
@@ -513,7 +407,10 @@ edit_block_server <- function(callbacks = list()) {
 
         observeEvent(
           input$append_block,
-          actions[["append_block_action"]](block_id)
+          actions[["append_block_action"]](
+            block_id,
+            at = input$append_block$at
+          )
         )
 
         observeEvent(

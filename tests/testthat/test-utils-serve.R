@@ -353,22 +353,19 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   expect_setequal(nav$label, c("First", "Second"))
   expect_identical(nav$label[nav$active], "First")
 
-  # Drive a runtime add through the nav UI: the client `add` handler must
-  # render the new view once, correctly labelled.
+  # Drive a runtime add through the nav UI ("New page" adds "Page 3", no
+  # dialog): the client `add` handler must render the new view once,
+  # correctly labelled.
   app$run_js(
     "document.querySelector('#my_board-view_nav .blockr-view-add').click()"
   )
-  app$wait_for_idle()
-
-  app$set_inputs(`my_board-view_new_name` = "Third")
-  app$click("my_board-confirm_view_add")
   wait_view_nav(app, 3)
 
   nav <- read_view_nav(app)
 
   expect_identical(nrow(nav), 3L)
   expect_false(anyDuplicated(nav$id) > 0L)
-  expect_true("Third" %in% nav$label)
+  expect_true("Page 3" %in% nav$label)
   expect_false(any(nav$label == ""))
 })
 
@@ -420,7 +417,18 @@ test_that("the view nav does not report the server's own push back (#424)", {
   # client-side activation would report a view the board never switched to --
   # and with the echo gone, nothing would correct it.
   watch_view_nav(app)
-  push_view_nav(app, '{"add": {"id": "ghost", "name": "Ghost"}}')
+  push_view_nav(
+    app,
+    jsonlite::toJSON(
+      list(
+        add = list(
+          id = "ghost",
+          html = as.character(view_item_ui("ghost", "Ghost", can_crud = TRUE))
+        )
+      ),
+      auto_unbox = TRUE
+    )
+  )
 
   expect_identical(view_nav_reports(app), character())
 
@@ -459,21 +467,10 @@ test_that("a click on the view the server left still switches (#424)", {
   app$run_js(
     "document.querySelector('#my_board-view_nav .blockr-view-add').click()"
   )
-  wait_js(
-    app,
-    paste0(
-      "(function(){var e=document.getElementById('my_board-view_new_name');",
-      "return e !== null && e.classList.contains('shiny-bound-input');})()"
-    ),
-    function() dock_shell_diag(app, "my_board")
-  )
-
-  app$set_inputs(`my_board-view_new_name` = "Third")
-  app$click("my_board-confirm_view_add")
   wait_view_nav(app, 3)
 
   nav <- read_view_nav(app)
-  expect_identical(nav$label[nav$active], "Third")
+  expect_identical(nav$label[nav$active], "Page 3")
 
   # Clicking Second again has to reach the server. Left cached, the dedup
   # would swallow the report as a repeat and the board would sit on Third.
@@ -764,13 +761,16 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_setequal(docks$id, c(first, second))
   expect_identical(docks$id[docks$active], second)
 
-  # Rename the active view through the pencil: it swaps the label span for an
-  # inline input that commits on Enter, sending `view_nav_rename`. The id is
-  # stable, so the label moves but the dock container (keyed by id) does not.
+  # Rename the active view in manage mode: a click on the name swaps the label
+  # span for an inline input that commits on Enter, sending `view_nav_rename`.
+  # The id is stable, so the label moves but the dock container (keyed by id)
+  # does not.
   app$run_js(
     paste0(
+      "document.querySelector('#my_board-view_nav .blockr-view-manage')",
+      ".click();",
       "var it = document.querySelector('", item_sel(second), "');",
-      "it.querySelector('.blockr-view-edit').click();",
+      "it.querySelector('.blockr-view-item-name').click();",
       "var inp = it.querySelector('.blockr-view-rename-input');",
       "inp.value = 'Renamed';",
       "$(inp).trigger($.Event('keydown', {key: 'Enter'}));"
@@ -789,18 +789,18 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_setequal(docks$id, c(first, second))
   expect_identical(docks$id[docks$active], second)
 
-  # Remove the (non-active) First view: the x button sends `view_nav_remove`
-  # and the confirmation modal's button drives the delete. The reconcile drops
+  # Remove the (non-active) First view: the x asks in place, and its Remove
+  # button sends `view_nav_remove`; there is no dialog. The reconcile drops
   # both its nav entry and its dock container, leaving the renamed survivor.
   app$run_js(
     paste0(
       "document.querySelector('", item_sel(first),
-      " .blockr-view-remove').click()"
+      " .blockr-view-remove').click();",
+      "document.querySelector('", item_sel(first),
+      " .blockr-view-remove-confirm').click();"
     )
   )
   app$wait_for_idle()
-
-  app$click("my_board-confirm_view_remove")
   app$wait_for_idle()
 
   nav <- read_view_nav(app)
@@ -813,7 +813,7 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_true(docks$active)
 })
 
-test_that("a view moves down via the nav reorder control (#351)", {
+test_that("a view moves down via a reorder from the nav (#351)", {
 
   skip_on_cran()
 
@@ -835,17 +835,20 @@ test_that("a view moves down via the nav reorder control (#351)", {
 
   first <- nav$id[nav$label == "First"]
 
-  # Nudge First down via its chevron: the gesture sends a relative
-  # `view_nav_reorder`, the server applies the order and pushes it back, and the
-  # binding re-sequences the nav. Order is board content, so the active view
-  # rides along rather than snapping to the new first entry.
+  # Drop First below Second: a drag in manage mode sends the order it left
+  # the list in as `view_nav_reorder` (sent directly here; the drag itself is
+  # native HTML5 and not driven by the harness). The server applies the order
+  # and pushes it back, and the binding re-sequences the nav. Order is board
+  # content, so the active view rides along rather than snapping to the new
+  # first entry.
+  second <- nav$id[nav$label == "Second"]
   app$run_js(
-    paste0(
-      "document.querySelector('",
-      sprintf(
-        "#my_board-view_nav .blockr-view-item[data-view-id=\"%s\"]", first
+    sprintf(
+      paste0(
+        "Shiny.setInputValue('my_board-view_nav_reorder', ",
+        "{order: ['%s', '%s']}, {priority: 'event'})"
       ),
-      " .blockr-view-down').click()"
+      second, first
     )
   )
   app$wait_for_idle()
@@ -984,22 +987,19 @@ test_that("locked board hides block actions, shows lock indicator (#236)", {
     "Read-only"
   )
 
-  # Block cards and their dropdown menus render, but the locked dock suppresses
-  # the mutating actions: no append / delete buttons anywhere.
-  expect_gte(count(".blockr-block-dropdown"), 1)
-  expect_equal(count("[id$=\"-append_block\"]"), 0)
-  expect_equal(count("[id$=\"-delete_block\"]"), 0)
-
-  # The dropdown's "Block Actions" section is gone; "Block Details" remains.
-  headers <- app$get_js(
+  # Block cards and their "…" menus render, but the locked dock suppresses
+  # the mutating actions: the menu config on each trigger (block-menu.js
+  # draws it with Blockr.menu) sends no append / delete event.
+  expect_gte(count(".blockr-block-menu-btn"), 1)
+  menus <- app$get_js(
     paste0(
-      "Array.from(document.querySelectorAll(",
-      "'.blockr-block-dropdown .dropdown-header'",
-      ")).map(function(e) { return e.innerText; }).join('|')"
+      "Array.from(document.querySelectorAll('.blockr-block-menu-btn'))",
+      ".map(function(e) { return e.getAttribute('data-blockr-menu'); })",
+      ".join('|')"
     )
   )
-  expect_match(headers, "Block Details")
-  expect_false(grepl("Block Actions", headers))
+  expect_match(menus, "Copy block ID")
+  expect_false(grepl("append_block|delete_block", menus))
 
   # View CRUD is locked too: no "New page" add control.
   expect_equal(count(".blockr-view-add"), 0)
@@ -1738,4 +1738,154 @@ test_that("a rail collapse round-trips with no following gesture (#436)", {
 
   toggle_rail("false")
   expect_false(stored_collapsed())
+})
+
+test_that("New page opens the name of the page it added, and only that", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-new-page-rename",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  app$run_js(
+    paste0(
+      "document.querySelector('#my_board-view_nav')",
+      ".closest('.blockr-view-dropdown')",
+      ".querySelector('.blockr-view-toggle').click();",
+      "document.querySelector('#my_board-view_nav .blockr-view-manage')",
+      ".click();",
+      "document.querySelector('#my_board-view_nav .blockr-view-add').click();"
+    )
+  )
+  wait_view_nav(app, 3)
+
+  wait_js(
+    app,
+    paste0(
+      "document.activeElement !== null && ",
+      "document.activeElement.classList.contains('blockr-view-rename-input')"
+    ),
+    function() "[view-nav] the new page's name never opened for renaming"
+  )
+  expect_identical(
+    app$get_js("document.activeElement.value"),
+    "Page 3"
+  )
+
+  # Escape gives the name back and leaves the menu open, in manage mode.
+  app$run_js(
+    paste0(
+      "document.activeElement.dispatchEvent(",
+      "new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))"
+    )
+  )
+
+  expect_identical(
+    app$get_js(
+      paste0(
+        "(function(){var n = document.querySelector('#my_board-view_nav');",
+        "return [n.classList.contains('show'), ",
+        "n.classList.contains('is-managing'), ",
+        "n.querySelectorAll('.blockr-view-rename-input').length];})()"
+      )
+    ),
+    list(TRUE, TRUE, 0L)
+  )
+
+  # A page added by other means, such as the assistant, keeps its name shut,
+  # even while the server is making one for "New page".
+  renaming <- function() {
+    app$get_js(
+      paste0(
+        "[...document.querySelectorAll(",
+        "'#my_board-view_nav .blockr-view-rename-input')]",
+        ".map(i => i.value)"
+      )
+    )
+  }
+
+  push_row <- function(id, name) {
+    push_view_nav(
+      app,
+      jsonlite::toJSON(
+        list(
+          add = list(
+            id = id,
+            html = as.character(view_item_ui(id, name, can_crud = TRUE))
+          )
+        ),
+        auto_unbox = TRUE
+      )
+    )
+  }
+
+  push_view_nav(app, '{"rename_new": "Page 9"}')
+  push_row("ghost", "Ghost")
+
+  expect_identical(renaming(), list())
+
+  push_row("page-9", "Page 9")
+
+  expect_identical(renaming(), list("Page 9"))
+})
+
+test_that("the last page offers no removal", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-last-page",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  removable <- function() {
+    app$get_js(
+      paste0(
+        "[...document.querySelectorAll(",
+        "'#my_board-view_nav .blockr-view-item')]",
+        ".map(r => getComputedStyle(r.querySelector('.blockr-view-remove'))",
+        ".display !== 'none')"
+      )
+    )
+  }
+
+  app$run_js(
+    paste0(
+      "document.querySelector('#my_board-view_nav')",
+      ".closest('.blockr-view-dropdown')",
+      ".querySelector('.blockr-view-toggle').click();",
+      "document.querySelector('#my_board-view_nav .blockr-view-manage')",
+      ".click();"
+    )
+  )
+
+  expect_identical(removable(), list(TRUE, TRUE))
+
+  # The in-place question, then its Remove button.
+  app$run_js(
+    paste0(
+      "document.querySelectorAll('#my_board-view_nav .blockr-view-remove')[1]",
+      ".click();",
+      "document.querySelector(",
+      "'#my_board-view_nav .blockr-view-remove-confirm')",
+      ".click();"
+    )
+  )
+  wait_view_nav(app, 1)
+
+  expect_identical(removable(), list(FALSE))
 })
