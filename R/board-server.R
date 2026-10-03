@@ -81,7 +81,7 @@ board_server_callback <- function(board, update, visibility, ...,
   switch_view_observer(
     session, update, client_active, board, docks, active_dock
   )
-  add_view_observer(client_views, session, board, update)
+  add_view_observer(client_views, session, update)
   remove_view_observer(client_views, session, update)
   rename_view_observer(client_views, session, update)
   reorder_view_observer(client_views, session, update)
@@ -1115,11 +1115,10 @@ manage_dock <- function(
 #'
 #' @param client_views Reactive record of the client-shown views.
 #' @param session Shiny session.
-#' @param board Reactive board state.
 #' @param update Board update signal.
 #'
 #' @noRd
-add_view_observer <- function(client_views, session, board, update) {
+add_view_observer <- function(client_views, session, update) {
   input <- session$input
 
   # The new view is created through the update lifecycle: a stable id is

@@ -1740,7 +1740,6 @@ test_that("New page submits an add-and-activate delta and names the page", {
   testServer(
     function(input, output, session) {
       client_views <- new_client_views(board_views(brd))
-      board <- reactiveValues(board = brd)
       add_view_observer(
         client_views,
         list(
@@ -1749,7 +1748,6 @@ test_that("New page submits an add-and-activate delta and names the page", {
             sent[[length(sent) + 1L]] <<- list(input_id, message)
           }
         ),
-        board = board,
         update = function(x) captured <<- x
       )
     },
