@@ -6,7 +6,6 @@
 local_mocked_sidebar <- function(env = parent.frame()) {
   local_mocked_bindings(
     show_sidebar         = function(...) invisible(list(...)),
-    keep_or_hide_sidebar = function(...) invisible(list(...)),
     hide_sidebar         = function(...) invisible(list(...)),
     .env = env
   )
@@ -188,7 +187,6 @@ test_that("edit stack action: board change with no active edit is inert", {
   hide_calls <- list()
   local_mocked_bindings(
     show_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar = function(id, ...) {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
@@ -234,7 +232,6 @@ test_that("edit stack action: removing the edited stack closes the sidebar", {
   hide_calls <- list()
   local_mocked_bindings(
     show_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar = function(id, ...) {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
@@ -286,7 +283,6 @@ test_that("edit stack action: a form written by another action stays open", {
   hide_calls <- list()
   local_mocked_bindings(
     show_sidebar = function(...) invisible(NULL),
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar = function(id, ...) {
       hide_calls[[length(hide_calls) + 1L]] <<- id
       invisible(NULL)
@@ -337,7 +333,6 @@ test_that("stack actions write the sidebar from their own module", {
       wrote_from[[length(wrote_from) + 1L]] <<- get_session()$ns(NULL)
       invisible(NULL)
     },
-    keep_or_hide_sidebar = function(...) invisible(NULL),
     hide_sidebar = function(...) invisible(NULL)
   )
 
@@ -563,9 +558,6 @@ test_that("add stack action: a commit closes an unpinned panel only", {
     local_mocked_bindings(
       show_sidebar = function(...) seen$show <<- seen$show + 1L,
       hide_sidebar = function(...) seen$hide <<- seen$hide + 1L,
-      keep_or_hide_sidebar = function(...) {
-        stop("the panel must not be rebuilt after a commit")
-      },
       sidebar_state = function(id, ...) list(open = TRUE, pinned = pinned)
     )
 

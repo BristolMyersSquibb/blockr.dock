@@ -103,19 +103,16 @@ test_that("board server", {
 
   expect_identical(isolate(n_panels()), 0L)
 
-  do.call(
-    ms$setInputs,
-    set_names(
-      list(
-        1L,
-        c(
-          as_block_panel_id("a"),
-          as_ext_panel_id("edit_board")
-        )
-      ),
-      c(mod_input("confirm_add"), mod_input("add_dock_panel"))
+  # Two picks from the add-panel menu, one panel each.
+  for (pick in list(
+    list(value = as.character(as_block_panel_id("a")), nonce = 1L),
+    list(value = as.character(as_ext_panel_id("edit_board")), nonce = 2L)
+  )) {
+    do.call(
+      ms$setInputs,
+      set_names(list(pick), mod_input("add_dock_panel_pick"))
     )
-  )
+  }
 
   expect_identical(isolate(n_panels()), 2L)
 
@@ -1376,7 +1373,22 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
 
   expect_length(rt, 1L)
   expect_identical(rt[[1L]]$add$id, "Third")
-  expect_identical(rt[[1L]]$add$name, "Third")
+
+  row <- xml2::read_html(rt[[1L]]$add$html)
+
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(row, "//div[@data-view-id]"),
+      "data-view-id"
+    ),
+    "Third"
+  )
+  expect_identical(
+    xml2::xml_text(
+      xml2::xml_find_first(row, "//span[@class='blockr-view-item-name']")
+    ),
+    "Third"
+  )
   expect_identical(names(client_views), c("First", "Second", "Third"))
   expect_identical(isolate(client_views[["Third"]]), "Third")
 })
@@ -1715,7 +1727,7 @@ test_that("extension servers receive view_data, not the active dock (#264)", {
   )
 })
 
-test_that("New view modal confirm submits an add-and-activate delta", {
+test_that("New page submits an add-and-activate delta and names the page", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block(), b = new_head_block()),
@@ -1723,36 +1735,50 @@ test_that("New view modal confirm submits an add-and-activate delta", {
   )
 
   captured <- NULL
+  sent <- list()
 
   testServer(
     function(input, output, session) {
       client_views <- new_client_views(board_views(brd))
-      board <- reactiveValues(board = brd)
       add_view_observer(
         client_views,
-        session,
-        board = board,
+        list(
+          input = session$input,
+          sendInputMessage = function(input_id, message) {
+            sent[[length(sent) + 1L]] <<- list(input_id, message)
+          }
+        ),
         update = function(x) captured <<- x
       )
     },
     {
-      session$setInputs(
-        view_new_name = "Charts",
-        view_new_blocks = "a",
-        view_new_exts = character(),
-        confirm_view_add = 1L
-      )
+      # "New page" adds an empty page, no dialog.
+      session$setInputs(view_nav_add = 1L)
       session$flushReact()
 
       # The new view has no id yet, so "add and activate" travels as the
       # add key in both slots; the dock resolves it to the minted id in
       # normalize_views_delta().
       expect_named(captured$views, c("add", "active"))
-      expect_identical(captured$views$active, "Charts")
-      expect_identical(names(captured$views$add), "Charts")
+      expect_identical(captured$views$active, "Page 2")
+      expect_identical(names(captured$views$add), "Page 2")
       expect_true(is_dock_view(captured$views$add[[1L]]))
+      expect_length(view_members(captured$views$add[[1L]]), 0L)
+
+      # The nav opens this page's name for renaming when it arrives.
+      expect_identical(
+        sent,
+        list(list("view_nav", list(rename_new = "Page 2")))
+      )
     }
   )
+})
+
+test_that("next_page_name takes the next free Page N", {
+  expect_identical(next_page_name(character()), "Page 1")
+  expect_identical(next_page_name(c("A", "B")), "Page 3")
+  expect_identical(next_page_name(c("A", "Page 2")), "Page 3")
+  expect_identical(next_page_name(c("Page 2", "Page 3")), "Page 4")
 })
 
 test_that("board_server_callback stashes served plugins on the dock (#331)", {

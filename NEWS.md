@@ -1,5 +1,34 @@
 # blockr.dock (development version)
 
+* The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
+  keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
+  and Remove block after a divider. The preview and a block's own control
+  keep their buttons in the header. A control's button shows its icon, or its
+  label where it has none, and is named by its `ctrl_label` ("Control" without
+  one); the dock no longer applies a control's `ctrl_class` to it. The dock no
+  longer depends on shinyWidgets.
+
+* Adding, appending, prepending and inserting a block open one menu in place,
+  with a filter box and one row per block type, instead of the block browser
+  sidebar. "Add panel" is the same menu over the board's blocks not on the
+  page, and its dialog is gone. An action's trigger can name where its
+  gesture happened (`at`, see `new_action()`): the menu opens there, and
+  under the navbar when nothing is named.
+
+* "Manage pages" turns the views menu into an editor: drag a page by its grip
+  to reorder, click a name to rename it, remove a page after a question in
+  its row, and add an empty "Page N" with "New page", all without a dialog.
+
+* The board options sidebar lists the option categories, and a row opens
+  that category's page. The header then shows a back arrow and the
+  category's name, and the arrow or Escape returns to the list. The
+  Bootstrap accordion and the rule above it are gone; "Show code" is the
+  list's last row.
+
+* A "Compact" board option (`new_compact_option()`, in `dock_board_options()`,
+  off by default) turns every block header into an eyebrow line: a small
+  tinted mark and the name in muted capitals.
+
 * A first visit to a view no longer re-checks every block's frozen state per
   card mount. A card's reported sections depended on the session's whole input
   name set, so every new input on the board woke every block's `visible`, and
@@ -26,11 +55,11 @@
   light by default, and core's thematic switch, off by default, which lets
   plots take the board's colours.
 
-* The block header drops its subtitle: a 42px mark in the block's category
+* The block header drops its subtitle: a 32px mark in the block's category
   colour carries the status dot, and the block type, with the package as a
-  badge, is the mark's tooltip. The controls sit just under the header with
-  no rules around them; one rule separates them from the preview while both
-  are open.
+  badge, is the mark's tooltip. The title is 16px and wraps to two lines.
+  The controls sit just under the header with no rules around them; one rule
+  separates them from the preview while both are open.
 
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's

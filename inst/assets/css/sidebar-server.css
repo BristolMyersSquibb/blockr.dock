@@ -49,7 +49,7 @@
   gap: 12px;
   box-sizing: border-box;
   height: 48px;
-  padding: 0 12px 0 16px;
+  padding: 0 14px 0 20px;
   border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
   background: var(--blockr-color-bg-surface);
 }
@@ -118,10 +118,13 @@
   color: var(--blockr-color-text-accent-strong);
 }
 
+/* Content starts 20px from the panel's edge, the same as the header title;
+   the panels that draw their own background undo this with a matching
+   negative margin. */
 .blockr-sidebar-body {
   flex: 1 1 auto;
   overflow: auto;
-  padding: 16px;
+  padding: 16px 20px;
 }
 
 .blockr-sidebar-body:focus {
@@ -165,4 +168,59 @@ html.blockr-html-pushed-left {
 .blockr-sidebar-close svg {
   width: 10px;
   height: 10px;
+}
+
+/* ============================================
+   Board options: category list and pages
+   ============================================ */
+.blockr-options-list {
+  margin: -8px -10px;
+}
+
+.blockr-options-row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blockr-options-row:focus-visible,
+.blockr-options-code:focus-visible {
+  outline: var(--blockr-focus-outline);
+  outline-offset: -2px;
+}
+
+.blockr-options-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-options-page .shiny-input-container,
+.blockr-options-page .form-group {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.blockr-sidebar-back {
+  display: none;
+}
+
+.blockr-sidebar-paged .blockr-sidebar-back {
+  display: inline-flex;
+}
+
+.blockr-sidebar-paged .blockr-sidebar-header {
+  padding-left: 12px;
+  gap: 6px;
+}
+
+/* blockr.ui's one chevron points down: turned left for the way back, and
+   right for a row that opens a page. */
+.blockr-sidebar-back svg {
+  transform: rotate(90deg);
+}
+
+.blockr-options-chevron svg {
+  transform: rotate(-90deg);
 }

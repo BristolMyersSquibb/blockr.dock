@@ -10,7 +10,11 @@
 #' functions, they each have a unique ID and a [shiny::reactiveVal()]-based
 #' trigger object (inheriting from `action_trigger`). Action trigger objects
 #' implement their own counter-based invalidation mechanism (on top of how
-#' reactive values behave).
+#' reactive values behave). A trigger fires with its target, such as the ID
+#' of the block to append to, and may name where the gesture happened as
+#' `at`: a list holding the `id` of an element, or the `x` and `y` of a point
+#' in the viewport. An action that opens a menu in place opens it there, and
+#' in a fixed spot when the trigger names none.
 #'
 #' An action that fills a sidebar panel records itself on it as it writes, so
 #' the panel reports the writing action as its owner alongside whether it is
@@ -168,20 +172,28 @@ register_action <- function(id, action, ..., session = get_session()) {
 }
 
 new_trigger <- function(value = NULL) {
-  rv <- reactiveVal(list(value = value, counter = 0L))
+  rv <- reactiveVal(list(value = value, at = NULL, counter = 0L))
 
   structure(
-    function(new) {
+    function(new, at = NULL) {
       cur <- rv()
 
       if (missing(new)) {
         return(cur[["value"]])
       }
 
-      rv(list(value = new, counter = cur[["counter"]] + 1L))
+      rv(list(value = new, at = at, counter = cur[["counter"]] + 1L))
 
       invisible(new)
     },
+    at = function() rv()[["at"]],
     class = c("action_trigger", "function")
   )
+}
+
+# A trigger made by action_triggers() knows where its last gesture
+# happened; a plain reactive passed as a trigger names nowhere.
+trigger_at <- function(x) {
+  at <- attr(x, "at")
+  if (is.function(at)) at()
 }

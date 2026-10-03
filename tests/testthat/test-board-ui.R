@@ -6,10 +6,9 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 14 base elements (blockr.ui's controls, the dock's tooltip hand-off and
-  # the rename handler among them) + the viewport probe + the two
-  # pre-rendered block-browser sidebars (add_block_sidebar,
-  # append_block_sidebar).
+  # 16 base elements (blockr.ui's controls, the dock's tooltip hand-off, the
+  # rename handler, the "+" menu and the compact switch among them) + the
+  # viewport probe.
   expect_length(ui, 17L)
 })
 
@@ -18,7 +17,7 @@ test_that("dummy board ui test", {
 # live server-side (settings_observer → show_sidebar → settings_body) is
 # replaced by markup, so the assertions move to the rendered tag tree.
 
-test_that("settings sidebar mount is pre-rendered with the options accordion", {
+test_that("settings sidebar mount is pre-rendered with the options list", {
   ui <- board_ui(
     "test",
     new_dock_board(blocks = c(a = new_dataset_block()))
@@ -31,7 +30,7 @@ test_that("settings sidebar mount is pre-rendered with the options accordion", {
   expect_match(html, 'id="test-settings_sidebar"', fixed = TRUE)
   expect_match(html, 'data-mode="overlay"', fixed = TRUE)
 
-  # Its body slot carries the rendered options accordion. We probe by
+  # Its body slot carries the rendered options list and pages. We probe by
   # looking for the inputId of the default `board_name` option, which is
   # always present (contributed by blockr.core for any board).
   expect_match(html, 'id="test-board_name"', fixed = TRUE)
@@ -407,7 +406,11 @@ test_that("the shared stylesheet layer is blockr.ui's, not this package's", {
   )
 
   expect_no_match(css, "(?m)^:root", perl = TRUE)
-  expect_no_match(css, "(?m)^\\s*--blockr-[a-z0-9-]+\\s*:", perl = TRUE)
+  # The one exception is the card's inset, which blockr.ui's table preview
+  # reads to run a table to the card edges.
+  expect_no_match(
+    css, "(?m)^\\s*--blockr-(?!card-inset\\b)[a-z0-9-]+\\s*:", perl = TRUE
+  )
 
   unscoped <- c(
     "body", "label", "\\.form-control", "\\.btn-primary", "\\.tooltip",

@@ -1,10 +1,11 @@
 // Renames a block in place, for every card from one set of listeners on the
 // document, whenever the card was inserted. A title marked
-// `data-blockr-editable` starts editing on a double-click (the block menu's
-// "Rename" sends one). The field is the card's Shiny text input, so a name
-// reaches the server the way a keystroke does. Enter and a click elsewhere
-// commit, Escape restores the name editing began with; an empty name is
-// refused on Enter and dropped on blur.
+// `data-blockr-editable` starts editing on a double-click, or on the
+// `blockr-rename:start` event the block menu's "Rename" sends. The field is
+// the card's Shiny text input, so a name reaches the server the way a
+// keystroke does. Enter and a click elsewhere commit, Escape restores the
+// name editing began with; an empty name is refused on Enter and dropped on
+// blur.
 (function () {
   var FIELD = '.blockr-inline-edit > .blockr-title-edit input';
 
@@ -17,7 +18,7 @@
   }
 
   $(document).on(
-    'dblclick',
+    'dblclick blockr-rename:start',
     '.blockr-inline-edit > .blockr-title-display[data-blockr-editable]',
     function () {
       var wrap = $(this).siblings('.blockr-title-edit');

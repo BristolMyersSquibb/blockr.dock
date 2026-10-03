@@ -594,6 +594,9 @@ view_binding_dep <- function() {
   )
 }
 
+# A click inside the views menu leaves it open (`data-bs-auto-close =
+# "outside"`), so managing pages does not close it; the binding closes it
+# after a switch.
 #' @noRd
 view_nav_ui <- function(id, views) {
 
@@ -610,12 +613,36 @@ view_nav_ui <- function(id, views) {
     MoreArgs = list(active_id = active, can_crud = can_crud)
   )
 
-  add_btn <- NULL
+  manage <- NULL
   if (can_crud) {
-    add_btn <- tags$button(
-      class = "dropdown-item blockr-view-add",
-      bsicons::bs_icon("plus-lg"),
-      "New page"
+    manage <- tagList(
+      div(
+        class = "blockr-view-browse",
+        div(class = "blockr-menu__divider"),
+        tags$button(
+          type = "button",
+          class = paste(
+            "dropdown-item blockr-menu__item blockr-menu__item--quiet",
+            "blockr-view-manage"
+          ),
+          span(class = "blockr-menu__icon", blockr.ui::small_icon("sliders")),
+          span(class = "blockr-menu__label", "Manage pages")
+        )
+      ),
+      div(
+        class = "blockr-view-foot",
+        div(class = "blockr-menu__divider"),
+        div(
+          class = "blockr-view-foot-row",
+          tags$button(
+            type = "button",
+            class = "blockr-view-add",
+            blockr.ui::small_icon("plus"),
+            "New page"
+          ),
+          tags$button(type = "button", class = "blockr-view-done", "Done")
+        )
+      )
     )
   }
 
@@ -626,16 +653,16 @@ view_nav_ui <- function(id, views) {
       class = "blockr-navbar-icon-btn dropdown-toggle blockr-view-toggle",
       type = "button",
       `data-bs-toggle` = "dropdown",
+      `data-bs-auto-close` = "outside",
       `aria-expanded` = "false",
       bsicons::bs_icon("journals"),
       tags$span(class = "blockr-view-toggle-label", active_nm)
     ),
     div(
-      class = "dropdown-menu blockr-view-nav",
+      class = "dropdown-menu blockr-menu blockr-view-nav",
       id = nav_id,
-      items,
-      if (can_crud) tags$hr(class = "dropdown-divider"),
-      add_btn
+      div(class = "blockr-view-list", items),
+      manage
     )
   )
 }
@@ -644,45 +671,29 @@ view_nav_ui <- function(id, views) {
 view_item_ui <- function(view_id, view_name, active_id = NULL,
                          can_crud = FALSE) {
 
-  cls <- paste("dropdown-item blockr-view-item",
+  cls <- paste("dropdown-item blockr-menu__item blockr-view-item",
                if (identical(view_id, active_id)) "active" else "")
-
-  actions <- NULL
-  if (can_crud) {
-    actions <- tags$span(
-      class = "blockr-view-item-actions",
-      tags$span(
-        class = "blockr-view-action blockr-view-up",
-        role = "button",
-        title = "Move up",
-        bsicons::bs_icon("chevron-up")
-      ),
-      tags$span(
-        class = "blockr-view-action blockr-view-down",
-        role = "button",
-        title = "Move down",
-        bsicons::bs_icon("chevron-down")
-      ),
-      tags$span(
-        class = "blockr-view-action blockr-view-edit",
-        role = "button",
-        title = "Rename",
-        bsicons::bs_icon("pencil")
-      ),
-      tags$span(
-        class = "blockr-view-action blockr-view-remove",
-        role = "button",
-        title = "Remove",
-        bsicons::bs_icon("x-lg")
-      )
-    )
-  }
 
   tags$div(
     class = cls,
     `data-view-id` = view_id,
+    if (can_crud) {
+      tags$span(
+        class = "blockr-view-grip",
+        `aria-label` = "Drag to reorder",
+        blockr.ui::small_icon("grip")
+      )
+    },
     tags$span(class = "blockr-view-item-name", view_name),
-    actions
+    tags$span(class = "blockr-menu__check", blockr.ui::small_icon("check")),
+    if (can_crud) {
+      tags$span(
+        class = "blockr-view-action blockr-view-remove",
+        role = "button",
+        title = "Remove page",
+        blockr.ui::small_icon("remove")
+      )
+    }
   )
 }
 

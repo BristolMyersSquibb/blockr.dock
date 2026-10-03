@@ -9,6 +9,7 @@ reference:
   contents:
     - new_dock_board
     - new_dock_stack
+    - new_compact_option
 - title: Dock layout
   desc: Tools for defining panel arrangements.
   contents:
