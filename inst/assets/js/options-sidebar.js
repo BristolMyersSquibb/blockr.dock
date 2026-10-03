@@ -10,28 +10,6 @@
   // The Escape layer of each sidebar showing a page.
   var layers = new WeakMap();
 
-  // A page may ask for more width while it is open: an element in it with
-  // `data-blockr-page-width` (px), such as blockr.theme's scale map editor.
-  // The sidebar never gets narrower for it, and gets its width back on the
-  // list.
-  var WIDTH = '--blockr-sidebar-panel-width';
-
-  function widen(sidebar, page) {
-    var ask = page.querySelector('[data-blockr-page-width]');
-    var px = ask ? parseInt(ask.getAttribute('data-blockr-page-width'), 10) : 0;
-    if (!px || px <= sidebar.getBoundingClientRect().width) return;
-    sidebar.setAttribute('data-list-width', sidebar.style.getPropertyValue(WIDTH));
-    sidebar.style.setProperty(WIDTH, px + 'px');
-  }
-
-  function unwiden(sidebar) {
-    if (!sidebar.hasAttribute('data-list-width')) return;
-    var was = sidebar.getAttribute('data-list-width');
-    if (was) sidebar.style.setProperty(WIDTH, was);
-    else sidebar.style.removeProperty(WIDTH);
-    sidebar.removeAttribute('data-list-width');
-  }
-
   function openPage(root) {
     return root.querySelector('.blockr-options-page:not([hidden])');
   }
@@ -48,7 +26,6 @@
     var title = sidebar.querySelector('.blockr-sidebar-title');
     title.setAttribute('data-list-title', title.textContent);
     title.textContent = category;
-    widen(sidebar, page);
     sidebar.classList.add('blockr-sidebar-paged');
     layers.set(sidebar, Blockr.layer(sidebar, {
       inPage: true,
@@ -73,7 +50,6 @@
     root.querySelector('.blockr-options-list').hidden = false;
     var title = sidebar.querySelector('.blockr-sidebar-title');
     title.textContent = title.getAttribute('data-list-title');
-    unwiden(sidebar);
     sidebar.classList.remove('blockr-sidebar-paged');
     if (refocus) {
       var category = page.getAttribute('data-category');
