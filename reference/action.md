@@ -138,7 +138,11 @@ functions, they each have a unique ID and a
 [`shiny::reactiveVal()`](https://rdrr.io/pkg/shiny/man/reactiveVal.html)-based
 trigger object (inheriting from `action_trigger`). Action trigger
 objects implement their own counter-based invalidation mechanism (on top
-of how reactive values behave).
+of how reactive values behave). A trigger fires with its target, such as
+the ID of the block to append to, and may name where the gesture
+happened as `at`: a list holding the `id` of an element, or the `x` and
+`y` of a point in the viewport. An action that opens a menu in place
+opens it there, and in a fixed spot when the trigger names none.
 
 An action that fills a sidebar panel records itself on it as it writes,
 so the panel reports the writing action as its owner alongside whether

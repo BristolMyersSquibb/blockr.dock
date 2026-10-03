@@ -11,7 +11,7 @@ are classed shiny server functions.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">blockr.dock</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -185,7 +185,11 @@ module function. Actions are typically created by action generator
 functions, they each have a unique ID and a <code><a href="https://rdrr.io/pkg/shiny/man/reactiveVal.html" class="external-link">shiny::reactiveVal()</a></code>-based
 trigger object (inheriting from <code>action_trigger</code>). Action trigger objects
 implement their own counter-based invalidation mechanism (on top of how
-reactive values behave).</p>
+reactive values behave). A trigger fires with its target, such as the ID
+of the block to append to, and may name where the gesture happened as
+<code>at</code>: a list holding the <code>id</code> of an element, or the <code>x</code> and <code>y</code> of a point
+in the viewport. An action that opens a menu in place opens it there, and
+in a fixed spot when the trigger names none.</p>
 <p>An action that fills a sidebar panel records itself on it as it writes, so
 the panel reports the writing action as its owner alongside whether it is
 open and pinned. <code>sidebar_owned_by()</code> reads that back for a given action:

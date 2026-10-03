@@ -148,6 +148,8 @@ extension object.
   [`` `stack_color<-`() ``](https://bristolmyerssquibb.github.io/blockr.dock/reference/stack.md)
   [`as_dock_stack()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/stack.md)
   : Colored stacks
+- [`new_compact_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_compact_option.md)
+  : Compact block headers
 
 ## Dock layout
 
