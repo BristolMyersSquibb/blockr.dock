@@ -202,6 +202,35 @@ html.blockr-html-pushed-left {
   margin-bottom: 16px;
 }
 
+/* The dock's checkboxes (dock_checkbox()), one under the other. */
+.blockr-options-page .blockr-checkbox {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+/* The code page: the board as an R script, with Copy above it. */
+.blockr-code-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.blockr-code-script {
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  font-size: var(--blockr-font-size-sm);
+  white-space: pre;
+  background: var(--blockr-color-bg-subtle);
+  border: 1px solid var(--blockr-color-border-default);
+  border-radius: var(--blockr-radius-lg);
+}
+
+.blockr-code-note {
+  margin-bottom: 12px;
+  color: var(--blockr-color-text-muted);
+}
+
 .blockr-sidebar-back {
   display: none;
 }

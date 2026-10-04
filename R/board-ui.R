@@ -31,6 +31,7 @@ board_ui.dock_board <- function(
     blockr_dock_dep(),
     tooltip_dep(),
     compact_dep(),
+    dark_mode_dep(),
     viewport_probe_ui(id),
     rail_dep(),
     parking_ui(
@@ -205,16 +206,17 @@ settings_body <- function(
     if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
   }
 
-  generate_code <- div(
-    id = "generate_code",
-    opt_ui_or_null("generate_code", plugins, x)
-  )
+  generate_code <- opt_ui_or_null("generate_code", plugins, x)
+
+  if (not_null(generate_code)) {
+    generate_code <- div(id = "generate_code", generate_code)
+  }
 
   # Locked board: the options pages write board state via
   # set_board_option_value(), which core's gate rejects while locked. Drop them
-  # so the settings sidebar offers only the read-only generated-code export.
+  # so the settings sidebar offers only the read-only code page.
   if (is_dock_locked()) {
-    return(generate_code)
+    return(options_sidebar_ui(id, NULL, generate_code = generate_code))
   }
 
   # Caller-supplied `options` (threaded from `serve()` through

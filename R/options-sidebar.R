@@ -38,25 +38,51 @@ options_sidebar_ui <- function(id, options, generate_code = NULL) {
         class = "blockr-options-page",
         `data-category` = cat,
         hidden = NA,
-        lapply(opts, board_option_ui, id)
+        lapply(opts, dock_option_ui, id)
       )
     },
     names(cats),
     cats
   )
 
-  code_row <- NULL
+  # "Show code" ends the list after a gap, and opens a page of its own with
+  # the board as an R script.
+  code_row <- code_page <- NULL
   if (not_null(generate_code)) {
-    code_row <- tagList(div(class = "blockr-menu__gap"), generate_code)
+    code_row <- tagList(
+      div(class = "blockr-menu__gap"),
+      tags$button(
+        type = "button",
+        class = paste(
+          "blockr-menu__item blockr-menu__item--quiet blockr-options-row",
+          "blockr-options-code"
+        ),
+        `data-category` = code_page_id,
+        tags$span(class = "blockr-menu__icon", blockr.ui::small_icon("code")),
+        tags$span(class = "blockr-menu__label", "Show code")
+      )
+    )
+    code_page <- div(
+      class = "blockr-options-page blockr-options-code-page",
+      `data-category` = code_page_id,
+      `data-label` = "Code",
+      hidden = NA,
+      generate_code
+    )
   }
 
   div(
     class = "blockr-options",
     options_sidebar_dep(),
     div(class = "blockr-options-list", rows, code_row),
-    unname(pages)
+    unname(pages),
+    code_page
   )
 }
+
+# The code page's key among the category pages; no option category is named
+# with a leading dot.
+code_page_id <- ".code"
 
 options_sidebar_dep <- function() {
   htmltools::htmlDependency(
