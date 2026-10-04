@@ -356,14 +356,11 @@ test_that("a restored card paints its saved sections open (#418)", {
     panels <- xml2::xml_find_all(
       root,
       paste0(
-        "//div[", has_class("blockr-block-accordion"), "]/div[@data-value]"
+        "//div[", has_class("blockr-block-sections"), "]/div[@data-value]"
       )
     )
 
-    open <- xml2::xml_find_lgl(
-      panels,
-      paste0("count(.//div[", has_class("show"), "]) > 0")
-    )
+    open <- !xml2::xml_has_attr(panels, "hidden")
 
     xml2::xml_attr(panels, "data-value")[open]
   }
@@ -386,8 +383,6 @@ test_that("a restored card paints its saved sections open (#418)", {
 
 test_that("a card with every section hidden paints none open (#418)", {
 
-  # `open = character()` would reach bslib as an absent `open` and pop the
-  # first panel back open.
   card <- block_card_content(
     NS("blk"),
     expr_ui = div(id = "blk-expr"),
@@ -397,58 +392,21 @@ test_that("a card with every section hidden paints none open (#418)", {
 
   root <- xml2::read_html(as.character(htmltools::tagList(card)))
 
-  expect_length(
-    xml2::xml_find_all(
-      root,
-      paste0("//div[", has_class("accordion-collapse"), " and ",
-             has_class("show"), "]")
+  sections <- xml2::xml_find_all(
+    root,
+    paste0("//div[", has_class("blockr-block-section"), "]")
+  )
+
+  expect_length(sections, 2L)
+  expect_true(all(xml2::xml_has_attr(sections, "hidden")))
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(
+        root, paste0("//div[", has_class("blockr-block-sections"), "]")
+      ),
+      "data-open"
     ),
-    0L
-  )
-})
-
-test_that("hiding the last section closes it (#69)", {
-
-  sent <- character()
-
-  local_mocked_bindings(
-    accordion_panel_set = function(id, values, session) {
-      vals <- paste(values, collapse = ",")
-      sent[[length(sent) + 1L]] <<- paste0("set:", vals)
-    },
-    accordion_panel_close = function(id, values, session) {
-      sent[[length(sent) + 1L]] <<- paste0("close:", values)
-    }
-  )
-
-  testServer(
-    edit_block_server(),
-    {
-      session$flushReact()
-
-      # A card paints with its sections open, so the init NULL closes nothing.
-      expect_identical(sent, character())
-
-      session$setInputs(collapse_blk_sections = c("inputs", "outputs"))
-      session$setInputs(collapse_blk_sections = "outputs")
-
-      expect_identical(sent, c("set:inputs,outputs", "set:outputs"))
-
-      # The last toggle off reports NULL, which `accordion_panel_set()` cannot
-      # carry -- it rejects an empty selection -- so this closes all instead.
-      session$setInputs(collapse_blk_sections = NULL)
-
-      expect_identical(sent[[3L]], "close:TRUE")
-
-      session$setInputs(collapse_blk_sections = "outputs")
-
-      expect_identical(sent[[4L]], "set:outputs")
-    },
-    args = list(
-      block_id = "a",
-      board = board_args(blocks = c(a = new_rbind_block())),
-      update = reactiveVal()
-    )
+    ""
   )
 })
 
@@ -538,17 +496,6 @@ test_that("a card's sections ignore other inputs appearing", {
 
 test_that("a locked card reports its sections without a widget (#418)", {
 
-  sent <- character()
-
-  local_mocked_bindings(
-    accordion_panel_set = function(id, values, session) {
-      sent[[length(sent) + 1L]] <<- "set"
-    },
-    accordion_panel_close = function(id, values, session) {
-      sent[[length(sent) + 1L]] <<- "close"
-    }
-  )
-
   blk <- new_dataset_block()
   attr(blk, "visible") <- "outputs"
 
@@ -564,11 +511,10 @@ test_that("a locked card reports its sections without a widget (#418)", {
         # rather than dropping them.
         expect_identical(session$returned$visible(), "outputs")
 
-        # Neither observer is wired, so a forged input moves no accordion.
+        # A forged input changes nothing it reports.
         session$setInputs(collapse_blk_sections = "inputs")
         session$setInputs(collapse_blk_sections = NULL)
 
-        expect_identical(sent, character())
         expect_identical(session$returned$visible(), "outputs")
       },
       args = list(
@@ -624,7 +570,7 @@ test_that("an input-free block card drops the inputs section (#69)", {
         xml2::xml_find_all(
           root,
           paste0(
-            "//div[", has_class("blockr-block-accordion"), "]/div[@data-value]"
+            "//div[", has_class("blockr-block-sections"), "]/div[@data-value]"
           )
         ),
         "data-value"
@@ -688,11 +634,11 @@ test_that("a board saved before #69 restores an input-free card", {
   expect_identical(xml2::xml_attr(toggles, "data-sections"), "outputs")
 })
 
-test_that("a closed section's accordion button is collapsed on first paint", {
+test_that("a closed section is hidden on first paint", {
 
-  # The rule above the preview reads these hidden buttons (blockr-dock.css),
-  # so they have to be right before any toggle runs.
-  collapsed <- function(visible) {
+  # The rule above the preview reads the sections' `data-open`
+  # (blockr-dock.css), so it has to be right before any toggle runs.
+  paint <- function(visible) {
     card <- block_card_content(
       NS("blk"),
       expr_ui = div(id = "blk-expr"),
@@ -700,67 +646,31 @@ test_that("a closed section's accordion button is collapsed on first paint", {
       visible = visible
     )
     root <- xml2::read_html(as.character(htmltools::tagList(card)))
-    items <- xml2::xml_find_all(root, "//div[@data-value]")
-    closed <- xml2::xml_find_first(
-      items,
-      paste0(".//button[", has_class("collapsed"), "]")
+    box <- xml2::xml_find_first(
+      root, paste0("//div[", has_class("blockr-block-sections"), "]")
     )
-    set_names(
-      !is.na(xml2::xml_name(closed)),
-      xml2::xml_attr(items, "data-value")
+    items <- xml2::xml_find_all(box, "./div[@data-value]")
+    list(
+      hidden = set_names(
+        xml2::xml_has_attr(items, "hidden"),
+        xml2::xml_attr(items, "data-value")
+      ),
+      open = xml2::xml_attr(box, "data-open")
     )
   }
 
-  expect_identical(
-    collapsed(c("inputs", "outputs")),
-    c(inputs = FALSE, outputs = FALSE)
-  )
-  expect_identical(collapsed("outputs"), c(inputs = TRUE, outputs = FALSE))
+  both <- paint(c("inputs", "outputs"))
+
+  expect_identical(both$hidden, c(inputs = FALSE, outputs = FALSE))
+  expect_identical(both$open, "inputs outputs")
+
+  preview <- paint("outputs")
+
+  expect_identical(preview$hidden, c(inputs = TRUE, outputs = FALSE))
+  expect_identical(preview$open, "outputs")
 })
 
 test_that("block card sections carry the css-styling contract (#214)", {
-
-  card <- block_card_content(
-    NS("blk"),
-    expr_ui = div(id = "blk-expr"),
-    block_ui = div(id = "blk-out"),
-    visible = c("inputs", "outputs")
-  )
-
-  root <- xml2::read_html(as.character(htmltools::tagList(card)))
-
-  # The stylesheet keys the per-panel styling off this class and the stable
-  # panel data-value, so both must be present for the cards to render styled.
-  acc <- xml2::xml_find_all(
-    root,
-    paste0("//div[", has_class("blockr-block-accordion"), "]")
-  )
-  expect_length(acc, 1L)
-
-  values <- xml2::xml_attr(
-    xml2::xml_find_all(acc, "./div[@data-value]"),
-    "data-value"
-  )
-  expect_setequal(values, c("inputs", "outputs"))
-
-  # The header-hide and body frame now live in the stylesheet: the panel's own
-  # header and body must not inline the styles tagQuery used to bake in per card
-  # (a revert to that would silently detach them from the css contract above).
-  inputs_item <- "./div[@data-value='inputs']"
-
-  header <- xml2::xml_find_first(
-    acc,
-    paste0(inputs_item, "/div[", has_class("accordion-header"), "]")
-  )
-  body <- xml2::xml_find_first(
-    acc,
-    paste0(inputs_item, "//div[", has_class("accordion-body"), "]")
-  )
-  expect_true(is.na(xml2::xml_attr(header, "style")))
-  expect_true(is.na(xml2::xml_attr(body, "style")))
-})
-
-test_that("block card accordions carry no header content (#72)", {
 
   card <- block_card_content(
     NS("blk"),
@@ -772,25 +682,35 @@ test_that("block card accordions carry no header content (#72)", {
 
   root <- xml2::read_html(as.character(htmltools::tagList(card)))
 
-  headers <- xml2::xml_find_all(
+  # The stylesheet keys the per-section styling off this class and the stable
+  # data-value, so both must be present for the cards to render styled.
+  box <- xml2::xml_find_all(
     root,
-    paste0("//div[", has_class("accordion-header"), "]")
+    paste0("//div[", has_class("blockr-block-sections"), "]")
   )
-  expect_length(headers, 3L)
+  expect_length(box, 1L)
 
-  # Every one of these headers is hidden by the stylesheet, which also takes
-  # the titles out of the accessibility tree, so an icon or title rendered
-  # into one is built per card and then read by nobody.
-  slots <- xml2::xml_find_all(
-    headers,
-    paste0(
-      ".//div[", has_class("accordion-icon"), " or ",
-      has_class("accordion-title"), "]"
-    )
+  items <- xml2::xml_find_all(box, "./div[@data-value]")
+
+  expect_identical(
+    xml2::xml_attr(items, "data-value"),
+    c("ctrl", "inputs", "outputs")
   )
-  expect_length(slots, 6L)
-  expect_length(xml2::xml_children(slots), 0L)
-  expect_identical(unique(xml2::xml_text(slots)), "")
+  expect_true(all(grepl("blockr-block-section", xml2::xml_attr(items, "class"))))
+
+  # The look lives in the stylesheet: no section or section body inlines a
+  # style, which would outrank any sheet a theme attaches.
+  bodies <- xml2::xml_find_all(items, "./div[@class='blockr-block-section-body']")
+
+  expect_length(bodies, 3L)
+  expect_true(all(is.na(xml2::xml_attr(items, "style"))))
+  expect_true(all(is.na(xml2::xml_attr(bodies, "style"))))
+
+  # No Bootstrap accordion is left in the card.
+  expect_length(
+    xml2::xml_find_all(root, paste0("//*[", has_class("accordion-item"), "]")),
+    0L
+  )
 })
 
 test_that("the header names the block type on its mark", {

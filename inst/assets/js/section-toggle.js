@@ -1,13 +1,90 @@
 // A card's open sections (block_card_toggles() in R), as the Shiny input the
-// server opens and closes the card's panels from. The set lives in
-// `data-sections`. A button toggles its own section; the controls have no
-// button, and the card's "…" menu toggles them with a `blockr-section:toggle`
-// event carrying the section.
+// server saves the set from. The set lives in `data-sections`. A button
+// toggles its own section; the controls have no button, and the card's "…"
+// menu toggles them with a `blockr-section:toggle` event carrying the
+// section.
+//
+// The card does not wait for the server: the section folds on the click. A
+// closed section carries `hidden`, so Shiny suspends the outputs in it. The
+// fold animates the height, then hides; the unfold shows, then animates. The
+// sections' `data-open` lists the open ones for the stylesheet, which draws
+// the rule above the preview only while controls are open above it.
 (function () {
   'use strict';
 
+  var DURATION = 220;
+
   function sections(el) {
     return el.getAttribute('data-sections').split(' ').filter(Boolean);
+  }
+
+  function sectionsOf(el) {
+    var card = el.closest('.blockr-block-card-body');
+    return card && card.querySelector(':scope > .blockr-block-sections');
+  }
+
+  function setOpenAttr(box) {
+    var open = [];
+    box.querySelectorAll(':scope > .blockr-block-section').forEach(function (s) {
+      if (!s.hidden && !s.classList.contains('is-closing')) {
+        open.push(s.getAttribute('data-value'));
+      }
+    });
+    box.setAttribute('data-open', open.join(' '));
+  }
+
+  function finish(section) {
+    section.classList.remove('is-folding', 'is-closing');
+    section.style.height = '';
+  }
+
+  function fold(section, open, box) {
+    var reduce = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (section._blockrFold) {
+      clearTimeout(section._blockrFold);
+      section._blockrFold = null;
+      finish(section);
+    }
+
+    if (open === !section.hidden) return;
+
+    if (reduce) {
+      section.hidden = !open;
+      setOpenAttr(box);
+      $(section).trigger(open ? 'shown' : 'hidden');
+      return;
+    }
+
+    if (open) {
+      section.hidden = false;
+      var h = section.scrollHeight;
+      section.style.height = '0px';
+      section.classList.add('is-folding');
+      setOpenAttr(box);
+      // Shiny re-checks visibility on `shown`, so outputs in the section
+      // resume and render.
+      $(section).trigger('shown');
+      section.getBoundingClientRect();
+      section.style.height = h + 'px';
+      section._blockrFold = setTimeout(function () {
+        section._blockrFold = null;
+        finish(section);
+      }, DURATION);
+    } else {
+      section.style.height = section.scrollHeight + 'px';
+      section.classList.add('is-folding', 'is-closing');
+      setOpenAttr(box);
+      section.getBoundingClientRect();
+      section.style.height = '0px';
+      section._blockrFold = setTimeout(function () {
+        section._blockrFold = null;
+        finish(section);
+        section.hidden = true;
+        $(section).trigger('hidden');
+      }, DURATION);
+    }
   }
 
   function toggle(el, section) {
@@ -21,6 +98,11 @@
       btn.classList.toggle('active', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
+    var box = sectionsOf(el);
+    var target = box && box.querySelector(
+      ':scope > .blockr-block-section[data-value="' + CSS.escape(section) + '"]'
+    );
+    if (target) fold(target, at < 0, box);
   }
 
   var binding = new Shiny.InputBinding();

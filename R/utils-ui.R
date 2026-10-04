@@ -1,39 +1,19 @@
-off_canvas <- function(
-  id,
-  title,
-  ...,
-  width = "w-25",
-  position = c("start", "top", "bottom", "end")
-) {
-  label <- paste0(id, "-title")
-
+# A pool for UI that is built but not on screen: block cards waiting for a
+# panel, extensions of views that are not shown. It is kept out of sight with
+# `visibility`, not `display`, so what is parked keeps a size and its outputs
+# keep rendering, as they did in the Bootstrap offcanvas this replaces. New
+# cards are inserted into the pool itself and parked ones are moved into its
+# `.blockr-parking-body`; both callers select by those.
+parking_ui <- function(id, ..., position = c("start", "bottom")) {
   div(
-    class = glue(
-      "offcanvas offcanvas-{match.arg(position)} {width} blockr-offcanvas-pool"
-    ),
-    tabindex = "-1",
     id = id,
-    `aria-labelledby` = label,
-    `data-bs-scroll` = "true",
+    class = paste0("blockr-parking blockr-parking--", match.arg(position)),
+    `aria-hidden` = "true",
     div(
-      class = "offcanvas-header",
-      h5(class = "offcanvas-title", id = label, title),
-      tags$button(
-        type = "button",
-        class = "btn-close",
-        `data-bs-dismiss` = "offcanvas",
-        `aria-label` = "Close"
-      )
-    ),
-    div(
-      class = "offcanvas-body",
+      class = "blockr-parking-body",
       ...
     )
   )
-}
-
-collapse_container <- function(id, ...) {
-  tags$div(class = "collapse", id = id, ...)
 }
 
 # One message per sweep, not one per card: `sendCustomMessage()` writes a

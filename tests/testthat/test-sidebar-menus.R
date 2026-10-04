@@ -913,16 +913,31 @@ test_that("the controls toggle in the block menu flips the card's section", {
     )
   }
 
+  # The card folds the section itself, without waiting for the server.
+  wait_hidden <- function(section) {
+    sel <- sprintf(
+      "#%s .blockr-block-section[data-value=%s]",
+      sub("collapse_blk_sections$", "blk_sections", sections), section
+    )
+    wait_js(
+      app,
+      sprintf("document.querySelector('%s').hidden === true", sel),
+      function() paste("[sections] still open:", section)
+    )
+  }
+
   click_sel(app, paste(menu_sel, ".blockr-menu__item"))
 
   expect_identical(open(), "outputs")
   wait_reported("[\"outputs\"]")
+  wait_hidden("inputs")
 
   # The preview keeps its own button.
   click_sel(app, sprintf("#%s [data-section=outputs]", sections))
 
   expect_identical(open(), "")
   wait_reported("null")
+  wait_hidden("outputs")
 })
 
 test_that("the options sidebar pages back to its list", {
