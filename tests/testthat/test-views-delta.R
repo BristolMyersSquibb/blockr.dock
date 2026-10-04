@@ -758,6 +758,25 @@ test_that("validate_views_delta rejects adding an existing id", {
   )
 })
 
+test_that("validate_views_delta rejects an empty rename", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    views = list(A = "a")
+  )
+
+  view_id <- vid(brd, "A")
+
+  expect_error(
+    validate_views_delta(
+      list(rename = setNames(list(""), view_id)),
+      brd,
+      list()
+    ),
+    class = "dock_views_delta_invalid"
+  )
+})
+
 test_that("validate_views_delta rejects an unknown rename id", {
 
   brd <- new_dock_board(
