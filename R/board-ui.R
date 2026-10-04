@@ -55,6 +55,8 @@ board_ui.dock_board <- function(
         ctrl_ui = if ("ctrl_block" %in% names(plugins)) plugins[["ctrl_block"]]
       )
     ),
+    # Ahead of the navbar, so the tab line is there when it first paints
+    view_tabs_init(options),
     div(
       class = "blockr-navbar",
       style = sprintf("--blockr-spinner-delay: %dms;", spinner_delay_ms()),
@@ -66,6 +68,9 @@ board_ui.dock_board <- function(
       div(
         class = "blockr-navbar-right",
         tagAppendAttributes(v_nav, `data-navbar-slot` = "views"),
+        # With the view_tabs option on, the views also show as a tab line on
+        # a second line of the navbar
+        view_tabs_ui(),
         # The navbar is one row of slots (see blockr-dock.css), so a plugin's
         # pieces and the dock's can interleave: mark, workflow, save ...
         # views, actions, status, tools, account.

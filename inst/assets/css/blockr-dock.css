@@ -870,7 +870,7 @@
      The clip stays on either way: every background tab's render overlay is
      parked below the grid by dockView, and un-clipping them would trail a
      blank screenful past the last panel. */
-  height: var(--blockr-stack-height, calc(100vh - 48px));
+  height: var(--blockr-stack-height, calc(100vh - var(--blockr-navbar-height, 48px)));
   overflow: hidden;
 }
 
@@ -1317,4 +1317,122 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-brand:
   height: 20px;
   margin: 0 2px 0 4px;
   background: var(--blockr-color-border-default);
+}
+
+/* "Show views as tabs": a check while the tab line is on */
+.blockr-view-tabs-toggle .blockr-menu__check {
+  visibility: hidden;
+  margin-left: auto;
+}
+
+html.blockr-view-tabs .blockr-view-tabs-toggle .blockr-menu__check {
+  visibility: visible;
+}
+
+/* ------------------------------------------------------------------
+   Views as tabs (the view_tabs board option, view-tabs.js)
+   ------------------------------------------------------------------
+   With `.blockr-view-tabs` on <html> the navbar wraps onto a second line: a
+   rule, then a tab per view (view-tabs.js mirrors the views menu), then the
+   views menu as a chevron, for managing views and turning the tabs off. */
+.blockr-navbar [data-navbar-slot="break"],
+.blockr-navbar [data-navbar-slot="viewtabs"] {
+  display: none;
+}
+
+html.blockr-view-tabs .blockr-navbar {
+  flex-wrap: wrap;
+  height: auto;
+  padding-top: 9px;
+  row-gap: 0;
+}
+
+/* The wrapped bar takes its height from its items, where the one-line bar
+   is a fixed 48px that hides any excess. A Shiny input in the navbar (core's
+   import, a file input) carries a form group's bottom margin and a progress
+   bar below the field, which would make the first line twice as tall. The
+   margin and an empty label go, and the progress bar hangs below the field
+   out of flow. */
+.blockr-navbar .shiny-input-container {
+  position: relative;
+  margin-bottom: 0 !important;
+}
+
+.blockr-navbar .shiny-input-container > .control-label:empty {
+  display: none;
+}
+
+.blockr-navbar .shiny-file-input-progress {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 2px 0 0;
+}
+
+html.blockr-view-tabs .blockr-navbar [data-navbar-slot="break"] {
+  display: block;
+  order: 85;
+  flex: 0 0 calc(100% + 24px);
+  height: 1px;
+  margin: 9px -12px 0;
+  background: var(--blockr-color-border-default);
+}
+
+html.blockr-view-tabs .blockr-navbar [data-navbar-slot="viewtabs"] {
+  display: flex;
+  order: 90;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 38px;
+  margin-left: -4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+html.blockr-view-tabs .blockr-navbar [data-navbar-slot="views"] {
+  order: 95;
+}
+
+/* In the tab line the views menu is only for managing views: no name, no
+   rule, a chevron alone */
+html.blockr-view-tabs .blockr-navbar [data-navbar-slot="views"]::after,
+html.blockr-view-tabs .blockr-view-toggle-label {
+  display: none;
+}
+
+html.blockr-view-tabs .blockr-view-toggle.blockr-navbar-icon-btn {
+  width: 30px;
+  padding: 0;
+  justify-content: center;
+}
+
+.blockr-view-tab {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--blockr-color-text-muted);
+  font: inherit;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blockr-view-tab:hover {
+  color: var(--blockr-color-text-default);
+  background: var(--blockr-color-bg-hover);
+}
+
+.blockr-view-tab.is-active {
+  color: var(--blockr-color-text-default);
+  font-weight: var(--blockr-font-weight-semibold);
+  box-shadow: inset 0 -2px 0 var(--blockr-color-border-accent);
+}
+
+.blockr-view-tab:focus:not(:focus-visible) {
+  outline: none;
 }

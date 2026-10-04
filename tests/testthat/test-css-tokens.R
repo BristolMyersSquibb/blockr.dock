@@ -126,7 +126,7 @@ package_source <- function() {
 # `setProperty()` naming the token. A `var()` read spells the name with a
 # closing parenthesis after it, and does not count.
 written_by_package <- function(token, src) {
-  any(grepl(paste0(token, "[:\"]"), src))
+  any(grepl(paste0(token, "[:\"']"), src))
 }
 
 test_that("every var() fallback carries the value its token resolves to", {

@@ -1,5 +1,9 @@
 # blockr.dock (development version)
 
+* `new_view_tabs_option()` ("Views as tabs" under Theme options, off by
+  default, saved with the workflow) shows the views as a line of tabs under
+  the navbar. "Show views as tabs" in the views menu sets the same option.
+
 * The views menu's toggle shows the current view's name and the design
   system's chevron, which turns while the menu is open, and a short rule sets
   it apart from the tools. The menu opens aligned to the toggle's right edge.

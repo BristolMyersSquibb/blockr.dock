@@ -234,7 +234,8 @@ dock_board_options <- function() {
     new_board_name_option(),
     new_thematic_option(),
     new_dark_mode_option(value = blockr_option("dark_mode", "light")),
-    new_compact_option()
+    new_compact_option(),
+    new_view_tabs_option()
   )
 }
 

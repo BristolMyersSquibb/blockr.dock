@@ -97,5 +97,6 @@ Collate:
     'utils-serdes.R'
     'utils-serve.R'
     'utils-ui.R'
+    'view-tabs.R'
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.0.0

@@ -6,10 +6,10 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 16 base elements (blockr.ui's controls, the dock's tooltip hand-off, the
-  # rename handler, the "+" menu and the compact switch among them) + the
-  # viewport probe.
-  expect_length(ui, 17L)
+  # 17 base elements (blockr.ui's controls, the dock's tooltip hand-off, the
+  # rename handler, the "+" menu, the compact switch and the view-tabs script
+  # among them) + the viewport probe.
+  expect_length(ui, 18L)
 })
 
 # Settings sidebar is mounted with pre-rendered content + a JS-trigger gear
@@ -212,7 +212,10 @@ test_that("the dock's navbar pieces carry their slots", {
     xml2::xml_attr(nodes, "data-navbar-slot")
   }
 
-  expect_setequal(slots(), c("brand", "views", "spacer", "tools"))
+  expect_setequal(
+    slots(),
+    c("brand", "views", "break", "viewtabs", "spacer", "tools")
+  )
 
   locked <- withr::with_options(list(blockr.locked = TRUE), slots())
   expect_true("actions" %in% locked)

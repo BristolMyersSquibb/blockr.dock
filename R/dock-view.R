@@ -596,7 +596,8 @@ view_binding_dep <- function() {
 
 # A click inside the views menu leaves it open (`data-bs-auto-close =
 # "outside"`), so managing views does not close it; the binding closes it
-# after a switch.
+# after a switch. "Show views as tabs" below the list turns on the tab line
+# (view-tabs.R).
 #' @noRd
 view_nav_ui <- function(id, views) {
 
@@ -613,35 +614,37 @@ view_nav_ui <- function(id, views) {
     MoreArgs = list(active_id = active, can_crud = can_crud)
   )
 
-  manage <- NULL
+  browse <- div(
+    class = "blockr-view-browse",
+    div(class = "blockr-menu__divider"),
+    if (can_crud) {
+      tags$button(
+        type = "button",
+        class = paste(
+          "dropdown-item blockr-menu__item blockr-menu__item--quiet",
+          "blockr-view-manage"
+        ),
+        span(class = "blockr-menu__icon", blockr.ui::small_icon("sliders")),
+        span(class = "blockr-menu__label", "Manage views")
+      )
+    },
+    view_tabs_toggle_ui()
+  )
+
+  foot <- NULL
   if (can_crud) {
-    manage <- tagList(
+    foot <- div(
+      class = "blockr-view-foot",
+      div(class = "blockr-menu__divider"),
       div(
-        class = "blockr-view-browse",
-        div(class = "blockr-menu__divider"),
+        class = "blockr-view-foot-row",
         tags$button(
           type = "button",
-          class = paste(
-            "dropdown-item blockr-menu__item blockr-menu__item--quiet",
-            "blockr-view-manage"
-          ),
-          span(class = "blockr-menu__icon", blockr.ui::small_icon("sliders")),
-          span(class = "blockr-menu__label", "Manage views")
-        )
-      ),
-      div(
-        class = "blockr-view-foot",
-        div(class = "blockr-menu__divider"),
-        div(
-          class = "blockr-view-foot-row",
-          tags$button(
-            type = "button",
-            class = "blockr-view-add",
-            blockr.ui::small_icon("plus"),
-            "New view"
-          ),
-          tags$button(type = "button", class = "blockr-view-done", "Done")
-        )
+          class = "blockr-view-add",
+          blockr.ui::small_icon("plus"),
+          "New view"
+        ),
+        tags$button(type = "button", class = "blockr-view-done", "Done")
       )
     )
   }
@@ -663,7 +666,8 @@ view_nav_ui <- function(id, views) {
       class = "dropdown-menu dropdown-menu-end blockr-menu blockr-view-nav",
       id = nav_id,
       div(class = "blockr-view-list", items),
-      manage
+      browse,
+      foot
     )
   )
 }
