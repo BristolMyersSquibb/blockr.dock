@@ -1239,3 +1239,41 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-brand:
   background-color: var(--blockr-color-bg-hover);
   color: var(--blockr-color-text-default);
 }
+
+/* ------------------------------------------------------------------
+   The navbar as one row of slots
+   ------------------------------------------------------------------
+   The dock's own pieces and a plugin's (blockr.session's workflow name, save
+   menu and avatar) carry `data-navbar-slot`. The group wrappers step out of
+   layout so every piece is an item of .blockr-navbar and takes its order from
+   its slot: the mark, the workflow and its save menu on the left; the views,
+   actions, status, tools and the account on the right. A piece without a slot
+   lands after the mark on the left (core's import and export) or just before
+   the tools on the right (an app's help menu). */
+.blockr-navbar {
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.blockr-navbar-left,
+.blockr-navbar-right,
+.blockr-navbar-left > div:not([data-navbar-slot]),
+.manage-project-navbar {
+  display: contents;
+}
+
+.blockr-navbar-left > :not([data-navbar-slot]),
+.blockr-navbar-left > div:not([data-navbar-slot]) > :not([data-navbar-slot]) {
+  order: 20;
+}
+.blockr-navbar-right > :not([data-navbar-slot]) { order: 65; }
+.blockr-navbar [data-navbar-slot="brand"]   { order: 10; }
+.blockr-navbar [data-navbar-slot="title"]   { order: 20; }
+.blockr-navbar [data-navbar-slot="save"]    { order: 25; margin-left: -4px; }
+.blockr-navbar [data-navbar-slot="spacer"]  { order: 40; flex: 1 1 auto; }
+.blockr-navbar [data-navbar-slot="views"]   { order: 45; }
+.blockr-navbar [data-navbar-slot="actions"] { order: 50; }
+.blockr-navbar [data-navbar-slot="status"]  { order: 60; }
+.blockr-navbar [data-navbar-slot="tools"]   { order: 70; }
+.blockr-navbar [data-navbar-slot="account"] { order: 80; margin-left: 4px; }

@@ -171,9 +171,11 @@ test_that("the navbar leads with the blockr mark, with or without a menu", {
   doc <- xml2::read_html(as.character(board_ui("test", brd)))
   brand <- by_class(doc, "blockr-navbar-brand")
 
-  # One mark, with the seven squares of the logo in stroke order (the busy
-  # animation staggers on `--i`), and the status region the old ring carried.
+  # One mark, in the brand slot, with the seven squares of the logo in stroke
+  # order (the busy animation staggers on `--i`), and the status region the
+  # old ring carried.
   expect_length(brand, 1)
+  expect_identical(xml2::xml_attr(brand, "data-navbar-slot"), "brand")
   rects <- xml2::xml_find_all(brand[[1]], ".//*[local-name()='rect']")
   expect_length(rects, 7)
   expect_identical(
@@ -195,6 +197,25 @@ test_that("the navbar leads with the blockr mark, with or without a menu", {
     )
   )
   expect_length(locked, 1)
+})
+
+test_that("the dock's navbar pieces carry their slots", {
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  slots <- function() {
+    doc <- xml2::read_html(as.character(board_ui("test", brd)))
+    nodes <- xml2::xml_find_all(
+      doc,
+      "//*[contains(@class, 'blockr-navbar')]//*[@data-navbar-slot]"
+    )
+    xml2::xml_attr(nodes, "data-navbar-slot")
+  }
+
+  expect_setequal(slots(), c("brand", "views", "spacer", "tools"))
+
+  locked <- withr::with_options(list(blockr.locked = TRUE), slots())
+  expect_true("actions" %in% locked)
 })
 
 test_that("a plugin's brand menu moves under the mark", {

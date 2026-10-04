@@ -1,4 +1,4 @@
-# The navbar's first item: the blockr mark. It is always drawn, and it is the
+# The navbar's first slot: the blockr mark. It is always drawn, and it is the
 # board's busy indicator (see "Navbar mark" in blockr-dock.css), so a board
 # without any plugin keeps both. A plugin may hang a menu on it: an element of
 # its UI with the class `blockr-navbar-brand-menu` (a Bootstrap
@@ -29,7 +29,7 @@ split_brand_menu <- function(ui) {
   )
 }
 
-#' The mark that leads the navbar, with or without a menu
+#' The mark in the brand slot, with or without a menu
 #' @noRd
 navbar_brand_ui <- function(menu = NULL) {
 
@@ -41,6 +41,7 @@ navbar_brand_ui <- function(menu = NULL) {
     return(
       tags$span(
         class = "blockr-navbar-brand",
+        `data-navbar-slot` = "brand",
         tags$span(class = "blockr-navbar-mark", blockr_mark(20)),
         status
       )
@@ -49,6 +50,7 @@ navbar_brand_ui <- function(menu = NULL) {
 
   tags$div(
     class = "blockr-navbar-brand dropdown",
+    `data-navbar-slot` = "brand",
     tags$button(
       class = "blockr-navbar-mark blockr-navbar-mark-btn",
       type = "button",

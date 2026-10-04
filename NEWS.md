@@ -1,5 +1,11 @@
 # blockr.dock (development version)
 
+* Navbar pieces carry `data-navbar-slot`, and the navbar orders them in one
+  row: the mark, the workflow's name and save menu on the left; the views,
+  actions, tools and account on the right. A plugin's pieces and the dock's
+  can interleave this way. The board options button shows a side panel icon
+  instead of a gear.
+
 * The navbar leads with the blockr mark, which is also the busy indicator:
   while blocks compute, its squares empty and fill in the order the R is
   drawn. It replaces the spinner ring. A plugin can hang a menu on the mark

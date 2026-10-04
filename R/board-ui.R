@@ -65,10 +65,18 @@ board_ui.dock_board <- function(
       ),
       div(
         class = "blockr-navbar-right",
-        v_nav,
+        tagAppendAttributes(v_nav, `data-navbar-slot` = "views"),
+        # The navbar is one row of slots (see blockr-dock.css), so a plugin's
+        # pieces and the dock's can interleave: mark, workflow, save ...
+        # views, actions, status, tools, account.
+        tags$span(
+          class = "blockr-navbar-spacer",
+          `data-navbar-slot` = "spacer"
+        ),
         if (is_dock_locked()) {
           tags$span(
             class = "blockr-lock-indicator",
+            `data-navbar-slot` = "actions",
             title = "Editing is disabled by this deployment.",
             `aria-label` = "Read-only mode",
             role = "status",
@@ -87,10 +95,13 @@ board_ui.dock_board <- function(
         tags$button(
           type = "button",
           class = "btn action-button blockr-navbar-icon-btn",
+          `data-navbar-slot` = "tools",
           `data-blockr-sidebar-target` = NS(id, "settings_sidebar"),
           `aria-label` = "Board options",
           title = "Board options",
-          bsicons::bs_icon("gear")
+          # The side panel it opens, not a gear: the gear is a block's
+          # settings everywhere else.
+          bsicons::bs_icon("layout-sidebar-reverse")
         )
       )
     ),
