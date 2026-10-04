@@ -1,5 +1,10 @@
 # blockr.dock (development version)
 
+* The card's preview toggle and "…" button and the Edit board extension's
+  buttons draw blockr.ui's small icons instead of Font Awesome's, through
+  `blockr.ui::small_icon()` in place of `shiny::icon()` (BristolMyersSquibb/blockr.ui#85).
+  The "…" button's dots are horizontal, as the design system draws them.
+
 * The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
   and Remove block after a divider. The preview and a block's own control

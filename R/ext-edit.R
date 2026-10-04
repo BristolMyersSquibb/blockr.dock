@@ -54,7 +54,7 @@ blk_ext_ui <- function(id, board) {
         actionButton(
           NS(id, "confirm_add"),
           "Add block",
-          icon = icon("plus"),
+          icon = blockr.ui::small_icon("plus"),
           class = "btn-primary"
         )
       ),
@@ -73,7 +73,7 @@ blk_ext_ui <- function(id, board) {
         actionButton(
           NS(id, "confirm_rm"),
           "Remove block",
-          icon = icon("trash"),
+          icon = blockr.ui::small_icon("trash"),
           class = "btn-danger"
         )
       )
@@ -99,13 +99,13 @@ blk_ext_ui <- function(id, board) {
         actionButton(
           NS(id, "add_link"),
           "Add link row",
-          icon = icon("plus"),
+          icon = blockr.ui::small_icon("plus"),
           class = "btn-primary"
         ),
         actionButton(
           NS(id, "rm_link"),
           "Remove row(s)",
-          icon = icon("minus"),
+          icon = blockr.ui::small_icon("minus"),
           class = "btn-danger"
         )
       )
@@ -131,13 +131,13 @@ blk_ext_ui <- function(id, board) {
         actionButton(
           NS(id, "add_stack"),
           "Add stack row",
-          icon = icon("plus"),
+          icon = blockr.ui::small_icon("plus"),
           class = "btn-primary"
         ),
         actionButton(
           NS(id, "rm_stack"),
           "Remove row(s)",
-          icon = icon("minus"),
+          icon = blockr.ui::small_icon("minus"),
           class = "btn-danger"
         )
       )
@@ -147,7 +147,7 @@ blk_ext_ui <- function(id, board) {
       actionButton(
         NS(id, "apply_changes"),
         "Apply changes",
-        icon = icon("check"),
+        icon = blockr.ui::small_icon("check"),
         class = "btn-success"
       )
     )

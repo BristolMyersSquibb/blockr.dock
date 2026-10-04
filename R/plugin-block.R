@@ -155,7 +155,7 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
     id = ns("collapse_blk_sections"),
     class = "blockr-section-toggle",
     `data-sections` = paste(open, collapse = " "),
-    toggle("outputs", "Preview", icon("eye")),
+    toggle("outputs", "Preview", blockr.ui::small_icon("eye")),
     # A block's own control is drawn as the preview is: its icon, or its
     # label where it has none, and named by its label.
     if (!is.null(ctrl_meta)) {
@@ -232,7 +232,7 @@ block_card_dropdown <- function(ns, blk_id, has_inputs = FALSE) {
     type = "button",
     title = "More actions",
     `data-blockr-menu` = jsonlite::toJSON(config, auto_unbox = TRUE),
-    icon("ellipsis-vertical"),
+    blockr.ui::small_icon("dots"),
     block_menu_dep()
   )
 }

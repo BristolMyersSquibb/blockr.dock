@@ -48,7 +48,7 @@ Suggests:
 Remotes:
     rstudio/shinytest2,
     BristolMyersSquibb/blockr.core,
-    BristolMyersSquibb/blockr.ui,
+    BristolMyersSquibb/blockr.ui@feat/no-font-awesome,
     cynkra/dockViewR,
     nbenn/reactives
 Config/testthat/edition: 3
