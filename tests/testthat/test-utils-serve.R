@@ -1078,7 +1078,7 @@ test_that("single-page board renders one auto-named view (#236)", {
   expect_identical(docks$id, nav$id)
 })
 
-test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
+test_that("navbar mark: real work vs bookkeeping (#285, #345, #355, #360)", {
 
   skip_on_cran()
 
@@ -1112,12 +1112,11 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
     app$get_js(
       r"(JSON.stringify((function () {
         var html = document.documentElement;
-        var spinner = document.querySelector('.blockr-navbar-spinner');
-        if (spinner) spinner.style.transition = 'none';
+        var spinner =
+          document.querySelector('.blockr-navbar-brand .blockr-mark rect');
         var arc = function () {
           if (!spinner) return null;
-          var cs = getComputedStyle(spinner);
-          return { top: cs.borderTopColor, side: cs.borderRightColor };
+          return getComputedStyle(spinner).animationName;
         };
         var mark = function (parent) {
           var el = document.createElement('div');
@@ -1150,11 +1149,11 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
 
         real.forEach(function (el) { el.classList.add('recalculating'); });
         html.classList.remove('shiny-busy');
-        if (spinner) spinner.style.transition = '';
 
-        var painted = bookkeeping && bookkeeping.side !== 'rgba(0, 0, 0, 0)';
-        var bkArc = bookkeeping && bookkeeping.top !== bookkeeping.side;
-        var coArc = computing && computing.top !== computing.side;
+        var painted = spinner !== null &&
+          getComputedStyle(spinner).fill !== 'none';
+        var bkArc = bookkeeping !== 'none';
+        var coArc = computing === 'blockr-mark-fill';
 
         return {
           pulseOff: pulseOff, hasSpinner: spinner !== null,

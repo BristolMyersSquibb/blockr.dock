@@ -15,6 +15,14 @@ board_ui.dock_board <- function(
   # view). The nav needs only structure (ids, names, active), not geometry.
   v_nav <- view_nav_ui(id, views)
 
+  # A preserve_board plugin (blockr.session) draws its part of the navbar; a
+  # menu it offers for the mark moves under the dock's mark.
+  plg <- split_brand_menu(
+    if ("preserve_board" %in% names(plugins)) {
+      board_ui(id, plugins[["preserve_board"]], x)
+    }
+  )
+
   # One dock output per view, stacked inside the view container; visibility
   # is toggled by CSS based on the active view.
   dock_outputs <- dock_outputs_ui(id, views)
@@ -50,34 +58,13 @@ board_ui.dock_board <- function(
     div(
       class = "blockr-navbar",
       style = sprintf("--blockr-spinner-delay: %dms;", spinner_delay_ms()),
+      navbar_brand_ui(plg$menu),
       div(
         class = "blockr-navbar-left",
-        if ("preserve_board" %in% names(plugins)) {
-          board_ui(id, plugins[["preserve_board"]], x)
-        }
+        plg$rest
       ),
       div(
         class = "blockr-navbar-right",
-        # Busy spinner. Always rendered and always visible, driven purely by CSS
-        # off the `.shiny-busy` class Shiny toggles on <html> during a flush --
-        # no server observer. Idle it is a faint, closed ring; a flush scoped to
-        # real block evaluation (a bare panel switch does not qualify) paints a
-        # darker arc onto it and spins it. It leads this right group (ahead of
-        # the view nav), where its 16px ring is not juxtaposed against the
-        # smaller gear; because it is always painted (never shown/hidden) its
-        # constant slot shifts no neighbour. The busy appearance is held for
-        # `--blockr-spinner-delay` ms (set on the navbar above), so a
-        # sub-threshold flush never flickers it. The ring spins inside a static
-        # slot that carries a hover tooltip naming the state (idle / computing),
-        # so the label does not turn with it. Announced like the lock indicator.
-        tags$span(
-          class = "blockr-navbar-spinner-slot",
-          tags$span(
-            class = "blockr-navbar-spinner",
-            role = "status",
-            `aria-label` = "Busy"
-          )
-        ),
         v_nav,
         if (is_dock_locked()) {
           tags$span(
@@ -231,9 +218,9 @@ settings_body <- function(
 
 spinner_delay_ms <- function() {
 
-  ms <- suppressWarnings(as.integer(blockr_option("spinner_delay_ms", 200L)))
+  ms <- suppressWarnings(as.integer(blockr_option("spinner_delay_ms", 500L)))
 
-  if (length(ms) != 1L || is.na(ms) || ms < 0L) 200L else ms
+  if (length(ms) != 1L || is.na(ms) || ms < 0L) 500L else ms
 }
 
 # The viewport-width probe: a hidden element whose input binding reports

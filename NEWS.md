@@ -1,5 +1,12 @@
 # blockr.dock (development version)
 
+* The navbar leads with the blockr mark, which is also the busy indicator:
+  while blocks compute, its squares empty and fill in the order the R is
+  drawn. It replaces the spinner ring. A plugin can hang a menu on the mark
+  with an element of class `blockr-navbar-brand-menu`. The busy delay
+  (`blockr.spinner_delay_ms`) now defaults to 500 ms, so work that finishes
+  sooner shows nothing.
+
 * The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
   and Remove block after a divider. The preview and a block's own control
