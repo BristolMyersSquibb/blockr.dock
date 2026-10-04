@@ -652,14 +652,15 @@ view_nav_ui <- function(id, views) {
     tags$button(
       class = "blockr-navbar-icon-btn dropdown-toggle blockr-view-toggle",
       type = "button",
+      `aria-label` = "Views",
       `data-bs-toggle` = "dropdown",
       `data-bs-auto-close` = "outside",
       `aria-expanded` = "false",
-      bsicons::bs_icon("journals"),
-      tags$span(class = "blockr-view-toggle-label", active_nm)
+      tags$span(class = "blockr-view-toggle-label", active_nm),
+      span(class = "blockr-view-toggle-chev", blockr.ui::small_icon("chevron"))
     ),
     div(
-      class = "dropdown-menu blockr-menu blockr-view-nav",
+      class = "dropdown-menu dropdown-menu-end blockr-menu blockr-view-nav",
       id = nav_id,
       div(class = "blockr-view-list", items),
       manage

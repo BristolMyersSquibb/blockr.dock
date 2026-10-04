@@ -1,5 +1,9 @@
 # blockr.dock (development version)
 
+* The views menu's toggle shows the current view's name and the design
+  system's chevron, which turns while the menu is open, and a short rule sets
+  it apart from the tools. The menu opens aligned to the toggle's right edge.
+
 * The views menu and its messages say "view" throughout, where some said
   "page": "Show in this view", "Cannot remove the last view.".
 

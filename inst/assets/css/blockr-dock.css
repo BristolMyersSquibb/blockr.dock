@@ -589,15 +589,41 @@
    ============================================ */
 
 /* Dropdown toggle */
-.blockr-view-toggle {
+/* The views toggle: the current view's name and the design system's
+   chevron, which turns while the menu is open. Bootstrap's caret is off. */
+.blockr-view-toggle.blockr-navbar-icon-btn {
   display: flex;
   align-items: center;
   gap: 6px;
   width: auto;
-  padding: 4px 10px;
+  height: 30px;
+  padding: 0 8px;
   font-size: var(--blockr-font-size-sm);
   font-weight: var(--blockr-font-weight-medium);
-  color: var(--blockr-color-text-secondary);
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-view-toggle[aria-expanded="true"] {
+  background-color: var(--blockr-color-bg-hover);
+}
+
+.blockr-view-toggle:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+.blockr-view-toggle-chev {
+  display: inline-flex;
+  color: var(--blockr-color-text-muted);
+  transition: transform var(--blockr-transition), color var(--blockr-transition);
+}
+
+.blockr-view-toggle:hover .blockr-view-toggle-chev {
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-view-toggle[aria-expanded="true"] .blockr-view-toggle-chev {
+  transform: rotate(180deg);
 }
 
 .blockr-view-toggle-label {
@@ -608,7 +634,7 @@
 }
 
 .blockr-view-toggle::after {
-  margin-left: 2px;
+  display: none;
 }
 
 /* The menu takes its look from blockr.ui's menu classes; these are the
@@ -1277,3 +1303,18 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-brand:
 .blockr-navbar [data-navbar-slot="status"]  { order: 60; }
 .blockr-navbar [data-navbar-slot="tools"]   { order: 70; }
 .blockr-navbar [data-navbar-slot="account"] { order: 80; margin-left: 4px; }
+
+/* The views, set apart from the tools after them by a short rule */
+.blockr-navbar [data-navbar-slot="views"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blockr-navbar [data-navbar-slot="views"]::after {
+  content: "";
+  width: 1px;
+  height: 20px;
+  margin: 0 2px 0 4px;
+  background: var(--blockr-color-border-default);
+}
