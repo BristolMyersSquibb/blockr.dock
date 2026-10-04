@@ -279,6 +279,49 @@ test_that("adding a second block keeps both block panels (#196)", {
   expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
 })
 
+test_that("every closable tab draws blockr.ui's x (#492)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "empty", "app.R", package = "blockr.dock"),
+    name = "close-icon",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  # The extension's tab comes from the restore the board opens with and the
+  # block's from `dock_panel()`, the two routes a tab takes into the dock.
+  app$set_inputs(
+    `my_board-ext_edit_board-registry_select` = "dataset_block",
+    `my_board-ext_edit_board-block_id` = "a"
+  )
+  app$click("my_board-ext_edit_board-confirm_add")
+  wait_block_panel_tabs(app, "block_panel-a")
+
+  tabs <- app$get_js(
+    paste0(
+      "Array.from(document.querySelectorAll(",
+      "'#my_board-view_container .dv-default-tab'",
+      ")).map(function(e) { return {",
+      "id: e.id.replace(/.*-tab-/, ''),",
+      "icon: e.querySelector('.dv-default-tab-action').innerHTML",
+      "}; })"
+    )
+  )
+
+  expect_setequal(
+    chr_xtr(tabs, "id"),
+    c("ext_panel-edit_board", "block_panel-a")
+  )
+  expect_identical(
+    unique(chr_xtr(tabs, "icon")),
+    as.character(blockr.ui::small_icon("remove"))
+  )
+})
+
 test_that("edit board extension stacks (e2e)", {
 
   skip_on_cran()
