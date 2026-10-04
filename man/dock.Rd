@@ -98,8 +98,8 @@ Using the docking layout manager provided by dockViewR, a \code{dock_board}
 extends \code{\link[blockr.core:new_board]{blockr.core::new_board()}}. In addition to the attributes contained
 in a core board, this also includes dock extensions (as \code{extensions}) and
 the per-view layout, stored as two independent slots -- view structure
-(\code{\link[=board_views]{board_views()}}) and grid geometry (\code{\link[=board_grids]{board_grids()}}). Single-page boards
-are a degenerate case with one auto-named "Page" view.
+(\code{\link[=board_views]{board_views()}}) and grid geometry (\code{\link[=board_grids]{board_grids()}}). Single-view boards
+are a degenerate case with one auto-named view.
 }
 \details{
 Multi-view boards pass \code{views} (and optionally \code{grids}); see

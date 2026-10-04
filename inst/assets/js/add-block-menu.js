@@ -57,7 +57,7 @@
     });
   }
 
-  // Adding a panel to the page: the board's blocks and extensions that are
+  // Adding a panel to the view: the board's blocks and extensions that are
   // not on it yet; a pick sends the panel id.
   function openPanels(m) {
     var at = anchorFor(m.at);

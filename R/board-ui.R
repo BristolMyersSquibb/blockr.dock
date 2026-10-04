@@ -11,8 +11,8 @@ board_ui.dock_board <- function(
   views <- board_views(x)
 
   # View nav in the navbar -- always present, since boards always carry a
-  # `dock_views` collection (single-page boards have one auto-named "Page"
-  # view). The nav needs only structure (ids, names, active), not geometry.
+  # `dock_views` collection (single-view boards have one auto-named view).
+  # The nav needs only structure (ids, names, active), not geometry.
   v_nav <- view_nav_ui(id, views)
 
   # A preserve_board plugin (blockr.session) draws its part of the navbar; a

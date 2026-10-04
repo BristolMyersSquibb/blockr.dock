@@ -39,7 +39,7 @@ $(function () {
       .text(text);
   };
 
-  // The name of the page each nav's "New page" made, until the page arrives
+  // The name of the view each nav's "New view" made, until the view arrives
   // (`rename_new` from the server).
   var renameNew = new WeakMap();
 
@@ -68,7 +68,7 @@ $(function () {
     if (!on) renameNew.delete(el);
   };
 
-  // Swap a page's name for a field. Enter and blur commit, Escape restores.
+  // Swap a view's name for a field. Enter and blur commit, Escape restores.
   // Only in manage mode, which stays open, so a commit never closes the menu.
   var startRename = function ($item) {
     var $name = $item.find('.blockr-view-item-name');
@@ -234,7 +234,7 @@ $(function () {
         callback(true);
       });
 
-      // View switch: a click on a page, unless the menu is managing pages
+      // View switch: a click on a view, unless the menu is managing views
       // (then a click on the name renames it) or the click hit a tool.
       $(el).on('click.viewBinding', '.blockr-view-item', function (e) {
         if ($(e.target).closest('.blockr-view-remove, .blockr-view-grip').length) {
@@ -280,9 +280,9 @@ $(function () {
         setManaging(el, false);
       });
 
-      // Remove asks in place: the x turns the row into "Remove this page?"
+      // Remove asks in place: the x turns the row into "Remove this view?"
       // with a Remove button; only that button sends the request, and the
-      // server removes the page without a dialog. The question is a layer
+      // server removes the view without a dialog. The question is a layer
       // (Blockr.layer), so Escape or a click anywhere outside its row takes
       // it back.
       var confirming = null;
@@ -325,8 +325,8 @@ $(function () {
         $item.find('.blockr-view-remove-confirm').trigger('focus');
       });
 
-      // Add click: the server adds an empty "Page N" and switches to it; the
-      // page arrives through receiveMessage, its name open for renaming.
+      // Add click: the server adds an empty "View N" and switches to it; the
+      // view arrives through receiveMessage, its name open for renaming.
       $(el).on('click.viewBinding', '.blockr-view-add', function (e) {
         e.stopPropagation();
         e.preventDefault();

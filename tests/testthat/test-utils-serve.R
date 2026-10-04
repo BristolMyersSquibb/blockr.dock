@@ -396,7 +396,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   expect_setequal(nav$label, c("First", "Second"))
   expect_identical(nav$label[nav$active], "First")
 
-  # Drive a runtime add through the nav UI ("New page" adds "Page 3", no
+  # Drive a runtime add through the nav UI ("New view" adds "View 3", no
   # dialog): the client `add` handler must render the new view once,
   # correctly labelled.
   app$run_js(
@@ -408,7 +408,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
 
   expect_identical(nrow(nav), 3L)
   expect_false(anyDuplicated(nav$id) > 0L)
-  expect_true("Page 3" %in% nav$label)
+  expect_true("View 3" %in% nav$label)
   expect_false(any(nav$label == ""))
 })
 
@@ -513,7 +513,7 @@ test_that("a click on the view the server left still switches (#424)", {
   wait_view_nav(app, 3)
 
   nav <- read_view_nav(app)
-  expect_identical(nav$label[nav$active], "Page 3")
+  expect_identical(nav$label[nav$active], "View 3")
 
   # Clicking Second again has to reach the server. Left cached, the dedup
   # would swallow the report as a repeat and the board would sit on Third.
@@ -1044,7 +1044,7 @@ test_that("locked board hides block actions, shows lock indicator (#236)", {
   expect_match(menus, "Copy block ID")
   expect_false(grepl("append_block|delete_block", menus))
 
-  # View CRUD is locked too: no "New page" add control.
+  # View CRUD is locked too: no "New view" add control.
   expect_equal(count(".blockr-view-add"), 0)
 })
 
@@ -1782,7 +1782,7 @@ test_that("a rail collapse round-trips with no following gesture (#436)", {
   expect_false(stored_collapsed())
 })
 
-test_that("New page opens the name of the page it added, and only that", {
+test_that("New view opens the name of the view it added, and only that", {
 
   skip_on_cran()
 
@@ -1815,11 +1815,11 @@ test_that("New page opens the name of the page it added, and only that", {
       "document.activeElement !== null && ",
       "document.activeElement.classList.contains('blockr-view-rename-input')"
     ),
-    function() "[view-nav] the new page's name never opened for renaming"
+    function() "[view-nav] the new view's name never opened for renaming"
   )
   expect_identical(
     app$get_js("document.activeElement.value"),
-    "Page 3"
+    "View 3"
   )
 
   # Escape gives the name back and leaves the menu open, in manage mode.
@@ -1842,8 +1842,8 @@ test_that("New page opens the name of the page it added, and only that", {
     list(TRUE, TRUE, 0L)
   )
 
-  # A page added by other means, such as the assistant, keeps its name shut,
-  # even while the server is making one for "New page".
+  # A view added by other means, such as the assistant, keeps its name shut,
+  # even while the server is making one for "New view".
   renaming <- function() {
     app$get_js(
       paste0(
@@ -1869,17 +1869,17 @@ test_that("New page opens the name of the page it added, and only that", {
     )
   }
 
-  push_view_nav(app, '{"rename_new": "Page 9"}')
+  push_view_nav(app, '{"rename_new": "View 9"}')
   push_row("ghost", "Ghost")
 
   expect_identical(renaming(), list())
 
-  push_row("page-9", "Page 9")
+  push_row("view-9", "View 9")
 
-  expect_identical(renaming(), list("Page 9"))
+  expect_identical(renaming(), list("View 9"))
 })
 
-test_that("the last page offers no removal", {
+test_that("the last view offers no removal", {
 
   skip_on_cran()
 

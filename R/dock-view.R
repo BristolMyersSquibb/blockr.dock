@@ -6,10 +6,10 @@
 #' with `board_views()`. **Grid** -- the geometry of each view (nesting, tab
 #' groups, sizes) -- is a separate, `NULL`-valid `dock_grids` slot, read with
 #' `board_grids()`; a grid also carries the **rails** pinned to the view's
-#' edges, holding members the splitview therefore does not arrange. Single-page
-#' boards are a degenerate case:
-#' one auto-named "Page" view. Blocks and extensions are shared across views
-#' via the board's DAG; view membership is a layout concern only.
+#' edges, holding members the splitview therefore does not arrange. Single-view
+#' boards are a degenerate case: one auto-named view. Blocks and extensions
+#' are shared across views via the board's DAG; view membership is a layout
+#' concern only.
 #'
 #' Each view carries a stable, immutable **id** (its key in the collection)
 #' distinct from its editable display **name**. This mirrors the id / name
@@ -184,7 +184,7 @@ finalize_views_active <- function(views) {
 # Resequence a `dock_views` by a total permutation of its ids. Bare `[` on the
 # list drops the class and the `active` attribute, and routing through
 # `finalize_views_active()` would reset active to whatever now sits first -- so
-# re-stamp the active view explicitly, keeping the active page put across a
+# re-stamp the active view explicitly, keeping the active view put across a
 # reorder.
 reorder_dock_views <- function(x, order) {
 
@@ -595,7 +595,7 @@ view_binding_dep <- function() {
 }
 
 # A click inside the views menu leaves it open (`data-bs-auto-close =
-# "outside"`), so managing pages does not close it; the binding closes it
+# "outside"`), so managing views does not close it; the binding closes it
 # after a switch.
 #' @noRd
 view_nav_ui <- function(id, views) {
@@ -626,7 +626,7 @@ view_nav_ui <- function(id, views) {
             "blockr-view-manage"
           ),
           span(class = "blockr-menu__icon", blockr.ui::small_icon("sliders")),
-          span(class = "blockr-menu__label", "Manage pages")
+          span(class = "blockr-menu__label", "Manage views")
         )
       ),
       div(
@@ -638,7 +638,7 @@ view_nav_ui <- function(id, views) {
             type = "button",
             class = "blockr-view-add",
             blockr.ui::small_icon("plus"),
-            "New page"
+            "New view"
           ),
           tags$button(type = "button", class = "blockr-view-done", "Done")
         )
@@ -690,7 +690,7 @@ view_item_ui <- function(view_id, view_name, active_id = NULL,
       tags$span(
         class = "blockr-view-action blockr-view-remove",
         role = "button",
-        title = "Remove page",
+        title = "Remove view",
         blockr.ui::small_icon("remove")
       )
     }

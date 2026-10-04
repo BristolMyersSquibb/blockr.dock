@@ -1,5 +1,8 @@
 # blockr.dock (development version)
 
+* The views menu and its messages say "view" throughout, where some said
+  "page": "Show in this view", "Cannot remove the last view.".
+
 * Navbar pieces carry `data-navbar-slot`, and the navbar orders them in one
   row: the mark, the workflow's name and save menu on the left; the views,
   actions, tools and account on the right. A plugin's pieces and the dock's
@@ -23,14 +26,14 @@
 
 * Adding, appending, prepending and inserting a block open one menu in place,
   with a filter box and one row per block type, instead of the block browser
-  sidebar. "Add panel" is the same menu over the board's blocks not on the
-  page, and its dialog is gone. An action's trigger can name where its
+  sidebar. "Add panel" is the same menu over the board's blocks not in the
+  view, and its dialog is gone. An action's trigger can name where its
   gesture happened (`at`, see `new_action()`): the menu opens there, and
   under the navbar when nothing is named.
 
-* "Manage pages" turns the views menu into an editor: drag a page by its grip
-  to reorder, click a name to rename it, remove a page after a question in
-  its row, and add an empty "Page N" with "New page", all without a dialog.
+* "Manage views" turns the views menu into an editor: drag a view by its grip
+  to reorder, click a name to rename it, remove a view after a question in
+  its row, and add an empty "View N" with "New view", all without a dialog.
 
 * The board options sidebar lists the option categories, and a row opens
   that category's page. The header then shows a back arrow and the

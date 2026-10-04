@@ -4,8 +4,8 @@
 #' extends [blockr.core::new_board()]. In addition to the attributes contained
 #' in a core board, this also includes dock extensions (as `extensions`) and
 #' the per-view layout, stored as two independent slots -- view structure
-#' ([board_views()]) and grid geometry ([board_grids()]). Single-page boards
-#' are a degenerate case with one auto-named "Page" view.
+#' ([board_views()]) and grid geometry ([board_grids()]). Single-view boards
+#' are a degenerate case with one auto-named view.
 #'
 #' Multi-view boards pass `views` (and optionally `grids`); see
 #' [dock_view()][dock_view] and [dock_grid()][layout] for the input forms and
