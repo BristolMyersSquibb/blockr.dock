@@ -284,7 +284,10 @@ set_dock_view_output <- function(..., session = get_session()) {
     if (is_dock_locked()) list(locked = TRUE, disableDnd = TRUE),
     list(
       defaultRenderer = "always",
-      add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked())
+      add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked()),
+      # The dock carries the icon, not its panels, so the tabs a restore builds
+      # draw it as well as the ones `dock_panel()` adds.
+      close_icon = blockr.ui::small_icon("remove")
     )
   )
 

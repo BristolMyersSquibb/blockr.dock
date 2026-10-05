@@ -279,6 +279,49 @@ test_that("adding a second block keeps both block panels (#196)", {
   expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
 })
 
+test_that("every closable tab draws blockr.ui's x (#492)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "empty", "app.R", package = "blockr.dock"),
+    name = "close-icon",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  # The extension's tab comes from the restore the board opens with and the
+  # block's from `dock_panel()`, the two routes a tab takes into the dock.
+  app$set_inputs(
+    `my_board-ext_edit_board-registry_select` = "dataset_block",
+    `my_board-ext_edit_board-block_id` = "a"
+  )
+  app$click("my_board-ext_edit_board-confirm_add")
+  wait_block_panel_tabs(app, "block_panel-a")
+
+  tabs <- app$get_js(
+    paste0(
+      "Array.from(document.querySelectorAll(",
+      "'#my_board-view_container .dv-default-tab'",
+      ")).map(function(e) { return {",
+      "id: e.id.replace(/.*-tab-/, ''),",
+      "icon: e.querySelector('.dv-default-tab-action').innerHTML",
+      "}; })"
+    )
+  )
+
+  expect_setequal(
+    chr_xtr(tabs, "id"),
+    c("ext_panel-edit_board", "block_panel-a")
+  )
+  expect_identical(
+    unique(chr_xtr(tabs, "icon")),
+    as.character(blockr.ui::small_icon("remove"))
+  )
+})
+
 test_that("edit board extension stacks (e2e)", {
 
   skip_on_cran()
@@ -1738,6 +1781,114 @@ test_that("a rail collapse round-trips with no following gesture (#436)", {
 
   toggle_rail("false")
   expect_false(stored_collapsed())
+})
+
+test_that("a rail collapsed on one page collapses on every page (#480)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "rail-sync", "app.R", package = "blockr.dock"),
+    name = "rail-sync",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+
+  nav <- read_view_nav(app)
+  view <- set_names(nav$id, nav$label)
+
+  rail <- function(page) {
+    paste0(
+      "window.HTMLWidgets?.find('#my_board-", view[[page]], "-dock')",
+      "?.getWidget()?.getEdgeGroup('left')"
+    )
+  }
+
+  rail_is <- function(page, collapsed) {
+    paste0(rail(page), "?.isCollapsed() === ", collapsed)
+  }
+
+  wait_rail <- function(page, collapsed) {
+    app$wait_for_js(rail_is(page, collapsed), timeout = 15 * 1000)
+  }
+
+  # A click on the rail's open tab, which is how a user collapses or expands
+  # it.
+  toggle <- function(page) {
+    app$run_js(
+      paste0(
+        "document.querySelector('#my_board-", view[[page]], "-dock ",
+        "[data-testid=\"dv-edge-group-rail-left\"] .dv-tab').click();"
+      )
+    )
+  }
+
+  # A click on the board option's switch, should it not already read `on`.
+  set_sync <- function(on) {
+    app$run_js(
+      paste0(
+        "var el = document.getElementById('my_board-sync_rails');",
+        "if (el.checked !== ", on, ") el.click();"
+      )
+    )
+    app$wait_for_idle()
+  }
+
+  stored_collapsed <- function(page) {
+    board <- blockr_deser(
+      jsonlite::fromJSON(
+        retry_download(app, "my_board-preserve_board-serialize"),
+        simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+      )
+    )
+    rails <- board_grids(board)[[view[[page]]]][["rails"]]
+    isTRUE(rails[["left"]][["collapsed"]])
+  }
+
+  wait_rail("First", "false")
+
+  toggle("First")
+  wait_rail("First", "true")
+
+  # Second's dock is built on this first visit, from a layout that already has
+  # the rail collapsed: the client carries a collapse only to docks it has.
+  click_view(app, view[["Second"]])
+  wait_view_handle(app, view[["Second"]])
+  wait_rail("Second", "true")
+
+  # Expanding it here expands First's, whose dock is built and sits behind this
+  # one. That dock reports the change like any other, so the board stores it.
+  toggle("Second")
+  wait_rail("Second", "false")
+  wait_rail("First", "false")
+  app$wait_for_idle()
+
+  expect_false(stored_collapsed("First"))
+
+  # Switched off, a page keeps its rail as it was left, and a page built now
+  # opens as stored rather than as the one on screen.
+  set_sync("false")
+
+  toggle("Second")
+  wait_rail("Second", "true")
+  app$wait_for_idle()
+
+  expect_false(isTRUE(app$get_js(paste0(rail("First"), ".isCollapsed()"))))
+
+  click_view(app, view[["Third"]])
+  wait_view_handle(app, view[["Third"]])
+  wait_rail("Third", "false")
+
+  # Switched back on, the other pages follow the one on screen at once.
+  set_sync("true")
+  wait_rail("Second", "false")
+  app$wait_for_idle()
+
+  expect_false(stored_collapsed("Second"))
 })
 
 test_that("New page opens the name of the page it added, and only that", {

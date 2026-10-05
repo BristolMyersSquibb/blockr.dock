@@ -57,7 +57,7 @@ sidebar_ui <- function(id, ui = NULL, title = NULL,
           class = "blockr-sidebar-btn blockr-sidebar-close",
           `aria-label` = "Close sidebar",
           title = "Close",
-          close_icon()
+          blockr.ui::small_icon("remove")
         )
       )
     ),
@@ -208,14 +208,6 @@ hide_unless_pinned <- function(id, session = get_session()) {
     hide_sidebar(id, session = session)
   }
   invisible(NULL)
-}
-
-close_icon <- function() {
-  HTML(paste0(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" fill="none" ',
-    'stroke="currentColor" stroke-width="1" stroke-linecap="round" ',
-    'aria-hidden="true"><path d="M2.5 2.5l5 5M7.5 2.5l-5 5"></path></svg>'
-  ))
 }
 
 # Walk to the root session so `sendInputMessage(id, ...)` targets the
