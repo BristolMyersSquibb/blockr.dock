@@ -696,11 +696,16 @@ test_that("block card sections carry the css-styling contract (#214)", {
     xml2::xml_attr(items, "data-value"),
     c("ctrl", "inputs", "outputs")
   )
-  expect_true(all(grepl("blockr-block-section", xml2::xml_attr(items, "class"))))
+  expect_true(
+    all(grepl("blockr-block-section", xml2::xml_attr(items, "class")))
+  )
 
   # The look lives in the stylesheet: no section or section body inlines a
   # style, which would outrank any sheet a theme attaches.
-  bodies <- xml2::xml_find_all(items, "./div[@class='blockr-block-section-body']")
+  bodies <- xml2::xml_find_all(
+    items,
+    "./div[@class='blockr-block-section-body']"
+  )
 
   expect_length(bodies, 3L)
   expect_true(all(is.na(xml2::xml_attr(items, "style"))))
