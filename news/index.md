@@ -2,6 +2,10 @@
 
 ## blockr.dock (development version)
 
+- Renaming a block sends the new name to the server on Enter or when the
+  field loses focus, not on every keystroke. Each keystroke was a board
+  update, and while typing those piled up on the server.
+
 - The rails of a board’s pages open and close together. Collapsing or
   expanding the rail on one edge of a page does the same on every other
   page, and a page visited for the first time opens with its rails the
