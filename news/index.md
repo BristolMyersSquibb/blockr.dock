@@ -2,6 +2,20 @@
 
 ## blockr.dock (development version)
 
+- The rails of a board’s pages open and close together. Collapsing or
+  expanding the rail on one edge of a page does the same on every other
+  page, and a page visited for the first time opens with its rails the
+  way the pages already visited show theirs. Only a rail holding panels
+  takes part. The “Sync rails across pages” board option
+  ([`new_sync_rails_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_sync_rails_option.md),
+  in
+  [`dock_board_options()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.md),
+  on unless the `sync_rails` blockr option says otherwise) turns this
+  off, and switching it back on brings every page to the one on screen.
+  A board saved before this release has no such option, so its pages
+  keep their rails as they were left
+  ([\#480](https://github.com/BristolMyersSquibb/blockr.dock/issues/480)).
+
 - The block’s “…” menu is blockr.ui’s `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy
   block ID, and Remove block after a divider. The preview and a block’s

@@ -131,9 +131,12 @@ coercion function `as_dock_board()`. Inheritance can be checked using
 object: the board name, a thematic switch, off unless the `thematic`
 blockr option says otherwise, so that plots can take the board's
 colours, a light/dark switch, light unless the `dark_mode` blockr option
-says otherwise, and the "Compact" header switch
+says otherwise, the "Compact" header switch
 ([`new_compact_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_compact_option.md)),
-off unless the `compact` blockr option says otherwise.
+off unless the `compact` blockr option says otherwise, and a switch that
+opens and closes the rails of every page together
+([`new_sync_rails_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_sync_rails_option.md)),
+on unless the `sync_rails` blockr option says otherwise.
 
 ## Details
 
