@@ -202,3 +202,20 @@ empty_dock_prompt <- function(ns) {
 drop_nulls <- function(x) {
   x[!lgl_ply(x, is.null)]
 }
+
+# A checkbox in blockr.ui's look (`.blockr-checkbox`), on Shiny's own checkbox
+# binding: it reports TRUE or FALSE under `id`, and `updateCheckboxInput()`
+# and bslib's `toggle_switch()` set it, so it stands in for a bslib switch
+# under the same id.
+dock_checkbox <- function(id, label, value = FALSE) {
+  tags$label(
+    class = "blockr-checkbox",
+    tags$input(
+      id = id,
+      type = "checkbox",
+      checked = if (isTRUE(value)) NA
+    ),
+    tags$span(class = "blockr-checkbox__box", blockr.ui::small_icon("confirm")),
+    tags$span(class = "blockr-checkbox__label", label)
+  )
+}

@@ -25,7 +25,7 @@
     root.querySelector('.blockr-options-list').hidden = true;
     var title = sidebar.querySelector('.blockr-sidebar-title');
     title.setAttribute('data-list-title', title.textContent);
-    title.textContent = category;
+    title.textContent = page.getAttribute('data-label') || category;
     sidebar.classList.add('blockr-sidebar-paged');
     layers.set(sidebar, Blockr.layer(sidebar, {
       inPage: true,
@@ -33,6 +33,13 @@
     }));
     // Shiny outputs inside a page that was hidden at render wake up on show.
     $(page).trigger('shown');
+    // A page that wants to know it opened names an input: the code page asks
+    // for the board to be built this way.
+    var ping = page.querySelector('[data-open-input]');
+    if (ping) {
+      Shiny.setInputValue(ping.getAttribute('data-open-input'), Date.now(),
+                          { priority: 'event' });
+    }
     var first = page.querySelector('input, select, textarea, button');
     if (first) first.focus({ preventScroll: true });
   }

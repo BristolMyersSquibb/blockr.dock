@@ -24,14 +24,14 @@ new_compact_option <- function(value = blockr_option("compact", FALSE),
     id = "compact",
     default = value,
     ui = function(id) {
-      bslib::input_switch(NS(id, "compact"), "Compact", value)
+      dock_checkbox(NS(id, "compact"), "Compact", value)
     },
     server = function(..., session) {
       observeEvent(
         get_board_option_or_null("compact", session),
         {
           on <- isTRUE(get_board_option_value("compact", session))
-          bslib::toggle_switch("compact", value = on, session = session)
+          updateCheckboxInput(session, "compact", value = on)
           session$sendCustomMessage("blockr-compact", on)
         }
       )

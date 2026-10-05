@@ -59,7 +59,7 @@ test_that("an option without a category goes under Other options", {
   )
 })
 
-test_that("Show code ends the list as a row of its own", {
+test_that("Show code ends the list and opens a page of its own", {
 
   html <- xml2::read_html(
     as.character(htmltools::tagList(settings_body("brd", new_dock_board())))
@@ -67,20 +67,51 @@ test_that("Show code ends the list as a row of its own", {
 
   row <- xml2::xml_find_all(
     html,
-    "//div[@class='blockr-options-list']/*[last()]/button"
+    "//div[@class='blockr-options-list']/button[last()]"
   )
 
   expect_length(row, 1L)
-  expect_identical(xml2::xml_attr(row, "id"), "brd-generate_code-code_mod")
-  expect_match(
-    xml2::xml_attr(row, "class"),
-    "action-button blockr-menu__item",
-    fixed = TRUE
-  )
+  expect_identical(xml2::xml_attr(row, "data-category"), ".code")
+  expect_match(xml2::xml_attr(row, "class"), "blockr-options-row", fixed = TRUE)
   expect_identical(
     xml2::xml_text(
       xml2::xml_find_all(row, ".//span[@class='blockr-menu__label']")
     ),
     "Show code"
+  )
+
+  page <- xml2::xml_find_all(
+    html,
+    "//div[@data-category='.code' and @data-label='Code']"
+  )
+
+  expect_length(page, 1L)
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(page, ".//*[@data-open-input]"),
+      "data-open-input"
+    ),
+    "brd-generate_code-code_mod"
+  )
+})
+
+test_that("a locked board's sidebar keeps the code page and nothing else", {
+
+  html <- withr::with_options(
+    list(blockr.locked = TRUE),
+    xml2::read_html(
+      as.character(htmltools::tagList(settings_body("brd", new_dock_board())))
+    )
+  )
+
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_all(
+        html,
+        "//button[contains(@class, 'blockr-options-row')]"
+      ),
+      "data-category"
+    ),
+    ".code"
   )
 })
