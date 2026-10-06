@@ -399,15 +399,6 @@ test_that("a card with every section hidden paints none open (#418)", {
 
   expect_length(sections, 2L)
   expect_true(all(xml2::xml_has_attr(sections, "hidden")))
-  expect_identical(
-    xml2::xml_attr(
-      xml2::xml_find_first(
-        root, paste0("//div[", has_class("blockr-block-sections"), "]")
-      ),
-      "data-open"
-    ),
-    ""
-  )
 })
 
 test_that("a card tells an empty selection from no report yet (#426)", {
@@ -636,9 +627,9 @@ test_that("a board saved before #69 restores an input-free card", {
 
 test_that("a closed section is hidden on first paint", {
 
-  # The rule above the preview reads the sections' `data-open`
+  # The rule above the preview reads the sections' own `hidden`
   # (blockr-dock.css), so it has to be right before any toggle runs.
-  paint <- function(visible) {
+  hidden <- function(visible) {
     card <- block_card_content(
       NS("blk"),
       expr_ui = div(id = "blk-expr"),
@@ -646,28 +637,23 @@ test_that("a closed section is hidden on first paint", {
       visible = visible
     )
     root <- xml2::read_html(as.character(htmltools::tagList(card)))
-    box <- xml2::xml_find_first(
-      root, paste0("//div[", has_class("blockr-block-sections"), "]")
+    items <- xml2::xml_find_all(
+      root,
+      paste0(
+        "//div[", has_class("blockr-block-sections"), "]/div[@data-value]"
+      )
     )
-    items <- xml2::xml_find_all(box, "./div[@data-value]")
-    list(
-      hidden = set_names(
-        xml2::xml_has_attr(items, "hidden"),
-        xml2::xml_attr(items, "data-value")
-      ),
-      open = xml2::xml_attr(box, "data-open")
+    set_names(
+      xml2::xml_has_attr(items, "hidden"),
+      xml2::xml_attr(items, "data-value")
     )
   }
 
-  both <- paint(c("inputs", "outputs"))
-
-  expect_identical(both$hidden, c(inputs = FALSE, outputs = FALSE))
-  expect_identical(both$open, "inputs outputs")
-
-  preview <- paint("outputs")
-
-  expect_identical(preview$hidden, c(inputs = TRUE, outputs = FALSE))
-  expect_identical(preview$open, "outputs")
+  expect_identical(
+    hidden(c("inputs", "outputs")),
+    c(inputs = FALSE, outputs = FALSE)
+  )
+  expect_identical(hidden("outputs"), c(inputs = TRUE, outputs = FALSE))
 })
 
 test_that("block card sections carry the css-styling contract (#214)", {

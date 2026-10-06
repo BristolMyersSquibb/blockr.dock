@@ -249,8 +249,8 @@ block_menu_dep <- function() {
 block_card_content <- function(ns, expr_ui, block_ui, visible,
                                ctrl_ui = NULL, has_inputs = TRUE) {
 
-  # A closed section is `hidden`, so Shiny suspends the outputs in it.
-  # section-toggle.js opens and closes them in the browser as the header's
+  # A closed section is `hidden`, so Shiny suspends the outputs in it. In
+  # the browser, section-toggle.js opens and closes them as the header's
   # toggles flip; the server only hears the new set.
   section <- function(value, ...) {
     div(
@@ -266,10 +266,6 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
     div(
       id = ns("blk_sections"),
       class = "blockr-block-sections",
-      # The open sections, kept current by section-toggle.js. The stylesheet
-      # reads it to draw the rule above the preview only while controls are
-      # open above it, which the preview's own section cannot see.
-      `data-open` = paste(visible, collapse = " "),
       if (!is.null(ctrl_ui)) section("ctrl", ctrl_ui),
       if (has_inputs) section("inputs", expr_ui),
       section(

@@ -474,11 +474,13 @@
 /* The controls sit under the header with no rule above or below them, on
    the card's own surface. The one rule left separates the controls from the
    preview, edge to edge, and only while both are open: it lives in the
-   preview's section, so it opens and closes with the preview, and
-   `data-open` (section-toggle.js) says whether controls are open above it.
-   The rule is a background line rather than a border so the space above it
-   sits inside the section and folds with it. */
-.blockr-block-sections[data-open~="ctrl"] > [data-value="inputs"] > .blockr-block-section-body {
+   preview's section, so it opens and closes with the preview. The sections
+   come in a fixed order (control, inputs, preview), so a sibling selector
+   reads whether one above is open: neither `hidden` nor `.is-closing`, which
+   section-toggle.js sets as a fold starts. The rule is a background line
+   rather than a border so the space above it sits inside the section and
+   folds with it. */
+.blockr-block-section[data-value="ctrl"]:not([hidden], .is-closing) ~ [data-value="inputs"] > .blockr-block-section-body {
   padding-top: 12px;
 }
 
@@ -494,8 +496,7 @@
   padding: 0 var(--blockr-card-inset);
 }
 
-.blockr-block-sections[data-open~="inputs"] > [data-value="outputs"] > .blockr-block-section-body,
-.blockr-block-sections[data-open~="ctrl"] > [data-value="outputs"] > .blockr-block-section-body {
+.blockr-block-section:is([data-value="inputs"], [data-value="ctrl"]):not([hidden], .is-closing) ~ [data-value="outputs"] > .blockr-block-section-body {
   padding: 33px var(--blockr-card-inset) 0;
   background: linear-gradient(var(--blockr-color-border-default), var(--blockr-color-border-default)) 0 16px / 100% 1px no-repeat;
 }

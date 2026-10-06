@@ -940,6 +940,86 @@ test_that("the controls toggle in the block menu flips the card's section", {
   wait_hidden("outputs")
 })
 
+test_that("the rule above the preview follows the sections above it", {
+
+  skip_on_cran()
+
+  app <- inputs_app("section-rule")
+  withr::defer(app$stop())
+
+  card_id <- function(blk, what) {
+    paste0("my_board-block_", blk, "-edit_block-", what)
+  }
+
+  ruled <- function(blk) {
+    app$get_js(
+      sprintf(
+        paste0(
+          "getComputedStyle(document.querySelector('#%s > ",
+          "[data-value=outputs] > .blockr-block-section-body'))",
+          ".backgroundImage !== 'none'"
+        ),
+        card_id(blk, "blk_sections")
+      )
+    )
+  }
+
+  # The card's "…" menu toggles the inputs with this event; a second one
+  # `again` ms later reverses the fold while it runs.
+  toggle_inputs <- function(again = NULL) {
+    app$run_js(
+      sprintf(
+        paste0(
+          "(function () {",
+          "var t = document.getElementById('%s');",
+          "var go = function () {",
+          "t.dispatchEvent(",
+          "new CustomEvent('blockr-section:toggle', { detail: 'inputs' }));",
+          "};",
+          "go();%s",
+          "})()"
+        ),
+        card_id("a", "collapse_blk_sections"),
+        if (is.null(again)) "" else sprintf(" setTimeout(go, %d);", again)
+      )
+    )
+  }
+
+  settled <- function(sections, hidden) {
+    wait_js(
+      app,
+      sprintf(
+        paste0(
+          "document.getElementById('%s').getAttribute('data-sections') ",
+          "=== '%s' && !document.querySelector('#%s > .is-folding') && ",
+          "document.querySelector('#%s > [data-value=inputs]').hidden === %s"
+        ),
+        card_id("a", "collapse_blk_sections"), sections,
+        card_id("a", "blk_sections"), card_id("a", "blk_sections"),
+        if (hidden) "true" else "false"
+      ),
+      function() paste("[sections] not settled at", sections)
+    )
+  }
+
+  # An rbind block has no inputs, so nothing sits above its preview.
+  expect_false(ruled("v"))
+  expect_true(ruled("a"))
+
+  toggle_inputs()
+  settled("outputs", hidden = TRUE)
+  expect_false(ruled("a"))
+
+  toggle_inputs()
+  settled("outputs inputs", hidden = FALSE)
+  expect_true(ruled("a"))
+
+  # Folded away and straight back, the inputs never close.
+  toggle_inputs(again = 50)
+  settled("outputs inputs", hidden = FALSE)
+  expect_true(ruled("a"))
+})
+
 test_that("the options sidebar pages back to its list", {
 
   skip_on_cran()

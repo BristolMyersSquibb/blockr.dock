@@ -6,9 +6,10 @@
 //
 // The card does not wait for the server: the section folds on the click. A
 // closed section carries `hidden`, so Shiny suspends the outputs in it. The
-// fold animates the height, then hides; the unfold shows, then animates. The
-// sections' `data-open` lists the open ones for the stylesheet, which draws
-// the rule above the preview only while controls are open above it.
+// fold animates the height, then hides; the unfold shows, then animates. A
+// closing section carries `is-closing` from the start of the fold, so the
+// stylesheet, which reads the sections' own state, drops the rule above the
+// preview as the fold begins.
 (function () {
   'use strict';
 
@@ -23,22 +24,12 @@
     return card && card.querySelector(':scope > .blockr-block-sections');
   }
 
-  function setOpenAttr(box) {
-    var open = [];
-    box.querySelectorAll(':scope > .blockr-block-section').forEach(function (s) {
-      if (!s.hidden && !s.classList.contains('is-closing')) {
-        open.push(s.getAttribute('data-value'));
-      }
-    });
-    box.setAttribute('data-open', open.join(' '));
-  }
-
   function finish(section) {
     section.classList.remove('is-folding', 'is-closing');
     section.style.height = '';
   }
 
-  function fold(section, open, box) {
+  function fold(section, open) {
     var reduce = window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -52,7 +43,6 @@
 
     if (reduce) {
       section.hidden = !open;
-      setOpenAttr(box);
       $(section).trigger(open ? 'shown' : 'hidden');
       return;
     }
@@ -62,7 +52,6 @@
       var h = section.scrollHeight;
       section.style.height = '0px';
       section.classList.add('is-folding');
-      setOpenAttr(box);
       // Shiny re-checks visibility on `shown`, so outputs in the section
       // resume and render.
       $(section).trigger('shown');
@@ -75,7 +64,6 @@
     } else {
       section.style.height = section.scrollHeight + 'px';
       section.classList.add('is-folding', 'is-closing');
-      setOpenAttr(box);
       section.getBoundingClientRect();
       section.style.height = '0px';
       section._blockrFold = setTimeout(function () {
@@ -102,7 +90,7 @@
     var target = box && box.querySelector(
       ':scope > .blockr-block-section[data-value="' + CSS.escape(section) + '"]'
     );
-    if (target) fold(target, at < 0, box);
+    if (target) fold(target, at < 0);
   }
 
   var binding = new Shiny.InputBinding();
