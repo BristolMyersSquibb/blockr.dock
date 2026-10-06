@@ -47,7 +47,7 @@ Suggests:
 Remotes:
     rstudio/shinytest2,
     BristolMyersSquibb/blockr.core,
-    BristolMyersSquibb/blockr.ui@feat/no-font-awesome,
+    BristolMyersSquibb/blockr.ui,
     cynkra/dockViewR,
     nbenn/reactives
 Config/testthat/edition: 3
@@ -89,6 +89,7 @@ Collate:
     'sidebar-inputs.R'
     'sidebar-link.R'
     'sidebar-stack.R'
+    'sync-rails-option.R'
     'utils-dock.R'
     'utils-misc.R'
     'utils-pkg.R'

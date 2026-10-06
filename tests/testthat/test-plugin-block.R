@@ -55,9 +55,9 @@ test_that("a blank block name does not reach the board", {
   testServer(
     edit_block_server(),
     {
-      # The field sends as the user types, so a name cleared or replaced by
-      # spaces arrives before the card refuses it on Enter or restores it on
-      # blur.
+      # Shiny sends the field on Enter and on blur before the card refuses an
+      # empty name or restores the old one, so a name cleared or replaced by
+      # spaces still arrives.
       session$setInputs(block_name_in = "   ")
       expect_null(update())
 
@@ -1052,6 +1052,12 @@ test_that("a title renames in place and refuses an empty name (e2e)", {
 
   start()
   type("Renamed")
+
+  # Typing stays in the browser: the server holds the old name until the
+  # edit ends.
+  app$wait_for_idle()
+  expect_identical(app$get_value(input = id("block_name_in")), "Dataset")
+
   press("Enter")
   expect_identical(state(), "false|false|Renamed|Renamed")
 

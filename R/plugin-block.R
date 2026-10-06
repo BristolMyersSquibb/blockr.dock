@@ -105,10 +105,15 @@ block_card_title <- function(block, id, info) {
           # The displayed title mirrors this input (block-rename.js), so a
           # rename decided by the board, which `updateTextInput()` delivers,
           # lands the way a keystroke does, with no render round-trip.
+          # With `updateOn = "blur"` the name reaches the server on Enter or
+          # when the field loses focus, so a rename is one board update rather
+          # than one per keystroke (about half a second of server time each on
+          # a large board); the browser shows the title as it is typed.
           textInput(
             input_id,
             label = NULL,
-            value = block_name(block)
+            value = block_name(block),
+            updateOn = "blur"
           ),
           div(class = "blockr-title-error", "A block needs a name")
         )
@@ -324,8 +329,10 @@ edit_block_server <- function(callbacks = list()) {
         observeEvent(
           input$block_name_in,
           {
-            # The field reports every keystroke, and the card refuses a name of
-            # spaces the same as an empty one.
+            # Shiny sends the field on Enter and on blur before block-rename.js
+            # refuses an empty name or restores the old one, so a blank name
+            # still arrives here. The card refuses a name of spaces the same as
+            # an empty one.
             req(
               trimws(input$block_name_in),
               block_id %in% board_block_ids(board$board)

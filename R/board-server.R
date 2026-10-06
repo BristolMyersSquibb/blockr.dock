@@ -597,6 +597,31 @@ live_view_grid <- function(v_id, docks, board) {
   )
 }
 
+# The collapse state of the rails on the docks built so far, by edge: what the
+# rails of a dock built next take while the board keeps them in step. Only a
+# rail holding panels has a state to give, and the client keeps those on one
+# edge alike, so the first found speaks for its edge. The `first` view is read
+# before the others: should an echo of a state the client carried across not
+# have arrived yet, the view the user is leaving decides.
+live_rail_collapse <- function(docks, board, first = NULL) {
+
+  out <- list()
+
+  for (v in union(intersect(first, names(docks)), names(docks))) {
+
+    for (rail in live_view_grid(v, docks, board)[["rails"]]) {
+
+      pos <- rail[["position"]]
+
+      if (is.null(out[[pos]]) && rail_holds_panels(rail)) {
+        out[[pos]] <- rail[["collapsed"]]
+      }
+    }
+  }
+
+  out
+}
+
 # A view's live membership: everything its grid places, tree and rails alike.
 # Moving a panel between the two changes where it sits, never whether it is a
 # member, so `grid_panel_ids()` spanning both is what keeps a railed panel from
@@ -787,6 +812,19 @@ reconcile_views <- function(board, update, docks, active_dock,
       views[[server_active]],
       if (is.null(grids)) NULL else grids[[server_active]]
     )
+
+    # While the board keeps its rails in step, a view built mid-session opens
+    # with its rails the way the docks already built show theirs. The client
+    # carries a collapse across every dock it has (dock-rail.js); a dock not yet
+    # built is the one it cannot reach, and the browser cannot correct a restore
+    # before it paints.
+    collapse <- live_rail_collapse(
+      docks, board, first = isolate(client_active())
+    )
+
+    if (length(collapse) && rails_synced(session)) {
+      active_grid <- follow_rail_collapse(active_grid, collapse)
+    }
 
     create_view(
       server_active,

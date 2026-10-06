@@ -12,8 +12,23 @@
 
 * The card's preview toggle and "…" button and the Edit board extension's
   buttons draw blockr.ui's small icons instead of Font Awesome's, through
-  `blockr.ui::small_icon()` in place of `shiny::icon()` (BristolMyersSquibb/blockr.ui#85).
-  The "…" button's dots are horizontal, as the design system draws them.
+  `blockr.ui::small_icon()` in place of `shiny::icon()`
+  (BristolMyersSquibb/blockr.ui#85). The "…" button's dots are horizontal, as
+  the design system draws them.
+
+* Renaming a block sends the new name to the server on Enter or when the
+  field loses focus, not on every keystroke. Each keystroke was a board
+  update, and while typing those piled up on the server.
+
+* The rails of a board's pages open and close together. Collapsing or
+  expanding the rail on one edge of a page does the same on every other page,
+  and a page visited for the first time opens with its rails the way the pages
+  already visited show theirs. Only a rail holding panels takes part. The
+  "Sync rails across pages" board option (`new_sync_rails_option()`, in
+  `dock_board_options()`, on unless the `sync_rails` blockr option says
+  otherwise) turns this off, and switching it back on brings every page to the
+  one on screen. A board saved before this release has no such option, so its
+  pages keep their rails as they were left (#480).
 
 * The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy block ID,

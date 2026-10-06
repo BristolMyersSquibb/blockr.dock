@@ -19,6 +19,14 @@ $(function () {
   // it. A drag that ends anywhere else leaves the derived rule to hide it
   // again. This has to happen on the client: a server round-trip mid-drag
   // arrives long after the pointer has moved on.
+  //
+  // Rails can also be kept in step across views, which a board option turns on
+  // and off. Collapsing or expanding a rail then does the same to the rail on
+  // that edge of every other dock built so far. The docks of the views not on
+  // screen sit behind the shown one at full size, so they take the change at
+  // once rather than at the next switch. A dock built later is the server's to
+  // get right: `reconcile_views()` builds it with its rails as the docks here
+  // show theirs.
 
   var DWELL_MS = 250;
 
@@ -27,6 +35,14 @@ $(function () {
   // The drag in flight, page-wide. Only one HTML5 drag can be active at a time,
   // so this is a single slot rather than a per-dock one.
   var drag = null;
+
+  // Whether the rails of every dock open and close together: the "Sync rails
+  // across pages" board option. Page-wide, like the "Compact" one.
+  var inStep = false;
+
+  // Set while a collapse is carried to the other docks, so the change each of
+  // them reports back is not carried on in turn.
+  var carrying = false;
 
   var edgeGroup = function (api, position) {
     return api.groups.filter(function (group) {
@@ -67,6 +83,45 @@ $(function () {
 
       if (!drag) dock.revealed[position] = false;
     });
+  };
+
+  // Collapse or expand the rail on `position` of every dock but `from` to
+  // match. Only a rail holding panels follows: an empty one is hidden, so it
+  // has nothing to show either way.
+  var carry = function (from, position, collapsed) {
+    carrying = true;
+
+    try {
+      Object.keys(docks).forEach(function (id) {
+        var dock = docks[id];
+
+        if (dock === from) return;
+
+        if (!document.body.contains(dock.el)) {
+          teardown(id);
+          return;
+        }
+
+        var group = edgeGroup(dock.api, position);
+
+        if (!group || !group.panels.length) return;
+        if (group.api.isCollapsed() === collapsed) return;
+
+        if (collapsed) group.api.collapse(); else group.api.expand();
+      });
+    } finally {
+      carrying = false;
+    }
+  };
+
+  // The dock of the view on screen, whose rails the others follow when the
+  // option is switched on.
+  var shownDock = function () {
+    return Object.keys(docks).map(function (id) {
+      return docks[id];
+    }).filter(function (dock) {
+      return $(dock.el).closest('.blockr-view-dock-active').length > 0;
+    })[0];
   };
 
   var reveal = function (dock, rail) {
@@ -213,6 +268,24 @@ $(function () {
       onDragOver(dock, e.originalEvent || e);
     });
 
+    // A rail that collapses or expands takes the others on its edge with it,
+    // if it holds panels. That rules out the two changes nobody chose: dockview
+    // collapsing a rail as its last panel leaves, and a drag revealing an empty
+    // rail collapsed. The drop that then expands a revealed rail does count, as
+    // the user brought it open.
+    rails.forEach(function (rail) {
+      var group = edgeGroup(api, rail.position);
+
+      if (!group) return;
+
+      dock.disposables.push(
+        group.api.onDidCollapsedChange(function () {
+          if (!inStep || carrying || !group.panels.length) return;
+          carry(dock, rail.position, group.api.isCollapsed());
+        })
+      );
+    });
+
     sync(dock);
 
     return true;
@@ -227,6 +300,28 @@ $(function () {
 
   $(document).on('keydown.blockrRail', function (e) {
     if (e.key === 'Escape') endDrag();
+  });
+
+  // Switching the option on brings every other dock to the rails on screen,
+  // so they are in step from then on rather than from the next collapse.
+  Shiny.addCustomMessageHandler('blockr-rail-sync', function (on) {
+    var was = inStep;
+
+    inStep = on === true;
+
+    if (!inStep || was) return;
+
+    var shown = shownDock();
+
+    if (!shown) return;
+
+    shown.rails.forEach(function (rail) {
+      var group = edgeGroup(shown.api, rail.position);
+
+      if (group && group.panels.length) {
+        carry(shown, rail.position, group.api.isCollapsed());
+      }
+    });
   });
 
   Shiny.addCustomMessageHandler('blockr-dock-rails', function (m) {
