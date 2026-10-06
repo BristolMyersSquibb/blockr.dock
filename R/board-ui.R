@@ -4,20 +4,16 @@ board_ui.dock_board <- function(
   x,
   plugins = board_plugins(x),
   options = blockr.core::blockr_app_options(x),
+  navbar = blockr_app_navbar(x, plugins),
   ...
 ) {
   stopifnot(is_string(id))
 
-  views <- board_views(x)
-
-  # View nav in the navbar -- always present, since boards always carry a
-  # `dock_views` collection (single-page boards have one auto-named "Page"
-  # view). The nav needs only structure (ids, names, active), not geometry.
-  v_nav <- view_nav_ui(id, views)
+  validate_navbar_items(navbar)
 
   # One dock output per view, stacked inside the view container; visibility
   # is toggled by CSS based on the active view.
-  dock_outputs <- dock_outputs_ui(id, views)
+  dock_outputs <- dock_outputs_ui(id, board_views(x))
 
   tagList(
     # Ahead of blockr_dock_dep(), so the shared tokens and theme land first
@@ -47,66 +43,7 @@ board_ui.dock_board <- function(
         ctrl_ui = if ("ctrl_block" %in% names(plugins)) plugins[["ctrl_block"]]
       )
     ),
-    div(
-      class = "blockr-navbar",
-      style = sprintf("--blockr-spinner-delay: %dms;", spinner_delay_ms()),
-      div(
-        class = "blockr-navbar-left",
-        if ("preserve_board" %in% names(plugins)) {
-          board_ui(id, plugins[["preserve_board"]], x)
-        }
-      ),
-      div(
-        class = "blockr-navbar-right",
-        # Busy spinner. Always rendered and always visible, driven purely by CSS
-        # off the `.shiny-busy` class Shiny toggles on <html> during a flush --
-        # no server observer. Idle it is a faint, closed ring; a flush scoped to
-        # real block evaluation (a bare panel switch does not qualify) paints a
-        # darker arc onto it and spins it. It leads this right group (ahead of
-        # the view nav), where its 16px ring is not juxtaposed against the
-        # smaller gear; because it is always painted (never shown/hidden) its
-        # constant slot shifts no neighbour. The busy appearance is held for
-        # `--blockr-spinner-delay` ms (set on the navbar above), so a
-        # sub-threshold flush never flickers it. The ring spins inside a static
-        # slot that carries a hover tooltip naming the state (idle / computing),
-        # so the label does not turn with it. Announced like the lock indicator.
-        tags$span(
-          class = "blockr-navbar-spinner-slot",
-          tags$span(
-            class = "blockr-navbar-spinner",
-            role = "status",
-            `aria-label` = "Busy"
-          )
-        ),
-        v_nav,
-        if (is_dock_locked()) {
-          tags$span(
-            class = "blockr-lock-indicator",
-            title = "Editing is disabled by this deployment.",
-            `aria-label` = "Read-only mode",
-            role = "status",
-            bsicons::bs_icon("lock-fill"),
-            tags$span(
-              class = "blockr-lock-indicator-label",
-              "Read-only"
-            )
-          )
-        },
-        # Pure-JS open trigger via `data-blockr-sidebar-target`. The
-        # settings sidebar's body is pre-rendered into its mount below, so
-        # no server observer is needed: clicking the gear toggles the
-        # panel client-side. `tags$button` (not `actionButton`) because
-        # there is no `input$<id>` to wire.
-        tags$button(
-          type = "button",
-          class = "btn action-button blockr-navbar-icon-btn",
-          `data-blockr-sidebar-target` = NS(id, "settings_sidebar"),
-          `aria-label` = "Board options",
-          title = "Board options",
-          bsicons::bs_icon("gear")
-        )
-      )
-    ),
+    navbar_ui(id, navbar, x),
     dock_outputs,
     off_canvas(
       id = NS(id, "exts_offcanvas"),

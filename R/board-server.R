@@ -15,6 +15,9 @@
 #'   server but not to callbacks, so `blockr_app_server.dock_board()` captures
 #'   and forwards them here; stashed on `active_dock` so the deferred card-build
 #'   paths see the served ctrl / edit UI. Defaults to the board default set.
+#' @param navbar The navbar items `blockr_app_server.dock_board()` resolved, so
+#'   that the servers of an app's items run here, under the board's namespace.
+#'   Defaults to the board's default items.
 #' @param session Shiny session.
 #'
 #' @return List with `dock`, `actions`, `view_data`, and extension
@@ -24,6 +27,10 @@
 #' @noRd
 board_server_callback <- function(board, update, visibility, ...,
                                   plugins = board_plugins(isolate(board$board)),
+                                  navbar = blockr_app_navbar(
+                                    isolate(board$board),
+                                    plugins
+                                  ),
                                   session = get_session()) {
   initial_board <- isolate(board$board)
 
@@ -212,6 +219,8 @@ board_server_callback <- function(board, update, visibility, ...,
   )
 
   register_actions(actions, triggers, board, update, ext_res)
+
+  navbar_server(navbar, board)
 
   # Returned to core, spread into every plugin's args (see the two-bundle note
   # above): `dock` for block placement, `view_data` for serialization, `actions`
