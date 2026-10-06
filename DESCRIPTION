@@ -26,7 +26,6 @@ Imports:
     shiny (>= 1.14.0),
     shinyjs,
     bslib,
-    glue,
     dockViewR (>= 0.4.0),
     htmltools,
     cli,
