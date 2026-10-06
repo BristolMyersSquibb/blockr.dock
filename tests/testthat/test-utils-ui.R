@@ -314,3 +314,67 @@ test_that("the offcanvases skip rendering their contents (e2e)", {
   expect_identical(probe$blocks, "hidden")
   expect_identical(probe$exts, "hidden")
 })
+
+test_that("static htmlwidgets re-measure as the dock resizes them (e2e)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "static-widget", "app.R", package = "blockr.dock"),
+    name = "static-widget",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  # The last size htmlwidgets handed the probe, and the size of its box.
+  sizes_js <- function(blk) {
+    sprintf(
+      paste0(
+        "(function () {",
+        " var el = document.querySelector('#my_board-block_handle-%s .probe');",
+        " var r = el.getBoundingClientRect();",
+        " return { told: el.getAttribute('data-size'),",
+        " box: Math.round(r.width) + 'x' + Math.round(r.height) };",
+        " })()"
+      ),
+      blk
+    )
+  }
+
+  fit <- function(blk) {
+    wait_js(
+      app,
+      sprintf(
+        "(function (s) { return s.box !== '0x0' && s.told === s.box; })(%s)",
+        sizes_js(blk)
+      ),
+      function() {
+        s <- app$get_js(sizes_js(blk))
+        paste0("[probe ", blk, "] told ", s$told, ", box ", s$box)
+      }
+    )
+    s <- app$get_js(sizes_js(blk))
+    expect_identical(s$told, s$box)
+  }
+
+  # Built off screen with its inputs open, then moved into its panel.
+  fit("o")
+
+  # Painted with its inputs closed, then opened.
+  app$run_js(
+    paste0(
+      "document.getElementById('my_board-block_s-edit_block-",
+      "collapse_blk_sections').dispatchEvent(",
+      "new CustomEvent('blockr-section:toggle', { detail: 'inputs' }));"
+    )
+  )
+  fit("s")
+
+  # Its card narrows, as when a splitter is dragged; the window keeps its size.
+  app$run_js(
+    "document.getElementById('my_board-block_handle-o').style.width = '50%';"
+  )
+  fit("o")
+})

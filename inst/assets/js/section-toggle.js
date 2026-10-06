@@ -5,11 +5,11 @@
 // section.
 //
 // The card does not wait for the server: the section folds on the click. A
-// closed section carries `hidden`, so Shiny suspends the outputs in it. The
-// fold animates the height, then hides; the unfold shows, then animates. A
-// closing section carries `is-closing` from the start of the fold, so the
-// stylesheet, which reads the sections' own state, drops the rule above the
-// preview as the fold begins.
+// closed section carries `hidden`, so Shiny, which watches its outputs' size,
+// suspends the ones in it. The fold animates the height, then hides; the
+// unfold shows, then animates. A closing section carries `is-closing` from
+// the start of the fold, so the stylesheet, which reads the sections' own
+// state, drops the rule above the preview as the fold begins.
 (function () {
   'use strict';
 
@@ -43,7 +43,6 @@
 
     if (reduce) {
       section.hidden = !open;
-      $(section).trigger(open ? 'shown' : 'hidden');
       return;
     }
 
@@ -52,9 +51,6 @@
       var h = section.scrollHeight;
       section.style.height = '0px';
       section.classList.add('is-folding');
-      // Shiny re-checks visibility on `shown`, so outputs in the section
-      // resume and render.
-      $(section).trigger('shown');
       section.getBoundingClientRect();
       section.style.height = h + 'px';
       section._blockrFold = setTimeout(function () {
@@ -70,7 +66,6 @@
         section._blockrFold = null;
         finish(section);
         section.hidden = true;
-        $(section).trigger('hidden');
       }, DURATION);
     }
   }

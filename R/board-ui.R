@@ -25,6 +25,7 @@ board_ui.dock_board <- function(
     blockr.ui::theme_dep(),
     blockr.ui::controls_dep(),
     show_block_dep(),
+    htmlwidgets_resize_dep(),
     attr_output_dep(),
     add_block_menu_dep(),
     block_rename_dep(),
@@ -263,6 +264,17 @@ blockr_dock_dep <- function() {
     pkg_version(),
     src = pkg_file("assets", "css"),
     stylesheet = "blockr-dock.css"
+  )
+}
+
+# Static htmlwidgets re-measure when the dock resizes them, until the dock
+# requires an htmlwidgets release with ramnathv/htmlwidgets#496 (#528).
+htmlwidgets_resize_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-htmlwidgets-resize",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "htmlwidgets-resize.js"
   )
 }
 
