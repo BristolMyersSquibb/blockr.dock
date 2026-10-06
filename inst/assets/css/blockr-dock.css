@@ -147,7 +147,7 @@
 
 .blockr-issue--warning {
   border-color: var(--blockr-color-border-warning);
-  background: color-mix(in srgb, var(--blockr-color-border-warning) 10%, var(--blockr-color-bg-surface));
+  background: var(--blockr-color-bg-warning);
 }
 
 /* ============================================================
