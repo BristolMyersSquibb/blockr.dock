@@ -395,20 +395,27 @@ test_that("navbar items lay out in one row in the browser", {
   # The spacer pushes the rest of the bar to its right edge.
   expect_equal(box("filled")$right, bar()$right, tolerance = 0.01)
 
-  # On a narrow bar the plugin's piece gives way, and the rest keeps its width
-  # and stays on the bar, on one line.
+  # On a narrow bar the plugin's piece gives way, its content shrinking with
+  # it rather than spill over its neighbours, and the rest keeps its width and
+  # stays on the bar, on one line. At this width the piece gets about 250px of
+  # the 370px it takes on a wide bar, well above the 130px its content needs.
+  piece_width <- box("preserve_board")$width
   options_width <- box("options")$width
 
-  app$set_window_size(width = 480, height = 800)
+  app$set_window_size(width = 560, height = 800)
   app$wait_for_js(
-    paste0(
-      "document.querySelector('[data-navbar-item=\"preserve_board\"]')",
-      ".getBoundingClientRect().width < 200"
+    sprintf(
+      paste0(
+        "document.querySelector('[data-navbar-item=\"preserve_board\"]')",
+        ".getBoundingClientRect().width < %f"
+      ),
+      piece_width
     )
   )
 
   piece <- box("preserve_board")
-  expect_lt(piece$width, piece$scroll)
+  expect_lt(piece$width, piece_width)
+  expect_lte(piece$scroll, ceiling(piece$width))
   expect_equal(box("options")$width, options_width, tolerance = 0.01)
   expect_lte(box("filled")$right, bar()$right + 0.5)
 

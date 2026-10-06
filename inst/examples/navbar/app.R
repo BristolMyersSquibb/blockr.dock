@@ -19,7 +19,7 @@ output_item <- function(id, content) {
 serve(
   new_dock_board(
     blocks = c(a = new_dataset_block("iris")),
-    views = list("a")
+    views = list(Page = "a")
   ),
   "my_board",
   navbar = custom_navbar(
