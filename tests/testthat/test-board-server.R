@@ -720,6 +720,112 @@ test_that("reconcile builds only the active view's dock (#304)", {
   expect_false(flags[[visited]])
 })
 
+# Two views, each with a block on its left rail, stored expanded.
+railed_views_board <- function() {
+  new_dock_board(
+    blocks = c(
+      a = new_dataset_block(), b = new_dataset_block(),
+      c = new_dataset_block(), d = new_dataset_block()
+    ),
+    views = list(A = c("a", "b"), B = c("c", "d")),
+    grids = list(
+      A = dock_grid("a", rail(blk("b"))),
+      B = dock_grid("c", rail(blk("d")))
+    ),
+    active = "A"
+  )
+}
+
+# The `_state` a dock showing `grid` echoes, as far as the grid cast reads it.
+rail_echo <- function(grid) {
+  list(grid = grid_to_tree(grid), edgeGroups = rails_to_edges(grid[["rails"]]))
+}
+
+test_that("the docks built so far give each edge its rail collapse (#480)", {
+
+  brd <- railed_views_board()
+
+  # A's dock reports its rail collapsed, which the board has yet to store; B's
+  # has not reported, so B reads as stored.
+  shown <- board_grids(brd)[["A"]]
+  shown[["rails"]][["left"]][["collapsed"]] <- TRUE
+
+  docks <- list(
+    A = list(layout = function() rail_echo(shown)),
+    B = list(layout = function() NULL)
+  )
+  board <- list(board = brd)
+
+  expect_identical(live_rail_collapse(docks, board), list(left = TRUE))
+  expect_identical(
+    live_rail_collapse(docks, board, first = "B"), list(left = FALSE)
+  )
+
+  # A view that is not built has no say, and an empty rail none either.
+  expect_identical(
+    live_rail_collapse(docks, board, first = "C"), list(left = TRUE)
+  )
+
+  shown[["rails"]][["left"]][["panels"]] <- character()
+
+  expect_identical(
+    live_rail_collapse(docks["A"], board, first = "A"), list()
+  )
+})
+
+test_that("a view built mid-session opens with its rails in step (#480)", {
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  brd <- railed_views_board()
+
+  shown <- board_grids(brd)[["A"]]
+  shown[["rails"]][["left"]][["collapsed"]] <- TRUE
+
+  # Visit B while A's dock, the only one built, shows its rail collapsed, and
+  # return the layout B's dock would be built from.
+  visit_b <- function(sync) {
+
+    built <- NULL
+
+    docks <- with_mock_context(ms, reactives::reactive_vals())
+    docks[["A"]] <- list(layout = function() rail_echo(shown))
+
+    session <- list(
+      ns = identity,
+      userData = list2env(
+        list(board_options = list(sync_rails = function() sync))
+      ),
+      sendInputMessage = function(...) invisible(),
+      sendCustomMessage = function(...) invisible()
+    )
+
+    with_mocked_bindings(
+      with_mock_context(
+        ms,
+        reconcile_views(
+          reactiveValues(board = apply_views_active("B", brd)),
+          reactiveVal(),
+          docks,
+          reactiveValues(),
+          reactiveVal("A"),
+          new_client_views(board_views(brd)),
+          session
+        )
+      ),
+      create_view = function(v_id, layout, ...) built <<- layout,
+      switch_active_view = function(...) invisible(),
+      .package = "blockr.dock"
+    )
+
+    built
+  }
+
+  expect_true(visit_b(TRUE)[["rails"]][["left"]][["collapsed"]])
+  expect_false(visit_b(FALSE)[["rails"]][["left"]][["collapsed"]])
+})
+
 test_that("visible axis follows the client's painted front tab (#328)", {
 
   # The visible slot -- the client-confirmed paint core's render gate waits for

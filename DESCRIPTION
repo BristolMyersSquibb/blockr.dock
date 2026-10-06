@@ -90,6 +90,7 @@ Collate:
     'sidebar-inputs.R'
     'sidebar-link.R'
     'sidebar-stack.R'
+    'sync-rails-option.R'
     'utils-dock.R'
     'utils-misc.R'
     'utils-pkg.R'
