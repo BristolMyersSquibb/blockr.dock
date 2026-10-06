@@ -4,7 +4,7 @@
   Its sections (control, inputs, preview) fold in the browser on the
   toggle's click instead of through a server round trip to bslib's
   accordion, so the preview's eye answers in a few milliseconds instead of
-  50 to 150. The cards of views not on screen wait in plain parking pools
+  50 to 150. The cards of views not on screen wait in plain divs off the page
   instead of Bootstrap offcanvases, the warnings and messages under the
   preview fold in a native `<details>`, and the card is the dock's own
   `.blockr-block-card` instead of Bootstrap's `.card`. Bootstrap stays on the

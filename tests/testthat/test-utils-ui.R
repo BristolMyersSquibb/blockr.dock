@@ -281,7 +281,7 @@ test_that("determine_panel_pos reserves every extension's group (#250)", {
   )
 })
 
-test_that("the parking pools skip rendering their contents (e2e)", {
+test_that("the offcanvases skip rendering their contents (e2e)", {
 
   skip_on_cran()
 
@@ -298,7 +298,9 @@ test_that("the parking pools skip rendering their contents (e2e)", {
     app$get_js(
       r"(JSON.stringify((function () {
         var body = function (id) {
-          var el = document.querySelector('#' + id + ' > .blockr-parking-body');
+          var el = document.querySelector(
+            '#' + id + ' > .blockr-offcanvas-body'
+          );
           return getComputedStyle(el).contentVisibility;
         };
         return {

@@ -33,7 +33,7 @@ board_ui.dock_board <- function(
     compact_dep(),
     viewport_probe_ui(id),
     rail_dep(),
-    parking_ui(
+    off_canvas(
       id = NS(id, "blocks_offcanvas"),
       # Only the active view's cards are built at startup; off-screen views'
       # cards are inserted on first visit. The build dominates first paint and
@@ -107,7 +107,7 @@ board_ui.dock_board <- function(
       )
     ),
     dock_outputs,
-    parking_ui(
+    off_canvas(
       id = NS(id, "exts_offcanvas"),
       position = "bottom",
       map(
