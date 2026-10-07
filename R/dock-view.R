@@ -1,13 +1,15 @@
 #' Dock views: structure and grid
 #'
-#' A `dock_board` stores its views as two independent slots. **Structure**
+#' A `dock_board` stores its views as three independent slots. **Structure**
 #' -- which panels belong to each view, plus the view names, ids and the
 #' active view -- is a `dock_views` collection of `dock_view` objects, read
 #' with `board_views()`. **Grid** -- the geometry of each view (nesting, tab
 #' groups, sizes) -- is a separate, `NULL`-valid `dock_grids` slot, read with
-#' `board_grids()`. Single-page boards are a degenerate case: one auto-named
-#' "Page" view. Blocks and extensions are shared across views via the board's
-#' DAG; view membership is a layout concern only.
+#' `board_grids()`; a grid also carries the **rails** pinned to the view's
+#' edges, holding members the splitview therefore does not arrange. Single-page
+#' boards are a degenerate case:
+#' one auto-named "Page" view. Blocks and extensions are shared across views
+#' via the board's DAG; view membership is a layout concern only.
 #'
 #' Each view carries a stable, immutable **id** (its key in the collection)
 #' distinct from its editable display **name**. This mirrors the id / name
@@ -32,24 +34,26 @@
 #' individual view. View CRUD is enabled unless the dock is locked (see
 #' `is_dock_locked()`).
 #'
-#' Structure and grid are related by total semantics, not containment: a
+#' Structure and geometry are related by total semantics, not containment: a
 #' member with no grid entry is an un-landed intent, a grid entry with no
 #' membership an inert ghost. Both are legal on a committed board and
 #' reconciled only where placement is read (`view_grid()` prunes ghosts and
 #' shows un-landed members via a default) -- the board is valid with no grid
-#' at all. Referential integrity still holds: every member must reference a
-#' block or extension on the board.
+#' at all. The rails partition that placement rather than adding to it: a
+#' member a rail names is placed by the rail and so is absent from the grid,
+#' and a view's membership is the union of the two. Referential integrity
+#' still holds: every member must reference a block or extension on the board.
 #'
 #' @param members Ordered character vector of panel ids.
 #' @param name Optional display name for the view.
 #'
 #' @return `board_views()` returns a `dock_views`, `board_grids()` a
-#'   `dock_grids` or `NULL`, and their setters the modified board
-#'   invisibly. `dock_view()` returns a `dock_view` and `view_members()` a
-#'   character vector. `is_dock_view()` / `is_dock_views()` /
-#'   `is_dock_grids()` return a boolean; `validate_dock_view()`,
-#'   `validate_dock_views()` and `validate_dock_grids()` return their
-#'   (validated) input and throw on error. `active_view()` returns the active
+#'   `dock_grids` or `NULL`, and their setters the modified board invisibly. A
+#'   `dock_view()` is a `dock_view` and `view_members()` a character vector.
+#'   The predicates `is_dock_view()` / `is_dock_views()` / `is_dock_grids()`
+#'   return a boolean, while `validate_dock_view()`, `validate_dock_views()`
+#'   and `validate_dock_grids()` return their (validated) input and throw on
+#'   error. `active_view()` returns the active
 #'   view's id, or `NULL` when no view is active, and `active_view<-()` the
 #'   modified collection (or `dock_board`) invisibly. `view_name()` returns a
 #'   view's explicit display name (or `NULL`), `view_name<-()` the modified
@@ -416,11 +420,6 @@ active_view.dock_board <- function(x) {
   invisible(x)
 }
 
-views_can_crud <- function(x) {
-  stopifnot(is_dock_views(x))
-  !is_dock_locked()
-}
-
 #' @export
 str_value.dock_views <- function(x, ...) {
 
@@ -595,6 +594,9 @@ view_binding_dep <- function() {
   )
 }
 
+# A click inside the views menu leaves it open (`data-bs-auto-close =
+# "outside"`), so managing pages does not close it; the binding closes it
+# after a switch.
 #' @noRd
 view_nav_ui <- function(id, views) {
 
@@ -602,7 +604,7 @@ view_nav_ui <- function(id, views) {
   nav_id <- ns("view_nav")
   active <- active_view(views)
   active_nm <- unname(view_names(views)[active])
-  can_crud <- views_can_crud(views)
+  can_crud <- !is_dock_locked()
 
   items <- map(
     view_item_ui,
@@ -611,12 +613,36 @@ view_nav_ui <- function(id, views) {
     MoreArgs = list(active_id = active, can_crud = can_crud)
   )
 
-  add_btn <- NULL
+  manage <- NULL
   if (can_crud) {
-    add_btn <- tags$button(
-      class = "dropdown-item blockr-view-add",
-      bsicons::bs_icon("plus-lg"),
-      "New page"
+    manage <- tagList(
+      div(
+        class = "blockr-view-browse",
+        div(class = "blockr-menu__divider"),
+        tags$button(
+          type = "button",
+          class = paste(
+            "dropdown-item blockr-menu__item blockr-menu__item--quiet",
+            "blockr-view-manage"
+          ),
+          span(class = "blockr-menu__icon", blockr.ui::small_icon("sliders")),
+          span(class = "blockr-menu__label", "Manage pages")
+        )
+      ),
+      div(
+        class = "blockr-view-foot",
+        div(class = "blockr-menu__divider"),
+        div(
+          class = "blockr-view-foot-row",
+          tags$button(
+            type = "button",
+            class = "blockr-view-add",
+            blockr.ui::small_icon("plus"),
+            "New page"
+          ),
+          tags$button(type = "button", class = "blockr-view-done", "Done")
+        )
+      )
     )
   }
 
@@ -627,16 +653,16 @@ view_nav_ui <- function(id, views) {
       class = "blockr-navbar-icon-btn dropdown-toggle blockr-view-toggle",
       type = "button",
       `data-bs-toggle` = "dropdown",
+      `data-bs-auto-close` = "outside",
       `aria-expanded` = "false",
       bsicons::bs_icon("journals"),
       tags$span(class = "blockr-view-toggle-label", active_nm)
     ),
     div(
-      class = "dropdown-menu blockr-view-nav",
+      class = "dropdown-menu blockr-menu blockr-view-nav",
       id = nav_id,
-      items,
-      if (can_crud) tags$hr(class = "dropdown-divider"),
-      add_btn
+      div(class = "blockr-view-list", items),
+      manage
     )
   )
 }
@@ -645,45 +671,29 @@ view_nav_ui <- function(id, views) {
 view_item_ui <- function(view_id, view_name, active_id = NULL,
                          can_crud = FALSE) {
 
-  cls <- paste("dropdown-item blockr-view-item",
+  cls <- paste("dropdown-item blockr-menu__item blockr-view-item",
                if (identical(view_id, active_id)) "active" else "")
-
-  actions <- NULL
-  if (can_crud) {
-    actions <- tags$span(
-      class = "blockr-view-item-actions",
-      tags$span(
-        class = "blockr-view-action blockr-view-up",
-        role = "button",
-        title = "Move up",
-        bsicons::bs_icon("chevron-up")
-      ),
-      tags$span(
-        class = "blockr-view-action blockr-view-down",
-        role = "button",
-        title = "Move down",
-        bsicons::bs_icon("chevron-down")
-      ),
-      tags$span(
-        class = "blockr-view-action blockr-view-edit",
-        role = "button",
-        title = "Rename",
-        bsicons::bs_icon("pencil")
-      ),
-      tags$span(
-        class = "blockr-view-action blockr-view-remove",
-        role = "button",
-        title = "Remove",
-        bsicons::bs_icon("x-lg")
-      )
-    )
-  }
 
   tags$div(
     class = cls,
     `data-view-id` = view_id,
+    if (can_crud) {
+      tags$span(
+        class = "blockr-view-grip",
+        `aria-label` = "Drag to reorder",
+        blockr.ui::small_icon("grip")
+      )
+    },
     tags$span(class = "blockr-view-item-name", view_name),
-    actions
+    tags$span(class = "blockr-menu__check", blockr.ui::small_icon("check")),
+    if (can_crud) {
+      tags$span(
+        class = "blockr-view-action blockr-view-remove",
+        role = "button",
+        title = "Remove page",
+        blockr.ui::small_icon("remove")
+      )
+    }
   )
 }
 
@@ -814,7 +824,8 @@ validate_views_delta <- function(views, board, upd) {
   }
 
   unknown_keys <- setdiff(
-    names(views), c("add", "mod", "rm", "active", "rename", "grid", "order")
+    names(views),
+    c("add", "mod", "rm", "active", "rename", "grid", "order")
   )
   if (length(unknown_keys)) {
     blockr_abort(
@@ -1010,13 +1021,9 @@ validate_views_delta <- function(views, board, upd) {
 # a non-member that resolves to a block or extension, and `move` / `resize` /
 # `select` a member of the post-add view. Hint refs (`near`) resolve against the
 # same running membership.
-view_mod_verbs <- function() {
-  c("rm", "add", "move", "resize", "select")
-}
+view_mod_verbs <- c("rm", "add", "move", "resize", "select")
 
-valid_panel_sides <- function() {
-  c("within", "left", "right", "above", "below")
-}
+valid_panel_sides <- c("within", "left", "right", "above", "below")
 
 # The `views$mod` currency is typed refs (`blk()` / `ext()`) and bare id sugar;
 # the prefix strings are the wire encoding. Augment canonicalizes each view's
@@ -1086,14 +1093,14 @@ resolve_view_mod <- function(mod, view_id, members, post_block_ids, ext_ids) {
   if (not_null(mod[["add"]])) {
     mod[["add"]] <- resolve_placement_verb(
       mod[["add"]], view_id, "add", post_blk, post_ext, resolve_near,
-      c("near", "side", "size")
+      c("near", "side", "size", "rail")
     )
   }
 
   if (not_null(mod[["move"]])) {
     mod[["move"]] <- resolve_placement_verb(
       mod[["move"]], view_id, "move", mem_blk, mem_ext, resolve_near,
-      c("near", "side")
+      c("near", "side", "rail")
     )
   }
 
@@ -1290,7 +1297,7 @@ validate_view_mod <- function(mod, view_id, members, ok_panels) {
     )
   }
 
-  unknown <- setdiff(names(mod), view_mod_verbs())
+  unknown <- setdiff(names(mod), view_mod_verbs)
 
   if (length(unknown)) {
     blockr_abort(
@@ -1456,12 +1463,36 @@ validate_mod_map <- function(map, view_id, verb) {
 # -- they come from the `blk()` / `ext()` constructor and the verb's contextual
 # whitelist in resolution -- so this checks only that `near` resolves to a
 # member (the running `anchors` set), `side` is in dockview's drop vocabulary,
-# and `size` is a ratio in (0, 1). No hint at all falls back to
+# `size` is a ratio in (0, 1), and `rail` names an edge the view offers without
+# also anchoring inside the tree. No hint at all falls back to
 # `determine_panel_pos()` at delivery.
 validate_panel_hint <- function(hint, view_id, anchors) {
 
   if (is.null(hint) || !length(hint)) {
     return(invisible())
+  }
+
+  rail <- hint[["rail"]]
+
+  if (not_null(rail)) {
+
+    if (!is_string(rail) || !rail %in% rail_positions) {
+      blockr_abort(
+        "Hint `rail` in `views$mod${view_id}` must be one of {rail_positions}.",
+        class = "dock_views_mod_hint_invalid"
+      )
+    }
+
+    # A rail is an edge of the whole view, `near` / `side` a spot inside its
+    # splitview: a hint naming both asks for two destinations at once.
+    clash <- intersect(names(hint), c("near", "side"))
+
+    if (length(clash)) {
+      blockr_abort(
+        "Hint `rail` in `views$mod${view_id}` cannot combine with {clash}.",
+        class = "dock_views_mod_hint_invalid"
+      )
+    }
   }
 
   near <- hint[["near"]]
@@ -1475,11 +1506,11 @@ validate_panel_hint <- function(hint, view_id, anchors) {
 
   side <- hint[["side"]]
 
-  if (not_null(side) && !isTRUE(side %in% valid_panel_sides())) {
+  if (not_null(side) && !isTRUE(side %in% valid_panel_sides)) {
     blockr_abort(
       paste0(
         "Hint `side` ", side, " in `views$mod$", view_id, "` must be one of: ",
-        paste(valid_panel_sides(), collapse = ", "), "."
+        paste(valid_panel_sides, collapse = ", "), "."
       ),
       class = "dock_views_mod_hint_invalid"
     )

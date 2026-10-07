@@ -41,8 +41,7 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
     ctrl_tag <- ctrl(NS(blk_srv_id, "ctrl_block"), blk)
     ctrl_meta <- list(
       label = ctrl_btn_label(ctrl),
-      icon  = ctrl_btn_icon(ctrl),
-      class = ctrl_btn_class(ctrl)
+      icon  = ctrl_btn_icon(ctrl)
     )
   } else {
     ctrl_tag <- NULL
@@ -70,6 +69,19 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
 has_external_ctrl <- function(x) {
   ctrl <- attr(x, "external_ctrl")
   isTRUE(ctrl) || (is.character(ctrl) && length(ctrl) > 0L)
+}
+
+# Whether a block contributes any controls, decided by rendering its expression
+# UI and asking whether that produced markup: core's `new_block()` default is
+# `function(id) tagList()`, so a block with nothing to configure (`rbind_block`,
+# whose only variation is its link set) yields an empty document. Rendering
+# rather than inspecting the tags also catches a UI carrying html dependencies
+# alone. Rendering with doRenderTags() gives the markup without resolving those
+# dependencies, which renderTags() does and which cost more than the markup
+# itself once every control carried its own set.
+has_expr_ui <- function(x) {
+  markup <- htmltools::doRenderTags(expr_ui("block", x))
+  nzchar(trimws(as.character(markup)))
 }
 
 show_block_dep <- function() {
@@ -126,15 +138,13 @@ insert_block_ui.dock_board <- function(id, x, blocks, dock, ...,
 }
 
 # The dock's build ledger is core's `visible` axis: a per-block reactiveVal,
-# logical (NA never built / FALSE built off screen / TRUE painted now) like
-# `required`, so `built_cards()` reads `!is.na(visible)`. It once read
-# `required` non-NA, but that axis is a multi-writer construction-demand
-# channel -- core's "Show code" marks every block required to export the whole
-# script -- so a demand with no card masqueraded as built and blanked the view
-# on its first visit. `visible` is written only where the dock builds, paints
-# or reconciles a card. The dock still writes `required[[id]]` FALSE off screen
-# / TRUE on screen (construction demand); block removal needs no dock write --
-# core drops the slot, dropping the card from the ledger too.
+# logical (NA never built / FALSE built off screen / TRUE painted now), so
+# `built_cards()` reads `!is.na(visible)`. It is written only where the dock
+# builds, paints or parks a card, which is what keeps it a ledger: demand
+# travels as `update` payloads instead, the dock's `eager` set among them, so a
+# block that core builds for another consumer (core's "Show code" asks for
+# every block) never reads back as a card the dock built. Block removal needs
+# no dock write -- core drops the slot, dropping the card from the ledger too.
 built_cards <- function(visibility) {
   ids <- ls(visibility$visible)
   ids[lgl_ply(ids, slot_built, visibility$visible)]
@@ -145,38 +155,29 @@ slot_built <- function(id, visible) {
 }
 
 # Record `new` cards as built off screen: `visible` FALSE enters them in the
-# ledger (built, not yet painted), `required` FALSE holds no construction
-# demand until a view switch or the report observer places them. Slots
-# pre-exist: core seeds every block's before any block plugin runs.
+# ledger (built, not yet painted). Slots pre-exist: core seeds every block's
+# before any block plugin runs.
 mark_cards_built <- function(visibility, new) {
   for (id in new) {
     visibility$visible[[id]](FALSE)
-    visibility$required[[id]](FALSE)
   }
 }
 
-# Reconcile the required axis over `built` from an on-screen set: on screen ->
-# TRUE, off screen -> FALSE. A card leaving the screen keeps its ledger entry --
-# `visible` goes FALSE (built, off screen), never NA (never built), or its view
-# blanks on the next visit. The arrange observer owns marking a card painted
-# (visible TRUE). Seeds the required axis too, with `built` the active view's
-# membership.
-show_cards <- function(visibility, built, on_screen) {
-  for (id in built) {
-    on <- id %in% on_screen
-
-    if (!identical(isolate(visibility$required[[id]]()), on)) {
-      visibility$required[[id]](on)
-    }
-
-    if (!on && isTRUE(isolate(visibility$visible[[id]]()))) {
+# Park the cards that have left the screen: `visible` goes FALSE (built, off
+# screen), never NA (never built), or their view blanks on the next visit.
+mark_cards_hidden <- function(visibility, hidden) {
+  for (id in hidden) {
+    if (isTRUE(isolate(visibility$visible[[id]]()))) {
       visibility$visible[[id]](FALSE)
     }
   }
 }
 
 # Mark a view's on-screen blocks painted: `visible` TRUE -- the client-confirmed
-# paint core's render gate (is_visible = isTRUE) waits for.
+# paint core's render gate (is_visible = isTRUE) waits for. Unlike
+# mark_cards_hidden(), which walks the ledger, this walks the caller's set and
+# dereferences each slot, so that set must already be reconciled against core's
+# visibility slots -- see report_visible_observer().
 mark_cards_rendered <- function(visibility, on_screen) {
   for (id in on_screen) {
     if (!isTRUE(isolate(visibility$visible[[id]]()))) {

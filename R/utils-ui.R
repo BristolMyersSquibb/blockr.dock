@@ -8,7 +8,9 @@ off_canvas <- function(
   label <- paste0(id, "-title")
 
   div(
-    class = glue("offcanvas offcanvas-{match.arg(position)} {width}"),
+    class = glue(
+      "offcanvas offcanvas-{match.arg(position)} {width} blockr-offcanvas-pool"
+    ),
     tabindex = "-1",
     id = id,
     `aria-labelledby` = label,
@@ -54,41 +56,69 @@ move_dom_elements <- function(from, to, session = get_session()) {
 
 determine_active_views <- function(layout, active_panel = NULL) {
 
+  groups <- layout_groups(layout)
+
+  if (!length(groups)) {
+    return(character())
+  }
+
+  set_names(
+    chr_ply(groups, group_active_view, active_panel = active_panel),
+    chr_xtr(groups, "id")
+  )
+}
+
+# A group's active view is its open tab -- but a bare tab switch does not always
+# refresh the echo's `activeView`, so the client's live `active_panel` overrides
+# the front of whichever group lists it.
+group_active_view <- function(group, active_panel) {
+
+  if (not_null(active_panel) && active_panel %in% group[["views"]]) {
+    return(active_panel)
+  }
+
+  group[["activeView"]]
+}
+
+# Every on-screen dock group, normalised to `list(id, views, activeView)`. The
+# dockView tree contributes its leaves: a compact `dock_grid` is expanded
+# (assigning ids), while a raw dockView `_state` echo already carries its tree
+# at `$grid`.
+#
+# A rail is a group too, serialised beside the grid rather than inside it, so it
+# folds in here. Without that, a block a user parks on an edge reads as off
+# screen and its card never paints. A rail counts only while it is both shown
+# and expanded: a collapsed rail is a bare strip with no content pane, exactly
+# as a background tab has none. A bare `dock_grid` carries no rails, so only an
+# echo contributes any.
+layout_groups <- function(layout) {
+
   if (is.null(layout)) {
-    return(character())
+    return(list())
   }
 
-  # The dockView tree, keyed by group id: a compact `dock_grid` is expanded
-  # (assigning ids), while a raw dockView `_state` echo already carries its
-  # tree at `$grid`. A group's active view is its open tab -- but a bare tab
-  # switch does not always refresh the echo's `activeView`, so the client's
-  # live `active_panel` overrides the front of whichever group lists it.
-  tree <- if (is_dock_grid(layout)) grid_to_tree(layout) else layout[["grid"]]
+  compact <- is_dock_grid(layout)
+  tree <- if (compact) grid_to_tree(layout) else layout[["grid"]]
 
-  root <- tree[["root"]]
-
-  if (is.null(root)) {
-    return(character())
+  rails <- if (compact) {
+    list()
+  } else {
+    lapply(Filter(rail_on_screen, layout[["edgeGroups"]]), `[[`, "group")
   }
 
-  xtr_leaf <- function(x) {
+  lapply(c(grid_leaves(tree), rails), new_layout_group)
+}
 
-    if (identical(x[["type"]], "leaf")) {
+new_layout_group <- function(group) {
+  list(
+    id = as.character(group[["id"]]),
+    views = as.character(unlst(group[["views"]])),
+    activeView = coal(group[["activeView"]], "", fail_all = FALSE)
+  )
+}
 
-      front <- if (not_null(active_panel) &&
-                     active_panel %in% x[["data"]][["views"]]) {
-        active_panel
-      } else {
-        coal(x[["data"]][["activeView"]], "", fail_all = FALSE)
-      }
-
-      return(set_names(front, x[["data"]][["id"]]))
-    }
-
-    lapply(x[["data"]], xtr_leaf)
-  }
-
-  rapply(xtr_leaf(root), identity, "character")
+rail_on_screen <- function(edge) {
+  isTRUE(edge[["visible"]]) && !isTRUE(edge[["collapsed"]])
 }
 
 visible_block_ids <- function(layout, active_panel = NULL) {
@@ -116,17 +146,29 @@ active_view_block_ids <- function(x) {
   view_block_ids(views[[active_view(views)]])
 }
 
-visible_exts <- function() {
-  blockr_option("visible_extensions", "dag")
+# A group holding an extension is reserved. A hint-less add landing there tabs
+# over the extension and takes focus, which is how a block panel ends up
+# covering the DAG it was opened from. The test is membership rather than the
+# front tab -- an extension parked behind a fronted sibling is covered just the
+# same -- and it reads the panel id, so every extension is reserved, not a
+# hardcoded few.
+holds_ext_panel <- function(group) {
+  any(maybe_ext_panel_id(group[["views"]]))
 }
 
 determine_panel_pos <- function(dock) {
 
-  active <- determine_active_views(dock$layout())
+  groups <- layout_groups(dock$layout())
+  ids <- chr_xtr(groups, "id")
 
-  keep_visible <- as_ext_panel_id(visible_exts())
-
-  cands <- names(active)[!active %in% keep_visible]
+  # A narrow view is one group, so it is always the target. The reservation
+  # would leave no candidate there and split a second group off, undoing the
+  # collapse on the first block a user adds.
+  cands <- if (isTRUE(dock$narrow)) {
+    ids
+  } else {
+    ids[!lgl_ply(groups, holds_ext_panel)]
+  }
 
   if (!length(cands)) {
     return(list(direction = "right"))

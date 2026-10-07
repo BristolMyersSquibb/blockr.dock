@@ -21,11 +21,11 @@ test_that("action ctor", {
   db_act <- board_actions(new_dock_board())
 
   expect_type(db_act, "list")
-  expect_length(db_act, 11L)
+  expect_length(db_act, 12L)
 
   trig <- action_triggers(db_act)
 
-  expect_length(trig, 11L)
+  expect_length(trig, 12L)
   expect_named(trig, chr_ply(db_act, action_id))
 
   expect_null(
@@ -38,4 +38,22 @@ test_that("action ctor", {
       session = MockShinySession$new()
     )
   )
+})
+
+test_that("a trigger names where its gesture happened, for that firing", {
+
+  trigger <- new_trigger()
+
+  isolate({
+    trigger("a", at = list(x = 10, y = 20))
+    expect_identical(trigger(), "a")
+    expect_identical(trigger_at(trigger), list(x = 10, y = 20))
+
+    trigger("b")
+    expect_identical(trigger(), "b")
+    expect_null(trigger_at(trigger))
+  })
+
+  # A plain reactive used as a trigger names nowhere.
+  expect_null(trigger_at(reactive("a")))
 })

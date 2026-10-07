@@ -299,7 +299,6 @@ edit_inputs_rows <- function(ns, board, block_id) {
     # whose block picker appends a fresh slot - the slot count is open-ended.
     return(
       tagList(
-        css_block_selectize(),
         edit_inputs_variadic_rows(board, rows),
         edit_inputs_add_section(ns, board, block_id)
       )
@@ -408,14 +407,11 @@ edit_inputs_finite_rows <- function(ns, board, block_id, rows) {
     if (length(hit)) hit[[1L]] else NA_character_
   }
 
-  tagList(
-    css_block_selectize(),
-    tags$div(
-      class = "blockr-inputs-list",
-      lapply(ports, function(port) {
-        edit_inputs_finite_row(ns, board, port, source_for(port), sources)
-      })
-    )
+  tags$div(
+    class = "blockr-inputs-list",
+    lapply(ports, function(port) {
+      edit_inputs_finite_row(ns, board, port, source_for(port), sources)
+    })
   )
 }
 
@@ -452,18 +448,12 @@ edit_inputs_finite_row <- function(ns, board, port, from, sources) {
 # server observer of its own.
 edit_inputs_source_select <- function(id, board, sources, current,
                                       placeholder = "Choose a source...") {
-  selectizeInput(
+  board_block_select(
     id,
-    label = NULL,
-    choices = NULL,
+    board,
+    sources,
+    selected = current,
     options = list(
-      options = build_block_options(board, sources),
-      items = if (nzchar(current)) list(current) else list(),
-      maxItems = 1L,
-      valueField = "value",
-      labelField = "label",
-      searchField = c("label", "description", "searchtext"),
-      render = js_blk_selectize_render(),
       plugins = list("remove_button"),
       placeholder = placeholder,
       # Render the dropdown on <body> so the sidebar's scroll container does

@@ -86,7 +86,14 @@ the coercion function \code{as_dock_board()}. Inheritance can be checked using
 \code{is_dock_board()}, which returns a boolean. The \code{dock_extensions()} and
 \verb{dock_extensions<-()} accessors return / set the board's \code{dock_extension}
 objects. A character vector of IDs is returned by \code{dock_ext_ids()} and
-\code{dock_board_options()} returns a \code{board_options} object.
+\code{dock_board_options()} returns a \code{board_options} object: the board name, a
+thematic switch, off unless the \code{thematic} blockr option says otherwise, so
+that plots can take the board's colours, a light/dark switch, light unless
+the \code{dark_mode} blockr option says otherwise, the "Compact" header switch
+(\code{\link[=new_compact_option]{new_compact_option()}}), off unless the \code{compact} blockr option says
+otherwise, and a switch that opens and closes the rails of every page
+together (\code{\link[=new_sync_rails_option]{new_sync_rails_option()}}), on unless the \code{sync_rails} blockr
+option says otherwise.
 }
 \description{
 Using the docking layout manager provided by dockViewR, a \code{dock_board}

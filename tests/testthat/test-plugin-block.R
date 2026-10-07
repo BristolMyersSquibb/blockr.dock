@@ -50,13 +50,41 @@ test_that("edit block server", {
   )
 })
 
+test_that("a blank block name does not reach the board", {
+
+  testServer(
+    edit_block_server(),
+    {
+      # Shiny sends the field on Enter and on blur before the card refuses an
+      # empty name or restores the old one, so a name cleared or replaced by
+      # spaces still arrives.
+      session$setInputs(block_name_in = "   ")
+      expect_null(update())
+
+      session$setInputs(block_name_in = "")
+      expect_null(update())
+
+      session$setInputs(block_name_in = "Renamed")
+      expect_identical(update()$blocks$mod$a, list(block_name = "Renamed"))
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("renaming a block does not loop (#181)", {
 
   pushed <- character()
+  labels <- list()
 
   local_mocked_bindings(
-    updateTextInput = function(session, input_id, label, value) {
+    updateTextInput = function(session, input_id, label = NULL, value = NULL,
+                               ...) {
       pushed <<- c(pushed, value)
+      labels <<- c(labels, list(label))
     }
   )
 
@@ -102,6 +130,9 @@ test_that("renaming a block does not loop (#181)", {
 
       # A rename originating elsewhere still flows into the text input.
       expect_identical(pushed, c("Dataset", "External"))
+
+      # The field has no label, and a sync must not give it one.
+      expect_true(all(vapply(labels, is.null, logical(1L))))
     },
     args = list(
       block_id = "a",
@@ -211,32 +242,480 @@ test_that("condition UI updates surgically by condition id (#36)", {
   )
 })
 
-test_that("locked dock keeps block_card_toggles hidden (#122)", {
+test_that("locked dock drops block_card_toggles entirely (#122, #418)", {
+
+  # Unlocked: the toggle renders, open on the saved sections.
+  unlocked <- withr::with_options(
+    list(blockr.locked = NULL),
+    block_card_toggles("outputs", NS("x"))
+  )
+  expect_s3_class(unlocked, "shiny.tag")
+  expect_identical(
+    htmltools::tagGetAttribute(unlocked, "data-sections"),
+    "outputs"
+  )
+
+  # Locked: no widget at all. It used to render hidden purely to seed the
+  # accordion, which the card now paints correct without.
+  locked <- withr::with_options(
+    list(blockr.locked = TRUE),
+    block_card_toggles("outputs", NS("x"))
+  )
+  expect_null(locked)
+})
+
+test_that("a block's own control is drawn as its icon, named by its label", {
+
+  toggle <- function(ctrl_meta) {
+    xml2::xml_find_first(
+      xml2::read_html(
+        as.character(
+          htmltools::tagList(block_card_toggles("outputs", NS("x"), ctrl_meta))
+        )
+      ),
+      "//button[@data-section='ctrl']"
+    )
+  }
+
+  with_icon <- toggle(
+    list(label = "AI Assistant", icon = tags$svg(class = "probe-icon"))
+  )
+  expect_identical(xml2::xml_attr(with_icon, "title"), "AI Assistant")
+  expect_length(
+    xml2::xml_find_all(with_icon, ".//svg[@class='probe-icon']"),
+    1L
+  )
+  expect_identical(trimws(xml2::xml_text(with_icon)), "")
+
+  # Without an icon, the label is the button's text.
+  without <- toggle(list(label = "Settings", icon = NULL))
+  expect_identical(xml2::xml_attr(without, "title"), "Settings")
+  expect_identical(trimws(xml2::xml_text(without)), "Settings")
+})
+
+test_that("a control without a label is named Control", {
+
+  ctrl <- function(id, x) NULL
+
+  expect_identical(ctrl_btn_label(ctrl), "Control")
+  expect_identical(
+    ctrl_btn_label(structure(ctrl, ctrl_label = "")),
+    "Control"
+  )
+  expect_identical(
+    ctrl_btn_label(structure(ctrl, ctrl_label = "AI Assistant")),
+    "AI Assistant"
+  )
+})
+
+test_that("a locked board's block title offers no rename", {
+
+  title <- function(locked) {
+    xml2::read_html(
+      as.character(
+        withr::with_options(
+          list(blockr.locked = locked),
+          block_card_title(new_dataset_block(), "x", NULL)
+        )
+      )
+    )
+  }
+
+  editable <- function(root) {
+    xml2::xml_attr(
+      xml2::xml_find_first(root, "//div[@id='x-title_display']"),
+      "data-blockr-editable"
+    )
+  }
+
+  # The rename script starts the edit from this attribute alone, so a card
+  # carries no script or handler of its own.
+  unlocked <- title(NULL)
+  expect_identical(editable(unlocked), "")
+  expect_length(xml2::xml_find_all(unlocked, "//script | //*[@ondblclick]"), 0L)
+
+  # The board refuses a rename while locked, so the gesture goes, and with
+  # it blockr.ui's text cursor and tooltip.
+  expect_true(is.na(editable(title(TRUE))))
+})
+
+test_that("a restored card paints its saved sections open (#418)", {
+
+  open_panels <- function(blk) {
+
+    card <- edit_block_ui(
+      "blk",
+      blk,
+      "a",
+      expr_ui = expr_ui("blk", blk),
+      block_ui = div(id = "blk-out")
+    )
+
+    root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+    panels <- xml2::xml_find_all(
+      root,
+      paste0(
+        "//div[", has_class("blockr-block-accordion"), "]/div[@data-value]"
+      )
+    )
+
+    open <- xml2::xml_find_lgl(
+      panels,
+      paste0("count(.//div[", has_class("show"), "]) > 0")
+    )
+
+    xml2::xml_attr(panels, "data-value")[open]
+  }
+
+  blk <- new_dataset_block()
+
+  # No saved state: both sections paint open, as before.
+  expect_setequal(open_panels(blk), c("inputs", "outputs"))
+
+  attr(blk, "visible") <- "outputs"
+
+  # The hidden section must never paint open -- correcting it after the fact
+  # takes a client round trip, which the user watches happen.
+  expect_identical(open_panels(blk), "outputs")
+
+  attr(blk, "visible") <- "inputs"
+
+  expect_identical(open_panels(blk), "inputs")
+})
+
+test_that("a card with every section hidden paints none open (#418)", {
+
+  # `open = character()` would reach bslib as an absent `open` and pop the
+  # first panel back open.
+  card <- block_card_content(
+    NS("blk"),
+    expr_ui = div(id = "blk-expr"),
+    block_ui = div(id = "blk-out"),
+    visible = character()
+  )
+
+  root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+  expect_length(
+    xml2::xml_find_all(
+      root,
+      paste0("//div[", has_class("accordion-collapse"), " and ",
+             has_class("show"), "]")
+    ),
+    0L
+  )
+})
+
+test_that("hiding the last section closes it (#69)", {
+
+  sent <- character()
+
+  local_mocked_bindings(
+    accordion_panel_set = function(id, values, session) {
+      vals <- paste(values, collapse = ",")
+      sent[[length(sent) + 1L]] <<- paste0("set:", vals)
+    },
+    accordion_panel_close = function(id, values, session) {
+      sent[[length(sent) + 1L]] <<- paste0("close:", values)
+    }
+  )
+
+  testServer(
+    edit_block_server(),
+    {
+      session$flushReact()
+
+      # A card paints with its sections open, so the init NULL closes nothing.
+      expect_identical(sent, character())
+
+      session$setInputs(collapse_blk_sections = c("inputs", "outputs"))
+      session$setInputs(collapse_blk_sections = "outputs")
+
+      expect_identical(sent, c("set:inputs,outputs", "set:outputs"))
+
+      # The last toggle off reports NULL, which `accordion_panel_set()` cannot
+      # carry -- it rejects an empty selection -- so this closes all instead.
+      session$setInputs(collapse_blk_sections = NULL)
+
+      expect_identical(sent[[3L]], "close:TRUE")
+
+      session$setInputs(collapse_blk_sections = "outputs")
+
+      expect_identical(sent[[4L]], "set:outputs")
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_rbind_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
+test_that("a card tells an empty selection from no report yet (#426)", {
+
+  testServer(
+    edit_block_server(),
+    {
+      session$flushReact()
+
+      # Still painting. `freeze_hidden_inputs()` reads this as "has not
+      # reported in" and leaves the block editable until the card lands.
+      expect_null(session$returned$visible())
+
+      session$setInputs(collapse_blk_sections = "outputs")
+
+      expect_identical(session$returned$visible(), "outputs")
+
+      # The toggle reports NULL once the last section goes off. The user hid
+      # everything, so that has to arrive as an empty set -- reported, and
+      # with the inputs section among what is hidden.
+      session$setInputs(collapse_blk_sections = NULL)
+
+      expect_identical(session$returned$visible(), character())
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
+test_that("a card whose first report is empty still counts as one (#426)", {
+
+  testServer(
+    edit_block_server(),
+    {
+      session$flushReact()
+
+      # A restored all-hidden card reports NULL first thing, with nothing
+      # before it to distinguish it from the pre-report NULL above.
+      session$setInputs(collapse_blk_sections = NULL)
+
+      expect_identical(session$returned$visible(), character())
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
+test_that("a card's sections ignore other inputs appearing", {
+
+  testServer(
+    edit_block_server(),
+    {
+      runs <- 0L
+
+      observe({
+        session$returned$visible()
+        runs <<- runs + 1L
+      })
+
+      session$flushReact()
+      session$setInputs(collapse_blk_sections = "outputs")
+
+      before <- runs
+
+      # Every card mount registers new inputs on the session. They say nothing
+      # about this card, and `freeze_hidden_inputs()` reads every card's
+      # `visible`, so each one waking it would redo the whole board.
+      session$setInputs(some_other_input = 1, and_another = "x")
+
+      expect_identical(runs, before)
+      expect_identical(session$returned$visible(), "outputs")
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
+test_that("a locked card reports its sections without a widget (#418)", {
+
+  sent <- character()
+
+  local_mocked_bindings(
+    accordion_panel_set = function(id, values, session) {
+      sent[[length(sent) + 1L]] <<- "set"
+    },
+    accordion_panel_close = function(id, values, session) {
+      sent[[length(sent) + 1L]] <<- "close"
+    }
+  )
 
   blk <- new_dataset_block()
   attr(blk, "visible") <- "outputs"
 
-  # Unlocked: widget renders visible, with `selected` matching saved attr
-  unlocked <- withr::with_options(
-    list(blockr.locked = NULL),
-    block_card_toggles(blk, NS("x"))
-  )
-  expect_s3_class(unlocked, "shiny.tag.list")
-  unlocked_html <- as.character(htmltools::tagList(unlocked))
-  expect_match(unlocked_html, 'value="outputs".*checked', fixed = FALSE)
-  expect_false(grepl("display: none", unlocked_html, fixed = TRUE))
-
-  # Locked: widget still renders (so input$collapse_blk_sections seeds
-  # accordion_panel_set) but is hidden and the tooltip script is dropped
-  locked <- withr::with_options(
+  withr::with_options(
     list(blockr.locked = TRUE),
-    block_card_toggles(blk, NS("x"))
+    testServer(
+      edit_block_server(),
+      {
+        session$flushReact()
+
+        # There is no toggle to read this back from, and serialization stores
+        # it -- so a locked board saves the sections its cards painted with
+        # rather than dropping them.
+        expect_identical(session$returned$visible(), "outputs")
+
+        # Neither observer is wired, so a forged input moves no accordion.
+        session$setInputs(collapse_blk_sections = "inputs")
+        session$setInputs(collapse_blk_sections = NULL)
+
+        expect_identical(sent, character())
+        expect_identical(session$returned$visible(), "outputs")
+      },
+      args = list(
+        block_id = "a",
+        board = board_args(blocks = c(a = blk)),
+        update = reactiveVal()
+      )
+    )
   )
-  expect_s3_class(locked, "shiny.tag")
-  locked_html <- as.character(locked)
-  expect_match(locked_html, "display: none", fixed = TRUE)
-  expect_match(locked_html, 'value="outputs".*checked', fixed = FALSE)
-  expect_false(grepl("<script", locked_html, fixed = TRUE))
+})
+
+test_that("the block plugin reports whether its card offers inputs (#69)", {
+
+  reported <- function(blk) {
+
+    res <- NULL
+
+    testServer(
+      edit_block_server(),
+      res <<- session$returned,
+      args = list(
+        block_id = "a",
+        board = board_args(blocks = c(a = blk)),
+        update = reactiveVal()
+      )
+    )
+
+    edit_block_validator(res)
+
+    res[["has_inputs"]]
+  }
+
+  expect_false(reported(new_rbind_block()))
+  expect_true(reported(new_dataset_block()))
+})
+
+test_that("an input-free block card drops the inputs section (#69)", {
+
+  card_parts <- function(blk) {
+
+    card <- edit_block_ui(
+      "blk",
+      blk,
+      "a",
+      expr_ui = expr_ui("blk", blk),
+      block_ui = div(id = "blk-out")
+    )
+
+    root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+    list(
+      panels = xml2::xml_attr(
+        xml2::xml_find_all(
+          root,
+          paste0(
+            "//div[", has_class("blockr-block-accordion"), "]/div[@data-value]"
+          )
+        ),
+        "data-value"
+      ),
+      open = xml2::xml_attr(
+        xml2::xml_find_first(
+          root,
+          paste0("//div[", has_class("blockr-section-toggle"), "]")
+        ),
+        "data-sections"
+      ),
+      menu = vapply(
+        jsonlite::fromJSON(
+          xml2::xml_attr(
+            xml2::xml_find_first(root, "//button[@data-blockr-menu]"),
+            "data-blockr-menu"
+          ),
+          simplifyVector = FALSE
+        )$items,
+        function(x) x$label %||% "",
+        character(1L)
+      )
+    )
+  }
+
+  # An rbind block is configured entirely by its links, so its section would
+  # come up empty and its toggle would open nothing.
+  rbnd <- card_parts(new_rbind_block())
+
+  expect_identical(rbnd$panels, "outputs")
+  expect_identical(rbnd$open, "outputs")
+  expect_false("Controls" %in% rbnd$menu)
+
+  dataset <- card_parts(new_dataset_block())
+
+  expect_identical(dataset$panels, c("inputs", "outputs"))
+  expect_identical(dataset$open, "inputs outputs")
+  expect_identical(dataset$menu[[1L]], "Controls")
+})
+
+test_that("a board saved before #69 restores an input-free card", {
+
+  blk <- new_rbind_block()
+  attr(blk, "visible") <- c("inputs", "outputs")
+
+  toggles <- xml2::xml_find_first(
+    xml2::read_html(
+      as.character(
+        htmltools::tagList(
+          block_card_toggles(
+            visible_sections(blk),
+            NS("x"),
+            has_inputs = FALSE
+          )
+        )
+      )
+    ),
+    "//div[@data-sections]"
+  )
+
+  expect_identical(xml2::xml_attr(toggles, "data-sections"), "outputs")
+})
+
+test_that("a closed section's accordion button is collapsed on first paint", {
+
+  # The rule above the preview reads these hidden buttons (blockr-dock.css),
+  # so they have to be right before any toggle runs.
+  collapsed <- function(visible) {
+    card <- block_card_content(
+      NS("blk"),
+      expr_ui = div(id = "blk-expr"),
+      block_ui = div(id = "blk-out"),
+      visible = visible
+    )
+    root <- xml2::read_html(as.character(htmltools::tagList(card)))
+    items <- xml2::xml_find_all(root, "//div[@data-value]")
+    closed <- xml2::xml_find_first(
+      items,
+      paste0(".//button[", has_class("collapsed"), "]")
+    )
+    set_names(
+      !is.na(xml2::xml_name(closed)),
+      xml2::xml_attr(items, "data-value")
+    )
+  }
+
+  expect_identical(
+    collapsed(c("inputs", "outputs")),
+    c(inputs = FALSE, outputs = FALSE)
+  )
+  expect_identical(collapsed("outputs"), c(inputs = TRUE, outputs = FALSE))
 })
 
 test_that("block card sections carry the css-styling contract (#214)", {
@@ -244,7 +723,8 @@ test_that("block card sections carry the css-styling contract (#214)", {
   card <- block_card_content(
     NS("blk"),
     expr_ui = div(id = "blk-expr"),
-    block_ui = div(id = "blk-out")
+    block_ui = div(id = "blk-out"),
+    visible = c("inputs", "outputs")
   )
 
   root <- xml2::read_html(as.character(htmltools::tagList(card)))
@@ -278,6 +758,105 @@ test_that("block card sections carry the css-styling contract (#214)", {
   )
   expect_true(is.na(xml2::xml_attr(header, "style")))
   expect_true(is.na(xml2::xml_attr(body, "style")))
+})
+
+test_that("block card accordions carry no header content (#72)", {
+
+  card <- block_card_content(
+    NS("blk"),
+    expr_ui = div(id = "blk-expr"),
+    block_ui = div(id = "blk-out"),
+    visible = c("inputs", "outputs"),
+    ctrl_ui = div(id = "blk-ctrl")
+  )
+
+  root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+  headers <- xml2::xml_find_all(
+    root,
+    paste0("//div[", has_class("accordion-header"), "]")
+  )
+  expect_length(headers, 3L)
+
+  # Every one of these headers is hidden by the stylesheet, which also takes
+  # the titles out of the accessibility tree, so an icon or title rendered
+  # into one is built per card and then read by nobody.
+  slots <- xml2::xml_find_all(
+    headers,
+    paste0(
+      ".//div[", has_class("accordion-icon"), " or ",
+      has_class("accordion-title"), "]"
+    )
+  )
+  expect_length(slots, 6L)
+  expect_length(xml2::xml_children(slots), 0L)
+  expect_identical(unique(xml2::xml_text(slots)), "")
+})
+
+test_that("the header names the block type on its mark", {
+
+  card <- edit_block_ui(
+    "blk",
+    new_dataset_block(),
+    "a",
+    expr_ui = div(id = "blk-expr"),
+    block_ui = div(id = "blk-out")
+  )
+
+  root <- xml2::read_html(as.character(htmltools::tagList(card)))
+
+  # One header in both sizes: no subtitle, the type and package are the
+  # mark's tooltip.
+  expect_length(xml2::xml_find_all(root, "//bslib-popover"), 0L)
+  # block-tooltips.js hands these to Blockr.tooltip; no native title.
+  mark <- xml2::xml_find_first(root, "//span[@class='blockr-block-mark']")
+  expect_identical(xml2::xml_attr(mark, "data-blockr-tip"), "dataset block")
+  expect_identical(xml2::xml_attr(mark, "data-blockr-tip-badge"), "blockr.core")
+  expect_true(is.na(xml2::xml_attr(mark, "title")))
+  expect_match(xml2::xml_attr(mark, "style"), "--blockr-dock-cat: #",
+               fixed = TRUE)
+})
+
+test_that("the block menu lists its actions for Blockr.menu", {
+
+  menu_config <- function() {
+    btn <- block_card_dropdown(NS("blk"), "a", has_inputs = TRUE)
+    jsonlite::fromJSON(
+      htmltools::tagGetAttribute(btn, "data-blockr-menu"),
+      simplifyVector = FALSE
+    )
+  }
+
+  cfg <- menu_config()
+  expect_null(cfg$head)
+  expect_identical(cfg$align, "end")
+
+  labels <- vapply(cfg$items, function(x) x$label %||% "", character(1L))
+  expect_identical(
+    labels,
+    c("Controls", "", "Rename", "Append block", "Copy block ID", "",
+      "Remove block")
+  )
+  expect_true(cfg$items[[2L]]$divider)
+  expect_true(cfg$items[[6L]]$divider)
+  # Only the controls toggle and Remove carry an icon.
+  icons <- vapply(cfg$items, function(x) x$icon %||% "", character(1L))
+  expect_identical(icons, c("sliders", "", "", "", "", "", "trash"))
+  # The toggle flips the card's section input; the other picks send the
+  # events the server already observes.
+  expect_identical(cfg$items[[1L]]$target, "blk-collapse_blk_sections")
+  expect_identical(cfg$items[[1L]]$section, "inputs")
+  targets <- vapply(cfg$items, function(x) x$target %||% "", character(1L))
+  expect_true(all(c("blk-append_block", "blk-delete_block") %in% targets))
+  expect_true(cfg$items[[7L]]$danger)
+  expect_identical(cfg$items[[5L]]$meta, "a")
+  expect_true(cfg$items[[5L]]$mono)
+
+  # A locked dock lists nothing that changes the board.
+  withr::local_options(blockr.locked = TRUE)
+  labels <- vapply(menu_config()$items, function(x) x$label %||% "",
+                   character(1L))
+  expect_identical(labels, "Copy block ID")
 })
 
 test_that("block card carries no html output (#403)", {
@@ -395,7 +974,7 @@ test_that("card status and title land in the browser (e2e, #403)", {
 
   expect_match(
     app$get_js(attr_js(el("b", "status_indicator"), "style")),
-    "#f59e0b",
+    "#d97706",
     fixed = TRUE
   )
   expect_identical(
@@ -483,6 +1062,106 @@ test_that("card status and title land in the browser (e2e, #403)", {
   wait_js(app, paste0(title_js, " === 'Renamed'"), diagnose)
 })
 
+test_that("a title renames in place and refuses an empty name (e2e)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "block-status", "app.R", package = "blockr.dock"),
+    name = "card-rename",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  # Escape and Enter end the edit by blurring the field, and headless Chrome
+  # fires no blur in a tab that lacks the focus, as when another test's tab
+  # was opened after this one.
+  app$get_chromote_session()$Emulation$setFocusEmulationEnabled(enabled = TRUE)
+
+  wait_dock_loaded(app, 2)
+
+  id <- function(part) sprintf("my_board-block_a-edit_block-%s", part)
+  jq <- function(part) sprintf("$('#%s')", id(part))
+
+  start <- function() {
+    app$run_js(
+      sprintf(
+        paste(
+          "document.getElementById('%s')",
+          ".dispatchEvent(new MouseEvent('dblclick', {bubbles: true}))"
+        ),
+        id("title_display")
+      )
+    )
+  }
+
+  type <- function(text) {
+    app$run_js(
+      sprintf("%s.val('%s').trigger('input')", jq("block_name_in"), text)
+    )
+  }
+
+  press <- function(key) {
+    app$run_js(
+      sprintf(
+        "%s.trigger($.Event('keydown', {key: '%s'}))",
+        jq("block_name_in"),
+        key
+      )
+    )
+  }
+
+  # Open, marked invalid, field value, displayed title.
+  state <- function() {
+    app$get_js(
+      sprintf(
+        paste0(
+          "[%s.is(':visible'), %s.hasClass('is-invalid'), %s.val(), %s]",
+          ".join('|')"
+        ),
+        jq("title_edit"),
+        jq("title_edit"),
+        jq("block_name_in"),
+        paste0(jq("title_display"), ".find('.blockr-title').text()")
+      )
+    )
+  }
+
+  start()
+  expect_identical(state(), "true|false|Dataset|Dataset")
+
+  type("")
+  press("Enter")
+  expect_identical(state(), "true|true||")
+
+  press("Escape")
+  expect_identical(state(), "false|false|Dataset|Dataset")
+
+  start()
+  type("Renamed")
+
+  # Typing stays in the browser: the server holds the old name until the
+  # edit ends.
+  app$wait_for_idle()
+  expect_identical(app$get_value(input = id("block_name_in")), "Dataset")
+
+  press("Enter")
+  expect_identical(state(), "false|false|Renamed|Renamed")
+
+  # The field is the card's Shiny input, so the board takes the name and the
+  # dock tab shows it.
+  wait_js(
+    app,
+    paste(
+      "Array.from(document.querySelectorAll('.dv-tab'))",
+      ".some(function (t) { return t.textContent.trim() === 'Renamed'; })"
+    ),
+    function() "[card-rename] no tab reads 'Renamed'"
+  )
+})
+
 test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {
 
   df <- data.frame(
@@ -509,17 +1188,27 @@ test_that("block_cond_buckets drops status-phase rows from warnings (#290)", {
 test_that("block_status_style is the shared status-dot spec (#290)", {
 
   waiting <- block_status_style("waiting")
-  expect_identical(waiting$color, "#f59e0b")
+  expect_identical(waiting$color, "#d97706")
   expect_identical(waiting$size, 8L)
   expect_identical(waiting$ring, 2L)
   expect_identical(waiting$ring_color, "#ffffff")
   expect_identical(waiting$label, "Waiting for a data input")
 
-  expect_identical(block_status_style("unset")$color, "#eab308")
+  # Unset shares the amber of the empty field's cue (design system).
+  expect_identical(block_status_style("unset")$color, "#d97706")
   expect_identical(block_status_style("failed")$color, "#dc2626")
 
-  # `ready`, `dormant` and non-strings carry no indicator.
-  for (st in list("ready", "dormant", NULL, character(), c("a", "b"))) {
+  # The spec names the blockr.ui tokens and the shape too, so the DAG can draw
+  # the dot the dock draws: a waiting block is the one hollow badge.
+  expect_identical(waiting$token, "--blockr-color-border-warning")
+  expect_identical(waiting$ring_token, "--blockr-color-bg-surface")
+  expect_true(waiting$hollow)
+  expect_identical(waiting$outline, 1.5)
+  others <- lapply(c("stale", "unset", "failed"), block_status_style)
+  expect_false(any(lgl_xtr(others, "hollow")))
+
+  # The `ready` and `unevaluated` statuses and non-strings carry no indicator.
+  for (st in list("ready", "unevaluated", NULL, character(), c("a", "b"))) {
     expect_null(block_status_style(st))
   }
 })
@@ -538,13 +1227,10 @@ test_that("block_status_badge is the shared badge derivation (#314)", {
     block_status_style("failed")
   )
 
-  # `ready` and an absent status carry no badge.
+  # The `ready` and `unevaluated` statuses and an absent one carry no badge.
   expect_null(block_status_badge("ready"))
+  expect_null(block_status_badge("unevaluated"))
   expect_null(block_status_badge(NULL))
-
-  # `dormant` is indeterminate: `NA` tells a persistent renderer to keep the
-  # existing badge rather than clear it.
-  expect_identical(block_status_badge("dormant"), NA)
 })
 
 test_that("a stale block carries a muted badge (#408)", {
@@ -571,11 +1257,16 @@ test_that("a stale block carries a muted badge (#408)", {
   # they were raised against inputs it no longer has, and it has not re-run, so
   # a red dot would assert a failure nobody has observed on the current inputs.
   expect_identical(block_status_badge("stale", 2L), stale)
+  expect_match(
+    block_status_dot_attrs("stale", 2L)$style,
+    "background-color:var(--blockr-color-text-muted, #6b7280)",
+    fixed = TRUE
+  )
 
-  # A dormant block keeps its error badge -- nothing about its inputs changed,
-  # so the last-known failure still describes them.
+  # Errors on an unevaluated block cannot predate a check it never had, so
+  # unlike a stale block's they still promote the badge to `failed`.
   expect_identical(
-    block_status_badge("dormant", 2L),
+    block_status_badge("unevaluated", 2L),
     block_status_style("failed")
   )
 
@@ -583,15 +1274,69 @@ test_that("a stale block carries a muted badge (#408)", {
   expect_null(block_status_note("stale"))
 })
 
+test_that("a parked block draws the badge of its last check (#485)", {
+
+  withr::local_options(blockr.background_construction_delay = 0)
+
+  # The tests above hand the badge statuses they spell out. Through core's own
+  # board server, a block checked off screen by an `evaluate` request goes on
+  # reporting what that check found once it is parked again, so it shows the
+  # failure without ever having been on screen.
+  board <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block("iris"),
+      b = new_subset_block(subset = "no_such_column > 1")
+    ),
+    links = c(ab = new_link("a", "b"))
+  )
+
+  testServer(
+    board_server,
+    {
+      session$flushReact()
+
+      expect_identical(reval_if(rv$eval[["b"]]), "unevaluated")
+      expect_null(block_status_badge(reval_if(rv$eval[["b"]])))
+
+      board_update(list(evaluate = "b"))
+      session$flushReact()
+
+      expect_length(rv$evaluating(), 0L)
+      expect_identical(reval_if(rv$eval[["b"]]), "failed")
+      expect_identical(
+        block_status_badge(reval_if(rv$eval[["b"]])),
+        block_status_style("failed")
+      )
+    },
+    args = list(
+      x = board,
+      plugins = blockr_app_plugins(board),
+      options = blockr_app_options(board),
+      callbacks = board_server_callback,
+      callback_location = "start"
+    )
+  )
+})
+
 test_that("block status indicator + note reflect eval status (#290)", {
 
   waiting_dot <- block_status_dot_attrs("waiting")
-  expect_match(waiting_dot$style, "#f59e0b", fixed = TRUE)
+  expect_match(waiting_dot$style, "#d97706", fixed = TRUE)
   expect_identical(waiting_dot$title, "Waiting for a data input")
   expect_identical(waiting_dot[["aria-label"]], "Waiting for a data input")
-  # The white ring is carried in the written style from the shared spec, not
-  # the CSS.
-  expect_match(waiting_dot$style, "0 0 0 2px #ffffff", fixed = TRUE)
+  # The ring around the dot is the surface colour, with the shared spec's
+  # white as its fallback. A waiting block draws a hollow amber ring, so the
+  # solid amber dot stays with the block that needs input.
+  expect_match(
+    waiting_dot$style,
+    "0 0 0 2px var(--blockr-color-bg-surface, #ffffff)",
+    fixed = TRUE
+  )
+  expect_match(
+    waiting_dot$style,
+    "inset 0 0 0 1.5px var(--blockr-color-border-warning, #d97706)",
+    fixed = TRUE
+  )
 
   # An error condition reddens the dot even when the eval status is `ready`,
   # matching the DAG node badge.
@@ -601,7 +1346,7 @@ test_that("block status indicator + note reflect eval status (#290)", {
     fixed = TRUE
   )
 
-  expect_match(block_status_dot_attrs("unset")$style, "#eab308", fixed = TRUE)
+  expect_match(block_status_dot_attrs("unset")$style, "#d97706", fixed = TRUE)
   expect_match(block_status_dot_attrs("failed")$style, "#dc2626", fixed = TRUE)
 
   expect_match(
@@ -617,12 +1362,12 @@ test_that("block status indicator + note reflect eval status (#290)", {
   # `failed` keeps the error styling, so no placeholder note.
   expect_null(block_status_note("failed"))
 
-  # A `ready` or `dormant` block, and an absent status, carry no affordance:
-  # the dot's attributes are all cleared rather than left stale from the last
-  # status.
+  # A `ready` or `unevaluated` block, and an absent status, carry no
+  # affordance: the dot's attributes are all cleared rather than left stale
+  # from the last status.
   blank <- list(style = "", title = "", role = "", `aria-label` = "")
 
-  for (st in list("ready", "dormant", NULL, character(), c("a", "b"))) {
+  for (st in list("ready", "unevaluated", NULL, character(), c("a", "b"))) {
     expect_identical(block_status_dot_attrs(st), blank)
     expect_null(block_status_note(st))
   }
@@ -658,7 +1403,7 @@ test_that("edit block server surfaces eval status reactively (#290)", {
       session$flushReact()
 
       expect_identical(blk_status(), "waiting")
-      expect_match(output$status_indicator$style, "#f59e0b", fixed = TRUE)
+      expect_match(output$status_indicator$style, "#d97706", fixed = TRUE)
       expect_identical(output$status_note, list(`data-status` = "waiting"))
 
       status("failed")

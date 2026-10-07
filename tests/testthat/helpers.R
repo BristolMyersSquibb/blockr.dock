@@ -159,26 +159,38 @@ fire_action <- function(gen, trigger, board) {
 }
 
 # Stand-in for the `visibility` channel blockr.core hands the board callback:
-# three environments of per-block reactiveVals (`required`, `visible`,
-# `frozen`), one slot per block, mirroring core's add_vis_slots at construction
-# (which seeds every board block before the callback runs). `visible` is logical
-# (the dock's build ledger: !is.na = ever built), matching core's slot. The dock
-# writes values into these slots; core owns their lifecycle in the real thing.
-# Pass the block ids to seed, or a board handle to seed from its blocks.
+# two environments of per-block reactiveVals (`visible`, `frozen`), one slot
+# per block, mirroring core's add_vis_slots at construction (which seeds every
+# board block before the callback runs). The `visible` slot is logical (the
+# dock's build ledger: !is.na = ever built), matching core's. The dock writes
+# values into these slots; core owns their lifecycle in the real thing. Pass
+# the block ids to seed, or a board handle to seed from its blocks.
 fake_visibility <- function(x = character()) {
   ids <- if (is.character(x)) x else board_block_ids(shiny::isolate(x$board))
 
   vis <- list(
-    required = new.env(parent = emptyenv()),
     visible = new.env(parent = emptyenv()),
     frozen = new.env(parent = emptyenv())
   )
   for (id in ids) {
-    vis$required[[id]] <- shiny::reactiveVal(NA)
     vis$visible[[id]] <- shiny::reactiveVal(NA)
     vis$frozen[[id]] <- shiny::reactiveVal(FALSE)
   }
   vis
+}
+
+# The blocks the dock holds eager in `update`'s pending payload, as core would
+# read them: one `eager` delta, keyed by the owner label the dock declared. The
+# delta is a `set`, so this is the whole of what the dock holds.
+held_eager <- function(update, owner = NULL) {
+  held <- shiny::isolate(update())[["eager"]]
+
+  if (is.null(owner)) {
+    testthat::expect_length(held, 1L)
+    owner <- names(held)
+  }
+
+  held[[owner]][["set"]]
 }
 
 # Resolve a view's stable id from its display label. Views are keyed by
@@ -291,6 +303,100 @@ read_view_docks <- function(app, board_id = "my_board") {
   )
 }
 
+# Click a view's nav entry the way a user does. The item is a plain div behind
+# a delegated handler, not a Shiny input, so a synthetic DOM click is the
+# gesture -- `app$click()` drives inputs.
+click_view <- function(app, view, board_id = "my_board") {
+  app$run_js(
+    sprintf(
+      paste0(
+        "document.querySelector('#%s-view_nav ",
+        ".blockr-view-item[data-view-id=\"%s\"]').click()"
+      ),
+      board_id, view
+    )
+  )
+}
+
+# Start recording what the view nav does, discarding anything recorded before:
+# every value it reports to the server, and every message the server pushes
+# into it. Reports are read off `shiny:inputchanged`, which sits ahead of
+# Shiny's no-resend dedup in the input pipeline, so it observes the report the
+# binding made rather than only those that survive dedup -- the level a nav
+# echo lives at, since a deduped echo never reaches the server yet is still a
+# report. The push log is what makes the report tally exact: `receiveMessage`
+# is wrapped so a push is logged only once applied, so a push whose value has
+# shown up has already contributed any report it was going to.
+watch_view_nav <- function(app, board_id = "my_board") {
+  app$run_js(
+    sprintf(
+      paste0(
+        "window.__viewNavReports = [];",
+        "window.__viewNavPushes = [];",
+        "$(document).off('shiny:inputchanged.viewNavProbe');",
+        "$(document).on('shiny:inputchanged.viewNavProbe', function (e) {",
+        "  if (e.name === '%s-view_nav') {",
+        "    window.__viewNavReports.push(e.value);",
+        "  }",
+        "});",
+        "var b = Shiny.inputBindings.bindingNames['blockr.view'].binding;",
+        "if (!b.__viewNavProbed) {",
+        "  var orig = b.receiveMessage;",
+        "  b.receiveMessage = function (el, data) {",
+        "    var res = orig.call(this, el, data);",
+        "    window.__viewNavPushes.push(data.value || null);",
+        "    return res;",
+        "  };",
+        "  b.__viewNavProbed = true;",
+        "}"
+      ),
+      board_id
+    )
+  )
+}
+
+view_nav_reports <- function(app) {
+  as.character(unlist(app$get_js("window.__viewNavReports")))
+}
+
+# Wait until the server has pushed `view` into the nav and the binding has
+# applied it. `insertUI(immediate = TRUE)` puts a view's dock container on the
+# wire ahead of the flush that carries the input message, so the dock landing
+# says nothing about the push; this waits on the push itself.
+wait_view_nav_push <- function(app, view, timeout = 30 * 1000) {
+  diagnose <- function() {
+    sprintf(
+      "[view-nav-push] want=%s got=%s", view,
+      app$get_js("JSON.stringify(window.__viewNavPushes)")
+    )
+  }
+
+  wait_js(
+    app,
+    sprintf("window.__viewNavPushes.indexOf('%s') !== -1", view),
+    diagnose,
+    timeout
+  )
+}
+
+# Deliver a message to the nav binding exactly as `sendInputMessage("view_nav",
+# ...)` does, but without the server: `payload` is the JSON the server would
+# send (`{"value": ...}`, `{"add": {...}}`). What the nav must not do with a
+# programmatic update is a client-side round trip -- receiveMessage reporting
+# the pushed value straight back through subscribe() -- so driving
+# receiveMessage directly states that contract with no timing in it.
+push_view_nav <- function(app, payload, board_id = "my_board") {
+  app$run_js(
+    sprintf(
+      paste0(
+        "Shiny.inputBindings.bindingNames['blockr.view'].binding",
+        ".receiveMessage(document.getElementById('%s-view_nav'), %s);"
+      ),
+      board_id, payload
+    )
+  )
+}
+
 # Wrap `wait_for_js` so a timeout dumps the page state before failing. The
 # queue-only e2e flakes never reproduce locally, so a residual timeout has to
 # carry enough context to be actionable rather than an opaque "JS did not
@@ -399,6 +505,46 @@ wait_view_nav <- function(app, n, board_id = "my_board", timeout = 30 * 1000) {
   )
 }
 
+# Wait until `view`'s dock container has been inserted. Off-screen views are
+# deferred, so the handle lands when the server processes that view's first
+# visit -- which makes it the gate for "the server acted on this switch",
+# without reading the client-toggled active class wait_dock_loaded warns
+# about. It says nothing about the nav push that follows in the same flush,
+# which goes out behind this `immediate = TRUE` insert: use
+# wait_view_nav_push() for that.
+wait_view_handle <- function(app, view, board_id = "my_board",
+                             timeout = 30 * 1000) {
+  wait_js(
+    app,
+    sprintf(
+      "document.querySelector('#%s-view_handle-%s') !== null", board_id, view
+    ),
+    function() dock_shell_diag(app, board_id),
+    timeout
+  )
+}
+
+# Wait until `view`'s dock is the shown one. `blockr-view-dock-active` is
+# toggled by the `switch-view` handler, whose retry budget can lapse while the
+# target dock is still being inserted -- so this is only sound once the handle
+# is up (wait_view_handle), where the handler applies the class on its first
+# attempt. Use it for a return visit, never for a first one.
+wait_view_dock_active <- function(app, view, board_id = "my_board",
+                                  timeout = 30 * 1000) {
+  wait_js(
+    app,
+    sprintf(
+      paste0(
+        "document.querySelector(",
+        "'#%s-view_handle-%s.blockr-view-dock-active') !== null"
+      ),
+      board_id, view
+    ),
+    function() dock_shell_diag(app, board_id),
+    timeout
+  )
+}
+
 # The dock-owned board state observable in server-rendered DOM: the view nav
 # (one row per view, including which is active), and every block's card id. The
 # serialization e2e captures this before and after a save / restore reload to
@@ -441,6 +587,69 @@ block_panel_tabs <- function(app, board_id = "my_board") {
   )
   nodes <- xml2::xml_find_all(html, "//*[contains(@id, '-tab-block_panel-')]")
   sort(sub(".*-tab-(block_panel-.+)$", "\\1", xml2::xml_attr(nodes, "id")))
+}
+
+# The dockview groups one board's views render, as their laid-out rectangles.
+# A narrow board stacks its groups into one scrolling column, so what separates
+# the collapsed render from the nested one is the geometry, not the count: the
+# rows share a left edge and a width and differ in `top`. There is no CSS
+# selector in `xml2`, and the same bundle ships a `dv-group-view` class
+# alongside `dv-groupview`, so this reads the rects from the live DOM instead.
+dock_group_rects <- function(app, board_id = "my_board") {
+  jsonlite::fromJSON(
+    app$get_js(
+      sprintf(
+        paste0(
+          "JSON.stringify(Array.from(document.querySelectorAll(",
+          "'#%s-view_container .dv-groupview')).map(function(e){",
+          "var r=e.getBoundingClientRect();",
+          "return {top:Math.round(r.top), left:Math.round(r.left),",
+          " width:Math.round(r.width), height:Math.round(r.height)};}))"
+        ),
+        board_id
+      )
+    )
+  )
+}
+
+# Whether the page itself scrolls, and by how much -- the property the stack
+# depends on. A squeezed stack (dockView dividing a viewport-height box) leaves
+# the document exactly the viewport's height.
+page_scroll_extent <- function(app) {
+  jsonlite::fromJSON(
+    app$get_js(
+      paste0(
+        "JSON.stringify({docH: document.documentElement.scrollHeight,",
+        " viewH: window.innerHeight})"
+      )
+    )
+  )
+}
+
+# Wait until the view container has settled to exactly `n` dockview groups.
+# A restore mounts asynchronously and transiently surfaces a tab group's
+# members as separate leaves, so reading the count straight after
+# `wait_for_idle()` (server idle, client render in flight) samples that
+# transient and ejects a green PR.
+wait_dock_groups <- function(app, n, board_id = "my_board",
+                             timeout = 30 * 1000) {
+  js <- sprintf(
+    paste0(
+      "document.querySelectorAll(",
+      "'#%s-view_container .dv-groupview').length === %d"
+    ),
+    board_id, n
+  )
+
+  diagnose <- function() {
+    sprintf(
+      "[dock-groups] want=%d got=%d shell=%s",
+      n, nrow(dock_group_rects(app, board_id)),
+      dock_shell_diag(app, board_id)
+    )
+  }
+
+  wait_js(app, js, diagnose, timeout)
 }
 
 # The block panels whose tab is the *front* (active) tab of its dockview group,

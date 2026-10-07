@@ -20,9 +20,19 @@ board_ui.dock_board <- function(
   dock_outputs <- dock_outputs_ui(id, views)
 
   tagList(
+    # Ahead of blockr_dock_dep(), so the shared tokens and theme land first
+    # and this package's own rules override them by source order.
+    blockr.ui::theme_dep(),
+    blockr.ui::controls_dep(),
     show_block_dep(),
     attr_output_dep(),
+    add_block_menu_dep(),
+    block_rename_dep(),
     blockr_dock_dep(),
+    tooltip_dep(),
+    compact_dep(),
+    viewport_probe_ui(id),
+    rail_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
       title = "Offcanvas blocks",
@@ -92,6 +102,7 @@ board_ui.dock_board <- function(
           class = "btn action-button blockr-navbar-icon-btn",
           `data-blockr-sidebar-target` = NS(id, "settings_sidebar"),
           `aria-label` = "Board options",
+          title = "Board options",
           bsicons::bs_icon("gear")
         )
       )
@@ -113,19 +124,13 @@ board_ui.dock_board <- function(
     # DOM ids. Action handlers reach the matching mount by reading
     # `board$board_id` (set by blockr.core in the board's reactiveValues)
     # and composing `NS(board$board_id, "actions_sidebar")` at server time.
-    # Contract: one sidebar = one concern. We mount four on the right
-    # (matching their navbar triggers) but with different modes so they
-    # coexist cleanly when both are open:
-    #   * "actions_sidebar":  the remaining trigger-specific handlers
-    #     (add link, add/edit stack, and the dormant prepend block).
-    #     Body is populated server-side via `show_sidebar()` because each
-    #     ships a freshly-built, trigger-dependent form.
-    #   * "add_block_sidebar" / "append_block_sidebar": the block browser
-    #     for the add and append flows. Both catalogues are registry-based
-    #     (board- / source-independent), so their bodies are pre-rendered
-    #     here at UI-build time and the handlers just toggle them open, so
-    #     opening never re-renders. The source for append is supplied
-    #     server-side at commit.
+    # Contract: one sidebar = one concern. We mount two on the right
+    # with different modes so they coexist cleanly when both are open
+    # (adding a block is the "+" menu, add-block-menu.R, not a sidebar):
+    #   * "actions_sidebar":  the trigger-specific editors (add and edit
+    #     link, add and edit stack, block inputs). Body is populated
+    #     server-side via `show_sidebar()` because each ships a
+    #     freshly-built, trigger-dependent form.
     #   * "settings_sidebar": the navbar gear's board-options panel.
     #     `overlay` mode: layers above the page (and above the action
     #     panel when both are pinned) without reflowing content. Body is
@@ -147,45 +152,13 @@ board_ui.dock_board <- function(
       mode = "overlay",
       side = "right"
     ),
-    # "add_block_sidebar": the add-block browser. Its catalogue is the
-    # registry and never varies, so the body is pre-rendered here once
-    # rather than rebuilt on every open (the dynamic actions_sidebar
-    # path). The id is composed so the markup lands under the
-    # `add_block_action` server's namespace - that handler mounts
-    # `block_browser_server("browser")` and just toggles this panel
-    # (`show_sidebar()` with no `ui`), so opening it never re-renders.
-    sidebar_ui(
-      NS(id, "add_block_sidebar"),
-      ui = block_browser_ui(
-        NS(NS(id, "add_block_action"), "browser")
-      ),
-      title = "Add new block",
-      mode = "overlay",
-      side = "right"
-    ),
-    # "append_block_sidebar": the append browser. Its linkable-block
-    # catalogue is registry-based, not source-specific, so it too is
-    # pre-rendered once (via the source-less `append_to()` descriptor).
-    # The right-clicked source is supplied server-side by the append
-    # action at commit; the "Append from X" context goes in the sidebar
-    # title. Composed id so the markup lands under the
-    # `append_block_action` server's namespace.
-    sidebar_ui(
-      NS(id, "append_block_sidebar"),
-      ui = block_browser_ui(
-        NS(NS(id, "append_block_action"), "browser"),
-        target = append_to()
-      ),
-      title = "Append new block",
-      mode = "overlay",
-      side = "right"
-    ),
     sidebar_ui(
       NS(id, "settings_sidebar"),
       ui = settings_body(id, x, options = options),
       title = "Board options",
       mode = "overlay",
-      side = "right"
+      side = "right",
+      back = TRUE
     )
   )
 }
@@ -197,15 +170,15 @@ board_ui.dock_board <- function(
 dock_outputs_ui <- function(id, views) {
   div(
     id = NS(id, "view_container"),
-    class = "blockr-view-container",
-    style = "position: relative; height: calc(100vh - 48px);"
+    class = "blockr-view-container blockr-attr-output"
   )
 }
 
 #' Build the body of the board-options sidebar.
 #'
-#' Returns a tagList containing the same options accordion that the
-#' Bootstrap offcanvas used to render. Called at server time from
+#' Returns the options sidebar's body: a list of option categories, each
+#' opening a page with that category's options (see
+#' `options_sidebar_ui()`). Called at server time from
 #' `board_server_callback()` when the user clicks the navbar gear, and
 #' passed to `show_sidebar()`.
 #'
@@ -213,7 +186,7 @@ dock_outputs_ui <- function(id, views) {
 #' custom_options(...))` via `blockr_app_server.dock_board()` →
 #' `board_server_callback()` → `settings_observer()`) wins. When the
 #' caller passed nothing, falls back to `blockr.core::blockr_app_options(x)`
-#' so the accordion still includes options contributed by blocks on the
+#' so the sidebar still includes options contributed by blocks on the
 #' board and by registered block constructors, the same set `serve()`
 #' would have computed on the default path.
 #'
@@ -239,8 +212,8 @@ settings_body <- function(
     opt_ui_or_null("generate_code", plugins, x)
   )
 
-  # Locked board: the options accordion writes board state via
-  # set_board_option_value(), which core's gate rejects while locked. Drop it
+  # Locked board: the options pages write board state via
+  # set_board_option_value(), which core's gate rejects while locked. Drop them
   # so the settings sidebar offers only the read-only generated-code export.
   if (is_dock_locked()) {
     return(generate_code)
@@ -253,32 +226,7 @@ settings_body <- function(
 
   stopifnot(is_board_options(options))
 
-  opts <- split(options, chr_ply(options, attr, "category"))
-
-  tagList(
-    generate_code,
-    hr(),
-    do.call(
-      accordion,
-      c(
-        list(
-          id = NS(id, "board_options"),
-          multiple = TRUE,
-          open = FALSE,
-          class = "accordion-flush"
-        ),
-        map(
-          do.call,
-          rep(list(accordion_panel), length(opts)),
-          map(
-            list,
-            title = names(opts),
-            lapply(opts, lapply, board_option_ui, id)
-          )
-        )
-      )
-    )
-  )
+  options_sidebar_ui(id, options, generate_code = generate_code)
 }
 
 spinner_delay_ms <- function() {
@@ -288,11 +236,45 @@ spinner_delay_ms <- function() {
   if (length(ms) != 1L || is.na(ms) || ms < 0L) 200L else ms
 }
 
+# The viewport-width probe: a hidden element whose input binding reports
+# `window.innerWidth` at Shiny's input initialisation, so the width lands in
+# the session's first input batch and `is_narrow_viewport()` can be answered
+# before the first dock is inserted. It never reports again -- the narrow
+# decision is taken once per session.
+viewport_probe_ui <- function(id) {
+  div(
+    id = NS(id, "viewport_width"),
+    class = "blockr-viewport-probe",
+    style = "display: none;",
+    viewport_probe_dep()
+  )
+}
+
+viewport_probe_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-viewport-probe",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "viewport-probe.js"
+  )
+}
+
 blockr_dock_dep <- function() {
   htmltools::htmlDependency(
     "blockr-fab",
     pkg_version(),
     src = pkg_file("assets", "css"),
     stylesheet = "blockr-dock.css"
+  )
+}
+
+# The dock chrome's tooltips go to Blockr.tooltip, blockr.ui's light card,
+# which `blockr.ui::controls_dep()` brings (see block-tooltips.js).
+tooltip_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-dock-tooltips",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "block-tooltips.js"
   )
 }

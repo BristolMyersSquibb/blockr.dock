@@ -249,6 +249,30 @@ test_that("a grid in views$mod is rejected at the update boundary", {
   )
 })
 
+test_that("a grid-seeded add cannot place a panel twice", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a")
+  )
+
+  # Seeding geometry validates the grid while the update is staged, so every
+  # producer that routes through the delta inherits the check. Without it the
+  # duplicate survives to the render cast and aborts there in core's
+  # block-id vocabulary, far from whatever wrote the grid.
+  expect_error(
+    validate_board_update(
+      list(
+        views = list(
+          add = list(Split = dock_grid("block_panel-a", "block_panel-a"))
+        )
+      ),
+      brd
+    ),
+    class = "dock_grid_panel_duplicated"
+  )
+})
+
 test_that("apply_views: full delta round-trips through the board", {
 
   brd <- new_dock_board(
@@ -406,7 +430,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
   # instantiated (no DOM surgery). The proxy's membership matches the board and
   # the live layout is pending (NULL), so the layout check is a no-op and only
   # the rename fires.
-  docks <- reactiveValues()
+  docks <- reactives::reactive_vals()
   for (id in names(board_views(brd))) {
     ids <- as.character(view_members(board_views(brd)[[id]]))
     docks[[id]] <- list(
@@ -416,7 +440,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
   }
   active_dock <- reactiveValues()
   client_active <- reactiveVal(active_view(board_views(brd)))
-  client_views <- reactiveVal(seed_view_state(board_views(brd)))
+  client_views <- new_client_views(board_views(brd))
 
   # The board carries the new name; the live state still has the old one, so
   # reconcile detects the rename and relabels the nav + client_views.
@@ -433,7 +457,7 @@ test_that("reconcile_views syncs the nav and live state on rename", {
       identical(m$rename$id, "v1") && identical(m$rename$to, "New")
     }))
   )
-  expect_identical(view_name(isolate(client_views())[["v1"]]), "New")
+  expect_identical(isolate(client_views[["v1"]]), "New")
 })
 
 test_that("blocks$rm auto-augments views$mod for every affected view", {
@@ -1050,7 +1074,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     # Registry pre-populated for every view (proxy membership matching the
     # board); the DOM helpers are mocked so the test exercises reconcile's
     # nav-sync, not the live teardown / switch.
-    docks <- reactiveValues()
+    docks <- reactives::reactive_vals()
     for (id in names(state)) {
       ids <- as.character(view_members(state[[id]]))
       docks[[id]] <- list(
@@ -1061,8 +1085,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
     active_dock <- reactiveValues()
     client_active <- reactiveVal(name_to_id[[active_label]])
 
-    active_view(state) <- name_to_id[[active_label]]
-    client_views <- reactiveVal(seed_view_state(state))
+    client_views <- new_client_views(state)
 
     # Remove on the board (pure), then reconcile the live session against it.
     removed <- apply_views_rm(name_to_id[[rm_label]], brd)
@@ -1074,7 +1097,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
                         client_active, client_views, session)
       ),
       remove_view = function(view_id, session, docks) {
-        trim_rv(docks, view_id)
+        docks[view_id] <- NULL
         invisible()
       },
       hide_view_ui = function(...) NULL,
@@ -1083,7 +1106,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
       ensure_block_ui = function(...) NULL
     )
 
-    list(sent = sent, ids = name_to_id)
+    list(sent = sent, ids = name_to_id, shown = names(client_views))
   }
 
   # Removing a non-active view drops its tab; the active selection is
@@ -1094,6 +1117,7 @@ test_that("reconcile_views syncs the view_nav switcher on removal", {
       identical(m$remove, non_active$ids[["B"]])
     }))
   )
+  expect_identical(non_active$shown, unname(non_active$ids[c("A", "C")]))
 
   # Removing the active view drops its tab and switches to a survivor.
   was_active <- run_rm("A", "A")
@@ -1120,18 +1144,57 @@ test_that("apply_views_rm is a pure board transform", {
   expect_identical(unname(view_names(board_views(out))), "A")
 })
 
-test_that("reorder_by_move swaps a neighbour and clamps at the ends", {
+test_that("a drag's order is taken only as a permutation of the current one", {
 
   o <- c("A", "B", "C")
 
-  expect_identical(reorder_by_move(o, "B", "up"), c("B", "A", "C"))
-  expect_identical(reorder_by_move(o, "B", "down"), c("A", "C", "B"))
+  expect_identical(dragged_order(o, list("C", "A", "B")), c("C", "A", "B"))
 
-  # A boundary nudge or an unknown id yields the same order (the observer then
-  # emits nothing).
-  expect_identical(reorder_by_move(o, "A", "up"), o)
-  expect_identical(reorder_by_move(o, "C", "down"), o)
-  expect_identical(reorder_by_move(o, "Z", "up"), o)
+  # Stale or malformed: a missing, an extra or a repeated id.
+  expect_null(dragged_order(o, list("C", "A")))
+  expect_null(dragged_order(o, list("C", "A", "B", "D")))
+  expect_null(dragged_order(o, list("C", "C", "A")))
+})
+
+test_that("a refused drag gets the current order pushed back", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    views = list(A = "a", B = "b")
+  )
+
+  ids <- names(board_views(brd))
+  updates <- list()
+  pushed <- list()
+
+  testServer(
+    function(input, output, session) {
+      reorder_view_observer(
+        new_client_views(board_views(brd)),
+        list(
+          input = input,
+          sendInputMessage = function(id, msg) {
+            pushed[[length(pushed) + 1L]] <<- msg
+          }
+        ),
+        update = function(x) updates[[length(updates) + 1L]] <<- x
+      )
+    },
+    {
+      session$setInputs(view_nav_reorder = list(order = as.list(rev(ids))))
+
+      expect_identical(updates, list(list(views = list(order = rev(ids)))))
+      expect_length(pushed, 0L)
+
+      # The client still lists one page the server has since dropped.
+      session$setInputs(
+        view_nav_reorder = list(order = as.list(c(rev(ids), "gone")))
+      )
+
+      expect_length(updates, 1L)
+      expect_identical(pushed, list(list(order = as.list(ids))))
+    }
+  )
 })
 
 test_that("apply_views_order reorders views, keeping the active one", {
@@ -1225,7 +1288,7 @@ test_that("reconcile_views pushes the settled order to the nav", {
     sendCustomMessage = function(type, message) invisible()
   )
 
-  docks <- reactiveValues()
+  docks <- reactives::reactive_vals()
   for (id in names(board_views(brd))) {
     ids <- as.character(view_members(board_views(brd)[[id]]))
     docks[[id]] <- list(
@@ -1235,7 +1298,7 @@ test_that("reconcile_views pushes the settled order to the nav", {
   }
   active_dock <- reactiveValues()
   client_active <- reactiveVal(active_view(board_views(brd)))
-  client_views <- reactiveVal(seed_view_state(board_views(brd)))
+  client_views <- new_client_views(board_views(brd))
 
   # The board now carries [B, A]; the client still shows [A, B], so reconcile
   # detects the reorder, pushes the order and re-sequences client_views.
@@ -1252,5 +1315,5 @@ test_that("reconcile_views pushes the settled order to the nav", {
       identical(as.character(unlist(m$order)), c("B", "A"))
     }))
   )
-  expect_identical(names(isolate(client_views())), c("B", "A"))
+  expect_identical(names(client_views), c("B", "A"))
 })

@@ -42,6 +42,6 @@ echo) as a \code{dock_layout}; \code{is_dock_layout()} is the class check;
 \code{validate_dock_layout()} returns its input and errors on a malformed shape.
 Cast across the seam with \code{as_dock_layout()} (build the dockView payload
 from a \link[=dock-grid]{dock_grid} against the board's blocks and extensions),
-\code{\link[=as_dock_grid]{as_dock_grid()}} (canonical geometry from a layout) and
+\code{\link[=as_dock_grid]{as_dock_grid()}} (canonical geometry from a layout, rails included) and
 \link[=dock_view]{as_dock_view()} (membership from a layout).
 }

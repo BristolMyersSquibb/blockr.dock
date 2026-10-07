@@ -19,19 +19,22 @@
 .blockr-block-browser,
 .blockr-stack-menu,
 .blockr-link-menu {
-  --bb-grey-50: #f9fafb;
-  --bb-grey-100: #f3f4f6;
-  --bb-grey-200: #e5e7eb;
-  --bb-grey-300: #d1d5db;
-  --bb-grey-400: #9ca3af;
-  --bb-grey-500: #6b7280;
-  --bb-grey-600: #4b5563;
-  --bb-grey-700: #374151;
-  --bb-grey-900: #111827;
-  --bb-blue-100: #dbeafe;
-  --bb-blue-500: #3b82f6;
-  --bb-blue-600: #2563eb;
-  --bb-blue-700: #1d4ed8;
+  /* Aliases for blockr.ui's ramps, so the dark scheme and a theme reach
+     these menus; the literals are the fallback without the token sheet. The
+     blues name the accent ramp, so an accent theme reaches them too. */
+  --bb-grey-50: var(--blockr-grey-50, #f9fafb);
+  --bb-grey-100: var(--blockr-grey-100, #f3f4f6);
+  --bb-grey-200: var(--blockr-grey-200, #e5e7eb);
+  --bb-grey-300: var(--blockr-grey-300, #d1d5db);
+  --bb-grey-400: var(--blockr-grey-400, #9ca3af);
+  --bb-grey-500: var(--blockr-grey-500, #6b7280);
+  --bb-grey-600: var(--blockr-grey-600, #4b5563);
+  --bb-grey-700: var(--blockr-grey-700, #374151);
+  --bb-grey-900: var(--blockr-grey-900, #111827);
+  --bb-blue-100: var(--blockr-accent-100, #dbeafe);
+  --bb-blue-500: var(--blockr-accent-500, #3b82f6);
+  --bb-blue-600: var(--blockr-accent-600, #2563eb);
+  --bb-blue-700: var(--blockr-accent-700, #1d4ed8);
   /* Compact density (the spec's finalized default): 32px icon tile, the
      glyph filling more of it (16px -> 0.5 ratio vs the airier 40/18). */
   --bb-icon: 32px;
@@ -44,8 +47,8 @@
   gap: 12px;
   height: 100%;
   min-height: 0;
-  margin: -16px;
-  padding: 16px;
+  margin: -16px -20px;
+  padding: 16px 20px;
 
   /* Inherit the app/theme typeface (the prototype sets no font-family);
      only the colour is fixed here. */
@@ -54,14 +57,14 @@
 
 .blockr-block-browser-context {
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: var(--blockr-font-size-xs);
   color: var(--bb-grey-500);
   margin: 0;
 }
 
 .blockr-block-browser-context strong {
   color: var(--bb-grey-900);
-  font-weight: 600;
+  font-weight: var(--blockr-font-weight-semibold);
 }
 
 /* Search input. Soft grey field with a blue focus ring (prototype). */
@@ -74,7 +77,7 @@
   background: var(--bb-grey-50)
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239ca3af'><path d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/></svg>")
     no-repeat 14px center / 14px 14px;
-  font-size: 14px;
+  font-size: var(--blockr-font-size-base);
   color: var(--bb-grey-900);
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
@@ -104,8 +107,8 @@
 .blockr-block-browser-category h3 {
   margin: 0 0 4px 0;
   padding: 0 12px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-medium);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--bb-grey-500);
@@ -142,7 +145,7 @@
 .blockr-block-browser-card:hover,
 .blockr-block-browser-card:focus-within {
   border-color: var(--bb-grey-200);
-  background: rgba(249, 250, 251, 0.6);
+  background: var(--blockr-color-bg-subtle);
 }
 
 /* Expanded card: lifts out of the flush list as a contained white panel
@@ -151,7 +154,7 @@
   margin: 8px 0;
   border-color: var(--bb-grey-200);
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--blockr-color-bg-raised);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05),
     0 10px 24px rgba(15, 23, 42, 0.08);
 }
@@ -160,7 +163,7 @@
    the grey hover/expanded state. Driven by the JS keydown handler. */
 .blockr-block-browser-card.card-selected {
   border-color: var(--bb-blue-500);
-  background: rgba(59, 130, 246, 0.06);
+  background: var(--blockr-color-bg-selected);
 }
 
 .blockr-block-browser-card.hidden {
@@ -245,8 +248,8 @@
 
 .blockr-block-browser-card-name {
   flex: 1 1 auto;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--blockr-font-size-base);
+  font-weight: var(--blockr-font-weight-medium);
   color: var(--bb-grey-900);
   line-height: 1.4;
   overflow: hidden;
@@ -262,8 +265,8 @@
   background: var(--bb-grey-100);
   color: var(--bb-grey-500);
   border-radius: 999px;
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-medium);
   white-space: nowrap;
 }
 
@@ -307,7 +310,7 @@
   margin: 8px 0 0 0;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--bb-grey-100);
-  font-size: 12px;
+  font-size: var(--blockr-font-size-xs);
   color: var(--bb-grey-500);
   line-height: 1.45;
 }
@@ -340,8 +343,8 @@
 }
 
 .blockr-block-browser-field label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-semibold);
   color: var(--bb-grey-600);
 }
 
@@ -354,15 +357,15 @@
   border-radius: 8px;
   background: var(--bb-grey-50);
   color: var(--bb-grey-900);
-  font-size: 13px;
+  font-size: var(--blockr-font-size-sm);
   transition: border-color 150ms ease, background 150ms ease,
     box-shadow 150ms ease;
 }
 
 /* The block id is identifier-like; render it monospace (spec). */
 .blockr-block-browser-field-id input {
-  font-family: "SF Mono", "Fira Code", "Consolas", "Monaco", monospace;
-  font-size: 12.5px;
+  font-family: var(--blockr-font-mono);
+  font-size: var(--blockr-font-size-sm);
 }
 
 /* Native select arrow replaced with a grey chevron, room reserved for it. */
@@ -378,9 +381,9 @@
 .blockr-block-browser-field input:focus,
 .blockr-block-browser-field select:focus {
   outline: none;
-  background: #ffffff;
+  background: var(--blockr-color-bg-surface);
   border-color: var(--bb-blue-500);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  box-shadow: var(--blockr-focus-ring);
 }
 
 /* Field visibility is decided server-side: block_browser_ui() renders
@@ -402,10 +405,10 @@
   padding: 0 15px;
   border: 1px solid var(--bb-grey-200);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--blockr-color-bg-surface);
   color: var(--bb-blue-700);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-semibold);
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
 }
@@ -432,7 +435,7 @@
   align-items: center;
   justify-content: center;
   color: var(--bb-grey-400);
-  font-size: 14px;
+  font-size: var(--blockr-font-size-base);
   padding: 32px 16px;
   text-align: center;
 }

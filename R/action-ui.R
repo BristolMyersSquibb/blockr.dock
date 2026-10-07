@@ -1,92 +1,3 @@
-css_modal <- function() {
-  tags$style(
-    HTML(
-      "#shiny-modal .modal-header {
-        padding: 12px 20px;
-        border-bottom: 1px solid #e2e8f0;
-      }
-      #shiny-modal .modal-title {
-        font-size: 1.125rem;
-        font-weight: 600;
-        margin: 0;
-      }
-      #shiny-modal .modal-body {
-        padding: 20px;
-      }
-      #shiny-modal .modal-body .form-group {
-        width: 100%;
-        margin-bottom: 16px;
-      }
-      #shiny-modal .modal-body .selectize-input,
-      #shiny-modal .modal-body input[type='text'] {
-        width: 100%;
-      }
-      #shiny-modal .modal-body .shiny-input-container {
-        width: 100%;
-      }
-      #shiny-modal .modal-body .control-label {
-        font-size: 0.875rem;
-        color: #6c757d;
-        margin-bottom: 4px;
-        font-weight: normal;
-      }
-      #shiny-modal .modal-footer {
-        padding: 12px 20px;
-        border-top: 1px solid #e2e8f0;
-        gap: 8px;
-      }
-      #shiny-modal .modal-footer .btn {
-        font-size: 0.875rem;
-        padding: 0.375rem 0.75rem;
-      }"
-    )
-  )
-}
-
-css_modal_advanced <- function(id) {
-  tagList(
-    css_modal(),
-    tags$style(
-      HTML(
-        sprintf(
-          "#%s {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-          }
-          #%s.expanded {
-            max-height: 500px;
-            overflow: visible;
-            transition: max-height 0.5s ease-in;
-          }
-          .modal-advanced-toggle {
-            cursor: pointer;
-            user-select: none;
-            padding: 8px 0;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: #6c757d;
-            font-size: 0.875rem;
-          }
-          .modal-chevron {
-            transition: transform 0.2s;
-            display: inline-block;
-            font-size: 14px;
-            font-weight: bold;
-          }
-          .modal-chevron.rotated {
-            transform: rotate(90deg);
-          }",
-          id,
-          id
-        )
-      )
-    )
-  )
-}
-
 css_block_selectize <- function() {
   tags$style(
     HTML(
@@ -127,12 +38,12 @@ css_block_selectize <- function() {
       .block-name {
         font-weight: 600;
         font-size: 15px;
-        color: #212529;
+        color: var(--blockr-color-text-default);
         flex: 1;
       }
       .block-desc {
         font-size: 13px;
-        color: #6c757d;
+        color: var(--blockr-color-text-muted);
         line-height: 1.4;
       }
       .badge-two-tone {
@@ -147,18 +58,18 @@ css_block_selectize <- function() {
         flex-shrink: 0;
       }
       .selectize-dropdown .block-option {
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--blockr-color-border-default);
       }
       .selectize-dropdown .block-option:last-child {
         border-bottom: none;
       }
       .selectize-dropdown .block-option:hover,
       .selectize-dropdown .block-option.active {
-        background-color: #e9ecef;
+        background-color: var(--blockr-color-bg-hover);
       }
       .selectize-input .remove {
         text-decoration: none !important;
-        color: #6c757d !important;
+        color: var(--blockr-color-text-muted) !important;
         font-weight: normal !important;
         border: none !important;
         margin-left: 8px !important;
@@ -167,8 +78,8 @@ css_block_selectize <- function() {
         transition: background-color 0.2s ease, color 0.2s ease;
       }
       .selectize-input .remove:hover {
-        background-color: rgba(108, 117, 125, 0.1) !important;
-        color: #495057 !important;
+        background-color: var(--blockr-color-bg-hover) !important;
+        color: var(--blockr-color-text-default) !important;
       }"
     )
   )
@@ -243,8 +154,10 @@ js_blk_selectize_render <- function() {
 
               var containerStyle =
                 'display: inline-flex; align-items: center; gap: 8px; ' +
-                'padding: 4px 8px; background-color: #f8f9fa; ' +
-                'border-radius: 6px; border: 1px solid #e9ecef;';
+                'padding: 4px 8px; ' +
+                'background-color: var(--blockr-color-bg-subtle); ' +
+                'border-radius: 6px; ' +
+                'border: 1px solid var(--blockr-color-border-default);';
               var iconWrapperStyle =
                 'background-color: ' + bgColor + '; width: 24px; ' +
                 'height: 24px; border-radius: 4px; display: flex; ' +
@@ -305,42 +218,32 @@ js_blk_selectize_render <- function() {
   )
 }
 
-auto_focus_script <- function(id) {
-  tags$script(
-    HTML(
-      sprintf(
-        "$('#shiny-modal').on(
-          'shown.bs.modal',
-          function() {
-            $('#%s')[0].selectize.focus();
-          }
-        );",
-        id
-      )
+blk_selectize <- function(id, options_data, selected = NULL, max_items = 1L,
+                          label = NULL, options = list()) {
+
+  items <- selected[!is.na(selected) & nzchar(selected)]
+
+  opts <- list(
+    options = options_data,
+    items = as.list(items),
+    valueField = "value",
+    labelField = "label",
+    searchField = c("label", "description", "searchtext"),
+    render = js_blk_selectize_render()
+  )
+
+  if (not_null(max_items)) {
+    opts[["maxItems"]] <- max_items
+  }
+
+  tagList(
+    css_block_selectize(),
+    selectizeInput(
+      id,
+      label = label,
+      choices = NULL,
+      multiple = !isTRUE(max_items == 1L),
+      options = utils::modifyList(opts, options)
     )
-  )
-}
-
-toggle_button <- function(opt_id, tog_id) {
-  div(
-    class = "modal-advanced-toggle text-muted",
-    id = tog_id,
-    onclick = sprintf(
-      "const section = document.getElementById('%s');
-      const chevron = document.querySelector('#%s .modal-chevron');
-      section.classList.toggle('expanded');
-      chevron.classList.toggle('rotated');",
-      opt_id,
-      tog_id
-    ),
-    tags$span(class = "modal-chevron", "\u203A"),
-    "Show advanced options"
-  )
-}
-
-confirm_button <- function(...) {
-  div(
-    style = "display: flex; justify-content: flex-end; margin-top: 20px;",
-    actionButton(..., class = "btn-primary")
   )
 }

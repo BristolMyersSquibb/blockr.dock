@@ -25,8 +25,11 @@ $(function () {
   // Views are addressed by a stable id (`data-view-id`); the visible
   // text (`.blockr-view-item-name`) is a free-form display label. Switch,
   // remove and rename all travel by id, so a rename never re-keys.
+  // While a name is being edited, the field stands in for it.
   var itemName = function ($item) {
-    return $item.find('.blockr-view-item-name').text();
+    var $name = $item.find('.blockr-view-item-name');
+    if ($name.length) return $name.text();
+    return $item.find('.blockr-view-rename-input').val() || '';
   };
 
   var setToggleLabel = function ($el, text) {
@@ -34,6 +37,173 @@ $(function () {
       .closest('.blockr-view-dropdown')
       .find('.blockr-view-toggle-label')
       .text(text);
+  };
+
+  // The name of the page each nav's "New page" made, until the page arrives
+  // (`rename_new` from the server).
+  var renameNew = new WeakMap();
+
+  var closeMenu = function ($el) {
+    var toggle = $el.closest('.blockr-view-dropdown')
+      .find('[data-bs-toggle="dropdown"]')[0];
+    if (toggle) bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+  };
+
+  var isManaging = function ($el) {
+    return $el.closest('.blockr-view-nav').hasClass('is-managing');
+  };
+
+  // In manage mode a click on a name renames it, which blockr.ui's editable
+  // marker says with the text cursor and a tooltip.
+  var markEditable = function ($scope, on) {
+    $scope.find('.blockr-view-item-name').each(function () {
+      if (on) this.setAttribute('data-blockr-editable', 'Click to rename');
+      else this.removeAttribute('data-blockr-editable');
+    });
+  };
+
+  var setManaging = function (el, on) {
+    $(el).toggleClass('is-managing', on);
+    markEditable($(el), on);
+    if (!on) renameNew.delete(el);
+  };
+
+  // Swap a page's name for a field. Enter and blur commit, Escape restores.
+  // Only in manage mode, which stays open, so a commit never closes the menu.
+  var startRename = function ($item) {
+    var $name = $item.find('.blockr-view-item-name');
+    if (!$name.length) return;
+    var currentName = $name.text();
+
+    var $input = $('<input>')
+      .addClass('blockr-view-rename-input')
+      .val(currentName)
+      .attr('type', 'text');
+
+    $name.replaceWith($input);
+    $input.focus().select();
+
+    var committed = false;
+    var layer = null;
+    var restore = function (text) {
+      layer.remove();
+      var $back = $('<span>').addClass('blockr-view-item-name').text(text);
+      if (isManaging($input)) $back.attr('data-blockr-editable', 'Click to rename');
+      $input.replaceWith($back);
+    };
+    var commit = function () {
+      if (committed) return;
+      committed = true;
+
+      var rawName = $input.val().trim();
+      // The name is a free-form display label: the only checks are
+      // non-empty and not a duplicate of another view's name.
+      var errorMsg = null;
+      if (rawName.length === 0) {
+        errorMsg = 'View name cannot be empty.';
+      } else {
+        var $siblings = $item.closest('.blockr-view-nav').find('.blockr-view-item');
+        $siblings.each(function () {
+          if (this !== $item[0] && itemName($(this)) === rawName) {
+            errorMsg = 'A view with this name already exists.';
+            return false; // break
+          }
+        });
+      }
+      if (errorMsg) {
+        showNotification(errorMsg);
+      }
+      var newName = errorMsg ? currentName : rawName;
+      restore(newName);
+
+      if (newName !== currentName) {
+        // The id is stable across a rename; only the label changes.
+        if ($item.hasClass('active')) {
+          setToggleLabel($item.closest('.blockr-view-dropdown'), newName);
+        }
+        var navId = $item.closest('.blockr-view-nav').attr('id');
+        Shiny.setInputValue(navId + '_rename', {
+          id: $item.attr('data-view-id'),
+          to: newName
+        }, { priority: 'event' });
+      }
+    };
+
+    // An edit not yet committed is a layer (Blockr.layer): Escape restores
+    // the name and leaves the menu open.
+    layer = Blockr.layer($input[0], {
+      inPage: true,
+      escape: function () {
+        committed = true;
+        restore(currentName);
+      }
+    });
+
+    $input.on('click', function (e) { e.stopPropagation(); });
+    $input.on('keydown', function (e) {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commit();
+      }
+    });
+    $input.on('blur', commit);
+  };
+
+  // Native drag to reorder, from the grip only (so clicking into a name
+  // never starts a drag). The row moves as the pointer passes other rows;
+  // on drop the resulting order goes to the server, which applies it and
+  // pushes it back through `order`.
+  var enableDrag = function (el) {
+    var list = el.querySelector('.blockr-view-list');
+    if (!list) return;
+    var dragging = null;
+    var before = null;
+
+    list.addEventListener('mousedown', function (e) {
+      var row = e.target.closest('.blockr-view-item');
+      if (!row) return;
+      if (e.target.closest('.blockr-view-grip') && isManaging($(el))) {
+        row.setAttribute('draggable', 'true');
+      } else {
+        row.removeAttribute('draggable');
+      }
+    });
+    list.addEventListener('dragstart', function (e) {
+      var row = e.target.closest && e.target.closest('.blockr-view-item');
+      if (!row) return;
+      dragging = row;
+      before = $(list).children('.blockr-view-item').map(function () {
+        return this.getAttribute('data-view-id');
+      }).get().join('|');
+      row.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      // Firefox does not start a drag without data being set.
+      e.dataTransfer.setData('text/plain', row.getAttribute('data-view-id'));
+    });
+    list.addEventListener('dragover', function (e) {
+      if (!dragging) return;
+      e.preventDefault();
+      var over = e.target.closest && e.target.closest('.blockr-view-item');
+      if (!over || over === dragging) return;
+      var r = over.getBoundingClientRect();
+      var after = e.clientY > r.top + r.height / 2;
+      list.insertBefore(dragging, after ? over.nextSibling : over);
+    });
+    list.addEventListener('drop', function (e) {
+      if (dragging) e.preventDefault();
+    });
+    list.addEventListener('dragend', function () {
+      if (!dragging) return;
+      dragging.classList.remove('is-dragging');
+      dragging.removeAttribute('draggable');
+      dragging = null;
+      var ids = $(list).children('.blockr-view-item').map(function () {
+        return this.getAttribute('data-view-id');
+      }).get();
+      if (ids.join('|') === before) return;
+      Shiny.setInputValue(el.id + '_reorder', { order: ids }, { priority: 'event' });
+    });
   };
 
   var viewBinding = new Shiny.InputBinding();
@@ -58,163 +228,117 @@ $(function () {
     },
 
     subscribe: function (el, callback) {
-      // Programmatic updates (receiveMessage) trigger 'change'
+      // A real DOM change event on the nav. Programmatic updates do NOT come
+      // through here: receiveMessage no longer triggers 'change' (see there).
       $(el).on('change.viewBinding', function () {
         callback(true);
       });
 
-      // View switch: click on item (but not on action buttons)
+      // View switch: a click on a page, unless the menu is managing pages
+      // (then a click on the name renames it) or the click hit a tool.
       $(el).on('click.viewBinding', '.blockr-view-item', function (e) {
-        if ($(e.target).closest('.blockr-view-item-actions').length) {
-          e.stopPropagation();
+        if ($(e.target).closest('.blockr-view-remove, .blockr-view-grip').length) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        var $item = $(this);
+
+        if (isManaging($item)) {
+          if ($(e.target).closest('.blockr-view-item-name').length) {
+            startRename($item);
+          }
           return;
         }
 
-        e.preventDefault();
-        var $item = $(this);
         var $nav = $(el);
-
         $nav.find('.blockr-view-item').removeClass('active');
         $item.addClass('active');
-
         setToggleLabel($nav, itemName($item));
-
         callback(true);
+        closeMenu($nav);
       });
 
-      // Edit click: swap name span for inline input
-      $(el).on('click.viewBinding', '.blockr-view-edit', function (e) {
+      $(el).on('click.viewBinding', '.blockr-view-manage', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        setManaging(el, true);
+      });
+      $(el).on('click.viewBinding', '.blockr-view-done', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var active = document.activeElement;
+        if (active && $(active).is('.blockr-view-rename-input')) active.blur();
+        cancelConfirm();
+        setManaging(el, false);
+      });
+      // Closing the menu leaves manage mode, so it always opens on the list.
+      $(el).closest('.blockr-view-dropdown').on('hidden.bs.dropdown.viewBinding', function () {
+        var active = document.activeElement;
+        if (active && $(active).is('.blockr-view-rename-input')) active.blur();
+        cancelConfirm();
+        setManaging(el, false);
+      });
+
+      // Remove asks in place: the x turns the row into "Remove this page?"
+      // with a Remove button; only that button sends the request, and the
+      // server removes the page without a dialog. The question is a layer
+      // (Blockr.layer), so Escape or a click anywhere outside its row takes
+      // it back.
+      var confirming = null;
+      var cancelConfirm = function () {
+        if (!confirming) return;
+        confirming.layer.remove();
+        $(confirming.item).removeClass('is-confirming').find('.blockr-view-confirm').remove();
+        confirming = null;
+      };
+
+      $(el).on('click.viewBinding', '.blockr-view-remove-confirm', function (e) {
         e.stopPropagation();
         e.preventDefault();
-
         var $item = $(this).closest('.blockr-view-item');
-        var $name = $item.find('.blockr-view-item-name');
-        var currentName = $name.text();
-
-        var $input = $('<input>')
-          .addClass('blockr-view-rename-input')
-          .val(currentName)
-          .attr('type', 'text');
-
-        $name.replaceWith($input);
-        $input.focus().select();
-
-        var committed = false;
-        var commit = function (closeMenu) {
-          if (committed) return;
-          committed = true;
-
-          var rawName = $input.val().trim();
-          // The name is a free-form display label: the only checks are
-          // non-empty and not a duplicate of another view's name.
-          var errorMsg = null;
-          if (rawName.length === 0) {
-            errorMsg = 'View name cannot be empty.';
-          } else {
-            var $siblings = $item.closest('.blockr-view-nav').find('.blockr-view-item');
-            $siblings.each(function () {
-              if (this !== $item[0] && itemName($(this)) === rawName) {
-                errorMsg = 'A view with this name already exists.';
-                return false; // break
-              }
-            });
-          }
-          if (errorMsg) {
-            showNotification(errorMsg);
-          }
-          var newName = errorMsg ? currentName : rawName;
-          var $newName = $('<span>')
-            .addClass('blockr-view-item-name')
-            .text(newName);
-          $input.replaceWith($newName);
-
-          if (newName !== currentName) {
-            // The id is stable across a rename; only the label changes.
-            if ($item.hasClass('active')) {
-              setToggleLabel($item.closest('.blockr-view-dropdown'), newName);
-            }
-
-            var $nav = $item.closest('.blockr-view-nav');
-            var navId = $nav.attr('id');
-            Shiny.setInputValue(navId + '_rename', {
-              id: $item.attr('data-view-id'),
-              to: newName
-            }, { priority: 'event' });
-          }
-
-          if (closeMenu) {
-            var toggle = $item.closest('.blockr-view-dropdown')
-              .find('[data-bs-toggle="dropdown"]')[0];
-            if (toggle) {
-              var dd = bootstrap.Dropdown.getOrCreateInstance(toggle);
-              dd.hide();
-            }
-          }
-        };
-
-        $input.on('keydown', function (e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            commit(true);
-          } else if (e.key === 'Escape') {
-            committed = true;
-            var $newName = $('<span>')
-              .addClass('blockr-view-item-name')
-              .text(currentName);
-            $input.replaceWith($newName);
-          }
-        });
-
-        $input.on('blur', function () {
-          commit(false);
+        Shiny.setInputValue(el.id + '_remove', $item.attr('data-view-id'), {
+          priority: 'event'
         });
       });
 
-      // Remove click
       $(el).on('click.viewBinding', '.blockr-view-remove', function (e) {
         e.stopPropagation();
         e.preventDefault();
-
         var $item = $(this).closest('.blockr-view-item');
-        var viewId = $item.attr('data-view-id');
-        var $nav = $item.closest('.blockr-view-nav');
-        var navId = $nav.attr('id');
-
-        Shiny.setInputValue(navId + '_remove', viewId, { priority: 'event' });
+        cancelConfirm();
+        $item.addClass('is-confirming').append(
+          $('<span>').addClass('blockr-view-confirm').append(
+            $('<span>').addClass('blockr-view-confirm-text')
+              .text('Remove \u201c' + itemName($item) + '\u201d?'),
+            $('<button>').attr('type', 'button')
+              .addClass('blockr-view-remove-confirm').text('Remove')
+          )
+        );
+        confirming = {
+          item: $item[0],
+          layer: Blockr.layer($item[0], {
+            escape: cancelConfirm,
+            outside: cancelConfirm
+          })
+        };
+        $item.find('.blockr-view-remove-confirm').trigger('focus');
       });
 
-      // Reorder click: view order is board state, so the gesture carries only a
-      // relative move intent. The server applies it and pushes the settled
-      // order back via receiveMessage; the DOM never moves optimistically.
-      $(el).on('click.viewBinding', '.blockr-view-up, .blockr-view-down', function (e) {
-        e.stopPropagation();
-        e.preventDefault();
-
-        var $item = $(this).closest('.blockr-view-item');
-        var $nav = $item.closest('.blockr-view-nav');
-        var navId = $nav.attr('id');
-        var dir = $(this).hasClass('blockr-view-up') ? 'up' : 'down';
-
-        Shiny.setInputValue(navId + '_reorder', {
-          id: $item.attr('data-view-id'),
-          dir: dir
-        }, { priority: 'event' });
-      });
-
-      // Add click
+      // Add click: the server adds an empty "Page N" and switches to it; the
+      // page arrives through receiveMessage, its name open for renaming.
       $(el).on('click.viewBinding', '.blockr-view-add', function (e) {
         e.stopPropagation();
         e.preventDefault();
-
-        var $nav = $(this).closest('.blockr-view-nav');
-        var navId = $nav.attr('id');
-
-        Shiny.setInputValue(navId + '_add', Date.now(), { priority: 'event' });
+        Shiny.setInputValue(el.id + '_add', Date.now(), { priority: 'event' });
       });
+
+      enableDrag(el);
     },
 
     unsubscribe: function (el) {
       $(el).off('.viewBinding');
+      $(el).closest('.blockr-view-dropdown').off('.viewBinding');
     },
 
     receiveMessage: function (el, data) {
@@ -222,62 +346,26 @@ $(function () {
         this.setValue(el, data.value);
       }
 
+      if (data.hasOwnProperty('rename_new')) {
+        renameNew.set(el, data.rename_new);
+      }
+
       if (data.hasOwnProperty('add')) {
-        var addId = data.add.id;
-        var addName = data.add.name;
-        var canCrud = data.canCrud !== false;
-        var newItem = $('<div>')
-          .addClass('dropdown-item blockr-view-item')
-          .attr('data-view-id', addId)
-          .append(
-            $('<span>').addClass('blockr-view-item-name').text(addName)
-          );
-
-        if (canCrud) {
-          var chevronUpSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-up" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"></path></svg>';
-          var chevronDownSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-chevron-down" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"></path></svg>';
-          var pencilSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-pencil" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"></path></svg>';
-          var xLgSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-x-lg" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"></path></svg>';
-          newItem.append(
-            $('<span>')
-              .addClass('blockr-view-item-actions')
-              .append(
-                $('<span>')
-                  .addClass('blockr-view-action blockr-view-up')
-                  .attr('role', 'button')
-                  .attr('title', 'Move up')
-                  .html(chevronUpSvg),
-                $('<span>')
-                  .addClass('blockr-view-action blockr-view-down')
-                  .attr('role', 'button')
-                  .attr('title', 'Move down')
-                  .html(chevronDownSvg),
-                $('<span>')
-                  .addClass('blockr-view-action blockr-view-edit')
-                  .attr('role', 'button')
-                  .attr('title', 'Rename')
-                  .html(pencilSvg),
-                $('<span>')
-                  .addClass('blockr-view-action blockr-view-remove')
-                  .attr('role', 'button')
-                  .attr('title', 'Remove')
-                  .html(xLgSvg)
-              )
-          );
+        var $new = $(data.add.html);
+        $(el).find('.blockr-view-list').append($new);
+        var asked = renameNew.get(el) === itemName($new);
+        if (asked) renameNew.delete(el);
+        if (isManaging($(el))) {
+          markEditable($new, true);
+          if (asked) startRename($new);
         }
 
-        // Insert before the divider (if present) or at end
-        var $divider = $(el).find('.dropdown-divider');
-        if ($divider.length) {
-          $divider.before(newItem);
-        } else {
-          $(el).append(newItem);
-        }
-
-        // Activate the new item and update toggle label
-        $(el).find('.blockr-view-item').removeClass('active');
-        newItem.addClass('active');
-        setToggleLabel($(el), addName);
+        // Deliberately not activated here. The server owns which view is
+        // active: an add that means to navigate carries `active` in its delta
+        // and lands as a `value` message a moment later. Activating on the
+        // client would leave the nav pointing at a view the board never
+        // switched to -- and with the echo below dropped, nothing corrects
+        // it.
       }
 
       if (data.hasOwnProperty('remove')) {
@@ -298,23 +386,29 @@ $(function () {
       }
 
       if (data.hasOwnProperty('order')) {
-        var $nav = $(el);
-        var $anchor = $nav.find('.dropdown-divider');
+        var $list = $(el).find('.blockr-view-list');
         // Re-append each item in the server's order; re-appending an existing
         // node moves it, so iterating in order lands the DOM in that order.
         data.order.forEach(function (viewId) {
-          var $item = $nav.find(
-            '.blockr-view-item[data-view-id="' + viewId + '"]'
+          $list.append(
+            $list.find('.blockr-view-item[data-view-id="' + viewId + '"]')
           );
-          if ($anchor.length) {
-            $anchor.before($item);
-          } else {
-            $nav.append($item);
-          }
         });
       }
 
-      $(el).trigger('change');
+      // Do NOT report the value back. The server drives the active view on
+      // every path (a switch, an add, the removal of the active view), so it
+      // already knows what it just pushed -- and an echo is not merely
+      // redundant. With two switches in flight (a section clicked before the
+      // previous one settled) the first push's echo lands after the second has
+      // been applied, misses the server's `client_active` guard and is applied
+      // as a fresh switch, whose push echoes in turn: the board then ping-pongs
+      // between the visited views forever. Shiny's no-resend dedup does not
+      // absorb it either, since the alternating values always differ.
+      //
+      // Forget the cached value instead, so a later real click on the view the
+      // server pushed away from is still sent (the dedup would swallow it).
+      Shiny.forgetLastInputValue(el.id);
     }
   });
 

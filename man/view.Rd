@@ -76,12 +76,12 @@ known views.}
 }
 \value{
 \code{board_views()} returns a \code{dock_views}, \code{board_grids()} a
-\code{dock_grids} or \code{NULL}, and their setters the modified board
-invisibly. \code{dock_view()} returns a \code{dock_view} and \code{view_members()} a
-character vector. \code{is_dock_view()} / \code{is_dock_views()} /
-\code{is_dock_grids()} return a boolean; \code{validate_dock_view()},
-\code{validate_dock_views()} and \code{validate_dock_grids()} return their
-(validated) input and throw on error. \code{active_view()} returns the active
+\code{dock_grids} or \code{NULL}, and their setters the modified board invisibly. A
+\code{dock_view()} is a \code{dock_view} and \code{view_members()} a character vector.
+The predicates \code{is_dock_view()} / \code{is_dock_views()} / \code{is_dock_grids()}
+return a boolean, while \code{validate_dock_view()}, \code{validate_dock_views()}
+and \code{validate_dock_grids()} return their (validated) input and throw on
+error. \code{active_view()} returns the active
 view's id, or \code{NULL} when no view is active, and \verb{active_view<-()} the
 modified collection (or \code{dock_board}) invisibly. \code{view_name()} returns a
 view's explicit display name (or \code{NULL}), \verb{view_name<-()} the modified
@@ -91,14 +91,16 @@ view id (derived from the id where a view has no explicit name).
 view whose members are a \link[=dock-layout]{dock_layout}'s panel ids.
 }
 \description{
-A \code{dock_board} stores its views as two independent slots. \strong{Structure}
+A \code{dock_board} stores its views as three independent slots. \strong{Structure}
 -- which panels belong to each view, plus the view names, ids and the
 active view -- is a \code{dock_views} collection of \code{dock_view} objects, read
 with \code{board_views()}. \strong{Grid} -- the geometry of each view (nesting, tab
 groups, sizes) -- is a separate, \code{NULL}-valid \code{dock_grids} slot, read with
-\code{board_grids()}. Single-page boards are a degenerate case: one auto-named
-"Page" view. Blocks and extensions are shared across views via the board's
-DAG; view membership is a layout concern only.
+\code{board_grids()}; a grid also carries the \strong{rails} pinned to the view's
+edges, holding members the splitview therefore does not arrange. Single-page
+boards are a degenerate case:
+one auto-named "Page" view. Blocks and extensions are shared across views
+via the board's DAG; view membership is a layout concern only.
 }
 \details{
 Each view carries a stable, immutable \strong{id} (its key in the collection)
@@ -124,13 +126,15 @@ defaulting to the first; it is a property of the collection, never of an
 individual view. View CRUD is enabled unless the dock is locked (see
 \code{is_dock_locked()}).
 
-Structure and grid are related by total semantics, not containment: a
+Structure and geometry are related by total semantics, not containment: a
 member with no grid entry is an un-landed intent, a grid entry with no
 membership an inert ghost. Both are legal on a committed board and
 reconciled only where placement is read (\code{view_grid()} prunes ghosts and
 shows un-landed members via a default) -- the board is valid with no grid
-at all. Referential integrity still holds: every member must reference a
-block or extension on the board.
+at all. The rails partition that placement rather than adding to it: a
+member a rail names is placed by the rail and so is absent from the grid,
+and a view's membership is the union of the two. Referential integrity
+still holds: every member must reference a block or extension on the board.
 }
 \examples{
 brd <- new_dock_board(

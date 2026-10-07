@@ -220,6 +220,45 @@ dock_proxy <- function(session = get_session()) {
   dockViewR::dock_view_proxy(dock_id(), session = session)
 }
 
+# Hand the client the edges this dock carries a rail on, once the restore that
+# creates them has gone out. The client owns two things the server cannot see in
+# time: revealing a hidden rail mid-drag, which has no server round-trip to
+# spare, and re-asserting the derived visibility rule as panels are added,
+# removed and moved. Both need to know which edges are rails and how wide the
+# collapsed strip is, which is all this carries.
+send_rail_config <- function(rails, session = get_session()) {
+
+  if (!length(rails)) {
+    return(invisible(NULL))
+  }
+
+  session$sendCustomMessage(
+    "blockr-dock-rails",
+    list(
+      id = session$ns(dock_id()),
+      rails = unname(lapply(rails, rail_client_config))
+    )
+  )
+
+  invisible(NULL)
+}
+
+rail_client_config <- function(rail) {
+  list(
+    position = rail[["position"]],
+    collapsedSize = coal(rail[["collapsed_size"]], 35, fail_all = FALSE)
+  )
+}
+
+rail_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-dock-rail",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "dock-rail.js"
+  )
+}
+
 dock_board_ns <- function(dock) {
   coal(dock$board_ns, dock$proxy$session$ns)
 }
@@ -255,7 +294,10 @@ set_dock_view_output <- function(..., session = get_session()) {
     if (is_dock_locked()) list(disableDnd = TRUE),
     list(
       defaultRenderer = "always",
-      add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked())
+      add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked()),
+      # The dock carries the icon, not its panels, so the tabs a restore builds
+      # draw it as well as the ones `dock_panel()` adds.
+      close_icon = blockr.ui::small_icon("remove")
     )
   )
 
@@ -275,6 +317,101 @@ is_dock_locked <- function() {
   # consults via is_board_locked(), so one deployment option drives both core's
   # update / option gate and dock's UI hides.
   isTRUE(blockr_option("locked", FALSE))
+}
+
+# The narrow-viewport decision, taken once per session from the width the
+# client reports at input initialisation (see `viewport_probe_ui()`). Below the
+# breakpoint a view's groups stack into one scrolling column rather than a
+# nested grid, so a board on a phone reads top to bottom instead of running
+# columns off-screen. A width that never arrived -- a `board_ui()` built after
+# Shiny bound its inputs, so the probe missed the initial batch -- reads as
+# wide, the desktop render, as does an unset or unusable breakpoint.
+is_narrow_viewport <- function(width) {
+
+  breakpoint <- narrow_breakpoint()
+
+  is_number(width) && not_null(breakpoint) && width < breakpoint
+}
+
+# A breakpoint under this is a typo rather than a layout: no viewport is 50 px
+# wide, and the value that reads as "never collapse" is an absent option.
+narrow_breakpoint_floor <- 50
+
+# The viewport width below which a view collapses, in CSS pixels, or NULL when
+# the collapse is off. Opt-in: a board renders its authored grid at every width
+# until a deployment sets `options(blockr.narrow_breakpoint = ...)`. `Inf` is
+# meaningful and allowed -- it collapses at every width, which is how a board
+# meant only for phones asks to always stack. Anything else unusable aborts
+# rather than falling back to a default: a deployment that sets a breakpoint
+# has an intent, and silently rendering the other layout hides the typo until
+# someone opens the board on a phone.
+narrow_breakpoint <- function() {
+
+  opt <- blockr_option("narrow_breakpoint", NULL)
+
+  if (is.null(opt)) {
+    return(NULL)
+  }
+
+  px <- suppressWarnings(as.numeric(opt))
+
+  if (!is_scalar(px) || is.na(px) || px < narrow_breakpoint_floor) {
+    blockr_abort(
+      paste(
+        "`blockr.narrow_breakpoint` must be a single number of at least",
+        "{narrow_breakpoint_floor} px, or `Inf` to always collapse;",
+        "got {opt}."
+      ),
+      class = "narrow_breakpoint_invalid"
+    )
+  }
+
+  px
+}
+
+# The most of the viewport one row of the collapsed stack may take, as a
+# fraction in (0, 1]. At the 0.8 default a tall panel fills most of the screen
+# and the page scrolls from one to the next; lower it to fit more rows at once.
+# Tune with `options(blockr.narrow_group_fraction = ...)`; an unusable value
+# aborts, for the same reason the breakpoint does.
+narrow_group_fraction <- function() {
+
+  opt <- blockr_option("narrow_group_fraction", NULL)
+
+  if (is.null(opt)) {
+    return(0.8)
+  }
+
+  frac <- suppressWarnings(as.numeric(opt))
+
+  if (!is_number(frac) || frac <= 0 || frac > 1) {
+    blockr_abort(
+      "`blockr.narrow_group_fraction` must be a fraction in (0, 1]; got {opt}.",
+      class = "narrow_group_fraction_invalid"
+    )
+  }
+
+  frac
+}
+
+# The stacked container's height: the sum of the rows' viewport shares, so the
+# page scrolls the stack rather than dockView dividing a viewport-height box
+# among the rows and squeezing every one of them. Takes the *wide* grid, the
+# one `stack_row_heights()` reads the authored heights off; the stacked grid
+# carries those normalised to ratios, which no longer say how tall the stack
+# is. Written as the custom property the stylesheet reads, so a wide viewport
+# (which stamps nothing) keeps the viewport-height default rather than needing
+# it cleared. Height only -- the container keeps its clip, or the parked
+# background-tab overlays trail a blank screenful past the last panel.
+narrow_stack_attrs <- function(grid) {
+
+  total <- sum(stack_row_heights(grid))
+
+  if (!isTRUE(total > 0)) {
+    total <- narrow_group_fraction()
+  }
+
+  list(style = paste0("--blockr-stack-height: ", total * 100, "vh;"))
 }
 
 dock_panel_groups <- function(session = get_session()) {

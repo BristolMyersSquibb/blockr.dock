@@ -143,6 +143,33 @@ test_that("grids_stable holds when the live grid is the stored fixed point", {
   expect_false(grids_stable(stored, drifted))
 })
 
+test_that("grids_stable reads a squeezed rail as the fixed point (#457)", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block()),
+    views = list(V = c("a", "b")),
+    grids = list(
+      V = dock_grid("a", rail(blk("b"), position = "right", size = 420))
+    )
+  )
+
+  stored <- board_grids(brd)
+
+  # A viewport too narrow to render the rail reports a width the layout forced,
+  # which the mirror declines to commit -- so the round trip is settled, and the
+  # sentinel has to say so rather than reading the divergence as a pending
+  # write. Anything else in the grid still moves it off the fixed point.
+  squeezed <- stored[["V"]]
+  squeezed[["rails"]][["right"]][["size"]] <- 120
+
+  expect_true(grids_stable(stored, new_dock_grids(list(V = squeezed))))
+
+  moved <- squeezed
+  moved[["rails"]][["right"]][["collapsed"]] <- TRUE
+
+  expect_false(grids_stable(stored, new_dock_grids(list(V = moved))))
+})
+
 test_that("dock app renders a block added via the extension (#191)", {
 
   skip_on_cran()
@@ -252,6 +279,49 @@ test_that("adding a second block keeps both block panels (#196)", {
   expect_identical(block_panel_tabs(app), c("block_panel-a", "block_panel-b"))
 })
 
+test_that("every closable tab draws blockr.ui's x (#492)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "empty", "app.R", package = "blockr.dock"),
+    name = "close-icon",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  # The extension's tab comes from the restore the board opens with and the
+  # block's from `dock_panel()`, the two routes a tab takes into the dock.
+  app$set_inputs(
+    `my_board-ext_edit_board-registry_select` = "dataset_block",
+    `my_board-ext_edit_board-block_id` = "a"
+  )
+  app$click("my_board-ext_edit_board-confirm_add")
+  wait_block_panel_tabs(app, "block_panel-a")
+
+  tabs <- app$get_js(
+    paste0(
+      "Array.from(document.querySelectorAll(",
+      "'#my_board-view_container .dv-default-tab'",
+      ")).map(function(e) { return {",
+      "id: e.id.replace(/.*-tab-/, ''),",
+      "icon: e.querySelector('.dv-default-tab-action').innerHTML",
+      "}; })"
+    )
+  )
+
+  expect_setequal(
+    chr_xtr(tabs, "id"),
+    c("ext_panel-edit_board", "block_panel-a")
+  )
+  expect_identical(
+    unique(chr_xtr(tabs, "icon")),
+    as.character(blockr.ui::small_icon("remove"))
+  )
+})
+
 test_that("edit board extension stacks (e2e)", {
 
   skip_on_cran()
@@ -326,23 +396,132 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   expect_setequal(nav$label, c("First", "Second"))
   expect_identical(nav$label[nav$active], "First")
 
-  # Drive a runtime add through the nav UI: the client `add` handler must
-  # render the new view once, correctly labelled.
+  # Drive a runtime add through the nav UI ("New page" adds "Page 3", no
+  # dialog): the client `add` handler must render the new view once,
+  # correctly labelled.
   app$run_js(
     "document.querySelector('#my_board-view_nav .blockr-view-add').click()"
   )
-  app$wait_for_idle()
-
-  app$set_inputs(`my_board-view_new_name` = "Third")
-  app$click("my_board-confirm_view_add")
   wait_view_nav(app, 3)
 
   nav <- read_view_nav(app)
 
   expect_identical(nrow(nav), 3L)
   expect_false(anyDuplicated(nav$id) > 0L)
-  expect_true("Third" %in% nav$label)
+  expect_true("Page 3" %in% nav$label)
   expect_false(any(nav$label == ""))
+})
+
+test_that("the view nav does not report the server's own push back (#424)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-nav-echo",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_view_nav(app, 2)
+
+  nav <- read_view_nav(app)
+  first <- nav$id[nav$label == "First"]
+  second <- nav$id[nav$label == "Second"]
+
+  watch_view_nav(app)
+
+  # A click reports once, and only once. `switch_active_view()` answers it by
+  # pushing the new active view back with `sendInputMessage("view_nav", ...)`,
+  # and that push used to arrive as a second report -- the loop's fuel: with
+  # two switches in flight the first push's echo lands after the second has
+  # been applied, so it misses `switch_view_observer()`'s `client_active` guard
+  # and is taken for a fresh switch, whose own push echoes in turn. Waiting on
+  # the push means an echo of it would already be in the tally.
+  click_view(app, second)
+  wait_view_nav_push(app, second)
+
+  expect_identical(view_nav_reports(app), second)
+
+  # The push alone, delivered as the server sends it. It must move the nav and
+  # report nothing at all.
+  watch_view_nav(app)
+  push_view_nav(app, sprintf('{"value": "%s"}', first))
+
+  expect_identical(view_nav_reports(app), character())
+
+  nav <- read_view_nav(app)
+  expect_identical(nav$id[nav$active], first)
+
+  # An `add` push must not move the active view either. The server owns that
+  # and says so with a `value` message when an add means to navigate; a
+  # client-side activation would report a view the board never switched to --
+  # and with the echo gone, nothing would correct it.
+  watch_view_nav(app)
+  push_view_nav(
+    app,
+    jsonlite::toJSON(
+      list(
+        add = list(
+          id = "ghost",
+          html = as.character(view_item_ui("ghost", "Ghost", can_crud = TRUE))
+        )
+      ),
+      auto_unbox = TRUE
+    )
+  )
+
+  expect_identical(view_nav_reports(app), character())
+
+  nav <- read_view_nav(app)
+  expect_identical(nrow(nav), 3L)
+  expect_identical(nav$id[nav$active], first)
+})
+
+test_that("a click on the view the server left still switches (#424)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-nav-forget",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_view_nav(app, 2)
+
+  nav <- read_view_nav(app)
+  second <- nav$id[nav$label == "Second"]
+
+  # Second becomes the last value the client sent, and so the one Shiny's
+  # no-resend dedup holds for the nav.
+  click_view(app, second)
+  wait_view_handle(app, second)
+
+  # Add a third view. The server activates it and pushes that back, so the
+  # board leaves Second without the client having sent anything -- the dedup's
+  # cached value is now stale. Dropping the echo is what makes it stale, so
+  # `receiveMessage()` clears it with `forgetLastInputValue()`.
+  app$run_js(
+    "document.querySelector('#my_board-view_nav .blockr-view-add').click()"
+  )
+  wait_view_nav(app, 3)
+
+  nav <- read_view_nav(app)
+  expect_identical(nav$label[nav$active], "Page 3")
+
+  # Clicking Second again has to reach the server. Left cached, the dedup
+  # would swallow the report as a repeat and the board would sit on Third.
+  click_view(app, second)
+  wait_view_dock_active(app, second)
+
+  docks <- read_view_docks(app)
+  expect_identical(docks$id[docks$active], second)
 })
 
 test_that("a board survives the live Export/Import round-trip (#233)", {
@@ -614,9 +793,7 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   # Switch active view: clicking the Second nav item reports its id to
   # `view_nav`; the reconcile builds Second's deferred dock on this first visit
   # and swaps which dock is active.
-  app$run_js(
-    paste0("document.querySelector('", item_sel(second), "').click()")
-  )
+  click_view(app, second)
   app$wait_for_idle()
 
   nav <- read_view_nav(app)
@@ -627,13 +804,16 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_setequal(docks$id, c(first, second))
   expect_identical(docks$id[docks$active], second)
 
-  # Rename the active view through the pencil: it swaps the label span for an
-  # inline input that commits on Enter, sending `view_nav_rename`. The id is
-  # stable, so the label moves but the dock container (keyed by id) does not.
+  # Rename the active view in manage mode: a click on the name swaps the label
+  # span for an inline input that commits on Enter, sending `view_nav_rename`.
+  # The id is stable, so the label moves but the dock container (keyed by id)
+  # does not.
   app$run_js(
     paste0(
+      "document.querySelector('#my_board-view_nav .blockr-view-manage')",
+      ".click();",
       "var it = document.querySelector('", item_sel(second), "');",
-      "it.querySelector('.blockr-view-edit').click();",
+      "it.querySelector('.blockr-view-item-name').click();",
       "var inp = it.querySelector('.blockr-view-rename-input');",
       "inp.value = 'Renamed';",
       "$(inp).trigger($.Event('keydown', {key: 'Enter'}));"
@@ -652,18 +832,18 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_setequal(docks$id, c(first, second))
   expect_identical(docks$id[docks$active], second)
 
-  # Remove the (non-active) First view: the x button sends `view_nav_remove`
-  # and the confirmation modal's button drives the delete. The reconcile drops
+  # Remove the (non-active) First view: the x asks in place, and its Remove
+  # button sends `view_nav_remove`; there is no dialog. The reconcile drops
   # both its nav entry and its dock container, leaving the renamed survivor.
   app$run_js(
     paste0(
       "document.querySelector('", item_sel(first),
-      " .blockr-view-remove').click()"
+      " .blockr-view-remove').click();",
+      "document.querySelector('", item_sel(first),
+      " .blockr-view-remove-confirm').click();"
     )
   )
   app$wait_for_idle()
-
-  app$click("my_board-confirm_view_remove")
   app$wait_for_idle()
 
   nav <- read_view_nav(app)
@@ -676,7 +856,7 @@ test_that("view lifecycle: switch, rename, remove a view (#232)", {
   expect_true(docks$active)
 })
 
-test_that("a view moves down via the nav reorder control (#351)", {
+test_that("a view moves down via a reorder from the nav (#351)", {
 
   skip_on_cran()
 
@@ -698,17 +878,20 @@ test_that("a view moves down via the nav reorder control (#351)", {
 
   first <- nav$id[nav$label == "First"]
 
-  # Nudge First down via its chevron: the gesture sends a relative
-  # `view_nav_reorder`, the server applies the order and pushes it back, and the
-  # binding re-sequences the nav. Order is board content, so the active view
-  # rides along rather than snapping to the new first entry.
+  # Drop First below Second: a drag in manage mode sends the order it left
+  # the list in as `view_nav_reorder` (sent directly here; the drag itself is
+  # native HTML5 and not driven by the harness). The server applies the order
+  # and pushes it back, and the binding re-sequences the nav. Order is board
+  # content, so the active view rides along rather than snapping to the new
+  # first entry.
+  second <- nav$id[nav$label == "Second"]
   app$run_js(
-    paste0(
-      "document.querySelector('",
-      sprintf(
-        "#my_board-view_nav .blockr-view-item[data-view-id=\"%s\"]", first
+    sprintf(
+      paste0(
+        "Shiny.setInputValue('my_board-view_nav_reorder', ",
+        "{order: ['%s', '%s']}, {priority: 'event'})"
       ),
-      " .blockr-view-down').click()"
+      second, first
     )
   )
   app$wait_for_idle()
@@ -764,9 +947,11 @@ test_that("dock panel move updates layout state and serialization (#234)", {
     app$wait_for_idle()
   }
 
-  # The fixture seeds blocks a and b tabbed together in a single dock group
-  # (the extension panel sits in its own group).
-  await_groups(2L)
+  # The fixture seeds blocks a and b tabbed together in a single dock group.
+  # Every board offers both edges, so `api.groups` carries the two alongside it
+  # whether or not they hold anything -- three in total, and four once the
+  # split below makes a second grid group.
+  await_groups(3L)
   before <- read_layout()
   expect_identical(
     group_of(before, "block_panel-a"),
@@ -784,7 +969,7 @@ test_that("dock panel move updates layout state and serialization (#234)", {
       "b.api.moveTo({group: b.api.group, position: 'right'});"
     )
   )
-  await_groups(3L)
+  await_groups(4L)
 
   layout <- read_layout()
 
@@ -797,7 +982,8 @@ test_that("dock panel move updates layout state and serialization (#234)", {
   )
 
   # Serialization: our grid format round-trips through JSON and keeps every
-  # panel while still separating a and b.
+  # panel while still separating a and b. The extension is not among them --
+  # it sits in the rail, which the grid tree does not carry.
   grid <- as_dock_grid(layout)
   restored <- as_dock_grid(
     jsonlite::fromJSON(
@@ -806,9 +992,9 @@ test_that("dock panel move updates layout state and serialization (#234)", {
     )
   )
   reparsed <- new_dock_layout(list(grid = grid_to_tree(restored)))
-  expect_setequal(
-    panel_obj_ids(layout_panel_ids(reparsed)),
-    c("a", "b", "edit_board")
+  expect_setequal(panel_obj_ids(layout_panel_ids(reparsed)), c("a", "b"))
+  expect_identical(
+    rail_panel_ids(as_dock_rails(layout)), "ext_panel-edit_board"
   )
   expect_false(
     identical(
@@ -844,22 +1030,19 @@ test_that("locked board hides block actions, shows lock indicator (#236)", {
     "Read-only"
   )
 
-  # Block cards and their dropdown menus render, but the locked dock suppresses
-  # the mutating actions: no append / delete buttons anywhere.
-  expect_gte(count(".blockr-block-dropdown"), 1)
-  expect_equal(count("[id$=\"-append_block\"]"), 0)
-  expect_equal(count("[id$=\"-delete_block\"]"), 0)
-
-  # The dropdown's "Block Actions" section is gone; "Block Details" remains.
-  headers <- app$get_js(
+  # Block cards and their "…" menus render, but the locked dock suppresses
+  # the mutating actions: the menu config on each trigger (block-menu.js
+  # draws it with Blockr.menu) sends no append / delete event.
+  expect_gte(count(".blockr-block-menu-btn"), 1)
+  menus <- app$get_js(
     paste0(
-      "Array.from(document.querySelectorAll(",
-      "'.blockr-block-dropdown .dropdown-header'",
-      ")).map(function(e) { return e.innerText; }).join('|')"
+      "Array.from(document.querySelectorAll('.blockr-block-menu-btn'))",
+      ".map(function(e) { return e.getAttribute('data-blockr-menu'); })",
+      ".join('|')"
     )
   )
-  expect_match(headers, "Block Details")
-  expect_false(grepl("Block Actions", headers))
+  expect_match(menus, "Copy block ID")
+  expect_false(grepl("append_block|delete_block", menus))
 
   # View CRUD is locked too: no "New page" add control.
   expect_equal(count(".blockr-view-add"), 0)
@@ -996,4 +1179,864 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
   expect_true(probe$trackPainted)
   expect_false(probe$bookkeepingArc)
   expect_true(probe$computingArc)
+})
+
+test_that("a narrow viewport stacks a view into a scrolling column (#413)", {
+
+  skip_on_cran()
+
+  # An authored two-group board, one group tabbed: side by side when wide, and
+  # the tabbed group means the stack carries a parked background-tab overlay.
+  app <- new_app_driver(
+    system.file("examples", "narrow-stack", "app.R", package = "blockr.dock"),
+    name = "narrow-viewport",
+    seed = 42,
+    width = 500,
+    height = 900,
+    load_timeout = 30 * 1000,
+    timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_block_panel_tabs(
+    app, c("block_panel-a", "block_panel-b", "block_panel-c")
+  )
+  wait_dock_groups(app, 2L)
+
+  rects <- dock_group_rects(app)
+
+  # Stacked, not side by side: the rows share a left edge and a width, and the
+  # second starts below the first. Authored wide, these differ in `left`.
+  expect_identical(nrow(rects), 2L)
+  expect_identical(length(unique(rects$left)), 1L)
+  expect_identical(length(unique(rects$width)), 1L)
+  expect_gt(rects$top[[2L]], rects$top[[1L]])
+
+  # The page carries the stack rather than dockView squeezing it into the
+  # viewport, which is what `narrow_group_fraction()` buys.
+  scroll <- page_scroll_extent(app)
+  expect_gt(scroll$docH, scroll$viewH)
+
+  # And it ends with the stack. Every background tab's render overlay is
+  # parked below the grid by dockView, each a full container tall, so a
+  # container that does not clip trails a blank screenful past the last panel.
+  expect_lt(scroll$docH - max(rects$top + rects$height), 60)
+
+  app$wait_for_idle()
+
+  # The stack is a render, not a commit. The mirror is left unwired, so the
+  # echo writes nothing back, and the stored grid is still the authored 40/60
+  # one -- what a save persists and a wide viewport restores to. It is read
+  # directly because nothing else here can tell: a narrow view reports its
+  # stored grid as its live one, so `roundtrip_stable` holds trivially, and the
+  # update tally also counts the dock's `eager` payloads. The authored board is
+  # the one `inst/examples/narrow-stack/app.R` serves.
+  authored <- new_dock_board(
+    blocks = c(
+      a = new_dataset_block(),
+      b = new_dataset_block("mtcars"),
+      c = new_dataset_block("airquality")
+    ),
+    grids = list(
+      Main = dock_grid("a", panels("b", "c", active = "b"), sizes = c(0.4, 0.6))
+    )
+  )
+
+  expect_true(
+    grids_stable(
+      board_grids(authored),
+      app$get_value(export = "stored_grids")
+    )
+  )
+  expect_true(isTRUE(app$get_value(export = "roundtrip_stable")))
+})
+
+test_that("the extension rides a left rail, shown only while it holds it", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "rail-derived",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+  api <- paste0("HTMLWidgets.find('#", dock, "').getWidget()")
+
+  # Optional-chain in the polls: the widget can still be null early in startup,
+  # and the condition must yield `false` rather than abort on a null deref.
+  rail_visible <- function(state) {
+    paste0(
+      "HTMLWidgets.find('#", dock, "')?.getWidget()",
+      "?.isEdgeGroupVisible('left') === ", state
+    )
+  }
+
+  app$wait_for_js(rail_visible("true"), timeout = 15 * 1000)
+  app$wait_for_idle()
+
+  # A rail is a real dockview edge group carrying its tabs vertically, keyed by
+  # the group id the payload names it with.
+  # Both declared rails are in the DOM; the empty right one renders at zero
+  # width. Address the left one by the group id its payload names it with.
+  rail_html <- xml2::read_html(
+    app$get_html('[data-testid="dv-edge-group-rail-left"]')
+  )
+
+  has_class <- function(token) {
+    paste0(
+      "//*[contains(concat(' ', normalize-space(@class), ' '), ' ",
+      token, " ')]"
+    )
+  }
+
+  expect_length(
+    xml2::xml_find_all(rail_html, has_class("dv-groupview-edge")), 1L
+  )
+  expect_length(
+    xml2::xml_find_all(rail_html, has_class("dv-tabs-container-vertical")), 1L
+  )
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_all(rail_html, has_class("dv-tab")), "data-tab-panel-id"
+    ),
+    "ext_panel-edit_board"
+  )
+
+  read_state <- function() {
+    new_dock_layout(app$get_value(input = paste0(dock, "_state")))
+  }
+
+  read_rails <- function() as_dock_rails(read_state())
+
+  expect_identical(rail_panel_ids(read_rails()), "ext_panel-edit_board")
+
+  # The right rail is declared but empty, so it is hidden -- which is what
+  # gives a drag toward that edge something to reveal.
+  expect_false(
+    isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('right')")))
+  )
+  expect_true(
+    isTRUE(app$get_js(paste0("!!", api, ".getEdgeGroup('right')")))
+  )
+
+  # Emptying the rail hides it: visibility is derived from what it holds, not
+  # stored, so nothing has to remember to turn it off. This is the client half
+  # of the rule; the server half (the same rule in the restore payload) is
+  # covered in test-rail-class.R. The two assertions above and below pin both
+  # ends: born hidden when empty, and hidden again once emptied.
+  app$run_js(
+    paste0(
+      "var api = ", api, ";",
+      "var grid = api.groups.filter(",
+      "function (g) { return g.api.location.type === 'grid' })[0];",
+      "api.getPanel('ext_panel-edit_board').api.moveTo(",
+      "{group: grid, position: 'within'});"
+    )
+  )
+
+  app$wait_for_js(rail_visible("false"), timeout = 15 * 1000)
+  app$wait_for_idle()
+
+  expect_identical(rail_panel_ids(read_rails()), character())
+  expect_true(
+    "ext_panel-edit_board" %in% layout_panel_ids(as_dock_grid(read_state()))
+  )
+})
+
+test_that("a viewport too narrow for a rail keeps its stored width (#457)", {
+
+  skip_on_cran()
+
+  # Narrow enough that the rail cannot have the 260px the fixture stores for it.
+  # A rail is the low-priority view of dockView's shell splitview, so the layout
+  # squeezes it rather than the centre, and hands the space back to the centre
+  # rather than the rail once there is room again -- the width it reports from
+  # here on is the viewport's, and committing it would leave the board holding
+  # the narrowest one it was ever opened at.
+  app <- new_app_driver(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "rail-narrow-viewport",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000,
+    width = 520,
+    height = 900
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+
+  rail_width <- function() {
+    app$get_js(
+      paste0(
+        "document.querySelector(",
+        "'[data-testid=\"dv-edge-group-rail-left\"]')",
+        "?.getBoundingClientRect().width"
+      )
+    )
+  }
+
+  stored_rail_width <- function() {
+    ser <- jsonlite::fromJSON(
+      retry_download(app, "my_board-preserve_board-serialize"),
+      simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+    )
+    grids <- ser[["payload"]][["grids"]][["payload"]]
+    grids[[1L]][["rails"]][["left"]][["size"]]
+  }
+
+  app$wait_for_js(
+    paste0(
+      "document.querySelector(",
+      "'[data-testid=\"dv-edge-group-rail-left\"]')",
+      "?.getBoundingClientRect().width > 0"
+    ),
+    timeout = 15 * 1000
+  )
+  app$wait_for_idle()
+
+  # The DOM read is what keeps this from passing vacuously: it has to observe
+  # the squeeze for the stored width to be asserting anything.
+  expect_lt(rail_width(), 200)
+  expect_equal(stored_rail_width(), 260)
+
+  # And a viewport with room again leaves the stored width where it was, so a
+  # later restore has the authored geometry to come back to.
+  app$set_window_size(width = 1600, height = 900)
+  app$wait_for_idle()
+
+  expect_equal(stored_rail_width(), 260)
+})
+
+test_that("a drag toward the edge reveals a hidden rail, collapsed", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "rail-reveal",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+  api <- paste0("HTMLWidgets.find('#", dock, "').getWidget()")
+
+  rail_visible <- function(state) {
+    paste0(
+      "HTMLWidgets.find('#", dock, "')?.getWidget()",
+      "?.isEdgeGroupVisible('left') === ", state
+    )
+  }
+
+  app$wait_for_js(rail_visible("true"), timeout = 15 * 1000)
+
+  # Empty the rail so it is hidden, which is the state a reveal has to rescue:
+  # with no hit area, a drag toward that edge would otherwise have nothing to
+  # aim at.
+  app$run_js(
+    paste0(
+      "var api = ", api, ";",
+      "var grid = api.groups.filter(",
+      "function (g) { return g.api.location.type === 'grid' })[0];",
+      "api.getPanel('ext_panel-edit_board').api.moveTo(",
+      "{group: grid, position: 'within'});"
+    )
+  )
+
+  app$wait_for_js(rail_visible("false"), timeout = 15 * 1000)
+
+  # Start a real dockview drag and hold the pointer in the band the collapsed
+  # strip would occupy. dockview's own `dragstart` handler arms the drag, so
+  # this exercises the same path a user's gesture takes.
+  app$run_js(
+    paste0(
+      "var el = document.querySelector('#", dock, "');",
+      "var tab = document.querySelector(",
+      "'[data-tab-panel-id=\"block_panel-b\"]');",
+      "var dt = new DataTransfer();",
+      "tab.dispatchEvent(new DragEvent('dragstart',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt}));",
+      "var r = el.getBoundingClientRect();",
+      "el.dispatchEvent(new DragEvent('dragover',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt,",
+      " clientX: r.left + 5, clientY: r.top + r.height / 2}));"
+    )
+  )
+
+  app$wait_for_js(rail_visible("true"), timeout = 15 * 1000)
+
+  # Revealed collapsed: an empty rail shows its strip, not a full-width pane.
+  expect_true(
+    isTRUE(app$get_js(paste0(api, ".getEdgeGroup('left').isCollapsed()")))
+  )
+
+  # A drag that ends without dropping into the rail leaves the derived rule to
+  # hide it again.
+  app$run_js(
+    paste0(
+      "document.querySelector('[data-tab-panel-id=\"block_panel-b\"]')",
+      ".dispatchEvent(new DragEvent('dragend', {bubbles: true}));"
+    )
+  )
+
+  app$wait_for_js(rail_visible("false"), timeout = 15 * 1000)
+
+  expect_false(isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('left')"))))
+})
+
+test_that("a rail's seam squares against its content on every edge", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "rails", "app.R", package = "blockr.dock"),
+    name = "rail-seams",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 3)
+  app$wait_for_js(
+    'document.querySelectorAll(".dv-groupview-edge").length === 2',
+    timeout = 15 * 1000
+  )
+
+  # Dockview's spaced themes round a strip's *top* corners and its content's
+  # *bottom* corners whichever edge the header is on, which notches the seam
+  # once it moves. Rotating them is CSS, so the assertion is the computed
+  # radius: square where strip meets content, rounded on the outer edge.
+  radii <- function(position, part) {
+    unlist(
+      app$get_js(
+        paste0(
+          "(function(){var t=document.querySelector('",
+          "[data-testid=\"dv-edge-group-rail-", position, "\"] ", part,
+          "');if(!t)return 'none';var c=getComputedStyle(t);return [",
+          "c.borderTopLeftRadius,c.borderTopRightRadius,",
+          "c.borderBottomRightRadius,c.borderBottomLeftRadius].join('/')})()"
+        )
+      )
+    )
+  }
+
+  strip <- ".dv-tabs-and-actions-container"
+  content <- ".dv-content-container"
+
+  # A left strip meets its content on its right, a right strip on its left.
+  expect_identical(radii("left", strip), "12px/0px/0px/12px")
+  expect_identical(radii("left", content), "0px/12px/12px/0px")
+  expect_identical(radii("right", strip), "0px/12px/12px/0px")
+  expect_identical(radii("right", content), "12px/0px/0px/12px")
+})
+
+test_that("a drop elsewhere hides the rail it emptied (#431)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "rails", "app.R", package = "blockr.dock"),
+    name = "rail-empty-on-drop",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 3)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+  api <- paste0("HTMLWidgets.find('#", dock, "').getWidget()")
+
+  visible <- function(position, state) {
+    paste0(
+      "HTMLWidgets.find('#", dock, "')?.getWidget()",
+      "?.isEdgeGroupVisible('", position, "') === ", state
+    )
+  }
+
+  app$wait_for_js(visible("right", "true"), timeout = 15 * 1000)
+
+  # Drag the right rail's only panel out, sweeping its reveal band on the way,
+  # and drop it in the grid.
+  app$run_js(
+    paste0(
+      "var el = document.querySelector('#", dock, "');",
+      "var tab = document.querySelector(",
+      "'[data-tab-panel-id=\"block_panel-b\"]');",
+      "var dt = new DataTransfer();",
+      "tab.dispatchEvent(new DragEvent('dragstart',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt}));",
+      "var r = el.getBoundingClientRect();",
+      "el.dispatchEvent(new DragEvent('dragover',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt,",
+      " clientX: r.right - 5, clientY: r.top + r.height / 2}));"
+    )
+  )
+
+  # Dockview detaches the dragged tab as the panel lands, and a detached node's
+  # `dragend` propagates nowhere -- so the panel event, not the DOM event, is
+  # what has to resolve the drag. Reproduce that exactly: detach, then move.
+  app$run_js(
+    paste0(
+      "var api = ", api, ";",
+      "var grid = api.groups.filter(",
+      "function (g) { return g.api.location.type === 'grid' })[0];",
+      "document.querySelector('[data-tab-panel-id=\"block_panel-b\"]')",
+      ".remove();",
+      "api.getPanel('block_panel-b').api.moveTo(",
+      "{group: grid, position: 'within'});"
+    )
+  )
+
+  app$wait_for_js(visible("right", "false"), timeout = 15 * 1000)
+
+  expect_false(isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('right')"))))
+  expect_true(
+    "block_panel-b" %in% grid_tree_ids(
+      as_dock_grid(
+        new_dock_layout(app$get_value(input = paste0(dock, "_state")))
+      )
+    )
+  )
+})
+
+test_that("a panel landing in a revealed rail expands it (#431)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "edit-board", "app.R", package = "blockr.dock"),
+    name = "rail-expand-on-drop",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+  dock <- paste0("my_board-", read_dock_state(app)$active_view, "-dock")
+  api <- paste0("HTMLWidgets.find('#", dock, "').getWidget()")
+
+  state <- function(prop, want) {
+    paste0(
+      "HTMLWidgets.find('#", dock, "')?.getWidget()", prop, " === ", want
+    )
+  }
+
+  app$wait_for_js(state("?.isEdgeGroupVisible('left')", "true"),
+                  timeout = 15 * 1000)
+
+  # Empty the rail so it hides, which is the state a reveal has to rescue.
+  app$run_js(
+    paste0(
+      "var api = ", api, ";",
+      "var grid = api.groups.filter(",
+      "function (g) { return g.api.location.type === 'grid' })[0];",
+      "api.getPanel('ext_panel-edit_board').api.moveTo(",
+      "{group: grid, position: 'within'});"
+    )
+  )
+  app$wait_for_js(state("?.isEdgeGroupVisible('left')", "false"),
+                  timeout = 15 * 1000)
+
+  # Reveal it by dwelling in the band the collapsed strip would occupy. It
+  # comes up collapsed, so an empty rail shows its strip rather than a
+  # full-width empty pane.
+  app$run_js(
+    paste0(
+      "var el = document.querySelector('#", dock, "');",
+      "var tab = document.querySelector(",
+      "'[data-tab-panel-id=\"block_panel-a\"]');",
+      "var dt = new DataTransfer();",
+      "tab.dispatchEvent(new DragEvent('dragstart',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt}));",
+      "var r = el.getBoundingClientRect();",
+      "el.dispatchEvent(new DragEvent('dragover',",
+      "{bubbles: true, cancelable: true, dataTransfer: dt,",
+      " clientX: r.left + 5, clientY: r.top + r.height / 2}));"
+    )
+  )
+  # Gate on visibility, not on `isCollapsed()`: a hidden empty rail already
+  # reports itself collapsed, so waiting on that would pass before the reveal
+  # had happened at all.
+  app$wait_for_js(state("?.isEdgeGroupVisible('left')", "true"),
+                  timeout = 15 * 1000)
+  expect_true(
+    isTRUE(app$get_js(paste0(api, ".getEdgeGroup('left').isCollapsed()")))
+  )
+
+  # Land a panel in it by moving the one the drag picked up, which is what a
+  # real drop does -- it relocates a panel rather than creating one. A rail
+  # being collapsed is no obstacle to that: the panel lands and the strip
+  # expands.
+  app$run_js(
+    paste0(
+      api, ".getPanel('block_panel-a').api.moveTo({group: ", api,
+      ".groups.filter(function (g) {",
+      "var l = g.api.location;",
+      "return l.type === 'edge' && l.position === 'left' })[0],",
+      " position: 'center'});"
+    )
+  )
+
+  # The rail expands: content has arrived, so the bare strip is no longer what
+  # the user wants to see.
+  app$wait_for_js(state("?.getEdgeGroup('left')?.isCollapsed()", "false"),
+                  timeout = 15 * 1000)
+
+  expect_true(isTRUE(app$get_js(paste0(api, ".isEdgeGroupVisible('left')"))))
+  expect_equal(
+    app$get_js(
+      paste0(
+        "(", api, ".groups.filter(function (g) {",
+        "var l = g.api.location;",
+        "return l.type === 'edge' && l.position === 'left' })[0]",
+        " || {panels: []}).panels.length"
+      )
+    ),
+    1
+  )
+})
+
+test_that("a rail collapse round-trips with no following gesture (#436)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "rails", "app.R", package = "blockr.dock"),
+    name = "rail-collapse",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 3)
+  view <- read_dock_state(app)$active_view
+  dock <- paste0("my_board-", view, "-dock")
+  api <- paste0("HTMLWidgets.find('#", dock, "').getWidget()")
+
+  # Optional-chain the polls from `window` down: early in startup neither the
+  # widget nor htmlwidgets itself is on the page yet, and the poll has to wait
+  # that window out (yield `false`) rather than abort on a null dereference or
+  # an undefined global.
+  rail_is <- function(collapsed) {
+    paste0(
+      "window.HTMLWidgets?.find('#", dock, "')?.getWidget()",
+      "?.getEdgeGroup('left')?.isCollapsed() === ", collapsed
+    )
+  }
+
+  # A click on a rail's active tab toggles it collapsed and changes nothing
+  # else -- no move, no add, no activation change. Every other rail gesture
+  # rides an event the dockView client already reports, which is what hid this
+  # one (cynkra/dockViewR#109): the rail rendered collapsed while the board
+  # went on recording the state it had before, until an unrelated click
+  # happened to flush. So the assertions below deliberately follow the toggle
+  # with nothing at all.
+  toggle_rail <- function(collapsed) {
+    app$run_js(
+      paste0(
+        api, ".groups.find(function (g) {",
+        "var l = g.api.location;",
+        "return l.type === 'edge' && l.position === 'left' })",
+        ".element.querySelector('.dv-tab').click();"
+      )
+    )
+    app$wait_for_js(rail_is(collapsed), timeout = 15 * 1000)
+    app$wait_for_idle()
+  }
+
+  # The board as a save finds it: exported through the live plugin, so the read
+  # goes through the mirror that commits the client echo rather than through
+  # the echo itself. A stale value is harmless in a live session -- the next
+  # click corrects it -- and wrong exactly here, where the toggle is the last
+  # thing the user did before the board was written out.
+  stored_collapsed <- function() {
+    board <- blockr_deser(
+      jsonlite::fromJSON(
+        retry_download(app, "my_board-preserve_board-serialize"),
+        simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+      )
+    )
+    isTRUE(board_grids(board)[[view]][["rails"]][["left"]][["collapsed"]])
+  }
+
+  app$wait_for_js(rail_is("false"), timeout = 15 * 1000)
+  expect_false(stored_collapsed())
+
+  toggle_rail("true")
+  expect_true(stored_collapsed())
+
+  toggle_rail("false")
+  expect_false(stored_collapsed())
+})
+
+test_that("a rail collapsed on one page collapses on every page (#480)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "rail-sync", "app.R", package = "blockr.dock"),
+    name = "rail-sync",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_dock_loaded(app, n_blocks = 2)
+
+  nav <- read_view_nav(app)
+  view <- set_names(nav$id, nav$label)
+
+  rail <- function(page) {
+    paste0(
+      "window.HTMLWidgets?.find('#my_board-", view[[page]], "-dock')",
+      "?.getWidget()?.getEdgeGroup('left')"
+    )
+  }
+
+  rail_is <- function(page, collapsed) {
+    paste0(rail(page), "?.isCollapsed() === ", collapsed)
+  }
+
+  wait_rail <- function(page, collapsed) {
+    app$wait_for_js(rail_is(page, collapsed), timeout = 15 * 1000)
+  }
+
+  # A click on the rail's open tab, which is how a user collapses or expands
+  # it.
+  toggle <- function(page) {
+    app$run_js(
+      paste0(
+        "document.querySelector('#my_board-", view[[page]], "-dock ",
+        "[data-testid=\"dv-edge-group-rail-left\"] .dv-tab').click();"
+      )
+    )
+  }
+
+  # A click on the board option's switch, should it not already read `on`.
+  set_sync <- function(on) {
+    app$run_js(
+      paste0(
+        "var el = document.getElementById('my_board-sync_rails');",
+        "if (el.checked !== ", on, ") el.click();"
+      )
+    )
+    app$wait_for_idle()
+  }
+
+  stored_collapsed <- function(page) {
+    board <- blockr_deser(
+      jsonlite::fromJSON(
+        retry_download(app, "my_board-preserve_board-serialize"),
+        simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+      )
+    )
+    rails <- board_grids(board)[[view[[page]]]][["rails"]]
+    isTRUE(rails[["left"]][["collapsed"]])
+  }
+
+  wait_rail("First", "false")
+
+  toggle("First")
+  wait_rail("First", "true")
+
+  # Second's dock is built on this first visit, from a layout that already has
+  # the rail collapsed: the client carries a collapse only to docks it has.
+  click_view(app, view[["Second"]])
+  wait_view_handle(app, view[["Second"]])
+  wait_rail("Second", "true")
+
+  # Expanding it here expands First's, whose dock is built and sits behind this
+  # one. That dock reports the change like any other, so the board stores it.
+  toggle("Second")
+  wait_rail("Second", "false")
+  wait_rail("First", "false")
+  app$wait_for_idle()
+
+  expect_false(stored_collapsed("First"))
+
+  # Switched off, a page keeps its rail as it was left, and a page built now
+  # opens as stored rather than as the one on screen.
+  set_sync("false")
+
+  toggle("Second")
+  wait_rail("Second", "true")
+  app$wait_for_idle()
+
+  expect_false(isTRUE(app$get_js(paste0(rail("First"), ".isCollapsed()"))))
+
+  click_view(app, view[["Third"]])
+  wait_view_handle(app, view[["Third"]])
+  wait_rail("Third", "false")
+
+  # Switched back on, the other pages follow the one on screen at once.
+  set_sync("true")
+  wait_rail("Second", "false")
+  app$wait_for_idle()
+
+  expect_false(stored_collapsed("Second"))
+})
+
+test_that("New page opens the name of the page it added, and only that", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-new-page-rename",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  app$run_js(
+    paste0(
+      "document.querySelector('#my_board-view_nav')",
+      ".closest('.blockr-view-dropdown')",
+      ".querySelector('.blockr-view-toggle').click();",
+      "document.querySelector('#my_board-view_nav .blockr-view-manage')",
+      ".click();",
+      "document.querySelector('#my_board-view_nav .blockr-view-add').click();"
+    )
+  )
+  wait_view_nav(app, 3)
+
+  wait_js(
+    app,
+    paste0(
+      "document.activeElement !== null && ",
+      "document.activeElement.classList.contains('blockr-view-rename-input')"
+    ),
+    function() "[view-nav] the new page's name never opened for renaming"
+  )
+  expect_identical(
+    app$get_js("document.activeElement.value"),
+    "Page 3"
+  )
+
+  # Escape gives the name back and leaves the menu open, in manage mode.
+  app$run_js(
+    paste0(
+      "document.activeElement.dispatchEvent(",
+      "new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))"
+    )
+  )
+
+  expect_identical(
+    app$get_js(
+      paste0(
+        "(function(){var n = document.querySelector('#my_board-view_nav');",
+        "return [n.classList.contains('show'), ",
+        "n.classList.contains('is-managing'), ",
+        "n.querySelectorAll('.blockr-view-rename-input').length];})()"
+      )
+    ),
+    list(TRUE, TRUE, 0L)
+  )
+
+  # A page added by other means, such as the assistant, keeps its name shut,
+  # even while the server is making one for "New page".
+  renaming <- function() {
+    app$get_js(
+      paste0(
+        "[...document.querySelectorAll(",
+        "'#my_board-view_nav .blockr-view-rename-input')]",
+        ".map(i => i.value)"
+      )
+    )
+  }
+
+  push_row <- function(id, name) {
+    push_view_nav(
+      app,
+      jsonlite::toJSON(
+        list(
+          add = list(
+            id = id,
+            html = as.character(view_item_ui(id, name, can_crud = TRUE))
+          )
+        ),
+        auto_unbox = TRUE
+      )
+    )
+  }
+
+  push_view_nav(app, '{"rename_new": "Page 9"}')
+  push_row("ghost", "Ghost")
+
+  expect_identical(renaming(), list())
+
+  push_row("page-9", "Page 9")
+
+  expect_identical(renaming(), list("Page 9"))
+})
+
+test_that("the last page offers no removal", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "view-last-page",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  app$wait_for_idle()
+
+  removable <- function() {
+    app$get_js(
+      paste0(
+        "[...document.querySelectorAll(",
+        "'#my_board-view_nav .blockr-view-item')]",
+        ".map(r => getComputedStyle(r.querySelector('.blockr-view-remove'))",
+        ".display !== 'none')"
+      )
+    )
+  }
+
+  app$run_js(
+    paste0(
+      "document.querySelector('#my_board-view_nav')",
+      ".closest('.blockr-view-dropdown')",
+      ".querySelector('.blockr-view-toggle').click();",
+      "document.querySelector('#my_board-view_nav .blockr-view-manage')",
+      ".click();"
+    )
+  )
+
+  expect_identical(removable(), list(TRUE, TRUE))
+
+  # The in-place question, then its Remove button.
+  app$run_js(
+    paste0(
+      "document.querySelectorAll('#my_board-view_nav .blockr-view-remove')[1]",
+      ".click();",
+      "document.querySelector(",
+      "'#my_board-view_nav .blockr-view-remove-confirm')",
+      ".click();"
+    )
+  )
+  wait_view_nav(app, 1)
+
+  expect_identical(removable(), list(FALSE))
 })

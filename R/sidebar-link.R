@@ -517,7 +517,6 @@ edit_link_menu_ui <- function(id, board, link_id) {
     )
   } else {
     tagList(
-      css_block_selectize(),
       uiOutput(ns("endpoints")),
       uiOutput(ns("input_field")),
       actionButton(
@@ -572,17 +571,22 @@ edit_link_menu_server <- function(id, board, link_id) {
         row <- edit_link_row(brd, lid)
         req(row)
 
-        ids <- board_block_ids(brd)
         tagList(
-          edit_link_block_select(
-            session$ns("from"), "Source block", brd, ids, row$from
+          board_block_select(
+            session$ns("from"),
+            brd,
+            selected = row$from,
+            label = "Source block"
           ),
           # Only blocks that can still receive a link (a free named input,
           # or variadic arity) are offered as targets; the edited link's own
           # slot is freed first, so its current target stays selectable.
-          edit_link_block_select(
-            session$ns("to"), "Target block", brd,
-            edit_link_target_ids(brd, lid), row$to
+          board_block_select(
+            session$ns("to"),
+            brd,
+            edit_link_target_ids(brd, lid),
+            selected = row$to,
+            label = "Target block"
           )
         )
       })
@@ -812,25 +816,4 @@ edit_link_target_ids <- function(board, link_id) {
     logical(1L)
   )
   ids[keep]
-}
-
-# A single-select block picker rendered with the block-browser selectize
-# (icon, name, package badge, id) - the same look as the add-panel picker
-# - preselected to `selected`. `build_block_options()` /
-# `js_blk_selectize_render()` are the shared block-browser helpers.
-edit_link_block_select <- function(id, label, board, blk_ids, selected) {
-  selectizeInput(
-    id,
-    label = label,
-    choices = NULL,
-    options = list(
-      options = build_block_options(board, blk_ids),
-      items = list(selected),
-      maxItems = 1L,
-      valueField = "value",
-      labelField = "label",
-      searchField = c("label", "description", "searchtext"),
-      render = js_blk_selectize_render()
-    )
-  )
 }

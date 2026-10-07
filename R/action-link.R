@@ -140,3 +140,64 @@ remove_link_action <- function(trigger, board, update, ...) {
     id = "remove_link_action"
   )
 }
+
+# Triggered with a link id like the other actions in this file, though what
+# it commits is a block: an insert is scoped to the wire it splits, and the
+# wire is what the user gestures at.
+insert_block_action <- function(trigger, board, update, ...) {
+  new_action(
+    function(input, output, session) {
+
+      # The catalogue is registry-based (any block that can receive from the
+      # link's source); the menu's caption names the wire's two ends.
+      added <- block_browser_server(
+        "browser",
+        board = reactive(board$board),
+        target = reactive(insert_into(trigger()))
+      )
+
+      observeEvent(trigger(), {
+        open_add_block_menu(
+          "insert",
+          insert_caption(board$board, trigger()),
+          at = trigger_at(trigger),
+          session = session
+        )
+      })
+
+      observeEvent(added(), {
+
+        res <- added()
+
+        # The menu yields no links when the split link has gone between
+        # opening the panel and committing. Applying the block alone would
+        # leave it stranded off the graph, so bail.
+        if (!length(res$links)) {
+          notify(
+            "That link is no longer on the board.",
+            type = "warning", session = session
+          )
+          return()
+        }
+
+        # One update. `modify_board_links()` drops the split link before it
+        # adds, so the far end's slot is free by the time the second new link
+        # claims it, and `before` puts that link where the split one sat: an
+        # entry's argument position follows the board's link order, so a link
+        # merely appended would slide every sibling after it up a place. The
+        # anchor is resolved before `rm` is applied, which is what lets it
+        # name the link this same payload removes.
+        update(
+          list(
+            blocks = list(add = res$blocks),
+            links = list(add = res$links, rm = trigger(), before = res$before)
+          )
+        )
+
+      })
+
+      NULL
+    },
+    id = "insert_block_action"
+  )
+}

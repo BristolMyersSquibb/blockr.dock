@@ -148,3 +148,179 @@ test_that("move_dom_elements batches a sweep into one message", {
 
   expect_length(sent, 0L)
 })
+
+test_that("determine_panel_pos takes a narrow view's only group", {
+
+  # That group holds the DAG, which the wide path reserves -- leaving no
+  # candidate, so the add would split a second group off and undo the collapse.
+  local_mocked_bindings(
+    layout_groups = function(layout) {
+      list(
+        list(
+          id = "grp1",
+          views = "ext_panel-dag",
+          activeView = "ext_panel-dag"
+        )
+      )
+    }
+  )
+
+  dock <- list(
+    layout = function() NULL,
+    prev_active_group = function() NULL
+  )
+
+  expect_identical(determine_panel_pos(dock), list(direction = "right"))
+
+  dock[["narrow"]] <- TRUE
+
+  expect_identical(
+    determine_panel_pos(dock),
+    list(referenceGroup = "grp1", direction = "within")
+  )
+})
+
+test_that("layout_groups reads whole group membership, grid and rails (#250)", {
+
+  expect_identical(layout_groups(NULL), list())
+
+  expect_identical(
+    layout_groups(dock_grid(c("ext_panel-dag", "block_panel-a"))),
+    list(
+      list(
+        id = "1",
+        views = c("ext_panel-dag", "block_panel-a"),
+        activeView = "ext_panel-dag"
+      )
+    )
+  )
+
+  echo <- function(collapsed = FALSE) {
+    list(
+      grid = grid_to_tree(dock_grid("block_panel-a")),
+      edgeGroups = list(
+        left = list(
+          visible = TRUE,
+          collapsed = collapsed,
+          group = list(
+            views = list("ext_panel-dag", "block_panel-b"),
+            activeView = "block_panel-b",
+            id = "rail-left"
+          )
+        )
+      )
+    )
+  }
+
+  expect_identical(chr_xtr(layout_groups(echo()), "id"), c("1", "rail-left"))
+  expect_identical(
+    layout_groups(echo())[[2L]][["views"]],
+    c("ext_panel-dag", "block_panel-b")
+  )
+
+  # A collapsed rail has no content pane, so it is not on screen and not a
+  # group an add can land in.
+  expect_identical(chr_xtr(layout_groups(echo(TRUE)), "id"), "1")
+})
+
+test_that("determine_panel_pos reserves every extension's group (#250)", {
+
+  leaf <- function(id, view, members) {
+    list(
+      type = "leaf",
+      data = list(id = id, activeView = view, views = as.list(members))
+    )
+  }
+
+  dock <- function(...) {
+    list(
+      layout = function() {
+        list(grid = list(root = list(type = "branch", data = list(...))))
+      },
+      prev_active_group = function() NULL
+    )
+  }
+
+  # A group of plain block panels is a candidate, as before.
+  expect_identical(
+    determine_panel_pos(dock(leaf("grp1", "block_panel-a", "block_panel-a"))),
+    list(referenceGroup = "grp1", direction = "within")
+  )
+
+  # An extension mounted under any key is reserved, not just `dag`: the add
+  # would otherwise tab over it and take focus.
+  expect_identical(
+    determine_panel_pos(
+      dock(leaf("grp1", "ext_panel-minidag", "ext_panel-minidag"))
+    ),
+    list(direction = "right")
+  )
+
+  # Membership, not the front tab. An extension parked behind a fronted sibling
+  # is covered just the same, so its group stays reserved.
+  expect_identical(
+    determine_panel_pos(
+      dock(
+        leaf(
+          "grp1", "block_panel-a", c("ext_panel-dag", "block_panel-a")
+        )
+      )
+    ),
+    list(direction = "right")
+  )
+
+  # Reserving one group still leaves the others open.
+  expect_identical(
+    determine_panel_pos(
+      dock(
+        leaf("grp1", "ext_panel-dag", "ext_panel-dag"),
+        leaf("grp2", "block_panel-a", "block_panel-a")
+      )
+    ),
+    list(referenceGroup = "grp2", direction = "within")
+  )
+})
+
+test_that("only the offcanvas pools skip rendering their contents (e2e)", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
+    name = "pool-content-visibility",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  # Bootstrap adds `.show` only once an offcanvas has slid in, so one that is
+  # opening carries `.showing` alone, as the probe's offcanvas does.
+  probe <- jsonlite::fromJSON(
+    app$get_js(
+      r"(JSON.stringify((function () {
+        var cv = function (el) {
+          return getComputedStyle(el).contentVisibility;
+        };
+        var body = function (id) {
+          return document.querySelector('#' + id + ' > .offcanvas-body');
+        };
+        var other = document.createElement('div');
+        other.className = 'offcanvas offcanvas-end showing';
+        other.innerHTML = '<div class="offcanvas-body"></div>';
+        document.body.appendChild(other);
+        var res = {
+          blocks: cv(body('my_board-blocks_offcanvas')),
+          exts: cv(body('my_board-exts_offcanvas')),
+          opening: cv(other.firstChild)
+        };
+        other.remove();
+        return res;
+      })()))"
+    )
+  )
+
+  expect_identical(probe$blocks, "hidden")
+  expect_identical(probe$exts, "hidden")
+  expect_identical(probe$opening, "visible")
+})

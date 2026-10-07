@@ -10,8 +10,12 @@
 # unaffected.
 #
 # Shape: a `dock_grid` carries an `orientation`, `children`, `sizes` and an
-# optional `focus`. A leaf holds its `panels` (a character vector) and its open
-# `active` tab; a branch holds `children` (nodes) and their `sizes`.
+# optional `focus` and `rails`. A leaf holds its `panels` (a character vector)
+# and its open `active` tab; a branch holds `children` (nodes) and their
+# `sizes`. `rails` is flat like `focus` rather than part of the recursion: a
+# map keyed by edge, each holding the panels pinned there. The tree and the
+# rails partition the panels the grid places -- a railed panel is absent from
+# the tree, which is what puts it outside the splitview.
 # `children` and `sizes` are parallel; `sizes` are 0-1 ratios summing to 1;
 # `focus` is a panel id or NULL. A branch nests, and its split direction
 # alternates with depth (as dockView does), so only the root orientation is
@@ -43,7 +47,8 @@ normalise_sizes <- function(sizes) {
 }
 
 new_dock_grid <- function(children = list(), sizes = NULL,
-                          orientation = "horizontal", focus = NULL) {
+                          orientation = "horizontal", focus = NULL,
+                          rails = NULL) {
 
   content <- list(orientation = orientation, children = children, sizes = sizes)
 
@@ -51,13 +56,19 @@ new_dock_grid <- function(children = list(), sizes = NULL,
     content[["focus"]] <- focus
   }
 
+  if (length(rails)) {
+    content[["rails"]] <- view_rail_set(rails)
+  }
+
   canonicalize_grid(structure(content, class = "dock_grid"))
 }
 
 # The canonical form, computed directly on our shape: every branch's sizes are
 # normalised to ratios summing to 1 (defaulting to an even split when absent),
-# and a `focus` that no longer names a placed panel is dropped. There are no
-# volatile ids to reassign, so two grids of the same shape are `identical()`.
+# and a `focus` that no longer names a placed panel is dropped -- placed meaning
+# in the tree or in a rail, since a rail's open tab can hold focus too. There
+# are no volatile ids to reassign, so two grids of the same shape are
+# `identical()`.
 canonicalize_grid <- function(grid) {
 
   norm_children <- function(children, sizes) {
@@ -82,6 +93,30 @@ canonicalize_grid <- function(grid) {
   grid[["children"]] <- root[["children"]]
   grid[["sizes"]] <- root[["sizes"]]
 
+  # The tree and the rails partition what the grid places, so a panel a rail
+  # claims leaves the tree. Enforcing it here rather than at the call sites
+  # makes it a property of the type: however a grid is built, no panel is in
+  # both, and the dockView cast can emit the tree without re-checking.
+  # An empty rail at its defaults says nothing -- every dock offers every edge
+  # -- so it is dropped rather than stored, the same way a stale `focus` is.
+  if (length(grid[["rails"]])) {
+    grid[["rails"]] <- Filter(Negate(rail_is_default), grid[["rails"]])
+    if (!length(grid[["rails"]])) grid[["rails"]] <- NULL
+  }
+
+  railed <- rail_panel_ids(grid[["rails"]])
+
+  if (length(railed)) {
+
+    kept <- prune_tree(
+      grid[["children"]], grid[["sizes"]],
+      setdiff(grid_tree_ids(grid), railed)
+    )
+
+    grid[["children"]] <- kept[["children"]]
+    grid[["sizes"]] <- normalise_sizes(kept[["sizes"]])
+  }
+
   if (not_null(grid[["focus"]]) && !grid[["focus"]] %in% grid_panel_ids(grid)) {
     grid[["focus"]] <- NULL
   }
@@ -89,8 +124,16 @@ canonicalize_grid <- function(grid) {
   grid
 }
 
-# All panel ids in a grid, in reading order (root children first, depth-first).
+# All panel ids a grid places: its tree, in reading order (root children first,
+# depth-first), then whatever its rails hold. The two partition the set, so a
+# panel appears exactly once.
 grid_panel_ids <- function(grid) {
+  c(grid_tree_ids(grid), rail_panel_ids(grid[["rails"]]))
+}
+
+# Just the tree half -- what the splitview arranges, and so what the dockView
+# grid cast consumes.
+grid_tree_ids <- function(grid) {
 
   collect <- function(node) {
     if (is_grid_leaf(node)) {
@@ -112,7 +155,8 @@ grid_panel_ids <- function(grid) {
 #' casts another `dock_grid` (identity) or a [dock_layout][dock-layout]
 #' (dockView's client echo) into it and is idempotent. `is_dock_grid()` is the
 #' class check; `validate_dock_grid()` returns its input and errors on a
-#' malformed or non-canonical grid.
+#' malformed or non-canonical grid, or on one that places a panel more than
+#' once.
 #'
 #' @param x Object to cast (a `dock_grid` or a [dock_layout][dock-layout]),
 #'   validate, or test.
@@ -151,7 +195,7 @@ validate_dock_grid <- function(x) {
   }
 
   unexpected <- setdiff(
-    names(x), c("orientation", "children", "sizes", "focus")
+    names(x), c("orientation", "children", "sizes", "focus", "rails")
   )
 
   if (length(unexpected)) {
@@ -161,10 +205,32 @@ validate_dock_grid <- function(x) {
     )
   }
 
+  validate_grid_rails(x[["rails"]])
+
   if (!grid_sizes_canonical(x)) {
     blockr_abort(
       "A `dock_grid` must be canonical: each branch's sizes sum to 1.",
       class = "dock_grid_not_canonical"
+    )
+  }
+
+  # A grid says where each panel goes, so a panel it places twice -- twice in
+  # the tree, twice in one rail, or once in each of two rails -- has no
+  # arrangement to express. The tree/rail overlap `canonicalize_grid()` prunes
+  # has a principled winner (the rail claims the panel); two occurrences of the
+  # same kind have none, so first-wins would apply an arbitrary choice quietly
+  # to someone's layout. Hence a rejection here rather than a dedup there.
+  # Without it the duplicate travels to `as_dock_layout()` and dies in core's
+  # vocabulary ("Block IDs are required to be unique.") at render time, far
+  # from whatever wrote the grid.
+  placed <- grid_panel_ids(x)
+  dup <- unique(placed[duplicated(placed)])
+
+  if (length(dup)) {
+    blockr_abort(
+      "A `dock_grid` places each panel once, but {dup} {?is/are} placed more \\
+       than once.",
+      class = "dock_grid_panel_duplicated"
     )
   }
 
@@ -185,13 +251,18 @@ as_dock_grid.list <- function(x, ...) {
     children = coal(x[["children"]], list(), fail_all = FALSE),
     sizes = x[["sizes"]],
     orientation = coal(x[["orientation"]], "horizontal", fail_all = FALSE),
-    focus = x[["focus"]]
+    focus = x[["focus"]],
+    rails = lapply(x[["rails"]], as_dock_rail)
   )
 }
 
 #' @export
 as.list.dock_grid <- function(x, ...) {
-  unclass(x)
+
+  x <- unclass(x)
+  x[["rails"]] <- lapply(x[["rails"]], unclass)
+
+  x
 }
 
 # Each branch splits its extent among its direct children, so their sizes are
@@ -244,7 +315,18 @@ all.equal.dock_grid <- function(target, current, ..., scale = 1) {
   target[["focus"]] <- NULL
   current[["focus"]] <- NULL
 
-  all.equal(unclass(target), unclass(current), ..., scale = scale)
+  # Rails carry pixels, not 0-1 ratios, so the sash noise floor is meaningless
+  # on them -- a 0.005 slack on a 260px width would swallow a real drag. Compare
+  # them at `all.equal()`'s own tolerance, and the tree at the caller's.
+  rails <- all.equal(target[["rails"]], current[["rails"]])
+
+  target[["rails"]] <- NULL
+  current[["rails"]] <- NULL
+
+  tree <- all.equal(unclass(target), unclass(current), ..., scale = scale)
+
+  if (isTRUE(tree) && isTRUE(rails)) TRUE else c(tree[!isTRUE(tree)],
+                                                 rails[!isTRUE(rails)])
 }
 
 #' @export
@@ -270,11 +352,10 @@ print.dock_grid <- function(x, ...) {
   invisible(x)
 }
 
-# Restrict a grid to `members`, dropping ghosts and unknowns and pruning any
-# leaf or branch left empty, as a canonical `dock_grid`. The construction-time
-# cleaner and the drop half of `place_members()`: it removes, never adds, so a
-# member the grid omits stays absent here (defaulted only in `place_members()`).
-restrict_grid <- function(grid, members) {
+# Keep only the leaf panels in `members`, dropping any leaf or branch left
+# empty. Shared by `restrict_grid()` (which prunes to a view's membership) and
+# `canonicalize_grid()` (which prunes what the rails have claimed).
+prune_tree <- function(children, sizes, members) {
 
   prune <- function(children, sizes) {
 
@@ -315,14 +396,66 @@ restrict_grid <- function(grid, members) {
     }
   }
 
-  root <- prune(grid[["children"]], grid[["sizes"]])
+  prune(children, sizes)
+}
+
+# Restrict a grid to `members`, dropping ghosts and unknowns and pruning any
+# leaf or branch left empty, as a canonical `dock_grid`. The construction-time
+# cleaner and the drop half of `place_members()`: it removes, never adds, so a
+# member the grid omits stays absent here (defaulted only in `place_members()`).
+restrict_grid <- function(grid, members) {
+
+  root <- prune_tree(grid[["children"]], grid[["sizes"]], members)
 
   new_dock_grid(
     children = root[["children"]],
     sizes = root[["sizes"]],
     orientation = grid[["orientation"]],
-    focus = grid[["focus"]]
+    focus = grid[["focus"]],
+    rails = lapply(grid[["rails"]], restrict_rail, members = members)
   )
+}
+
+# A copy of `grid` in which every rail wears the width `stored` records for it.
+# A rail's width is pixels, and dockView grinds a low-priority edge group down
+# whenever the dock is too narrow to hold it -- then leaves it there once the
+# dock widens again, handing the regained space to the centre instead.
+# Committing that width would replace what the user set with the narrowest
+# viewport the board was ever opened at, and every restore after it would come
+# back at that. The mirror therefore takes a rail's width from the client only
+# across an echo that left the dock's own width alone, and rides the stored one
+# through every other.
+keep_rail_sizes <- function(grid, stored) {
+
+  rails <- grid[["rails"]]
+
+  if (!length(rails)) {
+    return(grid)
+  }
+
+  kept <- coal(stored[["rails"]], list(), fail_all = FALSE)
+
+  grid[["rails"]] <- set_names(
+    map(keep_rail_size, rails, kept[names(rails)]),
+    names(rails)
+  )
+
+  canonicalize_grid(grid)
+}
+
+# A copy of `grid` in which each rail holding panels is collapsed or expanded
+# as `collapsed`, a logical keyed by edge, says for its edge. A rail on an edge
+# it does not name stays as it was, and so does an empty rail: it is hidden, so
+# it has no state to show.
+follow_rail_collapse <- function(grid, collapsed) {
+
+  for (pos in intersect(names(grid[["rails"]]), names(collapsed))) {
+    if (rail_holds_panels(grid[["rails"]][[pos]])) {
+      grid[["rails"]][[pos]][["collapsed"]] <- collapsed[[pos]]
+    }
+  }
+
+  grid
 }
 
 # The member-driven placement of a view: membership decides *which* panels
@@ -358,7 +491,8 @@ append_default_leaves <- function(grid, pids) {
     children = c(grid[["children"]], lapply(pids, default_leaf)),
     sizes = c(grid[["sizes"]], rep(size, length(pids))),
     orientation = grid[["orientation"]],
-    focus = grid[["focus"]]
+    focus = grid[["focus"]],
+    rails = grid[["rails"]]
   )
 }
 
@@ -392,8 +526,123 @@ set_grid_active <- function(grid, pid) {
     children = lapply(grid[["children"]], front),
     sizes = grid[["sizes"]],
     orientation = grid[["orientation"]],
-    focus = pid
+    focus = pid,
+    rails = lapply(grid[["rails"]], front_rail, pid = pid)
   )
+}
+
+# Flatten a grid's nesting into one vertical stack: every tab group survives as
+# its own row -- railed ones included -- in reading order, splits dropped. The
+# narrow-viewport render, applied at the dockView seam and nowhere else, so the
+# keeps the authored geometry a wide viewport restores to. Merging the leaves
+# instead would put a whole dashboard's panels in one tab strip, where naming
+# one of ten tabs is hopeless; a stack keeps the author's grouping and lets the
+# page scroll through it.
+stack_grid <- function(grid) {
+
+  leaves <- stack_rows(grid)
+
+  if (!length(leaves)) {
+    return(grid)
+  }
+
+  new_dock_grid(
+    children = leaves,
+    sizes = stack_row_heights(grid),
+    orientation = "vertical",
+    focus = grid[["focus"]]
+  )
+}
+
+# The rows of the stack: the tree's leaves in reading order, then whatever the
+# rails hold, matching how `grid_panel_ids()` orders the two halves. A rail is
+# already a tab group and a narrow viewport has no edge to spare for it, so it
+# becomes a row like any leaf -- and it has to, since the tree and the rails
+# partition the placed panels and a dropped rail would strand its members.
+stack_rows <- function(grid) {
+  c(grid_leaves_in_order(grid), rail_rows(grid[["rails"]]))
+}
+
+rail_rows <- function(rails) {
+
+  held <- rails[lgl_ply(rails, rail_holds_panels)]
+
+  lapply(held, rail_row)
+}
+
+rail_holds_panels <- function(rail) {
+  length(rail[["panels"]]) > 0L
+}
+
+rail_row <- function(rail) {
+  list(panels = rail[["panels"]], active = rail[["active"]])
+}
+
+# What each row of the stack gets, as a share of the viewport height: the
+# height the author gave that group in the wide render, capped by
+# `narrow_group_fraction()`. Carrying the wide heights over means a group the
+# author sized down stays short instead of being padded out to a uniform row,
+# and the cap keeps a full-height group from filling more than a screenful.
+# These are absolute viewport shares, not ratios -- `new_dock_grid()`
+# normalises them for the grid, and the container's height is their sum
+# (`narrow_stack_attrs()`), so each row lands back on the share computed here.
+stack_row_heights <- function(grid) {
+
+  cap <- narrow_group_fraction()
+
+  # A rail's stored size is a width along the edge it was pinned to, so it
+  # carries no height to bring over and takes a full row.
+  c(
+    pmin(grid_leaf_heights(grid), cap),
+    rep(cap, length(rail_rows(grid[["rails"]])))
+  )
+}
+
+# Each leaf's share of the viewport height in the wide render: the product of
+# the sizes of the vertical splits on its path, a horizontal split dividing
+# width and leaving height alone. Split direction alternates with depth in
+# dockView, so only the root orientation is stored and every level below
+# follows from it.
+grid_leaf_heights <- function(grid) {
+
+  descend <- function(node, orientation, share) {
+
+    if (is_grid_leaf(node)) {
+      return(share)
+    }
+
+    kids <- node[["children"]]
+
+    shares <- if (identical(orientation, "vertical")) {
+      share * node[["sizes"]]
+    } else {
+      rep(share, length(kids))
+    }
+
+    unlst(map(descend, kids, flip_orientation(orientation), shares))
+  }
+
+  descend(
+    list(children = grid[["children"]], sizes = grid[["sizes"]]),
+    coal(grid[["orientation"]], "horizontal", fail_all = FALSE),
+    1
+  )
+}
+
+# Every leaf of a grid, in reading order (root children first, depth-first),
+# each keeping the panels and open tab it carried.
+grid_leaves_in_order <- function(grid) {
+
+  collect <- function(node) {
+
+    if (is_grid_leaf(node)) {
+      list(node)
+    } else {
+      unlst(lapply(node[["children"]], collect))
+    }
+  }
+
+  unlst(lapply(grid[["children"]], collect))
 }
 
 new_dock_grids <- function(x = list()) {
@@ -474,20 +723,28 @@ board_grids <- function(x) {
 }
 
 # A view's placement geometry, member-driven: membership is authoritative for
-# which panels appear, the grid only for their arrangement. No grid (NULL, or
-# a member-less view) falls back to a default over the members; otherwise the
-# grid's arrangement is kept for the members it places, a member it omits is
-# given a default spot, and a ghost (grid panel no longer a member) is dropped.
-# This is where placement is resolved, on read.
+# which panels appear, the grid only for their arrangement. The members a rail
+# holds are placed by that rail and so are absent here -- the two slots
+# partition the membership. No grid (NULL, or a member-less view) falls back to
+# a default over the members; otherwise the grid's arrangement is kept for the
+# members it places, a member it omits is given a default spot, and a ghost
+# (grid panel no longer a member) is dropped. This is where placement is
+# resolved, on read.
 view_grid <- function(view, grid) {
 
   members <- view_members(view)
 
-  if (is.null(grid) || !length(members)) {
+  placed <- if (is.null(grid) || !length(members)) {
     default_grid(members)
   } else {
     place_members(grid, members)
   }
+
+  placed[["rails"]] <- with_default_rails(
+    coal(placed[["rails"]], list(), fail_all = FALSE)
+  )
+
+  placed
 }
 
 # The active view's placement grid: which view is active is `active_view()`,
@@ -500,10 +757,12 @@ active_view_grid <- function(board) {
   view_grid(board_views(board)[[id]], board_grids(board)[[id]])
 }
 
-# The default geometry over a set of members: an extensions group on the left
-# and a blocks group on the right, each tabbing its panels. A view with no grid
-# falls back to this, so a fresh board and a grid-less view lay out identically.
-default_grid <- function(members) {
+# The default geometry over the members the grid places: an extensions group on
+# the left and a blocks group on the right, each tabbing its panels. A view with
+# no grid falls back to this, so a fresh board and a grid-less view lay out
+# identically. Whatever a rail holds never reaches here -- the default board
+# rails its extensions, so this sees only its blocks.
+default_grid <- function(members, rails = NULL) {
 
   ext <- members[maybe_ext_panel_id(members)]
   blk <- members[maybe_block_panel_id(members)]
@@ -512,7 +771,7 @@ default_grid <- function(members) {
   if (length(ext)) spec <- c(spec, list(ext))
   if (length(blk)) spec <- c(spec, list(blk))
 
-  do.call(dock_grid, spec)
+  do.call(dock_grid, c(spec, unname(rails)))
 }
 
 
@@ -530,8 +789,9 @@ coerce_dock_grids <- function(grids, id_map) {
 }
 
 # Restrict each grid to the (already cleaned) membership of the view it keys,
-# dropping ghosts and unknown panels so stored geometry never outlives the
-# board. Grids keyed by an unknown view are left for validation to reject.
+# less whatever that view's rails hold, dropping ghosts and unknown panels so
+# stored geometry never outlives the board and no panel sits in both a rail and
+# the grid. Grids keyed by an unknown view are left for validation to reject.
 restrict_grids_to_views <- function(grids, views) {
 
   for (id in names(grids)) {
@@ -567,9 +827,13 @@ restrict_grids_to_views <- function(grids, views) {
 #'   but redundant (a bare string is equivalent).
 #' * `group(..., sizes = NULL)`: a branch container. `sizes` is a
 #'   numeric vector parallel to `...` that overrides the even split.
+#' * `rail(..., position = "left")`: a tab group pinned to one edge of
+#'   the view rather than arranged by the splitview. Write it among the
+#'   grid's children; it is not one, so it never counts towards `sizes`,
+#'   and the members it names leave the grid tree.
 #' * `default_layout(blocks, extensions)` produces the default board
-#'   arrangement (extensions on top, blocks below) as a `list(views, grids)`
-#'   the constructor consumes.
+#'   arrangement (an extension rail on the left, blocks tabbed in the
+#'   grid) as a `list(views, grids)` the constructor consumes.
 #'
 #' `dock_grid()` accepts `orientation = "horizontal" | "vertical"` for the
 #' top-level split direction and `sizes` for the root-branch ratios. The
@@ -584,7 +848,16 @@ restrict_grids_to_views <- function(grids, views) {
 #'   consistency.
 #' @param orientation Top-level split direction; one of `"horizontal"`
 #'   (default) or `"vertical"`.
-#' @param active For `panels()`, the id of the tab to open by default.
+#' @param active For `panels()` and `rail()`, the id of the tab to open by
+#'   default.
+#' @param position For `rail()`, the edge the rail pins to; `"left"` (the
+#'   default) or `"right"`.
+#' @param collapsed For `rail()`, whether it opens collapsed to its bare tab
+#'   strip. A user collapses a rail by clicking its open tab, and that choice
+#'   is stored, so a restored board comes back the way it was left.
+#' @param size,collapsed_size For `rail()`, its width (or height, on a
+#'   horizontal edge) in pixels when open and when collapsed to its bare tab
+#'   strip.
 #' @param sizes Numeric vector parallel to `...`, giving each child's
 #'   share of the parent (positive; need not sum to 1).
 #' @param blocks,extensions Dock board components to arrange (for
@@ -612,11 +885,15 @@ restrict_grids_to_views <- function(grids, views) {
 #' # Vertical top-level split
 #' dock_grid(blk("a"), blk("b"), orientation = "vertical")
 #'
+#' # An extension parked on the left edge, out of the splitview
+#' dock_grid(blk("a"), rail(ext("dag"), position = "left"))
+#'
 #' @return `dock_grid()` returns a [dock_grid][dock-grid] object. `panels()`
 #' returns a `dock_panels` node and `group()` returns a `dock_group` node --
-#' both are grid sub-trees usable inside `dock_grid()` / `group()`.
-#' `default_layout()` returns a `list` with `views` (a `dock_views`) and
-#' `grids` (a `dock_grids`).
+#' both are grid sub-trees usable inside `dock_grid()` / `group()`. A `rail()`
+#' is a `dock_rail`, written among a grid's children but pinned outside the
+#' splitview. Finally `default_layout()` returns a `list` with `views` (a
+#' `dock_views`) and `grids` (a `dock_grids`).
 #'
 #' @rdname layout
 #' @export
@@ -624,14 +901,20 @@ dock_grid <- function(..., orientation = c("horizontal", "vertical"),
                       sizes = NULL) {
 
   orientation <- match.arg(orientation)
-  children <- list(...)
+  nodes <- list(...)
+
+  # A `rail()` sits among the children as written, but it is not one: it is
+  # pinned outside the splitview, so it never counts towards `sizes`.
+  railed <- lgl_ply(nodes, is_dock_rail)
+  children <- nodes[!railed]
 
   validate_sizes(sizes, children)
 
   new_dock_grid(
     children = lapply(children, build_grid_node),
     sizes = sizes,
-    orientation = orientation
+    orientation = orientation,
+    rails = nodes[railed]
   )
 }
 
@@ -714,17 +997,16 @@ validate_sizes <- function(sizes, children) {
 #' @export
 default_layout <- function(blocks, extensions) {
 
-  members <- c(
-    as.character(as_ext_panel_id(as_dock_extensions(extensions))),
-    as.character(as_block_panel_id(as_blocks(blocks)))
-  )
+  ext <- as.character(as_ext_panel_id(as_dock_extensions(extensions)))
+  blk <- as.character(as_block_panel_id(as_blocks(blocks)))
 
-  views <- new_dock_views(mint_view_ids(list(new_dock_view(members))))
+  views <- new_dock_views(mint_view_ids(list(new_dock_view(c(ext, blk)))))
+  id <- names(views)
 
   list(
     views = views,
     grids = new_dock_grids(
-      set_names(list(default_grid(members)), names(views))
+      set_names(list(default_grid(blk, rails = default_rails(ext))), id)
     )
   )
 }
@@ -796,7 +1078,8 @@ rewrite_grid_leaves <- function(grid, id_map) {
     children = lapply(grid[["children"]], rewrite_node),
     sizes = grid[["sizes"]],
     orientation = grid[["orientation"]],
-    focus = if (not_null(grid[["focus"]])) rename1(grid[["focus"]]) else NULL
+    focus = if (not_null(grid[["focus"]])) rename1(grid[["focus"]]) else NULL,
+    rails = lapply(grid[["rails"]], resolve_rail, id_map = id_map)
   )
 }
 

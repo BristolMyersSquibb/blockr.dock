@@ -3,385 +3,286 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
 
   blk_info <- blks_metadata(blk)
   ns <- NS(id)
+  has_inputs <- has_expr_ui(blk)
+  visible <- visible_sections(blk)
 
   div(
     class = "card-body",
+    # Header parts take their look from the stylesheet, never from a `style=`
+    # attribute, which would outrank any sheet a theme attaches. The status
+    # dot is the exception: its binding writes the spec it shares with the DAG.
     div(
-      class = "d-flex align-items-stretch gap-3",
+      class = "blockr-block-header",
       div(
         class = "blockr-block-icon",
-        span(
-          title = blk_info$description,
-          blk_icon_data_uri(blk_info$icon, blk_info$color, mode = "inline")
-        ),
+        block_mark(blk, blk_info),
         block_status_dot(ns)
       ),
       div(
-        class = paste(
-          "d-flex flex-column justify-content-center",
-          "flex-grow-1 min-height-0"
-        ),
+        class = "blockr-block-header-main",
         div(
-          class = "d-flex align-items-center justify-content-between w-100",
+          class = "blockr-block-header-row",
           block_card_title(blk, id, blk_info),
           div(
-            class = "d-flex align-items-center gap-1 flex-shrink-0",
-            block_card_toggles(blk, ns, ctrl_meta),
-            block_card_dropdown(ns, blk_info, blk_id)
+            class = "blockr-block-header-actions",
+            block_card_toggles(visible, ns, ctrl_meta, has_inputs),
+            block_card_dropdown(ns, blk_id, has_inputs)
           )
         )
       )
     ),
-    block_card_content(ns, expr_ui, block_ui, ctrl_ui)
+    block_card_content(ns, expr_ui, block_ui, visible, ctrl_ui, has_inputs)
+  )
+}
+
+visible_sections <- function(blk) {
+  as.character(coal(attr(blk, "visible"), c("inputs", "outputs")))
+}
+
+# The toggle reports `NULL` for "every section hidden", which is also what the
+# input holds before the card has reported at all -- and the freeze gate has
+# to tell those apart. Shiny registers the key on the first report even when
+# the value is `NULL`, so the key discriminates; the unconditional read is
+# what takes the dependency that wakes a caller still on the other branch.
+# The key test runs under isolate(): `names()` on a module's input depends on
+# the session's whole name set, so every new input anywhere on the board
+# would invalidate every block's `visible` -- and freeze_hidden_inputs(),
+# which reads all of them, would redo the whole board per card mount.
+reported_sections <- function(input) {
+
+  sections <- input$collapse_blk_sections
+
+  if ("collapse_blk_sections" %in% isolate(names(input))) {
+    coal(sections, character())
+  }
+}
+
+# The category colour goes to the stylesheet as a custom property rather than
+# being painted inline, so the tint, size and radius stay a theme's to change.
+# Type and package become the mark's tooltip through block-tooltips.js.
+block_mark <- function(blk, info) {
+
+  type <- gsub("_", " ", class(blk)[1L])
+
+  span(
+    class = "blockr-block-mark",
+    style = paste0("--blockr-dock-cat: ", info$color, ";"),
+    `data-blockr-tip` = type,
+    `data-blockr-tip-badge` = info$package,
+    `aria-label` = paste(type, info$package, sep = ", "),
+    role = "img",
+    HTML(info$icon)
   )
 }
 
 block_card_title <- function(block, id, info) {
   ns <- NS(id)
   input_id <- ns("block_name_in")
+  editable <- !is_dock_locked()
 
   div(
-    class = "flex-grow-1 pe-3",
+    class = "blockr-block-title-wrap",
     div(
-      class = "card-title mb-0",
-      style = "line-height: 1.0;",
+      class = "blockr-block-title",
       # Inline editable title container
       div(
         class = "blockr-inline-edit",
-        # Display mode - click to edit
+        # A double-click (or "Rename" in the block's menu) starts editing,
+        # which block-rename.js does, so a single click stays free to select
+        # the panel. A locked board refuses renames, so its title is not
+        # marked editable.
         div(
           id = ns("title_display"),
-          class = "blockr-title-display d-inline-flex align-items-center gap-2",
-          title = "Click to rename",
-          style = paste(
-            "padding: 4px 8px;",
-            "margin: -4px -8px;",
-            "border-radius: 4px;",
-            "cursor: pointer;",
-            "border: 2px dashed transparent;",
-            "transition: border-color 0.15s ease;"
-          ),
-          onmouseover = paste0(
-            "this.style.borderColor='#ddd';",
-            "this.querySelector('.edit-icon').style.opacity='1';"
-          ),
-          onmouseout = paste0(
-            "this.style.borderColor='transparent';",
-            "this.querySelector('.edit-icon').style.opacity='0';"
-          ),
-          onclick = sprintf(
-            paste0(
-              "this.style.display='none';",
-              "var editWrap = document.getElementById('%s');",
-              "editWrap.style.display='block';",
-              "var input = editWrap.querySelector('input');",
-              "input.focus();",
-              "input.select();"
-            ),
-            ns("title_edit")
-          ),
-          tags$span(class = "blockr-title", block_name(block)),
-          icon(
-            "pen-to-square",
-            class = "edit-icon",
-            style = paste(
-              "opacity: 0;",
-              "font-size: 0.7em;",
-              "color: #bbb;",
-              "transition: opacity 0.15s ease;"
-            )
-          )
+          class = "blockr-title-display",
+          `data-blockr-editable` = if (editable) "",
+          tags$span(class = "blockr-title", block_name(block))
         ),
         # Edit mode - hidden by default
         div(
           id = ns("title_edit"),
           class = "blockr-title-edit",
           style = "display: none;",
+          # The displayed title mirrors this input (block-rename.js), so a
+          # rename decided by the board, which `updateTextInput()` delivers,
+          # lands the way a keystroke does, with no render round-trip.
+          # With `updateOn = "blur"` the name reaches the server on Enter or
+          # when the field loses focus, so a rename is one board update rather
+          # than one per keystroke (about half a second of server time each on
+          # a large board); the browser shows the title as it is typed.
           textInput(
             input_id,
             label = NULL,
-            value = block_name(block)
+            value = block_name(block),
+            updateOn = "blur"
           ),
-          # The displayed title mirrors this input, so it is kept in sync here
-          # rather than by a server-rendered output: `updateTextInput()` fires
-          # 'change', so a rename decided by the board lands the same way a
-          # keystroke does, with no render round-trip.
-          tags$script(HTML(sprintf(
-            "$(document).ready(function() {
-              var input = $('#%s');
-              var display = $('#%s');
-              var editWrap = $('#%s');
-              input.on('blur', function() {
-                editWrap.hide();
-                display.css('display', 'flex');
-              });
-              input.on('keydown', function(e) {
-                if (e.key === 'Enter') {
-                  $(this).blur();
-                }
-              });
-              input.on('input change', function() {
-                display.find('.blockr-title').text($(this).val());
-              });
-            });",
-            input_id, ns("title_display"), ns("title_edit")
-          )))
+          div(class = "blockr-title-error", "A block needs a name")
         )
       )
-    ),
-    popover(
-      span(
-        class = "blockr-subtitle",
-        info$name
-      ),
-      # Title + package badge
-      div(
-        class = "d-flex align-items-center justify-content-between gap-2 mb-2",
-        tags$strong(info$name),
-        span(class = "badge-two-tone", info$package)
-      ),
-      # Description
-      p(class = "mb-0", info$description),
-      options = list(trigger = "hover")
     )
   )
 }
 
-block_card_toggles <- function(blk, ns, ctrl_meta = NULL) {
+# The card's open sections, as the `collapse_blk_sections` input
+# (section-toggle.js). The preview and a block's own control have a button
+# each; the controls are toggled from the card's "…" menu.
+block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
+                               has_inputs = TRUE) {
 
-  vals <- c("inputs", "outputs")
-  icon_labels <- list(
-    as.character(icon("sliders")),
-    as.character(icon("eye"))
-  )
-  tooltip_titles <- c("Controls", "Preview")
-
-  if (!is.null(ctrl_meta)) {
-    vals <- c(vals, "ctrl")
-    icon_labels <- c(
-      icon_labels,
-      list(as.character(ctrl_button_label(ctrl_meta)))
-    )
-    tooltip_titles <- c(
-      tooltip_titles,
-      coal(ctrl_meta$tooltip, ctrl_meta$label, "Control")
-    )
-  }
-
-  section_toggles <- shinyWidgets::checkboxGroupButtons(
-    inputId = ns("collapse_blk_sections"),
-    status = "light",
-    size = "sm",
-    choiceNames = icon_labels,
-    choiceValues = vals,
-    individual = TRUE,
-    selected = coal(attr(blk, "visible"), c("inputs", "outputs"))
-  )
-
-  section_toggles$attribs$class <- paste(
-    "blockr-section-toggle",
-    trimws(gsub("form-group|ms-auto", "", section_toggles$attribs$class))
-  )
-
-  # Locked dock: render the widget hidden so `input$collapse_blk_sections`
-  # still seeds the accordion via the observer below and honors any saved
-  # `attr(blk, "visible")` on restore (#122). The tooltip wiring is skipped
-  # because nothing is hoverable.
-  #
-  # NOTE: this is a UI-only hide, not a real lock. `display: none` removes the
-  # widget from view but the checkbox group is still a live Shiny input — a
-  # client can flip it via `Shiny.setInputValue()` and the observer below will
-  # happily mutate accordion state. "Lock" here is a UX affordance, not a
-  # server-side trust boundary. The principled fix is to drop the hidden
-  # widget entirely and seed the accordion directly from `attr(blk, "visible")`
-  # on startup, so the observer can be gated on `!is_dock_locked()`. TODO(#TBD).
+  # A locked card offers no toggle at all: the accordion is seeded from
+  # `visible` at render, so nothing here has to report back to place it. The
+  # widget used to be rendered hidden for exactly that seeding, which left a
+  # live Shiny input a client could flip via `Shiny.setInputValue()`.
   if (is_dock_locked()) {
-    return(div(style = "display: none;", section_toggles))
+    return(NULL)
   }
 
-  tagList(
-    section_toggles,
-    tags$script(HTML(sprintf(
-      "$(function() {
-        var btns = $('#%s').find('.btn');
-        var titles = %s;
-        btns.each(function(i) { $(this).attr('title', titles[i]); });
-      });",
-      ns("collapse_blk_sections"),
-      jsonlite::toJSON(tooltip_titles)
-    )))
+  sections <- c(
+    if (has_inputs) "inputs",
+    "outputs",
+    if (!is.null(ctrl_meta)) "ctrl"
   )
-}
 
-ctrl_button_label <- function(meta) {
+  open <- intersect(visible, sections)
 
-  label <- if (nzchar(coal(meta$label, ""))) meta$label
-  inner <- if (is.null(meta$icon)) label else tagList(meta$icon, label)
-
-  if (is.null(meta$class)) {
-    return(inner)
-  }
-
-  span(class = meta$class, inner)
-}
-
-block_card_dropdown <- function(ns, info, blk_id) {
-
-  dd_header <- function(title) {
-    tags$li(
-      h6(class = "dropdown-header", title)
+  toggle <- function(section, title, label) {
+    on <- section %in% open
+    tags$button(
+      type = "button",
+      class = paste("btn btn-light", if (on) "active"),
+      `data-section` = section,
+      `aria-pressed` = tolower(on),
+      title = title,
+      label
     )
-  }
-
-  dd_action <- function(title, id, symbol, class = character()) {
-
-    cls <- c(
-      "dropdown-item action-button py-2 position-relative",
-      class
-    )
-
-    tags$li(
-      tags$button(
-        class = cls,
-        type = "button",
-        id = id,
-        if (not_null(symbol)) {
-          span(
-            class = "position-absolute start-0 top-50 translate-middle-y ms-3",
-            symbol
-          )
-        },
-        title
-      )
-    )
-  }
-
-  dd_info <- function(key, val) {
-    div(
-      class = "d-flex justify-content-between align-items-center mb-3",
-      span(key, class = "text-muted small"),
-      span(val, class = "small fw-medium")
-    )
-  }
-
-  dd_divider <- function() {
-    tags$li(tags$hr(class = "dropdown-divider my-2"))
   }
 
   div(
-    class = "dropdown",
-    tags$button(
-      class = "btn btn-light blockr-header-icon",
-      type = "button",
-      `data-bs-toggle` = "dropdown",
-      `aria-expanded` = "false",
-      icon("ellipsis-vertical")
-    ),
-    tags$ul(
-      class = paste(
-        "dropdown-menu dropdown-menu-end blockr-block-dropdown",
-        "shadow-sm rounded-3 border-1"
-      ),
-      style = "min-width: 250px;",
-      if (!is_dock_locked()) {
-        tagList(
-          dd_header("Block Actions"),
-          dd_action(
-            "Append block",
-            ns("append_block"),
-            bsicons::bs_icon("plus", class = "text-success", size = "1.1em")
-          ),
-          dd_action(
-            "Delete block",
-            ns("delete_block"),
-            bsicons::bs_icon("trash", class = "text-danger", size = "1.1em")
-          ),
-          dd_divider()
-        )
-      },
-      dd_header("Block Details"),
-      tags$li(
-        div(
-          class = "px-3 py-2",
-          div(
-            class = "d-flex justify-content-between align-items-center mb-3",
-            span("Package", class = "text-muted small"),
-            span(class = "badge-two-tone", info$package)
-          ),
-          dd_info("Type", info$category),
-          div(
-            class = "d-flex justify-content-between align-items-center",
-            span("ID", class = "text-muted small"),
-            div(
-              class = "d-flex align-items-center gap-2",
-              tags$code(
-                blk_id,
-                style = "font-size: var(--blockr-font-size-xs);"
-              ),
-              tags$button(
-                class = "btn btn-link p-0 border-0 text-muted",
-                style = "line-height: 1; text-decoration: none;",
-                onclick = sprintf(
-                  paste0(
-                    "event.stopPropagation(); ",
-                    "navigator.clipboard.writeText('%s'); ",
-                    "var btn = this; ",
-                    "var copyIcon = btn.querySelector('.copy-icon'); ",
-                    "var checkIcon = btn.querySelector('.check-icon'); ",
-                    "copyIcon.style.display = 'none'; ",
-                    "checkIcon.style.display = ''; ",
-                    "setTimeout(function() { ",
-                    "checkIcon.style.display = 'none'; ",
-                    "copyIcon.style.display = ''; }, 1500);"
-                  ),
-                  blk_id
-                ),
-                title = "Copy to clipboard",
-                span(
-                  class = "copy-icon",
-                  bsicons::bs_icon("copy", size = "0.9em")
-                ),
-                span(
-                  class = "check-icon text-success",
-                  style = "display: none;",
-                  bsicons::bs_icon("check", size = "0.9em")
-                )
-              )
-            )
-          )
-        )
-      )
-    )
+    id = ns("collapse_blk_sections"),
+    class = "blockr-section-toggle",
+    `data-sections` = paste(open, collapse = " "),
+    toggle("outputs", "Preview", icon("eye")),
+    # A block's own control is drawn as the preview is: its icon, or its
+    # label where it has none, and named by its label.
+    if (!is.null(ctrl_meta)) {
+      toggle("ctrl", ctrl_meta$label, coal(ctrl_meta$icon, ctrl_meta$label))
+    },
+    section_toggle_dep()
   )
 }
 
-block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
+section_toggle_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-section-toggle",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "section-toggle.js"
+  )
+}
 
-  inputs_panel <- accordion_panel(
-    icon = icon("sliders"),
-    title = "Block inputs",
-    value = "inputs",
-    expr_ui
+# The block's "…" menu, drawn by Blockr.menu (blockr.ui) from the config on
+# the trigger; block-menu.js opens it and turns each item's `action` into a
+# pick: `section` toggles one of the card's sections, `input` sends the same
+# event the old dropdown buttons did, so the server's observers are
+# unchanged, `rename` starts the in-place rename and `copy` puts the block
+# ID on the clipboard. A locked dock lists no action that changes the board.
+block_card_dropdown <- function(ns, blk_id, has_inputs = FALSE) {
+
+  locked <- is_dock_locked()
+
+  # Plain actions have no icon; Remove, which destroys something, has the
+  # bin and sits after a divider (design system, "The block's '…' menu").
+  # The block's type and package are the tooltip on its mark, not a head.
+  items <- c(
+    if (has_inputs && !locked) {
+      list(
+        list(
+          label = "Controls", icon = "sliders", action = "section",
+          section = "inputs", target = ns("collapse_blk_sections")
+        ),
+        list(divider = TRUE)
+      )
+    },
+    if (!locked) {
+      list(
+        list(
+          label = "Rename", action = "rename", target = ns("title_display")
+        ),
+        list(
+          label = "Append block", action = "input", target = ns("append_block")
+        )
+      )
+    },
+    list(
+      list(
+        label = "Copy block ID", meta = blk_id, mono = TRUE, action = "copy",
+        target = blk_id
+      )
+    ),
+    if (!locked) {
+      list(
+        list(divider = TRUE),
+        list(
+          label = "Remove block", icon = "trash", danger = TRUE,
+          action = "input", target = ns("delete_block")
+        )
+      )
+    }
   )
 
+  config <- list(align = "end", items = items)
+
+  tags$button(
+    id = ns("block_menu"),
+    class = "btn btn-light blockr-header-icon blockr-block-menu-btn",
+    type = "button",
+    title = "More actions",
+    `data-blockr-menu` = jsonlite::toJSON(config, auto_unbox = TRUE),
+    icon("ellipsis-vertical"),
+    block_menu_dep()
+  )
+}
+
+block_menu_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-block-menu",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "block-menu.js"
+  )
+}
+
+block_card_content <- function(ns, expr_ui, block_ui, visible,
+                               ctrl_ui = NULL, has_inputs = TRUE) {
+
+  inputs_panel <- if (has_inputs) {
+    accordion_panel(
+      title = NULL,
+      value = "inputs",
+      expr_ui
+    )
+  }
+
   outputs_panel <- accordion_panel(
-    icon = icon("chart-simple"),
-    title = "Block output(s)",
+    title = NULL,
     value = "outputs",
     block_ui,
     block_status_notes(ns),
     block_issues_ui(ns)
   )
 
-  ctrl_panel <- if (!is.null(ctrl_ui)) build_ctrl_panel(ctrl_ui)
+  ctrl_panel <- if (!is.null(ctrl_ui)) {
+    accordion_panel(title = NULL, value = "ctrl", ctrl_ui)
+  }
 
   tagList(
-    div(id = ns("errors_block"), class = "mt-4"),
+    div(id = ns("errors_block"), class = "blockr-block-errors"),
     accordion(
       id = ns("blk_accordion"),
       class = "blockr-block-accordion",
       multiple = TRUE,
-      open = c("inputs", "outputs"),
+      # An empty set has to travel as FALSE: bslib reads `character()` the same
+      # as an absent `open` and falls back to opening the first panel.
+      open = if (length(visible)) visible else FALSE,
       ctrl_panel,
       inputs_panel,
       outputs_panel
@@ -389,17 +290,13 @@ block_card_content <- function(ns, expr_ui, block_ui, ctrl_ui = NULL) {
   )
 }
 
-build_ctrl_panel <- function(ctrl_ui) {
-  accordion_panel(
-    title = "Control",
-    value = "ctrl",
-    ctrl_ui
-  )
+# A control without a label, or with an empty one, is named "Control".
+ctrl_btn_label <- function(fn) {
+  label <- attr(fn, "ctrl_label")
+  if (is_string(label) && nzchar(label)) label else "Control"
 }
 
-ctrl_btn_label <- function(fn) coal(attr(fn, "ctrl_label"), "Control")
-ctrl_btn_icon  <- function(fn) attr(fn, "ctrl_icon")
-ctrl_btn_class <- function(fn) attr(fn, "ctrl_class")
+ctrl_btn_icon <- function(fn) attr(fn, "ctrl_icon")
 
 edit_block_server <- function(callbacks = list()) {
 
@@ -429,20 +326,22 @@ edit_block_server <- function(callbacks = list()) {
               return()
             }
 
-            updateTextInput(
-              session,
-              "block_name_in",
-              "Block name",
-              cur_name()
-            )
+            # The value goes by name: the third positional argument is the
+            # label, and the rename field has none (it would push the field
+            # off the name it sits on).
+            updateTextInput(session, "block_name_in", value = cur_name())
           }
         )
 
         observeEvent(
           input$block_name_in,
           {
+            # Shiny sends the field on Enter and on blur before block-rename.js
+            # refuses an empty name or restores the old one, so a blank name
+            # still arrives here. The card refuses a name of spaces the same as
+            # an empty one.
             req(
-              input$block_name_in,
+              trimws(input$block_name_in),
               block_id %in% board_block_ids(board$board)
             )
 
@@ -480,14 +379,33 @@ edit_block_server <- function(callbacks = list()) {
           block_status_note_attrs(blk_status())
         )
 
-        observeEvent(
-          input$collapse_blk_sections,
-          accordion_panel_set(
-            "blk_accordion",
+        # These carry user toggles only -- the card paints with its saved
+        # sections already open -- so a locked dock, which renders no toggle
+        # widget, wires neither and a forged `collapse_blk_sections` moves
+        # nothing.
+        if (!is_dock_locked()) {
+
+          observeEvent(
             input$collapse_blk_sections,
-            session
+            accordion_panel_set(
+              "blk_accordion",
+              input$collapse_blk_sections,
+              session
+            )
           )
-        )
+
+          # Hiding the last section reports NULL, which the setter above drops
+          # as its `ignoreNULL` default -- and could not carry anyway, since the
+          # set message rejects an empty selection. Closing all is its own
+          # message, observed separately.
+          observeEvent(
+            is.null(input$collapse_blk_sections),
+            if (is.null(input$collapse_blk_sections)) {
+              accordion_panel_close("blk_accordion", TRUE, session)
+            },
+            ignoreInit = TRUE
+          )
+        }
 
         output$issues_count <- renderText(cond_issue_label(conds()))
         outputOptions(output, "issues_count", suspendWhenHidden = FALSE)
@@ -496,7 +414,10 @@ edit_block_server <- function(callbacks = list()) {
 
         observeEvent(
           input$append_block,
-          actions[["append_block_action"]](block_id)
+          actions[["append_block_action"]](
+            block_id,
+            at = input$append_block$at
+          )
         )
 
         observeEvent(
@@ -526,8 +447,24 @@ edit_block_server <- function(callbacks = list()) {
           }
         }
 
+        # Read once rather than per board commit: building a block's controls
+        # to answer costs ~10ms, and core re-runs this server whenever the
+        # block is modified, so the answer cannot go stale under it.
+        blk <- board_blocks(isolate(board$board))[[block_id]]
+
+        # A locked card has no toggle to report from, and its sections cannot
+        # move from what it painted with -- so report that set instead. It is
+        # what serialization stores, and what freeze_hidden_inputs() reads to
+        # tell a card that has reported in from one still painting.
+        visible <- if (is_dock_locked()) {
+          reactive(visible_sections(blk))
+        } else {
+          reactive(reported_sections(input))
+        }
+
         list(
-          visible = reactive(input$collapse_blk_sections)
+          visible = visible,
+          has_inputs = has_expr_ui(blk)
         )
       }
     )
@@ -671,29 +608,57 @@ block_status_style <- function(status) {
     return(NULL)
   }
 
+  # Each colour is named by the blockr.ui token it reads, next to that token's
+  # light value, which a renderer that cannot read CSS (the DAG's canvas) or a
+  # page without the token sheet falls back to.
   spec <- switch(
     status,
     stale = list(
       color = "#6b7280",
+      token = "--blockr-color-text-muted",
       label = "Inputs changed since this block last ran"
     ),
-    waiting = list(color = "#f59e0b", label = "Waiting for a data input"),
-    unset = list(color = "#eab308", label = "Set this block's inputs"),
-    failed = list(color = "#dc2626", label = "Evaluation failed")
+    waiting = list(
+      color = "#d97706",
+      token = "--blockr-color-border-warning",
+      label = "Waiting for a data input"
+    ),
+    unset = list(
+      color = "#d97706",
+      token = "--blockr-color-border-warning",
+      label = "Set this block's inputs"
+    ),
+    failed = list(
+      color = "#dc2626",
+      token = "--blockr-color-border-danger",
+      label = "Evaluation failed"
+    )
   )
 
   if (is.null(spec)) {
     return(NULL)
   }
 
-  c(spec, list(size = 8L, ring = 2L, ring_color = "#ffffff"))
+  # A waiting block is drawn hollow: the solid amber stays for the block that
+  # needs input, not for every block downstream of it.
+  c(
+    spec,
+    list(
+      hollow = identical(status, "waiting"),
+      outline = 1.5,
+      size = 8L,
+      ring = 2L,
+      ring_color = "#ffffff",
+      ring_token = "--blockr-color-bg-surface"
+    )
+  )
 }
 
 #' @param status A block eval status: `stale`, `waiting`, `unset` and `failed`
-#'   carry a badge; `ready` carries none; `dormant` is indeterminate; any other
-#'   value yields no badge. The `size` field is the coloured dot's pixel
-#'   diameter and `ring` its white outline width, both shared so the dock card
-#'   icon and the DAG node badge render identically.
+#'   carry a badge; `ready` and `unevaluated` carry none; any other value
+#'   yields no badge. The `size` field is the coloured dot's pixel
+#'   diameter and `ring` the width of the ring around it, both shared by the
+#'   dock card icon and the DAG node badge.
 #' @param error_count Number of error conditions the block has raised. A
 #'   positive count promotes the badge to `failed`, catching render-phase
 #'   errors that leave the eval status `ready`. A `stale` block is exempt:
@@ -702,7 +667,7 @@ block_status_style <- function(status) {
 #' @export
 block_status_badge <- function(status, error_count = 0L) {
 
-  # A stale block's conditions predate the upstream change that made it stale,
+  # A stale block's conditions predate the change that made it stale,
   # and it has not re-run since, so they say nothing about whether it would
   # still fail on its current inputs.
   if (isTRUE(status == "stale")) {
@@ -711,13 +676,6 @@ block_status_badge <- function(status, error_count = 0L) {
 
   if (error_count > 0L) {
     status <- "failed"
-  }
-
-  # A dormant block has no computed status: return `NA` to signal "leave the
-  # badge as-is", so a persistent renderer (the DAG node) keeps its last-known
-  # badge rather than clearing it when the block drops out of the eval set.
-  if (isTRUE(status == "dormant")) {
-    return(NA)
   }
 
   block_status_style(status)
@@ -738,12 +696,20 @@ block_status_dot_attrs <- function(status, error_count = 0L) {
     return(list(style = "", title = "", role = "", `aria-label` = ""))
   }
 
+  fill <- sprintf("var(%s, %s)", spec$token, spec$color)
+  surface <- sprintf("var(%s, %s)", spec$ring_token, spec$ring_color)
+  ring <- sprintf("0 0 0 %dpx %s", spec$ring, surface)
+
   list(
     style = htmltools::css(
       width = paste0(spec$size, "px"),
       height = paste0(spec$size, "px"),
-      `background-color` = spec$color,
-      `box-shadow` = paste0("0 0 0 ", spec$ring, "px ", spec$ring_color)
+      `background-color` = if (spec$hollow) surface else fill,
+      `box-shadow` = if (spec$hollow) {
+        sprintf("inset 0 0 0 %gpx %s, %s", spec$outline, fill, ring)
+      } else {
+        ring
+      }
     ),
     title = spec$label,
     role = "img",
@@ -799,12 +765,22 @@ attr_output_dep <- function() {
   )
 }
 
+block_rename_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-block-rename",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "block-rename.js"
+  )
+}
+
 edit_block_validator <- function(x) {
 
   stopifnot(
     is.list(x),
-    setequal(names(x), "visible"),
-    is.reactive(x[["visible"]])
+    setequal(names(x), c("visible", "has_inputs")),
+    is.reactive(x[["visible"]]),
+    is_bool(x[["has_inputs"]])
   )
 
   invisible(x)

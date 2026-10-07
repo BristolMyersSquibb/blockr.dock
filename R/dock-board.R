@@ -40,7 +40,14 @@
 #' `is_dock_board()`, which returns a boolean. The `dock_extensions()` and
 #' `dock_extensions<-()` accessors return / set the board's `dock_extension`
 #' objects. A character vector of IDs is returned by `dock_ext_ids()` and
-#' `dock_board_options()` returns a `board_options` object.
+#' `dock_board_options()` returns a `board_options` object: the board name, a
+#' thematic switch, off unless the `thematic` blockr option says otherwise, so
+#' that plots can take the board's colours, a light/dark switch, light unless
+#' the `dark_mode` blockr option says otherwise, the "Compact" header switch
+#' ([new_compact_option()]), off unless the `compact` blockr option says
+#' otherwise, and a switch that opens and closes the rails of every page
+#' together ([new_sync_rails_option()]), on unless the `sync_rails` blockr
+#' option says otherwise.
 #'
 #' @rdname dock
 #' @export
@@ -70,14 +77,16 @@ new_dock_board <- function(blocks = list(), links = list(), stacks = list(),
   )
 }
 
-# Coerce the `views` / `grids` inputs into the board's two slots. A NULL (or
-# empty) `views` yields the default single-view arrangement; otherwise each is
-# resolved against the board's blocks and extensions via a shared id map.
-# Finally the presentation is reconciled to the authoritative block /
-# extension set: members with no backing panel are pruned from the views and
-# each grid is restricted to its view's members, so construction (and restore)
-# of a stale or inconsistent layout self-heals rather than aborting.
-initialise_views <- function(views, grids, blocks, extensions, active = NULL) {
+# Coerce the `views` / `grids` / `rails` inputs into the board's three slots. A
+# NULL (or empty) `views` yields the default single-view arrangement; otherwise
+# each is resolved against the board's blocks and extensions via a shared id
+# map. Finally the presentation is reconciled to the authoritative block /
+# extension set: members with no backing panel are pruned from the views, each
+# rail is restricted to its view's members and each grid to the members no rail
+# claims, so construction (and restore) of a stale or inconsistent layout
+# self-heals rather than aborting.
+initialise_views <- function(views, grids, blocks, extensions,
+                             active = NULL) {
 
   if (!length(views) && !length(grids)) {
 
@@ -224,7 +233,11 @@ extension_ids <- function(x, class = NULL) {
 #' @export
 dock_board_options <- function() {
   new_board_options(
-    new_board_name_option()
+    new_board_name_option(),
+    new_thematic_option(),
+    new_dark_mode_option(value = blockr_option("dark_mode", "light")),
+    new_compact_option(),
+    new_sync_rails_option()
   )
 }
 

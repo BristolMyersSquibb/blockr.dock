@@ -6,9 +6,10 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 9 base elements + the two pre-rendered block-browser sidebars
-  # (add_block_sidebar, append_block_sidebar).
-  expect_length(ui, 11L)
+  # 16 base elements (blockr.ui's controls, the dock's tooltip hand-off, the
+  # rename handler, the "+" menu and the compact switch among them) + the
+  # viewport probe.
+  expect_length(ui, 17L)
 })
 
 # Settings sidebar is mounted with pre-rendered content + a JS-trigger gear
@@ -16,7 +17,7 @@ test_that("dummy board ui test", {
 # live server-side (settings_observer → show_sidebar → settings_body) is
 # replaced by markup, so the assertions move to the rendered tag tree.
 
-test_that("settings sidebar mount is pre-rendered with the options accordion", {
+test_that("settings sidebar mount is pre-rendered with the options list", {
   ui <- board_ui(
     "test",
     new_dock_board(blocks = c(a = new_dataset_block()))
@@ -29,7 +30,7 @@ test_that("settings sidebar mount is pre-rendered with the options accordion", {
   expect_match(html, 'id="test-settings_sidebar"', fixed = TRUE)
   expect_match(html, 'data-mode="overlay"', fixed = TRUE)
 
-  # Its body slot carries the rendered options accordion. We probe by
+  # Its body slot carries the rendered options list and pages. We probe by
   # looking for the inputId of the default `board_name` option, which is
   # always present (contributed by blockr.core for any board).
   expect_match(html, 'id="test-board_name"', fixed = TRUE)
@@ -355,4 +356,70 @@ test_that("locked mode drops the board-options accordion (#135)", {
 
   # The read-only generated-code export stays available.
   expect_match(html, 'id="generate_code"', fixed = TRUE)
+})
+
+test_that("board_ui mounts the viewport probe with its binding", {
+
+  ui <- board_ui(
+    "test",
+    new_dock_board(blocks = c(a = new_dataset_block()))
+  )
+
+  html <- as.character(ui)
+
+  # The DOM id is namespaced (two boards on one page must not collide) and
+  # carries the class the binding finds; the input name is `viewport_width`.
+  expect_match(html, 'id="test-viewport_width"', fixed = TRUE)
+  expect_match(html, "blockr-viewport-probe", fixed = TRUE)
+
+  expect_true(
+    "blockr-viewport-probe" %in%
+      chr_xtr(htmltools::findDependencies(ui), "name")
+  )
+})
+
+test_that("the shared stylesheet layer is blockr.ui's, not this package's", {
+
+  ui <- board_ui(
+    "test",
+    new_dock_board(blocks = c(a = new_dataset_block()))
+  )
+
+  deps <- chr_xtr(htmltools::findDependencies(ui), "name")
+
+  expect_true("blockr-theme" %in% deps)
+
+  # Source order settles which side wins where the two sheets overlap, so the
+  # shared layer has to resolve ahead of this package's own.
+  expect_lt(match("blockr-theme", deps), match("blockr-fab", deps))
+
+  css <- paste(
+    readLines(
+      system.file(
+        "assets", "css", "blockr-dock.css",
+        package = "blockr.dock",
+        mustWork = TRUE
+      ),
+      warn = FALSE
+    ),
+    collapse = "\n"
+  )
+
+  expect_no_match(css, "(?m)^:root", perl = TRUE)
+  # The one exception is the card's inset, which blockr.ui's table preview
+  # reads to run a table to the card edges.
+  expect_no_match(
+    css, "(?m)^\\s*--blockr-(?!card-inset\\b)[a-z0-9-]+\\s*:", perl = TRUE
+  )
+
+  unscoped <- c(
+    "body", "label", "\\.form-control", "\\.btn-primary", "\\.tooltip",
+    "\\.popover", "table\\.dataTable", "\\.g6-toolbar"
+  )
+
+  expect_no_match(
+    css,
+    paste0("(?m)^(", paste(unscoped, collapse = "|"), ")[ ,{:]"),
+    perl = TRUE
+  )
 })

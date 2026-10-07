@@ -7,10 +7,9 @@
 #'
 #' @param board Reactive board state (list with `$board`).
 #' @param update Reactive update signal from blockr.core.
-#' @param visibility Per-block visibility channel from blockr.core: a list of
-#'   three reactiveVal environments (`required`, `visible`, `frozen`) the dock
-#'   writes to gate off-screen blocks and to freeze the inputs of blocks whose
-#'   controls are hidden.
+#' @param visibility Visibility channel bundle from blockr.core: the per-block
+#'   reactiveVal environments `visible` (which cards it has painted) and
+#'   `frozen` (whose inputs it has hidden).
 #' @param ... Extension server arguments.
 #' @param plugins Served board plugins. Core threads these to its own block
 #'   server but not to callbacks, so `blockr_app_server.dock_board()` captures
@@ -19,7 +18,8 @@
 #' @param session Shiny session.
 #'
 #' @return List with `dock`, `actions`, `view_data`, and extension
-#'   results.
+#'   results, plus the `eager()` declaration that makes the board lazy, which
+#'   core reads and strips before plugins see the list.
 #'
 #' @noRd
 board_server_callback <- function(board, update, visibility, ...,
@@ -39,27 +39,27 @@ board_server_callback <- function(board, update, visibility, ...,
 
   triggers <- action_triggers(actions)
 
-  # Per-session dock state, closure-private. `docks` is the live manage_dock()
-  # registry of built dock modules, keyed by view id. `client_views` is the nav
-  # model: the nav-rendered set of views plus their display names, and
-  # live_view_data()'s name source. It is distinct from `docks` only during the
-  # init flush (board_ui seeds the nav statically); reconcile_views() is its
-  # sole mutator. `client_active` mirrors which view the browser shows as
-  # active. Per-view panel membership lives on each dock proxy (`live_panels`),
-  # kept authoritative by the add/remove touchpoints; it drives `n_panels` / the
-  # empty-dock prompt and the membership fold without waiting on the lagging
-  # browser echo. `docks` is a `reactiveValues`, so live_view_data() depends on
-  # each view's entry and re-evaluates when reconcile creates it, whatever the
-  # init flush order.
-  docks <- reactiveValues()
+  # Per-session dock state, closure-private. The `docks` registry holds each
+  # built dock module's manage_dock() handle, keyed by view id. As a reactives
+  # collection, it lets live_view_data() depend on each view's slot and
+  # re-evaluate when reconcile creates it, whatever the init flush order. The
+  # nav model, `client_views`, holds the display name of every view the nav
+  # renders, keyed by view id in nav order, and is live_view_data()'s name
+  # source. It is seeded from the board because board_ui renders the nav
+  # statically, and reconcile_views() is its sole mutator. The `client_active`
+  # value mirrors which view the browser shows as active. Per-view panel
+  # membership lives on each dock proxy (`live_panels`), kept authoritative by
+  # the add/remove touchpoints; it drives `n_panels` / the empty-dock prompt and
+  # the membership fold without waiting on the lagging browser echo.
+  docks <- reactives::reactive_vals()
   active_dock <- reactiveValues()
   client_active <- reactiveVal(NULL)
-  client_views <- reactiveVal(seed_view_state(board_views(initial_board)))
+  client_views <- new_client_views(board_views(initial_board))
 
-  # The `visibility` channel core hands us (per-block `required` / `visible` /
-  # `frozen` reactiveVal slots) is the single store: its `visible` axis is the
-  # dock's build ledger (!is.na = ever built), read via built_cards(). Stash it
-  # on active_dock -- the dock handle every card-touching path receives (view
+  # The `visibility` channel core hands us (per-block `visible` / `frozen`
+  # reactiveVal slots) is the single store: its `visible` axis is the dock's
+  # build ledger (!is.na = ever built), read via built_cards(). Stash it on
+  # active_dock -- the dock handle every card-touching path receives (view
   # switch, panel-op apply, core insert / remove) -- so they read and write the
   # one channel.
   active_dock$visibility <- visibility
@@ -69,10 +69,19 @@ board_server_callback <- function(board, update, visibility, ...,
   # default (which carries no served ctrl_block).
   active_dock$plugins <- plugins
 
+  # The narrow-viewport decision. The width `viewport_probe_ui()` reports rides
+  # this session's first input batch, so it is settled before the reconcile
+  # below inserts the first dock; taken once, since the probe never re-fires
+  # and reflowing takes a reload. It travels on the same handle for the same
+  # reason `plugins` does -- core's block insert plugin places panels through
+  # it, and a narrow board takes every add as a tab.
+  narrow <- is_narrow_viewport(isolate(session$input$viewport_width))
+  active_dock$narrow <- narrow
+
   switch_view_observer(
     session, update, client_active, board, docks, active_dock
   )
-  add_view_observer(client_views, session, board, update)
+  add_view_observer(client_views, session, update)
   remove_view_observer(client_views, session, update)
   rename_view_observer(client_views, session, update)
   reorder_view_observer(client_views, session, update)
@@ -93,22 +102,44 @@ board_server_callback <- function(board, update, visibility, ...,
     )
   )
 
-  # Gate off-screen blocks from the first flush, before the client reports its
-  # layout (else core's all-visible default evaluates every block at startup).
-  # Seed to what board_ui rendered: the active view's whole membership is built
-  # (visible FALSE -- built, not yet painted), its front panels required TRUE
-  # and background tabs FALSE. Off-screen views' cards are built on first visit
-  # by switch_active_view. Core holds its render gate (is_visible = isTRUE)
-  # until the active view reports its blocks painted (visible TRUE).
+  # The dock makes the board lazy, and what board_ui rendered is its opening
+  # eager set: the active view's front panels. The declaration travels in the
+  # returned list rather than as a payload, since a payload applies at the tail
+  # of the flush it is written in, after that flush has decided what to
+  # construct. Core seeds the set as it runs the callbacks, so the layout echo
+  # only has to report a change.
+  owner <- dock_id(session$ns)
+  opening <- visible_block_ids(active_view_grid(initial_board))
+
+  hold_eager <- eager_holder(update, owner, opening)
+
+  # The active view's whole membership is built (visible FALSE -- built, not yet
+  # painted). Off-screen views' cards are built on first visit by
+  # switch_active_view. Core holds its render gate (is_visible = isTRUE) until
+  # the active view reports its blocks painted (visible TRUE).
   mark_cards_built(visibility, active_view_block_ids(initial_board))
 
-  show_cards(
-    visibility,
-    active_view_block_ids(initial_board),
-    visible_block_ids(active_view_grid(initial_board))
-  )
+  report_visible_observer(visibility, hold_eager, client_active, docks)
 
-  report_visible_observer(visibility, client_active, docks)
+  # One row per group of the active view, restamped on a view switch since a
+  # different view stacks a different number of groups. The container is an
+  # attr output, so this writes a custom property onto it and nothing else --
+  # no re-render of the docks it holds.
+  #
+  # Wired on a wide board too, where it renders nothing. An output element with
+  # no renderer never clears the `recalculating` class Shiny stamps while it
+  # waits, and Shiny greys a recalculating output to 30% opacity -- on the
+  # element wrapping the whole dock, that is the entire board behind a
+  # translucent veil, permanently. Rendering an empty style clears the class,
+  # and the binding reads "" as "drop the attribute", leaving the stylesheet's
+  # viewport-height default in charge.
+  session$output$view_container <- render_attrs(
+    if (narrow) {
+      narrow_stack_attrs(active_view_grid(board$board))
+    } else {
+      list(style = "")
+    }
+  )
 
   # `view_data` is the live all-views layout, split into a `dock_views` +
   # `dock_grids` pair. Each view is live where its dock has reported, else its
@@ -184,39 +215,31 @@ board_server_callback <- function(board, update, visibility, ...,
 
   # Returned to core, spread into every plugin's args (see the two-bundle note
   # above): `dock` for block placement, `view_data` for serialization, `actions`
-  # for the edit-block plugin, and the extensions' resolved results.
+  # for the edit-block plugin, and the extensions' resolved results. The `eager`
+  # declaration is core's to read, and never reaches a plugin.
   list(
     dock = active_dock,
     actions = triggers,
     view_data = view_data,
-    extensions = ext_res
+    extensions = ext_res,
+    eager = eager(owner, opening)
   )
 }
 
-# The initial `client_views`: one bare (empty) view per view id, carrying the
-# display name. Gives live_view_data and the nav the view set before any
-# dockview has reported its live layout; the dock modules themselves are
-# created by the reconcile pass (its empty-`docks` case). Which view is active
-# is tracked solely by `client_active`, not here.
-seed_view_state <- function(views) {
-  reconstruct_dock_views(lapply(views, bare_view))
-}
-
-# An empty view standing in for a view in `client_views`: carries the view's
-# display name so live_view_data / the nav keep the id -> name mapping without
-# its membership or geometry.
-bare_view <- function(x) {
-  new_dock_view(character(), view_name(x))
+new_client_views <- function(views) {
+  do.call(reactives::reactive_vals, as.list(view_names(views)))
 }
 
 #' Observe view tab switches.
 #'
 #' A tab click (`input$view_nav` carries the target view id) requests an
 #' active-view change through the update lifecycle; the reconcile pass does
-#' the DOM switch. Guarded so a no-op (e.g. the nav echoing a programmatic
-#' `value` set back) does not re-enter the lifecycle. On a locked board core's
-#' update gate rejects the active-view update, so the switch is driven directly
-#' against the DOM instead, keeping navigation live on a read-only board.
+#' the DOM switch. Guarded so a no-op does not re-enter the lifecycle: a click
+#' on the already-active view reports it like any other, and once a
+#' programmatic push has cleared the client's no-resend cache that repeat does
+#' reach here. On a locked board core's update gate rejects the active-view
+#' update, so the switch is driven directly against the DOM instead, keeping
+#' navigation live on a read-only board.
 #'
 #' @param session Shiny session.
 #' @param update Board update signal.
@@ -253,25 +276,41 @@ switch_view_observer <- function(session, update, client_active, board, docks,
   )
 }
 
-report_visible_observer <- function(visibility, client_active, docks) {
+report_visible_observer <- function(visibility, hold_eager, client_active,
+                                    docks) {
 
-  # Drives both visibility axes off two live client signals: the active view's
-  # settled `_state` layout echo (`dock$layout()`, the arrangement dockView
-  # painted) and its live active panel (`dock$active_panel()`). Over the built
-  # cards, the front panels go required TRUE and are marked painted on the
-  # visible axis (the client-confirmed paint core's render gate waits for);
-  # everything else built goes required FALSE with its visible slot cleared.
-  # A bare tab switch does not reliably re-echo `_state` (only structural
-  # gestures do), so the active panel is folded in as the front of its group --
-  # otherwise a newly-fronted tab is never marked visible and its block stays
-  # blank until a structural change. `req(layout())` waits for the client's
-  # first report (NULL before then); `active_panel()` is NULL until a switch.
+  # Drives the dock's demand and its paint report off two live client signals:
+  # the active view's settled `_state` layout echo (`dock$layout()`, the
+  # arrangement dockView painted) and its live active panel
+  # (`dock$active_panel()`). The front panels are held eager and marked painted
+  # on the visible axis (the client-confirmed paint core's render gate waits
+  # for); everything else built is released by its absence from the eager set
+  # and parked in the ledger. A bare tab switch does not reliably re-echo
+  # `_state` (only structural gestures do), so the active panel is folded in as
+  # the front of its group -- otherwise a newly-fronted tab is never marked
+  # visible and its block stays blank until a structural change.
+  # The `req(layout())` guard waits for the client's first report (NULL before
+  # then); `active_panel()` is NULL until a switch.
+  #
+  # The echo is the client's account of what is on screen and core's visibility
+  # slots are the server's account of which blocks exist, so the two disagree
+  # for one tick after a removal: the echo still names a panel whose slot core
+  # has already dropped. Intersecting here reconciles them once, for every
+  # consumer, rather than leaving each to guard its own lookup -- and a
+  # consumer that dereferences a slot rather than testing membership (as
+  # `mark_cards_rendered()` does) would otherwise call `NULL()` and take the
+  # session down.
   on_screen <- reactive({
     active <- req(client_active())
     dock <- req(docks[[active]])
     layout <- req(dock$layout())
 
-    sort(visible_block_ids(layout, dock$active_panel()))
+    sort(
+      intersect(
+        visible_block_ids(layout, dock$active_panel()),
+        ls(visibility$visible)
+      )
+    )
   })
 
   observeEvent(
@@ -279,9 +318,59 @@ report_visible_observer <- function(visibility, client_active, docks) {
     {
       req(client_active())
 
-      show_cards(visibility, built_cards(visibility), on_screen())
+      hold_eager(on_screen())
+
+      mark_cards_hidden(
+        visibility,
+        setdiff(built_cards(visibility), on_screen())
+      )
+
       mark_cards_rendered(visibility, on_screen())
     }
+  )
+}
+
+# The dock's evaluation demand: the blocks it has on screen, held eager under
+# the owner label it declared. The `set` verb carries the whole eager set, so a
+# card that left the screen is released by its absence -- one payload per
+# switch where the retired `required` channel took a write per slot. Sent only
+# when the set changes from what core holds, which starts as the declared
+# opening set, since a layout echo re-reports the same set and every payload is
+# a board-update round trip.
+eager_holder <- function(update, owner, opening) {
+
+  sent <- new.env(parent = emptyenv())
+  sent$ids <- sort(opening)
+
+  function(on_screen) {
+
+    ids <- sort(on_screen)
+
+    if (identical(sent$ids, ids)) {
+      return(invisible())
+    }
+
+    sent$ids <- ids
+
+    fold_update(update, list(eager = set_names(list(list(set = ids)), owner)))
+
+    invisible()
+  }
+}
+
+# Core drains the update channel once per flush, so a second writer before that
+# apply replaces the first payload whole rather than adding to it. The settled
+# `_state` echo drives two of them -- the geometry mirror and the eager holder
+# above -- and either can run first, so both fold into what is already pending
+# instead of overwriting it. Folding an `eager` component into a state-carrying
+# payload cannot cost it its lock exemption: the mirror is only wired on an
+# unlocked board.
+fold_update <- function(update, payload) {
+  update(
+    utils::modifyList(
+      coal(isolate(update()), list(), fail_all = FALSE),
+      payload
+    )
   )
 }
 
@@ -297,6 +386,12 @@ report_visible_observer <- function(visibility, client_active, docks) {
 # while still editable, so core's expression pin captures its published value;
 # freezing one from birth would hold a blank. A block without the edit-block
 # plugin (no `visible`) never reports, hence is never frozen.
+#
+# A card offers an inputs section only where its block contributes controls
+# (`has_inputs`), so for the rest a missing section hides nothing and must not
+# freeze: an `rbind_block` builds its expression from its link set alone, and a
+# pin would strand it on the links it held when it painted. A foreign
+# edit-block plugin reports no `has_inputs`, and is read as offering one.
 freeze_hidden_inputs <- function(board, visibility) {
 
   observe({
@@ -312,11 +407,14 @@ freeze_hidden_inputs <- function(board, visibility) {
         next
       }
 
-      vis <- board$blocks[[id]]$server$visible
-      sections <- if (not_null(vis)) vis()
+      srv <- board$blocks[[id]]$server
+      sections <- if (not_null(srv$visible)) srv$visible()
       reported <- not_null(sections)
 
-      frozen <- reported && (locked || !("inputs" %in% sections))
+      has_inputs <- coal(srv$has_inputs, TRUE, fail_all = FALSE)
+      hidden <- has_inputs && !("inputs" %in% sections)
+
+      frozen <- reported && (locked || hidden)
 
       if (!identical(isolate(slot()), frozen)) {
         slot(frozen)
@@ -331,14 +429,17 @@ freeze_hidden_inputs <- function(board, visibility) {
 # what is stored -- so a sash drag, a programmatic move / resize, or a tab
 # switch is at most one board commit and a re-echo after quiescence none.
 #
-# dockViewR surfaces `_state` only once a layout has settled: the intermediate
-# frames a restore once streamed -- a tab group momentarily split into separate
-# leaves, or an empty re-init frame (#327) -- never reach the mirror, so every
-# echo it sees is a settled layout to commit, gated only by the tolerance below.
+# A settled layout is all dockViewR surfaces through `_state`, so the frames a
+# restore streams -- a tab group momentarily split into separate leaves -- never
+# reach the mirror. The two echoes it does see that are not layouts to commit
+# are guarded below: the empty dock before its restore, and a rail width the
+# dock was too narrow to hold.
 #
 # It does not restrict to membership: a panel absent from the view is an inert
 # ghost, pruned at the compose / restore boundary, never by this writer.
 observe_grid_echo <- function(id, dock, board, commit_grid) {
+
+  dock_width <- reactiveVal()
 
   observeEvent(
     dock$layout(),
@@ -355,12 +456,50 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
         return()
       }
 
-      grid <- as_dock_grid(as_dock_layout(state))
+      layout <- as_dock_layout(state)
+      grid <- as_dock_grid(layout)
+
+      # A dock is rendered empty and holds nothing until `restore_layout()`
+      # reaches it, and the flush that opens dockViewR's `_state` gate -- the
+      # first geometry its ResizeObserver reports -- can beat that restore to
+      # the server. What it echoes places nothing, so committing it blanks the
+      # view's stored geometry and leaves the arrangement to be rebuilt from
+      # whatever the client renders next. The tree survives that, since the
+      # restore echo carries the same one back; a rail's width does not, being
+      # pixels -- what comes back is whatever width the dock had room for.
+      #
+      # Membership is what separates that dock from a view the user has emptied,
+      # which echoes nothing because there is nothing left to place and whose
+      # empty grid is a layout to commit like any other. Testing the echo alone
+      # would hold a stale grid for every emptied view.
+      if (!length(layout_panel_ids(grid)) &&
+            length(view_members(views[[id]]))) {
+        return()
+      }
+
+      previous <- dock_width()
+      width <- layout_dock_width(layout)
+
+      dock_width(width)
 
       stored <- board_grids(board$board)[[id]]
 
+      # A rail's width is pixels against the dock, and dockView shrinks a rail
+      # the dock is too narrow to hold -- so an echo the dock's own width
+      # provoked reports a width the layout forced rather than one the user
+      # dragged, and the two are indistinguishable once the grid is cast. Ride
+      # the stored widths through such an echo; the tree needs none of this, its
+      # ratios being scale-free. The first echo has no width to compare against
+      # and no gesture behind it either.
+      if (!is_same_width(previous, width)) {
+        grid <- keep_rail_sizes(grid, stored)
+      }
+
       # Same geometry within the sash-position noise floor -> nothing to commit,
-      # so window-resize jitter is absorbed while a real drag still writes.
+      # so window-resize jitter is absorbed while a real drag still writes. The
+      # rails ride inside the grid and so inside the same compare -- their pixel
+      # sizes are held to an exact match by `all.equal.dock_grid()`, which only
+      # applies the ratio noise floor to the tree.
       if (isTRUE(all.equal(stored, grid, tolerance = grid_size_tol()))) {
         return()
       }
@@ -371,33 +510,43 @@ observe_grid_echo <- function(id, dock, board, commit_grid) {
   )
 }
 
+is_same_width <- function(previous, current) {
+
+  if (is.null(previous) || is.null(current)) {
+    return(FALSE)
+  }
+
+  isTRUE(all.equal(previous, current))
+}
+
 # The live all-views layout, split into a `dock_views` (membership + names +
 # active) and a `dock_grids` (geometry) pair -- the same shape the board stores.
 # Each view contributes its live dockview grid once its dock has reported, and
 # its board-stored grid otherwise, so an off-screen view whose dock is deferred
 # (never created this session, #304) is represented by what it would restore to
 # rather than blocking every consumer on a layout that never arrives. Reading
-# `docks[[v_id]]` (a reactiveValues) takes a dependency on each view's entry, so
-# a view upgrades from stored to live when reconcile creates its dock and it
-# reports -- whatever the flush order. NULL now only stands for a view briefly
-# in the nav model but not yet on the board (a sub-flush removal transient),
-# which consumers `req()` past. The active view comes from `client_active`, not
-# `client_views`.
+# `docks[[v_id]]` takes a dependency on that view's slot, even before it
+# exists, so a view upgrades from stored to live when reconcile creates its dock
+# and it reports -- whatever the flush order. NULL now only stands for a view
+# briefly in the nav model but not yet on the board (a sub-flush removal
+# transient), which consumers `req()` past. The active view comes from
+# `client_active`, not `client_views`.
 live_view_data <- function(client_views, docks, board, client_active) {
   reactive({
 
-    state <- client_views()
+    labels <- reactives::as_values(client_views)
+    ids <- names(labels)
 
-    grids <- lapply(names(state), live_view_grid, docks = docks, board = board)
+    grids <- lapply(ids, live_view_grid, docks = docks, board = board)
 
     if (any(lgl_ply(grids, is.null))) {
       return(NULL)
     }
 
-    grids <- set_names(grids, names(state))
+    grids <- set_names(grids, ids)
 
     views <- reconstruct_dock_views(
-      set_names(map(live_view_membership, grids, state), names(state))
+      set_names(map(live_view_membership, grids, labels), ids)
     )
 
     ca <- client_active()
@@ -418,7 +567,12 @@ live_view_grid <- function(v_id, docks, board) {
 
   dk <- docks[[v_id]]
 
-  if (!is.null(dk)) {
+  # A narrow view renders flat, so its echo describes the phone, not the board:
+  # taking it here would put the collapsed grid in front of serialization and
+  # save away the geometry a wide viewport restores to. Read the stored grid
+  # instead -- the same member-driven fallback a deferred view takes, so
+  # membership still tracks every add and remove.
+  if (!is.null(dk) && !isTRUE(dk$narrow)) {
     ly <- dk$layout()
     if (!is.null(ly)) {
       return(as_dock_grid(as_dock_layout(ly)))
@@ -431,11 +585,49 @@ live_view_grid <- function(v_id, docks, board) {
     return(NULL)
   }
 
-  as_dock_grid(view_grid(views[[v_id]], board_grids(board$board)[[v_id]]))
+  # Canonicalised, because `view_grid()` stamps the whole offered rail set on
+  # its result -- the client has to be told which edges exist -- while a stored
+  # grid records only the populated ones. The echo branch above comes back
+  # through `new_dock_grid()`, which drops the empty ones, so without this the
+  # two branches report different shapes for the same geometry and every
+  # consumer comparing against the board (`grids_stable()`, serialization) sees
+  # a difference that is not one.
+  canonicalize_grid(
+    view_grid(views[[v_id]], board_grids(board$board)[[v_id]])
+  )
 }
 
-live_view_membership <- function(grid, view) {
-  new_dock_view(layout_panel_ids(grid), view_name(view))
+# The collapse state of the rails on the docks built so far, by edge: what the
+# rails of a dock built next take while the board keeps them in step. Only a
+# rail holding panels has a state to give, and the client keeps those on one
+# edge alike, so the first found speaks for its edge. The `first` view is read
+# before the others: should an echo of a state the client carried across not
+# have arrived yet, the view the user is leaving decides.
+live_rail_collapse <- function(docks, board, first = NULL) {
+
+  out <- list()
+
+  for (v in union(intersect(first, names(docks)), names(docks))) {
+
+    for (rail in live_view_grid(v, docks, board)[["rails"]]) {
+
+      pos <- rail[["position"]]
+
+      if (is.null(out[[pos]]) && rail_holds_panels(rail)) {
+        out[[pos]] <- rail[["collapsed"]]
+      }
+    }
+  }
+
+  out
+}
+
+# A view's live membership: everything its grid places, tree and rails alike.
+# Moving a panel between the two changes where it sits, never whether it is a
+# member, so `grid_panel_ids()` spanning both is what keeps a railed panel from
+# reading as removed.
+live_view_membership <- function(grid, name) {
+  new_dock_view(layout_panel_ids(grid), name)
 }
 
 hide_view_ui <- function(view_id, docks) {
@@ -475,7 +667,8 @@ show_view_ui <- function(view_id, docks) {
 # class at insert so the initially-shown view needs no switch round-trip.
 create_view <- function(v_id, layout, board, update, session, docks, visibility,
                         plugins = board_plugins(isolate(board$board)),
-                        blocks = NULL, extensions = NULL, active = FALSE) {
+                        blocks = NULL, extensions = NULL, active = FALSE,
+                        narrow = FALSE) {
 
   ns <- session$ns
 
@@ -503,7 +696,8 @@ create_view <- function(v_id, layout, board, update, session, docks, visibility,
     v_id, board, update, visibility, plugins,
     layout = layout,
     blocks = blocks,
-    extensions = extensions
+    extensions = extensions,
+    narrow = narrow
   )
 
   invisible()
@@ -525,7 +719,7 @@ remove_view <- function(v_id, session, docks) {
     immediate = TRUE,
     session = session
   )
-  trim_rv(docks, v_id)
+  docks[v_id] <- NULL
 
   invisible()
 }
@@ -556,9 +750,8 @@ reconcile_views <- function(board, update, docks, active_dock,
   want <- names(views)
   labels <- view_names(views)
   server_active <- active_view(views)
-  state <- isolate(client_views())
   have <- names(docks)
-  shown <- names(state)
+  shown <- names(client_views)
 
   # Nav + client_views model: every view, built or deferred. `board_ui` seeds
   # the nav statically, so `shown` already lists every view on init and this add
@@ -566,27 +759,32 @@ reconcile_views <- function(board, update, docks, active_dock,
   # blank-labelled duplicate (#189). Label from the container `view_names()`,
   # which resolves whether the name sits on the layout or is derived from id.
   for (v in setdiff(want, shown)) {
-    state[[v]] <- bare_view(views[[v]])
+    client_views[[v]] <- labels[[v]]
     session$sendInputMessage(
       "view_nav",
-      list(add = list(id = v, name = labels[[v]]))
+      list(
+        add = list(
+          id = v,
+          html = as.character(
+            view_item_ui(v, labels[[v]], can_crud = !is_dock_locked())
+          )
+        )
+      )
     )
   }
 
   for (v in setdiff(shown, want)) {
     session$sendInputMessage("view_nav", list(remove = v))
-    state[[v]] <- NULL
+    client_views[v] <- NULL
   }
 
   for (v in intersect(want, shown)) {
 
-    new_nm <- view_name(views[[v]])
-
-    if (!identical(new_nm, view_name(state[[v]]))) {
-      view_name(state[[v]]) <- new_nm
+    if (!identical(isolate(client_views[[v]]), labels[[v]])) {
+      client_views[[v]] <- labels[[v]]
       session$sendInputMessage(
         "view_nav",
-        list(rename = list(id = v, to = new_nm))
+        list(rename = list(id = v, to = labels[[v]]))
       )
     }
   }
@@ -594,8 +792,8 @@ reconcile_views <- function(board, update, docks, active_dock,
   # A pure reorder is invisible to the set-diffing loops above (same members,
   # same names), so re-sequence the nav explicitly when the board order and the
   # client's differ. `as.list()` forces a JSON array even for a single id.
-  if (!identical(names(state), want)) {
-    state <- reorder_dock_views(state, want)
+  if (!identical(names(client_views), want)) {
+    reactives::reorder(client_views, want)
     session$sendInputMessage("view_nav", list(order = as.list(want)))
   }
 
@@ -615,6 +813,19 @@ reconcile_views <- function(board, update, docks, active_dock,
       if (is.null(grids)) NULL else grids[[server_active]]
     )
 
+    # While the board keeps its rails in step, a view built mid-session opens
+    # with its rails the way the docks already built show theirs. The client
+    # carries a collapse across every dock it has (dock-rail.js); a dock not yet
+    # built is the one it cannot reach, and the browser cannot correct a restore
+    # before it paints.
+    collapse <- live_rail_collapse(
+      docks, board, first = isolate(client_active())
+    )
+
+    if (length(collapse) && rails_synced(session)) {
+      active_grid <- follow_rail_collapse(active_grid, collapse)
+    }
+
     create_view(
       server_active,
       active_grid,
@@ -626,11 +837,10 @@ reconcile_views <- function(board, update, docks, active_dock,
       isolate(active_dock$plugins),
       blocks = board_blocks(brd),
       extensions = dock_extensions(brd),
-      active = is.null(isolate(client_active()))
+      active = is.null(isolate(client_active())),
+      narrow = isTRUE(isolate(active_dock$narrow))
     )
   }
-
-  client_views(state)
 
   if (!is.null(server_active) &&
         !identical(server_active, isolate(client_active()))) {
@@ -652,6 +862,8 @@ reconcile_views <- function(board, update, docks, active_dock,
 #' @param board,update Reactive board state and update signal.
 #' @param layout Optional initial placement `dock_grid`; defaults to the
 #'   board's active view grid.
+#' @param narrow Whether the client reported a narrow viewport, in which case
+#'   the view renders as one tabbed group and takes no geometry write-back.
 #'
 #' @return The view's `dock` handle: a list holding the dockViewR `proxy`
 #'   alongside `board_ns`, `live_panels`, `layout` (reactive), `n_panels`,
@@ -666,7 +878,8 @@ manage_dock <- function(
   plugins = board_plugins(isolate(board$board)),
   layout = NULL,
   blocks = NULL,
-  extensions = NULL
+  extensions = NULL,
+  narrow = FALSE
 ) {
   init_board <- isolate(board$board)
   init_layout <- coal(layout, active_view_grid(init_board))
@@ -682,6 +895,15 @@ manage_dock <- function(
 
   if (not_null(init_select)) {
     init_layout <- set_grid_active(init_layout, init_select)
+  }
+
+  # Narrow viewport: the nesting flattens into one vertical stack, so the board
+  # scrolls top to bottom rather than running columns off-screen. Applied here,
+  # at the dockView seam, and nowhere else -- `board_grids()` keeps the
+  # geometry a wide viewport restores to. Folded in after the select so a
+  # pending tab still opens in whichever group carries it.
+  if (narrow) {
+    init_layout <- stack_grid(init_layout)
   }
 
   # Block/ext cards live at the board (parent) namespace level
@@ -711,7 +933,8 @@ manage_dock <- function(
       prev_active_group = prev_active_group,
       active_group_trail = active_group_trail,
       visibility = visibility,
-      plugins = plugins
+      plugins = plugins,
+      narrow = narrow
     )
 
     # Apply server-initiated panel ops to this view's live dock -- the sole
@@ -747,10 +970,18 @@ manage_dock <- function(
     # once here. Do NOT extend this to the render path: report_visible_observer
     # also reacts to `dock$layout()`, but it writes the visibility channel (what
     # paints the front tab), not the board, and must stay live when locked.
-    if (!is_dock_locked()) {
+    #
+    # A narrow board takes none either, for a different reason: what it echoes
+    # is the collapsed render, so committing would overwrite every view's
+    # authored geometry with one flat group -- one phone visit and the desktop
+    # layout is gone for everyone who loads that board next.
+    if (!is_dock_locked() && !narrow) {
 
       commit_grid <- function(grid) {
-        update(list(views = list(grid = set_names(list(grid), id))))
+        fold_update(
+          update,
+          list(views = list(grid = set_names(list(grid), id)))
+        )
       }
 
       observe_grid_echo(id, dock, board, commit_grid)
@@ -770,10 +1001,16 @@ manage_dock <- function(
     observeEvent(
       req(input[[dock_input("initialized")]]),
       {
-        panels <- as_dock_panel_id(as_dock_grid(init_layout))
+        # Always a list, as `as_dock_panel_id()` on a `dock_grid` was: on a
+        # bare character vector it hands back one classed id rather than a
+        # list when there is only one panel, and `Filter()` would then test
+        # its unclassed element and drop it.
+        panels <- lapply(layout_panel_ids(init_layout), as_dock_panel_id)
 
         restore_layout(init_layout, dock$proxy,
                        blocks = init_blocks, extensions = init_exts)
+
+        send_rail_config(init_layout[["rails"]], session)
 
         show_block_ui(
           as_obj_id(Filter(is_block_panel_id, panels)), session,
@@ -822,17 +1059,22 @@ manage_dock <- function(
 
     observeEvent(
       input$empty_dock_add,
-      suggest_panels_to_add(dock, board, panels = list(), session = session)
+      suggest_panels_to_add(
+        dock, board, panels = list(),
+        at = list(id = session$ns("empty_dock_add")),
+        session = session
+      )
     )
 
-    # The add-panel modal emits an `add` panel-op; the apply observer places the
-    # panels. The `+` was clicked on a group, so anchor the add `within` a
-    # member of that group (`near`); an empty dock has no group and falls back
-    # to the view's default spot.
+    # A pick in the add-panel menu emits an `add` panel-op; the apply observer
+    # places the panel. The `+` was clicked on a group, so anchor the add
+    # `within` a member of that group (`near`); an empty dock has no group and
+    # falls back to the view's default spot.
     observeEvent(
-      input$confirm_add,
+      input$add_dock_panel_pick,
       {
-        req(input$add_dock_panel)
+        pick <- input$add_dock_panel_pick$value
+        req(is_string(pick), nzchar(pick))
 
         ref_group <- input[[dock_input("panel-to-add")]]
 
@@ -840,9 +1082,7 @@ manage_dock <- function(
           group_front_panel(dock, ref_group)
         }
 
-        update(add_panel_delta(id, input$add_dock_panel, near))
-
-        removeModal()
+        update(add_panel_delta(id, pick, near))
       }
     )
 
@@ -906,132 +1146,27 @@ manage_dock <- function(
 
 #' Observe view addition requests.
 #'
-#' Shows a modal to name the new view and pick blocks/extensions, then emits
-#' an `add` + `active` views delta; the reconcile pass instantiates the dock
-#' and switches to it.
+#' "New page" in the views menu's manage mode: adds an empty page with the
+#' next free "Page N" name and switches to it, with no dialog. The client
+#' opens the new row's name for renaming, and its blocks are added from the
+#' page's "+" menu.
 #'
 #' @param client_views Reactive record of the client-shown views.
 #' @param session Shiny session.
-#' @param board Reactive board state.
 #' @param update Board update signal.
 #'
 #' @noRd
-add_view_observer <- function(client_views, session, board, update) {
+add_view_observer <- function(client_views, session, update) {
   input <- session$input
-  output <- session$output
-  ns <- session$ns
 
-  # Show modal for view creation
+  # The new view is created through the update lifecycle: a stable id is
+  # minted in `augment_board_update.dock_board()` and `apply_views_add()`
+  # instantiates the dock -- the same path a delta-driven add takes, so id
+  # assignment happens in exactly one place.
   observeEvent(input$view_nav_add, {
-    req(views_can_crud(client_views()))
+    req(!is_dock_locked())
 
-    state <- client_views()
-    existing <- view_names(state)
-    n <- length(state) + 1L
-    while (paste("Page", n) %in% existing) n <- n + 1L
-    default_name <- paste("Page", n)
-
-    brd <- board$board
-    blk_options <- build_block_options(brd, board_block_ids(brd))
-    ext_options <- build_ext_options(brd, dock_ext_ids(brd))
-
-    showModal(
-      modalDialog(
-        title = "New view",
-        size = "l",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          css_modal(),
-          textInput(
-            ns("view_new_name"),
-            "View name",
-            value = default_name
-          ),
-          if (length(blk_options)) {
-            tagList(
-              css_block_selectize(),
-              selectizeInput(
-                ns("view_new_blocks"),
-                label = "Blocks to show",
-                choices = NULL,
-                multiple = TRUE,
-                options = list(
-                  options = blk_options,
-                  valueField = "value",
-                  labelField = "label",
-                  searchField = c("label", "description", "searchtext"),
-                  placeholder = "Select blocks...",
-                  openOnFocus = FALSE,
-                  plugins = list("remove_button"),
-                  render = js_blk_selectize_render()
-                )
-              )
-            )
-          },
-          if (length(ext_options)) {
-            selectizeInput(
-              ns("view_new_exts"),
-              label = "Extensions to show",
-              choices = NULL,
-              multiple = TRUE,
-              options = list(
-                options = ext_options,
-                valueField = "value",
-                labelField = "label",
-                searchField = c("label", "description", "searchtext"),
-                placeholder = "Select extensions...",
-                openOnFocus = FALSE,
-                plugins = list("remove_button"),
-                render = js_blk_selectize_render()
-              )
-            )
-          },
-          uiOutput(ns("view_name_validation")),
-          confirm_button(ns("confirm_view_add"), label = "Create view")
-        )
-      )
-    )
-  })
-
-  # Name validation feedback
-  output$view_name_validation <- renderUI({
-    req(input$view_new_name)
-    msg <- validate_view_name(
-      trimws(input$view_new_name),
-      view_names(client_views())
-    )
-    if (!is.null(msg)) tags$div(class = "text-danger", msg)
-  })
-
-  # Confirm view creation. The new view is created through the update
-  # lifecycle: a stable id is minted in `augment_board_update.dock_board()`
-  # and `apply_views_add()` instantiates the dock — the same path a
-  # delta-driven add takes, so id assignment happens in exactly one place.
-  observeEvent(input$confirm_view_add, {
-    state <- client_views()
-    new_name <- trimws(input$view_new_name)
-
-    if (!is.null(validate_view_name(new_name, view_names(state)))) {
-      return()
-    }
-
-    removeModal()
-
-    brd <- board$board
-    sel_blks <- intersect(
-      coal(input$view_new_blocks, character()),
-      board_block_ids(brd)
-    )
-    sel_exts <- intersect(
-      coal(input$view_new_exts, character()),
-      dock_ext_ids(brd)
-    )
-
-    members <- c(
-      as.character(as_ext_panel_id(sel_exts)),
-      as.character(as_block_panel_id(sel_blks))
-    )
+    name <- next_page_name(unlst(reactives::as_values(client_views)))
 
     # Switch to the new view on creation. Its id is minted in augment, so
     # we point `active` at its `add` key (the display name); the dock
@@ -1039,19 +1174,31 @@ add_view_observer <- function(client_views, session, board, update) {
     update(
       list(
         views = list(
-          add = set_names(list(dock_view(members)), new_name),
-          active = new_name
+          add = set_names(list(dock_view(character())), name),
+          active = name
         )
       )
     )
+
+    # Names the page for the nav, which opens its name for renaming once the
+    # page arrives; no other page does, wherever it comes from.
+    session$sendInputMessage("view_nav", list(rename_new = name))
   })
+}
+
+# "Page N", N one more than the pages there are, or the first free one after.
+next_page_name <- function(existing) {
+  n <- length(existing) + 1L
+  while (paste("Page", n) %in% existing) n <- n + 1L
+  paste("Page", n)
 }
 
 #' Observe view removal requests.
 #'
-#' Shows a confirmation modal, then emits an `rm` views delta; the reconcile
-#' pass destroys the dock module, removes the DOM container, and switches to
-#' another view if the removed one was active.
+#' The views menu asks in place ("Remove this page?") before it sends
+#' `view_nav_remove`, so the request is final here: it emits an `rm` views
+#' delta; the reconcile pass destroys the dock module, removes the DOM
+#' container, and switches to another view if the removed one was active.
 #'
 #' @param client_views Reactive record of the client-shown views.
 #' @param session Shiny session.
@@ -1060,64 +1207,18 @@ add_view_observer <- function(client_views, session, board, update) {
 #' @noRd
 remove_view_observer <- function(client_views, session, update) {
   input <- session$input
-  ns <- session$ns
 
-  # Show confirmation modal. `input$view_nav_remove` carries the view id;
-  # the modal shows the display name.
   observeEvent(input$view_nav_remove, {
-    req(views_can_crud(client_views()))
+    req(!is_dock_locked())
 
     rm_id <- input$view_nav_remove
-    state <- client_views()
 
-    if (!rm_id %in% names(state)) {
+    if (!rm_id %in% names(client_views)) {
       return()
     }
 
-    if (length(state) <= 1L) {
-      notify("Cannot remove the last view.")
-      return()
-    }
-
-    rm_name <- coal(view_name(state[[rm_id]]), rm_id, fail_all = FALSE)
-
-    showModal(
-      modalDialog(
-        title = "Remove view",
-        size = "s",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          tags$p(
-            "Are you sure you want to remove view ",
-            tags$strong(rm_name),
-            "?"
-          ),
-          div(
-            style = "display: flex; justify-content: flex-end; gap: 8px;
-              margin-top: 20px;",
-            modalButton("Cancel"),
-            actionButton(
-              ns("confirm_view_remove"),
-              "Remove",
-              class = "btn-danger"
-            )
-          )
-        )
-      )
-    )
-  })
-
-  # Removal flows through the update lifecycle: `apply_views_rm()` tears
-  # down the dock module, drops the view from the board and the live
-  # state, and re-syncs the nav switcher.
-  observeEvent(input$confirm_view_remove, {
-    removeModal()
-
-    rm_id <- input$view_nav_remove
-    state <- client_views()
-
-    if (!rm_id %in% names(state) || length(state) <= 1L) {
+    if (length(client_views) <= 1L) {
+      notify("Cannot remove the last page.")
       return()
     }
 
@@ -1142,11 +1243,11 @@ rename_view_observer <- function(client_views, session, update) {
   input <- session$input
 
   observeEvent(input$view_nav_rename, {
-    req(views_can_crud(client_views()))
+    req(!is_dock_locked())
 
     rename <- input$view_nav_rename
 
-    if (!rename$id %in% names(client_views())) {
+    if (!rename$id %in% names(client_views)) {
       return()
     }
 
@@ -1156,60 +1257,52 @@ rename_view_observer <- function(client_views, session, update) {
   })
 }
 
-# Translate a relative up / down nudge of one view into the total order it
-# yields. Clamped: nudging the first view up or the last down is a no-op, as is
-# an unknown id.
-reorder_by_move <- function(order, id, dir) {
+# The order a drag left the views menu in, if it is a permutation of the
+# current one; NULL for a stale or malformed one.
+dragged_order <- function(order, dragged) {
 
-  idx <- match(id, order)
+  dragged <- as.character(unlist(dragged))
 
-  if (is.na(idx)) {
-    return(order)
+  if (length(dragged) == length(order) && setequal(dragged, order) &&
+        !anyDuplicated(dragged)) {
+    dragged
   }
-
-  swap <- switch(dir, up = idx - 1L, down = idx + 1L, NA_integer_)
-
-  if (is.na(swap) || swap < 1L || swap > length(order)) {
-    return(order)
-  }
-
-  order[c(idx, swap)] <- order[c(swap, idx)]
-
-  order
 }
 
-# View order is board content, not client-owned geometry: the up / down gesture
-# carries only a relative `{id, dir}` intent. The order the client shows is
-# authoritative here, so the total permutation is derived from
-# `names(client_views())` and travels the update lifecycle as a `views$order`
-# delta; reconcile then pushes the settled order back to the nav. A boundary
-# nudge yields the same order and emits nothing.
+# View order is board content, not client-owned geometry, so a drag's order
+# travels the update lifecycle as a `views$order` delta, and reconcile pushes
+# the settled order back to the nav. The drag has moved the rows already, so
+# an order refused is pushed back at once.
 reorder_view_observer <- function(client_views, session, update) {
   input <- session$input
 
   observeEvent(input$view_nav_reorder, {
-    req(views_can_crud(client_views()))
+    req(!is_dock_locked())
 
-    move <- input$view_nav_reorder
-    order <- names(client_views())
-    reordered <- reorder_by_move(order, move$id, move$dir)
+    order <- names(client_views)
+    dragged <- dragged_order(order, input$view_nav_reorder$order)
 
-    if (!identical(reordered, order)) {
-      update(list(views = list(order = reordered)))
+    if (is.null(dragged)) {
+      session$sendInputMessage("view_nav", list(order = as.list(order)))
+    } else if (!identical(dragged, order)) {
+      update(list(views = list(order = dragged)))
     }
   })
 }
 
-#' Show a modal for adding panels to the dock.
+#' Open the menu for adding a panel to the dock.
 #'
-#' Lists blocks and extensions not yet shown in the dock. If none are
-#' available, either triggers `suggest_new` or notifies the user.
+#' The "+" menu (Blockr.menu, add-block-menu.js), listing the blocks and
+#' extensions not yet shown in the dock: mark, title and the block type as
+#' meta text. A pick is `add_dock_panel_pick`. If none are available,
+#' either triggers `suggest_new` or notifies the user.
 #'
 #' @param dock Dock proxy.
 #' @param board Reactive board state.
 #' @param suggest_new If truthy, called when no panels are available
 #'   (used to prompt adding a new block).
 #' @param panels Currently visible panels (auto-detected if `NULL`).
+#' @param at Where the menu opens (see [new_action()]).
 #' @param session Shiny session.
 #'
 #' @noRd
@@ -1218,6 +1311,7 @@ suggest_panels_to_add <- function(
   board,
   suggest_new = FALSE,
   panels = NULL,
+  at = NULL,
   session = get_session()
 ) {
   ns <- session$ns
@@ -1238,40 +1332,16 @@ suggest_panels_to_add <- function(
     as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
   )
 
-  options_data <- c(
-    build_block_options(board$board, blk_opts, value_fun = as_block_panel_id),
-    build_ext_options(board$board, ext_opts, value_fun = as_ext_panel_id)
-  )
+  items <- add_panel_menu_items(board$board, blk_opts, ext_opts)
 
-  if (length(options_data)) {
-    showModal(
-      modalDialog(
-        title = "Add panel",
-        size = "l",
-        easyClose = TRUE,
-        footer = NULL,
-        tagList(
-          css_modal(),
-          css_block_selectize(),
-          selectizeInput(
-            ns("add_dock_panel"),
-            label = "Select panel to add",
-            choices = NULL,
-            multiple = TRUE,
-            options = list(
-              options = options_data,
-              valueField = "value",
-              labelField = "label",
-              searchField = c("label", "description", "searchtext"),
-              placeholder = "Type to search...",
-              openOnFocus = FALSE,
-              plugins = list("remove_button"),
-              render = js_blk_selectize_render()
-            )
-          ),
-          confirm_button(ns("confirm_add"), label = "Add Panel"),
-          auto_focus_script(ns("add_dock_panel"))
-        )
+  if (length(items)) {
+    session$sendCustomMessage(
+      "blockr-add-panel-menu",
+      list(
+        pick = ns("add_dock_panel_pick"),
+        caption = "Show on this page",
+        at = at,
+        items = items
       )
     )
   } else if (!isFALSE(suggest_new)) {
@@ -1299,8 +1369,6 @@ extension_default_icon <- function() {
 
 #' Build a single selectize option entry.
 #'
-#' Shared structure for block and extension options in panel pickers.
-#'
 #' @param value Option value (ID, possibly prefixed).
 #' @param label Display label.
 #' @param id Raw object ID.
@@ -1327,15 +1395,11 @@ build_one_option <- function(value, label, id, package, icon, color) {
 #'
 #' @param board Board object.
 #' @param blk_ids Character vector of block IDs to include.
-#' @param value_fun Coercion applied to each ID to form the option value;
-#'   defaults to `identity` (bare IDs, for a block-only selectize). The
-#'   panel picker passes `as_block_panel_id` so a single mixed selectize
-#'   can be disambiguated on read-back.
 #'
 #' @return A list of option lists suitable for `selectizeInput`.
 #'
 #' @noRd
-build_block_options <- function(board, blk_ids, value_fun = identity) {
+build_block_options <- function(board, blk_ids) {
   if (!length(blk_ids)) {
     return(list())
   }
@@ -1346,7 +1410,7 @@ build_block_options <- function(board, blk_ids, value_fun = identity) {
   lapply(seq_along(blk_ids), function(i) {
     id <- blk_ids[i]
     build_one_option(
-      value = as.character(value_fun(id)),
+      value = id,
       label = block_name(blks[[id]]),
       id = id,
       package = meta$package[i],
@@ -1354,61 +1418,4 @@ build_block_options <- function(board, blk_ids, value_fun = identity) {
       color = meta$color[i]
     )
   })
-}
-
-#' Build selectize option entries for extensions.
-#'
-#' @param board Board object.
-#' @param ext_ids Character vector of extension IDs to include.
-#' @param value_fun Coercion applied to each ID to form the option value;
-#'   defaults to `identity` (bare IDs, for an extension-only selectize). The
-#'   panel picker passes `as_ext_panel_id` so a single mixed selectize
-#'   can be disambiguated on read-back.
-#'
-#' @return A list of option lists suitable for `selectizeInput`.
-#'
-#' @noRd
-build_ext_options <- function(board, ext_ids, value_fun = identity) {
-  if (!length(ext_ids)) {
-    return(list())
-  }
-
-  all_exts <- as.list(dock_extensions(board))
-
-  lapply(ext_ids, function(ext_id) {
-    ext <- all_exts[[ext_id]]
-    ext_name <- extension_name(ext)
-    ext_pkg <- ctor_pkg(extension_ctor(ext))
-
-    build_one_option(
-      value = as.character(value_fun(ext_id)),
-      label = ext_name,
-      id = ext_id,
-      package = coal(ext_pkg, "local"),
-      icon = extension_default_icon(),
-      color = "#999999"
-    )
-  })
-}
-
-#' Validate a view name.
-#'
-#' With identity carried by a stable id, the name is a free-form display
-#' label: the only remaining rules are display concerns — non-empty and
-#' (to keep tabs unambiguous) not a duplicate of another view's name.
-#'
-#' @param name Trimmed view name string.
-#' @param existing Character vector of existing view names.
-#'
-#' @return Error message string, or `NULL` if valid.
-#'
-#' @noRd
-validate_view_name <- function(name, existing) {
-  if (nchar(name) == 0L) {
-    "Name cannot be empty."
-  } else if (name %in% existing) {
-    "A view with this name already exists."
-  } else {
-    NULL
-  }
 }

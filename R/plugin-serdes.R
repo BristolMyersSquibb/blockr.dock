@@ -21,7 +21,7 @@ ser_deser_ui <- function(id, board) {
       NS(id, "serialize"),
       "Export",
       class = "btn-sm",
-      icon = icon("file-export"),
+      icon = NULL
     )
   )
 }

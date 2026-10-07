@@ -8,6 +8,273 @@
   resize is per-session -- the settled-echo grid mirror is not wired while
   locked, so nothing is written back to the board (#421).
 
+* Renaming a block sends the new name to the server on Enter or when the
+  field loses focus, not on every keystroke. Each keystroke was a board
+  update, and while typing those piled up on the server.
+
+* The rails of a board's pages open and close together. Collapsing or
+  expanding the rail on one edge of a page does the same on every other page,
+  and a page visited for the first time opens with its rails the way the pages
+  already visited show theirs. Only a rail holding panels takes part. The
+  "Sync rails across pages" board option (`new_sync_rails_option()`, in
+  `dock_board_options()`, on unless the `sync_rails` blockr option says
+  otherwise) turns this off, and switching it back on brings every page to the
+  one on screen. A board saved before this release has no such option, so its
+  pages keep their rails as they were left (#480).
+
+* The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
+  keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
+  and Remove block after a divider. The preview and a block's own control
+  keep their buttons in the header. A control's button shows its icon, or its
+  label where it has none, and is named by its `ctrl_label` ("Control" without
+  one); the dock no longer applies a control's `ctrl_class` to it. The dock no
+  longer depends on shinyWidgets.
+
+* Adding, appending, prepending and inserting a block open one menu in place,
+  with a filter box and one row per block type, instead of the block browser
+  sidebar. "Add panel" is the same menu over the board's blocks not on the
+  page, and its dialog is gone. An action's trigger can name where its
+  gesture happened (`at`, see `new_action()`): the menu opens there, and
+  under the navbar when nothing is named.
+
+* "Manage pages" turns the views menu into an editor: drag a page by its grip
+  to reorder, click a name to rename it, remove a page after a question in
+  its row, and add an empty "Page N" with "New page", all without a dialog.
+
+* The board options sidebar lists the option categories, and a row opens
+  that category's page. The header then shows a back arrow and the
+  category's name, and the arrow or Escape returns to the list. The
+  Bootstrap accordion and the rule above it are gone; "Show code" is the
+  list's last row.
+
+* A "Compact" board option (`new_compact_option()`, in `dock_board_options()`,
+  off by default) turns every block header into an eyebrow line: a small
+  tinted mark and the name in muted capitals.
+
+* A first visit to a view no longer re-checks every block's frozen state per
+  card mount. A card's reported sections depended on the session's whole input
+  name set, so every new input on the board woke every block's `visible`, and
+  `freeze_hidden_inputs()` re-read all of them: 21 to 43 runs over ~90 blocks
+  per first visit. The key test now runs under `isolate()`; reading the section
+  input itself already fires when the card first reports.
+
+* Testing a block for controls renders their markup without resolving their
+  html dependencies, which cost more than the markup once every control
+  carried its own set (`resolveDependencies` 1.4 s to 0.8 s over a short
+  session).
+
+* Cards and extensions parked off screen (views you have left) are no longer
+  styled or laid out by the browser (`content-visibility: hidden` on the closed
+  offcanvas pools). On a 90-block board they are half the document; one DOM
+  insertion goes from 106 to 11 ms and a return view switch spends 0.8 s instead
+  of 2.1 s on style (loaded container, same page A/B).
+
+* The dock reads its colours, radii and surfaces from blockr.ui's design
+  tokens, so a board follows blockr.ui's dark scheme: the dockview frame and
+  tabs, block headers, sidebars, the block browser and the block menu. Font
+  sizes, weights and families read the type tokens.
+  The options of `dock_board_options()` now include the light/dark switch,
+  light by default, and core's thematic switch, off by default, which lets
+  plots take the board's colours.
+
+* The block header drops its subtitle: a 32px mark in the block's category
+  colour carries the status dot, and the block type, with the package as a
+  badge, is the mark's tooltip. The title is 16px and wraps to two lines.
+  The controls sit just under the header with no rules around them; one rule
+  separates them from the preview while both are open.
+
+* The dock's chrome (block header, navbar, view menu, sidebars) shows
+  blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
+  native one. The "…" menu and the board options gear have one.
+
+* A parked block's status badge is drawn from the status blockr.core now
+  reports for it in place of `dormant`: the outcome of the block's last
+  check, `stale` once that is out of date, or `unevaluated` without one.
+  The `block_status_badge()` helper no longer returns `NA`, which it gave
+  for `dormant` to tell a persistent renderer such as the blockr.dag node
+  to keep the badge it drew last. A parked block that failed shows the
+  failed badge without being visited, and `unevaluated`, like `ready`,
+  carries none. Requires blockr.core with the `unevaluated` status (#485).
+
+* The dock now states its evaluation demand as the blocks it holds eager,
+  in place of the per-block `required` channel blockr.core has retired.
+  Its board callback makes the board lazy by returning `eager()` with the
+  active view's front panels, which core seeds as the dock's eager set
+  before the first flush. From there, what the dock has on screen travels
+  as an `eager` update under the same owner label -- one payload per view
+  switch where the retired channel took a write per slot, and a card that
+  leaves the screen is released by its absence from the set rather than
+  by a second write. Requires blockr.core with `eager()` (#417).
+
+* A card the dock has built but is not showing no longer carries
+  construction demand of its own. The retired `required` channel had a
+  third state for it, which paced those blocks into core's priority
+  construction lane; nothing replaces it, so the blocks behind an
+  unvisited tab are built by core's background pass in its own order and
+  fronting one holds it eager. First paint therefore waits on fewer blocks
+  than before (#417).
+
+* A new `insert_block_action` puts a block into an existing link
+  ([#459](https://github.com/BristolMyersSquibb/blockr.dock/issues/459)).
+  Triggered with a link id, it offers the same block browser as the add and
+  append flows; committing a block C for `A -> B` drops that link and wires
+  `A -> C -> B` in one update. The far end takes the split link's place, not
+  merely its slot, which is what makes this an insertion rather than a
+  rewire. Position is what matters, for named and blank entries alike:
+  `sync_dot_args()` drops every key and re-adds them in the board's link
+  order, so a link merely appended lands last and slides every sibling after
+  the split one up a place. `rbind(first = a, second = z)` came back as
+  `rbind(second = z, first = c)`, rows swapped, even though the name was
+  preserved. The far end is therefore placed with the `before` component
+  `blockr.core` gained for this, and it keeps inheriting the split link's
+  input on top, which preserves a named entry's binding as well as its
+  position. The near end lands on a free slot of the new block, with the
+  usual picker when there is more than one to choose from. Candidates are
+  filtered as for append, since the new block has to be able to receive from
+  the source, and both new links offer an id field with an auto default, as
+  the add, append and prepend flows do. Unlike append, the panel closes even
+  when pinned: the gesture consumes the link it was triggered with, so there
+  is nothing left to repeat it against.
+* A grid that places the same panel more than once is now rejected when validated, rather than surviving to the render cast. A grid says where each panel goes, so two spots for one panel express nothing, and the check spans both halves of one: twice in the tree, twice inside a single rail, or once in each of two rails. The tree/rail overlap that canonicalisation prunes has a principled winner -- the rail claims the panel -- while two such spots have none, so this rejects rather than quietly dropping one. Previously the duplicate reached the render cast and aborted with blockr.core's "Block IDs are required to be unique.", which names blocks rather than the layout and fires far from whatever wrote the grid. Every producer routing through the views delta -- a hand-written grid, a restored board, a `views$grid` write, a `views$add` entry -- inherits the check (#464).
+
+* The `blk()` / `ext()` placement hint gained a `rail` key, so the `add` and `move` panel-op verbs can park a panel on a view's left or right edge. A rail used to be authorable only as a view's birth geometry, through `rail()` inside a `dock_grid()`, which left the user's own drag as the only route into one on a view already on screen. The key names an edge rather than an anchor, so it excludes `near` / `side`: a `side` is a direction relative to a `near` anchor *inside* the splitview while a rail position is an edge of the whole view, and both spell `left` and `right` (#461).
+
+* A block panel opened from an extension -- a node click in the DAG, a row click in an outline -- no longer lands as a tab on top of the extension it was opened from. An add that carries no placement hint now reserves every group holding an extension panel, read off the panel id rather than off the hardcoded `dag` key behind the undocumented `blockr.visible_extensions` option, so an extension mounted under any other key is reserved too. The reservation tests membership rather than the front tab, which is what made the misplacement look intermittent -- the same click placed correctly or not depending on which tab of the extension's group happened to be open. The option is gone, and nothing has to opt in (#250).
+
+* A rail's width now survives a viewport too narrow to render it. A rail is
+  sized in pixels and is the low-priority view of dockView's shell splitview,
+  so a dock that cannot fit it squeezes the rail rather than the centre -- and
+  hands the space back to the centre, not the rail, once there is room again.
+  The settled-echo mirror used to commit that width, which left the board
+  holding the narrowest viewport it had ever been opened at, and every later
+  restore came back at that. It now takes a rail's width from the client only
+  across an echo that left the dock's own width alone -- a rail sash moves the
+  boundary between the rail and the centre and leaves that total untouched,
+  while a viewport change moves it -- so a sash drag still persists and a
+  resize no longer rewrites what the user set.
+
+  The mirror also ignores the empty dock a view echoes before its restore
+  reaches it. That echo places nothing, and committing it blanked the view's
+  stored geometry, leaving the arrangement to be rebuilt from whatever the
+  client rendered next -- which for a rail is a width, not the same width back
+  (#457).
+
+* On a narrow viewport, a view's nested grid now flattens into a single
+  vertical stack: every tab group survives as its own row, railed ones
+  included, and the page scrolls from one to the next instead of columns
+  running off-screen. A row keeps the height the wide layout gave it -- so a
+  group the author sized down stays short rather than being padded out --
+  capped at `blockr.narrow_group_fraction` of the viewport (0.8 by default, a
+  fraction in (0, 1]). The width is read once, at startup, so reflowing takes
+  a reload.
+
+  The collapse is opt-in and off until a deployment sets
+  `blockr.narrow_breakpoint`. Setting it to `Inf` collapses at every width,
+  which is how a board meant only for phones asks to always stack. An unusable
+  value aborts rather than falling back to a default -- anything under 50 px,
+  `NA`, or a string that is not a number -- since a deployment that sets a
+  breakpoint has an intent, and silently rendering the other layout would hide
+  the typo until someone opened the board on a phone.
+
+  The stack is a render and nothing more: a narrow session writes no geometry
+  back, so the board keeps the layout a wide viewport restores to and a save
+  from a phone still persists it (#413).
+
+* Blocks and extensions can now sit in a **rail** -- a tab group pinned to one edge of a view, out of the splitview, rather than a grid cell competing with the panels for width. Every board offers a left and a right edge; a rail is written among a view's grid children with `rail()`, and the default board parks the extensions on the left. Which rails a dock *offers* is a constant, so a grid only records which are *populated* -- an empty rail is invisible, and a board stored before rails existed offers the same edges as any other. A railed panel is absent from the grid tree, so the placement walks are untouched and a view's members are the union of the two, with membership still authoritative for which panels exist while the tree and the rails only say where. Dragging a panel into or out of a rail is stock dockview, and the arrangement rides the settled-echo mirror and `save_dock()` / `restore_dock()` like the rest of the grid does (#431).
+
+  A rail's visibility is derived rather than stored: a rail holding panels
+  is shown, an empty one is hidden. That rule replaces a pin concept and a
+  persisted flag, and it matches the invariant the grid already keeps. Since
+  a hidden rail has no hit area, dragging toward its edge reveals it --
+  collapsed, so an empty rail shows its bare strip rather than a full-width
+  empty pane -- and the drop expands it. A drag that ends anywhere else
+  leaves the derived rule to hide it again. Whether a rail is collapsed *is*
+  stored, since unlike visibility it cannot be derived -- an expanded rail
+  and a collapsed one hold the same panels -- so a board comes back the way
+  it was left.
+
+* The `--blockr-*` design tokens and the host-app-wide theme layer now live in
+  blockr.ui, which this package imports and attaches through
+  `blockr.ui::theme_dep()`. Nine other packages style themselves from that
+  vocabulary, two of them without declaring a dependency here, and the theme
+  layer restyled the whole Bootstrap surface -- typography, labels, form
+  controls, selectize, buttons, tooltips, popovers and the DataTables chrome
+  -- of every app that loaded a docking layout manager. Neither the vocabulary
+  nor the theme is this package's to own. What stays is the docking chrome,
+  every rule of it scoped to markup generated here (#407).
+
+* Block card chrome that was built on every render and then hidden by the
+  stylesheet is gone: the icons and titles fed into the block card's accordion
+  headers, which `display: none` also keeps out of the accessibility tree, and
+  the export button's icon in the board offcanvas. Dropped with them is a
+  `.popover-header` rule that hid a header no popover here renders -- and, the
+  stylesheet being host-app-wide, any header a consumer's own popover rendered
+  too. The companion `.popover .btn-close` rule stays: bslib injects that button
+  into any popover whose trigger does not include "focus", so it is built on the
+  client and cannot be dropped at the source (#72).
+
+* Removing blocks that are on screen no longer kills the session with
+  "attempt to apply non-function". Cutting a whole stack hit it every time.
+  The visible-axis observer drove both card axes straight off the client's
+  layout echo, which still names a panel for a tick after core has dropped
+  its block, and `mark_cards_rendered()` called the dropped slot. The echo is
+  now reconciled against core's visibility slots once, where it is read, so no
+  consumer sees a block the server has already dropped (#387).
+
+* A block card whose sections the user has all hidden now comes back hidden,
+  and freezes while its controls are off screen. The toggle widget reports
+  `NULL` for an empty selection, which is the same value the server holds
+  before the card has reported at all, so "the user hid everything" was
+  stored as -- and read back as -- "nothing saved": the card reopened both
+  sections. The same conflation left the block unfrozen, since the freeze
+  gate reads a non-`NULL` report to mean the card has landed. The card now
+  reports an empty selection as `character()`, telling it from a card that
+  has yet to report, and both halves follow. A board saved before this change
+  carries a genuine `NULL` and still restores with both sections open (#426).
+
+* A restored block card paints its saved sections open straight away,
+  instead of opening every section and collapsing the hidden ones a
+  moment later. The card rendered its accordion open unconditionally and
+  left a server observer to correct it, which it could only do once the
+  client had reported the toggle widget's value back -- on a four-block
+  board that correction landed some five seconds after the card
+  appeared, so the user watched the board settle into its saved shape
+  rather than opening in it. A locked dock now renders no toggle widget
+  at all: it was there purely to drive that correction, hidden behind
+  `display: none` yet still a live input a client could set (#418).
+
+* Two selectize widgets that had lost their callers are gone. Adopting
+  blockr.ui's link-menu module in the add-link flow deleted the only call to
+  `board_select()`, and `block_registry_selectize()` had no caller either.
+  Exported in their place is `board_block_select()`, the block picker the
+  board itself uses wherever a block is chosen -- the rich selectize listing
+  each block by icon, name, ID and defining package -- returned with the
+  styling its option rendering requires already attached. Every board-block
+  picker in the package now builds through that one function, so a consumer
+  outside it gets the widget the product uses rather than a reconstruction
+  of it (#427).
+
+* Switching to a view before the board has settled no longer leaves it
+  hopping between views for good. The nav reported the server's own
+  `sendInputMessage("view_nav", ...)` straight back as a gesture, and with
+  two switches in flight the first push's echo landed after the second had
+  been applied, missed `switch_view_observer()`'s `client_active` guard and
+  was taken for a fresh switch -- whose push echoed in turn. Every hop
+  re-evaluated and repainted the whole view, so the board looked like it
+  was reloading itself and only a page reload got out of it. The nav no
+  longer reports a programmatic update at all: it forgets Shiny's cached
+  input value instead, so a later click on the view the server pushed away
+  from is still reported. A newly added view is no longer marked active on
+  the client either, which the echo was the only thing correcting: an add
+  whose delta does not ask to navigate -- an extension creating a view in
+  the background -- now leaves the active view alone (#424).
+
+* A block with nothing to configure no longer carries an empty "Block
+  inputs" section, nor the toggle that opens it. Core's `new_block()` ui
+  default renders no markup at all, so a card for a block configured
+  entirely by its links -- `rbind_block`, say -- offered a control that
+  opened onto a blank panel (#69).
+
 * Extension state now reaches the saved board. Every extension serialized
   an empty payload while still writing its object and constructor, so a
   save looked complete yet carried none of its extensions' state and a
@@ -25,7 +292,7 @@
   rewritten by the next drag. The native input gives the full gamut, plus
   the platform's own dialog, eyedropper and keyboard handling (#396).
 
-* A block whose inputs changed while it was dormant now carries a muted
+* A block whose inputs changed while it was parked now carries a muted
   grey status badge instead of none. Core's sixth eval status, `stale`,
   fell through `block_status_badge()` to "no badge", so a block holding
   an out-of-date result looked identical to a healthy one on both the
