@@ -223,34 +223,60 @@ test_that("a locked board locks its layout unless told otherwise (#421)", {
     list(locked = TRUE, disableDnd = TRUE)
   )
 
+  # Each option leaves its own part to the reader, and only that part.
+  expect_identical(
+    layout_flags(blockr.locked = TRUE, blockr.lock_resize = FALSE),
+    list(disableDnd = TRUE)
+  )
+
+  expect_identical(
+    layout_flags(blockr.locked = TRUE, blockr.lock_dnd = FALSE),
+    list(locked = TRUE)
+  )
+
   expect_length(
-    layout_flags(blockr.locked = TRUE, blockr.lock_layout = FALSE),
+    layout_flags(
+      blockr.locked = TRUE,
+      blockr.lock_resize = FALSE,
+      blockr.lock_dnd = FALSE
+    ),
     0L
   )
 })
 
-test_that("the layout lock takes a boolean, and aborts on anything else", {
+test_that("each layout lock takes a boolean, and aborts on anything else", {
 
-  withr::local_options(blockr.locked = TRUE, blockr.lock_layout = NULL)
-  expect_true(is_layout_locked())
+  for (part in c("resize", "dnd")) {
 
-  withr::local_options(blockr.lock_layout = FALSE)
-  expect_false(is_layout_locked())
+    opt <- paste0("blockr.lock_", part)
+    env <- paste0("BLOCKR_LOCK_", toupper(part))
 
-  for (value in list(NA, "maybe", c(TRUE, FALSE))) {
+    withr::local_options(
+      set_names(list(TRUE, NULL), c("blockr.locked", opt))
+    )
+    expect_true(is_layout_locked(part))
 
-    withr::local_options(blockr.lock_layout = value)
+    withr::local_options(set_names(list(FALSE), opt))
+    expect_false(is_layout_locked(part))
 
-    expect_error(is_layout_locked(), class = "lock_layout_invalid")
+    for (value in list(NA, "maybe", c(TRUE, FALSE))) {
+
+      withr::local_options(set_names(list(value), opt))
+
+      expect_error(
+        is_layout_locked(part),
+        class = paste0("lock_", part, "_invalid")
+      )
+    }
+
+    # A deployment sets it through the environment as well, as a string.
+    withr::local_options(set_names(list(NULL), opt))
+    withr::local_envvar(set_names("false", env))
+    expect_false(is_layout_locked(part))
+
+    # An unlocked board has no layout to lock.
+    withr::local_options(blockr.locked = NULL)
+    withr::local_envvar(set_names("true", env))
+    expect_false(is_layout_locked(part))
   }
-
-  # A deployment sets it through the environment as well, as a string.
-  withr::local_options(blockr.lock_layout = NULL)
-  withr::local_envvar(BLOCKR_LOCK_LAYOUT = "false")
-  expect_false(is_layout_locked())
-
-  # An unlocked board has no layout to lock.
-  withr::local_options(blockr.locked = NULL)
-  withr::local_envvar(BLOCKR_LOCK_LAYOUT = "true")
-  expect_false(is_layout_locked())
 })

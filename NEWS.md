@@ -1,13 +1,13 @@
 # blockr.dock (development version)
 
-* A locked board can leave its layout to the reader. With the `lock_layout`
-  blockr option set to `FALSE`, a reader can resize panels by dragging the
-  borders between them, to make room for a wide table, and rearrange them by
-  dragging their tabs. Nothing a reader changes is saved: reloading the board
-  brings back the layout it was deployed with. Closing and adding panels stay
-  off, and by default the layout stays locked as before (#421). The border of
-  a rail can be dragged either way, as dockview's lock does not reach it
-  (dockview/dockview#1671).
+* A locked board can leave parts of its layout to the reader. With the
+  `lock_resize` blockr option set to `FALSE`, a reader can resize panels by
+  dragging the borders between them, to make room for a wide table, and with
+  `lock_dnd` set to `FALSE`, rearrange them by dragging their tabs. Nothing a
+  reader changes is saved: reloading the board brings back the layout it was
+  deployed with. Closing and adding panels stay off, and by default both stay
+  locked as before (#421). The border of a rail can be dragged either way, as
+  dockview's lock does not reach it (dockview/dockview#1671).
 
 * The dock draws a block's mark as blockr.ui's, in the sizes the spec gives it
   (#495). The block header calls `blockr.ui::block_mark()` at 32px, which the
