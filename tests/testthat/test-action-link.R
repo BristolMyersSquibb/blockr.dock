@@ -283,6 +283,29 @@ test_that("link menu renders a name field only for variadic targets", {
   expect_identical(placeholder, "leave blank for an unnamed input")
 })
 
+test_that("a link menu card leads with the block's mark", {
+  board <- new_board(c(a = new_dataset_block("iris"), m = new_merge_block()))
+
+  doc <- xml2::read_html(as.character(link_menu_ui("mid", board, "a")))
+
+  mark <- xml2::xml_find_all(
+    doc,
+    paste0(
+      "//*[", has_class("blockr-link-menu-card"), "][@data-block-type='m']",
+      "/*[", has_class("blockr-block-browser-card-header"), "]",
+      "/span[", has_class("blockr-block-mark"), "]"
+    )
+  )
+
+  # A list row's mark is blockr.ui's at its plain 24px.
+  expect_length(mark, 1L)
+  expect_identical(xml2::xml_attr(mark, "class"), "blockr-block-mark")
+  expect_identical(
+    xml2::xml_attr(mark, "data-category"),
+    block_metadata(new_merge_block())$category
+  )
+})
+
 test_that("add link action: INCOMING commit targets the anchor", {
   local_mocked_sidebar()
   # Anchor `h` (head) has a free input; the INCOMING section offers `a`

@@ -46,10 +46,7 @@ add_block_menu_item <- function(meta) {
     # The type id ("filter_block"), not the description: a description
     # mentions other blocks' words and would match half the list.
     keywords = meta$type,
-    mark = list(
-      icon = meta$icon,
-      color = unname(blk_color(meta$category))
-    )
+    mark = list(icon = meta$icon, category = meta$category)
   )
 }
 
@@ -105,7 +102,7 @@ add_panel_menu_items <- function(board, blk_ids, ext_ids) {
         value = as.character(as_block_panel_id(blk_ids[[i]])),
         meta = meta$name[i],
         keywords = blk_ids[[i]],
-        mark = list(icon = meta$icon[i], color = meta$color[i])
+        mark = list(icon = meta$icon[i], category = meta$category[i])
       )
     })
   }
@@ -121,7 +118,7 @@ add_panel_menu_items <- function(board, blk_ids, ext_ids) {
         keywords = ext_id,
         mark = list(
           icon = extension_default_icon(),
-          color = unname(blk_color("uncategorized"))
+          category = "uncategorized"
         )
       )
     })
