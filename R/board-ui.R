@@ -63,7 +63,7 @@ board_ui.dock_board <- function(
     # and composing `NS(board$board_id, "actions_sidebar")` at server time.
     # Contract: one sidebar = one concern. We mount two on the right
     # with different modes so they coexist cleanly when both are open
-    # (adding a block is the "+" menu, add-block-menu.R, not a sidebar):
+    # (adding a block is the "+" menu, action-menu.R, not a sidebar):
     #   * "actions_sidebar":  the trigger-specific editors (add and edit
     #     link, add and edit stack, block inputs). Body is populated
     #     server-side via `show_sidebar()` because each ships a
