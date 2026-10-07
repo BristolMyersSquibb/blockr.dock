@@ -5,11 +5,14 @@
 #'
 #' - `blks_metadata()`: Retrieves metadata given a `block` or `blocks` object
 #'   from the block registry. Can also handle blocks which are not
-#'   registered and provides default values in that case.
-#' - `blk_color()`: Produces colors using the Okabe-Ito colorblind-friendly
-#'   palette for a character vector of block categories.
-#' - `blk_icon_data_uri()`: Processes block icons to add color and turn them
-#'   into square-shaped icons.
+#'   registered and provides default values in that case. The `color` column
+#'   is the category's colour, from [blockr.ui::category_color()].
+#' - `blk_color()`: Deprecated. The category colours are blockr.ui's, and
+#'   [blockr.ui::category_color()], which this now calls, looks them up.
+#' - `blk_icon_data_uri()`: Deprecated. Processes block icons to add color and
+#'   turn them into square-shaped icons. For the block's mark as an image,
+#'   use [blockr.ui::block_mark_svg()], which draws it from the block's glyph
+#'   and category.
 #' - `block_status_badge()`: Derives a block's status badge from its eval
 #'   status and error count -- the single derivation the dock card icon and
 #'   the blockr.dag node badge share, so both show the same status. Returns a
@@ -19,10 +22,7 @@
 #'
 #' @examples
 #' blk <- blockr.core::new_dataset_block()
-#' meta <- blks_metadata(blk)
-#'
-#' col <- blk_color(meta$category)
-#' blk_icon_data_uri(meta$icon, col)
+#' blks_metadata(blk)
 #'
 #' block_status_badge("waiting")
 #'
@@ -39,26 +39,22 @@
 #' @export
 blks_metadata <- function(blocks) {
   meta <- block_metadata(blocks)
-  cbind(meta, color = blk_color(meta$category))
+  cbind(meta, color = blockr.ui::category_color(meta$category))
 }
 
 #' @param category Block category
 #' @rdname meta
 #' @export
 blk_color <- function(category) {
-  chr_ply(
-    category,
-    switch,
-    input = "#0072B2", # Blue
-    transform = "#009E73", # Bluish green
-    structured = "#56B4E9", # Sky blue
-    plot = "#E69F00", # Orange
-    table = "#CC79A7", # Reddish purple/pink
-    model = "#F0E442", # Yellow (includes AI/ML)
-    output = "#D55E00", # Vermilion
-    utility = "#CCCCCC", # Light gray
-    "#999999" # Medium gray (uncategorized)
+
+  blockr_warn(
+    "`blk_color()` is deprecated; use `blockr.ui::category_color()` instead.",
+    class = "deprecated_blk_color",
+    frequency = "once",
+    frequency_id = "blockr_deprecated_blk_color"
   )
+
+  blockr.ui::category_color(category)
 }
 
 #' @param icon_svg Character string containing the SVG icon markup
@@ -69,6 +65,14 @@ blk_color <- function(category) {
 #' @export
 blk_icon_data_uri <- function(icon_svg, color, size = 48,
                               mode = c("uri", "inline")) {
+
+  blockr_warn(
+    "`blk_icon_data_uri()` is deprecated; use ",
+    "`blockr.ui::block_mark_svg()` instead.",
+    class = "deprecated_blk_icon_data_uri",
+    frequency = "once",
+    frequency_id = "blockr_deprecated_blk_icon_data_uri"
+  )
 
   mode <- match.arg(mode)
 

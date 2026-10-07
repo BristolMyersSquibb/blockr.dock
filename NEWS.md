@@ -11,6 +11,13 @@
   matched the menus' marks, which came out as 32px squares on a grey tint. The
   header's glyph is 18px, up from 16px.
 
+* Both `blk_color()` and `blk_icon_data_uri()` are deprecated (#495). The
+  category colours are blockr.ui's, and `blockr.ui::category_color()` looks
+  them up. The deprecated `blk_color()` calls it, so its colours now come in
+  lower case. For the mark as an image, `blockr.ui::block_mark_svg()` draws it
+  from a block's glyph and category. The `color` column of `blks_metadata()`
+  stays, now from `blockr.ui::category_color()`.
+
 * Renaming a block sends the new name to the server on Enter or when the
   field loses focus, not on every keystroke. Each keystroke was a board
   update, and while typing those piled up on the server.
