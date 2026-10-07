@@ -336,7 +336,7 @@ edit_inputs_variadic_row <- function(board, row) {
     tags$span(
       class = "blockr-inputs-drag-handle",
       `aria-label` = "Drag to reorder",
-      title = "Drag to reorder",
+      `data-blockr-tooltip` = "Drag to reorder",
       drag_handle_icon()
     ),
     tags$div(
@@ -358,7 +358,7 @@ edit_inputs_variadic_row <- function(board, row) {
       type = "button",
       class = "blockr-inputs-remove",
       `aria-label` = "Remove input",
-      title = "Remove input",
+      `data-blockr-tooltip` = "Remove input",
       "\u00d7"
     )
   )
