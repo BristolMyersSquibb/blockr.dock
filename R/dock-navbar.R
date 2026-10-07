@@ -8,14 +8,15 @@
 #' `plugins` and `options`.
 #'
 #' The default items, returned by `default_navbar_items()`, are, in order: the
-#' piece the `preserve_board` plugin draws (id `"preserve_board"`), a spacer
-#' (`"spacer"`), the busy indicator (`"busy"`), the view menu (`"views"`), the
-#' read-only indicator (`"read_only"`), drawn only on a locked board, and the
-#' board options (`"options"`). The generic `blockr_app_navbar()` gives the
-#' default by board class, and `custom_navbar()` returns a navbar function that
-#' appends a fixed set of items to it, dropping any default item that shares an
-#' id with one of them. A plugin's piece is placed by `plugin_navbar_item()`,
-#' which the defaults use for the `preserve_board` plugin.
+#' blockr logo, which is also the busy indicator (id `"logo"`), the piece the
+#' `preserve_board` plugin draws (`"preserve_board"`), a spacer (`"spacer"`),
+#' the view menu (`"views"`), the read-only indicator (`"read_only"`), drawn
+#' only on a locked board, and the board options (`"options"`). The generic
+#' `blockr_app_navbar()` gives the default by board class, and `custom_navbar()`
+#' returns a navbar function that appends a fixed set of items to it, dropping
+#' any default item that shares an id with one of them. A plugin's piece is
+#' placed by `plugin_navbar_item()`, which the defaults use for the
+#' `preserve_board` plugin.
 #'
 #' An item whose `ui` draws a single [shiny::uiOutput()] or
 #' [shiny::textOutput()] takes no room in the bar while that output is empty,
@@ -265,6 +266,7 @@ default_navbar_items <- function(x, plugins) {
   # without the plugin keeps the rest of the bar on the right.
   c(
     new_navbar_items(),
+    navbar_item("logo", logo_navbar_ui),
     if ("preserve_board" %in% names(plugins)) {
       plugin_navbar_item(plugins[["preserve_board"]])
     },
@@ -273,7 +275,6 @@ default_navbar_items <- function(x, plugins) {
       function(id, board) tags$span(class = "blockr-navbar-spacer"),
       fill = TRUE
     ),
-    navbar_item("busy", busy_navbar_ui),
     navbar_item("views", views_navbar_ui),
     navbar_item("read_only", read_only_navbar_ui),
     navbar_item("options", options_navbar_ui)
@@ -380,25 +381,61 @@ navbar_board_id <- function(id) {
   sub(paste0(ns.sep, "[^", ns.sep, "]*$"), "", id)
 }
 
-# Busy spinner. Always rendered and always visible, driven purely by CSS off
-# the `.shiny-busy` class Shiny toggles on <html> during a flush -- no server
-# observer. Idle it is a faint, closed ring; a flush scoped to real block
-# evaluation (a bare panel switch does not qualify) paints a darker arc onto it
-# and spins it. It sits ahead of the view menu, where its 16px ring is not
-# juxtaposed against the smaller options button; because it is always painted
-# (never shown/hidden) its constant slot shifts no neighbour. The busy
-# appearance is held for `--blockr-spinner-delay` ms (set on the navbar), so a
-# sub-threshold flush never flickers it. The ring spins inside a static slot
-# that carries a hover tooltip naming the state (idle / computing), so the label
-# does not turn with it. Announced like the lock indicator.
-busy_navbar_ui <- function(id, board) {
+# The blockr logo, which leads the bar and is the board's busy indicator.
+# Always drawn, and driven purely by CSS off the `.shiny-busy` class Shiny
+# toggles on <html> during a flush -- no server observer. Idle it is the whole
+# logo; a flush scoped to real block evaluation (a bare panel switch does not
+# qualify) fades and fills its squares in turn, after `--blockr-spinner-delay`
+# ms (set on the navbar), so a sub-threshold flush never shows. While busy its
+# tooltip says "Computing" (navbar-logo.js). Announced like the lock indicator,
+# by a status that only screen readers see.
+logo_navbar_ui <- function(id, board) {
   tags$span(
-    class = "blockr-navbar-spinner-slot",
-    tags$span(
-      class = "blockr-navbar-spinner",
-      role = "status",
-      `aria-label` = "Busy"
+    class = "blockr-navbar-logo",
+    navbar_logo_dep(),
+    blockr_logo(20L),
+    tags$span(class = "visually-hidden", role = "status", `aria-label` = "Busy")
+  )
+}
+
+# The blockr logo: a 3 x 3 grid of squares with two left out, which draw an R.
+# The squares are listed in the order the R is drawn in one stroke (up the
+# stem, across the top, back to the middle, out the leg), and each carries its
+# place as `--i`, on which the busy animation staggers them.
+blockr_logo <- function(size = 20L) {
+
+  # (column, row) in stroke order
+  cells <- list(
+    c(0L, 2L), c(0L, 1L), c(0L, 0L), c(1L, 0L), c(2L, 0L), c(1L, 1L), c(2L, 2L)
+  )
+
+  rects <- chr_ply(
+    seq_along(cells),
+    function(i) {
+      sprintf(
+        '<rect style="--i:%d" x="%d" y="%d" width="64" height="64" rx="7"/>',
+        i - 1L, cells[[i]][1L] * 80L, cells[[i]][2L] * 80L
+      )
+    }
+  )
+
+  HTML(
+    sprintf(
+      paste0(
+        '<svg class="blockr-logo" width="%d" height="%d" viewBox="0 0 224 224"',
+        ' aria-hidden="true">%s</svg>'
+      ),
+      size, size, paste(rects, collapse = "")
     )
+  )
+}
+
+navbar_logo_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-navbar-logo",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "navbar-logo.js"
   )
 }
 
