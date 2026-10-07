@@ -52,6 +52,16 @@ test_that("the board block picker offers every block, styling attached", {
 
   expect_match(html, ".block-option {", fixed = TRUE)
   expect_match(html, "Source block", fixed = TRUE)
+
+  # An option hands the renderer its block's category, from which blockr.ui's
+  # stylesheet colours the mark, so the picker attaches that stylesheet.
+  expect_identical(chr_xtr(cfg$options, "category"), rep("input", 3L))
+  expect_null(unlst(lst_xtr(cfg$options, "color")))
+  expect_match(cfg$render, "blockr-block-mark", fixed = TRUE)
+  expect_contains(
+    chr_xtr(htmltools::findDependencies(ui), "name"),
+    chr_xtr(htmltools::findDependencies(blockr.ui::controls_dep()), "name")
+  )
 })
 
 test_that("the picker offers only the blocks it is given", {

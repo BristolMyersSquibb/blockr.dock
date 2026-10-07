@@ -809,12 +809,22 @@ test_that("the header names the block type on its mark", {
   # mark's tooltip.
   expect_length(xml2::xml_find_all(root, "//bslib-popover"), 0L)
   # block-tooltips.js hands these to Blockr.tooltip; no native title.
-  mark <- xml2::xml_find_first(root, "//span[@class='blockr-block-mark']")
+  mark <- xml2::xml_find_first(
+    root,
+    paste0("//span[", has_class("blockr-block-mark"), "]")
+  )
   expect_identical(xml2::xml_attr(mark, "data-blockr-tip"), "dataset block")
   expect_identical(xml2::xml_attr(mark, "data-blockr-tip-badge"), "blockr.core")
   expect_true(is.na(xml2::xml_attr(mark, "title")))
-  expect_match(xml2::xml_attr(mark, "style"), "--blockr-dock-cat: #",
-               fixed = TRUE)
+
+  # The mark is blockr.ui's at the header's 32px, which its stylesheet colours
+  # from the category, so the dock writes no colour onto it.
+  expect_identical(
+    xml2::xml_attr(mark, "class"),
+    "blockr-block-mark blockr-block-mark--32"
+  )
+  expect_identical(xml2::xml_attr(mark, "data-category"), "input")
+  expect_true(is.na(xml2::xml_attr(mark, "style")))
 })
 
 test_that("the block menu lists its actions for Blockr.menu", {
@@ -1081,6 +1091,20 @@ test_that("a title renames in place and refuses an empty name (e2e)", {
   app$get_chromote_session()$Emulation$setFocusEmulationEnabled(enabled = TRUE)
 
   wait_dock_loaded(app, 2)
+
+  # A card is in the DOM, and counted above, from the moment it is built into
+  # the hidden offcanvas pool, before the dock moves it into its panel. A field
+  # in the pool cannot take the focus, so wait for the move.
+  wait_js(
+    app,
+    paste(
+      "(function () {",
+      "var c = document.getElementById('my_board-block_handle-a');",
+      "return c !== null && !c.closest('.blockr-offcanvas-pool');",
+      "})()"
+    ),
+    function() "[card-rename] the card of a is still in the offcanvas pool"
+  )
 
   id <- function(part) sprintf("my_board-block_a-edit_block-%s", part)
   jq <- function(part) sprintf("$('#%s')", id(part))

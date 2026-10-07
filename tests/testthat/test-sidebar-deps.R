@@ -49,15 +49,18 @@ test_that("each panel builder attaches the dependencies it draws with", {
 
   board <- two_block_board()
 
+  # The cards of the link and stack menus draw blockr.ui's block mark.
+  mark <- dep_names(blockr.ui::controls_dep())
+
   expect_setequal(dep_names(sidebar_ui("panel")), "sidebar-server")
 
   expect_setequal(
     dep_names(link_menu_ui("menu", board, "a")),
-    c("sidebar-block", "sidebar-link")
+    c("sidebar-block", "sidebar-link", mark)
   )
   expect_setequal(
     dep_names(stack_menu_ui("menu", board)),
-    c("sidebar-block", "sidebar-stack")
+    c("sidebar-block", "sidebar-stack", mark)
   )
   expect_setequal(
     dep_names(edit_inputs_menu_ui("menu", board, "b")),
@@ -67,10 +70,10 @@ test_that("each panel builder attaches the dependencies it draws with", {
 
 test_that("a sidebar body's own dependencies survive the panel wrapper", {
 
-  body <- link_menu_ui("menu", two_block_board(), "a")
+  body <- edit_inputs_menu_ui("menu", two_block_board(), "b")
 
   expect_setequal(
     dep_names(sidebar_ui("panel", ui = body)),
-    c("sidebar-server", "sidebar-block", "sidebar-link")
+    c("sidebar-server", "sidebar-inputs")
   )
 })

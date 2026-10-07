@@ -5,8 +5,9 @@
 
    Visual language follows the validated sidebar prototype
    (blockr.dock@feat/sidebar-s3-dispatch): a borderless list where each
-   row highlights only on hover/focus, larger colour-tinted icon tiles,
-   and muted grey section headers. Palette below mirrors the prototype's
+   row highlights only on hover/focus, and muted grey section headers.
+   The cards of the link and stack menus lead with the block's mark,
+   which blockr.ui draws. Palette below mirrors the prototype's
    Tailwind-style grey/blue scale. */
 
 /* Design tokens for the card visuals, declared on the two menus' roots to
@@ -30,9 +31,6 @@
   --bb-blue-500: var(--blockr-accent-500, #3b82f6);
   --bb-blue-600: var(--blockr-accent-600, #2563eb);
   --bb-blue-700: var(--blockr-accent-700, #1d4ed8);
-  /* Compact density (the spec's finalized default): 32px icon tile, the
-     glyph filling more of it (16px -> 0.5 ratio vs the airier 40/18). */
-  --bb-icon: 32px;
   --bb-gap: 12px;
 }
 
@@ -145,63 +143,6 @@
   /* Single title row, so the icon centres against it directly. */
   align-items: center;
   gap: var(--bb-gap);
-}
-
-/* Colour-tinted icon tile. The tint comes from data-category below; the
-   glyph itself is an inline SVG / <img>. */
-.blockr-block-browser-card-icon {
-  flex: 0 0 auto;
-  width: var(--bb-icon);
-  height: var(--bb-icon);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: rgba(120, 120, 120, 0.12);
-  color: var(--bb-grey-500);
-}
-
-.blockr-block-browser-card-icon svg,
-.blockr-block-browser-card-icon img {
-  width: 16px;
-  height: 16px;
-  display: block;
-}
-
-/* Per-category icon tints (Okabe-Ito palette, matching blockr.dock's
-   blk_color()). Section headers stay grey, prototype-style; only the
-   tiles carry colour. Driven entirely by data-category. */
-.blockr-block-browser-card[data-category="input"] .blockr-block-browser-card-icon {
-  background: rgba(0, 114, 178, 0.15);
-  color: #0072b2;
-}
-.blockr-block-browser-card[data-category="transform"] .blockr-block-browser-card-icon {
-  background: rgba(0, 158, 115, 0.15);
-  color: #009e73;
-}
-.blockr-block-browser-card[data-category="structured"] .blockr-block-browser-card-icon {
-  background: rgba(86, 180, 233, 0.18);
-  color: #2b8fd0;
-}
-.blockr-block-browser-card[data-category="plot"] .blockr-block-browser-card-icon {
-  background: rgba(230, 159, 0, 0.18);
-  color: #b97c00;
-}
-.blockr-block-browser-card[data-category="table"] .blockr-block-browser-card-icon {
-  background: rgba(204, 121, 167, 0.18);
-  color: #cc79a7;
-}
-.blockr-block-browser-card[data-category="model"] .blockr-block-browser-card-icon {
-  background: rgba(240, 228, 66, 0.25);
-  color: #9a8f00;
-}
-.blockr-block-browser-card[data-category="output"] .blockr-block-browser-card-icon {
-  background: rgba(213, 94, 0, 0.16);
-  color: #d55e00;
-}
-.blockr-block-browser-card[data-category="utility"] .blockr-block-browser-card-icon {
-  background: rgba(120, 120, 120, 0.16);
-  color: var(--bb-grey-500);
 }
 
 .blockr-block-browser-card-name {
