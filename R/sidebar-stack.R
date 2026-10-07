@@ -28,6 +28,12 @@ stack_menu_server <- function(id, board, target = NULL) {
       # (addressed to this module's `commit` input), so it no-ops harmlessly
       # when the panel isn't mounted. `ignoreInit` because the initial render
       # is already current.
+      #
+      # Only when the cards changed. Most board changes leave them as they
+      # were (a tab click is a board change: the dock stores the front tab),
+      # and rendering every card is the costly part, paid while the menu is
+      # closed nearly always.
+      last <- new.env(parent = emptyenv())
       observeEvent(
         board(),
         {
@@ -35,12 +41,19 @@ stack_menu_server <- function(id, board, target = NULL) {
           tgt <- target_fn()
           # In edit mode the stack being edited may have just been removed
           # from the board; there's nothing left to sync to, so skip. Without
-          # this guard `stack_sync_payload()` -> `lookup_stack()` aborts. Bare
-          # "commit": the module session namespaces it to the panel root's id
-          # (passing `session$ns("commit")` would double-prefix).
+          # this guard `resolve_stack_target()` -> `lookup_stack()` aborts.
+          # Bare "commit": the module session namespaces it to the panel
+          # root's id (passing `session$ns("commit")` would double-prefix).
           if (is.null(tgt) ||
                 tgt %in% board_stack_ids(brd)) {
-            session$sendInputMessage("commit", stack_sync_payload(brd, tgt))
+            ctx <- resolve_stack_target(brd, tgt)
+            metas <- stack_menu_block_metas(brd, ctx$pool, ctx$selected)
+            if (identical(metas, last$metas)) {
+              return()
+            }
+            last$metas <- metas
+            payload <- stack_sync_payload(metas)
+            session$sendInputMessage("commit", payload)
           }
         },
         ignoreInit = TRUE
@@ -146,9 +159,7 @@ validate_stack_spec <- function(spec, board, target, session) {
 # insert ones it doesn't yet have. The client removes cards no longer in
 # the set, inserts missing ones, and leaves surviving cards (and their
 # selected state) untouched.
-stack_sync_payload <- function(board, target) {
-  ctx <- resolve_stack_target(board, target)
-  metas <- stack_menu_block_metas(board, ctx$pool, ctx$selected)
+stack_sync_payload <- function(metas) {
   list(
     type = "menu:sync",
     cards = lapply(metas, function(m) {

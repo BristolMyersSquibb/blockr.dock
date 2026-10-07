@@ -749,3 +749,43 @@ test_that("remove stack action", {
     }
   )
 })
+
+test_that("stack menu sync: sends only when the cards change", {
+  dock <- function(active, a_name = NULL) {
+    a <- new_dataset_block("iris")
+    if (!is.null(a_name)) block_name(a) <- a_name
+    new_dock_board(
+      blocks = c(a = a, b = new_dataset_block("mtcars")),
+      views = list(A = "a", B = "b"),
+      active = active
+    )
+  }
+  rv <- reactiveVal(dock("A"))
+  sent <- 0L
+  local_mocked_bindings(
+    stack_sync_payload = function(metas) {
+      sent <<- sent + 1L
+      list(type = "menu:sync", cards = list())
+    }
+  )
+
+  testServer(stack_menu_server, args = list(id = "menu", board = rv), {
+    session$flushReact()
+
+    # The first change sends: nothing has been sent yet.
+    rv(dock("B"))
+    session$flushReact()
+    expect_identical(sent, 1L)
+
+    # A board change the cards do not show (another view in front, as a
+    # tab click does) sends nothing.
+    rv(dock("A"))
+    session$flushReact()
+    expect_identical(sent, 1L)
+
+    # A renamed block is a different card.
+    rv(dock("A", a_name = "Renamed"))
+    session$flushReact()
+    expect_identical(sent, 2L)
+  })
+})

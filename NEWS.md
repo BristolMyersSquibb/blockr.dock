@@ -1,5 +1,11 @@
 # blockr.dock (development version)
 
+* The stack menus ("create stack" and "edit stack") send their cards only
+  when the cards changed. They rendered and sent every block's card on every
+  board change, including a tab click (the dock stores the front tab in the
+  board), whether or not a menu was open: about 75 ms and 226 KB per click on
+  a 60-block board, ahead of the block the click brings to the front.
+
 * The card's preview toggle and "…" button and the Edit board extension's
   buttons draw blockr.ui's small icons instead of Font Awesome's, through
   `blockr.ui::small_icon()` in place of `shiny::icon()`
