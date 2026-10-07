@@ -29,7 +29,6 @@ board_ui.dock_board <- function(
     add_block_menu_dep(),
     block_rename_dep(),
     blockr_dock_dep(),
-    tooltip_dep(),
     compact_dep(),
     viewport_probe_ui(id),
     rail_dep(),
@@ -82,7 +81,7 @@ board_ui.dock_board <- function(
         if (is_dock_locked()) {
           tags$span(
             class = "blockr-lock-indicator",
-            title = "Editing is disabled by this deployment.",
+            `data-blockr-tooltip` = "Editing is disabled by this deployment.",
             `aria-label` = "Read-only mode",
             role = "status",
             bsicons::bs_icon("lock-fill"),
@@ -102,7 +101,7 @@ board_ui.dock_board <- function(
           class = "btn action-button blockr-navbar-icon-btn",
           `data-blockr-sidebar-target` = NS(id, "settings_sidebar"),
           `aria-label` = "Board options",
-          title = "Board options",
+          `data-blockr-tooltip` = "Board options",
           bsicons::bs_icon("gear")
         )
       )
@@ -265,16 +264,5 @@ blockr_dock_dep <- function() {
     pkg_version(),
     src = pkg_file("assets", "css"),
     stylesheet = "blockr-dock.css"
-  )
-}
-
-# The dock chrome's tooltips go to Blockr.tooltip, blockr.ui's light card,
-# which `blockr.ui::controls_dep()` brings (see block-tooltips.js).
-tooltip_dep <- function() {
-  htmltools::htmlDependency(
-    "blockr-dock-tooltips",
-    pkg_version(),
-    src = pkg_file("assets", "js"),
-    script = "block-tooltips.js"
   )
 }

@@ -280,16 +280,21 @@ test_that("a block's own control is drawn as its icon, named by its label", {
   with_icon <- toggle(
     list(label = "AI Assistant", icon = tags$svg(class = "probe-icon"))
   )
-  expect_identical(xml2::xml_attr(with_icon, "title"), "AI Assistant")
+  expect_identical(
+    xml2::xml_attr(with_icon, "data-blockr-tooltip"),
+    "AI Assistant"
+  )
+  expect_identical(xml2::xml_attr(with_icon, "aria-label"), "AI Assistant")
   expect_length(
     xml2::xml_find_all(with_icon, ".//svg[@class='probe-icon']"),
     1L
   )
   expect_identical(trimws(xml2::xml_text(with_icon)), "")
 
-  # Without an icon, the label is the button's text.
+  # Without an icon, the label is the button's text, which names it.
   without <- toggle(list(label = "Settings", icon = NULL))
-  expect_identical(xml2::xml_attr(without, "title"), "Settings")
+  expect_identical(xml2::xml_attr(without, "data-blockr-tooltip"), "Settings")
+  expect_true(is.na(xml2::xml_attr(without, "aria-label")))
   expect_identical(trimws(xml2::xml_text(without)), "Settings")
 })
 
@@ -808,13 +813,20 @@ test_that("the header names the block type on its mark", {
   # One header in both sizes: no subtitle, the type and package are the
   # mark's tooltip.
   expect_length(xml2::xml_find_all(root, "//bslib-popover"), 0L)
-  # block-tooltips.js hands these to Blockr.tooltip; no native title.
+  # Blockr.tooltip reads both attributes, the package as the name's badge; no
+  # native title.
   mark <- xml2::xml_find_first(
     root,
     paste0("//span[", has_class("blockr-block-mark"), "]")
   )
-  expect_identical(xml2::xml_attr(mark, "data-blockr-tip"), "dataset block")
-  expect_identical(xml2::xml_attr(mark, "data-blockr-tip-badge"), "blockr.core")
+  expect_identical(
+    xml2::xml_attr(mark, "data-blockr-tooltip"),
+    "dataset block"
+  )
+  expect_identical(
+    xml2::xml_attr(mark, "data-blockr-tooltip-badge"),
+    "blockr.core"
+  )
   expect_true(is.na(xml2::xml_attr(mark, "title")))
 
   # The mark is blockr.ui's at the header's 32px, which its stylesheet colours
@@ -988,8 +1000,29 @@ test_that("card status and title land in the browser (e2e, #403)", {
     fixed = TRUE
   )
   expect_identical(
-    app$get_js(attr_js(el("b", "status_indicator"), "title")),
+    app$get_js(attr_js(el("b", "status_indicator"), "data-blockr-tooltip")),
     "Waiting for a data input"
+  )
+
+  # Blockr.tooltip reads the attributes when it shows, the mark's package as
+  # a badge after its type.
+  tooltip_js <- function(blk, part = "") {
+    sprintf(
+      "Blockr.tooltip.text(document.getElementById('%s')%s)",
+      el(blk, "status_indicator"),
+      part
+    )
+  }
+
+  expect_identical(
+    app$get_js(tooltip_js("b")),
+    "Waiting for a data input"
+  )
+  expect_identical(
+    app$get_js(
+      tooltip_js("a", ".parentElement.querySelector('.blockr-block-mark')")
+    ),
+    "dataset block · blockr.core"
   )
 
   # An evaluated block clears the attributes rather than keeping a stale spec.
@@ -1001,7 +1034,10 @@ test_that("card status and title land in the browser (e2e, #403)", {
     diagnose
   )
   expect_null(app$get_js(attr_js(el("a", "status_indicator"), "style")))
-  expect_null(app$get_js(attr_js(el("a", "status_indicator"), "title")))
+  expect_null(
+    app$get_js(attr_js(el("a", "status_indicator"), "data-blockr-tooltip"))
+  )
+  expect_identical(app$get_js(tooltip_js("a")), "")
 
   # Both notes ship with the card and the stylesheet reveals exactly the one
   # the slot's data-status names.
@@ -1051,7 +1087,7 @@ test_that("card status and title land in the browser (e2e, #403)", {
         "%s === 'Waiting for a data input'"
       ),
       el("c", "status_indicator"),
-      attr_js(el("c", "status_indicator"), "title")
+      attr_js(el("c", "status_indicator"), "data-blockr-tooltip")
     ),
     diagnose
   )
@@ -1346,7 +1382,10 @@ test_that("block status indicator + note reflect eval status (#290)", {
 
   waiting_dot <- block_status_dot_attrs("waiting")
   expect_match(waiting_dot$style, "#d97706", fixed = TRUE)
-  expect_identical(waiting_dot$title, "Waiting for a data input")
+  expect_identical(
+    waiting_dot[["data-blockr-tooltip"]],
+    "Waiting for a data input"
+  )
   expect_identical(waiting_dot[["aria-label"]], "Waiting for a data input")
   # The ring around the dot is the surface colour, with the shared spec's
   # white as its fallback. A waiting block draws a hollow amber ring, so the
@@ -1389,7 +1428,9 @@ test_that("block status indicator + note reflect eval status (#290)", {
   # A `ready` or `unevaluated` block, and an absent status, carry no
   # affordance: the dot's attributes are all cleared rather than left stale
   # from the last status.
-  blank <- list(style = "", title = "", role = "", `aria-label` = "")
+  blank <- list(
+    style = "", `data-blockr-tooltip` = "", role = "", `aria-label` = ""
+  )
 
   for (st in list("ready", "unevaluated", NULL, character(), c("a", "b"))) {
     expect_identical(block_status_dot_attrs(st), blank)
@@ -1445,7 +1486,7 @@ test_that("edit block server surfaces eval status reactively (#290)", {
       # A ready block with no conditions carries no status affordance at all.
       expect_identical(blk_status(), "ready")
       expect_identical(output$status_indicator$style, "")
-      expect_identical(output$status_indicator$title, "")
+      expect_identical(output$status_indicator[["data-blockr-tooltip"]], "")
 
       # A render-phase error leaves the eval status `ready` but still reddens
       # the dot, matching the DAG node badge (the note stays hidden).
