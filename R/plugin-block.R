@@ -58,8 +58,8 @@ reported_sections <- function(input) {
 }
 
 # The mark is blockr.ui's, at the header's 32px, and the compact header takes
-# it down to 20px (blockr-dock.css). Type and package become the mark's tooltip
-# through block-tooltips.js.
+# it down to 20px (blockr-dock.css). Its tooltip is the type, with the package
+# as its badge.
 block_card_mark <- function(blk, info) {
 
   type <- gsub("_", " ", class(blk)[1L])
@@ -68,8 +68,8 @@ block_card_mark <- function(blk, info) {
     info$icon,
     info$category,
     size = 32,
-    `data-blockr-tip` = type,
-    `data-blockr-tip-badge` = info$package,
+    `data-blockr-tooltip` = type,
+    `data-blockr-tooltip-badge` = info$package,
     `aria-label` = paste(type, info$package, sep = ", "),
     role = "img"
   )
@@ -144,15 +144,18 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
 
   open <- intersect(visible, sections)
 
-  toggle <- function(section, title, label) {
+  # The name is the button's tooltip, and its text where it has no icon; a
+  # button drawn as an icon has the name as its label as well.
+  toggle <- function(section, name, icon = NULL) {
     on <- section %in% open
     tags$button(
       type = "button",
       class = paste("btn btn-light", if (on) "active"),
       `data-section` = section,
       `aria-pressed` = tolower(on),
-      title = title,
-      label
+      `data-blockr-tooltip` = name,
+      `aria-label` = if (!is.null(icon)) name,
+      coal(icon, name)
     )
   }
 
@@ -160,11 +163,11 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
     id = ns("collapse_blk_sections"),
     class = "blockr-section-toggle",
     `data-sections` = paste(open, collapse = " "),
-    toggle("outputs", "Preview", icon("eye")),
+    toggle("outputs", "Preview", blockr.ui::small_icon("eye")),
     # A block's own control is drawn as the preview is: its icon, or its
     # label where it has none, and named by its label.
     if (!is.null(ctrl_meta)) {
-      toggle("ctrl", ctrl_meta$label, coal(ctrl_meta$icon, ctrl_meta$label))
+      toggle("ctrl", ctrl_meta$label, ctrl_meta$icon)
     },
     section_toggle_dep()
   )
@@ -235,9 +238,10 @@ block_card_dropdown <- function(ns, blk_id, has_inputs = FALSE) {
     id = ns("block_menu"),
     class = "btn btn-light blockr-header-icon blockr-block-menu-btn",
     type = "button",
-    title = "More actions",
+    `data-blockr-tooltip` = "More actions",
+    `aria-label` = "More actions",
     `data-blockr-menu` = jsonlite::toJSON(config, auto_unbox = TRUE),
-    icon("ellipsis-vertical"),
+    blockr.ui::small_icon("dots"),
     block_menu_dep()
   )
 }
@@ -693,7 +697,9 @@ block_status_dot_attrs <- function(status, error_count = 0L) {
   spec <- block_status_badge(status, error_count)
 
   if (!is.list(spec)) {
-    return(list(style = "", title = "", role = "", `aria-label` = ""))
+    return(
+      list(style = "", `data-blockr-tooltip` = "", role = "", `aria-label` = "")
+    )
   }
 
   fill <- sprintf("var(%s, %s)", spec$token, spec$color)
@@ -711,7 +717,7 @@ block_status_dot_attrs <- function(status, error_count = 0L) {
         ring
       }
     ),
-    title = spec$label,
+    `data-blockr-tooltip` = spec$label,
     role = "img",
     `aria-label` = spec$label
   )

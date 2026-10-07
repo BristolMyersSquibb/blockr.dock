@@ -9,6 +9,12 @@
   locked as before (#421). The border of a rail can be dragged either way, as
   dockview's lock does not reach it (dockview/dockview#1671).
 
+* The card's preview toggle and "…" button and the Edit board extension's
+  buttons draw blockr.ui's small icons instead of Font Awesome's, through
+  `blockr.ui::small_icon()` in place of `shiny::icon()`
+  (BristolMyersSquibb/blockr.ui#85). The "…" button's dots are horizontal, as
+  the design system draws them.
+
 * The dock draws a block's mark as blockr.ui's, in the sizes the spec gives it
   (#495). The block header calls `blockr.ui::block_mark()` at 32px, which the
   compact header shows at 20px, and the cards of the link and stack menus call
@@ -106,7 +112,10 @@
 
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
-  native one. The "…" menu and the board options gear have one.
+  native one. The "…" menu and the board options gear have one. The markup
+  carries each tooltip as `data-blockr-tooltip` rather than as a `title`, and
+  an icon-only button is named by an `aria-label`. Markup an app adds to the
+  chrome gets the light card the same way; a `title` there stays native.
 
 * A parked block's status badge is drawn from the status blockr.core now
   reports for it in place of `dormant`: the outcome of the block's last

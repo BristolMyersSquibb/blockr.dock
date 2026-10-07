@@ -11,11 +11,6 @@ dock_panel_ids <- function(proxy = dock_proxy()) {
   if (!is.list(res)) list(res) else res
 }
 
-dock_panel_named_ids <- function(proxy = dock_proxy()) {
-  panels <- dockViewR::get_panels(proxy)
-  set_names(chr_xtr(panels, "id"), chr_xtr(panels, "title"))
-}
-
 block_panel_ids <- function(proxy = dock_proxy()) {
   res <- dock_panel_ids(proxy)
 
@@ -439,20 +434,6 @@ narrow_stack_attrs <- function(grid) {
   }
 
   list(style = paste0("--blockr-stack-height: ", total * 100, "vh;"))
-}
-
-dock_panel_groups <- function(session = get_session()) {
-  xtr_leaf_id <- function(x) {
-    if (x$type == "leaf") {
-      return(x$data$id)
-    }
-
-    lapply(x$data, xtr_leaf_id)
-  }
-
-  unlist(
-    xtr_leaf_id(session$input[[dock_input("state")]][["grid"]][["root"]])
-  )
 }
 
 #' Swap the contents of the `active_dock` mirror to a different dock.

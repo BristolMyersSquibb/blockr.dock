@@ -37,7 +37,7 @@ sidebar_ui <- function(id, ui = NULL, title = NULL,
           type = "button",
           class = "blockr-sidebar-btn blockr-sidebar-back",
           `aria-label` = "Back",
-          title = "Back",
+          `data-blockr-tooltip` = "Back",
           blockr.ui::small_icon("chevron")
         )
       },
@@ -49,14 +49,14 @@ sidebar_ui <- function(id, ui = NULL, title = NULL,
           class = "blockr-sidebar-btn blockr-sidebar-pin",
           `aria-label` = "Pin sidebar",
           `aria-pressed` = "false",
-          title = "Pin",
+          `data-blockr-tooltip` = "Pin",
           bsicons::bs_icon("pin-angle", size = "12px")
         ),
         tags$button(
           type = "button",
           class = "blockr-sidebar-btn blockr-sidebar-close",
           `aria-label` = "Close sidebar",
-          title = "Close",
+          `data-blockr-tooltip` = "Close",
           blockr.ui::small_icon("remove")
         )
       )

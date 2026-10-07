@@ -13,7 +13,7 @@
   var commitSeq = 0;
 
   // Shared card-list helpers live on `window.BlockrDock.cardSearch`, set
-  // up by `blockr-block-browser.js`. `stack_menu_ui()` always attaches
+  // up by `sidebar-block.js`. `stack_menu_ui()` always attaches
   // `block_browser_dep()` before `stack_menu_dep()`, so the namespace
   // is in scope by the time this binding runs.
   var cardSearch = window.BlockrDock.cardSearch;

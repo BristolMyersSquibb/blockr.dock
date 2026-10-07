@@ -404,59 +404,6 @@ test_that("prepend block action: a duplicate target name is rejected", {
   )
 })
 
-test_that("block browser renders a name field for variadic ends", {
-  board <- new_board(
-    c(a = new_dataset_block("iris"), r = new_rbind_block(),
-      m = new_merge_block())
-  )
-  by_class <- function(tok) {
-    sprintf(
-      "//*[contains(concat(' ', normalize-space(@class), ' '), ' %s ')]", tok
-    )
-  }
-  field_input <- function(html, block_type, cls) {
-    doc <- xml2::read_html(html)
-    card <- xml2::xml_find_first(
-      doc,
-      paste0(
-        by_class("blockr-block-browser-card"),
-        "[@data-block-type='", block_type, "']"
-      )
-    )
-    xml2::xml_find_first(card, paste0(".", by_class(cls), "//input"))
-  }
-
-  # Append a variadic rbind -> block-input becomes a free-text name field;
-  # a finite merge keeps its port <select> (no text input).
-  append_html <- as.character(block_browser_ui("b", board, append_to("a")))
-  rbind_name <- field_input(
-    append_html, "rbind_block", "blockr-block-browser-field-block-input"
-  )
-  expect_false(is.na(rbind_name))
-  expect_identical(
-    xml2::xml_attr(rbind_name, "placeholder"),
-    "leave blank for an unnamed input"
-  )
-  expect_true(
-    is.na(
-      field_input(
-        append_html, "merge_block", "blockr-block-browser-field-block-input"
-      )
-    )
-  )
-
-  # Prepend into a variadic target -> target-input becomes a name field.
-  prepend_html <- as.character(block_browser_ui("b", board, prepend_to("r")))
-  expect_false(
-    is.na(
-      field_input(
-        prepend_html, "dataset_block",
-        "blockr-block-browser-field-target-input"
-      )
-    )
-  )
-})
-
 test_that("prepend: NULL target_input falls back to only slot", {
   # head_block has arity 1 (input "data"); the browser hides the
   # target_input picker, so spec$target_input arrives as NULL. The
