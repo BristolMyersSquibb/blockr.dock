@@ -1,3 +1,4 @@
+library(shiny)
 library(blockr.core)
 library(blockr.dock)
 
