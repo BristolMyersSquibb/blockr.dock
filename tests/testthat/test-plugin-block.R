@@ -1082,6 +1082,20 @@ test_that("a title renames in place and refuses an empty name (e2e)", {
 
   wait_dock_loaded(app, 2)
 
+  # The card is built in the hidden offcanvas pool and moved into its panel
+  # once the dock has drawn, and a field in the pool takes no focus, so a
+  # dblclick that lands before the move leaves nothing for Escape and Enter to
+  # blur: the field stays open. The markers wait_dock_loaded() checks are all
+  # in the first page, so wait for the move itself.
+  wait_js(
+    app,
+    paste0(
+      "document.getElementById('my_board-block_handle-a')",
+      ".closest('[id$=\"-block_panel-a\"]') !== null"
+    ),
+    function() dock_shell_diag(app, "my_board")
+  )
+
   id <- function(part) sprintf("my_board-block_a-edit_block-%s", part)
   jq <- function(part) sprintf("$('#%s')", id(part))
 
