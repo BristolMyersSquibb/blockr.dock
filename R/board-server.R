@@ -1374,19 +1374,19 @@ extension_default_icon <- function() {
 #' @param id Raw object ID.
 #' @param package Package name string.
 #' @param icon Icon HTML string.
-#' @param color Colour string.
+#' @param category Block category, which colours the block's mark.
 #'
 #' @return A named list.
 #'
 #' @noRd
-build_one_option <- function(value, label, id, package, icon, color) {
+build_one_option <- function(value, label, id, package, icon, category) {
   list(
     value = value,
     label = label,
     description = paste0("ID: ", id),
     package = package,
     icon = icon,
-    color = color,
+    category = category,
     searchtext = paste(label, id, package)
   )
 }
@@ -1415,7 +1415,7 @@ build_block_options <- function(board, blk_ids) {
       id = id,
       package = meta$package[i],
       icon = meta$icon[i],
-      color = meta$color[i]
+      category = meta$category[i]
     )
   })
 }

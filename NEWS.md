@@ -4,12 +4,14 @@
   (#495). The block header calls `blockr.ui::block_mark()` at 32px, which the
   compact header shows at 20px, and the cards of the link and stack menus call
   it at 24px. The rows of the "+" and "Add panel" menus give blockr.ui's menu
-  the block's category, from which it draws the same mark at 24px. Each mark
-  takes its colour from its category's token. The dock's own
-  `.blockr-block-mark` rules and their `--blockr-dock-cat` property are gone,
-  as are the cards' tinted tiles and their copy of the palette. The rules also
-  matched the menus' marks, which came out as 32px squares on a grey tint. The
-  header's glyph is 18px, up from 16px.
+  the block's category, from which it draws the same mark at 24px, and so does
+  the block picker of `board_block_select()`, in its list and in its field.
+  The picker no longer draws tiles of its own, and no longer reads the
+  `icon_style` option. Each mark takes its colour from its category's token.
+  The dock's own `.blockr-block-mark` rules and their `--blockr-dock-cat`
+  property are gone, as are the cards' tinted tiles and their copy of the
+  palette. The rules also matched the menus' marks, which came out as 32px
+  squares on a grey tint. The header's glyph is 18px, up from 16px.
 
 * Both `blk_color()` and `blk_icon_data_uri()` are deprecated (#495). The
   category colours are blockr.ui's, and `blockr.ui::category_color()` looks
