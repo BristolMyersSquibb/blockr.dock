@@ -1,12 +1,9 @@
 # blockr.dock (development version)
 
-* A locked board lets panels be resized again. Locking passed dockview
-  both `disableDnd` and the component-level `locked` flag, and the latter
-  disables every sash, so a reader could not widen a panel to see a wide
-  table. Only `disableDnd` is passed now: panels still cannot be dragged
-  between groups, closed or added, but the drag borders are live. The
-  resize is per-session -- the settled-echo grid mirror is not wired while
-  locked, so nothing is written back to the board (#421).
+* A reader of a locked board can resize its panels by dragging the borders
+  between them, to make room for a wide table. Panels still cannot be
+  moved, closed or added, and a resize is not saved: reloading the board
+  brings back the layout it was deployed with (#421).
 
 * Renaming a block sends the new name to the server on Enter or when the
   field loses focus, not on every keystroke. Each keystroke was a board
