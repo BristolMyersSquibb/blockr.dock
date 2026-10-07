@@ -1,5 +1,16 @@
 # blockr.dock (development version)
 
+* The dock draws a block's mark as blockr.ui's, in the sizes the spec gives it
+  (#495). The block header calls `blockr.ui::block_mark()` at 32px, which the
+  compact header shows at 20px, and the cards of the link and stack menus call
+  it at 24px. The rows of the "+" and "Add panel" menus give blockr.ui's menu
+  the block's category, from which it draws the same mark at 24px. Each mark
+  takes its colour from its category's token. The dock's own
+  `.blockr-block-mark` rules and their `--blockr-dock-cat` property are gone,
+  as are the cards' tinted tiles and their copy of the palette. The rules also
+  matched the menus' marks, which came out as 32px squares on a grey tint. The
+  header's glyph is 18px, up from 16px.
+
 * Renaming a block sends the new name to the server on Enter or when the
   field loses focus, not on every keystroke. Each keystroke was a board
   update, and while typing those piled up on the server.

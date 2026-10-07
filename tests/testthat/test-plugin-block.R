@@ -809,12 +809,22 @@ test_that("the header names the block type on its mark", {
   # mark's tooltip.
   expect_length(xml2::xml_find_all(root, "//bslib-popover"), 0L)
   # block-tooltips.js hands these to Blockr.tooltip; no native title.
-  mark <- xml2::xml_find_first(root, "//span[@class='blockr-block-mark']")
+  mark <- xml2::xml_find_first(
+    root,
+    paste0("//span[", has_class("blockr-block-mark"), "]")
+  )
   expect_identical(xml2::xml_attr(mark, "data-blockr-tip"), "dataset block")
   expect_identical(xml2::xml_attr(mark, "data-blockr-tip-badge"), "blockr.core")
   expect_true(is.na(xml2::xml_attr(mark, "title")))
-  expect_match(xml2::xml_attr(mark, "style"), "--blockr-dock-cat: #",
-               fixed = TRUE)
+
+  # The mark is blockr.ui's at the header's 32px, which its stylesheet colours
+  # from the category, so the dock writes no colour onto it.
+  expect_identical(
+    xml2::xml_attr(mark, "class"),
+    "blockr-block-mark blockr-block-mark--32"
+  )
+  expect_identical(xml2::xml_attr(mark, "data-category"), "input")
+  expect_true(is.na(xml2::xml_attr(mark, "style")))
 })
 
 test_that("the block menu lists its actions for Blockr.menu", {

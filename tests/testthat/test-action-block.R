@@ -620,12 +620,33 @@ test_that("the + menu lists block types by category, append only receivers", {
   expect_true("dataset_block" %in% chr_ply(rows, `[[`, "type"))
   ds <- Filter(function(x) identical(x$type, "dataset_block"), rows)[[1L]]
   expect_identical(ds$badge, "blockr.core")
-  expect_match(ds$mark$color, "^#")
+  # The row's mark takes its colour from the category, in blockr.ui.
+  expect_identical(ds$mark$category, "input")
+  expect_null(ds$mark$color)
 
   # A source-only block cannot receive a link, so append does not offer it.
   app <- Filter(function(x) !is.null(x$type), add_block_menu_items("append"))
   expect_false("dataset_block" %in% chr_ply(app, `[[`, "type"))
   expect_true("head_block" %in% chr_ply(app, `[[`, "type"))
+})
+
+test_that("the add-panel menu marks a block by its category", {
+
+  board <- new_dock_board(
+    c(a = new_dataset_block("iris"), b = new_head_block()),
+    extensions = new_edit_board_extension()
+  )
+
+  items <- add_panel_menu_items(board, c("a", "b"), dock_ext_ids(board))
+  marks <- lst_xtr(Filter(function(x) !is.null(x$mark), items), "mark")
+
+  # An extension has no category, so its mark takes the one a block without
+  # one falls back to.
+  expect_identical(
+    chr_xtr(marks, "category"),
+    c("input", "transform", "uncategorized")
+  )
+  expect_null(unlst(lst_xtr(marks, "color")))
 })
 
 test_that("the + menu takes in a block registered anew under its uid", {

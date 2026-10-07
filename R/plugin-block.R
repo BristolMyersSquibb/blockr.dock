@@ -15,7 +15,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
       class = "blockr-block-header",
       div(
         class = "blockr-block-icon",
-        block_mark(blk, blk_info),
+        block_card_mark(blk, blk_info),
         block_status_dot(ns)
       ),
       div(
@@ -57,21 +57,21 @@ reported_sections <- function(input) {
   }
 }
 
-# The category colour goes to the stylesheet as a custom property rather than
-# being painted inline, so the tint, size and radius stay a theme's to change.
-# Type and package become the mark's tooltip through block-tooltips.js.
-block_mark <- function(blk, info) {
+# The mark is blockr.ui's, at the header's 32px, and the compact header takes
+# it down to 20px (blockr-dock.css). Type and package become the mark's tooltip
+# through block-tooltips.js.
+block_card_mark <- function(blk, info) {
 
   type <- gsub("_", " ", class(blk)[1L])
 
-  span(
-    class = "blockr-block-mark",
-    style = paste0("--blockr-dock-cat: ", info$color, ";"),
+  blockr.ui::block_mark(
+    info$icon,
+    info$category,
+    size = 32,
     `data-blockr-tip` = type,
     `data-blockr-tip-badge` = info$package,
     `aria-label` = paste(type, info$package, sep = ", "),
-    role = "img",
-    HTML(info$icon)
+    role = "img"
   )
 }
 
