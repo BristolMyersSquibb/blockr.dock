@@ -53,7 +53,6 @@ test_that("each panel builder attaches the dependencies it draws with", {
   mark <- dep_names(blockr.ui::controls_dep())
 
   expect_setequal(dep_names(sidebar_ui("panel")), "sidebar-server")
-  expect_setequal(dep_names(block_browser_ui("browser")), "sidebar-block")
 
   expect_setequal(
     dep_names(link_menu_ui("menu", board, "a")),
@@ -71,10 +70,10 @@ test_that("each panel builder attaches the dependencies it draws with", {
 
 test_that("a sidebar body's own dependencies survive the panel wrapper", {
 
-  body <- block_browser_ui("browser")
+  body <- edit_inputs_menu_ui("menu", two_block_board(), "b")
 
   expect_setequal(
     dep_names(sidebar_ui("panel", ui = body)),
-    c("sidebar-server", "sidebar-block")
+    c("sidebar-server", "sidebar-inputs")
   )
 })
