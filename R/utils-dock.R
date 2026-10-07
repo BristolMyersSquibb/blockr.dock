@@ -280,7 +280,7 @@ set_dock_view_output <- function(..., session = get_session()) {
     # part of it to the reader (see `is_layout_locked()`): `locked` freezes the
     # borders between groups, and `disableDnd` stops panels being dragged.
     if (is_layout_locked("resize")) list(locked = TRUE),
-    if (is_layout_locked("dnd")) list(disableDnd = TRUE),
+    if (is_layout_locked("rearrange")) list(disableDnd = TRUE),
     list(
       defaultRenderer = "always",
       add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked()),
@@ -310,15 +310,16 @@ is_dock_locked <- function() {
 
 # Whether a locked board also locks a part of its layout: its sizes ("resize"),
 # so that a reader cannot drag the borders between panels, or its arrangement
-# ("dnd"), so that a reader cannot drag panels by their tabs. Each is on unless
-# a deployment sets `options(blockr.lock_resize = FALSE)` or
-# `options(blockr.lock_dnd = FALSE)`, which leaves that part to the reader.
-# Nothing a reader changes is saved, since a locked board writes no geometry
-# back (see `manage_dock()`), and closing or adding panels stays off either
-# way. With resizing locked, the border of a rail still moves, as dockview's
-# lock does not reach edge groups (dockview/dockview#1671). Anything but a
-# boolean aborts, as an unusable narrow breakpoint does.
-is_layout_locked <- function(part = c("resize", "dnd")) {
+# ("rearrange"), so that a reader cannot drag panels by their tabs. Each is on
+# unless a deployment leaves that part to the reader, with
+# `options(blockr.lock_resize = FALSE)` or
+# `options(blockr.lock_rearrange = FALSE)`. Nothing a reader changes is saved,
+# since a locked board writes no geometry back (see `manage_dock()`), and
+# closing or adding panels stays off either way. With resizing locked, the
+# border of a rail still moves, as dockview's lock does not reach edge groups
+# (dockview/dockview#1671). Anything but a boolean aborts, as an unusable
+# narrow breakpoint does.
+is_layout_locked <- function(part = c("resize", "rearrange")) {
 
   part <- match.arg(part)
 

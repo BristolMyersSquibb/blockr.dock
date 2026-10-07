@@ -230,7 +230,7 @@ test_that("a locked board locks its layout unless told otherwise (#421)", {
   )
 
   expect_identical(
-    layout_flags(blockr.locked = TRUE, blockr.lock_dnd = FALSE),
+    layout_flags(blockr.locked = TRUE, blockr.lock_rearrange = FALSE),
     list(locked = TRUE)
   )
 
@@ -238,7 +238,7 @@ test_that("a locked board locks its layout unless told otherwise (#421)", {
     layout_flags(
       blockr.locked = TRUE,
       blockr.lock_resize = FALSE,
-      blockr.lock_dnd = FALSE
+      blockr.lock_rearrange = FALSE
     ),
     0L
   )
@@ -246,7 +246,7 @@ test_that("a locked board locks its layout unless told otherwise (#421)", {
 
 test_that("each layout lock takes a boolean, and aborts on anything else", {
 
-  for (part in c("resize", "dnd")) {
+  for (part in c("resize", "rearrange")) {
 
     opt <- paste0("blockr.lock_", part)
     env <- paste0("BLOCKR_LOCK_", toupper(part))
