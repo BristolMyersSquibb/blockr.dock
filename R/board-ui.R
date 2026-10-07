@@ -111,61 +111,6 @@ dock_outputs_ui <- function(id, views) {
   )
 }
 
-#' Build the body of the board-options sidebar.
-#'
-#' Returns the options sidebar's body: a list of option categories, each
-#' opening a page with that category's options (see
-#' `options_sidebar_ui()`). Called at server time from
-#' `board_server_callback()` when the user clicks the navbar gear, and
-#' passed to `show_sidebar()`.
-#'
-#' Caller-supplied `options` (threaded down from `serve(board, options =
-#' custom_options(...))` via `blockr_app_server.dock_board()` →
-#' `board_server_callback()` → `settings_observer()`) wins. When the
-#' caller passed nothing, falls back to `blockr.core::blockr_app_options(x)`
-#' so the sidebar still includes options contributed by blocks on the
-#' board and by registered block constructors, the same set `serve()`
-#' would have computed on the default path.
-#'
-#' @param id Board module id.
-#' @param x Current board (`board$board`).
-#' @param plugins Board plugins.
-#' @param options Augmented board options (board + block contributions).
-#'   `NULL` means "no caller override"; the default is recomputed via
-#'   `blockr.core::blockr_app_options(x)`.
-#' @noRd
-settings_body <- function(
-  id,
-  x,
-  plugins = board_plugins(x),
-  options = NULL
-) {
-  opt_ui_or_null <- function(plg, plgs, x) {
-    if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
-  }
-
-  generate_code <- div(
-    id = "generate_code",
-    opt_ui_or_null("generate_code", plugins, x)
-  )
-
-  # Locked board: the options pages write board state via
-  # set_board_option_value(), which core's gate rejects while locked. Drop them
-  # so the settings sidebar offers only the read-only generated-code export.
-  if (is_dock_locked()) {
-    return(generate_code)
-  }
-
-  # Caller-supplied `options` (threaded from `serve()` through
-  # `blockr_app_server.dock_board()` / `settings_observer()`) wins; fall
-  # back to the recomputed default only when the caller has nothing to say.
-  options <- coal(options, blockr.core::blockr_app_options(x))
-
-  stopifnot(is_board_options(options))
-
-  options_sidebar_ui(id, options, generate_code = generate_code)
-}
-
 spinner_delay_ms <- function() {
 
   ms <- suppressWarnings(as.integer(blockr_option("spinner_delay_ms", 200L)))
