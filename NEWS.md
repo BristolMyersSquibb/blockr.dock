@@ -1,9 +1,13 @@
 # blockr.dock (development version)
 
-* A reader of a locked board can resize its panels by dragging the borders
-  between them, to make room for a wide table. Panels still cannot be
-  moved, closed or added, and a resize is not saved: reloading the board
-  brings back the layout it was deployed with (#421).
+* A locked board can leave its layout to the reader. With the `lock_layout`
+  blockr option set to `FALSE`, a reader can resize panels by dragging the
+  borders between them, to make room for a wide table, and rearrange them by
+  dragging their tabs. Nothing a reader changes is saved: reloading the board
+  brings back the layout it was deployed with. Closing and adding panels stay
+  off, and by default the layout stays locked as before (#421). The border of
+  a rail can be dragged either way, as dockview's lock does not reach it
+  (dockview/dockview#1671).
 
 * Renaming a block sends the new name to the server on Enter or when the
   field loses focus, not on every keystroke. Each keystroke was a board

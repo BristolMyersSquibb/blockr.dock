@@ -189,7 +189,7 @@ test_that("the stacked container is as tall as the rows it carries", {
   expect_match(narrow_stack_attrs(new_dock_grid())$style, "50vh", fixed = TRUE)
 })
 
-test_that("locking disables DnD but leaves sashes draggable (#421)", {
+test_that("a locked board locks its layout unless told otherwise (#421)", {
 
   captured <- NULL
 
@@ -205,27 +205,52 @@ test_that("locking disables DnD but leaves sashes draggable (#421)", {
 
   session <- list(output = list(), ns = NS("board"))
 
-  unlocked <- withr::with_options(
-    list(blockr.locked = NULL),
-    {
-      set_dock_view_output(session = session)
-      captured
-    }
-  )
-  expect_false("disableDnd" %in% names(unlocked))
-  expect_false("locked" %in% names(unlocked))
+  # The flags dockview takes to freeze a layout, as the dock passes them.
+  layout_flags <- function(...) {
+    withr::with_options(
+      list(...),
+      {
+        set_dock_view_output(session = session)
+        captured[intersect(c("locked", "disableDnd"), names(captured))]
+      }
+    )
+  }
 
-  locked <- withr::with_options(
-    list(blockr.locked = TRUE),
-    {
-      set_dock_view_output(session = session)
-      captured
-    }
+  expect_length(layout_flags(blockr.locked = NULL), 0L)
+
+  expect_identical(
+    layout_flags(blockr.locked = TRUE),
+    list(locked = TRUE, disableDnd = TRUE)
   )
-  # Panels cannot be dragged between groups ...
-  expect_true(isTRUE(locked$disableDnd))
-  # ... but the component-level `locked` flag, which disables every sash, is
-  # deliberately not set: resizing a panel is a viewport gesture, not a board
-  # mutation.
-  expect_false("locked" %in% names(locked))
+
+  expect_length(
+    layout_flags(blockr.locked = TRUE, blockr.lock_layout = FALSE),
+    0L
+  )
+})
+
+test_that("the layout lock takes a boolean, and aborts on anything else", {
+
+  withr::local_options(blockr.locked = TRUE, blockr.lock_layout = NULL)
+  expect_true(is_layout_locked())
+
+  withr::local_options(blockr.lock_layout = FALSE)
+  expect_false(is_layout_locked())
+
+  for (value in list(NA, "maybe", c(TRUE, FALSE))) {
+
+    withr::local_options(blockr.lock_layout = value)
+
+    expect_error(is_layout_locked(), class = "lock_layout_invalid")
+  }
+
+  # A deployment sets it through the environment as well, as a string.
+  withr::local_options(blockr.lock_layout = NULL)
+  withr::local_envvar(BLOCKR_LOCK_LAYOUT = "false")
+  expect_false(is_layout_locked())
+
+  # An unlocked board has no layout to lock.
+  withr::local_options(blockr.locked = NULL)
+  withr::local_envvar(BLOCKR_LOCK_LAYOUT = "true")
+  expect_false(is_layout_locked())
 })

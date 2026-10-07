@@ -281,17 +281,10 @@ dock_panel <- function(...) {
 set_dock_view_output <- function(..., session = get_session()) {
   args <- c(
     list(...),
-    # Locking is about board *structure*, not the reader's viewport. dockview
-    # splits the two: `disableDnd` stops panels being dragged between groups
-    # (a membership change, which is structure), while the component-level
-    # `locked` flag disables every sash -- it sets `gridview.locked`, which
-    # walks the branch nodes and disables their splitviews. Leaving `locked`
-    # off keeps the sashes draggable, so a reader can widen a panel to see a
-    # wide table without being able to restructure the board. The resize is
-    # ephemeral: the settled-echo grid mirror is not wired while locked (see
-    # `manage_dock()`), so nothing is written back and a reload restores the
-    # deployed geometry.
-    if (is_dock_locked()) list(disableDnd = TRUE),
+    # A locked board keeps its layout as well, unless the deployment leaves it
+    # to the reader (see `is_layout_locked()`): `locked` freezes the borders
+    # between groups, and `disableDnd` stops panels being dragged anywhere.
+    if (is_layout_locked()) list(locked = TRUE, disableDnd = TRUE),
     list(
       defaultRenderer = "always",
       add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked()),
@@ -317,6 +310,33 @@ is_dock_locked <- function() {
   # consults via is_board_locked(), so one deployment option drives both core's
   # update / option gate and dock's UI hides.
   isTRUE(blockr_option("locked", FALSE))
+}
+
+# Whether a locked board locks its layout too, so that a reader can neither drag
+# the borders between panels nor rearrange them by their tabs. On unless a
+# deployment sets `options(blockr.lock_layout = FALSE)`, which leaves the layout
+# to the reader. Nothing a reader changes is saved, since a locked board writes
+# no geometry back (see `manage_dock()`), and closing or adding panels stays off
+# either way. Even locked, the border of a rail stays live, as dockview's lock
+# does not reach edge groups (dockview/dockview#1671). Anything but a boolean
+# aborts, as an unusable narrow breakpoint does.
+is_layout_locked <- function() {
+
+  if (!is_dock_locked()) {
+    return(FALSE)
+  }
+
+  opt <- blockr_option("lock_layout", TRUE)
+  val <- as.logical(opt)
+
+  if (!is_bool(val)) {
+    blockr_abort(
+      "`blockr.lock_layout` must be `TRUE` or `FALSE`; got {opt}.",
+      class = "lock_layout_invalid"
+    )
+  }
+
+  val
 }
 
 # The narrow-viewport decision, taken once per session from the width the
