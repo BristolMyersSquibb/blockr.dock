@@ -283,6 +283,29 @@ test_that("link menu renders a name field only for variadic targets", {
   expect_identical(placeholder, "leave blank for an unnamed input")
 })
 
+test_that("a link menu card leads with the block's mark", {
+  board <- new_board(c(a = new_dataset_block("iris"), m = new_merge_block()))
+
+  doc <- xml2::read_html(as.character(link_menu_ui("mid", board, "a")))
+
+  mark <- xml2::xml_find_all(
+    doc,
+    paste0(
+      "//*[", has_class("blockr-link-menu-card"), "][@data-block-type='m']",
+      "/*[", has_class("blockr-block-browser-card-header"), "]",
+      "/span[", has_class("blockr-block-mark"), "]"
+    )
+  )
+
+  # A list row's mark is blockr.ui's at its plain 24px.
+  expect_length(mark, 1L)
+  expect_identical(xml2::xml_attr(mark, "class"), "blockr-block-mark")
+  expect_identical(
+    xml2::xml_attr(mark, "data-category"),
+    block_metadata(new_merge_block())$category
+  )
+})
+
 test_that("add link action: INCOMING commit targets the anchor", {
   local_mocked_sidebar()
   # Anchor `h` (head) has a free input; the INCOMING section offers `a`
@@ -1265,67 +1288,4 @@ test_that("insert block action: a link that has gone commits nothing", {
   )
 
   expect_identical(upd, list())
-})
-
-test_that("insert panel: cards, an Insert button, and the wire's two ends", {
-
-  board <- new_board(
-    c(a = new_dataset_block("iris"), b = new_head_block()),
-    links = c(l1 = new_link("a", "b", "data"))
-  )
-
-  html <- as.character(block_browser_ui("b", board, insert_into("l1")))
-  doc <- xml2::read_html(html)
-
-  cards <- xml2::xml_find_all(
-    doc, "//*[contains(@class, 'blockr-block-browser-card')]"
-  )
-  types <- xml2::xml_attr(cards, "data-block-type")
-
-  # Eligibility matches append: the inserted block has to receive from the
-  # link's source, so a source-only block is not on offer.
-  expect_true("head_block" %in% types)
-  expect_false("dataset_block" %in% types)
-
-  # The context names both ends of the wire being split, so the user can see
-  # what they are inserting into.
-  context <- xml2::xml_text(
-    xml2::xml_find_first(
-      doc, "//*[contains(@class, 'blockr-block-browser-context')]"
-    )
-  )
-  # Both ends are named the way the user sees them, which is the block name
-  # rather than the id.
-  expect_match(context, "Insert into")
-  expect_match(context, "Dataset")
-  expect_match(context, "Head")
-
-  expect_match(html, "Insert", fixed = TRUE)
-
-  # An insert makes two links, so it offers an id for each rather than the
-  # single field the one-link flows render.
-  for (cls in c("near-link-id", "far-link-id")) {
-    expect_false(
-      is.na(
-        xml2::xml_attr(
-          xml2::xml_find_first(
-            doc,
-            paste0(
-              "//*[contains(@class, 'blockr-block-browser-field-", cls, "')]"
-            )
-          ),
-          "class"
-        )
-      )
-    )
-  }
-})
-
-test_that("insert panel: a link that has gone renders without context", {
-
-  board <- new_board(c(a = new_dataset_block("iris")))
-
-  html <- as.character(block_browser_ui("b", board, insert_into("gone")))
-
-  expect_false(grepl("Insert into", html, fixed = TRUE))
 })

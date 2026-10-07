@@ -185,20 +185,6 @@
   flex-shrink: 0;
 }
 
-.blockr-block-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--blockr-radius-lg, 8px);
-  color: var(--blockr-dock-cat, #999999);
-  background: color-mix(in srgb, var(--blockr-dock-cat, #999999) 18%, var(--blockr-color-bg-surface, #ffffff));
-  /* The glyph is a bsicons SVG sized `1em` inline, so this sizes it. */
-  font-size: 16px;
-  line-height: 1;
-}
-
 .blockr-block-title-wrap {
   flex-grow: 1;
   min-width: 0;
@@ -249,7 +235,10 @@
   min-height: 26px;
 }
 
-.blockr-compact .blockr-block-mark {
+/* The header's mark is built at blockr.ui's 32px, and the option switches in
+   the browser without rebuilding it, so the compact header gives it the
+   geometry of blockr.ui's 20px mark (`.blockr-block-mark--20`) here. */
+.blockr-compact .blockr-block-header .blockr-block-mark {
   width: 20px;
   height: 20px;
   border-radius: 5px;

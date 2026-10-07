@@ -970,10 +970,6 @@ is_dock_group <- function(x) {
   inherits(x, "dock_group")
 }
 
-is_dock_node <- function(x) {
-  inherits(x, "dock_node")
-}
-
 validate_sizes <- function(sizes, children) {
   if (is.null(sizes)) {
     return(invisible(NULL))

@@ -412,10 +412,7 @@ link_block_card <- function(meta, ns, board, direction) {
     `data-category` = meta_category(meta),
     tags$div(
       class = "blockr-block-browser-card-header",
-      tags$span(
-        class = "blockr-block-browser-card-icon",
-        if (nzchar(meta$icon)) htmltools::HTML(meta$icon) else NULL
-      ),
+      blockr.ui::block_mark(meta$icon, meta$category),
       tags$div(
         class = "blockr-link-menu-card-titles",
         tags$span(
@@ -431,7 +428,7 @@ link_block_card <- function(meta, ns, board, direction) {
         type = "button",
         class = "blockr-block-browser-card-chevron",
         `aria-label` = "Configure before adding",
-        chevron_icon()
+        blockr.ui::small_icon("chevron")
       )
     ),
     link_card_advanced(meta, ns, board)
@@ -480,10 +477,10 @@ link_card_advanced <- function(meta, ns, board) {
 
 # ---- helpers -----------------------------------------------------------
 
-# `field_text()`, `field_select()`, and `chevron_icon()` are defined
-# in `block-browser.R` and reused here via package scope. The link
-# menu shares the `.blockr-block-browser-field-*` class space with
-# the block browser, so the markup is identical.
+# Both `field_text()` and `field_select()` are defined in
+# `sidebar-block.R` and reused here via package scope. The link menu
+# shares the `.blockr-block-browser-field-*` class space with the block
+# browser, so the markup is identical.
 
 seed_link_id <- function(board) {
   out <- seed_ids(board_link_ids(board), 1L)

@@ -67,10 +67,6 @@ new_dock_id <- function(x, class = character()) {
   structure(x, class = c(class, "dock_id"))
 }
 
-is_dock_id <- function(x) {
-  inherits(x, "dock_id")
-}
-
 new_dock_panel_id <- function(x, class = character()) {
   new_dock_id(x, c(class, "dock_panel_id"))
 }
@@ -83,10 +79,6 @@ is_dock_panel_id <- function(x) {
 
 new_dock_handle_id <- function(x, class = character()) {
   new_dock_id(x, c(class, "dock_handle_id"))
-}
-
-is_dock_handle_id <- function(x) {
-  inherits(x, "dock_handle_id")
 }
 
 #' @param x Object
