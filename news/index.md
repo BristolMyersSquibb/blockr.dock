@@ -2,6 +2,14 @@
 
 ## blockr.dock (development version)
 
+- The card’s preview toggle and “…” button and the Edit board
+  extension’s buttons draw blockr.ui’s small icons instead of Font
+  Awesome’s, through
+  [`blockr.ui::small_icon()`](https://bristolmyerssquibb.github.io/blockr.ui/reference/controls_dep.html)
+  in place of [`shiny::icon()`](https://rdrr.io/pkg/shiny/man/icon.html)
+  (BristolMyersSquibb/blockr.ui#85). The “…” button’s dots are
+  horizontal, as the design system draws them.
+
 - The dock draws a block’s mark as blockr.ui’s, in the sizes the spec
   gives it
   ([\#495](https://github.com/BristolMyersSquibb/blockr.dock/issues/495)).
