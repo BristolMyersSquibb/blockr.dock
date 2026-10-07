@@ -25,7 +25,6 @@ board_ui.dock_board <- function(
     add_block_menu_dep(),
     block_rename_dep(),
     blockr_dock_dep(),
-    tooltip_dep(),
     compact_dep(),
     viewport_probe_ui(id),
     rail_dep(),
@@ -147,16 +146,5 @@ blockr_dock_dep <- function() {
     pkg_version(),
     src = pkg_file("assets", "css"),
     stylesheet = "blockr-dock.css"
-  )
-}
-
-# The dock chrome's tooltips go to Blockr.tooltip, blockr.ui's light card,
-# which `blockr.ui::controls_dep()` brings (see block-tooltips.js).
-tooltip_dep <- function() {
-  htmltools::htmlDependency(
-    "blockr-dock-tooltips",
-    pkg_version(),
-    src = pkg_file("assets", "js"),
-    script = "block-tooltips.js"
   )
 }

@@ -19,6 +19,26 @@
   `blockr_app_ui()` the server's arguments as well, the dock's method appends
   only its unnamed `...` to the page.
 
+* The dock draws a block's mark as blockr.ui's, in the sizes the spec gives it
+  (#495). The block header calls `blockr.ui::block_mark()` at 32px, which the
+  compact header shows at 20px, and the cards of the link and stack menus call
+  it at 24px. The rows of the "+" and "Add panel" menus give blockr.ui's menu
+  the block's category, from which it draws the same mark at 24px, and so does
+  the block picker of `board_block_select()`, in its list and in its field.
+  The picker no longer draws tiles of its own, and no longer reads the
+  `icon_style` option. Each mark takes its colour from its category's token.
+  The dock's own `.blockr-block-mark` rules and their `--blockr-dock-cat`
+  property are gone, as are the cards' tinted tiles and their copy of the
+  palette. The rules also matched the menus' marks, which came out as 32px
+  squares on a grey tint. The header's glyph is 18px, up from 16px.
+
+* Both `blk_color()` and `blk_icon_data_uri()` are deprecated (#495). The
+  category colours are blockr.ui's, and `blockr.ui::category_color()` looks
+  them up. The deprecated `blk_color()` calls it, so its colours now come in
+  lower case. For the mark as an image, `blockr.ui::block_mark_svg()` draws it
+  from a block's glyph and category. The `color` column of `blks_metadata()`
+  stays, now from `blockr.ui::category_color()`.
+
 * Renaming a block sends the new name to the server on Enter or when the
   field loses focus, not on every keystroke. Each keystroke was a board
   update, and while typing those piled up on the server.
@@ -96,7 +116,10 @@
 
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
-  native one. The "…" menu and the board options gear have one.
+  native one. The "…" menu and the board options gear have one. The markup
+  carries each tooltip as `data-blockr-tooltip` rather than as a `title`, and
+  an icon-only button is named by an `aria-label`. Markup an app adds to the
+  chrome gets the light card the same way; a `title` there stays native.
 
 * A parked block's status badge is drawn from the status blockr.core now
   reports for it in place of `dormant`: the outcome of the block's last

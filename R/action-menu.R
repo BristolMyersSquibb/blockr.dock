@@ -46,10 +46,7 @@ add_block_menu_item <- function(meta) {
     # The type id ("filter_block"), not the description: a description
     # mentions other blocks' words and would match half the list.
     keywords = meta$type,
-    mark = list(
-      icon = meta$icon,
-      color = unname(blk_color(meta$category))
-    )
+    mark = list(icon = meta$icon, category = meta$category)
   )
 }
 

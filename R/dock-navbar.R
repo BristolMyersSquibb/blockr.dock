@@ -421,7 +421,7 @@ read_only_navbar_ui <- function(id, board) {
 
   tags$span(
     class = "blockr-lock-indicator",
-    title = "Editing is disabled by this deployment.",
+    `data-blockr-tooltip` = "Editing is disabled by this deployment.",
     `aria-label` = "Read-only mode",
     role = "status",
     bsicons::bs_icon("lock-fill"),
@@ -443,7 +443,7 @@ options_navbar_ui <- function(id, board) {
     class = "btn action-button blockr-navbar-icon-btn",
     `data-blockr-sidebar-target` = NS(navbar_board_id(id), "settings_sidebar"),
     `aria-label` = "Board options",
-    title = "Board options",
+    `data-blockr-tooltip` = "Board options",
     bsicons::bs_icon("gear")
   )
 }

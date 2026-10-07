@@ -610,6 +610,25 @@ test_that("stack menu ui defers the form to a server-rendered slot", {
   expect_length(xml2::xml_find_all(doc, "//input[@id='mid-stack_name']"), 0L)
 })
 
+test_that("a stack menu card leads with the block's mark", {
+  board <- new_dock_board(c(a = new_dataset_block("iris")))
+  doc <- xml2::read_html(as.character(stack_menu_ui("mid", board)))
+
+  mark <- xml2::xml_find_all(
+    doc,
+    paste0(
+      "//*[", has_class("blockr-stack-menu-card"), "][@data-block-type='a']",
+      "/*[", has_class("blockr-block-browser-card-header"), "]",
+      "/span[", has_class("blockr-block-mark"), "]"
+    )
+  )
+
+  # A list row's mark is blockr.ui's at its plain 24px.
+  expect_length(mark, 1L)
+  expect_identical(xml2::xml_attr(mark, "class"), "blockr-block-mark")
+  expect_identical(xml2::xml_attr(mark, "data-category"), "input")
+})
+
 test_that("the colour field pairs a native picker with the bound hex input", {
   doc <- xml2::read_html(
     as.character(color_field_tag(NS("mid"), "#abc"))

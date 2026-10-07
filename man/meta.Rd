@@ -57,11 +57,14 @@ for block icons.
 \itemize{
 \item \code{blks_metadata()}: Retrieves metadata given a \code{block} or \code{blocks} object
 from the block registry. Can also handle blocks which are not
-registered and provides default values in that case.
-\item \code{blk_color()}: Produces colors using the Okabe-Ito colorblind-friendly
-palette for a character vector of block categories.
-\item \code{blk_icon_data_uri()}: Processes block icons to add color and turn them
-into square-shaped icons.
+registered and provides default values in that case. The \code{color} column
+is the category's colour, from \code{\link[blockr.ui:category_color]{blockr.ui::category_color()}}.
+\item \code{blk_color()}: Deprecated. The category colours are blockr.ui's, and
+\code{\link[blockr.ui:category_color]{blockr.ui::category_color()}}, which this now calls, looks them up.
+\item \code{blk_icon_data_uri()}: Deprecated. Processes block icons to add color and
+turn them into square-shaped icons. For the block's mark as an image,
+use \code{\link[blockr.ui:block_mark_svg]{blockr.ui::block_mark_svg()}}, which draws it from the block's glyph
+and category.
 \item \code{block_status_badge()}: Derives a block's status badge from its eval
 status and error count -- the single derivation the dock card icon and
 the blockr.dag node badge share, so both show the same status. Returns a
@@ -70,10 +73,7 @@ styling list (draw the badge) or \code{NULL} (no badge).
 }
 \examples{
 blk <- blockr.core::new_dataset_block()
-meta <- blks_metadata(blk)
-
-col <- blk_color(meta$category)
-blk_icon_data_uri(meta$icon, col)
+blks_metadata(blk)
 
 block_status_badge("waiting")
 
