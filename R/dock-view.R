@@ -690,7 +690,8 @@ view_item_ui <- function(view_id, view_name, active_id = NULL,
       tags$span(
         class = "blockr-view-action blockr-view-remove",
         role = "button",
-        title = "Remove page",
+        `aria-label` = "Remove page",
+        `data-blockr-tooltip` = "Remove page",
         blockr.ui::small_icon("remove")
       )
     }

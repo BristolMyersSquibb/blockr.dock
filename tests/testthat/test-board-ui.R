@@ -6,10 +6,9 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 16 base elements (blockr.ui's controls, the dock's tooltip hand-off, the
-  # rename handler, the "+" menu and the compact switch among them) + the
-  # viewport probe.
-  expect_length(ui, 17L)
+  # 15 base elements (blockr.ui's controls, the rename handler, the "+" menu
+  # and the compact switch among them) + the viewport probe.
+  expect_length(ui, 16L)
 })
 
 # Settings sidebar is mounted with pre-rendered content + a JS-trigger gear
@@ -136,6 +135,50 @@ test_that("locked mode renders a navbar lock indicator", {
   expect_match(locked_html, "blockr-lock-indicator-label", fixed = TRUE)
   # Visible label, not just the aria-label / tooltip.
   expect_match(locked_html, ">Read-only<", fixed = TRUE)
+})
+
+test_that("the chrome's tooltips are written for Blockr.tooltip (#494)", {
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  render <- function(locked) {
+    withr::with_options(
+      list(blockr.locked = locked),
+      xml2::read_html(as.character(board_ui("test", brd)))
+    )
+  }
+
+  chrome <- paste0(
+    "//*[", has_class("blockr-block-header"), " or ",
+    has_class("blockr-navbar"), " or ", has_class("blockr-sidebar"), "]"
+  )
+
+  tooltips <- function(doc) {
+
+    # No native title is left for the browser to show in place of the card.
+    expect_length(
+      xml2::xml_find_all(doc, paste0(chrome, "/descendant-or-self::*[@title]")),
+      0L
+    )
+
+    # The card only describes, and only while it shows, so an element with
+    # no text of its own has its name in an aria-label.
+    tips <- xml2::xml_find_all(doc, "//*[@data-blockr-tooltip]")
+    bare <- tips[!nzchar(trimws(xml2::xml_text(tips)))]
+    expect_false(anyNA(xml2::xml_attr(bare, "aria-label")))
+
+    xml2::xml_attr(tips, "data-blockr-tooltip")
+  }
+
+  unlocked <- c(
+    "dataset block", "Preview", "More actions", "Remove page",
+    "Board options", "Back", "Pin", "Close"
+  )
+  expect_true(all(unlocked %in% tooltips(render(NULL))))
+
+  expect_true(
+    "Editing is disabled by this deployment." %in% tooltips(render(TRUE))
+  )
 })
 
 test_that("navbar busy spinner leads the right group (#345, #355, #360)", {

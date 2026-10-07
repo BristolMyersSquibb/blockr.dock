@@ -103,7 +103,10 @@
 
 * The dock's chrome (block header, navbar, view menu, sidebars) shows
   blockr.ui's light-card tooltip (`Blockr.tooltip`) in place of the browser's
-  native one. The "…" menu and the board options gear have one.
+  native one. The "…" menu and the board options gear have one. The markup
+  carries each tooltip as `data-blockr-tooltip` rather than as a `title`, and
+  an icon-only button is named by an `aria-label`. Markup an app adds to the
+  chrome gets the light card the same way; a `title` there stays native.
 
 * A parked block's status badge is drawn from the status blockr.core now
   reports for it in place of `dormant`: the outcome of the block's last
