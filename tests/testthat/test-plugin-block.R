@@ -1082,6 +1082,20 @@ test_that("a title renames in place and refuses an empty name (e2e)", {
 
   wait_dock_loaded(app, 2)
 
+  # A card is in the DOM, and counted above, from the moment it is built into
+  # the hidden offcanvas pool, before the dock moves it into its panel. A field
+  # in the pool cannot take the focus, so wait for the move.
+  wait_js(
+    app,
+    paste(
+      "(function () {",
+      "var c = document.getElementById('my_board-block_handle-a');",
+      "return c !== null && !c.closest('.blockr-offcanvas-pool');",
+      "})()"
+    ),
+    function() "[card-rename] the card of a is still in the offcanvas pool"
+  )
+
   id <- function(part) sprintf("my_board-block_a-edit_block-%s", part)
   jq <- function(part) sprintf("$('#%s')", id(part))
 
