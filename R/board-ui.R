@@ -118,39 +118,12 @@ board_ui.dock_board <- function(
         MoreArgs = list(id = id, board = x)
       )
     ),
-    # Sidebar mounts. Ids are namespaced with `NS(id, ...)` so two
-    # `board_ui.dock_board()` instances on the same page don't collide on
-    # DOM ids. Action handlers reach the matching mount by reading
-    # `board$board_id` (set by blockr.core in the board's reactiveValues)
-    # and composing `NS(board$board_id, "actions_sidebar")` at server time.
-    # Contract: one sidebar = one concern. We mount two on the right
-    # with different modes so they coexist cleanly when both are open
-    # (adding a block is the "+" menu, add-block-menu.R, not a sidebar):
-    #   * "actions_sidebar":  the trigger-specific editors (add and edit
-    #     link, add and edit stack, block inputs). Body is populated
-    #     server-side via `show_sidebar()` because each ships a
-    #     freshly-built, trigger-dependent form.
-    #   * "settings_sidebar": the navbar gear's board-options panel.
-    #     `overlay` mode: layers above the page (and above the action
-    #     panel when both are pinned) without reflowing content. Body is
-    #     pre-rendered here at UI-build time and the gear button opens it
-    #     via `data-blockr-sidebar-target` (pure JS, no server roundtrip).
-    # Reusing one DOM slot across both concerns would let a foreign caller
-    # silently swap a pinned panel's body, since the JS replaces content in
-    # place and never inspects the pin class. Splitting by concern keeps
-    # pin semantics intuitive without multi-pin machinery on the JS side.
-    # For "actions_sidebar", which cannot be split (its handlers ship
-    # trigger-dependent forms), the equivalent guarantee is the ownership
-    # stamp: every `show_sidebar()` records the writing module's namespaced
-    # id on the panel -- `NS(<board id>, <action id>)` for a board action --
-    # reported back as `owner` alongside `open` / `pinned` in the panel's
-    # input value, so a holder of a trigger bundle can tell whose form is
-    # currently on screen.
-    sidebar_ui(
-      NS(id, "actions_sidebar"),
-      mode = "overlay",
-      side = "right"
-    ),
+    # The navbar gear's board-options panel, namespaced with `NS(id, ...)`
+    # so two boards on one page don't collide on DOM ids. `overlay` mode:
+    # it layers above the page without reflowing it until pinned. The body
+    # is pre-rendered here and the gear opens it through
+    # `data-blockr-sidebar-target`, without a server round trip. The board
+    # actions open menus in place (action-menu.R), not a panel (#544).
     sidebar_ui(
       NS(id, "settings_sidebar"),
       ui = settings_body(id, x, options = options),

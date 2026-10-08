@@ -25,7 +25,7 @@ block_browser_server <- function(id, board, target = NULL) {
       # module validates the committed ids (a non-empty duplicate notifies
       # and `req()`s out), then returns a ready-to-apply value: a `blocks`
       # object for the add flow, or `list(blocks, links)` for append /
-      # prepend - parity with link_menu_server() / stack_menu_server().
+      # prepend.
       eventReactive(
         input$commit,
         {

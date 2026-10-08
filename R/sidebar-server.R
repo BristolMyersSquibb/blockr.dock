@@ -150,16 +150,6 @@ sidebar_state <- function(id, session = get_session()) {
   }
 }
 
-# Whether the calling module still holds an open panel, asked the same way a
-# write stamps it. The auto-close handlers gate on this so a handler whose
-# target vanished closes its own form and not the one another action has
-# since written into the shared slot.
-owns_open_sidebar <- function(id, session = get_session()) {
-  state <- sidebar_state(id, session = session)
-
-  isTRUE(state$open) && identical(state$owner, session$ns(NULL))
-}
-
 #' @param action Action ID
 #' @param board_id ID of the board module the action is registered with
 #' @param session Shiny session
@@ -198,16 +188,6 @@ sidebar_owned_by <- function(action, board_id, session = get_session()) {
     open = isTRUE(state[["open"]]),
     pinned = isTRUE(state[["pinned"]])
   )
-}
-
-# Post-commit close for a panel whose menu tracks the board on its own: an
-# unpinned panel closes after the commit, a pinned one is left alone so the
-# menu refreshes itself in place.
-hide_unless_pinned <- function(id, session = get_session()) {
-  if (!isTRUE(sidebar_state(id, session = session)$pinned)) {
-    hide_sidebar(id, session = session)
-  }
-  invisible(NULL)
 }
 
 # Walk to the root session so `sendInputMessage(id, ...)` targets the
