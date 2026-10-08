@@ -19,6 +19,22 @@
   `blockr_app_ui()` the server's arguments as well, the dock's method appends
   only its unnamed `...` to the page.
 
+* A locked board can leave parts of its layout to the reader. With the
+  `lock_resize` blockr option set to `FALSE`, a reader can resize panels by
+  dragging the borders between them, to make room for a wide table, and with
+  `lock_rearrange` set to `FALSE`, rearrange them by dragging their tabs.
+  Nothing a reader changes is saved: reloading the board brings back the
+  layout it was deployed with. Closing and adding panels stay off, and by
+  default both stay locked as before (#421). The border of a rail can be
+  dragged either way, as dockview's lock does not reach it
+  (dockview/dockview#1671).
+
+* The card's preview toggle and "…" button and the Edit board extension's
+  buttons draw blockr.ui's small icons instead of Font Awesome's, through
+  `blockr.ui::small_icon()` in place of `shiny::icon()`
+  (BristolMyersSquibb/blockr.ui#85). The "…" button's dots are horizontal, as
+  the design system draws them.
+
 * The dock draws a block's mark as blockr.ui's, in the sizes the spec gives it
   (#495). The block header calls `blockr.ui::block_mark()` at 32px, which the
   compact header shows at 20px, and the cards of the link and stack menus call

@@ -11,11 +11,6 @@ dock_panel_ids <- function(proxy = dock_proxy()) {
   if (!is.list(res)) list(res) else res
 }
 
-dock_panel_named_ids <- function(proxy = dock_proxy()) {
-  panels <- dockViewR::get_panels(proxy)
-  set_names(chr_xtr(panels, "id"), chr_xtr(panels, "title"))
-}
-
 block_panel_ids <- function(proxy = dock_proxy()) {
   res <- dock_panel_ids(proxy)
 
@@ -281,7 +276,11 @@ dock_panel <- function(...) {
 set_dock_view_output <- function(..., session = get_session()) {
   args <- c(
     list(...),
-    if (is_dock_locked()) list(locked = TRUE, disableDnd = TRUE),
+    # A locked board keeps its layout as well, unless the deployment leaves a
+    # part of it to the reader (see `is_layout_locked()`): `locked` freezes the
+    # borders between groups, and `disableDnd` stops panels being dragged.
+    if (is_layout_locked("resize")) list(locked = TRUE),
+    if (is_layout_locked("rearrange")) list(disableDnd = TRUE),
     list(
       defaultRenderer = "always",
       add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked()),
@@ -307,6 +306,40 @@ is_dock_locked <- function() {
   # consults via is_board_locked(), so one deployment option drives both core's
   # update / option gate and dock's UI hides.
   isTRUE(blockr_option("locked", FALSE))
+}
+
+# Whether a locked board also locks a part of its layout: its sizes ("resize"),
+# so that a reader cannot drag the borders between panels, or its arrangement
+# ("rearrange"), so that a reader cannot drag panels by their tabs. Each is on
+# unless a deployment leaves that part to the reader, with
+# `options(blockr.lock_resize = FALSE)` or
+# `options(blockr.lock_rearrange = FALSE)`. Nothing a reader changes is saved,
+# since a locked board writes no geometry back (see `manage_dock()`), and
+# closing or adding panels stays off either way. With resizing locked, the
+# border of a rail still moves, as dockview's lock does not reach edge groups
+# (dockview/dockview#1671). Anything but a boolean aborts, as an unusable
+# narrow breakpoint does.
+is_layout_locked <- function(part = c("resize", "rearrange")) {
+
+  part <- match.arg(part)
+
+  if (!is_dock_locked()) {
+    return(FALSE)
+  }
+
+  name <- paste0("lock_", part)
+
+  opt <- blockr_option(name, TRUE)
+  val <- as.logical(opt)
+
+  if (!is_bool(val)) {
+    blockr_abort(
+      "`blockr.{name}` must be `TRUE` or `FALSE`; got {opt}.",
+      class = paste0(name, "_invalid")
+    )
+  }
+
+  val
 }
 
 # The narrow-viewport decision, taken once per session from the width the
@@ -402,20 +435,6 @@ narrow_stack_attrs <- function(grid) {
   }
 
   list(style = paste0("--blockr-stack-height: ", total * 100, "vh;"))
-}
-
-dock_panel_groups <- function(session = get_session()) {
-  xtr_leaf_id <- function(x) {
-    if (x$type == "leaf") {
-      return(x$data$id)
-    }
-
-    lapply(x$data, xtr_leaf_id)
-  }
-
-  unlist(
-    xtr_leaf_id(session$input[[dock_input("state")]][["grid"]][["root"]])
-  )
 }
 
 #' Swap the contents of the `active_dock` mirror to a different dock.
