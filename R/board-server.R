@@ -1148,8 +1148,8 @@ manage_dock <- function(
 #'
 #' "New page" in the views menu's manage mode: adds an empty page with the
 #' next free "Page N" name and switches to it, with no dialog. The client
-#' opens the new row's name for renaming, and its blocks are added from the
-#' page's "+" menu.
+#' opens the new row's name for renaming, and its panels are added from the
+#' menu for adding a panel, which the empty page's "Add panel" opens.
 #'
 #' @param client_views Reactive record of the client-shown views.
 #' @param session Shiny session.
@@ -1292,10 +1292,11 @@ reorder_view_observer <- function(client_views, session, update) {
 
 #' Open the menu for adding a panel to the dock.
 #'
-#' The "+" menu (Blockr.menu, add-block-menu.js), listing the blocks and
-#' extensions not yet shown in the dock: mark, title and the block type as
-#' meta text. A pick is `add_dock_panel_pick`. If none are available,
-#' either triggers `suggest_new` or notifies the user.
+#' The menu for adding a panel (Blockr.menu, add-block-menu.js), which the
+#' "+" on a group of panels and the empty page's "Add panel" open, listing
+#' the blocks and extensions not yet shown in the dock: mark, title and the
+#' block type as meta text. A pick is `add_dock_panel_pick`. If none are
+#' available, either triggers `suggest_new` or notifies the user.
 #'
 #' @param dock Dock proxy.
 #' @param board Reactive board state.

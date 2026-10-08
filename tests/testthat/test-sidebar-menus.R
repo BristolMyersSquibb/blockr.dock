@@ -709,8 +709,9 @@ test_that("Enter commits the typed name and takes focus out of the field", {
   expect_identical(exported(app, "links"), c("l1:a>", "l2:b>", "l3:c>typed"))
 })
 
-# The "+" menu, the block's "…" menu, the section toggles and the options
-# pages are client code over a server round trip, so these drive the board.
+# The block actions' menu, the block's "…" menu, the section toggles and the
+# options pages are client code over a server round trip, so these drive the
+# board.
 
 menu_sel <- "body > .blockr-menu"
 
@@ -754,11 +755,11 @@ shown_menu_btn <- paste0(
   ".find(b => b.getBoundingClientRect().width > 0)"
 )
 
-test_that("a pick from the + menu adds the block", {
+test_that("a pick from the block actions' menu adds the block", {
 
   skip_on_cran()
 
-  app <- menus_app("plus-menu-pick")
+  app <- menus_app("actions-menu-pick")
   withr::defer(app$stop())
 
   app$click(fixture("add_block"))
@@ -790,11 +791,11 @@ test_that("a pick from the + menu adds the block", {
   expect_length(added, 1L)
 })
 
-test_that("append opens the + menu at the block's menu button", {
+test_that("append opens its menu at the block's menu button", {
 
   skip_on_cran()
 
-  app <- menus_app("plus-menu-anchor")
+  app <- menus_app("actions-menu-anchor")
   withr::defer(app$stop())
 
   btn <- app$get_js(paste0(shown_menu_btn, ".id"))
@@ -815,7 +816,7 @@ test_that("append opens the + menu at the block's menu button", {
       "'body > .blockr-menu .blockr-menu__caption');",
       "return c !== null && c.textContent.indexOf('Append to') === 0;})()"
     ),
-    function() "[plus-menu] no append menu"
+    function() "[actions-menu] no append menu"
   )
 
   box <- menu_box(app, sprintf("document.getElementById('%s')", btn))
@@ -826,6 +827,61 @@ test_that("append opens the + menu at the block's menu button", {
   press(app, "Escape")
   wait_sel(app, menu_sel, present = FALSE)
   expect_identical(app$get_js("document.activeElement.id"), btn)
+})
+
+test_that("the menu's tool opens the browser, whose form sets the block ID", {
+
+  skip_on_cran()
+
+  app <- menus_app("actions-menu-browser")
+  withr::defer(app$stop())
+
+  app$click(fixture("add_block"))
+  wait_sel(app, paste(menu_sel, ".blockr-menu__filter-input"))
+
+  app$run_js(
+    paste0(
+      "var f = document.querySelector('", menu_sel, " ",
+      ".blockr-menu__filter-input');",
+      "f.value = 'head';",
+      "f.dispatchEvent(new Event('input', {bubbles: true}));"
+    )
+  )
+  click_sel(app, paste(menu_sel, ".blockr-menu__tool"))
+
+  # The browser opens in the sidebar on what was typed in the menu.
+  head_card <- paste(".blockr-block-browser", card("head_block"))
+  wait_sel(app, head_card)
+  wait_sel(app, menu_sel, present = FALSE)
+
+  expect_identical(
+    app$get_js(
+      "document.querySelector('.blockr-block-browser-search').value"
+    ),
+    "head"
+  )
+  expect_true(
+    app$get_js(
+      sprintf(
+        "document.querySelector(%s).classList.contains('hidden')",
+        shQuote(paste(".blockr-block-browser", card("dataset_block")))
+      )
+    )
+  )
+
+  click_sel(app, paste(head_card, ".blockr-block-browser-card-chevron"))
+  type_into(app, paste(head_card, ".blockr-block-browser-field-id input"), "h1")
+  click_sel(app, paste(head_card, ".blockr-block-browser-card-add"))
+
+  app$wait_for_value(
+    export = fixture("blocks"),
+    ignore = list(c("a", "b", "m", "r", "s"))
+  )
+
+  expect_identical(
+    setdiff(exported(app, "blocks"), c("a", "b", "m", "r", "s")),
+    "h1"
+  )
 })
 
 test_that("Rename in the block menu opens the title's field", {

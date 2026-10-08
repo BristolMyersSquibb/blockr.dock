@@ -1,13 +1,23 @@
 (function () {
   "use strict";
 
-  // Card-list helpers shared by the link and stack menus. Both render
-  // the same `.blockr-block-browser-card` markup and the same
-  // `data-name` / `data-description` / `data-package` / `data-category`
-  // search contract, so the filter and the card-iteration helper live
-  // on a tiny `window.BlockrDock.cardSearch` namespace. Both menus
-  // depend on `block_browser_dep()` being attached first (which it is
-  // wherever `link_menu_ui()` or `stack_menu_ui()` is rendered) and
+  // The block browser is a Shiny input: its value is the block the user
+  // chose to add. Adding is an event (click a card, or the in-card add
+  // button), so the value carries a monotonically increasing `nonce`
+  // that guarantees Shiny sees a change and re-fires even when the same
+  // block is added twice. R reads it as `input[[<root id>]]` and ignores
+  // the nonce, as it does for a pick from the block actions' menu, which
+  // writes the same input.
+  var COMMIT_EVENT = "blockr-block-browser:commit";
+  var commitSeq = 0;
+
+  // Card-list helpers shared by the block browser and the link and stack
+  // menus. All three render the same `.blockr-block-browser-card` markup
+  // and the same `data-name` / `data-description` / `data-package` /
+  // `data-category` search contract, so the filter and the card-iteration
+  // helper live on a tiny `window.BlockrDock.cardSearch` namespace. The
+  // menus depend on `block_browser_dep()` being attached first (which it
+  // is wherever `link_menu_ui()` or `stack_menu_ui()` is rendered) and
   // just call into this API. Keep the surface deliberately small.
   var BlockrDock = window.BlockrDock = window.BlockrDock || {};
   BlockrDock.cardSearch = BlockrDock.cardSearch || {
@@ -121,4 +131,166 @@
         }
       });
   };
+
+  // Cards currently shown (not filtered out by search).
+  function visibleCards(root) {
+    return BlockrDock.cardSearch.getCards(root).filter(function (card) {
+      return !card.classList.contains("hidden");
+    });
+  }
+
+  // Move the keyboard-selection highlight to `card` (or clear it when
+  // null) and scroll it into view. Selection is a purely visual marker
+  // - `.card-selected` - distinct from the chevron's `.card-expanded`.
+  function selectCard(root, card) {
+    BlockrDock.cardSearch.getCards(root).forEach(function (c) {
+      c.classList.toggle("card-selected", c === card);
+    });
+    if (card) card.scrollIntoView({ block: "nearest" });
+  }
+
+  // Fields are rendered only for the flows that use them, so an absent
+  // field simply means "not applicable" -> null. An empty value is also
+  // reported as null.
+  function getFieldValue(card, fieldClass) {
+    var el = card.querySelector(
+      "." + fieldClass + " input, ." + fieldClass + " select"
+    );
+    if (!el) return null;
+    return el.value === "" ? null : el.value;
+  }
+
+  function gatherSpec(card) {
+    var field = function (name) {
+      return getFieldValue(card, "blockr-block-browser-field-" + name);
+    };
+    return {
+      type: card.getAttribute("data-block-type"),
+      id: field("id"),
+      title: field("title"),
+      link_id: field("link-id"),
+      near_link_id: field("near-link-id"),
+      far_link_id: field("far-link-id"),
+      block_input: field("block-input"),
+      target_input: field("target-input"),
+      nonce: ++commitSeq
+    };
+  }
+
+  // Record the chosen block on the root and fire the commit event; the
+  // binding's `subscribe` callback then has Shiny read `getValue`.
+  function commitCard(root, card) {
+    root._blockrBrowserValue = gatherSpec(card);
+    root.dispatchEvent(new CustomEvent(COMMIT_EVENT));
+  }
+
+  // Unfold or fold a card's form.
+  function toggleCard(card) {
+    var open = card.classList.toggle("card-expanded");
+    var chevron = card.querySelector(".blockr-block-browser-card-chevron");
+    if (chevron) chevron.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  // Wire the search box and the delegated card-area click handler.
+  // Idempotent: safe to call from both initialize() and subscribe()
+  // (Shiny may invoke either first).
+  function initBrowser(root) {
+    if (root.dataset.blockrBlockBrowserInit === "1") return;
+    root.dataset.blockrBlockBrowserInit = "1";
+
+    var search = root.querySelector(".blockr-block-browser-search");
+    if (search) {
+      var filter = function () {
+        BlockrDock.cardSearch.applySearch(root, search.value);
+        // Keep a valid card highlighted so Enter adds the top hit; drop
+        // the highlight if the previously selected card was filtered out.
+        var current = root.querySelector(
+          ".blockr-block-browser-card.card-selected"
+        );
+        if (!current || current.classList.contains("hidden")) {
+          selectCard(root, visibleCards(root)[0] || null);
+        }
+      };
+      search.addEventListener("input", filter);
+      // What was typed in the menu the browser was opened from.
+      if (search.value) filter();
+
+      // Arrow keys move the highlight, Enter adds it. Gated to the search
+      // box so arrow keys still edit text inside an expanded card's form.
+      root.addEventListener("keydown", function (event) {
+        if (event.target !== search) return;
+
+        var cards = visibleCards(root);
+        if (cards.length === 0) return;
+
+        var current = root.querySelector(
+          ".blockr-block-browser-card.card-selected"
+        );
+        var idx = current ? cards.indexOf(current) : -1;
+
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          selectCard(root, cards[idx < cards.length - 1 ? idx + 1 : 0]);
+        } else if (event.key === "ArrowUp") {
+          event.preventDefault();
+          selectCard(root, cards[idx > 0 ? idx - 1 : cards.length - 1]);
+        } else if (event.key === "Enter") {
+          event.preventDefault();
+          commitCard(root, current || cards[0]);
+        }
+      });
+    }
+
+    var cardsArea = root.querySelector(".blockr-block-browser-categories");
+    if (cardsArea) {
+      cardsArea.addEventListener("click", function (event) {
+        var card = event.target.closest(".blockr-block-browser-card");
+        if (!card || !root.contains(card)) return;
+
+        if (event.target.closest(".blockr-block-browser-card-chevron")) {
+          toggleCard(card);
+          event.preventDefault();
+          return;
+        }
+        if (event.target.closest(".blockr-block-browser-card-add")) {
+          commitCard(root, card);
+          event.preventDefault();
+          return;
+        }
+        if (event.target.closest(".blockr-block-browser-card-advanced")) {
+          return;
+        }
+        commitCard(root, card);
+      });
+    }
+  }
+
+  var binding = new Shiny.InputBinding();
+  $.extend(binding, {
+    find: function (scope) {
+      return $(scope).find(".blockr-block-browser");
+    },
+    initialize: function (el) {
+      initBrowser(el);
+    },
+    getValue: function (el) {
+      return el._blockrBrowserValue || null;
+    },
+    subscribe: function (el, callback) {
+      initBrowser(el);
+      // Shiny's callback takes no args; addEventListener passes the
+      // Event, which breaks the value-update path - wrap to drop it.
+      var handler = function () { callback(); };
+      el._blockrBrowserHandler = handler;
+      el.addEventListener(COMMIT_EVENT, handler);
+    },
+    unsubscribe: function (el) {
+      if (el._blockrBrowserHandler) {
+        el.removeEventListener(COMMIT_EVENT, el._blockrBrowserHandler);
+        el._blockrBrowserHandler = null;
+      }
+    }
+  });
+
+  Shiny.inputBindings.register(binding, "blockr.dock.blockBrowser");
 })();

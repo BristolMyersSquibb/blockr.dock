@@ -1,7 +1,9 @@
-/* The block cards the link and stack menus share: a search bar at top and
-   a scrollable, category-grouped card list below. The classes keep the
-   .blockr-block-browser-* names of the block browser sidebar they were
-   built for, which the "+" menu has replaced. Bootstrap-free.
+/* The block browser, and the block cards the link and stack menus share
+   with it: a search bar at top and a scrollable, category-grouped card list
+   below. Clicking a card adds the block as a pick from the block actions'
+   menu does; opening a card (chevron) reveals a small form and an explicit
+   add button for the block's id and title, its links' ids and the input a
+   link lands on. Bootstrap-free.
 
    Visual language follows the validated sidebar prototype
    (blockr.dock@feat/sidebar-s3-dispatch): a borderless list where each
@@ -10,9 +12,9 @@
    which blockr.ui draws. Palette below mirrors the prototype's
    Tailwind-style grey/blue scale. */
 
-/* Design tokens for the card visuals, declared on the two menus' roots to
-   keep them resolvable there without leaking into the global :root
-   namespace. */
+/* Design tokens for the card visuals, declared on the three roots to keep
+   them resolvable there without leaking into the global :root namespace. */
+.blockr-block-browser,
 .blockr-stack-menu,
 .blockr-link-menu {
   /* Aliases for blockr.ui's ramps, so the dark scheme and a theme reach
@@ -32,6 +34,19 @@
   --bb-blue-600: var(--blockr-accent-600, #2563eb);
   --bb-blue-700: var(--blockr-accent-700, #1d4ed8);
   --bb-gap: 12px;
+}
+
+/* The browser fills the sidebar's body, edge to edge, as the link menu
+   does. */
+.blockr-block-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  margin: -16px -20px;
+  padding: 16px 20px;
+  color: var(--blockr-color-text-default);
 }
 
 /* Search input. Soft grey field with a blue focus ring (prototype). */
@@ -93,8 +108,8 @@
 }
 
 /* Card shell. Borderless by default; the whole row is a click target
-   (the link menu adds the link, the stack menu toggles the block) and
-   highlights subtly on hover / keyboard focus. The chevron and the
+   (the browser adds the block, the link menu the link, the stack menu
+   toggles the block) and highlights subtly on hover / keyboard focus. The chevron and the
    expanded form opt out of that behaviour in JS. */
 .blockr-block-browser-card {
   display: flex;
@@ -127,8 +142,8 @@
     0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
-/* A block picked in the stack menu: a clear blue marker, distinct from
-   the grey hover/expanded state. */
+/* The browser's keyboard row and a block picked in the stack menu: a
+   clear blue marker, distinct from the grey hover/expanded state. */
 .blockr-block-browser-card.card-selected {
   border-color: var(--bb-blue-500);
   background: var(--blockr-color-bg-selected);
@@ -185,6 +200,21 @@
   transform: rotate(180deg);
 }
 
+/* The block's description, under the header while the card is open. */
+.blockr-block-browser-card-descr {
+  display: none;
+  margin: 8px 0 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bb-grey-100);
+  font-size: var(--blockr-font-size-xs);
+  color: var(--bb-grey-500);
+  line-height: 1.45;
+}
+
+.blockr-block-browser-card.card-expanded .blockr-block-browser-card-descr {
+  display: block;
+}
+
 /* Expanded form area, hidden until the card is .card-expanded. Indented
    to align under the title, on a faint grey panel (prototype). The form
    fields are real <input>/<select> elements, not Shiny-bound; the JS
@@ -228,6 +258,11 @@
     box-shadow 150ms ease;
 }
 
+/* The block id is identifier-like, so it is set in the code face. */
+.blockr-block-browser-field-id input {
+  font-family: var(--blockr-font-mono);
+}
+
 /* Native select arrow replaced with a grey chevron, room reserved for it. */
 .blockr-block-browser-field select {
   appearance: none;
@@ -246,7 +281,7 @@
   box-shadow: var(--blockr-focus-ring);
 }
 
-/* A link card's add action: a full-width ghost-outline button (white
+/* A card's add action: a full-width ghost-outline button (white
    fill, blue label, grey hairline) - the spec's finalized primary action,
    lighter than a solid fill so it sits calmly at the foot of the open
    panel. */
@@ -289,4 +324,12 @@
   font-size: var(--blockr-font-size-base);
   padding: 32px 16px;
   text-align: center;
+}
+
+.blockr-block-browser.is-empty .blockr-block-browser-empty {
+  display: flex;
+}
+
+.blockr-block-browser.is-empty .blockr-block-browser-categories {
+  display: none;
 }
