@@ -1,34 +1,62 @@
+# Putting blocks into a stack. Triggered with block ids (a block's "Add to
+# stack", a selection's "Stack selected"), it lists the board's stacks and
+# "New stack"; a block leaves the stack it was in. Triggered with anything
+# else (an older DAG's canvas "Create stack"), it lists the blocks in no
+# stack to tick, and makes a stack of them.
 add_stack_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
-      sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-      # Pass the board as a reactive: the menu validates the committed
-      # spec (id / name / colour) itself and keeps an open panel in sync
-      # with the board (cards added / removed live), so this handler is a
-      # thin adapter - no dock-side validators, no manual refresh.
-      committed <- stack_menu_server(
-        "menu", board = reactive(board$board)
-      )
-
-      menu_ui <- function() {
-        stack_menu_ui(session$ns("menu"), board$board)
-      }
 
       observeEvent(trigger(), {
-        show_sidebar(
-          sidebar_id, title = "Create new stack", ui = menu_ui()
+
+        brd <- board$board
+        ids <- trigger_block_ids(trigger(), brd)
+
+        if (length(ids)) {
+          open_action_menu(
+            at = trigger_at(trigger),
+            caption = paste("Add", blocks_label(brd, ids), "to"),
+            items = c(
+              stack_menu_rows(brd, setdiff(board_stack_ids(brd), stacks_holding_all(brd, ids))),
+              if (length(board_stack_ids(brd))) list(menu_divider()),
+              list(menu_row("New stack", "new", icon = "plus", quiet = TRUE))
+            ),
+            session = session
+          )
+          return()
+        }
+
+        open_action_menu(
+          at = trigger_at(trigger),
+          caption = "New stack of",
+          items = block_menu_rows(brd, stack_eligible_blocks(brd)),
+          multi = TRUE,
+          session = session
         )
       })
 
-      observeEvent(committed(), {
-        # The menu returns an id-keyed stacks object of `dock_stack`
-        # objects (built via `blockr.dock::new_dock_stack()`), ready to
-        # apply as-is.
-        update(list(stacks = list(add = committed())))
+      observeEvent(input$pick, {
 
-        # The form is a `uiOutput` on the board, so a pinned panel re-renders
-        # itself against the merged state and suggests a fresh stack id.
-        hide_unless_pinned(sidebar_id)
+        brd <- board$board
+        ids <- trigger_block_ids(trigger(), brd)
+
+        if (!is.null(input$pick$values)) {
+          ids <- intersect(pick_values(input$pick), board_block_ids(brd))
+          req(length(ids))
+          update(new_stack_update(brd, ids))
+          return()
+        }
+
+        val <- pick_value(input$pick)
+        req(is_string(val), length(ids))
+
+        if (identical(val, "new")) {
+          update(new_stack_update(brd, ids))
+        } else {
+          stk <- pick_arg(val)
+          req(stk %in% board_stack_ids(brd))
+          update(join_stack_update(brd, stk, ids))
+        }
       })
 
       NULL
@@ -37,87 +65,104 @@ add_stack_action <- function(trigger, board, update, ...) {
   )
 }
 
+# The stack's menu: Rename… and Colour… open a second menu, Blocks… lists
+# the blocks to tick in or out of it, Dissolve stack keeps the blocks.
 edit_stack_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
-      sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-      committed <- stack_menu_server(
-        "menu",
-        board = reactive(board$board),
-        target = reactive(trigger())
-      )
 
-      menu_ui <- function() {
-        stack_menu_ui(
-          session$ns("menu"), board$board, target = trigger()
-        )
+      first <- NULL
+
+      current <- function() {
+        id <- trigger()
+        req(is_string(id), id %in% board_stack_ids(board$board))
+        id
       }
 
-      # The sidebar title carries the stack identifier so users always
-      # see which stack they're editing (the menu body no longer prints
-      # a subtitle of its own).
-      sidebar_title <- function() paste0("Edit stack ", trigger())
-
       observeEvent(trigger(), {
-        show_sidebar(
-          sidebar_id, title = sidebar_title(), ui = menu_ui()
+
+        brd <- board$board
+        id <- current()
+        stk <- board_stacks(brd)[[id]]
+
+        first <<- open_action_menu(
+          at = trigger_at(trigger),
+          head = list(
+            title = stack_name(stk),
+            text = n_blocks(length(stack_blocks(stk)))
+          ),
+          items = list(
+            menu_row("Rename…", "rename"),
+            menu_row("Colour…", "colour"),
+            menu_row("Blocks…", "blocks"),
+            menu_divider(),
+            menu_row("Dissolve stack", "dissolve", icon = "trash", danger = TRUE)
+          ),
+          session = session
         )
       })
 
-      # Close the sidebar the moment the edited stack leaves the board
-      # (removed elsewhere): editing a stack that no longer exists makes
-      # no sense, so don't wait for an "Update" click. Guarded on this
-      # action still owning the open panel, so an edit-then-switch-then-
-      # remove sequence closes nothing another action has since written
-      # into the shared slot.
-      observeEvent(board$board, {
-        id <- trigger()
-        # No-op unless an edit is actually in progress (a valid stack id);
-        # otherwise `trigger()` is NULL / empty (e.g. while another action
-        # mutates the board) and the membership test would error.
-        if (length(id) == 1L && !is.na(id) && nzchar(id) &&
-              !id %in% board_stack_ids(board$board) &&
-              owns_open_sidebar(sidebar_id)) {
-          hide_sidebar(sidebar_id)
-        }
-      }, ignoreInit = TRUE)
+      observeEvent(input$pick, {
 
-      observeEvent(committed(), {
-        id <- trigger()
+        brd <- board$board
+        id <- current()
+        stk <- board_stacks(brd)[[id]]
+        pick <- input$pick
 
-        # Safety net for a race (board change not yet observed when the
-        # user clicks): committing for a stack that's gone would error in
-        # the `mod` update, which looks it up. Bail and close unless `id`
-        # is a present stack.
-        if (!(length(id) == 1L && !is.na(id) && nzchar(id) &&
-                id %in% board_stack_ids(board$board))) {
-          hide_sidebar(sidebar_id)
+        if (!is.null(pick_field(pick))) {
+          name <- trimws(pick_field(pick))
+          req(nzchar(name))
+          update(stack_mod(id, list(name = name)))
           return()
         }
 
-        # The committed stacks are already `dock_stack` objects, so the
-        # `stack_*()` accessors below read the real colour / name values.
-        stk <- committed()[[id]]
+        if (!is.null(pick$values)) {
+          ids <- intersect(pick_values(pick), board_block_ids(brd))
+          update(stack_mod(id, list(blocks = ids)))
+          return()
+        }
 
-        # `mod` entries are partial-arg deltas applied via `update_stack()`
-        # on the blockr.core side (a full `stacks` object trips
-        # `board_update_stacks_mod_entry_invalid`), so unpack the stack
-        # into its fields. Reserved key `blocks` replaces the member ids;
-        # the rest update the named attributes.
-        update(list(
-          stacks = list(
-            mod = set_names(
-              list(list(
-                blocks = stack_blocks(stk),
-                name = stack_name(stk),
-                color = stack_color(stk)
-              )),
-              id
+        val <- pick_value(pick)
+        req(is_string(val))
+
+        switch(
+          pick_step(val),
+          rename = open_action_menu(
+            at = trigger_at(trigger),
+            caption = "Rename stack",
+            field = menu_field(
+              stack_name(stk), empty_msg = "A stack needs a name"
+            ),
+            back = first,
+            session = session
+          ),
+          colour = if (is.null(pick_arg(val))) {
+            open_action_menu(
+              at = trigger_at(trigger),
+              caption = paste("Colour of", stack_name(stk)),
+              items = colour_menu_rows(brd, id),
+              back = first,
+              session = session
             )
-          )
-        ))
-
-        hide_unless_pinned(sidebar_id)
+          } else {
+            col <- pick_arg(val)
+            req(is_hex_color(col))
+            update(stack_mod(id, list(color = col)))
+          },
+          blocks = open_action_menu(
+            at = trigger_at(trigger),
+            caption = paste("Blocks in", stack_name(stk)),
+            items = block_menu_rows(
+              brd,
+              union(stack_blocks(stk), stack_eligible_blocks(brd)),
+              checked = stack_blocks(stk)
+            ),
+            multi = TRUE,
+            back = first,
+            session = session
+          ),
+          dissolve = update(list(stacks = list(rm = id)))
+        )
       })
 
       NULL
@@ -137,4 +182,125 @@ remove_stack_action <- function(trigger, board, update, ...) {
     },
     id = "remove_stack_action"
   )
+}
+
+# ---- helpers --------------------------------------------------------------
+
+# The block ids a trigger names, or none: an older DAG fires add_stack with
+# TRUE from the canvas. Ids sent from the browser as an array arrive as a
+# list.
+trigger_block_ids <- function(value, board) {
+  value <- unlist(value)
+  if (!is.character(value)) {
+    return(character())
+  }
+  intersect(value, board_block_ids(board))
+}
+
+blocks_label <- function(board, ids) {
+  if (length(ids) == 1L) block_label(board, ids) else paste(length(ids), "blocks")
+}
+
+n_blocks <- function(n) if (n == 1L) "1 block" else paste(n, "blocks")
+
+# The stacks that already hold every one of `ids`: adding them there would
+# change nothing.
+stacks_holding_all <- function(board, ids) {
+  stks <- board_stacks(board)
+  names(stks)[lgl_ply(stks, function(s) all(ids %in% stack_blocks(s)))]
+}
+
+stack_square <- function() {
+  paste0(
+    "<svg viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\">",
+    "<rect x=\"2\" y=\"2\" width=\"12\" height=\"12\" rx=\"3\"/></svg>"
+  )
+}
+
+stack_menu_rows <- function(board, ids) {
+  stks <- board_stacks(board)
+  lapply(
+    ids,
+    function(id) {
+      menu_row(
+        label = stack_name(stks[[id]]),
+        value = paste0("stack:", id),
+        meta = n_blocks(length(stack_blocks(stks[[id]]))),
+        mark = list(icon = stack_square(), color = stack_color(stks[[id]])),
+        keywords = id
+      )
+    }
+  )
+}
+
+# The current colour, then colours the dock suggests next to the board's
+# other stacks, then the browser's picker.
+colour_menu_rows <- function(board, id) {
+  stks <- board_stacks(board)
+  cur <- stack_color(stks[[id]])
+  others <- chr_ply(stks[setdiff(names(stks), id)], stack_color)
+  sugg <- setdiff(toupper(suggest_new_colors(c(others, cur), n = 6L)), toupper(cur))
+
+  swatch <- function(col, label, value) {
+    menu_row(
+      label, value,
+      mark = list(icon = stack_square(), color = col),
+      meta = if (!identical(label, col)) toupper(col)
+    )
+  }
+
+  c(
+    list(swatch(cur, "Current", paste0("colour:", cur)), menu_divider()),
+    lapply(sugg, function(col) swatch(col, col, paste0("colour:", col))),
+    list(
+      menu_divider(),
+      menu_row(
+        "Custom…", "colour", quiet = TRUE,
+        colour_picker = TRUE, colour = cur
+      )
+    )
+  )
+}
+
+stack_mod <- function(id, delta) {
+  list(stacks = list(mod = set_names(list(delta), id)))
+}
+
+# A block sits in one stack at most: the stacks the blocks leave, as mod
+# entries.
+leave_stacks <- function(board, ids, keep = NULL) {
+  stks <- board_stacks(board)
+  out <- list()
+  for (sid in setdiff(names(stks), keep)) {
+    mem <- stack_blocks(stks[[sid]])
+    if (any(ids %in% mem)) {
+      out[[sid]] <- list(blocks = setdiff(mem, ids))
+    }
+  }
+  out
+}
+
+join_stack_update <- function(board, stack_id, ids) {
+  mem <- stack_blocks(board_stacks(board)[[stack_id]])
+  mod <- leave_stacks(board, ids, keep = stack_id)
+  mod[[stack_id]] <- list(blocks = union(mem, ids))
+  list(stacks = list(mod = mod))
+}
+
+# "Stack 1", "Stack 2", …: the first number no stack on the board is called.
+next_stack_name <- function(board) {
+  taken <- chr_ply(board_stacks(board), function(s) stack_name(s) %||% "")
+  n <- 1L
+  while (paste("Stack", n) %in% taken) n <- n + 1L
+  paste("Stack", n)
+}
+
+new_stack_update <- function(board, ids) {
+  stks <- board_stacks(board)
+  col <- suggest_new_colors(chr_ply(stks, stack_color))
+  stk <- new_dock_stack(blocks = ids, name = next_stack_name(board), color = col)
+  upd <- list(stacks = list(add = as_stacks(set_names(list(stk), seed_stack_id(board)))))
+  mod <- leave_stacks(board, ids)
+  if (length(mod)) upd$stacks$mod <- mod
+  upd
 }

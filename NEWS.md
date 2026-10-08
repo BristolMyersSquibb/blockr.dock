@@ -1,5 +1,15 @@
 # blockr.dock (development version)
 
+* Creating and editing a stack open menus instead of the actions sidebar
+  (#544). A stack's menu has Rename…, a name field in a second menu;
+  Colour…, the current colour, colours that differ from the other stacks
+  and the browser's picker; Blocks…, the blocks to tick in or out, applied
+  when the menu closes; and Dissolve stack, which keeps the blocks.
+  `add_stack_action` fired with block ids lists the board's stacks and "New
+  stack"; a block leaves the stack it was in. A new stack is called "Stack
+  1", "Stack 2" and so on. Fired without blocks, as an older blockr.dag does
+  from the canvas, it asks which blocks to stack.
+
 * Creating and editing a link open menus where the gesture happened instead
   of the actions sidebar (#544). "Connect to…" lists the blocks this one can
   send to and take from; a target with more than one free input asks which

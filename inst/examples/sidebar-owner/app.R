@@ -2,13 +2,13 @@ library(shiny)
 library(blockr.core)
 library(blockr.dock)
 
-# Two buttons firing shared-panel actions straight off the trigger bundle -
+# A button firing a shared-panel action straight off the trigger bundle -
 # the path a consumer's context menu takes, and the one that declares nothing
-# about which panel the action fills.
+# about which panel the action fills. Edit inputs is the one board action left
+# on the actions sidebar (#544).
 fire_ui <- function(id, board) {
   div(
-    actionButton(NS(id, "edit_inputs"), "Inputs of b"),
-    actionButton(NS(id, "edit_stack"), "Edit s1")
+    actionButton(NS(id, "edit_inputs"), "Inputs of b")
   )
 }
 
@@ -27,7 +27,6 @@ fire_srv <- function(id, board, update, actions, ...) {
       }
 
       observeEvent(input$edit_inputs, fire("edit_inputs_action", "b"))
-      observeEvent(input$edit_stack, fire("edit_stack_action", "s1"))
 
       exportTestValues(owned = owned())
 

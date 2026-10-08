@@ -43,7 +43,8 @@ menu_srv <- function(id, board, update, actions, ...) {
       exportTestValues(
         blocks = names(board_blocks(board$board)),
         links = link_specs(board$board),
-        stacks = lapply(board_stacks(board$board), stack_blocks)
+        stacks = lapply(board_stacks(board$board), stack_blocks),
+        stack_names = lapply(board_stacks(board$board), stack_name)
       )
 
       list(state = list())

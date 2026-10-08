@@ -134,6 +134,13 @@ wait_sel <- function(app, selector, present = TRUE, diagnose = NULL,
 
 actions_panel <- "my_board-actions_sidebar"
 
+# The board options panel: with the link and stack actions on menus (#544),
+# it is the side panel the dismissal and pin tests open.
+options_panel <- "my_board-settings_sidebar"
+open_options <- function(app) {
+  click_sel(app, '[data-blockr-sidebar-target="my_board-settings_sidebar"]')
+}
+
 press_esc <- function(app) {
   app$run_js(
     paste0(
@@ -167,29 +174,29 @@ test_that("Escape and an outside click close an unpinned panel", {
   withr::defer(app$stop())
 
   expect_identical(
-    panel_state(app, actions_panel),
+    panel_state(app, options_panel),
     list(open = FALSE, pinned = FALSE)
   )
 
-  app$click(fixture("add_stack"))
-  wait_panel(app, actions_panel, open = TRUE)
+  open_options(app)
+  wait_panel(app, options_panel, open = TRUE)
 
   expect_identical(
-    panel_state(app, actions_panel),
+    panel_state(app, options_panel),
     list(open = TRUE, pinned = FALSE)
   )
 
   press_esc(app)
-  wait_panel(app, actions_panel, open = FALSE)
+  wait_panel(app, options_panel, open = FALSE)
 
-  app$click(fixture("add_stack"))
-  wait_panel(app, actions_panel, open = TRUE)
+  open_options(app)
+  wait_panel(app, options_panel, open = TRUE)
 
   click_outside(app)
-  wait_panel(app, actions_panel, open = FALSE)
+  wait_panel(app, options_panel, open = FALSE)
 
   expect_identical(
-    panel_state(app, actions_panel),
+    panel_state(app, options_panel),
     list(open = FALSE, pinned = FALSE)
   )
 })
@@ -201,14 +208,14 @@ test_that("a pinned panel survives Escape and an outside click", {
   app <- menus_app("sidebar-pinned")
   withr::defer(app$stop())
 
-  app$click(fixture("add_stack"))
-  wait_panel(app, actions_panel, open = TRUE)
+  open_options(app)
+  wait_panel(app, options_panel, open = TRUE)
 
-  click_sel(app, paste0("#", actions_panel, " .blockr-sidebar-pin"))
+  click_sel(app, paste0("#", options_panel, " .blockr-sidebar-pin"))
   app$wait_for_idle()
 
   expect_identical(
-    panel_state(app, actions_panel),
+    panel_state(app, options_panel),
     list(open = TRUE, pinned = TRUE)
   )
 
@@ -217,15 +224,15 @@ test_that("a pinned panel survives Escape and an outside click", {
   app$wait_for_idle()
 
   expect_identical(
-    panel_state(app, actions_panel),
+    panel_state(app, options_panel),
     list(open = TRUE, pinned = TRUE)
   )
 
   # The close button is the one dismissal that overrides a pin.
-  click_sel(app, paste0("#", actions_panel, " .blockr-sidebar-close"))
-  wait_panel(app, actions_panel, open = FALSE)
+  click_sel(app, paste0("#", options_panel, " .blockr-sidebar-close"))
+  wait_panel(app, options_panel, open = FALSE)
 
-  expect_false(panel_state(app, actions_panel)$open)
+  expect_false(panel_state(app, options_panel)$open)
 })
 
 # An overlay panel floats on open and only reflows the board once pinned, which
@@ -266,17 +273,17 @@ test_that("an overlay panel reflows the board only once pinned", {
     app$get_js(
       sprintf(
         "document.getElementById('%s').getBoundingClientRect().width",
-        actions_panel
+        options_panel
       )
     )
   }
 
-  app$click(fixture("add_stack"))
-  wait_panel(app, actions_panel, open = TRUE)
+  open_options(app)
+  wait_panel(app, options_panel, open = TRUE)
 
   expect_false(pushed())
 
-  click_sel(app, paste0("#", actions_panel, " .blockr-sidebar-pin"))
+  click_sel(app, paste0("#", options_panel, " .blockr-sidebar-pin"))
   app$wait_for_idle()
 
   expect_true(pushed())
@@ -286,109 +293,13 @@ test_that("an overlay panel reflows the board only once pinned", {
   # reflowed the board, so the two agree only to layout's sub-pixel rounding.
   expect_equal(width(), panel_width(), tolerance = 1e-6)
 
-  click_sel(app, paste0("#", actions_panel, " .blockr-sidebar-pin"))
+  click_sel(app, paste0("#", options_panel, " .blockr-sidebar-pin"))
   app$wait_for_idle()
 
   expect_false(pushed())
   expect_equal(width(), 0)
 })
 
-wait_stack_form <- function(app, action) {
-  wait_sel(app, paste0("#my_board-", action, "-menu-stack_name"))
-}
-
-stack_card_selected <- function(app, id) {
-  app$get_js(
-    sprintf(
-      "document.querySelector(%s).classList.contains('card-selected')",
-      shQuote(card(id))
-    )
-  )
-}
-
-# The menu holds its selection in a client-side list, separate from which cards
-# the search leaves visible. Filtering to nothing and back tells the two apart:
-# a selection stored on the visible cards alone would not survive it.
-test_that("the stack menu holds its selection across a search that hides it", {
-
-  skip_on_cran()
-
-  app <- menus_app("stack-create")
-  withr::defer(app$stop())
-
-  app$click(fixture("add_stack"))
-  wait_panel(app, actions_panel, open = TRUE)
-  wait_stack_form(app, "add_stack_action")
-
-  scope <- paste0("#", actions_panel)
-  selected <- function() {
-    js_count(app, paste0(scope, " .blockr-block-browser-card.card-selected"))
-  }
-  visible <- function() {
-    js_count(app, paste0(scope, " .blockr-block-browser-card:not(.hidden)"))
-  }
-
-  # Blocks r and s are stacked already, so the create pool offers a, b and m.
-  expect_identical(visible(), 3L)
-  expect_identical(selected(), 0L)
-
-  click_sel(app, card("a"))
-  click_sel(app, card("b"))
-
-  expect_identical(selected(), 2L)
-
-  type_search(app, scope, "zzz_matches_nothing")
-
-  expect_identical(visible(), 0L)
-  expect_identical(selected(), 2L)
-
-  type_search(app, scope, "")
-
-  expect_identical(visible(), 3L)
-  expect_identical(selected(), 2L)
-
-  set_field(app, "#my_board-add_stack_action-menu-stack_name", "My stack")
-  click_sel(app, ".blockr-stack-menu-confirm")
-  wait_panel(app, actions_panel, open = FALSE)
-
-  stacks <- exported(app, "stacks")
-  added <- setdiff(names(stacks), "s1")
-
-  expect_length(added, 1L)
-  expect_setequal(unlst(stacks[[added]]), c("a", "b"))
-})
-
-test_that("the edit flow arrives with the stack's members selected", {
-
-  skip_on_cran()
-
-  app <- menus_app("stack-edit")
-  withr::defer(app$stop())
-
-  app$click(fixture("edit_stack"))
-  wait_panel(app, actions_panel, open = TRUE)
-  wait_stack_form(app, "edit_stack_action")
-
-  expect_true(stack_card_selected(app, "r"))
-  expect_true(stack_card_selected(app, "s"))
-  expect_false(stack_card_selected(app, "a"))
-
-  click_sel(app, card("r"))
-
-  expect_false(stack_card_selected(app, "r"))
-
-  click_sel(app, ".blockr-stack-menu-confirm")
-  wait_panel(app, actions_panel, open = FALSE)
-
-  expect_setequal(unlst(exported(app, "stacks")[["s1"]]), "s")
-})
-
-# The inputs menu is the one that keeps its panel open across commits, so there
-# is no close to gate on. Its rows are a `uiOutput` re-rendered from the board
-# after every commit, which makes the row list itself the client-visible proof
-# that an edit landed. Its board is a fixture of its own: only a variadic block
-# grows rows carrying a remove button and a name field, and only fixed link ids
-# let an assertion name the slot that moved.
 inputs_app <- function(name) menus_app(name, "sidebar-inputs")
 
 inputs_row <- function(link_id) {
@@ -1010,4 +921,67 @@ test_that("Connect to links a block, asking for the input where there is a choic
 
   app$wait_for_value(export = fixture("links"), ignore = list(character()))
   expect_identical(exported(app, "links"), "a>m>y")
+})
+
+# The stack's menu (#544): Blocks… ticks members and applies them when the menu
+# closes; Escape drops the ticks. Rename… opens a field in a second menu.
+test_that("the stack menu's Blocks applies its ticks on an outside click only", {
+
+  skip_on_cran()
+
+  app <- menus_app("stack-menu-blocks")
+  withr::defer(app$stop())
+
+  open_blocks <- function() {
+    app$click(fixture("edit_stack"))
+    wait_sel(app, menu_sel)
+    menu_row_click(app, "Blocks")
+    app$wait_for_js(
+      "!!document.querySelector('body > .blockr-menu.blockr-menu--multi')"
+    )
+  }
+
+  open_blocks()
+  menu_row_click(app, "Dataset")
+  press(app, "Escape")
+  app$wait_for_idle()
+  expect_setequal(unlst(exported(app, "stacks")$s1), c("r", "s"))
+
+  # Escape went back to the stack's menu; close it and start again.
+  press(app, "Escape")
+  open_blocks()
+  before <- exported(app, "stacks")
+  menu_row_click(app, "Dataset")
+  # Blockr.layer reads the pointer, not the mouse.
+  app$run_js(
+    "document.body.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}))"
+  )
+  app$wait_for_value(export = fixture("stacks"), ignore = list(before))
+  expect_setequal(unlst(exported(app, "stacks")$s1), c("r", "s", "a"))
+})
+
+test_that("the stack menu's Rename opens a field that renames on Enter", {
+
+  skip_on_cran()
+
+  app <- menus_app("stack-menu-rename")
+  withr::defer(app$stop())
+
+  before <- exported(app, "stack_names")
+  app$click(fixture("edit_stack"))
+  wait_sel(app, menu_sel)
+  menu_row_click(app, "Rename")
+  wait_sel(app, ".blockr-action-menu-field__input")
+
+  app$run_js(
+    paste0(
+      "var f = document.querySelector('.blockr-action-menu-field__input');",
+      "f.value = 'Heads';",
+      "f.dispatchEvent(new Event('input', {bubbles: true}));"
+    )
+  )
+  press(app, "Enter", "document.querySelector('.blockr-action-menu-field__input')")
+
+  app$wait_for_value(export = fixture("stack_names"), ignore = list(before))
+  expect_identical(unlst(exported(app, "stack_names")$s1), "Heads")
 })
