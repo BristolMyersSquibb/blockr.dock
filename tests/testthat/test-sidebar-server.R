@@ -206,29 +206,6 @@ test_that("a panel reports the action that wrote its body", {
 
   expect_identical(owned(), list(panel = panel, open = TRUE, pinned = TRUE))
 
-  # A second surface fills the same panel. Nothing declared which panel it
-  # writes, so a stale stamp here is what a consumer would re-fire into --
-  # and the query says so: at the moment it fires, edit_stack holds nothing.
-  app$click("my_board-ext_fire-edit_stack")
-  app$wait_for_idle()
-
-  expect_identical(
-    app$get_value(input = panel)$owner, "my_board-edit_stack_action"
-  )
-  expect_identical(stamped_owner(), "my_board-edit_stack_action")
-  expect_null(owned())
-
-  # Ownership moved with the write, so the query follows it: edit_stack now
-  # answers for the panel...
-  app$click("my_board-ext_fire-edit_stack")
-  app$wait_for_idle()
-
-  expect_identical(owned(), list(panel = panel, open = TRUE, pinned = TRUE))
-
-  # ... and edit_inputs, which filled the very same panel earlier, no longer
-  # does. That flip is what a consumer re-fires (or does not) on.
-  app$click("my_board-ext_fire-edit_inputs")
-  app$wait_for_idle()
-
-  expect_null(owned())
+  # Only edit inputs writes the actions panel now (#544), so the flip between
+  # two writers this test also covered has no second writer to show it.
 })
