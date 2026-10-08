@@ -57,25 +57,23 @@
     });
   }
 
-  // Adding a panel to the page: the board's blocks and extensions that are
-  // not on it yet; a pick sends the panel id.
+  // Adding panels to the page: the board's blocks and extensions that are
+  // not on it yet, ticked and sent together as the menu closes (not on
+  // Escape).
   function openPanels(m) {
     var at = anchorFor(m.at);
-    var items = (m.items || []).map(function (it) {
-      if (!it.value) return it;
-      var value = it.value;
-      return Object.assign({}, it, {
-        onSelect: function () {
-          Shiny.setInputValue(m.pick, { value: value, nonce: ++nonce },
-                              { priority: 'event' });
-        }
-      });
-    });
     Blockr.menu(at.anchor, {
       caption: m.caption,
-      filter: items.length > 8 ? 'Search' : false,
+      filter: (m.items || []).length > 8 ? 'Search' : false,
       minWidth: 260,
-      items: items,
+      multi: true,
+      items: m.items || [],
+      onChange: function (picked) {
+        Shiny.setInputValue(m.pick, {
+          values: picked.map(function (it) { return it.value; }),
+          nonce: ++nonce
+        }, { priority: 'event' });
+      },
       onClose: function () {
         if (at.temp) at.temp.remove();
       }

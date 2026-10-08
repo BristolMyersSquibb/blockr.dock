@@ -116,6 +116,31 @@ test_that("board server", {
 
   expect_identical(isolate(n_panels()), 2L)
 
+  # Both off again, then back with one close of the menu: ticked together.
+  for (p in list(as_block_panel_id("a"), as_ext_panel_id("edit_board"))) {
+    do.call(
+      ms$setInputs,
+      set_names(list(p), mod_input(dock_input("panel-to-remove")))
+    )
+  }
+  expect_identical(isolate(n_panels()), 0L)
+
+  do.call(
+    ms$setInputs,
+    set_names(
+      list(list(
+        values = list(
+          as.character(as_block_panel_id("a")),
+          as.character(as_ext_panel_id("edit_board"))
+        ),
+        nonce = 3L
+      )),
+      mod_input("add_dock_panel_pick")
+    )
+  )
+
+  expect_identical(isolate(n_panels()), 2L)
+
   ms2 <- new_mock_session()
   withr::defer(if (!ms2$isClosed()) ms2$close())
 

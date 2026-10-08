@@ -1066,15 +1066,21 @@ manage_dock <- function(
       )
     )
 
-    # A pick in the add-panel menu emits an `add` panel-op; the apply observer
-    # places the panel. The `+` was clicked on a group, so anchor the add
-    # `within` a member of that group (`near`); an empty dock has no group and
-    # falls back to the view's default spot.
+    # The add-panel menu ticks panels and sends them as it closes; they go out
+    # as one `add` panel-op, which the apply observer places. The `+` was
+    # clicked on a group, so anchor the add `within` a member of that group
+    # (`near`); an empty dock has no group and falls back to the view's
+    # default spot. A single `value` is a pick from a menu without ticks.
     observeEvent(
       input$add_dock_panel_pick,
       {
-        pick <- input$add_dock_panel_pick$value
-        req(is_string(pick), nzchar(pick))
+        sent <- input$add_dock_panel_pick
+        pick <- if (!is.null(sent$values)) {
+          as.character(unlist(sent$values))
+        } else {
+          sent$value
+        }
+        req(is.character(pick), length(pick), all(nzchar(pick)))
 
         ref_group <- input[[dock_input("panel-to-add")]]
 
@@ -1294,7 +1300,8 @@ reorder_view_observer <- function(client_views, session, update) {
 #'
 #' The "+" menu (Blockr.menu, add-block-menu.js), listing the blocks and
 #' extensions not yet shown in the dock: mark, title and the block type as
-#' meta text. A pick is `add_dock_panel_pick`. If none are available,
+#' meta text. Several can be ticked; they arrive together as
+#' `add_dock_panel_pick` when the menu closes. If none are available,
 #' either triggers `suggest_new` or notifies the user.
 #'
 #' @param dock Dock proxy.
