@@ -4,20 +4,16 @@ board_ui.dock_board <- function(
   x,
   plugins = board_plugins(x),
   options = blockr.core::blockr_app_options(x),
+  navbar = blockr_app_navbar(x, plugins),
   ...
 ) {
   stopifnot(is_string(id))
 
-  views <- board_views(x)
-
-  # View nav in the navbar -- always present, since boards always carry a
-  # `dock_views` collection (single-page boards have one auto-named "Page"
-  # view). The nav needs only structure (ids, names, active), not geometry.
-  v_nav <- view_nav_ui(id, views)
+  validate_navbar_items(navbar)
 
   # One dock output per view, stacked inside the view container; visibility
   # is toggled by CSS based on the active view.
-  dock_outputs <- dock_outputs_ui(id, views)
+  dock_outputs <- dock_outputs_ui(id, board_views(x))
 
   tagList(
     # Ahead of blockr_dock_dep(), so the shared tokens and theme land first
@@ -46,66 +42,7 @@ board_ui.dock_board <- function(
         ctrl_ui = if ("ctrl_block" %in% names(plugins)) plugins[["ctrl_block"]]
       )
     ),
-    div(
-      class = "blockr-navbar",
-      style = sprintf("--blockr-spinner-delay: %dms;", spinner_delay_ms()),
-      div(
-        class = "blockr-navbar-left",
-        if ("preserve_board" %in% names(plugins)) {
-          board_ui(id, plugins[["preserve_board"]], x)
-        }
-      ),
-      div(
-        class = "blockr-navbar-right",
-        # Busy spinner. Always rendered and always visible, driven purely by CSS
-        # off the `.shiny-busy` class Shiny toggles on <html> during a flush --
-        # no server observer. Idle it is a faint, closed ring; a flush scoped to
-        # real block evaluation (a bare panel switch does not qualify) paints a
-        # darker arc onto it and spins it. It leads this right group (ahead of
-        # the view nav), where its 16px ring is not juxtaposed against the
-        # smaller gear; because it is always painted (never shown/hidden) its
-        # constant slot shifts no neighbour. The busy appearance is held for
-        # `--blockr-spinner-delay` ms (set on the navbar above), so a
-        # sub-threshold flush never flickers it. The ring spins inside a static
-        # slot that carries a hover tooltip naming the state (idle / computing),
-        # so the label does not turn with it. Announced like the lock indicator.
-        tags$span(
-          class = "blockr-navbar-spinner-slot",
-          tags$span(
-            class = "blockr-navbar-spinner",
-            role = "status",
-            `aria-label` = "Busy"
-          )
-        ),
-        v_nav,
-        if (is_dock_locked()) {
-          tags$span(
-            class = "blockr-lock-indicator",
-            `data-blockr-tooltip` = "Editing is disabled by this deployment.",
-            `aria-label` = "Read-only mode",
-            role = "status",
-            bsicons::bs_icon("lock-fill"),
-            tags$span(
-              class = "blockr-lock-indicator-label",
-              "Read-only"
-            )
-          )
-        },
-        # Pure-JS open trigger via `data-blockr-sidebar-target`. The
-        # settings sidebar's body is pre-rendered into its mount below, so
-        # no server observer is needed: clicking the gear toggles the
-        # panel client-side. `tags$button` (not `actionButton`) because
-        # there is no `input$<id>` to wire.
-        tags$button(
-          type = "button",
-          class = "btn action-button blockr-navbar-icon-btn",
-          `data-blockr-sidebar-target` = NS(id, "settings_sidebar"),
-          `aria-label` = "Board options",
-          `data-blockr-tooltip` = "Board options",
-          bsicons::bs_icon("gear")
-        )
-      )
-    ),
+    navbar_ui(id, navbar, x),
     dock_outputs,
     off_canvas(
       id = NS(id, "exts_offcanvas"),
@@ -125,7 +62,7 @@ board_ui.dock_board <- function(
     # and composing `NS(board$board_id, "actions_sidebar")` at server time.
     # Contract: one sidebar = one concern. We mount two on the right
     # with different modes so they coexist cleanly when both are open
-    # (adding a block is the "+" menu, add-block-menu.R, not a sidebar):
+    # (adding a block is the "+" menu, action-menu.R, not a sidebar):
     #   * "actions_sidebar":  the trigger-specific editors (add and edit
     #     link, add and edit stack, block inputs). Body is populated
     #     server-side via `show_sidebar()` because each ships a
@@ -171,61 +108,6 @@ dock_outputs_ui <- function(id, views) {
     id = NS(id, "view_container"),
     class = "blockr-view-container blockr-attr-output"
   )
-}
-
-#' Build the body of the board-options sidebar.
-#'
-#' Returns the options sidebar's body: a list of option categories, each
-#' opening a page with that category's options (see
-#' `options_sidebar_ui()`). Called at server time from
-#' `board_server_callback()` when the user clicks the navbar gear, and
-#' passed to `show_sidebar()`.
-#'
-#' Caller-supplied `options` (threaded down from `serve(board, options =
-#' custom_options(...))` via `blockr_app_server.dock_board()` →
-#' `board_server_callback()` → `settings_observer()`) wins. When the
-#' caller passed nothing, falls back to `blockr.core::blockr_app_options(x)`
-#' so the sidebar still includes options contributed by blocks on the
-#' board and by registered block constructors, the same set `serve()`
-#' would have computed on the default path.
-#'
-#' @param id Board module id.
-#' @param x Current board (`board$board`).
-#' @param plugins Board plugins.
-#' @param options Augmented board options (board + block contributions).
-#'   `NULL` means "no caller override"; the default is recomputed via
-#'   `blockr.core::blockr_app_options(x)`.
-#' @noRd
-settings_body <- function(
-  id,
-  x,
-  plugins = board_plugins(x),
-  options = NULL
-) {
-  opt_ui_or_null <- function(plg, plgs, x) {
-    if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
-  }
-
-  generate_code <- div(
-    id = "generate_code",
-    opt_ui_or_null("generate_code", plugins, x)
-  )
-
-  # Locked board: the options pages write board state via
-  # set_board_option_value(), which core's gate rejects while locked. Drop them
-  # so the settings sidebar offers only the read-only generated-code export.
-  if (is_dock_locked()) {
-    return(generate_code)
-  }
-
-  # Caller-supplied `options` (threaded from `serve()` through
-  # `blockr_app_server.dock_board()` / `settings_observer()`) wins; fall
-  # back to the recomputed default only when the caller has nothing to say.
-  options <- coal(options, blockr.core::blockr_app_options(x))
-
-  stopifnot(is_board_options(options))
-
-  options_sidebar_ui(id, options, generate_code = generate_code)
 }
 
 spinner_delay_ms <- function() {

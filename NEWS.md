@@ -1,5 +1,24 @@
 # blockr.dock (development version)
 
+* The navbar is drawn from a list of items, the dock's own controls included,
+  which an app adds to, reorders or drops from through `serve()`, as it does
+  plugins and options. An item, made by `navbar_item()`, has a UI and may have
+  a server, which runs once per session under the item's namespace. The call
+  `serve(board, navbar = custom_navbar(item))` appends one to the default, and
+  `navbar` takes any function of the board and its plugins that returns
+  items, such as one that reorders or drops from `default_navbar_items()`
+  with `[`. The defaults are the plugin's piece, placed by
+  `plugin_navbar_item()`, a spacer, the busy indicator, the view menu, now set
+  apart by a short rule, the read-only indicator and the board options. On a
+  narrow bar the plugin's piece gives way first and the rest keeps its width.
+  An item whose output renders nothing leaves no gap (#529).
+
+* **Breaking:** the navbar's `.blockr-navbar-left` and `.blockr-navbar-right`
+  groups are gone, and the plugin's piece no longer takes up the free space, so
+  a spacer inside it has nothing to push against. Since `serve()` hands
+  `blockr_app_ui()` the server's arguments as well, the dock's method appends
+  only its unnamed `...` to the page.
+
 * A locked board can leave parts of its layout to the reader. With the
   `lock_resize` blockr option set to `FALSE`, a reader can resize panels by
   dragging the borders between them, to make room for a wide table, and with

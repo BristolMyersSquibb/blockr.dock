@@ -1,6 +1,6 @@
 Package: blockr.dock
 Title: A Docking Layout Manager for 'blockr'
-Version: 0.1.3.9002
+Version: 0.1.3.9003
 Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",
@@ -57,19 +57,20 @@ Collate:
     'action-block.R'
     'action-inputs.R'
     'action-link.R'
+    'action-menu.R'
     'action-stack.R'
     'action-ui.R'
     'action-utils.R'
-    'add-block-menu.R'
     'block-meta.R'
     'block-ui.R'
+    'board-options.R'
     'board-plugins.R'
     'board-server.R'
     'board-ui.R'
-    'compact-option.R'
     'dock-board.R'
     'dock-grid.R'
     'dock-layout.R'
+    'dock-navbar.R'
     'dock-rail.R'
     'dock-stack.R'
     'dock-view.R'
@@ -78,8 +79,8 @@ Collate:
     'ext-edit.R'
     'ext-meta.R'
     'ext-ui.R'
-    'options-sidebar.R'
     'panel-id.R'
+    'panel-menu.R'
     'panel-ops.R'
     'panel-ref.R'
     'plugin-block.R'
@@ -90,7 +91,6 @@ Collate:
     'sidebar-inputs.R'
     'sidebar-link.R'
     'sidebar-stack.R'
-    'sync-rails-option.R'
     'utils-dock.R'
     'utils-misc.R'
     'utils-pkg.R'

@@ -15,6 +15,9 @@
 #'   server but not to callbacks, so `blockr_app_server.dock_board()` captures
 #'   and forwards them here; stashed on `active_dock` so the deferred card-build
 #'   paths see the served ctrl / edit UI. Defaults to the board default set.
+#' @param navbar The navbar items `blockr_app_server.dock_board()` resolved, so
+#'   that the servers of an app's items run here, under the board's namespace.
+#'   Defaults to the board's default items.
 #' @param session Shiny session.
 #'
 #' @return List with `dock`, `actions`, `view_data`, and extension
@@ -24,6 +27,10 @@
 #' @noRd
 board_server_callback <- function(board, update, visibility, ...,
                                   plugins = board_plugins(isolate(board$board)),
+                                  navbar = blockr_app_navbar(
+                                    isolate(board$board),
+                                    plugins
+                                  ),
                                   session = get_session()) {
   initial_board <- isolate(board$board)
 
@@ -212,6 +219,8 @@ board_server_callback <- function(board, update, visibility, ...,
   )
 
   register_actions(actions, triggers, board, update, ext_res)
+
+  navbar_server(navbar, board)
 
   # Returned to core, spread into every plugin's args (see the two-bundle note
   # above): `dock` for block placement, `view_data` for serialization, `actions`
@@ -1288,83 +1297,6 @@ reorder_view_observer <- function(client_views, session, update) {
       update(list(views = list(order = dragged)))
     }
   })
-}
-
-#' Open the menu for adding a panel to the dock.
-#'
-#' The "+" menu (Blockr.menu, add-block-menu.js), listing the blocks and
-#' extensions not yet shown in the dock: mark, title and the block type as
-#' meta text. A pick is `add_dock_panel_pick`. If none are available,
-#' either triggers `suggest_new` or notifies the user.
-#'
-#' @param dock Dock proxy.
-#' @param board Reactive board state.
-#' @param suggest_new If truthy, called when no panels are available
-#'   (used to prompt adding a new block).
-#' @param panels Currently visible panels (auto-detected if `NULL`).
-#' @param at Where the menu opens (see [new_action()]).
-#' @param session Shiny session.
-#'
-#' @noRd
-suggest_panels_to_add <- function(
-  dock,
-  board,
-  suggest_new = FALSE,
-  panels = NULL,
-  at = NULL,
-  session = get_session()
-) {
-  ns <- session$ns
-
-  if (is.null(panels)) {
-    panels <- dock_panel_ids(dock$proxy)
-  }
-
-  stopifnot(is.list(panels), all(lgl_ply(panels, is_dock_panel_id)))
-
-  blk_opts <- setdiff(
-    board_block_ids(board$board),
-    as_obj_id(panels[lgl_ply(panels, is_block_panel_id)])
-  )
-
-  ext_opts <- setdiff(
-    dock_ext_ids(board$board),
-    as_obj_id(panels[lgl_ply(panels, is_ext_panel_id)])
-  )
-
-  items <- add_panel_menu_items(board$board, blk_opts, ext_opts)
-
-  if (length(items)) {
-    session$sendCustomMessage(
-      "blockr-add-panel-menu",
-      list(
-        pick = ns("add_dock_panel_pick"),
-        caption = "Show on this page",
-        at = at,
-        items = items
-      )
-    )
-  } else if (!isFALSE(suggest_new)) {
-    suggest_new(TRUE)
-  } else if (
-    length(board_block_ids(board$board)) == 0L &&
-      length(dock_ext_ids(board$board)) == 0L
-  ) {
-    notify("The board has no blocks yet. Add a new block to get started.")
-  } else {
-    notify(
-      paste(
-        "All blocks and extensions are already in this view.",
-        "Add a new block to the board first."
-      )
-    )
-  }
-}
-
-#' Default icon for extensions in the panel picker.
-#' @noRd
-extension_default_icon <- function() {
-  as.character(bsicons::bs_icon("gear"))
 }
 
 #' Build a single selectize option entry.
