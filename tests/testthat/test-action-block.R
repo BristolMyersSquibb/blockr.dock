@@ -260,7 +260,7 @@ test_that("prepend block action: target_input picks the link slot", {
   )
 })
 
-test_that("block actions open the + menu from their own module", {
+test_that("block actions open their menu from their own module", {
   # The pick comes back as the module's own `browser-commit`, so the menu
   # has to be opened with the action's session: its namespace names the
   # input the pick is sent to.
@@ -441,7 +441,7 @@ test_that("prepend: NULL target_input falls back to only slot", {
   )
 })
 
-test_that("the + menu opens where the trigger's gesture happened", {
+test_that("the block actions' menu opens where the gesture happened", {
 
   opened <- list()
   local_mocked_bindings(
@@ -489,7 +489,7 @@ test_that("the + menu opens where the trigger's gesture happened", {
   )
 })
 
-test_that("a pick from the + menu adds the block", {
+test_that("a pick from the block actions' menu adds the block", {
   local_mocked_bindings(
     open_add_block_menu = function(...) invisible(NULL)
   )
@@ -557,7 +557,7 @@ test_that("a pick from the append menu adds the block and its link", {
   )
 })
 
-test_that("the + menu lists block types by category, append only receivers", {
+test_that("the block actions' menu lists types, append only receivers", {
 
   items <- add_block_menu_items("add")
   rows <- Filter(function(x) !is.null(x$type), items)
@@ -596,7 +596,7 @@ test_that("the add-panel menu marks a block by its category", {
   expect_null(unlst(lst_xtr(marks, "color")))
 })
 
-test_that("the + menu takes in a block registered anew under its uid", {
+test_that("the block actions' menu takes in a block registered anew", {
 
   uid <- "menu_probe_block"
   withr::defer(unregister_blocks(uid))
@@ -618,6 +618,327 @@ test_that("the + menu takes in a block registered anew under its uid", {
     overwrite = TRUE
   )
   expect_identical(labels(), "Renamed probe")
+})
+
+# The block browser in the sidebar, which the menu's tool opens. Its form is
+# the only way to set what the menu leaves to the server: the IDs, above all,
+# cannot be changed after adding.
+
+by_class <- function(tok) {
+  sprintf(
+    "//*[contains(concat(' ', normalize-space(@class), ' '), ' %s ')]", tok
+  )
+}
+
+browser_card <- function(html, block_type) {
+  xml2::xml_find_first(
+    xml2::read_html(html),
+    paste0(
+      by_class("blockr-block-browser-card"), "[@data-block-type='",
+      block_type, "']"
+    )
+  )
+}
+
+# The fields a card's form offers, by the class suffix each reports through.
+card_fields <- function(html, block_type) {
+  fields <- xml2::xml_find_all(
+    browser_card(html, block_type),
+    paste0(".", by_class("blockr-block-browser-field"))
+  )
+  sub(
+    ".*blockr-block-browser-field-", "", xml2::xml_attr(fields, "class")
+  )
+}
+
+test_that("the block browser offers the fields of its flow", {
+
+  board <- new_board(
+    c(a = new_dataset_block("iris"), m = new_merge_block()),
+    links = c(l1 = new_link("a", "m", "x"))
+  )
+  html <- function(target) {
+    as.character(block_browser_ui("b", board, target))
+  }
+
+  add <- html(NULL)
+  expect_identical(card_fields(add, "dataset_block"), c("id", "title"))
+  expect_match(add, ">Add block</button>", fixed = TRUE)
+
+  # A merge takes two inputs, so appending one asks which the link lands on.
+  app <- html(append_to("a"))
+  expect_identical(
+    card_fields(app, "merge_block"),
+    c("id", "title", "link-id", "block-input")
+  )
+  expect_identical(card_fields(app, "head_block"), c("id", "title", "link-id"))
+  expect_match(app, ">Append block</button>", fixed = TRUE)
+
+  # The merge has one free input left, `y`, so there is nothing to ask.
+  pre <- html(prepend_to("m"))
+  expect_identical(
+    card_fields(pre, "dataset_block"), c("id", "title", "link-id")
+  )
+  expect_match(pre, ">Prepend block</button>", fixed = TRUE)
+
+  # An insert makes two links, so it asks for an ID for each.
+  ins <- html(insert_into("l1"))
+  expect_identical(
+    card_fields(ins, "head_block"),
+    c("id", "title", "near-link-id", "far-link-id")
+  )
+  expect_match(ins, ">Insert block</button>", fixed = TRUE)
+})
+
+test_that("a prepend asks which free input of its target the link lands on", {
+
+  board <- new_board(c(a = new_dataset_block("iris"), m = new_merge_block()))
+
+  html <- as.character(block_browser_ui("b", board, prepend_to("m")))
+  opts <- xml2::xml_text(
+    xml2::xml_find_all(
+      browser_card(html, "dataset_block"),
+      paste0(
+        ".", by_class("blockr-block-browser-field-target-input"), "//option"
+      )
+    )
+  )
+
+  expect_identical(opts, c("x", "y"))
+})
+
+test_that("block browser renders a name field for variadic ends", {
+
+  board <- new_board(
+    c(a = new_dataset_block("iris"), r = new_rbind_block(),
+      m = new_merge_block())
+  )
+  field_input <- function(html, block_type, cls) {
+    xml2::xml_find_first(
+      browser_card(html, block_type), paste0(".", by_class(cls), "//input")
+    )
+  }
+
+  # Append a variadic rbind -> block-input becomes a free-text name field;
+  # a finite merge keeps its port <select> (no text input).
+  append_html <- as.character(block_browser_ui("b", board, append_to("a")))
+  rbind_name <- field_input(
+    append_html, "rbind_block", "blockr-block-browser-field-block-input"
+  )
+  expect_false(is.na(rbind_name))
+  expect_identical(
+    xml2::xml_attr(rbind_name, "placeholder"),
+    "leave blank for an unnamed input"
+  )
+  expect_true(
+    is.na(
+      field_input(
+        append_html, "merge_block", "blockr-block-browser-field-block-input"
+      )
+    )
+  )
+
+  # Prepend into a variadic target -> target-input becomes a name field.
+  prepend_html <- as.character(block_browser_ui("b", board, prepend_to("r")))
+  expect_false(
+    is.na(
+      field_input(
+        prepend_html, "dataset_block",
+        "blockr-block-browser-field-target-input"
+      )
+    )
+  )
+})
+
+test_that("the block browser is the commit input, and opens on the query", {
+
+  html <- as.character(block_browser_ui("act-browser", query = "head"))
+  doc <- xml2::read_html(html)
+  root <- xml2::xml_find_first(doc, by_class("blockr-block-browser"))
+
+  expect_identical(xml2::xml_attr(root, "id"), "act-browser-commit")
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(doc, by_class("blockr-block-browser-search")),
+      "value"
+    ),
+    "head"
+  )
+
+  chevron <- xml2::xml_find_first(
+    doc, by_class("blockr-block-browser-card-chevron")
+  )
+  expect_identical(
+    xml2::xml_attr(chevron, "data-blockr-tooltip"), "Configure before adding"
+  )
+})
+
+test_that("the block actions' menu sends its tool to the action", {
+
+  sent <- NULL
+  session <- list(
+    ns = NS("my_board-append_block_action"),
+    sendCustomMessage = function(type, message) sent <<- message
+  )
+
+  open_add_block_menu("append", "Append to Iris", session = session)
+
+  expect_identical(sent$commit, "my_board-append_block_action-browser-commit")
+  expect_identical(sent$expand, "my_board-append_block_action-expand")
+})
+
+# Runs `gen` with the sidebar's state stubbed: whether the action holds the
+# open sidebar and whether it is pinned. Records what is shown, hidden and
+# opened, in order.
+sidebar_run <- function(gen, trigger, board, holds = FALSE, pinned = FALSE,
+                        expr) {
+
+  rec <- new.env(parent = emptyenv())
+  rec$calls <- list()
+  log <- function(what, ...) {
+    rec$calls[[length(rec$calls) + 1L]] <- list(what, ...)
+  }
+
+  local_mocked_bindings(
+    owns_open_sidebar = function(...) holds,
+    sidebar_state = function(...) {
+      list(open = holds, pinned = pinned, owner = NULL)
+    },
+    show_sidebar = function(id, ui = NULL, title = NULL, ...) {
+      log("show", id = id, title = title, html = as.character(ui))
+    },
+    hide_sidebar = function(id, ...) log("hide", id = id),
+    open_add_block_menu = function(mode, caption, ...) {
+      log("menu", mode = mode, caption = caption)
+    }
+  )
+
+  r_update <- reactiveVal(list())
+
+  testServer(
+    function(id, ...) {
+      moduleServer(
+        action_id(gen),
+        gen(trigger = trigger, board = board, update = r_update)
+      )
+    },
+    {
+      session$flushReact()
+      eval(expr)
+    }
+  )
+
+  list(calls = rec$calls, update = isolate(r_update()))
+}
+
+test_that("the menu's tool opens the block browser on what was typed", {
+
+  r_board <- reactiveValues(
+    board = new_board(c(a = new_dataset_block("iris"))),
+    board_id = "my_board"
+  )
+
+  res <- sidebar_run(
+    append_block_action, reactive("a"), r_board,
+    expr = quote(session$setInputs(expand = list(query = "hea", nonce = 1)))
+  )
+
+  whats <- chr_xtr(res$calls, 1L)
+  expect_identical(whats, c("menu", "show"))
+
+  show <- res$calls[[2L]]
+  expect_identical(show$id, "my_board-actions_sidebar")
+  expect_identical(show$title, res$calls[[1L]]$caption)
+  expect_match(
+    show$html, 'id="append_block_action-browser-commit"', fixed = TRUE
+  )
+  expect_match(show$html, 'value="hea"', fixed = TRUE)
+})
+
+test_that("a gesture shows the browser afresh where the action holds it", {
+
+  r_board <- reactiveValues(
+    board = new_board(c(a = new_dataset_block("iris"))),
+    board_id = "my_board"
+  )
+
+  res <- sidebar_run(
+    append_block_action, reactive("a"), r_board, holds = TRUE,
+    expr = quote(NULL)
+  )
+
+  # No menu: the browser follows the gesture, as a pinned one follows the
+  # DAG's selection.
+  expect_identical(chr_xtr(res$calls, 1L), "show")
+  expect_match(res$calls[[1L]]$title, "^Append to ")
+})
+
+test_that("a pick closes the browser, unless it is pinned", {
+
+  r_board <- reactiveValues(
+    board = new_board(c(a = new_dataset_block("iris"), m = new_merge_block())),
+    board_id = "my_board"
+  )
+  pick <- quote(
+    session$setInputs(
+      `browser-commit` = list(type = "head_block", id = "h1", nonce = 1)
+    )
+  )
+  after_pick <- function(gen, target, ...) {
+    res <- sidebar_run(gen, reactive(target), r_board, expr = pick, ...)
+    expect_named(res$update$blocks$add, "h1")
+    # The first call is the gesture's.
+    chr_xtr(res$calls[-1L], 1L)
+  }
+
+  expect_identical(
+    after_pick(append_block_action, "a", holds = TRUE), "hide"
+  )
+  expect_identical(
+    after_pick(append_block_action, "a", holds = TRUE, pinned = TRUE),
+    character()
+  )
+  # A prepend takes up one of its target's inputs, so a pinned browser is
+  # shown afresh, without it, once the board has taken the link in.
+  res <- sidebar_run(
+    prepend_block_action, reactive("m"),
+    reactiveValues(board = isolate(r_board$board), board_id = "my_board"),
+    holds = TRUE, pinned = TRUE,
+    expr = quote({
+      session$setInputs(
+        `browser-commit` = list(type = "head_block", id = "h1", nonce = 1)
+      )
+      expect_length(rec$calls, 1L)
+      board$board <- new_board(
+        c(a = new_dataset_block("iris"), m = new_merge_block(),
+          h1 = new_head_block()),
+        links = c(l1 = new_link("h1", "m", "x"))
+      )
+      session$flushReact()
+    })
+  )
+  expect_identical(chr_xtr(res$calls, 1L), c("show", "show"))
+  expect_false(grepl("target-input", res$calls[[2L]]$html, fixed = TRUE))
+  # A sidebar another action holds is left alone.
+  expect_identical(after_pick(append_block_action, "a"), character())
+})
+
+test_that("a target that leaves the board closes the browser", {
+
+  r_board <- reactiveValues(
+    board = new_board(c(a = new_dataset_block("iris"), b = new_head_block())),
+    board_id = "my_board"
+  )
+
+  res <- sidebar_run(
+    append_block_action, reactive("a"), r_board, holds = TRUE,
+    expr = quote({
+      board$board <- new_board(c(b = new_head_block()))
+      session$flushReact()
+    })
+  )
+
+  expect_identical(chr_xtr(res$calls, 1L), c("show", "hide"))
 })
 
 test_that("remove block action", {

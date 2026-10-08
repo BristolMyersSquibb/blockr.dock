@@ -1,9 +1,12 @@
-// The "+" menu (add-block-menu.R). The add, append, prepend and insert
-// actions run on the server, so the menu opens on a message, at what the
-// action's trigger named (`at`): an element while it is on screen, or a
-// point. Without either, as for an action fired from code, it opens near the
-// top of the page. A pick sends the block type as the browser's commit; the
-// server generates the block's id and resolves the link's port.
+// The menu the block actions open (add-block-menu.R). The add, append,
+// prepend and insert actions run on the server, so the menu opens on a
+// message, at what the action's trigger named (`at`): an element while it is
+// on screen, or a point. Without either, as for an action fired from code, it
+// opens near the top of the page. A pick sends the block type as the
+// browser's commit; the server generates the block's id and resolves the
+// link's input. The menu's tool asks the action for the block browser in the
+// sidebar instead, where those are set before adding, and hands on what was
+// typed, so the browser opens on the same cards.
 (function () {
   var nonce = 0;
 
@@ -51,6 +54,15 @@
       filter: 'Search blocks',
       minWidth: 300,
       items: items,
+      tool: {
+        icon: 'open',
+        label: 'Open in the sidebar',
+        onSelect: function (query) {
+          Shiny.setInputValue(m.expand, { query: query, nonce: ++nonce }, {
+            priority: 'event'
+          });
+        }
+      },
       onClose: function () {
         if (at.temp) at.temp.remove();
       }

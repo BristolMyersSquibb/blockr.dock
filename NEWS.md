@@ -1,5 +1,17 @@
 # blockr.dock (development version)
 
+* The block browser is back, behind the tool at the top right of the menu
+  the block actions open (#543). Since #483, adding, appending, prepending
+  and inserting a block from that menu committed the block type alone, so a
+  block or a link it added kept a generated ID for good, as neither can be
+  renamed later. The tool, "Open in the sidebar", opens the same list in the
+  actions sidebar, on what was typed in the menu, where a card unfolds into
+  the form for the block's ID and title, its links' IDs and the input a link
+  lands on. The browser can be pinned to add one block after another, and a
+  pinned one follows the selection in the DAG again, as the link, stack and
+  inputs forms do. The tool and its icon are blockr.ui's
+  (BristolMyersSquibb/blockr.ui#94).
+
 * The block card no longer uses Bootstrap (BristolMyersSquibb/blockr.ui#85).
   Its sections (control, inputs, preview) fold in the browser on the
   toggle's click instead of through a server round trip to bslib's
@@ -29,9 +41,10 @@
 * The dock draws a block's mark as blockr.ui's, in the sizes the spec gives it
   (#495). The block header calls `blockr.ui::block_mark()` at 32px, which the
   compact header shows at 20px, and the cards of the link and stack menus call
-  it at 24px. The rows of the "+" and "Add panel" menus give blockr.ui's menu
-  the block's category, from which it draws the same mark at 24px, and so does
-  the block picker of `board_block_select()`, in its list and in its field.
+  it at 24px. The rows of the block actions' and "Add panel" menus give
+  blockr.ui's menu the block's category, from which it draws the same mark at
+  24px, and so does the block picker of `board_block_select()`, in its list
+  and in its field.
   The picker no longer draws tiles of its own, and no longer reads the
   `icon_style` option. Each mark takes its colour from its category's token.
   The dock's own `.blockr-block-mark` rules and their `--blockr-dock-cat`

@@ -1,24 +1,17 @@
-# The "+" menu that adding, appending, prepending and inserting a block open.
-# A pick sends the block browser's commit with the block type alone, so
+# The menu the block actions open: adding, appending, prepending and inserting
+# a block. A pick sends the commit with the block type alone, so
 # block_browser_server() builds the block, generates its id and resolves the
-# link's port.
+# link's input. Its tool opens the same list as the block browser in the
+# sidebar, where the ids and the input are set before adding.
 
 # The rows for one flow: every registered block type for add and prepend,
 # only the ones that can receive a link for append and insert (the filter
-# browser_block_metas() applies). Built once per flow and registry, since
-# for append and insert it instantiates each block to read its inputs; the
-# key hashes the registry's entries, so registering a block anew rebuilds.
+# browser_block_metas() applies).
 add_block_menu_items <- function(mode) {
 
-  key <- paste(mode, rlang::hash(available_blocks()))
+  groups <- category_groups(block_metas(mode))
 
-  if (!is.null(add_block_menu_cache[[key]])) {
-    return(add_block_menu_cache[[key]])
-  }
-
-  groups <- category_groups(browser_block_metas(mode))
-
-  items <- unlst(
+  unlst(
     Map(
       function(category, metas) {
         c(
@@ -30,13 +23,7 @@ add_block_menu_items <- function(mode) {
       groups
     )
   )
-
-  assign(key, items, envir = add_block_menu_cache)
-
-  items
 }
-
-add_block_menu_cache <- new.env(parent = emptyenv())
 
 add_block_menu_item <- function(meta) {
   list(
@@ -52,13 +39,14 @@ add_block_menu_item <- function(meta) {
 
 # Open the menu for one flow, at what the gesture named (`at`, see
 # new_action()). The session is the action module's, so the commit lands on
-# its `browser` module's input.
+# its `browser` module's input, and the tool on the action's `expand`.
 open_add_block_menu <- function(mode, caption, at = NULL,
                                 session = get_session()) {
   session$sendCustomMessage(
     "blockr-add-block-menu",
     list(
       commit = session$ns(NS("browser", "commit")),
+      expand = session$ns("expand"),
       caption = caption,
       at = at,
       items = add_block_menu_items(mode)

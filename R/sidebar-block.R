@@ -357,6 +357,200 @@ browser_block_metas <- function(mode) {
   metas
 }
 
+# The metadata for one flow, built once per flow and registry: for append and
+# insert, browser_block_metas() instantiates each block to read its inputs.
+# The key hashes the registry's entries, so registering a block anew rebuilds.
+# Both the block actions' menu and the block browser list from it.
+block_metas <- function(mode) {
+
+  key <- paste(mode, rlang::hash(available_blocks()))
+
+  if (is.null(block_metas_cache[[key]])) {
+    assign(key, browser_block_metas(mode), envir = block_metas_cache)
+  }
+
+  block_metas_cache[[key]]
+}
+
+block_metas_cache <- new.env(parent = emptyenv())
+
+# The block browser: the list the block actions' menu offers, in the sidebar,
+# where a card unfolds into a form for what a pick from the menu leaves to the
+# server: the block's ID and title, the IDs of its links, the input a link
+# lands on. The menu's tool opens it, on what was typed there (`query`). The
+# root element is the Shiny input a pick from the menu writes to as well, so
+# block_browser_server() reads both as `input$commit`.
+block_browser_ui <- function(id, board = NULL, target = NULL, query = "") {
+
+  stopifnot(
+    is.character(id), length(id) == 1L, nzchar(id),
+    is.null(target) || inherits(target, "bb_target"),
+    is_string(query)
+  )
+
+  ns <- NS(id)
+  mode <- target_mode(target)
+  ports <- target_ports(board, target)
+  groups <- category_groups(block_metas(mode))
+
+  htmltools::attachDependencies(
+    tags$div(
+      id = ns("commit"),
+      class = "blockr-block-browser",
+      `data-mode` = mode,
+      tags$input(
+        type = "search",
+        class = "blockr-block-browser-search",
+        placeholder = "Search...",
+        value = query,
+        `aria-label` = "Search blocks"
+      ),
+      tags$div(
+        class = "blockr-block-browser-categories",
+        lapply(
+          names(groups),
+          function(cat) {
+            category_section(
+              cat,
+              groups[[cat]],
+              function(m) browser_block_card(m, ns, mode, ports)
+            )
+          }
+        )
+      ),
+      tags$div(
+        class = "blockr-block-browser-empty",
+        "No blocks match your search."
+      )
+    ),
+    list(block_browser_dep())
+  )
+}
+
+# The free inputs of the block a prepend feeds, or a name where it takes any
+# number. Append and insert pick an input on the new block instead, per card.
+target_ports <- function(board, target) {
+
+  none <- list(inputs = character(), variadic = FALSE)
+
+  if (!identical(target_mode(target), "prepend") || is.null(target$id)) {
+    return(none)
+  }
+
+  blk <- board_block(board, target$id)
+
+  if (is.null(blk)) {
+    return(none)
+  }
+
+  list(
+    inputs = free_named_inputs(
+      blk, target$id, as.data.frame(safe_board_links(board))
+    ),
+    variadic = is.na(block_arity(blk))
+  )
+}
+
+# A card as the link menu draws one: the block's mark, its name and package,
+# and the chevron that unfolds the form. A click elsewhere on the card adds
+# the block as a pick from the menu does.
+browser_block_card <- function(meta, ns, mode, ports) {
+  tags$div(
+    class = "blockr-block-browser-card",
+    `data-block-type` = meta$type,
+    `data-name` = meta$name,
+    `data-description` = meta$description,
+    `data-package` = meta$package,
+    `data-category` = meta_category(meta),
+    tags$div(
+      class = "blockr-block-browser-card-header",
+      blockr.ui::block_mark(meta$icon, meta$category),
+      tags$span(class = "blockr-block-browser-card-name", meta$name),
+      tags$span(class = "blockr-menu__badge", meta$package),
+      tags$button(
+        type = "button",
+        class = "blockr-block-browser-card-chevron",
+        `aria-label` = "Configure before adding",
+        `data-blockr-tooltip` = "Configure before adding",
+        blockr.ui::small_icon("chevron")
+      )
+    ),
+    if (nzchar(meta$description)) {
+      tags$p(class = "blockr-block-browser-card-descr", meta$description)
+    },
+    card_advanced(meta, ns, mode, ports)
+  )
+}
+
+# The form holds only the fields of its flow. An input is asked for where
+# there is a choice, two or more free ones; an end that takes any number of
+# inputs asks for an optional name instead, which blank leaves positional.
+card_advanced <- function(meta, ns, mode, ports) {
+
+  field_id <- function(suffix) ns(paste0(meta$type, "_", suffix))
+  new_block_end <- mode %in% c("append", "insert")
+
+  # The slot field reports through the class of its end, the new block's or
+  # the target's, whichever form it takes.
+  slot <- if (new_block_end) "block_input" else "target_input"
+  slot_class <- gsub("_", "-", slot, fixed = TRUE)
+
+  tags$div(
+    class = "blockr-block-browser-card-advanced",
+    field_text("id", field_id("id"), "Block ID", "", placeholder = "auto"),
+    field_text(
+      "title", field_id("title"), "Block title", "",
+      placeholder = meta$name
+    ),
+    if (mode %in% c("append", "prepend")) {
+      field_text(
+        "link-id", field_id("link_id"), "Link ID", "",
+        placeholder = "auto"
+      )
+    },
+    if (mode == "insert") {
+      tagList(
+        field_text(
+          "near-link-id", field_id("near_link_id"), "Incoming link ID", "",
+          placeholder = "auto"
+        ),
+        field_text(
+          "far-link-id", field_id("far_link_id"), "Outgoing link ID", "",
+          placeholder = "auto"
+        )
+      )
+    },
+    if (new_block_end && length(meta$inputs) > 1L) {
+      field_select(
+        slot_class, field_id(slot), "New block input port", meta$inputs
+      )
+    },
+    if (mode == "prepend" && length(ports$inputs) > 1L) {
+      field_select(
+        slot_class, field_id(slot), "Target input port", ports$inputs
+      )
+    },
+    if ((new_block_end && isTRUE(meta$variadic)) ||
+          (mode == "prepend" && isTRUE(ports$variadic))) {
+      field_text(
+        slot_class, field_id(slot), "Input name (optional)", "",
+        placeholder = "leave blank for an unnamed input"
+      )
+    },
+    tags$button(
+      type = "button",
+      class = "blockr-block-browser-card-add",
+      switch(
+        mode,
+        add = "Add block",
+        append = "Append block",
+        prepend = "Prepend block",
+        insert = "Insert block"
+      )
+    )
+  )
+}
+
 # The link's two ends plus the slot it lands on, or NULL when the id names
 # no link on the board. One lookup, so callers cannot disagree about it.
 link_ends <- function(board, link_id) {
