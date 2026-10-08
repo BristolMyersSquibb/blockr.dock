@@ -1,4 +1,3 @@
-#' @importFrom glue glue
 #' @import blockr.core shiny bslib
 NULL
 
