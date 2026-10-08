@@ -896,6 +896,99 @@
   border-color: var(--blockr-color-border-accent);
 }
 
+/* "Show views as tabs": a check while the tab line is on */
+.blockr-view-tabs-toggle .blockr-menu__check {
+  visibility: hidden;
+  margin-left: auto;
+}
+
+.blockr-view-tabs-toggle[aria-checked="true"] .blockr-menu__check {
+  visibility: visible;
+}
+
+/* ============================================
+   Views as tabs
+   ============================================
+   With the `view_tabs` option on, the views item's tab line shows
+   (view_tabs_ui()) and the item leaves the bar's row for a line of its own
+   under it: a rule, the tabs, then the view menu as a chevron alone, for
+   managing views. Out of the row's flow, the line leaves the row laid out as
+   it is without it, at the bar's 48px, and adds its own 39px, rule included,
+   which the view container gives up. */
+.blockr-navbar:has(.blockr-view-tabs:not([hidden])) {
+  position: relative;
+  height: 87px;
+  padding-bottom: 39px;
+}
+
+.blockr-navbar:has(.blockr-view-tabs:not([hidden])) ~ .blockr-view-container {
+  height: var(--blockr-stack-height, calc(100vh - 87px));
+}
+
+.blockr-navbar-item:has(> .blockr-view-tabs:not([hidden])) {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  gap: 8px;
+  height: 39px;
+  padding: 0 12px;
+  border-top: 1px solid var(--blockr-color-border-default);
+}
+
+.blockr-view-tabs:not([hidden]) {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 38px;
+  margin-left: -4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+/* In the tab line the view menu is only for managing views: no name, no
+   rule, a chevron alone */
+.blockr-view-tabs:not([hidden]) ~ .blockr-navbar-rule,
+.blockr-view-tabs:not([hidden]) ~ .blockr-view-dropdown .blockr-view-toggle-label {
+  display: none;
+}
+
+.blockr-view-tabs:not([hidden]) ~ .blockr-view-dropdown .blockr-view-toggle.blockr-navbar-icon-btn {
+  width: 30px;
+  padding: 0;
+  justify-content: center;
+}
+
+.blockr-view-tab {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--blockr-color-text-muted);
+  font: inherit;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blockr-view-tab:hover {
+  color: var(--blockr-color-text-default);
+  background: var(--blockr-color-bg-hover);
+}
+
+.blockr-view-tab.is-active {
+  color: var(--blockr-color-text-default);
+  font-weight: var(--blockr-font-weight-semibold);
+  box-shadow: inset 0 -2px 0 var(--blockr-color-border-accent);
+}
+
+.blockr-view-tab:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* ============================================
    Multi-dock stacking (views)
    ============================================ */

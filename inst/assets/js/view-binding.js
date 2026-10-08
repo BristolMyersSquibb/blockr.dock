@@ -39,6 +39,54 @@ $(function () {
       .text(text);
   };
 
+  // The tab line of a board with the `view_tabs` option (view_tabs_ui()),
+  // found by the nav's id; empty on a board without it. It mirrors the
+  // nav's views, so every update of the nav's views updates it too.
+  var tabsOf = function (el) {
+    return $(document.getElementById(el.id + '-tabs'));
+  };
+
+  var tabOf = function (el, viewId) {
+    return tabsOf(el).children('.blockr-view-tab[data-view-id="' + viewId + '"]');
+  };
+
+  // Scroll the line sideways, and only sideways, to the current view's tab:
+  // the page itself stays where it is.
+  var revealTab = function (el) {
+    var line = tabsOf(el)[0];
+    if (!line || line.hidden) return;
+    var tab = line.querySelector('.blockr-view-tab.is-active');
+    if (!tab) return;
+    var l = line.getBoundingClientRect();
+    var t = tab.getBoundingClientRect();
+    if (t.left < l.left) line.scrollLeft -= l.left - t.left;
+    else if (t.right > l.right) line.scrollLeft += t.right - l.right;
+  };
+
+  // Mark the current view: its row, the toggle's label and its tab.
+  var markActive = function (el, viewId) {
+    $(el).find('.blockr-view-item').removeClass('active');
+    var $item = $(el)
+      .find('.blockr-view-item[data-view-id="' + viewId + '"]')
+      .addClass('active');
+    if ($item.length) {
+      setToggleLabel($(el), itemName($item));
+    }
+    tabsOf(el).children('.blockr-view-tab').each(function () {
+      var on = this.getAttribute('data-view-id') === viewId;
+      this.classList.toggle('is-active', on);
+      this.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    revealTab(el);
+  };
+
+  // Show or hide the tab line, and with it the check of the nav's row for it.
+  var showTabs = function (el, on) {
+    tabsOf(el).prop('hidden', !on);
+    $(el).find('.blockr-view-tabs-toggle').attr('aria-checked', on ? 'true' : 'false');
+    revealTab(el);
+  };
+
   // The name of the view each nav's "New view" made, until the view arrives
   // (`rename_new` from the server).
   var renameNew = new WeakMap();
@@ -121,8 +169,9 @@ $(function () {
         if ($item.hasClass('active')) {
           setToggleLabel($item.closest('.blockr-view-dropdown'), newName);
         }
-        var navId = $item.closest('.blockr-view-nav').attr('id');
-        Shiny.setInputValue(navId + '_rename', {
+        var nav = $item.closest('.blockr-view-nav')[0];
+        tabOf(nav, $item.attr('data-view-id')).text(newName);
+        Shiny.setInputValue(nav.id + '_rename', {
           id: $item.attr('data-view-id'),
           to: newName
         }, { priority: 'event' });
@@ -218,13 +267,7 @@ $(function () {
     },
 
     setValue: function (el, value) {
-      $(el).find('.blockr-view-item').removeClass('active');
-      var $item = $(el)
-        .find('.blockr-view-item[data-view-id="' + value + '"]')
-        .addClass('active');
-      if ($item.length) {
-        setToggleLabel($(el), itemName($item));
-      }
+      markActive(el, value);
     },
 
     subscribe: function (el, callback) {
@@ -251,12 +294,28 @@ $(function () {
           return;
         }
 
-        var $nav = $(el);
-        $nav.find('.blockr-view-item').removeClass('active');
-        $item.addClass('active');
-        setToggleLabel($nav, itemName($item));
+        markActive(el, $item.attr('data-view-id'));
         callback(true);
-        closeMenu($nav);
+        closeMenu($(el));
+      });
+
+      // A tab switches views as a pick in the menu does: it marks the view
+      // and reports it as the nav's value.
+      tabsOf(el).on('click.viewBinding', '.blockr-view-tab', function (e) {
+        e.preventDefault();
+        markActive(el, this.getAttribute('data-view-id'));
+        callback(true);
+      });
+
+      // "Show views as tabs" asks for the state it wants; the option's server
+      // answers with `tabs`, which shows or hides the line. The menu closes,
+      // since the toggle it hangs from moves between the bar and the line.
+      $(el).on('click.viewBinding', '.blockr-view-tabs-toggle', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var on = this.getAttribute('aria-checked') !== 'true';
+        Shiny.setInputValue(el.id + '_tabs', on, { priority: 'event' });
+        closeMenu($(el));
       });
 
       $(el).on('click.viewBinding', '.blockr-view-manage', function (e) {
@@ -339,11 +398,16 @@ $(function () {
     unsubscribe: function (el) {
       $(el).off('.viewBinding');
       $(el).closest('.blockr-view-dropdown').off('.viewBinding');
+      tabsOf(el).off('.viewBinding');
     },
 
     receiveMessage: function (el, data) {
       if (data.hasOwnProperty('value')) {
         this.setValue(el, data.value);
+      }
+
+      if (data.hasOwnProperty('tabs')) {
+        showTabs(el, data.tabs === true);
       }
 
       if (data.hasOwnProperty('rename_new')) {
@@ -353,6 +417,7 @@ $(function () {
       if (data.hasOwnProperty('add')) {
         var $new = $(data.add.html);
         $(el).find('.blockr-view-list').append($new);
+        tabsOf(el).append(data.add.tab);
         var asked = renameNew.get(el) === itemName($new);
         if (asked) renameNew.delete(el);
         if (isManaging($(el))) {
@@ -372,6 +437,7 @@ $(function () {
         $(el)
           .find('.blockr-view-item[data-view-id="' + data.remove + '"]')
           .remove();
+        tabOf(el, data.remove).remove();
       }
 
       if (data.hasOwnProperty('rename')) {
@@ -379,6 +445,7 @@ $(function () {
           '.blockr-view-item[data-view-id="' + data.rename.id + '"]'
         );
         $target.find('.blockr-view-item-name').text(data.rename.to);
+        tabOf(el, data.rename.id).text(data.rename.to);
 
         if ($target.hasClass('active')) {
           setToggleLabel($(el), data.rename.to);
@@ -387,12 +454,14 @@ $(function () {
 
       if (data.hasOwnProperty('order')) {
         var $list = $(el).find('.blockr-view-list');
+        var $tabs = tabsOf(el);
         // Re-append each item in the server's order; re-appending an existing
         // node moves it, so iterating in order lands the DOM in that order.
         data.order.forEach(function (viewId) {
           $list.append(
             $list.find('.blockr-view-item[data-view-id="' + viewId + '"]')
           );
+          $tabs.append(tabOf(el, viewId));
         });
       }
 
