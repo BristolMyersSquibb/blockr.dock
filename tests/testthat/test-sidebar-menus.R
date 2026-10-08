@@ -293,159 +293,6 @@ test_that("an overlay panel reflows the board only once pinned", {
   expect_equal(width(), 0)
 })
 
-port_select <- function(card_sel) {
-  paste0(card_sel, " .blockr-block-browser-field-block-input select")
-}
-
-# A committed link leaves the pool in place rather than re-rendering it, so the
-# option list is what says the sync landed. Comparing the serialised array keeps
-# the wait and the assertion on the same fact.
-port_values_js <- function(card_sel) {
-  sprintf(
-    paste0(
-      "JSON.stringify(Array.from(document.querySelectorAll(%s))",
-      ".map(function(o){return o.value}))"
-    ),
-    shQuote(paste0(port_select(card_sel), " option"))
-  )
-}
-
-wait_ports <- function(app, card_sel, expected, timeout = 30 * 1000) {
-  wait_js(
-    app,
-    sprintf("%s === '%s'", port_values_js(card_sel), expected),
-    function() sprintf("[ports] %s", app$get_js(port_values_js(card_sel))),
-    timeout
-  )
-}
-
-pin_actions <- function(app) {
-  click_sel(app, paste0("#", actions_panel, " .blockr-sidebar-pin"))
-  app$wait_for_idle()
-}
-
-test_that("an outgoing card commits a link out of the anchor", {
-
-  skip_on_cran()
-
-  app <- menus_app("link-outgoing")
-  withr::defer(app$stop())
-
-  expect_identical(exported(app, "links"), character())
-
-  app$click(fixture("link_a"))
-  wait_panel(app, actions_panel, open = TRUE)
-
-  click_sel(app, card("b", "outgoing"))
-  wait_panel(app, actions_panel, open = FALSE)
-
-  expect_identical(exported(app, "links"), "a>b>data")
-})
-
-test_that("an incoming card commits a link into the anchor", {
-
-  skip_on_cran()
-
-  app <- menus_app("link-incoming")
-  withr::defer(app$stop())
-
-  app$click(fixture("link_m"))
-  wait_panel(app, actions_panel, open = TRUE)
-
-  click_sel(app, card("a", "incoming"))
-  wait_panel(app, actions_panel, open = FALSE)
-
-  expect_identical(exported(app, "links"), "a>m>x")
-})
-
-test_that("the link menu filters across both direction sections", {
-
-  skip_on_cran()
-
-  app <- menus_app("link-search")
-  withr::defer(app$stop())
-
-  app$click(fixture("link_m"))
-  wait_panel(app, actions_panel, open = TRUE)
-
-  scope <- paste0("#", actions_panel)
-
-  expect_identical(
-    js_count(app, paste0(scope, " .blockr-link-menu-direction")), 2L
-  )
-
-  all_cards <- js_count(app, paste0(scope, " .blockr-block-browser-card"))
-  visible <- function() {
-    js_count(app, paste0(scope, " .blockr-block-browser-card:not(.hidden)"))
-  }
-
-  expect_identical(visible(), all_cards)
-
-  type_search(app, scope, "zzz_matches_nothing")
-  expect_identical(visible(), 0L)
-
-  type_search(app, scope, "")
-  expect_identical(visible(), all_cards)
-})
-
-# A pinned panel is the documented way to wire several links in a row. The menu
-# reconciles its own cards against the board instead of re-rendering, so a
-# target whose only port is now taken has to leave the DOM on its own.
-test_that("a wired single-port target leaves a pinned menu's pool", {
-
-  skip_on_cran()
-
-  app <- menus_app("link-pool-sync")
-  withr::defer(app$stop())
-
-  app$click(fixture("link_a"))
-  wait_panel(app, actions_panel, open = TRUE)
-  pin_actions(app)
-
-  before <- js_count(
-    app, paste0("#", actions_panel, " .blockr-block-browser-card")
-  )
-
-  click_sel(app, card("b", "outgoing"))
-  wait_sel(app, card("b", "outgoing"), present = FALSE)
-
-  expect_true(panel_open(app, actions_panel))
-  expect_identical(exported(app, "links"), "a>b>data")
-  expect_lt(
-    js_count(app, paste0("#", actions_panel, " .blockr-block-browser-card")),
-    before
-  )
-})
-
-test_that("a repeat commit through one card takes the next free port", {
-
-  skip_on_cran()
-
-  app <- menus_app("link-next-port")
-  withr::defer(app$stop())
-
-  app$click(fixture("link_a"))
-  wait_panel(app, actions_panel, open = TRUE)
-  pin_actions(app)
-
-  merge_card <- card("m", "outgoing")
-  wait_ports(app, merge_card, '["x","y"]')
-
-  click_sel(app, merge_card)
-  wait_ports(app, merge_card, '["y"]')
-
-  expect_identical(exported(app, "links"), "a>m>x")
-
-  click_sel(app, merge_card)
-  wait_sel(app, merge_card, present = FALSE)
-
-  expect_setequal(exported(app, "links"), c("a>m>x", "a>m>y"))
-})
-
-# The name / colour / id fields are a `uiOutput` the server fills on a later
-# round trip, so an open panel does not yet mean a usable form. Confirming
-# before it lands commits a NULL name, which the validator rejects without
-# closing anything -- so the close wait then spends its whole budget.
 wait_stack_form <- function(app, action) {
   wait_sel(app, paste0("#my_board-", action, "-menu-stack_name"))
 }
@@ -1123,4 +970,44 @@ test_that("the compact switch turns the headers into eyebrows", {
     function() "[compact] the root never took .blockr-compact"
   )
   expect_true(compact())
+})
+
+# The link actions open a menu in place of the sidebar form (#544).
+menu_row_click <- function(app, label) {
+  app$run_js(
+    sprintf(
+      paste0(
+        "[...document.querySelectorAll('body > .blockr-menu .blockr-menu__item')]",
+        ".find(r => r.textContent.trim().startsWith(%s)).click();"
+      ),
+      encodeString(label, quote = "'")
+    )
+  )
+}
+
+test_that("Connect to links a block, asking for the input where there is a choice", {
+
+  skip_on_cran()
+
+  app <- menus_app("connect-menu")
+  withr::defer(app$stop())
+
+  app$click(fixture("link_a"))
+  wait_sel(app, menu_sel)
+
+  expect_identical(
+    app$get_js("document.querySelector('body > .blockr-menu .blockr-menu__caption').textContent"),
+    "Connect Dataset"
+  )
+
+  menu_row_click(app, "Merge")
+  wait_sel(app, paste(menu_sel, ".blockr-menu__caption"))
+  app$wait_for_js(
+    "document.querySelector('body > .blockr-menu .blockr-menu__caption').textContent.startsWith('Into which input')"
+  )
+
+  menu_row_click(app, "y")
+
+  app$wait_for_value(export = fixture("links"), ignore = list(character()))
+  expect_identical(exported(app, "links"), "a>m>y")
 })

@@ -28,6 +28,7 @@ board_ui.dock_board <- function(
     htmlwidgets_resize_dep(),
     attr_output_dep(),
     add_block_menu_dep(),
+    action_menu_dep(),
     block_rename_dep(),
     blockr_dock_dep(),
     compact_dep(),
