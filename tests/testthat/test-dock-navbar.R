@@ -397,12 +397,13 @@ test_that("navbar items lay out in one row in the browser", {
 
   # On a narrow bar the plugin's piece gives way, its content shrinking with
   # it rather than spill over its neighbours, and the rest keeps its width and
-  # stays on the bar, on one line. At this width the piece gets about 250px of
-  # the 370px it takes on a wide bar, well above the 130px its content needs.
+  # stays on the bar, on one line. At this width the piece gets about 80px of
+  # the 120px it takes on a wide bar, so the names of Import and Export are cut
+  # short, well above the 40px the two buttons need without them.
   piece_width <- box("preserve_board")$width
   options_width <- box("options")$width
 
-  app$set_window_size(width = 560, height = 800)
+  app$set_window_size(width = 380, height = 800)
   app$wait_for_js(
     sprintf(
       paste0(
@@ -420,6 +421,7 @@ test_that("navbar items lay out in one row in the browser", {
   expect_lte(box("filled")$right, bar()$right + 0.5)
 
   mid <- function(b) (b$top + b$bottom) / 2
+  expect_equal(mid(piece), mid(box("options")), tolerance = 0.01)
   expect_equal(mid(box("views")), mid(box("options")), tolerance = 0.01)
   expect_equal(mid(box("filled")), mid(box("options")), tolerance = 0.01)
 })
