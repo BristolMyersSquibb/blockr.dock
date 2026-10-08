@@ -2,6 +2,17 @@
 
 ## blockr.dock (development version)
 
+- The block card no longer uses Bootstrap
+  (BristolMyersSquibb/blockr.ui#85). Its sections (control, inputs,
+  preview) fold in the browser on the toggle’s click instead of through
+  a server round trip to bslib’s accordion, so the preview’s eye answers
+  in a few milliseconds instead of 50 to 150. The cards of views not on
+  screen wait in plain divs off the page instead of Bootstrap
+  offcanvases, the warnings and messages under the preview fold in a
+  native `<details>`, and the card is the dock’s own
+  `.blockr-block-card` instead of Bootstrap’s `.card`. Bootstrap stays
+  on the page for now.
+
 - A locked board can leave parts of its layout to the reader. With the
   `lock_resize` blockr option set to `FALSE`, a reader can resize panels
   by dragging the borders between them, to make room for a wide table,
