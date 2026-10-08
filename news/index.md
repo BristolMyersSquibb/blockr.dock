@@ -2,6 +2,17 @@
 
 ## blockr.dock (development version)
 
+- A locked board can leave parts of its layout to the reader. With the
+  `lock_resize` blockr option set to `FALSE`, a reader can resize panels
+  by dragging the borders between them, to make room for a wide table,
+  and with `lock_rearrange` set to `FALSE`, rearrange them by dragging
+  their tabs. Nothing a reader changes is saved: reloading the board
+  brings back the layout it was deployed with. Closing and adding panels
+  stay off, and by default both stay locked as before
+  ([\#421](https://github.com/BristolMyersSquibb/blockr.dock/issues/421)).
+  The border of a rail can be dragged either way, as dockview’s lock
+  does not reach it (dockview/dockview#1671).
+
 - The card’s preview toggle and “…” button and the Edit board
   extension’s buttons draw blockr.ui’s small icons instead of Font
   Awesome’s, through
