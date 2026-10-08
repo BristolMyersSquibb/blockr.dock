@@ -1,5 +1,9 @@
 # blockr.dock (development version)
 
+* The "+" of a page lets you tick several blocks and extensions; they are
+  shown together when the menu closes, and Escape drops them (#544). It
+  needs `Blockr.menu()`'s `multi` option from blockr.ui.
+
 * Creating and editing a stack open menus instead of the actions sidebar
   (#544). A stack's menu has Rename…, a name field in a second menu;
   Colour…, the current colour, colours that differ from the other stacks
