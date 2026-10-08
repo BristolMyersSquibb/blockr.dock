@@ -92,7 +92,7 @@ returns a `list` with `views` (a `dock_views`) and `grids` (a
 
 Construct a grid with:
 
-- `dock_grid(...)`: the page-level container. Its `...` are the children
+- `dock_grid(...)`: the view-level container. Its `...` are the children
   of the root branch. Bare strings become single-panel leaves, character
   vectors become tabbed leaves, lists become nested branches. Use
   `panels()` for a tabbed leaf with an explicit open tab, and `group()`

@@ -3,12 +3,12 @@
 extends blockr.core::new_board(). In addition to the attributes contained
 in a core board, this also includes dock extensions (as extensions) and
 the per-view layout, stored as two independent slots – view structure
-(board_views()) and grid geometry (board_grids()). Single-page boards
+(board_views()) and grid geometry (board_grids()). Single-view boards
 are a degenerate case with one auto-named "Page" view.'><meta property="og:description" content='Using the docking layout manager provided by dockViewR, a dock_board
 extends blockr.core::new_board(). In addition to the attributes contained
 in a core board, this also includes dock extensions (as extensions) and
 the per-view layout, stored as two independent slots – view structure
-(board_views()) and grid geometry (board_grids()). Single-page boards
+(board_views()) and grid geometry (board_grids()). Single-view boards
 are a degenerate case with one auto-named "Page" view.'></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -58,7 +58,7 @@ are a degenerate case with one auto-named "Page" view.'></head><body>
 extends <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_board.html" class="external-link">blockr.core::new_board()</a></code>. In addition to the attributes contained
 in a core board, this also includes dock extensions (as <code>extensions</code>) and
 the per-view layout, stored as two independent slots – view structure
-(<code><a href="view.html">board_views()</a></code>) and grid geometry (<code><a href="view.html">board_grids()</a></code>). Single-page boards
+(<code><a href="view.html">board_views()</a></code>) and grid geometry (<code><a href="view.html">board_grids()</a></code>). Single-view boards
 are a degenerate case with one auto-named "Page" view.</p>
     </div>
 
@@ -175,7 +175,7 @@ thematic switch, off unless the <code>thematic</code> blockr option says otherwi
 that plots can take the board's colours, a light/dark switch, light unless
 the <code>dark_mode</code> blockr option says otherwise, the "Compact" header switch
 (<code><a href="new_compact_option.html">new_compact_option()</a></code>), off unless the <code>compact</code> blockr option says
-otherwise, and a switch that opens and closes the rails of every page
+otherwise, and a switch that opens and closes the rails of every view
 together (<code><a href="new_sync_rails_option.html">new_sync_rails_option()</a></code>), on unless the <code>sync_rails</code> blockr
 option says otherwise.</p>
     </div>

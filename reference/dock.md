@@ -9,7 +9,7 @@ stored as two independent slots – view structure
 ([`board_views()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md))
 and grid geometry
 ([`board_grids()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/view.md)).
-Single-page boards are a degenerate case with one auto-named "Page"
+Single-view boards are a degenerate case with one auto-named "Page"
 view.
 
 ## Usage
@@ -134,7 +134,7 @@ colours, a light/dark switch, light unless the `dark_mode` blockr option
 says otherwise, the "Compact" header switch
 ([`new_compact_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_compact_option.md)),
 off unless the `compact` blockr option says otherwise, and a switch that
-opens and closes the rails of every page together
+opens and closes the rails of every view together
 ([`new_sync_rails_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_sync_rails_option.md)),
 on unless the `sync_rails` blockr option says otherwise.
 

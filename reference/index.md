@@ -24,7 +24,7 @@ extension object.
 - [`new_compact_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_compact_option.md)
   : Compact block headers
 - [`new_sync_rails_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_sync_rails_option.md)
-  : Rails in step across pages
+  : Rails in step across views
 
 ## Dock layout
 
@@ -146,6 +146,20 @@ such as adding or removing a block.
   [`board_block_select()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
   [`sidebar_owned_by()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/action.md)
   : Board actions
+
+## Navbar
+
+The navbar is drawn from a list of items, which an app adds to, reorders
+or drops from.
+
+- [`navbar_item()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/navbar.md)
+  [`is_navbar_item()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/navbar.md)
+  [`is_navbar_items()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/navbar.md)
+  [`plugin_navbar_item()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/navbar.md)
+  [`default_navbar_items()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/navbar.md)
+  [`blockr_app_navbar()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/navbar.md)
+  [`custom_navbar()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/navbar.md)
+  : Navbar items
 
 ## Utilities
 
