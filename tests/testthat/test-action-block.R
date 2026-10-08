@@ -266,7 +266,8 @@ test_that("block actions open the + menu from their own module", {
   # input the pick is sent to.
   opened <- list()
   local_mocked_bindings(
-    open_add_block_menu = function(mode, caption, at = NULL,
+    open_add_block_menu = function(mode, caption, at = NULL, board = NULL,
+                                   target = NULL,
                                    session = get_session()) {
       opened[[length(opened) + 1L]] <<- list(
         ns = session$ns(NULL), mode = mode, caption = caption
@@ -445,7 +446,8 @@ test_that("the + menu opens where the trigger's gesture happened", {
 
   opened <- list()
   local_mocked_bindings(
-    open_add_block_menu = function(mode, caption, at = NULL,
+    open_add_block_menu = function(mode, caption, at = NULL, board = NULL,
+                                   target = NULL,
                                    session = get_session()) {
       opened[[length(opened) + 1L]] <<- list(at = at)
       invisible(NULL)
@@ -643,6 +645,55 @@ test_that("remove block action", {
       expect_named(upd, "blocks")
       expect_named(upd$blocks, "rm")
       expect_identical(upd$blocks$rm, "a")
+    }
+  )
+})
+
+test_that("a + menu row carries what its options need", {
+  rows <- Filter(function(x) !is.null(x$type), add_block_menu_items("append"))
+  merge <- Filter(function(x) identical(x$type, "merge_block"), rows)[[1L]]
+  expect_identical(unlist(merge$options$inputs), c("x", "y"))
+  expect_false(merge$options$variadic)
+  rbind <- Filter(function(x) identical(x$type, "rbind_block"), rows)[[1L]]
+  expect_true(rbind$options$variadic)
+})
+
+test_that("the + menu tells its options which ids are taken and, for prepend, the free inputs", {
+  brd <- new_board(
+    blocks = c(a = new_dataset_block(), m = new_merge_block()),
+    links = links(am = new_link("a", "m", "x"))
+  )
+  ctx <- add_block_options_context("prepend", brd, "m")
+  expect_setequal(unlist(ctx$taken_ids), c("a", "m"))
+  expect_identical(unlist(ctx$taken_links), "am")
+  expect_identical(unlist(ctx$target_inputs), "y")
+  expect_false(ctx$target_variadic)
+  expect_identical(add_block_options_context("add", NULL, NULL), list())
+})
+
+test_that("an ID and a title from the options reach the new block", {
+  local_mocked_bindings(open_add_block_menu = function(...) invisible(NULL))
+  r_board <- reactiveValues(
+    board = new_board(blocks = c(a = new_dataset_block())),
+    board_id = "my_board"
+  )
+  r_update <- reactiveVal(list())
+  testServer(
+    function(id, ...) {
+      moduleServer(id, append_block_action(trigger = reactive("a"), board = r_board, update = r_update))
+    },
+    {
+      session$flushReact()
+      session$setInputs(`browser-commit` = list(
+        type = "merge_block", id = "joined", title = "Joined",
+        block_input = "y", link_id = "a_to_joined", nonce = 1
+      ))
+      upd <- r_update()
+      expect_identical(names(upd$blocks$add), "joined")
+      expect_identical(block_name(upd$blocks$add[["joined"]]), "Joined")
+      lnk <- as.data.frame(upd$links$add)
+      expect_identical(lnk$id, "a_to_joined")
+      expect_identical(lnk$input, "y")
     }
   )
 })

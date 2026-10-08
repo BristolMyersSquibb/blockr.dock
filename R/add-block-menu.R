@@ -1,7 +1,9 @@
 # The "+" menu that adding, appending, prepending and inserting a block open.
 # A pick sends the block browser's commit with the block type alone, so
 # block_browser_server() builds the block, generates its id and resolves the
-# link's port.
+# link's port. The chevron at a row's end opens the block's options first
+# (#544): its ID and title, the input where there is a choice, and the ids of
+# the links the flow makes; they go out with the same commit.
 
 # The rows for one flow: every registered block type for add and prepend,
 # only the ones that can receive a link for append and insert (the filter
@@ -23,7 +25,7 @@ add_block_menu_items <- function(mode) {
       function(category, metas) {
         c(
           list(list(title = category)),
-          lapply(metas, add_block_menu_item)
+          lapply(metas, add_block_menu_item, mode = mode)
         )
       },
       names(groups),
@@ -38,7 +40,7 @@ add_block_menu_items <- function(mode) {
 
 add_block_menu_cache <- new.env(parent = emptyenv())
 
-add_block_menu_item <- function(meta) {
+add_block_menu_item <- function(meta, mode = "add") {
   list(
     label = meta$name,
     type = meta$type,
@@ -46,24 +48,62 @@ add_block_menu_item <- function(meta) {
     # The type id ("filter_block"), not the description: a description
     # mentions other blocks' words and would match half the list.
     keywords = meta$type,
-    mark = list(icon = meta$icon, category = meta$category)
+    mark = list(icon = meta$icon, category = meta$category),
+    # What the options need of the new block: the inputs it can take the
+    # link on, for append and insert.
+    options = list(
+      description = meta$description,
+      inputs = as.list(meta$inputs),
+      variadic = isTRUE(meta$variadic)
+    )
   )
 }
 
 # Open the menu for one flow, at what the gesture named (`at`, see
 # new_action()). The session is the action module's, so the commit lands on
 # its `browser` module's input.
-open_add_block_menu <- function(mode, caption, at = NULL,
-                                session = get_session()) {
+open_add_block_menu <- function(mode, caption, at = NULL, board = NULL,
+                                target = NULL, session = get_session()) {
   session$sendCustomMessage(
     "blockr-add-block-menu",
-    list(
-      commit = session$ns(NS("browser", "commit")),
-      caption = caption,
-      at = at,
-      items = add_block_menu_items(mode)
+    c(
+      list(
+        commit = session$ns(NS("browser", "commit")),
+        caption = caption,
+        at = at,
+        mode = mode,
+        items = add_block_menu_items(mode)
+      ),
+      add_block_options_context(mode, board, target)
     )
   )
+}
+
+# What the options check against and offer that depends on the board: the
+# block and link ids already taken, and for prepend the target's free inputs.
+add_block_options_context <- function(mode, board, target) {
+
+  if (is.null(board)) {
+    return(list())
+  }
+
+  out <- list(
+    taken_ids = as.list(board_block_ids(board)),
+    taken_links = as.list(board_link_ids(board))
+  )
+
+  if (identical(mode, "prepend") && length(target)) {
+    blk <- board_block(board, target)
+    if (!is.null(blk)) {
+      out$target_variadic <- is.na(block_arity(blk))
+      out$target_inputs <- as.list(
+        free_named_inputs(blk, target, as.data.frame(board_links(board)))
+      )
+      out$target_taken <- as.list(taken_input_names(board, target))
+    }
+  }
+
+  out
 }
 
 add_block_menu_dep <- function() {

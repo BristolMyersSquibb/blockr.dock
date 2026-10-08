@@ -11,7 +11,8 @@ add_block_action <- function(trigger, board, update, ...) {
 
       observeEvent(trigger(), {
         open_add_block_menu(
-          "add", "Add a block", at = trigger_at(trigger), session = session
+          "add", "Add a block", at = trigger_at(trigger),
+          board = board$board, session = session
         )
       })
 
@@ -43,6 +44,8 @@ append_block_action <- function(trigger, board, update, ...) {
           "append",
           paste("Append to", block_label(board$board, trigger())),
           at = trigger_at(trigger),
+          board = board$board,
+          target = trigger(),
           session = session
         )
       })
@@ -77,6 +80,8 @@ prepend_block_action <- function(trigger, board, update, ...) {
           "prepend",
           paste("Prepend to", block_label(board$board, trigger())),
           at = trigger_at(trigger),
+          board = board$board,
+          target = trigger(),
           session = session
         )
       })
