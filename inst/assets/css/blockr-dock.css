@@ -93,11 +93,19 @@
   margin-top: 3px;
 }
 
+.blockr-issues {
+  margin-top: 16px;
+}
+
 .blockr-issues:not(:has(.blockr-issue)) {
   display: none;
 }
 
 .blockr-issues-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
   cursor: pointer;
   color: var(--blockr-color-text-meta);
   font-size: var(--blockr-font-size-base);
@@ -114,8 +122,32 @@
   transition: transform 0.2s ease;
 }
 
-.blockr-issues-toggle[aria-expanded="true"] svg {
+.blockr-issues-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.blockr-issues[open] > .blockr-issues-toggle svg {
   transform: rotate(180deg);
+}
+
+.blockr-issues-body {
+  padding-top: 8px;
+}
+
+/* A warning or a message, in the tint of its kind. */
+.blockr-issue {
+  margin-bottom: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--blockr-color-border-default);
+  border-radius: var(--blockr-radius-lg);
+  font-size: var(--blockr-font-size-base);
+  color: var(--blockr-color-text-default);
+  background: var(--blockr-color-bg-subtle);
+}
+
+.blockr-issue--warning {
+  border-color: var(--blockr-color-border-warning);
+  background: var(--blockr-color-bg-warning);
 }
 
 /* ============================================================
@@ -353,132 +385,116 @@
 }
 
 /* ============================================
-   Offcanvas / Sidebar Styling (Figma-aligned)
-   ============================================ */
-.offcanvas {
-  width: 320px !important;
-  border-left: 1px solid var(--blockr-color-border) !important;
+   Offcanvas (off_canvas())
+   ============================================
+   Built UI that is not on screen: block cards waiting for a panel and the
+   extensions of hidden views. Off the page to the left (cards) or below
+   (extensions) and invisible, but laid out at a quarter of the viewport's
+   width, so the outputs in it keep a size and keep rendering. */
+.blockr-offcanvas {
+  position: fixed;
+  left: 0;
+  z-index: -1;
+  display: flex;
+  flex-direction: column;
+  width: 25%;
+  visibility: hidden;
+  pointer-events: none;
+  background: var(--blockr-color-bg-surface);
 }
 
-.offcanvas-header {
-  border-bottom: 1px solid var(--blockr-color-border);
-  padding: 16px 20px;
+.blockr-offcanvas--start {
+  top: 0;
+  bottom: 0;
+  transform: translateX(-100%);
 }
 
-.offcanvas-title {
-  font-size: var(--blockr-font-size-lg);
-  font-weight: var(--blockr-font-weight-semibold);
-  color: var(--blockr-color-text-primary);
+.blockr-offcanvas--bottom {
+  bottom: 0;
+  height: 30vh;
+  transform: translateY(100%);
 }
 
-.offcanvas-body {
-  font-size: var(--blockr-font-size-sm);
+.blockr-offcanvas-body {
+  flex-grow: 1;
+  overflow-y: auto;
   padding: 20px;
-  background: var(--blockr-color-bg-surface, #ffffff);
 }
 
-.offcanvas .accordion {
-  margin: 0 -20px;
+/* Parked cards (`hide_block_ui()`, `hide_ext_ui()`) are invisible, but the
+   browser kept styling and laying out every one: on a 90-block board, half
+   the document once all views had been visited. Setting
+   `content-visibility: hidden` skips that work. Unlike `display: none`, it
+   leaves the cards' sizes readable, so Shiny does not suspend their outputs
+   and charts get no resize to zero. */
+.blockr-offcanvas > .blockr-offcanvas-body {
+  content-visibility: hidden;
 }
 
-.offcanvas .accordion-button {
-  font-size: var(--blockr-font-size-section);
-  font-weight: var(--blockr-font-weight-semibold);
-  font-variant-caps: all-small-caps;
-  color: var(--blockr-color-text-secondary);
-  letter-spacing: 0.5px;
-  background: transparent;
+/* ============================================
+   Block card (block_ui())
+   ============================================
+   The card fills its panel on the panel's surface. Its sections (control,
+   inputs, preview) sit one under the other, and the header's toggles open
+   and close them (section-toggle.js). A closed section is `hidden`, so
+   Shiny suspends the outputs in it. The card's padding is its inset, which
+   an output that runs to the card edges (a table) reads: it pulls itself out
+   by this much and pads its text back in, so its rules and scroll area reach
+   the edges while its text keeps the card's alignment. */
+.blockr-block-card {
+  --blockr-card-inset: 16px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  word-wrap: break-word;
+  background-color: var(--blockr-color-bg-surface);
 }
 
-.offcanvas .accordion-button:not(.collapsed) {
-  background: var(--blockr-color-bg-subtle);
-  box-shadow: none;
-}
-
-/* Block card sections (inputs / outputs / control) render as an always-open,
-   header-less accordion. These selectors carry the per-panel styling that used
-   to be applied per card at build time. Keyed on the stable panel data-value
-   and scoped with child combinators so they never reach a block's own nested
-   accordions -- and unscoped by .offcanvas so they hold once a card is moved
-   into a dock panel. */
-.blockr-block-accordion > .accordion-item {
-  border: none;
-  border-radius: 0;
-}
-
-.blockr-block-accordion > .accordion-item > .accordion-header {
-  display: none;
+.blockr-block-card-body {
+  flex: 1 1 auto;
+  padding: var(--blockr-card-inset);
 }
 
 .blockr-block-errors {
   margin-top: 12px;
 }
 
-/* One rule separates controls and preview, only while both are open. It
-   lives in the preview's panel, so it opens and closes with the preview;
-   `:has()` reads whether controls are open off the panels' hidden accordion
-   buttons, which Bootstrap marks `.collapsed` as a panel starts to close. It
-   is a background line, not a border, so the space above it animates with
-   the collapsing panel. */
-.blockr-block-accordion > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body,
-.blockr-block-accordion > .accordion-item[data-value="ctrl"] > .accordion-collapse > .accordion-body {
-  margin: 0;
-  padding: 0;
-  border: none;
-}
-
-.blockr-block-accordion:has(> .accordion-item[data-value="ctrl"] > .accordion-header .accordion-button:not(.collapsed)) > .accordion-item[data-value="inputs"] > .accordion-collapse > .accordion-body {
+/* The controls sit under the header with no rule above or below them, on
+   the card's own surface. The one rule left separates the controls from the
+   preview, edge to edge, and only while both are open: it lives in the
+   preview's section, so it opens and closes with the preview. The sections
+   come in a fixed order (control, inputs, preview), so a sibling selector
+   reads whether one above is open: neither `hidden` nor `.is-closing`, which
+   section-toggle.js sets as a fold starts. The rule is a background line
+   rather than a border so the space above it sits inside the section and
+   folds with it. */
+.blockr-block-section[data-value="ctrl"]:not([hidden], .is-closing) ~ [data-value="inputs"] > .blockr-block-section-body {
   padding-top: 12px;
 }
 
-/* The card's side inset, for an output that runs to the card edges (a
-   table): it pulls itself out by this much and pads its text back in, so
-   its rules and scroll area reach the edges while its text keeps the
-   card's alignment. */
-.blockr-block-accordion {
-  --blockr-card-inset: var(--bs-card-spacer-x);
+/* The preview runs edge to edge and pads its content back in, with the
+   controls open or closed, so an output pulled out by the inset stays inside
+   the scroll box. */
+.blockr-block-sections > [data-value="outputs"] {
+  margin: 0 calc(-1 * var(--blockr-card-inset));
 }
 
-/* The preview's panel runs edge to edge and pads its content back in, with
-   the controls open or closed, so an output pulled out by the inset stays
-   inside the scroll box. The margin sits on the collapsing element, not the
-   body: that element clips while it animates, so a margin inside it would
-   cut the rule and the preview short at both ends during the roll. */
-.blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse {
-  margin: 0 calc(-1 * var(--bs-card-spacer-x));
-}
-
-.blockr-block-accordion > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
+.blockr-block-sections > [data-value="outputs"] > .blockr-block-section-body {
   overflow-x: auto;
-  padding: 0 var(--bs-card-spacer-x);
+  padding: 0 var(--blockr-card-inset);
 }
 
-.blockr-block-accordion:has(> .accordion-item:is([data-value="inputs"], [data-value="ctrl"]) > .accordion-header .accordion-button:not(.collapsed)) > .accordion-item[data-value="outputs"] > .accordion-collapse > .accordion-body {
-  padding: 33px var(--bs-card-spacer-x) 0;
+.blockr-block-section:is([data-value="inputs"], [data-value="ctrl"]):not([hidden], .is-closing) ~ [data-value="outputs"] > .blockr-block-section-body {
+  padding: 33px var(--blockr-card-inset) 0;
   background: linear-gradient(var(--blockr-color-border-default), var(--blockr-color-border-default)) 0 16px / 100% 1px no-repeat;
 }
 
-.blockr-block-accordion > .accordion-item > .collapsing {
-  transition-duration: 0.22s;
-}
-
-/* Export button adjustments */
-.offcanvas .shiny-download-link {
-  margin-top: -5px;
-}
-
-/* Make Show code button smaller */
-.offcanvas .btn-default,
-.offcanvas .btn-outline-default {
-  font-size: var(--blockr-font-size-sm);
-  padding: 6px 12px;
-}
-
-.offcanvas hr {
-  margin-left: -20px;
-  margin-right: -20px;
-  border-color: var(--blockr-color-border);
-  opacity: 1;
+/* Folding: section-toggle.js animates the height between the section's
+   content height and zero, then sets `hidden`. */
+.blockr-block-section.is-folding {
+  overflow: hidden;
+  transition: height 0.22s ease;
 }
 
 /* ============================================
@@ -908,19 +924,6 @@
   z-index: 1;
   pointer-events: auto;
   opacity: 1;
-}
-
-/* Cards and extensions of views not on screen are parked in the two offcanvas
-   pools (`hide_block_ui()`, `hide_ext_ui()`). A closed offcanvas is only
-   `visibility: hidden`, so the browser kept styling and laying out every
-   parked card: on a 90-block board, half the document once all views had been
-   visited. Setting `content-visibility: hidden` skips that work. Unlike
-   `display: none`, it leaves the cards' sizes readable, so Shiny does not
-   suspend their outputs and charts get no resize to zero. The rule keys on the
-   pools' own class rather than `.offcanvas`: Bootstrap adds `.show` only once
-   an offcanvas has slid in, so any other offcanvas would slide in blank. */
-.blockr-offcanvas-pool:not(.show) > .offcanvas-body {
-  content-visibility: hidden;
 }
 
 /* Empty dock prompt — overlays the dockview when no panels are present */

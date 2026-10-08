@@ -35,7 +35,7 @@ hide_ext_ui <- function(ids, session, board_ns = session$ns) {
   }
 
   eid <- board_ns(hid)
-  oid <- paste0(board_ns("exts_offcanvas"), " .offcanvas-body")
+  oid <- paste0(board_ns("exts_offcanvas"), " .blockr-offcanvas-body")
 
   log_debug("hiding {cli::qty(length(eid))}extension{?s} {eid} in {oid}")
 

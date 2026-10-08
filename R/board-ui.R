@@ -21,6 +21,7 @@ board_ui.dock_board <- function(
     blockr.ui::theme_dep(),
     blockr.ui::controls_dep(),
     show_block_dep(),
+    htmlwidgets_resize_dep(),
     attr_output_dep(),
     add_block_menu_dep(),
     block_rename_dep(),
@@ -30,7 +31,6 @@ board_ui.dock_board <- function(
     rail_dep(),
     off_canvas(
       id = NS(id, "blocks_offcanvas"),
-      title = "Offcanvas blocks",
       # Only the active view's cards are built at startup; off-screen views'
       # cards are inserted on first visit. The build dominates first paint and
       # scales with total block count, not with what is on screen.
@@ -47,7 +47,6 @@ board_ui.dock_board <- function(
     off_canvas(
       id = NS(id, "exts_offcanvas"),
       position = "bottom",
-      title = "Offcanvas extensions",
       map(
         extension_ui,
         dock_extensions(x),
@@ -147,5 +146,16 @@ blockr_dock_dep <- function() {
     pkg_version(),
     src = pkg_file("assets", "css"),
     stylesheet = "blockr-dock.css"
+  )
+}
+
+# Static htmlwidgets re-measure when the dock resizes them, until the dock
+# requires an htmlwidgets release with ramnathv/htmlwidgets#496 (#528).
+htmlwidgets_resize_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-htmlwidgets-resize",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "htmlwidgets-resize.js"
   )
 }
