@@ -181,7 +181,7 @@ test_that("the chrome's tooltips are written for Blockr.tooltip (#494)", {
   )
 })
 
-test_that("busy spinner precedes the view menu (#345, #355, #360)", {
+test_that("the logo leads the navbar as its busy indicator (#530)", {
 
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))
 
@@ -197,86 +197,52 @@ test_that("busy spinner precedes the view menu (#345, #355, #360)", {
   }
 
   doc <- xml2::read_html(as.character(board_ui("test", brd)))
-  spinner <- by_class(doc, "blockr-navbar-spinner")
+  logo <- by_class(doc, "blockr-navbar-logo")
 
-  # A CSS-only busy ring driven off `.shiny-busy`, announced like the lock
-  # indicator.
-  expect_length(spinner, 1)
-  expect_identical(xml2::xml_attr(spinner, "role"), "status")
-  expect_identical(xml2::xml_attr(spinner, "aria-label"), "Busy")
+  # The logo is the first item of the bar.
+  expect_length(logo, 1)
+  item <- xml2::xml_parent(logo[[1]])
+  expect_identical(xml2::xml_attr(item, "data-navbar-item"), "logo")
+  expect_length(xml2::xml_find_all(item, "preceding-sibling::*"), 0L)
 
-  # The ring sits in a static slot (which carries the hover tooltip); the slot
-  # is the busy item, right ahead of the view menu's, so the ring is not
-  # juxtaposed against the smaller gear. Always painted, no edge to hide at.
-  slot <- by_class(doc, "blockr-navbar-spinner-slot")
-  expect_length(slot, 1)
-  expect_length(by_class(slot[[1]], "blockr-navbar-spinner"), 1)
-  item <- xml2::xml_parent(slot[[1]])
-  expect_identical(xml2::xml_attr(item, "data-navbar-item"), "busy")
+  # Seven squares, each carrying its place in the order the R is drawn, on
+  # which the busy animation staggers them. The drawing itself is hidden from
+  # screen readers.
+  svg <- xml2::xml_find_first(logo[[1]], ".//svg")
+  expect_identical(xml2::xml_attr(svg, "aria-hidden"), "true")
   expect_identical(
-    xml2::xml_attr(
-      xml2::xml_find_first(item, "following-sibling::*[1]"),
-      "data-navbar-item"
-    ),
-    "views"
+    xml2::xml_attr(xml2::xml_find_all(svg, ".//rect"), "style"),
+    paste0("--i:", 0:6)
   )
 
-  # Blocks still evaluate while read-only, so the spinner survives locked mode
-  # (unlike the editing chrome around it).
+  # Announced like the lock indicator, by a status only screen readers see.
+  status <- xml2::xml_find_all(logo[[1]], ".//*[@role='status']")
+  expect_length(status, 1)
+  expect_identical(xml2::xml_attr(status, "aria-label"), "Busy")
+  expect_identical(xml2::xml_attr(status, "class"), "visually-hidden")
+
+  # Blocks still evaluate while read-only, so the busy indicator survives
+  # locked mode (unlike the editing chrome around it).
   locked <- withr::with_options(
     list(blockr.locked = TRUE),
     by_class(
       xml2::read_html(as.character(board_ui("test", brd))),
-      "blockr-navbar-spinner"
+      "blockr-navbar-logo"
     )
   )
   expect_length(locked, 1)
 })
 
-test_that("the busy spinner still turns under reduced motion", {
+test_that("the logo is whole when idle and still moves under reduced motion", {
 
-  # A stylesheet assertion because nothing else can catch this: the spinner is
-  # only ever seen mid-flush, and CI never runs with the preference set. When
-  # the reduced-motion block killed the animation outright, the ring rendered
-  # perfectly and sat frozen -- indistinguishable from a hung session -- for
-  # every user whose OS reports the preference (Windows does so whenever
-  # "Animation effects" is off). Slower is fine here; stopped is not.
-  css <- paste(
-    readLines(
-      system.file(
-        "assets", "css", "blockr-dock.css",
-        package = "blockr.dock",
-        mustWork = TRUE
-      ),
-      warn = FALSE
-    ),
-    collapse = "\n"
-  )
-
-  reduced <- regmatches(
-    css,
-    regexpr(
-      "(?s)@media \\(prefers-reduced-motion: reduce\\).*?\\n\\}",
-      css,
-      perl = TRUE
-    )
-  )
-
-  expect_length(reduced, 1L)
-
-  # Must slow the busy selector that carries the spin; on the bare
-  # `.blockr-navbar-spinner` the override is outspecified and does nothing.
-  expect_match(reduced, "html.shiny-busy:has", fixed = TRUE)
-  expect_match(reduced, "animation-duration: 1.6s", fixed = TRUE)
-  expect_no_match(reduced, "animation:\\s*none")
-})
-
-test_that("the idle navbar spinner is a closed ring, the arc is busy-only", {
-
-  # Same rationale as the reduced-motion assertion: the spinner's states are
-  # only ever seen mid-flush. Idle must be a full ring -- no transparent gap,
-  # or it reads as an oversized "C" -- and the darker arc that signals motion
-  # belongs on the busy selector, not the base rule.
+  # Stylesheet assertions, because nothing else can catch these: the logo is
+  # only ever seen animating mid-flush, and CI never runs with the preference
+  # set. Idle, the logo must be whole, so the animation belongs on the busy
+  # selector, not the base rule, and it waits the display delay. When the
+  # reduced-motion block killed the old ring's animation outright, the ring
+  # sat frozen -- indistinguishable from a hung session -- for every user
+  # whose OS reports the preference (Windows does so whenever "Animation
+  # effects" is off). Slower is fine here; stopped is not.
   css <- paste(
     readLines(
       system.file(
@@ -291,58 +257,44 @@ test_that("the idle navbar spinner is a closed ring, the arc is busy-only", {
 
   base <- regmatches(
     css,
-    regexpr("(?m)^\\.blockr-navbar-spinner \\{[^}]*\\}", css, perl = TRUE)
+    regexpr(
+      "(?m)^\\.blockr-navbar-logo \\.blockr-logo rect \\{[^}]*\\}",
+      css,
+      perl = TRUE
+    )
   )
 
   busy <- regmatches(
     css,
     regexpr(
-      "(?s)html\\.shiny-busy:has[^{]*\\.blockr-navbar-spinner \\{[^}]*\\}",
+      "(?m)^html\\.shiny-busy:has[^{]*\\.blockr-logo rect \\{[^}]*\\}",
       css,
       perl = TRUE
     )
   )
 
   expect_length(base, 1L)
-  expect_no_match(base, "border-\\w+-color:\\s*transparent")
-  expect_match(busy, "border-top-color", fixed = TRUE)
-})
+  expect_no_match(base, "animation")
+  expect_length(busy, 1L)
+  expect_match(busy, "animation: blockr-logo-fill", fixed = TRUE)
+  expect_match(busy, "var(--blockr-spinner-delay, 0ms)", fixed = TRUE)
 
-test_that("the spinner's hover tooltip names its state", {
-
-  # CSS-only, like the ring: on hover the slot names its state, switching from
-  # "Idle" to "Computing" on the busy scope -- on the busy selector, not the
-  # base rule.
-  css <- paste(
-    readLines(
-      system.file(
-        "assets", "css", "blockr-dock.css",
-        package = "blockr.dock",
-        mustWork = TRUE
-      ),
-      warn = FALSE
-    ),
-    collapse = "\n"
-  )
-
-  idle <- regmatches(
+  reduced <- regmatches(
     css,
     regexpr(
-      "(?m)^\\.blockr-navbar-spinner-slot::after \\{[^}]*\\}",
-      css, perl = TRUE
+      "(?s)@media \\(prefers-reduced-motion: reduce\\).*?\\n\\}",
+      css,
+      perl = TRUE
     )
   )
 
-  busy <- regmatches(
-    css,
-    regexpr(
-      "(?s)html\\.shiny-busy:has[^{]*-slot::after \\{[^}]*\\}",
-      css, perl = TRUE
-    )
-  )
+  expect_length(reduced, 1L)
 
-  expect_match(idle, "content: \"Idle\"", fixed = TRUE)
-  expect_match(busy, "content: \"Computing\"", fixed = TRUE)
+  # Must slow the busy selector that carries the animation; on the bare
+  # `.blockr-logo rect` the override is outspecified and does nothing.
+  expect_match(reduced, "html.shiny-busy:has", fixed = TRUE)
+  expect_match(reduced, "animation-duration: 3.9s", fixed = TRUE)
+  expect_no_match(reduced, "animation:\\s*none")
 })
 
 test_that("navbar carries the spinner display delay from the option (#355)", {
@@ -362,7 +314,7 @@ test_that("navbar carries the spinner display delay from the option (#355)", {
   }
 
   # A 200 ms minimum-busy delay by default, fed into the CSS custom property
-  # the spinner's show transition reads.
+  # the logo's busy animation waits.
   expect_match(
     navbar_style(list(blockr.spinner_delay_ms = NULL)),
     "--blockr-spinner-delay: 200ms",
