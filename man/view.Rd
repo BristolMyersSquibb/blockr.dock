@@ -97,7 +97,7 @@ active view -- is a \code{dock_views} collection of \code{dock_view} objects, re
 with \code{board_views()}. \strong{Grid} -- the geometry of each view (nesting, tab
 groups, sizes) -- is a separate, \code{NULL}-valid \code{dock_grids} slot, read with
 \code{board_grids()}; a grid also carries the \strong{rails} pinned to the view's
-edges, holding members the splitview therefore does not arrange. Single-page
+edges, holding members the splitview therefore does not arrange. Single-view
 boards are a degenerate case:
 one auto-named "Page" view. Blocks and extensions are shared across views
 via the board's DAG; view membership is a layout concern only.

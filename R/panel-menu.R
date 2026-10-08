@@ -47,7 +47,7 @@ suggest_panels_to_add <- function(
       "blockr-add-panel-menu",
       list(
         pick = ns("add_dock_panel_pick"),
-        caption = "Show on this page",
+        caption = "Show in this view",
         at = at,
         items = items
       )

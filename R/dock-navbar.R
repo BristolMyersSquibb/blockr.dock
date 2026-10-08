@@ -403,7 +403,7 @@ busy_navbar_ui <- function(id, board) {
 }
 
 # View menu in the navbar -- always present, since boards always carry a
-# `dock_views` collection (single-page boards have one auto-named "Page" view).
+# `dock_views` collection (single-view boards have one auto-named "Page" view).
 # The menu needs only structure (ids, names, active), not geometry. A short rule
 # sets it apart from the controls after it.
 views_navbar_ui <- function(id, board) {

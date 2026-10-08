@@ -71,15 +71,15 @@
   field loses focus, not on every keystroke. Each keystroke was a board
   update, and while typing those piled up on the server.
 
-* The rails of a board's pages open and close together. Collapsing or
-  expanding the rail on one edge of a page does the same on every other page,
-  and a page visited for the first time opens with its rails the way the pages
+* The rails of a board's views open and close together. Collapsing or
+  expanding the rail on one edge of a view does the same on every other view,
+  and a view visited for the first time opens with its rails the way the views
   already visited show theirs. Only a rail holding panels takes part. The
-  "Sync rails across pages" board option (`new_sync_rails_option()`, in
+  "Sync rails across views" board option (`new_sync_rails_option()`, in
   `dock_board_options()`, on unless the `sync_rails` blockr option says
-  otherwise) turns this off, and switching it back on brings every page to the
+  otherwise) turns this off, and switching it back on brings every view to the
   one on screen. A board saved before this release has no such option, so its
-  pages keep their rails as they were left (#480).
+  views keep their rails as they were left (#480).
 
 * The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
@@ -91,8 +91,8 @@
 
 * Adding, appending, prepending and inserting a block open one menu in place,
   with a filter box and one row per block type, instead of the block browser
-  sidebar. "Add panel" is the same menu over the board's blocks not on the
-  page, and its dialog is gone. An action's trigger can name where its
+  sidebar. "Add panel" is the same menu over the board's blocks not in the
+  view, and its dialog is gone. An action's trigger can name where its
   gesture happened (`at`, see `new_action()`): the menu opens there, and
   under the navbar when nothing is named.
 
@@ -491,7 +491,7 @@
   The darker arc that signals motion is painted on only while the board is
   busy; at rest the ring is a single muted colour and recedes into the navbar.
 
-* Views (pages) can now be reordered from the nav dropdown: each item carries
+* Views can now be reordered from the nav dropdown: each item carries
   up / down controls beside its rename and remove actions. Order is board
   content, so the move travels through the update lifecycle as a new
   `views$order` delta (a total permutation of the view ids) and survives save /

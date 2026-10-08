@@ -1,7 +1,7 @@
 #' Set up dock board server logic.
 #'
 #' Entry point called by blockr.core's board server. Creates the dock
-#' infrastructure (always multi-view; single-page boards are a
+#' infrastructure (always multi-view; single-view boards are a
 #' degenerate case with one auto-named "Page" view), starts extension
 #' servers, and wires up action triggers.
 #'
@@ -1189,8 +1189,8 @@ add_view_observer <- function(client_views, session, update) {
       )
     )
 
-    # Names the page for the nav, which opens its name for renaming once the
-    # page arrives; no other page does, wherever it comes from.
+    # Names the view for the nav, which opens its name for renaming once the
+    # view arrives; no other view does, wherever it comes from.
     session$sendInputMessage("view_nav", list(rename_new = name))
   })
 }

@@ -6,7 +6,7 @@
 #' with `board_views()`. **Grid** -- the geometry of each view (nesting, tab
 #' groups, sizes) -- is a separate, `NULL`-valid `dock_grids` slot, read with
 #' `board_grids()`; a grid also carries the **rails** pinned to the view's
-#' edges, holding members the splitview therefore does not arrange. Single-page
+#' edges, holding members the splitview therefore does not arrange. Single-view
 #' boards are a degenerate case:
 #' one auto-named "Page" view. Blocks and extensions are shared across views
 #' via the board's DAG; view membership is a layout concern only.
