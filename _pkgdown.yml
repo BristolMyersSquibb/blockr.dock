@@ -45,6 +45,10 @@ reference:
   desc: Actions are intended as re-usable, narrowly scoped board interactions, such as adding or removing a block.
   contents:
     - new_action
+- title: Navbar
+  desc: The navbar is drawn from a list of items, which an app adds to, reorders or drops from.
+  contents:
+    - navbar_item
 - title: Utilities
   desc: Various utility functions that are exported for use in dependent packages.
   contents:

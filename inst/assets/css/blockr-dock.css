@@ -525,25 +525,50 @@
 .blockr-navbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   height: 48px;
-  padding: 0 16px;
+  padding: 0 12px;
   background-color: var(--blockr-color-bg-surface, #ffffff);
   border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 
-.blockr-navbar-left {
-  flex: 1;
+/* One wrapper per navbar item (navbar_item_ui()). An item keeps its width
+   unless it fills, taking up the free space, or shrinks, giving way first on
+   a narrow bar; `min-width: 0` lets it go below its content's width. */
+.blockr-navbar-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex: none;
 }
 
-.blockr-navbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.blockr-navbar-item-fill {
+  flex-grow: 1;
+}
+
+.blockr-navbar-item-shrink,
+.blockr-navbar-item-shrink > * {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+/* An item whose output renders nothing, such as an avatar with nobody signed
+   in, takes no room: flexbox counts an empty box in the bar's `gap`. Out of
+   flow rather than `display: none`, since an output without a box counts as
+   hidden to Shiny, which then suspends it and never renders what would show
+   the item. */
+.blockr-navbar-item:empty,
+.blockr-navbar-item:has(> .shiny-html-output:only-child:empty),
+.blockr-navbar-item:has(> .shiny-text-output:only-child:empty) {
+  position: absolute;
+}
+
+/* The short rule that sets the view menu apart from the controls after it */
+.blockr-navbar-rule {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 2px 0 12px;
+  background: var(--blockr-color-border-default, #e5e7eb);
 }
 
 .blockr-navbar-icon-btn {
@@ -568,7 +593,7 @@
 
 /* Read-only / locked-mode indicator. Styled as a static status pill,
    not a button -- no hover state, no pointer cursor. Sits between the
-   view nav and the settings gear in the navbar right slot. */
+   view nav and the board options button in the navbar. */
 .blockr-lock-indicator {
   display: inline-flex;
   align-items: center;
@@ -612,8 +637,42 @@
   white-space: nowrap;
 }
 
+.blockr-view-toggle.blockr-navbar-icon-btn {
+  width: auto;
+  height: 30px;
+  gap: 6px;
+  padding: 0 8px;
+  font-weight: 500;
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-view-toggle[aria-expanded="true"] {
+  background-color: var(--blockr-color-bg-hover);
+}
+
 .blockr-view-toggle::after {
-  margin-left: 2px;
+  display: none;
+}
+
+/* The design system's chevron: muted, default on hover, turned while the
+   menu is open */
+.blockr-view-toggle-chev {
+  display: inline-flex;
+  color: var(--blockr-color-text-muted);
+  transition: transform var(--blockr-transition), color var(--blockr-transition);
+}
+
+.blockr-view-toggle:hover .blockr-view-toggle-chev {
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-view-toggle[aria-expanded="true"] .blockr-view-toggle-chev {
+  transform: rotate(180deg);
+}
+
+.blockr-view-toggle:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
 }
 
 /* The menu takes its look from blockr.ui's menu classes; these are the
@@ -1049,7 +1108,7 @@
 
    The slot is always laid out and always painted -- there is no show/hide, so
    nothing ever blinks in or out and it reflows no neighbour wherever it sits;
-   it leads the navbar's right group, ahead of the view nav. Idle it is a
+   by default it sits ahead of the view nav. Idle it is a
    faint, closed ring (a
    track in one muted colour); a busy flush paints a darker arc onto that ring
    and spins it. Both the arc (a 0s `border-top-color` transition) and the spin

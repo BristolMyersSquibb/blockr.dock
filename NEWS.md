@@ -1,5 +1,26 @@
 # blockr.dock (development version)
 
+* The navbar is drawn from a list of items, the dock's own controls included,
+  which an app adds to, reorders or drops from through `serve()`, as it does
+  plugins and options. An item, made by `navbar_item()`, has a UI and may have
+  a server, which runs once per session under the item's namespace. The call
+  `serve(board, navbar = custom_navbar(item))` appends one to the default, and
+  `navbar` takes any function of the board and its plugins that returns
+  items, such as one that reorders or drops from `default_navbar_items()`
+  with `[`. The defaults are the plugin's piece, placed by
+  `plugin_navbar_item()`, a spacer, the busy indicator, the view menu, now set
+  apart by a short rule, the read-only indicator and the board options. On a
+  narrow bar the plugin's piece gives way first and the rest keeps its width.
+  An item whose output renders nothing leaves no gap. The view menu's button
+  shows the current view's name and a chevron, and the board options button
+  the side panel it opens rather than a gear (#529).
+
+* **Breaking:** the navbar's `.blockr-navbar-left` and `.blockr-navbar-right`
+  groups are gone, and the plugin's piece no longer takes up the free space, so
+  a spacer inside it has nothing to push against. Since `serve()` hands
+  `blockr_app_ui()` the server's arguments as well, the dock's method appends
+  only its unnamed `...` to the page.
+
 * The block card no longer uses Bootstrap (BristolMyersSquibb/blockr.ui#85).
   Its sections (control, inputs, preview) fold in the browser on the
   toggle's click instead of through a server round trip to bslib's
@@ -50,15 +71,15 @@
   field loses focus, not on every keystroke. Each keystroke was a board
   update, and while typing those piled up on the server.
 
-* The rails of a board's pages open and close together. Collapsing or
-  expanding the rail on one edge of a page does the same on every other page,
-  and a page visited for the first time opens with its rails the way the pages
+* The rails of a board's views open and close together. Collapsing or
+  expanding the rail on one edge of a view does the same on every other view,
+  and a view visited for the first time opens with its rails the way the views
   already visited show theirs. Only a rail holding panels takes part. The
-  "Sync rails across pages" board option (`new_sync_rails_option()`, in
+  "Sync rails across views" board option (`new_sync_rails_option()`, in
   `dock_board_options()`, on unless the `sync_rails` blockr option says
-  otherwise) turns this off, and switching it back on brings every page to the
+  otherwise) turns this off, and switching it back on brings every view to the
   one on screen. A board saved before this release has no such option, so its
-  pages keep their rails as they were left (#480).
+  views keep their rails as they were left (#480).
 
 * The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
@@ -70,14 +91,14 @@
 
 * Adding, appending, prepending and inserting a block open one menu in place,
   with a filter box and one row per block type, instead of the block browser
-  sidebar. "Add panel" is the same menu over the board's blocks not on the
-  page, and its dialog is gone. An action's trigger can name where its
+  sidebar. "Add panel" is the same menu over the board's blocks not in the
+  view, and its dialog is gone. An action's trigger can name where its
   gesture happened (`at`, see `new_action()`): the menu opens there, and
   under the navbar when nothing is named.
 
-* "Manage pages" turns the views menu into an editor: drag a page by its grip
-  to reorder, click a name to rename it, remove a page after a question in
-  its row, and add an empty "Page N" with "New page", all without a dialog.
+* "Manage views" turns the views menu into an editor: drag a view by its grip
+  to reorder, click a name to rename it, remove a view after a question in
+  its row, and add an empty "View N" with "New view", all without a dialog.
 
 * The board options sidebar lists the option categories, and a row opens
   that category's page. The header then shows a back arrow and the
@@ -470,7 +491,7 @@
   The darker arc that signals motion is painted on only while the board is
   busy; at rest the ring is a single muted colour and recedes into the navbar.
 
-* Views (pages) can now be reordered from the nav dropdown: each item carries
+* Views can now be reordered from the nav dropdown: each item carries
   up / down controls beside its rename and remove actions. Order is board
   content, so the move travels through the update lifecycle as a new
   `views$order` delta (a total permutation of the view ids) and survives save /

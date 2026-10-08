@@ -1,5 +1,5 @@
 # Adding, appending and prepending a block open the "+" menu in place
-# (add-block-menu.R); a pick comes back through block_browser_server(),
+# (action-menu.R); a pick comes back through block_browser_server(),
 # which builds the block and, for append and prepend, its link.
 add_block_action <- function(trigger, board, update, ...) {
   new_action(

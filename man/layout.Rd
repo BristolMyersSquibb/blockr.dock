@@ -73,7 +73,7 @@ grid.
 \details{
 Construct a grid with:
 \itemize{
-\item \code{dock_grid(...)}: the page-level container. Its \code{...} are the
+\item \code{dock_grid(...)}: the view-level container. Its \code{...} are the
 children of the root branch. Bare strings become single-panel
 leaves, character vectors become tabbed leaves, lists become
 nested branches. Use \code{\link[=panels]{panels()}} for a tabbed leaf with an explicit
