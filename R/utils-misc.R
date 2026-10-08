@@ -84,32 +84,8 @@ expand_hex_color <- function(x) {
   }
 }
 
-create_block_with_name <- function(reg_id, blk_nms, ...) {
-  name_fun <- function(nms) {
-    function(class) {
-      last(make.unique(c(nms, default_block_name(class)), sep = " "))
-    }
-  }
-
-  create_block(reg_id, ..., block_name = name_fun(blk_nms))
-}
-
 trace_env <- new.env()
 
 insert_ui <- insertUI
 
 remove_ui <- removeUI
-
-combine_distinct <- function(...) {
-  Reduce(
-    function(x, y) {
-      stopifnot(
-        length(unique(names(x))) == length(x),
-        length(unique(names(y))) == length(y),
-        length(intersect(names(x), names(y))) == 0L
-      )
-      c(x, y)
-    },
-    c(...)
-  )
-}
