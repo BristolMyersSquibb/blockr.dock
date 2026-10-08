@@ -68,13 +68,15 @@ function of the board and its plugins that returns the items, as it does
 \details{
 The default items, returned by \code{default_navbar_items()}, are, in order: the
 piece the \code{preserve_board} plugin draws (id \code{"preserve_board"}), a spacer
-(\code{"spacer"}), the busy indicator (\code{"busy"}), the view menu (\code{"views"}), the
-read-only indicator (\code{"read_only"}), drawn only on a locked board, and the
-board options (\code{"options"}). The generic \code{blockr_app_navbar()} gives the
-default by board class, and \code{custom_navbar()} returns a navbar function that
-appends a fixed set of items to it, dropping any default item that shares an
-id with one of them. A plugin's piece is placed by \code{plugin_navbar_item()},
-which the defaults use for the \code{preserve_board} plugin.
+(\code{"spacer"}), the busy indicator (\code{"busy"}), the view menu (\code{"views"}), which
+shows the views as a line of tabs under the bar while the board's
+\code{\link[=new_view_tabs_option]{new_view_tabs_option()}} is on, the read-only indicator (\code{"read_only"}),
+drawn only on a locked board, and the board options (\code{"options"}). The
+generic \code{blockr_app_navbar()} gives the default by board class, and
+\code{custom_navbar()} returns a navbar function that appends a fixed set of items
+to it, dropping any default item that shares an id with one of them. A
+plugin's piece is placed by \code{plugin_navbar_item()}, which the defaults use
+for the \code{preserve_board} plugin.
 
 An item whose \code{ui} draws a single \code{\link[shiny:uiOutput]{shiny::uiOutput()}} or
 \code{\link[shiny:textOutput]{shiny::textOutput()}} takes no room in the bar while that output is empty,

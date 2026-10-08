@@ -9,13 +9,15 @@
 #'
 #' The default items, returned by `default_navbar_items()`, are, in order: the
 #' piece the `preserve_board` plugin draws (id `"preserve_board"`), a spacer
-#' (`"spacer"`), the busy indicator (`"busy"`), the view menu (`"views"`), the
-#' read-only indicator (`"read_only"`), drawn only on a locked board, and the
-#' board options (`"options"`). The generic `blockr_app_navbar()` gives the
-#' default by board class, and `custom_navbar()` returns a navbar function that
-#' appends a fixed set of items to it, dropping any default item that shares an
-#' id with one of them. A plugin's piece is placed by `plugin_navbar_item()`,
-#' which the defaults use for the `preserve_board` plugin.
+#' (`"spacer"`), the busy indicator (`"busy"`), the view menu (`"views"`), which
+#' shows the views as a line of tabs under the bar while the board's
+#' [new_view_tabs_option()] is on, the read-only indicator (`"read_only"`),
+#' drawn only on a locked board, and the board options (`"options"`). The
+#' generic `blockr_app_navbar()` gives the default by board class, and
+#' `custom_navbar()` returns a navbar function that appends a fixed set of items
+#' to it, dropping any default item that shares an id with one of them. A
+#' plugin's piece is placed by `plugin_navbar_item()`, which the defaults use
+#' for the `preserve_board` plugin.
 #'
 #' An item whose `ui` draws a single [shiny::uiOutput()] or
 #' [shiny::textOutput()] takes no room in the bar while that output is empty,
@@ -405,10 +407,20 @@ busy_navbar_ui <- function(id, board) {
 # View menu in the navbar -- always present, since boards always carry a
 # `dock_views` collection (single-view boards have one auto-named "Page" view).
 # The menu needs only structure (ids, names, active), not geometry. A short rule
-# sets it apart from the controls after it.
+# sets it apart from the controls after it. On a board with the `view_tabs`
+# option the item draws the tab line as well, from the board's views and as the
+# option is on or off. While the line shows, the item leaves the bar's row for a
+# line of its own under it, the tabs followed by the menu as a chevron alone
+# (blockr-dock.css).
 views_navbar_ui <- function(id, board) {
+
+  board_id <- navbar_board_id(id)
+  views <- board_views(board)
+  tabs <- board_view_tabs(board)
+
   tagList(
-    view_nav_ui(navbar_board_id(id), board_views(board)),
+    if (not_null(tabs)) view_tabs_ui(board_id, views, tabs),
+    view_nav_ui(board_id, views, tabs),
     tags$span(class = "blockr-navbar-rule", `aria-hidden` = "true")
   )
 }

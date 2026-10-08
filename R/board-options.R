@@ -65,6 +65,93 @@ compact_dep <- function() {
   )
 }
 
+#' Views as tabs
+#'
+#' A board option that shows the board's views as a line of tabs under the
+#' navbar, one tab per view, with the view menu reduced to its chevron at the
+#' end of the line. Off by default, it sits with the light/dark switch and
+#' "Compact" under "Theme options", and "Show views as tabs" at the foot of the
+#' view menu sets it as well. A board saved with the option on shows the tabs
+#' from its first paint.
+#'
+#' @param value Logical, whether the views show as tabs. Defaults to the
+#'   `view_tabs` blockr option, else `FALSE`.
+#' @param category Options sidebar category.
+#' @param label The option's name, which its switch shows.
+#' @param ... Passed to [blockr.core::new_board_option()].
+#'
+#' @return A `board_option` object.
+#'
+#' @examples
+#' new_view_tabs_option(TRUE)
+#'
+#' @export
+new_view_tabs_option <- function(value = blockr_option("view_tabs", FALSE),
+                                 category = "Theme options",
+                                 label = "Views as tabs", ...) {
+
+  new_board_option(
+    id = "view_tabs",
+    default = value,
+    ui = function(id) {
+      bslib::input_switch(NS(id, "view_tabs"), label, value)
+    },
+    server = function(board, ..., session) {
+      list(
+        # The view menu's row for the option asks for the state it wants.
+        observeEvent(
+          session$input$view_nav_tabs,
+          set_board_option_value(
+            "view_tabs",
+            isTRUE(session$input$view_nav_tabs),
+            board$board,
+            session
+          )
+        ),
+        observeEvent(
+          get_board_option_or_null("view_tabs", session),
+          {
+            on <- isTRUE(get_board_option_value("view_tabs", session))
+            bslib::toggle_switch("view_tabs", value = on, session = session)
+            session$sendInputMessage("view_nav", list(tabs = on))
+          }
+        )
+      )
+    },
+    category = category,
+    label = label,
+    ...
+  )
+}
+
+#' @export
+validate_board_option.view_tabs_option <- function(x) {
+
+  val <- board_option_value(NextMethod())
+
+  if (!is_bool(val)) {
+    blockr_abort(
+      "Expecting `view_tabs` to be a boolean.",
+      class = "board_options_view_tabs_invalid"
+    )
+  }
+
+  invisible(x)
+}
+
+# Whether the board's first paint shows its views as tabs, from the option's
+# value on the board. A board without the option, such as one saved before it
+# existed, gives `NULL`, and its views item draws neither the tab line nor the
+# menu's row for it.
+board_view_tabs <- function(board) {
+
+  opts <- board_options(board)
+
+  if ("view_tabs" %in% names(opts)) {
+    isTRUE(board_option_value(opts[["view_tabs"]]))
+  }
+}
+
 #' Rails in step across views
 #'
 #' A board option that opens and closes the rails of every view together.

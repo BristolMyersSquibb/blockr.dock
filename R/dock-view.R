@@ -596,9 +596,10 @@ view_binding_dep <- function() {
 
 # A click inside the views menu leaves it open (`data-bs-auto-close =
 # "outside"`), so managing pages does not close it; the binding closes it
-# after a switch.
+# after a switch. On a board with the `view_tabs` option, `tabs` is whether it
+# is on, and the menu carries the option's row.
 #' @noRd
-view_nav_ui <- function(id, views) {
+view_nav_ui <- function(id, views, tabs = NULL) {
 
   ns <- NS(id)
   nav_id <- ns("view_nav")
@@ -627,7 +628,8 @@ view_nav_ui <- function(id, views) {
           ),
           span(class = "blockr-menu__icon", blockr.ui::small_icon("sliders")),
           span(class = "blockr-menu__label", "Manage views")
-        )
+        ),
+        if (not_null(tabs)) view_tabs_toggle_ui(tabs)
       ),
       div(
         class = "blockr-view-foot",
@@ -699,6 +701,60 @@ view_item_ui <- function(view_id, view_name, active_id = NULL,
         blockr.ui::small_icon("remove")
       )
     }
+  )
+}
+
+# The row at the foot of the views menu that turns the tab line on and off. It
+# asks the server for the state it wants, and its check shows while the tabs
+# are on (view-binding.js).
+view_tabs_toggle_ui <- function(on) {
+  tags$button(
+    type = "button",
+    class = paste(
+      "dropdown-item blockr-menu__item blockr-menu__item--quiet",
+      "blockr-view-tabs-toggle"
+    ),
+    role = "menuitemcheckbox",
+    `aria-checked` = if (on) "true" else "false",
+    span(class = "blockr-menu__label", "Show views as tabs"),
+    span(class = "blockr-menu__check", blockr.ui::small_icon("check"))
+  )
+}
+
+# The views as a line of tabs, one per view, hidden unless `on`. Its id is the
+# views menu's with `-tabs` appended, by which the menu's binding finds it: an
+# update of the menu updates the tabs too, and a tab switches views as a pick
+# in the menu does (view-binding.js).
+view_tabs_ui <- function(id, views, on = FALSE) {
+
+  active <- active_view(views)
+
+  div(
+    id = NS(NS(id, "view_nav"), "tabs"),
+    class = "blockr-view-tabs",
+    role = "tablist",
+    `aria-label` = "Views",
+    hidden = if (!on) NA,
+    map(
+      view_tab_ui,
+      names(views),
+      view_names(views),
+      MoreArgs = list(active_id = active)
+    )
+  )
+}
+
+view_tab_ui <- function(view_id, view_name, active_id = NULL) {
+
+  on <- identical(view_id, active_id)
+
+  tags$button(
+    type = "button",
+    class = c("blockr-view-tab", if (on) "is-active"),
+    role = "tab",
+    `aria-selected` = if (on) "true" else "false",
+    `data-view-id` = view_id,
+    view_name
   )
 }
 

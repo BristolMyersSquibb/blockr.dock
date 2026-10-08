@@ -266,6 +266,77 @@ test_that("a board without the plugin keeps its controls on the right", {
   )
 })
 
+test_that("the views item draws the views as tabs as the board's option is", {
+
+  skip_if_not_installed("xml2")
+
+  board <- function(...) {
+    new_dock_board(
+      blocks = c(a = new_dataset_block(), b = new_dataset_block()),
+      views = list(First = "a", Second = "b"),
+      active = "Second",
+      ...
+    )
+  }
+
+  draw <- function(brd) {
+    xml2::read_html(as.character(board_ui("test", brd)))
+  }
+
+  line <- function(doc) {
+    xml2::xml_find_first(
+      doc,
+      "//div[@data-navbar-item='views']/div[@id='test-view_nav-tabs']"
+    )
+  }
+
+  row <- function(doc) {
+    xml2::xml_find_first(
+      doc,
+      paste0(
+        "//*[@id='test-view_nav']//button",
+        "[contains(concat(' ', @class, ' '), ' blockr-view-tabs-toggle ')]"
+      )
+    )
+  }
+
+  # Off by default: the line is drawn hidden, a tab per view with the current
+  # one marked, and the menu's row for it is unchecked.
+  off <- draw(board())
+  tabs <- xml2::xml_find_all(line(off), "./button")
+
+  expect_false(is.na(xml2::xml_attr(line(off), "hidden")))
+  expect_identical(xml2::xml_attr(tabs, "data-view-id"), c("First", "Second"))
+  expect_identical(xml2::xml_text(tabs), c("First", "Second"))
+  expect_identical(xml2::xml_attr(tabs, "aria-selected"), c("false", "true"))
+  expect_identical(
+    xml2::xml_attr(tabs, "class"),
+    c("blockr-view-tab", "blockr-view-tab is-active")
+  )
+  expect_identical(xml2::xml_attr(row(off), "aria-checked"), "false")
+  expect_identical(trimws(xml2::xml_text(row(off))), "Show views as tabs")
+
+  # A board saved with the option on shows the line from its first paint.
+  withr::with_options(list(blockr.view_tabs = TRUE), on <- draw(board()))
+
+  expect_true(is.na(xml2::xml_attr(line(on), "hidden")))
+  expect_identical(xml2::xml_attr(row(on), "aria-checked"), "true")
+
+  # A board without the option draws neither.
+  none <- draw(board(options = new_board_options(new_board_name_option())))
+
+  expect_s3_class(line(none), "xml_missing")
+  expect_s3_class(row(none), "xml_missing")
+
+  # A locked board shows the tabs it was saved with, but cannot change the
+  # option, so its menu has no row for it.
+  withr::local_options(blockr.locked = TRUE)
+  withr::with_options(list(blockr.view_tabs = TRUE), locked <- draw(board()))
+
+  expect_true(is.na(xml2::xml_attr(line(locked), "hidden")))
+  expect_s3_class(row(locked), "xml_missing")
+})
+
 test_that("the app UI resolves `navbar` and appends only unnamed `...`", {
 
   brd <- new_dock_board()
@@ -422,4 +493,203 @@ test_that("navbar items lay out in one row in the browser", {
   mid <- function(b) (b$top + b$bottom) / 2
   expect_equal(mid(box("views")), mid(box("options")), tolerance = 0.01)
   expect_equal(mid(box("filled")), mid(box("options")), tolerance = 0.01)
+})
+
+test_that("the views show as tabs under the bar, in step with the menu", {
+
+  skip_on_cran()
+
+  app <- new_app_driver(
+    system.file("examples", "view-tabs", "app.R", package = "blockr.dock"),
+    name = "view-tabs",
+    seed = 42,
+    load_timeout = 30 * 1000,
+    timeout = 20 * 1000
+  )
+  withr::defer(app$stop())
+
+  wait_view_nav(app, 3)
+
+  tabs <- function() {
+    res <- app$get_js(
+      paste0(
+        "(function() {",
+        "  var line = document.getElementById('my_board-view_nav-tabs');",
+        "  var tabs = Array.from(line.children);",
+        "  return {",
+        "    hidden: line.hidden,",
+        "    ids: tabs.map(function (t) { return t.dataset.viewId; }),",
+        "    names: tabs.map(function (t) { return t.textContent; }),",
+        "    active: tabs.filter(function (t) {",
+        "      return t.classList.contains('is-active');",
+        "    }).map(function (t) { return t.dataset.viewId; })",
+        "  };",
+        "})()"
+      )
+    )
+    res[c("ids", "names", "active")] <- lapply(
+      res[c("ids", "names", "active")],
+      function(x) as.character(unlist(x))
+    )
+    res
+  }
+
+  wait_tabs <- function(cond) {
+    wait_js(
+      app,
+      paste0(
+        "(function() {",
+        "  var line = document.getElementById('my_board-view_nav-tabs');",
+        "  return ", cond, ";",
+        "})()"
+      ),
+      function() utils::capture.output(str(tabs()))
+    )
+  }
+
+  box <- function(sel) {
+    app$get_js(
+      sprintf(
+        paste0(
+          "(function() {",
+          "  var r = document.querySelector('%s').getBoundingClientRect();",
+          "  return {top: r.top, bottom: r.bottom, height: r.height};",
+          "})()"
+        ),
+        sel
+      )
+    )
+  }
+
+  row <- "#my_board-view_nav .blockr-view-tabs-toggle"
+  options <- "[data-navbar-item=\"options\"]"
+  switched <- "document.getElementById('my_board-view_tabs').checked"
+
+  checked <- function() {
+    app$get_js(
+      sprintf("document.querySelector('%s').getAttribute('aria-checked')", row)
+    )
+  }
+
+  # A board saved with the option shows the tab line from the start, one tab
+  # per view with the current one marked, and the view menu as a chevron
+  # alone. The line sits under the bar's row, which is laid out as without
+  # it, and the views give up its height.
+  expect_false(tabs()$hidden)
+  expect_identical(tabs()$ids, c("First", "Second", "Third"))
+  expect_identical(tabs()$active, "First")
+  expect_identical(checked(), "true")
+  expect_identical(
+    app$get_js(
+      paste0(
+        "getComputedStyle(document.querySelector(",
+        "'.blockr-view-toggle-label')).display"
+      )
+    ),
+    "none"
+  )
+
+  bar <- box(".blockr-navbar")
+  line <- box("#my_board-view_nav-tabs")
+
+  expect_equal(bar$height, 87, tolerance = 0.01)
+  expect_equal(line$top, 48, tolerance = 0.01)
+  expect_equal(line$bottom, 86, tolerance = 0.01)
+  expect_equal(
+    (box(options)$top + box(options)$bottom) / 2,
+    47 / 2,
+    tolerance = 0.01
+  )
+  expect_equal(box(".blockr-view-container")$top, 87, tolerance = 0.01)
+
+  # A tab switches views as a pick in the menu does.
+  app$run_js(
+    paste0(
+      "document.querySelector('#my_board-view_nav-tabs ",
+      "[data-view-id=\"Second\"]').click()"
+    )
+  )
+  wait_view_handle(app, "Second")
+  wait_js(
+    app,
+    paste0(
+      "document.querySelector('#my_board-view_nav .active')",
+      ".dataset.viewId === 'Second'"
+    ),
+    function() utils::capture.output(print(read_view_nav(app)))
+  )
+
+  expect_identical(tabs()$active, "Second")
+
+  # The menu's row turns the option off: the line goes, the bar is back to
+  # its own height, and the option's switch follows. Then on again.
+  app$run_js("document.querySelector('.blockr-view-toggle').click()")
+  app$run_js(sprintf("document.querySelector('%s').click()", row))
+  wait_tabs(paste0("line.hidden && !", switched))
+
+  expect_identical(checked(), "false")
+  expect_equal(box(".blockr-navbar")$height, 48, tolerance = 0.01)
+  expect_equal(box(".blockr-view-container")$top, 48, tolerance = 0.01)
+
+  app$run_js("document.querySelector('.blockr-view-toggle').click()")
+  app$run_js(sprintf("document.querySelector('%s').click()", row))
+  wait_tabs(paste0("!line.hidden && ", switched))
+
+  expect_identical(checked(), "true")
+
+  # Adding, renaming, reordering and removing a view reach the tabs through
+  # the menu's messages.
+  app$run_js(
+    paste0(
+      "Shiny.setInputValue('my_board-view_nav_add', Date.now(), ",
+      "{priority: 'event'})"
+    )
+  )
+  wait_tabs("line.children.length === 4")
+
+  added <- setdiff(tabs()$ids, c("First", "Second", "Third"))
+
+  wait_tabs(
+    sprintf(
+      "line.querySelector('.is-active').dataset.viewId === '%s'",
+      added
+    )
+  )
+
+  app$run_js(
+    sprintf(
+      paste0(
+        "Shiny.setInputValue('my_board-view_nav_rename', ",
+        "{id: '%s', to: 'Fourth'}, {priority: 'event'})"
+      ),
+      added
+    )
+  )
+  wait_tabs("line.textContent.indexOf('Fourth') !== -1")
+
+  expect_identical(tabs()$names, c("First", "Second", "Third", "Fourth"))
+
+  app$run_js(
+    sprintf(
+      paste0(
+        "Shiny.setInputValue('my_board-view_nav_reorder', ",
+        "{order: ['Second', 'Third', '%s', 'First']}, {priority: 'event'})"
+      ),
+      added
+    )
+  )
+  wait_tabs("line.firstElementChild.dataset.viewId === 'Second'")
+
+  expect_identical(tabs()$ids, c("Second", "Third", added, "First"))
+
+  app$run_js(
+    paste0(
+      "Shiny.setInputValue('my_board-view_nav_remove', 'Third', ",
+      "{priority: 'event'})"
+    )
+  )
+  wait_tabs("line.children.length === 3")
+
+  expect_identical(tabs()$ids, c("Second", added, "First"))
+  expect_identical(tabs()$ids, read_view_nav(app)$id)
 })
