@@ -11,7 +11,9 @@
   `plugin_navbar_item()`, a spacer, the busy indicator, the view menu, now set
   apart by a short rule, the read-only indicator and the board options. On a
   narrow bar the plugin's piece gives way first and the rest keeps its width.
-  An item whose output renders nothing leaves no gap (#529).
+  An item whose output renders nothing leaves no gap. The view menu's button
+  shows the current view's name and a chevron, and the board options button
+  the side panel it opens rather than a gear (#529).
 
 * **Breaking:** the navbar's `.blockr-navbar-left` and `.blockr-navbar-right`
   groups are gone, and the plugin's piece no longer takes up the free space, so
@@ -84,9 +86,9 @@
   gesture happened (`at`, see `new_action()`): the menu opens there, and
   under the navbar when nothing is named.
 
-* "Manage pages" turns the views menu into an editor: drag a page by its grip
-  to reorder, click a name to rename it, remove a page after a question in
-  its row, and add an empty "Page N" with "New page", all without a dialog.
+* "Manage views" turns the views menu into an editor: drag a view by its grip
+  to reorder, click a name to rename it, remove a view after a question in
+  its row, and add an empty "View N" with "New view", all without a dialog.
 
 * The board options sidebar lists the option categories, and a row opens
   that category's page. The header then shows a back arrow and the

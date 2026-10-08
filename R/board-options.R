@@ -144,7 +144,8 @@ rails_synced <- function(session = get_session()) {
 #' Returns the options sidebar's body: a list of option categories, each
 #' opening a page with that category's options (see
 #' `options_sidebar_ui()`). Called at server time from
-#' `board_server_callback()` when the user clicks the navbar gear, and
+#' `board_server_callback()` when the user clicks the navbar's board options
+#' button, and
 #' passed to `show_sidebar()`.
 #'
 #' Caller-supplied `options` (threaded down from `serve(board, options =

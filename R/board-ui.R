@@ -67,10 +67,11 @@ board_ui.dock_board <- function(
     #     link, add and edit stack, block inputs). Body is populated
     #     server-side via `show_sidebar()` because each ships a
     #     freshly-built, trigger-dependent form.
-    #   * "settings_sidebar": the navbar gear's board-options panel.
+    #   * "settings_sidebar": the board-options panel of the navbar's options
+    #     button.
     #     `overlay` mode: layers above the page (and above the action
     #     panel when both are pinned) without reflowing content. Body is
-    #     pre-rendered here at UI-build time and the gear button opens it
+    #     pre-rendered here at UI-build time and the options button opens it
     #     via `data-blockr-sidebar-target` (pure JS, no server roundtrip).
     # Reusing one DOM slot across both concerns would let a foreign caller
     # silently swap a pinned panel's body, since the JS replaces content in

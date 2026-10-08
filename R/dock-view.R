@@ -626,7 +626,7 @@ view_nav_ui <- function(id, views) {
             "blockr-view-manage"
           ),
           span(class = "blockr-menu__icon", blockr.ui::small_icon("sliders")),
-          span(class = "blockr-menu__label", "Manage pages")
+          span(class = "blockr-menu__label", "Manage views")
         )
       ),
       div(
@@ -638,7 +638,7 @@ view_nav_ui <- function(id, views) {
             type = "button",
             class = "blockr-view-add",
             blockr.ui::small_icon("plus"),
-            "New page"
+            "New view"
           ),
           tags$button(type = "button", class = "blockr-view-done", "Done")
         )
@@ -652,11 +652,15 @@ view_nav_ui <- function(id, views) {
     tags$button(
       class = "blockr-navbar-icon-btn dropdown-toggle blockr-view-toggle",
       type = "button",
+      `aria-label` = "Views",
       `data-bs-toggle` = "dropdown",
       `data-bs-auto-close` = "outside",
       `aria-expanded` = "false",
-      bsicons::bs_icon("journals"),
-      tags$span(class = "blockr-view-toggle-label", active_nm)
+      tags$span(class = "blockr-view-toggle-label", active_nm),
+      tags$span(
+        class = "blockr-view-toggle-chev",
+        blockr.ui::small_icon("chevron")
+      )
     ),
     div(
       class = "dropdown-menu blockr-menu blockr-view-nav",
@@ -690,8 +694,8 @@ view_item_ui <- function(view_id, view_name, active_id = NULL,
       tags$span(
         class = "blockr-view-action blockr-view-remove",
         role = "button",
-        `aria-label` = "Remove page",
-        `data-blockr-tooltip` = "Remove page",
+        `aria-label` = "Remove view",
+        `data-blockr-tooltip` = "Remove view",
         blockr.ui::small_icon("remove")
       )
     }

@@ -171,7 +171,7 @@ test_that("the chrome's tooltips are written for Blockr.tooltip (#494)", {
   }
 
   unlocked <- c(
-    "dataset block", "Preview", "More actions", "Remove page",
+    "dataset block", "Preview", "More actions", "Remove view",
     "Board options", "Back", "Pin", "Close"
   )
   expect_true(all(unlocked %in% tooltips(render(NULL))))
