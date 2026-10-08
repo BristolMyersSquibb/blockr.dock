@@ -292,6 +292,68 @@ test_that("a stale close of an already-removed panel emits no rm (#362)", {
   expect_null(isolate(upd()))
 })
 
+test_that("a group's + opens the menu at the + and adds to its group (#508)", {
+
+  # The dock's add-tab callback reports the group whose "+" was clicked along
+  # with the button itself: the menu opens at the button, and a pick from it
+  # joins the group.
+  brd <- board_args(
+    blocks = c(a = new_dataset_block(), b = new_dataset_block()),
+    views = list(A = "a")
+  )
+
+  mod_input <- function(name) paste0("dock_main-", name)
+
+  opened_at <- list()
+
+  local_mocked_bindings(
+    suggest_panels_to_add = function(..., at = NULL) {
+      opened_at <<- c(opened_at, list(at))
+      invisible()
+    },
+    group_front_panel = function(dock, group_id) {
+      if (identical(group_id, "1")) "block_panel-a"
+    }
+  )
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  upd <- reactiveVal()
+
+  with_mock_context(ms, {
+    manage_dock("dock_main", brd, visibility = fake_visibility("a"),
+                update = upd)
+  })
+
+  ms$flushReact()
+
+  plus <- list(id = "my_board-dock_main-dock-add-1")
+
+  do.call(
+    ms$setInputs,
+    set_names(
+      list(list(group = "1", at = plus)),
+      mod_input(dock_input("panel-to-add"))
+    )
+  )
+
+  expect_identical(opened_at, list(plus))
+
+  do.call(
+    ms$setInputs,
+    set_names(
+      list(list(value = as.character(as_block_panel_id("b")), nonce = 1L)),
+      mod_input("add_dock_panel_pick")
+    )
+  )
+
+  expect_identical(
+    isolate(upd())$views$mod$dock_main$add,
+    list(`block_panel-b` = list(near = "block_panel-a", side = "within"))
+  )
+})
+
 test_that("a pending select fronts its tab on the first dock build (#324)", {
 
   # A deferred view's dock is built during the reconcile that activates it, so

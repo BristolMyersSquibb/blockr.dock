@@ -1,5 +1,11 @@
 # blockr.dock (development version)
 
+* A group's "+" opens the menu of panels to add under itself instead of under
+  the navbar, as the empty page's "Add panel" button already did (#508). The
+  dock hands dockViewR's add-tab plugin a callback of its own, which reports
+  the button along with its group, now that dockViewR passes the button to the
+  callback (cynkra/dockViewR#122).
+
 * The block card no longer uses Bootstrap (BristolMyersSquibb/blockr.ui#85).
   Its sections (control, inputs, preview) fold in the browser on the
   toggle's click instead of through a server round trip to bslib's

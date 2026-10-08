@@ -828,6 +828,37 @@ test_that("append opens the + menu at the block's menu button", {
   expect_identical(app$get_js("document.activeElement.id"), btn)
 })
 
+test_that("a group's + opens the panel menu under it (#508)", {
+
+  skip_on_cran()
+
+  # The first of two pages, which leaves the other page's block for the menu.
+  app <- menus_app("panel-menu-anchor", example = "multi-view")
+  withr::defer(app$stop())
+
+  # The "+" of the page's one group; the other page's has no box.
+  plus <- paste0(
+    "[...document.querySelectorAll('.dv-left-actions-container > div')]",
+    ".find(b => b.getBoundingClientRect().width > 0)"
+  )
+
+  wait_js(
+    app,
+    paste0(plus, " !== undefined"),
+    function() "[panel-menu] no + on screen"
+  )
+
+  # A click from code lands at 0, 0, as one from assistive technology can: the
+  # menu goes by the button, not by the click's point.
+  app$run_js(paste0(plus, ".click()"))
+  wait_sel(app, menu_sel)
+
+  box <- menu_box(app, plus)
+  expect_identical(box$caption, "Show on this page")
+  expect_gte(box$top, box$anchorBottom)
+  expect_lt(box$top - box$anchorBottom, 12)
+})
+
 test_that("Rename in the block menu opens the title's field", {
 
   skip_on_cran()

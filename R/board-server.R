@@ -1046,9 +1046,15 @@ manage_dock <- function(
       }
     )
 
+    # A group's "+" sends its group and itself as where it was clicked (see
+    # `add_tab_callback()`), and the menu opens under it.
     observeEvent(
       input[[dock_input("panel-to-add")]],
-      suggest_panels_to_add(dock, board, session = session)
+      suggest_panels_to_add(
+        dock, board,
+        at = input[[dock_input("panel-to-add")]][["at"]],
+        session = session
+      )
     )
 
     # Empty-dock prompt — rendered for all empty docks, visibility
@@ -1076,7 +1082,7 @@ manage_dock <- function(
         pick <- input$add_dock_panel_pick$value
         req(is_string(pick), nzchar(pick))
 
-        ref_group <- input[[dock_input("panel-to-add")]]
+        ref_group <- input[[dock_input("panel-to-add")]][["group"]]
 
         near <- if (not_null(ref_group)) {
           group_front_panel(dock, ref_group)
