@@ -59,7 +59,7 @@ test_that("panel state reports the owner beside open and pinned", {
   )
 
   echoed <- list(
-    open = TRUE, pinned = TRUE, owner = "my_board-add_link_action"
+    open = TRUE, pinned = TRUE, owner = "my_board-edit_inputs_action"
   )
 
   expect_identical(
@@ -75,7 +75,7 @@ test_that("ownership requires an open panel and a matching stamp", {
   }
 
   expect_true(owns(open = TRUE, owner = "my_board-edit_stack_action"))
-  expect_false(owns(open = TRUE, owner = "my_board-add_link_action"))
+  expect_false(owns(open = TRUE, owner = "my_board-edit_inputs_action"))
   expect_false(owns(open = FALSE, owner = "my_board-edit_stack_action"))
   expect_false(owns(open = TRUE))
 })
@@ -186,13 +186,13 @@ test_that("a panel reports the action that wrote its body", {
   # The stamp is the writing module's namespaced id, which for a board action
   # is `NS(<board id>, <action id>)` -- the composition `sidebar_owned_by()`
   # makes so that a consumer does not have to.
-  app$click("my_board-ext_fire-add_link")
+  app$click("my_board-ext_fire-edit_inputs")
   app$wait_for_idle()
 
   expect_identical(
-    app$get_value(input = panel)$owner, "my_board-add_link_action"
+    app$get_value(input = panel)$owner, "my_board-edit_inputs_action"
   )
-  expect_identical(stamped_owner(), "my_board-add_link_action")
+  expect_identical(stamped_owner(), "my_board-edit_inputs_action")
 
   # Pin it, so the panel survives the clicks that follow and the flag a
   # re-target gates on is the one the query has to carry back.
@@ -201,7 +201,7 @@ test_that("a panel reports the action that wrote its body", {
 
   expect_true(app$get_value(input = panel)$pinned)
 
-  app$click("my_board-ext_fire-add_link")
+  app$click("my_board-ext_fire-edit_inputs")
   app$wait_for_idle()
 
   expect_identical(owned(), list(panel = panel, open = TRUE, pinned = TRUE))
@@ -225,9 +225,9 @@ test_that("a panel reports the action that wrote its body", {
 
   expect_identical(owned(), list(panel = panel, open = TRUE, pinned = TRUE))
 
-  # ... and add_link, which filled the very same panel earlier, no longer
+  # ... and edit_inputs, which filled the very same panel earlier, no longer
   # does. That flip is what a consumer re-fires (or does not) on.
-  app$click("my_board-ext_fire-add_link")
+  app$click("my_board-ext_fire-edit_inputs")
   app$wait_for_idle()
 
   expect_null(owned())

@@ -57,6 +57,38 @@
   border-color: var(--blockr-color-border-danger);
 }
 
+/* A name field in an action menu of its own (action-menu.js): the renaming
+   field of the design system, at the menu's text size, with its refusal
+   line under it. */
+.blockr-action-menu-field {
+  padding: 2px 4px 4px;
+}
+
+.blockr-action-menu-field__input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: var(--blockr-font-size-base);
+  color: var(--blockr-color-text-default);
+  border: 1px solid var(--blockr-color-border-accent);
+  border-radius: var(--blockr-radius-md);
+  background: var(--blockr-color-bg-surface);
+  box-shadow: var(--blockr-focus-ring);
+  outline: none;
+}
+
+.blockr-action-menu-field--bad .blockr-action-menu-field__input {
+  border-color: var(--blockr-color-border-danger);
+}
+
+.blockr-action-menu-field__error {
+  padding: 4px 4px 0;
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-danger);
+}
+
 .blockr-section-header {
   font-size: var(--blockr-font-size-section);
   font-weight: var(--blockr-font-weight-medium);

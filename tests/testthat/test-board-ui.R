@@ -9,7 +9,7 @@ test_that("dummy board ui test", {
   # 16 base elements (blockr.ui's controls, the rename handler, the "+" menu,
   # the compact switch and the static widgets' resize bridge among them) + the
   # viewport probe.
-  expect_length(ui, 17L)
+  expect_length(ui, 18L)
 })
 
 # Settings sidebar is mounted with pre-rendered content + a JS-trigger gear

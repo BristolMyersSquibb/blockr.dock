@@ -1,5 +1,14 @@
 # blockr.dock (development version)
 
+* Creating and editing a link open menus where the gesture happened instead
+  of the actions sidebar (#544). "Connect to…" lists the blocks this one can
+  send to and take from; a target with more than one free input asks which
+  in a second menu. A link's menu inserts a block into it, renames its input
+  (on a block that takes any number of inputs) or moves it to another free
+  input, changes the block it comes from, and removes it. Rename, Move and
+  Change source open a second menu at the same spot, and Escape goes back to
+  the first. Link ids are generated.
+
 * The block card no longer uses Bootstrap (BristolMyersSquibb/blockr.ui#85).
   Its sections (control, inputs, preview) fold in the browser on the
   toggle's click instead of through a server round trip to bslib's

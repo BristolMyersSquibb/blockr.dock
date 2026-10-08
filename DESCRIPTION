@@ -47,12 +47,13 @@ Suggests:
 Remotes:
     rstudio/shinytest2,
     BristolMyersSquibb/blockr.core,
-    BristolMyersSquibb/blockr.ui,
+    BristolMyersSquibb/blockr.ui@feat/multi-on-close,
     cynkra/dockViewR,
     nbenn/reactives
 Config/testthat/edition: 3
 Collate:
     'action-class.R'
+    'action-menu.R'
     'action-block.R'
     'action-inputs.R'
     'action-link.R'

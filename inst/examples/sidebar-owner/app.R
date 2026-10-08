@@ -7,7 +7,7 @@ library(blockr.dock)
 # about which panel the action fills.
 fire_ui <- function(id, board) {
   div(
-    actionButton(NS(id, "add_link"), "Connect a"),
+    actionButton(NS(id, "edit_inputs"), "Inputs of b"),
     actionButton(NS(id, "edit_stack"), "Edit s1")
   )
 }
@@ -26,7 +26,7 @@ fire_srv <- function(id, board, update, actions, ...) {
         actions[[action]](value)
       }
 
-      observeEvent(input$add_link, fire("add_link_action", "a"))
+      observeEvent(input$edit_inputs, fire("edit_inputs_action", "b"))
       observeEvent(input$edit_stack, fire("edit_stack_action", "s1"))
 
       exportTestValues(owned = owned())
