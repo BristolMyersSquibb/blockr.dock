@@ -57,6 +57,103 @@
   border-color: var(--blockr-color-border-danger);
 }
 
+/* The "+" menu's options for one block (add-block-menu.js): a head with a
+   back arrow, then a small form in the menu. */
+.blockr-add-options__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--blockr-color-border-default);
+  font-weight: var(--blockr-font-weight-semibold);
+}
+
+.blockr-add-options__back {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blockr-radius-sm);
+  background: transparent;
+  color: var(--blockr-color-text-muted);
+  cursor: pointer;
+}
+
+.blockr-add-options__back svg {
+  transform: rotate(90deg);
+}
+
+.blockr-add-options__back:hover {
+  background: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-add-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 4px 4px;
+}
+
+.blockr-add-options__desc {
+  margin: 0;
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-add-options__label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-add-options__input {
+  /* The design system's text field: 42px, bg-field, radius 8, 12px side
+     padding, 14px. */
+  display: block;
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  font: inherit;
+  font-size: var(--blockr-font-size-base);
+  color: var(--blockr-color-text-default);
+  border: 1px solid var(--blockr-color-border-default);
+  border-radius: var(--blockr-radius-lg);
+  background: var(--blockr-color-bg-field);
+  outline: none;
+}
+
+.blockr-add-options__input.is-mono {
+  font-family: var(--blockr-font-mono);
+  font-size: var(--blockr-font-size-sm);
+}
+
+.blockr-add-options__input:focus {
+  border-color: var(--blockr-color-border-accent);
+  box-shadow: var(--blockr-focus-ring);
+}
+
+.blockr-add-options__field.is-bad .blockr-add-options__input {
+  border-color: var(--blockr-color-border-danger);
+}
+
+.blockr-add-options__error {
+  padding-top: 3px;
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-danger);
+}
+
+.blockr-add-options__end {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
 /* A name field in an action menu of its own (action-menu.js): the renaming
    field of the design system, at the menu's text size, with its refusal
    line under it. */

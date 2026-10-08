@@ -196,6 +196,7 @@ edit_link_action <- function(trigger, board, update, ...) {
             "insert",
             insert_caption(brd, lid),
             at = trigger_at(trigger),
+            board = brd,
             session = session
           ),
           remove = update(list(links = list(rm = lid))),
@@ -338,6 +339,7 @@ insert_block_action <- function(trigger, board, update, ...) {
           "insert",
           insert_caption(board$board, trigger()),
           at = trigger_at(trigger),
+          board = board$board,
           session = session
         )
       })

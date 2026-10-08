@@ -817,3 +817,39 @@ test_that("the stack menu's Rename opens a field that renames on Enter", {
   app$wait_for_value(export = fixture("stack_names"), ignore = list(before))
   expect_identical(unlst(exported(app, "stack_names")$s1), "Heads")
 })
+
+test_that("the chevron on a + menu row opens its options, and the ID given is used", {
+
+  skip_on_cran()
+
+  app <- menus_app("plus-menu-options")
+  withr::defer(app$stop())
+
+  app$click(fixture("add_block"))
+  wait_sel(app, paste(menu_sel, ".blockr-menu__filter-input"))
+
+  app$run_js(
+    paste0(
+      "[...document.querySelectorAll('body > .blockr-menu .blockr-menu__item')]",
+      ".find(r => r.textContent.includes('head'))",
+      ".querySelector('.blockr-menu__tool')",
+      ".dispatchEvent(new MouseEvent('click', {bubbles: true}));"
+    )
+  )
+  wait_sel(app, ".blockr-add-options__input")
+
+  app$run_js(
+    paste0(
+      "var f = document.querySelector('.blockr-add-options__input');",
+      "f.value = 'my_head';",
+      "f.dispatchEvent(new Event('input', {bubbles: true}));",
+      "f.form.requestSubmit();"
+    )
+  )
+
+  app$wait_for_value(
+    export = fixture("blocks"),
+    ignore = list(c("a", "b", "m", "r", "s"))
+  )
+  expect_true("my_head" %in% exported(app, "blocks"))
+})

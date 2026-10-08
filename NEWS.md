@@ -1,5 +1,14 @@
 # blockr.dock (development version)
 
+* A row of the "+" menu shows a chevron at its end under the pointer, in
+  place of the package badge, that opens the block's options before it is
+  added (#544): its ID and title, the input the
+  link goes into where there is a choice, and the ids of the links the flow
+  makes. A click on the row itself still adds the block with the defaults.
+  The options take Enter, refuse an ID that is taken in place, and Escape
+  goes back to the list with its search. It needs `Blockr.menu()`'s row
+  `tool` from blockr.ui.
+
 * The actions sidebar is gone, with the link, stack and inputs forms it held
   (#544). The board options panel is the one side panel left.
   `edit_inputs_action` stays registered, so an older blockr.dag's "Edit
