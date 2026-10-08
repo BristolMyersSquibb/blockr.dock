@@ -21,6 +21,11 @@
   switch alone. While it is busy, its "Computing" label is blockr.ui's light
   tooltip.
 
+* The default Import and Export are one row of quiet 30px buttons, the size
+  the design spec gives a toolbar (#531). Import opens the browser's file
+  chooser, without the field label, text field and progress bar of Shiny's
+  `fileInput()`. On a narrow bar the names of both are cut short.
+
 * **Breaking:** the navbar's `.blockr-navbar-left` and `.blockr-navbar-right`
   groups are gone, and the plugin's piece no longer takes up the free space, so
   a spacer inside it has nothing to push against. Since `serve()` hands

@@ -598,6 +598,34 @@
   white-space: nowrap;
 }
 
+/* The dock's piece of the preserve_board plugin (ser_deser_ui()): Import and
+   Export as one row of quiet 30px buttons. On a bar too narrow for both, their
+   names are cut short rather than spill over the next item. A name takes the
+   font's own line height, since the clip would cut its descenders at the
+   button's `line-height: 1`. */
+.blockr-serdes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blockr-serdes > .blockr-btn {
+  min-width: 0;
+}
+
+.blockr-serdes > .blockr-btn > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: normal;
+}
+
+/* Import is a label around a file input that only the keyboard and screen
+   readers reach, so the label draws the input's focus ring. */
+.blockr-serdes > label:has(> input:focus-visible) {
+  outline: var(--blockr-focus-outline);
+  outline-offset: var(--blockr-focus-offset);
+}
+
 /* ============================================
    View Navigation
    ============================================ */
