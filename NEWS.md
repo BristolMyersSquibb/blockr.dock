@@ -1,5 +1,12 @@
 # blockr.dock (development version)
 
+* The actions sidebar is gone, with the link, stack and inputs forms it held
+  (#544). The board options panel is the one side panel left.
+  `edit_inputs_action` stays registered, so an older blockr.dag's "Edit
+  inputs" says to use a link's menu or Connect to instead. `sidebar_owned_by()`
+  still reports the panel an action wrote; the dock's own actions write none,
+  so it returns `NULL` for them.
+
 * The "+" of a page lets you tick several blocks and extensions; they are
   shown together when the menu closes, and Escape drops them (#544). It
   needs `Blockr.menu()`'s `multi` option from blockr.ui.

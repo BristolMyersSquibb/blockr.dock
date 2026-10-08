@@ -4,10 +4,7 @@
 sidebar_deps <- function() {
   list(
     sidebar_dep(),
-    block_browser_dep(),
-    link_menu_dep(),
-    stack_menu_dep(),
-    inputs_menu_dep()
+    block_browser_dep()
   )
 }
 
@@ -45,35 +42,19 @@ test_that("every sidebar dependency names assets that exist", {
   )
 })
 
-test_that("each panel builder attaches the dependencies it draws with", {
-
-  board <- two_block_board()
-
-  # The cards of the link and stack menus draw blockr.ui's block mark.
-  mark <- dep_names(blockr.ui::controls_dep())
-
+test_that("a side panel attaches the dependency it draws with", {
   expect_setequal(dep_names(sidebar_ui("panel")), "sidebar-server")
-
-  expect_setequal(
-    dep_names(link_menu_ui("menu", board, "a")),
-    c("sidebar-block", "sidebar-link", mark)
-  )
-  expect_setequal(
-    dep_names(stack_menu_ui("menu", board)),
-    c("sidebar-block", "sidebar-stack", mark)
-  )
-  expect_setequal(
-    dep_names(edit_inputs_menu_ui("menu", board, "b")),
-    "sidebar-inputs"
-  )
 })
 
 test_that("a sidebar body's own dependencies survive the panel wrapper", {
 
-  body <- edit_inputs_menu_ui("menu", two_block_board(), "b")
+  body <- htmltools::attachDependencies(
+    htmltools::div("body"),
+    action_menu_dep()
+  )
 
   expect_setequal(
     dep_names(sidebar_ui("panel", ui = body)),
-    c("sidebar-server", "sidebar-inputs")
+    c("sidebar-server", "blockr-action-menu")
   )
 })

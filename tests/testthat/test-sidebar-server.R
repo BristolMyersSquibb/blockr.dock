@@ -67,19 +67,6 @@ test_that("panel state reports the owner beside open and pinned", {
     echoed
   )
 })
-
-test_that("ownership requires an open panel and a matching stamp", {
-  # Asked from `my_board-edit_stack_action`, the fake session's module.
-  owns <- function(...) {
-    owns_open_sidebar("panel", session = fake_sidebar_session(list(...)))
-  }
-
-  expect_true(owns(open = TRUE, owner = "my_board-edit_stack_action"))
-  expect_false(owns(open = TRUE, owner = "my_board-edit_inputs_action"))
-  expect_false(owns(open = FALSE, owner = "my_board-edit_stack_action"))
-  expect_false(owns(open = TRUE))
-})
-
 test_that("a query reports the panel an action currently holds", {
 
   session <- fake_sidebar_session(
@@ -139,73 +126,3 @@ test_that("a panel outside the board's own mounts answers the same way", {
   )
 })
 
-# The stamp is only useful if it survives the trip through the browser: R
-# ships it with the body swap, the binding parks it on the panel and reports
-# it back in the panel's value, and the query has to compose an id that
-# matches what came back. No unit test sees that seam, and a consumer reading
-# a stamp that never arrives cannot tell the difference between "no owner"
-# and "the mechanism is dead", so drive it through a real app. The fixture
-# fires the actions straight off the trigger bundle, which is the path a
-# consumer's context menu takes and the one that declares nothing; it reports
-# what the query says for the action about to fire, read just before it does.
-test_that("a panel reports the action that wrote its body", {
-
-  skip_on_cran()
-
-  app <- new_app_driver(
-    system.file("examples", "sidebar-owner", "app.R", package = "blockr.dock"),
-    name = "sidebar-owner",
-    seed = 42,
-    load_timeout = 30 * 1000,
-    timeout = 30 * 1000
-  )
-  withr::defer(app$stop())
-
-  app$wait_for_idle()
-
-  panel <- "my_board-actions_sidebar"
-
-  stamped_owner <- function() {
-    xml2::xml_attr(
-      xml2::xml_find_first(
-        xml2::read_html(app$get_html(paste0("#", panel))),
-        paste0("//div[@id='", panel, "']")
-      ),
-      "data-blockr-sidebar-owner"
-    )
-  }
-
-  # The fixture exports the query result from its extension module, so the
-  # export name is namespaced the same way the module's inputs are.
-  owned <- function() app$get_value(export = "my_board-ext_fire-owned")
-
-  expect_null(app$get_value(input = panel)$owner)
-  expect_true(is.na(stamped_owner()))
-  expect_null(owned())
-
-  # The stamp is the writing module's namespaced id, which for a board action
-  # is `NS(<board id>, <action id>)` -- the composition `sidebar_owned_by()`
-  # makes so that a consumer does not have to.
-  app$click("my_board-ext_fire-edit_inputs")
-  app$wait_for_idle()
-
-  expect_identical(
-    app$get_value(input = panel)$owner, "my_board-edit_inputs_action"
-  )
-  expect_identical(stamped_owner(), "my_board-edit_inputs_action")
-
-  # Pin it, so the panel survives the clicks that follow and the flag a
-  # re-target gates on is the one the query has to carry back.
-  app$click(selector = paste0("#", panel, " .blockr-sidebar-pin"))
-  app$wait_for_idle()
-
-  expect_true(app$get_value(input = panel)$pinned)
-
-  app$click("my_board-ext_fire-edit_inputs")
-  app$wait_for_idle()
-
-  expect_identical(owned(), list(panel = panel, open = TRUE, pinned = TRUE))
-
-  # Only edit inputs writes the actions panel now (#544), so the flip between
-  # two writers this test also covered has no second writer to show it.
-})

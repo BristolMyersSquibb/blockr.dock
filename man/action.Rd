@@ -115,13 +115,13 @@ of the block to append to, and may name where the gesture happened as
 in the viewport. An action that opens a menu in place opens it there, and
 in a fixed spot when the trigger names none.
 
-An action that fills a sidebar panel records itself on it as it writes, so
-the panel reports the writing action as its owner alongside whether it is
-open and pinned. \code{sidebar_owned_by()} reads that back for a given action:
-a consumer re-firing an action on a new selection can ask whether the form
-it previously opened is still the one on screen, without knowing which
-panel that action fills. The read is a snapshot and creates no reactive
-dependency, as called for in an \code{\link[shiny:observeEvent]{shiny::observeEvent()}} handler.
+An action that fills a sidebar panel with \code{show_sidebar()} records itself
+on it as it writes, so the panel reports the writing action as its owner
+alongside whether it is open and pinned. \code{sidebar_owned_by()} reads that
+back for a given action, without knowing which panel the action fills. The
+read is a snapshot and creates no reactive dependency, as called for in an
+\code{\link[shiny:observeEvent]{shiny::observeEvent()}} handler. The dock's own actions open menus where
+the gesture happened instead of a panel, so for them it returns \code{NULL}.
 }
 \section{\code{block_input_select()}}{
 

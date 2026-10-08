@@ -1,14 +1,11 @@
 (function () {
   "use strict";
 
-  // Card-list helpers shared by the link and stack menus. Both render
-  // the same `.blockr-block-browser-card` markup and the same
-  // `data-name` / `data-description` / `data-package` / `data-category`
-  // search contract, so the filter and the card-iteration helper live
-  // on a tiny `window.BlockrDock.cardSearch` namespace. Both menus
-  // depend on `block_browser_dep()` being attached first (which it is
-  // wherever `link_menu_ui()` or `stack_menu_ui()` is rendered) and
-  // just call into this API. Keep the surface deliberately small.
+  // Card-list helpers for the block browser's `.blockr-block-browser-card`
+  // markup and its `data-name` / `data-description` / `data-package` /
+  // `data-category` search contract, on a tiny
+  // `window.BlockrDock.cardSearch` namespace. The link and stack menus
+  // that shared it are menus now (#544). Keep the surface small.
   var BlockrDock = window.BlockrDock = window.BlockrDock || {};
   BlockrDock.cardSearch = BlockrDock.cardSearch || {
     getCards: function (root) {

@@ -128,16 +128,3 @@ test_that("caller options merge over the picker defaults", {
   expect_identical(chr_xtr(cfg$options, "value"), "a")
   expect_identical(cfg$valueField, "value")
 })
-
-test_that("the inputs sidebar picker keeps its own selectize options", {
-
-  cfg <- selectize_config(
-    edit_inputs_source_select("src", picker_board(), c("a", "b"), "a")
-  )
-
-  expect_true("remove_button" %in% unlist(cfg$plugins))
-  expect_identical(cfg$dropdownParent, "body")
-  expect_equal(cfg$maxItems, 1)
-  expect_identical(unlist(cfg$items), "a")
-  expect_identical(chr_xtr(cfg$options, "value"), c("a", "b"))
-})

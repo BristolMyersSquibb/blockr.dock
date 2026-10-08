@@ -85,11 +85,10 @@ Collate:
     'plugin-block.R'
     'plugin-code.R'
     'plugin-serdes.R'
+    'link-utils.R'
     'sidebar-server.R'
+    'stack-utils.R'
     'sidebar-block.R'
-    'sidebar-inputs.R'
-    'sidebar-link.R'
-    'sidebar-stack.R'
     'sync-rails-option.R'
     'utils-dock.R'
     'utils-misc.R'
@@ -98,4 +97,4 @@ Collate:
     'utils-serve.R'
     'utils-ui.R'
 VignetteBuilder: knitr
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0
