@@ -75,18 +75,28 @@
   color: var(--blockr-color-text-meta);
 }
 
-.blockr-error {
+/* Block conditions: an error above the block's content, warnings and
+   messages under the preview. All three are the same surface as the gear
+   tray: the kind's fill, no border (a border marks a control or something
+   that floats), radius-lg, and an icon for the kind. */
+.blockr-error,
+.blockr-issue {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 12px 16px;
-  margin: 0 -16px;
-  background-color: var(--blockr-color-bg-danger);
-  color: var(--blockr-color-error);
+  padding: 12px 14px;
+  border-radius: var(--blockr-radius-lg);
   font-size: var(--blockr-font-size-base);
 }
 
-.blockr-error-icon {
+.blockr-error {
+  margin-bottom: 16px;
+  background-color: var(--blockr-color-bg-danger);
+  color: var(--blockr-color-error);
+}
+
+.blockr-error-icon,
+.blockr-issue-icon {
   flex-shrink: 0;
   width: 16px;
   height: 16px;
@@ -134,20 +144,26 @@
   padding-top: 8px;
 }
 
-/* A warning or a message, in the tint of its kind. */
+/* A warning or a message, in the fill of its kind. */
 .blockr-issue {
   margin-bottom: 8px;
-  padding: 12px 16px;
-  border: 1px solid var(--blockr-color-border-default);
-  border-radius: var(--blockr-radius-lg);
-  font-size: var(--blockr-font-size-base);
   color: var(--blockr-color-text-default);
   background: var(--blockr-color-bg-subtle);
 }
 
+.blockr-issue-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blockr-color-text-meta);
+}
+
 .blockr-issue--warning {
-  border-color: var(--blockr-color-border-warning);
   background: var(--blockr-color-bg-warning);
+}
+
+.blockr-issue--warning .blockr-issue-icon {
+  color: var(--blockr-color-text-warning);
 }
 
 /* ============================================================
