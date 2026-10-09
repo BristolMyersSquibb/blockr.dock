@@ -525,12 +525,12 @@ cond_alert <- function(dom_id, msg, severity) {
     )
   }
 
-  icon <- switch(severity, warning = "exclamation-triangle", "info-circle")
+  icon <- switch(severity, warning = "warning", "info")
 
   tags$div(
     id = dom_id,
     class = sprintf("blockr-issue blockr-issue--%s", severity),
-    bsicons::bs_icon(icon, class = "blockr-issue-icon"),
+    tags$span(class = "blockr-issue-icon", blockr.ui::small_icon(icon)),
     tags$span(content)
   )
 }

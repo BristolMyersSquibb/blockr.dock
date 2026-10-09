@@ -152,6 +152,9 @@
 }
 
 .blockr-issue-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--blockr-color-text-meta);
 }
 
