@@ -758,7 +758,7 @@ test_that("validate_views_delta rejects adding an existing id", {
   )
 })
 
-test_that("validate_views_delta rejects an empty rename", {
+test_that("validate_views_delta rejects empty or blank rename names", {
 
   brd <- new_dock_board(
     blocks = c(a = new_dataset_block()),
@@ -767,14 +767,39 @@ test_that("validate_views_delta rejects an empty rename", {
 
   view_id <- vid(brd, "A")
 
-  expect_error(
-    validate_views_delta(
-      list(rename = setNames(list(""), view_id)),
-      brd,
-      list()
-    ),
-    class = "dock_views_delta_invalid"
+  for (name in c("", "  \t")) {
+    expect_error(
+      validate_views_delta(
+        list(rename = setNames(list(name), view_id)),
+        brd,
+        list()
+      ),
+      "non-empty display names",
+      class = "dock_views_delta_invalid"
+    )
+  }
+})
+
+test_that("view adds reject empty or blank display names", {
+
+  brd <- new_dock_board(
+    blocks = c(a = new_dataset_block()),
+    views = list(A = "a")
   )
+
+  adds <- list(
+    setNames(list(dock_view("block_panel-a")), ""),
+    setNames(list(dock_grid("block_panel-a")), "  \t"),
+    setNames(list(dock_view("block_panel-a", name = "  ")), "Named")
+  )
+
+  for (add in adds) {
+    expect_error(
+      augment_board_update(list(views = list(add = add)), brd),
+      "non-empty display names",
+      class = "dock_views_delta_invalid"
+    )
+  }
 })
 
 test_that("validate_views_delta rejects an unknown rename id", {
