@@ -14,16 +14,6 @@ css_block_selectize <- function() {
         border-radius: 6px;
         transition: background-color 0.15s ease;
       }
-      .block-icon-wrapper {
-        flex-shrink: 0;
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-      }
       .block-content {
         flex: 1;
         min-width: 0;
@@ -85,136 +75,71 @@ css_block_selectize <- function() {
   )
 }
 
+# A block's mark is blockr.ui's, drawn as `Blockr.menu` draws a row's: the
+# glyph in a `.blockr-block-mark` whose `data-category` colours it, at the
+# 24px of a list row, in the list and in the field alike. The stylesheet comes
+# with blockr.ui's controls, which `blk_selectize()` attaches.
 js_blk_selectize_render <- function() {
-
-  icon_style <- blockr_option("icon_style", "light")
-
   I(
-    sprintf(
-      "(
-        function() {
-          var iconStyle = '%s';
+    "(
+      function() {
+        var mark = function(item, escape) {
+          var category = item.category ?
+            ' data-category=\"' + escape(item.category) + '\"' : '';
+          return '<span class=\"blockr-block-mark\"' + category + '>' +
+                 (item.icon || '') + '</span>';
+        };
 
-          // Shared helper functions
-          var hexToRgba = function(hex, alpha) {
-            var r = parseInt(hex.slice(1, 3), 16);
-            var g = parseInt(hex.slice(3, 5), 16);
-            var b = parseInt(hex.slice(5, 7), 16);
-            return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
-          };
+        return {
+          item: function(item, escape) {
+            var name = escape(item.label);
+            var pkg = escape(item.package || '');
 
-          var getIconColors = function(color) {
-            if (iconStyle === 'light') {
-              return {
-                iconFill: color,
-                bgColor: hexToRgba(color, 0.3)
-              };
-            } else {
-              return {
-                iconFill: 'white',
-                bgColor: color
-              };
+            var containerStyle =
+              'display: inline-flex; align-items: center; gap: 8px; ' +
+              'padding: 4px 8px; ' +
+              'background-color: var(--blockr-color-bg-subtle); ' +
+              'border-radius: 6px; ' +
+              'border: 1px solid var(--blockr-color-border-default);';
+            var pkgBadgeHtml = pkg ?
+              '<div class=\"badge-two-tone\" style=\"margin-left: 4px;\">' +
+              pkg + '</div>' : '';
+            return '<div style=\"' + containerStyle + '\">' +
+                   mark(item, escape) +
+                   '<div style=\"font-weight: 500; font-size: 14px;\">' +
+                   name + '</div>' + pkgBadgeHtml + '</div>';
+          },
+          option: function(item, escape) {
+            var name = escape(item.label);
+            var desc = escape(item.description || '');
+            var pkg = escape(item.package || '');
+
+            var pkgBadge = pkg ?
+                           '<div class=\"badge-two-tone\">' + pkg +
+                           '</div>' : '';
+
+            // For board blocks, show type/ID info as description
+            // For registry blocks, show the description field
+            var descHtml = '';
+            if (item.block_type) {
+              var blockType = escape(item.block_type);
+              var blockId = escape(item.block_id || '');
+              descHtml = '<div class=\"block-desc\">type: ' + blockType +
+                         (blockId ? ' &middot; ID: ' + blockId : '') +
+                         '</div>';
+            } else if (desc) {
+              descHtml = '<div class=\"block-desc\">' + desc + '</div>';
             }
-          };
 
-          var styleIcon = function(iconSvg, color, size) {
-            var colors = getIconColors(color);
-
-            // Remove existing style attribute using string manipulation
-            var cleanSvg = iconSvg;
-            var styleStart = cleanSvg.indexOf('style=\"');
-            if (styleStart !== -1) {
-              var styleEnd = cleanSvg.indexOf('\"', styleStart + 7);
-              if (styleEnd !== -1) {
-                cleanSvg = cleanSvg.substring(0, styleStart) +
-                           cleanSvg.substring(styleEnd + 1);
-              }
-            }
-
-            return {
-              svg: cleanSvg.replace(
-                '<svg ',
-                '<svg style=\"width: ' + size + 'px; height: ' + size +
-                'px; fill: ' + colors.iconFill + ';\" '
-              ),
-              bgColor: colors.bgColor
-            };
-          };
-
-          return {
-            item: function(item, escape) {
-              var name = escape(item.label);
-              var pkg = escape(item.package || '');
-              var color = item.color || '#6c757d';
-              var iconSvg = item.icon || '';
-
-              var styledIcon = styleIcon(iconSvg, color, 14);
-              var styledSvg = styledIcon.svg;
-              var bgColor = styledIcon.bgColor;
-
-              var containerStyle =
-                'display: inline-flex; align-items: center; gap: 8px; ' +
-                'padding: 4px 8px; ' +
-                'background-color: var(--blockr-color-bg-subtle); ' +
-                'border-radius: 6px; ' +
-                'border: 1px solid var(--blockr-color-border-default);';
-              var iconWrapperStyle =
-                'background-color: ' + bgColor + '; width: 24px; ' +
-                'height: 24px; border-radius: 4px; display: flex; ' +
-                'align-items: center; justify-content: center; flex-shrink: 0;';
-              var pkgBadgeHtml = pkg ?
-                '<div class=\"badge-two-tone\" style=\"margin-left: 4px;\">' +
-                pkg + '</div>' : '';
-              return '<div style=\"' + containerStyle + '\">' +
-                     '<div style=\"' + iconWrapperStyle + '\">' +
-                     styledSvg + '</div>' +
-                     '<div style=\"font-weight: 500; font-size: 14px;\">' +
-                     name + '</div>' + pkgBadgeHtml + '</div>';
-            },
-            option: function(item, escape) {
-              var name = escape(item.label);
-              var desc = escape(item.description || '');
-              var pkg = escape(item.package || '');
-              var color = item.color || '#6c757d';
-              var iconSvg = item.icon || '';
-
-              var styledIcon = styleIcon(iconSvg, color, 20);
-              var styledSvg = styledIcon.svg;
-              var bgColor = styledIcon.bgColor;
-
-              var iconWrapperStyle = 'background-color: ' + bgColor + ';';
-              var iconWrapper = '<div class=\"block-icon-wrapper\" ' +
-                                'style=\"' + iconWrapperStyle + '\">' +
-                                styledSvg + '</div>';
-
-              var pkgBadge = pkg ?
-                             '<div class=\"badge-two-tone\">' + pkg +
-                             '</div>' : '';
-
-              // For board blocks, show type/ID info as description
-              // For registry blocks, show the description field
-              var descHtml = '';
-              if (item.block_type) {
-                var blockType = escape(item.block_type);
-                var blockId = escape(item.block_id || '');
-                descHtml = '<div class=\"block-desc\">type: ' + blockType +
-                           (blockId ? ' &middot; ID: ' + blockId : '') +
-                           '</div>';
-              } else if (desc) {
-                descHtml = '<div class=\"block-desc\">' + desc + '</div>';
-              }
-
-              return '<div class=\"block-option\">' + iconWrapper +
-                     '<div class=\"block-content\">' +
-                     '<div class=\"block-header\">' +
-                     '<div class=\"block-name\">' + name + '</div>' + pkgBadge +
-                     '</div>' + descHtml + '</div>' + '</div>';
-            }
-          };
-        }
-      )()",
-      icon_style
-    )
+            return '<div class=\"block-option\">' + mark(item, escape) +
+                   '<div class=\"block-content\">' +
+                   '<div class=\"block-header\">' +
+                   '<div class=\"block-name\">' + name + '</div>' + pkgBadge +
+                   '</div>' + descHtml + '</div>' + '</div>';
+          }
+        };
+      }
+    )()"
   )
 }
 
@@ -238,6 +163,7 @@ blk_selectize <- function(id, options_data, selected = NULL, max_items = 1L,
 
   tagList(
     css_block_selectize(),
+    blockr.ui::controls_dep(),
     selectizeInput(
       id,
       label = label,

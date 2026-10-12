@@ -6,8 +6,8 @@ test_that("dummy board ui test", {
   )
 
   expect_s3_class(ui, "shiny.tag.list")
-  # 16 base elements (blockr.ui's controls, the dock's tooltip hand-off, the
-  # rename handler, the "+" menu and the compact switch among them) + the
+  # 16 base elements (blockr.ui's controls, the rename handler, the "+" menu,
+  # the compact switch and the static widgets' resize bridge among them) + the
   # viewport probe.
   expect_length(ui, 17L)
 })
@@ -138,7 +138,51 @@ test_that("locked mode renders a navbar lock indicator", {
   expect_match(locked_html, ">Read-only<", fixed = TRUE)
 })
 
-test_that("navbar busy spinner leads the right group (#345, #355, #360)", {
+test_that("the chrome's tooltips are written for Blockr.tooltip (#494)", {
+
+  brd <- new_dock_board(blocks = c(a = new_dataset_block()))
+
+  render <- function(locked) {
+    withr::with_options(
+      list(blockr.locked = locked),
+      xml2::read_html(as.character(board_ui("test", brd)))
+    )
+  }
+
+  chrome <- paste0(
+    "//*[", has_class("blockr-block-header"), " or ",
+    has_class("blockr-navbar"), " or ", has_class("blockr-sidebar"), "]"
+  )
+
+  tooltips <- function(doc) {
+
+    # No native title is left for the browser to show in place of the card.
+    expect_length(
+      xml2::xml_find_all(doc, paste0(chrome, "/descendant-or-self::*[@title]")),
+      0L
+    )
+
+    # The card only describes, and only while it shows, so an element with
+    # no text of its own has its name in an aria-label.
+    tips <- xml2::xml_find_all(doc, "//*[@data-blockr-tooltip]")
+    bare <- tips[!nzchar(trimws(xml2::xml_text(tips)))]
+    expect_false(anyNA(xml2::xml_attr(bare, "aria-label")))
+
+    xml2::xml_attr(tips, "data-blockr-tooltip")
+  }
+
+  unlocked <- c(
+    "dataset block", "Preview", "More actions", "Remove view",
+    "Board options", "Back", "Pin", "Close"
+  )
+  expect_true(all(unlocked %in% tooltips(render(NULL))))
+
+  expect_true(
+    "Editing is disabled by this deployment." %in% tooltips(render(TRUE))
+  )
+})
+
+test_that("busy spinner precedes the view menu (#345, #355, #360)", {
 
   brd <- new_dock_board(blocks = c(a = new_dataset_block()))
 
@@ -163,17 +207,23 @@ test_that("navbar busy spinner leads the right group (#345, #355, #360)", {
   expect_identical(xml2::xml_attr(spinner, "aria-label"), "Busy")
 
   # The ring sits in a static slot (which carries the hover tooltip); the slot
-  # leads the navbar's right group, ahead of the view nav, so the ring is not
+  # is the busy item, right ahead of the view menu's, so the ring is not
   # juxtaposed against the smaller gear. Always painted, no edge to hide at.
   slot <- by_class(doc, "blockr-navbar-spinner-slot")
   expect_length(slot, 1)
   expect_length(by_class(slot[[1]], "blockr-navbar-spinner"), 1)
-  expect_length(xml2::xml_find_all(slot[[1]], "preceding-sibling::*"), 0)
-  group_class <- xml2::xml_attr(xml2::xml_parent(slot[[1]]), "class")
-  expect_match(group_class, "blockr-navbar-right", fixed = TRUE)
+  item <- xml2::xml_parent(slot[[1]])
+  expect_identical(xml2::xml_attr(item, "data-navbar-item"), "busy")
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(item, "following-sibling::*[1]"),
+      "data-navbar-item"
+    ),
+    "views"
+  )
 
   # Blocks still evaluate while read-only, so the spinner survives locked mode
-  # (unlike the editing chrome in that group).
+  # (unlike the editing chrome around it).
   locked <- withr::with_options(
     list(blockr.locked = TRUE),
     by_class(

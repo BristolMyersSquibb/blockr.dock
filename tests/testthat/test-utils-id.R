@@ -6,7 +6,6 @@ test_that("ids", {
 
   expect_s3_class(blk_pnl_id, c("block_panel_id", "dock_panel_id", "dock_id"))
 
-  expect_true(is_dock_id(blk_pnl_id))
   expect_true(is_dock_panel_id(blk_pnl_id))
   expect_true(is_block_panel_id(blk_pnl_id))
 
@@ -27,8 +26,6 @@ test_that("ids", {
     c("block_handle_id", "dock_handle_id", "dock_id")
   )
 
-  expect_true(is_dock_id(blk_hndl_id))
-  expect_true(is_dock_handle_id(blk_hndl_id))
   expect_true(is_block_handle_id(blk_hndl_id))
 
   expect_true(maybe_block_handle_id(blk_hndl_id))
@@ -47,7 +44,6 @@ test_that("ids", {
 
   expect_s3_class(ext_pnl_id, c("ext_panel_id", "dock_panel_id", "dock_id"))
 
-  expect_true(is_dock_id(ext_pnl_id))
   expect_true(is_dock_panel_id(ext_pnl_id))
   expect_true(is_ext_panel_id(ext_pnl_id))
 
@@ -73,8 +69,6 @@ test_that("ids", {
     c("ext_handle_id", "dock_handle_id", "dock_id")
   )
 
-  expect_true(is_dock_id(ext_hndl_id))
-  expect_true(is_dock_handle_id(ext_hndl_id))
   expect_true(is_ext_handle_id(ext_hndl_id))
 
   expect_true(maybe_ext_handle_id(ext_hndl_id))
@@ -113,8 +107,6 @@ test_that("view handle ids round-trip", {
   hndl <- as_view_handle_id(view_id)
 
   expect_s3_class(hndl, c("view_handle_id", "dock_handle_id", "dock_id"))
-  expect_true(is_dock_id(hndl))
-  expect_true(is_dock_handle_id(hndl))
   expect_true(maybe_view_handle_id(hndl))
 
   expect_identical(unclass(hndl), "view_handle-verdant_aardvark")

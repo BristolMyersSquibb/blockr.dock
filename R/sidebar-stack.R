@@ -324,10 +324,7 @@ stack_block_card <- function(meta) {
       list(
         tags$div(
           class = "blockr-block-browser-card-header",
-          tags$span(
-            class = "blockr-block-browser-card-icon",
-            if (nzchar(meta$icon)) htmltools::HTML(meta$icon) else NULL
-          ),
+          blockr.ui::block_mark(meta$icon, meta$category),
           tags$div(
             class = "blockr-stack-menu-card-titles",
             tags$span(

@@ -443,6 +443,21 @@ keep_rail_sizes <- function(grid, stored) {
   canonicalize_grid(grid)
 }
 
+# A copy of `grid` in which each rail holding panels is collapsed or expanded
+# as `collapsed`, a logical keyed by edge, says for its edge. A rail on an edge
+# it does not name stays as it was, and so does an empty rail: it is hidden, so
+# it has no state to show.
+follow_rail_collapse <- function(grid, collapsed) {
+
+  for (pos in intersect(names(grid[["rails"]]), names(collapsed))) {
+    if (rail_holds_panels(grid[["rails"]][[pos]])) {
+      grid[["rails"]][[pos]][["collapsed"]] <- collapsed[[pos]]
+    }
+  }
+
+  grid
+}
+
 # The member-driven placement of a view: membership decides *which* panels
 # appear, the grid only *how*. A ghost (grid panel no longer a member) is
 # dropped by `restrict_grid()`; a member the grid omits is appended a default
@@ -801,7 +816,7 @@ restrict_grids_to_views <- function(grids, views) {
 #'
 #' Construct a grid with:
 #'
-#' * `dock_grid(...)`: the page-level container. Its `...` are the
+#' * `dock_grid(...)`: the view-level container. Its `...` are the
 #'   children of the root branch. Bare strings become single-panel
 #'   leaves, character vectors become tabbed leaves, lists become
 #'   nested branches. Use [panels()] for a tabbed leaf with an explicit
@@ -953,10 +968,6 @@ is_dock_panels <- function(x) {
 
 is_dock_group <- function(x) {
   inherits(x, "dock_group")
-}
-
-is_dock_node <- function(x) {
-  inherits(x, "dock_node")
 }
 
 validate_sizes <- function(sizes, children) {

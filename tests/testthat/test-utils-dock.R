@@ -188,3 +188,95 @@ test_that("the stacked container is as tall as the rows it carries", {
   # An empty view still needs a box, not a zero-height one.
   expect_match(narrow_stack_attrs(new_dock_grid())$style, "50vh", fixed = TRUE)
 })
+
+test_that("a locked board locks its layout unless told otherwise (#421)", {
+
+  captured <- NULL
+
+  local_mocked_bindings(
+    dock_view = function(...) {
+      captured <<- list(...)
+      structure(list(), class = "htmlwidget")
+    },
+    render_dock_view = function(expr, ...) expr,
+    .package = "dockViewR"
+  )
+  local_mocked_bindings(dock_proxy = function(...) NULL)
+
+  session <- list(output = list(), ns = NS("board"))
+
+  # The flags dockview takes to freeze a layout, as the dock passes them.
+  layout_flags <- function(...) {
+    withr::with_options(
+      list(...),
+      {
+        set_dock_view_output(session = session)
+        captured[intersect(c("locked", "disableDnd"), names(captured))]
+      }
+    )
+  }
+
+  expect_length(layout_flags(blockr.locked = NULL), 0L)
+
+  expect_identical(
+    layout_flags(blockr.locked = TRUE),
+    list(locked = TRUE, disableDnd = TRUE)
+  )
+
+  # Each option leaves its own part to the reader, and only that part.
+  expect_identical(
+    layout_flags(blockr.locked = TRUE, blockr.lock_resize = FALSE),
+    list(disableDnd = TRUE)
+  )
+
+  expect_identical(
+    layout_flags(blockr.locked = TRUE, blockr.lock_rearrange = FALSE),
+    list(locked = TRUE)
+  )
+
+  expect_length(
+    layout_flags(
+      blockr.locked = TRUE,
+      blockr.lock_resize = FALSE,
+      blockr.lock_rearrange = FALSE
+    ),
+    0L
+  )
+})
+
+test_that("each layout lock takes a boolean, and aborts on anything else", {
+
+  for (part in c("resize", "rearrange")) {
+
+    opt <- paste0("blockr.lock_", part)
+    env <- paste0("BLOCKR_LOCK_", toupper(part))
+
+    withr::local_options(
+      set_names(list(TRUE, NULL), c("blockr.locked", opt))
+    )
+    expect_true(is_layout_locked(part))
+
+    withr::local_options(set_names(list(FALSE), opt))
+    expect_false(is_layout_locked(part))
+
+    for (value in list(NA, "maybe", c(TRUE, FALSE))) {
+
+      withr::local_options(set_names(list(value), opt))
+
+      expect_error(
+        is_layout_locked(part),
+        class = paste0("lock_", part, "_invalid")
+      )
+    }
+
+    # A deployment sets it through the environment as well, as a string.
+    withr::local_options(set_names(list(NULL), opt))
+    withr::local_envvar(set_names("false", env))
+    expect_false(is_layout_locked(part))
+
+    # An unlocked board has no layout to lock.
+    withr::local_options(blockr.locked = NULL)
+    withr::local_envvar(set_names("true", env))
+    expect_false(is_layout_locked(part))
+  }
+})

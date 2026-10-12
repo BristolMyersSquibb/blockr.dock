@@ -10,9 +10,13 @@ blockr_app_options.dock_board <- function(x, ...) {
 
 #' @export
 blockr_app_ui.dock_board <- function(id, x, plugins, options, ...,
+                                     navbar = blockr_app_navbar,
                                      query = list()) {
 
+  # The `...` of serve() reaches the server as well, so a named argument is
+  # meant for it. Only the unnamed ones are tags for the page.
   args <- list(...)
+  args <- args[!nzchar(coal(names(args), character(length(args))))]
 
   # A `?view=<id>` deep link renders the GET navbar highlight and the
   # prioritized offcanvas card shells for that view directly rather than the
@@ -21,7 +25,8 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...,
 
   # `options` is forwarded to `board_ui()` so the settings sidebar's
   # pre-rendered body reflects `serve(board, options = custom_options(...))`
-  # overrides at page-build time.
+  # overrides at page-build time. The navbar items are resolved from the same
+  # board and plugins as in the server method.
 
   do.call(
     page_fillable,
@@ -39,10 +44,16 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...,
         # Disable bslib's built-in busy indicators (the page-wide pulse and
         # per-output spinners). The dock drives its own subtle navbar spinner
         # off the `.shiny-busy` class Shiny sets on <html> instead -- see the
-        # `.blockr-navbar-spinner` slot in board_ui.dock_board() and its CSS.
+        # `.blockr-navbar-spinner` slot in busy_navbar_ui() and its CSS.
         useBusyIndicators(spinners = FALSE, pulse = FALSE),
         shinyjs::useShinyjs(),
-        board_ui(id, x, plugins, options = options)
+        board_ui(
+          id,
+          x,
+          plugins,
+          options = options,
+          navbar = resolve_navbar(navbar, x, plugins)
+        )
       ),
       unname(args)
     )
@@ -51,6 +62,7 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...,
 
 #' @export
 blockr_app_server.dock_board <- function(id, x, plugins, options, ...,
+                                         navbar = blockr_app_navbar,
                                          query = list()) {
 
   # A `?view=<id>` deep link opens the board on that view. Applied here, before
@@ -58,12 +70,15 @@ blockr_app_server.dock_board <- function(id, x, plugins, options, ...,
   # dock directly -- no default-view dock built then switched away.
   x <- apply_url_view(x, query)
 
+  items <- resolve_navbar(navbar, x, plugins)
+
   # Core threads `plugins` to its own block server but not to board callbacks,
   # so capture them for the callback to stash on active_dock -- the deferred
   # card-build paths need the served set, since board_plugins() drops any served
-  # ctrl_block.
+  # ctrl_block. The navbar items ride along, for the callback to run their
+  # servers.
   callback <- function(...) {
-    board_server_callback(..., plugins = plugins)
+    board_server_callback(..., plugins = plugins, navbar = items)
   }
 
   board_server(id, x, plugins, options, callbacks = callback,

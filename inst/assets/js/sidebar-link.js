@@ -13,7 +13,7 @@
   var commitSeq = 0;
   var seedCounter = 0;
 
-  // Reuse the search helper shipped by blockr-block-browser.js.
+  // Reuse the search helper shipped by sidebar-block.js.
   // `link_menu_ui()` always attaches block_browser_dep() before
   // link_menu_dep(), so the namespace is in scope by the time this
   // binding runs.
