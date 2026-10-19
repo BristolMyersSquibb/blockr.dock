@@ -15,7 +15,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
       class = "blockr-block-header",
       div(
         class = "blockr-block-icon",
-        block_mark(blk, blk_info),
+        block_card_mark(blk, blk_info),
         block_status_dot(ns)
       ),
       div(
@@ -57,21 +57,21 @@ reported_sections <- function(input) {
   }
 }
 
-# The category colour goes to the stylesheet as a custom property rather than
-# being painted inline, so the tint, size and radius stay a theme's to change.
-# Type and package become the mark's tooltip through block-tooltips.js.
-block_mark <- function(blk, info) {
+# The mark is blockr.ui's, at the header's 32px, and the compact header takes
+# it down to 20px (blockr-dock.css). Its tooltip is the type, with the package
+# as its badge.
+block_card_mark <- function(blk, info) {
 
   type <- gsub("_", " ", class(blk)[1L])
 
-  span(
-    class = "blockr-block-mark",
-    style = paste0("--blockr-dock-cat: ", info$color, ";"),
-    `data-blockr-tip` = type,
-    `data-blockr-tip-badge` = info$package,
+  blockr.ui::block_mark(
+    info$icon,
+    info$category,
+    size = 32,
+    `data-blockr-tooltip` = type,
+    `data-blockr-tooltip-badge` = info$package,
     `aria-label` = paste(type, info$package, sep = ", "),
-    role = "img",
-    HTML(info$icon)
+    role = "img"
   )
 }
 
@@ -105,10 +105,15 @@ block_card_title <- function(block, id, info) {
           # The displayed title mirrors this input (block-rename.js), so a
           # rename decided by the board, which `updateTextInput()` delivers,
           # lands the way a keystroke does, with no render round-trip.
+          # With `updateOn = "blur"` the name reaches the server on Enter or
+          # when the field loses focus, so a rename is one board update rather
+          # than one per keystroke (about half a second of server time each on
+          # a large board); the browser shows the title as it is typed.
           textInput(
             input_id,
             label = NULL,
-            value = block_name(block)
+            value = block_name(block),
+            updateOn = "blur"
           ),
           div(class = "blockr-title-error", "A block needs a name")
         )
@@ -139,15 +144,18 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
 
   open <- intersect(visible, sections)
 
-  toggle <- function(section, title, label) {
+  # The name is the button's tooltip, and its text where it has no icon; a
+  # button drawn as an icon has the name as its label as well.
+  toggle <- function(section, name, icon = NULL) {
     on <- section %in% open
     tags$button(
       type = "button",
       class = paste("btn btn-light", if (on) "active"),
       `data-section` = section,
       `aria-pressed` = tolower(on),
-      title = title,
-      label
+      `data-blockr-tooltip` = name,
+      `aria-label` = if (!is.null(icon)) name,
+      coal(icon, name)
     )
   }
 
@@ -159,7 +167,7 @@ block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
     # A block's own control is drawn as the preview is: its icon, or its
     # label where it has none, and named by its label.
     if (!is.null(ctrl_meta)) {
-      toggle("ctrl", ctrl_meta$label, coal(ctrl_meta$icon, ctrl_meta$label))
+      toggle("ctrl", ctrl_meta$label, ctrl_meta$icon)
     },
     section_toggle_dep()
   )
@@ -230,7 +238,8 @@ block_card_dropdown <- function(ns, blk_id, has_inputs = FALSE) {
     id = ns("block_menu"),
     class = "btn btn-light blockr-header-icon blockr-block-menu-btn",
     type = "button",
-    title = "More actions",
+    `data-blockr-tooltip` = "More actions",
+    `aria-label` = "More actions",
     `data-blockr-menu` = jsonlite::toJSON(config, auto_unbox = TRUE),
     blockr.ui::small_icon("dots"),
     block_menu_dep()
@@ -249,8 +258,8 @@ block_menu_dep <- function() {
 block_card_content <- function(ns, expr_ui, block_ui, visible,
                                ctrl_ui = NULL, has_inputs = TRUE) {
 
-  # A closed section is `hidden`, so Shiny suspends the outputs in it.
-  # section-toggle.js opens and closes them in the browser as the header's
+  # A closed section is `hidden`, so Shiny suspends the outputs in it. In
+  # the browser, section-toggle.js opens and closes them as the header's
   # toggles flip; the server only hears the new set.
   section <- function(value, ...) {
     div(
@@ -266,10 +275,6 @@ block_card_content <- function(ns, expr_ui, block_ui, visible,
     div(
       id = ns("blk_sections"),
       class = "blockr-block-sections",
-      # The open sections, kept current by section-toggle.js. The stylesheet
-      # reads it to draw the rule above the preview only while controls are
-      # open above it, which the preview's own section cannot see.
-      `data-open` = paste(visible, collapse = " "),
       if (!is.null(ctrl_ui)) section("ctrl", ctrl_ui),
       if (has_inputs) section("inputs", expr_ui),
       section(
@@ -328,8 +333,10 @@ edit_block_server <- function(callbacks = list()) {
         observeEvent(
           input$block_name_in,
           {
-            # The field reports every keystroke, and the card refuses a name of
-            # spaces the same as an empty one.
+            # Shiny sends the field on Enter and on blur before block-rename.js
+            # refuses an empty name or restores the old one, so a blank name
+            # still arrives here. The card refuses a name of spaces the same as
+            # an empty one.
             req(
               trimws(input$block_name_in),
               block_id %in% board_block_ids(board$board)
@@ -643,7 +650,9 @@ block_status_dot_attrs <- function(status, error_count = 0L) {
   spec <- block_status_badge(status, error_count)
 
   if (!is.list(spec)) {
-    return(list(style = "", title = "", role = "", `aria-label` = ""))
+    return(
+      list(style = "", `data-blockr-tooltip` = "", role = "", `aria-label` = "")
+    )
   }
 
   fill <- sprintf("var(%s, %s)", spec$token, spec$color)
@@ -661,7 +670,7 @@ block_status_dot_attrs <- function(status, error_count = 0L) {
         ring
       }
     ),
-    title = spec$label,
+    `data-blockr-tooltip` = spec$label,
     role = "img",
     `aria-label` = spec$label
   )

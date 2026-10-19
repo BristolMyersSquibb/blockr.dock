@@ -418,3 +418,24 @@ test_that("a railed panel counts as on screen while the rail is expanded", {
     visible_block_ids(dock_grid("block_panel-a")), "a"
   )
 })
+
+test_that("a grid's rails take the collapse state named for their edge", {
+
+  grid <- dock_grid(blk("a"), rail(blk("b")))
+  grid[["rails"]] <- with_default_rails(grid[["rails"]])
+
+  collapsed <- function(x) lgl_xtr(x[["rails"]], "collapsed", use_names = TRUE)
+
+  expect_identical(
+    collapsed(follow_rail_collapse(grid, list(left = TRUE, right = TRUE))),
+    c(left = TRUE, right = FALSE)
+  )
+
+  # A rail on an edge not named keeps its state, as does an empty one, which is
+  # hidden and so has none to show.
+  expect_identical(
+    collapsed(follow_rail_collapse(grid, list(right = TRUE))),
+    c(left = FALSE, right = FALSE)
+  )
+  expect_identical(follow_rail_collapse(grid, list()), grid)
+})

@@ -336,8 +336,8 @@ edit_inputs_variadic_row <- function(board, row) {
     tags$span(
       class = "blockr-inputs-drag-handle",
       `aria-label` = "Drag to reorder",
-      title = "Drag to reorder",
-      drag_handle_icon()
+      `data-blockr-tooltip` = "Drag to reorder",
+      blockr.ui::small_icon("grip")
     ),
     tags$div(
       class = "blockr-inputs-source",
@@ -358,7 +358,7 @@ edit_inputs_variadic_row <- function(board, row) {
       type = "button",
       class = "blockr-inputs-remove",
       `aria-label` = "Remove input",
-      title = "Remove input",
+      `data-blockr-tooltip` = "Remove input",
       "\u00d7"
     )
   )
@@ -474,24 +474,5 @@ inputs_menu_dep <- function() {
     stylesheet = "css/sidebar-inputs.css",
     script = "js/sidebar-inputs.js",
     all_files = FALSE
-  )
-}
-
-drag_handle_icon <- function() {
-  tags$svg(
-    xmlns = "http://www.w3.org/2000/svg",
-    viewBox = "0 0 16 16",
-    width = "16",
-    height = "16",
-    fill = "currentColor",
-    `aria-hidden` = "true",
-    tags$path(
-      d = paste0(
-        "M6 3.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm0 4.5a1 1 0 1 1-2 0 1 1 0 0 ",
-        "1 2 0zm0 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 3.5a1 1 0 1 1-2 0 1 ",
-        "1 0 0 1 2 0zm0 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm0 4.5a1 1 0 1 1-2 ",
-        "0 1 1 0 0 1 2 0z"
-      )
-    )
   )
 }

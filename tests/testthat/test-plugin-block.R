@@ -55,9 +55,9 @@ test_that("a blank block name does not reach the board", {
   testServer(
     edit_block_server(),
     {
-      # The field sends as the user types, so a name cleared or replaced by
-      # spaces arrives before the card refuses it on Enter or restores it on
-      # blur.
+      # Shiny sends the field on Enter and on blur before the card refuses an
+      # empty name or restores the old one, so a name cleared or replaced by
+      # spaces still arrives.
       session$setInputs(block_name_in = "   ")
       expect_null(update())
 
@@ -280,16 +280,21 @@ test_that("a block's own control is drawn as its icon, named by its label", {
   with_icon <- toggle(
     list(label = "AI Assistant", icon = tags$svg(class = "probe-icon"))
   )
-  expect_identical(xml2::xml_attr(with_icon, "title"), "AI Assistant")
+  expect_identical(
+    xml2::xml_attr(with_icon, "data-blockr-tooltip"),
+    "AI Assistant"
+  )
+  expect_identical(xml2::xml_attr(with_icon, "aria-label"), "AI Assistant")
   expect_length(
     xml2::xml_find_all(with_icon, ".//svg[@class='probe-icon']"),
     1L
   )
   expect_identical(trimws(xml2::xml_text(with_icon)), "")
 
-  # Without an icon, the label is the button's text.
+  # Without an icon, the label is the button's text, which names it.
   without <- toggle(list(label = "Settings", icon = NULL))
-  expect_identical(xml2::xml_attr(without, "title"), "Settings")
+  expect_identical(xml2::xml_attr(without, "data-blockr-tooltip"), "Settings")
+  expect_true(is.na(xml2::xml_attr(without, "aria-label")))
   expect_identical(trimws(xml2::xml_text(without)), "Settings")
 })
 
@@ -399,15 +404,6 @@ test_that("a card with every section hidden paints none open (#418)", {
 
   expect_length(sections, 2L)
   expect_true(all(xml2::xml_has_attr(sections, "hidden")))
-  expect_identical(
-    xml2::xml_attr(
-      xml2::xml_find_first(
-        root, paste0("//div[", has_class("blockr-block-sections"), "]")
-      ),
-      "data-open"
-    ),
-    ""
-  )
 })
 
 test_that("a card tells an empty selection from no report yet (#426)", {
@@ -636,9 +632,9 @@ test_that("a board saved before #69 restores an input-free card", {
 
 test_that("a closed section is hidden on first paint", {
 
-  # The rule above the preview reads the sections' `data-open`
+  # The rule above the preview reads the sections' own `hidden`
   # (blockr-dock.css), so it has to be right before any toggle runs.
-  paint <- function(visible) {
+  hidden <- function(visible) {
     card <- block_card_content(
       NS("blk"),
       expr_ui = div(id = "blk-expr"),
@@ -646,28 +642,23 @@ test_that("a closed section is hidden on first paint", {
       visible = visible
     )
     root <- xml2::read_html(as.character(htmltools::tagList(card)))
-    box <- xml2::xml_find_first(
-      root, paste0("//div[", has_class("blockr-block-sections"), "]")
+    items <- xml2::xml_find_all(
+      root,
+      paste0(
+        "//div[", has_class("blockr-block-sections"), "]/div[@data-value]"
+      )
     )
-    items <- xml2::xml_find_all(box, "./div[@data-value]")
-    list(
-      hidden = set_names(
-        xml2::xml_has_attr(items, "hidden"),
-        xml2::xml_attr(items, "data-value")
-      ),
-      open = xml2::xml_attr(box, "data-open")
+    set_names(
+      xml2::xml_has_attr(items, "hidden"),
+      xml2::xml_attr(items, "data-value")
     )
   }
 
-  both <- paint(c("inputs", "outputs"))
-
-  expect_identical(both$hidden, c(inputs = FALSE, outputs = FALSE))
-  expect_identical(both$open, "inputs outputs")
-
-  preview <- paint("outputs")
-
-  expect_identical(preview$hidden, c(inputs = TRUE, outputs = FALSE))
-  expect_identical(preview$open, "outputs")
+  expect_identical(
+    hidden(c("inputs", "outputs")),
+    c(inputs = FALSE, outputs = FALSE)
+  )
+  expect_identical(hidden("outputs"), c(inputs = TRUE, outputs = FALSE))
 })
 
 test_that("block card sections carry the css-styling contract (#214)", {
@@ -733,13 +724,30 @@ test_that("the header names the block type on its mark", {
   # One header in both sizes: no subtitle, the type and package are the
   # mark's tooltip.
   expect_length(xml2::xml_find_all(root, "//bslib-popover"), 0L)
-  # block-tooltips.js hands these to Blockr.tooltip; no native title.
-  mark <- xml2::xml_find_first(root, "//span[@class='blockr-block-mark']")
-  expect_identical(xml2::xml_attr(mark, "data-blockr-tip"), "dataset block")
-  expect_identical(xml2::xml_attr(mark, "data-blockr-tip-badge"), "blockr.core")
+  # Blockr.tooltip reads both attributes, the package as the name's badge; no
+  # native title.
+  mark <- xml2::xml_find_first(
+    root,
+    paste0("//span[", has_class("blockr-block-mark"), "]")
+  )
+  expect_identical(
+    xml2::xml_attr(mark, "data-blockr-tooltip"),
+    "dataset block"
+  )
+  expect_identical(
+    xml2::xml_attr(mark, "data-blockr-tooltip-badge"),
+    "blockr.core"
+  )
   expect_true(is.na(xml2::xml_attr(mark, "title")))
-  expect_match(xml2::xml_attr(mark, "style"), "--blockr-dock-cat: #",
-               fixed = TRUE)
+
+  # The mark is blockr.ui's at the header's 32px, which its stylesheet colours
+  # from the category, so the dock writes no colour onto it.
+  expect_identical(
+    xml2::xml_attr(mark, "class"),
+    "blockr-block-mark blockr-block-mark--32"
+  )
+  expect_identical(xml2::xml_attr(mark, "data-category"), "input")
+  expect_true(is.na(xml2::xml_attr(mark, "style")))
 })
 
 test_that("the block menu lists its actions for Blockr.menu", {
@@ -903,8 +911,29 @@ test_that("card status and title land in the browser (e2e, #403)", {
     fixed = TRUE
   )
   expect_identical(
-    app$get_js(attr_js(el("b", "status_indicator"), "title")),
+    app$get_js(attr_js(el("b", "status_indicator"), "data-blockr-tooltip")),
     "Waiting for a data input"
+  )
+
+  # Blockr.tooltip reads the attributes when it shows, the mark's package as
+  # a badge after its type.
+  tooltip_js <- function(blk, part = "") {
+    sprintf(
+      "Blockr.tooltip.text(document.getElementById('%s')%s)",
+      el(blk, "status_indicator"),
+      part
+    )
+  }
+
+  expect_identical(
+    app$get_js(tooltip_js("b")),
+    "Waiting for a data input"
+  )
+  expect_identical(
+    app$get_js(
+      tooltip_js("a", ".parentElement.querySelector('.blockr-block-mark')")
+    ),
+    "dataset block · blockr.core"
   )
 
   # An evaluated block clears the attributes rather than keeping a stale spec.
@@ -916,7 +945,10 @@ test_that("card status and title land in the browser (e2e, #403)", {
     diagnose
   )
   expect_null(app$get_js(attr_js(el("a", "status_indicator"), "style")))
-  expect_null(app$get_js(attr_js(el("a", "status_indicator"), "title")))
+  expect_null(
+    app$get_js(attr_js(el("a", "status_indicator"), "data-blockr-tooltip"))
+  )
+  expect_identical(app$get_js(tooltip_js("a")), "")
 
   # Both notes ship with the card and the stylesheet reveals exactly the one
   # the slot's data-status names.
@@ -966,7 +998,7 @@ test_that("card status and title land in the browser (e2e, #403)", {
         "%s === 'Waiting for a data input'"
       ),
       el("c", "status_indicator"),
-      attr_js(el("c", "status_indicator"), "title")
+      attr_js(el("c", "status_indicator"), "data-blockr-tooltip")
     ),
     diagnose
   )
@@ -1006,6 +1038,20 @@ test_that("a title renames in place and refuses an empty name (e2e)", {
   app$get_chromote_session()$Emulation$setFocusEmulationEnabled(enabled = TRUE)
 
   wait_dock_loaded(app, 2)
+
+  # A card is in the DOM, and counted above, from the moment it is built into
+  # the hidden offcanvas pool, before the dock moves it into its panel. A field
+  # in the pool cannot take the focus, so wait for the move.
+  wait_js(
+    app,
+    paste(
+      "(function () {",
+      "var c = document.getElementById('my_board-block_handle-a');",
+      "return c !== null && !c.closest('.blockr-offcanvas');",
+      "})()"
+    ),
+    function() "[card-rename] the card of a is still in the offcanvas pool"
+  )
 
   id <- function(part) sprintf("my_board-block_a-edit_block-%s", part)
   jq <- function(part) sprintf("$('#%s')", id(part))
@@ -1066,6 +1112,12 @@ test_that("a title renames in place and refuses an empty name (e2e)", {
 
   start()
   type("Renamed")
+
+  # Typing stays in the browser: the server holds the old name until the
+  # edit ends.
+  app$wait_for_idle()
+  expect_identical(app$get_value(input = id("block_name_in")), "Dataset")
+
   press("Enter")
   expect_identical(state(), "false|false|Renamed|Renamed")
 
@@ -1241,7 +1293,10 @@ test_that("block status indicator + note reflect eval status (#290)", {
 
   waiting_dot <- block_status_dot_attrs("waiting")
   expect_match(waiting_dot$style, "#d97706", fixed = TRUE)
-  expect_identical(waiting_dot$title, "Waiting for a data input")
+  expect_identical(
+    waiting_dot[["data-blockr-tooltip"]],
+    "Waiting for a data input"
+  )
   expect_identical(waiting_dot[["aria-label"]], "Waiting for a data input")
   # The ring around the dot is the surface colour, with the shared spec's
   # white as its fallback. A waiting block draws a hollow amber ring, so the
@@ -1284,7 +1339,9 @@ test_that("block status indicator + note reflect eval status (#290)", {
   # A `ready` or `unevaluated` block, and an absent status, carry no
   # affordance: the dot's attributes are all cleared rather than left stale
   # from the last status.
-  blank <- list(style = "", title = "", role = "", `aria-label` = "")
+  blank <- list(
+    style = "", `data-blockr-tooltip` = "", role = "", `aria-label` = ""
+  )
 
   for (st in list("ready", "unevaluated", NULL, character(), c("a", "b"))) {
     expect_identical(block_status_dot_attrs(st), blank)
@@ -1340,7 +1397,7 @@ test_that("edit block server surfaces eval status reactively (#290)", {
       # A ready block with no conditions carries no status affordance at all.
       expect_identical(blk_status(), "ready")
       expect_identical(output$status_indicator$style, "")
-      expect_identical(output$status_indicator$title, "")
+      expect_identical(output$status_indicator[["data-blockr-tooltip"]], "")
 
       # A render-phase error leaves the eval status `ready` but still reddens
       # the dot, matching the DAG node badge (the note stays hidden).

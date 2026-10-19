@@ -147,7 +147,7 @@
 
 .blockr-issue--warning {
   border-color: var(--blockr-color-border-warning);
-  background: color-mix(in srgb, var(--blockr-color-border-warning) 10%, var(--blockr-color-bg-surface));
+  background: var(--blockr-color-bg-warning);
 }
 
 /* ============================================================
@@ -183,20 +183,6 @@
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
-}
-
-.blockr-block-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--blockr-radius-lg, 8px);
-  color: var(--blockr-dock-cat, #999999);
-  background: color-mix(in srgb, var(--blockr-dock-cat, #999999) 18%, var(--blockr-color-bg-surface, #ffffff));
-  /* The glyph is a bsicons SVG sized `1em` inline, so this sizes it. */
-  font-size: 16px;
-  line-height: 1;
 }
 
 .blockr-block-title-wrap {
@@ -249,7 +235,10 @@
   min-height: 26px;
 }
 
-.blockr-compact .blockr-block-mark {
+/* The header's mark is built at blockr.ui's 32px, and the option switches in
+   the browser without rebuilding it, so the compact header gives it the
+   geometry of blockr.ui's 20px mark (`.blockr-block-mark--20`) here. */
+.blockr-compact .blockr-block-header .blockr-block-mark {
   width: 20px;
   height: 20px;
   border-radius: 5px;
@@ -300,7 +289,7 @@
    fallback, and a waiting block draws a hollow ring. The dot must stay in flow
    when it carries no status (never display:none) so it is not suspended while
    hidden and left stuck ".recalculating", which would trip the navbar
-   busy-spinner scope; with no size written it takes no space on its own. */
+   logo's busy scope; with no size written it takes no space on its own. */
 .blockr-block-icon {
   position: relative;
   display: inline-flex;
@@ -396,13 +385,13 @@
 }
 
 /* ============================================
-   Parking pools (parking_ui())
+   Offcanvas (off_canvas())
    ============================================
    Built UI that is not on screen: block cards waiting for a panel and the
    extensions of hidden views. Off the page to the left (cards) or below
    (extensions) and invisible, but laid out at a quarter of the viewport's
    width, so the outputs in it keep a size and keep rendering. */
-.blockr-parking {
+.blockr-offcanvas {
   position: fixed;
   left: 0;
   z-index: -1;
@@ -414,19 +403,19 @@
   background: var(--blockr-color-bg-surface);
 }
 
-.blockr-parking--start {
+.blockr-offcanvas--start {
   top: 0;
   bottom: 0;
   transform: translateX(-100%);
 }
 
-.blockr-parking--bottom {
+.blockr-offcanvas--bottom {
   bottom: 0;
   height: 30vh;
   transform: translateY(100%);
 }
 
-.blockr-parking-body {
+.blockr-offcanvas-body {
   flex-grow: 1;
   overflow-y: auto;
   padding: 20px;
@@ -434,11 +423,11 @@
 
 /* Parked cards (`hide_block_ui()`, `hide_ext_ui()`) are invisible, but the
    browser kept styling and laying out every one: on a 90-block board, half
-   the document once all views had been visited. `content-visibility: hidden`
-   skips that work. Unlike `display: none`, it leaves the cards' sizes
-   readable, so Shiny does not suspend their outputs and charts get no resize
-   to zero. */
-.blockr-parking > .blockr-parking-body {
+   the document once all views had been visited. Setting
+   `content-visibility: hidden` skips that work. Unlike `display: none`, it
+   leaves the cards' sizes readable, so Shiny does not suspend their outputs
+   and charts get no resize to zero. */
+.blockr-offcanvas > .blockr-offcanvas-body {
   content-visibility: hidden;
 }
 
@@ -474,11 +463,13 @@
 /* The controls sit under the header with no rule above or below them, on
    the card's own surface. The one rule left separates the controls from the
    preview, edge to edge, and only while both are open: it lives in the
-   preview's section, so it opens and closes with the preview, and
-   `data-open` (section-toggle.js) says whether controls are open above it.
-   The rule is a background line rather than a border so the space above it
-   sits inside the section and folds with it. */
-.blockr-block-sections[data-open~="ctrl"] > [data-value="inputs"] > .blockr-block-section-body {
+   preview's section, so it opens and closes with the preview. The sections
+   come in a fixed order (control, inputs, preview), so a sibling selector
+   reads whether one above is open: neither `hidden` nor `.is-closing`, which
+   section-toggle.js sets as a fold starts. The rule is a background line
+   rather than a border so the space above it sits inside the section and
+   folds with it. */
+.blockr-block-section[data-value="ctrl"]:not([hidden], .is-closing) ~ [data-value="inputs"] > .blockr-block-section-body {
   padding-top: 12px;
 }
 
@@ -494,8 +485,7 @@
   padding: 0 var(--blockr-card-inset);
 }
 
-.blockr-block-sections[data-open~="inputs"] > [data-value="outputs"] > .blockr-block-section-body,
-.blockr-block-sections[data-open~="ctrl"] > [data-value="outputs"] > .blockr-block-section-body {
+.blockr-block-section:is([data-value="inputs"], [data-value="ctrl"]):not([hidden], .is-closing) ~ [data-value="outputs"] > .blockr-block-section-body {
   padding: 33px var(--blockr-card-inset) 0;
   background: linear-gradient(var(--blockr-color-border-default), var(--blockr-color-border-default)) 0 16px / 100% 1px no-repeat;
 }
@@ -535,25 +525,50 @@
 .blockr-navbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   height: 48px;
-  padding: 0 16px;
+  padding: 0 12px;
   background-color: var(--blockr-color-bg-surface, #ffffff);
   border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 
-.blockr-navbar-left {
-  flex: 1;
+/* One wrapper per navbar item (navbar_item_ui()). An item keeps its width
+   unless it fills, taking up the free space, or shrinks, giving way first on
+   a narrow bar; `min-width: 0` lets it go below its content's width. */
+.blockr-navbar-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex: none;
 }
 
-.blockr-navbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.blockr-navbar-item-fill {
+  flex-grow: 1;
+}
+
+.blockr-navbar-item-shrink,
+.blockr-navbar-item-shrink > * {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+/* An item whose output renders nothing, such as an avatar with nobody signed
+   in, takes no room: flexbox counts an empty box in the bar's `gap`. Out of
+   flow rather than `display: none`, since an output without a box counts as
+   hidden to Shiny, which then suspends it and never renders what would show
+   the item. */
+.blockr-navbar-item:empty,
+.blockr-navbar-item:has(> .shiny-html-output:only-child:empty),
+.blockr-navbar-item:has(> .shiny-text-output:only-child:empty) {
+  position: absolute;
+}
+
+/* The short rule that sets the view menu apart from the controls after it */
+.blockr-navbar-rule {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 2px 0 12px;
+  background: var(--blockr-color-border-default, #e5e7eb);
 }
 
 .blockr-navbar-icon-btn {
@@ -578,7 +593,7 @@
 
 /* Read-only / locked-mode indicator. Styled as a static status pill,
    not a button -- no hover state, no pointer cursor. Sits between the
-   view nav and the settings gear in the navbar right slot. */
+   view nav and the board options button in the navbar. */
 .blockr-lock-indicator {
   display: inline-flex;
   align-items: center;
@@ -597,6 +612,34 @@
 
 .blockr-lock-indicator-label {
   white-space: nowrap;
+}
+
+/* The dock's piece of the preserve_board plugin (ser_deser_ui()): Import and
+   Export as one row of quiet 30px buttons. On a bar too narrow for both, their
+   names are cut short rather than spill over the next item. A name takes the
+   font's own line height, since the clip would cut its descenders at the
+   button's `line-height: 1`. */
+.blockr-serdes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blockr-serdes > .blockr-btn {
+  min-width: 0;
+}
+
+.blockr-serdes > .blockr-btn > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: normal;
+}
+
+/* Import is a label around a file input that only the keyboard and screen
+   readers reach, so the label draws the input's focus ring. */
+.blockr-serdes > label:has(> input:focus-visible) {
+  outline: var(--blockr-focus-outline);
+  outline-offset: var(--blockr-focus-offset);
 }
 
 /* ============================================
@@ -622,8 +665,42 @@
   white-space: nowrap;
 }
 
+.blockr-view-toggle.blockr-navbar-icon-btn {
+  width: auto;
+  height: 30px;
+  gap: 6px;
+  padding: 0 8px;
+  font-weight: 500;
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-view-toggle[aria-expanded="true"] {
+  background-color: var(--blockr-color-bg-hover);
+}
+
 .blockr-view-toggle::after {
-  margin-left: 2px;
+  display: none;
+}
+
+/* The design system's chevron: muted, default on hover, turned while the
+   menu is open */
+.blockr-view-toggle-chev {
+  display: inline-flex;
+  color: var(--blockr-color-text-muted);
+  transition: transform var(--blockr-transition), color var(--blockr-transition);
+}
+
+.blockr-view-toggle:hover .blockr-view-toggle-chev {
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-view-toggle[aria-expanded="true"] .blockr-view-toggle-chev {
+  transform: rotate(180deg);
+}
+
+.blockr-view-toggle:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
 }
 
 /* The menu takes its look from blockr.ui's menu classes; these are the
@@ -1038,108 +1115,81 @@
 }
 
 /* ============================================
-   Navbar busy spinner
+   Navbar logo: the busy indicator
    ============================================ */
 
-/* A small ring in the navbar that spins while the session does real block
-   evaluation, replacing bslib's page-wide busy pulse. Driven purely off the
-   `.shiny-busy` class Shiny puts on <html> during a flush -- no server
-   observer, no page darkening.
+/* The blockr logo leads the navbar and is the board's busy indicator,
+   replacing bslib's page-wide busy pulse. Driven purely off the `.shiny-busy`
+   class Shiny puts on <html> during a flush -- no server observer, no page
+   darkening. Idle it is the whole logo. While the session does real block
+   evaluation its seven squares fade and fill again in the order the R is
+   drawn (each square's place is its `--i`, from blockr_logo()), and the moment
+   the work ends the animation is removed, so the logo is whole again instead
+   of freezing half drawn.
 
    Scoped exactly as the old pulse was: a plain panel switch round-trips to the
    server -- the on-screen visibility report and the layout fold -- without
-   recomputing any visible output, so gating on `.shiny-busy` alone would spin
-   for what is only layout bookkeeping. Require a genuinely recalculating output
-   inside the visible view container: block evaluation marks its output
-   "recalculating" there, bookkeeping does not. Scoping to the container is
-   deliberate -- an off-screen block parked in the (hidden) parking pool stays
-   "recalculating" while it waits for evaluation, and that pool sits outside the
-   container, so a pending hidden block never spins the navbar. Startup and real
-   recompute spin; a bare panel switch does not.
+   recomputing any visible output, so gating on `.shiny-busy` alone would
+   animate for what is only layout bookkeeping. Require a genuinely
+   recalculating output inside the visible view container: block evaluation
+   marks its output "recalculating" there, bookkeeping does not. Scoping to the
+   container is deliberate -- an off-screen block parked in the (hidden)
+   offcanvas pool stays "recalculating" while it waits for evaluation, and that
+   pool sits outside the container, so a pending hidden block never animates
+   the logo. Startup and real recompute animate it; a bare panel switch does
+   not.
 
-   The slot is always laid out and always painted -- there is no show/hide, so
-   nothing ever blinks in or out and it reflows no neighbour wherever it sits;
-   it leads the navbar's right group, ahead of the view nav. Idle it is a
-   faint, closed ring (a
-   track in one muted colour); a busy flush paints a darker arc onto that ring
-   and spins it. Both the arc (a 0s `border-top-color` transition) and the spin
-   (an `animation-delay`) are held by `var(--blockr-spinner-delay)` -- set on
-   `.blockr-navbar` from the `spinner_delay_ms` option -- while the return to the
-   bare idle ring carries no delay. So the arc appears only once the session has
-   stayed busy for the full delay (a flush that clears sooner is interrupted
-   mid-delay and never shows one) and it clears the instant work finishes. */
-.blockr-navbar-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid color-mix(in srgb, var(--blockr-color-text-muted) 30%, transparent);
-  border-radius: 50%;
-  transition: border-top-color 0s;
-}
-
-html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
-  border-top-color: var(--blockr-color-text-muted);
-  animation: blockr-navbar-spin 0.7s linear infinite;
-  animation-delay: var(--blockr-spinner-delay, 0ms);
-  transition-delay: var(--blockr-spinner-delay, 0ms);
-}
-
-/* Hover tooltip. The ring spins, so its label hangs off the static slot that
-   wraps it -- on the ring itself the spin transform would turn the text too.
-   CSS-only, like the ring: the label switches on the same busy scope that paints
-   the arc, so it needs no server observer. */
-.blockr-navbar-spinner-slot {
+   The animation waits `var(--blockr-spinner-delay)` -- set on `.blockr-navbar`
+   from the `spinner_delay_ms` option -- so a flush that clears sooner shows
+   nothing. Its label, "Computing", is blockr.ui's tooltip, which
+   navbar-logo.js gives the logo on the same scope. The logo's green is
+   blockr.ui's `--blockr-logo`, the same under every theme and in the dark
+   scheme. */
+.blockr-navbar-logo {
   display: inline-flex;
-  position: relative;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 5px;
+  color: var(--blockr-logo);
 }
 
-.blockr-navbar-spinner-slot::after {
-  content: "Idle";
-  position: absolute;
-  top: calc(100% + 7px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 2px 8px;
-  border-radius: var(--blockr-radius-sm, 4px);
-  background: var(--blockr-grey-900);
-  color: var(--blockr-grey-50);
-  font-size: var(--blockr-font-size-xs);
-  line-height: 1.5;
-  white-space: nowrap;
-  box-shadow: var(--blockr-shadow);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s ease;
-  z-index: 1080;
+.blockr-navbar-logo .blockr-logo {
+  display: block;
 }
 
-html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner-slot::after {
-  content: "Computing";
+.blockr-navbar-logo .blockr-logo rect {
+  fill: currentColor;
 }
 
-.blockr-navbar-spinner-slot:hover::after {
-  opacity: 1;
+html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-logo .blockr-logo rect {
+  animation: blockr-logo-fill 1.96s linear infinite;
+  animation-delay: calc(var(--blockr-spinner-delay, 0ms) + var(--i) * 140ms);
 }
 
-@keyframes blockr-navbar-spin {
-  to {
-    transform: rotate(360deg);
-  }
+/* A square is pale for the first half of its cycle and green for the second,
+   so the R comes down and builds up again in stroke order. Pale first, so the
+   first square changes as soon as the delay is over; until its turn each
+   square keeps the logo's green. */
+@keyframes blockr-logo-fill {
+  0%, 47% { fill: color-mix(in srgb, currentColor 16%, var(--blockr-color-bg-surface)); }
+  53%, 100% { fill: currentColor; }
 }
 
-/* Reduced motion slows the ring, it does not stop it. Stopping it leaves a
-   fully styled ring frozen in the navbar, which reads as a hung session --
-   the exact opposite of what a busy indicator is for -- and it is the only
-   state the indicator can be seen in, since it is hidden when idle. A 16px
-   ring turning in place carries none of the vestibular risk the preference
-   exists to avoid (it is not page-level or parallax motion), so the honest
-   reading of the preference here is "calmer", not "gone".
+/* Reduced motion slows the logo, it does not stop it. Stopping it leaves the
+   logo still during a long computation, which reads as nothing happening --
+   the exact opposite of what a busy indicator is for. Squares fading in place
+   carry none of the vestibular risk the preference exists to avoid (it is not
+   page-level or parallax motion), so the honest reading of the preference
+   here is "calmer", not "gone".
 
    This is not a rare corner: Windows maps "Animation effects: off" (a common
    managed / VDI default) onto `prefers-reduced-motion: reduce`, so on those
-   machines every Edge user saw a spinner that never moved. */
+   machines every Edge user would see a busy indicator that never moved. */
 @media (prefers-reduced-motion: reduce) {
-  html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-spinner {
-    animation-duration: 1.6s;
+  html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-logo .blockr-logo rect {
+    animation-duration: 3.9s;
+    animation-delay: calc(var(--blockr-spinner-delay, 0ms) + var(--i) * 280ms);
   }
 }
 

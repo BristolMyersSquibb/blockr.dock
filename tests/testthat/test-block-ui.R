@@ -320,7 +320,7 @@ test_that("a card sweep is one move-element message, not one per card (#397)", {
   expect_length(sent, 1L)
   expect_identical(
     chr_xtr(sent[[1L]], "to"),
-    rep("#my_board-blocks_offcanvas .blockr-parking-body", 3L)
+    rep("#my_board-blocks_offcanvas .blockr-offcanvas-body", 3L)
   )
 
   sent <- list()

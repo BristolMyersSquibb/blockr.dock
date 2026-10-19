@@ -265,7 +265,7 @@ hide_block_ui <- function(ids, session, board_ns = session$ns) {
   }
 
   bid <- board_ns(hid)
-  oid <- paste0(board_ns("blocks_offcanvas"), " .blockr-parking-body")
+  oid <- paste0(board_ns("blocks_offcanvas"), " .blockr-offcanvas-body")
 
   log_debug("hiding {cli::qty(length(bid))}block{?s} {bid} in {oid}")
 

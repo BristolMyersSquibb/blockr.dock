@@ -1,16 +1,17 @@
-# A pool for UI that is built but not on screen: block cards waiting for a
-# panel, extensions of views that are not shown. It is kept out of sight with
-# `visibility`, not `display`, so what is parked keeps a size and its outputs
-# keep rendering, as they did in the Bootstrap offcanvas this replaces. New
-# cards are inserted into the pool itself and parked ones are moved into its
-# `.blockr-parking-body`; both callers select by those.
-parking_ui <- function(id, ..., position = c("start", "bottom")) {
+# A container off the visible page for UI that is built but not on screen:
+# block cards waiting for a panel, extensions of views that are not shown. It
+# is kept out of sight with `visibility`, not `display`, so what is parked
+# keeps a size and its outputs keep rendering, as they did in the Bootstrap
+# offcanvas this replaces. New cards are inserted into the offcanvas itself
+# and parked ones are moved into its `.blockr-offcanvas-body`; both callers
+# select by those.
+off_canvas <- function(id, ..., position = c("start", "bottom")) {
   div(
     id = id,
-    class = paste0("blockr-parking blockr-parking--", match.arg(position)),
+    class = paste0("blockr-offcanvas blockr-offcanvas--", match.arg(position)),
     `aria-hidden` = "true",
     div(
-      class = "blockr-parking-body",
+      class = "blockr-offcanvas-body",
       ...
     )
   )
