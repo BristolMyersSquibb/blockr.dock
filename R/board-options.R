@@ -24,7 +24,7 @@ new_compact_option <- function(value = blockr_option("compact", FALSE),
     id = "compact",
     default = value,
     ui = function(id) {
-      dock_checkbox(NS(id, "compact"), "Compact", value)
+      checkboxInput(NS(id, "compact"), "Compact", value)
     },
     server = function(..., session) {
       observeEvent(
@@ -92,18 +92,14 @@ new_sync_rails_option <- function(value = blockr_option("sync_rails", TRUE),
     id = "sync_rails",
     default = value,
     ui = function(id) {
-      bslib::input_switch(
-        NS(id, "sync_rails"),
-        "Sync rails across views",
-        value
-      )
+      checkboxInput(NS(id, "sync_rails"), "Sync rails across views", value)
     },
     server = function(..., session) {
       observeEvent(
         get_board_option_or_null("sync_rails", session),
         {
           on <- rails_synced(session)
-          bslib::toggle_switch("sync_rails", value = on, session = session)
+          updateCheckboxInput(session, "sync_rails", value = on)
           session$sendCustomMessage("blockr-rail-sync", on)
         }
       )

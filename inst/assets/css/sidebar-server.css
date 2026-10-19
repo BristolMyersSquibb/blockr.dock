@@ -202,12 +202,6 @@ html.blockr-html-pushed-left {
   margin-bottom: 16px;
 }
 
-/* The dock's checkboxes (dock_checkbox()), one under the other. */
-.blockr-options-page .blockr-checkbox {
-  display: flex;
-  margin-bottom: 12px;
-}
-
 /* The code page: the board as an R script, with Copy above it. */
 .blockr-code-actions {
   display: flex;

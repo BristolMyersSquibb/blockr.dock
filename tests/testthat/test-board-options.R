@@ -13,14 +13,22 @@ test_that("the compact switch is a dock board option, off by default", {
   )
 })
 
-test_that("the compact option is a dock checkbox", {
+test_that("the dock's options are Shiny's checkboxes, not bslib's switches", {
 
-  opt <- new_compact_option(TRUE)
-  html <- as.character(board_option_ui(opt, "board"))
+  for (opt in list(new_compact_option(TRUE), new_sync_rails_option(TRUE))) {
 
-  expect_match(html, 'id="board-compact"', fixed = TRUE)
-  expect_match(html, "blockr-checkbox", fixed = TRUE)
-  expect_no_match(html, "form-switch", fixed = TRUE)
+    id <- board_option_id(opt)
+    root <- xml2::read_html(as.character(board_option_ui(opt, "board")))
+    box <- xml2::xml_find_all(root, "//div[@class='checkbox']/label/input")
+
+    expect_length(box, 1L)
+    expect_identical(xml2::xml_attr(box, "id"), paste0("board-", id))
+    expect_identical(xml2::xml_attr(box, "checked"), "checked")
+    expect_length(
+      xml2::xml_find_all(root, "//*[contains(@class, 'form-switch')]"),
+      0L
+    )
+  }
 })
 
 test_that("the rail sync switch is a dock board option, on by default", {
@@ -38,42 +46,72 @@ test_that("the rail sync switch is a dock board option, on by default", {
   )
 })
 
-test_that("the rail sync option tells the client, which keeps rails in step", {
+# The session an option's server runs in, with the input and custom messages it
+# sends recorded: updateCheckboxInput() needs a session that is Shiny's.
+recording_session <- function(options) {
 
   ms <- new_mock_session()
+
+  ms$userData$board_options <- options
+  ms$userData$inputs <- list()
+  ms$userData$messages <- list()
+
+  ms$sendInputMessage <- function(id, message) {
+    sent <- ms$userData$inputs[[id]]
+    ms$userData$inputs[[id]] <- c(sent, message$value)
+    invisible()
+  }
+
+  ms$sendCustomMessage <- function(type, message) {
+    sent <- ms$userData$messages[[type]]
+    ms$userData$messages[[type]] <- c(sent, message)
+    invisible()
+  }
+
+  ms
+}
+
+test_that("the compact option sets its box and tells the client", {
+
+  value <- reactiveVal(TRUE)
+  ms <- recording_session(list(compact = value))
   withr::defer(if (!ms$isClosed()) ms$close())
 
-  sent <- list()
-
-  value <- with_mock_context(ms, reactiveVal(TRUE))
-
-  session <- list(
-    ns = identity,
-    userData = list2env(list(board_options = list(sync_rails = value))),
-    onFlush = function(fun, once = TRUE) fun(),
-    sendInputMessage = function(...) invisible(),
-    sendCustomMessage = function(type, message) {
-      if (identical(type, "blockr-rail-sync")) {
-        sent[[length(sent) + 1L]] <<- message
-      }
-      invisible()
-    }
-  )
-
-  with_mock_context(
-    ms,
-    board_option_server(new_sync_rails_option(), session = session)
-  )
+  with_mock_context(ms, board_option_server(new_compact_option(), session = ms))
   ms$flushReact()
 
-  expect_identical(sent, list(TRUE))
-  expect_true(rails_synced(session))
+  expect_identical(ms$userData$inputs$compact, TRUE)
+  expect_identical(ms$userData$messages[["blockr-compact"]], TRUE)
 
   with_mock_context(ms, value(FALSE))
   ms$flushReact()
 
-  expect_identical(sent, list(TRUE, FALSE))
-  expect_false(rails_synced(session))
+  expect_identical(ms$userData$inputs$compact, c(TRUE, FALSE))
+  expect_identical(ms$userData$messages[["blockr-compact"]], c(TRUE, FALSE))
+})
+
+test_that("the rail sync option tells the client, which keeps rails in step", {
+
+  value <- reactiveVal(TRUE)
+  ms <- recording_session(list(sync_rails = value))
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  with_mock_context(
+    ms,
+    board_option_server(new_sync_rails_option(), session = ms)
+  )
+  ms$flushReact()
+
+  expect_identical(ms$userData$inputs$sync_rails, TRUE)
+  expect_identical(ms$userData$messages[["blockr-rail-sync"]], TRUE)
+  expect_true(rails_synced(ms))
+
+  with_mock_context(ms, value(FALSE))
+  ms$flushReact()
+
+  expect_identical(ms$userData$inputs$sync_rails, c(TRUE, FALSE))
+  expect_identical(ms$userData$messages[["blockr-rail-sync"]], c(TRUE, FALSE))
+  expect_false(rails_synced(ms))
 
   # A board without the option, such as one saved before it existed, keeps
   # each view's rails as they were left.
