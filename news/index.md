@@ -2,6 +2,10 @@
 
 ## blockr.dock (development version)
 
+- `views$rename` and `views$add` reject empty or whitespace-only display
+  names before applying an update
+  ([\#517](https://github.com/BristolMyersSquibb/blockr.dock/issues/517)).
+
 - The navbar is drawn from a list of items, the dock’s own controls
   included, which an app adds to, reorders or drops from through
   [`serve()`](https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html),
