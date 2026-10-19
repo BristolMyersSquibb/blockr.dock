@@ -39,7 +39,7 @@ $(function () {
       .text(text);
   };
 
-  // The name of the page each nav's "New page" made, until the page arrives
+  // The name of the view each nav's "New view" made, until the view arrives
   // (`rename_new` from the server).
   var renameNew = new WeakMap();
 
@@ -280,7 +280,7 @@ $(function () {
         setManaging(el, false);
       });
 
-      // Remove asks in place: the x turns the row into "Remove this page?"
+      // Remove asks in place: the x turns the row into "Remove this view?"
       // with a Remove button; only that button sends the request, and the
       // server removes the page without a dialog. The question is a layer
       // (Blockr.layer), so Escape or a click anywhere outside its row takes
@@ -325,7 +325,7 @@ $(function () {
         $item.find('.blockr-view-remove-confirm').trigger('focus');
       });
 
-      // Add click: the server adds an empty "Page N" and switches to it; the
+      // Add click: the server adds an empty "View N" and switches to it; the
       // page arrives through receiveMessage, its name open for renaming.
       $(el).on('click.viewBinding', '.blockr-view-add', function (e) {
         e.stopPropagation();

@@ -1,6 +1,6 @@
 # What the four block actions share: adding, appending, prepending and
 # inserting a block. A gesture opens the block actions' menu where it
-# happened (add-block-menu.R). Where the action holds the sidebar already, it
+# happened (action-menu.R). Where the action holds the sidebar already, it
 # shows the block browser there for the new target instead, which is what
 # keeps a pinned browser following the DAG's selection. The menu's tool opens
 # the browser on what was typed in the menu. A pick from either commits
