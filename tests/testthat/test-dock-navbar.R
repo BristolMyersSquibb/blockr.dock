@@ -91,7 +91,7 @@ test_that("default_navbar_items() are the dock's controls in order", {
   expect_true(is_navbar_items(items))
   expect_identical(
     names(items),
-    c("preserve_board", "spacer", "busy", "views", "read_only", "options")
+    c("logo", "preserve_board", "spacer", "views", "read_only", "options")
   )
   expect_true(items[["spacer"]][["fill"]])
   expect_true(items[["preserve_board"]][["shrink"]])
@@ -100,7 +100,7 @@ test_that("default_navbar_items() are the dock's controls in order", {
   # Without the plugin there is no piece of it to place.
   expect_identical(
     names(default_navbar_items(brd, plg[c("edit_block", "generate_code")])),
-    c("spacer", "busy", "views", "read_only", "options")
+    c("logo", "spacer", "views", "read_only", "options")
   )
 })
 
@@ -121,7 +121,7 @@ test_that("custom_navbar() appends items to the default", {
   # custom_plugins() does for plugins.
   expect_identical(
     names(custom_navbar(navbar_test_item("views"))(brd, plg)),
-    c("preserve_board", "spacer", "busy", "read_only", "options", "views")
+    c("logo", "preserve_board", "spacer", "read_only", "options", "views")
   )
 
   expect_error(custom_navbar("help"), class = "navbar_items_coercion_invalid")
@@ -193,7 +193,7 @@ test_that("board_ui() draws the navbar from its items", {
   # indicator of an unlocked board.
   expect_identical(
     xml2::xml_attr(wrappers, "data-navbar-item"),
-    c("preserve_board", "spacer", "busy", "views", "options", "probe")
+    c("logo", "preserve_board", "spacer", "views", "options", "probe")
   )
 
   cls <- set_names(
@@ -209,7 +209,7 @@ test_that("board_ui() draws the navbar from its items", {
     cls[["preserve_board"]],
     "blockr-navbar-item blockr-navbar-item-shrink"
   )
-  expect_identical(cls[["busy"]], "blockr-navbar-item")
+  expect_identical(cls[["logo"]], "blockr-navbar-item")
 
   # An item's UI is called with `NS(board_id, item_id)` and the board.
   expect_identical(seen$id, "test-probe")
@@ -259,10 +259,10 @@ test_that("a board without the plugin keeps its controls on the right", {
     "//div[contains(concat(' ', @class, ' '), ' blockr-navbar ')]/div"
   )
 
-  # The spacer leads, so it pushes the rest of the bar to the right.
+  # The spacer follows the logo, so it pushes the rest of the bar to the right.
   expect_identical(
     xml2::xml_attr(wrappers, "data-navbar-item"),
-    c("spacer", "busy", "views", "options")
+    c("logo", "spacer", "views", "options")
   )
 })
 
@@ -468,12 +468,13 @@ test_that("navbar items lay out in one row in the browser", {
 
   # On a narrow bar the plugin's piece gives way, its content shrinking with
   # it rather than spill over its neighbours, and the rest keeps its width and
-  # stays on the bar, on one line. At this width the piece gets about 250px of
-  # the 370px it takes on a wide bar, well above the 130px its content needs.
+  # stays on the bar, on one line. At this width the piece gets about 80px of
+  # the 120px it takes on a wide bar, so the names of Import and Export are cut
+  # short, well above the 40px the two buttons need without them.
   piece_width <- box("preserve_board")$width
   options_width <- box("options")$width
 
-  app$set_window_size(width = 560, height = 800)
+  app$set_window_size(width = 380, height = 800)
   app$wait_for_js(
     sprintf(
       paste0(
@@ -491,6 +492,7 @@ test_that("navbar items lay out in one row in the browser", {
   expect_lte(box("filled")$right, bar()$right + 0.5)
 
   mid <- function(b) (b$top + b$bottom) / 2
+  expect_equal(mid(piece), mid(box("options")), tolerance = 0.01)
   expect_equal(mid(box("views")), mid(box("options")), tolerance = 0.01)
   expect_equal(mid(box("filled")), mid(box("options")), tolerance = 0.01)
 })
