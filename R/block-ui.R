@@ -48,9 +48,8 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
     ctrl_meta <- NULL
   }
 
-  card_tag <- div(
-    class = "card",
-    width = "100%",
+  div(
+    class = "blockr-block-card",
     id = board_ns(as_block_handle_id(blk_id)),
     edit_ui(
       edit_ns,
@@ -62,8 +61,6 @@ block_card <- function(blk, blk_id, plugin, board, board_ns, ctrl = NULL) {
       ctrl_meta = ctrl_meta
     )
   )
-
-  tagAppendAttributes(card_tag, class = "border border-0 shadow-none")
 }
 
 has_external_ctrl <- function(x) {
@@ -268,7 +265,7 @@ hide_block_ui <- function(ids, session, board_ns = session$ns) {
   }
 
   bid <- board_ns(hid)
-  oid <- paste0(board_ns("blocks_offcanvas"), " .offcanvas-body")
+  oid <- paste0(board_ns("blocks_offcanvas"), " .blockr-offcanvas-body")
 
   log_debug("hiding {cli::qty(length(bid))}block{?s} {bid} in {oid}")
 

@@ -7,7 +7,7 @@ edit_block_ui <- function(id, blk, blk_id, expr_ui, block_ui,
   visible <- visible_sections(blk)
 
   div(
-    class = "card-body",
+    class = "blockr-block-card-body",
     # Header parts take their look from the stylesheet, never from a `style=`
     # attribute, which would outrank any sheet a theme attaches. The status
     # dot is the exception: its binding writes the spec it shares with the DAG.
@@ -128,8 +128,8 @@ block_card_title <- function(block, id, info) {
 block_card_toggles <- function(visible, ns, ctrl_meta = NULL,
                                has_inputs = TRUE) {
 
-  # A locked card offers no toggle at all: the accordion is seeded from
-  # `visible` at render, so nothing here has to report back to place it. The
+  # A locked card offers no toggle at all: the sections are seeded from
+  # `visible` at render, so nothing here has to report back to place them. The
   # widget used to be rendered hidden for exactly that seeding, which left a
   # live Shiny input a client could flip via `Shiny.setInputValue()`.
   if (is_dock_locked()) {
@@ -258,38 +258,31 @@ block_menu_dep <- function() {
 block_card_content <- function(ns, expr_ui, block_ui, visible,
                                ctrl_ui = NULL, has_inputs = TRUE) {
 
-  inputs_panel <- if (has_inputs) {
-    accordion_panel(
-      title = NULL,
-      value = "inputs",
-      expr_ui
+  # A closed section is `hidden`, so Shiny suspends the outputs in it. In
+  # the browser, section-toggle.js opens and closes them as the header's
+  # toggles flip; the server only hears the new set.
+  section <- function(value, ...) {
+    div(
+      class = "blockr-block-section",
+      `data-value` = value,
+      hidden = if (!value %in% visible) NA,
+      div(class = "blockr-block-section-body", ...)
     )
-  }
-
-  outputs_panel <- accordion_panel(
-    title = NULL,
-    value = "outputs",
-    block_ui,
-    block_status_notes(ns),
-    block_issues_ui(ns)
-  )
-
-  ctrl_panel <- if (!is.null(ctrl_ui)) {
-    accordion_panel(title = NULL, value = "ctrl", ctrl_ui)
   }
 
   tagList(
     div(id = ns("errors_block"), class = "blockr-block-errors"),
-    accordion(
-      id = ns("blk_accordion"),
-      class = "blockr-block-accordion",
-      multiple = TRUE,
-      # An empty set has to travel as FALSE: bslib reads `character()` the same
-      # as an absent `open` and falls back to opening the first panel.
-      open = if (length(visible)) visible else FALSE,
-      ctrl_panel,
-      inputs_panel,
-      outputs_panel
+    div(
+      id = ns("blk_sections"),
+      class = "blockr-block-sections",
+      if (!is.null(ctrl_ui)) section("ctrl", ctrl_ui),
+      if (has_inputs) section("inputs", expr_ui),
+      section(
+        "outputs",
+        block_ui,
+        block_status_notes(ns),
+        block_issues_ui(ns)
+      )
     )
   )
 }
@@ -382,34 +375,6 @@ edit_block_server <- function(callbacks = list()) {
         output$status_note <- render_attrs(
           block_status_note_attrs(blk_status())
         )
-
-        # These carry user toggles only -- the card paints with its saved
-        # sections already open -- so a locked dock, which renders no toggle
-        # widget, wires neither and a forged `collapse_blk_sections` moves
-        # nothing.
-        if (!is_dock_locked()) {
-
-          observeEvent(
-            input$collapse_blk_sections,
-            accordion_panel_set(
-              "blk_accordion",
-              input$collapse_blk_sections,
-              session
-            )
-          )
-
-          # Hiding the last section reports NULL, which the setter above drops
-          # as its `ignoreNULL` default -- and could not carry anyway, since the
-          # set message rejects an empty selection. Closing all is its own
-          # message, observed separately.
-          observeEvent(
-            is.null(input$collapse_blk_sections),
-            if (is.null(input$collapse_blk_sections)) {
-              accordion_panel_close("blk_accordion", TRUE, session)
-            },
-            ignoreInit = TRUE
-          )
-        }
 
         output$issues_count <- renderText(cond_issue_label(conds()))
         outputOptions(output, "issues_count", suspendWhenHidden = FALSE)
@@ -560,11 +525,9 @@ cond_alert <- function(dom_id, msg, severity) {
     )
   }
 
-  cl <- switch(severity, warning = "warning", message = "light")
-
   tags$div(
     id = dom_id,
-    class = sprintf("blockr-issue alert alert-%s", cl),
+    class = sprintf("blockr-issue blockr-issue--%s", severity),
     content
   )
 }
@@ -576,32 +539,22 @@ cond_issue_label <- function(cnds) {
   paste(n, if (n == 1L) "issue" else "issues")
 }
 
+# The warnings and messages under the preview, folded behind their count. A
+# native disclosure: the summary is the toggle, and the browser opens and
+# closes it.
 block_issues_ui <- function(ns) {
-
-  collapse_id <- ns("outputs_issues_collapse")
-
-  div(
+  tags$details(
     id = ns("outputs_issues"),
-    class = "mt-3 blockr-issues",
-    tags$div(
-      class = paste(
-        "d-flex align-items-center justify-content-between",
-        "blockr-issues-toggle"
-      ),
-      `data-bs-toggle` = "collapse",
-      `data-bs-target` = paste0("#", collapse_id),
-      `aria-expanded` = "false",
-      `aria-controls` = collapse_id,
+    class = "blockr-issues",
+    tags$summary(
+      class = "blockr-issues-toggle",
       textOutput(ns("issues_count"), inline = TRUE),
-      bsicons::bs_icon("chevron-down", class = "blockr-meta")
+      blockr.ui::small_icon("chevron")
     ),
-    collapse_container(
-      id = collapse_id,
-      div(
-        class = "pt-2",
-        div(id = ns("outputs_issues_warnings")),
-        div(id = ns("outputs_issues_messages"))
-      )
+    div(
+      class = "blockr-issues-body",
+      div(id = ns("outputs_issues_warnings")),
+      div(id = ns("outputs_issues_messages"))
     )
   )
 }

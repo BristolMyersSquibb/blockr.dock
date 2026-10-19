@@ -37,7 +37,7 @@ $(function () {
   var drag = null;
 
   // Whether the rails of every dock open and close together: the "Sync rails
-  // across pages" board option. Page-wide, like the "Compact" one.
+  // across views" board option. Page-wide, like the "Compact" one.
   var inStep = false;
 
   // Set while a collapse is carried to the other docks, so the change each of

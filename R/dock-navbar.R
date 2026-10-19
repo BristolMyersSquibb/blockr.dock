@@ -440,7 +440,7 @@ navbar_logo_dep <- function() {
 }
 
 # View menu in the navbar -- always present, since boards always carry a
-# `dock_views` collection (single-page boards have one auto-named "Page" view).
+# `dock_views` collection (single-view boards have one auto-named "Page" view).
 # The menu needs only structure (ids, names, active), not geometry. A short rule
 # sets it apart from the controls after it.
 views_navbar_ui <- function(id, board) {
@@ -471,7 +471,7 @@ read_only_navbar_ui <- function(id, board) {
 
 # Pure-JS open trigger via `data-blockr-sidebar-target`. The settings sidebar's
 # body is pre-rendered into its mount (see board_ui.dock_board()), so no server
-# observer is needed: clicking the gear toggles the panel client-side. A plain
+# observer is needed: clicking the button toggles the panel client-side. A plain
 # `tags$button` rather than an `actionButton`, since there is no `input$<id>` to
 # wire.
 options_navbar_ui <- function(id, board) {
@@ -481,6 +481,8 @@ options_navbar_ui <- function(id, board) {
     `data-blockr-sidebar-target` = NS(navbar_board_id(id), "settings_sidebar"),
     `aria-label` = "Board options",
     `data-blockr-tooltip` = "Board options",
-    bsicons::bs_icon("gear")
+    # The side panel it opens, not a gear: the gear stands for a block's
+    # settings everywhere else.
+    bsicons::bs_icon("layout-sidebar-reverse")
   )
 }

@@ -4,7 +4,7 @@
 #' extends [blockr.core::new_board()]. In addition to the attributes contained
 #' in a core board, this also includes dock extensions (as `extensions`) and
 #' the per-view layout, stored as two independent slots -- view structure
-#' ([board_views()]) and grid geometry ([board_grids()]). Single-page boards
+#' ([board_views()]) and grid geometry ([board_grids()]). Single-view boards
 #' are a degenerate case with one auto-named "Page" view.
 #'
 #' Multi-view boards pass `views` (and optionally `grids`); see
@@ -45,7 +45,7 @@
 #' that plots can take the board's colours, a light/dark switch, light unless
 #' the `dark_mode` blockr option says otherwise, the "Compact" header switch
 #' ([new_compact_option()]), off unless the `compact` blockr option says
-#' otherwise, and a switch that opens and closes the rails of every page
+#' otherwise, and a switch that opens and closes the rails of every view
 #' together ([new_sync_rails_option()]), on unless the `sync_rails` blockr
 #' option says otherwise.
 #'
