@@ -13,6 +13,16 @@ test_that("the compact switch is a dock board option, off by default", {
   )
 })
 
+test_that("the compact option is a dock checkbox", {
+
+  opt <- new_compact_option(TRUE)
+  html <- as.character(board_option_ui(opt, "board"))
+
+  expect_match(html, 'id="board-compact"', fixed = TRUE)
+  expect_match(html, "blockr-checkbox", fixed = TRUE)
+  expect_no_match(html, "form-switch", fixed = TRUE)
+})
+
 test_that("the rail sync switch is a dock board option, on by default", {
 
   opts <- dock_board_options()

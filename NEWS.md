@@ -34,14 +34,12 @@
   `blockr_app_ui()` the server's arguments as well, the dock's method appends
   only its unnamed `...` to the page.
 
-* The options sidebar no longer uses Bootstrap (BristolMyersSquibb/blockr.ui#85).
-  Core's dark mode, preview search and thematic options, and Compact, are
-  drawn as the dock's checkboxes in blockr.ui's look, under the same input
-  ids, so core reads them as before. Show code opens a Code page of the
-  sidebar with the script and a Copy button, in place of core's modal; as
-  in core, it builds every block first, and holds the script back while a
-  block is not configured or reports an error, with a button that evaluates
-  the board once. A locked board's sidebar keeps the Code page.
+* Show code opens a Code page of the options sidebar with the script and a
+  Copy button, in place of core's modal, which needs Bootstrap
+  (BristolMyersSquibb/blockr.ui#85). As in core, it builds every block first,
+  and holds the script back while a block is not configured or reports an
+  error, with a button that evaluates the board once. A locked board's sidebar
+  keeps the Code page.
 
 * The block card no longer uses Bootstrap (BristolMyersSquibb/blockr.ui#85).
   Its sections (control, inputs, preview) fold in the browser on the

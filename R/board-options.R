@@ -232,7 +232,7 @@ options_sidebar_ui <- function(id, options, generate_code = NULL) {
         class = "blockr-options-page",
         `data-category` = cat,
         hidden = NA,
-        lapply(opts, dock_option_ui, id)
+        lapply(opts, board_option_ui, id)
       )
     },
     names(cats),
