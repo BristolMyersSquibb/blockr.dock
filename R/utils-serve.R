@@ -42,9 +42,9 @@ blockr_app_ui.dock_board <- function(id, x, plugins, options, ...,
           "enable-negative-margins" = "true"
         ),
         # Disable bslib's built-in busy indicators (the page-wide pulse and
-        # per-output spinners). The dock drives its own subtle navbar spinner
-        # off the `.shiny-busy` class Shiny sets on <html> instead -- see the
-        # `.blockr-navbar-spinner` slot in busy_navbar_ui() and its CSS.
+        # per-output spinners). The dock animates the navbar's logo off the
+        # `.shiny-busy` class Shiny sets on <html> instead -- see
+        # logo_navbar_ui() and its CSS.
         useBusyIndicators(spinners = FALSE, pulse = FALSE),
         shinyjs::useShinyjs(),
         board_ui(
