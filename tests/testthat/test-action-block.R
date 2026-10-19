@@ -260,16 +260,16 @@ test_that("prepend block action: target_input picks the link slot", {
   )
 })
 
-test_that("block actions open their menu from their own module", {
-  # The pick comes back as the module's own `browser-commit`, so the menu
-  # has to be opened with the action's session: its namespace names the
-  # input the pick is sent to.
-  opened <- list()
+test_that("block actions show the block browser from their own module", {
+  # A pick comes back as the module's own `browser-commit`, so the browser
+  # has to be drawn under the action's namespace and shown from its session.
+  shown <- list()
   local_mocked_bindings(
-    open_add_block_menu = function(mode, caption, at = NULL,
-                                   session = get_session()) {
-      opened[[length(opened) + 1L]] <<- list(
-        ns = session$ns(NULL), mode = mode, caption = caption
+    show_sidebar = function(id, ui = NULL, title = NULL,
+                            session = get_session()) {
+      shown[[length(shown) + 1L]] <<- list(
+        ns = session$ns(NULL), id = id, title = title,
+        html = as.character(ui)
       )
       invisible(NULL)
     }
@@ -285,16 +285,16 @@ test_that("block actions open their menu from their own module", {
   fire_action(prepend_block_action, "m", r_board)
 
   expect_identical(
-    lapply(opened, `[[`, "ns"),
+    lapply(shown, `[[`, "ns"),
     list("add_block_action", "append_block_action", "prepend_block_action")
   )
-  expect_identical(
-    chr_ply(opened, `[[`, "mode"),
-    c("add", "append", "prepend")
+  expect_identical(unique(chr_xtr(shown, "id")), "b-actions_sidebar")
+  expect_identical(shown[[1L]]$title, "Add a block")
+  expect_match(shown[[2L]]$title, "^Append to ")
+  expect_match(shown[[3L]]$title, "^Prepend to ")
+  expect_match(
+    shown[[2L]]$html, 'id="append_block_action-browser-commit"', fixed = TRUE
   )
-  expect_identical(opened[[1L]]$caption, "Add a block")
-  expect_match(opened[[2L]]$caption, "^Append to ")
-  expect_match(opened[[3L]]$caption, "^Prepend to ")
 })
 
 test_that("append block action: a name field names the variadic slot", {
@@ -441,57 +441,9 @@ test_that("prepend: NULL target_input falls back to only slot", {
   )
 })
 
-test_that("the block actions' menu opens where the gesture happened", {
-
-  opened <- list()
+test_that("a card added without its form adds the block", {
   local_mocked_bindings(
-    open_add_block_menu = function(mode, caption, at = NULL,
-                                   session = get_session()) {
-      opened[[length(opened) + 1L]] <<- list(at = at)
-      invisible(NULL)
-    }
-  )
-
-  r_board <- reactiveValues(
-    board = new_board(c(a = new_dataset_block())),
-    board_id = "my_board"
-  )
-
-  trigger <- new_trigger()
-
-  testServer(
-    function(id, ...) {
-      moduleServer(
-        action_id(append_block_action),
-        append_block_action(
-          trigger = trigger,
-          board = r_board,
-          update = reactiveVal(list())
-        )
-      )
-    },
-    {
-      trigger("a", at = list(id = "my_board-block_a-edit_block-block_menu"))
-      session$flushReact()
-
-      # Fired from code, with nowhere named.
-      trigger("a")
-      session$flushReact()
-    }
-  )
-
-  expect_identical(
-    opened,
-    list(
-      list(at = list(id = "my_board-block_a-edit_block-block_menu")),
-      list(at = NULL)
-    )
-  )
-})
-
-test_that("a pick from the block actions' menu adds the block", {
-  local_mocked_bindings(
-    open_add_block_menu = function(...) invisible(NULL)
+    show_sidebar = function(...) invisible(NULL)
   )
 
   r_board <- reactiveValues(board = new_board(), board_id = "my_board")
@@ -508,7 +460,7 @@ test_that("a pick from the block actions' menu adds the block", {
     },
     {
       session$flushReact()
-      # What add-block-menu.js sends: the type, no ids.
+      # A card's form left empty: the type, no ids.
       session$setInputs(`browser-commit` = commit_spec(
         type = "dataset_block", nonce = 1
       ))
@@ -521,9 +473,9 @@ test_that("a pick from the block actions' menu adds the block", {
   )
 })
 
-test_that("a pick from the append menu adds the block and its link", {
+test_that("an append card added without its form adds the block and link", {
   local_mocked_bindings(
-    open_add_block_menu = function(...) invisible(NULL)
+    show_sidebar = function(...) invisible(NULL)
   )
 
   r_board <- reactiveValues(
@@ -557,24 +509,19 @@ test_that("a pick from the append menu adds the block and its link", {
   )
 })
 
-test_that("the block actions' menu lists types, append only receivers", {
+test_that("the block browser lists every type, append only receivers", {
 
-  items <- add_block_menu_items("add")
-  rows <- Filter(function(x) !is.null(x$type), items)
-  titles <- Filter(function(x) !is.null(x$title), items)
+  metas <- block_metas("add")
+  ds <- Filter(function(x) identical(x$type, "dataset_block"), metas)
 
-  expect_true(length(titles) > 0L)
-  expect_true("dataset_block" %in% chr_ply(rows, `[[`, "type"))
-  ds <- Filter(function(x) identical(x$type, "dataset_block"), rows)[[1L]]
-  expect_identical(ds$badge, "blockr.core")
-  # The row's mark takes its colour from the category, in blockr.ui.
-  expect_identical(ds$mark$category, "input")
-  expect_null(ds$mark$color)
+  expect_length(ds, 1L)
+  expect_identical(ds[[1L]]$package, "blockr.core")
+  expect_identical(ds[[1L]]$category, "input")
 
   # A source-only block cannot receive a link, so append does not offer it.
-  app <- Filter(function(x) !is.null(x$type), add_block_menu_items("append"))
-  expect_false("dataset_block" %in% chr_ply(app, `[[`, "type"))
-  expect_true("head_block" %in% chr_ply(app, `[[`, "type"))
+  app <- chr_xtr(block_metas("append"), "type")
+  expect_false("dataset_block" %in% app)
+  expect_true("head_block" %in% app)
 })
 
 test_that("the add-panel menu marks a block by its category", {
@@ -596,17 +543,14 @@ test_that("the add-panel menu marks a block by its category", {
   expect_null(unlst(lst_xtr(marks, "color")))
 })
 
-test_that("the block actions' menu takes in a block registered anew", {
+test_that("the block browser takes in a block registered anew", {
 
   uid <- "menu_probe_block"
   withr::defer(unregister_blocks(uid))
 
   labels <- function() {
-    rows <- Filter(
-      function(x) identical(x$type, uid),
-      add_block_menu_items("add")
-    )
-    chr_xtr(rows, "label")
+    metas <- Filter(function(x) identical(x$type, uid), block_metas("add"))
+    chr_xtr(metas, "name")
   }
 
   register_block(new_dataset_block, "Probe", "A probe block", uid = uid)
@@ -620,9 +564,8 @@ test_that("the block actions' menu takes in a block registered anew", {
   expect_identical(labels(), "Renamed probe")
 })
 
-# The block browser in the sidebar, which the menu's tool opens. Its form is
-# the only way to set what the menu leaves to the server: the IDs, above all,
-# cannot be changed after adding.
+# The block browser in the sidebar. Its form is the only way to set the IDs
+# of a block and its links, which cannot be changed after adding.
 
 by_class <- function(tok) {
   sprintf(
@@ -750,20 +693,12 @@ test_that("block browser renders a name field for variadic ends", {
   )
 })
 
-test_that("the block browser is the commit input, and opens on the query", {
+test_that("the block browser is the commit input", {
 
-  html <- as.character(block_browser_ui("act-browser", query = "head"))
-  doc <- xml2::read_html(html)
+  doc <- xml2::read_html(as.character(block_browser_ui("act-browser")))
   root <- xml2::xml_find_first(doc, by_class("blockr-block-browser"))
 
   expect_identical(xml2::xml_attr(root, "id"), "act-browser-commit")
-  expect_identical(
-    xml2::xml_attr(
-      xml2::xml_find_first(doc, by_class("blockr-block-browser-search")),
-      "value"
-    ),
-    "head"
-  )
 
   chevron <- xml2::xml_find_first(
     doc, by_class("blockr-block-browser-card-chevron")
@@ -773,23 +708,9 @@ test_that("the block browser is the commit input, and opens on the query", {
   )
 })
 
-test_that("the block actions' menu sends its tool to the action", {
-
-  sent <- NULL
-  session <- list(
-    ns = NS("my_board-append_block_action"),
-    sendCustomMessage = function(type, message) sent <<- message
-  )
-
-  open_add_block_menu("append", "Append to Iris", session = session)
-
-  expect_identical(sent$commit, "my_board-append_block_action-browser-commit")
-  expect_identical(sent$expand, "my_board-append_block_action-expand")
-})
-
 # Runs `gen` with the sidebar's state stubbed: whether the action holds the
-# open sidebar and whether it is pinned. Records what is shown, hidden and
-# opened, in order.
+# open sidebar and whether it is pinned. Records what is shown and hidden, in
+# order.
 sidebar_run <- function(gen, trigger, board, holds = FALSE, pinned = FALSE,
                         expr) {
 
@@ -807,10 +728,7 @@ sidebar_run <- function(gen, trigger, board, holds = FALSE, pinned = FALSE,
     show_sidebar = function(id, ui = NULL, title = NULL, ...) {
       log("show", id = id, title = title, html = as.character(ui))
     },
-    hide_sidebar = function(id, ...) log("hide", id = id),
-    open_add_block_menu = function(mode, caption, ...) {
-      log("menu", mode = mode, caption = caption)
-    }
+    hide_sidebar = function(id, ...) log("hide", id = id)
   )
 
   r_update <- reactiveVal(list())
@@ -831,46 +749,31 @@ sidebar_run <- function(gen, trigger, board, holds = FALSE, pinned = FALSE,
   list(calls = rec$calls, update = isolate(r_update()))
 }
 
-test_that("the menu's tool opens the block browser on what was typed", {
+test_that("a gesture shows the block browser, held or not", {
 
   r_board <- reactiveValues(
     board = new_board(c(a = new_dataset_block("iris"))),
     board_id = "my_board"
   )
 
-  res <- sidebar_run(
-    append_block_action, reactive("a"), r_board,
-    expr = quote(session$setInputs(expand = list(query = "hea", nonce = 1)))
-  )
+  # Held, the browser is shown afresh for the gesture's target, as a pinned
+  # one is when the DAG fires the action again on a new selection.
+  for (holds in c(FALSE, TRUE)) {
 
-  whats <- chr_xtr(res$calls, 1L)
-  expect_identical(whats, c("menu", "show"))
+    res <- sidebar_run(
+      append_block_action, reactive("a"), r_board, holds = holds,
+      expr = quote(NULL)
+    )
 
-  show <- res$calls[[2L]]
-  expect_identical(show$id, "my_board-actions_sidebar")
-  expect_identical(show$title, res$calls[[1L]]$caption)
-  expect_match(
-    show$html, 'id="append_block_action-browser-commit"', fixed = TRUE
-  )
-  expect_match(show$html, 'value="hea"', fixed = TRUE)
-})
+    expect_identical(chr_xtr(res$calls, 1L), "show")
 
-test_that("a gesture shows the browser afresh where the action holds it", {
-
-  r_board <- reactiveValues(
-    board = new_board(c(a = new_dataset_block("iris"))),
-    board_id = "my_board"
-  )
-
-  res <- sidebar_run(
-    append_block_action, reactive("a"), r_board, holds = TRUE,
-    expr = quote(NULL)
-  )
-
-  # No menu: the browser follows the gesture, as a pinned one follows the
-  # DAG's selection.
-  expect_identical(chr_xtr(res$calls, 1L), "show")
-  expect_match(res$calls[[1L]]$title, "^Append to ")
+    show <- res$calls[[1L]]
+    expect_identical(show$id, "my_board-actions_sidebar")
+    expect_match(show$title, "^Append to ")
+    expect_match(
+      show$html, 'id="append_block_action-browser-commit"', fixed = TRUE
+    )
+  }
 })
 
 test_that("a pick closes the browser, unless it is pinned", {

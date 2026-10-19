@@ -709,33 +709,11 @@ test_that("Enter commits the typed name and takes focus out of the field", {
   expect_identical(exported(app, "links"), c("l1:a>", "l2:b>", "l3:c>typed"))
 })
 
-# The block actions' menu, the block's "…" menu, the section toggles and the
+# The block browser, the block's "…" menu, the section toggles and the
 # options pages are client code over a server round trip, so these drive the
 # board.
 
 menu_sel <- "body > .blockr-menu"
-
-# The open menu's caption and box, and the box of the element it should hang
-# off when one is named.
-menu_box <- function(app, anchor = NULL) {
-  app$get_js(
-    sprintf(
-      paste0(
-        "(function(){",
-        "var m = document.querySelector('body > .blockr-menu');",
-        "var r = m.getBoundingClientRect();",
-        "var a = %s;",
-        "var b = a ? a.getBoundingClientRect() : null;",
-        "var c = m.querySelector('.blockr-menu__caption');",
-        "return {caption: c ? c.textContent : null, top: r.top,",
-        "  center: r.left + r.width / 2, viewport: window.innerWidth,",
-        "  anchorBottom: b ? b.bottom : null};",
-        "})()"
-      ),
-      if (is.null(anchor)) "null" else anchor
-    )
-  )
-}
 
 press <- function(app, key, target = "document.activeElement") {
   app$run_js(
@@ -755,116 +733,27 @@ shown_menu_btn <- paste0(
   ".find(b => b.getBoundingClientRect().width > 0)"
 )
 
-test_that("a pick from the block actions' menu adds the block", {
+test_that("Add block opens the browser, whose form sets the block ID", {
 
   skip_on_cran()
 
-  app <- menus_app("actions-menu-pick")
+  app <- menus_app("actions-browser")
   withr::defer(app$stop())
 
   app$click(fixture("add_block"))
-  wait_sel(app, paste(menu_sel, ".blockr-menu__filter-input"))
 
-  # An action fired from code names no gesture, so the menu takes the fixed
-  # spot: centred, under the navbar.
-  box <- menu_box(app)
-  expect_identical(box$caption, "Add a block")
-  expect_lt(abs(box$center - box$viewport / 2), 2)
-  expect_lt(box$top, 100)
-
-  app$run_js(
-    paste0(
-      "var f = document.querySelector('body > .blockr-menu ",
-      ".blockr-menu__filter-input');",
-      "f.value = 'head';",
-      "f.dispatchEvent(new Event('input', {bubbles: true}));"
-    )
-  )
-  press(app, "Enter")
-
-  app$wait_for_value(
-    export = fixture("blocks"),
-    ignore = list(c("a", "b", "m", "r", "s"))
-  )
-
-  added <- setdiff(exported(app, "blocks"), c("a", "b", "m", "r", "s"))
-  expect_length(added, 1L)
-})
-
-test_that("append opens its menu at the block's menu button", {
-
-  skip_on_cran()
-
-  app <- menus_app("actions-menu-anchor")
-  withr::defer(app$stop())
-
-  btn <- app$get_js(paste0(shown_menu_btn, ".id"))
-
-  # From the keyboard, as the one path the pointer cannot stand in for: the
-  # down arrow opens the "…" menu on its first row, Controls.
-  app$run_js(sprintf("document.getElementById('%s').focus()", btn))
-  press(app, "ArrowDown")
-  wait_sel(app, menu_sel)
-  press(app, "ArrowDown")
-  press(app, "ArrowDown")
-  press(app, "Enter")
-
-  wait_js(
-    app,
-    paste0(
-      "(function(){var c = document.querySelector(",
-      "'body > .blockr-menu .blockr-menu__caption');",
-      "return c !== null && c.textContent.indexOf('Append to') === 0;})()"
-    ),
-    function() "[actions-menu] no append menu"
-  )
-
-  box <- menu_box(app, sprintf("document.getElementById('%s')", btn))
-  expect_gte(box$top, box$anchorBottom)
-  expect_lt(box$top - box$anchorBottom, 12)
-
-  # Escape hands the focus back to the button the gesture started on.
-  press(app, "Escape")
-  wait_sel(app, menu_sel, present = FALSE)
-  expect_identical(app$get_js("document.activeElement.id"), btn)
-})
-
-test_that("the menu's tool opens the browser, whose form sets the block ID", {
-
-  skip_on_cran()
-
-  app <- menus_app("actions-menu-browser")
-  withr::defer(app$stop())
-
-  app$click(fixture("add_block"))
-  wait_sel(app, paste(menu_sel, ".blockr-menu__filter-input"))
-
-  app$run_js(
-    paste0(
-      "var f = document.querySelector('", menu_sel, " ",
-      ".blockr-menu__filter-input');",
-      "f.value = 'head';",
-      "f.dispatchEvent(new Event('input', {bubbles: true}));"
-    )
-  )
-  click_sel(app, paste(menu_sel, ".blockr-menu__tool"))
-
-  # The browser opens in the sidebar on what was typed in the menu.
-  head_card <- paste(".blockr-block-browser", card("head_block"))
+  # No menu on the way: the action shows the browser in the sidebar.
+  browser <- paste0("#", actions_panel, " .blockr-block-browser")
+  head_card <- paste(browser, card("head_block"))
   wait_sel(app, head_card)
-  wait_sel(app, menu_sel, present = FALSE)
+  expect_identical(js_count(app, menu_sel), 0L)
 
-  expect_identical(
-    app$get_js(
-      "document.querySelector('.blockr-block-browser-search').value"
-    ),
-    "head"
-  )
+  type_search(app, browser, "head")
   expect_true(
     app$get_js(
       sprintf(
         "document.querySelector(%s).classList.contains('hidden')",
-        shQuote(paste(".blockr-block-browser", card("dataset_block")))
+        shQuote(paste(browser, card("dataset_block")))
       )
     )
   )
@@ -881,6 +770,38 @@ test_that("the menu's tool opens the browser, whose form sets the block ID", {
   expect_identical(
     setdiff(exported(app, "blocks"), c("a", "b", "m", "r", "s")),
     "h1"
+  )
+})
+
+test_that("Append block in the block's menu opens the browser for the block", {
+
+  skip_on_cran()
+
+  app <- menus_app("actions-browser-append")
+  withr::defer(app$stop())
+
+  btn <- app$get_js(paste0(shown_menu_btn, ".id"))
+
+  # From the keyboard: the down arrow opens the "…" menu on its first row,
+  # Controls, and two more reach Append block.
+  app$run_js(sprintf("document.getElementById('%s').focus()", btn))
+  press(app, "ArrowDown")
+  wait_sel(app, menu_sel)
+  press(app, "ArrowDown")
+  press(app, "ArrowDown")
+  press(app, "Enter")
+
+  wait_sel(app, paste0("#", actions_panel, " .blockr-block-browser"))
+  wait_sel(app, menu_sel, present = FALSE)
+
+  expect_match(
+    app$get_js(
+      sprintf(
+        "document.querySelector('#%s .blockr-sidebar-title').textContent",
+        actions_panel
+      )
+    ),
+    "^Append to "
   )
 })
 

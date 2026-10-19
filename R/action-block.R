@@ -1,10 +1,9 @@
 # What the four block actions share: adding, appending, prepending and
-# inserting a block. A gesture opens the block actions' menu where it
-# happened (action-menu.R). Where the action holds the sidebar already, it
-# shows the block browser there for the new target instead, which is what
-# keeps a pinned browser following the DAG's selection. The menu's tool opens
-# the browser on what was typed in the menu. A pick from either commits
-# through block_browser_server(), and `apply` takes the value it builds.
+# inserting a block. Each gesture shows the block browser in the actions
+# sidebar, for the target it names, and so does the DAG's firing of the
+# action again on a new selection, which keeps a pinned browser following
+# it. A pick commits through block_browser_server(), and `apply` takes the
+# value it builds.
 #
 # Both `target` and `caption` read the trigger's value. Once a pick is
 # applied, the browser closes unless it is pinned: a pinned one stays, and is
@@ -14,11 +13,10 @@
 # reads the target's inputs as they are then. A target that leaves the board,
 # the link an insert split among them, closes the browser, since there is
 # nothing left to add to.
-serve_block_action <- function(mode, trigger, board, target, caption, apply,
+serve_block_action <- function(trigger, board, target, caption, apply,
                                refresh = FALSE, session = get_session()) {
 
   sidebar_id <- NS(isolate(board$board_id), "actions_sidebar")
-  input <- session$input
 
   added <- block_browser_server(
     "browser",
@@ -26,29 +24,18 @@ serve_block_action <- function(mode, trigger, board, target, caption, apply,
     target = reactive(target(trigger()))
   )
 
-  show_browser <- function(query = "") {
+  show_browser <- function() {
     show_sidebar(
       sidebar_id,
       title = caption(board$board, trigger()),
       ui = block_browser_ui(
-        session$ns("browser"), board$board, target(trigger()), query
+        session$ns("browser"), board$board, target(trigger())
       ),
       session = session
     )
   }
 
-  observeEvent(trigger(), {
-    if (owns_open_sidebar(sidebar_id, session)) {
-      show_browser()
-    } else {
-      open_add_block_menu(
-        mode, caption(board$board, trigger()), at = trigger_at(trigger),
-        session = session
-      )
-    }
-  })
-
-  observeEvent(input$expand, show_browser(coal(input$expand$query, "")))
+  observeEvent(trigger(), show_browser())
 
   stale <- reactiveVal(FALSE)
 
@@ -104,7 +91,7 @@ add_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       serve_block_action(
-        "add", trigger, board,
+        trigger, board,
         target = function(x) NULL,
         caption = function(board, x) "Add a block",
         # A ready-to-apply `blocks` object, id-keyed, the block built and
@@ -121,7 +108,7 @@ append_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       serve_block_action(
-        "append", trigger, board,
+        trigger, board,
         target = append_to,
         caption = function(board, id) {
           paste("Append to", block_label(board, id))
@@ -146,7 +133,7 @@ prepend_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       serve_block_action(
-        "prepend", trigger, board,
+        trigger, board,
         target = prepend_to,
         caption = function(board, id) {
           paste("Prepend to", block_label(board, id))

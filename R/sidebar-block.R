@@ -112,8 +112,8 @@ block_commit_link <- function(spec, board, target, blk, blk_id) {
 # very link this payload removes.
 #
 # Returning the placement rather than letting the action rebuild it keeps the
-# decision with the part that made it: the menu is what knows which of the two
-# links is the far end.
+# decision with the part that made it: the commit is what knows which of the
+# two links is the far end.
 block_commit_insert <- function(spec, board, target, blk, blk_id) {
 
   ends <- link_ends(board, target$id)
@@ -360,7 +360,6 @@ browser_block_metas <- function(mode) {
 # The metadata for one flow, built once per flow and registry: for append and
 # insert, browser_block_metas() instantiates each block to read its inputs.
 # The key hashes the registry's entries, so registering a block anew rebuilds.
-# Both the block actions' menu and the block browser list from it.
 block_metas <- function(mode) {
 
   key <- paste(mode, rlang::hash(available_blocks()))
@@ -374,18 +373,15 @@ block_metas <- function(mode) {
 
 block_metas_cache <- new.env(parent = emptyenv())
 
-# The block browser: the list the block actions' menu offers, in the sidebar,
-# where a card unfolds into a form for what a pick from the menu leaves to the
-# server: the block's ID and title, the IDs of its links, the input a link
-# lands on. The menu's tool opens it, on what was typed there (`query`). The
-# root element is the Shiny input a pick from the menu writes to as well, so
-# block_browser_server() reads both as `input$commit`.
-block_browser_ui <- function(id, board = NULL, target = NULL, query = "") {
+# The block browser the block actions show in the sidebar: the block types
+# the flow can add, where a card unfolds into a form for the block's ID and
+# title, the IDs of its links and the input a link lands on. The root element
+# is the Shiny input block_browser_server() reads as `input$commit`.
+block_browser_ui <- function(id, board = NULL, target = NULL) {
 
   stopifnot(
     is.character(id), length(id) == 1L, nzchar(id),
-    is.null(target) || inherits(target, "bb_target"),
-    is_string(query)
+    is.null(target) || inherits(target, "bb_target")
   )
 
   ns <- NS(id)
@@ -402,7 +398,6 @@ block_browser_ui <- function(id, board = NULL, target = NULL, query = "") {
         type = "search",
         class = "blockr-block-browser-search",
         placeholder = "Search...",
-        value = query,
         `aria-label` = "Search blocks"
       ),
       tags$div(
@@ -453,7 +448,7 @@ target_ports <- function(board, target) {
 
 # A card as the link menu draws one: the block's mark, its name and package,
 # and the chevron that unfolds the form. A click elsewhere on the card adds
-# the block as a pick from the menu does.
+# the block, and the server fills in what the form leaves empty.
 browser_block_card <- function(meta, ns, mode, ports) {
   tags$div(
     class = "blockr-block-browser-card",

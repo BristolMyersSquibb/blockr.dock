@@ -148,14 +148,14 @@ insert_block_action <- function(trigger, board, update, ...) {
   new_action(
     function(input, output, session) {
       serve_block_action(
-        "insert", trigger, board,
+        trigger, board,
         target = insert_into,
         caption = insert_caption,
         apply = function(res) {
 
-          # The menu yields no links when the split link has gone between
-          # opening it and committing. Applying the block alone would leave
-          # it stranded off the graph, so bail.
+          # The browser yields no links when the split link has gone
+          # between opening it and committing. Applying the block alone
+          # would leave it stranded off the graph, so bail.
           if (!length(res$links)) {
             notify(
               "That link is no longer on the board.",
@@ -184,5 +184,19 @@ insert_block_action <- function(trigger, board, update, ...) {
       NULL
     },
     id = "insert_block_action"
+  )
+}
+
+insert_caption <- function(board, link_id) {
+
+  ends <- link_ends(board, link_id)
+
+  if (is.null(ends)) {
+    return("Insert a block")
+  }
+
+  paste(
+    "Insert between", block_label(board, ends$from),
+    "and", block_label(board, ends$to)
   )
 }

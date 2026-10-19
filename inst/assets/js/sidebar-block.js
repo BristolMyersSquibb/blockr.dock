@@ -6,8 +6,7 @@
   // button), so the value carries a monotonically increasing `nonce`
   // that guarantees Shiny sees a change and re-fires even when the same
   // block is added twice. R reads it as `input[[<root id>]]` and ignores
-  // the nonce, as it does for a pick from the block actions' menu, which
-  // writes the same input.
+  // the nonce.
   var COMMIT_EVENT = "blockr-block-browser:commit";
   var commitSeq = 0;
 
@@ -212,8 +211,6 @@
         }
       };
       search.addEventListener("input", filter);
-      // What was typed in the menu the browser was opened from.
-      if (search.value) filter();
 
       // Arrow keys move the highlight, Enter adds it. Gated to the search
       // box so arrow keys still edit text inside an expanded card's form.

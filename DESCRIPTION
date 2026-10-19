@@ -56,7 +56,6 @@ Collate:
     'action-block.R'
     'action-inputs.R'
     'action-link.R'
-    'action-menu.R'
     'action-stack.R'
     'action-ui.R'
     'action-utils.R'
