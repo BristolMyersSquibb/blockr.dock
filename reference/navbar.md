@@ -84,15 +84,16 @@ return a boolean.
 ## Details
 
 The default items, returned by `default_navbar_items()`, are, in order:
-the piece the `preserve_board` plugin draws (id `"preserve_board"`), a
-spacer (`"spacer"`), the busy indicator (`"busy"`), the view menu
-(`"views"`), the read-only indicator (`"read_only"`), drawn only on a
-locked board, and the board options (`"options"`). The generic
-`blockr_app_navbar()` gives the default by board class, and
-`custom_navbar()` returns a navbar function that appends a fixed set of
-items to it, dropping any default item that shares an id with one of
-them. A plugin's piece is placed by `plugin_navbar_item()`, which the
-defaults use for the `preserve_board` plugin.
+the blockr logo, which is also the busy indicator (id `"logo"`), the
+piece the `preserve_board` plugin draws (`"preserve_board"`), a spacer
+(`"spacer"`), the view menu (`"views"`), the read-only indicator
+(`"read_only"`), drawn only on a locked board, and the board options
+(`"options"`). The generic `blockr_app_navbar()` gives the default by
+board class, and `custom_navbar()` returns a navbar function that
+appends a fixed set of items to it, dropping any default item that
+shares an id with one of them. A plugin's piece is placed by
+`plugin_navbar_item()`, which the defaults use for the `preserve_board`
+plugin.
 
 An item whose `ui` draws a single
 [`shiny::uiOutput()`](https://rdrr.io/pkg/shiny/man/htmlOutput.html) or
@@ -116,7 +117,7 @@ help <- navbar_item(
 brd <- new_dock_board()
 items <- c(default_navbar_items(brd, blockr.core::board_plugins(brd)), help)
 names(items)
-#> [1] "preserve_board" "spacer"         "busy"           "views"         
+#> [1] "logo"           "preserve_board" "spacer"         "views"         
 #> [5] "read_only"      "options"        "help"          
 names(items[c("help", "options")])
 #> [1] "help"    "options"

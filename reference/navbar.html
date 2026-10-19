@@ -135,14 +135,15 @@ boolean.</p>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The default items, returned by <code>default_navbar_items()</code>, are, in order: the
-piece the <code>preserve_board</code> plugin draws (id <code>"preserve_board"</code>), a spacer
-(<code>"spacer"</code>), the busy indicator (<code>"busy"</code>), the view menu (<code>"views"</code>), the
-read-only indicator (<code>"read_only"</code>), drawn only on a locked board, and the
-board options (<code>"options"</code>). The generic <code>blockr_app_navbar()</code> gives the
-default by board class, and <code>custom_navbar()</code> returns a navbar function that
-appends a fixed set of items to it, dropping any default item that shares an
-id with one of them. A plugin's piece is placed by <code>plugin_navbar_item()</code>,
-which the defaults use for the <code>preserve_board</code> plugin.</p>
+blockr logo, which is also the busy indicator (id <code>"logo"</code>), the piece the
+<code>preserve_board</code> plugin draws (<code>"preserve_board"</code>), a spacer (<code>"spacer"</code>),
+the view menu (<code>"views"</code>), the read-only indicator (<code>"read_only"</code>), drawn
+only on a locked board, and the board options (<code>"options"</code>). The generic
+<code>blockr_app_navbar()</code> gives the default by board class, and <code>custom_navbar()</code>
+returns a navbar function that appends a fixed set of items to it, dropping
+any default item that shares an id with one of them. A plugin's piece is
+placed by <code>plugin_navbar_item()</code>, which the defaults use for the
+<code>preserve_board</code> plugin.</p>
 <p>An item whose <code>ui</code> draws a single <code><a href="https://rdrr.io/pkg/shiny/man/htmlOutput.html" class="external-link">shiny::uiOutput()</a></code> or
 <code><a href="https://rdrr.io/pkg/shiny/man/textOutput.html" class="external-link">shiny::textOutput()</a></code> takes no room in the bar while that output is empty,
 as an avatar would with nobody signed in.</p>
@@ -163,7 +164,7 @@ as an avatar would with nobody signed in.</p>
 <span class="r-in"><span><span class="va">brd</span> <span class="op">&lt;-</span> <span class="fu"><a href="dock.html">new_dock_board</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">items</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu">default_navbar_items</span><span class="op">(</span><span class="va">brd</span>, <span class="fu">blockr.core</span><span class="fu">::</span><span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_plugin.html" class="external-link">board_plugins</a></span><span class="op">(</span><span class="va">brd</span><span class="op">)</span><span class="op">)</span>, <span class="va">help</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">items</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "preserve_board" "spacer"         "busy"           "views"         </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "logo"           "preserve_board" "spacer"         "views"         </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [5] "read_only"      "options"        "help"          </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">items</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"help"</span>, <span class="st">"options"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "help"    "options"</span>

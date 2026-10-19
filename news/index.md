@@ -13,15 +13,26 @@
   default, and `navbar` takes any function of the board and its plugins
   that returns items, such as one that reorders or drops from
   [`default_navbar_items()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/navbar.md)
-  with `[`. The defaults are the plugin’s piece, placed by
+  with `[`. The defaults are the blockr logo, the plugin’s piece, placed
+  by
   [`plugin_navbar_item()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/navbar.md),
-  a spacer, the busy indicator, the view menu, now set apart by a short
-  rule, the read-only indicator and the board options. On a narrow bar
-  the plugin’s piece gives way first and the rest keeps its width. An
-  item whose output renders nothing leaves no gap. The view menu’s
-  button shows the current view’s name and a chevron, and the board
-  options button the side panel it opens rather than a gear
+  a spacer, the view menu, now set apart by a short rule, the read-only
+  indicator and the board options. On a narrow bar the plugin’s piece
+  gives way first and the rest keeps its width. An item whose output
+  renders nothing leaves no gap. The view menu’s button shows the
+  current view’s name and a chevron, and the board options button the
+  side panel it opens rather than a gear
   ([\#529](https://github.com/BristolMyersSquibb/blockr.dock/issues/529)).
+
+- The blockr logo leads the navbar and is the board’s busy indicator, in
+  place of the spinner ring
+  ([\#530](https://github.com/BristolMyersSquibb/blockr.dock/issues/530)).
+  While blocks compute, its seven squares fade and fill again in the
+  order the R is drawn, and the moment the work ends the logo is whole
+  again. As the ring did, it waits the `spinner_delay_ms` option first,
+  slows rather than stops under reduced motion, and leaves a bare panel
+  switch alone. While it is busy, its “Computing” label is blockr.ui’s
+  light tooltip.
 
 - **Breaking:** the navbar’s `.blockr-navbar-left` and
   `.blockr-navbar-right` groups are gone, and the plugin’s piece no
