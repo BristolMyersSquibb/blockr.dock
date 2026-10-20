@@ -180,7 +180,18 @@
   // binding's `subscribe` callback then has Shiny read `getValue`.
   function commitCard(root, card) {
     root._blockrBrowserValue = gatherSpec(card);
+    root._blockrBrowserCard = card;
     root.dispatchEvent(new CustomEvent(COMMIT_EVENT));
+  }
+
+  // Empty a card's form: the text fields blank, so the server generates the
+  // ids again, and each port picker back on its first port. The card stays
+  // open for the next block of its type.
+  function resetCard(card) {
+    card.querySelectorAll(".blockr-block-browser-field input")
+      .forEach(function (el) { el.value = ""; });
+    card.querySelectorAll(".blockr-block-browser-field select")
+      .forEach(function (el) { el.selectedIndex = 0; });
   }
 
   // Unfold or fold a card's form.
@@ -272,6 +283,12 @@
     },
     getValue: function (el) {
       return el._blockrBrowserValue || null;
+    },
+    // The server confirms an add it applied with `reset`, which clears the
+    // form of the card it came from (reset_block_browser()).
+    receiveMessage: function (el, msg) {
+      var card = el._blockrBrowserCard;
+      if (msg && msg.reset && card && el.contains(card)) resetCard(card);
     },
     subscribe: function (el, callback) {
       initBrowser(el);

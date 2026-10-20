@@ -43,10 +43,13 @@ serve_block_action <- function(trigger, board, target, caption, apply,
 
     apply(added())
 
+    # Only a pick that went through gets here, so the form it came from is
+    # cleared, while a refused one keeps what was typed, to be corrected.
     if (owns_open_sidebar(sidebar_id, session)) {
       if (!isTRUE(sidebar_state(sidebar_id, session)$pinned)) {
         hide_sidebar(sidebar_id, session)
       } else {
+        reset_block_browser(session)
         stale(refresh)
       }
     }

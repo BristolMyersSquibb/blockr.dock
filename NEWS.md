@@ -35,8 +35,8 @@
   cards are drawn like the link cards, with blockr.ui's block mark and
   chevron, the package as blockr.ui's badge, and an add button named for the
   action ("Append block"). The browser can be pinned to add one block after
-  another, and a pinned one follows the selection in the DAG, as the link,
-  stack and inputs forms do.
+  another, clearing the form of each block it adds, and a pinned one follows
+  the selection in the DAG, as the link, stack and inputs forms do.
 
 * **Breaking:** the navbar's `.blockr-navbar-left` and `.blockr-navbar-right`
   groups are gone, and the plugin's piece no longer takes up the free space, so

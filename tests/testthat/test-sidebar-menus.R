@@ -773,6 +773,62 @@ test_that("Add block opens the browser, whose form sets the block ID", {
   )
 })
 
+test_that("a pinned browser clears the form an add went through", {
+
+  skip_on_cran()
+
+  app <- menus_app("actions-browser-pinned")
+  withr::defer(app$stop())
+
+  app$click(fixture("add_block"))
+
+  browser <- paste0("#", actions_panel, " .blockr-block-browser")
+  head_card <- paste(browser, card("head_block"))
+  id_field <- paste(head_card, ".blockr-block-browser-field-id input")
+  value_of <- function(sel) {
+    app$get_js(sprintf("document.querySelector(%s).value", shQuote(sel)))
+  }
+  wait_sel(app, head_card)
+
+  click_sel(app, paste0("#", actions_panel, " .blockr-sidebar-pin"))
+  type_search(app, browser, "head")
+  click_sel(app, paste(head_card, ".blockr-block-browser-card-chevron"))
+  type_into(app, id_field, "h1")
+  click_sel(app, paste(head_card, ".blockr-block-browser-card-add"))
+
+  wait_js(
+    app,
+    sprintf("document.querySelector(%s).value === ''", shQuote(id_field)),
+    function() paste("[pinned] the ID field still holds", value_of(id_field))
+  )
+  expect_true("h1" %in% exported(app, "blocks"))
+
+  # The card and the search stay, for the next block of the type.
+  expect_true(
+    app$get_js(
+      sprintf(
+        "document.querySelector(%s).classList.contains('card-expanded')",
+        shQuote(head_card)
+      )
+    )
+  )
+  expect_identical(
+    value_of(paste(browser, ".blockr-block-browser-search")), "head"
+  )
+
+  # The next add takes a generated ID rather than being refused.
+  known <- c("a", "b", "m", "r", "s", "h1")
+  click_sel(app, paste(head_card, ".blockr-block-browser-card-add"))
+  app$wait_for_value(export = fixture("blocks"), ignore = list(known))
+  expect_length(setdiff(exported(app, "blocks"), known), 1L)
+
+  # A refused ID stays in the field, to be corrected.
+  type_into(app, id_field, "a")
+  click_sel(app, paste(head_card, ".blockr-block-browser-card-add"))
+  app$wait_for_idle()
+  expect_identical(value_of(id_field), "a")
+})
+
 test_that("Append block in the block's menu opens the browser for the block", {
 
   skip_on_cran()

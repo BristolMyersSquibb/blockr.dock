@@ -422,6 +422,13 @@ block_browser_ui <- function(id, board = NULL, target = NULL) {
   )
 }
 
+# Clear the form of the card that was just added from, so a browser that
+# stays open does not offer an ID that is taken now. The session is the block
+# action's, whose `browser` module holds the commit input.
+reset_block_browser <- function(session = get_session()) {
+  session$sendInputMessage(NS("browser", "commit"), list(reset = TRUE))
+}
+
 # The free inputs of the block a prepend feeds, or a name where it takes any
 # number. Append and insert pick an input on the new block instead, per card.
 target_ports <- function(board, target) {

@@ -728,7 +728,8 @@ sidebar_run <- function(gen, trigger, board, holds = FALSE, pinned = FALSE,
     show_sidebar = function(id, ui = NULL, title = NULL, ...) {
       log("show", id = id, title = title, html = as.character(ui))
     },
-    hide_sidebar = function(id, ...) log("hide", id = id)
+    hide_sidebar = function(id, ...) log("hide", id = id),
+    reset_block_browser = function(...) log("reset")
   )
 
   r_update <- reactiveVal(list())
@@ -797,9 +798,10 @@ test_that("a pick closes the browser, unless it is pinned", {
   expect_identical(
     after_pick(append_block_action, "a", holds = TRUE), "hide"
   )
+  # A pinned one stays, and the form the pick came from is cleared.
   expect_identical(
     after_pick(append_block_action, "a", holds = TRUE, pinned = TRUE),
-    character()
+    "reset"
   )
   # A prepend takes up one of its target's inputs, so a pinned browser is
   # shown afresh, without it, once the board has taken the link in.
@@ -811,7 +813,7 @@ test_that("a pick closes the browser, unless it is pinned", {
       session$setInputs(
         `browser-commit` = list(type = "head_block", id = "h1", nonce = 1)
       )
-      expect_length(rec$calls, 1L)
+      expect_length(rec$calls, 2L)
       board$board <- new_board(
         c(a = new_dataset_block("iris"), m = new_merge_block(),
           h1 = new_head_block()),
@@ -820,8 +822,8 @@ test_that("a pick closes the browser, unless it is pinned", {
       session$flushReact()
     })
   )
-  expect_identical(chr_xtr(res$calls, 1L), c("show", "show"))
-  expect_false(grepl("target-input", res$calls[[2L]]$html, fixed = TRUE))
+  expect_identical(chr_xtr(res$calls, 1L), c("show", "reset", "show"))
+  expect_false(grepl("target-input", res$calls[[3L]]$html, fixed = TRUE))
   # A sidebar another action holds is left alone.
   expect_identical(after_pick(append_block_action, "a"), character())
 })
