@@ -28,6 +28,7 @@ Imports:
     bslib,
     dockViewR (>= 0.4.0),
     htmltools,
+    htmlwidgets,
     cli,
     jsonlite,
     rlang,

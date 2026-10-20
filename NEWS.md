@@ -1,5 +1,11 @@
 # blockr.dock (development version)
 
+* A group's "+" opens the menu of panels to add under itself instead of under
+  the navbar, as the empty view's "Add panel" button already did (#508). The
+  dock hands dockViewR's add-tab plugin a callback of its own, which reports
+  the button along with its group, now that dockViewR passes the button to the
+  callback (cynkra/dockViewR#122).
+
 * `views$rename` and `views$add` reject empty or whitespace-only display names
   before applying an update ([#517](https://github.com/BristolMyersSquibb/blockr.dock/issues/517)).
 

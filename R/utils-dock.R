@@ -283,7 +283,10 @@ set_dock_view_output <- function(..., session = get_session()) {
     if (is_layout_locked("rearrange")) list(disableDnd = TRUE),
     list(
       defaultRenderer = "always",
-      add_tab = dockViewR::new_add_tab_plugin(!is_dock_locked()),
+      add_tab = dockViewR::new_add_tab_plugin(
+        !is_dock_locked(),
+        callback = add_tab_callback()
+      ),
       # The dock carries the icon, not its panels, so the tabs a restore builds
       # draw it as well as the ones `dock_panel()` adds.
       close_icon = blockr.ui::small_icon("remove")
@@ -298,6 +301,25 @@ set_dock_view_output <- function(..., session = get_session()) {
   )
 
   dock_proxy(session)
+}
+
+# A click on a group's "+" asks for the add-panel menu with the group's id, as
+# dockViewR's default callback does, and names the button as where the gesture
+# happened (`at`, see `new_action()`), so that the menu opens under it instead
+# of under the navbar. An element is named by its id, which dockview does not
+# give the button, so it gets one from its dock and group, as dockViewR names a
+# panel's element from its dock and panel.
+add_tab_callback <- function() {
+  htmlwidgets::JS(
+    "(config, event, button) => {
+      button.id = `${config.dockId}-add-${config.group.id}`;
+      Shiny.setInputValue(
+        `${config.dockId}_panel-to-add`,
+        { group: config.group.id, at: { id: button.id } },
+        { priority: 'event' }
+      );
+    }"
+  )
 }
 
 is_dock_locked <- function() {
