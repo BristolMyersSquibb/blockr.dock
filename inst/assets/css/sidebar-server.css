@@ -184,8 +184,7 @@ html.blockr-html-pushed-left {
   text-overflow: ellipsis;
 }
 
-.blockr-options-row:focus-visible,
-.blockr-options-code:focus-visible {
+.blockr-options-row:focus-visible {
   outline: var(--blockr-focus-outline);
   outline-offset: -2px;
 }

@@ -83,7 +83,6 @@ Collate:
     'panel-ops.R'
     'panel-ref.R'
     'plugin-block.R'
-    'plugin-code.R'
     'plugin-serdes.R'
     'sidebar-server.R'
     'sidebar-block.R'

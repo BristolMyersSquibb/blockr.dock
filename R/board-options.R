@@ -24,14 +24,14 @@ new_compact_option <- function(value = blockr_option("compact", FALSE),
     id = "compact",
     default = value,
     ui = function(id) {
-      bslib::input_switch(NS(id, "compact"), "Compact", value)
+      checkboxInput(NS(id, "compact"), "Compact", value)
     },
     server = function(..., session) {
       observeEvent(
         get_board_option_or_null("compact", session),
         {
           on <- isTRUE(get_board_option_value("compact", session))
-          bslib::toggle_switch("compact", value = on, session = session)
+          updateCheckboxInput(session, "compact", value = on)
           session$sendCustomMessage("blockr-compact", on)
         }
       )
@@ -92,18 +92,14 @@ new_sync_rails_option <- function(value = blockr_option("sync_rails", TRUE),
     id = "sync_rails",
     default = value,
     ui = function(id) {
-      bslib::input_switch(
-        NS(id, "sync_rails"),
-        "Sync rails across views",
-        value
-      )
+      checkboxInput(NS(id, "sync_rails"), "Sync rails across views", value)
     },
     server = function(..., session) {
       observeEvent(
         get_board_option_or_null("sync_rails", session),
         {
           on <- rails_synced(session)
-          bslib::toggle_switch("sync_rails", value = on, session = session)
+          updateCheckboxInput(session, "sync_rails", value = on)
           session$sendCustomMessage("blockr-rail-sync", on)
         }
       )
@@ -143,56 +139,40 @@ rails_synced <- function(session = get_session()) {
 #'
 #' Returns the options sidebar's body: a list of option categories, each
 #' opening a page with that category's options (see
-#' `options_sidebar_ui()`). Called at server time from
-#' `board_server_callback()` when the user clicks the navbar's board options
-#' button, and
-#' passed to `show_sidebar()`.
+#' `options_sidebar_ui()`). Called by `board_ui.dock_board()`, which
+#' pre-renders it into the settings sidebar that the navbar's board options
+#' button opens in the browser.
 #'
 #' Caller-supplied `options` (threaded down from `serve(board, options =
-#' custom_options(...))` via `blockr_app_server.dock_board()` →
-#' `board_server_callback()` → `settings_observer()`) wins. When the
-#' caller passed nothing, falls back to `blockr.core::blockr_app_options(x)`
-#' so the sidebar still includes options contributed by blocks on the
-#' board and by registered block constructors, the same set `serve()`
-#' would have computed on the default path.
+#' custom_options(...))` via `blockr_app_ui.dock_board()` → `board_ui()`)
+#' wins. When the caller passed nothing, falls back to
+#' `blockr.core::blockr_app_options(x)` so the sidebar still includes options
+#' contributed by blocks on the board and by registered block constructors,
+#' the same set `serve()` would have computed on the default path.
 #'
 #' @param id Board module id.
-#' @param x Current board (`board$board`).
-#' @param plugins Board plugins.
-#' @param options Augmented board options (board + block contributions).
-#'   `NULL` means "no caller override"; the default is recomputed via
+#' @param x The board.
+#' @param options Augmented board options (board + block contributions), or
+#'   `NULL` for "no caller override", which recomputes the default via
 #'   `blockr.core::blockr_app_options(x)`.
 #' @noRd
-settings_body <- function(
-  id,
-  x,
-  plugins = board_plugins(x),
-  options = NULL
-) {
-  opt_ui_or_null <- function(plg, plgs, x) {
-    if (plg %in% names(plgs)) board_ui(id, plgs[[plg]], x)
-  }
-
-  generate_code <- div(
-    id = "generate_code",
-    opt_ui_or_null("generate_code", plugins, x)
-  )
+settings_body <- function(id, x, options = NULL) {
 
   # Locked board: the options pages write board state via
-  # set_board_option_value(), which core's gate rejects while locked. Drop them
-  # so the settings sidebar offers only the read-only generated-code export.
+  # set_board_option_value(), which core's gate rejects while locked, so the
+  # sidebar has nothing to offer and the navbar draws no button for it.
   if (is_dock_locked()) {
-    return(generate_code)
+    return(NULL)
   }
 
   # Caller-supplied `options` (threaded from `serve()` through
-  # `blockr_app_server.dock_board()` / `settings_observer()`) wins; fall
-  # back to the recomputed default only when the caller has nothing to say.
+  # `blockr_app_ui.dock_board()` and `board_ui()`) wins; fall back to the
+  # recomputed default only when the caller has nothing to say.
   options <- coal(options, blockr.core::blockr_app_options(x))
 
   stopifnot(is_board_options(options))
 
-  options_sidebar_ui(id, options, generate_code = generate_code)
+  options_sidebar_ui(id, options)
 }
 
 # The categories, in the order the options come, with their options. An
@@ -205,7 +185,7 @@ option_categories <- function(options) {
   split(as.list(options), factor(cats, levels = unique(cats)))
 }
 
-options_sidebar_ui <- function(id, options, generate_code = NULL) {
+options_sidebar_ui <- function(id, options) {
 
   cats <- option_categories(options)
 
@@ -238,15 +218,10 @@ options_sidebar_ui <- function(id, options, generate_code = NULL) {
     cats
   )
 
-  code_row <- NULL
-  if (not_null(generate_code)) {
-    code_row <- tagList(div(class = "blockr-menu__gap"), generate_code)
-  }
-
   div(
     class = "blockr-options",
     options_sidebar_dep(),
-    div(class = "blockr-options-list", rows, code_row),
+    div(class = "blockr-options-list", rows),
     unname(pages)
   )
 }

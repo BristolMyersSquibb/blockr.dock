@@ -99,7 +99,7 @@ test_that("default_navbar_items() are the dock's controls in order", {
 
   # Without the plugin there is no piece of it to place.
   expect_identical(
-    names(default_navbar_items(brd, plg[c("edit_block", "generate_code")])),
+    names(default_navbar_items(brd, plg["edit_block"])),
     c("logo", "spacer", "views", "read_only", "options")
   )
 })
@@ -250,7 +250,7 @@ test_that("a board without the plugin keeps its controls on the right", {
   skip_if_not_installed("xml2")
 
   brd <- new_dock_board()
-  plg <- board_plugins(brd)[c("edit_block", "generate_code")]
+  plg <- board_plugins(brd)["edit_block"]
 
   doc <- xml2::read_html(as.character(board_ui("test", brd, plg)))
 

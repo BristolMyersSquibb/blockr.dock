@@ -356,8 +356,9 @@ test_that("locked mode drops the board-options accordion (#135)", {
   expect_false(grepl('id="test-board_name"', html, fixed = TRUE))
   expect_false(grepl('id="test-board_options"', html, fixed = TRUE))
 
-  # The read-only generated-code export stays available.
-  expect_match(html, 'id="generate_code"', fixed = TRUE)
+  # Nothing is left for the board options sidebar to offer, so the navbar has
+  # no button for it.
+  expect_false(grepl('aria-label="Board options"', html, fixed = TRUE))
 })
 
 test_that("board_ui mounts the viewport probe with its binding", {
