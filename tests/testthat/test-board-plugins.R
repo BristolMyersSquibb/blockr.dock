@@ -6,7 +6,7 @@ test_that("board plugins", {
 
   expect_named(
     plugins,
-    c("edit_block", "preserve_board", "generate_code"),
+    c("edit_block", "preserve_board"),
     ignore.order = TRUE
   )
 })

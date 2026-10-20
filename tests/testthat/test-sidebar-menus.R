@@ -1081,38 +1081,6 @@ test_that("the options sidebar pages back to its list", {
   )
 })
 
-test_that("Show code in the options sidebar opens the code page", {
-
-  skip_on_cran()
-
-  app <- menus_app("show-code")
-  withr::defer(app$stop())
-
-  click_sel(app, "button[aria-label=\"Board options\"]")
-  wait_panel(app, "my_board-settings_sidebar", open = TRUE)
-  click_sel(app, "#my_board-settings_sidebar .blockr-options-code")
-
-  # The page asks for every block to be built, then shows the script or says
-  # why it cannot; no dialog opens.
-  wait_sel(
-    app,
-    paste(
-      "#my_board-settings_sidebar .blockr-options-code-page:not([hidden])",
-      ":is(.blockr-code-script, .blockr-code-note)"
-    )
-  )
-  expect_identical(
-    app$get_js(
-      paste0(
-        "document.querySelector('#my_board-settings_sidebar ",
-        ".blockr-sidebar-title').textContent"
-      )
-    ),
-    "Code"
-  )
-  expect_identical(app$get_js("document.querySelectorAll('.modal').length"), 0L)
-})
-
 test_that("the compact switch turns the headers into eyebrows", {
 
   skip_on_cran()

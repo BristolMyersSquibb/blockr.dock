@@ -473,8 +473,14 @@ read_only_navbar_ui <- function(id, board) {
 # body is pre-rendered into its mount (see board_ui.dock_board()), so no server
 # observer is needed: clicking the button toggles the panel client-side. A plain
 # `tags$button` rather than an `actionButton`, since there is no `input$<id>` to
-# wire.
+# wire. A locked board has no options to offer (see settings_body()), so it
+# gets no button.
 options_navbar_ui <- function(id, board) {
+
+  if (is_dock_locked()) {
+    return(NULL)
+  }
+
   tags$button(
     type = "button",
     class = "btn action-button blockr-navbar-icon-btn",

@@ -34,12 +34,12 @@
   `blockr_app_ui()` the server's arguments as well, the dock's method appends
   only its unnamed `...` to the page.
 
-* Show code opens a Code page of the options sidebar with the script and a
-  Copy button, in place of core's modal, which needs Bootstrap
-  (BristolMyersSquibb/blockr.ui#85). As in core, it builds every block first,
-  and holds the script back while a block is not configured or reports an
-  error, with a button that evaluates the board once. A locked board's sidebar
-  keeps the Code page.
+* **Breaking:** Show code is gone from the board options sidebar, and
+  `board_plugins()` no longer gives a dock board a `generate_code` plugin, so
+  asking for one by name fails. The board's script is to come from a dock
+  extension in blockr.code (BristolMyersSquibb/blockr.code#8); the modal that
+  Show code opened needs Bootstrap (BristolMyersSquibb/blockr.ui#85). A locked
+  board, whose sidebar held nothing else, draws no board options button.
 
 * The block card no longer uses Bootstrap (BristolMyersSquibb/blockr.ui#85).
   Its sections (control, inputs, preview) fold in the browser on the
@@ -123,8 +123,7 @@
 * The board options sidebar lists the option categories, and a row opens
   that category's page. The header then shows a back arrow and the
   category's name, and the arrow or Escape returns to the list. The
-  Bootstrap accordion and the rule above it are gone; "Show code" is the
-  list's last row.
+  Bootstrap accordion and the rule above it are gone.
 
 * A "Compact" board option (`new_compact_option()`, in `dock_board_options()`,
   off by default) turns every block header into an eyebrow line: a small
