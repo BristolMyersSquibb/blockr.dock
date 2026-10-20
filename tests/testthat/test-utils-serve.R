@@ -396,7 +396,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
   expect_setequal(nav$label, c("First", "Second"))
   expect_identical(nav$label[nav$active], "First")
 
-  # Drive a runtime add through the nav UI ("New page" adds "Page 3", no
+  # Drive a runtime add through the nav UI ("New view" adds "View 3", no
   # dialog): the client `add` handler must render the new view once,
   # correctly labelled.
   app$run_js(
@@ -408,7 +408,7 @@ test_that("multi-view nav renders one labelled entry per view (#189)", {
 
   expect_identical(nrow(nav), 3L)
   expect_false(anyDuplicated(nav$id) > 0L)
-  expect_true("Page 3" %in% nav$label)
+  expect_true("View 3" %in% nav$label)
   expect_false(any(nav$label == ""))
 })
 
@@ -513,7 +513,7 @@ test_that("a click on the view the server left still switches (#424)", {
   wait_view_nav(app, 3)
 
   nav <- read_view_nav(app)
-  expect_identical(nav$label[nav$active], "Page 3")
+  expect_identical(nav$label[nav$active], "View 3")
 
   # Clicking Second again has to reach the server. Left cached, the dedup
   # would swallow the report as a repeat and the board would sit on Third.
@@ -1044,7 +1044,7 @@ test_that("locked board hides block actions, shows lock indicator (#236)", {
   expect_match(menus, "Copy block ID")
   expect_false(grepl("append_block|delete_block", menus))
 
-  # View CRUD is locked too: no "New page" add control.
+  # View CRUD is locked too: no "New view" add control.
   expect_equal(count(".blockr-view-add"), 0)
 })
 
@@ -1078,13 +1078,13 @@ test_that("single-page board renders one auto-named view (#236)", {
   expect_identical(docks$id, nav$id)
 })
 
-test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
+test_that("navbar logo: real work vs bookkeeping (#285, #345, #360, #530)", {
 
   skip_on_cran()
 
   app <- new_app_driver(
     system.file("examples", "multi-view", "app.R", package = "blockr.dock"),
-    name = "navbar-spinner",
+    name = "navbar-logo",
     seed = 42,
     load_timeout = 30 * 1000,
     timeout = 20 * 1000
@@ -1093,31 +1093,29 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
 
   app$wait_for_idle()
 
-  # The navbar spinner replaces shiny's page pulse: it turns while the session
+  # The navbar logo replaces shiny's page pulse: it animates while the session
   # does real block evaluation. A panel switch marks the session busy (the
   # visibility report and layout fold round-trips) without recomputing a visible
-  # output, so gating on `.shiny-busy` alone would spin for what is only layout
-  # bookkeeping; block evaluation marks its output `.recalculating` inside the
-  # view container. The ring is always painted: the busy scope adds a darker arc
-  # (a `border-top-color` distinct from the faint track the other sides carry)
-  # rather than toggling its presence, and the arc is held by a
-  # `transition-delay`, so drive the two busy states directly and read whether
-  # the top border differs from a side border (arc present when computing,
-  # absent when only bookkeeping) with transitions disabled -- otherwise the
-  # delayed arc would not have landed by the time the synchronous probe reads
-  # it. The recalculating element is placed outside the view container (a hidden
-  # block still pending evaluation in the offcanvas pool) versus inside it (real
-  # visible work) to pin the scope.
+  # output, so gating on `.shiny-busy` alone would animate for what is only
+  # layout bookkeeping; block evaluation marks its output `.recalculating`
+  # inside the view container. Drive the two busy states directly and read
+  # whether the logo's squares carry an animation and what its tooltip says.
+  # The animation waits the display delay, but its name is computed at once,
+  # so a synchronous probe can read it. The recalculating element is placed
+  # outside the view container (a hidden block still pending evaluation in the
+  # offcanvas pool) versus inside it (real visible work) to pin the scope.
   probe <- jsonlite::fromJSON(
     app$get_js(
       r"(JSON.stringify((function () {
         var html = document.documentElement;
-        var spinner = document.querySelector('.blockr-navbar-spinner');
-        if (spinner) spinner.style.transition = 'none';
-        var arc = function () {
-          if (!spinner) return null;
-          var cs = getComputedStyle(spinner);
-          return { top: cs.borderTopColor, side: cs.borderRightColor };
+        var logo = document.querySelector('.blockr-navbar-logo');
+        var rect = logo && logo.querySelector('rect');
+        var read = function () {
+          if (!rect) return null;
+          return {
+            animated: getComputedStyle(rect).animationName !== 'none',
+            label: Blockr.tooltip.text(logo)
+          };
         };
         var mark = function (parent) {
           var el = document.createElement('div');
@@ -1126,59 +1124,100 @@ test_that("navbar spinner: real work vs bookkeeping (#285, #345, #355, #360)", {
           return el;
         };
 
+        // A hover takes the logo's tooltip up; leave again at once, so that
+        // no card shows.
+        if (rect) {
+          rect.dispatchEvent(new PointerEvent('pointerover', {
+            bubbles: true
+          }));
+          rect.dispatchEvent(new PointerEvent('pointerout', {
+            bubbles: true, relatedTarget: document.body
+          }));
+        }
+
         var pulseOff = html.dataset.shinyBusyPulse !== 'true';
         var container = document.querySelector('.blockr-view-container');
+
+        var idle = read();
         html.classList.add('shiny-busy');
 
         // The app's own outputs may still be settling -- a block card inside a
         // view container can hold a lingering `.recalculating` well past
         // wait_for_idle(). Neutralise every real in-container marker (the exact
-        // spinner-CSS scope) so only the synthetic markers below drive the
-        // reading, then restore them.
+        // busy scope) so only the synthetic markers below drive the reading,
+        // then restore them.
         var real = Array.from(
           document.querySelectorAll('.blockr-view-container .recalculating')
         );
         real.forEach(function (el) { el.classList.remove('recalculating'); });
 
         var hidden = mark(document.body);
-        var bookkeeping = arc();
+        var bookkeeping = read();
         hidden.remove();
 
         var visible = mark(container);
-        var computing = arc();
+        var computing = read();
         visible.remove();
 
         real.forEach(function (el) { el.classList.add('recalculating'); });
         html.classList.remove('shiny-busy');
-        if (spinner) spinner.style.transition = '';
-
-        var painted = bookkeeping && bookkeeping.side !== 'rgba(0, 0, 0, 0)';
-        var bkArc = bookkeeping && bookkeeping.top !== bookkeeping.side;
-        var coArc = computing && computing.top !== computing.side;
 
         return {
-          pulseOff: pulseOff, hasSpinner: spinner !== null,
+          pulseOff: pulseOff, hasLogo: rect !== null,
           hasContainer: container !== null,
-          trackPainted: painted, bookkeepingArc: bkArc, computingArc: coArc
+          idle: idle, bookkeeping: bookkeeping, computing: computing
         };
       })()))"
     )
   )
 
-  # The page pulse is off, and the navbar spinner and the view container the
-  # scope keys on are both present.
+  # The page pulse is off, and the logo and the view container the scope keys
+  # on are both present.
   expect_true(probe$pulseOff)
-  expect_true(probe$hasSpinner)
+  expect_true(probe$hasLogo)
   expect_true(probe$hasContainer)
 
-  # Busy with a recalculating output only outside the view container (a bare
-  # panel switch, or a hidden block still pending in the offcanvas) leaves the
-  # ring as a bare track -- no arc; busy with a recalculating output inside it
-  # (block evaluation) paints the darker arc on. The track itself stays painted
-  # rather than toggling off -- the always-on behaviour.
-  expect_true(probe$trackPainted)
-  expect_false(probe$bookkeepingArc)
-  expect_true(probe$computingArc)
+  # Idle, or busy with a recalculating output only outside the view container
+  # (a bare panel switch, or a hidden block still pending in the offcanvas),
+  # the logo is at rest and has no tooltip; busy with a recalculating output
+  # inside it (block evaluation) animates the squares and names the state.
+  expect_false(probe$idle$animated)
+  expect_identical(probe$idle$label, "")
+  expect_false(probe$bookkeeping$animated)
+  expect_identical(probe$bookkeeping$label, "")
+  expect_true(probe$computing$animated)
+  expect_identical(probe$computing$label, "Computing")
+
+  # Hovering the busy logo shows the tooltip, and the tooltip goes when the
+  # work ends, as the animation does, rather than say "Computing" over a logo
+  # at rest.
+  app$run_js(
+    r"((function () {
+      var el = document.createElement('div');
+      el.className = 'recalculating blockr-test-busy';
+      document.querySelector('.blockr-view-container').appendChild(el);
+      document.documentElement.classList.add('shiny-busy');
+      document.querySelector('.blockr-navbar-logo rect').dispatchEvent(
+        new PointerEvent('pointerover', { bubbles: true })
+      );
+    })())"
+  )
+
+  app$wait_for_js("document.querySelector('.blockr-tooltip') !== null")
+  expect_identical(
+    app$get_js("document.querySelector('.blockr-tooltip').textContent"),
+    "Computing"
+  )
+
+  app$run_js(
+    r"((function () {
+      document.querySelector('.blockr-test-busy').remove();
+      document.documentElement.classList.remove('shiny-busy');
+      $(document).trigger('shiny:idle');
+    })())"
+  )
+
+  expect_true(app$get_js("document.querySelector('.blockr-tooltip') === null"))
 })
 
 test_that("a narrow viewport stacks a view into a scrolling column (#413)", {
@@ -1891,7 +1930,7 @@ test_that("a rail collapsed on one page collapses on every page (#480)", {
   expect_false(stored_collapsed("Second"))
 })
 
-test_that("New page opens the name of the page it added, and only that", {
+test_that("New view opens the name of the view it added, and only that", {
 
   skip_on_cran()
 
@@ -1924,11 +1963,11 @@ test_that("New page opens the name of the page it added, and only that", {
       "document.activeElement !== null && ",
       "document.activeElement.classList.contains('blockr-view-rename-input')"
     ),
-    function() "[view-nav] the new page's name never opened for renaming"
+    function() "[view-nav] the new view's name never opened for renaming"
   )
   expect_identical(
     app$get_js("document.activeElement.value"),
-    "Page 3"
+    "View 3"
   )
 
   # Escape gives the name back and leaves the menu open, in manage mode.
@@ -1951,8 +1990,8 @@ test_that("New page opens the name of the page it added, and only that", {
     list(TRUE, TRUE, 0L)
   )
 
-  # A page added by other means, such as the assistant, keeps its name shut,
-  # even while the server is making one for "New page".
+  # A view added by other means, such as the assistant, keeps its name shut,
+  # even while the server is making one for "New view".
   renaming <- function() {
     app$get_js(
       paste0(
@@ -1978,17 +2017,17 @@ test_that("New page opens the name of the page it added, and only that", {
     )
   }
 
-  push_view_nav(app, '{"rename_new": "Page 9"}')
+  push_view_nav(app, '{"rename_new": "View 9"}')
   push_row("ghost", "Ghost")
 
   expect_identical(renaming(), list())
 
-  push_row("page-9", "Page 9")
+  push_row("view-9", "View 9")
 
-  expect_identical(renaming(), list("Page 9"))
+  expect_identical(renaming(), list("View 9"))
 })
 
-test_that("the last page offers no removal", {
+test_that("the last view offers no removal", {
 
   skip_on_cran()
 

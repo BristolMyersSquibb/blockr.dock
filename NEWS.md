@@ -1,10 +1,47 @@
 # blockr.dock (development version)
 
 * A group's "+" opens the menu of panels to add under itself instead of under
-  the navbar, as the empty page's "Add panel" button already did (#508). The
+  the navbar, as the empty view's "Add panel" button already did (#508). The
   dock hands dockViewR's add-tab plugin a callback of its own, which reports
   the button along with its group, now that dockViewR passes the button to the
   callback (cynkra/dockViewR#122).
+
+* `views$rename` and `views$add` reject empty or whitespace-only display names
+  before applying an update ([#517](https://github.com/BristolMyersSquibb/blockr.dock/issues/517)).
+
+* The navbar is drawn from a list of items, the dock's own controls included,
+  which an app adds to, reorders or drops from through `serve()`, as it does
+  plugins and options. An item, made by `navbar_item()`, has a UI and may have
+  a server, which runs once per session under the item's namespace. The call
+  `serve(board, navbar = custom_navbar(item))` appends one to the default, and
+  `navbar` takes any function of the board and its plugins that returns
+  items, such as one that reorders or drops from `default_navbar_items()`
+  with `[`. The defaults are the blockr logo, the plugin's piece, placed by
+  `plugin_navbar_item()`, a spacer, the view menu, now set apart by a short
+  rule, the read-only indicator and the board options. On a narrow bar the
+  plugin's piece gives way first and the rest keeps its width. An item whose
+  output renders nothing leaves no gap. The view menu's button shows the
+  current view's name and a chevron, and the board options button the side
+  panel it opens rather than a gear (#529).
+
+* The blockr logo leads the navbar and is the board's busy indicator, in place
+  of the spinner ring (#530). While blocks compute, its seven squares fade and
+  fill again in the order the R is drawn, and the moment the work ends the
+  logo is whole again. As the ring did, it waits the `spinner_delay_ms` option
+  first, slows rather than stops under reduced motion, and leaves a bare panel
+  switch alone. While it is busy, its "Computing" label is blockr.ui's light
+  tooltip.
+
+* The default Import and Export are one row of quiet 30px buttons, the size
+  the design spec gives a toolbar (#531). Import opens the browser's file
+  chooser, without the field label, text field and progress bar of Shiny's
+  `fileInput()`. On a narrow bar the names of both are cut short.
+
+* **Breaking:** the navbar's `.blockr-navbar-left` and `.blockr-navbar-right`
+  groups are gone, and the plugin's piece no longer takes up the free space, so
+  a spacer inside it has nothing to push against. Since `serve()` hands
+  `blockr_app_ui()` the server's arguments as well, the dock's method appends
+  only its unnamed `...` to the page.
 
 * The block card no longer uses Bootstrap (BristolMyersSquibb/blockr.ui#85).
   Its sections (control, inputs, preview) fold in the browser on the
@@ -56,15 +93,15 @@
   field loses focus, not on every keystroke. Each keystroke was a board
   update, and while typing those piled up on the server.
 
-* The rails of a board's pages open and close together. Collapsing or
-  expanding the rail on one edge of a page does the same on every other page,
-  and a page visited for the first time opens with its rails the way the pages
+* The rails of a board's views open and close together. Collapsing or
+  expanding the rail on one edge of a view does the same on every other view,
+  and a view visited for the first time opens with its rails the way the views
   already visited show theirs. Only a rail holding panels takes part. The
-  "Sync rails across pages" board option (`new_sync_rails_option()`, in
+  "Sync rails across views" board option (`new_sync_rails_option()`, in
   `dock_board_options()`, on unless the `sync_rails` blockr option says
-  otherwise) turns this off, and switching it back on brings every page to the
+  otherwise) turns this off, and switching it back on brings every view to the
   one on screen. A board saved before this release has no such option, so its
-  pages keep their rails as they were left (#480).
+  views keep their rails as they were left (#480).
 
 * The block's "…" menu is blockr.ui's `Blockr.menu`, driven from the
   keyboard: the Controls toggle, then Rename, Append block and Copy block ID,
@@ -76,14 +113,14 @@
 
 * Adding, appending, prepending and inserting a block open one menu in place,
   with a filter box and one row per block type, instead of the block browser
-  sidebar. "Add panel" is the same menu over the board's blocks not on the
-  page, and its dialog is gone. An action's trigger can name where its
+  sidebar. "Add panel" is the same menu over the board's blocks not in the
+  view, and its dialog is gone. An action's trigger can name where its
   gesture happened (`at`, see `new_action()`): the menu opens there, and
   under the navbar when nothing is named.
 
-* "Manage pages" turns the views menu into an editor: drag a page by its grip
-  to reorder, click a name to rename it, remove a page after a question in
-  its row, and add an empty "Page N" with "New page", all without a dialog.
+* "Manage views" turns the views menu into an editor: drag a view by its grip
+  to reorder, click a name to rename it, remove a view after a question in
+  its row, and add an empty "View N" with "New view", all without a dialog.
 
 * The board options sidebar lists the option categories, and a row opens
   that category's page. The header then shows a back arrow and the
@@ -476,7 +513,7 @@
   The darker arc that signals motion is painted on only while the board is
   busy; at rest the ring is a single muted colour and recedes into the navbar.
 
-* Views (pages) can now be reordered from the nav dropdown: each item carries
+* Views can now be reordered from the nav dropdown: each item carries
   up / down controls beside its rename and remove actions. Order is board
   content, so the move travels through the update lifecycle as a new
   `views$order` delta (a total permutation of the view ids) and survives save /

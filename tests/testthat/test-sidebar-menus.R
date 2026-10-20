@@ -832,11 +832,11 @@ test_that("a group's + opens the panel menu under it (#508)", {
 
   skip_on_cran()
 
-  # The first of two pages, which leaves the other page's block for the menu.
+  # The first of two views, which leaves the other view's block for the menu.
   app <- menus_app("panel-menu-anchor", example = "multi-view")
   withr::defer(app$stop())
 
-  # The "+" of the page's one group; the other page's has no box.
+  # The "+" of the view's one group; the other view's has no box.
   plus <- paste0(
     "[...document.querySelectorAll('.dv-left-actions-container > div')]",
     ".find(b => b.getBoundingClientRect().width > 0)"
@@ -854,7 +854,7 @@ test_that("a group's + opens the panel menu under it (#508)", {
   wait_sel(app, menu_sel)
 
   box <- menu_box(app, plus)
-  expect_identical(box$caption, "Show on this page")
+  expect_identical(box$caption, "Show in this view")
   expect_gte(box$top, box$anchorBottom)
   expect_lt(box$top - box$anchorBottom, 12)
 })
