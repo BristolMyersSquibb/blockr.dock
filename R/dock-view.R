@@ -798,6 +798,15 @@ validate_added_view <- function(entry, ok_panels, view_id) {
     )
   }
 
+  name <- view_name(entry)
+
+  if (!is_string(name) || !nzchar(trimws(name))) {
+    blockr_abort(
+      "`views$add` entries must have non-empty display names.",
+      class = "dock_views_delta_invalid"
+    )
+  }
+
   bad <- setdiff(panels, as.character(ok_panels))
 
   if (length(bad)) {
@@ -868,6 +877,17 @@ validate_views_delta <- function(views, board, upd) {
   if (length(rm_ids) && !is.character(rm_ids)) {
     blockr_abort(
       "`views$rm` must be a character vector of view ids.",
+      class = "dock_views_delta_invalid"
+    )
+  }
+
+  rename_blank <- length(views$rename) && any(lgl_ply(
+    views$rename, function(x) is_string(x) && !nzchar(trimws(x))
+  ))
+
+  if (rename_blank) {
+    blockr_abort(
+      "`views$rename` must contain non-empty display names.",
       class = "dock_views_delta_invalid"
     )
   }
