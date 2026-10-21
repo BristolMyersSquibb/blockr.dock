@@ -110,6 +110,16 @@ visible_block_ids <- function(layout, active_panel = NULL) {
   as_obj_id(new_block_panel_id(block_panels))
 }
 
+# The extension counterpart of `visible_block_ids`: the extensions whose panel
+# is the front of a group, by the key their servers run under.
+visible_ext_ids <- function(layout, active_panel = NULL) {
+
+  front_panels <- as.character(determine_active_views(layout, active_panel))
+  ext_panels <- front_panels[maybe_ext_panel_id(front_panels)]
+
+  as_obj_id(new_ext_panel_id(ext_panels))
+}
+
 # The block object ids of a view's whole membership (front and tabbed alike).
 # `visible_block_ids` reads a grid for front panels only; this reads the
 # structural member set, for building all of a view's cards.

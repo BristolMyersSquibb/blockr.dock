@@ -116,7 +116,8 @@ board_server_callback <- function(board, update, visibility, ...,
   # construct. Core seeds the set as it runs the callbacks, so the layout echo
   # only has to report a change.
   owner <- dock_id(session$ns)
-  opening <- visible_block_ids(active_view_grid(initial_board))
+  opening_grid <- active_view_grid(initial_board)
+  opening <- visible_block_ids(opening_grid)
 
   hold_eager <- eager_holder(update, owner, opening)
 
@@ -126,7 +127,21 @@ board_server_callback <- function(board, update, visibility, ...,
   # the active view reports its blocks painted (visible TRUE).
   mark_cards_built(visibility, active_view_block_ids(initial_board))
 
-  report_visible_observer(visibility, hold_eager, client_active, docks)
+  # Whether each extension's panel is on screen, one slot per extension. The
+  # slots open on the arrangement board_ui rendered, as the eager set does, and
+  # report_visible_observer() keeps them in step with the client from its first
+  # report on. Each extension gets a slot of its own, not a share of one set, so
+  # that a write invalidates only on a change to that panel: a set would wake
+  # every extension whenever any one panel came or went.
+  opening_exts <- visible_ext_ids(opening_grid)
+
+  ext_visible <- lapply(
+    set_names(nm = names(exts)),
+    function(id) reactiveVal(id %in% opening_exts)
+  )
+
+  report_visible_observer(visibility, hold_eager, client_active, docks,
+                          ext_visible)
 
   # One row per group of the active view, restamped on a view switch since a
   # different view stacks a different number of groups. The container is an
@@ -173,7 +188,8 @@ board_server_callback <- function(board, update, visibility, ...,
 
   # Two bundles of live handles, kept in step. Extension servers are called
   # (below) with `board` + `update` (read / mutate the board), `view_data` +
-  # `actions` (the live products) and the `extensions` peer env. The callback
+  # `actions` (the live products), the `extensions` peer env and, each its own,
+  # `visible` -- a read-only view of its slot in `ext_visible`. The callback
   # RETURNS `dock`, `view_data`, `actions` and the extensions' results to core,
   # which spreads them into every plugin's args. `view_data` + `actions` are in
   # both -- they are consumed on each side (serialization and the edit-block
@@ -196,6 +212,7 @@ board_server_callback <- function(board, update, visibility, ...,
       extension_server,
       exts,
       names(exts),
+      lapply(ext_visible, function(slot) list(visible = reactive(slot()))),
       MoreArgs = list(
         list(
           board = board,
@@ -286,7 +303,7 @@ switch_view_observer <- function(session, update, client_active, board, docks,
 }
 
 report_visible_observer <- function(visibility, hold_eager, client_active,
-                                    docks) {
+                                    docks, ext_visible = list()) {
 
   # Drives the dock's demand and its paint report off two live client signals:
   # the active view's settled `_state` layout echo (`dock$layout()`, the
@@ -309,16 +326,23 @@ report_visible_observer <- function(visibility, hold_eager, client_active,
   # consumer that dereferences a slot rather than testing membership (as
   # `mark_cards_rendered()` does) would otherwise call `NULL()` and take the
   # session down.
+  #
+  # An extension's panel is on screen by the same account, so the report sets
+  # each extension's slot in `ext_visible` too. That is as far as the dock can
+  # go for one: it cannot pause a module's observers from outside, so the
+  # extension gates its own outputs and demand on the slot. The loop runs over
+  # the slots rather than the echo, so a panel no extension owns writes nothing.
   on_screen <- reactive({
     active <- req(client_active())
     dock <- req(docks[[active]])
     layout <- req(dock$layout())
+    panel <- dock$active_panel()
 
-    sort(
-      intersect(
-        visible_block_ids(layout, dock$active_panel()),
-        ls(visibility$visible)
-      )
+    list(
+      blocks = sort(
+        intersect(visible_block_ids(layout, panel), ls(visibility$visible))
+      ),
+      exts = visible_ext_ids(layout, panel)
     )
   })
 
@@ -327,14 +351,18 @@ report_visible_observer <- function(visibility, hold_eager, client_active,
     {
       req(client_active())
 
-      hold_eager(on_screen())
+      blocks <- on_screen()[["blocks"]]
+      exts <- on_screen()[["exts"]]
 
-      mark_cards_hidden(
-        visibility,
-        setdiff(built_cards(visibility), on_screen())
-      )
+      hold_eager(blocks)
 
-      mark_cards_rendered(visibility, on_screen())
+      mark_cards_hidden(visibility, setdiff(built_cards(visibility), blocks))
+
+      mark_cards_rendered(visibility, blocks)
+
+      for (id in names(ext_visible)) {
+        ext_visible[[id]](id %in% exts)
+      }
     }
   )
 }

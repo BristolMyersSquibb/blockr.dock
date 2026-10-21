@@ -13,6 +13,13 @@
 #' `extensions[[id]]`. `view_data` is a reactive holding the live
 #' all-views layout (the committed board is `board`); it is `NULL`
 #' until every view has reported its layout once, so `req()` it.
+#' The `visible` argument is a reactive that is `TRUE` while the
+#' extension's panel is on screen and `FALSE` otherwise. A panel is on
+#' screen while it is the front tab of a group in the active view,
+#' unless that group is a collapsed rail. The outputs of a closed
+#' panel, or of one in a view not shown, keep rendering, so an
+#' extension gates on `visible` whatever it should only do while seen,
+#' such as re-rendering an output or holding blocks eager.
 #' @param ui A function with a single argument (`ns`) returning a `shiny.tag`
 #' @param name Name for extension
 #' @param class Extension subclass

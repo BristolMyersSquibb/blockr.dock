@@ -1,5 +1,10 @@
 # blockr.dock (development version)
 
+* Each extension server receives `visible`, a reactive that is `TRUE` while
+  the extension's panel is on screen (#560). The outputs of a closed panel, or
+  of one in a view not shown, keep rendering, so this is what an extension
+  gates them on, along with any blocks it holds eager.
+
 * `views$rename` and `views$add` reject empty or whitespace-only display names
   before applying an update ([#517](https://github.com/BristolMyersSquibb/blockr.dock/issues/517)).
 
