@@ -1147,6 +1147,68 @@ test_that("report_visible_observer follows the live active panel (#361)", {
   expect_identical(isolate(env$vis$visible[["a"]]()), FALSE)
 })
 
+test_that("report_visible_observer reports each extension's panel (#560)", {
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  env <- with_mock_context(ms, {
+    layout_a <- reactiveVal(NULL)
+    layout_b <- reactiveVal(NULL)
+    active_panel <- reactiveVal(NULL)
+
+    docks <- reactives::reactive_vals()
+    docks[["A"]] <- list(layout = layout_a, active_panel = active_panel)
+    docks[["B"]] <- list(layout = layout_b, active_panel = reactiveVal(NULL))
+
+    vis <- fake_visibility("a")
+    mark_cards_built(vis, "a")
+    client_active <- reactiveVal("A")
+    upd <- reactiveVal()
+
+    exts <- list(dag = reactiveVal(FALSE), code = reactiveVal(FALSE))
+
+    report_visible_observer(vis, eager_holder(upd, "dock", character()),
+                            client_active, docks, exts)
+
+    list(a = layout_a, b = layout_b, active_panel = active_panel,
+         active = client_active, exts = exts, upd = upd)
+  })
+
+  shown <- function() {
+    lgl_ply(env$exts, function(x) isolate(x()), use_names = TRUE)
+  }
+
+  # A fronts the DAG in one group and block a over the code panel in another.
+  # The echo also names a panel no extension owns: it has nothing to write, and
+  # must not take the session down.
+  with_mock_context(ms, env$a(
+    dock_grid(
+      panels("ext_panel-dag"),
+      panels("block_panel-a", "ext_panel-code", active = "block_panel-a"),
+      panels("ext_panel-gone")
+    )
+  ))
+  expect_no_error(ms$flushReact())
+
+  expect_identical(shown(), c(dag = TRUE, code = FALSE))
+  expect_identical(held_eager(env$upd), "a")
+
+  # A bare tab switch fronts the code panel without a fresh echo, and parks a.
+  with_mock_context(ms, env$active_panel("ext_panel-code"))
+  ms$flushReact()
+
+  expect_identical(shown(), c(dag = TRUE, code = TRUE))
+  expect_identical(held_eager(env$upd), character())
+
+  # View B holds neither extension, so switching to it hides both.
+  with_mock_context(ms, env$b(dock_grid(panels("block_panel-a"))))
+  with_mock_context(ms, env$active("B"))
+  ms$flushReact()
+
+  expect_identical(shown(), c(dag = FALSE, code = FALSE))
+  expect_identical(held_eager(env$upd), "a")
+})
+
 test_that("eager_holder sends one set payload under the declared owner", {
 
   upd <- reactiveVal()
@@ -1831,6 +1893,96 @@ test_that("extension servers receive view_data, not the active dock (#264)", {
       expect_false("dock" %in% names(captured))
     }
   )
+})
+
+test_that("an extension server learns whether its panel is on screen (#560)", {
+
+  seen <- list()
+  runs <- 0L
+
+  probe <- function(class) {
+    new_dock_extension(
+      server = function(id, visible, ...) {
+        seen[[class]] <<- visible
+        moduleServer(
+          id,
+          function(input, output, session) {
+            observe({
+              visible()
+              runs <<- runs + 1L
+            })
+            list(state = list())
+          }
+        )
+      },
+      ui = function(id) tagList(),
+      name = "Probe",
+      class = class,
+      ctor = function(...) NULL
+    )
+  }
+
+  # Only `front` has a panel, beside block a; `away` is placed in no view.
+  board_rv <- board_args(
+    blocks = c(a = new_dataset_block()),
+    extensions = as_dock_extensions(
+      list(probe("front_extension"), probe("away_extension"))
+    ),
+    grids = list(
+      Page = dock_grid(
+        panels("ext_panel-front"), panels("block_panel-a"),
+        sizes = c(0.5, 0.5)
+      )
+    )
+  )
+
+  ms <- new_mock_session()
+  withr::defer(if (!ms$isClosed()) ms$close())
+
+  with_mock_context(
+    ms,
+    board_server_callback(
+      board_rv, update = reactiveVal(), visibility = fake_visibility(board_rv)
+    )
+  )
+  ms$flushReact()
+
+  expect_true(is.reactive(seen$front_extension))
+
+  # Before the client reports, the panels shown are the ones the stored
+  # arrangement fronts, as with the blocks the dock opens eager.
+  expect_true(isolate(seen$front_extension()))
+  expect_false(isolate(seen$away_extension()))
+
+  report <- function(...) {
+    grid <- as_dock_grid(dock_grid(...))
+    do.call(
+      ms$setInputs,
+      set_names(
+        list(list(grid = grid_to_tree(grid), activeGroup = "1")),
+        "Page-dock_state"
+      )
+    )
+    ms$flushReact()
+  }
+
+  # A sash drag re-echoes the layout but fronts the same panels: no change to
+  # `visible`, so nothing that reads it runs again.
+  before <- runs
+
+  report(
+    panels("ext_panel-front"), panels("block_panel-a"), sizes = c(0.3, 0.7)
+  )
+
+  expect_true(isolate(seen$front_extension()))
+  expect_identical(runs, before)
+
+  # Closing the panel takes it off screen.
+  report(panels("block_panel-a"))
+
+  expect_false(isolate(seen$front_extension()))
+  expect_false(isolate(seen$away_extension()))
+  expect_identical(runs, before + 1L)
 })
 
 test_that("New view submits an add-and-activate delta and names the view", {

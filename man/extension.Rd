@@ -70,7 +70,14 @@ exposing every extension's server result keyed by ID (each carrying
 its \code{state}), so one extension can read another's state via
 \code{extensions[[id]]}. \code{view_data} is a reactive holding the live
 all-views layout (the committed board is \code{board}); it is \code{NULL}
-until every view has reported its layout once, so \code{req()} it.}
+until every view has reported its layout once, so \code{req()} it.
+The \code{visible} argument is a reactive that is \code{TRUE} while the
+extension's panel is on screen and \code{FALSE} otherwise. A panel is on
+screen while it is the front tab of a group in the active view,
+unless that group is a collapsed rail. The outputs of a closed
+panel, or of one in a view not shown, keep rendering, so an
+extension gates on \code{visible} whatever it should only do while seen,
+such as re-rendering an output or holding blocks eager.}
 
 \item{ui}{A function with a single argument (\code{ns}) returning a \code{shiny.tag}}
 
