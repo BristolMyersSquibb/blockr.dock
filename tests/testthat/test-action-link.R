@@ -1289,3 +1289,47 @@ test_that("insert block action: a link that has gone commits nothing", {
 
   expect_identical(upd, list())
 })
+
+test_that("the insert browser offers the blocks that can receive a link", {
+
+  board <- new_board(
+    c(a = new_dataset_block("iris"), b = new_head_block()),
+    links = c(l1 = new_link("a", "b", "data"))
+  )
+
+  types <- function(link_id) {
+    html <- as.character(block_browser_ui("b", board, insert_into(link_id)))
+    cards <- xml2::xml_find_all(
+      xml2::read_html(html),
+      paste0(
+        "//*[contains(concat(' ', normalize-space(@class), ' '), ",
+        "' blockr-block-browser-card ')]"
+      )
+    )
+    xml2::xml_attr(cards, "data-block-type")
+  }
+
+  # Eligibility matches append: the inserted block has to receive from the
+  # link's source, so a source-only block is not on offer.
+  expect_true("head_block" %in% types("l1"))
+  expect_false("dataset_block" %in% types("l1"))
+
+  # A link that has gone still draws the list; the action closes the browser.
+  expect_identical(types("gone"), types("l1"))
+})
+
+test_that("a block action's target is there while its block or link is", {
+
+  board <- new_board(
+    c(a = new_dataset_block("iris"), b = new_head_block()),
+    links = c(l1 = new_link("a", "b", "data"))
+  )
+
+  expect_true(target_on_board(NULL, board))
+  expect_true(target_on_board(append_to(NULL), board))
+  expect_true(target_on_board(append_to("a"), board))
+  expect_false(target_on_board(prepend_to("z"), board))
+  expect_true(target_on_board(insert_into("l1"), board))
+  # An insert names a link, so a block's id is not one.
+  expect_false(target_on_board(insert_into("a"), board))
+})

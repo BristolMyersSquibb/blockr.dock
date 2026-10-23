@@ -1,9 +1,10 @@
 #' Open the menu for adding a panel to the dock.
 #'
-#' The "+" menu (Blockr.menu, add-block-menu.js), listing the blocks and
-#' extensions not yet shown in the dock: mark, title and the block type as
-#' meta text. A pick is `add_dock_panel_pick`. If none are available,
-#' either triggers `suggest_new` or notifies the user.
+#' The menu for adding a panel (Blockr.menu, panel-menu.js), which the
+#' "+" on a group of panels and the empty view's "Add panel" open, listing
+#' the blocks and extensions not yet shown in the dock: mark, title and the
+#' block type as meta text. A pick is `add_dock_panel_pick`. If none are
+#' available, either triggers `suggest_new` or notifies the user.
 #'
 #' @param dock Dock proxy.
 #' @param board Reactive board state.
@@ -118,4 +119,13 @@ add_panel_menu_items <- function(board, blk_ids, ext_ids) {
 #' @noRd
 extension_default_icon <- function() {
   as.character(bsicons::bs_icon("gear"))
+}
+
+panel_menu_dep <- function() {
+  htmltools::htmlDependency(
+    "blockr-panel-menu",
+    pkg_version(),
+    src = pkg_file("assets", "js"),
+    script = "panel-menu.js"
+  )
 }

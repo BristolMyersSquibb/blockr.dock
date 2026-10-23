@@ -49,10 +49,16 @@ test_that("each panel builder attaches the dependencies it draws with", {
 
   board <- two_block_board()
 
-  # The cards of the link and stack menus draw blockr.ui's block mark.
+  # The cards of the block browser and the link and stack menus draw
+  # blockr.ui's block mark.
   mark <- dep_names(blockr.ui::controls_dep())
 
   expect_setequal(dep_names(sidebar_ui("panel")), "sidebar-server")
+
+  expect_setequal(
+    dep_names(block_browser_ui("browser", board, append_to("a"))),
+    c("sidebar-block", mark)
+  )
 
   expect_setequal(
     dep_names(link_menu_ui("menu", board, "a")),

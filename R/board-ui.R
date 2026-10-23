@@ -23,7 +23,7 @@ board_ui.dock_board <- function(
     show_block_dep(),
     htmlwidgets_resize_dep(),
     attr_output_dep(),
-    add_block_menu_dep(),
+    panel_menu_dep(),
     block_rename_dep(),
     blockr_dock_dep(),
     compact_dep(),
@@ -60,12 +60,11 @@ board_ui.dock_board <- function(
     # `board$board_id` (set by blockr.core in the board's reactiveValues)
     # and composing `NS(board$board_id, "actions_sidebar")` at server time.
     # Contract: one sidebar = one concern. We mount two on the right
-    # with different modes so they coexist cleanly when both are open
-    # (adding a block is the "+" menu, action-menu.R, not a sidebar):
-    #   * "actions_sidebar":  the trigger-specific editors (add and edit
-    #     link, add and edit stack, block inputs). Body is populated
-    #     server-side via `show_sidebar()` because each ships a
-    #     freshly-built, trigger-dependent form.
+    # with different modes so they coexist cleanly when both are open:
+    #   * "actions_sidebar":  the trigger-specific editors (the block
+    #     browser, add and edit link, add and edit stack, block inputs).
+    #     Body is populated server-side via `show_sidebar()` because each
+    #     ships a freshly-built, trigger-dependent form.
     #   * "settings_sidebar": the board-options panel of the navbar's options
     #     button.
     #     `overlay` mode: layers above the page (and above the action

@@ -428,6 +428,7 @@ link_block_card <- function(meta, ns, board, direction) {
         type = "button",
         class = "blockr-block-browser-card-chevron",
         `aria-label` = "Configure before adding",
+        `data-blockr-tooltip` = "Configure before adding",
         blockr.ui::small_icon("chevron")
       )
     ),

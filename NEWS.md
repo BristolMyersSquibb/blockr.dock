@@ -37,6 +37,16 @@
   chooser, without the field label, text field and progress bar of Shiny's
   `fileInput()`. On a narrow bar the names of both are cut short.
 
+* Adding, appending, prepending and inserting a block open the block browser
+  in the actions sidebar (#543). A card unfolds into the form for the block's
+  ID and title, its links' IDs and the input a link lands on, the only place
+  to set the IDs, as neither a block's nor a link's can be changed later. The
+  cards are drawn like the link cards, with blockr.ui's block mark and
+  chevron, the package as blockr.ui's badge, and an add button named for the
+  action ("Append block"). The browser can be pinned to add one block after
+  another, clearing the form of each block it adds, and a pinned one follows
+  the selection in the DAG, as the link, stack and inputs forms do.
+
 * **Breaking:** the navbar's `.blockr-navbar-left` and `.blockr-navbar-right`
   groups are gone, and the plugin's piece no longer takes up the free space, so
   a spacer inside it has nothing to push against. Since `serve()` hands
@@ -80,9 +90,9 @@
 * The dock draws a block's mark as blockr.ui's, in the sizes the spec gives it
   (#495). The block header calls `blockr.ui::block_mark()` at 32px, which the
   compact header shows at 20px, and the cards of the link and stack menus call
-  it at 24px. The rows of the "+" and "Add panel" menus give blockr.ui's menu
-  the block's category, from which it draws the same mark at 24px, and so does
-  the block picker of `board_block_select()`, in its list and in its field.
+  it at 24px. The rows of the "Add panel" menu give blockr.ui's menu the
+  block's category, from which it draws the same mark at 24px, and so does the
+  block picker of `board_block_select()`, in its list and in its field.
   The picker no longer draws tiles of its own, and no longer reads the
   `icon_style` option. Each mark takes its colour from its category's token.
   The dock's own `.blockr-block-mark` rules and their `--blockr-dock-cat`
@@ -119,12 +129,10 @@
   one); the dock no longer applies a control's `ctrl_class` to it. The dock no
   longer depends on shinyWidgets.
 
-* Adding, appending, prepending and inserting a block open one menu in place,
-  with a filter box and one row per block type, instead of the block browser
-  sidebar. "Add panel" is the same menu over the board's blocks not in the
-  view, and its dialog is gone. An action's trigger can name where its
-  gesture happened (`at`, see `new_action()`): the menu opens there, and
-  under the navbar when nothing is named.
+* "Add panel" opens a menu in place, with a row per block or extension not in
+  the view, instead of a dialog. An action's trigger can name where its
+  gesture happened (`at`, see `new_action()`), for an action that opens a
+  menu in place.
 
 * "Manage views" turns the views menu into an editor: drag a view by its grip
   to reorder, click a name to rename it, remove a view after a question in
