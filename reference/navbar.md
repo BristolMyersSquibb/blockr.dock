@@ -86,14 +86,16 @@ return a boolean.
 The default items, returned by `default_navbar_items()`, are, in order:
 the blockr logo, which is also the busy indicator (id `"logo"`), the
 piece the `preserve_board` plugin draws (`"preserve_board"`), a spacer
-(`"spacer"`), the view menu (`"views"`), the read-only indicator
-(`"read_only"`), drawn only on a locked board, and the board options
-(`"options"`). The generic `blockr_app_navbar()` gives the default by
-board class, and `custom_navbar()` returns a navbar function that
-appends a fixed set of items to it, dropping any default item that
-shares an id with one of them. A plugin's piece is placed by
-`plugin_navbar_item()`, which the defaults use for the `preserve_board`
-plugin.
+(`"spacer"`), the view menu (`"views"`), which shows the views as a line
+of tabs under the bar while the board's
+[`new_view_tabs_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_view_tabs_option.md)
+is on, the read-only indicator (`"read_only"`), drawn only on a locked
+board, and the board options (`"options"`). The generic
+`blockr_app_navbar()` gives the default by board class, and
+`custom_navbar()` returns a navbar function that appends a fixed set of
+items to it, dropping any default item that shares an id with one of
+them. A plugin's piece is placed by `plugin_navbar_item()`, which the
+defaults use for the `preserve_board` plugin.
 
 An item whose `ui` draws a single
 [`shiny::uiOutput()`](https://rdrr.io/pkg/shiny/man/htmlOutput.html) or

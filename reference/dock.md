@@ -133,8 +133,11 @@ blockr option says otherwise, so that plots can take the board's
 colours, a light/dark switch, light unless the `dark_mode` blockr option
 says otherwise, the "Compact" header switch
 ([`new_compact_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_compact_option.md)),
-off unless the `compact` blockr option says otherwise, and a switch that
-opens and closes the rails of every view together
+off unless the `compact` blockr option says otherwise, the "Views as
+tabs" switch
+([`new_view_tabs_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_view_tabs_option.md)),
+off unless the `view_tabs` blockr option says otherwise, and a switch
+that opens and closes the rails of every view together
 ([`new_sync_rails_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_sync_rails_option.md)),
 on unless the `sync_rails` blockr option says otherwise.
 

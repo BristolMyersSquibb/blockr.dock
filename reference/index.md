@@ -23,6 +23,8 @@ extension object.
   : Colored stacks
 - [`new_compact_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_compact_option.md)
   : Compact block headers
+- [`new_view_tabs_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_view_tabs_option.md)
+  : Views as tabs
 - [`new_sync_rails_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_sync_rails_option.md)
   : Rails in step across views
 

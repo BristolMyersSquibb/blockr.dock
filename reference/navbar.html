@@ -137,13 +137,14 @@ boolean.</p>
     <p>The default items, returned by <code>default_navbar_items()</code>, are, in order: the
 blockr logo, which is also the busy indicator (id <code>"logo"</code>), the piece the
 <code>preserve_board</code> plugin draws (<code>"preserve_board"</code>), a spacer (<code>"spacer"</code>),
-the view menu (<code>"views"</code>), the read-only indicator (<code>"read_only"</code>), drawn
-only on a locked board, and the board options (<code>"options"</code>). The generic
-<code>blockr_app_navbar()</code> gives the default by board class, and <code>custom_navbar()</code>
-returns a navbar function that appends a fixed set of items to it, dropping
-any default item that shares an id with one of them. A plugin's piece is
-placed by <code>plugin_navbar_item()</code>, which the defaults use for the
-<code>preserve_board</code> plugin.</p>
+the view menu (<code>"views"</code>), which shows the views as a line of tabs under the
+bar while the board's <code><a href="new_view_tabs_option.html">new_view_tabs_option()</a></code> is on, the read-only
+indicator (<code>"read_only"</code>), drawn only on a locked board, and the board
+options (<code>"options"</code>). The generic <code>blockr_app_navbar()</code> gives the default
+by board class, and <code>custom_navbar()</code> returns a navbar function that appends
+a fixed set of items to it, dropping any default item that shares an id
+with one of them. A plugin's piece is placed by <code>plugin_navbar_item()</code>,
+which the defaults use for the <code>preserve_board</code> plugin.</p>
 <p>An item whose <code>ui</code> draws a single <code><a href="https://rdrr.io/pkg/shiny/man/htmlOutput.html" class="external-link">shiny::uiOutput()</a></code> or
 <code><a href="https://rdrr.io/pkg/shiny/man/textOutput.html" class="external-link">shiny::textOutput()</a></code> takes no room in the bar while that output is empty,
 as an avatar would with nobody signed in.</p>

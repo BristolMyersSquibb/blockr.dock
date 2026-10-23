@@ -55,6 +55,17 @@
   the server’s arguments as well, the dock’s method appends only its
   unnamed `...` to the page.
 
+- The views can show as a line of tabs under the navbar, one per view,
+  with the “Views as tabs” board option under “Theme options”
+  ([`new_view_tabs_option()`](https://bristolmyerssquibb.github.io/blockr.dock/reference/new_view_tabs_option.md))
+  or the “Show views as tabs” row at the foot of the view menu, which
+  sets the same option
+  ([\#555](https://github.com/BristolMyersSquibb/blockr.dock/issues/555)).
+  The option is off by default and saved with the board, which then
+  shows the tabs from its first paint. A tab switches views as a pick in
+  the menu does, and the menu, reduced to its chevron at the end of the
+  line, stays for managing them.
+
 - The block card no longer uses Bootstrap
   (BristolMyersSquibb/blockr.ui#85). Its sections (control, inputs,
   preview) fold in the browser on the toggle’s click instead of through
