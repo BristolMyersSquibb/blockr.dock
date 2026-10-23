@@ -146,7 +146,7 @@ test_that("as_dock_layout materialises grid + panels on demand", {
   payload <- as_dock_layout(resolved, blks, list())
 
   expect_s3_class(payload, "dock_layout")
-  expect_named(payload, c("grid", "panels", "activeGroup"))
+  expect_named(payload, c("grid", "panels"))
   expect_named(payload$panels, c("block_panel-a", "block_panel-b"))
   expect_identical(payload$panels[["block_panel-a"]][["title"]], "Dataset")
 })
