@@ -10,6 +10,7 @@ reference:
     - new_dock_board
     - new_dock_stack
     - new_compact_option
+    - new_view_tabs_option
     - new_sync_rails_option
 - title: Dock layout
   desc: Tools for defining panel arrangements.

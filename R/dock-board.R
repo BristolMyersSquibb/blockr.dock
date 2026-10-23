@@ -45,9 +45,10 @@
 #' that plots can take the board's colours, a light/dark switch, light unless
 #' the `dark_mode` blockr option says otherwise, the "Compact" header switch
 #' ([new_compact_option()]), off unless the `compact` blockr option says
-#' otherwise, and a switch that opens and closes the rails of every view
-#' together ([new_sync_rails_option()]), on unless the `sync_rails` blockr
-#' option says otherwise.
+#' otherwise, the "Views as tabs" switch ([new_view_tabs_option()]), off unless
+#' the `view_tabs` blockr option says otherwise, and a switch that opens and
+#' closes the rails of every view together ([new_sync_rails_option()]), on
+#' unless the `sync_rails` blockr option says otherwise.
 #'
 #' @rdname dock
 #' @export
@@ -237,6 +238,7 @@ dock_board_options <- function() {
     new_thematic_option(),
     new_dark_mode_option(value = blockr_option("dark_mode", "light")),
     new_compact_option(),
+    new_view_tabs_option(),
     new_sync_rails_option()
   )
 }

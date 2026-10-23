@@ -1495,6 +1495,15 @@ test_that("reconcile_views adds a nav item only for unshown views (#189)", {
     ),
     "Third"
   )
+
+  # The view's tab rides along, for a board that shows its views as tabs.
+  tab <- xml2::xml_find_first(
+    xml2::read_html(rt[[1L]]$add$tab),
+    "//button[@role='tab']"
+  )
+
+  expect_identical(xml2::xml_attr(tab, "data-view-id"), "Third")
+  expect_identical(xml2::xml_text(tab), "Third")
   expect_identical(names(client_views), c("First", "Second", "Third"))
   expect_identical(isolate(client_views[["Third"]]), "Third")
 })

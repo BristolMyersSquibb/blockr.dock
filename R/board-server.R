@@ -776,7 +776,8 @@ reconcile_views <- function(board, update, docks, active_dock,
           id = v,
           html = as.character(
             view_item_ui(v, labels[[v]], can_crud = !is_dock_locked())
-          )
+          ),
+          tab = as.character(view_tab_ui(v, labels[[v]]))
         )
       )
     )
