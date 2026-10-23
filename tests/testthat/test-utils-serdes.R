@@ -390,6 +390,40 @@ test_that("focus round-trips through the dockView seam", {
   expect_identical(as_dock_grid(lay)[["focus"]], "block_panel-c")
 })
 
+test_that("the first group holds focus like any other (#462)", {
+  blks <- as_blocks(list(a = new_dataset_block(), b = new_head_block()))
+
+  # Group ids count from "1", so a click into the first group echoes the id a
+  # payload once sent to mean "no focus".
+  grid <- dock_grid("block_panel-a", "block_panel-b")
+  echo <- list(grid = grid_to_tree(grid), activeGroup = "1")
+  expect_identical(
+    as_dock_grid(as_dock_layout(echo))[["focus"]], "block_panel-a"
+  )
+
+  # On a single-group board the first group is the only one focus can reach.
+  single <- list(grid = grid_to_tree(dock_grid("block_panel-a")),
+                 activeGroup = "1")
+  expect_identical(
+    as_dock_grid(as_dock_layout(single))[["focus"]], "block_panel-a"
+  )
+
+  grid[["focus"]] <- "block_panel-a"
+  lay <- as_dock_layout(grid, blocks = blks)
+  expect_identical(lay[["activeGroup"]], "1")
+  expect_identical(as_dock_grid(lay)[["focus"]], "block_panel-a")
+})
+
+test_that("a grid without focus names no active group (#462)", {
+  blks <- as_blocks(list(a = new_dataset_block(), b = new_head_block()))
+
+  # With no `activeGroup` to restore, dockView activates no group and echoes
+  # none back.
+  lay <- as_dock_layout(dock_grid("block_panel-a", "block_panel-b"), blks)
+  expect_false("activeGroup" %in% names(lay))
+  expect_null(as_dock_grid(lay)[["focus"]])
+})
+
 test_that("dockView pixel sizes normalise to ratios on collapse", {
   # A live dockView echo carries absolute pixel sizes; collapsing to our
   # canonical grid normalises them to 0-1 ratios.

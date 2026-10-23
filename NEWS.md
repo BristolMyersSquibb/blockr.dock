@@ -1,5 +1,11 @@
 # blockr.dock (development version)
 
+* The first group of a view can hold focus (#462). A click into it used to
+  read as no focus, so a consumer of `view_data` could not move focus back into
+  that group, and on a single-group view never saw focus at all. A view without
+  focus now opens with no group active, where it used to open with the first
+  group drawn as active.
+
 * `views$rename` and `views$add` reject empty or whitespace-only display names
   before applying an update ([#517](https://github.com/BristolMyersSquibb/blockr.dock/issues/517)).
 

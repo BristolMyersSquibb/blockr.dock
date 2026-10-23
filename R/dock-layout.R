@@ -113,10 +113,13 @@ as_dock_layout.dock_grid <- function(x, blocks = list(), extensions = list(),
 
   out <- list(grid = tree, panels = panels)
 
-  if (length(panel_ids)) {
-    out[["activeGroup"]] <- coal(
-      focus_group_id(tree, x[["focus"]]), "1", fail_all = FALSE
-    )
+  # A grid without focus names no group, so dockView activates none and its
+  # echo comes back without one. Defaulting to the first group instead would
+  # make "no focus" and a click into that group the same id (#462).
+  group <- focus_group_id(tree, x[["focus"]])
+
+  if (not_null(group)) {
+    out[["activeGroup"]] <- group
   }
 
   if (length(rails)) {
@@ -366,10 +369,10 @@ tree_to_grid <- function(tree, active_group = NULL, rails = NULL) {
 }
 
 # The open panel of a dockView group (`activeGroup` id -> its active view).
-# NULL for the load-default first group ("1").
+# NULL when no group is active.
 focus_panel <- function(tree, active_group) {
 
-  if (is.null(active_group) || identical(active_group, "1")) {
+  if (is.null(active_group)) {
     return(NULL)
   }
 
