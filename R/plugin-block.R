@@ -525,10 +525,13 @@ cond_alert <- function(dom_id, msg, severity) {
     )
   }
 
+  icon <- switch(severity, warning = "warning", "info")
+
   tags$div(
     id = dom_id,
     class = sprintf("blockr-issue blockr-issue--%s", severity),
-    content
+    tags$span(class = "blockr-issue-icon", blockr.ui::small_icon(icon)),
+    tags$span(content)
   )
 }
 
