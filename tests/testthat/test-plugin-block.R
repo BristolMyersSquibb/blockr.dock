@@ -242,6 +242,73 @@ test_that("condition UI updates surgically by condition id (#36)", {
   )
 })
 
+test_that("the issues list shows only with warnings or messages (#565)", {
+
+  # The list is an attr output: the server writes `data-issues` onto it while
+  # the card has warnings or messages, and the stylesheet hides it without.
+  # Errors show above the sections instead, so they do not count.
+  none <- list(
+    error = c(e1 = "boom"),
+    warning = character(),
+    message = character()
+  )
+  some <- list(
+    error = character(),
+    warning = c(w1 = "careful"),
+    message = c(m1 = "noted")
+  )
+
+  expect_identical(block_issues_attrs(none), list(`data-issues` = ""))
+  expect_identical(block_issues_attrs(some), list(`data-issues` = 2L))
+  expect_identical(cond_issue_label(some), "2 issues")
+
+  root <- xml2::read_html(as.character(block_issues_ui(NS("blk"))))
+
+  issues <- xml2::xml_find_all(
+    root,
+    paste0(
+      "//details[", has_class("blockr-issues"),
+      " and ", has_class("blockr-attr-output"), "]"
+    )
+  )
+  expect_length(issues, 1L)
+  expect_identical(xml2::xml_attr(issues, "id"), "blk-outputs_issues")
+  expect_true(is.na(xml2::xml_attr(issues, "data-issues")))
+  expect_identical(xml2::xml_attr(issues, "aria-live"), "off")
+
+  css <- paste(
+    readLines(
+      system.file(
+        "assets", "css", "blockr-dock.css",
+        package = "blockr.dock",
+        mustWork = TRUE
+      ),
+      warn = FALSE
+    ),
+    collapse = "\n"
+  )
+
+  expect_match(
+    css,
+    ".blockr-issues:not([data-issues]) {\n  display: none;\n}",
+    fixed = TRUE
+  )
+
+  # The card's server writes it: a dataset block raises no conditions.
+  testServer(
+    edit_block_server(),
+    {
+      session$flushReact()
+      expect_identical(output$outputs_issues, list(`data-issues` = ""))
+    },
+    args = list(
+      block_id = "a",
+      board = board_args(blocks = c(a = new_dataset_block())),
+      update = reactiveVal()
+    )
+  )
+})
+
 test_that("locked dock drops block_card_toggles entirely (#122, #418)", {
 
   # Unlocked: the toggle renders, open on the saved sections.

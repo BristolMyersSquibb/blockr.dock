@@ -268,7 +268,7 @@ test_that("the logo is whole when idle and still moves under reduced motion", {
   busy <- regmatches(
     css,
     regexpr(
-      "(?m)^html\\.shiny-busy:has[^{]*\\.blockr-logo rect \\{[^}]*\\}",
+      "(?m)^\\.blockr-navbar-logo\\.is-computing [^{]*rect \\{[^}]*\\}",
       css,
       perl = TRUE
     )
@@ -279,6 +279,12 @@ test_that("the logo is whole when idle and still moves under reduced motion", {
   expect_length(busy, 1L)
   expect_match(busy, "animation: blockr-logo-fill", fixed = TRUE)
   expect_match(busy, "var(--blockr-spinner-delay, 0ms)", fixed = TRUE)
+
+  # The busy scope is a class navbar-logo.js sets on the logo. Read in here as
+  # a `:has()` looking for a recalculating output, it made Chrome restyle the
+  # whole page on every output update, next to Shiny's own fade rule (#565).
+  rules <- gsub("(?s)/\\*.*?\\*/", "", css, perl = TRUE)
+  expect_no_match(rules, ":has\\([^{]*recalculating")
 
   reduced <- regmatches(
     css,
@@ -293,7 +299,11 @@ test_that("the logo is whole when idle and still moves under reduced motion", {
 
   # Must slow the busy selector that carries the animation; on the bare
   # `.blockr-logo rect` the override is outspecified and does nothing.
-  expect_match(reduced, "html.shiny-busy:has", fixed = TRUE)
+  expect_match(
+    reduced,
+    ".blockr-navbar-logo.is-computing .blockr-logo rect",
+    fixed = TRUE
+  )
   expect_match(reduced, "animation-duration: 3.9s", fixed = TRUE)
   expect_no_match(reduced, "animation:\\s*none")
 })
