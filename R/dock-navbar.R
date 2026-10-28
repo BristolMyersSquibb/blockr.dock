@@ -383,13 +383,12 @@ navbar_board_id <- function(id) {
 }
 
 # The blockr logo, which leads the bar and is the board's busy indicator.
-# Always drawn, and driven purely by CSS off the `.shiny-busy` class Shiny
-# toggles on <html> during a flush -- no server observer. Idle it is the whole
-# logo; a flush scoped to real block evaluation (a bare panel switch does not
-# qualify) fades and fills its squares in turn, after `--blockr-spinner-delay`
-# ms (set on the navbar), so a sub-threshold flush never shows. While busy its
-# tooltip says "Computing" (navbar-logo.js). Announced like the lock indicator,
-# by a status that only screen readers see.
+# Always drawn, and driven in the browser -- no server observer: navbar-logo.js
+# gives it `is-computing` while a flush recomputes an output on screen (a bare
+# panel switch does not qualify), and the CSS then fades and fills its squares
+# in turn, after `--blockr-spinner-delay` ms (set on the navbar), so a
+# sub-threshold flush never shows. While busy its tooltip says "Computing".
+# Announced like the lock indicator, by a status that only screen readers see.
 logo_navbar_ui <- function(id, board) {
   tags$span(
     class = "blockr-navbar-logo",

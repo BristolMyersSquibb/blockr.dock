@@ -379,6 +379,11 @@ edit_block_server <- function(callbacks = list()) {
         output$issues_count <- renderText(cond_issue_label(conds()))
         outputOptions(output, "issues_count", suspendWhenHidden = FALSE)
 
+        # The list is hidden while it has nothing to show, so it must render
+        # while hidden, or it would never learn that it has.
+        output$outputs_issues <- render_attrs(block_issues_attrs(conds()))
+        outputOptions(output, "outputs_issues", suspendWhenHidden = FALSE)
+
         update_blk_cond_observer(conds, session)
 
         observeEvent(
@@ -532,20 +537,35 @@ cond_alert <- function(dom_id, msg, severity) {
   )
 }
 
+cond_issue_count <- function(cnds) {
+  length(cnds$warning) + length(cnds$message)
+}
+
 cond_issue_label <- function(cnds) {
 
-  n <- length(cnds$warning) + length(cnds$message)
+  n <- cond_issue_count(cnds)
 
   paste(n, if (n == 1L) "issue" else "issues")
 }
 
+block_issues_attrs <- function(cnds) {
+
+  n <- cond_issue_count(cnds)
+
+  list(`data-issues` = if (n > 0L) n else "")
+}
+
 # The warnings and messages under the preview, folded behind their count. A
 # native disclosure: the summary is the toggle, and the browser opens and
-# closes it.
+# closes it. It is an attr output as well, which carries `data-issues` while
+# there are any (block_issues_attrs()); the stylesheet hides it without. Shiny
+# makes a bound output a polite live region unless it says otherwise, and the
+# list is not one: the count in it announces itself.
 block_issues_ui <- function(ns) {
   tags$details(
     id = ns("outputs_issues"),
-    class = "blockr-issues",
+    class = "blockr-issues blockr-attr-output",
+    `aria-live` = "off",
     tags$summary(
       class = "blockr-issues-toggle",
       textOutput(ns("issues_count"), inline = TRUE),

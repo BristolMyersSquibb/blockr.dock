@@ -1100,13 +1100,15 @@ test_that("navbar logo: real work vs bookkeeping (#285, #345, #360, #530)", {
   # layout bookkeeping; block evaluation marks its output `.recalculating`
   # inside the view container. Drive the two busy states directly and read
   # whether the logo's squares carry an animation and what its tooltip says.
-  # The animation waits the display delay, but its name is computed at once,
-  # so a synchronous probe can read it. The recalculating element is placed
-  # outside the view container (a hidden block still pending evaluation in the
-  # offcanvas pool) versus inside it (real visible work) to pin the scope.
+  # The animation waits the display delay, but its name is computed at once.
+  # The scope is read by navbar-logo.js in the frame after a Shiny event that
+  # can change it, so each state raises the event Shiny would and is read a
+  # frame later. The recalculating element is placed outside the view
+  # container (a hidden block still pending evaluation in the offcanvas pool)
+  # versus inside it (real visible work) to pin the scope.
   probe <- jsonlite::fromJSON(
     app$get_js(
-      r"(JSON.stringify((function () {
+      r"((async function () {
         var html = document.documentElement;
         var logo = document.querySelector('.blockr-navbar-logo');
         var rect = logo && logo.querySelector('rect');
@@ -1122,6 +1124,12 @@ test_that("navbar logo: real work vs bookkeeping (#285, #345, #360, #530)", {
           el.className = 'recalculating';
           parent.appendChild(el);
           return el;
+        };
+        var after = function (target, type) {
+          $(target).trigger(type);
+          return new Promise(function (resolve) {
+            requestAnimationFrame(function () { resolve(); });
+          });
         };
 
         // A hover takes the logo's tooltip up; leave again at once, so that
@@ -1152,22 +1160,27 @@ test_that("navbar logo: real work vs bookkeeping (#285, #345, #360, #530)", {
         real.forEach(function (el) { el.classList.remove('recalculating'); });
 
         var hidden = mark(document.body);
+        await after(document, 'shiny:busy');
         var bookkeeping = read();
         hidden.remove();
 
         var visible = mark(container);
+        await after(visible, 'shiny:outputinvalidated');
         var computing = read();
         visible.remove();
 
         real.forEach(function (el) { el.classList.add('recalculating'); });
         html.classList.remove('shiny-busy');
+        await after(document, 'shiny:idle');
+        var done = read();
 
-        return {
+        return JSON.stringify({
           pulseOff: pulseOff, hasLogo: rect !== null,
           hasContainer: container !== null,
-          idle: idle, bookkeeping: bookkeeping, computing: computing
-        };
-      })()))"
+          idle: idle, bookkeeping: bookkeeping, computing: computing,
+          done: done
+        });
+      })())"
     )
   )
 
@@ -1180,13 +1193,16 @@ test_that("navbar logo: real work vs bookkeeping (#285, #345, #360, #530)", {
   # Idle, or busy with a recalculating output only outside the view container
   # (a bare panel switch, or a hidden block still pending in the offcanvas),
   # the logo is at rest and has no tooltip; busy with a recalculating output
-  # inside it (block evaluation) animates the squares and names the state.
+  # inside it (block evaluation) animates the squares and names the state,
+  # until the session is idle again.
   expect_false(probe$idle$animated)
   expect_identical(probe$idle$label, "")
   expect_false(probe$bookkeeping$animated)
   expect_identical(probe$bookkeeping$label, "")
   expect_true(probe$computing$animated)
   expect_identical(probe$computing$label, "Computing")
+  expect_false(probe$done$animated)
+  expect_identical(probe$done$label, "")
 
   # Hovering the busy logo shows the tooltip, and the tooltip goes when the
   # work ends, as the animation does, rather than say "Computing" over a logo
@@ -1197,10 +1213,18 @@ test_that("navbar logo: real work vs bookkeeping (#285, #345, #360, #530)", {
       el.className = 'recalculating blockr-test-busy';
       document.querySelector('.blockr-view-container').appendChild(el);
       document.documentElement.classList.add('shiny-busy');
-      document.querySelector('.blockr-navbar-logo rect').dispatchEvent(
-        new PointerEvent('pointerover', { bubbles: true })
-      );
+      $(document).trigger('shiny:busy');
     })())"
+  )
+
+  computing <- "document.querySelector('.blockr-navbar-logo.is-computing')"
+
+  app$wait_for_js(paste(computing, "!== null"))
+
+  app$run_js(
+    r"(document.querySelector('.blockr-navbar-logo rect').dispatchEvent(
+      new PointerEvent('pointerover', { bubbles: true })
+    ))"
   )
 
   app$wait_for_js("document.querySelector('.blockr-tooltip') !== null")
@@ -1217,7 +1241,8 @@ test_that("navbar logo: real work vs bookkeeping (#285, #345, #360, #530)", {
     })())"
   )
 
-  expect_true(app$get_js("document.querySelector('.blockr-tooltip') === null"))
+  app$wait_for_js("document.querySelector('.blockr-tooltip') === null")
+  expect_false(app$get_js(paste(computing, "!== null")))
 })
 
 test_that("a narrow viewport stacks a view into a scrolling column (#413)", {

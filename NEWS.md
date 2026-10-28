@@ -1,5 +1,13 @@
 # blockr.dock (development version)
 
+* The busy logo and the issues list under a card no longer key their CSS off
+  `:has()` (#565). On a page of 21,000 elements, those selectors made Chrome
+  restyle the whole page four times over in one recompute, about 340 ms of
+  style; it now restyles 36 elements in 4 ms (headless Chrome, same page A/B).
+  The logo animates while it carries a class that the browser sets on Shiny's
+  busy and output events, and the issues list stays hidden until the server
+  writes `data-issues` onto it.
+
 * The first group of a view can hold focus (#462). A click into it used to
   read as no focus, so a consumer of `view_data` could not move focus back into
   that group, and on a single-group view never saw focus at all. A view without

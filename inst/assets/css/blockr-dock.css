@@ -97,7 +97,10 @@
   margin-top: 16px;
 }
 
-.blockr-issues:not(:has(.blockr-issue)) {
+/* The list shows only while the card has warnings or messages. The server
+   writes `data-issues` onto it then (block_issues_attrs()), which spares the
+   browser a `:has()` test on the list's content. */
+.blockr-issues:not([data-issues]) {
   display: none;
 }
 
@@ -1212,31 +1215,38 @@
    ============================================ */
 
 /* The blockr logo leads the navbar and is the board's busy indicator,
-   replacing bslib's page-wide busy pulse. Driven purely off the `.shiny-busy`
-   class Shiny puts on <html> during a flush -- no server observer, no page
-   darkening. Idle it is the whole logo. While the session does real block
-   evaluation its seven squares fade and fill again in the order the R is
-   drawn (each square's place is its `--i`, from blockr_logo()), and the moment
-   the work ends the animation is removed, so the logo is whole again instead
-   of freezing half drawn.
+   replacing bslib's page-wide busy pulse. It animates while it carries
+   `.is-computing`, a class navbar-logo.js sets in the browser -- no server
+   observer, no page darkening. Idle it is the whole logo. While the session
+   does real block evaluation its seven squares fade and fill again in the
+   order the R is drawn (each square's place is its `--i`, from blockr_logo()),
+   and the moment the work ends the animation is removed, so the logo is whole
+   again instead of freezing half drawn.
 
    Scoped exactly as the old pulse was: a plain panel switch round-trips to the
    server -- the on-screen visibility report and the layout fold -- without
    recomputing any visible output, so gating on `.shiny-busy` alone would
-   animate for what is only layout bookkeeping. Require a genuinely
-   recalculating output inside the visible view container: block evaluation
-   marks its output "recalculating" there, bookkeeping does not. Scoping to the
-   container is deliberate -- an off-screen block parked in the (hidden)
-   offcanvas pool stays "recalculating" while it waits for evaluation, and that
-   pool sits outside the container, so a pending hidden block never animates
-   the logo. Startup and real recompute animate it; a bare panel switch does
-   not.
+   animate for what is only layout bookkeeping. The class also requires a
+   genuinely recalculating output inside the visible view container: block
+   evaluation marks its output "recalculating" there, bookkeeping does not.
+   Scoping to the container is deliberate -- an off-screen block parked in the
+   (hidden) offcanvas pool stays "recalculating" while it waits for evaluation,
+   and that pool sits outside the container, so a pending hidden block never
+   animates the logo. Startup and real recompute animate it; a bare panel
+   switch does not.
+
+   This stylesheet used to read that scope itself, as
+   `html.shiny-busy:has(.blockr-view-container .recalculating)`. Next to
+   Shiny's own fade rule, that `:has()` made Chrome restyle the whole page on
+   every output update, a cost that grew with the board. The class goes on the
+   logo, not on <html>: flipped there, it restyled every `rect` on the page,
+   the thousands of an SVG chart included.
 
    The animation waits `var(--blockr-spinner-delay)` -- set on `.blockr-navbar`
    from the `spinner_delay_ms` option -- so a flush that clears sooner shows
    nothing. Its label, "Computing", is blockr.ui's tooltip, which
-   navbar-logo.js gives the logo on the same scope. The logo's green is
-   blockr.ui's `--blockr-logo`, the same under every theme and in the dark
+   navbar-logo.js gives the logo while it carries the class. The logo's green
+   is blockr.ui's `--blockr-logo`, the same under every theme and in the dark
    scheme. */
 .blockr-navbar-logo {
   display: inline-flex;
@@ -1255,7 +1265,7 @@
   fill: currentColor;
 }
 
-html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-logo .blockr-logo rect {
+.blockr-navbar-logo.is-computing .blockr-logo rect {
   animation: blockr-logo-fill 1.96s linear infinite;
   animation-delay: calc(var(--blockr-spinner-delay, 0ms) + var(--i) * 140ms);
 }
@@ -1280,7 +1290,7 @@ html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-logo .
    managed / VDI default) onto `prefers-reduced-motion: reduce`, so on those
    machines every Edge user would see a busy indicator that never moved. */
 @media (prefers-reduced-motion: reduce) {
-  html.shiny-busy:has(.blockr-view-container .recalculating) .blockr-navbar-logo .blockr-logo rect {
+  .blockr-navbar-logo.is-computing .blockr-logo rect {
     animation-duration: 3.9s;
     animation-delay: calc(var(--blockr-spinner-delay, 0ms) + var(--i) * 280ms);
   }
