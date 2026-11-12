@@ -1,23 +1,20 @@
-# A rail is a group pinned to one edge of a view -- dockView's edge group. It is
-# a board slot of its own, keyed by view and then by edge, because dockView
-# serialises `edgeGroups` beside `grid` and a rail's membership is not grid
-# geometry. A panel in a rail is simply absent from the grid tree, so every
-# placement walk (`restrict_grid()`, `rewrite_grid_leaves()`, the dockView
-# casts) is untouched, and a view's members are the union of its grid panels
-# and its rail panels. Membership stays authoritative for which panels exist;
-# the grid and the rails only say where.
+# A rail is a group pinned to one edge of a view -- dockView's edge group.
+# A grid keeps its rails beside its tree, keyed by edge, because dockView
+# serialises `edgeGroups` beside `grid`.
+# A panel in a rail is absent from the grid tree, so the walks over the tree
+# leave rails alone, and the panels a grid places are those of its tree and
+# its rails.
 #
 # Shape: a `dock_rail` carries the `position` it is pinned to, the `panels` it
 # holds, its open `active` tab, whether it is `collapsed` to its bare strip, and
 # its `size` and `collapsed_size` in pixels.
-# The `size` rides the settled echo like a branch's sizes do, so a sash drag
-# persists; the two size fields are pixels rather than ratios because a rail is
-# sized against the dock, not against a share of a split.
+# The two size fields are pixels rather than ratios because a rail is sized
+# against the dock, not against a share of a split.
 #
-# Visibility is *not* stored. A rail holding panels is shown and an empty one is
-# hidden, which is the same invariant the grid already keeps -- membership
-# decides existence, geometry only arrangement -- and it leaves no flag to go
-# stale. Rails are likewise declared once and never removed: dockView's
+# Visibility is *not* stored.
+# A rail holding panels is shown and an empty one is hidden, which leaves no
+# flag to go stale.
+# Rails are likewise declared once and never removed: dockView's
 # `removeEdgeGroup()` disposes the panels the rail holds, and a declared rail
 # stays put as a target a drag can reveal.
 
@@ -158,36 +155,6 @@ as_dock_rail <- function(x) {
   )
 }
 
-restrict_rail <- function(rail, members) {
-
-  new_dock_rail(
-    rail[["position"]],
-    intersect(rail[["panels"]], members),
-    active = rail[["active"]],
-    collapsed = rail[["collapsed"]],
-    size = rail[["size"]],
-    collapsed_size = rail[["collapsed_size"]]
-  )
-}
-
-# A rail wearing the width `stored` records for it, or the default width when
-# the board records none -- an edge every dock offers but no grid has stored.
-# The rail half of `keep_rail_sizes()`, which says why the client's width is not
-# always the one to keep.
-keep_rail_size <- function(rail, stored) {
-
-  stored <- coal(stored, new_dock_rail(rail[["position"]]))
-
-  new_dock_rail(
-    rail[["position"]],
-    rail[["panels"]],
-    active = rail[["active"]],
-    collapsed = rail[["collapsed"]],
-    size = stored[["size"]],
-    collapsed_size = rail[["collapsed_size"]]
-  )
-}
-
 #' @export
 str_value.dock_rail <- function(x, ...) {
 
@@ -289,63 +256,6 @@ validate_grid_rails <- function(rails) {
   }
 
   invisible(rails)
-}
-
-# Every edge, with whatever the grid stores taking precedence. All four are
-# always available: which rails a dock *offers* is a constant of the dock, not
-# something a constructor call or a saved layout gets to vary, so a grid only
-# ever records which are populated. An empty rail is invisible and costs
-# nothing, and it has to exist before a drag can reveal it -- deriving the set
-# here means a grid stored before rails existed, and a view added at runtime,
-# both offer the same edges without a migration.
-with_default_rails <- function(rails) {
-
-  out <- set_names(lapply(rail_positions, new_dock_rail), rail_positions)
-  out[names(rails)] <- rails
-
-  out
-}
-
-# Front `pid` in the rail that holds it, the rail half of `set_grid_active()`.
-front_rail <- function(rail, pid) {
-
-  if (!pid %in% rail[["panels"]]) {
-    return(rail)
-  }
-
-  rail[["active"]] <- pid
-  rail
-}
-
-resolve_rail <- function(rail, id_map) {
-
-  panels <- resolve_panel_ids(rail[["panels"]], id_map)
-  active <- rail[["active"]]
-
-  if (not_null(active)) {
-    active <- resolve_panel_ids(active, id_map)
-  }
-
-  new_dock_rail(
-    rail[["position"]],
-    panels,
-    active = active,
-    collapsed = rail[["collapsed"]],
-    size = rail[["size"]],
-    collapsed_size = rail[["collapsed_size"]]
-  )
-}
-
-# The default board populates one edge: extensions park on the left. The other
-# three are offered by `with_default_rails()` like they are on every board, so
-# there is nothing to declare here.
-default_rails <- function(ext = character()) {
-
-  if (!length(ext)) {
-    return(list())
-  }
-
-  list(left = new_dock_rail("left", ext))
 }
 
 #' @rdname layout

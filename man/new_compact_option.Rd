@@ -4,19 +4,10 @@
 \alias{new_compact_option}
 \title{Compact block headers}
 \usage{
-new_compact_option(
-  value = blockr_option("compact", FALSE),
-  category = "Theme options",
-  ...
-)
+new_compact_option(value)
 }
 \arguments{
-\item{value}{Logical, whether headers start compact. Defaults to the
-\code{compact} blockr option, else \code{FALSE}.}
-
-\item{category}{Options sidebar category.}
-
-\item{...}{Passed to \code{\link[blockr.core:new_board_option]{blockr.core::new_board_option()}}.}
+\item{value}{Logical, whether headers start compact.}
 }
 \value{
 A \code{board_option} object.

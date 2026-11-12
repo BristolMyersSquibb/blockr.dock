@@ -1,4 +1,21 @@
-# blockr.dock (development version)
+# blockr.dock 0.2.1
+
+* R no longer draws the dock, which the client draws from here on (#568).
+  The board server, the page, the block cards with their menus and sidebars,
+  the actions, the extension API and the Edit board extension are gone.
+  So are dock stacks, `new_dock_board()` with `dock_view()` and the readers of
+  a board's views, the navbar items with `navbar_item()` and
+  `custom_navbar()`, the serializer and the `blockr_deser()` methods, and the
+  examples in `inst/examples`.
+  What stays is what app scripts keep: the functions that write a grid,
+  `dock_grid()`, `panels()`, `group()`, `rail()` and `blk()`, with their
+  checks, and the constructors of the dock's board options.
+  Each board option constructor takes its value alone, and `blk()` takes no
+  placement hint.
+  The package requires blockr.core 0.2.0 and no longer imports dockViewR,
+  shiny, shinyjs, bslib, bsicons, htmltools, reactives or blockr.ui.
+
+# blockr.dock 0.2.0
 
 * The busy logo and the issues list under a card no longer key their CSS off
   `:has()` (#565). On a page of 21,000 elements, those selectors made Chrome

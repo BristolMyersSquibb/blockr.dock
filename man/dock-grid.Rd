@@ -14,8 +14,7 @@ is_dock_grid(x)
 validate_dock_grid(x)
 }
 \arguments{
-\item{x}{Object to cast (a \code{dock_grid} or a \link[=dock-layout]{dock_layout}),
-validate, or test.}
+\item{x}{Object to cast (a \code{dock_grid} or a list), validate, or test.}
 
 \item{...}{Passed on to methods.}
 }
@@ -24,13 +23,13 @@ validate, or test.}
 \code{is_dock_grid()} a boolean.
 }
 \description{
-A \code{dock_grid} is a view's geometry in our compact, dockView-independent
-form -- nested splits and tab groups with sizes normalised to 0-1 ratios and
-no volatile ids, so two casts of the same layout compare \code{identical()}. It is
-authored with \link[=layout]{dock_grid()} and produced by \code{as_dock_grid()}, which
-casts another \code{dock_grid} (identity) or a \link[=dock-layout]{dock_layout}
-(dockView's client echo) into it and is idempotent. \code{is_dock_grid()} is the
-class check; \code{validate_dock_grid()} returns its input and errors on a
-malformed or non-canonical grid, or on one that places a panel more than
-once.
+A \code{dock_grid} is a view's geometry in a compact form that does not depend on
+dockView: nested splits and tab groups with sizes normalised to 0-1 ratios
+and no volatile ids, so two grids of the same shape compare \code{identical()}.
+It is written with \link[=layout]{dock_grid()}.
+The function \code{as_dock_grid()} casts another \code{dock_grid} (identity) or a list
+of the same shape into one, and is idempotent.
+The check \code{is_dock_grid()} tests the class, and \code{validate_dock_grid()}
+returns its input and errors on a malformed or non-canonical grid, or on one
+that places a panel more than once.
 }

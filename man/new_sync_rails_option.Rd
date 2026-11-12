@@ -4,19 +4,10 @@
 \alias{new_sync_rails_option}
 \title{Rails in step across views}
 \usage{
-new_sync_rails_option(
-  value = blockr_option("sync_rails", TRUE),
-  category = "Board options",
-  ...
-)
+new_sync_rails_option(value)
 }
 \arguments{
-\item{value}{Logical, whether the rails are kept in step. Defaults to the
-\code{sync_rails} blockr option, else \code{TRUE}.}
-
-\item{category}{Options sidebar category.}
-
-\item{...}{Passed to \code{\link[blockr.core:new_board_option]{blockr.core::new_board_option()}}.}
+\item{value}{Logical, whether the rails are kept in step.}
 }
 \value{
 A \code{board_option} object.

@@ -14,115 +14,53 @@ test_that("ids", {
   expect_identical(blk_pnl_id, as_block_panel_id(blk_pnl_id))
   expect_identical(blk_id, as_obj_id(blk_pnl_id))
 
-  expect_error(
-    as_ext_panel_id(blk_pnl_id),
-    class = "invalid_ext_panel_id_coercion"
-  )
-
-  blk_hndl_id <- as_block_handle_id(blk_pnl_id)
-
-  expect_s3_class(
-    blk_hndl_id,
-    c("block_handle_id", "dock_handle_id", "dock_id")
-  )
-
-  expect_true(is_block_handle_id(blk_hndl_id))
-
-  expect_true(maybe_block_handle_id(blk_hndl_id))
-
-  expect_identical(blk_hndl_id, as_block_handle_id(blk_hndl_id))
-  expect_identical(blk_id, as_obj_id(blk_hndl_id))
-
-  expect_error(
-    as_ext_panel_id(blk_hndl_id),
-    class = "invalid_ext_panel_id_coercion"
-  )
-
-  ext_id <- "extension"
-
-  ext_pnl_id <- as_ext_panel_id(ext_id)
-
-  expect_s3_class(ext_pnl_id, c("ext_panel_id", "dock_panel_id", "dock_id"))
-
-  expect_true(is_dock_panel_id(ext_pnl_id))
-  expect_true(is_ext_panel_id(ext_pnl_id))
-
-  expect_true(maybe_ext_panel_id(ext_pnl_id))
-
-  expect_identical(ext_pnl_id, as_ext_panel_id(ext_pnl_id))
-  expect_identical(ext_id, as_obj_id(ext_pnl_id))
-
-  expect_error(
-    as_block_panel_id(ext_pnl_id),
-    class = "invalid_block_panel_id_coercion"
-  )
-
-  expect_error(
-    as_block_handle_id(ext_pnl_id),
-    class = "invalid_block_handle_id_coercion"
-  )
-
-  ext_hndl_id <- as_ext_handle_id(ext_id)
-
-  expect_s3_class(
-    ext_hndl_id,
-    c("ext_handle_id", "dock_handle_id", "dock_id")
-  )
-
-  expect_true(is_ext_handle_id(ext_hndl_id))
-
-  expect_true(maybe_ext_handle_id(ext_hndl_id))
-
-  expect_identical(ext_hndl_id, as_ext_handle_id(ext_hndl_id))
-  expect_identical(ext_id, as_obj_id(ext_hndl_id))
-
-  expect_error(
-    as_block_handle_id(ext_hndl_id),
-    class = "invalid_block_handle_id_coercion"
-  )
-
-  expect_error(
-    as_block_panel_id(ext_hndl_id),
-    class = "invalid_block_panel_id_coercion"
+  expect_warning(
+    as_block_panel_id(unclass(blk_pnl_id)),
+    class = "maybe_multiple_block_id_conversion"
   )
 
   obj_ids <- c("foo", "bar", "baz")
 
-  dock_pnl_ids <- map(
-    do.call,
-    c(as_ext_panel_id, as_block_panel_id, as_block_panel_id),
-    lapply(obj_ids, list)
-  )
+  dock_pnl_ids <- lapply(obj_ids, as_block_panel_id)
 
   panel_ids <- chr_ply(dock_pnl_ids, unclass)
 
   expect_identical(dock_pnl_ids, as_dock_panel_id(panel_ids))
   expect_identical(as_obj_id(dock_pnl_ids), obj_ids)
+
+  expect_error(
+    as_dock_panel_id("foo"),
+    class = "invalid_dock_panel_id_coercion"
+  )
 })
 
-test_that("view handle ids round-trip", {
+test_that("the panel ids of blocks are those of their ids", {
 
-  view_id <- "verdant_aardvark"
+  blks <- c(a = new_dataset_block(), b = new_head_block())
 
-  hndl <- as_view_handle_id(view_id)
+  expect_identical(
+    unclass(as_dock_panel_id(blks)),
+    c("block_panel-a", "block_panel-b")
+  )
+  expect_identical(as_obj_id(as_block_panel_id(blks)), names(blks))
+})
 
-  expect_s3_class(hndl, c("view_handle_id", "dock_handle_id", "dock_id"))
-  expect_true(maybe_view_handle_id(hndl))
+test_that("panel_obj_ids() strips the prefix of a block's panel id alone", {
 
-  expect_identical(unclass(hndl), "view_handle-verdant_aardvark")
-  expect_identical(hndl, as_view_handle_id(hndl))
-  expect_identical(view_id, as_obj_id(hndl))
+  expect_identical(
+    panel_obj_ids(c("block_panel-a", "b", "ext_panel-dag")),
+    c("a", "b", "ext_panel-dag")
+  )
+  expect_identical(panel_obj_ids(character()), character())
 })
 
 test_that("panel-id predicates are class checks, not string matches", {
 
   expect_true(is_block_panel_id(as_block_panel_id("a")))
-  expect_true(is_ext_panel_id(as_ext_panel_id("dag")))
   expect_true(is_dock_panel_id(as_block_panel_id("a")))
 
   # A bare wire-prefixed string is not a classed panel id -- the string-shape
-  # test is `maybe_*_panel_id()`, kept distinct on purpose.
+  # test is `maybe_block_panel_id()`, kept distinct on purpose.
   expect_false(is_block_panel_id("block_panel-a"))
-  expect_false(is_ext_panel_id("ext_panel-dag"))
   expect_false(is_dock_panel_id("block_panel-a"))
 })
