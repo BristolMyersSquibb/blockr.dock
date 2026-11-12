@@ -2,100 +2,38 @@
 % Please edit documentation in R/panel-ref.R
 \name{blk}
 \alias{blk}
-\alias{ext}
 \alias{is_panel_ref}
-\alias{as_panel_ref}
 \alias{as.character.panel_ref}
 \title{Typed panel references}
 \usage{
-blk(id, near = NULL, side = NULL, size = NULL, rail = NULL)
-
-ext(id, near = NULL, side = NULL, size = NULL, rail = NULL)
+blk(id)
 
 is_panel_ref(x)
-
-as_panel_ref(
-  id,
-  block_ids = character(),
-  ext_ids = character(),
-  near = NULL,
-  side = NULL,
-  size = NULL,
-  rail = NULL
-)
 
 \method{as.character}{panel_ref}(x, ...)
 }
 \arguments{
-\item{id}{A block or extension id. For \code{blk()} / \code{ext()} a bare id (not the
-wire-prefixed panel id); \code{as_panel_ref()} additionally accepts an already
-wire-prefixed panel id or a \code{panel_ref}.}
-
-\item{near}{A ref or bare id to anchor placement against.}
-
-\item{side}{Placement direction relative to \code{near}: one of \code{within}, \code{left},
-\code{right}, \code{above}, \code{below}.}
-
-\item{size}{Target size ratio in (0, 1) -- consumed by \code{resize}, and recorded
-on \code{add} for a later size-on-create pass.}
-
-\item{rail}{The edge to park the panel on, \code{left} or \code{right}. Mutually
-exclusive with \code{near} / \code{side}.}
+\item{id}{A block id, not the prefixed panel id.}
 
 \item{x}{An object.}
-
-\item{block_ids, ext_ids}{Character vectors partitioning the id namespace that
-\code{as_panel_ref()} resolves a bare \code{id} against.}
 
 \item{...}{Ignored.}
 }
 \value{
-\code{blk()}, \code{ext()} and \code{as_panel_ref()} return a \code{panel_ref}.
-\code{as.character()} on one returns its canonical panel id, and
+The constructor \code{blk()} returns a \code{panel_ref}.
+Calling \code{as.character()} on one returns its canonical panel id, and
 \code{is_panel_ref()} returns a boolean.
 }
 \description{
-\code{blk()} and \code{ext()} construct references to a block or extension panel for
-the \code{views$mod} panel-op grammar (see
-\link[blockr.core:board_update]{board_update}). They are the public currency: a
-caller names a block or extension by its
-\strong{id}, never the \verb{block_panel-} / \verb{ext_panel-} wire prefix -- the ref is the
-codec, and \code{as.character()} on one yields the canonical panel-id encoding.
-}
-\details{
-Each ref optionally carries its own placement hint, so a verb's operands are
-an unnamed list of self-describing refs:
-\code{add = list(blk("a", near = "b", side = "right"), ext("dag"))}. Which hint
-fields are meaningful depends on the verb -- \code{add} consumes \code{near} / \code{side} /
-\code{size} / \code{rail}, \code{move} consumes \code{near} / \code{side} / \code{rail} -- and a hint on a
-ref used where no placement happens (\code{rm}, \code{select}, a \code{near} anchor, or the
-\code{dock_grid()} / \code{panels()} authoring DSL) is a loud error. Because the hints
-are constructor arguments, a misspelled one (\code{blk("a", sise = 0.4)}) fails at
-the call site with R's own unused-argument error, before any payload exists.
-
-The \code{rail} hint parks a panel on one of the view's edges (see \code{\link[=rail]{rail()}}),
-which is the one destination the tree cannot express, so it excludes \code{near}
-and \code{side}. Keeping the two apart matters beyond the pairing: \code{side} is a
-direction relative to a \code{near} anchor \emph{inside} the splitview, a rail position
-is an edge of the whole view, and both spell \code{left} and \code{right}.
-
-Bare id strings are accepted as sugar wherever a ref is, resolved block-first
-with a hard error only on a true cross-namespace clash (an id that is both a
-block and an extension), which then demands a typed ref.
-
-\code{as_panel_ref()} is the programmatic form of that sugar: given a bare \code{id}
-and the \code{block_ids} / \code{ext_ids} partitioning a board's namespace, it returns
-the correctly-typed \code{blk()} / \code{ext()} ref (carrying any placement hint),
-applying the same block-first precedence and the same cross-namespace clash
-error. An already wire-prefixed panel id, or an existing \code{panel_ref},
-resolves to the matching ref unchanged.
+The function \code{blk()} constructs a reference to a block's panel for the
+functions that write a grid, such as \link[=layout]{dock_grid()} and \code{\link[=panels]{panels()}}.
+A caller names a block by its \strong{id}, never by the \verb{block_panel-} prefix of
+its panel id: the ref is the codec, and \code{as.character()} on one yields the
+canonical panel id.
+Bare id strings are accepted wherever a ref is.
 }
 \examples{
-blk("my_block", near = "other_block", side = "right")
-ext("dag", rail = "left")
+blk("my_block")
 as.character(blk("my_block"))
-
-as_panel_ref("my_block", block_ids = "my_block")
-as_panel_ref("dag", block_ids = "my_block", ext_ids = "dag")
 
 }

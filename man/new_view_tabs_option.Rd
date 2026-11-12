@@ -4,22 +4,10 @@
 \alias{new_view_tabs_option}
 \title{Views as tabs}
 \usage{
-new_view_tabs_option(
-  value = blockr_option("view_tabs", FALSE),
-  category = "Theme options",
-  label = "Views as tabs",
-  ...
-)
+new_view_tabs_option(value)
 }
 \arguments{
-\item{value}{Logical, whether the views show as tabs. Defaults to the
-\code{view_tabs} blockr option, else \code{FALSE}.}
-
-\item{category}{Options sidebar category.}
-
-\item{label}{The option's name, which its switch shows.}
-
-\item{...}{Passed to \code{\link[blockr.core:new_board_option]{blockr.core::new_board_option()}}.}
+\item{value}{Logical, whether the views show as tabs.}
 }
 \value{
 A \code{board_option} object.

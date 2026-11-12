@@ -4,11 +4,9 @@ template:
   light-switch: true
 
 reference:
-- title: Dock Board
-  desc: A `board` class that includes dock layout information and board extension object.
+- title: Dock board options
+  desc: The board options that the dock defines.
   contents:
-    - new_dock_board
-    - new_dock_stack
     - new_compact_option
     - new_view_tabs_option
     - new_sync_rails_option
@@ -20,38 +18,15 @@ reference:
   desc: A view's geometry in canonical form.
   contents:
     - as_dock_grid
-- title: Dock layout boundary
-  desc: dockView's native layout representation, the wire form at the client boundary.
-  contents:
-    - new_dock_layout
 - title: Panel IDs
-  desc: The canonical panel IDs a grid or layout references.
+  desc: The canonical panel IDs a grid references.
   contents:
-    - layout_panel_ids
+    - as_dock_panel_id
 - title: Panel references
-  desc: Typed references to block and extension panels for the update grammar.
+  desc: Typed references to block panels for the functions that write a grid.
   contents:
     - blk
-- title: Dock views
-  desc: Multi-view (tabbed) boards. Each view is its own panel arrangement.
-  contents:
-    - active_view
-- title: Board extensions
-  desc: Board extensions allow for adding components that interact with and modify board state.
-  contents:
-    - new_dock_extension
-    - new_ext_meta
-    - new_edit_board_extension
-- title: Board actions
-  desc: Actions are intended as re-usable, narrowly scoped board interactions, such as adding or removing a block.
-  contents:
-    - new_action
 - title: Navbar
   desc: The navbar is drawn from a list of items, which an app adds to, reorders or drops from.
   contents:
     - navbar_item
-- title: Utilities
-  desc: Various utility functions that are exported for use in dependent packages.
-  contents:
-    - blks_metadata
-    - dock_id

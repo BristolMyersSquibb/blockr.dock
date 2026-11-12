@@ -1,6 +1,6 @@
 Package: blockr.dock
 Title: A Docking Layout Manager for 'blockr'
-Version: 0.2.0
+Version: 0.2.1
 Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",
@@ -11,90 +11,24 @@ Authors@R:
              role = c("aut"),
              email = "david@cynkra.com")
     )
-Description: Building on the docking layout manager provided by 'dockViewR',
-    this provides a flexible front-end to 'blockr.core'. It provides an extension mechanism which allows for providing means to manipulate a board
-    object via panel-based user interface components.
+Description: Provides the dock, a frontend to 'blockr.core' that arranges the
+    panels of a board's blocks into views, each a grid of nested splits, tab
+    groups and rails.
 URL: https://bristolmyerssquibb.github.io/blockr.dock/
 BugReports: https://github.com/BristolMyersSquibb/blockr.dock/issues
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:
-    blockr.core (>= 0.1.4),
-    blockr.ui,
-    bsicons,
-    shiny (>= 1.14.0),
-    shinyjs,
-    bslib,
-    dockViewR (>= 0.4.0),
-    htmltools,
-    cli,
-    jsonlite,
-    rlang,
-    utils,
-    reactives
+    blockr.core (>= 0.2.0),
+    utils
 Suggests:
     testthat (>= 3.0.0),
-    DT,
-    colorspace,
-    methods,
     withr,
-    shinytest2,
-    chromote,
-    xml2,
     knitr,
     rmarkdown
 Remotes:
-    rstudio/shinytest2,
-    BristolMyersSquibb/blockr.core,
-    BristolMyersSquibb/blockr.ui,
-    cynkra/dockViewR,
-    nbenn/reactives
+    BristolMyersSquibb/blockr.core@js-state
 Config/testthat/edition: 3
-Collate:
-    'action-class.R'
-    'action-block.R'
-    'action-inputs.R'
-    'action-link.R'
-    'action-menu.R'
-    'action-stack.R'
-    'action-ui.R'
-    'action-utils.R'
-    'block-meta.R'
-    'block-ui.R'
-    'board-options.R'
-    'board-plugins.R'
-    'board-server.R'
-    'board-ui.R'
-    'dock-board.R'
-    'dock-grid.R'
-    'dock-layout.R'
-    'dock-navbar.R'
-    'dock-rail.R'
-    'dock-stack.R'
-    'dock-view.R'
-    'ext-class.R'
-    'ext-delta.R'
-    'ext-edit.R'
-    'ext-meta.R'
-    'ext-ui.R'
-    'panel-id.R'
-    'panel-menu.R'
-    'panel-ops.R'
-    'panel-ref.R'
-    'plugin-block.R'
-    'plugin-code.R'
-    'plugin-serdes.R'
-    'sidebar-server.R'
-    'sidebar-block.R'
-    'sidebar-inputs.R'
-    'sidebar-link.R'
-    'sidebar-stack.R'
-    'utils-dock.R'
-    'utils-misc.R'
-    'utils-pkg.R'
-    'utils-serdes.R'
-    'utils-serve.R'
-    'utils-ui.R'
 VignetteBuilder: knitr
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0

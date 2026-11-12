@@ -4,7 +4,6 @@
 \alias{dock_grid}
 \alias{panels}
 \alias{group}
-\alias{default_layout}
 \alias{rail}
 \title{Dock grid authoring}
 \usage{
@@ -13,8 +12,6 @@ dock_grid(..., orientation = c("horizontal", "vertical"), sizes = NULL)
 panels(..., active = NULL)
 
 group(..., sizes = NULL)
-
-default_layout(blocks, extensions)
 
 rail(
   ...,
@@ -26,11 +23,10 @@ rail(
 )
 }
 \arguments{
-\item{...}{For \code{dock_grid()} and \code{group()}, grid children (\code{blk()} /
-\code{ext()} references, bare ids, character vectors, lists, \code{panels()}, or
-\code{group()}). For \code{panels()}, panel references or ids. A reference used
-here cannot carry a placement hint. Otherwise reserved for generic
-consistency.}
+\item{...}{For \code{dock_grid()} and \code{group()}, grid children (\code{blk()}
+references, bare ids, character vectors, lists, \code{panels()}, or
+\code{group()}).
+For \code{panels()} and \code{rail()}, panel references or ids.}
 
 \item{orientation}{Top-level split direction; one of \code{"horizontal"}
 (default) or \code{"vertical"}.}
@@ -40,9 +36,6 @@ share of the parent (positive; need not sum to 1).}
 
 \item{active}{For \code{panels()} and \code{rail()}, the id of the tab to open by
 default.}
-
-\item{blocks, extensions}{Dock board components to arrange (for
-\code{default_layout()}).}
 
 \item{position}{For \code{rail()}, the edge the rail pins to; \code{"left"} (the
 default) or \code{"right"}.}
@@ -56,19 +49,16 @@ horizontal edge) in pixels when open and when collapsed to its bare tab
 strip.}
 }
 \value{
-\code{dock_grid()} returns a \link[=dock-grid]{dock_grid} object. \code{panels()}
-returns a \code{dock_panels} node and \code{group()} returns a \code{dock_group} node --
-both are grid sub-trees usable inside \code{dock_grid()} / \code{group()}. A \code{rail()}
-is a \code{dock_rail}, written among a grid's children but pinned outside the
-splitview. Finally \code{default_layout()} returns a \code{list} with \code{views} (a
-\code{dock_views}) and \code{grids} (a \code{dock_grids}).
+The function \code{dock_grid()} returns a \link[=dock-grid]{dock_grid} object,
+\code{panels()} a \code{dock_panels} node and \code{group()} a \code{dock_group} node, both
+grid sub-trees usable inside \code{dock_grid()} / \code{group()}.
+A \code{rail()} is a \code{dock_rail}, written among a grid's children but pinned
+outside the splitview.
 }
 \description{
 A \link[=dock-grid]{dock_grid} is a view's geometry: the arrangement of its
-panels into nested splits and tab groups, with sizes. \code{dock_grid()} is the
-authoring DSL that builds one; view \emph{membership} (which panels belong) and
-the display \emph{name} live on the view (see \link[=dock_view]{dock_view()}), not the
-grid.
+panels into nested splits and tab groups, with sizes.
+The function \code{dock_grid()} is the authoring DSL that builds one.
 }
 \details{
 Construct a grid with:
@@ -88,40 +78,29 @@ numeric vector parallel to \code{...} that overrides the even split.
 the view rather than arranged by the splitview. Write it among the
 grid's children; it is not one, so it never counts towards \code{sizes},
 and the members it names leave the grid tree.
-\item \code{default_layout(blocks, extensions)} produces the default board
-arrangement (an extension rail on the left, blocks tabbed in the
-grid) as a \code{list(views, grids)} the constructor consumes.
 }
 
-\code{dock_grid()} accepts \code{orientation = "horizontal" | "vertical"} for the
-top-level split direction and \code{sizes} for the root-branch ratios. The
-dockView-native \verb{\{grid, panels, activeGroup\}} payload dockViewR consumes is a
-\link[=dock-layout]{dock_layout}, built from a grid against the board's blocks and
-extensions.
+The function \code{dock_grid()} accepts \code{orientation = "horizontal" | "vertical"} for the top-level split direction and \code{sizes} for the
+root-branch ratios.
 }
 \examples{
-blks <- c(
-  a = blockr.core::new_dataset_block(),
-  b = blockr.core::new_head_block()
-)
-
 # Panels named with typed references; bare id strings work too
 panels(blk("a"), blk("b"), active = blk("b"))
 
 # Branch with explicit child ratios
 group(blk("a"), blk("b"), sizes = c(0.3, 0.7))
 
-# An extension panel beside a tabbed block leaf
+# A block panel beside a tabbed block leaf
 dock_grid(
-  ext("dag"),
-  panels(blk("a"), blk("b"), active = blk("b")),
+  blk("a"),
+  panels(blk("b"), blk("c"), active = blk("c")),
   sizes = c(0.3, 0.7)
 )
 
 # Vertical top-level split
 dock_grid(blk("a"), blk("b"), orientation = "vertical")
 
-# An extension parked on the left edge, out of the splitview
-dock_grid(blk("a"), rail(ext("dag"), position = "left"))
+# A block parked on the left edge, out of the splitview
+dock_grid(blk("a"), rail(blk("b"), position = "left"))
 
 }

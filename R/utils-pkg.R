@@ -1,6 +1,2 @@
-#' @import blockr.core shiny bslib
+#' @import blockr.core
 NULL
-
-pkg_file <- function(..., pkg = parent.frame()) {
-  system.file(..., package = pkg_name(pkg))
-}
