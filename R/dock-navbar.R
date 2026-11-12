@@ -9,8 +9,6 @@
 #' blockr logo, which is also the busy indicator (id `"logo"`), a spacer
 #' (`"spacer"`), the view menu (`"views"`), the read-only indicator
 #' (`"read_only"`) and the board options (`"options"`).
-#' The function `custom_navbar()` appends a fixed set of items to them,
-#' dropping any default item that shares an id with one of them.
 #'
 #' @param id Item id, unique within the navbar
 #' @param fill Whether the item takes up the free space of the bar
@@ -24,11 +22,9 @@
 #' names(items)
 #' names(items[c("help", "options")])
 #'
-#' names(custom_navbar(help))
-#'
 #' @return The constructor `navbar_item()` returns a `navbar_item` object.
-#' The functions `default_navbar_items()` and `custom_navbar()` return a
-#' `navbar_items` collection, as do `c()` and `[` on items.
+#' The function `default_navbar_items()` returns a `navbar_items`
+#' collection, as do `c()` and `[` on items.
 #' The checks `is_navbar_item()` and `is_navbar_items()` return a boolean.
 #'
 #' @rdname navbar
@@ -42,8 +38,7 @@ navbar_item <- function(id, fill = FALSE, shrink = FALSE) {
   )
 }
 
-#' @param x Object. For `custom_navbar()`, the items to append: a
-#' `navbar_item`, a `navbar_items` collection or a list of items.
+#' @param x Object.
 #' @rdname navbar
 #' @export
 is_navbar_item <- function(x) {
@@ -203,14 +198,4 @@ default_navbar_items <- function() {
     navbar_item("read_only"),
     navbar_item("options")
   )
-}
-
-#' @rdname navbar
-#' @export
-custom_navbar <- function(x) {
-
-  custom <- as_navbar_items(x)
-  default <- default_navbar_items()
-
-  c(default[setdiff(names(default), names(custom))], custom)
 }

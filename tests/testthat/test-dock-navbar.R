@@ -59,26 +59,3 @@ test_that("default_navbar_items() are the dock's parts in order", {
   )
   expect_true(items[["spacer"]][["fill"]])
 })
-
-test_that("custom_navbar() appends items to the default", {
-
-  help <- navbar_item("help")
-
-  expect_identical(
-    names(custom_navbar(help)),
-    c(names(default_navbar_items()), "help")
-  )
-
-  expect_identical(
-    names(custom_navbar(list(help, navbar_item("about")))),
-    c(names(default_navbar_items()), "help", "about")
-  )
-
-  # An item with a default's id takes its place at the end.
-  expect_identical(
-    names(custom_navbar(navbar_item("views"))),
-    c("logo", "spacer", "read_only", "options", "views")
-  )
-
-  expect_error(custom_navbar("help"), class = "navbar_items_coercion_invalid")
-})

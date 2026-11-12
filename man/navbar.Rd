@@ -5,7 +5,6 @@
 \alias{is_navbar_item}
 \alias{is_navbar_items}
 \alias{default_navbar_items}
-\alias{custom_navbar}
 \title{Navbar items}
 \usage{
 navbar_item(id, fill = FALSE, shrink = FALSE)
@@ -15,8 +14,6 @@ is_navbar_item(x)
 is_navbar_items(x)
 
 default_navbar_items()
-
-custom_navbar(x)
 }
 \arguments{
 \item{id}{Item id, unique within the navbar}
@@ -26,13 +23,12 @@ custom_navbar(x)
 \item{shrink}{Whether the item gives way first on a narrow bar. The items
 with neither \code{fill} nor \code{shrink} keep their width.}
 
-\item{x}{Object. For \code{custom_navbar()}, the items to append: a
-\code{navbar_item}, a \code{navbar_items} collection or a list of items.}
+\item{x}{Object.}
 }
 \value{
 The constructor \code{navbar_item()} returns a \code{navbar_item} object.
-The functions \code{default_navbar_items()} and \code{custom_navbar()} return a
-\code{navbar_items} collection, as do \code{c()} and \code{[} on items.
+The function \code{default_navbar_items()} returns a \code{navbar_items}
+collection, as do \code{c()} and \code{[} on items.
 The checks \code{is_navbar_item()} and \code{is_navbar_items()} return a boolean.
 }
 \description{
@@ -46,8 +42,6 @@ The default items, returned by \code{default_navbar_items()}, are, in order: the
 blockr logo, which is also the busy indicator (id \code{"logo"}), a spacer
 (\code{"spacer"}), the view menu (\code{"views"}), the read-only indicator
 (\code{"read_only"}) and the board options (\code{"options"}).
-The function \code{custom_navbar()} appends a fixed set of items to them,
-dropping any default item that shares an id with one of them.
 }
 \examples{
 help <- navbar_item("help")
@@ -55,7 +49,5 @@ help <- navbar_item("help")
 items <- c(default_navbar_items(), help)
 names(items)
 names(items[c("help", "options")])
-
-names(custom_navbar(help))
 
 }
