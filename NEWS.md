@@ -1,5 +1,12 @@
 # blockr.dock 0.2.1
 
+* The dock has a client of its own, which draws the page as an empty dockview,
+  in dockview's dark theme while the board option `dark_mode` is dark (#569).
+  The constructor `new_dock_plugin()` makes the dock plugin, a frontend of the
+  plugin class `blockr.dock-dock_plugin`.
+  The package lists the class in `._BLOCKR_MODULES_`, so that `serve()` runs
+  the dock in place of core's basic frontend wherever blockr.dock is available.
+
 * R no longer draws the dock, which the client draws from here on (#568).
   The board server, the page, the block cards with their menus and sidebars,
   the actions, the extension API and the Edit board extension are gone.

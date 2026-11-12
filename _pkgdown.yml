@@ -4,6 +4,10 @@ template:
   light-switch: true
 
 reference:
+- title: Dock plugin
+  desc: The frontend that draws the page.
+  contents:
+    - new_dock_plugin
 - title: Dock board options
   desc: The board options that the dock defines.
   contents:
