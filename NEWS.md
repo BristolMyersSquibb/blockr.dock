@@ -1,5 +1,10 @@
 # blockr.dock 0.2.1
 
+* The dock has a client of its own, which registers the class of the dock
+  plugin and draws the page as an empty dockview (#569).
+  The constructor `new_dock_plugin()` makes the dock plugin, a frontend of the
+  plugin class `blockr.dock-dock_plugin`.
+
 * R no longer draws the dock, which the client draws from here on (#568).
   The board server, the page, the block cards with their menus and sidebars,
   the actions, the extension API and the Edit board extension are gone.

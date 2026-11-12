@@ -3,3 +3,4 @@ CRAN-SUBMISSION
 docs
 inst/doc
 .claude/
+node_modules/

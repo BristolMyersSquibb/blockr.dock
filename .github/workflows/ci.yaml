@@ -8,6 +8,8 @@ name: ci
 jobs:
   ci:
     uses: BristolMyersSquibb/blockr.ci/.github/workflows/ci.yaml@main
+    with:
+      typescript-dir: '.'
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       BLOCKR_PAT: ${{ secrets.BLOCKR_PAT }}
