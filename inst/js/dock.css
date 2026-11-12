@@ -4091,21 +4091,3 @@
   position: fixed;
   inset: 0;
 }
-.blockr-dock .dv-shell {
-  --dv-group-view-background-color: var(--blockr-color-bg-page, #f9fafb);
-  --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface, #ffffff);
-  --dv-activegroup-visiblepanel-tab-background-color: var( --blockr-color-bg-selected, color-mix(in srgb, #2563eb 7%, transparent) );
-  --dv-activegroup-visiblepanel-tab-color: var(--blockr-color-text-accent, #2563eb);
-  --dv-inactivegroup-visiblepanel-tab-background-color: var( --blockr-color-bg-selected-inactive, color-mix(in srgb, #111827 10%, transparent) );
-  --dv-inactivegroup-visiblepanel-tab-color: var(--blockr-color-text-default, #111827);
-  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-activegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #6b7280);
-  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-inactivegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #6b7280);
-  --dv-separator-border: transparent;
-  --dv-sash-color: transparent;
-  --dv-tab-divider-color: transparent;
-  --dv-active-sash-color: var(--blockr-color-border-accent, #2563eb);
-  --dv-border-radius: var(--blockr-radius-xl, 12px);
-  --dv-tab-border-radius: var(--blockr-radius-lg, 8px);
-}
