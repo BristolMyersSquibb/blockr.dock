@@ -10,6 +10,9 @@
 //   packages that its module imports, as dock.js holds dockview.
 // - An index.css beside a module is its stylesheet, bundled into <name>.css
 //   with the stylesheets it imports, as dock.css holds dockview's.
+// - Both are minified, as core minifies the React it ships, since most of
+//   each is dockview's. The license comments of what a bundle holds stay, at
+//   its end.
 //
 // The build owns inst/js and empties it first, so that nothing is left of a
 // module that is gone.
@@ -55,6 +58,7 @@ export async function build(root: string): Promise<string[]> {
   const options = {
     absWorkingDir: root,
     outdir: out,
+    minify: true,
     logLevel: "warning",
     metafile: true,
   } satisfies esbuild.BuildOptions;
