@@ -26,7 +26,3 @@ reference:
   desc: Typed references to block panels for the functions that write a grid.
   contents:
     - blk
-- title: Navbar
-  desc: The navbar is drawn from a list of items, which an app adds to, reorders or drops from.
-  contents:
-    - navbar_item
