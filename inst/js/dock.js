@@ -11671,6 +11671,17 @@ var themeAbyss = {
   colorScheme: "dark",
   tabGroupIndicator: "none"
 };
+var themeAbyssSpaced = {
+  name: "abyssSpaced",
+  className: "dockview-theme-abyss-spaced",
+  colorScheme: "dark",
+  gap: 10,
+  edgeGroupCollapsedSize: 44,
+  dndOverlayMounting: "absolute",
+  dndPanelOverlay: "group",
+  dndTabIndicator: "line",
+  dndOverlayBorder: "2px solid var(--dv-active-sash-color)"
+};
 var themeLightSpaced = {
   name: "lightSpaced",
   className: "dockview-theme-light-spaced",
@@ -20093,24 +20104,34 @@ var PaneviewReact = React.forwardRef((props, ref) => {
 PaneviewReact.displayName = "PaneviewComponent";
 
 // srcts/modules/dock/index.tsx
+import { useCallback, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { jsx } from "react/jsx-runtime";
 var api = 1;
 var panels = {};
-function Dock() {
-  return /* @__PURE__ */ jsx("div", { className: "blockr-dock", children: /* @__PURE__ */ jsx(DockviewReact, { components: panels, onReady: () => void 0, theme: themeLightSpaced }) });
+function useDark(core) {
+  const subscribe = useCallback((changed) => core.store.subscribe(changed), [core]);
+  return useSyncExternalStore(subscribe, () => core.options.value("dark_mode") === "dark");
 }
-var dock_default = {
-  render({ el }) {
+function Dock({ core }) {
+  const theme = useDark(core) ? themeAbyssSpaced : themeLightSpaced;
+  return /* @__PURE__ */ jsx("div", { className: "blockr-dock", children: /* @__PURE__ */ jsx(DockviewReact, { components: panels, onReady: () => void 0, theme }) });
+}
+var frontend = {
+  render({ el, core }) {
     const root = createRoot(el);
     flushSync(() => {
-      root.render(/* @__PURE__ */ jsx(Dock, {}));
+      root.render(/* @__PURE__ */ jsx(Dock, { core }));
     });
     return () => {
       root.unmount();
     };
   }
+};
+var dock_default = {
+  options: ["dark_mode"],
+  frontend
 };
 export {
   api,

@@ -2,6 +2,7 @@
 % Please edit documentation in R/dock-plugin.R
 \name{new_dock_plugin}
 \alias{new_dock_plugin}
+\alias{._BLOCKR_MODULES_}
 \title{The dock plugin}
 \usage{
 new_dock_plugin()
@@ -16,6 +17,14 @@ The constructor \code{new_dock_plugin()} makes the dock plugin, of class
 \code{c("dock_plugin", "frontend_plugin", "plugin")}, whose plugin class has the
 id \code{blockr.dock-dock_plugin} (see \code{\link[blockr.core:new_plugin]{blockr.core::new_plugin()}}).
 The dock keeps no state in the board, so the constructor takes no args.
+}
+\details{
+The package lists the class in the \code{._BLOCKR_MODULES_} that it exports,
+with its name, "Dock", and its module, \code{js/dock.js} (see
+\code{\link[blockr.core:read_blocks_yml]{blockr.core::read_blocks_yml()}}).
+So \code{\link[blockr.core:available_plugins]{blockr.core::available_plugins()}} gives the class wherever blockr.dock
+is available, and \code{\link[blockr.core:serve]{blockr.core::serve()}} runs the dock in place of core's
+basic frontend.
 }
 \examples{
 new_dock_plugin()
