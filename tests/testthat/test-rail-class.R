@@ -1,136 +1,103 @@
-test_that("rail() builds a rail and gates its arguments", {
+test_that("rail() writes a rail and checks its arguments", {
 
-  rl <- rail(blk("a"), blk("b"), position = "right", active = blk("b"))
+  rl <- rail(blk("a"), plg("b"), position = "right", active = plg("b"))
 
   expect_s3_class(rl, "dock_rail")
-  expect_identical(rl[["position"]], "right")
-  expect_identical(rl[["panels"]], c("block_panel-a", "block_panel-b"))
-  expect_identical(rl[["active"]], "block_panel-b")
+  expect_identical(rl$position, "right")
+  expect_identical(rl$panels, list(blk("a"), plg("b")))
+  expect_identical(rl$active, plg("b"))
 
-  # The first panel fronts by default, and an empty rail has no open tab.
-  expect_identical(rail(blk("a"), blk("b"))[["active"]], "block_panel-a")
-  expect_null(rail()[["active"]])
+  # A rail shows its first panel unless it is given another, and an empty
+  # rail shows none.
+  expect_identical(rail("a", "b")$active, new_panel_ref("a", "bare"))
+  expect_null(rail()$active)
 
-  expect_false(rail(blk("a"))[["collapsed"]])
-  expect_true(rail(blk("a"), collapsed = TRUE)[["collapsed"]])
+  expect_false(rail("a")$collapsed)
+  expect_identical(rail("a")$size, 260)
+  expect_identical(rail("a")$collapsed_size, 35)
+  expect_identical(rail("a", size = 300L)$size, 300)
 
   expect_error(
-    rail(blk("a"), active = blk("b")),
-    class = "dock_rail_active_invalid"
+    rail("a", active = "b"),
+    class = "dock_panels_active_invalid"
   )
   expect_error(
-    rail(blk("a"), collapsed = "yes"),
+    rail("a", collapsed = "yes"),
     class = "dock_rail_collapsed_invalid"
   )
-  expect_error(rail(blk("a"), position = "diagonal"))
-  expect_error(rail(blk("a"), position = "top"))
-  expect_error(rail(blk("a"), size = -1), class = "dock_rail_size_invalid")
+  expect_error(rail("a", position = "diagonal"))
+  expect_error(rail("a", position = "top"))
+  expect_error(rail("a", size = -1), class = "dock_rail_size_invalid")
+  expect_error(rail("a", size = NA_real_), class = "dock_rail_size_invalid")
+  expect_error(
+    rail("a", collapsed_size = c(1, 2)),
+    class = "dock_rail_size_invalid"
+  )
 })
 
-test_that("a grid carries at most one rail per edge", {
+test_that("a grid holds its rails by edge, left before right", {
+
+  grid <- dock_grid(
+    "a",
+    rail("c", position = "right"),
+    rail("b", collapsed = TRUE)
+  )
+
+  expect_named(grid$rails, c("left", "right"))
+  expect_named(
+    grid$rails$left,
+    c("panels", "active", "collapsed", "size", "collapsed_size")
+  )
+  expect_true(grid$rails$left$collapsed)
+
+  # A rail takes no share of the top split.
+  expect_identical(grid$sizes, 1)
+})
+
+test_that("a view has one rail at most on each edge", {
+
+  expect_error(
+    dock_grid(rail("a"), rail("b")),
+    "two on the left edge",
+    class = "dock_rails_position_clash"
+  )
 
   expect_named(
-    view_rail_set(list(rail(blk("a")), rail(blk("b"), position = "right"))),
-    c("left", "right")
-  )
-
-  expect_error(
-    view_rail_set(list(rail(blk("a")), rail(blk("b")))),
-    class = "dock_rails_position_clash"
-  )
-})
-
-test_that("a rail claims a panel that the grid's tree also names", {
-
-  # Both say where the panel goes, so the same panel in both is ambiguous. The
-  # rail wins and the tree loses it, keeping the partition total.
-  grid <- dock_grid("block_panel-a", "block_panel-b", rail(blk("b")))
-
-  expect_identical(grid_tree_ids(grid), "block_panel-a")
-  expect_identical(rail_panel_ids(grid[["rails"]]), "block_panel-b")
-})
-
-test_that("an empty rail at its defaults is not stored", {
-
-  # Every dock offers every edge, so an empty rail at its defaults says
-  # nothing.
-  expect_null(dock_grid("a", rail(position = "right"))[["rails"]])
-
-  # One that sets its geometry is kept, as is one holding panels.
-  expect_named(
-    dock_grid("a", rail(position = "right", size = 300))[["rails"]],
-    "right"
-  )
-  expect_true(
-    dock_grid("a", rail(blk("b"), collapsed = TRUE))[["rails"]][["left"]][[
-      "collapsed"
-    ]]
-  )
-})
-
-test_that("a second rail on the same edge is rejected everywhere", {
-
-  # Dockview allows one group per edge, so every route in has to say so --
-  # including validation, where keying by position makes a duplicate look
-  # well-formed (names and positions agree).
-  expect_error(
-    dock_grid(rail(blk("a")), rail(blk("b"))),
-    class = "dock_rails_position_clash"
-  )
-  expect_error(
-    new_dock_grid(
-      rails = list(
-        new_dock_rail("left", "block_panel-a"),
-        new_dock_rail("left", "block_panel-b")
-      )
-    ),
-    class = "dock_rails_position_clash"
-  )
-  expect_error(
-    validate_dock_grid(
-      structure(
-        list(
-          orientation = "horizontal", children = list(), sizes = numeric(),
-          rails = list(
-            left = new_dock_rail("left", "block_panel-a"),
-            left = new_dock_rail("left", "block_panel-b")
-          )
-        ),
-        class = "dock_grid"
-      )
-    ),
-    class = "dock_rails_position_clash"
-  )
-
-  # Distinct edges are fine.
-  expect_named(
-    dock_grid(rail(blk("a")), rail(blk("b"), position = "right"))[["rails"]],
+    dock_grid(rail("a"), rail("b", position = "right"))$rails,
     c("left", "right")
   )
 })
 
-test_that("a grid gates its rails", {
+test_that("a grid drops a rail that holds no panel, whatever its widths", {
 
-  expect_error(
-    validate_dock_grid(
-      structure(
-        list(orientation = "horizontal", children = list(), sizes = numeric(),
-             rails = list(left = "not a rail")),
-        class = "dock_grid"
-      )
-    ),
-    class = "dock_rail_structure_invalid"
-  )
+  expect_null(dock_grid("a", rail(position = "right", size = 300))$rails)
+  expect_null(dock_grid("a", rail(collapsed = TRUE))$rails)
+})
 
-  # Keyed by the edge each pins to, so a hand-written grid cannot drift.
-  expect_error(
-    validate_dock_grid(
-      structure(
-        list(orientation = "horizontal", children = list(), sizes = numeric(),
-             rails = list(right = new_dock_rail("left"))),
-        class = "dock_grid"
-      )
-    ),
-    class = "dock_rails_ids_missing"
-  )
+test_that("validate_dock_grid() checks the rails of a grid", {
+
+  grid <- dock_grid("a", rail("b"))
+  expect_identical(validate_dock_grid(grid), grid)
+
+  fake <- grid
+  names(fake$rails) <- "top"
+  expect_error(validate_dock_grid(fake), class = "dock_rails_structure_invalid")
+
+  fake <- grid
+  fake$rails$left$collapsed <- "no"
+  expect_error(validate_dock_grid(fake), class = "dock_rail_collapsed_invalid")
+
+  fake <- grid
+  fake$rails$left$size <- -1
+  expect_error(validate_dock_grid(fake), class = "dock_rail_size_invalid")
+
+  fake <- grid
+  fake$rails$left$panels <- list()
+  expect_error(validate_dock_grid(fake), class = "dock_grid_not_canonical")
+})
+
+test_that("a rail prints the ids of its panels", {
+
+  expect_output(print(rail("a", plg("dag"))), "<dock_rail> left: a, dag")
+  expect_identical(str_value(rail()), "<dock_rail> left: (empty)")
 })

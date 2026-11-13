@@ -1,417 +1,91 @@
-# A view's geometry is a `dock_grid`, a compact description that does not
-# depend on dockView.
-# It holds the nesting, the orientation, the sizes of each branch and the
-# focused panel, with no type tags and no volatile ids.
+# A view's grid says which panels the view shows, and where
+# (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.1#grids).
+# As an app script writes it with `dock_grid()`, it has the shape of the grid
+# that the dock's state holds, with a panel reference in place of each panel.
+# Its top split holds an `orientation`, its `children` and their `sizes`, and
+# it holds its rails by edge in `rails`, where it has any.
+# A child is a split, with its `children` and their `sizes`, or a tab group,
+# with its `panels` and the `active` one, which it shows.
+# A rail holds its `panels`, its `active` one, whether it is `collapsed`, and
+# its `size` and `collapsed_size` in pixels.
 #
-# Shape: a `dock_grid` carries an `orientation`, `children`, `sizes` and an
-# optional `focus` and `rails`.
-# A leaf holds its `panels` (a character vector) and its open `active` tab,
-# and a branch holds `children` (nodes) and their `sizes`.
-# The `rails` component is flat like `focus` rather than part of the recursion:
-# a map keyed by edge, each holding the panels pinned there.
-# The tree and the rails partition the panels the grid places -- a railed panel
-# is absent from the tree, which is what puts it outside the splitview.
-# The `children` and `sizes` are parallel, the `sizes` are 0-1 ratios summing
-# to 1, and `focus` is a panel id or NULL.
-# A branch nests, and its split direction alternates with depth (as dockView
-# does), so only the root orientation is stored.
-# Relative sizes ride through verbatim.
+# The functions that write a grid keep each reference as the script gives it,
+# since they know neither the board's blocks nor the names of its plugins.
+# R turns each reference into a panel as it writes the dock's state, with
+# `grid_state()`.
+# A grid is in its canonical form once written: the shares of each split sum
+# to 1, and it holds no tab group, split or rail without a panel.
 
-is_grid_leaf <- function(node) not_null(node[["panels"]])
-
-even_sizes <- function(n) if (n) rep(1 / n, n) else numeric()
-
-normalise_sizes <- function(sizes) {
-
-  if (!length(sizes)) {
-    return(numeric())
-  }
-
-  total <- sum(sizes)
-
-  if (total > 0) sizes / total else sizes
-}
-
-new_dock_grid <- function(children = list(), sizes = NULL,
-                          orientation = "horizontal", focus = NULL,
-                          rails = NULL) {
-
-  content <- list(orientation = orientation, children = children, sizes = sizes)
-
-  if (not_null(focus)) {
-    content[["focus"]] <- focus
-  }
-
-  if (length(rails)) {
-    content[["rails"]] <- view_rail_set(rails)
-  }
-
-  canonicalize_grid(structure(content, class = "dock_grid"))
-}
-
-# The canonical form, computed directly on our shape: every branch's sizes are
-# normalised to ratios summing to 1 (defaulting to an even split when absent),
-# and a `focus` that no longer names a placed panel is dropped -- placed meaning
-# in the tree or in a rail, since a rail's open tab can hold focus too. There
-# are no volatile ids to reassign, so two grids of the same shape are
-# `identical()`.
-canonicalize_grid <- function(grid) {
-
-  norm_children <- function(children, sizes) {
-
-    n <- length(children)
-    sizes <- normalise_sizes(if (length(sizes) == n) sizes else even_sizes(n))
-
-    list(children = lapply(children, norm_node), sizes = sizes)
-  }
-
-  norm_node <- function(node) {
-
-    if (is_grid_leaf(node)) {
-      return(node)
-    }
-
-    norm_children(node[["children"]], node[["sizes"]])
-  }
-
-  root <- norm_children(grid[["children"]], grid[["sizes"]])
-
-  grid[["children"]] <- root[["children"]]
-  grid[["sizes"]] <- root[["sizes"]]
-
-  # The tree and the rails partition what the grid places, so a panel a rail
-  # claims leaves the tree.
-  # Enforcing it here rather than at the call sites makes it a property of the
-  # type: however a grid is built, no panel is in both.
-  # An empty rail at its defaults says nothing -- every dock offers every edge
-  # -- so it is dropped rather than stored, the same way a stale `focus` is.
-  if (length(grid[["rails"]])) {
-    grid[["rails"]] <- Filter(Negate(rail_is_default), grid[["rails"]])
-    if (!length(grid[["rails"]])) grid[["rails"]] <- NULL
-  }
-
-  railed <- rail_panel_ids(grid[["rails"]])
-
-  if (length(railed)) {
-
-    kept <- prune_tree(
-      grid[["children"]], grid[["sizes"]],
-      setdiff(grid_tree_ids(grid), railed)
-    )
-
-    grid[["children"]] <- kept[["children"]]
-    grid[["sizes"]] <- normalise_sizes(kept[["sizes"]])
-  }
-
-  if (not_null(grid[["focus"]]) && !grid[["focus"]] %in% grid_panel_ids(grid)) {
-    grid[["focus"]] <- NULL
-  }
-
-  grid
-}
-
-# All panel ids a grid places: its tree, in reading order (root children first,
-# depth-first), then whatever its rails hold. The two partition the set, so a
-# panel appears exactly once.
-grid_panel_ids <- function(grid) {
-  c(grid_tree_ids(grid), rail_panel_ids(grid[["rails"]]))
-}
-
-# Just the tree half -- what the splitview arranges.
-grid_tree_ids <- function(grid) {
-
-  collect <- function(node) {
-    if (is_grid_leaf(node)) {
-      node[["panels"]]
-    } else {
-      unlst(lapply(node[["children"]], collect))
-    }
-  }
-
-  as.character(unlst(lapply(grid[["children"]], collect)))
-}
-
-#' Canonical view grid
+#' Writing a grid
 #'
-#' A `dock_grid` is a view's geometry in a compact form that does not depend on
-#' dockView: nested splits and tab groups with sizes normalised to 0-1 ratios
-#' and no volatile ids, so two grids of the same shape compare `identical()`.
-#' It is written with [dock_grid()][layout].
-#' The function `as_dock_grid()` casts another `dock_grid` (identity) or a list
-#' of the same shape into one, and is idempotent.
-#' The check `is_dock_grid()` tests the class, and `validate_dock_grid()`
-#' returns its input and errors on a malformed or non-canonical grid, or on one
-#' that places a panel more than once.
+#' A view's grid says which panels the view shows, and where.
+#' Its top split divides the view into tab groups and splits, which divide the
+#' other way, each with its share.
+#' A rail on the left or right edge of the view holds panels outside the
+#' splits.
+#' Each tab group and each rail holds panels, the cards of blocks and the UIs
+#' of plugins, with a tab for each panel.
+#' The functions here write a grid, which [dock_view()] takes:
 #'
-#' @param x Object to cast (a `dock_grid` or a list), validate, or test.
-#' @param ... Passed on to methods.
-#' @return `as_dock_grid()` and `validate_dock_grid()` a `dock_grid`;
-#'   `is_dock_grid()` a boolean.
-#' @name dock-grid
-#' @export
-as_dock_grid <- function(x, ...) {
-  UseMethod("as_dock_grid")
-}
-
-#' @rdname dock-grid
-#' @export
-is_dock_grid <- function(x) {
-  inherits(x, "dock_grid")
-}
-
-#' @rdname dock-grid
-#' @export
-validate_dock_grid <- function(x) {
-
-  if (!is_dock_grid(x)) {
-    blockr_abort(
-      "Expecting a `dock_grid` object.",
-      class = "dock_grid_structure_invalid"
-    )
-  }
-
-  if (!is.list(x) ||
-        !all(c("orientation", "children", "sizes") %in% names(x))) {
-    blockr_abort(
-      "A `dock_grid` must carry `orientation`, `children` and `sizes`.",
-      class = "dock_grid_structure_invalid"
-    )
-  }
-
-  unexpected <- setdiff(
-    names(x), c("orientation", "children", "sizes", "focus", "rails")
-  )
-
-  if (length(unexpected)) {
-    blockr_abort(
-      "Unexpected `dock_grid` component{?s} {unexpected}.",
-      class = "dock_grid_structure_invalid"
-    )
-  }
-
-  validate_grid_rails(x[["rails"]])
-
-  if (!grid_sizes_canonical(x)) {
-    blockr_abort(
-      "A `dock_grid` must be canonical: each branch's sizes sum to 1.",
-      class = "dock_grid_not_canonical"
-    )
-  }
-
-  # A grid says where each panel goes, so a panel it places twice -- twice in
-  # the tree, twice in one rail, or once in each of two rails -- has no
-  # arrangement to express.
-  # The tree/rail overlap `canonicalize_grid()` prunes has a principled winner
-  # (the rail claims the panel), while two occurrences of the same kind have
-  # none, so first-wins would apply an arbitrary choice quietly to someone's
-  # layout.
-  # Hence a rejection here rather than a dedup there, where the grid is
-  # written.
-  placed <- grid_panel_ids(x)
-  dup <- unique(placed[duplicated(placed)])
-
-  if (length(dup)) {
-    blockr_abort(
-      "A `dock_grid` places each panel once, but {dup} {?is/are} placed more \\
-       than once.",
-      class = "dock_grid_panel_duplicated"
-    )
-  }
-
-  invisible(x)
-}
-
-#' @export
-as_dock_grid.dock_grid <- function(x, ...) x
-
-#' @export
-as_dock_grid.list <- function(x, ...) {
-
-  new_dock_grid(
-    children = coal(x[["children"]], list(), fail_all = FALSE),
-    sizes = x[["sizes"]],
-    orientation = coal(x[["orientation"]], "horizontal", fail_all = FALSE),
-    focus = x[["focus"]],
-    rails = lapply(x[["rails"]], as_dock_rail)
-  )
-}
-
-#' @export
-as.list.dock_grid <- function(x, ...) {
-
-  x <- unclass(x)
-  x[["rails"]] <- lapply(x[["rails"]], unclass)
-
-  x
-}
-
-# Each branch splits its extent among its direct children, so their sizes are
-# ratios summing to 1; a leaf carries no children to constrain. Empty branches
-# (no children) are vacuously canonical.
-grid_sizes_canonical <- function(grid) {
-
-  ok <- TRUE
-
-  walk <- function(children, sizes) {
-
-    if (length(children) && !isTRUE(all.equal(sum(sizes), 1))) {
-      ok <<- FALSE
-    }
-
-    for (node in children) {
-      if (!is_grid_leaf(node)) {
-        walk(node[["children"]], node[["sizes"]])
-      }
-    }
-  }
-
-  walk(grid[["children"]], grid[["sizes"]])
-
-  ok
-}
-
-#' @export
-str_value.dock_grid <- function(x, ...) {
-  str_value_ids(x, "dock_grid")
-}
-
-#' @importFrom utils str
-#' @export
-str.dock_grid <- function(object, ...) {
-  cat(" ", str_value(object), "\n", sep = "")
-  invisible(object)
-}
-
-#' @export
-format.dock_grid <- function(x, ..., bare = TRUE) {
-  format_grid_tree(x, "dock_grid", bare)
-}
-
-#' @export
-print.dock_grid <- function(x, ...) {
-  cat(format(x, ...), sep = "\n")
-  invisible(x)
-}
-
-# Keep only the leaf panels in `members`, dropping any leaf or branch left
-# empty.
-# The function `canonicalize_grid()` prunes what the rails have claimed with it.
-prune_tree <- function(children, sizes, members) {
-
-  prune <- function(children, sizes) {
-
-    keep <- lgl_ply(children, function(node) not_null(prune_node(node)))
-
-    list(
-      children = lapply(children[keep], prune_node),
-      sizes = sizes[keep]
-    )
-  }
-
-  prune_node <- function(node) {
-
-    if (is_grid_leaf(node)) {
-
-      kept <- intersect(node[["panels"]], members)
-
-      if (!length(kept)) {
-        return(NULL)
-      }
-
-      active <- node[["active"]]
-      keep_active <- not_null(active) && active %in% kept
-
-      list(
-        panels = kept,
-        active = if (keep_active) active else kept[[1L]]
-      )
-    } else {
-
-      pruned <- prune(node[["children"]], node[["sizes"]])
-
-      if (!length(pruned[["children"]])) {
-        return(NULL)
-      }
-
-      pruned
-    }
-  }
-
-  prune(children, sizes)
-}
-
-#' Dock grid authoring
+#' * The function `dock_grid(...)` writes the grid.
+#'   Its `...` are what its top split holds, in order, and its rails.
+#'   A panel reference or a bare id is a tab group of that panel alone, and a
+#'   character vector a tab group with a tab for each of its ids.
+#'   A list is a split, which gives each of its children an equal share.
+#' * The function `panels(..., active = NULL)` writes a tab group of the
+#'   panels given.
+#'   It shows `active`, or its first panel where `active` is `NULL`.
+#' * The function `group(..., sizes = NULL)` writes a split, which divides
+#'   the other way from the split that holds it, with the share of each child
+#'   in `sizes`.
+#' * The function `rail(..., position = "left")` writes a rail, which holds
+#'   the panels given on the edge of the view that `position` names.
+#'   The grid takes it among the children of `dock_grid()`, but it is none of
+#'   them, so it takes no share in `sizes`.
 #'
-#' A [dock_grid][dock-grid] is a view's geometry: the arrangement of its
-#' panels into nested splits and tab groups, with sizes.
-#' The function `dock_grid()` is the authoring DSL that builds one.
+#' A grid names each panel by a panel reference, as [blk()] and [plg()] write
+#' them, or by a bare id.
+#' It keeps each reference as written, since it knows neither the board's
+#' blocks nor the names of its plugins, which [new_dock_board()] resolves.
 #'
-#' Construct a grid with:
+#' The shares in `sizes` are positive numbers, which need not sum to 1, since
+#' the grid scales them to ratios that do.
+#' A split without `sizes` gives each of its children an equal share.
+#' The grid drops a tab group, split or rail that holds no panel, and the
+#' share of the one it drops goes to its siblings, in proportion.
+#' The functions refuse a share that is not positive, and a rail's width that
+#' is below 0.
 #'
-#' * `dock_grid(...)`: the view-level container. Its `...` are the
-#'   children of the root branch. Bare strings become single-panel
-#'   leaves, character vectors become tabbed leaves, lists become
-#'   nested branches. Use [panels()] for a tabbed leaf with an explicit
-#'   open tab, and [group()] for a branch with explicit sizes.
-#' * `panels(..., active = NULL)`: a tabbed leaf whose tab strip holds
-#'   the given panel ids. `active` selects the initially-open tab; the
-#'   first id wins by default. A single-panel `panels()` is permitted
-#'   but redundant (a bare string is equivalent).
-#' * `group(..., sizes = NULL)`: a branch container. `sizes` is a
-#'   numeric vector parallel to `...` that overrides the even split.
-#' * `rail(..., position = "left")`: a tab group pinned to one edge of
-#'   the view rather than arranged by the splitview. Write it among the
-#'   grid's children; it is not one, so it never counts towards `sizes`,
-#'   and the members it names leave the grid tree.
-#'
-#' The function `dock_grid()` accepts `orientation = "horizontal" |
-#' "vertical"` for the top-level split direction and `sizes` for the
-#' root-branch ratios.
-#'
-#' @param ... For `dock_grid()` and `group()`, grid children (`blk()`
-#'   references, bare ids, character vectors, lists, `panels()`, or
-#'   `group()`).
-#'   For `panels()` and `rail()`, panel references or ids.
-#' @param orientation Top-level split direction; one of `"horizontal"`
-#'   (default) or `"vertical"`.
-#' @param active For `panels()` and `rail()`, the id of the tab to open by
-#'   default.
-#' @param position For `rail()`, the edge the rail pins to; `"left"` (the
-#'   default) or `"right"`.
-#' @param collapsed For `rail()`, whether it opens collapsed to its bare tab
-#'   strip. A user collapses a rail by clicking its open tab, and that choice
-#'   is stored, so a restored board comes back the way it was left.
-#' @param size,collapsed_size For `rail()`, its width (or height, on a
-#'   horizontal edge) in pixels when open and when collapsed to its bare tab
-#'   strip.
-#' @param sizes Numeric vector parallel to `...`, giving each child's
-#'   share of the parent (positive; need not sum to 1).
+#' @param ... For `dock_grid()` and `group()`, what the split holds: panel
+#'   references, bare ids, character vectors, lists, `panels()` and `group()`,
+#'   and for `dock_grid()` alone, `rail()`.
+#'   For `panels()` and `rail()`, the panels, as panel references or bare ids.
+#' @param orientation How the top split divides the view: `"horizontal"`, the
+#'   default, puts its children side by side, and `"vertical"` one above the
+#'   other.
+#' @param active For `panels()` and `rail()`, the panel that it shows, which
+#'   is its first where `active` is `NULL`.
+#' @param position For `rail()`, the edge of the view that it sits on,
+#'   `"left"`, the default, or `"right"`.
+#' @param collapsed For `rail()`, whether it shows its tabs alone.
+#' @param size,collapsed_size For `rail()`, its width in pixels while it is
+#'   open and while it is collapsed.
+#' @param sizes The share of each child of the split, positive numbers, one
+#'   for each child.
 #'
 #' @examples
-#' # Panels named with typed references; bare id strings work too
-#' panels(blk("a"), blk("b"), active = blk("b"))
+#' # A tab group of a and b, which shows b, beside c
+#' dock_grid(panels("a", "b", active = "b"), "c", sizes = c(0.3, 0.7))
 #'
-#' # Branch with explicit child ratios
-#' group(blk("a"), blk("b"), sizes = c(0.3, 0.7))
+#' # The block a above a split of b and c
+#' dock_grid("a", group("b", "c"), orientation = "vertical")
 #'
-#' # A block panel beside a tabbed block leaf
-#' dock_grid(
-#'   blk("a"),
-#'   panels(blk("b"), blk("c"), active = blk("c")),
-#'   sizes = c(0.3, 0.7)
-#' )
+#' # The block a, with the DAG on a rail on the left edge
+#' dock_grid(blk("a"), rail(plg("blockr.dag-dag_plugin")))
 #'
-#' # Vertical top-level split
-#' dock_grid(blk("a"), blk("b"), orientation = "vertical")
-#'
-#' # A block parked on the left edge, out of the splitview
-#' dock_grid(blk("a"), rail(blk("b"), position = "left"))
-#'
-#' @return The function `dock_grid()` returns a [dock_grid][dock-grid] object,
-#' `panels()` a `dock_panels` node and `group()` a `dock_group` node, both
-#' grid sub-trees usable inside `dock_grid()` / `group()`.
-#' A `rail()` is a `dock_rail`, written among a grid's children but pinned
-#' outside the splitview.
+#' @return The function `dock_grid()` returns a `dock_grid`.
+#'   The function `panels()` returns a tab group, `group()` a split and
+#'   `rail()` a `dock_rail`, which `dock_grid()` takes.
 #'
 #' @rdname layout
 #' @export
@@ -421,59 +95,44 @@ dock_grid <- function(..., orientation = c("horizontal", "vertical"),
   orientation <- match.arg(orientation)
   nodes <- list(...)
 
-  # A `rail()` sits among the children as written, but it is not one: it is
-  # pinned outside the splitview, so it never counts towards `sizes`.
   railed <- lgl_ply(nodes, is_dock_rail)
   children <- nodes[!railed]
 
-  validate_sizes(sizes, children)
+  check_sizes(sizes, length(children))
 
-  new_dock_grid(
-    children = lapply(children, build_grid_node),
-    sizes = sizes,
-    orientation = orientation,
-    rails = nodes[railed]
+  grid <- c(
+    list(orientation = orientation),
+    grid_split(lapply(children, grid_node), sizes)
   )
+
+  rails <- grid_rails(nodes[railed])
+
+  if (length(rails)) {
+    grid[["rails"]] <- rails
+  }
+
+  validate_dock_grid(structure(grid, class = "dock_grid"))
 }
 
 #' @rdname layout
 #' @export
 panels <- function(..., active = NULL) {
-  ids <- chr_ply(list(...), as_panel_string)
 
-  if (!is.null(active)) {
-    active <- as_panel_string(active)
-  }
+  refs <- as_panel_refs(list(...))
 
-  if (length(ids) && !is.null(active)) {
-
-    if (!is_string(active) || !active %in% ids) {
-      blockr_abort(
-        "`active` must be one of the panel ids.",
-        class = "dock_panels_active_invalid"
-      )
-    }
-  }
-
-  new_dock_panels(ids, active = active)
+  structure(
+    list(panels = refs, active = active_panel_ref(active, refs)),
+    class = c("dock_panels", "dock_node")
+  )
 }
 
 #' @rdname layout
 #' @export
 group <- function(..., sizes = NULL) {
+
   children <- list(...)
-  validate_sizes(sizes, children)
-  new_dock_group(children, sizes)
-}
+  check_sizes(sizes, length(children))
 
-new_dock_panels <- function(ids, active = NULL) {
-  structure(
-    list(views = as.list(ids), active = active),
-    class = c("dock_panels", "dock_node")
-  )
-}
-
-new_dock_group <- function(children, sizes = NULL) {
   structure(
     list(children = children, sizes = sizes),
     class = c("dock_group", "dock_node")
@@ -488,180 +147,423 @@ is_dock_group <- function(x) {
   inherits(x, "dock_group")
 }
 
-validate_sizes <- function(sizes, children) {
+# The shares that a script gives the children of a split, `n` of them: one
+# positive number for each, as the schema of the dock's state has them.
+check_sizes <- function(sizes, n) {
+
   if (is.null(sizes)) {
-    return(invisible(NULL))
+    return(invisible())
   }
 
-  if (!is.numeric(sizes) || length(sizes) != length(children) ||
-        any(sizes <= 0)) {
+  if (!is.numeric(sizes) || is.object(sizes)) {
     blockr_abort(
-      paste(
-        "`sizes` must be a positive numeric vector of length equal to",
-        "the number of children."
-      ),
+      "The argument `sizes` gives the shares of a split's children, as ",
+      "numbers.",
       class = "dock_layout_sizes_invalid"
     )
   }
 
-  invisible(NULL)
+  if (length(sizes) != n) {
+    blockr_abort(
+      "The argument `sizes` gives a share for each of the split's {n} ",
+      "child{?ren}, while it gives {length(sizes)}.",
+      class = "dock_layout_sizes_invalid"
+    )
+  }
+
+  bad <- as.character(sizes[is.na(sizes) | !is.finite(sizes) | sizes <= 0])
+
+  if (length(bad)) {
+    blockr_abort(
+      "A share in `sizes` is a positive number, which the share{?s} {bad} ",
+      "{?is/are} not.",
+      class = "dock_layout_sizes_invalid"
+    )
+  }
+
+  invisible()
 }
 
-# Render a `dock_grid` as an indented tree under a `<label>` header, reading
-# our compact shape directly.
-format_grid_tree <- function(x, label, bare) {
+# A child of a split, from what a script gives: a panel reference or bare ids
+# for a tab group, `panels()` for a tab group, and `group()` or a list for a
+# split. It is `NULL` where it holds no panel.
+grid_node <- function(x) {
 
-  orientation <- coal(x[["orientation"]], "horizontal", fail_all = FALSE)
+  if (is_dock_rail(x)) {
+    blockr_abort(
+      "A rail sits on an edge of the view, so `dock_grid()` takes it, and ",
+      "neither `group()` nor a list does.",
+      class = "dock_layout_node_invalid"
+    )
+  }
 
-  header <- paste0("<", label, "> ", orientation)
-  children <- x[["children"]]
+  if (is_dock_panels(x)) {
+    return(tab_group(x[["panels"]], x[["active"]]))
+  }
 
-  if (!length(children)) {
+  if (is_dock_group(x)) {
+    return(nested_split(lapply(x[["children"]], grid_node), x[["sizes"]]))
+  }
+
+  if (is_panel_ref(x) || (is.character(x) && !is.object(x))) {
+    return(tab_group(as_panel_refs(x)))
+  }
+
+  if (is.list(x) && !is.object(x)) {
+    return(nested_split(lapply(x, grid_node)))
+  }
+
+  blockr_abort(
+    "A grid holds panel references, bare ids, `panels()`, `group()` and ",
+    "lists, and not an object of class {class(x)[1L]}.",
+    class = "dock_layout_node_invalid"
+  )
+}
+
+# A tab group of `panels`, which shows `active`, or its first panel where
+# `active` is `NULL`. It is `NULL` where it holds no panel.
+tab_group <- function(panels, active = NULL) {
+
+  if (!length(panels)) {
+    return(NULL)
+  }
+
+  list(panels = panels, active = coal(active, panels[[1L]], fail_all = FALSE))
+}
+
+# A split inside another, which is `NULL` where it holds nothing.
+nested_split <- function(nodes, sizes = NULL) {
+
+  split <- grid_split(nodes, sizes)
+
+  if (!length(split[["children"]])) {
+    return(NULL)
+  }
+
+  split
+}
+
+# A split of `nodes`, with the share of each in `sizes`, or an equal share for
+# each where `sizes` is `NULL`.
+# A node that holds no panel, which `grid_node()` gives as `NULL`, leaves the
+# split with its share, and the shares that stay are scaled to sum to 1.
+grid_split <- function(nodes, sizes = NULL) {
+
+  sizes <- as.double(coal(sizes, rep(1, length(nodes)), fail_all = FALSE))
+  keep <- !lgl_ply(nodes, is.null)
+
+  list(children = nodes[keep], sizes = sizes[keep] / sum(sizes[keep]))
+}
+
+#' Grids
+#'
+#' A `dock_grid` is a view's grid, as [dock_grid()][layout] writes it.
+#' The function `is_dock_grid()` tests whether an object is one.
+#' The function `validate_dock_grid()` returns a grid, and refuses one that is
+#' not in its canonical form, as `dock_grid()` writes it.
+#' In that form, the shares of each split are positive and sum to 1.
+#' No tab group, split or rail is empty, and each tab group and rail shows one
+#' of its own panels.
+#' A view has at most one rail on each of its two edges, left and right.
+#'
+#' @param x An object.
+#'
+#' @return The function `is_dock_grid()` returns a boolean, and
+#'   `validate_dock_grid()` its input, invisibly.
+#'
+#' @examples
+#' grid <- dock_grid("a", "b", sizes = c(1, 3))
+#' is_dock_grid(grid)
+#' grid$sizes
+#'
+#' @name dock-grid
+#' @export
+is_dock_grid <- function(x) {
+  inherits(x, "dock_grid")
+}
+
+#' @rdname dock-grid
+#' @export
+validate_dock_grid <- function(x) {
+
+  if (!is_dock_grid(x) || !is.list(x)) {
+    blockr_abort(
+      "Expecting a `dock_grid` object.",
+      class = "dock_grid_structure_invalid"
+    )
+  }
+
+  fields <- c("orientation", "children", "sizes", "rails")
+
+  if (!all(fields[1:3] %in% names(x)) || !all(names(x) %in% fields)) {
+    blockr_abort(
+      "A `dock_grid` holds its `orientation`, `children` and `sizes`, and ",
+      "its `rails` where it has any.",
+      class = "dock_grid_structure_invalid"
+    )
+  }
+
+  if (!is_string(x[["orientation"]]) ||
+        !x[["orientation"]] %in% c("horizontal", "vertical")) {
+    blockr_abort(
+      "The orientation of a `dock_grid` is \"horizontal\" or \"vertical\".",
+      class = "dock_grid_structure_invalid"
+    )
+  }
+
+  check_split <- function(node, top = FALSE) {
+
+    children <- node[["children"]]
+    sizes <- node[["sizes"]]
+
+    if (!is.list(children) || (!top && !length(children)) ||
+          !is.numeric(sizes) || length(sizes) != length(children) ||
+          any(sizes <= 0) ||
+          (length(sizes) && !isTRUE(all.equal(sum(sizes), 1)))) {
+      blockr_abort(
+        "A `dock_grid` must be canonical: each split holds a child, and its ",
+        "shares are positive and sum to 1.",
+        class = "dock_grid_not_canonical"
+      )
+    }
+
+    for (child in children) {
+      if (not_null(child[["panels"]])) {
+        check_tab_group(child, "tab group")
+      } else {
+        check_split(child)
+      }
+    }
+  }
+
+  check_split(x, top = TRUE)
+
+  validate_grid_rails(x[["rails"]])
+
+  invisible(x)
+}
+
+# A tab group, or a rail, `what`, holds panel references and shows one of
+# them.
+check_tab_group <- function(x, what) {
+
+  refs <- x[["panels"]]
+
+  if (!is.list(refs) || !length(refs) || !all(lgl_ply(refs, is_panel_ref)) ||
+        !any(lgl_ply(refs, identical, x[["active"]]))) {
+    blockr_abort(
+      "A {what} of a `dock_grid` holds panel references and shows one of ",
+      "them.",
+      class = "dock_grid_not_canonical"
+    )
+  }
+
+  invisible(x)
+}
+
+# The grid with `f()` applied to each of its panels, in its tab groups and on
+# its rails, which keeps its shape. Since a rail holds `panels`, the walk
+# takes it as it takes a tab group.
+map_grid_panels <- function(grid, f) {
+
+  node <- function(x) {
+
+    if (not_null(x[["panels"]])) {
+      x[["panels"]] <- lapply(x[["panels"]], f)
+      x[["active"]] <- f(x[["active"]])
+    } else {
+      x[["children"]] <- lapply(x[["children"]], node)
+    }
+
+    x
+  }
+
+  grid[["children"]] <- lapply(grid[["children"]], node)
+
+  if (length(grid[["rails"]])) {
+    grid[["rails"]] <- lapply(grid[["rails"]], node)
+  }
+
+  grid
+}
+
+# The grid as the dock's state holds it, with the panel that `resolve()`
+# gives for each reference, as `list(block = "a")`.
+grid_state <- function(grid, resolve) {
+  map_grid_panels(unclass(grid), resolve)
+}
+
+# A grid of the dock's state as `dock_grid()` writes it, with a reference to
+# each panel, as `blk()` and `plg()` write them.
+grid_from_state <- function(grid) {
+  structure(map_grid_panels(grid, panel_ref_of), class = "dock_grid")
+}
+
+# The panels that a grid places, in reading order: those of its tab groups,
+# depth first, then those of its rails, left before right.
+grid_panels <- function(grid) {
+
+  flat <- function(x) coal(unlst(x), list(), fail_all = FALSE)
+
+  walk <- function(x) {
+
+    if (not_null(x[["panels"]])) {
+      return(x[["panels"]])
+    }
+
+    flat(lapply(x[["children"]], walk))
+  }
+
+  c(
+    flat(lapply(grid[["children"]], walk)),
+    flat(lst_xtr(grid[["rails"]], "panels"))
+  )
+}
+
+# The default grid over a view's panels, which R writes for a view that the
+# script gives panels in place of a grid: the plugins' panels in one tab
+# group, beside the blocks' panels in another, as today's `default_grid()`
+# does.
+default_grid <- function(panels) {
+
+  plugin <- lgl_ply(panels, function(panel) not_null(panel[["plugin"]]))
+  groups <- Filter(length, list(panels[plugin], panels[!plugin]))
+
+  c(list(orientation = "horizontal"), grid_split(lapply(groups, tab_group)))
+}
+
+# The panels that a grid of the dock's state places more than once, each
+# named as a sentence names it.
+panels_placed_twice <- function(grid) {
+  labels <- chr_ply(grid_panels(grid), panel_label)
+  unique(labels[duplicated(labels)])
+}
+
+#' @export
+str_value.dock_grid <- function(x, ...) {
+
+  ids <- chr_xtr(grid_panels(x), "id")
+
+  if (!length(ids)) {
+    return("<dock_grid> (empty)")
+  }
+
+  paste0("<dock_grid> ", paste0(ids, collapse = ", "))
+}
+
+#' @importFrom utils str
+#' @export
+str.dock_grid <- function(object, ...) {
+  cat(" ", str_value(object), "\n", sep = "")
+  invisible(object)
+}
+
+#' @export
+format.dock_grid <- function(x, ...) {
+
+  header <- paste0("<dock_grid> ", x[["orientation"]])
+
+  if (!length(x[["children"]]) && !length(x[["rails"]])) {
     return(paste0(header, " (empty)"))
   }
 
+  rails <- Map(
+    function(rail, edge) {
+      c(
+        paste0(edge, " rail", grid_attrs(if (rail[["collapsed"]]) "collapsed")),
+        format_tabs(rail, "")
+      )
+    },
+    x[["rails"]],
+    names(x[["rails"]])
+  )
+
   c(
     header,
-    format_dock_nodes(
-      children, x[["sizes"]], orientation, x[["focus"]], bare,
-      prefix = ""
-    )
+    format_nodes(x[["children"]], x[["sizes"]], x[["orientation"]], ""),
+    unlst(rails)
   )
 }
 
-str_value_ids <- function(x, label) {
-
-  ids <- panel_obj_ids(grid_panel_ids(x))
-
-  if (!length(ids)) {
-    return(paste0("<", label, "> (empty)"))
-  }
-
-  paste0("<", label, "> ", paste0(ids, collapse = ", "))
+#' @export
+print.dock_grid <- function(x, ...) {
+  cat(format(x, ...), sep = "\n")
+  invisible(x)
 }
 
-flip_orientation <- function(x) {
-  if (identical(x, "horizontal")) "vertical" else "horizontal"
-}
-
-format_dock_nodes <- function(children, sizes, orientation, focus, bare,
-                              prefix) {
+# The lines of a split's children, as a tree under `prefix`.
+format_nodes <- function(children, sizes, orientation, prefix) {
 
   n <- length(children)
 
-  render_one <- function(i) {
+  lines <- lapply(
+    seq_len(n),
+    function(i) {
 
-    last <- i == n
-    branch <- if (last) "\u2514\u2500 " else "\u251c\u2500 "
-    indent <- if (last) "   " else "\u2502  "
+      last <- i == n
+      branch <- paste0(prefix, if (last) "\u2514\u2500 " else "\u251c\u2500 ")
+      indent <- paste0(prefix, if (last) "   " else "\u2502  ")
 
-    format_dock_node(
-      children[[i]],
-      orientation,
-      if (length(sizes)) sizes[[i]] else NULL,
-      focus,
-      bare,
-      paste0(prefix, branch),
-      paste0(prefix, indent)
-    )
-  }
-
-  unlst(lapply(seq_len(n), render_one))
-}
-
-format_dock_node <- function(node, orientation, size, focus, bare,
-                             line_prefix, child_prefix) {
-
-  if (is_grid_leaf(node)) {
-
-    if (length(node[["panels"]]) == 1L) {
-
-      id <- node[["panels"]][[1L]]
-
-      paste0(
-        line_prefix,
-        dock_panel_label(id, bare),
-        dock_attrs(dock_size_label(size), dock_focus_label(id, focus))
-      )
-
-    } else {
-
-      format_dock_tabs(node, size, focus, bare, line_prefix, child_prefix)
+      format_node(children[[i]], sizes[[i]], orientation, branch, indent)
     }
-
-  } else if (not_null(node[["children"]])) {
-
-    format_dock_branch(
-      node, orientation, size, focus, bare, line_prefix, child_prefix
-    )
-
-  } else {
-
-    blockr_abort(
-      "Encountered an unknown grid node while formatting.",
-      class = "dock_layout_format_invalid"
-    )
-  }
-}
-
-format_dock_branch <- function(node, orientation, size, focus, bare,
-                               line_prefix, child_prefix) {
-
-  orientation <- flip_orientation(orientation)
-
-  c(
-    paste0(
-      line_prefix, "group",
-      dock_attrs(orientation, dock_size_label(size))
-    ),
-    format_dock_nodes(
-      node[["children"]], node[["sizes"]], orientation, focus, bare,
-      child_prefix
-    )
   )
+
+  unlst(lines)
 }
 
-format_dock_tabs <- function(node, size, focus, bare, line_prefix,
-                             child_prefix) {
+format_node <- function(node, size, orientation, branch, indent) {
 
-  tabs <- chr_ply(node[["panels"]], identity)
-  active <- coal(node[["active"]], tabs[[1L]], fail_all = FALSE)
-  n <- length(tabs)
+  share <- paste0(round(100 * size), "%")
 
-  render_tab <- function(i) {
+  if (not_null(node[["children"]])) {
 
-    branch <- if (i == n) "\u2514\u2500 " else "\u251c\u2500 "
-    id <- tabs[[i]]
+    inner <- setdiff(c("horizontal", "vertical"), orientation)
 
-    paste0(
-      child_prefix, branch,
-      dock_panel_label(id, bare),
-      dock_attrs(
-        if (identical(id, active)) "active",
-        dock_focus_label(id, focus)
+    return(
+      c(
+        paste0(branch, "group", grid_attrs(inner, share)),
+        format_nodes(node[["children"]], node[["sizes"]], inner, indent)
       )
     )
   }
 
-  c(
-    paste0(line_prefix, "tabs", dock_attrs(dock_size_label(size))),
-    unlst(lapply(seq_len(n), render_tab))
+  if (length(node[["panels"]]) == 1L) {
+    ref <- node[["panels"]][[1L]]
+    return(paste0(branch, ref[["id"]], grid_attrs(ref_kind(ref), share)))
+  }
+
+  c(paste0(branch, "tabs", grid_attrs(share)), format_tabs(node, indent))
+}
+
+# The lines of the tabs of a tab group or a rail, under `prefix`.
+format_tabs <- function(node, prefix) {
+
+  refs <- node[["panels"]]
+  n <- length(refs)
+
+  chr_ply(
+    seq_len(n),
+    function(i) {
+      ref <- refs[[i]]
+      paste0(
+        prefix,
+        if (i == n) "\u2514\u2500 " else "\u251c\u2500 ",
+        ref[["id"]],
+        grid_attrs(
+          ref_kind(ref),
+          if (identical(ref, node[["active"]]) && n > 1L) "active"
+        )
+      )
+    }
   )
 }
 
-dock_panel_label <- function(id, bare) {
-  if (isTRUE(bare)) panel_obj_ids(id) else id
+# How the tree marks the panel of a plugin, which it names by its id alone.
+ref_kind <- function(ref) {
+  if (identical(ref[["type"]], "plugin")) "plugin"
 }
 
-dock_size_label <- function(size) {
-  if (is.null(size)) NULL else paste0(round(100 * size), "%")
-}
-
-dock_focus_label <- function(id, focus) {
-  if (not_null(focus) && identical(id, focus)) "focus" else NULL
-}
-
-dock_attrs <- function(...) {
+grid_attrs <- function(...) {
 
   tokens <- c(...)
 
@@ -670,56 +572,4 @@ dock_attrs <- function(...) {
   }
 
   paste0(" (", paste(tokens, collapse = ", "), ")")
-}
-
-# Build a compact grid node from a user-facing DSL spec. Accepts:
-#   - character (single or vector) → leaf (single id, or tabs for a vector)
-#   - dock_panels                  → leaf with the given active tab
-#   - dock_group                   → branch with the given sizes
-#   - bare list                    → branch (even split)
-build_grid_node <- function(node) {
-
-  if (is_panel_ref(node)) {
-    node <- as_panel_string(node)
-  }
-
-  if (is.character(node)) {
-    return(list(panels = node, active = node[[1L]]))
-  }
-
-  if (is_dock_panels(node)) {
-
-    ids <- chr_ply(node[["views"]], identity)
-
-    return(
-      list(
-        panels = ids,
-        active = coal(node[["active"]], ids[[1L]], fail_all = FALSE)
-      )
-    )
-  }
-
-  if (is_dock_group(node)) {
-    return(
-      list(
-        children = lapply(node[["children"]], build_grid_node),
-        sizes = coal(node[["sizes"]], even_sizes(length(node[["children"]])),
-                     fail_all = FALSE)
-      )
-    )
-  }
-
-  if (is.list(node)) {
-    return(
-      list(
-        children = lapply(node, build_grid_node),
-        sizes = even_sizes(length(node))
-      )
-    )
-  }
-
-  blockr_abort(
-    "Unknown layout node type: {class(node)}.",
-    class = "dock_layout_node_invalid"
-  )
 }

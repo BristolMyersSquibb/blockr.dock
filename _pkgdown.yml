@@ -18,19 +18,20 @@ reference:
     - new_compact_option
     - new_view_tabs_option
     - new_sync_rails_option
-- title: Dock layout
-  desc: Tools for defining panel arrangements.
+- title: Dock board
+  desc: The board that an app script builds for the dock, and its readers.
+  contents:
+    - new_dock_board
+- title: Views and folders
+  desc: The views that the dock shows, and the folders that group them.
+  contents:
+    - dock_view
+- title: Grids
+  desc: Which panels a view shows, and where.
   contents:
     - dock_grid
-- title: Dock grid
-  desc: A view's geometry in canonical form.
-  contents:
-    - as_dock_grid
-- title: Panel IDs
-  desc: The canonical panel IDs a grid references.
-  contents:
-    - as_dock_panel_id
+    - is_dock_grid
 - title: Panel references
-  desc: Typed references to block panels for the functions that write a grid.
+  desc: The references by which a grid names the panels of blocks and plugins.
   contents:
     - blk

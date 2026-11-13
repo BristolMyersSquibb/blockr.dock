@@ -5,7 +5,7 @@
 \alias{panels}
 \alias{group}
 \alias{rail}
-\title{Dock grid authoring}
+\title{Writing a grid}
 \usage{
 dock_grid(..., orientation = c("horizontal", "vertical"), sizes = NULL)
 
@@ -23,84 +23,84 @@ rail(
 )
 }
 \arguments{
-\item{...}{For \code{dock_grid()} and \code{group()}, grid children (\code{blk()}
-references, bare ids, character vectors, lists, \code{panels()}, or
-\code{group()}).
-For \code{panels()} and \code{rail()}, panel references or ids.}
+\item{...}{For \code{dock_grid()} and \code{group()}, what the split holds: panel
+references, bare ids, character vectors, lists, \code{panels()} and \code{group()},
+and for \code{dock_grid()} alone, \code{rail()}.
+For \code{panels()} and \code{rail()}, the panels, as panel references or bare ids.}
 
-\item{orientation}{Top-level split direction; one of \code{"horizontal"}
-(default) or \code{"vertical"}.}
+\item{orientation}{How the top split divides the view: \code{"horizontal"}, the
+default, puts its children side by side, and \code{"vertical"} one above the
+other.}
 
-\item{sizes}{Numeric vector parallel to \code{...}, giving each child's
-share of the parent (positive; need not sum to 1).}
+\item{sizes}{The share of each child of the split, positive numbers, one
+for each child.}
 
-\item{active}{For \code{panels()} and \code{rail()}, the id of the tab to open by
-default.}
+\item{active}{For \code{panels()} and \code{rail()}, the panel that it shows, which
+is its first where \code{active} is \code{NULL}.}
 
-\item{position}{For \code{rail()}, the edge the rail pins to; \code{"left"} (the
-default) or \code{"right"}.}
+\item{position}{For \code{rail()}, the edge of the view that it sits on,
+\code{"left"}, the default, or \code{"right"}.}
 
-\item{collapsed}{For \code{rail()}, whether it opens collapsed to its bare tab
-strip. A user collapses a rail by clicking its open tab, and that choice
-is stored, so a restored board comes back the way it was left.}
+\item{collapsed}{For \code{rail()}, whether it shows its tabs alone.}
 
-\item{size, collapsed_size}{For \code{rail()}, its width (or height, on a
-horizontal edge) in pixels when open and when collapsed to its bare tab
-strip.}
+\item{size, collapsed_size}{For \code{rail()}, its width in pixels while it is
+open and while it is collapsed.}
 }
 \value{
-The function \code{dock_grid()} returns a \link[=dock-grid]{dock_grid} object,
-\code{panels()} a \code{dock_panels} node and \code{group()} a \code{dock_group} node, both
-grid sub-trees usable inside \code{dock_grid()} / \code{group()}.
-A \code{rail()} is a \code{dock_rail}, written among a grid's children but pinned
-outside the splitview.
+The function \code{dock_grid()} returns a \code{dock_grid}.
+The function \code{panels()} returns a tab group, \code{group()} a split and
+\code{rail()} a \code{dock_rail}, which \code{dock_grid()} takes.
 }
 \description{
-A \link[=dock-grid]{dock_grid} is a view's geometry: the arrangement of its
-panels into nested splits and tab groups, with sizes.
-The function \code{dock_grid()} is the authoring DSL that builds one.
+A view's grid says which panels the view shows, and where.
+Its top split divides the view into tab groups and splits, which divide the
+other way, each with its share.
+A rail on the left or right edge of the view holds panels outside the
+splits.
+Each tab group and each rail holds panels, the cards of blocks and the UIs
+of plugins, with a tab for each panel.
+The functions here write a grid, which \code{\link[=dock_view]{dock_view()}} takes:
 }
 \details{
-Construct a grid with:
 \itemize{
-\item \code{dock_grid(...)}: the view-level container. Its \code{...} are the
-children of the root branch. Bare strings become single-panel
-leaves, character vectors become tabbed leaves, lists become
-nested branches. Use \code{\link[=panels]{panels()}} for a tabbed leaf with an explicit
-open tab, and \code{\link[=group]{group()}} for a branch with explicit sizes.
-\item \code{panels(..., active = NULL)}: a tabbed leaf whose tab strip holds
-the given panel ids. \code{active} selects the initially-open tab; the
-first id wins by default. A single-panel \code{panels()} is permitted
-but redundant (a bare string is equivalent).
-\item \code{group(..., sizes = NULL)}: a branch container. \code{sizes} is a
-numeric vector parallel to \code{...} that overrides the even split.
-\item \code{rail(..., position = "left")}: a tab group pinned to one edge of
-the view rather than arranged by the splitview. Write it among the
-grid's children; it is not one, so it never counts towards \code{sizes},
-and the members it names leave the grid tree.
+\item The function \code{dock_grid(...)} writes the grid.
+Its \code{...} are what its top split holds, in order, and its rails.
+A panel reference or a bare id is a tab group of that panel alone, and a
+character vector a tab group with a tab for each of its ids.
+A list is a split, which gives each of its children an equal share.
+\item The function \code{panels(..., active = NULL)} writes a tab group of the
+panels given.
+It shows \code{active}, or its first panel where \code{active} is \code{NULL}.
+\item The function \code{group(..., sizes = NULL)} writes a split, which divides
+the other way from the split that holds it, with the share of each child
+in \code{sizes}.
+\item The function \code{rail(..., position = "left")} writes a rail, which holds
+the panels given on the edge of the view that \code{position} names.
+The grid takes it among the children of \code{dock_grid()}, but it is none of
+them, so it takes no share in \code{sizes}.
 }
 
-The function \code{dock_grid()} accepts \code{orientation = "horizontal" | "vertical"} for the top-level split direction and \code{sizes} for the
-root-branch ratios.
+A grid names each panel by a panel reference, as \code{\link[=blk]{blk()}} and \code{\link[=plg]{plg()}} write
+them, or by a bare id.
+It keeps each reference as written, since it knows neither the board's
+blocks nor the names of its plugins, which \code{\link[=new_dock_board]{new_dock_board()}} resolves.
+
+The shares in \code{sizes} are positive numbers, which need not sum to 1, since
+the grid scales them to ratios that do.
+A split without \code{sizes} gives each of its children an equal share.
+The grid drops a tab group, split or rail that holds no panel, and the
+share of the one it drops goes to its siblings, in proportion.
+The functions refuse a share that is not positive, and a rail's width that
+is below 0.
 }
 \examples{
-# Panels named with typed references; bare id strings work too
-panels(blk("a"), blk("b"), active = blk("b"))
+# A tab group of a and b, which shows b, beside c
+dock_grid(panels("a", "b", active = "b"), "c", sizes = c(0.3, 0.7))
 
-# Branch with explicit child ratios
-group(blk("a"), blk("b"), sizes = c(0.3, 0.7))
+# The block a above a split of b and c
+dock_grid("a", group("b", "c"), orientation = "vertical")
 
-# A block panel beside a tabbed block leaf
-dock_grid(
-  blk("a"),
-  panels(blk("b"), blk("c"), active = blk("c")),
-  sizes = c(0.3, 0.7)
-)
-
-# Vertical top-level split
-dock_grid(blk("a"), blk("b"), orientation = "vertical")
-
-# A block parked on the left edge, out of the splitview
-dock_grid(blk("a"), rail(blk("b"), position = "left"))
+# The block a, with the DAG on a rail on the left edge
+dock_grid(blk("a"), rail(plg("blockr.dag-dag_plugin")))
 
 }

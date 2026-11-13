@@ -1,5 +1,33 @@
 # blockr.dock 0.2.1
 
+* An app script writes the dock's state with `new_dock_board()` (#574).
+  The function returns a board that core's `new_board()` builds, which holds
+  the dock plugin's state beside the plugins that the script gives in
+  `plugins`.
+  The script writes each view with `dock_view()`, which takes the view's grid
+  or the panels of its default grid, and each folder with `dock_folder()`.
+  A grid, written with `dock_grid()`, `panels()`, `group()` and `rail()`,
+  names a block's panel by the block's id or `blk()`.
+  It names a plugin's panel with `plg()`, by the name that the script gives the
+  plugin in `plugins` or by the id of the plugin's class.
+  The constructor `new_dock_plugin()` turns them into the state as the script
+  runs.
+  It draws each id that the script leaves out, names a view without a name
+  after its id, writes each `index`, and makes the first view active where the
+  script names none.
+  As the script runs, R refuses, naming each, a grid that places a panel twice
+  or names a block that the board lacks, a share that is not positive, and a
+  folder that sits in itself.
+  It also refuses an `active` view or a `folder` that the script does not give,
+  and a card section other than `"inputs"` and `"outputs"`.
+  The argument `visible` takes the place of a block's `visible` attribute.
+  The readers `board_views()`, `active_view()` and `view_name()` read the
+  dock's state of a board, and `dock_plugins()` reads the board's other
+  plugins.
+  The functions of the panel ids `block_panel-<id>`, such as
+  `as_block_panel_id()`, go, since a grid names each panel by an object, and so
+  does `as_dock_grid()`.
+
 * The dock plugin's class keeps the dock's state (#570): the views, the
   folders that group them in the navigation, the grid of each view, the
   active view and the sections that each block's card shows.
