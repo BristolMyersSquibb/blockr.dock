@@ -1,16 +1,8 @@
-// The helpers of a view's grid, which the `update`, the `migrate` and the
-// dock's commands share.
+// The helpers of a view's grid, which the `update` and the dock's commands
+// share.
 
 import { describe, expect, test } from "vitest";
-import {
-  appendTabGroup,
-  canonicalGrid,
-  defaultGrid,
-  gridFailures,
-  gridPanels,
-  placePanel,
-  prunePanels,
-} from "./grid.ts";
+import { canonicalGrid, gridFailures, gridPanels, placePanel, prunePanels } from "./grid.ts";
 import type { Grid, Panel, Rail, TabGroup } from "./types.ts";
 
 const a = { block: "a" };
@@ -190,33 +182,15 @@ describe("placePanel()", () => {
   });
 
   test("puts the panel in a tab group of its own in an empty grid", () => {
-    expect(placePanel(defaultGrid([]), a)).toEqual({ orientation: "horizontal", children: [group(a)], sizes: [1] });
+    expect(placePanel({ orientation: "horizontal", children: [], sizes: [] }, a)).toEqual({
+      orientation: "horizontal",
+      children: [group(a)],
+      sizes: [1],
+    });
   });
 
   test("leaves a grid that places the panel already, on a rail too, as it is", () => {
     expect(placePanel(overview, dag)).toBe(overview);
     expect(placePanel(overview, c)).toBe(overview);
-  });
-});
-
-describe("appendTabGroup()", () => {
-  test("adds a tab group of the panel alone at the end of the top split", () => {
-    const grid: Grid = { orientation: "vertical", children: [group(a)], sizes: [1] };
-    expect(appendTabGroup(grid, b)).toEqual({ orientation: "vertical", children: [group(a), group(b)], sizes: [0.5, 0.5] });
-  });
-});
-
-describe("defaultGrid()", () => {
-  test("puts the plugins' panels in one tab group, beside the blocks' panels in another", () => {
-    expect(defaultGrid([a, dag, b, md])).toEqual({
-      orientation: "horizontal",
-      children: [group(dag, md), group(a, b)],
-      sizes: [0.5, 0.5],
-    });
-  });
-
-  test("gives one tab group where the panels are of one kind, and none where there are none", () => {
-    expect(defaultGrid([a, b])).toEqual({ orientation: "horizontal", children: [group(a, b)], sizes: [1] });
-    expect(defaultGrid([])).toEqual({ orientation: "horizontal", children: [], sizes: [] });
   });
 });

@@ -8,8 +8,6 @@
   When a block is removed, the class's `update` takes its panel out of every
   grid, and when a block is added, it places the block's panel in the active
   view.
-  The class's `migrate` takes the state from version 1, the shape of today's
-  files, to version 2, which `plugin_version()` gives for the class.
 
 * The dock takes the items of its navbar from the `navbar` of `serve()`,
   through its method of `frontend_args()` (#576).

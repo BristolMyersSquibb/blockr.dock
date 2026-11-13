@@ -1,11 +1,9 @@
-// Helpers for a view's grid, which the `update`, the `migrate` and the dock's
-// commands share (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.1#grids).
+// Helpers for a view's grid, which the `update` and the dock's commands share
+// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.1#grids).
 // They give a grid's canonical form, check a grid, place a panel at its
-// default place, take panels out, and give the default grid over a view's
-// panels.
+// default place, and take panels out.
 // They are ported from today's canonicalize_grid(), validate_dock_grid(),
-// prune_tree(), append_default_leaves() and default_grid() in R/dock-grid.R,
-// at 655e323.
+// prune_tree() and append_default_leaves() in R/dock-grid.R, at 655e323.
 //
 // In a grid in its canonical form, the shares of each split sum to 1.
 // No tab group, split or rail is empty, and each tab group and rail shows one
@@ -14,11 +12,6 @@
 // The top split may be empty: that is the grid of a view that shows nothing.
 
 import type { Grid, Node, Panel, Rail, Split, TabGroup } from "./types.ts";
-
-// The widths of a rail in pixels where nothing sets them: open, and
-// collapsed.
-export const RAIL_SIZE = 260;
-export const RAIL_COLLAPSED_SIZE = 35;
 
 // The edges that a view has a rail on, in reading order.
 export const EDGES = ["left", "right"] as const;
@@ -222,7 +215,7 @@ export function placePanel(grid: Grid, panel: Panel): Grid {
 // panel alone.
 // The new tab group gets the mean of its siblings' shares, as in today's
 // append_default_leaves().
-export function appendTabGroup(grid: Grid, panel: Panel): Grid {
+function appendTabGroup(grid: Grid, panel: Panel): Grid {
   const shares = fitted(grid.sizes, grid.children.length);
   const mean = shares.length === 0 ? 1 : 1 / shares.length;
   return {
@@ -230,19 +223,4 @@ export function appendTabGroup(grid: Grid, panel: Panel): Grid {
     children: [...grid.children, { panels: [panel], active: panel }],
     sizes: normalized([...shares, mean]),
   };
-}
-
-// The default grid over a view's panels.
-// The plugins' panels share one tab group, and the blocks' panels share
-// another, beside it, in an even split.
-// Each tab group shows its first panel, and a grid without panels has no tab
-// group.
-export function defaultGrid(panels: readonly Panel[]): Grid {
-  const groups = [panels.filter((panel) => "plugin" in panel), panels.filter((panel) => "block" in panel)].flatMap(
-    (held) => {
-      const [first] = held;
-      return first === undefined ? [] : [{ panels: held, active: first }];
-    },
-  );
-  return { orientation: "horizontal", children: groups, sizes: fitted([], groups.length) };
 }

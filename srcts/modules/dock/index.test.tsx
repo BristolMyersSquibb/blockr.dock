@@ -17,7 +17,7 @@ const DOCK = "blockr.dock-dock_plugin";
 
 // R's reply to hello in an app that runs the dock in place of core's basic
 // frontend, beside core's other plugins, with where R serves the module of
-// the dock plugin's class, at version 2, and those of the dock's board
+// the dock plugin's class, at version 1, and those of the dock's board
 // options, beside core's.
 const hello = {
   ...HELLO,
@@ -26,7 +26,7 @@ const hello = {
     ...Object.fromEntries(
       Object.entries(HELLO.plugins).filter(([id]) => id !== "blockr.core-basic_frontend_plugin"),
     ),
-    [DOCK]: { name: "Dock", version: 2, module: "blockr.dock/js/dock.js" },
+    [DOCK]: { name: "Dock", version: 1, module: "blockr.dock/js/dock.js" },
   },
   options: {
     ...HELLO.options,
@@ -165,17 +165,11 @@ describe("the dock's frontend", () => {
   });
 });
 
-// The board of the page "Saved boards and app scripts across the switch",
-// with two views, the DAG on a rail of the first, a stack, and a card that
-// shows its output alone, as the conversion writes it from a file that
-// blockr.dock 0.2.0 wrote, with the dock plugin's state at version 1
-// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.2#the-dock-board).
-// The state is that of `dockState`, which typedjson wrote with each value of
-// length one bare, or the same with arrays.
-function converted(dockState: Json): JsonBoard {
+// A board with two blocks, a stack, and the dock's state at version 1, given.
+function boardWith(dockState: DockState): JsonBoard {
   return {
     format: 1,
-    packages: { "blockr.core": "0.1.4", "blockr.dock": "0.2.0" },
+    packages: { "blockr.core": "0.2.0", "blockr.dock": "0.2.1" },
     board: {
       id: "curious_otter",
       versions: { [DOCK]: 1 },
@@ -197,69 +191,10 @@ function converted(dockState: Json): JsonBoard {
   };
 }
 
-// The dock's state at version 1 as typedjson wrote it, with each value of
-// length one bare and an empty list as [].
-const bare = {
-  views: {
-    main: { name: "Main", members: ["block_panel-a", "block_panel-b", "ext_panel-blockr.dag-dag_plugin"] },
-    side: { name: "Side", members: "block_panel-b" },
-  },
-  active: "side",
-  grids: {
-    main: {
-      orientation: "horizontal",
-      children: [
-        {
-          children: [
-            { panels: "block_panel-a", active: "block_panel-a" },
-            { panels: "block_panel-b", active: "block_panel-b" },
-          ],
-          sizes: [0.5, 0.5],
-        },
-      ],
-      sizes: 1,
-      rails: {
-        right: {
-          position: "right",
-          panels: "ext_panel-blockr.dag-dag_plugin",
-          active: "ext_panel-blockr.dag-dag_plugin",
-          collapsed: true,
-          size: 300,
-          collapsed_size: 35,
-        },
-      },
-    },
-    side: { orientation: "horizontal", children: [{ panels: "block_panel-b", active: "block_panel-b" }], sizes: 1, rails: [] },
-  },
-  visible: { b: "outputs" },
-};
-
-// The same state with arrays.
-const arrays = {
-  ...bare,
-  views: { ...bare.views, side: { name: "Side", members: ["block_panel-b"] } },
-  grids: {
-    main: {
-      ...bare.grids.main,
-      children: [
-        {
-          children: [
-            { panels: ["block_panel-a"], active: "block_panel-a" },
-            { panels: ["block_panel-b"], active: "block_panel-b" },
-          ],
-          sizes: [0.5, 0.5],
-        },
-      ],
-      sizes: [1],
-      rails: { right: { ...bare.grids.main.rails.right, panels: ["ext_panel-blockr.dag-dag_plugin"] } },
-    },
-    side: { ...bare.grids.side, children: [{ panels: ["block_panel-b"], active: "block_panel-b" }], sizes: [1] },
-  },
-  visible: { b: ["outputs"] },
-};
-
-// What the dock's state at version 2 holds for that board.
-const migrated: DockState = {
+// The dock's state with two views: the first shows the blocks side by side,
+// with the DAG on a rail at its right edge, collapsed, and the second, which
+// is active, shows `b` alone, whose card shows its output alone.
+const twoViews: DockState = {
   views: {
     main: {
       name: "Main",
@@ -310,20 +245,17 @@ describe("the dock plugin's state", () => {
     stop();
   });
 
-  test.each([
-    ["as typedjson wrote it, with each value of length one bare", bare],
-    ["with arrays", arrays],
-  ])("migrates from version 1 as a converted board opens, %s", async (_form, dockState) => {
-    const { core, settled, stop } = await startDock(undefined, {}, converted(dockState));
+  test("is what a board holds at version 1, as the board opens", async () => {
+    const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
-    expect(core.store.board().plugins[DOCK]).toEqual(migrated);
-    expect(core.store.jsonBoard().board.versions).toEqual({ [DOCK]: 2 });
+    expect(core.store.board().plugins[DOCK]).toEqual(twoViews);
+    expect(core.store.jsonBoard().board.versions).toEqual({ [DOCK]: 1 });
     stop();
   });
 
   test("loses a removed block's panel from every view and its entry in visible, which one undo takes back", async () => {
-    const { core, settled, stop } = await startDock(undefined, {}, converted(bare));
+    const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
     await core.commands.run("blockr.core-remove_block", { id: "b" });
@@ -336,12 +268,12 @@ describe("the dock plugin's state", () => {
     });
 
     core.store.undo();
-    expect(core.store.board().plugins[DOCK]).toEqual(migrated);
+    expect(core.store.board().plugins[DOCK]).toEqual(twoViews);
     stop();
   });
 
   test("gains an added block's panel in the active view, at the default place", async () => {
-    const { core, settled, stop } = await startDock(undefined, {}, converted(bare));
+    const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
     await core.commands.run("blockr.core-add_block", { registry_id: "blockr.core-head_block", id: "c" });
@@ -352,7 +284,7 @@ describe("the dock plugin's state", () => {
   });
 
   test("makes the first view of the navigation active where core's command removes the active view", async () => {
-    const { core, settled, stop } = await startDock(undefined, {}, converted(bare));
+    const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
     await core.commands.run("blockr.core-set_plugin_state", { plugin: DOCK, patches: [{ op: "remove", path: "/views/side" }] });
@@ -361,7 +293,7 @@ describe("the dock plugin's state", () => {
   });
 
   test("refuses a state that its schema refuses, as a share of 0", async () => {
-    const { core, settled, stop } = await startDock(undefined, {}, converted(bare));
+    const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
     const run = core.commands.run("blockr.core-set_plugin_state", {
@@ -369,7 +301,7 @@ describe("the dock plugin's state", () => {
       patches: [{ op: "replace", path: "/views/main/grid/children/0/sizes", value: [0, 1] }],
     });
     await expect(run).rejects.toThrow();
-    expect(core.store.board().plugins[DOCK]).toEqual(migrated);
+    expect(core.store.board().plugins[DOCK]).toEqual(twoViews);
     stop();
   });
 });

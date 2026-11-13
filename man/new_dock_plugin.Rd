@@ -18,10 +18,8 @@ The constructor \code{new_dock_plugin()} makes the dock plugin, of class
 id \code{blockr.dock-dock_plugin} (see \code{\link[blockr.core:new_plugin]{blockr.core::new_plugin()}}).
 The dock keeps its state in the board: its views, the folders that group
 them, the active view and the sections that each block's card shows.
-The class gives that state version 2 (see \code{\link[blockr.core:plugin_version]{blockr.core::plugin_version()}}),
-and its schema ships beside its module, as \code{js/dock.schema.json}.
-The client migrates the state of a board that holds it at version 1, the
-shape of today's files, as the conversion of such a file writes it.
+The schema of that state ships beside the class's module, as
+\code{js/dock.schema.json}.
 The constructor takes no args, so a board that an app script builds holds
 no state for the dock, and the client gives it the class's default, which
 holds no view.
