@@ -25,6 +25,9 @@ with its name, "Dock", and its module, \code{js/dock.js} (see
 So \code{\link[blockr.core:available_plugins]{blockr.core::available_plugins()}} gives the class wherever blockr.dock
 is available, and \code{\link[blockr.core:serve]{blockr.core::serve()}} runs the dock in place of core's
 basic frontend.
+An app script gives the items of the dock's navbar to \code{serve()} in
+\code{navbar}, which the dock takes through its method of
+\code{\link[blockr.core:frontend_args]{blockr.core::frontend_args()}} (see \code{\link[=default_navbar]{default_navbar()}}).
 
 The class requires five board options: the dock's own, \code{compact},
 \code{view_tabs} and \code{sync_rails} (see \code{\link[=new_compact_option]{new_compact_option()}}), and core's
