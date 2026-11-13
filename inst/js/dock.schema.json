@@ -1,0 +1,317 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "views": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/View"
+      },
+      "description": "Every view, by its id."
+    },
+    "folders": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/Folder"
+      },
+      "description": "Every folder, by its id."
+    },
+    "active": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ViewId"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The view that the board opens on, or null while the state holds no view."
+    },
+    "visible": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Section"
+        }
+      },
+      "description": "The sections that a block's card shows, by the block's id, for each card that hides a section. A card without an entry shows both."
+    }
+  },
+  "required": [
+    "views",
+    "folders",
+    "active",
+    "visible"
+  ],
+  "additionalProperties": false,
+  "description": "The dock's views, the folders that group them, the active view and the sections that each block's card shows.",
+  "definitions": {
+    "View": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name that the user gives the view."
+        },
+        "folder": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FolderId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The folder that the view sits in, or null at the top."
+        },
+        "index": {
+          "type": "string",
+          "description": "The key that orders the view among the views and folders of its folder, compared as a string."
+        },
+        "grid": {
+          "$ref": "#/definitions/Grid",
+          "description": "Which panels the view shows, and where."
+        }
+      },
+      "required": [
+        "name",
+        "folder",
+        "index",
+        "grid"
+      ],
+      "additionalProperties": false,
+      "description": "A view: a grid of panels, with a name, in a place in the navigation."
+    },
+    "FolderId": {
+      "type": "string",
+      "description": "The id of a folder, which never changes."
+    },
+    "Grid": {
+      "type": "object",
+      "properties": {
+        "orientation": {
+          "type": "string",
+          "enum": [
+            "horizontal",
+            "vertical"
+          ],
+          "description": "How the top split divides. Each split inside divides the other way from the split that holds it."
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node"
+          },
+          "description": "What the top split holds, in order."
+        },
+        "sizes": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "description": "The share of a split that one of its children takes, a ratio above 0.",
+            "exclusiveMinimum": 0
+          },
+          "description": "The share of each child, ratios that sum to 1."
+        },
+        "rails": {
+          "type": "object",
+          "properties": {
+            "left": {
+              "$ref": "#/definitions/Rail"
+            },
+            "right": {
+              "$ref": "#/definitions/Rail"
+            }
+          },
+          "additionalProperties": false,
+          "description": "The rails of the view, by the edge that each sits on."
+        }
+      },
+      "required": [
+        "orientation",
+        "children",
+        "sizes"
+      ],
+      "additionalProperties": false,
+      "description": "Where a view places its panels: nested splits of tab groups, and a rail on each side."
+    },
+    "Node": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Split"
+        },
+        {
+          "$ref": "#/definitions/TabGroup"
+        }
+      ],
+      "description": "What a split holds: a split or a tab group."
+    },
+    "Split": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node"
+          },
+          "description": "What the split holds, in order."
+        },
+        "sizes": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "description": "The share of a split that one of its children takes, a ratio above 0.",
+            "exclusiveMinimum": 0
+          },
+          "description": "The share of each child, ratios that sum to 1."
+        }
+      },
+      "required": [
+        "children",
+        "sizes"
+      ],
+      "additionalProperties": false,
+      "description": "A split, which divides the other way from the split that holds it."
+    },
+    "TabGroup": {
+      "type": "object",
+      "properties": {
+        "panels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Panel"
+          },
+          "description": "Its panels, in the order of their tabs."
+        },
+        "active": {
+          "$ref": "#/definitions/Panel",
+          "description": "The panel that it shows."
+        }
+      },
+      "required": [
+        "panels",
+        "active"
+      ],
+      "additionalProperties": false,
+      "description": "A tab group, with a tab for each of its panels."
+    },
+    "Panel": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "block": {
+              "$ref": "#/definitions/BlockId"
+            }
+          },
+          "required": [
+            "block"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "plugin": {
+              "$ref": "#/definitions/PluginClassId"
+            }
+          },
+          "required": [
+            "plugin"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "A panel: the card of one of the board's blocks, by the block's id, or the UI of one of the app's plugins, by the id of the plugin's class."
+    },
+    "BlockId": {
+      "type": "string"
+    },
+    "PluginClassId": {
+      "type": "string"
+    },
+    "Rail": {
+      "type": "object",
+      "properties": {
+        "panels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Panel"
+          },
+          "description": "Its panels, in the order of their tabs."
+        },
+        "active": {
+          "$ref": "#/definitions/Panel",
+          "description": "The panel that it shows."
+        },
+        "collapsed": {
+          "type": "boolean",
+          "description": "Whether the rail shows its tabs alone."
+        },
+        "size": {
+          "type": "number",
+          "description": "Its width in pixels while it is open, 260 by default.",
+          "minimum": 0
+        },
+        "collapsed_size": {
+          "type": "number",
+          "description": "Its width in pixels while it is collapsed, 35 by default.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "panels",
+        "active",
+        "collapsed",
+        "size",
+        "collapsed_size"
+      ],
+      "additionalProperties": false,
+      "description": "A rail on an edge of the view, with a tab for each of its panels."
+    },
+    "Folder": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name that the user gives the folder."
+        },
+        "folder": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FolderId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The folder that the folder sits in, or null at the top."
+        },
+        "index": {
+          "type": "string",
+          "description": "The key that orders the folder among the views and folders of its folder, compared as a string."
+        }
+      },
+      "required": [
+        "name",
+        "folder",
+        "index"
+      ],
+      "additionalProperties": false,
+      "description": "A folder, which groups views and other folders in the navigation."
+    },
+    "ViewId": {
+      "type": "string",
+      "description": "The id of a view, which never changes."
+    },
+    "Section": {
+      "type": "string",
+      "enum": [
+        "inputs",
+        "outputs"
+      ],
+      "description": "A section of a block's card."
+    }
+  }
+}

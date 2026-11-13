@@ -18,6 +18,12 @@
 //   compact-option.schema.json beside compact-option.js, as core's build
 //   writes those of its own. R writes the value of a board option that an app
 //   script gives by it.
+// - The build generates the JSON Schema of the dock plugin's state from the
+//   type DockState in srcts/state/types.ts, as core's build generates the
+//   schema of a block's state. It writes it beside the dock's module, as
+//   dock.schema.json, where R finds it. The dock's module imports the file as
+//   the schema of its class's state, so the build writes it before it
+//   bundles.
 //
 // The build owns inst/js and empties it first, so that nothing is left of a
 // module that is gone.
@@ -28,6 +34,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { preset } from "@blockr/core/build";
 import * as esbuild from "esbuild";
+import { createGenerator } from "ts-json-schema-generator";
 
 interface Entry {
   readonly name: string;
@@ -59,6 +66,7 @@ export async function build(root: string): Promise<string[]> {
 
   await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
+  const schemas = await stateSchema(root, out);
 
   const options = {
     absWorkingDir: root,
@@ -93,8 +101,33 @@ export async function build(root: string): Promise<string[]> {
 
   return [
     ...results.flatMap((result) => Object.keys(result.metafile.outputs)),
+    ...schemas,
     ...(await optionSchemas(root, out)),
   ].sort();
+}
+
+// Writes the JSON Schema of the dock plugin's state, from the type DockState
+// that srcts/state/types.ts exports, into `out` as dock.schema.json, beside
+// the module of the dock plugin's class, and gives the file it wrote,
+// relative to `root`.
+// The schema allows no property that the types do not declare, and each type
+// that the file exports is a definition of its own, as in core's schemas.
+async function stateSchema(root: string, out: string): Promise<string[]> {
+  const source = join(root, "srcts", "state", "types.ts");
+  if (!existsSync(source)) return [];
+
+  const schema = createGenerator({
+    path: source,
+    tsconfig: join(root, "tsconfig.client.json"),
+    expose: "export",
+    topRef: false,
+    additionalProperties: false,
+    skipTypeCheck: true,
+  }).createSchema("DockState");
+
+  const file = join(out, "dock.schema.json");
+  await writeFile(file, `${JSON.stringify(schema, null, 2)}\n`);
+  return [relative(root, file)];
 }
 
 // Writes the JSON Schema of each of the dock's board options into `out`,

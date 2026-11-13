@@ -5,7 +5,15 @@
 #' The constructor `new_dock_plugin()` makes the dock plugin, of class
 #' `c("dock_plugin", "frontend_plugin", "plugin")`, whose plugin class has the
 #' id `blockr.dock-dock_plugin` (see [blockr.core::new_plugin()]).
-#' The dock keeps no state in the board, so the constructor takes no args.
+#' The dock keeps its state in the board: its views, the folders that group
+#' them, the active view and the sections that each block's card shows.
+#' The class gives that state version 2 (see [blockr.core::plugin_version()]),
+#' and its schema ships beside its module, as `js/dock.schema.json`.
+#' The client migrates the state of a board that holds it at version 1, the
+#' shape of today's files, as the conversion of such a file writes it.
+#' The constructor takes no args, so a board that an app script builds holds
+#' no state for the dock, and the client gives it the class's default, which
+#' holds no view.
 #'
 #' The package lists the class in the `._BLOCKR_MODULES_` that it exports,
 #' with its name, "Dock", and its module, `js/dock.js` (see
@@ -31,6 +39,13 @@
 #' @export
 new_dock_plugin <- function() {
   new_plugin(list(), "dock_plugin", c("dock_plugin", "frontend_plugin"))
+}
+
+# The version of the shape of the dock's state: 2, the shape that the client
+# defines, after version 1, today's shape.
+#' @export
+plugin_version.dock_plugin <- function(x, ...) {
+  2L
 }
 
 #' @rdname new_dock_plugin

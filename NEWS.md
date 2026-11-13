@@ -1,5 +1,16 @@
 # blockr.dock 0.2.1
 
+* The dock plugin's class keeps the dock's state (#570): the views, the
+  folders that group them in the navigation, the grid of each view, the
+  active view and the sections that each block's card shows.
+  The build generates the schema of the state from its types and writes it
+  beside the module, as `js/dock.schema.json`.
+  When a block is removed, the class's `update` takes its panel out of every
+  grid, and when a block is added, it places the block's panel in the active
+  view.
+  The class's `migrate` takes the state from version 1, the shape of today's
+  files, to version 2, which `plugin_version()` gives for the class.
+
 * The client defines the dock's board options, `compact`, `view_tabs` and
   `sync_rails`, each in a module of its own, with a checkbox as its UI (#571).
   Each takes its default from the blockr option of its name, and where that
