@@ -11,6 +11,18 @@ test_that("the dock plugin is a frontend of its own class", {
   expect_length(plugin_state(x), 0L)
 })
 
+test_that("the dock's state has version 1 and a schema beside its module", {
+
+  expect_identical(plugin_version(new_dock_plugin()), 1L)
+
+  schema <- read_json_schema("js/dock.schema.json", package = "blockr.dock")
+
+  expect_named(
+    schema[["properties"]],
+    c("views", "folders", "active", "visible")
+  )
+})
+
 test_that("core finds the dock's plugin class in the package's listing", {
 
   plugins <- available_plugins()

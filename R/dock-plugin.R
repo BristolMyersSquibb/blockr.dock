@@ -5,7 +5,13 @@
 #' The constructor `new_dock_plugin()` makes the dock plugin, of class
 #' `c("dock_plugin", "frontend_plugin", "plugin")`, whose plugin class has the
 #' id `blockr.dock-dock_plugin` (see [blockr.core::new_plugin()]).
-#' The dock keeps no state in the board, so the constructor takes no args.
+#' The dock keeps its state in the board: its views, the folders that group
+#' them, the active view and the sections that each block's card shows.
+#' The schema of that state ships beside the class's module, as
+#' `js/dock.schema.json`.
+#' The constructor takes no args, so a board that an app script builds holds
+#' no state for the dock, and the client gives it the class's default, which
+#' holds no view.
 #'
 #' The package lists the class in the `._BLOCKR_MODULES_` that it exports,
 #' with its name, "Dock", and its module, `js/dock.js` (see

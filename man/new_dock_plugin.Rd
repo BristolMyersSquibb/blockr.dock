@@ -16,7 +16,13 @@ Its client draws the page as a React app, with dockview for the layout.
 The constructor \code{new_dock_plugin()} makes the dock plugin, of class
 \code{c("dock_plugin", "frontend_plugin", "plugin")}, whose plugin class has the
 id \code{blockr.dock-dock_plugin} (see \code{\link[blockr.core:new_plugin]{blockr.core::new_plugin()}}).
-The dock keeps no state in the board, so the constructor takes no args.
+The dock keeps its state in the board: its views, the folders that group
+them, the active view and the sections that each block's card shows.
+The schema of that state ships beside the class's module, as
+\code{js/dock.schema.json}.
+The constructor takes no args, so a board that an app script builds holds
+no state for the dock, and the client gives it the class's default, which
+holds no view.
 }
 \details{
 The package lists the class in the \code{._BLOCKR_MODULES_} that it exports,

@@ -12,13 +12,22 @@
 // and sync_rails, which ../../options defines, and core's show_conditions and
 // dark_mode. So core gives each board that lacks a value for one of them its
 // default as the board opens, before the dock draws it.
+// The class keeps the dock's state, which ../../state defines.
+// It gives core the schema of the state, which the build generates from the
+// state's types, and the default of the state, which holds no view.
+// It also gives core the `update` of ../../state.
 
 import { DockviewReact, themeAbyssSpaced, themeLightSpaced } from "dockview-react";
 import type { IDockviewReactProps } from "dockview-react";
 import { useCallback, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import type { CoreApi, FrontendModule, PluginClass } from "@blockr/core";
+import type { CoreApi, FrontendModule, JsonSchema, PluginClass } from "@blockr/core";
+// The schema of the class's state is the file that the build writes for R,
+// beside the bundle.
+// eslint-disable-next-line no-restricted-imports
+import schema from "../../../inst/js/dock.schema.json" with { type: "json" };
+import { defaultState, update } from "../../state/index.ts";
 
 export const api = 1;
 
@@ -57,5 +66,10 @@ const frontend = {
 
 export default {
   options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
+  // TypeScript gives the objects in the JSON's arrays properties that may be
+  // undefined, which no Json has, so it does not take the schema for a Json,
+  // though it is one.
+  state: { schema: schema as unknown as JsonSchema, default: defaultState },
+  update,
   frontend,
 } satisfies Omit<PluginClass, "id">;
