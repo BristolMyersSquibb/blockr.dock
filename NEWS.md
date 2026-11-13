@@ -1,18 +1,20 @@
 # blockr.dock 0.2.1
 
-* The dock takes the items of its navbar in the `navbar` of `serve()`, through
-  its method of `frontend_args()` (#576).
-  The method takes `default_navbar()` where a script passes none, checks every
-  item as the app starts, naming one that the dock cannot draw, and returns
-  the items for the client.
-  An item is one of the dock's own parts, which `default_navbar()` gives, or
-  one that `navbar_link()`, `navbar_menu()`, `navbar_storage()` or
-  `navbar_item()` makes: a link, a menu, one of the storage plugin's controls,
-  or a module that a package offers.
-  The argument `navbar` takes the items themselves, where it took a function
-  of the board and its plugins.
-  The function `custom_navbar()` returns the default items without those that
-  `drop` names, with its `items` appended.
+* The dock takes the items of its navbar from the `navbar` of `serve()`,
+  through its method of `frontend_args()` (#576).
+  Where a script passes no `navbar`, the method takes `default_navbar()`.
+  The method checks every item as the app starts.
+  If the dock cannot draw an item, the method stops the app with an error
+  that names the item.
+  It returns the items for the client.
+  An item is one of the dock's own parts, from `default_navbar()`, a link from
+  `navbar_link()`, a menu from `navbar_menu()`, one of the storage plugin's
+  controls from `navbar_storage()`, or a module that a package offers, from
+  `navbar_item()`.
+  The argument `navbar` takes the items themselves.
+  In blockr.dock 0.2.0, it took a function of the board and its plugins.
+  The function `custom_navbar()` starts from the default items.
+  It leaves out those whose ids are in `drop`, then appends its `items`.
 
 * The client defines the dock's board options, `compact`, `view_tabs` and
   `sync_rails`, each in a module of its own, with a checkbox as its UI (#571).

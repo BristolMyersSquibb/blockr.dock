@@ -1,64 +1,75 @@
 #' Navbar items
 #'
-#' The bar across the top of the dock holds the navbar items that an app
-#' script gives [blockr.core::serve()] in `navbar`, in their order.
-#' R hands them to the dock's method of [blockr.core::frontend_args()], which
-#' takes `default_navbar()` where the script passes none.
-#' The method checks every item as the app starts, and stops the app with an
-#' error that names an item that the dock cannot draw.
-#' It returns the items in `navbar`, which core sends to the client in its
-#' reply to `hello`.
-#' So no board and no file holds the bar, and every board that the app opens
-#' shows the same one.
+#' An app script gives [blockr.core::serve()] the items of the dock's navbar,
+#' the bar across the top of the dock, in `navbar`.
+#' The bar shows them in their order.
+#' R hands them to the dock's method of [blockr.core::frontend_args()].
+#' Where the script passes no `navbar`, the method takes `default_navbar()`.
+#' The method checks every item as the app starts.
+#' If the dock cannot draw an item, the method stops the app with an error
+#' that names the item.
+#' The method returns the items in `navbar`, and core sends them to the
+#' client in its reply to `hello`.
+#' So no board and no file holds the bar.
+#' Every board that the app opens shows the same bar.
 #'
-#' The default bar, which `default_navbar()` gives, holds the dock's own
-#' parts, each under its id, from left to right: the logo (`logo`), the
-#' board's name (`name`), the controls of the app's storage plugin
-#' (`storage`), Undo and Redo (`undo_redo`), the spacer (`spacer`), which takes
-#' the free space, the views menu (`views`), the read-only pill (`read_only`)
-#' and the options button (`options`).
+#' The function `default_navbar()` gives the default bar.
+#' It holds the dock's own parts, each under its id, from left to right: the
+#' logo (`logo`), the board's name (`name`), the controls of the app's
+#' storage plugin (`storage`), Undo and Redo (`undo_redo`), the spacer
+#' (`spacer`), the views menu (`views`), the read-only pill (`read_only`) and
+#' the options button (`options`).
+#' The spacer takes the free space, so the items after it sit at the right
+#' end of the bar.
 #' No function makes a part, so a script takes one from `default_navbar()`.
 #' Besides the dock's own parts, an item is one of these:
 #'
-#' * A link, which `navbar_link()` makes, and which opens in a new tab.
-#' * A menu of links and further menus, which `navbar_menu()` makes.
-#' * One of the storage plugin's controls, which `navbar_storage()` places
-#'   apart from the rest by the control's id.
-#'   The `storage` part draws the controls that no such item places.
-#' * A module that a package offers, which `navbar_item()` names by its id,
-#'   `{pkg}-{name}`, and which draws the item.
-#'   R checks that the id is a non-empty string, but not that a package offers
-#'   the module, which the client loads as it draws the bar.
+#' * A link, from `navbar_link()`.
+#'   It opens in a new tab.
+#' * A menu of links and further menus, from `navbar_menu()`.
+#' * One of the storage plugin's controls, from `navbar_storage()`, by the
+#'   control's id.
+#'   The dock draws that control in the item's place, and the `storage` part
+#'   draws the other controls.
+#' * A module that a package offers, from `navbar_item()`, by the module's
+#'   id, `{pkg}-{name}`.
+#'   The module draws the item.
+#'   R checks that the id is a non-empty string.
+#'   It does not check that a package offers the module.
+#'   The client loads the module as it draws the bar.
 #'
-#' Items combine with `c()`, `[` reorders or drops them by id or position,
-#' and `[[` extracts one, while `names()` gives their ids.
-#' The function `custom_navbar()` gives the default bar without the items
-#' whose ids `drop` names, with `items` appended.
-#' It drops each default item that shares an id with one of `items` too, so
-#' that such an item takes the default's place at the end.
+#' Items combine with `c()`.
+#' The operator `[` reorders or drops them, by id or by position.
+#' The operator `[[` extracts one, and `names()` gives their ids.
 #' Ids are unique among the items of the bar, and among the items of each
 #' menu.
 #'
-#' Each item is a list of its `kind`, its `id` and the fields of its kind,
-#' which R writes as a JSON object for the client: `part`, `storage`, `link`
-#' with `label` and `href`, `menu` with `label` and `items`, and `module` with
-#' `module`.
+#' The function `custom_navbar()` starts from the default bar.
+#' It leaves out each item whose id is in `drop`.
+#' Then it appends `items`.
+#' An item of `items` with the id of a default item replaces that default
+#' item, at the end of the bar.
+#'
+#' Each item is a list of its `kind`, its `id` and the fields of its kind.
+#' R writes it as a JSON object for the client.
+#' The kinds are `part`, `storage`, `link` with `label` and `href`, `menu`
+#' with `label` and `items`, and `module` with `module`.
 #'
 #' @param id The item's id, a non-empty string.
 #'   For `navbar_storage()`, the id of the storage plugin's control.
-#' @param label The text that the link or the menu shows, a non-empty string
+#' @param label The text of the link or the menu, a non-empty string
 #' @param href The URL that the link opens, a non-empty string
-#' @param ... For `navbar_menu()`, the links and menus that it holds, which
-#'   combine as with `c()`.
-#'   For `frontend_args()`, the other arguments of [blockr.core::serve()],
-#'   which the dock refuses.
+#' @param ... For `navbar_menu()`, its links and menus, which combine as with
+#'   `c()`.
+#'   For `frontend_args()`, the other arguments of [blockr.core::serve()].
+#'   The dock refuses them.
 #' @param module The id of a module that a package offers, as
 #'   `"blockr.topline-deck_button"`
-#' @param items The items that `custom_navbar()` appends: an item, a
-#'   `navbar_items` collection or a list of items
-#' @param drop The ids of the default items that `custom_navbar()` leaves out
+#' @param items The items to append: an item, a `navbar_items` collection or
+#'   a list of items
+#' @param drop The ids of default items to leave out
 #' @param x An object.
-#'   For `frontend_args()`, the dock plugin, as [new_dock_plugin()] makes it.
+#'   For `frontend_args()`, the dock plugin, from [new_dock_plugin()].
 #' @param navbar The items of the bar: an item, a `navbar_items` collection or
 #'   a list of items
 #'
@@ -84,8 +95,8 @@
 #' The functions `default_navbar()` and `custom_navbar()` return a
 #' `navbar_items` collection, as do `c()` and `[` on items.
 #' The checks `is_navbar_item()` and `is_navbar_items()` return a boolean.
-#' The dock's method of `frontend_args()` returns a list that holds the items
-#' in `navbar`, each as a list of its fields.
+#' The dock's method of `frontend_args()` returns a list with the items in
+#' `navbar`, each as a list of its fields.
 #'
 #' @rdname navbar
 #' @export
@@ -123,8 +134,8 @@ new_navbar_item <- function(kind, id, ...) {
   )
 }
 
-# The kinds of navbar items that the dock draws, each with the fields that an
-# item of the kind holds besides its kind and its id.
+# The kinds of navbar items that the dock draws. Each kind gives the fields
+# of its items besides `kind` and `id`.
 navbar_kinds <- list(
   part = character(),
   link = c("label", "href"),
@@ -433,9 +444,9 @@ custom_navbar <- function(items = list(), drop = character()) {
 #' @export
 frontend_args.dock_plugin <- function(x, ..., navbar = default_navbar()) {
 
-  # R reads the other arguments unevaluated, as core's method does, so that
-  # one that calls a function of a package that the app has not loaded fails
-  # with this error too.
+  # R reads the other arguments without evaluating them, as core's method
+  # does. So an argument that calls a function of a package that the app has
+  # not loaded fails with this error too.
   others <- as.list(substitute(list(...)))[-1L]
 
   if (length(others)) {
@@ -453,8 +464,8 @@ frontend_args.dock_plugin <- function(x, ..., navbar = default_navbar()) {
   list(navbar = navbar_json(as_navbar_items(navbar)))
 }
 
-# The items as R writes them as JSON: each a bare list of its kind, its id and
-# the fields of its kind, with the items of a menu written in turn.
+# The items as R writes them as JSON. Each item is a bare list of its kind,
+# its id and the fields of its kind, and so is each item of a menu.
 navbar_json <- function(items) {
   lapply(
     unclass(items),

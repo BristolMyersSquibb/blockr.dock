@@ -323,7 +323,7 @@ test_that("the dock's frontend_args() refuses what it cannot draw, naming it", {
     class = "navbar_items_ids_invalid"
   )
 
-  # The function that a script for today's dock passed
+  # A script for blockr.dock 0.2.0 passed a function
   expect_error(
     frontend_args(dock, navbar = function(x, plugins) default_navbar()),
     class = "navbar_items_coercion_invalid"
@@ -348,7 +348,7 @@ test_that("serve() hands navbar to the dock's frontend_args()", {
     class = "navbar_item_part_invalid"
   )
 
-  # It refuses every other argument, which it evaluates none of
+  # It refuses every other argument, without evaluating it
   expect_error(
     serve(board, title = "Trials", theme = no_such_function()),
     paste0(
