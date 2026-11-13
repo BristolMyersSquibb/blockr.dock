@@ -13,6 +13,10 @@
 #' So [blockr.core::available_plugins()] gives the class wherever blockr.dock
 #' is available, and [blockr.core::serve()] runs the dock in place of core's
 #' basic frontend.
+#' An app script gives the items of the dock's navbar to `serve()` in
+#' `navbar`.
+#' The dock takes them through its method of [blockr.core::frontend_args()]
+#' (see [default_navbar()]).
 #'
 #' The class requires five board options: the dock's own, `compact`,
 #' `view_tabs` and `sync_rails` (see [new_compact_option()]), and core's
