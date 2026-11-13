@@ -8,6 +8,10 @@ reference:
   desc: The frontend that draws the page.
   contents:
     - new_dock_plugin
+- title: Navbar
+  desc: The items of the bar across the top of the dock.
+  contents:
+    - navbar_link
 - title: Dock board options
   desc: The board options that the dock defines.
   contents:

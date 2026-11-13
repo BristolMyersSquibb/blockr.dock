@@ -11,6 +11,22 @@
   The class's `migrate` takes the state from version 1, the shape of today's
   files, to version 2, which `plugin_version()` gives for the class.
 
+* The dock takes the items of its navbar from the `navbar` of `serve()`,
+  through its method of `frontend_args()` (#576).
+  Where a script passes no `navbar`, the method takes `default_navbar()`.
+  The method checks every item as the app starts.
+  If the dock cannot draw an item, the method stops the app with an error
+  that names the item.
+  It returns the items for the client.
+  An item is one of the dock's own parts, from `default_navbar()`, a link from
+  `navbar_link()`, a menu from `navbar_menu()`, one of the storage plugin's
+  controls from `navbar_storage()`, or a module that a package offers, from
+  `navbar_item()`.
+  The argument `navbar` takes the items themselves.
+  In blockr.dock 0.2.0, it took a function of the board and its plugins.
+  The function `custom_navbar()` starts from the default items.
+  It leaves out those whose ids are in `drop`, then appends its `items`.
+
 * The client defines the dock's board options, `compact`, `view_tabs` and
   `sync_rails`, each in a module of its own, with a checkbox as its UI (#571).
   Each takes its default from the blockr option of its name, and where that
