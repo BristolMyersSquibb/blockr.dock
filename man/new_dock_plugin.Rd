@@ -40,8 +40,8 @@ The schema of that state ships beside the class's module, as
 }
 \details{
 The constructor writes the state that an app script gives, once, as the
-script runs.
-An app script gives it to \code{\link[=new_dock_board]{new_dock_board()}}, which hands it on:
+script runs, and the script gives the plugin to \code{\link[blockr.core:new_board]{blockr.core::new_board()}}
+in \code{plugins} (see \code{\link[=board_views]{board_views()}}):
 \itemize{
 \item Each view in \code{views}, written with \code{\link[=dock_view]{dock_view()}}, gets its grid, or the
 default grid over the panels that it is given.
@@ -66,15 +66,21 @@ Where the script gives no views, folders or \code{visible}, the plugin holds no
 state, and a board that holds it holds none for the dock.
 The client then gives the board the class's default, which holds no view,
 and the dock adds a view as it starts.
-In a grid that the constructor takes itself, a bare id names a block, and
-\code{\link[=plg]{plg()}} names a plugin by the id of its class.
+In a grid, a bare id names a block, and \code{\link[=plg]{plg()}} names a plugin by the id of
+its class.
 
 The constructor refuses, naming each, a grid that places a panel twice.
 A panel on a rail and in a tab group counts as twice.
+It refuses a grid that names a plugin by an id that lacks the form
+\code{{package}-{id}} of a plugin class's id.
+It refuses no id of that form, since a grid may name a plugin that
+\code{\link[blockr.core:serve]{blockr.core::serve()}} adds to the app.
 It also refuses a view or folder that names a folder that \code{folders} lacks,
 and a folder that sits in itself, through the folders that hold it.
 Last, it refuses an \code{active} that names a view that \code{views} lacks, and a
 section other than \code{"inputs"} and \code{"outputs"}.
+It knows nothing of the board that holds it, so it refuses no grid or entry
+of \code{visible} that names a block that the board lacks.
 
 The package lists the class in the \code{._BLOCKR_MODULES_} that it exports,
 with its name, "Dock", and its module, \code{js/dock.js} (see

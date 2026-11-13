@@ -70,45 +70,51 @@ board_fixture_values <- function() {
   list(
     dock = list(
       description = paste(
-        "A board that a dock app script builds with new_dock_board(), with",
-        "every id given, so that none is drawn at random. The dock plugin's",
-        "state holds two views and a folder. The view main sits at the top and",
-        "has the index a0, the folder more sits at the top after it with a1,",
-        "and the view side sits in the folder more with a0. The grid of main",
-        "holds a split of one tab group, whose one share R writes as an array",
-        "by the schema of the dock's state, and a rail on the left edge with",
-        "the panel of core's Edit board plugin. The script names that plugin",
-        "edit in its plugins, and the state names it by the id of its class,",
-        "blockr.core-edit_board_plugin. The plugin keeps no state, so the",
-        "board holds none for it. The view side, the active view, gets the",
-        "default grid over the one panel that the script gives it. The card of",
-        "b shows its output alone. The stack has no color, and the",
-        "board holds the value of the board option compact that the script",
-        "sets, and no other. The client opens the board with the dock",
-        "plugin's class and keeps the dock's state as it is."
+        "A board that a dock app script builds with new_board() and the dock",
+        "plugin, with every id given, so that none is drawn at random. The",
+        "dock plugin's state holds two views and a folder. The view main sits",
+        "at the top and has the index a0, the folder more sits at the top",
+        "after it with a1, and the view side sits in the folder more with a0.",
+        "The grid of main holds a split of one tab group, whose one share R",
+        "writes as an array by the schema of the dock's state, and a rail on",
+        "the left edge with the panel of core's Edit board plugin, which the",
+        "grid names by the id of its class, blockr.core-edit_board_plugin. The",
+        "plugin keeps no state, so the board holds none for it. The view side,",
+        "the active view, gets the default grid over the one panel that the",
+        "script gives it. The card of b shows its output alone. The stack has",
+        "no color, and the board holds the value of the board option compact",
+        "that the script sets, and no other. The client opens the board with",
+        "the dock plugin's class and keeps the dock's state as it is."
       ),
-      board = new_dock_board(
+      board = new_board(
         blocks = c(
           a = new_dataset_block("iris", block_name = "Iris"),
           b = new_head_block(n = 3L, block_name = "Head")
         ),
         links = links(ab = new_link("a", "b", "data")),
         stacks = stacks(s1 = new_stack(c("a", "b"), "Input")),
-        plugins = list(edit = new_edit_board_plugin()),
-        views = list(
-          main = dock_view(
-            dock_grid(
-              group(panels("a", "b", active = "b")),
-              rail(plg("edit"), collapsed = TRUE, size = 300)
-            ),
-            name = "Main"
-          ),
-          side = dock_view("b", folder = "more")
-        ),
-        folders = list(more = dock_folder("More")),
-        active = "side",
-        visible = list(b = "outputs"),
         options = new_compact_option(TRUE),
+        plugins = list(
+          new_dock_plugin(
+            views = list(
+              main = dock_view(
+                dock_grid(
+                  group(panels("a", "b", active = "b")),
+                  rail(
+                    plg("blockr.core-edit_board_plugin"),
+                    collapsed = TRUE,
+                    size = 300
+                  )
+                ),
+                name = "Main"
+              ),
+              side = dock_view("b", folder = "more")
+            ),
+            folders = list(more = dock_folder("More")),
+            active = "side",
+            visible = list(b = "outputs")
+          )
+        ),
         id = "curious_otter",
         name = "Curious otter"
       )

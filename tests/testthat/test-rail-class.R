@@ -9,7 +9,7 @@ test_that("rail() writes a rail and checks its arguments", {
 
   # A rail shows its first panel unless it is given another, and an empty
   # rail shows none.
-  expect_identical(rail("a", "b")$active, new_panel_ref("a", "bare"))
+  expect_identical(rail("a", "b")$active, blk("a"))
   expect_null(rail()$active)
 
   expect_false(rail("a")$collapsed)

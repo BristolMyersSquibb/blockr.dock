@@ -50,8 +50,8 @@ test_that("a tab group shows its first panel unless it is given another", {
 
   grid <- dock_grid(panels("a", "b", "c", active = "b"), c("d", "e"))
 
-  expect_identical(grid$children[[1L]]$active, new_panel_ref("b", "bare"))
-  expect_identical(grid$children[[2L]]$active, new_panel_ref("d", "bare"))
+  expect_identical(grid$children[[1L]]$active, blk("b"))
+  expect_identical(grid$children[[2L]]$active, blk("d"))
   expect_length(grid$children[[2L]]$panels, 2L)
 
   expect_error(

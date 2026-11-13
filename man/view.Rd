@@ -32,7 +32,7 @@ The function \code{dock_view()} returns a \code{dock_view}, \code{dock_folder()}
 }
 \description{
 The dock shows one view of the board at a time, a grid of panels, and its
-views menu lists every view, grouped in folders (see \code{\link[=new_dock_board]{new_dock_board()}}).
+views menu lists every view, grouped in folders (see \code{\link[=new_dock_plugin]{new_dock_plugin()}}).
 The function \code{dock_view()} writes a view, and \code{dock_folder()} a folder.
 }
 \details{
@@ -48,7 +48,7 @@ A view without a name is named after its id, as "Adverse events" for
 A folder groups views and other folders in the views menu, at any depth,
 and does not change what a view shows.
 A view or folder sits in the folder whose id it names in \code{folder}, which is
-the folder's name in the \code{folders} of \code{\link[=new_dock_board]{new_dock_board()}}, and at the top
+the folder's name in the \code{folders} of \code{\link[=new_dock_plugin]{new_dock_plugin()}}, and at the top
 where it names none.
 
 The function \code{view_name()} reads the name of a view, such as one that

@@ -193,7 +193,9 @@ test_that("a view given panels gets the default grid over them", {
 
   state <- plugin_state(
     new_dock_plugin(
-      views = list(v = dock_view(list("a", plg("x"), blk("b"), plg("y"))))
+      views = list(
+        v = dock_view(list("a", plg("pkg-x"), blk("b"), plg("pkg-y")))
+      )
     )
   )
 
@@ -203,8 +205,8 @@ test_that("a view given panels gets the default grid over them", {
       orientation = "horizontal",
       children = list(
         list(
-          panels = list(list(plugin = "x"), list(plugin = "y")),
-          active = list(plugin = "x")
+          panels = list(list(plugin = "pkg-x"), list(plugin = "pkg-y")),
+          active = list(plugin = "pkg-x")
         ),
         list(
           panels = list(list(block = "a"), list(block = "b")),
@@ -229,7 +231,9 @@ test_that("the state holds the rails of a grid, without their positions", {
   state <- plugin_state(
     new_dock_plugin(
       views = list(
-        v = dock_view(dock_grid("a", rail(plg("x"), "b", collapsed = TRUE)))
+        v = dock_view(
+          dock_grid("a", rail(plg("pkg-x"), "b", collapsed = TRUE))
+        )
       )
     )
   )
@@ -238,8 +242,8 @@ test_that("the state holds the rails of a grid, without their positions", {
     state$views$v$grid$rails,
     list(
       left = list(
-        panels = list(list(plugin = "x"), list(block = "b")),
-        active = list(plugin = "x"),
+        panels = list(list(plugin = "pkg-x"), list(block = "b")),
+        active = list(plugin = "pkg-x"),
         collapsed = TRUE,
         size = 260,
         collapsed_size = 35
@@ -279,16 +283,37 @@ test_that("the constructor refuses a grid that places a panel twice", {
   expect_error(
     new_dock_plugin(
       views = list(
-        v = dock_view(dock_grid("a", blk("a"), plg("x"), panels(plg("x")))),
+        v = dock_view(
+          dock_grid("a", blk("a"), plg("pkg-x"), panels(plg("pkg-x")))
+        ),
         w = dock_view(c("b", "b"))
       )
     ),
     paste(
-      "The grid of the view v places the block a and the plugin x more than",
-      "once. The grid of the view w places the block b more than once."
+      "The grid of the view v places the block a and the plugin pkg-x more",
+      "than once. The grid of the view w places the block b more than once."
     ),
     fixed = TRUE,
     class = "dock_grid_panel_duplicated"
+  )
+})
+
+test_that("the constructor refuses a plugin named by no id of a class", {
+
+  expect_error(
+    new_dock_plugin(
+      views = list(
+        v = dock_view(dock_grid("a", plg("dag"))),
+        w = dock_view(list(plg("x"), plg("blockr.dag-dag_plugin"), plg("y")))
+      )
+    ),
+    paste(
+      "The grid of the view v names the plugin dag, which is no id of a",
+      "plugin class. The grid of the view w names the plugins x and y, which",
+      "are no ids of plugin classes."
+    ),
+    fixed = TRUE,
+    class = "dock_plugin_id_invalid"
   )
 })
 

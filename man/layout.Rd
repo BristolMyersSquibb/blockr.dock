@@ -81,9 +81,7 @@ them, so it takes no share in \code{sizes}.
 }
 
 A grid names each panel by a panel reference, as \code{\link[=blk]{blk()}} and \code{\link[=plg]{plg()}} write
-them, or by a bare id.
-It keeps each reference as written, since it knows neither the board's
-blocks nor the names of its plugins, which \code{\link[=new_dock_board]{new_dock_board()}} resolves.
+them, or by a bare id, which names a block.
 
 The shares in \code{sizes} are positive numbers, which need not sum to 1, since
 the grid scales them to ratios that do.

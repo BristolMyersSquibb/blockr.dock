@@ -7,14 +7,8 @@
 # A panel there is `list(block = "a")` or
 # `list(plugin = "blockr.dag-dag_plugin")`.
 
-# The id of the dock plugin's class, under which a board holds the dock's
-# state.
-dock_class_id <- "blockr.dock-dock_plugin"
-
 # The dock's state from `views`, `folders`, `active` and `visible`, as
 # `new_dock_plugin()` takes them.
-# A bare id in a grid names a block here, and `plg()` names a plugin by the id
-# of its class, since `new_dock_board()` resolves the names of plugins first.
 # The state is an empty list where the script gives nothing, so that a board
 # holds no state for the dock.
 dock_state <- function(views, folders, active, visible) {
@@ -54,6 +48,7 @@ dock_state <- function(views, folders, active, visible) {
 
   grids <- set_names(lapply(views, view_grid_state), ids[["views"]])
   check_placed_once(grids)
+  check_plugin_ids(grids)
 
   index <- nav_index(view_holders, folder_holders)
 
@@ -304,16 +299,9 @@ check_holders <- function(view_holders, folder_holders) {
 
 # The grid of a view as the dock's state holds it: its own, or the default
 # grid over the panels that it is given.
-# A bare id names a block here, and `plg()` names a plugin by the id of its
-# class.
 view_grid_state <- function(view) {
 
-  resolve <- function(ref) {
-    state_panel(
-      ref[["id"]],
-      if (identical(ref[["type"]], "plugin")) "plugin" else "block"
-    )
-  }
+  resolve <- function(ref) state_panel(ref[["id"]], ref[["type"]])
 
   if (not_null(view[["grid"]])) {
     return(grid_state(view[["grid"]], resolve))
@@ -337,6 +325,38 @@ check_placed_once <- function(grids) {
       recycle0 = TRUE
     ),
     class = "dock_grid_panel_duplicated"
+  )
+}
+
+# A grid names a plugin by the id of its class, which has the form
+# `{package}-{id}`, so a grid of the dock's state that names one by an id
+# without a package is refused, naming the view, and each such id.
+# An id of a plugin class goes unchecked, since `serve()` may add the class.
+check_plugin_ids <- function(grids) {
+
+  lost <- lapply(
+    grids,
+    function(grid) {
+      ids <- unlst(lst_xtr(grid_panels(grid), "plugin"))
+      unique(ids[!grepl("-", ids, fixed = TRUE)])
+    }
+  )
+
+  lost <- lost[lengths(lost) > 0L]
+  many <- lengths(lost) > 1L
+
+  abort_each(
+    paste0(
+      "The grid of the view ", names(lost), " names the plugin",
+      ifelse(many, "s ", " "), chr_ply(lost, paste_enum, quotes = ""),
+      ifelse(
+        many,
+        ", which are no ids of plugin classes.",
+        ", which is no id of a plugin class."
+      ),
+      recycle0 = TRUE
+    ),
+    class = "dock_plugin_id_invalid"
   )
 }
 

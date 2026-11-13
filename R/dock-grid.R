@@ -9,8 +9,8 @@
 # A rail holds its `panels`, its `active` one, whether it is `collapsed`, and
 # its `size` and `collapsed_size` in pixels.
 #
-# The functions that write a grid keep each reference as the script gives it,
-# since they know neither the board's blocks nor the names of its plugins.
+# The functions that write a grid hold a panel reference for each panel, and
+# take a bare id for the reference to a block's panel.
 # R turns each reference into a panel as it writes the dock's state, with
 # `grid_state()`.
 # A grid is in its canonical form once written: the shares of each split sum
@@ -44,9 +44,7 @@
 #'   them, so it takes no share in `sizes`.
 #'
 #' A grid names each panel by a panel reference, as [blk()] and [plg()] write
-#' them, or by a bare id.
-#' It keeps each reference as written, since it knows neither the board's
-#' blocks nor the names of its plugins, which [new_dock_board()] resolves.
+#' them, or by a bare id, which names a block.
 #'
 #' The shares in `sizes` are positive numbers, which need not sum to 1, since
 #' the grid scales them to ratios that do.

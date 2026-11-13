@@ -14,8 +14,7 @@ is_panel_ref(x)
 }
 \arguments{
 \item{id}{For \code{blk()}, the id of a block.
-For \code{plg()}, the name of a plugin in the \code{plugins} of \code{\link[=new_dock_board]{new_dock_board()}},
-or the id of a plugin's class.}
+For \code{plg()}, the id of a plugin's class.}
 
 \item{x}{An object.}
 }
@@ -27,16 +26,13 @@ The functions \code{blk()} and \code{plg()} return a \code{panel_ref}, and
 A grid places panels, each the card of a block or the UI of a plugin, and
 names each panel by a panel reference (see \code{\link[=dock_grid]{dock_grid()}}).
 The function \code{blk()} names the panel of a block, by the block's id.
-The function \code{plg()} names the panel of a plugin, by the name that the app
-script gives the plugin in the \code{plugins} of \code{\link[=new_dock_board]{new_dock_board()}}, or else by
-the id of the plugin's class, as \code{"blockr.dag-dag_plugin"}.
-A bare id names a panel too.
-It names the panel of the block of that id, where the board holds one, and
-otherwise the panel of the plugin of that name in \code{plugins}.
+The function \code{plg()} names the panel of a plugin, by the id of the
+plugin's class, as \code{"blockr.dag-dag_plugin"}.
+A bare id names a panel too, that of the block of that id.
 }
 \details{
-R refuses no reference to a plugin, since it may name the class of a plugin
-that \code{\link[blockr.core:serve]{blockr.core::serve()}} adds to the app.
+The dock plugin's constructor refuses a \code{plg()} whose id lacks the form
+\code{{package}-{id}} of a plugin class's id (see \code{\link[=new_dock_plugin]{new_dock_plugin()}}).
 As the dock starts, it drops the panel of a plugin that the app does not
 run.
 }
@@ -44,6 +40,6 @@ run.
 blk("a")
 plg("blockr.dag-dag_plugin")
 
-dock_grid(blk("a"), "b", rail(plg("dag")))
+dock_grid(blk("a"), "b", rail(plg("blockr.dag-dag_plugin")))
 
 }

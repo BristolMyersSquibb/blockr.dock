@@ -1,7 +1,7 @@
 #' Views and folders
 #'
 #' The dock shows one view of the board at a time, a grid of panels, and its
-#' views menu lists every view, grouped in folders (see [new_dock_board()]).
+#' views menu lists every view, grouped in folders (see [new_dock_plugin()]).
 #' The function `dock_view()` writes a view, and `dock_folder()` a folder.
 #'
 #' A view takes its grid, as [dock_grid()][layout] writes it, which says which
@@ -16,7 +16,7 @@
 #' A folder groups views and other folders in the views menu, at any depth,
 #' and does not change what a view shows.
 #' A view or folder sits in the folder whose id it names in `folder`, which is
-#' the folder's name in the `folders` of [new_dock_board()], and at the top
+#' the folder's name in the `folders` of [new_dock_plugin()], and at the top
 #' where it names none.
 #'
 #' The function `view_name()` reads the name of a view, such as one that

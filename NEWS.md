@@ -1,29 +1,24 @@
 # blockr.dock 0.2.1
 
-* An app script writes the dock's state with `new_dock_board()` (#574).
-  The function returns a board that core's `new_board()` builds, which holds
-  the dock plugin's state beside the plugins that the script gives in
-  `plugins`.
+* An app script writes the dock's state with `new_dock_plugin()`, which it
+  gives core's `new_board()` in `plugins` (#574).
   The script writes each view with `dock_view()`, which takes the view's grid
   or the panels of its default grid, and each folder with `dock_folder()`.
   A grid, written with `dock_grid()`, `panels()`, `group()` and `rail()`,
-  names a block's panel by the block's id or `blk()`.
-  It names a plugin's panel with `plg()`, by the name that the script gives the
-  plugin in `plugins` or by the id of the plugin's class.
-  The constructor `new_dock_plugin()` turns them into the state as the script
-  runs.
+  names a block's panel by the block's id or `blk()`, and a plugin's panel
+  with `plg()`, by the id of the plugin's class.
+  The constructor turns them into the state as the script runs.
   It draws each id that the script leaves out, names a view without a name
   after its id, writes each `index`, and makes the first view active where the
   script names none.
-  As the script runs, R refuses, naming each, a grid that places a panel twice
-  or names a block that the board lacks, a share that is not positive, and a
+  It refuses, naming each, a grid that places a panel twice or names a plugin
+  by an id that is no plugin class's, a share that is not positive, and a
   folder that sits in itself.
   It also refuses an `active` view or a `folder` that the script does not give,
   and a card section other than `"inputs"` and `"outputs"`.
   The argument `visible` takes the place of a block's `visible` attribute.
   The readers `board_views()`, `active_view()` and `view_name()` read the
-  dock's state of a board, and `dock_plugins()` reads the board's other
-  plugins.
+  dock's state of a board.
   The functions of the panel ids `block_panel-<id>`, such as
   `as_block_panel_id()`, go, since a grid names each panel by an object, and so
   does `as_dock_grid()`.

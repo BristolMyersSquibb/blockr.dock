@@ -18,10 +18,10 @@ reference:
     - new_compact_option
     - new_view_tabs_option
     - new_sync_rails_option
-- title: Dock board
-  desc: The board that an app script builds for the dock, and its readers.
+- title: The dock's state on a board
+  desc: The readers of the dock's state on a board.
   contents:
-    - new_dock_board
+    - board_views
 - title: Views and folders
   desc: The views that the dock shows, and the folders that group them.
   contents:
