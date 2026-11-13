@@ -1,5 +1,20 @@
 # blockr.dock 0.2.1
 
+* The dock plugin's class registers the dock's 18 commands (#573).
+  They add, rename, move and remove views and folders, and switch the active
+  view.
+  They place, move, remove, resize and show panels, set a view's grid,
+  collapse or open a rail, and set the sections of a block's card.
+  Each command returns one delta of patches inside the dock's state.
+  Each is one undo step, except `blockr.dock-activate_view`,
+  `blockr.dock-activate_panel` and `blockr.dock-collapse_rail`.
+  On a locked board, a reader can still switch views, show another tab, and
+  collapse or open a rail.
+  No command adds, renames, moves or removes a view or folder there, or adds
+  or removes a panel.
+  A command moves or resizes a panel only where the blockr options
+  `lock_rearrange` or `lock_resize` are `FALSE`.
+
 * The dock plugin's class keeps the dock's state (#570): the views, the
   folders that group them in the navigation, the grid of each view, the
   active view and the sections that each block's card shows.

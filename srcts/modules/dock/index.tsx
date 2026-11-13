@@ -15,7 +15,8 @@
 // The class keeps the dock's state, which ../../state defines.
 // It gives core the schema of the state, which the build generates from the
 // state's types, and the default of the state, which holds no view.
-// It also gives core the `update` of ../../state.
+// It also gives core the `update` of ../../state, and the dock's commands,
+// which ../../commands defines and core registers with the class.
 
 import { DockviewReact, themeAbyssSpaced, themeLightSpaced } from "dockview-react";
 import type { IDockviewReactProps } from "dockview-react";
@@ -27,6 +28,7 @@ import type { CoreApi, FrontendModule, JsonSchema, PluginClass } from "@blockr/c
 // beside the bundle.
 // eslint-disable-next-line no-restricted-imports
 import schema from "../../../inst/js/dock.schema.json" with { type: "json" };
+import { dockCommands } from "../../commands/index.ts";
 import { defaultState, update } from "../../state/index.ts";
 
 export const api = 1;
@@ -71,5 +73,6 @@ export default {
   // though it is one.
   state: { schema: schema as unknown as JsonSchema, default: defaultState },
   update,
+  commands: dockCommands,
   frontend,
 } satisfies Omit<PluginClass, "id">;

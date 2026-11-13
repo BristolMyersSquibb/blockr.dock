@@ -3,6 +3,6 @@
 // its UI module, and the schemas of their values, which the build writes
 // beside those modules for R.
 
-export { compact, dockOptions, syncRails, viewTabs } from "./options.ts";
+export { compact, dockOptions, logicalOption, syncRails, viewTabs } from "./options.ts";
 export type { BlockrOptions } from "./options.ts";
 export { optionSchemas } from "./schemas.ts";

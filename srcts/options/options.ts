@@ -68,13 +68,20 @@ export const dockOptions: Readonly<Record<OptionId, Omit<Option, "id">>> = {
 // of the board option's name, read as a logical, or `fallback` where nothing
 // sets it.
 function logicalDefault(id: OptionId, fallback: boolean): (core: BlockrOptions) => Promise<Json> {
-  return async (core) => {
-    const sent = await core.blockrOption(id);
-    if (sent === undefined) return fallback;
-    const value = typeof sent === "string" ? asLogical(sent) : sent;
-    if (typeof value === "boolean") return value;
-    throw new TypeError(`The blockr option ${id} is ${JSON.stringify(sent)}, which the board option ${id} does not take.`);
-  };
+  return (core) => logicalOption(core, id, fallback, `which the board option ${id} does not take`);
+}
+
+// A blockr option read as a logical, or `fallback` where nothing sets it, as
+// the dock's commands read the blockr options that loosen the board lock.
+// A string reads as the logical that R's as.logical() reads it as.
+// Any other value that is no logical fails, with a message that names the
+// value as R sent it and ends on `refused`.
+export async function logicalOption(core: BlockrOptions, name: string, fallback: boolean, refused: string): Promise<boolean> {
+  const sent = await core.blockrOption(name);
+  if (sent === undefined) return fallback;
+  const value = typeof sent === "string" ? asLogical(sent) : sent;
+  if (typeof value === "boolean") return value;
+  throw new TypeError(`The blockr option ${name} is ${JSON.stringify(sent)}, ${refused}.`);
 }
 
 // The logical that R's as.logical() reads a string as, or undefined where it
