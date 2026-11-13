@@ -19,6 +19,15 @@ tinted square and the name in small capitals. Off by default, which keeps
 the regular header (a 32px mark and a 16px title that may wrap to two
 lines). It sits with the light/dark switch under "Theme options".
 }
+\details{
+A board that holds no value for it takes its default as it opens:
+the blockr option \code{compact}, as \code{options(blockr.compact = TRUE)} or the
+environment variable \code{BLOCKR_COMPACT} sets it, or off where neither does
+(see \code{\link[blockr.core:blockr_option]{blockr.core::blockr_option()}}).
+The client defines the board option, with its label, category, schema, UI
+and default, in the module \code{js/compact-option.js}, which the package lists
+in its \code{._BLOCKR_MODULES_} (see \code{\link[=new_dock_plugin]{new_dock_plugin()}}).
+}
 \examples{
 new_compact_option(TRUE)
 

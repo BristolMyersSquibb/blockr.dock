@@ -1,5 +1,15 @@
 # blockr.dock 0.2.1
 
+* The client defines the dock's board options, `compact`, `view_tabs` and
+  `sync_rails`, each in a module of its own, with a checkbox as its UI (#571).
+  Each takes its default from the blockr option of its name, and where that
+  is unset, `compact` and `view_tabs` are off and `sync_rails` is on.
+  The package lists them in `._BLOCKR_MODULES_`, with the schema of each
+  value beside its module.
+  The dock plugin's class requires them, with core's `show_conditions` and
+  `dark_mode`, so that a board that opens without a value of one of them
+  takes its default.
+
 * The dock has a client of its own, which draws the page as an empty dockview,
   in dockview's dark theme while the board option `dark_mode` is dark (#569).
   The constructor `new_dock_plugin()` makes the dock plugin, a frontend of the

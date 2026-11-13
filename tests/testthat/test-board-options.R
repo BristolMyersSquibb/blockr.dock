@@ -35,3 +35,51 @@ test_that("a dock board option made without a value holds none", {
     expect_null(board_option_value(opt))
   }
 })
+
+test_that("the package lists each dock board option with its module", {
+
+  listed <- ._BLOCKR_MODULES_[["options"]]
+
+  expect_named(listed, c("compact", "view_tabs", "sync_rails"))
+
+  for (id in names(listed)) {
+    module <- listed[[id]][["module"]]
+    expect_identical(module, paste0("js/", gsub("_", "-", id), "-option.js"))
+    expect_true(nzchar(system.file(module, package = "blockr.dock")))
+  }
+})
+
+test_that("the schema of each dock board option ships beside its module", {
+
+  for (id in c("compact", "view_tabs", "sync_rails")) {
+
+    schema <- read_json_schema(
+      paste0("js/", gsub("_", "-", id), "-option.schema.json"),
+      package = "blockr.dock"
+    )
+
+    expect_named(schema, c("type", "description"))
+    expect_identical(schema[["type"]], "boolean")
+    expect_type(schema[["description"]], "character")
+  }
+})
+
+test_that("R writes the value of a dock board option that a script gives", {
+
+  board <- new_board(
+    options = c(
+      new_compact_option(TRUE),
+      new_view_tabs_option(FALSE),
+      new_sync_rails_option(FALSE)
+    )
+  )
+
+  expect_identical(
+    blockr_ser(board)[["board"]][["options"]],
+    list(
+      compact = list(value = TRUE, version = 1L),
+      view_tabs = list(value = FALSE, version = 1L),
+      sync_rails = list(value = FALSE, version = 1L)
+    )
+  )
+})

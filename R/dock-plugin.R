@@ -14,6 +14,15 @@
 #' is available, and [blockr.core::serve()] runs the dock in place of core's
 #' basic frontend.
 #'
+#' The class requires five board options: the dock's own, `compact`,
+#' `view_tabs` and `sync_rails` (see [new_compact_option()]), and core's
+#' `show_conditions` and `dark_mode`.
+#' So the client gives every board that lacks a value of one of them its
+#' default as the board opens, before the dock draws it.
+#' The package lists each of its own board options in `._BLOCKR_MODULES_`
+#' too, with its module, as `js/compact-option.js`, beside which the schema of
+#' its value ships, as `js/compact-option.schema.json`.
+#'
 #' @return A `plugin` object, as [blockr.core::new_plugin()] returns it.
 #'
 #' @examples
@@ -35,5 +44,10 @@ new_dock_plugin <- function() {
       name = "Dock",
       module = "js/dock.js"
     )
+  ),
+  options = list(
+    compact = list(module = "js/compact-option.js"),
+    view_tabs = list(module = "js/view-tabs-option.js"),
+    sync_rails = list(module = "js/sync-rails-option.js")
   )
 )

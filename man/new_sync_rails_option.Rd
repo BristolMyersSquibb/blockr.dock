@@ -20,6 +20,13 @@ time opens with its rails the way the views already visited show theirs.
 Only a rail holding panels takes part: an empty one is not shown. On by
 default; switched off, each view keeps its rails as they were left there.
 }
+\details{
+A board that holds no value for it takes its default as it opens:
+the blockr option \code{sync_rails}, as \code{options(blockr.sync_rails = FALSE)} or
+the environment variable \code{BLOCKR_SYNC_RAILS} sets it, or on where neither
+does (see \code{\link[blockr.core:blockr_option]{blockr.core::blockr_option()}}).
+The client defines the board option in the module \code{js/sync-rails-option.js}.
+}
 \examples{
 new_sync_rails_option(FALSE)
 

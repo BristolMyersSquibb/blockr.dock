@@ -13,14 +13,19 @@
 // - Both are minified, as core minifies the React it ships, since most of
 //   each is dockview's. The license comments of what a bundle holds stay, at
 //   its end.
+// - The JSON Schema of each of the dock's board options, in
+//   srcts/options/schemas.ts, is written beside the board option's module, as
+//   compact-option.schema.json beside compact-option.js, as core's build
+//   writes those of its own. R writes the value of a board option that an app
+//   script gives by it.
 //
 // The build owns inst/js and empties it first, so that nothing is left of a
 // module that is gone.
 
 import { existsSync } from "node:fs";
-import { mkdir, readdir, rm } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { preset } from "@blockr/core/build";
 import * as esbuild from "esbuild";
 
@@ -86,7 +91,41 @@ export async function build(root: string): Promise<string[]> {
     throw new Error("esbuild warned, as printed above");
   }
 
-  return results.flatMap((result) => Object.keys(result.metafile.outputs)).sort();
+  return [
+    ...results.flatMap((result) => Object.keys(result.metafile.outputs)),
+    ...(await optionSchemas(root, out)),
+  ].sort();
+}
+
+// Writes the JSON Schema of each of the dock's board options into `out`,
+// beside the board option's module, and gives the files it wrote, relative to
+// `root`. It reads them from srcts/options/schemas.ts alone, which Node runs
+// as it is, where the index of srcts/options brings in the JSX of the board
+// options' UIs, which Node cannot run.
+async function optionSchemas(root: string, out: string): Promise<string[]> {
+  const source = join(root, "srcts", "options", "schemas.ts");
+  if (!existsSync(source)) return [];
+
+  const { optionSchemas: schemas } = (await import(pathToFileURL(source).href)) as {
+    optionSchemas: Readonly<Record<string, unknown>>;
+  };
+
+  const written: string[] = [];
+
+  for (const [id, schema] of Object.entries(schemas)) {
+    const file = join(out, `${optionModuleName(id)}.schema.json`);
+    await writeFile(file, `${JSON.stringify(schema, null, 2)}\n`);
+    written.push(relative(root, file));
+  }
+
+  return written;
+}
+
+// The name of the module of the dock's board option with the id given, as
+// compact-option for compact, which blockr.dock lists in R with the board
+// option.
+function optionModuleName(id: string): string {
+  return `${id.replaceAll("_", "-")}-option`;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

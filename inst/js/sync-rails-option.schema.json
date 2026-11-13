@@ -1,0 +1,4 @@
+{
+  "type": "boolean",
+  "description": "Whether collapsing or opening a view's rail does so on every view at once"
+}
