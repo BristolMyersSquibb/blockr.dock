@@ -26,7 +26,9 @@ Suggests:
     testthat (>= 3.0.0),
     withr,
     knitr,
-    rmarkdown
+    rmarkdown,
+    shinytest2,
+    chromote
 Remotes:
     BristolMyersSquibb/blockr.core@js-state
 Config/testthat/edition: 3
