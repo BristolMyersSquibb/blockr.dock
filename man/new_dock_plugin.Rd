@@ -25,6 +25,15 @@ with its name, "Dock", and its module, \code{js/dock.js} (see
 So \code{\link[blockr.core:available_plugins]{blockr.core::available_plugins()}} gives the class wherever blockr.dock
 is available, and \code{\link[blockr.core:serve]{blockr.core::serve()}} runs the dock in place of core's
 basic frontend.
+
+The class requires five board options: the dock's own, \code{compact},
+\code{view_tabs} and \code{sync_rails} (see \code{\link[=new_compact_option]{new_compact_option()}}), and core's
+\code{show_conditions} and \code{dark_mode}.
+So the client gives every board that lacks a value of one of them its
+default as the board opens, before the dock draws it.
+The package lists each of its own board options in \code{._BLOCKR_MODULES_}
+too, with its module, as \code{js/compact-option.js}, beside which the schema of
+its value ships, as \code{js/compact-option.schema.json}.
 }
 \examples{
 new_dock_plugin()

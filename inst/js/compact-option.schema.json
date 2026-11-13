@@ -1,0 +1,4 @@
+{
+  "type": "boolean",
+  "description": "Whether each block card shows a compact header over the block's content"
+}

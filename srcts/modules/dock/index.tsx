@@ -7,7 +7,11 @@
 // bundle holds.
 // The page is an empty dockview, which holds no panel. It takes dockview's
 // light-spaced theme, or its abyss-spaced theme where the board option
-// dark_mode is dark, which is why the class requires dark_mode.
+// dark_mode is dark.
+// The class requires five board options: the dock's own, compact, view_tabs
+// and sync_rails, which ../../options defines, and core's show_conditions and
+// dark_mode. So core gives each board that lacks a value for one of them its
+// default as the board opens, before the dock draws it.
 
 import { DockviewReact, themeAbyssSpaced, themeLightSpaced } from "dockview-react";
 import type { IDockviewReactProps } from "dockview-react";
@@ -52,6 +56,6 @@ const frontend = {
 } satisfies FrontendModule;
 
 export default {
-  options: ["dark_mode"],
+  options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
   frontend,
 } satisfies Omit<PluginClass, "id">;

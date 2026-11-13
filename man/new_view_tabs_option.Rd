@@ -20,6 +20,13 @@ end of the line. Off by default, it sits with the light/dark switch and
 view menu sets it as well. A board saved with the option on shows the tabs
 from its first paint.
 }
+\details{
+A board that holds no value for it takes its default as it opens:
+the blockr option \code{view_tabs}, as \code{options(blockr.view_tabs = TRUE)} or the
+environment variable \code{BLOCKR_VIEW_TABS} sets it, or off where neither does
+(see \code{\link[blockr.core:blockr_option]{blockr.core::blockr_option()}}).
+The client defines the board option in the module \code{js/view-tabs-option.js}.
+}
 \examples{
 new_view_tabs_option(TRUE)
 

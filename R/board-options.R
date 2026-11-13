@@ -6,6 +6,14 @@
 #' the regular header (a 32px mark and a 16px title that may wrap to two
 #' lines). It sits with the light/dark switch under "Theme options".
 #'
+#' A board that holds no value for it takes its default as it opens:
+#' the blockr option `compact`, as `options(blockr.compact = TRUE)` or the
+#' environment variable `BLOCKR_COMPACT` sets it, or off where neither does
+#' (see [blockr.core::blockr_option()]).
+#' The client defines the board option, with its label, category, schema, UI
+#' and default, in the module `js/compact-option.js`, which the package lists
+#' in its `._BLOCKR_MODULES_` (see [new_dock_plugin()]).
+#'
 #' @param value Logical, whether headers start compact.
 #'
 #' @return A `board_option` object.
@@ -27,6 +35,12 @@ new_compact_option <- function(value) {
 #' view menu sets it as well. A board saved with the option on shows the tabs
 #' from its first paint.
 #'
+#' A board that holds no value for it takes its default as it opens:
+#' the blockr option `view_tabs`, as `options(blockr.view_tabs = TRUE)` or the
+#' environment variable `BLOCKR_VIEW_TABS` sets it, or off where neither does
+#' (see [blockr.core::blockr_option()]).
+#' The client defines the board option in the module `js/view-tabs-option.js`.
+#'
 #' @param value Logical, whether the views show as tabs.
 #'
 #' @return A `board_option` object.
@@ -47,6 +61,12 @@ new_view_tabs_option <- function(value) {
 #' time opens with its rails the way the views already visited show theirs.
 #' Only a rail holding panels takes part: an empty one is not shown. On by
 #' default; switched off, each view keeps its rails as they were left there.
+#'
+#' A board that holds no value for it takes its default as it opens:
+#' the blockr option `sync_rails`, as `options(blockr.sync_rails = FALSE)` or
+#' the environment variable `BLOCKR_SYNC_RAILS` sets it, or on where neither
+#' does (see [blockr.core::blockr_option()]).
+#' The client defines the board option in the module `js/sync-rails-option.js`.
 #'
 #' @param value Logical, whether the rails are kept in step.
 #'

@@ -1,0 +1,4 @@
+{
+  "type": "boolean",
+  "description": "Whether the views show as a line of tabs under the navbar"
+}
