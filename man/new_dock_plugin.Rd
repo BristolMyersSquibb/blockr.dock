@@ -5,7 +5,24 @@
 \alias{._BLOCKR_MODULES_}
 \title{The dock plugin}
 \usage{
-new_dock_plugin()
+new_dock_plugin(
+  views = NULL,
+  folders = list(),
+  active = NULL,
+  visible = list()
+)
+}
+\arguments{
+\item{views}{The views, each written with \code{\link[=dock_view]{dock_view()}}, by id, or \code{NULL}
+for none.}
+
+\item{folders}{The folders, each written with \code{\link[=dock_folder]{dock_folder()}}, by id.}
+
+\item{active}{The id of the view that the board opens on, or \code{NULL} for the
+first view of the views menu.}
+
+\item{visible}{The sections that each block's card shows, by the block's
+id, as \code{list(a = "outputs")}.}
 }
 \value{
 A \code{plugin} object, as \code{\link[blockr.core:new_plugin]{blockr.core::new_plugin()}} returns it.
@@ -19,12 +36,51 @@ id \code{blockr.dock-dock_plugin} (see \code{\link[blockr.core:new_plugin]{block
 The dock keeps its state in the board: its views, the folders that group
 them, the active view and the sections that each block's card shows.
 The schema of that state ships beside the class's module, as
-\code{js/dock.schema.json}.
-The constructor takes no args, so a board that an app script builds holds
-no state for the dock, and the client gives it the class's default, which
-holds no view.
+\code{js/dock.schema.json}, and R writes the state by it.
 }
 \details{
+The constructor writes the state that an app script gives, once, as the
+script runs, and the script gives the plugin to \code{\link[blockr.core:new_board]{blockr.core::new_board()}}
+in \code{plugins} (see \code{\link[=board_views]{board_views()}}):
+\itemize{
+\item Each view in \code{views}, written with \code{\link[=dock_view]{dock_view()}}, gets its grid, or the
+default grid over the panels that it is given.
+A view's id is its name in the list, and R draws the id of each view that
+the list leaves unnamed, in the shape that the blockr option \code{rand_id}
+names (see \code{\link[blockr.core:rand_names]{blockr.core::rand_names()}}).
+A view without a name is named after its id.
+\item Each folder in \code{folders}, written with \code{\link[=dock_folder]{dock_folder()}}, has its name in
+the list as its id, or an id that R draws.
+\item Each view and folder gets an \code{index}, which orders it among the views and
+folders of the folder that holds it.
+In each folder, and at the top, the views come first and the folders
+after them, each in the order that the script gives.
+\item The view that \code{active} names is the one that the board opens on.
+Where \code{active} names none, it is the first view of the views menu.
+\item The argument \code{visible} gives the sections that a block's card shows, by
+the block's id: \code{"inputs"}, \code{"outputs"} or neither.
+A card without an entry shows both, so R drops an entry that names both.
+}
+
+Where the script gives no views, folders or \code{visible}, the plugin holds no
+state, and a board that holds it holds none for the dock.
+The client then gives the board the class's default, which holds no view,
+and the dock adds a view as it starts.
+In a grid, a bare id names a block, and \code{\link[=plg]{plg()}} names a plugin by the
+name that the script gives it in the board's \code{plugins}, or by the id of its
+class.
+
+The constructor refuses, naming each, a grid that places a panel twice.
+A panel on a rail and in a tab group counts as twice.
+It also refuses a view or folder that names a folder that \code{folders} lacks,
+and a folder that sits in itself, through the folders that hold it.
+Last, it refuses an \code{active} that names a view that \code{views} lacks, and a
+section other than \code{"inputs"} and \code{"outputs"}.
+It knows nothing of the board that holds it, so the dock completes its
+state as \code{new_board()} builds the board, and refuses there what only the
+board can tell, such as a grid that names a block that the board lacks
+(see \code{\link[=board_views]{board_views()}}).
+
 The package lists the class in the \code{._BLOCKR_MODULES_} that it exports,
 with its name, "Dock", and its module, \code{js/dock.js} (see
 \code{\link[blockr.core:read_blocks_yml]{blockr.core::read_blocks_yml()}}).
@@ -47,5 +103,16 @@ its value ships, as \code{js/compact-option.schema.json}.
 }
 \examples{
 new_dock_plugin()
+
+dock <- new_dock_plugin(
+  views = list(
+    overview = dock_view(dock_grid("a", "b"), name = "Overview"),
+    ae = dock_view("c", folder = "safety")
+  ),
+  folders = list(safety = dock_folder("Safety")),
+  visible = list(b = "outputs")
+)
+
+names(blockr.core::plugin_state(dock))
 
 }

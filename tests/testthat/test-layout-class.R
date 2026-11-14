@@ -1,139 +1,124 @@
 test_that("an invalid grid node reports a legible error", {
+
   expect_error(
     dock_grid("a", active = TRUE),
-    "Unknown layout node type",
+    "not an object of class logical",
+    class = "dock_layout_node_invalid"
+  )
+
+  # A rail sits on an edge of the view, so only the top split takes one.
+  expect_error(dock_grid(group(rail("a"))), class = "dock_layout_node_invalid")
+  expect_error(
+    dock_grid(list("a", rail("b"))),
     class = "dock_layout_node_invalid"
   )
 })
 
-test_that("validate_dock_grid enforces the canonical invariant", {
-
-  g <- as_dock_grid(dock_grid("a", "b", sizes = c(0.3, 0.7)))
-  expect_identical(validate_dock_grid(g), g)
-
-  # A plain list is not a dock_grid.
-  expect_error(
-    validate_dock_grid(list(grid = list())),
-    class = "dock_grid_structure_invalid"
-  )
-
-  # A non-canonical grid -- branch sizes that no longer sum to 1 -- is rejected.
-  fake <- g
-  fake[["sizes"]] <- c(0.9, 0.7)
-  expect_error(validate_dock_grid(fake), class = "dock_grid_not_canonical")
-})
-
-test_that("a grid places each panel once", {
-
-  # Twice in the tree. A grid says where each panel goes, so two spots for one
-  # panel express nothing, and neither spot wins on principle -- hence a
-  # rejection rather than a quiet first-wins dedup.
-  expect_error(
-    validate_dock_grid(dock_grid("block_panel-a", "block_panel-a")),
-    class = "dock_grid_panel_duplicated"
-  )
-
-  # The rails place panels too, so the invariant spans them: twice inside one
-  # rail, or once in each of two.
-  expect_error(
-    validate_dock_grid(dock_grid(rail(blk("a"), blk("a")))),
-    class = "dock_grid_panel_duplicated"
-  )
-  expect_error(
-    validate_dock_grid(
-      dock_grid(rail(blk("a")), rail(blk("a"), position = "right"))
-    ),
-    class = "dock_grid_panel_duplicated"
-  )
-
-  # Every repeated panel is named, not just the first one found.
-  expect_error(
-    validate_dock_grid(
-      dock_grid(
-        "block_panel-a", "block_panel-a", "block_panel-b", "block_panel-b"
-      )
-    ),
-    "block_panel-a and block_panel-b"
-  )
-
-  # The one overlap that does have a winner stays a prune, not a rejection: a
-  # rail claims its panel out of the tree in `canonicalize_grid()`, so what
-  # reaches the check already places it once.
-  ov <- dock_grid("block_panel-a", "block_panel-b", rail(blk("a")))
-  expect_identical(validate_dock_grid(ov), ov)
-  expect_setequal(grid_panel_ids(ov), c("block_panel-a", "block_panel-b"))
-})
-
-test_that("a grid casts to a list and back", {
+test_that("a grid scales the shares of each split to ratios that sum to 1", {
 
   grid <- dock_grid(
-    panels("block_panel-a", "block_panel-b", active = "block_panel-b"),
-    "block_panel-c",
-    rail("block_panel-d", collapsed = TRUE),
-    sizes = c(0.4, 0.6)
-  )
-
-  lst <- as.list(grid)
-
-  expect_false(is_dock_grid(lst))
-  expect_false(is_dock_rail(lst[["rails"]][["left"]]))
-  expect_identical(as_dock_grid(lst), grid)
-  expect_identical(as_dock_grid(grid), grid)
-})
-
-test_that("sizes propagate to grid children and nested branches", {
-
-  grid <- dock_grid("a", "b", sizes = c(0.3, 0.7))
-  expect_equal(grid$sizes, c(0.3, 0.7))
-
-  grid2 <- dock_grid(
     "a",
-    group("b", "c", sizes = c(0.4, 0.6)),
+    group("b", "c", sizes = c(1, 3)),
     sizes = c(0.3, 0.7)
   )
-  expect_equal(grid2$sizes, c(0.3, 0.7))
-  expect_equal(grid2$children[[2L]]$sizes, c(0.4, 0.6))
+
+  expect_identical(grid$sizes, c(0.3, 0.7))
+  expect_identical(grid$children[[2L]]$sizes, c(0.25, 0.75))
+
+  expect_identical(dock_grid("a", "b")$sizes, c(0.5, 0.5))
+  expect_identical(dock_grid(list("a", "b"))$children[[1L]]$sizes, c(0.5, 0.5))
+  expect_identical(dock_grid()$sizes, numeric())
 })
 
-test_that("panels() sets the active tab in a tabbed leaf", {
+test_that("a grid drops what holds no panel, and its share", {
 
-  grid <- dock_grid(panels("a", "b", "c", active = "b"))
-  leaf <- grid$children[[1L]]
-  expect_identical(leaf$active, "b")
-  expect_identical(leaf$panels, c("a", "b", "c"))
-})
-
-test_that("panels() with single id is allowed but redundant", {
-
-  expect_silent(panels("a"))
-  grid <- dock_grid(panels("a"))
-  expect_identical(grid_panel_ids(grid), "a")
-})
-
-test_that("orientation flips the top-level grid", {
-
-  grid <- dock_grid("a", "b", orientation = "vertical")
-  expect_identical(grid$orientation, "vertical")
-})
-
-test_that("dock_grid rejects invalid sizes vector", {
-
-  expect_error(
-    dock_grid("a", "b", sizes = c(0.5)),
-    class = "dock_layout_sizes_invalid"
+  grid <- dock_grid(
+    panels(),
+    "a",
+    group(character(), list()),
+    "b",
+    sizes = c(1, 1, 1, 2)
   )
-  expect_error(
-    dock_grid("a", "b", sizes = c(-0.5, 1.5)),
-    class = "dock_layout_sizes_invalid"
-  )
+
+  expect_length(grid$children, 2L)
+  expect_equal(grid$sizes, c(1 / 3, 2 / 3))
+
+  expect_identical(dock_grid(panels(), group())$children, list())
 })
 
-test_that("panels() rejects active that isn't one of the IDs", {
+test_that("a tab group shows its first panel unless it is given another", {
+
+  grid <- dock_grid(panels("a", "b", "c", active = "b"), c("d", "e"))
+
+  expect_identical(grid$children[[1L]]$active, blk("b"))
+  expect_identical(grid$children[[2L]]$active, blk("d"))
+  expect_length(grid$children[[2L]]$panels, 2L)
 
   expect_error(
     panels("a", "b", active = "c"),
     class = "dock_panels_active_invalid"
   )
+})
+
+test_that("orientation sets how the top split divides", {
+
+  expect_identical(dock_grid("a", "b")$orientation, "horizontal")
+  expect_identical(
+    dock_grid("a", "b", orientation = "vertical")$orientation,
+    "vertical"
+  )
+  expect_error(dock_grid("a", orientation = "diagonal"))
+})
+
+test_that("dock_grid() and group() refuse shares that are not positive", {
+
+  expect_error(
+    dock_grid("a", "b", sizes = 0.5),
+    "2 children, while it gives 1",
+    class = "dock_layout_sizes_invalid"
+  )
+  expect_error(
+    dock_grid("a", "b", sizes = c(-0.5, 1.5)),
+    "the share -0.5 is not",
+    class = "dock_layout_sizes_invalid"
+  )
+  expect_error(
+    group("a", "b", sizes = c(0, -1)),
+    "the shares 0 and -1 are not",
+    class = "dock_layout_sizes_invalid"
+  )
+  expect_error(
+    dock_grid("a", sizes = NA_real_),
+    class = "dock_layout_sizes_invalid"
+  )
+  expect_error(dock_grid("a", sizes = "1"), class = "dock_layout_sizes_invalid")
+})
+
+test_that("validate_dock_grid() refuses a grid that is not canonical", {
+
+  grid <- dock_grid("a", "b", sizes = c(0.3, 0.7))
+  expect_identical(validate_dock_grid(grid), grid)
+
+  expect_error(
+    validate_dock_grid(list()),
+    class = "dock_grid_structure_invalid"
+  )
+
+  fake <- grid
+  fake$sizes <- c(0.9, 0.7)
+  expect_error(validate_dock_grid(fake), class = "dock_grid_not_canonical")
+
+  fake <- grid
+  fake$children[[1L]]$active <- blk("z")
+  expect_error(validate_dock_grid(fake), class = "dock_grid_not_canonical")
+
+  fake <- grid
+  fake$children[[1L]] <- list(children = list(), sizes = numeric())
+  expect_error(validate_dock_grid(fake), class = "dock_grid_not_canonical")
+
+  fake <- grid
+  fake$focus <- "a"
+  expect_error(validate_dock_grid(fake), class = "dock_grid_structure_invalid")
 })
 
 test_that("dock_grid has a tree-style print method", {
@@ -143,14 +128,14 @@ test_that("dock_grid has a tree-style print method", {
   expect_snapshot(
     print(
       dock_grid(
-        group("data", "filt", "head"), "assistant_extension",
+        group("data", "filt", "head"), plg("assistant"),
         sizes = c(0.6, 0.4)
       )
     )
   )
 
   expect_snapshot(
-    print(dock_grid("a", panels("b", "c", "edit", active = "c")))
+    print(dock_grid("a", panels("b", "c", plg("edit"), active = "c")))
   )
 
   expect_snapshot(
@@ -164,58 +149,36 @@ test_that("dock_grid has a tree-style print method", {
 
   expect_snapshot(print(dock_grid("top", group("a", group("b", "c")))))
 
+  expect_snapshot(
+    print(
+      dock_grid(
+        "a",
+        rail(plg("dag"), "b", active = "b", collapsed = TRUE),
+        rail("c", position = "right")
+      )
+    )
+  )
+
   expect_snapshot(print(dock_grid()))
-})
-test_that("dock_grid format strips panel-id prefixes unless bare = FALSE", {
-
-  grid <- dock_grid(blk("a"), rail(blk("b")))
-
-  bare <- format(grid)
-  full <- format(grid, bare = FALSE)
-
-  expect_false(any(grepl("block_panel-", bare)))
-  expect_true(any(grepl("block_panel-a", full, fixed = TRUE)))
-})
-
-test_that("dock_grid format marks the focused panel", {
-
-  grid <- dock_grid("a", panels("b", "c", active = "c"))
-  grid[["focus"]] <- "c"
-
-  out <- format(grid)
-
-  expect_true(any(grepl("focus", out, fixed = TRUE)))
-})
-
-test_that("empty dock_grid formats as a single line", {
-
-  out <- format(dock_grid())
-
-  expect_length(out, 1L)
-  expect_match(out, "empty", fixed = TRUE)
 })
 
 test_that("print.dock_grid returns its input invisibly", {
 
   grid <- dock_grid("a", "b")
 
-  expect_identical(expect_invisible(print(grid)), grid)
-})
-
-test_that("str_value.dock_grid lists the panel object ids", {
-
-  grid <- dock_grid("block_panel-b", "block_panel-a")
-
-  expect_identical(str_value(grid), "<dock_grid> b, a")
-
   expect_output(
-    str(grid),
-    "<dock_grid> b, a",
+    expect_identical(expect_invisible(print(grid)), grid),
+    "<dock_grid> horizontal",
     fixed = TRUE
   )
 })
 
-test_that("str_value.dock_grid marks an empty grid", {
+test_that("str_value.dock_grid lists the ids of the panels", {
+
+  grid <- dock_grid("b", blk("a"), rail(plg("dag")))
+
+  expect_identical(str_value(grid), "<dock_grid> b, a, dag")
+  expect_output(str(grid), "<dock_grid> b, a, dag", fixed = TRUE)
 
   expect_identical(str_value(dock_grid()), "<dock_grid> (empty)")
 })

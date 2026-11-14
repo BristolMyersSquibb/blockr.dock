@@ -1,0 +1,150 @@
+{
+  "description": "A board that a dock app script builds with new_board() and the dock plugin, with every id given, so that none is drawn at random. The dock plugin's state holds two views and a folder. The view main sits at the top and has the index a0, the folder more sits at the top after it with a1, and the view side sits in the folder more with a0. The grid of main holds a split of one tab group, whose one share R writes as an array by the schema of the dock's state, and a rail on the left edge with the panel of core's Edit board plugin. The script names that plugin edit in the board's plugins, and the state names it by the id of its class, blockr.core-edit_board_plugin. The plugin keeps no state, so the board holds none for it. The view side, the active view, gets the default grid over the one panel that the script gives it. The card of b shows its output alone. The stack has no color, and the board holds the value of the board option compact that the script sets, and no other. The client opens the board with the dock plugin's class and keeps the dock's state as it is.",
+  "format": 1,
+  "packages": {
+    "blockr.core": "0.2.0",
+    "blockr.dock": "0.2.1"
+  },
+  "board": {
+    "id": "curious_otter",
+    "versions": {
+      "blockr.dock-dock_plugin": 1
+    },
+    "name": "Curious otter",
+    "blocks": {
+      "a": {
+        "registry_id": "blockr.core-dataset_block",
+        "version": 1,
+        "state": {
+          "dataset": "iris",
+          "package": "datasets"
+        },
+        "name": "Iris",
+        "locked": null
+      },
+      "b": {
+        "registry_id": "blockr.core-head_block",
+        "version": 1,
+        "state": {
+          "n": 3,
+          "direction": "head"
+        },
+        "name": "Head",
+        "locked": null
+      }
+    },
+    "links": {
+      "ab": {
+        "from": "a",
+        "to": "b",
+        "input": "data"
+      }
+    },
+    "stacks": {
+      "s1": {
+        "name": "Input",
+        "blocks": [
+          "a",
+          "b"
+        ],
+        "color": null
+      }
+    },
+    "options": {
+      "compact": {
+        "value": true,
+        "version": 1
+      }
+    },
+    "plugins": {
+      "blockr.dock-dock_plugin": {
+        "views": {
+          "main": {
+            "name": "Main",
+            "folder": null,
+            "index": "a0",
+            "grid": {
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "children": [
+                    {
+                      "panels": [
+                        {
+                          "block": "a"
+                        },
+                        {
+                          "block": "b"
+                        }
+                      ],
+                      "active": {
+                        "block": "b"
+                      }
+                    }
+                  ],
+                  "sizes": [
+                    1.0
+                  ]
+                }
+              ],
+              "sizes": [
+                1.0
+              ],
+              "rails": {
+                "left": {
+                  "panels": [
+                    {
+                      "plugin": "blockr.core-edit_board_plugin"
+                    }
+                  ],
+                  "active": {
+                    "plugin": "blockr.core-edit_board_plugin"
+                  },
+                  "collapsed": true,
+                  "size": 300.0,
+                  "collapsed_size": 35.0
+                }
+              }
+            }
+          },
+          "side": {
+            "name": "Side",
+            "folder": "more",
+            "index": "a0",
+            "grid": {
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "panels": [
+                    {
+                      "block": "b"
+                    }
+                  ],
+                  "active": {
+                    "block": "b"
+                  }
+                }
+              ],
+              "sizes": [
+                1.0
+              ]
+            }
+          }
+        },
+        "folders": {
+          "more": {
+            "name": "More",
+            "folder": null,
+            "index": "a1"
+          }
+        },
+        "active": "side",
+        "visible": {
+          "b": [
+            "outputs"
+          ]
+        }
+      }
+    }
+  }
+}

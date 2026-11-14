@@ -2,34 +2,34 @@
 % Please edit documentation in R/dock-grid.R
 \name{dock-grid}
 \alias{dock-grid}
-\alias{as_dock_grid}
 \alias{is_dock_grid}
 \alias{validate_dock_grid}
-\title{Canonical view grid}
+\title{Grids}
 \usage{
-as_dock_grid(x, ...)
-
 is_dock_grid(x)
 
 validate_dock_grid(x)
 }
 \arguments{
-\item{x}{Object to cast (a \code{dock_grid} or a list), validate, or test.}
-
-\item{...}{Passed on to methods.}
+\item{x}{An object.}
 }
 \value{
-\code{as_dock_grid()} and \code{validate_dock_grid()} a \code{dock_grid};
-\code{is_dock_grid()} a boolean.
+The function \code{is_dock_grid()} returns a boolean, and
+\code{validate_dock_grid()} its input, invisibly.
 }
 \description{
-A \code{dock_grid} is a view's geometry in a compact form that does not depend on
-dockView: nested splits and tab groups with sizes normalised to 0-1 ratios
-and no volatile ids, so two grids of the same shape compare \code{identical()}.
-It is written with \link[=layout]{dock_grid()}.
-The function \code{as_dock_grid()} casts another \code{dock_grid} (identity) or a list
-of the same shape into one, and is idempotent.
-The check \code{is_dock_grid()} tests the class, and \code{validate_dock_grid()}
-returns its input and errors on a malformed or non-canonical grid, or on one
-that places a panel more than once.
+A \code{dock_grid} is a view's grid, as \link[=layout]{dock_grid()} writes it.
+The function \code{is_dock_grid()} tests whether an object is one.
+The function \code{validate_dock_grid()} returns a grid, and refuses one that is
+not in its canonical form, as \code{dock_grid()} writes it.
+In that form, the shares of each split are positive and sum to 1.
+No tab group, split or rail is empty, and each tab group and rail shows one
+of its own panels.
+A view has at most one rail on each of its two edges, left and right.
+}
+\examples{
+grid <- dock_grid("a", "b", sizes = c(1, 3))
+is_dock_grid(grid)
+grid$sizes
+
 }

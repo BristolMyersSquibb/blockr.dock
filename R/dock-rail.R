@@ -1,164 +1,130 @@
-# A rail is a group pinned to one edge of a view -- dockView's edge group.
-# A grid keeps its rails beside its tree, keyed by edge, because dockView
-# serialises `edgeGroups` beside `grid`.
-# A panel in a rail is absent from the grid tree, so the walks over the tree
-# leave rails alone, and the panels a grid places are those of its tree and
-# its rails.
+# A rail holds panels on the left or right edge of a view, outside its splits,
+# as dockview's edge group does.
+# The function `rail()` writes one for `dock_grid()`, which keeps it in its
+# `rails`, by the edge that its `position` names, without that `position`.
+# A rail's widths are pixels rather than shares, since the dock sizes a rail
+# against its own width, and not as a share of a split.
 #
-# Shape: a `dock_rail` carries the `position` it is pinned to, the `panels` it
-# holds, its open `active` tab, whether it is `collapsed` to its bare strip, and
-# its `size` and `collapsed_size` in pixels.
-# The two size fields are pixels rather than ratios because a rail is sized
-# against the dock, not against a share of a split.
-#
-# Visibility is *not* stored.
-# A rail holding panels is shown and an empty one is hidden, which leaves no
-# flag to go stale.
-# Rails are likewise declared once and never removed: dockView's
-# `removeEdgeGroup()` disposes the panels the rail holds, and a declared rail
-# stays put as a target a drag can reveal.
+# A grid holds a rail only while the rail holds panels, since a rail's
+# `active` names one of them, so `dock_grid()` drops a rail that holds none,
+# whatever its widths.
+# Rails sit on the left and right edges alone: the top edge is where every
+# tab group's tabs sit, and the bottom edge is left out with it.
 
-# The edges a dock offers. Left and right only: a rail is a side thing, and a
-# full-width band across the top or bottom reads as a drawer rather than as the
-# rail this is for. The top edge is also where every group's tab strip sits, so
-# its reveal band overlaps the one place an ordinary tab drag always passes --
-# workable (arm the band only once the pointer has left it since the drag
-# began), but not worth carrying for an edge nobody has asked for.
 rail_positions <- c("left", "right")
 
-new_dock_rail <- function(position = "left", panels = character(),
-                          active = NULL, collapsed = FALSE, size = 260,
-                          collapsed_size = 35) {
+#' @rdname layout
+#' @export
+rail <- function(..., position = c("left", "right"), active = NULL,
+                 collapsed = FALSE, size = 260, collapsed_size = 35) {
 
-  panels <- as.character(panels)
+  position <- match.arg(position)
+  refs <- as_panel_refs(list(...))
 
-  if (!length(panels)) {
-    active <- NULL
-  } else if (is.null(active) || !active %in% panels) {
-    active <- panels[[1L]]
+  if (!is_bool(collapsed)) {
+    blockr_abort(
+      "Whether a rail is collapsed is `TRUE` or `FALSE`.",
+      class = "dock_rail_collapsed_invalid"
+    )
   }
+
+  check_rail_size(size, "size")
+  check_rail_size(collapsed_size, "collapsed_size")
 
   structure(
     list(
       position = position,
-      panels = panels,
-      active = active,
+      panels = refs,
+      active = active_panel_ref(active, refs),
       collapsed = collapsed,
-      size = rail_size(size),
-      collapsed_size = rail_size(collapsed_size)
+      size = as.double(size),
+      collapsed_size = as.double(collapsed_size)
     ),
     class = "dock_rail"
   )
-}
-
-# A pixel size is a double however it arrives. JSON reads a whole number back
-# as an integer, so without normalising here a restored rail would not compare
-# `identical()` to the one it was saved from. A non-number passes through for
-# `validate_dock_rail()` to reject.
-rail_size <- function(x) {
-  if (is.numeric(x)) as.double(x) else x
 }
 
 is_dock_rail <- function(x) {
   inherits(x, "dock_rail")
 }
 
-validate_dock_rail <- function(x) {
+# A rail's width, `arg`, is a number of pixels of 0 or more, as the schema of
+# the dock's state has it.
+check_rail_size <- function(x, arg) {
 
-  if (!is_dock_rail(x) || !is.list(x)) {
+  if (!is_number(x) || is.na(x) || !is.finite(x) || x < 0) {
     blockr_abort(
-      "Expecting a `dock_rail` object.",
-      class = "dock_rail_structure_invalid"
+      "The width of a rail in `{arg}` is a number of pixels of 0 or more.",
+      class = "dock_rail_size_invalid"
     )
-  }
-
-  unexpected <- setdiff(
-    names(x),
-    c("position", "panels", "active", "collapsed", "size", "collapsed_size")
-  )
-
-  if (length(unexpected)) {
-    blockr_abort(
-      "Unexpected `dock_rail` component{?s} {unexpected}.",
-      class = "dock_rail_structure_invalid"
-    )
-  }
-
-  pos <- x[["position"]]
-
-  if (!is_string(pos) || !pos %in% rail_positions) {
-    blockr_abort(
-      "A `dock_rail` must be pinned to one of {rail_positions}.",
-      class = "dock_rail_position_invalid"
-    )
-  }
-
-  if (!is.character(x[["panels"]])) {
-    blockr_abort(
-      "A `dock_rail` must carry its `panels` as a character vector.",
-      class = "dock_rail_structure_invalid"
-    )
-  }
-
-  active <- x[["active"]]
-
-  if (not_null(active) && !(is_string(active) && active %in% x[["panels"]])) {
-    blockr_abort(
-      "A `dock_rail` `active` tab must be one of its panels.",
-      class = "dock_rail_active_invalid"
-    )
-  }
-
-  if (!is_bool(x[["collapsed"]])) {
-    blockr_abort(
-      "A `dock_rail` `collapsed` must be `TRUE` or `FALSE`.",
-      class = "dock_rail_collapsed_invalid"
-    )
-  }
-
-  for (fld in c("size", "collapsed_size")) {
-    validate_rail_size(x[[fld]], fld)
   }
 
   invisible(x)
 }
 
-validate_rail_size <- function(value, arg) {
+# The rails that a script gives `dock_grid()`, by edge, left before right,
+# without the rails that hold no panel.
+# A view has one rail at most on each edge.
+grid_rails <- function(rails) {
 
-  if (is.null(value)) {
-    return(invisible(NULL))
-  }
+  edges <- chr_xtr(rails, "position")
+  twice <- unique(edges[duplicated(edges)])
 
-  if (!is_number(value) || is.na(value) || !is.finite(value) || value < 0) {
+  if (length(twice)) {
     blockr_abort(
-      "A `dock_rail` `{arg}` must be a single non-negative number of pixels.",
-      class = "dock_rail_size_invalid"
+      "A view has one rail at most on each edge, while the grid gives two on ",
+      "the {twice} edge{?s}.",
+      class = "dock_rails_position_clash"
     )
   }
 
-  invisible(NULL)
+  rails <- set_names(rails, edges)[intersect(rail_positions, edges)]
+  rails <- Filter(function(rail) length(rail[["panels"]]) > 0L, rails)
+
+  lapply(rails, function(rail) unclass(rail)[names(rail) != "position"])
 }
 
-as_dock_rail <- function(x) {
+# The rails of a grid, by edge, as `dock_grid()` keeps them.
+validate_grid_rails <- function(rails) {
 
-  if (is_dock_rail(x)) {
-    return(x)
+  if (is.null(rails)) {
+    return(invisible(rails))
   }
 
-  new_dock_rail(
-    position = coal(x[["position"]], "left", fail_all = FALSE),
-    panels = coal(unlst(x[["panels"]]), character(), fail_all = FALSE),
-    active = x[["active"]],
-    collapsed = isTRUE(x[["collapsed"]]),
-    size = x[["size"]],
-    collapsed_size = x[["collapsed_size"]]
-  )
+  edges <- names(rails)
+
+  if (!is.list(rails) || is.object(rails) || !length(rails) ||
+        is.null(edges) || !all(edges %in% rail_positions) ||
+        anyDuplicated(edges)) {
+    blockr_abort(
+      "A `dock_grid` holds its rails by the edge that each sits on, one at ",
+      "most on each of the edges {rail_positions}.",
+      class = "dock_rails_structure_invalid"
+    )
+  }
+
+  for (rail in rails) {
+
+    check_tab_group(rail, "rail")
+
+    if (!is_bool(rail[["collapsed"]])) {
+      blockr_abort(
+        "Whether a rail is collapsed is `TRUE` or `FALSE`.",
+        class = "dock_rail_collapsed_invalid"
+      )
+    }
+
+    check_rail_size(rail[["size"]], "size")
+    check_rail_size(rail[["collapsed_size"]], "collapsed_size")
+  }
+
+  invisible(rails)
 }
 
 #' @export
 str_value.dock_rail <- function(x, ...) {
 
-  ids <- panel_obj_ids(x[["panels"]])
+  ids <- chr_xtr(x[["panels"]], "id")
   held <- if (length(ids)) paste0(ids, collapse = ", ") else "(empty)"
 
   paste0("<dock_rail> ", x[["position"]], ": ", held)
@@ -173,118 +139,4 @@ format.dock_rail <- function(x, ...) {
 print.dock_rail <- function(x, ...) {
   cat(format(x, ...), sep = "\n")
   invisible(x)
-}
-
-# A grid's rails, keyed by the edge each is pinned to: dockView allows at most
-# one group per edge, so the edge is the key and a second rail claiming it is an
-# authoring error rather than something to merge.
-view_rail_set <- function(x) {
-
-  if (is_dock_rail(x)) {
-    x <- list(x)
-  }
-
-  rails <- lapply(x, as_dock_rail)
-
-  if (!length(rails)) {
-    return(list())
-  }
-
-  pos <- chr_xtr(rails, "position")
-  dup <- unique(pos[duplicated(pos)])
-
-  if (length(dup)) {
-    blockr_abort(
-      "At most one rail per edge, but {dup} {?is/are} claimed twice.",
-      class = "dock_rails_position_clash"
-    )
-  }
-
-  set_names(rails, pos)
-}
-
-# Whether a rail records anything a grid needs to store: its panels, or geometry
-# an author set. An empty rail at its defaults is implied by every dock offering
-# every edge, so storing it would be noise that round-trips forever.
-rail_is_default <- function(rail) {
-  identical(rail, new_dock_rail(rail[["position"]]))
-}
-
-# All panel ids held by one view's rails, in edge order.
-rail_panel_ids <- function(rails) {
-  as.character(unlst(lapply(rails, `[[`, "panels")))
-}
-
-# One view's rails, keyed by the edge each is pinned to: dockView allows at most
-# one group per edge, so the edge is the key and a second rail claiming it is an
-# authoring error rather than something to merge.
-validate_grid_rails <- function(rails) {
-
-  if (is.null(rails)) {
-    return(invisible(rails))
-  }
-
-  if (!is.list(rails) || is_dock_rail(rails)) {
-    blockr_abort(
-      "A `dock_grid` `rails` component must be a list of `dock_rail` objects.",
-      class = "dock_rails_structure_invalid"
-    )
-  }
-
-  for (rail in rails) {
-    validate_dock_rail(rail)
-  }
-
-  if (length(rails) && !identical(names(rails), chr_xtr(rails, "position"))) {
-    blockr_abort(
-      "A `dock_grid` `rails` component must be keyed by the edge each pins to.",
-      class = "dock_rails_ids_missing"
-    )
-  }
-
-  # Keying by position makes duplicates look well-formed to the check above --
-  # two left rails carry names and positions that agree. Dockview allows one
-  # group per edge, so a second claim on the same edge is malformed however it
-  # was built, and the validator has to say so as loudly as the constructor.
-  dup <- unique(names(rails)[duplicated(names(rails))])
-
-  if (length(dup)) {
-    blockr_abort(
-      "At most one rail per edge, but {dup} {?is/are} claimed twice.",
-      class = "dock_rails_position_clash"
-    )
-  }
-
-  invisible(rails)
-}
-
-#' @rdname layout
-#' @export
-rail <- function(..., position = c("left", "right"),
-                 active = NULL, collapsed = FALSE, size = 260,
-                 collapsed_size = 35) {
-
-  position <- match.arg(position)
-  ids <- chr_ply(list(...), as_panel_string)
-
-  if (not_null(active)) {
-    active <- as_panel_string(active)
-  }
-
-  if (length(ids) && not_null(active) && !active %in% ids) {
-    blockr_abort(
-      "`active` must be one of the panel ids.",
-      class = "dock_rail_active_invalid"
-    )
-  }
-
-  validate_dock_rail(
-    new_dock_rail(
-      position, ids,
-      active = active,
-      collapsed = collapsed,
-      size = size,
-      collapsed_size = collapsed_size
-    )
-  )
 }
