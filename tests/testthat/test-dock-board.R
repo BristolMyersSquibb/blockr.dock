@@ -31,20 +31,128 @@ test_that("a board holds no state for the dock where the script gives none", {
   expect_null(active_view(board))
 })
 
-test_that("a grid names a plugin by the id of its class, unchecked", {
+test_that("plg() names a plugin by its name in `plugins` or by its class", {
 
-  # The board holds no plugin of either class: the Edit board plugin keeps no
-  # state, and serve() may add the class of the other.
+  # A bare id names a block, and never a plugin of that name.
   board <- new_board(
-    blocks = c(a = new_dataset_block()),
+    blocks = c(a = new_dataset_block(), edit = new_head_block()),
     plugins = list(
       new_dock_plugin(
         views = list(
           v = dock_view(
             dock_grid(
-              "a",
-              plg("blockr.core-edit_board_plugin"),
-              plg("blockr.dag-dag_plugin")
+              "a", "edit",
+              plg("edit"), plg("files"), plg("blockr.dag-dag_plugin")
+            )
+          )
+        )
+      ),
+      edit = new_edit_board_plugin(),
+      files = new_file_storage_plugin()
+    )
+  )
+
+  expect_identical(
+    grid_panels(dock_state_of(board)$views$v$grid),
+    list(
+      list(block = "a"),
+      list(block = "edit"),
+      list(plugin = "blockr.core-edit_board_plugin"),
+      list(plugin = "blockr.core-file_storage_plugin"),
+      list(plugin = "blockr.dag-dag_plugin")
+    )
+  )
+
+  # The dock plugin alone holds the names, until it is on a board.
+  dock <- new_dock_plugin(views = list(v = dock_view(plg("edit"))))
+
+  expect_identical(
+    grid_panels(plugin_state(dock)$views$v$grid),
+    list(list(plugin = "edit"))
+  )
+})
+
+test_that("the default grid of a view tells a plugin's panel by its name", {
+
+  board <- new_board(
+    blocks = c(a = new_dataset_block()),
+    plugins = list(
+      new_dock_plugin(views = list(v = dock_view(list("a", plg("edit"))))),
+      edit = new_edit_board_plugin()
+    )
+  )
+
+  edit <- list(plugin = "blockr.core-edit_board_plugin")
+
+  expect_identical(
+    dock_state_of(board)$views$v$grid$children,
+    list(
+      list(panels = list(edit), active = edit),
+      list(panels = list(list(block = "a")), active = list(block = "a"))
+    )
+  )
+})
+
+test_that("a plugin placed by its name and by its class is placed twice", {
+
+  expect_error(
+    new_board(
+      plugins = list(
+        new_dock_plugin(
+          views = list(
+            v = dock_view(
+              dock_grid(
+                plg("edit"),
+                rail(plg("blockr.core-edit_board_plugin"))
+              )
+            )
+          )
+        ),
+        edit = new_edit_board_plugin()
+      )
+    ),
+    paste(
+      "The grid of the view v places the plugin blockr.core-edit_board_plugin",
+      "more than once."
+    ),
+    fixed = TRUE,
+    class = "dock_grid_panel_duplicated"
+  )
+})
+
+test_that("the dock refuses a plg() that names no plugin and no class", {
+
+  expect_error(
+    new_board(
+      plugins = list(
+        new_dock_plugin(
+          views = list(
+            v = dock_view(dock_grid(plg("dga"), plg("edit"))),
+            w = dock_view(list(plg("x"), plg("blockr.dag-dag_plugin")))
+          )
+        ),
+        files = new_file_storage_plugin()
+      )
+    ),
+    paste(
+      "The grid of the view v names the plugins dga and edit, which the",
+      "board's plugins do not name. The grid of the view w names the plugin",
+      "x, which the board's plugins do not name."
+    ),
+    fixed = TRUE,
+    class = "dock_plugin_name_unknown"
+  )
+
+  # The id of a plugin class goes unchecked, since serve() may add the class,
+  # as do the Edit board plugin's, which keeps no state.
+  board <- new_board(
+    plugins = list(
+      new_dock_plugin(
+        views = list(
+          v = dock_view(
+            list(
+              plg("blockr.dag-dag_plugin"),
+              plg("blockr.core-edit_board_plugin")
             )
           )
         )
@@ -55,10 +163,47 @@ test_that("a grid names a plugin by the id of its class, unchecked", {
   expect_identical(
     grid_panels(dock_state_of(board)$views$v$grid),
     list(
-      list(block = "a"),
-      list(plugin = "blockr.core-edit_board_plugin"),
-      list(plugin = "blockr.dag-dag_plugin")
+      list(plugin = "blockr.dag-dag_plugin"),
+      list(plugin = "blockr.core-edit_board_plugin")
     )
+  )
+})
+
+test_that("the dock refuses each block that the board lacks", {
+
+  expect_error(
+    new_board(
+      blocks = c(a = new_dataset_block()),
+      plugins = list(
+        new_dock_plugin(
+          views = list(
+            v = dock_view(dock_grid("a", "x")),
+            w = dock_view(list("y", blk("z")))
+          ),
+          visible = list(q = "inputs")
+        )
+      )
+    ),
+    paste(
+      "The grid of the view v names the block x, which the board lacks.",
+      "The grid of the view w names the blocks y and z, which the board",
+      "lacks. The argument `visible` names the block q, which the board lacks."
+    ),
+    fixed = TRUE,
+    class = "dock_board_block_unknown"
+  )
+
+  # A state without views.
+  expect_error(
+    new_board(
+      blocks = c(a = new_dataset_block()),
+      plugins = list(
+        new_dock_plugin(visible = list(a = "inputs", b = "inputs"))
+      )
+    ),
+    "The argument `visible` names the block b, which the board lacks.",
+    fixed = TRUE,
+    class = "dock_board_block_unknown"
   )
 })
 
@@ -69,7 +214,7 @@ test_that("board_views() reads views that new_dock_plugin() takes back", {
       main = dock_view(
         dock_grid(
           panels("a", "b", active = "b"),
-          rail(plg("blockr.core-edit_board_plugin"), collapsed = TRUE)
+          rail(plg("edit"), collapsed = TRUE)
         ),
         name = "Main"
       ),
@@ -82,7 +227,10 @@ test_that("board_views() reads views that new_dock_plugin() takes back", {
 
   blocks <- c(a = new_dataset_block(), b = new_head_block())
 
-  full <- new_board(blocks = blocks, plugins = list(dock))
+  full <- new_board(
+    blocks = blocks,
+    plugins = list(dock, edit = new_edit_board_plugin())
+  )
 
   views <- board_views(full)
 

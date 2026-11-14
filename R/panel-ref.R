@@ -3,17 +3,21 @@
 #' A grid places panels, each the card of a block or the UI of a plugin, and
 #' names each panel by a panel reference (see [dock_grid()]).
 #' The function `blk()` names the panel of a block, by the block's id.
-#' The function `plg()` names the panel of a plugin, by the id of the
-#' plugin's class, as `"blockr.dag-dag_plugin"`.
+#' The function `plg()` names the panel of a plugin, by the name that the app
+#' script gives the plugin in the `plugins` of [blockr.core::new_board()], or
+#' else by the id of the plugin's class, as `"blockr.dag-dag_plugin"`.
 #' A bare id names a panel too, that of the block of that id.
 #'
-#' The dock plugin's constructor refuses a `plg()` whose id lacks the form
-#' `{package}-{id}` of a plugin class's id (see [new_dock_plugin()]).
+#' The dock refuses no id of a plugin class, since it may name the class of a
+#' plugin that [blockr.core::serve()] adds to the app.
+#' As `new_board()` builds the board, it refuses a `plg()` that names neither
+#' a plugin class nor a plugin in the board's `plugins` (see [board_views()]).
 #' As the dock starts, it drops the panel of a plugin that the app does not
 #' run.
 #'
 #' @param id For `blk()`, the id of a block.
-#'   For `plg()`, the id of a plugin's class.
+#'   For `plg()`, the name of a plugin in the `plugins` of
+#'   [blockr.core::new_board()], or the id of a plugin's class.
 #' @param x An object.
 #'
 #' @return The functions `blk()` and `plg()` return a `panel_ref`, and
@@ -21,9 +25,10 @@
 #'
 #' @examples
 #' blk("a")
+#' plg("dag")
 #' plg("blockr.dag-dag_plugin")
 #'
-#' dock_grid(blk("a"), "b", rail(plg("blockr.dag-dag_plugin")))
+#' dock_grid(blk("a"), "b", rail(plg("dag")))
 #'
 #' @rdname panel-ref
 #' @export

@@ -21,15 +21,32 @@ The function \code{board_views()} returns a list of views, by id, each a
 An app script builds its board with \code{\link[blockr.core:new_board]{blockr.core::new_board()}}, and gives
 the dock's state among the board's \code{plugins}, as the dock plugin that
 \code{\link[=new_dock_plugin]{new_dock_plugin()}} makes.
-A grid names a plugin's panel by the id of the plugin's class, as
-\code{plg("blockr.dag-dag_plugin")}, and may name a plugin that the board does
+The script may name the board's other plugins there, as
+\code{plugins = list(new_dock_plugin(...), dag = new_dag_plugin())}, and a grid
+then names a plugin's panel by that name, as \code{plg("dag")}.
+A grid may also name a plugin by the id of its class, as
+\code{plg("blockr.dag-dag_plugin")}, and so name a plugin that the board does
 not hold, such as one that keeps no state.
 }
 \details{
+As \code{new_board()} builds the board, the dock completes its state on it,
+through its method of \code{\link[blockr.core:complete_plugin]{blockr.core::complete_plugin()}}.
+Where a grid names a plugin by such a name, the dock names it by the id of
+the plugin's class instead, as the board holds the plugin.
+It then refuses, naming each, a grid that places a panel twice, as a grid
+does that names one plugin both by its name and by the id of its class.
+It refuses a \code{plg()} whose id is neither the name of one of the board's
+plugins nor the id of a plugin class, which has the form \code{{package}-{id}}.
+It refuses no id of that form, since a grid may name a plugin that
+\code{\link[blockr.core:serve]{blockr.core::serve()}} adds to the app.
+Last, it refuses a grid or an entry of \code{visible} that names a block that
+the board lacks.
+
 The readers take a board.
 The function \code{board_views()} reads its views, each as \code{\link[=dock_view]{dock_view()}} writes
 it, with its grid.
-Each grid names its panels with \code{\link[=blk]{blk()}} and \code{\link[=plg]{plg()}}.
+Each grid names its panels with \code{\link[=blk]{blk()}} and \code{\link[=plg]{plg()}}, the latter by the id
+of the plugin's class.
 So a script can build one board from another, as
 \code{new_dock_plugin(views = board_views(board)["main"])} does.
 The function \code{active_view()} reads the id of the active view.
@@ -45,14 +62,15 @@ board <- blockr.core::new_board(
     new_dock_plugin(
       views = list(
         main = dock_view(
-          dock_grid("a", "b", rail(plg("blockr.core-edit_board_plugin"))),
+          dock_grid("a", "b", rail(plg("edit"))),
           name = "Main"
         ),
         side = dock_view("b")
       ),
       active = "side",
       visible = list(b = "outputs")
-    )
+    ),
+    edit = blockr.core::new_edit_board_plugin()
   )
 )
 

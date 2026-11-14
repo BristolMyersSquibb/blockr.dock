@@ -6,16 +6,22 @@
   or the panels of its default grid, and each folder with `dock_folder()`.
   A grid, written with `dock_grid()`, `panels()`, `group()` and `rail()`,
   names a block's panel by the block's id or `blk()`, and a plugin's panel
-  with `plg()`, by the id of the plugin's class.
+  with `plg()`, by the name that the script gives the plugin in `plugins` or
+  by the id of the plugin's class.
   The constructor turns them into the state as the script runs.
   It draws each id that the script leaves out, names a view without a name
   after its id, writes each `index`, and makes the first view active where the
   script names none.
-  It refuses, naming each, a grid that places a panel twice or names a plugin
-  by an id that is no plugin class's, a share that is not positive, and a
-  folder that sits in itself.
+  It refuses, naming each, a grid that places a panel twice, a share that is
+  not positive, and a folder that sits in itself.
   It also refuses an `active` view or a `folder` that the script does not give,
   and a card section other than `"inputs"` and `"outputs"`.
+  As `new_board()` builds the board, the dock's method of core's
+  `complete_plugin()` turns each name of a plugin in a grid into the id of the
+  plugin's class.
+  It then refuses, naming each, a grid that places a panel twice, a `plg()`
+  that names neither a plugin of the board nor a plugin class, and a grid or
+  an entry of `visible` that names a block that the board lacks.
   The argument `visible` takes the place of a block's `visible` attribute.
   The readers `board_views()`, `active_view()` and `view_name()` read the
   dock's state of a board.

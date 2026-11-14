@@ -82,6 +82,9 @@ them, so it takes no share in \code{sizes}.
 
 A grid names each panel by a panel reference, as \code{\link[=blk]{blk()}} and \code{\link[=plg]{plg()}} write
 them, or by a bare id, which names a block.
+It keeps each reference as written, and the dock turns the name of a plugin
+into the id of the plugin's class as \code{\link[blockr.core:new_board]{blockr.core::new_board()}} builds the
+board (see \code{\link[=board_views]{board_views()}}).
 
 The shares in \code{sizes} are positive numbers, which need not sum to 1, since
 the grid scales them to ratios that do.

@@ -66,21 +66,20 @@ Where the script gives no views, folders or \code{visible}, the plugin holds no
 state, and a board that holds it holds none for the dock.
 The client then gives the board the class's default, which holds no view,
 and the dock adds a view as it starts.
-In a grid, a bare id names a block, and \code{\link[=plg]{plg()}} names a plugin by the id of
-its class.
+In a grid, a bare id names a block, and \code{\link[=plg]{plg()}} names a plugin by the
+name that the script gives it in the board's \code{plugins}, or by the id of its
+class.
 
 The constructor refuses, naming each, a grid that places a panel twice.
 A panel on a rail and in a tab group counts as twice.
-It refuses a grid that names a plugin by an id that lacks the form
-\code{{package}-{id}} of a plugin class's id.
-It refuses no id of that form, since a grid may name a plugin that
-\code{\link[blockr.core:serve]{blockr.core::serve()}} adds to the app.
 It also refuses a view or folder that names a folder that \code{folders} lacks,
 and a folder that sits in itself, through the folders that hold it.
 Last, it refuses an \code{active} that names a view that \code{views} lacks, and a
 section other than \code{"inputs"} and \code{"outputs"}.
-It knows nothing of the board that holds it, so it refuses no grid or entry
-of \code{visible} that names a block that the board lacks.
+It knows nothing of the board that holds it, so the dock completes its
+state as \code{new_board()} builds the board, and refuses there what only the
+board can tell, such as a grid that names a block that the board lacks
+(see \code{\link[=board_views]{board_views()}}).
 
 The package lists the class in the \code{._BLOCKR_MODULES_} that it exports,
 with its name, "Dock", and its module, \code{js/dock.js} (see

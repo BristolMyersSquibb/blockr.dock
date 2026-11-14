@@ -45,6 +45,9 @@
 #'
 #' A grid names each panel by a panel reference, as [blk()] and [plg()] write
 #' them, or by a bare id, which names a block.
+#' It keeps each reference as written, and the dock turns the name of a plugin
+#' into the id of the plugin's class as [blockr.core::new_board()] builds the
+#' board (see [board_views()]).
 #'
 #' The shares in `sizes` are positive numbers, which need not sum to 1, since
 #' the grid scales them to ratios that do.

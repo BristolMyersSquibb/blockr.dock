@@ -36,21 +36,20 @@
 #' state, and a board that holds it holds none for the dock.
 #' The client then gives the board the class's default, which holds no view,
 #' and the dock adds a view as it starts.
-#' In a grid, a bare id names a block, and [plg()] names a plugin by the id of
-#' its class.
+#' In a grid, a bare id names a block, and [plg()] names a plugin by the
+#' name that the script gives it in the board's `plugins`, or by the id of its
+#' class.
 #'
 #' The constructor refuses, naming each, a grid that places a panel twice.
 #' A panel on a rail and in a tab group counts as twice.
-#' It refuses a grid that names a plugin by an id that lacks the form
-#' `{package}-{id}` of a plugin class's id.
-#' It refuses no id of that form, since a grid may name a plugin that
-#' [blockr.core::serve()] adds to the app.
 #' It also refuses a view or folder that names a folder that `folders` lacks,
 #' and a folder that sits in itself, through the folders that hold it.
 #' Last, it refuses an `active` that names a view that `views` lacks, and a
 #' section other than `"inputs"` and `"outputs"`.
-#' It knows nothing of the board that holds it, so it refuses no grid or entry
-#' of `visible` that names a block that the board lacks.
+#' It knows nothing of the board that holds it, so the dock completes its
+#' state as `new_board()` builds the board, and refuses there what only the
+#' board can tell, such as a grid that names a block that the board lacks
+#' (see [board_views()]).
 #'
 #' The package lists the class in the `._BLOCKR_MODULES_` that it exports,
 #' with its name, "Dock", and its module, `js/dock.js` (see
