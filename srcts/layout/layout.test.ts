@@ -22,7 +22,7 @@ function group(...panels: Panel[]): TabGroup {
 }
 
 function rail(...panels: Panel[]): Rail {
-  return { ...group(...panels), collapsed: false, size: 260, collapsed_size: 35 };
+  return { ...group(...panels), collapsed: false, size: 260 };
 }
 
 // The view Overview of The dock's state: a tab group of a and b, which shows
@@ -120,10 +120,9 @@ describe("gridToLayout()", () => {
         size: 260,
         visible: true,
         collapsed: false,
-        collapsedSize: 35,
         group: { id: "rail-left", views: [panelId(dag)], activeView: panelId(dag) },
       },
-      right: { size: 260, visible: false, collapsed: false, collapsedSize: 35, group: { id: "rail-right", views: [] } },
+      right: { size: 260, visible: false, collapsed: false, group: { id: "rail-right", views: [] } },
     });
   });
 
@@ -181,9 +180,9 @@ describe("gridToLayout()", () => {
     expect(layout.grid.root.data).toMatchObject([{ size: 0.2 / 0.7 }, { size: 0.5 / 0.7 }]);
   });
 
-  test("gives a rail that the grid collapsed its collapse and its widths", () => {
-    const grid: Grid = { ...overview, rails: { right: { ...rail(dag), collapsed: true, size: 300, collapsed_size: 40 } } };
-    expect(gridToLayout(grid, named, SIZE).edgeGroups?.right).toMatchObject({ size: 300, visible: true, collapsed: true, collapsedSize: 40 });
+  test("gives a rail that the grid collapsed its collapse and its width", () => {
+    const grid: Grid = { ...overview, rails: { right: { ...rail(dag), collapsed: true, size: 300 } } };
+    expect(gridToLayout(grid, named, SIZE).edgeGroups?.right).toMatchObject({ size: 300, visible: true, collapsed: true });
   });
 });
 
@@ -222,7 +221,7 @@ describe("layoutToGrid()", () => {
 
   test("reads a rail's collapse and its width in whole pixels, and no rail on an edge group without panels", () => {
     const layout = gridToLayout(overview, named, SIZE);
-    const left = { ...layout.edgeGroups?.left, size: 259.6, collapsed: true, collapsedSize: 35, visible: true, group: layout.edgeGroups?.left?.group };
+    const left = { ...layout.edgeGroups?.left, size: 259.6, collapsed: true, visible: true, group: layout.edgeGroups?.left?.group };
     expect(layoutToGrid({ ...layout, edgeGroups: { left } }).rails).toEqual({ left: { ...rail(dag), collapsed: true, size: 260 } });
     expect(layoutToGrid({ ...layout, edgeGroups: {} }).rails).toBeUndefined();
   });

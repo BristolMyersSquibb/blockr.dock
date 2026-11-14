@@ -59,7 +59,7 @@ import type { DockviewApi, DockviewIDisposable } from "dockview-react";
 import { stateOf } from "../../commands/index.ts";
 import { columnRuns, gestureRuns, gridToLayout, layoutToGrid, panelId, panelOf, railId, stackGrid } from "../../layout/index.ts";
 import type { Run, Size } from "../../layout/index.ts";
-import { EDGES, gridChanges, RAIL_COLLAPSED_SIZE, samePanel, tabGroups, withStoredShares } from "../../state/index.ts";
+import { EDGES, gridChanges, samePanel, tabGroups, withStoredShares } from "../../state/index.ts";
 import type { Edge, Grid, Panel, ViewId } from "../../state/index.ts";
 import type { Narrow } from "./narrow.ts";
 import type { Settings } from "./settings.ts";
@@ -85,6 +85,10 @@ const EMPTY: Grid = { orientation: "horizontal", children: [], sizes: [] };
 // How long a drag stays in an edge's band before the hidden rail there shows,
 // so that a drag that sweeps past an edge does not flash the rail open.
 const DWELL_MS = 250;
+
+// A drag that dwells within 35 pixels of an edge reveals the hidden rail
+// there, as today's dock-rail.js has it.
+const REVEAL_BAND = 35;
 
 // Draws the active view in dockview, and follows the board, until the
 // returned function runs.
@@ -280,16 +284,13 @@ export function drawDock(options: DrawingOptions): () => void {
     }
   }
 
-  // The band of an edge in which a drag reveals the hidden rail there: the
-  // width of the rail's collapsed strip, as the active view stores it or 35
-  // pixels, so that what the user aims at and what appears are about the same
-  // band.
+  // Whether a drag is in the band of an edge in which it reveals the hidden
+  // rail there.
   function inBand(edge: Edge, event: DragEvent): boolean {
     const rect = el.getBoundingClientRect();
     const { clientX: x, clientY: y } = event;
     if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return false;
-    const band = active()?.grid.rails?.[edge]?.collapsed_size ?? RAIL_COLLAPSED_SIZE;
-    return edge === "left" ? x - rect.left <= band : rect.right - x <= band;
+    return edge === "left" ? x - rect.left <= REVEAL_BAND : rect.right - x <= REVEAL_BAND;
   }
 
   function clearDwell(): void {

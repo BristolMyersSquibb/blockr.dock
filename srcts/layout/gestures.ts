@@ -20,7 +20,7 @@
 // was a drag that moved one of them by more than the blockr option
 // dock_grid_size_tol.
 // Dockview also narrows a rail that a narrow dock cannot hold, and leaves it
-// narrow, so a rail keeps its stored widths unless the gesture was a drag
+// narrow, so a rail keeps its stored width unless the gesture was a drag
 // that left the dock's own width alone and moved the rail's edge, as a drag
 // of the rail's sash does, as today's grid mirror in R/board-server.R has it,
 // at 655e323.
@@ -103,7 +103,7 @@ export function columnRuns(view: ViewId, shown: Grid, read: Grid): Run[] {
   ];
 }
 
-// The grid with the stored widths of each rail that the stored grid holds on
+// The grid with the stored width of each rail that the stored grid holds on
 // the same edge.
 // Where `moved` gives the grid that dockview showed before a drag, a rail
 // whose width the drag changed keeps its new width while it is open.
@@ -116,7 +116,7 @@ function withStoredRails(grid: Grid, stored: Grid, moved?: Grid): Grid {
     const kept = stored.rails?.[edge];
     const was = moved?.rails?.[edge];
     const dragged = was !== undefined && was.size !== rail.size;
-    rails[edge] = kept === undefined ? rail : { ...rail, size: dragged ? rail.size : kept.size, collapsed_size: kept.collapsed_size };
+    rails[edge] = kept === undefined ? rail : { ...rail, size: dragged ? rail.size : kept.size };
   }
   return { ...grid, rails };
 }

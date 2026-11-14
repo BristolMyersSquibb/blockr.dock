@@ -27,7 +27,7 @@ function group(...panels: Panel[]): TabGroup {
 }
 
 function rail(...panels: Panel[]): Rail {
-  return { ...group(...panels), collapsed: false, size: 260, collapsed_size: 35 };
+  return { ...group(...panels), collapsed: false, size: 260 };
 }
 
 const empty: Grid = { orientation: "horizontal", children: [], sizes: [] };
@@ -484,7 +484,7 @@ describe("blockr.dock-move_panel", () => {
     expect(dock().views.main?.grid).toEqual({ ...main, children: [group(b), group(c), group(a)], sizes: [0.5, 0.25, 0.25] });
   });
 
-  test("changes nothing where a panel alone on a rail moves to that rail, whose widths stay", async () => {
+  test("changes nothing where a panel alone on a rail moves to that rail, whose width stays", async () => {
     const wide: DockState = {
       ...state,
       views: { ...state.views, main: { ...viewIn(state, "main"), grid: { ...main, rails: { left: { ...rail(dag), size: 400 } } } } },

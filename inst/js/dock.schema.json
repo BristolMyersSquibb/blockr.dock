@@ -253,19 +253,13 @@
           "type": "number",
           "description": "Its width in pixels while it is open, 260 by default.",
           "minimum": 0
-        },
-        "collapsed_size": {
-          "type": "number",
-          "description": "Its width in pixels while it is collapsed, 35 by default.",
-          "minimum": 0
         }
       },
       "required": [
         "panels",
         "active",
         "collapsed",
-        "size",
-        "collapsed_size"
+        "size"
       ],
       "additionalProperties": false,
       "description": "A rail on an edge of the view, with a tab for each of its panels."

@@ -21,7 +21,7 @@
 
 import type { Board, CoreApi, Patch, PluginClassId } from "@blockr/core";
 import { DOCK, stateOf } from "../../commands/index.ts";
-import { gridPanels, keyIn, pointer, prunePanels, RAIL_COLLAPSED_SIZE, RAIL_SIZE } from "../../state/index.ts";
+import { gridPanels, keyIn, pointer, prunePanels, RAIL_SIZE } from "../../state/index.ts";
 import type { Grid, Panel, View, ViewId } from "../../state/index.ts";
 
 // The id and the name of the view that the dock adds to a state that holds
@@ -70,7 +70,7 @@ function startingGrid(board: Board, drawn: readonly PluginClassId[]): Grid {
     sizes: block === undefined ? [] : [1],
     ...(plugin === undefined
       ? {}
-      : { rails: { left: { panels: plugins, active: plugin, collapsed: false, size: RAIL_SIZE, collapsed_size: RAIL_COLLAPSED_SIZE } } }),
+      : { rails: { left: { panels: plugins, active: plugin, collapsed: false, size: RAIL_SIZE } } }),
   };
 }
 

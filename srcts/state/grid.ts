@@ -29,10 +29,8 @@ export type Edge = (typeof EDGES)[number];
 export const SIDES = ["within", "left", "right", "above", "below"] as const;
 export type Side = (typeof SIDES)[number];
 
-// The widths in pixels of a rail that a panel opens, open and collapsed, as
-// today's rail() has them.
+// The width in pixels of a rail that a panel opens, as today's rail() has it.
 export const RAIL_SIZE = 260;
-export const RAIL_COLLAPSED_SIZE = 35;
 
 // How far from 1 the shares of a split may sum, to allow for rounding, as
 // R's all.equal() allows.
@@ -336,8 +334,7 @@ export function placeFailure(grid: Grid, place: Place): string | undefined {
 // At an edge of the whole grid, it gets an even share of the top split, as a
 // drop on the dock's edge gives it, or half of the whole grid where the top
 // split divides the other way, with either.
-// A panel on a rail that the view lacks opens the rail, at the default
-// widths.
+// A panel on a rail that the view lacks opens the rail, at the default width.
 // It throws where placeFailure() names a failure.
 export function placedAt(grid: Grid, panel: Panel, place: Place, sizing: "split" | "distribute"): Grid {
   const failure = placeFailure(grid, place);
@@ -360,7 +357,7 @@ function onRail(grid: Grid, edge: Edge, panel: Panel): Grid {
   const rail = grid.rails?.[edge];
   const next: Rail =
     rail === undefined
-      ? { ...tabGroup(panel), collapsed: false, size: RAIL_SIZE, collapsed_size: RAIL_COLLAPSED_SIZE }
+      ? { ...tabGroup(panel), collapsed: false, size: RAIL_SIZE }
       : { ...rail, panels: [...rail.panels, panel], active: panel };
   return { ...grid, rails: { ...grid.rails, [edge]: next } };
 }
@@ -521,7 +518,7 @@ export function withStoredShares(stored: Grid, grid: Grid, tolerance: number): G
 //   rails it holds, and which panels each tab group and rail holds, in order.
 // - Their sizes, in `sizes`, which the blockr option lock_resize keeps: the
 //   shares of a split, where the new grid has the same splits and tab groups,
-//   and the widths of a rail that both grids hold.
+//   and the width of a rail that both grids hold.
 // None counts which panel a tab group or rail shows, or whether a rail is
 // collapsed, which a reader always changes.
 // Shares count as changed where they differ at all, so a grid read back from
@@ -561,7 +558,7 @@ function shape(grid: Grid): Json {
 function resizedFrom(stored: Grid, grid: Grid): boolean {
   const widths = EDGES.some((edge) => {
     const [a, b] = [stored.rails?.[edge], grid.rails?.[edge]];
-    return a !== undefined && b !== undefined && (a.size !== b.size || a.collapsed_size !== b.collapsed_size);
+    return a !== undefined && b !== undefined && a.size !== b.size;
   });
   if (widths) return true;
   if (!sameShape(stored, grid)) return false;

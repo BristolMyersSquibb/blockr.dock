@@ -167,7 +167,7 @@ export const panelCommands = [
       const held = viewOf(board, view);
       if (held === undefined) return [];
       // A panel alone on the rail that it moves to stays there, and the rail
-      // keeps its widths, which it would forget once it held no panel.
+      // keeps its width, which it would forget once it held no panel.
       const from = locate(held.grid, panel);
       if (rail !== undefined && from !== undefined && "edge" in from && from.edge === rail) {
         if (held.grid.rails?.[rail]?.panels.length === 1) return [];

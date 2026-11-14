@@ -18,7 +18,7 @@ function group(...panels: Panel[]): TabGroup {
 }
 
 function rail(...panels: Panel[]): Rail {
-  return { ...group(...panels), collapsed: false, size: 260, collapsed_size: 35 };
+  return { ...group(...panels), collapsed: false, size: 260 };
 }
 
 const stored: Grid = {
@@ -96,7 +96,7 @@ describe("gestureRuns()", () => {
     expect(gestureRuns("v", stored, read, stored, drag)).toEqual([{ id: "blockr.dock-set_grid", args: { view: "v", grid: read } }]);
   });
 
-  test("keeps a rail's stored widths where the dock's own width changed, as dockview narrows a rail that it cannot hold", () => {
+  test("keeps a rail's stored width where the dock's own width changed, as dockview narrows a rail that it cannot hold", () => {
     const read: Grid = { ...stored, rails: { left: { ...rail(dag), size: 120 } } };
     expect(gestureRuns("v", read, read, stored, { ...drag, widths: false })).toEqual([]);
     const moved: Grid = { ...read, children: [group(a), group(b, c)] };
@@ -109,14 +109,6 @@ describe("gestureRuns()", () => {
     const shown: Grid = { ...stored, rails: { left: { ...rail(dag), size: 120 } } };
     const read: Grid = { ...shown, sizes: [0.4, 0.6] };
     expect(gestureRuns("v", shown, read, stored, drag)).toEqual([
-      { id: "blockr.dock-set_grid", args: { view: "v", grid: { ...read, rails: { left: rail(dag) } } } },
-    ]);
-  });
-
-  test("keeps a rail's stored collapsed width, which no gesture changes", () => {
-    const shown: Grid = { ...stored, rails: { left: { ...rail(dag), collapsed_size: 44 } } };
-    const read: Grid = { ...shown, children: [group(a), group(b, c)] };
-    expect(gestureRuns("v", shown, read, stored, click)).toEqual([
       { id: "blockr.dock-set_grid", args: { view: "v", grid: { ...read, rails: { left: rail(dag) } } } },
     ]);
   });

@@ -67,7 +67,7 @@ describe("startingPatches()", () => {
             orientation: "horizontal",
             children: [group({ block: "a" }, { block: "b" })],
             sizes: [1],
-            rails: { left: { ...group({ plugin: EDIT }), collapsed: false, size: 260, collapsed_size: 35 } },
+            rails: { left: { ...group({ plugin: EDIT }), collapsed: false, size: 260 } },
           },
         },
       },
@@ -129,7 +129,7 @@ describe("urlView()", () => {
 
 describe("shownBlocks()", () => {
   const drawn = new Map([[DAG, "DAG"]]);
-  const rail = { ...group({ block: "c" }, { block: "d" }), collapsed: false, size: 260, collapsed_size: 35 };
+  const rail = { ...group({ block: "c" }, { block: "d" }), collapsed: false, size: 260 };
   const main: Grid = {
     orientation: "horizontal",
     children: [{ panels: [{ block: "a" }, { block: "b" }], active: { block: "b" } }, group({ plugin: DAG })],

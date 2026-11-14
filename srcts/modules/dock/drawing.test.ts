@@ -85,7 +85,7 @@ function group(...panels: Panel[]): TabGroup {
 }
 
 function rail(...panels: Panel[]): Rail {
-  return { ...group(...panels), collapsed: false, size: 260, collapsed_size: 35 };
+  return { ...group(...panels), collapsed: false, size: 260 };
 }
 
 // The view Main shows a tab group of a and b, which shows b, beside c, with

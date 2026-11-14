@@ -21,7 +21,6 @@ export {
   placePanel,
   places,
   prunePanels,
-  RAIL_COLLAPSED_SIZE,
   RAIL_SIZE,
   resized,
   samePanel,

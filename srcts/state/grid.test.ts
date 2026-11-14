@@ -32,7 +32,7 @@ function group(...panels: Panel[]): TabGroup {
 }
 
 function rail(...panels: Panel[]): Rail {
-  return { ...group(...panels), collapsed: false, size: 260, collapsed_size: 35 };
+  return { ...group(...panels), collapsed: false, size: 260 };
 }
 
 // The view Overview of the page: a tab group of a and b, which shows b, in
@@ -380,7 +380,7 @@ describe("gridChanges()", () => {
     expect(gridChanges(overview, swapped)).toEqual({ ...none, arrangement: true });
   });
 
-  test("finds other shares in the same splits, and other widths of a rail that both grids hold", () => {
+  test("finds other shares in the same splits, and another width of a rail that both grids hold", () => {
     expect(gridChanges(overview, { ...overview, sizes: [0.4, 0.6] })).toEqual({ ...none, sizes: true });
     expect(gridChanges(overview, resized(overview, dag, 300))).toEqual({ ...none, sizes: true });
     // It compares shares exactly, which withStoredShares() keeps where they

@@ -13,7 +13,7 @@
 // The layout always holds the edge groups of both rails, since a view offers
 // a rail on each edge.
 // Each shows only while it holds panels.
-// A rail that the grid lacks opens at the default widths once a panel goes
+// A rail that the grid lacks opens at the default width once a panel goes
 // onto it.
 //
 // The dock's commands write grids in their canonical form, which
@@ -32,7 +32,7 @@
 
 import { Orientation } from "dockview-react";
 import type { GroupviewPanelState, SerializedDockview, SerializedEdgeGroups } from "dockview-react";
-import { EDGES, fitted, isTabGroup, RAIL_COLLAPSED_SIZE, RAIL_SIZE, samePanel } from "../state/index.ts";
+import { EDGES, fitted, isTabGroup, RAIL_SIZE, samePanel } from "../state/index.ts";
 import type { Edge, Grid, Node, Panel, Rail, Split, TabGroup } from "../state/index.ts";
 import { panelId, panelOf, railId } from "./ids.ts";
 
@@ -119,7 +119,6 @@ export function gridToLayout(grid: Grid, title: (panel: Panel) => string | undef
       size: rail?.size ?? RAIL_SIZE,
       visible: holds,
       collapsed: holds && rail?.collapsed === true,
-      collapsedSize: rail?.collapsed_size ?? RAIL_COLLAPSED_SIZE,
       group: { id: railId(edge), ...state } satisfies GroupPanelViewState,
     };
   };
@@ -206,7 +205,6 @@ function railOf(edgeGroup: SerializedEdgeGroup | undefined): Rail | undefined {
     ...group,
     collapsed: edgeGroup.collapsed === true,
     size: Math.max(0, Math.round(edgeGroup.size)),
-    collapsed_size: edgeGroup.collapsedSize ?? RAIL_COLLAPSED_SIZE,
   };
 }
 
