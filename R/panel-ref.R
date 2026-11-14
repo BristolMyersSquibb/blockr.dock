@@ -8,8 +8,8 @@
 #' else by the id of the plugin's class, as `"blockr.dag-dag_plugin"`.
 #' A bare id names a panel too, that of the block of that id.
 #'
-#' The dock refuses no id of a plugin class, since it may name the class of a
-#' plugin that [blockr.core::serve()] adds to the app.
+#' The dock refuses no id of a plugin class, since such an id may name the
+#' class of a plugin that [blockr.core::serve()] adds to the app.
 #' As `new_board()` builds the board, it refuses a `plg()` that names neither
 #' a plugin class nor a plugin in the board's `plugins` (see [board_views()]).
 #' As the dock starts, it drops the panel of a plugin that the app does not

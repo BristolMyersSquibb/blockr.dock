@@ -33,8 +33,8 @@ else by the id of the plugin's class, as \code{"blockr.dag-dag_plugin"}.
 A bare id names a panel too, that of the block of that id.
 }
 \details{
-The dock refuses no id of a plugin class, since it may name the class of a
-plugin that \code{\link[blockr.core:serve]{blockr.core::serve()}} adds to the app.
+The dock refuses no id of a plugin class, since such an id may name the
+class of a plugin that \code{\link[blockr.core:serve]{blockr.core::serve()}} adds to the app.
 As \code{new_board()} builds the board, it refuses a \code{plg()} that names neither
 a plugin class nor a plugin in the board's \code{plugins} (see \code{\link[=board_views]{board_views()}}).
 As the dock starts, it drops the panel of a plugin that the app does not

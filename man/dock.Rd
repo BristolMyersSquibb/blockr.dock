@@ -31,8 +31,9 @@ not hold, such as one that keeps no state.
 \details{
 As \code{new_board()} builds the board, the dock completes its state on it,
 through its method of \code{\link[blockr.core:complete_plugin]{blockr.core::complete_plugin()}}.
-Where a grid names a plugin by such a name, the dock names it by the id of
-the plugin's class instead, as the board holds the plugin.
+Where a grid names a plugin by the name that the script gives it, the dock
+names it by the id of the plugin's class instead, as the board holds the
+plugin.
 It then refuses, naming each, a grid that places a panel twice, as a grid
 does that names one plugin both by its name and by the id of its class.
 It refuses a \code{plg()} whose id is neither the name of one of the board's
