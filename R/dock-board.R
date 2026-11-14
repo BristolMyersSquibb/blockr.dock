@@ -32,12 +32,22 @@
 #' So a script can build one board from another, as
 #' `new_dock_plugin(views = board_views(board)["main"])` does.
 #' The function `active_view()` reads the id of the active view.
+#' The function `board_visible()` reads the sections that each block's card
+#' shows, by the block's id, as the `visible` of [new_dock_plugin()] takes
+#' them.
+#' It lists only the cards that hide a section, since a card without an entry
+#' shows both.
+#' A script that builds a board from another keeps the entries of the blocks
+#' that the new board holds, since `new_board()` refuses an entry for a block
+#' that the board lacks (see [view_blocks()]).
 #'
 #' @param x A board.
 #'
 #' @return The function `board_views()` returns a list of views, by id, each a
 #'   `dock_view`, and `active_view()` returns the id of the active view, or
 #'   `NULL` where the board holds no view.
+#'   The function `board_visible()` returns a list that gives the sections of
+#'   each card that hides one, by block id, as `list(b = "outputs")`.
 #'
 #' @examples
 #' board <- blockr.core::new_board(
@@ -65,6 +75,8 @@
 #' names(board_views(board))
 #' active_view(board)
 #' view_name(board_views(board)[["side"]])
+#' view_blocks(board_views(board)[["main"]])
+#' board_visible(board)
 #'
 #' @rdname dock
 #' @export
@@ -85,6 +97,12 @@ board_views <- function(x) {
 #' @export
 active_view <- function(x) {
   board_dock_state(x)[["active"]]
+}
+
+#' @rdname dock
+#' @export
+board_visible <- function(x) {
+  coal(board_dock_state(x)[["visible"]], list(), fail_all = FALSE)
 }
 
 # The dock's state that a board holds, or an empty list where it holds none.

@@ -272,14 +272,79 @@ test_that("board_views() reads views that new_dock_plugin() takes back", {
   )
 })
 
+test_that("board_visible() reads the sections of the cards that hide one", {
+
+  board <- new_board(
+    blocks = c(a = new_dataset_block(), b = new_head_block()),
+    plugins = list(
+      new_dock_plugin(
+        views = list(main = dock_view(c("a", "b"))),
+        visible = list(a = c("inputs", "outputs"), b = "outputs")
+      )
+    )
+  )
+
+  expect_identical(board_visible(board), list(b = "outputs"))
+
+  board <- new_board(
+    blocks = c(a = new_dataset_block()),
+    plugins = list(new_dock_plugin(views = list(main = dock_view("a"))))
+  )
+
+  expect_length(board_visible(board), 0L)
+})
+
+test_that("the readers give what a board of one of its views needs", {
+
+  full <- new_board(
+    blocks = c(
+      a = new_dataset_block(),
+      b = new_head_block(),
+      c = new_head_block()
+    ),
+    plugins = list(
+      new_dock_plugin(
+        views = list(
+          main = dock_view(dock_grid("a", rail("b", plg("edit")))),
+          side = dock_view("c")
+        ),
+        visible = list(a = "inputs", c = "outputs")
+      ),
+      edit = new_edit_board_plugin()
+    )
+  )
+
+  views <- board_views(full)
+  keep <- view_blocks(views[["main"]])
+  visible <- board_visible(full)
+
+  expect_identical(keep, c("a", "b"))
+
+  # The board of the view main, as CEDX's script of one view builds one, which
+  # `new_board()` would refuse with the entry of `visible` for the block c.
+  plugins <- board_plugins(full)
+  plugins[["blockr.dock-dock_plugin"]] <- new_dock_plugin(
+    views = views["main"],
+    visible = visible[names(visible) %in% keep]
+  )
+
+  one <- new_board(blocks = board_blocks(full)[keep], plugins = plugins)
+
+  expect_identical(board_views(one), views["main"])
+  expect_identical(active_view(one), "main")
+  expect_identical(board_visible(one), list(a = "inputs"))
+})
+
 test_that("the readers read a board that holds no state for the dock", {
 
   board <- new_board(blocks = c(a = new_dataset_block()))
 
   expect_identical(board_views(board), list())
   expect_null(active_view(board))
+  expect_identical(board_visible(board), list())
 
   expect_error(board_views(list()), class = "dock_board_invalid")
+  expect_error(board_visible(list()), class = "dock_board_invalid")
 })
 
 test_that("every board fixture has its R values", {

@@ -4,6 +4,7 @@
 \alias{dock_view}
 \alias{dock_folder}
 \alias{view_name}
+\alias{view_blocks}
 \title{Views and folders}
 \usage{
 dock_view(grid, name = NULL, folder = NULL)
@@ -11,6 +12,8 @@ dock_view(grid, name = NULL, folder = NULL)
 dock_folder(name, folder = NULL)
 
 view_name(x)
+
+view_blocks(x)
 }
 \arguments{
 \item{grid}{The view's grid, as \link[=layout]{dock_grid()} writes it, or the
@@ -29,6 +32,8 @@ named after its id.}
 The function \code{dock_view()} returns a \code{dock_view}, \code{dock_folder()} a
 \code{dock_folder}, and \code{view_name()} the name of the view, a string, or
 \code{NULL} for a view without one.
+The function \code{view_blocks()} returns the ids of the blocks, a character
+vector.
 }
 \description{
 The dock shows one view of the board at a time, a grid of panels, and its
@@ -53,6 +58,12 @@ where it names none.
 
 The function \code{view_name()} reads the name of a view, such as one that
 \code{\link[=board_views]{board_views()}} reads from a board.
+The function \code{view_blocks()} reads the ids of the blocks whose panels a
+view shows.
+It reads them from the view's grid, or from the panels that the view is
+given in place of a grid.
+The ids come in the order of the grid: first those of its tab groups, depth
+first, then those of its rails, left before right.
 }
 \examples{
 dock_view(dock_grid("a", "b"), name = "Overview")
@@ -60,5 +71,9 @@ dock_view(c("a", "b"), folder = "safety")
 dock_folder("Safety")
 
 view_name(dock_view("a", name = "Overview"))
+
+view_blocks(
+  dock_view(dock_grid(panels("a", "b"), rail(plg("blockr.dag-dag_plugin"))))
+)
 
 }

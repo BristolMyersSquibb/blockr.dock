@@ -21,6 +21,12 @@
 #'
 #' The function `view_name()` reads the name of a view, such as one that
 #' [board_views()] reads from a board.
+#' The function `view_blocks()` reads the ids of the blocks whose panels a
+#' view shows.
+#' It reads them from the view's grid, or from the panels that the view is
+#' given in place of a grid.
+#' The ids come in the order of the grid: first those of its tab groups, depth
+#' first, then those of its rails, left before right.
 #'
 #' @param grid The view's grid, as [dock_grid()][layout] writes it, or the
 #'   panels that its default grid places.
@@ -34,6 +40,8 @@
 #' @return The function `dock_view()` returns a `dock_view`, `dock_folder()` a
 #'   `dock_folder`, and `view_name()` the name of the view, a string, or
 #'   `NULL` for a view without one.
+#'   The function `view_blocks()` returns the ids of the blocks, a character
+#'   vector.
 #'
 #' @examples
 #' dock_view(dock_grid("a", "b"), name = "Overview")
@@ -41,6 +49,10 @@
 #' dock_folder("Safety")
 #'
 #' view_name(dock_view("a", name = "Overview"))
+#'
+#' view_blocks(
+#'   dock_view(dock_grid(panels("a", "b"), rail(plg("blockr.dag-dag_plugin"))))
+#' )
 #'
 #' @rdname view
 #' @export
@@ -79,6 +91,32 @@ dock_folder <- function(name, folder = NULL) {
 #' @rdname view
 #' @export
 view_name <- function(x) {
+  check_dock_view(x)
+  x[["name"]]
+}
+
+#' @rdname view
+#' @export
+view_blocks <- function(x) {
+
+  check_dock_view(x)
+
+  refs <- if (is.null(x[["grid"]])) {
+    x[["panels"]]
+  } else {
+    grid_panels(x[["grid"]])
+  }
+
+  blocks <- refs[chr_xtr(refs, "type") == "block"]
+
+  unique(chr_xtr(blocks, "id"))
+}
+
+is_dock_view <- function(x) {
+  inherits(x, "dock_view")
+}
+
+check_dock_view <- function(x) {
 
   if (!is_dock_view(x)) {
     blockr_abort(
@@ -87,11 +125,7 @@ view_name <- function(x) {
     )
   }
 
-  x[["name"]]
-}
-
-is_dock_view <- function(x) {
-  inherits(x, "dock_view")
+  invisible(x)
 }
 
 is_dock_folder <- function(x) {

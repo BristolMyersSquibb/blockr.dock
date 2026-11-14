@@ -1,0 +1,605 @@
+---
+title: "Migration notes for app scripts"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Migration notes for app scripts}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  render = function(x, ...) {
+    if (inherits(x, "shiny.appobj")) invisible() else knitr::knit_print(x, ...)
+  }
+)
+```
+
+```{r setup, message = FALSE}
+library(blockr.core)
+library(blockr.dock)
+```
+
+An app script of blockr.dock 0.2.0 builds a dock board with `new_dock_board()` and serves it with `serve()`.
+In version 0.2.1, the browser holds the board and makes every change to it, as the migration notes of blockr.core describe (`vignette("migration-notes", package = "blockr.core")`).
+The dock is a plugin there, the frontend that draws the page in the browser.
+The board holds the dock's state: its views, their grids and the sections that each card shows.
+Most of a script stays as it is, but some functions and arguments of version 0.2.0 are gone, and some take other values.
+
+These notes list each change that a dock app script needs to run on blockr.dock 0.2.1.
+They are written so that an AI can apply them to a script.
+Each section names what a script calls in version 0.2.0, says what takes its place, and shows the code of both versions.
+A function of version 0.2.0 that is gone has no alias, so a script that still calls it stops with R's error that the function cannot be found.
+An argument that is gone stops the call as an unused argument.
+A script follows the migration notes of blockr.core too, and those of each other blockr package that it calls, such as blockr.dag for the DAG.
+
+## Boards that version 0.2.0 saved
+
+A board that blockr.dock 0.2.0 saved opens in version 0.2.1 once blockr.convert has turned its file into a JSON board.
+That holds for a file of the dock's Import and Export, and for a record of blockr.session.
+The function `convert_file()` of blockr.convert reads the file and writes the JSON board, which `serve()` serves by its path:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.1
+blockr.convert::convert_file("board-0.2.0.json", out = "board.json")
+serve("board.json")
+```
+
+The storage plugin of blockr.session needs no such step.
+It converts each record that blockr.session stored with version 0.2.0, as it opens the record.
+
+The conversion reads the files of blockr.dock 0.1.2 and later.
+A file of blockr.dock 0.1.0 holds one `layout` in place of views and grids.
+Version 0.2.0 does not open such a file, and the conversion does not read it either.
+
+The JSON board opens with the views of the file, in their order, with their names and grids, and on the same active view.
+Each card shows the sections that it showed, each stack keeps its colour, and each of the dock's board options keeps its value.
+Each extension of the file becomes the plugin that takes its place, with the extension's state.
+So the panel of the DAG's extension becomes the panel of blockr.dag's plugin.
+The panels of the Edit board extension become those of core's Edit board plugin.
+
+Some of what a file holds does not cross:
+
+- The panel that had focus.
+- A rail that holds no panel.
+- The card section `ctrl`, which showed what the `ctrl_block` plugin of blockr.core added to a card.
+  That plugin is gone, and so is the section.
+- An extension that no plugin takes the place of.
+  The conversion drops an extension in three cases: blockr.convert has no method for its class, the converting session lacks the package of the plugin that takes its place, or an app script defined it with `new_dock_extension()`.
+  It drops the extension's panels too, and names the extension in a warning, with its class and its package.
+  A user who installs what the warning names converts the file again.
+
+Until 14 August 2026, blockr.dock wrote an empty state for each extension.
+So a file of blockr.dock 0.1.2 holds no state of its extensions, such as the positions that the DAG gave the blocks.
+The plugins of its JSON board start from their defaults.
+
+## The board
+
+In version 0.2.0, `new_dock_board()` builds a dock board, of class `dock_board`.
+It takes the board's blocks, links, stacks and options, the dock's extensions and its views.
+In version 0.2.1, every board is of class `board`, which the `new_board()` of blockr.core builds.
+The dock's state is the state of a plugin, the dock plugin, which `new_dock_plugin()` makes.
+So a script builds its board with `new_board()`, and gives the dock plugin among the board's `plugins`:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+serve(
+  new_dock_board(
+    blocks = c(a = new_dataset_block("iris"), b = new_head_block()),
+    links = new_link("a", "b"),
+    views = list(main = dock_view(c("a", "b"), name = "Main"))
+  ),
+  "my_board"
+)
+```
+
+```{r}
+# blockr.dock 0.2.1
+serve(
+  new_board(
+    blocks = c(a = new_dataset_block("iris"), b = new_head_block()),
+    links = new_link("a", "b"),
+    plugins = list(
+      new_dock_plugin(
+        views = list(main = dock_view(c("a", "b"), name = "Main"))
+      )
+    ),
+    id = "my_board"
+  )
+)
+```
+
+The function `new_dock_plugin(views = NULL, folders = list(), active = NULL, visible = list())` takes the dock's state.
+Its `views` are the views, and its `folders` the folders that group them in the views menu.
+Its `active` is the id of the view that the board opens on, and its `visible` gives the sections that each card shows.
+Each argument of `new_dock_board()` goes as follows:
+
+| Version 0.2.0 | Version 0.2.1 |
+|---|---|
+| `blocks`, `links` and `stacks` | The same arguments of `new_board()` |
+| `options` | The `options` of `new_board()`, without the default `dock_board_options()` ([Board options](#board-options)) |
+| `extensions` | The plugins that take their place, in the `plugins` of `new_board()` ([Plugins in place of extensions](#plugins-in-place-of-extensions)) |
+| `views` and `active` | The same arguments of `new_dock_plugin()`, each view with its grid ([Views and their grids](#views-and-their-grids)) |
+| `grids` | Nothing, since each view takes its grid |
+| `ctor`, `pkg`, `class` and `...` | Nothing, since `new_board()` takes none of them |
+
+In version 0.2.0, `serve()` takes the board's ID, as `"my_board"` above.
+In version 0.2.1, the ID goes to the `id` of `new_board()`, and the board's name to its `name`, as the notes of blockr.core say.
+
+A script that gives `new_dock_board()` no views gives `new_board()` no dock plugin.
+The dock still draws such a board, since `serve()` runs the dock as the app's frontend wherever blockr.dock is available.
+As the dock starts on a board without views, it adds a view named "Page", as version 0.2.0 did.
+That view shows the board's blocks in the default grid, with the panels of the app's plugins that have a UI on its left rail:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+serve(new_dock_board(blocks = c(a = new_dataset_block("iris"))), "my_board")
+```
+
+```{r}
+# blockr.dock 0.2.1
+serve(new_board(blocks = c(a = new_dataset_block("iris")), id = "my_board"))
+```
+
+The functions `is_dock_board()` and `as_dock_board()` go, since no board has a class of its own.
+
+## Views and their grids
+
+In version 0.2.0, a view holds its members, the panels that it shows.
+The `grids` of `new_dock_board()` hold the grid of each view that has one, which arranges the view's members.
+In version 0.2.1, a view holds its grid alone, which says which panels the view shows, and where.
+So `dock_view()` takes the view's grid in place of its members, and `grids` goes:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+board <- new_dock_board(
+  blocks = c(a = new_dataset_block("iris"), b = new_head_block()),
+  views = list(main = dock_view(c("a", "b"), name = "Main")),
+  grids = list(main = dock_grid("a", "b", sizes = c(0.3, 0.7)))
+)
+```
+
+```{r}
+# blockr.dock 0.2.1
+board <- new_board(
+  blocks = c(a = new_dataset_block("iris"), b = new_head_block()),
+  plugins = list(
+    new_dock_plugin(
+      views = list(
+        main = dock_view(
+          dock_grid("a", "b", sizes = c(0.3, 0.7)),
+          name = "Main"
+        )
+      )
+    )
+  )
+)
+```
+
+A view without a grid takes its panels, as `dock_view(c("a", "b"))` does.
+It gets the default grid over them, as in version 0.2.0: the plugins' panels in one tab group, beside the blocks' panels in another.
+A view that shows no panel takes none, as `dock_view(list())` does.
+
+Each view is written with `dock_view()`.
+Version 0.2.0 also took the members of a view alone, as `views = list(main = c("a", "b"))`.
+Version 0.2.1 refuses such a view, so a script writes it as `views = list(main = dock_view(c("a", "b")))`.
+
+Version 0.2.0 reconciled the members of a view with its grid.
+Version 0.2.1 does not, so a script writes the grid that version 0.2.0 showed:
+
+- A panel that the grid places, but that the view's members lack, did not show in version 0.2.0.
+  The script removes the panel from the grid.
+- A member that the grid lacks showed in a tab group of its own, at the end of the grid's top split.
+  Its share was the mean of the shares of the split's other children.
+  The script adds the panel there, as `dock_grid("a", "b", "c", sizes = c(0.3, 0.7, 0.5))` does for the member `c` of a view whose grid is `dock_grid("a", "b", sizes = c(0.3, 0.7))`.
+- A panel that the grid places both on a rail and in a tab group showed on the rail alone.
+  Version 0.2.1 refuses a grid that places a panel twice, so the script removes the panel from its tab group.
+
+The function `layout_panel_ids()` goes.
+A script that derived the members of a view from its grid, as `dock_view(layout_panel_ids(grid))` does, gives the view the grid itself: `dock_view(grid)`.
+
+In version 0.2.1, a bare id names a block, in a grid and among the panels of a view.
+In version 0.2.0, it named an extension too, where no block had that id, as `"edit_board"` named the Edit board extension.
+A script names such a panel with `plg()` instead ([Plugins in place of extensions](#plugins-in-place-of-extensions)).
+
+The functions `dock_grid()`, `panels()`, `group()` and `rail()` take the arguments that they took in version 0.2.0.
+The function `blk()` takes the block's id alone.
+Its `near`, `side`, `size` and `rail` served the grammar of `views$mod` in a board's updates.
+That grammar is gone.
+The function `default_layout()` goes, since `dock_view()` gives the default grid to a view that takes panels in place of a grid.
+
+A view without a name is named after its id.
+Version 0.2.1 splits the id into words at each capital letter, as `myView` gives "My view", where version 0.2.0 showed "MyView".
+A script that keeps the name of version 0.2.0 gives such a view its name, as `dock_view(grid, name = "MyView")`.
+
+## Plugins in place of extensions
+
+In version 0.2.0, `new_dock_board()` takes the dock's extensions in `extensions`.
+A grid, or the members of a view, name the panel of an extension with `ext()`, by the extension's name in that list.
+In version 0.2.1, a plugin takes the place of each extension.
+The board takes the plugins in the `plugins` of `new_board()`, beside the dock plugin.
+A grid names the panel of a plugin with `plg()`, by the name that the script gives the plugin in `plugins`:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+board <- new_dock_board(
+  blocks = c(a = new_dataset_block("iris"), b = new_head_block()),
+  links = new_link("a", "b"),
+  extensions = list(analysis = blockr.dag::new_dag_extension()),
+  views = list(main = list(ext("analysis"), blk("a"), blk("b"))),
+  grids = list(main = dock_grid(ext("analysis"), panels("a", "b")))
+)
+```
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.1
+board <- new_board(
+  blocks = c(a = new_dataset_block("iris"), b = new_head_block()),
+  links = new_link("a", "b"),
+  plugins = list(
+    new_dock_plugin(
+      views = list(
+        main = dock_view(dock_grid(plg("analysis"), panels("a", "b")))
+      )
+    ),
+    analysis = blockr.dag::new_dag_plugin()
+  )
+)
+```
+
+The migration notes of each package that gave an extension name the plugin that takes its place.
+For the DAG, blockr.dag gives `new_dag_plugin()` in place of `new_dag_extension()`.
+
+In version 0.2.0, an extension without a name in `extensions` has the name of its class, without `_extension`, as `dag` for `new_dag_extension()`.
+In version 0.2.1, a plugin without a name has none.
+So a script that places the panel of such an extension, as `ext("dag")` does, gives its plugin that name, as `dag = blockr.dag::new_dag_plugin()`.
+A grid may also name a plugin by the id of its class, as `plg("blockr.dag-dag_plugin")`, which needs no name.
+Such a reference also places the panel of a plugin that the board does not hold, such as one that keeps no state.
+Core's `new_board()` refuses a `plg()` whose id is neither a name in `plugins` nor the id of a plugin class.
+
+The Edit board extension goes, since core's Edit board plugin makes the same edits and runs by default.
+So a script drops `new_edit_board_extension()`.
+It gives core's plugin in `plugins` only where a grid places the plugin's panel:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+board <- new_dock_board(
+  blocks = c(a = new_dataset_block("iris")),
+  extensions = new_edit_board_extension(),
+  views = list(main = c("a", "edit_board")),
+  grids = list(main = dock_grid("a", rail(ext("edit_board"))))
+)
+```
+
+```{r}
+# blockr.dock 0.2.1
+board <- new_board(
+  blocks = c(a = new_dataset_block("iris")),
+  plugins = list(
+    new_dock_plugin(
+      views = list(main = dock_view(dock_grid("a", rail(plg("edit")))))
+    ),
+    edit = new_edit_board_plugin()
+  )
+)
+```
+
+The grid may name the plugin as `plg("blockr.core-edit_board_plugin")` instead, without the plugin in `plugins`.
+
+The function `dock_extensions()` goes, with `dock_ext_ids()`.
+Core's `board_plugins()` gives the plugins that a board holds, by the id of each plugin's class, the dock plugin among them.
+
+An extension that a script defined with `new_dock_extension()` has no place in version 0.2.1, since a plugin class comes from a package.
+So a script moves such an extension into a package, as a plugin class.
+The notes of blockr.core say the same of a plugin that a script defined.
+The rest of the extension API goes with `new_dock_extension()` ([The functions that go](#the-functions-that-go)).
+
+## The sections of a card
+
+In version 0.2.0, the `visible` attribute of a block gives the sections that its card shows: `"inputs"`, `"outputs"` or both.
+In version 0.2.1, a block holds nothing beside its state, its name and its lock, so the attribute no longer reaches the board.
+The `visible` of `new_dock_plugin()` takes its place, a list that gives the sections of each card by the block's id:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+blk <- new_head_block()
+attr(blk, "visible") <- "outputs"
+
+board <- new_dock_board(blocks = c(a = new_dataset_block("iris"), b = blk))
+```
+
+```{r}
+# blockr.dock 0.2.1
+board <- new_board(
+  blocks = c(a = new_dataset_block("iris"), b = new_head_block()),
+  plugins = list(new_dock_plugin(visible = list(b = "outputs")))
+)
+```
+
+A card without an entry shows both sections, as in version 0.2.0.
+A script that sets the attribute on each of its blocks builds the list from the blocks instead, as `visible = lapply(blocks, function(blk) "inputs")` does.
+Core's `new_board()` refuses an entry that names a block that the board lacks.
+The section `ctrl` is gone, so a script drops it from the sections that it gives.
+
+## Stacks
+
+In version 0.2.0, `new_dock_board()` makes each stack a dock stack, as `new_dock_stack()` makes one.
+A dock stack has a colour, which `suggest_new_colors()` picks where the script gives none.
+In version 0.2.1, a stack of blockr.core keeps its colour, which `new_stack()` takes in `color`:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+board <- new_dock_board(
+  blocks = c(a = new_dataset_block("iris"), b = new_head_block()),
+  stacks = list(s1 = new_dock_stack(c("a", "b"), "Input", color = "#ffcc88"))
+)
+```
+
+```{r}
+# blockr.dock 0.2.1
+board <- new_board(
+  blocks = c(a = new_dataset_block("iris"), b = new_head_block()),
+  stacks = list(s1 = new_stack(c("a", "b"), "Input", color = "#ffcc88"))
+)
+```
+
+A stack without a colour holds none, and the dock draws it in a default colour of its own.
+So `suggest_new_colors()` goes, with the blockr option `stack_color`, whose function picked the colours.
+The functions `as_dock_stack()` and `is_dock_stack()` go too, and so does `stack_color<-()`, since nothing changes a board in R.
+Core's `stack_color()` reads the colour of one stack, or `NULL` for a stack without one.
+In version 0.2.0, `stack_color()` also read the colours of all the stacks of a board, as `stack_color(board)` did.
+A script reads them one stack at a time instead, as `lapply(board_stacks(board), stack_color)` does.
+
+## Board options
+
+In version 0.2.0, a dock board holds every board option of `dock_board_options()`, unless its script gives others.
+In version 0.2.1, a board holds a value only for a board option that someone set, as the notes of blockr.core say.
+So `dock_board_options()` goes, and a script gives a board option only to set a value other than its default:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+board <- new_dock_board(
+  blocks = c(a = new_dataset_block("iris")),
+  options = c(dock_board_options(), new_board_options(new_n_rows_option(25)))
+)
+```
+
+```{r}
+# blockr.dock 0.2.1
+board <- new_board(
+  blocks = c(a = new_dataset_block("iris")),
+  options = new_n_rows_option(25)
+)
+```
+
+The constructors of the dock's board options take the value alone, as `new_compact_option(TRUE)`, `new_view_tabs_option(TRUE)` and `new_sync_rails_option(FALSE)` do.
+A script drops their other arguments, such as `category` or `label`.
+The blockr options `compact`, `view_tabs` and `sync_rails` still give their defaults, as `options(blockr.view_tabs = TRUE)` does.
+
+## The navbar
+
+In version 0.2.0, the `navbar` of `serve()` takes a function of the board and its plugins, which returns the navbar items.
+The function `custom_navbar()` makes such a function.
+In version 0.2.1, `navbar` takes the items themselves, and `serve()` hands them to the dock.
+Its default is `default_navbar()`, the dock's own parts and the controls of the app's storage plugin, each under its id:
+
+1. The logo, `logo`.
+2. The board's name, `name`, which a click renames.
+3. The controls of the app's storage plugin, `storage`.
+4. Undo and Redo, `undo_redo`.
+5. The spacer, `spacer`.
+6. The views menu, `views`.
+7. The read-only pill, `read_only`.
+8. The options button, `options`.
+
+The board's name takes the place of the field of the `board_name` board option in the options sidebar.
+Undo and Redo are new.
+The controls of the storage plugin take the place of the item `preserve_board`, which showed core's Import and Export or the menus of blockr.session.
+
+The function `custom_navbar(items, drop)` returns items, rather than a function.
+It appends `items` to `default_navbar()`, as in version 0.2.0, and leaves out the default items whose ids `drop` names.
+
+A navbar item of version 0.2.0, made by `navbar_item(id, ui, server)`, draws its UI in R.
+Nothing draws UI in R in version 0.2.1, so a script gives one of these items in its place:
+
+- A link, `navbar_link(id, label, href)`, which opens in a new tab.
+- A menu of links and further menus, `navbar_menu(id, label, ...)`.
+- A module that a package offers, `navbar_item(id, module)`, by the module's id, as `"blockr.topline-deck_button"`.
+  Where the item needs R, that package gives a plugin class, whose requests the module calls.
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+issues <- navbar_item(
+  "issues",
+  function(id, board) {
+    shiny::tags$a(
+      href = "https://github.com/BristolMyersSquibb/blockr/issues/new",
+      "Report an issue"
+    )
+  }
+)
+
+serve(new_dock_board(), navbar = custom_navbar(issues))
+```
+
+```{r}
+# blockr.dock 0.2.1
+serve(
+  new_board(),
+  navbar = custom_navbar(
+    navbar_link(
+      "issues",
+      "Report an issue",
+      "https://github.com/BristolMyersSquibb/blockr/issues/new"
+    )
+  )
+)
+```
+
+The arguments `fill` and `shrink` of `navbar_item()` go.
+Only the spacer takes the free space, and on a narrow bar the board's name and the storage plugin's controls give way first.
+The functions `blockr_app_navbar()` and `plugin_navbar_item()` go too.
+
+A script that passes a function of its own as `navbar`, such as one that reorders or drops default items, passes the items that the function returns.
+The function `default_navbar()` takes the place of `default_navbar_items(board, plugins)`, and `[` still reorders or drops items by id:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+serve(
+  new_dock_board(),
+  navbar = function(x, plugins) {
+    default_navbar_items(x, plugins)[c("logo", "views", "options")]
+  }
+)
+```
+
+```{r}
+# blockr.dock 0.2.1
+serve(new_board(), navbar = default_navbar()[c("logo", "views", "options")])
+```
+
+A script with the storage plugin of blockr.session may pass `navbar = custom_navbar(avatar_navbar_item())`, which places the avatar after the options button.
+It keeps that, and adds `drop = "name"`, so that the bar shows one name, the workflow's:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.1
+serve(
+  new_board(),
+  navbar = custom_navbar(blockr.session::avatar_navbar_item(), drop = "name")
+)
+```
+
+A script that leaves out `navbar` shows the avatar among the other controls of blockr.session's storage plugin, beside the board's name.
+
+A script that adds a help menu through the `use_help_nav()` of blockr.sandbox passes the menu among its navbar items instead, as a menu of links.
+The function `serve()` takes the bar from its `navbar` alone.
+
+## A board built from another board
+
+Nothing changes a board in R in version 0.2.1.
+So the setters of a dock board go: `board_views<-()`, `board_grids<-()`, `active_view<-()`, `view_name<-()`, `dock_extensions<-()` and `stack_color<-()`.
+A script that derives a board from another builds the new board from the parts of the other, which the readers give.
+The notes of blockr.core describe this for core's parts, and the readers of the dock are these:
+
+- The function `board_views()` reads the views of a board, each as `dock_view()` writes it, with its grid.
+  The function `new_dock_plugin()` takes them back.
+- The function `view_blocks()` reads the ids of the blocks whose panels a view shows.
+  It takes the place of `view_members()`, which read the view's members.
+- The function `active_view()` reads the id of the active view, and `view_name()` reads the name of a view.
+- The function `board_visible()` reads the sections of each card that hides one.
+- Core's `board_plugins()` reads the plugins of a board, the dock plugin among them, in place of `dock_extensions()`.
+
+The function `board_grids()` goes, since each view that `board_views()` reads holds its grid.
+Such a grid names the panel of each plugin by the id of the plugin's class, as `plg("blockr.dag-dag_plugin")`.
+The board keeps no name that a script gives a plugin.
+
+Take a board with two views, `main` and `side`, as version 0.2.1 builds it:
+
+```{r}
+# blockr.dock 0.2.1
+full <- new_board(
+  blocks = c(
+    a = new_dataset_block("iris"),
+    b = new_head_block(),
+    c = new_head_block(n = 3L)
+  ),
+  links = c(ab = new_link("a", "b"), ac = new_link("a", "c")),
+  plugins = list(
+    new_dock_plugin(
+      views = list(
+        main = dock_view(dock_grid("a", "b", rail(plg("edit")))),
+        side = dock_view(c("a", "c"))
+      ),
+      visible = list(b = "outputs", c = "inputs")
+    ),
+    edit = new_edit_board_plugin()
+  )
+)
+```
+
+From the same board, a script of version 0.2.0 builds a board of the view `side` alone, with the blocks that the view shows:
+
+```{r, eval = FALSE}
+# blockr.dock 0.2.0
+view <- board_views(full)[["side"]]
+keep <- intersect(
+  sub("^block_panel-", "", view_members(view)),
+  names(board_blocks(full))
+)
+lnks <- board_links(full)
+
+board <- new_dock_board(
+  blocks = board_blocks(full)[keep],
+  links = lnks[lnks$from %in% keep & lnks$to %in% keep],
+  extensions = dock_extensions(full),
+  views = list(side = view),
+  grids = list(side = board_grids(full)[["side"]]),
+  options = board_options(full),
+  active = "side"
+)
+```
+
+In version 0.2.1, the script gives the new board the dock plugin of its one view, in place of the dock plugin of `full`:
+
+```{r}
+# blockr.dock 0.2.1
+views <- board_views(full)
+keep <- view_blocks(views[["side"]])
+visible <- board_visible(full)
+lnks <- board_links(full)
+
+plugins <- board_plugins(full)
+plugins[["blockr.dock-dock_plugin"]] <- new_dock_plugin(
+  views = views["side"],
+  active = "side",
+  visible = visible[names(visible) %in% keep]
+)
+
+board <- new_board(
+  blocks = board_blocks(full)[keep],
+  links = lnks[lnks$from %in% keep & lnks$to %in% keep],
+  options = board_options(full),
+  plugins = plugins
+)
+```
+
+The new board takes the entries of `visible` for the blocks that it keeps.
+Core's `new_board()` refuses an entry for a block that the board lacks, as the entry of `b` would be here.
+The new board also takes the other plugins of `full`, with the dock plugin replaced, since a board holds one plugin of each class.
+
+## The functions that go
+
+The table gives each function of version 0.2.0 that is gone, with what takes its place.
+
+| Version 0.2.0 | Version 0.2.1 |
+|---|---|
+| `new_dock_board()` | The `new_board()` of blockr.core, with the dock plugin of `new_dock_plugin()` in its `plugins` |
+| `is_dock_board()` and `as_dock_board()` | Nothing, since every board is of class `board` |
+| `dock_board_options()` | Nothing, since a board holds only the values that someone set |
+| `ext()` | `plg()` |
+| `layout_panel_ids()` | The grid itself, which `dock_view()` takes |
+| `default_layout()` | The default grid, which `dock_view()` gives a view that takes panels in place of a grid |
+| `view_members()` | `view_blocks()`, for the blocks that a view shows |
+| `board_grids()` | The grid of each view that `board_views()` reads |
+| `view_names()` | The `view_name()` of each view, as `vapply(board_views(board), view_name, character(1))` |
+| `dock_extensions()`, `dock_ext_ids()` and `extension_ids()` | Core's `board_plugins()`, and its names |
+| `board_views<-()`, `board_grids<-()`, `active_view<-()`, `view_name<-()`, `dock_extensions<-()` and `stack_color<-()` | Nothing, since nothing changes a board in R |
+| `new_dock_stack()`, `as_dock_stack()`, `is_dock_stack()` and `suggest_new_colors()` | Core's `new_stack()`, which takes the stack's `color` |
+| `stack_color()` | Core's `stack_color()`, which reads the colour of one stack |
+| `new_edit_board_extension()` | Core's Edit board plugin, `new_edit_board_plugin()`, which runs by default |
+| `default_navbar_items()` | `default_navbar()` |
+| `blockr_app_navbar()` and `plugin_navbar_item()` | Nothing, since the dock draws the storage plugin's controls itself |
+| `new_dock_extension()`, `new_dock_extensions()`, `as_dock_extensions()`, `is_dock_extension()`, `is_dock_extensions()`, `validate_extension()`, `validate_extensions()`, `extension_ui()`, `extension_server()`, `extension_ctor()`, `extension_id()`, `extension_name()`, `extension_description()`, `extension_block_callback()`, `new_ext_meta()`, `is_ext_meta()`, `ext_meta()`, `ext_args()`, `ext_desc()`, `ext_examples()` and `ext_guidance()` | A plugin class, which a package defines |
+| `new_action()`, `is_action()`, `is_action_generator()`, `action_id()`, `action_triggers()` and `board_actions()` | Core's commands |
+| `sidebar_owned_by()`, `block_input_select()` and `board_block_select()` | Nothing in R, since the dock draws its sidebars and menus in the browser |
+| `blks_metadata()`, `blk_color()`, `blk_icon_data_uri()` and `block_status_badge()` | Nothing in R, since the dock draws each card in the browser |
+| `as_panel_ref()`, the `as.character()` of a panel reference, `dock_id()`, `as_dock_panel_id()`, `is_dock_panel_id()`, `as_block_panel_id()`, `is_block_panel_id()`, `as_ext_panel_id()`, `is_ext_panel_id()`, `as_obj_id()`, `panel_obj_ids()`, `as_dock_handle_id()`, `as_block_handle_id()`, `as_ext_handle_id()` and `as_view_handle_id()` | `blk()` and `plg()`, since a grid names each panel by a reference rather than by an id |
+| `as_dock_grid()`, `is_dock_grids()` and `validate_dock_grids()` | Nothing, since each view holds its grid |
+| `as_dock_view()`, `is_dock_view()`, `is_dock_views()`, `validate_dock_view()` and `validate_dock_views()` | Nothing, since `new_dock_plugin()` checks the views that it takes |
+| `new_dock_layout()`, `as_dock_layout()`, `is_dock_layout()` and `validate_dock_layout()` | Nothing, since the dock draws dockview in the browser |
+
+The other functions that a script calls stay, with the changes above.
+They are `dock_view()`, `dock_grid()`, `panels()`, `group()`, `rail()`, `blk()`, `is_dock_grid()`, `validate_dock_grid()`, `is_panel_ref()`, `board_views()`, `active_view()`, `view_name()`, the constructors of the dock's board options, `navbar_item()`, `is_navbar_item()`, `is_navbar_items()` and `custom_navbar()`.
+The functions `new_dock_plugin()`, `dock_folder()`, `plg()`, `view_blocks()`, `board_visible()`, `default_navbar()`, `navbar_link()`, `navbar_menu()` and `navbar_storage()` are new.

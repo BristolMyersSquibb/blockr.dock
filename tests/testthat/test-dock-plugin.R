@@ -424,6 +424,28 @@ test_that("view_name() reads the name of a view", {
   expect_error(view_name(list()), class = "dock_view_invalid")
 })
 
+test_that("view_blocks() reads the blocks of a view in the grid's order", {
+
+  grid <- dock_grid(
+    "c",
+    group(panels(blk("a"), plg("dag")), "d"),
+    rail(plg("blockr.dag-dag_plugin")),
+    rail("b", position = "right")
+  )
+
+  expect_identical(view_blocks(dock_view(grid)), c("c", "a", "d", "b"))
+
+  expect_identical(
+    view_blocks(dock_view(list(plg("dag"), "b", blk("a")))),
+    c("b", "a")
+  )
+
+  expect_identical(view_blocks(dock_view(plg("dag"))), character())
+  expect_identical(view_blocks(dock_view(list())), character())
+
+  expect_error(view_blocks(list()), class = "dock_view_invalid")
+})
+
 test_that("the index keys are those that fractional-indexing gives", {
 
   # The keys that fractional-indexing 4.0.0 gives for
