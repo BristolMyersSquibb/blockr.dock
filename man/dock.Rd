@@ -3,11 +3,14 @@
 \name{board_views}
 \alias{board_views}
 \alias{active_view}
+\alias{board_visible}
 \title{The dock's state on a board}
 \usage{
 board_views(x)
 
 active_view(x)
+
+board_visible(x)
 }
 \arguments{
 \item{x}{A board.}
@@ -16,6 +19,8 @@ active_view(x)
 The function \code{board_views()} returns a list of views, by id, each a
 \code{dock_view}, and \code{active_view()} returns the id of the active view, or
 \code{NULL} where the board holds no view.
+The function \code{board_visible()} returns a list that gives the sections of
+each card that hides one, by block id, as \code{list(b = "outputs")}.
 }
 \description{
 An app script builds its board with \code{\link[blockr.core:new_board]{blockr.core::new_board()}}, and gives
@@ -51,6 +56,14 @@ of the plugin's class.
 So a script can build one board from another, as
 \code{new_dock_plugin(views = board_views(board)["main"])} does.
 The function \code{active_view()} reads the id of the active view.
+The function \code{board_visible()} reads the sections that each block's card
+shows, by the block's id, as the \code{visible} of \code{\link[=new_dock_plugin]{new_dock_plugin()}} takes
+them.
+It lists only the cards that hide a section, since a card without an entry
+shows both.
+A script that builds a board from another keeps the entries of the blocks
+that the new board holds, since \code{new_board()} refuses an entry for a block
+that the board lacks (see \code{\link[=view_blocks]{view_blocks()}}).
 }
 \examples{
 board <- blockr.core::new_board(
@@ -78,5 +91,7 @@ board <- blockr.core::new_board(
 names(board_views(board))
 active_view(board)
 view_name(board_views(board)[["side"]])
+view_blocks(board_views(board)[["main"]])
+board_visible(board)
 
 }

@@ -27,11 +27,12 @@ Suggests:
     withr,
     knitr,
     rmarkdown,
+    quarto,
     shinytest2,
     chromote,
     yyjsonr
 Remotes:
     BristolMyersSquibb/blockr.core@js-state
 Config/testthat/edition: 3
-VignetteBuilder: knitr
+VignetteBuilder: knitr, quarto
 Config/roxygen2/version: 8.1.0

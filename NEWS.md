@@ -15,6 +15,18 @@
   A command moves or resizes a panel only where the blockr options
   `lock_rearrange` or `lock_resize` are `FALSE`.
 
+* The vignette "Migration notes for app scripts" lists each change that an app
+  script of blockr.dock 0.2.0 needs to run on version 0.2.1 (#585).
+  It is written so that an AI can apply it to a script.
+  It says how a board that version 0.2.0 saved converts through blockr.convert,
+  and what takes the place of each function that goes.
+  Two readers join `board_views()` and `active_view()`, for a script that
+  builds a board from another.
+  The function `view_blocks()` reads the ids of the blocks whose panels a view
+  shows, in place of `view_members()`.
+  The function `board_visible()` reads the sections of each card that hides
+  one.
+
 * An app script writes the dock's state with `new_dock_plugin()`, which it
   gives core's `new_board()` in `plugins` (#574).
   The script writes each view with `dock_view()`, which takes the view's grid
