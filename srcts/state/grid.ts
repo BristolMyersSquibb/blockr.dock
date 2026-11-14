@@ -542,13 +542,19 @@ export function gridChanges(stored: Grid, grid: Grid): GridChanges {
   };
 }
 
-// The arrangement of a grid, as gridChanges() compares it, with its panels,
-// or its shape alone, without them.
-function arrangement(grid: Grid, panels = true): Json {
-  const node = (child: Node): Json =>
-    isTabGroup(child) ? (panels ? child.panels : "tab group") : child.children.map(node);
-  const edges = rails(grid).map(([edge, rail]): [Edge, Json] => [edge, panels ? rail.panels : "rail"]);
+// The arrangement of a grid, as gridChanges() compares it: its orientation,
+// its splits and tab groups with their panels, and its rails with theirs.
+function arrangement(grid: Grid): Json {
+  const node = (child: Node): Json => (isTabGroup(child) ? child.panels : child.children.map(node));
+  const edges = rails(grid).map(([edge, rail]): [Edge, Json] => [edge, rail.panels]);
   return { orientation: grid.orientation, children: grid.children.map(node), rails: Object.fromEntries(edges) };
+}
+
+// The shape of a grid's splits: its orientation, and its splits and tab
+// groups, without their panels.
+function shape(grid: Grid): Json {
+  const node = (child: Node): Json => (isTabGroup(child) ? "tab group" : child.children.map(node));
+  return { orientation: grid.orientation, children: grid.children.map(node) };
 }
 
 // Whether a new grid changes the sizes of a stored one.
@@ -563,10 +569,13 @@ function resizedFrom(stored: Grid, grid: Grid): boolean {
   return shares(stored).some((share, i) => share !== given[i]);
 }
 
-// Whether two grids have the same orientation, splits, tab groups and rails,
+// Whether two grids have the same orientation, splits and tab groups,
 // whatever panels they hold.
+// Rails are no splits, so two grids that differ in their rails alone have the
+// same shape, as where a drop takes a panel out of a tab group of several onto
+// a rail.
 function sameShape(a: Grid, b: Grid): boolean {
-  return JSON.stringify(arrangement(a, false)) === JSON.stringify(arrangement(b, false));
+  return JSON.stringify(shape(a)) === JSON.stringify(shape(b));
 }
 
 // The shares of every split of a grid, the top split first, depth first, as

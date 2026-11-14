@@ -420,6 +420,13 @@ describe("withStoredShares()", () => {
     expect(withStoredShares(overview, flipped, 0.5)).toBe(flipped);
   });
 
+  test("keeps the stored shares where the new grid differs in its rails alone", () => {
+    const railed: Grid = { ...overview, sizes: [0.302, 0.698], rails: { ...overview.rails, right: rail(md) } };
+    expect(withStoredShares(overview, railed, 0.005)).toEqual({ ...railed, sizes: [0.3, 0.7] });
+    const bare: Grid = { orientation: overview.orientation, children: overview.children, sizes: overview.sizes };
+    expect(withStoredShares(overview, { ...bare, sizes: [0.302, 0.698] }, 0.005)).toEqual(bare);
+  });
+
   test("reads stored sizes that do not sum to 1 as canonicalGrid() scales them", () => {
     const stored: Grid = { orientation: "horizontal", children: [group(a), group(b)], sizes: [0.3, 0.6] };
     const given: Grid = { ...stored, sizes: [0.332, 0.668] };
