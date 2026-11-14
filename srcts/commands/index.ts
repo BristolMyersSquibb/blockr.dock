@@ -18,6 +18,7 @@ import { panelCommands } from "./panels.ts";
 import { sectionCommands } from "./sections.ts";
 import { viewCommands } from "./views.ts";
 
-export { DOCK } from "./common.ts";
+export { DOCK, gridSizeTolerance, layoutLocks, stateOf } from "./common.ts";
+export type { LayoutLocks } from "./common.ts";
 
 export const dockCommands: readonly Command<Json, unknown>[] = [...viewCommands, ...panelCommands, ...sectionCommands];

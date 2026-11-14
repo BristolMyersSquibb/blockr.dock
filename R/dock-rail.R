@@ -2,12 +2,12 @@
 # as dockview's edge group does.
 # The function `rail()` writes one for `dock_grid()`, which keeps it in its
 # `rails`, by the edge that its `position` names, without that `position`.
-# A rail's widths are pixels rather than shares, since the dock sizes a rail
+# A rail's width is pixels rather than a share, since the dock sizes a rail
 # against its own width, and not as a share of a split.
 #
 # A grid holds a rail only while the rail holds panels, since a rail's
 # `active` names one of them, so `dock_grid()` drops a rail that holds none,
-# whatever its widths.
+# whatever its width.
 # Rails sit on the left and right edges alone: the top edge is where every
 # tab group's tabs sit, and the bottom edge is left out with it.
 
@@ -16,7 +16,7 @@ rail_positions <- c("left", "right")
 #' @rdname layout
 #' @export
 rail <- function(..., position = c("left", "right"), active = NULL,
-                 collapsed = FALSE, size = 260, collapsed_size = 35) {
+                 collapsed = FALSE, size = 260) {
 
   position <- match.arg(position)
   refs <- as_panel_refs(list(...))
@@ -29,7 +29,6 @@ rail <- function(..., position = c("left", "right"), active = NULL,
   }
 
   check_rail_size(size, "size")
-  check_rail_size(collapsed_size, "collapsed_size")
 
   structure(
     list(
@@ -37,8 +36,7 @@ rail <- function(..., position = c("left", "right"), active = NULL,
       panels = refs,
       active = active_panel_ref(active, refs),
       collapsed = collapsed,
-      size = as.double(size),
-      collapsed_size = as.double(collapsed_size)
+      size = as.double(size)
     ),
     class = "dock_rail"
   )
@@ -115,7 +113,6 @@ validate_grid_rails <- function(rails) {
     }
 
     check_rail_size(rail[["size"]], "size")
-    check_rail_size(rail[["collapsed_size"]], "collapsed_size")
   }
 
   invisible(rails)

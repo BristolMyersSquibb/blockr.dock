@@ -14,7 +14,6 @@ test_that("rail() writes a rail and checks its arguments", {
 
   expect_false(rail("a")$collapsed)
   expect_identical(rail("a")$size, 260)
-  expect_identical(rail("a")$collapsed_size, 35)
   expect_identical(rail("a", size = 300L)$size, 300)
 
   expect_error(
@@ -30,7 +29,7 @@ test_that("rail() writes a rail and checks its arguments", {
   expect_error(rail("a", size = -1), class = "dock_rail_size_invalid")
   expect_error(rail("a", size = NA_real_), class = "dock_rail_size_invalid")
   expect_error(
-    rail("a", collapsed_size = c(1, 2)),
+    rail("a", size = c(1, 2)),
     class = "dock_rail_size_invalid"
   )
 })
@@ -46,7 +45,7 @@ test_that("a grid holds its rails by edge, left before right", {
   expect_named(grid$rails, c("left", "right"))
   expect_named(
     grid$rails$left,
-    c("panels", "active", "collapsed", "size", "collapsed_size")
+    c("panels", "active", "collapsed", "size")
   )
   expect_true(grid$rails$left$collapsed)
 
@@ -68,7 +67,7 @@ test_that("a view has one rail at most on each edge", {
   )
 })
 
-test_that("a grid drops a rail that holds no panel, whatever its widths", {
+test_that("a grid drops a rail that holds no panel, whatever its width", {
 
   expect_null(dock_grid("a", rail(position = "right", size = 300))$rails)
   expect_null(dock_grid("a", rail(collapsed = TRUE))$rails)

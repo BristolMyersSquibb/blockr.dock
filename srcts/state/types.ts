@@ -109,11 +109,6 @@ export type Rail = {
    * @minimum 0
    */
   readonly size: number;
-  /**
-   * Its width in pixels while it is collapsed, 35 by default.
-   * @minimum 0
-   */
-  readonly collapsed_size: number;
 };
 
 /** A panel: the card of one of the board's blocks, by the block's id, or the UI of one of the app's plugins, by the id of the plugin's class. */

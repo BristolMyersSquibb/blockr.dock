@@ -63,7 +63,7 @@ function updated(delta: Delta, board: Board): Patch[] {
 const state: DockState = {
   views: {
     v1: view("a0", grid([{ panels: [a, b], active: b }, group(c)], [0.5, 0.5])),
-    v2: view("a1", grid([group(a)], [1], { left: { ...group(dag), collapsed: false, size: 260, collapsed_size: 35 } })),
+    v2: view("a1", grid([group(a)], [1], { left: { ...group(dag), collapsed: false, size: 260 } })),
     v3: view("a2", grid([group(c)], [1])),
   },
   folders: {},

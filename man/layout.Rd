@@ -18,8 +18,7 @@ rail(
   position = c("left", "right"),
   active = NULL,
   collapsed = FALSE,
-  size = 260,
-  collapsed_size = 35
+  size = 260
 )
 }
 \arguments{
@@ -43,8 +42,7 @@ is its first where \code{active} is \code{NULL}.}
 
 \item{collapsed}{For \code{rail()}, whether it shows its tabs alone.}
 
-\item{size, collapsed_size}{For \code{rail()}, its width in pixels while it is
-open and while it is collapsed.}
+\item{size}{For \code{rail()}, its width in pixels while it is open.}
 }
 \value{
 The function \code{dock_grid()} returns a \code{dock_grid}.

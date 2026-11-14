@@ -29,10 +29,8 @@ export type Edge = (typeof EDGES)[number];
 export const SIDES = ["within", "left", "right", "above", "below"] as const;
 export type Side = (typeof SIDES)[number];
 
-// The widths in pixels of a rail that a panel opens, open and collapsed, as
-// today's rail() has them.
-const RAIL_SIZE = 260;
-const RAIL_COLLAPSED_SIZE = 35;
+// The width in pixels of a rail that a panel opens, as today's rail() has it.
+export const RAIL_SIZE = 260;
 
 // How far from 1 the shares of a split may sum, to allow for rounding, as
 // R's all.equal() allows.
@@ -59,7 +57,7 @@ export function places(grid: Grid, panel: Panel): boolean {
 }
 
 // The tab groups of a grid's splits, in reading order.
-function tabGroups(grid: Grid): TabGroup[] {
+export function tabGroups(grid: Grid): TabGroup[] {
   const groups: TabGroup[] = [];
   const walk = (node: Node) => {
     if (isTabGroup(node)) groups.push(node);
@@ -137,7 +135,7 @@ function prunedGroup(group: TabGroup, keep: (panel: Panel) => boolean): TabGroup
 
 // The shares of `n` children: `sizes` scaled to sum to 1, or an even split
 // where `sizes` does not give each child a positive share.
-function fitted(sizes: readonly number[], n: number): number[] {
+export function fitted(sizes: readonly number[], n: number): number[] {
   const fits = sizes.length === n && sizes.every((size) => Number.isFinite(size) && size > 0);
   return fits ? normalized(sizes) : evenShares(n);
 }
@@ -336,8 +334,7 @@ export function placeFailure(grid: Grid, place: Place): string | undefined {
 // At an edge of the whole grid, it gets an even share of the top split, as a
 // drop on the dock's edge gives it, or half of the whole grid where the top
 // split divides the other way, with either.
-// A panel on a rail that the view lacks opens the rail, at the default
-// widths.
+// A panel on a rail that the view lacks opens the rail, at the default width.
 // It throws where placeFailure() names a failure.
 export function placedAt(grid: Grid, panel: Panel, place: Place, sizing: "split" | "distribute"): Grid {
   const failure = placeFailure(grid, place);
@@ -360,7 +357,7 @@ function onRail(grid: Grid, edge: Edge, panel: Panel): Grid {
   const rail = grid.rails?.[edge];
   const next: Rail =
     rail === undefined
-      ? { ...tabGroup(panel), collapsed: false, size: RAIL_SIZE, collapsed_size: RAIL_COLLAPSED_SIZE }
+      ? { ...tabGroup(panel), collapsed: false, size: RAIL_SIZE }
       : { ...rail, panels: [...rail.panels, panel], active: panel };
   return { ...grid, rails: { ...grid.rails, [edge]: next } };
 }
@@ -521,7 +518,7 @@ export function withStoredShares(stored: Grid, grid: Grid, tolerance: number): G
 //   rails it holds, and which panels each tab group and rail holds, in order.
 // - Their sizes, in `sizes`, which the blockr option lock_resize keeps: the
 //   shares of a split, where the new grid has the same splits and tab groups,
-//   and the widths of a rail that both grids hold.
+//   and the width of a rail that both grids hold.
 // None counts which panel a tab group or rail shows, or whether a rail is
 // collapsed, which a reader always changes.
 // Shares count as changed where they differ at all, so a grid read back from
@@ -542,20 +539,26 @@ export function gridChanges(stored: Grid, grid: Grid): GridChanges {
   };
 }
 
-// The arrangement of a grid, as gridChanges() compares it, with its panels,
-// or its shape alone, without them.
-function arrangement(grid: Grid, panels = true): Json {
-  const node = (child: Node): Json =>
-    isTabGroup(child) ? (panels ? child.panels : "tab group") : child.children.map(node);
-  const edges = rails(grid).map(([edge, rail]): [Edge, Json] => [edge, panels ? rail.panels : "rail"]);
+// The arrangement of a grid, as gridChanges() compares it: its orientation,
+// its splits and tab groups with their panels, and its rails with theirs.
+function arrangement(grid: Grid): Json {
+  const node = (child: Node): Json => (isTabGroup(child) ? child.panels : child.children.map(node));
+  const edges = rails(grid).map(([edge, rail]): [Edge, Json] => [edge, rail.panels]);
   return { orientation: grid.orientation, children: grid.children.map(node), rails: Object.fromEntries(edges) };
+}
+
+// The shape of a grid's splits: its orientation, and its splits and tab
+// groups, without their panels.
+function shape(grid: Grid): Json {
+  const node = (child: Node): Json => (isTabGroup(child) ? "tab group" : child.children.map(node));
+  return { orientation: grid.orientation, children: grid.children.map(node) };
 }
 
 // Whether a new grid changes the sizes of a stored one.
 function resizedFrom(stored: Grid, grid: Grid): boolean {
   const widths = EDGES.some((edge) => {
     const [a, b] = [stored.rails?.[edge], grid.rails?.[edge]];
-    return a !== undefined && b !== undefined && (a.size !== b.size || a.collapsed_size !== b.collapsed_size);
+    return a !== undefined && b !== undefined && a.size !== b.size;
   });
   if (widths) return true;
   if (!sameShape(stored, grid)) return false;
@@ -563,10 +566,13 @@ function resizedFrom(stored: Grid, grid: Grid): boolean {
   return shares(stored).some((share, i) => share !== given[i]);
 }
 
-// Whether two grids have the same orientation, splits, tab groups and rails,
+// Whether two grids have the same orientation, splits and tab groups,
 // whatever panels they hold.
+// Rails are no splits, so two grids that differ in their rails alone have the
+// same shape, as where a drop takes a panel out of a tab group of several onto
+// a rail.
 function sameShape(a: Grid, b: Grid): boolean {
-  return JSON.stringify(arrangement(a, false)) === JSON.stringify(arrangement(b, false));
+  return JSON.stringify(shape(a)) === JSON.stringify(shape(b));
 }
 
 // The shares of every split of a grid, the top split first, depth first, as

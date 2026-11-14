@@ -10,3 +10,100 @@
   position: fixed;
   inset: 0;
 }
+
+/*
+ * In a window narrower than the blockr option narrow_breakpoint, the dock
+ * draws a view's tab groups and rails in one column.
+ * The column is as tall as its rows together, which the dock sets as the
+ * root's height, so the page scrolls through the rows.
+ */
+.blockr-dock[data-layout="narrow"] {
+  position: relative;
+  inset: auto;
+}
+
+/* A panel's frame, which the block's card or the plugin's UI fills. */
+.blockr-dock-panel {
+  height: 100%;
+  overflow: auto;
+}
+
+/*
+ * Dockview reads the design tokens.
+ * Dockview paints its frame and tabs from its own variables, so this bridge
+ * sets them to blockr.ui's tokens, on dockview's light-spaced theme, as
+ * today's dock does.
+ * Each token is read with its value in blockr.ui's light scheme as the
+ * fallback under the light theme, and with its value in the dark scheme under
+ * the dark theme, which core switches the page to in data-bc-theme, as the
+ * board option dark_mode says.
+ * So the dock draws in either theme on a page that holds no token sheet of
+ * blockr.ui, until the client settles how the tokens reach the page.
+ * The values are those of blockr.ui's tokens at e14e831.
+ * The selectors take the dock's root, so that they win over the class of
+ * dockview's theme, which sets the same variables on the same element.
+ * The dark scheme also sets the two colours that dockview's light values,
+ * black at a low alpha, make vanish on a dark surface: white at the same
+ * weight reads the same.
+ * A test checks that the dark theme sets each colour that dockview's
+ * light-spaced theme sets otherwise than its dark abyss-spaced theme does,
+ * but for those of features that the dock does not use.
+ */
+.blockr-dock .dv-shell {
+  --dv-group-view-background-color: var(--blockr-color-bg-page, #f9fafb);
+  --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface, #ffffff);
+
+  --dv-activegroup-visiblepanel-tab-background-color: var(
+    --blockr-color-bg-selected,
+    color-mix(in srgb, #2563eb 7%, transparent)
+  );
+  --dv-activegroup-visiblepanel-tab-color: var(--blockr-color-text-accent, #2563eb);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(
+    --blockr-color-bg-selected-inactive,
+    color-mix(in srgb, #111827 10%, transparent)
+  );
+  --dv-inactivegroup-visiblepanel-tab-color: var(--blockr-color-text-default, #111827);
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-activegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #6b7280);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #6b7280);
+
+  --dv-separator-border: transparent;
+  --dv-sash-color: transparent;
+  --dv-tab-divider-color: transparent;
+  --dv-active-sash-color: var(--blockr-color-border-accent, #2563eb);
+
+  --dv-border-radius: var(--blockr-radius-xl, 12px);
+  --dv-tab-border-radius: var(--blockr-radius-lg, 8px);
+}
+
+[data-bc-theme="dark"] .blockr-dock .dv-shell {
+  --dv-group-view-background-color: var(--blockr-color-bg-page, #0e1219);
+  --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface, #161b23);
+
+  --dv-activegroup-visiblepanel-tab-background-color: var(
+    --blockr-color-bg-selected,
+    color-mix(in srgb, #3b82f6 7%, transparent)
+  );
+  --dv-activegroup-visiblepanel-tab-color: var(--blockr-color-text-accent, #60a5fa);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(
+    --blockr-color-bg-selected-inactive,
+    color-mix(in srgb, #f0f3f7 10%, transparent)
+  );
+  --dv-inactivegroup-visiblepanel-tab-color: var(--blockr-color-text-default, #f0f3f7);
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-activegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #8a94a3);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #8a94a3);
+
+  --dv-separator-border: transparent;
+  --dv-sash-color: transparent;
+  --dv-tab-divider-color: transparent;
+  --dv-active-sash-color: var(--blockr-color-border-accent, #3b82f6);
+
+  --dv-border-radius: var(--blockr-radius-xl, 12px);
+  --dv-tab-border-radius: var(--blockr-radius-lg, 8px);
+
+  --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
+  --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
+}

@@ -83,12 +83,14 @@ export function holdsBlock(board: Board, panel: Panel): boolean {
 // option lock_resize is TRUE, each TRUE unless set, as today's
 // is_layout_locked() reads them.
 // A board without the board lock keeps neither, and reads no blockr option.
+// The dock's commands read them through their context, and the dock's
+// frontend through CoreApi, as it tells dockview what to lock.
 export interface LayoutLocks {
   readonly rearrange: boolean;
   readonly resize: boolean;
 }
 
-export async function layoutLocks(context: CommandContext): Promise<LayoutLocks> {
+export async function layoutLocks(context: Pick<CommandContext, "lock" | "blockrOption">): Promise<LayoutLocks> {
   if (!context.lock.board) return { rearrange: false, resize: false };
   const read = (option: string) => logicalOption(context, option, true, "where it takes TRUE or FALSE");
   const [rearrange, resize] = await Promise.all([read("lock_rearrange"), read("lock_resize")]);
@@ -98,7 +100,7 @@ export async function layoutLocks(context: CommandContext): Promise<LayoutLocks>
 // How far a grid that a command is given may move a share of a split, which
 // then keeps its stored shares: the blockr option dock_grid_size_tol, or
 // 0.005 unless set, as today's grid_size_tol() reads it.
-export async function gridSizeTolerance(context: CommandContext): Promise<number> {
+export async function gridSizeTolerance(context: Pick<CommandContext, "blockrOption">): Promise<number> {
   return await numericOption(context, "dock_grid_size_tol", 0.005, "where it takes a number of 0 or more");
 }
 

@@ -7,7 +7,7 @@
 # A child is a split, with its `children` and their `sizes`, or a tab group,
 # with its `panels` and the `active` one, which it shows.
 # A rail holds its `panels`, its `active` one, whether it is `collapsed`, and
-# its `size` and `collapsed_size` in pixels.
+# its `size` in pixels.
 #
 # The functions that write a grid hold a panel reference for each panel, and
 # take a bare id for the reference to a block's panel.
@@ -69,8 +69,7 @@
 #' @param position For `rail()`, the edge of the view that it sits on,
 #'   `"left"`, the default, or `"right"`.
 #' @param collapsed For `rail()`, whether it shows its tabs alone.
-#' @param size,collapsed_size For `rail()`, its width in pixels while it is
-#'   open and while it is collapsed.
+#' @param size For `rail()`, its width in pixels while it is open.
 #' @param sizes The share of each child of the split, positive numbers, one
 #'   for each child.
 #'

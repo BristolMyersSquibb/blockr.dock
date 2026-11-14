@@ -32,7 +32,7 @@ function group(...panels: Panel[]): TabGroup {
 }
 
 function rail(...panels: Panel[]): Rail {
-  return { ...group(...panels), collapsed: false, size: 260, collapsed_size: 35 };
+  return { ...group(...panels), collapsed: false, size: 260 };
 }
 
 // The view Overview of the page: a tab group of a and b, which shows b, in
@@ -380,7 +380,7 @@ describe("gridChanges()", () => {
     expect(gridChanges(overview, swapped)).toEqual({ ...none, arrangement: true });
   });
 
-  test("finds other shares in the same splits, and other widths of a rail that both grids hold", () => {
+  test("finds other shares in the same splits, and another width of a rail that both grids hold", () => {
     expect(gridChanges(overview, { ...overview, sizes: [0.4, 0.6] })).toEqual({ ...none, sizes: true });
     expect(gridChanges(overview, resized(overview, dag, 300))).toEqual({ ...none, sizes: true });
     // It compares shares exactly, which withStoredShares() keeps where they
@@ -418,6 +418,13 @@ describe("withStoredShares()", () => {
     expect(withStoredShares(overview, moved, 0.005)).toEqual(moved);
     const flipped: Grid = { ...overview, orientation: "vertical" };
     expect(withStoredShares(overview, flipped, 0.5)).toBe(flipped);
+  });
+
+  test("keeps the stored shares where the new grid differs in its rails alone", () => {
+    const railed: Grid = { ...overview, sizes: [0.302, 0.698], rails: { ...overview.rails, right: rail(md) } };
+    expect(withStoredShares(overview, railed, 0.005)).toEqual({ ...railed, sizes: [0.3, 0.7] });
+    const bare: Grid = { orientation: overview.orientation, children: overview.children, sizes: overview.sizes };
+    expect(withStoredShares(overview, { ...bare, sizes: [0.302, 0.698] }, 0.005)).toEqual(bare);
   });
 
   test("reads stored sizes that do not sum to 1 as canonicalGrid() scales them", () => {

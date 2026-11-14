@@ -1,5 +1,23 @@
 # blockr.dock 0.2.1
 
+* The dock draws the active view with dockview, from the board in the client
+  (#577).
+  Each tab group of the view's grid becomes a dockview group, each rail an edge
+  group, and each panel a dockview panel, whose tab shows the block's name or
+  the plugin's.
+  After each gesture, the dock reads dockview's layout back into a grid, once,
+  as the user lets go.
+  Where only the shown tab or a rail's collapse changed, it runs
+  `blockr.dock-activate_panel` or `blockr.dock-collapse_rail`, and where
+  anything else changed, `blockr.dock-set_grid`.
+  As the grid changes through an undo or another origin's command, dockview
+  moves its panels, so that what core mounted in them stays mounted.
+  In a window narrower than the blockr option `narrow_breakpoint`, the dock
+  stacks the view's tab groups and rails in one column.
+  A board without views opens on the view "Page", with the panels of the app's
+  plugins on its left rail and the blocks in one tab group.
+  The dock demands the blocks whose cards are on screen.
+
 * The dock plugin's class registers the dock's 18 commands (#573).
   They add, rename, move and remove views and folders, and switch the active
   view.

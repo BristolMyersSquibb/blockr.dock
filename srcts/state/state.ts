@@ -61,10 +61,8 @@ function isTabGroup(value: Json | undefined): value is TabGroup {
 
 function isRail(value: Json | undefined): value is Rail {
   if (!isObject(value)) return false;
-  const { collapsed, size, collapsed_size } = value;
-  return (
-    typeof collapsed === "boolean" && typeof size === "number" && typeof collapsed_size === "number" && isTabGroup(value)
-  );
+  const { collapsed, size } = value;
+  return typeof collapsed === "boolean" && typeof size === "number" && isTabGroup(value);
 }
 
 // Whether a value names a panel: a block by its id or a plugin's class by its

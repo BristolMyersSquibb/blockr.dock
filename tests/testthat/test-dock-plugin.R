@@ -241,8 +241,7 @@ test_that("the state holds the rails of a grid, without their positions", {
         panels = list(list(plugin = "x"), list(block = "b")),
         active = list(plugin = "x"),
         collapsed = TRUE,
-        size = 260,
-        collapsed_size = 35
+        size = 260
       )
     )
   )

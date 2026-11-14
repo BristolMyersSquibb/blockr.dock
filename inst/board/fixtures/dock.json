@@ -101,8 +101,7 @@
                     "plugin": "blockr.core-edit_board_plugin"
                   },
                   "collapsed": true,
-                  "size": 300.0,
-                  "collapsed_size": 35.0
+                  "size": 300.0
                 }
               }
             }
