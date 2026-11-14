@@ -5,9 +5,6 @@
 // The frontend draws the page as a React app on the one copy of React that
 // core puts on the page, with the layout drawn by dockview, which the module's
 // bundle holds.
-// The page is an empty dockview, which holds no panel. It takes dockview's
-// light-spaced theme, or its abyss-spaced theme where the board option
-// dark_mode is dark.
 // The class requires five board options: the dock's own, compact, view_tabs
 // and sync_rails, which ../../options defines, and core's show_conditions and
 // dark_mode. So core gives each board that lacks a value for one of them its
@@ -17,51 +14,59 @@
 // state's types, and the default of the state, which holds no view.
 // It also gives core the `update` of ../../state, and the dock's commands,
 // which ../../commands defines and core registers with the class.
+//
+// The frontend's render() takes these steps, which core awaits before it
+// starts the scheduler
+// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.8#starting-the-page):
+// 1. It reads the blockr options that the dock reads as it draws
+//    (./settings.ts).
+// 2. It takes the step on starting, as one delta of the dock plugin's class
+//    that undo does not take back (./start.ts).
+// 3. It demands the blocks whose cards are on screen, so that the scheduler
+//    evaluates the blocks of the opening view first (./demand.ts).
+// 4. It draws the page, and the active view in it, with dockview
+//    (./dock.tsx, ./drawing.ts).
+// The cleanup that render() returns undoes all of them but the step on
+// starting, which is the board's.
 
-import { DockviewReact, themeAbyssSpaced, themeLightSpaced } from "dockview-react";
-import type { IDockviewReactProps } from "dockview-react";
-import { useCallback, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import type { CoreApi, FrontendModule, JsonSchema, PluginClass } from "@blockr/core";
+import type { FrontendModule, JsonSchema, PluginClass } from "@blockr/core";
 // The schema of the class's state is the file that the build writes for R,
 // beside the bundle.
 // eslint-disable-next-line no-restricted-imports
 import schema from "../../../inst/js/dock.schema.json" with { type: "json" };
 import { dockCommands } from "../../commands/index.ts";
 import { defaultState, update } from "../../state/index.ts";
+import { demandShown } from "./demand.ts";
+import { Dock } from "./dock.tsx";
+import { trackNarrow } from "./narrow.ts";
+import { readSettings } from "./settings.ts";
+import { drawnPlugins, startOnBoard, urlView } from "./start.ts";
 
 export const api = 1;
 
-// The components that draw the content of panels, by name, of which dockview
-// needs one for each panel it draws.
-const panels: IDockviewReactProps["components"] = {};
-
-// Whether the board option dark_mode is dark. A change to the board, such as
-// one that sets the board option, can switch it.
-function useDark(core: CoreApi): boolean {
-  const subscribe = useCallback((changed: () => void) => core.store.subscribe(changed), [core]);
-  return useSyncExternalStore(subscribe, () => core.options.value("dark_mode") === "dark");
-}
-
-function Dock({ core }: { core: CoreApi }) {
-  const theme = useDark(core) ? themeAbyssSpaced : themeLightSpaced;
-  return (
-    <div className="blockr-dock">
-      <DockviewReact components={panels} onReady={() => undefined} theme={theme} />
-    </div>
-  );
-}
-
 const frontend = {
-  render({ el, core }) {
+  async render({ el, core, plugin, signal }) {
+    const settings = await readSettings(core);
+    if (signal.aborted) return undefined;
+
+    const win = el.ownerDocument.defaultView ?? window;
+    const drawn = drawnPlugins(core);
+    startOnBoard(core, plugin, [...drawn.keys()], urlView(win.location));
+
+    const narrow = trackNarrow(win, settings.breakpoint);
+    const release = demandShown(core, drawn, narrow);
+
     const root = createRoot(el);
     // React draws the page before render() returns.
     flushSync(() => {
-      root.render(<Dock core={core} />);
+      root.render(<Dock core={core} plugin={plugin} settings={settings} narrow={narrow} drawn={drawn} />);
     });
     return () => {
       root.unmount();
+      release();
+      narrow.stop();
     };
   },
 } satisfies FrontendModule;

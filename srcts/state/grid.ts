@@ -31,8 +31,8 @@ export type Side = (typeof SIDES)[number];
 
 // The widths in pixels of a rail that a panel opens, open and collapsed, as
 // today's rail() has them.
-const RAIL_SIZE = 260;
-const RAIL_COLLAPSED_SIZE = 35;
+export const RAIL_SIZE = 260;
+export const RAIL_COLLAPSED_SIZE = 35;
 
 // How far from 1 the shares of a split may sum, to allow for rounding, as
 // R's all.equal() allows.
@@ -59,7 +59,7 @@ export function places(grid: Grid, panel: Panel): boolean {
 }
 
 // The tab groups of a grid's splits, in reading order.
-function tabGroups(grid: Grid): TabGroup[] {
+export function tabGroups(grid: Grid): TabGroup[] {
   const groups: TabGroup[] = [];
   const walk = (node: Node) => {
     if (isTabGroup(node)) groups.push(node);
@@ -137,7 +137,7 @@ function prunedGroup(group: TabGroup, keep: (panel: Panel) => boolean): TabGroup
 
 // The shares of `n` children: `sizes` scaled to sum to 1, or an even split
 // where `sizes` does not give each child a positive share.
-function fitted(sizes: readonly number[], n: number): number[] {
+export function fitted(sizes: readonly number[], n: number): number[] {
   const fits = sizes.length === n && sizes.every((size) => Number.isFinite(size) && size > 0);
   return fits ? normalized(sizes) : evenShares(n);
 }
