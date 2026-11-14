@@ -5,19 +5,28 @@
 
 export type { DockState, Folder, FolderId, Grid, Node, Panel, Rail, Section, Split, TabGroup, View, ViewId } from "./types.ts";
 export { defaultState, isDockState } from "./state.ts";
-export { update } from "./update.ts";
+export { rehoused, update } from "./update.ts";
 export {
   canonicalGrid,
+  collapsedRail,
   EDGES,
+  gridChanges,
   gridFailures,
   gridPanels,
   isTabGroup,
+  locate,
   panelName,
+  placedAt,
   placePanel,
   places,
   prunePanels,
+  resized,
   samePanel,
+  showing,
+  SIDES,
+  withStoredShares,
 } from "./grid.ts";
-export type { Edge } from "./grid.ts";
-export { compare, firstView, inFolder, viewOrder } from "./navigation.ts";
+export type { Edge, GridChanges, Place } from "./grid.ts";
+export { compare, firstView, inFolder, keyIn, sameEntry, sitsAt, viewOrder, within } from "./navigation.ts";
+export type { Entry } from "./navigation.ts";
 export { patched, pointer } from "./patch.ts";

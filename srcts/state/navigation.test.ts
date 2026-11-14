@@ -1,7 +1,7 @@
 // The order in which the navigation lists the views and folders.
 
 import { describe, expect, test } from "vitest";
-import { firstView, inFolder, viewOrder } from "./navigation.ts";
+import { compare, firstView, inFolder, keyIn, keysBetween, sameEntry, sitsAt, viewOrder, within } from "./navigation.ts";
 import { defaultState } from "./state.ts";
 import type { DockState, Folder, FolderId, View } from "./types.ts";
 
@@ -76,5 +76,92 @@ describe("firstView()", () => {
 
   test("gives null where the state holds no view", () => {
     expect(firstView(defaultState)).toBeNull();
+  });
+});
+
+describe("sameEntry()", () => {
+  test("tells a view from a folder of the same id", () => {
+    expect(sameEntry({ view: "x" }, { view: "x" })).toBe(true);
+    expect(sameEntry({ folder: "x" }, { folder: "x" })).toBe(true);
+    expect(sameEntry({ view: "x" }, { folder: "x" })).toBe(false);
+    expect(sameEntry({ view: "x" }, { view: "y" })).toBe(false);
+  });
+});
+
+describe("keyIn()", () => {
+  test("gives a key after the last view or folder of a folder, or of the top", () => {
+    expect(keyIn(state, null, undefined)).toBe("a3");
+    expect(keyIn(state, "safety", undefined)).toBe("a2");
+  });
+
+  test("gives a key between the neighbours of the view or folder that it goes before", () => {
+    const key = keyIn(state, null, { folder: "safety" });
+    expect(compare("a0", key)).toBe(-1);
+    expect(compare(key, "a1")).toBe(-1);
+    expect(keyIn(state, null, { view: "overview" })).toBe("Zz");
+  });
+
+  test("gives a key in an empty folder, or one that the state lacks", () => {
+    expect(keyIn(state, "nested", { view: "labs" })).toBe("Zz");
+    expect(keyIn({ ...state, views: {} }, "safety", undefined)).toBe("a2");
+  });
+
+  test("leaves out the view or folder that moves", () => {
+    // Moving Overview to the end of the top puts it after Listing, which the
+    // key of Listing, a2, is the last before.
+    expect(keyIn(state, null, undefined, { view: "overview" })).toBe("a3");
+    // Moving Listing before Safety puts it between Overview and Safety.
+    const key = keyIn(state, null, { folder: "safety" }, { view: "listing" });
+    expect(compare("a0", key)).toBe(-1);
+    expect(compare(key, "a1")).toBe(-1);
+  });
+
+  test("gives a key after the one before where two neighbours have the same key", () => {
+    const tied: DockState = { ...defaultState, views: { a: view(null, "a0"), b: view(null, "a0") } };
+    expect(keyIn(tied, null, { view: "b" })).toBe("a1");
+  });
+});
+
+describe("sitsAt()", () => {
+  test("says whether a view or folder sits right before another, or last", () => {
+    expect(sitsAt(state, { view: "overview" }, null, { folder: "safety" })).toBe(true);
+    expect(sitsAt(state, { view: "overview" }, null, { view: "listing" })).toBe(false);
+    expect(sitsAt(state, { view: "listing" }, null, undefined)).toBe(true);
+    expect(sitsAt(state, { view: "overview" }, null, undefined)).toBe(false);
+  });
+
+  test("says false for a view or folder that sits in another folder", () => {
+    expect(sitsAt(state, { view: "ae" }, null, undefined)).toBe(false);
+    expect(sitsAt(state, { folder: "nested" }, "safety", undefined)).toBe(true);
+  });
+});
+
+describe("within()", () => {
+  test("says whether a folder is another or sits in it, through the folders that hold it", () => {
+    expect(within(state, "nested", "safety")).toBe(true);
+    expect(within(state, "safety", "safety")).toBe(true);
+    expect(within(state, "safety", "nested")).toBe(false);
+  });
+
+  test("ends on a folder that sits in itself", () => {
+    const loop: DockState = { ...defaultState, folders: { x: folder("y", "a0"), y: folder("x", "a0"), z: folder(null, "a1") } };
+    expect(within(loop, "x", "z")).toBe(false);
+    expect(within(loop, "x", "y")).toBe(true);
+  });
+});
+
+describe("keysBetween()", () => {
+  test("gives keys in order between two keys", () => {
+    const keys = keysBetween("a0", "a1", 2);
+    expect(keys).toHaveLength(2);
+    expect([...keys].sort(compare)).toEqual(keys);
+    expect(keys.every((key) => compare("a0", key) < 0 && compare(key, "a1") < 0)).toBe(true);
+  });
+
+  test("leaves out a bound that is no key, or the upper of two equal bounds", () => {
+    expect(keysBetween("a0", "not a key", 1)).toEqual(["a1"]);
+    expect(keysBetween("not a key", "a1", 1)).toEqual(["a0"]);
+    expect(keysBetween("a0", "a0", 1)).toEqual(["a1"]);
+    expect(keysBetween("?", "?", 1)).toEqual(["a0"]);
   });
 });

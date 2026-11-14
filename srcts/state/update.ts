@@ -30,9 +30,8 @@
 // The store's check of the state against the schema then says what is wrong.
 
 import type { Board, Delta, Patch, PluginClassId } from "@blockr/core";
-import { generateNKeysBetween } from "fractional-indexing";
 import { gridPanels, placePanel, places, prunePanels } from "./grid.ts";
-import { compare, firstView } from "./navigation.ts";
+import { compare, firstView, keysBetween } from "./navigation.ts";
 import { patched, pointer } from "./patch.ts";
 import { isDockState } from "./state.ts";
 import type { DockState, Folder, FolderId, Panel, View } from "./types.ts";
@@ -100,7 +99,9 @@ interface Move {
 // The views and folders that a removed folder held keep their order.
 // Where the board before the delta lacks the folder too, they go to the end
 // of the top.
-function rehoused(state: DockState, before: DockState): { state: DockState; moves: Move[] } {
+// The command blockr.dock-remove_folder moves what the folder held in the
+// same way.
+export function rehoused(state: DockState, before: DockState): { state: DockState; moves: Move[] } {
   const lacks = (folder: FolderId | null): folder is FolderId => folder !== null && !Object.hasOwn(state.folders, folder);
   const entries = (kind: Move["kind"], record: Readonly<Record<string, View | Folder>>) =>
     Object.entries(record).map(([id, entry]) => ({ kind, id, folder: entry.folder, index: entry.index }));
@@ -202,24 +203,6 @@ function pathOrder(a: readonly string[], b: readonly string[]): number {
     if (order !== 0) return order;
   }
   return a.length - b.length;
-}
-
-// Keys in order between two keys, `n` of them, or with fewer bounds where a
-// bound is no key of fractional-indexing's, as a patch can leave one.
-function keysBetween(a: string | null, b: string | null, n: number): string[] {
-  const bounds: [string | null, string | null][] = [
-    [a, b],
-    [a, null],
-    [null, b],
-  ];
-  for (const [low, high] of bounds) {
-    try {
-      return generateNKeysBetween(low, high, n);
-    } catch {
-      // A bound that is no key, which the next pair leaves out.
-    }
-  }
-  return generateNKeysBetween(null, null, n);
 }
 
 // The state with the panel of each block given placed in the active view, at
