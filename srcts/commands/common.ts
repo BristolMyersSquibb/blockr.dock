@@ -1,9 +1,10 @@
 // What the dock's commands share: where the board holds the dock's state, how
 // a command reads it and writes patches into it, the checks of what they are
-// given, and how a command reads what a locked board keeps of a view's grid.
+// given, how a command reads what a locked board keeps of a view's grid, and
+// how far it lets a grid that it is given move the shares of a split.
 
 import type { Board, Command, CommandContext, Delta, Json, JsonSchema } from "@blockr/core";
-import { logicalOption } from "../options/index.ts";
+import { logicalOption, numericOption } from "../options/index.ts";
 import { gridFailures, gridPanels, inFolder, isDockState, pointer, sameEntry } from "../state/index.ts";
 import type { DockState, Entry, FolderId, Grid, Panel } from "../state/index.ts";
 
@@ -92,6 +93,13 @@ export async function layoutLocks(context: CommandContext): Promise<LayoutLocks>
   const read = (option: string) => logicalOption(context, option, true, "where it takes TRUE or FALSE");
   const [rearrange, resize] = await Promise.all([read("lock_rearrange"), read("lock_resize")]);
   return { rearrange, resize };
+}
+
+// How far a grid that a command is given may move a share of a split, which
+// then keeps its stored shares: the blockr option dock_grid_size_tol, or
+// 0.005 unless set, as today's grid_size_tol() reads it.
+export async function gridSizeTolerance(context: CommandContext): Promise<number> {
+  return await numericOption(context, "dock_grid_size_tol", 0.005, "where it takes a number of 0 or more");
 }
 
 // "View N" or "Folder N", with N one more than the names given, or the first

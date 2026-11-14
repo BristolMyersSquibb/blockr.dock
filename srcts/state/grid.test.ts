@@ -15,8 +15,9 @@ import {
   prunePanels,
   resized,
   showing,
+  withStoredShares,
 } from "./grid.ts";
-import type { Grid, Panel, Rail, TabGroup } from "./types.ts";
+import type { Grid, Panel, Rail, Split, TabGroup } from "./types.ts";
 
 const a = { block: "a" };
 const b = { block: "b" };
@@ -382,6 +383,47 @@ describe("gridChanges()", () => {
   test("finds other shares in the same splits, and other widths of a rail that both grids hold", () => {
     expect(gridChanges(overview, { ...overview, sizes: [0.4, 0.6] })).toEqual({ ...none, sizes: true });
     expect(gridChanges(overview, resized(overview, dag, 300))).toEqual({ ...none, sizes: true });
-    expect(gridChanges(overview, { ...overview, sizes: [0.3 + 1e-12, 0.7 - 1e-12] })).toEqual(none);
+    // It compares shares exactly, which withStoredShares() keeps where they
+    // moved a little.
+    const jittered: Grid = { ...overview, sizes: [0.3 + 1e-12, 0.7 - 1e-12] };
+    expect(gridChanges(overview, jittered)).toEqual({ ...none, sizes: true });
+    expect(gridChanges(overview, withStoredShares(overview, jittered, 0.005))).toEqual(none);
+  });
+});
+
+describe("withStoredShares()", () => {
+  const inner = (sizes: number[]): Split => ({ children: [group(c), group(md)], sizes });
+
+  test("keeps the stored shares of each split that the new grid moves by no more than the tolerance", () => {
+    const jittered: Grid = { ...overview, children: [{ panels: [a, b], active: a }, inner([0.603, 0.397])], sizes: [0.302, 0.698] };
+    expect(withStoredShares(overview, jittered, 0.005)).toEqual({ ...overview, children: [{ panels: [a, b], active: a }, inner([0.6, 0.4])] });
+
+    // The split that the new grid moves by more takes the new shares, while
+    // the other keeps its stored ones.
+    const dragged: Grid = { ...jittered, sizes: [0.4, 0.6] };
+    expect(withStoredShares(overview, dragged, 0.005)).toEqual({ ...overview, children: [{ panels: [a, b], active: a }, inner([0.6, 0.4])], sizes: [0.4, 0.6] });
+
+    // A tolerance of 0 keeps only the shares that do not move at all.
+    expect(withStoredShares(overview, jittered, 0)).toEqual(jittered);
+  });
+
+  test("takes the new shares of a split whole where it moves one share by more, so that they sum to 1", () => {
+    const stored: Grid = { orientation: "horizontal", children: [group(a), group(b), group(c)], sizes: [0.2, 0.3, 0.5] };
+    const given: Grid = { ...stored, sizes: [0.203, 0.31, 0.487] };
+    expect(withStoredShares(stored, given, 0.005)).toEqual(given);
+  });
+
+  test("keeps the new grid where it has other splits or tab groups", () => {
+    const moved = placedAt(prunePanels(overview, (panel) => panel !== c), c, { near: a, side: "below" }, "split");
+    expect(withStoredShares(overview, moved, 0.005)).toEqual(moved);
+    const flipped: Grid = { ...overview, orientation: "vertical" };
+    expect(withStoredShares(overview, flipped, 0.5)).toBe(flipped);
+  });
+
+  test("reads stored sizes that do not sum to 1 as canonicalGrid() scales them", () => {
+    const stored: Grid = { orientation: "horizontal", children: [group(a), group(b)], sizes: [0.3, 0.6] };
+    const given: Grid = { ...stored, sizes: [0.332, 0.668] };
+    expect(withStoredShares(stored, given, 0.005).sizes).toEqual(canonicalGrid(stored).sizes);
+    expect(gridChanges(stored, withStoredShares(stored, given, 0.005)).sizes).toBe(false);
   });
 });

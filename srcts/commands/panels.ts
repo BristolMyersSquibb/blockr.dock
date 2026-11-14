@@ -9,6 +9,9 @@
 // A new tab group beside another gets the share that dockview gives a group
 // it adds or moves there: adding one evens out the split, and moving one
 // halves the tab group that it goes beside.
+// Setting a view's grid keeps the stored shares of each split that the grid
+// moves by no more than the blockr option dock_grid_size_tol, as the grid
+// that the dock reads back from dockview moves each share a little.
 // Showing another tab and opening or collapsing a rail take no undo step,
 // since they change only what the user looks at.
 //
@@ -17,8 +20,8 @@
 // Moving or resizing one, and setting a view's grid, are left to readers only
 // where a deployment sets the blockr options lock_rearrange or lock_resize to
 // FALSE.
-// Those blockr options come as a promise, so these commands read them in
-// their prepare(), and refuse in their run().
+// Blockr options come as a promise, so these commands read them in their
+// prepare(), and refuse in their run().
 
 import type { Board } from "@blockr/core";
 import {
@@ -32,9 +35,10 @@ import {
   resized,
   samePanel,
   showing,
+  withStoredShares,
 } from "../state/index.ts";
 import type { DockState, Edge, Grid, GridChanges, Panel, Place, View, ViewId } from "../state/index.ts";
-import { at, command, givenGridFailures, holdsBlock, layoutLocks, refuse, stateOf } from "./common.ts";
+import { at, command, givenGridFailures, gridSizeTolerance, holdsBlock, layoutLocks, refuse, stateOf } from "./common.ts";
 import type { LayoutLocks } from "./common.ts";
 import * as schemas from "./schemas.ts";
 
@@ -242,24 +246,26 @@ export const panelCommands = [
     },
   }),
 
-  command<SetGrid, SetGrid & { readonly locks: LayoutLocks }>({
+  command<SetGrid, SetGrid & { readonly locks: LayoutLocks; readonly tolerance: number }>({
     id: "blockr.dock-set_grid",
     label: "Set grid",
     description:
-      "Sets a view's whole grid, which says which panels the view shows and where, as the dock does after the user drags a panel or a border. A grid places each panel once, and the shares of each split are above 0 and sum to 1.",
+      "Sets a view's whole grid, which says which panels the view shows and where, as the dock does after the user drags a panel or a border. A grid places each panel once, and the shares of each split are above 0 and sum to 1. Where the grid has the same splits and tab groups as the view's, a split keeps its shares unless the grid moves one by more than the blockr option dock_grid_size_tol, 0.005 unless set.",
     args: schemas.object({ view: schemas.view, grid: schemas.grid }, ["view", "grid"]),
     enabled(board, { view }) {
       return viewOf(board, view) !== undefined;
     },
     async prepare(_board, args, context) {
-      return { ...args, locks: await layoutLocks(context) };
+      const [locks, tolerance] = await Promise.all([layoutLocks(context), gridSizeTolerance(context)]);
+      return { ...args, locks, tolerance };
     },
-    run(board, { view, grid, locks }, { lock }) {
+    run(board, { view, grid, locks, tolerance }, { lock }) {
       const held = viewOf(board, view);
       if (held === undefined) return [];
       refuse(givenGridFailures(board, grid));
-      keep(gridChanges(held.grid, grid), locks, lock.board);
-      return { patches: [gridPatch(view, grid)] };
+      const kept = withStoredShares(held.grid, grid, tolerance);
+      keep(gridChanges(held.grid, kept), locks, lock.board);
+      return { patches: [gridPatch(view, kept)] };
     },
   }),
 

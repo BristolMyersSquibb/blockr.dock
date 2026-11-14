@@ -569,6 +569,39 @@ describe("blockr.dock-set_grid", () => {
     await expect(run("set_grid", { view: "side", grid: { ...lacking, orientation: "diagonal" } })).rejects.toThrow("/grid");
     expect(dock()).toEqual(state);
   });
+
+  test("keeps the shares of a split that the grid moves by no more than the blockr option dock_grid_size_tol", async () => {
+    const { dock, run } = await start();
+    await run("set_grid", { view: "main", grid: { ...main, sizes: [0.502, 0.498] } });
+    expect(dock()).toEqual(state);
+
+    const jittered: Grid = { ...main, children: [{ panels: [a, b], active: a }, group(c)], sizes: [0.503, 0.497] };
+    await run("set_grid", { view: "main", grid: jittered });
+    expect(dock().views.main?.grid).toEqual({ ...jittered, sizes: [0.5, 0.5] });
+    const dragged: Grid = { ...jittered, sizes: [0.51, 0.49] };
+    await run("set_grid", { view: "main", grid: dragged });
+    expect(dock().views.main?.grid).toEqual(dragged);
+  });
+
+  test("reads dock_grid_size_tol as a number of 0 or more, and from the string that an environment variable sets", async () => {
+    const jittered: Grid = { ...main, children: [{ panels: [a, b], active: a }, group(c)], sizes: [0.503, 0.497] };
+
+    const loose = await start({ blockrOptions: { dock_grid_size_tol: "0.02" } });
+    await loose.run("set_grid", { view: "main", grid: { ...jittered, sizes: [0.51, 0.49] } });
+    expect(loose.dock().views.main?.grid.sizes).toEqual([0.5, 0.5]);
+
+    const exact = await start({ blockrOptions: { dock_grid_size_tol: 0 } });
+    await exact.run("set_grid", { view: "main", grid: jittered });
+    expect(exact.dock().views.main?.grid.sizes).toEqual([0.503, 0.497]);
+
+    for (const value of ["small", -0.01, null]) {
+      const { dock, run } = await start({ blockrOptions: { dock_grid_size_tol: value } });
+      await expect(run("set_grid", { view: "main", grid: jittered })).rejects.toThrow(
+        `The blockr option dock_grid_size_tol is ${JSON.stringify(value)}, where it takes a number of 0 or more.`,
+      );
+      expect(dock()).toEqual(state);
+    }
+  });
 });
 
 describe("blockr.dock-collapse_rail", () => {
@@ -658,6 +691,16 @@ describe("the commands for panels and rails on a locked board", () => {
     const resize = await start({ locked: true, blockrOptions: { lock_resize: "false" } });
     await resize.run("set_grid", { view: "main", grid: resized });
     expect(resize.dock().views.main?.grid).toEqual(resized);
+  });
+
+  test("set a grid that moves a tab under lock_resize, keeping the shares that it moves by no more than dock_grid_size_tol", async () => {
+    const { dock, run } = await start({ locked: true, blockrOptions: { lock_rearrange: false } });
+    // Moving b into the tab group of c keeps the splits and tab groups, whose
+    // shares are compared.
+    const moved: Grid = { ...main, children: [group(a), { panels: [b, c], active: b }], sizes: [0.497, 0.503] };
+    await run("set_grid", { view: "main", grid: moved });
+    expect(dock().views.main?.grid).toEqual({ ...moved, sizes: [0.5, 0.5] });
+    await expect(run("set_grid", { view: "main", grid: { ...moved, sizes: [0.49, 0.51] } })).rejects.toThrow("lock_resize");
   });
 
   test("refuse to move a panel where a blockr option of the lock holds no logical", async () => {

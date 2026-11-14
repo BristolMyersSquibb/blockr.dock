@@ -77,11 +77,41 @@ function logicalDefault(id: OptionId, fallback: boolean): (core: BlockrOptions) 
 // Any other value that is no logical fails, with a message that names the
 // value as R sent it and ends on `refused`.
 export async function logicalOption(core: BlockrOptions, name: string, fallback: boolean, refused: string): Promise<boolean> {
+  return await readOption(core, name, fallback, refused, (sent) => {
+    const value = typeof sent === "string" ? asLogical(sent) : sent;
+    return typeof value === "boolean" ? value : undefined;
+  });
+}
+
+// A blockr option read as a number of 0 or more, or `fallback` where nothing
+// sets it, as blockr.dock-set_grid reads dock_grid_size_tol.
+// A string reads as the number that it holds.
+// Any other value, and a number below 0, fails as in logicalOption().
+export async function numericOption(core: BlockrOptions, name: string, fallback: number, refused: string): Promise<number> {
+  return await readOption(core, name, fallback, refused, (sent) => {
+    const value = typeof sent === "string" ? asNumber(sent) : sent;
+    return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+  });
+}
+
+// A blockr option as `read` reads the value that R sent, or `fallback` where
+// nothing sets it.
+// Where `read` gives undefined, it fails, with a message that names the value
+// as R sent it and ends on `refused`.
+async function readOption<T>(core: BlockrOptions, name: string, fallback: T, refused: string, read: (sent: Json) => T | undefined): Promise<T> {
   const sent = await core.blockrOption(name);
   if (sent === undefined) return fallback;
-  const value = typeof sent === "string" ? asLogical(sent) : sent;
-  if (typeof value === "boolean") return value;
+  const value = read(sent);
+  if (value !== undefined) return value;
   throw new TypeError(`The blockr option ${name} is ${JSON.stringify(sent)}, ${refused}.`);
+}
+
+// The finite number that a string holds, or undefined where it holds none, as
+// "", "a" and "Inf" do, as core reads the string that an environment variable
+// gives, which core keeps to itself.
+function asNumber(text: string): number | undefined {
+  const number = text.trim() === "" ? Number.NaN : Number(text);
+  return Number.isFinite(number) ? number : undefined;
 }
 
 // The logical that R's as.logical() reads a string as, or undefined where it

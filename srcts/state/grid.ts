@@ -2,8 +2,9 @@
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.1#grids).
 // They give a grid's canonical form, check a grid, place a panel at its
 // default place or where a command names, take panels out, resize the tab
-// group or rail that holds a panel, and tell what a new grid changes of a
-// stored one, which a locked board keeps.
+// group or rail that holds a panel, keep the stored shares where a new grid
+// moves them only a little, and tell what a new grid changes of a stored
+// one, which a locked board keeps.
 // They are ported from today's canonicalize_grid(), validate_dock_grid(),
 // prune_tree() and append_default_leaves() in R/dock-grid.R, and from
 // hint_to_position() in R/panel-ops.R, at 655e323.
@@ -486,6 +487,31 @@ export function resized(grid: Grid, panel: Panel, size: number): Grid {
   });
 }
 
+// The new grid, where each split keeps its stored shares unless the new grid
+// moves one of them by more than `tolerance`, the blockr option
+// dock_grid_size_tol, as today's grid mirror in R/board-server.R keeps the
+// stored grid, at 655e323.
+// Dockview derives the shares that it lays out from whole pixels, so a grid
+// read back from it moves each share a little where nobody resized anything.
+// It compares the shares of a split only where both grids have the same
+// splits and tab groups, and reads the stored sizes as canonicalGrid() scales
+// them.
+// A split keeps its stored shares or takes the new ones whole, so that they
+// sum to 1, while the mirror keeps or replaces the whole grid.
+export function withStoredShares(stored: Grid, grid: Grid, tolerance: number): Grid {
+  if (!sameShape(stored, grid)) return grid;
+  const kept = (before: Split, after: Split): Split => {
+    const children = after.children.map((child, i) => {
+      const was = before.children[i];
+      return isTabGroup(child) || was === undefined || isTabGroup(was) ? child : kept(was, child);
+    });
+    const shares = fitted(before.sizes, before.children.length);
+    const steady = shares.every((share, i) => Math.abs(share - (after.sizes[i] ?? Number.NaN)) <= tolerance);
+    return { children, sizes: steady ? shares : after.sizes };
+  };
+  return { ...grid, ...kept(stored, grid) };
+}
+
 // What a new grid changes of a stored one, in the parts that a locked board
 // tells apart:
 // - Its panels, in `panels`, where it holds other panels, which a reader
@@ -498,6 +524,8 @@ export function resized(grid: Grid, panel: Panel, size: number): Grid {
 //   and the widths of a rail that both grids hold.
 // None counts which panel a tab group or rail shows, or whether a rail is
 // collapsed, which a reader always changes.
+// Shares count as changed where they differ at all, so a grid read back from
+// dockview goes through withStoredShares() first.
 export interface GridChanges {
   readonly panels: boolean;
   readonly arrangement: boolean;
@@ -530,15 +558,22 @@ function resizedFrom(stored: Grid, grid: Grid): boolean {
     return a !== undefined && b !== undefined && (a.size !== b.size || a.collapsed_size !== b.collapsed_size);
   });
   if (widths) return true;
-  if (JSON.stringify(arrangement(stored, false)) !== JSON.stringify(arrangement(grid, false))) return false;
+  if (!sameShape(stored, grid)) return false;
   const given = shares(grid);
-  return shares(stored).some((share, i) => Math.abs(share - (given[i] ?? share)) > TOLERANCE);
+  return shares(stored).some((share, i) => share !== given[i]);
 }
 
-// The shares of every split of a grid, the top split first, depth first.
+// Whether two grids have the same orientation, splits, tab groups and rails,
+// whatever panels they hold.
+function sameShape(a: Grid, b: Grid): boolean {
+  return JSON.stringify(arrangement(a, false)) === JSON.stringify(arrangement(b, false));
+}
+
+// The shares of every split of a grid, the top split first, depth first, as
+// canonicalGrid() scales each split's sizes.
 function shares(grid: Grid): number[] {
   const walk = (split: Split): number[] => [
-    ...split.sizes,
+    ...fitted(split.sizes, split.children.length),
     ...split.children.flatMap((child) => (isTabGroup(child) ? [] : walk(child))),
   ];
   return walk(grid);
