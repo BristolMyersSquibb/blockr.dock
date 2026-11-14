@@ -219,53 +219,62 @@ describe("locate()", () => {
 
 describe("placedAt()", () => {
   test("adds a panel as a new tab of the tab group of the panel that `near` names, which it shows", () => {
-    const placed = placedAt(overview, { block: "d" }, { near: c });
+    const placed = placedAt(overview, { block: "d" }, { near: c }, "distribute");
     expect(placed.children[1]).toEqual({
       children: [{ panels: [c, { block: "d" }], active: { block: "d" } }, group(md)],
       sizes: [0.6, 0.4],
     });
   });
 
-  test("adds a tab group beside it, with the mean of its siblings' shares, where its split divides that way", () => {
+  test("adds a tab group beside it, which evens out its split where it divides that way, as dockview's addPanel() does", () => {
     // The split that holds c divides vertically, the other way from the top.
-    const placed = placedAt(overview, { block: "d" }, { near: c, side: "below" });
-    expect(placed.children[1]).toEqual({
-      children: [group(c), group({ block: "d" }), group(md)],
-      sizes: [0.6 / 1.5, 0.5 / 1.5, 0.4 / 1.5],
-    });
-    const left = placedAt(overview, { block: "d" }, { near: a, side: "left" });
+    const placed = placedAt(overview, { block: "d" }, { near: c, side: "below" }, "distribute");
+    expect(placed.children[1]).toEqual({ children: [group(c), group({ block: "d" }), group(md)], sizes: [1 / 3, 1 / 3, 1 / 3] });
+    const left = placedAt(overview, { block: "d" }, { near: a, side: "left" }, "distribute");
     expect(left.children).toEqual([group({ block: "d" }), overview.children[0], overview.children[1]]);
-    expect(left.sizes).toEqual([0.5 / 1.5, 0.3 / 1.5, 0.7 / 1.5]);
+    expect(left.sizes).toEqual([1 / 3, 1 / 3, 1 / 3]);
   });
 
-  test("splits the tab group's place in two where its split divides the other way", () => {
-    const placed = placedAt(overview, { block: "d" }, { near: c, side: "right" });
-    expect(placed.children[1]).toEqual({
-      children: [{ children: [group(c), group({ block: "d" })], sizes: [0.5, 0.5] }, group(md)],
-      sizes: [0.6, 0.4],
-    });
-    const above = placedAt(overview, { block: "d" }, { near: b, side: "above" });
-    expect(above.children[0]).toEqual({ children: [group({ block: "d" }), overview.children[0]], sizes: [0.5, 0.5] });
-    expect(above.sizes).toEqual([0.3, 0.7]);
+  test("halves the tab group's share there with \"split\", as dockview's moveTo() and a drag do", () => {
+    const placed = placedAt(overview, { block: "d" }, { near: c, side: "below" }, "split");
+    expect(placed.children[1]).toEqual({ children: [group(c), group({ block: "d" }), group(md)], sizes: [0.3, 0.3, 0.4] });
+    const left = placedAt(overview, { block: "d" }, { near: a, side: "left" }, "split");
+    expect(left.children).toEqual([group({ block: "d" }), overview.children[0], overview.children[1]]);
+    expect(left.sizes).toEqual([0.15, 0.15, 0.7]);
+  });
+
+  test("splits the tab group's place in two where its split divides the other way, with either sizing", () => {
+    for (const sizing of ["split", "distribute"] as const) {
+      const placed = placedAt(overview, { block: "d" }, { near: c, side: "right" }, sizing);
+      expect(placed.children[1]).toEqual({
+        children: [{ children: [group(c), group({ block: "d" })], sizes: [0.5, 0.5] }, group(md)],
+        sizes: [0.6, 0.4],
+      });
+      const above = placedAt(overview, { block: "d" }, { near: b, side: "above" }, sizing);
+      expect(above.children[0]).toEqual({ children: [group({ block: "d" }), overview.children[0]], sizes: [0.5, 0.5] });
+      expect(above.sizes).toEqual([0.3, 0.7]);
+    }
   });
 
   test("adds a panel to the rail that `rail` names, before `near` and `side`, or opens a rail there", () => {
-    expect(placedAt(overview, { block: "d" }, { rail: "left", near: a, side: "right" }).rails).toEqual({
+    expect(placedAt(overview, { block: "d" }, { rail: "left", near: a, side: "right" }, "distribute").rails).toEqual({
       left: { ...rail(dag), panels: [dag, { block: "d" }], active: { block: "d" } },
     });
-    expect(placedAt(overview, { block: "d" }, { rail: "right" }).rails).toEqual({ left: rail(dag), right: rail({ block: "d" }) });
+    expect(placedAt(overview, { block: "d" }, { rail: "right" }, "distribute").rails).toEqual({ left: rail(dag), right: rail({ block: "d" }) });
   });
 
   test("adds a panel to the rail of the panel that `near` names, within", () => {
-    expect(placedAt(overview, { block: "d" }, { near: dag }).rails?.left?.panels).toEqual([dag, { block: "d" }]);
+    expect(placedAt(overview, { block: "d" }, { near: dag }, "distribute").rails?.left?.panels).toEqual([dag, { block: "d" }]);
   });
 
-  test("places a panel at an edge of the whole grid where `side` comes without `near`", () => {
-    const right = placedAt(overview, { block: "d" }, { side: "right" });
-    expect(right.children).toEqual([...overview.children, group({ block: "d" })]);
-    expect(right.sizes).toEqual([0.3 / 1.5, 0.7 / 1.5, 0.5 / 1.5]);
+  test("places a panel at an edge of the whole grid where `side` comes without `near`, evening out the top split", () => {
+    for (const sizing of ["split", "distribute"] as const) {
+      const right = placedAt(overview, { block: "d" }, { side: "right" }, sizing);
+      expect(right.children).toEqual([...overview.children, group({ block: "d" })]);
+      expect(right.sizes).toEqual([1 / 3, 1 / 3, 1 / 3]);
+    }
 
-    const above = placedAt(overview, { block: "d" }, { side: "above" });
+    const above = placedAt(overview, { block: "d" }, { side: "above" }, "distribute");
     expect(above).toEqual({
       orientation: "vertical",
       children: [group({ block: "d" }), { children: overview.children, sizes: overview.sizes }],
@@ -276,25 +285,25 @@ describe("placedAt()", () => {
 
   test("places a panel at an edge beside a top split that holds one tab group alone, or none", () => {
     const one: Grid = { orientation: "horizontal", children: [group(a)], sizes: [1] };
-    expect(placedAt(one, b, { side: "below" })).toEqual({
+    expect(placedAt(one, b, { side: "below" }, "distribute")).toEqual({
       orientation: "vertical",
       children: [group(a), group(b)],
       sizes: [0.5, 0.5],
     });
     const none: Grid = { orientation: "horizontal", children: [], sizes: [] };
-    expect(placedAt(none, b, { side: "above" })).toEqual({ orientation: "vertical", children: [group(b)], sizes: [1] });
+    expect(placedAt(none, b, { side: "above" }, "distribute")).toEqual({ orientation: "vertical", children: [group(b)], sizes: [1] });
   });
 
   test("places a panel at its default place, without `near` or `rail`, or within alone", () => {
-    expect(placedAt(overview, { block: "d" }, {})).toEqual(placePanel(overview, { block: "d" }));
-    expect(placedAt(overview, { block: "d" }, { side: "within" })).toEqual(placePanel(overview, { block: "d" }));
+    expect(placedAt(overview, { block: "d" }, {}, "distribute")).toEqual(placePanel(overview, { block: "d" }));
+    expect(placedAt(overview, { block: "d" }, { side: "within" }, "distribute")).toEqual(placePanel(overview, { block: "d" }));
   });
 
   test("throws where `near` names a panel that the grid lacks, or one on a rail beside which it places", () => {
-    expect(() => placedAt(overview, { block: "d" }, { near: { block: "z" } })).toThrow(
+    expect(() => placedAt(overview, { block: "d" }, { near: { block: "z" } }, "distribute")).toThrow(
       'The view does not show the panel of the block "z", which near names.',
     );
-    expect(() => placedAt(overview, { block: "d" }, { near: dag, side: "below" })).toThrow("on a rail");
+    expect(() => placedAt(overview, { block: "d" }, { near: dag, side: "below" }, "distribute")).toThrow("on a rail");
     expect(placeFailure(overview, { near: dag, side: "below", rail: "right" })).toBeUndefined();
   });
 });
@@ -348,11 +357,11 @@ describe("gridChanges()", () => {
   });
 
   test("finds other panels, which change the arrangement too", () => {
-    expect(gridChanges(overview, placedAt(overview, { block: "d" }, { near: a }))).toEqual({ ...none, panels: true, arrangement: true });
+    expect(gridChanges(overview, placedAt(overview, { block: "d" }, { near: a }, "distribute"))).toEqual({ ...none, panels: true, arrangement: true });
   });
 
   test("finds another arrangement of the same panels, with new shares that it does not compare", () => {
-    const moved = placedAt(prunePanels(overview, (panel) => panel !== c), c, { near: a, side: "below" });
+    const moved = placedAt(prunePanels(overview, (panel) => panel !== c), c, { near: a, side: "below" }, "split");
     expect(gridChanges(overview, moved)).toEqual({ ...none, arrangement: true });
     const swapped: Grid = { ...overview, children: [{ panels: [b, a], active: b }, overview.children[1] ?? group(c)] };
     expect(gridChanges(overview, swapped)).toEqual({ ...none, arrangement: true });

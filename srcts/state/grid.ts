@@ -245,6 +245,26 @@ function inserted(split: Split, at: number, node: Node): Split {
   };
 }
 
+// The split with a node among its children at `at`, where each child gets the
+// same share, as dockview's Sizing.Distribute gives them.
+function evened(split: Split, at: number, node: Node): Split {
+  const children = [...split.children.slice(0, at), node, ...split.children.slice(at)];
+  return { children, sizes: children.map(() => 1 / children.length) };
+}
+
+// The split with a node before or after its child at `beside`, which takes
+// half of that child's share, as dockview's Sizing.Split gives it.
+function halved(split: Split, beside: number, before: boolean, node: Node): Split {
+  const shares = fitted(split.sizes, split.children.length);
+  const half = (shares[beside] ?? 0) / 2;
+  const sizes = shares.map((share, i) => (i === beside ? half : share));
+  const at = before ? beside : beside + 1;
+  return {
+    children: [...split.children.slice(0, at), node, ...split.children.slice(at)],
+    sizes: [...sizes.slice(0, at), half, ...sizes.slice(at)],
+  };
+}
+
 function tabGroup(panel: Panel): TabGroup {
   return { panels: [panel], active: panel };
 }
@@ -299,15 +319,23 @@ export function placeFailure(grid: Grid, place: Place): string | undefined {
 
 // The grid with a panel placed where `place` says, which the grid holds
 // nowhere yet, as the tab group or rail that shows it.
-// A panel beside a tab group goes in a new tab group, which gets the mean of
-// its siblings' shares where the split that holds the tab group divides that
-// way, and half of the tab group's place where it divides the other way.
-// A panel at an edge of the whole grid goes in the same way, beside the top
-// split.
+// A panel beside a tab group, or at an edge of the whole grid, goes in a new
+// tab group, with the share that dockview 8.9.0 gives a group that it adds
+// there.
+// Beside a tab group in the split that holds it, the new tab group gets an
+// even share of the split, as dockview's addPanel() gives it, with `sizing`
+// "distribute".
+// With "split", it takes half of the tab group's share instead, as
+// dockview's moveTo() and a drag give it under its default dropSizing.
+// Where that split divides the other way, the new tab group takes half of the
+// tab group's place with either.
+// At an edge of the whole grid, it gets an even share of the top split, as a
+// drop on the dock's edge gives it, or half of the whole grid where the top
+// split divides the other way, with either.
 // A panel on a rail that the view lacks opens the rail, at the default
 // widths.
 // It throws where placeFailure() names a failure.
-export function placedAt(grid: Grid, panel: Panel, place: Place): Grid {
+export function placedAt(grid: Grid, panel: Panel, place: Place, sizing: "split" | "distribute"): Grid {
   const failure = placeFailure(grid, place);
   if (failure !== undefined) throw new Error(failure);
   if (place.rail !== undefined) return onRail(grid, place.rail, panel);
@@ -319,7 +347,7 @@ export function placedAt(grid: Grid, panel: Panel, place: Place): Grid {
   if (side === "within") {
     return withNode(grid, at.path, (node) => (isTabGroup(node) ? { panels: [...node.panels, panel], active: panel } : node));
   }
-  return besideGroup(grid, at.path, panel, side);
+  return besideGroup(grid, at.path, panel, side, sizing);
 }
 
 // The grid with a panel on the rail of an edge, as its last tab, which the
@@ -345,14 +373,16 @@ function leads(side: Exclude<Side, "within">): boolean {
 }
 
 // The grid with a panel in a new tab group beside the tab group at `path`.
-function besideGroup(grid: Grid, path: readonly number[], panel: Panel, side: Exclude<Side, "within">): Grid {
+function besideGroup(grid: Grid, path: readonly number[], panel: Panel, side: Exclude<Side, "within">, sizing: "split" | "distribute"): Grid {
   const holder = path.slice(0, -1);
   const at = path.at(-1) ?? 0;
   // The top split divides as the grid's orientation says, and each split
   // inside divides the other way from the split that holds it.
   const divides = holder.length % 2 === 0 ? grid.orientation : flipped(grid.orientation);
   if (divides === orientationOf(side)) {
-    return withSplit(grid, holder, (split) => inserted(split, leads(side) ? at : at + 1, tabGroup(panel)));
+    return withSplit(grid, holder, (split) =>
+      sizing === "split" ? halved(split, at, leads(side), tabGroup(panel)) : evened(split, leads(side) ? at : at + 1, tabGroup(panel)),
+    );
   }
   return withNode(grid, path, (node) => ({
     children: leads(side) ? [tabGroup(panel), node] : [node, tabGroup(panel)],
@@ -367,7 +397,7 @@ function atEdge(grid: Grid, panel: Panel, side: Exclude<Side, "within">): Grid {
   const orientation = orientationOf(side);
   if (grid.children.length === 0) return { ...grid, orientation, children: [tabGroup(panel)], sizes: [1] };
   if (grid.orientation === orientation) {
-    return { ...grid, ...inserted(grid, leads(side) ? 0 : grid.children.length, tabGroup(panel)) };
+    return { ...grid, ...evened(grid, leads(side) ? 0 : grid.children.length, tabGroup(panel)) };
   }
   // A top split that holds one tab group alone divides nothing, so the tab
   // group goes beside the new one without it.

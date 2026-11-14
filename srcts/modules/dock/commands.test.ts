@@ -426,6 +426,12 @@ describe("blockr.dock-add_panel", () => {
     expect(dock().views.side?.grid.rails).toEqual({ right: rail(dag) });
   });
 
+  test("evens out the split that takes a new tab group, as dockview's addPanel() does", async () => {
+    const { dock, run } = await start();
+    await run("add_panel", { view: "main", panel: md, near: c, side: "right" });
+    expect(dock().views.main?.grid).toEqual({ ...main, children: [...main.children, group(md)], sizes: [1 / 3, 1 / 3, 1 / 3] });
+  });
+
   test("refuses a panel that the view shows, a block that the board lacks, and a `near` that the view does not show", async () => {
     const { dock, enabled, run } = await start();
     expect(enabled("add_panel", { view: "main", panel: a })).toBe(false);
@@ -470,6 +476,12 @@ describe("blockr.dock-move_panel", () => {
       sizes: [1],
       rails: { right: rail(dag) },
     });
+  });
+
+  test("halves the tab group that a panel moves beside, as dockview's moveTo() and a drag do", async () => {
+    const { dock, run } = await start();
+    await run("move_panel", { view: "main", panel: a, near: c, side: "right" });
+    expect(dock().views.main?.grid).toEqual({ ...main, children: [group(b), group(c), group(a)], sizes: [0.5, 0.25, 0.25] });
   });
 
   test("changes nothing where a panel alone on a rail moves to that rail, whose widths stay", async () => {

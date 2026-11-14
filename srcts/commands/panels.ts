@@ -6,6 +6,9 @@
 // A panel goes where `near`, `side` and `rail` say, as today's
 // hint_to_position() places one, or at its default place, and the grid that a
 // command writes is in its canonical form.
+// A new tab group beside another gets the share that dockview gives a group
+// it adds or moves there: adding one evens out the split, and moving one
+// halves the tab group that it goes beside.
 // Showing another tab and opening or collapsing a rail take no undo step,
 // since they change only what the user looks at.
 //
@@ -123,7 +126,7 @@ export const panelCommands = [
     run(board, { view, panel, near, side, rail }) {
       const held = viewOf(board, view);
       if (held === undefined) return [];
-      return { patches: [gridPatch(view, placedAt(held.grid, panel, { near, side, rail }))] };
+      return { patches: [gridPatch(view, placedAt(held.grid, panel, { near, side, rail }, "distribute"))] };
     },
   }),
 
@@ -165,7 +168,7 @@ export const panelCommands = [
       if (rail !== undefined && from !== undefined && "edge" in from && from.edge === rail) {
         if (held.grid.rails?.[rail]?.panels.length === 1) return [];
       }
-      return { patches: [gridPatch(view, placedAt(withoutPanel(held.grid, panel), panel, { near, side, rail }))] };
+      return { patches: [gridPatch(view, placedAt(withoutPanel(held.grid, panel), panel, { near, side, rail }, "split"))] };
     },
   }),
 
