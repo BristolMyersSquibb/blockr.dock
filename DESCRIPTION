@@ -28,7 +28,8 @@ Suggests:
     knitr,
     rmarkdown,
     shinytest2,
-    chromote
+    chromote,
+    yyjsonr
 Remotes:
     BristolMyersSquibb/blockr.core@js-state
 Config/testthat/edition: 3

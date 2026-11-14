@@ -12,6 +12,10 @@ import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
+// The fixture of a board that R writes for a dock app script is a file of the
+// R package, which R's suite checks too.
+// eslint-disable-next-line no-restricted-imports
+import dockFixture from "../../../inst/board/fixtures/dock.json" with { type: "json" };
 
 const DOCK = "blockr.dock-dock_plugin";
 
@@ -235,7 +239,27 @@ const twoViews: DockState = {
   visible: { b: ["outputs"] },
 };
 
+// The fixture in inst/board/fixtures/dock.json, without its description: the
+// JSON board that R writes for a board that a dock app script builds.
+// R's suite checks that blockr_ser() writes it as the file holds it
+// (tests/testthat/helper-board-fixtures.R).
+function rBoard(): JsonBoard {
+  const { description, ...board } = dockFixture as unknown as JsonBoard & { description: string };
+  expect(description).not.toBe("");
+  return board;
+}
+
 describe("the dock plugin's state", () => {
+  test("is what R writes for a board that an app script builds, which opens as R writes it", async () => {
+    const board = rBoard();
+    const { core, settled, stop } = await startDock(undefined, {}, board);
+    await settled();
+
+    expect(core.store.board().plugins[DOCK]).toEqual(board.board.plugins[DOCK]);
+    expect(core.store.jsonBoard().board.versions).toEqual({ [DOCK]: 1 });
+    stop();
+  });
+
   test("is the class's default, which holds no view, on a board that holds none for the dock", async () => {
     const { core, settled, stop } = await startDock();
     await settled();

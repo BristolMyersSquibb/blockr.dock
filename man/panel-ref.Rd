@@ -2,38 +2,49 @@
 % Please edit documentation in R/panel-ref.R
 \name{blk}
 \alias{blk}
+\alias{plg}
 \alias{is_panel_ref}
-\alias{as.character.panel_ref}
-\title{Typed panel references}
+\title{Panel references}
 \usage{
 blk(id)
 
-is_panel_ref(x)
+plg(id)
 
-\method{as.character}{panel_ref}(x, ...)
+is_panel_ref(x)
 }
 \arguments{
-\item{id}{A block id, not the prefixed panel id.}
+\item{id}{For \code{blk()}, the id of a block.
+For \code{plg()}, the name of a plugin in the \code{plugins} of
+\code{\link[blockr.core:new_board]{blockr.core::new_board()}}, or the id of a plugin's class.}
 
 \item{x}{An object.}
-
-\item{...}{Ignored.}
 }
 \value{
-The constructor \code{blk()} returns a \code{panel_ref}.
-Calling \code{as.character()} on one returns its canonical panel id, and
+The functions \code{blk()} and \code{plg()} return a \code{panel_ref}, and
 \code{is_panel_ref()} returns a boolean.
 }
 \description{
-The function \code{blk()} constructs a reference to a block's panel for the
-functions that write a grid, such as \link[=layout]{dock_grid()} and \code{\link[=panels]{panels()}}.
-A caller names a block by its \strong{id}, never by the \verb{block_panel-} prefix of
-its panel id: the ref is the codec, and \code{as.character()} on one yields the
-canonical panel id.
-Bare id strings are accepted wherever a ref is.
+A grid places panels, each the card of a block or the UI of a plugin, and
+names each panel by a panel reference (see \code{\link[=dock_grid]{dock_grid()}}).
+The function \code{blk()} names the panel of a block, by the block's id.
+The function \code{plg()} names the panel of a plugin, by the name that the app
+script gives the plugin in the \code{plugins} of \code{\link[blockr.core:new_board]{blockr.core::new_board()}}, or
+else by the id of the plugin's class, as \code{"blockr.dag-dag_plugin"}.
+A bare id names a panel too, that of the block of that id.
+}
+\details{
+The dock refuses no id of a plugin class, since such an id may name the
+class of a plugin that \code{\link[blockr.core:serve]{blockr.core::serve()}} adds to the app.
+As \code{new_board()} builds the board, it refuses a \code{plg()} that names neither
+a plugin class nor a plugin in the board's \code{plugins} (see \code{\link[=board_views]{board_views()}}).
+As the dock starts, it drops the panel of a plugin that the app does not
+run.
 }
 \examples{
-blk("my_block")
-as.character(blk("my_block"))
+blk("a")
+plg("dag")
+plg("blockr.dag-dag_plugin")
+
+dock_grid(blk("a"), "b", rail(plg("dag")))
 
 }

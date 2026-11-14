@@ -10,27 +10,27 @@
 ---
 
     Code
-      print(dock_grid(group("data", "filt", "head"), "assistant_extension", sizes = c(
-        0.6, 0.4)))
+      print(dock_grid(group("data", "filt", "head"), plg("assistant"), sizes = c(0.6,
+        0.4)))
     Output
       <dock_grid> horizontal
       ├─ group (vertical, 60%)
       │  ├─ data (33%)
       │  ├─ filt (33%)
       │  └─ head (33%)
-      └─ assistant_extension (40%)
+      └─ assistant (plugin, 40%)
 
 ---
 
     Code
-      print(dock_grid("a", panels("b", "c", "edit", active = "c")))
+      print(dock_grid("a", panels("b", "c", plg("edit"), active = "c")))
     Output
       <dock_grid> horizontal
       ├─ a (50%)
       └─ tabs (50%)
          ├─ b
          ├─ c (active)
-         └─ edit
+         └─ edit (plugin)
 
 ---
 
@@ -55,6 +55,20 @@
          └─ group (horizontal, 50%)
             ├─ b (50%)
             └─ c (50%)
+
+---
+
+    Code
+      print(dock_grid("a", rail(plg("dag"), "b", active = "b", collapsed = TRUE),
+      rail("c", position = "right")))
+    Output
+      <dock_grid> horizontal
+      └─ a (100%)
+      left rail (collapsed)
+      ├─ dag (plugin)
+      └─ b (active)
+      right rail
+      └─ c
 
 ---
 
