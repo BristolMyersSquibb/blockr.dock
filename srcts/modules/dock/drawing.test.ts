@@ -367,7 +367,7 @@ describe("a gesture", () => {
     expect(s.grid()).toEqual(main);
     expect(s.shown()).toEqual(main);
     expect(s.core.notifications.get()).toMatchObject([
-      { severity: "error", source: { kind: "module", object: { plugin: DOCK }, code: "edit_refused" } },
+      { severity: "error", source: { kind: "module", module: { object: { plugin: DOCK } }, code: "edit_refused" } },
     ]);
   });
 });
