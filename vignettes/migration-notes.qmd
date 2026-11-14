@@ -3,7 +3,7 @@ title: "Migration notes for app scripts"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Migration notes for app scripts}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
 
