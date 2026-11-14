@@ -70,7 +70,7 @@ describe("canonicalGrid()", () => {
     }
   });
 
-  test("drops the tab groups, splits and rails that hold no panel, and gives their shares to their siblings", () => {
+  test("drops the tab groups, splits and rails that hold no panel, and gives their shares to their siblings in proportion", () => {
     const grid: Grid = {
       orientation: "horizontal",
       children: [
@@ -82,6 +82,8 @@ describe("canonicalGrid()", () => {
       rails: { right: { ...rail(dag), panels: [] } },
     };
     expect(canonicalGrid(grid)).toEqual({ orientation: "horizontal", children: [group(b)], sizes: [1] });
+    const three: Grid = { orientation: "horizontal", children: [{ panels: [], active: a }, group(a), group(b)], sizes: [0.2, 0.3, 0.5] };
+    expect(canonicalGrid(three).sizes).toEqual([0.3 / 0.8, 0.5 / 0.8]);
   });
 
   test("has a tab group or rail whose `active` it does not hold show its first panel", () => {
@@ -106,7 +108,7 @@ describe("canonicalGrid()", () => {
 });
 
 describe("prunePanels()", () => {
-  test("takes panels out and gives the shares of what this empties to the siblings, in proportion", () => {
+  test("takes panels out, and drops the tab groups, splits and rails that this empties", () => {
     const pruned = prunePanels(overview, (panel) => !("block" in panel && panel.block === "c"));
     expect(pruned).toEqual({
       orientation: "horizontal",
@@ -114,6 +116,16 @@ describe("prunePanels()", () => {
       sizes: [0.3, 0.7],
       rails: { left: rail(dag) },
     });
+  });
+
+  test("evens out a split whose tab group it empties, as dockview does where it removes a group", () => {
+    const three: Grid = { orientation: "horizontal", children: [group(a), group(b), group(c)], sizes: [0.2, 0.3, 0.5] };
+    expect(prunePanels(three, (panel) => panel !== b).sizes).toEqual([0.5, 0.5]);
+    // A tab group that held no panel already does not even it out.
+    const empty: Grid = { ...three, children: [group(a), { panels: [], active: a }, group(c)] };
+    expect(prunePanels(empty, () => true).sizes).toEqual([0.2 / 0.7, 0.5 / 0.7]);
+    const both: Grid = { orientation: "horizontal", children: [group(a), { panels: [], active: a }, group(b), group(c)], sizes: [0.1, 0.2, 0.3, 0.4] };
+    expect(prunePanels(both, (panel) => panel !== b).sizes).toEqual([0.5, 0.5]);
   });
 
   test("has a tab group whose shown panel went show its first panel", () => {
@@ -185,12 +197,12 @@ describe("placePanel()", () => {
     });
   });
 
-  test("adds a tab group at the end of the top split, with the mean of its siblings' shares, where every tab group holds a plugin's panel", () => {
+  test("adds a tab group at the end of the top split, which evens it out, where every tab group holds a plugin's panel", () => {
     const grid: Grid = { orientation: "horizontal", children: [group(dag), { panels: [a, md], active: a }], sizes: [0.25, 0.75] };
     expect(placePanel(grid, b)).toEqual({
       orientation: "horizontal",
       children: [group(dag), { panels: [a, md], active: a }, group(b)],
-      sizes: [0.25 / 1.5, 0.75 / 1.5, 0.5 / 1.5],
+      sizes: [1 / 3, 1 / 3, 1 / 3],
     });
   });
 

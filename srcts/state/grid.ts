@@ -7,6 +7,8 @@
 // They are ported from today's canonicalize_grid(), validate_dock_grid(),
 // prune_tree() and append_default_leaves() in R/dock-grid.R, and from
 // hint_to_position() in R/panel-ops.R, at 655e323.
+// The shares that a split gets where a tab group comes or goes follow
+// dockview 8.9.0 instead, as each helper says.
 //
 // In a grid in its canonical form, the shares of each split sum to 1.
 // No tab group, split or rail is empty, and each tab group and rail shows one
@@ -77,7 +79,8 @@ function rails(grid: Grid): [Edge, Rail][] {
 // The canonical form of a grid.
 // Each split's shares are scaled to sum to 1, or split evenly where the sizes
 // do not give each child a positive share.
-// Tab groups, splits and rails without panels are dropped.
+// Tab groups, splits and rails without panels are dropped, and the share of
+// each goes to its siblings in proportion, as dock_grid() in R drops one.
 // A tab group or rail whose `active` is none of its panels shows its first
 // panel.
 export function canonicalGrid(grid: Grid): Grid {
@@ -85,8 +88,10 @@ export function canonicalGrid(grid: Grid): Grid {
 }
 
 // The grid without the panels that `keep` refuses.
-// Each tab group, split and rail that this empties is dropped, and its share
-// goes to its siblings in proportion.
+// Each tab group, split and rail that this empties is dropped.
+// The split that held such a tab group or split gives its other children
+// even shares, as dockview 8.9.0 does where it removes a group.
+// One that held no panel already is dropped as canonicalGrid() drops it.
 // A tab group or rail whose shown panel went shows its first panel.
 // The grid that it gives is in its canonical form.
 export function prunePanels(grid: Grid, keep: (panel: Panel) => boolean): Grid {
@@ -108,12 +113,17 @@ function prunedNode(node: Node, keep: (panel: Panel) => boolean): Node | undefin
 
 function prunedSplit(split: Split, keep: (panel: Panel) => boolean): Split | undefined {
   const shares = fitted(split.sizes, split.children.length);
-  const kept = split.children.flatMap((child, i) => {
-    const pruned = prunedNode(child, keep);
-    return pruned === undefined ? [] : [{ node: pruned, share: shares[i] ?? 0 }];
-  });
+  const pruned = split.children.map((child) => prunedNode(child, keep));
+  const kept = pruned.flatMap((node, i) => (node === undefined ? [] : [{ node, share: shares[i] ?? 0 }]));
   if (kept.length === 0) return undefined;
-  return { children: kept.map(({ node }) => node), sizes: normalized(kept.map(({ share }) => share)) };
+  const children = kept.map(({ node }) => node);
+  const emptied = split.children.some((child, i) => pruned[i] === undefined && holdsPanel(child));
+  return { children, sizes: emptied ? evenShares(children.length) : normalized(kept.map(({ share }) => share)) };
+}
+
+// Whether a node holds a panel, in a tab group or in a split inside it.
+function holdsPanel(node: Node): boolean {
+  return isTabGroup(node) ? node.panels.length > 0 : node.children.some(holdsPanel);
 }
 
 function prunedGroup(group: TabGroup, keep: (panel: Panel) => boolean): TabGroup | undefined {
@@ -128,7 +138,12 @@ function prunedGroup(group: TabGroup, keep: (panel: Panel) => boolean): TabGroup
 // where `sizes` does not give each child a positive share.
 function fitted(sizes: readonly number[], n: number): number[] {
   const fits = sizes.length === n && sizes.every((size) => Number.isFinite(size) && size > 0);
-  return fits ? normalized(sizes) : Array.from({ length: n }, () => 1 / n);
+  return fits ? normalized(sizes) : evenShares(n);
+}
+
+// The same share for each of `n` children.
+function evenShares(n: number): number[] {
+  return Array.from({ length: n }, () => 1 / n);
 }
 
 // The shares scaled to sum to 1.
@@ -227,29 +242,17 @@ export function placePanel(grid: Grid, panel: Panel): Grid {
 
 // The grid with a new tab group at the end of the top split, which holds the
 // panel alone.
-// The new tab group gets the mean of its siblings' shares, as in today's
-// append_default_leaves().
+// Each child of the top split then gets an even share, as dockview's
+// addPanel() gives a group that it adds at an edge of the dock.
 function appendTabGroup(grid: Grid, panel: Panel): Grid {
-  return { ...grid, ...inserted(grid, grid.children.length, tabGroup(panel)) };
-}
-
-// The split with a node among its children at `at`, which gets the mean of
-// its siblings' shares.
-// The siblings share the rest in proportion.
-function inserted(split: Split, at: number, node: Node): Split {
-  const shares = fitted(split.sizes, split.children.length);
-  const mean = shares.length === 0 ? 1 : 1 / shares.length;
-  return {
-    children: [...split.children.slice(0, at), node, ...split.children.slice(at)],
-    sizes: normalized([...shares.slice(0, at), mean, ...shares.slice(at)]),
-  };
+  return { ...grid, ...evened(grid, grid.children.length, tabGroup(panel)) };
 }
 
 // The split with a node among its children at `at`, where each child gets the
 // same share, as dockview's Sizing.Distribute gives them.
 function evened(split: Split, at: number, node: Node): Split {
   const children = [...split.children.slice(0, at), node, ...split.children.slice(at)];
-  return { children, sizes: children.map(() => 1 / children.length) };
+  return { children, sizes: evenShares(children.length) };
 }
 
 // The split with a node before or after its child at `beside`, which takes
