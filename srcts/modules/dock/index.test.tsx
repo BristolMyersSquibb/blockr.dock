@@ -3,9 +3,11 @@
 // fixtures of core's wire protocol, so that the tests need neither R nor a
 // browser (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.8#testing).
 
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { Json, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
-import { describe, expect, test } from "vitest";
+import { describe, expect, onTestFinished, test } from "vitest";
 import { defaultState } from "../../state/index.ts";
 import type { DockState } from "../../state/index.ts";
 import * as compactOption from "../compact-option/index.ts";
@@ -107,38 +109,35 @@ describe("the dock's frontend", () => {
     stop();
   });
 
-  test("draws the page as an empty dockview, in the page's element", async () => {
+  test("draws the active view with dockview, in the page's element, on dockview's light-spaced theme", async () => {
     const el = document.createElement("div");
     const { settled, stop } = await startDock(el);
     await settled();
 
     const shell = el.querySelector(".blockr-dock .dv-shell");
     expect(shell?.classList).toContain("dockview-theme-light-spaced");
-    expect(el.querySelectorAll(".dv-groupview")).toHaveLength(0);
+    // The rail on the left edge comes first.
+    expect(tabs(el)).toEqual(["Edit board", "Iris", "Head", "Merge", "Wide sepals", "Bind", "Scatter"]);
+    expect(el.querySelectorAll(".blockr-dock-panel[data-block]")).not.toHaveLength(0);
     stop();
   });
 
-  test("takes dockview's dark theme while dark_mode is dark", async () => {
+  test("keeps dockview's light-spaced theme while dark_mode is dark, as the stylesheet's bridge follows dark_mode", async () => {
     const el = document.createElement("div");
     const { core, settled, stop } = await startDock(el);
     await settled();
-    const shell = () => el.querySelector(".blockr-dock .dv-shell");
 
     await core.commands.run("blockr.core-set_option", { id: "dark_mode", value: "dark" });
     await settled();
-    expect(shell()?.classList).toContain("dockview-theme-abyss-spaced");
-    expect(shell()?.classList).not.toContain("dockview-theme-light-spaced");
-
-    await core.commands.run("blockr.core-set_option", { id: "dark_mode", value: "light" });
-    await settled();
-    expect(shell()?.classList).toContain("dockview-theme-light-spaced");
+    expect(el.querySelector(".blockr-dock .dv-shell")?.classList).toContain("dockview-theme-light-spaced");
+    expect(document.documentElement.getAttribute("data-bc-theme")).toBe("dark");
     stop();
   });
 
   test("removes what it drew in its cleanup", async () => {
     const s = await startDock();
     const el = document.createElement("div");
-    const cleanup = dock.default.frontend.render({
+    const cleanup = await dock.default.frontend.render({
       el,
       core: s.core,
       plugin: DOCK,
@@ -147,9 +146,50 @@ describe("the dock's frontend", () => {
     });
     expect(el.querySelector(".blockr-dock")).not.toBeNull();
 
-    cleanup();
+    cleanup?.();
     expect(el.childElementCount).toBe(0);
     s.stop();
+  });
+
+  test("draws nothing where its signal aborts while it reads the blockr options", async () => {
+    const s = await startDock();
+    const el = document.createElement("div");
+    const controller = new AbortController();
+    const rendering = dock.default.frontend.render({ el, core: s.core, plugin: DOCK, signal: controller.signal, args: {} });
+    controller.abort();
+
+    expect(await rendering).toBeUndefined();
+    expect(el.childElementCount).toBe(0);
+    s.stop();
+  });
+
+  test("fails to draw, naming the value, where R holds a blockr option that the dock does not take", async () => {
+    const el = document.createElement("div");
+    const { settled, stop } = await startDock(el, { narrow_breakpoint: "wide" });
+    await settled();
+
+    expect(el.textContent).toContain('The blockr option narrow_breakpoint is "wide"');
+    expect(el.querySelector(".blockr-dock")).toBeNull();
+    stop();
+  });
+
+  test("shows no close button on a tab under the board lock", async () => {
+    const el = document.createElement("div");
+    const { settled, stop } = await stubCore({ hello: { ...hello, lock: { board: true, load: false } }, modules, el });
+    await settled();
+
+    expect(tabs(el)).not.toHaveLength(0);
+    expect(el.querySelectorAll(".dv-default-tab-action")).toHaveLength(0);
+    stop();
+  });
+
+  test("shows a close button on each tab of a board without the board lock", async () => {
+    const el = document.createElement("div");
+    const { settled, stop } = await startDock(el);
+    await settled();
+
+    expect(el.querySelectorAll(".dv-default-tab-action")).toHaveLength(tabs(el).length);
+    stop();
   });
 
   test("draws the page again as another board opens", async () => {
@@ -168,6 +208,12 @@ describe("the dock's frontend", () => {
     s.stop();
   });
 });
+
+// The titles of the tabs that the dock draws in the element, in the order of
+// the page.
+function tabs(el: HTMLElement): string[] {
+  return [...el.querySelectorAll(".dv-tab")].map((tab) => tab.textContent.trim());
+}
 
 // A board with two blocks, a stack, and the dock's state at version 1, given.
 function boardWith(dockState: DockState): JsonBoard {
@@ -327,5 +373,181 @@ describe("the dock plugin's state", () => {
     await expect(run).rejects.toThrow();
     expect(core.store.board().plugins[DOCK]).toEqual(twoViews);
     stop();
+  });
+});
+
+describe("the step on starting", () => {
+  test("adds the view Page to a board that holds no view, with the plugins on its left rail, which undo does not take back", async () => {
+    const { core, settled, stop } = await startDock(document.createElement("div"));
+    await settled();
+
+    const blocks = ["a", "b", "c", "d", "e", "f"].map((block) => ({ block }));
+    expect(core.store.board().plugins[DOCK]).toEqual({
+      views: {
+        page: {
+          name: "Page",
+          folder: null,
+          index: "a0",
+          grid: {
+            orientation: "horizontal",
+            children: [{ panels: blocks, active: blocks[0] }],
+            sizes: [1],
+            rails: {
+              left: {
+                panels: [{ plugin: "blockr.core-edit_board_plugin" }],
+                active: { plugin: "blockr.core-edit_board_plugin" },
+                collapsed: false,
+                size: 260,
+                collapsed_size: 35,
+              },
+            },
+          },
+        },
+      },
+      folders: {},
+      active: "page",
+      visible: {},
+    });
+    expect(core.store.canUndo()).toBe(false);
+    stop();
+  });
+
+  test("removes the panels of plugins that the app does not run, as one step that undo does not take back", async () => {
+    const { core, settled, stop } = await startDock(document.createElement("div"), {}, boardWith(twoViews));
+    await settled();
+
+    const state = core.store.board().plugins[DOCK] as DockState;
+    expect(state.views.main?.grid).toEqual({ ...twoViews.views.main?.grid, rails: undefined });
+    expect(state.views.main?.grid.rails).toBeUndefined();
+    expect(state.views.side).toEqual(twoViews.views.side);
+    expect(core.store.canUndo()).toBe(false);
+    stop();
+  });
+
+  test("makes active the view that the URL's query parameter view names", async () => {
+    window.history.replaceState(null, "", "/?view=main");
+    onTestFinished(() => {
+      window.history.replaceState(null, "", "/");
+    });
+    const { core, settled, stop } = await startDock(document.createElement("div"), {}, boardWith(twoViews));
+    await settled();
+
+    expect(core.store.board().plugins[DOCK]).toMatchObject({ active: "main" });
+    stop();
+  });
+
+  test("changes nothing for a URL that names no view", async () => {
+    window.history.replaceState(null, "", "/?view=gone");
+    onTestFinished(() => {
+      window.history.replaceState(null, "", "/");
+    });
+    const { core, settled, stop } = await startDock(document.createElement("div"), {}, boardWith(twoViews));
+    await settled();
+
+    expect(core.store.board().plugins[DOCK]).toMatchObject({ active: "side" });
+    stop();
+  });
+});
+
+describe("the demand", () => {
+  // A board whose view shows b in front of c, beside nothing else, while a
+  // is upstream of b.
+  const board: JsonBoard = {
+    ...boardWith({
+      views: {
+        main: {
+          name: "Main",
+          folder: null,
+          index: "a0",
+          grid: { orientation: "horizontal", children: [{ panels: [{ block: "b" }, { block: "c" }], active: { block: "b" } }], sizes: [1] },
+        },
+      },
+      folders: {},
+      active: "main",
+      visible: {},
+    }),
+  };
+  const withC: JsonBoard = {
+    ...board,
+    board: {
+      ...board.board,
+      blocks: {
+        ...board.board.blocks,
+        c: { registry_id: "blockr.core-dataset_block", version: 1, state: { dataset: "mtcars", package: "datasets" }, name: "Cars", locked: null },
+      },
+    },
+  };
+
+  // The blocks that core sent R to evaluate, in order.
+  function evaluated(sent: readonly { readonly kind: string }[]): string[] {
+    return sent.flatMap((request) => (request.kind === "evaluate" ? [(request as unknown as { block: string }).block] : []));
+  }
+
+  test("has the blocks whose cards are on screen evaluated, with what is upstream of them, and no other block", async () => {
+    const { sent, settled, stop } = await startDock(document.createElement("div"), {}, withC);
+    await settled();
+
+    expect(evaluated(sent).sort()).toEqual(["a", "b"]);
+    stop();
+  });
+
+  test("follows the panel that a tab group shows", async () => {
+    const { core, sent, settled, stop } = await startDock(document.createElement("div"), {}, withC);
+    await settled();
+
+    await core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "c" } });
+    await settled();
+
+    expect(evaluated(sent).sort()).toEqual(["a", "b", "c"]);
+    stop();
+  });
+});
+
+// The colour variables that dockview's light-spaced theme sets otherwise than
+// its dark abyss-spaced theme, which would show a light value under the dark
+// theme unless the bridge sets them, as blockr.dock#502 asks a test to catch.
+describe("the bridge from blockr.ui's tokens to dockview's theme", () => {
+  // A stylesheet without its comments.
+  const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const dockview = read("../../../node_modules/dockview-react/dist/styles/dockview.css");
+  const own = read("./index.css");
+
+  // The custom properties that the rules of a selector set, each with its
+  // last value, as the cascade gives it for rules of equal specificity.
+  function properties(css: string, selector: string): Map<string, string> {
+    const found = new Map<string, string>();
+    for (const [, selectors = "", body = ""] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const names = selectors.split(",").map((name) => name.trim());
+      if (!names.includes(selector)) continue;
+      for (const [, name = "", value = ""] of body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) found.set(name, value.replace(/\s+/g, " ").trim());
+    }
+    return found;
+  }
+
+  const light = properties(dockview, ".dockview-theme-light-spaced");
+  const dark = properties(dockview, ".dockview-theme-abyss-spaced");
+  const bridged = properties(own, ".blockr-dock .dv-shell");
+  const darkBridged = properties(own, '[data-bc-theme="dark"] .blockr-dock .dv-shell');
+
+  // What the dock does not use: floating groups, which it does not offer,
+  // and the palette of the abyss themes, which no variable of the
+  // light-spaced theme reads.
+  const unused = (name: string) => name.startsWith("--dv-floating-") || name.startsWith("--dv-color-abyss");
+
+  test("sets under the dark theme each colour of the light-spaced theme that the dark theme sets otherwise", () => {
+    const differing = [...new Set([...light.keys(), ...dark.keys()])].filter((name) => light.get(name) !== dark.get(name) && !unused(name));
+    expect(differing.length).toBeGreaterThan(0);
+    expect(differing.filter((name) => !darkBridged.has(name))).toEqual([]);
+  });
+
+  test("reads each token with a fallback, its light value under the light theme and its dark value under the dark theme", () => {
+    for (const [name, value] of [...bridged, ...darkBridged]) {
+      for (const [, token = "", fallback] of value.matchAll(/var\(\s*(--blockr-[\w-]+)\s*(?:,\s*([^)]+))?/g)) {
+        expect(fallback, `${name} reads ${token}`).toBeDefined();
+      }
+    }
+    for (const name of bridged.keys()) expect(darkBridged.has(name), name).toBe(true);
+    expect(bridged.get("--dv-group-view-background-color")).toBe("var(--blockr-color-bg-page, #f9fafb)");
+    expect(darkBridged.get("--dv-group-view-background-color")).toBe("var(--blockr-color-bg-page, #0e1219)");
   });
 });

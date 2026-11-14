@@ -10,6 +10,7 @@ export {
   canonicalGrid,
   collapsedRail,
   EDGES,
+  fitted,
   gridChanges,
   gridFailures,
   gridPanels,
@@ -20,10 +21,13 @@ export {
   placePanel,
   places,
   prunePanels,
+  RAIL_COLLAPSED_SIZE,
+  RAIL_SIZE,
   resized,
   samePanel,
   showing,
   SIDES,
+  tabGroups,
   withStoredShares,
 } from "./grid.ts";
 export type { Edge, GridChanges, Place } from "./grid.ts";
