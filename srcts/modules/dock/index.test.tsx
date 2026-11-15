@@ -7,13 +7,15 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Json, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
-import { describe, expect, onTestFinished, test } from "vitest";
+import { flushSync } from "react-dom";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 import { defaultState } from "../../state/index.ts";
 import type { DockState } from "../../state/index.ts";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
+import { FADES_FOR, SHOWN_FOR } from "./toasts.tsx";
 // The fixture of a board that R writes for a dock app script is a file of the
 // R package, which R's suite checks too.
 // eslint-disable-next-line no-restricted-imports
@@ -501,12 +503,15 @@ describe("the demand", () => {
   });
 });
 
+// A stylesheet without its comments, by its path from this file.
+// Vite rewrites `new URL()` of a string literal into the URL that its server
+// serves the file at, so the path comes in as an argument.
+const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+
 // The colour variables that dockview's light-spaced theme sets otherwise than
 // its dark abyss-spaced theme, which would show a light value under the dark
 // theme unless the bridge sets them, as blockr.dock#502 asks a test to catch.
 describe("the bridge from blockr.ui's tokens to dockview's theme", () => {
-  // A stylesheet without its comments.
-  const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   const dockview = read("../../../node_modules/dockview-react/dist/styles/dockview.css");
   const own = read("./index.css");
 
@@ -549,3 +554,210 @@ describe("the bridge from blockr.ui's tokens to dockview's theme", () => {
     expect(darkBridged.get("--dv-group-view-background-color")).toBe("var(--blockr-color-bg-page, #0e1219)");
   });
 });
+
+// The toasts that the page shows, in order.
+const toastsIn = (el: ParentNode): HTMLElement[] => [
+  ...el.querySelectorAll<HTMLElement>('section[aria-label="Notifications"] > [data-severity]'),
+];
+
+// The severity, the first line and the message of each toast that the page
+// shows, in order.
+function toasts(el: ParentNode): [string | null, string, string][] {
+  return toastsIn(el).map((toast) => {
+    const [title, message] = [...toast.querySelectorAll("p")].map((p) => p.textContent);
+    return [toast.getAttribute("data-severity"), title ?? "", message ?? ""];
+  });
+}
+
+// The messages of the toasts that the page shows, in order.
+const messages = (el: ParentNode): string[] => toasts(el).map(([, , message]) => message);
+
+// The toast whose message is the one given.
+function toastOf(el: ParentNode, message: string): HTMLElement {
+  const found = toastsIn(el).find((toast) => toast.querySelectorAll("p")[1]?.textContent === message);
+  if (found === undefined) throw new Error(`Found no toast "${message}".`);
+  return found;
+}
+
+// The button that closes the toast.
+function closeButton(toast: HTMLElement): HTMLButtonElement {
+  const button = toast.querySelector<HTMLButtonElement>('button[aria-label="Close"]');
+  if (button === null) throw new Error("The toast has no button that closes it.");
+  return button;
+}
+
+describe("the toasts", () => {
+  test("show each notification that no card shows, whoever raised it, until core withdraws it or the user closes it", async () => {
+    const el = document.createElement("div");
+    // R raises a warning in each block's evaluation, which the block's card
+    // shows.
+    const warned = () => ({
+      conditions: [{ severity: "warning" as const, class: ["warning", "condition"], phase: "block_eval" as const, message: "Few rows." }],
+    });
+    const { core, settled, stop } = await stubCore({ hello, modules, el, evaluate: warned });
+    await settled();
+    expect(core.notifications.get().some((n) => n.source.kind === "r" && n.message === "Few rows.")).toBe(true);
+
+    let placed: () => void = () => undefined;
+    flushSync(() => {
+      core.notifications.notify(DOCK, { severity: "message", code: "saved", message: "Saved." });
+      placed = core.notifications.notify(DOCK, { severity: "error", code: "not_placed", message: "Not placed.", about: { block: "b" } });
+      core.notifications.notify(DOCK, { severity: "warning", code: "crowded", message: "The view is crowded.", about: null });
+    });
+    expect(toasts(el)).toEqual([
+      ["message", 'Plugin "Dock" · blockr.dock', "Saved."],
+      ["error", 'Block "Head" · blockr.dock', "Not placed."],
+      ["warning", "Board · blockr.dock", "The view is crowded."],
+    ]);
+    expect(toastsIn(el).map((toast) => toast.getAttribute("role"))).toEqual(["status", "alert", "alert"]);
+    // The toasts sit beside the dock's root, outside it.
+    expect(el.querySelector(".blockr-dock .blockr-dock-toasts")).toBeNull();
+
+    flushSync(() => {
+      closeButton(toastOf(el, "The view is crowded.")).click();
+    });
+    expect(messages(el)).toEqual(["Saved.", "Not placed."]);
+    expect(core.notifications.get().some((n) => n.message === "The view is crowded.")).toBe(true);
+    flushSync(() => {
+      placed();
+    });
+    expect(messages(el)).toEqual(["Saved."]);
+    stop();
+  });
+
+  test("show what the store dropped as the board opened, which core raised before the dock drew", async () => {
+    const board = rBoard();
+    const gone = { registry_id: "blockr.gone-gone_block", version: 1, state: {}, name: "Gone", locked: null };
+    const el = document.createElement("div");
+    const { settled, stop } = await startDock(el, {}, { ...board, board: { ...board.board, blocks: { ...board.board.blocks, x: gone } } });
+    await settled();
+
+    expect(toasts(el)).toEqual([["warning", "Board", expect.stringMatching(/opened without[\s\S]*blockr\.gone-gone_block/)]]);
+    stop();
+  });
+
+  test("show a message as text, never as HTML, and without the escapes of cli's styles", async () => {
+    const el = document.createElement("div");
+    const { core, settled, stop } = await startDock(el);
+    await settled();
+
+    flushSync(() => {
+      core.notifications.notify(DOCK, { severity: "error", code: "failed", message: "<b>Not</b> \u001b[1msaved\u001b[22m." });
+    });
+    expect(messages(el)).toEqual(["<b>Not</b> saved."]);
+    expect(toastOf(el, "<b>Not</b> saved.").querySelector("b")).toBeNull();
+    stop();
+  });
+
+  test("fade from a message's toast after five seconds, but not while the pointer rests on it or the keyboard's focus is in it", async () => {
+    const el = document.createElement("div");
+    // The button of a toast takes the focus only in the document.
+    document.body.append(el);
+    const { core, settled, stop } = await startDock(el);
+    await settled();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      flushSync(() => {
+        core.notifications.notify(DOCK, { severity: "message", code: "saved", message: "Saved." });
+        core.notifications.notify(DOCK, { severity: "error", code: "share_failed", message: "Not shared." });
+      });
+      const saved = toastOf(el, "Saved.");
+      flushSync(() => {
+        saved.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+        vi.advanceTimersByTime(60_000);
+      });
+      flushSync(() => {
+        closeButton(saved).focus();
+        saved.dispatchEvent(new PointerEvent("pointerout", { bubbles: true }));
+        vi.advanceTimersByTime(60_000);
+      });
+      expect(messages(el)).toEqual(["Saved.", "Not shared."]);
+
+      flushSync(() => {
+        closeButton(saved).blur();
+        vi.advanceTimersByTime(SHOWN_FOR);
+      });
+      expect(toastOf(el, "Saved.").hasAttribute("data-fading")).toBe(true);
+      flushSync(() => {
+        vi.advanceTimersByTime(FADES_FOR);
+      });
+      expect(messages(el)).toEqual(["Not shared."]);
+    } finally {
+      vi.useRealTimers();
+      stop();
+      el.remove();
+    }
+  });
+
+  test("go with what the frontend drew in its cleanup, which leaves the notifications unfollowed", async () => {
+    const s = await startDock();
+    const el = document.createElement("div");
+    const cleanup = await dock.default.frontend.render({
+      el,
+      core: s.core,
+      plugin: DOCK,
+      signal: new AbortController().signal,
+      args: {},
+    });
+    flushSync(() => {
+      s.core.notifications.notify(DOCK, { severity: "error", code: "failed", message: "Failed." });
+    });
+    expect(messages(el)).toEqual(["Failed."]);
+
+    cleanup?.();
+    expect(el.childElementCount).toBe(0);
+    flushSync(() => {
+      s.core.notifications.notify(DOCK, { severity: "error", code: "failed", message: "Failed again." });
+    });
+    expect(el.childElementCount).toBe(0);
+    s.stop();
+  });
+});
+
+describe("the stylesheet of the toasts", () => {
+  // The declarations of each rule of the toasts, by the rule's selector.
+  const rules = new Map(
+    [...read("./index.css").matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .map(([, selector = "", body = ""]) => [selector.trim(), declarations(body)] as const)
+      .filter(([selector]) => selector.includes(".blockr-dock-toast")),
+  );
+  const dark = '[data-bc-theme="dark"] ';
+
+  // Whether a value reads one of blockr.ui's tokens whose value differs
+  // between the light scheme and the dark scheme: a colour, a shadow or the
+  // focus outline.
+  const themed = (value: string) => /var\(\s*--blockr-(?:color|shadow|focus-outline)/.test(value);
+
+  test("reads each token with a fallback", () => {
+    expect(rules.size).toBeGreaterThan(0);
+    for (const [selector, declared] of rules) {
+      for (const [name, value] of declared) {
+        for (const [, token = "", fallback] of value.matchAll(/var\(\s*(--blockr-[\w-]+)\s*(?:,\s*([^)]+))?/g)) {
+          expect(fallback, `${selector} { ${name} } reads ${token}`).toBeDefined();
+        }
+      }
+    }
+  });
+
+  test("restates under the dark theme each value that reads a token of the light scheme, with the token's dark value as the fallback", () => {
+    const light = [...rules].filter(([selector]) => !selector.startsWith(dark));
+    expect(light.length).toBeGreaterThan(0);
+    for (const [selector, declared] of light) {
+      for (const [name, value] of declared) {
+        if (!themed(value)) continue;
+        const restated = rules.get(`${dark}${selector}`)?.get(name);
+        expect(restated, `${selector} { ${name} }`).toBeDefined();
+        expect(restated, `${selector} { ${name} }`).not.toBe(value);
+      }
+    }
+    expect(rules.get('.blockr-dock-toast[data-severity="error"]')?.get("color")).toBe("var(--blockr-color-text-danger, #b91c1c)");
+    expect(rules.get(`${dark}.blockr-dock-toast[data-severity="error"]`)?.get("color")).toBe("var(--blockr-color-text-danger, #f87171)");
+  });
+});
+
+// The declarations of a rule's body, each by its property, with its value.
+function declarations(body: string): Map<string, string> {
+  return new Map(
+    [...body.matchAll(/([\w-]+)\s*:\s*([^;]+);/g)].map(([, name = "", value = ""]) => [name, value.replace(/\s+/g, " ").trim()]),
+  );
+}
