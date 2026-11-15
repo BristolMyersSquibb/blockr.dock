@@ -889,7 +889,8 @@ const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.m
 // theme unless the bridge sets them, as blockr.dock#502 asks a test to catch.
 describe("the bridge from blockr.ui's tokens to dockview's theme", () => {
   const dockview = read("../../../node_modules/dockview-react/dist/styles/dockview.css");
-  const own = read("./index.css");
+  // The dock's stylesheet with the card's, which it imports.
+  const own = read("./index.css") + read("./card/card.css");
 
   // The custom properties that the rules of a selector set, each with its
   // last value, as the cascade gives it for rules of equal specificity.

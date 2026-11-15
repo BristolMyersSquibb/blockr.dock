@@ -2,62 +2,11 @@
  * The block's card, its menus and its tooltips (./card.tsx), drawn as
  * today's card is in the first 501 lines of inst/assets/css/blockr-dock.css,
  * at 655e323, and as the design system's header, menus and tooltips are.
- *
- * The colours read blockr.ui's tokens through the dock's own variables,
- * which hold each token with its value in blockr.ui's light scheme as the
- * fallback, and with its value in the dark scheme under the dark theme, as
- * the bridge to dockview's variables does (../index.css).
- * So the card draws in either theme on a page that holds no token sheet of
- * blockr.ui.
+ * The colours are the dock's variables (../index.css), which read blockr.ui's
+ * tokens under either theme.
  * The menus and the tooltips sit in the dock's layer, inside the dock's root,
- * and so read the same variables.
- * The values are those of blockr.ui's tokens at e14e831.
+ * and so read the same variables and the dock's face.
  */
-.blockr-dock {
-  --dock-text-default: var(--blockr-color-text-default, #111827);
-  --dock-text-muted: var(--blockr-color-text-muted, #6b7280);
-  --dock-text-accent: var(--blockr-color-text-accent, #2563eb);
-  --dock-text-danger: var(--blockr-color-text-danger, #b91c1c);
-  --dock-bg-surface: var(--blockr-color-bg-surface, #ffffff);
-  --dock-bg-raised: var(--blockr-color-bg-raised, #ffffff);
-  --dock-bg-subtle: var(--blockr-color-bg-subtle, #f9fafb);
-  --dock-bg-field: var(--blockr-color-bg-field, #f9fafb);
-  --dock-bg-hover: var(--blockr-color-bg-hover, #f3f4f6);
-  --dock-bg-danger: var(--blockr-color-bg-danger, #fef2f2);
-  --dock-border-default: var(--blockr-color-border-default, #e5e7eb);
-  --dock-border-accent: var(--blockr-color-border-accent, #2563eb);
-  --dock-border-danger: var(--blockr-color-border-danger, #dc2626);
-  --dock-focus-ring: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
-  --dock-shadow-md: var(--blockr-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
-}
-
-[data-bc-theme="dark"] .blockr-dock {
-  --dock-text-default: var(--blockr-color-text-default, #f0f3f7);
-  --dock-text-muted: var(--blockr-color-text-muted, #8a94a3);
-  --dock-text-accent: var(--blockr-color-text-accent, #60a5fa);
-  --dock-text-danger: var(--blockr-color-text-danger, #f87171);
-  --dock-bg-surface: var(--blockr-color-bg-surface, #161b23);
-  --dock-bg-raised: var(--blockr-color-bg-raised, #1e242e);
-  --dock-bg-subtle: var(--blockr-color-bg-subtle, #14181f);
-  --dock-bg-field: var(--blockr-color-bg-field, #14181f);
-  --dock-bg-hover: var(--blockr-color-bg-hover, color-mix(in srgb, #f0f3f7 6%, transparent));
-  --dock-bg-danger: var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1));
-  --dock-border-default: var(--blockr-color-border-default, #232932);
-  --dock-border-accent: var(--blockr-color-border-accent, #3b82f6);
-  --dock-border-danger: var(--blockr-color-border-danger, #f87171);
-  --dock-focus-ring: var(--blockr-focus-ring, 0 0 0 3px rgb(96 165 250 / 0.28));
-  --dock-shadow-md: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.5));
-}
-
-/*
- * The card, its menus and its tooltips take the sans face of core's theme,
- * as the UIs that core draws in the card do, since the page that core serves
- * sets no face.
- */
-.blockr-card,
-.blockr-dock-layer {
-  font-family: var(--bc-font-sans, ui-sans-serif, system-ui, sans-serif);
-}
 
 /*
  * The card fills its panel on the panel's surface.
@@ -71,10 +20,10 @@
   box-sizing: border-box;
   min-height: 100%;
   min-width: 0;
-  padding: var(--blockr-card-inset);
+  padding: var(--blockr-card-inset, 16px);
   overflow-wrap: break-word;
-  background: var(--dock-bg-surface);
-  color: var(--dock-text-default);
+  background: var(--blockr-dock-bg-surface);
+  color: var(--blockr-dock-text);
 }
 
 /* The header: one row of the mark, the name and the tools. */
@@ -152,7 +101,7 @@
   font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: var(--blockr-font-weight-semibold, 600);
   line-height: 1.3;
-  color: var(--dock-text-default);
+  color: var(--blockr-dock-text);
   transition: background-color var(--blockr-transition, 0.15s ease);
 }
 
@@ -161,7 +110,7 @@
 }
 
 .blockr-card-name[data-editable]:hover {
-  background-color: var(--dock-bg-hover);
+  background-color: var(--blockr-dock-bg-hover);
 }
 
 /*
@@ -178,26 +127,26 @@
   width: 100%;
   margin: 0;
   padding: 4px 8px;
-  border: 1px solid var(--dock-border-accent);
+  border: 1px solid var(--blockr-dock-border-accent);
   border-radius: var(--blockr-radius-md, 6px);
-  background: var(--dock-bg-surface);
-  box-shadow: var(--dock-focus-ring);
+  background: var(--blockr-dock-bg-surface);
+  box-shadow: var(--blockr-dock-focus-ring);
   font: inherit;
   font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: var(--blockr-font-weight-semibold, 600);
   line-height: 1.3;
-  color: var(--dock-text-default);
+  color: var(--blockr-dock-text);
   outline: none;
 }
 
 .blockr-card-name-field[aria-invalid="true"] {
-  border-color: var(--dock-border-danger);
+  border-color: var(--blockr-dock-border-danger);
 }
 
 .blockr-card-name-error {
   margin-top: 4px;
   font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--dock-text-danger);
+  color: var(--blockr-dock-text-danger);
   white-space: nowrap;
 }
 
@@ -225,7 +174,7 @@
   border: 0;
   border-radius: var(--blockr-radius-sm, 4px);
   background: transparent;
-  color: var(--dock-text-muted);
+  color: var(--blockr-dock-text-muted);
   cursor: pointer;
   transition: background-color var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
 }
@@ -233,25 +182,25 @@
 .blockr-card-tool:hover,
 .blockr-card-tool:focus-visible,
 .blockr-card-tool[aria-expanded="true"] {
-  background: var(--dock-bg-hover);
-  color: var(--dock-text-default);
+  background: var(--blockr-dock-bg-hover);
+  color: var(--blockr-dock-text);
 }
 
 .blockr-card-tool:focus-visible {
   outline: none;
-  box-shadow: var(--dock-focus-ring);
+  box-shadow: var(--blockr-dock-focus-ring);
 }
 
 .blockr-card-tool[aria-pressed="true"] {
-  color: color-mix(in srgb, var(--dock-text-accent) 70%, var(--dock-bg-surface));
+  color: color-mix(in srgb, var(--blockr-dock-text-accent) 70%, var(--blockr-dock-bg-surface));
 }
 
 .blockr-card-tool[aria-pressed="true"]:hover {
-  color: var(--dock-text-accent);
+  color: var(--blockr-dock-text-accent);
 }
 
 .blockr-card-icon-knob {
-  fill: var(--dock-bg-raised);
+  fill: var(--blockr-dock-bg-raised);
 }
 
 /*
@@ -291,17 +240,17 @@
  * section too.
  */
 .blockr-card-section[data-section="outputs"] {
-  margin: 0 calc(-1 * var(--blockr-card-inset));
+  margin: 0 calc(-1 * var(--blockr-card-inset, 16px));
 }
 
 .blockr-card-section[data-section="outputs"] > .blockr-card-section-body {
-  padding: 0 var(--blockr-card-inset);
+  padding: 0 var(--blockr-card-inset, 16px);
   overflow-x: auto;
 }
 
 .blockr-card-section[data-section="inputs"][data-open="true"] + .blockr-card-section[data-section="outputs"] > .blockr-card-section-body {
   padding-top: 33px;
-  background: linear-gradient(var(--dock-border-default), var(--dock-border-default)) 0 16px / 100% 1px no-repeat;
+  background: linear-gradient(var(--blockr-dock-border), var(--blockr-dock-border)) 0 16px / 100% 1px no-repeat;
 }
 
 .blockr-card-section[data-folding] > .blockr-card-section-body {
@@ -345,7 +294,7 @@
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--dock-text-muted);
+  color: var(--blockr-dock-text-muted);
 }
 
 .blockr-card[data-compact] .blockr-card-name-edit {
@@ -387,11 +336,11 @@
   max-height: 320px;
   overflow-y: auto;
   padding: 6px;
-  border: 1px solid var(--dock-border-default);
+  border: 1px solid var(--blockr-dock-border);
   border-radius: var(--blockr-radius-lg, 8px);
-  background: var(--dock-bg-raised);
-  box-shadow: var(--dock-shadow-md);
-  color: var(--dock-text-default);
+  background: var(--blockr-dock-bg-raised);
+  box-shadow: var(--blockr-dock-shadow);
+  color: var(--blockr-dock-text);
   font-family: inherit;
   font-size: var(--blockr-font-size-base, 0.875rem);
   outline: none;
@@ -409,7 +358,7 @@
   border: 0;
   border-radius: var(--blockr-radius-sm, 4px);
   background: transparent;
-  color: var(--dock-text-default);
+  color: var(--blockr-dock-text);
   font: inherit;
   text-align: left;
   white-space: nowrap;
@@ -417,14 +366,14 @@
 }
 
 .blockr-card-menu-row[data-active] {
-  background: var(--dock-bg-hover);
+  background: var(--blockr-dock-bg-hover);
 }
 
 /* A row that destroys something is plain at rest, and red only as the row
    that the pointer or the keyboard is on. */
 .blockr-card-menu-row[data-danger][data-active] {
-  background: var(--dock-bg-danger);
-  color: var(--dock-text-danger);
+  background: var(--blockr-dock-bg-danger);
+  color: var(--blockr-dock-text-danger);
 }
 
 .blockr-card-menu-icon {
@@ -432,16 +381,16 @@
   flex-shrink: 0;
   justify-content: center;
   width: 16px;
-  color: var(--dock-text-muted);
+  color: var(--blockr-dock-text-muted);
 }
 
 .blockr-card-menu-row[data-active] .blockr-card-menu-icon,
 .blockr-card-menu-row[data-active] .blockr-card-menu-meta {
-  color: var(--dock-text-default);
+  color: var(--blockr-dock-text);
 }
 
 .blockr-card-menu-row[data-danger][data-active] .blockr-card-menu-icon {
-  color: var(--dock-text-danger);
+  color: var(--blockr-dock-text-danger);
 }
 
 .blockr-card-menu-label {
@@ -457,14 +406,14 @@
   padding-left: 16px;
   font-family: var(--blockr-font-mono, "SF Mono", "Fira Code", "Consolas", "Monaco", monospace);
   font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--dock-text-muted);
+  color: var(--blockr-dock-text-muted);
 }
 
 .blockr-card-menu-divider {
   height: 1px;
   margin: 6px -6px;
   border: 0;
-  background: var(--dock-border-default);
+  background: var(--blockr-dock-border);
 }
 
 /* The "+" menu's caption, one muted line saying what the menu is for. */
@@ -472,7 +421,7 @@
   padding: 0 10px 4px;
   overflow: hidden;
   font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--dock-text-muted);
+  color: var(--blockr-dock-text-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -484,7 +433,7 @@
   z-index: 1;
   margin: 0 -6px 4px;
   padding: 4px 6px;
-  background: var(--dock-bg-raised);
+  background: var(--blockr-dock-bg-raised);
 }
 
 .blockr-card-menu-search input {
@@ -494,17 +443,17 @@
   height: 30px;
   margin: 0;
   padding: 0 9px;
-  border: 1px solid var(--dock-border-default);
+  border: 1px solid var(--blockr-dock-border);
   border-radius: var(--blockr-radius-md, 6px);
-  background: var(--dock-bg-field);
-  color: var(--dock-text-default);
+  background: var(--blockr-dock-bg-field);
+  color: var(--blockr-dock-text);
   font: inherit;
   font-size: var(--blockr-font-size-sm, 0.8125rem);
   outline: none;
 }
 
 .blockr-card-menu-search input::placeholder {
-  color: var(--dock-text-muted);
+  color: var(--blockr-dock-text-muted);
 }
 
 /* A category's title: 12px, weight 600, uppercase, muted, inset to the rows'
@@ -513,12 +462,12 @@
   position: sticky;
   top: 32px;
   padding: 8px 10px 4px;
-  background: var(--dock-bg-raised);
+  background: var(--blockr-dock-bg-raised);
   font-size: var(--blockr-font-size-xs, 0.75rem);
   font-weight: var(--blockr-font-weight-semibold, 600);
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--dock-text-muted);
+  color: var(--blockr-dock-text-muted);
 }
 
 /* The neutral badge of a package: an 18px capsule at 11px, weight 500. */
@@ -529,10 +478,10 @@
   align-items: center;
   height: 18px;
   padding: 0 7px;
-  border: 1px solid var(--dock-border-default);
+  border: 1px solid var(--blockr-dock-border);
   border-radius: var(--blockr-radius-pill, 999px);
-  background: var(--dock-bg-subtle);
-  color: var(--dock-text-muted);
+  background: var(--blockr-dock-bg-subtle);
+  color: var(--blockr-dock-text-muted);
   font-size: 11px;
   font-weight: var(--blockr-font-weight-medium, 500);
   vertical-align: middle;
@@ -544,7 +493,7 @@
 
 .blockr-card-menu-empty {
   padding: 10px;
-  color: var(--dock-text-muted);
+  color: var(--blockr-dock-text-muted);
   font-style: italic;
   text-align: center;
 }
@@ -563,13 +512,13 @@
   box-sizing: border-box;
   max-width: 320px;
   padding: 5px 9px;
-  border: 1px solid var(--dock-border-default);
+  border: 1px solid var(--blockr-dock-border);
   border-radius: var(--blockr-radius-lg, 8px);
-  background: var(--dock-bg-raised);
-  box-shadow: var(--dock-shadow-md);
+  background: var(--blockr-dock-bg-raised);
+  box-shadow: var(--blockr-dock-shadow);
   font-size: var(--blockr-font-size-xs, 0.75rem);
   line-height: 1.4;
-  color: var(--dock-text-default);
+  color: var(--blockr-dock-text);
   overflow-wrap: anywhere;
 }
 
@@ -578,7 +527,7 @@
 }
 
 .blockr-card-tooltip-line[data-muted] {
-  color: var(--dock-text-muted);
+  color: var(--blockr-dock-text-muted);
 }
 
 .blockr-card-tooltip-badge {

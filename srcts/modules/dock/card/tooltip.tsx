@@ -19,10 +19,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FocusEvent, PointerEvent, ReactElement, ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useDock } from "../context.ts";
+import type { Tooltips } from "../context.ts";
 import { useFloating } from "./floating.ts";
 import { tooltipSpot } from "./place.ts";
-import { useScope } from "./scope.ts";
-import type { Tooltips } from "./scope.ts";
 
 export interface TipLine {
   readonly text: string;
@@ -70,7 +70,7 @@ interface Shown {
 // The props that give an element its tooltip, and the tooltip, which the
 // element's component draws.
 export function useTooltip(source: TipSource): { readonly props: TipProps; readonly tooltip: ReactNode } {
-  const { layer, tooltips } = useScope();
+  const { layer, tooltips } = useDock();
   const [shown, setShown] = useState<Shown | null>(null);
   // The timer that shows the tooltip once the pointer has rested.
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

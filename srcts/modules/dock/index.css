@@ -49,8 +49,8 @@
 
 /*
  * The dock's own pieces read the design tokens as dockview's variables do
- * below: the "+" of a tab group, the prompt of an empty view and the panel
- * picker.
+ * below: the "+" of a tab group, the prompt of an empty view, the panel
+ * picker and the block cards (./card/card.css).
  * Each reads a variable of the dock's, which reads a token of blockr.ui's with
  * the token's value in the light scheme as the fallback, or in the dark scheme
  * under the dark theme.
@@ -69,6 +69,12 @@
   --blockr-dock-border: var(--blockr-color-border-default, #e5e7eb);
   --blockr-dock-border-accent: var(--blockr-color-border-accent, #2563eb);
   --blockr-dock-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.1));
+  --blockr-dock-text-danger: var(--blockr-color-text-danger, #b91c1c);
+  --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #ffffff);
+  --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #f9fafb);
+  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, #fef2f2);
+  --blockr-dock-border-danger: var(--blockr-color-border-danger, #dc2626);
+  --blockr-dock-focus-ring: var(--blockr-focus-ring, 0 0 0 3px rgb(37 99 235 / 0.12));
 }
 
 [data-bc-theme="dark"] .blockr-dock {
@@ -85,6 +91,12 @@
   --blockr-dock-border: var(--blockr-color-border-default, #232932);
   --blockr-dock-border-accent: var(--blockr-color-border-accent, #3b82f6);
   --blockr-dock-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.5));
+  --blockr-dock-text-danger: var(--blockr-color-text-danger, #f87171);
+  --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #161b23);
+  --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #14181f);
+  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1));
+  --blockr-dock-border-danger: var(--blockr-color-border-danger, #f87171);
+  --blockr-dock-focus-ring: var(--blockr-focus-ring, 0 0 0 3px rgb(96 165 250 / 0.28));
 }
 
 /*

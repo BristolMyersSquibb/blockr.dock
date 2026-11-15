@@ -22,12 +22,12 @@ import type { RegistryEntry } from "@blockr/core";
 import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { useDock } from "../context.ts";
 import { useFloating } from "./floating.ts";
 import { categoryOf, Mark, packageOf } from "./mark.tsx";
 import { stepped, useDismiss } from "./menu.tsx";
 import type { Closing } from "./menu.tsx";
 import { menuSpot } from "./place.ts";
-import { useScope } from "./scope.ts";
 
 interface Group {
   readonly category: string;
@@ -67,7 +67,7 @@ export function BlockPicker({
   onPick: (entry: RegistryEntry) => void;
   onClose: (how: Closing) => void;
 }): ReactElement | null {
-  const { layer } = useScope();
+  const { layer } = useDock();
   const ref = useFloating<HTMLDivElement>(anchor, menuSpot);
   const field = useRef<HTMLInputElement>(null);
   const id = useId();

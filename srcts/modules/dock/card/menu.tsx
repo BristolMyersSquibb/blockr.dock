@@ -18,9 +18,9 @@
 import { Fragment, useEffect, useId, useLayoutEffect, useState } from "react";
 import type { KeyboardEvent, ReactElement, ReactNode, RefObject } from "react";
 import { createPortal } from "react-dom";
+import { useDock } from "../context.ts";
 import { useFloating } from "./floating.ts";
 import { menuSpot } from "./place.ts";
-import { useScope } from "./scope.ts";
 
 export interface MenuRow {
   readonly key: string;
@@ -88,7 +88,7 @@ export function ActionMenu({
   keyboard: boolean;
   onClose: (how: Closing) => void;
 }): ReactElement | null {
-  const { layer } = useScope();
+  const { layer } = useDock();
   const ref = useFloating<HTMLDivElement>(anchor, menuSpot);
   const id = useId();
   const [active, setActive] = useState<number | null>(keyboard ? 0 : null);

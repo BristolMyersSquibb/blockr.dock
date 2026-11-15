@@ -48,8 +48,8 @@ import { activeView } from "../../commands/index.ts";
 import { PANEL_COMPONENT, panelOf } from "../../layout/index.ts";
 import type { PanelParams } from "../../layout/index.ts";
 import { gridPanels } from "../../state/index.ts";
-import { BlockCard, CardScope, createTooltips, giveFocus, useScope } from "./card/index.ts";
-import { DockContext, useBoard, useDock } from "./context.ts";
+import { BlockCard, createTooltips } from "./card/index.ts";
+import { DockContext, giveFocus, useBoard, useDock } from "./context.ts";
 import { drawDock } from "./drawing.ts";
 import type { Narrow } from "./narrow.ts";
 import { PanelPicker, usePickerButton } from "./picker.tsx";
@@ -100,7 +100,7 @@ const components: IDockviewReactProps["components"] = { [PANEL_COMPONENT]: Panel
 
 // A panel's tab, which has no close button on a locked board.
 function Tab(props: IDockviewPanelHeaderProps<PanelParams>): ReactElement {
-  const { core } = useScope();
+  const { core } = useDock();
   const { panel } = props.params;
   const onPointerDown =
     "block" in panel
@@ -182,11 +182,10 @@ export interface DockProps {
 export function Dock({ core, plugin, settings, narrow, drawn }: DockProps): ReactElement {
   const root = useRef<HTMLDivElement>(null);
   const stop = useRef<(() => void) | undefined>(undefined);
-  const shared = useMemo(() => ({ core, plugin, drawn }), [core, plugin, drawn]);
-  const locked = core.lock.board;
   const [layer, setLayer] = useState<HTMLDivElement | null>(null);
   const [tooltips] = useState(createTooltips);
-  const scope = useMemo(() => ({ core, plugin, layer, tooltips }), [core, plugin, layer, tooltips]);
+  const shared = useMemo(() => ({ core, plugin, drawn, layer, tooltips }), [core, plugin, drawn, layer, tooltips]);
+  const locked = core.lock.board;
 
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
@@ -222,12 +221,10 @@ export function Dock({ core, plugin, settings, narrow, drawn }: DockProps): Reac
 
   return (
     <DockContext value={shared}>
-      <CardScope value={scope}>
-        <div className="blockr-dock" ref={root}>
-          {locked ? view : <PanelPicker>{view}</PanelPicker>}
-          <div className="blockr-dock-layer" ref={setLayer} />
-        </div>
-      </CardScope>
+      <div className="blockr-dock" ref={root}>
+        {locked ? view : <PanelPicker>{view}</PanelPicker>}
+        <div className="blockr-dock-layer" ref={setLayer} />
+      </div>
     </DockContext>
   );
 }

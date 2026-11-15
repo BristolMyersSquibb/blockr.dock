@@ -41,15 +41,13 @@ import type { BlockId } from "@blockr/core";
 import { useCallback, useState } from "react";
 import type { ReactElement } from "react";
 import { SECTIONS, stateOf } from "../../../commands/index.ts";
+import { giveFocus, useBoard, useDock } from "../context.ts";
 import { Header } from "./header.tsx";
-import { giveFocus, useBoard, useScope } from "./scope.ts";
 import { Mounted, Section } from "./section.tsx";
 
 export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
-  const { core } = useScope();
-  const block = useBoard(core, (board) => board.blocks[id]);
-  const visible = useBoard(core, (board) => stateOf(board)?.visible[id]);
-  const compact = useBoard(core, () => core.options.value("compact") === true);
+  const { core } = useDock();
+  const board = useBoard(core);
   const [drawn, setDrawn] = useState(false);
 
   const focus = useCallback(() => {
@@ -74,8 +72,10 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
   );
   const mountOutput = useCallback((el: HTMLElement) => core.mountOutput(el, id), [core, id]);
 
+  const block = board.blocks[id];
   if (block === undefined) return null;
-  const sections = visible ?? SECTIONS;
+  const sections = stateOf(board)?.visible[id] ?? SECTIONS;
+  const compact = core.options.value("compact") === true;
   const entry = core.blockRegistry()[block.registry_id];
   const inputs = !core.store.locked(id);
 

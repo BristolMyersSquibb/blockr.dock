@@ -32,14 +32,13 @@ import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement, ReactNode, RefObject } from "react";
 import { SECTIONS } from "../../../commands/index.ts";
 import type { Section } from "../../../state/index.ts";
-import { runEdit } from "../edits.ts";
 import { copyText } from "./clipboard.ts";
 import { BinIcon, DotsIcon, EyeIcon, LockIcon, SlidersIcon } from "./icons.tsx";
 import { Mark, packageOf } from "./mark.tsx";
 import { ActionMenu } from "./menu.tsx";
 import type { Closing, MenuRow } from "./menu.tsx";
+import { runEdit, useDock } from "../context.ts";
 import { BlockPicker } from "./picker.tsx";
-import { useScope } from "./scope.ts";
 import { useTooltip } from "./tooltip.tsx";
 
 const GESTURE = "Double-click to edit";
@@ -59,7 +58,7 @@ export function Header({
   // Whether the block's UI has drawn anything.
   drawn: boolean;
 }): ReactElement {
-  const { core, plugin } = useScope();
+  const { core, plugin } = useDock();
   const locked = core.lock.board;
   const [renaming, setRenaming] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -67,7 +66,7 @@ export function Header({
 
   const toggle = (section: Section) => {
     const shown = sections.includes(section) ? sections.filter((each) => each !== section) : [...sections, section];
-    void runEdit(core, plugin, "blockr.dock-set_sections", {
+    runEdit(core, plugin, "blockr.dock-set_sections", {
       block: id,
       sections: SECTIONS.filter((each) => shown.includes(each)),
     });
@@ -84,7 +83,7 @@ export function Header({
           <NameField
             name={block.name}
             onCommit={(name) => {
-              void runEdit(core, plugin, "blockr.core-rename_block", { id, name });
+              runEdit(core, plugin, "blockr.core-rename_block", { id, name });
             }}
             onDone={(restore) => {
               setRenaming(false);
@@ -122,7 +121,7 @@ export function Header({
               label={open ? "Open to readers" : "Locked for readers"}
               pressed={open}
               onClick={() => {
-                void runEdit(core, plugin, "blockr.core-set_block_lock", { id, locked: open ? null : false });
+                runEdit(core, plugin, "blockr.core-set_block_lock", { id, locked: open ? null : false });
               }}
             >
               <LockIcon open={open} />
@@ -276,7 +275,7 @@ function MenuButton({
   block: Block;
   onRename: () => void;
 }): ReactElement {
-  const { core, plugin } = useScope();
+  const { core, plugin } = useDock();
   const [open, setOpen] = useState<Open | null>(null);
   const { props, tooltip } = useTooltip(open === null ? "More actions" : null);
 
@@ -323,7 +322,7 @@ function MenuButton({
         danger: true,
         divided: true,
         onSelect() {
-          void runEdit(core, plugin, "blockr.core-remove_block", { id });
+          runEdit(core, plugin, "blockr.core-remove_block", { id });
         },
       },
     ];
@@ -335,7 +334,7 @@ function MenuButton({
     const [first] = entry.inputs;
     const input: Readonly<Record<string, string>> =
       entry.inputs.length > 1 && !entry.inputs.includes("...") && first !== undefined ? { input: first } : {};
-    void runEdit(core, plugin, "blockr.core-append_block", { from: id, registry_id: entry.id, ...input });
+    runEdit(core, plugin, "blockr.core-append_block", { from: id, registry_id: entry.id, ...input });
   };
 
   return (
