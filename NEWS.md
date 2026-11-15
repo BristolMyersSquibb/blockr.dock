@@ -21,6 +21,19 @@
   that a plugin's UI has room, and `rail()` takes 500 unless given.
   The dock draws in the face of core's UIs, so its tabs match them.
 
+* The dock shows as a toast every notification of `CoreApi` that no card shows
+  (#580).
+  It leaves a notification about a block to the block's card, unless a plugin
+  raised it.
+  Every other notification shows as a toast: what a plugin raised, even about
+  a block, and every notification about no block, such as the error that the
+  dock raises for a refused gesture.
+  The toasts stack in the window's bottom right corner, and each names what
+  its notification concerns.
+  A message's toast fades after five seconds, but not while the pointer rests
+  on it, and a warning's or an error's stays until the user closes it.
+  A toast shows its message as text, without the ANSI escapes of cli's styles.
+
 * The dock draws the active view with dockview, from the board in the client
   (#577).
   Each tab group of the view's grid becomes a dockview group, each rail an edge
