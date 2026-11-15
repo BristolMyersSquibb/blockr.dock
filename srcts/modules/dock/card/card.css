@@ -551,10 +551,12 @@
 
 /*
  * The tooltip: a small light card, bg-raised, 1px border-default, shadow-md,
- * radius 8, 12px text-default and 5px 9px of padding.
+ * radius 8, 12px text-default and 5px 9px of padding, which the pointer
+ * passes through.
  */
 .blockr-card-tooltip {
   position: fixed;
+  pointer-events: none;
   left: 0;
   top: 0;
   z-index: 1;

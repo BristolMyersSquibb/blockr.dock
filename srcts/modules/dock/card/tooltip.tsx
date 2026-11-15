@@ -12,9 +12,8 @@
 // - It leaves as the pointer or the focus leaves, on a click, on Escape and
 //   as the page scrolls.
 // - It sits above its element, and below only where there is no room above.
-// Unlike blockr.ui's, it stays while the pointer moves from its element onto
-// it, and leaves with the pointer from there, so that a user who magnifies the
-// screen can read it (WCAG 1.4.13).
+// - It ignores the pointer, which reaches what lies under it, as the tab strip
+//   under the tooltips of a card's header.
 // No tooltip shows for a touch, which has no hover.
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -46,9 +45,6 @@ export interface TipProps {
 
 const DELAY = 300;
 const WARM = 400;
-// How long a tooltip stays as the pointer leaves its element, for the pointer
-// to reach the tooltip.
-const GRACE = 100;
 
 // The tooltips of a dock, of which one shows at a time.
 export function createTooltips(): Tooltips {
@@ -71,20 +67,18 @@ interface Shown {
   readonly tip: Tip;
 }
 
-type Timer = ReturnType<typeof setTimeout>;
-
 // The props that give an element its tooltip, and the tooltip, which the
 // element's component draws.
 export function useTooltip(source: TipSource): { readonly props: TipProps; readonly tooltip: ReactNode } {
   const { layer, tooltips } = useScope();
   const [shown, setShown] = useState<Shown | null>(null);
-  const timers = useRef<{ show?: Timer; hide?: Timer }>({});
+  // The timer that shows the tooltip once the pointer has rested.
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const showing = useRef(false);
 
   const hide = useCallback(() => {
-    clearTimeout(timers.current.show);
-    clearTimeout(timers.current.hide);
-    timers.current = {};
+    clearTimeout(timer.current);
+    timer.current = undefined;
     if (!showing.current) return;
     showing.current = false;
     tooltips.left();
@@ -97,10 +91,6 @@ export function useTooltip(source: TipSource): { readonly props: TipProps; reado
     tooltips.showing(hide);
     showing.current = true;
     setShown({ el, tip });
-  };
-
-  const stay = () => {
-    clearTimeout(timers.current.hide);
   };
 
   useEffect(() => {
@@ -121,21 +111,16 @@ export function useTooltip(source: TipSource): { readonly props: TipProps; reado
 
   const props: TipProps = {
     onPointerEnter(event) {
-      if (event.pointerType === "touch") return;
-      stay();
-      if (showing.current) return;
+      if (event.pointerType === "touch" || showing.current) return;
       const el = event.currentTarget;
-      clearTimeout(timers.current.show);
+      clearTimeout(timer.current);
       if (tooltips.warm()) show(el);
       else
-        timers.current.show = setTimeout(() => {
+        timer.current = setTimeout(() => {
           show(el);
         }, DELAY);
     },
-    onPointerLeave() {
-      clearTimeout(timers.current.show);
-      if (showing.current) timers.current.hide = setTimeout(hide, GRACE);
-    },
+    onPointerLeave: hide,
     onPointerDown: hide,
     onFocus(event) {
       // A click focuses a button too, right after its pointerdown hid the
@@ -145,28 +130,15 @@ export function useTooltip(source: TipSource): { readonly props: TipProps; reado
     onBlur: hide,
   };
 
-  const tooltip =
-    shown === null || layer === null
-      ? null
-      : createPortal(<TooltipCard anchor={shown.el} tip={shown.tip} onPointerEnter={stay} onPointerLeave={hide} />, layer);
+  const tooltip = shown === null || layer === null ? null : createPortal(<TooltipCard anchor={shown.el} tip={shown.tip} />, layer);
   return { props, tooltip };
 }
 
-function TooltipCard({
-  anchor,
-  tip,
-  onPointerEnter,
-  onPointerLeave,
-}: {
-  anchor: HTMLElement;
-  tip: Tip;
-  onPointerEnter: () => void;
-  onPointerLeave: () => void;
-}): ReactElement {
+function TooltipCard({ anchor, tip }: { anchor: HTMLElement; tip: Tip }): ReactElement {
   const ref = useFloating<HTMLDivElement>(anchor, tooltipSpot);
   const lines = typeof tip === "string" ? [{ text: tip }] : tip;
   return (
-    <div ref={ref} role="tooltip" className="blockr-card-tooltip" onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave}>
+    <div ref={ref} role="tooltip" className="blockr-card-tooltip">
       {lines.map((line, i) => (
         <div key={i} className="blockr-card-tooltip-line" data-muted={line.muted === true ? "" : undefined}>
           {line.text}

@@ -590,7 +590,6 @@ describe("the card's tooltips", () => {
     expect(tooltip(el)?.textContent).toBe("Preview");
 
     pointer(preview, "pointerout");
-    await wait(150);
     await settled();
     expect(tooltip(el)).toBeNull();
   });
