@@ -1,7 +1,8 @@
 /*
  * The stylesheet of the dock's module, which the build bundles into
  * inst/js/dock.css: dockview's stylesheet, then the dock's own rules, which
- * style only what sits under the dock's root, `.blockr-dock`.
+ * style only what sits under the dock's root, `.blockr-dock`, and under the
+ * column of toasts beside it, `.blockr-dock-toasts`.
  */
 @import "dockview-react/dist/styles/dockview.css";
 
@@ -106,4 +107,173 @@
 
   --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
   --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
+}
+
+/*
+ * The toasts, one above the other in the window's bottom right corner, beside
+ * the dock's root (./toasts.tsx).
+ * They sit in the toast layer of blockr.ui's design system, above every other
+ * layer.
+ * The column scrolls where the toasts outgrow the window. Its padding keeps
+ * their shadows from being cut off there, and it lets clicks through between
+ * the toasts, so that the dock below takes them.
+ */
+.blockr-dock-toasts {
+  position: fixed;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: var(--blockr-z-toast, 1090);
+  box-sizing: border-box;
+  display: grid;
+  gap: 0.5rem;
+  width: 21rem;
+  max-width: calc(100vw - 1rem);
+  max-height: calc(100dvh - 1rem);
+  margin: 0;
+  padding: 0.5rem;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+/*
+ * A toast takes the message style of blockr.ui's design system: 13px, a
+ * radius of 6px, and a fill and edge for its severity.
+ * A message's toast is neutral, on the raised surface of menus, with the
+ * default edge.
+ * An error's toast takes the danger set and a warning's the amber set.
+ * Their fills are tints, which the dark scheme draws see-through, so each
+ * tint lies over the raised surface, and the page does not show through the
+ * toast.
+ * Each token is read with its value in blockr.ui's light scheme as the
+ * fallback under the light theme, and with its value in the dark scheme under
+ * the dark theme, as in the bridge to dockview's theme above.
+ */
+.blockr-dock-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  border-radius: var(--blockr-radius-md, 6px);
+  background-color: var(--blockr-color-bg-raised, #ffffff);
+  color: var(--blockr-color-text-default, #111827);
+  box-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.1));
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  pointer-events: auto;
+  transition: opacity 300ms;
+}
+
+.blockr-dock-toast[data-severity="error"] {
+  border-color: var(--blockr-color-border-danger-subtle, color-mix(in srgb, #dc2626 35%, transparent));
+  background-image: linear-gradient(var(--blockr-color-bg-danger, #fef2f2), var(--blockr-color-bg-danger, #fef2f2));
+  color: var(--blockr-color-text-danger, #b91c1c);
+}
+
+.blockr-dock-toast[data-severity="warning"] {
+  border-color: var(--blockr-color-border-warning-subtle, color-mix(in srgb, #d97706 45%, transparent));
+  background-image: linear-gradient(var(--blockr-color-bg-warning, #fffbeb), var(--blockr-color-bg-warning, #fffbeb));
+  color: var(--blockr-color-text-warning, #b45309);
+}
+
+[data-bc-theme="dark"] .blockr-dock-toast {
+  border-color: var(--blockr-color-border-default, #232932);
+  background-color: var(--blockr-color-bg-raised, #1e242e);
+  color: var(--blockr-color-text-default, #f0f3f7);
+  box-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.5));
+}
+
+[data-bc-theme="dark"] .blockr-dock-toast[data-severity="error"] {
+  border-color: var(--blockr-color-border-danger-subtle, color-mix(in srgb, #f87171 35%, transparent));
+  background-image: linear-gradient(
+    var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1)),
+    var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1))
+  );
+  color: var(--blockr-color-text-danger, #f87171);
+}
+
+[data-bc-theme="dark"] .blockr-dock-toast[data-severity="warning"] {
+  border-color: var(--blockr-color-border-warning-subtle, color-mix(in srgb, #fbbf24 45%, transparent));
+  background-image: linear-gradient(
+    var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1)),
+    var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1))
+  );
+  color: var(--blockr-color-text-warning, #fbbf24);
+}
+
+/* A message's toast fades before it goes, at once under reduced motion. */
+.blockr-dock-toast[data-fading] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blockr-dock-toast {
+    transition: none;
+  }
+}
+
+/*
+ * The text of a toast: the first line, which names what the notification
+ * concerns, in bold, and the message below it, which keeps its line breaks
+ * and wraps a long word, such as a path.
+ * The package in the first line keeps the toast's colour, since the design
+ * system puts no muted text on the danger fill.
+ */
+.blockr-dock-toast-text {
+  display: grid;
+  flex: 1;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.blockr-dock-toast-title,
+.blockr-dock-toast-message {
+  margin: 0;
+}
+
+.blockr-dock-toast-title {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+
+.blockr-dock-toast-package {
+  font-weight: normal;
+}
+
+.blockr-dock-toast-message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The button that closes a toast, a quiet icon button in the toast's colour,
+ * with the hover and the focus outline of blockr.ui's design system.
+ */
+.blockr-dock-toast-close {
+  flex: none;
+  margin: -0.125rem -0.25rem 0 0;
+  padding: 0 0.375rem;
+  border: 0;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.blockr-dock-toast-close:hover {
+  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+}
+
+.blockr-dock-toast-close:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
+}
+
+[data-bc-theme="dark"] .blockr-dock-toast-close:hover {
+  background-color: var(--blockr-color-bg-hover, color-mix(in srgb, #f0f3f7 6%, transparent));
+}
+
+[data-bc-theme="dark"] .blockr-dock-toast-close:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #3b82f6);
 }
