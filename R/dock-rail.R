@@ -16,7 +16,7 @@ rail_positions <- c("left", "right")
 #' @rdname layout
 #' @export
 rail <- function(..., position = c("left", "right"), active = NULL,
-                 collapsed = FALSE, size = 260) {
+                 collapsed = FALSE, size = 500) {
 
   position <- match.arg(position)
   refs <- as_panel_refs(list(...))

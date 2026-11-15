@@ -13,6 +13,18 @@
 }
 
 /*
+ * The dock draws in the face of core's UIs, such as the Edit board plugin's,
+ * the theme variable --bc-font-sans of core's stylesheet, since the page sets
+ * none.
+ * The tabs, the panel picker and the prompt of an empty view take it from the
+ * dock's root, and the toasts, which sit beside the root, take it too.
+ */
+.blockr-dock,
+.blockr-dock-toasts {
+  font-family: var(--bc-font-sans, system-ui, sans-serif);
+}
+
+/*
  * In a window narrower than the blockr option narrow_breakpoint, the dock
  * draws a view's tab groups and rails in one column.
  * The column is as tall as its rows together, which the dock sets as the
@@ -23,10 +35,271 @@
   inset: auto;
 }
 
-/* A panel's frame, which the block's card or the plugin's UI fills. */
+/*
+ * A panel's frame, which the block's card or the plugin's UI fills.
+ * The frame of a plugin's panel is the element that the dock gives
+ * mountPlugin(), at the panel's width and height.
+ */
 .blockr-dock-panel {
   height: 100%;
   overflow: auto;
+}
+
+/*
+ * The dock's own pieces read the design tokens as dockview's variables do
+ * below: the "+" of a tab group, the prompt of an empty view and the panel
+ * picker.
+ * Each reads a variable of the dock's, which reads a token of blockr.ui's with
+ * the token's value in the light scheme as the fallback, or in the dark scheme
+ * under the dark theme.
+ */
+.blockr-dock {
+  --blockr-dock-text: var(--blockr-color-text-default, #111827);
+  --blockr-dock-text-muted: var(--blockr-color-text-muted, #6b7280);
+  --blockr-dock-text-accent: var(--blockr-color-text-accent, #2563eb);
+  --blockr-dock-bg-raised: var(--blockr-color-bg-raised, #ffffff);
+  --blockr-dock-bg-field: var(--blockr-color-bg-field, #f9fafb);
+  --blockr-dock-bg-hover: var(--blockr-color-bg-hover, #f3f4f6);
+  --blockr-dock-bg-accent-subtle: var(
+    --blockr-color-bg-accent-subtle,
+    color-mix(in srgb, #2563eb 7%, transparent)
+  );
+  --blockr-dock-border: var(--blockr-color-border-default, #e5e7eb);
+  --blockr-dock-border-accent: var(--blockr-color-border-accent, #2563eb);
+  --blockr-dock-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.1));
+}
+
+[data-bc-theme="dark"] .blockr-dock {
+  --blockr-dock-text: var(--blockr-color-text-default, #f0f3f7);
+  --blockr-dock-text-muted: var(--blockr-color-text-muted, #8a94a3);
+  --blockr-dock-text-accent: var(--blockr-color-text-accent, #60a5fa);
+  --blockr-dock-bg-raised: var(--blockr-color-bg-raised, #1e242e);
+  --blockr-dock-bg-field: var(--blockr-color-bg-field, #14181f);
+  --blockr-dock-bg-hover: var(--blockr-color-bg-hover, color-mix(in srgb, #f0f3f7 6%, transparent));
+  --blockr-dock-bg-accent-subtle: var(
+    --blockr-color-bg-accent-subtle,
+    color-mix(in srgb, #3b82f6 7%, transparent)
+  );
+  --blockr-dock-border: var(--blockr-color-border-default, #232932);
+  --blockr-dock-border-accent: var(--blockr-color-border-accent, #3b82f6);
+  --blockr-dock-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.5));
+}
+
+/*
+ * The "+" in the header of a tab group, which opens the panel picker, in a
+ * slot as tall as the header, which centres it beside the tabs.
+ */
+.blockr-dock-add-slot {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 4px;
+}
+
+.blockr-dock-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blockr-radius-md, 6px);
+  background: transparent;
+  color: var(--blockr-dock-text-muted);
+  cursor: pointer;
+}
+
+.blockr-dock-add:hover,
+.blockr-dock-add[aria-expanded="true"] {
+  background: var(--blockr-dock-bg-hover);
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-add:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: 1px;
+}
+
+/*
+ * The prompt of an empty view, over the whole dock, as today's
+ * .blockr-empty-dock-prompt in inst/assets/css/blockr-dock.css, at 655e323.
+ */
+.blockr-dock-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+.blockr-dock-empty p {
+  margin: 0;
+}
+
+/* The prompt's button, outlined in the accent colour, as today's. */
+.blockr-dock-empty-add {
+  padding: 4px 12px;
+  border: 1px solid var(--blockr-dock-border-accent);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: transparent;
+  color: var(--blockr-dock-text-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.blockr-dock-empty-add:hover,
+.blockr-dock-empty-add[aria-expanded="true"] {
+  background: var(--blockr-dock-bg-accent-subtle);
+}
+
+.blockr-dock-empty-add:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: 2px;
+}
+
+/*
+ * The panel picker, a popover in the top layer, at least 260 pixels wide, as
+ * today's Blockr.menu.
+ * It sits below the button that opened it, which takes the anchor name
+ * --blockr-dock-picker while it is open, and flips where the window has no
+ * room for it there.
+ */
+.blockr-dock-picker {
+  box-sizing: border-box;
+  min-width: 260px;
+  max-width: min(360px, calc(100vw - 16px));
+  max-height: min(420px, calc(100vh - 16px));
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-lg, 8px);
+  background: var(--blockr-dock-bg-raised);
+  color: var(--blockr-dock-text);
+  box-shadow: var(--blockr-dock-shadow);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+@supports (position-area: block-end) {
+  .blockr-dock-picker {
+    position-anchor: --blockr-dock-picker;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline;
+    inset: auto;
+    margin: 4px 0;
+  }
+}
+
+/* Without anchor positioning, script places the picker in the window. */
+@supports not (position-area: block-end) {
+  .blockr-dock-picker {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+  }
+}
+
+.blockr-dock-picker-caption {
+  margin: 0;
+  padding: 6px 8px 4px;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: 600;
+}
+
+.blockr-dock-picker-search {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-dock-bg-field);
+  color: inherit;
+  font: inherit;
+}
+
+.blockr-dock-picker-search:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: -1px;
+}
+
+.blockr-dock-picker-menu,
+.blockr-dock-picker-menu > [role="group"] {
+  display: grid;
+  gap: 2px;
+}
+
+/* The heading "Plugins", below a line where blocks come before it. */
+.blockr-dock-picker-menu > [role="group"]:not(:first-child) {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--blockr-dock-border);
+}
+
+.blockr-dock-picker-heading {
+  padding: 4px 8px 2px;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.blockr-dock-picker-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--blockr-radius-md, 6px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.blockr-dock-picker-item:hover,
+.blockr-dock-picker-item:focus-visible {
+  background: var(--blockr-dock-bg-hover);
+}
+
+.blockr-dock-picker-item:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: -2px;
+}
+
+.blockr-dock-picker-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The name of a block's class, beside the block's name. */
+.blockr-dock-picker-type {
+  flex: none;
+  margin-left: auto;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+}
+
+.blockr-dock-picker-note {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--blockr-dock-text-muted);
 }
 
 /*

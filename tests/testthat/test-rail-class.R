@@ -13,7 +13,7 @@ test_that("rail() writes a rail and checks its arguments", {
   expect_null(rail()$active)
 
   expect_false(rail("a")$collapsed)
-  expect_identical(rail("a")$size, 260)
+  expect_identical(rail("a")$size, 500)
   expect_identical(rail("a", size = 300L)$size, 300)
 
   expect_error(

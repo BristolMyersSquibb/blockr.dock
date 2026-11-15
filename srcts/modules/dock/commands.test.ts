@@ -5,7 +5,7 @@
 import type { Json, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
 import { describe, expect, onTestFinished, test } from "vitest";
-import { compare, gridPanels, inFolder, viewOrder } from "../../state/index.ts";
+import { compare, gridPanels, inFolder, RAIL_SIZE, viewOrder } from "../../state/index.ts";
 import type { DockState, Grid, Panel, Rail, TabGroup, View } from "../../state/index.ts";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
@@ -27,7 +27,7 @@ function group(...panels: Panel[]): TabGroup {
 }
 
 function rail(...panels: Panel[]): Rail {
-  return { ...group(...panels), collapsed: false, size: 260 };
+  return { ...group(...panels), collapsed: false, size: RAIL_SIZE };
 }
 
 const empty: Grid = { orientation: "horizontal", children: [], sizes: [] };

@@ -105,7 +105,7 @@ export type Rail = {
   /** Whether the rail shows its tabs alone. */
   readonly collapsed: boolean;
   /**
-   * Its width in pixels while it is open, 260 by default.
+   * Its width in pixels while it is open, 500 by default.
    * @minimum 0
    */
   readonly size: number;

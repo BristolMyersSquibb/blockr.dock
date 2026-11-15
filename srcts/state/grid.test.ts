@@ -13,6 +13,7 @@ import {
   placeFailure,
   placePanel,
   prunePanels,
+  RAIL_SIZE,
   resized,
   showing,
   withStoredShares,
@@ -32,7 +33,7 @@ function group(...panels: Panel[]): TabGroup {
 }
 
 function rail(...panels: Panel[]): Rail {
-  return { ...group(...panels), collapsed: false, size: 260 };
+  return { ...group(...panels), collapsed: false, size: RAIL_SIZE };
 }
 
 // The view Overview of the page: a tab group of a and b, which shows b, in
