@@ -29,8 +29,12 @@ export type Edge = (typeof EDGES)[number];
 export const SIDES = ["within", "left", "right", "above", "below"] as const;
 export type Side = (typeof SIDES)[number];
 
-// The width in pixels of a rail that a panel opens, as today's rail() has it.
-export const RAIL_SIZE = 260;
+// The width in pixels of a rail that a panel opens.
+// Today's rail() has 260, which leaves a plugin's UI about 200 pixels once the
+// rail's tabs and scrollbar take theirs.
+// A rail of 500 fits a row of core's Edit board plugin on one line, and gives
+// a plugin such as the DAG or the assistant room to work.
+export const RAIL_SIZE = 500;
 
 // How far from 1 the shares of a split may sum, to allow for rounding, as
 // R's all.equal() allows.

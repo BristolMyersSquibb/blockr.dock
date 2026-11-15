@@ -6,6 +6,7 @@
 import { createDockview, Orientation } from "dockview-react";
 import type { DockviewApi, IContentRenderer } from "dockview-react";
 import { describe, expect, test } from "vitest";
+import { RAIL_SIZE } from "../state/index.ts";
 import type { Grid, Panel, Rail, TabGroup } from "../state/index.ts";
 import { gridToLayout, layoutToGrid, PANEL_COMPONENT, panelId, panelOf, railId } from "./index.ts";
 
@@ -122,7 +123,7 @@ describe("gridToLayout()", () => {
         collapsed: false,
         group: { id: "rail-left", views: [panelId(dag)], activeView: panelId(dag) },
       },
-      right: { size: 260, visible: false, collapsed: false, group: { id: "rail-right", views: [] } },
+      right: { size: RAIL_SIZE, visible: false, collapsed: false, group: { id: "rail-right", views: [] } },
     });
   });
 

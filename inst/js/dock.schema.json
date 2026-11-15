@@ -251,7 +251,7 @@
         },
         "size": {
           "type": "number",
-          "description": "Its width in pixels while it is open, 260 by default.",
+          "description": "Its width in pixels while it is open, 500 by default.",
           "minimum": 0
         }
       },

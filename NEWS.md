@@ -18,6 +18,40 @@
   holds Copy block ID alone, and it mounts the UI only of a block that the
   board lock leaves open.
 
+* The dock places each plugin whose class has a `ui` in a panel of its own,
+  and mounts the plugin's UI there with core's `mountPlugin()` (#584).
+  The UI fills the panel's body.
+  It stays mounted behind another tab and on a collapsed rail.
+  Dockview hides it there, and the UI keeps what it holds, such as a scroll
+  position.
+  The dock runs the UI's cleanup once the panel goes.
+  A "+" in the header of each tab group opens the panel picker.
+  The picker lists the blocks that the active view does not show, then, under
+  "Plugins", each plugin with a `ui` that the view does not show.
+  A search field at its top, which has the focus as the picker opens, filters
+  them.
+  A pick from a tab group's "+" adds the panel as a new tab of that group.
+  An empty view says "Start by adding a panel", with a button that opens the
+  picker, whose pick goes to the default place.
+  Under the board lock, the dock draws no "+", and an empty view says "This
+  view is empty".
+  A rail is 500 pixels wide unless a grid gives its width, rather than 260, so
+  that a plugin's UI has room, and `rail()` takes 500 unless given.
+  The dock draws in the face of core's UIs, so its tabs match them.
+
+* The dock shows as a toast every notification of `CoreApi` that no card shows
+  (#580).
+  It leaves a notification about a block to the block's card, unless a plugin
+  raised it.
+  Every other notification shows as a toast: what a plugin raised, even about
+  a block, and every notification about no block, such as the error that the
+  dock raises for a refused gesture.
+  The toasts stack in the window's bottom right corner, and each names what
+  its notification concerns.
+  A message's toast fades after five seconds, but not while the pointer rests
+  on it, and a warning's or an error's stays until the user closes it.
+  A toast shows its message as text, without the ANSI escapes of cli's styles.
+
 * The dock draws the active view with dockview, from the board in the client
   (#577).
   Each tab group of the view's grid becomes a dockview group, each rail an edge

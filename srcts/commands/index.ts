@@ -18,7 +18,7 @@ import { panelCommands } from "./panels.ts";
 import { sectionCommands } from "./sections.ts";
 import { viewCommands } from "./views.ts";
 
-export { DOCK, gridSizeTolerance, layoutLocks, stateOf } from "./common.ts";
+export { activeView, DOCK, gridSizeTolerance, layoutLocks, stateOf } from "./common.ts";
 export { SECTIONS } from "./sections.ts";
 export type { LayoutLocks } from "./common.ts";
 

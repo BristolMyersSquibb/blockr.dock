@@ -61,7 +61,7 @@ import { columnRuns, gestureRuns, gridToLayout, layoutToGrid, panelId, panelOf, 
 import type { Run, Size } from "../../layout/index.ts";
 import { EDGES, gridChanges, samePanel, tabGroups, withStoredShares } from "../../state/index.ts";
 import type { Edge, Grid, Panel, ViewId } from "../../state/index.ts";
-import { refused } from "./edits.ts";
+import { notifyRefused } from "./context.ts";
 import type { Narrow } from "./narrow.ts";
 import type { Settings } from "./settings.ts";
 
@@ -243,7 +243,7 @@ export function drawDock(options: DrawingOptions): () => void {
     void core.commands
       .run(run.id, run.args)
       .catch((error: unknown) => {
-        if (!stopped) refused(core, plugin, error);
+        if (!stopped) notifyRefused(core, plugin, error);
       })
       .finally(() => {
         pending -= 1;

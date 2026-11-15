@@ -2,7 +2,7 @@
 
 import type { Block, Board, Patch } from "@blockr/core";
 import { describe, expect, test } from "vitest";
-import { patched } from "../../state/index.ts";
+import { patched, RAIL_SIZE } from "../../state/index.ts";
 import type { DockState, Grid, Panel, TabGroup, View } from "../../state/index.ts";
 import { shownBlocks } from "./demand.ts";
 import { PAGE_ID, startingPatches, urlView } from "./start.ts";
@@ -67,7 +67,7 @@ describe("startingPatches()", () => {
             orientation: "horizontal",
             children: [group({ block: "a" }, { block: "b" })],
             sizes: [1],
-            rails: { left: { ...group({ plugin: EDIT }), collapsed: false, size: 260 } },
+            rails: { left: { ...group({ plugin: EDIT }), collapsed: false, size: RAIL_SIZE } },
           },
         },
       },

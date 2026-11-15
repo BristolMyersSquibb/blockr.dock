@@ -24,8 +24,11 @@
 //    that undo does not take back (./start.ts).
 // 3. It demands the blocks whose cards are on screen, so that the scheduler
 //    evaluates the blocks of the opening view first (./demand.ts).
-// 4. It draws the page, and the active view in it, with dockview
-//    (./dock.tsx, ./drawing.ts).
+// 4. It starts the toasts of the opening, which follow the notifications of
+//    CoreApi (./toasts.tsx).
+// 5. It draws the page: the active view, with dockview (./dock.tsx,
+//    ./drawing.ts), and beside it the toasts of the notifications that no
+//    card shows.
 // The cleanup that render() returns undoes all of them but the step on
 // starting, which is the board's.
 
@@ -43,6 +46,7 @@ import { Dock } from "./dock.tsx";
 import { trackNarrow } from "./narrow.ts";
 import { readSettings } from "./settings.ts";
 import { drawnPlugins, startOnBoard, urlView } from "./start.ts";
+import { createToasts, ToastList } from "./toasts.tsx";
 
 export const api = 1;
 
@@ -57,14 +61,21 @@ const frontend = {
 
     const narrow = trackNarrow(win, settings.breakpoint);
     const release = demandShown(core, drawn, narrow);
+    const toasts = createToasts(core.notifications);
 
     const root = createRoot(el);
     // React draws the page before render() returns.
     flushSync(() => {
-      root.render(<Dock core={core} plugin={plugin} settings={settings} narrow={narrow} drawn={drawn} />);
+      root.render(
+        <>
+          <Dock core={core} plugin={plugin} settings={settings} narrow={narrow} drawn={drawn} />
+          <ToastList core={core} toasts={toasts} />
+        </>,
+      );
     });
     return () => {
       root.unmount();
+      toasts.stop();
       release();
       narrow.stop();
     };

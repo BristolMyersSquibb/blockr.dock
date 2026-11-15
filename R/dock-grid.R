@@ -69,7 +69,8 @@
 #' @param position For `rail()`, the edge of the view that it sits on,
 #'   `"left"`, the default, or `"right"`.
 #' @param collapsed For `rail()`, whether it shows its tabs alone.
-#' @param size For `rail()`, its width in pixels while it is open.
+#' @param size For `rail()`, its width in pixels while it is open, 500 unless
+#'   given, which fits a row of core's Edit board plugin on one line.
 #' @param sizes The share of each child of the split, positive numbers, one
 #'   for each child.
 #'
