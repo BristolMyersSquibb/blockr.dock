@@ -1,5 +1,22 @@
 # blockr.dock 0.2.1
 
+* The dock places each plugin whose class has a `ui` in a panel of its own,
+  and mounts the plugin's UI there with core's `mountPlugin()` (#584).
+  The UI fills the panel's body.
+  It stays mounted behind another tab and on a collapsed rail.
+  Dockview hides it there, and the UI keeps what it holds, such as a scroll
+  position.
+  The dock runs the UI's cleanup once the panel goes.
+  A "+" in the header of each tab group opens the panel picker.
+  The picker lists the blocks that the active view does not show, then, under
+  "Plugins", each plugin with a `ui` that the view does not show.
+  Where it lists more than eight, a search field filters them.
+  A pick from a tab group's "+" adds the panel as a new tab of that group.
+  An empty view says "Start by adding a panel", with a button that opens the
+  picker, whose pick goes to the default place.
+  Under the board lock, the dock draws no "+", and an empty view says "This
+  view is empty".
+
 * The dock draws the active view with dockview, from the board in the client
   (#577).
   Each tab group of the view's grid becomes a dockview group, each rail an edge

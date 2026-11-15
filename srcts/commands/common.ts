@@ -6,7 +6,7 @@
 import type { Board, Command, CommandContext, Delta, Json, JsonSchema } from "@blockr/core";
 import { logicalOption, numericOption } from "../options/index.ts";
 import { gridFailures, gridPanels, inFolder, isDockState, pointer, sameEntry } from "../state/index.ts";
-import type { DockState, Entry, FolderId, Grid, Panel } from "../state/index.ts";
+import type { DockState, Entry, FolderId, Grid, Panel, View } from "../state/index.ts";
 
 // The id of the dock plugin's class, under which the board holds the dock's
 // state, at /plugins/blockr.dock-dock_plugin.
@@ -17,6 +17,13 @@ export const DOCK = "blockr.dock-dock_plugin";
 export function stateOf(board: Board): DockState | undefined {
   const state = board.plugins[DOCK];
   return isDockState(state) ? state : undefined;
+}
+
+// The active view of the board's dock state, or undefined where it has none.
+export function activeView(board: Board): View | undefined {
+  const state = stateOf(board);
+  const active = state?.active ?? null;
+  return active === null ? undefined : state?.views[active];
 }
 
 // The JSON Pointer from the board's root to the segments given, inside the
