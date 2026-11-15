@@ -1,9 +1,11 @@
 /*
  * The stylesheet of the dock's module, which the build bundles into
- * inst/js/dock.css: dockview's stylesheet, then the dock's own rules, which
- * style only what sits under the dock's root, `.blockr-dock`.
+ * inst/js/dock.css: dockview's stylesheet, the card's (./card/card.css),
+ * then the dock's own rules, which style only what sits under the dock's
+ * root, `.blockr-dock`.
  */
 @import "dockview-react/dist/styles/dockview.css";
+@import "./card/card.css";
 
 /* The dock covers the window, whatever margin the page's body has. */
 .blockr-dock {
