@@ -23,7 +23,9 @@
 // 2. It takes the step on starting, as one delta of the dock plugin's class
 //    that undo does not take back (./start.ts).
 // 3. It demands the blocks whose cards are on screen, so that the scheduler
-//    evaluates the blocks of the opening view first (./demand.ts).
+//    evaluates the blocks of the opening view first, and sets CoreApi's
+//    onScreen to those blocks and to the plugins whose panels are on screen
+//    (./demand.ts).
 // 4. It starts the toasts of the opening, which follow the notifications of
 //    CoreApi (./toasts.tsx).
 // 5. It draws the page: the active view, with dockview (./dock.tsx,
@@ -31,6 +33,14 @@
 //    card shows.
 // The cleanup that render() returns undoes all of them but the step on
 // starting, which is the board's.
+//
+// As a plugin asks to show a block or a plugin through core's show(), the
+// frontend's show() runs the dock's command blockr.dock-show_panel with the
+// board object, which names the panel as a grid names it
+// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#showing-a-panel).
+// The command has the active view show the panel, and takes no undo step.
+// Where the command is not enabled, as on a locked board whose active view
+// lacks the panel, show() shows nothing, while core has given the block focus.
 
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
@@ -49,6 +59,9 @@ import { drawnPlugins, startOnBoard, urlView } from "./start.ts";
 import { createToasts, ToastList } from "./toasts.tsx";
 
 export const api = 1;
+
+// The command through which the frontend shows a panel.
+const SHOW_PANEL = "blockr.dock-show_panel";
 
 const frontend = {
   async render({ el, core, plugin, signal }) {
@@ -79,6 +92,11 @@ const frontend = {
       release();
       narrow.stop();
     };
+  },
+  async show({ object, core }) {
+    const args = { panel: object };
+    if (!core.commands.enabled(SHOW_PANEL, args)) return;
+    await core.commands.run(SHOW_PANEL, args);
   },
 } satisfies FrontendModule;
 

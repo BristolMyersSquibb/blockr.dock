@@ -1,10 +1,11 @@
-// The step that the dock takes as it starts on a board, and what it demands.
+// The step that the dock takes as it starts on a board, what it demands and
+// what it has on screen.
 
 import type { Block, Board, Patch } from "@blockr/core";
 import { describe, expect, test } from "vitest";
 import { patched, RAIL_SIZE } from "../../state/index.ts";
 import type { DockState, Grid, Panel, TabGroup, View } from "../../state/index.ts";
-import { shownBlocks } from "./demand.ts";
+import { onScreen } from "./demand.ts";
 import { PAGE_ID, startingPatches, urlView } from "./start.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
@@ -127,7 +128,7 @@ describe("urlView()", () => {
   });
 });
 
-describe("shownBlocks()", () => {
+describe("onScreen()", () => {
   const drawn = new Map([[DAG, "DAG"]]);
   const rail = { ...group({ block: "c" }, { block: "d" }), collapsed: false, size: 260 };
   const main: Grid = {
@@ -139,26 +140,26 @@ describe("shownBlocks()", () => {
   const state: DockState = { ...twoViews, views: { ...twoViews.views, main: view(main) } };
   const blocks = ["a", "b", "c", "d"];
 
-  test("gives the blocks whose panels the tab groups and the open rails of the active view show", () => {
-    expect(shownBlocks(boardWith(state, blocks), drawn, false)).toEqual(["b", "c"]);
+  test("gives the blocks and the plugins whose panels the tab groups and the open rails of the active view show", () => {
+    expect(onScreen(boardWith(state, blocks), drawn, false)).toEqual({ blocks: ["b", "c"], plugins: [DAG] });
   });
 
   test("leaves out the panel that a collapsed rail shows, but in the narrow column", () => {
     const collapsed = { ...state, views: { ...state.views, main: view({ ...main, rails: { left: { ...rail, collapsed: true } } }) } };
-    expect(shownBlocks(boardWith(collapsed, blocks), drawn, false)).toEqual(["b"]);
-    expect(shownBlocks(boardWith(collapsed, blocks), drawn, true)).toEqual(["b", "c"]);
+    expect(onScreen(boardWith(collapsed, blocks), drawn, false)).toEqual({ blocks: ["b"], plugins: [DAG] });
+    expect(onScreen(boardWith(collapsed, blocks), drawn, true)).toEqual({ blocks: ["b", "c"], plugins: [DAG] });
   });
 
-  test("gives the blocks of the active view alone", () => {
-    expect(shownBlocks(boardWith({ ...state, active: "side" }, blocks), drawn, false)).toEqual(["b"]);
+  test("gives the blocks and the plugins of the active view alone", () => {
+    expect(onScreen(boardWith({ ...state, active: "side" }, blocks), drawn, false)).toEqual({ blocks: ["b"], plugins: [] });
   });
 
   test("gives the first panel of a tab group whose shown panel the dock cannot draw", () => {
     const grid: Grid = { orientation: "horizontal", children: [{ panels: [{ plugin: "gone" }, { block: "a" }], active: { plugin: "gone" } }], sizes: [1] };
-    expect(shownBlocks(boardWith({ ...state, views: { main: view(grid) } }, blocks), drawn, false)).toEqual(["a"]);
+    expect(onScreen(boardWith({ ...state, views: { main: view(grid) } }, blocks), drawn, false)).toEqual({ blocks: ["a"], plugins: [] });
   });
 
-  test("gives no block where no view is active", () => {
-    expect(shownBlocks(boardWith(empty), drawn, false)).toEqual([]);
+  test("gives no block and no plugin where no view is active", () => {
+    expect(onScreen(boardWith(empty), drawn, false)).toEqual({ blocks: [], plugins: [] });
   });
 });
