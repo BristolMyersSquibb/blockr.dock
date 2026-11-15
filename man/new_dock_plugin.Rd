@@ -81,6 +81,12 @@ state as \code{new_board()} builds the board, and refuses there what only the
 board can tell, such as a grid that names a block that the board lacks
 (see \code{\link[=board_views]{board_views()}}).
 
+The plugin prints its views and folders in the order of the views menu.
+Each folder shows the views and folders that it holds below it.
+The print marks the active view with "(active)".
+Last, it lists each card that hides a section, with the sections that show.
+A board that holds the plugin prints it the same way.
+
 The package lists the class in the \code{._BLOCKR_MODULES_} that it exports,
 with its name, "Dock", and its module, \code{js/dock.js} (see
 \code{\link[blockr.core:read_blocks_yml]{blockr.core::read_blocks_yml()}}).
@@ -112,6 +118,8 @@ dock <- new_dock_plugin(
   folders = list(safety = dock_folder("Safety")),
   visible = list(b = "outputs")
 )
+
+dock
 
 names(blockr.core::plugin_state(dock))
 

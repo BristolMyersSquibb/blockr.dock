@@ -62,8 +62,8 @@
       print(dock_grid("a", rail(plg("dag"), "b", active = "b", collapsed = TRUE),
       rail("c", position = "right")))
     Output
-      <dock_grid> horizontal
-      └─ a (100%)
+      <dock_grid>
+      └─ a
       left rail (collapsed)
       ├─ dag (plugin)
       └─ b (active)
@@ -75,5 +75,27 @@
     Code
       print(dock_grid())
     Output
-      <dock_grid> horizontal (empty)
+      <dock_grid> (empty)
+
+# a grid prints no orientation or share where a split has one child
+
+    Code
+      print(dock_grid(group("a", "b")))
+    Output
+      <dock_grid>
+      └─ group (vertical)
+         ├─ a (50%)
+         └─ b (50%)
+
+---
+
+    Code
+      print(dock_grid("a", group(panels("b", "c"))))
+    Output
+      <dock_grid> horizontal
+      ├─ a (50%)
+      └─ group (50%)
+         └─ tabs
+            ├─ b (active)
+            └─ c
 

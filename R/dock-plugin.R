@@ -51,6 +51,12 @@
 #' board can tell, such as a grid that names a block that the board lacks
 #' (see [board_views()]).
 #'
+#' The plugin prints its views and folders in the order of the views menu.
+#' Each folder shows the views and folders that it holds below it.
+#' The print marks the active view with "(active)".
+#' Last, it lists each card that hides a section, with the sections that show.
+#' A board that holds the plugin prints it the same way.
+#'
 #' The package lists the class in the `._BLOCKR_MODULES_` that it exports,
 #' with its name, "Dock", and its module, `js/dock.js` (see
 #' [blockr.core::read_blocks_yml()]).
@@ -93,6 +99,8 @@
 #'   visible = list(b = "outputs")
 #' )
 #'
+#' dock
+#'
 #' names(blockr.core::plugin_state(dock))
 #'
 #' @export
@@ -102,6 +110,79 @@ new_dock_plugin <- function(views = NULL, folders = list(), active = NULL,
     dock_state(views, folders, active, visible),
     "dock_plugin",
     c("dock_plugin", "frontend_plugin")
+  )
+}
+
+# The print lists the views and folders as the views menu does: by their
+# `index` within each folder, with what a folder holds below it.
+# The method compares the keys by their bytes, as the client compares their
+# code units.
+# The collation of a locale would put "aa" before "aA".
+#' @export
+format.dock_plugin <- function(x, ...) {
+
+  state <- plugin_state(x)
+
+  views <- state[["views"]]
+  folders <- state[["folders"]]
+
+  view_holders <- chr_ply(views, holder_of)
+  folder_holders <- chr_ply(folders, holder_of)
+
+  view_lines <- function(id) {
+
+    lines <- format(
+      new_dock_view(
+        grid = grid_from_state(views[[id]][["grid"]]),
+        name = views[[id]][["name"]]
+      )
+    )
+
+    if (identical(id, state[["active"]])) {
+      lines[1L] <- paste(lines[1L], "(active)")
+    }
+
+    lines
+  }
+
+  folder_lines <- function(id) {
+    c(
+      format(dock_folder(folders[[id]][["name"]])),
+      format_tree(lines_in(id))
+    )
+  }
+
+  # The lines of each view and folder that sits in the folder `folder`, or at
+  # the top for "", in the order of the views menu.
+  lines_in <- function(folder) {
+
+    held_views <- views[view_holders == folder]
+    held_folders <- folders[folder_holders == folder]
+
+    index <- c(chr_xtr(held_views, "index"), chr_xtr(held_folders, "index"))
+
+    lines <- c(
+      lapply(names(held_views), view_lines),
+      lapply(names(held_folders), folder_lines)
+    )
+
+    lines[order(index, method = "radix")]
+  }
+
+  sections <- chr_ply(
+    state[["visible"]],
+    function(shown) if (length(shown)) paste(shown, collapse = ", ") else "none"
+  )
+
+  c(
+    paste0("<", class(x)[1L], "> ", plugin_class_id(x)),
+    unlst(lines_in("")),
+    if (length(sections)) {
+      c(
+        "visible",
+        format_tree(paste0(names(state[["visible"]]), " (", sections, ")"))
+      )
+    }
   )
 }
 

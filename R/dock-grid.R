@@ -459,10 +459,15 @@ str.dock_grid <- function(object, ...) {
   invisible(object)
 }
 
+# The print leaves out what says nothing of the layout: the orientation of a
+# split that holds fewer than two children, and the share of an only child.
 #' @export
 format.dock_grid <- function(x, ...) {
 
-  header <- paste0("<dock_grid> ", x[["orientation"]])
+  header <- paste0(
+    "<dock_grid>",
+    if (length(x[["children"]]) > 1L) paste0(" ", x[["orientation"]])
+  )
 
   if (!length(x[["children"]]) && !length(x[["rails"]])) {
     return(paste0(header, " (empty)"))
@@ -472,7 +477,7 @@ format.dock_grid <- function(x, ...) {
     function(rail, edge) {
       c(
         paste0(edge, " rail", grid_attrs(if (rail[["collapsed"]]) "collapsed")),
-        format_tabs(rail, "")
+        format_tabs(rail)
       )
     },
     x[["rails"]],
@@ -481,7 +486,7 @@ format.dock_grid <- function(x, ...) {
 
   c(
     header,
-    format_nodes(x[["children"]], x[["sizes"]], x[["orientation"]], ""),
+    format_nodes(x[["children"]], x[["sizes"]], x[["orientation"]]),
     unlst(rails)
   )
 }
@@ -492,70 +497,89 @@ print.dock_grid <- function(x, ...) {
   invisible(x)
 }
 
-# The lines of a split's children, as a tree under `prefix`.
-format_nodes <- function(children, sizes, orientation, prefix) {
+# The lines of a split's children, as a tree.
+# An only child has no share in the tree.
+format_nodes <- function(children, sizes, orientation) {
 
-  n <- length(children)
+  shared <- length(children) > 1L
 
-  lines <- lapply(
-    seq_len(n),
-    function(i) {
-
-      last <- i == n
-      branch <- paste0(prefix, if (last) "\u2514\u2500 " else "\u251c\u2500 ")
-      indent <- paste0(prefix, if (last) "   " else "\u2502  ")
-
-      format_node(children[[i]], sizes[[i]], orientation, branch, indent)
-    }
+  format_tree(
+    map(
+      function(node, size) format_node(node, if (shared) size, orientation),
+      children,
+      sizes
+    )
   )
-
-  unlst(lines)
 }
 
-format_node <- function(node, size, orientation, branch, indent) {
+# The lines of a child of a split that divides as `orientation` says, with
+# its share, or with none where `size` is `NULL`.
+format_node <- function(node, size, orientation) {
 
-  share <- paste0(round(100 * size), "%")
+  share <- if (not_null(size)) paste0(round(100 * size), "%")
 
   if (not_null(node[["children"]])) {
 
     inner <- setdiff(c("horizontal", "vertical"), orientation)
+    divides <- if (length(node[["children"]]) > 1L) inner
 
     return(
       c(
-        paste0(branch, "group", grid_attrs(inner, share)),
-        format_nodes(node[["children"]], node[["sizes"]], inner, indent)
+        paste0("group", grid_attrs(divides, share)),
+        format_nodes(node[["children"]], node[["sizes"]], inner)
       )
     )
   }
 
   if (length(node[["panels"]]) == 1L) {
     ref <- node[["panels"]][[1L]]
-    return(paste0(branch, ref[["id"]], grid_attrs(ref_kind(ref), share)))
+    return(paste0(ref[["id"]], grid_attrs(ref_kind(ref), share)))
   }
 
-  c(paste0(branch, "tabs", grid_attrs(share)), format_tabs(node, indent))
+  c(paste0("tabs", grid_attrs(share)), format_tabs(node))
 }
 
-# The lines of the tabs of a tab group or a rail, under `prefix`.
-format_tabs <- function(node, prefix) {
+# The lines of the tabs of a tab group or a rail, as a tree.
+format_tabs <- function(node) {
 
   refs <- node[["panels"]]
-  n <- length(refs)
+  several <- length(refs) > 1L
 
-  chr_ply(
-    seq_len(n),
-    function(i) {
-      ref <- refs[[i]]
-      paste0(
-        prefix,
-        if (i == n) "\u2514\u2500 " else "\u251c\u2500 ",
-        ref[["id"]],
-        grid_attrs(
-          ref_kind(ref),
-          if (identical(ref, node[["active"]]) && n > 1L) "active"
+  format_tree(
+    lapply(
+      refs,
+      function(ref) {
+        paste0(
+          ref[["id"]],
+          grid_attrs(
+            ref_kind(ref),
+            if (several && identical(ref, node[["active"]])) "active"
+          )
         )
-      )
-    }
+      }
+    )
+  )
+}
+
+# The lines of `items`, each a character vector of lines, as the branches of a
+# tree.
+# Each item's first line follows its branch, and the item's other lines go
+# below it, indented.
+format_tree <- function(items) {
+
+  n <- length(items)
+
+  unlst(
+    map(
+      function(lines, last) {
+        c(
+          paste0(if (last) "\u2514\u2500 " else "\u251c\u2500 ", lines[1L]),
+          paste0(if (last) "   " else "\u2502  ", lines[-1L], recycle0 = TRUE)
+        )
+      },
+      items,
+      seq_len(n) == n
+    )
   )
 }
 

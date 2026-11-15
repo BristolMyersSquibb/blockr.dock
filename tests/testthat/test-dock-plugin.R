@@ -412,8 +412,69 @@ test_that("a view and a folder take a name that holds more than spaces", {
     "<dock_view> A (in f)",
     fixed = TRUE
   )
-  expect_output(print(dock_view(dock_grid("a"))), "<dock_grid> horizontal")
+  expect_output(print(dock_view(dock_grid("a"))), "<dock_grid>", fixed = TRUE)
   expect_output(print(dock_folder("F")), "<dock_folder> F", fixed = TRUE)
+})
+
+test_that("the plugin prints its views and folders in the views menu's order", {
+
+  # The script lists the view Lab first, while the views menu lists it last,
+  # in the folder Labs inside the folder Safety.
+  dock <- new_dock_plugin(
+    views = list(
+      lab = dock_view(c("e", "f"), folder = "labs"),
+      main = dock_view(
+        dock_grid(panels("a", "b"), "c", rail(plg("dag")), sizes = c(3, 7)),
+        name = "Main"
+      ),
+      ae = dock_view("d", name = "Adverse events", folder = "safety")
+    ),
+    folders = list(
+      safety = dock_folder("Safety"),
+      labs = dock_folder("Labs", folder = "safety")
+    ),
+    active = "ae",
+    visible = list(b = "outputs", c = character())
+  )
+
+  expect_snapshot(print(dock))
+
+  expect_snapshot(print(new_dock_plugin(visible = list(a = "inputs"))))
+
+  expect_identical(
+    format(new_dock_plugin()),
+    "<dock_plugin> blockr.dock-dock_plugin"
+  )
+})
+
+test_that("the print orders the views by their keys in any collation", {
+
+  # The collation of en_US.UTF-8 puts "aa", the key of the 37th view, before
+  # "aA", the key of the 11th, while the client compares the keys by their
+  # code units.
+  skip_on_os("windows")
+  withr::local_collate("en_US.UTF-8")
+
+  ids <- sprintf("v%02d", 1:37)
+  views <- set_names(rep(list(dock_view("a")), 37L), ids)
+
+  lines <- format(new_dock_plugin(views = views))
+  lines <- lines[startsWith(lines, "<dock_view>")]
+
+  expect_identical(
+    sub(" (active)", "", lines, fixed = TRUE),
+    paste("<dock_view>", toupper(ids))
+  )
+})
+
+test_that("a board prints the dock plugin that it holds", {
+
+  board <- new_board(
+    blocks = c(a = new_dataset_block("iris")),
+    plugins = list(new_dock_plugin(views = list(main = dock_view("a"))))
+  )
+
+  expect_output(print(board), "<dock_view> Main (active)", fixed = TRUE)
 })
 
 test_that("view_name() reads the name of a view", {
