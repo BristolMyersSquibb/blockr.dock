@@ -18,7 +18,7 @@ rail(
   position = c("left", "right"),
   active = NULL,
   collapsed = FALSE,
-  size = 260
+  size = 500
 )
 }
 \arguments{
@@ -42,7 +42,8 @@ is its first where \code{active} is \code{NULL}.}
 
 \item{collapsed}{For \code{rail()}, whether it shows its tabs alone.}
 
-\item{size}{For \code{rail()}, its width in pixels while it is open.}
+\item{size}{For \code{rail()}, its width in pixels while it is open, 500 unless
+given, which fits a row of core's Edit board plugin on one line.}
 }
 \value{
 The function \code{dock_grid()} returns a \code{dock_grid}.

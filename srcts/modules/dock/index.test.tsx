@@ -396,7 +396,7 @@ describe("the step on starting", () => {
                 panels: [{ plugin: "blockr.core-edit_board_plugin" }],
                 active: { plugin: "blockr.core-edit_board_plugin" },
                 collapsed: false,
-                size: 260,
+                size: 500,
               },
             },
           },
@@ -772,7 +772,7 @@ describe("the panel picker", () => {
     const heading = el.querySelector(`[id="${group?.getAttribute("aria-labelledby") ?? ""}"]`);
     expect(heading?.textContent).toBe("Plugins");
     expect([...(group?.querySelectorAll("[role='menuitem']") ?? [])].map((item) => item.textContent)).toEqual(["Edit board", "Notes"]);
-    expect(el.querySelector(".blockr-dock-picker-search")).toBeNull();
+    expect(el.querySelector(".blockr-dock-picker-search")).not.toBeNull();
     s.stop();
   });
 
@@ -808,38 +808,37 @@ describe("the panel picker", () => {
     s.stop();
   });
 
-  test("filters its entries by a search field where it lists more than eight, and Enter there picks the first", async () => {
+  test("filters its entries by the search field that has the focus as it opens, where Enter picks the first", async () => {
     const el = attached();
-    const heads = Object.fromEntries(
-      ["c", "d", "e", "f", "g", "h", "i"].map((id) => [
-        id,
-        { registry_id: "blockr.core-head_block", version: 1, state: { n: 3, direction: "head" }, name: `Head ${id}`, locked: null },
-      ]),
-    );
-    const board = boardWith(viewsOf(EMPTY_GRID));
-    const s = await startWithNotes(el, { ...board, board: { ...board.board, blocks: { ...board.board.blocks, ...heads } } });
+    const s = await startWithNotes(el, boardWith(viewsOf(EMPTY_GRID)));
 
     click(el.querySelector(".blockr-dock-empty-add"));
     await drawn();
     const search = el.querySelector<HTMLInputElement>(".blockr-dock-picker-search");
-    expect(search).not.toBeNull();
     expect(document.activeElement).toBe(search);
-    expect(entries(el)).toHaveLength(11);
+    expect(entries(el)).toHaveLength(4);
 
+    // The search finds an entry by its name, its block class or its id.
     type(search, "set");
     await drawn();
     expect(entries(el)).toEqual([["Dataset", "dataset block"]]);
+    type(search, "tail");
+    await drawn();
+    expect(entries(el)).toEqual([["Head", "head/tail block"]]);
+    type(search, "test-notes");
+    await drawn();
+    expect(entries(el)).toEqual([["Notes"]]);
 
     type(search, "zzz");
     await drawn();
     expect(entries(el)).toEqual([]);
     expect(el.querySelector(".blockr-dock-picker-note")?.textContent).toBe("No panel matches.");
 
-    type(search, "head g");
+    type(search, "hea");
     await drawn();
     press("Enter");
     await s.settled();
-    expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "g" }], active: { block: "g" } }]);
+    expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "b" }], active: { block: "b" } }]);
     s.stop();
   });
 
@@ -851,19 +850,23 @@ describe("the panel picker", () => {
     button?.focus();
     press("ArrowDown");
     await drawn();
-    const focused = () => document.activeElement?.querySelector(".blockr-dock-picker-name")?.textContent;
-    expect(focused()).toBe("Dataset");
+    const search = el.querySelector(".blockr-dock-picker-search");
+    expect(document.activeElement).toBe(search);
 
+    const focused = () => document.activeElement?.querySelector(".blockr-dock-picker-name")?.textContent;
+    press("ArrowDown");
+    expect(focused()).toBe("Dataset");
     press("ArrowDown");
     expect(focused()).toBe("Edit board");
     press("End");
     expect(focused()).toBe("Notes");
     press("ArrowDown");
     expect(focused()).toBe("Dataset");
-    press("ArrowUp");
-    expect(focused()).toBe("Notes");
+    press("End");
     press("Home");
     expect(focused()).toBe("Dataset");
+    press("ArrowUp");
+    expect(document.activeElement).toBe(search);
     s.stop();
   });
 });

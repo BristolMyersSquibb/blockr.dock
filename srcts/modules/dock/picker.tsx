@@ -5,9 +5,11 @@
 // with the name of its block class beside it, in the order of the board.
 // After them, under "Plugins", it lists the app's plugins with a `ui` that the
 // view does not show, by their names, in the order of the app's plugins.
-// Where it lists more than eight, a search field filters them by name, by the
-// name of a block's class and by id, as today's Blockr.menu does, at 655e323.
-// Where it has nothing to list, it says why in place of the list.
+// A search field at its top filters them by name, by the name of a block's
+// class and by id, so that the picker serves a board of many blocks.
+// Today's Blockr.menu shows one only where it lists more than eight, at
+// 655e323.
+// Where the picker has nothing to list, it says why in place of the list.
 //
 // Two buttons open it: the "+" in the header of each tab group, and the "Add
 // panel" button of an empty view.
@@ -26,15 +28,13 @@
 // In a browser without anchor positioning, script places it.
 // Its keys are those of a menu button
 // (https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/):
-// - Enter, Space and ArrowDown on the button open the picker, with the focus
-//   on the search field, or else on the first entry.
+// - A click, Enter, Space and ArrowDown on the button open the picker, with
+//   the focus on its search field.
 // - ArrowDown and ArrowUp move through the entries, and Home and End move to
 //   the first and the last.
 // - ArrowDown in the search field moves to the first entry, and Enter there
 //   picks it.
 // - Escape closes the picker, and the focus goes back to the button.
-// A click on the button opens the picker with the focus on the search field,
-// or else leaves the focus on the button, where ArrowDown enters the picker.
 
 import type { BlockRegistry, Board, Json, PluginClassId } from "@blockr/core";
 import { createContext, useCallback, useContext, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -86,9 +86,6 @@ function searched(entries: PickerEntries, query: string): PickerEntries {
   return { blocks: entries.blocks.filter(finds), plugins: entries.plugins.filter(finds) };
 }
 
-// Where the picker lists more entries than this, it offers a search field.
-const SEARCH_ABOVE = 8;
-
 // The open picker.
 interface Picking {
   // The button that opened it, with an id of the button's own.
@@ -122,11 +119,10 @@ const ANCHOR = "--blockr-dock-picker";
 const SEARCH = ".blockr-dock-picker-search";
 const ITEM = '[role="menuitem"]';
 
-// Moves the focus into the picker: onto its search field, or else onto its
-// first entry where `entry` says so.
-function focusInto(el: HTMLElement | null, entry: boolean): void {
-  const into = el?.querySelector<HTMLElement>(SEARCH) ?? (entry ? el?.querySelector<HTMLElement>(ITEM) : undefined);
-  into?.focus();
+// Moves the focus into the picker, onto its search field, which it has unless
+// it has nothing to list.
+function focusInto(el: HTMLElement | null): void {
+  el?.querySelector<HTMLElement>(SEARCH)?.focus();
 }
 
 // Places the picker below the button, or above it where the window has no
@@ -149,7 +145,7 @@ export function PanelPicker({ children }: { readonly children: ReactNode }): Rea
   const [picking, setPicking] = useState<Picking | undefined>(undefined);
   const ref = useRef<HTMLDivElement>(null);
   const enter = useCallback(() => {
-    focusInto(ref.current, true);
+    focusInto(ref.current);
   }, []);
   const state = useMemo(() => ({ picking, setPicking, enter }), [picking, enter]);
 
@@ -157,15 +153,14 @@ export function PanelPicker({ children }: { readonly children: ReactNode }): Rea
     const el = ref.current;
     if (el === null || picking === undefined) return undefined;
     const { button, keyboard } = picking;
-    // After a click, the focus stays on the button, so that ArrowDown there
-    // enters the picker.
-    // Safari does not focus a button that the user clicks, so the dock does.
-    // The browser gives the focus back to the button as the picker closes.
+    // Safari does not focus a button that the user clicks, so the dock does,
+    // and the browser gives the focus back to the button as the picker
+    // closes.
     if (!keyboard) button.focus({ focusVisible: false });
     button.style.setProperty("anchor-name", ANCHOR);
     el.showPopover({ source: button });
     place(el, button);
-    focusInto(el, keyboard);
+    focusInto(el);
     return () => {
       button.style.removeProperty("anchor-name");
       el.hidePopover();
@@ -292,7 +287,7 @@ function PickerMenu({ near }: { readonly near: Panel | undefined }): ReactElemen
     const last = all.length - 1;
     let next: HTMLElement | null | undefined;
     if (event.key === "ArrowDown") next = all[at === last ? 0 : at + 1];
-    else if (event.key === "ArrowUp") next = at === 0 ? (search.current ?? all[last]) : all[at - 1];
+    else if (event.key === "ArrowUp") next = at === 0 ? search.current : all[at - 1];
     else if (event.key === "Home") next = all[0];
     else if (event.key === "End") next = all[last];
     else return;
@@ -303,22 +298,20 @@ function PickerMenu({ near }: { readonly near: Panel | undefined }): ReactElemen
   return (
     <>
       {captioned}
-      {count > SEARCH_ABOVE ? (
-        <input
-          ref={search}
-          type="search"
-          className="blockr-dock-picker-search"
-          aria-label="Search"
-          placeholder="Search"
-          autoComplete="off"
-          spellCheck={false}
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-          }}
-          onKeyDown={onSearchKey}
-        />
-      ) : null}
+      <input
+        ref={search}
+        type="search"
+        className="blockr-dock-picker-search"
+        aria-label="Search"
+        placeholder="Search"
+        autoComplete="off"
+        spellCheck={false}
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+        }}
+        onKeyDown={onSearchKey}
+      />
       <div ref={menu} role="menu" aria-labelledby={caption} className="blockr-dock-picker-menu" onKeyDown={onMenuKey}>
         {shown.blocks.map((entry) => (
           <Item key={entry.id} entry={entry} pick={pick} />

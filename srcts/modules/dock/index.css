@@ -5,10 +5,18 @@
  */
 @import "dockview-react/dist/styles/dockview.css";
 
-/* The dock covers the window, whatever margin the page's body has. */
+/*
+ * The dock covers the window, whatever margin the page's body has.
+ * It draws in the face of core's UIs, such as the Edit board plugin's, the
+ * theme variable --bc-font-sans of core's stylesheet, since the page sets
+ * none.
+ * The tabs, the panel picker and the prompt of an empty view take it from the
+ * dock's root.
+ */
 .blockr-dock {
   position: fixed;
   inset: 0;
+  font-family: var(--bc-font-sans, system-ui, sans-serif);
 }
 
 /*
@@ -39,8 +47,6 @@
  * Each reads a variable of the dock's, which reads a token of blockr.ui's with
  * the token's value in the light scheme as the fallback, or in the dark scheme
  * under the dark theme.
- * The face is that of core's UIs, such as the Edit board plugin's, the theme
- * variable --bc-font-sans of core's stylesheet.
  */
 .blockr-dock {
   --blockr-dock-text: var(--blockr-color-text-default, #111827);
@@ -124,7 +130,6 @@
   justify-content: center;
   gap: 12px;
   color: var(--blockr-dock-text-muted);
-  font-family: var(--bc-font-sans, system-ui, sans-serif);
   font-size: var(--blockr-font-size-sm, 0.8125rem);
 }
 
@@ -172,7 +177,6 @@
   background: var(--blockr-dock-bg-raised);
   color: var(--blockr-dock-text);
   box-shadow: var(--blockr-dock-shadow);
-  font-family: var(--bc-font-sans, system-ui, sans-serif);
   font-size: var(--blockr-font-size-sm, 0.8125rem);
 }
 

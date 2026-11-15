@@ -10,12 +10,16 @@
   A "+" in the header of each tab group opens the panel picker.
   The picker lists the blocks that the active view does not show, then, under
   "Plugins", each plugin with a `ui` that the view does not show.
-  Where it lists more than eight, a search field filters them.
+  A search field at its top, which has the focus as the picker opens, filters
+  them.
   A pick from a tab group's "+" adds the panel as a new tab of that group.
   An empty view says "Start by adding a panel", with a button that opens the
   picker, whose pick goes to the default place.
   Under the board lock, the dock draws no "+", and an empty view says "This
   view is empty".
+  A rail is 500 pixels wide unless a grid gives its width, rather than 260, so
+  that a plugin's UI has room, and `rail()` takes 500 unless given.
+  The dock draws in the face of core's UIs, so its tabs match them.
 
 * The dock draws the active view with dockview, from the board in the client
   (#577).
