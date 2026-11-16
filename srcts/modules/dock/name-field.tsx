@@ -50,8 +50,13 @@ export function NameField({ name, label, className, onSubmit, onDone }: NameFiel
         setText(event.target.value);
       }}
       onKeyDown={(event) => {
-        if (event.key === "Enter" && !event.nativeEvent.isComposing) finish(true);
-        else if (event.key === "Escape") {
+        // Enter's default goes, since the keypress that follows would click
+        // the button that takes the focus back from the field, as the name of
+        // a view in the views menu does.
+        if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+          event.preventDefault();
+          finish(true);
+        } else if (event.key === "Escape") {
           event.preventDefault();
           event.stopPropagation();
           finish(false);

@@ -362,7 +362,9 @@ describe("the views menu in manage mode", () => {
 
     if (field === null) throw new Error("No field.");
     type(field, "Demographics");
-    pressIn(field, "Enter");
+    // Enter's default goes, since the keypress that follows would click the
+    // name, which takes the focus back, and open the field again.
+    expect(pressIn(field, "Enter").defaultPrevented).toBe(true);
     await drawn();
     expect(stateOf(core).views[added]?.name).toBe("Demographics");
     expect(managedRows(menu).at(-1)).toBe("Demographics");
