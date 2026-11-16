@@ -29,16 +29,18 @@
 // Blockr options come as a promise, so these commands read them in their
 // prepare(), and refuse in their run().
 
-import type { Board } from "@blockr/core";
+import type { Board, CommandContext } from "@blockr/core";
 import {
   collapsedRail,
   gridChanges,
   locate,
   placedAt,
+  placeFailures,
   placePanel,
   places,
   prunePanels,
   resized,
+  resizeFailures,
   samePanel,
   showing,
   withStoredShares,
@@ -114,9 +116,9 @@ const KEPT = {
 };
 
 // Refuses where a locked board keeps a part that a command changes.
-function keep(changes: Partial<GridChanges>, locks: LayoutLocks, locked: boolean): void {
-  if (!locked) return;
-  refuse([
+function keep(changes: Partial<GridChanges>, locks: LayoutLocks, context: Pick<CommandContext, "lock" | "refusal">): void {
+  if (!context.lock.board) return;
+  refuse(context, [
     ...(changes.panels === true ? [KEPT.panels] : []),
     ...(changes.arrangement === true && locks.rearrange ? [KEPT.arrangement] : []),
     ...(changes.sizes === true && locks.resize ? [KEPT.sizes] : []),
@@ -133,10 +135,12 @@ export const panelCommands = [
     preflight(board, { view, panel }, { lock }) {
       return !lock.board && boardView(board, view) !== undefined && !shows(board, view, panel) && holdsBlock(board, panel);
     },
-    run(board, { view, panel, near, side, rail }) {
+    run(board, { view, panel, near, side, rail }, context) {
       const held = boardView(board, view);
       if (held === undefined) return [];
-      return { patches: [gridPatch(view, placedAt(held.grid, panel, { near, side, rail }, "distribute"))] };
+      const place = { near, side, rail };
+      refuse(context, placeFailures(held.grid, place));
+      return { patches: [gridPatch(view, placedAt(held.grid, panel, place, "distribute"))] };
     },
   }),
 
@@ -168,8 +172,8 @@ export const panelCommands = [
     async prepare(_board, args, context) {
       return { ...args, locks: await layoutLocks(context) };
     },
-    run(board, { view, panel, near, side, rail, locks }, { lock }) {
-      keep({ arrangement: true }, locks, lock.board);
+    run(board, { view, panel, near, side, rail, locks }, context) {
+      keep({ arrangement: true }, locks, context);
       const held = boardView(board, view);
       if (held === undefined) return [];
       // A panel alone on the rail that it moves to stays there, and the rail
@@ -178,7 +182,10 @@ export const panelCommands = [
       if (rail !== undefined && from !== undefined && "edge" in from && from.edge === rail) {
         if (held.grid.rails?.[rail]?.panels.length === 1) return [];
       }
-      return { patches: [gridPatch(view, placedAt(withoutPanel(held.grid, panel), panel, { near, side, rail }, "split"))] };
+      const place = { near, side, rail };
+      const rest = withoutPanel(held.grid, panel);
+      refuse(context, placeFailures(rest, place));
+      return { patches: [gridPatch(view, placedAt(rest, panel, place, "split"))] };
     },
   }),
 
@@ -206,10 +213,11 @@ export const panelCommands = [
     async prepare(_board, args, context) {
       return { ...args, locks: await layoutLocks(context) };
     },
-    run(board, { view, panel, size, locks }, { lock }) {
-      keep({ sizes: true }, locks, lock.board);
+    run(board, { view, panel, size, locks }, context) {
+      keep({ sizes: true }, locks, context);
       const held = boardView(board, view);
       if (held === undefined) return [];
+      refuse(context, resizeFailures(held.grid, panel, size));
       return { patches: [gridPatch(view, resized(held.grid, panel, size))] };
     },
   }),
@@ -272,12 +280,12 @@ export const panelCommands = [
       const [locks, tolerance] = await Promise.all([layoutLocks(context), gridSizeTolerance(context)]);
       return { ...args, locks, tolerance };
     },
-    run(board, { view, grid, locks, tolerance }, { lock }) {
+    run(board, { view, grid, locks, tolerance }, context) {
       const held = boardView(board, view);
       if (held === undefined) return [];
-      refuse(givenGridFailures(board, grid));
+      refuse(context, givenGridFailures(board, grid));
       const kept = withStoredShares(held.grid, grid, tolerance);
-      keep(gridChanges(held.grid, kept), locks, lock.board);
+      keep(gridChanges(held.grid, kept), locks, context);
       return { patches: [gridPatch(view, kept)] };
     },
   }),

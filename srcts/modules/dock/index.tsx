@@ -64,6 +64,7 @@ import { dockCommands } from "../../commands/index.ts";
 import { defaultState, update } from "../../state/index.ts";
 import { API } from "./api.ts";
 import { trackBusy } from "./busy.ts";
+import { createTooltips } from "./card/index.ts";
 import { DockContext } from "./context.ts";
 import { demandShown } from "./demand.ts";
 import { Dock } from "./dock.tsx";
@@ -106,7 +107,7 @@ const frontend = {
     flushSync(() => {
       root.render(
         <>
-          <DockContext value={{ core, drawn }}>
+          <DockContext value={{ core, plugin, drawn, tooltips: createTooltips() }}>
             <Navbar items={items} busy={busy} sidebar={sidebar} mac={onMac(win)} openFolders={openFolders} />
           </DockContext>
           <Dock core={core} plugin={plugin} settings={settings} narrow={narrow} drawn={drawn} viewsMenu={holdsPart(items, "views")} />

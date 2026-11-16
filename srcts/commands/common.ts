@@ -1,7 +1,8 @@
 // What the dock's commands share: where the board holds the dock's state, how
 // a command reads it and writes patches into it, the checks of what they are
-// given, how a command reads what a locked board keeps of a view's grid, and
-// how far it lets a grid that it is given move the shares of a split.
+// given and how a command refuses what fails them, how a command reads what a
+// locked board keeps of a view's grid, and how far it lets a grid that it is
+// given move the shares of a split.
 
 import type { Board, Command, CommandContext, Delta, Json, JsonSchema } from "@blockr/core";
 import { logicalOption, numericOption } from "../options/index.ts";
@@ -75,9 +76,13 @@ export function givenGridFailures(board: Board, grid: Grid): string[] {
   return [...gridFailures(grid), ...lacking.map((block) => `The grid places the panel of the block "${block}", which the board does not hold.`)];
 }
 
-// Throws an Error that says the failures, where there are any.
-export function refuse(failures: readonly string[]): void {
-  if (failures.length > 0) throw new Error(failures.join(" "));
+// Throws the refusal that the command's context makes of the failures, where
+// there are any.
+// Core's command registry rejects with that refusal as it is, and logs no
+// line of it.
+// It would log a plain Error at error, as a failure of the dock's code.
+export function refuse(context: Pick<CommandContext, "refusal">, failures: readonly string[]): void {
+  if (failures.length > 0) throw context.refusal(failures);
 }
 
 // Whether the board holds the block, where a panel names one.

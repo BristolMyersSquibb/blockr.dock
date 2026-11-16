@@ -3,15 +3,10 @@
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.5#the-docks-own-parts).
 
 import type { CoreApi, Json, JsonBoard } from "@blockr/core";
-import { HELLO, stubCore } from "@blockr/core/stubs";
-import { beforeAll, describe, expect, onTestFinished, test } from "vitest";
+import { stubCore } from "@blockr/core/stubs";
+import { describe, expect, onTestFinished, test } from "vitest";
 import type { DockState, Folder, FolderId, View } from "../../state/index.ts";
-import * as compactOption from "../compact-option/index.ts";
-import * as syncRailsOption from "../sync-rails-option/index.ts";
-import * as viewTabsOption from "../view-tabs-option/index.ts";
-import * as dock from "./index.tsx";
-
-const DOCK = "blockr.dock-dock_plugin";
+import { DOCK, hello as dockHello, modules } from "./testing.ts";
 
 function view(name: string, folder: FolderId | null, index: string): View {
   return { name, folder, index, grid: { orientation: "horizontal", children: [], sizes: [] } };
@@ -68,24 +63,7 @@ async function startViews(options: StartOptions = {}) {
     },
   };
   const frontend: Record<string, Json> = options.navbar === undefined ? {} : { navbar: [...options.navbar] };
-  const hello = {
-    ...HELLO,
-    packages: { ...HELLO.packages, "blockr.dock": "0.2.1" },
-    plugins: {
-      ...Object.fromEntries(Object.entries(HELLO.plugins).filter(([id]) => id !== "blockr.core-basic_frontend_plugin")),
-      [DOCK]: { name: "Dock", version: 1, module: "blockr.dock/js/dock.js" },
-    },
-    options: {
-      ...HELLO.options,
-      compact: { package: "blockr.dock", module: "blockr.dock/compact-option.js", version: 1 },
-      view_tabs: { package: "blockr.dock", module: "blockr.dock/view-tabs-option.js", version: 1 },
-      sync_rails: { package: "blockr.dock", module: "blockr.dock/sync-rails-option.js", version: 1 },
-    },
-    lock: { board: options.locked ?? false, load: false },
-    frontend,
-    board,
-  };
-  const modules = { [DOCK]: dock, compact: compactOption, view_tabs: viewTabsOption, sync_rails: syncRailsOption };
+  const hello = { ...dockHello, lock: { board: options.locked ?? false, load: false }, frontend, board };
   const el = document.createElement("div");
   document.body.append(el);
   const s = await stubCore({ hello, modules, el });
@@ -123,11 +101,13 @@ function popover(el: HTMLElement, label: string): HTMLElement {
   return found;
 }
 
-// The rows of a menu of views and folders, each as its name, indented by two
-// spaces for each folder that holds it, with a folder's name after "+" while
-// it is closed and "-" while it is open, and "*" after the active view's.
+// The rows of the views and folders of a menu, each as its name, indented by
+// two spaces for each folder that holds it, with a folder's name after "+"
+// while it is closed and "-" while it is open, and "*" after the active
+// view's.
 function treeRows(menu: HTMLElement): string[] {
-  return [...menu.querySelectorAll<HTMLElement>(".blockr-dock-views-row")].map((row) => {
+  const rows = [...menu.querySelectorAll<HTMLElement>(".blockr-dock-menu-row")];
+  return rows.filter((row) => row.style.getPropertyValue("--depth") !== "").map((row) => {
     const depth = Number(row.style.getPropertyValue("--depth"));
     const fold = row.getAttribute("aria-expanded");
     const mark = fold === null ? "" : fold === "true" ? "- " : "+ ";
@@ -147,11 +127,15 @@ function managedRows(menu: HTMLElement): string[] {
 
 // The row of a menu whose text is given.
 function row(menu: HTMLElement, text: string): HTMLElement {
-  const found = [...menu.querySelectorAll<HTMLElement>('[role^="menuitem"], .blockr-dock-views-managed')].find(
-    (candidate) => candidate.textContent === text,
-  );
+  const found = [...menu.querySelectorAll<HTMLElement>(".blockr-dock-menu-row")].find((candidate) => candidate.textContent === text);
   if (found === undefined) throw new Error(`No row "${text}".`);
   return found;
+}
+
+// The text of the row that the keyboard is on, the menu's active descendant.
+function activeRow(menu: HTMLElement): string | undefined {
+  const id = menu.getAttribute("aria-activedescendant");
+  return id === null ? undefined : (menu.querySelector(`[id="${id}"]`)?.textContent ?? undefined);
 }
 
 // The button inside the element whose label or text is given.
@@ -206,14 +190,14 @@ describe("the views menu", () => {
 
     expect(menu.getAttribute("role")).toBe("menu");
     expect(treeRows(menu)).toEqual(["Overview", "- Safety", "  Adverse events *", "  + Nested", "Listing"]);
-    // Every row leaves room for a folder's chevron, so that the names line up.
-    expect(row(menu, "Overview").querySelector(".blockr-dock-views-slot")).not.toBeNull();
-    // What a folder holds sits in a group below the folder's row.
-    expect(menu.querySelector('[role="group"][aria-label="Safety"]')?.textContent).toBe("Adverse eventsNested");
-    expect([...menu.querySelectorAll(":scope > [role^='menuitem']")].map((r) => r.textContent).slice(-2)).toEqual([
-      "Manage views",
-      "Show views as tabs",
-    ]);
+    expect(row(menu, "Adverse events").getAttribute("role")).toBe("menuitemradio");
+    // Every row of the views leaves room for a folder's chevron, so that the
+    // names line up, while the rows after them leave none.
+    expect(row(menu, "Overview").querySelector(".blockr-dock-menu-fold")).not.toBeNull();
+    expect(row(menu, "Manage views").querySelector(".blockr-dock-menu-fold")).toBeNull();
+    const rows = [...menu.querySelectorAll(".blockr-dock-menu-row")].map((r) => r.textContent);
+    expect(rows.slice(-2)).toEqual(["Manage views", "Show views as tabs"]);
+    expect(row(menu, "Manage views").previousElementSibling?.className).toBe("blockr-dock-menu-divider");
   });
 
   test("opens and closes a folder in place, and keeps which folders are open on the screen, out of the board", async () => {
@@ -273,29 +257,34 @@ describe("the views menu", () => {
     await drawn();
     const menu = popover(el, "Views");
 
-    // The keyboard opens the menu with the focus on the active view.
-    expect(document.activeElement?.textContent).toBe("Adverse events");
-    press("ArrowDown");
-    expect(document.activeElement?.textContent).toBe("Nested");
-    press("ArrowRight");
-    await drawn();
+    // The keyboard opens the menu on the active view, while the focus stays on
+    // the menu.
+    expect(document.activeElement).toBe(menu);
+    expect(activeRow(menu)).toBe("Adverse events");
+    const step = async (key: string) => {
+      press(key);
+      await drawn();
+    };
+    await step("ArrowDown");
+    expect(activeRow(menu)).toBe("Nested");
+    await step("ArrowRight");
     expect(treeRows(menu)).toContain("    Labs");
-    expect(document.activeElement?.textContent).toBe("Nested");
-    press("ArrowRight");
-    expect(document.activeElement?.textContent).toBe("Labs");
-    press("ArrowLeft");
-    expect(document.activeElement?.textContent).toBe("Nested");
-    press("ArrowLeft");
-    await drawn();
+    expect(activeRow(menu)).toBe("Nested");
+    await step("ArrowRight");
+    expect(activeRow(menu)).toBe("Labs");
+    await step("ArrowLeft");
+    expect(activeRow(menu)).toBe("Nested");
+    await step("ArrowLeft");
     expect(treeRows(menu)).not.toContain("    Labs");
-    press("ArrowLeft");
-    expect(document.activeElement?.textContent).toBe("Safety");
-    press("Home");
-    expect(document.activeElement?.textContent).toBe("Overview");
-    press("ArrowUp");
-    expect(document.activeElement?.textContent).toBe("Show views as tabs");
-    press("End");
-    expect(document.activeElement?.textContent).toBe("Show views as tabs");
+    await step("ArrowLeft");
+    expect(activeRow(menu)).toBe("Safety");
+    await step("Home");
+    expect(activeRow(menu)).toBe("Overview");
+    await step("ArrowUp");
+    expect(activeRow(menu)).toBe("Show views as tabs");
+    await step("ArrowUp");
+    await step("Enter");
+    expect(popover(el, "Manage views").getAttribute("role")).toBe("dialog");
   });
 
   test("turns the line of tabs on and off from the row Show views as tabs, whose check shows while it is on", async () => {
@@ -327,6 +316,7 @@ describe("the views menu in manage mode", () => {
 
     expect(menu.getAttribute("role")).toBe("dialog");
     expect(managedRows(menu)).toEqual(["Overview", "Safety", "  Adverse events", "  Nested", "Listing"]);
+    expect(document.activeElement).toBe(menu);
     expect([...menu.querySelectorAll(".blockr-dock-views-foot button")].map((b) => b.textContent)).toEqual([
       "New view",
       "New folder",
@@ -346,6 +336,14 @@ describe("the views menu in manage mode", () => {
     await drawn();
     menu = await openMenu(el);
     expect(menu.getAttribute("role")).toBe("menu");
+
+    // Escape closes manage mode, and the focus goes back to the button.
+    click(row(menu, "Manage views"));
+    await drawn();
+    pressIn(popover(el, "Manage views"), "Escape");
+    await drawn();
+    expect(el.querySelector('[aria-label="Manage views"]')).toBeNull();
+    expect(document.activeElement).toBe(viewsButton(el));
   });
 
   test("adds a view last at the top, makes it active, and opens its name in a field that renames it", async () => {
@@ -589,31 +587,6 @@ describe("the line of tabs", () => {
     expect(bar(el).dataset.tabs).toBeUndefined();
     expect(el.querySelector<HTMLElement>(".blockr-dock")?.dataset.tabs).toBeUndefined();
   });
-});
-
-// The tests run on happy-dom, which has no Popover API, with which the menus
-// show in the top layer and hide again.
-// So the tests give every element a showPopover() that does nothing, and read
-// what the menus draw.
-// A browser keeps the focus off a popover that is hidden, which React would
-// otherwise focus again as it ends the commit that closed the menu, since
-// the popover had the focus before.
-// So hidePopover() takes the focus out of the popover once the commit ends.
-beforeAll(() => {
-  if (!("showPopover" in HTMLElement.prototype)) {
-    Object.defineProperty(HTMLElement.prototype, "showPopover", { configurable: true, value: () => undefined });
-  }
-  if (!("hidePopover" in HTMLElement.prototype)) {
-    Object.defineProperty(HTMLElement.prototype, "hidePopover", {
-      configurable: true,
-      value(this: HTMLElement) {
-        queueMicrotask(() => {
-          const focused = this.ownerDocument.activeElement;
-          if (focused instanceof HTMLElement && this.contains(focused)) focused.blur();
-        });
-      },
-    });
-  }
 });
 
 // Has each row of the menu in manage mode sit 34 pixels below the one before,

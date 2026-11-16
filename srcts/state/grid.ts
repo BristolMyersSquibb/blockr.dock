@@ -310,17 +310,17 @@ export function locate(grid: Grid, panel: Panel): Location | undefined {
   return held === undefined ? undefined : { edge: held[0] };
 }
 
-// Why a grid cannot take a panel at a place, in a sentence, or undefined
+// Why a grid cannot take a panel at a place, in a sentence each, or none
 // where it can: the panel that `near` names has to be in the grid, and one
 // on a rail takes a panel only within.
-export function placeFailure(grid: Grid, place: Place): string | undefined {
-  if (place.rail !== undefined || place.near === undefined) return undefined;
+export function placeFailures(grid: Grid, place: Place): string[] {
+  if (place.rail !== undefined || place.near === undefined) return [];
   const at = locate(grid, place.near);
-  if (at === undefined) return `The view does not show ${panelName(place.near)}, which near names.`;
+  if (at === undefined) return [`The view does not show ${panelName(place.near)}, which near names.`];
   if ("edge" in at && (place.side ?? "within") !== "within") {
-    return `The view shows ${panelName(place.near)}, which near names, on a rail, which takes a panel only within.`;
+    return [`The view shows ${panelName(place.near)}, which near names, on a rail, which takes a panel only within.`];
   }
-  return undefined;
+  return [];
 }
 
 // The grid with a panel placed where `place` says, which the grid holds
@@ -339,10 +339,9 @@ export function placeFailure(grid: Grid, place: Place): string | undefined {
 // drop on the dock's edge gives it, or half of the whole grid where the top
 // split divides the other way, with either.
 // A panel on a rail that the view lacks opens the rail, at the default width.
-// It throws where placeFailure() names a failure.
+// A command checks the place with placeFailures() first, and refuses a place
+// that fails.
 export function placedAt(grid: Grid, panel: Panel, place: Place, sizing: "split" | "distribute"): Grid {
-  const failure = placeFailure(grid, place);
-  if (failure !== undefined) throw new Error(failure);
   if (place.rail !== undefined) return onRail(grid, place.rail, panel);
   const side = place.side ?? "within";
   if (place.near === undefined) return side === "within" ? placePanel(grid, panel) : atEdge(grid, panel, side);
@@ -446,6 +445,15 @@ function withSplit(grid: Grid, path: readonly number[], fn: (split: Split) => Sp
   return withNode(grid, path, (node) => (isTabGroup(node) ? node : fn(node)));
 }
 
+// The split at `path` inside a split, the split itself for an empty path, or
+// undefined where the path leads to a tab group or to nothing.
+function splitAt(split: Split, path: readonly number[]): Split | undefined {
+  const [i, ...deeper] = path;
+  if (i === undefined) return split;
+  const child = split.children[i];
+  return child === undefined || isTabGroup(child) ? undefined : splitAt(child, deeper);
+}
+
 // The grid with the tab group or rail that holds a panel showing it.
 export function showing(grid: Grid, panel: Panel): Grid {
   const at = locate(grid, panel);
@@ -461,12 +469,28 @@ export function collapsedRail(grid: Grid, edge: Edge, collapsed: boolean): Grid 
   return rail === undefined ? grid : { ...grid, rails: { ...grid.rails, [edge]: { ...rail, collapsed } } };
 }
 
+// Why the tab group that holds a panel cannot take `size` of the split that
+// holds it, in a sentence each, or none where it can: a tab group takes a
+// share below 1, and one that fills its split alone keeps its share of 1.
+// A panel on a rail fails neither, since `size` is then the rail's width.
+export function resizeFailures(grid: Grid, panel: Panel, size: number): string[] {
+  const at = locate(grid, panel);
+  if (at === undefined || "edge" in at) return [];
+  const failures: string[] = [];
+  if (size >= 1) failures.push(`A tab group takes a share of its split below 1, which ${String(size)} is not.`);
+  const split = splitAt(grid, at.path.slice(0, -1));
+  if (split !== undefined && split.children.length < 2) {
+    failures.push(`The tab group that holds ${panelName(panel)} fills its split alone, so its share stays 1.`);
+  }
+  return failures;
+}
+
 // The grid with the tab group that holds a panel taking `size` of the split
 // that holds it, a ratio between 0 and 1, while the other children share the
 // rest in proportion, or with the rail that holds it `size` pixels wide while
 // it is open.
-// It throws where the tab group fills its split alone, and where `size` is
-// not below 1 for a tab group.
+// A command checks the size with resizeFailures() first, and refuses a size
+// that fails.
 export function resized(grid: Grid, panel: Panel, size: number): Grid {
   const at = locate(grid, panel);
   if (at === undefined) return grid;
@@ -474,14 +498,8 @@ export function resized(grid: Grid, panel: Panel, size: number): Grid {
     const rail = grid.rails?.[at.edge];
     return rail === undefined ? grid : { ...grid, rails: { ...grid.rails, [at.edge]: { ...rail, size } } };
   }
-  if (size >= 1) {
-    throw new Error(`A tab group takes a share of its split below 1, which ${String(size)} is not.`);
-  }
   const i = at.path.at(-1) ?? 0;
   return withSplit(grid, at.path.slice(0, -1), (split) => {
-    if (split.children.length < 2) {
-      throw new Error(`The tab group that holds ${panelName(panel)} fills its split alone, so its share stays 1.`);
-    }
     const shares = fitted(split.sizes, split.children.length);
     const rest = sum(shares) - (shares[i] ?? 0);
     return { ...split, sizes: shares.map((share, j) => (j === i ? size : (share / rest) * (1 - size))) };

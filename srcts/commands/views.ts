@@ -75,13 +75,13 @@ export const viewCommands = [
       const folder = args.folder ?? null;
       return editable(state, lock.board) && folderOrTop(state, folder) && fits(state, folder, args.before);
     },
-    run(board, args, { mintId }) {
+    run(board, args, context) {
       const state = dockState(board);
       if (state === undefined) return [];
       const grid = args.grid ?? EMPTY;
-      refuse(givenGridFailures(board, grid));
+      refuse(context, givenGridFailures(board, grid));
       const folder = args.folder ?? null;
-      const id = mintId(taken(state));
+      const id = context.mintId(taken(state));
       const view = {
         name: args.name ?? nextName("View", Object.values(state.views).map((other) => other.name)),
         folder,

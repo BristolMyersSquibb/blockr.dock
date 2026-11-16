@@ -1,11 +1,13 @@
 /*
  * The stylesheet of the dock's module, which the build bundles into
- * inst/js/dock.css: dockview's stylesheet, then the dock's own rules, which
- * style only what sits under the dock's root, `.blockr-dock`, under the bar
- * above it, `.blockr-dock-bar`, and under the column of toasts beside it,
+ * inst/js/dock.css: dockview's stylesheet, the card's (./card/card.css),
+ * then the dock's own rules, which style only what sits under the dock's
+ * root, `.blockr-dock`, under the bar above it, `.blockr-dock-bar`, and under
+ * the column of toasts beside it,
  * `.blockr-dock-toasts`.
  */
 @import "dockview-react/dist/styles/dockview.css";
+@import "./card/card.css";
 
 /*
  * The bar and the dock below it cover the window, whatever margin the page's
@@ -71,7 +73,7 @@
 /*
  * The dock's own pieces read the design tokens as dockview's variables do
  * below: the "+" of a tab group, the prompt of an empty view, the panel
- * picker, and the bar with its menus.
+ * picker, the bar, the dock's menus and the block cards (./card/card.css).
  * Each reads a variable of the dock's, which reads a token of blockr.ui's with
  * the token's value in the light scheme as the fallback, or in the dark scheme
  * under the dark theme.
@@ -102,14 +104,15 @@
     --blockr-color-border-accent-subtle,
     color-mix(in srgb, #2563eb 35%, transparent)
   );
-  --blockr-dock-text-danger: var(--blockr-color-text-danger, #b91c1c);
-  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, #fef2f2);
-  --blockr-dock-border-danger: var(--blockr-color-border-danger, #dc2626);
   --blockr-dock-border-danger-subtle: var(
     --blockr-color-border-danger-subtle,
     color-mix(in srgb, #dc2626 35%, transparent)
   );
   --blockr-dock-logo: var(--blockr-logo, #089e76);
+  --blockr-dock-text-danger: var(--blockr-color-text-danger, #b91c1c);
+  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, #fef2f2);
+  --blockr-dock-border-danger: var(--blockr-color-border-danger, #dc2626);
+  --blockr-dock-focus-ring: var(--blockr-focus-ring, 0 0 0 3px rgb(37 99 235 / 0.12));
 }
 
 [data-bc-theme="dark"] .blockr-dock,
@@ -137,14 +140,15 @@
     --blockr-color-border-accent-subtle,
     color-mix(in srgb, #3b82f6 35%, transparent)
   );
-  --blockr-dock-text-danger: var(--blockr-color-text-danger, #f87171);
-  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1));
-  --blockr-dock-border-danger: var(--blockr-color-border-danger, #f87171);
   --blockr-dock-border-danger-subtle: var(
     --blockr-color-border-danger-subtle,
     color-mix(in srgb, #f87171 35%, transparent)
   );
   --blockr-dock-logo: var(--blockr-logo, #089e76);
+  --blockr-dock-text-danger: var(--blockr-color-text-danger, #f87171);
+  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1));
+  --blockr-dock-border-danger: var(--blockr-color-border-danger, #f87171);
+  --blockr-dock-focus-ring: var(--blockr-focus-ring, 0 0 0 3px rgb(96 165 250 / 0.28));
 }
 
 /*
@@ -226,30 +230,39 @@
 }
 
 /*
- * The panel picker, a popover in the top layer, at least 260 pixels wide, as
- * today's Blockr.menu.
- * It sits below the button that opened it, which takes the anchor name
- * --blockr-dock-picker while it is open, and flips where the window has no
- * room for it there.
+ * A menu of the dock (./menu.tsx): the panel picker, the menus of the bar,
+ * and the menu and the "+" menu of a block's card.
+ * It is the design system's floating surface, a popover in the top layer:
+ * bg-raised, 1px border, radius 8 and shadow-md, 180 to 320 pixels wide and
+ * up to 320 pixels tall, then scrolling under its search.
+ * Its rows are 34 pixels tall at 14px, radius 4 and 10px to the sides,
+ * inside 6px of padding.
+ * It sits 4px below the button that opened it, lined up with the button's
+ * left edge, or its right edge for a menu that its data-align puts at the
+ * end, and a menu inside a menu sits 4px beside the row that opened it.
+ * Each flips where the window has no room for it there.
+ * The button or the row takes an anchor name of the menu's depth while the
+ * menu is open, which the menu names as its anchor.
  */
-.blockr-dock-picker {
+.blockr-dock-menu {
   box-sizing: border-box;
-  min-width: 260px;
-  max-width: min(360px, calc(100vw - 16px));
-  max-height: min(420px, calc(100vh - 16px));
-  overflow: auto;
-  padding: 4px;
+  min-width: 180px;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: min(320px, calc(100vh - 16px));
+  overflow-y: auto;
+  padding: 6px;
   border: 1px solid var(--blockr-dock-border);
   border-radius: var(--blockr-radius-lg, 8px);
   background: var(--blockr-dock-bg-raised);
-  color: var(--blockr-dock-text);
   box-shadow: var(--blockr-dock-shadow);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-dock-text);
+  font-family: var(--bc-font-sans, system-ui, sans-serif);
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  outline: none;
 }
 
 @supports (position-area: block-end) {
-  .blockr-dock-picker {
-    position-anchor: --blockr-dock-picker;
+  .blockr-dock-menu {
     position-area: block-end span-inline-end;
     position-try-fallbacks:
       flip-block,
@@ -258,113 +271,259 @@
     inset: auto;
     margin: 4px 0;
   }
+
+  .blockr-dock-menu[data-align="end"] {
+    position-area: block-end span-inline-start;
+  }
+
+  .blockr-dock-menu:not([data-depth="0"]) {
+    position-area: inline-end span-block-end;
+    position-try-fallbacks:
+      flip-inline,
+      flip-block,
+      flip-block flip-inline;
+    margin: 0 4px;
+  }
 }
 
-/*
- * Without anchor positioning, script places the picker in the window
- * (./popover.ts).
- */
+/* Without anchor positioning, script places the menu in the window. */
 @supports not (position-area: block-end) {
-  .blockr-dock-picker {
+  .blockr-dock-menu {
     position: fixed;
     inset: auto;
     margin: 0;
   }
 }
 
-.blockr-dock-picker-caption {
+/* One muted line on top, saying what the menu is for. */
+.blockr-dock-menu-caption {
   margin: 0;
-  padding: 6px 8px 4px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: 600;
-}
-
-.blockr-dock-picker-search {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0 0 4px;
-  padding: 4px 8px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-md, 6px);
-  background: var(--blockr-dock-bg-field);
-  color: inherit;
-  font: inherit;
-}
-
-.blockr-dock-picker-search:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
-  outline-offset: -1px;
-}
-
-.blockr-dock-picker-menu,
-.blockr-dock-picker-menu > [role="group"] {
-  display: grid;
-  gap: 2px;
-}
-
-/* The heading "Plugins", below a line where blocks come before it. */
-.blockr-dock-picker-menu > [role="group"]:not(:first-child) {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid var(--blockr-dock-border);
-}
-
-.blockr-dock-picker-heading {
-  padding: 4px 8px 2px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.blockr-dock-picker-item {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: var(--blockr-radius-md, 6px);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-.blockr-dock-picker-item:hover,
-.blockr-dock-picker-item:focus-visible {
-  background: var(--blockr-dock-bg-hover);
-}
-
-.blockr-dock-picker-item:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
-  outline-offset: -2px;
-}
-
-.blockr-dock-picker-name {
-  min-width: 0;
+  padding: 0 10px 4px;
   overflow: hidden;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* The name of a block's class, beside the block's name. */
-.blockr-dock-picker-type {
-  flex: none;
-  margin-left: auto;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
+/*
+ * The search: part of the menu, not a field, 30 pixels tall at 13px, with no
+ * focus ring, since it holds the focus as long as the menu is open.
+ * It stays on top while the rows scroll under it.
+ */
+.blockr-dock-menu-search {
+  position: sticky;
+  top: -6px;
+  z-index: 1;
+  margin: 0 -6px 4px;
+  padding: 4px 6px;
+  background: var(--blockr-dock-bg-raised);
 }
 
-.blockr-dock-picker-note {
+.blockr-dock-menu-search input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 30px;
   margin: 0;
-  padding: 6px 8px;
+  padding: 0 9px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-dock-bg-field);
+  color: var(--blockr-dock-text);
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  outline: none;
+}
+
+.blockr-dock-menu-search input::placeholder {
   color: var(--blockr-dock-text-muted);
+}
+
+/*
+ * A group's title: 12px, weight 600, uppercase and muted, inset to the rows'
+ * text, and on top while its rows scroll under it.
+ */
+.blockr-dock-menu-title {
+  position: sticky;
+  top: 32px;
+  padding: 8px 10px 4px;
+  background: var(--blockr-dock-bg-raised);
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/*
+ * A row is a button, a link or, in a menu with a search, an option, each
+ * drawn alike.
+ * A row that a fold holds sits 16px deeper for each fold that holds it.
+ */
+.blockr-dock-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 34px;
+  margin: 0;
+  padding: 7px 10px 7px calc(10px + var(--depth, 0) * 16px);
+  border: 0;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: var(--blockr-dock-text);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blockr-dock-menu-row[data-active],
+.blockr-dock-menu-row[aria-haspopup][aria-expanded="true"] {
+  background: var(--blockr-dock-bg-hover);
+}
+
+/* The current pick of a set, as the active view, is set in weight 600. */
+.blockr-dock-menu-row[role="menuitemradio"][aria-checked="true"] {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+
+/* A toggle that is on ends on a check, at the row's weight. */
+.blockr-dock-menu-row .blockr-dock-check {
+  flex: none;
+}
+
+/*
+ * The chevron of a fold, before its label, which points right while the fold
+ * is closed and down while it is open, as the design system's folds do.
+ * Every row of a group that has a fold leaves its room, so that the labels
+ * line up.
+ */
+.blockr-dock-menu-fold {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+}
+
+.blockr-dock-menu-fold .blockr-dock-chevron {
+  transition: transform var(--blockr-transition, 0.15s ease);
+}
+
+[aria-expanded="false"] > .blockr-dock-menu-fold .blockr-dock-chevron {
+  transform: rotate(-90deg);
+}
+
+/* A disabled row is listed, but takes no hover, and its tooltip says why. */
+.blockr-dock-menu-row[aria-disabled="true"] {
+  color: var(--blockr-dock-text-disabled);
+  cursor: default;
+}
+
+.blockr-dock-menu-row[aria-disabled="true"][data-active] {
+  background: transparent;
+}
+
+/* The chevron of a row that opens a menu beside it. */
+.blockr-dock-menu-row .blockr-dock-chevron {
+  flex: none;
+  color: var(--blockr-dock-text-muted);
+}
+
+/* A status: text in the muted colour, which runs nothing. */
+.blockr-dock-menu-status {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+/* A row that destroys something is plain at rest, and red only as the row
+   that the pointer or the keyboard is on. */
+.blockr-dock-menu-row[data-danger][data-active] {
+  background: var(--blockr-dock-bg-danger);
+  color: var(--blockr-dock-text-danger);
+}
+
+.blockr-dock-menu-lead {
+  display: inline-flex;
+  flex-shrink: 0;
+  justify-content: center;
+  min-width: 16px;
+  color: var(--blockr-dock-text-muted);
+}
+
+.blockr-dock-menu-row[data-active] .blockr-dock-menu-lead,
+.blockr-dock-menu-row[data-active] .blockr-dock-menu-meta,
+.blockr-dock-menu-row[data-active] .blockr-dock-menu-detail {
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-menu-row[data-danger][data-active] .blockr-dock-menu-lead {
+  color: var(--blockr-dock-text-danger);
+}
+
+.blockr-dock-menu-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Muted text after the label, as the name of a block's class. */
+.blockr-dock-menu-detail {
+  flex-shrink: 0;
+  margin-left: 12px;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+/* Text in a monospaced face after the label, as the id of a block. */
+.blockr-dock-menu-meta {
+  flex-shrink: 0;
+  margin-left: 12px;
+  padding-left: 16px;
+  color: var(--blockr-dock-text-muted);
+  font-family: var(--blockr-font-mono, "SF Mono", "Fira Code", "Consolas", "Monaco", monospace);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+/* The neutral badge of a package: an 18 pixel capsule at 11px, weight 500. */
+.blockr-dock-menu-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: 18px;
+  margin-left: 12px;
+  padding: 0 7px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-pill, 999px);
+  background: var(--blockr-dock-bg-subtle);
+  color: var(--blockr-dock-text-muted);
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+
+.blockr-dock-menu-divider {
+  height: 1px;
+  margin: 6px -6px;
+  border: 0;
+  background: var(--blockr-dock-border);
+}
+
+/* What the menu says where it lists no row, or keeps none of its search. */
+.blockr-dock-menu-note {
+  margin: 0;
+  padding: 10px;
+  color: var(--blockr-dock-text-muted);
+  font-style: italic;
+  text-align: center;
 }
 
 /*
@@ -951,152 +1110,6 @@ button.blockr-dock-bar-name:hover {
 }
 
 /*
- * The menus of the bar (./menu.tsx), in the look of a menu of actions in the
- * design system: the raised surface with the default edge, a radius of 8 and
- * the shadow of a menu, 6 pixels of inner padding, and rows 34 pixels high in
- * 14 pixel text, with a radius of 4 and 10 pixels at each side.
- * A menu is 180 to 320 pixels wide, sized to what it holds.
- * It sits 4 pixels below its button, or beside its row for a menu inside a
- * menu, and flips where the window has no room there.
- */
-.blockr-dock-menu {
-  box-sizing: border-box;
-  min-width: 180px;
-  max-width: min(320px, calc(100vw - 16px));
-  max-height: min(320px, calc(100vh - 16px));
-  overflow: auto;
-  padding: 6px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-lg, 8px);
-  background: var(--blockr-dock-bg-raised);
-  color: var(--blockr-dock-text);
-  box-shadow: var(--blockr-dock-shadow);
-  font-family: var(--bc-font-sans, system-ui, sans-serif);
-  font-size: var(--blockr-font-size-base, 0.875rem);
-}
-
-.blockr-dock-menu:focus-visible {
-  outline: none;
-}
-
-@supports (position-area: block-end) {
-  .blockr-dock-menu {
-    position-area: block-end span-inline-end;
-    position-try-fallbacks:
-      flip-block,
-      flip-inline,
-      flip-block flip-inline;
-    inset: auto;
-    margin: 4px 0;
-  }
-
-  .blockr-dock-menu:not([data-depth="0"]) {
-    position-area: inline-end span-block-end;
-    position-try-fallbacks:
-      flip-inline,
-      flip-block,
-      flip-block flip-inline;
-    margin: 0 4px;
-  }
-}
-
-/*
- * Without anchor positioning, script places a menu in the window
- * (./popover.ts).
- */
-@supports not (position-area: block-end) {
-  .blockr-dock-menu {
-    position: fixed;
-    inset: auto;
-    margin: 0;
-  }
-}
-
-.blockr-dock-menu-item {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 34px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: start;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.blockr-dock-menu-item:hover:not([aria-disabled="true"]),
-.blockr-dock-menu-item:focus-visible,
-.blockr-dock-menu-item[aria-haspopup][aria-expanded="true"] {
-  background: var(--blockr-dock-bg-hover);
-}
-
-.blockr-dock-menu-item:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
-  outline-offset: -2px;
-}
-
-.blockr-dock-menu-item[aria-disabled="true"] {
-  color: var(--blockr-dock-text-disabled);
-  cursor: default;
-}
-
-.blockr-dock-menu-label {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.blockr-dock-menu-item .blockr-dock-chevron {
-  flex: none;
-  color: var(--blockr-dock-text-muted);
-}
-
-.blockr-dock-menu-status {
-  display: flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 10px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-}
-
-/*
- * A divider between two groups of a menu's rows: a rule from edge to edge,
- * with the menu's inner padding above and below it.
- */
-.blockr-dock-menu-divider {
-  height: 1px;
-  margin: 6px -6px;
-  background: var(--blockr-dock-border);
-}
-
-/*
- * A row that acts on the menu rather than picks from it, as "Manage views",
- * in the muted colour, which turns default under the pointer.
- * A row that is on, as "Show views as tabs", ends on a check.
- */
-.blockr-dock-menu-quiet {
-  color: var(--blockr-dock-text-muted);
-}
-
-.blockr-dock-menu-quiet:hover,
-.blockr-dock-menu-quiet:focus-visible {
-  color: var(--blockr-dock-text);
-}
-
-.blockr-dock-menu-item .blockr-dock-check {
-  flex: none;
-}
-
-/*
  * The views menu on the bar (./views-menu.tsx): a quiet button with the active
  * view's name and the chevron, in the default colour, as today's, since the
  * name is the board's rather than an action's, and a short rule after it.
@@ -1216,51 +1229,17 @@ button.blockr-dock-bar-name:hover {
 }
 
 /*
- * The menus of views and folders, the views menu and the menu of a folder's
- * tab, at least 220 pixels wide, as today's views menu.
- * A row sits 16 pixels deeper for each folder that holds it.
- * Where a folder's row shows, every row leaves room for the folder's chevron,
- * which points right while the folder is closed and down while it is open, as
- * a fold of the design system does.
- * The active view's row is set in weight 600.
- */
-.blockr-dock-views-menu {
-  min-width: 220px;
-}
-
-.blockr-dock-views-row {
-  padding-inline-start: calc(10px + var(--depth, 0) * 16px);
-}
-
-.blockr-dock-views-row[aria-checked="true"] {
-  font-weight: var(--blockr-font-weight-semibold, 600);
-}
-
-.blockr-dock-views-slot {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 12px;
-  color: var(--blockr-dock-text-muted);
-}
-
-.blockr-dock-views-slot .blockr-dock-chevron,
-.blockr-dock-views-fold .blockr-dock-chevron {
-  transition: transform var(--blockr-transition, 0.15s ease);
-}
-
-[aria-expanded="false"] > .blockr-dock-views-slot .blockr-dock-chevron,
-.blockr-dock-views-fold[aria-expanded="false"] .blockr-dock-chevron {
-  transform: rotate(-90deg);
-}
-
-/*
- * The views menu in manage mode.
+ * The views menu in manage mode, a popover in the look of the dock's menus,
+ * at least 260 pixels wide, so that its foot holds its three buttons.
  * A row holds its grip, a folder's chevron, which opens and closes the folder,
  * the name, which shows a field's edge under the pointer, since a click
  * renames it, and the cross, which turns red under the pointer.
+ * A row sits 16 pixels deeper for each folder that holds it.
  */
+.blockr-dock-views-manage {
+  min-width: 260px;
+}
+
 .blockr-dock-views-managed {
   position: relative;
   box-sizing: border-box;
@@ -1272,7 +1251,9 @@ button.blockr-dock-bar-name:hover {
   border-radius: var(--blockr-radius-sm, 4px);
 }
 
-.blockr-dock-views-managed .blockr-dock-views-slot {
+/* The room of a folder's chevron, which a view's row leaves. */
+.blockr-dock-views-slot {
+  flex: none;
   width: 22px;
 }
 
@@ -1315,6 +1296,15 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-views-fold:hover {
   background: var(--blockr-dock-bg-hover);
   color: var(--blockr-dock-text);
+}
+
+/* A folder's chevron points right while it is closed, and down while open. */
+.blockr-dock-views-fold .blockr-dock-chevron {
+  transition: transform var(--blockr-transition, 0.15s ease);
+}
+
+.blockr-dock-views-fold[aria-expanded="false"] .blockr-dock-chevron {
+  transform: rotate(-90deg);
 }
 
 .blockr-dock-views-remove:hover {

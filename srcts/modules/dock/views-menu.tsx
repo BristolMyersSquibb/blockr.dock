@@ -1,16 +1,15 @@
 // The views menu, the dock's own part `views` of the bar (./navbar.tsx)
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.5#the-docks-own-parts).
-// It lists the views and folders of the navigation, each in the order that its
-// `index` gives within its folder, with what an open folder holds below the
-// folder's row (./views-list.ts).
-// A click on a folder's row opens or closes it in place.
+// It is one of the dock's menus (./menu.tsx), which lists the views and
+// folders of the navigation, each in the order that its `index` gives within
+// its folder, with what an open folder holds below the folder's row
+// (./views-list.ts).
+// A folder is a fold of the menu, which opens and closes in place.
 // Which folders are open stays on the screen, outside the board
 // (./open-folders.ts).
 // As the menu opens, the folders that hold the active view open, so that the
-// menu shows the active view, whose row it sets in weight 600, as blockr.ui's
-// design system marks the current pick.
-// A pick of a view runs blockr.dock-activate_view, under every lock, and
-// closes the menu.
+// menu shows the active view, whose row it sets as the current pick.
+// A pick of a view runs blockr.dock-activate_view, under every lock.
 // The bar shows the active view's name on the menu's button, and a short rule
 // after it sets the menu apart from the parts after it.
 //
@@ -18,8 +17,9 @@
 // and folders, through the dock's commands, in its manage mode, as today's
 // views menu adds, renames, reorders and removes views (view_nav_ui() in
 // R/dock-view.R and inst/assets/js/view-binding.js, at 655e323):
-// - The row "Manage views", below the list, turns the menu to manage mode, and
-//   Done turns it back. Closing the menu leaves manage mode too.
+// - The row "Manage views", below the list, turns the menu to manage mode, a
+//   popover of its own in the menu's place, and Done turns it back.
+//   Closing it leaves manage mode too, so that the menu opens on the list.
 // - In manage mode, each row has a grip, by which a drag moves the view or
 //   folder (./views-list.ts), and a cross, which asks in the row before it
 //   removes the view or folder. The last view has no cross, since the dock
@@ -30,7 +30,11 @@
 //   "New folder" adds a folder last at the top. Each opens its new name in a
 //   field.
 // - The row "Show views as tabs" turns the board option view_tabs on and off,
-//   through core's command blockr.core-set_option, as today's row does.
+//   through core's command blockr.core-set_option, as today's row does, and
+//   ends on a check while it is on.
+// Manage mode is a dialog, through whose controls Tab moves, and which Escape
+// closes, but in a field or a row that asks, where Escape gives up the edit or
+// the question alone.
 //
 // While the board option view_tabs is on, the views menu leaves the bar's row
 // for a line of tabs under it, followed by the menu as a chevron alone, as
@@ -46,13 +50,14 @@
 
 import type { CoreApi, Json } from "@blockr/core";
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { CSSProperties, FocusEvent, KeyboardEvent, PointerEvent, ReactElement, RefObject } from "react";
+import type { CSSProperties, FocusEvent, PointerEvent, ReactElement } from "react";
 import { dockState } from "../../commands/index.ts";
 import { foldersHolding, inFolder, sameEntry } from "../../state/index.ts";
 import type { DockState, Entry, FolderId, ViewId } from "../../state/index.ts";
-import { useBoard, useDock } from "./context.ts";
-import { CheckIcon, Chevron, GripIcon, PlusIcon, RemoveIcon, SlidersIcon } from "./icons.tsx";
-import { MenuPopover, moveFocus, useMenuButton } from "./menu.tsx";
+import { runEdit, useBoard, useDock } from "./context.ts";
+import { Chevron, GripIcon, PlusIcon, RemoveIcon, SlidersIcon } from "./icons.tsx";
+import { Menu, useMenuButton, useMenuSurface } from "./menu.tsx";
+import type { Closing, MenuRow } from "./menu.tsx";
 import { NameField } from "./name-field.tsx";
 import type { OpenFolders } from "./open-folders.ts";
 import { cutTip } from "./tips.ts";
@@ -70,11 +75,7 @@ const MOVE_VIEW = "blockr.dock-move_view";
 const MOVE_FOLDER = "blockr.dock-move_folder";
 const SET_OPTION = "blockr.core-set_option";
 
-// The rows of a menu of views and folders that the keys move through: those
-// of every open folder among them, in the order of the page.
-const ROW = '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]';
-
-// How near the top or the bottom edge of the menu a drag scrolls it, and by
+// How near the top or the bottom edge of manage mode a drag scrolls it, and by
 // how much at each move of the pointer, in pixels.
 const EDGE = 24;
 const STEP = 8;
@@ -109,6 +110,14 @@ export function Views({ openFolders }: { readonly openFolders: OpenFolders }): R
   );
 }
 
+// The views menu while it is open: by the button that opened it, whether the
+// keyboard opened it, and whether it is in manage mode.
+interface Opened {
+  readonly anchor: HTMLElement;
+  readonly keyboard: boolean;
+  readonly managing: boolean;
+}
+
 interface ViewsMenuProps {
   readonly state: DockState;
   readonly openFolders: OpenFolders;
@@ -119,28 +128,48 @@ interface ViewsMenuProps {
 
 function ViewsMenu({ state, openFolders, tabs }: ViewsMenuProps): ReactElement {
   const { core } = useDock();
+  const open = useOpenFolders(openFolders);
+  const [opened, setOpened] = useState<Opened | null>(null);
   const button = useRef<HTMLButtonElement>(null);
-  const list = useRef<HTMLDivElement>(null);
-  const [managing, setManaging] = useState(false);
-  const { opened, close, handlers } = useMenuButton(button, list, {
-    onOpen: () => {
-      setManaging(false);
+  const props = useMenuButton(
+    opened !== null,
+    (anchor, keyboard) => {
       openFolders.open(activeHolders(state));
+      setOpened({ anchor, keyboard, managing: false });
     },
-    first: currentRow,
-  });
+    () => {
+      setOpened(null);
+    },
+  );
+  const close = useCallback((how: Closing) => {
+    setOpened(null);
+    if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+  }, []);
   const active = state.active === null ? undefined : state.views[state.active];
   const name = active?.name ?? "Views";
-  // The popover takes the focus from a row that goes, so that the menu keeps
-  // it.
-  const keepFocus = () => {
-    list.current?.focus({ focusVisible: false });
-  };
 
-  const pick = (view: ViewId) => {
-    close();
-    activate(core, state, view);
-  };
+  const actions = (at: Opened): MenuRow[] =>
+    core.lock.board
+      ? []
+      : [
+          {
+            key: "manage",
+            label: "Manage views",
+            lead: <SlidersIcon />,
+            divided: true,
+            onSelect: () => {
+              setOpened({ ...at, managing: true });
+            },
+          },
+          {
+            key: "tabs",
+            label: "Show views as tabs",
+            checked: tabs,
+            onSelect: () => {
+              runEdit(core, SET_OPTION, { id: "view_tabs", value: !tabs });
+            },
+          },
+        ];
 
   return (
     <>
@@ -148,158 +177,73 @@ function ViewsMenu({ state, openFolders, tabs }: ViewsMenuProps): ReactElement {
         ref={button}
         type="button"
         className={tabs ? "blockr-dock-bar-button blockr-dock-views-chevron" : "blockr-dock-bar-button blockr-dock-views-button"}
-        aria-haspopup="menu"
-        aria-expanded={opened !== undefined}
         aria-label={tabs ? "Views" : `Views: ${name}`}
         {...(tabs ? { title: "Views" } : cutTip((cut) => (cut ? name : undefined)))}
-        {...handlers}
+        {...props}
       >
         {tabs ? null : <span className="blockr-dock-bar-label">{name}</span>}
         <Chevron />
       </button>
-      <MenuPopover
-        list={list}
-        label={managing ? "Manage views" : "Views"}
-        depth={0}
-        role={managing ? "dialog" : "menu"}
-        className="blockr-dock-views-menu"
-        close={close}
-        onKeyDown={
-          managing
-            ? undefined
-            : (event) => {
-                moveInTree(event, openFolders);
-              }
-        }
-      >
-        {opened === undefined ? null : managing ? (
-          <Manage
-            state={state}
-            openFolders={openFolders}
-            list={list}
-            onDone={() => {
-              keepFocus();
-              setManaging(false);
-            }}
-          />
-        ) : (
-          <>
-            <Tree state={state} root={null} openFolders={openFolders} onPick={pick} />
-            {core.lock.board ? null : (
-              <>
-                <div role="separator" className="blockr-dock-menu-divider" />
-                <button
-                  type="button"
-                  role="menuitem"
-                  tabIndex={-1}
-                  className="blockr-dock-menu-item blockr-dock-menu-quiet"
-                  onClick={() => {
-                    keepFocus();
-                    setManaging(true);
-                  }}
-                >
-                  <SlidersIcon />
-                  <span className="blockr-dock-menu-label">Manage views</span>
-                </button>
-                <button
-                  type="button"
-                  role="menuitemcheckbox"
-                  aria-checked={tabs}
-                  tabIndex={-1}
-                  className="blockr-dock-menu-item blockr-dock-menu-quiet"
-                  onClick={() => {
-                    close();
-                    void run(core, SET_OPTION, { id: "view_tabs", value: !tabs });
-                  }}
-                >
-                  <span className="blockr-dock-menu-label">Show views as tabs</span>
-                  {tabs ? <CheckIcon /> : null}
-                </button>
-              </>
-            )}
-          </>
-        )}
-      </MenuPopover>
+      {opened === null ? null : opened.managing ? (
+        <Manage
+          anchor={opened.anchor}
+          keyboard={opened.keyboard}
+          state={state}
+          openFolders={openFolders}
+          onClose={close}
+          onDone={() => {
+            setOpened({ ...opened, managing: false });
+          }}
+        />
+      ) : (
+        <Menu
+          anchor={opened.anchor}
+          label="Views"
+          align="end"
+          groups={[
+            { key: "views", rows: viewRows(core, state, null, open, openFolders) },
+            { key: "actions", rows: actions(opened) },
+          ]}
+          keyboard={opened.keyboard}
+          onClose={close}
+        />
+      )}
     </>
   );
 }
 
-interface TreeProps {
-  readonly state: DockState;
-  // The folder whose views and folders the menu lists, or null for the top.
-  readonly root: FolderId | null;
-  readonly openFolders: OpenFolders;
-  readonly onPick: (view: ViewId) => void;
-}
-
-// The rows of a menu that lists views and folders, with what each open folder
-// holds in a group below the folder's row.
-function Tree({ state, root, openFolders, onPick }: TreeProps): ReactElement {
-  const open = useOpenFolders(openFolders);
-  const rows = rowsOf(state, root, open);
-  if (rows.length === 0) {
-    return (
-      <div role="none" className="blockr-dock-menu-status">
-        Empty
-      </div>
-    );
-  }
-  // Where a folder's row shows, every row leaves room for the folder's
-  // chevron, so that the names line up.
-  const slot = rows.some((row) => "folder" in row.entry);
-  const draw = (folder: FolderId | null, depth: number): ReactElement[] =>
-    rows
-      .filter((row) => row.folder === folder && row.depth === depth)
-      .map((row) => {
-        const { entry } = row;
-        const name = nameOf(state, entry);
-        if ("view" in entry) {
-          return (
-            <button
-              key={keyOf(entry)}
-              type="button"
-              role="menuitemradio"
-              aria-checked={entry.view === state.active}
-              tabIndex={-1}
-              className="blockr-dock-menu-item blockr-dock-views-row"
-              style={depthStyle(depth)}
-              onClick={() => {
-                onPick(entry.view);
-              }}
-            >
-              {slot ? <span className="blockr-dock-views-slot" /> : null}
-              <span className="blockr-dock-menu-label">{name}</span>
-            </button>
-          );
-        }
-        return (
-          <div key={keyOf(entry)} role="none">
-            <button
-              type="button"
-              role="menuitem"
-              aria-expanded={row.open}
-              tabIndex={-1}
-              data-folder={entry.folder}
-              className="blockr-dock-menu-item blockr-dock-views-row"
-              style={depthStyle(depth)}
-              onClick={() => {
-                openFolders.set(entry.folder, !row.open);
-              }}
-            >
-              <span className="blockr-dock-views-slot">
-                <Chevron />
-              </span>
-              <span className="blockr-dock-menu-label">{name}</span>
-            </button>
-            {row.open ? (
-              <div role="group" aria-label={name}>
-                {draw(entry.folder, depth + 1)}
-              </div>
-            ) : null}
-          </div>
-        );
-      });
-  return <>{draw(root, 0)}</>;
+// The rows of a menu that lists the views and folders of a folder, or of the
+// top for null, given the folders that are open: a view's row, the current
+// pick where the view is active, makes the view active, and a folder's row
+// is a fold.
+function viewRows(
+  core: CoreApi,
+  state: DockState,
+  root: FolderId | null,
+  open: ReadonlySet<FolderId>,
+  openFolders: OpenFolders,
+): MenuRow[] {
+  return rowsOf(state, root, open).map(({ entry, depth, open: unfolded }): MenuRow => {
+    const common = { key: keyOf(entry), label: nameOf(state, entry), depth };
+    if ("view" in entry) {
+      return {
+        ...common,
+        current: entry.view === state.active,
+        onSelect: () => {
+          activate(core, state, entry.view);
+        },
+      };
+    }
+    return {
+      ...common,
+      fold: {
+        open: unfolded,
+        onToggle: (on) => {
+          openFolders.set(entry.folder, on);
+        },
+      },
+    };
+  });
 }
 
 // A drag of a view or a folder by its grip, with where it would land as the
@@ -310,19 +254,22 @@ interface Drag {
 }
 
 interface ManageProps {
+  // The button that opened the views menu.
+  readonly anchor: HTMLElement;
+  readonly keyboard: boolean;
   readonly state: DockState;
   readonly openFolders: OpenFolders;
-  // The popover, which takes the focus from a row that goes.
-  readonly list: RefObject<HTMLDivElement | null>;
+  readonly onClose: (how: Closing) => void;
   readonly onDone: () => void;
 }
 
-// The menu in manage mode: every view and folder that the menu shows, each
-// with its grip, its name and its cross, and below them the buttons that add
-// a view or a folder, and Done.
+// The views menu in manage mode, a popover in the menu's place: every view
+// and folder that the menu shows, each with its grip, its name and its cross,
+// and below them the buttons that add a view or a folder, and Done.
 // A row is renamed, or asks whether to remove it, one at a time.
-function Manage({ state, openFolders, list, onDone }: ManageProps): ReactElement {
+function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }: ManageProps): ReactElement {
   const { core } = useDock();
+  const ref = useRef<HTMLDivElement>(null);
   const open = useOpenFolders(openFolders);
   const rows = rowsOf(state, null, open);
   const slot = rows.some((row) => "folder" in row.entry);
@@ -334,22 +281,32 @@ function Manage({ state, openFolders, list, onDone }: ManageProps): ReactElement
   const dragging = useRef<Drag | undefined>(undefined);
   const rowList = useRef<HTMLDivElement>(null);
 
+  useMenuSurface(ref, anchor, { depth: 0, align: "end", keyboard, onClose });
+  useLayoutEffect(() => {
+    ref.current?.focus({ preventScroll: true });
+  }, []);
+
+  // The popover takes the focus from a row that goes, so that it keeps it.
+  const keepFocus = () => {
+    ref.current?.focus({ preventScroll: true, focusVisible: false });
+  };
+
   const follow = (next: Drag | undefined) => {
     dragging.current = next;
     setDrag(next);
   };
 
   const addView = () => {
-    void run(core, ADD_VIEW, {}).then((applied) => {
-      const added = applied ? dockState(core.store.board())?.active : null;
+    void applied(core, ADD_VIEW, {}).then((done) => {
+      const added = done ? dockState(core.store.board())?.active : null;
       if (added !== undefined && added !== null) setRenaming(keyOf({ view: added }));
     });
   };
 
   const addFolder = () => {
     const before = new Set(Object.keys(state.folders));
-    void run(core, ADD_FOLDER, {}).then((applied) => {
-      const after = applied ? Object.keys(dockState(core.store.board())?.folders ?? {}) : [];
+    void applied(core, ADD_FOLDER, {}).then((done) => {
+      const after = done ? Object.keys(dockState(core.store.board())?.folders ?? {}) : [];
       const added = after.find((id) => !before.has(id));
       if (added !== undefined) setRenaming(keyOf({ folder: added }));
     });
@@ -366,7 +323,7 @@ function Manage({ state, openFolders, list, onDone }: ManageProps): ReactElement
     onPointerMove(event) {
       const el = rowList.current;
       if (dragging.current === undefined || el === null) return;
-      scrollNearEdge(list.current, event.clientY);
+      scrollNearEdge(ref.current, event.clientY);
       follow({ entry, drop: dropAt(state, rows, spansOf(el), event.clientY, entry) });
     },
     onPointerUp() {
@@ -380,7 +337,25 @@ function Manage({ state, openFolders, list, onDone }: ManageProps): ReactElement
   });
 
   return (
-    <>
+    <div
+      ref={ref}
+      popover="auto"
+      role="dialog"
+      aria-label="Manage views"
+      tabIndex={-1}
+      className="blockr-dock-menu blockr-dock-views-manage"
+      data-align="end"
+      data-depth={0}
+      onToggle={(event) => {
+        if (event.newState === "closed") onClose({ restore: false, pointer: false });
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        onClose({ restore: true, pointer: false });
+      }}
+    >
       <div ref={rowList} className="blockr-dock-views-rows">
         {rows.map((row, i) => {
           const { entry } = row;
@@ -393,7 +368,7 @@ function Manage({ state, openFolders, list, onDone }: ManageProps): ReactElement
                 name={name}
                 depth={row.depth}
                 onRemove={() => {
-                  list.current?.focus({ focusVisible: false });
+                  keepFocus();
                   setConfirming(undefined);
                   remove(core, entry);
                 }}
@@ -435,7 +410,7 @@ function Manage({ state, openFolders, list, onDone }: ManageProps): ReactElement
           );
         })}
       </div>
-      <div role="separator" className="blockr-dock-menu-divider" />
+      <hr className="blockr-dock-menu-divider" />
       <div className="blockr-dock-views-foot">
         <button type="button" className="blockr-dock-views-add" onClick={addView}>
           <PlusIcon />
@@ -445,11 +420,18 @@ function Manage({ state, openFolders, list, onDone }: ManageProps): ReactElement
           <PlusIcon />
           New folder
         </button>
-        <button type="button" className="blockr-dock-views-done" onClick={onDone}>
+        <button
+          type="button"
+          className="blockr-dock-views-done"
+          onClick={() => {
+            keepFocus();
+            onDone();
+          }}
+        >
           Done
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -673,51 +655,40 @@ interface FolderTabProps {
 // The tab of a folder, which opens a menu of what the folder holds.
 function FolderTab({ state, folder, current, openFolders }: FolderTabProps): ReactElement {
   const { core } = useDock();
+  const open = useOpenFolders(openFolders);
+  const [opened, setOpened] = useState<{ readonly anchor: HTMLElement; readonly keyboard: boolean } | null>(null);
   const button = useRef<HTMLButtonElement>(null);
-  const list = useRef<HTMLDivElement>(null);
-  const { opened, close, handlers } = useMenuButton(button, list, {
-    onOpen: () => {
+  const props = useMenuButton(
+    opened !== null,
+    (anchor, keyboard) => {
       openFolders.open(activeHolders(state));
+      setOpened({ anchor, keyboard });
     },
-    first: currentRow,
-  });
+    () => {
+      setOpened(null);
+    },
+  );
+  const close = useCallback((how: Closing) => {
+    setOpened(null);
+    if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+  }, []);
   const name = nameOf(state, { folder });
   return (
     <>
-      <button
-        ref={button}
-        type="button"
-        className="blockr-dock-tab"
-        aria-haspopup="menu"
-        aria-expanded={opened !== undefined}
-        aria-current={current ? "true" : undefined}
-        {...handlers}
-      >
+      <button ref={button} type="button" className="blockr-dock-tab" aria-current={current ? "true" : undefined} {...props}>
         {name}
         <Chevron />
       </button>
-      <MenuPopover
-        list={list}
-        label={name}
-        depth={0}
-        className="blockr-dock-views-menu"
-        close={close}
-        onKeyDown={(event) => {
-          moveInTree(event, openFolders);
-        }}
-      >
-        {opened === undefined ? null : (
-          <Tree
-            state={state}
-            root={folder}
-            openFolders={openFolders}
-            onPick={(view) => {
-              close();
-              activate(core, state, view);
-            }}
-          />
-        )}
-      </MenuPopover>
+      {opened === null ? null : (
+        <Menu
+          anchor={opened.anchor}
+          label={name}
+          groups={[{ key: "views", rows: viewRows(core, state, folder, open, openFolders) }]}
+          note="This folder is empty."
+          keyboard={opened.keyboard}
+          onClose={close}
+        />
+      )}
     </>
   );
 }
@@ -733,40 +704,6 @@ function activeHolders(state: DockState): FolderId[] {
   return state.active === null ? [] : foldersHolding(state, { view: state.active });
 }
 
-// The row that takes the focus as the keyboard opens a menu of views and
-// folders: the active view's, or the first row where the menu does not list
-// it.
-function currentRow(list: HTMLElement): HTMLElement | undefined {
-  return list.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]') ?? list.querySelector<HTMLElement>(ROW) ?? undefined;
-}
-
-// Moves the focus through the rows of a menu of views and folders as the keys
-// of a menu move it, and opens and closes a folder in place as the keys of a
-// tree do:
-// - ArrowDown and ArrowUp move to the next and the previous row, and Home and
-//   End to the first and the last.
-// - ArrowRight opens a closed folder, and moves into an open one.
-// - ArrowLeft closes an open folder, and moves from a row inside a folder to
-//   the folder's row.
-function moveInTree(event: KeyboardEvent<HTMLElement>, openFolders: OpenFolders): void {
-  if (moveFocus([...event.currentTarget.querySelectorAll<HTMLElement>(ROW)], event)) return;
-  const row = event.target instanceof HTMLElement ? event.target : undefined;
-  const folder = row?.dataset.folder;
-  const expanded = row?.getAttribute("aria-expanded") === "true";
-  let next: Element | null | undefined;
-  if (event.key === "ArrowRight") {
-    if (row === undefined || folder === undefined) return;
-    if (expanded) next = row.nextElementSibling?.querySelector(ROW);
-    else openFolders.set(folder, true);
-  } else if (event.key === "ArrowLeft") {
-    if (folder !== undefined && expanded) openFolders.set(folder, false);
-    else next = row?.closest('[role="group"]')?.previousElementSibling;
-  } else return;
-  event.preventDefault();
-  event.stopPropagation();
-  if (next instanceof HTMLElement) next.focus();
-}
-
 // Scrolls the line of tabs sideways, and only sideways, so that its marked
 // tab shows, while the page stays where it is.
 function reveal(line: HTMLElement | null): void {
@@ -779,17 +716,16 @@ function reveal(line: HTMLElement | null): void {
   else if (at.right > bounds.right) line.scrollLeft += at.right - bounds.right;
 }
 
-// Scrolls the menu as a drag nears its top or its bottom edge, so that a drag
-// reaches the rows out of view.
-function scrollNearEdge(menu: HTMLElement | null, y: number): void {
-  if (menu === null) return;
-  const { top, bottom } = menu.getBoundingClientRect();
-  if (y < top + EDGE) menu.scrollTop -= STEP;
-  else if (y > bottom - EDGE) menu.scrollTop += STEP;
+// Scrolls manage mode as a drag nears its top or its bottom edge, so that a
+// drag reaches the rows out of view.
+function scrollNearEdge(panel: HTMLElement | null, y: number): void {
+  if (panel === null) return;
+  const { top, bottom } = panel.getBoundingClientRect();
+  if (y < top + EDGE) panel.scrollTop -= STEP;
+  else if (y > bottom - EDGE) panel.scrollTop += STEP;
 }
 
-// Where each row of the menu in manage mode sits on the screen, in their
-// order.
+// Where each row of manage mode sits on the screen, in their order.
 function spansOf(rowList: HTMLElement): Span[] {
   return [...rowList.querySelectorAll<HTMLElement>(":scope > [data-row]")].map((row) => {
     const { top, bottom } = row.getBoundingClientRect();
@@ -797,9 +733,9 @@ function spansOf(rowList: HTMLElement): Span[] {
   });
 }
 
-// Runs a command, where core tells the user why the store refused it, through
-// its notification board_edit_failed, and gives whether the store applied it.
-async function run(core: CoreApi, id: string, args: Readonly<Record<string, Json>>): Promise<boolean> {
+// Runs one of the dock's commands as an edit, and gives whether the board
+// took it, where core tells the user why it refused it.
+async function applied(core: CoreApi, id: string, args: Readonly<Record<string, Json>>): Promise<boolean> {
   return await core.commands.run(id, args).then(
     () => true,
     () => false,
@@ -808,17 +744,17 @@ async function run(core: CoreApi, id: string, args: Readonly<Record<string, Json
 
 // Makes a view the active one, unless it is already.
 function activate(core: CoreApi, state: DockState, view: ViewId): void {
-  if (view !== state.active) void run(core, ACTIVATE_VIEW, { view });
+  if (view !== state.active) runEdit(core, ACTIVATE_VIEW, { view });
 }
 
 function rename(core: CoreApi, entry: Entry, name: string): void {
-  if ("view" in entry) void run(core, RENAME_VIEW, { view: entry.view, name });
-  else void run(core, RENAME_FOLDER, { folder: entry.folder, name });
+  if ("view" in entry) runEdit(core, RENAME_VIEW, { view: entry.view, name });
+  else runEdit(core, RENAME_FOLDER, { folder: entry.folder, name });
 }
 
 function remove(core: CoreApi, entry: Entry): void {
-  if ("view" in entry) void run(core, REMOVE_VIEW, { view: entry.view });
-  else void run(core, REMOVE_FOLDER, { folder: entry.folder });
+  if ("view" in entry) runEdit(core, REMOVE_VIEW, { view: entry.view });
+  else runEdit(core, REMOVE_FOLDER, { folder: entry.folder });
 }
 
 // Whether the dock removes a view or a folder: it refuses the last view.
@@ -829,7 +765,7 @@ function removable(core: CoreApi, entry: Entry): boolean {
 }
 
 // Moves a view or a folder where a drop lands, and opens the folder that
-// takes it, so that the menu shows it there.
+// takes it, so that manage mode shows it there.
 function move(core: CoreApi, openFolders: OpenFolders, entry: Entry, drop: Drop): void {
   const args: Record<string, Json> =
     "view" in entry ? { view: entry.view, folder: drop.folder } : { folder: entry.folder, into: drop.folder };
@@ -837,7 +773,7 @@ function move(core: CoreApi, openFolders: OpenFolders, entry: Entry, drop: Drop)
   const id = "view" in entry ? MOVE_VIEW : MOVE_FOLDER;
   if (!core.commands.preflight(id, args)) return;
   if (drop.folder !== null) openFolders.open([drop.folder]);
-  void run(core, id, args);
+  runEdit(core, id, args);
 }
 
 // The name of a view or a folder.
@@ -851,7 +787,7 @@ function keyOf(entry: Entry): string {
   return "view" in entry ? `view:${entry.view}` : `folder:${entry.folder}`;
 }
 
-// How deep a row sits, which indents it.
+// How deep a row of manage mode sits, which indents it.
 function depthStyle(depth: number): CSSProperties {
   return { "--depth": depth } as CSSProperties;
 }
