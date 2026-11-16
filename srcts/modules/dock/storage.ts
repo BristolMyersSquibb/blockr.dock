@@ -11,9 +11,6 @@
 // Where controls() throws, no control draws: the bar shows a warning in the
 // place of the `storage` item, which names the plugin's package, and the dock
 // logs why.
-// The dock reads none of the hints that a control may carry, such as
-// `placement`: an app script places a control on the bar through its navbar
-// items alone.
 // A storage plugin tells the user why one of its buttons failed, since it
 // alone knows its backend, and core tells the user why it refused what the
 // button asked of it, such as a board to open. So the dock logs a run() that
