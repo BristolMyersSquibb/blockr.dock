@@ -112,7 +112,9 @@ dock_grid <- function(..., orientation = c("horizontal", "vertical"),
     grid[["rails"]] <- rails
   }
 
-  validate_dock_grid(structure(grid, class = "dock_grid"))
+  grid <- structure(grid, class = "dock_grid")
+  validate_dock_grid(grid)
+  grid
 }
 
 #' @rdname layout
