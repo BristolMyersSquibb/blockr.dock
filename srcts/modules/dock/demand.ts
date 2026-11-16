@@ -14,6 +14,15 @@
 // without a subscription of its own.
 // The dock makes it within its frontend's render(), so that the scheduler
 // evaluates the blocks of the opening view first.
+//
+// As the demand follows the board, the dock sets CoreApi's onScreen to the
+// blocks whose cards are on screen and to the plugins whose panels are, by
+// the same rule
+// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.12#what-a-frontend-offers-other-plugins).
+// It sets it within render() too, and again after every change to the board
+// and as the window crosses the breakpoint of the narrow column.
+// Where the dock sets the same blocks and plugins again, core changes nothing
+// and tells no plugin.
 
 import type { BlockId, Board, CoreApi, PluginClassId } from "@blockr/core";
 import { stateOf } from "../../commands/index.ts";
@@ -26,13 +35,18 @@ import type { Narrow } from "./narrow.ts";
 export const OWNER = "blockr.dock";
 export const SHOWN = 1;
 
-// The blocks whose cards are on screen, on a board where the dock draws the
-// panels of the plugins given, by the ids of their classes.
-export function shownBlocks(board: Board, drawn: ReadonlyMap<PluginClassId, string>, narrow: boolean): BlockId[] {
+// The blocks and the plugins whose panels are on screen, as CoreApi's
+// onScreen takes them, on a board where the dock draws the panels of the
+// plugins given, by the ids of their classes.
+export function onScreen(
+  board: Board,
+  drawn: ReadonlyMap<PluginClassId, string>,
+  narrow: boolean,
+): { blocks: BlockId[]; plugins: PluginClassId[] } {
   const state = stateOf(board);
   const active = state?.active ?? null;
   const view = active === null ? undefined : state?.views[active];
-  if (view === undefined) return [];
+  if (view === undefined) return { blocks: [], plugins: [] };
 
   const title = (panel: Panel) => ("block" in panel ? board.blocks[panel.block]?.name : drawn.get(panel.plugin));
   const grid = layoutToGrid(gridToLayout(view.grid, title, { width: 0, height: 0 }));
@@ -43,21 +57,37 @@ export function shownBlocks(board: Board, drawn: ReadonlyMap<PluginClassId, stri
       return rail === undefined || (rail.collapsed && !narrow) ? [] : [rail.active];
     }),
   ];
-  return shown.flatMap((panel) => ("block" in panel ? [panel.block] : []));
+  return {
+    blocks: shown.flatMap((panel) => ("block" in panel ? [panel.block] : [])),
+    plugins: shown.flatMap((panel) => ("plugin" in panel ? [panel.plugin] : [])),
+  };
 }
 
-// Demands the blocks whose cards are on screen, until the returned function
-// runs.
+// Demands the blocks whose cards are on screen, and sets CoreApi's onScreen,
+// until the returned function runs.
 // The narrow column shows the panels of collapsed rails too, so the demand
 // takes the blocks again as the window crosses the breakpoint.
-export function demandShown(core: Pick<CoreApi, "scheduler">, drawn: ReadonlyMap<PluginClassId, string>, narrow: Narrow): () => void {
-  const blocks = () => (board: Board) => shownBlocks(board, drawn, narrow.get());
+export function demandShown(
+  core: Pick<CoreApi, "scheduler" | "store" | "onScreen">,
+  drawn: ReadonlyMap<PluginClassId, string>,
+  narrow: Narrow,
+): () => void {
+  const blocks = () => (board: Board) => onScreen(board, drawn, narrow.get()).blocks;
   const demand = core.scheduler.demand(OWNER, blocks(), { priority: SHOWN });
-  const off = narrow.subscribe(() => {
+  const tell = (board: Board) => {
+    core.onScreen.set(onScreen(board, drawn, narrow.get()));
+  };
+  tell(core.store.board());
+  const offBoard = core.store.subscribe((_change, board) => {
+    tell(board);
+  });
+  const offNarrow = narrow.subscribe(() => {
     demand.set(blocks(), { priority: SHOWN });
+    tell(core.store.board());
   });
   return () => {
-    off();
+    offNarrow();
+    offBoard();
     demand.release();
   };
 }

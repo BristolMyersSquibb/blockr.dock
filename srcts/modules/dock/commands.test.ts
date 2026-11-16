@@ -155,7 +155,7 @@ const IDS = [
 ].map((name) => `blockr.dock-${name}`);
 
 describe("the dock's commands", () => {
-  test("are the 18 of the class, each with a label, a description and args, and three take no undo step", async () => {
+  test("are the 18 of the class, each with a label, a description and args, and four take no undo step", async () => {
     const { core } = await start();
     const registered = core.commands.registered();
 
@@ -168,6 +168,7 @@ describe("the dock's commands", () => {
     expect(IDS.filter((id) => registered[id]?.undo === false)).toEqual([
       "blockr.dock-activate_view",
       "blockr.dock-activate_panel",
+      "blockr.dock-show_panel",
       "blockr.dock-collapse_rail",
     ]);
   });
@@ -540,11 +541,68 @@ describe("blockr.dock-show_panel", () => {
     expect(dock().views.main?.grid.children[1]).toEqual({ panels: [c, md], active: md });
   });
 
-  test("on a locked board, only has the active view show a panel that it holds", async () => {
-    const { dock, enabled, run } = await start({ locked: true });
-    expect(enabled("show_panel", { panel: md })).toBe(false);
+  test("shows the panel in the active view alone, and switches no view", async () => {
+    const { dock, run } = await start({ dockState: { ...state, active: "side" } });
+
+    await run("show_panel", { panel: a });
+    expect(dock().active).toBe("side");
+    expect(dock().views.side?.grid.children).toEqual([{ panels: [c, a], active: a }]);
+    expect(dock().views.main).toEqual(state.views.main);
+  });
+
+  test("takes no undo step, where it adds the panel too, and leaves the redo steps as they were", async () => {
+    const { core, dock, run } = await start();
+    await run("rename_view", { view: "side", name: "Other" });
+    core.store.undo();
+
+    await run("show_panel", { panel: a });
+    await run("show_panel", { panel: md });
+    expect(dock().views.main?.grid.children).toEqual([{ panels: [a, b], active: a }, { panels: [c, md], active: md }]);
+    expect(core.store.canUndo()).toBe(false);
+
+    core.store.redo();
+    expect(dock().views.side?.name).toBe("Other");
+    expect(gridPanels(viewIn(dock(), "main").grid)).toContainEqual(md);
+  });
+
+  // The views main and inner, with the DAG on the left rail of each,
+  // collapsed, and on main beside the panel of blockr.md, which the rail
+  // shows.
+  const collapsed: DockState = {
+    ...state,
+    views: {
+      ...state.views,
+      main: { ...viewIn(state, "main"), grid: { ...main, rails: { left: { ...rail(md, dag), active: md, collapsed: true } } } },
+      inner: { ...viewIn(state, "inner"), grid: { ...viewIn(state, "inner").grid, rails: { left: { ...rail(dag), collapsed: true } } } },
+    },
+  };
+
+  test("opens a collapsed rail that holds the panel, on every view that has a rail on that edge while sync_rails is on", async () => {
+    const { dock, run } = await start({ dockState: collapsed });
+
+    await run("show_panel", { panel: dag });
+    expect(dock().views.main?.grid.rails?.left).toEqual({ ...rail(md, dag), active: dag });
+    expect(dock().views.inner?.grid.rails?.left).toEqual(rail(dag));
+    expect(dock().views.side).toEqual(state.views.side);
+  });
+
+  test("opens the rail of the active view alone while sync_rails is off", async () => {
+    const { core, dock, run } = await start({ dockState: collapsed });
+    await core.commands.run("blockr.core-set_option", { id: "sync_rails", value: false });
+
+    await run("show_panel", { panel: dag });
+    expect(dock().views.main?.grid.rails?.left).toEqual({ ...rail(md, dag), active: dag });
+    expect(dock().views.inner?.grid.rails?.left?.collapsed).toBe(true);
+  });
+
+  test("on a locked board, only has the active view show a panel that it holds, opening its rail", async () => {
+    const { dock, enabled, run } = await start({ dockState: collapsed, locked: true });
+    expect(enabled("show_panel", { panel: { plugin: "blockr.ai-chat_plugin" } })).toBe(false);
+
     await run("show_panel", { panel: a });
     expect(dock().views.main?.grid.children[0]).toEqual({ panels: [a, b], active: a });
+    await run("show_panel", { panel: dag });
+    expect(dock().views.main?.grid.rails?.left).toEqual({ ...rail(md, dag), active: dag });
   });
 });
 
