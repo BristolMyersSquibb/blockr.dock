@@ -410,7 +410,7 @@ export function Menu({
             }}
           >
             {content}
-            <Chevron point="right" />
+            <Chevron right />
           </button>
           {open ? (
             <Menu

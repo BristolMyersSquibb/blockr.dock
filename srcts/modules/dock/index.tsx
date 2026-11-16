@@ -29,8 +29,8 @@
 //    onScreen to those blocks and to the plugins whose panels are on screen
 //    (./demand.ts).
 // 5. It starts to follow whether the logo turns (./busy.ts), and holds
-//    whether the options sidebar is open, whether it is pinned and which page
-//    it shows (./sidebar.ts).
+//    whether the options sidebar is open, whether it is pinned and which
+//    categories it has expanded (./sidebar.ts).
 // 6. It starts the toasts of the opening, which follow the notifications of
 //    CoreApi (./toasts.tsx).
 // 7. It binds the shortcuts of the bar on the page's document

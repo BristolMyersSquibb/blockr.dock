@@ -1,6 +1,6 @@
 // The dock's options sidebar, which the options button on the bar opens
-// (./navbar.tsx), and which shows each board option that the board holds on
-// the page of its category
+// (./navbar.tsx), and which shows each board option that the board holds under
+// its category
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#settings).
 // The board holds every board option that something on the page requires, its
 // default included where nobody set one, so the sidebar shows those of the
@@ -14,23 +14,24 @@
 // options open
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.11#board-options-on-a-locked-board).
 //
-// The sidebar opens on the list of categories, whose first row takes the
-// focus:
-// 1. A click on a row shows the category's page, titled with the category and
-//    with a back arrow. Core mounts the UI of each of the page's board options
-//    with mountOption(). The back arrow takes the focus, and the page's first
-//    field takes it once core has drawn one.
-// 2. The back arrow or Escape returns to the list, and the row of the page
-//    takes the focus. Core ends the page's mounts.
-// 3. On the list, Escape closes the sidebar. The close button closes it from
-//    either.
-// Once the sidebar closes, the focus goes back to where it was as the sidebar
-// opened, such as the options button, unless the user has moved it out of the
-// sidebar.
-// The list shows the categories in alphabetical order, and each page shows its
-// board options in the alphabetical order of their labels. The order in which
-// the board holds its board options is no guide, since core puts each default
-// on the board once the default resolves.
+// The sidebar lists the categories as an accordion of `details` elements, in
+// alphabetical order, of which the user may expand several at once:
+// 1. A click on a category expands it in place. Core mounts the UI of each of
+//    its board options with mountOption(), in the alphabetical order of their
+//    labels.
+// 2. Another click collapses it. Core ends those mounts once the category has
+//    folded shut.
+// The categories that the user expanded stay expanded as the sidebar closes
+// (./sidebar.ts).
+// The order in which the board holds its board options is no guide, since
+// core puts each default on the board once the default resolves.
+// The pages put each board option on the page of its category, which today's
+// sidebar opens one at a time. The accordion shows several categories at once,
+// with no page to step into and back out of.
+//
+// As the sidebar opens, its first category takes the focus. Once the sidebar
+// closes, the focus goes back to where it was as the sidebar opened, such as
+// the options button, unless the user has moved it out of the sidebar.
 //
 // The sidebar carries over today's, at 655e323 (R/sidebar-server.R, with
 // inst/assets/js/sidebar-server.js and options-sidebar.js):
@@ -51,17 +52,18 @@
 // board's name either, since the board's name is on the bar.
 
 import type { Board, Option, OptionId } from "@blockr/core";
-import { useCallback, useEffect, useLayoutEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
 import { useBoard, useDock } from "./context.ts";
 import { Chevron, CloseIcon, PinIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
 import type { Sidebar } from "./sidebar.ts";
 
-// The title of the list of categories, as today's.
+// The sidebar's title, as today's.
 const TITLE = "Board options";
 
-// What Tab moves the focus to, as today's sidebar finds it.
+// What Tab moves the focus to, as today's sidebar finds it, and the summary
+// of a category.
 const FOCUSABLE = [
   "a[href]",
   "button:not([disabled])",
@@ -69,11 +71,8 @@ const FOCUSABLE = [
   "select:not([disabled])",
   "textarea:not([disabled])",
   '[tabindex]:not([tabindex="-1"])',
+  "details > summary:first-of-type",
 ].join(", ");
-
-// The fields of a page, the first of which takes the focus as the page opens,
-// as today's.
-const FIELDS = "input, select, textarea, button";
 
 // What closes before the sidebar on Escape: an open popover and a modal
 // dialog.
@@ -97,19 +96,12 @@ function categories(board: Board, registered: Readonly<Record<OptionId, Option>>
 export function OptionsSidebar({ sidebar }: { readonly sidebar: Sidebar }): ReactElement {
   const { core } = useDock();
   const board = useBoard(core);
-  const { open, pinned, page } = useSyncExternalStore(sidebar.subscribe, sidebar.state);
+  const { open, pinned, expanded } = useSyncExternalStore(sidebar.subscribe, sidebar.state);
   const grouped = categories(board, core.options.registered());
-  const ids = page === undefined ? undefined : grouped.get(page);
   const ref = useRef<HTMLDivElement>(null);
   const title = `${sidebar.id}-title`;
 
-  // A page whose category the board no longer holds gives way to the list.
-  const gone = page !== undefined && ids === undefined;
-  useEffect(() => {
-    if (gone) sidebar.show(undefined);
-  }, [sidebar, gone]);
-
-  useFocus(ref, open, ids === undefined ? undefined : page);
+  useFocus(ref, open);
   useKeys(ref, sidebar);
   usePressOutside(ref, sidebar, open && !pinned);
 
@@ -125,21 +117,8 @@ export function OptionsSidebar({ sidebar }: { readonly sidebar: Sidebar }): Reac
       data-open={open ? "" : undefined}
     >
       <header className="blockr-dock-sidebar-header">
-        {ids === undefined ? null : (
-          <button
-            type="button"
-            className="blockr-dock-sidebar-button blockr-dock-sidebar-back"
-            aria-label="Back"
-            title="Back"
-            onClick={() => {
-              sidebar.show(undefined);
-            }}
-          >
-            <Chevron point="left" />
-          </button>
-        )}
         <h2 id={title} className="blockr-dock-sidebar-title">
-          {ids === undefined ? TITLE : page}
+          {TITLE}
         </h2>
         <button
           type="button"
@@ -166,51 +145,96 @@ export function OptionsSidebar({ sidebar }: { readonly sidebar: Sidebar }): Reac
         </button>
       </header>
       <div className="blockr-dock-sidebar-body">
-        {ids === undefined ? <CategoryList grouped={grouped} sidebar={sidebar} /> : <OptionsPage ids={ids} />}
+        {grouped.size === 0 ? (
+          <p className="blockr-dock-sidebar-note">The board holds no board options.</p>
+        ) : (
+          <div className="blockr-dock-sidebar-categories">
+            {[...grouped].map(([category, ids]) => (
+              <Category key={category} category={category} ids={ids} expanded={expanded.includes(category)} sidebar={sidebar} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// The list of categories, a row for each, which opens the category's page.
-function CategoryList({
-  grouped,
-  sidebar,
-}: {
-  readonly grouped: ReadonlyMap<string, readonly OptionId[]>;
+interface CategoryProps {
+  readonly category: string;
+  // The ids of its board options, in their order.
+  readonly ids: readonly OptionId[];
+  readonly expanded: boolean;
   readonly sidebar: Sidebar;
-}): ReactElement {
-  if (grouped.size === 0) return <p className="blockr-dock-sidebar-note">The board holds no board options.</p>;
+}
+
+// A category, whose content holds the UI of each of its board options while
+// the category is expanded, and while it folds shut.
+function Category({ category, ids, expanded, sidebar }: CategoryProps): ReactElement {
+  // Whether the category folds shut, while which its content holds the UIs
+  // still.
+  const [folding, setFolding] = useState(false);
+  // How many times the category has collapsed, so that a fold that the user
+  // cut short by expanding and collapsing it again ends with the last one.
+  const folds = useRef(0);
+
   return (
-    <div className="blockr-dock-sidebar-list">
-      {[...grouped.keys()].map((category) => (
-        <button
-          key={category}
-          type="button"
-          className="blockr-dock-sidebar-row"
-          data-category={category}
-          onClick={() => {
-            sidebar.show(category);
-          }}
-        >
-          <span className="blockr-dock-sidebar-row-name">{category}</span>
-          <Chevron point="right" />
-        </button>
-      ))}
-    </div>
+    <details
+      className="blockr-dock-sidebar-category"
+      open={expanded}
+      onToggle={(event) => {
+        const details = event.currentTarget;
+        sidebar.expand(category, details.open);
+        if (details.open) return;
+        folds.current += 1;
+        const fold = folds.current;
+        setFolding(true);
+        void folded(details).then(() => {
+          if (folds.current === fold) setFolding(false);
+        });
+      }}
+    >
+      <summary className="blockr-dock-sidebar-summary">
+        <Chevron />
+        <span className="blockr-dock-sidebar-summary-name">{category}</span>
+      </summary>
+      {expanded || folding ? (
+        <div className="blockr-dock-sidebar-options">
+          {ids.map((id) => (
+            <OptionFrame key={id} option={id} />
+          ))}
+        </div>
+      ) : null}
+    </details>
   );
 }
 
-// The page of a category, with the UI of each of its board options, one under
-// the other.
-function OptionsPage({ ids }: { readonly ids: readonly OptionId[] }): ReactElement {
-  return (
-    <div className="blockr-dock-sidebar-page">
-      {ids.map((id) => (
-        <OptionFrame key={id} option={id} />
-      ))}
-    </div>
-  );
+// Resolves once the category's content has folded shut, which takes as long
+// as the longest transition that the content's style gives, or at once where
+// it gives none, as under reduced motion.
+// The browser lists no animation of the content, its ::details-content, in
+// getAnimations(), and fires no transition event for it, so the style is all
+// that says how long the fold takes.
+async function folded(el: HTMLElement): Promise<void> {
+  const style = el.ownerDocument.defaultView?.getComputedStyle(el, "::details-content");
+  const ms = style === undefined ? 0 : longest(style.transitionDuration, style.transitionDelay);
+  await new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+// The longest transition, in milliseconds, of those whose durations and delays
+// a computed style lists, such as "0.22s, 0.22s" and "0s".
+// A list shorter than the other repeats, as CSS repeats it.
+function longest(durations: string, delays: string): number {
+  const ms = (list: string): number[] =>
+    list.split(",").map((item) => {
+      const time = Number.parseFloat(item);
+      if (!Number.isFinite(time)) return 0;
+      return item.trim().endsWith("ms") ? time : time * 1000;
+    });
+  const duration = ms(durations);
+  const delay = ms(delays);
+  return Math.max(0, ...duration.map((d, i) => d + (delay[i % delay.length] ?? 0)));
 }
 
 // The element in which core mounts the UI of a board option, or the renderer
@@ -221,13 +245,12 @@ function OptionFrame({ option }: { readonly option: OptionId }): ReactElement {
   return <Mounted mount={mount} className="blockr-dock-sidebar-option" data={{ "data-option": option }} />;
 }
 
-// Moves the focus as the sidebar opens and closes, and as its page changes,
-// as the sidebar's comment at the top of this file says.
-function useFocus(ref: { readonly current: HTMLElement | null }, open: boolean, page: string | undefined): void {
+// Gives the sidebar's first category the focus as the sidebar opens, and the
+// focus back to where it was as the sidebar closes, as the comment at the top
+// of this file says.
+function useFocus(ref: { readonly current: HTMLElement | null }, open: boolean): void {
   // Where the focus was as the sidebar opened.
   const before = useRef<Element | null>(null);
-  // The page that the sidebar showed when it last drew.
-  const shown = useRef<string | undefined>(undefined);
 
   useLayoutEffect(() => {
     const root = ref.current;
@@ -235,7 +258,7 @@ function useFocus(ref: { readonly current: HTMLElement | null }, open: boolean, 
     const doc = root.ownerDocument;
     if (open) {
       before.current = doc.activeElement;
-      const first = root.querySelector<HTMLElement>(`.blockr-dock-sidebar-body :is(${FOCUSABLE})`);
+      const first = root.querySelector(".blockr-dock-sidebar-body")?.querySelector<HTMLElement>(FOCUSABLE);
       (first ?? root).focus();
       return;
     }
@@ -247,46 +270,6 @@ function useFocus(ref: { readonly current: HTMLElement | null }, open: boolean, 
     const held = active === null || active === doc.body || root.contains(active);
     if (held && back instanceof HTMLElement && back.isConnected) back.focus();
   }, [ref, open]);
-
-  useLayoutEffect(() => {
-    const root = ref.current;
-    const was = shown.current;
-    shown.current = page;
-    if (root === null || !open || was === page) return undefined;
-    if (page === undefined) {
-      const row = [...root.querySelectorAll<HTMLElement>(".blockr-dock-sidebar-row")].find((r) => r.dataset.category === was);
-      (row ?? root).focus();
-      return undefined;
-    }
-    const back = root.querySelector<HTMLElement>(".blockr-dock-sidebar-back");
-    const fields = root.querySelector<HTMLElement>(".blockr-dock-sidebar-page");
-    if (back === null || fields === null) return undefined;
-    back.focus();
-    return focusFirstField(fields, back);
-  }, [ref, open, page]);
-}
-
-// Gives the first field of the page the focus once core has drawn one, where
-// the focus is still on `from`.
-// The returned function stops waiting for a field.
-function focusFirstField(fields: HTMLElement, from: HTMLElement): () => void {
-  const doc = fields.ownerDocument;
-  const attempt = (): boolean => {
-    const field = fields.querySelector<HTMLElement>(FIELDS);
-    if (field === null) return false;
-    if (doc.activeElement === from) field.focus();
-    return true;
-  };
-  if (attempt()) return () => undefined;
-  const Observer = doc.defaultView?.MutationObserver;
-  if (Observer === undefined) return () => undefined;
-  const observer = new Observer(() => {
-    if (attempt()) observer.disconnect();
-  });
-  observer.observe(fields, { childList: true, subtree: true });
-  return () => {
-    observer.disconnect();
-  };
 }
 
 // Hears Escape, and Tab and Shift+Tab, in the sidebar.
@@ -302,11 +285,8 @@ function useKeys(ref: { readonly current: HTMLElement | null }, sidebar: Sidebar
         keepFocus(root, event);
         return;
       }
-      if (event.key !== "Escape" || holdsOverlay(root)) return;
-      const { page, pinned } = sidebar.state();
-      if (page !== undefined) sidebar.show(undefined);
-      else if (!pinned) sidebar.set(false);
-      else return;
+      if (event.key !== "Escape" || holdsOverlay(root) || sidebar.state().pinned) return;
+      sidebar.set(false);
       event.preventDefault();
     };
     root.addEventListener("keydown", onKey);

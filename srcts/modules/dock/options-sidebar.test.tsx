@@ -18,9 +18,9 @@ const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";
 const VIEWER = "blockr.test-viewer_plugin";
 
-// What the UIs of blockr.test's board options wait for before they draw,
-// which a test may hold back.
-let drawing: Promise<void> = Promise.resolve();
+// The categories of the board options that the board of core's reply to hello
+// holds, once core has put on it those that the dock and blockr.test require.
+const CATEGORIES = ["Board options", "Table options", "Theme options", "View options"];
 
 // A UI that shows the board option's value in a number field, and submits the
 // number that the user types as the field changes. Escape in a field whose
@@ -30,8 +30,7 @@ let drawing: Promise<void> = Promise.resolve();
 // control until it applies.
 function numberUi(): OptionModule<number> {
   return {
-    async render({ el, host }) {
-      await drawing;
+    render({ el, host }) {
       const field = el.ownerDocument.createElement("input");
       field.type = "number";
       const show = () => {
@@ -143,25 +142,30 @@ function find(root: ParentNode, selector: string): HTMLElement {
 const sidebarIn = (el: HTMLElement): HTMLElement => find(el, ".blockr-dock-sidebar");
 const optionsButton = (el: HTMLElement): HTMLElement => find(el, ".blockr-dock-bar-options");
 const isOpen = (el: HTMLElement): boolean => sidebarIn(el).hasAttribute("data-open");
-const title = (el: HTMLElement): string | null => find(sidebarIn(el), ".blockr-dock-sidebar-title").textContent;
 
-// The categories of the list, in order.
-const rows = (el: HTMLElement): (string | null)[] =>
-  [...sidebarIn(el).querySelectorAll<HTMLElement>(".blockr-dock-sidebar-row")].map((row) => row.textContent);
+// The categories, in order, each with whether it is expanded.
+const categoriesIn = (el: HTMLElement): HTMLDetailsElement[] => [...sidebarIn(el).querySelectorAll<HTMLDetailsElement>("details")];
+const names = (el: HTMLElement): (string | null)[] => categoriesIn(el).map((details) => find(details, "summary").textContent);
+const expanded = (el: HTMLElement): (string | null)[] =>
+  categoriesIn(el)
+    .filter((details) => details.open)
+    .map((details) => find(details, "summary").textContent);
 
-function row(el: HTMLElement, category: string): HTMLElement {
-  const found = [...sidebarIn(el).querySelectorAll<HTMLElement>(".blockr-dock-sidebar-row")].find((r) => r.textContent === category);
-  if (found === undefined) throw new Error(`The list has no row "${category}".`);
+function category(el: HTMLElement, name: string): HTMLDetailsElement {
+  const found = categoriesIn(el).find((details) => find(details, "summary").textContent === name);
+  if (found === undefined) throw new Error(`The sidebar has no category "${name}".`);
   return found;
 }
 
-// The ids of the board options whose UIs the page holds, in order.
-const pageOptions = (el: HTMLElement): (string | undefined)[] =>
-  [...sidebarIn(el).querySelectorAll<HTMLElement>(".blockr-dock-sidebar-option")].map((frame) => frame.dataset.option);
+const summary = (el: HTMLElement, name: string): HTMLElement => find(category(el, name), "summary");
 
-// The fields that the UIs on the page drew, in order.
-const fields = (el: HTMLElement): HTMLElement[] => [
-  ...sidebarIn(el).querySelectorAll<HTMLElement>(".blockr-dock-sidebar-option :is(input, select)"),
+// The ids of the board options whose UIs the category holds, in order.
+const optionsIn = (el: HTMLElement, name: string): (string | undefined)[] =>
+  [...category(el, name).querySelectorAll<HTMLElement>(".blockr-dock-sidebar-option")].map((frame) => frame.dataset.option);
+
+// The fields that the UIs of the category's board options drew, in order.
+const fields = (el: HTMLElement, name: string): HTMLElement[] => [
+  ...category(el, name).querySelectorAll<HTMLElement>(".blockr-dock-sidebar-option :is(input, select)"),
 ];
 
 function button(root: ParentNode, name: string): HTMLElement {
@@ -187,7 +191,7 @@ function press(key: string, init: KeyboardEventInit = {}): boolean {
 
 // Types the number into the field, as React hears it, and has the field
 // change.
-function type(field: HTMLElement, text: string): void {
+function type(field: HTMLElement | undefined, text: string): void {
   if (!(field instanceof HTMLInputElement)) throw new Error("The field is no input.");
   field.value = text;
   field.dispatchEvent(new Event("input", { bubbles: true }));
@@ -202,29 +206,13 @@ async function open(el: HTMLElement): Promise<void> {
   await drawn();
 }
 
-// Opens the page of the category, and waits for core to draw the UI of each
-// of its board options.
-async function openPage(el: HTMLElement, category: string, count: number): Promise<void> {
-  click(row(el, category));
+// Expands the category by a click on its summary, and waits for core to draw
+// the UI of each of its board options.
+async function expand(el: HTMLElement, name: string, count: number): Promise<void> {
+  click(summary(el, name));
   await vi.waitFor(() => {
-    expect(fields(el)).toHaveLength(count);
+    expect(fields(el, name)).toHaveLength(count);
   });
-}
-
-// Holds back the UIs of blockr.test's board options until the returned
-// function runs, or the test finishes.
-function holdBack(): () => void {
-  let release = (): void => undefined;
-  drawing = new Promise((resolve) => {
-    release = resolve;
-  });
-  onTestFinished(() => {
-    release();
-    drawing = Promise.resolve();
-  });
-  return () => {
-    release();
-  };
 }
 
 // Counts the mounts of board options' UIs that started and ended.
@@ -244,7 +232,7 @@ function countMounts(core: CoreApi): { readonly started: string[]; readonly ende
 }
 
 describe("the options sidebar", () => {
-  test("is closed and inert as the dock starts, and opens from the options button on the list of categories", async () => {
+  test("is closed and inert as the dock starts, and opens from the options button with every category collapsed, the first of which takes the focus", async () => {
     const { el } = await startSidebar();
     const sidebar = sidebarIn(el);
     expect(isOpen(el)).toBe(false);
@@ -257,111 +245,90 @@ describe("the options sidebar", () => {
     expect(optionsButton(el).getAttribute("aria-expanded")).toBe("true");
     expect(sidebar.getAttribute("role")).toBe("dialog");
     expect(sidebar.getAttribute("aria-labelledby")).toBe(find(sidebar, "h2").id);
-    expect(title(el)).toBe("Board options");
-    expect(document.activeElement).toBe(row(el, "Board options"));
+    expect(find(sidebar, "h2").textContent).toBe("Board options");
+    expect(expanded(el)).toEqual([]);
+    expect(sidebar.querySelectorAll(".blockr-dock-sidebar-option")).toHaveLength(0);
+    expect(document.activeElement).toBe(summary(el, "Board options"));
   });
 
   test("lists the categories of the board options that the board holds in alphabetical order, those that a plugin class of another package requires among them", async () => {
     const { el } = await startSidebar();
     await open(el);
-    expect(rows(el)).toEqual(["Board options", "Table options", "Theme options", "View options"]);
+    expect(names(el)).toEqual(CATEGORIES);
   });
 
-  test("shows a category's page, titled with it, where core mounts the UI of each of its board options, in the alphabetical order of their labels", async () => {
+  test("expands a category in place, where core mounts the UI of each of its board options, in the alphabetical order of their labels", async () => {
     const { el, core } = await startSidebar();
     const mounts = countMounts(core);
     await open(el);
 
-    await openPage(el, "Theme options", 3);
-    expect(title(el)).toBe("Theme options");
-    expect(pageOptions(el)).toEqual(["compact", "dark_mode", "view_tabs"]);
+    await expand(el, "Theme options", 3);
+    expect(expanded(el)).toEqual(["Theme options"]);
+    expect(optionsIn(el, "Theme options")).toEqual(["compact", "dark_mode", "view_tabs"]);
     expect(mounts.started).toEqual(["compact", "dark_mode", "view_tabs"]);
 
-    const compact = fields(el)[0];
-    expect(compact).toBeInstanceOf(HTMLInputElement);
-    compact?.click();
+    fields(el, "Theme options")[0]?.click();
     await vi.waitFor(() => {
       expect(core.store.board().options.compact).toBe(true);
     });
   });
 
-  test("gives the back arrow the focus as a page opens, and the page's first field once core has drawn it", async () => {
-    const { el } = await startSidebar();
-    const release = holdBack();
-    await open(el);
-    click(row(el, "View options"));
-    await drawn();
-    expect(fields(el)).toEqual([]);
-    expect(document.activeElement).toBe(button(sidebarIn(el), "Back"));
-
-    release();
-    await vi.waitFor(() => {
-      expect(document.activeElement).toBe(fields(el)[0]);
-    });
-  });
-
-  test("leaves the focus where the user moved it before the page's first field draws", async () => {
-    const { el } = await startSidebar();
-    const release = holdBack();
-    await open(el);
-    click(row(el, "View options"));
-    await drawn();
-    const pin = button(sidebarIn(el), "Pin sidebar");
-    pin.focus();
-
-    release();
-    await vi.waitFor(() => {
-      expect(fields(el)).toHaveLength(1);
-    });
-    expect(document.activeElement).toBe(pin);
-  });
-
-  test("returns to the list on the back arrow and on Escape, where the page's row takes the focus, and ends the page's mounts", async () => {
+  test("expands several categories at once, and ends the mounts of a category as it collapses", async () => {
     const { el, core } = await startSidebar();
     const mounts = countMounts(core);
     await open(el);
 
-    await openPage(el, "Theme options", 3);
-    click(button(sidebarIn(el), "Back"));
-    await drawn();
-    expect(title(el)).toBe("Board options");
-    expect(pageOptions(el)).toEqual([]);
-    expect(mounts.ended).toEqual(["compact", "dark_mode", "view_tabs"]);
-    expect(document.activeElement).toBe(row(el, "Theme options"));
+    await expand(el, "Theme options", 3);
+    await expand(el, "View options", 1);
+    expect(expanded(el)).toEqual(["Theme options", "View options"]);
 
-    await openPage(el, "View options", 1);
-    expect(press("Escape")).toBe(true);
-    await drawn();
-    expect(isOpen(el)).toBe(true);
-    expect(rows(el)).toEqual(["Board options", "Table options", "Theme options", "View options"]);
-    expect(mounts.ended).toEqual(["compact", "dark_mode", "view_tabs", "zoom"]);
-    expect(document.activeElement).toBe(row(el, "View options"));
-  });
-
-  test("leaves Escape to a UI on the page that takes it, as a field that reverts what the user typed", async () => {
-    const { el, core } = await startSidebar();
-    await open(el);
-    await openPage(el, "View options", 1);
-    const [field] = fields(el);
-    if (!(field instanceof HTMLInputElement)) throw new Error("No field.");
-
-    field.focus();
-    field.value = "7";
-    expect(press("Escape")).toBe(true);
-    await drawn();
-    expect(field.value).toBe("2");
-    expect(title(el)).toBe("View options");
-
-    type(field, "3");
+    click(summary(el, "Theme options"));
     await vi.waitFor(() => {
-      expect(core.store.board().options.zoom).toBe(3);
+      expect(mounts.ended).toEqual(["compact", "dark_mode", "view_tabs"]);
     });
-    press("Escape");
-    await drawn();
-    expect(title(el)).toBe("Board options");
+    expect(expanded(el)).toEqual(["View options"]);
+    expect(optionsIn(el, "Theme options")).toEqual([]);
+    expect(fields(el, "View options")).toHaveLength(1);
   });
 
-  test("closes on Escape on the list, on its close button and on a press outside it, and gives the focus back to the options button", async () => {
+  test("keeps the UIs of a category until it has folded shut, as long as the longest transition of its content", async () => {
+    const { el, core } = await startSidebar();
+    const mounts = countMounts(core);
+    const computed = window.getComputedStyle.bind(window);
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element, pseudo) =>
+      pseudo === "::details-content"
+        ? ({ transitionDuration: "0.03s, 0.08s, 0s", transitionDelay: "0s" } as CSSStyleDeclaration)
+        : computed(element, pseudo),
+    );
+    await open(el);
+    await expand(el, "View options", 1);
+
+    click(summary(el, "View options"));
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(expanded(el)).toEqual([]);
+    expect(optionsIn(el, "View options")).toEqual(["zoom"]);
+    expect(mounts.ended).toEqual([]);
+    await vi.waitFor(() => {
+      expect(mounts.ended).toEqual(["zoom"]);
+    });
+    expect(optionsIn(el, "View options")).toEqual([]);
+  });
+
+  test("keeps its categories expanded as it closes and opens again, unpinned", async () => {
+    const { el } = await startSidebar();
+    await open(el);
+    click(button(sidebarIn(el), "Pin sidebar"));
+    await expand(el, "View options", 1);
+    click(button(sidebarIn(el), "Close sidebar"));
+    await drawn();
+
+    await open(el);
+    expect(expanded(el)).toEqual(["View options"]);
+    expect(fields(el, "View options")).toHaveLength(1);
+    expect(button(sidebarIn(el), "Pin sidebar").getAttribute("aria-pressed")).toBe("false");
+  });
+
+  test("closes on Escape, on its close button and on a press outside it, and gives the focus back to the options button", async () => {
     const { el } = await startSidebar();
 
     await open(el);
@@ -373,7 +340,6 @@ describe("the options sidebar", () => {
     expect(document.activeElement).toBe(optionsButton(el));
 
     await open(el);
-    await openPage(el, "Theme options", 3);
     click(button(sidebarIn(el), "Close sidebar"));
     await drawn();
     expect(isOpen(el)).toBe(false);
@@ -385,17 +351,27 @@ describe("the options sidebar", () => {
     expect(isOpen(el)).toBe(false);
   });
 
-  test("opens again on the list, unpinned, once it has closed on a pinned page", async () => {
-    const { el } = await startSidebar();
+  test("leaves Escape to a UI in it that takes the key, as a field that reverts what the user typed", async () => {
+    const { el, core } = await startSidebar();
     await open(el);
-    click(button(sidebarIn(el), "Pin sidebar"));
-    await openPage(el, "Theme options", 3);
-    click(button(sidebarIn(el), "Close sidebar"));
-    await drawn();
+    await expand(el, "View options", 1);
+    const [field] = fields(el, "View options");
+    if (!(field instanceof HTMLInputElement)) throw new Error("No field.");
 
-    await open(el);
-    expect(title(el)).toBe("Board options");
-    expect(button(sidebarIn(el), "Pin sidebar").getAttribute("aria-pressed")).toBe("false");
+    field.focus();
+    field.value = "7";
+    expect(press("Escape")).toBe(true);
+    await drawn();
+    expect(field.value).toBe("2");
+    expect(isOpen(el)).toBe(true);
+
+    type(field, "3");
+    await vi.waitFor(() => {
+      expect(core.store.board().options.zoom).toBe(3);
+    });
+    press("Escape");
+    await drawn();
+    expect(isOpen(el)).toBe(false);
   });
 
   test("stays open on a press on the options button, which toggles it, and on a toast, which lies over it", async () => {
@@ -430,16 +406,10 @@ describe("the options sidebar", () => {
     expect(bar.hasAttribute("data-pushed")).toBe(true);
     expect(root.hasAttribute("data-pushed")).toBe(true);
 
-    row(el, "Board options").focus();
+    summary(el, "Board options").focus();
     expect(press("Escape")).toBe(false);
     root.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     await drawn();
-    expect(isOpen(el)).toBe(true);
-
-    await openPage(el, "View options", 1);
-    press("Escape");
-    await drawn();
-    expect(title(el)).toBe("Board options");
     expect(isOpen(el)).toBe(true);
 
     click(button(sidebarIn(el), "Close sidebar"));
@@ -452,9 +422,8 @@ describe("the options sidebar", () => {
   test("keeps the focus inside it on Tab and Shift+Tab, pinned or not", async () => {
     const { el } = await startSidebar();
     await open(el);
-    const sidebar = sidebarIn(el);
-    const pin = button(sidebar, "Pin sidebar");
-    const last = row(el, "View options");
+    const pin = button(sidebarIn(el), "Pin sidebar");
+    const last = summary(el, "View options");
 
     last.focus();
     expect(press("Tab")).toBe(true);
@@ -464,7 +433,7 @@ describe("the options sidebar", () => {
 
     click(pin);
     await drawn();
-    row(el, "Board options").focus();
+    summary(el, "Board options").focus();
     expect(press("Tab")).toBe(false);
     pin.focus();
     expect(press("Tab", { shiftKey: true })).toBe(true);
@@ -474,46 +443,41 @@ describe("the options sidebar", () => {
   test("leaves a control that a board option's UI hides out as Tab wraps around", async () => {
     const { el } = await startSidebar();
     await open(el);
-    await openPage(el, "View options", 1);
-    const [field] = fields(el);
-    field?.focus();
+    await expand(el, "View options", 1);
+    fields(el, "View options")[0]?.focus();
     expect(press("Tab")).toBe(true);
-    expect(document.activeElement).toBe(button(sidebarIn(el), "Back"));
+    expect(document.activeElement).toBe(button(sidebarIn(el), "Pin sidebar"));
   });
 
   test("shows a board option that comes onto the board later", async () => {
     const { el, core } = await startSidebar({ options: { show_conditions: { value: ["error"], version: 1 } } });
     await open(el);
-    expect(rows(el)).toEqual(["Board options", "Theme options", "View options"]);
+    expect(names(el)).toEqual(["Board options", "Theme options", "View options"]);
 
     await core.commands.run("blockr.core-set_option", { id: "n_rows", value: 25 });
     await drawn();
-    expect(rows(el)).toEqual(["Board options", "Table options", "Theme options", "View options"]);
+    expect(names(el)).toEqual(CATEGORIES);
   });
 
-  test("returns to the list where the board no longer holds a board option of the page's category", async () => {
+  test("drops a category whose board options leave the board, though the user expanded it", async () => {
     const { el, core } = await startSidebar({ options: { grain: { value: 5, version: 1 } } });
     await open(el);
-    expect(rows(el)).toContain("Extra options");
-    await openPage(el, "Extra options", 1);
+    await expand(el, "Extra options", 1);
 
     core.store.apply({ options: { unset: ["grain"] } });
     await vi.waitFor(() => {
-      expect(title(el)).toBe("Board options");
+      expect(names(el)).not.toContain("Extra options");
     });
-    expect(rows(el)).not.toContain("Extra options");
     expect(core.store.board().options.grain).toBeUndefined();
   });
 
   test("shows the board options on a locked board too, where a change goes onto the board", async () => {
     const { el, core } = await startSidebar({ locked: true });
     await open(el);
-    expect(rows(el)).toEqual(["Board options", "Table options", "Theme options", "View options"]);
+    expect(names(el)).toEqual(CATEGORIES);
 
-    await openPage(el, "View options", 1);
-    const [field] = fields(el);
-    if (field === undefined) throw new Error("No field.");
-    type(field, "4");
+    await expand(el, "View options", 1);
+    type(fields(el, "View options")[0], "4");
     await vi.waitFor(() => {
       expect(core.store.board().options.zoom).toBe(4);
     });

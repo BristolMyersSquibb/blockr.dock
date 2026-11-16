@@ -1104,9 +1104,7 @@ button.blockr-dock-bar-name:hover {
 /*
  * The header, 48 pixels high with the rule under it, as the bar is, so that
  * the two rules run on one line where the sidebar sits beside the bar: the
- * back arrow on a page, the title, and the pin and close buttons.
- * The title starts 20 pixels from the edge, as the body's content does, or
- * after the back arrow, which starts 12 pixels from it.
+ * title, 20 pixels from the edge, and the pin and close buttons.
  */
 .blockr-dock-sidebar-header {
   flex: none;
@@ -1117,14 +1115,6 @@ button.blockr-dock-bar-name:hover {
   height: 48px;
   padding: 0 14px 0 20px;
   border-bottom: 1px solid var(--blockr-dock-border);
-}
-
-.blockr-dock-sidebar-header:has(> .blockr-dock-sidebar-back) {
-  padding-left: 12px;
-}
-
-.blockr-dock-sidebar-back {
-  margin-right: 2px;
 }
 
 .blockr-dock-sidebar-title {
@@ -1140,9 +1130,8 @@ button.blockr-dock-bar-name:hover {
 }
 
 /*
- * The back arrow, the pin and the close button: quiet icon buttons of the
- * design system at its size xs, in the muted colour, which take the hover
- * wash.
+ * The pin and the close button: quiet icon buttons of the design system at
+ * its size xs, in the muted colour, which take the hover wash.
  */
 .blockr-dock-sidebar-button {
   flex: none;
@@ -1169,7 +1158,7 @@ button.blockr-dock-bar-name:hover {
 }
 
 .blockr-dock-sidebar-button:focus-visible,
-.blockr-dock-sidebar-row:focus-visible {
+.blockr-dock-sidebar-summary:focus-visible {
   outline: 2px solid var(--blockr-dock-border-accent);
   outline-offset: -2px;
 }
@@ -1207,38 +1196,40 @@ button.blockr-dock-bar-name:hover {
 }
 
 /*
- * The list of categories, whose rows are those of a menu of actions in the
- * design system, 34 pixels high with 10 pixels at each side, so the list
- * reaches out by those 10 pixels, and the categories line up with the title.
- * Each row ends in a chevron that points right, since it opens a page.
+ * The categories, an accordion of `details` elements, whose summaries are the
+ * rows of a menu of actions in the design system, 34 pixels high with 10
+ * pixels at each side.
+ * The accordion reaches out by those 10 pixels, so that the categories line
+ * up with the title.
+ * The chevron goes before the category's name, and points down while the
+ * category is expanded, or right while it is collapsed.
  */
-.blockr-dock-sidebar-list {
+.blockr-dock-sidebar-categories {
   margin: -8px -10px;
 }
 
-.blockr-dock-sidebar-row {
+.blockr-dock-sidebar-summary {
   box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
   min-height: 34px;
   padding: 0 10px;
-  border: 0;
   border-radius: var(--blockr-radius-sm, 4px);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: start;
+  list-style: none;
   cursor: pointer;
 }
 
-.blockr-dock-sidebar-row:hover,
-.blockr-dock-sidebar-row:focus-visible {
+.blockr-dock-sidebar-summary::-webkit-details-marker {
+  display: none;
+}
+
+.blockr-dock-sidebar-summary:hover,
+.blockr-dock-sidebar-summary:focus-visible {
   background: var(--blockr-dock-bg-hover);
 }
 
-.blockr-dock-sidebar-row-name {
+.blockr-dock-sidebar-summary-name {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -1246,15 +1237,65 @@ button.blockr-dock-bar-name:hover {
   white-space: nowrap;
 }
 
-.blockr-dock-sidebar-row .blockr-dock-chevron {
+.blockr-dock-sidebar-summary .blockr-dock-chevron {
   flex: none;
   color: var(--blockr-dock-text-muted);
+  rotate: -90deg;
 }
 
-/* A page holds the UI of each board option, 16 pixels under the one before. */
-.blockr-dock-sidebar-page {
+.blockr-dock-sidebar-category[open] > .blockr-dock-sidebar-summary .blockr-dock-chevron {
+  rotate: none;
+}
+
+/*
+ * A category's content folds open and shut over 0.22s, as a card's section
+ * does, unless the reader asks for less motion: its block size moves between
+ * 0 and its own, and it stays drawn until the fold has shut.
+ * The fold opens from a block size of 0 that @starting-style gives, since
+ * Chromium draws the opening at once without it.
+ * A browser that cannot move a size to the content's own opens and shuts it
+ * at once.
+ */
+.blockr-dock-sidebar-category {
+  interpolate-size: allow-keywords;
+}
+
+.blockr-dock-sidebar-category::details-content {
+  overflow: clip;
+  contain: layout;
+}
+
+.blockr-dock-sidebar-category:not([open])::details-content {
+  block-size: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .blockr-dock-sidebar-category::details-content {
+    transition-property: block-size, content-visibility, display;
+    transition-duration: 0.22s;
+    transition-timing-function: ease;
+    transition-behavior: allow-discrete;
+  }
+
+  @starting-style {
+    .blockr-dock-sidebar-category[open]::details-content {
+      block-size: 0;
+    }
+  }
+
+  .blockr-dock-sidebar-summary .blockr-dock-chevron {
+    transition: rotate 0.2s ease;
+  }
+}
+
+/*
+ * The UI of each board option of an expanded category, 16 pixels under the
+ * one before, which lines up with the category's name, after its chevron.
+ */
+.blockr-dock-sidebar-options {
   display: grid;
   gap: 16px;
+  padding: 8px 10px 16px 30px;
 }
 
 .blockr-dock-sidebar-note {

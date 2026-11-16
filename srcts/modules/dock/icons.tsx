@@ -6,19 +6,13 @@
 
 import type { ReactElement } from "react";
 
-// The points of the chevron's stroke, for each way that it points.
-const CHEVRON = {
-  down: "3 4.5 6 7.5 9 4.5",
-  right: "4.5 3 7.5 6 4.5 9",
-  left: "7.5 3 4.5 6 7.5 9",
-} as const;
-
 // The one chevron of blockr.ui's design system: a 12 pixel box, stroked at
 // 1.4 pixels whatever its size, which points down, or right as a "go to"
-// arrow, such as that of a menu inside a menu or of a row in the options
-// sidebar, or left as the sidebar's way back.
-// A menu's chevron flips up while the menu is open (./index.css).
-export function Chevron({ point = "down" }: { readonly point?: keyof typeof CHEVRON }): ReactElement {
+// arrow, such as that of a menu inside a menu.
+// A menu's chevron flips up while the menu is open, and a category of the
+// options sidebar turns its chevron to point right while it is collapsed
+// (./index.css).
+export function Chevron({ right = false }: { readonly right?: boolean }): ReactElement {
   return (
     <svg
       className="blockr-dock-chevron"
@@ -33,7 +27,7 @@ export function Chevron({ point = "down" }: { readonly point?: keyof typeof CHEV
       aria-hidden="true"
       focusable="false"
     >
-      <polyline points={CHEVRON[point]} vectorEffect="non-scaling-stroke" />
+      <polyline points={right ? "4.5 3 7.5 6 4.5 9" : "3 4.5 6 7.5 9 4.5"} vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }

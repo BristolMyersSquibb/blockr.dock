@@ -1,11 +1,15 @@
 # blockr.dock 0.2.1
 
 * The options button on the bar opens the dock's options sidebar (#583).
-  The sidebar lists the categories of the board options that the board holds,
-  and a click on one shows the category's page, where core mounts the UI of
-  each of its board options.
-  The categories come in alphabetical order, and so do the board options on a
-  page, by their labels.
+  The sidebar lists the categories of the board options that the board holds
+  as an accordion, whose categories the user expands in place, several at
+  once.
+  An expanded category shows the UI of each of its board options, which core
+  mounts.
+  The categories come in alphabetical order, and so do the board options in a
+  category, by their labels.
+  A category that the user expanded stays expanded as the sidebar closes and
+  opens again.
   The sidebar shows the board options on a locked board too, since the board
   lock leaves them open.
   Unpinned, the sidebar lies over the page, and Escape or a press outside it
