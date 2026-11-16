@@ -39,7 +39,7 @@
 // board object, which names the panel as a grid names it
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#showing-a-panel).
 // The command has the active view show the panel, and takes no undo step.
-// Where the command is not enabled, as on a locked board whose active view
+// Where the command fails its preflight, as on a locked board whose active view
 // lacks the panel, show() shows nothing, while core has given the block focus.
 
 import { flushSync } from "react-dom";
@@ -95,7 +95,7 @@ const frontend = {
   },
   async show({ object, core }) {
     const args = { panel: object };
-    if (!core.commands.enabled(SHOW_PANEL, args)) return;
+    if (!core.commands.preflight(SHOW_PANEL, args)) return;
     await core.commands.run(SHOW_PANEL, args);
   },
 } satisfies FrontendModule;

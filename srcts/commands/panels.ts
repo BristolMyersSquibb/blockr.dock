@@ -130,7 +130,7 @@ export const panelCommands = [
     description:
       "Places a panel in a view that does not show it, as the tab that its tab group or rail shows: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place, a new tab in the last tab group that holds no plugin's panel.",
     args: placeArgs("goes"),
-    enabled(board, { view, panel }, { lock }) {
+    preflight(board, { view, panel }, { lock }) {
       return !lock.board && viewOf(board, view) !== undefined && !shows(board, view, panel) && holdsBlock(board, panel);
     },
     run(board, { view, panel, near, side, rail }) {
@@ -146,7 +146,7 @@ export const panelCommands = [
     description:
       "Takes a panel out of a view, as closing its tab does. It removes no block, and the panel stays in the other views that show it.",
     args: schemas.object({ view: schemas.view, panel: schemas.panel }, ["view", "panel"]),
-    enabled(board, { view, panel }, { lock }) {
+    preflight(board, { view, panel }, { lock }) {
       return !lock.board && shows(board, view, panel);
     },
     run(board, { view, panel }) {
@@ -162,7 +162,7 @@ export const panelCommands = [
     description:
       "Moves a panel within a view that shows it, placed as blockr.dock-add_panel places one: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place.",
     args: placeArgs("moves"),
-    enabled(board, { view, panel, near }) {
+    preflight(board, { view, panel, near }) {
       return shows(board, view, panel) && (near === undefined || !samePanel(near, panel));
     },
     async prepare(_board, args, context) {
@@ -200,7 +200,7 @@ export const panelCommands = [
       },
       ["view", "panel", "size"],
     ),
-    enabled(board, { view, panel }) {
+    preflight(board, { view, panel }) {
       return shows(board, view, panel);
     },
     async prepare(_board, args, context) {
@@ -221,7 +221,7 @@ export const panelCommands = [
       "Has the tab group or rail that holds a panel show it, as clicking its tab does. It takes no undo step, since it changes only what the user looks at.",
     args: schemas.object({ view: schemas.view, panel: schemas.panel }, ["view", "panel"]),
     undo: false,
-    enabled(board, { view, panel }) {
+    preflight(board, { view, panel }) {
       return shows(board, view, panel);
     },
     run(board, { view, panel }) {
@@ -238,7 +238,7 @@ export const panelCommands = [
       "Shows a panel in the active view, as the dock carries out core's show(): has the tab group or rail that holds it show it, opening the rail where it is collapsed, where the view shows it, and places it at the default place where the view does not, a new tab in the last tab group that holds no plugin's panel. While the board option sync_rails is on, a rail that it opens opens on every view that has a rail on that edge. It never switches views, and takes no undo step, since showing takes none. On a locked board, it only has a tab group or rail show a panel that the view shows.",
     args: schemas.object({ panel: schemas.panel }, ["panel"]),
     undo: false,
-    enabled(board, { panel }, { lock }) {
+    preflight(board, { panel }, { lock }) {
       const active = stateOf(board)?.active ?? null;
       if (active === null || !holdsBlock(board, panel)) return false;
       return !lock.board || shows(board, active, panel);
@@ -265,7 +265,7 @@ export const panelCommands = [
     description:
       "Sets a view's whole grid, which says which panels the view shows and where, as the dock does after the user drags a panel or a border. A grid places each panel once, and the shares of each split are above 0 and sum to 1. Where the grid has the same splits and tab groups as the view's, a split keeps its shares unless the grid moves one by more than the blockr option dock_grid_size_tol, 0.005 unless set.",
     args: schemas.object({ view: schemas.view, grid: schemas.grid }, ["view", "grid"]),
-    enabled(board, { view }) {
+    preflight(board, { view }) {
       return viewOf(board, view) !== undefined;
     },
     async prepare(_board, args, context) {
@@ -296,7 +296,7 @@ export const panelCommands = [
       ["view", "edge", "collapsed"],
     ),
     undo: false,
-    enabled(board, { view, edge }) {
+    preflight(board, { view, edge }) {
       return viewOf(board, view)?.grid.rails?.[edge] !== undefined;
     },
     run(board, { view, edge, collapsed }) {

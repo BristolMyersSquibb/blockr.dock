@@ -36,7 +36,7 @@ export const sectionCommands = [
       },
       ["block", "sections"],
     ),
-    enabled(board, { block }, { lock }) {
+    preflight(board, { block }, { lock }) {
       return !lock.board && stateOf(board) !== undefined && Object.hasOwn(board.blocks, block);
     },
     run(board, { block, sections }) {
