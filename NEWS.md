@@ -26,8 +26,8 @@
   It leaves a notification about a block to the block's card, unless a plugin
   raised it.
   Every other notification shows as a toast: what a plugin raised, even about
-  a block, and every notification about no block, such as the error that the
-  dock raises for a refused gesture.
+  a block, and every notification about no block, such as the error that core
+  raises for a refused gesture.
   The toasts stack in the window's bottom right corner, and each names what
   its notification concerns.
   A message's toast fades after five seconds, but not while the pointer rests

@@ -163,7 +163,7 @@ export interface DockProps {
 export function Dock({ core, plugin, settings, narrow, drawn }: DockProps): ReactElement {
   const root = useRef<HTMLDivElement>(null);
   const stop = useRef<(() => void) | undefined>(undefined);
-  const shared = useMemo(() => ({ core, plugin, drawn }), [core, plugin, drawn]);
+  const shared = useMemo(() => ({ core, drawn }), [core, drawn]);
   const locked = core.lock.board;
 
   const onReady = useCallback(

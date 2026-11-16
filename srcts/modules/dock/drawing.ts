@@ -38,8 +38,9 @@
 // - While a command that a gesture sent has not yet applied, the dock leaves
 //   dockview as the user left it, and once every such command has applied or
 //   been refused, it brings dockview to the stored grid.
-// - A refused command raises a notification of the code edit_refused, which
-//   concerns the dock plugin, as core's plugins raise one for a refused edit.
+// - Where the board refuses a command that a gesture sent, core tells the user
+//   why, as an error of the code board_edit_failed. The dock raises no
+//   notification of its own.
 //
 // Rails:
 // - Dockview always holds the edge groups of both rails, and the dock shows
@@ -61,13 +62,13 @@ import { columnRuns, gestureRuns, gridToLayout, layoutToGrid, panelId, panelOf, 
 import type { Run, Size } from "../../layout/index.ts";
 import { EDGES, gridChanges, samePanel, tabGroups, withStoredShares } from "../../state/index.ts";
 import type { Edge, Grid, Panel, ViewId } from "../../state/index.ts";
-import { notifyRefused } from "./context.ts";
 import type { Narrow } from "./narrow.ts";
 import type { Settings } from "./settings.ts";
 
 export interface DrawingOptions {
   readonly core: CoreApi;
-  // The id of the dock plugin's class, which raises the dock's notifications.
+  // The id of the dock plugin's class, under which the board holds the dock's
+  // state.
   readonly plugin: PluginClassId;
   readonly api: DockviewApi;
   // The dock's root, which holds dockview, and in which gestures start.
@@ -242,8 +243,8 @@ export function drawDock(options: DrawingOptions): () => void {
     pending += 1;
     void core.commands
       .run(run.id, run.args)
-      .catch((error: unknown) => {
-        if (!stopped) notifyRefused(core, plugin, error);
+      .catch(() => {
+        // Core tells the user why the board refused the command.
       })
       .finally(() => {
         pending -= 1;
