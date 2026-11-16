@@ -347,6 +347,25 @@ describe("a gesture", () => {
     expect(run.mock.calls).toEqual([["blockr.dock-activate_panel", { view: "main", panel: a }]]);
   });
 
+  test("commits what a drop changed as the drag ends, where the browser sends no pointerup after it, as Safari does", async () => {
+    const s = await start();
+    const run = vi.spyOn(s.core.commands, "run");
+
+    // Safari sends no pointercancel as a native drag starts, and no pointerup
+    // after the drop.
+    s.el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    s.panel(b).api.moveTo({ group: s.panel(c).group, position: "right" });
+    await s.after();
+    expect(run).not.toHaveBeenCalled();
+
+    document.dispatchEvent(new Event("dragend"));
+    await s.after();
+    expect(run.mock.calls.map(([id]) => id)).toEqual(["blockr.dock-set_grid"]);
+    const stored = s.grid();
+    if (stored === undefined) throw new Error("The view Main has no grid.");
+    expectShows(s.shown(), stored);
+  });
+
   test("that collapses a rail runs blockr.dock-collapse_rail, on every view while sync_rails is on, with no undo step", async () => {
     const s = await start();
 

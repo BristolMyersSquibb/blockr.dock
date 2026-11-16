@@ -534,22 +534,22 @@ function locate(grid2, panel2) {
   const held = rails(grid2).find(([, rail2]) => rail2.panels.some((placed) => samePanel(placed, panel2)));
   return held === void 0 ? void 0 : { edge: held[0] };
 }
-function placeFailure(grid2, place2) {
-  if (place2.rail !== void 0 || place2.near === void 0) return void 0;
-  const at2 = locate(grid2, place2.near);
-  if (at2 === void 0) return `The view does not show ${panelName(place2.near)}, which near names.`;
-  if ("edge" in at2 && (place2.side ?? "within") !== "within") {
-    return `The view shows ${panelName(place2.near)}, which near names, on a rail, which takes a panel only within.`;
+function placeFailure(grid2, place) {
+  if (place.rail !== void 0 || place.near === void 0) return void 0;
+  const at2 = locate(grid2, place.near);
+  if (at2 === void 0) return `The view does not show ${panelName(place.near)}, which near names.`;
+  if ("edge" in at2 && (place.side ?? "within") !== "within") {
+    return `The view shows ${panelName(place.near)}, which near names, on a rail, which takes a panel only within.`;
   }
   return void 0;
 }
-function placedAt(grid2, panel2, place2, sizing) {
-  const failure = placeFailure(grid2, place2);
+function placedAt(grid2, panel2, place, sizing) {
+  const failure = placeFailure(grid2, place);
   if (failure !== void 0) throw new Error(failure);
-  if (place2.rail !== void 0) return onRail(grid2, place2.rail, panel2);
-  const side2 = place2.side ?? "within";
-  if (place2.near === void 0) return side2 === "within" ? placePanel(grid2, panel2) : atEdge(grid2, panel2, side2);
-  const at2 = locate(grid2, place2.near);
+  if (place.rail !== void 0) return onRail(grid2, place.rail, panel2);
+  const side2 = place.side ?? "within";
+  if (place.near === void 0) return side2 === "within" ? placePanel(grid2, panel2) : atEdge(grid2, panel2, side2);
+  const at2 = locate(grid2, place.near);
   if (at2 === void 0) return grid2;
   if ("edge" in at2) return onRail(grid2, at2.edge, panel2);
   if (side2 === "within") {
@@ -903,8 +903,8 @@ function rehoused(state, before2) {
       outer = parent;
       parent = before2.folders[outer]?.folder ?? null;
     }
-    const place2 = before2.folders[outer]?.index ?? null;
-    return { ...entry, target: lacks(parent) ? null : parent, place: place2, path };
+    const place = before2.folders[outer]?.index ?? null;
+    return { ...entry, target: lacks(parent) ? null : parent, place, path };
   });
   const lists = /* @__PURE__ */ new Map();
   const folderKeys = (target) => {
@@ -927,8 +927,8 @@ function rehoused(state, before2) {
     if (first === void 0) continue;
     group.sort((a, b) => pathOrder(a.path, b.path) || compare(a.kind, b.kind) || compare(a.id, b.id));
     const list = folderKeys(first.target);
-    const place2 = first.place;
-    const after = place2 === null ? list.length : list.filter((held) => held.added || compare(held.index, place2) <= 0).length;
+    const place = first.place;
+    const after = place === null ? list.length : list.filter((held) => held.added || compare(held.index, place) <= 0).length;
     const keys = keysBetween(list[after - 1]?.index ?? null, list[after]?.index ?? null, group.length);
     group.forEach((entry, i) => {
       const index = keys[i] ?? entry.index;
@@ -1948,6 +1948,9 @@ function trackBusy(core, drawn, narrow, delay) {
   };
 }
 
+// srcts/modules/dock/card/card.tsx
+import { useCallback as useCallback5, useState as useState4 } from "react";
+
 // srcts/modules/dock/context.ts
 import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
 var DockContext = createContext(null);
@@ -1966,283 +1969,58 @@ function useBoard(core) {
   const board = useCallback(() => core.store.board(), [core]);
   return useSyncExternalStore(subscribe, board);
 }
-
-// srcts/modules/dock/dock.tsx
-import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./libraries-a3ad4872.js";
-import { useCallback as useCallback3, useEffect, useLayoutEffect as useLayoutEffect2, useMemo as useMemo2, useRef as useRef2 } from "react";
-
-// srcts/modules/dock/drawing.ts
-var EMPTY2 = { orientation: "horizontal", children: [], sizes: [] };
-var DWELL_MS = 250;
-var REVEAL_BAND = 35;
-function drawDock(options) {
-  const { core, plugin, api: api2, el, settings, narrow, drawn } = options;
-  const doc = el.ownerDocument;
-  const win = doc.defaultView ?? window;
-  let view2;
-  let column = narrow.get();
-  let shown;
-  let pending = 0;
-  let press;
-  let laidOut = api2.width > 0 && api2.height > 0;
-  let dragging = false;
-  const revealed = /* @__PURE__ */ new Set();
-  let dwell;
-  let stopped = false;
-  const active = () => {
-    const state = dockState(core.store.board());
-    const id = state?.active ?? null;
-    const held = id === null ? void 0 : state?.views[id];
-    return id === null || held === void 0 ? void 0 : { id, grid: held.grid };
-  };
-  const title = (panel2) => "block" in panel2 ? core.store.board().blocks[panel2.block]?.name : drawn.get(panel2.plugin);
-  const size = () => ({ width: api2.width, height: api2.height });
-  const read = () => layoutToGrid(api2.toJSON());
-  const target = (grid2) => column ? stackGrid(grid2, settings.fraction).grid : grid2;
-  function draw() {
-    const current = active();
-    view2 = current?.id ?? null;
-    const was = column;
-    column = narrow.get();
-    if (was !== column) lockDockview();
-    const grid2 = current?.grid ?? EMPTY2;
-    el.dataset.layout = column ? "narrow" : "wide";
-    el.style.height = column ? `${String(Math.round(stackGrid(grid2, settings.fraction).height * 1e4) / 100)}vh` : "";
-    api2.fromJSON(gridToLayout(target(grid2), title, size()), { reuseExistingPanels: true });
-    syncRails2();
-    shown = read();
-  }
-  function lockDockview() {
-    const locked = core.lock.board;
-    api2.updateOptions({
-      locked: column || locked && settings.lockResize,
-      disableDnd: column || locked && settings.lockRearrange
-    });
-  }
-  function reconcile() {
-    if (stopped || pending > 0) return;
-    const current = active();
-    if (view2 === void 0 || (current?.id ?? null) !== view2 || narrow.get() !== column) {
-      draw();
-      return;
-    }
-    if (current === void 0) return;
-    const want = layoutToGrid(gridToLayout(target(current.grid), title, size()));
-    const now = read();
-    const changes = gridChanges(want, now);
-    const sized = api2.width > 0 && api2.height > 0;
-    if (changes.panels || changes.arrangement || sized && !sharesNear(want, now, settings.tolerance)) {
-      draw();
-      return;
-    }
-    const wantedGroups = tabGroups(want);
-    tabGroups(now).forEach((group, i) => {
-      const wanted = wantedGroups[i];
-      if (wanted !== void 0 && !samePanel(wanted.active, group.active)) showPanel(wanted.active);
-    });
-    for (const edge2 of EDGES) {
-      const [wanted, rail2] = [want.rails?.[edge2], now.rails?.[edge2]];
-      const group = api2.getEdgeGroup(edge2);
-      if (wanted === void 0 || rail2 === void 0 || group === void 0) continue;
-      if (!samePanel(wanted.active, rail2.active)) showPanel(wanted.active);
-      if (wanted.collapsed !== rail2.collapsed) {
-        if (wanted.collapsed) group.collapse();
-        else group.expand();
-      }
-      if (wanted.size !== rail2.size) group.setSize({ width: wanted.size });
-    }
-    retitle();
-    shown = read();
-  }
-  function showPanel(panel2) {
-    api2.getPanel(panelId(panel2))?.api.setActive();
-  }
-  function retitle() {
-    for (const held of api2.panels) {
-      const panel2 = panelFromId(held.id);
-      const name2 = panel2 === void 0 ? void 0 : title(panel2);
-      if (name2 !== void 0 && held.api.title !== name2) held.api.setTitle(name2);
-    }
-  }
-  const dockWidth = () => el.getBoundingClientRect().width;
-  function settle(pointer2) {
-    if (stopped) return;
-    syncRails2();
-    const current = active();
-    const before2 = shown;
-    if (before2 === void 0 || current === void 0 || current.id !== view2) return;
-    const now = read();
-    shown = now;
-    const runs = column ? columnRuns(current.id, before2, now) : gestureRuns(current.id, before2, now, current.grid, {
-      shares: pointer2 !== void 0,
-      widths: pointer2?.width === dockWidth(),
-      tolerance: settings.tolerance
-    });
-    for (const run of runs) send(run);
-  }
-  function send(run) {
-    pending += 1;
-    void core.commands.run(run.id, run.args).catch(() => {
-    }).finally(() => {
-      pending -= 1;
-      reconcile();
-    });
-  }
-  function syncRails2() {
-    for (const edge2 of EDGES) {
-      const group = api2.getGroup(railId(edge2));
-      if (group === void 0) continue;
-      const holds = group.panels.length > 0;
-      if (holds && revealed.has(edge2) && group.api.isCollapsed()) group.api.expand();
-      if (!dragging) revealed.delete(edge2);
-      const wanted = !column && (holds || revealed.has(edge2));
-      if (api2.isEdgeGroupVisible(edge2) !== wanted) api2.setEdgeGroupVisible(edge2, wanted);
-    }
-  }
-  function restoreRails() {
-    if (column) return;
-    const current = active();
-    const sizes = api2.toJSON().edgeGroups;
-    for (const edge2 of EDGES) {
-      const rail2 = current?.grid.rails?.[edge2];
-      const group = api2.getEdgeGroup(edge2);
-      const now = sizes?.[edge2]?.size;
-      if (rail2 === void 0 || group === void 0 || rail2.collapsed || now === void 0) continue;
-      if (Math.round(now) !== rail2.size) group.setSize({ width: rail2.size });
-    }
-  }
-  function inBand(edge2, event) {
-    const rect = el.getBoundingClientRect();
-    const { clientX: x, clientY: y } = event;
-    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return false;
-    return edge2 === "left" ? x - rect.left <= REVEAL_BAND : rect.right - x <= REVEAL_BAND;
-  }
-  function clearDwell() {
-    if (dwell !== void 0) clearTimeout(dwell.timer);
-    dwell = void 0;
-  }
-  function reveal(edge2) {
-    if (api2.isEdgeGroupVisible(edge2)) return;
-    revealed.add(edge2);
-    api2.setEdgeGroupVisible(edge2, true);
-    const group = api2.getEdgeGroup(edge2);
-    if (group !== void 0 && !group.isCollapsed()) group.collapse();
-  }
-  const onDragOver = (event) => {
-    if (!dragging || column) return;
-    const edge2 = EDGES.find((candidate) => inBand(candidate, event));
-    if (edge2 === void 0) {
-      clearDwell();
-      return;
-    }
-    if (dwell?.edge === edge2) return;
-    clearDwell();
-    dwell = {
-      edge: edge2,
-      timer: setTimeout(() => {
-        dwell = void 0;
-        if (dragging) reveal(edge2);
-      }, DWELL_MS)
-    };
-  };
-  const endDrag = () => {
-    if (!dragging) return;
-    dragging = false;
-    clearDwell();
-    syncRails2();
-  };
-  const onKey = (event) => {
-    if (event.key === "Escape") endDrag();
-  };
-  const onPointerDown = () => {
-    press = { width: dockWidth() };
-  };
-  const onPointerUp = () => {
-    const pressed = press;
-    if (pressed === void 0) return;
-    press = void 0;
-    settle(pressed);
-  };
-  const onResize = () => {
-    if (stopped) return;
-    if (press === void 0) restoreRails();
-    const was = laidOut;
-    laidOut = api2.width > 0 && api2.height > 0;
-    if (!was && laidOut) reconcile();
-  };
-  const resizes = typeof win.ResizeObserver === "function" ? new win.ResizeObserver(() => {
-    win.requestAnimationFrame(onResize);
-  }) : void 0;
-  const landed = () => {
-    dragging = false;
-    clearDwell();
-  };
-  const disposables = [
-    api2.onDidLayoutChange(() => {
-      if (press === void 0) settle();
-    }),
-    api2.onWillDragPanel(() => {
-      dragging = true;
-    }),
-    api2.onWillDragGroup(() => {
-      dragging = true;
-    }),
-    api2.onDidMovePanel(landed),
-    api2.onDidAddPanel(landed),
-    api2.onDidRemovePanel(landed)
-  ];
-  resizes?.observe(el);
-  el.addEventListener("pointerdown", onPointerDown, true);
-  win.addEventListener("pointerup", onPointerUp, true);
-  win.addEventListener("pointercancel", onPointerUp, true);
-  el.addEventListener("dragover", onDragOver);
-  doc.addEventListener("drop", endDrag);
-  doc.addEventListener("dragend", endDrag);
-  doc.addEventListener("keydown", onKey);
-  let lastState = core.store.board().plugins[plugin];
-  const offBoard = core.store.subscribe((_change, board) => {
-    if (board.plugins[plugin] === lastState) {
-      retitle();
-      return;
-    }
-    lastState = board.plugins[plugin];
-    reconcile();
+function runEdit(core, id, args) {
+  core.commands.run(id, args).catch(() => {
   });
-  const offNarrow = narrow.subscribe(() => {
-    reconcile();
-  });
-  lockDockview();
-  draw();
-  for (const edge2 of EDGES) {
-    const group = api2.getEdgeGroup(edge2);
-    if (group === void 0) continue;
-    disposables.push(
-      group.onDidCollapsedChange(() => {
-        queueMicrotask(() => {
-          if (press === void 0) settle();
-        });
-      })
-    );
-  }
-  return () => {
-    stopped = true;
-    clearDwell();
-    resizes?.disconnect();
-    offBoard();
-    offNarrow();
-    for (const disposable of disposables) disposable.dispose();
-    el.removeEventListener("pointerdown", onPointerDown, true);
-    win.removeEventListener("pointerup", onPointerUp, true);
-    win.removeEventListener("pointercancel", onPointerUp, true);
-    el.removeEventListener("dragover", onDragOver);
-    doc.removeEventListener("drop", endDrag);
-    doc.removeEventListener("dragend", endDrag);
-    doc.removeEventListener("keydown", onKey);
-  };
 }
-function sharesNear(a, b, tolerance) {
-  const bare = (grid2) => ({ orientation: grid2.orientation, children: grid2.children, sizes: grid2.sizes });
-  return !gridChanges(bare(a), bare(withStoredShares(a, b, tolerance))).sizes;
+function giveFocus(core, block) {
+  if (core.focus.get() !== block) core.focus.set(block);
+}
+
+// srcts/modules/dock/card/header.tsx
+import { useCallback as useCallback4, useId as useId2, useLayoutEffect as useLayoutEffect3, useRef as useRef3, useState as useState3 } from "react";
+
+// srcts/modules/dock/menu.tsx
+import { Fragment, useCallback as useCallback2, useEffect, useId, useLayoutEffect as useLayoutEffect2, useMemo, useRef, useState } from "react";
+
+// srcts/modules/dock/floating.ts
+import { useLayoutEffect } from "react";
+function usePopover(ref2, source) {
+  useLayoutEffect(() => {
+    const el = ref2.current;
+    if (el === null) return;
+    el.showPopover({ source });
+    return () => {
+      try {
+        el.hidePopover();
+      } catch {
+      }
+    };
+  }, [ref2, source]);
+}
+function useFloating(ref2, anchor, placement) {
+  useLayoutEffect(() => {
+    const el = ref2.current;
+    if (el === null || placement === null) return;
+    const doc = el.ownerDocument;
+    const win = doc.defaultView ?? window;
+    const place = () => {
+      const view2 = { width: win.innerWidth, height: win.innerHeight };
+      const spot = placement(anchor.getBoundingClientRect(), el.getBoundingClientRect(), view2);
+      el.style.left = `${String(Math.round(spot.left))}px`;
+      el.style.top = `${String(Math.round(spot.top))}px`;
+    };
+    place();
+    const resizes = typeof win.ResizeObserver === "function" ? new win.ResizeObserver(place) : void 0;
+    resizes?.observe(el);
+    win.addEventListener("resize", place);
+    doc.addEventListener("scroll", place, true);
+    return () => {
+      resizes?.disconnect();
+      win.removeEventListener("resize", place);
+      doc.removeEventListener("scroll", place, true);
+    };
+  }, [ref2, anchor, placement]);
 }
 
 // srcts/modules/dock/icons.tsx
@@ -2292,334 +2070,39 @@ function LockIcon({ size = 12 }) {
   return /* @__PURE__ */ jsx2("svg", { width: size, height: size, viewBox: "0 0 16 16", fill: "currentColor", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx2("path", { d: "M8 1a3 3 0 0 0-3 3v3H4.5A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7H11V4a3 3 0 0 0-3-3Zm-1.75 6V4a1.75 1.75 0 1 1 3.5 0v3h-3.5Z" }) });
 }
 
-// srcts/modules/dock/picker.tsx
-import { createContext as createContext2, useCallback as useCallback2, useContext as useContext2, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-
-// srcts/modules/dock/popover.ts
-var GAP = 4;
-function place(el, anchor, side2 = "below") {
-  const win = el.ownerDocument.defaultView;
-  if (win === null || win.CSS.supports("position-area", "block-end")) return;
-  const at2 = anchor.getBoundingClientRect();
-  const { width, height } = el.getBoundingClientRect();
-  let left;
-  let top;
-  if (side2 === "below") {
-    const above = at2.top - GAP - height;
-    top = at2.bottom + GAP + height > win.innerHeight && above >= 0 ? above : at2.bottom + GAP;
-    left = Math.max(0, Math.min(at2.left, win.innerWidth - width));
-  } else {
-    const before2 = at2.left - GAP - width;
-    left = at2.right + GAP + width > win.innerWidth && before2 >= 0 ? before2 : at2.right + GAP;
-    top = Math.max(0, Math.min(at2.top, win.innerHeight - height));
-  }
-  el.style.left = `${String(left)}px`;
-  el.style.top = `${String(top)}px`;
+// srcts/modules/dock/place.ts
+var EDGE = 8;
+var MENU_GAP = 4;
+var TOOLTIP_GAP = 6;
+function clamp(value, low, high) {
+  return Math.max(low, Math.min(value, high));
 }
-
-// srcts/modules/dock/picker.tsx
-import { Fragment, jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
-function pickerEntries(board, registry, drawn) {
-  const view2 = activeView(board);
-  if (view2 === void 0) return { blocks: [], plugins: [] };
-  const blocks = Object.entries(board.blocks).flatMap(([block, held]) => {
-    if (places(view2.grid, { block })) return [];
-    const type = registry[held.registry_id]?.name;
-    return [{ panel: { block }, id: block, name: held.name, ...type === void 0 ? {} : { type } }];
-  });
-  const plugins = [...drawn].flatMap(
-    ([plugin, name2]) => places(view2.grid, { plugin }) ? [] : [{ panel: { plugin }, id: plugin, name: name2 }]
-  );
-  return { blocks, plugins };
-}
-function searched(entries, query) {
-  const needle = query.trim().toLowerCase();
-  if (needle === "") return entries;
-  const finds = (entry) => [entry.name, entry.type ?? "", entry.id].some((text2) => text2.toLowerCase().includes(needle));
-  return { blocks: entries.blocks.filter(finds), plugins: entries.plugins.filter(finds) };
-}
-var PickerContext = createContext2(null);
-function usePicker() {
-  const value = useContext2(PickerContext);
-  if (value === null) throw new Error("A button of the panel picker is drawn outside the picker.");
-  return value;
-}
-var ANCHOR = "--blockr-dock-picker";
-var SEARCH = ".blockr-dock-picker-search";
-var ITEM = '[role="menuitem"]';
-function focusInto(el) {
-  el?.querySelector(SEARCH)?.focus();
-}
-function PanelPicker({ children: children2 }) {
-  const [picking, setPicking] = useState(void 0);
-  const ref2 = useRef(null);
-  const enter = useCallback2(() => {
-    focusInto(ref2.current);
-  }, []);
-  const state = useMemo(() => ({ picking, setPicking, enter }), [picking, enter]);
-  useLayoutEffect(() => {
-    const el = ref2.current;
-    if (el === null || picking === void 0) return void 0;
-    const { button, keyboard } = picking;
-    if (!keyboard) button.focus({ focusVisible: false });
-    button.style.setProperty("anchor-name", ANCHOR);
-    el.showPopover({ source: button });
-    place(el, button);
-    focusInto(el);
-    return () => {
-      button.style.removeProperty("anchor-name");
-      el.hidePopover();
-    };
-  }, [picking]);
-  return /* @__PURE__ */ jsxs2(PickerContext, { value: state, children: [
-    children2,
-    /* @__PURE__ */ jsx3(
-      "div",
-      {
-        ref: ref2,
-        popover: "auto",
-        className: "blockr-dock-picker",
-        onToggle: (event) => {
-          if (event.newState === "closed") setPicking(void 0);
-        },
-        onBlur: (event) => {
-          const next = event.relatedTarget;
-          if (next instanceof Node && !event.currentTarget.contains(next)) setPicking(void 0);
-        },
-        children: picking === void 0 ? null : /* @__PURE__ */ jsx3(PickerMenu, { near: picking.near })
-      }
-    )
-  ] });
-}
-function usePickerButton(near2) {
-  const { picking, setPicking, enter } = usePicker();
-  const id = useId();
-  const open = picking?.id === id;
-  const pressedOpen = useRef(false);
-  const show = (button, keyboard) => {
-    setPicking({ id, button, near: near2(), keyboard });
-  };
+function menuSpot(trigger, menu, view2, align = "start") {
+  const below = trigger.bottom + MENU_GAP;
+  const above = trigger.top - MENU_GAP - menu.height;
+  const top = below + menu.height > view2.height - EDGE && above >= EDGE ? above : below;
+  const left = align === "end" ? trigger.right - menu.width : trigger.left;
   return {
-    "aria-haspopup": "menu",
-    "aria-expanded": open,
-    onPointerDown: () => {
-      pressedOpen.current = open;
-    },
-    onClick: (event) => {
-      const keyboard = event.detail === 0;
-      const wasOpen = open || !keyboard && pressedOpen.current;
-      pressedOpen.current = false;
-      if (wasOpen) setPicking(void 0);
-      else show(event.currentTarget, keyboard);
-    },
-    onKeyDown: (event) => {
-      if (event.key !== "ArrowDown") return;
-      event.preventDefault();
-      if (open) enter();
-      else show(event.currentTarget, true);
-    }
+    left: clamp(left, EDGE, view2.width - EDGE - menu.width),
+    top: clamp(top, EDGE, view2.height - EDGE - menu.height)
   };
 }
-function PickerMenu({ near: near2 }) {
-  const { core, drawn } = useDock();
-  const { setPicking } = usePicker();
-  const board = useBoard(core);
-  const [query, setQuery] = useState("");
-  const caption = useId();
-  const heading = useId();
-  const menu = useRef(null);
-  const search = useRef(null);
-  const listed = useMemo(() => pickerEntries(board, core.blockRegistry(), drawn), [board, core, drawn]);
-  const shown = useMemo(() => searched(listed, query), [listed, query]);
-  const count2 = listed.blocks.length + listed.plugins.length;
-  const pick = (panel2) => {
-    setPicking(void 0);
-    const view2 = dockState(core.store.board())?.active ?? null;
-    if (view2 === null) return;
-    const args = near2 === void 0 ? { view: view2, panel: panel2 } : { view: view2, panel: panel2, near: near2, side: "within" };
-    void core.commands.run("blockr.dock-add_panel", args).catch(() => {
-    });
+function besideSpot(row, menu, view2) {
+  const right = row.right + MENU_GAP;
+  const left = row.left - MENU_GAP - menu.width;
+  const x = right + menu.width > view2.width - EDGE && left >= EDGE ? left : right;
+  return {
+    left: clamp(x, EDGE, view2.width - EDGE - menu.width),
+    top: clamp(row.top, EDGE, view2.height - EDGE - menu.height)
   };
-  const captioned = /* @__PURE__ */ jsx3("p", { id: caption, className: "blockr-dock-picker-caption", children: "Show in this view" });
-  if (count2 === 0) {
-    return /* @__PURE__ */ jsxs2(Fragment, { children: [
-      captioned,
-      /* @__PURE__ */ jsx3("p", { className: "blockr-dock-picker-note", children: nothingLeft(board, drawn) })
-    ] });
-  }
-  const first = shown.blocks[0] ?? shown.plugins[0];
-  const items = () => [...menu.current?.querySelectorAll(ITEM) ?? []];
-  const onSearchKey = (event) => {
-    if (event.nativeEvent.isComposing) return;
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      items()[0]?.focus();
-    } else if (event.key === "Enter" && first !== void 0) {
-      event.preventDefault();
-      pick(first.panel);
-    }
+}
+function tooltipSpot(trigger, tooltip, view2) {
+  const above = trigger.top - TOOLTIP_GAP - tooltip.height;
+  return {
+    left: clamp(trigger.left + trigger.width / 2 - tooltip.width / 2, EDGE, view2.width - EDGE - tooltip.width),
+    top: above < EDGE ? trigger.bottom + TOOLTIP_GAP : above
   };
-  const onMenuKey = (event) => {
-    const all = items();
-    const at2 = all.findIndex((item) => item === event.target);
-    if (at2 < 0) return;
-    const last = all.length - 1;
-    let next;
-    if (event.key === "ArrowDown") next = all[at2 === last ? 0 : at2 + 1];
-    else if (event.key === "ArrowUp") next = at2 === 0 ? search.current : all[at2 - 1];
-    else if (event.key === "Home") next = all[0];
-    else if (event.key === "End") next = all[last];
-    else return;
-    event.preventDefault();
-    next?.focus();
-  };
-  return /* @__PURE__ */ jsxs2(Fragment, { children: [
-    captioned,
-    /* @__PURE__ */ jsx3(
-      "input",
-      {
-        ref: search,
-        type: "search",
-        className: "blockr-dock-picker-search",
-        "aria-label": "Search",
-        placeholder: "Search",
-        autoComplete: "off",
-        spellCheck: false,
-        value: query,
-        onChange: (event) => {
-          setQuery(event.target.value);
-        },
-        onKeyDown: onSearchKey
-      }
-    ),
-    /* @__PURE__ */ jsxs2("div", { ref: menu, role: "menu", "aria-labelledby": caption, className: "blockr-dock-picker-menu", onKeyDown: onMenuKey, children: [
-      shown.blocks.map((entry) => /* @__PURE__ */ jsx3(Item, { entry, pick }, entry.id)),
-      shown.plugins.length === 0 ? null : /* @__PURE__ */ jsxs2("div", { role: "group", "aria-labelledby": heading, children: [
-        /* @__PURE__ */ jsx3("div", { id: heading, "aria-hidden": "true", className: "blockr-dock-picker-heading", children: "Plugins" }),
-        shown.plugins.map((entry) => /* @__PURE__ */ jsx3(Item, { entry, pick }, entry.id))
-      ] })
-    ] }),
-    first === void 0 ? /* @__PURE__ */ jsx3("p", { className: "blockr-dock-picker-note", children: "No panel matches." }) : null
-  ] });
 }
-function Item({ entry, pick }) {
-  return /* @__PURE__ */ jsxs2(
-    "button",
-    {
-      type: "button",
-      role: "menuitem",
-      tabIndex: -1,
-      className: "blockr-dock-picker-item",
-      onClick: () => {
-        pick(entry.panel);
-      },
-      children: [
-        /* @__PURE__ */ jsx3("span", { className: "blockr-dock-picker-name", children: entry.name }),
-        entry.type === void 0 ? null : /* @__PURE__ */ jsx3("span", { className: "blockr-dock-picker-type", children: entry.type })
-      ]
-    }
-  );
-}
-function nothingLeft(board, drawn) {
-  return Object.keys(board.blocks).length === 0 && drawn.size === 0 ? "The board has no blocks yet. Add a new block to get started." : "All blocks and plugins are already in this view. Add a new block to the board first.";
-}
-
-// srcts/modules/dock/dock.tsx
-import { Fragment as Fragment2, jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
-function PanelFrame({ params }) {
-  const { panel: panel2 } = params;
-  return "block" in panel2 ? /* @__PURE__ */ jsx4("div", { className: "blockr-dock-panel", "data-block": panel2.block }) : /* @__PURE__ */ jsx4(PluginFrame, { plugin: panel2.plugin });
-}
-function PluginFrame({ plugin }) {
-  const { core } = useDock();
-  const ref2 = useRef2(null);
-  useLayoutEffect2(() => {
-    const el = ref2.current;
-    if (el === null) return void 0;
-    const end = core.mountPlugin(el, plugin);
-    return () => {
-      queueMicrotask(end);
-    };
-  }, [core, plugin]);
-  return /* @__PURE__ */ jsx4("div", { ref: ref2, className: "blockr-dock-panel", "data-plugin": plugin });
-}
-var components = { [PANEL_COMPONENT]: PanelFrame };
-function LockedTab(props) {
-  return /* @__PURE__ */ jsx4(DockviewDefaultTab, { ...props, hideClose: true });
-}
-function AddPanelButton({ api: api2, group }) {
-  const button = usePickerButton(() => {
-    const shown = group.activePanel;
-    return shown === void 0 ? void 0 : panelFromId(shown.id);
-  });
-  if (api2.location.type === "edge") return null;
-  return /* @__PURE__ */ jsx4("div", { className: "blockr-dock-add-slot", children: /* @__PURE__ */ jsx4("button", { type: "button", className: "blockr-dock-add", "aria-label": "Add panel", ...button, children: /* @__PURE__ */ jsx4("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx4("path", { d: "M8 3v10M3 8h10", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }) }) }) });
-}
-function showsNothing(board, drawn) {
-  const view2 = activeView(board);
-  if (view2 === void 0) return false;
-  return !gridPanels(view2.grid).some((panel2) => "block" in panel2 ? Object.hasOwn(board.blocks, panel2.block) : drawn.has(panel2.plugin));
-}
-function EmptyView() {
-  const { core, drawn } = useDock();
-  const board = useBoard(core);
-  if (!showsNothing(board, drawn)) return null;
-  if (!core.lock.board) return /* @__PURE__ */ jsx4(EmptyPrompt, {});
-  return /* @__PURE__ */ jsxs3("div", { className: "blockr-dock-empty", children: [
-    /* @__PURE__ */ jsx4(LockIcon, { size: 32 }),
-    /* @__PURE__ */ jsx4("p", { children: "This view is empty" })
-  ] });
-}
-function EmptyPrompt() {
-  const button = usePickerButton(() => void 0);
-  return /* @__PURE__ */ jsxs3("div", { className: "blockr-dock-empty", children: [
-    /* @__PURE__ */ jsxs3("svg", { viewBox: "0 0 16 16", width: "32", height: "32", "aria-hidden": "true", focusable: "false", children: [
-      /* @__PURE__ */ jsx4("circle", { cx: "8", cy: "8", r: "6.5", fill: "none", stroke: "currentColor" }),
-      /* @__PURE__ */ jsx4("path", { d: "M8 5v6M5 8h6", fill: "none", stroke: "currentColor", strokeLinecap: "round" })
-    ] }),
-    /* @__PURE__ */ jsx4("p", { children: "Start by adding a panel" }),
-    /* @__PURE__ */ jsx4("button", { type: "button", className: "blockr-dock-empty-add", ...button, children: "Add panel" })
-  ] });
-}
-function Dock({ core, plugin, settings, narrow, drawn }) {
-  const root = useRef2(null);
-  const stop = useRef2(void 0);
-  const shared = useMemo2(() => ({ core, drawn }), [core, drawn]);
-  const locked = core.lock.board;
-  const onReady = useCallback3(
-    (event) => {
-      const el = root.current;
-      if (el === null) return;
-      stop.current?.();
-      stop.current = drawDock({ core, plugin, api: event.api, el, settings, narrow, drawn });
-    },
-    [core, plugin, settings, narrow, drawn]
-  );
-  useEffect(
-    () => () => {
-      stop.current?.();
-      stop.current = void 0;
-    },
-    []
-  );
-  const view2 = /* @__PURE__ */ jsxs3(Fragment2, { children: [
-    /* @__PURE__ */ jsx4(
-      DockviewReact,
-      {
-        components,
-        onReady,
-        theme: themeLightSpaced,
-        defaultRenderer: "always",
-        ...locked ? { defaultTabComponent: LockedTab } : { leftHeaderActionsComponent: AddPanelButton }
-      }
-    ),
-    /* @__PURE__ */ jsx4(EmptyView, {})
-  ] });
-  return /* @__PURE__ */ jsx4(DockContext, { value: shared, children: /* @__PURE__ */ jsx4("div", { className: "blockr-dock", ref: root, children: locked ? view2 : /* @__PURE__ */ jsx4(PanelPicker, { children: view2 }) }) });
-}
-
-// srcts/modules/dock/navbar.tsx
-import { useCallback as useCallback5, useEffect as useEffect2, useLayoutEffect as useLayoutEffect4, useReducer, useRef as useRef4, useState as useState3, useSyncExternalStore as useSyncExternalStore2 } from "react";
 
 // srcts/modules/dock/errors.ts
 function errorMessage(error) {
@@ -2628,9 +2111,6 @@ function errorMessage(error) {
 function asError(error) {
   return error instanceof Error ? error : new Error(errorMessage(error));
 }
-
-// srcts/modules/dock/menu.tsx
-import { useCallback as useCallback4, useLayoutEffect as useLayoutEffect3, useRef as useRef3, useState as useState2 } from "react";
 
 // srcts/modules/dock/storage.ts
 var KINDS = /* @__PURE__ */ new Set(["button", "menu", "status"]);
@@ -2784,267 +2264,1568 @@ function editable2(target) {
 }
 
 // srcts/modules/dock/menu.tsx
-import { Fragment as Fragment3, jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
-var ROWS = ':scope > [role="menuitem"], :scope > [role="none"] > [role="menuitem"]';
-function menuItems(list) {
-  return [...list.querySelectorAll(ROWS)];
+import { Fragment as Fragment2, jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
+function matches(row, searched) {
+  const words = searched.toLowerCase().split(/\s+/).filter((word) => word !== "");
+  const text2 = [row.label, row.detail ?? "", row.search ?? ""].join(" ").toLowerCase();
+  return words.every((word) => text2.includes(word));
+}
+function stepped(at2, step, count2) {
+  if (at2 === null) return step === 1 ? 0 : count2 - 1;
+  return (at2 + step + count2) % count2;
+}
+function anchored(doc) {
+  return doc.defaultView?.CSS.supports("position-area", "block-end") === true;
 }
 function anchorName(depth) {
   return `--blockr-dock-menu-${String(depth)}`;
 }
-function MenuButton({ label, entries, className, onTip }) {
-  const [opened, setOpened] = useState2(void 0);
-  const button = useRef3(null);
-  const list = useRef3(null);
-  const open = opened !== void 0;
-  const pressedOpen = useRef3(false);
-  const close = useCallback4(() => {
-    setOpened(void 0);
-  }, []);
-  usePopover(list, button, opened, 0);
-  const tip = (event) => {
-    onTip?.(event.currentTarget);
-  };
-  return /* @__PURE__ */ jsxs4(Fragment3, { children: [
-    /* @__PURE__ */ jsxs4(
-      "button",
-      {
-        ref: button,
-        type: "button",
-        className,
-        "aria-haspopup": "menu",
-        "aria-expanded": open,
-        onPointerEnter: tip,
-        onFocus: tip,
-        onPointerDown: () => {
-          pressedOpen.current = open;
-        },
-        onClick: (event) => {
-          const keyboard = event.detail === 0;
-          const wasOpen = open || !keyboard && pressedOpen.current;
-          pressedOpen.current = false;
-          setOpened(wasOpen ? void 0 : { keyboard });
-        },
-        onKeyDown: (event) => {
-          if (event.key !== "ArrowDown") return;
-          event.preventDefault();
-          const first = list.current === null ? void 0 : menuItems(list.current)[0];
-          if (open) first?.focus();
-          else setOpened({ keyboard: true });
-        },
-        children: [
-          /* @__PURE__ */ jsx5("span", { className: "blockr-dock-bar-label", children: label }),
-          /* @__PURE__ */ jsx5(Chevron, {})
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsx5(MenuList, { list, label, opened, close, closeAll: close, entries, depth: 0 })
-  ] });
-}
-function usePopover(list, trigger, opened, depth) {
-  useLayoutEffect3(() => {
-    const el = list.current;
-    const at2 = trigger.current;
-    if (el === null || at2 === null || opened === void 0) return void 0;
-    if (!opened.keyboard) at2.focus({ focusVisible: false });
-    const name2 = anchorName(depth);
-    at2.style.setProperty("anchor-name", name2);
-    el.style.setProperty("position-anchor", name2);
-    el.showPopover({ source: at2 });
-    place(el, at2, depth === 0 ? "below" : "beside");
-    const first = menuItems(el)[0];
-    if (opened.keyboard && first !== void 0) first.focus();
-    else el.focus({ focusVisible: false });
-    return () => {
-      at2.style.removeProperty("anchor-name");
-      el.hidePopover();
+var reachable = (row) => row.status !== true;
+function useDismiss(menu, anchor, close) {
+  useEffect(() => {
+    const doc = anchor.ownerDocument;
+    const outside = (target) => menu.current !== null && !(target instanceof Node && (anchor.contains(target) || menu.current.contains(target)));
+    const onPointerDown = (event) => {
+      if (outside(event.target)) close({ restore: false, pointer: true });
     };
-  }, [list, trigger, opened, depth]);
+    const onFocusIn = (event) => {
+      if (outside(event.target)) close({ restore: false, pointer: false });
+    };
+    doc.addEventListener("pointerdown", onPointerDown, true);
+    doc.addEventListener("focusin", onFocusIn);
+    return () => {
+      doc.removeEventListener("pointerdown", onPointerDown, true);
+      doc.removeEventListener("focusin", onFocusIn);
+    };
+  }, [menu, anchor, close]);
 }
-function MenuList({ list, label, opened, close, closeAll, entries, depth }) {
-  return /* @__PURE__ */ jsx5(
-    "div",
-    {
-      ref: list,
-      popover: "auto",
-      role: "menu",
-      "aria-label": label,
-      tabIndex: -1,
-      className: "blockr-dock-menu",
-      "data-depth": depth,
-      onToggle: (event) => {
-        if (event.newState === "closed") close();
-      },
-      onBlur: (event) => {
-        const next = event.relatedTarget;
-        if (next instanceof Node && !event.currentTarget.contains(next)) close();
-      },
-      onKeyDown: moveThrough,
-      children: opened === void 0 ? null : entries.map((entry) => /* @__PURE__ */ jsx5(Row, { entry, depth, closeAll }, entry.id))
-    }
+function Menu({
+  anchor,
+  label,
+  align = "start",
+  caption,
+  search,
+  groups,
+  note,
+  keyboard,
+  depth = 0,
+  onClose,
+  onCloseAll
+}) {
+  const ref2 = useRef(null);
+  const field = useRef(null);
+  const id = useId();
+  const closeAll = onCloseAll ?? onClose;
+  const [searched, setSearched] = useState("");
+  const [active, setActive] = useState(search !== void 0 || keyboard ? 0 : null);
+  const [sub, setSub] = useState(null);
+  const [placement] = useState(() => {
+    if (anchored(anchor.ownerDocument)) return null;
+    return depth === 0 ? (trigger, size, view2) => menuSpot(trigger, size, view2, align) : besideSpot;
+  });
+  const listed = groups.some((group) => group.rows.length > 0);
+  const shown = useMemo(
+    () => groups.map((group) => ({ ...group, rows: group.rows.filter((row) => matches(row, searched)) })).filter((group) => group.rows.length > 0),
+    [groups, searched]
   );
-}
-function moveThrough(event) {
-  const rows = menuItems(event.currentTarget);
-  const at2 = rows.findIndex((row) => row === event.target);
-  const last = rows.length - 1;
-  let next;
-  if (event.key === "ArrowDown") next = rows[at2 < 0 || at2 === last ? 0 : at2 + 1];
-  else if (event.key === "ArrowUp") next = rows[at2 <= 0 ? last : at2 - 1];
-  else if (event.key === "Home") next = rows[0];
-  else if (event.key === "End") next = rows[last];
-  else return;
-  event.preventDefault();
-  event.stopPropagation();
-  next?.focus();
-}
-function Row({ entry, depth, closeAll }) {
-  switch (entry.kind) {
-    case "link":
-      return /* @__PURE__ */ jsx5(
+  const rows = shown.flatMap((group) => group.rows).filter(reachable);
+  const rowId = (i) => `${id}-row-${String(i)}`;
+  const activeId = active !== null && active < rows.length ? rowId(active) : void 0;
+  useLayoutEffect2(() => {
+    const name2 = anchorName(depth);
+    if (depth === 0 && !keyboard) anchor.focus({ preventScroll: true, focusVisible: false });
+    anchor.style.setProperty("anchor-name", name2);
+    ref2.current?.style.setProperty("position-anchor", name2);
+    return () => {
+      anchor.style.removeProperty("anchor-name");
+    };
+  }, [anchor, keyboard, depth]);
+  usePopover(ref2, anchor);
+  useFloating(ref2, anchor, placement);
+  useLayoutEffect2(() => {
+    (field.current ?? ref2.current)?.focus({ preventScroll: true });
+  }, []);
+  useDismiss(ref2, anchor, onClose);
+  useLayoutEffect2(() => {
+    if (activeId !== void 0) ref2.current?.querySelector(`[id="${activeId}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [activeId]);
+  const closeSub = useCallback2((how) => {
+    setSub(null);
+    if (how.restore) ref2.current?.focus({ preventScroll: true });
+  }, []);
+  const rowElement = (i) => ref2.current?.querySelector(`[id="${rowId(i)}"]`) ?? null;
+  const pick = (row, i, pointer2) => {
+    if (row.disabled === true) return;
+    if (row.rows !== void 0) {
+      const element = rowElement(i);
+      if (element !== null) {
+        setActive(i);
+        setSub({ key: row.key, row: element, keyboard: !pointer2 });
+      }
+      return;
+    }
+    if (row.href !== void 0) {
+      rowElement(i)?.click();
+      return;
+    }
+    closeAll({ restore: true, pointer: pointer2 });
+    row.onSelect?.();
+  };
+  const onKeyDown = (event) => {
+    if (event.nativeEvent.isComposing) return;
+    const row = active === null ? void 0 : rows[active];
+    switch (event.key) {
+      case "ArrowDown":
+      case "ArrowUp":
+        if (rows.length > 0) setActive(stepped(active, event.key === "ArrowDown" ? 1 : -1, rows.length));
+        break;
+      case "Home":
+      case "End":
+        if (search !== void 0) return;
+        setActive(event.key === "Home" ? 0 : rows.length - 1);
+        break;
+      case "ArrowRight":
+        if (search !== void 0 || row?.rows === void 0 || active === null) return;
+        pick(row, active, false);
+        break;
+      case "ArrowLeft":
+        if (search !== void 0 || depth === 0) return;
+        onClose({ restore: true, pointer: false });
+        break;
+      case " ":
+        if (search !== void 0) return;
+        if (row !== void 0 && active !== null) pick(row, active, false);
+        break;
+      case "Enter":
+        if (row !== void 0 && active !== null) pick(row, active, false);
+        break;
+      case "Escape":
+        onClose({ restore: true, pointer: false });
+        break;
+      case "Tab":
+        closeAll({ restore: true, pointer: false });
+        return;
+      default:
+        return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const starts = shown.map(
+    (_, g) => shown.slice(0, g).reduce((count2, group) => count2 + group.rows.filter(reachable).length, 0)
+  );
+  const drawRow = (row, i) => {
+    const common2 = {
+      id: rowId(i),
+      className: "blockr-dock-menu-row",
+      "data-active": i === active ? "" : void 0,
+      "data-danger": row.danger === true ? "" : void 0,
+      title: row.tooltip,
+      // The focus stays in the menu.
+      onPointerDown: (event) => {
+        event.preventDefault();
+      },
+      onPointerMove: () => {
+        if (active !== i) setActive(i);
+      }
+    };
+    const content = /* @__PURE__ */ jsxs2(Fragment2, { children: [
+      row.lead === void 0 ? null : /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-lead", "aria-hidden": "true", children: row.lead }),
+      /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-label", children: row.label }),
+      row.detail === void 0 ? null : /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-detail", children: row.detail }),
+      row.badge === void 0 ? null : /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-badge", children: row.badge }),
+      row.meta === void 0 ? null : /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-meta", children: row.meta })
+    ] });
+    if (search !== void 0) {
+      return /* @__PURE__ */ jsx3(
+        "div",
+        {
+          ...common2,
+          role: "option",
+          "aria-selected": i === active,
+          onClick: (event) => {
+            pick(row, i, event.detail !== 0);
+          },
+          children: content
+        }
+      );
+    }
+    if (row.href !== void 0) {
+      return /* @__PURE__ */ jsx3(
         "a",
         {
+          ...common2,
           role: "menuitem",
           tabIndex: -1,
-          className: "blockr-dock-menu-item",
-          href: entry.href,
+          href: row.href,
           target: "_blank",
           rel: "noopener noreferrer",
-          onClick: closeAll,
-          onKeyDown: (event) => {
-            if (event.key !== " ") return;
-            event.preventDefault();
-            event.currentTarget.click();
+          onClick: (event) => {
+            const pointer2 = event.detail !== 0;
+            setTimeout(() => {
+              closeAll({ restore: true, pointer: pointer2 });
+            }, 0);
           },
-          children: /* @__PURE__ */ jsx5("span", { className: "blockr-dock-menu-label", children: entry.label })
-        }
-      );
-    case "button": {
-      const disabled = entry.disabled === true;
-      return /* @__PURE__ */ jsx5(
-        "button",
-        {
-          type: "button",
-          role: "menuitem",
-          tabIndex: -1,
-          className: "blockr-dock-menu-item",
-          "aria-disabled": disabled ? true : void 0,
-          title: entry.tooltip,
-          "aria-keyshortcuts": ariaShortcuts(entry.shortcut),
-          onClick: () => {
-            if (disabled) return;
-            closeAll();
-            entry.run();
-          },
-          children: /* @__PURE__ */ jsx5("span", { className: "blockr-dock-menu-label", children: entry.label })
+          children: content
         }
       );
     }
-    case "status":
-      return /* @__PURE__ */ jsx5("div", { role: "none", className: "blockr-dock-menu-status", title: entry.tooltip, children: entry.text });
-    case "menu":
-      return /* @__PURE__ */ jsx5(SubMenu, { entry, depth: depth + 1, closeAll });
-  }
-}
-function SubMenu({
-  entry,
-  depth,
-  closeAll
-}) {
-  const [opened, setOpened] = useState2(void 0);
-  const row = useRef3(null);
-  const list = useRef3(null);
-  const open = opened !== void 0;
-  const close = useCallback4(() => {
-    setOpened(void 0);
-  }, []);
-  usePopover(list, row, opened, depth);
-  return /* @__PURE__ */ jsxs4("div", { role: "none", className: "blockr-dock-menu-group", children: [
-    /* @__PURE__ */ jsxs4(
+    if (row.rows !== void 0) {
+      const open = sub?.key === row.key;
+      return /* @__PURE__ */ jsxs2("div", { role: "none", children: [
+        /* @__PURE__ */ jsxs2(
+          "button",
+          {
+            ...common2,
+            type: "button",
+            role: "menuitem",
+            tabIndex: -1,
+            "aria-haspopup": "menu",
+            "aria-expanded": open,
+            onClick: (event) => {
+              if (open) closeSub({ restore: false, pointer: true });
+              else pick(row, i, event.detail !== 0);
+            },
+            children: [
+              content,
+              /* @__PURE__ */ jsx3(Chevron, { right: true })
+            ]
+          }
+        ),
+        open ? /* @__PURE__ */ jsx3(
+          Menu,
+          {
+            anchor: sub.row,
+            label: row.label,
+            groups: [{ key: row.key, rows: row.rows }],
+            keyboard: sub.keyboard,
+            depth: depth + 1,
+            onClose: closeSub,
+            onCloseAll: closeAll
+          }
+        ) : null
+      ] });
+    }
+    return /* @__PURE__ */ jsx3(
       "button",
       {
-        ref: row,
+        ...common2,
         type: "button",
         role: "menuitem",
         tabIndex: -1,
-        className: "blockr-dock-menu-item",
-        "aria-haspopup": "menu",
-        "aria-expanded": open,
+        "aria-disabled": row.disabled === true ? true : void 0,
+        "aria-keyshortcuts": ariaShortcuts(row.shortcut),
         onClick: (event) => {
-          setOpened(open ? void 0 : { keyboard: event.detail === 0 });
+          pick(row, i, event.detail !== 0);
         },
-        onKeyDown: (event) => {
-          if (event.key !== "ArrowRight") return;
-          event.preventDefault();
-          event.stopPropagation();
-          setOpened({ keyboard: true });
-        },
-        children: [
-          /* @__PURE__ */ jsx5("span", { className: "blockr-dock-menu-label", children: entry.label }),
-          /* @__PURE__ */ jsx5(Chevron, { right: true })
-        ]
+        children: content
       }
-    ),
-    /* @__PURE__ */ jsx5(
-      "div",
+    );
+  };
+  const drawGroup = (group, g) => {
+    const drawn = group.rows.map((row, r) => {
+      const element = row.status === true ? /* @__PURE__ */ jsx3("div", { role: "none", className: "blockr-dock-menu-status", title: row.tooltip, children: row.label }) : drawRow(row, (starts[g] ?? 0) + group.rows.slice(0, r).filter(reachable).length);
+      return /* @__PURE__ */ jsxs2(Fragment, { children: [
+        row.divided === true && search === void 0 ? /* @__PURE__ */ jsx3("hr", { className: "blockr-dock-menu-divider" }) : null,
+        element
+      ] }, row.key);
+    });
+    return group.title === void 0 ? /* @__PURE__ */ jsx3(Fragment, { children: drawn }, group.key) : /* @__PURE__ */ jsxs2("div", { role: "group", "aria-labelledby": `${id}-${group.key}`, children: [
+      /* @__PURE__ */ jsx3("div", { id: `${id}-${group.key}`, role: "presentation", className: "blockr-dock-menu-title", children: group.title }),
+      drawn
+    ] }, group.key);
+  };
+  return /* @__PURE__ */ jsxs2(
+    "div",
+    {
+      ref: ref2,
+      popover: "auto",
+      className: "blockr-dock-menu",
+      "data-align": align,
+      "data-depth": depth,
+      tabIndex: -1,
+      onKeyDown,
+      onToggle: (event) => {
+        if (event.newState === "closed") onClose({ restore: false, pointer: false });
+      },
+      ...search === void 0 && listed ? { role: "menu", "aria-label": label, "aria-activedescendant": activeId } : {},
+      children: [
+        caption === void 0 ? null : /* @__PURE__ */ jsx3("p", { className: "blockr-dock-menu-caption", children: caption }),
+        !listed ? /* @__PURE__ */ jsx3("p", { className: "blockr-dock-menu-note", children: note }) : search === void 0 ? shown.map(drawGroup) : /* @__PURE__ */ jsxs2(Fragment2, { children: [
+          /* @__PURE__ */ jsx3("div", { className: "blockr-dock-menu-search", children: /* @__PURE__ */ jsx3(
+            "input",
+            {
+              ref: field,
+              type: "search",
+              role: "combobox",
+              "aria-label": search.label,
+              "aria-expanded": "true",
+              "aria-controls": `${id}-list`,
+              "aria-autocomplete": "list",
+              "aria-activedescendant": activeId,
+              placeholder: search.label,
+              autoComplete: "off",
+              spellCheck: false,
+              value: searched,
+              onChange: (event) => {
+                setSearched(event.target.value);
+                setActive(0);
+              }
+            }
+          ) }),
+          /* @__PURE__ */ jsx3("div", { id: `${id}-list`, role: "listbox", "aria-label": label, children: shown.map(drawGroup) }),
+          rows.length === 0 ? /* @__PURE__ */ jsx3("p", { className: "blockr-dock-menu-note", children: search.empty }) : null
+        ] })
+      ]
+    }
+  );
+}
+function useMenuButton(open, show, close) {
+  const pressedOpen = useRef(false);
+  return {
+    "aria-haspopup": "menu",
+    "aria-expanded": open,
+    onPointerDown: () => {
+      pressedOpen.current = open;
+    },
+    onClick: (event) => {
+      const keyboard = event.detail === 0;
+      const wasOpen = open || !keyboard && pressedOpen.current;
+      pressedOpen.current = false;
+      if (wasOpen) close();
+      else show(event.currentTarget, keyboard);
+    },
+    onKeyDown: (event) => {
+      if (event.key !== "ArrowDown" || open) return;
+      event.preventDefault();
+      show(event.currentTarget, true);
+    }
+  };
+}
+function entryRows(entries) {
+  return entries.map((entry) => {
+    switch (entry.kind) {
+      case "link":
+        return { key: entry.id, label: entry.label, href: entry.href };
+      case "button":
+        return {
+          key: entry.id,
+          label: entry.label,
+          ...entry.tooltip === void 0 ? {} : { tooltip: entry.tooltip },
+          ...entry.shortcut === void 0 ? {} : { shortcut: entry.shortcut },
+          ...entry.disabled === true ? { disabled: true } : {},
+          onSelect: entry.run
+        };
+      case "status":
+        return { key: entry.id, label: entry.text, status: true, ...entry.tooltip === void 0 ? {} : { tooltip: entry.tooltip } };
+      case "menu":
+        return { key: entry.id, label: entry.label, rows: entryRows(entry.entries) };
+    }
+  });
+}
+function MenuButton({ label, entries, className, onTip }) {
+  const [open, setOpen] = useState(null);
+  const button = useRef(null);
+  const props = useMenuButton(
+    open !== null,
+    (anchor, keyboard) => {
+      setOpen({ anchor, keyboard });
+    },
+    () => {
+      setOpen(null);
+    }
+  );
+  const close = useCallback2((how) => {
+    setOpen(null);
+    if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+  }, []);
+  const tip = (event) => {
+    onTip?.(event.currentTarget);
+  };
+  return /* @__PURE__ */ jsxs2(Fragment2, { children: [
+    /* @__PURE__ */ jsxs2("button", { ref: button, type: "button", className, ...props, onPointerEnter: tip, onFocus: tip, children: [
+      /* @__PURE__ */ jsx3("span", { className: "blockr-dock-bar-label", children: label }),
+      /* @__PURE__ */ jsx3(Chevron, {})
+    ] }),
+    open === null ? null : /* @__PURE__ */ jsx3(
+      Menu,
       {
-        className: "blockr-dock-menu-nest",
-        onKeyDown: (event) => {
-          if (event.key !== "ArrowLeft") return;
-          event.preventDefault();
-          event.stopPropagation();
-          close();
-          row.current?.focus();
-        },
-        children: /* @__PURE__ */ jsx5(MenuList, { list, label: entry.label, opened, close, closeAll, entries: entry.entries, depth })
+        anchor: open.anchor,
+        label,
+        groups: [{ key: "entries", rows: entryRows(entries) }],
+        keyboard: open.keyboard,
+        onClose: close
       }
     )
   ] });
 }
 
+// srcts/modules/dock/card/mark.tsx
+import { jsx as jsx4 } from "react/jsx-runtime";
+var UNCATEGORIZED = "uncategorized";
+function categoryOf(entry) {
+  return entry === void 0 || entry.category === "" ? UNCATEGORIZED : entry.category;
+}
+function packageOf(id) {
+  const at2 = id.indexOf("-");
+  return at2 > 0 ? id.slice(0, at2) : null;
+}
+function Mark({
+  entry,
+  size,
+  ...rest
+}) {
+  return /* @__PURE__ */ jsx4(
+    "span",
+    {
+      ...rest,
+      className: "blockr-card-mark",
+      "data-size": size,
+      "data-category": categoryOf(entry),
+      dangerouslySetInnerHTML: { __html: entry?.icon ?? "" }
+    }
+  );
+}
+
+// srcts/modules/dock/card/classes.tsx
+import { jsx as jsx5 } from "react/jsx-runtime";
+var UNCATEGORIZED2 = categoryOf(void 0);
+function classGroups(entries, pick) {
+  const groups = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    const category = categoryOf(entry);
+    groups.set(category, [...groups.get(category) ?? [], entry]);
+  }
+  const last = (category) => category === UNCATEGORIZED2 ? 1 : 0;
+  return [...groups].sort(([a], [b]) => last(a) - last(b) || a.localeCompare(b)).map(([category, list]) => ({
+    key: category,
+    title: category,
+    rows: list.sort((a, b) => a.name.localeCompare(b.name)).map((entry) => {
+      const pkg = packageOf(entry.id);
+      return {
+        key: entry.id,
+        label: entry.name,
+        lead: /* @__PURE__ */ jsx5(Mark, { entry, size: 24 }),
+        ...pkg === null ? {} : { badge: pkg },
+        search: [entry.id, entry.category, ...entry.keywords].join(" "),
+        onSelect: () => {
+          pick(entry);
+        }
+      };
+    })
+  }));
+}
+
+// srcts/modules/dock/card/clipboard.ts
+async function copyText(doc, text2) {
+  const { clipboard } = doc.defaultView?.navigator ?? {};
+  if (clipboard === void 0) return copyCommand(doc, text2);
+  try {
+    await clipboard.writeText(text2);
+    return true;
+  } catch {
+    return copyCommand(doc, text2);
+  }
+}
+function copyCommand(doc, text2) {
+  const before2 = doc.activeElement;
+  const field = doc.createElement("textarea");
+  field.value = text2;
+  field.setAttribute("readonly", "");
+  field.style.cssText = "position: fixed; inset-block-start: 0; opacity: 0;";
+  doc.body.append(field);
+  field.select();
+  try {
+    return doc.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    field.remove();
+    if (before2 instanceof HTMLElement) before2.focus({ preventScroll: true });
+  }
+}
+
+// srcts/modules/dock/card/icons.tsx
+import { jsx as jsx6, jsxs as jsxs3 } from "react/jsx-runtime";
+function Icon({ width = 1.25, children: children2 }) {
+  return /* @__PURE__ */ jsx6(
+    "svg",
+    {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: width,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": "true",
+      children: children2
+    }
+  );
+}
+function SlidersIcon() {
+  return /* @__PURE__ */ jsxs3(Icon, { children: [
+    /* @__PURE__ */ jsx6("path", { d: "M2 4h12M2 8h12M2 12h12" }),
+    /* @__PURE__ */ jsx6("circle", { className: "blockr-card-icon-knob", cx: "5", cy: "4", r: "1.6" }),
+    /* @__PURE__ */ jsx6("circle", { className: "blockr-card-icon-knob", cx: "10", cy: "8", r: "1.6" }),
+    /* @__PURE__ */ jsx6("circle", { className: "blockr-card-icon-knob", cx: "6", cy: "12", r: "1.6" })
+  ] });
+}
+function EyeIcon() {
+  return /* @__PURE__ */ jsxs3(Icon, { width: 1.4, children: [
+    /* @__PURE__ */ jsx6("path", { d: "M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" }),
+    /* @__PURE__ */ jsx6("circle", { cx: "8", cy: "8", r: "2" })
+  ] });
+}
+function LockIcon2({ open }) {
+  return /* @__PURE__ */ jsxs3(Icon, { children: [
+    /* @__PURE__ */ jsx6("rect", { x: "3.5", y: "7", width: "9", height: "6.5", rx: "1.5" }),
+    /* @__PURE__ */ jsx6("path", { d: open ? "M5.5 7V5a2.5 2.5 0 0 1 4.67-1.25" : "M5.5 7V5a2.5 2.5 0 0 1 5 0v2" })
+  ] });
+}
+function DotsIcon() {
+  return /* @__PURE__ */ jsxs3("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "currentColor", "aria-hidden": "true", children: [
+    /* @__PURE__ */ jsx6("circle", { cx: "3.5", cy: "8", r: "1.2" }),
+    /* @__PURE__ */ jsx6("circle", { cx: "8", cy: "8", r: "1.2" }),
+    /* @__PURE__ */ jsx6("circle", { cx: "12.5", cy: "8", r: "1.2" })
+  ] });
+}
+function BinIcon() {
+  return /* @__PURE__ */ jsx6(Icon, { children: /* @__PURE__ */ jsx6("path", { d: "M2.5 4.5h11M6.5 4.5V3h3v1.5M4 4.5l.7 9h6.6l.7-9" }) });
+}
+
+// srcts/modules/dock/card/tooltip.tsx
+import { useCallback as useCallback3, useEffect as useEffect2, useRef as useRef2, useState as useState2 } from "react";
+import { Fragment as Fragment3, jsx as jsx7, jsxs as jsxs4 } from "react/jsx-runtime";
+var DELAY = 300;
+var WARM = 400;
+function createTooltips() {
+  let current;
+  let warmUntil = 0;
+  return {
+    showing(hide) {
+      if (current !== void 0 && current !== hide) current();
+      current = hide;
+    },
+    left() {
+      warmUntil = Date.now() + WARM;
+    },
+    warm: () => Date.now() < warmUntil
+  };
+}
+function useTooltip(source) {
+  const { tooltips } = useDock();
+  const [shown, setShown] = useState2(null);
+  const timer = useRef2(void 0);
+  const showing2 = useRef2(false);
+  const hide = useCallback3(() => {
+    clearTimeout(timer.current);
+    timer.current = void 0;
+    if (!showing2.current) return;
+    showing2.current = false;
+    tooltips.left();
+    setShown(null);
+  }, [tooltips]);
+  const show = (el) => {
+    const tip = typeof source === "function" ? source(el) : source;
+    if (tip === null || tip.length === 0 || !el.isConnected) return;
+    tooltips.showing(hide);
+    showing2.current = true;
+    setShown({ el, tip });
+  };
+  useEffect2(() => {
+    if (shown === null) return;
+    const doc = shown.el.ownerDocument;
+    const onKey = (event) => {
+      if (event.key === "Escape") hide();
+    };
+    doc.addEventListener("keydown", onKey, true);
+    doc.addEventListener("scroll", hide, true);
+    return () => {
+      doc.removeEventListener("keydown", onKey, true);
+      doc.removeEventListener("scroll", hide, true);
+    };
+  }, [shown, hide]);
+  useEffect2(() => hide, [hide]);
+  const props = {
+    onPointerEnter(event) {
+      if (event.pointerType === "touch" || showing2.current) return;
+      const el = event.currentTarget;
+      clearTimeout(timer.current);
+      if (tooltips.warm()) show(el);
+      else
+        timer.current = setTimeout(() => {
+          show(el);
+        }, DELAY);
+    },
+    onPointerLeave: hide,
+    onPointerDown: hide,
+    onFocus(event) {
+      if (event.currentTarget.matches(":focus-visible")) show(event.currentTarget);
+    },
+    onBlur: hide
+  };
+  const tooltip = shown === null ? null : /* @__PURE__ */ jsx7(TooltipCard, { anchor: shown.el, tip: shown.tip });
+  return { props, tooltip };
+}
+function TooltipCard({ anchor, tip }) {
+  const ref2 = useRef2(null);
+  usePopover(ref2, anchor);
+  useFloating(ref2, anchor, tooltipSpot);
+  const lines = typeof tip === "string" ? [{ text: tip }] : tip;
+  return /* @__PURE__ */ jsx7("div", { ref: ref2, popover: "manual", role: "tooltip", className: "blockr-card-tooltip", children: lines.map((line, i) => /* @__PURE__ */ jsxs4("div", { className: "blockr-card-tooltip-line", "data-muted": line.muted === true ? "" : void 0, children: [
+    line.text,
+    line.badge === void 0 ? null : /* @__PURE__ */ jsxs4(Fragment3, { children: [
+      " ",
+      /* @__PURE__ */ jsx7("span", { className: "blockr-card-tooltip-badge", children: line.badge })
+    ] })
+  ] }, i)) });
+}
+
+// srcts/modules/dock/card/header.tsx
+import { Fragment as Fragment4, jsx as jsx8, jsxs as jsxs5 } from "react/jsx-runtime";
+var GESTURE = "Double-click to edit";
+function Header({
+  id,
+  block,
+  entry,
+  sections,
+  drawn
+}) {
+  const { core } = useDock();
+  const locked = core.lock.board;
+  const [renaming, setRenaming] = useState3(false);
+  const menuButton = useRef3(null);
+  const open = block.locked === false;
+  const toggle = (section) => {
+    const shown = sections.includes(section) ? sections.filter((each) => each !== section) : [...sections, section];
+    runEdit(core, "blockr.dock-set_sections", {
+      block: id,
+      sections: SECTIONS.filter((each) => shown.includes(each))
+    });
+  };
+  const rename = () => {
+    setRenaming(true);
+  };
+  return /* @__PURE__ */ jsxs5("header", { className: "blockr-card-header", children: [
+    /* @__PURE__ */ jsx8(HeaderMark, { entry, block }),
+    /* @__PURE__ */ jsx8("div", { className: "blockr-card-title", children: renaming ? /* @__PURE__ */ jsx8(
+      NameField,
+      {
+        name: block.name,
+        onCommit: (name2) => {
+          runEdit(core, "blockr.core-rename_block", { id, name: name2 });
+        },
+        onDone: (restore) => {
+          setRenaming(false);
+          if (restore) menuButton.current?.focus({ preventScroll: true });
+        }
+      }
+    ) : /* @__PURE__ */ jsx8(Name, { name: block.name, editable: !locked, onRename: rename }) }),
+    /* @__PURE__ */ jsxs5("div", { className: "blockr-card-tools", children: [
+      locked ? null : /* @__PURE__ */ jsxs5(Fragment4, { children: [
+        drawn ? /* @__PURE__ */ jsx8(
+          Tool,
+          {
+            label: "Controls",
+            pressed: sections.includes("inputs"),
+            onClick: () => {
+              toggle("inputs");
+            },
+            children: /* @__PURE__ */ jsx8(SlidersIcon, {})
+          }
+        ) : null,
+        /* @__PURE__ */ jsx8(
+          Tool,
+          {
+            label: "Preview",
+            pressed: sections.includes("outputs"),
+            onClick: () => {
+              toggle("outputs");
+            },
+            children: /* @__PURE__ */ jsx8(EyeIcon, {})
+          }
+        ),
+        /* @__PURE__ */ jsx8(
+          Tool,
+          {
+            label: open ? "Open to readers" : "Locked for readers",
+            pressed: open,
+            onClick: () => {
+              runEdit(core, "blockr.core-set_block_lock", { id, locked: open ? null : false });
+            },
+            children: /* @__PURE__ */ jsx8(LockIcon2, { open })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsx8(MenuButton2, { ref: menuButton, id, block, onRename: rename })
+    ] })
+  ] });
+}
+function HeaderMark({ entry, block }) {
+  const pkg = packageOf(block.registry_id);
+  const name2 = entry?.name ?? block.registry_id;
+  const { props, tooltip } = useTooltip([pkg === null ? { text: name2 } : { text: name2, badge: pkg }]);
+  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+    /* @__PURE__ */ jsx8(Mark, { entry, size: 32, role: "img", "aria-label": pkg === null ? name2 : `${name2}, ${pkg}`, ...props }),
+    tooltip
+  ] });
+}
+function cutOff(el) {
+  return el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+}
+function Name({ name: name2, editable: editable3, onRename }) {
+  const { props, tooltip } = useTooltip((el) => {
+    const cut = cutOff(el);
+    if (!editable3) return cut ? name2 : null;
+    return cut ? [{ text: name2 }, { text: GESTURE, muted: true }] : GESTURE;
+  });
+  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+    /* @__PURE__ */ jsx8("h3", { className: "blockr-card-name", "data-editable": editable3 ? "" : void 0, onDoubleClick: editable3 ? onRename : void 0, ...props, children: name2 }),
+    tooltip
+  ] });
+}
+function NameField({
+  name: name2,
+  onCommit,
+  onDone
+}) {
+  const [value, setValue] = useState3(name2);
+  const [refused, setRefused] = useState3(false);
+  const field = useRef3(null);
+  const ended = useRef3(false);
+  const error = useId2();
+  useLayoutEffect3(() => {
+    field.current?.focus({ preventScroll: true });
+    field.current?.select();
+  }, []);
+  const end = (commit, restore) => {
+    if (ended.current) return;
+    ended.current = true;
+    const given = value.trim();
+    if (commit && given !== name2) onCommit(given);
+    onDone(restore);
+  };
+  return /* @__PURE__ */ jsxs5("div", { className: "blockr-card-name-edit", children: [
+    /* @__PURE__ */ jsx8(
+      "input",
+      {
+        ref: field,
+        className: "blockr-card-name-field",
+        "aria-label": "Block name",
+        "aria-invalid": refused,
+        "aria-describedby": refused ? error : void 0,
+        value,
+        onChange: (event) => {
+          setValue(event.target.value);
+          if (event.target.value.trim() !== "") setRefused(false);
+        },
+        onKeyDown: (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            if (value.trim() === "") setRefused(true);
+            else end(true, true);
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            end(false, true);
+          }
+        },
+        onBlur: () => {
+          end(value.trim() !== "", false);
+        }
+      }
+    ),
+    refused ? /* @__PURE__ */ jsx8("div", { id: error, className: "blockr-card-name-error", children: "A block needs a name" }) : null
+  ] });
+}
+function Tool({
+  label,
+  pressed,
+  onClick,
+  children: children2
+}) {
+  const { props, tooltip } = useTooltip(label);
+  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+    /* @__PURE__ */ jsx8("button", { type: "button", className: "blockr-card-tool", "aria-label": label, "aria-pressed": pressed, onClick, ...props, children: children2 }),
+    tooltip
+  ] });
+}
+function MenuButton2({
+  ref: ref2,
+  id,
+  block,
+  onRename
+}) {
+  const { core, plugin } = useDock();
+  const [open, setOpen] = useState3(null);
+  const { props: tip, tooltip } = useTooltip(open === null ? "More actions" : null);
+  const button = useMenuButton(
+    open !== null,
+    (anchor, keyboard) => {
+      setOpen({ menu: "actions", anchor, keyboard });
+    },
+    () => {
+      setOpen(null);
+    }
+  );
+  const close = useCallback4(
+    (how) => {
+      setOpen(null);
+      if (how.restore) ref2.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+    },
+    [ref2]
+  );
+  const actions = (anchor) => {
+    const copy = {
+      key: "copy",
+      label: "Copy block ID",
+      meta: id,
+      onSelect() {
+        void copyText(anchor.ownerDocument, id).then((copied) => {
+          if (!copied) {
+            core.notifications.notify(plugin, {
+              severity: "error",
+              code: "copy_failed",
+              message: `The browser did not let the dock copy the block ID "${id}".`
+            });
+          }
+        });
+      }
+    };
+    if (core.lock.board) return [copy];
+    return [
+      { key: "rename", label: "Rename", onSelect: onRename },
+      {
+        key: "append",
+        label: "Append block",
+        onSelect() {
+          setOpen({ menu: "append", anchor, keyboard: false });
+        }
+      },
+      copy,
+      {
+        key: "remove",
+        label: "Remove block",
+        lead: /* @__PURE__ */ jsx8(BinIcon, {}),
+        danger: true,
+        divided: true,
+        onSelect() {
+          runEdit(core, "blockr.core-remove_block", { id });
+        }
+      }
+    ];
+  };
+  const append = (entry) => {
+    const [first] = entry.inputs;
+    const input = entry.inputs.length > 1 && !entry.inputs.includes("...") && first !== void 0 ? { input: first } : {};
+    runEdit(core, "blockr.core-append_block", { from: id, registry_id: entry.id, ...input });
+  };
+  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+    /* @__PURE__ */ jsx8(
+      "button",
+      {
+        ref: ref2,
+        type: "button",
+        className: "blockr-card-tool",
+        "aria-label": "More actions",
+        ...tip,
+        ...button,
+        onPointerDown: () => {
+          button.onPointerDown();
+          tip.onPointerDown();
+        },
+        children: /* @__PURE__ */ jsx8(DotsIcon, {})
+      }
+    ),
+    tooltip,
+    open?.menu === "actions" ? /* @__PURE__ */ jsx8(
+      Menu,
+      {
+        anchor: open.anchor,
+        label: "More actions",
+        align: "end",
+        groups: [{ key: "actions", rows: actions(open.anchor) }],
+        keyboard: open.keyboard,
+        onClose: close
+      }
+    ) : null,
+    open?.menu === "append" ? /* @__PURE__ */ jsx8(
+      Menu,
+      {
+        anchor: open.anchor,
+        label: "Block classes",
+        align: "end",
+        caption: `Append to ${block.name}`,
+        search: { label: "Search blocks", empty: "No matches" },
+        groups: classGroups(
+          Object.values(core.blockRegistry()).filter((entry) => entry.inputs.length > 0),
+          append
+        ),
+        keyboard: open.keyboard,
+        onClose: close
+      }
+    ) : null
+  ] });
+}
+
+// srcts/modules/dock/card/section.tsx
+import { useLayoutEffect as useLayoutEffect4, useRef as useRef4 } from "react";
+import { jsx as jsx9 } from "react/jsx-runtime";
+function Section({
+  name: name2,
+  open,
+  empty = false,
+  children: children2
+}) {
+  const ref2 = useRef4(null);
+  const was = useRef4(null);
+  useLayoutEffect4(() => {
+    const el = ref2.current;
+    if (el === null) return;
+    const before2 = was.current;
+    was.current = open;
+    if (before2 === null || before2 === open || empty) {
+      settle(el, open && !empty);
+      return;
+    }
+    return fold(el, open);
+  }, [open, empty]);
+  return /* @__PURE__ */ jsx9("section", { ref: ref2, className: "blockr-card-section", "data-section": name2, children: /* @__PURE__ */ jsx9("div", { className: "blockr-card-section-body", children: children2 }) });
+}
+function settle(el, shows2) {
+  delete el.dataset.folding;
+  el.dataset.open = String(shows2);
+  el.hidden = !shows2;
+}
+function fold(el, open) {
+  let current = true;
+  el.dataset.folding = "";
+  if (open) {
+    el.hidden = false;
+    el.getBoundingClientRect();
+  }
+  el.dataset.open = String(open);
+  const transitions = el.getAnimations().filter((animation) => "transitionProperty" in animation);
+  void Promise.allSettled(transitions.map((transition) => transition.finished)).then(() => {
+    if (!current) return;
+    delete el.dataset.folding;
+    if (!open) el.hidden = true;
+  });
+  return () => {
+    current = false;
+  };
+}
+function Mounted({
+  mount,
+  label,
+  className
+}) {
+  const ref2 = useRef4(null);
+  useLayoutEffect4(() => {
+    const el = ref2.current;
+    if (el === null) return;
+    const cleanup = mount(el);
+    return () => {
+      queueMicrotask(cleanup);
+    };
+  }, [mount]);
+  return /* @__PURE__ */ jsx9("div", { ref: ref2, role: "region", "aria-label": label, className });
+}
+
+// srcts/modules/dock/card/card.tsx
+import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
+function BlockCard({ id }) {
+  const { core } = useDock();
+  const board = useBoard(core);
+  const [drawn, setDrawn] = useState4(false);
+  const focus = useCallback5(() => {
+    giveFocus(core, id);
+  }, [core, id]);
+  const mountUi = useCallback5(
+    (el) => {
+      const cleanup = core.mountBlock(el, id);
+      const seen = () => {
+        setDrawn(el.hasChildNodes());
+      };
+      seen();
+      const watch = new MutationObserver(seen);
+      watch.observe(el, { childList: true });
+      return () => {
+        watch.disconnect();
+        cleanup();
+      };
+    },
+    [core, id]
+  );
+  const mountOutput = useCallback5((el) => core.mountOutput(el, id), [core, id]);
+  const block = board.blocks[id];
+  if (block === void 0) return null;
+  const sections = dockState(board)?.visible[id] ?? SECTIONS;
+  const compact2 = core.options.value("compact") === true;
+  const entry = core.blockRegistry()[block.registry_id];
+  const inputs = !core.store.locked(id);
+  return /* @__PURE__ */ jsxs6(
+    "article",
+    {
+      className: "blockr-card",
+      "aria-label": block.name,
+      "data-compact": compact2 ? "" : void 0,
+      onPointerDown: focus,
+      onFocus: focus,
+      children: [
+        /* @__PURE__ */ jsx10(Header, { id, block, entry, sections, drawn: inputs && drawn }),
+        /* @__PURE__ */ jsxs6("div", { className: "blockr-card-sections", children: [
+          inputs ? /* @__PURE__ */ jsx10(Section, { name: "inputs", open: sections.includes("inputs"), empty: !drawn, children: /* @__PURE__ */ jsx10(Mounted, { mount: mountUi, label: "Inputs" }) }) : null,
+          /* @__PURE__ */ jsx10(Section, { name: "outputs", open: sections.includes("outputs"), children: /* @__PURE__ */ jsx10(Mounted, { mount: mountOutput, label: "Output", className: "blockr-card-output" }) })
+        ] })
+      ]
+    }
+  );
+}
+
+// srcts/modules/dock/dock.tsx
+import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./libraries-a3ad4872.js";
+import { useCallback as useCallback7, useEffect as useEffect3, useLayoutEffect as useLayoutEffect5, useMemo as useMemo3, useRef as useRef5, useState as useState6 } from "react";
+
+// srcts/modules/dock/drawing.ts
+var EMPTY2 = { orientation: "horizontal", children: [], sizes: [] };
+var DWELL_MS = 250;
+var REVEAL_BAND = 35;
+function drawDock(options) {
+  const { core, plugin, api: api2, el, settings, narrow, drawn } = options;
+  const doc = el.ownerDocument;
+  const win = doc.defaultView ?? window;
+  let view2;
+  let column = narrow.get();
+  let shown;
+  let pending = 0;
+  let press;
+  let laidOut = api2.width > 0 && api2.height > 0;
+  let dragging = false;
+  const revealed = /* @__PURE__ */ new Set();
+  let dwell;
+  let stopped = false;
+  const active = () => {
+    const state = dockState(core.store.board());
+    const id = state?.active ?? null;
+    const held = id === null ? void 0 : state?.views[id];
+    return id === null || held === void 0 ? void 0 : { id, grid: held.grid };
+  };
+  const title = (panel2) => "block" in panel2 ? core.store.board().blocks[panel2.block]?.name : drawn.get(panel2.plugin);
+  const size = () => ({ width: api2.width, height: api2.height });
+  const read = () => layoutToGrid(api2.toJSON());
+  const target = (grid2) => column ? stackGrid(grid2, settings.fraction).grid : grid2;
+  function draw() {
+    const current = active();
+    view2 = current?.id ?? null;
+    const was = column;
+    column = narrow.get();
+    if (was !== column) lockDockview();
+    const grid2 = current?.grid ?? EMPTY2;
+    el.dataset.layout = column ? "narrow" : "wide";
+    el.style.height = column ? `${String(Math.round(stackGrid(grid2, settings.fraction).height * 1e4) / 100)}vh` : "";
+    api2.fromJSON(gridToLayout(target(grid2), title, size()), { reuseExistingPanels: true });
+    syncRails2();
+    shown = read();
+  }
+  function lockDockview() {
+    const locked = core.lock.board;
+    api2.updateOptions({
+      locked: column || locked && settings.lockResize,
+      disableDnd: column || locked && settings.lockRearrange
+    });
+  }
+  function reconcile() {
+    if (stopped || pending > 0) return;
+    const current = active();
+    if (view2 === void 0 || (current?.id ?? null) !== view2 || narrow.get() !== column) {
+      draw();
+      return;
+    }
+    if (current === void 0) return;
+    const want = layoutToGrid(gridToLayout(target(current.grid), title, size()));
+    const now = read();
+    const changes = gridChanges(want, now);
+    const sized = api2.width > 0 && api2.height > 0;
+    if (changes.panels || changes.arrangement || sized && !sharesNear(want, now, settings.tolerance)) {
+      draw();
+      return;
+    }
+    const wantedGroups = tabGroups(want);
+    tabGroups(now).forEach((group, i) => {
+      const wanted = wantedGroups[i];
+      if (wanted !== void 0 && !samePanel(wanted.active, group.active)) showPanel(wanted.active);
+    });
+    for (const edge2 of EDGES) {
+      const [wanted, rail2] = [want.rails?.[edge2], now.rails?.[edge2]];
+      const group = api2.getEdgeGroup(edge2);
+      if (wanted === void 0 || rail2 === void 0 || group === void 0) continue;
+      if (!samePanel(wanted.active, rail2.active)) showPanel(wanted.active);
+      if (wanted.collapsed !== rail2.collapsed) {
+        if (wanted.collapsed) group.collapse();
+        else group.expand();
+      }
+      if (wanted.size !== rail2.size) group.setSize({ width: wanted.size });
+    }
+    retitle();
+    shown = read();
+  }
+  function showPanel(panel2) {
+    api2.getPanel(panelId(panel2))?.api.setActive();
+  }
+  function retitle() {
+    for (const held of api2.panels) {
+      const panel2 = panelFromId(held.id);
+      const name2 = panel2 === void 0 ? void 0 : title(panel2);
+      if (name2 !== void 0 && held.api.title !== name2) held.api.setTitle(name2);
+    }
+  }
+  const dockWidth = () => el.getBoundingClientRect().width;
+  function settle2(pointer2) {
+    if (stopped) return;
+    syncRails2();
+    const current = active();
+    const before2 = shown;
+    if (before2 === void 0 || current === void 0 || current.id !== view2) return;
+    const now = read();
+    shown = now;
+    const runs = column ? columnRuns(current.id, before2, now) : gestureRuns(current.id, before2, now, current.grid, {
+      shares: pointer2 !== void 0,
+      widths: pointer2?.width === dockWidth(),
+      tolerance: settings.tolerance
+    });
+    for (const run of runs) send(run);
+  }
+  function send(run) {
+    pending += 1;
+    void core.commands.run(run.id, run.args).catch(() => {
+    }).finally(() => {
+      pending -= 1;
+      reconcile();
+    });
+  }
+  function syncRails2() {
+    for (const edge2 of EDGES) {
+      const group = api2.getGroup(railId(edge2));
+      if (group === void 0) continue;
+      const holds = group.panels.length > 0;
+      if (holds && revealed.has(edge2) && group.api.isCollapsed()) group.api.expand();
+      if (!dragging) revealed.delete(edge2);
+      const wanted = !column && (holds || revealed.has(edge2));
+      if (api2.isEdgeGroupVisible(edge2) !== wanted) api2.setEdgeGroupVisible(edge2, wanted);
+    }
+  }
+  function restoreRails() {
+    if (column) return;
+    const current = active();
+    const sizes = api2.toJSON().edgeGroups;
+    for (const edge2 of EDGES) {
+      const rail2 = current?.grid.rails?.[edge2];
+      const group = api2.getEdgeGroup(edge2);
+      const now = sizes?.[edge2]?.size;
+      if (rail2 === void 0 || group === void 0 || rail2.collapsed || now === void 0) continue;
+      if (Math.round(now) !== rail2.size) group.setSize({ width: rail2.size });
+    }
+  }
+  function inBand(edge2, event) {
+    const rect = el.getBoundingClientRect();
+    const { clientX: x, clientY: y } = event;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return false;
+    return edge2 === "left" ? x - rect.left <= REVEAL_BAND : rect.right - x <= REVEAL_BAND;
+  }
+  function clearDwell() {
+    if (dwell !== void 0) clearTimeout(dwell.timer);
+    dwell = void 0;
+  }
+  function reveal(edge2) {
+    if (api2.isEdgeGroupVisible(edge2)) return;
+    revealed.add(edge2);
+    api2.setEdgeGroupVisible(edge2, true);
+    const group = api2.getEdgeGroup(edge2);
+    if (group !== void 0 && !group.isCollapsed()) group.collapse();
+  }
+  const onDragOver = (event) => {
+    if (!dragging || column) return;
+    const edge2 = EDGES.find((candidate) => inBand(candidate, event));
+    if (edge2 === void 0) {
+      clearDwell();
+      return;
+    }
+    if (dwell?.edge === edge2) return;
+    clearDwell();
+    dwell = {
+      edge: edge2,
+      timer: setTimeout(() => {
+        dwell = void 0;
+        if (dragging) reveal(edge2);
+      }, DWELL_MS)
+    };
+  };
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    clearDwell();
+    syncRails2();
+  };
+  const onKey = (event) => {
+    if (event.key === "Escape") endDrag();
+  };
+  const endPress = () => {
+    if (press === void 0) return;
+    press = void 0;
+    queueMicrotask(() => {
+      settle2();
+    });
+  };
+  const onDragDone = () => {
+    endDrag();
+    endPress();
+  };
+  const onPointerDown = () => {
+    press = { width: dockWidth() };
+  };
+  const onPointerUp = () => {
+    const pressed = press;
+    if (pressed === void 0) return;
+    press = void 0;
+    settle2(pressed);
+  };
+  const onResize = () => {
+    if (stopped) return;
+    if (press === void 0) restoreRails();
+    const was = laidOut;
+    laidOut = api2.width > 0 && api2.height > 0;
+    if (!was && laidOut) reconcile();
+  };
+  const resizes = typeof win.ResizeObserver === "function" ? new win.ResizeObserver(() => {
+    win.requestAnimationFrame(onResize);
+  }) : void 0;
+  const landed = () => {
+    const drag = dragging;
+    dragging = false;
+    clearDwell();
+    if (drag) endPress();
+  };
+  const disposables = [
+    api2.onDidLayoutChange(() => {
+      if (press === void 0) settle2();
+    }),
+    api2.onWillDragPanel(() => {
+      dragging = true;
+    }),
+    api2.onWillDragGroup(() => {
+      dragging = true;
+    }),
+    api2.onDidMovePanel(landed),
+    api2.onDidAddPanel(landed),
+    api2.onDidRemovePanel(landed)
+  ];
+  resizes?.observe(el);
+  el.addEventListener("pointerdown", onPointerDown, true);
+  win.addEventListener("pointerup", onPointerUp, true);
+  win.addEventListener("pointercancel", onPointerUp, true);
+  el.addEventListener("dragover", onDragOver);
+  doc.addEventListener("drop", onDragDone);
+  doc.addEventListener("dragend", onDragDone);
+  doc.addEventListener("keydown", onKey);
+  let lastState = core.store.board().plugins[plugin];
+  const offBoard = core.store.subscribe((_change, board) => {
+    if (board.plugins[plugin] === lastState) {
+      retitle();
+      return;
+    }
+    lastState = board.plugins[plugin];
+    reconcile();
+  });
+  const offNarrow = narrow.subscribe(() => {
+    reconcile();
+  });
+  lockDockview();
+  draw();
+  for (const edge2 of EDGES) {
+    const group = api2.getEdgeGroup(edge2);
+    if (group === void 0) continue;
+    disposables.push(
+      group.onDidCollapsedChange(() => {
+        queueMicrotask(() => {
+          if (press === void 0) settle2();
+        });
+      })
+    );
+  }
+  return () => {
+    stopped = true;
+    clearDwell();
+    resizes?.disconnect();
+    offBoard();
+    offNarrow();
+    for (const disposable of disposables) disposable.dispose();
+    el.removeEventListener("pointerdown", onPointerDown, true);
+    win.removeEventListener("pointerup", onPointerUp, true);
+    win.removeEventListener("pointercancel", onPointerUp, true);
+    el.removeEventListener("dragover", onDragOver);
+    doc.removeEventListener("drop", onDragDone);
+    doc.removeEventListener("dragend", onDragDone);
+    doc.removeEventListener("keydown", onKey);
+  };
+}
+function sharesNear(a, b, tolerance) {
+  const bare = (grid2) => ({ orientation: grid2.orientation, children: grid2.children, sizes: grid2.sizes });
+  return !gridChanges(bare(a), bare(withStoredShares(a, b, tolerance))).sizes;
+}
+
+// srcts/modules/dock/picker.tsx
+import { createContext as createContext2, useCallback as useCallback6, useContext as useContext2, useId as useId3, useMemo as useMemo2, useState as useState5 } from "react";
+import { jsx as jsx11, jsxs as jsxs7 } from "react/jsx-runtime";
+var PickerContext = createContext2(null);
+function usePicker() {
+  const value = useContext2(PickerContext);
+  if (value === null) throw new Error("A button of the panel picker is drawn outside the picker.");
+  return value;
+}
+function PanelPicker({ children: children2 }) {
+  const [picking, setPicking] = useState5(void 0);
+  const state = useMemo2(() => ({ picking, setPicking }), [picking]);
+  const close = useCallback6(
+    (how) => {
+      setPicking(void 0);
+      if (how.restore) picking?.button.focus({ preventScroll: true, focusVisible: !how.pointer });
+    },
+    [picking]
+  );
+  return /* @__PURE__ */ jsxs7(PickerContext, { value: state, children: [
+    children2,
+    picking === void 0 ? null : /* @__PURE__ */ jsx11(PickerMenu, { picking, onClose: close })
+  ] });
+}
+function usePickerButton(near2) {
+  const { picking, setPicking } = usePicker();
+  const id = useId3();
+  return useMenuButton(
+    picking?.id === id,
+    (button, keyboard) => {
+      setPicking({ id, button, near: near2(), keyboard });
+    },
+    () => {
+      setPicking(void 0);
+    }
+  );
+}
+function pickerGroups(board, registry, drawn, pick) {
+  const view2 = activeView(board);
+  if (view2 === void 0) return [];
+  const blocks = Object.entries(board.blocks).flatMap(([block, held]) => {
+    if (places(view2.grid, { block })) return [];
+    const entry = registry[held.registry_id];
+    return [
+      {
+        key: block,
+        label: held.name,
+        lead: /* @__PURE__ */ jsx11(Mark, { entry, size: 24 }),
+        ...entry === void 0 ? {} : { detail: entry.name },
+        search: block,
+        onSelect: () => {
+          pick({ block });
+        }
+      }
+    ];
+  });
+  const plugins = [...drawn].flatMap(
+    ([plugin, name2]) => places(view2.grid, { plugin }) ? [] : [
+      {
+        key: plugin,
+        label: name2,
+        search: plugin,
+        onSelect: () => {
+          pick({ plugin });
+        }
+      }
+    ]
+  );
+  return [
+    { key: "blocks", rows: blocks },
+    { key: "plugins", title: "Plugins", rows: plugins }
+  ];
+}
+function PickerMenu({ picking, onClose }) {
+  const { core, drawn } = useDock();
+  const board = useBoard(core);
+  const { near: near2 } = picking;
+  const groups = useMemo2(() => {
+    const pick = (panel2) => {
+      const view2 = dockState(core.store.board())?.active ?? null;
+      if (view2 === null) return;
+      const args = near2 === void 0 ? { view: view2, panel: panel2 } : { view: view2, panel: panel2, near: near2, side: "within" };
+      core.commands.run("blockr.dock-add_panel", args).catch(() => {
+      });
+    };
+    return pickerGroups(board, core.blockRegistry(), drawn, pick);
+  }, [board, core, drawn, near2]);
+  return /* @__PURE__ */ jsx11(
+    Menu,
+    {
+      anchor: picking.button,
+      label: "Panels",
+      caption: "Show in this view",
+      search: { label: "Search", empty: "No panel matches." },
+      groups,
+      note: nothingLeft(board, drawn),
+      keyboard: picking.keyboard,
+      onClose
+    }
+  );
+}
+function nothingLeft(board, drawn) {
+  return Object.keys(board.blocks).length === 0 && drawn.size === 0 ? "The board has no blocks yet. Add a new block to get started." : "All blocks and plugins are already in this view. Add a new block to the board first.";
+}
+
+// srcts/modules/dock/dock.tsx
+import { Fragment as Fragment5, jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
+function PanelFrame({ params }) {
+  const { panel: panel2 } = params;
+  return "block" in panel2 ? /* @__PURE__ */ jsx12("div", { className: "blockr-dock-panel", "data-block": panel2.block, children: /* @__PURE__ */ jsx12(BlockCard, { id: panel2.block }) }) : /* @__PURE__ */ jsx12(PluginFrame, { plugin: panel2.plugin });
+}
+function PluginFrame({ plugin }) {
+  const { core } = useDock();
+  const ref2 = useRef5(null);
+  useLayoutEffect5(() => {
+    const el = ref2.current;
+    if (el === null) return void 0;
+    const end = core.mountPlugin(el, plugin);
+    return () => {
+      queueMicrotask(end);
+    };
+  }, [core, plugin]);
+  return /* @__PURE__ */ jsx12("div", { ref: ref2, className: "blockr-dock-panel", "data-plugin": plugin });
+}
+var components = { [PANEL_COMPONENT]: PanelFrame };
+function Tab(props) {
+  const { core } = useDock();
+  const { panel: panel2 } = props.params;
+  const onPointerDown = "block" in panel2 ? () => {
+    giveFocus(core, panel2.block);
+  } : void 0;
+  return /* @__PURE__ */ jsx12(DockviewDefaultTab, { ...props, hideClose: core.lock.board, onPointerDown });
+}
+function AddPanelButton({ api: api2, group }) {
+  const button = usePickerButton(() => {
+    const shown = group.activePanel;
+    return shown === void 0 ? void 0 : panelFromId(shown.id);
+  });
+  if (api2.location.type === "edge") return null;
+  return /* @__PURE__ */ jsx12("div", { className: "blockr-dock-add-slot", children: /* @__PURE__ */ jsx12("button", { type: "button", className: "blockr-dock-add", "aria-label": "Add panel", ...button, children: /* @__PURE__ */ jsx12("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx12("path", { d: "M8 3v10M3 8h10", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }) }) }) });
+}
+function showsNothing(board, drawn) {
+  const view2 = activeView(board);
+  if (view2 === void 0) return false;
+  return !gridPanels(view2.grid).some((panel2) => "block" in panel2 ? Object.hasOwn(board.blocks, panel2.block) : drawn.has(panel2.plugin));
+}
+function EmptyView() {
+  const { core, drawn } = useDock();
+  const board = useBoard(core);
+  if (!showsNothing(board, drawn)) return null;
+  if (!core.lock.board) return /* @__PURE__ */ jsx12(EmptyPrompt, {});
+  return /* @__PURE__ */ jsxs8("div", { className: "blockr-dock-empty", children: [
+    /* @__PURE__ */ jsx12(LockIcon, { size: 32 }),
+    /* @__PURE__ */ jsx12("p", { children: "This view is empty" })
+  ] });
+}
+function EmptyPrompt() {
+  const button = usePickerButton(() => void 0);
+  return /* @__PURE__ */ jsxs8("div", { className: "blockr-dock-empty", children: [
+    /* @__PURE__ */ jsxs8("svg", { viewBox: "0 0 16 16", width: "32", height: "32", "aria-hidden": "true", focusable: "false", children: [
+      /* @__PURE__ */ jsx12("circle", { cx: "8", cy: "8", r: "6.5", fill: "none", stroke: "currentColor" }),
+      /* @__PURE__ */ jsx12("path", { d: "M8 5v6M5 8h6", fill: "none", stroke: "currentColor", strokeLinecap: "round" })
+    ] }),
+    /* @__PURE__ */ jsx12("p", { children: "Start by adding a panel" }),
+    /* @__PURE__ */ jsx12("button", { type: "button", className: "blockr-dock-empty-add", ...button, children: "Add panel" })
+  ] });
+}
+function Dock({ core, plugin, settings, narrow, drawn }) {
+  const root = useRef5(null);
+  const stop = useRef5(void 0);
+  const [tooltips] = useState6(createTooltips);
+  const shared = useMemo3(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
+  const locked = core.lock.board;
+  const onReady = useCallback7(
+    (event) => {
+      const el = root.current;
+      if (el === null) return;
+      stop.current?.();
+      stop.current = drawDock({ core, plugin, api: event.api, el, settings, narrow, drawn });
+    },
+    [core, plugin, settings, narrow, drawn]
+  );
+  useEffect3(
+    () => () => {
+      stop.current?.();
+      stop.current = void 0;
+    },
+    []
+  );
+  const view2 = /* @__PURE__ */ jsxs8(Fragment5, { children: [
+    /* @__PURE__ */ jsx12(
+      DockviewReact,
+      {
+        components,
+        onReady,
+        theme: themeLightSpaced,
+        defaultRenderer: "always",
+        defaultTabComponent: Tab,
+        ...locked ? {} : { leftHeaderActionsComponent: AddPanelButton }
+      }
+    ),
+    /* @__PURE__ */ jsx12(EmptyView, {})
+  ] });
+  return /* @__PURE__ */ jsx12(DockContext, { value: shared, children: /* @__PURE__ */ jsx12("div", { className: "blockr-dock", ref: root, children: locked ? view2 : /* @__PURE__ */ jsx12(PanelPicker, { children: view2 }) }) });
+}
+
 // srcts/modules/dock/navbar.tsx
-import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
+import { useCallback as useCallback8, useEffect as useEffect4, useLayoutEffect as useLayoutEffect6, useReducer, useRef as useRef6, useState as useState7, useSyncExternalStore as useSyncExternalStore2 } from "react";
+import { jsx as jsx13, jsxs as jsxs9 } from "react/jsx-runtime";
 function Navbar({ items, busy, sidebar, mac }) {
   const { core } = useDock();
   const storage = useStorage(core);
   const apart = new Set(items.flatMap((item) => item.kind === "storage" ? [item.id] : []));
-  return /* @__PURE__ */ jsx6("header", { className: "blockr-dock-bar", children: items.map((item) => /* @__PURE__ */ jsx6(Item2, { item, storage, apart, busy, sidebar, mac }, item.id)) });
+  return /* @__PURE__ */ jsx13("header", { className: "blockr-dock-bar", children: items.map((item) => /* @__PURE__ */ jsx13(Item, { item, storage, apart, busy, sidebar, mac }, item.id)) });
 }
-function Item2({ item, storage, apart, busy, sidebar, mac }) {
+function Item({ item, storage, apart, busy, sidebar, mac }) {
   switch (item.kind) {
     case "part":
-      return /* @__PURE__ */ jsx6(Part, { id: item.id, storage, apart, busy, sidebar, mac });
+      return /* @__PURE__ */ jsx13(Part, { id: item.id, storage, apart, busy, sidebar, mac });
     case "storage": {
       const control = storage?.failed === void 0 ? storage?.controls.find((c) => c.id === item.id) : void 0;
-      return control === void 0 ? null : /* @__PURE__ */ jsx6(StorageControlView, { control });
+      return control === void 0 ? null : /* @__PURE__ */ jsx13(StorageControlView, { control });
     }
     case "link":
-      return /* @__PURE__ */ jsx6(Link, { item });
+      return /* @__PURE__ */ jsx13(Link, { item });
     case "menu":
-      return /* @__PURE__ */ jsx6(MenuButton, { label: item.label, entries: linkEntries(item.items), className: "blockr-dock-bar-button" });
+      return /* @__PURE__ */ jsx13(MenuButton, { label: item.label, entries: linkEntries(item.items), className: "blockr-dock-bar-button" });
     case "module":
-      return /* @__PURE__ */ jsx6(ModuleSlot, { item });
+      return /* @__PURE__ */ jsx13(ModuleSlot, { item });
   }
 }
 function Part({ id, storage, apart, busy, sidebar, mac }) {
   const { core } = useDock();
   switch (id) {
     case "logo":
-      return /* @__PURE__ */ jsx6(Logo, { busy });
+      return /* @__PURE__ */ jsx13(Logo, { busy });
     case "name":
-      return /* @__PURE__ */ jsx6(BoardName, {});
+      return /* @__PURE__ */ jsx13(BoardName, {});
     case "storage":
-      return /* @__PURE__ */ jsx6(StorageControls, { storage, apart });
+      return /* @__PURE__ */ jsx13(StorageControls, { storage, apart });
     case "undo_redo":
-      return /* @__PURE__ */ jsx6(UndoRedo, { mac });
+      return /* @__PURE__ */ jsx13(UndoRedo, { mac });
     case "spacer":
-      return /* @__PURE__ */ jsx6("span", { className: "blockr-dock-bar-spacer", "aria-hidden": "true" });
+      return /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-spacer", "aria-hidden": "true" });
     case "views":
       return null;
     case "read_only":
-      return core.lock.board ? /* @__PURE__ */ jsx6(ReadOnlyPill, {}) : null;
+      return core.lock.board ? /* @__PURE__ */ jsx13(ReadOnlyPill, {}) : null;
     case "options":
-      return /* @__PURE__ */ jsx6(OptionsButton, { sidebar });
+      return /* @__PURE__ */ jsx13(OptionsButton, { sidebar });
   }
 }
 var CELLS = [
@@ -3058,19 +3839,19 @@ var CELLS = [
 ];
 function Logo({ busy }) {
   const turning = useSyncExternalStore2(busy.subscribe, busy.get);
-  return /* @__PURE__ */ jsxs5("span", { className: turning ? "blockr-dock-logo is-computing" : "blockr-dock-logo", title: turning ? "Computing" : void 0, children: [
-    /* @__PURE__ */ jsx6("svg", { className: "blockr-dock-logo-mark", width: "20", height: "20", viewBox: "0 0 224 224", "aria-hidden": "true", focusable: "false", children: CELLS.map(([x, y], i) => /* @__PURE__ */ jsx6("rect", { style: { "--i": i }, x: x * 80, y: y * 80, width: "64", height: "64", rx: "7" }, i)) }),
-    /* @__PURE__ */ jsx6("span", { className: "blockr-dock-visually-hidden", role: "status", children: turning ? "Computing" : "" })
+  return /* @__PURE__ */ jsxs9("span", { className: turning ? "blockr-dock-logo is-computing" : "blockr-dock-logo", title: turning ? "Computing" : void 0, children: [
+    /* @__PURE__ */ jsx13("svg", { className: "blockr-dock-logo-mark", width: "20", height: "20", viewBox: "0 0 224 224", "aria-hidden": "true", focusable: "false", children: CELLS.map(([x, y], i) => /* @__PURE__ */ jsx13("rect", { style: { "--i": i }, x: x * 80, y: y * 80, width: "64", height: "64", rx: "7" }, i)) }),
+    /* @__PURE__ */ jsx13("span", { className: "blockr-dock-visually-hidden", role: "status", children: turning ? "Computing" : "" })
   ] });
 }
 function BoardName() {
   const { core } = useDock();
   const board = useBoard(core);
-  const [renaming, setRenaming] = useState3(false);
+  const [renaming, setRenaming] = useState7(false);
   const locked = core.lock.board;
   if (renaming) {
-    return /* @__PURE__ */ jsx6(
-      NameField,
+    return /* @__PURE__ */ jsx13(
+      NameField2,
       {
         name: board.name,
         onSubmit: (name2) => {
@@ -3088,9 +3869,9 @@ function BoardName() {
 Click to rename` : "Click to rename";
   });
   if (locked) {
-    return /* @__PURE__ */ jsx6("span", { className: "blockr-dock-bar-name blockr-dock-bar-shrinks", ...tip, children: /* @__PURE__ */ jsx6("span", { className: "blockr-dock-bar-label", children: board.name }) });
+    return /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-name blockr-dock-bar-shrinks", ...tip, children: /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: board.name }) });
   }
-  return /* @__PURE__ */ jsx6(
+  return /* @__PURE__ */ jsx13(
     "button",
     {
       type: "button",
@@ -3100,19 +3881,19 @@ Click to rename` : "Click to rename";
         setRenaming(true);
       },
       ...tip,
-      children: /* @__PURE__ */ jsx6("span", { className: "blockr-dock-bar-label", children: board.name })
+      children: /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: board.name })
     }
   );
 }
-function NameField({
+function NameField2({
   name: name2,
   onSubmit,
   onDone
 }) {
-  const [text2, setText] = useState3(name2);
-  const ref2 = useRef4(null);
-  const done = useRef4(false);
-  useLayoutEffect4(() => {
+  const [text2, setText] = useState7(name2);
+  const ref2 = useRef6(null);
+  const done = useRef6(false);
+  useLayoutEffect6(() => {
     ref2.current?.focus();
     ref2.current?.select();
   }, []);
@@ -3123,7 +3904,7 @@ function NameField({
     if (submit && trimmed !== "" && trimmed !== name2) onSubmit(trimmed);
     onDone();
   }
-  return /* @__PURE__ */ jsx6(
+  return /* @__PURE__ */ jsx13(
     "input",
     {
       ref: ref2,
@@ -3148,18 +3929,18 @@ function NameField({
 function StorageControls({ storage, apart }) {
   if (storage === void 0) return null;
   if (storage.failed !== void 0) {
-    return /* @__PURE__ */ jsx6(Warning, { message: `The storage controls of ${storage.package} failed: ${storage.failed}` });
+    return /* @__PURE__ */ jsx13(Warning, { message: `The storage controls of ${storage.package} failed: ${storage.failed}` });
   }
   const shown = storage.controls.filter((control) => !apart.has(control.id));
   if (shown.length === 0) return null;
-  return /* @__PURE__ */ jsx6("div", { className: "blockr-dock-bar-storage blockr-dock-bar-shrinks", children: shown.map((control) => /* @__PURE__ */ jsx6(StorageControlView, { control }, control.id)) });
+  return /* @__PURE__ */ jsx13("div", { className: "blockr-dock-bar-storage blockr-dock-bar-shrinks", children: shown.map((control) => /* @__PURE__ */ jsx13(StorageControlView, { control }, control.id)) });
 }
 function StorageControlView({ control }) {
   const { core } = useDock();
   const tip = control.kind === "menu" || control.tooltip === void 0 ? cutTip((cut) => cut ? labelOf(control) : void 0) : {};
   switch (control.kind) {
     case "button":
-      return /* @__PURE__ */ jsx6(
+      return /* @__PURE__ */ jsx13(
         "button",
         {
           type: "button",
@@ -3171,11 +3952,11 @@ function StorageControlView({ control }) {
             void runButton(core, control);
           },
           ...tip,
-          children: /* @__PURE__ */ jsx6("span", { className: "blockr-dock-bar-label", children: control.label })
+          children: /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: control.label })
         }
       );
     case "menu":
-      return /* @__PURE__ */ jsx6(
+      return /* @__PURE__ */ jsx13(
         MenuButton,
         {
           label: control.label,
@@ -3187,7 +3968,7 @@ function StorageControlView({ control }) {
         }
       );
     case "status":
-      return /* @__PURE__ */ jsx6("span", { className: "blockr-dock-bar-status blockr-dock-bar-shrinks", title: control.tooltip, ...tip, children: /* @__PURE__ */ jsx6("span", { className: "blockr-dock-bar-label", children: control.text }) });
+      return /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-status blockr-dock-bar-shrinks", title: control.tooltip, ...tip, children: /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: control.text }) });
   }
 }
 function labelOf(control) {
@@ -3221,7 +4002,7 @@ function linkEntries(items) {
   );
 }
 function Link({ item }) {
-  return /* @__PURE__ */ jsx6("a", { className: "blockr-dock-bar-button", href: item.href, target: "_blank", rel: "noopener noreferrer", children: /* @__PURE__ */ jsx6("span", { className: "blockr-dock-bar-label", children: item.label }) });
+  return /* @__PURE__ */ jsx13("a", { className: "blockr-dock-bar-button", href: item.href, target: "_blank", rel: "noopener noreferrer", children: /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: item.label }) });
 }
 function UndoRedo({ mac }) {
   const { core } = useDock();
@@ -3233,8 +4014,8 @@ function UndoRedo({ mac }) {
     } catch {
     }
   };
-  return /* @__PURE__ */ jsxs5("div", { className: "blockr-dock-bar-steps", children: [
-    /* @__PURE__ */ jsx6(
+  return /* @__PURE__ */ jsxs9("div", { className: "blockr-dock-bar-steps", children: [
+    /* @__PURE__ */ jsx13(
       "button",
       {
         type: "button",
@@ -3248,7 +4029,7 @@ function UndoRedo({ mac }) {
         children: "Undo"
       }
     ),
-    /* @__PURE__ */ jsx6(
+    /* @__PURE__ */ jsx13(
       "button",
       {
         type: "button",
@@ -3265,14 +4046,14 @@ function UndoRedo({ mac }) {
   ] });
 }
 function ReadOnlyPill() {
-  return /* @__PURE__ */ jsxs5("span", { className: "blockr-dock-bar-pill", role: "status", "aria-label": "Read-only mode", title: "Editing is disabled by this deployment.", children: [
-    /* @__PURE__ */ jsx6(LockIcon, {}),
-    /* @__PURE__ */ jsx6("span", { children: "Read-only" })
+  return /* @__PURE__ */ jsxs9("span", { className: "blockr-dock-bar-pill", role: "status", "aria-label": "Read-only mode", title: "Editing is disabled by this deployment.", children: [
+    /* @__PURE__ */ jsx13(LockIcon, {}),
+    /* @__PURE__ */ jsx13("span", { children: "Read-only" })
   ] });
 }
 function OptionsButton({ sidebar }) {
   const open = useSyncExternalStore2(sidebar.subscribe, sidebar.isOpen);
-  return /* @__PURE__ */ jsx6(
+  return /* @__PURE__ */ jsx13(
     "button",
     {
       type: "button",
@@ -3287,9 +4068,9 @@ function OptionsButton({ sidebar }) {
 }
 function ModuleSlot({ item }) {
   const { core } = useDock();
-  const ref2 = useRef4(null);
-  const [failure, setFailure] = useState3(void 0);
-  useEffect2(() => {
+  const ref2 = useRef6(null);
+  const [failure, setFailure] = useState7(void 0);
+  useEffect4(() => {
     const el = ref2.current;
     if (el === null) return void 0;
     const controller = new AbortController();
@@ -3318,8 +4099,8 @@ function ModuleSlot({ item }) {
       }
     };
   }, [core, item.id, item.module]);
-  if (failure !== void 0) return /* @__PURE__ */ jsx6(Warning, { message: failure });
-  return /* @__PURE__ */ jsx6("span", { ref: ref2, className: "blockr-dock-bar-module", "data-module": item.module });
+  if (failure !== void 0) return /* @__PURE__ */ jsx13(Warning, { message: failure });
+  return /* @__PURE__ */ jsx13("span", { ref: ref2, className: "blockr-dock-bar-module", "data-module": item.module });
 }
 function navbarModule(exports) {
   if (!isObject(exports) || typeof exports.api !== "number") {
@@ -3333,12 +4114,12 @@ function navbarModule(exports) {
   return mod;
 }
 function Warning({ message }) {
-  return /* @__PURE__ */ jsx6("span", { className: "blockr-dock-bar-warning", role: "img", "aria-label": message, title: message, children: /* @__PURE__ */ jsx6(WarningIcon, {}) });
+  return /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-warning", role: "img", "aria-label": message, title: message, children: /* @__PURE__ */ jsx13(WarningIcon, {}) });
 }
 function useStorage(core) {
   const storage = core.plugins.storage();
   const [, redraw] = useReducer((n) => n + 1, 0);
-  useEffect2(() => {
+  useEffect4(() => {
     if (storage?.subscribe === void 0) return void 0;
     try {
       return storage.subscribe(redraw);
@@ -3350,13 +4131,13 @@ function useStorage(core) {
   useBoard(core);
   const drawn = drawnControls(core);
   const problem = drawn?.problem;
-  useEffect2(() => {
+  useEffect4(() => {
     if (problem !== void 0) core.log("blockr.dock").error(problem);
   }, [core, problem]);
   return drawn;
 }
 function useHistory(core) {
-  const subscribe = useCallback5(
+  const subscribe = useCallback8(
     (changed) => core.store.subscribe(() => {
       changed();
     }),
@@ -3592,7 +4373,7 @@ function startOnBoard(core, plugin, drawn, view2) {
 }
 
 // srcts/modules/dock/toasts.tsx
-import { useCallback as useCallback6, useSyncExternalStore as useSyncExternalStore3 } from "react";
+import { useCallback as useCallback9, useSyncExternalStore as useSyncExternalStore3 } from "react";
 
 // srcts/modules/dock/notifications.ts
 function onCard(notification) {
@@ -3606,7 +4387,7 @@ function plainText(message) {
 }
 
 // srcts/modules/dock/toasts.tsx
-import { jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx14, jsxs as jsxs10 } from "react/jsx-runtime";
 var SHOWN_FOR = 5e3;
 var FADES_FOR = 300;
 function createToasts(notifications) {
@@ -3726,7 +4507,7 @@ function ToastList({ core, toasts }) {
   const list = useSyncExternalStore3(toasts.subscribe, toasts.list);
   const board = useBoard2(core);
   if (list.length === 0) return null;
-  return /* @__PURE__ */ jsx7("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => /* @__PURE__ */ jsx7(
+  return /* @__PURE__ */ jsx14("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => /* @__PURE__ */ jsx14(
     ToastItem,
     {
       toast,
@@ -3740,7 +4521,7 @@ function ToastItem({ toast, title, toasts }) {
   const { notification, fading } = toast;
   const { id, severity } = notification;
   const pkg = sourcePackage(notification);
-  return /* @__PURE__ */ jsxs6(
+  return /* @__PURE__ */ jsxs10(
     "div",
     {
       className: "blockr-dock-toast",
@@ -3762,17 +4543,17 @@ function ToastItem({ toast, title, toasts }) {
         }
       },
       children: [
-        /* @__PURE__ */ jsxs6("div", { className: "blockr-dock-toast-text", children: [
-          /* @__PURE__ */ jsxs6("p", { className: "blockr-dock-toast-title", children: [
+        /* @__PURE__ */ jsxs10("div", { className: "blockr-dock-toast-text", children: [
+          /* @__PURE__ */ jsxs10("p", { className: "blockr-dock-toast-title", children: [
             title,
-            pkg === void 0 ? null : /* @__PURE__ */ jsxs6("span", { className: "blockr-dock-toast-package", children: [
+            pkg === void 0 ? null : /* @__PURE__ */ jsxs10("span", { className: "blockr-dock-toast-package", children: [
               " \xB7 ",
               pkg
             ] })
           ] }),
-          /* @__PURE__ */ jsx7("p", { className: "blockr-dock-toast-message", children: plainText(notification.message) })
+          /* @__PURE__ */ jsx14("p", { className: "blockr-dock-toast-message", children: plainText(notification.message) })
         ] }),
-        /* @__PURE__ */ jsx7(
+        /* @__PURE__ */ jsx14(
           "button",
           {
             type: "button",
@@ -3781,7 +4562,7 @@ function ToastItem({ toast, title, toasts }) {
             onClick: () => {
               toasts.close(id);
             },
-            children: /* @__PURE__ */ jsx7("span", { "aria-hidden": "true", children: "\xD7" })
+            children: /* @__PURE__ */ jsx14("span", { "aria-hidden": "true", children: "\xD7" })
           }
         )
       ]
@@ -3789,7 +4570,7 @@ function ToastItem({ toast, title, toasts }) {
   );
 }
 function useBoard2(core) {
-  const subscribe = useCallback6(
+  const subscribe = useCallback9(
     (fn) => core.store.subscribe(() => {
       fn();
     }),
@@ -3799,7 +4580,7 @@ function useBoard2(core) {
 }
 
 // srcts/modules/dock/index.tsx
-import { Fragment as Fragment4, jsx as jsx8, jsxs as jsxs7 } from "react/jsx-runtime";
+import { Fragment as Fragment6, jsx as jsx15, jsxs as jsxs11 } from "react/jsx-runtime";
 var api = API;
 var SHOW_PANEL = "blockr.dock-show_panel";
 var frontend = {
@@ -3819,10 +4600,10 @@ var frontend = {
     const root = createRoot(el);
     flushSync(() => {
       root.render(
-        /* @__PURE__ */ jsxs7(Fragment4, { children: [
-          /* @__PURE__ */ jsx8(DockContext, { value: { core, drawn }, children: /* @__PURE__ */ jsx8(Navbar, { items, busy, sidebar, mac: onMac(win) }) }),
-          /* @__PURE__ */ jsx8(Dock, { core, plugin, settings, narrow, drawn }),
-          /* @__PURE__ */ jsx8(ToastList, { core, toasts })
+        /* @__PURE__ */ jsxs11(Fragment6, { children: [
+          /* @__PURE__ */ jsx15(DockContext, { value: { core, plugin, drawn, tooltips: createTooltips() }, children: /* @__PURE__ */ jsx15(Navbar, { items, busy, sidebar, mac: onMac(win) }) }),
+          /* @__PURE__ */ jsx15(Dock, { core, plugin, settings, narrow, drawn }),
+          /* @__PURE__ */ jsx15(ToastList, { core, toasts })
         ] })
       );
     });

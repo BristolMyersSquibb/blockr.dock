@@ -1,0 +1,359 @@
+/*
+ * The block's card, its menus and its tooltips (./card.tsx), drawn as
+ * today's card is in the first 501 lines of inst/assets/css/blockr-dock.css,
+ * at 655e323, and as the design system's header, menus and tooltips are.
+ * The colours are the dock's variables (../index.css), which read blockr.ui's
+ * tokens under either theme.
+ * The card's menus are the dock's (../menu.tsx), whose rules are the dock's
+ * (../index.css).
+ */
+
+/*
+ * The card fills its panel on the panel's surface.
+ * Its padding is its inset, which an output that runs to the card's edges,
+ * as a table, reads: it pulls itself out by this much and pads its text back
+ * in, so that its rules and scroll area reach the edges while its text keeps
+ * the card's alignment.
+ */
+.blockr-card {
+  --blockr-card-inset: 16px;
+  box-sizing: border-box;
+  min-height: 100%;
+  min-width: 0;
+  padding: var(--blockr-card-inset, 16px);
+  overflow-wrap: break-word;
+  background: var(--blockr-dock-bg-surface);
+  color: var(--blockr-dock-text);
+}
+
+/* The header: one row of the mark, the name and the tools. */
+.blockr-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+}
+
+/*
+ * A mark is blockr.ui's: a square in its category's colour, tinted behind
+ * the icon, at 32px in the header and at 24px in a row of the "+" menu.
+ * Its position leaves room for the status dot on its corner.
+ */
+.blockr-card-mark {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--blockr-category-uncategorized, #999999);
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.blockr-card-mark[data-size="32"] {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 18px;
+}
+
+.blockr-card-mark svg {
+  width: 1em;
+  height: 1em;
+}
+
+.blockr-card-mark[data-category="input"] { color: var(--blockr-category-input, #0072b2); }
+.blockr-card-mark[data-category="transform"] { color: var(--blockr-category-transform, #009e73); }
+.blockr-card-mark[data-category="structured"] { color: var(--blockr-category-structured, #56b4e9); }
+.blockr-card-mark[data-category="plot"] { color: var(--blockr-category-plot, #e69f00); }
+.blockr-card-mark[data-category="table"] { color: var(--blockr-category-table, #cc79a7); }
+.blockr-card-mark[data-category="model"] { color: var(--blockr-category-model, #f0e442); }
+.blockr-card-mark[data-category="output"] { color: var(--blockr-category-output, #d55e00); }
+.blockr-card-mark[data-category="utility"] { color: var(--blockr-category-utility, #cccccc); }
+
+.blockr-card-title {
+  position: relative;
+  flex-grow: 1;
+  min-width: 0;
+  padding-right: 8px;
+}
+
+/*
+ * The name, at 16px and weight 600, which wraps to a second line and is cut
+ * after it.
+ * A name that can be renamed takes the hover wash, whose padding the negative
+ * margin pulls back, so that the name sits where it would without it.
+ */
+.blockr-card-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: -4px -8px;
+  padding: 4px 8px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  border-radius: var(--blockr-radius-md, 6px);
+  font-size: var(--blockr-font-size-lg, 1rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  line-height: 1.3;
+  color: var(--blockr-dock-text);
+  transition: background-color var(--blockr-transition, 0.15s ease);
+}
+
+.blockr-card-name[data-editable] {
+  cursor: text;
+}
+
+.blockr-card-name[data-editable]:hover {
+  background-color: var(--blockr-dock-bg-hover);
+}
+
+/*
+ * The field that renames the block, at the name's own size and weight, in
+ * the name's place, on the surface with the accent's edge and the focus ring.
+ */
+.blockr-card-name-edit {
+  margin: -5px 0 -5px -9px;
+}
+
+.blockr-card-name-field {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--blockr-dock-border-accent);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-dock-bg-surface);
+  box-shadow: var(--blockr-dock-focus-ring);
+  font: inherit;
+  font-size: var(--blockr-font-size-lg, 1rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  line-height: 1.3;
+  color: var(--blockr-dock-text);
+  outline: none;
+}
+
+.blockr-card-name-field[aria-invalid="true"] {
+  border-color: var(--blockr-dock-border-danger);
+}
+
+.blockr-card-name-error {
+  margin-top: 4px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-dock-text-danger);
+  white-space: nowrap;
+}
+
+/*
+ * The tools: the toggles, the padlock and the "…" button, bare, 26px,
+ * text-muted, and text-default on the hover wash.
+ * A pressed toggle is lighter than text-accent, since the toggles are on in
+ * almost every card, and takes text-accent under the pointer.
+ */
+.blockr-card-tools {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.blockr-card-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--blockr-control-h-xs, 26px);
+  height: var(--blockr-control-h-xs, 26px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: var(--blockr-dock-text-muted);
+  cursor: pointer;
+  transition: background-color var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
+}
+
+.blockr-card-tool:hover,
+.blockr-card-tool:focus-visible,
+.blockr-card-tool[aria-expanded="true"] {
+  background: var(--blockr-dock-bg-hover);
+  color: var(--blockr-dock-text);
+}
+
+.blockr-card-tool:focus-visible {
+  outline: none;
+  box-shadow: var(--blockr-dock-focus-ring);
+}
+
+.blockr-card-tool[aria-pressed="true"] {
+  color: color-mix(in srgb, var(--blockr-dock-text-accent) 70%, var(--blockr-dock-bg-surface));
+}
+
+.blockr-card-tool[aria-pressed="true"]:hover {
+  color: var(--blockr-dock-text-accent);
+}
+
+.blockr-card-icon-knob {
+  fill: var(--blockr-dock-bg-raised);
+}
+
+/*
+ * The sections, 12px below the header, inputs above outputs.
+ * A section is a grid of one row, whose height the stylesheet moves between
+ * 0 and that of what it holds as the section folds, which clips what it
+ * holds while it folds.
+ */
+.blockr-card-sections {
+  margin-top: 12px;
+}
+
+.blockr-card-section {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.blockr-card-section[data-open="false"] {
+  grid-template-rows: 0fr;
+}
+
+.blockr-card-section[hidden] {
+  display: none;
+}
+
+.blockr-card-section-body {
+  min-height: 0;
+  min-width: 0;
+}
+
+/*
+ * The outputs run edge to edge and pad their content back in.
+ * The rule between the sections, edge to edge, shows only while both show:
+ * it sits in the outputs' section, so that it folds with it, and leaves as
+ * the inputs' section starts to fold.
+ * It is a line of the background, so that the room above it folds with the
+ * section too.
+ */
+.blockr-card-section[data-section="outputs"] {
+  margin: 0 calc(-1 * var(--blockr-card-inset, 16px));
+}
+
+.blockr-card-section[data-section="outputs"] > .blockr-card-section-body {
+  padding: 0 var(--blockr-card-inset, 16px);
+  overflow-x: auto;
+}
+
+.blockr-card-section[data-section="inputs"][data-open="true"] + .blockr-card-section[data-section="outputs"] > .blockr-card-section-body {
+  padding-top: 33px;
+  background: linear-gradient(var(--blockr-dock-border), var(--blockr-dock-border)) 0 16px / 100% 1px no-repeat;
+}
+
+.blockr-card-section[data-folding] > .blockr-card-section-body {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .blockr-card-section[data-folding] {
+    transition: grid-template-rows 0.22s ease;
+  }
+}
+
+/* The output's height, as core's card gives it, at which a plot is drawn. */
+.blockr-card-output {
+  height: 384px;
+}
+
+/*
+ * A compact header is an eyebrow over the block's content: the mark at 20px
+ * and the name at 11px, uppercase and muted, on one line with an ellipsis,
+ * 6px above the content.
+ */
+.blockr-card[data-compact] .blockr-card-header {
+  gap: 8px;
+  min-height: 26px;
+}
+
+.blockr-card[data-compact] .blockr-card-header .blockr-card-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.blockr-card[data-compact] .blockr-card-name {
+  display: block;
+  margin: -2px -6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--blockr-dock-text-muted);
+}
+
+.blockr-card[data-compact] .blockr-card-name-edit {
+  margin: -3px 0 -3px -7px;
+}
+
+.blockr-card[data-compact] .blockr-card-name-field {
+  padding: 2px 6px;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+.blockr-card[data-compact] .blockr-card-sections {
+  margin-top: 6px;
+}
+
+/*
+ * The tooltip: a small light card, bg-raised, 1px border-default, shadow-md,
+ * radius 8, 12px text-default and 5px 9px of padding, which the pointer
+ * passes through.
+ * It is a popover in the top layer, which script places in the window.
+ */
+.blockr-card-tooltip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  pointer-events: none;
+  box-sizing: border-box;
+  max-width: 320px;
+  padding: 5px 9px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-lg, 8px);
+  background: var(--blockr-dock-bg-raised);
+  box-shadow: var(--blockr-dock-shadow);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.4;
+  color: var(--blockr-dock-text);
+  overflow-wrap: anywhere;
+}
+
+.blockr-card-tooltip-line + .blockr-card-tooltip-line {
+  margin-top: 2px;
+}
+
+.blockr-card-tooltip-line[data-muted] {
+  color: var(--blockr-dock-text-muted);
+}
+
+/* The neutral badge of a package: an 18px capsule at 11px, weight 500. */
+.blockr-card-tooltip-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  margin-left: 2px;
+  padding: 0 7px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-pill, 999px);
+  background: var(--blockr-dock-bg-subtle);
+  color: var(--blockr-dock-text-muted);
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  vertical-align: middle;
+}
