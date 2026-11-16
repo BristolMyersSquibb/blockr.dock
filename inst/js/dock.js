@@ -1,24 +1,5777 @@
-import{flushSync as zf}from"react-dom";import{createRoot as Mf}from"react-dom/client";var Vi={$schema:"http://json-schema.org/draft-07/schema#",type:"object",properties:{views:{type:"object",additionalProperties:{$ref:"#/definitions/View"},description:"Every view, by its id."},folders:{type:"object",additionalProperties:{$ref:"#/definitions/Folder"},description:"Every folder, by its id."},active:{anyOf:[{$ref:"#/definitions/ViewId"},{type:"null"}],description:"The view that the board opens on, or null while the state holds no view."},visible:{type:"object",additionalProperties:{type:"array",items:{$ref:"#/definitions/Section"}},description:"The sections that a block's card shows, by the block's id, for each card that hides a section. A card without an entry shows both."}},required:["views","folders","active","visible"],additionalProperties:!1,description:"The dock's views, the folders that group them, the active view and the sections that each block's card shows.",definitions:{View:{type:"object",properties:{name:{type:"string",description:"The name that the user gives the view."},folder:{anyOf:[{$ref:"#/definitions/FolderId"},{type:"null"}],description:"The folder that the view sits in, or null at the top."},index:{type:"string",description:"The key that orders the view among the views and folders of its folder, compared as a string."},grid:{$ref:"#/definitions/Grid",description:"Which panels the view shows, and where."}},required:["name","folder","index","grid"],additionalProperties:!1,description:"A view: a grid of panels, with a name, in a place in the navigation."},FolderId:{type:"string",description:"The id of a folder, which never changes."},Grid:{type:"object",properties:{orientation:{type:"string",enum:["horizontal","vertical"],description:"How the top split divides. Each split inside divides the other way from the split that holds it."},children:{type:"array",items:{$ref:"#/definitions/Node"},description:"What the top split holds, in order."},sizes:{type:"array",items:{type:"number",description:"The share of a split that one of its children takes, a ratio above 0.",exclusiveMinimum:0},description:"The share of each child, ratios that sum to 1."},rails:{type:"object",properties:{left:{$ref:"#/definitions/Rail"},right:{$ref:"#/definitions/Rail"}},additionalProperties:!1,description:"The rails of the view, by the edge that each sits on."}},required:["orientation","children","sizes"],additionalProperties:!1,description:"Where a view places its panels: nested splits of tab groups, and a rail on each side."},Node:{anyOf:[{$ref:"#/definitions/Split"},{$ref:"#/definitions/TabGroup"}],description:"What a split holds: a split or a tab group."},Split:{type:"object",properties:{children:{type:"array",items:{$ref:"#/definitions/Node"},description:"What the split holds, in order."},sizes:{type:"array",items:{type:"number",description:"The share of a split that one of its children takes, a ratio above 0.",exclusiveMinimum:0},description:"The share of each child, ratios that sum to 1."}},required:["children","sizes"],additionalProperties:!1,description:"A split, which divides the other way from the split that holds it."},TabGroup:{type:"object",properties:{panels:{type:"array",items:{$ref:"#/definitions/Panel"},description:"Its panels, in the order of their tabs."},active:{$ref:"#/definitions/Panel",description:"The panel that it shows."}},required:["panels","active"],additionalProperties:!1,description:"A tab group, with a tab for each of its panels."},Panel:{anyOf:[{type:"object",properties:{block:{$ref:"#/definitions/BlockId"}},required:["block"],additionalProperties:!1},{type:"object",properties:{plugin:{$ref:"#/definitions/PluginClassId"}},required:["plugin"],additionalProperties:!1}],description:"A panel: the card of one of the board's blocks, by the block's id, or the UI of one of the app's plugins, by the id of the plugin's class."},BlockId:{type:"string"},PluginClassId:{type:"string"},Rail:{type:"object",properties:{panels:{type:"array",items:{$ref:"#/definitions/Panel"},description:"Its panels, in the order of their tabs."},active:{$ref:"#/definitions/Panel",description:"The panel that it shows."},collapsed:{type:"boolean",description:"Whether the rail shows its tabs alone."},size:{type:"number",description:"Its width in pixels while it is open, 500 by default.",minimum:0}},required:["panels","active","collapsed","size"],additionalProperties:!1,description:"A rail on an edge of the view, with a tab for each of its panels."},Folder:{type:"object",properties:{name:{type:"string",description:"The name that the user gives the folder."},folder:{anyOf:[{$ref:"#/definitions/FolderId"},{type:"null"}],description:"The folder that the folder sits in, or null at the top."},index:{type:"string",description:"The key that orders the folder among the views and folders of its folder, compared as a string."}},required:["name","folder","index"],additionalProperties:!1,description:"A folder, which groups views and other folders in the navigation."},ViewId:{type:"string",description:"The id of a view, which never changes."},Section:{type:"string",enum:["inputs","outputs"],description:"A section of a block's card."}}};function ot(e){return Array.isArray(e)}function le(e){return e!==null&&typeof e=="object"&&!Array.isArray(e)}function Zt(e,t){if(e===t)return!0;if(ot(e)||ot(t))return ot(e)&&ot(t)&&e.length===t.length&&e.every((n,o)=>o in t&&Zt(n,t[o]??null));if(!le(e)||!le(t))return!1;let i=Object.keys(e);return i.length===Object.keys(t).length&&i.every(n=>Object.hasOwn(t,n)&&Zt(e[n]??null,t[n]??null))}var Fn={views:{},folders:{},active:null,visible:{}};function At(e){return le(e)&&Wn(e.views,Id)&&Wn(e.folders,Is)&&(e.active===null||typeof e.active=="string")&&Wn(e.visible,t=>Hi(t,i=>i==="inputs"||i==="outputs"))}function Id(e){return Is(e)&&Ad(e.grid)}function Is(e){return le(e)&&typeof e.name=="string"&&(e.folder===null||typeof e.folder=="string")&&typeof e.index=="string"}function Ad(e){if(!le(e))return!1;let{orientation:t,rails:i}=e;return t!=="horizontal"&&t!=="vertical"?!1:(i===void 0||le(i)&&(i.left===void 0||Es(i.left))&&(i.right===void 0||Es(i.right)))&&As(e)}function Od(e){return As(e)||Os(e)}function As(e){return le(e)&&Hi(e.children,Od)&&Hi(e.sizes,t=>typeof t=="number")}function Os(e){return le(e)&&Hi(e.panels,Ts)&&Ts(e.active)}function Es(e){if(!le(e))return!1;let{collapsed:t,size:i}=e;return typeof t=="boolean"&&typeof i=="number"&&Os(e)}function Ts(e){return le(e)?typeof e.block=="string"!=(typeof e.plugin=="string"):!1}function Wn(e,t){return le(e)&&Object.values(e).every(t)}function Hi(e,t){return ot(e)&&e.every(t)}var oe=["left","right"],Bn=["within","left","right","above","below"];function ne(e){return"panels"in e}function ie(e,t){return"block"in e?"block"in t&&e.block===t.block:"plugin"in t&&e.plugin===t.plugin}function _e(e){return[...De(e).flatMap(t=>t.panels),...Qt(e).flatMap(([,t])=>t.panels)]}function We(e,t){return _e(e).some(i=>ie(i,t))}function De(e){let t=[],i=n=>{ne(n)?t.push(n):n.children.forEach(i)};return e.children.forEach(i),t}function Qt(e){return oe.flatMap(t=>{let i=e.rails?.[t];return i===void 0?[]:[[t,i]]})}function _t(e,t){let i=$s(e,t)??{children:[],sizes:[]},n=Qt(e).flatMap(([o,s])=>{let r=Hs(s,t);return r===void 0?[]:[[o,{...s,...r}]]});return{orientation:e.orientation,...i,...n.length===0?{}:{rails:Object.fromEntries(n)}}}function zd(e,t){return ne(e)?Hs(e,t):$s(e,t)}function $s(e,t){let i=Se(e.sizes,e.children.length),n=e.children.map(a=>zd(a,t)),o=n.flatMap((a,l)=>a===void 0?[]:[{node:a,share:i[l]??0}]);if(o.length===0)return;let s=o.map(({node:a})=>a),r=e.children.some((a,l)=>n[l]===void 0&&Vs(a));return{children:s,sizes:r?Un(s.length):Ws(o.map(({share:a})=>a))}}function Vs(e){return ne(e)?e.panels.length>0:e.children.some(Vs)}function Hs(e,t){let i=e.panels.filter(t),[n]=i;if(n===void 0)return;let o=i.find(s=>ie(s,e.active))??n;return{panels:i,active:o}}function Se(e,t){return e.length===t&&e.every(n=>Number.isFinite(n)&&n>0)?Ws(e):Un(t)}function Un(e){return Array.from({length:e},()=>1/e)}function Ws(e){let t=Jn(e);return Math.abs(t-1)<=15e-9?[...e]:e.map(i=>i/t)}function Jn(e){return e.reduce((t,i)=>t+i,0)}function jn(e){let t=[],i=(r,a,l)=>{!l&&r.children.length===0&&t.push(`The split at "${a}" holds nothing.`),r.sizes.length!==r.children.length?t.push(`The split at "${a||"/"}" has ${zs(r.children.length,"child","children")} and ${zs(r.sizes.length,"share","shares")}.`):r.sizes.every(d=>Number.isFinite(d)&&d>0)?r.children.length>0&&Math.abs(Jn(r.sizes)-1)>15e-9&&t.push(`The shares of the split at "${a||"/"}" do not sum to 1.`):t.push(`The split at "${a||"/"}" gives a child a share that is not above 0.`),r.children.forEach((d,h)=>{ne(d)?n(d,`${a}/children/${String(h)}`,"tab group"):i(d,`${a}/children/${String(h)}`,!1)})},n=(r,a,l)=>{r.panels.length===0?t.push(`The ${l} at "${a}" holds no panel.`):r.panels.some(d=>ie(d,r.active))||t.push(`The ${l} at "${a}" shows a panel that it does not hold.`)};i(e,"",!0);for(let[r,a]of Qt(e))n(a,`/rails/${r}`,"rail");let o=[],s=[];for(let r of _e(e))o.some(a=>ie(a,r))?s.some(a=>ie(a,r))||s.push(r):o.push(r);for(let r of s)t.push(`The grid places ${qt(r)} more than once.`);return t}function zs(e,t,i){return`${String(e)} ${e===1?t:i}`}function qt(e){return"block"in e?`the panel of the block "${e.block}"`:`the panel of the plugin "${e.plugin}"`}function Ot(e,t){if(We(e,t))return e;let i=De(e).reverse().find(n=>n.panels.every(o=>"block"in o));if(i!==void 0){let n=o=>o===i?{panels:[...i.panels,t],active:t}:ne(o)?o:{...o,children:o.children.map(n)};return{...e,children:e.children.map(n)}}return Md(e,t)}function Md(e,t){return{...e,...Yn(e,e.children.length,He(t))}}function Yn(e,t,i){let n=[...e.children.slice(0,t),i,...e.children.slice(t)];return{children:n,sizes:Un(n.length)}}function Rd(e,t,i,n){let o=Se(e.sizes,e.children.length),s=(o[t]??0)/2,r=o.map((l,d)=>d===t?s:l),a=i?t:t+1;return{children:[...e.children.slice(0,a),n,...e.children.slice(a)],sizes:[...r.slice(0,a),s,...r.slice(a)]}}function He(e){return{panels:[e],active:e}}function Ze(e,t){let i=(o,s)=>{if(ne(o))return o.panels.some(r=>ie(r,t))?s:void 0;for(let[r,a]of o.children.entries()){let l=i(a,[...s,r]);if(l!==void 0)return l}};for(let[o,s]of e.children.entries()){let r=i(s,[o]);if(r!==void 0)return{path:r}}let n=Qt(e).find(([,o])=>o.panels.some(s=>ie(s,t)));return n===void 0?void 0:{edge:n[0]}}function Wi(e,t){if(t.rail!==void 0||t.near===void 0)return[];let i=Ze(e,t.near);return i===void 0?[`The view does not show ${qt(t.near)}, which near names.`]:"edge"in i&&(t.side??"within")!=="within"?[`The view shows ${qt(t.near)}, which near names, on a rail, which takes a panel only within.`]:[]}function Fi(e,t,i,n){if(i.rail!==void 0)return Ms(e,i.rail,t);let o=i.side??"within";if(i.near===void 0)return o==="within"?Ot(e,t):Nd(e,t,o);let s=Ze(e,i.near);return s===void 0?e:"edge"in s?Ms(e,s.edge,t):o==="within"?Bi(e,s.path,r=>ne(r)?{panels:[...r.panels,t],active:t}:r):Ld(e,s.path,t,o,n)}function Ms(e,t,i){let n=e.rails?.[t],o=n===void 0?{...He(i),collapsed:!1,size:500}:{...n,panels:[...n.panels,i],active:i};return{...e,rails:{...e.rails,[t]:o}}}function Fs(e){return e==="left"||e==="right"?"horizontal":"vertical"}function Xt(e){return e==="left"||e==="above"}function Ld(e,t,i,n,o){let s=t.slice(0,-1),r=t.at(-1)??0;return(s.length%2===0?e.orientation:$d(e.orientation))===Fs(n)?Bs(e,s,l=>o==="split"?Rd(l,r,Xt(n),He(i)):Yn(l,Xt(n)?r:r+1,He(i))):Bi(e,t,l=>({children:Xt(n)?[He(i),l]:[l,He(i)],sizes:[.5,.5]}))}function Nd(e,t,i){let n=Fs(i);if(e.children.length===0)return{...e,orientation:n,children:[He(t)],sizes:[1]};if(e.orientation===n)return{...e,...Yn(e,Xt(i)?0:e.children.length,He(t))};let[o]=e.children,s=e.children.length===1&&o!==void 0&&ne(o)?o:{children:e.children,sizes:e.sizes};return{...e,orientation:n,children:Xt(i)?[He(t),s]:[s,He(t)],sizes:[.5,.5]}}function $d(e){return e==="horizontal"?"vertical":"horizontal"}function Bi(e,t,i){let n=(o,s)=>{let[r,...a]=s;return{...o,children:o.children.map((l,d)=>d!==r?l:a.length===0?i(l):ne(l)?l:n(l,a))}};return{...e,...n(e,t)}}function Bs(e,t,i){return t.length===0?{...e,...i({children:e.children,sizes:e.sizes})}:Bi(e,t,n=>ne(n)?n:i(n))}function Us(e,t){let[i,...n]=t;if(i===void 0)return e;let o=e.children[i];return o===void 0||ne(o)?void 0:Us(o,n)}function Ui(e,t){let i=Ze(e,t);if(i===void 0)return e;if("path"in i)return Bi(e,i.path,o=>ne(o)?{...o,active:t}:o);let n=e.rails?.[i.edge];return n===void 0?e:{...e,rails:{...e.rails,[i.edge]:{...n,active:t}}}}function Kn(e,t,i){let n=e.rails?.[t];return n===void 0?e:{...e,rails:{...e.rails,[t]:{...n,collapsed:i}}}}function Zn(e,t,i){let n=Ze(e,t);if(n===void 0||"edge"in n)return[];let o=[];i>=1&&o.push(`A tab group takes a share of its split below 1, which ${String(i)} is not.`);let s=Us(e,n.path.slice(0,-1));return s!==void 0&&s.children.length<2&&o.push(`The tab group that holds ${qt(t)} fills its split alone, so its share stays 1.`),o}function Xn(e,t,i){let n=Ze(e,t);if(n===void 0)return e;if("edge"in n){let s=e.rails?.[n.edge];return s===void 0?e:{...e,rails:{...e.rails,[n.edge]:{...s,size:i}}}}let o=n.path.at(-1)??0;return Bs(e,n.path.slice(0,-1),s=>{let r=Se(s.sizes,s.children.length),a=Jn(r)-(r[o]??0);return{...s,sizes:r.map((l,d)=>d===o?i:l/a*(1-i))}})}function bt(e,t,i){if(!Js(e,t))return t;let n=(o,s)=>{let r=s.children.map((d,h)=>{let c=o.children[h];return ne(d)||c===void 0||ne(c)?d:n(c,d)}),a=Se(o.sizes,o.children.length),l=a.every((d,h)=>Math.abs(d-(s.sizes[h]??Number.NaN))<=i);return{children:r,sizes:l?a:s.sizes}};return{...t,...n(e,t)}}function st(e,t){let i=_e(e),n=_e(t);return{panels:i.length!==n.length||!n.every(o=>i.some(s=>ie(s,o))),arrangement:JSON.stringify(Rs(t))!==JSON.stringify(Rs(e)),sizes:Vd(e,t)}}function Rs(e){let t=n=>ne(n)?n.panels:n.children.map(t),i=Qt(e).map(([n,o])=>[n,o.panels]);return{orientation:e.orientation,children:e.children.map(t),rails:Object.fromEntries(i)}}function Ls(e){let t=i=>ne(i)?"tab group":i.children.map(t);return{orientation:e.orientation,children:e.children.map(t)}}function Vd(e,t){if(oe.some(o=>{let[s,r]=[e.rails?.[o],t.rails?.[o]];return s!==void 0&&r!==void 0&&s.size!==r.size}))return!0;if(!Js(e,t))return!1;let n=Ns(t);return Ns(e).some((o,s)=>o!==n[s])}function Js(e,t){return JSON.stringify(Ls(e))===JSON.stringify(Ls(t))}function Ns(e){let t=i=>[...Se(i.sizes,i.children.length),...i.children.flatMap(n=>ne(n)?[]:t(n))];return t(e)}var qn="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",er=qn.slice(10),js=new Map;function Ys(e){let t=js.get(e);if(t===void 0){t=new Uint8Array(256);for(let i=0;i<e.length;i++)t[e.charCodeAt(i)]=i;js.set(e,t)}return t}function zt(e,t,i,n){let o=i[0];if(t!=null&&e>=t)throw new Error(e+" >= "+t);if(e.slice(-1)===o||t&&t.slice(-1)===o)throw new Error("trailing zero");if(t){let a=0;for(;(e[a]||o)===t[a];)a++;if(a>0)return t.slice(0,a)+zt(e.slice(a),t.slice(a),i,n)}let s=e?n[e.charCodeAt(0)]:0,r=t!=null?n[t.charCodeAt(0)]:i.length;if(r-s>1){let a=Math.round(.5*(s+r));return i[a]}else return t&&t.length>1?t.slice(0,1):i[s]+zt(e.slice(1),null,i,n)}function tr(e,t,i){if(e.length!==Mt(e[0],t,i))throw new Error("invalid integer part of order key: "+e)}function Mt(e,t,i){let n=i[e.charCodeAt(0)];if(t[n]===e){let o=t.length/2;return n<o?o-n+1:n-o+2}throw new Error("invalid order key head: "+e)}function ei(e,t,i){let n=Mt(e[0],t,i);if(n>e.length)throw new Error("invalid order key: "+e);return e.slice(0,n)}function Ks(e,t,i,n){if(ir(e,t,i))throw new Error("invalid order key: "+e);let o=ei(e,i,n);if(e.slice(o.length).slice(-1)===t[0])throw new Error("invalid order key: "+e)}function Zs(e,t,i,n,o){tr(e,n,o);let s=e[0],r=t[0],a="";for(let c=e.length-1;c>=1;c--){let u=i[e.charCodeAt(c)]+1;if(u===t.length)a=r+a;else return s+e.slice(1,c)+t[u]+a}let l=o[s.charCodeAt(0)];if(l===n.length-1)return null;let d=n[l+1],h=Mt(d,n,o)-Mt(s,n,o);return d+(h>0?a+r:h<0?a.slice(1):a)}function Hd(e,t,i,n,o){tr(e,n,o);let s=e[0],r=t[t.length-1],a="";for(let c=e.length-1;c>=1;c--){let u=i[e.charCodeAt(c)]-1;if(u===-1)a=r+a;else return s+e.slice(1,c)+t[u]+a}let l=o[s.charCodeAt(0)];if(l===0)return null;let d=n[l-1],h=Mt(d,n,o)-Mt(s,n,o);return d+(h>0?a+r:h<0?a.slice(1):a)}var Xs=new Map;function ir(e,t,i){let n=Xs.get(i);n===void 0&&(n=new Map,Xs.set(i,n));let o=t.charCodeAt(0),s=n.get(o);return s===void 0&&(s=i[0]+t[0].repeat(i.length/2),n.set(o,s)),e===s}function nr(e){for(let t=1;t<e.length;t++)if(e.charCodeAt(t-1)>=e.charCodeAt(t))return!1;return!0}function or(e){for(let t=0;t<e.length;t++)if(e.charCodeAt(t)>255)return!1;return!0}var qs=new Set;function sr(e){if(!qs.has(e)){if(e.length<2||!nr(e))throw new Error("digits must be at least 2 characters in strictly ascending character code order: "+e);if(!or(e))throw new Error("digits must be single-byte (char code 0-255): "+e);qs.add(e)}}var Qs=new Set;function rr(e){if(!Qs.has(e)){if(e.length<2||e.length%2!==0||!nr(e))throw new Error("intDigits must be an even number of at least 2 characters in strictly ascending character code order: "+e);if(!or(e))throw new Error("intDigits must be single-byte (char code 0-255): "+e);Qs.add(e)}}function rt(e,t,i=void 0,n=void 0){n!==void 0?rr(n):n=i??er,i!==void 0?sr(i):i=qn;let o=Ys(i),s=Ys(n);if(e!=null&&Ks(e,i,n,s),t!=null&&Ks(t,i,n,s),e!=null&&t!=null&&e>t){let c=e;e=t,t=c}if(e==null){if(t==null)return n[n.length/2]+i[0];let c=ei(t,n,s),u=t.slice(c.length);if(ir(c,i,n))return c+zt("",u,i,o);if(c<t)return c;let p=Hd(c,i,o,n,s);if(p==null)throw new Error("cannot decrement any more");return p}if(t==null){let c=ei(e,n,s),u=e.slice(c.length),p=Zs(c,i,o,n,s);return p??c+zt(u,null,i,o)}let r=ei(e,n,s),a=e.slice(r.length),l=ei(t,n,s),d=t.slice(l.length);if(r===l)return r+zt(a,d,i,o);let h=Zs(r,i,o,n,s);if(h==null)throw new Error("cannot increment any more");return h<t?h:r+zt(a,null,i,o)}function ti(e,t,i,n=void 0,o=void 0){if(o!==void 0?rr(o):o=n??er,n!==void 0?sr(n):n=qn,i===0)return[];if(i===1)return[rt(e,t,n,o)];if(t==null){let a=rt(e,t,n,o),l=[a];for(let d=0;d<i-1;d++)a=rt(a,t,n,o),l.push(a);return l}if(e==null){let a=rt(e,t,n,o),l=[a];for(let d=0;d<i-1;d++)a=rt(e,a,n,o),l.push(a);return l.reverse(),l}let s=Math.floor(i/2),r=rt(e,t,n,o);return[...ti(e,r,s,n,o),r,...ti(r,t,i-s-1,n,o)]}function Rt(e,t){let i=Object.entries(e.views).filter(([,o])=>ar(e,o.folder)===t).map(([o,s])=>({entry:{view:o},id:o,index:s.index})),n=Object.entries(e.folders).filter(([o,s])=>ar(e,s.folder,o)===t).map(([o,s])=>({entry:{folder:o},id:o,index:s.index}));return[...i,...n].sort((o,s)=>Ae(o.index,s.index)||Ae(o.id,s.id)).map(({entry:o})=>o)}function lr(e){let t=[],i=new Set,n=o=>{for(let s of Rt(e,o))"view"in s?t.push(s.view):i.has(s.folder)||(i.add(s.folder),n(s.folder))};return n(null),t}function ii(e){return lr(e)[0]??null}function at(e,t){return"view"in e?"view"in t&&e.view===t.view:"folder"in t&&e.folder===t.folder}function lt(e,t,i,n){let o=Rt(e,t).filter(l=>n===void 0||!at(l,n)),s=i===void 0?o.length:o.findIndex(l=>at(l,i)),r=l=>l===void 0?null:Wd(e,l),[a]=Qn(r(o[s-1]),r(o[s]),1);return a??rt(null,null)}function Ji(e,t,i,n){let o=Rt(e,i),s=o.findIndex(a=>at(a,t));if(s===-1)return!1;let r=o[s+1];return n===void 0?r===void 0:r!==void 0&&at(r,n)}function ji(e,t,i){let n=new Set,o=t;for(;o!==null&&!n.has(o);){if(o===i)return!0;n.add(o),o=e.folders[o]?.folder??null}return!1}function Qn(e,t,i){let n=[[e,t],[e,null],[null,t]];for(let[o,s]of n)try{return ti(o,s,i)}catch{}return ti(null,null,i)}function Wd(e,t){return("view"in t?e.views[t.view]?.index:e.folders[t.folder]?.index)??null}function Ae(e,t){return e<t?-1:e>t?1:0}function ar(e,t,i){return t===null||!Object.hasOwn(e.folders,t)||i!==void 0&&Fd(e,i)?null:t}function Fd(e,t){let i=e.folders[t]?.folder??null;return i!==null&&ji(e,i,t)}function wt(e){return e.map(t=>`/${t.replaceAll("~","~0").replaceAll("/","~1")}`).join("")}function Bd(e){if(!e.startsWith("/"))return;let t=e.slice(1).split("/");if(!t.some(i=>/~(?![01])/.test(i)))return t.map(i=>i.replaceAll("~1","/").replaceAll("~0","~"))}function to(e,t,i){let n=e;for(let o of t){let s=Bd(o.path);s?.[0]!=="plugins"||s[1]!==i||(n=n===void 0?void 0:eo(n,s.slice(2),o))}return n}function eo(e,t,i){let[n,...o]=t;if(n===void 0)return i.op==="replace"?i.value:void 0;if(ot(e)){let a=e,l=o.length===0,d=l&&n==="-"&&i.op==="add"?a.length:Ud(n),h=l&&i.op==="add"?a.length:a.length-1;if(d===void 0||d>h)return;let c=[...a];if(!l){let u=eo(a[d],o,i);return u===void 0?void 0:(c.splice(d,1,u),c)}if(i.op==="remove")c.splice(d,1);else{if(i.value===void 0)return;c.splice(d,i.op==="add"?0:1,i.value)}return c}if(!le(e))return;let s=e,r=Object.hasOwn(s,n);if(o.length>0){if(!r)return;let a=eo(s[n],o,i);return a===void 0?void 0:{...s,[n]:a}}if(i.op==="remove")return r?Object.fromEntries(Object.entries(s).filter(([a])=>a!==n)):void 0;if(!(i.value===void 0||i.op==="replace"&&!r))return{...s,[n]:i.value}}function Ud(e){return/^(0|[1-9]\d*)$/.test(e)?Number(e):void 0}function io(e,t,i){let n=t.plugins[i],o=n===void 0?void 0:to(n,e.patches??[],i),s=new Set(e.blocks?.rm??[]),r=Object.keys(e.blocks?.add??{});if(s.size===0&&r.length===0&&o===n)return[];if(!At(o))return[];let a=At(n)?n:o,l=Jd(o,s),{state:d,moves:h}=Yi(l,a),c=d.active!==null&&Object.hasOwn(d.views,d.active)?d.active:ii(d),u=Kd({...d,active:c},r),p=(...f)=>wt(["plugins",i,...f]),m=[];for(let[f,v]of Object.entries(u.views))v.grid!==o.views[f]?.grid&&m.push({op:"replace",path:p("views",f,"grid"),value:v.grid});for(let f of s)Object.hasOwn(o.visible,f)&&m.push({op:"remove",path:p("visible",f)});for(let f of h)m.push({op:"replace",path:p(f.kind,f.id,"folder"),value:f.folder}),m.push({op:"replace",path:p(f.kind,f.id,"index"),value:f.index});return u.active!==o.active&&m.push({op:"replace",path:p("active"),value:u.active}),m}function Jd(e,t){if(t.size===0)return e;let i=s=>!("block"in s&&t.has(s.block)),n=Object.fromEntries(Object.entries(e.views).map(([s,r])=>[s,_e(r.grid).every(i)?r:{...r,grid:_t(r.grid,i)}])),o=Object.fromEntries(Object.entries(e.visible).filter(([s])=>!t.has(s)));return{...e,views:n,visible:o}}function Yi(e,t){let i=p=>p!==null&&!Object.hasOwn(e.folders,p),n=(p,m)=>Object.entries(m).map(([f,v])=>({kind:p,id:f,folder:v.folder,index:v.index})),o=[...n("views",e.views),...n("folders",e.folders)],s=o.flatMap(p=>i(p.folder)?[{...p,folder:p.folder}]:[]);if(s.length===0)return{state:e,moves:[]};let r=s.map(p=>{let m=[p.index],f=p.folder,v=new Set([f]),g=t.folders[f]?.folder??null;for(;i(g)&&Object.hasOwn(t.folders,g)&&!v.has(g);)m.unshift(t.folders[f]?.index??""),v.add(g),f=g,g=t.folders[f]?.folder??null;let w=t.folders[f]?.index??null;return{...p,target:i(g)?null:g,place:w,path:m}}),a=new Map,l=p=>{let m=a.get(p);return m===void 0&&(m=o.filter(f=>f.folder===p).sort((f,v)=>Ae(f.index,v.index)||Ae(f.id,v.id)).map(f=>({index:f.index,added:!1})),a.set(p,m)),m},d=new Map;for(let p of r){let m=JSON.stringify([p.target,p.place]);d.set(m,[...d.get(m)??[],p])}let h=[...d.values()].sort((p,m)=>jd(p[0]?.place??null,m[0]?.place??null)),c=[];for(let p of h){let[m]=p;if(m===void 0)continue;p.sort((b,C)=>Yd(b.path,C.path)||Ae(b.kind,C.kind)||Ae(b.id,C.id));let f=l(m.target),v=m.place,g=v===null?f.length:f.filter(b=>b.added||Ae(b.index,v)<=0).length,w=Qn(f[g-1]?.index??null,f[g]?.index??null,p.length);p.forEach((b,C)=>{let P=w[C]??b.index;c.push({kind:b.kind,id:b.id,folder:m.target,index:P}),f.splice(g+C,0,{index:P,added:!0})})}let u=e;for(let{kind:p,id:m,folder:f,index:v}of c)if(p==="views"){let g=u.views[m];g!==void 0&&(u={...u,views:{...u.views,[m]:{...g,folder:f,index:v}}})}else{let g=u.folders[m];g!==void 0&&(u={...u,folders:{...u.folders,[m]:{...g,folder:f,index:v}}})}return{state:u,moves:c}}function jd(e,t){return e===t?0:e===null?1:t===null?-1:Ae(e,t)}function Yd(e,t){for(let i=0;i<Math.min(e.length,t.length);i++){let n=Ae(e[i]??"",t[i]??"");if(n!==0)return n}return e.length-t.length}function Kd(e,t){let i=e.active;if(i===null)return e;let n=e;for(let o of t){let s={block:o},r=n.views[i];if(r===void 0)return n;Object.values(n.views).some(a=>We(a.grid,s))||(n={...n,views:{...n.views,[i]:{...r,grid:Ot(r.grid,s)}}})}return n}var ni={compact:{type:"boolean",description:"Whether each block card shows a compact header over the block's content"},view_tabs:{type:"boolean",description:"Whether the views show as a line of tabs under the navbar"},sync_rails:{type:"boolean",description:"Whether collapsing or opening a view's rail does so on every view at once"}};import{Checkbox as Zd,reactModule as Xd,useValue as qd}from"@blockr/core/react";import{jsx as Qd}from"react/jsx-runtime";function Zi(e){function t({host:i}){return Qd(Zd,{bound:qd(i),label:e})}return Xd(t)}var eh={label:"Compact",category:"Theme options",schema:ni.compact,default:no("compact",!1),ui:Zi("Compact")},th={label:"Views as tabs",category:"Theme options",schema:ni.view_tabs,default:no("view_tabs",!1),ui:Zi("Views as tabs")},ih={label:"Sync rails across views",category:"Board options",schema:ni.sync_rails,default:no("sync_rails",!0),ui:Zi("Sync rails across views")};function no(e,t){return i=>Xi(i,e,t,`which the board option ${e} does not take`)}async function Xi(e,t,i,n){return await dr(e,t,i,n,o=>{let s=typeof o=="string"?oh(o):o;return typeof s=="boolean"?s:void 0})}async function oo(e,t,i,n){return await dr(e,t,i,n,o=>{let s=typeof o=="string"?nh(o):o;return typeof s=="number"&&Number.isFinite(s)&&s>=0?s:void 0})}async function dr(e,t,i,n,o){let s=await e.blockrOption(t);if(s===void 0)return i;let r=o(s);if(r!==void 0)return r;throw new TypeError(`The blockr option ${t} is ${JSON.stringify(s)}, ${n}.`)}function nh(e){let t=e.trim()===""?Number.NaN:Number(e);return Number.isFinite(t)?t:void 0}function oh(e){let t=e.trim();if(["TRUE","true","True","T"].includes(t))return!0;if(["FALSE","false","False","F"].includes(t))return!1}var oi="blockr.dock-dock_plugin";function F(e){let t=e.plugins[oi];return At(t)?t:void 0}function si(e){let t=F(e),i=t?.active??null;return i===null?void 0:t?.views[i]}function de(...e){return wt(["plugins",oi,...e])}function ri(e,t,i,n){return i===void 0?!0:n!==void 0&&at(i,n)?!1:Rt(e,t).some(o=>at(o,i))}function ai(e,t){return t===null||Object.hasOwn(e.folders,t)}function qi(e,t){let i=_e(t).flatMap(n=>"block"in n&&!Object.hasOwn(e.blocks,n.block)?[n.block]:[]);return[...jn(t),...i.map(n=>`The grid places the panel of the block "${n}", which the board does not hold.`)]}function dt(e,t){if(t.length>0)throw e.refusal(t)}function so(e,t){return!("block"in t)||Object.hasOwn(e.blocks,t.block)}async function yt(e){if(!e.lock.board)return{rearrange:!1,resize:!1};let t=o=>Xi(e,o,!0,"where it takes TRUE or FALSE"),[i,n]=await Promise.all([t("lock_rearrange"),t("lock_resize")]);return{rearrange:i,resize:n}}async function li(e){return await oo(e,"dock_grid_size_tol",.005,"where it takes a number of 0 or more")}function ro(e,t){let i=t.length+1;for(;t.includes(`${e} ${String(i)}`);)i+=1;return`${e} ${String(i)}`}function se(e,t=[]){let i=rh(e);return{type:"object",properties:e,required:t,additionalProperties:!1,...Object.keys(i).length===0?{}:{$defs:i}}}var sh=JSON.parse(JSON.stringify(Vi.definitions).replaceAll('"#/definitions/','"#/$defs/'));function Dt(e,t){return{$ref:`#/$defs/${e}`,description:t}}function rh(e){let t=new Map,i=hr(e);for(let n=i.pop();n!==void 0;n=i.pop()){if(t.has(n))continue;let o=sh[n];if(o===void 0)throw new Error(`The schema of the dock's state defines no "${n}".`);t.set(n,o),i.push(...hr(o))}return Object.fromEntries([...t].sort(([n],[o])=>n<o?-1:1))}function hr(e){return[...JSON.stringify(e).matchAll(/"#\/\$defs\/([^"]+)"/g)].flatMap(t=>t.slice(1,2))}var Ce={type:"string",description:"The id of a view."},di={type:"string",description:"The id of a folder."};function hi(e,t=!1){return{type:["string","null"],description:`The id of the folder that the ${e} goes into, or null for the top of the navigation.${t?" It goes to the top where this is left out.":""}`}}function ci(e,t){return{type:"string",pattern:"\\S",description:`${t} It holds a character other than a space, and may be the name of another ${e}.`}}var ui={description:'The view or folder that it goes before, as { "view": id } or { "folder": id }, which sits in the folder that it goes into. It goes at the end of that folder where this is left out.',anyOf:[se({view:Ce},["view"]),se({folder:di},["folder"])]},Lt=Dt("Panel",`A panel, as a grid names it: { "block": id } for a block's card, or { "plugin": id } for the UI of a plugin, by the id of its class.`);function cr(e){return Dt("Panel",`A panel of the view, by whose tab group the panel ${e}: in it, or beside it on the side that \`side\` names. Where this panel sits on a rail, the panel ${e} onto that rail, and \`side\` is within.`)}var ur={type:"string",enum:Bn,description:"Where the panel goes by the tab group of the panel that `near` names: within it, as a new tab, or in a new tab group to its left or right, or above or below it. It is within unless given. Without `near`, a side other than within places the panel at that edge of the whole grid."},pr={type:"string",enum:oe,description:"The edge of the view whose rail takes the panel, as a new tab, which opens a rail there where the view has none. It takes precedence over `near` and `side`."},mr={type:"string",enum:oe,description:"The edge of the view that the rail sits on."},fr=Dt("Grid","A view's grid, which says which panels it shows and where.");function Fe(e,t){return F(e)?.views[t]}function Nt(e,t,i){let n=Fe(e,t);return n!==void 0&&We(n.grid,i)}function Xe(e,t){return{op:"replace",path:de("views",e,"grid"),value:t}}function vr(e,t){return _t(e,i=>!ie(i,t))}function gr(e){return se({view:Ce,panel:Lt,near:cr(e),side:ur,rail:pr},["view","panel"])}var lo={panels:"The board is locked, which keeps the panels that each view shows.",arrangement:"The board is locked, and the blockr option lock_rearrange keeps where each panel sits.",sizes:"The board is locked, and the blockr option lock_resize keeps the sizes of the splits and rails."};function ho(e,t,i){i.lock.board&&dt(i,[...e.panels===!0?[lo.panels]:[],...e.arrangement===!0&&t.rearrange?[lo.arrangement]:[],...e.sizes===!0&&t.resize?[lo.sizes]:[]])}var wr=[{id:"blockr.dock-add_panel",label:"Add panel",description:"Places a panel in a view that does not show it, as the tab that its tab group or rail shows: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place, a new tab in the last tab group that holds no plugin's panel.",args:gr("goes"),preflight(e,{view:t,panel:i},{lock:n}){return!n.board&&Fe(e,t)!==void 0&&!Nt(e,t,i)&&so(e,i)},run(e,{view:t,panel:i,near:n,side:o,rail:s},r){let a=Fe(e,t);if(a===void 0)return[];let l={near:n,side:o,rail:s};return dt(r,Wi(a.grid,l)),{patches:[Xe(t,Fi(a.grid,i,l,"distribute"))]}}},{id:"blockr.dock-remove_panel",label:"Remove panel",description:"Takes a panel out of a view, as closing its tab does. It removes no block, and the panel stays in the other views that show it.",args:se({view:Ce,panel:Lt},["view","panel"]),preflight(e,{view:t,panel:i},{lock:n}){return!n.board&&Nt(e,t,i)},run(e,{view:t,panel:i}){let n=Fe(e,t);return n===void 0?[]:{patches:[Xe(t,vr(n.grid,i))]}}},{id:"blockr.dock-move_panel",label:"Move panel",description:"Moves a panel within a view that shows it, placed as blockr.dock-add_panel places one: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place.",args:gr("moves"),preflight(e,{view:t,panel:i,near:n}){return Nt(e,t,i)&&(n===void 0||!ie(n,i))},async prepare(e,t,i){return{...t,locks:await yt(i)}},run(e,{view:t,panel:i,near:n,side:o,rail:s,locks:r},a){ho({arrangement:!0},r,a);let l=Fe(e,t);if(l===void 0)return[];let d=Ze(l.grid,i);if(s!==void 0&&d!==void 0&&"edge"in d&&d.edge===s&&l.grid.rails?.[s]?.panels.length===1)return[];let h={near:n,side:o,rail:s},c=vr(l.grid,i);return dt(a,Wi(c,h)),{patches:[Xe(t,Fi(c,i,h,"split"))]}}},{id:"blockr.dock-resize_panel",label:"Resize panel",description:"Sets the size of the tab group that holds a panel: its share of the split that holds it, a ratio between 0 and 1, while the other children of the split share the rest in proportion. For a panel on a rail, it sets the rail's width in pixels while it is open.",args:se({view:Ce,panel:Lt,size:{type:"number",exclusiveMinimum:0,description:"The share of its split that the tab group takes, above 0 and below 1, or the width in pixels of the rail."}},["view","panel","size"]),preflight(e,{view:t,panel:i}){return Nt(e,t,i)},async prepare(e,t,i){return{...t,locks:await yt(i)}},run(e,{view:t,panel:i,size:n,locks:o},s){ho({sizes:!0},o,s);let r=Fe(e,t);return r===void 0?[]:(dt(s,Zn(r.grid,i,n)),{patches:[Xe(t,Xn(r.grid,i,n))]})}},{id:"blockr.dock-activate_panel",label:"Activate panel",description:"Has the tab group or rail that holds a panel show it, as clicking its tab does. It takes no undo step, since it changes only what the user looks at.",args:se({view:Ce,panel:Lt},["view","panel"]),undo:!1,preflight(e,{view:t,panel:i}){return Nt(e,t,i)},run(e,{view:t,panel:i}){let n=Fe(e,t);return n===void 0?[]:{patches:[Xe(t,Ui(n.grid,i))]}}},{id:"blockr.dock-show_panel",label:"Show panel",description:"Shows a panel in the active view, as the dock carries out core's show(): has the tab group or rail that holds it show it, opening the rail where it is collapsed, where the view shows it, and places it at the default place where the view does not, a new tab in the last tab group that holds no plugin's panel. While the board option sync_rails is on, a rail that it opens opens on every view that has a rail on that edge. It never switches views, and takes no undo step, since showing takes none. On a locked board, it only has a tab group or rail show a panel that the view shows.",args:se({panel:Lt},["panel"]),undo:!1,preflight(e,{panel:t},{lock:i}){let n=F(e)?.active??null;return n===null||!so(e,t)?!1:!i.board||Nt(e,n,t)},run(e,{panel:t}){let i=F(e),n=i?.active??null,o=n===null?void 0:i?.views[n];if(i===void 0||n===null||o===void 0)return[];if(!We(o.grid,t))return{patches:[Xe(n,Ot(o.grid,t))]};let s=Ui(o.grid,t),r=Ze(s,t);if(r===void 0||!("edge"in r)||s.rails?.[r.edge]?.collapsed!==!0)return{patches:[Xe(n,s)]};let a={...i,views:{...i.views,[n]:{...o,grid:s}}};return{patches:_r(e,a,n,r.edge,!1)}}},{id:"blockr.dock-set_grid",label:"Set grid",description:"Sets a view's whole grid, which says which panels the view shows and where, as the dock does after the user drags a panel or a border. A grid places each panel once, and the shares of each split are above 0 and sum to 1. Where the grid has the same splits and tab groups as the view's, a split keeps its shares unless the grid moves one by more than the blockr option dock_grid_size_tol, 0.005 unless set.",args:se({view:Ce,grid:fr},["view","grid"]),preflight(e,{view:t}){return Fe(e,t)!==void 0},async prepare(e,t,i){let[n,o]=await Promise.all([yt(i),li(i)]);return{...t,locks:n,tolerance:o}},run(e,{view:t,grid:i,locks:n,tolerance:o},s){let r=Fe(e,t);if(r===void 0)return[];dt(s,qi(e,i));let a=bt(r.grid,i,o);return ho(st(r.grid,a),n,s),{patches:[Xe(t,a)]}}},{id:"blockr.dock-collapse_rail",label:"Collapse rail",description:"Collapses the rail on an edge of a view, which then shows its tabs alone, or opens it. While the board option sync_rails is on, it does so on every view that has a rail on that edge. It takes no undo step, since it changes only what the user looks at.",args:se({view:Ce,edge:mr,collapsed:{type:"boolean",description:"Whether the rail is collapsed, or open."}},["view","edge","collapsed"]),undo:!1,preflight(e,{view:t,edge:i}){return Fe(e,t)?.grid.rails?.[i]!==void 0},run(e,{view:t,edge:i,collapsed:n}){let o=F(e);return o===void 0?[]:{patches:_r(e,o,t,i,n)}}}];function _r(e,t,i,n,o){let s=e.options.sync_rails!==!1;return ah(t,s?void 0:i,n).map(([r,a])=>Xe(r,Kn(a,n,o)))}function ah(e,t,i){return Object.entries(e.views).flatMap(([n,o])=>(t===void 0||n===t)&&o.grid.rails?.[i]!==void 0?[[n,o.grid]]:[])}var St=["inputs","outputs"],yr=[{id:"blockr.dock-set_sections",label:"Set card sections",description:"Sets the sections of a block's card that show: its inputs, its outputs, both, or neither. A card shows both unless this sets it otherwise.",args:se({block:{type:"string",description:"The id of a block of the board."},sections:{type:"array",items:Dt("Section","A section of a block's card."),uniqueItems:!0,description:'The sections that the card shows, of "inputs" and "outputs".'}},["block","sections"]),preflight(e,{block:t},{lock:i}){return!i.board&&F(e)!==void 0&&Object.hasOwn(e.blocks,t)},run(e,{block:t,sections:i}){let n=F(e);if(n===void 0)return[];let o=St.filter(s=>i.includes(s));return o.length===St.length?Object.hasOwn(n.visible,t)?{patches:[{op:"remove",path:de("visible",t)}]}:[]:{patches:[{op:"add",path:de("visible",t),value:o}]}}}];var lh={orientation:"horizontal",children:[],sizes:[]};function ht(e,t){return e!==void 0&&!t}function Dr(e){return t=>Object.hasOwn(e.views,t)||Object.hasOwn(e.folders,t)}var Sr=[{id:"blockr.dock-add_view",label:"Add view",description:'Adds a view, under a new id, and makes it the active view. It goes into a folder, or to the top, before the view or folder that `before` names, or at the end. Where no name is given, it is named "View N", with N one more than the views there are, or the first N after it that no view\'s name has. Where no grid is given, it shows nothing.',args:se({name:ci("view","The name of the new view."),folder:hi("view",!0),before:ui,grid:Dt("Grid","The grid of the new view, which says which panels it shows and where.")}),preflight(e,t,{lock:i}){let n=F(e),o=t.folder??null;return ht(n,i.board)&&ai(n,o)&&ri(n,o,t.before)},run(e,t,i){let n=F(e);if(n===void 0)return[];let o=t.grid??lh;dt(i,qi(e,o));let s=t.folder??null,r=i.mintId(Dr(n)),a={name:t.name??ro("View",Object.values(n.views).map(l=>l.name)),folder:s,index:lt(n,s,t.before),grid:o};return{patches:[{op:"add",path:de("views",r),value:a},{op:"replace",path:de("active"),value:r}]}}},{id:"blockr.dock-remove_view",label:"Remove view",description:"Removes a view, and makes the first view of the navigation active where the view it removes was. It removes no block, and refuses to remove the last view.",args:se({view:Ce},["view"]),preflight(e,{view:t},{lock:i}){let n=F(e);return ht(n,i.board)&&Object.hasOwn(n.views,t)&&Object.keys(n.views).length>1},run(e,{view:t}){let i=F(e);if(i===void 0)return[];let n=Object.fromEntries(Object.entries(i.views).filter(([s])=>s!==t)),o=[{op:"remove",path:de("views",t)}];return i.active===t&&o.push({op:"replace",path:de("active"),value:ii({...i,views:n})}),{patches:o}}},{id:"blockr.dock-rename_view",label:"Rename view",description:"Gives a view a new name.",args:se({view:Ce,name:ci("view","The view's new name.")},["view","name"]),preflight(e,{view:t},{lock:i}){let n=F(e);return ht(n,i.board)&&Object.hasOwn(n.views,t)},run:(e,{view:t,name:i})=>({patches:[{op:"replace",path:de("views",t,"name"),value:i}]})},{id:"blockr.dock-move_view",label:"Move view",description:"Moves a view into a folder, or to the top, before the view or folder that `before` names, or at the end of that folder.",args:se({view:Ce,folder:hi("view"),before:ui},["view","folder"]),preflight(e,{view:t,folder:i,before:n},{lock:o}){let s=F(e);return ht(s,o.board)&&Object.hasOwn(s.views,t)&&ai(s,i)&&ri(s,i,n,{view:t})},run(e,{view:t,folder:i,before:n}){let o=F(e),s=o?.views[t];return o===void 0||s===void 0?[]:s.folder===i&&Ji(o,{view:t},i,n)?[]:{patches:[{op:"replace",path:de("views",t,"folder"),value:i},{op:"replace",path:de("views",t,"index"),value:lt(o,i,n,{view:t})}]}}},{id:"blockr.dock-activate_view",label:"Activate view",description:"Makes a view the active one, which the dock shows. It takes no undo step, since it changes only what the user looks at.",args:se({view:Ce},["view"]),undo:!1,preflight(e,{view:t}){let i=F(e);return i!==void 0&&Object.hasOwn(i.views,t)},run:(e,{view:t})=>({patches:[{op:"replace",path:de("active"),value:t}]})},{id:"blockr.dock-add_folder",label:"Add folder",description:'Adds a folder, under a new id, which groups views and other folders in the navigation. It goes into a folder, or to the top, before the view or folder that `before` names, or at the end. Where no name is given, it is named "Folder N", with N one more than the folders there are, or the first N after it that no folder\'s name has.',args:se({name:ci("folder","The name of the new folder."),folder:hi("folder",!0),before:ui}),preflight(e,t,{lock:i}){let n=F(e),o=t.folder??null;return ht(n,i.board)&&ai(n,o)&&ri(n,o,t.before)},run(e,t,{mintId:i}){let n=F(e);if(n===void 0)return[];let o=t.folder??null,s={name:t.name??ro("Folder",Object.values(n.folders).map(r=>r.name)),folder:o,index:lt(n,o,t.before)};return{patches:[{op:"add",path:de("folders",i(Dr(n))),value:s}]}}},{id:"blockr.dock-remove_folder",label:"Remove folder",description:"Removes a folder, and moves the views and folders that it holds up into the folder that held it, in its place and in their order. It removes no view.",args:se({folder:di},["folder"]),preflight(e,{folder:t},{lock:i}){let n=F(e);return ht(n,i.board)&&Object.hasOwn(n.folders,t)},run(e,{folder:t}){let i=F(e);if(i===void 0)return[];let n=Object.fromEntries(Object.entries(i.folders).filter(([s])=>s!==t)),{moves:o}=Yi({...i,folders:n},i);return{patches:[{op:"remove",path:de("folders",t)},...o.flatMap(s=>[{op:"replace",path:de(s.kind,s.id,"folder"),value:s.folder},{op:"replace",path:de(s.kind,s.id,"index"),value:s.index}])]}}},{id:"blockr.dock-rename_folder",label:"Rename folder",description:"Gives a folder a new name.",args:se({folder:di,name:ci("folder","The folder's new name.")},["folder","name"]),preflight(e,{folder:t},{lock:i}){let n=F(e);return ht(n,i.board)&&Object.hasOwn(n.folders,t)},run:(e,{folder:t,name:i})=>({patches:[{op:"replace",path:de("folders",t,"name"),value:i}]})},{id:"blockr.dock-move_folder",label:"Move folder",description:"Moves a folder, with what it holds, into another folder, or to the top, before the view or folder that `before` names, or at the end of that folder. It refuses to move a folder into itself or into a folder inside it.",args:se({folder:di,into:hi("folder"),before:ui},["folder","into"]),preflight(e,{folder:t,into:i,before:n},{lock:o}){let s=F(e);return ht(s,o.board)&&Object.hasOwn(s.folders,t)&&ai(s,i)&&(i===null||!ji(s,i,t))&&ri(s,i,n,{folder:t})},run(e,{folder:t,into:i,before:n}){let o=F(e),s=o?.folders[t];return o===void 0||s===void 0?[]:s.folder===i&&Ji(o,{folder:t},i,n)?[]:{patches:[{op:"replace",path:de("folders",t,"folder"),value:i},{op:"replace",path:de("folders",t,"index"),value:lt(o,i,n,{folder:t})}]}}}];var Cr=[...Sr,...wr,...yr];function co(e,t,i,n,o){let s=Pr(t,n),r=Pr(bt(t,i,o.shares?o.tolerance:1/0),n,o.widths?t:void 0),a=st(s,r);if(a.panels||a.arrangement||a.sizes)return[{id:"blockr.dock-set_grid",args:{view:e,grid:r}}];let l=[],d=c=>{l.push({id:"blockr.dock-activate_panel",args:{view:e,panel:c}})},h=De(s);De(r).forEach((c,u)=>{let p=h[u];p!==void 0&&!ie(p.active,c.active)&&d(c.active)});for(let c of oe){let[u,p]=[s.rails?.[c],r.rails?.[c]];u===void 0||p===void 0||(ie(u.active,p.active)||d(p.active),u.collapsed!==p.collapsed&&l.push({id:"blockr.dock-collapse_rail",args:{view:e,edge:c,collapsed:p.collapsed}}))}return l}function uo(e,t,i){let n=_e(i),o=_e(t).filter(a=>!n.some(l=>ie(l,a))),s=De(t).map(a=>a.active),r=De(i).map(a=>a.active).filter(a=>!s.some(l=>ie(l,a)));return[...o.map(a=>({id:"blockr.dock-remove_panel",args:{view:e,panel:a}})),...r.map(a=>({id:"blockr.dock-activate_panel",args:{view:e,panel:a}}))]}function Pr(e,t,i){if(e.rails===void 0)return e;let n={};for(let o of oe){let s=e.rails[o];if(s===void 0)continue;let r=t.rails?.[o],a=i?.rails?.[o],l=a!==void 0&&a.size!==s.size;n[o]=r===void 0?s:{...s,size:l?s.size:r.size}}return{...e,rails:n}}function $t(e){return"block"in e?JSON.stringify({block:e.block}):JSON.stringify({plugin:e.plugin})}function qe(e){let t;try{t=JSON.parse(e)}catch{return}if(typeof t!="object"||t===null||Array.isArray(t)||Object.keys(t).length!==1)return;let{block:n,plugin:o}=t;if(typeof n=="string")return{block:n};if(typeof o=="string")return{plugin:o}}function pi(e){return`rail-${e}`}var Qr,ea=class{constructor(){}},Ee=class extends ea{constructor(e,t,i,n){super(),this.viewId=e,this.groupId=t,this.panelId=i,this.tabGroupId=n}},_i=class extends ea{constructor(e,t){super(),this.viewId=e,this.paneId=t}},et=class ta{constructor(){}static getInstance(){return ta.INSTANCE}hasData(t){return t&&t===this.proto}clearData(t){this.hasData(t)&&(this.proto=void 0,this.data=void 0)}getData(t){if(this.hasData(t))return this.data}setData(t,i){i&&(this.data=t,this.proto=i)}};Qr=et;et.INSTANCE=new Qr;function X(){let e=et.getInstance();if(e.hasData(Ee.prototype))return e.getData(Ee.prototype)[0]}function mi(){let e=et.getInstance();if(e.hasData(_i.prototype))return e.getData(_i.prototype)[0]}var L;(function(e){e.NONE={dispose:()=>{}};function t(i){return{dispose:()=>{i()}}}e.from=t})(L||(L={}));var x=class{get isDisposed(){return this._isDisposed}constructor(...e){this._isDisposed=!1,this._disposables=new Set(e)}addDisposables(...e){e.forEach(t=>this._disposables.add(t))}removeDisposable(e){this._disposables.delete(e)}dispose(){this._isDisposed||(this._isDisposed=!0,this._disposables.forEach(e=>e.dispose()),this._disposables.clear())}},Q=class{constructor(){this._disposable=L.NONE}get value(){return this._disposable===L.NONE?void 0:this._disposable}set value(e){this._disposable&&this._disposable.dispose(),this._disposable=e}dispose(){this._disposable&&(this._disposable.dispose(),this._disposable=L.NONE)}},Ge;(function(e){e.map=(t,i)=>n=>t(o=>n(i(o))),e.any=(...t)=>i=>{let n=t.map(o=>o(i));return{dispose:()=>{n.forEach(o=>{o.dispose()})}}}})(Ge||(Ge={}));var Mo=class{constructor(){this._defaultPrevented=!1}get defaultPrevented(){return this._defaultPrevented}preventDefault(){this._defaultPrevented=!0}},ia=class{constructor(){this._isAccepted=!1}get isAccepted(){return this._isAccepted}accept(){this._isAccepted=!0}},dh=class{constructor(){this.events=new Map}get size(){return this.events.size}add(e,t){this.events.set(e,t)}delete(e){this.events.delete(e)}clear(){this.events.clear()}},Gr=class na{static create(){var t;return new na((t=new Error("listener stacktrace").stack)!==null&&t!==void 0?t:"")}constructor(t){this.value=t}print(){console.warn("dockview: stacktrace",this.value)}},hh=class{constructor(e,t){this.callback=e,this.stacktrace=t}},_=class ze{static setLeakageMonitorEnabled(t){t!==ze.ENABLE_TRACKING&&ze.MEMORY_LEAK_WATCHER.clear(),ze.ENABLE_TRACKING=t}get value(){return this._last}constructor(t){this.options=t,this._listeners=[],this._disposed=!1}get event(){return this._event||(this._event=t=>{var i;!((i=this.options)===null||i===void 0)&&i.replay&&this._last!==void 0&&t(this._last);let n=new hh(t,ze.ENABLE_TRACKING?Gr.create():void 0);return this._listeners.push(n),{dispose:()=>{let o=this._listeners.indexOf(n);o>-1?this._listeners.splice(o,1):ze.ENABLE_TRACKING}}},ze.ENABLE_TRACKING&&ze.MEMORY_LEAK_WATCHER.add(this._event,Gr.create())),this._event}fire(t){var i;if(this._pauseTokens!==void 0&&this._pauseTokens.size>0)return;!((i=this.options)===null||i===void 0)&&i.replay&&(this._last=t);let n=this._listeners,o=n.length;if(o!==0){if(o===1){n[0].callback(t);return}for(let s of n.slice())s.callback(t)}}pause(){var t;let i={};return(t=this._pauseTokens)!==null&&t!==void 0||(this._pauseTokens=new Set),this._pauseTokens.add(i),L.from(()=>{var n;return(n=this._pauseTokens)===null||n===void 0?void 0:n.delete(i)})}dispose(){this._disposed||(this._disposed=!0,this._listeners.length>0&&(ze.ENABLE_TRACKING?queueMicrotask(()=>{for(let i of this._listeners){var t;console.warn("dockview: stacktrace",(t=i.stacktrace)===null||t===void 0?void 0:t.print())}this._listeners=[]}):this._listeners=[]),ze.ENABLE_TRACKING&&this._event&&ze.MEMORY_LEAK_WATCHER.delete(this._event))}};_.ENABLE_TRACKING=!1;_.MEMORY_LEAK_WATCHER=new dh;function T(e,t,i,n){return e.addEventListener(t,i,n),{dispose:()=>{e.removeEventListener(t,i,n)}}}var kr=class{constructor(){this._onFired=new _,this._currentFireCount=0,this._pending=new Set,this._queued=!1,this.onEvent=e=>{let t=this._currentFireCount;return this._onFired.event(i=>{this._currentFireCount>t&&e(i)})}}fire(e){this._currentFireCount++,this._pending.add(e),!this._queued&&(this._queued=!0,queueMicrotask(()=>{this._queued=!1;let t=this._pending;this._pending=new Set,this._onFired.fire(t)}))}dispose(){this._onFired.dispose()}},ch=class extends x{constructor(e){super(),this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this._value=null,this.addDisposables(this._onDidChange,kt(e,t=>{let i=t.target.scrollWidth>t.target.clientWidth,n=t.target.scrollHeight>t.target.clientHeight;this._value={hasScrollX:i,hasScrollY:n},this._onDidChange.fire(this._value)}))}};function kt(e,t){let i=new Set,n=new ResizeObserver(o=>{let s=!1,r;r=requestAnimationFrame(()=>{s=!0,r!==void 0&&i.delete(r);let a=o[0];t(a)}),s||i.add(r)});return n.observe(e),{dispose:()=>{n.unobserve(e),n.disconnect();for(let o of i)cancelAnimationFrame(o);i.clear()}}}var Re=(e,...t)=>{for(let i of t)e.classList.contains(i)&&e.classList.remove(i)},Le=(e,...t)=>{for(let i of t)e.classList.contains(i)||e.classList.add(i)},G=(e,t,i)=>{let n=e.classList.contains(t);i&&!n&&e.classList.add(t),!i&&n&&e.classList.remove(t)};function So(e,t){for(;e;){if(e===t)return!0;e=e.parentNode}return!1}function oa(e){return new uh(e)}var uh=class extends x{constructor(e){super(),this._onDidFocus=new _,this.onDidFocus=this._onDidFocus.event,this._onDidBlur=new _,this.onDidBlur=this._onDidBlur.event,this.addDisposables(this._onDidFocus,this._onDidBlur);let t=So(Go(e),e),i=!1,n=()=>{i=!1,t||(t=!0,this._onDidFocus.fire())},o=()=>{t&&(i=!0,globalThis.setTimeout(()=>{i&&(i=!1,t=!1,this._onDidBlur.fire())},0))};this._refreshStateHandler=()=>{So(Go(e),e)!==t&&(t?o():n())},this.addDisposables(T(e,"focus",n,!0)),this.addDisposables(T(e,"blur",o,!0))}refreshState(){this._refreshStateHandler()}},sa="dv-quasiPreventDefault";function ra(e){e[sa]=!0}function xr(e){return e[sa]}function Co(e,t){var i,n;let o=(i=(n=e.composedPath)===null||n===void 0?void 0:n.call(e))!==null&&i!==void 0?i:[];if(o.length>0)return t.some(r=>o.includes(r));let s=e.target;return s instanceof Node&&t.some(r=>r.contains(s))}function ph(e){let t=[],i=e.getRootNode();for(;Wt(i);)t.push(i),i=i.host.getRootNode();return t}function mh(e,t){let i=t?.getRootNode(),n=e,o=n.getRootNode();for(;o!==i&&Wt(o);)n=o.host,o=n.getRootNode();return n}function Er(e,t,i={}){let n=Array.from(t),{nonce:o}=i,s=typeof o=="function"?o(e):o;for(let r of n){if(r.href){let d=e.createElement("link");d.href=r.href,d.type=r.type,d.rel="stylesheet",s&&d.setAttribute("nonce",s),e.head.appendChild(d);continue}let a=[];try{r.cssRules&&(a=Array.from(r.cssRules).map(d=>d.cssText))}catch(d){console.warn("dockview: failed to access stylesheet rules due to security restrictions",d)}let l=e.createDocumentFragment();for(let d of a){let h=e.createElement("style");s&&h.setAttribute("nonce",s),h.appendChild(e.createTextNode(d)),l.appendChild(h)}e.head.appendChild(l)}}function Po(e){let{left:t,top:i,width:n,height:o}=e.getBoundingClientRect();return{left:t+window.scrollX,top:i+window.scrollY,width:n,height:o}}function ln(e){let t=e;for(;t?.parentNode;){if(t.parentNode===document)return!0;t.parentNode instanceof DocumentFragment?t=t.parentNode.host:t=t.parentNode}return!1}function Wt(e){return!!e&&e.nodeType===Node.DOCUMENT_FRAGMENT_NODE&&"host"in e&&!!e.host}function dn(e){var t;let i=e.getRootNode();return i!==e&&typeof i.elementsFromPoint=="function"?i:(t=e.ownerDocument)!==null&&t!==void 0?t:document}function fh(e,t){e.dataset.testid=t}function vh(e,t){let i=[];function n(o){if(o.nodeType===Node.ELEMENT_NODE){e.includes(o.tagName)&&i.push(o),o.shadowRoot&&n(o.shadowRoot);for(let s of o.children)n(s)}}return n(t instanceof Document?t.documentElement:t),i}function bi(e=document){let t=vh(["IFRAME","WEBVIEW"],e),i=new WeakMap;for(let n of t)i.set(n,n.style.pointerEvents),n.style.pointerEvents="none";return{release:()=>{for(let o of t){var n;o.style.pointerEvents=(n=i.get(o))!==null&&n!==void 0?n:"auto"}t.splice(0,t.length)}}}function aa(e=document){let t=e instanceof Document?e:e.ownerDocument,i=t?.documentElement;if(!t||!i)return{release:()=>{}};let n=["user-select","-webkit-user-select"],o=n.map(r=>[r,i.style.getPropertyValue(r)]);for(let r of n)i.style.setProperty(r,"none");let s=r=>r.preventDefault();return t.addEventListener("selectstart",s),{release:()=>{t.removeEventListener("selectstart",s);for(let[r,a]of o)a?i.style.setProperty(r,a):i.style.removeProperty(r)}}}function gh(e){function t(o){let s=[];for(let r=0;r<o.classList.length;r++)s.push(o.classList.item(r));return s}let i,n=e;for(;n!==null&&(i=t(n).find(o=>o.startsWith("dockview-theme-")),typeof i!="string");){if(n.parentElement===null){let o=n.getRootNode();n=Wt(o)?o.host:null;continue}n=n.parentElement}return i}var pn=class{constructor(e){this.element=e,this._classNames=[]}setClassNames(e){for(let t of this._classNames)G(this.element,t,!1);this._classNames=e.split(" ").filter(t=>t.trim().length>0);for(let t of this._classNames)G(this.element,t,!0)}},la=100;function po(e,t){let i=Po(e),n=Po(t);return!(i.left<n.left||i.left+i.width>n.left+n.width||i.top<n.top||i.top+i.height>n.top+n.height)}function _h(e){let t=new _,i=e.screenX,n=e.screenY,o,s=0,r=!1,a=()=>{if(r||e.closed)return;let d=e.screenX,h=e.screenY;(d!==i||h!==n)&&(clearTimeout(o),o=setTimeout(()=>{t.fire()},la),i=d,n=h),s=requestAnimationFrame(a)};a();let l=t.dispose.bind(t);return t.dispose=()=>{r||(r=!0,cancelAnimationFrame(s),clearTimeout(o)),l()},t}function bh(e,t){let i;return new x(T(e,"resize",()=>{clearTimeout(i),i=setTimeout(()=>{t()},la)}),L.from(()=>clearTimeout(i)))}function wh(e,t,i){var n;let o=(n=i?.buffer)!==null&&n!==void 0?n:10,s=e.getBoundingClientRect(),r=t.getBoundingClientRect(),a=0,l=0,d=s.left-r.left,h=s.top-r.top,c=s.bottom-r.bottom,u=s.right-r.right;d<o?a=o-d:u>o&&(a=-o-u),h<o?l=o-h:c>o&&(l=-c-o),(a!==0||l!==0)&&(e.style.transform=`translate(${a}px, ${l}px)`)}function da(e){let t=e;for(;t&&(t.style.zIndex==="auto"||t.style.zIndex==="");)t=t.parentElement;return t}function Go(e){var t;let i=e.getRootNode(),n=i.nodeType===Node.DOCUMENT_NODE?i:e.ownerDocument;return n&&typeof n.hasFocus=="function"&&!n.hasFocus()?null:(t=i.activeElement)!==null&&t!==void 0?t:null}function ha(e){var t;let i=e.getRootNode();return Wt(i)?i:((t=e.ownerDocument)!==null&&t!==void 0?t:document).body}function Tr(e,t,i,n,o,s,r){try{var a=e[s](r),l=a.value}catch(d){i(d);return}a.done?t(l):Promise.resolve(l).then(n,o)}function ca(e){return function(){var t=this,i=arguments;return new Promise(function(n,o){var s=e.apply(t,i);function r(l){Tr(s,n,o,r,a,"next",l)}function a(l){Tr(s,n,o,r,a,"throw",l)}r(void 0)})}}function yh(e){let t=ua(e);if(t)throw t}var Dh=new Set(["javascript:","data:","blob:","vbscript:","file:"]),Sh=250;function ua(e,t=globalThis.location){let i;try{i=new URL(e,t.href)}catch{return new Error(`dockview: invalid popout URL: ${e}`)}if(Dh.has(i.protocol))return new Error(`dockview: popout URL must not use the "${i.protocol}" protocol, which would run in the opener's context; got: ${e}`);if(!(i.protocol===t.protocol&&i.host===t.host))return new Error(`dockview: popout URL must be same-origin with the page (${t.protocol}//${t.host}); got: ${e}`)}var Ch=class extends x{get window(){var e,t;return(e=(t=this._window)===null||t===void 0?void 0:t.value)!==null&&e!==void 0?e:null}get failure(){return this._failure}constructor(e,t,i){super(),this.target=e,this.className=t,this.options=i,this._onWillClose=new _,this.onWillClose=this._onWillClose.event,this._onDidClose=new _,this.onDidClose=this._onDidClose.event,this._window=null,this.addDisposables(this._onWillClose,this._onDidClose)}dispose(){this.close(),super.dispose()}dimensions(){if(!this._window)return null;let e=this._window.value.screenX;return{top:this._window.value.screenY,left:e,width:this._window.value.innerWidth,height:this._window.value.innerHeight}}close(){var e,t;let i=this._window;i&&(this._window=null,this._onWillClose.fire(),(e=(t=this.options).onWillClose)===null||e===void 0||e.call(t,{id:this.target,window:i.value}),i.disposable.dispose(),this._onDidClose.fire())}open(){var e=this;return ca(function*(){var t,i;if(e._window)throw new Error("instance of popout window is already open");let n=`${e.options.url}`;yh(n);let o=Object.entries({top:e.options.top,left:e.options.left,width:e.options.width,height:e.options.height}).map(([l,d])=>`${l}=${d}`).join(","),s=window.open(n,e.target,o);if(!s)return e._failure={reason:"blocked"},null;let r=new x;e._window={value:s,disposable:r},r.addDisposables(L.from(()=>{s.close()}),e.watchForClose(s),T(globalThis.window,"beforeunload",()=>{e.close()}));let a=e.createPopoutWindowContainer();return e.className&&a.classList.add(e.className),(t=(i=e.options).onDidOpen)===null||t===void 0||t.call(i,{id:e.target,window:s}),new Promise(l=>{let d=h=>{e._failure={reason:"unscriptable",error:h instanceof Error?h:new Error(String(h))},e.close(),l(null)};try{s.addEventListener("unload",()=>{})}catch(h){d(h);return}r.addDisposables(e.onWillClose(()=>{var h;(h=e._failure)!==null&&h!==void 0||(e._failure={reason:"closed"}),l(null)})),s.addEventListener("load",()=>{try{var h,c,u;let f=s.document;f.title=document.title,f.body.appendChild(a),Er(f,[...Array.from(globalThis.document.styleSheets),...(h=globalThis.document.adoptedStyleSheets)!==null&&h!==void 0?h:[]],{nonce:e.options.nonce});let v=[];for(let g=(c=(u=e.options).styleRoot)===null||c===void 0?void 0:c.call(u);Wt(g);g=g.host.getRootNode()){var p,m;v.push(...Array.from((p=g.styleSheets)!==null&&p!==void 0?p:[]),...(m=g.adoptedStyleSheets)!==null&&m!==void 0?m:[])}v.length>0&&Er(f,v,{nonce:e.options.nonce}),T(s,"beforeunload",()=>{e.close()}),l(a)}catch(f){d(f)}})})})()}watchForClose(e){if(typeof e.closed!="boolean")return L.NONE;let t=setInterval(()=>{e.closed&&this.close()},Sh);return L.from(()=>{clearInterval(t)})}createPopoutWindowContainer(){let e=document.createElement("div");return e.classList.add("dv-popout-window"),e.id="dv-popout-window",e.style.position="absolute",e.style.width="100%",e.style.height="100%",e.style.top="0px",e.style.left="0px",e}};function Me(e){if(e.length===0)throw new Error("Invalid tail call");return[e.slice(0,e.length-1),e[e.length-1]]}function ko(e,t){if(e.length!==t.length)return!1;for(let i=0;i<e.length;i++)if(e[i]!==t[i])return!1;return!0}function mo(e,t){let i=e.indexOf(t);i>-1&&(e.splice(i,1),e.unshift(t))}function Qi(e,t){let i=e.indexOf(t);i>-1&&(e.splice(i,1),e.push(t))}function Ph(e,t){for(let i=0;i<e.length;i++){let n=e[i];if(t(n))return i}return-1}function pa(e,t){let i=e.indexOf(t);return i>-1?(e.splice(i,1),!0):!1}var Z=(e,t,i)=>t>i?t:Math.min(i,Math.max(e,t)),Ro=()=>{let e=1;return{next:()=>(e++).toString()}},Oe=(e,t)=>{let i=[];if(typeof t!="number"&&(t=e,e=0),e<=t)for(let n=e;n<t;n++)i.push(n);else for(let n=e;n>t;n--)i.push(n);return i},Gh=class{set size(e){this._size=e}setContainerGeometry(e,t){this._appliedStyles[e]!==t&&(this._appliedStyles[e]=t,this.container.style[e]=t)}get size(){return this._size}get cachedVisibleSize(){return this._cachedVisibleSize}get visible(){return this._cachedVisibleSize===void 0}get minimumSize(){return this.visible?this.view.minimumSize:0}get viewMinimumSize(){return this.view.minimumSize}get maximumSize(){return this.visible?this.view.maximumSize:0}get viewMaximumSize(){return this.view.maximumSize}get priority(){return this.view.priority}get snap(){return!!this.view.snap}set enabled(e){this.container.style.pointerEvents=e?"":"none"}constructor(e,t,i,n){this.container=e,this.view=t,this.disposable=n,this._cachedVisibleSize=void 0,this._appliedStyles={},typeof i=="number"?(this._size=i,this._cachedVisibleSize=void 0,e.classList.add("visible")):(this._size=0,this._cachedVisibleSize=i.cachedVisibleSize)}setVisible(e,t){if(e!==this.visible){if(e){var i;let n=(i=this._cachedVisibleSize)!==null&&i!==void 0?i:0;this._cachedVisibleSize=void 0,this.size=Z(n,this.viewMinimumSize,this.viewMaximumSize)}else this._cachedVisibleSize=typeof t=="number"?t:this.size,this.size=0;this.container.classList.toggle("visible",e),this.view.setVisible&&this.view.setVisible(e)}}scale(e){if(this._cachedVisibleSize!==void 0){this._cachedVisibleSize=Math.round(this._cachedVisibleSize*e);return}this.size=Z(Math.round(this.size*e),this.minimumSize,this.maximumSize)}dispose(){return this.disposable.dispose(),this.view}},mn=(function(e){return e.HORIZONTAL="HORIZONTAL",e.VERTICAL="VERTICAL",e})({});function Ir(e,t,i){e.appliedLeft!==t&&(e.appliedLeft=t,e.container.style.left=t),e.appliedTop!==i&&(e.appliedTop=i,e.container.style.top=i)}var pe;(function(e){e.Distribute={type:"distribute"};function t(n){return{type:"split",index:n}}e.Split=t;function i(n){return{type:"invisible",cachedVisibleSize:n}}e.Invisible=i})(pe||(pe={}));var Gt=class{get contentSize(){return this._contentSize}get size(){return this._size}set size(e){this._size=e}get orthogonalSize(){return this._orthogonalSize}set orthogonalSize(e){this._orthogonalSize=e}get length(){return this.viewItems.length}get proportions(){return this._proportions?[...this._proportions]:void 0}get proportionalLayout(){return this._proportionalLayout}set proportionalLayout(e){this._proportionalLayout!==e&&(this._proportionalLayout=e,e?this.saveProportions():this._proportions=void 0)}get orientation(){return this._orientation}set orientation(e){if(this._orientation===e)return;this._orientation=e;let t=this.size;this.size=this.orthogonalSize,this.orthogonalSize=t,this.rescaleViews(this.size),Re(this.element,"dv-horizontal","dv-vertical"),this.element.classList.add(this.orientation=="HORIZONTAL"?"dv-horizontal":"dv-vertical")}get minimumSize(){return this.viewItems.reduce((e,t)=>e+t.minimumSize,0)}get maximumSize(){return this.length===0?Number.POSITIVE_INFINITY:this.viewItems.reduce((e,t)=>e+t.maximumSize,0)}get startSnappingEnabled(){return this._startSnappingEnabled}set startSnappingEnabled(e){this._startSnappingEnabled!==e&&(this._startSnappingEnabled=e,this.updateSashEnablement())}get endSnappingEnabled(){return this._endSnappingEnabled}set endSnappingEnabled(e){this._endSnappingEnabled!==e&&(this._endSnappingEnabled=e,this.updateSashEnablement())}get disabled(){return this._disabled}set disabled(e){this._disabled=e,G(this.element,"dv-splitview-disabled",e)}get margin(){return this._margin}get marginShare(){let e=0;for(let t of this.viewItems)t.visible&&e++;return this.marginShareFor(e)}set margin(e){this._margin=e,G(this.element,"dv-splitview-has-margin",e!==0)}constructor(e,t){var i,n;this.container=e,this.viewItems=[],this.sashes=[],this._size=0,this._orthogonalSize=0,this._contentSize=0,this._proportions=void 0,this._startSnappingEnabled=!0,this._endSnappingEnabled=!0,this._disabled=!1,this._margin=0,this._onDidSashEnd=new _,this.onDidSashEnd=this._onDidSashEnd.event,this._onDidAddView=new _,this.onDidAddView=this._onDidAddView.event,this._onDidRemoveView=new _,this.onDidRemoveView=this._onDidRemoveView.event,this.resize=(o,s,r=this.viewItems.map(p=>p.size),a,l,d=Number.NEGATIVE_INFINITY,h=Number.POSITIVE_INFINITY,c,u)=>{if(o<0||o>this.viewItems.length)return 0;let p=Oe(o,-1),m=Oe(o+1,this.viewItems.length);if(l)for(let k of l)mo(p,k),mo(m,k);if(a)for(let k of a)Qi(p,k),Qi(m,k);let f=p.reduce((k,A)=>k+this.viewItems[A].minimumSize-r[A],0),v=p.reduce((k,A)=>k+this.viewItems[A].maximumSize-r[A],0),g=m.length===0?Number.POSITIVE_INFINITY:m.reduce((k,A)=>k+r[A]-this.viewItems[A].minimumSize,0),w=m.length===0?Number.NEGATIVE_INFINITY:m.reduce((k,A)=>k+r[A]-this.viewItems[A].maximumSize,0),b=Math.max(f,w),C=Math.min(g,v),P=!1;if(c){let k=this.viewItems[c.index],A=s>=c.limitDelta;P=A!==k.visible,k.setVisible(A,c.size)}if(!P&&u){let k=this.viewItems[u.index],A=s<u.limitDelta;P=A!==k.visible,k.setVisible(A,u.size)}if(P)return this.resize(o,s,r,a,l,d,h);let M=Z(s,b,C),D=0,y=M;for(let k of p){let A=this.viewItems[k],U=r[k],R=Z(U+y,A.minimumSize,A.maximumSize),j=R-U;D+=j,y-=j,A.size=R}let z=D;for(let k of m){let A=this.viewItems[k],U=r[k],R=Z(U-z,A.minimumSize,A.maximumSize),j=R-U;z+=j,A.size=R}return s},this._orientation=(i=t.orientation)!==null&&i!==void 0?i:"VERTICAL",this.element=this.createContainer(),this.margin=(n=t.margin)!==null&&n!==void 0?n:0,this._proportionalLayout=t.proportionalLayout===void 0?!0:!!t.proportionalLayout,this.viewContainer=this.createViewContainer(),this.sashContainer=this.createSashContainer(),this.element.appendChild(this.sashContainer),this.element.appendChild(this.viewContainer),this.container.appendChild(this.element),this.style(t.styles),t.descriptor&&(this._size=t.descriptor.size,t.descriptor.views.forEach((o,s)=>{let r=o.visible===void 0||o.visible?o.size:{type:"invisible",cachedVisibleSize:o.size},a=o.view;this.addView(a,r,s,!0)}),this._contentSize=this.viewItems.reduce((o,s)=>o+s.size,0),this.saveProportions())}style(e){e?.separatorBorder==="transparent"?(Re(this.element,"dv-separator-border"),this.element.style.removeProperty("--dv-separator-border")):(Le(this.element,"dv-separator-border"),e?.separatorBorder&&this.element.style.setProperty("--dv-separator-border",e.separatorBorder))}isViewVisible(e){if(e<0||e>=this.viewItems.length)throw new Error("Index out of bounds");return this.viewItems[e].visible}setViewVisible(e,t){if(e<0||e>=this.viewItems.length)throw new Error("Index out of bounds");let i=this.viewItems[e];i.setVisible(t,i.size),this.distributeEmptySpace(e),this.layoutViews(),this.saveProportions()}getViewSize(e){return e<0||e>=this.viewItems.length?-1:this.viewItems[e].size}resizeView(e,t){if(e<0||e>=this.viewItems.length)return;let i=Oe(this.viewItems.length).filter(r=>r!==e),n=[...i.filter(r=>this.viewItems[r].priority==="low"),e],o=i.filter(r=>this.viewItems[r].priority==="high"),s=this.viewItems[e];t=Math.round(t),t=Z(t,s.minimumSize,Math.min(s.maximumSize,this._size)),s.size=t,this.relayout(n,o)}getViews(){return this.viewItems.map(e=>e.view)}onDidChange(e,t){let i=this.viewItems.indexOf(e);if(i<0||i>=this.viewItems.length)return;t=typeof t=="number"?t:e.size,t=Z(t,e.minimumSize,e.maximumSize),e.size=t;let n=Oe(this.viewItems.length).filter(r=>r!==i),o=[...n.filter(r=>this.viewItems[r].priority==="low"),i],s=n.filter(r=>this.viewItems[r].priority==="high");this.relayout([...o,i],s)}addView(e,t=pe.Distribute,i=this.viewItems.length,n){let o=document.createElement("div");o.className="dv-view",o.appendChild(e.element);let s;if(typeof t=="number")s=t;else if(t.type==="split"){let l=this.viewItems[t.index];if(l){let d=Math.floor(l.size/2);s=l.size-d,l.size=d}else s=this.getViewSize(t.index)/2}else t.type==="invisible"?s={cachedVisibleSize:t.cachedVisibleSize}:s=e.minimumSize;let r=e.onDidChange(l=>this.onDidChange(a,l.size)),a=new Gh(o,e,s,{dispose:()=>{r.dispose(),o.remove()}});if(i===this.viewItems.length?this.viewContainer.appendChild(o):this.viewContainer.insertBefore(o,this.viewContainer.children.item(i)),this.viewItems.splice(i,0,a),this.viewItems.length>1){let l=document.createElement("div");l.className="dv-sash";let d=c=>{var u;for(let H of this.viewItems)H.enabled=!1;let p=(u=l.ownerDocument)!==null&&u!==void 0?u:document,m=bi(p),f=this._orientation==="HORIZONTAL"?c.clientX:c.clientY,v=Ph(this.sashes,H=>H.container===l),g=this.viewItems.map(H=>H.size),w,b,C=Oe(v,-1),P=Oe(v+1,this.viewItems.length),M=C.reduce((H,W)=>H+(this.viewItems[W].minimumSize-g[W]),0),D=C.reduce((H,W)=>H+(this.viewItems[W].viewMaximumSize-g[W]),0),y=P.length===0?Number.POSITIVE_INFINITY:P.reduce((H,W)=>H+(g[W]-this.viewItems[W].minimumSize),0),z=P.length===0?Number.NEGATIVE_INFINITY:P.reduce((H,W)=>H+(g[W]-this.viewItems[W].viewMaximumSize),0),k=Math.max(M,z),A=Math.min(y,D),U=this.findFirstSnapIndex(C),R=this.findFirstSnapIndex(P);if(typeof U=="number"){let H=this.viewItems[U],W=Math.floor(H.viewMinimumSize/2);w={index:U,limitDelta:H.visible?k-W:k+W,size:H.size}}if(typeof R=="number"){let H=this.viewItems[R],W=Math.floor(H.viewMinimumSize/2);b={index:R,limitDelta:H.visible?A+W:A-W,size:H.size}}let j=H=>{let W=(this._orientation==="HORIZONTAL"?H.clientX:H.clientY)-f;this.resize(v,W,g,void 0,void 0,k,A,w,b),this.distributeEmptySpace(),this.layoutViews()},B=()=>{for(let H of this.viewItems)H.enabled=!0;m.release(),this.saveProportions(),p.removeEventListener("pointermove",j),p.removeEventListener("pointerup",B),p.removeEventListener("pointercancel",B),p.removeEventListener("contextmenu",B),this._onDidSashEnd.fire(void 0)};p.addEventListener("pointermove",j),p.addEventListener("pointerup",B),p.addEventListener("pointercancel",B),p.addEventListener("contextmenu",B)};l.addEventListener("pointerdown",d);let h={container:l,disposable:()=>{l.removeEventListener("pointerdown",d),l.remove()}};this.sashContainer.appendChild(l),this.sashes.push(h)}n||this.relayout([i]),!n&&typeof t!="number"&&t.type==="distribute"&&this.distributeViewSizes(),this._onDidAddView.fire(e)}distributeViewSizes(){let e=[],t=0;for(let r of this.viewItems)r.maximumSize-r.minimumSize>0&&(e.push(r),t+=r.size);let i=Math.floor(t/e.length);for(let r of e)r.size=Z(i,r.minimumSize,r.maximumSize);let n=Oe(this.viewItems.length),o=n.filter(r=>this.viewItems[r].priority==="low"),s=n.filter(r=>this.viewItems[r].priority==="high");this.relayout(o,s)}removeView(e,t,i=!1){let n=this.viewItems.splice(e,1)[0];if(n.dispose(),this.viewItems.length>=1){let o=Math.max(e-1,0);this.sashes.splice(o,1)[0].disposable()}return i||this.relayout(),t?.type==="distribute"&&this.distributeViewSizes(),this._onDidRemoveView.fire(n.view),n.view}getViewCachedVisibleSize(e){if(e<0||e>=this.viewItems.length)throw new Error("Index out of bounds");return this.viewItems[e].cachedVisibleSize}moveView(e,t){let i=this.getViewCachedVisibleSize(e),n=i===void 0?this.getViewSize(e):pe.Invisible(i),o=this.removeView(e,void 0,!0);this.addView(o,n,t)}layout(e,t){let i=Math.max(this.size,this._contentSize);if(this.size=e,this.orthogonalSize=t,this._proportions||this.saveProportions(),this.proportions){let n=0;for(let o=0;o<this.viewItems.length;o++){let s=this.viewItems[o],r=this.proportions[o];typeof r=="number"?n+=r:e-=s.size}for(let o=0;o<this.viewItems.length;o++){let s=this.viewItems[o],r=this.proportions[o];typeof r=="number"&&n>0&&(s.size=Z(Math.round(r*e/n),s.minimumSize,s.maximumSize))}}else{let n=Oe(this.viewItems.length),o=n.filter(r=>this.viewItems[r].priority==="low"),s=n.filter(r=>this.viewItems[r].priority==="high");this.resize(this.viewItems.length-1,e-i,void 0,o,s)}this.distributeEmptySpace(),this.layoutViews()}relayout(e,t){let i=this.viewItems.reduce((n,o)=>n+o.size,0);this.resize(this.viewItems.length-1,this._size-i,void 0,e,t),this.distributeEmptySpace(),this.layoutViews(),this.saveProportions()}distributeEmptySpace(e){let t=0;for(let s of this.viewItems)t+=s.size;let i=this.size-t;if(i===0)return;let n=Oe(this.viewItems.length-1,-1),o=!1;for(let s of this.viewItems)if(s.priority==="low"||s.priority==="high"){o=!0;break}if(o){let s=n.filter(a=>this.viewItems[a].priority==="low"),r=n.filter(a=>this.viewItems[a].priority==="high");for(let a of r)mo(n,a);for(let a of s)Qi(n,a)}typeof e=="number"&&Qi(n,e);for(let s=0;i!==0&&s<n.length;s++){let r=this.viewItems[n[s]],a=Z(r.size+i,r.minimumSize,r.maximumSize),l=a-r.size;i-=l,r.size=a}}rescaleViews(e){let t=0;for(let o of this.viewItems)t+=o.size;if(e<=0||t<=0)return;let i=e/t,n=0;for(let o of this.viewItems)o.scale(i),n+=o.size;this._contentSize=n}saveProportions(){if(!this.proportionalLayout)return;let e=0;for(let t of this.viewItems)e+=t.size;e>0&&(this._proportions=this.viewItems.map(t=>t.visible?t.size/e:void 0))}layoutViews(){let e=0,t=0;for(let l of this.viewItems)e+=l.size,l.visible&&t++;if(this._contentSize=e,this.updateSashEnablement(),this.viewItems.length===0)return;let i=Math.max(0,t-1),n=this.marginShareFor(t),o=0,s=[],r=4,a=0;this.viewItems.forEach((l,d)=>{o+=this.viewItems[d].size,s.push(o),a+=l.visible?1:0;let h=l.visible?l.size-n:0,c=Math.max(0,a-1),u=d===0||c===0?0:s[d-1]+c/i*n;if(d<this.viewItems.length-1){let p=l.visible?u+h-r/2+this.margin/2:u,m=this.sashes[d];this._orientation==="HORIZONTAL"&&Ir(m,`${p}px`,"0px"),this._orientation==="VERTICAL"&&Ir(m,"0px",`${p}px`)}this._orientation==="HORIZONTAL"&&(l.setContainerGeometry("width",`${h}px`),l.setContainerGeometry("left",`${u}px`),l.setContainerGeometry("top",""),l.setContainerGeometry("height","")),this._orientation==="VERTICAL"&&(l.setContainerGeometry("height",`${h}px`),l.setContainerGeometry("top",`${u}px`),l.setContainerGeometry("width",""),l.setContainerGeometry("left","")),l.view.layout(h,this._orthogonalSize)})}marginShareFor(e){let t=Math.max(0,e-1);return this._margin*t/Math.max(1,e)}findFirstSnapIndex(e){for(let t of e){let i=this.viewItems[t];if(i.visible&&i.snap)return t}for(let t of e){let i=this.viewItems[t];if(i.visible&&i.maximumSize-i.minimumSize>0)return;if(!i.visible&&i.snap)return t}}updateSashEnablement(){if(this.sashes.length===0)return;let e=!1,t=this.viewItems.map(a=>e=a.size-a.minimumSize>0||e);e=!1;let i=this.viewItems.map(a=>e=a.maximumSize-a.size>0||e),n=[...this.viewItems].reverse();e=!1;let o=n.map(a=>e=a.size-a.minimumSize>0||e).reverse();e=!1;let s=n.map(a=>e=a.maximumSize-a.size>0||e).reverse(),r=0;for(let a=0;a<this.sashes.length;a++){let l=this.sashes[a],d=this.viewItems[a];r+=d.size;let h=!(t[a]&&s[a+1]),c=!(i[a]&&o[a+1]);if(h&&c){let u=Oe(a,-1),p=Oe(a+1,this.viewItems.length),m=this.findFirstSnapIndex(u),f=this.findFirstSnapIndex(p),v=typeof m=="number"&&!this.viewItems[m].visible,g=typeof f=="number"&&!this.viewItems[f].visible;v&&o[a]&&(r>0||this.startSnappingEnabled)?this.updateSash(l,1):g&&t[a]&&(r<this._contentSize||this.endSnappingEnabled)?this.updateSash(l,0):this.updateSash(l,2)}else h&&!c?this.updateSash(l,1):!h&&c?this.updateSash(l,0):this.updateSash(l,3)}}updateSash(e,t){G(e.container,"dv-disabled",t===2),G(e.container,"dv-enabled",t===3),G(e.container,"dv-maximum",t===0),G(e.container,"dv-minimum",t===1)}createViewContainer(){let e=document.createElement("div");return e.className="dv-view-container",e}createSashContainer(){let e=document.createElement("div");return e.className="dv-sash-container",e}createContainer(){let e=document.createElement("div");return e.className=`dv-split-view-container ${this._orientation==="HORIZONTAL"?"dv-horizontal":"dv-vertical"}`,e}dispose(){this._onDidSashEnd.dispose(),this._onDidAddView.dispose(),this._onDidRemoveView.dispose();for(let e=0;e<this.element.children.length;e++)if(this.element.children.item(e)===this.element){this.element.remove();break}for(let e of this.viewItems)e.dispose();this.element.remove()}},fn=Object.keys({orientation:void 0,descriptor:void 0,proportionalLayout:void 0,styles:void 0,margin:void 0,disableAutoResizing:void 0,className:void 0}),fo=class extends x{get onDidAddView(){return this.splitview.onDidAddView}get onDidRemoveView(){return this.splitview.onDidRemoveView}get minimumSize(){return this.splitview.minimumSize}get maximumSize(){return this.splitview.maximumSize}get orientation(){return this.splitview.orientation}get size(){return this.splitview.size}get orthogonalSize(){return this.splitview.orthogonalSize}constructor(e,t){var i;super(),this.paneItems=[],this.skipAnimation=!1,this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this._orientation=(i=t.orientation)!==null&&i!==void 0?i:"VERTICAL",this.element=document.createElement("div"),this.element.className="dv-pane-container",e.appendChild(this.element),this.splitview=new Gt(this.element,{orientation:this._orientation,proportionalLayout:!1,descriptor:t.descriptor}),this.getPanes().forEach(n=>{let o=new x(n.onDidChangeExpansionState(()=>{this.setupAnimation(),this._onDidChange.fire(void 0)})),s={pane:n,disposable:{dispose:()=>{o.dispose()}}};this.paneItems.push(s),n.orthogonalSize=this.splitview.orthogonalSize}),this.addDisposables(this._onDidChange,this.splitview.onDidSashEnd(()=>{this._onDidChange.fire(void 0)}),this.splitview.onDidAddView(()=>{this._onDidChange.fire()}),this.splitview.onDidRemoveView(()=>{this._onDidChange.fire()}))}setViewVisible(e,t){this.splitview.setViewVisible(e,t)}addPane(e,t,i=this.splitview.length,n=!1){let o=e.onDidChangeExpansionState(()=>{this.setupAnimation(),this._onDidChange.fire(void 0)}),s={pane:e,disposable:{dispose:()=>{o.dispose()}}};this.paneItems.splice(i,0,s),e.orthogonalSize=this.splitview.orthogonalSize,this.splitview.addView(e,t,i,n)}getViewSize(e){return this.splitview.getViewSize(e)}getViewCachedVisibleSize(e){return this.splitview.getViewCachedVisibleSize(e)}getPanes(){return this.splitview.getViews()}removePane(e,t){if(e<0||e>=this.paneItems.length)throw new Error("Index out of bounds");let i=this.paneItems.splice(e,1)[0];return this.splitview.removeView(e),t?.skipDispose||(i.disposable.dispose(),i.pane.dispose()),i}moveView(e,t){if(e===t)return;let i=this.getViewCachedVisibleSize(e),n=this.removePane(e,{skipDispose:!0}),o=i===void 0?n.pane.size:pe.Invisible(i);n.disposable.dispose(),this.skipAnimation=!0;try{this.addPane(n.pane,o,t,!1)}finally{this.skipAnimation=!1}}layout(e,t){this.splitview.layout(e,t)}setupAnimation(){this.skipAnimation||(this.animationTimer&&(clearTimeout(this.animationTimer),this.animationTimer=void 0),Le(this.element,"dv-animated"),this.animationTimer=setTimeout(()=>{this.animationTimer=void 0,Re(this.element,"dv-animated")},200))}dispose(){super.dispose(),this.animationTimer&&(clearTimeout(this.animationTimer),this.animationTimer=void 0),this.paneItems.forEach(e=>{e.disposable.dispose(),e.pane.dispose()}),this.paneItems=[],this.splitview.dispose(),this.element.remove()}},ge=class{get minimumWidth(){return this.view.minimumWidth}get maximumWidth(){return this.view.maximumWidth}get minimumHeight(){return this.view.minimumHeight}get maximumHeight(){return this.view.maximumHeight}get priority(){return this.view.priority}get snap(){return this.view.snap}get minimumSize(){return this.orientation==="HORIZONTAL"?this.minimumHeight:this.minimumWidth}get maximumSize(){return this.orientation==="HORIZONTAL"?this.maximumHeight:this.maximumWidth}get minimumOrthogonalSize(){return this.orientation==="HORIZONTAL"?this.minimumWidth:this.minimumHeight}get maximumOrthogonalSize(){return this.orientation==="HORIZONTAL"?this.maximumWidth:this.maximumHeight}get orthogonalSize(){return this._orthogonalSize}get size(){return this._size}get element(){return this.view.element}get width(){return this.orientation==="HORIZONTAL"?this.orthogonalSize:this.size}get height(){return this.orientation==="HORIZONTAL"?this.size:this.orthogonalSize}constructor(e,t,i,n=0){this.view=e,this.orientation=t,this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this._orthogonalSize=i,this._size=n,this._disposable=this.view.onDidChange(o=>{o?this._onDidChange.fire({size:this.orientation==="VERTICAL"?o.width:o.height,orthogonalSize:this.orientation==="VERTICAL"?o.height:o.width}):this._onDidChange.fire({})})}setVisible(e){this.view.setVisible&&this.view.setVisible(e)}layout(e,t){this._size=e,this._orthogonalSize=t,this.view.layout(this.width,this.height)}dispose(){this._onDidChange.dispose(),this._disposable.dispose()}},he=class sn extends x{get width(){return this.orientation==="HORIZONTAL"?this.size:this.orthogonalSize}get height(){return this.orientation==="HORIZONTAL"?this.orthogonalSize:this.size}get minimumSize(){if(this._cachedMinimumSize===void 0){let t=0;for(let i=0;i<this.children.length;i++)this.splitview.isViewVisible(i)&&(t=Math.max(t,this.children[i].minimumOrthogonalSize));this._cachedMinimumSize=t}return this._cachedMinimumSize}get maximumSize(){if(this._cachedMaximumSize===void 0){let t=Number.POSITIVE_INFINITY;for(let i=0;i<this.children.length;i++)this.splitview.isViewVisible(i)&&(t=Math.min(t,this.children[i].maximumOrthogonalSize));this._cachedMaximumSize=t}return this._cachedMaximumSize}get minimumOrthogonalSize(){return this.splitview.minimumSize}get maximumOrthogonalSize(){return this.splitview.maximumSize}get orthogonalSize(){return this._orthogonalSize}get size(){return this._size}get minimumWidth(){return this.orientation==="HORIZONTAL"?this.minimumOrthogonalSize:this.minimumSize}get minimumHeight(){return this.orientation==="HORIZONTAL"?this.minimumSize:this.minimumOrthogonalSize}get maximumWidth(){return this.orientation==="HORIZONTAL"?this.maximumOrthogonalSize:this.maximumSize}get maximumHeight(){return this.orientation==="HORIZONTAL"?this.maximumSize:this.maximumOrthogonalSize}get priority(){var t;return(t=this._cachedPriority)!==null&&t!==void 0||(this._cachedPriority=this.computePriority()),this._cachedPriority}computePriority(){if(this.children.length===0)return"normal";let t=!1,i=!1;for(let o of this.children){var n;let s=(n=o.priority)!==null&&n!==void 0?n:"normal";s==="high"?t=!0:s==="low"&&(i=!0)}return t?"high":i?"low":"normal"}invalidateCachedSizes(){this._cachedMinimumSize=void 0,this._cachedMaximumSize=void 0,this._cachedPriority=void 0,this._onDidInvalidateSizes.fire()}get disabled(){return this.splitview.disabled}set disabled(t){this.splitview.disabled=t}get margin(){return this.splitview.margin}set margin(t){this.splitview.margin=t,this.children.forEach(i=>{i instanceof sn&&(i.margin=t)})}get proportionalLayout(){return this.splitview.proportionalLayout}set proportionalLayout(t){this.splitview.proportionalLayout=t,this.children.forEach(i=>{i instanceof sn&&(i.proportionalLayout=t)})}constructor(t,i,n,o,s,r,a,l){if(super(),this.orientation=t,this.styles=n,this._childrenDisposable=L.NONE,this.children=[],this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this._onDidVisibilityChange=new _,this.onDidVisibilityChange=this._onDidVisibilityChange.event,this._onDidInvalidateSizes=new _,this.onDidInvalidateSizes=this._onDidInvalidateSizes.event,this._orthogonalSize=s,this._size=o,this.element=document.createElement("div"),this.element.className="dv-branch-node",l){let d={views:l.map(h=>{var c;return{view:h.node,size:h.node.size,visible:(c=h.visible)!==null&&c!==void 0?c:!0}}),size:this.orthogonalSize};this.children=l.map(h=>h.node),this.splitview=new Gt(this.element,{orientation:this.orientation,descriptor:d,proportionalLayout:i,styles:n,margin:a})}else this.splitview=new Gt(this.element,{orientation:this.orientation,proportionalLayout:i,styles:n,margin:a}),this.splitview.layout(this.size,this.orthogonalSize);this.disabled=r,this.addDisposables(this._onDidChange,this._onDidVisibilityChange,this._onDidInvalidateSizes,this.splitview.onDidSashEnd(()=>{this._onDidChange.fire({})})),this.setupChildrenEvents()}setVisible(t){}isChildVisible(t){if(t<0||t>=this.children.length)throw new Error("Invalid index");return this.splitview.isViewVisible(t)}setChildVisible(t,i){if(t<0||t>=this.children.length)throw new Error("Invalid index");if(this.splitview.isViewVisible(t)===i)return;let n=this.splitview.contentSize===0;this.splitview.setViewVisible(t,i),this.invalidateCachedSizes();let o=this.splitview.contentSize===0;(i&&n||!i&&o)&&this._onDidVisibilityChange.fire({visible:i})}moveChild(t,i){if(t===i)return;if(t<0||t>=this.children.length)throw new Error("Invalid from index");t<i&&i--,this.splitview.moveView(t,i);let n=this._removeChild(t);this._addChild(n,i)}getChildSize(t){if(t<0||t>=this.children.length)throw new Error("Invalid index");return this.splitview.getViewSize(t)}resizeChild(t,i){if(t<0||t>=this.children.length)throw new Error("Invalid index");this.splitview.resizeView(t,i)}layout(t,i){this._size=i,this._orthogonalSize=t,this.splitview.layout(i,t)}addChild(t,i,n,o){if(n<0||n>this.children.length)throw new Error("Invalid index");this.splitview.addView(t,i,n,o),this._addChild(t,n)}getChildCachedVisibleSize(t){if(t<0||t>=this.children.length)throw new Error("Invalid index");return this.splitview.getViewCachedVisibleSize(t)}removeChild(t,i){if(t<0||t>=this.children.length)throw new Error("Invalid index");return this.splitview.removeView(t,i),this._removeChild(t)}_addChild(t,i){this.children.splice(i,0,t),this.setupChildrenEvents()}_removeChild(t){let[i]=this.children.splice(t,1);return this.setupChildrenEvents(),i}setupChildrenEvents(){this.invalidateCachedSizes(),this._childrenDisposable.dispose(),this._childrenDisposable=new x(Ge.any(...this.children.map(t=>t.onDidChange))(t=>{this.invalidateCachedSizes(),this._onDidChange.fire({size:t.orthogonalSize})}),...this.children.map((t,i)=>t instanceof sn?new x(t.onDidVisibilityChange(({visible:n})=>{this.setChildVisible(i,n)}),t.onDidInvalidateSizes(()=>{this.invalidateCachedSizes()})):L.NONE))}dispose(){this._childrenDisposable.dispose(),this.splitview.dispose(),this.children.forEach(t=>t.dispose()),super.dispose()}};function xo(e,t){if(e instanceof ge)return e;if(e instanceof he)return xo(e.children[t?e.children.length-1:0],t);throw new Error("invalid node")}function Lo(e,t,i,n=1){let o=e.getChildCachedVisibleSize(t);return o===void 0?i:pe.Invisible(Math.round(o*n))}function ma(e,t,i){if(e instanceof he){let n=new he(e.orientation,e.proportionalLayout,e.styles,t,i,e.disabled,e.margin);for(let o=e.children.length-1;o>=0;o--){let s=e.children[o],r=s instanceof he?s.orthogonalSize:s.size;n.addChild(ma(s,s.size,s.orthogonalSize),Lo(e,o,r),0,!0)}return n}else return new ge(e.view,e.orientation,i)}function Eo(e,t,i){if(e instanceof he){let n=new he(Be(e.orientation),e.proportionalLayout,e.styles,t,i,e.disabled,e.margin),o=0,s=e.size===0?1:t/e.size;for(let r=e.children.length-1;r>=0;r--){let a=e.children[r],l=a instanceof he?a.orthogonalSize:a.size,d=e.size===0?0:Math.round(t*l/e.size);o+=d,r===0&&(d+=t-o),n.addChild(Eo(a,i,d),Lo(e,r,d,s),0,!0)}return n}else return new ge(e.view,Be(e.orientation),i)}function kh(e){let t=e.parentElement;if(!t)throw new Error("Invalid grid element");let i=t.firstElementChild,n=0;for(;i!==e&&i!==t.lastElementChild&&i;)i=i.nextElementSibling,n++;return n}function K(e){let t=e.parentElement;if(!t)throw new Error("Invalid grid element");if(/\bdv-grid-view\b/.test(t.className))return[];let i=kh(t),n=t.parentElement.parentElement.parentElement;return[...K(n),i]}function xe(e,t,i){if(fa(e,t)===To(i)){let[n,o]=Me(t),s=o;return(i==="right"||i==="bottom")&&(s+=1),[...n,s]}else{let n=i==="right"||i==="bottom"?1:0;return[...t,n]}}function To(e){return e==="top"||e==="bottom"?"VERTICAL":"HORIZONTAL"}function fa(e,t){return t.length%2===0?Be(e):e}var Be=e=>e==="HORIZONTAL"?"VERTICAL":"HORIZONTAL";function va(e){return!!e.children}var Io=(e,t)=>{let i=t==="VERTICAL"?e.box.width:e.box.height;if(!va(e))return typeof e.cachedVisibleSize=="number"?{type:"leaf",data:e.view.toJSON(),size:e.cachedVisibleSize,visible:!1}:{type:"leaf",data:e.view.toJSON(),size:i};let n=e.children.map(o=>Io(o,Be(t)));return typeof e.cachedVisibleSize=="number"?{type:"branch",data:n,size:e.cachedVisibleSize,visible:!1}:{type:"branch",data:n,size:i}},ga=class{get length(){return this._root?this._root.children.length:0}get orientation(){return this.root.orientation}set orientation(e){if(this.root.orientation===e)return;let{size:t,orthogonalSize:i}=this.root;this.root=Eo(this.root,i,t),this.root.layout(t,i)}get width(){return this.root.width}get height(){return this.root.height}get minimumWidth(){return this.root.minimumWidth}get minimumHeight(){return this.root.minimumHeight}get maximumWidth(){return this.root.maximumWidth}get maximumHeight(){return this.root.maximumHeight}get locked(){return this._locked}set locked(e){this._locked=e;let t=[this.root];for(;t.length>0;){let i=t.pop();i instanceof he&&(i.disabled=e,t.push(...i.children))}}get margin(){return this._margin}set margin(e){this._margin=e,this.root.margin=e}maximizedView(){var e;return(e=this._maximizedNode)===null||e===void 0?void 0:e.leaf.view}hasMaximizedView(){return this._maximizedNode!==void 0}maximizeView(e){var t;let i=K(e.element),[n,o]=this.getNode(i);if(!(o instanceof ge)||((t=this._maximizedNode)===null||t===void 0?void 0:t.leaf)===o)return;this.hasMaximizedView()&&this.exitMaximizedView(),Io(this.getView(),this.orientation);let s=[];function r(a,l){for(let d=0;d<a.children.length;d++){let h=a.children[d];h instanceof ge?h!==l&&(a.isChildVisible(d)?a.setChildVisible(d,!1):s.push(h)):r(h,l)}}r(this.root,o),this._maximizedNode={leaf:o,hiddenOnMaximize:s},this._onDidMaximizedNodeChange.fire({view:o.view,isMaximized:!0})}exitMaximizedView(){if(!this._maximizedNode)return;let e=this._maximizedNode.hiddenOnMaximize;function t(n){for(let o=n.children.length-1;o>=0;o--){let s=n.children[o];s instanceof ge?e.includes(s)||n.setChildVisible(o,!0):t(s)}}t(this.root);let i=this._maximizedNode.leaf;this._maximizedNode=void 0,this._onDidMaximizedNodeChange.fire({view:i.view,isMaximized:!1})}serialize(){let e=this.maximizedView(),t;e&&(t=K(e.element));let i=this._onDidMaximizedNodeChange.pause();try{this.hasMaximizedView()&&this.exitMaximizedView();let n={root:Io(this.getView(),this.orientation),width:this.width,height:this.height,orientation:this.orientation};return t&&(n.maximizedNode={location:t}),e&&this.maximizeView(e),n}finally{i.dispose()}}dispose(){this.disposable.dispose(),this._onDidChange.dispose(),this._onDidMaximizedNodeChange.dispose(),this._onDidViewVisibilityChange.dispose(),this.root.dispose(),this._maximizedNode=void 0,this.element.remove()}clear(){let e=this.root.orientation;this.root=new he(e,this.proportionalLayout,this.styles,this.root.size,this.root.orthogonalSize,this.locked,this.margin)}deserialize(e,t){let i=e.orientation,n=i==="VERTICAL"?e.height:e.width;if(this._deserialize(e.root,i,t,n),this.layout(e.width,e.height),e.maximizedNode){let o=e.maximizedNode.location,[s,r]=this.getNode(o);if(!(r instanceof ge))return;this.maximizeView(r.view)}}_deserialize(e,t,i,n){this.root=this._deserializeNode(e,t,i,n)}_deserializeNode(e,t,i,n){let o;if(e.type==="branch"){let r=e.data.map(a=>({node:this._deserializeNode(a,Be(t),i,e.size),visible:a.visible}));o=new he(t,this.proportionalLayout,this.styles,e.size,n,this.locked,this.margin,r)}else{let r=i.fromJSON(e);if(typeof e.visible=="boolean"){var s;(s=r.setVisible)===null||s===void 0||s.call(r,e.visible)}o=new ge(r,t,n,e.size)}return o}get root(){return this._root}set root(e){let t=this._root;t&&(t.dispose(),this._maximizedNode=void 0,t.element.remove()),this._root=e,this.element.appendChild(this._root.element),this.disposable.value=this._root.onDidChange(i=>{this._onDidChange.fire(i)})}normalize(){if(!this._root||this._root.children.length!==1)return;let e=this.root,t=e.children[0];if(t instanceof ge)return;e.element.remove();let i=e.removeChild(0);e.dispose(),i.dispose(),this._root=ma(t,t.size,t.orthogonalSize),this.element.appendChild(this._root.element),this.disposable.value=this._root.onDidChange(n=>{this._onDidChange.fire(n)})}insertOrthogonalSplitviewAtRoot(){if(!this._root)return;let e=this.root;if(e.element.remove(),this._root=new he(Be(e.orientation),this.proportionalLayout,this.styles,this.root.orthogonalSize,this.root.size,this.locked,this.margin),e.children.length!==0)if(e.children.length===1){let t=e.children[0];e.removeChild(0).dispose(),e.dispose(),this._root.addChild(Eo(t,t.orthogonalSize,t.size),pe.Distribute,0)}else this._root.addChild(e,pe.Distribute,0);this.element.appendChild(this._root.element),this.disposable.value=this._root.onDidChange(t=>{this._onDidChange.fire(t)})}next(e){return this.progmaticSelect(e)}previous(e){return this.progmaticSelect(e,!0)}getView(e){let t=e?this.getNode(e)[1]:this.root;return this._getViews(t,this.orientation)}_getViews(e,t,i){let n={height:e.height,width:e.width};if(e instanceof ge)return{box:n,view:e.view,cachedVisibleSize:i};let o=[];for(let s=0;s<e.children.length;s++){let r=e.children[s],a=e.getChildCachedVisibleSize(s);o.push(this._getViews(r,Be(t),a))}return{box:n,children:o,cachedVisibleSize:i}}progmaticSelect(e,t=!1){let[i,n]=this.getNode(e);if(!(n instanceof ge))throw new TypeError("invalid location");for(let o=i.length-1;o>-1;o--){let s=i[o],r=e[o]||0;if(t?r-1>-1:r+1<s.children.length)return xo(s.children[t?r-1:r+1],t)}return xo(this.root,t)}get proportionalLayout(){return this.root.proportionalLayout}set proportionalLayout(e){this.root.proportionalLayout=e}constructor(e,t,i,n,o){this.styles=t,this._locked=!1,this._margin=0,this._maximizedNode=void 0,this.disposable=new Q,this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this._onDidViewVisibilityChange=new _,this.onDidViewVisibilityChange=this._onDidViewVisibilityChange.event,this._onDidMaximizedNodeChange=new _,this.onDidMaximizedNodeChange=this._onDidMaximizedNodeChange.event,this.element=document.createElement("div"),this.element.className="dv-grid-view",this._locked=n??!1,this._margin=o??0,this.root=new he(i,e,t,0,0,this.locked,this.margin)}isViewVisible(e){let[t,i]=Me(e),[,n]=this.getNode(t);if(!(n instanceof he))throw new TypeError("Invalid from location");return n.isChildVisible(i)}setViewVisible(e,t){this.hasMaximizedView()&&this.exitMaximizedView();let[i,n]=Me(e),[,o]=this.getNode(i);if(!(o instanceof he))throw new TypeError("Invalid from location");this._onDidViewVisibilityChange.fire(),o.setChildVisible(n,t)}moveView(e,t,i){this.hasMaximizedView()&&this.exitMaximizedView();let[,n]=this.getNode(e);if(!(n instanceof he))throw new TypeError("Invalid location");n.moveChild(t,i)}addView(e,t,i){this.hasMaximizedView()&&this.exitMaximizedView();let[n,o]=Me(i),[s,r]=this.getNode(n);if(r instanceof he){let a=new ge(e,Be(r.orientation),r.orthogonalSize);r.addChild(a,t,o)}else{let[a,...l]=[...s].reverse(),[d,...h]=[...n].reverse(),c=0,u=a.getChildCachedVisibleSize(d);typeof u=="number"&&(c=pe.Invisible(u)),a.removeChild(d).dispose();let p=new he(r.orientation,this.proportionalLayout,this.styles,r.size,r.orthogonalSize,this.locked,this.margin);a.addChild(p,r.size,d);let m=new ge(r.view,a.orientation,r.size);p.addChild(m,c,0),typeof t!="number"&&t.type==="split"&&(t={type:"split",index:0});let f=new ge(e,a.orientation,r.size);p.addChild(f,t,o)}}remove(e,t){let i=K(e.element);return this.removeView(i,t)}removeView(e,t){this.hasMaximizedView()&&this.exitMaximizedView();let[i,n]=Me(e),[o,s]=this.getNode(i);if(!(s instanceof he))throw new TypeError("Invalid location");let r=s.children[n];if(!(r instanceof ge))throw new TypeError("Invalid location");if(s.removeChild(n,t),r.dispose(),s.children.length!==1)return r.view;let a=s.children[0];if(o.length===0)return a instanceof ge||(s.removeChild(0,t),this.root=a),r.view;let[l,...d]=[...o].reverse(),[h,...c]=[...i].reverse(),u=s.isChildVisible(0);s.removeChild(0,t);let p=l.children.map((m,f)=>l.getChildSize(f));if(l.removeChild(h,t).dispose(),a instanceof he){let m=a.children.map(f=>f instanceof he?f.orthogonalSize:f.size);p.splice(h,1,...m);for(let f=0;f<a.children.length;f++){let v=a.children[f],g=Lo(a,f,m[f]);l.addChild(v,!u&&typeof g=="number"?pe.Invisible(g):g,h+f)}for(;a.children.length>0;)a.removeChild(0)}else{let m=new ge(a.view,Be(a.orientation),a.size),f=u?a.orthogonalSize:pe.Invisible(a.orthogonalSize);l.addChild(m,f,h)}a.dispose();for(let m=0;m<p.length;m++)l.resizeChild(m,p[m]);return r.view}layout(e,t){let[i,n]=this.root.orientation==="HORIZONTAL"?[t,e]:[e,t];this.root.layout(i,n)}getNode(e,t=this.root,i=[]){if(e.length===0)return[i,t];if(!(t instanceof he))throw new TypeError("Invalid location");let[n,...o]=e;if(n<0||n>=t.children.length)throw new Error("Invalid location");let s=t.children[n];return i.push(t),this.getNode(o,s,i)}},vn=Object.keys({disableAutoResizing:void 0,proportionalLayout:void 0,orientation:void 0,hideBorders:void 0,className:void 0}),No=class extends x{get element(){return this._element}get disableResizing(){return this._disableResizing}set disableResizing(e){this._disableResizing=e}constructor(e,t=!1){super(),this._lastWidth=-1,this._lastHeight=-1,this._disableResizing=t,this._element=e,this.addDisposables(kt(this._element,i=>{if(this.isDisposed||this.disableResizing||!this._element.offsetParent||!ln(this._element))return;let n=Math.round(i.contentRect.width),o=Math.round(i.contentRect.height);n===this._lastWidth&&o===this._lastHeight||(this._lastWidth=n,this._lastHeight=o,this.layout(n,o))}))}layoutFromElement(){if(this.disableResizing||!this._element.offsetParent||!ln(this._element))return;let e=Math.round(this._element.clientWidth),t=Math.round(this._element.clientHeight);e===0||t===0||this.layout(e,t)}},xh=Ro();function hn(e){switch(e){case"left":return"left";case"right":return"right";case"above":return"top";case"below":return"bottom";default:return"center"}}var _a=class extends No{get id(){return this._id}get size(){return this._groups.size}get groups(){return Array.from(this._groups.values()).map(e=>e.value)}get width(){return this.gridview.width}get height(){return this.gridview.height}get minimumHeight(){return this.gridview.minimumHeight}get maximumHeight(){return this.gridview.maximumHeight}get minimumWidth(){return this.gridview.minimumWidth}get maximumWidth(){return this.gridview.maximumWidth}get activeGroup(){return this._activeGroup}get locked(){return this.gridview.locked}set locked(e){this.gridview.locked=e}constructor(e,t){var i;super(document.createElement("div"),t.disableAutoResizing),this._id=xh.next(),this._groups=new Map,this._onDidRemove=new _,this.onDidRemove=this._onDidRemove.event,this._onDidAdd=new _,this.onDidAdd=this._onDidAdd.event,this._onDidMaximizedChange=new _,this.onDidMaximizedChange=this._onDidMaximizedChange.event,this._onDidActiveChange=new _,this.onDidActiveChange=this._onDidActiveChange.event,this._bufferOnDidLayoutChange=new kr,this.onDidLayoutChange=Ge.map(this._bufferOnDidLayoutChange.onEvent,n=>({reasons:n})),this._onDidViewVisibilityChangeMicroTaskQueue=new kr,this.onDidViewVisibilityChangeMicroTaskQueue=this._onDidViewVisibilityChangeMicroTaskQueue.onEvent,this.element.style.height="100%",this.element.style.width="100%",this._classNames=new pn(this.element),this._classNames.setClassNames((i=t.className)!==null&&i!==void 0?i:""),e.appendChild(this.element),this.gridview=new ga(!!t.proportionalLayout,t.styles,t.orientation,t.locked,t.margin),this.gridview.locked=!!t.locked,this.element.appendChild(this.gridview.element),this.layout(0,0,!0),this.addDisposables(this.gridview.onDidMaximizedNodeChange(n=>{this._onDidMaximizedChange.fire({panel:n.view,isMaximized:n.isMaximized})}),this.gridview.onDidViewVisibilityChange(()=>this._onDidViewVisibilityChangeMicroTaskQueue.fire()),this.onDidViewVisibilityChangeMicroTaskQueue(()=>{this.forceRelayout()}),L.from(()=>{this.element.remove()}),this.gridview.onDidChange(()=>{this._bufferOnDidLayoutChange.fire("geometry")}),Ge.any(this.onDidAdd,this.onDidRemove)(()=>{this._bufferOnDidLayoutChange.fire("structure")}),this.onDidActiveChange(()=>{this._bufferOnDidLayoutChange.fire("activePanel")}),this.onDidMaximizedChange(()=>{this._bufferOnDidLayoutChange.fire("geometry")}),this._onDidMaximizedChange,this._onDidViewVisibilityChangeMicroTaskQueue,this._bufferOnDidLayoutChange)}setVisible(e,t){this.gridview.setViewVisible(K(e.element),t),this._bufferOnDidLayoutChange.fire("geometry")}isVisible(e){return this.gridview.isViewVisible(K(e.element))}updateOptions(e){if("proportionalLayout"in e){var t;this.gridview.proportionalLayout=(t=e.proportionalLayout)!==null&&t!==void 0?t:!0}if(e.orientation&&(this.gridview.orientation=e.orientation),"styles"in e,"disableAutoResizing"in e){var i;this.disableResizing=(i=e.disableAutoResizing)!==null&&i!==void 0?i:!1}if("locked"in e){var n;this.locked=(n=e.locked)!==null&&n!==void 0?n:!1}if("margin"in e){var o;this.gridview.margin=(o=e.margin)!==null&&o!==void 0?o:0}if("className"in e){var s;this._classNames.setClassNames((s=e.className)!==null&&s!==void 0?s:"")}}maximizeGroup(e){this.gridview.maximizeView(e),this.doSetGroupActive(e)}isMaximizedGroup(e){return this.gridview.maximizedView()===e}exitMaximizedGroup(){this.gridview.exitMaximizedView()}hasMaximizedGroup(){return this.gridview.hasMaximizedView()}doAddGroup(e,t=[0],i,n=this.gridview){n.addView(e,i??pe.Distribute,t),this._onDidAdd.fire(e)}doRemoveGroup(e,t){if(!this._groups.has(e.id))throw new Error("invalid operation");let i=this._groups.get(e.id),n=this.gridview.remove(e,pe.Distribute);if(i&&!t?.skipDispose&&(i.disposable.dispose(),i.value.dispose(),this._groups.delete(e.id),this._onDidRemove.fire(e)),!t?.skipActive&&this._activeGroup===e){let o=Array.from(this._groups.values());this.doSetGroupActive(o.length>0?o[0].value:void 0)}return n}getPanel(e){var t;return(t=this._groups.get(e))===null||t===void 0?void 0:t.value}doSetGroupActive(e){this._activeGroup!==e&&(this._activeGroup&&this._activeGroup.setActive(!1),e&&e.setActive(!0),this._activeGroup=e,this._onDidActiveChange.fire(e))}removeGroup(e){this.doRemoveGroup(e)}activateNext(e){var t,i;if((t=e)!==null&&t!==void 0||(e={}),!e.group){if(!this.activeGroup)return;e.group=this.activeGroup}let n=K(e.group.element),o=(i=this.gridview.next(n))===null||i===void 0?void 0:i.view;this.doSetGroupActive(o)}activatePrevious(e){var t,i;if((t=e)!==null&&t!==void 0||(e={}),!e.group){if(!this.activeGroup)return;e.group=this.activeGroup}let n=K(e.group.element),o=(i=this.gridview.previous(n))===null||i===void 0?void 0:i.view;this.doSetGroupActive(o)}forceRelayout(){this.layout(this.width,this.height,!0)}layout(e,t,i){(i||e!==this.width||t!==this.height)&&(this.gridview.element.style.height=`${t}px`,this.gridview.element.style.width=`${e}px`,this.gridview.layout(e,t))}dispose(){this._onDidActiveChange.dispose(),this._onDidAdd.dispose(),this._onDidRemove.dispose();for(let e of this.groups)e.dispose();this.gridview.dispose(),super.dispose()}};function wi(e){"@babel/helpers - typeof";return wi=typeof Symbol=="function"&&typeof Symbol.iterator=="symbol"?function(t){return typeof t}:function(t){return t&&typeof Symbol=="function"&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},wi(e)}function Eh(e,t){if(wi(e)!="object"||!e)return e;var i=e[Symbol.toPrimitive];if(i!==void 0){var n=i.call(e,t||"default");if(wi(n)!="object")return n;throw new TypeError("@@toPrimitive must return a primitive value.")}return(t==="string"?String:Number)(e)}function Th(e){var t=Eh(e,"string");return wi(t)=="symbol"?t:t+""}function Ih(e,t,i){return(t=Th(t))in e?Object.defineProperty(e,t,{value:i,enumerable:!0,configurable:!0,writable:!0}):e[t]=i,e}function Ar(e,t){var i=Object.keys(e);if(Object.getOwnPropertySymbols){var n=Object.getOwnPropertySymbols(e);t&&(n=n.filter(function(o){return Object.getOwnPropertyDescriptor(e,o).enumerable})),i.push.apply(i,n)}return i}function I(e){for(var t=1;t<arguments.length;t++){var i=arguments[t]!=null?arguments[t]:{};t%2?Ar(Object(i),!0).forEach(function(n){Ih(e,n,i[n])}):Object.getOwnPropertyDescriptors?Object.defineProperties(e,Object.getOwnPropertyDescriptors(i)):Ar(Object(i)).forEach(function(n){Object.defineProperty(e,n,Object.getOwnPropertyDescriptor(i,n))})}return e}function Ah(e,t){return e==="center"?`Tab into ${t}`:`Split ${e} of ${t}`}function Oh(e,t){return e==="center"?`docked into ${t}`:`split ${e} of ${t}`}var cn={panelOpened:e=>`${e} opened`,panelClosed:e=>`${e} closed`,groupMaximized:e=>`${e} maximized`,groupRestored:e=>`${e} restored`,groupFloated:e=>`${e} floated`,groupDocked:e=>`${e} docked`,groupPoppedOut:e=>`${e} opened in a new window`,closeTab:e=>`Close ${e}`,closeTabPlain:()=>"Close",movePickTarget:(e,t,i,n)=>`Moving ${e}. Target ${t}, ${i} of ${n}. Enter to choose where, Escape to cancel.`,movePickEdge:(e,t)=>`${Ah(e,t)}. Arrows to change, Enter to confirm, Escape to go back.`,moveCommitted:(e,t,i)=>`${e} ${Oh(i,t)}.`,moveCancelled:()=>"Move cancelled.",moveNotAllowed:()=>"That move is not allowed.",moveFloated:e=>`${e} floated.`};function ba(e){return e?I(I({},cn),e):cn}var $o=class{get minimumSize(){return this.component.minimumSize}get maximumSize(){return this.component.maximumSize}get width(){return this.component.width}get height(){return this.component.height}get length(){return this.component.length}get orientation(){return this.component.orientation}get panels(){return this.component.panels}get onDidLayoutFromJSON(){return this.component.onDidLayoutFromJSON}get onDidLayoutChange(){return this.component.onDidLayoutChange}get onDidAddView(){return this.component.onDidAddView}get onDidRemoveView(){return this.component.onDidRemoveView}constructor(e){this.component=e}removePanel(e,t){this.component.removePanel(e,t)}focus(){this.component.focus()}getPanel(e){return this.component.getPanel(e)}layout(e,t){return this.component.layout(e,t)}addPanel(e){return this.component.addPanel(e)}movePanel(e,t){this.component.movePanel(e,t)}fromJSON(e){this.component.fromJSON(e)}toJSON(){return this.component.toJSON()}clear(){this.component.clear()}updateOptions(e){this.component.updateOptions(e)}dispose(){this.component.dispose()}},yi=class{get minimumSize(){return this.component.minimumSize}get maximumSize(){return this.component.maximumSize}get width(){return this.component.width}get height(){return this.component.height}get panels(){return this.component.panels}get onDidLayoutChange(){return this.component.onDidLayoutChange}get onDidLayoutFromJSON(){return this.component.onDidLayoutFromJSON}get onDidAddView(){return this.component.onDidAddView}get onDidRemoveView(){return this.component.onDidRemoveView}get onDidDrop(){return this.component.onDidDrop}get onUnhandledDragOver(){return this.component.onUnhandledDragOver}constructor(e){this.component=e}removePanel(e){this.component.removePanel(e)}getPanel(e){return this.component.getPanel(e)}movePanel(e,t){this.component.movePanel(e,t)}focus(){this.component.focus()}layout(e,t){this.component.layout(e,t)}addPanel(e){return this.component.addPanel(e)}fromJSON(e){this.component.fromJSON(e)}toJSON(){return this.component.toJSON()}clear(){this.component.clear()}updateOptions(e){this.component.updateOptions(e)}dispose(){this.component.dispose()}},Vo=class{get width(){return this.component.width}get height(){return this.component.height}get minimumHeight(){return this.component.minimumHeight}get maximumHeight(){return this.component.maximumHeight}get minimumWidth(){return this.component.minimumWidth}get maximumWidth(){return this.component.maximumWidth}get onDidLayoutChange(){return this.component.onDidLayoutChange}get onDidAddPanel(){return this.component.onDidAddGroup}get onDidRemovePanel(){return this.component.onDidRemoveGroup}get onDidActivePanelChange(){return this.component.onDidActiveGroupChange}get onDidLayoutFromJSON(){return this.component.onDidLayoutFromJSON}get panels(){return this.component.groups}get orientation(){return this.component.orientation}set orientation(e){this.component.updateOptions({orientation:e})}constructor(e){this.component=e}focus(){this.component.focus()}layout(e,t,i=!1){this.component.layout(e,t,i)}addPanel(e){return this.component.addPanel(e)}removePanel(e,t){this.component.removePanel(e,t)}movePanel(e,t){this.component.movePanel(e,t)}getPanel(e){return this.component.getPanel(e)}fromJSON(e){return this.component.fromJSON(e)}toJSON(){return this.component.toJSON()}clear(){this.component.clear()}updateOptions(e){this.component.updateOptions(e)}dispose(){this.component.dispose()}},Ho=class{get id(){return this.component.id}get width(){return this.component.width}get height(){return this.component.height}get minimumHeight(){return this.component.minimumHeight}get maximumHeight(){return this.component.maximumHeight}get minimumWidth(){return this.component.minimumWidth}get maximumWidth(){return this.component.maximumWidth}get size(){return this.component.size}get tabGroupColors(){return this.component.tabGroupColorPalette.entries()}get totalPanels(){return this.component.totalPanels}get onDidActiveGroupChange(){return this.component.onDidActiveGroupChange}get onDidAddGroup(){return this.component.onDidAddGroup}get onDidRemoveGroup(){return this.component.onDidRemoveGroup}get onDidActivePanelChange(){return this.component.onDidActivePanelChange}get onDidPanelPinnedChange(){return this.component.onDidPanelPinnedChange}get onDidAddPanel(){return this.component.onDidAddPanel}get onDidRemovePanel(){return this.component.onDidRemovePanel}get onDidMovePanel(){return this.component.onDidMovePanel}get onDidLayoutFromJSON(){return this.component.onDidLayoutFromJSON}get onDidLayoutChange(){return this.component.onDidLayoutChange}get onDidDrop(){return this.component.onDidDrop}get onWillDrop(){return this.component.onWillDrop}get onWillMutateLayout(){return this.component.onWillMutateLayout}get onDidMutateLayout(){return this.component.onDidMutateLayout}get onWillShowOverlay(){return this.component.onWillShowOverlay}get onWillDragGroup(){return this.component.onWillDragGroup}get onWillDragPanel(){return this.component.onWillDragPanel}get onUnhandledDragOver(){return this.component.onUnhandledDragOver}get dndCapabilities(){return this.component.dndCapabilities}get onDidPopoutGroupSizeChange(){return this.component.onDidPopoutGroupSizeChange}get onDidPopoutGroupPositionChange(){return this.component.onDidPopoutGroupPositionChange}get onDidAddPopoutGroup(){return this.component.onDidAddPopoutGroup}get onDidRemovePopoutGroup(){return this.component.onDidRemovePopoutGroup}get onDidOpenPopoutWindowFail(){return this.component.onDidOpenPopoutWindowFail}get onWillClosePopoutWindow(){return this.component.onWillClosePopoutWindow}getPopouts(){return this.component.getPopouts()}get onDidCreateTabGroup(){return this.component.onDidCreateTabGroup}get onDidDestroyTabGroup(){return this.component.onDidDestroyTabGroup}get onDidAddPanelToTabGroup(){return this.component.onDidAddPanelToTabGroup}get onDidRemovePanelFromTabGroup(){return this.component.onDidRemovePanelFromTabGroup}get onDidTabGroupChange(){return this.component.onDidTabGroupChange}get onDidTabGroupCollapsedChange(){return this.component.onDidTabGroupCollapsedChange}get panels(){return this.component.panels}get groups(){return this.component.groups}adjacentGroupInDirection(e,t){return this.component.adjacentGroupInDirection(e,t)}get activePanel(){return this.component.activePanel}get activeGroup(){return this.component.activeGroup}get messages(){return ba(this.component.options.messages)}constructor(e){this.component=e}focus(){this.component.focus()}getPanel(e){return this.component.getGroupPanel(e)}layout(e,t,i=!1){this.component.layout(e,t,i)}addPanel(e){return this.component.withOrigin("api",()=>this.component.addPanel(e))}removePanel(e,t){this.component.withOrigin("api",()=>this.component.removePanel(e,t))}addGroup(e){return this.component.withOrigin("api",()=>this.component.addGroup(e))}serializeGroup(e){return this.component.serializeGroup(e)}addGroupFromJSON(e,t){return this.component.withOrigin("api",()=>this.component.addGroupFromJSON(e,t))}addPanelFromJSON(e,t){return this.component.withOrigin("api",()=>this.component.addPanelFromJSON(e,t))}closeAllGroups(){return this.component.withOrigin("api",()=>this.component.closeAllGroups())}removeGroup(e){this.component.withOrigin("api",()=>this.component.removeGroup(e))}getGroup(e){return this.component.getPanel(e)}addFloatingGroup(e,t){return this.component.withOrigin("api",()=>this.component.addFloatingGroup(e,t))}fromJSON(e,t){this.component.withOrigin("api",()=>this.component.fromJSON(e,t))}toJSON(){return this.component.toJSON()}clear(){this.component.withOrigin("api",()=>this.component.clear())}undo(){this.component.undo()}redo(){this.component.redo()}get canUndo(){return this.component.canUndo}get canRedo(){return this.component.canRedo}clearHistory(){this.component.clearHistory()}get onDidChangeHistory(){return this.component.onDidChangeHistory}get smartGuidesEnabled(){return this.component.smartGuidesEnabled}setSmartGuidesEnabled(e){this.component.setSmartGuidesEnabled(e)}updateSmartGuidesOptions(e){this.component.updateSmartGuidesOptions(e)}get onDidSnapFloat(){return this.component.onDidSnapFloat}get onDidSnapTogether(){return this.component.onDidSnapTogether}get popoutRestorationPromise(){return this.component.popoutRestorationPromise}activateNext(e){this.component.activateNext(e)}activatePrevious(e){this.component.activatePrevious(e)}moveToNext(e){this.activateNext(e)}moveToPrevious(e){this.activatePrevious(e)}maximizeGroup(e){this.component.withOrigin("api",()=>this.component.maximizeGroup(e.group))}hasMaximizedGroup(){return this.component.hasMaximizedGroup()}exitMaximizedGroup(){this.component.withOrigin("api",()=>this.component.exitMaximizedGroup())}get onDidMaximizedGroupChange(){return this.component.onDidMaximizedGroupChange}addPopoutGroup(e,t){return this.component.withOrigin("api",()=>this.component.addPopoutGroup(e,t))}addEdgeGroup(e,t){return this.component.addEdgeGroup(e,t)}revealEdgeGroupWithData(e,t,i){this.component.revealEdgeGroupWithData(e,t,i)}getEdgeGroup(e){return this.component.getEdgeGroup(e)}setEdgeGroupVisible(e,t){this.component.setEdgeGroupVisible(e,t)}isEdgeGroupVisible(e){return this.component.isEdgeGroupVisible(e)}removeEdgeGroup(e){this.component.removeEdgeGroup(e)}pinEdgeGroup(e){this.component.pinEdgeGroup(e)}autoHideEdgeGroup(e){this.component.autoHideEdgeGroup(e)}peekEdgeGroup(e,t){this.component.peekEdgeGroup(e,t)}updateOptions(e){this.component.updateOptions(e)}_getGroupModel(e){let t=this.component.getPanel(e);if(!t)throw new Error(`dockview: group '${e}' not found`);return t.model}createTabGroup(e){let t=this._getGroupModel(e.groupId);return this.component.withOrigin("api",()=>t.createTabGroup({label:e.label,color:e.color,componentParams:e.componentParams}))}dissolveTabGroup(e){let t=this._getGroupModel(e.groupId);this.component.withOrigin("api",()=>t.dissolveTabGroup(e.tabGroupId))}addPanelToTabGroup(e){let t=this._getGroupModel(e.groupId);this.component.withOrigin("api",()=>t.addPanelToTabGroup(e.tabGroupId,e.panelId,e.index))}removePanelFromTabGroup(e){let t=this._getGroupModel(e.groupId);this.component.withOrigin("api",()=>t.removePanelFromTabGroup(e.panelId))}getTabGroups(e){return this._getGroupModel(e.groupId).getTabGroups()}getTabGroupForPanel(e){return this._getGroupModel(e.groupId).getTabGroupForPanel(e.panelId)}moveTabGroup(e){this._getGroupModel(e.groupId).moveTabGroup(e.tabGroupId,e.index)}dispose(){this.component.dispose()}},wa=class extends x{constructor(e,t){super(),this.element=e,this.callbacks=t,this.target=null,this.registerListeners()}onDragEnter(e){this.target=e.target,this.callbacks.onDragEnter(e)}onDragOver(e){e.preventDefault(),this.callbacks.onDragOver&&this.callbacks.onDragOver(e)}onDragLeave(e){this.target===e.target&&(this.target=null,this.callbacks.onDragLeave(e))}onDragEnd(e){this.target=null,this.callbacks.onDragEnd(e)}onDrop(e){this.callbacks.onDrop(e)}registerListeners(){this.addDisposables(T(this.element,"dragenter",e=>{this.onDragEnter(e)},!0)),this.addDisposables(T(this.element,"dragover",e=>{this.onDragOver(e)},!0)),this.addDisposables(T(this.element,"dragleave",e=>{this.onDragLeave(e)})),this.addDisposables(T(this.element,"dragend",e=>{this.onDragEnd(e)})),this.addDisposables(T(this.element,"drop",e=>{this.onDrop(e)}))}},zh={value:50,type:"percentage"},Mh=100,Rh=100;function Ao(){let e=document.createElement("div");e.className="dv-drop-target-dropzone";let t=document.createElement("div");return t.className="dv-drop-target-selection",e.appendChild(t),{dropzone:e,selection:t}}function ya(e,t,i,n){var o,s,r;let a=(o=n?.smallWidthBoundary)!==null&&o!==void 0?o:Mh,l=(s=n?.smallHeightBoundary)!==null&&s!==void 0?s:Rh,d=t<a,h=i<l,c=e==="left",u=e==="right",p=e==="top",m=e==="bottom",f=!d&&u,v=!d&&c,g=!h&&p,w=!h&&m,b=1,C=(r=n?.size)!==null&&r!==void 0?r:zh;return C.type==="percentage"?b=Z(C.value,0,100)/100:((f||v)&&(b=Z(C.value,0,t)/t),(g||w)&&(b=Z(C.value,0,i)/i)),{isSmallX:d,isSmallY:h,isLeft:c,isRight:u,isTop:p,isBottom:m,rightClass:f,leftClass:v,topClass:g,bottomClass:w,size:b}}function Da(e,t,i,n,o){let s=ya(t,i,n,o),{rightClass:r,leftClass:a,topClass:l,bottomClass:d,size:h}=s,c={top:"0px",left:"0px",width:"100%",height:"100%"};r?(c.left=`${100*(1-h)}%`,c.width=`${100*h}%`):a?c.width=`${100*h}%`:l?c.height=`${100*h}%`:d&&(c.top=`${100*(1-h)}%`,c.height=`${100*h}%`),s.isSmallX&&s.isLeft&&(c.width="4px"),s.isSmallX&&s.isRight&&(c.left=`${i-4}px`,c.width="4px"),s.isSmallY&&s.isTop&&(c.height="4px"),s.isSmallY&&s.isBottom&&(c.top=`${n-4}px`,c.height="4px"),e.style.top=c.top,e.style.left=c.left,e.style.width=c.width,e.style.height=c.height,e.style.visibility="visible",(!e.style.transform||e.style.transform==="")&&(e.style.transform="translate3d(0, 0, 0)");let u=s.isSmallX&&(s.isLeft||s.isRight)||s.isSmallY&&(s.isTop||s.isBottom);G(e,"dv-drop-target-small-vertical",s.isSmallY),G(e,"dv-drop-target-small-horizontal",s.isSmallX),G(e,"dv-drop-target-selection-line",u),G(e,"dv-drop-target-left",s.isLeft),G(e,"dv-drop-target-right",s.isRight),G(e,"dv-drop-target-top",s.isTop),G(e,"dv-drop-target-bottom",s.isBottom),G(e,"dv-drop-target-center",t==="center")}function Lh(e,t){let i=`${Math.round(t.top)}px`,n=`${Math.round(t.left)}px`,o=`${Math.round(t.width)}px`,s=`${Math.round(t.height)}px`;return e.style.top!==i||e.style.left!==n||e.style.width!==o||e.style.height!==s}function Nh(e,t){e.style.top=`${Math.round(t.top)}px`,e.style.left=`${Math.round(t.left)}px`,e.style.width=`${Math.round(t.width)}px`,e.style.height=`${Math.round(t.height)}px`,e.style.visibility="visible",(!e.style.transform||e.style.transform==="")&&(e.style.transform="translate3d(0, 0, 0)")}function Sa(e){let t=ya(e.quadrant,e.width,e.height,e.overlayModel),{rightClass:i,leftClass:n,topClass:o,bottomClass:s,size:r}=t,a=e.outlineElement.getBoundingClientRect(),l=e.targetModel.getElements(void 0,e.outlineElement),d=l.root,h=l.overlay,c=d.getBoundingClientRect(),u=a.top-c.top,p=a.left-c.left,m={top:u,left:p,width:e.width,height:e.height};return i?(m.left=p+e.width*(1-r),m.width=e.width*r):n?m.width=e.width*r:o?m.height=e.height*r:s&&(m.top=u+e.height*(1-r),m.height=e.height*r),t.isSmallX&&t.isLeft&&(m.width=4),t.isSmallX&&t.isRight&&(m.left=p+e.width-4,m.width=4),t.isSmallY&&t.isTop&&(m.height=4),t.isSmallY&&t.isBottom&&(m.top=u+e.height-4,m.height=4),Lh(h,m)?(Nh(h,m),h.className=`dv-drop-target-anchor${e.className?` ${e.className}`:""}`,G(h,"dv-drop-target-left",t.isLeft),G(h,"dv-drop-target-right",t.isRight),G(h,"dv-drop-target-top",t.isTop),G(h,"dv-drop-target-bottom",t.isBottom),G(h,"dv-drop-target-anchor-line",t.isSmallX&&(t.isLeft||t.isRight)||t.isSmallY&&(t.isTop||t.isBottom)),G(h,"dv-drop-target-center",e.quadrant==="center"),l.changed&&(G(h,"dv-drop-target-anchor-container-changed",!0),setTimeout(()=>{G(h,"dv-drop-target-anchor-container-changed",!1)},10)),{boundsChanged:!0,targetChanged:l.changed}):{boundsChanged:!1,targetChanged:l.changed}}var Ca=class extends Mo{get nativeEvent(){return this.options.nativeEvent}get position(){return this.options.position}get edge(){return!!this.options.edge}get edgeGroup(){return!!this.options.edgeGroup}constructor(e){super(),this.options=e}};function Or(e){switch(e){case"above":return"top";case"below":return"bottom";case"left":return"left";case"right":return"right";case"within":return"center";default:throw new Error(`invalid direction '${e}'`)}}function $h(e){switch(e){case"top":return"above";case"bottom":return"below";case"left":return"left";case"right":return"right";case"center":return"within";default:throw new Error(`invalid position '${e}'`)}}var Vh={value:20,type:"percentage"},Wo=class fi extends x{get disabled(){return this._disabled}set disabled(t){this._disabled=t}get state(){return this._state}constructor(t,i){super(),this.element=t,this.options=i,this._edge=!1,this._edgeGroup=!1,this._onDrop=new _,this.onDrop=this._onDrop.event,this._onWillShowOverlay=new _,this.onWillShowOverlay=this._onWillShowOverlay.event,this._disabled=!1,this._acceptedTargetZonesSet=new Set(this.options.acceptedTargetZones),this.dnd=new wa(this.element,{onDragEnter:()=>{var n,o;(n=(o=this.options).getOverrideTarget)===null||n===void 0||(n=n.call(o))===null||n===void 0||n.getElements()},onDragOver:n=>{var o,s,r,a,l,d,h;if(this._disabled){this.clearOwnOverlay();return}fi.ACTUAL_TARGET=this;let c=(o=(s=this.options).getOverrideTarget)===null||o===void 0?void 0:o.call(s);if(this._acceptedTargetZonesSet.size===0){this.clearOwnOverlay();return}let u=(r=(a=(l=this.options).getOverlayOutline)===null||a===void 0?void 0:a.call(l))!==null&&r!==void 0?r:this.element,p=u.offsetWidth,m=u.offsetHeight;if(p===0||m===0)return;let f=u.getBoundingClientRect(),v=((d=n.clientX)!==null&&d!==void 0?d:0)-f.left,g=((h=n.clientY)!==null&&h!==void 0?h:0)-f.top,w=this.resolvePosition(v,g,p,m,n);if(this.isAlreadyUsed(n)){this.removeDropTarget();return}if(w===null){this.clearOwnOverlay();return}let b=w.position;if(!this.options.canDisplayOverlay(n,b)){this.clearOwnOverlay();return}let C=new Ca({nativeEvent:n,position:b,edge:w.edge,edgeGroup:w.edgeGroup});if(this._onWillShowOverlay.fire(C),C.defaultPrevented){this.clearOwnOverlay();return}if(this.markAsUsed(n),w.edge){this.clearOwnOverlay(),this._state=b,this._edge=!0,this._edgeGroup=w.edgeGroup;return}if(this._edge=!1,this._edgeGroup=!1,!c){if(!this.targetElement){let P=Ao();this.targetElement=P.dropzone,this.overlayElement=P.selection,this._state="center",u.classList.add("dv-drop-target"),u.append(this.targetElement)}}this.toggleClasses(b,p,m),this._state=b},onDragLeave:()=>{var n,o;let s=(n=(o=this.options).getOverrideTarget)===null||n===void 0?void 0:n.call(o);if(s){var r;this._state=void 0,this._edge=!1,this._edgeGroup=!1,(r=s.scheduleClear)===null||r===void 0||r.call(s);return}this.removeDropTarget()},onDragEnd:n=>{var o,s;let r=(o=(s=this.options).getOverrideTarget)===null||o===void 0?void 0:o.call(s);r&&fi.ACTUAL_TARGET===this&&this._state&&(n.stopPropagation(),this._onDrop.fire({position:this._state,nativeEvent:n,edge:this._edge,edgeGroup:this._edgeGroup})),this.removeDropTarget(),r?.clear()},onDrop:n=>{var o,s;n.preventDefault();let r=this._state,a=this._edge,l=this._edgeGroup;this.removeDropTarget(),(o=(s=this.options).getOverrideTarget)===null||o===void 0||(o=o.call(s))===null||o===void 0||o.clear(),r&&(n.stopPropagation(),this._onDrop.fire({position:r,nativeEvent:n,edge:a,edgeGroup:l}))}}),this.addDisposables(this._onDrop,this._onWillShowOverlay,this.dnd)}setTargetZones(t){this._acceptedTargetZonesSet=new Set(t)}setOverlayModel(t){this.options.overlayModel=t}dispose(){this.removeDropTarget(),super.dispose()}markAsUsed(t){t[fi.USED_EVENT_ID]=!0}isAlreadyUsed(t){let i=t[fi.USED_EVENT_ID];return typeof i=="boolean"&&i}toggleClasses(t,i,n){var o,s;let r=(o=(s=this.options).getOverrideTarget)===null||o===void 0?void 0:o.call(s);if(r){var a,l,d;Sa({outlineElement:(a=(l=(d=this.options).getOverlayOutline)===null||l===void 0?void 0:l.call(d))!==null&&a!==void 0?a:this.element,targetModel:r,quadrant:t,width:i,height:n,overlayModel:this.options.overlayModel,className:this.options.className});return}this.overlayElement&&Da(this.overlayElement,t,i,n,this.options.overlayModel)}resolvePosition(t,i,n,o,s){var r,a;let l=(r=(a=this.options).getPositionResolver)===null||r===void 0?void 0:r.call(a);if(l){let h=l.resolve({x:t,y:i,width:n,height:o,zones:this._acceptedTargetZonesSet,event:s});return h?{position:h.position,edge:!!h.edge,edgeGroup:!!h.edgeGroup}:null}let d=this.calculateQuadrant(this._acceptedTargetZonesSet,t,i,n,o);return d?{position:d,edge:!1,edgeGroup:!1}:null}calculateQuadrant(t,i,n,o,s){var r,a;let l=(r=(a=this.options.overlayModel)===null||a===void 0?void 0:a.activationSize)!==null&&r!==void 0?r:Vh;return l.type==="percentage"?Pa(t,i,n,o,s,l.value):Fo(t,i,n,o,s,l.value)}clearOwnOverlay(){let t=this._state!==void 0;if(this.removeDropTarget(),t){var i,n;(i=(n=this.options).getOverrideTarget)===null||i===void 0||(i=i.call(n))===null||i===void 0||i.clear()}}removeDropTarget(){if(this._state=void 0,this._edge=!1,this._edgeGroup=!1,this.targetElement){var t;(t=this.targetElement.parentElement)===null||t===void 0||t.classList.remove("dv-drop-target"),this.targetElement.remove(),this.targetElement=void 0,this.overlayElement=void 0}}showOverlay(t){var i,n,o,s,r;let a=(i=(n=this.options).getOverrideTarget)===null||i===void 0?void 0:i.call(n),l=(o=(s=(r=this.options).getOverlayOutline)===null||s===void 0?void 0:s.call(r))!==null&&o!==void 0?o:this.element,d=l.offsetWidth,h=l.offsetHeight;if(!a&&!this.targetElement){let c=Ao();this.targetElement=c.dropzone,this.overlayElement=c.selection,l.classList.add("dv-drop-target"),l.append(this.targetElement)}this.toggleClasses(t,d,h),this._state=t}clearOverlay(){var t,i;this.removeDropTarget(),(t=(i=this.options).getOverrideTarget)===null||t===void 0||(t=t.call(i))===null||t===void 0||t.clear(),this._state=void 0}};Wo.USED_EVENT_ID="__dockview_droptarget_event_is_used__";function Pa(e,t,i,n,o,s){let r=100*t/n,a=100*i/o;return e.has("left")&&r<s?"left":e.has("right")&&r>100-s?"right":e.has("top")&&a<s?"top":e.has("bottom")&&a>100-s?"bottom":e.has("center")?"center":null}function Fo(e,t,i,n,o,s){let r=a=>typeof s=="number"?s:s[a];return e.has("left")&&t<r("left")?"left":e.has("right")&&t>n-r("right")?"right":e.has("top")&&i<r("top")?"top":e.has("bottom")&&i>o-r("bottom")?"bottom":e.has("center")?"center":null}function Hh(e,t,i){var n,o,s;Le(t,"dv-dragged"),t.style.top="-9999px",t.style.position="absolute",(i?.owner?ha(i.owner):((n=i?.ownerDocument)!==null&&n!==void 0?n:document).body).appendChild(t),e.setDragImage(t,(o=i?.x)!==null&&o!==void 0?o:0,(s=i?.y)!==null&&s!==void 0?s:0),setTimeout(()=>{Re(t,"dv-dragged"),t.remove()},0)}var un=class vi extends x{static getInstance(){var t;return(t=vi._instance)!==null&&t!==void 0||(vi._instance=new vi),vi._instance}constructor(){super(),this._targets=new Set,this._targetByElement=new Map,this._onDragStart=new _,this.onDragStart=this._onDragStart.event,this._onDragMove=new _,this.onDragMove=this._onDragMove.event,this._onDragEnd=new _,this.onDragEnd=this._onDragEnd.event,this.addDisposables(this._onDragStart,this._onDragMove,this._onDragEnd)}get active(){return this._active}registerTarget(t){return this._targets.add(t),this._targetByElement.set(t.element,t),{dispose:()=>{this._targets.delete(t),this._targetByElement.get(t.element)===t&&this._targetByElement.delete(t.element),this._currentTarget===t&&(this._currentTarget=void 0)}}}beginDrag(t){var i,n,o,s;this._active&&this.cancel();let{pointerEvent:r,source:a}=t,l=t.getData();this._active={pointerId:r.pointerId,startX:r.clientX,startY:r.clientY,source:a},this._lastPointerEvent=r,this._onDragMoveCallback=t.onDragMove,this._onDragEndCallback=t.onDragEnd,this._dataDisposable=l,this._ghost=t.ghost,this._iframeShield=bi((i=a.ownerDocument)!==null&&i!==void 0?i:document),this._selectionShield=aa((n=a.ownerDocument)!==null&&n!==void 0?n:document);let d={clientX:r.clientX,clientY:r.clientY,pointerEvent:r};this._onDragStart.fire(d);let h=(o=(s=a.ownerDocument)===null||s===void 0?void 0:s.defaultView)!==null&&o!==void 0?o:globalThis.window;this._moveListener=T(h,"pointermove",c=>{var u;c.pointerId===((u=this._active)===null||u===void 0?void 0:u.pointerId)&&this._handleMove(c)}),this._upListener=T(h,"pointerup",c=>{var u;c.pointerId===((u=this._active)===null||u===void 0?void 0:u.pointerId)&&this._handleEnd(c,!0)}),this._cancelListener=T(h,"pointercancel",c=>{var u;c.pointerId===((u=this._active)===null||u===void 0?void 0:u.pointerId)&&this._handleEnd(c,!1)})}cancel(){var t,i;if(!this._active)return;let n=this._onDragEndCallback,o=this._lastPointerEvent;if((t=this._currentTarget)===null||t===void 0||t.handleDragLeave(),this._teardown(),(i=this._dataDisposable)===null||i===void 0||i.dispose(),this._dataDisposable=void 0,o){let s={clientX:o.clientX,clientY:o.clientY,pointerEvent:o};n?.(s,!1),this._onDragEnd.fire(s)}}_findTargetUnder(t,i){let n=(this._active?dn(this._active.source):document).elementsFromPoint(t,i);for(let s of n){let r=s;for(;r;){var o;let a=this._targetByElement.get(r);if(a&&!(!((o=a.isHitTestTransparent)===null||o===void 0)&&o.call(a)))return a;r=r.parentElement}}}_handleMove(t){var i,n;this._lastPointerEvent=t,(i=this._ghost)===null||i===void 0||i.update(t.clientX,t.clientY);let o={clientX:t.clientX,clientY:t.clientY,pointerEvent:t},s=this._findTargetUnder(t.clientX,t.clientY);if(s!==this._currentTarget){var r;(r=this._currentTarget)===null||r===void 0||r.handleDragLeave(),this._currentTarget=s}s&&s.handleDragOver(o),(n=this._onDragMoveCallback)===null||n===void 0||n.call(this,o),this._onDragMove.fire(o)}_handleEnd(t,i){let n={clientX:t.clientX,clientY:t.clientY,pointerEvent:t};try{if(i&&this._currentTarget)this._currentTarget.handleDrop(n);else{var o;(o=this._currentTarget)===null||o===void 0||o.handleDragLeave()}}finally{let s=this._onDragEndCallback,r=this._dataDisposable;this._teardown(),this._dataDisposable=void 0,setTimeout(()=>r?.dispose(),0),s?.(n,i),this._onDragEnd.fire(n)}}_teardown(){var t,i,n,o,s,r;this._currentTarget=void 0,this._active=void 0,this._lastPointerEvent=void 0,this._onDragMoveCallback=void 0,this._onDragEndCallback=void 0,(t=this._ghost)===null||t===void 0||t.dispose(),this._ghost=void 0,(i=this._iframeShield)===null||i===void 0||i.release(),this._iframeShield=void 0,(n=this._selectionShield)===null||n===void 0||n.release(),this._selectionShield=void 0,(o=this._moveListener)===null||o===void 0||o.dispose(),(s=this._upListener)===null||s===void 0||s.dispose(),(r=this._cancelListener)===null||r===void 0||r.dispose(),this._moveListener=void 0,this._upListener=void 0,this._cancelListener=void 0}},Wh={value:20,type:"percentage"},Fh=class extends x{get disabled(){return this._disabled}set disabled(e){this._disabled=e,e&&this._removeOverlay()}get state(){return this._state}constructor(e,t){super(),this.element=e,this.options=t,this._edge=!1,this._edgeGroup=!1,this._onDrop=new _,this.onDrop=this._onDrop.event,this._onWillShowOverlay=new _,this.onWillShowOverlay=this._onWillShowOverlay.event,this._disabled=!1,this._acceptedTargetZonesSet=new Set(t.acceptedTargetZones);let i={element:this.element,handleDragOver:n=>this._onDragOver(n),handleDragLeave:()=>this._onDragLeave(),handleDrop:n=>this._onDropEvent(n),isHitTestTransparent:t.isHitTestTransparent};this.addDisposables(this._onDrop,this._onWillShowOverlay,un.getInstance().registerTarget(i))}clearOverlay(){this._clearOwnOverlay()}setTargetZones(e){this._acceptedTargetZonesSet=new Set(e)}setOverlayModel(e){this.options.overlayModel=e}dispose(){this._removeOverlay(),super.dispose()}_onDragOver(e){var t,i,n,o,s;if(this._disabled){this._clearOwnOverlay();return}let r=(t=(i=this.options).getOverrideTarget)===null||t===void 0?void 0:t.call(i);if(this._acceptedTargetZonesSet.size===0){this._clearOwnOverlay();return}let a=(n=(o=(s=this.options).getOverlayOutline)===null||o===void 0?void 0:o.call(s))!==null&&n!==void 0?n:this.element,l=a.offsetWidth,d=a.offsetHeight;if(l===0||d===0)return;let h=a.getBoundingClientRect(),c=e.clientX-h.left,u=e.clientY-h.top,p=this._resolvePosition(c,u,l,d,e.pointerEvent);if(p===null){this._clearOwnOverlay();return}let m=p.position;if(!this.options.canDisplayOverlay(e.pointerEvent,m)){this._clearOwnOverlay();return}let f=new Ca({nativeEvent:e.pointerEvent,position:m,edge:p.edge,edgeGroup:p.edgeGroup});if(this._onWillShowOverlay.fire(f),f.defaultPrevented){this._clearOwnOverlay();return}if(p.edge){this._clearOwnOverlay(),this._state=m,this._edge=!0,this._edgeGroup=p.edgeGroup;return}if(this._edge=!1,this._edgeGroup=!1,r){Sa({outlineElement:a,targetModel:r,quadrant:m,width:l,height:d,overlayModel:this.options.overlayModel,className:this.options.className}),this._state=m;return}if(!this._targetElement){let v=Ao();this._targetElement=v.dropzone,this._overlayElement=v.selection,this._state="center",this.element.classList.add("dv-drop-target"),this.element.append(this._targetElement)}this._overlayElement&&Da(this._overlayElement,m,l,d,this.options.overlayModel),this._state=m}_onDragLeave(){var e,t;let i=(e=(t=this.options).getOverrideTarget)===null||e===void 0?void 0:e.call(t);if(i){this._state=void 0,i.clear();return}this._removeOverlay()}_onDropEvent(e){var t,i;let n=this._state,o=this._edge,s=this._edgeGroup,r=(t=(i=this.options).getOverrideTarget)===null||t===void 0?void 0:t.call(i);this._removeOverlay(),r?.clear(),n&&this._onDrop.fire({position:n,nativeEvent:e.pointerEvent,edge:o,edgeGroup:s})}_resolvePosition(e,t,i,n,o){var s,r;let a=(s=(r=this.options).getPositionResolver)===null||s===void 0?void 0:s.call(r);if(a){let d=a.resolve({x:e,y:t,width:i,height:n,zones:this._acceptedTargetZonesSet,event:o});return d?{position:d.position,edge:!!d.edge,edgeGroup:!!d.edgeGroup}:null}let l=this._calculateQuadrant(e,t,i,n);return l?{position:l,edge:!1,edgeGroup:!1}:null}_calculateQuadrant(e,t,i,n){var o,s;let r=(o=(s=this.options.overlayModel)===null||s===void 0?void 0:s.activationSize)!==null&&o!==void 0?o:Wh;return r.type==="percentage"?Pa(this._acceptedTargetZonesSet,e,t,i,n,r.value):Fo(this._acceptedTargetZonesSet,e,t,i,n,r.value)}_clearOwnOverlay(){let e=this._state!==void 0;if(this._removeOverlay(),e){var t,i;(t=(i=this.options).getOverrideTarget)===null||t===void 0||(t=t.call(i))===null||t===void 0||t.clear()}}_removeOverlay(){if(this._edge=!1,this._edgeGroup=!1,this._targetElement){var e;this._state=void 0,(e=this._targetElement.parentElement)===null||e===void 0||e.classList.remove("dv-drop-target"),this._targetElement.remove(),this._targetElement=void 0,this._overlayElement=void 0}else this._state=void 0}},Bh=5,Uh=250,Jh=8,jh=class extends x{constructor(e,t){var i;super(),this.element=e,this.options=t,this._disabled=!1,this._armed=!1,this._startX=0,this._startY=0,this._touchOnly=(i=t.touchOnly)!==null&&i!==void 0?i:!0,this.addDisposables(T(this.element,"pointerdown",n=>{this._onPointerDown(n)}))}setDisabled(e){this._disabled=e,e&&this._cancelPending()}setTouchOnly(e){this._touchOnly!==e&&(this._touchOnly=e,e&&this._cancelPending())}_shouldHandle(e){var t,i;return!(this._disabled||this._touchOnly&&e.pointerType!=="touch"&&e.pointerType!=="pen"||e.pointerType==="mouse"&&e.button!==0||!((t=(i=this.options).isCancelled)===null||t===void 0)&&t.call(i,e))}_onPointerDown(e){var t,i,n,o,s,r;if(!this._shouldHandle(e))return;this._cancelPending(),this._selectionShield=aa((t=this.element.ownerDocument)!==null&&t!==void 0?t:document),this._pendingPointerId=e.pointerId,this._startX=e.clientX,this._startY=e.clientY,this._startEvent=e;let a=e.pointerType==="touch"||e.pointerType==="pen",l=this.options.touchInitiationDelay,d=(i=typeof l=="function"?l():l)!==null&&i!==void 0?i:Uh;this._armed=!a||d<=0,a&&d>0&&Number.isFinite(d)&&(this._armTimer=setTimeout(()=>{this._armTimer=void 0,this._armed=!0},d));let h=(n=this.options.threshold)!==null&&n!==void 0?n:Bh,c=this.options.pressTolerance,u=(o=typeof c=="function"?c():c)!==null&&o!==void 0?o:Jh,p=(s=(r=this.element.ownerDocument)===null||r===void 0?void 0:r.defaultView)!==null&&s!==void 0?s:globalThis.window;this._pendingMoveListener=T(p,"pointermove",m=>{if(m.pointerId!==this._pendingPointerId)return;let f=m.clientX-this._startX,v=m.clientY-this._startY,g=Math.hypot(f,v);if(this._armed){g>=h&&this._beginDrag(m);return}g>u&&this._beginDrag(m)}),this._pendingUpListener=T(p,"pointerup",m=>{m.pointerId===this._pendingPointerId&&this._cancelPending()}),this._pendingCancelListener=T(p,"pointercancel",m=>{m.pointerId===this._pendingPointerId&&this._cancelPending()})}cancelPending(){this._cancelPending()}_cancelPending(){var e,t,i,n;(e=this._selectionShield)===null||e===void 0||e.release(),this._selectionShield=void 0,this._pendingPointerId=void 0,this._armTimer!==void 0&&(clearTimeout(this._armTimer),this._armTimer=void 0),this._armed=!1,(t=this._pendingMoveListener)===null||t===void 0||t.dispose(),(i=this._pendingUpListener)===null||i===void 0||i.dispose(),(n=this._pendingCancelListener)===null||n===void 0||n.dispose(),this._pendingMoveListener=void 0,this._pendingUpListener=void 0,this._pendingCancelListener=void 0,this._startEvent=void 0}_beginDrag(e){var t,i,n,o,s;let r=(t=this._startEvent)!==null&&t!==void 0?t:e;this._cancelPending();let a=r.defaultPrevented;if((i=(n=this.options).onDragStart)===null||i===void 0||i.call(n,r),r.defaultPrevented&&!a)return;let l=(o=(s=this.options).createGhost)===null||o===void 0?void 0:o.call(s,r);un.getInstance().beginDrag({pointerEvent:e,source:this.element,getData:()=>this.options.getData(r),ghost:l,onDragMove:this.options.onDragMove,onDragEnd:this.options.onDragEnd})}dispose(){this._cancelPending(),super.dispose()}},Yh=class{constructor(e){var t,i,n,o;this._disposed=!1,this.element=e.element,this.offsetX=(t=e.offsetX)!==null&&t!==void 0?t:0,this.offsetY=(i=e.offsetY)!==null&&i!==void 0?i:0;let s=e.owner?ha(e.owner):document.body,r;Wt(s)&&typeof this.element.showPopover=="function"&&(r=this.element.ownerDocument.createElement("div"),r.popover="manual",Object.assign(r.style,{inset:"auto",margin:"0",padding:"0",border:"0",background:"transparent",color:"inherit",overflow:"visible"}),r.appendChild(this.element),this.element.style.pointerEvents="none",this.element.style.transform="none"),this.container=(n=r)!==null&&n!==void 0?n:this.element;let a=this.container.style;a.position="fixed",a.left="0px",a.top="0px",a.pointerEvents="none",a.zIndex="99999",a.opacity=String((o=e.opacity)!==null&&o!==void 0?o:.8),a.willChange="transform",a.transform=`translate3d(${e.initialX-this.offsetX}px, ${e.initialY-this.offsetY}px, 0)`,s.appendChild(this.container),r?.showPopover()}update(e,t){this._disposed||(this.container.style.transform=`translate3d(${e-this.offsetX}px, ${t-this.offsetY}px, 0)`)}dispose(){this._disposed||(this._disposed=!0,this.element.remove(),this.container!==this.element&&this.container.remove())}},Kh=class extends x{constructor(e,t){super(),this.el=e,this.opts=t,this._dataDisposable=new Q,this._pointerEventsDisposable=new Q,this._disabled=!!t.disabled,this.addDisposables(this._dataDisposable,this._pointerEventsDisposable,T(this.el,"dragstart",i=>{var n,o,s,r,a,l,d;if(i.defaultPrevented||this._disabled||!((n=(o=this.opts).isCancelled)===null||n===void 0)&&n.call(o,i)){i.preventDefault();return}if((s=(r=this.opts).onDragStart)===null||s===void 0||s.call(r,i),i.defaultPrevented)return;let h=bi((a=this.el.ownerDocument)!==null&&a!==void 0?a:document);this._pointerEventsDisposable.value={dispose:()=>h.release()},this.el.classList.add("dv-dragged"),setTimeout(()=>this.el.classList.remove("dv-dragged"),0),this._dataDisposable.value=this.opts.getData(i);let c=(l=(d=this.opts).createGhost)===null||l===void 0?void 0:l.call(d,i);if(c&&i.dataTransfer){var u,p,m;if(Hh(i.dataTransfer,c.element,{x:(u=c.offsetX)!==null&&u!==void 0?u:0,y:(p=c.offsetY)!==null&&p!==void 0?p:0,ownerDocument:(m=this.el.ownerDocument)!==null&&m!==void 0?m:void 0,owner:this.el}),c.dispose){let f=c.dispose;setTimeout(()=>f(),0)}}i.dataTransfer&&(i.dataTransfer.effectAllowed="move",i.dataTransfer.items.length===0&&i.dataTransfer.setData("text/plain",""))}),T(this.el,"dragend",i=>{var n,o;this._pointerEventsDisposable.dispose(),setTimeout(()=>this._dataDisposable.dispose(),0),(n=(o=this.opts).onDragEnd)===null||n===void 0||n.call(o,i)}))}setDisabled(e){this._disabled=e}setTouchOnly(e){}cancelPending(){}},Zh=class{constructor(){this.kind="html5"}createDropTarget(e,t){return new Wo(e,t)}createDragSource(e,t){return new Kh(e,t)}},Xh=class{constructor(){this.kind="pointer"}createDropTarget(e,t){return new Fh(e,t)}createDragSource(e,t){let i=t.createGhost?o=>{let s=t.createGhost(o);if(!s)return;let r=new Yh({element:s.element,initialX:o.clientX,initialY:o.clientY,offsetX:s.offsetX,offsetY:s.offsetY,owner:e});if(s.dispose){let a=r.dispose.bind(r),l=s.dispose;r.dispose=()=>{a(),l()}}return r}:void 0,n=new jh(e,{getData:t.getData,isCancelled:t.isCancelled,onDragStart:t.onDragStart,onDragEnd:t.onDragEnd?o=>t.onDragEnd(o.pointerEvent):void 0,createGhost:i,touchOnly:t.touchOnly,touchInitiationDelay:t.touchInitiationDelay,pressTolerance:t.pressTolerance,threshold:t.threshold});return t.disabled&&n.setDisabled(!0),n}},Ue=new Zh,Ie=new Xh,gn=Object.keys({disableAutoResizing:void 0,disableDnd:void 0,className:void 0}),qh=class extends ia{constructor(e,t,i,n){super(),this.nativeEvent=e,this.position=t,this.getData=i,this.panel=n}},Ga=class extends Mo{constructor(){super()}},ka=class extends x{get isFocused(){return this._isFocused}get isActive(){return this._isActive}get isVisible(){return this._isVisible}get width(){return this._width}get height(){return this._height}constructor(e,t){super(),this.id=e,this.component=t,this._isFocused=!1,this._isActive=!1,this._isVisible=!0,this._width=0,this._height=0,this._parameters={},this.panelUpdatesDisposable=new Q,this._onDidDimensionChange=new _,this.onDidDimensionsChange=this._onDidDimensionChange.event,this._onDidChangeFocus=new _,this.onDidFocusChange=this._onDidChangeFocus.event,this._onWillFocus=new _,this.onWillFocus=this._onWillFocus.event,this._onDidVisibilityChange=new _,this.onDidVisibilityChange=this._onDidVisibilityChange.event,this._onWillVisibilityChange=new _,this.onWillVisibilityChange=this._onWillVisibilityChange.event,this._onDidActiveChange=new _,this.onDidActiveChange=this._onDidActiveChange.event,this._onActiveChange=new _,this.onActiveChange=this._onActiveChange.event,this._onDidParametersChange=new _,this.onDidParametersChange=this._onDidParametersChange.event,this.addDisposables(this.onDidFocusChange(i=>{this._isFocused=i.isFocused}),this.onDidActiveChange(i=>{this._isActive=i.isActive}),this.onDidVisibilityChange(i=>{this._isVisible=i.isVisible}),this.onDidDimensionsChange(i=>{this._width=i.width,this._height=i.height}),this.panelUpdatesDisposable,this._onDidDimensionChange,this._onDidChangeFocus,this._onDidVisibilityChange,this._onDidActiveChange,this._onWillFocus,this._onActiveChange,this._onWillFocus,this._onWillVisibilityChange,this._onDidParametersChange)}getParameters(){return this._parameters}initialize(e){this.panelUpdatesDisposable.value=this._onDidParametersChange.event(t=>{this._parameters=t,e.update({params:t})})}setVisible(e){this._onWillVisibilityChange.fire({isVisible:e})}setActive(){this._onActiveChange.fire()}updateParameters(e){this._onDidParametersChange.fire(e)}},xa=class extends ka{constructor(e,t){super(e,t),this._onDidConstraintsChangeInternal=new _,this.onDidConstraintsChangeInternal=this._onDidConstraintsChangeInternal.event,this._onDidConstraintsChange=new _({replay:!0}),this.onDidConstraintsChange=this._onDidConstraintsChange.event,this._onDidSizeChange=new _,this.onDidSizeChange=this._onDidSizeChange.event,this.addDisposables(this._onDidConstraintsChangeInternal,this._onDidConstraintsChange,this._onDidSizeChange)}setConstraints(e){this._onDidConstraintsChangeInternal.fire(e)}setSize(e){this._onDidSizeChange.fire(e)}},Qh=class extends xa{set pane(e){this._pane=e}constructor(e,t){super(e,t),this._onDidExpansionChange=new _({replay:!0}),this.onDidExpansionChange=this._onDidExpansionChange.event,this._onMouseEnter=new _({}),this.onMouseEnter=this._onMouseEnter.event,this._onMouseLeave=new _({}),this.onMouseLeave=this._onMouseLeave.event,this.addDisposables(this._onDidExpansionChange,this._onMouseEnter,this._onMouseLeave)}setExpanded(e){var t;(t=this._pane)===null||t===void 0||t.setExpanded(e)}get isExpanded(){var e;return!!(!((e=this._pane)===null||e===void 0)&&e.isExpanded())}},Bo=class extends x{get element(){return this._element}get width(){return this._width}get height(){return this._height}get params(){var e;return(e=this._params)===null||e===void 0?void 0:e.params}constructor(e,t,i){super(),this.id=e,this.component=t,this.api=i,this._height=0,this._width=0,this._element=document.createElement("div"),this._element.tabIndex=-1,this._element.style.outline="none",this._element.style.height="100%",this._element.style.width="100%",this._element.style.overflow="hidden";let n=oa(this._element);this.addDisposables(this.api,n.onDidFocus(()=>{this.api._onDidChangeFocus.fire({isFocused:!0})}),n.onDidBlur(()=>{this.api._onDidChangeFocus.fire({isFocused:!1})}),n)}focus(){let e=new Ga;this.api._onWillFocus.fire(e),!e.defaultPrevented&&this._element.focus()}layout(e,t){this._width=e,this._height=t,this.api._onDidDimensionChange.fire({width:e,height:t}),this.part&&this._params&&this.part.update({params:this._params.params})}init(e){this._params=e,this.part=this.getComponent()}update(e){var t,i;this._params=I(I({},this._params),{},{params:I(I({},(t=this._params)===null||t===void 0?void 0:t.params),e.params)});for(let n of Object.keys(e.params))e.params[n]===void 0&&delete this._params.params[n];(i=this.part)===null||i===void 0||i.update({params:this._params.params})}toJSON(){var e,t;let i=(e=(t=this._params)===null||t===void 0?void 0:t.params)!==null&&e!==void 0?e:{};return{id:this.id,component:this.component,params:Object.keys(i).length>0?i:void 0}}dispose(){var e;this.api.dispose(),(e=this.part)===null||e===void 0||e.dispose(),super.dispose()}},ec=class extends Bo{set orientation(e){this._orientation=e}get orientation(){return this._orientation}get minimumSize(){return this.headerSize+(this.isExpanded()?this._minimumBodySize:0)}get maximumSize(){return this.headerSize+(this.isExpanded()?this._maximumBodySize:0)}get size(){return this._size}get orthogonalSize(){return this._orthogonalSize}set orthogonalSize(e){this._orthogonalSize=e}get minimumBodySize(){return this._minimumBodySize}set minimumBodySize(e){this._minimumBodySize=typeof e=="number"?e:0}get maximumBodySize(){return this._maximumBodySize}set maximumBodySize(e){this._maximumBodySize=typeof e=="number"?e:Number.POSITIVE_INFINITY}get headerVisible(){return this._headerVisible}set headerVisible(e){this._headerVisible=e,this.header.style.display=e?"":"none"}constructor(e){super(e.id,e.component,new Qh(e.id,e.component)),this._onDidChangeExpansionState=new _({replay:!0}),this.onDidChangeExpansionState=this._onDidChangeExpansionState.event,this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this._orthogonalSize=0,this._size=0,this._isExpanded=!1,this.api.pane=this,this.api.initialize(this),this.headerSize=e.headerSize,this.headerComponent=e.headerComponent,this._minimumBodySize=e.minimumBodySize,this._maximumBodySize=e.maximumBodySize,this._isExpanded=e.isExpanded,this._headerVisible=e.isHeaderVisible,this._onDidChangeExpansionState.fire(this.isExpanded()),this._orientation=e.orientation,this.element.classList.add("dv-pane"),this.addDisposables(this.api.onWillVisibilityChange(t=>{let{isVisible:i}=t,{accessor:n}=this._params;n.setVisible(this,i)}),this.api.onDidSizeChange(t=>{this._onDidChange.fire({size:t.size})}),T(this.element,"mouseenter",t=>{this.api._onMouseEnter.fire(t)}),T(this.element,"mouseleave",t=>{this.api._onMouseLeave.fire(t)})),this.addDisposables(this._onDidChangeExpansionState,this.onDidChangeExpansionState(t=>{this.api._onDidExpansionChange.fire({isExpanded:t})}),this.api.onDidFocusChange(t=>{this.header&&(t.isFocused?Le(this.header,"focused"):Re(this.header,"focused"))})),this.renderOnce()}setVisible(e){this.api._onDidVisibilityChange.fire({isVisible:e})}setActive(e){this.api._onDidActiveChange.fire({isActive:e})}isExpanded(){return this._isExpanded}setExpanded(e){var t;this._isExpanded!==e&&(this._isExpanded=e,e?(this.animationTimer&&clearTimeout(this.animationTimer),this.body&&this.element.appendChild(this.body)):(this._expandedSize=this._size,this.animationTimer=setTimeout(()=>{var i;(i=this.body)===null||i===void 0||i.remove()},200)),this._onDidChange.fire(e?{size:(t=this._expandedSize)!==null&&t!==void 0?t:this.width}:{}),this._onDidChangeExpansionState.fire(e))}layout(e,t){this._size=e,this._orthogonalSize=t;let[i,n]=this.orientation==="HORIZONTAL"?[e,t]:[t,e];super.layout(i,n)}init(e){var t,i;super.init(e),typeof e.minimumBodySize=="number"&&(this.minimumBodySize=e.minimumBodySize),typeof e.maximumBodySize=="number"&&(this.maximumBodySize=e.maximumBodySize),this.bodyPart=this.getBodyComponent(),this.headerPart=this.getHeaderComponent(),this.bodyPart.init(I(I({},e),{},{api:this.api})),this.headerPart.init(I(I({},e),{},{api:this.api})),(t=this.body)===null||t===void 0||t.append(this.bodyPart.element),(i=this.header)===null||i===void 0||i.append(this.headerPart.element),typeof e.isExpanded=="boolean"&&this.setExpanded(e.isExpanded)}toJSON(){let e=this._params;return I(I({},super.toJSON()),{},{headerComponent:this.headerComponent,title:e.title})}renderOnce(){this.header=document.createElement("div"),this.header.tabIndex=0,this.header.className="dv-pane-header",this.header.style.height=`${this.headerSize}px`,this.header.style.lineHeight=`${this.headerSize}px`,this.header.style.minHeight=`${this.headerSize}px`,this.header.style.maxHeight=`${this.headerSize}px`,this.element.appendChild(this.header),this.body=document.createElement("div"),this.body.className="dv-pane-body",this.element.appendChild(this.body)}getComponent(){return{update:e=>{var t,i;(t=this.bodyPart)===null||t===void 0||t.update(e),(i=this.headerPart)===null||i===void 0||i.update(e)},dispose:()=>{var e,t;(e=this.bodyPart)===null||e===void 0||e.dispose(),(t=this.headerPart)===null||t===void 0||t.dispose()}}}},tc=class extends ec{constructor(e){super({id:e.id,component:e.component,headerComponent:e.headerComponent,orientation:e.orientation,isExpanded:e.isExpanded,isHeaderVisible:!0,headerSize:e.headerSize,minimumBodySize:e.minimumBodySize,maximumBodySize:e.maximumBodySize}),this._onDidDrop=new _,this.onDidDrop=this._onDidDrop.event,this._onUnhandledDragOver=new _,this.onUnhandledDragOver=this._onUnhandledDragOver.event,this.accessor=e.accessor,this.addDisposables(this._onDidDrop,this._onUnhandledDragOver),e.disableDnd||this.initDragFeatures()}initDragFeatures(){if(!this.header)return;let e=this.id,t=this.accessor.id;this.header.draggable=!0;let i={getData:()=>(et.getInstance().setData([new _i(t,e)],_i.prototype),{dispose:()=>{et.getInstance().clearData(_i.prototype)}})};this.html5DragSource=Ue.createDragSource(this.header,i),this.pointerDragSource=Ie.createDragSource(this.header,i);let o={acceptedTargetZones:["top","bottom"],overlayModel:{activationSize:{type:"percentage",value:50}},canDisplayOverlay:(s,r)=>{let a=mi();if(a&&a.paneId!==this.id&&a.viewId===this.accessor.id)return!0;let l=new qh(s,r,mi,this);return this._onUnhandledDragOver.fire(l),l.isAccepted}};this.target=Ue.createDropTarget(this.element,o),this.pointerTarget=Ie.createDropTarget(this.element,o),this.addDisposables(this._onDidDrop,this.html5DragSource,this.pointerDragSource,this.target,this.pointerTarget,this.target.onDrop(s=>{this.onDrop(s)}),this.pointerTarget.onDrop(s=>{this.onDrop(s)}))}onDrop(e){let t=mi();if(t?.viewId!==this.accessor.id){this._onDidDrop.fire(I(I({},e),{},{panel:this,api:new yi(this.accessor),getData:mi}));return}let i=this._params.containerApi,n=t.paneId,o=i.getPanel(n);if(!o){this._onDidDrop.fire(I(I({},e),{},{panel:this,getData:mi,api:new yi(this.accessor)}));return}let s=i.panels,r=s.indexOf(o),a=i.panels.indexOf(this);(e.position==="left"||e.position==="top")&&r<a&&a--,(e.position==="right"||e.position==="bottom")&&(r>a&&a++,a=Math.min(s.length-1,a)),i.movePanel(r,a)}},ic=0,nc=()=>`dv-tabpanel-${ic++}`,oc=class extends x{get element(){return this._element}get dimensions(){return this._dimensions}constructor(e,t){var i,n,o,s,r,a,l;super(),this.accessor=e,this.group=t,this.disposable=new Q,this._onDidFocus=new _,this.onDidFocus=this._onDidFocus.event,this._onDidBlur=new _,this.onDidBlur=this._onDidBlur.event,this._onDidDimensionsChange=new _,this.onDidDimensionsChange=this._onDidDimensionsChange.event,this._element=document.createElement("div"),this._element.className="dv-content-container",this._element.tabIndex=-1,this._element.id=nc(),this._element.setAttribute("role","tabpanel"),this.addDisposables(this._onDidFocus,this._onDidBlur,this._onDidDimensionsChange);let d=()=>{var c;return(c=t.dropTargetContainer)===null||c===void 0?void 0:c.model},h=(c,u)=>this.group.canDisplayContentOverlay(c,u);this.dropTarget=new Wo(this.element,{getOverlayOutline:()=>{var c;return((c=e.options.theme)===null||c===void 0?void 0:c.dndPanelOverlay)==="group"?this.element.parentElement:null},className:"dv-drop-target-content",acceptedTargetZones:["top","bottom","left","right","center"],canDisplayOverlay:h,getOverrideTarget:d,overlayModel:(i=(n=this.accessor).resolveDropOverlayModel)===null||i===void 0?void 0:i.call(n,"content"),getPositionResolver:()=>{var c;return(c=e.getDropPositionResolver)===null||c===void 0?void 0:c.call(e)}}),this.pointerDropTarget=Ie.createDropTarget(this.element,{acceptedTargetZones:["top","bottom","left","right","center"],canDisplayOverlay:h,getOverlayOutline:()=>{var c;return((c=e.options.theme)===null||c===void 0?void 0:c.dndPanelOverlay)==="group"?this.element.parentElement:null},className:"dv-drop-target-content",getOverrideTarget:d,overlayModel:(o=(s=this.accessor).resolveDropOverlayModel)===null||o===void 0?void 0:o.call(s,"content"),getPositionResolver:()=>{var c;return(c=e.getDropPositionResolver)===null||c===void 0?void 0:c.call(e)}}),this.addDisposables(this.dropTarget,this.pointerDropTarget,(r=(a=(l=this.accessor).onDidOptionsChange)===null||a===void 0?void 0:a.call(l,()=>{var c,u,p;let m=(c=(u=(p=this.accessor).resolveDropOverlayModel)===null||u===void 0?void 0:u.call(p,"content"))!==null&&c!==void 0?c:{};this.dropTarget.setOverlayModel(m),this.pointerDropTarget.setOverlayModel(m)}))!==null&&r!==void 0?r:L.NONE)}show(){this.element.style.display=""}hide(){this.element.style.display="none"}setLabelledBy(e){e?this._element.setAttribute("aria-labelledby",e):this._element.removeAttribute("aria-labelledby")}renderPanel(e,t){var i;let n=((i=t?.asActive)!==null&&i!==void 0?i:!0)||this.group.isPanelActive(e);if(n||this.panel===e){var o;if(((o=this.panel)===null||o===void 0?void 0:o.view.content.element.parentElement)===this._element){var s,r;this.panel.view.content.element.remove(),(s=(r=this.panel.view.content).onHide)===null||s===void 0||s.call(r)}this.panel=e}let a;switch(e.api.renderer){case"onlyWhenVisible":if(this.group.renderContainer.detatch(e),n){var l,d;this._element.appendChild(e.view.content.element),(l=(d=e.view.content).onShow)===null||l===void 0||l.call(d)}a=this._element;break;case"always":e.view.content.element.parentElement===this._element&&e.view.content.element.remove(),a=this.group.renderContainer.attach({panel:e,referenceContainer:this});break;default:throw new Error(`dockview: invalid renderer type '${e.api.renderer}'`)}if(n){let h=oa(a);this.focusTracker=h;let c=new x;c.addDisposables(h,h.onDidFocus(()=>this._onDidFocus.fire()),h.onDidBlur(()=>this._onDidBlur.fire())),this.disposable.value=c}}openPanel(e){this.panel!==e&&this.renderPanel(e)}layout(e,t){var i;((i=this._dimensions)===null||i===void 0?void 0:i.width)===e&&this._dimensions.height===t||(this._dimensions={width:e,height:t},this._onDidDimensionsChange.fire(this._dimensions))}closePanel(){if(this.panel&&this.panel.api.renderer==="onlyWhenVisible"){var e,t;this.panel.view.content.element.remove(),(e=(t=this.panel.view.content).onHide)===null||e===void 0||e.call(t)}this.panel=void 0}dispose(){this.disposable.dispose(),super.dispose()}refreshFocusState(){var e;!((e=this.focusTracker)===null||e===void 0)&&e.refreshState&&this.focusTracker.refreshState()}},_n=e=>{let t=document.createElementNS("http://www.w3.org/2000/svg","svg");t.setAttributeNS(null,"height",e.height),t.setAttributeNS(null,"width",e.width),t.setAttributeNS(null,"viewBox",e.viewbox),t.setAttributeNS(null,"aria-hidden","false"),t.setAttributeNS(null,"focusable","false"),t.classList.add("dv-svg");let i=document.createElementNS("http://www.w3.org/2000/svg","path");return i.setAttributeNS(null,"d",e.path),t.appendChild(i),t},sc=()=>_n({width:"11",height:"11",viewbox:"0 0 28 28",path:"M2.1 27.3L0 25.2L11.55 13.65L0 2.1L2.1 0L13.65 11.55L25.2 0L27.3 2.1L15.75 13.65L27.3 25.2L25.2 27.3L13.65 15.75L2.1 27.3Z"}),Ea=()=>_n({width:"11",height:"11",viewbox:"0 0 24 24",path:"M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H6c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"}),rc=()=>_n({width:"11",height:"11",viewbox:"0 0 24 15",path:"M12 14.15L0 2.15L2.15 0L12 9.9L21.85 0.0499992L24 2.2L12 14.15Z"}),Ta=()=>_n({width:"11",height:"11",viewbox:"0 0 15 25",path:"M2.15 24.1L0 21.95L9.9 12.05L0 2.15L2.15 0L14.2 12.05L2.15 24.1Z"}),ac=500,lc=8,Uo=class extends x{constructor(e,t){super(),this.element=e,this.options=t,this._startX=0,this._startY=0,this.addDisposables(T(this.element,"pointerdown",i=>{this._onPointerDown(i)}))}_onPointerDown(e){var t,i,n,o,s;if((!((t=this.options.touchOnly)!==null&&t!==void 0)||t)&&e.pointerType!=="touch"&&e.pointerType!=="pen")return;this._cancelPending(),this._pointerId=e.pointerId,this._startX=e.clientX,this._startY=e.clientY;let r=(i=this.options.delay)!==null&&i!==void 0?i:ac,a=(n=this.options.tolerance)!==null&&n!==void 0?n:lc,l=(o=(s=this.element.ownerDocument)===null||s===void 0?void 0:s.defaultView)!==null&&o!==void 0?o:globalThis.window;this._timer=setTimeout(()=>{this._timer=void 0,this._cancelPending(),this._installContextMenuGuard(l),this._installClickGuard(l),this.options.onLongPress(e)},r),this._moveListener=T(l,"pointermove",d=>{if(d.pointerId!==this._pointerId)return;let h=d.clientX-this._startX,c=d.clientY-this._startY;Math.hypot(h,c)>a&&this._cancelPending()}),this._upListener=T(l,"pointerup",d=>{d.pointerId===this._pointerId&&this._cancelPending()}),this._cancelListener=T(l,"pointercancel",d=>{d.pointerId===this._pointerId&&this._cancelPending()})}_installContextMenuGuard(e){let t,i=setTimeout(()=>t?.dispose(),500);t=T(e,"contextmenu",n=>{n.preventDefault(),clearTimeout(i),t?.dispose()},{capture:!0})}_installClickGuard(e){let t,i=setTimeout(()=>t?.dispose(),500);t=T(e,"click",n=>{Co(n,[this.element])&&(n.preventDefault(),n.stopPropagation()),clearTimeout(i),t?.dispose()},{capture:!0})}_cancelPending(){var e,t,i;this._timer!==void 0&&(clearTimeout(this._timer),this._timer=void 0),this._pointerId=void 0,(e=this._moveListener)===null||e===void 0||e.dispose(),(t=this._upListener)===null||t===void 0||t.dispose(),(i=this._cancelListener)===null||i===void 0||i.dispose(),this._moveListener=void 0,this._upListener=void 0,this._cancelListener=void 0}dispose(){this._cancelPending(),super.dispose()}};function Te(e){if(e.disableDnd)return{html5:!1,pointer:!1,pointerHandlesMouse:!1};switch(e.dndStrategy){case"pointer":return{html5:!1,pointer:!0,pointerHandlesMouse:!0};case"html5":return{html5:!0,pointer:!1,pointerHandlesMouse:!1};default:return dc()?{html5:!1,pointer:!0,pointerHandlesMouse:!0}:{html5:!0,pointer:!0,pointerHandlesMouse:!1}}}function dc(){if(globalThis.window===void 0||!globalThis.matchMedia)return!1;let e=globalThis.matchMedia("(pointer: coarse)").matches,t=globalThis.matchMedia("(pointer: fine)").matches;return e&&!t}var hc=0,cc=()=>`dv-tab-${hc++}`,uc=class extends x{get element(){return this._element}constructor(e,t,i){var n,o,s,r,a,l,d,h;super(),this.panel=e,this.accessor=t,this.group=i,this.content=void 0,this.panelTransfer=et.getInstance(),this._direction="horizontal",this._pinIndicator=void 0,this._onPointDown=new _,this.onPointerDown=this._onPointDown.event,this._onTabClick=new _,this.onTabClick=this._onTabClick.event,this._onDropped=new _,this.onDrop=this._onDropped.event,this._onDragStart=new _,this.onDragStart=this._onDragStart.event,this._onDragEnd=new _,this.onDragEnd=this._onDragEnd.event;let c=Te(this.accessor.options);this._element=document.createElement("div"),this._element.className="dv-tab",this._element.tabIndex=-1,this._element.draggable=c.html5,this._element.id=cc(),this._element.setAttribute("role","tab"),this._element.setAttribute("aria-selected","false"),this._element.setAttribute("aria-label",(n=this.panel.title)!==null&&n!==void 0?n:this.panel.id),this._element.dataset.tabPanelId=this.panel.id;let u=(o=this.group)===null||o===void 0||(o=o.model)===null||o===void 0?void 0:o.contentContainerId;u&&this._element.setAttribute("aria-controls",u),G(this.element,"dv-inactive-tab",!0),this._updatePinnedClasses();let p=(f,v)=>{if(this.group.locked)return!1;let g=X();if(this.accessor.id===g?.viewId){var w;return!(((w=this.accessor.options.theme)===null||w===void 0?void 0:w.tabAnimation)==="smooth"||g.tabGroupId&&g.groupId===this.group.id&&this.group.model.getTabGroupForPanel(this.panel.id))}return this.group.model.canDisplayOverlay(f,v,"tab")};this.dropTarget=Ue.createDropTarget(this._element,{acceptedTargetZones:["left","right"],overlayModel:this._buildOverlayModel(),canDisplayOverlay:p,getOverrideTarget:()=>{var f;return(f=i.model.dropTargetContainer)===null||f===void 0?void 0:f.model}}),this.pointerDropTarget=Ie.createDropTarget(this._element,{acceptedTargetZones:["left","right"],overlayModel:this._buildOverlayModel(),canDisplayOverlay:p,getOverrideTarget:()=>{var f;return(f=i.model.dropTargetContainer)===null||f===void 0?void 0:f.model}});let m={getData:()=>(this.panelTransfer.setData([new Ee(this.accessor.id,this.group.id,this.panel.id)],Ee.prototype),{dispose:()=>{this.panelTransfer.clearData(Ee.prototype)}}),createGhost:()=>({element:this._buildGhostElement(),offsetX:30,offsetY:-10}),onDragStart:f=>{var v;this._onDragStart.fire(f),!f.defaultPrevented&&!(f instanceof PointerEvent)&&((v=this.accessor.options.theme)===null||v===void 0?void 0:v.tabAnimation)==="smooth"&&requestAnimationFrame(()=>{G(this.element,"dv-tab--dragging",!0)})},onDragEnd:f=>{this._onDragEnd.fire(f)}};this.html5DragSource=Ue.createDragSource(this._element,I(I({},m),{},{disabled:!c.html5})),this.pointerDragSource=Ie.createDragSource(this._element,I(I({},m),{},{disabled:!c.pointer,touchOnly:!c.pointerHandlesMouse,isCancelled:()=>!Te(this.accessor.options).pointer})),this.onWillShowOverlay=Ge.any(this.dropTarget.onWillShowOverlay,this.pointerDropTarget.onWillShowOverlay),this.addDisposables(this._onPointDown,this._onTabClick,this._onDropped,this._onDragStart,this._onDragEnd,this.accessor.onDidOptionsChange(()=>{let f=this._buildOverlayModel();this.dropTarget.setOverlayModel(f),this.pointerDropTarget.setOverlayModel(f),this._updatePinnedClasses()}),(s=(r=this.panel.api)===null||r===void 0||(a=r.onDidChangePinned)===null||a===void 0?void 0:a.call(r,()=>{this._updatePinnedClasses()}))!==null&&s!==void 0?s:{dispose:()=>{}},(l=(d=this.panel.api)===null||d===void 0||(h=d.onDidTitleChange)===null||h===void 0?void 0:h.call(d,f=>{var v;this._element.setAttribute("aria-label",(v=f.title)!==null&&v!==void 0?v:this.panel.id)}))!==null&&l!==void 0?l:{dispose:()=>{}},T(this._element,"dragend",()=>{G(this.element,"dv-tab--dragging",!1)}),this.html5DragSource,T(this._element,"pointerdown",f=>{this._onPointDown.fire(f)}),T(this._element,"click",f=>{this._onTabClick.fire(f)}),T(this._element,"contextmenu",f=>{var v;(v=this.accessor.contextMenuService)===null||v===void 0||v.show(this.panel,this.group,f)}),new Uo(this._element,{onLongPress:f=>{var v;this.pointerDragSource.cancelPending(),(v=this.accessor.contextMenuService)===null||v===void 0||v.show(this.panel,this.group,f)}}),this.dropTarget.onDrop(f=>{this._onDropped.fire(f)}),this.pointerDropTarget.onDrop(f=>{this._onDropped.fire(f)}),this.dropTarget,this.pointerDropTarget,this.pointerDragSource)}_updatePinnedClasses(){var e,t,i,n;let o=(e=(t=this.panel.api)===null||t===void 0?void 0:t.isPinned)!==null&&e!==void 0?e:!1,s=o&&((i=this.accessor.options.pinnedTabs)===null||i===void 0?void 0:i.compact)===!0;G(this.element,"dv-tab--pinned",o),G(this.element,"dv-tab--pinned-compact",s);let r=o&&!(!((n=this.panel.api)===null||n===void 0)&&n.tabComponent);if(r&&!this._pinIndicator){let a=document.createElement("div");a.className="dv-tab-pin",a.appendChild(Ea()),this._element.insertBefore(a,this._element.firstChild),this._pinIndicator=a}else!r&&this._pinIndicator&&(this._pinIndicator.remove(),this._pinIndicator=void 0)}setActive(e){G(this.element,"dv-active-tab",e),G(this.element,"dv-inactive-tab",!e),this._element.setAttribute("aria-selected",e?"true":"false"),this._element.tabIndex=e?0:-1}setContent(e){this.content&&this.content.element.remove(),this.content=e,this._element.appendChild(this.content.element)}_buildOverlayModel(){var e,t,i;let n=(e=(t=this.accessor).resolveDropOverlayModel)===null||e===void 0?void 0:e.call(t,"tab",this.group);if(n)return n;let o=((i=this.accessor.options.theme)===null||i===void 0?void 0:i.dndTabIndicator)==="line"?Number.POSITIVE_INFINITY:0;return{activationSize:{value:50,type:"percentage"},smallWidthBoundary:o,smallHeightBoundary:o}}setDirection(e){this._direction=e;let t=e==="vertical"?["top","bottom"]:["left","right"];this.dropTarget.setTargetZones(t),this.pointerDropTarget.setTargetZones(t)}updateDragAndDropState(){let e=Te(this.accessor.options);this._element.draggable=e.html5,this.html5DragSource.setDisabled(!e.html5),this.pointerDragSource.setDisabled(!e.pointer),this.pointerDragSource.setTouchOnly(!e.pointerHandlesMouse)}_buildGhostElement(){let e=getComputedStyle(this.element),t=this.element.cloneNode(!0),i=this._direction==="vertical",n=new Set(["writing-mode","inline-size","block-size","min-inline-size","min-block-size","max-inline-size","max-block-size","margin-inline","margin-inline-start","margin-inline-end","margin-block","margin-block-start","margin-block-end","padding-inline","padding-inline-start","padding-inline-end","padding-block","padding-block-start","padding-block-end"]);return Array.from(e).forEach(o=>{i&&n.has(o)||t.style.setProperty(o,e.getPropertyValue(o),e.getPropertyPriority(o))}),i&&(t.style.setProperty("writing-mode","horizontal-tb"),t.style.setProperty("width",e.height),t.style.setProperty("height",e.width)),t.style.position="absolute",t.classList.add("dv-tab-ghost-drag"),t}},Di=class{get kind(){return this.options.kind}get nativeEvent(){return this.event.nativeEvent}get position(){return this.event.position}get edge(){return this.event.edge}get edgeGroup(){return this.event.edgeGroup}get defaultPrevented(){return this.event.defaultPrevented}get panel(){return this.options.panel}get api(){return this.options.api}get group(){return this.options.group}preventDefault(){this.event.preventDefault()}getData(){return this.options.getData()}constructor(e,t){this.event=e,this.options=t}};var Ia=class extends x{get group(){return this.groupAccessor()}constructor(e){var t,i;super(),this.panelTransfer=et.getInstance(),this._onDragStart=new _,this.onDragStart=this._onDragStart.event,this._element=e.element,this.accessor=e.accessor;let n=e.group;this.groupAccessor=typeof n=="function"?n:()=>n,this.isFloatingMoveHandle=(t=e.isFloatingMoveHandle)!==null&&t!==void 0?t:(()=>!0);let o=Te(this.accessor.options);this._element.draggable=o.html5,G(this._element,"dv-draggable",o.html5||o.pointer),this.addDisposables(this._onDragStart);let s=()=>{let u=document.createElement("div"),p=globalThis.getComputedStyle(this._element),m=p.getPropertyValue("--dv-activegroup-visiblepanel-tab-background-color"),f=p.getPropertyValue("--dv-activegroup-visiblepanel-tab-color");return u.style.backgroundColor=m,u.style.color=f,u.style.padding="2px 8px",u.style.height="24px",u.style.fontSize="11px",u.style.lineHeight="20px",u.style.borderRadius="12px",u.style.whiteSpace="nowrap",u.style.boxSizing="border-box",u.style.display="inline-block",u.textContent=`Multiple Panels (${this.group.size})`,u},a={getData:()=>(this.panelTransfer.setData([new Ee(this.accessor.id,this.group.id,null)],Ee.prototype),{dispose:()=>{this.panelTransfer.clearData(Ee.prototype)}}),createGhost:()=>{var u,p;let m=(u=(p=this.accessor).buildGroupDragGhost)===null||u===void 0?void 0:u.call(p,this.group);return m||{element:s(),offsetX:30,offsetY:-10}},onDragStart:u=>{this._onDragStart.fire(u)}};this.html5DragSource=Ue.createDragSource(this._element,I(I({},a),{},{disabled:!o.html5,isCancelled:u=>!!(this.group.api.location.type==="floating"&&this.isFloatingMoveHandle()&&!u.shiftKey||this.group.api.location.type==="edge"&&this.group.size===0)}));let l=()=>{var u;return((u=this.group)===null||u===void 0||(u=u.api)===null||u===void 0||(u=u.location)===null||u===void 0?void 0:u.type)==="floating"&&this.isFloatingMoveHandle()};this.pointerDragSource=Ie.createDragSource(this._element,I(I({},a),{},{disabled:!o.pointer,touchOnly:!o.pointerHandlesMouse,touchInitiationDelay:()=>l()?500:250,pressTolerance:()=>l()?1/0:8,isCancelled:()=>!Te(this.accessor.options).pointer||this.group.api.location.type==="edge"&&this.group.size===0,onDragStart:u=>{var p;let m=u.defaultPrevented;this._onDragStart.fire(u),!(u.defaultPrevented&&!m)&&((p=this.getFloatingOverlay())===null||p===void 0||p.cancelPendingDrag())}}));let d=new Q,h=()=>{let u=this.getFloatingOverlay();d.value=u?u.onDidStartMoving(()=>{this.pointerDragSource.cancelPending()}):L.NONE};h(),this.addDisposables(d);let c=(i=this.group)===null||i===void 0||(i=i.api)===null||i===void 0?void 0:i.onDidLocationChange;c&&this.addDisposables(c(h)),this.addDisposables(this.html5DragSource,this.pointerDragSource)}updateDragAndDropState(){let e=Te(this.accessor.options);this._element.draggable=e.html5,G(this._element,"dv-draggable",e.html5||e.pointer),this.html5DragSource.setDisabled(!e.html5),this.pointerDragSource.setDisabled(!e.pointer),this.pointerDragSource.setTouchOnly(!e.pointerHandlesMouse)}getFloatingOverlay(){var e;if(this.group)return(e=this.accessor.floatingGroups)===null||e===void 0||(e=e.find(t=>t.group===this.group))===null||e===void 0?void 0:e.overlay}},pc=class extends x{get element(){return this._element}constructor(e,t){var i,n,o,s,r,a,l;super(),this.accessor=e,this.group=t,this._onDrop=new _,this.onDrop=this._onDrop.event,this._onDragStart=new _,this.onDragStart=this._onDragStart.event,this._element=document.createElement("div"),this._element.className="dv-void-container",this.addDisposables(this._onDrop,this._onDragStart,T(this._element,"pointerdown",()=>{this.accessor.doSetGroupActive(this.group)}),T(this._element,"pointerdown",h=>{h.shiftKey&&ra(h)},!0)),this.dragSource=new Ia({element:this._element,accessor:this.accessor,group:this.group,isFloatingMoveHandle:()=>!this._element.closest(".dv-resize-container-with-titlebar")});let d=(h,c)=>{if(this.group.api.locked)return!1;let u=X();return this.accessor.id===u?.viewId?!0:t.model.canDisplayOverlay(h,c,"header_space")};this.dropTarget=Ue.createDropTarget(this._element,{acceptedTargetZones:["center"],canDisplayOverlay:d,getOverrideTarget:()=>{var h;return(h=t.model.dropTargetContainer)===null||h===void 0?void 0:h.model},overlayModel:(i=(n=this.accessor).resolveDropOverlayModel)===null||i===void 0?void 0:i.call(n,"header_space",this.group)}),this.pointerDropTarget=Ie.createDropTarget(this._element,{acceptedTargetZones:["center"],canDisplayOverlay:d,getOverrideTarget:()=>{var h;return(h=t.model.dropTargetContainer)===null||h===void 0?void 0:h.model},overlayModel:(o=(s=this.accessor).resolveDropOverlayModel)===null||o===void 0?void 0:o.call(s,"header_space",this.group)}),this.onWillShowOverlay=Ge.any(this.dropTarget.onWillShowOverlay,this.pointerDropTarget.onWillShowOverlay),this.addDisposables(this.dragSource,this.dragSource.onDragStart(h=>{this._onDragStart.fire(h)}),this.dropTarget.onDrop(h=>{this._onDrop.fire(h)}),this.pointerDropTarget.onDrop(h=>{this._onDrop.fire(h)}),this.dropTarget,this.pointerDropTarget,(r=(a=(l=this.accessor).onDidOptionsChange)===null||a===void 0?void 0:a.call(l,()=>{var h,c,u;let p=(h=(c=(u=this.accessor).resolveDropOverlayModel)===null||c===void 0?void 0:c.call(u,"header_space",this.group))!==null&&h!==void 0?h:{};this.dropTarget.setOverlayModel(p),this.pointerDropTarget.setOverlayModel(p)}))!==null&&r!==void 0?r:L.NONE)}updateDragAndDropState(){this.dragSource.updateDragAndDropState()}},Aa=class Oa extends x{get element(){return this._element}get orientation(){return this._orientation}set orientation(t){this._orientation!==t&&(this._scrollOffset=0,this._orientation=t,Re(this._scrollbar,"dv-scrollbar-vertical","dv-scrollbar-horizontal"),t==="vertical"?Le(this._scrollbar,"dv-scrollbar-vertical"):Le(this._scrollbar,"dv-scrollbar-horizontal"))}constructor(t){super(),this.scrollableElement=t,this._scrollOffset=0,this._orientation="horizontal",this._element=document.createElement("div"),this._element.className="dv-scrollable",this._scrollbar=document.createElement("div"),this._scrollbar.className="dv-scrollbar dv-scrollbar-horizontal",this.element.appendChild(t),this.element.appendChild(this._scrollbar),this.addDisposables(T(this.element,"wheel",i=>{this._scrollOffset+=i.deltaY*Oa.MouseWheelSpeed,this.scheduleStyleUpdate()}),T(this._scrollbar,"pointerdown",i=>{var n;i.preventDefault();let o=(n=this._scrollbar.ownerDocument)!==null&&n!==void 0?n:document;G(this.element,"dv-scrollable-scrolling",!0);let s=this._orientation==="horizontal"?i.clientX:i.clientY,r=this._scrollOffset,a=d=>{let h=this._orientation==="horizontal"?d.clientX-s:d.clientY-s,c=(this._orientation==="horizontal"?this.element.clientWidth:this.element.clientHeight)/(this._orientation==="horizontal"?this.scrollableElement.scrollWidth:this.scrollableElement.scrollHeight);this._scrollOffset=r+h/c,this.scheduleStyleUpdate()},l=()=>{G(this.element,"dv-scrollable-scrolling",!1),o.removeEventListener("pointermove",a),o.removeEventListener("pointerup",l),o.removeEventListener("pointercancel",l)};o.addEventListener("pointermove",a),o.addEventListener("pointerup",l),o.addEventListener("pointercancel",l)}),T(this.element,"scroll",()=>{this.scheduleStyleUpdate()}),T(this.scrollableElement,"scroll",()=>{this._scrollOffset=this._orientation==="horizontal"?this.scrollableElement.scrollLeft:this.scrollableElement.scrollTop,this.scheduleStyleUpdate()}),kt(this.element,()=>{G(this.element,"dv-scrollable-resizing",!0),this._animationTimer&&clearTimeout(this._animationTimer),this._animationTimer=setTimeout(()=>{clearTimeout(this._animationTimer),G(this.element,"dv-scrollable-resizing",!1)},500),this.scheduleStyleUpdate()}),L.from(()=>{this._pendingStyleFrame!==void 0&&(cancelAnimationFrame(this._pendingStyleFrame),this._pendingStyleFrame=void 0),this._animationTimer!==void 0&&(clearTimeout(this._animationTimer),this._animationTimer=void 0)}))}scheduleStyleUpdate(){this._pendingStyleFrame===void 0&&(this._pendingStyleFrame=requestAnimationFrame(()=>{this._pendingStyleFrame=void 0,this.calculateScrollbarStyles()}))}calculateScrollbarStyles(){let t=this._orientation==="horizontal"?this.element.clientWidth:this.element.clientHeight,i=this._orientation==="horizontal"?this.scrollableElement.scrollWidth:this.scrollableElement.scrollHeight;if(i>t){let n=t*(t/i);this._orientation==="horizontal"?(this._scrollbar.style.width=`${n}px`,this._scrollbar.style.height=""):(this._scrollbar.style.height=`${n}px`,this._scrollbar.style.width=""),this._scrollOffset=Z(this._scrollOffset,0,i-t),this._orientation==="horizontal"?this.scrollableElement.scrollLeft=this._scrollOffset:this.scrollableElement.scrollTop=this._scrollOffset;let o=this._scrollOffset/(i-t);this._orientation==="horizontal"?(this._scrollbar.style.left=`${(t-n)*o}px`,this._scrollbar.style.top=""):(this._scrollbar.style.top=`${(t-n)*o}px`,this._scrollbar.style.left="")}else this._orientation==="horizontal"?(this._scrollbar.style.width="0px",this._scrollbar.style.left="0px"):(this._scrollbar.style.height="0px",this._scrollbar.style.top="0px"),this._scrollOffset=0}};Aa.MouseWheelSpeed=1;var za="dv-tabs-container--wrap";function Ma(e,t){return typeof e=="boolean"?e:!!e?.[t]}function Oo(e){return typeof e=="boolean"?e:e?Object.values(e).some(Boolean):!1}var Ra=class extends ia{constructor(e,t,i,n,o){super(),this.nativeEvent=e,this.target=t,this.position=i,this.getData=n,this.group=o}},bn=Object.keys({disableAutoResizing:void 0,proportionalLayout:void 0,hideBorders:void 0,singleTabMode:void 0,disableFloatingGroups:void 0,floatingGroupBounds:void 0,transformFloatingGroupDrag:void 0,smartGuides:void 0,floatingGroupDragHandle:void 0,popoutUrl:void 0,nonce:void 0,defaultRenderer:void 0,defaultHeaderPosition:void 0,debug:void 0,locked:void 0,disableDnd:void 0,dndStrategy:void 0,className:void 0,noPanelsOverlay:void 0,closeEmptyGroups:void 0,groupIdGenerator:void 0,dndEdges:void 0,dropPositionResolver:void 0,dndCompass:void 0,dropSizing:void 0,theme:void 0,disableTabsOverflowList:void 0,overflow:void 0,scrollbars:void 0,getTabContextMenuItems:void 0,getTabGroupChipContextMenuItems:void 0,createTabGroupChipComponent:void 0,createGroupDragGhostComponent:void 0,dropOverlayModel:void 0,announcements:void 0,getAnnouncement:void 0,announcer:void 0,messages:void 0,keyboardNavigation:void 0,layoutHistory:void 0,autoHideEdgeGroups:void 0,dockToEdgeGroups:void 0,edgeGroupPeek:void 0,tabGroupColors:void 0,tabGroupAccent:void 0,pinnedTabs:void 0});function mc(e){return!!e.referencePanel}function fc(e){return!!e.referenceGroup}function vo(e){return!!e.referencePanel}function go(e){return!!e.referenceGroup}var Jo=[{id:"grey",value:"var(--dv-tab-group-color-grey)",label:"Grey"},{id:"blue",value:"var(--dv-tab-group-color-blue)",label:"Blue"},{id:"red",value:"var(--dv-tab-group-color-red)",label:"Red"},{id:"yellow",value:"var(--dv-tab-group-color-yellow)",label:"Yellow"},{id:"green",value:"var(--dv-tab-group-color-green)",label:"Green"},{id:"pink",value:"var(--dv-tab-group-color-pink)",label:"Pink"},{id:"purple",value:"var(--dv-tab-group-color-purple)",label:"Purple"},{id:"cyan",value:"var(--dv-tab-group-color-cyan)",label:"Cyan"},{id:"orange",value:"var(--dv-tab-group-color-orange)",label:"Orange"}],La=class{constructor(e,t=!0){this._entries=e.slice(),this._byId=new Map(e.map(i=>[i.id,i])),this._enabled=t}get enabled(){return this._enabled}set enabled(e){this._enabled=e}setEntries(e){this._entries=e.slice(),this._byId=new Map(e.map(t=>[t.id,t]))}entries(){return this._entries}has(e){return this._byId.has(e)}get(e){return this._byId.get(e)}defaultId(){var e;return(e=this._entries[0])===null||e===void 0?void 0:e.id}resolveValue(e){if(!this._enabled||!e)return;let t=this._byId.get(e);return t?t.value:e}},_o;function Na(){var e;return(e=_o)!==null&&e!==void 0||(_o=new La(Jo,!0)),_o}function jo(e,t,i){let n=(i??Na()).resolveValue(t);n===void 0?e.style.removeProperty("--dv-tab-group-color"):e.style.setProperty("--dv-tab-group-color",n)}function Yo(e,t){return(t??Na()).resolveValue(e)}var zr=class extends x{get element(){return this._element}constructor(e){super(),this._palette=e,this._onClick=new _,this.onClick=this._onClick.event,this._onContextMenu=new _,this.onContextMenu=this._onContextMenu.event,this._element=document.createElement("div"),this._element.className="dv-tab-group-chip",this._element.tabIndex=0,this._label=document.createElement("span"),this._label.className="dv-tab-group-chip-label",this._element.appendChild(this._label),this.addDisposables(this._onClick,this._onContextMenu,new Uo(this._element,{onLongPress:t=>{this._onContextMenu.fire(t)}}),T(this._element,"click",t=>{this._onClick.fire(t)}),T(this._element,"contextmenu",t=>{this._onContextMenu.fire(t)}))}init(e){this._tabGroup=e.tabGroup,this.updateColor(e.tabGroup.color),this.updateLabel(e.tabGroup.label),this.updateCollapsed(e.tabGroup.collapsed),this.addDisposables(e.tabGroup.onDidChange(()=>{this._tabGroup&&(this.updateColor(this._tabGroup.color),this.updateLabel(this._tabGroup.label))}),e.tabGroup.onDidCollapseChange(t=>{this.updateCollapsed(t)}),this._onClick.event(()=>{var t;(t=this._tabGroup)===null||t===void 0||t.toggle()}))}update(e){this._tabGroup=e.tabGroup,this.updateColor(e.tabGroup.color),this.updateLabel(e.tabGroup.label),this.updateCollapsed(e.tabGroup.collapsed)}updateColor(e){var t;jo(this._element,e,this._palette),G(this._element,"dv-tab-group-chip--accent-off",((t=this._palette)===null||t===void 0?void 0:t.enabled)===!1)}updateLabel(e){this._label.textContent=e,G(this._label,"dv-tab-group-chip-label--empty",!e)}updateCollapsed(e){G(this._element,"dv-tab-group-chip--collapsed",e)}},vc="dv-tab-group-chip-continuation",Mr=8,$a=class{get underlines(){return this._underlines}constructor(e){this._ctx=e,this._underlines=new Map,this._continuationMarkers=new Map,this._rafId=null}positionUnderlines(){requestAnimationFrame(()=>{this._positionUnderlinesSync()})}trackUnderlines(){this._rafId!==null&&cancelAnimationFrame(this._rafId);let e=performance.now(),t=250,i=()=>{this._positionUnderlinesSync(),performance.now()-e<t?this._rafId=requestAnimationFrame(i):this._rafId=null};this._rafId=requestAnimationFrame(i)}syncUnderlineElements(e){for(let t of e)if(!this._underlines.has(t)){let i=document.createElement("div");i.className="dv-tab-group-underline",this._ctx.tabsList.appendChild(i),this._underlines.set(t,i)}for(let[t,i]of this._underlines)e.has(t)||(i.remove(),this._underlines.delete(t),this._clearContinuationMarkers(t))}getUnderline(e){return this._underlines.get(e)}dispose(){this._rafId!==null&&(cancelAnimationFrame(this._rafId),this._rafId=null);for(let[,e]of this._underlines)e.remove();this._underlines.clear(),this._clearContinuationMarkers()}_syncContinuationMarkers(e,t){let i=this._continuationMarkers.get(e);for(i||(i=[],this._continuationMarkers.set(e,i));i.length<t;){let n=document.createElement("div");n.className=vc,this._ctx.tabsList.appendChild(n),i.push(n)}for(;i.length>t;){let n=i.pop();n?.remove()}return i}_clearContinuationMarkers(e){if(e===void 0){for(let[,i]of this._continuationMarkers)for(let n of i)n.remove();this._continuationMarkers.clear();return}let t=this._continuationMarkers.get(e);if(t){for(let i of t)i.remove();this._continuationMarkers.delete(e)}}_positionUnderlinesSync(){let e=this._ctx.tabsList.getBoundingClientRect(),t=this._ctx.getTabGroups(),i=this._ctx.getDirection()==="vertical",n=this._ctx.tabsList.classList.contains(za);n||this._clearContinuationMarkers();let o=i?e.width:e.height,s=this._ctx.getActivePanelId(),r=this._ctx.getTabMap();for(let a of t){let l=this._underlines.get(a.id);if(!l)continue;let d=a.panelIds;if(d.length===0){l.style.display="none";continue}if(l.style.display="",n){this._positionWrappedUnderline(l,a,e,r,i);continue}let h=this._ctx.getChipElement(a.id),c;if(h){let g=h.getBoundingClientRect(),w=getComputedStyle(h),b=i?Number.parseFloat(w.marginTop)||0:Number.parseFloat(w.marginLeft)||0;c=i?g.top-e.top-b:g.left-e.left-b}else{let g=d[0],w=r.get(g);if(w){let b=w.value.element.getBoundingClientRect();c=i?b.top-e.top:b.left-e.left}else c=0}let u=d[d.length-1],p=r.get(u);if(!p){i?(l.style.top=`${c}px`,l.style.height="0px",l.style.left="",l.style.width=""):(l.style.left=`${c}px`,l.style.width="0px",l.style.top="",l.style.height="");continue}let m=p.value.element.getBoundingClientRect(),f=i?m.bottom-e.top:m.right-e.left,v=f-c;if((a.collapsed||a.panelIds.some(g=>{let w=r.get(g);return w?.value.element.classList.contains("dv-tab--group-expanding")}))&&h){let g=h.getBoundingClientRect(),w=i?g.top+g.height/2-e.top:g.left+g.width/2-e.left,b=0,C=0;for(let M of a.panelIds){let D=r.get(M);if(!D)continue;let y=D.value.element;i?(b+=y.getBoundingClientRect().height,C+=y.scrollHeight):(b+=y.getBoundingClientRect().width,C+=y.scrollWidth)}let P=C>0?Math.min(1,b/C):0;c=w+(c-w)*P,f=w+(f-w)*P,v=Math.max(0,f-c)}i?(l.style.top=`${c}px`,l.style.height=`${Math.max(0,v)}px`,l.style.left="",l.style.width="",l.style.bottom=""):(l.style.left=`${c}px`,l.style.width=`${Math.max(0,v)}px`,l.style.top="",l.style.height="",l.style.bottom=""),this.applyShape(l,a,c,v,o,s,e,i)}}_positionWrappedUnderline(e,t,i,n,o){let r=Yo(t.color,this._ctx.getColorPalette());if(r===void 0){e.style.display="none",this._clearContinuationMarkers(t.id);return}let{runs:a,firstRun:l}=this._computeWrappedRuns(t,i,n,o);if(a.length===0){e.style.display="none",this._clearContinuationMarkers(t.id);return}this._positionContinuationMarkers(t.id,a,l,r,o);let d=Math.min(...a.map(b=>b.left)),h=Math.max(...a.map(b=>b.right)),c=Math.min(...a.map(b=>b.top)),u=Math.max(...a.map(b=>b.bottom)),p=o?Math.max(0,h-d):i.width,m=o?i.height:Math.max(0,u-c);e.style.left=o?`${d}px`:"0px",e.style.top=o?"0px":`${c}px`,e.style.bottom="auto",e.style.width=`${p}px`,e.style.height=`${m}px`,e.style.backgroundColor="";let{svg:f,path:v}=this.ensureSvgPath(e);f.setAttribute("width",String(p)),f.setAttribute("height",String(m)),v.setAttribute("stroke",r),v.setAttribute("stroke-width",String(2));let g=this._ctx.getHeaderPosition(),w=o?g==="right":g==="bottom";v.setAttribute("d",this._wrappedPathData(a,o,w,d,c,2))}_computeWrappedRuns(e,t,i,n){let o=[],s;for(let a of e.panelIds){var r;let l=i.get(a);if(!l)continue;let d=l.value.element.getBoundingClientRect();if(d.width===0&&d.height===0)continue;let h=d.top-t.top,c=d.bottom-t.top,u=d.left-t.left,p=d.right-t.left,m=n?u:h,f=o.find(v=>Math.abs((n?v.left:v.top)-m)<=2);f?(f.top=Math.min(f.top,h),f.bottom=Math.max(f.bottom,c),f.left=Math.min(f.left,u),f.right=Math.max(f.right,p)):(f={top:h,bottom:c,left:u,right:p},o.push(f)),(r=s)!==null&&r!==void 0||(s=f)}return{runs:o,firstRun:s}}_wrappedPathData(e,t,i,n,o,s){let r="";for(let a of e)if(t){let l=i?a.right-n-s/2:a.left-n+s/2;r+=`M ${l},${a.top} L ${l},${a.bottom} `}else{let l=i?a.top-o+s/2:a.bottom-o-s/2;r+=`M ${a.left},${l} L ${a.right},${l} `}return r.trim()}_positionContinuationMarkers(e,t,i,n,o){let s=t.filter(a=>a!==i),r=this._syncContinuationMarkers(e,s.length);s.forEach((a,l)=>{let d=r[l];if(d.style.backgroundColor=n,o){let h=(a.left+a.right)/2;d.style.left=`${h-Mr/2}px`,d.style.top=`${a.top}px`}else{let h=(a.top+a.bottom)/2;d.style.left=`${a.left}px`,d.style.top=`${h-Mr/2}px`}})}ensureSvgPath(e){let t=e.firstElementChild;if(t?.tagName==="svg")return{svg:t,path:t.firstElementChild};e.replaceChildren();let i=document.createElementNS("http://www.w3.org/2000/svg","svg");i.style.display="block";let n=document.createElementNS("http://www.w3.org/2000/svg","path");return n.setAttribute("fill","none"),i.appendChild(n),e.appendChild(i),{svg:i,path:n}}},gc=class extends $a{_applyStraightLine(e,t,i,n,o,s,r){let a=r?o:n,l=r?n:o;e.setAttribute("width",String(a)),e.setAttribute("height",String(l)),i.style.width=`${a}px`,i.style.height=`${l}px`,t.setAttribute("d",r?`M ${s},0 L ${s},${n}`:`M 0,${s} L ${n},${s}`)}applyShape(e,t,i,n,o,s,r,a){let d=o,h=n,c=Yo(t.color,this._ctx.getColorPalette());if(h<=0||d<=0||c===void 0){e.style.display="none";return}e.style.display="";let u;s&&t.panelIds.includes(s)&&(u=this._ctx.getTabMap().get(s));let{svg:p,path:m}=this.ensureSvgPath(e);m.setAttribute("stroke",c),m.setAttribute("stroke-width",String(2));let f=2,v=this._ctx.getHeaderPosition(),g=!a&&v==="bottom",w=a&&v==="right",b,C;if(a?(b=w?d-f:f,C=w?f:d-f):(b=g?f:d-f,C=g?d-f:f),!u){this._applyStraightLine(p,m,e,h,d,b,a);return}let P=u.value.element.getBoundingClientRect(),M,D;if(a?(M=Math.max(0,P.top-r.top-i),D=Math.min(h,P.bottom-r.top-i)):(M=Math.max(0,P.left-r.left-i),D=Math.min(h,P.right-r.left-i)),D<=M){this._applyStraightLine(p,m,e,h,d,b,a);return}let y=6,z=C>b?1:-1;if(a){let k=d,A=h;p.setAttribute("width",String(k)),p.setAttribute("height",String(A)),e.style.width=`${k}px`,e.style.height=`${A}px`;let U=[`M ${b},0`,`L ${b},${M-y}`,`Q ${b},${M} ${b+z*y},${M}`,`L ${C-z*y},${M}`,`Q ${C},${M} ${C},${M+y}`,`L ${C},${D-y}`,`Q ${C},${D} ${C-z*y},${D}`,`L ${b+z*y},${D}`,`Q ${b},${D} ${b},${D+y}`,`L ${b},${A}`].join(" ");m.setAttribute("d",U)}else{let k=h,A=d;p.setAttribute("width",String(k)),p.setAttribute("height",String(A)),e.style.width=`${k}px`,e.style.height=`${A}px`;let U=[`M 0,${b}`,`L ${M-y},${b}`,`Q ${M},${b} ${M},${b+z*y}`,`L ${M},${C-z*y}`,`Q ${M},${C} ${M+y},${C}`,`L ${D-y},${C}`,`Q ${D},${C} ${D},${C-z*y}`,`L ${D},${b+z*y}`,`Q ${D},${b} ${D+y},${b}`,`L ${k},${b}`].join(" ");m.setAttribute("d",U)}}},_c=class extends $a{applyShape(e,t,i,n,o,s,r,a){let d=Yo(t.color,this._ctx.getColorPalette());if(n<=0||d===void 0){e.style.display="none";return}e.style.display="",e.firstElementChild&&e.replaceChildren(),e.style.backgroundColor=d,a?(e.style.width="2px",e.style.height=`${n}px`):(e.style.width=`${n}px`,e.style.height="2px")}},bc=new Map,wc=class{get chipRenderers(){return this._chipRenderers}get groupUnderlines(){var e,t;return(e=(t=this._indicator)===null||t===void 0?void 0:t.underlines)!==null&&e!==void 0?e:bc}get skipNextCollapseAnimation(){return this._skipNextCollapseAnimation}set skipNextCollapseAnimation(e){this._skipNextCollapseAnimation=e}constructor(e,t){this._ctx=e,this._callbacks=t,this._chipRenderers=new Map,this._indicator=null,this._skipNextCollapseAnimation=!1,this._pendingTransitionCleanups=new Map}update(){let e=this._ctx.group.model.getTabGroups(),t=new Set;for(let n of e)t.add(n.id),this._ensureChipForGroup(n),this._positionChipForGroup(n);for(let[n,o]of this._chipRenderers)if(!t.has(n)){var i;o.chip.element.remove(),o.chip.dispose(),(i=o.dragSourcesDisposable)===null||i===void 0||i.dispose(),o.disposable.dispose(),this._chipRenderers.delete(n)}this._updateTabGroupClasses()}refreshAccents(){for(let i of this._ctx.group.model.getTabGroups()){var e,t;let n=this._chipRenderers.get(i.id);n==null||(t=(e=n.chip).update)===null||t===void 0||t.call(e,{tabGroup:i})}this._updateTabGroupClasses()}positionAllChips(){if(this._chipRenderers.size!==0)for(let e of this._ctx.group.model.getTabGroups())this._positionChipForGroup(e)}updateDirection(){let e=this._ctx.getDirection()==="vertical";for(let[,t]of this._chipRenderers){let i=e?["top"]:["left"];t.dropTarget.setTargetZones(i),t.pointerDropTarget.setTargetZones(i)}}clearChipDropOverlays(){for(let[,i]of this._chipRenderers){var e,t;(e=i.dropTarget)===null||e===void 0||e.clearOverlay(),(t=i.pointerDropTarget)===null||t===void 0||t.clearOverlay()}}snapshotChipSizes(){let e=this._ctx.getDirection()==="vertical",t=new Map;for(let[i,n]of this._chipRenderers){let o=n.chip.element.getBoundingClientRect();t.set(i,e?o.height:o.width)}return t}positionUnderlines(){var e;(e=this._indicator)===null||e===void 0||e.positionUnderlines()}trackUnderlines(){var e;(e=this._indicator)===null||e===void 0||e.trackUnderlines()}setGroupDragImage(e,t,i){if(!e.dataTransfer)return;let n=this._ctx.getDirection()==="vertical",o=this._ctx.tabsList.cloneNode(!0);n?(o.classList.remove("dv-tabs-container-vertical","dv-vertical"),o.classList.add("dv-horizontal"),o.style.writingMode="horizontal-tb",o.style.height=`${this._ctx.tabsList.offsetWidth}px`):o.style.height=`${this._ctx.tabsList.offsetHeight}px`,o.style.width="auto",o.style.overflow="visible",o.style.pointerEvents="none";let s=Array.from(o.children),r=Array.from(this._ctx.tabsList.children);for(let p=s.length-1;p>=0;p--)r[p]!==i&&s[p].remove();let a=document.createElement("div");a.className="dv-groupview dv-active-group",a.style.position="fixed",a.style.top="-10000px",a.style.left="0px",a.style.height="auto",a.style.width="auto",a.style.pointerEvents="none";let l=document.createElement("div");l.className="dv-tabs-and-actions-container",l.style.height="auto",l.style.width="auto",a.appendChild(l),l.appendChild(o),this._ctx.accessor.element.appendChild(a);let d=o.querySelector(".dv-tab-group-chip"),h=i.getBoundingClientRect(),c=e.clientX-h.left,u=e.clientY-h.top;if(d){let p=d.getBoundingClientRect(),m=a.getBoundingClientRect(),f=p.left-m.left+c,v=p.top-m.top+u;e.dataTransfer.setDragImage(a,f,v)}else e.dataTransfer.setDragImage(a,c,u);requestAnimationFrame(()=>{a.remove()})}cleanupTransition(e){var t;(t=this._pendingTransitionCleanups.get(e))===null||t===void 0||t(),this._pendingTransitionCleanups.delete(e)}updateDragAndDropState(){let e=Te(this._ctx.accessor.options);for(let o of this._chipRenderers.values()){var t,i,n;o.chip.element.draggable=e.html5,(t=o.html5DragSource)===null||t===void 0||t.setDisabled(!e.html5),(i=o.pointerDragSource)===null||i===void 0||i.setDisabled(!e.pointer),(n=o.pointerDragSource)===null||n===void 0||n.setTouchOnly(!e.pointerHandlesMouse)}}disposeChipDrag(e){var t;let i=this._chipRenderers.get(e);i&&((t=i.dragSourcesDisposable)===null||t===void 0||t.dispose(),i.html5DragSource=void 0,i.pointerDragSource=void 0,i.dragSourcesDisposable=void 0)}_buildChipGhostElement(e){let t=getComputedStyle(e),i=e.cloneNode(!0);return Array.from(t).forEach(n=>{i.style.setProperty(n,t.getPropertyValue(n),t.getPropertyPriority(n))}),i.style.position="absolute",i}disposeAll(){var e;(e=this._indicator)===null||e===void 0||e.dispose(),this._indicator=null;for(let[,i]of this._pendingTransitionCleanups)i();this._pendingTransitionCleanups.clear();for(let[,i]of this._chipRenderers){var t;i.chip.element.remove(),i.chip.dispose(),(t=i.dragSourcesDisposable)===null||t===void 0||t.dispose(),i.disposable.dispose()}this._chipRenderers.clear()}_ensureIndicator(){var e,t,i;let n=((e=(t=this._ctx.accessor.options.theme)===null||t===void 0?void 0:t.tabGroupIndicator)!==null&&e!==void 0?e:"wrap")==="none"?_c:gc;this._indicator&&!(this._indicator instanceof n)&&(this._indicator.dispose(),this._indicator=null),(i=this._indicator)!==null&&i!==void 0||(this._indicator=new n({tabsList:this._ctx.tabsList,getTabGroups:()=>this._ctx.group.model.getTabGroups(),getActivePanelId:()=>{var o;return(o=this._ctx.group.activePanel)===null||o===void 0?void 0:o.id},getTabMap:()=>this._ctx.getTabMap(),getChipElement:o=>{var s;return(s=this._chipRenderers.get(o))===null||s===void 0?void 0:s.chip.element},getDirection:()=>this._ctx.getDirection(),getHeaderPosition:()=>this._ctx.group.model.headerPosition,getColorPalette:()=>this._ctx.accessor.tabGroupColorPalette}))}_createChipDragSources(e,t){let i=Te(this._ctx.accessor.options);e.element.draggable=i.html5;let n=et.getInstance(),o=()=>(n.setData([new Ee(this._ctx.accessor.id,this._ctx.group.id,null,t.id)],Ee.prototype),{dispose:()=>{n.clearData(Ee.prototype)}}),s=Ue.createDragSource(e.element,{getData:o,disabled:!i.html5,isCancelled:()=>!Te(this._ctx.accessor.options).html5,onDragStart:l=>{"dataTransfer"in l&&l.dataTransfer&&this.setGroupDragImage(l,t,e.element),this._callbacks.onChipDragStart(t,e,l)},onDragEnd:l=>{var d,h;(d=(h=this._callbacks).onChipDragEnd)===null||d===void 0||d.call(h,t,e,l)}}),r=()=>{n.clearData(Ee.prototype)};e.element.addEventListener("dragend",r,{once:!0});let a=Ie.createDragSource(e.element,{getData:o,disabled:!i.pointer,touchOnly:!i.pointerHandlesMouse,isCancelled:()=>!Te(this._ctx.accessor.options).pointer,createGhost:()=>({element:this._buildChipGhostElement(e.element),offsetX:8,offsetY:8}),onDragStart:l=>{this._callbacks.onChipDragStart(t,e,l)}});return{html5DragSource:s,pointerDragSource:a,disposable:{dispose:()=>{s.dispose(),a.dispose(),e.element.removeEventListener("dragend",r)}}}}_ensureChipForGroup(e){let t=this._chipRenderers.get(e.id);if(t){if(!t.html5DragSource){let u=this._createChipDragSources(t.chip,e);t.html5DragSource=u.html5DragSource,t.pointerDragSource=u.pointerDragSource,t.dragSourcesDisposable=u.disposable}return}let i=this._ctx.accessor.options.createTabGroupChipComponent,n=i?i(e):new zr(this._ctx.accessor.tabGroupColorPalette);n.init({tabGroup:e,api:this._ctx.accessor.api});let o=this._createChipDragSources(n,e),s=[e.onDidChange(()=>{var u;(u=n.update)===null||u===void 0||u.call(n,{tabGroup:e}),this._updateTabGroupClasses()}),e.onDidPanelChange(()=>{this._positionChipForGroup(e),this._updateTabGroupClasses()}),e.onDidCollapseChange(()=>{this._updateTabGroupClasses()})],r=u=>{var p;(p=this._chipRenderers.get(e.id))===null||p===void 0||(p=p.pointerDragSource)===null||p===void 0||p.cancelPending(),this._callbacks.onChipContextMenu(e,u)};n instanceof zr?s.push(n.onContextMenu(r)):s.push(new Uo(n.element,{onLongPress:r}),T(n.element,"contextmenu",r));let a={acceptedTargetZones:this._ctx.getDirection()==="vertical"?["top"]:["left"],overlayModel:{activationSize:{value:100,type:"percentage"}},canDisplayOverlay:(u,p)=>{if(this._ctx.group.locked||this._ctx.accessor.options.disableDnd)return!1;let m=X();if(this._ctx.accessor.id===m?.viewId){var f;return!(((f=this._ctx.accessor.options.theme)===null||f===void 0?void 0:f.tabAnimation)==="smooth"&&!m.tabGroupId)}return this._ctx.group.model.canDisplayOverlay(u,p,"tab")}},l=Ue.createDropTarget(n.element,a),d=Ie.createDropTarget(n.element,a),h=u=>{this._callbacks.onChipDrop(e,u)};s.push(l,l.onDrop(h),d,d.onDrop(h));let c=new x(...s);this._chipRenderers.set(e.id,{chip:n,html5DragSource:o.html5DragSource,pointerDragSource:o.pointerDragSource,dragSourcesDisposable:o.disposable,disposable:c,dropTarget:l,pointerDropTarget:d}),e.collapsed&&(this._skipNextCollapseAnimation=!0)}_positionChipForGroup(e){let t=this._chipRenderers.get(e.id);if(!t)return;let i=t.chip.element,n=e.panelIds;if(n.length===0){i.remove();return}let o=n[0],s=this._ctx.getTabMap().get(o);if(!s){i.remove();return}let r=s.value.element;i.nextSibling!==r&&this._ctx.tabsList.insertBefore(i,r)}_updateTabGroupClasses(){let e=this._ctx.group.model.getTabGroups(),t=this._ctx.getTabs(),i=this._ctx.getTabMap(),n=!1,o=new Map;for(let a of e)for(let l of a.panelIds)o.set(l,a);for(let a of t){let l=a.value,d=l.panel.id,h=o.get(d),c=!!h;if(G(l.element,"dv-tab--grouped",c),h){let u=h.panelIds,p=u[0]===d,m=u[u.length-1]===d;G(l.element,"dv-tab--group-first",p),G(l.element,"dv-tab--group-last",m),jo(l.element,h.color,this._ctx.accessor.tabGroupColorPalette);let f=l.element.classList.contains("dv-tab--group-collapsed");if(!h.collapsed&&f){var s;n=!0,l.element.classList.remove("dv-tab--group-collapsed"),l.element.classList.add("dv-tab--group-expanding"),(s=this._pendingTransitionCleanups.get(d))===null||s===void 0||s();let v=()=>{l.element.classList.remove("dv-tab--group-expanding"),l.element.style.removeProperty("width"),l.element.removeEventListener("transitionend",v),clearTimeout(g),this._pendingTransitionCleanups.delete(d)},g=setTimeout(v,300);this._pendingTransitionCleanups.set(d,v),l.element.addEventListener("transitionend",v)}}else G(l.element,"dv-tab--group-first",!1),G(l.element,"dv-tab--group-last",!1),l.element.classList.remove("dv-tab--group-collapsed","dv-tab--group-expanding"),l.element.style.removeProperty("width"),l.element.style.removeProperty("--dv-tab-group-color")}let r=new Set;for(let a of e)if(r.add(a.id),a.collapsed&&a.panelIds.some(l=>{let d=i.get(l);return d&&!d.value.element.classList.contains("dv-tab--group-collapsed")}))if(this._skipNextCollapseAnimation){let l=[];for(let d of a.panelIds){let h=i.get(d);h&&(h.value.element.style.transition="none",h.value.element.classList.add("dv-tab--group-collapsed"),l.push(h.value.element))}if(l.length>0){l[0].offsetHeight;for(let d of l)d.style.removeProperty("transition")}}else{n=!0;let l=this._ctx.getDirection()==="vertical";for(let d of a.panelIds){let h=i.get(d);if(h&&!h.value.element.classList.contains("dv-tab--group-collapsed")){let c=h.value.element.getBoundingClientRect();l?h.value.element.style.height=`${c.height}px`:h.value.element.style.width=`${c.width}px`,h.value.element.offsetHeight,h.value.element.classList.add("dv-tab--group-collapsed")}}}this._skipNextCollapseAnimation=!1,this._ensureIndicator(),this._indicator&&(this._indicator.syncUnderlineElements(r),n?this._indicator.trackUnderlines():this._indicator.positionUnderlines())}};function gi(e,t){return t==="vertical"?e.height:e.width}function rn(e,t){return t==="vertical"?e.top:e.left}function Va(e,t){return t==="vertical"?e.clientY:e.clientX}var yc=class extends x{get _tabs(){return this.host.tabItems}get _tabMap(){return this.host.tabMap}get _tabsList(){return this.host.tabsList}get _direction(){return this.host.direction}get group(){return this.host.groupPanel}get accessor(){return this.host.component}get _tabGroupManager(){return this.host.tabGroupManager}get _wrapMode(){return this._tabsList.classList.contains(za)}get animState(){return this._animState}set animState(e){this._animState=e}get pendingCollapse(){return this._pendingCollapse}set pendingCollapse(e){this._pendingCollapse=e}set voidContainerElement(e){this._voidContainer=e}constructor(e){super(),this.host=e,this._animState=null,this._pendingMarginCleanups=new Map,this._pendingCollapse=!1,this._flipTransitionCleanup=null,this._voidContainer=null,this._extendedDropZone=null,this._pointerInsideTabsList=!1,this._wrapIndicatorEl=null,this.addDisposables({dispose:()=>{var t;(t=this._flipTransitionCleanup)===null||t===void 0||t.call(this)}})}setExtendedDropZone(e){this._extendedDropZone=e}setExternalInsertionIndex(e){this._animState&&e!==this._animState.currentInsertionIndex&&(this._animState.currentInsertionIndex=e,this.applyDragOverTransforms())}clearExternalAnimState(){this._animState&&(this.resetTabTransforms(),this._animState.sourceIndex===-1?this._animState=null:this._animState.currentInsertionIndex=null)}snapshotTabPositions(){let e=new Map;for(let t of this._tabs)e.set(t.value.panel.id,t.value.element.getBoundingClientRect());return e}_mainAxisSize(e){return gi(e,this._direction)}_mainAxisStart(e){return rn(e,this._direction)}_mainAxisCoord(e,t){return Va({clientX:e,clientY:t},this._direction)}get _gapMarginProperty(){return this._direction==="vertical"?"margin-top":"margin-left"}getAverageTabSize(){if(this._tabs.length===0)return 0;let e=0;for(let t of this._tabs)e+=this._mainAxisSize(t.value.element.getBoundingClientRect());return e/this._tabs.length}handlePointerDragMove(e,t){let i=dn(this._tabsList).elementFromPoint(e,t);if(!(i&&(this._tabsList.contains(i)||this._extendedDropZone&&this._extendedDropZone.contains(i)))){this._pointerInsideTabsList&&(this._pointerInsideTabsList=!1,this.processDragLeave(i));return}this._pointerInsideTabsList=!0,this.processDragOver(e,t)}handlePointerDragEnd(e){if(e&&this._animState&&this._animState.sourceIndex!==-1&&this._animState.currentInsertionIndex!==null&&this.isPointInsideTabsList(e.clientX,e.clientY)){let t=this._animState.sourceTabGroupId;if(t){let i=this._animState.currentInsertionIndex;this._animState=null,this.commitGroupMove(t,i)}else this.commitPointerReorder(e.pointerEvent)}this._pointerInsideTabsList=!1,this.resetDragAnimation()}isPointInsideTabsList(e,t){let i=dn(this._tabsList).elementFromPoint(e,t);return!!i&&this._tabsList.contains(i)}resolveTabDrop(e){var t,i;let n=e.currentInsertionIndex;if(n===null)return null;let{sourceIndex:o,targetTabGroupId:s}=e,r=n-(o!==-1&&o<n?1:0);return r===o&&s===((t=(i=this.group.model.getTabGroupForPanel(e.sourceTabId))===null||i===void 0?void 0:i.id)!==null&&t!==void 0?t:null)?null:{index:r,targetTabGroupId:s}}commitPointerReorder(e){let t=this._animState;if(t?.currentInsertionIndex==null)return;let i=this.resolveTabDrop(t);this._animState=null,this.clearWrapDropIndicator(),this.uncollapseSourceTab(t.sourceTabId),i&&this.host.fireDrop(I({event:e},i))}processDragOver(e,t){if(this.accessor.options.disableDnd||(this._dropStaleAnimState(),!this._animState&&!this._initAnimStateForExternalDrag()))return!1;if(this._animState.sourceIndex!==-1){var i;(i=this.group.model.dropTargetContainer)===null||i===void 0||(i=i.model)===null||i===void 0||i.clear()}return this.handleDragOver({clientX:e,clientY:t}),!0}_dropStaleAnimState(){if(!this._animState)return;let e=X();e?.tabGroupId&&e.groupId!==this.group.id&&this._animState.sourceTabGroupId!==e.tabGroupId&&(this._animState=null)}_initAnimStateForExternalDrag(){var e;let t=X();if(((e=this.accessor.options.theme)===null||e===void 0?void 0:e.tabAnimation)==="default"&&!t?.tabGroupId||!t||!(t.panelId||t.tabGroupId)||t.groupId===this.group.id)return!1;let i=this.getAverageTabSize();return this._animState=t.tabGroupId?this._makeGroupDragAnimState(t,i):this._makeTabDragAnimState(t,i),!0}_makeGroupDragAnimState(e,t){var i;let n=this.accessor.getPanel(e.groupId),o=n?.model.getTabGroups().find(r=>r.id===e.tabGroupId),s=t*((i=o?.panelIds.length)!==null&&i!==void 0?i:1)+t;return{sourceTabId:"",sourceIndex:-1,tabPositions:this.snapshotTabPositions(),chipSizes:this._tabGroupManager.snapshotChipSizes(),currentInsertionIndex:null,targetTabGroupId:null,sourceTabGroupId:e.tabGroupId,sourceGroupPanelIds:o?new Set(o.panelIds):new Set,sourceChipSize:t,cursorOffsetFromDragStart:s/2,sourceGapSize:s,containerStart:this._mainAxisStart(this._tabsList.getBoundingClientRect())}}_makeTabDragAnimState(e,t){return{sourceTabId:e.panelId,sourceIndex:-1,tabPositions:this.snapshotTabPositions(),chipSizes:this._tabGroupManager.snapshotChipSizes(),currentInsertionIndex:null,targetTabGroupId:null,sourceTabGroupId:null,sourceGroupPanelIds:null,sourceChipSize:0,cursorOffsetFromDragStart:t/2,sourceGapSize:t,containerStart:this._mainAxisStart(this._tabsList.getBoundingClientRect())}}processDragLeave(e){var t;if(this._animState&&!(e&&this._tabsList.contains(e))){if(e&&(!((t=this._extendedDropZone)===null||t===void 0)&&t.contains(e))){this.resetTabTransforms(),this._animState.currentInsertionIndex=null;return}this._voidContainer&&e&&(e===this._voidContainer||this._voidContainer.contains(e))||(this.resetTabTransforms(),this._animState.sourceIndex===-1?(this.clearHeaderAnchorOverlay(),this._animState=null):this._animState.currentInsertionIndex=null)}}clearHeaderAnchorOverlay(){var e;let t=this.group.model.dropTargetContainer,i=t?.renderedOutline;i&&![this._tabsList,this._voidContainer,this._extendedDropZone].some(n=>n?.contains(i))||t==null||(e=t.model)===null||e===void 0||e.clear()}handleDragOver(e){var t,i;if(!this._animState)return;if(this._wrapMode&&!this._animState.sourceTabGroupId){var n;this.handleWrappedDragOver(e.clientX,(n=e.clientY)!==null&&n!==void 0?n:0);return}let o=this._mainAxisCoord(e.clientX,(t=e.clientY)!==null&&t!==void 0?t:0),s=this._buildFirstPanelToGroupMap(),r=this._computeDragOverInsertionIndex(o,s),a=null;if(r!==null&&this._tabGroupManager.chipRenderers.size>0){let l=this._resolveInsertionAgainstTabGroups(o,r,s);r=l.insertionIndex,a=l.targetTabGroupId}r===this._animState.currentInsertionIndex&&a===this._animState.targetTabGroupId||(this._animState.currentInsertionIndex=r,this._animState.targetTabGroupId=a,((i=this.accessor.options.theme)===null||i===void 0?void 0:i.tabAnimation)==="smooth"&&this.applyDragOverTransforms())}_buildFirstPanelToGroupMap(){let e=new Map;if(this._tabGroupManager.chipRenderers.size===0)return e;for(let t of this.group.model.getTabGroups())t.id!==this._animState.sourceTabGroupId&&t.panelIds.length>0&&e.set(t.panelIds[0],t.id);return e}_computeDragOverInsertionIndex(e,t){let i=this._animState,n=i.sourceGroupPanelIds,o=e-i.cursorOffsetFromDragStart-i.containerStart,s=0,r=null;for(let h=0;h<this._tabs.length;h++){let c=this._tabs[h].value;if(c.panel.id===i.sourceTabId||n?.has(c.panel.id))continue;let u=t.get(c.panel.id);if(u){var a;let f=(a=i.chipSizes.get(u))!==null&&a!==void 0?a:0;if(s+f>o){var l;(l=r)!==null&&l!==void 0||(r=h);break}s+=f}let p=i.tabPositions.get(c.panel.id),m=this._mainAxisSize(p??c.element.getBoundingClientRect());if(s+m/2<=o)s+=m,r=h+1;else{var d;(d=r)!==null&&d!==void 0||(r=h);break}}return r}_accumulatedSizeUpTo(e,t){let i=this._animState,n=i.sourceGroupPanelIds,o=0;for(let r=0;r<this._tabs.length;r++){let a=this._tabs[r].value;if(a.panel.id===i.sourceTabId||n?.has(a.panel.id))continue;if(r>=e)break;let l=t.get(a.panel.id);if(l){var s;o+=(s=i.chipSizes.get(l))!==null&&s!==void 0?s:0}let d=i.tabPositions.get(a.panel.id);o+=this._mainAxisSize(d??a.element.getBoundingClientRect())}return o}_resolveInsertionAgainstTabGroups(e,t,i){var n;let o=!!this._animState.sourceTabGroupId,s=this._accumulatedSizeUpTo(t,i);for(let a of this.group.model.getTabGroups()){let l=this._evaluateTabGroupForInsertion(a,e,t,s,o);if(l){var r;return l.targetTabGroupId?l:(r=this._keepSourceGroupAtOwnSlot(e,l.insertionIndex,s))!==null&&r!==void 0?r:l}}return(n=this._keepSourceGroupAtOwnSlot(e,t,s))!==null&&n!==void 0?n:{insertionIndex:t,targetTabGroupId:null}}_keepSourceGroupAtOwnSlot(e,t,i){let n=this._animState,o=n.sourceIndex;if(n.sourceGroupPanelIds||o===-1||t!==o&&t!==o+1)return null;let s=this.group.model.getTabGroups().find(a=>a.panelIds.includes(n.sourceTabId));if(!s)return null;if(s.panelIds[0]===n.sourceTabId){var r;let a=(r=n.chipSizes.get(s.id))!==null&&r!==void 0?r:0;if(e<n.containerStart+i+a)return null}return{insertionIndex:t,targetTabGroupId:s.id}}_evaluateTabGroupForInsertion(e,t,i,n,o){let s=this._resolveGroupRange(e);if(!s)return null;let{firstIdx:r,lastIdx:a}=s,l=i>=r&&i<=a,d=!l&&i===r-1;return!l&&!d?null:o?this._resolveGroupDragTarget(i,r,a,l):this._resolveTabDragTarget(e,t,i,n,r,d)}_resolveGroupRange(e){let t=this._animState,i=t.sourceGroupPanelIds,n=e.panelIds.filter(r=>r!==t.sourceTabId&&!i?.has(r));if(n.length===0)return null;let o=this._tabs.findIndex(r=>r.value.panel.id===n[0]),s=this._tabs.findIndex(r=>r.value.panel.id===n[n.length-1]);return o===-1||s===-1?null:{firstIdx:o,lastIdx:s}}_resolveGroupDragTarget(e,t,i,n){return n?{insertionIndex:e<(t+i+1)/2?t:i+1,targetTabGroupId:null}:{insertionIndex:e,targetTabGroupId:null}}_resolveTabDragTarget(e,t,i,n,o,s){var r;let a=this._animState,l=(r=a.chipSizes.get(e.id))!==null&&r!==void 0?r:0;if(s)return this._onlySourceBetween(i,o)?t>=(e.collapsed?a.containerStart+n+l/2:a.containerStart+n+l)?{insertionIndex:o,targetTabGroupId:e.id}:{insertionIndex:i,targetTabGroupId:null}:null;let d=a.containerStart+n+l;return i===o?{insertionIndex:i,targetTabGroupId:t>=d?e.id:null}:{insertionIndex:i,targetTabGroupId:e.id}}_onlySourceBetween(e,t){let i=this._animState;for(let o=e;o<t;o++){var n;let s=this._tabs[o].value.panel.id;if(s!==i.sourceTabId&&!(!((n=i.sourceGroupPanelIds)===null||n===void 0)&&n.has(s)))return!1}return!0}handleWrappedDragOver(e,t){if(!this._animState)return;let i=this.computeWrappedInsertionIndex(e,t);i===this._animState.currentInsertionIndex&&this._animState.targetTabGroupId===null||(this._animState.currentInsertionIndex=i,this._animState.targetTabGroupId=null,this.updateWrapDropIndicator(i))}computeWrappedInsertionIndex(e,t){var i;let n=this._direction==="vertical",o=this._wrappedDragEntries();if(o.length===0)return this._tabs.length;let s=n?e:t,r=n?t:e,a=p=>n?p.left:p.top,l=p=>n?p.right:p.bottom,d=p=>n?p.top:p.left,h=p=>n?p.height:p.width,c=this._bucketWrappedLines(o,a,l),u=[...((i=c.find(p=>s>=p.start&&s<=p.end))!==null&&i!==void 0?i:this._nearestWrappedLine(c,s)).items].sort((p,m)=>d(p.rect)-d(m.rect));for(let p of u)if(r<d(p.rect)+h(p.rect)/2)return p.index;return u[u.length-1].index+1}_wrappedDragEntries(){var e,t;let i=(e=this._animState)===null||e===void 0?void 0:e.sourceTabId,n=(t=this._animState)===null||t===void 0?void 0:t.sourceGroupPanelIds,o=[];for(let s=0;s<this._tabs.length;s++){let r=this._tabs[s].value;r.panel.id!==i&&(n?.has(r.panel.id)||o.push({index:s,rect:r.element.getBoundingClientRect()}))}return o}_bucketWrappedLines(e,t,i){let n=[];for(let o of e){let s=t(o.rect),r=n.find(a=>Math.abs(a.start-s)<=2);r?(r.items.push(o),r.end=Math.max(r.end,i(o.rect))):n.push({start:s,end:i(o.rect),items:[o]})}return n.sort((o,s)=>o.start-s.start),n}_nearestWrappedLine(e,t){let i=n=>t<n.start?n.start-t:t-n.end;return e.reduce((n,o)=>i(o)<i(n)?o:n,e[0])}updateWrapDropIndicator(e){var t;this.clearWrapDropIndicator();let i=this._tabs.length;if(i===0)return;let n=(t=this._animState)===null||t===void 0?void 0:t.sourceTabId;if(e<i){let o=this._tabs[e].value.element;if(this._tabs[e].value.panel.id===n)return;o.classList.add("dv-tab--reorder-before"),this._wrapIndicatorEl=o}else{let o=this._tabs[i-1].value.element;o.classList.add("dv-tab--reorder-after"),this._wrapIndicatorEl=o}}clearWrapDropIndicator(){var e;(e=this._wrapIndicatorEl)===null||e===void 0||e.classList.remove("dv-tab--reorder-before","dv-tab--reorder-after"),this._wrapIndicatorEl=null}_removeClassInstantlyBatch(e,t){let i=[];for(let n of e)n.classList.contains(t)&&(n.style.transition="none",G(n,t,!1),i.push(n));if(i.length>0){i[0].getBoundingClientRect();for(let n of i)n.style.removeProperty("transition")}}uncollapseSourceTab(e){let t=this._tabMap.get(e);t&&this._removeClassInstantlyBatch([t.value.element],"dv-tab--dragging")}applyDragOverTransforms(e=!1){var t;if(this._wrapMode)return;if(((t=this._animState)===null||t===void 0?void 0:t.currentInsertionIndex)==null){this.resetTabTransforms();return}if(this._pendingCollapse)return;let i=this._animState.currentInsertionIndex,n=this._computeGapSize(),o=this._computeChipToShift(i);this._applyGapMargins(i,n,o,e)}_computeGapSize(){let e=this._animState;if(e.sourceTabGroupId&&e.sourceGroupPanelIds)return e.sourceGapSize;let t=e.tabPositions.get(e.sourceTabId);return t?this._mainAxisSize(t):this.getAverageTabSize()}_computeChipToShift(e){if(this._tabGroupManager.chipRenderers.size===0)return null;for(let t of this.group.model.getTabGroups()){let i=this._chipToShiftForGroup(t,e);if(i!==void 0)return i}return null}_chipToShiftForGroup(e,t){let i=this._animState;if(e.id===i.sourceTabGroupId||e.panelIds.includes(i.sourceTabId))return;let n=e.panelIds.filter(s=>{var r;return s!==i.sourceTabId&&!(!((r=i.sourceGroupPanelIds)===null||r===void 0)&&r.has(s))});if(n.length===0)return;let o=this._tabs.findIndex(s=>s.value.panel.id===n[0]);if((!i.targetTabGroupId||i.targetTabGroupId===e.id&&e.collapsed)&&!(o<t)){if(this._onlySourceBetween(t,o)){let s=this._tabGroupManager.chipRenderers.get(e.id);if(s)return s.chip.element}return null}}_applyGapMargins(e,t,i,n){let o=this._animState,s=o.sourceGroupPanelIds,r=!1;for(let[a,l]of this._tabGroupManager.chipRenderers)a!==o.sourceTabGroupId&&this._clearMargin(l.chip.element,n);i&&(this._setMargin(i,`${t}px`,n),r=!0);for(let a=0;a<this._tabs.length;a++){let l=this._tabs[a].value;l.panel.id!==o.sourceTabId&&(s?.has(l.panel.id)||(!r&&a>=e?(this._setMargin(l.element,`${t}px`,n),r=!0):this._clearMargin(l.element,n)))}this._tabGroupManager.trackUnderlines()}_shiftingClass(e){return e.classList.contains("dv-tab-group-chip")?"dv-tab-group-chip--shifting":"dv-tab--shifting"}_setMargin(e,t,i){let n=this._gapMarginProperty;i?(e.style.transition="none",e.style.setProperty(n,t),e.getBoundingClientRect(),e.style.removeProperty("transition")):e.style.setProperty(n,t),G(e,this._shiftingClass(e),!0)}_clearMargin(e,t){let i=this._shiftingClass(e),n=this._gapMarginProperty,o=this._pendingMarginCleanups.get(e);if(o&&o(),t||!e.style.getPropertyValue(n))e.style.removeProperty(n),G(e,i,!1);else{e.style.setProperty(n,"0px"),G(e,i,!0);let s=()=>{e.style.removeProperty(n),G(e,i,!1),e.removeEventListener("transitionend",s),clearTimeout(r),this._pendingMarginCleanups.delete(e)},r=setTimeout(s,300);this._pendingMarginCleanups.set(e,s),e.addEventListener("transitionend",s)}}resetTabTransforms(){this.clearWrapDropIndicator();for(let[,e]of this._pendingMarginCleanups)e();this._pendingMarginCleanups.clear();for(let e of this._tabs)e.value.element.style.removeProperty("margin-left"),e.value.element.style.removeProperty("margin-right"),e.value.element.style.removeProperty("margin-top"),e.value.element.style.removeProperty("margin-bottom"),e.value.element.style.removeProperty("transform"),G(e.value.element,"dv-tab--shifting",!1);for(let[,e]of this._tabGroupManager.chipRenderers)e.chip.element.style.removeProperty("margin-left"),e.chip.element.style.removeProperty("margin-top"),G(e.chip.element,"dv-tab-group-chip--shifting",!1);this._tabGroupManager.positionUnderlines()}commitGroupMove(e,t){let i=X();if(this._tabGroupManager.disposeChipDrag(e),this._tabGroupManager.clearChipDropOverlays(),this.group.model.getTabGroups().some(s=>s.id===e)){var n;if(((n=this.accessor.options.theme)===null||n===void 0?void 0:n.tabAnimation)==="smooth"){this._clearGroupDragClasses(e);let s=this.snapshotTabPositions();this.resetTabTransforms(),this.group.model.moveTabGroup(e,t),this.runFlipAnimation(s,"",!1)}else this._tabGroupManager.skipNextCollapseAnimation=!0,this.group.model.moveTabGroup(e,t)}else if(i){var o;this.resetTabTransforms(),this.accessor.moveGroupOrPanel({from:{groupId:i.groupId,tabGroupId:(o=i.tabGroupId)!==null&&o!==void 0?o:e},to:{group:this.group,position:"center",index:t}})}}_clearGroupDragClasses(e){let t=this._tabGroupManager.chipRenderers.get(e);t&&this._removeClassInstantlyBatch([t.chip.element],"dv-tab-group-chip--dragging"),this._removeClassInstantlyBatch(this._tabs.map(n=>n.value.element),"dv-tab--dragging");let i=this._tabGroupManager.groupUnderlines.get(e);i&&i.style.removeProperty("display"),this._tabGroupManager.skipNextCollapseAnimation=!0}resetDragAnimation(){if(this._pendingCollapse=!1,this._animState){this.resetTabTransforms(),this._animState.sourceTabGroupId?this._clearGroupDragClasses(this._animState.sourceTabGroupId):this._removeClassInstantlyBatch(this._tabs.map(e=>e.value.element),"dv-tab--dragging"),this._animState=null;for(let[,e]of this._tabGroupManager.groupUnderlines)e.style.removeProperty("display")}}runFlipAnimation(e,t,i=!1,n){if(this._wrapMode)return;let o=!1;for(let s=0;s<this._tabs.length;s++)this._applyFlipTransform(this._tabs[s],s,t,i,e,n)&&(o=!0);o&&this._scheduleFlipReset()}_applyFlipTransform(e,t,i,n,o,s){let r=this._direction==="vertical",a=e.value.panel.id;if(a===i){if(!n)return!1;let c=e.value.element.getBoundingClientRect();return e.value.element.style.transform=r?`translateY(${c.height}px)`:`translateX(${c.width}px)`,G(e.value.element,"dv-tab--shifting",!0),!0}if(s!==void 0&&(t<s.from||t>s.to))return!1;let l=o.get(a);if(!l)return!1;let d=e.value.element.getBoundingClientRect(),h=r?l.top-d.top:l.left-d.left;return Math.abs(h)<1?!1:(e.value.element.style.transform=r?`translateY(${h}px)`:`translateX(${h}px)`,G(e.value.element,"dv-tab--shifting",!0),!0)}_scheduleFlipReset(){requestAnimationFrame(()=>{var e;for(let n of this._tabs)n.value.element.style.transform&&(n.value.element.style.transform="");this._tabGroupManager.trackUnderlines(),(e=this._flipTransitionCleanup)===null||e===void 0||e.call(this);let t=n=>{if(n.propertyName==="transform"){i();for(let o of this._tabs)G(o.value.element,"dv-tab--shifting",!1);this._tabGroupManager.positionUnderlines()}},i=()=>{this._tabsList.removeEventListener("transitionend",t),this._flipTransitionCleanup=null};this._flipTransitionCleanup=i,this._tabsList.addEventListener("transitionend",t)})}},Dc=class extends x{get _animState(){return this._reorder.animState}set _animState(e){this._reorder.animState=e}get _pendingCollapse(){return this._reorder.pendingCollapse}set _pendingCollapse(e){this._reorder.pendingCollapse=e}get tabItems(){return this._tabs}get tabMap(){return this._tabMap}get tabsList(){return this._tabsList}get groupPanel(){return this.group}get component(){return this.accessor}get tabGroupManager(){return this._tabGroupManager}fireDrop(e){this._onDrop.fire(e)}setOverflowExclude(e){this._overflowExclude=e,this.refreshOverflow()}setForcedOverflow(e){this._forcedOverflow=e,this.refreshOverflow()}refreshOverflow(){this._showTabsOverflowControl&&this.toggleDropdown({reset:!1}),this._applyPinnedSticky()}setPinnedSticky(e){this._pinnedSticky!==e&&(this._pinnedSticky=e,this._applyPinnedSticky())}_applyPinnedSticky(){let e=this._pinnedSticky?this._tabs.filter(i=>this._overflowExclude(i.value.panel.id)):[];if(e.length===0&&!this._hasPinnedStickyStyling)return;for(let i of this._tabs){let n=i.value.element;n.classList.contains("dv-tab--pinned-sticky")&&(n.classList.remove("dv-tab--pinned-sticky"),n.style.removeProperty("--dv-pinned-sticky-left"))}if(e.length===0){this._hasPinnedStickyStyling=!1;return}let t=e.map(i=>i.value.element.offsetLeft);e.forEach((i,n)=>{let o=i.value.element;o.classList.add("dv-tab--pinned-sticky"),o.style.setProperty("--dv-pinned-sticky-left",`${t[n]}px`)}),this._hasPinnedStickyStyling=!0}get showTabsOverflowControl(){return this._showTabsOverflowControl}set showTabsOverflowControl(e){if(this._showTabsOverflowControl!=e)if(this._showTabsOverflowControl=e,e){let t=new ch(this._tabsList);this._observerDisposable.value=new x(t,t.onDidChange(i=>{let n=i.hasScrollX||i.hasScrollY;this.toggleDropdown({reset:!n}),this._applyPinnedSticky(),this._tabGroupManager.groupUnderlines.size>0&&this._tabGroupManager.positionUnderlines()}),T(this._tabsList,"scroll",()=>{this.toggleDropdown({reset:!1}),this._applyPinnedSticky(),this._tabGroupManager.groupUnderlines.size>0&&this._tabGroupManager.positionUnderlines()}))}else this._observerDisposable.value=L.NONE}get element(){return this._element}get tabsListElement(){return this._tabsList}set voidContainer(e){var t;(t=this._voidContainerListeners)===null||t===void 0||t.dispose(),this._voidContainerListeners=null,this._reorder.voidContainerElement=e,e&&(this._voidContainerListeners=new x(T(e,"dragover",i=>{this._animState&&i.preventDefault()}),T(e,"drop",i=>{var n;!((n=this._animState)===null||n===void 0)&&n.sourceTabGroupId&&this._animState.currentInsertionIndex!==null&&(i.preventDefault(),i.stopPropagation(),this.handleVoidDrop())})))}handleVoidDrop(){var e,t;if(!(!((e=this._animState)===null||e===void 0)&&e.sourceTabGroupId))return!1;let i=this._animState.sourceTabGroupId,n=(t=this._animState.currentInsertionIndex)!==null&&t!==void 0?t:this._tabs.length;return this._animState=null,this._commitGroupMove(i,n),!0}get panels(){return this._tabs.map(e=>e.value.panel.id)}get size(){return this._tabs.length}get tabs(){return this._tabs.map(e=>e.value)}get direction(){return this._direction}set direction(e){if(this._direction!==e){this._direction=e,this._tabsList.setAttribute("aria-orientation",e==="vertical"?"vertical":"horizontal"),this._scrollbar&&(this._scrollbar.orientation=e),Re(this._tabsList,"dv-horizontal","dv-vertical"),e==="vertical"?Le(this._tabsList,"dv-tabs-container-vertical","dv-vertical"):(Re(this._tabsList,"dv-tabs-container-vertical"),Le(this._tabsList,"dv-horizontal"));for(let t of this._tabs)t.value.setDirection(e);this._tabGroupManager.updateDirection()}}constructor(e,t,i){super(),this.group=e,this.accessor=t,this._observerDisposable=new Q,this._pointerActivation=new Q,this._scrollbar=null,this._tabs=[],this._overflowRefreshPending=!1,this._tabMap=new Map,this.selectedIndex=-1,this._showTabsOverflowControl=!1,this._overflowExclude=()=>!1,this._forcedOverflow=()=>!1,this._pinnedSticky=!1,this._hasPinnedStickyStyling=!1,this._direction="horizontal",this._voidContainerListeners=null,this._onTabDragStart=new _,this.onTabDragStart=this._onTabDragStart.event,this._onDrop=new _,this.onDrop=this._onDrop.event,this._onWillShowOverlay=new _,this.onWillShowOverlay=this._onWillShowOverlay.event,this._onOverflowTabsChange=new _,this.onOverflowTabsChange=this._onOverflowTabsChange.event,this._tabsList=document.createElement("div"),this._tabsList.className="dv-tabs-container",this._tabsList.setAttribute("role","tablist"),this._tabsList.setAttribute("aria-orientation",this._direction==="vertical"?"vertical":"horizontal"),this.showTabsOverflowControl=i.showTabsOverflowControl,t.options.scrollbars==="native"?this._element=this._tabsList:(this._scrollbar=new Aa(this._tabsList),this._scrollbar.orientation=this.direction,this._element=this._scrollbar.element,this.addDisposables(this._scrollbar)),this._tabGroupManager=new wc({group:this.group,accessor:this.accessor,tabsList:this._tabsList,getTabs:()=>this._tabs,getTabMap:()=>this._tabMap,getDirection:()=>this._direction},{onChipContextMenu:(o,s)=>{var r;(r=this.accessor.contextMenuService)===null||r===void 0||r.showForChip(o,this.group,s)},onChipDragStart:(o,s,r)=>{this._handleChipDragStart(o,s,r)},onChipDragEnd:()=>{this._reorder.resetDragAnimation()},onChipDrop:(o,s)=>{this._handleChipDrop(o,s)}}),this._reorder=new yc(this);let n=Ie.createDropTarget(this._tabsList,{acceptedTargetZones:["center"],canDisplayOverlay:()=>!1,isHitTestTransparent:()=>{let o=X();return o?.viewId!==this.accessor.id||o.groupId!==this.group.id?!0:o.panelId===null&&!o.tabGroupId}});this.addDisposables(n,this._onOverflowTabsChange,this._observerDisposable,this._pointerActivation,this._onWillShowOverlay,this._onDrop,this._onTabDragStart,this._reorder,un.getInstance().onDragEnd(o=>{this._reorder.handlePointerDragEnd(o)}),un.getInstance().onDragMove(o=>{this._reorder.handlePointerDragMove(o.clientX,o.clientY)}),T(this.element,"pointerdown",o=>{o.defaultPrevented||o.button===0&&this.accessor.doSetGroupActive(this.group)}),T(this._tabsList,"wheel",o=>{let s=this._direction==="vertical",r=s?o.deltaY||o.deltaX:o.deltaX||o.deltaY;if(r===0)return;let a=s?this._tabsList.scrollHeight-this._tabsList.clientHeight:this._tabsList.scrollWidth-this._tabsList.clientWidth;if(a<=0)return;let l=s?this._tabsList.scrollTop:this._tabsList.scrollLeft;r<0&&l<=0||r>0&&l>=a||(o.preventDefault(),o.stopPropagation(),s?this._tabsList.scrollTop=l+r:this._tabsList.scrollLeft=l+r)},{passive:!1}),T(this._tabsList,"keydown",o=>{this._onKeyDown(o)}),T(this._tabsList,"dragover",o=>{this._reorder.processDragOver(o.clientX,o.clientY)&&o.preventDefault()},!0),T(this._tabsList,"dragleave",o=>{this._reorder.processDragLeave(o.relatedTarget)},!0),T(this._tabsList,"dragend",()=>{this._reorder.resetDragAnimation()}),T(this._tabsList,"drop",o=>{var s,r,a;if(((s=this._animState)===null||s===void 0?void 0:s.currentInsertionIndex)==null||((r=this.accessor.options.theme)===null||r===void 0?void 0:r.tabAnimation)!=="smooth"&&!this._animState.sourceTabGroupId)return;o.stopPropagation(),o.preventDefault(),(a=this.group.model.dropTargetContainer)===null||a===void 0||(a=a.model)===null||a===void 0||a.clear();let l=this._animState;if(this._animState=null,this._pendingCollapse=!1,l.sourceTabGroupId){this._commitGroupMove(l.sourceTabGroupId,l.currentInsertionIndex);return}let d=this._reorder.resolveTabDrop(l);if(this._reorder.uncollapseSourceTab(l.sourceTabId),!d){this.resetTabTransforms();return}let h=l.sourceIndex,c=this.snapshotTabPositions();this.resetTabTransforms(),this._onDrop.fire(I({event:o},d)),this.runFlipAnimation(c,l.sourceTabId,h===-1,{from:Math.min(h,d.index),to:Math.max(h,d.index)})},!0),L.from(()=>{var o;(o=this._voidContainerListeners)===null||o===void 0||o.dispose(),this._reorder.resetDragAnimation(),this._tabGroupManager.disposeAll();for(let{value:s,disposable:r}of this._tabs)r.dispose(),s.dispose();this._tabs=[],this._tabMap.clear()}))}indexOf(e){return this._tabs.findIndex(t=>t.value.panel.id===e)}getTabId(e){var t;return(t=this._tabMap.get(e))===null||t===void 0?void 0:t.value.element.id}getPanelForTab(e){for(let{value:t}of this._tabs)if(t.element===e||t.element.contains(e))return t.panel}isActive(e){return this.selectedIndex>-1&&this._tabs[this.selectedIndex].value===e}_onKeyDown(e){let t=this._tabs.findIndex(r=>r.value.element===e.target);if(t===-1)return;let i=this._direction==="vertical",n=i?"ArrowDown":"ArrowRight",o=i?"ArrowUp":"ArrowLeft",s=this._tabs.length-1;switch(e.key){case n:e.preventDefault(),this._focusTab(Math.min(t+1,s));break;case o:e.preventDefault(),this._focusTab(Math.max(t-1,0));break;case"Home":e.preventDefault(),this._focusTab(0);break;case"End":e.preventDefault(),this._focusTab(s);break;case"Enter":case" ":e.preventDefault(),this.accessor.withOrigin("user",()=>this._tabs[t].value.panel.api.setActive());break;case"Delete":case"Backspace":e.preventDefault(),this._closeTab(t);break}}_closeTab(e){var t,i,n,o,s;let r=(t=this._tabs[e])===null||t===void 0?void 0:t.value;if(!r)return;let a=(i=(n=(o=this._tabs[e+1])===null||o===void 0?void 0:o.value)!==null&&n!==void 0?n:(s=this._tabs[e-1])===null||s===void 0?void 0:s.value)===null||i===void 0?void 0:i.panel.id;if(r.panel.api.close(),a!==void 0){let l=this._tabs.findIndex(d=>d.value.panel.id===a);l>-1&&this._focusTab(l)}}_focusTab(e){for(let t=0;t<this._tabs.length;t++)this._tabs[t].value.element.tabIndex=t===e?0:-1;this._tabs[e].value.element.focus()}focusActiveTab(){var e;if(this._tabs.length===0)return;let t=(e=this.group.activePanel)===null||e===void 0?void 0:e.id,i=t?this._tabs.findIndex(n=>n.value.panel.id===t):-1;this._focusTab(i>-1?i:0)}setActivePanel(e){let t=this._direction==="vertical";for(let i of this._tabs){let n=e.id===i.value.panel.id;i.value.setActive(n),n&&this._scrollTabIntoView(i.value.element,t)}this._tabGroupManager.groupUnderlines.size>0&&this._tabGroupManager.positionUnderlines()}_scrollTabIntoView(e,t){let i=e.parentElement;if(!i)return;let n=t?e.offsetTop:e.offsetLeft,o=t?e.offsetHeight:e.offsetWidth,s=t?i.scrollTop:i.scrollLeft,r=t?i.clientHeight:i.clientWidth;(n<s||n+o>s+r)&&(t?i.scrollTop=n:i.scrollLeft=n)}_activateOnPointerDown(e){if(!Te(this.accessor.options).html5){this.group.model.openPanel(e);return}let t=requestAnimationFrame(()=>{this._tabMap.has(e.id)&&this.group.model.openPanel(e)});this._pointerActivation.value={dispose:()=>cancelAnimationFrame(t)}}openPanel(e,t=this._tabs.length){if(this._tabMap.has(e.id))return;let i=new uc(e,this.accessor,this.group);i.setContent(e.view.tab),this._direction!=="horizontal"&&i.setDirection(this._direction);let n={value:i,disposable:new x(i.onDragStart(o=>{var s;let r=o.defaultPrevented;if(this._onTabDragStart.fire({nativeEvent:o,panel:e}),!(o.defaultPrevented&&!r)&&((s=this.accessor.options.theme)===null||s===void 0?void 0:s.tabAnimation)==="smooth"){let a=gi(i.element.getBoundingClientRect(),this._direction),l=this._tabs.findIndex(d=>d.value===i);this._animState={sourceTabId:e.id,sourceIndex:l,tabPositions:this.snapshotTabPositions(),chipSizes:this._tabGroupManager.snapshotChipSizes(),currentInsertionIndex:null,targetTabGroupId:null,sourceTabGroupId:null,sourceGroupPanelIds:null,sourceChipSize:0,cursorOffsetFromDragStart:a/2,sourceGapSize:a,containerStart:rn(this._tabsList.getBoundingClientRect(),this._direction)},this._pendingCollapse=!0,requestAnimationFrame(()=>{var d,h;this._pendingCollapse=!1,this._animState&&(this._tabsList.classList.contains("dv-tabs-container--wrap")||(i.element.style.transition="none",G(i.element,"dv-tab--dragging",!0),i.element.offsetHeight),(h=(d=this._animState).currentInsertionIndex)!==null&&h!==void 0||(d.currentInsertionIndex=l),this.applyDragOverTransforms(!0),i.element.style.removeProperty("transition"))})}}),i.onTabClick(o=>{o.defaultPrevented||this.group.api.location.type==="edge"&&(this.group.activePanel===e?this.group.api.isCollapsed()?this.group.api.expand():this.group.api.collapse():(this.group.model.openPanel(e),this.group.api.isCollapsed()&&this.group.api.expand()))}),i.onPointerDown(o=>{if(o.defaultPrevented)return;let s=!this.accessor.options.disableFloatingGroups,r=this.group.api.location.type==="floating"&&this.size===1;if(s&&!r&&o.shiftKey){o.preventDefault();let a=this.accessor.getGroupPanel(i.panel.id),{top:l,left:d}=i.element.getBoundingClientRect(),{top:h,left:c}=this.accessor.element.getBoundingClientRect();this.accessor.addFloatingGroup(a,{x:d-c,y:l-h,inDragMode:!0});return}o.button===0&&this.group.api.location.type!=="edge"&&this.group.activePanel!==e&&this._activateOnPointerDown(e)}),i.onDrop(o=>{let s=this._animState;this._animState=null,this._pendingCollapse=!1;let r=this._tabs.findIndex(c=>c.value===i);if(s){var a;let c=o.position==="right"?r+1:r;if(s.sourceTabGroupId){var l;this._commitGroupMove(s.sourceTabGroupId,(l=s.currentInsertionIndex)!==null&&l!==void 0?l:c);return}this._reorder.uncollapseSourceTab(s.sourceTabId);let u=this.snapshotTabPositions();this.resetTabTransforms(),this._onDrop.fire({event:o.nativeEvent,index:c,targetTabGroupId:s.targetTabGroupId}),((a=this.accessor.options.theme)===null||a===void 0?void 0:a.tabAnimation)==="smooth"&&this.runFlipAnimation(u,s.sourceTabId,s.sourceIndex===-1,s.sourceIndex===-1?void 0:{from:Math.min(s.sourceIndex,c),to:Math.max(s.sourceIndex,c)})}else{var d,h;let c=this._direction==="vertical"?"bottom":"right",u=o.position===c?r+1:r,p=X(),m=p?this._tabs.findIndex(g=>g.value.panel.id===p.panelId):-1,f=u-(m!==-1&&m<u?1:0),v=(d=(h=this.group.model.getTabGroupForPanel(i.panel.id))===null||h===void 0?void 0:h.id)!==null&&d!==void 0?d:null;this._onDrop.fire({event:o.nativeEvent,index:f,targetTabGroupId:v})}}),i.onWillShowOverlay(o=>{this._onWillShowOverlay.fire(new Di(o,{kind:"tab",panel:this.group.activePanel,api:this.accessor.api,group:this.group,getData:X}))}))};this.addTab(n,t),this._scheduleOverflowRefresh(),this._tabGroupManager.positionAllChips(),this._animState&&(this._animState.tabPositions=this.snapshotTabPositions(),this._animState.chipSizes=this._tabGroupManager.snapshotChipSizes(),this.applyDragOverTransforms())}delete(e){var t;let i=this.indexOf(e);if(i===-1)return;((t=this._animState)===null||t===void 0?void 0:t.sourceTabId)===e&&(this.resetTabTransforms(),this._animState=null),this._tabGroupManager.cleanupTransition(e);let{value:n,disposable:o}=this._tabs.splice(i,1)[0];this._tabMap.delete(e),o.dispose(),n.dispose(),n.element.remove(),this._scheduleOverflowRefresh(),this._animState&&(this._animState.tabPositions=this.snapshotTabPositions(),this._animState.chipSizes=this._tabGroupManager.snapshotChipSizes(),this.applyDragOverTransforms())}addTab(e,t=this._tabs.length){if(t<0||t>this._tabs.length)throw new Error("invalid location");let i=t<this._tabs.length?this._tabs[t].value.element:null;this._tabsList.insertBefore(e.value.element,i),this._tabs=[...this._tabs.slice(0,t),e,...this._tabs.slice(t)],this._tabMap.set(e.value.panel.id,e),this.selectedIndex<0&&(this.selectedIndex=t)}_scheduleOverflowRefresh(){this._overflowRefreshPending||!this._showTabsOverflowControl||(this._overflowRefreshPending=!0,queueMicrotask(()=>{if(this._overflowRefreshPending=!1,this.isDisposed||!this._showTabsOverflowControl)return;let e=this._tabsList,t=e.scrollWidth>e.clientWidth||e.scrollHeight>e.clientHeight;this.toggleDropdown({reset:!t})}))}toggleDropdown(e){let t=this._tabs.some(r=>!this._overflowExclude(r.value.panel.id)&&this._forcedOverflow(r.value.panel.id));if(e.reset&&!t){this._onOverflowTabsChange.fire({tabs:[],tabGroups:[],pinnedTabs:[],reset:!0});return}let i=this._tabs.filter(r=>!this._overflowExclude(r.value.panel.id)&&(this._forcedOverflow(r.value.panel.id)||!e.reset&&!po(r.value.element,this._tabsList))).map(r=>r.value.panel.id),n=e.reset?[]:this._tabs.filter(r=>this._overflowExclude(r.value.panel.id)&&r.value.element.getBoundingClientRect().width>0&&!po(r.value.element,this._tabsList)).map(r=>r.value.panel.id),o=new Set(i),s=[];for(let r of this.group.model.getTabGroups()){let a=this._tabGroupManager.chipRenderers.get(r.id),l=a&&!po(a.chip.element,this._tabsList),d=r.panelIds.length>0&&r.panelIds.every(h=>o.has(h));if((l||d)&&(s.push(r.id),r.collapsed))for(let h of r.panelIds)o.has(h)||(o.add(h),i.push(h))}this._onOverflowTabsChange.fire({tabs:i,tabGroups:s,pinnedTabs:n,reset:!1})}updateDragAndDropState(){for(let e of this._tabs)e.value.updateDragAndDropState();this._tabGroupManager.updateDragAndDropState()}updateTabGroups(){this._tabGroupManager.update()}refreshTabGroupAccent(){this._tabGroupManager.refreshAccents()}_handleChipDragStart(e,t,i){var n;let o=e.panelIds[0],s=o?this._tabs.findIndex(d=>d.value.panel.id===o):-1,r=t.element.getBoundingClientRect(),a=gi(r,this._direction);for(let d of e.panelIds){let h=this._tabMap.get(d);h&&(a+=gi(h.value.element.getBoundingClientRect(),this._direction))}if(this._animState={sourceTabId:"",sourceIndex:s,tabPositions:this.snapshotTabPositions(),chipSizes:this._tabGroupManager.snapshotChipSizes(),currentInsertionIndex:null,targetTabGroupId:null,sourceTabGroupId:e.id,sourceGroupPanelIds:new Set(e.panelIds),sourceChipSize:gi(r,this._direction),cursorOffsetFromDragStart:Va(i,this._direction)-rn(r,this._direction),sourceGapSize:a,containerStart:rn(this._tabsList.getBoundingClientRect(),this._direction)},((n=this.accessor.options.theme)===null||n===void 0?void 0:n.tabAnimation)!=="smooth")return;let l=new Set(e.panelIds);this._pendingCollapse=!0,requestAnimationFrame(()=>{var d,h;if(this._pendingCollapse=!1,!this._animState)return;for(let p of this._tabs)l.has(p.value.panel.id)&&(p.value.element.style.transition="none",G(p.value.element,"dv-tab--dragging",!0));let c=this._tabGroupManager.chipRenderers.get(e.id);c&&(c.chip.element.style.transition="none",G(c.chip.element,"dv-tab-group-chip--dragging",!0)),this._tabsList.offsetHeight;let u=this._tabGroupManager.groupUnderlines.get(e.id);u&&(u.style.display="none"),(h=(d=this._animState).currentInsertionIndex)!==null&&h!==void 0||(d.currentInsertionIndex=s),this.applyDragOverTransforms(!0);for(let p of this._tabs)l.has(p.value.panel.id)&&p.value.element.style.removeProperty("transition");c&&c.chip.element.style.removeProperty("transition")})}_handleChipDrop(e,t){let i=e.panelIds[0];if(!i)return;let n=this._tabs.findIndex(l=>l.value.panel.id===i);if(n===-1)return;let o=X();if(o?.tabGroupId){var s;let l=this._animState;this._animState=null,this._pendingCollapse=!1,this._commitGroupMove(o.tabGroupId,(s=l?.currentInsertionIndex)!==null&&s!==void 0?s:n);return}let r=o?.groupId===this.group.id&&o?.panelId?this._tabs.findIndex(l=>l.value.panel.id===o.panelId):-1,a=n-(r!==-1&&r<n?1:0);this._onDrop.fire({event:t.nativeEvent,index:a,targetTabGroupId:null})}setExtendedDropZone(e){this._reorder.setExtendedDropZone(e)}setExternalInsertionIndex(e){this._reorder.setExternalInsertionIndex(e)}clearExternalAnimState(){this._reorder.clearExternalAnimState()}snapshotTabPositions(){return this._reorder.snapshotTabPositions()}handleDragOver(e){this._reorder.handleDragOver(e)}applyDragOverTransforms(e=!1){this._reorder.applyDragOverTransforms(e)}resetTabTransforms(){this._reorder.resetTabTransforms()}_commitGroupMove(e,t){this._reorder.commitGroupMove(e,t)}runFlipAnimation(e,t,i=!1,n){this._reorder.runFlipAnimation(e,t,i,n)}};function Sc(){let e=document.createElement("div");e.className="dv-tabs-overflow-dropdown-default";let t=document.createElement("span");t.textContent="";let i=Ta();return e.appendChild(i),e.appendChild(t),{element:e,update:n=>{t.textContent=`${n.tabs}`}}}var Cc=class extends x{get onTabDragStart(){return this.tabs.onTabDragStart}get panels(){return this.tabs.panels}get size(){return this.tabs.size}get hidden(){return this._hidden}set hidden(e){this._hidden=e,this.element.style.display=e?"none":""}get direction(){return this._direction}set direction(e){this._direction=e,e==="vertical"?(Le(this._element,"dv-groupview-header-vertical"),Le(this.rightActionsContainer,"dv-right-actions-container-vertical"),this.tabs.direction=e):(Re(this._element,"dv-groupview-header-vertical"),Re(this.rightActionsContainer,"dv-right-actions-container-vertical"),this.tabs.direction=e)}get element(){return this._element}get tabsListElement(){return this.tabs.tabsListElement}constructor(e,t){super(),this.accessor=e,this.group=t,this._hidden=!1,this._direction="horizontal",this._dropIndexResolver=(i,n)=>n,this._pinnedRow=void 0,this.dropdownPart=null,this._overflowTabs=[],this._overflowTabGroups=[],this._overflowPinnedTabs=[],this._dropdownDisposable=new Q,this._onDrop=new _,this.onDrop=this._onDrop.event,this._onGroupDragStart=new _,this.onGroupDragStart=this._onGroupDragStart.event,this._onWillShowOverlay=new _,this.onWillShowOverlay=this._onWillShowOverlay.event,this._element=document.createElement("div"),this._element.className="dv-tabs-and-actions-container",G(this._element,"dv-full-width-single-tab",this.accessor.options.singleTabMode==="fullwidth"),this.rightActionsContainer=document.createElement("div"),this.rightActionsContainer.className="dv-right-actions-container",this.leftActionsContainer=document.createElement("div"),this.leftActionsContainer.className="dv-left-actions-container",this.preActionsContainer=document.createElement("div"),this.preActionsContainer.className="dv-pre-actions-container",this.tabs=new Dc(t,e,{showTabsOverflowControl:!e.options.disableTabsOverflowList}),this.voidContainer=new pc(this.accessor,this.group),this.tabs.voidContainer=this.voidContainer.element,this._element.appendChild(this.preActionsContainer),this._element.appendChild(this.tabs.element),this._element.appendChild(this.leftActionsContainer),this._element.appendChild(this.voidContainer.element),this._element.appendChild(this.rightActionsContainer),this.tabs.setExtendedDropZone(this._element),this.addDisposables(this.tabs.onDrop(i=>this._onDrop.fire(i)),this.tabs.onWillShowOverlay(i=>this._onWillShowOverlay.fire(i)),e.onDidOptionsChange(()=>{this.tabs.showTabsOverflowControl=!e.options.disableTabsOverflowList}),this.tabs.onOverflowTabsChange(i=>{this.toggleDropdown(i)}),this.tabs,this._onWillShowOverlay,this._onDrop,this._onGroupDragStart,this.voidContainer,this.voidContainer.onDragStart(i=>{this._onGroupDragStart.fire({nativeEvent:i,group:this.group})}),this.voidContainer.onDrop(i=>{this.tabs.handleVoidDrop()||this._onDrop.fire({event:i.nativeEvent,index:this.tabs.size})}),this.voidContainer.onWillShowOverlay(i=>{this._onWillShowOverlay.fire(new Di(i,{kind:"header_space",panel:this.group.activePanel,api:this.accessor.api,group:this.group,getData:X}))}),T(this.leftActionsContainer,"dragleave",i=>{let n=i.relatedTarget;!this.leftActionsContainer.contains(n)&&!this._element.contains(n)&&this.tabs.clearExternalAnimState()}),T(this.voidContainer.element,"dragleave",i=>{let n=i.relatedTarget;this.voidContainer.element.contains(n)||(this._element.contains(n)?this.tabs.setExternalInsertionIndex(null):this.tabs.clearExternalAnimState())}),T(this.voidContainer.element,"pointerdown",i=>{if(!i.defaultPrevented&&!this.accessor.options.disableFloatingGroups&&i.shiftKey&&this.group.api.location.type!=="floating"&&this.group.api.location.type!=="edge"){i.preventDefault();let{top:n,left:o}=this.element.getBoundingClientRect(),{top:s,left:r}=this.accessor.element.getBoundingClientRect();this.accessor.addFloatingGroup(this.group,{x:o-r+20,y:n-s+20,inDragMode:!0})}}))}show(){this.hidden||(this.element.style.display="")}hide(){this._element.style.display="none"}setRightActionsElement(e){this.rightActions!==e&&(this.rightActions&&(this.rightActions.remove(),this.rightActions=void 0),e&&(this.rightActionsContainer.appendChild(e),this.rightActions=e))}setLeftActionsElement(e){this.leftActions!==e&&(this.leftActions&&(this.leftActions.remove(),this.leftActions=void 0),e&&(this.leftActionsContainer.appendChild(e),this.leftActions=e))}setPrefixActionsElement(e){this.preActions!==e&&(this.preActions&&(this.preActions.remove(),this.preActions=void 0),e&&(this.preActionsContainer.appendChild(e),this.preActions=e))}isActive(e){return this.tabs.isActive(e)}indexOf(e){return this.tabs.indexOf(e)}getTabId(e){return this.tabs.getTabId(e)}getPanelForTab(e){return this.tabs.getPanelForTab(e)}setActive(e){}delete(e){this.tabs.delete(e),this.updateClassnames()}setActivePanel(e){this.tabs.setActivePanel(e)}focusActiveTab(){this.tabs.focusActiveTab()}openPanel(e,t=this.tabs.size){this.tabs.openPanel(e,t),this.updateClassnames()}closePanel(e){this.delete(e.id)}setOverflowExclude(e){this.tabs.setOverflowExclude(e)}setForcedOverflow(e){this.tabs.setForcedOverflow(e)}setPinnedSticky(e){this.tabs.setPinnedSticky(e)}refreshOverflow(){this.tabs.refreshOverflow()}setPinnedRow(e){this._pinnedRow!==e&&(this._pinnedRow&&this._pinnedRow.remove(),this._pinnedRow=e,e&&(e.classList.add("dv-pinned-row"),this._element.insertBefore(e,this._element.firstChild)),G(this._element,"dv-tabs-and-actions-container--pinned-row",!!e))}setDropIndexResolver(e){this._dropIndexResolver=e}resolveDropIndex(e,t){return this._dropIndexResolver(e,t)}updateClassnames(){G(this._element,"dv-single-tab",this.size===1)}toggleDropdown(e){let t=e.reset?[]:e.tabs,i=e.reset?[]:e.tabGroups,n=e.reset?[]:e.pinnedTabs;this._overflowTabs=t,this._overflowTabGroups=i,this._overflowPinnedTabs=n;let o=this._overflowTabs.length+this._overflowPinnedTabs.length;if(o>0&&this.dropdownPart){this.dropdownPart.update({tabs:o});return}if(o===0){this._dropdownDisposable.dispose();return}let s=document.createElement("div");s.className="dv-tabs-overflow-dropdown-root";let r=Sc();r.update({tabs:o}),this.dropdownPart=r,s.appendChild(r.element),this.rightActionsContainer.prepend(s),this._dropdownDisposable.value=new x(L.from(()=>{var a,l;s.remove(),(a=this.dropdownPart)===null||a===void 0||(l=a.dispose)===null||l===void 0||l.call(a),this.dropdownPart=null}),T(s,"pointerdown",a=>{a.preventDefault()},{capture:!0}),T(s,"click",a=>{let l=da(s),d={x:a.clientX,y:a.clientY,zIndex:l?.style.zIndex?`calc(${l.style.zIndex} * 2)`:void 0},{context:h,rowRenderers:c}=this.createOverflowRenderContext(s,d),u=this.accessor.advancedOverflowService;try{u?u.renderOverflow({group:this.group,overflowTabs:[...this._overflowTabs],overflowTabGroups:[...this._overflowTabGroups],pinnedOverflowTabs:[...this._overflowPinnedTabs],context:h}):h.open(this.renderFreeOverflowList(h))}catch(p){throw c.dispose(),p}}))}createOverflowRenderContext(e,t){let i=new Set(this._overflowTabGroups),n=this.group.model.getTabGroups(),o=new Map,s=new Map;for(let d of n)if(s.set(d.id,d),i.has(d.id))for(let h of d.panelIds)o.set(h,d);let r=()=>this.accessor.getPopupServiceForGroup(this.group),a=new x,l=d=>{let h=document.createElement("div");h.className="dv-tabs-overflow-group-header";let c=document.createElement("span");c.className="dv-tabs-overflow-group-color",jo(c,d.color,this.accessor.tabGroupColorPalette),h.appendChild(c);let u=document.createElement("span");if(u.className="dv-tabs-overflow-group-label",u.textContent=d.label||d.id,h.appendChild(u),d.collapsed){let p=document.createElement("span");p.className="dv-tabs-overflow-group-collapsed-badge",p.textContent=`${d.panelIds.length}`,h.appendChild(p)}return h.addEventListener("click",()=>{r().close(),d.collapsed&&d.expand();let p=d.panelIds[0];if(p){let m=this.group.panels.find(f=>f.id===p);this.accessor.withOrigin("user",()=>m?.api.setActive())}}),h};return{context:{overflowGroupIdForPanel:d=>{var h;return(h=o.get(d))===null||h===void 0?void 0:h.id},buildGroupHeader:d=>{let h=s.get(d);if(!(!h||!i.has(h.id)))return l(h)},buildPinnedHeader:()=>{let d=document.createElement("div");d.className="dv-tabs-overflow-group-header dv-tabs-overflow-pinned-header";let h=Ea();h.classList.add("dv-tabs-overflow-pinned-icon"),d.appendChild(h);let c=document.createElement("span");return c.className="dv-tabs-overflow-group-label",c.textContent="Pinned",d.appendChild(c),d},buildRow:d=>{let h=this.group.panels.find(b=>b.id===d);if(!h)return;let c=this.tabs.tabs.find(b=>b.panel.id===d),u=o.get(d),p=h.view.createTabRenderer("headerOverflow"),m=!1,f=L.from(()=>{if(!m){var b;m=!0,(b=p.dispose)===null||b===void 0||b.call(p)}});a.isDisposed?f.dispose():a.addDisposables(f);let v=p.element,g=document.createElement("div");G(g,"dv-tab",!0),G(g,"dv-active-tab",h.api.isActive),G(g,"dv-inactive-tab",!h.api.isActive),u&&G(g,"dv-tab--grouped",!0);let w=()=>{u?.collapsed&&u.expand(),c?.element.scrollIntoView({block:"nearest",inline:"nearest"}),this.accessor.withOrigin("user",()=>h.api.setActive())};return g.addEventListener("click",b=>{r().close(),!b.defaultPrevented&&w()}),g.appendChild(v),{element:g,panel:h,activate:()=>{r().close(),w()},dispose:()=>{a.removeDisposable(f),f.dispose()}}},open:d=>{r().openPopover(d,t,{onClose:()=>a.dispose()})},close:()=>r().close(),focusTrigger:()=>{e.tabIndex=-1,e.focus()}},rowRenderers:a}}renderFreeOverflowList(e){let t=document.createElement("div");t.style.overflow="auto",t.className="dv-tabs-overflow-container";let i=this._overflowPinnedTabs.map(o=>e.buildRow(o)).filter(o=>o!=null);if(i.length>0){t.appendChild(e.buildPinnedHeader());for(let o of i)t.appendChild(o.element)}let n=new Set;for(let o of this.tabs.tabs.filter(s=>this._overflowTabs.includes(s.panel.id))){let s=e.overflowGroupIdForPanel(o.panel.id);if(s&&!n.has(s)){n.add(s);let a=e.buildGroupHeader(s);a&&t.appendChild(a)}let r=e.buildRow(o.panel.id);r&&t.appendChild(r.element)}return t}updateDragAndDropState(){this.tabs.updateDragAndDropState(),this.voidContainer.updateDragAndDropState()}updateTabGroups(){this.tabs.updateTabGroups()}refreshTabGroupAccent(){this.tabs.refreshTabGroupAccent()}},Pc=class extends x{get label(){return this._label}get color(){return this._color}get componentParams(){return this._componentParams}setLabel(e){this.isDisposed||this._label===e||(this._label=e,this._onDidChange.fire())}setColor(e){if(this.isDisposed)return;let t=e===""?void 0:e;this._color!==t&&(this._color=t,this._onDidChange.fire())}setComponentParams(e){this.isDisposed||(this._componentParams=e,this._onDidChange.fire())}get collapsed(){return this._collapsed}get panelIds(){return this._panelIds}get size(){return this._panelIds.length}get isEmpty(){return this._panelIds.length===0}constructor(e,t){var i,n;super(),this.id=e,this._collapsed=!1,this._panelIds=[],this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this._onDidPanelChange=new _,this.onDidPanelChange=this._onDidPanelChange.event,this._onDidCollapseChange=new _,this.onDidCollapseChange=this._onDidCollapseChange.event,this._onDidDestroy=new _,this.onDidDestroy=this._onDidDestroy.event,this._label=(i=t?.label)!==null&&i!==void 0?i:"",this._color=t?.color===""?void 0:t?.color,this._collapsed=(n=t?.collapsed)!==null&&n!==void 0?n:!1,this._componentParams=t?.componentParams,this.addDisposables(this._onDidChange,this._onDidPanelChange,this._onDidCollapseChange,this._onDidDestroy)}addPanel(e,t){if(this.isDisposed||this._panelIds.includes(e))return;let i=t===void 0?this._panelIds.length:Math.max(0,Math.min(t,this._panelIds.length));this._panelIds.splice(i,0,e),this._onDidPanelChange.fire({panelId:e,type:"add"})}removePanel(e){if(this.isDisposed)return!1;let t=this._panelIds.indexOf(e);return t===-1?!1:(this._panelIds.splice(t,1),this._onDidPanelChange.fire({panelId:e,type:"remove"}),!0)}indexOfPanel(e){return this._panelIds.indexOf(e)}containsPanel(e){return this._panelIds.includes(e)}collapse(){this.isDisposed||this._collapsed||(this._collapsed=!0,this._onDidCollapseChange.fire(!0))}expand(){this.isDisposed||!this._collapsed||(this._collapsed=!1,this._onDidCollapseChange.fire(!1))}toggle(){this._collapsed?this.expand():this.collapse()}toJSON(){let e={id:this.id,collapsed:this._collapsed,panelIds:[...this._panelIds]};return this._label&&(e.label=this._label),this._color!==void 0&&(e.color=this._color),this._componentParams!==void 0&&(e.componentParams=this._componentParams),e}dispose(){this._onDidDestroy.fire(),super.dispose()}},Ko=class extends Mo{get nativeEvent(){return this.options.nativeEvent}get position(){return this.options.position}get panel(){return this.options.panel}get index(){return this.options.index}get group(){return this.options.group}get api(){return this.options.api}constructor(e){super(),this.options=e}getData(){return this.options.getData()}},Ha=class extends Ko{get kind(){return this._kind}get edgeGroup(){return this._edgeGroup}constructor(e){super(e),this._kind=e.kind,this._edgeGroup=!!e.edgeGroup}},Gc=class extends x{get tabGroups(){return this._tabGroups}get element(){throw new Error("dockview: not supported")}get activePanel(){return this._activePanel}get contentContainerId(){return this.contentContainer.element.id}get contentDropTarget(){return this.contentContainer.dropTarget}get locked(){return this._locked}set locked(e){this._locked=e,G(this.container,"dv-locked-groupview",e==="no-drop-target"||e)}get isActive(){return this._isGroupActive}get panels(){return this._panels}get size(){return this._panels.length}get isEmpty(){return this._panels.length===0}get hasWatermark(){return!!(this.watermark&&this.container.contains(this.watermark.element))}get header(){return this.tabsContainer}get tabsListElement(){return this.tabsContainer.tabsListElement}getPanelForTab(e){return this.tabsContainer.getPanelForTab(e)}get isContentFocused(){let e=this.contentContainer.element,t=Go(e);return t?So(t,e):!1}get headerPosition(){var e;return(e=this._headerPosition)!==null&&e!==void 0?e:"top"}set headerPosition(e){this._headerPosition=e,this.invalidateHeaderSize(),Re(this.container,"dv-groupview-header-top","dv-groupview-header-bottom","dv-groupview-header-left","dv-groupview-header-right"),Le(this.container,`dv-groupview-header-${e}`);let t=e==="top"||e==="bottom"?"horizontal":"vertical",i=this._headerDirection;if(this._headerDirection=t,this.tabsContainer.direction=t,this.header.direction=t,this.panels.length>0&&this.layoutContent(),this.updateHeaderActions(),i!==void 0&&i!==t){var n;(n=this.groupPanel)===null||n===void 0||n.api._onDidHeaderDirectionChange.fire({direction:t,position:e})}}get location(){return this._location}set location(e){this._location=e,G(this.container,"dv-groupview-floating",!1),G(this.container,"dv-groupview-popout",!1),G(this.container,"dv-groupview-edge",!1);let t=i=>{this.contentContainer.dropTarget.setTargetZones(i),this.contentContainer.pointerDropTarget.setTargetZones(i)};switch(e.type){case"grid":t(["top","bottom","left","right","center"]);break;case"floating":t(["top","bottom","left","right","center"]),G(this.container,"dv-groupview-floating",!0);break;case"popout":t(["top","bottom","left","right","center"]),G(this.container,"dv-groupview-popout",!0);break;case"edge":t(["center"]),G(this.container,"dv-groupview-edge",!0);break}this.groupPanel.api._onDidLocationChange.fire({location:this.location})}constructor(e,t,i,n,o){var s,r;super(),this.container=e,this.accessor=t,this.id=i,this.options=n,this.groupPanel=o,this._isGroupActive=!1,this._locked=!1,this._location={type:"grid"},this.mostRecentlyUsed=[],this._overwriteRenderContainer=null,this._overwriteDropTargetContainer=null,this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this._width=0,this._height=0,this._panels=[],this._panelDisposables=new Map,this._tabGroupDisposables=new Map,this._pendingMicrotaskDisposables=new Set,this._onMove=new _,this.onMove=this._onMove.event,this._onDidDrop=new _,this.onDidDrop=this._onDidDrop.event,this._onWillDrop=new _,this.onWillDrop=this._onWillDrop.event,this._onWillShowOverlay=new _,this.onWillShowOverlay=this._onWillShowOverlay.event,this._onTabDragStart=new _,this.onTabDragStart=this._onTabDragStart.event,this._onGroupDragStart=new _,this.onGroupDragStart=this._onGroupDragStart.event,this._onDidAddPanel=new _,this.onDidAddPanel=this._onDidAddPanel.event,this._onDidPanelTitleChange=new _,this.onDidPanelTitleChange=this._onDidPanelTitleChange.event,this._onDidPanelParametersChange=new _,this.onDidPanelParametersChange=this._onDidPanelParametersChange.event,this._onDidRemovePanel=new _,this.onDidRemovePanel=this._onDidRemovePanel.event,this._onDidActivePanelChange=new _,this.onDidActivePanelChange=this._onDidActivePanelChange.event,this._onUnhandledDragOver=new _,this.onUnhandledDragOver=this._onUnhandledDragOver.event,this._tabGroups=[],this._tabGroupMap=new Map,this._panelToTabGroup=new Map,this._tabGroupIdCounter=0,this._pendingTabGroupUpdate=!1,this._onDidCreateTabGroup=new _,this.onDidCreateTabGroup=this._onDidCreateTabGroup.event,this._onDidDestroyTabGroup=new _,this.onDidDestroyTabGroup=this._onDidDestroyTabGroup.event,this._onDidAddPanelToTabGroup=new _,this.onDidAddPanelToTabGroup=this._onDidAddPanelToTabGroup.event,this._onDidRemovePanelFromTabGroup=new _,this.onDidRemovePanelFromTabGroup=this._onDidRemovePanelFromTabGroup.event,this._onDidTabGroupChange=new _,this.onDidTabGroupChange=this._onDidTabGroupChange.event,this._onDidTabGroupCollapsedChange=new _,this.onDidTabGroupCollapsedChange=this._onDidTabGroupCollapsedChange.event,G(this.container,"dv-groupview",!0),this.container.setAttribute("role","region"),this._api=new Ho(this.accessor),this.tabsContainer=new Cc(this.accessor,this.groupPanel),this.contentContainer=new oc(this.accessor,this),e.append(this.tabsContainer.element,this.contentContainer.element),this.header.hidden=!!n.hideHeader,this.locked=(s=n.locked)!==null&&s!==void 0?s:!1,this.headerPosition=(r=n.headerPosition)!==null&&r!==void 0?r:t.defaultHeaderPosition,this.addDisposables(kt(this.tabsContainer.element,()=>{if(this.isDisposed)return;let a=this.measureHeaderSize();a!==this._cachedHeaderSize&&(this._cachedHeaderSize=a,this.layout(this._width,this._height))}),this._onDidPanelTitleChange.event(()=>this.updateAccessibleLabel()),this._onTabDragStart,this._onGroupDragStart,this._onWillShowOverlay,this.tabsContainer.onTabDragStart(a=>{this._onTabDragStart.fire(a)}),this.tabsContainer.onGroupDragStart(a=>{this._onGroupDragStart.fire(a)}),this.tabsContainer.onDrop(a=>{var l;let d=X(),h=(l=d?.panelId)!==null&&l!==void 0?l:null,c=h?this.tabsContainer.resolveDropIndex(h,a.index):a.index;if(this.handleDropEvent("header",a.event,"center",c),h&&a.targetTabGroupId){let u=this._tabGroupMap.get(a.targetTabGroupId),p;if(u){let m=this._panels.findIndex(f=>f.id===h);if(m!==-1){p=0;for(let f of u.panelIds)this._panels.findIndex(v=>v.id===f)<m&&p++}}this.addPanelToTabGroup(a.targetTabGroupId,h,p)}else h&&a.targetTabGroupId===null&&this.removePanelFromTabGroup(h)}),this.contentContainer.onDidFocus(()=>{this.accessor.doSetGroupActive(this.groupPanel)}),this.contentContainer.onDidBlur(()=>{}),this.contentContainer.dropTarget.onDrop(a=>{this.handleDropEvent("content",a.nativeEvent,a.position,void 0,a.edge,a.edgeGroup)}),this.contentContainer.pointerDropTarget.onDrop(a=>{this.handleDropEvent("content",a.nativeEvent,a.position,void 0,a.edge,a.edgeGroup)}),this.tabsContainer.onWillShowOverlay(a=>{this._onWillShowOverlay.fire(a)}),this.contentContainer.dropTarget.onWillShowOverlay(a=>{this._onWillShowOverlay.fire(new Di(a,{kind:"content",panel:this.activePanel,api:this._api,group:this.groupPanel,getData:X}))}),this.contentContainer.pointerDropTarget.onWillShowOverlay(a=>{this._onWillShowOverlay.fire(new Di(a,{kind:"content",panel:this.activePanel,api:this._api,group:this.groupPanel,getData:X}))}),this._onMove,this._onDidChange,this._onDidDrop,this._onWillDrop,this._onDidAddPanel,this._onDidRemovePanel,this._onDidActivePanelChange,this._onUnhandledDragOver,this._onDidPanelTitleChange,this._onDidPanelParametersChange,this._onDidCreateTabGroup,this._onDidDestroyTabGroup,this._onDidAddPanelToTabGroup,this._onDidRemovePanelFromTabGroup,this._onDidTabGroupChange,this._onDidTabGroupCollapsedChange,this._onDidCreateTabGroup.event(()=>{this._scheduleTabGroupUpdate()}),this._onDidDestroyTabGroup.event(()=>{this._scheduleTabGroupUpdate()}),this._onDidAddPanelToTabGroup.event(()=>{this._scheduleTabGroupUpdate()}),this._onDidRemovePanelFromTabGroup.event(()=>{this._scheduleTabGroupUpdate()}),this._onDidTabGroupChange.event(()=>{this._scheduleTabGroupUpdate()}),this._onDidTabGroupCollapsedChange.event(()=>{this._scheduleTabGroupUpdate()}))}_scheduleTabGroupUpdate(){this._pendingTabGroupUpdate||(this._pendingTabGroupUpdate=!0,queueMicrotask(()=>{this._pendingTabGroupUpdate=!1,this.isDisposed||this.tabsContainer.updateTabGroups()}))}_bracketTabGroupMutation(e){return this.accessor.mutation?this.accessor.mutation("tab-group",e):e()}createTabGroup(e){return this._bracketTabGroupMutation(()=>this._doCreateTabGroup(e))}_doCreateTabGroup(e){var t;let i=(t=e?.id)!==null&&t!==void 0?t:`tg-${this.id}-${this._tabGroupIdCounter++}`,n=new Pc(i,{label:e?.label,color:e?.color,collapsed:e?.collapsed,componentParams:e?.componentParams});return this._tabGroups.push(n),this._tabGroupMap.set(i,n),this._tabGroupDisposables.set(i,new x(n.onDidChange(()=>{this._onDidTabGroupChange.fire({tabGroup:n})}),n.onDidCollapseChange(o=>{o?this._handleGroupCollapse(n):this._handleGroupExpand(n),this._onDidTabGroupCollapsedChange.fire({tabGroup:n})}),n.onDidDestroy(()=>{this._removeTabGroupInternal(n)}))),this._onDidCreateTabGroup.fire({tabGroup:n}),n}dissolveTabGroup(e){let t=this._tabGroupMap.get(e);t&&this._bracketTabGroupMutation(()=>{let i=[...t.panelIds];for(let n of i)t.removePanel(n),this._panelToTabGroup.delete(n),this._onDidRemovePanelFromTabGroup.fire({tabGroup:t,panelId:n});t.dispose()})}addPanelToTabGroup(e,t,i){let n=this._tabGroupMap.get(e);if(!n||!this._panels.some(s=>s.id===t))return;let o=this.getTabGroupForPanel(t);o?.id!==e&&this._bracketTabGroupMutation(()=>{o&&this.removePanelFromTabGroup(t),n.addPanel(t,i),this._panelToTabGroup.set(t,n),this._enforceContiguity(n,t),this._onDidAddPanelToTabGroup.fire({tabGroup:n,panelId:t})})}movePanelWithinGroup(e,t,i){let n=this._tabGroupMap.get(e);n?.containsPanel(t)&&(n.removePanel(t),n.addPanel(t,i),this._enforceContiguity(n,t),this.tabsContainer.updateTabGroups())}movePanelBetweenGroups(e,t,i){let n=this._findTabGroupForPanel(e),o=this._tabGroupMap.get(t);o&&(n&&(n.removePanel(e),this._panelToTabGroup.delete(e),this._moveOutOfGroupSpan(n,e),this._onDidRemovePanelFromTabGroup.fire({tabGroup:n,panelId:e}),n.isEmpty&&n.dispose()),o.addPanel(e,i),this._panelToTabGroup.set(e,o),this._enforceContiguity(o,e),this._onDidAddPanelToTabGroup.fire({tabGroup:o,panelId:e}))}moveTabGroup(e,t){let i=this._tabGroupMap.get(e);if(!i||i.panelIds.length===0)return;let n=new Set(i.panelIds),o=i.panelIds.map(l=>this._panels.find(d=>d.id===l)).filter(l=>l!==void 0);if(o.length===0)return;let s=0;for(let l=0;l<Math.min(t,this._panels.length);l++)n.has(this._panels[l].id)&&s++;for(let l of o){let d=this._panels.indexOf(l);d!==-1&&this._panels.splice(d,1)}let r=t-s,a=Math.max(0,Math.min(r,this._panels.length));this._panels.splice(a,0,...o);for(let l of this._panels)this.tabsContainer.delete(l.id);for(let l=0;l<this._panels.length;l++)this.tabsContainer.openPanel(this._panels[l],l);this._syncActiveTab(),this.tabsContainer.updateTabGroups()}_enforceContiguity(e,t){let i=this._panels.find(a=>a.id===t);if(!i)return;let n=e.indexOfPanel(t),o=this._computeGlobalIndex(e,n),s=this._panels.indexOf(i);if(s===o)return;this._panels.splice(s,1);let r=o>s?o-1:o;this._panels.splice(r,0,i),this._reinsertTab(i,r)}_reinsertTab(e,t){this.tabsContainer.delete(e.id),this.tabsContainer.openPanel(e,t),e===this._activePanel&&this._syncActiveTab()}_syncActiveTab(){this._activePanel&&(this.tabsContainer.setActivePanel(this._activePanel),this.contentContainer.setLabelledBy(this.tabsContainer.getTabId(this._activePanel.id)))}_computeGlobalIndex(e,t){let i=e.panelIds;if(i.length<=1){let n=this._panels.find(o=>o.id===i[0]);return n?this._panels.indexOf(n):this._panels.length}for(let n=0;n<i.length;n++){if(n===t)continue;let o=this._panels.find(s=>s.id===i[n]);if(o){let s=this._panels.indexOf(o);return Math.max(0,s+(t-n))}}return this._panels.length}removePanelFromTabGroup(e){let t=this._findTabGroupForPanel(e);t&&this._bracketTabGroupMutation(()=>{t.removePanel(e),this._panelToTabGroup.delete(e),this._moveOutOfGroupSpan(t,e),this._onDidRemovePanelFromTabGroup.fire({tabGroup:t,panelId:e}),t.isEmpty&&t.dispose()})}_moveOutOfGroupSpan(e,t){let i=this._panels.findIndex(a=>a.id===t);if(i===-1||e.isEmpty)return;let n=e.panelIds,o=this._panels.findIndex(a=>a.id===n[0]),s=this._panels.findIndex(a=>a.id===n[n.length-1]);if(o===-1||s===-1||i<o||i>s)return;let[r]=this._panels.splice(i,1);this._panels.splice(s,0,r),this._reinsertTab(r,s)}getTabGroups(){return this._tabGroups}updateTabGroups(){this.tabsContainer.updateTabGroups()}refreshTabGroupAccent(){this.tabsContainer.refreshTabGroupAccent()}refreshWatermark(){if(this.watermark){var e,t;this.watermark.element.remove(),(e=(t=this.watermark).dispose)===null||e===void 0||e.call(t),this.watermark=void 0}this.updateContainer()}getTabGroupForPanel(e){return this._findTabGroupForPanel(e)}_findTabGroupForPanel(e){return this._panelToTabGroup.get(e)}_removeTabGroupInternal(e){let t=this._tabGroups.indexOf(e);if(t!==-1){this._tabGroups.splice(t,1),this._tabGroupMap.delete(e.id);for(let n of e.panelIds)this._panelToTabGroup.delete(n);this._onDidDestroyTabGroup.fire({tabGroup:e});let i=this._tabGroupDisposables.get(e.id);this._tabGroupDisposables.delete(e.id),i&&(this._pendingMicrotaskDisposables.add(i),queueMicrotask(()=>{this._pendingMicrotaskDisposables.delete(i),i.dispose()}))}}_handleGroupCollapse(e){if(!this._activePanel||!e.containsPanel(this._activePanel.id))return;let t=this._panels.indexOf(this._activePanel);for(let i=t+1;i<this._panels.length;i++){let n=this._panels[i],o=this._findTabGroupForPanel(n.id);if(!o?.collapsed){this.doSetActivePanel(n),this.updateContainer();return}}for(let i=t-1;i>=0;i--){let n=this._panels[i],o=this._findTabGroupForPanel(n.id);if(!o?.collapsed){this.doSetActivePanel(n),this.updateContainer();return}}this.contentContainer.closePanel(),this.doSetActivePanel(void 0),this.updateContainer()}_handleGroupExpand(e){if(this._activePanel)return;let t=e.panelIds[0];if(t){let i=this._panels.find(n=>n.id===t);i&&(this.doSetActivePanel(i),this.updateContainer())}}restoreTabGroups(e){for(let t of e){let i=/-(\d+)$/.exec(t.id);if(i){let n=Number.parseInt(i[1],10)+1;n>this._tabGroupIdCounter&&(this._tabGroupIdCounter=n)}}for(let t of e){let i=this.createTabGroup({id:t.id,label:t.label,color:t.color,componentParams:t.componentParams}),n=this._tabGroupMap.get(i.id);for(let o of t.panelIds)this._panels.some(s=>s.id===o)&&(i.addPanel(o),this._panelToTabGroup.set(o,n),this._enforceContiguity(n,o));t.collapsed&&i.collapse(),i.isEmpty&&i.dispose()}}focusContent(){this.contentContainer.element.focus()}focusActiveTab(){this.tabsContainer.focusActiveTab()}set renderContainer(e){this.panels.forEach(t=>{this.renderContainer.detatch(t)}),this._overwriteRenderContainer=e,this.panels.forEach(t=>{this.rerender(t)}),this.panels.length>0&&this.layoutContent()}get renderContainer(){var e;return(e=this._overwriteRenderContainer)!==null&&e!==void 0?e:this.accessor.overlayRenderContainer}set dropTargetContainer(e){this._overwriteDropTargetContainer=e}get dropTargetContainer(){var e;return this._location.type==="floating"&&this.accessor.rootDropTargetContainer.disabled?this.accessor.floatingDropTargetContainer:(e=this._overwriteDropTargetContainer)!==null&&e!==void 0?e:this.accessor.rootDropTargetContainer}initialize(){this.options.panels&&this.options.panels.forEach(e=>{this.doAddPanel(e)}),this.options.activePanel&&this.openPanel(this.options.activePanel),this.setActive(this.isActive,!0),this.updateContainer(),this.updateHeaderActions()}updateHeaderActions(){var e;(e=this.accessor.headerActionsService)===null||e===void 0||e.refresh(this.groupPanel)}attachHeaderAction(e,t){switch(e){case"left":this.tabsContainer.setLeftActionsElement(t);break;case"right":this.tabsContainer.setRightActionsElement(t);break;case"prefix":this.tabsContainer.setPrefixActionsElement(t);break}}rerender(e){this.contentContainer.renderPanel(e,{asActive:!1})}indexOf(e){return this.tabsContainer.indexOf(e.id)}toJSON(){var e;let t={views:this.tabsContainer.panels,activeView:(e=this._activePanel)===null||e===void 0?void 0:e.id,id:this.id};return this.locked!==!1&&(t.locked=this.locked),this.header.hidden&&(t.hideHeader=!0),this.headerPosition!=="top"&&(t.headerPosition=this.headerPosition),this._tabGroups.length>0&&(t.tabGroups=this._tabGroups.map(i=>i.toJSON())),t}moveToNext(e){var t,i,n;(t=e)!==null&&t!==void 0||(e={}),(n=(i=e).panel)!==null&&n!==void 0||(i.panel=this.activePanel);let o=e.panel?this.panels.indexOf(e.panel):-1,s;if(o<this.panels.length-1)s=o+1;else{if(e.suppressRoll)return;s=0}this.openPanel(this.panels[s])}moveToPrevious(e){var t,i,n;if((t=e)!==null&&t!==void 0||(e={}),(n=(i=e).panel)!==null&&n!==void 0||(i.panel=this.activePanel),!e.panel)return;let o=this.panels.indexOf(e.panel),s;if(o>0)s=o-1;else{if(e.suppressRoll)return;s=this.panels.length-1}this.openPanel(this.panels[s])}containsPanel(e){return this.panels.includes(e)}init(e){}update(e){}focus(){var e;(e=this._activePanel)===null||e===void 0||e.focus()}openPanel(e,t={}){typeof t.index!="number"||t.index>this.panels.length?t.index=this.panels.length:t.index<0&&(t.index=0);let i=!!t.skipSetActive;if(e.updateParentGroup(this.groupPanel,{skipSetActive:t.skipSetActive}),this.doAddPanel(e,t.index,{skipSetActive:i}),this.invalidateHeaderSize(),this._activePanel===e){this.contentContainer.openPanel(e);return}i||this.doSetActivePanel(e),t.skipSetGroupActive||this.accessor.doSetGroupActive(this.groupPanel),t.skipSetActive?e.runEvents():this.updateContainer()}removePanel(e,t){let i=typeof e=="string"?e:e.id,n=this._panels.find(o=>o.id===i);if(!n)throw new Error("invalid operation");return this._removePanel(n,t)}closeAllPanels(){if(this.panels.length>0){let e=[...this.panels];for(let t of e)this.doClose(t)}else this.accessor.removeGroup(this.groupPanel)}closePanel(e){this.doClose(e)}doClose(e){let t=this.panels.length===1&&this.accessor.isLastGridGroup(this.groupPanel);this.accessor.removePanel(e,t&&this.accessor.options.noPanelsOverlay==="emptyGroup"?{removeEmptyGroup:!1}:void 0)}isPanelActive(e){return this._activePanel===e}updateActions(e){this.tabsContainer.setRightActionsElement(e)}setActive(e,t=!1){if(!this.isDisposed&&!(!t&&this.isActive===e)){if(this._isGroupActive=e,G(this.container,"dv-active-group",e),G(this.container,"dv-inactive-group",!e),this.tabsContainer.setActive(this.isActive),!this._activePanel&&this.panels.length>0){let i=this._panels.find(n=>{let o=this._findTabGroupForPanel(n.id);return!o?.collapsed});i&&this.doSetActivePanel(i)}this.updateContainer()}}layout(e,t){this._width=e,this._height=t,this.layoutContent()}layoutContent(){var e;let{width:t,height:i}=this.contentDimensions();this.contentContainer.layout(t,i),!((e=this._activePanel)===null||e===void 0)&&e.layout&&this._activePanel.layout(t,i)}relayout(){this.invalidateHeaderSize(),this.layout(this._width,this._height)}measureHeaderSize(){let e=this.tabsContainer.element;return this.headerPosition==="top"||this.headerPosition==="bottom"?e.offsetHeight:e.offsetWidth}invalidateHeaderSize(){this._cachedHeaderSize=void 0}contentDimensions(){var e;let t=this.headerPosition==="top"||this.headerPosition==="bottom",i=(e=this._cachedHeaderSize)!==null&&e!==void 0?e:this._cachedHeaderSize=this.measureHeaderSize();return{width:t?this._width:Math.max(0,this._width-i),height:t?Math.max(0,this._height-i):this._height}}_removePanel(e,t){let i=this._activePanel===e;if(this.doRemovePanel(e),this.invalidateHeaderSize(),i&&this.panels.length>0){let n=this.mostRecentlyUsed[0];this.openPanel(n,{skipSetActive:t?.skipSetActive,skipSetGroupActive:t?.skipSetActiveGroup})}return t?.skipSetActive||this.updateContainer(),e}doRemovePanel(e){let t=this.panels.indexOf(e);if(this._activePanel===e&&this.contentContainer.closePanel(),this.tabsContainer.delete(e.id),this._panels.splice(t,1),this.mostRecentlyUsed.includes(e)){let n=this.mostRecentlyUsed.indexOf(e);this.mostRecentlyUsed.splice(n,1)}let i=this._panelDisposables.get(e.id);i&&(i.dispose(),this._panelDisposables.delete(e.id)),this.removePanelFromTabGroup(e.id),this._activePanel===e&&this._panels.length===0&&this.doSetActivePanel(void 0),this._onDidRemovePanel.fire({panel:e})}doAddPanel(e,t=this.panels.length,i){let n=this._panels.indexOf(e)>-1;this.tabsContainer.show(),this.contentContainer.show(),this.tabsContainer.openPanel(e,t),i?.skipSetActive?e.api.renderer==="always"&&this.contentContainer.renderPanel(e,{asActive:!1}):this.contentContainer.openPanel(e),!n&&(this.updateMru(e),this.panels.splice(t,0,e),this._panelDisposables.set(e.id,new x(e.api.onDidTitleChange(o=>this._onDidPanelTitleChange.fire(o)),e.api.onDidParametersChange(o=>this._onDidPanelParametersChange.fire(o)))),this._onDidAddPanel.fire({panel:e}))}doSetActivePanel(e){if(this._activePanel!==e){if(this._activePanel=e,e){var t,i,n;this._syncActiveTab(),this.contentContainer.openPanel(e),this.layoutContent(),this.updateMru(e),this.contentContainer.refreshFocusState(),this._onDidActivePanelChange.fire({panel:e,origin:(t=(i=(n=this.accessor).currentOrigin)===null||i===void 0?void 0:i.call(n))!==null&&t!==void 0?t:"user"})}this.updateAccessibleLabel()}}updateAccessibleLabel(){var e;let t=(e=this._activePanel)===null||e===void 0?void 0:e.title;t?this.container.setAttribute("aria-label",t):this.container.removeAttribute("aria-label")}updateMru(e){this.mostRecentlyUsed.includes(e)&&this.mostRecentlyUsed.splice(this.mostRecentlyUsed.indexOf(e),1),this.mostRecentlyUsed=[e,...this.mostRecentlyUsed]}updateContainer(){this.panels.forEach(n=>n.runEvents());let e=this.isEmpty||!this._activePanel;if(e&&!this.watermark){let n=this.accessor.createWatermarkComponent();n.init({containerApi:this._api,group:this.groupPanel}),this.watermark=n,T(this.watermark.element,"pointerdown",()=>{this.isActive||this.accessor.doSetGroupActive(this.groupPanel)}),this.contentContainer.element.appendChild(this.watermark.element)}if(!e&&this.watermark){var t,i;this.watermark.element.remove(),(t=(i=this.watermark).dispose)===null||t===void 0||t.call(i),this.watermark=void 0}}canDisplayOverlay(e,t,i){let n=new Ra(e,i,t,X,this.accessor.getPanel(this.id));return this._onUnhandledDragOver.fire(n),n.isAccepted}canDisplayContentOverlay(e,t){if(this.locked==="no-drop-target"||this.locked&&t==="center")return!1;let i=X();return!i&&e.shiftKey&&this.location.type!=="floating"?!1:i?.viewId===this.accessor.id?!0:this.canDisplayOverlay(e,t,"content")}handleDropEvent(e,t,i,n,o,s){if(this.locked==="no-drop-target")return;if(e==="content"&&o){this.accessor.dockToLayoutEdge(t,i,s);return}function r(){switch(e){case"header":return typeof n=="number"?"tab":"header_space";case"content":return"content"}}let a=typeof n=="number"?this.panels[n]:void 0,l=new Ha({nativeEvent:t,position:i,panel:a,index:n,getData:()=>X(),kind:r(),group:this.groupPanel,api:this._api});if(this._onWillDrop.fire(l),l.defaultPrevented)return;let d=X();if(d?.viewId===this.accessor.id){if(e==="content"&&d.groupId===this.id&&(i==="center"||d.panelId===null&&!d.tabGroupId)||e==="header"&&d.groupId===this.id&&d.panelId===null&&!d.tabGroupId)return;if(d.panelId===null){let{groupId:u}=d;this._onMove.fire({target:i,groupId:u,index:n,tabGroupId:d.tabGroupId});return}if(this.tabsContainer.indexOf(d.panelId)!==-1&&this.tabsContainer.size===1&&this.accessor.options.closeEmptyGroups!==!1)return;let{groupId:h,panelId:c}=d;if(this.id===h&&!i&&this.tabsContainer.indexOf(c)===n)return;this._onMove.fire({target:i,groupId:d.groupId,itemId:d.panelId,index:n})}else this._onDidDrop.fire(new Ko({nativeEvent:t,position:i,panel:a,index:n,getData:()=>X(),group:this.groupPanel,api:this._api}))}updateDragAndDropState(){this.tabsContainer.updateDragAndDropState()}dispose(){var e,t,i;super.dispose(),(e=this.watermark)===null||e===void 0||e.element.remove(),(t=this.watermark)===null||t===void 0||(i=t.dispose)===null||i===void 0||i.call(t),this.watermark=void 0;for(let n of[...this._tabGroups])n.dispose();for(let n of this._tabGroupDisposables.values())n.dispose();this._tabGroupDisposables.clear();for(let n of this._pendingMicrotaskDisposables)n.dispose();this._pendingMicrotaskDisposables.clear();for(let n of this.panels)n.dispose();this.tabsContainer.dispose(),this.contentContainer.dispose()}},Zo=class extends ka{constructor(e,t,i){super(e,t),this._onDidConstraintsChangeInternal=new _,this.onDidConstraintsChangeInternal=this._onDidConstraintsChangeInternal.event,this._onDidConstraintsChange=new _,this.onDidConstraintsChange=this._onDidConstraintsChange.event,this._onDidSizeChange=new _,this.onDidSizeChange=this._onDidSizeChange.event,this.addDisposables(this._onDidConstraintsChangeInternal,this._onDidConstraintsChange,this._onDidSizeChange),i&&this.initialize(i)}setConstraints(e){this._onDidConstraintsChangeInternal.fire(e)}setSize(e){this._onDidSizeChange.fire(e)}},Xo=class extends Bo{get priority(){return this._priority}get snap(){return this._snap}get minimumWidth(){return this.__minimumWidth()}get minimumHeight(){return this.__minimumHeight()}get maximumHeight(){return this.__maximumHeight()}get maximumWidth(){return this.__maximumWidth()}__minimumWidth(){let e=typeof this._minimumWidth=="function"?this._minimumWidth():this._minimumWidth;return e!==this._evaluatedMinimumWidth&&(this._evaluatedMinimumWidth=e,this.updateConstraints()),e}__maximumWidth(){let e=typeof this._maximumWidth=="function"?this._maximumWidth():this._maximumWidth;return e!==this._evaluatedMaximumWidth&&(this._evaluatedMaximumWidth=e,this.updateConstraints()),e}__minimumHeight(){let e=typeof this._minimumHeight=="function"?this._minimumHeight():this._minimumHeight;return e!==this._evaluatedMinimumHeight&&(this._evaluatedMinimumHeight=e,this.updateConstraints()),e}__maximumHeight(){let e=typeof this._maximumHeight=="function"?this._maximumHeight():this._maximumHeight;return e!==this._evaluatedMaximumHeight&&(this._evaluatedMaximumHeight=e,this.updateConstraints()),e}get isActive(){return this.api.isActive}get isVisible(){return this.api.isVisible}constructor(e,t,i,n){super(e,t,n??new Zo(e,t)),this._evaluatedMinimumWidth=0,this._evaluatedMaximumWidth=Number.MAX_SAFE_INTEGER,this._evaluatedMinimumHeight=0,this._evaluatedMaximumHeight=Number.MAX_SAFE_INTEGER,this._minimumWidth=0,this._minimumHeight=0,this._maximumWidth=Number.MAX_SAFE_INTEGER,this._maximumHeight=Number.MAX_SAFE_INTEGER,this._snap=!1,this._onDidChange=new _,this.onDidChange=this._onDidChange.event,typeof i?.minimumWidth=="number"&&(this._minimumWidth=i.minimumWidth),typeof i?.maximumWidth=="number"&&(this._maximumWidth=i.maximumWidth),typeof i?.minimumHeight=="number"&&(this._minimumHeight=i.minimumHeight),typeof i?.maximumHeight=="number"&&(this._maximumHeight=i.maximumHeight),this.api.initialize(this),this.addDisposables(this.api.onWillVisibilityChange(o=>{let{isVisible:s}=o,{accessor:r}=this._params;r.setVisible(this,s)}),this.api.onActiveChange(()=>{let{accessor:o}=this._params;o.doSetGroupActive(this)}),this.api.onDidConstraintsChangeInternal(o=>this.applyConstraints(o)),this.api.onDidSizeChange(o=>{this._onDidChange.fire({height:o.height,width:o.width})}),this._onDidChange)}setVisible(e){this.api._onDidVisibilityChange.fire({isVisible:e})}setActive(e){this.api._onDidActiveChange.fire({isActive:e})}init(e){e.maximumHeight&&(this._maximumHeight=e.maximumHeight),e.minimumHeight&&(this._minimumHeight=e.minimumHeight),e.maximumWidth&&(this._maximumWidth=e.maximumWidth),e.minimumWidth&&(this._minimumWidth=e.minimumWidth),this._priority=e.priority,this._snap=!!e.snap,super.init(e),typeof e.isVisible=="boolean"&&this.setVisible(e.isVisible)}applyConstraints(e){(typeof e.minimumWidth=="number"||typeof e.minimumWidth=="function")&&(this._minimumWidth=e.minimumWidth),(typeof e.minimumHeight=="number"||typeof e.minimumHeight=="function")&&(this._minimumHeight=e.minimumHeight),(typeof e.maximumWidth=="number"||typeof e.maximumWidth=="function")&&(this._maximumWidth=e.maximumWidth),(typeof e.maximumHeight=="number"||typeof e.maximumHeight=="function")&&(this._maximumHeight=e.maximumHeight),this.notifyConstraintsChanged()}notifyConstraintsChanged(){this._onDidChange.fire(void 0)}updateConstraints(){this.api._onDidConstraintsChange.fire({minimumWidth:this._evaluatedMinimumWidth,maximumWidth:this._evaluatedMaximumWidth,minimumHeight:this._evaluatedMinimumHeight,maximumHeight:this._evaluatedMaximumHeight})}toJSON(){let e=super.toJSON(),t=n=>n===Number.MAX_SAFE_INTEGER?void 0:n,i=n=>n<=0?void 0:n;return I(I({},e),{},{minimumHeight:i(this.minimumHeight),maximumHeight:t(this.maximumHeight),minimumWidth:i(this.minimumWidth),maximumWidth:t(this.maximumWidth),snap:this.snap,priority:this.priority})}},Qe="dockview: DockviewGroupPanelApiImpl not initialized",kc=class extends Zo{get location(){if(!this._group)throw new Error(Qe);return this._group.model.location}get boundingBox(){if(!this._group||this._group.model.location.type==="popout")return;let e=this.accessor.element.getBoundingClientRect(),t=this._group.element.getBoundingClientRect();return{left:t.left-e.left,top:t.top-e.top,width:t.width,height:t.height}}get locked(){if(!this._group)throw new Error(Qe);return this._group.locked}set locked(e){if(!this._group)throw new Error(Qe);this._group.locked=e}constructor(e,t){super(e,"__dockviewgroup__"),this.accessor=t,this._isApplyingSize=!1,this._onDidLocationChange=new _,this.onDidLocationChange=this._onDidLocationChange.event,this._onDidActivePanelChange=new _,this.onDidActivePanelChange=this._onDidActivePanelChange.event,this._onDidCollapsedChange=new _,this.onDidCollapsedChange=this._onDidCollapsedChange.event,this._onDidPeekChange=new _,this.onDidPeekChange=this._onDidPeekChange.event,this._onDidHeaderDirectionChange=new _,this.onDidHeaderDirectionChange=this._onDidHeaderDirectionChange.event,this.addDisposables(this._onDidLocationChange,this._onDidActivePanelChange,this._onDidCollapsedChange,this._onDidPeekChange,this._onDidHeaderDirectionChange,this._onDidVisibilityChange.event(i=>{if(i.isVisible&&this._pendingSize){let n=this._pendingSize;this._pendingSize=void 0,super.setSize(n)}}),this.onDidDimensionsChange(i=>{var n,o;let s=i.width!==((n=this._reportedSize)===null||n===void 0?void 0:n.width)||i.height!==((o=this._reportedSize)===null||o===void 0?void 0:o.height);this._reportedSize={width:i.width,height:i.height},s&&this.isVisible&&!this._isApplyingSize&&(this._pendingSize=void 0)}))}setSize(e){(typeof e.width=="number"||typeof e.height=="number")&&(this._pendingSize=I({},e));let t=this._isApplyingSize;this._isApplyingSize=!0;try{super.setSize(e)}finally{this._isApplyingSize=t}}close(){if(this._group)return this.accessor.removeGroup(this._group)}getWindow(){return this.location.type==="popout"?this.location.getWindow():globalThis.window}setHeaderPosition(e){if(!this._group)throw new Error(Qe);this._group.model.headerPosition=e}getHeaderPosition(){if(!this._group)throw new Error(Qe);return this._group.model.headerPosition}moveTo(e){if(!this._group)throw new Error(Qe);this.accessor.withOrigin("api",()=>{var t,i,n,o;let s=(t=e.group)!==null&&t!==void 0?t:this.accessor.addGroup({direction:$h((i=e.position)!==null&&i!==void 0?i:"right"),skipSetActive:(n=e.skipSetActive)!==null&&n!==void 0?n:!1});this.accessor.moveGroupOrPanel({from:{groupId:this._group.id},to:{group:s,position:e.group&&(o=e.position)!==null&&o!==void 0?o:"center",index:e.index},skipSetActive:e.skipSetActive})})}maximize(){if(!this._group)throw new Error(Qe);this.location.type==="grid"&&this.accessor.maximizeGroup(this._group)}isMaximized(){if(!this._group)throw new Error(Qe);return this.accessor.isMaximizedGroup(this._group)}exitMaximized(){if(!this._group)throw new Error(Qe);this.isMaximized()&&this.accessor.exitMaximizedGroup()}collapse(){this._group&&this.accessor.setEdgeGroupCollapsed(this._group,!0)}expand(){this._group&&this.accessor.setEdgeGroupCollapsed(this._group,!1)}isCollapsed(){return this._group?this.accessor.isEdgeGroupCollapsed(this._group):!1}isPeeking(){return this._group?this.accessor.isEdgeGroupPeeking(this._group):!1}setAutoHide(e){this._group&&this.accessor.setEdgeGroupAutoHide(this._group,e)}isAutoHide(){return this._group?this.accessor.isEdgeGroupAutoHide(this._group):!1}initialize(e){this._group=e}},xc=100,Ec=100,en=class extends Xo{get minimumWidth(){var e;if(typeof this._explicitConstraints.minimumWidth=="number")return this._explicitConstraints.minimumWidth;let t=(e=this.activePanel)===null||e===void 0?void 0:e.minimumWidth;return typeof t=="number"?t:super.__minimumWidth()}get minimumHeight(){var e;if(typeof this._explicitConstraints.minimumHeight=="number")return this._explicitConstraints.minimumHeight;let t=(e=this.activePanel)===null||e===void 0?void 0:e.minimumHeight;return typeof t=="number"?t:super.__minimumHeight()}get maximumWidth(){var e;if(typeof this._explicitConstraints.maximumWidth=="number")return this._explicitConstraints.maximumWidth;let t=(e=this.activePanel)===null||e===void 0?void 0:e.maximumWidth;return typeof t=="number"?t:super.__maximumWidth()}get maximumHeight(){var e;if(typeof this._explicitConstraints.maximumHeight=="number")return this._explicitConstraints.maximumHeight;let t=(e=this.activePanel)===null||e===void 0?void 0:e.maximumHeight;return typeof t=="number"?t:super.__maximumHeight()}get panels(){return this._model.panels}get activePanel(){return this._model.activePanel}get size(){return this._model.size}get model(){return this._model}get locked(){return this._model.locked}set locked(e){this._model.locked=e}get header(){return this._model.header}constructor(e,t,i){var n,o,s,r,a,l;super(t,"groupview_default",{minimumHeight:(n=(o=i.constraints)===null||o===void 0?void 0:o.minimumHeight)!==null&&n!==void 0?n:Ec,minimumWidth:(s=(r=i.constraints)===null||r===void 0?void 0:r.minimumWidth)!==null&&s!==void 0?s:xc,maximumHeight:(a=i.constraints)===null||a===void 0?void 0:a.maximumHeight,maximumWidth:(l=i.constraints)===null||l===void 0?void 0:l.maximumWidth},new kc(t,e)),this._explicitConstraints={},this.api.initialize(this),this._model=new Gc(this.element,e,t,i,this),this._lastConstraints=this.currentConstraints(),this.addDisposables(this.model.onDidActivePanelChange(d=>{this.api._onDidActivePanelChange.fire(d),this.notifyIfConstraintsChanged()}),this.model.onDidRemovePanel(()=>{this.notifyIfConstraintsChanged()}))}applyConstraints(e){e.minimumWidth!==void 0&&(this._explicitConstraints.minimumWidth=typeof e.minimumWidth=="function"?e.minimumWidth():e.minimumWidth),e.minimumHeight!==void 0&&(this._explicitConstraints.minimumHeight=typeof e.minimumHeight=="function"?e.minimumHeight():e.minimumHeight),e.maximumWidth!==void 0&&(this._explicitConstraints.maximumWidth=typeof e.maximumWidth=="function"?e.maximumWidth():e.maximumWidth),e.maximumHeight!==void 0&&(this._explicitConstraints.maximumHeight=typeof e.maximumHeight=="function"?e.maximumHeight():e.maximumHeight),super.applyConstraints(e),this._lastConstraints=this.currentConstraints()}currentConstraints(){return{minimumWidth:this.minimumWidth,maximumWidth:this.maximumWidth,minimumHeight:this.minimumHeight,maximumHeight:this.maximumHeight}}notifyIfConstraintsChanged(){let e=this._lastConstraints,t=this.currentConstraints();e.minimumWidth===t.minimumWidth&&e.maximumWidth===t.maximumWidth&&e.minimumHeight===t.minimumHeight&&e.maximumHeight===t.maximumHeight||(this._lastConstraints=t,this.notifyConstraintsChanged())}focus(){this.api.isActive||this.api.setActive(),super.focus()}initialize(){this._model.initialize()}setActive(e){super.setActive(e),this.model.setActive(e)}layout(e,t){super.layout(e,t),this.model.layout(e,t)}relayout(){this.model.relayout()}getComponent(){return this._model}toJSON(){return this.model.toJSON()}};var Tc={name:"abyss",className:"dockview-theme-abyss",colorScheme:"dark",tabGroupIndicator:"none"};var Wa={name:"lightSpaced",className:"dockview-theme-light-spaced",colorScheme:"light",gap:10,edgeGroupCollapsedSize:44,dndOverlayMounting:"absolute",dndPanelOverlay:"group",dndTabIndicator:"line",dndOverlayBorder:"2px solid var(--dv-active-sash-color)"};var Ic=class extends Zo{get location(){return this.group.api.location}get title(){return this.panel.title}get isPinned(){return this.panel.isPinned}get isGroupActive(){return this.group.isActive}get renderer(){return this.panel.renderer}set group(e){if(this._group!==e){let t=this._group.isActive;this._group=e,this._onDidGroupChange.fire({}),this.setupGroupEventListeners(),t!==this.isGroupActive&&this._onDidActiveGroupChange.fire({isActive:this.isGroupActive}),this.fireLocationChange()}}get group(){return this._group}get tabComponent(){return this._tabComponent}constructor(e,t,i,n,o){super(e.id,n),this.panel=e,this.accessor=i,this._onDidTitleChange=new _,this.onDidTitleChange=this._onDidTitleChange.event,this._onDidChangePinned=new _,this.onDidChangePinned=this._onDidChangePinned.event,this._onDidActiveGroupChange=new _,this.onDidActiveGroupChange=this._onDidActiveGroupChange.event,this._onDidGroupChange=new _,this.onDidGroupChange=this._onDidGroupChange.event,this._onDidRendererChange=new _,this.onDidRendererChange=this._onDidRendererChange.event,this._onDidLocationChange=new _,this.onDidLocationChange=this._onDidLocationChange.event,this.groupEventsDisposable=new Q,this._tabComponent=o,this.initialize(e),this._group=t,this.setupGroupEventListeners(),this.addDisposables(this.groupEventsDisposable,this._onDidRendererChange,this._onDidTitleChange,this._onDidChangePinned,this._onDidGroupChange,this._onDidActiveGroupChange,this._onDidLocationChange)}getWindow(){return this.group.api.getWindow()}setActive(){this.accessor.withOrigin("api",()=>super.setActive())}moveTo(e){this.accessor.withOrigin("api",()=>{var t,i;return this.accessor.moveGroupOrPanel({from:{groupId:this._group.id,panelId:this.panel.id},to:{group:(t=e.group)!==null&&t!==void 0?t:this._group,position:e.group&&(i=e.position)!==null&&i!==void 0?i:"center",index:e.index},skipSetActive:e.skipSetActive})})}setTitle(e){this.panel.setTitle(e)}setPinned(e){this.accessor.setPanelPinned(this.panel,e)}setRenderer(e){this.panel.setRenderer(e)}close(){this.group.model.closePanel(this.panel)}maximize(){this.group.api.maximize()}isMaximized(){return this.group.api.isMaximized()}exitMaximized(){this.group.api.exitMaximized()}fireLocationChange(){this.accessor.deferLocationChange(this,()=>{this.isDisposed||this._onDidLocationChange.fire({location:this.location})})}setupGroupEventListeners(){let e=this.isGroupActive;this.groupEventsDisposable.value=new x(this.group.api.onDidVisibilityChange(t=>{let i=!t.isVisible&&this.isVisible,n=t.isVisible&&!this.isVisible,o=this.group.model.isPanelActive(this.panel);(i||n&&o)&&this._onDidVisibilityChange.fire(t)}),this.group.api.onDidLocationChange(()=>{this.group===this.panel.group&&this.fireLocationChange()}),this.group.api.onDidActiveChange(()=>{this.group===this.panel.group&&e!==this.isGroupActive&&(e=this.isGroupActive,this._onDidActiveGroupChange.fire({isActive:this.isGroupActive}))}))}},Ht=class extends x{get params(){return this._params}get title(){return this._title}get isPinned(){return this._pinned}get group(){return this._group}get renderer(){var e;return(e=this._renderer)!==null&&e!==void 0?e:this.accessor.renderer}get minimumWidth(){return this._minimumWidth}get minimumHeight(){return this._minimumHeight}get maximumWidth(){return this._maximumWidth}get maximumHeight(){return this._maximumHeight}constructor(e,t,i,n,o,s,r,a){super(),this.id=e,this.accessor=n,this.containerApi=o,this.view=r,this._pinned=!1,this._renderer=a.renderer,this._group=s,this._minimumWidth=a.minimumWidth,this._minimumHeight=a.minimumHeight,this._maximumWidth=a.maximumWidth,this._maximumHeight=a.maximumHeight,this.api=new Ic(this,this._group,n,t,i),this.addDisposables(this.api.onActiveChange(()=>{n.setActivePanel(this)}),this.api.onDidSizeChange(l=>{this.group.api.setSize(l)}),this.api.onDidRendererChange(()=>{this.group.model.rerender(this)}))}init(e){this._params=e.params,this.view.init(I(I({},e),{},{api:this.api,containerApi:this.containerApi})),this.setTitle(e.title)}focus(){let e=new Ga;this.api._onWillFocus.fire(e),!e.defaultPrevented&&(this.api.isActive||this.api.setActive())}toJSON(){return{id:this.id,contentComponent:this.view.contentComponent,tabComponent:this.view.tabComponent,params:Object.keys(this._params||{}).length>0?this._params:void 0,title:this.title,renderer:this._renderer,minimumHeight:this._minimumHeight,maximumHeight:this._maximumHeight,minimumWidth:this._minimumWidth,maximumWidth:this._maximumWidth,pinned:this._pinned?!0:void 0}}setTitle(e){e!==this.title&&(this._title=e,this.view.setTitle(e),this.api._onDidTitleChange.fire({title:e}))}setPinned(e){this._pinned!==e&&(this._pinned=e,this.api._onDidChangePinned.fire({isPinned:e}))}setRenderer(e){e!==this.renderer&&(this._renderer=e,this.api._onDidRendererChange.fire({renderer:e}))}update(e){this._params=I(I({},this._params),e.params);for(let t of Object.keys(e.params))e.params[t]===void 0&&delete this._params[t];this.view.update({params:this._params})}updateFromStateModel(e){var t,i,n,o,s;this._maximumHeight=e.maximumHeight,this._minimumHeight=e.minimumHeight,this._maximumWidth=e.maximumWidth,this._minimumWidth=e.minimumWidth,this._params=(t=e.params)!==null&&t!==void 0?t:{},this.view.update({params:this._params}),this.setTitle((i=e.title)!==null&&i!==void 0?i:this.id),this.setRenderer((n=e.renderer)!==null&&n!==void 0?n:this.accessor.renderer),this.setPinned(((o=e.pinned)!==null&&o!==void 0?o:!1)&&!!(!((s=this.accessor.options.pinnedTabs)===null||s===void 0)&&s.enabled))}updateParentGroup(e,t){this._group=e,this.api.group=this._group;let i=this._group.model.isPanelActive(this),n=this.group.api.isActive&&i;t?.skipSetActive||this.api.isActive!==n&&this.api._onDidActiveChange.fire({isActive:this.group.api.isActive&&i}),this.api.isVisible!==i&&this.api._onDidVisibilityChange.fire({isVisible:i})}runEvents(){let e=this._group.model.isPanelActive(this),t=this.group.api.isActive&&e;this.api.isActive!==t&&this.api._onDidActiveChange.fire({isActive:this.group.api.isActive&&e}),this.api.isVisible!==e&&this.api._onDidVisibilityChange.fire({isVisible:e})}layout(e,t){this.api._onDidDimensionChange.fire({width:e,height:t}),this.view.layout(e,t)}dispose(){this.api.dispose(),this.view.dispose()}},Rr=class extends x{get element(){return this._element}constructor(){super(),this._messages=cn,this._element=document.createElement("div"),this._element.className="dv-default-tab",this._content=document.createElement("div"),this._content.className="dv-default-tab-content",this.action=document.createElement("div"),this.action.className="dv-default-tab-action",this.action.setAttribute("role","button"),this.action.setAttribute("tabindex","-1");let e=sc();e.setAttribute("aria-hidden","true"),this.action.appendChild(e),this._element.appendChild(this._content),this._element.appendChild(this.action),this.render()}init(e){var t;this._title=e.title,this._messages=(t=e.containerApi.messages)!==null&&t!==void 0?t:cn,this.addDisposables(e.api.onDidTitleChange(i=>{this._title=i.title,this.render()}),T(this.action,"pointerdown",i=>{i.preventDefault()}),T(this.action,"click",i=>{i.defaultPrevented||(i.preventDefault(),e.api.close())})),this.render()}render(){if(this._content.textContent!==this._title){var e;this._content.textContent=(e=this._title)!==null&&e!==void 0?e:""}this.action.setAttribute("aria-label",this._title?this._messages.closeTab(this._title):this._messages.closeTabPlain())}},Fa=class{get content(){return this._content}get tab(){return this._tab}constructor(e,t,i,n){this.accessor=e,this.id=t,this.contentComponent=i,this.tabComponent=n,this._content=this.createContentComponent(this.id,i),this._tab=this.createTabComponent(this.id,n)}createTabRenderer(e){let t=this.createTabComponent(this.id,this.tabComponent);if(this._params&&t.init(I(I({},this._params),{},{tabLocation:e})),this._updateEvent){var i;(i=t.update)===null||i===void 0||i.call(t,this._updateEvent)}return t}init(e){this._params=e,this.content.init(e),this.tab.init(I(I({},e),{},{tabLocation:"header"}))}setTitle(e){this._params&&(this._params.title=e)}layout(e,t){var i,n;(i=(n=this.content).layout)===null||i===void 0||i.call(n,e,t)}update(e){var t,i,n,o;this._updateEvent=e,(t=(i=this.content).update)===null||t===void 0||t.call(i,e),(n=(o=this.tab).update)===null||n===void 0||n.call(o,e)}dispose(){var e,t,i,n;(e=(t=this.content).dispose)===null||e===void 0||e.call(t),(i=(n=this.tab).dispose)===null||i===void 0||i.call(n)}createContentComponent(e,t){return this.accessor.options.createComponent({id:e,name:t})}createTabComponent(e,t){let i=t??this.accessor.options.defaultTabComponent;if(i){if(this.accessor.options.createTabComponent){let n=this.accessor.options.createTabComponent({id:e,name:i});return n||new Rr}console.warn(`dockview: tabComponent '${t}' was not found. falling back to the default tab.`)}return new Rr}},Ac=class{constructor(e){this.accessor=e}fromJSON(e,t){var i,n,o;let s=e.id,r=e.params,a=e.title,l=e.view,d=l?l.content.id:(i=e.contentComponent)!==null&&i!==void 0?i:"unknown",h=l?(n=l.tab)===null||n===void 0?void 0:n.id:e.tabComponent,c=new Fa(this.accessor,s,d,h),u=new Ht(s,d,h,this.accessor,new Ho(this.accessor),t,c,{renderer:e.renderer,minimumWidth:e.minimumWidth,minimumHeight:e.minimumHeight,maximumWidth:e.maximumWidth,maximumHeight:e.maximumHeight});return u.init({title:a??s,params:r??{}}),e.pinned&&(!((o=this.accessor.options.pinnedTabs)===null||o===void 0)&&o.enabled)&&u.setPinned(!0),u}},Oc=class extends x{get element(){return this._element}constructor(){super(),this._element=document.createElement("div"),this._element.className="dv-watermark"}init(e){}},zc=class{constructor(){this._orderedList=[]}push(e){this._orderedList=[...this._orderedList.filter(t=>t!==e),e],this.update()}destroy(e){this._orderedList=this._orderedList.filter(t=>t!==e),this.update()}update(){for(let e=0;e<this._orderedList.length;e++)this._orderedList[e].setAttribute("aria-level",`${e}`),this._orderedList[e].style.zIndex=`calc(var(--dv-overlay-z-index, 999) + ${e*2})`}},tn=new zc;function bo(e){return e.width>0&&e.height>0}var qo=class Pt extends x{set minimumInViewportWidth(t){this.options.minimumInViewportWidth=t}set minimumInViewportHeight(t){this.options.minimumInViewportHeight=t}get element(){return this._element}get isVisible(){return this._isVisible}get headerHeight(){var t,i;return(t=(i=this.options.header)===null||i===void 0?void 0:i.offsetHeight)!==null&&t!==void 0?t:0}constructor(t){super(),this.options=t,this._element=document.createElement("div"),this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this._onDidChangeEnd=new _,this.onDidChangeEnd=this._onDidChangeEnd.event,this._onDidStartMoving=new _,this.onDidStartMoving=this._onDidStartMoving.event,this._dragMove=new Q,this._dragCancelled=!1,this.addDisposables(this._onDidChange,this._onDidChangeEnd,this._onDidStartMoving,this._dragMove),this._element.className="dv-resize-container",this._element.setAttribute("role","dialog"),this._element.setAttribute("aria-modal","false"),this._isVisible=!0,this.setupResize("top"),this.setupResize("bottom"),this.setupResize("left"),this.setupResize("right"),this.setupResize("topleft"),this.setupResize("topright"),this.setupResize("bottomleft"),this.setupResize("bottomright"),this.options.header&&(G(this._element,"dv-resize-container-with-titlebar",!0),this._element.appendChild(this.options.header)),this._element.appendChild(this.options.content),this.options.container.appendChild(this._element),this.setBounds(I(I(I(I({height:this.options.height,width:this.options.width},"top"in this.options&&{top:this.options.top}),"bottom"in this.options&&{bottom:this.options.bottom}),"left"in this.options&&{left:this.options.left}),"right"in this.options&&{right:this.options.right})),tn.push(this._element)}setVisible(t){t!==this.isVisible&&(this._isVisible=t,G(this.element,"dv-hidden",!this.isVisible))}bringToFront(){tn.push(this._element)}setBounds(t={}){typeof t.height=="number"&&(this._element.style.height=`${t.height}px`),typeof t.width=="number"&&(this._element.style.width=`${t.width}px`),"top"in t&&typeof t.top=="number"&&(this._element.style.top=`${t.top}px`,this._element.style.bottom="auto",this.verticalAlignment="top"),"bottom"in t&&typeof t.bottom=="number"&&(this._element.style.bottom=`${t.bottom}px`,this._element.style.top="auto",this.verticalAlignment="bottom"),"left"in t&&typeof t.left=="number"&&(this._element.style.left=`${t.left}px`,this._element.style.right="auto",this.horiziontalAlignment="left"),"right"in t&&typeof t.right=="number"&&(this._element.style.right=`${t.right}px`,this._element.style.left="auto",this.horiziontalAlignment="right");let i=this.options.container.getBoundingClientRect(),n=this._element.getBoundingClientRect();if(!bo(i)||!bo(n)){this._onDidChange.fire();return}let o=Math.max(0,this.getMinimumWidth(n.width)),s=Math.max(0,this.getMinimumHeight(n.height));if(this.verticalAlignment==="top"){let r=Z(n.top-i.top,-s,Math.max(0,i.height-n.height+s));this._element.style.top=`${r}px`,this._element.style.bottom="auto"}if(this.verticalAlignment==="bottom"){let r=Z(i.bottom-n.bottom,-s,Math.max(0,i.height-n.height+s));this._element.style.bottom=`${r}px`,this._element.style.top="auto"}if(this.horiziontalAlignment==="left"){let r=Z(n.left-i.left,-o,Math.max(0,i.width-n.width+o));this._element.style.left=`${r}px`,this._element.style.right="auto"}if(this.horiziontalAlignment==="right"){let r=Z(i.right-n.right,-o,Math.max(0,i.width-n.width+o));this._element.style.right=`${r}px`,this._element.style.left="auto"}this._onDidChange.fire()}toJSON(){let t=this.options.container.getBoundingClientRect(),i=this._element.getBoundingClientRect(),n={};return this.verticalAlignment==="top"?n.top=Number.parseFloat(this._element.style.top):this.verticalAlignment==="bottom"?n.bottom=Number.parseFloat(this._element.style.bottom):n.top=i.top-t.top,this.horiziontalAlignment==="left"?n.left=Number.parseFloat(this._element.style.left):this.horiziontalAlignment==="right"?n.right=Number.parseFloat(this._element.style.right):n.left=i.left-t.left,bo(i)?(n.width=i.width,n.height=i.height):(n.width=Number.parseFloat(this._element.style.width)||0,n.height=Number.parseFloat(this._element.style.height)||0),n}cancelPendingDrag(){this._dragMove.value&&(this._dragCancelled=!0,G(this._element,"dv-resize-container-dragging",!1),this._dragMove.value=L.NONE)}setupDrag(t,i){let n=(o,s)=>{var r,a,l;let d=null,h=!1;this._dragCancelled=!1;let c=this.options.transformDragPosition?(r=(a=(l=this.options).getSiblingBoxes)===null||a===void 0?void 0:a.call(l))!==null&&r!==void 0?r:[]:[],u=bi();if(o&&typeof s=="number"&&typeof o.setPointerCapture=="function")try{o.setPointerCapture(s)}catch{}let p=()=>{G(this._element,"dv-resize-container-dragging",!1),this._dragMove.value=L.NONE,this._onDidChangeEnd.fire()};this._dragMove.value=new x({dispose:()=>{if(u.release(),o&&typeof s=="number"&&typeof o.releasePointerCapture=="function")try{o.releasePointerCapture(s)}catch{}}},T(globalThis.window,"pointermove",m=>{var f;if(this._dragCancelled)return;let v=this.options.container.getBoundingClientRect(),g=m.clientX-v.left,w=m.clientY-v.top;G(this._element,"dv-resize-container-dragging",!0);let b=this._element.getBoundingClientRect();(f=d)!==null&&f!==void 0||(d={x:m.clientX-b.left,y:m.clientY-b.top});let C=Math.max(0,this.getMinimumWidth(b.width)),P=Math.max(0,this.getMinimumHeight(b.height)),M=w-d.y,D=g-d.x;if(this.options.transformDragPosition){let B=this.options.transformDragPosition({proposed:{top:M,left:D,width:b.width,height:b.height},container:{width:v.width,height:v.height},others:c,modifiers:{altKey:m.altKey,ctrlKey:m.ctrlKey,metaKey:m.metaKey,shiftKey:m.shiftKey}});B&&(M=B.top,D=B.left)}let y=Math.max(0,v.height-b.height+P),z=Math.max(0,v.width-b.width+C),k=Z(M,-P,y),A=Z(v.height-b.height-M,-P,y),U=Z(D,-C,z),R=Z(v.width-b.width-D,-C,z),j={};k<=A?j.top=k:j.bottom=A,U<=R?j.left=U:j.right=R,this.setBounds(j),h||(h=!0,this._onDidStartMoving.fire())}),T(globalThis.window,"pointerup",p),T(globalThis.window,"pointercancel",p))};this.addDisposables(T(t,"pointerdown",o=>{if(o.defaultPrevented){o.preventDefault();return}xr(o)||n(t,o.pointerId)}),T(this.options.content,"pointerdown",o=>{o.defaultPrevented||xr(o)||o.shiftKey&&n(this.options.content,o.pointerId)}),T(this.options.content,"pointerdown",()=>{tn.push(this._element)},!0)),i?.inDragMode&&n()}setupResize(t){let i=document.createElement("div");i.className=`dv-resize-handle-${t}`,this._element.appendChild(i);let n=new Q;this.addDisposables(n,T(i,"pointerdown",o=>{o.preventDefault();let s=null,r=bi(),a=o.pointerId;if(typeof i.setPointerCapture=="function")try{i.setPointerCapture(a)}catch{}let l=()=>{n.dispose(),this._onDidChangeEnd.fire()};n.value=new x(T(globalThis.window,"pointermove",d=>{var h;let c=this.options.container.getBoundingClientRect(),u=this._element.getBoundingClientRect(),p=d.clientY-c.top,m=d.clientX-c.left;(h=s)!==null&&h!==void 0||(s={originalY:p,originalHeight:u.height,originalX:m,originalWidth:u.width});let f,v,g,w,b,C,P=()=>{let k=s.originalY+s.originalHeight>c.height?Math.max(0,c.height-Pt.MINIMUM_HEIGHT):Math.max(0,s.originalY+s.originalHeight-Pt.MINIMUM_HEIGHT);f=Z(p,0,k),g=s.originalY+s.originalHeight-f,v=c.height-f-g},M=()=>{f=s.originalY-s.originalHeight;let k=f<0&&typeof this.options.minimumInViewportHeight=="number"?-f+this.options.minimumInViewportHeight:Pt.MINIMUM_HEIGHT,A=c.height-Math.max(0,f);g=Z(p-f,k,A),v=c.height-f-g},D=()=>{let k=s.originalX+s.originalWidth>c.width?Math.max(0,c.width-Pt.MINIMUM_WIDTH):Math.max(0,s.originalX+s.originalWidth-Pt.MINIMUM_WIDTH);w=Z(m,0,k),C=s.originalX+s.originalWidth-w,b=c.width-w-C},y=()=>{w=s.originalX-s.originalWidth;let k=w<0&&typeof this.options.minimumInViewportWidth=="number"?-w+this.options.minimumInViewportWidth:Pt.MINIMUM_WIDTH,A=c.width-Math.max(0,w);C=Z(m-w,k,A),b=c.width-w-C};switch(t){case"top":P();break;case"bottom":M();break;case"left":D();break;case"right":y();break;case"topleft":P(),D();break;case"topright":P(),y();break;case"bottomleft":M(),D();break;case"bottomright":M(),y();break}let z={};f<=v?z.top=f:z.bottom=v,w<=b?z.left=w:z.right=b,z.height=g,z.width=C,this.setBounds(z)}),{dispose:()=>{if(r.release(),typeof i.releasePointerCapture=="function")try{i.releasePointerCapture(a)}catch{}}},T(globalThis.window,"pointerup",l),T(globalThis.window,"pointercancel",l))}))}getMinimumWidth(t){return typeof this.options.minimumInViewportWidth=="number"?t-this.options.minimumInViewportWidth:0}getMinimumHeight(t){return typeof this.options.minimumInViewportHeight=="number"?t-this.options.minimumInViewportHeight:0}dispose(){tn.destroy(this._element),this._element.remove(),super.dispose()}};qo.MINIMUM_HEIGHT=20;qo.MINIMUM_WIDTH=20;var Mc=class extends x{get element(){return this._element}get group(){return this._group}setGroup(e){this._group=e}constructor(e,t){super(),this.accessor=e,this._onDragStart=new _,this.onDragStart=this._onDragStart.event,this._group=t,this._element=document.createElement("div"),this._element.className="dv-floating-titlebar",this.addDisposables(this._onDragStart,T(this._element,"pointerdown",()=>{this.accessor.doSetGroupActive(this._group)}),T(this._element,"pointerdown",i=>{i.shiftKey&&ra(i)},!0)),this.dragSource=new Ia({element:this._element,accessor:this.accessor,group:()=>this._group}),this.addDisposables(this.dragSource,this.dragSource.onDragStart(i=>{this._onDragStart.fire(i)}))}updateDragAndDropState(){this.dragSource.updateDragAndDropState()}};function Je(e){return{moduleName:e.name,options:e.options,services:{[e.serviceKey]:e.create},init:e.init?(t,i)=>e.init(t,i[e.serviceKey]):void 0,dependsOn:e.dependsOn}}var Rc=new Set(["AdvancedOverflow","AutoEdgeGroup","AutoHideEdgeGroup","DndCompass","KeyboardDocking","KeyboardNavigation","LayoutHistory","License","MultiRowTabs","PinnedTabs","SmartGuides"]),Lr=new Set;function Ba(e,t){let i=t===void 0?[]:[].concat(t),n=i.map(r=>`\`${r}\``).join(", "),o=i.length>1?"require":"requires",s=i.length?`${n} ${o} the "${e}" module`:`The "${e}" module is required`;return Rc.has(e)?`dockview: ${s}, which ships in dockview-enterprise.
+// srcts/modules/dock/index.tsx
+import { flushSync } from "react-dom";
+import { createRoot } from "react-dom/client";
 
-  npm install dockview-enterprise
-  import 'dockview-enterprise'; // self-registers every enterprise module
-`:`dockview: ${s}, but it is not registered.`}function Ua(e,t){let i=`${e}|${(t===void 0?[]:[].concat(t)).join("|")}`;Lr.has(i)||(Lr.add(i),console.error(Ba(e,t)))}function Pe(e,t,i){if(e!==void 0)return e;Ua(t,i)}var Lc=class{constructor(){this._modules=new Map,this._services={},this._initDisposables=[]}get services(){return this._services}register(e){if(!this._modules.has(e.moduleName)){if(e.dependsOn)for(let t of e.dependsOn)this.register(t);this._modules.set(e.moduleName,e)}}initialize(e){for(let t of this._modules.values())if(t.services)for(let[i,n]of Object.entries(t.services))this._services[i]=n(e)}postConstruct(e){for(let t of this._modules.values())t.init&&this._initDisposables.push(t.init(e,this._services))}has(e){return this._modules.has(e)}dispose(){for(let e of this._initDisposables)e.dispose();this._initDisposables.length=0;for(let e of Object.values(this._services))e!==void 0&&typeof e.dispose=="function"&&e.dispose()}},Nc=[];function $c(){return[...Nc]}var Vc=[{optionKey:"smartGuides",reason:"smartGuides",moduleName:"SmartGuides",when:e=>!!e.smartGuides&&e.smartGuides.enabled!==!1},{optionKey:"layoutHistory",reason:"layoutHistory.enabled: true",moduleName:"LayoutHistory",when:e=>{var t;return((t=e.layoutHistory)===null||t===void 0?void 0:t.enabled)===!0}},{optionKey:"pinnedTabs",reason:"pinnedTabs.enabled: true",moduleName:"PinnedTabs",when:e=>{var t;return((t=e.pinnedTabs)===null||t===void 0?void 0:t.enabled)===!0}},{optionKey:"overflow",reason:"overflow.mode: 'wrap'",moduleName:"MultiRowTabs",when:e=>{var t;return((t=e.overflow)===null||t===void 0?void 0:t.mode)==="wrap"}},{optionKey:"overflow",reason:"overflow.maxRows",moduleName:"MultiRowTabs",when:e=>{var t;return((t=e.overflow)===null||t===void 0?void 0:t.maxRows)!=null}},{optionKey:"overflow",reason:"overflow.search",moduleName:"AdvancedOverflow",when:e=>{var t;return!!(!((t=e.overflow)===null||t===void 0)&&t.search)}},{optionKey:"overflow",reason:"overflow.mru",moduleName:"AdvancedOverflow",when:e=>{var t;return!!(!((t=e.overflow)===null||t===void 0)&&t.mru)}},{optionKey:"autoHideEdgeGroups",reason:"autoHideEdgeGroups",moduleName:"AutoHideEdgeGroup",when:e=>Oo(e.autoHideEdgeGroups)},{optionKey:"dockToEdgeGroups",reason:"dockToEdgeGroups",moduleName:"AutoEdgeGroup",when:e=>Oo(e.dockToEdgeGroups)},{optionKey:"dndCompass",reason:"dndCompass",moduleName:"DndCompass",when:e=>!!e.dndCompass},{optionKey:"keyboardNavigation",reason:"keyboardNavigation",moduleName:"KeyboardNavigation",when:e=>!!e.keyboardNavigation}];function Hc(e,t){let i=new Map;for(let n of Vc){if(!n.when(e)||t(n.moduleName))continue;let o=i.get(n.moduleName);o?o.push(n.reason):i.set(n.moduleName,[n.reason])}for(let[n,o]of i)Ua(n,o)}var ct={left:100,top:100,width:300,height:300},Wc=class extends x{get group(){return this._group}setTitleBar(e){this._titleBar=e}setAnchorGroup(e){var t;this._group=e,(t=this._titleBar)===null||t===void 0||t.setGroup(e),this._onDidChangeAnchorGroup.fire(e)}constructor(e,t,i){super(),this.overlay=t,this.gridview=i,this._onDidChangeAnchorGroup=new _,this.onDidChangeAnchorGroup=this._onDidChangeAnchorGroup.event,this._group=e,this.addDisposables(this._onDidChangeAnchorGroup,t,{dispose:()=>this.gridview.dispose()})}position(e){this.overlay.setBounds(e)}},Fc=class{get floatingGroups(){return this._floatingGroups}constructor(e){this._floatingGroups=[],this._host=e}add(e,t,i){let n=new Wc(e,t,i),o=new x((()=>{let l=-1,d=-1;return kt(i.element,h=>{let c=Math.round(h.contentRect.width),u=Math.round(h.contentRect.height);c===l&&u===d||(l=c,d=u,i.layout(c,u))})})()),s=l=>{var d;let h=(d=l.activePanel)===null||d===void 0?void 0:d.title;h?t.element.setAttribute("aria-label",h):t.element.removeAttribute("aria-label")},r=new Q,a=l=>{s(l),r.value=new x(l.api.onDidActiveChange(d=>{d.isActive&&t.bringToFront()}),l.api.onDidActivePanelChange(()=>s(l)),l.onDidChange(d=>{t.setBounds({height:typeof d?.height=="number"?d.height+t.headerHeight:d?.height,width:d?.width})}))};return a(e),n.addDisposables(r,n.onDidChangeAnchorGroup(l=>a(l)),t.onDidChange(()=>{i.layout(i.width,i.height)}),t.onDidChangeEnd(()=>{this._host.fireLayoutChange("geometry")}),{dispose:()=>{o.dispose(),pa(this._floatingGroups,n),e.model.location={type:"grid"}}}),this._floatingGroups.push(n),n}findByGroup(e){return this._floatingGroups.find(t=>t.group===e||t.gridview.element.contains(e.element))}serialize(){return this._floatingGroups.map(e=>{let t=e.gridview.serialize(),i=e.overlay.toJSON(),n=t.root;return n.type==="branch"&&n.data.length===1&&n.data[0].type==="leaf"?{data:n.data[0].data,position:i}:{grid:t,position:i}})}constrainBounds(){for(let e of this._floatingGroups)e.overlay.setBounds()}updateBounds(e){if("floatingGroupBounds"in e)for(let n of this._floatingGroups){switch(e.floatingGroupBounds){case"boundedWithinViewport":n.overlay.minimumInViewportHeight=void 0,n.overlay.minimumInViewportWidth=void 0;break;case void 0:n.overlay.minimumInViewportHeight=100,n.overlay.minimumInViewportWidth=100;break;default:var t,i;n.overlay.minimumInViewportHeight=(t=e.floatingGroupBounds)===null||t===void 0?void 0:t.minimumHeightWithinViewport,n.overlay.minimumInViewportWidth=(i=e.floatingGroupBounds)===null||i===void 0?void 0:i.minimumWidthWithinViewport}n.overlay.setBounds()}}disposeAll(){for(let e of[...this._floatingGroups])e.dispose()}dispose(){this.disposeAll()}},Bc=Je({name:"FloatingGroup",serviceKey:"floatingGroupService",create:e=>new Fc(e)}),Uc=class{constructor(e){this._entries=[],this._restorationCleanups=new Set,this._restorationPromise=Promise.resolve(),this._onDidRemove=new _,this.onDidRemove=this._onDidRemove.event,this._host=e}get entries(){return this._entries}get restorationPromise(){return this._restorationPromise}add(e){this._entries.push(e)}remove(e){pa(this._entries,e)&&!this._host.isDisposed&&this._onDidRemove.fire(e)}findByGroup(e){return this._entries.find(t=>t.popoutGroup===e||t.gridview.element.contains(e.element))}findReferenceGroupId(e){var t;return(t=this._entries.find(i=>i.popoutGroup===e))===null||t===void 0?void 0:t.referenceGroup}observeGridviewSize(e,t,i){var n;let o=(n=e.window)===null||n===void 0?void 0:n.ResizeObserver;if(!o)return;let s=-1,r=-1,a=()=>{let d=e.window;if(this._host.isDisposed||!d||d.closed)return;let h=Math.round(t.element.clientWidth),c=Math.round(t.element.clientHeight);h===s&&c===r||(s=h,r=c,h>0&&c>0&&t.layout(h,c),i.updateAllPositions())},l=new o(()=>{var d;let h=(d=e.window)===null||d===void 0?void 0:d.requestAnimationFrame;h?h.call(e.window,a):a()});return l.observe(t.element),{dispose:()=>l.disconnect()}}scheduleRestoration(e,t,i){return new Promise(n=>{let o=()=>{this._restorationCleanups.delete(o),clearTimeout(s),i?.(),n()},s=setTimeout(()=>{if(this._restorationCleanups.delete(o),this._host.isDisposed){n();return}Promise.resolve(t()).then(()=>n(),()=>n())},e);this._restorationCleanups.add(o)})}finishRestoration(e){this._restorationPromise=Promise.all(e).then(()=>{})}cancelPendingRestorations(){for(let e of[...this._restorationCleanups])e();this._restorationCleanups.clear()}serialize(){return this._entries.map(e=>{let t=e.gridview.serialize(),i=t.root,n=e.popoutGroup.api.location.type==="popout"?e.popoutGroup.api.location.popoutUrl:void 0,o={gridReferenceGroup:e.referenceGroup,position:e.window.dimensions(),url:n};return i.type==="branch"&&i.data.length===1&&i.data[0].type==="leaf"?I(I({},o),{},{data:i.data[0].data}):I(I({},o),{},{grid:t})})}disposeAll(){for(let e of[...this._entries])e.disposable.dispose()}dispose(){this.cancelPendingRestorations(),this.disposeAll(),this._onDidRemove.dispose()}},Jc=Je({name:"PopoutWindow",serviceKey:"popoutWindowService",create:e=>new Uc(e)}),jc=class{constructor(e){this._watermark=null,this._host=e}update(){if(this._host.hasVisibleGridGroup()){this._unmount();return}if(this._watermark)return;this._watermark=this._host.createWatermarkComponent(),this._watermark.init({containerApi:this._host.api});let e=document.createElement("div");e.className="dv-watermark-container",fh(e,"watermark-component"),e.appendChild(this._watermark.element),this._host.mountElement.appendChild(e)}refresh(){this._unmount(),this.update()}_unmount(){var e,t;this._watermark&&(this._watermark.element.parentElement.remove(),(e=(t=this._watermark).dispose)===null||e===void 0||e.call(t),this._watermark=null)}dispose(){this._unmount()}},Yc=Je({name:"Watermark",serviceKey:"watermarkService",create:e=>new jc(e),init:(e,t)=>(t.update(),new x(Ge.any(e.onDidAdd,e.onDidRemove)(()=>{t.update()}),e.onDidViewVisibilityChangeMicroTaskQueue(()=>{t.update()})))}),Kc=class{constructor(){this._edgeGroups=new Map,this._edgeGroupDisposables=new Map,this._autoHide=new WeakMap,this._autoReveal=new WeakMap}add(e,t,i){this._edgeGroups.set(e,t),this._edgeGroupDisposables.set(e,i)}remove(e){var t;(t=this._edgeGroupDisposables.get(e))===null||t===void 0||t.dispose(),this._edgeGroupDisposables.delete(e),this._edgeGroups.delete(e)}get(e){return this._edgeGroups.get(e)}has(e){return this._edgeGroups.has(e)}hasAny(){return this._edgeGroups.size>0}entries(){return this._edgeGroups.entries()}includes(e){for(let t of this._edgeGroups.values())if(t===e)return!0;return!1}findPositionOf(e){for(let[t,i]of this._edgeGroups)if(i===e)return t}setAutoHide(e,t){t===void 0?this._autoHide.delete(e):this._autoHide.set(e,t)}isAutoHide(e){return this._autoHide.get(e)}setAutoReveal(e,t){this._autoReveal.set(e,t)}isAutoReveal(e){var t;return(t=this._autoReveal.get(e))!==null&&t!==void 0?t:!1}disposeAll(){for(let e of this._edgeGroupDisposables.values())e.dispose();this._edgeGroupDisposables.clear(),this._edgeGroups.clear()}dispose(){this.disposeAll()}},Zc=Je({name:"EdgeGroup",serviceKey:"edgeGroupService",create:()=>new Kc}),Xc=["left","right","top","bottom"],Ja=10,Qo=32,qc={activationSize:{type:"pixels",value:Ja},size:{type:"pixels",value:20}},Qc={activationSize:{type:"pixels",value:Qo},size:{type:"pixels",value:20}};function ja(e){return typeof e.dndEdges=="object"&&e.dndEdges!==null}function Ya(e,t){return!ja(e)&&t&&Oo(e.dockToEdgeGroups)}function Nr(e,t){return ja(e)?e.dndEdges:Ya(e,t)?Qc:qc}function eu(e,t){if(!Ya(e,t))return;let i=n=>Ma(e.dockToEdgeGroups,n)?Qo:Ja;return{left:i("left"),right:i("right"),top:i("top"),bottom:i("bottom")}}function tu(e){return{resolve:({x:t,y:i,width:n,height:o,zones:s})=>{let r=Fo(s,t,i,n,o,e);return r?{position:r,edge:!1}:null}}}var iu=".dv-tabs-and-actions-container";function nu(e,t){var i,n;let o=e.type.startsWith("drag")?e.target:(i=(n=dn(t)).elementFromPoint)===null||i===void 0?void 0:i.call(n,e.clientX,e.clientY);return o instanceof Element&&o.closest(iu)!==null}var ou=class{constructor(e){this._widenedEdges=new Set,this._host=e;let t=(o,s)=>{if(this._widenedEdges.has(s)&&nu(o,e.element))return!1;let r=X();return r?r.viewId!==e.id?!1:s==="center"?e.isGridEmpty():!0:s==="center"&&!e.isGridEmpty()?!1:e.dispatchUnhandledDragOver(o,s)},i=Nr(e.options,!1),n=()=>{var o;return(o=e.options.dropPositionResolver)!==null&&o!==void 0?o:this._edgeBandResolver};this._html5Target=Ue.createDropTarget(e.element,{className:"dv-drop-target-edge",canDisplayOverlay:t,acceptedTargetZones:["top","bottom","left","right","center"],overlayModel:i,getOverrideTarget:()=>e.rootDropTargetOverrideTarget(),getPositionResolver:n}),this._pointerTarget=Ie.createDropTarget(e.element,{className:"dv-drop-target-edge",canDisplayOverlay:t,acceptedTargetZones:["top","bottom","left","right","center"],overlayModel:i,getOverrideTarget:()=>e.rootDropTargetOverrideTarget(),getPositionResolver:n}),this.onWillShowOverlay=Ge.any(this._html5Target.onWillShowOverlay,this._pointerTarget.onWillShowOverlay),this.onDrop=Ge.any(this._html5Target.onDrop,this._pointerTarget.onDrop),this.setOptions(e.options)}setOptions(e){if("dndEdges"in e){let t=typeof e.dndEdges=="boolean"&&e.dndEdges===!1;this._html5Target.disabled=t,this._pointerTarget.disabled=t}if("dndEdges"in e||"dockToEdgeGroups"in e){let t={dndEdges:"dndEdges"in e?e.dndEdges:this._host.options.dndEdges,dockToEdgeGroups:"dockToEdgeGroups"in e?e.dockToEdgeGroups:this._host.options.dockToEdgeGroups},i=Nr(t,this._host.hasEdgeDragReveal);this._html5Target.setOverlayModel(i),this._pointerTarget.setOverlayModel(i);let n=eu(t,this._host.hasEdgeDragReveal);this._edgeBandResolver=n?tu(n):void 0,this._widenedEdges=new Set(Xc.filter(o=>n?.[o]===Qo))}}dispose(){this._html5Target.dispose(),this._pointerTarget.dispose()}},su=Je({name:"RootDropTarget",serviceKey:"rootDropTargetService",create:e=>new ou(e),init:(e,t)=>(t.setOptions(e.options),L.NONE)}),ru={left:"createLeftHeaderActionComponent",right:"createRightHeaderActionComponent",prefix:"createPrefixHeaderActionComponent"},au=class{constructor(e){this._perGroup=new Map,this._host=e}refresh(e){if(!e?.model)return;let t=this._ensureState(e);this._refreshSlot("left",e,t.left),this._refreshSlot("right",e,t.right),this._refreshSlot("prefix",e,t.prefix)}refreshAll(){for(let e of this._host.groups)this.refresh(e)}disposeGroup(e){let t=this._perGroup.get(e);t&&(t.left.dispose(),t.right.dispose(),t.prefix.dispose(),this._perGroup.delete(e))}dispose(){for(let e of[...this._perGroup.keys()])this.disposeGroup(e)}_ensureState(e){let t=this._perGroup.get(e);return t||(t={left:new Q,right:new Q,prefix:new Q},this._perGroup.set(e,t)),t}_refreshSlot(e,t,i){let n=this._host.options[ru[e]];if(n){let o=n(t);i.value=o,o.init({containerApi:this._host.api,api:t.api,group:t}),t.model.attachHeaderAction(e,o.element)}else i.dispose(),t.model.attachHeaderAction(e,void 0)}},lu=Je({name:"HeaderActions",serviceKey:"headerActionsService",create:e=>new au(e),init:(e,t)=>new x(e.onDidRemoveGroup(i=>{t.disposeGroup(i)}))}),$r=e=>e==="load"||e==="clear";function nn(e,t){let i=e.createElement("div");return i.className=t==="assertive"?"dv-live-region-assertive":"dv-live-region",i.setAttribute("role",t==="assertive"?"alert":"status"),i.setAttribute("aria-live",t),i.setAttribute("aria-atomic","true"),Object.assign(i.style,{position:"absolute",width:"1px",height:"1px",margin:"-1px",padding:"0",overflow:"hidden",clip:"rect(0 0 0 0)",clipPath:"inset(50%)",whiteSpace:"nowrap",border:"0"}),i}var du=class extends x{constructor(e){var t;super(),this._regions=new Map,this._suppressDepth=0,this._locationSubs=new Map,this._host=e;let i=e.element.ownerDocument;this._mainWindow=(t=i.defaultView)!==null&&t!==void 0?t:window;let n={polite:nn(i,"polite"),assertive:nn(i,"assertive")};e.element.appendChild(n.polite),e.element.appendChild(n.assertive),this._regions.set(this._mainWindow,n),this._syncPopoutRegions(),this.addDisposables({dispose:()=>this._disposeRegions()},e.onDidChangePopouts(()=>this._syncPopoutRegions()),e.onDidAddPanel(o=>this._announce(o,"open")),e.onDidRemovePanel(o=>this._announce(o,"close")),e.onWillMutateLayout(o=>{$r(o.kind)&&this._suppressDepth++}),e.onDidMutateLayout(o=>{$r(o.kind)&&(this._suppressDepth=Math.max(0,this._suppressDepth-1))}),e.onDidMaximizedGroupChange(o=>{let s=o.group.activePanel;s&&this._announce(s,o.isMaximized?"maximize":"restore")}),e.onDidAddGroup(o=>this._trackLocation(o)),e.onDidRemoveGroup(o=>{var s;(s=this._locationSubs.get(o.id))===null||s===void 0||s.dispose(),this._locationSubs.delete(o.id)}),{dispose:()=>{this._locationSubs.forEach(o=>o.dispose()),this._locationSubs.clear()}})}_syncPopoutRegions(){let e=this._host.element.ownerDocument,t=new Set([this._mainWindow]);for(let n of this._host.getPopoutWindows()){var i;if(n.document===e||(t.add(n),this._regions.has(n)))continue;let o=n.document,s=(i=o.body)!==null&&i!==void 0?i:o.documentElement,r={polite:nn(o,"polite"),assertive:nn(o,"assertive")};s.appendChild(r.polite),s.appendChild(r.assertive),this._regions.set(n,r)}for(let[n,o]of this._regions)t.has(n)||(o.polite.remove(),o.assertive.remove(),this._regions.delete(n))}_disposeRegions(){for(let e of this._regions.values())e.polite.remove(),e.assertive.remove();this._regions.clear()}_focusedRegions(){for(let[e,t]of this._regions)if(e!==this._mainWindow)try{if(e.document.hasFocus())return t}catch{}return this._regions.get(this._mainWindow)}_trackLocation(e){let t=e.api.location.type,i=e.api.onDidLocationChange(n=>{let o=n.location.type;if(o===t)return;t=o;let s=e.activePanel;if(!s)return;let r;switch(o){case"floating":r="float";break;case"popout":r="popout";break;default:r="dock";break}this._announce(s,r)});this._locationSubs.set(e.id,i)}announce(e,t="polite"){if(this._host.options.announcements===!1||this._suppressDepth>0||!e)return;let i=this._host.options.announcer;if(i){i({message:e,politeness:t});return}let n=this._focusedRegions(),o=t==="assertive"?n.assertive:n.polite;o.textContent="",o.textContent=e}_announce(e,t){var i,n;let o=(i=(n=this._host.options).getAnnouncement)===null||i===void 0?void 0:i.call(n,{kind:t,panel:e});o===null||o===""||this.announce(o??this._defaultMessage(e,t))}_defaultMessage(e,t){var i;let n=ba(this._host.options.messages),o=(i=e.title)!==null&&i!==void 0?i:e.id;switch(t){case"open":return n.panelOpened(o);case"close":return n.panelClosed(o);case"maximize":return n.groupMaximized(o);case"restore":return n.groupRestored(o);case"float":return n.groupFloated(o);case"dock":return n.groupDocked(o);case"popout":return n.groupPoppedOut(o)}}},hu=Je({name:"LiveRegion",serviceKey:"liveRegionService",create:e=>new du(e)}),cu=30,uu=-10,pu=class{constructor(e){this.host=e}dispatchWillDragPanel(e){this.host.fireWillDragPanel(e)}dispatchWillDragGroup(e){this.host.fireWillDragGroup(e)}dispatchWillDrop(e){this.host.fireWillDrop(e)}dispatchWillShowOverlay(e){this.host.fireWillShowOverlay(e)}buildGroupDragGhost(e){let t=this.host.options.createGroupDragGhostComponent;if(!t)return;let i=t(e);return i.init({group:e,api:this.host.api}),{element:i.element,offsetX:cu,offsetY:uu,dispose:i.dispose?()=>{var n;return(n=i.dispose)===null||n===void 0?void 0:n.call(i)}:void 0}}resolveOverlayModel(e,t){var i,n;return(i=(n=this.host.options).dropOverlayModel)===null||i===void 0?void 0:i.call(n,{location:e,group:t})}showPreviewOverlay(e,t){let i=e.model.contentDropTarget;return i.showOverlay(t),L.from(()=>i.clearOverlay())}dispose(){}},mu=Je({name:"AdvancedDnD",serviceKey:"advancedDnDService",create:e=>new pu(e)}),fu=class{constructor(e){this._host=e}attachToGroup(e){return new x(e.model.onDidCreateTabGroup(t=>{this._host.fireDidCreateTabGroup(t)}),e.model.onDidDestroyTabGroup(t=>{this._host.fireDidDestroyTabGroup(t)}),e.model.onDidAddPanelToTabGroup(t=>{this._host.fireDidAddPanelToTabGroup(t)}),e.model.onDidRemovePanelFromTabGroup(t=>{this._host.fireDidRemovePanelFromTabGroup(t)}),e.model.onDidTabGroupChange(t=>{this._host.fireDidTabGroupChange(t)}),e.model.onDidTabGroupCollapsedChange(t=>{this._host.fireDidTabGroupCollapsedChange(t)}))}dispose(){}},vu=Je({name:"TabGroupChips",serviceKey:"tabGroupChipsService",create:e=>new fu(e),init:(e,t)=>{let i=new Map;return new x(e.onDidAddGroup(n=>{i.set(n,t.attachToGroup(n))}),e.onDidRemoveGroup(n=>{var o;(o=i.get(n))===null||o===void 0||o.dispose(),i.delete(n)}),{dispose:()=>{for(let n of i.values())n.dispose();i.clear()}})}});function Vr(e,t){var i,n;if(!((i=t.api)===null||i===void 0||(n=i.isPeeking)===null||n===void 0)&&n.call(i))return"calc(var(--dv-overlay-z-index, 999) + 100)";if(!(e instanceof HTMLElement))return;let o=da(e);return o?.style.zIndex?`calc(${o.style.zIndex} * 2)`:void 0}var gu=0,_u=()=>`dv-ctx-menu-item-${gu++}`;function Hr(e){return typeof e=="object"}function ke(e,t,i,n){let o=document.createElement("div");return o.className="dv-context-menu-item",o.setAttribute("role","menuitem"),n&&(o.classList.add("dv-context-menu-item--disabled"),o.setAttribute("aria-disabled","true")),o.textContent=e,n||o.addEventListener("click",()=>{i(),t()}),o}function Wr(){let e=document.createElement("div");return e.className="dv-context-menu-separator",e.setAttribute("role","separator"),e}function bu(){if(globalThis.window===void 0||!globalThis.matchMedia)return!1;let e=globalThis.matchMedia("(pointer: coarse)").matches,t=globalThis.matchMedia("(pointer: fine)").matches;return e&&!t}function wu(e){let t=document.createElement("div");t.className="dv-context-menu-rename";let i=document.createElement("input");return i.className="dv-context-menu-rename-input",i.type="text",i.placeholder="Name This Group",i.value=e.label,i.addEventListener("input",()=>{e.setLabel(i.value)}),i.addEventListener("keydown",n=>{n.key!=="Escape"&&n.key!=="Enter"&&n.stopPropagation()}),i.addEventListener("click",n=>{n.stopPropagation()}),t.appendChild(i),bu()||requestAnimationFrame(()=>{i.focus(),i.select()}),t}function yu(e,t){let i=document.createElement("div");if(i.className="dv-context-menu-color-picker",!t.enabled)return i;for(let n of t.entries()){let o=document.createElement("div");o.className="dv-context-menu-color-swatch",o.style.setProperty("--dv-tab-group-color",n.value),n.label&&(o.title=n.label),e.color===n.id&&o.classList.add("dv-context-menu-color-swatch--selected"),o.addEventListener("click",()=>{e.setColor(n.id)}),i.appendChild(o)}return i}var Du=class{constructor(e){this.accessor=e}buildMaximizeItem(e,t){let i=e.api.isMaximized();return ke(i?"Restore":"Maximize",t,i?()=>e.api.exitMaximized():()=>e.api.maximize(),!i&&e.api.location.type!=="grid")}buildCollapseItem(e,t){return ke(e.collapsed?"Expand":"Collapse",t,()=>e.toggle())}_shouldInjectPin(){let e=this.accessor.options.pinnedTabs;return!!this.accessor.pinnedTabsService&&!!e?.enabled&&e.contextMenuItem!==!1}_resolveTabItems(e,t,i){var n,o,s;let r=(n=(o=(s=this.accessor.options).getTabContextMenuItems)===null||o===void 0?void 0:o.call(s,{panel:e,group:t,api:this.accessor.api,event:i}))!==null&&n!==void 0?n:[];return this._shouldInjectPin()?["pin",...r]:r}appendComponentItem(e,t,i,n,o,s){var r,a;let l=(r=(a=this.accessor.options).createContextMenuItemComponent)===null||r===void 0?void 0:r.call(a,{id:_u(),component:t.component});l&&(s.addDisposables(l),l.init(I(I({},i),{},{group:n,api:this.accessor.api,close:o,componentProps:t.componentProps})),e.appendChild(l.element))}buildBuiltInTabItem(e,t,i,n){switch(e){case"separator":return Wr();case"close":return ke("Close",n,()=>t.api.close());case"closeOthers":return ke("Close Others",n,()=>{i.panels.filter(o=>o!==t).forEach(o=>o.api.close())});case"closeAll":return ke("Close All",n,()=>{[...i.panels].forEach(o=>o.api.close())});case"closeLeft":{let o=i.panels.indexOf(t);return ke("Close to the Left",n,()=>{i.panels.filter((s,r)=>r<o).forEach(s=>s.api.close())},o<=0)}case"closeRight":{let o=i.panels.indexOf(t);return ke("Close to the Right",n,()=>{i.panels.filter((s,r)=>r>o).forEach(s=>s.api.close())},o===-1||o>=i.panels.length-1)}case"maximize":return this.buildMaximizeItem(t,n);case"float":return ke("Float",n,()=>this.accessor.api.addFloatingGroup(t),t.api.location.type==="floating");case"popout":return ke("Open in New Window",n,()=>{this.accessor.api.addPopoutGroup(t)},t.api.location.type==="popout");case"pin":return ke(t.api.isPinned?"Unpin tab":"Pin tab",n,()=>t.api.setPinned(!t.api.isPinned));default:return}}appendConfigItem(e,t,i,n,o,s){t.element?e.appendChild(t.element):t.component?this.appendComponentItem(e,t,i,n,o,s):t.label&&e.appendChild(ke(t.label,o,()=>{var r;return(r=t.action)===null||r===void 0?void 0:r.call(t)},t.disabled))}show(e,t,i){let n=this._resolveTabItems(e,t,i);if(n.length===0)return;i.preventDefault();let o=this.accessor.getPopupServiceForGroup(t),s=()=>o.close(),r=new x,a=document.createElement("div");a.className="dv-context-menu",a.setAttribute("role","menu");try{for(let l of n){if(Hr(l)){this.appendConfigItem(a,l,{panel:e},t,s,r);continue}let d=this.buildBuiltInTabItem(l,e,t,s);d&&a.appendChild(d)}}catch(l){throw r.dispose(),l}o.openPopover(a,{x:i.clientX,y:i.clientY,zIndex:Vr(i.target,t)},{onClose:()=>r.dispose()})}showForChip(e,t,i){if(!this.accessor.options.getTabGroupChipContextMenuItems)return;let n=this.accessor.options.getTabGroupChipContextMenuItems({tabGroup:e,group:t,api:this.accessor.api,event:i});if(n.length===0)return;i.preventDefault();let o=this.accessor.getPopupServiceForGroup(t),s=()=>o.close(),r=new x,a=document.createElement("div");a.className="dv-context-menu",a.setAttribute("role","menu");try{for(let l of n)l==="separator"?a.appendChild(Wr()):l==="rename"?a.appendChild(wu(e)):l==="colorPicker"?a.appendChild(yu(e,this.accessor.tabGroupColorPalette)):l==="collapse"?a.appendChild(this.buildCollapseItem(e,s)):l==="close"?a.appendChild(ke("Close All",s,()=>{t.panels.filter(d=>e.containsPanel(d.id)).forEach(d=>d.api.close())})):Hr(l)&&this.appendConfigItem(a,l,{tabGroup:e},t,s,r)}catch(l){throw r.dispose(),l}o.openPopover(a,{x:i.clientX,y:i.clientY,zIndex:Vr(i.target,t)},{onClose:()=>r.dispose()})}},Su=Je({name:"ContextMenu",serviceKey:"contextMenuService",create:e=>new Du(e)}),Cu=[Bc,Jc,Yc,Zc,su,lu,hu,mu,vu,Su],Pu=class{constructor(){this.cache=new WeakMap,this.currentFrameId=0,this.rafId=null}getPosition(e){let t=this.cache.get(e);if(t?.frameId===this.currentFrameId)return t.rect;this.scheduleFrameUpdate();let i=Po(e);return this.cache.set(e,{rect:i,frameId:this.currentFrameId}),i}invalidate(){this.currentFrameId++}scheduleFrameUpdate(){this.rafId||(this.rafId=requestAnimationFrame(()=>{this.currentFrameId++,this.rafId=null}))}},Fr=-1;function wo(e){let t=e.group.api;return t.location.type==="edge"&&t.isCollapsed()}function Gu(){let e=document.createElement("div");return e.tabIndex=-1,e}function Vt(e,t,i){let n=`${i}px`;e[t]!==n&&(e[t]=n)}var Ct=new WeakMap,Br=class extends x{constructor(e,t){super(),this.element=e,this.accessor=t,this.map={},this._disposed=!1,this._generation=0,this.positionCache=new Pu,this.addDisposables(L.from(()=>{for(let i of Object.values(this.map))Ct.get(i.panel)===this&&Ct.delete(i.panel),i.disposable.dispose(),i.destroy.dispose(),this.cancelPendingUpdate(i);this._disposed=!0}))}updateAllPositions(){if(!this._disposed){this.positionCache.invalidate();for(let e of Object.values(this.map))e.panel.api.isVisible&&e.resize&&e.resize()}}repositionPanelOverlay(e,t=!1,i){var n;if(this._disposed)return;let o=this.map[e];o&&(o.forceVisible=t,o.clip=i,this.positionCache.invalidate(),(n=o.resize)===null||n===void 0||n.call(o))}cancelPendingUpdate(e){e.pendingUpdate!==void 0&&(cancelAnimationFrame(e.pendingUpdate),e.pendingUpdate=void 0)}detatch(e){if(this.map[e.api.id]){let t=this.map[e.api.id];return t.disposable.dispose(),t.destroy.dispose(),this.cancelPendingUpdate(t),delete this.map[e.api.id],Ct.get(t.panel)===this&&Ct.delete(t.panel),!0}return!1}attach(e){var t,i,n;let{panel:o,referenceContainer:s}=e,r=Ct.get(o);if(r&&r!==this&&r.detatch(o),this._disposed?Ct.delete(o):Ct.set(o,this),!this.map[o.api.id]){let g=Gu();g.className="dv-render-overlay",g.style.visibility="hidden",this.map[o.api.id]={panel:o,disposable:L.NONE,destroy:L.NONE,element:g,retainPreviousGeometry:!1,positioned:!1,generation:++this._generation}}let a=this.map[o.api.id];if(a.referenceContainer!==s){a.generation=++this._generation,this.cancelPendingUpdate(a),a.referenceContainer=s;let g=wo(o);a.retainPreviousGeometry=a.positioned&&!g,g&&!a.forceVisible&&(a.element.style.visibility="hidden",a.element.style.pointerEvents="none")}let l=a.generation,d=a.element,h=o.view.content.element,c=g=>{if(!g||g.width<=0||g.height<=0)return;let w=this.map[o.api.id];!w||w.forceVisible||w.positioned&&o.api.isVisible||(Vt(d.style,"width",g.width),Vt(d.style,"height",g.height))};c(s.dimensions),h.parentElement!==d&&d.appendChild(h),d.parentElement!==this.element&&this.element.appendChild(d);let u=()=>{let g=o.api.id,w=this.map[g];if(w?.generation!==l||w.pendingUpdate!==void 0)return;w.pendingUpdate=Fr;let b=requestAnimationFrame(()=>{var C;let P=this.map[g];if(P&&(P.pendingUpdate=void 0),this.isDisposed||P?.generation!==l)return;let M=(C=P.forceVisible)!==null&&C!==void 0?C:!1,D=P.clip,y=wo(o),z=!M&&(!o.api.isVisible||y),k=this.positionCache.getPosition(s.element),A=this.positionCache.getPosition(this.element),U=k.left-A.left,R=k.top-A.top,j=k.width,B=k.height;if(j===0||B===0){if(y&&!M){P.retainPreviousGeometry=!1,d.style.visibility="hidden",d.style.pointerEvents="none",d.style.clipPath="",d.style.zIndex="";return}if(P.retainPreviousGeometry){z&&(d.style.visibility="hidden",d.style.pointerEvents="none");return}}if(P.retainPreviousGeometry=!1,P.positioned=!0,Vt(d.style,"left",U),Vt(d.style,"top",R),Vt(d.style,"width",j),Vt(d.style,"height",B),z?(d.style.visibility="hidden",d.style.pointerEvents="none"):(d.style.visibility="",d.style.pointerEvents=""),M?d.style.zIndex="1000":o.api.location.type!=="floating"&&(d.style.zIndex=""),D){var H,W;let S=this.element.ownerDocument.defaultView,$=(H=S?.scrollX)!==null&&H!==void 0?H:0,Y=(W=S?.scrollY)!==null&&W!==void 0?W:0,q=D.top+Y,re=D.left+$,ye=Math.max(0,q-k.top),mt=Math.max(0,re-k.left),ft=Math.max(0,k.left+j-(D.right+$)),it=Math.max(0,k.top+B-(D.bottom+Y));d.style.clipPath=`inset(${ye}px ${ft}px ${it}px ${mt}px)`}else d.style.clipPath="";G(d,"dv-render-overlay-float",o.group.api.location.type==="floating")});w.pendingUpdate===Fr&&(w.pendingUpdate=b)},p=()=>{var g;let w=!(!((g=this.map[o.api.id])===null||g===void 0)&&g.forceVisible)&&wo(o);if(o.api.isVisible&&!w){var b;this.positionCache.invalidate(),u(),!((b=this.map[o.api.id])===null||b===void 0)&&b.retainPreviousGeometry&&(d.style.visibility=""),d.style.pointerEvents=""}else d.style.visibility="hidden",d.style.pointerEvents="none"},m=new Q,f=()=>{o.api.location.type==="floating"?queueMicrotask(()=>{if(v.isDisposed)return;let g=this.accessor.getFloatingWindowForGroup(o.api.group);if(!g)return;let w=g.overlay.element,b=()=>{let P=Number(w.getAttribute("aria-level"));d.style.zIndex=`calc(var(--dv-overlay-z-index, 999) + ${P*2+1})`},C=new MutationObserver(()=>{b()});m.value=L.from(()=>C.disconnect()),C.observe(w,{attributeFilter:["aria-level"],attributes:!0}),b()}):d.style.zIndex=""},v=new x(m,new wa(d,{onDragEnd:g=>{s.dropTarget.dnd.onDragEnd(g)},onDragEnter:g=>{s.dropTarget.dnd.onDragEnter(g)},onDragLeave:g=>{s.dropTarget.dnd.onDragLeave(g)},onDrop:g=>{s.dropTarget.dnd.onDrop(g)},onDragOver:g=>{s.dropTarget.dnd.onDragOver(g)}}),o.api.onDidVisibilityChange(()=>{p()}),o.api.onDidDimensionsChange(()=>{o.api.isVisible&&u()}),(t=(i=(n=o.group.api).onDidCollapsedChange)===null||i===void 0?void 0:i.call(n,()=>{this.positionCache.invalidate(),u()}))!==null&&t!==void 0?t:L.NONE,s.onDidDimensionsChange(g=>{c(g)}),o.api.onDidLocationChange(()=>{f()}));return this.map[o.api.id].destroy=L.from(()=>{h.parentElement===d&&h.remove(),d.remove()}),f(),queueMicrotask(()=>{this.isDisposed||p()}),this.map[o.api.id].disposable.dispose(),this.map[o.api.id].disposable=v,this.map[o.api.id].resize=u,d}},ku=class extends x{constructor(e){super(),this.accessor=e,this.init()}init(){let e=new Set,t=new Set;this.addDisposables(this.accessor.onDidAddPanel(i=>{if(e.has(i.api.id))throw new Error(`dockview: Invalid event sequence. [onDidAddPanel] called for panel ${i.api.id} but panel already exists`);e.add(i.api.id)}),this.accessor.onDidRemovePanel(i=>{if(e.has(i.api.id))e.delete(i.api.id);else throw new Error(`dockview: Invalid event sequence. [onDidRemovePanel] called for panel ${i.api.id} but panel does not exists`)}),this.accessor.onDidAddGroup(i=>{if(t.has(i.api.id))throw new Error(`dockview: Invalid event sequence. [onDidAddGroup] called for group ${i.api.id} but group already exists`);t.add(i.api.id)}),this.accessor.onDidRemoveGroup(i=>{if(t.has(i.api.id))t.delete(i.api.id);else throw new Error(`dockview: Invalid event sequence. [onDidRemoveGroup] called for group ${i.api.id} but group does not exists`)}))}};function xu(e){if(!e.matchMedia)return!1;let t=e.matchMedia("(pointer: coarse)").matches,i=e.matchMedia("(pointer: fine)").matches;return t&&!i}function Eu(e){var t,i,n,o,s,r,a;let l=(t=e.window)!==null&&t!==void 0?t:window,d=(i=e.capture)!==null&&i!==void 0?i:!1,h=(n=e.escape)!==null&&n!==void 0?n:!0,c=(o=e.keys)!==null&&o!==void 0?o:[],u=(s=e.outsidePointerDown)!==null&&s!==void 0?s:!0,p=(r=e.pointerDownGraceMs)!==null&&r!==void 0?r:0,m=(a=e.now)!==null&&a!==void 0?a:Date.now,f=m(),v=new x,g=w=>{var b,C;return e.isInside?e.isInside(w):Co(w,(b=(C=e.elements)===null||C===void 0?void 0:C.call(e))!==null&&b!==void 0?b:[])};if((h||c.length>0)&&v.addDisposables(T(l,"keydown",w=>{(h&&w.key==="Escape"||c.includes(w.key))&&e.onDismiss()},d)),(u||e.onInsidePointerDown)&&v.addDisposables(T(l,"pointerdown",w=>{if(g(w)){var b;(b=e.onInsidePointerDown)===null||b===void 0||b.call(e,w);return}!u||m()-f<p||e.onDismiss()},d)),e.resize&&v.addDisposables(T(l,"resize",()=>{xu(l)||e.onDismiss()})),e.focusOut){let w=()=>{var D,y,z;return(D=(y=e.anchor)===null||y===void 0?void 0:y.call(e))!==null&&D!==void 0?D:(z=e.elements)===null||z===void 0?void 0:z.call(e)[0]},b=new WeakSet,C=D=>{var y,z;if(b.has(D))return;b.add(D);let k=D.target;k instanceof Element&&((e.isFocusInside?e.isFocusInside(mh(k,w())):Co(D,(y=(z=e.elements)===null||z===void 0?void 0:z.call(e))!==null&&y!==void 0?y:[]))||e.onDismiss())},P=new Map,M=()=>{var D,y,z;let k=new Set,A=(D=e.anchor)===null||D===void 0?void 0:D.call(e),U=[...(y=(z=e.elements)===null||z===void 0?void 0:z.call(e))!==null&&y!==void 0?y:[],...A?[A]:[]];for(let R of U)for(let j of ph(R))k.add(j);for(let[R,j]of P)k.has(R)||(j.dispose(),P.delete(R));for(let R of k)P.has(R)||P.set(R,T(R,"focusin",C,d))};v.addDisposables(T(l,"focusin",D=>{M(),C(D)},d),{dispose:()=>{for(let[,D]of P)D.dispose();P.clear()}}),M()}return v}var Ur=class extends x{constructor(e,t=globalThis.window){super(),this._active=null,this._activeDisposable=new Q,this._root=e,this._window=t,this._element=t.document.createElement("div"),this._element.className="dv-popover-anchor",this._element.style.position="relative",this._root.prepend(this._element),this.addDisposables(L.from(()=>{this.close()}),this._activeDisposable)}updateRoot(e){e.prepend(this._element),this._root=e}openPopover(e,t,i){var n;this.close();let o=this._window.document.createElement("div");o.style.position="absolute",o.style.zIndex=(n=t.zIndex)!==null&&n!==void 0?n:"var(--dv-overlay-z-index)",o.appendChild(e);let s=this._element.getBoundingClientRect(),r=s.left,a=s.top;o.style.top=`${t.y-a}px`,o.style.left=`${t.x-r}px`,this._element.appendChild(o),this._active=o;let l=200;this._activeDisposable.value=new x(Eu({window:this._window,onDismiss:()=>this.close(),elements:()=>this._active?[this._active]:[],keys:["Enter"],pointerDownGraceMs:l,resize:!0}),i?.onClose?L.from(i.onClose):L.NONE),this._window.requestAnimationFrame(()=>{wh(o,this._root)})}close(){this._active&&(this._active.remove(),this._activeDisposable.dispose(),this._active=null)}},yo=class extends x{get renderedOutline(){return this._model?this._outline:void 0}get disabled(){return this._disabled}set disabled(e){this.disabled!==e&&(this._disabled=e,e&&this._clearNow())}_cancelPendingClear(){this._pendingClear!==void 0&&(clearTimeout(this._pendingClear),this._pendingClear=void 0)}_clearNow(){this._cancelPendingClear(),this._model&&this._model.root.remove(),this._model=void 0}get model(){if(!this.disabled)return{clear:()=>{this._clearNow()},scheduleClear:()=>{this._pendingClear!==void 0||!this._model||(this._pendingClear=setTimeout(()=>{this._pendingClear=void 0,this._clearNow()},0))},exists:()=>!!this._model,getElements:(e,t)=>{this._cancelPendingClear();let i=this._outline!==t;if(this._outline=t,this._model)return this._model.changed=i,this._model;let n=this.createContainer(),o=this.createAnchor();if(this._model={root:n,overlay:o,changed:i},n.appendChild(o),this.element.appendChild(n),e?.target instanceof HTMLElement){let s=e.target.getBoundingClientRect(),r=this.element.getBoundingClientRect();o.style.left=`${s.left-r.left}px`,o.style.top=`${s.top-r.top}px`}return this._model}}}constructor(e,t){super(),this.element=e,this._disabled=!1,this._disabled=t.disabled,this.addDisposables(L.from(()=>{var i;(i=this.model)===null||i===void 0||i.clear()}))}createContainer(){let e=document.createElement("div");return e.className="dv-drop-target-container",e}createAnchor(){let e=document.createElement("div");return e.className="dv-drop-target-anchor",e.style.visibility="hidden",e}},Do=["left","right","top","bottom"];function an(e){return e==="left"||e==="right"}var Tu={marginShare:0,size:Number.POSITIVE_INFINITY},Iu=class{get _effectiveBaseCollapsed(){var e;return(e=this._measuredTabSize)!==null&&e!==void 0?e:this._baseCollapsedSize}get minimumSize(){return this._isCollapsed?this.collapsedSize:this._baseMinimumSize!==void 0?this._baseMinimumSize+this._axis.marginShare:this._effectiveBaseCollapsed+50+this._axis.marginShare}get maximumSize(){return this._isCollapsed?this.collapsedSize:this._expandedMaximumSize}get element(){return this._group.element}get isCollapsed(){return this._isCollapsed}get lastExpandedSize(){return this._lastExpandedSize}get lastExpandedContentSize(){return this._lastExpandedSize-this._axis.marginShare}get collapsedSize(){return this._effectiveBaseCollapsed+this._axis.marginShare}get configuredMinimumSize(){return this._baseMinimumSize}get configuredMaximumSize(){return this._expandedMaximumSize}get configuredCollapsedSize(){return this._baseCollapsedSize}constructor(e,t,i,n=Tu){var o,s,r;this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this.snap=!1,this.priority="low",this._isCollapsed=!1,this._isVisible=!0,this._tabSizeDisposables=new x,this._group=t,this._orientation=i,t.element.classList.add("dv-edge-group"),t.element.dataset.testid=`dv-edge-group-${e.id}`,this._baseCollapsedSize=(o=e.collapsedSize)!==null&&o!==void 0?o:35,this._baseMinimumSize=e.minimumSize,this._axis=n,this._expandedMaximumSize=(s=e.maximumSize)!==null&&s!==void 0?s:Number.POSITIVE_INFINITY,this._lastExpandedSize=(r=e.initialSize)!==null&&r!==void 0?r:200,e.collapsed&&(this._isCollapsed=!0,t.element.classList.add("dv-edge-collapsed")),this._observeTabStrip()}_observeTabStrip(){let e=this._group.element.querySelector(".dv-tabs-and-actions-container");e&&this._tabSizeDisposables.addDisposables(kt(e,()=>{let{headerPosition:t}=this._group;(t==="left"||t==="right")==(this._orientation==="horizontal")&&this._applyMeasuredTabSize(this._orientation==="vertical"?e.offsetHeight:e.offsetWidth)}))}_applyMeasuredTabSize(e){e<=0||e===this._measuredTabSize||(this._measuredTabSize=e,this._isCollapsed&&this._onDidChange.fire({size:this.collapsedSize}))}layout(e,t){!this._isCollapsed&&this._isVisible&&this._axis.size>0&&(this._lastExpandedSize=e+this._axis.marginShare),this._orientation==="horizontal"?this._group.layout(e,t):this._group.layout(t,e)}setCollapsed(e){this._isCollapsed!==e&&(this._isCollapsed=e,this._group.element.classList.toggle("dv-edge-collapsed",e))}setVisible(e){this._isVisible=e}restoreExpandedSize(e){this._lastExpandedSize=e}updateSizing(e,t){this._baseCollapsedSize=e,this._baseMinimumSize=t}dispose(){this._tabSizeDisposables.dispose(),this._onDidChange.dispose()}},Au=class{get element(){return this._dockviewElement}constructor(e,t){this._dockviewElement=e,this._layoutDockview=t,this.priority="high",this.minimumSize=100,this.maximumSize=Number.POSITIVE_INFINITY,this._onDidChange=new _,this.onDidChange=this._onDidChange.event}layout(e,t){this._layoutDockview(t,e)}setVisible(e){}dispose(){this._onDidChange.dispose()}},Ou=class{get element(){return this._element}constructor(e,t=0){this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this.minimumSize=100,this.maximumSize=Number.POSITIVE_INFINITY,this.priority="high",this._element=document.createElement("div"),this._element.className="dv-shell-middle-column",this._element.style.height="100%",this._element.style.width="100%",this._splitview=new Gt(this._element,{orientation:"VERTICAL",proportionalLayout:!1,margin:t}),this._centerIndex=0,this._splitview.addView(e,{type:"distribute"},0)}addTopView(e,t){this._splitview.addView(e,t,0),this._topIndex=0,this._centerIndex+=1,this._bottomIndex!==void 0&&(this._bottomIndex+=1)}addBottomView(e,t){let i=this._splitview.length;this._splitview.addView(e,t,i),this._bottomIndex=i}removeView(e){let t=e==="top"?this._topIndex:this._bottomIndex;t!==void 0&&(this._splitview.removeView(t),e==="top"?(this._topIndex=void 0,this._centerIndex-=1,this._bottomIndex!==void 0&&(this._bottomIndex-=1)):this._bottomIndex=void 0)}layout(e,t){this._splitview.layout(t,e)}setVisible(e){}setViewVisible(e,t){let i=e==="top"?this._topIndex:this._bottomIndex;i!==void 0&&this._splitview.setViewVisible(i,t)}isViewVisible(e){let t=e==="top"?this._topIndex:this._bottomIndex;return t!==void 0?this._splitview.isViewVisible(t):!1}getViewSize(e){let t=e==="top"?this._topIndex:this._bottomIndex;return t!==void 0?this._splitview.getViewSize(t):0}getViewCachedVisibleSize(e){let t=e==="top"?this._topIndex:this._bottomIndex;if(t!==void 0)return this._splitview.getViewCachedVisibleSize(t)}resizeView(e,t){let i=e==="top"?this._topIndex:this._bottomIndex;i!==void 0&&this._splitview.resizeView(i,t)}get axis(){return this._splitview}updateMargin(e){this._splitview.margin=e}get disabled(){return this._splitview.disabled}set disabled(e){this._splitview.disabled=e}dispose(){this._onDidChange.dispose(),this._splitview.dispose()}},zu=class{constructor(e,t,i,n=0,o=35){this._disposables=new x,this._viewConfigs=new Map,this._pendingSizes=new Map,this._currentWidth=0,this._currentHeight=0,this._gap=n,this._defaultCollapsedSize=o,this._shellElement=document.createElement("div"),this._shellElement.className="dv-shell",this._shellElement.style.height="100%",this._shellElement.style.width="100%",this._shellElement.style.position="relative",e.appendChild(this._shellElement);let s=new Au(t,i);this._middleColumn=new Ou(s,n),this._outerSplitview=new Gt(this._shellElement,{orientation:"HORIZONTAL",proportionalLayout:!1,margin:n}),this._middleIndex=0,this._outerSplitview.addView(this._middleColumn,{type:"distribute"},0),this._disposables.addDisposables(kt(this._shellElement,r=>{if(!this._shellElement.offsetParent||!ln(this._shellElement))return;let a=Math.round(r.contentRect.width),l=Math.round(r.contentRect.height);a===this._currentWidth&&l===this._currentHeight||this.layout(a,l)}),this._outerSplitview,this._middleColumn,s)}get element(){return this._shellElement}get locked(){return this._outerSplitview.disabled}set locked(e){this._outerSplitview.disabled=e,this._middleColumn.disabled=e}addEdgeView(e,t,i){var n;if(this.hasEdgeGroup(e))throw new Error(`dockview: edge group already registered at position '${e}'`);this._viewConfigs.set(e,t);let o=new Iu(I(I({},t),{},{collapsedSize:(n=t.collapsedSize)!==null&&n!==void 0?n:this._defaultCollapsedSize}),i,an(e)?"horizontal":"vertical",this._axisFor(e)),s=o.isCollapsed?o.collapsedSize:o.lastExpandedSize;switch(e){case"left":this._outerSplitview.addView(o,s,0),this._leftIndex=0,this._middleIndex+=1,this._rightIndex!==void 0&&(this._rightIndex+=1),this._leftView=o;break;case"right":{let r=this._outerSplitview.length;this._outerSplitview.addView(o,s,r),this._rightIndex=r,this._rightView=o}break;case"top":this._middleColumn.addTopView(o,s),this._topView=o;break;case"bottom":this._middleColumn.addBottomView(o,s),this._bottomView=o;break}return this._disposables.addDisposables(o),!o.isCollapsed&&!this._canResize(e)&&this._pendingSizes.set(e,s),this._relayout(),o}layoutFromElement(){if(!this._shellElement.offsetParent||!ln(this._shellElement))return;let e=Math.round(this._shellElement.clientWidth),t=Math.round(this._shellElement.clientHeight);e===0||t===0||this.layout(e,t)}layout(e,t){this._currentWidth=e,this._currentHeight=t,this._outerSplitview.layout(e,t),this._flushPendingSizes()}updateTheme(e,t){this._gap=e,this._defaultCollapsedSize=t,this._outerSplitview.margin=e,this._middleColumn.updateMargin(e),this._applyThemeSizing(),this._relayout()}_hasSiblingOn(e){return an(e)?this._leftView!==void 0&&this._rightView!==void 0:this._topView!==void 0&&this._bottomView!==void 0}_axisFor(e){return an(e)?this._outerSplitview:this._middleColumn.axis}_applyThemeSizing(){for(let t of Do){let i=this._getView(t),n=this._viewConfigs.get(t);if(i&&n){var e;i.updateSizing((e=n.collapsedSize)!==null&&e!==void 0?e:this._defaultCollapsedSize,n.minimumSize)}}}_relayout(){this._currentWidth>0&&this._currentHeight>0&&this.layout(this._currentWidth,this._currentHeight)}_slotSize(e){switch(e){case"left":return this._leftIndex===void 0?0:this._outerSplitview.getViewSize(this._leftIndex);case"right":return this._rightIndex===void 0?0:this._outerSplitview.getViewSize(this._rightIndex);case"top":case"bottom":return this._middleColumn.getViewSize(e)}}removeEdgeView(e){let t=this._getView(e);if(t){switch(e){case"left":this._outerSplitview.removeView(this._leftIndex),this._leftIndex=void 0,this._leftView=void 0,this._middleIndex-=1,this._rightIndex!==void 0&&(this._rightIndex-=1);break;case"right":this._outerSplitview.removeView(this._rightIndex),this._rightIndex=void 0,this._rightView=void 0;break;case"top":this._middleColumn.removeView("top"),this._topView=void 0;break;case"bottom":this._middleColumn.removeView("bottom"),this._bottomView=void 0;break}this._disposables.removeDisposable(t),t.dispose(),this._viewConfigs.delete(e),this._pendingSizes.delete(e),this._relayout()}}hasEdgeGroup(e){switch(e){case"top":return this._topView!==void 0;case"bottom":return this._bottomView!==void 0;case"left":return this._leftView!==void 0;case"right":return this._rightView!==void 0}}setEdgeGroupVisible(e,t){let i=this._getView(e)!==void 0&&t!==this.isEdgeGroupVisible(e);switch(e){case"left":this._leftIndex!==void 0&&this._outerSplitview.setViewVisible(this._leftIndex,t);break;case"right":this._rightIndex!==void 0&&this._outerSplitview.setViewVisible(this._rightIndex,t);break;case"top":case"bottom":this._middleColumn.setViewVisible(e,t);break}i&&this._gap>0&&this._hasSiblingOn(e)&&this._relayout(),t&&this._flushPendingSizes()}isEdgeGroupVisible(e){switch(e){case"left":return this._leftIndex!==void 0?this._outerSplitview.isViewVisible(this._leftIndex):!1;case"right":return this._rightIndex!==void 0?this._outerSplitview.isViewVisible(this._rightIndex):!1;case"top":case"bottom":return this._middleColumn.isViewVisible(e)}}setEdgeGroupCollapsed(e,t){let i=this._getView(e);i&&(i.setCollapsed(t),t?(this._pendingSizes.delete(e),this._resizeView(e,i.collapsedSize)):this.resizeEdgeGroup(e,i.lastExpandedSize))}resizeEdgeGroup(e,t){let i=this._getView(e);if(!i||!Number.isFinite(t))return;let n=Math.round(t);if(!(n<=0)){if(i.restoreExpandedSize(n),i.isCollapsed){this._pendingSizes.delete(e);return}this._canResize(e)?(this._pendingSizes.delete(e),this._resizeView(e,n)):this._pendingSizes.set(e,n)}}_canResize(e){return this.isEdgeGroupVisible(e)&&this._axisFor(e).size>0}_resizeView(e,t){switch(e){case"left":this._leftIndex!==void 0&&this._outerSplitview.resizeView(this._leftIndex,t);break;case"right":this._rightIndex!==void 0&&this._outerSplitview.resizeView(this._rightIndex,t);break;case"top":case"bottom":this._middleColumn.resizeView(e,t);break}}_flushPendingSizes(){if(this._pendingSizes.size!==0)for(let[e,t]of this._pendingSizes){let i=this._getView(e);!i||i.isCollapsed||!this._canResize(e)||(this._pendingSizes.delete(e),this._resizeView(e,t))}}isEdgeGroupCollapsed(e){var t,i;return(t=(i=this._getView(e))===null||i===void 0?void 0:i.isCollapsed)!==null&&t!==void 0?t:!1}getEdgeGroupExpandedSize(e){var t,i;return(t=(i=this._getView(e))===null||i===void 0?void 0:i.lastExpandedContentSize)!==null&&t!==void 0?t:0}_getView(e){switch(e){case"top":return this._topView;case"bottom":return this._bottomView;case"left":return this._leftView;case"right":return this._rightView}}toJSON(){let e={};for(let t of Do){let i=this._getView(t);if(!i)continue;let n=this.isEdgeGroupVisible(t);e[t]={size:this._expandedSize(i,t,n),visible:n,collapsed:i.isCollapsed||void 0,minimumSize:i.configuredMinimumSize,maximumSize:Number.isFinite(i.configuredMaximumSize)?i.configuredMaximumSize:void 0,collapsedSize:i.configuredCollapsedSize}}return e}_expandedSize(e,t,i){if(e.isCollapsed)return e.lastExpandedSize;let n=this._pendingSizes.get(t);if(n!==void 0)return n;if(!i){var o;return(o=this._cachedVisibleSize(t))!==null&&o!==void 0?o:e.lastExpandedSize}return this._slotSize(t)}_cachedVisibleSize(e){switch(e){case"left":return this._leftIndex===void 0?void 0:this._outerSplitview.getViewCachedVisibleSize(this._leftIndex);case"right":return this._rightIndex===void 0?void 0:this._outerSplitview.getViewCachedVisibleSize(this._rightIndex);case"top":case"bottom":return this._middleColumn.getViewCachedVisibleSize(e)}}fromJSON(e){for(let i of Do){var t;let n=e[i],o=this._getView(i);!n||!o||(o.restoreExpandedSize(n.size),o.setCollapsed((t=n.collapsed)!==null&&t!==void 0?t:!1),n.collapsed?(this._pendingSizes.delete(i),this._resizeView(i,o.collapsedSize)):this.resizeEdgeGroup(i,n.size),this.setEdgeGroupVisible(i,!!n.visible))}}dispose(){this._disposables.dispose(),this._shellElement.remove()}};function Jr(e){e.error?console.error("dockview: failed to create popout.",e.error):e.reason==="blocked"?console.error("dockview: failed to create popout. perhaps you need to allow pop-ups for this website"):console.error(`dockview: failed to create popout (${e.reason}).`)}function Mu(e){var t;return new La((t=e.tabGroupColors)!==null&&t!==void 0?t:Jo,e.tabGroupAccent!=="off")}function on(e){let t=e.from.activePanel;[...e.from.panels].map(i=>{let n=e.from.model.removePanel(i);return e.from.model.renderContainer.detatch(i),n}).forEach(i=>{e.to.model.openPanel(i,{skipSetActive:t!==i,skipSetGroupActive:!0})})}var zo=()=>({dispose:()=>{}}),Ru=zo,jr=100,Lu=class extends _a{fireDidCreateTabGroup(e){this._onDidCreateTabGroup.fire(e)}fireDidDestroyTabGroup(e){this._onDidDestroyTabGroup.fire(e)}fireDidAddPanelToTabGroup(e){this._onDidAddPanelToTabGroup.fire(e)}fireDidRemovePanelFromTabGroup(e){this._onDidRemovePanelFromTabGroup.fire(e)}fireDidTabGroupChange(e){this._onDidTabGroupChange.fire(e)}fireDidTabGroupCollapsedChange(e){this._onDidTabGroupCollapsedChange.fire(e)}get orientation(){return this.gridview.orientation}get totalPanels(){return this.panels.length}get panels(){return this.groups.flatMap(e=>e.panels)}get dndCapabilities(){return Te(this.options)}get options(){return this._options}get tabGroupColorPalette(){return this._tabGroupColorPalette}get activePanel(){let e=this.activeGroup;if(e)return e.activePanel}get renderer(){var e;return(e=this.options.defaultRenderer)!==null&&e!==void 0?e:"onlyWhenVisible"}get defaultHeaderPosition(){var e;return(e=this.options.defaultHeaderPosition)!==null&&e!==void 0?e:"top"}get api(){return this._api}get floatingGroups(){var e,t;return(e=(t=this._moduleRegistry)===null||t===void 0||(t=t.services.floatingGroupService)===null||t===void 0?void 0:t.floatingGroups)!==null&&e!==void 0?e:[]}getFloatingWindowForGroup(e){var t;return(t=this._floatingGroupService)===null||t===void 0?void 0:t.findByGroup(e)}_gatherFloatingGroupBoxes(e){return this.getFloatingGroupSnapshots(e).map(t=>t.box)}getFloatingContainer(){var e;return(e=this._floatingOverlayHost)!==null&&e!==void 0?e:this.gridview.element}getFloatingGroupSnapshots(e){let t=this.getFloatingContainer().getBoundingClientRect();return this.floatingGroups.filter(i=>i.group!==e).map(i=>{let n=i.overlay.element.getBoundingClientRect();return{group:i.group,box:{left:n.left-t.left,top:n.top-t.top,width:n.width,height:n.height}}})}mergeFloatInto(e,t,i){e===t||!this.getPanel(t.id)||this.moveGroupOrPanel({from:{groupId:e.id},to:{group:t,position:i}})}getGridSplitterRects(){let e=this.getFloatingContainer().getBoundingClientRect(),t=[];return this.gridview.element.querySelectorAll(".dv-sash").forEach(i=>{let n=i.getBoundingClientRect();t.push({left:n.left-e.left,top:n.top-e.top,width:n.width,height:n.height})}),t}get _smartGuidesService(){return this._moduleRegistry.services.smartGuidesService}get smartGuidesEnabled(){var e,t;return(e=(t=this._smartGuidesService)===null||t===void 0?void 0:t.enabled)!==null&&e!==void 0?e:!1}setSmartGuidesEnabled(e){var t;(t=Pe(this._smartGuidesService,"SmartGuides","api.setSmartGuidesEnabled"))===null||t===void 0||t.setEnabled(e)}updateSmartGuidesOptions(e){var t;(t=Pe(this._smartGuidesService,"SmartGuides","api.updateSmartGuidesOptions"))===null||t===void 0||t.updateOptions(e)}get onDidSnapFloat(){var e,t;return(e=(t=this._smartGuidesService)===null||t===void 0?void 0:t.onDidSnapFloat)!==null&&e!==void 0?e:zo}get onDidSnapTogether(){var e,t;return(e=(t=this._smartGuidesService)===null||t===void 0?void 0:t.onDidSnapTogether)!==null&&e!==void 0?e:zo}_buildFloatingDragTransform(e,t){let i=this.options.transformFloatingGroupDrag,n=!t;if(!(!i&&!(n&&this._smartGuidesService)))return o=>{var s,r;let a=i?.({group:e,proposed:o.proposed,container:o.container,others:o.others,modifiers:o.modifiers}),l=a?I(I({},o.proposed),a):o.proposed,d=n?(s=this._smartGuidesService)===null||s===void 0?void 0:s.transformFloatingGroupDrag({group:e,proposed:l,container:o.container,others:o.others,modifiers:o.modifiers}):void 0;return(r=d??a)!==null&&r!==void 0?r:void 0}}get _floatingGroupService(){return this._moduleRegistry.services.floatingGroupService}get _popoutWindowService(){return this._moduleRegistry.services.popoutWindowService}get _watermarkService(){return this._moduleRegistry.services.watermarkService}get _edgeGroupService(){return this._moduleRegistry.services.edgeGroupService}get _rootDropTargetService(){return this._moduleRegistry.services.rootDropTargetService}get _advancedDnDService(){return this._moduleRegistry.services.advancedDnDService}get _dndCompassService(){return this._moduleRegistry.services.dndCompassService}canDropOnGroup(e,t,i){return e.model.canDisplayContentOverlay(i,t)}getDropOverlayElement(e){var t,i;let n=e.element.querySelector(".dv-content-container");if(n)return((t=this.options.theme)===null||t===void 0?void 0:t.dndPanelOverlay)==="group"&&(i=n.parentElement)!==null&&i!==void 0?i:n}getTabsListElement(e){return e.model.header.hidden?void 0:e.model.tabsListElement}relayoutGroup(e){e.relayout()}setForcedOverflow(e,t){e.model.header.setForcedOverflow(t)}getLayoutElement(){return this.gridview.element}getDropPositionResolver(){var e;if(this.options.dropPositionResolver)return this.options.dropPositionResolver;let t=(e=this._dndCompassService)===null||e===void 0?void 0:e.resolver,i=this._moduleRegistry.services.autoEdgeGroupService;return t&&i?{resolve:n=>{var o;return(o=i.resolveEdge(n))!==null&&o!==void 0?o:t.resolve(n)}}:t??i?.resolver}wireEdgeDropTarget(e){return[e.onWillShowOverlay(t=>{this.gridview.length>0&&t.position==="center"||this._onWillShowOverlay.fire(new Di(t,{kind:"edge",panel:void 0,api:this._api,group:void 0,getData:X}))}),e.onDrop(t=>this.dockToLayoutEdge(t.nativeEvent,t.position,t.edgeGroup))]}createEdgeDropTarget(e,t){let i={acceptedTargetZones:[t],canDisplayOverlay:()=>{var s;return((s=X())===null||s===void 0?void 0:s.viewId)===this.id},getPositionResolver:()=>({resolve:()=>({position:t,edge:!0,edgeGroup:!0})})},n=[Ue.createDropTarget(e,i),Ie.createDropTarget(e,i)],o=new x(...n);for(let s of n)o.addDisposables(...this.wireEdgeDropTarget(s));return o}dockToLayoutEdge(e,t,i=!1){let n=new Ha({nativeEvent:e,position:t,panel:void 0,api:this._api,group:void 0,getData:X,kind:"edge",edgeGroup:i});if(this._onWillDrop.fire(n),n.defaultPrevented)return;let o=X();if(o){var s;this.moveGroupOrPanel({from:{groupId:o.groupId,panelId:(s=o.panelId)!==null&&s!==void 0?s:void 0},to:{group:this.orthogonalize(t),position:"center"}})}else this._onDidDrop.fire(new Ko({nativeEvent:e,position:t,panel:void 0,api:this._api,group:void 0,getData:X}))}get headerActionsService(){return this._moduleRegistry.services.headerActionsService}get _layoutHistoryService(){return this._moduleRegistry.services.layoutHistoryService}undo(){var e;(e=Pe(this._layoutHistoryService,"LayoutHistory","api.undo"))===null||e===void 0||e.undo()}redo(){var e;(e=Pe(this._layoutHistoryService,"LayoutHistory","api.redo"))===null||e===void 0||e.redo()}get canUndo(){var e,t;return(e=(t=this._layoutHistoryService)===null||t===void 0?void 0:t.canUndo)!==null&&e!==void 0?e:!1}get canRedo(){var e,t;return(e=(t=this._layoutHistoryService)===null||t===void 0?void 0:t.canRedo)!==null&&e!==void 0?e:!1}clearHistory(){var e;(e=this._layoutHistoryService)===null||e===void 0||e.clear()}get onDidChangeHistory(){var e,t;return(e=(t=this._layoutHistoryService)===null||t===void 0?void 0:t.onDidChangeHistory)!==null&&e!==void 0?e:Ru}get hasEdgeDragReveal(){return!!this._moduleRegistry.services.autoEdgeGroupService}isGridEmpty(){return this.gridview.length===0}rootDropTargetOverrideTarget(){var e;return(e=this.rootDropTargetContainer)===null||e===void 0?void 0:e.model}dispatchUnhandledDragOver(e,t){let i=new Ra(e,"edge",t,X);return this._onUnhandledDragOver.fire(i),i.isAccepted}fireWillDragPanel(e){this._onWillDragPanel.fire(e)}fireWillDragGroup(e){this._onWillDragGroup.fire(e)}fireWillDrop(e){this._onWillDrop.fire(e)}fireWillShowOverlay(e){this._onWillShowOverlay.fire(e)}buildGroupDragGhost(e){var t;return(t=this._advancedDnDService)===null||t===void 0?void 0:t.buildGroupDragGhost(e)}resolveDropOverlayModel(e,t){var i;return(i=this._advancedDnDService)===null||i===void 0?void 0:i.resolveOverlayModel(e,t)}get rootElement(){var e,t;return(e=(t=this._shellManager)===null||t===void 0?void 0:t.element)!==null&&e!==void 0?e:this.element}ownsElement(e){if(this.rootElement.contains(e))return!0;let t=this.rootElement.ownerDocument,i=e.ownerDocument;return!i||i===t?!1:this.getPopoutWindows().some(n=>n.document===i)}adjacentGroup(e,t){let i=this.getGridviewForGroup(e);if(!i.element.contains(e.element))return;let n=K(e.element),o=(t?i.previous(n):i.next(n)).view;if(!(i!==this.gridview&&o===e))return o}adjacentGroupInDirection(e,t){if(e.api.location.type!=="grid")return;let i=e.element.getBoundingClientRect(),n=i.left+i.width/2,o=i.top+i.height/2,s,r=Number.POSITIVE_INFINITY;for(let a of this.groups){if(a===e||a.api.location.type!=="grid")continue;let l=a.element.getBoundingClientRect(),d=l.left+l.width/2-n,h=l.top+l.height/2-o,c;switch(t){case"left":c=d<0&&Math.abs(d)>=Math.abs(h);break;case"right":c=d>0&&Math.abs(d)>=Math.abs(h);break;case"up":c=h<0&&Math.abs(h)>=Math.abs(d);break;default:c=h>0&&Math.abs(h)>=Math.abs(d);break}if(!c)continue;let u=d*d+h*h;u<r&&(r=u,s=a)}return s}showDropPreview(e,t){var i,n;return(i=(n=this._advancedDnDService)===null||n===void 0?void 0:n.showPreviewOverlay(e,t))!==null&&i!==void 0?i:L.NONE}announce(e){var t;(t=this._moduleRegistry.services.liveRegionService)===null||t===void 0||t.announce(e)}dockPanel(e,t,i){this.moveGroupOrPanel({from:{groupId:e.group.id,panelId:e.id},to:{group:t,position:i}})}floatPanel(e){this.addFloatingGroup(e)}get contextMenuService(){return this._moduleRegistry.services.contextMenuService}get pinnedTabsService(){return this._moduleRegistry.services.pinnedTabsService}get advancedOverflowService(){return this._moduleRegistry.services.advancedOverflowService}setPanelPinned(e,t){var i;e.isPinned!==t&&!((i=this.options.pinnedTabs)===null||i===void 0)&&i.enabled&&this.pinnedTabsService&&(e.setPinned(t),this._onDidPanelPinnedChange.fire({panel:e,isPinned:t}))}get mountElement(){return this.gridview.element}hasVisibleGridGroup(){return this.groups.some(e=>e.api.location.type==="grid"&&e.api.isVisible)}isLastGridGroup(e){return e.api.location.type!=="grid"?!1:!this.groups.some(t=>t!==e&&t.api.location.type==="grid")}fireLayoutChange(e){this._bufferOnDidLayoutChange.fire(e)}get popoutRestorationPromise(){var e,t;return(e=(t=this._popoutWindowService)===null||t===void 0?void 0:t.restorationPromise)!==null&&e!==void 0?e:Promise.resolve()}constructor(e,t){var i,n,o,s,r,a;super(e,{proportionalLayout:(i=t.proportionalLayout)!==null&&i!==void 0?i:!0,orientation:"HORIZONTAL",styles:t.hideBorders?{separatorBorder:"transparent"}:void 0,disableAutoResizing:t.disableAutoResizing,locked:t.locked,margin:(n=(o=t.theme)===null||o===void 0?void 0:o.gap)!==null&&n!==void 0?n:0,className:t.className}),this.nextGroupId=Ro(),this._deserializer=new Ac(this),this._moduleRegistry=new Lc,this._onWillDragPanel=new _,this.onWillDragPanel=this._onWillDragPanel.event,this._onWillDragGroup=new _,this.onWillDragGroup=this._onWillDragGroup.event,this._onDidDrop=new _,this.onDidDrop=this._onDidDrop.event,this._onWillDrop=new _,this.onWillDrop=this._onWillDrop.event,this._mutationDepth=0,this._syncMutationDepth=0,this._pendingLocationChanges=new Map,this._openingPopoutWindows=new Set,this._origin="user",this._originDepth=0,this._onWillMutateLayout=new _,this.onWillMutateLayout=this._onWillMutateLayout.event,this._onDidMutateLayout=new _,this.onDidMutateLayout=this._onDidMutateLayout.event,this._onWillShowOverlay=new _,this.onWillShowOverlay=this._onWillShowOverlay.event,this._onUnhandledDragOver=new _,this.onUnhandledDragOver=this._onUnhandledDragOver.event,this._onDidRemovePanel=new _,this.onDidRemovePanel=this._onDidRemovePanel.event,this._onDidAddPanel=new _,this.onDidAddPanel=this._onDidAddPanel.event,this._onDidPopoutGroupSizeChange=new _,this.onDidPopoutGroupSizeChange=this._onDidPopoutGroupSizeChange.event,this._onDidPopoutGroupPositionChange=new _,this.onDidPopoutGroupPositionChange=this._onDidPopoutGroupPositionChange.event,this._onDidAddPopoutGroup=new _,this.onDidAddPopoutGroup=this._onDidAddPopoutGroup.event,this._onDidRemovePopoutGroup=new _,this.onDidRemovePopoutGroup=this._onDidRemovePopoutGroup.event,this._onDidChangePopouts=new _,this.onDidChangePopouts=this._onDidChangePopouts.event,this._onDidOpenPopoutWindowFail=new _,this.onDidOpenPopoutWindowFail=this._onDidOpenPopoutWindowFail.event,this._onWillClosePopoutWindow=new _,this.onWillClosePopoutWindow=this._onWillClosePopoutWindow.event,this._onDidStartFloatingGroupDrag=new _,this.onDidStartFloatingGroupDrag=this._onDidStartFloatingGroupDrag.event,this._onDidEndFloatingGroupDrag=new _,this.onDidEndFloatingGroupDrag=this._onDidEndFloatingGroupDrag.event,this._onDidLayoutFromJSON=new _,this.onDidLayoutFromJSON=this._onDidLayoutFromJSON.event,this._onDidActivePanelChange=new _({replay:!0}),this.onDidActivePanelChange=this._onDidActivePanelChange.event,this._onDidPanelPinnedChange=new _,this.onDidPanelPinnedChange=this._onDidPanelPinnedChange.event,this._onDidMovePanel=new _,this.onDidMovePanel=this._onDidMovePanel.event,this._onDidCreateTabGroup=new _,this.onDidCreateTabGroup=this._onDidCreateTabGroup.event,this._onDidDestroyTabGroup=new _,this.onDidDestroyTabGroup=this._onDidDestroyTabGroup.event,this._onDidAddPanelToTabGroup=new _,this.onDidAddPanelToTabGroup=this._onDidAddPanelToTabGroup.event,this._onDidRemovePanelFromTabGroup=new _,this.onDidRemovePanelFromTabGroup=this._onDidRemovePanelFromTabGroup.event,this._onDidTabGroupChange=new _,this.onDidTabGroupChange=this._onDidTabGroupChange.event,this._onDidTabGroupCollapsedChange=new _,this.onDidTabGroupCollapsedChange=this._onDidTabGroupCollapsedChange.event,this._onDidMaximizedGroupChange=new _,this.onDidMaximizedGroupChange=this._onDidMaximizedGroupChange.event,this._inShellLayout=!1,this._onDidRemoveGroup=new _,this.onDidRemoveGroup=this._onDidRemoveGroup.event,this._onDidEdgeGroupAutoHideChange=new _,this.onDidEdgeGroupAutoHideChange=this._onDidEdgeGroupAutoHideChange.event,this._onDidAddGroup=new _,this.onDidAddGroup=this._onDidAddGroup.event,this._onDidOptionsChange=new _,this.onDidOptionsChange=this._onDidOptionsChange.event,this._onDidActiveGroupChange=new _,this.onDidActiveGroupChange=this._onDidActiveGroupChange.event,this._peekingGroups=new Set,this._moving=!1,this._options=t,this._tabGroupColorPalette=Mu(t);let l=t.modules,d=l??[...Cu,...$c()];for(let u of d)this._moduleRegistry.register(u);this._moduleRegistry.initialize(this),this.reportMissingOptionModules(t);let h=this._popoutWindowService;h&&this.addDisposables(h.onDidRemove(u=>{this._onDidRemovePopoutGroup.fire({id:u.popoutGroup.id,group:u.popoutGroup,window:u.getWindow()})})),this.popupService=new Ur(this.element),this.addDisposables(this.popupService,L.from(()=>{for(let u of this._openingPopoutWindows)u.dispose();this._openingPopoutWindows.clear()})),this._api=new Ho(this),this.disableResizing=!0,this.element.remove(),this._shellManager=new zu(e,this.element,(u,p)=>this._layoutFromShell(u,p),(s=(r=t.theme)===null||r===void 0?void 0:r.gap)!==null&&s!==void 0?s:0,(a=t.theme)===null||a===void 0?void 0:a.edgeGroupCollapsedSize),this._shellManager.locked=!!t.locked,this.popupService.updateRoot(this._shellManager.element),this._shellThemeClassnames=new pn(this._shellManager.element),this.rootDropTargetContainer=new yo(this._shellManager.element,{disabled:!0}),this.floatingDropTargetContainer=new yo(this._shellManager.element,{disabled:!1}),this.overlayRenderContainer=new Br(this._shellManager.element,this),this._floatingOverlayHost=document.createElement("div"),this._floatingOverlayHost.className="dv-floating-overlay-host",this._shellManager.element.appendChild(this._floatingOverlayHost),G(this.gridview.element,"dv-dockview",!0),G(this.element,"dv-debug",!!t.debug),this.updateTheme(),t.debug&&this.addDisposables(new ku(this)),this.addDisposables(L.from(()=>this._pendingLocationChanges.clear()),this.rootDropTargetContainer,this.floatingDropTargetContainer,T(this._shellManager.element,"dragend",()=>{var u,p;(u=this.rootDropTargetContainer.model)===null||u===void 0||u.clear(),(p=this.floatingDropTargetContainer.model)===null||p===void 0||p.clear()},!0),this.overlayRenderContainer,this._onWillDragPanel,this._onWillDragGroup,this._onWillShowOverlay,this._onDidActivePanelChange,this._onDidPanelPinnedChange,this._onDidAddPanel,this._onDidRemovePanel,this._onDidLayoutFromJSON,this._onDidDrop,this._onWillDrop,this._onWillMutateLayout,this._onDidMutateLayout,this._onDidMovePanel,this._onDidMovePanel.event(()=>{this.debouncedUpdateAllPositions()}),this._onDidAddGroup,this._onDidRemoveGroup,this._onDidEdgeGroupAutoHideChange,this._onDidActiveGroupChange,this._onUnhandledDragOver,this._onDidMaximizedGroupChange,this._onDidPopoutGroupSizeChange,this._onDidPopoutGroupPositionChange,this._onDidAddPopoutGroup,this._onDidRemovePopoutGroup,this._onDidChangePopouts,this._onDidAddPopoutGroup.event(()=>this._onDidChangePopouts.fire()),this._onDidRemovePopoutGroup.event(()=>this._onDidChangePopouts.fire()),this._onDidOpenPopoutWindowFail,this._onDidStartFloatingGroupDrag,this._onDidEndFloatingGroupDrag,this._onDidCreateTabGroup,this._onDidDestroyTabGroup,this._onDidAddPanelToTabGroup,this._onDidRemovePanelFromTabGroup,this._onDidTabGroupChange,this._onDidTabGroupCollapsedChange,Ge.any(this.onDidPopoutGroupSizeChange,this.onDidPopoutGroupPositionChange)(()=>{this.fireLayoutChange("geometry")}),Ge.any(this.onDidCreateTabGroup,this.onDidDestroyTabGroup,this.onDidAddPanelToTabGroup,this.onDidRemovePanelFromTabGroup,this.onDidTabGroupChange,this.onDidTabGroupCollapsedChange)(()=>{this.fireLayoutChange("structure")}),this._onDidOptionsChange,this.onDidAdd(u=>{this._moving||this._onDidAddGroup.fire(u)}),this.onDidRemove(u=>{this._moving||this._onDidRemoveGroup.fire(u)}),this.onDidActiveChange(u=>{this._moving||this._onDidActiveGroupChange.fire(u)}),this.onDidMaximizedChange(u=>{this._onDidMaximizedGroupChange.fire({group:u.panel,isMaximized:u.isMaximized})}),Ge.any(this.onDidAddPanel,this.onDidRemovePanel,this.onDidAddGroup,this.onDidRemove,this.onDidRemoveGroup,this.onDidMovePanel)(()=>{this._bufferOnDidLayoutChange.fire("structure")}),this.onDidActivePanelChange(()=>{this._bufferOnDidLayoutChange.fire("activePanel")}),L.from(()=>{var u;this._moduleRegistry.dispose(),(u=this._shellManager)===null||u===void 0||u.dispose()}),this._onWillClosePopoutWindow);let c=this._rootDropTargetService;c&&this.addDisposables(...this.wireEdgeDropTarget(c)),this._moduleRegistry.postConstruct(this),this._shellManager.layoutFromElement()}setVisible(e,t){switch(e.api.location.type){case"grid":super.setVisible(e,t);break;case"floating":{let i=this.floatingGroups.find(n=>n.group===e);i&&(i.overlay.setVisible(t),e.api._onDidVisibilityChange.fire({isVisible:t}));break}case"popout":console.warn("dockview: You cannot hide a group that is in a popout window");break;case"edge":break}}getPopupServiceForGroup(e){var t,i;return(t=(i=this._popoutWindowService)===null||i===void 0||(i=i.findByGroup(e))===null||i===void 0?void 0:i.popupService)!==null&&t!==void 0?t:this.popupService}addPopoutGroup(e,t){return this.mutationAsync("popout",()=>this._doAddPopoutGroup(e,t))}getPopouts(){var e,t;return(e=(t=this._popoutWindowService)===null||t===void 0?void 0:t.entries.map(i=>({id:i.popoutGroup.id,group:i.popoutGroup,window:i.getWindow()})))!==null&&e!==void 0?e:[]}getPopoutWindows(){return this.getPopouts().map(e=>e.window)}_doAddPopoutGroup(e,t){var i,n,o,s,r;let a=Pe(this._popoutWindowService,"PopoutWindow","api.addPopoutGroup");if(!a||e instanceof en&&e.model.location.type==="edge")return Promise.resolve(!1);if(e instanceof Ht&&e.group.size===1&&this.closeEmptyGroups)return this.addPopoutGroup(e.group,t);let l=gh(this.gridview.element),d=this.element;function h(){var w,b;if(t?.position)return t.position;let C=(e instanceof en?e.element:(w=(b=e.group)===null||b===void 0?void 0:b.element)!==null&&w!==void 0?w:d).getBoundingClientRect();return{left:window.screenX+C.left,top:window.screenY+C.top,width:C.width,height:C.height}}let c=h(),u=(i=t==null||(n=t.overridePopoutGroup)===null||n===void 0?void 0:n.id)!==null&&i!==void 0?i:this.getNextGroupId(),p=(o=t?.popoutUrl)!==null&&o!==void 0?o:(s=this.options)===null||s===void 0?void 0:s.popoutUrl,m=p??"/popout.html",f=new Ch(`${this.id}-${u}`,l??"",{url:m,left:c.left,top:c.top,width:c.width,height:c.height,onDidOpen:t?.onDidOpen,onWillClose:w=>{var b;t==null||(b=t.onWillClose)===null||b===void 0||b.call(t,w),this._onWillClosePopoutWindow.fire(w)},nonce:(r=this.options)===null||r===void 0?void 0:r.nonce,styleRoot:()=>this.element.getRootNode()}),v=new x(f,f.onDidClose(()=>{v.dispose()}));this._openingPopoutWindows.add(v);let g=ua(m);return(g?Promise.resolve(null):f.open()).then(w=>{var b,C;if(this._openingPopoutWindows.delete(v),this.isDisposed)return v.dispose(),!1;if(f.isDisposed){let ae=f.failure;return ae&&!this.isDisposed&&(Jr(ae),this._onDidOpenPopoutWindowFail.fire(ae)),!1}let P=(b=t?.referenceGroup)!==null&&b!==void 0?b:e instanceof Ht?e.group:e,M=e.api.location.type,D=P.element.parentElement!==null,y;if(t?.overridePopoutGridview){var z;y=(z=t.overridePopoutGroup)!==null&&z!==void 0?z:P}else D?t?.overridePopoutGroup?y=t.overridePopoutGroup:(y=this.createGroup({id:u}),w&&this._onDidAddGroup.fire(y)):y=P;if(w===null){var k;return this.handleBlockedPopout({group:y,referenceGroup:P,options:t,popoutWindowDisposable:v,failure:g?{reason:"url-refused",error:g}:(k=f.failure)!==null&&k!==void 0?k:{reason:"blocked"}}),!1}let A=document.createElement("div");A.className="dv-overlay-render-container";let U=new Br(A,this);y.model.renderContainer=U;let R=(C=t?.overridePopoutGridview)!==null&&C!==void 0?C:this.createNestedGridview();t?.overridePopoutGridview?R.locked=this.gridview.locked:R.addView(y,pe.Distribute,[0]),R.element.style.width="100%",R.element.style.height="100%",R.layout(f.window.innerWidth,f.window.innerHeight);let j=!1,B=()=>{j||(j=!0,R.dispose())},H,W=[];if(!t?.overridePopoutGroup&&!t?.overridePopoutGridview&&D)if(e instanceof Ht){let ae=e.group;this.movingLock(()=>{let ve=P.model.removePanel(e);y.model.openPanel(ve)}),W=[{panel:e,from:ae}]}else switch(this.movingLock(()=>on({from:P,to:y})),W=y.panels.map(ae=>({panel:ae,from:P})),M){case"grid":P.api.setVisible(!1);break;case"floating":case"popout":var S;H=(S=this.floatingGroups.find(ae=>ae.group.api.id===e.api.id))===null||S===void 0?void 0:S.overlay.toJSON(),this.removeGroup(P);break}w.classList.add("dv-dockview"),w.style.overflow="hidden",w.appendChild(A),w.appendChild(R.element);let $=document.createElement("div"),Y=new yo($,{disabled:this.rootDropTargetContainer.disabled});w.appendChild($),y.model.dropTargetContainer=Y;let q=new Ur(w,f.window);if(v.addDisposables(q),y.model.location={type:"popout",getWindow:()=>f.window,popoutUrl:p},t?.overridePopoutGridview){let ae=this.groups.filter(ve=>R.element.contains(ve.element));for(let ve of ae)ve.model.renderContainer=U,ve.model.dropTargetContainer=Y,ve.model.location={type:"popout",getWindow:()=>f.window,popoutUrl:p}}D&&e.api.location.type==="grid"&&e.api.setVisible(!1),this.doSetGroupAndPanelActive(y);let re=a.observeGridviewSize(f,R,U);re&&v.addDisposables(re);let ye=new Q;v.addDisposables(ye);let mt=ae=>{ye.value=new x(ae.api.onDidActiveChange(ve=>{if(ve.isActive){var gt;(gt=f.window)===null||gt===void 0||gt.focus()}}),ae.api.onWillFocus(()=>{var ve;(ve=f.window)===null||ve===void 0||ve.focus()}))};mt(y);let ft={},it=D&&P&&this.getPanel(P.id),Ve={window:f,popoutGroup:y,gridview:R,overlayRenderContainer:U,dropTargetContainer:Y,getWindow:()=>f.window,popoutUrl:p,referenceGroup:it?P.id:void 0,popupService:q,setAnchorGroup:ae=>{Ve.popoutGroup=ae,mt(ae)},disposable:{dispose:()=>(v.dispose(),ft.returnedGroup)}},vt=_h(f.window);v.addDisposables(vt,bh(f.window,()=>{this._onDidPopoutGroupSizeChange.fire({width:f.window.innerWidth,height:f.window.innerHeight,group:Ve.popoutGroup})}),vt.event(()=>{this._onDidPopoutGroupPositionChange.fire({screenX:f.window.screenX,screenY:f.window.screenY,group:Ve.popoutGroup})}),T(f.window,"resize",()=>{R.layout(f.window.innerWidth,f.window.innerHeight)}),U,L.from(()=>this.disposePopoutWindow({group:y,referenceGroup:P,popoutGridview:R,isGroupAddedToDom:D,floatingBox:H,disposePopoutGridview:B,closeResult:ft}))),a.add(Ve),this._onDidAddPopoutGroup.fire({id:Ve.popoutGroup.id,group:Ve.popoutGroup,window:Ve.getWindow()});for(let{panel:ae,from:ve}of W)this.fireDidMovePanel(ae,ve);return!0}).catch(w=>(this._openingPopoutWindows.delete(v),console.error("dockview: failed to create popout.",w),!1))}handleBlockedPopout(e){let{group:t,referenceGroup:i,options:n,popoutWindowDisposable:o,failure:s}=e;if(Jr(s),o.dispose(),this._onDidOpenPopoutWindowFail.fire(s),n?.overridePopoutGridview){let r=n.overridePopoutGridview,a=this.groups.filter(l=>r.element.contains(l.element));for(let l of a)this.movingLock(()=>{r.remove(l),this.redockGroupToMainGrid(l)});r.dispose(),i&&!i.api.isVisible&&i.api.setVisible(!0);return}t===i?this.gridview.element.contains(t.element)||(this.movingLock(()=>this.doAddGroup(t,[0])),t.model.location={type:"grid"}):(this.movingLock(()=>on({from:t,to:i})),t.model.size===0&&this._groups.has(t.id)&&(t.dispose(),this._groups.delete(t.id),this._onDidRemoveGroup.fire(t))),i.api.isVisible||i.api.setVisible(!0)}redockGroupToMainGrid(e){e.model.renderContainer=this.overlayRenderContainer,e.model.dropTargetContainer=this.rootDropTargetContainer,e.model.location={type:"grid"},this.doAddGroup(e,[0])}disposePopoutWindow(e){var t;let{group:i,referenceGroup:n,popoutGridview:o,isGroupAddedToDom:s,floatingBox:r,disposePopoutGridview:a,closeResult:l}=e;if(this.isDisposed){a();return}let d=!!(!((t=this._popoutWindowService)===null||t===void 0)&&t.entries.find(m=>m.gridview===o)),h=this.groups.filter(m=>o.element.contains(m.element)),c=h.includes(i),u=c&&h.length===1;if(!d){c&&this.getPanel(i.id)&&(i.model.renderContainer=this.overlayRenderContainer,i.model.dropTargetContainer=this.rootDropTargetContainer,l.returnedGroup=i),a();return}let p=[];for(let m of h)if(m!==i){this.movingLock(()=>{this.doRemoveGroup(m,{skipDispose:!0,skipActive:!0,skipPopoutReturn:!0}),this.redockGroupToMainGrid(m)});for(let f of m.panels)p.push({panel:f,from:m})}if(c&&s&&this.getPanel(n.id)){let m=[...i.panels];this.movingLock(()=>on({from:i,to:n}));for(let f of m)p.push({panel:f,from:i});n.api.isVisible||n.api.setVisible(!0),this.getPanel(i.id)&&this.doRemoveGroup(i,{skipPopoutAssociated:!0})}else if(c&&this.getPanel(i.id)){if(i.model.renderContainer=this.overlayRenderContainer,i.model.dropTargetContainer=this.rootDropTargetContainer,l.returnedGroup=i,r&&u)this.addFloatingGroup(i,{height:r.height,width:r.width,position:r});else{this.doRemoveGroup(i,{skipDispose:!0,skipActive:!0,skipPopoutReturn:!0}),i.model.location={type:"grid"},this.movingLock(()=>{this.doAddGroup(i,[0])});for(let m of i.panels)p.push({panel:m,from:i})}this.doSetGroupAndPanelActive(i)}a();for(let{panel:m,from:f}of p)this.fireDidMovePanel(m,f)}addFloatingGroup(e,t){this.mutation("float",()=>this._doAddFloatingGroup(e,t))}_doAddFloatingGroup(e,t){if(!Pe(this._floatingGroupService,"FloatingGroup","api.addFloatingGroup")||e instanceof en&&e.model.location.type==="edge")return;let i,n=[];if(e instanceof Ht){let l=e.group;i=this.createGroup(),this._onDidAddGroup.fire(i),this.movingLock(()=>this.removePanel(e,{removeEmptyGroup:!1,skipDispose:!0,skipSetActiveGroup:!0})),this.removeGroupIfEmpty(l),this.movingLock(()=>i.model.openPanel(e,{skipSetGroupActive:!0})),n=[{panel:e,from:l}]}else{var o;i=e;let l=(o=this._popoutWindowService)===null||o===void 0?void 0:o.findReferenceGroupId(i),d=l?this.getPanel(l):void 0;typeof t?.skipRemoveGroup=="boolean"&&t.skipRemoveGroup||(d?(this.movingLock(()=>on({from:e,to:d})),this.doRemoveGroup(e,{skipPopoutReturn:!0,skipPopoutAssociated:!0}),this.doRemoveGroup(d,{skipDispose:!0}),i=d,n=i.panels.map(h=>({panel:h,from:e}))):(this.doRemoveGroup(e,{skipDispose:!0,skipPopoutReturn:!0,skipPopoutAssociated:!1}),n=i.panels.map(h=>({panel:h,from:i}))))}function s(){if(t?.position){let l={};return"left"in t.position?l.left=Math.max(t.position.left,0):"right"in t.position?l.right=Math.max(t.position.right,0):l.left=ct.left,"top"in t.position?l.top=Math.max(t.position.top,0):"bottom"in t.position?l.bottom=Math.max(t.position.bottom,0):l.top=ct.top,typeof t.width=="number"?l.width=Math.max(t.width,0):l.width=ct.width,typeof t.height=="number"?l.height=Math.max(t.height,0):l.height=ct.height,l}return{left:typeof t?.x=="number"?Math.max(t.x,0):ct.left,top:typeof t?.y=="number"?Math.max(t.y,0):ct.top,width:typeof t?.width=="number"?Math.max(t.width,0):ct.width,height:typeof t?.height=="number"?Math.max(t.height,0):ct.height}}let r=s(),a=this.createNestedGridview();a.addView(i,pe.Distribute,[0]),this.mountFloatingWindow(a,i,[i],r,{dragHandle:t?.dragHandle,inDragMode:t?.inDragMode,skipActiveGroup:t?.skipActiveGroup,disableSmartGuides:t?.disableSmartGuides});for(let{panel:l,from:d}of n)this.fireDidMovePanel(l,d)}get closeEmptyGroups(){return this.options.closeEmptyGroups!==!1}keepEmptyGroups(e){var t;return(t=e.keepEmptyGroups)!==null&&t!==void 0?t:!this.closeEmptyGroups}removeGroupIfEmpty(e){e.model.size===0&&this.closeEmptyGroups&&this.doRemoveGroup(e,{skipActive:!0})}get locked(){return this.gridview.locked}set locked(e){this.gridview.locked=e,this._shellManager&&(this._shellManager.locked=e);for(let t of this.nestedGridviews())t.locked=e}nestedGridviews(){var e,t;return[...this.floatingGroups.map(i=>i.gridview),...((e=(t=this._popoutWindowService)===null||t===void 0?void 0:t.entries)!==null&&e!==void 0?e:[]).map(i=>i.gridview)]}createNestedGridview(e="HORIZONTAL"){var t,i;return new ga(this.gridview.proportionalLayout,this.options.hideBorders?{separatorBorder:"transparent"}:void 0,e,this.gridview.locked,(t=(i=this.options.theme)===null||i===void 0?void 0:i.gap)!==null&&t!==void 0?t:0)}mountFloatingWindow(e,t,i,n,o){var s,r,a,l,d,h,c,u,p;let m=Pe(this._floatingGroupService,"FloatingGroup","api.addFloatingGroup");if(!m)return;let f=((s=(r=o?.dragHandle)!==null&&r!==void 0?r:this.options.floatingGroupDragHandle)!==null&&s!==void 0?s:"titlebar")==="titlebar"?new Mc(this,t):void 0,v=new qo(I(I({container:(a=this._floatingOverlayHost)!==null&&a!==void 0?a:this.gridview.element,content:e.element,header:f?.element},n),{},{minimumInViewportWidth:this.options.floatingGroupBounds==="boundedWithinViewport"?void 0:(l=(d=this.options.floatingGroupBounds)===null||d===void 0?void 0:d.minimumWidthWithinViewport)!==null&&l!==void 0?l:100,minimumInViewportHeight:this.options.floatingGroupBounds==="boundedWithinViewport"?void 0:(h=(c=this.options.floatingGroupBounds)===null||c===void 0?void 0:c.minimumHeightWithinViewport)!==null&&h!==void 0?h:100,transformDragPosition:this._buildFloatingDragTransform(t,(u=o?.disableSmartGuides)!==null&&u!==void 0?u:!1),getSiblingBoxes:()=>this._gatherFloatingGroupBoxes(t)})),g=(p=f?.element)!==null&&p!==void 0?p:t.element.querySelector(".dv-void-container");if(!g)throw new Error("dockview: failed to find drag handle");v.setupDrag(g,{inDragMode:typeof o?.inDragMode=="boolean"?o.inDragMode:!1});let w=m.add(t,v,e);w.addDisposables(v.onDidStartMoving(()=>this._onDidStartFloatingGroupDrag.fire(t)),v.onDidChangeEnd(()=>this._onDidEndFloatingGroupDrag.fire(t))),f&&(w.setTitleBar(f),w.addDisposables(f,L.from(()=>w.setTitleBar(void 0)),f.onDragStart(b=>{this._onWillDragGroup.fire({nativeEvent:b,group:w.group})})));for(let b of i)b.model.location={type:"floating"};o?.skipActiveGroup||this.doSetGroupAndPanelActive(t)}orthogonalize(e,t){switch(this.gridview.normalize(),e){case"top":case"bottom":this.gridview.orientation==="HORIZONTAL"&&this.gridview.insertOrthogonalSplitviewAtRoot();break;case"left":case"right":this.gridview.orientation==="VERTICAL"&&this.gridview.insertOrthogonalSplitviewAtRoot();break;default:break}switch(e){case"top":case"left":case"center":return this.createGroupAtLocation([0],void 0,t);case"bottom":case"right":return this.createGroupAtLocation([this.gridview.length],void 0,t);default:throw new Error(`dockview: unsupported position ${e}`)}}updateOptions(e){var t,i;super.updateOptions(e),this.reportMissingOptionModules(e),(t=this._floatingGroupService)===null||t===void 0||t.updateBounds(e),(i=this._rootDropTargetService)===null||i===void 0||i.setOptions(e);let n=this.options.disableDnd,o=this.options.dndStrategy;this._options=I(I({},this.options),e);let s=this.options.disableDnd,r=this.options.dndStrategy;if((n!==s||o!==r)&&this.updateDragAndDropState(),"proportionalLayout"in e){let h=this.gridview.proportionalLayout;for(let c of this.nestedGridviews())c.proportionalLayout=h}if("theme"in e&&this.updateTheme(),"createRightHeaderActionComponent"in e||"createLeftHeaderActionComponent"in e||"createPrefixHeaderActionComponent"in e){var a;(a=this.headerActionsService)===null||a===void 0||a.refreshAll()}if("createWatermarkComponent"in e){var l;(l=this._watermarkService)===null||l===void 0||l.refresh();for(let h of this.groups)h.model.refreshWatermark()}if("tabGroupColors"in e||"tabGroupAccent"in e){var d;this._tabGroupColorPalette.setEntries((d=this._options.tabGroupColors)!==null&&d!==void 0?d:Jo),this._tabGroupColorPalette.enabled=this._options.tabGroupAccent!=="off";for(let h of this.groups)h.model.refreshTabGroupAccent()}this._onDidOptionsChange.fire(),this._layoutFromShell(this.gridview.width,this.gridview.height)}reportMissingOptionModules(e){Hc(e,t=>this._moduleRegistry.has(t))}layout(e,t,i){var n;this._shellManager&&!this._inShellLayout?this._shellManager.layout(e,t):super.layout(e,t,i),this._syncFloatingOverlayHost(),(n=this._moduleRegistry)===null||n===void 0||(n=n.services.floatingGroupService)===null||n===void 0||n.constrainBounds()}_syncFloatingOverlayHost(){if(!this._floatingOverlayHost||!this._shellManager)return;let e=this._shellManager.element.getBoundingClientRect(),t=this.element.getBoundingClientRect(),i=this._floatingOverlayHost;i.style.left=`${t.left-e.left}px`,i.style.top=`${t.top-e.top}px`,i.style.width=`${t.width}px`,i.style.height=`${t.height}px`}_layoutFromShell(e,t){this._inShellLayout=!0,this.layout(e,t,!0),this._inShellLayout=!1}forceRelayout(){this._shellManager?this._layoutFromShell(this.width,this.height):super.forceRelayout()}addEdgeGroup(e,t){let i=this._edgeGroupService;if(!i)throw new Error(Ba("EdgeGroup","api.addEdgeGroup"));if(i.has(e))throw new Error(`dockview: edge group already exists at position '${e}'`);return this.mutation("add",()=>{let n=this.createGroup({id:t.id});n.model.location={type:"edge",position:e},n.model.headerPosition=e;let o=n.onDidChange(a=>{var l;if(!a)return;let d=an(e)?a.width:a.height;typeof d=="number"&&((l=this._shellManager)===null||l===void 0||l.resizeEdgeGroup(e,d))}),s=n.model.onDidRemovePanel(()=>{n.model.isEmpty&&(i.isAutoReveal(n)?queueMicrotask(()=>{var a;n.model.isEmpty&&(!((a=this._edgeGroupService)===null||a===void 0)&&a.includes(n))&&this.removeEdgeGroup(e)}):this.setEdgeGroupCollapsed(n,!0))});i.add(e,n,new x(s,o)),t.autoHide!==void 0&&i.setAutoHide(n,t.autoHide),t.autoReveal!==void 0&&i.setAutoReveal(n,t.autoReveal),this._onDidAddGroup.fire(n);let r={element:n.element,get headerPosition(){return n.model.headerPosition},layout:(a,l)=>n.layout(a,l)};return this._shellManager.addEdgeView(e,t,r),n.api})}revealEdgeGroupWithData(e,t,i){let n=this._edgeGroupService;n&&this.mutation("add",()=>{var o;let s=n.get(e);s||(this.addEdgeGroup(e,{id:this.getNextGroupId(),autoReveal:!0,autoHide:i?.autoHide,collapsed:!0}),s=n.get(e)),s&&this.moveGroupOrPanel({from:{groupId:t.groupId,panelId:(o=t.panelId)!==null&&o!==void 0?o:void 0},to:{group:s,position:"center"}})})}getEdgeGroup(e){var t;return(t=this._edgeGroupService)===null||t===void 0||(t=t.get(e))===null||t===void 0?void 0:t.api}getEdgeGroupPanel(e){var t;return(t=this._edgeGroupService)===null||t===void 0?void 0:t.get(e)}pinEdgeGroup(e){var t;(t=Pe(this._moduleRegistry.services.autoHideEdgeGroupService,"AutoHideEdgeGroup","api.pinEdgeGroup"))===null||t===void 0||t.pin(e)}autoHideEdgeGroup(e){var t;(t=Pe(this._moduleRegistry.services.autoHideEdgeGroupService,"AutoHideEdgeGroup","api.autoHideEdgeGroup"))===null||t===void 0||t.autoHide(e)}peekEdgeGroup(e,t){var i;(i=Pe(this._moduleRegistry.services.autoHideEdgeGroupService,"AutoHideEdgeGroup","api.peekEdgeGroup"))===null||i===void 0||i.peek(e,t)}get overlayRoot(){return this.rootElement}getDropZoneRect(){return this.element.getBoundingClientRect()}getEdgeGroupExpandedSize(e){var t,i;return(t=(i=this._shellManager)===null||i===void 0?void 0:i.getEdgeGroupExpandedSize(e))!==null&&t!==void 0?t:0}repositionPanelOverlay(e,t,i){this.overlayRenderContainer.repositionPanelOverlay(e.api.id,t,i)}setEdgeGroupVisible(e,t){this._shellManager.setEdgeGroupVisible(e,t)}isEdgeGroupVisible(e){return this._shellManager.isEdgeGroupVisible(e)}removeEdgeGroup(e){let t=Pe(this._edgeGroupService,"EdgeGroup","api.removeEdgeGroup");if(!t)return;let i=t.get(e);if(!i)throw new Error(`dockview: no edge group exists at position '${e}'`);this.mutation("remove",()=>{for(let n of[...i.panels])this.removePanel(n,{removeEmptyGroup:!1,skipDispose:!1});this._shellManager.removeEdgeView(e),t.remove(e),i.dispose(),this._groups.delete(i.id),this._onDidRemoveGroup.fire(i),this.activateFallbackGroupIfRemoved(i)})}setEdgeGroupCollapsed(e,t){var i;let n=(i=this._edgeGroupService)===null||i===void 0?void 0:i.findPositionOf(e);n&&this._shellManager.isEdgeGroupCollapsed(n)!==t&&(this._shellManager.setEdgeGroupCollapsed(n,t),e.api._onDidCollapsedChange.fire({isCollapsed:t}))}isEdgeGroupCollapsed(e){var t;let i=(t=this._edgeGroupService)===null||t===void 0?void 0:t.findPositionOf(e);return i?this._shellManager.isEdgeGroupCollapsed(i):!1}isEdgeGroupPeeking(e){return this._peekingGroups.has(e)}setEdgeGroupPeeking(e,t){this._peekingGroups.has(e)!==t&&(t?this._peekingGroups.add(e):this._peekingGroups.delete(e),e.api._onDidPeekChange.fire({isPeeking:t}))}isEdgeGroupAutoHide(e){var t,i;let n=(t=this._edgeGroupService)===null||t===void 0?void 0:t.isAutoHide(e);if(n!==void 0)return n;let o=(i=this._edgeGroupService)===null||i===void 0?void 0:i.findPositionOf(e);return o===void 0?!1:Ma(this.options.autoHideEdgeGroups,o)}setEdgeGroupAutoHide(e,t){let i=this._edgeGroupService;i?.includes(e)&&(i.setAutoHide(e,t),this._onDidEdgeGroupAutoHideChange.fire(e))}updateDragAndDropState(){for(let e of this.groups)e.model.updateDragAndDropState()}focus(){var e;(e=this.activeGroup)===null||e===void 0||e.focus()}getGroupPanel(e){return this.panels.find(t=>t.id===e)}setActivePanel(e){e.group.model.openPanel(e),this.doSetGroupAndPanelActive(e.group)}activateNext(e={}){if(!e.group){if(!this.activeGroup)return;e.group=this.activeGroup}if(e.includePanel&&e.group&&e.group.activePanel!==e.group.panels[e.group.panels.length-1]){e.group.model.moveToNext({suppressRoll:!0});return}let t=this.activationTarget(e.group,!1);t&&this.doSetGroupAndPanelActive(t)}activatePrevious(e={}){if(!e.group){if(!this.activeGroup)return;e.group=this.activeGroup}if(e.includePanel&&e.group&&e.group.activePanel!==e.group.panels[0]){e.group.model.moveToPrevious({suppressRoll:!0});return}let t=this.activationTarget(e.group,!0);t&&this.doSetGroupAndPanelActive(t)}activationTarget(e,t){let i=this.getGridviewForGroup(e);if(i.element.contains(e.element)){let r=K(e.element),a=(t?i.previous(r):i.next(r)).view;if(i===this.gridview||a!==e)return a}let n=[],o=r=>{va(r)?r.children.forEach(o):n.push(r.view)};o(this.gridview.getView());let s=n.filter(r=>r.api.isVisible);return s[t?s.length-1:0]}toJSON(){var e,t,i,n,o;let s=this.gridview.serialize(),r=this.panels.reduce((c,u)=>(c[u.id]=u.toJSON(),c),{}),a=(e=(t=this._floatingGroupService)===null||t===void 0?void 0:t.serialize())!==null&&e!==void 0?e:[],l=(i=(n=this._popoutWindowService)===null||n===void 0?void 0:n.serialize())!==null&&i!==void 0?i:[],d={grid:s,panels:r,activeGroup:(o=this.activeGroup)===null||o===void 0?void 0:o.id};a.length>0&&(d.floatingGroups=a),l.length>0&&(d.popoutGroups=l);let h=this._serializeEdgeGroups();return h&&(d.edgeGroups=h),d}_serializeEdgeGroups(){var e;if(!(!((e=this._edgeGroupService)===null||e===void 0)&&e.hasAny()))return;let t=this._shellManager.toJSON();for(let[i,n]of this._edgeGroupService.entries()){let o=t[i];if(!o)continue;if(this._edgeGroupService.isAutoReveal(n)&&n.model.isEmpty){delete t[i];continue}o.group=n.toJSON(),this._edgeGroupService.isAutoReveal(n)&&(o.autoReveal=!0);let s=this._edgeGroupService.isAutoHide(n);s!==void 0&&(o.autoHide=s)}return t}fromJSON(e,t){this.mutation("load",()=>this._doFromJSON(e,t))}_doFromJSON(e,t){var i,n;if((i=this._popoutWindowService)===null||i===void 0||i.cancelPendingRestorations(),typeof e!="object"||e===null)throw new Error("dockview: serialized layout must be a non-null object");if(!e.grid||((n=e.grid.root)===null||n===void 0?void 0:n.type)!=="branch"||!Array.isArray(e.grid.root.data))throw new Error("dockview: root must be of type branch");let o=new Map,s=new Map,r=[],a=[],l=()=>{for(let C of a)try{C.dispose()}catch(P){console.error("dockview: failed to dispose a temporary group created for reuseExistingPanels",P)}a.length=0};if(t?.reuseExistingPanels){let C=Object.keys(e.panels),P,M=()=>{let D=this.createGroup(),y=this._groups.get(D.api.id);return this._groups.delete(D.api.id),a.push(L.from(()=>{var z;this.movingLock(()=>{for(let k of D.panels.slice())D.model.removePanel(k)}),y?.disposable.dispose(),(z=this.headerActionsService)===null||z===void 0||z.disposeGroup(D),D.dispose()})),D};try{for(let D of this.panels)if(C.includes(D.api.id)){o.set(D.api.id,D);let y;if(D.api.renderer==="always"&&D.api.isVisible)y=M();else{var d;(d=P)!==null&&d!==void 0||(P=M()),y=P}s.set(D.api.id,y),r.push({panel:D,temporaryGroup:y})}this.movingLock(()=>{r.forEach(({panel:D,temporaryGroup:y})=>{this.moveGroupOrPanel({from:{groupId:D.api.group.api.id,panelId:D.api.id},to:{group:y,position:"center"},keepEmptyGroups:!0})})}),this.clear()}catch(D){throw l(),D}}else this.clear();let{grid:h,panels:c,activeGroup:u}=e;try{var p,m,f,v,g;let C=this.width,P=this.height,M=y=>{let{id:z,locked:k,hideHeader:A,headerPosition:U,views:R,activeView:j}=y;if(typeof z!="string")throw new TypeError("dockview: group id must be of type string");let B=this.createGroup({id:z,locked:k??!1,hideHeader:!!A,headerPosition:U});this._onDidAddGroup.fire(B);let H=[],W=R.filter(S=>c[S]);for(let S of W){let $=o.get(S),Y=s.get(S);if(Y&&$)this.movingLock(()=>{Y.model.removePanel($)}),H.push($),$.updateFromStateModel(c[S]);else{let q=this._deserializer.fromJSON(c[S],B);H.push(q)}}for(let S of H){let $=typeof j=="string"&&j===S.id;o.has(S.api.id)?this.movingLock(()=>{B.model.openPanel(S,{skipSetActive:!$,skipSetGroupActive:!0})}):B.model.openPanel(S,{skipSetActive:!$,skipSetGroupActive:!0})}return y.tabGroups&&y.tabGroups.length>0&&B.model.restoreTabGroups(y.tabGroups),!B.activePanel&&B.panels.length>0&&B.model.openPanel(B.panels[B.panels.length-1],{skipSetGroupActive:!0}),B};this.gridview.deserialize(h,{fromJSON:y=>M(y.data)}),this._layoutFromShell(C,P),e.edgeGroups&&this.deserializeEdgeGroups(e.edgeGroups,c,o,s),this.deserializeFloatingWindows((p=e.floatingGroups)!==null&&p!==void 0?p:[],M);let D=this.deserializePopoutWindows((m=e.popoutGroups)!==null&&m!==void 0?m:[],M);if((f=this._popoutWindowService)===null||f===void 0||f.finishRestoration(D),(v=this._floatingGroupService)===null||v===void 0||v.constrainBounds(),typeof u=="string"){let y=this.getPanel(u);y&&this.doSetGroupAndPanelActive(y)}(g=this._watermarkService)===null||g===void 0||g.update()}catch(C){var w;console.error("dockview: failed to deserialize layout. Reverting changes",C);for(let P of this.groups)for(let M of P.panels.slice())this.removePanel(M,{removeEmptyGroup:!1,skipDispose:!1});for(let P of this.groups){var b;!((b=this._edgeGroupService)===null||b===void 0)&&b.includes(P)||(P.dispose(),this._groups.delete(P.id),this._onDidRemoveGroup.fire(P))}throw(w=this._floatingGroupService)===null||w===void 0||w.disposeAll(),this.clear(),C}finally{l()}this.debouncedUpdateAllPositions(),this._onDidLayoutFromJSON.fire()}deserializeNestedGridview(e,t){let i=this.createNestedGridview(e.orientation),n=[];return i.deserialize(e,{fromJSON:o=>{let s=t(o.data);return n.push(s),s}}),{gridview:i,members:n}}deserializeEdgeGroups(e,t,i,n){let o=Pe(this._edgeGroupService,"EdgeGroup","fromJSON edge restoration");if(o){for(let r of["top","bottom","left","right"]){let a=e[r];if(a&&!o.has(r)){var s;let l=a.group,d=(s=l?.id)!==null&&s!==void 0?s:`${r}-group`;this.addEdgeGroup(r,{id:d,autoReveal:a.autoReveal,autoHide:a.autoHide,minimumSize:a.minimumSize,maximumSize:a.maximumSize,collapsedSize:a.collapsedSize})}}for(let[r,a]of o.entries()){let l=e[r],d=l?.group;if(d){let{views:h,activeView:c,locked:u,hideHeader:p}=d;a.locked=u??!1,a.header.hidden=!!p;let m=[];for(let f of h){if(!t[f])continue;let v=i.get(f),g=n.get(f);if(g&&v)this.movingLock(()=>{g.model.removePanel(v)}),m.push(v),v.updateFromStateModel(t[f]);else{let w=this._deserializer.fromJSON(t[f],a);m.push(w)}}for(let f of m){let v=c===f.id;i.has(f.api.id)?this.movingLock(()=>{a.model.openPanel(f,{skipSetActive:!v,skipSetGroupActive:!0})}):a.model.openPanel(f,{skipSetActive:!v,skipSetGroupActive:!0})}d.tabGroups&&d.tabGroups.length>0&&a.model.restoreTabGroups(d.tabGroups),!a.activePanel&&a.panels.length>0&&a.model.openPanel(a.panels[a.panels.length-1],{skipSetGroupActive:!0})}}this._shellManager.fromJSON(e)}}deserializeFloatingWindows(e,t){for(let i of e){let{data:n,grid:o,position:s}=i;if(o){let{gridview:r,members:a}=this.deserializeNestedGridview(o,t);if(a.length===0)continue;this.mountFloatingWindow(r,a[0],a,s,{inDragMode:!1})}else if(n){let r=t(n);this.addFloatingGroup(r,{position:s,width:s.width,height:s.height,skipRemoveGroup:!0,inDragMode:!1})}}}deserializePopoutWindows(e,t){let i=e.length>0?Pe(this._popoutWindowService,"PopoutWindow","fromJSON popout restoration"):this._popoutWindowService;return i?e.flatMap((n,o)=>{let{data:s,grid:r,position:a,gridReferenceGroup:l,url:d}=n,h,c=[];if(r){let p=this.deserializeNestedGridview(r,t);if(h=p.gridview,c=p.members,c.length===0)return h.dispose(),[]}let u=r?c[0]:t(s);return i.scheduleRestoration(o*100,()=>this.addPopoutGroup(u,{position:a??void 0,overridePopoutGroup:l?u:void 0,overridePopoutGridview:h,referenceGroup:l?this.getPanel(l):void 0,popoutUrl:d}),()=>{for(let p of c.length>0?c:[u])if(!this.isDisposed&&this._groups.has(p.id)&&p.element.parentElement===null){for(let m of[...p.panels])this.removePanel(m,{removeEmptyGroup:!1});p.dispose(),this._groups.delete(p.id),this._onDidRemoveGroup.fire(p)}})}):[]}clear(){this.mutation("clear",()=>this._doClear())}_doClear(){let e=Array.from(this._groups.values()).map(n=>n.value),t=!!this.activeGroup;for(let n of e){var i;if(!((i=this._edgeGroupService)===null||i===void 0)&&i.includes(n)){let o=[...n.panels];for(let s of o)this.removePanel(s,{removeEmptyGroup:!1});continue}this.removeGroup(n,{skipActive:!0})}t&&this.doSetGroupAndPanelActive(void 0),this.gridview.clear()}closeAllGroups(){this.mutation("remove",()=>{let e=Array.from(this._groups.values()).map(t=>t.value);for(let t of e){if(!this._groups.has(t.id))continue;let i=this.options.noPanelsOverlay==="emptyGroup"&&this.isLastGridGroup(t);i&&t.model.size===0||(t.model.closeAllPanels(),!this.closeEmptyGroups&&!i&&this._groups.has(t.id)&&t.model.size===0&&this.removeGroup(t,{skipActive:!0}))}})}addPanel(e){return this.mutation("add",()=>this._doAddPanel(e))}addPanelFromJSON(e,t){if(!e.contentComponent)throw new Error(`dockview: serialized panel ${e.id} has no contentComponent`);return this.mutation("add",()=>{let i=this._doAddPanel(I(I({},t),{},{id:e.id,component:e.contentComponent,tabComponent:e.tabComponent,title:e.title,renderer:e.renderer,params:e.params,minimumWidth:e.minimumWidth,minimumHeight:e.minimumHeight,maximumWidth:e.maximumWidth,maximumHeight:e.maximumHeight}));return e.pinned&&this.setPanelPinned(i,!0),i})}_doAddPanel(e){if(this.panels.some(h=>h.id===e.id))throw new Error(`dockview: panel with id ${e.id} already exists`);let t;if(e.position&&e.floating)throw new Error("dockview: you can only provide one of: position, floating as arguments to .addPanel(...)");let i={width:e.initialWidth,height:e.initialHeight},n,o=h=>!!e.inactive&&h.model.size>0;if(e.position)if(mc(e.position)){let h=typeof e.position.referencePanel=="string"?this.getGroupPanel(e.position.referencePanel):e.position.referencePanel;if(n=e.position.index,!h){var s;let c=typeof e.position.referencePanel=="string"?e.position.referencePanel:(s=e.position.referencePanel)===null||s===void 0?void 0:s.id;throw new Error(`dockview: referencePanel '${c}' does not exist`)}t=this.findGroup(h)}else if(fc(e.position)){var r;if(t=typeof e.position.referenceGroup=="string"?(r=this._groups.get(e.position.referenceGroup))===null||r===void 0?void 0:r.value:e.position.referenceGroup,n=e.position.index,!t){var a;let h=typeof e.position.referenceGroup=="string"?e.position.referenceGroup:(a=e.position.referenceGroup)===null||a===void 0?void 0:a.id;throw new Error(`dockview: referenceGroup '${h}' does not exist`)}}else{let h=this.orthogonalize(Or(e.position.direction)),c=this.createPanel(e,h);return h.model.openPanel(c,{skipSetActive:o(h),skipSetGroupActive:e.inactive,index:n}),e.inactive||this.doSetGroupAndPanelActive(h),h.api.setSize({height:i?.height,width:i?.width}),c}else t=this.activeGroup;let l;if(t){var d;let h=hn(((d=e.position)===null||d===void 0?void 0:d.direction)||"within");if(e.floating){let c=this.createGroup();this._onDidAddGroup.fire(c);let u=typeof e.floating=="object"&&e.floating!==null?e.floating:{};this.addFloatingGroup(c,I(I({},u),{},{inDragMode:!1,skipRemoveGroup:!0,skipActiveGroup:!0})),l=this.createPanel(e,c),c.model.openPanel(l,{skipSetActive:o(c),skipSetGroupActive:e.inactive,index:n})}else if(t.api.location.type==="edge"||h==="center")l=this.createPanel(e,t),t.model.openPanel(l,{skipSetActive:o(t),skipSetGroupActive:e.inactive,index:n}),t.api.setSize({width:i?.width,height:i?.height}),e.inactive||this.doSetGroupAndPanelActive(t);else{let c=this.getGridviewForGroup(t),u=K(t.element),p=xe(c.orientation,u,h),m=this.createGroupAtLocation(p,this.orientationAtLocation(p,c)==="VERTICAL"?i?.height:i?.width,void 0,c);l=this.createPanel(e,m),m.model.openPanel(l,{skipSetActive:o(m),skipSetGroupActive:e.inactive,index:n}),e.inactive||this.doSetGroupAndPanelActive(m)}}else if(e.floating){let h=this.createGroup();this._onDidAddGroup.fire(h);let c=typeof e.floating=="object"&&e.floating!==null?e.floating:{};this.addFloatingGroup(h,I(I({},c),{},{inDragMode:!1,skipRemoveGroup:!0,skipActiveGroup:!0})),l=this.createPanel(e,h),h.model.openPanel(l,{skipSetActive:o(h),skipSetGroupActive:e.inactive,index:n})}else{let h=this.createGroupAtLocation([0],this.gridview.orientation==="VERTICAL"?i?.height:i?.width);l=this.createPanel(e,h),h.model.openPanel(l,{skipSetActive:o(h),skipSetGroupActive:e.inactive,index:n}),e.inactive||this.doSetGroupAndPanelActive(h)}return l}removePanel(e,t){this.mutation("remove",()=>{var i;return this._doRemovePanel(e,{removeEmptyGroup:(i=t?.removeEmptyGroup)!==null&&i!==void 0?i:this.closeEmptyGroups,skipDispose:t?.skipDispose,skipSetActiveGroup:t?.skipSetActiveGroup})})}_doRemovePanel(e,t){let i=e.group;if(!i)throw new Error(`dockview: cannot remove panel ${e.id}. it's missing a group.`);i.model.removePanel(e,{skipSetActiveGroup:t.skipSetActiveGroup}),t.skipDispose||(e.group.model.renderContainer.detatch(e),e.dispose()),i.size===0&&t.removeEmptyGroup&&this.removeGroup(i,{skipActive:t.skipSetActiveGroup})}createWatermarkComponent(){return this.options.createWatermarkComponent?this.options.createWatermarkComponent():new Oc}addGroup(e){return this.mutation("add",()=>this._doAddGroup(e))}serializeGroup(e){let t={};for(let i of e.panels)t[i.id]=i.toJSON();return{group:e.model.toJSON(),panels:t}}addGroupFromJSON(e,t){return this.validateSerializedGroup(e),this.mutation("add",()=>this._doAddGroupFromJSON(e,t))}validateSerializedGroup(e){let t=e?.group;if(typeof t?.id!="string")throw new TypeError("dockview: group id must be of type string");if(!Array.isArray(t.views))throw new TypeError(`dockview: serialized group ${t.id} has no views`);for(let n of t.views){var i;if(!(!((i=e.panels)===null||i===void 0)&&i[n]))throw new Error(`dockview: serialized group ${t.id} is missing panel state for ${n}`);if(this.panels.some(o=>o.id===n))throw new Error(`dockview: panel with id ${n} already exists`)}}_doAddGroupFromJSON(e,t){var i;let{id:n,locked:o,hideHeader:s,headerPosition:r,constraints:a,activeView:l,tabGroups:d}=e.group;if(t&&((i=t.direction)!==null&&i!==void 0?i:"within")==="within"){let p=this.resolveReferenceGroup(t);if(p)return this.mergeGroupFromJSON(e,p,t)}let h={id:n,locked:o??!1,hideHeader:!!s,headerPosition:r,constraints:a,initialWidth:t?.initialWidth,initialHeight:t?.initialHeight,skipSetActive:!0},c=this.addEmptyGroupAt(h,t),u;try{u=this.deserializePanels(e,c)}catch(p){throw this.doRemoveGroup(c,{skipActive:!0}),p}for(let p of u)c.model.openPanel(p,{skipSetActive:p.id!==l,skipSetGroupActive:!0});return d&&d.length>0&&c.model.restoreTabGroups(d),!c.activePanel&&c.panels.length>0&&c.model.openPanel(c.panels[c.panels.length-1],{skipSetGroupActive:!0}),t?.skipSetActive||this.doSetGroupAndPanelActive(c),c}addEmptyGroupAt(e,t){if(t!==void 0&&(vo(t)||go(t)||typeof t.direction=="string"))return this._doAddGroup(I(I({},t),e));let i=this.createGroup(e);return this.doAddGroup(i),i}deserializePanels(e,t){let i=[];try{for(let n of e.group.views)i.push(this._deserializer.fromJSON(e.panels[n],t))}catch(n){for(let o of i)o.dispose();throw n}return i}resolveReferenceGroup(e){if(vo(e)){let t=typeof e.referencePanel=="string"?e.referencePanel:e.referencePanel.id,i=this.getGroupPanel(t);if(!i)throw new Error(`dockview: reference panel ${t} does not exist`);return i.group}if(go(e)){let t=typeof e.referenceGroup=="string"?e.referenceGroup:e.referenceGroup.id,i=this.getPanel(t);if(!i)throw new Error(`dockview: reference group ${t} does not exist`);return i}}mergeGroupFromJSON(e,t,i){let{activeView:n}=e.group,o=i.index;return this.deserializePanels(e,t).forEach((s,r)=>{t.model.openPanel(s,{index:o===void 0?void 0:o+r,skipSetActive:s.id!==n,skipSetGroupActive:!0})}),i.skipSetActive||this.doSetGroupAndPanelActive(t),t}_doAddGroup(e){if(e){let o;if(vo(e)){var t;let c=typeof e.referencePanel=="string"?this.panels.find(p=>p.id===e.referencePanel):e.referencePanel,u=typeof e.referencePanel=="string"?e.referencePanel:(t=e.referencePanel)===null||t===void 0?void 0:t.id;if(!c)throw new Error(`dockview: reference panel ${u} does not exist`);if(o=this.findGroup(c),!o)throw new Error(`dockview: reference group for reference panel ${u} does not exist`)}else if(go(e)){var i;if(o=typeof e.referenceGroup=="string"?(i=this._groups.get(e.referenceGroup))===null||i===void 0?void 0:i.value:e.referenceGroup,!o){var n;let c=typeof e.referenceGroup=="string"?e.referenceGroup:(n=e.referenceGroup)===null||n===void 0?void 0:n.id;throw new Error(`dockview: reference group ${c} does not exist`)}}else{let c=this.orthogonalize(Or(e.direction),e);return e.skipSetActive||this.doSetGroupAndPanelActive(c),c}let s=hn(e.direction||"within");if(o.api.location.type==="edge")throw new Error(`dockview: cannot add a group relative to edge group ${o.id}; edge groups cannot be split`);let r=this.getGridviewForGroup(o),a=K(o.element),l=xe(r.orientation,a,s),d=this.orientationAtLocation(l,r)==="VERTICAL"?e.initialHeight:e.initialWidth,h=this.createGroupAtLocation(l,d,e,r);return e.skipSetActive||this.doSetGroupAndPanelActive(h),h}else{let o=this.createGroup(e);return this.doAddGroup(o),this.doSetGroupAndPanelActive(o),o}}removeGroup(e,t){this.mutation("remove",()=>this.doRemoveGroup(e,t))}detachFromNestedWindow(e){var t,i;let n=(t=this._floatingGroupService)===null||t===void 0?void 0:t.findByGroup(e);if(n){let s=this.nestedWindowMembers(e);return s.length<=1?!1:(n.gridview.remove(e),n.group===e&&n.setAnchorGroup(s.find(r=>r!==e)),!0)}let o=(i=this._popoutWindowService)===null||i===void 0?void 0:i.findByGroup(e);if(o){let s=this.nestedWindowMembers(e);return s.length<=1?!1:(o.gridview.remove(e),o.popoutGroup===e&&o.setAnchorGroup(s.find(r=>r!==e)),!0)}return!1}disposeGroupRecord(e){e.dispose(),this._groups.delete(e.id),this._onDidRemoveGroup.fire(e)}activateFallbackGroupIfRemoved(e,t){if(!t&&this._activeGroup===e){let i=Array.from(this._groups.values());this.doSetGroupAndPanelActive(i.length>0?i[0].value:void 0)}}doRemoveGroup(e,t){var i;if(!((i=this._edgeGroupService)===null||i===void 0)&&i.includes(e))return e;let n=[...e.panels];if(!t?.skipDispose)for(let h of n){var o;this.removePanel(h,{removeEmptyGroup:!1,skipDispose:(o=t?.skipDispose)!==null&&o!==void 0?o:!1})}let s=this.activePanel;if(e.api.location.type==="floating"){var r;let h=(r=this._floatingGroupService)===null||r===void 0?void 0:r.findByGroup(e);if(!h)throw new Error("dockview: failed to find floating group");return this.detachFromNestedWindow(e)?(t?.skipDispose?e.model.location={type:"grid"}:this.disposeGroupRecord(e),this.activateFallbackGroupIfRemoved(e,t?.skipActive),e):(t?.skipDispose||this.disposeGroupRecord(e),h.dispose(),this.activateFallbackGroupIfRemoved(e,t?.skipActive),e)}if(e.api.location.type==="popout"){var a,l;let h=(a=this._popoutWindowService)===null||a===void 0?void 0:a.findByGroup(e);if(!h)throw new Error("dockview: failed to find popout group");if(this.detachFromNestedWindow(e))return t?.skipDispose?e.model.location={type:"grid"}:this.disposeGroupRecord(e),this.activateFallbackGroupIfRemoved(e,t?.skipActive),e;if(!t?.skipDispose){if(!t?.skipPopoutAssociated){let u=h.referenceGroup?this.getPanel(h.referenceGroup):void 0;u?.panels.length===0&&(this.closeEmptyGroups||!u.api.isVisible)&&this.removeGroup(u)}h.popoutGroup.dispose(),this._groups.delete(e.id),this._onDidRemoveGroup.fire(e)}(l=this._popoutWindowService)===null||l===void 0||l.remove(h);let c=h.disposable.dispose();return!t?.skipPopoutReturn&&c&&(this.doAddGroup(c,[0]),this.doSetGroupAndPanelActive(c)),this.activateFallbackGroupIfRemoved(e,t?.skipActive),h.popoutGroup}if(!this.gridview.element.contains(e.element)){if(!t?.skipDispose){let h=this._groups.get(e.id);h?.disposable.dispose(),this.disposeGroupRecord(e)}return this.activateFallbackGroupIfRemoved(e,t?.skipActive),e}let d=super.doRemoveGroup(e,t);return t?.skipActive||this.activePanel!==s&&this.fireActivePanelChange(this.activePanel),d}debouncedUpdateAllPositions(){this._updatePositionsFrameId!==void 0&&cancelAnimationFrame(this._updatePositionsFrameId),this._updatePositionsFrameId=requestAnimationFrame(()=>{var e,t;this._updatePositionsFrameId=void 0,this.overlayRenderContainer.updateAllPositions();for(let i of(e=(t=this._popoutWindowService)===null||t===void 0?void 0:t.entries)!==null&&e!==void 0?e:[])i.overlayRenderContainer.updateAllPositions()})}movingLock(e){let t=this._moving;try{return this._moving=!0,e()}finally{this._moving=t}}mutation(e,t){let i=this.openMutation(e);this._syncMutationDepth++;try{return t()}finally{this._syncMutationDepth--,this._syncMutationDepth===0&&this.releaseDisposedActiveGroup(),i()}}mutationAsync(e,t){var i=this;return ca(function*(){let n=i.openMutation(e);try{return yield t()}finally{n()}})()}openMutation(e){let t=this._origin;return this._mutationDepth===0&&this._onWillMutateLayout.fire({kind:e,origin:t}),this._mutationDepth++,()=>{this._mutationDepth--,this._mutationDepth===0&&(this.releaseDisposedActiveGroup(),this.flushLocationChanges(),this._onDidMutateLayout.fire({kind:e,origin:t}))}}releaseDisposedActiveGroup(){var e;!this.isDisposed&&(!((e=this._activeGroup)===null||e===void 0)&&e.model.isDisposed)&&this.activateFallbackGroupIfRemoved(this._activeGroup)}deferLocationChange(e,t){if(this._mutationDepth===0){t();return}this._pendingLocationChanges.set(e,t)}flushLocationChanges(){if(this._pendingLocationChanges.size===0)return;let e=Array.from(this._pendingLocationChanges.values());this._pendingLocationChanges.clear();for(let t of e)t()}currentOrigin(){return this._origin}withOrigin(e,t){if(this._originDepth>0||this._mutationDepth>0)return t();let i=this._origin;this._origin=e,this._originDepth++;try{return t()}finally{this._originDepth--,this._origin=i}}fireActivePanelChange(e){this._onDidActivePanelChange.fire({panel:e,origin:this._origin})}fireDidMovePanel(e,t){this._onDidMovePanel.fire({panel:e,from:t,to:e.group})}moveGroupOrPanel(e){this.mutation("move",()=>this._doMoveGroupOrPanel(e))}_doMoveGroupOrPanel(e){var t;let i=e.to.group,n=e.from.groupId,o=e.from.panelId,s=e.to.position,r=e.to.index,a=n?(t=this._groups.get(n))===null||t===void 0?void 0:t.value:void 0;if(!a)throw new Error(`dockview: Failed to find group id ${n}`);if(o===void 0){e.from.tabGroupId?this.moveTabGroupToGroup({sourceGroup:a,tabGroupId:e.from.tabGroupId,destinationGroup:i,destinationTarget:s,destinationIndex:r,skipSetActive:e.skipSetActive,keepEmptyGroups:e.keepEmptyGroups}):this.moveGroup({from:{group:a},to:{group:i,position:s},skipSetActive:e.skipSetActive});return}if(!s||s==="center"){let d=this.movingLock(()=>a.model.removePanel(o,{skipSetActive:!1,skipSetActiveGroup:!0}));if(!d)throw new Error(`dockview: No panel with id ${o}`);!this.keepEmptyGroups(e)&&a.model.size===0&&a!==i&&this.doRemoveGroup(a,{skipActive:!0});let h=i.model.size===0;this.movingLock(()=>{var c;return i.model.openPanel(d,{index:r,skipSetActive:((c=e.skipSetActive)!==null&&c!==void 0?c:!1)&&!h,skipSetGroupActive:!0})}),e.skipSetActive||this.doSetGroupAndPanelActive(i),this.fireDidMovePanel(d,a)}else{let d=this.getGridviewForGroup(i),h=K(i.element),c=xe(d.orientation,h,s);if(a.size<2&&!this.keepEmptyGroups(e)){if(a===i)return;let[u,p]=Me(c);if(a.api.location.type==="grid"&&d===this.gridview){let[g,w]=Me(K(a.element));if((this.options.dropSizing!=="distribute"||a===i)&&ko(g,u)){this.gridview.moveView(g,w,p),this.fireDidMovePanel(this.getGroupPanel(o),a);return}}if(a.api.location.type==="popout"&&this.nestedWindowMembers(a).length<=1){var l;let g=(l=this._popoutWindowService)===null||l===void 0?void 0:l.findByGroup(a);if(!g)return;let w=this.movingLock(()=>g.popoutGroup.model.removePanel(g.popoutGroup.panels[0],{skipSetActive:!0,skipSetActiveGroup:!0}));this.doRemoveGroup(a,{skipActive:!0});let b=xe(d.orientation,K(i.element),s),C=this.createGroupAtLocation(b,this.sizingForDrop(K(i.element)),void 0,d);this.movingLock(()=>C.model.openPanel(w,{skipSetActive:!0})),this.doSetGroupAndPanelActive(C),this.fireDidMovePanel(this.getGroupPanel(o),a);return}if(a.api.location.type==="edge"){let g=this.movingLock(()=>a.model.removePanel(o,{skipSetActive:!1,skipSetActiveGroup:!0}));if(!g)throw new Error(`dockview: No panel with id ${o}`);let w=this.createGroupAtLocation(c,this.sizingForDrop(h),void 0,d);this.movingLock(()=>w.model.openPanel(g,{skipSetGroupActive:!0})),this.doSetGroupAndPanelActive(w),this.fireDidMovePanel(g,a);return}let m=this.movingLock(()=>this.doRemoveGroup(a,{skipActive:!0,skipDispose:!0})),f=K(i.element),v=xe(d.orientation,f,s);this.movingLock(()=>this.doAddGroup(m,v,this.sizingForDrop(f),d)),this.setGroupLocationForRoot(m,d),this.doSetGroupAndPanelActive(m),this.fireDidMovePanel(this.getGroupPanel(o),a)}else{let u=this.movingLock(()=>a.model.removePanel(o,{skipSetActive:!1,skipSetActiveGroup:!0}));if(!u)throw new Error(`dockview: No panel with id ${o}`);let p=xe(d.orientation,h,s),m=this.createGroupAtLocation(p,this.sizingForDrop(h),void 0,d);this.movingLock(()=>m.model.openPanel(u,{skipSetGroupActive:!0})),this.doSetGroupAndPanelActive(m),this.fireDidMovePanel(u,a)}}}moveTabGroupToGroup(e){let{sourceGroup:t,tabGroupId:i,destinationGroup:n,destinationTarget:o,destinationIndex:s}=e,r=t.model.getTabGroups().find(v=>v.id===i);if(!r||r.panelIds.length===0)return;let a=r.label,l=r.color,d=r.collapsed,h=r.componentParams,c=[...r.panelIds],u=o&&o!=="center"?K(n.element):void 0,p=this.movingLock(()=>c.map(v=>t.model.removePanel(v,{skipSetActive:!1,skipSetActiveGroup:!0})).filter(v=>v!==void 0));if(p.length===0)return;let m=v=>{this.movingLock(()=>{for(let w of p)v.model.openPanel(w,{index:s,skipSetActive:!0,skipSetGroupActive:!0})});let g=v.model.createTabGroup({label:a,color:l,collapsed:d,componentParams:h});for(let w of p)v.model.addPanelToTabGroup(g.id,w.id);e.skipSetActive||this.doSetGroupAndPanelActive(v);for(let w of p)this.fireDidMovePanel(w,t)},f;if(!o||o==="center"||!u)f=n;else{let v=this.getGridviewForGroup(n),g=xe(v.orientation,u,o);f=this.createGroupAtLocation(g,this.sizingForDrop(u),void 0,v)}!this.keepEmptyGroups(e)&&t.model.size===0&&t!==f&&this.doRemoveGroup(t,{skipActive:!0}),m(f)}moveGroup(e){this.mutation("move",()=>this._doMoveGroup(e))}maximizeGroup(e){this.mutation("maximize",()=>super.maximizeGroup(e))}exitMaximizedGroup(){this.mutation("maximize",()=>super.exitMaximizedGroup())}_doMoveGroup(e){var t;let i=e.from.group,n=e.to.group,o=e.to.position;if(i===n)return;let s=i,r;if(o==="center"){let h=i.activePanel,c=i.model.getTabGroups().map(p=>({label:p.label,color:p.color,collapsed:p.collapsed,componentParams:p.componentParams,panelIds:[...p.panelIds]})),u=this.movingLock(()=>[...i.panels].map(p=>i.model.removePanel(p.id,{skipSetActive:!0})));i?.model.size===0&&this.doRemoveGroup(i,{skipActive:!0}),this.movingLock(()=>{for(let p of u)n.model.openPanel(p,{skipSetActive:p!==h,skipSetGroupActive:!0})}),r=u;for(let p of c){let m=n.model.createTabGroup({label:p.label,color:p.color,collapsed:p.collapsed,componentParams:p.componentParams});for(let f of p.panelIds)n.model.addPanelToTabGroup(m.id,f)}e.skipSetActive!==!0?this.doSetGroupAndPanelActive(n):this.activePanel||this.doSetGroupAndPanelActive(n)}else{let h=(()=>{if(i.api.location.type==="edge"||n.api.location.type==="edge")return!1;let c=this.getGridviewForGroup(i);if(c!==this.getGridviewForGroup(n))return!1;let u,p;try{u=K(i.element),p=K(n.element)}catch{return!1}return u.length===0||p.length===0?!1:ko(Me(u)[0],Me(p)[0])&&fa(c.orientation,p)===To(o)})();if(i.api.location.type==="edge"){let c=i.activePanel,u=i.model.getTabGroups().map(m=>({label:m.label,color:m.color,collapsed:m.collapsed,componentParams:m.componentParams,panelIds:[...m.panelIds]})),p=this.movingLock(()=>[...i.panels].map(m=>i.model.removePanel(m.id,{skipSetActive:!0})));s=this.createGroup(),this._onDidAddGroup.fire(s),this.movingLock(()=>{for(let m of p)s.model.openPanel(m,{skipSetActive:m!==c,skipSetGroupActive:!0})});for(let m of u){let f=s.model.createTabGroup({label:m.label,color:m.color,collapsed:m.collapsed,componentParams:m.componentParams});for(let v of m.panelIds)s.model.addPanelToTabGroup(f.id,v)}}else switch(i.api.location.type){case"grid":this.gridview.removeView(K(i.element));break;case"floating":{var a;let c=(a=this._floatingGroupService)===null||a===void 0?void 0:a.findByGroup(i);if(!c)throw new Error("dockview: failed to find floating group");this.detachFromNestedWindow(i)||c.dispose();break}case"popout":{var l,d;let c=(l=this._popoutWindowService)===null||l===void 0?void 0:l.findByGroup(i);if(!c)throw new Error("dockview: failed to find popout group");if(this.detachFromNestedWindow(i))break;if((d=this._popoutWindowService)===null||d===void 0||d.remove(c),c.referenceGroup){let u=this.getPanel(c.referenceGroup);u&&!u.api.isVisible&&this.doRemoveGroup(u,{skipActive:!0})}c.window.dispose();break}}if(n.api.location.type==="grid"||n.api.location.type==="floating"||n.api.location.type==="popout"){let c=this.getGridviewForGroup(n),u=K(n.element),p=xe(c.orientation,u,o),m;h&&this.options.dropSizing!=="distribute"?m=To(o)==="HORIZONTAL"?i.api.width:i.api.height:m=this.sizingForDrop(u),c.addView(s,m,p),this.setGroupLocationForRoot(s,c)}}if(((t=r)!==null&&t!==void 0?t:s.panels).forEach(h=>{this.fireDidMovePanel(h,i)}),this.debouncedUpdateAllPositions(),e.skipSetActive===!1){let h=n??i;this.doSetGroupAndPanelActive(h)}else s!==i&&e.skipSetActive!==!0&&this.doSetGroupAndPanelActive(s)}doSetGroupActive(e){var t;super.doSetGroupActive(e);let i=this.activePanel;!this._moving&&i!==((t=this._onDidActivePanelChange.value)===null||t===void 0?void 0:t.panel)&&this.fireActivePanelChange(i)}doSetGroupAndPanelActive(e){var t;super.doSetGroupActive(e);let i=this.activePanel;e&&this.hasMaximizedGroup()&&!this.isMaximizedGroup(e)&&this.exitMaximizedGroup(),!this._moving&&i!==((t=this._onDidActivePanelChange.value)===null||t===void 0?void 0:t.panel)&&this.fireActivePanelChange(i)}getNextGroupId(){let e=this.options.groupIdGenerator;if(!e){let t=this.nextGroupId.next();for(;this._groups.has(t);)t=this.nextGroupId.next();return t}for(let t=0;t<jr;t++){let i=e();if(typeof i!="string"||i.length===0)throw new TypeError("dockview: groupIdGenerator must return a non-empty string");if(!this._groups.has(i))return i}throw new Error(`dockview: groupIdGenerator returned an id already in use ${jr} times in a row`)}createGroup(e){var t;(t=e)!==null&&t!==void 0||(e={});let i=e?.id;i&&this._groups.has(e.id)&&(console.warn(`dockview: Duplicate group id ${e?.id}. reassigning group id to avoid errors`),i=void 0),i||(i=this.getNextGroupId());let n=new en(this,i,e);if(n.init({params:{},accessor:this}),!this._groups.has(n.id)){let o=new x(n.model.onTabDragStart(s=>{var r;(r=this._advancedDnDService)===null||r===void 0||r.dispatchWillDragPanel(s)}),n.model.onGroupDragStart(s=>{var r;(r=this._advancedDnDService)===null||r===void 0||r.dispatchWillDragGroup(s)}),n.model.onMove(s=>{let{groupId:r,itemId:a,target:l,index:d,tabGroupId:h}=s;this.moveGroupOrPanel({from:{groupId:r,panelId:a,tabGroupId:h},to:{group:n,position:l,index:d}})}),n.model.onDidDrop(s=>{this._onDidDrop.fire(s)}),n.model.onWillDrop(s=>{var r;(r=this._advancedDnDService)===null||r===void 0||r.dispatchWillDrop(s)}),n.model.onWillShowOverlay(s=>{var r;if(this.options.disableDnd){s.preventDefault();return}(r=this._advancedDnDService)===null||r===void 0||r.dispatchWillShowOverlay(s)}),n.model.onUnhandledDragOver(s=>{this._onUnhandledDragOver.fire(s)}),n.model.onDidAddPanel(s=>{this._moving||this._onDidAddPanel.fire(s.panel)}),n.model.onDidRemovePanel(s=>{this._moving||this._onDidRemovePanel.fire(s.panel)}),n.model.onDidActivePanelChange(s=>{var r;this._moving||s.panel===this.activePanel&&((r=this._onDidActivePanelChange.value)===null||r===void 0?void 0:r.panel)!==s.panel&&this.fireActivePanelChange(s.panel)}),n.model.onDidPanelTitleChange(()=>{this._bufferOnDidLayoutChange.fire("panelTitle")}),n.model.onDidPanelParametersChange(()=>{this._bufferOnDidLayoutChange.fire("panelParameters")}));this._groups.set(n.id,{value:n,disposable:o})}return n.initialize(),n}createPanel(e,t){var i,n,o;let s=e.component,r=(i=e.tabComponent)!==null&&i!==void 0?i:this.options.defaultTabComponent,a=new Fa(this,e.id,s,r),l=new Ht(e.id,s,r,this,this._api,t,a,{renderer:e.renderer,minimumWidth:e.minimumWidth,minimumHeight:e.minimumHeight,maximumWidth:e.maximumWidth,maximumHeight:e.maximumHeight});return l.init({title:(n=e.title)!==null&&n!==void 0?n:e.id,params:(o=e?.params)!==null&&o!==void 0?o:{}}),l}sizingForDrop(e){return this.options.dropSizing==="distribute"?pe.Distribute:pe.Split(e.length===0?0:e[e.length-1])}createGroupAtLocation(e,t,i,n=this.gridview){let o=this.createGroup(i);return this.doAddGroup(o,e,t,n),this.setGroupLocationForRoot(o,n),o}setGroupLocationForRoot(e,t){var i;let n=(i=this._popoutWindowService)===null||i===void 0?void 0:i.entries.find(o=>o.gridview===t);if(n){e.model.renderContainer!==n.overlayRenderContainer&&(e.model.renderContainer=n.overlayRenderContainer),e.model.dropTargetContainer=n.dropTargetContainer,e.model.location={type:"popout",getWindow:n.getWindow,popoutUrl:n.popoutUrl};return}e.model.renderContainer!==this.overlayRenderContainer&&(e.model.renderContainer=this.overlayRenderContainer),e.model.dropTargetContainer=this.rootDropTargetContainer,e.model.location=t===this.gridview?{type:"grid"}:{type:"floating"}}getGridviewForGroup(e){var t,i;let n=(t=this._floatingGroupService)===null||t===void 0?void 0:t.findByGroup(e);if(n)return n.gridview;let o=(i=this._popoutWindowService)===null||i===void 0?void 0:i.findByGroup(e);return o?o.gridview:this.gridview}nestedWindowMembers(e){let t=this.getGridviewForGroup(e);return t===this.gridview?[]:this.groups.filter(i=>t.element.contains(i.element))}findGroup(e){var t;return(t=Array.from(this._groups.values()).find(i=>i.value.model.containsPanel(e)))===null||t===void 0?void 0:t.value}orientationAtLocation(e,t=this.gridview){let i=t.orientation;return e.length%2==1?i:Be(i)}updateTheme(){var e,t,i,n,o,s;let r=(e=this._options.theme)!==null&&e!==void 0?e:Tc;(t=this._shellThemeClassnames)===null||t===void 0||t.setClassNames(r.className);let a=(i=r.gap)!==null&&i!==void 0?i:0;this.gridview.margin=a;for(let c of this.nestedGridviews())c.margin=a;if((n=this._shellManager)===null||n===void 0||n.updateTheme(a,(o=r.edgeGroupCollapsedSize)!==null&&o!==void 0?o:35),r.dndOverlayBorder===void 0){var l;this.element.style.removeProperty("--dv-drag-over-border"),(l=this._shellManager)===null||l===void 0||l.element.style.removeProperty("--dv-drag-over-border")}else{var d;this.element.style.setProperty("--dv-drag-over-border",r.dndOverlayBorder),(d=this._shellManager)===null||d===void 0||d.element.style.setProperty("--dv-drag-over-border",r.dndOverlayBorder)}r.dndOverlayMounting==="absolute"?this.rootDropTargetContainer.disabled=!1:this.rootDropTargetContainer.disabled=!0;let h=((s=r.tabGroupIndicator)!==null&&s!==void 0?s:"wrap")==="none";G(this.element,"dv-tab-group-indicator-none",h),this._shellManager&&G(this._shellManager.element,"dv-tab-group-indicator-none",h);for(let c of this.groups)c.model.updateTabGroups()}},Nu=class extends _a{get orientation(){return this.gridview.orientation}set orientation(e){this.gridview.orientation=e}get options(){return this._options}get deserializer(){return this._deserializer}set deserializer(e){this._deserializer=e}constructor(e,t){var i;super(e,{proportionalLayout:(i=t.proportionalLayout)!==null&&i!==void 0?i:!0,orientation:t.orientation,styles:t.hideBorders?{separatorBorder:"transparent"}:void 0,disableAutoResizing:t.disableAutoResizing,className:t.className}),this._onDidLayoutfromJSON=new _,this.onDidLayoutFromJSON=this._onDidLayoutfromJSON.event,this._onDidRemoveGroup=new _,this.onDidRemoveGroup=this._onDidRemoveGroup.event,this._onDidAddGroup=new _,this.onDidAddGroup=this._onDidAddGroup.event,this._onDidActiveGroupChange=new _,this.onDidActiveGroupChange=this._onDidActiveGroupChange.event,this._options=t,this.addDisposables(this._onDidAddGroup,this._onDidRemoveGroup,this._onDidActiveGroupChange,this.onDidAdd(n=>{this._onDidAddGroup.fire(n)}),this.onDidRemove(n=>{this._onDidRemoveGroup.fire(n)}),this.onDidActiveChange(n=>{this._onDidActiveGroupChange.fire(n)})),this.layoutFromElement()}updateOptions(e){super.updateOptions(e);let t=typeof e.orientation=="string"&&this.gridview.orientation!==e.orientation;this._options=I(I({},this.options),e),t&&(this.gridview.orientation=e.orientation),this.layout(this.gridview.width,this.gridview.height,!0)}removePanel(e){this.removeGroup(e)}toJSON(){var e;return{grid:this.gridview.serialize(),activePanel:(e=this.activeGroup)===null||e===void 0?void 0:e.id}}setVisible(e,t){this.gridview.setViewVisible(K(e.element),t)}setActive(e){this._groups.forEach((t,i)=>{t.value.setActive(e===t.value)})}focus(){var e;(e=this.activeGroup)===null||e===void 0||e.focus()}fromJSON(e){this.clear();let{grid:t,activePanel:i}=e;try{let n=[],o=this.width,s=this.height;if(this.gridview.deserialize(t,{fromJSON:r=>{let{data:a}=r,l=this.options.createComponent({id:a.id,name:a.component});return n.push(()=>l.init({params:a.params,minimumWidth:a.minimumWidth,maximumWidth:a.maximumWidth,minimumHeight:a.minimumHeight,maximumHeight:a.maximumHeight,priority:a.priority,snap:!!a.snap,accessor:this,isVisible:r.visible})),this._onDidAddGroup.fire(l),this.registerPanel(l),l}}),this.layout(o,s,!0),n.forEach(r=>r()),typeof i=="string"){let r=this.getPanel(i);r&&this.doSetGroupActive(r)}}catch(n){for(let o of this.groups)o.dispose(),this._groups.delete(o.id),this._onDidRemoveGroup.fire(o);throw this.clear(),n}this._onDidLayoutfromJSON.fire()}clear(){let e=this.activeGroup,t=Array.from(this._groups.values());for(let i of t)i.disposable.dispose(),this.doRemoveGroup(i.value,{skipActive:!0});e&&this.doSetGroupActive(void 0),this.gridview.clear()}movePanel(e,t){var i;let n=(i=this._groups.get(t.reference))===null||i===void 0?void 0:i.value;if(!n)throw new Error(`reference group ${t.reference} does not exist`);let o=hn(t.direction);if(o==="center")throw new Error(`${o} not supported as an option`);let s=K(n.element),r=xe(this.gridview.orientation,s,o),a=this.gridview.remove(e);this.doAddGroup(a,r,t.size)}addPanel(e){var t,i,n;let o=(t=e.location)!==null&&t!==void 0?t:[0];if(!((i=e.position)===null||i===void 0)&&i.referencePanel){var s;let a=(s=this._groups.get(e.position.referencePanel))===null||s===void 0?void 0:s.value;if(!a)throw new Error(`reference group ${e.position.referencePanel} does not exist`);let l=hn(e.position.direction);if(l==="center")throw new Error(`${l} not supported as an option`);{let d=K(a.element);o=xe(this.gridview.orientation,d,l)}}let r=this.options.createComponent({id:e.id,name:e.component});return r.init({params:(n=e.params)!==null&&n!==void 0?n:{},minimumWidth:e.minimumWidth,maximumWidth:e.maximumWidth,minimumHeight:e.minimumHeight,maximumHeight:e.maximumHeight,priority:e.priority,snap:!!e.snap,accessor:this,isVisible:!0}),this.doAddGroup(r,o,e.size),this.registerPanel(r),this.doSetGroupActive(r),r}registerPanel(e){let t=new x(e.api.onDidFocusChange(i=>{i.isFocused&&this._groups.forEach(n=>{let o=n.value;o.setActive(o===e)})}));this._groups.set(e.id,{value:e,disposable:t})}moveGroup(e,t,i){let n=this.getPanel(t);if(!n)throw new Error("invalid operation");let o=K(e.element),[s,r]=Me(xe(this.gridview.orientation,o,i)),[a,l]=Me(K(n.element));if(ko(a,s)){this.gridview.moveView(a,l,r);return}let d=this.doRemoveGroup(n,{skipActive:!0,skipDispose:!0}),h=K(e.element),c=xe(this.gridview.orientation,h,i);this.doAddGroup(d,c)}removeGroup(e){super.removeGroup(e)}dispose(){super.dispose(),this._onDidLayoutfromJSON.dispose()}},$u=class extends No{get panels(){return this.splitview.getViews()}get options(){return this._options}get length(){return this._panels.size}get orientation(){return this.splitview.orientation}get splitview(){return this._splitview}set splitview(e){this._splitview&&this._splitview.dispose(),this._splitview=e,this._splitviewChangeDisposable.value=new x(this._splitview.onDidSashEnd(()=>{this._onDidLayoutChange.fire({reasons:new Set(["geometry"])})}),this._splitview.onDidAddView(t=>this._onDidAddView.fire(t)),this._splitview.onDidRemoveView(t=>this._onDidRemoveView.fire(t)))}get minimumSize(){return this.splitview.minimumSize}get maximumSize(){return this.splitview.maximumSize}get height(){return this.splitview.orientation==="HORIZONTAL"?this.splitview.orthogonalSize:this.splitview.size}get width(){return this.splitview.orientation==="HORIZONTAL"?this.splitview.size:this.splitview.orthogonalSize}constructor(e,t){var i;super(document.createElement("div"),t.disableAutoResizing),this._splitviewChangeDisposable=new Q,this._panels=new Map,this._onDidLayoutfromJSON=new _,this.onDidLayoutFromJSON=this._onDidLayoutfromJSON.event,this._onDidAddView=new _,this.onDidAddView=this._onDidAddView.event,this._onDidRemoveView=new _,this.onDidRemoveView=this._onDidRemoveView.event,this._onDidLayoutChange=new _,this.onDidLayoutChange=this._onDidLayoutChange.event,this.element.style.height="100%",this.element.style.width="100%",this._classNames=new pn(this.element),this._classNames.setClassNames((i=t.className)!==null&&i!==void 0?i:""),e.appendChild(this.element),this._options=t,this.splitview=new Gt(this.element,t),this.addDisposables(this._onDidAddView,this._onDidLayoutfromJSON,this._onDidRemoveView,this._onDidLayoutChange),this.layoutFromElement()}updateOptions(e){if("className"in e){var t;this._classNames.setClassNames((t=e.className)!==null&&t!==void 0?t:"")}if("disableAutoResizing"in e){var i;this.disableResizing=(i=e.disableAutoResizing)!==null&&i!==void 0?i:!1}if(typeof e.orientation=="string"&&e.orientation!==this.splitview.orientation){this.splitview.orientation=e.orientation;for(let n of this.panels)n.orientation=e.orientation}this._options=I(I({},this.options),e),this.splitview.layout(this.splitview.size,this.splitview.orthogonalSize)}focus(){var e;(e=this._activePanel)===null||e===void 0||e.focus()}movePanel(e,t){this.splitview.moveView(e,t)}setVisible(e,t){let i=this.panels.indexOf(e);this.splitview.setViewVisible(i,t)}setActive(e,t){this._activePanel=e,this.panels.filter(i=>i!==e).forEach(i=>{i.api._onDidActiveChange.fire({isActive:!1}),t||i.focus()}),e.api._onDidActiveChange.fire({isActive:!0}),t||e.focus()}removePanel(e,t){let i=this._panels.get(e.id);if(!i)throw new Error(`unknown splitview panel ${e.id}`);i.dispose(),this._panels.delete(e.id);let n=this.panels.indexOf(e);this.splitview.removeView(n,t).dispose();let o=this.panels;o.length>0&&this.setActive(o[o.length-1])}getPanel(e){return this.panels.find(t=>t.id===e)}addPanel(e){var t;if(this._panels.has(e.id))throw new Error(`panel ${e.id} already exists`);let i=this.options.createComponent({id:e.id,name:e.component});i.orientation=this.splitview.orientation,i.init({params:(t=e.params)!==null&&t!==void 0?t:{},minimumSize:e.minimumSize,maximumSize:e.maximumSize,snap:e.snap,priority:e.priority,accessor:this});let n=typeof e.size=="number"?e.size:pe.Distribute,o=typeof e.index=="number"?e.index:void 0;return this.splitview.addView(i,n,o),this.doAddView(i),this.setActive(i),i}layout(e,t){let[i,n]=this.splitview.orientation==="HORIZONTAL"?[e,t]:[t,e];this.splitview.layout(i,n)}doAddView(e){let t=e.api.onDidFocusChange(i=>{i.isFocused&&this.setActive(e,!0)});this._panels.set(e.id,t)}toJSON(){var e;return{views:this.splitview.getViews().map((t,i)=>{let n=this.splitview.getViewCachedVisibleSize(i),o=typeof n=="number";return I({size:o?n:this.splitview.getViewSize(i),data:t.toJSON(),snap:!!t.snap,priority:t.priority},o?{visible:!1}:{})}),activeView:(e=this._activePanel)===null||e===void 0?void 0:e.id,size:this.splitview.size,orientation:this.splitview.orientation}}fromJSON(e){this.clear();let{views:t,orientation:i,size:n,activeView:o}=e,s=[],r=this.width,a=this.height;if(this.splitview=new Gt(this.element,{orientation:i,proportionalLayout:this.options.proportionalLayout,descriptor:{size:n,views:t.map(l=>{let d=l.data;if(this._panels.has(d.id))throw new Error(`panel ${d.id} already exists`);let h=this.options.createComponent({id:d.id,name:d.component});return s.push(()=>{var c;h.init({params:(c=d.params)!==null&&c!==void 0?c:{},minimumSize:d.minimumSize,maximumSize:d.maximumSize,snap:l.snap,priority:l.priority,accessor:this}),l.visible===!1&&h.setVisible(!1)}),h.orientation=i,this.doAddView(h),setTimeout(()=>{this._onDidAddView.fire(h)},0),{size:l.size,view:h,visible:l.visible}})}}),this.layout(r,a),s.forEach(l=>l()),typeof o=="string"){let l=this.getPanel(o);l&&this.setActive(l)}this._onDidLayoutfromJSON.fire()}clear(){for(let e of this._panels.values())e.dispose();for(this._panels.clear();this.splitview.length>0;)this.splitview.removeView(0,pe.Distribute,!0).dispose()}dispose(){for(let t of this._panels.values())t.dispose();this._panels.clear();let e=this.splitview.getViews();this._splitviewChangeDisposable.dispose(),this.splitview.dispose();for(let t of e)t.dispose();this.element.remove(),super.dispose()}},Yr=class extends x{get element(){return this._element}constructor(){super(),this._expandedIcon=rc(),this._collapsedIcon=Ta(),this.disposable=new Q,this.apiRef={api:null},this._element=document.createElement("div"),this.element.className="dv-default-header",this._content=document.createElement("span"),this._expander=document.createElement("div"),this._expander.className="dv-pane-header-icon",this.element.appendChild(this._expander),this.element.appendChild(this._content),this.addDisposables(T(this._element,"click",()=>{var e;(e=this.apiRef.api)===null||e===void 0||e.setExpanded(!this.apiRef.api.isExpanded)}))}init(e){this.apiRef.api=e.api,this._content.textContent=e.title,this.updateIcon(),this.disposable.value=e.api.onDidExpansionChange(()=>{this.updateIcon()})}updateIcon(){var e;let t=!!(!((e=this.apiRef.api)===null||e===void 0)&&e.isExpanded);G(this._expander,"collapsed",!t),t?(this._expander.contains(this._collapsedIcon)&&this._collapsedIcon.remove(),this._expander.contains(this._expandedIcon)||this._expander.appendChild(this._expandedIcon)):(this._expander.contains(this._expandedIcon)&&this._expandedIcon.remove(),this._expander.contains(this._collapsedIcon)||this._expander.appendChild(this._collapsedIcon))}update(e){}dispose(){this.disposable.dispose(),super.dispose()}},Vu=Ro(),Kr=22,Zr=0,Xr=Number.MAX_SAFE_INTEGER,qr=class extends tc{constructor(e){super({accessor:e.accessor,id:e.id,component:e.component,headerComponent:e.headerComponent,orientation:e.orientation,isExpanded:e.isExpanded,disableDnd:e.disableDnd,headerSize:e.headerSize,minimumBodySize:e.minimumBodySize,maximumBodySize:e.maximumBodySize}),this.options=e}getBodyComponent(){return this.options.body}getHeaderComponent(){return this.options.header}},Hu=class extends No{get id(){return this._id}get panels(){return this.paneview.getPanes()}set paneview(e){this._paneview=e,this._disposable.value=new x(this._paneview.onDidChange(()=>{this._onDidLayoutChange.fire({reasons:new Set(["geometry"])})}),this._paneview.onDidAddView(t=>this._onDidAddView.fire(t)),this._paneview.onDidRemoveView(t=>this._onDidRemoveView.fire(t)))}get paneview(){return this._paneview}get minimumSize(){return this.paneview.minimumSize}get maximumSize(){return this.paneview.maximumSize}get height(){return this.paneview.orientation==="HORIZONTAL"?this.paneview.orthogonalSize:this.paneview.size}get width(){return this.paneview.orientation==="HORIZONTAL"?this.paneview.size:this.paneview.orthogonalSize}get options(){return this._options}constructor(e,t){var i;super(document.createElement("div"),t.disableAutoResizing),this._id=Vu.next(),this._disposable=new Q,this._viewDisposables=new Map,this._onDidLayoutfromJSON=new _,this.onDidLayoutFromJSON=this._onDidLayoutfromJSON.event,this._onDidLayoutChange=new _,this.onDidLayoutChange=this._onDidLayoutChange.event,this._onDidDrop=new _,this.onDidDrop=this._onDidDrop.event,this._onDidAddView=new _,this.onDidAddView=this._onDidAddView.event,this._onDidRemoveView=new _,this.onDidRemoveView=this._onDidRemoveView.event,this._onUnhandledDragOver=new _,this.onUnhandledDragOver=this._onUnhandledDragOver.event,this.element.style.height="100%",this.element.style.width="100%",this.addDisposables(this._onDidLayoutChange,this._onDidLayoutfromJSON,this._onDidDrop,this._onDidAddView,this._onDidRemoveView,this._onUnhandledDragOver),this._classNames=new pn(this.element),this._classNames.setClassNames((i=t.className)!==null&&i!==void 0?i:""),e.appendChild(this.element),this._options=t,this.paneview=new fo(this.element,{orientation:"VERTICAL"}),this.addDisposables(this._disposable)}setVisible(e,t){let i=this.panels.indexOf(e);this.paneview.setViewVisible(i,t)}focus(){}updateOptions(e){if("className"in e){var t;this._classNames.setClassNames((t=e.className)!==null&&t!==void 0?t:"")}if("disableAutoResizing"in e){var i;this.disableResizing=(i=e.disableAutoResizing)!==null&&i!==void 0?i:!1}this._options=I(I({},this.options),e)}addPanel(e){var t,i,n;let o=this.options.createComponent({id:e.id,name:e.component}),s;e.headerComponent&&this.options.createHeaderComponent&&(s=this.options.createHeaderComponent({id:e.id,name:e.headerComponent})),(t=s)!==null&&t!==void 0||(s=new Yr);let r=new qr({id:e.id,component:e.component,headerComponent:e.headerComponent,header:s,body:o,orientation:"VERTICAL",isExpanded:!!e.isExpanded,disableDnd:!!this.options.disableDnd,accessor:this,headerSize:(i=e.headerSize)!==null&&i!==void 0?i:Kr,minimumBodySize:Zr,maximumBodySize:Xr});this.doAddPanel(r);let a=typeof e.size=="number"?e.size:pe.Distribute,l=typeof e.index=="number"?e.index:void 0;return r.init({params:(n=e.params)!==null&&n!==void 0?n:{},minimumBodySize:e.minimumBodySize,maximumBodySize:e.maximumBodySize,isExpanded:e.isExpanded,title:e.title,containerApi:new yi(this),accessor:this}),this.paneview.addPane(r,a,l),r.orientation=this.paneview.orientation,r}removePanel(e){let t=this.panels.indexOf(e);if(t<0)throw new Error(`unknown paneview panel ${e.id}`);this.paneview.removePane(t),this.doRemovePanel(e)}movePanel(e,t){this.paneview.moveView(e,t)}getPanel(e){return this.panels.find(t=>t.id===e)}layout(e,t){let[i,n]=this.paneview.orientation==="HORIZONTAL"?[e,t]:[t,e];this.paneview.layout(i,n)}toJSON(){let e=i=>i===Number.MAX_SAFE_INTEGER||i===Number.POSITIVE_INFINITY?void 0:i,t=i=>i<=0?void 0:i;return{views:this.paneview.getPanes().map((i,n)=>{let o=this.paneview.getViewCachedVisibleSize(n),s=typeof o=="number";return I({size:s?o:this.paneview.getViewSize(n),data:i.toJSON(),minimumSize:t(i.minimumBodySize),maximumSize:e(i.maximumBodySize),headerSize:i.headerSize,expanded:i.isExpanded()},s?{visible:!1}:{})}),size:this.paneview.size}}fromJSON(e){this.clear();let{views:t,size:i}=e,n=[],o=this.width,s=this.height;this.paneview.dispose(),this.paneview=new fo(this.element,{orientation:"VERTICAL",descriptor:{size:i,views:t.map(r=>{var a,l,d,h;let c=r.data,u=this.options.createComponent({id:c.id,name:c.component}),p;c.headerComponent&&this.options.createHeaderComponent&&(p=this.options.createHeaderComponent({id:c.id,name:c.headerComponent})),(a=p)!==null&&a!==void 0||(p=new Yr);let m=new qr({id:c.id,component:c.component,headerComponent:c.headerComponent,header:p,body:u,orientation:"VERTICAL",isExpanded:!!r.expanded,disableDnd:!!this.options.disableDnd,accessor:this,headerSize:(l=r.headerSize)!==null&&l!==void 0?l:Kr,minimumBodySize:(d=r.minimumSize)!==null&&d!==void 0?d:Zr,maximumBodySize:(h=r.maximumSize)!==null&&h!==void 0?h:Xr});return this.doAddPanel(m),n.push(()=>{var f;m.init({params:(f=c.params)!==null&&f!==void 0?f:{},minimumBodySize:r.minimumSize,maximumBodySize:r.maximumSize,title:c.title,isExpanded:!!r.expanded,containerApi:new yi(this),accessor:this}),m.orientation=this.paneview.orientation,r.visible===!1&&m.setVisible(!1)}),setTimeout(()=>{this._onDidAddView.fire(m)},0),{size:r.size,view:m,visible:r.visible}})}}),this.layout(o,s),n.forEach(r=>r()),this._onDidLayoutfromJSON.fire()}clear(){for(let[i,n]of this._viewDisposables.entries())n.dispose();this._viewDisposables.clear();let e=this.width,t=this.height;this.paneview.dispose(),this.paneview=new fo(this.element,{orientation:"VERTICAL"}),this.layout(e,t)}doAddPanel(e){let t=new x(e.onDidDrop(i=>{this._onDidDrop.fire(i)}),e.onUnhandledDragOver(i=>{this._onUnhandledDragOver.fire(i)}));this._viewDisposables.set(e.id,t)}doRemovePanel(e){let t=this._viewDisposables.get(e.id);t&&(t.dispose(),this._viewDisposables.delete(e.id))}dispose(){super.dispose();for(let[e,t]of this._viewDisposables.entries())t.dispose();this._viewDisposables.clear(),this.element.remove(),this.paneview.dispose()}},Ka=class extends Bo{get priority(){return this._priority}set orientation(e){this._orientation=e}get orientation(){return this._orientation}get minimumSize(){let e=typeof this._minimumSize=="function"?this._minimumSize():this._minimumSize;return e!==this._evaluatedMinimumSize&&(this._evaluatedMinimumSize=e,this.updateConstraints()),e}get maximumSize(){let e=typeof this._maximumSize=="function"?this._maximumSize():this._maximumSize;return e!==this._evaluatedMaximumSize&&(this._evaluatedMaximumSize=e,this.updateConstraints()),e}get snap(){return this._snap}constructor(e,t){super(e,t,new xa(e,t)),this._evaluatedMinimumSize=0,this._evaluatedMaximumSize=Number.POSITIVE_INFINITY,this._minimumSize=0,this._maximumSize=Number.POSITIVE_INFINITY,this._snap=!1,this._onDidChange=new _,this.onDidChange=this._onDidChange.event,this.api.initialize(this),this.addDisposables(this._onDidChange,this.api.onWillVisibilityChange(i=>{let{isVisible:n}=i,{accessor:o}=this._params;o.setVisible(this,n)}),this.api.onActiveChange(()=>{let{accessor:i}=this._params;i.setActive(this)}),this.api.onDidConstraintsChangeInternal(i=>{(typeof i.minimumSize=="number"||typeof i.minimumSize=="function")&&(this._minimumSize=i.minimumSize),(typeof i.maximumSize=="number"||typeof i.maximumSize=="function")&&(this._maximumSize=i.maximumSize),this.updateConstraints()}),this.api.onDidSizeChange(i=>{this._onDidChange.fire({size:i.size})}))}setVisible(e){this.api._onDidVisibilityChange.fire({isVisible:e})}setActive(e){this.api._onDidActiveChange.fire({isActive:e})}layout(e,t){let[i,n]=this.orientation==="HORIZONTAL"?[e,t]:[t,e];super.layout(i,n)}init(e){super.init(e),this._priority=e.priority,e.minimumSize&&(this._minimumSize=e.minimumSize),e.maximumSize&&(this._maximumSize=e.maximumSize),e.snap&&(this._snap=e.snap)}toJSON(){let e=i=>i===Number.MAX_SAFE_INTEGER||i===Number.POSITIVE_INFINITY?void 0:i,t=i=>i<=0?void 0:i;return I(I({},super.toJSON()),{},{minimumSize:t(this.minimumSize),maximumSize:e(this.maximumSize)})}updateConstraints(){this.api._onDidConstraintsChange.fire({maximumSize:this._evaluatedMaximumSize,minimumSize:this._evaluatedMinimumSize})}};function Za(e,t){return new Lu(e,t).api}function Xa(e,t){return new $o(new $u(e,t))}function qa(e,t){return new Vo(new Nu(e,t))}function Qa(e,t){return new yi(new Hu(e,t))}import E from"react";import Wu from"react-dom";function Si(e){"@babel/helpers - typeof";return Si=typeof Symbol=="function"&&typeof Symbol.iterator=="symbol"?function(t){return typeof t}:function(t){return t&&typeof Symbol=="function"&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},Si(e)}function Fu(e,t){if(Si(e)!="object"||!e)return e;var i=e[Symbol.toPrimitive];if(i!==void 0){var n=i.call(e,t||"default");if(Si(n)!="object")return n;throw new TypeError("@@toPrimitive must return a primitive value.")}return(t==="string"?String:Number)(e)}function Bu(e){var t=Fu(e,"string");return Si(t)=="symbol"?t:t+""}function Uu(e,t,i){return(t=Bu(t))in e?Object.defineProperty(e,t,{value:i,enumerable:!0,configurable:!0,writable:!0}):e[t]=i,e}function el(e,t){var i=Object.keys(e);if(Object.getOwnPropertySymbols){var n=Object.getOwnPropertySymbols(e);t&&(n=n.filter(function(o){return Object.getOwnPropertyDescriptor(e,o).enumerable})),i.push.apply(i,n)}return i}function be(e){for(var t=1;t<arguments.length;t++){var i=arguments[t]!=null?arguments[t]:{};t%2?el(Object(i),!0).forEach(function(n){Uu(e,n,i[n])}):Object.getOwnPropertyDescriptors?Object.defineProperties(e,Object.getOwnPropertyDescriptors(i)):el(Object(i)).forEach(function(n){Object.defineProperty(e,n,Object.getOwnPropertyDescriptor(i,n))})}return e}var ll=(e,t)=>{let[,i]=E.useState(0),n=E.useRef(e.componentProps);return E.useImperativeHandle(t,()=>({update:o=>{n.current=be(be({},n.current),o),i(s=>s+1)}}),[]),E.createElement(e.component,n.current)};ll.displayName="DockviewReactJsBridge";var Ju=(()=>{let e=1;return{next:()=>`dockview_react_portal_key_${(e++).toString()}`}})(),ju=E.createContext({}),je=class{constructor(e,t,i,n,o){this.parent=e,this.portalStore=t,this.component=i,this.parameters=n,this.context=o,this._initialProps={},this.disposed=!1,this.createPortal()}update(e){if(this.disposed)throw new Error("invalid operation: resource is already disposed");this.componentInstance?this.componentInstance.update(e):this._initialProps=be(be({},this._initialProps),e)}createPortal(){if(this.disposed)throw new Error("invalid operation: resource is already disposed");if(!Yu(this.component))throw new Error("Dockview: Only React.memo(...), React.ForwardRef(...) and functional components are accepted as components");let e=E.createElement(E.forwardRef(ll),{component:this.component,componentProps:this.parameters,ref:n=>{this.componentInstance=n,Object.keys(this._initialProps).length>0&&(this.componentInstance.update(this._initialProps),this._initialProps={})}}),t=this.context?E.createElement(ju.Provider,{value:this.context},e):e,i=Wu.createPortal(t,this.parent,Ju.next());this.ref={portal:i,disposable:this.portalStore.addPortal(i)}}dispose(){var e;(e=this.ref)===null||e===void 0||e.disposable.dispose(),this.disposed=!0}},Dn=()=>{let[e,t]=E.useState([]);return E.useDebugValue(`Portal count: ${e.length}`),[e,E.useCallback(i=>{t(o=>[...o,i]);let n=!1;return L.from(()=>{if(n)throw new Error("invalid operation: resource already disposed");n=!0,t(o=>o.filter(s=>s!==i))})},[])]};function Yu(e){return typeof e=="function"||!!e?.$$typeof}function Ku(e,t){let i=r=>r instanceof ShadowRoot?r.host:r.parentNode,n=new Set,o=new MutationObserver(r=>{if(!e.isConnected){o.disconnect(),t();return}for(let a of r)for(let l of a.removedNodes)if(n.has(l)){s();return}}),s=()=>{o.disconnect(),n.clear();for(let r=i(e);r;r=i(r))n.add(r),o.observe(r,{childList:!0})};return s(),L.from(()=>o.disconnect())}var Zu=Number.parseInt(E.version,10)>=18;function Sn(e,t,i){let n=E.useRef(void 0);E.useEffect(()=>{var o,s;let r=e.current;if(!r)return;(o=n.current)===null||o===void 0||o.dispose(),n.current=void 0;let a=(s=t.current)!==null&&s!==void 0?s:i(r);return t.current=a,()=>{let l=()=>{n.current=void 0,t.current=void 0,a.dispose()};Zu&&r.isConnected&&typeof MutationObserver<"u"?n.current=Ku(r,l):l()}},[])}function Cn(e){let t=E.useRef({instance:void 0,values:new Map});return E.useCallback(i=>{t.current.instance!==e.current&&(t.current={instance:e.current,values:new Map});let n=t.current.values,o=!0;for(let[s,r]of Object.entries(i))n.has(s)&&n.get(s)!==r&&(o=!1),n.set(s,r);return o},[e])}var tl=class{get element(){return this._element}constructor(e,t,i){this.id=e,this.component=t,this.reactPortalStore=i,this._onDidFocus=new _,this.onDidFocus=this._onDidFocus.event,this._onDidBlur=new _,this.onDidBlur=this._onDidBlur.event,this._element=document.createElement("div"),this._element.className="dv-react-part",this._element.style.height="100%",this._element.style.width="100%"}focus(){}init(e){this.part=new je(this.element,this.reactPortalStore,this.component,{params:e.params,api:e.api,containerApi:e.containerApi})}update(e){var t;(t=this.part)===null||t===void 0||t.update({params:e.params})}layout(e,t){}dispose(){var e;this._onDidFocus.dispose(),this._onDidBlur.dispose(),(e=this.part)===null||e===void 0||e.dispose()}},il=class{get element(){return this._element}constructor(e,t,i){this.id=e,this.component=t,this.reactPortalStore=i,this._element=document.createElement("div"),this._element.className="dv-react-part",this._element.style.height="100%",this._element.style.width="100%"}focus(){}init(e){this.part=new je(this.element,this.reactPortalStore,this.component,{params:e.params,api:e.api,containerApi:e.containerApi,tabLocation:e.tabLocation})}update(e){var t;(t=this.part)===null||t===void 0||t.update({params:e.params})}layout(e,t){}dispose(){var e;(e=this.part)===null||e===void 0||e.dispose()}},nl=class{get element(){return this._element}constructor(e,t,i){this.id=e,this.component=t,this.reactPortalStore=i,this._element=document.createElement("div"),this._element.className="dv-react-part",this._element.style.height="100%",this._element.style.width="100%"}init(e){this.part=new je(this.element,this.reactPortalStore,this.component,{group:e.group,containerApi:e.containerApi})}focus(){}update(e){var t,i,n;this.parameters&&(this.parameters.params=e.params),(t=this.part)===null||t===void 0||t.update({params:(i=(n=this.parameters)===null||n===void 0?void 0:n.params)!==null&&i!==void 0?i:{}})}layout(e,t){}dispose(){var e;(e=this.part)===null||e===void 0||e.dispose()}},Xu=class{get element(){return this._element}get part(){return this._part}constructor(e,t,i){this.component=e,this.reactPortalStore=t,this._group=i,this.mutableDisposable=new Q,this._element=document.createElement("div"),this._element.className="dv-react-part",this._element.style.height="100%",this._element.style.width="100%"}init(e){this.mutableDisposable.value=new x(this._group.model.onDidAddPanel(()=>{this.updatePanels()}),this._group.model.onDidRemovePanel(()=>{this.updatePanels()}),this._group.model.onDidActivePanelChange(()=>{this.updateActivePanel()}),e.api.onDidActiveChange(()=>{this.updateGroupActive()}),e.api.onDidLocationChange(t=>{this.updateLocation(t.location)})),this._part=new je(this.element,this.reactPortalStore,this.component,{api:e.api,containerApi:e.containerApi,panels:this._group.model.panels,activePanel:this._group.model.activePanel,isGroupActive:this._group.api.isActive,group:this._group,headerPosition:this._group.model.headerPosition,location:e.api.location})}dispose(){var e;this.mutableDisposable.dispose(),(e=this._part)===null||e===void 0||e.dispose()}update(e){var t;(t=this._part)===null||t===void 0||t.update(e.params)}updatePanels(){this.update({params:{panels:this._group.model.panels}})}updateActivePanel(){this.update({params:{activePanel:this._group.model.activePanel}})}updateGroupActive(){this.update({params:{isGroupActive:this._group.api.isActive}})}updateLocation(e){this.update({params:{location:e}})}},qu=class{get element(){return this._element}constructor(e,t,i){this.id=e,this.component=t,this.reactPortalStore=i,this._element=document.createElement("div"),this._element.className="dv-react-part",this._element.style.height="100%",this._element.style.width="100%"}init(e){this.part=new je(this._element,this.reactPortalStore,this.component,e)}dispose(){var e;(e=this.part)===null||e===void 0||e.dispose()}},ol=class{get element(){return this._element}constructor(e,t){this.component=e,this.reactPortalStore=t,this._element=document.createElement("div"),this._element.className="dv-react-part",this._element.style.display="inline-flex"}init(e){this.part=new je(this._element,this.reactPortalStore,this.component,{tabGroup:e.tabGroup,api:e.api})}update(e){var t;(t=this.part)===null||t===void 0||t.update({tabGroup:e.tabGroup})}dispose(){var e;(e=this.part)===null||e===void 0||e.dispose()}},sl=class{get element(){return this._element}constructor(e,t){this.component=e,this.reactPortalStore=t,this._element=document.createElement("div"),this._element.className="dv-react-part",this._element.style.display="inline-flex"}init(e){this.part=new je(this._element,this.reactPortalStore,this.component,{group:e.group,api:e.api})}dispose(){var e;(e=this.part)===null||e===void 0||e.dispose()}};function Ft(e,t){return e?i=>new Xu(e,t,i):void 0}var wn="props.defaultTabComponent";function Qu(e){return bn.reduce((t,i)=>(i in e&&(t[i]=e[i]),t),{})}var es=E.forwardRef((e,t)=>{let i=E.useRef(null),n=E.useRef(void 0),[o,s]=Dn(),r=Cn(n);E.useImperativeHandle(t,()=>i.current,[]);let a=E.useRef({});return E.useEffect(()=>{let l={};bn.forEach(d=>{let h=d,c=e[h];h in e&&c!==a.current[h]&&(l[h]=c)}),n.current&&Object.keys(l).length>0&&n.current.updateOptions(l),a.current=e},bn.map(l=>e[l])),Sn(i,n,l=>{let d=be({},e.tabComponents);e.defaultTabComponent&&(d[wn]=e.defaultTabComponent);let h={createLeftHeaderActionComponent:Ft(e.leftHeaderActionsComponent,{addPortal:s}),createRightHeaderActionComponent:Ft(e.rightHeaderActionsComponent,{addPortal:s}),createPrefixHeaderActionComponent:Ft(e.prefixHeaderActionsComponent,{addPortal:s}),createComponent:f=>new tl(f.id,e.components[f.name],{addPortal:s}),createTabComponent(f){return new il(f.id,d[f.name],{addPortal:s})},createWatermarkComponent:e.watermarkComponent?()=>new nl("watermark",e.watermarkComponent,{addPortal:s}):void 0,defaultTabComponent:e.defaultTabComponent?wn:void 0,createContextMenuItemComponent:f=>{if(f.component)return new qu(f.id,f.component,{addPortal:s})}},c=Qu(e);if(e.tabGroupChipComponent){let f=e.tabGroupChipComponent;c.createTabGroupChipComponent=()=>new ol(f,{addPortal:s})}if(e.groupDragGhostComponent){let f=e.groupDragGhostComponent;c.createGroupDragGhostComponent=()=>new sl(f,{addPortal:s})}let u=Za(l,be(be({},c),h)),{clientWidth:p,clientHeight:m}=l;return u.layout(p,m),e.onReady&&e.onReady({api:u}),u}),E.useEffect(()=>{if(!n.current)return()=>{};let l=n.current.onDidDrop(d=>{e.onDidDrop&&e.onDidDrop(d)});return()=>{l.dispose()}},[e.onDidDrop]),E.useEffect(()=>{if(!n.current)return()=>{};let l=n.current.onWillDrop(d=>{e.onWillDrop&&e.onWillDrop(d)});return()=>{l.dispose()}},[e.onWillDrop]),E.useEffect(()=>{!n.current||r({tabGroupChipComponent:e.tabGroupChipComponent})||n.current.updateOptions({createTabGroupChipComponent:e.tabGroupChipComponent?()=>new ol(e.tabGroupChipComponent,{addPortal:s}):void 0})},[e.tabGroupChipComponent]),E.useEffect(()=>{!n.current||r({groupDragGhostComponent:e.groupDragGhostComponent})||n.current.updateOptions({createGroupDragGhostComponent:e.groupDragGhostComponent?()=>new sl(e.groupDragGhostComponent,{addPortal:s}):void 0})},[e.groupDragGhostComponent]),E.useEffect(()=>{!n.current||r({components:e.components})||n.current.updateOptions({createComponent:l=>new tl(l.id,e.components[l.name],{addPortal:s})})},[e.components]),E.useEffect(()=>{if(!n.current||r({tabComponents:e.tabComponents,defaultTabComponent:e.defaultTabComponent}))return;let l=be({},e.tabComponents);e.defaultTabComponent&&(l[wn]=e.defaultTabComponent),n.current.updateOptions({defaultTabComponent:e.defaultTabComponent?wn:void 0,createTabComponent(d){return new il(d.id,l[d.name],{addPortal:s})}})},[e.tabComponents,e.defaultTabComponent]),E.useEffect(()=>{!n.current||r({watermarkComponent:e.watermarkComponent})||n.current.updateOptions({createWatermarkComponent:e.watermarkComponent?()=>new nl("watermark",e.watermarkComponent,{addPortal:s}):void 0})},[e.watermarkComponent]),E.useEffect(()=>{!n.current||r({rightHeaderActionsComponent:e.rightHeaderActionsComponent})||n.current.updateOptions({createRightHeaderActionComponent:Ft(e.rightHeaderActionsComponent,{addPortal:s})})},[e.rightHeaderActionsComponent]),E.useEffect(()=>{!n.current||r({leftHeaderActionsComponent:e.leftHeaderActionsComponent})||n.current.updateOptions({createLeftHeaderActionComponent:Ft(e.leftHeaderActionsComponent,{addPortal:s})})},[e.leftHeaderActionsComponent]),E.useEffect(()=>{!n.current||r({prefixHeaderActionsComponent:e.prefixHeaderActionsComponent})||n.current.updateOptions({createPrefixHeaderActionComponent:Ft(e.prefixHeaderActionsComponent,{addPortal:s})})},[e.prefixHeaderActionsComponent]),E.createElement("div",{style:{height:"100%",width:"100%"},ref:i},o)});es.displayName="DockviewComponent";var ep=()=>E.createElement("svg",{height:"11",width:"11",viewBox:"0 0 28 28","aria-hidden":"false",focusable:!1,className:"dv-svg"},E.createElement("path",{d:"M2.1 27.3L0 25.2L11.55 13.65L0 2.1L2.1 0L13.65 11.55L25.2 0L27.3 2.1L15.75 13.65L27.3 25.2L25.2 27.3L13.65 15.75L2.1 27.3Z"})),tp=()=>E.createElement("svg",{height:"11",width:"11",viewBox:"0 0 24 24","aria-hidden":"false",focusable:!1,className:"dv-svg"},E.createElement("path",{d:"M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H6c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"}));function ip(e,t){if(e==null)return{};var i={};for(var n in e)if({}.hasOwnProperty.call(e,n)){if(t.includes(n))continue;i[n]=e[n]}return i}function np(e,t){if(e==null)return{};var i,n,o=ip(e,t);if(Object.getOwnPropertySymbols){var s=Object.getOwnPropertySymbols(e);for(n=0;n<s.length;n++)i=s[n],t.includes(i)||{}.propertyIsEnumerable.call(e,i)&&(o[i]=e[i])}return o}var op=["api","containerApi","params","hideClose","closeActionOverride","onPointerDown","onPointerUp","onPointerLeave","tabLocation"];function sp(e){let[t,i]=E.useState(e.title);return E.useEffect(()=>{let n=e.onDidTitleChange(o=>{i(o.title)});return t!==e.title&&i(e.title),()=>{n.dispose()}},[e]),t}function rp(e){let[t,i]=E.useState(e.isPinned);return E.useEffect(()=>{let n=e.onDidChangePinned(o=>{i(o.isPinned)});return t!==e.isPinned&&i(e.isPinned),()=>{n.dispose()}},[e]),t}var dl=e=>{let{api:t,containerApi:i,params:n,hideClose:o,closeActionOverride:s,onPointerDown:r,onPointerUp:a,onPointerLeave:l,tabLocation:d}=e,h=np(e,op),c=sp(t),u=rp(t),p=E.useRef(!1),m=E.useCallback(b=>{b.preventDefault(),s?s():t.close()},[t,s]),f=E.useCallback(b=>{b.preventDefault()},[]),v=E.useCallback(b=>{p.current=b.button===1,r?.(b)},[r]),g=E.useCallback(b=>{p.current&&b.button===1&&!o&&(p.current=!1,m(b)),a?.(b)},[a,m,o]),w=E.useCallback(b=>{p.current=!1,l?.(b)},[l]);return E.createElement("div",be(be({"data-testid":"dockview-dv-default-tab"},h),{},{onPointerDown:v,onPointerUp:g,onPointerLeave:w,className:"dv-default-tab"}),u&&E.createElement("div",{className:"dv-tab-pin"},E.createElement(tp,null)),E.createElement("span",{className:"dv-default-tab-content"},c),!o&&E.createElement("button",{type:"button",className:"dv-default-tab-action","aria-label":"Close tab",onPointerDown:f,onClick:m},E.createElement(ep,null)))},rl=class extends Ka{constructor(e,t,i,n){super(e,t),this.reactComponent=i,this.reactPortalStore=n}getComponent(){var e,t;return new je(this.element,this.reactPortalStore,this.reactComponent,{params:(e=(t=this._params)===null||t===void 0?void 0:t.params)!==null&&e!==void 0?e:{},api:this.api,containerApi:new $o(this._params.accessor)})}};function ap(e){return fn.reduce((t,i)=>(i in e&&(t[i]=e[i]),t),{})}var lp=E.forwardRef((e,t)=>{let i=E.useRef(null),n=E.useRef(void 0),[o,s]=Dn(),r=Cn(n);E.useImperativeHandle(t,()=>i.current,[]);let a=E.useRef({});return E.useEffect(()=>{let l={};fn.forEach(d=>{let h=d,c=e[h];h in e&&c!==a.current[h]&&(l[h]=c)}),n.current&&Object.keys(l).length>0&&n.current.updateOptions(l),a.current=e},fn.map(l=>e[l])),Sn(i,n,l=>{let d=Xa(l,be(be({},ap(e)),{createComponent:u=>new rl(u.id,u.name,e.components[u.name],{addPortal:s})})),{clientWidth:h,clientHeight:c}=l;return d.layout(h,c),e.onReady&&e.onReady({api:d}),d}),E.useEffect(()=>{!n.current||r({components:e.components})||n.current.updateOptions({createComponent:l=>new rl(l.id,l.name,e.components[l.name],{addPortal:s})})},[e.components]),E.createElement("div",{style:{height:"100%",width:"100%"},ref:i},o)});lp.displayName="SplitviewComponent";var al=class extends Xo{constructor(e,t,i,n){super(e,t),this.reactComponent=i,this.reactPortalStore=n}getComponent(){var e,t;return new je(this.element,this.reactPortalStore,this.reactComponent,{params:(e=(t=this._params)===null||t===void 0?void 0:t.params)!==null&&e!==void 0?e:{},api:this.api,containerApi:new Vo(this._params.accessor)})}};function dp(e){return vn.reduce((t,i)=>(i in e&&(t[i]=e[i]),t),{})}var hp=E.forwardRef((e,t)=>{let i=E.useRef(null),n=E.useRef(void 0),[o,s]=Dn(),r=Cn(n);E.useImperativeHandle(t,()=>i.current,[]);let a=E.useRef({});return E.useEffect(()=>{let l={};vn.forEach(d=>{let h=d,c=e[h];h in e&&c!==a.current[h]&&(l[h]=c)}),n.current&&Object.keys(l).length>0&&n.current.updateOptions(l),a.current=e},vn.map(l=>e[l])),Sn(i,n,l=>{let d=qa(l,be(be({},dp(e)),{createComponent:u=>new al(u.id,u.name,e.components[u.name],{addPortal:s})})),{clientWidth:h,clientHeight:c}=l;return d.layout(h,c),e.onReady&&e.onReady({api:d}),d}),E.useEffect(()=>{!n.current||r({components:e.components})||n.current.updateOptions({createComponent:l=>new al(l.id,l.name,e.components[l.name],{addPortal:s})})},[e.components]),E.createElement("div",{style:{height:"100%",width:"100%"},ref:i},o)});hp.displayName="GridviewComponent";var yn=class{get element(){return this._element}constructor(e,t,i){this.id=e,this.component=t,this.reactPortalStore=i,this._element=document.createElement("div"),this._element.style.height="100%",this._element.style.width="100%"}init(e){this.part=new je(this.element,this.reactPortalStore,this.component,{params:e.params,api:e.api,title:e.title,containerApi:e.containerApi})}toJSON(){return{id:this.id}}update(e){var t;(t=this.part)===null||t===void 0||t.update({params:e.params})}dispose(){var e;(e=this.part)===null||e===void 0||e.dispose()}};function cp(e){return gn.reduce((t,i)=>(i in e&&(t[i]=e[i]),t),{})}var up=E.forwardRef((e,t)=>{let i=E.useRef(null),n=E.useRef(void 0),[o,s]=Dn(),r=Cn(n);E.useImperativeHandle(t,()=>i.current,[]);let a=E.useRef({});return E.useEffect(()=>{let l={};gn.forEach(d=>{let h=d,c=e[h];h in e&&c!==a.current[h]&&(l[h]=c)}),n.current&&Object.keys(l).length>0&&n.current.updateOptions(l),a.current=e},gn.map(l=>e[l])),Sn(i,n,l=>{var d;let h=(d=e.headerComponents)!==null&&d!==void 0?d:{},c=Qa(l,be(be({},cp(e)),{createComponent:m=>new yn(m.id,e.components[m.name],{addPortal:s}),createHeaderComponent:m=>new yn(m.id,h[m.name],{addPortal:s})})),{clientWidth:u,clientHeight:p}=l;return c.layout(u,p),e.onReady&&e.onReady({api:c}),c}),E.useEffect(()=>{!n.current||r({components:e.components})||n.current.updateOptions({createComponent:l=>new yn(l.id,e.components[l.name],{addPortal:s})})},[e.components]),E.useEffect(()=>{var l;if(!n.current||r({headerComponents:e.headerComponents}))return;let d=(l=e.headerComponents)!==null&&l!==void 0?l:{};n.current.updateOptions({createHeaderComponent:h=>new yn(h.id,d[h.name],{addPortal:s})})},[e.headerComponents]),E.useEffect(()=>{if(!n.current)return()=>{};let l=n.current.onDidDrop(d=>{e.onDidDrop&&e.onDidDrop(d)});return()=>{l.dispose()}},[e.onDidDrop]),E.createElement("div",{style:{height:"100%",width:"100%"},ref:i},o)});up.displayName="PaneviewComponent";var Pn="panel";function Bt(e,t,i){let n={},o=0,s=u=>u.flatMap(p=>{let m=$t(p);if(Object.hasOwn(n,m))return[];let f=t(p);if(f===void 0)return[];let v={panel:qe(m)??p};return n[m]={id:m,contentComponent:Pn,title:f,params:v},[m]}),r=u=>{let p=s(u.panels),m=$t(u.active),f=p.includes(m)?m:p[0];return f===void 0?{views:p}:{views:p,activeView:f}},a=(u,p)=>{if(ne(u)){let f=r(u);return f.views.length===0?void 0:(o+=1,{type:"leaf",size:p,data:{id:`group-${String(o)}`,...f}})}let m=l(u);return m.length===0?void 0:{type:"branch",size:p,data:m}},l=u=>{let p=Se(u.sizes,u.children.length),m=u.children.flatMap((v,g)=>a(v,p[g]??0)??[]),f=Se(m.map(v=>v.size??0),m.length);return m.map((v,g)=>({...v,size:f[g]??0}))},d=l(e),h=(u,p)=>{let m=p===void 0?{views:[]}:r(p),f=m.views.length>0;return{size:p?.size??500,visible:f,collapsed:f&&p?.collapsed===!0,group:{id:pi(u),...m}}},c={};for(let u of oe)c[u]=h(u,e.rails?.[u]);return{grid:{root:{type:"branch",size:1,data:d},width:i.width,height:i.height,orientation:e.orientation==="vertical"?mn.VERTICAL:mn.HORIZONTAL},panels:n,edgeGroups:c}}function Ut(e){let{root:t,orientation:i}=e.grid,n=Array.isArray(t.data)?ts(t.data):ts([t]),o={};for(let s of oe){let r=mp(e.edgeGroups?.[s]);r!==void 0&&(o[s]=r)}return{orientation:i===mn.VERTICAL?"vertical":"horizontal",...n,...Object.keys(o).length===0?{}:{rails:o}}}function ts(e){let t=e.flatMap(i=>{let n=pp(i);return n===void 0?[]:[{node:n,size:i.size??0}]});return{children:t.map(({node:i})=>i),sizes:Se(t.map(({size:i})=>i),t.length)}}function pp(e){if(!Array.isArray(e.data))return hl(e.data);let t=ts(e.data);return t.children.length===0?void 0:t}function hl(e){let t=e.views.flatMap(s=>qe(s)??[]),[i]=t;if(i===void 0)return;let n=e.activeView===void 0?void 0:qe(e.activeView),o=n===void 0?void 0:t.find(s=>ie(s,n));return{panels:t,active:o??i}}function mp(e){if(e===void 0||!fp(e.group))return;let t=hl(e.group);if(t!==void 0)return{...t,collapsed:e.collapsed===!0,size:Math.max(0,Math.round(e.size))}}function fp(e){if(typeof e!="object"||e===null)return!1;let{views:t,activeView:i}=e;return Array.isArray(t)&&t.every(n=>typeof n=="string")&&(i===void 0||typeof i=="string")}function Gn(e,t){let i=[],n=(s,r,a,l)=>{let d=Se(r,s.length);s.forEach((h,c)=>{let u=a?l*(d[c]??0):l;ne(h)?i.push({group:h,height:Math.min(u,t)}):n(h.children,h.sizes,!a,u)})};n(e.children,e.sizes,e.orientation==="vertical",1);for(let s of oe){let r=e.rails?.[s];r!==void 0&&r.panels.length>0&&i.push({group:{panels:r.panels,active:r.active},height:t})}if(i.length===0)return{grid:{orientation:"vertical",children:[],sizes:[]},height:t};let o=i.map(s=>s.height);return{grid:{orientation:"vertical",children:i.map(s=>s.group),sizes:Se(o,o.length)},height:o.reduce((s,r)=>s+r,0)}}var vp="blockr.dock",cl=1;function kn(e,t,i){let n=F(e),o=n?.active??null,s=o===null?void 0:n?.views[o];if(s===void 0)return{blocks:[],plugins:[]};let r=d=>"block"in d?e.blocks[d.block]?.name:t.get(d.plugin),a=Ut(Bt(s.grid,r,{width:0,height:0})),l=[...De(a).map(d=>d.active),...oe.flatMap(d=>{let h=a.rails?.[d];return h===void 0||h.collapsed&&!i?[]:[h.active]})];return{blocks:l.flatMap(d=>"block"in d?[d.block]:[]),plugins:l.flatMap(d=>"plugin"in d?[d.plugin]:[])}}function ul(e,t,i){let n=()=>l=>kn(l,t,i.get()).blocks,o=e.scheduler.demand(vp,n(),{priority:cl}),s=l=>{e.onScreen.set(kn(l,t,i.get()))};s(e.store.board());let r=e.store.subscribe((l,d)=>{s(d)}),a=i.subscribe(()=>{o.set(n(),{priority:cl}),s(e.store.board())});return()=>{a(),r(),o.release()}}function pl(e,t,i,n){let o=!1,s,r=new Set,a=()=>kn(e.store.board(),t,i.get()).blocks.some(c=>{let u=e.scheduler.status(c)?.status;return u==="stale"||u==="unevaluated"});function l(c){if(c!==o){o=c;for(let u of[...r])u()}}function d(){a()?!o&&s===void 0&&(s=setTimeout(()=>{s=void 0,l(!0)},n)):(clearTimeout(s),s=void 0,l(!1))}let h=[e.scheduler.subscribe(d),e.store.subscribe(()=>{d()}),i.subscribe(d)];return d(),{get:()=>o,subscribe(c){return r.add(c),()=>{r.delete(c)}},stop(){for(let c of h)c();clearTimeout(s),s=void 0,r.clear()}}}import{useCallback as ms,useState as sm}from"react";import{createContext as gp,useCallback as ml,useContext as _p,useSyncExternalStore as bp}from"react";var Jt=gp(null);function ee(){let e=_p(Jt);if(e===null)throw new Error("A component of the dock is drawn outside the dock.");return e}function Ne(e){let t=ml(n=>e.store.subscribe(()=>{n()}),[e]),i=ml(()=>e.store.board(),[e]);return bp(t,i)}function ut(e,t,i){e.commands.run(t,i).catch(()=>{})}function xn(e,t){e.focus.get()!==t&&e.focus.set(t)}import{useLayoutEffect as wp,useRef as yp}from"react";import{jsx as Dp}from"react/jsx-runtime";function xt({mount:e,label:t,className:i,data:n}){let o=yp(null);return wp(()=>{let s=o.current;if(s===null)return;let r=e(s);return()=>{queueMicrotask(r)}},[e]),Dp("div",{ref:o,role:t===void 0?void 0:"region","aria-label":t,className:i,...n})}import{useCallback as Yp,useId as Kp,useLayoutEffect as Zp,useRef as us,useState as Nn}from"react";import{Fragment as kl,useCallback as xl,useEffect as Tp,useId as Ip,useLayoutEffect as ss,useMemo as Ap,useRef as On,useState as Ei}from"react";import{useLayoutEffect as fl}from"react";function En(e,t){fl(()=>{let i=e.current;if(i!==null)return i.showPopover({source:t}),()=>{try{i.hidePopover()}catch{}}},[e,t])}function Tn(e,t,i){fl(()=>{let n=e.current;if(n===null||i===null)return;let o=n.ownerDocument,s=o.defaultView??window,r=()=>{let l={width:s.innerWidth,height:s.innerHeight},d=i(t.getBoundingClientRect(),n.getBoundingClientRect(),l);n.style.left=`${String(Math.round(d.left))}px`,n.style.top=`${String(Math.round(d.top))}px`};r();let a=typeof s.ResizeObserver=="function"?new s.ResizeObserver(r):void 0;return a?.observe(n),s.addEventListener("resize",r),o.addEventListener("scroll",r,!0),()=>{a?.disconnect(),s.removeEventListener("resize",r),o.removeEventListener("scroll",r,!0)}},[e,t,i])}import{jsx as $e,jsxs as Sp}from"react/jsx-runtime";function Ci({right:e=!1}){return $e("svg",{className:"blockr-dock-chevron",width:"12",height:"12",viewBox:"0 0 12 12",fill:"none",stroke:"currentColor",strokeWidth:"1.4",strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":"true",focusable:"false",children:$e("polyline",{points:e?"4.5 3 7.5 6 4.5 9":"3 4.5 6 7.5 9 4.5",vectorEffect:"non-scaling-stroke"})})}function vl(){return Sp("svg",{width:"14",height:"14",viewBox:"0 0 16 16",fill:"none",stroke:"currentColor",strokeWidth:"1.25",strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":"true",focusable:"false",children:[$e("path",{d:"M8 2.25l6.25 11H1.75z"}),$e("path",{d:"M8 5.75v2.5"}),$e("circle",{cx:"8",cy:"10.75",r:"0.75",fill:"currentColor",stroke:"none"})]})}function In({size:e=12}){return $e("svg",{width:e,height:e,viewBox:"0 0 16 16",fill:"currentColor","aria-hidden":"true",focusable:"false",children:$e("path",{d:"M8 1a3 3 0 0 0-3 3v3H4.5A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7H11V4a3 3 0 0 0-3-3Zm-1.75 6V4a1.75 1.75 0 1 1 3.5 0v3h-3.5Z"})})}function gl(){return $e("svg",{width:"12",height:"12",viewBox:"0 0 16 16",fill:"none",stroke:"currentColor",strokeWidth:"1.4",strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":"true",focusable:"false",children:$e("path",{d:"M5.5 2h5M6.5 2v4.25L4.5 9h7l-2-2.75V2M8 9v5",vectorEffect:"non-scaling-stroke"})})}function _l(){return $e("svg",{width:"10",height:"10",viewBox:"0 0 10 10",fill:"none",stroke:"currentColor",strokeWidth:"1",strokeLinecap:"round","aria-hidden":"true",focusable:"false",children:$e("path",{d:"M2.5 2.5l5 5M7.5 2.5l-5 5"})})}function Pi(e,t,i){return Math.max(t,Math.min(e,i))}function bl(e,t,i,n="start"){let o=e.bottom+4,s=e.top-4-t.height,r=o+t.height>i.height-8&&s>=8?s:o,a=n==="end"?e.right-t.width:e.left;return{left:Pi(a,8,i.width-8-t.width),top:Pi(r,8,i.height-8-t.height)}}function wl(e,t,i){let n=e.right+4,o=e.left-4-t.width,s=n+t.width>i.width-8&&o>=8?o:n;return{left:Pi(s,8,i.width-8-t.width),top:Pi(e.top,8,i.height-8-t.height)}}function yl(e,t,i){let n=e.top-6-t.height;return{left:Pi(e.left+e.width/2-t.width/2,8,i.width-8-t.width),top:n<8?e.bottom+6:n}}function Gi(e){return e instanceof Error?e.message:String(e)}function ki(e){return e instanceof Error?e:new Error(Gi(e))}var Cp=new Set(["button","menu","status"]);function is(e){let t=e.plugins.storage();if(t===void 0)return;let i=Object.keys(e.plugins.appPlugins()).find(r=>e.plugins.pluginClass(r).storage===t);if(i===void 0)return;let n=new Set,o;try{o=Cl(t.controls({core:e,plugin:i}),n)}catch(r){let a=Gi(r);return{failed:a,package:Pp(i),problem:`The storage controls of ${i} failed: ${a}`}}if(n.size===0)return{controls:o};let s=[...n].map(r=>JSON.stringify(r)).join(", ");return{controls:o,problem:`Storage controls of one list share the ids ${s}, so only the first of each draws.`}}function Dl(e){return e.flatMap(t=>t.kind==="button"?[t]:t.kind==="menu"?Dl(t.items):[])}function Sl(e,t){let i=is(e);if(i===void 0||i.failed!==void 0)return[];let n=t.some(s=>s.kind==="part"&&s.id==="storage"),o=new Set(t.flatMap(s=>s.kind==="storage"?[s.id]:[]));return Dl(i.controls.filter(s=>n||o.has(s.id)))}async function xi(e,t){try{await t.run()}catch(i){e.log("blockr.dock").error(ki(i))}}function Pp(e){let t=e.indexOf("-");return t<0?e:e.slice(0,t)}function Cl(e,t){let i=new Set,n=[];for(let o of e)if(Cp.has(o.kind)){if(i.has(o.id)){t.add(o.id);continue}i.add(o.id),n.push(o.kind==="menu"?{...o,items:Cl(o.items,t)}:o)}return n}function Pl(e,t,i){function n(o){if(o.defaultPrevented||Ep(o.target))return;let s=xp(o);if(s!==void 0){o.preventDefault();try{s==="undo"?t.store.undo():t.store.redo()}catch{}return}let r=i().find(a=>a.disabled!==!0&&a.shortcut!==void 0&&Gp(a.shortcut,o));r!==void 0&&(o.preventDefault(),o.repeat||xi(t,r))}return e.addEventListener("keydown",n),()=>{e.removeEventListener("keydown",n)}}function Gp(e,t){let i=os(e),n=t.key;return i===void 0||typeof n!="string"||n.toLowerCase()!==i.key.toLowerCase()||t.altKey!==i.alt||t.shiftKey!==i.shift?!1:i.mod?t.ctrlKey||t.metaKey:t.ctrlKey===i.ctrl&&t.metaKey===i.meta}function An(e){let t=e===void 0?void 0:os(e);if(t===void 0)return;let i=[...t.alt?["Alt"]:[],...t.shift?["Shift"]:[],t.key];return(t.mod?[["Control"],["Meta"]]:[[...t.ctrl?["Control"]:[],...t.meta?["Meta"]:[]]]).map(o=>[...o,...i].join("+")).join(" ")}function ns(e,t){let i=os(e);if(i===void 0)return e;let n=i.key.length===1?i.key.toUpperCase():i.key;return t?[...[...i.ctrl?["\u2303"]:[],...i.alt?["\u2325"]:[],...i.mod||i.meta?["\u2318"]:[],...i.shift?["\u21E7"]:[]],n].join(""):[...[...i.mod||i.ctrl?["Ctrl"]:[],...i.alt?["Alt"]:[],...i.shift?["Shift"]:[],...i.meta?["Meta"]:[]],n].join("+")}function Gl(e){let t=e.navigator;return/mac|iphone|ipad/i.test(t.userAgentData?.platform??t.platform)}var kp=["mod","ctrl","alt","shift","meta"];function os(e){let t=e.length<2?-1:e.lastIndexOf("+",e.length-2),i=e.slice(t+1),n=t<0?[]:e.slice(0,t).toLowerCase().split("+");if(i===""||new Set(n).size<n.length||!n.every(s=>kp.includes(s)))return;let o=s=>n.includes(s);if(!(o("mod")&&(o("ctrl")||o("meta"))))return{key:i,mod:o("mod"),ctrl:o("ctrl"),alt:o("alt"),shift:o("shift"),meta:o("meta")}}function xp(e){if(!(e.ctrlKey||e.metaKey)||e.altKey)return;let t=e.key.toLowerCase();if(t==="z")return e.shiftKey?"redo":"undo";if(t==="y"&&!e.shiftKey)return"redo"}function Ep(e){return e instanceof HTMLElement?e.isContentEditable||["INPUT","TEXTAREA","SELECT"].includes(e.tagName):!1}import{Fragment as as,jsx as te,jsxs as tt}from"react/jsx-runtime";function Op(e,t){let i=t.toLowerCase().split(/\s+/).filter(o=>o!==""),n=[e.label,e.detail??"",e.search??""].join(" ").toLowerCase();return i.every(o=>n.includes(o))}function zp(e,t,i){return e===null?t===1?0:i-1:(e+t+i)%i}function Mp(e){return e.defaultView?.CSS.supports("position-area","block-end")===!0}function Rp(e){return`--blockr-dock-menu-${String(e)}`}var rs=e=>e.status!==!0;function Lp(e,t,i){Tp(()=>{let n=t.ownerDocument,o=a=>e.current!==null&&!(a instanceof Node&&(t.contains(a)||e.current.contains(a))),s=a=>{o(a.target)&&i({restore:!1,pointer:!0})},r=a=>{o(a.target)&&i({restore:!1,pointer:!1})};return n.addEventListener("pointerdown",s,!0),n.addEventListener("focusin",r),()=>{n.removeEventListener("pointerdown",s,!0),n.removeEventListener("focusin",r)}},[e,t,i])}function Et({anchor:e,label:t,align:i="start",caption:n,search:o,groups:s,note:r,keyboard:a,depth:l=0,onClose:d,onCloseAll:h}){let c=On(null),u=On(null),p=Ip(),m=h??d,[f,v]=Ei(""),[g,w]=Ei(o!==void 0||a?0:null),[b,C]=Ei(null),[P]=Ei(()=>Mp(e.ownerDocument)?null:l===0?(S,$,Y)=>bl(S,$,Y,i):wl),M=s.some(S=>S.rows.length>0),D=Ap(()=>s.map(S=>({...S,rows:S.rows.filter($=>Op($,f))})).filter(S=>S.rows.length>0),[s,f]),y=D.flatMap(S=>S.rows).filter(rs),z=S=>`${p}-row-${String(S)}`,k=g!==null&&g<y.length?z(g):void 0;ss(()=>{let S=Rp(l);return l===0&&!a&&e.focus({preventScroll:!0,focusVisible:!1}),e.style.setProperty("anchor-name",S),c.current?.style.setProperty("position-anchor",S),()=>{e.style.removeProperty("anchor-name")}},[e,a,l]),En(c,e),Tn(c,e,P),ss(()=>{(u.current??c.current)?.focus({preventScroll:!0})},[]),Lp(c,e,d),ss(()=>{k!==void 0&&c.current?.querySelector(`[id="${k}"]`)?.scrollIntoView({block:"nearest"})},[k]);let A=xl(S=>{C(null),S.restore&&c.current?.focus({preventScroll:!0})},[]),U=S=>c.current?.querySelector(`[id="${z(S)}"]`)??null,R=(S,$,Y)=>{if(S.disabled!==!0){if(S.rows!==void 0){let q=U($);q!==null&&(w($),C({key:S.key,row:q,keyboard:!Y}));return}if(S.href!==void 0){U($)?.click();return}m({restore:!0,pointer:Y}),S.onSelect?.()}},j=S=>{if(S.nativeEvent.isComposing)return;let $=g===null?void 0:y[g];switch(S.key){case"ArrowDown":case"ArrowUp":y.length>0&&w(zp(g,S.key==="ArrowDown"?1:-1,y.length));break;case"Home":case"End":if(o!==void 0)return;w(S.key==="Home"?0:y.length-1);break;case"ArrowRight":if(o!==void 0||$?.rows===void 0||g===null)return;R($,g,!1);break;case"ArrowLeft":if(o!==void 0||l===0)return;d({restore:!0,pointer:!1});break;case" ":if(o!==void 0)return;$!==void 0&&g!==null&&R($,g,!1);break;case"Enter":$!==void 0&&g!==null&&R($,g,!1);break;case"Escape":d({restore:!0,pointer:!1});break;case"Tab":m({restore:!0,pointer:!1});return;default:return}S.preventDefault(),S.stopPropagation()},B=D.map((S,$)=>D.slice(0,$).reduce((Y,q)=>Y+q.rows.filter(rs).length,0)),H=(S,$)=>{let Y={id:z($),className:"blockr-dock-menu-row","data-active":$===g?"":void 0,"data-danger":S.danger===!0?"":void 0,title:S.tooltip,onPointerDown:re=>{re.preventDefault()},onPointerMove:()=>{g!==$&&w($)}},q=tt(as,{children:[S.lead===void 0?null:te("span",{className:"blockr-dock-menu-lead","aria-hidden":"true",children:S.lead}),te("span",{className:"blockr-dock-menu-label",children:S.label}),S.detail===void 0?null:te("span",{className:"blockr-dock-menu-detail",children:S.detail}),S.badge===void 0?null:te("span",{className:"blockr-dock-menu-badge",children:S.badge}),S.meta===void 0?null:te("span",{className:"blockr-dock-menu-meta",children:S.meta})]});if(o!==void 0)return te("div",{...Y,role:"option","aria-selected":$===g,onClick:re=>{R(S,$,re.detail!==0)},children:q});if(S.href!==void 0)return te("a",{...Y,role:"menuitem",tabIndex:-1,href:S.href,target:"_blank",rel:"noopener noreferrer",onClick:re=>{let ye=re.detail!==0;setTimeout(()=>{m({restore:!0,pointer:ye})},0)},children:q});if(S.rows!==void 0){let re=b?.key===S.key;return tt("div",{role:"none",children:[tt("button",{...Y,type:"button",role:"menuitem",tabIndex:-1,"aria-haspopup":"menu","aria-expanded":re,onClick:ye=>{re?A({restore:!1,pointer:!0}):R(S,$,ye.detail!==0)},children:[q,te(Ci,{right:!0})]}),re?te(Et,{anchor:b.row,label:S.label,groups:[{key:S.key,rows:S.rows}],keyboard:b.keyboard,depth:l+1,onClose:A,onCloseAll:m}):null]})}return te("button",{...Y,type:"button",role:"menuitem",tabIndex:-1,"aria-disabled":S.disabled===!0?!0:void 0,"aria-keyshortcuts":An(S.shortcut),onClick:re=>{R(S,$,re.detail!==0)},children:q})},W=(S,$)=>{let Y=S.rows.map((q,re)=>{let ye=q.status===!0?te("div",{role:"none",className:"blockr-dock-menu-status",title:q.tooltip,children:q.label}):H(q,(B[$]??0)+S.rows.slice(0,re).filter(rs).length);return tt(kl,{children:[q.divided===!0&&o===void 0?te("hr",{className:"blockr-dock-menu-divider"}):null,ye]},q.key)});return S.title===void 0?te(kl,{children:Y},S.key):tt("div",{role:"group","aria-labelledby":`${p}-${S.key}`,children:[te("div",{id:`${p}-${S.key}`,role:"presentation",className:"blockr-dock-menu-title",children:S.title}),Y]},S.key)};return tt("div",{ref:c,popover:"auto",className:"blockr-dock-menu","data-align":i,"data-depth":l,tabIndex:-1,onKeyDown:j,onToggle:S=>{S.newState==="closed"&&d({restore:!1,pointer:!1})},...o===void 0&&M?{role:"menu","aria-label":t,"aria-activedescendant":k}:{},children:[n===void 0?null:te("p",{className:"blockr-dock-menu-caption",children:n}),M?o===void 0?D.map(W):tt(as,{children:[te("div",{className:"blockr-dock-menu-search",children:te("input",{ref:u,type:"search",role:"combobox","aria-label":o.label,"aria-expanded":"true","aria-controls":`${p}-list`,"aria-autocomplete":"list","aria-activedescendant":k,placeholder:o.label,autoComplete:"off",spellCheck:!1,value:f,onChange:S=>{v(S.target.value),w(0)}})}),te("div",{id:`${p}-list`,role:"listbox","aria-label":t,children:D.map(W)}),y.length===0?te("p",{className:"blockr-dock-menu-note",children:o.empty}):null]}):te("p",{className:"blockr-dock-menu-note",children:r})]})}function Ti(e,t,i){let n=On(!1);return{"aria-haspopup":"menu","aria-expanded":e,onPointerDown:()=>{n.current=e},onClick:o=>{let s=o.detail===0,r=e||!s&&n.current;n.current=!1,r?i():t(o.currentTarget,s)},onKeyDown:o=>{o.key!=="ArrowDown"||e||(o.preventDefault(),t(o.currentTarget,!0))}}}function El(e){return e.map(t=>{switch(t.kind){case"link":return{key:t.id,label:t.label,href:t.href};case"button":return{key:t.id,label:t.label,...t.tooltip===void 0?{}:{tooltip:t.tooltip},...t.shortcut===void 0?{}:{shortcut:t.shortcut},...t.disabled===!0?{disabled:!0}:{},onSelect:t.run};case"status":return{key:t.id,label:t.text,status:!0,...t.tooltip===void 0?{}:{tooltip:t.tooltip}};case"menu":return{key:t.id,label:t.label,rows:El(t.entries)}}})}function ls({label:e,entries:t,className:i,onTip:n}){let[o,s]=Ei(null),r=On(null),a=Ti(o!==null,(h,c)=>{s({anchor:h,keyboard:c})},()=>{s(null)}),l=xl(h=>{s(null),h.restore&&r.current?.focus({preventScroll:!0,focusVisible:!h.pointer})},[]),d=h=>{n?.(h.currentTarget)};return tt(as,{children:[tt("button",{ref:r,type:"button",className:i,...a,onPointerEnter:d,onFocus:d,children:[te("span",{className:"blockr-dock-bar-label",children:e}),te(Ci,{})]}),o===null?null:te(Et,{anchor:o.anchor,label:e,groups:[{key:"entries",rows:El(t)}],keyboard:o.keyboard,onClose:l})]})}import{jsx as $p}from"react/jsx-runtime";var Np="uncategorized";function zn(e){return e===void 0||e.category===""?Np:e.category}function Mn(e){let t=e.indexOf("-");return t>0?e.slice(0,t):null}function Tt({entry:e,size:t,...i}){return $p("span",{...i,className:"blockr-card-mark","data-size":t,"data-category":zn(e),dangerouslySetInnerHTML:{__html:e?.icon??""}})}import{jsx as Hp}from"react/jsx-runtime";var Vp=zn(void 0);function Tl(e,t){let i=new Map;for(let o of e){let s=zn(o);i.set(s,[...i.get(s)??[],o])}let n=o=>o===Vp?1:0;return[...i].sort(([o],[s])=>n(o)-n(s)||o.localeCompare(s)).map(([o,s])=>({key:o,title:o,rows:s.sort((r,a)=>r.name.localeCompare(a.name)).map(r=>{let a=Mn(r.id);return{key:r.id,label:r.name,lead:Hp(Tt,{entry:r,size:24}),...a===null?{}:{badge:a},search:[r.id,r.category,...r.keywords].join(" "),onSelect:()=>{t(r)}}})}))}async function Al(e,t){let{clipboard:i}=e.defaultView?.navigator??{};if(i===void 0)return Il(e,t);try{return await i.writeText(t),!0}catch{return Il(e,t)}}function Il(e,t){let i=e.activeElement,n=e.createElement("textarea");n.value=t,n.setAttribute("readonly",""),n.style.cssText="position: fixed; inset-block-start: 0; opacity: 0;",e.body.append(n),n.select();try{return e.execCommand("copy")}catch{return!1}finally{n.remove(),i instanceof HTMLElement&&i.focus({preventScroll:!0})}}import{jsx as we,jsxs as Ln}from"react/jsx-runtime";function Rn({width:e=1.25,children:t}){return we("svg",{width:"14",height:"14",viewBox:"0 0 16 16",fill:"none",stroke:"currentColor",strokeWidth:e,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":"true",children:t})}function Ol(){return Ln(Rn,{children:[we("path",{d:"M2 4h12M2 8h12M2 12h12"}),we("circle",{className:"blockr-card-icon-knob",cx:"5",cy:"4",r:"1.6"}),we("circle",{className:"blockr-card-icon-knob",cx:"10",cy:"8",r:"1.6"}),we("circle",{className:"blockr-card-icon-knob",cx:"6",cy:"12",r:"1.6"})]})}function zl(){return Ln(Rn,{width:1.4,children:[we("path",{d:"M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"}),we("circle",{cx:"8",cy:"8",r:"2"})]})}function Ml({open:e}){return Ln(Rn,{children:[we("rect",{x:"3.5",y:"7",width:"9",height:"6.5",rx:"1.5"}),we("path",{d:e?"M5.5 7V5a2.5 2.5 0 0 1 4.67-1.25":"M5.5 7V5a2.5 2.5 0 0 1 5 0v2"})]})}function Rl(){return Ln("svg",{width:"14",height:"14",viewBox:"0 0 16 16",fill:"currentColor","aria-hidden":"true",children:[we("circle",{cx:"3.5",cy:"8",r:"1.2"}),we("circle",{cx:"8",cy:"8",r:"1.2"}),we("circle",{cx:"12.5",cy:"8",r:"1.2"})]})}function Ll(){return we(Rn,{children:we("path",{d:"M2.5 4.5h11M6.5 4.5V3h3v1.5M4 4.5l.7 9h6.6l.7-9"})})}import{useCallback as Wp,useEffect as Nl,useRef as ds,useState as Fp}from"react";import{Fragment as jp,jsx as hs,jsxs as $l}from"react/jsx-runtime";var Bp=300,Up=400;function Ii(){let e,t=0;return{showing(i){e!==void 0&&e!==i&&e(),e=i},left(){t=Date.now()+Up},warm:()=>Date.now()<t}}function Ai(e){let{tooltips:t}=ee(),[i,n]=Fp(null),o=ds(void 0),s=ds(!1),r=Wp(()=>{clearTimeout(o.current),o.current=void 0,s.current&&(s.current=!1,t.left(),n(null))},[t]),a=h=>{let c=typeof e=="function"?e(h):e;c===null||c.length===0||!h.isConnected||(t.showing(r),s.current=!0,n({el:h,tip:c}))};Nl(()=>{if(i===null)return;let h=i.el.ownerDocument,c=u=>{u.key==="Escape"&&r()};return h.addEventListener("keydown",c,!0),h.addEventListener("scroll",r,!0),()=>{h.removeEventListener("keydown",c,!0),h.removeEventListener("scroll",r,!0)}},[i,r]),Nl(()=>r,[r]);let l={onPointerEnter(h){if(h.pointerType==="touch"||s.current)return;let c=h.currentTarget;clearTimeout(o.current),t.warm()?a(c):o.current=setTimeout(()=>{a(c)},Bp)},onPointerLeave:r,onPointerDown:r,onFocus(h){h.currentTarget.matches(":focus-visible")&&a(h.currentTarget)},onBlur:r},d=i===null?null:hs(Jp,{anchor:i.el,tip:i.tip});return{props:l,tooltip:d}}function Jp({anchor:e,tip:t}){let i=ds(null);return En(i,e),Tn(i,e,yl),hs("div",{ref:i,popover:"manual",role:"tooltip",className:"blockr-card-tooltip",children:(typeof t=="string"?[{text:t}]:t).map((o,s)=>$l("div",{className:"blockr-card-tooltip-line","data-muted":o.muted===!0?"":void 0,children:[o.text,o.badge===void 0?null:$l(jp,{children:[" ",hs("span",{className:"blockr-card-tooltip-badge",children:o.badge})]})]},s))})}import{Fragment as Oi,jsx as ce,jsxs as pt}from"react/jsx-runtime";var Vl="Double-click to edit";function Hl({id:e,block:t,entry:i,sections:n,drawn:o}){let{core:s}=ee(),r=s.lock.board,[a,l]=Nn(!1),d=us(null),h=t.locked===!1,c=p=>{let m=n.includes(p)?n.filter(f=>f!==p):[...n,p];ut(s,"blockr.dock-set_sections",{block:e,sections:St.filter(f=>m.includes(f))})},u=()=>{l(!0)};return pt("header",{className:"blockr-card-header",children:[ce(Xp,{entry:i,block:t}),ce("div",{className:"blockr-card-title",children:a?ce(em,{name:t.name,onCommit:p=>{ut(s,"blockr.core-rename_block",{id:e,name:p})},onDone:p=>{l(!1),p&&d.current?.focus({preventScroll:!0})}}):ce(Qp,{name:t.name,editable:!r,onRename:u})}),pt("div",{className:"blockr-card-tools",children:[r?null:pt(Oi,{children:[o?ce(cs,{label:"Controls",pressed:n.includes("inputs"),onClick:()=>{c("inputs")},children:ce(Ol,{})}):null,ce(cs,{label:"Preview",pressed:n.includes("outputs"),onClick:()=>{c("outputs")},children:ce(zl,{})}),ce(cs,{label:h?"Open to readers":"Locked for readers",pressed:h,onClick:()=>{ut(s,"blockr.core-set_block_lock",{id:e,locked:h?null:!1})},children:ce(Ml,{open:h})})]}),ce(tm,{ref:d,id:e,block:t,onRename:u})]})]})}function Xp({entry:e,block:t}){let i=Mn(t.registry_id),n=e?.name??t.registry_id,{props:o,tooltip:s}=Ai([i===null?{text:n}:{text:n,badge:i}]);return pt(Oi,{children:[ce(Tt,{entry:e,size:32,role:"img","aria-label":i===null?n:`${n}, ${i}`,...o}),s]})}function qp(e){return e.scrollHeight>e.clientHeight+1||e.scrollWidth>e.clientWidth+1}function Qp({name:e,editable:t,onRename:i}){let{props:n,tooltip:o}=Ai(s=>{let r=qp(s);return t?r?[{text:e},{text:Vl,muted:!0}]:Vl:r?e:null});return pt(Oi,{children:[ce("h3",{className:"blockr-card-name","data-editable":t?"":void 0,onDoubleClick:t?i:void 0,...n,children:e}),o]})}function em({name:e,onCommit:t,onDone:i}){let[n,o]=Nn(e),[s,r]=Nn(!1),a=us(null),l=us(!1),d=Kp();Zp(()=>{a.current?.focus({preventScroll:!0}),a.current?.select()},[]);let h=(c,u)=>{if(l.current)return;l.current=!0;let p=n.trim();c&&p!==e&&t(p),i(u)};return pt("div",{className:"blockr-card-name-edit",children:[ce("input",{ref:a,className:"blockr-card-name-field","aria-label":"Block name","aria-invalid":s,"aria-describedby":s?d:void 0,value:n,onChange:c=>{o(c.target.value),c.target.value.trim()!==""&&r(!1)},onKeyDown:c=>{c.key==="Enter"?(c.preventDefault(),n.trim()===""?r(!0):h(!0,!0)):c.key==="Escape"&&(c.preventDefault(),c.stopPropagation(),h(!1,!0))},onBlur:()=>{h(n.trim()!=="",!1)}}),s?ce("div",{id:d,className:"blockr-card-name-error",children:"A block needs a name"}):null]})}function cs({label:e,pressed:t,onClick:i,children:n}){let{props:o,tooltip:s}=Ai(e);return pt(Oi,{children:[ce("button",{type:"button",className:"blockr-card-tool","aria-label":e,"aria-pressed":t,onClick:i,...o,children:n}),s]})}function tm({ref:e,id:t,block:i,onRename:n}){let{core:o,plugin:s}=ee(),[r,a]=Nn(null),{props:l,tooltip:d}=Ai(r===null?"More actions":null),h=Ti(r!==null,(m,f)=>{a({menu:"actions",anchor:m,keyboard:f})},()=>{a(null)}),c=Yp(m=>{a(null),m.restore&&e.current?.focus({preventScroll:!0,focusVisible:!m.pointer})},[e]),u=m=>{let f={key:"copy",label:"Copy block ID",meta:t,onSelect(){Al(m.ownerDocument,t).then(v=>{v||o.notifications.notify(s,{severity:"error",code:"copy_failed",message:`The browser did not let the dock copy the block ID "${t}".`})})}};return o.lock.board?[f]:[{key:"rename",label:"Rename",onSelect:n},{key:"append",label:"Append block",onSelect(){a({menu:"append",anchor:m,keyboard:!1})}},f,{key:"remove",label:"Remove block",lead:ce(Ll,{}),danger:!0,divided:!0,onSelect(){ut(o,"blockr.core-remove_block",{id:t})}}]},p=m=>{let[f]=m.inputs,v=m.inputs.length>1&&!m.inputs.includes("...")&&f!==void 0?{input:f}:{};ut(o,"blockr.core-append_block",{from:t,registry_id:m.id,...v})};return pt(Oi,{children:[ce("button",{ref:e,type:"button",className:"blockr-card-tool","aria-label":"More actions",...l,...h,onPointerDown:()=>{h.onPointerDown(),l.onPointerDown()},children:ce(Rl,{})}),d,r?.menu==="actions"?ce(Et,{anchor:r.anchor,label:"More actions",align:"end",groups:[{key:"actions",rows:u(r.anchor)}],keyboard:r.keyboard,onClose:c}):null,r?.menu==="append"?ce(Et,{anchor:r.anchor,label:"Block classes",align:"end",caption:`Append to ${i.name}`,search:{label:"Search blocks",empty:"No matches"},groups:Tl(Object.values(o.blockRegistry()).filter(m=>m.inputs.length>0),p),keyboard:r.keyboard,onClose:c}):null]})}import{useLayoutEffect as im,useRef as Wl}from"react";import{jsx as Fl}from"react/jsx-runtime";function ps({name:e,open:t,empty:i=!1,children:n}){let o=Wl(null),s=Wl(null);return im(()=>{let r=o.current;if(r===null)return;let a=s.current;if(s.current=t,a===null||a===t||i){nm(r,t&&!i);return}return om(r,t)},[t,i]),Fl("section",{ref:o,className:"blockr-card-section","data-section":e,children:Fl("div",{className:"blockr-card-section-body",children:n})})}function nm(e,t){delete e.dataset.folding,e.dataset.open=String(t),e.hidden=!t}function om(e,t){let i=!0;e.dataset.folding="",t&&(e.hidden=!1,e.getBoundingClientRect()),e.dataset.open=String(t);let n=e.getAnimations().filter(o=>"transitionProperty"in o);return Promise.allSettled(n.map(o=>o.finished)).then(()=>{i&&(delete e.dataset.folding,t||(e.hidden=!0))}),()=>{i=!1}}import{jsx as zi,jsxs as Bl}from"react/jsx-runtime";function fs({id:e}){let{core:t}=ee(),i=Ne(t),[n,o]=sm(!1),s=ms(()=>{xn(t,e)},[t,e]),r=ms(p=>{let m=t.mountBlock(p,e),f=()=>{o(p.hasChildNodes())};f();let v=new MutationObserver(f);return v.observe(p,{childList:!0}),()=>{v.disconnect(),m()}},[t,e]),a=ms(p=>t.mountOutput(p,e),[t,e]),l=i.blocks[e];if(l===void 0)return null;let d=F(i)?.visible[e]??St,h=t.options.value("compact")===!0,c=t.blockRegistry()[l.registry_id],u=!t.store.locked(e);return Bl("article",{className:"blockr-card","aria-label":l.name,"data-compact":h?"":void 0,onPointerDown:s,onFocus:s,children:[zi(Hl,{id:e,block:l,entry:c,sections:d,drawn:u&&n}),Bl("div",{className:"blockr-card-sections",children:[u?zi(ps,{name:"inputs",open:d.includes("inputs"),empty:!n,children:zi(xt,{mount:r,label:"Inputs"})}):null,zi(ps,{name:"outputs",open:d.includes("outputs"),children:zi(xt,{mount:a,label:"Output",className:"blockr-card-output"})})]})]})}import{useCallback as Xl,useEffect as bm,useMemo as wm,useRef as Zl,useState as ym,useSyncExternalStore as Dm}from"react";var rm={orientation:"horizontal",children:[],sizes:[]},am=250,Ul=35;function Jl(e){let{core:t,plugin:i,api:n,el:o,settings:s,narrow:r,drawn:a}=e,l=o.ownerDocument,d=l.defaultView??window,h,c=r.get(),u,p=0,m,f=n.width>0&&n.height>0,v=!1,g=new Set,w,b=!1,C=()=>{let O=F(t.store.board()),N=O?.active??null,J=N===null?void 0:O?.views[N];return N===null||J===void 0?void 0:{id:N,grid:J.grid}},P=O=>"block"in O?t.store.board().blocks[O.block]?.name:a.get(O.plugin),M=()=>({width:n.width,height:n.height}),D=()=>Ut(n.toJSON()),y=O=>c?Gn(O,s.fraction).grid:O;function z(){let O=C();h=O?.id??null;let N=c;c=r.get(),N!==c&&k();let J=O?.grid??rm;o.dataset.layout=c?"narrow":"wide",o.style.height=c?`${String(Math.round(Gn(J,s.fraction).height*1e4)/100)}vh`:"",n.fromJSON(Bt(y(J),P,M()),{reuseExistingPanels:!0}),W(),u=D()}function k(){let O=t.lock.board;n.updateOptions({locked:c||O&&s.lockResize,disableDnd:c||O&&s.lockRearrange})}function A(){if(b||p>0)return;let O=C();if(h===void 0||(O?.id??null)!==h||r.get()!==c){z();return}if(O===void 0)return;let N=Ut(Bt(y(O.grid),P,M())),J=D(),fe=st(N,J),Ye=n.width>0&&n.height>0;if(fe.panels||fe.arrangement||Ye&&!lm(N,J,s.tolerance)){z();return}let It=De(N);De(J).forEach((Kt,Ke)=>{let nt=It[Ke];nt!==void 0&&!ie(nt.active,Kt.active)&&U(nt.active)});for(let Kt of oe){let[Ke,nt]=[N.rails?.[Kt],J.rails?.[Kt]],$i=n.getEdgeGroup(Kt);Ke===void 0||nt===void 0||$i===void 0||(ie(Ke.active,nt.active)||U(Ke.active),Ke.collapsed!==nt.collapsed&&(Ke.collapsed?$i.collapse():$i.expand()),Ke.size!==nt.size&&$i.setSize({width:Ke.size}))}R(),u=D()}function U(O){n.getPanel($t(O))?.api.setActive()}function R(){for(let O of n.panels){let N=qe(O.id),J=N===void 0?void 0:P(N);J!==void 0&&O.api.title!==J&&O.api.setTitle(J)}}let j=()=>o.getBoundingClientRect().width;function B(O){if(b)return;W();let N=C(),J=u;if(J===void 0||N===void 0||N.id!==h)return;let fe=D();u=fe;let Ye=c?uo(N.id,J,fe):co(N.id,J,fe,N.grid,{shares:O!==void 0,widths:O?.width===j(),tolerance:s.tolerance});for(let It of Ye)H(It)}function H(O){p+=1,t.commands.run(O.id,O.args).catch(()=>{}).finally(()=>{p-=1,A()})}function W(){for(let O of oe){let N=n.getGroup(pi(O));if(N===void 0)continue;let J=N.panels.length>0;J&&g.has(O)&&N.api.isCollapsed()&&N.api.expand(),v||g.delete(O);let fe=!c&&(J||g.has(O));n.isEdgeGroupVisible(O)!==fe&&n.setEdgeGroupVisible(O,fe)}}function S(){if(c)return;let O=C(),N=n.toJSON().edgeGroups;for(let J of oe){let fe=O?.grid.rails?.[J],Ye=n.getEdgeGroup(J),It=N?.[J]?.size;fe===void 0||Ye===void 0||fe.collapsed||It===void 0||Math.round(It)!==fe.size&&Ye.setSize({width:fe.size})}}function $(O,N){let J=o.getBoundingClientRect(),{clientX:fe,clientY:Ye}=N;return fe<J.left||fe>J.right||Ye<J.top||Ye>J.bottom?!1:O==="left"?fe-J.left<=Ul:J.right-fe<=Ul}function Y(){w!==void 0&&clearTimeout(w.timer),w=void 0}function q(O){if(n.isEdgeGroupVisible(O))return;g.add(O),n.setEdgeGroupVisible(O,!0);let N=n.getEdgeGroup(O);N!==void 0&&!N.isCollapsed()&&N.collapse()}let re=O=>{if(!v||c)return;let N=oe.find(J=>$(J,O));if(N===void 0){Y();return}w?.edge!==N&&(Y(),w={edge:N,timer:setTimeout(()=>{w=void 0,v&&q(N)},am)})},ye=()=>{v&&(v=!1,Y(),W())},mt=O=>{O.key==="Escape"&&ye()},ft=()=>{m!==void 0&&(m=void 0,queueMicrotask(()=>{B()}))},it=()=>{ye(),ft()},Ve=()=>{m={width:j()}},vt=()=>{let O=m;O!==void 0&&(m=void 0,B(O))},ae=()=>{if(b)return;m===void 0&&S();let O=f;f=n.width>0&&n.height>0,!O&&f&&A()},ve=typeof d.ResizeObserver=="function"?new d.ResizeObserver(()=>{d.requestAnimationFrame(ae)}):void 0,gt=()=>{let O=v;v=!1,Y(),O&&ft()},ks=[n.onDidLayoutChange(()=>{m===void 0&&B()}),n.onWillDragPanel(()=>{v=!0}),n.onWillDragGroup(()=>{v=!0}),n.onDidMovePanel(gt),n.onDidAddPanel(gt),n.onDidRemovePanel(gt)];ve?.observe(o),o.addEventListener("pointerdown",Ve,!0),d.addEventListener("pointerup",vt,!0),d.addEventListener("pointercancel",vt,!0),o.addEventListener("dragover",re),l.addEventListener("drop",it),l.addEventListener("dragend",it),l.addEventListener("keydown",mt);let xs=t.store.board().plugins[i],xd=t.store.subscribe((O,N)=>{if(N.plugins[i]===xs){R();return}xs=N.plugins[i],A()}),Ed=r.subscribe(()=>{A()});k(),z();for(let O of oe){let N=n.getEdgeGroup(O);N!==void 0&&ks.push(N.onDidCollapsedChange(()=>{queueMicrotask(()=>{m===void 0&&B()})}))}return()=>{b=!0,Y(),ve?.disconnect(),xd(),Ed();for(let O of ks)O.dispose();o.removeEventListener("pointerdown",Ve,!0),d.removeEventListener("pointerup",vt,!0),d.removeEventListener("pointercancel",vt,!0),o.removeEventListener("dragover",re),l.removeEventListener("drop",it),l.removeEventListener("dragend",it),l.removeEventListener("keydown",mt)}}function lm(e,t,i){let n=o=>({orientation:o.orientation,children:o.children,sizes:o.sizes});return!st(n(e),n(bt(e,t,i))).sizes}import{createContext as dm,useCallback as hm,useContext as cm,useId as um,useMemo as jl,useState as pm}from"react";import{jsx as gs,jsxs as _m}from"react/jsx-runtime";var Yl=dm(null);function mm(){let e=cm(Yl);if(e===null)throw new Error("A button of the panel picker is drawn outside the picker.");return e}function Kl({children:e}){let[t,i]=pm(void 0),n=jl(()=>({picking:t,setPicking:i}),[t]),o=hm(s=>{i(void 0),s.restore&&t?.button.focus({preventScroll:!0,focusVisible:!s.pointer})},[t]);return _m(Yl,{value:n,children:[e,t===void 0?null:gs(vm,{picking:t,onClose:o})]})}function vs(e){let{picking:t,setPicking:i}=mm(),n=um();return Ti(t?.id===n,(o,s)=>{i({id:n,button:o,near:e(),keyboard:s})},()=>{i(void 0)})}function fm(e,t,i,n){let o=si(e);if(o===void 0)return[];let s=Object.entries(e.blocks).flatMap(([a,l])=>{if(We(o.grid,{block:a}))return[];let d=t[l.registry_id];return[{key:a,label:l.name,lead:gs(Tt,{entry:d,size:24}),...d===void 0?{}:{detail:d.name},search:a,onSelect:()=>{n({block:a})}}]}),r=[...i].flatMap(([a,l])=>We(o.grid,{plugin:a})?[]:[{key:a,label:l,search:a,onSelect:()=>{n({plugin:a})}}]);return[{key:"blocks",rows:s},{key:"plugins",title:"Plugins",rows:r}]}function vm({picking:e,onClose:t}){let{core:i,drawn:n}=ee(),o=Ne(i),{near:s}=e,r=jl(()=>{let a=l=>{let d=F(i.store.board())?.active??null;if(d===null)return;let h=s===void 0?{view:d,panel:l}:{view:d,panel:l,near:s,side:"within"};i.commands.run("blockr.dock-add_panel",h).catch(()=>{})};return fm(o,i.blockRegistry(),n,a)},[o,i,n,s]);return gs(Et,{anchor:e.button,label:"Panels",caption:"Show in this view",search:{label:"Search",empty:"No panel matches."},groups:r,note:gm(o,n),keyboard:e.keyboard,onClose:t})}function gm(e,t){return Object.keys(e.blocks).length===0&&t.size===0?"The board has no blocks yet. Add a new block to get started.":"All blocks and plugins are already in this view. Add a new block to the board first."}import{Fragment as Im,jsx as ue,jsxs as $n}from"react/jsx-runtime";function Sm({params:e}){let{panel:t}=e;return"block"in t?ue("div",{className:"blockr-dock-panel","data-block":t.block,children:ue(fs,{id:t.block})}):ue(Cm,{plugin:t.plugin})}function Cm({plugin:e}){let{core:t}=ee(),i=Xl(n=>t.mountPlugin(n,e),[t,e]);return ue(xt,{mount:i,className:"blockr-dock-panel",data:{"data-plugin":e}})}var Pm={[Pn]:Sm};function Gm(e){let{core:t}=ee(),{panel:i}=e.params,n="block"in i?()=>{xn(t,i.block)}:void 0;return ue(dl,{...e,hideClose:t.lock.board,onPointerDown:n})}function km({api:e,group:t}){let i=vs(()=>{let n=t.activePanel;return n===void 0?void 0:qe(n.id)});return e.location.type==="edge"?null:ue("div",{className:"blockr-dock-add-slot",children:ue("button",{type:"button",className:"blockr-dock-add","aria-label":"Add panel",...i,children:ue("svg",{viewBox:"0 0 16 16",width:"16",height:"16","aria-hidden":"true",focusable:"false",children:ue("path",{d:"M8 3v10M3 8h10",fill:"none",stroke:"currentColor",strokeWidth:"1.5",strokeLinecap:"round"})})})})}function xm(e,t){let i=si(e);return i===void 0?!1:!_e(i.grid).some(n=>"block"in n?Object.hasOwn(e.blocks,n.block):t.has(n.plugin))}function Em(){let{core:e,drawn:t}=ee(),i=Ne(e);return xm(i,t)?e.lock.board?$n("div",{className:"blockr-dock-empty",children:[ue(In,{size:32}),ue("p",{children:"This view is empty"})]}):ue(Tm,{}):null}function Tm(){let e=vs(()=>{});return $n("div",{className:"blockr-dock-empty",children:[$n("svg",{viewBox:"0 0 16 16",width:"32",height:"32","aria-hidden":"true",focusable:"false",children:[ue("circle",{cx:"8",cy:"8",r:"6.5",fill:"none",stroke:"currentColor"}),ue("path",{d:"M8 5v6M5 8h6",fill:"none",stroke:"currentColor",strokeLinecap:"round"})]}),ue("p",{children:"Start by adding a panel"}),ue("button",{type:"button",className:"blockr-dock-empty-add",...e,children:"Add panel"})]})}function ql({core:e,plugin:t,settings:i,narrow:n,drawn:o,sidebar:s}){let r=Zl(null),a=Zl(void 0),[l]=ym(Ii),d=wm(()=>({core:e,plugin:t,drawn:o,tooltips:l}),[e,t,o,l]),h=e.lock.board,{pinned:c}=Dm(s.subscribe,s.state),u=Xl(m=>{let f=r.current;f!==null&&(a.current?.(),a.current=Jl({core:e,plugin:t,api:m.api,el:f,settings:i,narrow:n,drawn:o}))},[e,t,i,n,o]);bm(()=>()=>{a.current?.(),a.current=void 0},[]);let p=$n(Im,{children:[ue(es,{components:Pm,onReady:u,theme:Wa,defaultRenderer:"always",defaultTabComponent:Gm,...h?{}:{leftHeaderActionsComponent:km}}),ue(Em,{})]});return ue(Jt,{value:d,children:ue("div",{className:"blockr-dock",ref:r,"data-pushed":c?"":void 0,children:h?p:ue(Kl,{children:p})})})}import{useCallback as Am,useEffect as _s,useLayoutEffect as Om,useReducer as zm,useRef as bs,useState as ws,useSyncExternalStore as Mi}from"react";import{jsx as V,jsxs as ys}from"react/jsx-runtime";function Ql({items:e,busy:t,sidebar:i,mac:n}){let{core:o}=ee(),s=Km(o),{pinned:r}=Mi(i.subscribe,i.state),a=new Set(e.flatMap(l=>l.kind==="storage"?[l.id]:[]));return V("header",{className:"blockr-dock-bar","data-pushed":r?"":void 0,children:e.map(l=>V(Mm,{item:l,storage:s,apart:a,busy:t,sidebar:i,mac:n},l.id))})}function Mm({item:e,storage:t,apart:i,busy:n,sidebar:o,mac:s}){switch(e.kind){case"part":return V(Rm,{id:e.id,storage:t,apart:i,busy:n,sidebar:o,mac:s});case"storage":{let r=t?.failed===void 0?t?.controls.find(a=>a.id===e.id):void 0;return r===void 0?null:V(ed,{control:r})}case"link":return V(Fm,{item:e});case"menu":return V(ls,{label:e.label,entries:id(e.items),className:"blockr-dock-bar-button"});case"module":return V(jm,{item:e})}}function Rm({id:e,storage:t,apart:i,busy:n,sidebar:o,mac:s}){let{core:r}=ee();switch(e){case"logo":return V(Nm,{busy:n});case"name":return V($m,{});case"storage":return V(Hm,{storage:t,apart:i});case"undo_redo":return V(Bm,{mac:s});case"spacer":return V("span",{className:"blockr-dock-bar-spacer","aria-hidden":"true"});case"views":return null;case"read_only":return r.lock.board?V(Um,{}):null;case"options":return V(Jm,{sidebar:o})}}var Lm=[[0,2],[0,1],[0,0],[1,0],[2,0],[1,1],[2,2]];function Nm({busy:e}){let t=Mi(e.subscribe,e.get);return ys("span",{className:t?"blockr-dock-logo is-computing":"blockr-dock-logo",title:t?"Computing":void 0,children:[V("svg",{className:"blockr-dock-logo-mark",width:"20",height:"20",viewBox:"0 0 224 224","aria-hidden":"true",focusable:"false",children:Lm.map(([i,n],o)=>V("rect",{style:{"--i":o},x:i*80,y:n*80,width:"64",height:"64",rx:"7"},o))}),V("span",{className:"blockr-dock-visually-hidden",role:"status",children:t?"Computing":""})]})}function $m(){let{core:e}=ee(),t=Ne(e),[i,n]=ws(!1),o=e.lock.board;if(i)return V(Vm,{name:t.name,onSubmit:r=>{e.commands.run("blockr.core-rename_board",{name:r}).catch(()=>{})},onDone:()=>{n(!1)}});let s=od(r=>o?r?t.name:void 0:r?`${t.name}
-Click to rename`:"Click to rename");return o?V("span",{className:"blockr-dock-bar-name blockr-dock-bar-shrinks",...s,children:V("span",{className:"blockr-dock-bar-label",children:t.name})}):V("button",{type:"button",className:"blockr-dock-bar-name blockr-dock-bar-shrinks","aria-label":`Board name: ${t.name}. Rename`,onClick:()=>{n(!0)},...s,children:V("span",{className:"blockr-dock-bar-label",children:t.name})})}function Vm({name:e,onSubmit:t,onDone:i}){let[n,o]=ws(e),s=bs(null),r=bs(!1);Om(()=>{s.current?.focus(),s.current?.select()},[]);function a(l){if(r.current)return;r.current=!0;let d=n.trim();l&&d!==""&&d!==e&&t(d),i()}return V("input",{ref:s,type:"text","aria-label":"Board name",className:"blockr-dock-bar-field",value:n,spellCheck:!1,onChange:l=>{o(l.target.value)},onKeyDown:l=>{l.key==="Enter"&&!l.nativeEvent.isComposing?a(!0):l.key==="Escape"&&a(!1)},onBlur:()=>{a(!0)}})}function Hm({storage:e,apart:t}){if(e===void 0)return null;if(e.failed!==void 0)return V(nd,{message:`The storage controls of ${e.package} failed: ${e.failed}`});let i=e.controls.filter(n=>!t.has(n.id));return i.length===0?null:V("div",{className:"blockr-dock-bar-storage blockr-dock-bar-shrinks",children:i.map(n=>V(ed,{control:n},n.id))})}function ed({control:e}){let{core:t}=ee(),i=e.kind==="menu"||e.tooltip===void 0?od(n=>n?Wm(e):void 0):{};switch(e.kind){case"button":return V("button",{type:"button",className:"blockr-dock-bar-button blockr-dock-bar-shrinks",disabled:e.disabled,title:e.tooltip,"aria-keyshortcuts":An(e.shortcut),onClick:()=>{xi(t,e)},...i,children:V("span",{className:"blockr-dock-bar-label",children:e.label})});case"menu":return V(ls,{label:e.label,entries:td(t,e.items),className:"blockr-dock-bar-button blockr-dock-bar-shrinks",onTip:n=>{sd(n,o=>o?e.label:void 0)}});case"status":return V("span",{className:"blockr-dock-bar-status blockr-dock-bar-shrinks",title:e.tooltip,...i,children:V("span",{className:"blockr-dock-bar-label",children:e.text})})}}function Wm(e){return e.kind==="status"?e.text:e.label}function td(e,t){return t.map(i=>{switch(i.kind){case"button":return{kind:"button",id:i.id,label:i.label,...i.tooltip===void 0?{}:{tooltip:i.tooltip},...i.shortcut===void 0?{}:{shortcut:i.shortcut},...i.disabled===void 0?{}:{disabled:i.disabled},run:()=>{xi(e,i)}};case"menu":return{kind:"menu",id:i.id,label:i.label,entries:td(e,i.items)};case"status":return{kind:"status",id:i.id,text:i.text,...i.tooltip===void 0?{}:{tooltip:i.tooltip}}}})}function id(e){return e.map(t=>t.kind==="link"?{kind:"link",id:t.id,label:t.label,href:t.href}:{kind:"menu",id:t.id,label:t.label,entries:id(t.items)})}function Fm({item:e}){return V("a",{className:"blockr-dock-bar-button",href:e.href,target:"_blank",rel:"noopener noreferrer",children:V("span",{className:"blockr-dock-bar-label",children:e.label})})}function Bm({mac:e}){let{core:t}=ee(),{canUndo:i,canRedo:n}=Zm(t),o=s=>{try{s?t.store.undo():t.store.redo()}catch{}};return ys("div",{className:"blockr-dock-bar-steps",children:[V("button",{type:"button",className:"blockr-dock-bar-button",title:`Undo (${ns("Mod+Z",e)})`,"aria-keyshortcuts":"Control+Z Meta+Z",disabled:!i,onClick:()=>{o(!0)},children:"Undo"}),V("button",{type:"button",className:"blockr-dock-bar-button",title:`Redo (${ns("Mod+Shift+Z",e)})`,"aria-keyshortcuts":"Control+Shift+Z Meta+Shift+Z Control+Y",disabled:!n,onClick:()=>{o(!1)},children:"Redo"})]})}function Um(){return ys("span",{className:"blockr-dock-bar-pill",role:"status","aria-label":"Read-only mode",title:"Editing is disabled by this deployment.",children:[V(In,{}),V("span",{children:"Read-only"})]})}function Jm({sidebar:e}){let{open:t}=Mi(e.subscribe,e.state);return V("button",{type:"button",className:"blockr-dock-bar-button blockr-dock-bar-options","aria-expanded":t,"aria-controls":e.id,onClick:()=>{e.set(!t)},children:"Options"})}function jm({item:e}){let{core:t}=ee(),i=bs(null),[n,o]=ws(void 0);return _s(()=>{let s=i.current;if(s===null)return;let r=new AbortController,{signal:a}=r,l=()=>a.aborted,d;return(async()=>{let c=Ym(await t.module(e.module));if(l())return;let u=await c.render({el:s,core:t,signal:a});l()?u?.():d=u})().catch(c=>{if(l())return;let u=`The module ${e.module} of the navbar item "${e.id}" cannot draw: ${Gi(c)}`;t.log("blockr.dock").error(new Error(u,{cause:c})),o(u)}),()=>{r.abort();try{d?.()}catch(c){t.log("blockr.dock").error(ki(c))}}},[t,e.id,e.module]),n!==void 0?V(nd,{message:n}):V("span",{ref:i,className:"blockr-dock-bar-module","data-module":e.module})}function Ym(e){if(!le(e)||typeof e.api!="number")throw new Error("It declares no major of core's JS API, as `export const api = 1`.");if(e.api!==1)throw new Error(`It was built against major ${String(e.api)} of core's JS API, where the dock's is ${String(1)}.`);let t=e.default;if(!le(t)||typeof t.render!="function")throw new Error("It has no default export with a render() function.");return t}function nd({message:e}){return V("span",{className:"blockr-dock-bar-warning",role:"img","aria-label":e,title:e,children:V(vl,{})})}function Km(e){let t=e.plugins.storage(),[,i]=zm(s=>s+1,0);_s(()=>{if(t?.subscribe!==void 0)try{return t.subscribe(i)}catch(s){e.log("blockr.dock").error(ki(s));return}},[e,t]),Ne(e);let n=is(e),o=n?.problem;return _s(()=>{o!==void 0&&e.log("blockr.dock").error(o)},[e,o]),n}function Zm(e){let t=Am(o=>e.store.subscribe(()=>{o()}),[e]),i=Mi(t,()=>e.store.canUndo()),n=Mi(t,()=>e.store.canRedo());return{canUndo:i,canRedo:n}}function od(e){let t=i=>{sd(i.currentTarget,e)};return{onPointerEnter:t,onFocus:t}}function sd(e,t){let i=e.querySelector(".blockr-dock-bar-label")??e,n=t(i.scrollWidth>i.clientWidth);n===void 0?e.removeAttribute("title"):e.setAttribute("title",n)}var Ds=["logo","name","storage","undo_redo","spacer","views","read_only","options"],Xm=Ds.map(e=>({kind:"part",id:e}));function rd(e){let t=e.navbar;if(t===void 0)return Xm;if(!Array.isArray(t))throw new TypeError(`The navbar is ${JSON.stringify(t)}, where the dock takes a list of navbar items.`);return ad(t,qm,"on the bar")}function ad(e,t,i){let n=e.map(t),o=new Set;for(let s of n){if(o.has(s.id))throw new TypeError(`More than one navbar item ${i} has the id ${JSON.stringify(s.id)}.`);o.add(s.id)}return n}function qm(e){let{kind:t,id:i}=dd(e),n=o=>hd(e,i,o);switch(t){case"part":if(!Qm(i))throw new TypeError(`The dock has no part ${JSON.stringify(i)} to draw on the navbar. Its parts are ${Ds.join(", ")}.`);return{kind:t,id:i};case"storage":return{kind:t,id:i};case"module":return{kind:t,id:i,module:n("module")};case"link":case"menu":return ld(e);default:throw new TypeError(`The navbar item ${JSON.stringify(i)} is of the kind ${JSON.stringify(t)}, which the dock does not draw.`)}}function ld(e){let{kind:t,id:i}=dd(e),n=s=>hd(e,i,s);if(t==="link")return{kind:t,id:i,label:n("label"),href:n("href")};if(t!=="menu")throw new TypeError(`The navbar menu holds the item ${JSON.stringify(i)}, which is neither a link nor a menu.`);let o=e.items;if(!Array.isArray(o))throw new TypeError(`The items of the navbar menu ${JSON.stringify(i)} are ${JSON.stringify(o)}, where the dock takes a list.`);return{kind:t,id:i,label:n("label"),items:ad(o,ld,`in the menu ${JSON.stringify(i)}`)}}function dd(e){if(!le(e)||typeof e.kind!="string"||typeof e.id!="string"||e.id==="")throw new TypeError(`The navbar item ${JSON.stringify(e)} has no kind and id that the dock reads.`);return{kind:e.kind,id:e.id}}function hd(e,t,i){let n=le(e)?e[i]:void 0;if(typeof n!="string"||n==="")throw new TypeError(`The ${i} of the navbar item ${JSON.stringify(t)} is ${JSON.stringify(n)}, where the dock takes a non-empty string.`);return n}function Qm(e){return Ds.includes(e)}function cd(e,t){let i=()=>t!==void 0&&e.innerWidth<t,n=i(),o=new Set,s=()=>{let a=i();if(a!==n){n=a;for(let l of[...o])l()}},r=t!==void 0&&Number.isFinite(t);return r&&e.addEventListener("resize",s),{get:()=>n,subscribe(a){return o.add(a),()=>{o.delete(a)}},stop(){r&&e.removeEventListener("resize",s),o.clear()}}}import{useCallback as ef,useEffect as Ss,useLayoutEffect as tf,useRef as Ri,useState as ud,useSyncExternalStore as nf}from"react";import{jsx as me,jsxs as jt}from"react/jsx-runtime";var of="Board options",Cs=["a[href]","button:not([disabled])",'input:not([disabled]):not([type="hidden"])',"select:not([disabled])","textarea:not([disabled])",'[tabindex]:not([tabindex="-1"])',"details > summary:first-of-type"].join(", "),sf=[":popover-open","dialog:modal"];function rf(e,t){let i=Object.keys(e.options).flatMap(o=>{let s=Object.hasOwn(t,o)?t[o]:void 0;return s===void 0?[]:[{id:o,label:s.label,category:s.category}]});i.sort((o,s)=>o.category.localeCompare(s.category)||o.label.localeCompare(s.label)||o.id.localeCompare(s.id));let n=new Map;for(let{id:o,category:s}of i)n.set(s,[...n.get(s)??[],o]);return n}function pd({sidebar:e}){let{core:t}=ee(),i=Ne(t),{open:n,pinned:o,expanded:s}=nf(e.subscribe,e.state),r=rf(i,t.options.registered()),a=pf(t,[...r.values()].flat()),l=Ri(null),d=`${e.id}-title`,h=new Map;for(let[c,u]of a){let p=Object.hasOwn(i.options,c)?i.options[c]:void 0;p!==void 0&&!Zt(p,u)&&h.set(c,u)}return mf(l,n),ff(l,e),_f(l,e,n&&!o),jt("div",{ref:l,id:e.id,className:"blockr-dock-sidebar",role:"dialog","aria-labelledby":d,tabIndex:-1,inert:!n,"data-open":n?"":void 0,children:[jt("header",{className:"blockr-dock-sidebar-header",children:[me("h2",{id:d,className:"blockr-dock-sidebar-title",children:of}),r.size===0?null:me(af,{categories:[...r.keys()],expanded:s,sidebar:e}),me("button",{type:"button",className:"blockr-dock-sidebar-button blockr-dock-sidebar-pin","aria-label":"Pin sidebar","aria-pressed":o,title:"Pin",onClick:()=>{e.pin(!o)},children:me(gl,{})}),me("button",{type:"button",className:"blockr-dock-sidebar-button","aria-label":"Close sidebar",title:"Close",onClick:()=>{e.set(!1)},children:me(_l,{})})]}),me("div",{className:"blockr-dock-sidebar-body",children:r.size===0?me("p",{className:"blockr-dock-sidebar-note",children:"The board holds no board options."}):me("div",{className:"blockr-dock-sidebar-categories",children:[...r].map(([c,u])=>me(lf,{category:c,ids:u,expanded:s.includes(c),changed:h,sidebar:e},c))})})]})}function af({categories:e,expanded:t,sidebar:i}){let n=e.every(o=>t.includes(o));return me("button",{type:"button",className:"blockr-dock-sidebar-expand","aria-expanded":n,onClick:()=>{for(let o of e)i.expand(o,!n)},children:n?"Collapse all":"Expand all"})}function lf({category:e,ids:t,expanded:i,changed:n,sidebar:o}){let[s,r]=ud(!1),a=Ri(0);return jt("details",{className:"blockr-dock-sidebar-category",open:i,onToggle:l=>{let d=l.currentTarget;if(o.expand(e,d.open),d.open)return;a.current+=1;let h=a.current;r(!0),hf(d).then(()=>{a.current===h&&r(!1)})},children:[jt("summary",{className:"blockr-dock-sidebar-summary",children:[me("span",{className:"blockr-dock-sidebar-summary-name",children:e}),me(df,{n:t.length}),me(Ci,{})]}),i||s?me("div",{className:"blockr-dock-sidebar-options",children:t.map(l=>me(uf,{option:l,reset:n.get(l)},l))}):null]})}function df({n:e}){return jt("span",{className:"blockr-dock-sidebar-count",children:[me("span",{"aria-hidden":"true",children:e}),me("span",{className:"blockr-dock-visually-hidden",children:e===1?", 1 board option":`, ${String(e)} board options`})]})}async function hf(e){let t=e.ownerDocument.defaultView?.getComputedStyle(e,"::details-content"),i=t===void 0?0:cf(t.transitionDuration,t.transitionDelay);await new Promise(n=>{setTimeout(n,i)})}function cf(e,t){let i=s=>s.split(",").map(r=>{let a=Number.parseFloat(r);return Number.isFinite(a)?r.trim().endsWith("ms")?a:a*1e3:0}),n=i(e),o=i(t);return Math.max(0,...n.map((s,r)=>s+(o[r%o.length]??0)))}function uf({option:e,reset:t}){let{core:i}=ee(),n=ef(a=>i.mountOption(a,e),[i,e]),o=Ri(null),s=i.options.registered(),r=Object.hasOwn(s,e)?s[e]?.label??e:e;return jt("div",{ref:o,className:"blockr-dock-sidebar-option","data-option":e,children:[me(xt,{mount:n,className:"blockr-dock-sidebar-option-ui"}),t===void 0?null:me("button",{type:"button",className:"blockr-dock-sidebar-reset","aria-label":`Reset ${r} to its default`,title:"Reset to the default",onClick:()=>{o.current?.querySelector(".blockr-dock-sidebar-option-ui")?.querySelector(Cs)?.focus(),ut(i,"blockr.core-set_option",{id:e,value:t})},children:"Reset"})]})}function pf(e,t){let[i,n]=ud(()=>new Map),o=Ri(new Set);return Ss(()=>{let s=e.options.registered();for(let r of t){if(o.current.has(r))continue;o.current.add(r);let a=Object.hasOwn(s,r)?s[r]:void 0;if(a===void 0)continue;let l=a.default;Promise.resolve(typeof l=="function"?l(e):l).then(d=>{n(h=>new Map(h).set(r,d))},()=>{})}}),i}function mf(e,t){let i=Ri(null);tf(()=>{let n=e.current;if(n===null)return;let o=n.ownerDocument;if(t){i.current=o.activeElement,(n.querySelector(".blockr-dock-sidebar-body")?.querySelector(Cs)??n).focus();return}let s=i.current;i.current=null;let r=o.activeElement;(r===null||r===o.body||n.contains(r))&&s instanceof HTMLElement&&s.isConnected&&s.focus()},[e,t])}function ff(e,t){Ss(()=>{let i=e.current;if(i===null)return;let n=o=>{if(!o.defaultPrevented){if(o.key==="Tab"){vf(i,o);return}o.key!=="Escape"||gf(i)||t.state().pinned||(t.set(!1),o.preventDefault())}};return i.addEventListener("keydown",n),()=>{i.removeEventListener("keydown",n)}},[e,t])}function vf(e,t){let i=[...e.querySelectorAll(Cs)].filter(r=>r.checkVisibility({visibilityProperty:!0})&&r.closest("[inert]")===null),n=i[0],o=i.at(-1),s=e.ownerDocument.activeElement;n===void 0||o===void 0?(t.preventDefault(),e.focus()):t.shiftKey&&(s===n||s===e)?(t.preventDefault(),o.focus()):!t.shiftKey&&(s===o||s===e)&&(t.preventDefault(),n.focus())}function gf(e){return sf.some(t=>{try{return e.querySelector(t)!==null}catch{return!1}})}function _f(e,t,i){Ss(()=>{let n=e.current;if(n===null||!i)return;let o=n.ownerDocument,s=r=>{let a=r.target;!(a instanceof Element)||n.contains(a)||a.closest(`[aria-controls="${t.id}"], .blockr-dock-toasts`)===null&&t.set(!1)};return o.addEventListener("pointerdown",s,!0),()=>{o.removeEventListener("pointerdown",s,!0)}},[e,t,i])}async function vd(e){let[t,i,n,o,s]=await Promise.all([li(e),yt(e),bf(e),wf(e),yf(e)]);return{tolerance:t,lockResize:i.resize,lockRearrange:i.rearrange,breakpoint:n,fraction:o,spinnerDelay:s}}var md=50;async function bf(e){let t=await e.blockrOption("narrow_breakpoint");if(t===void 0)return;let i=t===null?1/0:typeof t=="string"?Ps(t):t;if(typeof i=="number"&&i>=md)return i;throw new TypeError(`The blockr option narrow_breakpoint is ${JSON.stringify(t)}, where it takes a number of at least ${String(md)} or Inf.`)}async function wf(e){let t=await e.blockrOption("narrow_group_fraction");if(t===void 0)return .8;let i=typeof t=="string"?Ps(t):t;if(typeof i=="number"&&i>0&&i<=1)return i;throw new TypeError(`The blockr option narrow_group_fraction is ${JSON.stringify(t)}, where it takes a number above 0 and at most 1.`)}var fd=200;async function yf(e){let t=await e.blockrOption("spinner_delay_ms"),i=typeof t=="string"?Ps(t):t;if(typeof i!="number"||!Number.isFinite(i))return fd;let n=Math.trunc(i);return n>=0?n:fd}function Ps(e){let t=e.trim();return t==="Inf"?1/0:t===""?Number.NaN:Number(t)}var Df={open:!1,pinned:!1,expanded:[]},gd=0;function _d(){gd+=1;let e=Df,t=new Set,i=n=>{if(!(n.open===e.open&&n.pinned===e.pinned&&n.expanded===e.expanded)){e=n;for(let o of[...t])o()}};return{id:`blockr-dock-sidebar-${String(gd)}`,state:()=>e,set(n){i(n?{...e,open:!0}:{...e,open:!1,pinned:!1})},pin(n){e.open&&i({...e,pinned:n})},expand(n,o){if(e.expanded.includes(n)===o)return;let s=o?[...e.expanded,n]:e.expanded.filter(r=>r!==n);i({...e,expanded:s})},subscribe(n){return t.add(n),()=>{t.delete(n)}}}}var Gs="page",Sf="Page";function Cf(e,t,i){let n=F(e);if(n===void 0)return[];let o=(...c)=>wt(["plugins",oi,...c]),s=[],r=Object.keys(n.views).length===0,a=n.views;if(r){let c={name:Sf,folder:null,index:lt(n,null,void 0),grid:Pf(e,t)};s.push({op:"add",path:o("views",Gs),value:c}),a={[Gs]:c}}let l=c=>"block"in c||t.includes(c.plugin);for(let[c,u]of Object.entries(n.views))_e(u.grid).every(l)||s.push({op:"replace",path:o("views",c,"grid"),value:_t(u.grid,l)});let h=(i!==void 0&&Object.hasOwn(a,i)?i:void 0)??(r?Gs:n.active);return h!==n.active&&s.push({op:"replace",path:o("active"),value:h}),s}function Pf(e,t){let i=Object.keys(e.blocks).map(r=>({block:r})),n=t.map(r=>({plugin:r})),[o]=i,[s]=n;return{orientation:"horizontal",children:o===void 0?[]:[{panels:i,active:o}],sizes:o===void 0?[]:[1],...s===void 0?{}:{rails:{left:{panels:n,active:s,collapsed:!1,size:500}}}}}function bd(e){let t=e.plugins.appPlugins();return new Map(Object.entries(t).flatMap(([i,n])=>e.plugins.pluginClass(i).ui===void 0?[]:[[i,n.name]]))}function wd(e){let t=new URLSearchParams(e?.search??"").get("view");return t===null||t===""?void 0:t}function yd(e,t,i,n){let o=Cf(e.store.board(),i,n);o.length>0&&e.store.apply({patches:o},t,{undo:!1})}import{useCallback as kf,useSyncExternalStore as Cd}from"react";function Dd(e){let{about:t,source:i}=e;return t===void 0||!("block"in t)?!1:i.kind!=="module"||!("plugin"in i.module.object)}var Gf=/(?:\u001b\[|\u009b)[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;function Sd(e){return e.replace(Gf,"")}import{jsx as Ni,jsxs as Hn}from"react/jsx-runtime";var xf=5e3,Ef=300;function Pd(e){let t=new Map,i=new Set,n=new Set,o=e.get(),s=[],r=!1;function a(){let u=o.flatMap(p=>{let m=t.get(p.id)?.toast;return m===void 0?[]:[m]});if(!(u.length===s.length&&u.every((p,m)=>p===s[m]))){s=u;for(let p of[...n])p()}}function l(u,p){r||p.toast.notification.severity!=="message"||p.kept.size>0||(clearTimeout(p.timer),p.timer=setTimeout(()=>{p.toast={...p.toast,fading:!0},p.timer=setTimeout(()=>{d(u)},Ef),a()},xf))}function d(u){let p=t.get(u);p!==void 0&&(clearTimeout(p.timer),t.delete(u),i.add(u),a())}function h(){let u=new Set(o.map(p=>p.id));for(let[p,m]of t)u.has(p)||(clearTimeout(m.timer),t.delete(p));for(let p of i)u.has(p)||i.delete(p);for(let p of o){if(Dd(p)||i.has(p.id))continue;let m=t.get(p.id);if(m===void 0){let f={toast:{notification:p,fading:!1},timer:void 0,kept:new Set};t.set(p.id,f),l(p.id,f)}else m.toast.notification!==p&&(m.toast={...m.toast,notification:p})}a()}let c=e.subscribe(u=>{o=u,h()});return h(),{list:()=>s,subscribe(u){let p=()=>{u()};return n.add(p),()=>{n.delete(p)}},close:d,keep(u,p){let m=t.get(u);m!==void 0&&(m.kept.add(p),clearTimeout(m.timer),m.timer=void 0,m.toast.fading&&(m.toast={...m.toast,fading:!1},a()))},release(u,p){let m=t.get(u);m?.kept.delete(p)===!0&&l(u,m)},stop(){r=!0,c();for(let u of t.values())clearTimeout(u.timer)}}}function Tf(e,t,i){if(e===void 0)return"Board";if("option"in e)return`Board option "${Li(t.options.registered(),e.option)?.label??e.option}"`;if("plugin"in e)return`Plugin "${Li(t.plugins.appPlugins(),e.plugin)?.name??e.plugin}"`;if("stack"in e)return`Stack "${Li(i.stacks,e.stack)?.name??e.stack}"`;let n=s=>`"${Li(i.blocks,s)?.name??s}"`;if("block"in e)return`Block ${n(e.block)}`;let o=Li(i.links,e.link);return o===void 0?`Link "${e.link}"`:`Link from ${n(o.from)} to ${n(o.to)}`}function If(e){return e.source.module?.package}function Li(e,t){return Object.hasOwn(e,t)?e[t]:void 0}function Gd({core:e,toasts:t}){let i=Cd(t.subscribe,t.list),n=Of(e);return i.length===0?null:Ni("section",{className:"blockr-dock-toasts","aria-label":"Notifications",children:i.map(o=>Ni(Af,{toast:o,title:Tf(o.notification.about,e,n),toasts:t},o.notification.id))})}function Af({toast:e,title:t,toasts:i}){let{notification:n,fading:o}=e,{id:s,severity:r}=n,a=If(n);return Hn("div",{className:"blockr-dock-toast",role:r==="message"?"status":"alert","data-severity":r,"data-fading":o?"":void 0,onPointerEnter:()=>{i.keep(s,"pointer")},onPointerLeave:()=>{i.release(s,"pointer")},onFocus:()=>{i.keep(s,"focus")},onBlur:l=>{l.relatedTarget instanceof Node&&l.currentTarget.contains(l.relatedTarget)||i.release(s,"focus")},children:[Hn("div",{className:"blockr-dock-toast-text",children:[Hn("p",{className:"blockr-dock-toast-title",children:[t,a===void 0?null:Hn("span",{className:"blockr-dock-toast-package",children:[" \xB7 ",a]})]}),Ni("p",{className:"blockr-dock-toast-message",children:Sd(n.message)})]}),Ni("button",{type:"button",className:"blockr-dock-toast-close","aria-label":"Close",onClick:()=>{i.close(s)},children:Ni("span",{"aria-hidden":"true",children:"\xD7"})})]})}function Of(e){let t=kf(i=>e.store.subscribe(()=>{i()}),[e]);return Cd(t,()=>e.store.board())}import{Fragment as Lf,jsx as Yt,jsxs as Nf}from"react/jsx-runtime";var jy=1,kd="blockr.dock-show_panel",Rf={async render({el:e,core:t,plugin:i,signal:n,args:o}){let s=rd(o),r=await vd(t);if(n.aborted)return;let a=e.ownerDocument.defaultView??window,l=bd(t);yd(t,i,[...l.keys()],wd(a.location));let d=cd(a,r.breakpoint),h=ul(t,l,d),c=pl(t,l,d,r.spinnerDelay),u=_d(),p=Pd(t.notifications),m=Pl(e.ownerDocument,t,()=>Sl(t,s)),f=Mf(e),v={core:t,plugin:i,drawn:l,tooltips:Ii()};return zf(()=>{f.render(Nf(Lf,{children:[Yt(Jt,{value:v,children:Yt(Ql,{items:s,busy:c,sidebar:u,mac:Gl(a)})}),Yt(ql,{core:t,plugin:i,settings:r,narrow:d,drawn:l,sidebar:u}),Yt(Jt,{value:v,children:Yt(pd,{sidebar:u})}),Yt(Gd,{core:t,toasts:p})]}))}),()=>{f.unmount(),m(),p.stop(),c.stop(),h(),d.stop()}},async show({object:e,core:t}){let i={panel:e};t.commands.preflight(kd,i)&&await t.commands.run(kd,i)}},Yy={options:["compact","view_tabs","sync_rails","show_conditions","dark_mode"],state:{schema:Vi,default:Fn},update:io,commands:Cr,frontend:Rf};export{jy as api,Yy as default};
-/*! Bundled license information:
+// inst/js/dock.schema.json
+var dock_schema_default = {
+  $schema: "http://json-schema.org/draft-07/schema#",
+  type: "object",
+  properties: {
+    views: {
+      type: "object",
+      additionalProperties: {
+        $ref: "#/definitions/View"
+      },
+      description: "Every view, by its id."
+    },
+    folders: {
+      type: "object",
+      additionalProperties: {
+        $ref: "#/definitions/Folder"
+      },
+      description: "Every folder, by its id."
+    },
+    active: {
+      anyOf: [
+        {
+          $ref: "#/definitions/ViewId"
+        },
+        {
+          type: "null"
+        }
+      ],
+      description: "The view that the board opens on, or null while the state holds no view."
+    },
+    visible: {
+      type: "object",
+      additionalProperties: {
+        type: "array",
+        items: {
+          $ref: "#/definitions/Section"
+        }
+      },
+      description: "The sections that a block's card shows, by the block's id, for each card that hides a section. A card without an entry shows both."
+    }
+  },
+  required: [
+    "views",
+    "folders",
+    "active",
+    "visible"
+  ],
+  additionalProperties: false,
+  description: "The dock's views, the folders that group them, the active view and the sections that each block's card shows.",
+  definitions: {
+    View: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "The name that the user gives the view."
+        },
+        folder: {
+          anyOf: [
+            {
+              $ref: "#/definitions/FolderId"
+            },
+            {
+              type: "null"
+            }
+          ],
+          description: "The folder that the view sits in, or null at the top."
+        },
+        index: {
+          type: "string",
+          description: "The key that orders the view among the views and folders of its folder, compared as a string."
+        },
+        grid: {
+          $ref: "#/definitions/Grid",
+          description: "Which panels the view shows, and where."
+        }
+      },
+      required: [
+        "name",
+        "folder",
+        "index",
+        "grid"
+      ],
+      additionalProperties: false,
+      description: "A view: a grid of panels, with a name, in a place in the navigation."
+    },
+    FolderId: {
+      type: "string",
+      description: "The id of a folder, which never changes."
+    },
+    Grid: {
+      type: "object",
+      properties: {
+        orientation: {
+          type: "string",
+          enum: [
+            "horizontal",
+            "vertical"
+          ],
+          description: "How the top split divides. Each split inside divides the other way from the split that holds it."
+        },
+        children: {
+          type: "array",
+          items: {
+            $ref: "#/definitions/Node"
+          },
+          description: "What the top split holds, in order."
+        },
+        sizes: {
+          type: "array",
+          items: {
+            type: "number",
+            description: "The share of a split that one of its children takes, a ratio above 0.",
+            exclusiveMinimum: 0
+          },
+          description: "The share of each child, ratios that sum to 1."
+        },
+        rails: {
+          type: "object",
+          properties: {
+            left: {
+              $ref: "#/definitions/Rail"
+            },
+            right: {
+              $ref: "#/definitions/Rail"
+            }
+          },
+          additionalProperties: false,
+          description: "The rails of the view, by the edge that each sits on."
+        }
+      },
+      required: [
+        "orientation",
+        "children",
+        "sizes"
+      ],
+      additionalProperties: false,
+      description: "Where a view places its panels: nested splits of tab groups, and a rail on each side."
+    },
+    Node: {
+      anyOf: [
+        {
+          $ref: "#/definitions/Split"
+        },
+        {
+          $ref: "#/definitions/TabGroup"
+        }
+      ],
+      description: "What a split holds: a split or a tab group."
+    },
+    Split: {
+      type: "object",
+      properties: {
+        children: {
+          type: "array",
+          items: {
+            $ref: "#/definitions/Node"
+          },
+          description: "What the split holds, in order."
+        },
+        sizes: {
+          type: "array",
+          items: {
+            type: "number",
+            description: "The share of a split that one of its children takes, a ratio above 0.",
+            exclusiveMinimum: 0
+          },
+          description: "The share of each child, ratios that sum to 1."
+        }
+      },
+      required: [
+        "children",
+        "sizes"
+      ],
+      additionalProperties: false,
+      description: "A split, which divides the other way from the split that holds it."
+    },
+    TabGroup: {
+      type: "object",
+      properties: {
+        panels: {
+          type: "array",
+          items: {
+            $ref: "#/definitions/Panel"
+          },
+          description: "Its panels, in the order of their tabs."
+        },
+        active: {
+          $ref: "#/definitions/Panel",
+          description: "The panel that it shows."
+        }
+      },
+      required: [
+        "panels",
+        "active"
+      ],
+      additionalProperties: false,
+      description: "A tab group, with a tab for each of its panels."
+    },
+    Panel: {
+      anyOf: [
+        {
+          type: "object",
+          properties: {
+            block: {
+              $ref: "#/definitions/BlockId"
+            }
+          },
+          required: [
+            "block"
+          ],
+          additionalProperties: false
+        },
+        {
+          type: "object",
+          properties: {
+            plugin: {
+              $ref: "#/definitions/PluginClassId"
+            }
+          },
+          required: [
+            "plugin"
+          ],
+          additionalProperties: false
+        }
+      ],
+      description: "A panel: the card of one of the board's blocks, by the block's id, or the UI of one of the app's plugins, by the id of the plugin's class."
+    },
+    BlockId: {
+      type: "string"
+    },
+    PluginClassId: {
+      type: "string"
+    },
+    Rail: {
+      type: "object",
+      properties: {
+        panels: {
+          type: "array",
+          items: {
+            $ref: "#/definitions/Panel"
+          },
+          description: "Its panels, in the order of their tabs."
+        },
+        active: {
+          $ref: "#/definitions/Panel",
+          description: "The panel that it shows."
+        },
+        collapsed: {
+          type: "boolean",
+          description: "Whether the rail shows its tabs alone."
+        },
+        size: {
+          type: "number",
+          description: "Its width in pixels while it is open, 500 by default.",
+          minimum: 0
+        }
+      },
+      required: [
+        "panels",
+        "active",
+        "collapsed",
+        "size"
+      ],
+      additionalProperties: false,
+      description: "A rail on an edge of the view, with a tab for each of its panels."
+    },
+    Folder: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "The name that the user gives the folder."
+        },
+        folder: {
+          anyOf: [
+            {
+              $ref: "#/definitions/FolderId"
+            },
+            {
+              type: "null"
+            }
+          ],
+          description: "The folder that the folder sits in, or null at the top."
+        },
+        index: {
+          type: "string",
+          description: "The key that orders the folder among the views and folders of its folder, compared as a string."
+        }
+      },
+      required: [
+        "name",
+        "folder",
+        "index"
+      ],
+      additionalProperties: false,
+      description: "A folder, which groups views and other folders in the navigation."
+    },
+    ViewId: {
+      type: "string",
+      description: "The id of a view, which never changes."
+    },
+    Section: {
+      type: "string",
+      enum: [
+        "inputs",
+        "outputs"
+      ],
+      description: "A section of a block's card."
+    }
+  }
+};
 
-dockview-core/dist/package/main.esm.mjs:
-  (**
-   * dockview-core
-   * @version 8.9.0
-   * @link https://github.com/dockview/dockview
-   * @license MIT
-   *)
+// srcts/state/json.ts
+function isList(value) {
+  return Array.isArray(value);
+}
+function isObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function sameJson(a, b) {
+  if (a === b) return true;
+  if (isList(a) || isList(b)) {
+    return isList(a) && isList(b) && a.length === b.length && a.every((value, i) => i in b && sameJson(value, b[i] ?? null));
+  }
+  if (!isObject(a) || !isObject(b)) return false;
+  const names = Object.keys(a);
+  return names.length === Object.keys(b).length && names.every((name2) => Object.hasOwn(b, name2) && sameJson(a[name2] ?? null, b[name2] ?? null));
+}
 
-dockview-react/dist/package/main.esm.mjs:
-  (**
-   * dockview-react
-   * @version 8.9.0
-   * @link https://github.com/dockview/dockview
-   * @license MIT
-   *)
-*/
+// srcts/state/state.ts
+var defaultState = { views: {}, folders: {}, active: null, visible: {} };
+function isDockState(value) {
+  return isObject(value) && isRecordOf(value.views, isView) && isRecordOf(value.folders, isFolder) && (value.active === null || typeof value.active === "string") && isRecordOf(value.visible, (sections) => isListOf(sections, (s) => s === "inputs" || s === "outputs"));
+}
+function isView(value) {
+  return isFolder(value) && isGrid(value.grid);
+}
+function isFolder(value) {
+  return isObject(value) && typeof value.name === "string" && (value.folder === null || typeof value.folder === "string") && typeof value.index === "string";
+}
+function isGrid(value) {
+  if (!isObject(value)) return false;
+  const { orientation, rails: rails2 } = value;
+  if (orientation !== "horizontal" && orientation !== "vertical") return false;
+  const railsValid = rails2 === void 0 || isObject(rails2) && (rails2.left === void 0 || isRail(rails2.left)) && (rails2.right === void 0 || isRail(rails2.right));
+  return railsValid && isSplit(value);
+}
+function isNode(value) {
+  return isSplit(value) || isTabGroup(value);
+}
+function isSplit(value) {
+  return isObject(value) && isListOf(value.children, isNode) && isListOf(value.sizes, (size) => typeof size === "number");
+}
+function isTabGroup(value) {
+  return isObject(value) && isListOf(value.panels, isPanel) && isPanel(value.active);
+}
+function isRail(value) {
+  if (!isObject(value)) return false;
+  const { collapsed, size } = value;
+  return typeof collapsed === "boolean" && typeof size === "number" && isTabGroup(value);
+}
+function isPanel(value) {
+  if (!isObject(value)) return false;
+  return typeof value.block === "string" !== (typeof value.plugin === "string");
+}
+function isRecordOf(value, item) {
+  return isObject(value) && Object.values(value).every(item);
+}
+function isListOf(value, item) {
+  return isList(value) && value.every(item);
+}
+
+// srcts/state/grid.ts
+var EDGES = ["left", "right"];
+var SIDES = ["within", "left", "right", "above", "below"];
+var RAIL_SIZE = 500;
+var TOLERANCE = 15e-9;
+function isTabGroup2(node) {
+  return "panels" in node;
+}
+function samePanel(a, b) {
+  return "block" in a ? "block" in b && a.block === b.block : "plugin" in b && a.plugin === b.plugin;
+}
+function gridPanels(grid2) {
+  return [...tabGroups(grid2).flatMap((group) => group.panels), ...rails(grid2).flatMap(([, rail2]) => rail2.panels)];
+}
+function places(grid2, panel2) {
+  return gridPanels(grid2).some((placed) => samePanel(placed, panel2));
+}
+function tabGroups(grid2) {
+  const groups = [];
+  const walk = (node) => {
+    if (isTabGroup2(node)) groups.push(node);
+    else node.children.forEach(walk);
+  };
+  grid2.children.forEach(walk);
+  return groups;
+}
+function rails(grid2) {
+  return EDGES.flatMap((edge2) => {
+    const rail2 = grid2.rails?.[edge2];
+    return rail2 === void 0 ? [] : [[edge2, rail2]];
+  });
+}
+function prunePanels(grid2, keep2) {
+  const top = prunedSplit(grid2, keep2) ?? { children: [], sizes: [] };
+  const kept = rails(grid2).flatMap(([edge2, rail2]) => {
+    const pruned = prunedGroup(rail2, keep2);
+    return pruned === void 0 ? [] : [[edge2, { ...rail2, ...pruned }]];
+  });
+  return {
+    orientation: grid2.orientation,
+    ...top,
+    ...kept.length === 0 ? {} : { rails: Object.fromEntries(kept) }
+  };
+}
+function prunedNode(node, keep2) {
+  return isTabGroup2(node) ? prunedGroup(node, keep2) : prunedSplit(node, keep2);
+}
+function prunedSplit(split, keep2) {
+  const shares2 = fitted(split.sizes, split.children.length);
+  const pruned = split.children.map((child) => prunedNode(child, keep2));
+  const kept = pruned.flatMap((node, i) => node === void 0 ? [] : [{ node, share: shares2[i] ?? 0 }]);
+  if (kept.length === 0) return void 0;
+  const children2 = kept.map(({ node }) => node);
+  const emptied = split.children.some((child, i) => pruned[i] === void 0 && holdsPanel(child));
+  return { children: children2, sizes: emptied ? evenShares(children2.length) : normalized(kept.map(({ share }) => share)) };
+}
+function holdsPanel(node) {
+  return isTabGroup2(node) ? node.panels.length > 0 : node.children.some(holdsPanel);
+}
+function prunedGroup(group, keep2) {
+  const panels = group.panels.filter(keep2);
+  const [first] = panels;
+  if (first === void 0) return void 0;
+  const active = panels.find((panel2) => samePanel(panel2, group.active)) ?? first;
+  return { panels, active };
+}
+function fitted(sizes, n) {
+  const fits2 = sizes.length === n && sizes.every((size) => Number.isFinite(size) && size > 0);
+  return fits2 ? normalized(sizes) : evenShares(n);
+}
+function evenShares(n) {
+  return Array.from({ length: n }, () => 1 / n);
+}
+function normalized(shares2) {
+  const total = sum(shares2);
+  return Math.abs(total - 1) <= TOLERANCE ? [...shares2] : shares2.map((share) => share / total);
+}
+function sum(values) {
+  return values.reduce((total, value) => total + value, 0);
+}
+function gridFailures(grid2) {
+  const failures = [];
+  const split = (node, at2, top) => {
+    if (!top && node.children.length === 0) failures.push(`The split at "${at2}" holds nothing.`);
+    if (node.sizes.length !== node.children.length) {
+      failures.push(`The split at "${at2 || "/"}" has ${count(node.children.length, "child", "children")} and ${count(node.sizes.length, "share", "shares")}.`);
+    } else if (!node.sizes.every((size) => Number.isFinite(size) && size > 0)) {
+      failures.push(`The split at "${at2 || "/"}" gives a child a share that is not above 0.`);
+    } else if (node.children.length > 0 && Math.abs(sum(node.sizes) - 1) > TOLERANCE) {
+      failures.push(`The shares of the split at "${at2 || "/"}" do not sum to 1.`);
+    }
+    node.children.forEach((child, i) => {
+      if (isTabGroup2(child)) group(child, `${at2}/children/${String(i)}`, "tab group");
+      else split(child, `${at2}/children/${String(i)}`, false);
+    });
+  };
+  const group = (node, at2, what) => {
+    if (node.panels.length === 0) failures.push(`The ${what} at "${at2}" holds no panel.`);
+    else if (!node.panels.some((panel2) => samePanel(panel2, node.active))) {
+      failures.push(`The ${what} at "${at2}" shows a panel that it does not hold.`);
+    }
+  };
+  split(grid2, "", true);
+  for (const [edge2, rail2] of rails(grid2)) group(rail2, `/rails/${edge2}`, "rail");
+  const seen = [];
+  const twice = [];
+  for (const panel2 of gridPanels(grid2)) {
+    if (seen.some((other) => samePanel(other, panel2))) {
+      if (!twice.some((other) => samePanel(other, panel2))) twice.push(panel2);
+    } else seen.push(panel2);
+  }
+  for (const panel2 of twice) failures.push(`The grid places ${panelName(panel2)} more than once.`);
+  return failures;
+}
+function count(n, one, many) {
+  return `${String(n)} ${n === 1 ? one : many}`;
+}
+function panelName(panel2) {
+  return "block" in panel2 ? `the panel of the block "${panel2.block}"` : `the panel of the plugin "${panel2.plugin}"`;
+}
+function placePanel(grid2, panel2) {
+  if (places(grid2, panel2)) return grid2;
+  const target = tabGroups(grid2).reverse().find((group) => group.panels.every((placed) => "block" in placed));
+  if (target !== void 0) {
+    const add = (node) => {
+      if (node === target) return { panels: [...target.panels, panel2], active: panel2 };
+      return isTabGroup2(node) ? node : { ...node, children: node.children.map(add) };
+    };
+    return { ...grid2, children: grid2.children.map(add) };
+  }
+  return appendTabGroup(grid2, panel2);
+}
+function appendTabGroup(grid2, panel2) {
+  return { ...grid2, ...evened(grid2, grid2.children.length, tabGroup(panel2)) };
+}
+function evened(split, at2, node) {
+  const children2 = [...split.children.slice(0, at2), node, ...split.children.slice(at2)];
+  return { children: children2, sizes: evenShares(children2.length) };
+}
+function halved(split, beside, before2, node) {
+  const shares2 = fitted(split.sizes, split.children.length);
+  const half = (shares2[beside] ?? 0) / 2;
+  const sizes = shares2.map((share, i) => i === beside ? half : share);
+  const at2 = before2 ? beside : beside + 1;
+  return {
+    children: [...split.children.slice(0, at2), node, ...split.children.slice(at2)],
+    sizes: [...sizes.slice(0, at2), half, ...sizes.slice(at2)]
+  };
+}
+function tabGroup(panel2) {
+  return { panels: [panel2], active: panel2 };
+}
+function locate(grid2, panel2) {
+  const walk = (node, path) => {
+    if (isTabGroup2(node)) return node.panels.some((placed) => samePanel(placed, panel2)) ? path : void 0;
+    for (const [i, child] of node.children.entries()) {
+      const found = walk(child, [...path, i]);
+      if (found !== void 0) return found;
+    }
+    return void 0;
+  };
+  for (const [i, child] of grid2.children.entries()) {
+    const path = walk(child, [i]);
+    if (path !== void 0) return { path };
+  }
+  const held = rails(grid2).find(([, rail2]) => rail2.panels.some((placed) => samePanel(placed, panel2)));
+  return held === void 0 ? void 0 : { edge: held[0] };
+}
+function placeFailures(grid2, place) {
+  if (place.rail !== void 0 || place.near === void 0) return [];
+  const at2 = locate(grid2, place.near);
+  if (at2 === void 0) return [`The view does not show ${panelName(place.near)}, which near names.`];
+  if ("edge" in at2 && (place.side ?? "within") !== "within") {
+    return [`The view shows ${panelName(place.near)}, which near names, on a rail, which takes a panel only within.`];
+  }
+  return [];
+}
+function placedAt(grid2, panel2, place, sizing) {
+  if (place.rail !== void 0) return onRail(grid2, place.rail, panel2);
+  const side2 = place.side ?? "within";
+  if (place.near === void 0) return side2 === "within" ? placePanel(grid2, panel2) : atEdge(grid2, panel2, side2);
+  const at2 = locate(grid2, place.near);
+  if (at2 === void 0) return grid2;
+  if ("edge" in at2) return onRail(grid2, at2.edge, panel2);
+  if (side2 === "within") {
+    return withNode(grid2, at2.path, (node) => isTabGroup2(node) ? { panels: [...node.panels, panel2], active: panel2 } : node);
+  }
+  return besideGroup(grid2, at2.path, panel2, side2, sizing);
+}
+function onRail(grid2, edge2, panel2) {
+  const rail2 = grid2.rails?.[edge2];
+  const next = rail2 === void 0 ? { ...tabGroup(panel2), collapsed: false, size: RAIL_SIZE } : { ...rail2, panels: [...rail2.panels, panel2], active: panel2 };
+  return { ...grid2, rails: { ...grid2.rails, [edge2]: next } };
+}
+function sideOrientation(side2) {
+  return side2 === "left" || side2 === "right" ? "horizontal" : "vertical";
+}
+function leads(side2) {
+  return side2 === "left" || side2 === "above";
+}
+function besideGroup(grid2, path, panel2, side2, sizing) {
+  const holder2 = path.slice(0, -1);
+  const at2 = path.at(-1) ?? 0;
+  const divides = holder2.length % 2 === 0 ? grid2.orientation : flipped(grid2.orientation);
+  if (divides === sideOrientation(side2)) {
+    return withSplit(
+      grid2,
+      holder2,
+      (split) => sizing === "split" ? halved(split, at2, leads(side2), tabGroup(panel2)) : evened(split, leads(side2) ? at2 : at2 + 1, tabGroup(panel2))
+    );
+  }
+  return withNode(grid2, path, (node) => ({
+    children: leads(side2) ? [tabGroup(panel2), node] : [node, tabGroup(panel2)],
+    sizes: [0.5, 0.5]
+  }));
+}
+function atEdge(grid2, panel2, side2) {
+  const orientation = sideOrientation(side2);
+  if (grid2.children.length === 0) return { ...grid2, orientation, children: [tabGroup(panel2)], sizes: [1] };
+  if (grid2.orientation === orientation) {
+    return { ...grid2, ...evened(grid2, leads(side2) ? 0 : grid2.children.length, tabGroup(panel2)) };
+  }
+  const [only] = grid2.children;
+  const top = grid2.children.length === 1 && only !== void 0 && isTabGroup2(only) ? only : { children: grid2.children, sizes: grid2.sizes };
+  return {
+    ...grid2,
+    orientation,
+    children: leads(side2) ? [tabGroup(panel2), top] : [top, tabGroup(panel2)],
+    sizes: [0.5, 0.5]
+  };
+}
+function flipped(orientation) {
+  return orientation === "horizontal" ? "vertical" : "horizontal";
+}
+function withNode(grid2, path, fn) {
+  const walk = (split, rest) => {
+    const [i, ...deeper] = rest;
+    return {
+      ...split,
+      children: split.children.map((child, j) => {
+        if (j !== i) return child;
+        if (deeper.length === 0) return fn(child);
+        return isTabGroup2(child) ? child : walk(child, deeper);
+      })
+    };
+  };
+  return { ...grid2, ...walk(grid2, path) };
+}
+function withSplit(grid2, path, fn) {
+  if (path.length === 0) return { ...grid2, ...fn({ children: grid2.children, sizes: grid2.sizes }) };
+  return withNode(grid2, path, (node) => isTabGroup2(node) ? node : fn(node));
+}
+function splitAt(split, path) {
+  const [i, ...deeper] = path;
+  if (i === void 0) return split;
+  const child = split.children[i];
+  return child === void 0 || isTabGroup2(child) ? void 0 : splitAt(child, deeper);
+}
+function showing(grid2, panel2) {
+  const at2 = locate(grid2, panel2);
+  if (at2 === void 0) return grid2;
+  if ("path" in at2) return withNode(grid2, at2.path, (node) => isTabGroup2(node) ? { ...node, active: panel2 } : node);
+  const rail2 = grid2.rails?.[at2.edge];
+  return rail2 === void 0 ? grid2 : { ...grid2, rails: { ...grid2.rails, [at2.edge]: { ...rail2, active: panel2 } } };
+}
+function collapsedRail(grid2, edge2, collapsed) {
+  const rail2 = grid2.rails?.[edge2];
+  return rail2 === void 0 ? grid2 : { ...grid2, rails: { ...grid2.rails, [edge2]: { ...rail2, collapsed } } };
+}
+function resizeFailures(grid2, panel2, size) {
+  const at2 = locate(grid2, panel2);
+  if (at2 === void 0 || "edge" in at2) return [];
+  const failures = [];
+  if (size >= 1) failures.push(`A tab group takes a share of its split below 1, which ${String(size)} is not.`);
+  const split = splitAt(grid2, at2.path.slice(0, -1));
+  if (split !== void 0 && split.children.length < 2) {
+    failures.push(`The tab group that holds ${panelName(panel2)} fills its split alone, so its share stays 1.`);
+  }
+  return failures;
+}
+function resized(grid2, panel2, size) {
+  const at2 = locate(grid2, panel2);
+  if (at2 === void 0) return grid2;
+  if ("edge" in at2) {
+    const rail2 = grid2.rails?.[at2.edge];
+    return rail2 === void 0 ? grid2 : { ...grid2, rails: { ...grid2.rails, [at2.edge]: { ...rail2, size } } };
+  }
+  const i = at2.path.at(-1) ?? 0;
+  return withSplit(grid2, at2.path.slice(0, -1), (split) => {
+    const shares2 = fitted(split.sizes, split.children.length);
+    const rest = sum(shares2) - (shares2[i] ?? 0);
+    return { ...split, sizes: shares2.map((share, j) => j === i ? size : share / rest * (1 - size)) };
+  });
+}
+function withStoredShares(stored, grid2, tolerance) {
+  if (!sameShape(stored, grid2)) return grid2;
+  const kept = (before2, after2) => {
+    const children2 = after2.children.map((child, i) => {
+      const was = before2.children[i];
+      return isTabGroup2(child) || was === void 0 || isTabGroup2(was) ? child : kept(was, child);
+    });
+    const shares2 = fitted(before2.sizes, before2.children.length);
+    const steady = shares2.every((share, i) => Math.abs(share - (after2.sizes[i] ?? Number.NaN)) <= tolerance);
+    return { children: children2, sizes: steady ? shares2 : after2.sizes };
+  };
+  return { ...grid2, ...kept(stored, grid2) };
+}
+function gridChanges(stored, grid2) {
+  const before2 = gridPanels(stored);
+  const after2 = gridPanels(grid2);
+  return {
+    panels: before2.length !== after2.length || !after2.every((panel2) => before2.some((other) => samePanel(other, panel2))),
+    arrangement: JSON.stringify(arrangement(grid2)) !== JSON.stringify(arrangement(stored)),
+    sizes: resizedFrom(stored, grid2)
+  };
+}
+function arrangement(grid2) {
+  const node = (child) => isTabGroup2(child) ? child.panels : child.children.map(node);
+  const edges = rails(grid2).map(([edge2, rail2]) => [edge2, rail2.panels]);
+  return { orientation: grid2.orientation, children: grid2.children.map(node), rails: Object.fromEntries(edges) };
+}
+function shape(grid2) {
+  const node = (child) => isTabGroup2(child) ? "tab group" : child.children.map(node);
+  return { orientation: grid2.orientation, children: grid2.children.map(node) };
+}
+function resizedFrom(stored, grid2) {
+  const widths = EDGES.some((edge2) => {
+    const [a, b] = [stored.rails?.[edge2], grid2.rails?.[edge2]];
+    return a !== void 0 && b !== void 0 && a.size !== b.size;
+  });
+  if (widths) return true;
+  if (!sameShape(stored, grid2)) return false;
+  const given = shares(grid2);
+  return shares(stored).some((share, i) => share !== given[i]);
+}
+function sameShape(a, b) {
+  return JSON.stringify(shape(a)) === JSON.stringify(shape(b));
+}
+function shares(grid2) {
+  const walk = (split) => [
+    ...fitted(split.sizes, split.children.length),
+    ...split.children.flatMap((child) => isTabGroup2(child) ? [] : walk(child))
+  ];
+  return walk(grid2);
+}
+
+// srcts/state/navigation.ts
+import { generateKeyBetween, generateNKeysBetween } from "./vendor-a3ad4872.js";
+function inFolder(state, folder2) {
+  const views = Object.entries(state.views).filter(([, view2]) => holder(state, view2.folder) === folder2).map(([id, view2]) => ({ entry: { view: id }, id, index: view2.index }));
+  const folders = Object.entries(state.folders).filter(([id, inner]) => holder(state, inner.folder, id) === folder2).map(([id, inner]) => ({ entry: { folder: id }, id, index: inner.index }));
+  return [...views, ...folders].sort((a, b) => compare(a.index, b.index) || compare(a.id, b.id)).map(({ entry }) => entry);
+}
+function viewOrder(state) {
+  const order = [];
+  const walked = /* @__PURE__ */ new Set();
+  const walk = (folder2) => {
+    for (const entry of inFolder(state, folder2)) {
+      if ("view" in entry) order.push(entry.view);
+      else if (!walked.has(entry.folder)) {
+        walked.add(entry.folder);
+        walk(entry.folder);
+      }
+    }
+  };
+  walk(null);
+  return order;
+}
+function firstView(state) {
+  return viewOrder(state)[0] ?? null;
+}
+function sameEntry(a, b) {
+  return "view" in a ? "view" in b && a.view === b.view : "folder" in b && a.folder === b.folder;
+}
+function keyIn(state, folder2, before2, moving) {
+  const others = inFolder(state, folder2).filter((entry) => moving === void 0 || !sameEntry(entry, moving));
+  const at2 = before2 === void 0 ? others.length : others.findIndex((entry) => sameEntry(entry, before2));
+  const index = (entry) => entry === void 0 ? null : entryIndex(state, entry);
+  const [key] = keysBetween(index(others[at2 - 1]), index(others[at2]), 1);
+  return key ?? generateKeyBetween(null, null);
+}
+function sitsAt(state, entry, folder2, before2) {
+  const listed = inFolder(state, folder2);
+  const at2 = listed.findIndex((other) => sameEntry(other, entry));
+  if (at2 === -1) return false;
+  const next = listed[at2 + 1];
+  return before2 === void 0 ? next === void 0 : next !== void 0 && sameEntry(next, before2);
+}
+function foldersHolding(state, entry) {
+  const folders = [];
+  let at2 = "view" in entry ? holder(state, state.views[entry.view]?.folder ?? null) : holder(state, state.folders[entry.folder]?.folder ?? null, entry.folder);
+  while (at2 !== null && !folders.includes(at2)) {
+    folders.push(at2);
+    at2 = holder(state, state.folders[at2]?.folder ?? null, at2);
+  }
+  return folders;
+}
+function within(state, folder2, outer) {
+  const passed = /* @__PURE__ */ new Set();
+  let at2 = folder2;
+  while (at2 !== null && !passed.has(at2)) {
+    if (at2 === outer) return true;
+    passed.add(at2);
+    at2 = state.folders[at2]?.folder ?? null;
+  }
+  return false;
+}
+function keysBetween(a, b, n) {
+  const bounds = [
+    [a, b],
+    [a, null],
+    [null, b]
+  ];
+  for (const [low, high] of bounds) {
+    try {
+      return generateNKeysBetween(low, high, n);
+    } catch {
+    }
+  }
+  return generateNKeysBetween(null, null, n);
+}
+function entryIndex(state, entry) {
+  return ("view" in entry ? state.views[entry.view]?.index : state.folders[entry.folder]?.index) ?? null;
+}
+function compare(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function holder(state, folder2, self) {
+  if (folder2 === null || !Object.hasOwn(state.folders, folder2)) return null;
+  if (self !== void 0 && insideItself(state, self)) return null;
+  return folder2;
+}
+function insideItself(state, id) {
+  const parent = state.folders[id]?.folder ?? null;
+  return parent !== null && within(state, parent, id);
+}
+
+// srcts/state/patch.ts
+function pointer(segments) {
+  return segments.map((segment) => `/${segment.replaceAll("~", "~0").replaceAll("/", "~1")}`).join("");
+}
+function segmentsFromPath(path) {
+  if (!path.startsWith("/")) return void 0;
+  const segments = path.slice(1).split("/");
+  if (segments.some((segment) => /~(?![01])/.test(segment))) return void 0;
+  return segments.map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
+}
+function patched(state, patches, plugin) {
+  let at2 = state;
+  for (const patch of patches) {
+    const segments = segmentsFromPath(patch.path);
+    if (segments?.[0] !== "plugins" || segments[1] !== plugin) continue;
+    at2 = at2 === void 0 ? void 0 : applied(at2, segments.slice(2), patch);
+  }
+  return at2;
+}
+function applied(at2, segments, patch) {
+  const [segment, ...rest] = segments;
+  if (segment === void 0) return patch.op === "replace" ? patch.value : void 0;
+  if (isList(at2)) {
+    const items = at2;
+    const last = rest.length === 0;
+    const index = last && segment === "-" && patch.op === "add" ? items.length : arrayIndex(segment);
+    const bound = last && patch.op === "add" ? items.length : items.length - 1;
+    if (index === void 0 || index > bound) return void 0;
+    const copy = [...items];
+    if (!last) {
+      const inner = applied(items[index], rest, patch);
+      if (inner === void 0) return void 0;
+      copy.splice(index, 1, inner);
+      return copy;
+    }
+    if (patch.op === "remove") copy.splice(index, 1);
+    else if (patch.value === void 0) return void 0;
+    else copy.splice(index, patch.op === "add" ? 0 : 1, patch.value);
+    return copy;
+  }
+  if (!isObject(at2)) return void 0;
+  const record = at2;
+  const has = Object.hasOwn(record, segment);
+  if (rest.length > 0) {
+    if (!has) return void 0;
+    const inner = applied(record[segment], rest, patch);
+    return inner === void 0 ? void 0 : { ...record, [segment]: inner };
+  }
+  if (patch.op === "remove") {
+    if (!has) return void 0;
+    return Object.fromEntries(Object.entries(record).filter(([name2]) => name2 !== segment));
+  }
+  if (patch.value === void 0 || patch.op === "replace" && !has) return void 0;
+  return { ...record, [segment]: patch.value };
+}
+function arrayIndex(segment) {
+  return /^(0|[1-9]\d*)$/.test(segment) ? Number(segment) : void 0;
+}
+
+// srcts/state/update.ts
+function update(delta, board, plugin) {
+  const stored = board.plugins[plugin];
+  const given = stored === void 0 ? void 0 : patched(stored, delta.patches ?? [], plugin);
+  const removed = new Set(delta.blocks?.rm ?? []);
+  const added = Object.keys(delta.blocks?.add ?? {});
+  if (removed.size === 0 && added.length === 0 && given === stored) return [];
+  if (!isDockState(given)) return [];
+  const before2 = isDockState(stored) ? stored : given;
+  const cleared = removeBlocks(given, removed);
+  const { state: moved, moves } = rehoused(cleared, before2);
+  const active = moved.active !== null && Object.hasOwn(moved.views, moved.active) ? moved.active : firstView(moved);
+  const state = placeBlocks({ ...moved, active }, added);
+  const at2 = (...segments) => pointer(["plugins", plugin, ...segments]);
+  const patches = [];
+  for (const [id, view2] of Object.entries(state.views)) {
+    if (view2.grid !== given.views[id]?.grid) {
+      patches.push({ op: "replace", path: at2("views", id, "grid"), value: view2.grid });
+    }
+  }
+  for (const block of removed) {
+    if (Object.hasOwn(given.visible, block)) patches.push({ op: "remove", path: at2("visible", block) });
+  }
+  for (const move2 of moves) {
+    patches.push({ op: "replace", path: at2(move2.kind, move2.id, "folder"), value: move2.folder });
+    patches.push({ op: "replace", path: at2(move2.kind, move2.id, "index"), value: move2.index });
+  }
+  if (state.active !== given.active) patches.push({ op: "replace", path: at2("active"), value: state.active });
+  return patches;
+}
+function removeBlocks(state, removed) {
+  if (removed.size === 0) return state;
+  const kept = (panel2) => !("block" in panel2 && removed.has(panel2.block));
+  const views = Object.fromEntries(
+    Object.entries(state.views).map(([id, view2]) => [
+      id,
+      gridPanels(view2.grid).every(kept) ? view2 : { ...view2, grid: prunePanels(view2.grid, kept) }
+    ])
+  );
+  const visible = Object.fromEntries(Object.entries(state.visible).filter(([block]) => !removed.has(block)));
+  return { ...state, views, visible };
+}
+function rehoused(state, before2) {
+  const lacks = (folder2) => folder2 !== null && !Object.hasOwn(state.folders, folder2);
+  const entries = (kind, record) => Object.entries(record).map(([id, entry]) => ({ kind, id, folder: entry.folder, index: entry.index }));
+  const all = [...entries("views", state.views), ...entries("folders", state.folders)];
+  const stray = all.flatMap((entry) => lacks(entry.folder) ? [{ ...entry, folder: entry.folder }] : []);
+  if (stray.length === 0) return { state, moves: [] };
+  const placed = stray.map((entry) => {
+    const path = [entry.index];
+    let outer = entry.folder;
+    const passed = /* @__PURE__ */ new Set([outer]);
+    let parent = before2.folders[outer]?.folder ?? null;
+    while (lacks(parent) && Object.hasOwn(before2.folders, parent) && !passed.has(parent)) {
+      path.unshift(before2.folders[outer]?.index ?? "");
+      passed.add(parent);
+      outer = parent;
+      parent = before2.folders[outer]?.folder ?? null;
+    }
+    const place = before2.folders[outer]?.index ?? null;
+    return { ...entry, target: lacks(parent) ? null : parent, place, path };
+  });
+  const lists = /* @__PURE__ */ new Map();
+  const folderKeys = (target) => {
+    let list = lists.get(target);
+    if (list === void 0) {
+      list = all.filter((entry) => entry.folder === target).sort((a, b) => compare(a.index, b.index) || compare(a.id, b.id)).map((entry) => ({ index: entry.index, added: false }));
+      lists.set(target, list);
+    }
+    return list;
+  };
+  const groups = /* @__PURE__ */ new Map();
+  for (const entry of placed) {
+    const key = JSON.stringify([entry.target, entry.place]);
+    groups.set(key, [...groups.get(key) ?? [], entry]);
+  }
+  const order = [...groups.values()].sort((a, b) => placeOrder(a[0]?.place ?? null, b[0]?.place ?? null));
+  const moves = [];
+  for (const group of order) {
+    const [first] = group;
+    if (first === void 0) continue;
+    group.sort((a, b) => pathOrder(a.path, b.path) || compare(a.kind, b.kind) || compare(a.id, b.id));
+    const list = folderKeys(first.target);
+    const place = first.place;
+    const after2 = place === null ? list.length : list.filter((held) => held.added || compare(held.index, place) <= 0).length;
+    const keys = keysBetween(list[after2 - 1]?.index ?? null, list[after2]?.index ?? null, group.length);
+    group.forEach((entry, i) => {
+      const index = keys[i] ?? entry.index;
+      moves.push({ kind: entry.kind, id: entry.id, folder: first.target, index });
+      list.splice(after2 + i, 0, { index, added: true });
+    });
+  }
+  let next = state;
+  for (const { kind, id, folder: folder2, index } of moves) {
+    if (kind === "views") {
+      const view2 = next.views[id];
+      if (view2 !== void 0) next = { ...next, views: { ...next.views, [id]: { ...view2, folder: folder2, index } } };
+    } else {
+      const inner = next.folders[id];
+      if (inner !== void 0) next = { ...next, folders: { ...next.folders, [id]: { ...inner, folder: folder2, index } } };
+    }
+  }
+  return { state: next, moves };
+}
+function placeOrder(a, b) {
+  if (a === b) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return compare(a, b);
+}
+function pathOrder(a, b) {
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    const order = compare(a[i] ?? "", b[i] ?? "");
+    if (order !== 0) return order;
+  }
+  return a.length - b.length;
+}
+function placeBlocks(state, added) {
+  const active = state.active;
+  if (active === null) return state;
+  let next = state;
+  for (const block of added) {
+    const panel2 = { block };
+    const view2 = next.views[active];
+    if (view2 === void 0) return next;
+    if (Object.values(next.views).some((other) => places(other.grid, panel2))) continue;
+    next = { ...next, views: { ...next.views, [active]: { ...view2, grid: placePanel(view2.grid, panel2) } } };
+  }
+  return next;
+}
+
+// srcts/options/schemas.ts
+var optionSchemas = {
+  compact: {
+    type: "boolean",
+    description: "Whether each block card shows a compact header over the block's content"
+  },
+  view_tabs: {
+    type: "boolean",
+    description: "Whether the views show as a line of tabs under the navbar"
+  },
+  sync_rails: {
+    type: "boolean",
+    description: "Whether collapsing or opening a view's rail does so on every view at once"
+  }
+};
+
+// srcts/options/ui.tsx
+import { Checkbox, reactModule, useValue } from "@blockr/core/react";
+import { jsx } from "react/jsx-runtime";
+function checkboxUi(label) {
+  function CheckboxUi({ host }) {
+    return /* @__PURE__ */ jsx(Checkbox, { bound: useValue(host), label });
+  }
+  return reactModule(CheckboxUi);
+}
+
+// srcts/options/options.ts
+var compact = {
+  label: "Compact",
+  category: "Theme options",
+  schema: optionSchemas.compact,
+  default: logicalDefault("compact", false),
+  ui: checkboxUi("Compact")
+};
+var viewTabs = {
+  label: "Views as tabs",
+  category: "Theme options",
+  schema: optionSchemas.view_tabs,
+  default: logicalDefault("view_tabs", false),
+  ui: checkboxUi("Views as tabs")
+};
+var syncRails = {
+  label: "Sync rails across views",
+  category: "Board options",
+  schema: optionSchemas.sync_rails,
+  default: logicalDefault("sync_rails", true),
+  ui: checkboxUi("Sync rails across views")
+};
+function logicalDefault(id, fallback) {
+  return (core) => logicalOption(core, id, fallback, `which the board option ${id} does not take`);
+}
+async function logicalOption(core, name2, fallback, refused) {
+  return await readOption(core, name2, fallback, refused, (sent) => {
+    const value = typeof sent === "string" ? asLogical(sent) : sent;
+    return typeof value === "boolean" ? value : void 0;
+  });
+}
+async function numericOption(core, name2, fallback, refused) {
+  return await readOption(core, name2, fallback, refused, (sent) => {
+    const value = typeof sent === "string" ? asNumber(sent) : sent;
+    return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : void 0;
+  });
+}
+async function readOption(core, name2, fallback, refused, read) {
+  const sent = await core.blockrOption(name2);
+  if (sent === void 0) return fallback;
+  const value = read(sent);
+  if (value !== void 0) return value;
+  throw new TypeError(`The blockr option ${name2} is ${JSON.stringify(sent)}, ${refused}.`);
+}
+function asNumber(text2) {
+  const number = text2.trim() === "" ? Number.NaN : Number(text2);
+  return Number.isFinite(number) ? number : void 0;
+}
+function asLogical(text2) {
+  const trimmed = text2.trim();
+  if (["TRUE", "true", "True", "T"].includes(trimmed)) return true;
+  if (["FALSE", "false", "False", "F"].includes(trimmed)) return false;
+  return void 0;
+}
+
+// srcts/commands/common.ts
+var DOCK = "blockr.dock-dock_plugin";
+function dockState(board) {
+  const state = board.plugins[DOCK];
+  return isDockState(state) ? state : void 0;
+}
+function activeView(board) {
+  const state = dockState(board);
+  const active = state?.active ?? null;
+  return active === null ? void 0 : state?.views[active];
+}
+function at(...segments) {
+  return pointer(["plugins", DOCK, ...segments]);
+}
+function command(definition) {
+  return definition;
+}
+function fits(state, folder2, before2, moving) {
+  if (before2 === void 0) return true;
+  if (moving !== void 0 && sameEntry(before2, moving)) return false;
+  return inFolder(state, folder2).some((entry) => sameEntry(entry, before2));
+}
+function folderOrTop(state, folder2) {
+  return folder2 === null || Object.hasOwn(state.folders, folder2);
+}
+function givenGridFailures(board, grid2) {
+  const lacking = gridPanels(grid2).flatMap(
+    (panel2) => "block" in panel2 && !Object.hasOwn(board.blocks, panel2.block) ? [panel2.block] : []
+  );
+  return [...gridFailures(grid2), ...lacking.map((block) => `The grid places the panel of the block "${block}", which the board does not hold.`)];
+}
+function refuse(context, failures) {
+  if (failures.length > 0) throw context.refusal(failures);
+}
+function holdsBlock(board, panel2) {
+  return !("block" in panel2) || Object.hasOwn(board.blocks, panel2.block);
+}
+async function layoutLocks(context) {
+  if (!context.lock.board) return { rearrange: false, resize: false };
+  const read = (option) => logicalOption(context, option, true, "where it takes TRUE or FALSE");
+  const [rearrange, resize] = await Promise.all([read("lock_rearrange"), read("lock_resize")]);
+  return { rearrange, resize };
+}
+async function gridSizeTolerance(context) {
+  return await numericOption(context, "dock_grid_size_tol", 5e-3, "where it takes a number of 0 or more");
+}
+function nextName(word, taken2) {
+  let n = taken2.length + 1;
+  while (taken2.includes(`${word} ${String(n)}`)) n += 1;
+  return `${word} ${String(n)}`;
+}
+
+// srcts/commands/schemas.ts
+function object(properties, required = []) {
+  const defs = definitionsFor(properties);
+  return {
+    type: "object",
+    properties,
+    required,
+    additionalProperties: false,
+    ...Object.keys(defs).length === 0 ? {} : { $defs: defs }
+  };
+}
+var DEFINITIONS = JSON.parse(
+  JSON.stringify(dock_schema_default.definitions).replaceAll('"#/definitions/', '"#/$defs/')
+);
+function ref(name2, description) {
+  return { $ref: `#/$defs/${name2}`, description };
+}
+function definitionsFor(value) {
+  const picked = /* @__PURE__ */ new Map();
+  const queue = referenced(value);
+  for (let name2 = queue.pop(); name2 !== void 0; name2 = queue.pop()) {
+    if (picked.has(name2)) continue;
+    const definition = DEFINITIONS[name2];
+    if (definition === void 0) throw new Error(`The schema of the dock's state defines no "${name2}".`);
+    picked.set(name2, definition);
+    queue.push(...referenced(definition));
+  }
+  return Object.fromEntries([...picked].sort(([a], [b]) => a < b ? -1 : 1));
+}
+function referenced(value) {
+  return [...JSON.stringify(value).matchAll(/"#\/\$defs\/([^"]+)"/g)].flatMap((match) => match.slice(1, 2));
+}
+var view = { type: "string", description: "The id of a view." };
+var folder = { type: "string", description: "The id of a folder." };
+function into(what, optional = false) {
+  const top = optional ? " It goes to the top where this is left out." : "";
+  return {
+    type: ["string", "null"],
+    description: `The id of the folder that the ${what} goes into, or null for the top of the navigation.${top}`
+  };
+}
+function name(what, description) {
+  return {
+    type: "string",
+    pattern: "\\S",
+    description: `${description} It holds a character other than a space, and may be the name of another ${what}.`
+  };
+}
+var before = {
+  description: 'The view or folder that it goes before, as { "view": id } or { "folder": id }, which sits in the folder that it goes into. It goes at the end of that folder where this is left out.',
+  anyOf: [object({ view }, ["view"]), object({ folder }, ["folder"])]
+};
+var panel = ref("Panel", `A panel, as a grid names it: { "block": id } for a block's card, or { "plugin": id } for the UI of a plugin, by the id of its class.`);
+function near(what) {
+  return ref(
+    "Panel",
+    `A panel of the view, by whose tab group the panel ${what}: in it, or beside it on the side that \`side\` names. Where this panel sits on a rail, the panel ${what} onto that rail, and \`side\` is within.`
+  );
+}
+var side = {
+  type: "string",
+  enum: SIDES,
+  description: "Where the panel goes by the tab group of the panel that `near` names: within it, as a new tab, or in a new tab group to its left or right, or above or below it. It is within unless given. Without `near`, a side other than within places the panel at that edge of the whole grid."
+};
+var rail = {
+  type: "string",
+  enum: EDGES,
+  description: "The edge of the view whose rail takes the panel, as a new tab, which opens a rail there where the view has none. It takes precedence over `near` and `side`."
+};
+var edge = { type: "string", enum: EDGES, description: "The edge of the view that the rail sits on." };
+var grid = ref("Grid", "A view's grid, which says which panels it shows and where.");
+
+// srcts/commands/panels.ts
+function boardView(board, id) {
+  return dockState(board)?.views[id];
+}
+function shows(board, view2, panel2) {
+  const held = boardView(board, view2);
+  return held !== void 0 && places(held.grid, panel2);
+}
+function gridPatch(view2, grid2) {
+  return { op: "replace", path: at("views", view2, "grid"), value: grid2 };
+}
+function withoutPanel(grid2, panel2) {
+  return prunePanels(grid2, (placed) => !samePanel(placed, panel2));
+}
+function placeArgs(what) {
+  return object(
+    {
+      view,
+      panel,
+      near: near(what),
+      side,
+      rail
+    },
+    ["view", "panel"]
+  );
+}
+var KEPT = {
+  panels: "The board is locked, which keeps the panels that each view shows.",
+  arrangement: "The board is locked, and the blockr option lock_rearrange keeps where each panel sits.",
+  sizes: "The board is locked, and the blockr option lock_resize keeps the sizes of the splits and rails."
+};
+function keep(changes, locks, context) {
+  if (!context.lock.board) return;
+  refuse(context, [
+    ...changes.panels === true ? [KEPT.panels] : [],
+    ...changes.arrangement === true && locks.rearrange ? [KEPT.arrangement] : [],
+    ...changes.sizes === true && locks.resize ? [KEPT.sizes] : []
+  ]);
+}
+var panelCommands = [
+  command({
+    id: "blockr.dock-add_panel",
+    label: "Add panel",
+    description: "Places a panel in a view that does not show it, as the tab that its tab group or rail shows: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place, a new tab in the last tab group that holds no plugin's panel.",
+    args: placeArgs("goes"),
+    preflight(board, { view: view2, panel: panel2 }, { lock }) {
+      return !lock.board && boardView(board, view2) !== void 0 && !shows(board, view2, panel2) && holdsBlock(board, panel2);
+    },
+    run(board, { view: view2, panel: panel2, near: near2, side: side2, rail: rail2 }, context) {
+      const held = boardView(board, view2);
+      if (held === void 0) return [];
+      const place = { near: near2, side: side2, rail: rail2 };
+      refuse(context, placeFailures(held.grid, place));
+      return { patches: [gridPatch(view2, placedAt(held.grid, panel2, place, "distribute"))] };
+    }
+  }),
+  command({
+    id: "blockr.dock-remove_panel",
+    label: "Remove panel",
+    description: "Takes a panel out of a view, as closing its tab does. It removes no block, and the panel stays in the other views that show it.",
+    args: object({ view, panel }, ["view", "panel"]),
+    preflight(board, { view: view2, panel: panel2 }, { lock }) {
+      return !lock.board && shows(board, view2, panel2);
+    },
+    run(board, { view: view2, panel: panel2 }) {
+      const held = boardView(board, view2);
+      if (held === void 0) return [];
+      return { patches: [gridPatch(view2, withoutPanel(held.grid, panel2))] };
+    }
+  }),
+  command({
+    id: "blockr.dock-move_panel",
+    label: "Move panel",
+    description: "Moves a panel within a view that shows it, placed as blockr.dock-add_panel places one: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place.",
+    args: placeArgs("moves"),
+    preflight(board, { view: view2, panel: panel2, near: near2 }) {
+      return shows(board, view2, panel2) && (near2 === void 0 || !samePanel(near2, panel2));
+    },
+    async prepare(_board, args, context) {
+      return { ...args, locks: await layoutLocks(context) };
+    },
+    run(board, { view: view2, panel: panel2, near: near2, side: side2, rail: rail2, locks }, context) {
+      keep({ arrangement: true }, locks, context);
+      const held = boardView(board, view2);
+      if (held === void 0) return [];
+      const from = locate(held.grid, panel2);
+      if (rail2 !== void 0 && from !== void 0 && "edge" in from && from.edge === rail2) {
+        if (held.grid.rails?.[rail2]?.panels.length === 1) return [];
+      }
+      const place = { near: near2, side: side2, rail: rail2 };
+      const rest = withoutPanel(held.grid, panel2);
+      refuse(context, placeFailures(rest, place));
+      return { patches: [gridPatch(view2, placedAt(rest, panel2, place, "split"))] };
+    }
+  }),
+  command({
+    id: "blockr.dock-resize_panel",
+    label: "Resize panel",
+    description: "Sets the size of the tab group that holds a panel: its share of the split that holds it, a ratio between 0 and 1, while the other children of the split share the rest in proportion. For a panel on a rail, it sets the rail's width in pixels while it is open.",
+    args: object(
+      {
+        view,
+        panel,
+        size: {
+          type: "number",
+          exclusiveMinimum: 0,
+          description: "The share of its split that the tab group takes, above 0 and below 1, or the width in pixels of the rail."
+        }
+      },
+      ["view", "panel", "size"]
+    ),
+    preflight(board, { view: view2, panel: panel2 }) {
+      return shows(board, view2, panel2);
+    },
+    async prepare(_board, args, context) {
+      return { ...args, locks: await layoutLocks(context) };
+    },
+    run(board, { view: view2, panel: panel2, size, locks }, context) {
+      keep({ sizes: true }, locks, context);
+      const held = boardView(board, view2);
+      if (held === void 0) return [];
+      refuse(context, resizeFailures(held.grid, panel2, size));
+      return { patches: [gridPatch(view2, resized(held.grid, panel2, size))] };
+    }
+  }),
+  command({
+    id: "blockr.dock-activate_panel",
+    label: "Activate panel",
+    description: "Has the tab group or rail that holds a panel show it, as clicking its tab does. It takes no undo step, since it changes only what the user looks at.",
+    args: object({ view, panel }, ["view", "panel"]),
+    undo: false,
+    preflight(board, { view: view2, panel: panel2 }) {
+      return shows(board, view2, panel2);
+    },
+    run(board, { view: view2, panel: panel2 }) {
+      const held = boardView(board, view2);
+      if (held === void 0) return [];
+      return { patches: [gridPatch(view2, showing(held.grid, panel2))] };
+    }
+  }),
+  command({
+    id: "blockr.dock-show_panel",
+    label: "Show panel",
+    description: "Shows a panel in the active view, as the dock carries out core's show(): has the tab group or rail that holds it show it, opening the rail where it is collapsed, where the view shows it, and places it at the default place where the view does not, a new tab in the last tab group that holds no plugin's panel. While the board option sync_rails is on, a rail that it opens opens on every view that has a rail on that edge. It never switches views, and takes no undo step, since showing takes none. On a locked board, it only has a tab group or rail show a panel that the view shows.",
+    args: object({ panel }, ["panel"]),
+    undo: false,
+    preflight(board, { panel: panel2 }, { lock }) {
+      const active = dockState(board)?.active ?? null;
+      if (active === null || !holdsBlock(board, panel2)) return false;
+      return !lock.board || shows(board, active, panel2);
+    },
+    run(board, { panel: panel2 }) {
+      const state = dockState(board);
+      const active = state?.active ?? null;
+      const held = active === null ? void 0 : state?.views[active];
+      if (state === void 0 || active === null || held === void 0) return [];
+      if (!places(held.grid, panel2)) return { patches: [gridPatch(active, placePanel(held.grid, panel2))] };
+      const grid2 = showing(held.grid, panel2);
+      const at2 = locate(grid2, panel2);
+      if (at2 === void 0 || !("edge" in at2) || grid2.rails?.[at2.edge]?.collapsed !== true) {
+        return { patches: [gridPatch(active, grid2)] };
+      }
+      const shown = { ...state, views: { ...state.views, [active]: { ...held, grid: grid2 } } };
+      return { patches: railPatches(board, shown, active, at2.edge, false) };
+    }
+  }),
+  command({
+    id: "blockr.dock-set_grid",
+    label: "Set grid",
+    description: "Sets a view's whole grid, which says which panels the view shows and where, as the dock does after the user drags a panel or a border. A grid places each panel once, and the shares of each split are above 0 and sum to 1. Where the grid has the same splits and tab groups as the view's, a split keeps its shares unless the grid moves one by more than the blockr option dock_grid_size_tol, 0.005 unless set.",
+    args: object({ view, grid }, ["view", "grid"]),
+    preflight(board, { view: view2 }) {
+      return boardView(board, view2) !== void 0;
+    },
+    async prepare(_board, args, context) {
+      const [locks, tolerance] = await Promise.all([layoutLocks(context), gridSizeTolerance(context)]);
+      return { ...args, locks, tolerance };
+    },
+    run(board, { view: view2, grid: grid2, locks, tolerance }, context) {
+      const held = boardView(board, view2);
+      if (held === void 0) return [];
+      refuse(context, givenGridFailures(board, grid2));
+      const kept = withStoredShares(held.grid, grid2, tolerance);
+      keep(gridChanges(held.grid, kept), locks, context);
+      return { patches: [gridPatch(view2, kept)] };
+    }
+  }),
+  command({
+    id: "blockr.dock-collapse_rail",
+    label: "Collapse rail",
+    description: "Collapses the rail on an edge of a view, which then shows its tabs alone, or opens it. While the board option sync_rails is on, it does so on every view that has a rail on that edge. It takes no undo step, since it changes only what the user looks at.",
+    args: object(
+      {
+        view,
+        edge,
+        collapsed: { type: "boolean", description: "Whether the rail is collapsed, or open." }
+      },
+      ["view", "edge", "collapsed"]
+    ),
+    undo: false,
+    preflight(board, { view: view2, edge: edge2 }) {
+      return boardView(board, view2)?.grid.rails?.[edge2] !== void 0;
+    },
+    run(board, { view: view2, edge: edge2, collapsed }) {
+      const state = dockState(board);
+      if (state === void 0) return [];
+      return { patches: railPatches(board, state, view2, edge2, collapsed) };
+    }
+  })
+];
+function railPatches(board, state, view2, edge2, collapsed) {
+  const synced = board.options.sync_rails !== false;
+  return railViews(state, synced ? void 0 : view2, edge2).map(([id, grid2]) => gridPatch(id, collapsedRail(grid2, edge2, collapsed)));
+}
+function railViews(state, view2, edge2) {
+  return Object.entries(state.views).flatMap(
+    ([id, held]) => (view2 === void 0 || id === view2) && held.grid.rails?.[edge2] !== void 0 ? [[id, held.grid]] : []
+  );
+}
+
+// srcts/commands/sections.ts
+var SECTIONS = ["inputs", "outputs"];
+var sectionCommands = [
+  command({
+    id: "blockr.dock-set_sections",
+    label: "Set card sections",
+    description: "Sets the sections of a block's card that show: its inputs, its outputs, both, or neither. A card shows both unless this sets it otherwise.",
+    args: object(
+      {
+        block: { type: "string", description: "The id of a block of the board." },
+        sections: {
+          type: "array",
+          items: ref("Section", "A section of a block's card."),
+          uniqueItems: true,
+          description: 'The sections that the card shows, of "inputs" and "outputs".'
+        }
+      },
+      ["block", "sections"]
+    ),
+    preflight(board, { block }, { lock }) {
+      return !lock.board && dockState(board) !== void 0 && Object.hasOwn(board.blocks, block);
+    },
+    run(board, { block, sections }) {
+      const state = dockState(board);
+      if (state === void 0) return [];
+      const shown = SECTIONS.filter((section) => sections.includes(section));
+      if (shown.length === SECTIONS.length) {
+        return Object.hasOwn(state.visible, block) ? { patches: [{ op: "remove", path: at("visible", block) }] } : [];
+      }
+      return { patches: [{ op: "add", path: at("visible", block), value: shown }] };
+    }
+  })
+];
+
+// srcts/commands/views.ts
+var EMPTY = { orientation: "horizontal", children: [], sizes: [] };
+function editable(state, locked) {
+  return state !== void 0 && !locked;
+}
+function taken(state) {
+  return (id) => Object.hasOwn(state.views, id) || Object.hasOwn(state.folders, id);
+}
+var viewCommands = [
+  command({
+    id: "blockr.dock-add_view",
+    label: "Add view",
+    description: 'Adds a view, under a new id, and makes it the active view. It goes into a folder, or to the top, before the view or folder that `before` names, or at the end. Where no name is given, it is named "View N", with N one more than the views there are, or the first N after it that no view\'s name has. Where no grid is given, it shows nothing.',
+    args: object({
+      name: name("view", "The name of the new view."),
+      folder: into("view", true),
+      before,
+      grid: ref("Grid", "The grid of the new view, which says which panels it shows and where.")
+    }),
+    preflight(board, args, { lock }) {
+      const state = dockState(board);
+      const folder2 = args.folder ?? null;
+      return editable(state, lock.board) && folderOrTop(state, folder2) && fits(state, folder2, args.before);
+    },
+    run(board, args, context) {
+      const state = dockState(board);
+      if (state === void 0) return [];
+      const grid2 = args.grid ?? EMPTY;
+      refuse(context, givenGridFailures(board, grid2));
+      const folder2 = args.folder ?? null;
+      const id = context.mintId(taken(state));
+      const view2 = {
+        name: args.name ?? nextName("View", Object.values(state.views).map((other) => other.name)),
+        folder: folder2,
+        index: keyIn(state, folder2, args.before),
+        grid: grid2
+      };
+      return {
+        patches: [
+          { op: "add", path: at("views", id), value: view2 },
+          { op: "replace", path: at("active"), value: id }
+        ]
+      };
+    }
+  }),
+  command({
+    id: "blockr.dock-remove_view",
+    label: "Remove view",
+    description: "Removes a view, and makes the first view of the navigation active where the view it removes was. It removes no block, and refuses to remove the last view.",
+    args: object({ view }, ["view"]),
+    preflight(board, { view: view2 }, { lock }) {
+      const state = dockState(board);
+      return editable(state, lock.board) && Object.hasOwn(state.views, view2) && Object.keys(state.views).length > 1;
+    },
+    run(board, { view: view2 }) {
+      const state = dockState(board);
+      if (state === void 0) return [];
+      const views = Object.fromEntries(Object.entries(state.views).filter(([id]) => id !== view2));
+      const patches = [{ op: "remove", path: at("views", view2) }];
+      if (state.active === view2) patches.push({ op: "replace", path: at("active"), value: firstView({ ...state, views }) });
+      return { patches };
+    }
+  }),
+  command({
+    id: "blockr.dock-rename_view",
+    label: "Rename view",
+    description: "Gives a view a new name.",
+    args: object({ view, name: name("view", "The view's new name.") }, ["view", "name"]),
+    preflight(board, { view: view2 }, { lock }) {
+      const state = dockState(board);
+      return editable(state, lock.board) && Object.hasOwn(state.views, view2);
+    },
+    run: (_board, { view: view2, name: name2 }) => ({ patches: [{ op: "replace", path: at("views", view2, "name"), value: name2 }] })
+  }),
+  command({
+    id: "blockr.dock-move_view",
+    label: "Move view",
+    description: "Moves a view into a folder, or to the top, before the view or folder that `before` names, or at the end of that folder.",
+    args: object({ view, folder: into("view"), before }, ["view", "folder"]),
+    preflight(board, { view: view2, folder: folder2, before: before2 }, { lock }) {
+      const state = dockState(board);
+      return editable(state, lock.board) && Object.hasOwn(state.views, view2) && folderOrTop(state, folder2) && fits(state, folder2, before2, { view: view2 });
+    },
+    run(board, { view: view2, folder: folder2, before: before2 }) {
+      const state = dockState(board);
+      const moving = state?.views[view2];
+      if (state === void 0 || moving === void 0) return [];
+      if (moving.folder === folder2 && sitsAt(state, { view: view2 }, folder2, before2)) return [];
+      return {
+        patches: [
+          { op: "replace", path: at("views", view2, "folder"), value: folder2 },
+          { op: "replace", path: at("views", view2, "index"), value: keyIn(state, folder2, before2, { view: view2 }) }
+        ]
+      };
+    }
+  }),
+  command({
+    id: "blockr.dock-activate_view",
+    label: "Activate view",
+    description: "Makes a view the active one, which the dock shows. It takes no undo step, since it changes only what the user looks at.",
+    args: object({ view }, ["view"]),
+    undo: false,
+    preflight(board, { view: view2 }) {
+      const state = dockState(board);
+      return state !== void 0 && Object.hasOwn(state.views, view2);
+    },
+    run: (_board, { view: view2 }) => ({ patches: [{ op: "replace", path: at("active"), value: view2 }] })
+  }),
+  command({
+    id: "blockr.dock-add_folder",
+    label: "Add folder",
+    description: 'Adds a folder, under a new id, which groups views and other folders in the navigation. It goes into a folder, or to the top, before the view or folder that `before` names, or at the end. Where no name is given, it is named "Folder N", with N one more than the folders there are, or the first N after it that no folder\'s name has.',
+    args: object({
+      name: name("folder", "The name of the new folder."),
+      folder: into("folder", true),
+      before
+    }),
+    preflight(board, args, { lock }) {
+      const state = dockState(board);
+      const folder2 = args.folder ?? null;
+      return editable(state, lock.board) && folderOrTop(state, folder2) && fits(state, folder2, args.before);
+    },
+    run(board, args, { mintId }) {
+      const state = dockState(board);
+      if (state === void 0) return [];
+      const folder2 = args.folder ?? null;
+      const value = {
+        name: args.name ?? nextName("Folder", Object.values(state.folders).map((other) => other.name)),
+        folder: folder2,
+        index: keyIn(state, folder2, args.before)
+      };
+      return { patches: [{ op: "add", path: at("folders", mintId(taken(state))), value }] };
+    }
+  }),
+  command({
+    id: "blockr.dock-remove_folder",
+    label: "Remove folder",
+    description: "Removes a folder, and moves the views and folders that it holds up into the folder that held it, in its place and in their order. It removes no view.",
+    args: object({ folder }, ["folder"]),
+    preflight(board, { folder: folder2 }, { lock }) {
+      const state = dockState(board);
+      return editable(state, lock.board) && Object.hasOwn(state.folders, folder2);
+    },
+    run(board, { folder: folder2 }) {
+      const state = dockState(board);
+      if (state === void 0) return [];
+      const folders = Object.fromEntries(Object.entries(state.folders).filter(([id]) => id !== folder2));
+      const { moves } = rehoused({ ...state, folders }, state);
+      return {
+        patches: [
+          { op: "remove", path: at("folders", folder2) },
+          ...moves.flatMap((move2) => [
+            { op: "replace", path: at(move2.kind, move2.id, "folder"), value: move2.folder },
+            { op: "replace", path: at(move2.kind, move2.id, "index"), value: move2.index }
+          ])
+        ]
+      };
+    }
+  }),
+  command({
+    id: "blockr.dock-rename_folder",
+    label: "Rename folder",
+    description: "Gives a folder a new name.",
+    args: object({ folder, name: name("folder", "The folder's new name.") }, ["folder", "name"]),
+    preflight(board, { folder: folder2 }, { lock }) {
+      const state = dockState(board);
+      return editable(state, lock.board) && Object.hasOwn(state.folders, folder2);
+    },
+    run: (_board, { folder: folder2, name: name2 }) => ({
+      patches: [{ op: "replace", path: at("folders", folder2, "name"), value: name2 }]
+    })
+  }),
+  command({
+    id: "blockr.dock-move_folder",
+    label: "Move folder",
+    description: "Moves a folder, with what it holds, into another folder, or to the top, before the view or folder that `before` names, or at the end of that folder. It refuses to move a folder into itself or into a folder inside it.",
+    args: object({ folder, into: into("folder"), before }, ["folder", "into"]),
+    preflight(board, { folder: folder2, into: into2, before: before2 }, { lock }) {
+      const state = dockState(board);
+      return editable(state, lock.board) && Object.hasOwn(state.folders, folder2) && folderOrTop(state, into2) && (into2 === null || !within(state, into2, folder2)) && fits(state, into2, before2, { folder: folder2 });
+    },
+    run(board, { folder: folder2, into: into2, before: before2 }) {
+      const state = dockState(board);
+      const moving = state?.folders[folder2];
+      if (state === void 0 || moving === void 0) return [];
+      if (moving.folder === into2 && sitsAt(state, { folder: folder2 }, into2, before2)) return [];
+      return {
+        patches: [
+          { op: "replace", path: at("folders", folder2, "folder"), value: into2 },
+          { op: "replace", path: at("folders", folder2, "index"), value: keyIn(state, into2, before2, { folder: folder2 }) }
+        ]
+      };
+    }
+  })
+];
+
+// srcts/commands/index.ts
+var dockCommands = [...viewCommands, ...panelCommands, ...sectionCommands];
+
+// srcts/modules/dock/api.ts
+var API = 1;
+
+// srcts/layout/gestures.ts
+function gestureRuns(view2, shown, read, stored, reading) {
+  const before2 = withStoredRails(shown, stored);
+  const after2 = withStoredRails(
+    withStoredShares(shown, read, reading.shares ? reading.tolerance : Infinity),
+    stored,
+    reading.widths ? shown : void 0
+  );
+  const changes = gridChanges(before2, after2);
+  if (changes.panels || changes.arrangement || changes.sizes) {
+    return [{ id: "blockr.dock-set_grid", args: { view: view2, grid: after2 } }];
+  }
+  const runs = [];
+  const activate2 = (panel2) => {
+    runs.push({ id: "blockr.dock-activate_panel", args: { view: view2, panel: panel2 } });
+  };
+  const groups = tabGroups(before2);
+  tabGroups(after2).forEach((group, i) => {
+    const was = groups[i];
+    if (was !== void 0 && !samePanel(was.active, group.active)) activate2(group.active);
+  });
+  for (const edge2 of EDGES) {
+    const [was, rail2] = [before2.rails?.[edge2], after2.rails?.[edge2]];
+    if (was === void 0 || rail2 === void 0) continue;
+    if (!samePanel(was.active, rail2.active)) activate2(rail2.active);
+    if (was.collapsed !== rail2.collapsed) {
+      runs.push({ id: "blockr.dock-collapse_rail", args: { view: view2, edge: edge2, collapsed: rail2.collapsed } });
+    }
+  }
+  return runs;
+}
+function columnRuns(view2, shown, read) {
+  const held = gridPanels(read);
+  const removed = gridPanels(shown).filter((panel2) => !held.some((other) => samePanel(other, panel2)));
+  const showing2 = tabGroups(shown).map((group) => group.active);
+  const shows2 = tabGroups(read).map((group) => group.active).filter((panel2) => !showing2.some((other) => samePanel(other, panel2)));
+  return [
+    ...removed.map((panel2) => ({ id: "blockr.dock-remove_panel", args: { view: view2, panel: panel2 } })),
+    ...shows2.map((panel2) => ({ id: "blockr.dock-activate_panel", args: { view: view2, panel: panel2 } }))
+  ];
+}
+function withStoredRails(grid2, stored, moved) {
+  if (grid2.rails === void 0) return grid2;
+  const rails2 = {};
+  for (const edge2 of EDGES) {
+    const rail2 = grid2.rails[edge2];
+    if (rail2 === void 0) continue;
+    const kept = stored.rails?.[edge2];
+    const was = moved?.rails?.[edge2];
+    const dragged = was !== void 0 && was.size !== rail2.size;
+    rails2[edge2] = kept === void 0 ? rail2 : { ...rail2, size: dragged ? rail2.size : kept.size };
+  }
+  return { ...grid2, rails: rails2 };
+}
+
+// srcts/layout/ids.ts
+function panelId(panel2) {
+  return "block" in panel2 ? JSON.stringify({ block: panel2.block }) : JSON.stringify({ plugin: panel2.plugin });
+}
+function panelFromId(id) {
+  let value;
+  try {
+    value = JSON.parse(id);
+  } catch {
+    return void 0;
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return void 0;
+  const keys = Object.keys(value);
+  if (keys.length !== 1) return void 0;
+  const { block, plugin } = value;
+  if (typeof block === "string") return { block };
+  if (typeof plugin === "string") return { plugin };
+  return void 0;
+}
+function railId(edge2) {
+  return `rail-${edge2}`;
+}
+
+// srcts/layout/layout.ts
+import { Orientation } from "./vendor-a3ad4872.js";
+var PANEL_COMPONENT = "panel";
+function gridToLayout(grid2, title, size) {
+  const panels = {};
+  let groups = 0;
+  const take = (list) => list.flatMap((panel2) => {
+    const id = panelId(panel2);
+    if (Object.hasOwn(panels, id)) return [];
+    const name2 = title(panel2);
+    if (name2 === void 0) return [];
+    const params = { panel: panelFromId(id) ?? panel2 };
+    panels[id] = { id, contentComponent: PANEL_COMPONENT, title: name2, params };
+    return [id];
+  });
+  const shown = (group) => {
+    const views = take(group.panels);
+    const active = panelId(group.active);
+    const activeView2 = views.includes(active) ? active : views[0];
+    return activeView2 === void 0 ? { views } : { views, activeView: activeView2 };
+  };
+  const node = (child, share) => {
+    if (isTabGroup2(child)) {
+      const state = shown(child);
+      if (state.views.length === 0) return void 0;
+      groups += 1;
+      return { type: "leaf", size: share, data: { id: `group-${String(groups)}`, ...state } };
+    }
+    const data = split(child);
+    return data.length === 0 ? void 0 : { type: "branch", size: share, data };
+  };
+  const split = (parent) => {
+    const shares2 = fitted(parent.sizes, parent.children.length);
+    const kept = parent.children.flatMap((child, i) => node(child, shares2[i] ?? 0) ?? []);
+    const rescaled = fitted(
+      kept.map((object2) => object2.size ?? 0),
+      kept.length
+    );
+    return kept.map((object2, i) => ({ ...object2, size: rescaled[i] ?? 0 }));
+  };
+  const root = split(grid2);
+  const edgeGroup = (edge2, rail2) => {
+    const state = rail2 === void 0 ? { views: [] } : shown(rail2);
+    const holds = state.views.length > 0;
+    return {
+      size: rail2?.size ?? RAIL_SIZE,
+      visible: holds,
+      collapsed: holds && rail2?.collapsed === true,
+      group: { id: railId(edge2), ...state }
+    };
+  };
+  const edgeGroups = {};
+  for (const edge2 of EDGES) edgeGroups[edge2] = edgeGroup(edge2, grid2.rails?.[edge2]);
+  return {
+    grid: {
+      root: { type: "branch", size: 1, data: root },
+      width: size.width,
+      height: size.height,
+      orientation: grid2.orientation === "vertical" ? Orientation.VERTICAL : Orientation.HORIZONTAL
+    },
+    panels,
+    edgeGroups
+  };
+}
+function layoutToGrid(layout) {
+  const { root, orientation } = layout.grid;
+  const top = Array.isArray(root.data) ? children(root.data) : children([root]);
+  const rails2 = {};
+  for (const edge2 of EDGES) {
+    const rail2 = asRail(layout.edgeGroups?.[edge2]);
+    if (rail2 !== void 0) rails2[edge2] = rail2;
+  }
+  return {
+    orientation: orientation === Orientation.VERTICAL ? "vertical" : "horizontal",
+    ...top,
+    ...Object.keys(rails2).length === 0 ? {} : { rails: rails2 }
+  };
+}
+function children(objects) {
+  const kept = objects.flatMap((object2) => {
+    const node = asNode(object2);
+    return node === void 0 ? [] : [{ node, size: object2.size ?? 0 }];
+  });
+  return {
+    children: kept.map(({ node }) => node),
+    sizes: fitted(
+      kept.map(({ size }) => size),
+      kept.length
+    )
+  };
+}
+function asNode(object2) {
+  if (!Array.isArray(object2.data)) return asTabGroup(object2.data);
+  const split = children(object2.data);
+  return split.children.length === 0 ? void 0 : split;
+}
+function asTabGroup(state) {
+  const panels = state.views.flatMap((id) => panelFromId(id) ?? []);
+  const [first] = panels;
+  if (first === void 0) return void 0;
+  const shown = state.activeView === void 0 ? void 0 : panelFromId(state.activeView);
+  const active = shown === void 0 ? void 0 : panels.find((panel2) => samePanel(panel2, shown));
+  return { panels, active: active ?? first };
+}
+function asRail(edgeGroup) {
+  if (edgeGroup === void 0 || !isGroupState(edgeGroup.group)) return void 0;
+  const group = asTabGroup(edgeGroup.group);
+  if (group === void 0) return void 0;
+  return {
+    ...group,
+    collapsed: edgeGroup.collapsed === true,
+    size: Math.max(0, Math.round(edgeGroup.size))
+  };
+}
+function isGroupState(value) {
+  if (typeof value !== "object" || value === null) return false;
+  const { views, activeView: activeView2 } = value;
+  return Array.isArray(views) && views.every((view2) => typeof view2 === "string") && (activeView2 === void 0 || typeof activeView2 === "string");
+}
+
+// srcts/layout/stack.ts
+function stackGrid(grid2, cap) {
+  const rows = [];
+  const walk = (children2, sizes, vertical, height) => {
+    const shares2 = fitted(sizes, children2.length);
+    children2.forEach((child, i) => {
+      const share = vertical ? height * (shares2[i] ?? 0) : height;
+      if (isTabGroup2(child)) rows.push({ group: child, height: Math.min(share, cap) });
+      else walk(child.children, child.sizes, !vertical, share);
+    });
+  };
+  walk(grid2.children, grid2.sizes, grid2.orientation === "vertical", 1);
+  for (const edge2 of EDGES) {
+    const rail2 = grid2.rails?.[edge2];
+    if (rail2 !== void 0 && rail2.panels.length > 0) {
+      rows.push({ group: { panels: rail2.panels, active: rail2.active }, height: cap });
+    }
+  }
+  if (rows.length === 0) return { grid: { orientation: "vertical", children: [], sizes: [] }, height: cap };
+  const heights = rows.map((row) => row.height);
+  return {
+    grid: { orientation: "vertical", children: rows.map((row) => row.group), sizes: fitted(heights, heights.length) },
+    height: heights.reduce((total, height) => total + height, 0)
+  };
+}
+
+// srcts/modules/dock/demand.ts
+var OWNER = "blockr.dock";
+var SHOWN = 1;
+function onScreen(board, drawn, narrow) {
+  const state = dockState(board);
+  const active = state?.active ?? null;
+  const view2 = active === null ? void 0 : state?.views[active];
+  if (view2 === void 0) return { blocks: [], plugins: [] };
+  const title = (panel2) => "block" in panel2 ? board.blocks[panel2.block]?.name : drawn.get(panel2.plugin);
+  const grid2 = layoutToGrid(gridToLayout(view2.grid, title, { width: 0, height: 0 }));
+  const shown = [
+    ...tabGroups(grid2).map((group) => group.active),
+    ...EDGES.flatMap((edge2) => {
+      const rail2 = grid2.rails?.[edge2];
+      return rail2 === void 0 || rail2.collapsed && !narrow ? [] : [rail2.active];
+    })
+  ];
+  return {
+    blocks: shown.flatMap((panel2) => "block" in panel2 ? [panel2.block] : []),
+    plugins: shown.flatMap((panel2) => "plugin" in panel2 ? [panel2.plugin] : [])
+  };
+}
+function demandShown(core, drawn, narrow) {
+  const blocks = () => (board) => onScreen(board, drawn, narrow.get()).blocks;
+  const demand = core.scheduler.demand(OWNER, blocks(), { priority: SHOWN });
+  const tell = (board) => {
+    core.onScreen.set(onScreen(board, drawn, narrow.get()));
+  };
+  tell(core.store.board());
+  const offBoard = core.store.subscribe((_change, board) => {
+    tell(board);
+  });
+  const offNarrow = narrow.subscribe(() => {
+    demand.set(blocks(), { priority: SHOWN });
+    tell(core.store.board());
+  });
+  return () => {
+    offNarrow();
+    offBoard();
+    demand.release();
+  };
+}
+
+// srcts/modules/dock/busy.ts
+function trackBusy(core, drawn, narrow, delay) {
+  let turning = false;
+  let timer;
+  const listeners = /* @__PURE__ */ new Set();
+  const evaluating = () => onScreen(core.store.board(), drawn, narrow.get()).blocks.some((block) => {
+    const status = core.scheduler.status(block)?.status;
+    return status === "stale" || status === "unevaluated";
+  });
+  function turn(on) {
+    if (on === turning) return;
+    turning = on;
+    for (const fn of [...listeners]) fn();
+  }
+  function check() {
+    if (!evaluating()) {
+      clearTimeout(timer);
+      timer = void 0;
+      turn(false);
+    } else if (!turning && timer === void 0) {
+      timer = setTimeout(() => {
+        timer = void 0;
+        turn(true);
+      }, delay);
+    }
+  }
+  const offs = [
+    core.scheduler.subscribe(check),
+    core.store.subscribe(() => {
+      check();
+    }),
+    narrow.subscribe(check)
+  ];
+  check();
+  return {
+    get: () => turning,
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
+    },
+    stop() {
+      for (const off of offs) off();
+      clearTimeout(timer);
+      timer = void 0;
+      listeners.clear();
+    }
+  };
+}
+
+// srcts/modules/dock/card/card.tsx
+import { useCallback as useCallback5, useState as useState4 } from "react";
+
+// srcts/modules/dock/context.ts
+import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
+var DockContext = createContext(null);
+function useDock() {
+  const value = useContext(DockContext);
+  if (value === null) throw new Error("A component of the dock is drawn outside the dock.");
+  return value;
+}
+function useBoard(core) {
+  const subscribe = useCallback(
+    (changed) => core.store.subscribe(() => {
+      changed();
+    }),
+    [core]
+  );
+  const board = useCallback(() => core.store.board(), [core]);
+  return useSyncExternalStore(subscribe, board);
+}
+function runEdit(core, id, args) {
+  core.commands.run(id, args).catch(() => {
+  });
+}
+function giveFocus(core, block) {
+  if (core.focus.get() !== block) core.focus.set(block);
+}
+
+// srcts/modules/dock/mounted.tsx
+import { useLayoutEffect, useRef } from "react";
+import { jsx as jsx2 } from "react/jsx-runtime";
+function Mounted({ mount, label, className, data }) {
+  const ref2 = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref2.current;
+    if (el === null) return void 0;
+    const end = mount(el);
+    return () => {
+      queueMicrotask(end);
+    };
+  }, [mount]);
+  return /* @__PURE__ */ jsx2("div", { ref: ref2, role: label === void 0 ? void 0 : "region", "aria-label": label, className, ...data });
+}
+
+// srcts/modules/dock/card/header.tsx
+import { useCallback as useCallback4, useId as useId2, useLayoutEffect as useLayoutEffect4, useRef as useRef4, useState as useState3 } from "react";
+
+// srcts/modules/dock/menu.tsx
+import { Fragment, useCallback as useCallback2, useEffect, useId, useLayoutEffect as useLayoutEffect3, useMemo, useRef as useRef2, useState } from "react";
+
+// srcts/modules/dock/floating.ts
+import { useLayoutEffect as useLayoutEffect2 } from "react";
+function usePopover(ref2, source) {
+  useLayoutEffect2(() => {
+    const el = ref2.current;
+    if (el === null) return;
+    el.showPopover({ source });
+    return () => {
+      try {
+        el.hidePopover();
+      } catch {
+      }
+    };
+  }, [ref2, source]);
+}
+function useFloating(ref2, anchor, placement) {
+  useLayoutEffect2(() => {
+    const el = ref2.current;
+    if (el === null || placement === null) return;
+    const doc = el.ownerDocument;
+    const win = doc.defaultView ?? window;
+    const place = () => {
+      const view2 = { width: win.innerWidth, height: win.innerHeight };
+      const spot = placement(anchor.getBoundingClientRect(), el.getBoundingClientRect(), view2);
+      el.style.left = `${String(Math.round(spot.left))}px`;
+      el.style.top = `${String(Math.round(spot.top))}px`;
+    };
+    place();
+    const resizes = typeof win.ResizeObserver === "function" ? new win.ResizeObserver(place) : void 0;
+    resizes?.observe(el);
+    win.addEventListener("resize", place);
+    doc.addEventListener("scroll", place, true);
+    return () => {
+      resizes?.disconnect();
+      win.removeEventListener("resize", place);
+      doc.removeEventListener("scroll", place, true);
+    };
+  }, [ref2, anchor, placement]);
+}
+
+// srcts/modules/dock/icons.tsx
+import { jsx as jsx3, jsxs } from "react/jsx-runtime";
+function Chevron({ right = false }) {
+  return /* @__PURE__ */ jsx3(
+    "svg",
+    {
+      className: "blockr-dock-chevron",
+      width: "12",
+      height: "12",
+      viewBox: "0 0 12 12",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "1.4",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": "true",
+      focusable: "false",
+      children: /* @__PURE__ */ jsx3("polyline", { points: right ? "4.5 3 7.5 6 4.5 9" : "3 4.5 6 7.5 9 4.5", vectorEffect: "non-scaling-stroke" })
+    }
+  );
+}
+function WarningIcon() {
+  return /* @__PURE__ */ jsxs(
+    "svg",
+    {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "1.25",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": "true",
+      focusable: "false",
+      children: [
+        /* @__PURE__ */ jsx3("path", { d: "M8 2.25l6.25 11H1.75z" }),
+        /* @__PURE__ */ jsx3("path", { d: "M8 5.75v2.5" }),
+        /* @__PURE__ */ jsx3("circle", { cx: "8", cy: "10.75", r: "0.75", fill: "currentColor", stroke: "none" })
+      ]
+    }
+  );
+}
+function LockIcon({ size = 12 }) {
+  return /* @__PURE__ */ jsx3("svg", { width: size, height: size, viewBox: "0 0 16 16", fill: "currentColor", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx3("path", { d: "M8 1a3 3 0 0 0-3 3v3H4.5A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7H11V4a3 3 0 0 0-3-3Zm-1.75 6V4a1.75 1.75 0 1 1 3.5 0v3h-3.5Z" }) });
+}
+function CheckIcon() {
+  return /* @__PURE__ */ jsx3(
+    "svg",
+    {
+      className: "blockr-dock-check",
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "1.5",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": "true",
+      focusable: "false",
+      children: /* @__PURE__ */ jsx3("path", { d: "M3.5 8.5l3 3 6-7" })
+    }
+  );
+}
+function GripIcon() {
+  return /* @__PURE__ */ jsxs("svg", { width: "8", height: "12", viewBox: "0 0 8 12", fill: "currentColor", "aria-hidden": "true", focusable: "false", children: [
+    /* @__PURE__ */ jsx3("circle", { cx: "2", cy: "2", r: "1" }),
+    /* @__PURE__ */ jsx3("circle", { cx: "6", cy: "2", r: "1" }),
+    /* @__PURE__ */ jsx3("circle", { cx: "2", cy: "6", r: "1" }),
+    /* @__PURE__ */ jsx3("circle", { cx: "6", cy: "6", r: "1" }),
+    /* @__PURE__ */ jsx3("circle", { cx: "2", cy: "10", r: "1" }),
+    /* @__PURE__ */ jsx3("circle", { cx: "6", cy: "10", r: "1" })
+  ] });
+}
+function PlusIcon() {
+  return /* @__PURE__ */ jsx3(
+    "svg",
+    {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "1.25",
+      strokeLinecap: "round",
+      "aria-hidden": "true",
+      focusable: "false",
+      children: /* @__PURE__ */ jsx3("path", { d: "M8 3v10M3 8h10" })
+    }
+  );
+}
+function RemoveIcon() {
+  return /* @__PURE__ */ jsx3("svg", { width: "10", height: "10", viewBox: "0 0 10 10", fill: "none", stroke: "currentColor", strokeWidth: "1", strokeLinecap: "round", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx3("path", { d: "M2.5 2.5l5 5M7.5 2.5l-5 5" }) });
+}
+function SlidersIcon() {
+  return /* @__PURE__ */ jsxs(
+    "svg",
+    {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "1.25",
+      strokeLinecap: "round",
+      "aria-hidden": "true",
+      focusable: "false",
+      children: [
+        /* @__PURE__ */ jsx3("path", { d: "M2 4h12M2 8h12M2 12h12" }),
+        /* @__PURE__ */ jsx3("circle", { cx: "5", cy: "4", r: "1.6", fill: "var(--blockr-dock-bg-raised)" }),
+        /* @__PURE__ */ jsx3("circle", { cx: "10", cy: "8", r: "1.6", fill: "var(--blockr-dock-bg-raised)" }),
+        /* @__PURE__ */ jsx3("circle", { cx: "6", cy: "12", r: "1.6", fill: "var(--blockr-dock-bg-raised)" })
+      ]
+    }
+  );
+}
+function PinIcon() {
+  return /* @__PURE__ */ jsx3(
+    "svg",
+    {
+      width: "12",
+      height: "12",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "1.4",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": "true",
+      focusable: "false",
+      children: /* @__PURE__ */ jsx3("path", { d: "M5.5 2h5M6.5 2v4.25L4.5 9h7l-2-2.75V2M8 9v5", vectorEffect: "non-scaling-stroke" })
+    }
+  );
+}
+
+// srcts/modules/dock/place.ts
+var EDGE = 8;
+var MENU_GAP = 4;
+var TOOLTIP_GAP = 6;
+function clamp(value, low, high) {
+  return Math.max(low, Math.min(value, high));
+}
+function menuSpot(trigger, menu, view2, align = "start") {
+  const below = trigger.bottom + MENU_GAP;
+  const above = trigger.top - MENU_GAP - menu.height;
+  const top = below + menu.height > view2.height - EDGE && above >= EDGE ? above : below;
+  const left = align === "end" ? trigger.right - menu.width : trigger.left;
+  return {
+    left: clamp(left, EDGE, view2.width - EDGE - menu.width),
+    top: clamp(top, EDGE, view2.height - EDGE - menu.height)
+  };
+}
+function besideSpot(row, menu, view2) {
+  const right = row.right + MENU_GAP;
+  const left = row.left - MENU_GAP - menu.width;
+  const x = right + menu.width > view2.width - EDGE && left >= EDGE ? left : right;
+  return {
+    left: clamp(x, EDGE, view2.width - EDGE - menu.width),
+    top: clamp(row.top, EDGE, view2.height - EDGE - menu.height)
+  };
+}
+function tooltipSpot(trigger, tooltip, view2) {
+  const above = trigger.top - TOOLTIP_GAP - tooltip.height;
+  return {
+    left: clamp(trigger.left + trigger.width / 2 - tooltip.width / 2, EDGE, view2.width - EDGE - tooltip.width),
+    top: above < EDGE ? trigger.bottom + TOOLTIP_GAP : above
+  };
+}
+
+// srcts/modules/dock/errors.ts
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+function asError(error) {
+  return error instanceof Error ? error : new Error(errorMessage(error));
+}
+
+// srcts/modules/dock/storage.ts
+var KINDS = /* @__PURE__ */ new Set(["button", "menu", "status"]);
+function drawnControls(core) {
+  const storage = core.plugins.storage();
+  if (storage === void 0) return void 0;
+  const plugin = Object.keys(core.plugins.appPlugins()).find((id) => core.plugins.pluginClass(id).storage === storage);
+  if (plugin === void 0) return void 0;
+  const twice = /* @__PURE__ */ new Set();
+  let controls;
+  try {
+    controls = distinct(storage.controls({ core, plugin }), twice);
+  } catch (error) {
+    const failed = errorMessage(error);
+    return { failed, package: packageFromId(plugin), problem: `The storage controls of ${plugin} failed: ${failed}` };
+  }
+  if (twice.size === 0) return { controls };
+  const ids = [...twice].map((id) => JSON.stringify(id)).join(", ");
+  return { controls, problem: `Storage controls of one list share the ids ${ids}, so only the first of each draws.` };
+}
+function allButtons(controls) {
+  return controls.flatMap((control) => {
+    if (control.kind === "button") return [control];
+    if (control.kind === "menu") return allButtons(control.items);
+    return [];
+  });
+}
+function barButtons(core, items) {
+  const drawn = drawnControls(core);
+  if (drawn === void 0 || drawn.failed !== void 0) return [];
+  const all = items.some((item) => item.kind === "part" && item.id === "storage");
+  const apart = new Set(items.flatMap((item) => item.kind === "storage" ? [item.id] : []));
+  return allButtons(drawn.controls.filter((control) => all || apart.has(control.id)));
+}
+async function runButton(core, button) {
+  try {
+    await button.run();
+  } catch (error) {
+    core.log("blockr.dock").error(asError(error));
+  }
+}
+function packageFromId(id) {
+  const at2 = id.indexOf("-");
+  return at2 < 0 ? id : id.slice(0, at2);
+}
+function distinct(list, twice) {
+  const seen = /* @__PURE__ */ new Set();
+  const kept = [];
+  for (const control of list) {
+    if (!KINDS.has(control.kind)) continue;
+    if (seen.has(control.id)) {
+      twice.add(control.id);
+      continue;
+    }
+    seen.add(control.id);
+    kept.push(control.kind === "menu" ? { ...control, items: distinct(control.items, twice) } : control);
+  }
+  return kept;
+}
+
+// srcts/modules/dock/shortcuts.ts
+function bindShortcuts(doc, core, buttons) {
+  function onKey(event) {
+    if (event.defaultPrevented || editable2(event.target)) return;
+    const step = undoOrRedo(event);
+    if (step !== void 0) {
+      event.preventDefault();
+      try {
+        if (step === "undo") core.store.undo();
+        else core.store.redo();
+      } catch {
+      }
+      return;
+    }
+    const button = buttons().find(
+      (b) => b.disabled !== true && b.shortcut !== void 0 && matchesShortcut(b.shortcut, event)
+    );
+    if (button === void 0) return;
+    event.preventDefault();
+    if (!event.repeat) void runButton(core, button);
+  }
+  doc.addEventListener("keydown", onKey);
+  return () => {
+    doc.removeEventListener("keydown", onKey);
+  };
+}
+function matchesShortcut(text2, event) {
+  const shortcut = readShortcut(text2);
+  const key = event.key;
+  if (shortcut === void 0 || typeof key !== "string" || key.toLowerCase() !== shortcut.key.toLowerCase()) {
+    return false;
+  }
+  if (event.altKey !== shortcut.alt || event.shiftKey !== shortcut.shift) return false;
+  if (shortcut.mod) return event.ctrlKey || event.metaKey;
+  return event.ctrlKey === shortcut.ctrl && event.metaKey === shortcut.meta;
+}
+function ariaShortcuts(text2) {
+  const shortcut = text2 === void 0 ? void 0 : readShortcut(text2);
+  if (shortcut === void 0) return void 0;
+  const rest = [...shortcut.alt ? ["Alt"] : [], ...shortcut.shift ? ["Shift"] : [], shortcut.key];
+  const firsts = shortcut.mod ? [["Control"], ["Meta"]] : [[...shortcut.ctrl ? ["Control"] : [], ...shortcut.meta ? ["Meta"] : []]];
+  return firsts.map((first) => [...first, ...rest].join("+")).join(" ");
+}
+function shortcutLabel(text2, mac) {
+  const shortcut = readShortcut(text2);
+  if (shortcut === void 0) return text2;
+  const key = shortcut.key.length === 1 ? shortcut.key.toUpperCase() : shortcut.key;
+  if (mac) {
+    const glyphs = [
+      ...shortcut.ctrl ? ["\u2303"] : [],
+      ...shortcut.alt ? ["\u2325"] : [],
+      ...shortcut.mod || shortcut.meta ? ["\u2318"] : [],
+      ...shortcut.shift ? ["\u21E7"] : []
+    ];
+    return [...glyphs, key].join("");
+  }
+  const words = [
+    ...shortcut.mod || shortcut.ctrl ? ["Ctrl"] : [],
+    ...shortcut.alt ? ["Alt"] : [],
+    ...shortcut.shift ? ["Shift"] : [],
+    ...shortcut.meta ? ["Meta"] : []
+  ];
+  return [...words, key].join("+");
+}
+function onMac(win) {
+  const nav = win.navigator;
+  return /mac|iphone|ipad/i.test(nav.userAgentData?.platform ?? nav.platform);
+}
+var MODIFIERS = ["mod", "ctrl", "alt", "shift", "meta"];
+function readShortcut(text2) {
+  const at2 = text2.length < 2 ? -1 : text2.lastIndexOf("+", text2.length - 2);
+  const key = text2.slice(at2 + 1);
+  const names = at2 < 0 ? [] : text2.slice(0, at2).toLowerCase().split("+");
+  if (key === "" || new Set(names).size < names.length || !names.every((name2) => MODIFIERS.includes(name2))) {
+    return void 0;
+  }
+  const has = (name2) => names.includes(name2);
+  if (has("mod") && (has("ctrl") || has("meta"))) return void 0;
+  return { key, mod: has("mod"), ctrl: has("ctrl"), alt: has("alt"), shift: has("shift"), meta: has("meta") };
+}
+function undoOrRedo(event) {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey) return void 0;
+  const key = event.key.toLowerCase();
+  if (key === "z") return event.shiftKey ? "redo" : "undo";
+  if (key === "y" && !event.shiftKey) return "redo";
+  return void 0;
+}
+function editable2(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
+
+// srcts/modules/dock/menu.tsx
+import { Fragment as Fragment2, jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
+function matches(row, searched) {
+  const words = searched.toLowerCase().split(/\s+/).filter((word) => word !== "");
+  const text2 = [row.label, row.detail ?? "", row.search ?? ""].join(" ").toLowerCase();
+  return words.every((word) => text2.includes(word));
+}
+function stepped(at2, step, count2) {
+  if (at2 === null) return step === 1 ? 0 : count2 - 1;
+  return (at2 + step + count2) % count2;
+}
+function foldOf(rows, at2) {
+  const depth = rows[at2]?.depth ?? 0;
+  for (let i = at2 - 1; i >= 0 && depth > 0; i -= 1) {
+    if ((rows[i]?.depth ?? 0) < depth) return i;
+  }
+  return -1;
+}
+function anchored(doc) {
+  return doc.defaultView?.CSS.supports("position-area", "block-end") === true;
+}
+function anchorName(depth) {
+  return `--blockr-dock-menu-${String(depth)}`;
+}
+var reachable = (row) => row.status !== true;
+function useDismiss(menu, anchor, close) {
+  useEffect(() => {
+    const doc = anchor.ownerDocument;
+    const outside = (target) => menu.current !== null && !(target instanceof Node && (anchor.contains(target) || menu.current.contains(target)));
+    const onPointerDown = (event) => {
+      if (outside(event.target)) close({ restore: false, pointer: true });
+    };
+    const onFocusIn = (event) => {
+      if (outside(event.target)) close({ restore: false, pointer: false });
+    };
+    doc.addEventListener("pointerdown", onPointerDown, true);
+    doc.addEventListener("focusin", onFocusIn);
+    return () => {
+      doc.removeEventListener("pointerdown", onPointerDown, true);
+      doc.removeEventListener("focusin", onFocusIn);
+    };
+  }, [menu, anchor, close]);
+}
+function useMenuSurface(ref2, anchor, { depth, align, keyboard, onClose }) {
+  const [placement] = useState(() => {
+    if (anchored(anchor.ownerDocument)) return null;
+    return depth === 0 ? (trigger, size, view2) => menuSpot(trigger, size, view2, align) : besideSpot;
+  });
+  useLayoutEffect3(() => {
+    const name2 = anchorName(depth);
+    if (depth === 0 && !keyboard) anchor.focus({ preventScroll: true, focusVisible: false });
+    anchor.style.setProperty("anchor-name", name2);
+    ref2.current?.style.setProperty("position-anchor", name2);
+    return () => {
+      anchor.style.removeProperty("anchor-name");
+    };
+  }, [ref2, anchor, keyboard, depth]);
+  usePopover(ref2, anchor);
+  useFloating(ref2, anchor, placement);
+  useDismiss(ref2, anchor, onClose);
+}
+function Menu({
+  anchor,
+  label,
+  align = "start",
+  caption,
+  search,
+  groups,
+  note,
+  keyboard,
+  depth = 0,
+  onClose,
+  onCloseAll
+}) {
+  const ref2 = useRef2(null);
+  const field = useRef2(null);
+  const id = useId();
+  const closeAll = onCloseAll ?? onClose;
+  const [searched, setSearched] = useState("");
+  const [active, setActive] = useState(() => {
+    if (search !== void 0) return 0;
+    if (!keyboard) return null;
+    return Math.max(
+      0,
+      groups.flatMap((group) => group.rows).filter(reachable).findIndex((row) => row.current === true)
+    );
+  });
+  const [sub, setSub] = useState(null);
+  const listed = groups.some((group) => group.rows.length > 0);
+  const shown = useMemo(
+    () => groups.map((group) => ({ ...group, rows: group.rows.filter((row) => matches(row, searched)) })).filter((group) => group.rows.length > 0),
+    [groups, searched]
+  );
+  const rows = shown.flatMap((group) => group.rows).filter(reachable);
+  const rowId = (i) => `${id}-row-${String(i)}`;
+  const activeId = active !== null && active < rows.length ? rowId(active) : void 0;
+  useMenuSurface(ref2, anchor, { depth, align, keyboard, onClose });
+  useLayoutEffect3(() => {
+    (field.current ?? ref2.current)?.focus({ preventScroll: true });
+  }, []);
+  useLayoutEffect3(() => {
+    if (activeId !== void 0) ref2.current?.querySelector(`[id="${activeId}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [activeId]);
+  const closeSub = useCallback2((how) => {
+    setSub(null);
+    if (how.restore) ref2.current?.focus({ preventScroll: true });
+  }, []);
+  const rowElement = (i) => ref2.current?.querySelector(`[id="${rowId(i)}"]`) ?? null;
+  const pick = (row, i, pointer2) => {
+    if (row.disabled === true) return;
+    if (row.fold !== void 0) {
+      setActive(i);
+      row.fold.onToggle(!row.fold.open);
+      return;
+    }
+    if (row.rows !== void 0) {
+      const element = rowElement(i);
+      if (element !== null) {
+        setActive(i);
+        setSub({ key: row.key, row: element, keyboard: !pointer2 });
+      }
+      return;
+    }
+    if (row.href !== void 0) {
+      rowElement(i)?.click();
+      return;
+    }
+    closeAll({ restore: true, pointer: pointer2 });
+    row.onSelect?.();
+  };
+  const onKeyDown = (event) => {
+    if (event.nativeEvent.isComposing) return;
+    const row = active === null ? void 0 : rows[active];
+    switch (event.key) {
+      case "ArrowDown":
+      case "ArrowUp":
+        if (rows.length > 0) setActive(stepped(active, event.key === "ArrowDown" ? 1 : -1, rows.length));
+        break;
+      case "Home":
+      case "End":
+        if (search !== void 0) return;
+        setActive(event.key === "Home" ? 0 : rows.length - 1);
+        break;
+      case "ArrowRight":
+        if (search !== void 0 || row === void 0 || active === null) return;
+        if (row.fold !== void 0) {
+          if (!row.fold.open) row.fold.onToggle(true);
+          else if ((rows[active + 1]?.depth ?? 0) > (row.depth ?? 0)) setActive(active + 1);
+          break;
+        }
+        if (row.rows === void 0) return;
+        pick(row, active, false);
+        break;
+      case "ArrowLeft": {
+        if (search !== void 0) return;
+        const fold2 = active === null ? -1 : foldOf(rows, active);
+        if (row?.fold?.open === true) row.fold.onToggle(false);
+        else if (fold2 >= 0) setActive(fold2);
+        else if (depth === 0) return;
+        else onClose({ restore: true, pointer: false });
+        break;
+      }
+      case " ":
+        if (search !== void 0) return;
+        if (row !== void 0 && active !== null) pick(row, active, false);
+        break;
+      case "Enter":
+        if (row !== void 0 && active !== null) pick(row, active, false);
+        break;
+      case "Escape":
+        onClose({ restore: true, pointer: false });
+        break;
+      case "Tab":
+        closeAll({ restore: true, pointer: false });
+        return;
+      default:
+        return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const starts = shown.map(
+    (_, g) => shown.slice(0, g).reduce((count2, group) => count2 + group.rows.filter(reachable).length, 0)
+  );
+  const drawRow = (row, i, folds) => {
+    const common2 = {
+      id: rowId(i),
+      className: "blockr-dock-menu-row",
+      style: row.depth === void 0 ? void 0 : { "--depth": row.depth },
+      "data-active": i === active ? "" : void 0,
+      "data-danger": row.danger === true ? "" : void 0,
+      title: row.tooltip,
+      // The focus stays in the menu.
+      onPointerDown: (event) => {
+        event.preventDefault();
+      },
+      onPointerMove: () => {
+        if (active !== i) setActive(i);
+      }
+    };
+    const content = /* @__PURE__ */ jsxs2(Fragment2, { children: [
+      row.fold !== void 0 ? /* @__PURE__ */ jsx4("span", { className: "blockr-dock-menu-fold", "aria-hidden": "true", children: /* @__PURE__ */ jsx4(Chevron, {}) }) : folds ? /* @__PURE__ */ jsx4("span", { className: "blockr-dock-menu-fold", "aria-hidden": "true" }) : null,
+      row.lead === void 0 ? null : /* @__PURE__ */ jsx4("span", { className: "blockr-dock-menu-lead", "aria-hidden": "true", children: row.lead }),
+      /* @__PURE__ */ jsx4("span", { className: "blockr-dock-menu-label", children: row.label }),
+      row.detail === void 0 ? null : /* @__PURE__ */ jsx4("span", { className: "blockr-dock-menu-detail", children: row.detail }),
+      row.badge === void 0 ? null : /* @__PURE__ */ jsx4("span", { className: "blockr-dock-menu-badge", children: row.badge }),
+      row.meta === void 0 ? null : /* @__PURE__ */ jsx4("span", { className: "blockr-dock-menu-meta", children: row.meta }),
+      row.checked === true ? /* @__PURE__ */ jsx4(CheckIcon, {}) : null
+    ] });
+    if (search !== void 0) {
+      return /* @__PURE__ */ jsx4(
+        "div",
+        {
+          ...common2,
+          role: "option",
+          "aria-selected": i === active,
+          onClick: (event) => {
+            pick(row, i, event.detail !== 0);
+          },
+          children: content
+        }
+      );
+    }
+    if (row.href !== void 0) {
+      return /* @__PURE__ */ jsx4(
+        "a",
+        {
+          ...common2,
+          role: "menuitem",
+          tabIndex: -1,
+          href: row.href,
+          target: "_blank",
+          rel: "noopener noreferrer",
+          onClick: (event) => {
+            const pointer2 = event.detail !== 0;
+            setTimeout(() => {
+              closeAll({ restore: true, pointer: pointer2 });
+            }, 0);
+          },
+          children: content
+        }
+      );
+    }
+    if (row.rows !== void 0) {
+      const open = sub?.key === row.key;
+      return /* @__PURE__ */ jsxs2("div", { role: "none", children: [
+        /* @__PURE__ */ jsxs2(
+          "button",
+          {
+            ...common2,
+            type: "button",
+            role: "menuitem",
+            tabIndex: -1,
+            "aria-haspopup": "menu",
+            "aria-expanded": open,
+            onClick: (event) => {
+              if (open) closeSub({ restore: false, pointer: true });
+              else pick(row, i, event.detail !== 0);
+            },
+            children: [
+              content,
+              /* @__PURE__ */ jsx4(Chevron, { right: true })
+            ]
+          }
+        ),
+        open ? /* @__PURE__ */ jsx4(
+          Menu,
+          {
+            anchor: sub.row,
+            label: row.label,
+            groups: [{ key: row.key, rows: row.rows }],
+            keyboard: sub.keyboard,
+            depth: depth + 1,
+            onClose: closeSub,
+            onCloseAll: closeAll
+          }
+        ) : null
+      ] });
+    }
+    return /* @__PURE__ */ jsx4(
+      "button",
+      {
+        ...common2,
+        type: "button",
+        role: row.current !== void 0 ? "menuitemradio" : row.checked !== void 0 ? "menuitemcheckbox" : "menuitem",
+        tabIndex: -1,
+        "aria-checked": row.current ?? row.checked,
+        "aria-expanded": row.fold?.open,
+        "aria-disabled": row.disabled === true ? true : void 0,
+        "aria-keyshortcuts": ariaShortcuts(row.shortcut),
+        onClick: (event) => {
+          pick(row, i, event.detail !== 0);
+        },
+        children: content
+      }
+    );
+  };
+  const drawGroup = (group, g) => {
+    const folds = group.rows.some((row) => row.fold !== void 0);
+    const drawn = group.rows.map((row, r) => {
+      const element = row.status === true ? /* @__PURE__ */ jsx4("div", { role: "none", className: "blockr-dock-menu-status", title: row.tooltip, children: row.label }) : drawRow(row, (starts[g] ?? 0) + group.rows.slice(0, r).filter(reachable).length, folds);
+      return /* @__PURE__ */ jsxs2(Fragment, { children: [
+        row.divided === true && search === void 0 ? /* @__PURE__ */ jsx4("hr", { className: "blockr-dock-menu-divider" }) : null,
+        element
+      ] }, row.key);
+    });
+    return group.title === void 0 ? /* @__PURE__ */ jsx4(Fragment, { children: drawn }, group.key) : /* @__PURE__ */ jsxs2("div", { role: "group", "aria-labelledby": `${id}-${group.key}`, children: [
+      /* @__PURE__ */ jsx4("div", { id: `${id}-${group.key}`, role: "presentation", className: "blockr-dock-menu-title", children: group.title }),
+      drawn
+    ] }, group.key);
+  };
+  return /* @__PURE__ */ jsxs2(
+    "div",
+    {
+      ref: ref2,
+      popover: "auto",
+      className: "blockr-dock-menu",
+      "data-align": align,
+      "data-depth": depth,
+      tabIndex: -1,
+      onKeyDown,
+      onToggle: (event) => {
+        if (event.newState === "closed") onClose({ restore: false, pointer: false });
+      },
+      ...search === void 0 && listed ? { role: "menu", "aria-label": label, "aria-activedescendant": activeId } : {},
+      children: [
+        caption === void 0 ? null : /* @__PURE__ */ jsx4("p", { className: "blockr-dock-menu-caption", children: caption }),
+        !listed ? /* @__PURE__ */ jsx4("p", { className: "blockr-dock-menu-note", children: note }) : search === void 0 ? shown.map(drawGroup) : /* @__PURE__ */ jsxs2(Fragment2, { children: [
+          /* @__PURE__ */ jsx4("div", { className: "blockr-dock-menu-search", children: /* @__PURE__ */ jsx4(
+            "input",
+            {
+              ref: field,
+              type: "search",
+              role: "combobox",
+              "aria-label": search.label,
+              "aria-expanded": "true",
+              "aria-controls": `${id}-list`,
+              "aria-autocomplete": "list",
+              "aria-activedescendant": activeId,
+              placeholder: search.label,
+              autoComplete: "off",
+              spellCheck: false,
+              value: searched,
+              onChange: (event) => {
+                setSearched(event.target.value);
+                setActive(0);
+              }
+            }
+          ) }),
+          /* @__PURE__ */ jsx4("div", { id: `${id}-list`, role: "listbox", "aria-label": label, children: shown.map(drawGroup) }),
+          rows.length === 0 ? /* @__PURE__ */ jsx4("p", { className: "blockr-dock-menu-note", children: search.empty }) : null
+        ] })
+      ]
+    }
+  );
+}
+function useMenuButton(open, show, close) {
+  const pressedOpen = useRef2(false);
+  return {
+    "aria-haspopup": "menu",
+    "aria-expanded": open,
+    onPointerDown: () => {
+      pressedOpen.current = open;
+    },
+    onClick: (event) => {
+      const keyboard = event.detail === 0;
+      const wasOpen = open || !keyboard && pressedOpen.current;
+      pressedOpen.current = false;
+      if (wasOpen) close();
+      else show(event.currentTarget, keyboard);
+    },
+    onKeyDown: (event) => {
+      if (event.key !== "ArrowDown" || open) return;
+      event.preventDefault();
+      show(event.currentTarget, true);
+    }
+  };
+}
+function entryRows(entries) {
+  return entries.map((entry) => {
+    switch (entry.kind) {
+      case "link":
+        return { key: entry.id, label: entry.label, href: entry.href };
+      case "button":
+        return {
+          key: entry.id,
+          label: entry.label,
+          ...entry.tooltip === void 0 ? {} : { tooltip: entry.tooltip },
+          ...entry.shortcut === void 0 ? {} : { shortcut: entry.shortcut },
+          ...entry.disabled === true ? { disabled: true } : {},
+          onSelect: entry.run
+        };
+      case "status":
+        return { key: entry.id, label: entry.text, status: true, ...entry.tooltip === void 0 ? {} : { tooltip: entry.tooltip } };
+      case "menu":
+        return { key: entry.id, label: entry.label, rows: entryRows(entry.entries) };
+    }
+  });
+}
+function MenuButton({ label, entries, className, onTip }) {
+  const [open, setOpen] = useState(null);
+  const button = useRef2(null);
+  const props = useMenuButton(
+    open !== null,
+    (anchor, keyboard) => {
+      setOpen({ anchor, keyboard });
+    },
+    () => {
+      setOpen(null);
+    }
+  );
+  const close = useCallback2((how) => {
+    setOpen(null);
+    if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+  }, []);
+  const tip = (event) => {
+    onTip?.(event.currentTarget);
+  };
+  return /* @__PURE__ */ jsxs2(Fragment2, { children: [
+    /* @__PURE__ */ jsxs2("button", { ref: button, type: "button", className, ...props, onPointerEnter: tip, onFocus: tip, children: [
+      /* @__PURE__ */ jsx4("span", { className: "blockr-dock-bar-label", children: label }),
+      /* @__PURE__ */ jsx4(Chevron, {})
+    ] }),
+    open === null ? null : /* @__PURE__ */ jsx4(
+      Menu,
+      {
+        anchor: open.anchor,
+        label,
+        groups: [{ key: "entries", rows: entryRows(entries) }],
+        keyboard: open.keyboard,
+        onClose: close
+      }
+    )
+  ] });
+}
+
+// srcts/modules/dock/card/mark.tsx
+import { jsx as jsx5 } from "react/jsx-runtime";
+var UNCATEGORIZED = "uncategorized";
+function categoryOf(entry) {
+  return entry === void 0 || entry.category === "" ? UNCATEGORIZED : entry.category;
+}
+function packageOf(id) {
+  const at2 = id.indexOf("-");
+  return at2 > 0 ? id.slice(0, at2) : null;
+}
+function Mark({
+  entry,
+  size,
+  ...rest
+}) {
+  return /* @__PURE__ */ jsx5(
+    "span",
+    {
+      ...rest,
+      className: "blockr-card-mark",
+      "data-size": size,
+      "data-category": categoryOf(entry),
+      dangerouslySetInnerHTML: { __html: entry?.icon ?? "" }
+    }
+  );
+}
+
+// srcts/modules/dock/card/classes.tsx
+import { jsx as jsx6 } from "react/jsx-runtime";
+var UNCATEGORIZED2 = categoryOf(void 0);
+function classGroups(entries, pick) {
+  const groups = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    const category = categoryOf(entry);
+    groups.set(category, [...groups.get(category) ?? [], entry]);
+  }
+  const last = (category) => category === UNCATEGORIZED2 ? 1 : 0;
+  return [...groups].sort(([a], [b]) => last(a) - last(b) || a.localeCompare(b)).map(([category, list]) => ({
+    key: category,
+    title: category,
+    rows: list.sort((a, b) => a.name.localeCompare(b.name)).map((entry) => {
+      const pkg = packageOf(entry.id);
+      return {
+        key: entry.id,
+        label: entry.name,
+        lead: /* @__PURE__ */ jsx6(Mark, { entry, size: 24 }),
+        ...pkg === null ? {} : { badge: pkg },
+        search: [entry.id, entry.category, ...entry.keywords].join(" "),
+        onSelect: () => {
+          pick(entry);
+        }
+      };
+    })
+  }));
+}
+
+// srcts/modules/dock/card/clipboard.ts
+async function copyText(doc, text2) {
+  const { clipboard } = doc.defaultView?.navigator ?? {};
+  if (clipboard === void 0) return copyCommand(doc, text2);
+  try {
+    await clipboard.writeText(text2);
+    return true;
+  } catch {
+    return copyCommand(doc, text2);
+  }
+}
+function copyCommand(doc, text2) {
+  const before2 = doc.activeElement;
+  const field = doc.createElement("textarea");
+  field.value = text2;
+  field.setAttribute("readonly", "");
+  field.style.cssText = "position: fixed; inset-block-start: 0; opacity: 0;";
+  doc.body.append(field);
+  field.select();
+  try {
+    return doc.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    field.remove();
+    if (before2 instanceof HTMLElement) before2.focus({ preventScroll: true });
+  }
+}
+
+// srcts/modules/dock/card/icons.tsx
+import { jsx as jsx7, jsxs as jsxs3 } from "react/jsx-runtime";
+function Icon({ width = 1.25, children: children2 }) {
+  return /* @__PURE__ */ jsx7(
+    "svg",
+    {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: width,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": "true",
+      children: children2
+    }
+  );
+}
+function SlidersIcon2() {
+  return /* @__PURE__ */ jsxs3(Icon, { children: [
+    /* @__PURE__ */ jsx7("path", { d: "M2 4h12M2 8h12M2 12h12" }),
+    /* @__PURE__ */ jsx7("circle", { className: "blockr-card-icon-knob", cx: "5", cy: "4", r: "1.6" }),
+    /* @__PURE__ */ jsx7("circle", { className: "blockr-card-icon-knob", cx: "10", cy: "8", r: "1.6" }),
+    /* @__PURE__ */ jsx7("circle", { className: "blockr-card-icon-knob", cx: "6", cy: "12", r: "1.6" })
+  ] });
+}
+function EyeIcon() {
+  return /* @__PURE__ */ jsxs3(Icon, { width: 1.4, children: [
+    /* @__PURE__ */ jsx7("path", { d: "M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" }),
+    /* @__PURE__ */ jsx7("circle", { cx: "8", cy: "8", r: "2" })
+  ] });
+}
+function LockIcon2({ open }) {
+  return /* @__PURE__ */ jsxs3(Icon, { children: [
+    /* @__PURE__ */ jsx7("rect", { x: "3.5", y: "7", width: "9", height: "6.5", rx: "1.5" }),
+    /* @__PURE__ */ jsx7("path", { d: open ? "M5.5 7V5a2.5 2.5 0 0 1 4.67-1.25" : "M5.5 7V5a2.5 2.5 0 0 1 5 0v2" })
+  ] });
+}
+function DotsIcon() {
+  return /* @__PURE__ */ jsxs3("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "currentColor", "aria-hidden": "true", children: [
+    /* @__PURE__ */ jsx7("circle", { cx: "3.5", cy: "8", r: "1.2" }),
+    /* @__PURE__ */ jsx7("circle", { cx: "8", cy: "8", r: "1.2" }),
+    /* @__PURE__ */ jsx7("circle", { cx: "12.5", cy: "8", r: "1.2" })
+  ] });
+}
+function BinIcon() {
+  return /* @__PURE__ */ jsx7(Icon, { children: /* @__PURE__ */ jsx7("path", { d: "M2.5 4.5h11M6.5 4.5V3h3v1.5M4 4.5l.7 9h6.6l.7-9" }) });
+}
+
+// srcts/modules/dock/card/tooltip.tsx
+import { useCallback as useCallback3, useEffect as useEffect2, useRef as useRef3, useState as useState2 } from "react";
+import { Fragment as Fragment3, jsx as jsx8, jsxs as jsxs4 } from "react/jsx-runtime";
+var DELAY = 300;
+var WARM = 400;
+function createTooltips() {
+  let current;
+  let warmUntil = 0;
+  return {
+    showing(hide) {
+      if (current !== void 0 && current !== hide) current();
+      current = hide;
+    },
+    left() {
+      warmUntil = Date.now() + WARM;
+    },
+    warm: () => Date.now() < warmUntil
+  };
+}
+function useTooltip(source) {
+  const { tooltips } = useDock();
+  const [shown, setShown] = useState2(null);
+  const timer = useRef3(void 0);
+  const showing2 = useRef3(false);
+  const hide = useCallback3(() => {
+    clearTimeout(timer.current);
+    timer.current = void 0;
+    if (!showing2.current) return;
+    showing2.current = false;
+    tooltips.left();
+    setShown(null);
+  }, [tooltips]);
+  const show = (el) => {
+    const tip = typeof source === "function" ? source(el) : source;
+    if (tip === null || tip.length === 0 || !el.isConnected) return;
+    tooltips.showing(hide);
+    showing2.current = true;
+    setShown({ el, tip });
+  };
+  useEffect2(() => {
+    if (shown === null) return;
+    const doc = shown.el.ownerDocument;
+    const onKey = (event) => {
+      if (event.key === "Escape") hide();
+    };
+    doc.addEventListener("keydown", onKey, true);
+    doc.addEventListener("scroll", hide, true);
+    return () => {
+      doc.removeEventListener("keydown", onKey, true);
+      doc.removeEventListener("scroll", hide, true);
+    };
+  }, [shown, hide]);
+  useEffect2(() => hide, [hide]);
+  const props = {
+    onPointerEnter(event) {
+      if (event.pointerType === "touch" || showing2.current) return;
+      const el = event.currentTarget;
+      clearTimeout(timer.current);
+      if (tooltips.warm()) show(el);
+      else
+        timer.current = setTimeout(() => {
+          show(el);
+        }, DELAY);
+    },
+    onPointerLeave: hide,
+    onPointerDown: hide,
+    onFocus(event) {
+      if (event.currentTarget.matches(":focus-visible")) show(event.currentTarget);
+    },
+    onBlur: hide
+  };
+  const tooltip = shown === null ? null : /* @__PURE__ */ jsx8(TooltipCard, { anchor: shown.el, tip: shown.tip });
+  return { props, tooltip };
+}
+function TooltipCard({ anchor, tip }) {
+  const ref2 = useRef3(null);
+  usePopover(ref2, anchor);
+  useFloating(ref2, anchor, tooltipSpot);
+  const lines = typeof tip === "string" ? [{ text: tip }] : tip;
+  return /* @__PURE__ */ jsx8("div", { ref: ref2, popover: "manual", role: "tooltip", className: "blockr-card-tooltip", children: lines.map((line, i) => /* @__PURE__ */ jsxs4("div", { className: "blockr-card-tooltip-line", "data-muted": line.muted === true ? "" : void 0, children: [
+    line.text,
+    line.badge === void 0 ? null : /* @__PURE__ */ jsxs4(Fragment3, { children: [
+      " ",
+      /* @__PURE__ */ jsx8("span", { className: "blockr-card-tooltip-badge", children: line.badge })
+    ] })
+  ] }, i)) });
+}
+
+// srcts/modules/dock/card/header.tsx
+import { Fragment as Fragment4, jsx as jsx9, jsxs as jsxs5 } from "react/jsx-runtime";
+var GESTURE = "Double-click to edit";
+function Header({
+  id,
+  block,
+  entry,
+  sections,
+  drawn
+}) {
+  const { core } = useDock();
+  const locked = core.lock.board;
+  const [renaming, setRenaming] = useState3(false);
+  const menuButton = useRef4(null);
+  const open = block.locked === false;
+  const toggle = (section) => {
+    const shown = sections.includes(section) ? sections.filter((each) => each !== section) : [...sections, section];
+    runEdit(core, "blockr.dock-set_sections", {
+      block: id,
+      sections: SECTIONS.filter((each) => shown.includes(each))
+    });
+  };
+  const rename2 = () => {
+    setRenaming(true);
+  };
+  return /* @__PURE__ */ jsxs5("header", { className: "blockr-card-header", children: [
+    /* @__PURE__ */ jsx9(HeaderMark, { entry, block }),
+    /* @__PURE__ */ jsx9("div", { className: "blockr-card-title", children: renaming ? /* @__PURE__ */ jsx9(
+      NameField,
+      {
+        name: block.name,
+        onCommit: (name2) => {
+          runEdit(core, "blockr.core-rename_block", { id, name: name2 });
+        },
+        onDone: (restore) => {
+          setRenaming(false);
+          if (restore) menuButton.current?.focus({ preventScroll: true });
+        }
+      }
+    ) : /* @__PURE__ */ jsx9(Name, { name: block.name, editable: !locked, onRename: rename2 }) }),
+    /* @__PURE__ */ jsxs5("div", { className: "blockr-card-tools", children: [
+      locked ? null : /* @__PURE__ */ jsxs5(Fragment4, { children: [
+        drawn ? /* @__PURE__ */ jsx9(
+          Tool,
+          {
+            label: "Controls",
+            pressed: sections.includes("inputs"),
+            onClick: () => {
+              toggle("inputs");
+            },
+            children: /* @__PURE__ */ jsx9(SlidersIcon2, {})
+          }
+        ) : null,
+        /* @__PURE__ */ jsx9(
+          Tool,
+          {
+            label: "Preview",
+            pressed: sections.includes("outputs"),
+            onClick: () => {
+              toggle("outputs");
+            },
+            children: /* @__PURE__ */ jsx9(EyeIcon, {})
+          }
+        ),
+        /* @__PURE__ */ jsx9(
+          Tool,
+          {
+            label: open ? "Open to readers" : "Locked for readers",
+            pressed: open,
+            onClick: () => {
+              runEdit(core, "blockr.core-set_block_lock", { id, locked: open ? null : false });
+            },
+            children: /* @__PURE__ */ jsx9(LockIcon2, { open })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsx9(MenuButton2, { ref: menuButton, id, block, onRename: rename2 })
+    ] })
+  ] });
+}
+function HeaderMark({ entry, block }) {
+  const pkg = packageOf(block.registry_id);
+  const name2 = entry?.name ?? block.registry_id;
+  const { props, tooltip } = useTooltip([pkg === null ? { text: name2 } : { text: name2, badge: pkg }]);
+  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+    /* @__PURE__ */ jsx9(Mark, { entry, size: 32, role: "img", "aria-label": pkg === null ? name2 : `${name2}, ${pkg}`, ...props }),
+    tooltip
+  ] });
+}
+function cutOff(el) {
+  return el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+}
+function Name({ name: name2, editable: editable3, onRename }) {
+  const { props, tooltip } = useTooltip((el) => {
+    const cut = cutOff(el);
+    if (!editable3) return cut ? name2 : null;
+    return cut ? [{ text: name2 }, { text: GESTURE, muted: true }] : GESTURE;
+  });
+  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+    /* @__PURE__ */ jsx9("h3", { className: "blockr-card-name", "data-editable": editable3 ? "" : void 0, onDoubleClick: editable3 ? onRename : void 0, ...props, children: name2 }),
+    tooltip
+  ] });
+}
+function NameField({
+  name: name2,
+  onCommit,
+  onDone
+}) {
+  const [value, setValue] = useState3(name2);
+  const [refused, setRefused] = useState3(false);
+  const field = useRef4(null);
+  const ended = useRef4(false);
+  const error = useId2();
+  useLayoutEffect4(() => {
+    field.current?.focus({ preventScroll: true });
+    field.current?.select();
+  }, []);
+  const end = (commit, restore) => {
+    if (ended.current) return;
+    ended.current = true;
+    const given = value.trim();
+    if (commit && given !== name2) onCommit(given);
+    onDone(restore);
+  };
+  return /* @__PURE__ */ jsxs5("div", { className: "blockr-card-name-edit", children: [
+    /* @__PURE__ */ jsx9(
+      "input",
+      {
+        ref: field,
+        className: "blockr-card-name-field",
+        "aria-label": "Block name",
+        "aria-invalid": refused,
+        "aria-describedby": refused ? error : void 0,
+        value,
+        onChange: (event) => {
+          setValue(event.target.value);
+          if (event.target.value.trim() !== "") setRefused(false);
+        },
+        onKeyDown: (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            if (value.trim() === "") setRefused(true);
+            else end(true, true);
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            end(false, true);
+          }
+        },
+        onBlur: () => {
+          end(value.trim() !== "", false);
+        }
+      }
+    ),
+    refused ? /* @__PURE__ */ jsx9("div", { id: error, className: "blockr-card-name-error", children: "A block needs a name" }) : null
+  ] });
+}
+function Tool({
+  label,
+  pressed,
+  onClick,
+  children: children2
+}) {
+  const { props, tooltip } = useTooltip(label);
+  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+    /* @__PURE__ */ jsx9("button", { type: "button", className: "blockr-card-tool", "aria-label": label, "aria-pressed": pressed, onClick, ...props, children: children2 }),
+    tooltip
+  ] });
+}
+function MenuButton2({
+  ref: ref2,
+  id,
+  block,
+  onRename
+}) {
+  const { core, plugin } = useDock();
+  const [open, setOpen] = useState3(null);
+  const { props: tip, tooltip } = useTooltip(open === null ? "More actions" : null);
+  const button = useMenuButton(
+    open !== null,
+    (anchor, keyboard) => {
+      setOpen({ menu: "actions", anchor, keyboard });
+    },
+    () => {
+      setOpen(null);
+    }
+  );
+  const close = useCallback4(
+    (how) => {
+      setOpen(null);
+      if (how.restore) ref2.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+    },
+    [ref2]
+  );
+  const actions = (anchor) => {
+    const copy = {
+      key: "copy",
+      label: "Copy block ID",
+      meta: id,
+      onSelect() {
+        void copyText(anchor.ownerDocument, id).then((copied) => {
+          if (!copied) {
+            core.notifications.notify(plugin, {
+              severity: "error",
+              code: "copy_failed",
+              message: `The browser did not let the dock copy the block ID "${id}".`
+            });
+          }
+        });
+      }
+    };
+    if (core.lock.board) return [copy];
+    return [
+      { key: "rename", label: "Rename", onSelect: onRename },
+      {
+        key: "append",
+        label: "Append block",
+        onSelect() {
+          setOpen({ menu: "append", anchor, keyboard: false });
+        }
+      },
+      copy,
+      {
+        key: "remove",
+        label: "Remove block",
+        lead: /* @__PURE__ */ jsx9(BinIcon, {}),
+        danger: true,
+        divided: true,
+        onSelect() {
+          runEdit(core, "blockr.core-remove_block", { id });
+        }
+      }
+    ];
+  };
+  const append = (entry) => {
+    const [first] = entry.inputs;
+    const input = entry.inputs.length > 1 && !entry.inputs.includes("...") && first !== void 0 ? { input: first } : {};
+    runEdit(core, "blockr.core-append_block", { from: id, registry_id: entry.id, ...input });
+  };
+  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+    /* @__PURE__ */ jsx9(
+      "button",
+      {
+        ref: ref2,
+        type: "button",
+        className: "blockr-card-tool",
+        "aria-label": "More actions",
+        ...tip,
+        ...button,
+        onPointerDown: () => {
+          button.onPointerDown();
+          tip.onPointerDown();
+        },
+        children: /* @__PURE__ */ jsx9(DotsIcon, {})
+      }
+    ),
+    tooltip,
+    open?.menu === "actions" ? /* @__PURE__ */ jsx9(
+      Menu,
+      {
+        anchor: open.anchor,
+        label: "More actions",
+        align: "end",
+        groups: [{ key: "actions", rows: actions(open.anchor) }],
+        keyboard: open.keyboard,
+        onClose: close
+      }
+    ) : null,
+    open?.menu === "append" ? /* @__PURE__ */ jsx9(
+      Menu,
+      {
+        anchor: open.anchor,
+        label: "Block classes",
+        align: "end",
+        caption: `Append to ${block.name}`,
+        search: { label: "Search blocks", empty: "No matches" },
+        groups: classGroups(
+          Object.values(core.blockRegistry()).filter((entry) => entry.inputs.length > 0),
+          append
+        ),
+        keyboard: open.keyboard,
+        onClose: close
+      }
+    ) : null
+  ] });
+}
+
+// srcts/modules/dock/card/section.tsx
+import { useLayoutEffect as useLayoutEffect5, useRef as useRef5 } from "react";
+import { jsx as jsx10 } from "react/jsx-runtime";
+function Section({
+  name: name2,
+  open,
+  empty = false,
+  children: children2
+}) {
+  const ref2 = useRef5(null);
+  const was = useRef5(null);
+  useLayoutEffect5(() => {
+    const el = ref2.current;
+    if (el === null) return;
+    const before2 = was.current;
+    was.current = open;
+    if (before2 === null || before2 === open || empty) {
+      settle(el, open && !empty);
+      return;
+    }
+    return fold(el, open);
+  }, [open, empty]);
+  return /* @__PURE__ */ jsx10("section", { ref: ref2, className: "blockr-card-section", "data-section": name2, children: /* @__PURE__ */ jsx10("div", { className: "blockr-card-section-body", children: children2 }) });
+}
+function settle(el, shows2) {
+  delete el.dataset.folding;
+  el.dataset.open = String(shows2);
+  el.hidden = !shows2;
+}
+function fold(el, open) {
+  let current = true;
+  el.dataset.folding = "";
+  if (open) {
+    el.hidden = false;
+    el.getBoundingClientRect();
+  }
+  el.dataset.open = String(open);
+  const transitions = el.getAnimations().filter((animation) => "transitionProperty" in animation);
+  void Promise.allSettled(transitions.map((transition) => transition.finished)).then(() => {
+    if (!current) return;
+    delete el.dataset.folding;
+    if (!open) el.hidden = true;
+  });
+  return () => {
+    current = false;
+  };
+}
+
+// srcts/modules/dock/card/card.tsx
+import { jsx as jsx11, jsxs as jsxs6 } from "react/jsx-runtime";
+function BlockCard({ id }) {
+  const { core } = useDock();
+  const board = useBoard(core);
+  const [drawn, setDrawn] = useState4(false);
+  const focus = useCallback5(() => {
+    giveFocus(core, id);
+  }, [core, id]);
+  const mountUi = useCallback5(
+    (el) => {
+      const cleanup = core.mountBlock(el, id);
+      const seen = () => {
+        setDrawn(el.hasChildNodes());
+      };
+      seen();
+      const watch = new MutationObserver(seen);
+      watch.observe(el, { childList: true });
+      return () => {
+        watch.disconnect();
+        cleanup();
+      };
+    },
+    [core, id]
+  );
+  const mountOutput = useCallback5((el) => core.mountOutput(el, id), [core, id]);
+  const block = board.blocks[id];
+  if (block === void 0) return null;
+  const sections = dockState(board)?.visible[id] ?? SECTIONS;
+  const compact2 = core.options.value("compact") === true;
+  const entry = core.blockRegistry()[block.registry_id];
+  const inputs = !core.store.locked(id);
+  return /* @__PURE__ */ jsxs6(
+    "article",
+    {
+      className: "blockr-card",
+      "aria-label": block.name,
+      "data-compact": compact2 ? "" : void 0,
+      onPointerDown: focus,
+      onFocus: focus,
+      children: [
+        /* @__PURE__ */ jsx11(Header, { id, block, entry, sections, drawn: inputs && drawn }),
+        /* @__PURE__ */ jsxs6("div", { className: "blockr-card-sections", children: [
+          inputs ? /* @__PURE__ */ jsx11(Section, { name: "inputs", open: sections.includes("inputs"), empty: !drawn, children: /* @__PURE__ */ jsx11(Mounted, { mount: mountUi, label: "Inputs" }) }) : null,
+          /* @__PURE__ */ jsx11(Section, { name: "outputs", open: sections.includes("outputs"), children: /* @__PURE__ */ jsx11(Mounted, { mount: mountOutput, label: "Output", className: "blockr-card-output" }) })
+        ] })
+      ]
+    }
+  );
+}
+
+// srcts/modules/dock/dock.tsx
+import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./vendor-a3ad4872.js";
+import { useCallback as useCallback8, useEffect as useEffect3, useMemo as useMemo3, useRef as useRef8, useState as useState8, useSyncExternalStore as useSyncExternalStore3 } from "react";
+
+// srcts/modules/dock/drawing.ts
+var EMPTY2 = { orientation: "horizontal", children: [], sizes: [] };
+var DWELL_MS = 250;
+var REVEAL_BAND = 35;
+function drawDock(options) {
+  const { core, plugin, api: api2, el, settings, narrow, drawn } = options;
+  const doc = el.ownerDocument;
+  const win = doc.defaultView ?? window;
+  let view2;
+  let column = narrow.get();
+  let shown;
+  let pending = 0;
+  let press;
+  let laidOut = api2.width > 0 && api2.height > 0;
+  let dragging = false;
+  const revealed = /* @__PURE__ */ new Set();
+  let dwell;
+  let stopped = false;
+  const active = () => {
+    const state = dockState(core.store.board());
+    const id = state?.active ?? null;
+    const held = id === null ? void 0 : state?.views[id];
+    return id === null || held === void 0 ? void 0 : { id, grid: held.grid };
+  };
+  const title = (panel2) => "block" in panel2 ? core.store.board().blocks[panel2.block]?.name : drawn.get(panel2.plugin);
+  const size = () => ({ width: api2.width, height: api2.height });
+  const read = () => layoutToGrid(api2.toJSON());
+  const target = (grid2) => column ? stackGrid(grid2, settings.fraction).grid : grid2;
+  function draw() {
+    const current = active();
+    view2 = current?.id ?? null;
+    const was = column;
+    column = narrow.get();
+    if (was !== column) lockDockview();
+    const grid2 = current?.grid ?? EMPTY2;
+    el.dataset.layout = column ? "narrow" : "wide";
+    el.style.height = column ? `${String(Math.round(stackGrid(grid2, settings.fraction).height * 1e4) / 100)}vh` : "";
+    api2.fromJSON(gridToLayout(target(grid2), title, size()), { reuseExistingPanels: true });
+    syncRails2();
+    shown = read();
+  }
+  function lockDockview() {
+    const locked = core.lock.board;
+    api2.updateOptions({
+      locked: column || locked && settings.lockResize,
+      disableDnd: column || locked && settings.lockRearrange
+    });
+  }
+  function reconcile() {
+    if (stopped || pending > 0) return;
+    const current = active();
+    if (view2 === void 0 || (current?.id ?? null) !== view2 || narrow.get() !== column) {
+      draw();
+      return;
+    }
+    if (current === void 0) return;
+    const want = layoutToGrid(gridToLayout(target(current.grid), title, size()));
+    const now = read();
+    const changes = gridChanges(want, now);
+    const sized = api2.width > 0 && api2.height > 0;
+    if (changes.panels || changes.arrangement || sized && !sharesNear(want, now, settings.tolerance)) {
+      draw();
+      return;
+    }
+    const wantedGroups = tabGroups(want);
+    tabGroups(now).forEach((group, i) => {
+      const wanted = wantedGroups[i];
+      if (wanted !== void 0 && !samePanel(wanted.active, group.active)) showPanel(wanted.active);
+    });
+    for (const edge2 of EDGES) {
+      const [wanted, rail2] = [want.rails?.[edge2], now.rails?.[edge2]];
+      const group = api2.getEdgeGroup(edge2);
+      if (wanted === void 0 || rail2 === void 0 || group === void 0) continue;
+      if (!samePanel(wanted.active, rail2.active)) showPanel(wanted.active);
+      if (wanted.collapsed !== rail2.collapsed) {
+        if (wanted.collapsed) group.collapse();
+        else group.expand();
+      }
+      if (wanted.size !== rail2.size) group.setSize({ width: wanted.size });
+    }
+    retitle();
+    shown = read();
+  }
+  function showPanel(panel2) {
+    api2.getPanel(panelId(panel2))?.api.setActive();
+  }
+  function retitle() {
+    for (const held of api2.panels) {
+      const panel2 = panelFromId(held.id);
+      const name2 = panel2 === void 0 ? void 0 : title(panel2);
+      if (name2 !== void 0 && held.api.title !== name2) held.api.setTitle(name2);
+    }
+  }
+  const dockWidth = () => el.getBoundingClientRect().width;
+  function settle2(pointer2) {
+    if (stopped) return;
+    syncRails2();
+    const current = active();
+    const before2 = shown;
+    if (before2 === void 0 || current === void 0 || current.id !== view2) return;
+    const now = read();
+    shown = now;
+    const runs = column ? columnRuns(current.id, before2, now) : gestureRuns(current.id, before2, now, current.grid, {
+      shares: pointer2 !== void 0,
+      widths: pointer2?.width === dockWidth(),
+      tolerance: settings.tolerance
+    });
+    for (const run of runs) send(run);
+  }
+  function send(run) {
+    pending += 1;
+    void core.commands.run(run.id, run.args).catch(() => {
+    }).finally(() => {
+      pending -= 1;
+      reconcile();
+    });
+  }
+  function syncRails2() {
+    for (const edge2 of EDGES) {
+      const group = api2.getGroup(railId(edge2));
+      if (group === void 0) continue;
+      const holds = group.panels.length > 0;
+      if (holds && revealed.has(edge2) && group.api.isCollapsed()) group.api.expand();
+      if (!dragging) revealed.delete(edge2);
+      const wanted = !column && (holds || revealed.has(edge2));
+      if (api2.isEdgeGroupVisible(edge2) !== wanted) api2.setEdgeGroupVisible(edge2, wanted);
+    }
+  }
+  function restoreRails() {
+    if (column) return;
+    const current = active();
+    const sizes = api2.toJSON().edgeGroups;
+    for (const edge2 of EDGES) {
+      const rail2 = current?.grid.rails?.[edge2];
+      const group = api2.getEdgeGroup(edge2);
+      const now = sizes?.[edge2]?.size;
+      if (rail2 === void 0 || group === void 0 || rail2.collapsed || now === void 0) continue;
+      if (Math.round(now) !== rail2.size) group.setSize({ width: rail2.size });
+    }
+  }
+  function inBand(edge2, event) {
+    const rect = el.getBoundingClientRect();
+    const { clientX: x, clientY: y } = event;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return false;
+    return edge2 === "left" ? x - rect.left <= REVEAL_BAND : rect.right - x <= REVEAL_BAND;
+  }
+  function clearDwell() {
+    if (dwell !== void 0) clearTimeout(dwell.timer);
+    dwell = void 0;
+  }
+  function reveal2(edge2) {
+    if (api2.isEdgeGroupVisible(edge2)) return;
+    revealed.add(edge2);
+    api2.setEdgeGroupVisible(edge2, true);
+    const group = api2.getEdgeGroup(edge2);
+    if (group !== void 0 && !group.isCollapsed()) group.collapse();
+  }
+  const onDragOver = (event) => {
+    if (!dragging || column) return;
+    const edge2 = EDGES.find((candidate) => inBand(candidate, event));
+    if (edge2 === void 0) {
+      clearDwell();
+      return;
+    }
+    if (dwell?.edge === edge2) return;
+    clearDwell();
+    dwell = {
+      edge: edge2,
+      timer: setTimeout(() => {
+        dwell = void 0;
+        if (dragging) reveal2(edge2);
+      }, DWELL_MS)
+    };
+  };
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    clearDwell();
+    syncRails2();
+  };
+  const onKey = (event) => {
+    if (event.key === "Escape") endDrag();
+  };
+  const endPress = () => {
+    if (press === void 0) return;
+    press = void 0;
+    queueMicrotask(() => {
+      settle2();
+    });
+  };
+  const onDragDone = () => {
+    endDrag();
+    endPress();
+  };
+  const onPointerDown = () => {
+    press = { width: dockWidth() };
+  };
+  const onPointerUp = () => {
+    const pressed = press;
+    if (pressed === void 0) return;
+    press = void 0;
+    settle2(pressed);
+  };
+  const onResize = () => {
+    if (stopped) return;
+    if (press === void 0) restoreRails();
+    const was = laidOut;
+    laidOut = api2.width > 0 && api2.height > 0;
+    if (!was && laidOut) reconcile();
+  };
+  const resizes = typeof win.ResizeObserver === "function" ? new win.ResizeObserver(() => {
+    win.requestAnimationFrame(onResize);
+  }) : void 0;
+  const landed = () => {
+    const drag = dragging;
+    dragging = false;
+    clearDwell();
+    if (drag) endPress();
+  };
+  const disposables = [
+    api2.onDidLayoutChange(() => {
+      if (press === void 0) settle2();
+    }),
+    api2.onWillDragPanel(() => {
+      dragging = true;
+    }),
+    api2.onWillDragGroup(() => {
+      dragging = true;
+    }),
+    api2.onDidMovePanel(landed),
+    api2.onDidAddPanel(landed),
+    api2.onDidRemovePanel(landed)
+  ];
+  resizes?.observe(el);
+  el.addEventListener("pointerdown", onPointerDown, true);
+  win.addEventListener("pointerup", onPointerUp, true);
+  win.addEventListener("pointercancel", onPointerUp, true);
+  el.addEventListener("dragover", onDragOver);
+  doc.addEventListener("drop", onDragDone);
+  doc.addEventListener("dragend", onDragDone);
+  doc.addEventListener("keydown", onKey);
+  let lastState = core.store.board().plugins[plugin];
+  const offBoard = core.store.subscribe((_change, board) => {
+    if (board.plugins[plugin] === lastState) {
+      retitle();
+      return;
+    }
+    lastState = board.plugins[plugin];
+    reconcile();
+  });
+  const offNarrow = narrow.subscribe(() => {
+    reconcile();
+  });
+  lockDockview();
+  draw();
+  for (const edge2 of EDGES) {
+    const group = api2.getEdgeGroup(edge2);
+    if (group === void 0) continue;
+    disposables.push(
+      group.onDidCollapsedChange(() => {
+        queueMicrotask(() => {
+          if (press === void 0) settle2();
+        });
+      })
+    );
+  }
+  return () => {
+    stopped = true;
+    clearDwell();
+    resizes?.disconnect();
+    offBoard();
+    offNarrow();
+    for (const disposable of disposables) disposable.dispose();
+    el.removeEventListener("pointerdown", onPointerDown, true);
+    win.removeEventListener("pointerup", onPointerUp, true);
+    win.removeEventListener("pointercancel", onPointerUp, true);
+    el.removeEventListener("dragover", onDragOver);
+    doc.removeEventListener("drop", onDragDone);
+    doc.removeEventListener("dragend", onDragDone);
+    doc.removeEventListener("keydown", onKey);
+  };
+}
+function sharesNear(a, b, tolerance) {
+  const bare = (grid2) => ({ orientation: grid2.orientation, children: grid2.children, sizes: grid2.sizes });
+  return !gridChanges(bare(a), bare(withStoredShares(a, b, tolerance))).sizes;
+}
+
+// srcts/modules/dock/picker.tsx
+import { createContext as createContext2, useCallback as useCallback6, useContext as useContext2, useId as useId3, useMemo as useMemo2, useState as useState5 } from "react";
+import { jsx as jsx12, jsxs as jsxs7 } from "react/jsx-runtime";
+var PickerContext = createContext2(null);
+function usePicker() {
+  const value = useContext2(PickerContext);
+  if (value === null) throw new Error("A button of the panel picker is drawn outside the picker.");
+  return value;
+}
+function PanelPicker({ children: children2 }) {
+  const [picking, setPicking] = useState5(void 0);
+  const state = useMemo2(() => ({ picking, setPicking }), [picking]);
+  const close = useCallback6(
+    (how) => {
+      setPicking(void 0);
+      if (how.restore) picking?.button.focus({ preventScroll: true, focusVisible: !how.pointer });
+    },
+    [picking]
+  );
+  return /* @__PURE__ */ jsxs7(PickerContext, { value: state, children: [
+    children2,
+    picking === void 0 ? null : /* @__PURE__ */ jsx12(PickerMenu, { picking, onClose: close })
+  ] });
+}
+function usePickerButton(near2) {
+  const { picking, setPicking } = usePicker();
+  const id = useId3();
+  return useMenuButton(
+    picking?.id === id,
+    (button, keyboard) => {
+      setPicking({ id, button, near: near2(), keyboard });
+    },
+    () => {
+      setPicking(void 0);
+    }
+  );
+}
+function pickerGroups(board, registry, drawn, pick) {
+  const view2 = activeView(board);
+  if (view2 === void 0) return [];
+  const blocks = Object.entries(board.blocks).flatMap(([block, held]) => {
+    if (places(view2.grid, { block })) return [];
+    const entry = registry[held.registry_id];
+    return [
+      {
+        key: block,
+        label: held.name,
+        lead: /* @__PURE__ */ jsx12(Mark, { entry, size: 24 }),
+        ...entry === void 0 ? {} : { detail: entry.name },
+        search: block,
+        onSelect: () => {
+          pick({ block });
+        }
+      }
+    ];
+  });
+  const plugins = [...drawn].flatMap(
+    ([plugin, name2]) => places(view2.grid, { plugin }) ? [] : [
+      {
+        key: plugin,
+        label: name2,
+        search: plugin,
+        onSelect: () => {
+          pick({ plugin });
+        }
+      }
+    ]
+  );
+  return [
+    { key: "blocks", rows: blocks },
+    { key: "plugins", title: "Plugins", rows: plugins }
+  ];
+}
+function PickerMenu({ picking, onClose }) {
+  const { core, drawn } = useDock();
+  const board = useBoard(core);
+  const { near: near2 } = picking;
+  const groups = useMemo2(() => {
+    const pick = (panel2) => {
+      const view2 = dockState(core.store.board())?.active ?? null;
+      if (view2 === null) return;
+      const args = near2 === void 0 ? { view: view2, panel: panel2 } : { view: view2, panel: panel2, near: near2, side: "within" };
+      core.commands.run("blockr.dock-add_panel", args).catch(() => {
+      });
+    };
+    return pickerGroups(board, core.blockRegistry(), drawn, pick);
+  }, [board, core, drawn, near2]);
+  return /* @__PURE__ */ jsx12(
+    Menu,
+    {
+      anchor: picking.button,
+      label: "Panels",
+      caption: "Show in this view",
+      search: { label: "Search", empty: "No panel matches." },
+      groups,
+      note: nothingLeft(board, drawn),
+      keyboard: picking.keyboard,
+      onClose
+    }
+  );
+}
+function nothingLeft(board, drawn) {
+  return Object.keys(board.blocks).length === 0 && drawn.size === 0 ? "The board has no blocks yet. Add a new block to get started." : "All blocks and plugins are already in this view. Add a new block to the board first.";
+}
+
+// srcts/modules/dock/views-menu.tsx
+import { useCallback as useCallback7, useLayoutEffect as useLayoutEffect7, useRef as useRef7, useState as useState7, useSyncExternalStore as useSyncExternalStore2 } from "react";
+
+// srcts/modules/dock/name-field.tsx
+import { useLayoutEffect as useLayoutEffect6, useRef as useRef6, useState as useState6 } from "react";
+import { jsx as jsx13 } from "react/jsx-runtime";
+function NameField2({ name: name2, label, className, onSubmit, onDone }) {
+  const [text2, setText] = useState6(name2);
+  const ref2 = useRef6(null);
+  const done = useRef6(false);
+  useLayoutEffect6(() => {
+    ref2.current?.focus();
+    ref2.current?.select();
+  }, []);
+  function finish(submit) {
+    if (done.current) return;
+    done.current = true;
+    const trimmed = text2.trim();
+    if (submit && trimmed !== "" && trimmed !== name2) onSubmit(trimmed);
+    onDone();
+  }
+  return /* @__PURE__ */ jsx13(
+    "input",
+    {
+      ref: ref2,
+      type: "text",
+      "aria-label": label,
+      className,
+      value: text2,
+      spellCheck: false,
+      onChange: (event) => {
+        setText(event.target.value);
+      },
+      onKeyDown: (event) => {
+        if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+          event.preventDefault();
+          finish(true);
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          finish(false);
+        }
+      },
+      onBlur: () => {
+        finish(true);
+      }
+    }
+  );
+}
+
+// srcts/modules/dock/tips.ts
+function cutTip(text2) {
+  const tip = (event) => {
+    tipFor(event.currentTarget, text2);
+  };
+  return { onPointerEnter: tip, onFocus: tip };
+}
+function tipFor(el, text2) {
+  const label = el.querySelector(".blockr-dock-bar-label") ?? el;
+  const tooltip = text2(label.scrollWidth > label.clientWidth);
+  if (tooltip === void 0) el.removeAttribute("title");
+  else el.setAttribute("title", tooltip);
+}
+
+// srcts/modules/dock/views-list.ts
+function rowsOf(state, root, open) {
+  const rows = [];
+  const walked = new Set(root === null ? [] : [root]);
+  const walk = (folder2, depth) => {
+    for (const entry of inFolder(state, folder2)) {
+      const opens = "folder" in entry && open.has(entry.folder) && !walked.has(entry.folder);
+      rows.push({ entry, depth, folder: folder2, open: opens });
+      if (opens) {
+        walked.add(entry.folder);
+        walk(entry.folder, depth + 1);
+      }
+    }
+  };
+  walk(root, 0);
+  return rows;
+}
+function dropAt(state, rows, spans, y, moving) {
+  const drop = placeAt(state, rows, spans, y);
+  if (drop === void 0) return void 0;
+  if ("folder" in moving && drop.folder !== null && within(state, drop.folder, moving.folder)) return void 0;
+  if (drop.before !== void 0 && sameEntry(drop.before, moving)) return void 0;
+  const folder2 = "view" in moving ? state.views[moving.view]?.folder : state.folders[moving.folder]?.folder;
+  if (folder2 === drop.folder && sitsAt(state, moving, drop.folder, drop.before)) return void 0;
+  return drop;
+}
+function placeAt(state, rows, spans, y) {
+  const last = rows.length - 1;
+  const lastSpan = spans[last];
+  if (last < 0 || lastSpan === void 0) return void 0;
+  if (y >= lastSpan.bottom) return { folder: null, before: void 0, mark: { row: last, at: "below", depth: 0 } };
+  const at2 = spans.findIndex((span2) => y < span2.bottom);
+  const row = rows[at2];
+  const span = spans[at2];
+  if (row === void 0 || span === void 0) return void 0;
+  const share = (y - span.top) / Math.max(1, span.bottom - span.top);
+  const { entry } = row;
+  const isFolder2 = "folder" in entry;
+  if (share < (isFolder2 ? 0.25 : 0.5)) return { folder: row.folder, before: entry, mark: { row: at2, at: "above", depth: row.depth } };
+  if (!isFolder2) return { folder: row.folder, before: after(state, row), mark: { row: at2, at: "below", depth: row.depth } };
+  if (share <= 0.75) return { folder: entry.folder, before: void 0, mark: { row: at2, at: "into", depth: row.depth + 1 } };
+  if (row.open) return { folder: entry.folder, before: inFolder(state, entry.folder)[0], mark: { row: at2, at: "below", depth: row.depth + 1 } };
+  return { folder: row.folder, before: after(state, row), mark: { row: at2, at: "below", depth: row.depth } };
+}
+function after(state, row) {
+  const listed = inFolder(state, row.folder);
+  return listed[listed.findIndex((entry) => sameEntry(entry, row.entry)) + 1];
+}
+
+// srcts/modules/dock/views-menu.tsx
+import { Fragment as Fragment5, jsx as jsx14, jsxs as jsxs8 } from "react/jsx-runtime";
+var ACTIVATE_VIEW = "blockr.dock-activate_view";
+var ADD_VIEW = "blockr.dock-add_view";
+var ADD_FOLDER = "blockr.dock-add_folder";
+var RENAME_VIEW = "blockr.dock-rename_view";
+var RENAME_FOLDER = "blockr.dock-rename_folder";
+var REMOVE_VIEW = "blockr.dock-remove_view";
+var REMOVE_FOLDER = "blockr.dock-remove_folder";
+var MOVE_VIEW = "blockr.dock-move_view";
+var MOVE_FOLDER = "blockr.dock-move_folder";
+var SET_OPTION = "blockr.core-set_option";
+var EDGE2 = 24;
+var STEP = 8;
+function useViewTabs(core) {
+  const subscribe = useCallback7(
+    (changed) => core.store.subscribe(() => {
+      changed();
+    }),
+    [core]
+  );
+  return useSyncExternalStore2(subscribe, () => core.store.board().options.view_tabs === true);
+}
+function Views({ openFolders }) {
+  const { core } = useDock();
+  const board = useBoard(core);
+  const state = dockState(board);
+  if (state === void 0) return null;
+  const tabs = board.options.view_tabs === true;
+  return /* @__PURE__ */ jsxs8("div", { className: "blockr-dock-bar-views", "data-tabs": tabs ? "" : void 0, children: [
+    tabs ? /* @__PURE__ */ jsx14(TabLine, { state, openFolders }) : null,
+    /* @__PURE__ */ jsx14(ViewsMenu, { state, openFolders, tabs }),
+    tabs ? null : /* @__PURE__ */ jsx14("span", { className: "blockr-dock-bar-rule", "aria-hidden": "true" })
+  ] });
+}
+function ViewsMenu({ state, openFolders, tabs }) {
+  const { core } = useDock();
+  const open = useOpenFolders(openFolders);
+  const [opened, setOpened] = useState7(null);
+  const button = useRef7(null);
+  const props = useMenuButton(
+    opened !== null,
+    (anchor, keyboard) => {
+      openFolders.open(activeHolders(state));
+      setOpened({ anchor, keyboard, managing: false });
+    },
+    () => {
+      setOpened(null);
+    }
+  );
+  const close = useCallback7((how) => {
+    setOpened(null);
+    if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+  }, []);
+  const active = state.active === null ? void 0 : state.views[state.active];
+  const name2 = active?.name ?? "Views";
+  const actions = (at2) => core.lock.board ? [] : [
+    {
+      key: "manage",
+      label: "Manage views",
+      lead: /* @__PURE__ */ jsx14(SlidersIcon, {}),
+      divided: true,
+      onSelect: () => {
+        setOpened({ ...at2, managing: true });
+      }
+    },
+    {
+      key: "tabs",
+      label: "Show views as tabs",
+      checked: tabs,
+      onSelect: () => {
+        runEdit(core, SET_OPTION, { id: "view_tabs", value: !tabs });
+      }
+    }
+  ];
+  return /* @__PURE__ */ jsxs8(Fragment5, { children: [
+    /* @__PURE__ */ jsxs8(
+      "button",
+      {
+        ref: button,
+        type: "button",
+        className: tabs ? "blockr-dock-bar-button blockr-dock-views-chevron" : "blockr-dock-bar-button blockr-dock-views-button",
+        "aria-label": tabs ? "Views" : `Views: ${name2}`,
+        ...tabs ? { title: "Views" } : cutTip((cut) => cut ? name2 : void 0),
+        ...props,
+        children: [
+          tabs ? null : /* @__PURE__ */ jsx14("span", { className: "blockr-dock-bar-label", children: name2 }),
+          /* @__PURE__ */ jsx14(Chevron, {})
+        ]
+      }
+    ),
+    opened === null ? null : opened.managing ? /* @__PURE__ */ jsx14(
+      Manage,
+      {
+        anchor: opened.anchor,
+        keyboard: opened.keyboard,
+        state,
+        openFolders,
+        onClose: close,
+        onDone: () => {
+          setOpened({ ...opened, managing: false });
+        }
+      }
+    ) : /* @__PURE__ */ jsx14(
+      Menu,
+      {
+        anchor: opened.anchor,
+        label: "Views",
+        align: "end",
+        groups: [
+          { key: "views", rows: viewRows(core, state, null, open, openFolders) },
+          { key: "actions", rows: actions(opened) }
+        ],
+        keyboard: opened.keyboard,
+        onClose: close
+      }
+    )
+  ] });
+}
+function viewRows(core, state, root, open, openFolders) {
+  return rowsOf(state, root, open).map(({ entry, depth, open: unfolded }) => {
+    const common2 = { key: keyOf(entry), label: nameOf(state, entry), depth };
+    if ("view" in entry) {
+      return {
+        ...common2,
+        current: entry.view === state.active,
+        onSelect: () => {
+          activate(core, state, entry.view);
+        }
+      };
+    }
+    return {
+      ...common2,
+      fold: {
+        open: unfolded,
+        onToggle: (on) => {
+          openFolders.set(entry.folder, on);
+        }
+      }
+    };
+  });
+}
+function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }) {
+  const { core } = useDock();
+  const ref2 = useRef7(null);
+  const open = useOpenFolders(openFolders);
+  const rows = rowsOf(state, null, open);
+  const slot = rows.some((row) => "folder" in row.entry);
+  const [renaming, setRenaming] = useState7(void 0);
+  const [confirming, setConfirming] = useState7(void 0);
+  const [drag, setDrag] = useState7(void 0);
+  const dragging = useRef7(void 0);
+  const rowList = useRef7(null);
+  useMenuSurface(ref2, anchor, { depth: 0, align: "end", keyboard, onClose });
+  useLayoutEffect7(() => {
+    ref2.current?.focus({ preventScroll: true });
+  }, []);
+  const keepFocus2 = () => {
+    ref2.current?.focus({ preventScroll: true, focusVisible: false });
+  };
+  const follow = (next) => {
+    dragging.current = next;
+    setDrag(next);
+  };
+  const addView = () => {
+    void applied2(core, ADD_VIEW, {}).then((done) => {
+      const added = done ? dockState(core.store.board())?.active : null;
+      if (added !== void 0 && added !== null) setRenaming(keyOf({ view: added }));
+    });
+  };
+  const addFolder = () => {
+    const before2 = new Set(Object.keys(state.folders));
+    void applied2(core, ADD_FOLDER, {}).then((done) => {
+      const after2 = done ? Object.keys(dockState(core.store.board())?.folders ?? {}) : [];
+      const added = after2.find((id) => !before2.has(id));
+      if (added !== void 0) setRenaming(keyOf({ folder: added }));
+    });
+  };
+  const grip = (entry) => ({
+    onPointerDown(event) {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setConfirming(void 0);
+      follow({ entry, drop: void 0 });
+    },
+    onPointerMove(event) {
+      const el = rowList.current;
+      if (dragging.current === void 0 || el === null) return;
+      scrollNearEdge(ref2.current, event.clientY);
+      follow({ entry, drop: dropAt(state, rows, spansOf(el), event.clientY, entry) });
+    },
+    onPointerUp() {
+      const drop = dragging.current?.drop;
+      follow(void 0);
+      if (drop !== void 0) move(core, openFolders, entry, drop);
+    },
+    onPointerCancel() {
+      follow(void 0);
+    }
+  });
+  return /* @__PURE__ */ jsxs8(
+    "div",
+    {
+      ref: ref2,
+      popover: "auto",
+      role: "dialog",
+      "aria-label": "Manage views",
+      tabIndex: -1,
+      className: "blockr-dock-menu blockr-dock-views-manage",
+      "data-align": "end",
+      "data-depth": 0,
+      onToggle: (event) => {
+        if (event.newState === "closed") onClose({ restore: false, pointer: false });
+      },
+      onKeyDown: (event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        onClose({ restore: true, pointer: false });
+      },
+      children: [
+        /* @__PURE__ */ jsx14("div", { ref: rowList, className: "blockr-dock-views-rows", children: rows.map((row, i) => {
+          const { entry } = row;
+          const key = keyOf(entry);
+          const name2 = nameOf(state, entry);
+          if (confirming === key) {
+            return /* @__PURE__ */ jsx14(
+              ConfirmRow,
+              {
+                name: name2,
+                depth: row.depth,
+                onRemove: () => {
+                  keepFocus2();
+                  setConfirming(void 0);
+                  remove(core, entry);
+                },
+                onCancel: () => {
+                  setConfirming(void 0);
+                }
+              },
+              key
+            );
+          }
+          return /* @__PURE__ */ jsx14(
+            ManagedRow,
+            {
+              row,
+              name: name2,
+              slot,
+              renaming: renaming === key,
+              removable: removable(core, entry),
+              dragging: drag !== void 0 && sameEntry(drag.entry, entry),
+              mark: drag?.drop?.mark.row === i ? drag.drop.mark : void 0,
+              grip: grip(entry),
+              onFold: () => {
+                if ("folder" in entry) openFolders.set(entry.folder, !row.open);
+              },
+              onRename: () => {
+                setConfirming(void 0);
+                setRenaming(key);
+              },
+              onRenamed: (next) => {
+                rename(core, entry, next);
+              },
+              onRenameDone: () => {
+                setRenaming(void 0);
+              },
+              onConfirm: () => {
+                setRenaming(void 0);
+                setConfirming(key);
+              }
+            },
+            key
+          );
+        }) }),
+        /* @__PURE__ */ jsx14("hr", { className: "blockr-dock-menu-divider" }),
+        /* @__PURE__ */ jsxs8("div", { className: "blockr-dock-views-foot", children: [
+          /* @__PURE__ */ jsxs8("button", { type: "button", className: "blockr-dock-views-add", onClick: addView, children: [
+            /* @__PURE__ */ jsx14(PlusIcon, {}),
+            "New view"
+          ] }),
+          /* @__PURE__ */ jsxs8("button", { type: "button", className: "blockr-dock-views-add", onClick: addFolder, children: [
+            /* @__PURE__ */ jsx14(PlusIcon, {}),
+            "New folder"
+          ] }),
+          /* @__PURE__ */ jsx14(
+            "button",
+            {
+              type: "button",
+              className: "blockr-dock-views-done",
+              onClick: () => {
+                keepFocus2();
+                onDone();
+              },
+              children: "Done"
+            }
+          )
+        ] })
+      ]
+    }
+  );
+}
+function ManagedRow({
+  row,
+  name: name2,
+  slot,
+  renaming,
+  removable: removable2,
+  dragging,
+  mark,
+  grip,
+  onFold,
+  onRename,
+  onRenamed,
+  onRenameDone,
+  onConfirm
+}) {
+  const el = useRef7(null);
+  const nameButton = useRef7(null);
+  const refocus = useRef7(false);
+  const { entry } = row;
+  const isView2 = "view" in entry;
+  useLayoutEffect7(() => {
+    if (renaming || !refocus.current) return;
+    refocus.current = false;
+    nameButton.current?.focus();
+  }, [renaming]);
+  const style = { ...depthStyle(row.depth), ...mark === void 0 ? {} : { "--drop-depth": mark.depth } };
+  return /* @__PURE__ */ jsxs8(
+    "div",
+    {
+      ref: el,
+      className: "blockr-dock-views-managed",
+      "data-row": "",
+      "data-drop": mark?.at,
+      "data-dragging": dragging ? "" : void 0,
+      style,
+      children: [
+        /* @__PURE__ */ jsx14("span", { className: "blockr-dock-views-grip", "aria-hidden": "true", ...grip, children: /* @__PURE__ */ jsx14(GripIcon, {}) }),
+        isView2 ? slot ? /* @__PURE__ */ jsx14("span", { className: "blockr-dock-views-slot" }) : null : /* @__PURE__ */ jsx14(
+          "button",
+          {
+            type: "button",
+            className: "blockr-dock-views-fold",
+            "aria-expanded": row.open,
+            "aria-label": `${row.open ? "Close" : "Open"} the folder ${name2}`,
+            onClick: onFold,
+            children: /* @__PURE__ */ jsx14(Chevron, {})
+          }
+        ),
+        renaming ? /* @__PURE__ */ jsx14(
+          NameField2,
+          {
+            name: name2,
+            label: isView2 ? "View name" : "Folder name",
+            className: "blockr-dock-views-field",
+            onSubmit: onRenamed,
+            onDone: () => {
+              const doc = el.current?.ownerDocument;
+              refocus.current = doc !== void 0 && el.current?.contains(doc.activeElement) === true;
+              onRenameDone();
+            }
+          }
+        ) : /* @__PURE__ */ jsx14(
+          "button",
+          {
+            ref: nameButton,
+            type: "button",
+            className: "blockr-dock-views-name",
+            onClick: onRename,
+            ...cutTip((cut) => cut ? `${name2}
+Click to rename` : "Click to rename"),
+            children: name2
+          }
+        ),
+        removable2 ? /* @__PURE__ */ jsx14(
+          "button",
+          {
+            type: "button",
+            className: "blockr-dock-views-remove",
+            "aria-label": `Remove ${name2}`,
+            title: isView2 ? "Remove view" : "Remove folder",
+            onClick: onConfirm,
+            children: /* @__PURE__ */ jsx14(RemoveIcon, {})
+          }
+        ) : null
+      ]
+    }
+  );
+}
+function ConfirmRow({ name: name2, depth, onRemove, onCancel }) {
+  const removeButton = useRef7(null);
+  useLayoutEffect7(() => {
+    removeButton.current?.focus();
+  }, []);
+  return /* @__PURE__ */ jsxs8(
+    "div",
+    {
+      className: "blockr-dock-views-managed",
+      "data-row": "",
+      "data-confirming": "",
+      style: depthStyle(depth),
+      onBlur: (event) => {
+        const next = event.relatedTarget;
+        if (!(next instanceof Node) || !event.currentTarget.contains(next)) onCancel();
+      },
+      onKeyDown: (event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        onCancel();
+      },
+      children: [
+        /* @__PURE__ */ jsx14("span", { className: "blockr-dock-views-confirm-text", children: `Remove \u201C${name2}\u201D?` }),
+        /* @__PURE__ */ jsx14("button", { ref: removeButton, type: "button", className: "blockr-dock-views-confirm", onClick: onRemove, children: "Remove" })
+      ]
+    }
+  );
+}
+function TabLine({ state, openFolders }) {
+  const { core } = useDock();
+  const line = useRef7(null);
+  const { active } = state;
+  const outer = activeHolders(state).at(-1);
+  useLayoutEffect7(() => {
+    reveal(line.current);
+  }, [active, outer]);
+  return /* @__PURE__ */ jsx14("nav", { ref: line, className: "blockr-dock-tabs", "aria-label": "Views", children: inFolder(state, null).map(
+    (entry) => "view" in entry ? /* @__PURE__ */ jsx14(
+      "button",
+      {
+        type: "button",
+        className: "blockr-dock-tab",
+        "aria-current": entry.view === active ? "page" : void 0,
+        onClick: () => {
+          activate(core, state, entry.view);
+        },
+        children: nameOf(state, entry)
+      },
+      keyOf(entry)
+    ) : /* @__PURE__ */ jsx14(FolderTab, { state, folder: entry.folder, current: entry.folder === outer, openFolders }, keyOf(entry))
+  ) });
+}
+function FolderTab({ state, folder: folder2, current, openFolders }) {
+  const { core } = useDock();
+  const open = useOpenFolders(openFolders);
+  const [opened, setOpened] = useState7(null);
+  const button = useRef7(null);
+  const props = useMenuButton(
+    opened !== null,
+    (anchor, keyboard) => {
+      openFolders.open(activeHolders(state));
+      setOpened({ anchor, keyboard });
+    },
+    () => {
+      setOpened(null);
+    }
+  );
+  const close = useCallback7((how) => {
+    setOpened(null);
+    if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+  }, []);
+  const name2 = nameOf(state, { folder: folder2 });
+  return /* @__PURE__ */ jsxs8(Fragment5, { children: [
+    /* @__PURE__ */ jsxs8("button", { ref: button, type: "button", className: "blockr-dock-tab", "aria-current": current ? "true" : void 0, ...props, children: [
+      name2,
+      /* @__PURE__ */ jsx14(Chevron, {})
+    ] }),
+    opened === null ? null : /* @__PURE__ */ jsx14(
+      Menu,
+      {
+        anchor: opened.anchor,
+        label: name2,
+        groups: [{ key: "views", rows: viewRows(core, state, folder2, open, openFolders) }],
+        note: "This folder is empty.",
+        keyboard: opened.keyboard,
+        onClose: close
+      }
+    )
+  ] });
+}
+function useOpenFolders(openFolders) {
+  return useSyncExternalStore2(openFolders.subscribe, openFolders.get);
+}
+function activeHolders(state) {
+  return state.active === null ? [] : foldersHolding(state, { view: state.active });
+}
+function reveal(line) {
+  if (line === null) return;
+  const tab = line.querySelector("[aria-current]");
+  if (tab === null) return;
+  const bounds = line.getBoundingClientRect();
+  const at2 = tab.getBoundingClientRect();
+  if (at2.left < bounds.left) line.scrollLeft -= bounds.left - at2.left;
+  else if (at2.right > bounds.right) line.scrollLeft += at2.right - bounds.right;
+}
+function scrollNearEdge(panel2, y) {
+  if (panel2 === null) return;
+  const { top, bottom } = panel2.getBoundingClientRect();
+  if (y < top + EDGE2) panel2.scrollTop -= STEP;
+  else if (y > bottom - EDGE2) panel2.scrollTop += STEP;
+}
+function spansOf(rowList) {
+  return [...rowList.querySelectorAll(":scope > [data-row]")].map((row) => {
+    const { top, bottom } = row.getBoundingClientRect();
+    return { top, bottom };
+  });
+}
+async function applied2(core, id, args) {
+  return await core.commands.run(id, args).then(
+    () => true,
+    () => false
+  );
+}
+function activate(core, state, view2) {
+  if (view2 !== state.active) runEdit(core, ACTIVATE_VIEW, { view: view2 });
+}
+function rename(core, entry, name2) {
+  if ("view" in entry) runEdit(core, RENAME_VIEW, { view: entry.view, name: name2 });
+  else runEdit(core, RENAME_FOLDER, { folder: entry.folder, name: name2 });
+}
+function remove(core, entry) {
+  if ("view" in entry) runEdit(core, REMOVE_VIEW, { view: entry.view });
+  else runEdit(core, REMOVE_FOLDER, { folder: entry.folder });
+}
+function removable(core, entry) {
+  return "view" in entry ? core.commands.preflight(REMOVE_VIEW, { view: entry.view }) : core.commands.preflight(REMOVE_FOLDER, { folder: entry.folder });
+}
+function move(core, openFolders, entry, drop) {
+  const args = "view" in entry ? { view: entry.view, folder: drop.folder } : { folder: entry.folder, into: drop.folder };
+  if (drop.before !== void 0) args.before = drop.before;
+  const id = "view" in entry ? MOVE_VIEW : MOVE_FOLDER;
+  if (!core.commands.preflight(id, args)) return;
+  if (drop.folder !== null) openFolders.open([drop.folder]);
+  runEdit(core, id, args);
+}
+function nameOf(state, entry) {
+  return ("view" in entry ? state.views[entry.view]?.name : state.folders[entry.folder]?.name) ?? "";
+}
+function keyOf(entry) {
+  return "view" in entry ? `view:${entry.view}` : `folder:${entry.folder}`;
+}
+function depthStyle(depth) {
+  return { "--depth": depth };
+}
+
+// srcts/modules/dock/dock.tsx
+import { Fragment as Fragment6, jsx as jsx15, jsxs as jsxs9 } from "react/jsx-runtime";
+function PanelFrame({ params }) {
+  const { panel: panel2 } = params;
+  return "block" in panel2 ? /* @__PURE__ */ jsx15("div", { className: "blockr-dock-panel", "data-block": panel2.block, children: /* @__PURE__ */ jsx15(BlockCard, { id: panel2.block }) }) : /* @__PURE__ */ jsx15(PluginFrame, { plugin: panel2.plugin });
+}
+function PluginFrame({ plugin }) {
+  const { core } = useDock();
+  const mount = useCallback8((el) => core.mountPlugin(el, plugin), [core, plugin]);
+  return /* @__PURE__ */ jsx15(Mounted, { mount, className: "blockr-dock-panel", data: { "data-plugin": plugin } });
+}
+var components = { [PANEL_COMPONENT]: PanelFrame };
+function Tab(props) {
+  const { core } = useDock();
+  const { panel: panel2 } = props.params;
+  const onPointerDown = "block" in panel2 ? () => {
+    giveFocus(core, panel2.block);
+  } : void 0;
+  return /* @__PURE__ */ jsx15(DockviewDefaultTab, { ...props, hideClose: core.lock.board, onPointerDown });
+}
+function AddPanelButton({ api: api2, group }) {
+  const button = usePickerButton(() => {
+    const shown = group.activePanel;
+    return shown === void 0 ? void 0 : panelFromId(shown.id);
+  });
+  if (api2.location.type === "edge") return null;
+  return /* @__PURE__ */ jsx15("div", { className: "blockr-dock-add-slot", children: /* @__PURE__ */ jsx15("button", { type: "button", className: "blockr-dock-add", "aria-label": "Add panel", ...button, children: /* @__PURE__ */ jsx15("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx15("path", { d: "M8 3v10M3 8h10", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }) }) }) });
+}
+function showsNothing(board, drawn) {
+  const view2 = activeView(board);
+  if (view2 === void 0) return false;
+  return !gridPanels(view2.grid).some((panel2) => "block" in panel2 ? Object.hasOwn(board.blocks, panel2.block) : drawn.has(panel2.plugin));
+}
+function EmptyView() {
+  const { core, drawn } = useDock();
+  const board = useBoard(core);
+  if (!showsNothing(board, drawn)) return null;
+  if (!core.lock.board) return /* @__PURE__ */ jsx15(EmptyPrompt, {});
+  return /* @__PURE__ */ jsxs9("div", { className: "blockr-dock-empty", children: [
+    /* @__PURE__ */ jsx15(LockIcon, { size: 32 }),
+    /* @__PURE__ */ jsx15("p", { children: "This view is empty" })
+  ] });
+}
+function EmptyPrompt() {
+  const button = usePickerButton(() => void 0);
+  return /* @__PURE__ */ jsxs9("div", { className: "blockr-dock-empty", children: [
+    /* @__PURE__ */ jsxs9("svg", { viewBox: "0 0 16 16", width: "32", height: "32", "aria-hidden": "true", focusable: "false", children: [
+      /* @__PURE__ */ jsx15("circle", { cx: "8", cy: "8", r: "6.5", fill: "none", stroke: "currentColor" }),
+      /* @__PURE__ */ jsx15("path", { d: "M8 5v6M5 8h6", fill: "none", stroke: "currentColor", strokeLinecap: "round" })
+    ] }),
+    /* @__PURE__ */ jsx15("p", { children: "Start by adding a panel" }),
+    /* @__PURE__ */ jsx15("button", { type: "button", className: "blockr-dock-empty-add", ...button, children: "Add panel" })
+  ] });
+}
+function Dock({ core, plugin, settings, narrow, drawn, viewsMenu, sidebar }) {
+  const root = useRef8(null);
+  const stop = useRef8(void 0);
+  const [tooltips] = useState8(createTooltips);
+  const shared = useMemo3(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
+  const locked = core.lock.board;
+  const tabs = useViewTabs(core) && viewsMenu;
+  const { pinned } = useSyncExternalStore3(sidebar.subscribe, sidebar.state);
+  const onReady = useCallback8(
+    (event) => {
+      const el = root.current;
+      if (el === null) return;
+      stop.current?.();
+      stop.current = drawDock({ core, plugin, api: event.api, el, settings, narrow, drawn });
+    },
+    [core, plugin, settings, narrow, drawn]
+  );
+  useEffect3(
+    () => () => {
+      stop.current?.();
+      stop.current = void 0;
+    },
+    []
+  );
+  const view2 = /* @__PURE__ */ jsxs9(Fragment6, { children: [
+    /* @__PURE__ */ jsx15(
+      DockviewReact,
+      {
+        components,
+        onReady,
+        theme: themeLightSpaced,
+        defaultRenderer: "always",
+        defaultTabComponent: Tab,
+        ...locked ? {} : { leftHeaderActionsComponent: AddPanelButton }
+      }
+    ),
+    /* @__PURE__ */ jsx15(EmptyView, {})
+  ] });
+  return /* @__PURE__ */ jsx15(DockContext, { value: shared, children: /* @__PURE__ */ jsx15("div", { className: "blockr-dock", ref: root, "data-tabs": tabs ? "" : void 0, "data-pushed": pinned ? "" : void 0, children: locked ? view2 : /* @__PURE__ */ jsx15(PanelPicker, { children: view2 }) }) });
+}
+
+// srcts/modules/dock/navbar.tsx
+import { useCallback as useCallback9, useEffect as useEffect4, useReducer, useRef as useRef9, useState as useState9, useSyncExternalStore as useSyncExternalStore4 } from "react";
+
+// srcts/modules/dock/navbar-items.ts
+var PARTS = ["logo", "name", "storage", "undo_redo", "spacer", "views", "read_only", "options"];
+var DEFAULT_NAVBAR = PARTS.map((id) => ({ kind: "part", id }));
+function holdsPart(items, id) {
+  return items.some((item) => item.kind === "part" && item.id === id);
+}
+function readNavbar(args) {
+  const sent = args.navbar;
+  if (sent === void 0) return DEFAULT_NAVBAR;
+  if (!Array.isArray(sent)) {
+    throw new TypeError(`The navbar is ${JSON.stringify(sent)}, where the dock takes a list of navbar items.`);
+  }
+  return readList(sent, readItem, "on the bar");
+}
+function readList(list, read, where) {
+  const items = list.map(read);
+  const ids = /* @__PURE__ */ new Set();
+  for (const item of items) {
+    if (ids.has(item.id)) throw new TypeError(`More than one navbar item ${where} has the id ${JSON.stringify(item.id)}.`);
+    ids.add(item.id);
+  }
+  return items;
+}
+function readItem(sent) {
+  const { kind, id } = common(sent);
+  const field = (name2) => text(sent, id, name2);
+  switch (kind) {
+    case "part":
+      if (!isPart(id)) {
+        throw new TypeError(`The dock has no part ${JSON.stringify(id)} to draw on the navbar. Its parts are ${PARTS.join(", ")}.`);
+      }
+      return { kind, id };
+    case "storage":
+      return { kind, id };
+    case "module":
+      return { kind, id, module: field("module") };
+    case "link":
+    case "menu":
+      return readEntry(sent);
+    default:
+      throw new TypeError(`The navbar item ${JSON.stringify(id)} is of the kind ${JSON.stringify(kind)}, which the dock does not draw.`);
+  }
+}
+function readEntry(sent) {
+  const { kind, id } = common(sent);
+  const field = (name2) => text(sent, id, name2);
+  if (kind === "link") return { kind, id, label: field("label"), href: field("href") };
+  if (kind !== "menu") {
+    throw new TypeError(`The navbar menu holds the item ${JSON.stringify(id)}, which is neither a link nor a menu.`);
+  }
+  const items = sent.items;
+  if (!Array.isArray(items)) {
+    throw new TypeError(`The items of the navbar menu ${JSON.stringify(id)} are ${JSON.stringify(items)}, where the dock takes a list.`);
+  }
+  return { kind, id, label: field("label"), items: readList(items, readEntry, `in the menu ${JSON.stringify(id)}`) };
+}
+function common(sent) {
+  if (!isObject(sent) || typeof sent.kind !== "string" || typeof sent.id !== "string" || sent.id === "") {
+    throw new TypeError(`The navbar item ${JSON.stringify(sent)} has no kind and id that the dock reads.`);
+  }
+  return { kind: sent.kind, id: sent.id };
+}
+function text(sent, id, name2) {
+  const value = isObject(sent) ? sent[name2] : void 0;
+  if (typeof value !== "string" || value === "") {
+    throw new TypeError(`The ${name2} of the navbar item ${JSON.stringify(id)} is ${JSON.stringify(value)}, where the dock takes a non-empty string.`);
+  }
+  return value;
+}
+function isPart(id) {
+  return PARTS.includes(id);
+}
+
+// srcts/modules/dock/navbar.tsx
+import { jsx as jsx16, jsxs as jsxs10 } from "react/jsx-runtime";
+function Navbar({ items, busy, sidebar, mac, openFolders }) {
+  const { core } = useDock();
+  const storage = useStorage(core);
+  const { pinned } = useSyncExternalStore4(sidebar.subscribe, sidebar.state);
+  const apart = new Set(items.flatMap((item) => item.kind === "storage" ? [item.id] : []));
+  const tabs = useViewTabs(core) && holdsPart(items, "views");
+  return /* @__PURE__ */ jsx16("header", { className: "blockr-dock-bar", "data-tabs": tabs ? "" : void 0, "data-pushed": pinned ? "" : void 0, children: items.map((item) => /* @__PURE__ */ jsx16(
+    Item,
+    {
+      item,
+      storage,
+      apart,
+      busy,
+      sidebar,
+      mac,
+      openFolders
+    },
+    item.id
+  )) });
+}
+function Item({ item, storage, apart, busy, sidebar, mac, openFolders }) {
+  switch (item.kind) {
+    case "part":
+      return /* @__PURE__ */ jsx16(Part, { id: item.id, storage, apart, busy, sidebar, mac, openFolders });
+    case "storage": {
+      const control = storage?.failed === void 0 ? storage?.controls.find((c) => c.id === item.id) : void 0;
+      return control === void 0 ? null : /* @__PURE__ */ jsx16(StorageControlView, { control });
+    }
+    case "link":
+      return /* @__PURE__ */ jsx16(Link, { item });
+    case "menu":
+      return /* @__PURE__ */ jsx16(MenuButton, { label: item.label, entries: linkEntries(item.items), className: "blockr-dock-bar-button" });
+    case "module":
+      return /* @__PURE__ */ jsx16(ModuleSlot, { item });
+  }
+}
+function Part({ id, storage, apart, busy, sidebar, mac, openFolders }) {
+  const { core } = useDock();
+  switch (id) {
+    case "logo":
+      return /* @__PURE__ */ jsx16(Logo, { busy });
+    case "name":
+      return /* @__PURE__ */ jsx16(BoardName, {});
+    case "storage":
+      return /* @__PURE__ */ jsx16(StorageControls, { storage, apart });
+    case "undo_redo":
+      return /* @__PURE__ */ jsx16(UndoRedo, { mac });
+    case "spacer":
+      return /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-spacer", "aria-hidden": "true" });
+    case "views":
+      return /* @__PURE__ */ jsx16(Views, { openFolders });
+    case "read_only":
+      return core.lock.board ? /* @__PURE__ */ jsx16(ReadOnlyPill, {}) : null;
+    case "options":
+      return /* @__PURE__ */ jsx16(OptionsButton, { sidebar });
+  }
+}
+var CELLS = [
+  [0, 2],
+  [0, 1],
+  [0, 0],
+  [1, 0],
+  [2, 0],
+  [1, 1],
+  [2, 2]
+];
+function Logo({ busy }) {
+  const turning = useSyncExternalStore4(busy.subscribe, busy.get);
+  return /* @__PURE__ */ jsxs10("span", { className: turning ? "blockr-dock-logo is-computing" : "blockr-dock-logo", title: turning ? "Computing" : void 0, children: [
+    /* @__PURE__ */ jsx16("svg", { className: "blockr-dock-logo-mark", width: "20", height: "20", viewBox: "0 0 224 224", "aria-hidden": "true", focusable: "false", children: CELLS.map(([x, y], i) => /* @__PURE__ */ jsx16("rect", { style: { "--i": i }, x: x * 80, y: y * 80, width: "64", height: "64", rx: "7" }, i)) }),
+    /* @__PURE__ */ jsx16("span", { className: "blockr-dock-visually-hidden", role: "status", children: turning ? "Computing" : "" })
+  ] });
+}
+function BoardName() {
+  const { core } = useDock();
+  const board = useBoard(core);
+  const [renaming, setRenaming] = useState9(false);
+  const locked = core.lock.board;
+  if (renaming) {
+    return /* @__PURE__ */ jsx16(
+      NameField2,
+      {
+        name: board.name,
+        label: "Board name",
+        className: "blockr-dock-bar-field",
+        onSubmit: (name2) => {
+          core.commands.run("blockr.core-rename_board", { name: name2 }).catch(() => void 0);
+        },
+        onDone: () => {
+          setRenaming(false);
+        }
+      }
+    );
+  }
+  const tip = cutTip((cut) => {
+    if (locked) return cut ? board.name : void 0;
+    return cut ? `${board.name}
+Click to rename` : "Click to rename";
+  });
+  if (locked) {
+    return /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-name blockr-dock-bar-shrinks", ...tip, children: /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-label", children: board.name }) });
+  }
+  return /* @__PURE__ */ jsx16(
+    "button",
+    {
+      type: "button",
+      className: "blockr-dock-bar-name blockr-dock-bar-shrinks",
+      "aria-label": `Board name: ${board.name}. Rename`,
+      onClick: () => {
+        setRenaming(true);
+      },
+      ...tip,
+      children: /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-label", children: board.name })
+    }
+  );
+}
+function StorageControls({ storage, apart }) {
+  if (storage === void 0) return null;
+  if (storage.failed !== void 0) {
+    return /* @__PURE__ */ jsx16(Warning, { message: `The storage controls of ${storage.package} failed: ${storage.failed}` });
+  }
+  const shown = storage.controls.filter((control) => !apart.has(control.id));
+  if (shown.length === 0) return null;
+  return /* @__PURE__ */ jsx16("div", { className: "blockr-dock-bar-storage blockr-dock-bar-shrinks", children: shown.map((control) => /* @__PURE__ */ jsx16(StorageControlView, { control }, control.id)) });
+}
+function StorageControlView({ control }) {
+  const { core } = useDock();
+  const tip = control.kind === "menu" || control.tooltip === void 0 ? cutTip((cut) => cut ? labelOf(control) : void 0) : {};
+  switch (control.kind) {
+    case "button":
+      return /* @__PURE__ */ jsx16(
+        "button",
+        {
+          type: "button",
+          className: "blockr-dock-bar-button blockr-dock-bar-shrinks",
+          disabled: control.disabled,
+          title: control.tooltip,
+          "aria-keyshortcuts": ariaShortcuts(control.shortcut),
+          onClick: () => {
+            void runButton(core, control);
+          },
+          ...tip,
+          children: /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-label", children: control.label })
+        }
+      );
+    case "menu":
+      return /* @__PURE__ */ jsx16(
+        MenuButton,
+        {
+          label: control.label,
+          entries: storageEntries(core, control.items),
+          className: "blockr-dock-bar-button blockr-dock-bar-shrinks",
+          onTip: (button) => {
+            tipFor(button, (cut) => cut ? control.label : void 0);
+          }
+        }
+      );
+    case "status":
+      return /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-status blockr-dock-bar-shrinks", title: control.tooltip, ...tip, children: /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-label", children: control.text }) });
+  }
+}
+function labelOf(control) {
+  return control.kind === "status" ? control.text : control.label;
+}
+function storageEntries(core, items) {
+  return items.map((item) => {
+    switch (item.kind) {
+      case "button":
+        return {
+          kind: "button",
+          id: item.id,
+          label: item.label,
+          ...item.tooltip === void 0 ? {} : { tooltip: item.tooltip },
+          ...item.shortcut === void 0 ? {} : { shortcut: item.shortcut },
+          ...item.disabled === void 0 ? {} : { disabled: item.disabled },
+          run: () => {
+            void runButton(core, item);
+          }
+        };
+      case "menu":
+        return { kind: "menu", id: item.id, label: item.label, entries: storageEntries(core, item.items) };
+      case "status":
+        return { kind: "status", id: item.id, text: item.text, ...item.tooltip === void 0 ? {} : { tooltip: item.tooltip } };
+    }
+  });
+}
+function linkEntries(items) {
+  return items.map(
+    (item) => item.kind === "link" ? { kind: "link", id: item.id, label: item.label, href: item.href } : { kind: "menu", id: item.id, label: item.label, entries: linkEntries(item.items) }
+  );
+}
+function Link({ item }) {
+  return /* @__PURE__ */ jsx16("a", { className: "blockr-dock-bar-button", href: item.href, target: "_blank", rel: "noopener noreferrer", children: /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-label", children: item.label }) });
+}
+function UndoRedo({ mac }) {
+  const { core } = useDock();
+  const { canUndo, canRedo } = useHistory(core);
+  const step = (back) => {
+    try {
+      if (back) core.store.undo();
+      else core.store.redo();
+    } catch {
+    }
+  };
+  return /* @__PURE__ */ jsxs10("div", { className: "blockr-dock-bar-steps", children: [
+    /* @__PURE__ */ jsx16(
+      "button",
+      {
+        type: "button",
+        className: "blockr-dock-bar-button",
+        title: `Undo (${shortcutLabel("Mod+Z", mac)})`,
+        "aria-keyshortcuts": "Control+Z Meta+Z",
+        disabled: !canUndo,
+        onClick: () => {
+          step(true);
+        },
+        children: "Undo"
+      }
+    ),
+    /* @__PURE__ */ jsx16(
+      "button",
+      {
+        type: "button",
+        className: "blockr-dock-bar-button",
+        title: `Redo (${shortcutLabel("Mod+Shift+Z", mac)})`,
+        "aria-keyshortcuts": "Control+Shift+Z Meta+Shift+Z Control+Y",
+        disabled: !canRedo,
+        onClick: () => {
+          step(false);
+        },
+        children: "Redo"
+      }
+    )
+  ] });
+}
+function ReadOnlyPill() {
+  return /* @__PURE__ */ jsxs10("span", { className: "blockr-dock-bar-pill", role: "status", "aria-label": "Read-only mode", title: "Editing is disabled by this deployment.", children: [
+    /* @__PURE__ */ jsx16(LockIcon, {}),
+    /* @__PURE__ */ jsx16("span", { children: "Read-only" })
+  ] });
+}
+function OptionsButton({ sidebar }) {
+  const { open } = useSyncExternalStore4(sidebar.subscribe, sidebar.state);
+  return /* @__PURE__ */ jsx16(
+    "button",
+    {
+      type: "button",
+      className: "blockr-dock-bar-button blockr-dock-bar-options",
+      "aria-expanded": open,
+      "aria-controls": sidebar.id,
+      onClick: () => {
+        sidebar.set(!open);
+      },
+      children: "Options"
+    }
+  );
+}
+function ModuleSlot({ item }) {
+  const { core } = useDock();
+  const ref2 = useRef9(null);
+  const [failure, setFailure] = useState9(void 0);
+  useEffect4(() => {
+    const el = ref2.current;
+    if (el === null) return void 0;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const gone = () => signal.aborted;
+    let cleanup;
+    const draw = async () => {
+      const mod = navbarModule(await core.module(item.module));
+      if (gone()) return;
+      const done = await mod.render({ el, core, signal });
+      if (gone()) done?.();
+      else cleanup = done;
+    };
+    draw().catch((error) => {
+      if (gone()) return;
+      const message = `The module ${item.module} of the navbar item "${item.id}" cannot draw: ${errorMessage(error)}`;
+      core.log("blockr.dock").error(new Error(message, { cause: error }));
+      setFailure(message);
+    });
+    return () => {
+      controller.abort();
+      try {
+        cleanup?.();
+      } catch (error) {
+        core.log("blockr.dock").error(asError(error));
+      }
+    };
+  }, [core, item.id, item.module]);
+  if (failure !== void 0) return /* @__PURE__ */ jsx16(Warning, { message: failure });
+  return /* @__PURE__ */ jsx16("span", { ref: ref2, className: "blockr-dock-bar-module", "data-module": item.module });
+}
+function navbarModule(exports) {
+  if (!isObject(exports) || typeof exports.api !== "number") {
+    throw new Error("It declares no major of core's JS API, as `export const api = 1`.");
+  }
+  if (exports.api !== API) {
+    throw new Error(`It was built against major ${String(exports.api)} of core's JS API, where the dock's is ${String(API)}.`);
+  }
+  const mod = exports.default;
+  if (!isObject(mod) || typeof mod.render !== "function") throw new Error("It has no default export with a render() function.");
+  return mod;
+}
+function Warning({ message }) {
+  return /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-warning", role: "img", "aria-label": message, title: message, children: /* @__PURE__ */ jsx16(WarningIcon, {}) });
+}
+function useStorage(core) {
+  const storage = core.plugins.storage();
+  const [, redraw] = useReducer((n) => n + 1, 0);
+  useEffect4(() => {
+    if (storage?.subscribe === void 0) return void 0;
+    try {
+      return storage.subscribe(redraw);
+    } catch (error) {
+      core.log("blockr.dock").error(asError(error));
+      return void 0;
+    }
+  }, [core, storage]);
+  useBoard(core);
+  const drawn = drawnControls(core);
+  const problem = drawn?.problem;
+  useEffect4(() => {
+    if (problem !== void 0) core.log("blockr.dock").error(problem);
+  }, [core, problem]);
+  return drawn;
+}
+function useHistory(core) {
+  const subscribe = useCallback9(
+    (changed) => core.store.subscribe(() => {
+      changed();
+    }),
+    [core]
+  );
+  const canUndo = useSyncExternalStore4(subscribe, () => core.store.canUndo());
+  const canRedo = useSyncExternalStore4(subscribe, () => core.store.canRedo());
+  return { canUndo, canRedo };
+}
+
+// srcts/modules/dock/narrow.ts
+function trackNarrow(win, breakpoint) {
+  const narrowNow = () => breakpoint !== void 0 && win.innerWidth < breakpoint;
+  let narrow = narrowNow();
+  const listeners = /* @__PURE__ */ new Set();
+  const onResize = () => {
+    const now = narrowNow();
+    if (now === narrow) return;
+    narrow = now;
+    for (const fn of [...listeners]) fn();
+  };
+  const follows = breakpoint !== void 0 && Number.isFinite(breakpoint);
+  if (follows) win.addEventListener("resize", onResize);
+  return {
+    get: () => narrow,
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
+    },
+    stop() {
+      if (follows) win.removeEventListener("resize", onResize);
+      listeners.clear();
+    }
+  };
+}
+
+// srcts/modules/dock/open-folders.ts
+function createOpenFolders() {
+  let open = /* @__PURE__ */ new Set();
+  const listeners = /* @__PURE__ */ new Set();
+  const change = (next) => {
+    open = next;
+    for (const fn of [...listeners]) fn();
+  };
+  return {
+    get: () => open,
+    set(folder2, on) {
+      if (open.has(folder2) === on) return;
+      change(on ? /* @__PURE__ */ new Set([...open, folder2]) : new Set([...open].filter((other) => other !== folder2)));
+    },
+    open(folders) {
+      const closed = folders.filter((folder2) => !open.has(folder2));
+      if (closed.length > 0) change(/* @__PURE__ */ new Set([...open, ...closed]));
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
+    }
+  };
+}
+
+// srcts/modules/dock/options-sidebar.tsx
+import { useCallback as useCallback10, useEffect as useEffect5, useLayoutEffect as useLayoutEffect8, useRef as useRef10, useState as useState10, useSyncExternalStore as useSyncExternalStore5 } from "react";
+import { jsx as jsx17, jsxs as jsxs11 } from "react/jsx-runtime";
+var TITLE = "Board options";
+var FOCUSABLE = [
+  "a[href]",
+  "button:not([disabled])",
+  'input:not([disabled]):not([type="hidden"])',
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+  "details > summary:first-of-type"
+].join(", ");
+var OVERLAYS = [":popover-open", "dialog:modal"];
+function categories(board, registered) {
+  const held = Object.keys(board.options).flatMap((id) => {
+    const def = Object.hasOwn(registered, id) ? registered[id] : void 0;
+    return def === void 0 ? [] : [{ id, label: def.label, category: def.category }];
+  });
+  held.sort((a, b) => a.category.localeCompare(b.category) || a.label.localeCompare(b.label) || a.id.localeCompare(b.id));
+  const grouped = /* @__PURE__ */ new Map();
+  for (const { id, category } of held) grouped.set(category, [...grouped.get(category) ?? [], id]);
+  return grouped;
+}
+function OptionsSidebar({ sidebar }) {
+  const { core } = useDock();
+  const board = useBoard(core);
+  const { open, pinned, expanded } = useSyncExternalStore5(sidebar.subscribe, sidebar.state);
+  const grouped = categories(board, core.options.registered());
+  const defaults = useDefaults(core, [...grouped.values()].flat());
+  const ref2 = useRef10(null);
+  const title = `${sidebar.id}-title`;
+  const changed = /* @__PURE__ */ new Map();
+  for (const [id, value] of defaults) {
+    const held = Object.hasOwn(board.options, id) ? board.options[id] : void 0;
+    if (held !== void 0 && !sameJson(held, value)) changed.set(id, value);
+  }
+  useFocus(ref2, open);
+  useKeys(ref2, sidebar);
+  usePressOutside(ref2, sidebar, open && !pinned);
+  return /* @__PURE__ */ jsxs11(
+    "div",
+    {
+      ref: ref2,
+      id: sidebar.id,
+      className: "blockr-dock-sidebar",
+      role: "dialog",
+      "aria-labelledby": title,
+      tabIndex: -1,
+      inert: !open,
+      "data-open": open ? "" : void 0,
+      children: [
+        /* @__PURE__ */ jsxs11("header", { className: "blockr-dock-sidebar-header", children: [
+          /* @__PURE__ */ jsx17("h2", { id: title, className: "blockr-dock-sidebar-title", children: TITLE }),
+          grouped.size === 0 ? null : /* @__PURE__ */ jsx17(ExpandAll, { categories: [...grouped.keys()], expanded, sidebar }),
+          /* @__PURE__ */ jsx17(
+            "button",
+            {
+              type: "button",
+              className: "blockr-dock-sidebar-button blockr-dock-sidebar-pin",
+              "aria-label": "Pin sidebar",
+              "aria-pressed": pinned,
+              title: "Pin",
+              onClick: () => {
+                sidebar.pin(!pinned);
+              },
+              children: /* @__PURE__ */ jsx17(PinIcon, {})
+            }
+          ),
+          /* @__PURE__ */ jsx17(
+            "button",
+            {
+              type: "button",
+              className: "blockr-dock-sidebar-button",
+              "aria-label": "Close sidebar",
+              title: "Close",
+              onClick: () => {
+                sidebar.set(false);
+              },
+              children: /* @__PURE__ */ jsx17(RemoveIcon, {})
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsx17("div", { className: "blockr-dock-sidebar-body", children: grouped.size === 0 ? /* @__PURE__ */ jsx17("p", { className: "blockr-dock-sidebar-note", children: "The board holds no board options." }) : /* @__PURE__ */ jsx17("div", { className: "blockr-dock-sidebar-categories", children: [...grouped].map(([category, ids]) => /* @__PURE__ */ jsx17(
+          Category,
+          {
+            category,
+            ids,
+            expanded: expanded.includes(category),
+            changed,
+            sidebar
+          },
+          category
+        )) }) })
+      ]
+    }
+  );
+}
+function ExpandAll({
+  categories: categories2,
+  expanded,
+  sidebar
+}) {
+  const all = categories2.every((category) => expanded.includes(category));
+  return /* @__PURE__ */ jsx17(
+    "button",
+    {
+      type: "button",
+      className: "blockr-dock-sidebar-expand",
+      "aria-expanded": all,
+      onClick: () => {
+        for (const category of categories2) sidebar.expand(category, !all);
+      },
+      children: all ? "Collapse all" : "Expand all"
+    }
+  );
+}
+function Category({ category, ids, expanded, changed, sidebar }) {
+  const [folding, setFolding] = useState10(false);
+  const folds = useRef10(0);
+  return /* @__PURE__ */ jsxs11(
+    "details",
+    {
+      className: "blockr-dock-sidebar-category",
+      open: expanded,
+      onToggle: (event) => {
+        const details = event.currentTarget;
+        sidebar.expand(category, details.open);
+        if (details.open) return;
+        folds.current += 1;
+        const fold2 = folds.current;
+        setFolding(true);
+        void folded(details).then(() => {
+          if (folds.current === fold2) setFolding(false);
+        });
+      },
+      children: [
+        /* @__PURE__ */ jsxs11("summary", { className: "blockr-dock-sidebar-summary", children: [
+          /* @__PURE__ */ jsx17("span", { className: "blockr-dock-sidebar-summary-name", children: category }),
+          /* @__PURE__ */ jsx17(Count, { n: ids.length }),
+          /* @__PURE__ */ jsx17(Chevron, {})
+        ] }),
+        expanded || folding ? /* @__PURE__ */ jsx17("div", { className: "blockr-dock-sidebar-options", children: ids.map((id) => /* @__PURE__ */ jsx17(OptionLine, { option: id, reset: changed.get(id) }, id)) }) : null
+      ]
+    }
+  );
+}
+function Count({ n }) {
+  return /* @__PURE__ */ jsxs11("span", { className: "blockr-dock-sidebar-count", children: [
+    /* @__PURE__ */ jsx17("span", { "aria-hidden": "true", children: n }),
+    /* @__PURE__ */ jsx17("span", { className: "blockr-dock-visually-hidden", children: n === 1 ? ", 1 board option" : `, ${String(n)} board options` })
+  ] });
+}
+async function folded(el) {
+  const style = el.ownerDocument.defaultView?.getComputedStyle(el, "::details-content");
+  const ms = style === void 0 ? 0 : longest(style.transitionDuration, style.transitionDelay);
+  await new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+function longest(durations, delays) {
+  const ms = (list) => list.split(",").map((item) => {
+    const time = Number.parseFloat(item);
+    if (!Number.isFinite(time)) return 0;
+    return item.trim().endsWith("ms") ? time : time * 1e3;
+  });
+  const duration = ms(durations);
+  const delay = ms(delays);
+  return Math.max(0, ...duration.map((d, i) => d + (delay[i % delay.length] ?? 0)));
+}
+function OptionLine({ option, reset }) {
+  const { core } = useDock();
+  const mount = useCallback10((el) => core.mountOption(el, option), [core, option]);
+  const line = useRef10(null);
+  const registered = core.options.registered();
+  const label = Object.hasOwn(registered, option) ? registered[option]?.label ?? option : option;
+  return /* @__PURE__ */ jsxs11("div", { ref: line, className: "blockr-dock-sidebar-option", "data-option": option, children: [
+    /* @__PURE__ */ jsx17(Mounted, { mount, className: "blockr-dock-sidebar-option-ui" }),
+    reset === void 0 ? null : /* @__PURE__ */ jsx17(
+      "button",
+      {
+        type: "button",
+        className: "blockr-dock-sidebar-reset",
+        "aria-label": `Reset ${label} to its default`,
+        title: "Reset to the default",
+        onClick: () => {
+          line.current?.querySelector(".blockr-dock-sidebar-option-ui")?.querySelector(FOCUSABLE)?.focus();
+          runEdit(core, "blockr.core-set_option", { id: option, value: reset });
+        },
+        children: "Reset"
+      }
+    )
+  ] });
+}
+function useDefaults(core, ids) {
+  const [resolved, setResolved] = useState10(() => /* @__PURE__ */ new Map());
+  const asked = useRef10(/* @__PURE__ */ new Set());
+  useEffect5(() => {
+    const registered = core.options.registered();
+    for (const id of ids) {
+      if (asked.current.has(id)) continue;
+      asked.current.add(id);
+      const def = Object.hasOwn(registered, id) ? registered[id] : void 0;
+      if (def === void 0) continue;
+      const given = def.default;
+      void Promise.resolve(typeof given === "function" ? given(core) : given).then(
+        (value) => {
+          setResolved((before2) => new Map(before2).set(id, value));
+        },
+        () => void 0
+      );
+    }
+  });
+  return resolved;
+}
+function useFocus(ref2, open) {
+  const before2 = useRef10(null);
+  useLayoutEffect8(() => {
+    const root = ref2.current;
+    if (root === null) return;
+    const doc = root.ownerDocument;
+    if (open) {
+      before2.current = doc.activeElement;
+      const first = root.querySelector(".blockr-dock-sidebar-body")?.querySelector(FOCUSABLE);
+      (first ?? root).focus();
+      return;
+    }
+    const back = before2.current;
+    before2.current = null;
+    const active = doc.activeElement;
+    const held = active === null || active === doc.body || root.contains(active);
+    if (held && back instanceof HTMLElement && back.isConnected) back.focus();
+  }, [ref2, open]);
+}
+function useKeys(ref2, sidebar) {
+  useEffect5(() => {
+    const root = ref2.current;
+    if (root === null) return void 0;
+    const onKey = (event) => {
+      if (event.defaultPrevented) return;
+      if (event.key === "Tab") {
+        keepFocus(root, event);
+        return;
+      }
+      if (event.key !== "Escape" || holdsOverlay(root) || sidebar.state().pinned) return;
+      sidebar.set(false);
+      event.preventDefault();
+    };
+    root.addEventListener("keydown", onKey);
+    return () => {
+      root.removeEventListener("keydown", onKey);
+    };
+  }, [ref2, sidebar]);
+}
+function keepFocus(root, event) {
+  const focusable = [...root.querySelectorAll(FOCUSABLE)].filter(
+    (el) => el.checkVisibility({ visibilityProperty: true }) && el.closest("[inert]") === null
+  );
+  const first = focusable[0];
+  const last = focusable.at(-1);
+  const active = root.ownerDocument.activeElement;
+  if (first === void 0 || last === void 0) {
+    event.preventDefault();
+    root.focus();
+  } else if (event.shiftKey && (active === first || active === root)) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (active === last || active === root)) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+function holdsOverlay(root) {
+  return OVERLAYS.some((selector) => {
+    try {
+      return root.querySelector(selector) !== null;
+    } catch {
+      return false;
+    }
+  });
+}
+function usePressOutside(ref2, sidebar, armed) {
+  useEffect5(() => {
+    const root = ref2.current;
+    if (root === null || !armed) return void 0;
+    const doc = root.ownerDocument;
+    const onPress = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element) || root.contains(target)) return;
+      if (target.closest(`[aria-controls="${sidebar.id}"], .blockr-dock-toasts`) !== null) return;
+      sidebar.set(false);
+    };
+    doc.addEventListener("pointerdown", onPress, true);
+    return () => {
+      doc.removeEventListener("pointerdown", onPress, true);
+    };
+  }, [ref2, sidebar, armed]);
+}
+
+// srcts/modules/dock/settings.ts
+async function readSettings(core) {
+  const [tolerance, locks, breakpoint, fraction, spinnerDelay] = await Promise.all([
+    gridSizeTolerance(core),
+    layoutLocks(core),
+    narrowBreakpoint(core),
+    groupFraction(core),
+    spinnerDelayMs(core)
+  ]);
+  return { tolerance, lockResize: locks.resize, lockRearrange: locks.rearrange, breakpoint, fraction, spinnerDelay };
+}
+var BREAKPOINT_FLOOR = 50;
+async function narrowBreakpoint(core) {
+  const sent = await core.blockrOption("narrow_breakpoint");
+  if (sent === void 0) return void 0;
+  const value = sent === null ? Infinity : typeof sent === "string" ? numberIn(sent) : sent;
+  if (typeof value === "number" && value >= BREAKPOINT_FLOOR) return value;
+  throw new TypeError(
+    `The blockr option narrow_breakpoint is ${JSON.stringify(sent)}, where it takes a number of at least ${String(BREAKPOINT_FLOOR)} or Inf.`
+  );
+}
+async function groupFraction(core) {
+  const sent = await core.blockrOption("narrow_group_fraction");
+  if (sent === void 0) return 0.8;
+  const value = typeof sent === "string" ? numberIn(sent) : sent;
+  if (typeof value === "number" && value > 0 && value <= 1) return value;
+  throw new TypeError(`The blockr option narrow_group_fraction is ${JSON.stringify(sent)}, where it takes a number above 0 and at most 1.`);
+}
+var SPINNER_DELAY = 200;
+async function spinnerDelayMs(core) {
+  const sent = await core.blockrOption("spinner_delay_ms");
+  const value = typeof sent === "string" ? numberIn(sent) : sent;
+  if (typeof value !== "number" || !Number.isFinite(value)) return SPINNER_DELAY;
+  const ms = Math.trunc(value);
+  return ms >= 0 ? ms : SPINNER_DELAY;
+}
+function numberIn(text2) {
+  const trimmed = text2.trim();
+  if (trimmed === "Inf") return Infinity;
+  return trimmed === "" ? Number.NaN : Number(trimmed);
+}
+
+// srcts/modules/dock/sidebar.ts
+var CLOSED = { open: false, pinned: false, expanded: [] };
+var made = 0;
+function createSidebar() {
+  made += 1;
+  let state = CLOSED;
+  const listeners = /* @__PURE__ */ new Set();
+  const change = (next) => {
+    if (next.open === state.open && next.pinned === state.pinned && next.expanded === state.expanded) return;
+    state = next;
+    for (const fn of [...listeners]) fn();
+  };
+  return {
+    id: `blockr-dock-sidebar-${String(made)}`,
+    state: () => state,
+    set(open) {
+      change(open ? { ...state, open: true } : { ...state, open: false, pinned: false });
+    },
+    pin(pinned) {
+      if (state.open) change({ ...state, pinned });
+    },
+    expand(category, expanded) {
+      if (state.expanded.includes(category) === expanded) return;
+      const next = expanded ? [...state.expanded, category] : state.expanded.filter((c) => c !== category);
+      change({ ...state, expanded: next });
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
+    }
+  };
+}
+
+// srcts/modules/dock/start.ts
+var PAGE_ID = "page";
+var PAGE_NAME = "Page";
+function startingPatches(board, drawn, view2) {
+  const state = dockState(board);
+  if (state === void 0) return [];
+  const at2 = (...segments) => pointer(["plugins", DOCK, ...segments]);
+  const patches = [];
+  const added = Object.keys(state.views).length === 0;
+  let views = state.views;
+  if (added) {
+    const page = { name: PAGE_NAME, folder: null, index: keyIn(state, null, void 0), grid: startingGrid(board, drawn) };
+    patches.push({ op: "add", path: at2("views", PAGE_ID), value: page });
+    views = { [PAGE_ID]: page };
+  }
+  const draws = (panel2) => "block" in panel2 || drawn.includes(panel2.plugin);
+  for (const [id, held] of Object.entries(state.views)) {
+    if (gridPanels(held.grid).every(draws)) continue;
+    patches.push({ op: "replace", path: at2("views", id, "grid"), value: prunePanels(held.grid, draws) });
+  }
+  const named = view2 !== void 0 && Object.hasOwn(views, view2) ? view2 : void 0;
+  const active = named ?? (added ? PAGE_ID : state.active);
+  if (active !== state.active) patches.push({ op: "replace", path: at2("active"), value: active });
+  return patches;
+}
+function startingGrid(board, drawn) {
+  const blocks = Object.keys(board.blocks).map((block2) => ({ block: block2 }));
+  const plugins = drawn.map((plugin2) => ({ plugin: plugin2 }));
+  const [block] = blocks;
+  const [plugin] = plugins;
+  return {
+    orientation: "horizontal",
+    children: block === void 0 ? [] : [{ panels: blocks, active: block }],
+    sizes: block === void 0 ? [] : [1],
+    ...plugin === void 0 ? {} : { rails: { left: { panels: plugins, active: plugin, collapsed: false, size: RAIL_SIZE } } }
+  };
+}
+function drawnPlugins(core) {
+  const plugins = core.plugins.appPlugins();
+  return new Map(
+    Object.entries(plugins).flatMap(([id, plugin]) => core.plugins.pluginClass(id).ui === void 0 ? [] : [[id, plugin.name]])
+  );
+}
+function urlView(location) {
+  const view2 = new URLSearchParams(location?.search ?? "").get("view");
+  return view2 === null || view2 === "" ? void 0 : view2;
+}
+function startOnBoard(core, plugin, drawn, view2) {
+  const patches = startingPatches(core.store.board(), drawn, view2);
+  if (patches.length > 0) core.store.apply({ patches }, plugin, { undo: false });
+}
+
+// srcts/modules/dock/toasts.tsx
+import { useCallback as useCallback11, useSyncExternalStore as useSyncExternalStore6 } from "react";
+
+// srcts/modules/dock/notifications.ts
+function onCard(notification) {
+  const { about, source } = notification;
+  if (about === void 0 || !("block" in about)) return false;
+  return source.kind !== "module" || !("plugin" in source.module.object);
+}
+var ANSI = /(?:\u001b\[|\u009b)[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
+function plainText(message) {
+  return message.replace(ANSI, "");
+}
+
+// srcts/modules/dock/toasts.tsx
+import { jsx as jsx18, jsxs as jsxs12 } from "react/jsx-runtime";
+var SHOWN_FOR = 5e3;
+var FADES_FOR = 300;
+function createToasts(notifications) {
+  const shown = /* @__PURE__ */ new Map();
+  const gone = /* @__PURE__ */ new Set();
+  const listeners = /* @__PURE__ */ new Set();
+  let heard = notifications.get();
+  let list = [];
+  let stopped = false;
+  function publish() {
+    const next = heard.flatMap((notification) => {
+      const toast = shown.get(notification.id)?.toast;
+      return toast === void 0 ? [] : [toast];
+    });
+    if (next.length === list.length && next.every((toast, i) => toast === list[i])) return;
+    list = next;
+    for (const fn of [...listeners]) fn();
+  }
+  function countDown(id, toast) {
+    if (stopped || toast.toast.notification.severity !== "message" || toast.kept.size > 0) return;
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => {
+      toast.toast = { ...toast.toast, fading: true };
+      toast.timer = setTimeout(() => {
+        hide(id);
+      }, FADES_FOR);
+      publish();
+    }, SHOWN_FOR);
+  }
+  function hide(id) {
+    const toast = shown.get(id);
+    if (toast === void 0) return;
+    clearTimeout(toast.timer);
+    shown.delete(id);
+    gone.add(id);
+    publish();
+  }
+  function update2() {
+    const holding = new Set(heard.map((notification) => notification.id));
+    for (const [id, toast] of shown) {
+      if (holding.has(id)) continue;
+      clearTimeout(toast.timer);
+      shown.delete(id);
+    }
+    for (const id of gone) {
+      if (!holding.has(id)) gone.delete(id);
+    }
+    for (const notification of heard) {
+      if (onCard(notification) || gone.has(notification.id)) continue;
+      const toast = shown.get(notification.id);
+      if (toast === void 0) {
+        const added = { toast: { notification, fading: false }, timer: void 0, kept: /* @__PURE__ */ new Set() };
+        shown.set(notification.id, added);
+        countDown(notification.id, added);
+      } else if (toast.toast.notification !== notification) {
+        toast.toast = { ...toast.toast, notification };
+      }
+    }
+    publish();
+  }
+  const off = notifications.subscribe((all) => {
+    heard = all;
+    update2();
+  });
+  update2();
+  return {
+    list: () => list,
+    subscribe(fn) {
+      const wrapped = () => {
+        fn();
+      };
+      listeners.add(wrapped);
+      return () => {
+        listeners.delete(wrapped);
+      };
+    },
+    close: hide,
+    keep(id, by) {
+      const toast = shown.get(id);
+      if (toast === void 0) return;
+      toast.kept.add(by);
+      clearTimeout(toast.timer);
+      toast.timer = void 0;
+      if (!toast.toast.fading) return;
+      toast.toast = { ...toast.toast, fading: false };
+      publish();
+    },
+    release(id, by) {
+      const toast = shown.get(id);
+      if (toast?.kept.delete(by) !== true) return;
+      countDown(id, toast);
+    },
+    stop() {
+      stopped = true;
+      off();
+      for (const toast of shown.values()) clearTimeout(toast.timer);
+    }
+  };
+}
+function concerned(about, core, board) {
+  if (about === void 0) return "Board";
+  if ("option" in about) return `Board option "${own(core.options.registered(), about.option)?.label ?? about.option}"`;
+  if ("plugin" in about) return `Plugin "${own(core.plugins.appPlugins(), about.plugin)?.name ?? about.plugin}"`;
+  if ("stack" in about) return `Stack "${own(board.stacks, about.stack)?.name ?? about.stack}"`;
+  const block = (id) => `"${own(board.blocks, id)?.name ?? id}"`;
+  if ("block" in about) return `Block ${block(about.block)}`;
+  const link = own(board.links, about.link);
+  return link === void 0 ? `Link "${about.link}"` : `Link from ${block(link.from)} to ${block(link.to)}`;
+}
+function sourcePackage(notification) {
+  return notification.source.module?.package;
+}
+function own(record, key) {
+  return Object.hasOwn(record, key) ? record[key] : void 0;
+}
+function ToastList({ core, toasts }) {
+  const list = useSyncExternalStore6(toasts.subscribe, toasts.list);
+  const board = useBoard2(core);
+  if (list.length === 0) return null;
+  return /* @__PURE__ */ jsx18("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => /* @__PURE__ */ jsx18(
+    ToastItem,
+    {
+      toast,
+      title: concerned(toast.notification.about, core, board),
+      toasts
+    },
+    toast.notification.id
+  )) });
+}
+function ToastItem({ toast, title, toasts }) {
+  const { notification, fading } = toast;
+  const { id, severity } = notification;
+  const pkg = sourcePackage(notification);
+  return /* @__PURE__ */ jsxs12(
+    "div",
+    {
+      className: "blockr-dock-toast",
+      role: severity === "message" ? "status" : "alert",
+      "data-severity": severity,
+      "data-fading": fading ? "" : void 0,
+      onPointerEnter: () => {
+        toasts.keep(id, "pointer");
+      },
+      onPointerLeave: () => {
+        toasts.release(id, "pointer");
+      },
+      onFocus: () => {
+        toasts.keep(id, "focus");
+      },
+      onBlur: (event) => {
+        if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) {
+          toasts.release(id, "focus");
+        }
+      },
+      children: [
+        /* @__PURE__ */ jsxs12("div", { className: "blockr-dock-toast-text", children: [
+          /* @__PURE__ */ jsxs12("p", { className: "blockr-dock-toast-title", children: [
+            title,
+            pkg === void 0 ? null : /* @__PURE__ */ jsxs12("span", { className: "blockr-dock-toast-package", children: [
+              " \xB7 ",
+              pkg
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx18("p", { className: "blockr-dock-toast-message", children: plainText(notification.message) })
+        ] }),
+        /* @__PURE__ */ jsx18(
+          "button",
+          {
+            type: "button",
+            className: "blockr-dock-toast-close",
+            "aria-label": "Close",
+            onClick: () => {
+              toasts.close(id);
+            },
+            children: /* @__PURE__ */ jsx18("span", { "aria-hidden": "true", children: "\xD7" })
+          }
+        )
+      ]
+    }
+  );
+}
+function useBoard2(core) {
+  const subscribe = useCallback11(
+    (fn) => core.store.subscribe(() => {
+      fn();
+    }),
+    [core]
+  );
+  return useSyncExternalStore6(subscribe, () => core.store.board());
+}
+
+// srcts/modules/dock/index.tsx
+import { Fragment as Fragment7, jsx as jsx19, jsxs as jsxs13 } from "react/jsx-runtime";
+var api = API;
+var SHOW_PANEL = "blockr.dock-show_panel";
+var frontend = {
+  async render({ el, core, plugin, signal, args }) {
+    const items = readNavbar(args);
+    const settings = await readSettings(core);
+    if (signal.aborted) return void 0;
+    const win = el.ownerDocument.defaultView ?? window;
+    const drawn = drawnPlugins(core);
+    startOnBoard(core, plugin, [...drawn.keys()], urlView(win.location));
+    const narrow = trackNarrow(win, settings.breakpoint);
+    const release = demandShown(core, drawn, narrow);
+    const busy = trackBusy(core, drawn, narrow, settings.spinnerDelay);
+    const sidebar = createSidebar();
+    const openFolders = createOpenFolders();
+    const toasts = createToasts(core.notifications);
+    const unbind = bindShortcuts(el.ownerDocument, core, () => barButtons(core, items));
+    const root = createRoot(el);
+    const shared = { core, plugin, drawn, tooltips: createTooltips() };
+    flushSync(() => {
+      root.render(
+        /* @__PURE__ */ jsxs13(Fragment7, { children: [
+          /* @__PURE__ */ jsx19(DockContext, { value: shared, children: /* @__PURE__ */ jsx19(Navbar, { items, busy, sidebar, mac: onMac(win), openFolders }) }),
+          /* @__PURE__ */ jsx19(
+            Dock,
+            {
+              core,
+              plugin,
+              settings,
+              narrow,
+              drawn,
+              viewsMenu: holdsPart(items, "views"),
+              sidebar
+            }
+          ),
+          /* @__PURE__ */ jsx19(DockContext, { value: shared, children: /* @__PURE__ */ jsx19(OptionsSidebar, { sidebar }) }),
+          /* @__PURE__ */ jsx19(ToastList, { core, toasts })
+        ] })
+      );
+    });
+    return () => {
+      root.unmount();
+      unbind();
+      toasts.stop();
+      busy.stop();
+      release();
+      narrow.stop();
+    };
+  },
+  async show({ object: object2, core }) {
+    const args = { panel: object2 };
+    if (!core.commands.preflight(SHOW_PANEL, args)) return;
+    await core.commands.run(SHOW_PANEL, args);
+  }
+};
+var dock_default = {
+  options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
+  // TypeScript gives the objects in the JSON's arrays properties that may be
+  // undefined, which no Json has, so it does not take the schema for a Json,
+  // though it is one.
+  state: { schema: dock_schema_default, default: defaultState },
+  update,
+  commands: dockCommands,
+  frontend
+};
+export {
+  api,
+  dock_default as default
+};

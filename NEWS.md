@@ -26,6 +26,20 @@
   The sidebar holds no field for the board's name, which the bar shows, and no
   code export, which becomes blockr.code's plugin.
 
+* The bar's views menu lists the views and folders of the board in the order
+  of the navigation, with what each folder holds below it (#582).
+  A folder opens and closes in the menu.
+  Which folders are open stays on the screen, and the board does not keep it.
+  As the menu opens, the folders that hold the active view open with it.
+  A pick of a view makes it the active view, under every lock too.
+  On a board without the board lock, "Manage views" adds, renames, moves and
+  removes views and folders: a drag by a row's grip moves a view or a folder,
+  into a folder where it lets go over the folder's row.
+  The row "Show views as tabs" turns the board option `view_tabs` on and off.
+  While `view_tabs` is on, the views show as a line of tabs under the bar,
+  with a tab for each view and folder at the top, and a folder's tab opens a
+  menu of what the folder holds.
+
 * The dock draws a card in each block's panel (#578).
   Its header holds the block's mark, its name, the Controls and Preview
   toggles, the padlock and the "…" button.
@@ -84,7 +98,6 @@
   item, and a module that cannot draw leaves a warning in its place.
   On a narrow bar, the board's name and then the storage controls cut their
   labels short, and show them in full as the tooltip.
-  The bar draws no views menu yet, since #582 draws it.
 
 * The dock gives the assistant's model its guidance on arranging views, as the
   skill `layout` in `inst/assistant/skills` (#597).

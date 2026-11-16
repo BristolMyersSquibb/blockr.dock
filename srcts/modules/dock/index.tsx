@@ -30,7 +30,8 @@
 //    (./demand.ts).
 // 5. It starts to follow whether the logo turns (./busy.ts), and holds
 //    whether the options sidebar is open, whether it is pinned and which
-//    categories it has expanded (./sidebar.ts).
+//    categories it has expanded (./sidebar.ts), and which folders are open in
+//    the views menu (./open-folders.ts).
 // 6. It starts the toasts of the opening, which follow the notifications of
 //    CoreApi (./toasts.tsx).
 // 7. It binds the shortcuts of the bar on the page's document
@@ -40,6 +41,8 @@
 //    ./drawing.ts), and beside them the options sidebar
 //    (./options-sidebar.tsx) and the toasts of the notifications that no card
 //    shows.
+//    The active view starts lower while the views menu draws its line of tabs
+//    under the bar.
 // The cleanup that render() returns undoes all of them but the step on
 // starting, which is the board's.
 //
@@ -68,8 +71,9 @@ import { DockContext } from "./context.ts";
 import { demandShown } from "./demand.ts";
 import { Dock } from "./dock.tsx";
 import { Navbar } from "./navbar.tsx";
-import { readNavbar } from "./navbar-items.ts";
+import { holdsPart, readNavbar } from "./navbar-items.ts";
 import { trackNarrow } from "./narrow.ts";
+import { createOpenFolders } from "./open-folders.ts";
 import { OptionsSidebar } from "./options-sidebar.tsx";
 import { readSettings } from "./settings.ts";
 import { bindShortcuts, onMac } from "./shortcuts.ts";
@@ -97,6 +101,7 @@ const frontend = {
     const release = demandShown(core, drawn, narrow);
     const busy = trackBusy(core, drawn, narrow, settings.spinnerDelay);
     const sidebar = createSidebar();
+    const openFolders = createOpenFolders();
     const toasts = createToasts(core.notifications);
     const unbind = bindShortcuts(el.ownerDocument, core, () => barButtons(core, items));
 
@@ -107,9 +112,17 @@ const frontend = {
       root.render(
         <>
           <DockContext value={shared}>
-            <Navbar items={items} busy={busy} sidebar={sidebar} mac={onMac(win)} />
+            <Navbar items={items} busy={busy} sidebar={sidebar} mac={onMac(win)} openFolders={openFolders} />
           </DockContext>
-          <Dock core={core} plugin={plugin} settings={settings} narrow={narrow} drawn={drawn} sidebar={sidebar} />
+          <Dock
+            core={core}
+            plugin={plugin}
+            settings={settings}
+            narrow={narrow}
+            drawn={drawn}
+            viewsMenu={holdsPart(items, "views")}
+            sidebar={sidebar}
+          />
           <DockContext value={shared}>
             <OptionsSidebar sidebar={sidebar} />
           </DockContext>

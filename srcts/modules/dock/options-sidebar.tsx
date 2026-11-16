@@ -68,7 +68,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import type { ReactElement } from "react";
 import { sameJson } from "../../state/index.ts";
 import { runEdit, useBoard, useDock } from "./context.ts";
-import { Chevron, CloseIcon, PinIcon } from "./icons.tsx";
+import { Chevron, PinIcon, RemoveIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
 import type { Sidebar } from "./sidebar.ts";
 
@@ -164,7 +164,7 @@ export function OptionsSidebar({ sidebar }: { readonly sidebar: Sidebar }): Reac
             sidebar.set(false);
           }}
         >
-          <CloseIcon />
+          <RemoveIcon />
         </button>
       </header>
       <div className="blockr-dock-sidebar-body">

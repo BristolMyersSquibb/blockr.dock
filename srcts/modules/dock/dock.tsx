@@ -31,6 +31,8 @@
 // So the dock draws no "+", no close button on a tab and no picker there, and
 // an empty view says "This view is empty".
 //
+// While the views menu on the bar draws its line of tabs, under the bar's row,
+// the dock's root starts below the line (./views-menu.tsx).
 // While the options sidebar is pinned, the dock's root makes room for it at
 // the window's right edge (./options-sidebar.tsx, ./index.css). Dockview lays
 // the view out again, as for any change of the root's size.
@@ -59,6 +61,7 @@ import type { Narrow } from "./narrow.ts";
 import { PanelPicker, usePickerButton } from "./picker.tsx";
 import type { Settings } from "./settings.ts";
 import type { Sidebar } from "./sidebar.ts";
+import { useViewTabs } from "./views-menu.tsx";
 
 // The frame of a panel, which names the block or the plugin whose panel it
 // is, and holds a block's card.
@@ -160,15 +163,19 @@ export interface DockProps {
   readonly settings: Settings;
   readonly narrow: Narrow;
   readonly drawn: ReadonlyMap<PluginClassId, string>;
+  // Whether the bar holds the views menu, which draws its line of tabs under
+  // the bar while the board option view_tabs is on.
+  readonly viewsMenu: boolean;
   readonly sidebar: Sidebar;
 }
 
-export function Dock({ core, plugin, settings, narrow, drawn, sidebar }: DockProps): ReactElement {
+export function Dock({ core, plugin, settings, narrow, drawn, viewsMenu, sidebar }: DockProps): ReactElement {
   const root = useRef<HTMLDivElement>(null);
   const stop = useRef<(() => void) | undefined>(undefined);
   const [tooltips] = useState(createTooltips);
   const shared = useMemo(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
   const locked = core.lock.board;
+  const tabs = useViewTabs(core) && viewsMenu;
   const { pinned } = useSyncExternalStore(sidebar.subscribe, sidebar.state);
 
   const onReady = useCallback(
@@ -205,7 +212,7 @@ export function Dock({ core, plugin, settings, narrow, drawn, sidebar }: DockPro
 
   return (
     <DockContext value={shared}>
-      <div className="blockr-dock" ref={root} data-pushed={pinned ? "" : undefined}>
+      <div className="blockr-dock" ref={root} data-tabs={tabs ? "" : undefined} data-pushed={pinned ? "" : undefined}>
         {locked ? view : <PanelPicker>{view}</PanelPicker>}
       </div>
     </DockContext>
