@@ -1,5 +1,5 @@
-// A section of a card, which shows as the dock's `visible` says, and the
-// element in it in which core mounts the block's UI or its output
+// A section of a card, which shows as the dock's `visible` says, and holds the
+// element in which core mounts the block's UI or its output (../mounted.tsx)
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.7#sections).
 //
 // A section folds as it closes and unfolds as it opens, whoever changed
@@ -80,35 +80,4 @@ function fold(el: HTMLElement, open: boolean): () => void {
   return () => {
     current = false;
   };
-}
-
-// The element in which core mounts a block's UI or its output, as `mount`
-// does it, until the component goes.
-// Where it has a label, the element is a region of that name.
-// Core mounts the module as React commits the element.
-// Core's cleanup runs once React has finished the work in which the component
-// went, as core's card runs it.
-// A module written in React then unmounts its own root at once, before core
-// empties the element.
-// Within that work, React would put the unmount off until after core had
-// emptied the element, and then fail to remove what it drew.
-export function Mounted({
-  mount,
-  label,
-  className,
-}: {
-  mount: (el: HTMLElement) => () => void;
-  label: string;
-  className?: string;
-}): ReactElement {
-  const ref = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (el === null) return;
-    const cleanup = mount(el);
-    return () => {
-      queueMicrotask(cleanup);
-    };
-  }, [mount]);
-  return <div ref={ref} role="region" aria-label={label} className={className} />;
 }
