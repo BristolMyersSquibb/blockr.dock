@@ -70,7 +70,7 @@ export const viewCommands = [
       before: schemas.before,
       grid: schemas.ref("Grid", "The grid of the new view, which says which panels it shows and where."),
     }),
-    enabled(board, args, { lock }) {
+    preflight(board, args, { lock }) {
       const state = stateOf(board);
       const folder = args.folder ?? null;
       return editable(state, lock.board) && folderOrTop(state, folder) && fits(state, folder, args.before);
@@ -103,7 +103,7 @@ export const viewCommands = [
     description:
       "Removes a view, and makes the first view of the navigation active where the view it removes was. It removes no block, and refuses to remove the last view.",
     args: schemas.object({ view: schemas.view }, ["view"]),
-    enabled(board, { view }, { lock }) {
+    preflight(board, { view }, { lock }) {
       const state = stateOf(board);
       return editable(state, lock.board) && Object.hasOwn(state.views, view) && Object.keys(state.views).length > 1;
     },
@@ -122,7 +122,7 @@ export const viewCommands = [
     label: "Rename view",
     description: "Gives a view a new name.",
     args: schemas.object({ view: schemas.view, name: schemas.name("view", "The view's new name.") }, ["view", "name"]),
-    enabled(board, { view }, { lock }) {
+    preflight(board, { view }, { lock }) {
       const state = stateOf(board);
       return editable(state, lock.board) && Object.hasOwn(state.views, view);
     },
@@ -135,7 +135,7 @@ export const viewCommands = [
     description:
       "Moves a view into a folder, or to the top, before the view or folder that `before` names, or at the end of that folder.",
     args: schemas.object({ view: schemas.view, folder: schemas.into("view"), before: schemas.before }, ["view", "folder"]),
-    enabled(board, { view, folder, before }, { lock }) {
+    preflight(board, { view, folder, before }, { lock }) {
       const state = stateOf(board);
       return (
         editable(state, lock.board) &&
@@ -165,7 +165,7 @@ export const viewCommands = [
       "Makes a view the active one, which the dock shows. It takes no undo step, since it changes only what the user looks at.",
     args: schemas.object({ view: schemas.view }, ["view"]),
     undo: false,
-    enabled(board, { view }) {
+    preflight(board, { view }) {
       const state = stateOf(board);
       return state !== undefined && Object.hasOwn(state.views, view);
     },
@@ -182,7 +182,7 @@ export const viewCommands = [
       folder: schemas.into("folder", true),
       before: schemas.before,
     }),
-    enabled(board, args, { lock }) {
+    preflight(board, args, { lock }) {
       const state = stateOf(board);
       const folder = args.folder ?? null;
       return editable(state, lock.board) && folderOrTop(state, folder) && fits(state, folder, args.before);
@@ -206,7 +206,7 @@ export const viewCommands = [
     description:
       "Removes a folder, and moves the views and folders that it holds up into the folder that held it, in its place and in their order. It removes no view.",
     args: schemas.object({ folder: schemas.folder }, ["folder"]),
-    enabled(board, { folder }, { lock }) {
+    preflight(board, { folder }, { lock }) {
       const state = stateOf(board);
       return editable(state, lock.board) && Object.hasOwn(state.folders, folder);
     },
@@ -232,7 +232,7 @@ export const viewCommands = [
     label: "Rename folder",
     description: "Gives a folder a new name.",
     args: schemas.object({ folder: schemas.folder, name: schemas.name("folder", "The folder's new name.") }, ["folder", "name"]),
-    enabled(board, { folder }, { lock }) {
+    preflight(board, { folder }, { lock }) {
       const state = stateOf(board);
       return editable(state, lock.board) && Object.hasOwn(state.folders, folder);
     },
@@ -247,7 +247,7 @@ export const viewCommands = [
     description:
       "Moves a folder, with what it holds, into another folder, or to the top, before the view or folder that `before` names, or at the end of that folder. It refuses to move a folder into itself or into a folder inside it.",
     args: schemas.object({ folder: schemas.folder, into: schemas.into("folder"), before: schemas.before }, ["folder", "into"]),
-    enabled(board, { folder, into, before }, { lock }) {
+    preflight(board, { folder, into, before }, { lock }) {
       const state = stateOf(board);
       return (
         editable(state, lock.board) &&

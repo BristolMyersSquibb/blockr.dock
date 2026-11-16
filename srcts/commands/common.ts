@@ -39,13 +39,13 @@ export interface DockCommand<A, P = A> {
   readonly description: string;
   readonly args: JsonSchema;
   readonly undo?: false;
-  enabled?(board: Board, args: A, context: CommandContext): boolean;
+  preflight?(board: Board, args: A, context: CommandContext): boolean;
   prepare?(board: Board, args: A, context: CommandContext): Promise<P>;
   run(board: Board, args: P, context: CommandContext): Delta | readonly Delta[];
 }
 
 // A command of the dock's, as core registers it.
-// The command registry hands enabled(), prepare() and run() only args that
+// The command registry hands preflight(), prepare() and run() only args that
 // the command's schema takes, so they read them as an A, which TypeScript
 // cannot take for a Json where it has optional properties.
 export function command<A, P = A>(definition: DockCommand<A, P>): Command<Json, unknown> {
