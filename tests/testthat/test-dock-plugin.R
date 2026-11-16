@@ -412,8 +412,102 @@ test_that("a view and a folder take a name that holds more than spaces", {
     "<dock_view> A (in f)",
     fixed = TRUE
   )
-  expect_output(print(dock_view(dock_grid("a"))), "<dock_grid> horizontal")
+  expect_identical(
+    format(dock_view(dock_grid("a", "b"), name = "A", folder = "f")),
+    c(
+      "<dock_view> A (in f, horizontal)",
+      "\u251c\u2500 50%: a",
+      "\u2514\u2500 50%: b"
+    )
+  )
+  expect_identical(
+    format(dock_view(dock_grid(), name = "A")),
+    "<dock_view> A (empty)"
+  )
   expect_output(print(dock_folder("F")), "<dock_folder> F", fixed = TRUE)
+})
+
+test_that("the plugin prints its views and folders in the views menu's order", {
+
+  # The script lists the view Lab first, while the views menu lists it last,
+  # in the folder Labs inside the folder Safety.
+  dock <- new_dock_plugin(
+    views = list(
+      lab = dock_view(c("e", "f"), folder = "labs"),
+      main = dock_view(
+        dock_grid(panels("a", "b"), "c", rail(plg("dag")), sizes = c(3, 7)),
+        name = "Main"
+      ),
+      ae = dock_view("d", name = "Adverse events", folder = "safety")
+    ),
+    folders = list(
+      safety = dock_folder("Safety"),
+      labs = dock_folder("Labs", folder = "safety")
+    ),
+    active = "ae",
+    visible = list(b = "outputs", c = character())
+  )
+
+  expect_snapshot(print(dock))
+
+  expect_identical(
+    format(new_dock_plugin()),
+    "<dock_plugin> blockr.dock-dock_plugin"
+  )
+})
+
+test_that("the print marks the sections of each card that hides one", {
+
+  # The card of b shows its outputs alone and that of c its inputs alone,
+  # while no view places z, whose card shows neither.
+  dock <- new_dock_plugin(
+    views = list(
+      main = dock_view(
+        dock_grid(
+          panels("a", plg("edit"), "b", active = "b"),
+          rail("c", collapsed = TRUE)
+        )
+      )
+    ),
+    visible = list(b = "outputs", c = "inputs", z = character())
+  )
+
+  expect_snapshot(print(dock))
+
+  expect_snapshot(print(new_dock_plugin(visible = list(a = "inputs"))))
+})
+
+test_that("the print orders the views by their keys in any collation", {
+
+  # The collation of en_US.UTF-8 puts "aa", the key of the 37th view, before
+  # "aA", the key of the 11th, while the client compares the keys by their
+  # code units.
+  skip_on_os("windows")
+  withr::local_collate("en_US.UTF-8")
+
+  ids <- sprintf("v%02d", 1:37)
+  views <- set_names(rep(list(dock_view("a")), 37L), ids)
+
+  lines <- format(new_dock_plugin(views = views))
+  lines <- lines[grepl("<dock_view>", lines, fixed = TRUE)]
+
+  expect_identical(lines, paste0(ids, "<dock_view> ", toupper(ids)))
+})
+
+test_that("a board prints the dock plugin that it holds", {
+
+  dock <- new_dock_plugin(views = list(main = dock_view("a")))
+
+  board <- new_board(
+    blocks = c(a = new_dataset_block("iris")),
+    plugins = list(dock)
+  )
+
+  expect_output(
+    print(board),
+    paste(format(dock), collapse = "\n"),
+    fixed = TRUE
+  )
 })
 
 test_that("view_name() reads the name of a view", {

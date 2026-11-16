@@ -459,30 +459,20 @@ str.dock_grid <- function(object, ...) {
   invisible(object)
 }
 
+# The print leaves out what says nothing of the layout: the orientation of a
+# split that holds fewer than two children, and the share of an only child.
 #' @export
 format.dock_grid <- function(x, ...) {
 
-  header <- paste0("<dock_grid> ", x[["orientation"]])
-
-  if (!length(x[["children"]]) && !length(x[["rails"]])) {
-    return(paste0(header, " (empty)"))
+  if (!length(grid_panels(x))) {
+    return("<dock_grid> (empty)")
   }
 
-  rails <- Map(
-    function(rail, edge) {
-      c(
-        paste0(edge, " rail", grid_attrs(if (rail[["collapsed"]]) "collapsed")),
-        format_tabs(rail, "")
-      )
-    },
-    x[["rails"]],
-    names(x[["rails"]])
-  )
+  division <- split_division(x[["children"]], x[["orientation"]])
 
   c(
-    header,
-    format_nodes(x[["children"]], x[["sizes"]], x[["orientation"]], ""),
-    unlst(rails)
+    paste0("<dock_grid>", if (not_null(division)) paste0(" ", division)),
+    format_grid_body(x, list())
   )
 }
 
@@ -492,70 +482,147 @@ print.dock_grid <- function(x, ...) {
   invisible(x)
 }
 
-# The lines of a split's children, as a tree under `prefix`.
-format_nodes <- function(children, sizes, orientation, prefix) {
+# How a split divides, where it holds several children, since the orientation
+# of a split with one child says nothing of the layout.
+split_division <- function(children, orientation) {
+  if (length(children) > 1L) orientation
+}
 
-  n <- length(children)
+# The lines of a grid below its first line: its splits as a tree, then each of
+# its rails on a line.
+# The panel of a block whose card hides a section shows the sections that the
+# card shows, which `visible` gives by the block's id.
+format_grid_body <- function(grid, visible) {
 
-  lines <- lapply(
-    seq_len(n),
-    function(i) {
-
-      last <- i == n
-      branch <- paste0(prefix, if (last) "\u2514\u2500 " else "\u251c\u2500 ")
-      indent <- paste0(prefix, if (last) "   " else "\u2502  ")
-
-      format_node(children[[i]], sizes[[i]], orientation, branch, indent)
-    }
+  rails <- chr_mply(
+    function(rail, edge) {
+      paste0(
+        edge,
+        " rail",
+        grid_attrs(if (rail[["collapsed"]]) "collapsed"),
+        ": ",
+        format_tabs(rail, visible)
+      )
+    },
+    grid[["rails"]],
+    names(grid[["rails"]])
   )
 
-  unlst(lines)
+  c(
+    format_nodes(
+      grid[["children"]],
+      grid[["sizes"]],
+      grid[["orientation"]],
+      visible
+    ),
+    rails
+  )
 }
 
-format_node <- function(node, size, orientation, branch, indent) {
+# The lines of a split's children, as a tree, each after its share.
+# An only child has no share in the tree.
+format_nodes <- function(children, sizes, orientation, visible) {
 
-  share <- paste0(round(100 * size), "%")
+  shared <- length(children) > 1L
 
-  if (not_null(node[["children"]])) {
+  format_tree(
+    map(
+      function(node, size) {
 
-    inner <- setdiff(c("horizontal", "vertical"), orientation)
+        lines <- format_node(node, orientation, visible)
 
-    return(
-      c(
-        paste0(branch, "group", grid_attrs(inner, share)),
-        format_nodes(node[["children"]], node[["sizes"]], inner, indent)
-      )
+        if (shared) {
+          lines[1L] <- paste0(round(100 * size), "%: ", lines[1L])
+        }
+
+        lines
+      },
+      children,
+      sizes
     )
-  }
-
-  if (length(node[["panels"]]) == 1L) {
-    ref <- node[["panels"]][[1L]]
-    return(paste0(branch, ref[["id"]], grid_attrs(ref_kind(ref), share)))
-  }
-
-  c(paste0(branch, "tabs", grid_attrs(share)), format_tabs(node, indent))
+  )
 }
 
-# The lines of the tabs of a tab group or a rail, under `prefix`.
-format_tabs <- function(node, prefix) {
+# The lines of a child of a split that divides as `orientation` says.
+# A tab group lists its panels on one line, and a split, which divides the
+# other way, holds the lines of its children below its own.
+format_node <- function(node, orientation, visible) {
+
+  if (is.null(node[["children"]])) {
+    return(format_tabs(node, visible))
+  }
+
+  inner <- setdiff(c("horizontal", "vertical"), orientation)
+
+  c(
+    paste0("group", grid_attrs(split_division(node[["children"]], inner))),
+    format_nodes(node[["children"]], node[["sizes"]], inner, visible)
+  )
+}
+
+# The panels of a tab group or a rail, on one line, each with its marks: that
+# it is a plugin's panel, that it is the tab that its group shows, where the
+# group holds several, and after a semicolon, the sections that the card of a
+# block's panel shows, where the card hides one.
+format_tabs <- function(node, visible) {
 
   refs <- node[["panels"]]
-  n <- length(refs)
+  several <- length(refs) > 1L
 
-  chr_ply(
-    seq_len(n),
-    function(i) {
-      ref <- refs[[i]]
+  tabs <- chr_ply(
+    refs,
+    function(ref) {
+
+      kind <- ref_kind(ref)
+
       paste0(
-        prefix,
-        if (i == n) "\u2514\u2500 " else "\u251c\u2500 ",
         ref[["id"]],
         grid_attrs(
-          ref_kind(ref),
-          if (identical(ref, node[["active"]]) && n > 1L) "active"
+          kind,
+          if (several && identical(ref, node[["active"]])) "active",
+          sections = if (is.null(kind)) section_mark(ref[["id"]], visible)
         )
       )
     }
+  )
+
+  paste(tabs, collapse = ", ")
+}
+
+# The sections that the card of the block `id` shows, where `visible` gives
+# them, as one letter: "i" for its inputs, "o" for its outputs and "n" for
+# neither.
+# A card that `visible` gives no entry shows both, and has no mark.
+section_mark <- function(id, visible) {
+
+  if (!id %in% names(visible)) {
+    return(NULL)
+  }
+
+  shown <- visible[[id]]
+
+  if (length(shown)) substr(shown, 1L, 1L) else "n"
+}
+
+# The lines of `items`, each a character vector of lines, as the branches of a
+# tree.
+# Each item's first line follows its branch, and the item's other lines go
+# below it, indented.
+format_tree <- function(items) {
+
+  n <- length(items)
+
+  unlst(
+    map(
+      function(lines, last) {
+        c(
+          paste0(if (last) "\u2514\u2500 " else "\u251c\u2500 ", lines[1L]),
+          paste0(if (last) "   " else "\u2502  ", lines[-1L], recycle0 = TRUE)
+        )
+      },
+      items,
+      seq_len(n) == n
+    )
   )
 }
 
@@ -564,13 +631,18 @@ ref_kind <- function(ref) {
   if (identical(ref[["type"]], "plugin")) "plugin"
 }
 
-grid_attrs <- function(...) {
+# The marks of a line of the print, in parentheses after a space, with the
+# sections that a card shows after a semicolon, or nothing where there is no
+# mark.
+grid_attrs <- function(..., sections = NULL) {
 
-  tokens <- c(...)
+  marks <- c(...)
+
+  tokens <- c(if (length(marks)) paste(marks, collapse = ", "), sections)
 
   if (!length(tokens)) {
     return("")
   }
 
-  paste0(" (", paste(tokens, collapse = ", "), ")")
+  paste0(" (", paste(tokens, collapse = "; "), ")")
 }
