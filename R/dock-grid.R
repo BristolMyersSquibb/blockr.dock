@@ -464,30 +464,15 @@ str.dock_grid <- function(object, ...) {
 #' @export
 format.dock_grid <- function(x, ...) {
 
-  header <- paste0(
-    "<dock_grid>",
-    if (length(x[["children"]]) > 1L) paste0(" ", x[["orientation"]])
-  )
-
-  if (!length(x[["children"]]) && !length(x[["rails"]])) {
-    return(paste0(header, " (empty)"))
+  if (!length(grid_panels(x))) {
+    return("<dock_grid> (empty)")
   }
 
-  rails <- Map(
-    function(rail, edge) {
-      c(
-        paste0(edge, " rail", grid_attrs(if (rail[["collapsed"]]) "collapsed")),
-        format_tabs(rail)
-      )
-    },
-    x[["rails"]],
-    names(x[["rails"]])
-  )
+  division <- split_division(x[["children"]], x[["orientation"]])
 
   c(
-    header,
-    format_nodes(x[["children"]], x[["sizes"]], x[["orientation"]]),
-    unlst(rails)
+    paste0("<dock_grid>", if (not_null(division)) paste0(" ", division)),
+    format_grid_body(x, list())
   )
 }
 
@@ -497,68 +482,126 @@ print.dock_grid <- function(x, ...) {
   invisible(x)
 }
 
-# The lines of a split's children, as a tree.
+# How a split divides, where it holds several children, since the orientation
+# of a split with one child says nothing of the layout.
+split_division <- function(children, orientation) {
+  if (length(children) > 1L) orientation
+}
+
+# The lines of a grid below its first line: its splits as a tree, then each of
+# its rails on a line.
+# The panel of a block whose card hides a section shows the sections that the
+# card shows, which `visible` gives by the block's id.
+format_grid_body <- function(grid, visible) {
+
+  rails <- chr_mply(
+    function(rail, edge) {
+      paste0(
+        edge,
+        " rail",
+        grid_attrs(if (rail[["collapsed"]]) "collapsed"),
+        ": ",
+        format_tabs(rail, visible)
+      )
+    },
+    grid[["rails"]],
+    names(grid[["rails"]])
+  )
+
+  c(
+    format_nodes(
+      grid[["children"]],
+      grid[["sizes"]],
+      grid[["orientation"]],
+      visible
+    ),
+    rails
+  )
+}
+
+# The lines of a split's children, as a tree, each after its share.
 # An only child has no share in the tree.
-format_nodes <- function(children, sizes, orientation) {
+format_nodes <- function(children, sizes, orientation, visible) {
 
   shared <- length(children) > 1L
 
   format_tree(
     map(
-      function(node, size) format_node(node, if (shared) size, orientation),
+      function(node, size) {
+
+        lines <- format_node(node, orientation, visible)
+
+        if (shared) {
+          lines[1L] <- paste0(round(100 * size), "%: ", lines[1L])
+        }
+
+        lines
+      },
       children,
       sizes
     )
   )
 }
 
-# The lines of a child of a split that divides as `orientation` says, with
-# its share, or with none where `size` is `NULL`.
-format_node <- function(node, size, orientation) {
+# The lines of a child of a split that divides as `orientation` says.
+# A tab group lists its panels on one line, and a split, which divides the
+# other way, holds the lines of its children below its own.
+format_node <- function(node, orientation, visible) {
 
-  share <- if (not_null(size)) paste0(round(100 * size), "%")
-
-  if (not_null(node[["children"]])) {
-
-    inner <- setdiff(c("horizontal", "vertical"), orientation)
-    divides <- if (length(node[["children"]]) > 1L) inner
-
-    return(
-      c(
-        paste0("group", grid_attrs(divides, share)),
-        format_nodes(node[["children"]], node[["sizes"]], inner)
-      )
-    )
+  if (is.null(node[["children"]])) {
+    return(format_tabs(node, visible))
   }
 
-  if (length(node[["panels"]]) == 1L) {
-    ref <- node[["panels"]][[1L]]
-    return(paste0(ref[["id"]], grid_attrs(ref_kind(ref), share)))
-  }
+  inner <- setdiff(c("horizontal", "vertical"), orientation)
 
-  c(paste0("tabs", grid_attrs(share)), format_tabs(node))
+  c(
+    paste0("group", grid_attrs(split_division(node[["children"]], inner))),
+    format_nodes(node[["children"]], node[["sizes"]], inner, visible)
+  )
 }
 
-# The lines of the tabs of a tab group or a rail, as a tree.
-format_tabs <- function(node) {
+# The panels of a tab group or a rail, on one line, each with its marks: that
+# it is a plugin's panel, that it is the tab that its group shows, where the
+# group holds several, and after a semicolon, the sections that the card of a
+# block's panel shows, where the card hides one.
+format_tabs <- function(node, visible) {
 
   refs <- node[["panels"]]
   several <- length(refs) > 1L
 
-  format_tree(
-    lapply(
-      refs,
-      function(ref) {
-        paste0(
-          ref[["id"]],
-          grid_attrs(
-            ref_kind(ref),
-            if (several && identical(ref, node[["active"]])) "active"
-          )
+  tabs <- chr_ply(
+    refs,
+    function(ref) {
+
+      kind <- ref_kind(ref)
+
+      paste0(
+        ref[["id"]],
+        grid_attrs(
+          kind,
+          if (several && identical(ref, node[["active"]])) "active",
+          sections = if (is.null(kind)) section_mark(ref[["id"]], visible)
         )
-      }
-    )
+      )
+    }
   )
+
+  paste(tabs, collapse = ", ")
+}
+
+# The sections that the card of the block `id` shows, where `visible` gives
+# them, as one letter: "i" for its inputs, "o" for its outputs and "n" for
+# neither.
+# A card that `visible` gives no entry shows both, and has no mark.
+section_mark <- function(id, visible) {
+
+  if (!id %in% names(visible)) {
+    return(NULL)
+  }
+
+  shown <- visible[[id]]
+
+  if (length(shown)) substr(shown, 1L, 1L) else "n"
 }
 
 # The lines of `items`, each a character vector of lines, as the branches of a
@@ -588,13 +631,18 @@ ref_kind <- function(ref) {
   if (identical(ref[["type"]], "plugin")) "plugin"
 }
 
-grid_attrs <- function(...) {
+# The marks of a line of the print, in parentheses after a space, with the
+# sections that a card shows after a semicolon, or nothing where there is no
+# mark.
+grid_attrs <- function(..., sections = NULL) {
 
-  tokens <- c(...)
+  marks <- c(...)
+
+  tokens <- c(if (length(marks)) paste(marks, collapse = ", "), sections)
 
   if (!length(tokens)) {
     return("")
   }
 
-  paste0(" (", paste(tokens, collapse = ", "), ")")
+  paste0(" (", paste(tokens, collapse = "; "), ")")
 }

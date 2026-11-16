@@ -51,10 +51,15 @@
 #' board can tell, such as a grid that names a block that the board lacks
 #' (see [board_views()]).
 #'
-#' The plugin prints its views and folders in the order of the views menu.
-#' Each folder shows the views and folders that it holds below it.
-#' The print marks the active view with "(active)".
-#' Last, it lists each card that hides a section, with the sections that show.
+#' The plugin prints the views menu as a tree, in which each folder shows its
+#' name, with what it holds below it, and each view its id, with "(active)"
+#' for the active view.
+#' Each view follows, after its id, with its grid, in the order of the menu.
+#' The print marks the panel of each block whose card hides a section with the
+#' sections that the card shows, "i" for its inputs, "o" for its outputs and
+#' "n" for neither, and its first line explains the marks.
+#' A card that no view places, as where the script gives `visible` and no
+#' views, comes on the last line, with its mark.
 #' A board that holds the plugin prints it the same way.
 #'
 #' The package lists the class in the `._BLOCKR_MODULES_` that it exports,
@@ -113,11 +118,14 @@ new_dock_plugin <- function(views = NULL, folders = list(), active = NULL,
   )
 }
 
-# The print lists the views and folders as the views menu does: by their
-# `index` within each folder, with what a folder holds below it.
-# The method compares the keys by their bytes, as the client compares their
+# The print shows the views menu as a tree, in which a folder shows its name
+# and a view its id, and then each view in the menu's order, after its id.
+# The menu orders the views and folders of each folder by their `index`, and
+# the method compares the keys by their bytes, as the client compares their
 # code units.
 # The collation of a locale would put "aa" before "aA".
+# The first line explains the marks of the sections that a card shows, where
+# a card hides one, and the cards that no view places come on the last line.
 #' @export
 format.dock_plugin <- function(x, ...) {
 
@@ -125,62 +133,115 @@ format.dock_plugin <- function(x, ...) {
 
   views <- state[["views"]]
   folders <- state[["folders"]]
+  visible <- state[["visible"]]
 
   view_holders <- chr_ply(views, holder_of)
   folder_holders <- chr_ply(folders, holder_of)
 
-  view_lines <- function(id) {
+  # What sits in the folder `folder`, or at the top for "", in the order of
+  # the views menu: each view as its id, and each folder as a list of its id
+  # and of what it holds.
+  menu <- function(folder) {
 
-    lines <- format(
-      new_dock_view(
-        grid = grid_from_state(views[[id]][["grid"]]),
-        name = views[[id]][["name"]]
+    in_views <- view_holders == folder
+    in_folders <- folder_holders == folder
+
+    items <- c(
+      as.list(names(views)[in_views]),
+      lapply(
+        names(folders)[in_folders],
+        function(id) list(id = id, items = menu(id))
       )
     )
 
-    if (identical(id, state[["active"]])) {
-      lines[1L] <- paste(lines[1L], "(active)")
+    index <- c(
+      chr_xtr(views[in_views], "index"),
+      chr_xtr(folders[in_folders], "index")
+    )
+
+    items[order(index, method = "radix")]
+  }
+
+  # The lines of the views menu, as a tree.
+  menu_lines <- function(items) {
+    format_tree(
+      lapply(
+        items,
+        function(item) {
+
+          if (is.character(item)) {
+            return(
+              paste0(
+                item,
+                grid_attrs(if (identical(item, state[["active"]])) "active")
+              )
+            )
+          }
+
+          c(
+            format(dock_folder(folders[[item[["id"]]]][["name"]])),
+            menu_lines(item[["items"]])
+          )
+        }
+      )
+    )
+  }
+
+  # The ids of the views of the menu, depth first.
+  menu_views <- function(items) {
+    unlst(
+      lapply(
+        items,
+        function(item) {
+          if (is.character(item)) item else menu_views(item[["items"]])
+        }
+      )
+    )
+  }
+
+  items <- menu("")
+
+  dock_views <- lapply(
+    views,
+    function(view) {
+      new_dock_view(
+        grid = grid_from_state(view[["grid"]]),
+        name = view[["name"]]
+      )
     }
-
-    lines
-  }
-
-  folder_lines <- function(id) {
-    c(
-      format(dock_folder(folders[[id]][["name"]])),
-      format_tree(lines_in(id))
-    )
-  }
-
-  # The lines of each view and folder that sits in the folder `folder`, or at
-  # the top for "", in the order of the views menu.
-  lines_in <- function(folder) {
-
-    held_views <- views[view_holders == folder]
-    held_folders <- folders[folder_holders == folder]
-
-    index <- c(chr_xtr(held_views, "index"), chr_xtr(held_folders, "index"))
-
-    lines <- c(
-      lapply(names(held_views), view_lines),
-      lapply(names(held_folders), folder_lines)
-    )
-
-    lines[order(index, method = "radix")]
-  }
-
-  sections <- chr_ply(
-    state[["visible"]],
-    function(shown) if (length(shown)) paste(shown, collapse = ", ") else "none"
   )
 
+  view_lines <- lapply(
+    menu_views(items),
+    function(id) {
+      lines <- format(dock_views[[id]], visible = visible)
+      lines[1L] <- paste0(id, lines[1L])
+      lines
+    }
+  )
+
+  unplaced <- setdiff(names(visible), unlst(lapply(dock_views, view_blocks)))
+
   c(
-    paste0("<", class(x)[1L], "> ", plugin_class_id(x)),
-    unlst(lines_in("")),
-    if (length(sections)) {
-      c(
-        "visible",
-        format_tree(paste0(names(state[["visible"]]), " (", sections, ")"))
+    paste0(
+      "<", class(x)[1L], "> ", plugin_class_id(x),
+      if (length(visible)) {
+        " (sections: i inputs, o outputs, n neither, unmarked both)"
+      }
+    ),
+    menu_lines(items),
+    unlst(view_lines),
+    if (length(unplaced)) {
+      paste0(
+        "cards in no view: ",
+        paste0(
+          unplaced,
+          chr_ply(
+            unplaced,
+            function(id) grid_attrs(sections = section_mark(id, visible))
+          ),
+          collapse = ", "
+        )
       )
     }
   )

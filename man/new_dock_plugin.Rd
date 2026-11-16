@@ -81,10 +81,15 @@ state as \code{new_board()} builds the board, and refuses there what only the
 board can tell, such as a grid that names a block that the board lacks
 (see \code{\link[=board_views]{board_views()}}).
 
-The plugin prints its views and folders in the order of the views menu.
-Each folder shows the views and folders that it holds below it.
-The print marks the active view with "(active)".
-Last, it lists each card that hides a section, with the sections that show.
+The plugin prints the views menu as a tree, in which each folder shows its
+name, with what it holds below it, and each view its id, with "(active)"
+for the active view.
+Each view follows, after its id, with its grid, in the order of the menu.
+The print marks the panel of each block whose card hides a section with the
+sections that the card shows, "i" for its inputs, "o" for its outputs and
+"n" for neither, and its first line explains the marks.
+A card that no view places, as where the script gives \code{visible} and no
+views, comes on the last line, with its mark.
 A board that holds the plugin prints it the same way.
 
 The package lists the class in the \code{._BLOCKR_MODULES_} that it exports,

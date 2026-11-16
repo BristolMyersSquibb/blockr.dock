@@ -1,14 +1,21 @@
 # blockr.dock 0.2.1
 
-* The dock plugin prints its views and folders in the order of the views menu
-  (#603).
-  Each folder shows the views and folders that it holds below it.
-  The print marks the active view with "(active)".
-  Last, it lists each card that hides a section, with the sections that show.
+* The dock plugin prints the views menu as a tree, and then each view with its
+  grid, in the order of the menu (#603).
+  In the tree, each folder shows its name, with what it holds below it, and
+  each view its id, with "(active)" for the active view.
+  The print marks the panel of each block whose card hides a section with the
+  sections that the card shows: "i" for its inputs, "o" for its outputs and
+  "n" for neither.
   A board that holds the plugin prints it the same way.
-  The print of a grid leaves out the orientation of a split with fewer than
-  two children, and the share of an only child, since neither says anything
-  of the layout.
+
+* The print of a grid shows each tab group and each rail on one line, with
+  the share of each child of a split before it, as `30%: a (active), b`
+  (#603).
+  It leaves out the orientation of a split with fewer than two children, and
+  the share of an only child, since neither says anything of the layout.
+  The print of a view says on its first line how its grid's top split
+  divides, in place of the grid's own first line.
 
 * The dock places each plugin whose class has a `ui` in a panel of its own,
   and mounts the plugin's UI there with core's `mountPlugin()` (#584).

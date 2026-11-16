@@ -412,7 +412,14 @@ test_that("a view and a folder take a name that holds more than spaces", {
     "<dock_view> A (in f)",
     fixed = TRUE
   )
-  expect_output(print(dock_view(dock_grid("a"))), "<dock_grid>", fixed = TRUE)
+  expect_identical(
+    format(dock_view(dock_grid("a", "b"), name = "A", folder = "f")),
+    c(
+      "<dock_view> A (in f, horizontal)",
+      "\u251c\u2500 50%: a",
+      "\u2514\u2500 50%: b"
+    )
+  )
   expect_output(print(dock_folder("F")), "<dock_folder> F", fixed = TRUE)
 })
 
@@ -439,12 +446,31 @@ test_that("the plugin prints its views and folders in the views menu's order", {
 
   expect_snapshot(print(dock))
 
-  expect_snapshot(print(new_dock_plugin(visible = list(a = "inputs"))))
-
   expect_identical(
     format(new_dock_plugin()),
     "<dock_plugin> blockr.dock-dock_plugin"
   )
+})
+
+test_that("the print marks the sections of each card that hides one", {
+
+  # The card of b shows its outputs alone and that of c its inputs alone,
+  # while no view places z, whose card shows neither.
+  dock <- new_dock_plugin(
+    views = list(
+      main = dock_view(
+        dock_grid(
+          panels("a", plg("edit"), "b", active = "b"),
+          rail("c", collapsed = TRUE)
+        )
+      )
+    ),
+    visible = list(b = "outputs", c = "inputs", z = character())
+  )
+
+  expect_snapshot(print(dock))
+
+  expect_snapshot(print(new_dock_plugin(visible = list(a = "inputs"))))
 })
 
 test_that("the print orders the views by their keys in any collation", {
@@ -459,22 +485,25 @@ test_that("the print orders the views by their keys in any collation", {
   views <- set_names(rep(list(dock_view("a")), 37L), ids)
 
   lines <- format(new_dock_plugin(views = views))
-  lines <- lines[startsWith(lines, "<dock_view>")]
+  lines <- lines[grepl("<dock_view>", lines, fixed = TRUE)]
 
-  expect_identical(
-    sub(" (active)", "", lines, fixed = TRUE),
-    paste("<dock_view>", toupper(ids))
-  )
+  expect_identical(lines, paste0(ids, "<dock_view> ", toupper(ids)))
 })
 
 test_that("a board prints the dock plugin that it holds", {
 
+  dock <- new_dock_plugin(views = list(main = dock_view("a")))
+
   board <- new_board(
     blocks = c(a = new_dataset_block("iris")),
-    plugins = list(new_dock_plugin(views = list(main = dock_view("a"))))
+    plugins = list(dock)
   )
 
-  expect_output(print(board), "<dock_view> Main (active)", fixed = TRUE)
+  expect_output(
+    print(board),
+    paste(format(dock), collapse = "\n"),
+    fixed = TRUE
+  )
 })
 
 test_that("view_name() reads the name of a view", {
