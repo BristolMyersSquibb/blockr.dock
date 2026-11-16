@@ -26,7 +26,7 @@
 // the focus out of it.
 // CSS anchor positioning places it below the button that opened it, or above
 // the button where the window has no room below.
-// In a browser without anchor positioning, script places it.
+// In a browser without anchor positioning, script places it (./popover.ts).
 // Its keys are those of a menu button
 // (https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/):
 // - A click, Enter, Space and ArrowDown on the button open the picker, with
@@ -44,6 +44,7 @@ import { activeView, stateOf } from "../../commands/index.ts";
 import { places } from "../../state/index.ts";
 import type { Panel } from "../../state/index.ts";
 import { useBoard, useDock } from "./context.ts";
+import { place } from "./popover.ts";
 
 // An entry of the picker: the panel of a block or of a plugin, its name, and,
 // for a block, the name of its block class.
@@ -124,21 +125,6 @@ const ITEM = '[role="menuitem"]';
 // it has nothing to list.
 function focusInto(el: HTMLElement | null): void {
   el?.querySelector<HTMLElement>(SEARCH)?.focus();
-}
-
-// Places the picker below the button, or above it where the window has no
-// room below, as CSS places it in a browser with anchor positioning.
-function place(el: HTMLElement, button: HTMLElement): void {
-  const win = el.ownerDocument.defaultView;
-  if (win === null || win.CSS.supports("position-area", "block-end")) return;
-  const gap = 4;
-  const at = button.getBoundingClientRect();
-  const { width, height } = el.getBoundingClientRect();
-  const above = at.top - gap - height;
-  const top = at.bottom + gap + height > win.innerHeight && above >= 0 ? above : at.bottom + gap;
-  const left = Math.max(0, Math.min(at.left, win.innerWidth - width));
-  el.style.left = `${String(left)}px`;
-  el.style.top = `${String(top)}px`;
 }
 
 // The picker, which the buttons among its children open.

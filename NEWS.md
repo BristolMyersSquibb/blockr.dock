@@ -1,5 +1,26 @@
 # blockr.dock 0.2.1
 
+* The dock draws the bar across its top, from the navbar items that R hands
+  its frontend (#581).
+  By default, the bar holds the logo, the board's name, the controls of the
+  app's storage plugin, Undo and Redo, the read-only pill under the board lock,
+  and the options button.
+  The logo turns while R evaluates a block that the dock demands, once the
+  delay of the blockr option `spinner_delay_ms` is up.
+  A click on the board's name renames the board, but not under the board lock.
+  Undo and Redo follow the board's history, and run on Mod+Z, and on
+  Mod+Shift+Z or Mod+Y, outside text fields.
+  The dock draws every kind of storage control in the bar's look, binds the
+  shortcut of each button, and logs a button whose `run()` rejects.
+  A `navbar_storage()` item draws one control apart from the rest.
+  Links open in a new tab, and menus hold links and further menus.
+  A `navbar_item()` loads a module that a package offers, which draws the
+  item, and a module that cannot draw leaves a warning in its place.
+  On a narrow bar, the board's name and then the storage controls cut their
+  labels short, and show them in full as the tooltip.
+  The options button does not open a sidebar yet, since #583 draws it, and the
+  bar draws no views menu yet, since #582 draws it.
+
 * The dock carries out core's `show()`, through which a plugin shows a block
   or a plugin under every frontend (#599).
   The dock's frontend runs `blockr.dock-show_panel` with what `show()` was
