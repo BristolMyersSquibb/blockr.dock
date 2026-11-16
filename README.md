@@ -12,10 +12,14 @@
 status](https://www.r-pkg.org/badges/version/blockr.dock)](https://CRAN.R-project.org/package=blockr.dock)
 <!-- badges: end -->
 
-A docking layout manager provided by
-[dockViewR](https://github.com/cynkra/dockViewR) can be used as
-front-end to a [blockr](https://github.com/BristolMyersSquibb/blockr)
-board using this package.
+This package gives
+[blockr](https://github.com/BristolMyersSquibb/blockr) its dock, the
+frontend that draws a board in the browser. A navbar runs across the top
+of the page, and below it the dock shows the board in views, one at a
+time. Each view is a grid of panels, drawn with
+[dockview](https://dockview.dev), which hold the cards of the board’s
+blocks and the UIs of its plugins. Wherever blockr.dock is available,
+the `serve()` of blockr.core runs the dock as the app’s frontend.
 
 ## Installation
 
@@ -27,112 +31,120 @@ You can install the development version of blockr.dock from
 pak::pak("BristolMyersSquibb/blockr.dock")
 ```
 
-## Simple dock
+## A board in the dock
 
-To start up a board for visualizing `Sepal.Length` against `Sepal.Width`
-for the `iris` dataset:
+An app script builds its board with blockr.core, and serves it:
 
 ``` r
-library(blockr.dock)
 library(blockr.core)
+library(blockr.dock)
+
+blocks <- c(
+  data = new_dataset_block("iris"),
+  head = new_head_block(),
+  plot = new_scatter_block(x = "Sepal.Length", y = "Sepal.Width")
+)
+links <- c(new_link("data", "head"), new_link("data", "plot"))
+
+serve(new_board(blocks = blocks, links = links, name = "Iris"))
+```
+
+<figure>
+<img src="man/figures/page.png" alt="A board in the dock" />
+<figcaption aria-hidden="true">A board in the dock</figcaption>
+</figure>
+
+The board holds no view, so the dock opens on a view of its own, “Page”.
+Its left rail holds core’s Edit board plugin, which adds, renames and
+removes blocks, links and stacks. Beside the rail, a tab group holds the
+card of each block. The navbar holds the board’s name, Save and Open,
+which core’s storage plugin gives, Undo and Redo, the views menu and the
+options button.
+
+## Views
+
+The dock plugin, which `new_dock_plugin()` makes, gives the board its
+views, each with a grid that places its panels:
+
+``` r
+board <- new_board(
+  blocks = blocks,
+  links = links,
+  plugins = list(
+    new_dock_plugin(
+      views = list(
+        analysis = dock_view(
+          dock_grid(
+            panels("data", "head"),
+            "plot",
+            rail(plg("edit"), collapsed = TRUE)
+          ),
+          name = "Analysis"
+        ),
+        data = dock_view("data")
+      )
+    ),
+    edit = new_edit_board_plugin()
+  ),
+  name = "Iris"
+)
+
+serve(board)
+```
+
+<figure>
+<img src="man/figures/views.png" alt="The view “Analysis”" />
+<figcaption aria-hidden="true">The view “Analysis”</figcaption>
+</figure>
+
+The view “Analysis” shows a tab group of the dataset and the head block
+beside the plot, with core’s Edit board plugin on a collapsed rail. The
+views menu in the navbar switches to the view “Data”. The vignette
+“Views and grids”, `vignette("layouts", package = "blockr.dock")`, shows
+how an app script writes views, folders and grids.
+
+## The navbar
+
+An app script gives the items of the navbar to `serve()` in `navbar`.
+The function `custom_navbar()` starts from the default bar, as here,
+where it adds a menu of links:
+
+``` r
+issues <- "https://github.com/BristolMyersSquibb/blockr/issues"
 
 serve(
-  new_dock_board(
-    blocks = c(
-      a = new_dataset_block("iris"),
-      b = new_scatter_block(x = "Sepal.Length", y = "Sepal.Width")
-    ),
-    links = list(from = "a", to = "b", input = "data"),
-    extensions = list(edit = new_edit_board_extension()),
-    layouts = list("edit", list("a", "b"))
+  board,
+  navbar = custom_navbar(
+    navbar_menu(
+      "help",
+      "Help",
+      navbar_link("issues", "Report an issue", issues)
+    )
   )
 )
 ```
 
-<figure>
-<img src="man/figures/single-page.png" alt="Simple dock" />
-<figcaption aria-hidden="true">Simple dock</figcaption>
-</figure>
+The help page `?default_navbar` lists the parts of the default bar and
+every kind of item.
 
-## Locked dock
+## A locked board
 
-A locked dock prevents users from adding or removing blocks and
-extensions. Drag-and-drop and panel resizing are also disabled.
+Under the board lock, which the blockr option `locked` sets, as
+`options(blockr.locked = TRUE)` does, the blocks and links of the board
+stay as they are (see `help("locked-board", package = "blockr.core")`).
+The dock then draws no “+” in the header of a tab group and no close
+button on a tab, and the navbar shows that the board is read-only. The
+user still switches views, brings a tab to the front, and opens or
+collapses a rail.
 
-``` r
-library(blockr.dock)
-library(blockr.core)
+## Learn more
 
-options(blockr.locked = TRUE)
-
-serve(
-  new_dock_board(
-    blocks = c(
-      a = new_dataset_block("iris"),
-      b = new_head_block(n = 20L),
-      c = new_scatter_block(x = "Sepal.Length", y = "Sepal.Width"),
-      d = new_subset_block()
-    ),
-    links = c(
-      new_link("a", "b", input = "data"),
-      new_link("b", "c", input = "data"),
-      new_link("b", "d", input = "data")
-    ),
-    layouts = list(list("a", "b"), list("c", "d"))
-  )
-)
-```
-
-<figure>
-<img src="man/figures/locked-dock.png" alt="Locked dock" />
-<figcaption aria-hidden="true">Locked dock</figcaption>
-</figure>
-
-## Layouts
-
-Since `blockr.dock` 0.1.1 every board carries a `dock_layouts` object: a
-list of one or more views, exposed as a tab dropdown at the top of the
-app. The single-page case (what rendered as a no-tab dock in 0.1.0) is
-now a `dock_layouts` with one auto-named `"Page"` view, which is what
-you see in the [Simple dock](#simple-dock) screenshot above.
-
-To define multiple views explicitly, pass a named list to `layouts`.
-Each named entry becomes a tab; blocks and extensions are shared
-across views via the board’s DAG, view membership is a layout concern
-only.
-
-``` r
-library(blockr.core)
-library(blockr.dock)
-
-board <- new_dock_board(
-  extensions = blockr.dag::new_dag_extension(),
-  blocks = c(
-    dataset_1 = new_dataset_block(),
-    head_1 = new_head_block()
-  ),
-  links = new_link("dataset_1", "head_1"),
-  layouts = list(
-    Analysis = dock_layout(
-      "dag_extension",
-      panels("dataset_1", "head_1", active = "head_1"),
-      sizes = c(0.3, 0.7)
-    ),
-    Overview = dock_layout("dag_extension"),
-    Empty = list()
-  ),
-  active = "Overview"
-)
-
-serve(board, "my_board")
-```
-
-<figure>
-<img src="man/figures/views.png" alt="Multi-view dock" />
-<figcaption aria-hidden="true">Multi-view dock</figcaption>
-</figure>
-
-For the full set of shapes accepted by `new_dock_board(layouts = ...)`
-(nested grids, tabbed panels, active-view selection, the coercion rules
-that normalise everything to a `dock_layouts`), see
-`vignette("layouts", package = "blockr.dock")`.
+- The vignette “Views and grids”,
+  `vignette("layouts", package = "blockr.dock")`, shows how an app
+  script writes the dock’s views, folders and grids.
+- The vignette “How a plugin uses the dock’s panels”,
+  `vignette("plugins", package = "blockr.dock")`, is for the author of a
+  package whose plugin class has a UI.
+- The vignette “Migration notes for app scripts”,
+  `vignette("migration-notes", package = "blockr.dock")`, lists what an
+  app script of blockr.dock 0.2.0 changes to run on version 0.2.1.

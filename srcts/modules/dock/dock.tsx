@@ -33,6 +33,9 @@
 //
 // While the views menu on the bar draws its line of tabs, under the bar's row,
 // the dock's root starts below the line (./views-menu.tsx).
+// While the options sidebar is pinned, the dock's root makes room for it at
+// the window's right edge (./options-sidebar.tsx, ./index.css). Dockview lays
+// the view out again, as for any change of the root's size.
 
 import type { Board, CoreApi, PluginClassId } from "@blockr/core";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "dockview-react";
@@ -43,7 +46,7 @@ import type {
   IDockviewPanelProps,
   IDockviewReactProps,
 } from "dockview-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
 import { activeView } from "../../commands/index.ts";
 import { PANEL_COMPONENT, panelFromId } from "../../layout/index.ts";
@@ -53,9 +56,11 @@ import { BlockCard, createTooltips } from "./card/index.ts";
 import { DockContext, giveFocus, useBoard, useDock } from "./context.ts";
 import { drawDock } from "./drawing.ts";
 import { LockIcon } from "./icons.tsx";
+import { Mounted } from "./mounted.tsx";
 import type { Narrow } from "./narrow.ts";
 import { PanelPicker, usePickerButton } from "./picker.tsx";
 import type { Settings } from "./settings.ts";
+import type { Sidebar } from "./sidebar.ts";
 import { useViewTabs } from "./views-menu.tsx";
 
 // The frame of a panel, which names the block or the plugin whose panel it
@@ -72,31 +77,11 @@ function PanelFrame({ params }: IDockviewPanelProps<PanelParams>): ReactElement 
 }
 
 // The frame of a plugin's panel, which holds the plugin's UI while dockview
-// draws the panel.
-// A plugin's UI may draw in a React root of its own, as core's Edit board
-// plugin does.
-// Were the dock to end the mount as soon as React drops the frame, this would
-// happen:
-// 1. React drops the frame while it commits the dock's root, and runs the
-//    cleanup of the frame's effect.
-// 2. The cleanup that mountPlugin() returned unmounts the plugin's root.
-//    React puts that off until the commit is done.
-// 3. That cleanup then empties the frame.
-// 4. Once the commit is done, React unmounts the plugin's root, and fails to
-//    find what it drew in the frame.
-// So the dock ends the mount once the commit is done.
+// draws the panel (./mounted.tsx).
 function PluginFrame({ plugin }: { readonly plugin: PluginClassId }): ReactElement {
   const { core } = useDock();
-  const ref = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (el === null) return undefined;
-    const end = core.mountPlugin(el, plugin);
-    return () => {
-      queueMicrotask(end);
-    };
-  }, [core, plugin]);
-  return <div ref={ref} className="blockr-dock-panel" data-plugin={plugin} />;
+  const mount = useCallback((el: HTMLElement) => core.mountPlugin(el, plugin), [core, plugin]);
+  return <Mounted mount={mount} className="blockr-dock-panel" data={{ "data-plugin": plugin }} />;
 }
 
 const components: IDockviewReactProps["components"] = { [PANEL_COMPONENT]: PanelFrame };
@@ -181,15 +166,17 @@ export interface DockProps {
   // Whether the bar holds the views menu, which draws its line of tabs under
   // the bar while the board option view_tabs is on.
   readonly viewsMenu: boolean;
+  readonly sidebar: Sidebar;
 }
 
-export function Dock({ core, plugin, settings, narrow, drawn, viewsMenu }: DockProps): ReactElement {
+export function Dock({ core, plugin, settings, narrow, drawn, viewsMenu, sidebar }: DockProps): ReactElement {
   const root = useRef<HTMLDivElement>(null);
   const stop = useRef<(() => void) | undefined>(undefined);
   const [tooltips] = useState(createTooltips);
   const shared = useMemo(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
   const locked = core.lock.board;
   const tabs = useViewTabs(core) && viewsMenu;
+  const { pinned } = useSyncExternalStore(sidebar.subscribe, sidebar.state);
 
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
@@ -225,7 +212,7 @@ export function Dock({ core, plugin, settings, narrow, drawn, viewsMenu }: DockP
 
   return (
     <DockContext value={shared}>
-      <div className="blockr-dock" ref={root} data-tabs={tabs ? "" : undefined}>
+      <div className="blockr-dock" ref={root} data-tabs={tabs ? "" : undefined} data-pushed={pinned ? "" : undefined}>
         {locked ? view : <PanelPicker>{view}</PanelPicker>}
       </div>
     </DockContext>

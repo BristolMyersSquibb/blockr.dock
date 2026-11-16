@@ -1,0 +1,448 @@
+---
+title: "Views and grids"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Views and grids}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  render = function(x, ...) {
+    if (inherits(x, "shiny.appobj")) invisible() else knitr::knit_print(x, ...)
+  }
+)
+```
+
+```{r setup, message = FALSE}
+library(blockr.core)
+library(blockr.dock)
+```
+
+The dock shows a board in views, one at a time.
+The views menu in the navbar lists the views, grouped in folders, and the view that the user picks there is the active view, which the dock shows.
+Each view has a grid, which says which panels the view shows, and where.
+A panel shows the card of a block or the UI of a plugin, under a tab of its own.
+This vignette shows how an app script writes the views, folders and grids of a board.
+The vignette [How a plugin uses the dock's panels](plugins.html) covers the panels from the side of a plugin.
+
+## A first board
+
+An app script builds its board with `new_board()` of blockr.core.
+It gives the dock's state among the board's `plugins`, as the dock plugin that `new_dock_plugin()` makes, with the board's views in `views`:
+
+```{r}
+board <- new_board(
+  blocks = c(
+    data = new_dataset_block("iris"),
+    head = new_head_block()
+  ),
+  links = new_link("data", "head"),
+  plugins = list(
+    new_dock_plugin(
+      views = list(main = dock_view(dock_grid("data", "head"), name = "Main"))
+    )
+  )
+)
+
+serve(board)
+```
+
+The view `main`, named "Main", shows the cards of the two blocks side by side:
+
+```
+┌──────────────┬──────────────┐
+│              │              │
+│     data     │     head     │
+│              │              │
+└──────────────┴──────────────┘
+```
+
+Each view of `views` is written with `dock_view()`, and its id is its name in the list.
+The function `serve()` runs the dock as the app's frontend wherever blockr.dock is available.
+
+## A board without views
+
+A script that gives the dock no views can leave the dock plugin out:
+
+```{r}
+serve(
+  new_board(
+    blocks = c(data = new_dataset_block("iris"), head = new_head_block()),
+    links = new_link("data", "head")
+  )
+)
+```
+
+As the dock starts on a board without views, it adds the view "Page", under the id `page`.
+Its left rail holds the panels of the app's plugins that have a UI, such as core's Edit board plugin.
+Beside the rail, one tab group holds the cards of all the board's blocks, and shows the first.
+In the pictures, a tab group with several tabs shows them on its first line, with the tab that it shows in brackets:
+
+```
+┌───────────┬─────────────────────────┐
+│           │ [data]  head            │
+│   Edit    ├─────────────────────────┤
+│   board   │                         │
+│           │          data           │
+│ left rail │                         │
+└───────────┴─────────────────────────┘
+```
+
+The dock adds the view only where the board holds none, so it never changes the views of a saved board.
+
+## Writing a grid
+
+The function `dock_grid()` writes a grid.
+Its arguments are what the grid's top split holds, in order:
+
+- A bare id is a tab group that holds the card of the block of that id alone.
+- A character vector is a tab group with a tab for each of its ids, which shows the first.
+- A list is a split, which divides the other way from the split that holds it.
+
+The top split puts its children side by side.
+Each child of a split gets an equal share of it, unless the split's `sizes` give the shares.
+
+### Side by side and one above the other
+
+The two children of this top split sit side by side:
+
+```{r}
+dock_grid("a", "b")
+```
+
+```
+┌──────────────┬──────────────┐
+│              │              │
+│      a       │      b       │
+│              │              │
+└──────────────┴──────────────┘
+```
+
+A list in the top split divides the other way, so its children sit one above the other:
+
+```{r}
+dock_grid(list("a", "b"))
+```
+
+```
+┌─────────────────────────────┐
+│              a              │
+├─────────────────────────────┤
+│              b              │
+└─────────────────────────────┘
+```
+
+The argument `orientation = "vertical"` has the top split itself put its children one above the other, so `dock_grid("a", "b", orientation = "vertical")` shows the same.
+
+### Tabs
+
+A character vector puts the cards on the tabs of one tab group:
+
+```{r}
+dock_grid(c("a", "b"))
+```
+
+```
+┌─────────────────────────────┐
+│ [a]  b                      │
+├─────────────────────────────┤
+│                             │
+│              a              │
+│                             │
+└─────────────────────────────┘
+```
+
+The calls `dock_grid(list("a", "b"))` and `dock_grid(c("a", "b"))` read almost the same.
+But the list splits the space between the two cards, while the vector puts them on two tabs.
+The function `panels()` writes a tab group too, and its `active` names the tab that the tab group shows:
+
+```{r}
+dock_grid(panels("a", "b", "c", active = "b"))
+```
+
+```
+┌─────────────────────────────┐
+│  a  [b]  c                  │
+├─────────────────────────────┤
+│                             │
+│              b              │
+│                             │
+└─────────────────────────────┘
+```
+
+### Splits in splits
+
+Each level of lists divides the other way from the level that holds it.
+This grid holds `a` beside a split of `b` above `c`:
+
+```{r}
+dock_grid("a", list("b", "c"))
+```
+
+```
+┌──────────────┬──────────────┐
+│              │      b       │
+│      a       ├──────────────┤
+│              │      c       │
+└──────────────┴──────────────┘
+```
+
+A third level divides the way of the first, so this grid holds `a` above a split of `b` beside `c`:
+
+```{r}
+dock_grid(list("a", list("b", "c")))
+```
+
+```
+┌─────────────────────────────┐
+│              a              │
+├──────────────┬──────────────┤
+│      b       │      c       │
+└──────────────┴──────────────┘
+```
+
+### Sizes
+
+The argument `sizes` gives the share of each child of the top split:
+
+```{r}
+dock_grid("a", "b", sizes = c(0.3, 0.7))
+```
+
+```
+┌────────┬────────────────────┐
+│        │                    │
+│   a    │         b          │
+│        │                    │
+└────────┴────────────────────┘
+    30%            70%
+```
+
+The shares are positive numbers, which need not sum to 1, since the grid scales them to ratios that do.
+So `sizes = c(3, 7)` gives the same grid.
+The function `group()` writes a split with shares of its own, for a split inside another:
+
+```{r}
+dock_grid("a", group("b", "c", sizes = c(0.6, 0.4)), sizes = c(0.3, 0.7))
+```
+
+```
+┌────────┬────────────────────┐
+│        │         b          │  60%
+│   a    │                    │
+│        ├────────────────────┤
+│        │         c          │  40%
+└────────┴────────────────────┘
+    30%            70%
+```
+
+## Rails
+
+A rail holds panels on the left or right edge of a view, outside the splits, with a tab for each panel.
+The function `rail()` writes one, which `dock_grid()` takes among its arguments, but which takes no share in its `sizes`:
+
+```{r}
+dock_grid(c("a", "b"), rail("c"))
+```
+
+```
+┌───────────┬─────────────────────────┐
+│           │ [a]  b                  │
+│           ├─────────────────────────┤
+│     c     │                         │
+│           │            a            │
+│ left rail │                         │
+└───────────┴─────────────────────────┘
+```
+
+A rail sits on the left edge unless its `position` is `"right"`, and its `active` names the tab that it shows.
+Its `size` is its width in pixels while it is open, 500 unless given, which fits a row of core's Edit board plugin on one line.
+A rail with `collapsed = TRUE` shows its tabs alone, until the user opens it:
+
+```{r}
+dock_grid("a", rail("b", collapsed = TRUE), rail("c", "d", position = "right"))
+```
+
+```
+┌───┬─────────────────┬───────────────┐
+│ b │                 │ [c]  d        │
+│   │                 ├───────────────┤
+│   │        a        │               │
+│   │                 │       c       │
+│   │                 │  right rail   │
+└───┴─────────────────┴───────────────┘
+```
+
+The board option `sync_rails` is on unless the board or the blockr option `sync_rails` turns it off, as `new_sync_rails_option(FALSE)` does for a board.
+While it is on, a rail that the user opens or collapses opens or collapses on that edge of every view that has a rail there.
+
+## Plugins' panels
+
+A bare id names the card of a block, and so does `blk()`.
+The function `plg()` names the panel of a plugin, by the name that the script gives the plugin in the board's `plugins`:
+
+```{r}
+board <- new_board(
+  blocks = c(data = new_dataset_block("iris"), head = new_head_block()),
+  links = new_link("data", "head"),
+  plugins = list(
+    new_dock_plugin(
+      views = list(
+        main = dock_view(dock_grid(c("data", "head"), rail(plg("edit"))))
+      )
+    ),
+    edit = new_edit_board_plugin()
+  )
+)
+```
+
+The script gives core's Edit board plugin the name `edit`, and the left rail of the view `main` holds the plugin's panel.
+A grid may name a plugin by the id of its class instead, as `plg("blockr.core-edit_board_plugin")`, without the plugin in `plugins`.
+As `new_board()` builds the board, the dock names each plugin by the id of its class, as `board_views()` shows:
+
+```{r}
+board_views(board)
+```
+
+An app runs every plugin class that `available_plugins()` gives, unless its script narrows them in the `plugins` of `serve()`.
+So an app runs core's Edit board plugin whether or not its board holds the plugin, and the script above gives the plugin in `plugins` only to name it.
+As the dock starts, it drops from each view the panel of a plugin that the app does not run, or whose class has no UI, since it cannot draw that panel.
+
+## Several views
+
+A board has as many views as `views` gives:
+
+```{r}
+board <- new_board(
+  blocks = c(
+    data = new_dataset_block("iris"),
+    head = new_head_block(),
+    tail = new_head_block(direction = "tail")
+  ),
+  links = c(new_link("data", "head"), new_link("data", "tail")),
+  plugins = list(
+    new_dock_plugin(
+      views = list(
+        overview = dock_view(dock_grid("data", list("head", "tail"))),
+        first_rows = dock_view("head"),
+        both_ends = dock_view(
+          list("head", "tail", plg("edit")),
+          name = "Both ends"
+        ),
+        notes = dock_view(list())
+      ),
+      active = "first_rows"
+    ),
+    edit = new_edit_board_plugin()
+  )
+)
+```
+
+A view without a name is named after its id, as "First rows" for `first_rows`.
+In place of a grid, a view may take the panels that it shows: a bare id, a character vector of ids, or a list of ids and panel references, as the view `both_ends` takes.
+Such a view gets the default grid over its panels: the plugins' panels in one tab group, beside the blocks' panels in another.
+A view that shows no panel takes none, as `notes` does, and says "Start by adding a panel", with a button that opens the panel picker.
+A block may show in several views, as `head` does above, but a view shows each panel at most once.
+
+The view `first_rows` is active, so the board opens on it.
+Without `active`, the board opens on the first view of the views menu.
+Where the URL of the page names a view by its id, as `?view=both_ends`, the dock makes that view active as it starts, so that a link reaches a view.
+An id that names no view changes nothing.
+
+## Folders
+
+A folder groups views and other folders in the views menu, at any depth, and changes nothing that a view shows.
+The function `dock_folder()` writes one, and `new_dock_plugin()` takes the folders in `folders`, each by its id:
+
+```{r}
+dock <- new_dock_plugin(
+  views = list(
+    overview = dock_view(dock_grid("data", list("head", "tail"))),
+    first_rows = dock_view("head", folder = "rows"),
+    last_rows = dock_view("tail", folder = "rows"),
+    source = dock_view("data", folder = "inputs")
+  ),
+  folders = list(
+    rows = dock_folder("Rows"),
+    inputs = dock_folder("Inputs", folder = "rows")
+  )
+)
+
+dock
+```
+
+A view or a folder sits in the folder whose id it names in `folder`, and at the top of the views menu where it names none.
+In each folder, and at the top, the views come first and the folders after them, each in the order that the script gives.
+The print shows the views menu as a tree, and then each view with its grid.
+The user opens and closes a folder in the views menu.
+
+The board option `view_tabs` shows the views as a line of tabs under the navbar, with a tab for each view and folder at the top of the views menu, and a folder's tab opens a menu of what the folder holds.
+A script turns it on with `new_view_tabs_option(TRUE)` in the `options` of `new_board()`.
+
+## What R refuses
+
+The functions refuse a mistake as the script runs, naming each place:
+
+```{r, error = TRUE}
+new_dock_plugin(views = list(main = dock_view(dock_grid("a", rail("a")))))
+```
+
+The function `new_dock_plugin()` refuses a grid that places a panel twice, where a panel on a rail and in a tab group counts as twice.
+It also refuses a view or folder that names a folder that `folders` lacks, a folder that sits in itself, through the folders that hold it, and an `active` that names a view that `views` lacks.
+The functions `dock_grid()`, `group()` and `rail()` refuse a share that is not positive, and a rail's width below 0.
+
+The dock plugin knows nothing of the board that holds it, so `new_board()` refuses what only the board can tell:
+
+```{r, error = TRUE}
+new_board(
+  blocks = c(data = new_dataset_block("iris")),
+  plugins = list(
+    new_dock_plugin(views = list(main = dock_view(c("data", "head"))))
+  )
+)
+```
+
+It refuses a grid that names a block that the board lacks, and a `plg()` that names neither a plugin of the board's `plugins` nor a plugin class, by an id of the form `{pkg}-{id}`.
+It refuses no such id, since a grid may name a plugin that the app runs without the board holding it.
+
+## Reading the views of a board
+
+The function `board_views()` reads the views of a board, each as `dock_view()` writes it, with its grid, and `active_view()` reads the id of the active view:
+
+```{r}
+names(board_views(board))
+active_view(board)
+view_name(board_views(board)[["first_rows"]])
+view_blocks(board_views(board)[["overview"]])
+```
+
+The function `view_name()` reads the name of a view, and `view_blocks()` the ids of the blocks whose cards it shows.
+A script builds one board from another with them, as `new_dock_plugin(views = board_views(board)["overview"])` takes one view of `board`.
+
+The dock plugin holds the sections that each card shows as well, which `new_dock_plugin()` takes in `visible`, as `visible = list(head = "outputs")`.
+A card without an entry shows both its inputs and its outputs, and `board_visible()` reads the entries of a board (see `?new_dock_plugin`).
+
+## Cheat sheet
+
+| Goal | Code |
+|---|---|
+| Two cards side by side | `dock_grid("a", "b")` |
+| One above the other | `dock_grid(list("a", "b"))` |
+| A top split that divides from top to bottom | `dock_grid("a", "b", orientation = "vertical")` |
+| Two tabs of one tab group | `dock_grid(c("a", "b"))` |
+| A tab group that shows its second tab | `dock_grid(panels("a", "b", active = "b"))` |
+| A card beside a split of two | `dock_grid("a", list("b", "c"))` |
+| Shares of 30% and 70% | `dock_grid("a", "b", sizes = c(0.3, 0.7))` |
+| Shares inside a split | `dock_grid("a", group("b", "c", sizes = c(0.6, 0.4)))` |
+| A plugin's panel on the left rail | `dock_grid("a", rail(plg("edit")))` |
+| A collapsed rail on the right | `dock_grid("a", rail("b", position = "right", collapsed = TRUE))` |
+| A view with the default grid | `dock_view(c("a", "b"))` |
+| A view that shows nothing | `dock_view(list())` |
+| A view in a folder | `dock_view("a", folder = "f")`, with `folders = list(f = dock_folder("F"))` |
+| The view that the board opens on | `new_dock_plugin(views, active = "id")` |
+
+The help pages hold the rest: `?dock_grid` for grids and rails, `?dock_view` for views and folders, `?new_dock_plugin` for the dock's state, `?plg` for panel references and `?board_views` for the readers.

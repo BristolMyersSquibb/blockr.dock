@@ -1,0 +1,325 @@
+---
+title: "How a plugin uses the dock's panels"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{How a plugin uses the dock's panels}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+A plugin extends a board as a whole, as the DAG of blockr.dag does, and its class comes from a package (see `?blockr.core::new_plugin`).
+Where the class has a `ui`, every frontend places that UI on the page, and the dock places it in a panel.
+This vignette is for the author of such a package.
+It says how a plugin draws in its panel and sizes itself there, where it opens what needs more room, how it shows a block or a plugin, how it reads the dock's state and changes which views hold which panels, and where its settings go.
+Its last section names what else the dock draws for plugins.
+
+The examples follow one plugin class, which a package blockr.notes ships under the id `blockr.notes-notes_plugin`.
+Its plugin keeps notes about the board's blocks, and lists them in its panel.
+The package is made up for this vignette.
+
+## A plugin class with a UI
+
+A package defines a plugin class in a JS module of its own.
+The module exports the major of core's JS API that it was built against, and the class without its id as its default.
+Core registers the class under the id that R gives it, `{pkg}-{id}`.
+Core's types describe each member of a class, as the interface `PluginClass`.
+The function `install_js_types()` of blockr.core installs them under the name `@blockr/core`, as the vignette on block classes describes (`vignette("create-block", package = "blockr.core")`).
+
+The Notes plugin keeps its notes in its state, and its `ui` lists them:
+
+```ts
+import type { JsonSchema, PluginClass } from "@blockr/core";
+import schema from "./notes.schema.json" with { type: "json" };
+
+type Note = { readonly block: string; readonly text: string };
+type State = { readonly notes: readonly Note[] };
+
+export const api = 1;
+
+export default {
+  state: { schema: schema as JsonSchema, default: { notes: [] } },
+  ui: {
+    render({ el, core, plugin }) {
+      const list = document.createElement("ul");
+      list.className = "notes";
+      el.replaceChildren(list);
+      const draw = (): void => {
+        const { notes } = core.store.board().plugins[plugin] as State;
+        list.replaceChildren(
+          ...notes.map((note) => {
+            const block = document.createElement("span");
+            block.className = "note-block";
+            block.textContent = note.block;
+            const item = document.createElement("li");
+            item.append(note.text, " ", block);
+            return item;
+          }),
+        );
+      };
+      draw();
+      return core.store.subscribe(draw);
+    },
+  },
+} satisfies Omit<PluginClass, "id">;
+```
+
+Core calls `render()` with the element to draw in, `CoreApi`, the id of the plugin's class and a signal.
+The function may return its cleanup, here the end of the subscription to the board.
+
+In R, the package gives a constructor of its plugins and lists the class in the `._BLOCKR_MODULES_` that it exports, with the class's name and its module (see `?blockr.core::read_blocks_yml`):
+
+```r
+#' @export
+new_notes_plugin <- function(notes = list()) {
+  blockr.core::new_plugin(list(notes = notes), "notes_plugin")
+}
+
+#' @export
+._BLOCKR_MODULES_ <- new.env(parent = emptyenv())
+
+.onLoad <- function(libname, pkgname) {
+  ._BLOCKR_MODULES_$plugins <- list(
+    new_notes_plugin = list(
+      id = "notes_plugin",
+      name = "Notes",
+      module = "js/notes.js"
+    )
+  )
+}
+```
+
+The schema of the state ships beside the module, as `js/notes.schema.json`, and R writes the state that an app script gives the plugin by it.
+An app runs every plugin class that `blockr.core::available_plugins()` gives, unless its script names the plugins in the `plugins` of `serve()`.
+So the Notes plugin runs in every app where blockr.notes is installed.
+
+## The panel
+
+The dock offers each plugin whose class has a `ui` one panel, in which it mounts the plugin's UI with `core.mountPlugin()`.
+A view shows each plugin's panel at most once.
+The panel's tab shows the plugin's name, "Notes", which the package lists.
+The panel's frame, tab and close button are the dock's, and what is inside the frame is the plugin's.
+
+A view's grid names the panel by the id of the plugin's class, as `{ "plugin": "blockr.notes-notes_plugin" }`.
+An app script places the panel in a grid with `plg()`, as the vignette [Views and grids](layouts.html) shows.
+The panel picker, which the "+" in the header of each tab group opens, lists after the blocks, under "Plugins", each plugin with a `ui` that the active view does not show.
+A board that holds no view opens on the view "Page", whose left rail holds the panel of each of the app's plugins with a `ui`.
+A plugin that no view of a saved board holds, such as one that the app added since the board was saved, shows in no panel until the user picks it from the panel picker or a command shows it.
+
+The dock mounts the plugin's UI when it draws the panel.
+It runs the cleanup that `render()` returned once the panel goes: when the user closes the panel's tab, when the active view changes to one that does not show the panel, or when another board opens.
+Core aborts the signal of `render()` then too.
+A panel behind another tab or on a collapsed rail stays mounted.
+So the UI keeps what it holds outside the plugin's state, such as a scroll position or a note that the user has not saved yet.
+The dock may mount the UI again, as when the user switches back to a view that shows the panel.
+So a plugin keeps in its state what others should see, and runs from its class's `start` what has to outlive its panel.
+
+## Sizing from its own element
+
+The element in which the dock mounts the UI fills the panel's body, at the panel's width and height.
+It scrolls where what the plugin draws is taller than the panel.
+So a plugin sizes itself from its own element, with `height: 100%`, a container query or a `ResizeObserver`, as the Notes plugin shows the block of each note only where its panel is wide enough:
+
+```css
+.notes {
+  container-type: inline-size;
+}
+
+.notes .note-block {
+  display: none;
+}
+
+@container (min-width: 30rem) {
+  .notes .note-block {
+    display: inline;
+  }
+}
+```
+
+A collapsed rail shows its tabs alone, and the dock hides the panels on it rather than squeeze them.
+So a plugin need not tell a collapsed rail from a narrow panel by its width.
+
+A plugin draws only inside its element and in the browser's top layer.
+Nothing that it draws depends on the dock's markup, such as the classes of the dock's frame or of dockview, which draws the dock's layout.
+It gives no element an ID, since the whole page shares the IDs of its elements, as the UI of a block gives none either.
+So it draws the same under every frontend.
+
+## Room beyond the panel
+
+A plugin that needs more room than its panel, as for a form or a menu, opens it in the browser's top layer.
+A `<dialog>` that `showModal()` opens is in the top layer, and so is a popover.
+Nothing on the page clips an element there, so the panel's edges do not cut it off.
+The element still sits inside the plugin's element, so the cleanup removes it with the rest of the UI.
+In the Notes plugin, the button `edit` opens a form in a dialog, and the button `more` opens a menu:
+
+```ts
+const dialog = document.createElement("dialog");
+dialog.setAttribute("aria-label", "Edit note");
+dialog.append(form);
+el.append(dialog);
+edit.addEventListener("click", () => dialog.showModal(), { signal });
+
+const menu = document.createElement("div");
+menu.popover = "auto";
+el.append(menu);
+more.popoverTargetElement = menu;
+```
+
+The button `more` opens and closes the menu through its `popoverTargetElement`, which needs no element ID.
+The dock offers no place for dialogs or menus, and its own menus, such as the panel picker, are popovers too.
+
+## Showing a block or a plugin
+
+A plugin shows a block or a plugin through core's `show()`, as under every frontend:
+
+```ts
+await core.show({ block: note.block });
+await core.show({ plugin: "blockr.dag-dag_plugin" });
+```
+
+Under the dock, `show()` takes these steps:
+
+1. Core throws for a block that the board does not hold, and for a plugin that the app does not run or whose class has no `ui`.
+2. Core gives a block focus, in `core.focus`.
+3. Core calls the `show()` of the dock's frontend, which runs the dock's command `blockr.dock-show_panel` with the object, which names the panel as a grid names it.
+4. Where the active view shows the panel, the tab group or rail that holds it brings its tab to the front, and a collapsed rail opens.
+   While the board option `sync_rails` is on, the rail opens on every view that has a rail on that edge.
+5. Where the active view does not show the panel, the command places it at the default place: a new tab in the last tab group that holds only blocks' panels.
+   Where no tab group holds only blocks' panels, as in a view that shows nothing, the panel gets a new tab group at the end of the view's top split.
+6. The promise resolves once the dock has shown the panel.
+
+Showing takes no undo step, placing included, so the user's Undo passes over it.
+It never switches views, and it leaves the keyboard's focus where it is.
+On a locked board, the dock places no panel.
+There `show()` brings forward only a panel that the active view shows, and otherwise resolves without showing anything, while core has given a block focus all the same.
+
+## Reading the dock's state
+
+The dock keeps its views, the folders that group them, the active view and the sections that each block's card shows in its plugin state.
+The board holds that state under the id of the dock's class, `blockr.dock-dock_plugin`, open to every plugin, as the rest of the board is:
+
+```ts
+import type { Board } from "@blockr/core";
+
+const DOCK = "blockr.dock-dock_plugin";
+
+type View = {
+  readonly name: string;
+  readonly folder: string | null;
+  readonly index: string;
+  readonly grid: unknown;
+};
+
+type Folder = {
+  readonly name: string;
+  readonly folder: string | null;
+  readonly index: string;
+};
+
+type DockState = {
+  readonly views: Readonly<Record<string, View>>;
+  readonly folders: Readonly<Record<string, Folder>>;
+  readonly active: string | null;
+  readonly visible: Readonly<Record<string, readonly ("inputs" | "outputs")[]>>;
+};
+
+function dockState(board: Board): DockState | undefined {
+  return board.plugins[DOCK] as DockState | undefined;
+}
+```
+
+The state has four parts:
+
+- The part `views` holds each view by its id, with its `name`, the `folder` that it sits in, or `null` for the top of the views menu, its `index` and its `grid`.
+- The part `folders` holds each folder by its id, with its `name`, its `folder` and its `index`.
+- The part `active` holds the id of the active view.
+- The part `visible` holds, by block id, the sections that a block's card shows, for each card that hides one.
+
+The views menu orders the views and folders of each folder by their `index`, which it compares by code units.
+A grid holds its top split, with its `orientation`, its `children` and their `sizes`, and its rails by edge in `rails`.
+Each child is a split, with its own `children` and `sizes`, or a tab group, with its `panels` and the `active` one, which it shows.
+A rail holds its `panels` and its `active` one too, whether it is `collapsed`, and its `size`, its width in pixels while it is open.
+The schema of the state ships with the dock, as `js/dock.schema.json` in the installed package, and describes each field.
+
+Under another frontend, the board holds no state for the dock, and `dockState()` above gives `undefined`.
+A plugin follows the state as it changes through `core.store.subscribe()`, as it follows the rest of the board.
+To tell which blocks and plugins the user sees, a plugin reads `core.onScreen` instead, and to tell which block the user works in, `core.focus`, since every frontend sets both.
+Under the dock, `core.onScreen` holds the blocks and plugins whose panels the tab groups and the open rails of the active view show.
+
+## Changing which views hold which panels
+
+A plugin places a panel in a view, or takes one out of a view, with the dock's commands `blockr.dock-add_panel` and `blockr.dock-remove_panel`.
+Any plugin runs them through `core.commands.run()`, as any package runs another's commands.
+
+| Command | Args | What it does |
+|---|---|---|
+| `blockr.dock-add_panel` | `view`, `panel`, and `near`, `side` or `rail` | Places a panel in a view that does not show it, as the tab that its tab group or rail shows |
+| `blockr.dock-remove_panel` | `view`, `panel` | Takes a panel out of a view, as closing its tab does |
+
+The arg `view` is the id of a view, and `panel` names the panel as a grid names it, as `{ "block": "a" }`.
+Without `near`, `side` and `rail`, the panel goes to the default place, as for `show()`.
+With `rail`, `"left"` or `"right"`, it goes on the rail at that edge of the view.
+With `near`, a panel of the view, it goes in the tab group of that panel, or in a new tab group beside it, on the `side` given: `"left"`, `"right"`, `"above"` or `"below"`.
+Each of the two commands is one undo step.
+The command `blockr.dock-remove_panel` removes no block, and the other views that show the panel keep it.
+
+A plugin draws a control for one of the dock's commands only where `core.commands.registered()` holds that command.
+Another frontend registers none of the dock's commands, so there the plugin draws no such control and works on.
+The plugin greys the control out where `core.commands.preflight()` fails, as for a view that shows the panel already, or on a locked board, where neither command runs.
+As the Notes plugin draws the item of a note, it adds a button that puts the panel of the note's block on the right rail of the active view:
+
+```ts
+const ADD_PANEL = "blockr.dock-add_panel";
+
+if (ADD_PANEL in core.commands.registered()) {
+  const args = {
+    view: dockState(core.store.board())?.active ?? null,
+    panel: { block: note.block },
+    rail: "right",
+  };
+  const pin = document.createElement("button");
+  pin.textContent = "Pin to the right";
+  pin.disabled = !core.commands.preflight(ADD_PANEL, args);
+  pin.addEventListener("click", () => {
+    core.commands.run(ADD_PANEL, args).catch(() => undefined);
+  });
+  item.append(pin);
+}
+```
+
+The plugin draws its list again on every change of the board, a change of the active view included, so the button checks the preflight as it is drawn.
+
+Where the command registry or the store refuses a command of the origin "user", core tells the user why, through a notification.
+The call of `run()` still rejects, so the plugin catches the rejection and does nothing more.
+
+The dock registers its other commands too, such as `blockr.dock-add_view` and `blockr.dock-move_panel`.
+The command registry gives each with its label, a description of what it does and the schema of its args.
+The guidance that the dock gives the assistant's model says how they fit together, in the file that `system.file("assistant", "skills", "layout", "SKILL.md", package = "blockr.dock")` gives.
+
+## Settings
+
+A plugin keeps a setting of its own in its state first, so that the setting saves and migrates with the plugin.
+Its UI shows the setting and changes it through the plugin's commands, in its panel or in the top layer.
+A board option is meant for how the board is shown, such as the dock's `view_tabs`, and is no substitute for that state.
+A plugin's class names the board options of that kind that it requires in `options`, and its package registers those that it ships (see `?blockr.core::new_board_option`).
+
+The dock's options sidebar, which the options button in the navbar opens, shows each board option that the board holds, under its category.
+It mounts the UI of each with `core.mountOption()`, a board option that a plugin requires among them.
+It shows them on a locked board too, since the board lock leaves board options open.
+So a plugin's board options need no place of their own, and they show under every frontend, as core's basic frontend shows them in its toolbar.
+
+## No other place
+
+Besides the panel, the dock draws what every frontend draws for plugins:
+
+- The notifications that a plugin raises with `core.notifications.notify()` show as toasts, even one about a block.
+  Those that R, core or a block's modules raise about a block show on the block's card.
+- The controls of the app's storage plugin, which its class's `storage` gives, show in the navbar, in the navbar's look.
+  What the controls cannot hold, the storage plugin opens in a dialog of its own, in the top layer.
+
+The navbar's other items are the app's.
+An app script gives them to `serve()` in `navbar` (see `?default_navbar`), and no plugin adds to the navbar.
+
+The dock offers plugins no other place.
+Its block cards offer them no section, no button in a card's header and no item in a card's menu, and the dock gives them no panel for each block and no place for dialogs or menus.
+So the dock declares no member of its own on core's `PluginClass`, and reads no member of a plugin's class beyond core's.
+A plugin that draws in its panel and in the top layer, and works on the board through `CoreApi`, works the same under the dock as under core's basic frontend.

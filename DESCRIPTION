@@ -34,5 +34,5 @@ Suggests:
 Remotes:
     BristolMyersSquibb/blockr.core@js-state
 Config/testthat/edition: 3
-VignetteBuilder: knitr, quarto
+VignetteBuilder: quarto
 Config/roxygen2/version: 8.1.0

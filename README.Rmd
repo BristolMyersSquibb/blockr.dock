@@ -4,13 +4,49 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r, include=FALSE}
+```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.path = "man/figures/README-",
-  out.width = "100%"
+  out.width = "100%",
+  render = function(x, ...) {
+    if (inherits(x, "shiny.appobj")) invisible() else knitr::knit_print(x, ...)
+  }
 )
+
+# Serves the app in a process of its own and saves a screenshot of its page.
+# A capture beyond the viewport, as webshot2 takes, has Chrome lay the page out
+# at another size while it captures, so the image can show the dock half laid
+# out.
+screenshot <- function(app, file) {
+  port <- httpuv::randomPort()
+  server <- callr::r_bg(
+    function(app, port) {
+      # Core finds the board options that the dock requires among the
+      # packages that the process has loaded.
+      loadNamespace("blockr.dock")
+      shiny::runApp(app, port = port, launch.browser = FALSE)
+    },
+    args = list(app = app, port = port)
+  )
+  on.exit(server$kill(), add = TRUE)
+  log <- ""
+  while (!grepl("Listening on", log) && server$is_alive()) {
+    server$poll_io(1000)
+    log <- paste0(log, server$read_error())
+  }
+  session <- chromote::ChromoteSession$new(width = 1200, height = 700)
+  on.exit(session$close(), add = TRUE)
+  session$Page$navigate(paste0("http://127.0.0.1:", port))
+  Sys.sleep(8)
+  session$screenshot(
+    file,
+    cliprect = c(0, 0, 1200, 700),
+    options = list(captureBeyondViewport = FALSE),
+    show = FALSE
+  )
+}
 ```
 
 # blockr.dock
@@ -22,7 +58,10 @@ knitr::opts_chunk$set(
 [![CRAN status](https://www.r-pkg.org/badges/version/blockr.dock)](https://CRAN.R-project.org/package=blockr.dock)
 <!-- badges: end -->
 
-A docking layout manager provided by [dockViewR](https://github.com/cynkra/dockViewR) can be used as front-end to a [blockr](https://github.com/BristolMyersSquibb/blockr) board using this package.
+This package gives [blockr](https://github.com/BristolMyersSquibb/blockr) its dock, the frontend that draws a board in the browser.
+A navbar runs across the top of the page, and below it the dock shows the board in views, one at a time.
+Each view is a grid of panels, drawn with [dockview](https://dockview.dev), which hold the cards of the board's blocks and the UIs of its plugins.
+Wherever blockr.dock is available, the `serve()` of blockr.core runs the dock as the app's frontend.
 
 ## Installation
 
@@ -33,82 +72,108 @@ You can install the development version of blockr.dock from [GitHub](https://git
 pak::pak("BristolMyersSquibb/blockr.dock")
 ```
 
-## Simple dock
+## A board in the dock
 
-To start up a board for visualizing `Sepal.Length` against `Sepal.Width`
-for the `iris` dataset:
+An app script builds its board with blockr.core, and serves it:
 
-```{r single-page-code, code=readLines("inst/examples/single-page/app.R"), eval=FALSE}
+```{r page, message = FALSE}
+library(blockr.core)
+library(blockr.dock)
+
+blocks <- c(
+  data = new_dataset_block("iris"),
+  head = new_head_block(),
+  plot = new_scatter_block(x = "Sepal.Length", y = "Sepal.Width")
+)
+links <- c(new_link("data", "head"), new_link("data", "plot"))
+
+serve(new_board(blocks = blocks, links = links, name = "Iris"))
 ```
 
-```{r single-page-screenshot, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
-webshot2::appshot(
-  shiny::shinyAppDir(system.file("examples", "single-page", package = "blockr.dock")),
-  file = "man/figures/single-page.png",
-  delay = 3,
-  vwidth = 900,
-  vheight = 600
+```{r page-screenshot, echo = FALSE, results = "hide", message = FALSE, warning = FALSE}
+screenshot(
+  serve(new_board(blocks = blocks, links = links, name = "Iris")),
+  "man/figures/page.png"
 )
 ```
 
-![Simple dock](man/figures/single-page.png)
+![A board in the dock](man/figures/page.png)
 
-## Locked dock
+The board holds no view, so the dock opens on a view of its own, "Page".
+Its left rail holds core's Edit board plugin, which adds, renames and removes blocks, links and stacks.
+Beside the rail, a tab group holds the card of each block.
+The navbar holds the board's name, Save and Open, which core's storage plugin gives, Undo and Redo, the views menu and the options button.
 
-A locked dock prevents users from adding or removing blocks and
-extensions. Drag-and-drop and panel resizing are also disabled.
+## Views
 
-```{r locked-dock-code, code=readLines("inst/examples/locked-dock/app.R"), eval=FALSE}
+The dock plugin, which `new_dock_plugin()` makes, gives the board its views, each with a grid that places its panels:
+
+```{r views}
+board <- new_board(
+  blocks = blocks,
+  links = links,
+  plugins = list(
+    new_dock_plugin(
+      views = list(
+        analysis = dock_view(
+          dock_grid(
+            panels("data", "head"),
+            "plot",
+            rail(plg("edit"), collapsed = TRUE)
+          ),
+          name = "Analysis"
+        ),
+        data = dock_view("data")
+      )
+    ),
+    edit = new_edit_board_plugin()
+  ),
+  name = "Iris"
+)
+
+serve(board)
 ```
 
-```{r locked-dock-screenshot, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
-webshot2::appshot(
-  shiny::shinyAppDir(system.file("examples", "locked-dock", package = "blockr.dock")),
-  file = "man/figures/locked-dock.png",
-  delay = 3,
-  vwidth = 900,
-  vheight = 600
+```{r views-screenshot, echo = FALSE, results = "hide", message = FALSE, warning = FALSE}
+screenshot(serve(board), "man/figures/views.png")
+```
+
+![The view "Analysis"](man/figures/views.png)
+
+The view "Analysis" shows a tab group of the dataset and the head block beside the plot, with core's Edit board plugin on a collapsed rail.
+The views menu in the navbar switches to the view "Data".
+The vignette "Views and grids", `vignette("layouts", package = "blockr.dock")`, shows how an app script writes views, folders and grids.
+
+## The navbar
+
+An app script gives the items of the navbar to `serve()` in `navbar`.
+The function `custom_navbar()` starts from the default bar, as here, where it adds a menu of links:
+
+```{r navbar}
+issues <- "https://github.com/BristolMyersSquibb/blockr/issues"
+
+serve(
+  board,
+  navbar = custom_navbar(
+    navbar_menu(
+      "help",
+      "Help",
+      navbar_link("issues", "Report an issue", issues)
+    )
+  )
 )
 ```
 
-![Locked dock](man/figures/locked-dock.png)
+The help page `?default_navbar` lists the parts of the default bar and every kind of item.
 
-## Layouts
+## A locked board
 
-Since `blockr.dock` 0.1.1 every board carries a `dock_layouts` object:
-a list of one or more views, exposed as a tab dropdown at the top of
-the app. The single-page case (what rendered as a no-tab dock in
-0.1.0) is now a `dock_layouts` with one auto-named `"Page"` view, which
-is what you see in the [Simple dock](#simple-dock) screenshot above.
+Under the board lock, which the blockr option `locked` sets, as `options(blockr.locked = TRUE)` does, the blocks and links of the board stay as they are (see `help("locked-board", package = "blockr.core")`).
+The dock then draws no "+" in the header of a tab group and no close button on a tab, and the navbar shows that the board is read-only.
+The user still switches views, brings a tab to the front, and opens or collapses a rail.
 
-To define multiple views explicitly, pass a named list to `layouts`.
-Each named entry becomes a tab; blocks and extensions are shared
-across views via the board's DAG, view membership is a layout concern
-only.
+## Learn more
 
-```{r views-code, code=readLines("inst/examples/views/app.R"), eval=FALSE}
-```
-
-```{r views-screenshot, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
-# Use shinytest2 to click the view dropdown open before screenshotting
-withr::local_envvar(NOT_CRAN = "true")
-app <- shinytest2::AppDriver$new(
-  system.file("examples", "views", package = "blockr.dock"),
-  width = 900,
-  height = 600
-)
-Sys.sleep(4)
-app$run_js("document.querySelector('.blockr-view-toggle').click()")
-Sys.sleep(0.5)
-tmp <- tempfile(fileext = ".png")
-app$get_screenshot(tmp)
-file.copy(tmp, "man/figures/views.png", overwrite = TRUE)
-app$stop()
-```
-
-![Multi-view dock](man/figures/views.png)
-
-For the full set of shapes accepted by `new_dock_board(layouts = ...)`
-(nested grids, tabbed panels, active-view selection, the coercion rules
-that normalise everything to a `dock_layouts`), see
-`vignette("layouts", package = "blockr.dock")`.
+- The vignette "Views and grids", `vignette("layouts", package = "blockr.dock")`, shows how an app script writes the dock's views, folders and grids.
+- The vignette "How a plugin uses the dock's panels", `vignette("plugins", package = "blockr.dock")`, is for the author of a package whose plugin class has a UI.
+- The vignette "Migration notes for app scripts", `vignette("migration-notes", package = "blockr.dock")`, lists what an app script of blockr.dock 0.2.0 changes to run on version 0.2.1.

@@ -17,6 +17,32 @@
   `--bc-color-status-failed` and `--bc-color-category-input`, and from
   blockr.ui's until core has them.
 
+* The options button on the bar opens the dock's options sidebar (#583).
+  The sidebar lists the categories of the board options that the board holds
+  as an accordion, whose categories the user expands in place, several at
+  once.
+  Each category is a card, as each section of core's Edit board plugin is.
+  An expanded category shows the UI of each of its board options, which core
+  mounts, on a row of its own, with a rule between rows.
+  Each category shows how many board options it holds.
+  A Reset button by the UI of a board option whose value differs from its
+  default sets the default again, which undo cannot do.
+  A button in the sidebar's header expands every category, or collapses them
+  all, and the summary of an expanded category stays in view as the sidebar
+  scrolls.
+  The categories come in alphabetical order, and so do the board options in a
+  category, by their labels.
+  A category that the user expanded stays expanded as the sidebar closes and
+  opens again.
+  The sidebar shows the board options on a locked board too, since the board
+  lock leaves them open.
+  Unpinned, the sidebar lies over the page, and Escape or a press outside it
+  closes it.
+  Pinned, it stays open, and the bar and the dock make room for it.
+  Tab and Shift+Tab keep the focus inside the sidebar.
+  The sidebar holds no field for the board's name, which the bar shows, and no
+  code export, which becomes blockr.code's plugin.
+
 * The bar's views menu lists the views and folders of the board in the order
   of the navigation, with what each folder holds below it (#582).
   A folder opens and closes in the menu.
@@ -89,7 +115,6 @@
   item, and a module that cannot draw leaves a warning in its place.
   On a narrow bar, the board's name and then the storage controls cut their
   labels short, and show them in full as the tooltip.
-  The options button does not open a sidebar yet, since #583 draws it.
 
 * The dock gives the assistant's model its guidance on arranging views, as the
   skill `layout` in `inst/assistant/skills` (#597).
