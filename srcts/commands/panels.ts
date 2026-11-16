@@ -14,6 +14,12 @@
 // that the dock reads back from dockview moves each share a little.
 // Showing another tab and opening or collapsing a rail take no undo step,
 // since they change only what the user looks at.
+// Showing a panel in the active view, as the dock carries out core's show(),
+// takes none either, even where it adds the panel, since showing takes none
+// under any frontend.
+// Where the panel sits on a collapsed rail, showing it opens the rail as
+// blockr.dock-collapse_rail does, so on every view that has a rail on that
+// edge while the board option sync_rails is on.
 //
 // On a locked board, a reader still has a tab group show another panel and
 // opens or collapses a rail, while no command adds or removes a panel.
@@ -229,8 +235,9 @@ export const panelCommands = [
     id: "blockr.dock-show_panel",
     label: "Show panel",
     description:
-      "Shows a panel in the active view: has the tab group or rail that holds it show it, where the view shows it, and places it at the default place where the view does not, a new tab in the last tab group that holds no plugin's panel. On a locked board, it only has a tab group or rail show a panel that the view shows.",
+      "Shows a panel in the active view, as the dock carries out core's show(): has the tab group or rail that holds it show it, opening the rail where it is collapsed, where the view shows it, and places it at the default place where the view does not, a new tab in the last tab group that holds no plugin's panel. While the board option sync_rails is on, a rail that it opens opens on every view that has a rail on that edge. It never switches views, and takes no undo step, since showing takes none. On a locked board, it only has a tab group or rail show a panel that the view shows.",
     args: schemas.object({ panel: schemas.panel }, ["panel"]),
+    undo: false,
     enabled(board, { panel }, { lock }) {
       const active = stateOf(board)?.active ?? null;
       if (active === null || !holdsBlock(board, panel)) return false;
@@ -240,9 +247,15 @@ export const panelCommands = [
       const state = stateOf(board);
       const active = state?.active ?? null;
       const held = active === null ? undefined : state?.views[active];
-      if (active === null || held === undefined) return [];
-      const grid = places(held.grid, panel) ? showing(held.grid, panel) : placePanel(held.grid, panel);
-      return { patches: [gridPatch(active, grid)] };
+      if (state === undefined || active === null || held === undefined) return [];
+      if (!places(held.grid, panel)) return { patches: [gridPatch(active, placePanel(held.grid, panel))] };
+      const grid = showing(held.grid, panel);
+      const at = locate(grid, panel);
+      if (at === undefined || !("edge" in at) || grid.rails?.[at.edge]?.collapsed !== true) {
+        return { patches: [gridPatch(active, grid)] };
+      }
+      const shown = { ...state, views: { ...state.views, [active]: { ...held, grid } } };
+      return { patches: railPatches(board, shown, active, at.edge, false) };
     },
   }),
 
@@ -289,11 +302,18 @@ export const panelCommands = [
     run(board, { view, edge, collapsed }) {
       const state = stateOf(board);
       if (state === undefined) return [];
-      const synced = board.options.sync_rails !== false;
-      return { patches: railViews(state, synced ? undefined : view, edge).map(([id, grid]) => gridPatch(id, collapsedRail(grid, edge, collapsed))) };
+      return { patches: railPatches(board, state, view, edge, collapsed) };
     },
   }),
 ];
+
+// The patches that collapse or open the rail on an edge of a view, and, while
+// the board option sync_rails is on, of every view that has a rail on that
+// edge, each from its grid in the state given.
+function railPatches(board: Board, state: DockState, view: ViewId, edge: Edge, collapsed: boolean) {
+  const synced = board.options.sync_rails !== false;
+  return railViews(state, synced ? undefined : view, edge).map(([id, grid]) => gridPatch(id, collapsedRail(grid, edge, collapsed)));
+}
 
 // The views whose rail on the edge a command collapses or opens, with their
 // grids: the one given, or every view that has a rail there.

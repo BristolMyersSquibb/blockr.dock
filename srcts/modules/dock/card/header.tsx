@@ -66,7 +66,7 @@ export function Header({
 
   const toggle = (section: Section) => {
     const shown = sections.includes(section) ? sections.filter((each) => each !== section) : [...sections, section];
-    runEdit(core, plugin, "blockr.dock-set_sections", {
+    runEdit(core, "blockr.dock-set_sections", {
       block: id,
       sections: SECTIONS.filter((each) => shown.includes(each)),
     });
@@ -83,7 +83,7 @@ export function Header({
           <NameField
             name={block.name}
             onCommit={(name) => {
-              runEdit(core, plugin, "blockr.core-rename_block", { id, name });
+              runEdit(core, "blockr.core-rename_block", { id, name });
             }}
             onDone={(restore) => {
               setRenaming(false);
@@ -121,7 +121,7 @@ export function Header({
               label={open ? "Open to readers" : "Locked for readers"}
               pressed={open}
               onClick={() => {
-                runEdit(core, plugin, "blockr.core-set_block_lock", { id, locked: open ? null : false });
+                runEdit(core, "blockr.core-set_block_lock", { id, locked: open ? null : false });
               }}
             >
               <LockIcon open={open} />
@@ -322,7 +322,7 @@ function MenuButton({
         danger: true,
         divided: true,
         onSelect() {
-          runEdit(core, plugin, "blockr.core-remove_block", { id });
+          runEdit(core, "blockr.core-remove_block", { id });
         },
       },
     ];
@@ -334,7 +334,7 @@ function MenuButton({
     const [first] = entry.inputs;
     const input: Readonly<Record<string, string>> =
       entry.inputs.length > 1 && !entry.inputs.includes("...") && first !== undefined ? { input: first } : {};
-    runEdit(core, plugin, "blockr.core-append_block", { from: id, registry_id: entry.id, ...input });
+    runEdit(core, "blockr.core-append_block", { from: id, registry_id: entry.id, ...input });
   };
 
   return (

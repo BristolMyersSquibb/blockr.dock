@@ -6,15 +6,16 @@
 // in a portal of the dock's React tree, so they read the context of the dock's
 // root as well.
 // A component that draws from the board follows it with useBoard().
-// The module also holds how the dock runs one of its commands as an edit,
-// raises that the board refused one, and gives a block focus.
+// The module also holds how the dock runs one of its commands as an edit, and
+// how it gives a block focus.
 
 import type { BlockId, Board, CoreApi, Json, PluginClassId } from "@blockr/core";
 import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
 
 export interface DockContextValue {
   readonly core: CoreApi;
-  // The id of the dock plugin's class, which raises the dock's notifications.
+  // The id of the dock plugin's class, which raises the error of a failed copy
+  // of a block's id (./card/header.tsx).
   readonly plugin: PluginClassId;
   // The app's plugins whose class has a `ui`, each with its name, in the order
   // of the app's plugins.
@@ -59,22 +60,12 @@ export function useBoard(core: CoreApi): Board {
   return useSyncExternalStore(subscribe, board);
 }
 
-// Raises that the board refused a command that the dock ran, as a
-// notification of the code edit_refused, which concerns the dock plugin, as
-// core's plugins raise one for a refused edit.
-export function notifyRefused(core: CoreApi, plugin: PluginClassId, error: unknown): void {
-  core.notifications.notify(plugin, {
-    severity: "error",
-    code: "edit_refused",
-    message: error instanceof Error ? error.message : String(error),
-  });
-}
-
-// Runs one of the board's commands as an edit of the dock, and raises that the
-// board refused it, where it does.
-export function runEdit(core: CoreApi, plugin: PluginClassId, id: string, args: Json): void {
-  core.commands.run(id, args).catch((error: unknown) => {
-    notifyRefused(core, plugin, error);
+// Runs one of the board's commands as an edit of the dock.
+// Where the board refuses it, core tells the user why, as an error of the code
+// board_edit_failed.
+export function runEdit(core: CoreApi, id: string, args: Json): void {
+  core.commands.run(id, args).catch(() => {
+    // Core tells the user why the board refused the command.
   });
 }
 

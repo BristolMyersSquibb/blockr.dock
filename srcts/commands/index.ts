@@ -4,8 +4,9 @@
 // and other plugins see each change, and no change of arrangement reaches R.
 // Each reads the dock's state on the board and returns one delta of patches
 // inside it, which the store checks against the state's schema, and each is
-// one undo step but blockr.dock-activate_view, blockr.dock-activate_panel and
-// blockr.dock-collapse_rail, which change only what the user looks at.
+// one undo step but blockr.dock-activate_view, blockr.dock-activate_panel,
+// blockr.dock-collapse_rail and blockr.dock-show_panel, which change only what
+// the user looks at.
 // Their descriptions and the schemas of their args describe them to menus and
 // to the assistant's tools.
 // The store applies a patch inside a plugin's state on a locked board and

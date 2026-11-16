@@ -358,7 +358,7 @@ describe("a gesture", () => {
     expect(s.core.store.canUndo()).toBe(false);
   });
 
-  test("that the board lock refuses brings dockview back to the stored grid, and tells why", async () => {
+  test("that the board lock refuses brings dockview back to the stored grid, and leaves it to core to say why", async () => {
     const s = await start({ locked: true });
 
     s.panel(b).api.moveTo({ group: s.panel(c).group, position: "center" });
@@ -366,9 +366,7 @@ describe("a gesture", () => {
 
     expect(s.grid()).toEqual(main);
     expect(s.shown()).toEqual(main);
-    expect(s.core.notifications.get()).toMatchObject([
-      { severity: "error", source: { kind: "module", module: { object: { plugin: DOCK } }, code: "edit_refused" } },
-    ]);
+    expect(s.core.notifications.get()).toMatchObject([{ severity: "error", source: { kind: "core", code: "board_edit_failed" } }]);
   });
 });
 
