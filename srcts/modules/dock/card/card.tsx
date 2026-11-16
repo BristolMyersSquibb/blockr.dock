@@ -40,7 +40,7 @@
 import type { BlockId } from "@blockr/core";
 import { useCallback, useState } from "react";
 import type { ReactElement } from "react";
-import { SECTIONS, stateOf } from "../../../commands/index.ts";
+import { dockState, SECTIONS } from "../../../commands/index.ts";
 import { giveFocus, useBoard, useDock } from "../context.ts";
 import { Header } from "./header.tsx";
 import { Mounted, Section } from "./section.tsx";
@@ -74,7 +74,7 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
 
   const block = board.blocks[id];
   if (block === undefined) return null;
-  const sections = stateOf(board)?.visible[id] ?? SECTIONS;
+  const sections = dockState(board)?.visible[id] ?? SECTIONS;
   const compact = core.options.value("compact") === true;
   const entry = core.blockRegistry()[block.registry_id];
   const inputs = !core.store.locked(id);

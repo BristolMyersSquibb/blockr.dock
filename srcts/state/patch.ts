@@ -18,7 +18,7 @@ export function pointer(segments: readonly string[]): string {
 
 // The segments of a JSON Pointer, or undefined where the text is no pointer
 // below the board's root.
-function segmentsOf(path: string): string[] | undefined {
+function segmentsFromPath(path: string): string[] | undefined {
   if (!path.startsWith("/")) return undefined;
   const segments = path.slice(1).split("/");
   if (segments.some((segment) => /~(?![01])/.test(segment))) return undefined;
@@ -35,7 +35,7 @@ function segmentsOf(path: string): string[] | undefined {
 export function patched(state: Json, patches: readonly Patch[], plugin: PluginClassId): Json | undefined {
   let at: Json | undefined = state;
   for (const patch of patches) {
-    const segments = segmentsOf(patch.path);
+    const segments = segmentsFromPath(patch.path);
     if (segments?.[0] !== "plugins" || segments[1] !== plugin) continue;
     at = at === undefined ? undefined : applied(at, segments.slice(2), patch);
   }

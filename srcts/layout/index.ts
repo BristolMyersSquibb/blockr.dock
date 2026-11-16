@@ -5,7 +5,7 @@
 
 export { columnRuns, gestureRuns } from "./gestures.ts";
 export type { Reading, Run } from "./gestures.ts";
-export { panelId, panelOf, railId } from "./ids.ts";
+export { panelFromId, panelId, railId } from "./ids.ts";
 export { gridToLayout, layoutToGrid, PANEL_COMPONENT } from "./layout.ts";
 export type { PanelParams, Size } from "./layout.ts";
 export { stackGrid } from "./stack.ts";

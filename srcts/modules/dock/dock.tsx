@@ -43,7 +43,7 @@ import type {
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { activeView } from "../../commands/index.ts";
-import { PANEL_COMPONENT, panelOf } from "../../layout/index.ts";
+import { PANEL_COMPONENT, panelFromId } from "../../layout/index.ts";
 import type { PanelParams } from "../../layout/index.ts";
 import { gridPanels } from "../../state/index.ts";
 import { BlockCard, createTooltips } from "./card/index.ts";
@@ -114,7 +114,7 @@ function Tab(props: IDockviewPanelHeaderProps<PanelParams>): ReactElement {
 function AddPanelButton({ api, group }: IDockviewHeaderActionsProps): ReactElement | null {
   const button = usePickerButton(() => {
     const shown = group.activePanel;
-    return shown === undefined ? undefined : panelOf(shown.id);
+    return shown === undefined ? undefined : panelFromId(shown.id);
   });
   if (api.location.type === "edge") return null;
   return (

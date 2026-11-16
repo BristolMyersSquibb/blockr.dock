@@ -23,6 +23,16 @@
   the arrows move the active row, and the panel picker lists each block with
   the mark of its class.
 
+* The dock gives the assistant's model its guidance on arranging views, as the
+  skill `layout` in `inst/assistant/skills` (#597).
+  The assistant lists the skill in the catalogue of its system prompt in every
+  app that runs the dock, and the model reads it before it arranges a view.
+  The skill teaches the dock's views and folders, its grids and the commands
+  that change them.
+  It takes the place of the skill of that name that blockr.assistant gave for
+  its view tools.
+  A deployment's own skill named `layout` takes the place of the dock's.
+
 * The dock carries out core's `show()`, through which a plugin shows a block
   or a plugin under every frontend (#599).
   The dock's frontend runs `blockr.dock-show_panel` with what `show()` was
