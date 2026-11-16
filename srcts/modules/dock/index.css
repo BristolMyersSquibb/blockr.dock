@@ -1203,6 +1203,9 @@ button.blockr-dock-bar-name:hover {
  * up with the title.
  * The chevron goes before the category's name, and points down while the
  * category is expanded, or right while it is collapsed.
+ * As the header of a group that folds in the design system, the name is at
+ * weight 600, and the count of the category's board options follows it in
+ * 13px `text-muted`.
  */
 .blockr-dock-sidebar-categories {
   margin: -8px -10px;
@@ -1230,11 +1233,19 @@ button.blockr-dock-bar-name:hover {
 }
 
 .blockr-dock-sidebar-summary-name {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
+  font-weight: var(--blockr-font-weight-semibold, 600);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.blockr-dock-sidebar-count {
+  flex: none;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-variant-numeric: tabular-nums;
 }
 
 .blockr-dock-sidebar-summary .blockr-dock-chevron {
@@ -1289,13 +1300,22 @@ button.blockr-dock-bar-name:hover {
 }
 
 /*
- * The UI of each board option of an expanded category, 16 pixels under the
- * one before, which lines up with the category's name, after its chevron.
+ * The UI of each board option of an expanded category, which lines up with
+ * the category's name, after its chevron.
+ * A divider of the design system, 1px in `border-default`, parts each board
+ * option from the one before, 12 pixels from each.
  */
 .blockr-dock-sidebar-options {
   display: grid;
-  gap: 16px;
-  padding: 8px 10px 16px 30px;
+  padding: 0 10px 8px 30px;
+}
+
+.blockr-dock-sidebar-option {
+  padding: 12px 0;
+}
+
+.blockr-dock-sidebar-option + .blockr-dock-sidebar-option {
+  border-top: 1px solid var(--blockr-dock-border);
 }
 
 .blockr-dock-sidebar-note {

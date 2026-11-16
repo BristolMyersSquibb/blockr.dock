@@ -5,7 +5,8 @@
   as an accordion, whose categories the user expands in place, several at
   once.
   An expanded category shows the UI of each of its board options, which core
-  mounts.
+  mounts, with a thin rule between them.
+  Each category shows how many board options it holds.
   The categories come in alphabetical order, and so do the board options in a
   category, by their labels.
   A category that the user expanded stays expanded as the sidebar closes and

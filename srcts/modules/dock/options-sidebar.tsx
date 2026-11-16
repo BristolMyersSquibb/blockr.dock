@@ -15,7 +15,9 @@
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.11#board-options-on-a-locked-board).
 //
 // The sidebar lists the categories as an accordion of `details` elements, in
-// alphabetical order, of which the user may expand several at once:
+// alphabetical order, of which the user may expand several at once.
+// Each category's summary shows how many board options the category holds,
+// and a thin rule parts the board options of an expanded category:
 // 1. A click on a category expands it in place. Core mounts the UI of each of
 //    its board options with mountOption(), in the alphabetical order of their
 //    labels.
@@ -196,6 +198,7 @@ function Category({ category, ids, expanded, sidebar }: CategoryProps): ReactEle
       <summary className="blockr-dock-sidebar-summary">
         <Chevron />
         <span className="blockr-dock-sidebar-summary-name">{category}</span>
+        <Count n={ids.length} />
       </summary>
       {expanded || folding ? (
         <div className="blockr-dock-sidebar-options">
@@ -205,6 +208,17 @@ function Category({ category, ids, expanded, sidebar }: CategoryProps): ReactEle
         </div>
       ) : null}
     </details>
+  );
+}
+
+// How many board options a category holds, which a screen reader hears as
+// "3 board options" after the category's name.
+function Count({ n }: { readonly n: number }): ReactElement {
+  return (
+    <span className="blockr-dock-sidebar-count">
+      <span aria-hidden="true">{n}</span>
+      <span className="blockr-dock-visually-hidden">{n === 1 ? ", 1 board option" : `, ${String(n)} board options`}</span>
+    </span>
   );
 }
 

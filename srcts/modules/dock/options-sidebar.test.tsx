@@ -143,16 +143,14 @@ const sidebarIn = (el: HTMLElement): HTMLElement => find(el, ".blockr-dock-sideb
 const optionsButton = (el: HTMLElement): HTMLElement => find(el, ".blockr-dock-bar-options");
 const isOpen = (el: HTMLElement): boolean => sidebarIn(el).hasAttribute("data-open");
 
-// The categories, in order, each with whether it is expanded.
+// The categories, in order, by their names, and those that are expanded.
 const categoriesIn = (el: HTMLElement): HTMLDetailsElement[] => [...sidebarIn(el).querySelectorAll<HTMLDetailsElement>("details")];
-const names = (el: HTMLElement): (string | null)[] => categoriesIn(el).map((details) => find(details, "summary").textContent);
-const expanded = (el: HTMLElement): (string | null)[] =>
-  categoriesIn(el)
-    .filter((details) => details.open)
-    .map((details) => find(details, "summary").textContent);
+const nameOf = (details: HTMLDetailsElement): string | null => find(details, ".blockr-dock-sidebar-summary-name").textContent;
+const names = (el: HTMLElement): (string | null)[] => categoriesIn(el).map(nameOf);
+const expanded = (el: HTMLElement): (string | null)[] => categoriesIn(el).filter((details) => details.open).map(nameOf);
 
 function category(el: HTMLElement, name: string): HTMLDetailsElement {
-  const found = categoriesIn(el).find((details) => find(details, "summary").textContent === name);
+  const found = categoriesIn(el).find((details) => nameOf(details) === name);
   if (found === undefined) throw new Error(`The sidebar has no category "${name}".`);
   return found;
 }
@@ -255,6 +253,15 @@ describe("the options sidebar", () => {
     const { el } = await startSidebar();
     await open(el);
     expect(names(el)).toEqual(CATEGORIES);
+  });
+
+  test("shows how many board options each category holds, which a screen reader hears as a phrase", async () => {
+    const { el } = await startSidebar();
+    await open(el);
+    const counts = categoriesIn(el).map((details) => find(details, ".blockr-dock-sidebar-count [aria-hidden='true']").textContent);
+    expect(counts).toEqual(["2", "1", "3", "1"]);
+    expect(summary(el, "Theme options").textContent).toBe("Theme options3, 3 board options");
+    expect(summary(el, "Table options").textContent).toBe("Table options1, 1 board option");
   });
 
   test("expands a category in place, where core mounts the UI of each of its board options, in the alphabetical order of their labels", async () => {
