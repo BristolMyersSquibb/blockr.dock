@@ -23,6 +23,10 @@
 //   URLs. So the name of each holds a hash of its content, as blockr.core
 //   names the file that holds React, and no browser runs an old copy from its
 //   cache. The license comments of what each holds stay, at its end.
+// - The builds of the modules and of their stylesheets take the vendor check
+//   that blockr.core ships beside the preset. It fails the build where one of
+//   those files would hold code from node_modules. A source that imported
+//   dockview-core, rather than dockview-react, would fail it.
 // - The JSON Schema of each of the dock's board options, in
 //   srcts/options/schemas.ts, is written beside the board option's module, as
 //   compact-option.schema.json beside compact-option.js, as core's build
@@ -43,7 +47,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { preset } from "@blockr/core/build";
+import { preset, vendorCheck } from "@blockr/core/build";
 import * as esbuild from "esbuild";
 import { createGenerator } from "ts-json-schema-generator";
 
@@ -117,7 +121,11 @@ export async function build(root: string): Promise<string[]> {
           await esbuild.build({
             ...preset,
             ...options,
-            plugins: [...(vendorJs === undefined ? [] : [vendorImports(packages, vendorJs)]), ...preset.plugins],
+            plugins: [
+              ...(vendorJs === undefined ? [] : [vendorImports(packages, vendorJs)]),
+              ...preset.plugins,
+              vendorCheck,
+            ],
             entryPoints: entries.map((entry) => ({ in: entryFile(entry.dir), out: entry.name })),
           }),
         ]),
@@ -127,7 +135,10 @@ export async function build(root: string): Promise<string[]> {
           await esbuild.build({
             ...options,
             bundle: true,
-            plugins: vendorCss === undefined ? [] : [vendorStylesheetImports(packages, () => `./${vendorCss}`)],
+            plugins: [
+              ...(vendorCss === undefined ? [] : [vendorStylesheetImports(packages, () => `./${vendorCss}`)]),
+              vendorCheck,
+            ],
             entryPoints: stylesheets,
           }),
         ]),
