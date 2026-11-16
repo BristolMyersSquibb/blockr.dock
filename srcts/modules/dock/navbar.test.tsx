@@ -287,6 +287,45 @@ describe("the storage plugin's controls on the bar", () => {
     expect(button(storage, "Workflow one").getAttribute("aria-expanded")).toBe("false");
   });
 
+  test("keep the focus on a menu while the arrows move its row past a status, and open a menu inside it by ArrowRight", async () => {
+    const { storageClass } = everyKind();
+    const { el } = await startBar({ storage: "test", storageClass });
+    const storage = el.querySelector<HTMLElement>(".blockr-dock-bar-storage");
+    if (storage === null) throw new Error("No storage controls.");
+    // The row that a menu names as its active descendant.
+    const active = (menu: Element | null) => document.getElementById(menu?.getAttribute("aria-activedescendant") ?? "")?.textContent;
+    const keyOn = (target: Element | null, key: string) => {
+      target?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+    };
+
+    const opener = button(storage, "Workflow one");
+    opener.focus();
+    keyOn(opener, "ArrowDown");
+    await drawn();
+    const menu = el.querySelector('[role="menu"][aria-label="Workflow one"]');
+    expect(document.activeElement).toBe(menu);
+    expect(active(menu)).toBe("New");
+
+    // The arrows pass over the status "Owned by you".
+    keyOn(menu, "ArrowDown");
+    await drawn();
+    expect(active(menu)).toBe("Recent");
+    keyOn(menu, "ArrowRight");
+    await drawn();
+    const recent = el.querySelector('[role="menu"][aria-label="Recent"]');
+    expect(document.activeElement).toBe(recent);
+    expect(active(recent)).toBe("Open A");
+
+    keyOn(recent, "ArrowLeft");
+    await drawn();
+    expect(el.querySelector('[role="menu"][aria-label="Recent"]')).toBeNull();
+    expect(document.activeElement).toBe(menu);
+    keyOn(menu, "Escape");
+    await drawn();
+    expect(el.querySelector('[role="menu"][aria-label="Workflow one"]')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  });
+
   test("place a control apart where a storage item names it, while the storage item draws the rest", async () => {
     const { storageClass } = everyKind();
     const navbar: Json[] = [

@@ -33,6 +33,9 @@
 //   columnRuns() in the narrow column.
 // - While a pointer is down in the dock, as while the user drags a sash, it
 //   waits, so that a gesture commits once, when the user lets go.
+//   A drag of a tab ends the wait as it ends, by its drop or otherwise, since
+//   Safari sends no pointercancel as the drag starts and no pointerup after
+//   the drop, so that the dock would otherwise wait for the next click.
 // - Its own drawing changes nothing, since it compares with what dockview
 //   showed, which it reads again after each of its own changes.
 // - While a command that a gesture sent has not yet applied, the dock leaves
@@ -332,6 +335,20 @@ export function drawDock(options: DrawingOptions): () => void {
   const onKey = (event: KeyboardEvent) => {
     if (event.key === "Escape") endDrag();
   };
+  // A drag of a tab that ends ends the press that started it, and the dock
+  // reads back what the drop changed once dockview has moved the panel, as it
+  // does where the browser sent pointercancel as the drag started.
+  const endPress = () => {
+    if (press === undefined) return;
+    press = undefined;
+    queueMicrotask(() => {
+      settle();
+    });
+  };
+  const onDragDone = () => {
+    endDrag();
+    endPress();
+  };
 
   const onPointerDown = () => {
     press = { width: dockWidth() };
@@ -361,10 +378,13 @@ export function drawDock(options: DrawingOptions): () => void {
       : undefined;
 
   // A panel that lands resolves the drag, whether or not dragend reaches the
-  // document, since dockview detaches the dragged tab as the panel moves.
+  // document, since dockview detaches the dragged tab as the panel moves, and
+  // ends the press of a drag.
   const landed = () => {
+    const drag = dragging;
     dragging = false;
     clearDwell();
+    if (drag) endPress();
   };
 
   const disposables: DockviewIDisposable[] = [
@@ -387,8 +407,8 @@ export function drawDock(options: DrawingOptions): () => void {
   win.addEventListener("pointerup", onPointerUp, true);
   win.addEventListener("pointercancel", onPointerUp, true);
   el.addEventListener("dragover", onDragOver);
-  doc.addEventListener("drop", endDrag);
-  doc.addEventListener("dragend", endDrag);
+  doc.addEventListener("drop", onDragDone);
+  doc.addEventListener("dragend", onDragDone);
   doc.addEventListener("keydown", onKey);
   // A change that leaves the dock's state as it was, as a block's state that
   // the user edits, can change a tab's name alone.
@@ -435,8 +455,8 @@ export function drawDock(options: DrawingOptions): () => void {
     win.removeEventListener("pointerup", onPointerUp, true);
     win.removeEventListener("pointercancel", onPointerUp, true);
     el.removeEventListener("dragover", onDragOver);
-    doc.removeEventListener("drop", endDrag);
-    doc.removeEventListener("dragend", endDrag);
+    doc.removeEventListener("drop", onDragDone);
+    doc.removeEventListener("dragend", onDragDone);
     doc.removeEventListener("keydown", onKey);
   };
 }
