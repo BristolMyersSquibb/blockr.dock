@@ -13,6 +13,16 @@ import * as dock from "./index.tsx";
 
 export const DOCK = "blockr.dock-dock_plugin";
 
+// The tests run on happy-dom, which has no Popover API, with which the dock
+// shows its menus and tooltips in the top layer and hides them again.
+// So the tests give every element a showPopover() and a hidePopover() that do
+// nothing, and read what the dock draws.
+for (const method of ["showPopover", "hidePopover"]) {
+  if (!(method in HTMLElement.prototype)) {
+    Object.defineProperty(HTMLElement.prototype, method, { configurable: true, value: () => undefined });
+  }
+}
+
 // R's reply to hello in an app that runs the dock in place of core's basic
 // frontend, beside core's other plugins, with where R serves the module of
 // the dock plugin's class, at version 1, and those of the dock's board

@@ -4,8 +4,8 @@
  * at 655e323, and as the design system's header, menus and tooltips are.
  * The colours are the dock's variables (../index.css), which read blockr.ui's
  * tokens under either theme.
- * The menus and the tooltips sit in the dock's layer, inside the dock's root,
- * and so read the same variables and the dock's face.
+ * The card's menus are the dock's (../menu.tsx), whose rules are the dock's
+ * (../index.css).
  */
 
 /*
@@ -311,204 +311,16 @@
 }
 
 /*
- * The layer at the end of the dock's root, in which the menus and the
- * tooltips float, fixed to the window, above dockview's panels.
- */
-.blockr-dock-layer {
-  position: relative;
-  z-index: 1070;
-}
-
-/*
- * A menu is the design system's floating surface: bg-raised, 1px
- * border-default, radius 8 and shadow-md, 180 to 320px wide and up to 320px
- * tall, then scrolling under its search.
- * A menu of actions has 6px of inner padding and rows of 34px at 14px,
- * radius 4 and 10px to the sides.
- */
-.blockr-card-menu {
-  position: fixed;
-  left: 0;
-  top: 0;
-  box-sizing: border-box;
-  min-width: 180px;
-  max-width: 320px;
-  max-height: 320px;
-  overflow-y: auto;
-  padding: 6px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-lg, 8px);
-  background: var(--blockr-dock-bg-raised);
-  box-shadow: var(--blockr-dock-shadow);
-  color: var(--blockr-dock-text);
-  font-family: inherit;
-  font-size: var(--blockr-font-size-base, 0.875rem);
-  outline: none;
-}
-
-.blockr-card-menu-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 34px;
-  margin: 0;
-  padding: 7px 10px;
-  border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
-  background: transparent;
-  color: var(--blockr-dock-text);
-  font: inherit;
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.blockr-card-menu-row[data-active] {
-  background: var(--blockr-dock-bg-hover);
-}
-
-/* A row that destroys something is plain at rest, and red only as the row
-   that the pointer or the keyboard is on. */
-.blockr-card-menu-row[data-danger][data-active] {
-  background: var(--blockr-dock-bg-danger);
-  color: var(--blockr-dock-text-danger);
-}
-
-.blockr-card-menu-icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  justify-content: center;
-  width: 16px;
-  color: var(--blockr-dock-text-muted);
-}
-
-.blockr-card-menu-row[data-active] .blockr-card-menu-icon,
-.blockr-card-menu-row[data-active] .blockr-card-menu-meta {
-  color: var(--blockr-dock-text);
-}
-
-.blockr-card-menu-row[data-danger][data-active] .blockr-card-menu-icon {
-  color: var(--blockr-dock-text-danger);
-}
-
-.blockr-card-menu-label {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.blockr-card-menu-meta {
-  flex-shrink: 0;
-  margin-left: 12px;
-  padding-left: 16px;
-  font-family: var(--blockr-font-mono, "SF Mono", "Fira Code", "Consolas", "Monaco", monospace);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-dock-text-muted);
-}
-
-.blockr-card-menu-divider {
-  height: 1px;
-  margin: 6px -6px;
-  border: 0;
-  background: var(--blockr-dock-border);
-}
-
-/* The "+" menu's caption, one muted line saying what the menu is for. */
-.blockr-card-menu-caption {
-  padding: 0 10px 4px;
-  overflow: hidden;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-dock-text-muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The search, which stays on top while the rows scroll under it. */
-.blockr-card-menu-search {
-  position: sticky;
-  top: -6px;
-  z-index: 1;
-  margin: 0 -6px 4px;
-  padding: 4px 6px;
-  background: var(--blockr-dock-bg-raised);
-}
-
-.blockr-card-menu-search input {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  height: 30px;
-  margin: 0;
-  padding: 0 9px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-md, 6px);
-  background: var(--blockr-dock-bg-field);
-  color: var(--blockr-dock-text);
-  font: inherit;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  outline: none;
-}
-
-.blockr-card-menu-search input::placeholder {
-  color: var(--blockr-dock-text-muted);
-}
-
-/* A category's title: 12px, weight 600, uppercase, muted, inset to the rows'
-   text, and on top while its rows scroll under it. */
-.blockr-card-menu-title {
-  position: sticky;
-  top: 32px;
-  padding: 8px 10px 4px;
-  background: var(--blockr-dock-bg-raised);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--blockr-dock-text-muted);
-}
-
-/* The neutral badge of a package: an 18px capsule at 11px, weight 500. */
-.blockr-card-menu-badge,
-.blockr-card-tooltip-badge {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  height: 18px;
-  padding: 0 7px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-pill, 999px);
-  background: var(--blockr-dock-bg-subtle);
-  color: var(--blockr-dock-text-muted);
-  font-size: 11px;
-  font-weight: var(--blockr-font-weight-medium, 500);
-  vertical-align: middle;
-}
-
-.blockr-card-menu-badge {
-  margin-left: 12px;
-}
-
-.blockr-card-menu-empty {
-  padding: 10px;
-  color: var(--blockr-dock-text-muted);
-  font-style: italic;
-  text-align: center;
-}
-
-/*
  * The tooltip: a small light card, bg-raised, 1px border-default, shadow-md,
  * radius 8, 12px text-default and 5px 9px of padding, which the pointer
  * passes through.
+ * It is a popover in the top layer, which script places in the window.
  */
 .blockr-card-tooltip {
   position: fixed;
+  inset: auto;
+  margin: 0;
   pointer-events: none;
-  left: 0;
-  top: 0;
-  z-index: 1;
   box-sizing: border-box;
   max-width: 320px;
   padding: 5px 9px;
@@ -530,6 +342,18 @@
   color: var(--blockr-dock-text-muted);
 }
 
+/* The neutral badge of a package: an 18px capsule at 11px, weight 500. */
 .blockr-card-tooltip-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
   margin-left: 2px;
+  padding: 0 7px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-pill, 999px);
+  background: var(--blockr-dock-bg-subtle);
+  color: var(--blockr-dock-text-muted);
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  vertical-align: middle;
 }

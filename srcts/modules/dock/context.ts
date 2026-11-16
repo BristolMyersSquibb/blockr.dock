@@ -1,7 +1,7 @@
 // What the dock's components share through React's context: CoreApi, the id
 // of the dock plugin's class, and the app's plugins whose panels the dock
-// draws, each fixed for one opening of a board, and the layer and the
-// tooltips of the cards (./card).
+// draws, each fixed for one opening of a board, and the tooltips of the cards
+// (./card).
 // Dockview draws the content of each panel and the header of each tab group
 // in a portal of the dock's React tree, so they read the context of the dock's
 // root as well.
@@ -20,10 +20,6 @@ export interface DockContextValue {
   // The app's plugins whose class has a `ui`, each with its name, in the order
   // of the app's plugins.
   readonly drawn: ReadonlyMap<PluginClassId, string>;
-  // The element at the end of the dock's root in which the cards' menus and
-  // tooltips float, outside dockview's panels, which clip what overflows them.
-  // It is null until React has drawn it.
-  readonly layer: HTMLElement | null;
   readonly tooltips: Tooltips;
 }
 

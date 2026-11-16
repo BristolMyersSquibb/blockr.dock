@@ -20,9 +20,10 @@
 //    A click on a closed padlock runs blockr.core-set_block_lock with false,
 //    and one on an open padlock runs it with null.
 // 4. The "…" button, which opens the block's menu on a click, or on ArrowDown
-//    while it has the keyboard's focus (./menu.tsx): Rename, Append block,
-//    which opens the dock's "+" menu from the button (./picker.tsx), Copy
-//    block ID and, after a divider, Remove block.
+//    while it has the keyboard's focus, one of the dock's menus
+//    (../menu.tsx): Rename, Append block, which opens the dock's "+" menu
+//    from the button (./classes.tsx), Copy block ID and, after a divider,
+//    Remove block.
 // Under the board lock, the header has no toggle and no padlock, its name
 // starts no rename, and its menu holds Copy block ID alone, since no command
 // changes the rest there.
@@ -32,13 +33,13 @@ import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement, ReactNode, RefObject } from "react";
 import { SECTIONS } from "../../../commands/index.ts";
 import type { Section } from "../../../state/index.ts";
+import { runEdit, useDock } from "../context.ts";
+import { Menu, useMenuButton } from "../menu.tsx";
+import type { Closing, MenuRow } from "../menu.tsx";
+import { classGroups } from "./classes.tsx";
 import { copyText } from "./clipboard.ts";
 import { BinIcon, DotsIcon, EyeIcon, LockIcon, SlidersIcon } from "./icons.tsx";
 import { Mark, packageOf } from "./mark.tsx";
-import { ActionMenu } from "./menu.tsx";
-import type { Closing, MenuRow } from "./menu.tsx";
-import { runEdit, useDock } from "../context.ts";
-import { BlockPicker } from "./picker.tsx";
 import { useTooltip } from "./tooltip.tsx";
 
 const GESTURE = "Double-click to edit";
@@ -259,10 +260,13 @@ function Tool({
   );
 }
 
-// Which menu of the "…" button is open, with the button it opens from.
-type Open =
-  | { readonly menu: "actions"; readonly anchor: HTMLElement; readonly keyboard: boolean }
-  | { readonly menu: "append"; readonly anchor: HTMLElement };
+// Which menu of the "…" button is open, with the button it opens from, and
+// whether the keyboard opened it.
+interface Open {
+  readonly menu: "actions" | "append";
+  readonly anchor: HTMLElement;
+  readonly keyboard: boolean;
+}
 
 function MenuButton({
   ref,
@@ -277,7 +281,16 @@ function MenuButton({
 }): ReactElement {
   const { core, plugin } = useDock();
   const [open, setOpen] = useState<Open | null>(null);
-  const { props, tooltip } = useTooltip(open === null ? "More actions" : null);
+  const { props: tip, tooltip } = useTooltip(open === null ? "More actions" : null);
+  const button = useMenuButton(
+    open !== null,
+    (anchor, keyboard) => {
+      setOpen({ menu: "actions", anchor, keyboard });
+    },
+    () => {
+      setOpen(null);
+    },
+  );
 
   const close = useCallback(
     (how: Closing) => {
@@ -287,7 +300,7 @@ function MenuButton({
     [ref],
   );
 
-  const rows = (anchor: HTMLElement): MenuRow[] => {
+  const actions = (anchor: HTMLElement): MenuRow[] => {
     const copy: MenuRow = {
       key: "copy",
       label: "Copy block ID",
@@ -311,14 +324,14 @@ function MenuButton({
         key: "append",
         label: "Append block",
         onSelect() {
-          setOpen({ menu: "append", anchor });
+          setOpen({ menu: "append", anchor, keyboard: false });
         },
       },
       copy,
       {
         key: "remove",
         label: "Remove block",
-        icon: <BinIcon />,
+        lead: <BinIcon />,
         danger: true,
         divided: true,
         onSelect() {
@@ -344,30 +357,38 @@ function MenuButton({
         type="button"
         className="blockr-card-tool"
         aria-label="More actions"
-        aria-haspopup="menu"
-        aria-expanded={open !== null}
-        onClick={(event) => {
-          setOpen(open === null ? { menu: "actions", anchor: event.currentTarget, keyboard: event.detail === 0 } : null);
+        {...tip}
+        {...button}
+        onPointerDown={() => {
+          button.onPointerDown();
+          tip.onPointerDown();
         }}
-        onKeyDown={(event) => {
-          if (event.key !== "ArrowDown") return;
-          event.preventDefault();
-          setOpen({ menu: "actions", anchor: event.currentTarget, keyboard: true });
-        }}
-        {...props}
       >
         <DotsIcon />
       </button>
       {tooltip}
       {open?.menu === "actions" ? (
-        <ActionMenu anchor={open.anchor} label="More actions" rows={rows(open.anchor)} keyboard={open.keyboard} onClose={close} />
+        <Menu
+          anchor={open.anchor}
+          label="More actions"
+          align="end"
+          groups={[{ key: "actions", rows: actions(open.anchor) }]}
+          keyboard={open.keyboard}
+          onClose={close}
+        />
       ) : null}
       {open?.menu === "append" ? (
-        <BlockPicker
+        <Menu
           anchor={open.anchor}
+          label="Block classes"
+          align="end"
           caption={`Append to ${block.name}`}
-          entries={Object.values(core.blockRegistry()).filter((entry) => entry.inputs.length > 0)}
-          onPick={append}
+          search={{ label: "Search blocks", empty: "No matches" }}
+          groups={classGroups(
+            Object.values(core.blockRegistry()).filter((entry) => entry.inputs.length > 0),
+            append,
+          )}
+          keyboard={open.keyboard}
           onClose={close}
         />
       ) : null}

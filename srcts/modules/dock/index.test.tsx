@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import type { CoreApi, JsonBoard, PluginModule } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
 import { flushSync } from "react-dom";
-import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 import { defaultState } from "../../state/index.ts";
 import type { DockState, Grid, Panel } from "../../state/index.ts";
 import * as dock from "./index.tsx";
@@ -652,18 +652,6 @@ describe("a plugin's panel", () => {
   });
 });
 
-// The tests run on happy-dom, which has no Popover API, with which the panel
-// picker shows its popover in the top layer and hides it again.
-// So the tests give every element a showPopover() and a hidePopover() that do
-// nothing, and read what the picker draws.
-beforeAll(() => {
-  for (const method of ["showPopover", "hidePopover"]) {
-    if (!(method in HTMLElement.prototype)) {
-      Object.defineProperty(HTMLElement.prototype, method, { configurable: true, value: () => undefined });
-    }
-  }
-});
-
 // Clicks the button as a pointer does, which goes down on it first.
 function click(button: Element | null | undefined): void {
   if (button === null || button === undefined) throw new Error("No button to click.");
@@ -684,15 +672,15 @@ async function drawn(): Promise<void> {
 // The entries that the picker lists, each by its name, with the name of the
 // block's class where it has one.
 function entries(el: HTMLElement): string[][] {
-  return [...el.querySelectorAll(".blockr-dock-picker [role='menuitem']")].map((item) =>
-    [...item.children].map((part) => part.textContent),
+  return [...el.querySelectorAll(".blockr-dock-menu [role='option']")].map((item) =>
+    [...item.querySelectorAll(".blockr-dock-menu-label, .blockr-dock-menu-detail")].map((part) => part.textContent),
   );
 }
 
 // The entry of the picker of the name given.
 function entry(el: HTMLElement, name: string): Element | undefined {
-  return [...el.querySelectorAll(".blockr-dock-picker [role='menuitem']")].find(
-    (item) => item.querySelector(".blockr-dock-picker-name")?.textContent === name,
+  return [...el.querySelectorAll(".blockr-dock-menu [role='option']")].find(
+    (item) => item.querySelector(".blockr-dock-menu-label")?.textContent === name,
   );
 }
 
@@ -710,12 +698,12 @@ describe("the panel picker", () => {
     expect(buttons).toHaveLength(2);
     expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual(["Add panel", "Add panel"]);
     expect(el.querySelector(".dv-groupview-edge .blockr-dock-add")).toBeNull();
-    expect(el.querySelector(".blockr-dock-picker [role='menu']")).toBeNull();
+    expect(el.querySelector(".blockr-dock-menu [role='listbox']")).toBeNull();
 
     click(buttons[0]);
     await drawn();
     expect(buttons[0]?.getAttribute("aria-expanded")).toBe("true");
-    expect(el.querySelector(".blockr-dock-picker-caption")?.textContent).toBe("Show in this view");
+    expect(el.querySelector(".blockr-dock-menu-caption")?.textContent).toBe("Show in this view");
     s.stop();
   });
 
@@ -728,11 +716,11 @@ describe("the panel picker", () => {
 
     // Core's file storage plugin, whose class has no ui, has no panel.
     expect(entries(el)).toEqual([["Dataset", "dataset block"], ["Edit board"], ["Notes"]]);
-    const group = el.querySelector(".blockr-dock-picker [role='group']");
+    const group = el.querySelector(".blockr-dock-menu [role='group']");
     const heading = el.querySelector(`[id="${group?.getAttribute("aria-labelledby") ?? ""}"]`);
     expect(heading?.textContent).toBe("Plugins");
-    expect([...(group?.querySelectorAll("[role='menuitem']") ?? [])].map((item) => item.textContent)).toEqual(["Edit board", "Notes"]);
-    expect(el.querySelector(".blockr-dock-picker-search")).not.toBeNull();
+    expect([...(group?.querySelectorAll(".blockr-dock-menu-label") ?? [])].map((item) => item.textContent)).toEqual(["Edit board", "Notes"]);
+    expect(el.querySelector(".blockr-dock-menu-search input")).not.toBeNull();
     s.stop();
   });
 
@@ -750,7 +738,7 @@ describe("the panel picker", () => {
       { panels: [{ plugin: NOTES }], active: { plugin: NOTES } },
     ]);
     expect(frameOf(el, EDIT)?.querySelector('section[aria-label="Links"]')).not.toBeNull();
-    expect(el.querySelector(".blockr-dock-picker [role='menu']")).toBeNull();
+    expect(el.querySelector(".blockr-dock-menu [role='listbox']")).toBeNull();
     s.stop();
   });
 
@@ -784,8 +772,8 @@ describe("the panel picker", () => {
     click(el.querySelector(".blockr-dock-add"));
     await drawn();
 
-    expect(el.querySelector(".blockr-dock-picker [role='menu']")).toBeNull();
-    expect(el.querySelector(".blockr-dock-picker-note")?.textContent).toBe(
+    expect(el.querySelector(".blockr-dock-menu [role='listbox']")).toBeNull();
+    expect(el.querySelector(".blockr-dock-menu-note")?.textContent).toBe(
       "All blocks and plugins are already in this view. Add a new block to the board first.",
     );
     s.stop();
@@ -797,7 +785,7 @@ describe("the panel picker", () => {
 
     click(el.querySelector(".blockr-dock-empty-add"));
     await drawn();
-    const search = el.querySelector<HTMLInputElement>(".blockr-dock-picker-search");
+    const search = el.querySelector<HTMLInputElement>(".blockr-dock-menu-search input");
     expect(document.activeElement).toBe(search);
     expect(entries(el)).toHaveLength(4);
 
@@ -815,7 +803,7 @@ describe("the panel picker", () => {
     type(search, "zzz");
     await drawn();
     expect(entries(el)).toEqual([]);
-    expect(el.querySelector(".blockr-dock-picker-note")?.textContent).toBe("No panel matches.");
+    expect(el.querySelector(".blockr-dock-menu-note")?.textContent).toBe("No panel matches.");
 
     type(search, "hea");
     await drawn();
@@ -825,7 +813,7 @@ describe("the panel picker", () => {
     s.stop();
   });
 
-  test("moves the focus through its entries by the keys of a menu", async () => {
+  test("keeps the focus in its search, where the arrows move the active entry round the list and Enter picks it", async () => {
     const el = attached();
     const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "b" }]))));
 
@@ -833,23 +821,29 @@ describe("the panel picker", () => {
     button?.focus();
     press("ArrowDown");
     await drawn();
-    const search = el.querySelector(".blockr-dock-picker-search");
+    const search = el.querySelector<HTMLInputElement>(".blockr-dock-menu-search input");
     expect(document.activeElement).toBe(search);
 
-    const focused = () => document.activeElement?.querySelector(".blockr-dock-picker-name")?.textContent;
-    press("ArrowDown");
-    expect(focused()).toBe("Dataset");
-    press("ArrowDown");
-    expect(focused()).toBe("Edit board");
-    press("End");
-    expect(focused()).toBe("Notes");
-    press("ArrowDown");
-    expect(focused()).toBe("Dataset");
-    press("End");
-    press("Home");
-    expect(focused()).toBe("Dataset");
-    press("ArrowUp");
+    // The entry that the search names as its active descendant.
+    const active = () =>
+      document.getElementById(search?.getAttribute("aria-activedescendant") ?? "")?.querySelector(".blockr-dock-menu-label")
+        ?.textContent;
+    expect(active()).toBe("Dataset");
+    for (const [key, name] of [
+      ["ArrowDown", "Edit board"],
+      ["ArrowDown", "Notes"],
+      ["ArrowDown", "Dataset"],
+      ["ArrowUp", "Notes"],
+    ] as const) {
+      press(key);
+      await drawn();
+      expect(active()).toBe(name);
+    }
     expect(document.activeElement).toBe(search);
+
+    press("Enter");
+    await s.settled();
+    expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "b" }, { plugin: NOTES }], active: { plugin: NOTES } }]);
     s.stop();
   });
 });
@@ -890,7 +884,7 @@ describe("an empty view", () => {
 
     expect(el.querySelector(".blockr-dock-empty p")?.textContent).toBe("This view is empty");
     expect(el.querySelector(".blockr-dock-empty button")).toBeNull();
-    expect(el.querySelector(".blockr-dock-picker")).toBeNull();
+    expect(el.querySelector(".blockr-dock-menu")).toBeNull();
     s.stop();
 
     const shown = document.createElement("div");

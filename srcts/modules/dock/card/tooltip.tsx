@@ -14,15 +14,16 @@
 // - It sits above its element, and below only where there is no room above.
 // - It ignores the pointer, which reaches what lies under it, as the tab strip
 //   under the tooltips of a card's header.
+// - It is a popover of the manual kind, which the browser draws in the top
+//   layer, so that no panel clips it, and which closes no menu as it shows.
 // No tooltip shows for a touch, which has no hover.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FocusEvent, PointerEvent, ReactElement, ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { useDock } from "../context.ts";
 import type { Tooltips } from "../context.ts";
-import { useFloating } from "./floating.ts";
-import { tooltipSpot } from "./place.ts";
+import { useFloating, usePopover } from "../floating.ts";
+import { tooltipSpot } from "../place.ts";
 
 export interface TipLine {
   readonly text: string;
@@ -70,7 +71,7 @@ interface Shown {
 // The props that give an element its tooltip, and the tooltip, which the
 // element's component draws.
 export function useTooltip(source: TipSource): { readonly props: TipProps; readonly tooltip: ReactNode } {
-  const { layer, tooltips } = useDock();
+  const { tooltips } = useDock();
   const [shown, setShown] = useState<Shown | null>(null);
   // The timer that shows the tooltip once the pointer has rested.
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -130,15 +131,17 @@ export function useTooltip(source: TipSource): { readonly props: TipProps; reado
     onBlur: hide,
   };
 
-  const tooltip = shown === null || layer === null ? null : createPortal(<TooltipCard anchor={shown.el} tip={shown.tip} />, layer);
+  const tooltip = shown === null ? null : <TooltipCard anchor={shown.el} tip={shown.tip} />;
   return { props, tooltip };
 }
 
 function TooltipCard({ anchor, tip }: { anchor: HTMLElement; tip: Tip }): ReactElement {
-  const ref = useFloating<HTMLDivElement>(anchor, tooltipSpot);
+  const ref = useRef<HTMLDivElement>(null);
+  usePopover(ref, anchor);
+  useFloating(ref, anchor, tooltipSpot);
   const lines = typeof tip === "string" ? [{ text: tip }] : tip;
   return (
-    <div ref={ref} role="tooltip" className="blockr-card-tooltip">
+    <div ref={ref} popover="manual" role="tooltip" className="blockr-card-tooltip">
       {lines.map((line, i) => (
         <div key={i} className="blockr-card-tooltip-line" data-muted={line.muted === true ? "" : undefined}>
           {line.text}

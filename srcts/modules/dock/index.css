@@ -178,30 +178,37 @@
 }
 
 /*
- * The panel picker, a popover in the top layer, at least 260 pixels wide, as
- * today's Blockr.menu.
- * It sits below the button that opened it, which takes the anchor name
- * --blockr-dock-picker while it is open, and flips where the window has no
- * room for it there.
+ * A menu of the dock (./menu.tsx): the panel picker, and the menu and the "+"
+ * menu of a block's card.
+ * It is the design system's floating surface, a popover in the top layer:
+ * bg-raised, 1px border, radius 8 and shadow-md, 180 to 320 pixels wide and
+ * up to 320 pixels tall, then scrolling under its search.
+ * Its rows are 34 pixels tall at 14px, radius 4 and 10px to the sides,
+ * inside 6px of padding.
+ * It sits 4px below the button that opened it, which takes the anchor name
+ * --blockr-dock-menu while it is open, lined up with the button's left edge,
+ * or its right edge for a menu that its data-align puts at the end, and flips
+ * where the window has no room for it there.
  */
-.blockr-dock-picker {
+.blockr-dock-menu {
   box-sizing: border-box;
-  min-width: 260px;
-  max-width: min(360px, calc(100vw - 16px));
-  max-height: min(420px, calc(100vh - 16px));
-  overflow: auto;
-  padding: 4px;
+  min-width: 180px;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: min(320px, calc(100vh - 16px));
+  overflow-y: auto;
+  padding: 6px;
   border: 1px solid var(--blockr-dock-border);
   border-radius: var(--blockr-radius-lg, 8px);
   background: var(--blockr-dock-bg-raised);
-  color: var(--blockr-dock-text);
   box-shadow: var(--blockr-dock-shadow);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-dock-text);
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  outline: none;
 }
 
 @supports (position-area: block-end) {
-  .blockr-dock-picker {
-    position-anchor: --blockr-dock-picker;
+  .blockr-dock-menu {
+    position-anchor: --blockr-dock-menu;
     position-area: block-end span-inline-end;
     position-try-fallbacks:
       flip-block,
@@ -210,110 +217,179 @@
     inset: auto;
     margin: 4px 0;
   }
+
+  .blockr-dock-menu[data-align="end"] {
+    position-area: block-end span-inline-start;
+  }
 }
 
-/* Without anchor positioning, script places the picker in the window. */
+/* Without anchor positioning, script places the menu in the window. */
 @supports not (position-area: block-end) {
-  .blockr-dock-picker {
+  .blockr-dock-menu {
     position: fixed;
     inset: auto;
     margin: 0;
   }
 }
 
-.blockr-dock-picker-caption {
+/* One muted line on top, saying what the menu is for. */
+.blockr-dock-menu-caption {
   margin: 0;
-  padding: 6px 8px 4px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: 600;
-}
-
-.blockr-dock-picker-search {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0 0 4px;
-  padding: 4px 8px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-md, 6px);
-  background: var(--blockr-dock-bg-field);
-  color: inherit;
-  font: inherit;
-}
-
-.blockr-dock-picker-search:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
-  outline-offset: -1px;
-}
-
-.blockr-dock-picker-menu,
-.blockr-dock-picker-menu > [role="group"] {
-  display: grid;
-  gap: 2px;
-}
-
-/* The heading "Plugins", below a line where blocks come before it. */
-.blockr-dock-picker-menu > [role="group"]:not(:first-child) {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid var(--blockr-dock-border);
-}
-
-.blockr-dock-picker-heading {
-  padding: 4px 8px 2px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.blockr-dock-picker-item {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: var(--blockr-radius-md, 6px);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-.blockr-dock-picker-item:hover,
-.blockr-dock-picker-item:focus-visible {
-  background: var(--blockr-dock-bg-hover);
-}
-
-.blockr-dock-picker-item:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
-  outline-offset: -2px;
-}
-
-.blockr-dock-picker-name {
-  min-width: 0;
+  padding: 0 10px 4px;
   overflow: hidden;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* The name of a block's class, beside the block's name. */
-.blockr-dock-picker-type {
-  flex: none;
-  margin-left: auto;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
+/*
+ * The search: part of the menu, not a field, 30 pixels tall at 13px, with no
+ * focus ring, since it holds the focus as long as the menu is open.
+ * It stays on top while the rows scroll under it.
+ */
+.blockr-dock-menu-search {
+  position: sticky;
+  top: -6px;
+  z-index: 1;
+  margin: 0 -6px 4px;
+  padding: 4px 6px;
+  background: var(--blockr-dock-bg-raised);
 }
 
-.blockr-dock-picker-note {
+.blockr-dock-menu-search input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 30px;
   margin: 0;
-  padding: 6px 8px;
+  padding: 0 9px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-dock-bg-field);
+  color: var(--blockr-dock-text);
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  outline: none;
+}
+
+.blockr-dock-menu-search input::placeholder {
   color: var(--blockr-dock-text-muted);
+}
+
+/*
+ * A group's title: 12px, weight 600, uppercase and muted, inset to the rows'
+ * text, and on top while its rows scroll under it.
+ */
+.blockr-dock-menu-title {
+  position: sticky;
+  top: 32px;
+  padding: 8px 10px 4px;
+  background: var(--blockr-dock-bg-raised);
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.blockr-dock-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  min-height: 34px;
+  padding: 7px 10px;
+  border-radius: var(--blockr-radius-sm, 4px);
+  color: var(--blockr-dock-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blockr-dock-menu-row[data-active] {
+  background: var(--blockr-dock-bg-hover);
+}
+
+/* A row that destroys something is plain at rest, and red only as the row
+   that the pointer or the keyboard is on. */
+.blockr-dock-menu-row[data-danger][data-active] {
+  background: var(--blockr-dock-bg-danger);
+  color: var(--blockr-dock-text-danger);
+}
+
+.blockr-dock-menu-lead {
+  display: inline-flex;
+  flex-shrink: 0;
+  justify-content: center;
+  min-width: 16px;
+  color: var(--blockr-dock-text-muted);
+}
+
+.blockr-dock-menu-row[data-active] .blockr-dock-menu-lead,
+.blockr-dock-menu-row[data-active] .blockr-dock-menu-meta,
+.blockr-dock-menu-row[data-active] .blockr-dock-menu-detail {
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-menu-row[data-danger][data-active] .blockr-dock-menu-lead {
+  color: var(--blockr-dock-text-danger);
+}
+
+.blockr-dock-menu-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Muted text after the label, as the name of a block's class. */
+.blockr-dock-menu-detail {
+  flex-shrink: 0;
+  margin-left: 12px;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+/* Text in a monospaced face after the label, as the id of a block. */
+.blockr-dock-menu-meta {
+  flex-shrink: 0;
+  margin-left: 12px;
+  padding-left: 16px;
+  color: var(--blockr-dock-text-muted);
+  font-family: var(--blockr-font-mono, "SF Mono", "Fira Code", "Consolas", "Monaco", monospace);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+/* The neutral badge of a package: an 18 pixel capsule at 11px, weight 500. */
+.blockr-dock-menu-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: 18px;
+  margin-left: 12px;
+  padding: 0 7px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-pill, 999px);
+  background: var(--blockr-dock-bg-subtle);
+  color: var(--blockr-dock-text-muted);
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+
+.blockr-dock-menu-divider {
+  height: 1px;
+  margin: 6px -6px;
+  border: 0;
+  background: var(--blockr-dock-border);
+}
+
+/* What the menu says where it lists no row, or keeps none of its search. */
+.blockr-dock-menu-note {
+  margin: 0;
+  padding: 10px;
+  color: var(--blockr-dock-text-muted);
+  font-style: italic;
+  text-align: center;
 }
 
 /*

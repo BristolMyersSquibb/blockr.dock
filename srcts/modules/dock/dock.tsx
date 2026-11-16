@@ -18,8 +18,6 @@
 //   changes to one that does not show it, or when another board opens.
 //   The dock then runs the cleanup that mountPlugin() returned.
 // The frame of a block's panel holds the block's card (./card).
-// The cards draw their menus and tooltips in a layer at the end of the dock's
-// root, outside dockview's panels, which clip what overflows them.
 // A click on a block's tab gives the block focus in CoreApi.focus, as a click
 // into its card does, while a click on a plugin's tab leaves the focus where
 // it is.
@@ -182,9 +180,8 @@ export interface DockProps {
 export function Dock({ core, plugin, settings, narrow, drawn }: DockProps): ReactElement {
   const root = useRef<HTMLDivElement>(null);
   const stop = useRef<(() => void) | undefined>(undefined);
-  const [layer, setLayer] = useState<HTMLDivElement | null>(null);
   const [tooltips] = useState(createTooltips);
-  const shared = useMemo(() => ({ core, plugin, drawn, layer, tooltips }), [core, plugin, drawn, layer, tooltips]);
+  const shared = useMemo(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
   const locked = core.lock.board;
 
   const onReady = useCallback(
@@ -223,7 +220,6 @@ export function Dock({ core, plugin, settings, narrow, drawn }: DockProps): Reac
     <DockContext value={shared}>
       <div className="blockr-dock" ref={root}>
         {locked ? view : <PanelPicker>{view}</PanelPicker>}
-        <div className="blockr-dock-layer" ref={setLayer} />
       </div>
     </DockContext>
   );

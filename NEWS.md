@@ -17,6 +17,15 @@
   On a locked board, the card has no toggle, no padlock and no rename, its menu
   holds Copy block ID alone, and it mounts the UI only of a block that the
   board lock leaves open.
+  The card's menus and the panel picker are one kind of menu, a popover below
+  its button.
+  Each keeps the focus in its search, or on itself where it has none, while
+  the arrows move the active row, and the panel picker lists each block with
+  the mark of its class.
+
+* The dock's commands check the board in `preflight()`, which core calls in
+  place of `enabled()`, so that they run checked again, as on a locked board
+  (#606).
 
 * The dock carries out core's `show()`, through which a plugin shows a block
   or a plugin under every frontend (#599).

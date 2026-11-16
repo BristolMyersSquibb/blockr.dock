@@ -8,8 +8,9 @@ import { HELLO, stubCore } from "@blockr/core/stubs";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import type { DockState } from "../../../state/index.ts";
 import { DOCK, hello, modules } from "../testing.ts";
-import { menuSpot, tooltipSpot } from "./place.ts";
-import { grouped } from "./picker.tsx";
+import { matches } from "../menu.tsx";
+import { menuSpot, tooltipSpot } from "../place.ts";
+import { classGroups } from "./classes.tsx";
 
 // The dock's state with one view, which shows Iris (a), Head (b), in front of
 // Merge (c), and Bind (e) side by side, with the Edit board plugin on the
@@ -104,16 +105,16 @@ function sectionOf(card: HTMLElement, name: string): HTMLElement | null {
 
 // The menu or the "+" menu that is open, in the dock's layer.
 function openMenu(el: HTMLElement): HTMLElement | null {
-  return el.querySelector<HTMLElement>(".blockr-dock-layer .blockr-card-menu");
+  return el.querySelector<HTMLElement>(".blockr-dock-menu");
 }
 
 function rows(menu: HTMLElement): string[] {
-  return [...menu.querySelectorAll(".blockr-card-menu-label")].map((label) => label.textContent);
+  return [...menu.querySelectorAll(".blockr-dock-menu-label")].map((label) => label.textContent);
 }
 
 function rowOf(menu: HTMLElement, label: string): HTMLElement {
-  const row = [...menu.querySelectorAll<HTMLElement>(".blockr-card-menu-row")].find(
-    (each) => each.querySelector(".blockr-card-menu-label")?.textContent === label,
+  const row = [...menu.querySelectorAll<HTMLElement>(".blockr-dock-menu-row")].find(
+    (each) => each.querySelector(".blockr-dock-menu-label")?.textContent === label,
   );
   if (row === undefined) throw new Error(`The menu has no row ${label}.`);
   return row;
@@ -354,7 +355,7 @@ describe("a block's menu", () => {
     if (menu === null) throw new Error("No menu opened.");
     expect(menu.getAttribute("role")).toBe("menu");
     expect(rows(menu)).toEqual(["Rename", "Append block", "Copy block ID", "Remove block"]);
-    expect(rowOf(menu, "Copy block ID").querySelector(".blockr-card-menu-meta")?.textContent).toBe("b");
+    expect(rowOf(menu, "Copy block ID").querySelector(".blockr-dock-menu-meta")?.textContent).toBe("b");
     expect(button.getAttribute("aria-expanded")).toBe("true");
     expect(document.activeElement).toBe(menu);
     expect(menu.hasAttribute("aria-activedescendant")).toBe(false);
@@ -442,10 +443,10 @@ describe("a block's menu", () => {
 
     const picker = openMenu(el);
     if (picker === null) throw new Error("No + menu opened.");
-    expect(picker.querySelector(".blockr-card-menu-caption")?.textContent).toBe("Append to Head");
+    expect(picker.querySelector(".blockr-dock-menu-caption")?.textContent).toBe("Append to Head");
     // Only classes that take a link, so neither of the input blocks.
     expect(rows(picker)).toEqual(["scatter plot block", "head/tail block", "merge block", "rbind block", "subset block"]);
-    expect([...picker.querySelectorAll(".blockr-card-menu-title")].map((title) => title.textContent)).toEqual(["plot", "transform"]);
+    expect([...picker.querySelectorAll(".blockr-dock-menu-title")].map((title) => title.textContent)).toEqual(["plot", "transform"]);
 
     const search = picker.querySelector<HTMLInputElement>('input[role="combobox"]');
     if (search === null) throw new Error("The + menu has no search.");
@@ -554,7 +555,7 @@ describe("the card's tooltips", () => {
     new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
-  const tooltip = (el: HTMLElement) => el.querySelector('.blockr-dock-layer [role="tooltip"]');
+  const tooltip = (el: HTMLElement) => el.querySelector('[role="tooltip"]');
 
   test("show a tool's name after the pointer rests 300ms, and leave as the pointer does", async () => {
     const { el, settled } = await startCards();
@@ -598,18 +599,24 @@ describe("the placement of a menu and of a tooltip", () => {
   const view = { width: 800, height: 600 };
   const trigger = { left: 700, top: 100, right: 726, bottom: 126, width: 26 };
 
-  test("puts a menu 4px below its trigger, lined up with its right edge", () => {
-    expect(menuSpot(trigger, { width: 200, height: 150 }, view)).toEqual({ left: 526, top: 130 });
+  test("puts a menu 4px below its button, lined up with the button's left edge", () => {
+    const left = { left: 100, top: 100, right: 126, bottom: 126, width: 26 };
+    expect(menuSpot(left, { width: 200, height: 150 }, view)).toEqual({ left: 100, top: 130 });
   });
 
-  test("puts a menu above its trigger where it fits there but not below", () => {
+  test("lines a menu up with its button's right edge, for a button at the end of a row", () => {
+    expect(menuSpot(trigger, { width: 200, height: 150 }, view, "end")).toEqual({ left: 526, top: 130 });
+  });
+
+  test("puts a menu above its button where it fits there but not below", () => {
     const low = { ...trigger, top: 500, bottom: 526 };
-    expect(menuSpot(low, { width: 200, height: 150 }, view)).toEqual({ left: 526, top: 346 });
+    expect(menuSpot(low, { width: 200, height: 150 }, view, "end")).toEqual({ left: 526, top: 346 });
   });
 
   test("keeps a menu 8px from the window's edges", () => {
     const left = { left: 10, top: 100, right: 36, bottom: 126, width: 26 };
-    expect(menuSpot(left, { width: 200, height: 150 }, view).left).toBe(8);
+    expect(menuSpot(left, { width: 200, height: 150 }, view, "end").left).toBe(8);
+    expect(menuSpot(trigger, { width: 200, height: 150 }, view).left).toBe(592);
   });
 
   test("puts a tooltip 6px above its element, centred on it, and below where there is no room above", () => {
@@ -621,21 +628,26 @@ describe("the placement of a menu and of a tooltip", () => {
 
 describe("the + menu's classes", () => {
   const entries = Object.values(HELLO.block_registry);
+  const pick = () => undefined;
 
   test("come by category, then by name, with the classes of no category last", () => {
-    const groups = grouped([...entries, { ...entries[0], id: "blockr.test-thing_block", name: "a thing", category: "" } as (typeof entries)[0]], "");
-    expect(groups.map((group) => group.category)).toEqual(["input", "plot", "transform", "uncategorized"]);
-    expect(groups.find((group) => group.category === "transform")?.entries.map((entry) => entry.name)).toEqual([
+    const thing = { ...entries[0], id: "blockr.test-thing_block", name: "a thing", category: "" } as (typeof entries)[0];
+    const groups = classGroups([...entries, thing], pick);
+    expect(groups.map((group) => group.title)).toEqual(["input", "plot", "transform", "uncategorized"]);
+    expect(groups.find((group) => group.title === "transform")?.rows.map((row) => row.label)).toEqual([
       "head/tail block",
       "merge block",
       "rbind block",
       "subset block",
     ]);
+    expect(groups.find((group) => group.title === "uncategorized")?.rows.map((row) => row.badge)).toEqual(["blockr.test"]);
   });
 
   test("are those whose name, id, category or keywords hold every word searched", () => {
-    expect(grouped(entries, "Block MERGE").flatMap((group) => group.entries.map((entry) => entry.id))).toEqual(["blockr.core-merge_block"]);
-    expect(grouped(entries, "plot").flatMap((group) => group.entries.map((entry) => entry.id))).toEqual(["blockr.core-scatter_block"]);
-    expect(grouped(entries, "nothing like it")).toEqual([]);
+    const found = (searched: string) =>
+      classGroups(entries, pick).flatMap((group) => group.rows.filter((row) => matches(row, searched)).map((row) => row.key));
+    expect(found("Block MERGE")).toEqual(["blockr.core-merge_block"]);
+    expect(found("plot")).toEqual(["blockr.core-scatter_block"]);
+    expect(found("nothing like it")).toEqual([]);
   });
 });
