@@ -15,6 +15,46 @@
   The sidebar holds no field for the board's name, which the bar shows, and no
   code export, which becomes blockr.code's plugin.
 
+* The dock draws a card in each block's panel (#578).
+  Its header holds the block's mark, its name, the Controls and Preview
+  toggles, the padlock and the "…" button.
+  A double-click on the name renames the block, the toggles run
+  `blockr.dock-set_sections`, and the padlock runs
+  `blockr.core-set_block_lock`.
+  The menu holds Rename, Append block, which opens the dock's "+" menu of block
+  classes, Copy block ID and Remove block.
+  Core mounts the block's UI and its output in the card's two sections, which
+  fold as they close and stay mounted while closed.
+  The Controls toggle shows once the block's UI has drawn anything.
+  The board option `compact` turns each header into an eyebrow.
+  A block takes focus in `CoreApi.focus` as the user clicks into its card or
+  onto its tab, or moves the keyboard's focus into its card.
+  On a locked board, the card has no toggle, no padlock and no rename, its menu
+  holds Copy block ID alone, and it mounts the UI only of a block that the
+  board lock leaves open.
+  The card's menus, the panel picker and the bar's menus are one kind of menu,
+  a popover below its button, or beside its row for a menu inside a menu.
+  Each keeps the focus in its search, or on itself where it has none, while
+  the arrows move the active row, and the panel picker lists each block with
+  the mark of its class.
+
+* The dock plugin prints the views menu as a tree, and then each view with its
+  grid, in the order of the menu (#603).
+  In the tree, each folder shows its name, with what it holds below it, and
+  each view its id, with "(active)" for the active view.
+  The print marks the panel of each block whose card hides a section with the
+  sections that the card shows: "i" for its inputs, "o" for its outputs and
+  "n" for neither.
+  A board that holds the plugin prints it the same way.
+
+* The print of a grid shows each tab group and each rail on one line, with
+  the share of each child of a split before it, as `30%: a (active), b`
+  (#603).
+  It leaves out the orientation of a split with fewer than two children, and
+  the share of an only child, since neither says anything of the layout.
+  The print of a view says on its first line how its grid's top split
+  divides, in place of the grid's own first line.
+
 * The dock draws the bar across its top, from the navbar items that R hands
   its frontend (#581).
   By default, the bar holds the logo, the board's name, the controls of the
@@ -128,6 +168,9 @@
   or removes a panel.
   A command moves or resizes a panel only where the blockr options
   `lock_rearrange` or `lock_resize` are `FALSE`.
+  A command that refuses to run names each failure on a line of its own, as
+  core's commands do (#615).
+  Core logs no error for such a refusal.
 
 * The vignette "Migration notes for app scripts" lists each change that an app
   script of blockr.dock 0.2.0 needs to run on version 0.2.1 (#585).

@@ -169,17 +169,34 @@ check_nav_folder <- function(folder) {
   invisible(folder)
 }
 
+# A view's first line says how its grid's top split divides, in place of the
+# grid's own first line, or that the grid is empty.
+# The dock plugin's print gives `visible`, the sections of each block's card,
+# by which the panel of a block whose card hides a section shows its sections.
 #' @export
-format.dock_view <- function(x, ...) {
+format.dock_view <- function(x, visible = list(), ...) {
+
+  grid <- x[["grid"]]
+
+  grid_mark <- if (is.null(grid)) {
+    NULL
+  } else if (length(grid_panels(grid))) {
+    split_division(grid[["children"]], grid[["orientation"]])
+  } else {
+    "empty"
+  }
 
   header <- paste0(
     "<dock_view>",
     if (not_null(x[["name"]])) paste0(" ", x[["name"]]),
-    if (not_null(x[["folder"]])) paste0(" (in ", x[["folder"]], ")")
+    grid_attrs(
+      if (not_null(x[["folder"]])) paste("in", x[["folder"]]),
+      grid_mark
+    )
   )
 
-  if (not_null(x[["grid"]])) {
-    return(c(header, format(x[["grid"]])))
+  if (not_null(grid)) {
+    return(c(header, format_grid_body(grid, visible)))
   }
 
   ids <- chr_xtr(x[["panels"]], "id")

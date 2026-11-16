@@ -11,7 +11,7 @@ import { at, command, dockState } from "./common.ts";
 import * as schemas from "./schemas.ts";
 
 // The sections of a card, in the order in which the card shows them.
-const SECTIONS: readonly Section[] = ["inputs", "outputs"];
+export const SECTIONS: readonly Section[] = ["inputs", "outputs"];
 
 interface SetSections {
   readonly block: BlockId;

@@ -17,8 +17,10 @@
 // - Dockview drops a panel when the user closes its tab, when the active view
 //   changes to one that does not show it, or when another board opens.
 //   The dock then runs the cleanup that mountPlugin() returned.
-// The frame of a block's panel stays empty, until the dock draws the block's
-// card in it.
+// The frame of a block's panel holds the block's card (./card).
+// A click on a block's tab gives the block focus in CoreApi.focus, as a click
+// into its card does, while a click on a plugin's tab leaves the focus where
+// it is.
 //
 // The header of each tab group holds a "+", which opens the panel picker
 // (./picker.tsx).
@@ -42,13 +44,14 @@ import type {
   IDockviewPanelProps,
   IDockviewReactProps,
 } from "dockview-react";
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
 import { activeView } from "../../commands/index.ts";
 import { PANEL_COMPONENT, panelFromId } from "../../layout/index.ts";
 import type { PanelParams } from "../../layout/index.ts";
 import { gridPanels } from "../../state/index.ts";
-import { DockContext, useBoard, useDock } from "./context.ts";
+import { BlockCard, createTooltips } from "./card/index.ts";
+import { DockContext, giveFocus, useBoard, useDock } from "./context.ts";
 import { drawDock } from "./drawing.ts";
 import { LockIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
@@ -58,10 +61,16 @@ import type { Settings } from "./settings.ts";
 import type { Sidebar } from "./sidebar.ts";
 
 // The frame of a panel, which names the block or the plugin whose panel it
-// is.
+// is, and holds a block's card.
 function PanelFrame({ params }: IDockviewPanelProps<PanelParams>): ReactElement {
   const { panel } = params;
-  return "block" in panel ? <div className="blockr-dock-panel" data-block={panel.block} /> : <PluginFrame plugin={panel.plugin} />;
+  return "block" in panel ? (
+    <div className="blockr-dock-panel" data-block={panel.block}>
+      <BlockCard id={panel.block} />
+    </div>
+  ) : (
+    <PluginFrame plugin={panel.plugin} />
+  );
 }
 
 // The frame of a plugin's panel, which holds the plugin's UI while dockview
@@ -74,9 +83,17 @@ function PluginFrame({ plugin }: { readonly plugin: PluginClassId }): ReactEleme
 
 const components: IDockviewReactProps["components"] = { [PANEL_COMPONENT]: PanelFrame };
 
-// A tab without a close button, which a locked board shows.
-function LockedTab(props: IDockviewPanelHeaderProps): ReactElement {
-  return <DockviewDefaultTab {...props} hideClose />;
+// A panel's tab, which has no close button on a locked board.
+function Tab(props: IDockviewPanelHeaderProps<PanelParams>): ReactElement {
+  const { core } = useDock();
+  const { panel } = props.params;
+  const onPointerDown =
+    "block" in panel
+      ? () => {
+          giveFocus(core, panel.block);
+        }
+      : undefined;
+  return <DockviewDefaultTab {...props} hideClose={core.lock.board} onPointerDown={onPointerDown} />;
 }
 
 // The "+" in the header of a tab group, which opens the panel picker.
@@ -149,7 +166,8 @@ export interface DockProps {
 export function Dock({ core, plugin, settings, narrow, drawn, sidebar }: DockProps): ReactElement {
   const root = useRef<HTMLDivElement>(null);
   const stop = useRef<(() => void) | undefined>(undefined);
-  const shared = useMemo(() => ({ core, drawn }), [core, drawn]);
+  const [tooltips] = useState(createTooltips);
+  const shared = useMemo(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
   const locked = core.lock.board;
   const { pinned } = useSyncExternalStore(sidebar.subscribe, sidebar.state);
 
@@ -178,7 +196,8 @@ export function Dock({ core, plugin, settings, narrow, drawn, sidebar }: DockPro
         onReady={onReady}
         theme={themeLightSpaced}
         defaultRenderer="always"
-        {...(locked ? { defaultTabComponent: LockedTab } : { leftHeaderActionsComponent: AddPanelButton })}
+        defaultTabComponent={Tab}
+        {...(locked ? {} : { leftHeaderActionsComponent: AddPanelButton })}
       />
       <EmptyView />
     </>

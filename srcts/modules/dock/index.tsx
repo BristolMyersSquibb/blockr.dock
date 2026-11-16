@@ -63,6 +63,7 @@ import { dockCommands } from "../../commands/index.ts";
 import { defaultState, update } from "../../state/index.ts";
 import { API } from "./api.ts";
 import { trackBusy } from "./busy.ts";
+import { createTooltips } from "./card/index.ts";
 import { DockContext } from "./context.ts";
 import { demandShown } from "./demand.ts";
 import { Dock } from "./dock.tsx";
@@ -100,7 +101,7 @@ const frontend = {
     const unbind = bindShortcuts(el.ownerDocument, core, () => barButtons(core, items));
 
     const root = createRoot(el);
-    const shared = { core, drawn };
+    const shared = { core, plugin, drawn, tooltips: createTooltips() };
     // React draws the page before render() returns.
     flushSync(() => {
       root.render(
