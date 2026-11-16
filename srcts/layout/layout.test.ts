@@ -8,7 +8,7 @@ import type { DockviewApi, IContentRenderer } from "dockview-react";
 import { describe, expect, test } from "vitest";
 import { RAIL_SIZE } from "../state/index.ts";
 import type { Grid, Panel, Rail, TabGroup } from "../state/index.ts";
-import { gridToLayout, layoutToGrid, PANEL_COMPONENT, panelId, panelOf, railId } from "./index.ts";
+import { gridToLayout, layoutToGrid, PANEL_COMPONENT, panelFromId, panelId, railId } from "./index.ts";
 
 const a = { block: "a" };
 const b = { block: "b" };
@@ -71,17 +71,17 @@ describe("panelId()", () => {
   test("names a panel by the JSON of its block or its plugin class", () => {
     expect(panelId(a)).toBe('{"block":"a"}');
     expect(panelId(dag)).toBe('{"plugin":"blockr.dag-dag_plugin"}');
-    expect(panelOf(panelId(dag))).toEqual(dag);
+    expect(panelFromId(panelId(dag))).toEqual(dag);
   });
 
   test("names the panel of a block whose id holds any character", () => {
     const odd = { block: 'a "quoted"/~id' };
-    expect(panelOf(panelId(odd))).toEqual(odd);
+    expect(panelFromId(panelId(odd))).toEqual(odd);
   });
 
   test("leaves a dockview id that names no panel without one", () => {
     for (const id of ["1", "group-1", "{}", '{"block":1}', '{"block":"a","plugin":"p"}', "[]", "null"]) {
-      expect(panelOf(id)).toBeUndefined();
+      expect(panelFromId(id)).toBeUndefined();
     }
   });
 

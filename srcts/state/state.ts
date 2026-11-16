@@ -17,10 +17,10 @@ export const defaultState: DockState = { views: {}, folders: {}, active: null, v
 export function isDockState(value: Json | undefined): value is DockState {
   return (
     isObject(value) &&
-    recordOf(value.views, isView) &&
-    recordOf(value.folders, isFolder) &&
+    isRecordOf(value.views, isView) &&
+    isRecordOf(value.folders, isFolder) &&
     (value.active === null || typeof value.active === "string") &&
-    recordOf(value.visible, (sections) => listOf(sections, (s) => s === "inputs" || s === "outputs"))
+    isRecordOf(value.visible, (sections) => isListOf(sections, (s) => s === "inputs" || s === "outputs"))
   );
 }
 
@@ -52,11 +52,11 @@ function isNode(value: Json | undefined): value is Node {
 }
 
 function isSplit(value: Json | undefined): value is Split {
-  return isObject(value) && listOf(value.children, isNode) && listOf(value.sizes, (size) => typeof size === "number");
+  return isObject(value) && isListOf(value.children, isNode) && isListOf(value.sizes, (size) => typeof size === "number");
 }
 
 function isTabGroup(value: Json | undefined): value is TabGroup {
-  return isObject(value) && listOf(value.panels, isPanel) && isPanel(value.active);
+  return isObject(value) && isListOf(value.panels, isPanel) && isPanel(value.active);
 }
 
 function isRail(value: Json | undefined): value is Rail {
@@ -72,10 +72,10 @@ function isPanel(value: Json | undefined): value is Panel {
   return (typeof value.block === "string") !== (typeof value.plugin === "string");
 }
 
-function recordOf(value: Json | undefined, item: (value: Json) => boolean): boolean {
+function isRecordOf(value: Json | undefined, item: (value: Json) => boolean): boolean {
   return isObject(value) && Object.values(value).every(item);
 }
 
-function listOf(value: Json | undefined, item: (value: Json) => boolean): boolean {
+function isListOf(value: Json | undefined, item: (value: Json) => boolean): boolean {
   return isList(value) && value.every(item);
 }

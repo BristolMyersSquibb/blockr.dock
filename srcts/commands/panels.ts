@@ -44,7 +44,7 @@ import {
   withStoredShares,
 } from "../state/index.ts";
 import type { DockState, Edge, Grid, GridChanges, Panel, Place, View, ViewId } from "../state/index.ts";
-import { at, command, givenGridFailures, gridSizeTolerance, holdsBlock, layoutLocks, refuse, stateOf } from "./common.ts";
+import { at, command, dockState, givenGridFailures, gridSizeTolerance, holdsBlock, layoutLocks, refuse } from "./common.ts";
 import type { LayoutLocks } from "./common.ts";
 import * as schemas from "./schemas.ts";
 
@@ -71,13 +71,13 @@ interface CollapseRail {
 }
 
 // The view that the board's dock state holds under the id, or undefined.
-function viewOf(board: Board, id: ViewId): View | undefined {
-  return stateOf(board)?.views[id];
+function boardView(board: Board, id: ViewId): View | undefined {
+  return dockState(board)?.views[id];
 }
 
 // Whether the view holds the panel, in a tab group or on a rail.
 function shows(board: Board, view: ViewId, panel: Panel): boolean {
-  const held = viewOf(board, view);
+  const held = boardView(board, view);
   return held !== undefined && places(held.grid, panel);
 }
 
@@ -131,10 +131,10 @@ export const panelCommands = [
       "Places a panel in a view that does not show it, as the tab that its tab group or rail shows: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place, a new tab in the last tab group that holds no plugin's panel.",
     args: placeArgs("goes"),
     preflight(board, { view, panel }, { lock }) {
-      return !lock.board && viewOf(board, view) !== undefined && !shows(board, view, panel) && holdsBlock(board, panel);
+      return !lock.board && boardView(board, view) !== undefined && !shows(board, view, panel) && holdsBlock(board, panel);
     },
     run(board, { view, panel, near, side, rail }) {
-      const held = viewOf(board, view);
+      const held = boardView(board, view);
       if (held === undefined) return [];
       return { patches: [gridPatch(view, placedAt(held.grid, panel, { near, side, rail }, "distribute"))] };
     },
@@ -150,7 +150,7 @@ export const panelCommands = [
       return !lock.board && shows(board, view, panel);
     },
     run(board, { view, panel }) {
-      const held = viewOf(board, view);
+      const held = boardView(board, view);
       if (held === undefined) return [];
       return { patches: [gridPatch(view, withoutPanel(held.grid, panel))] };
     },
@@ -170,7 +170,7 @@ export const panelCommands = [
     },
     run(board, { view, panel, near, side, rail, locks }, { lock }) {
       keep({ arrangement: true }, locks, lock.board);
-      const held = viewOf(board, view);
+      const held = boardView(board, view);
       if (held === undefined) return [];
       // A panel alone on the rail that it moves to stays there, and the rail
       // keeps its width, which it would forget once it held no panel.
@@ -208,7 +208,7 @@ export const panelCommands = [
     },
     run(board, { view, panel, size, locks }, { lock }) {
       keep({ sizes: true }, locks, lock.board);
-      const held = viewOf(board, view);
+      const held = boardView(board, view);
       if (held === undefined) return [];
       return { patches: [gridPatch(view, resized(held.grid, panel, size))] };
     },
@@ -225,7 +225,7 @@ export const panelCommands = [
       return shows(board, view, panel);
     },
     run(board, { view, panel }) {
-      const held = viewOf(board, view);
+      const held = boardView(board, view);
       if (held === undefined) return [];
       return { patches: [gridPatch(view, showing(held.grid, panel))] };
     },
@@ -239,12 +239,12 @@ export const panelCommands = [
     args: schemas.object({ panel: schemas.panel }, ["panel"]),
     undo: false,
     preflight(board, { panel }, { lock }) {
-      const active = stateOf(board)?.active ?? null;
+      const active = dockState(board)?.active ?? null;
       if (active === null || !holdsBlock(board, panel)) return false;
       return !lock.board || shows(board, active, panel);
     },
     run(board, { panel }) {
-      const state = stateOf(board);
+      const state = dockState(board);
       const active = state?.active ?? null;
       const held = active === null ? undefined : state?.views[active];
       if (state === undefined || active === null || held === undefined) return [];
@@ -266,14 +266,14 @@ export const panelCommands = [
       "Sets a view's whole grid, which says which panels the view shows and where, as the dock does after the user drags a panel or a border. A grid places each panel once, and the shares of each split are above 0 and sum to 1. Where the grid has the same splits and tab groups as the view's, a split keeps its shares unless the grid moves one by more than the blockr option dock_grid_size_tol, 0.005 unless set.",
     args: schemas.object({ view: schemas.view, grid: schemas.grid }, ["view", "grid"]),
     preflight(board, { view }) {
-      return viewOf(board, view) !== undefined;
+      return boardView(board, view) !== undefined;
     },
     async prepare(_board, args, context) {
       const [locks, tolerance] = await Promise.all([layoutLocks(context), gridSizeTolerance(context)]);
       return { ...args, locks, tolerance };
     },
     run(board, { view, grid, locks, tolerance }, { lock }) {
-      const held = viewOf(board, view);
+      const held = boardView(board, view);
       if (held === undefined) return [];
       refuse(givenGridFailures(board, grid));
       const kept = withStoredShares(held.grid, grid, tolerance);
@@ -297,10 +297,10 @@ export const panelCommands = [
     ),
     undo: false,
     preflight(board, { view, edge }) {
-      return viewOf(board, view)?.grid.rails?.[edge] !== undefined;
+      return boardView(board, view)?.grid.rails?.[edge] !== undefined;
     },
     run(board, { view, edge, collapsed }) {
-      const state = stateOf(board);
+      const state = dockState(board);
       if (state === undefined) return [];
       return { patches: railPatches(board, state, view, edge, collapsed) };
     },
