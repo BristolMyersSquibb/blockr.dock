@@ -1,5 +1,20 @@
 # blockr.dock 0.2.1
 
+* The options button on the bar opens the dock's options sidebar (#583).
+  The sidebar lists the categories of the board options that the board holds,
+  and a click on one shows the category's page, where core mounts the UI of
+  each of its board options.
+  The categories come in alphabetical order, and so do the board options on a
+  page, by their labels.
+  The sidebar shows the board options on a locked board too, since the board
+  lock leaves them open.
+  Unpinned, the sidebar lies over the page, and Escape or a press outside it
+  closes it.
+  Pinned, it stays open, and the bar and the dock make room for it.
+  Tab and Shift+Tab keep the focus inside the sidebar.
+  The sidebar holds no field for the board's name, which the bar shows, and no
+  code export, which becomes blockr.code's plugin.
+
 * The dock draws the bar across its top, from the navbar items that R hands
   its frontend (#581).
   By default, the bar holds the logo, the board's name, the controls of the
@@ -18,8 +33,7 @@
   item, and a module that cannot draw leaves a warning in its place.
   On a narrow bar, the board's name and then the storage controls cut their
   labels short, and show them in full as the tooltip.
-  The options button does not open a sidebar yet, since #583 draws it, and the
-  bar draws no views menu yet, since #582 draws it.
+  The bar draws no views menu yet, since #582 draws it.
 
 * The dock gives the assistant's model its guidance on arranging views, as the
   skill `layout` in `inst/assistant/skills` (#597).

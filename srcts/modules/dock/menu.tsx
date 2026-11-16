@@ -320,7 +320,7 @@ function SubMenu({
         }}
       >
         <span className="blockr-dock-menu-label">{entry.label}</span>
-        <Chevron right />
+        <Chevron point="right" />
       </button>
       <div
         className="blockr-dock-menu-nest"

@@ -29,15 +29,17 @@
 //    onScreen to those blocks and to the plugins whose panels are on screen
 //    (./demand.ts).
 // 5. It starts to follow whether the logo turns (./busy.ts), and holds
-//    whether the options sidebar is open (./sidebar.ts).
+//    whether the options sidebar is open, whether it is pinned and which page
+//    it shows (./sidebar.ts).
 // 6. It starts the toasts of the opening, which follow the notifications of
 //    CoreApi (./toasts.tsx).
 // 7. It binds the shortcuts of the bar on the page's document
 //    (./shortcuts.ts).
 // 8. It draws the page: the bar across the top, with the navbar items
 //    (./navbar.tsx), below it the active view, with dockview (./dock.tsx,
-//    ./drawing.ts), and beside them the toasts of the notifications that no
-//    card shows.
+//    ./drawing.ts), and beside them the options sidebar
+//    (./options-sidebar.tsx) and the toasts of the notifications that no card
+//    shows.
 // The cleanup that render() returns undoes all of them but the step on
 // starting, which is the board's.
 //
@@ -67,6 +69,7 @@ import { Dock } from "./dock.tsx";
 import { Navbar } from "./navbar.tsx";
 import { readNavbar } from "./navbar-items.ts";
 import { trackNarrow } from "./narrow.ts";
+import { OptionsSidebar } from "./options-sidebar.tsx";
 import { readSettings } from "./settings.ts";
 import { bindShortcuts, onMac } from "./shortcuts.ts";
 import { createSidebar } from "./sidebar.ts";
@@ -97,14 +100,18 @@ const frontend = {
     const unbind = bindShortcuts(el.ownerDocument, core, () => barButtons(core, items));
 
     const root = createRoot(el);
+    const shared = { core, drawn };
     // React draws the page before render() returns.
     flushSync(() => {
       root.render(
         <>
-          <DockContext value={{ core, drawn }}>
+          <DockContext value={shared}>
             <Navbar items={items} busy={busy} sidebar={sidebar} mac={onMac(win)} />
           </DockContext>
-          <Dock core={core} plugin={plugin} settings={settings} narrow={narrow} drawn={drawn} />
+          <Dock core={core} plugin={plugin} settings={settings} narrow={narrow} drawn={drawn} sidebar={sidebar} />
+          <DockContext value={shared}>
+            <OptionsSidebar sidebar={sidebar} />
+          </DockContext>
           <ToastList core={core} toasts={toasts} />
         </>,
       );

@@ -2,7 +2,8 @@
  * The stylesheet of the dock's module, which the build bundles into
  * inst/js/dock.css: dockview's stylesheet, then the dock's own rules, which
  * style only what sits under the dock's root, `.blockr-dock`, under the bar
- * above it, `.blockr-dock-bar`, and under the column of toasts beside it,
+ * above it, `.blockr-dock-bar`, under the options sidebar beside it,
+ * `.blockr-dock-sidebar`, and under the column of toasts beside it,
  * `.blockr-dock-toasts`.
  */
 @import "dockview-react/dist/styles/dockview.css";
@@ -22,11 +23,12 @@
  * the theme variable --bc-font-sans of core's stylesheet, since the page sets
  * none.
  * The tabs, the panel picker and the prompt of an empty view take it from the
- * dock's root, and the bar and the toasts, which sit beside the root, take it
- * too.
+ * dock's root, and the bar, the options sidebar and the toasts, which sit
+ * beside the root, take it too.
  */
 .blockr-dock,
 .blockr-dock-bar,
+.blockr-dock-sidebar,
 .blockr-dock-toasts {
   font-family: var(--bc-font-sans, system-ui, sans-serif);
 }
@@ -57,14 +59,15 @@
 /*
  * The dock's own pieces read the design tokens as dockview's variables do
  * below: the "+" of a tab group, the prompt of an empty view, the panel
- * picker, and the bar with its menus.
+ * picker, the bar with its menus, and the options sidebar.
  * Each reads a variable of the dock's, which reads a token of blockr.ui's with
  * the token's value in the light scheme as the fallback, or in the dark scheme
  * under the dark theme.
  * The logo's green is the same in both.
  */
 .blockr-dock,
-.blockr-dock-bar {
+.blockr-dock-bar,
+.blockr-dock-sidebar {
   --blockr-dock-text: var(--blockr-color-text-default, #111827);
   --blockr-dock-text-muted: var(--blockr-color-text-muted, #6b7280);
   --blockr-dock-text-accent: var(--blockr-color-text-accent, #2563eb);
@@ -84,11 +87,17 @@
   --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #ffffff);
   --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #f9fafb);
   --blockr-dock-border-strong: var(--blockr-color-border-strong, #d1d5db);
+  --blockr-dock-bg-selected: var(
+    --blockr-color-bg-selected,
+    color-mix(in srgb, #2563eb 7%, transparent)
+  );
+  --blockr-dock-text-accent-strong: var(--blockr-color-text-accent-strong, #1d4ed8);
   --blockr-dock-logo: var(--blockr-logo, #089e76);
 }
 
 [data-bc-theme="dark"] .blockr-dock,
-[data-bc-theme="dark"] .blockr-dock-bar {
+[data-bc-theme="dark"] .blockr-dock-bar,
+[data-bc-theme="dark"] .blockr-dock-sidebar {
   --blockr-dock-text: var(--blockr-color-text-default, #f0f3f7);
   --blockr-dock-text-muted: var(--blockr-color-text-muted, #8a94a3);
   --blockr-dock-text-accent: var(--blockr-color-text-accent, #60a5fa);
@@ -108,6 +117,11 @@
   --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #161b23);
   --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #14181f);
   --blockr-dock-border-strong: var(--blockr-color-border-strong, #2d343f);
+  --blockr-dock-bg-selected: var(
+    --blockr-color-bg-selected,
+    color-mix(in srgb, #3b82f6 7%, transparent)
+  );
+  --blockr-dock-text-accent-strong: var(--blockr-color-text-accent-strong, #60a5fa);
   --blockr-dock-logo: var(--blockr-logo, #089e76);
 }
 
@@ -1021,4 +1035,231 @@ button.blockr-dock-bar-name:hover {
   padding: 0 10px;
   color: var(--blockr-dock-text-muted);
   font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+/*
+ * The options sidebar (./options-sidebar.tsx), a side panel of blockr.ui's
+ * design system, as today's: 420 pixels wide, or the window's width where the
+ * window is narrower, at the window's right edge from its top to its bottom,
+ * on the surface, with the default edge on its left and a shadow cast to the
+ * left, in the side panel's layer, above the bar and below the toasts.
+ * It slides in from the edge as it opens and out as it closes, but for a
+ * reader who asks for less motion.
+ * Closed, it is inert from the start, and hidden once it has slid out.
+ */
+.blockr-dock-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--blockr-z-offcanvas, 1045);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100vw);
+  border-left: 1px solid var(--blockr-dock-border);
+  background: var(--blockr-dock-bg-surface);
+  color: var(--blockr-dock-text);
+  box-shadow: -8px 0 24px rgb(15 23 42 / 0.08);
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition:
+    transform 200ms ease,
+    visibility 0s linear 200ms;
+}
+
+.blockr-dock-sidebar[data-open] {
+  transform: none;
+  visibility: visible;
+  transition: transform 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blockr-dock-sidebar,
+  .blockr-dock-sidebar[data-open] {
+    transition: none;
+  }
+}
+
+/* The sidebar itself takes the focus only where it holds nothing focusable. */
+.blockr-dock-sidebar:focus-visible {
+  outline: none;
+}
+
+/*
+ * The header, 48 pixels high with the rule under it, as the bar is, so that
+ * the two rules run on one line where the sidebar sits beside the bar: the
+ * back arrow on a page, the title, and the pin and close buttons.
+ * The title starts 20 pixels from the edge, as the body's content does, or
+ * after the back arrow, which starts 12 pixels from it.
+ */
+.blockr-dock-sidebar-header {
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 48px;
+  padding: 0 14px 0 20px;
+  border-bottom: 1px solid var(--blockr-dock-border);
+}
+
+.blockr-dock-sidebar-header:has(> .blockr-dock-sidebar-back) {
+  padding-left: 12px;
+}
+
+.blockr-dock-sidebar-back {
+  margin-right: 2px;
+}
+
+.blockr-dock-sidebar-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0 8px 0 0;
+  overflow: hidden;
+  font-size: var(--blockr-font-size-lg, 1rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * The back arrow, the pin and the close button: quiet icon buttons of the
+ * design system at its size xs, in the muted colour, which take the hover
+ * wash.
+ */
+.blockr-dock-sidebar-button {
+  flex: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--blockr-control-h-xs, 26px);
+  height: var(--blockr-control-h-xs, 26px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: var(--blockr-dock-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--blockr-transition, 0.15s ease),
+    color var(--blockr-transition, 0.15s ease);
+}
+
+.blockr-dock-sidebar-button:hover {
+  background: var(--blockr-dock-bg-hover);
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-sidebar-button:focus-visible,
+.blockr-dock-sidebar-row:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: -2px;
+}
+
+/*
+ * The pin leans while the sidebar floats, and stands upright on the selected
+ * wash, in the strong accent colour, while it is pinned, as today's.
+ */
+.blockr-dock-sidebar-pin svg {
+  transform: rotate(45deg);
+  transition: transform 180ms ease;
+}
+
+.blockr-dock-sidebar-pin[aria-pressed="true"] {
+  background: var(--blockr-dock-bg-selected);
+  color: var(--blockr-dock-text-accent-strong);
+}
+
+.blockr-dock-sidebar-pin[aria-pressed="true"] svg {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blockr-dock-sidebar-pin svg {
+    transition: none;
+  }
+}
+
+/* The body, which scrolls where what it holds outgrows the window. */
+.blockr-dock-sidebar-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 20px;
+}
+
+/*
+ * The list of categories, whose rows are those of a menu of actions in the
+ * design system, 34 pixels high with 10 pixels at each side, so the list
+ * reaches out by those 10 pixels, and the categories line up with the title.
+ * Each row ends in a chevron that points right, since it opens a page.
+ */
+.blockr-dock-sidebar-list {
+  margin: -8px -10px;
+}
+
+.blockr-dock-sidebar-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.blockr-dock-sidebar-row:hover,
+.blockr-dock-sidebar-row:focus-visible {
+  background: var(--blockr-dock-bg-hover);
+}
+
+.blockr-dock-sidebar-row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-dock-sidebar-row .blockr-dock-chevron {
+  flex: none;
+  color: var(--blockr-dock-text-muted);
+}
+
+/* A page holds the UI of each board option, 16 pixels under the one before. */
+.blockr-dock-sidebar-page {
+  display: grid;
+  gap: 16px;
+}
+
+.blockr-dock-sidebar-note {
+  margin: 0;
+  color: var(--blockr-dock-text-muted);
+}
+
+/*
+ * While the sidebar is pinned, the bar and the dock make room for it at the
+ * window's right edge, at once rather than as the sidebar slides, as today's
+ * pinned sidebar pushes the page.
+ * The narrow column flows in the page, so it takes a margin in place of an
+ * inset.
+ */
+.blockr-dock-bar[data-pushed],
+.blockr-dock[data-pushed]:not([data-layout="narrow"]) {
+  right: min(420px, 100vw);
+}
+
+.blockr-dock[data-layout="narrow"][data-pushed] {
+  margin-right: min(420px, 100vw);
 }

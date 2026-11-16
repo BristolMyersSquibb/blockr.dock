@@ -1115,8 +1115,8 @@ describe("the bridge from blockr.ui's tokens to dockview's theme", () => {
   });
 
   // The variables that the dock's own pieces read, the "+" of a tab group, the
-  // prompt of an empty view, the panel picker and the bar with its menus, under
-  // each theme.
+  // prompt of an empty view, the panel picker, the bar with its menus and the
+  // options sidebar, under each theme.
   const pieces = properties(own, ".blockr-dock");
   const darkPieces = properties(own, '[data-bc-theme="dark"] .blockr-dock');
 
@@ -1126,9 +1126,12 @@ describe("the bridge from blockr.ui's tokens to dockview's theme", () => {
     for (const [name, value] of [...pieces, ...darkPieces]) expect(value, name).toMatch(/^var\(\s*--blockr-[\w-]+\s*,/);
     expect(pieces.get("--blockr-dock-bg-raised")).toBe("var(--blockr-color-bg-raised, #ffffff)");
     expect(darkPieces.get("--blockr-dock-bg-raised")).toBe("var(--blockr-color-bg-raised, #1e242e)");
-    // The bar sits beside the dock's root, and takes the same variables.
+    // The bar and the options sidebar sit beside the dock's root, and take the
+    // same variables.
     expect(properties(own, ".blockr-dock-bar")).toEqual(pieces);
     expect(properties(own, '[data-bc-theme="dark"] .blockr-dock-bar')).toEqual(darkPieces);
+    expect(properties(own, ".blockr-dock-sidebar")).toEqual(pieces);
+    expect(properties(own, '[data-bc-theme="dark"] .blockr-dock-sidebar')).toEqual(darkPieces);
 
     // A rule reads no variable of the dock's that neither theme sets, and every
     // token that it reads itself, as a radius, with a fallback.

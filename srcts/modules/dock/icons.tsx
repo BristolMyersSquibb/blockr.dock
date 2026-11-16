@@ -1,15 +1,24 @@
-// The icons of the bar and its menus, each an inline SVG in the colour of the
-// text around it, which screen readers skip.
-// The chevron and the warning are those of blockr.ui's icons, chevron.svg and
-// warning.svg, drawn here since blockr.ui gives the client no icons yet.
+// The icons of the bar, its menus and the options sidebar, each an inline SVG
+// in the colour of the text around it, which screen readers skip.
+// The chevron, the warning and the cross are those of blockr.ui's icons,
+// chevron.svg, warning.svg and remove.svg, drawn here since blockr.ui gives the
+// client no icons yet.
 
 import type { ReactElement } from "react";
 
+// The points of the chevron's stroke, for each way that it points.
+const CHEVRON = {
+  down: "3 4.5 6 7.5 9 4.5",
+  right: "4.5 3 7.5 6 4.5 9",
+  left: "7.5 3 4.5 6 7.5 9",
+} as const;
+
 // The one chevron of blockr.ui's design system: a 12 pixel box, stroked at
 // 1.4 pixels whatever its size, which points down, or right as a "go to"
-// arrow, such as that of a menu inside a menu.
+// arrow, such as that of a menu inside a menu or of a row in the options
+// sidebar, or left as the sidebar's way back.
 // A menu's chevron flips up while the menu is open (./index.css).
-export function Chevron({ right = false }: { readonly right?: boolean }): ReactElement {
+export function Chevron({ point = "down" }: { readonly point?: keyof typeof CHEVRON }): ReactElement {
   return (
     <svg
       className="blockr-dock-chevron"
@@ -24,7 +33,7 @@ export function Chevron({ right = false }: { readonly right?: boolean }): ReactE
       aria-hidden="true"
       focusable="false"
     >
-      <polyline points={right ? "4.5 3 7.5 6 4.5 9" : "3 4.5 6 7.5 9 4.5"} vectorEffect="non-scaling-stroke" />
+      <polyline points={CHEVRON[point]} vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
@@ -57,6 +66,50 @@ export function LockIcon({ size = 12 }: { readonly size?: number }): ReactElemen
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
       <path d="M8 1a3 3 0 0 0-3 3v3H4.5A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7H11V4a3 3 0 0 0-3-3Zm-1.75 6V4a1.75 1.75 0 1 1 3.5 0v3h-3.5Z" />
+    </svg>
+  );
+}
+
+// A pushpin, upright, in a 12 pixel box, stroked as the chevron is, for the
+// pin button of the options sidebar, which tilts it while the sidebar is not
+// pinned (./index.css).
+// The icons of blockr.ui hold no pin, and today's sidebar draws Bootstrap's
+// pin-angle through bsicons, which the dock no longer imports.
+export function PinIcon(): ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M5.5 2h5M6.5 2v4.25L4.5 9h7l-2-2.75V2M8 9v5" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+// The cross of remove.svg, thin as every small icon of the design system, in
+// a 10 pixel box, for the close button of the options sidebar.
+export function CloseIcon(): ReactElement {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1"
+      strokeLinecap="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" />
     </svg>
   );
 }
