@@ -4,8 +4,8 @@
       print(dock_grid("a", "b"))
     Output
       <dock_grid> horizontal
-      ├─ a (50%)
-      └─ b (50%)
+      ├─ 50%: a
+      └─ 50%: b
 
 ---
 
@@ -14,11 +14,11 @@
         0.4)))
     Output
       <dock_grid> horizontal
-      ├─ group (vertical, 60%)
-      │  ├─ data (33%)
-      │  ├─ filt (33%)
-      │  └─ head (33%)
-      └─ assistant (plugin, 40%)
+      ├─ 60%: group (vertical)
+      │  ├─ 33%: data
+      │  ├─ 33%: filt
+      │  └─ 33%: head
+      └─ 40%: assistant (plugin)
 
 ---
 
@@ -26,11 +26,8 @@
       print(dock_grid("a", panels("b", "c", plg("edit"), active = "c")))
     Output
       <dock_grid> horizontal
-      ├─ a (50%)
-      └─ tabs (50%)
-         ├─ b
-         ├─ c (active)
-         └─ edit (plugin)
+      ├─ 50%: a
+      └─ 50%: b, c (active), edit (plugin)
 
 ---
 
@@ -39,9 +36,9 @@
         0.2)))
     Output
       <dock_grid> vertical
-      ├─ x (50%)
-      ├─ y (30%)
-      └─ z (20%)
+      ├─ 50%: x
+      ├─ 30%: y
+      └─ 20%: z
 
 ---
 
@@ -49,12 +46,12 @@
       print(dock_grid("top", group("a", group("b", "c"))))
     Output
       <dock_grid> horizontal
-      ├─ top (50%)
-      └─ group (vertical, 50%)
-         ├─ a (50%)
-         └─ group (horizontal, 50%)
-            ├─ b (50%)
-            └─ c (50%)
+      ├─ 50%: top
+      └─ 50%: group (vertical)
+         ├─ 50%: a
+         └─ 50%: group (horizontal)
+            ├─ 50%: b
+            └─ 50%: c
 
 ---
 
@@ -62,18 +59,35 @@
       print(dock_grid("a", rail(plg("dag"), "b", active = "b", collapsed = TRUE),
       rail("c", position = "right")))
     Output
-      <dock_grid> horizontal
-      └─ a (100%)
-      left rail (collapsed)
-      ├─ dag (plugin)
-      └─ b (active)
-      right rail
-      └─ c
+      <dock_grid>
+      └─ a
+      left rail (collapsed): dag (plugin), b (active)
+      right rail: c
 
 ---
 
     Code
       print(dock_grid())
     Output
-      <dock_grid> horizontal (empty)
+      <dock_grid> (empty)
+
+# a grid prints no orientation or share where a split has one child
+
+    Code
+      print(dock_grid(group("a", "b")))
+    Output
+      <dock_grid>
+      └─ group (vertical)
+         ├─ 50%: a
+         └─ 50%: b
+
+---
+
+    Code
+      print(dock_grid("a", group(panels("b", "c"))))
+    Output
+      <dock_grid> horizontal
+      ├─ 50%: a
+      └─ 50%: group
+         └─ b (active), c
 

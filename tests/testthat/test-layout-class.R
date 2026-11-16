@@ -162,6 +162,12 @@ test_that("dock_grid has a tree-style print method", {
   expect_snapshot(print(dock_grid()))
 })
 
+test_that("a grid prints no orientation or share where a split has one child", {
+
+  expect_snapshot(print(dock_grid(group("a", "b"))))
+  expect_snapshot(print(dock_grid("a", group(panels("b", "c")))))
+})
+
 test_that("print.dock_grid returns its input invisibly", {
 
   grid <- dock_grid("a", "b")
