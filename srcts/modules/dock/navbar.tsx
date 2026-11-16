@@ -26,7 +26,9 @@
 //   on (./views-menu.tsx). The bar grows by the line, under its row.
 // - The read-only pill, which shows while the board lock is on.
 // - The options button, a quiet button with its label as well, which opens and
-//   closes the options sidebar (./sidebar.ts).
+//   closes the options sidebar (./options-sidebar.tsx).
+// While the options sidebar is pinned, the bar makes room for it at its right
+// end (./index.css).
 // Core tells the user why the store refused a rename, an undo or a redo,
 // through its notification board_edit_failed, which the dock shows as a toast.
 //
@@ -85,12 +87,13 @@ export interface NavbarProps {
 export function Navbar({ items, busy, sidebar, mac, openFolders }: NavbarProps): ReactElement {
   const { core } = useDock();
   const storage = useStorage(core);
+  const { pinned } = useSyncExternalStore(sidebar.subscribe, sidebar.state);
   // The ids of the controls that storage items place apart.
   const apart = new Set(items.flatMap((item) => (item.kind === "storage" ? [item.id] : [])));
   // Whether the views menu draws its line of tabs, under the bar's row.
   const tabs = useViewTabs(core) && holdsPart(items, "views");
   return (
-    <header className="blockr-dock-bar" data-tabs={tabs ? "" : undefined}>
+    <header className="blockr-dock-bar" data-tabs={tabs ? "" : undefined} data-pushed={pinned ? "" : undefined}>
       {items.map((item) => (
         <Item
           key={item.id}
@@ -401,12 +404,13 @@ function ReadOnlyPill(): ReactElement {
 }
 
 function OptionsButton({ sidebar }: { readonly sidebar: Sidebar }): ReactElement {
-  const open = useSyncExternalStore(sidebar.subscribe, sidebar.isOpen);
+  const { open } = useSyncExternalStore(sidebar.subscribe, sidebar.state);
   return (
     <button
       type="button"
       className="blockr-dock-bar-button blockr-dock-bar-options"
       aria-expanded={open}
+      aria-controls={sidebar.id}
       onClick={() => {
         sidebar.set(!open);
       }}
