@@ -368,7 +368,7 @@ function onRail(grid: Grid, edge: Edge, panel: Panel): Grid {
 
 // The orientation in which a side divides: left and right side by side,
 // above and below one over the other.
-function orientationOf(side: Exclude<Side, "within">): Grid["orientation"] {
+function sideOrientation(side: Exclude<Side, "within">): Grid["orientation"] {
   return side === "left" || side === "right" ? "horizontal" : "vertical";
 }
 
@@ -384,7 +384,7 @@ function besideGroup(grid: Grid, path: readonly number[], panel: Panel, side: Ex
   // The top split divides as the grid's orientation says, and each split
   // inside divides the other way from the split that holds it.
   const divides = holder.length % 2 === 0 ? grid.orientation : flipped(grid.orientation);
-  if (divides === orientationOf(side)) {
+  if (divides === sideOrientation(side)) {
     return withSplit(grid, holder, (split) =>
       sizing === "split" ? halved(split, at, leads(side), tabGroup(panel)) : evened(split, leads(side) ? at : at + 1, tabGroup(panel)),
     );
@@ -399,7 +399,7 @@ function besideGroup(grid: Grid, path: readonly number[], panel: Panel, side: Ex
 // Where the top split divides the other way, the top split goes beside the
 // new tab group, inside a new top split.
 function atEdge(grid: Grid, panel: Panel, side: Exclude<Side, "within">): Grid {
-  const orientation = orientationOf(side);
+  const orientation = sideOrientation(side);
   if (grid.children.length === 0) return { ...grid, orientation, children: [tabGroup(panel)], sizes: [1] };
   if (grid.orientation === orientation) {
     return { ...grid, ...evened(grid, leads(side) ? 0 : grid.children.length, tabGroup(panel)) };

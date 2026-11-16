@@ -1,15 +1,20 @@
 /*
  * The stylesheet of the dock's module, which the build bundles into
  * inst/js/dock.css: dockview's stylesheet, then the dock's own rules, which
- * style only what sits under the dock's root, `.blockr-dock`, and under the
- * column of toasts beside it, `.blockr-dock-toasts`.
+ * style only what sits under the dock's root, `.blockr-dock`, under the bar
+ * above it, `.blockr-dock-bar`, and under the column of toasts beside it,
+ * `.blockr-dock-toasts`.
  */
 @import "dockview-react/dist/styles/dockview.css";
 
-/* The dock covers the window, whatever margin the page's body has. */
+/*
+ * The bar and the dock below it cover the window, whatever margin the page's
+ * body has.
+ * The bar is 48 pixels high, and the dock's root takes the rest of the window.
+ */
 .blockr-dock {
   position: fixed;
-  inset: 0;
+  inset: 48px 0 0;
 }
 
 /*
@@ -17,9 +22,11 @@
  * the theme variable --bc-font-sans of core's stylesheet, since the page sets
  * none.
  * The tabs, the panel picker and the prompt of an empty view take it from the
- * dock's root, and the toasts, which sit beside the root, take it too.
+ * dock's root, and the bar and the toasts, which sit beside the root, take it
+ * too.
  */
 .blockr-dock,
+.blockr-dock-bar,
 .blockr-dock-toasts {
   font-family: var(--bc-font-sans, system-ui, sans-serif);
 }
@@ -29,10 +36,12 @@
  * draws a view's tab groups and rails in one column.
  * The column is as tall as its rows together, which the dock sets as the
  * root's height, so the page scrolls through the rows.
+ * The bar stays at the top of the window, and the column starts below it.
  */
 .blockr-dock[data-layout="narrow"] {
   position: relative;
   inset: auto;
+  margin-top: 48px;
 }
 
 /*
@@ -47,13 +56,15 @@
 
 /*
  * The dock's own pieces read the design tokens as dockview's variables do
- * below: the "+" of a tab group, the prompt of an empty view and the panel
- * picker.
+ * below: the "+" of a tab group, the prompt of an empty view, the panel
+ * picker, and the bar with its menus.
  * Each reads a variable of the dock's, which reads a token of blockr.ui's with
  * the token's value in the light scheme as the fallback, or in the dark scheme
  * under the dark theme.
+ * The logo's green is the same in both.
  */
-.blockr-dock {
+.blockr-dock,
+.blockr-dock-bar {
   --blockr-dock-text: var(--blockr-color-text-default, #111827);
   --blockr-dock-text-muted: var(--blockr-color-text-muted, #6b7280);
   --blockr-dock-text-accent: var(--blockr-color-text-accent, #2563eb);
@@ -67,9 +78,17 @@
   --blockr-dock-border: var(--blockr-color-border-default, #e5e7eb);
   --blockr-dock-border-accent: var(--blockr-color-border-accent, #2563eb);
   --blockr-dock-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.1));
+  --blockr-dock-text-secondary: var(--blockr-color-text-secondary, #374151);
+  --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #9ca3af);
+  --blockr-dock-text-warning: var(--blockr-color-text-warning, #b45309);
+  --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #ffffff);
+  --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #f9fafb);
+  --blockr-dock-border-strong: var(--blockr-color-border-strong, #d1d5db);
+  --blockr-dock-logo: var(--blockr-logo, #089e76);
 }
 
-[data-bc-theme="dark"] .blockr-dock {
+[data-bc-theme="dark"] .blockr-dock,
+[data-bc-theme="dark"] .blockr-dock-bar {
   --blockr-dock-text: var(--blockr-color-text-default, #f0f3f7);
   --blockr-dock-text-muted: var(--blockr-color-text-muted, #8a94a3);
   --blockr-dock-text-accent: var(--blockr-color-text-accent, #60a5fa);
@@ -83,6 +102,13 @@
   --blockr-dock-border: var(--blockr-color-border-default, #232932);
   --blockr-dock-border-accent: var(--blockr-color-border-accent, #3b82f6);
   --blockr-dock-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.5));
+  --blockr-dock-text-secondary: var(--blockr-color-text-secondary, #c2c9d3);
+  --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #6b7686);
+  --blockr-dock-text-warning: var(--blockr-color-text-warning, #fbbf24);
+  --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #161b23);
+  --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #14181f);
+  --blockr-dock-border-strong: var(--blockr-color-border-strong, #2d343f);
+  --blockr-dock-logo: var(--blockr-logo, #089e76);
 }
 
 /*
@@ -198,7 +224,10 @@
   }
 }
 
-/* Without anchor positioning, script places the picker in the window. */
+/*
+ * Without anchor positioning, script places the picker in the window
+ * (./popover.ts).
+ */
 @supports not (position-area: block-end) {
   .blockr-dock-picker {
     position: fixed;
@@ -549,4 +578,447 @@
 
 [data-bc-theme="dark"] .blockr-dock-toast-close:focus-visible {
   outline: var(--blockr-focus-outline, 2px solid #3b82f6);
+}
+
+/*
+ * The bar across the top of the dock (./navbar.tsx), in the navbar style of
+ * blockr.ui's design system: 48 pixels high, on the surface, with a rule under
+ * it, every control 30 pixels high, and tokens only.
+ * It sits in the fixed layer of the design system, so that the narrow column
+ * scrolls under it.
+ * It draws its items in one row, 8 pixels apart.
+ * An item keeps its width, but for the board's name and the storage plugin's
+ * controls, which give way first on a narrow bar, as `.blockr-dock-bar-shrinks`
+ * lets them.
+ * Of those, the name gives way before the controls, down to a few letters,
+ * since a long name would otherwise leave each short label of the controls,
+ * such as Save, a letter or two.
+ * Flexbox shares out what the bar lacks by each item's flex-shrink times its
+ * width, so the name's large flex-shrink leaves the controls no share, not even
+ * the fraction of a pixel that would put an ellipsis in a label, until the name
+ * is down to its least width.
+ * The spacer takes the free space.
+ */
+.blockr-dock-bar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: var(--blockr-z-fixed, 1030);
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--blockr-dock-border);
+  background: var(--blockr-dock-bg-surface);
+  color: var(--blockr-dock-text);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+.blockr-dock-bar > * {
+  flex: none;
+}
+
+.blockr-dock-bar > .blockr-dock-bar-shrinks {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.blockr-dock-bar > .blockr-dock-bar-name.blockr-dock-bar-shrinks {
+  flex-shrink: 100000;
+  min-width: 5em;
+}
+
+.blockr-dock-bar > .blockr-dock-bar-spacer {
+  flex: 1 1 0;
+}
+
+/*
+ * A label that the bar cuts short, with an ellipsis, rather than spill over
+ * the next item.
+ * It takes the font's own line height, since the clip would cut its
+ * descenders at a button's tight line height.
+ */
+.blockr-dock-bar-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: normal;
+}
+
+/*
+ * A quiet button of the design system, at its size s: text only, in the muted
+ * colour, 30 pixels high with 8 pixels at each side, which takes the hover
+ * wash.
+ * Links, menus, the storage plugin's buttons, Undo, Redo and the options
+ * button all take it, so that every control on the bar shows its label.
+ * A menu's chevron follows its label, and flips up while the menu is open.
+ */
+.blockr-dock-bar-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--blockr-radius-md, 6px);
+  background: transparent;
+  color: var(--blockr-dock-text-muted);
+  font: inherit;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--blockr-transition, 0.15s ease),
+    color var(--blockr-transition, 0.15s ease);
+}
+
+.blockr-dock-bar-button:hover:not(:disabled),
+.blockr-dock-bar-button[aria-expanded="true"] {
+  background: var(--blockr-dock-bg-hover);
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-bar-button:disabled {
+  color: var(--blockr-dock-text-disabled);
+  cursor: default;
+}
+
+.blockr-dock-bar-button .blockr-dock-chevron {
+  flex: none;
+  transition: transform var(--blockr-transition, 0.15s ease);
+}
+
+.blockr-dock-bar-button[aria-expanded="true"] .blockr-dock-chevron {
+  transform: rotate(180deg);
+}
+
+/* Undo and Redo sit as close together as the storage plugin's buttons. */
+.blockr-dock-bar-steps {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blockr-dock-bar-button:focus-visible,
+.blockr-dock-bar-name:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: 1px;
+}
+
+/*
+ * The board's name, in the body face at weight 600, as the design system
+ * draws the workflow's name.
+ * At rest it is plain text, and the hover wash shows that a click renames it.
+ * While the user renames the board, a field takes its place, at its size and
+ * weight, with the accent edge and the focus ring.
+ */
+.blockr-dock-bar-name {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--blockr-radius-md, 6px);
+  background: transparent;
+  color: var(--blockr-dock-text);
+  font: inherit;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+
+button.blockr-dock-bar-name {
+  cursor: text;
+}
+
+button.blockr-dock-bar-name:hover {
+  background: var(--blockr-dock-bg-hover);
+}
+
+.blockr-dock-bar-field {
+  box-sizing: border-box;
+  width: 16rem;
+  max-width: 40vw;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--blockr-dock-border-accent);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-dock-bg-surface);
+  color: var(--blockr-dock-text);
+  font: inherit;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+
+.blockr-dock-bar-field:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: 1px;
+}
+
+/*
+ * The storage plugin's controls, in one row, 4 pixels apart, each of which
+ * cuts its label short on a narrow bar.
+ * A status is 12 pixel text in the muted colour.
+ */
+.blockr-dock-bar-storage {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blockr-dock-bar-storage > * {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.blockr-dock-bar-status {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 4px;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+}
+
+/* The read-only pill, a status that no pointer acts on, as today's. */
+.blockr-dock-bar-pill {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-pill, 999px);
+  background: var(--blockr-dock-bg-subtle);
+  color: var(--blockr-dock-text-secondary);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+
+/*
+ * The element in which a module on the bar draws.
+ * One that holds nothing takes no room, not even the bar's gap.
+ */
+.blockr-dock-bar-module {
+  display: flex;
+  align-items: center;
+}
+
+.blockr-dock-bar-module:empty {
+  display: none;
+}
+
+/*
+ * The warning in the place of a module that cannot draw, or of the storage
+ * plugin's controls where controls() threw, whose tooltip says why.
+ */
+.blockr-dock-bar-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--blockr-dock-text-warning);
+}
+
+/*
+ * The logo, which leads the bar and is the dock's busy indicator.
+ * It turns while it carries `is-computing`, which the logo sets once a block
+ * that the dock demands has read stale or unevaluated for the delay of the
+ * blockr option spinner_delay_ms (./busy.ts).
+ * Its seven squares then fade and fill again in the order in which one stroke
+ * draws the R, each by its place, --i, as today's logo turns.
+ * As soon as the work ends, the class goes, and the logo is whole again rather
+ * than frozen half drawn.
+ * The logo's green is blockr.ui's --blockr-logo.
+ */
+.blockr-dock-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 5px;
+  color: var(--blockr-dock-logo);
+}
+
+.blockr-dock-logo-mark {
+  display: block;
+}
+
+.blockr-dock-logo-mark rect {
+  fill: currentColor;
+}
+
+.blockr-dock-logo.is-computing .blockr-dock-logo-mark rect {
+  animation: blockr-dock-logo-fill 1.96s linear infinite;
+  animation-delay: calc(var(--i) * 140ms);
+}
+
+/*
+ * A square is pale for the first half of its cycle and green for the second,
+ * so the R comes down and builds up again in stroke order.
+ */
+@keyframes blockr-dock-logo-fill {
+  0%,
+  47% {
+    fill: color-mix(in srgb, currentColor 16%, var(--blockr-dock-bg-surface));
+  }
+
+  53%,
+  100% {
+    fill: currentColor;
+  }
+}
+
+/*
+ * Reduced motion slows the logo rather than stops it, as today's logo does,
+ * since a still logo during a long evaluation reads as nothing happening.
+ * Squares that fade in place carry none of the motion that the preference
+ * guards against.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .blockr-dock-logo.is-computing .blockr-dock-logo-mark rect {
+    animation-duration: 3.9s;
+    animation-delay: calc(var(--i) * 280ms);
+  }
+}
+
+/* What only a screen reader hears, such as that the logo turns. */
+.blockr-dock-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/*
+ * The menus of the bar (./menu.tsx), in the look of a menu of actions in the
+ * design system: the raised surface with the default edge, a radius of 8 and
+ * the shadow of a menu, 6 pixels of inner padding, and rows 34 pixels high in
+ * 14 pixel text, with a radius of 4 and 10 pixels at each side.
+ * A menu is 180 to 320 pixels wide, sized to what it holds.
+ * It sits 4 pixels below its button, or beside its row for a menu inside a
+ * menu, and flips where the window has no room there.
+ */
+.blockr-dock-menu {
+  box-sizing: border-box;
+  min-width: 180px;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: min(320px, calc(100vh - 16px));
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-lg, 8px);
+  background: var(--blockr-dock-bg-raised);
+  color: var(--blockr-dock-text);
+  box-shadow: var(--blockr-dock-shadow);
+  font-family: var(--bc-font-sans, system-ui, sans-serif);
+  font-size: var(--blockr-font-size-base, 0.875rem);
+}
+
+.blockr-dock-menu:focus-visible {
+  outline: none;
+}
+
+@supports (position-area: block-end) {
+  .blockr-dock-menu {
+    position-area: block-end span-inline-end;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline;
+    inset: auto;
+    margin: 4px 0;
+  }
+
+  .blockr-dock-menu:not([data-depth="0"]) {
+    position-area: inline-end span-block-end;
+    position-try-fallbacks:
+      flip-inline,
+      flip-block,
+      flip-block flip-inline;
+    margin: 0 4px;
+  }
+}
+
+/*
+ * Without anchor positioning, script places a menu in the window
+ * (./popover.ts).
+ */
+@supports not (position-area: block-end) {
+  .blockr-dock-menu {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+  }
+}
+
+.blockr-dock-menu-item {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.blockr-dock-menu-item:hover:not([aria-disabled="true"]),
+.blockr-dock-menu-item:focus-visible,
+.blockr-dock-menu-item[aria-expanded="true"] {
+  background: var(--blockr-dock-bg-hover);
+}
+
+.blockr-dock-menu-item:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: -2px;
+}
+
+.blockr-dock-menu-item[aria-disabled="true"] {
+  color: var(--blockr-dock-text-disabled);
+  cursor: default;
+}
+
+.blockr-dock-menu-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-dock-menu-item .blockr-dock-chevron {
+  flex: none;
+  color: var(--blockr-dock-text-muted);
+}
+
+.blockr-dock-menu-status {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
 }

@@ -41,11 +41,12 @@ import type {
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { ReactElement } from "react";
 import { activeView } from "../../commands/index.ts";
-import { PANEL_COMPONENT, panelOf } from "../../layout/index.ts";
+import { PANEL_COMPONENT, panelFromId } from "../../layout/index.ts";
 import type { PanelParams } from "../../layout/index.ts";
 import { gridPanels } from "../../state/index.ts";
 import { DockContext, useBoard, useDock } from "./context.ts";
 import { drawDock } from "./drawing.ts";
+import { LockIcon } from "./icons.tsx";
 import type { Narrow } from "./narrow.ts";
 import { PanelPicker, usePickerButton } from "./picker.tsx";
 import type { Settings } from "./settings.ts";
@@ -97,7 +98,7 @@ function LockedTab(props: IDockviewPanelHeaderProps): ReactElement {
 function AddPanelButton({ api, group }: IDockviewHeaderActionsProps): ReactElement | null {
   const button = usePickerButton(() => {
     const shown = group.activePanel;
-    return shown === undefined ? undefined : panelOf(shown.id);
+    return shown === undefined ? undefined : panelFromId(shown.id);
   });
   if (api.location.type === "edge") return null;
   return (
@@ -126,9 +127,7 @@ function EmptyView(): ReactElement | null {
   if (!core.lock.board) return <EmptyPrompt />;
   return (
     <div className="blockr-dock-empty">
-      <svg viewBox="0 0 16 16" width="32" height="32" aria-hidden="true" focusable="false" fill="currentColor">
-        <path d="M8 1a3 3 0 0 0-3 3v3H4.5A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7H11V4a3 3 0 0 0-3-3Zm-1.75 6V4a1.75 1.75 0 1 1 3.5 0v3h-3.5Z" />
-      </svg>
+      <LockIcon size={32} />
       <p>This view is empty</p>
     </div>
   );

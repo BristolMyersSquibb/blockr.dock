@@ -71,7 +71,7 @@ export function sameEntry(a: Entry, b: Entry): boolean {
 export function keyIn(state: DockState, folder: FolderId | null, before: Entry | undefined, moving?: Entry): string {
   const others = inFolder(state, folder).filter((entry) => moving === undefined || !sameEntry(entry, moving));
   const at = before === undefined ? others.length : others.findIndex((entry) => sameEntry(entry, before));
-  const index = (entry: Entry | undefined) => (entry === undefined ? null : indexOf(state, entry));
+  const index = (entry: Entry | undefined) => (entry === undefined ? null : entryIndex(state, entry));
   const [key] = keysBetween(index(others[at - 1]), index(others[at]), 1);
   return key ?? generateKeyBetween(null, null);
 }
@@ -121,7 +121,7 @@ export function keysBetween(a: string | null, b: string | null, n: number): stri
 }
 
 // The `index` of a view or folder, or null where the state lacks it.
-function indexOf(state: DockState, entry: Entry): string | null {
+function entryIndex(state: DockState, entry: Entry): string | null {
   return ("view" in entry ? state.views[entry.view]?.index : state.folders[entry.folder]?.index) ?? null;
 }
 

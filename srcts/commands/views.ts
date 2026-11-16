@@ -15,7 +15,7 @@
 import type { Patch } from "@blockr/core";
 import { firstView, keyIn, rehoused, sitsAt, within } from "../state/index.ts";
 import type { DockState, Entry, FolderId, Grid, ViewId } from "../state/index.ts";
-import { at, command, fits, folderOrTop, givenGridFailures, nextName, refuse, stateOf } from "./common.ts";
+import { at, command, dockState, fits, folderOrTop, givenGridFailures, nextName, refuse } from "./common.ts";
 import * as schemas from "./schemas.ts";
 
 // The grid of a view that shows nothing.
@@ -70,13 +70,13 @@ export const viewCommands = [
       before: schemas.before,
       grid: schemas.ref("Grid", "The grid of the new view, which says which panels it shows and where."),
     }),
-    enabled(board, args, { lock }) {
-      const state = stateOf(board);
+    preflight(board, args, { lock }) {
+      const state = dockState(board);
       const folder = args.folder ?? null;
       return editable(state, lock.board) && folderOrTop(state, folder) && fits(state, folder, args.before);
     },
     run(board, args, { mintId }) {
-      const state = stateOf(board);
+      const state = dockState(board);
       if (state === undefined) return [];
       const grid = args.grid ?? EMPTY;
       refuse(givenGridFailures(board, grid));
@@ -103,12 +103,12 @@ export const viewCommands = [
     description:
       "Removes a view, and makes the first view of the navigation active where the view it removes was. It removes no block, and refuses to remove the last view.",
     args: schemas.object({ view: schemas.view }, ["view"]),
-    enabled(board, { view }, { lock }) {
-      const state = stateOf(board);
+    preflight(board, { view }, { lock }) {
+      const state = dockState(board);
       return editable(state, lock.board) && Object.hasOwn(state.views, view) && Object.keys(state.views).length > 1;
     },
     run(board, { view }) {
-      const state = stateOf(board);
+      const state = dockState(board);
       if (state === undefined) return [];
       const views = Object.fromEntries(Object.entries(state.views).filter(([id]) => id !== view));
       const patches: Patch[] = [{ op: "remove", path: at("views", view) }];
@@ -122,8 +122,8 @@ export const viewCommands = [
     label: "Rename view",
     description: "Gives a view a new name.",
     args: schemas.object({ view: schemas.view, name: schemas.name("view", "The view's new name.") }, ["view", "name"]),
-    enabled(board, { view }, { lock }) {
-      const state = stateOf(board);
+    preflight(board, { view }, { lock }) {
+      const state = dockState(board);
       return editable(state, lock.board) && Object.hasOwn(state.views, view);
     },
     run: (_board, { view, name }) => ({ patches: [{ op: "replace", path: at("views", view, "name"), value: name }] }),
@@ -135,8 +135,8 @@ export const viewCommands = [
     description:
       "Moves a view into a folder, or to the top, before the view or folder that `before` names, or at the end of that folder.",
     args: schemas.object({ view: schemas.view, folder: schemas.into("view"), before: schemas.before }, ["view", "folder"]),
-    enabled(board, { view, folder, before }, { lock }) {
-      const state = stateOf(board);
+    preflight(board, { view, folder, before }, { lock }) {
+      const state = dockState(board);
       return (
         editable(state, lock.board) &&
         Object.hasOwn(state.views, view) &&
@@ -145,7 +145,7 @@ export const viewCommands = [
       );
     },
     run(board, { view, folder, before }) {
-      const state = stateOf(board);
+      const state = dockState(board);
       const moving = state?.views[view];
       if (state === undefined || moving === undefined) return [];
       if (moving.folder === folder && sitsAt(state, { view }, folder, before)) return [];
@@ -165,8 +165,8 @@ export const viewCommands = [
       "Makes a view the active one, which the dock shows. It takes no undo step, since it changes only what the user looks at.",
     args: schemas.object({ view: schemas.view }, ["view"]),
     undo: false,
-    enabled(board, { view }) {
-      const state = stateOf(board);
+    preflight(board, { view }) {
+      const state = dockState(board);
       return state !== undefined && Object.hasOwn(state.views, view);
     },
     run: (_board, { view }) => ({ patches: [{ op: "replace", path: at("active"), value: view }] }),
@@ -182,13 +182,13 @@ export const viewCommands = [
       folder: schemas.into("folder", true),
       before: schemas.before,
     }),
-    enabled(board, args, { lock }) {
-      const state = stateOf(board);
+    preflight(board, args, { lock }) {
+      const state = dockState(board);
       const folder = args.folder ?? null;
       return editable(state, lock.board) && folderOrTop(state, folder) && fits(state, folder, args.before);
     },
     run(board, args, { mintId }) {
-      const state = stateOf(board);
+      const state = dockState(board);
       if (state === undefined) return [];
       const folder = args.folder ?? null;
       const value = {
@@ -206,12 +206,12 @@ export const viewCommands = [
     description:
       "Removes a folder, and moves the views and folders that it holds up into the folder that held it, in its place and in their order. It removes no view.",
     args: schemas.object({ folder: schemas.folder }, ["folder"]),
-    enabled(board, { folder }, { lock }) {
-      const state = stateOf(board);
+    preflight(board, { folder }, { lock }) {
+      const state = dockState(board);
       return editable(state, lock.board) && Object.hasOwn(state.folders, folder);
     },
     run(board, { folder }) {
-      const state = stateOf(board);
+      const state = dockState(board);
       if (state === undefined) return [];
       const folders = Object.fromEntries(Object.entries(state.folders).filter(([id]) => id !== folder));
       const { moves } = rehoused({ ...state, folders }, state);
@@ -232,8 +232,8 @@ export const viewCommands = [
     label: "Rename folder",
     description: "Gives a folder a new name.",
     args: schemas.object({ folder: schemas.folder, name: schemas.name("folder", "The folder's new name.") }, ["folder", "name"]),
-    enabled(board, { folder }, { lock }) {
-      const state = stateOf(board);
+    preflight(board, { folder }, { lock }) {
+      const state = dockState(board);
       return editable(state, lock.board) && Object.hasOwn(state.folders, folder);
     },
     run: (_board, { folder, name }) => ({
@@ -247,8 +247,8 @@ export const viewCommands = [
     description:
       "Moves a folder, with what it holds, into another folder, or to the top, before the view or folder that `before` names, or at the end of that folder. It refuses to move a folder into itself or into a folder inside it.",
     args: schemas.object({ folder: schemas.folder, into: schemas.into("folder"), before: schemas.before }, ["folder", "into"]),
-    enabled(board, { folder, into, before }, { lock }) {
-      const state = stateOf(board);
+    preflight(board, { folder, into, before }, { lock }) {
+      const state = dockState(board);
       return (
         editable(state, lock.board) &&
         Object.hasOwn(state.folders, folder) &&
@@ -258,7 +258,7 @@ export const viewCommands = [
       );
     },
     run(board, { folder, into, before }) {
-      const state = stateOf(board);
+      const state = dockState(board);
       const moving = state?.folders[folder];
       if (state === undefined || moving === undefined) return [];
       if (moving.folder === into && sitsAt(state, { folder }, into, before)) return [];

@@ -28,7 +28,17 @@ describe("readSettings()", () => {
       lockRearrange: false,
       breakpoint: undefined,
       fraction: 0.8,
+      spinnerDelay: 200,
     });
+  });
+
+  test("reads spinner_delay_ms as a whole number of milliseconds, and takes 200 where it is not one of at least 0", async () => {
+    expect(await readSettings(coreWith({ spinner_delay_ms: 0 }))).toMatchObject({ spinnerDelay: 0 });
+    expect(await readSettings(coreWith({ spinner_delay_ms: "350" }))).toMatchObject({ spinnerDelay: 350 });
+    expect(await readSettings(coreWith({ spinner_delay_ms: 250.7 }))).toMatchObject({ spinnerDelay: 250 });
+    for (const sent of [-1, "soon", true, null, "Inf"]) {
+      expect(await readSettings(coreWith({ spinner_delay_ms: sent }))).toMatchObject({ spinnerDelay: 200 });
+    }
   });
 
   test("locks the sizes and the arrangement under the board lock, unless a deployment leaves them to readers", async () => {

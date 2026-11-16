@@ -1,0 +1,73 @@
+// The dock's skill `layout`, which teaches the assistant's model the dock's
+// commands and grids
+// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.4.5#what-a-package-adds).
+// R in blockr.assistant lists it from inst/assistant/skills, with the skills
+// of every package of the app.
+// The skill is text that only the model reads, so these tests are what fails
+// where a command that it names goes or is renamed.
+
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { stubCore } from "@blockr/core/stubs";
+import { expect, onTestFinished, test } from "vitest";
+import { DOCK, dockCommands } from "./index.ts";
+
+// The text of a file, by its path from this file.
+// Vite rewrites `new URL()` of a string literal into the URL that its server
+// serves the file at, so the path comes in as an argument.
+const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
+
+const SKILL = read("../../inst/assistant/skills/layout/SKILL.md");
+
+// How many characters of a skill's description the catalogue of the system
+// prompt shows, the blockr option assistant_skill_description_max_chars
+// unless a deployment sets it.
+const DESCRIPTION_MAX_CHARS = 1024;
+
+// The top-level keys of the skill's YAML frontmatter, each with its value.
+// A value that the key's line leaves open, as `>-` does, takes the indented
+// lines below it, joined with spaces, as YAML folds them.
+function frontmatter(text: string): Record<string, string> {
+  const [first, ...lines] = text.split("\n");
+  if (first !== "---") throw new Error("The skill starts with no YAML frontmatter.");
+  const end = lines.indexOf("---");
+  if (end === -1) throw new Error("The skill's YAML frontmatter has no end.");
+  const keys: Record<string, string> = {};
+  let key: string | undefined;
+  for (const line of lines.slice(0, end)) {
+    const top = /^([A-Za-z][\w-]*):\s*(.*)$/.exec(line);
+    if (top?.[1] !== undefined) {
+      key = top[1];
+      const value = top[2] ?? "";
+      keys[key] = value === ">-" || value === ">" ? "" : value;
+    } else if (key !== undefined && /^\s+\S/.test(line)) {
+      keys[key] = `${keys[key] ?? ""} ${line.trim()}`.trim();
+    }
+  }
+  return keys;
+}
+
+test("the skill is named after its directory and names no class, so the catalogue lists it in every app that runs the dock", () => {
+  const keys = frontmatter(SKILL);
+  expect(Object.keys(keys)).toEqual(["name", "description"]);
+  expect(keys.name).toBe("layout");
+});
+
+test("the catalogue shows the skill's description in full", () => {
+  const description = frontmatter(SKILL).description ?? "";
+  expect(description).not.toBe("");
+  expect(description.length).toBeLessThanOrEqual(DESCRIPTION_MAX_CHARS);
+});
+
+test("the skill names only commands that the dock and core register", async () => {
+  const { core, settled, stop } = await stubCore();
+  onTestFinished(stop);
+  await settled();
+  const registered = new Set([...Object.keys(core.commands.registered()), ...dockCommands.map((command) => command.id)]);
+
+  const named = new Set(SKILL.match(/\bblockr\.(?:core|dock)-\w+/g));
+  named.delete(DOCK);
+
+  expect(named.size).toBeGreaterThan(0);
+  expect([...named].filter((id) => !registered.has(id))).toEqual([]);
+});

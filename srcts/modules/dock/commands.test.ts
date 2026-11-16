@@ -129,7 +129,7 @@ async function start(
     // The dock's state on the board.
     dock: () => core.store.board().plugins[DOCK] as DockState,
     run: (name: string, args: Json = {}) => core.commands.run(`blockr.dock-${name}`, args),
-    enabled: (name: string, args: Json = {}) => core.commands.enabled(`blockr.dock-${name}`, args),
+    preflight: (name: string, args: Json = {}) => core.commands.preflight(`blockr.dock-${name}`, args),
   };
 }
 
@@ -214,8 +214,8 @@ describe("blockr.dock-add_view", () => {
   test("refuses a name of spaces alone, a folder that the state lacks, and a `before` in another folder", async () => {
     const { dock, run } = await start();
     await expect(run("add_view", { name: "  " })).rejects.toThrow("/name");
-    await expect(run("add_view", { folder: "nope" })).rejects.toThrow("not enabled");
-    await expect(run("add_view", { folder: "f", before: { view: "side" } })).rejects.toThrow("not enabled");
+    await expect(run("add_view", { folder: "nope" })).rejects.toThrow("fails its preflight");
+    await expect(run("add_view", { folder: "f", before: { view: "side" } })).rejects.toThrow("fails its preflight");
     expect(dock()).toEqual(state);
   });
 
@@ -249,9 +249,9 @@ describe("blockr.dock-remove_view", () => {
 
   test("refuses to remove the last view", async () => {
     const one: DockState = { ...state, views: { main: viewIn(state, "main") } };
-    const { dock, enabled, run } = await start({ dockState: one });
-    expect(enabled("remove_view", { view: "main" })).toBe(false);
-    await expect(run("remove_view", { view: "main" })).rejects.toThrow("not enabled");
+    const { dock, preflight, run } = await start({ dockState: one });
+    expect(preflight("remove_view", { view: "main" })).toBe(false);
+    await expect(run("remove_view", { view: "main" })).rejects.toThrow("fails its preflight");
     expect(dock()).toEqual(one);
   });
 });
@@ -262,7 +262,7 @@ describe("blockr.dock-rename_view", () => {
     await run("rename_view", { view: "side", name: "Main" });
     expect(dock().views.side?.name).toBe("Main");
     await expect(run("rename_view", { view: "side", name: "\t" })).rejects.toThrow("/name");
-    await expect(run("rename_view", { view: "nope", name: "New" })).rejects.toThrow("not enabled");
+    await expect(run("rename_view", { view: "nope", name: "New" })).rejects.toThrow("fails its preflight");
   });
 });
 
@@ -297,9 +297,9 @@ describe("blockr.dock-move_view", () => {
 
   test("refuses a `before` that is the view itself, or that its folder does not hold", async () => {
     const { run } = await start();
-    await expect(run("move_view", { view: "side", folder: null, before: { view: "side" } })).rejects.toThrow("not enabled");
-    await expect(run("move_view", { view: "side", folder: null, before: { view: "inner" } })).rejects.toThrow("not enabled");
-    await expect(run("move_view", { view: "side", folder: "nope" })).rejects.toThrow("not enabled");
+    await expect(run("move_view", { view: "side", folder: null, before: { view: "side" } })).rejects.toThrow("fails its preflight");
+    await expect(run("move_view", { view: "side", folder: null, before: { view: "inner" } })).rejects.toThrow("fails its preflight");
+    await expect(run("move_view", { view: "side", folder: "nope" })).rejects.toThrow("fails its preflight");
   });
 });
 
@@ -319,7 +319,7 @@ describe("blockr.dock-activate_view", () => {
 
   test("refuses a view that the state lacks", async () => {
     const { run } = await start();
-    await expect(run("activate_view", { view: "nope" })).rejects.toThrow("not enabled");
+    await expect(run("activate_view", { view: "nope" })).rejects.toThrow("fails its preflight");
   });
 });
 
@@ -378,15 +378,15 @@ describe("blockr.dock-move_folder", () => {
 
   test("refuses to move a folder into itself or into a folder inside it", async () => {
     const { dock, run } = await start();
-    await expect(run("move_folder", { folder: "g", into: "g" })).rejects.toThrow("not enabled");
-    await expect(run("move_folder", { folder: "f", into: "g" })).rejects.toThrow("not enabled");
+    await expect(run("move_folder", { folder: "g", into: "g" })).rejects.toThrow("fails its preflight");
+    await expect(run("move_folder", { folder: "f", into: "g" })).rejects.toThrow("fails its preflight");
     expect(dock()).toEqual(state);
   });
 });
 
 describe("the commands for views and folders on a locked board", () => {
   test("add, rename, move or remove no view or folder, while a reader still switches views", async () => {
-    const { dock, enabled, run } = await start({ locked: true });
+    const { dock, preflight, run } = await start({ locked: true });
 
     for (const [name, args] of [
       ["add_view", {}],
@@ -398,7 +398,7 @@ describe("the commands for views and folders on a locked board", () => {
       ["rename_folder", { folder: "f", name: "New" }],
       ["move_folder", { folder: "g", into: null }],
     ] as const) {
-      expect(enabled(name, args)).toBe(false);
+      expect(preflight(name, args)).toBe(false);
     }
 
     await run("activate_view", { view: "side" });
@@ -434,9 +434,9 @@ describe("blockr.dock-add_panel", () => {
   });
 
   test("refuses a panel that the view shows, a block that the board lacks, and a `near` that the view does not show", async () => {
-    const { dock, enabled, run } = await start();
-    expect(enabled("add_panel", { view: "main", panel: a })).toBe(false);
-    expect(enabled("add_panel", { view: "main", panel: { block: "z" } })).toBe(false);
+    const { dock, preflight, run } = await start();
+    expect(preflight("add_panel", { view: "main", panel: a })).toBe(false);
+    expect(preflight("add_panel", { view: "main", panel: { block: "z" } })).toBe(false);
     await expect(run("add_panel", { view: "inner", panel: a, near: c })).rejects.toThrow(
       'The view does not show the panel of the block "c", which near names.',
     );
@@ -461,7 +461,7 @@ describe("blockr.dock-remove_panel", () => {
 
   test("refuses a panel that the view does not show", async () => {
     const { run } = await start();
-    await expect(run("remove_panel", { view: "side", panel: a })).rejects.toThrow("not enabled");
+    await expect(run("remove_panel", { view: "side", panel: a })).rejects.toThrow("fails its preflight");
   });
 });
 
@@ -497,9 +497,9 @@ describe("blockr.dock-move_panel", () => {
   });
 
   test("refuses a panel that the view does not show, and a `near` that is the panel itself", async () => {
-    const { enabled } = await start();
-    expect(enabled("move_panel", { view: "side", panel: a })).toBe(false);
-    expect(enabled("move_panel", { view: "main", panel: a, near: a })).toBe(false);
+    const { preflight } = await start();
+    expect(preflight("move_panel", { view: "side", panel: a })).toBe(false);
+    expect(preflight("move_panel", { view: "main", panel: a, near: a })).toBe(false);
   });
 });
 
@@ -596,8 +596,8 @@ describe("blockr.dock-show_panel", () => {
   });
 
   test("on a locked board, only has the active view show a panel that it holds, opening its rail", async () => {
-    const { dock, enabled, run } = await start({ dockState: collapsed, locked: true });
-    expect(enabled("show_panel", { panel: { plugin: "blockr.ai-chat_plugin" } })).toBe(false);
+    const { dock, preflight, run } = await start({ dockState: collapsed, locked: true });
+    expect(preflight("show_panel", { panel: { plugin: "blockr.ai-chat_plugin" } })).toBe(false);
 
     await run("show_panel", { panel: a });
     expect(dock().views.main?.grid.children[0]).toEqual({ panels: [a, b], active: a });
@@ -687,16 +687,16 @@ describe("blockr.dock-collapse_rail", () => {
 
   test("refuses a view without a rail on the edge", async () => {
     const { run } = await start();
-    await expect(run("collapse_rail", { view: "side", edge: "left", collapsed: true })).rejects.toThrow("not enabled");
+    await expect(run("collapse_rail", { view: "side", edge: "left", collapsed: true })).rejects.toThrow("fails its preflight");
   });
 });
 
 describe("the commands for panels and rails on a locked board", () => {
   test("add and remove no panel, while a reader still has a tab group show another panel and collapses a rail", async () => {
-    const { dock, enabled, run } = await start({ locked: true });
+    const { dock, preflight, run } = await start({ locked: true });
 
-    expect(enabled("add_panel", { view: "main", panel: md })).toBe(false);
-    expect(enabled("remove_panel", { view: "main", panel: c })).toBe(false);
+    expect(preflight("add_panel", { view: "main", panel: md })).toBe(false);
+    expect(preflight("remove_panel", { view: "main", panel: c })).toBe(false);
 
     await run("activate_panel", { view: "main", panel: a });
     await run("collapse_rail", { view: "main", edge: "left", collapsed: true });
@@ -785,11 +785,11 @@ describe("blockr.dock-set_sections", () => {
   });
 
   test("refuses a section twice, a block that the board lacks, and a locked board", async () => {
-    const { enabled, run } = await start();
+    const { preflight, run } = await start();
     await expect(run("set_sections", { block: "a", sections: ["inputs", "inputs"] })).rejects.toThrow("/sections");
-    expect(enabled("set_sections", { block: "z", sections: [] })).toBe(false);
+    expect(preflight("set_sections", { block: "z", sections: [] })).toBe(false);
 
     const locked = await start({ locked: true });
-    expect(locked.enabled("set_sections", { block: "a", sections: [] })).toBe(false);
+    expect(locked.preflight("set_sections", { block: "a", sections: [] })).toBe(false);
   });
 });
