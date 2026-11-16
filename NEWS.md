@@ -5,8 +5,14 @@
   as an accordion, whose categories the user expands in place, several at
   once.
   An expanded category shows the UI of each of its board options, which core
-  mounts, with a thin rule between them.
-  Each category shows how many board options it holds.
+  mounts, in a tray drawn as a block's gear tray.
+  Each category shows how many board options it holds, and a dot where the
+  board holds a value other than the default for one of them.
+  A Reset button by the UI of such a board option sets its default again,
+  which undo cannot do.
+  A button in the sidebar's header expands every category, or collapses them
+  all, and the summary of an expanded category stays in view as the sidebar
+  scrolls.
   The categories come in alphabetical order, and so do the board options in a
   category, by their labels.
   A category that the user expanded stays expanded as the sidebar closes and

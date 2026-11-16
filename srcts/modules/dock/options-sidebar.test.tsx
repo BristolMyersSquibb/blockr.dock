@@ -166,8 +166,11 @@ const fields = (el: HTMLElement, name: string): HTMLElement[] => [
   ...category(el, name).querySelectorAll<HTMLElement>(".blockr-dock-sidebar-option :is(input, select)"),
 ];
 
+// The button whose accessible name, or else whose text, is the one given.
 function button(root: ParentNode, name: string): HTMLElement {
-  const found = [...root.querySelectorAll<HTMLElement>("button")].find((b) => b.getAttribute("aria-label") === name);
+  const found = [...root.querySelectorAll<HTMLElement>("button")].find(
+    (b) => b.getAttribute("aria-label") === name || (!b.hasAttribute("aria-label") && b.textContent === name),
+  );
   if (found === undefined) throw new Error(`No button "${name}".`);
   return found;
 }
@@ -261,7 +264,62 @@ describe("the options sidebar", () => {
     const counts = categoriesIn(el).map((details) => find(details, ".blockr-dock-sidebar-count [aria-hidden='true']").textContent);
     expect(counts).toEqual(["2", "1", "3", "1"]);
     expect(summary(el, "Theme options").textContent).toBe("Theme options3, 3 board options");
-    expect(summary(el, "Table options").textContent).toBe("Table options1, 1 board option");
+    expect(summary(el, "View options").textContent).toBe("View options1, 1 board option");
+  });
+
+  test("marks a category where the board holds a value other than the default for one of its board options", async () => {
+    const { el } = await startSidebar();
+    await open(el);
+    // The board of core's reply to hello holds 50 for n_rows, whose default is 10.
+    await vi.waitFor(() => {
+      expect(summary(el, "Table options").textContent).toBe("Table options1, 1 board option, 1 changed from its default");
+    });
+    const marked = categoriesIn(el).filter((details) => details.querySelector(".blockr-dock-sidebar-changed") !== null);
+    expect(marked.map(nameOf)).toEqual(["Table options"]);
+  });
+
+  test("resets a board option to its default with the Reset button by its UI, which hands the focus to the UI", async () => {
+    const { el, core } = await startSidebar({ options: { compact: { value: true, version: 1 } } });
+    await open(el);
+    await expand(el, "Theme options", 3);
+    await vi.waitFor(() => {
+      expect(category(el, "Theme options").querySelectorAll(".blockr-dock-sidebar-reset")).toHaveLength(1);
+    });
+    expect(summary(el, "Theme options").textContent).toBe("Theme options3, 3 board options, 1 changed from its default");
+
+    const reset = button(category(el, "Theme options"), "Reset Compact to its default");
+    reset.focus();
+    click(reset);
+    await vi.waitFor(() => {
+      expect(core.store.board().options.compact).toBe(false);
+    });
+    await drawn();
+    expect(category(el, "Theme options").querySelectorAll(".blockr-dock-sidebar-reset")).toHaveLength(0);
+    expect(summary(el, "Theme options").querySelector(".blockr-dock-sidebar-changed")).toBeNull();
+    expect(document.activeElement).toBe(fields(el, "Theme options")[0]);
+  });
+
+  test("expands every category from its header, and collapses them all once every one is expanded", async () => {
+    const { el } = await startSidebar();
+    await open(el);
+    const toggle = find(sidebarIn(el), ".blockr-dock-sidebar-expand");
+    expect(toggle.textContent).toBe("Expand all");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+
+    await expand(el, "Theme options", 3);
+    expect(toggle.textContent).toBe("Expand all");
+    click(toggle);
+    await vi.waitFor(() => {
+      expect(expanded(el)).toEqual(CATEGORIES);
+    });
+    expect(toggle.textContent).toBe("Collapse all");
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+
+    click(toggle);
+    await vi.waitFor(() => {
+      expect(expanded(el)).toEqual([]);
+    });
+    expect(toggle.textContent).toBe("Expand all");
   });
 
   test("expands a category in place, where core mounts the UI of each of its board options, in the alphabetical order of their labels", async () => {
@@ -429,20 +487,20 @@ describe("the options sidebar", () => {
   test("keeps the focus inside it on Tab and Shift+Tab, pinned or not", async () => {
     const { el } = await startSidebar();
     await open(el);
-    const pin = button(sidebarIn(el), "Pin sidebar");
+    const first = button(sidebarIn(el), "Expand all");
     const last = summary(el, "View options");
 
     last.focus();
     expect(press("Tab")).toBe(true);
-    expect(document.activeElement).toBe(pin);
+    expect(document.activeElement).toBe(first);
     expect(press("Tab", { shiftKey: true })).toBe(true);
     expect(document.activeElement).toBe(last);
 
-    click(pin);
+    click(button(sidebarIn(el), "Pin sidebar"));
     await drawn();
     summary(el, "Board options").focus();
     expect(press("Tab")).toBe(false);
-    pin.focus();
+    first.focus();
     expect(press("Tab", { shiftKey: true })).toBe(true);
     expect(document.activeElement).toBe(last);
   });
@@ -453,7 +511,7 @@ describe("the options sidebar", () => {
     await expand(el, "View options", 1);
     fields(el, "View options")[0]?.focus();
     expect(press("Tab")).toBe(true);
-    expect(document.activeElement).toBe(button(sidebarIn(el), "Pin sidebar"));
+    expect(document.activeElement).toBe(button(sidebarIn(el), "Expand all"));
   });
 
   test("shows a board option that comes onto the board later", async () => {

@@ -94,6 +94,7 @@
     color-mix(in srgb, #2563eb 7%, transparent)
   );
   --blockr-dock-text-accent-strong: var(--blockr-color-text-accent-strong, #1d4ed8);
+  --blockr-dock-bg-tray: var(--blockr-color-bg-subtle, #f9fafb);
   --blockr-dock-logo: var(--blockr-logo, #089e76);
   --blockr-dock-text-danger: var(--blockr-color-text-danger, #b91c1c);
   --blockr-dock-bg-danger: var(--blockr-color-bg-danger, #fef2f2);
@@ -128,6 +129,7 @@
     color-mix(in srgb, #3b82f6 7%, transparent)
   );
   --blockr-dock-text-accent-strong: var(--blockr-color-text-accent-strong, #60a5fa);
+  --blockr-dock-bg-tray: var(--blockr-color-bg-page, #0e1219);
   --blockr-dock-logo: var(--blockr-logo, #089e76);
   --blockr-dock-text-danger: var(--blockr-color-text-danger, #f87171);
   --blockr-dock-bg-danger: var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1));
@@ -1158,9 +1160,36 @@ button.blockr-dock-bar-name:hover {
 }
 
 .blockr-dock-sidebar-button:focus-visible,
+.blockr-dock-sidebar-expand:focus-visible,
 .blockr-dock-sidebar-summary:focus-visible {
   outline: 2px solid var(--blockr-dock-border-accent);
   outline-offset: -2px;
+}
+
+/*
+ * The button that expands or collapses every category: a quiet text button of
+ * the design system at its size xs, in 13px, in the muted colour, which takes
+ * the hover wash.
+ */
+.blockr-dock-sidebar-expand {
+  flex: none;
+  box-sizing: border-box;
+  height: var(--blockr-control-h-xs, 26px);
+  margin-right: 4px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: var(--blockr-dock-text-muted);
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  cursor: pointer;
+}
+
+.blockr-dock-sidebar-expand:hover {
+  background: var(--blockr-dock-bg-hover);
+  color: var(--blockr-dock-text);
 }
 
 /*
@@ -1187,12 +1216,17 @@ button.blockr-dock-bar-name:hover {
   }
 }
 
-/* The body, which scrolls where what it holds outgrows the window. */
+/*
+ * The body, which scrolls where what it holds outgrows the window.
+ * Its content starts 20 pixels from the edge, and 16 pixels below the header,
+ * through margins of what it holds rather than its own padding, since a summary
+ * that stays at the top while the body scrolls would stay below that padding.
+ */
 .blockr-dock-sidebar-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 16px 20px;
+  padding: 0 20px;
 }
 
 /*
@@ -1205,13 +1239,19 @@ button.blockr-dock-bar-name:hover {
  * category is expanded, or right while it is collapsed.
  * As the header of a group that folds in the design system, the name is at
  * weight 600, and the count of the category's board options follows it in
- * 13px `text-muted`.
+ * 13px `text-muted`, then a dot in the accent colour where the board holds a
+ * value other than the default for one of them.
+ * While the body scrolls, the summary of an expanded category stays at its
+ * top, on the surface, so that what scrolls under it does not show through.
  */
 .blockr-dock-sidebar-categories {
-  margin: -8px -10px;
+  margin: 8px -10px;
 }
 
 .blockr-dock-sidebar-summary {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -1219,6 +1259,7 @@ button.blockr-dock-bar-name:hover {
   min-height: 34px;
   padding: 0 10px;
   border-radius: var(--blockr-radius-sm, 4px);
+  background: var(--blockr-dock-bg-surface);
   list-style: none;
   cursor: pointer;
 }
@@ -1229,7 +1270,9 @@ button.blockr-dock-bar-name:hover {
 
 .blockr-dock-sidebar-summary:hover,
 .blockr-dock-sidebar-summary:focus-visible {
-  background: var(--blockr-dock-bg-hover);
+  background:
+    linear-gradient(var(--blockr-dock-bg-hover), var(--blockr-dock-bg-hover)),
+    var(--blockr-dock-bg-surface);
 }
 
 .blockr-dock-sidebar-summary-name {
@@ -1246,6 +1289,14 @@ button.blockr-dock-bar-name:hover {
   color: var(--blockr-dock-text-muted);
   font-size: var(--blockr-font-size-sm, 0.8125rem);
   font-variant-numeric: tabular-nums;
+}
+
+.blockr-dock-sidebar-changed {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--blockr-radius-pill, 999px);
+  background: var(--blockr-dock-border-accent);
 }
 
 .blockr-dock-sidebar-summary .blockr-dock-chevron {
@@ -1300,26 +1351,57 @@ button.blockr-dock-bar-name:hover {
 }
 
 /*
- * The UI of each board option of an expanded category, which lines up with
- * the category's name, after its chevron.
- * A divider of the design system, 1px in `border-default`, parts each board
- * option from the one before, 12 pixels from each.
+ * The board options of an expanded category sit in a tray, as the design
+ * system draws a block's gear tray: on the `bg-subtle` fill, or `bg-page`
+ * under the dark theme, at a radius of 8, with no border, 16 pixels apart and
+ * with no rules between them.
+ * The tray is as wide as the category's summary, and its board options line
+ * up with the category's name.
  */
 .blockr-dock-sidebar-options {
   display: grid;
-  padding: 0 10px 8px 30px;
+  gap: 16px;
+  margin: 2px 0 8px;
+  padding: 12px 14px 16px 30px;
+  border-radius: var(--blockr-radius-lg, 8px);
+  background: var(--blockr-dock-bg-tray);
 }
 
+/*
+ * A board option's UI, with its Reset button at the top right, on the line of
+ * the UI's label, as a quiet text button in 13px, in the muted colour.
+ */
 .blockr-dock-sidebar-option {
-  padding: 12px 0;
+  position: relative;
 }
 
-.blockr-dock-sidebar-option + .blockr-dock-sidebar-option {
-  border-top: 1px solid var(--blockr-dock-border);
+.blockr-dock-sidebar-reset {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: var(--blockr-dock-text-muted);
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.blockr-dock-sidebar-reset:hover {
+  background: var(--blockr-dock-bg-hover);
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-sidebar-reset:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: 1px;
 }
 
 .blockr-dock-sidebar-note {
-  margin: 0;
+  margin: 16px 0;
   color: var(--blockr-dock-text-muted);
 }
 

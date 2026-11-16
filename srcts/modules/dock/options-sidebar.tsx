@@ -15,16 +15,25 @@
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.11#board-options-on-a-locked-board).
 //
 // The sidebar lists the categories as an accordion of `details` elements, in
-// alphabetical order, of which the user may expand several at once.
-// Each category's summary shows how many board options the category holds,
-// and a thin rule parts the board options of an expanded category:
+// alphabetical order, of which the user may expand several at once:
 // 1. A click on a category expands it in place. Core mounts the UI of each of
 //    its board options with mountOption(), in the alphabetical order of their
-//    labels.
+//    labels, in a tray as the design system draws a block's gear tray.
 // 2. Another click collapses it. Core ends those mounts once the category has
 //    folded shut.
 // The categories that the user expanded stay expanded as the sidebar closes
-// (./sidebar.ts).
+// (./sidebar.ts). A button in the header expands every category, or collapses
+// them all once every one is expanded. While the body scrolls, the summary of
+// an expanded category stays at its top.
+//
+// Each category's summary shows how many board options the category holds,
+// and a dot where the board holds a value other than the default for one of
+// them. Such a board option has a Reset button by its UI, which sets the
+// default as its value. Undo never takes back a board option's value, so the
+// Reset button is the way back to the default.
+// The sidebar works out each default as core does, from the board option's
+// definition, once for each board option while the sidebar lives. A default
+// that fails gives no Reset button.
 // The order in which the board holds its board options is no guide, since
 // core puts each default on the board once the default resolves.
 // The pages put each board option on the page of its category, which today's
@@ -53,10 +62,11 @@
 // code export becomes blockr.code's plugin. The sidebar shows no field for the
 // board's name either, since the board's name is on the bar.
 
-import type { Board, Option, OptionId } from "@blockr/core";
+import type { Board, CoreApi, Json, Option, OptionId } from "@blockr/core";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
-import { useBoard, useDock } from "./context.ts";
+import { sameJson } from "../../state/index.ts";
+import { runEdit, useBoard, useDock } from "./context.ts";
 import { Chevron, CloseIcon, PinIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
 import type { Sidebar } from "./sidebar.ts";
@@ -100,8 +110,17 @@ export function OptionsSidebar({ sidebar }: { readonly sidebar: Sidebar }): Reac
   const board = useBoard(core);
   const { open, pinned, expanded } = useSyncExternalStore(sidebar.subscribe, sidebar.state);
   const grouped = categories(board, core.options.registered());
+  const defaults = useDefaults(core, [...grouped.values()].flat());
   const ref = useRef<HTMLDivElement>(null);
   const title = `${sidebar.id}-title`;
+
+  // The default of each board option whose value on the board differs from
+  // it, by the board option's id.
+  const changed = new Map<OptionId, Json>();
+  for (const [id, value] of defaults) {
+    const held = Object.hasOwn(board.options, id) ? board.options[id] : undefined;
+    if (held !== undefined && !sameJson(held, value)) changed.set(id, value);
+  }
 
   useFocus(ref, open);
   useKeys(ref, sidebar);
@@ -122,6 +141,7 @@ export function OptionsSidebar({ sidebar }: { readonly sidebar: Sidebar }): Reac
         <h2 id={title} className="blockr-dock-sidebar-title">
           {TITLE}
         </h2>
+        {grouped.size === 0 ? null : <ExpandAll categories={[...grouped.keys()]} expanded={expanded} sidebar={sidebar} />}
         <button
           type="button"
           className="blockr-dock-sidebar-button blockr-dock-sidebar-pin"
@@ -152,7 +172,14 @@ export function OptionsSidebar({ sidebar }: { readonly sidebar: Sidebar }): Reac
         ) : (
           <div className="blockr-dock-sidebar-categories">
             {[...grouped].map(([category, ids]) => (
-              <Category key={category} category={category} ids={ids} expanded={expanded.includes(category)} sidebar={sidebar} />
+              <Category
+                key={category}
+                category={category}
+                ids={ids}
+                expanded={expanded.includes(category)}
+                changed={changed}
+                sidebar={sidebar}
+              />
             ))}
           </div>
         )}
@@ -161,17 +188,45 @@ export function OptionsSidebar({ sidebar }: { readonly sidebar: Sidebar }): Reac
   );
 }
 
+// The button that expands every category, or collapses them all once every
+// one is expanded, which says in aria-expanded whether every one is.
+function ExpandAll({
+  categories,
+  expanded,
+  sidebar,
+}: {
+  readonly categories: readonly string[];
+  readonly expanded: readonly string[];
+  readonly sidebar: Sidebar;
+}): ReactElement {
+  const all = categories.every((category) => expanded.includes(category));
+  return (
+    <button
+      type="button"
+      className="blockr-dock-sidebar-expand"
+      aria-expanded={all}
+      onClick={() => {
+        for (const category of categories) sidebar.expand(category, !all);
+      }}
+    >
+      {all ? "Collapse all" : "Expand all"}
+    </button>
+  );
+}
+
 interface CategoryProps {
   readonly category: string;
   // The ids of its board options, in their order.
   readonly ids: readonly OptionId[];
   readonly expanded: boolean;
+  // The default of each board option whose value differs from it, by id.
+  readonly changed: ReadonlyMap<OptionId, Json>;
   readonly sidebar: Sidebar;
 }
 
 // A category, whose content holds the UI of each of its board options while
 // the category is expanded, and while it folds shut.
-function Category({ category, ids, expanded, sidebar }: CategoryProps): ReactElement {
+function Category({ category, ids, expanded, changed, sidebar }: CategoryProps): ReactElement {
   // Whether the category folds shut, while which its content holds the UIs
   // still.
   const [folding, setFolding] = useState(false);
@@ -199,11 +254,12 @@ function Category({ category, ids, expanded, sidebar }: CategoryProps): ReactEle
         <Chevron />
         <span className="blockr-dock-sidebar-summary-name">{category}</span>
         <Count n={ids.length} />
+        <Changed n={ids.filter((id) => changed.has(id)).length} />
       </summary>
       {expanded || folding ? (
         <div className="blockr-dock-sidebar-options">
           {ids.map((id) => (
-            <OptionFrame key={id} option={id} />
+            <OptionLine key={id} option={id} reset={changed.get(id)} />
           ))}
         </div>
       ) : null}
@@ -218,6 +274,20 @@ function Count({ n }: { readonly n: number }): ReactElement {
     <span className="blockr-dock-sidebar-count">
       <span aria-hidden="true">{n}</span>
       <span className="blockr-dock-visually-hidden">{n === 1 ? ", 1 board option" : `, ${String(n)} board options`}</span>
+    </span>
+  );
+}
+
+// A dot after the count, where the board holds a value other than the default
+// for n of the category's board options, which a screen reader hears as
+// "2 changed from their defaults".
+function Changed({ n }: { readonly n: number }): ReactElement | null {
+  if (n === 0) return null;
+  return (
+    <span className="blockr-dock-sidebar-changed">
+      <span className="blockr-dock-visually-hidden">
+        {n === 1 ? ", 1 changed from its default" : `, ${String(n)} changed from their defaults`}
+      </span>
     </span>
   );
 }
@@ -251,12 +321,63 @@ function longest(durations: string, delays: string): number {
   return Math.max(0, ...duration.map((d, i) => d + (delay[i % delay.length] ?? 0)));
 }
 
-// The element in which core mounts the UI of a board option, or the renderer
-// that the app names for it (./mounted.tsx).
-function OptionFrame({ option }: { readonly option: OptionId }): ReactElement {
+// A board option of an expanded category: the element in which core mounts
+// its UI, or the renderer that the app names for it (./mounted.tsx), and its
+// Reset button, where `reset` gives the default that the button sets.
+// The button leaves as the value becomes the default, so it hands the focus
+// to the board option's UI first, which keeps the focus in the sidebar.
+function OptionLine({ option, reset }: { readonly option: OptionId; readonly reset: Json | undefined }): ReactElement {
   const { core } = useDock();
   const mount = useCallback((el: HTMLElement) => core.mountOption(el, option), [core, option]);
-  return <Mounted mount={mount} className="blockr-dock-sidebar-option" data={{ "data-option": option }} />;
+  const line = useRef<HTMLDivElement>(null);
+  const registered = core.options.registered();
+  const label = Object.hasOwn(registered, option) ? (registered[option]?.label ?? option) : option;
+  return (
+    <div ref={line} className="blockr-dock-sidebar-option" data-option={option}>
+      <Mounted mount={mount} className="blockr-dock-sidebar-option-ui" />
+      {reset === undefined ? null : (
+        <button
+          type="button"
+          className="blockr-dock-sidebar-reset"
+          aria-label={`Reset ${label} to its default`}
+          title="Reset to the default"
+          onClick={() => {
+            line.current?.querySelector(".blockr-dock-sidebar-option-ui")?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+            runEdit(core, "blockr.core-set_option", { id: option, value: reset });
+          }}
+        >
+          Reset
+        </button>
+      )}
+    </div>
+  );
+}
+
+// The default of each of the board options, as its definition gives it, by
+// id, once the default has resolved.
+// A default that a function gives may ask R for a blockr option, so it
+// resolves later. The sidebar asks for each board option's default once, for
+// as long as it lives, and leaves out a default that fails.
+function useDefaults(core: CoreApi, ids: readonly OptionId[]): ReadonlyMap<OptionId, Json> {
+  const [resolved, setResolved] = useState<ReadonlyMap<OptionId, Json>>(() => new Map());
+  const asked = useRef(new Set<OptionId>());
+  useEffect(() => {
+    const registered = core.options.registered();
+    for (const id of ids) {
+      if (asked.current.has(id)) continue;
+      asked.current.add(id);
+      const def = Object.hasOwn(registered, id) ? registered[id] : undefined;
+      if (def === undefined) continue;
+      const given = def.default;
+      void Promise.resolve(typeof given === "function" ? given(core) : given).then(
+        (value) => {
+          setResolved((before) => new Map(before).set(id, value));
+        },
+        () => undefined,
+      );
+    }
+  });
+  return resolved;
 }
 
 // Gives the sidebar's first category the focus as the sidebar opens, and the
