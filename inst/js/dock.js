@@ -704,7 +704,7 @@ function shares(grid2) {
 }
 
 // srcts/state/navigation.ts
-import { generateKeyBetween, generateNKeysBetween } from "./libraries-a3ad4872.js";
+import { generateKeyBetween, generateNKeysBetween } from "./vendor-a3ad4872.js";
 function inFolder(state, folder2) {
   const views = Object.entries(state.views).filter(([, view2]) => holder(state, view2.folder) === folder2).map(([id, view2]) => ({ entry: { view: id }, id, index: view2.index }));
   const folders = Object.entries(state.folders).filter(([id, inner]) => holder(state, inner.folder, id) === folder2).map(([id, inner]) => ({ entry: { folder: id }, id, index: inner.index }));
@@ -1709,7 +1709,7 @@ function railId(edge2) {
 }
 
 // srcts/layout/layout.ts
-import { Orientation } from "./libraries-a3ad4872.js";
+import { Orientation } from "./vendor-a3ad4872.js";
 var PANEL_COMPONENT = "panel";
 function gridToLayout(grid2, title, size) {
   const panels = {};
@@ -3286,7 +3286,7 @@ function BlockCard({ id }) {
 }
 
 // srcts/modules/dock/dock.tsx
-import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./libraries-a3ad4872.js";
+import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./vendor-a3ad4872.js";
 import { useCallback as useCallback7, useEffect as useEffect3, useLayoutEffect as useLayoutEffect5, useMemo as useMemo3, useRef as useRef5, useState as useState6 } from "react";
 
 // srcts/modules/dock/drawing.ts

@@ -7,21 +7,22 @@
 //   which leaves its imports of React and of core's React SDK, its binding and
 //   its controls imports, which the page that R serves resolves through its
 //   import map. So no bundle holds any of them.
-// - The libraries that the dock bundles are the packages that package.json
-//   lists in `dependencies`: dockview-react and fractional-indexing. The build
-//   bundles them, minified, into a file of their own, libraries-<hash>.js,
-//   with every name that they export. The modules import them from that file.
-//   So a module's bundle holds only the dock's own code, unminified, and a
-//   diff of inst/js shows what an edit of srcts changed.
+// - The packages that the dock bundles from other projects are those that
+//   package.json lists in `dependencies`: dockview-react and
+//   fractional-indexing. The build bundles them, minified, into a file of
+//   their own, vendor-<hash>.js, with every name that they export. The
+//   modules import them from that file by its name. So a module's bundle
+//   holds only the dock's own code, unminified, and a diff of inst/js shows
+//   what an edit of srcts changed.
 // - An index.css beside a module is its stylesheet, bundled, unminified, into
-//   <name>.css. The build bundles the stylesheets of the libraries that it
+//   <name>.css. The build bundles the stylesheets of those packages that it
 //   imports, as the dock's imports dockview's, minified, into a file of their
-//   own, libraries-<hash>.css. The module's stylesheet imports that file in
+//   own, vendor-<hash>.css. The module's stylesheet imports that file in
 //   their place.
-// - R serves the two files of the libraries beside the modules, with no hash
-//   in their URLs. So the name of each holds a hash of its content, as core
-//   names react-<hash>.js, and no browser runs an old copy from its cache.
-//   The license comments of what each holds stay, at its end.
+// - R serves both vendor files beside the modules, with no hash in their
+//   URLs. So the name of each holds a hash of its content, as blockr.core
+//   names the file that holds React, and no browser runs an old copy from its
+//   cache. The license comments of what each holds stay, at its end.
 // - The JSON Schema of each of the dock's board options, in
 //   srcts/options/schemas.ts, is written beside the board option's module, as
 //   compact-option.schema.json beside compact-option.js, as core's build
@@ -68,9 +69,9 @@ async function modules(src: string): Promise<Entry[]> {
     .map((entry) => ({ name: entry.name, dir: join(dir, entry.name) }));
 }
 
-// The libraries that the dock bundles, by the names of their packages: those
-// that package.json lists in `dependencies`.
-async function libraries(root: string): Promise<string[]> {
+// The packages that the build bundles into the vendor files, by their names:
+// those that package.json lists in `dependencies`.
+async function vendorPackages(root: string): Promise<string[]> {
   const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as {
     readonly dependencies?: Readonly<Record<string, string>>;
   };
@@ -82,7 +83,7 @@ async function libraries(root: string): Promise<string[]> {
 export async function build(root: string): Promise<string[]> {
   const out = join(root, "inst", "js");
   const entries = await modules(join(root, "srcts"));
-  const names = await libraries(root);
+  const packages = await vendorPackages(root);
 
   await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
@@ -99,15 +100,15 @@ export async function build(root: string): Promise<string[]> {
     .map((entry) => ({ in: join(entry.dir, "index.css"), out: entry.name }))
     .filter((entry) => existsSync(entry.in));
 
-  const script =
-    entries.length === 0 || names.length === 0
+  const vendorJs =
+    entries.length === 0 || packages.length === 0
       ? undefined
-      : await bundleLibraries(root, out, "js", names.map((name) => `export * from ${JSON.stringify(name)};`));
-  const sheets = stylesheets.length === 0 ? [] : await libraryStylesheets(root, out, stylesheets, names);
-  const style =
+      : await vendorBundle(root, out, "js", packages.map((name) => `export * from ${JSON.stringify(name)};`));
+  const sheets = stylesheets.length === 0 ? [] : await vendorStylesheets(root, out, stylesheets, packages);
+  const vendorCss =
     sheets.length === 0
       ? undefined
-      : await bundleLibraries(root, out, "css", sheets.map((path) => `@import ${JSON.stringify(path)};`));
+      : await vendorBundle(root, out, "css", sheets.map((path) => `@import ${JSON.stringify(path)};`));
 
   const results = [
     ...(entries.length === 0
@@ -116,7 +117,7 @@ export async function build(root: string): Promise<string[]> {
           await esbuild.build({
             ...preset,
             ...options,
-            plugins: [...(script === undefined ? [] : [libraryImports(names, script)]), ...preset.plugins],
+            plugins: [...(vendorJs === undefined ? [] : [vendorImports(packages, vendorJs)]), ...preset.plugins],
             entryPoints: entries.map((entry) => ({ in: entryFile(entry.dir), out: entry.name })),
           }),
         ]),
@@ -126,7 +127,7 @@ export async function build(root: string): Promise<string[]> {
           await esbuild.build({
             ...options,
             bundle: true,
-            plugins: style === undefined ? [] : [libraryStylesheetImports(names, () => `./${style}`)],
+            plugins: vendorCss === undefined ? [] : [vendorStylesheetImports(packages, () => `./${vendorCss}`)],
             entryPoints: stylesheets,
           }),
         ]),
@@ -138,17 +139,17 @@ export async function build(root: string): Promise<string[]> {
 
   return [
     ...results.flatMap((result) => Object.keys(result.metafile.outputs)),
-    ...[script, style].flatMap((file) => (file === undefined ? [] : [relative(root, join(out, file))])),
+    ...[vendorJs, vendorCss].flatMap((file) => (file === undefined ? [] : [relative(root, join(out, file))])),
     ...schemas,
     ...(await optionSchemas(root, out)),
   ].sort();
 }
 
-// Bundles what the lines of a script or a stylesheet import from the
-// libraries, minified, into a file in `out`, and gives the file's name. The
-// name holds a hash of the file's content, as libraries-3f2a9c1d.js. A script
+// Bundles what the lines of a script or a stylesheet import from the vendored
+// packages, minified, into a vendor file in `out`, and gives the file's name.
+// The name holds a hash of the file's content, as vendor-3f2a9c1d.js. A script
 // takes the build preset, so that dockview's imports of React stay imports.
-async function bundleLibraries(
+async function vendorBundle(
   root: string,
   out: string,
   loader: "js" | "css",
@@ -167,54 +168,56 @@ async function bundleLibraries(
   }
 
   const text = result.outputFiles[0]?.text ?? "";
-  const file = `libraries-${createHash("sha256").update(text).digest("hex").slice(0, 8)}.${loader}`;
+  const file = `vendor-${createHash("sha256").update(text).digest("hex").slice(0, 8)}.${loader}`;
   await writeFile(join(out, file), text);
   return file;
 }
 
-// Leaves each import of a library in a module an import of the file that
-// bundles the libraries, by its name beside the module.
-function libraryImports(names: readonly string[], file: string): esbuild.Plugin {
+// Leaves each import of a vendored package in a module an import of the
+// vendor file, `file`, by its name beside the module.
+function vendorImports(packages: readonly string[], file: string): esbuild.Plugin {
   return {
-    name: "blockr.dock-library-imports",
+    name: "blockr.dock-vendor-imports",
     setup(build) {
       build.onResolve({ filter: /^[^./]/ }, (args) =>
-        names.includes(args.path) ? { path: `./${file}`, external: true } : undefined,
+        packages.includes(args.path) ? { path: `./${file}`, external: true } : undefined,
       );
     },
   };
 }
 
 // Whether a path that a stylesheet imports names a file of one of the
-// libraries, as dockview-react/dist/styles/dockview.css names one of
+// vendored packages, as dockview-react/dist/styles/dockview.css names one of
 // dockview-react.
-function libraryFile(names: readonly string[], path: string): boolean {
-  return names.some((name) => path.startsWith(`${name}/`));
+function vendoredFile(packages: readonly string[], path: string): boolean {
+  return packages.some((name) => path.startsWith(`${name}/`));
 }
 
-// Leaves each `@import` of a library's file in a stylesheet, as of
+// Leaves each `@import` of a vendored package's file in a stylesheet, as of
 // dockview-react/dist/styles/dockview.css in the dock's, an `@import` of the
 // path that `to` gives for it.
-function libraryStylesheetImports(names: readonly string[], to: (path: string) => string): esbuild.Plugin {
+function vendorStylesheetImports(packages: readonly string[], to: (path: string) => string): esbuild.Plugin {
   return {
-    name: "blockr.dock-library-stylesheets",
+    name: "blockr.dock-vendor-stylesheets",
     setup(build) {
       build.onResolve({ filter: /^[^./]/ }, (args) =>
-        args.kind === "import-rule" && libraryFile(names, args.path) ? { path: to(args.path), external: true } : undefined,
+        args.kind === "import-rule" && vendoredFile(packages, args.path)
+          ? { path: to(args.path), external: true }
+          : undefined,
       );
     },
   };
 }
 
-// The files of the libraries that the stylesheets import, by the paths that
-// they import them by, as dockview-react/dist/styles/dockview.css. It bundles
-// the stylesheets without writing them, and reads the imports of such files
-// that the bundles leave.
-async function libraryStylesheets(
+// The files of the vendored packages that the stylesheets import, by the
+// paths that they import them by, as dockview-react/dist/styles/dockview.css.
+// It bundles the stylesheets without writing them, and reads the imports of
+// such files that the bundles leave.
+async function vendorStylesheets(
   root: string,
   out: string,
   stylesheets: readonly { readonly in: string; readonly out: string }[],
-  names: readonly string[],
+  packages: readonly string[],
 ): Promise<string[]> {
   const result = await esbuild.build({
     absWorkingDir: root,
@@ -224,14 +227,14 @@ async function libraryStylesheets(
     write: false,
     metafile: true,
     logLevel: "warning",
-    plugins: [libraryStylesheetImports(names, (path) => path)],
+    plugins: [vendorStylesheetImports(packages, (path) => path)],
   });
   if (result.warnings.length > 0) {
     throw new Error("esbuild warned, as printed above");
   }
 
   const imports = Object.values(result.metafile.outputs).flatMap((output) =>
-    output.imports.flatMap((entry) => (entry.external === true && libraryFile(names, entry.path) ? [entry.path] : [])),
+    output.imports.flatMap((entry) => (entry.external === true && vendoredFile(packages, entry.path) ? [entry.path] : [])),
   );
   return [...new Set(imports)];
 }
