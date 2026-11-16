@@ -1,5 +1,28 @@
 # blockr.dock 0.2.1
 
+* The dock draws a card in each block's panel (#578).
+  Its header holds the block's mark, its name, the Controls and Preview
+  toggles, the padlock and the "…" button.
+  A double-click on the name renames the block, the toggles run
+  `blockr.dock-set_sections`, and the padlock runs
+  `blockr.core-set_block_lock`.
+  The menu holds Rename, Append block, which opens the dock's "+" menu of block
+  classes, Copy block ID and Remove block.
+  Core mounts the block's UI and its output in the card's two sections, which
+  fold as they close and stay mounted while closed.
+  The Controls toggle shows once the block's UI has drawn anything.
+  The board option `compact` turns each header into an eyebrow.
+  A block takes focus in `CoreApi.focus` as the user clicks into its card or
+  onto its tab, or moves the keyboard's focus into its card.
+  On a locked board, the card has no toggle, no padlock and no rename, its menu
+  holds Copy block ID alone, and it mounts the UI only of a block that the
+  board lock leaves open.
+  The card's menus, the panel picker and the bar's menus are one kind of menu,
+  a popover below its button, or beside its row for a menu inside a menu.
+  Each keeps the focus in its search, or on itself where it has none, while
+  the arrows move the active row, and the panel picker lists each block with
+  the mark of its class.
+
 * The dock plugin prints the views menu as a tree, and then each view with its
   grid, in the order of the menu (#603).
   In the tree, each folder shows its name, with what it holds below it, and
