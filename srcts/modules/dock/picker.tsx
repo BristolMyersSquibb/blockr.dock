@@ -40,7 +40,7 @@
 import type { BlockRegistry, Board, Json, PluginClassId } from "@blockr/core";
 import { createContext, useCallback, useContext, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
-import { activeView, stateOf } from "../../commands/index.ts";
+import { activeView, dockState } from "../../commands/index.ts";
 import { places } from "../../state/index.ts";
 import type { Panel } from "../../state/index.ts";
 import { useBoard, useDock } from "./context.ts";
@@ -231,7 +231,7 @@ function PickerMenu({ near }: { readonly near: Panel | undefined }): ReactElemen
 
   const pick = (panel: Panel) => {
     setPicking(undefined);
-    const view = stateOf(core.store.board())?.active ?? null;
+    const view = dockState(core.store.board())?.active ?? null;
     if (view === null) return;
     const args: Json = near === undefined ? { view, panel } : { view, panel, near, side: "within" };
     void core.commands.run("blockr.dock-add_panel", args).catch(() => {

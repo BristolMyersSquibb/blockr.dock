@@ -51,7 +51,7 @@ function raised(
 const ids = (toasts: Toasts): string[] => toasts.list().map((toast) => `${toast.notification.id}${toast.fading ? " fading" : ""}`);
 
 const made: Toasts[] = [];
-function toastsOf(notifications: Pick<CoreApi["notifications"], "get" | "subscribe">): Toasts {
+function createTestToasts(notifications: Pick<CoreApi["notifications"], "get" | "subscribe">): Toasts {
   const toasts = createToasts(notifications);
   made.push(toasts);
   return toasts;
@@ -87,7 +87,7 @@ describe("the toasts", () => {
       raised("plugin", "message", { block: "b" }),
       raised("stack", "warning", { stack: "s" }),
     ]);
-    const toasts = toastsOf(given.notifications);
+    const toasts = createTestToasts(given.notifications);
 
     expect(ids(toasts)).toEqual(["board", "plugin", "stack"]);
     const shown = toasts.list();
@@ -103,7 +103,7 @@ describe("the toasts", () => {
       request: { type: "evaluate", phase: "expr" },
     };
     const given = holding([raised("a", "error")]);
-    const toasts = toastsOf(given.notifications);
+    const toasts = createTestToasts(given.notifications);
     const heard = vi.fn();
     const off = toasts.subscribe(heard);
     const before = toasts.list();
@@ -125,7 +125,7 @@ describe("the toasts", () => {
 
   test("fade for a message after five seconds and then go, while a warning's and an error's stay until the user closes them", () => {
     const given = holding([raised("m", "message"), raised("w", "warning"), raised("e", "error")]);
-    const toasts = toastsOf(given.notifications);
+    const toasts = createTestToasts(given.notifications);
 
     vi.advanceTimersByTime(SHOWN_FOR - 1);
     expect(ids(toasts)).toEqual(["m", "w", "e"]);
@@ -142,7 +142,7 @@ describe("the toasts", () => {
 
   test("keep a message's toast while the pointer rests on it or the focus is in it, and start its five seconds again once neither does", () => {
     const given = holding([raised("m", "message")]);
-    const toasts = toastsOf(given.notifications);
+    const toasts = createTestToasts(given.notifications);
 
     vi.advanceTimersByTime(SHOWN_FOR - 1000);
     toasts.keep("m", "pointer");
@@ -171,7 +171,7 @@ describe("the toasts", () => {
 
   test("go as soon as core withdraws their notifications, and do not come back while a notification holds once they faded or the user closed them", () => {
     const given = holding([raised("m", "message"), raised("w", "warning"), raised("e", "error")]);
-    const toasts = toastsOf(given.notifications);
+    const toasts = createTestToasts(given.notifications);
 
     toasts.close("w");
     vi.advanceTimersByTime(SHOWN_FOR + FADES_FOR);
@@ -191,7 +191,7 @@ describe("the toasts", () => {
 
   test("keep their state where core holds a notification anew under the same id, and show what it holds now", () => {
     const given = holding([raised("m", "message")]);
-    const toasts = toastsOf(given.notifications);
+    const toasts = createTestToasts(given.notifications);
     vi.advanceTimersByTime(SHOWN_FOR);
     expect(ids(toasts)).toEqual(["m fading"]);
 
@@ -206,7 +206,7 @@ describe("the toasts", () => {
 
   test("stop following the notifications, and stop their timers, once stopped", () => {
     const given = holding([raised("m", "message")]);
-    const toasts = toastsOf(given.notifications);
+    const toasts = createTestToasts(given.notifications);
     toasts.keep("m", "pointer");
 
     toasts.stop();

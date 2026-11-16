@@ -134,7 +134,7 @@ export function rehoused(state: DockState, before: DockState): { state: DockStat
   // The keys of what each receiving folder holds, in order.
   // Each place adds the keys that it gives out to its folder's list.
   const lists = new Map<FolderId | null, { index: string; added: boolean }[]>();
-  const listOf = (target: FolderId | null) => {
+  const folderKeys = (target: FolderId | null) => {
     let list = lists.get(target);
     if (list === undefined) {
       list = all
@@ -163,7 +163,7 @@ export function rehoused(state: DockState, before: DockState): { state: DockStat
     const [first] = group;
     if (first === undefined) continue;
     group.sort((a, b) => pathOrder(a.path, b.path) || compare(a.kind, b.kind) || compare(a.id, b.id));
-    const list = listOf(first.target);
+    const list = folderKeys(first.target);
     const place = first.place;
     const after = place === null ? list.length : list.filter((held) => held.added || compare(held.index, place) <= 0).length;
     const keys = keysBetween(list[after - 1]?.index ?? null, list[after]?.index ?? null, group.length);

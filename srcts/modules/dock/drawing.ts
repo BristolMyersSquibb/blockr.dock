@@ -57,8 +57,8 @@
 
 import type { CoreApi, PluginClassId } from "@blockr/core";
 import type { DockviewApi, DockviewIDisposable } from "dockview-react";
-import { stateOf } from "../../commands/index.ts";
-import { columnRuns, gestureRuns, gridToLayout, layoutToGrid, panelId, panelOf, railId, stackGrid } from "../../layout/index.ts";
+import { dockState } from "../../commands/index.ts";
+import { columnRuns, gestureRuns, gridToLayout, layoutToGrid, panelFromId, panelId, railId, stackGrid } from "../../layout/index.ts";
 import type { Run, Size } from "../../layout/index.ts";
 import { EDGES, gridChanges, samePanel, tabGroups, withStoredShares } from "../../state/index.ts";
 import type { Edge, Grid, Panel, ViewId } from "../../state/index.ts";
@@ -124,7 +124,7 @@ export function drawDock(options: DrawingOptions): () => void {
 
   // The active view, with its stored grid.
   const active = (): { readonly id: ViewId; readonly grid: Grid } | undefined => {
-    const state = stateOf(core.store.board());
+    const state = dockState(core.store.board());
     const id = state?.active ?? null;
     const held = id === null ? undefined : state?.views[id];
     return id === null || held === undefined ? undefined : { id, grid: held.grid };
@@ -210,7 +210,7 @@ export function drawDock(options: DrawingOptions): () => void {
   // Gives each tab the name of its block, which a rename changes.
   function retitle(): void {
     for (const held of api.panels) {
-      const panel = panelOf(held.id);
+      const panel = panelFromId(held.id);
       const name = panel === undefined ? undefined : title(panel);
       if (name !== undefined && held.api.title !== name) held.api.setTitle(name);
     }
@@ -392,13 +392,13 @@ export function drawDock(options: DrawingOptions): () => void {
   doc.addEventListener("keydown", onKey);
   // A change that leaves the dock's state as it was, as a block's state that
   // the user edits, can change a tab's name alone.
-  let dockState = core.store.board().plugins[plugin];
+  let lastState = core.store.board().plugins[plugin];
   const offBoard = core.store.subscribe((_change, board) => {
-    if (board.plugins[plugin] === dockState) {
+    if (board.plugins[plugin] === lastState) {
       retitle();
       return;
     }
-    dockState = board.plugins[plugin];
+    lastState = board.plugins[plugin];
     reconcile();
   });
   const offNarrow = narrow.subscribe(() => {

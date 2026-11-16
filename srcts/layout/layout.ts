@@ -34,7 +34,7 @@ import { Orientation } from "dockview-react";
 import type { GroupviewPanelState, SerializedDockview, SerializedEdgeGroups } from "dockview-react";
 import { EDGES, fitted, isTabGroup, RAIL_SIZE, samePanel } from "../state/index.ts";
 import type { Edge, Grid, Node, Panel, Rail, Split, TabGroup } from "../state/index.ts";
-import { panelId, panelOf, railId } from "./ids.ts";
+import { panelFromId, panelId, railId } from "./ids.ts";
 
 // The name of the component that draws the content of every panel, which the
 // dock gives dockview.
@@ -72,7 +72,7 @@ export function gridToLayout(grid: Grid, title: (panel: Panel) => string | undef
       if (Object.hasOwn(panels, id)) return [];
       const name = title(panel);
       if (name === undefined) return [];
-      const params: PanelParams = { panel: panelOf(id) ?? panel };
+      const params: PanelParams = { panel: panelFromId(id) ?? panel };
       panels[id] = { id, contentComponent: PANEL_COMPONENT, title: name, params };
       return [id];
     });
@@ -152,7 +152,7 @@ export function layoutToGrid(layout: SerializedDockview): Grid {
   const top = Array.isArray(root.data) ? children(root.data) : children([root]);
   const rails: Partial<Record<Edge, Rail>> = {};
   for (const edge of EDGES) {
-    const rail = railOf(layout.edgeGroups?.[edge]);
+    const rail = asRail(layout.edgeGroups?.[edge]);
     if (rail !== undefined) rails[edge] = rail;
   }
   return {
@@ -166,7 +166,7 @@ export function layoutToGrid(layout: SerializedDockview): Grid {
 // hold no panel that the dock drew.
 function children(objects: readonly GridObject[]): Split {
   const kept = objects.flatMap((object) => {
-    const node = nodeOf(object);
+    const node = asNode(object);
     return node === undefined ? [] : [{ node, size: object.size ?? 0 }];
   });
   return {
@@ -178,28 +178,28 @@ function children(objects: readonly GridObject[]): Split {
   };
 }
 
-function nodeOf(object: GridObject): Node | undefined {
-  if (!Array.isArray(object.data)) return groupOf(object.data);
+function asNode(object: GridObject): Node | undefined {
+  if (!Array.isArray(object.data)) return asTabGroup(object.data);
   const split = children(object.data);
   return split.children.length === 0 ? undefined : split;
 }
 
 // The tab group of a dockview group's state, or undefined where the group
 // holds no panel that the dock drew.
-function groupOf(state: GroupPanelViewState): TabGroup | undefined {
-  const panels = state.views.flatMap((id) => panelOf(id) ?? []);
+function asTabGroup(state: GroupPanelViewState): TabGroup | undefined {
+  const panels = state.views.flatMap((id) => panelFromId(id) ?? []);
   const [first] = panels;
   if (first === undefined) return undefined;
-  const shown = state.activeView === undefined ? undefined : panelOf(state.activeView);
+  const shown = state.activeView === undefined ? undefined : panelFromId(state.activeView);
   const active = shown === undefined ? undefined : panels.find((panel) => samePanel(panel, shown));
   return { panels, active: active ?? first };
 }
 
 // The rail of an edge group, or undefined where it holds no panel that the
 // dock drew.
-function railOf(edgeGroup: SerializedEdgeGroup | undefined): Rail | undefined {
+function asRail(edgeGroup: SerializedEdgeGroup | undefined): Rail | undefined {
   if (edgeGroup === undefined || !isGroupState(edgeGroup.group)) return undefined;
-  const group = groupOf(edgeGroup.group);
+  const group = asTabGroup(edgeGroup.group);
   if (group === undefined) return undefined;
   return {
     ...group,

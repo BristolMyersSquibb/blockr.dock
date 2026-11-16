@@ -18,7 +18,7 @@ export function panelId(panel: Panel): string {
 
 // The panel that a dockview id names, or undefined where the id names none, as
 // the id of a panel that the dock did not draw.
-export function panelOf(id: string): Panel | undefined {
+export function panelFromId(id: string): Panel | undefined {
   let value: unknown;
   try {
     value = JSON.parse(id);

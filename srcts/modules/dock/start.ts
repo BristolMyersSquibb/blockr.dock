@@ -20,7 +20,7 @@
 // render() has nothing that mints one.
 
 import type { Board, CoreApi, Patch, PluginClassId } from "@blockr/core";
-import { DOCK, stateOf } from "../../commands/index.ts";
+import { DOCK, dockState } from "../../commands/index.ts";
 import { gridPanels, keyIn, pointer, prunePanels, RAIL_SIZE } from "../../state/index.ts";
 import type { Grid, Panel, View, ViewId } from "../../state/index.ts";
 
@@ -33,7 +33,7 @@ export const PAGE_NAME = "Page";
 // state's shape, given the ids of the app's plugins whose class has a `ui`, in
 // the order of the app's plugins, and the view that the URL names.
 export function startingPatches(board: Board, drawn: readonly PluginClassId[], view: string | undefined): Patch[] {
-  const state = stateOf(board);
+  const state = dockState(board);
   if (state === undefined) return [];
   const at = (...segments: string[]) => pointer(["plugins", DOCK, ...segments]);
   const patches: Patch[] = [];

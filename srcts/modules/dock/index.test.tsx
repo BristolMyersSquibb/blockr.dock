@@ -548,7 +548,7 @@ async function startWithNotes(el: HTMLElement, board: JsonBoard, locked = false)
 
 // The dock's state with the view main alone, which is active, of the grid
 // given, beside the view side where `side` gives its grid.
-function viewsOf(grid: Grid, side?: Grid): DockState {
+function dockStateWith(grid: Grid, side?: Grid): DockState {
   return {
     views: {
       main: { name: "Main", folder: null, index: "a0", grid },
@@ -561,7 +561,7 @@ function viewsOf(grid: Grid, side?: Grid): DockState {
 }
 
 // A grid of the tab groups given, side by side.
-function groupsOf(...groups: (readonly Panel[])[]): Grid {
+function gridWith(...groups: (readonly Panel[])[]): Grid {
   return {
     orientation: "horizontal",
     children: groups.map((panels) => ({ panels, active: panels[panels.length - 1] ?? { block: "a" } })),
@@ -574,7 +574,7 @@ const EMPTY_GRID: Grid = { orientation: "horizontal", children: [], sizes: [] };
 // A grid with a's panel in one tab group and the notes plugin's on the left
 // rail, collapsed or open.
 function notesOnRail(collapsed: boolean): Grid {
-  return { ...groupsOf([{ block: "a" }]), rails: { left: { panels: [{ plugin: NOTES }], active: { plugin: NOTES }, collapsed, size: 260 } } };
+  return { ...gridWith([{ block: "a" }]), rails: { left: { panels: [{ plugin: NOTES }], active: { plugin: NOTES }, collapsed, size: 260 } } };
 }
 
 // An element in the document, which the focus can reach, until the test ends.
@@ -587,31 +587,31 @@ function attached(): HTMLElement {
 }
 
 // The frame of a plugin's panel, which the dock draws in the element.
-function frameOf(el: HTMLElement, plugin: string): HTMLElement | null {
+function panelFrame(el: HTMLElement, plugin: string): HTMLElement | null {
   return el.querySelector<HTMLElement>(`.blockr-dock-panel[data-plugin="${plugin}"]`);
 }
 
 describe("a plugin's panel", () => {
   test("holds the plugin's UI, which the dock mounts in the panel's frame with mountPlugin(), and its tab shows the plugin's name", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ plugin: EDIT }, { plugin: NOTES }], [{ block: "a" }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: EDIT }, { plugin: NOTES }], [{ block: "a" }]))));
 
     expect(tabs(el)).toEqual(["Edit board", "Notes", "Dataset"]);
-    expect(frameOf(el, EDIT)?.querySelector('section[aria-label="Links"]')).not.toBeNull();
+    expect(panelFrame(el, EDIT)?.querySelector('section[aria-label="Links"]')).not.toBeNull();
     expect(s.notes.renders).toHaveLength(1);
-    expect(s.notes.renders[0]?.el).toBe(frameOf(el, NOTES));
-    expect(frameOf(el, NOTES)?.textContent).toBe("Notes");
+    expect(s.notes.renders[0]?.el).toBe(panelFrame(el, NOTES));
+    expect(panelFrame(el, NOTES)?.textContent).toBe("Notes");
     s.stop();
   });
 
   test("stays mounted behind another tab, which dockview hides", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ plugin: EDIT }, { plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: EDIT }, { plugin: NOTES }]))));
 
     await s.core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { plugin: EDIT } });
     await s.settled();
 
-    const frame = frameOf(el, NOTES);
+    const frame = panelFrame(el, NOTES);
     expect(s.notes.renders).toHaveLength(1);
     expect(s.notes.cleanups()).toBe(0);
     expect(frame?.textContent).toBe("Notes");
@@ -621,9 +621,9 @@ describe("a plugin's panel", () => {
 
   test("stays mounted on a collapsed rail, which dockview hides rather than squeezes", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(notesOnRail(true))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(notesOnRail(true))));
 
-    const frame = frameOf(el, NOTES);
+    const frame = panelFrame(el, NOTES);
     expect(s.notes.renders).toHaveLength(1);
     expect(frame?.textContent).toBe("Notes");
     expect(frame?.closest<HTMLElement>(".dv-render-overlay")?.style.visibility).toBe("hidden");
@@ -637,13 +637,13 @@ describe("a plugin's panel", () => {
 
   test("runs the cleanup of the plugin's UI once the panel goes, as its tab closes, as the view changes and as another board opens", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ plugin: EDIT }, { plugin: NOTES }]), groupsOf([{ block: "b" }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: EDIT }, { plugin: NOTES }]), gridWith([{ block: "b" }]))));
 
     await s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: NOTES } });
     await s.settled();
     expect(s.notes.cleanups()).toBe(1);
     expect(s.notes.renders[0]?.signal.aborted).toBe(true);
-    expect(frameOf(el, NOTES)).toBeNull();
+    expect(panelFrame(el, NOTES)).toBeNull();
 
     await s.core.commands.run("blockr.dock-add_panel", { view: "main", panel: { plugin: NOTES } });
     await s.settled();
@@ -652,7 +652,7 @@ describe("a plugin's panel", () => {
     await s.core.commands.run("blockr.dock-activate_view", { view: "side" });
     await s.settled();
     expect(s.notes.cleanups()).toBe(2);
-    expect(frameOf(el, EDIT)).toBeNull();
+    expect(panelFrame(el, EDIT)).toBeNull();
 
     await s.core.commands.run("blockr.dock-activate_view", { view: "main" });
     await s.settled();
@@ -666,8 +666,8 @@ describe("a plugin's panel", () => {
 
   test("ends a UI that draws in a React root of its own, as the Edit board plugin's does, without an error, as its tab closes", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }, { plugin: EDIT }]))));
-    const frame = frameOf(el, EDIT);
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: EDIT }]))));
+    const frame = panelFrame(el, EDIT);
     expect(frame?.querySelector('section[aria-label="Links"]')).not.toBeNull();
 
     // React reports an error of its commit as an error event of the window,
@@ -686,7 +686,7 @@ describe("a plugin's panel", () => {
     await s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: EDIT } });
     await s.settled();
 
-    expect(frameOf(el, EDIT)).toBeNull();
+    expect(panelFrame(el, EDIT)).toBeNull();
     expect(frame?.childElementCount).toBe(0);
     expect(reported).toEqual([]);
     expect(logged).not.toHaveBeenCalled();
@@ -746,7 +746,7 @@ function mainGrid(core: CoreApi): Grid | undefined {
 describe("the panel picker", () => {
   test('opens from a "+" in the header of each tab group, and from none on a rail', async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf({ ...notesOnRail(false), ...groupsOf([{ block: "a" }], [{ block: "b" }]) })));
+    const s = await startWithNotes(el, boardWith(dockStateWith({ ...notesOnRail(false), ...gridWith([{ block: "a" }], [{ block: "b" }]) })));
 
     const buttons = [...el.querySelectorAll(".blockr-dock-add")];
     expect(buttons).toHaveLength(2);
@@ -763,7 +763,7 @@ describe("the panel picker", () => {
 
   test("lists the blocks that the active view does not show, by name with their class, then under Plugins each plugin with a ui that it does not show", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "b" }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "b" }]))));
 
     click(el.querySelector(".blockr-dock-add"));
     await drawn();
@@ -780,7 +780,7 @@ describe("the panel picker", () => {
 
   test('adds a pick from the "+" of a tab group as a new tab of that group, which the group shows', async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "b" }], [{ plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "b" }], [{ plugin: NOTES }]))));
 
     click(el.querySelectorAll(".blockr-dock-add")[0]);
     await drawn();
@@ -791,14 +791,14 @@ describe("the panel picker", () => {
       { panels: [{ block: "b" }, { plugin: EDIT }], active: { plugin: EDIT } },
       { panels: [{ plugin: NOTES }], active: { plugin: NOTES } },
     ]);
-    expect(frameOf(el, EDIT)?.querySelector('section[aria-label="Links"]')).not.toBeNull();
+    expect(panelFrame(el, EDIT)?.querySelector('section[aria-label="Links"]')).not.toBeNull();
     expect(el.querySelector(".blockr-dock-picker [role='menu']")).toBeNull();
     s.stop();
   });
 
   test("leaves it to core to say why the board refuses a pick", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }], [{ block: "b" }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }], [{ block: "b" }]))));
 
     // The picker opens from the "+" of a's tab group.
     // A command then takes a's panel out of the view, and the picker stays
@@ -821,7 +821,7 @@ describe("the panel picker", () => {
 
   test("says why where the active view shows every block and plugin already", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }, { block: "b" }, { plugin: EDIT }, { plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { block: "b" }, { plugin: EDIT }, { plugin: NOTES }]))));
 
     click(el.querySelector(".blockr-dock-add"));
     await drawn();
@@ -835,7 +835,7 @@ describe("the panel picker", () => {
 
   test("filters its entries by the search field that has the focus as it opens, where Enter picks the first", async () => {
     const el = attached();
-    const s = await startWithNotes(el, boardWith(viewsOf(EMPTY_GRID)));
+    const s = await startWithNotes(el, boardWith(dockStateWith(EMPTY_GRID)));
 
     click(el.querySelector(".blockr-dock-empty-add"));
     await drawn();
@@ -869,7 +869,7 @@ describe("the panel picker", () => {
 
   test("moves the focus through its entries by the keys of a menu", async () => {
     const el = attached();
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "b" }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "b" }]))));
 
     const button = el.querySelector<HTMLElement>(".blockr-dock-add");
     button?.focus();
@@ -907,7 +907,7 @@ function type(input: HTMLInputElement | null, text: string): void {
 describe("an empty view", () => {
   test("says to start by adding a panel, with a button that opens the panel picker, whose pick goes to the default place", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: NOTES }]))));
     expect(el.querySelector(".blockr-dock-empty")).toBeNull();
 
     await s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: NOTES } });
@@ -928,7 +928,7 @@ describe("an empty view", () => {
 
   test('says it is empty under the board lock, where the dock draws no "+" and no picker', async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(EMPTY_GRID)), true);
+    const s = await startWithNotes(el, boardWith(dockStateWith(EMPTY_GRID)), true);
 
     expect(el.querySelector(".blockr-dock-empty p")?.textContent).toBe("This view is empty");
     expect(el.querySelector(".blockr-dock-empty button")).toBeNull();
@@ -936,7 +936,7 @@ describe("an empty view", () => {
     s.stop();
 
     const shown = document.createElement("div");
-    const t = await startWithNotes(shown, boardWith(viewsOf(groupsOf([{ block: "a" }]))), true);
+    const t = await startWithNotes(shown, boardWith(dockStateWith(gridWith([{ block: "a" }]))), true);
     expect(tabs(shown)).toEqual(["Dataset"]);
     expect(shown.querySelector(".blockr-dock-add")).toBeNull();
     expect(shown.querySelector(".blockr-dock-empty")).toBeNull();
@@ -956,7 +956,7 @@ function showsFrame(el: HTMLElement, panel: Panel): boolean {
 describe("showing a block or a plugin", () => {
   test("brings forward the panel of a block that the active view holds, which takes focus, without an undo step", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }, { block: "b" }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { block: "b" }]))));
     expect(showsFrame(el, { block: "a" })).toBe(false);
 
     await s.core.show({ block: "a" });
@@ -970,7 +970,7 @@ describe("showing a block or a plugin", () => {
 
   test("adds the panel of a plugin that the active view lacks at the default place, and switches no view", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }]), groupsOf([{ plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ plugin: NOTES }]))));
 
     await s.core.show({ plugin: NOTES });
     expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "a" }, { plugin: NOTES }], active: { plugin: NOTES } }]);
@@ -984,7 +984,7 @@ describe("showing a block or a plugin", () => {
 
   test("opens a collapsed rail that holds the panel", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(notesOnRail(true))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(notesOnRail(true))));
     expect(showsFrame(el, { plugin: NOTES })).toBe(false);
 
     await s.core.show({ plugin: NOTES });
@@ -996,11 +996,11 @@ describe("showing a block or a plugin", () => {
 
   test("on a locked board, adds no panel, while the block still takes focus", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }]))), true);
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]))), true);
 
     await s.core.show({ block: "b" });
     await s.core.show({ plugin: NOTES });
-    expect(mainGrid(s.core)).toEqual(groupsOf([{ block: "a" }]));
+    expect(mainGrid(s.core)).toEqual(gridWith([{ block: "a" }]));
     expect(s.core.focus.get()).toBe("b");
     expect(s.core.notifications.get()).toEqual([]);
     s.stop();
@@ -1008,7 +1008,7 @@ describe("showing a block or a plugin", () => {
 
   test("leaves the keyboard's focus where it is", async () => {
     const el = attached();
-    const s = await startWithNotes(el, boardWith(viewsOf({ ...notesOnRail(true), ...groupsOf([{ block: "a" }, { block: "b" }]) })));
+    const s = await startWithNotes(el, boardWith(dockStateWith({ ...notesOnRail(true), ...gridWith([{ block: "a" }, { block: "b" }]) })));
     const input = attached().appendChild(document.createElement("input"));
     input.focus();
 
@@ -1029,8 +1029,8 @@ function setWindowWidth(width: number): void {
 describe("what is on screen", () => {
   test("is the blocks and the plugins whose panels the active view shows, as the dock draws and as the view or its grid changes", async () => {
     const el = document.createElement("div");
-    const main = { ...notesOnRail(false), ...groupsOf([{ block: "a" }, { block: "b" }]) };
-    const s = await startWithNotes(el, boardWith(viewsOf(main, groupsOf([{ block: "a" }, { plugin: EDIT }]))));
+    const main = { ...notesOnRail(false), ...gridWith([{ block: "a" }, { block: "b" }]) };
+    const s = await startWithNotes(el, boardWith(dockStateWith(main, gridWith([{ block: "a" }, { plugin: EDIT }]))));
     expect(s.core.onScreen.get()).toEqual({ blocks: ["b"], plugins: [NOTES] });
 
     await s.core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "a" } });
@@ -1049,8 +1049,8 @@ describe("what is on screen", () => {
     onTestFinished(() => {
       setWindowWidth(width);
     });
-    const grid: Grid = { ...groupsOf([{ block: "a" }]), rails: { left: { panels: [{ plugin: EDIT }], active: { plugin: EDIT }, collapsed: true, size: 260 } } };
-    const s = await startDock(document.createElement("div"), { narrow_breakpoint: width - 100 }, boardWith(viewsOf(grid)));
+    const grid: Grid = { ...gridWith([{ block: "a" }]), rails: { left: { panels: [{ plugin: EDIT }], active: { plugin: EDIT }, collapsed: true, size: 260 } } };
+    const s = await startDock(document.createElement("div"), { narrow_breakpoint: width - 100 }, boardWith(dockStateWith(grid)));
     await s.settled();
     expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [] });
 
@@ -1158,7 +1158,7 @@ function toasts(el: ParentNode): [string | null, string, string][] {
 const messages = (el: ParentNode): string[] => toasts(el).map(([, , message]) => message);
 
 // The toast whose message is the one given.
-function toastOf(el: ParentNode, message: string): HTMLElement {
+function toastWithMessage(el: ParentNode, message: string): HTMLElement {
   const found = toastsIn(el).find((toast) => toast.querySelectorAll("p")[1]?.textContent === message);
   if (found === undefined) throw new Error(`Found no toast "${message}".`);
   return found;
@@ -1199,7 +1199,7 @@ describe("the toasts", () => {
     expect(el.querySelector(".blockr-dock .blockr-dock-toasts")).toBeNull();
 
     flushSync(() => {
-      closeButton(toastOf(el, "The view is crowded.")).click();
+      closeButton(toastWithMessage(el, "The view is crowded.")).click();
     });
     expect(messages(el)).toEqual(["Saved.", "Not placed."]);
     expect(core.notifications.get().some((n) => n.message === "The view is crowded.")).toBe(true);
@@ -1230,7 +1230,7 @@ describe("the toasts", () => {
       core.notifications.notify(DOCK, { severity: "error", code: "failed", message: "<b>Not</b> \u001b[1msaved\u001b[22m." });
     });
     expect(messages(el)).toEqual(["<b>Not</b> saved."]);
-    expect(toastOf(el, "<b>Not</b> saved.").querySelector("b")).toBeNull();
+    expect(toastWithMessage(el, "<b>Not</b> saved.").querySelector("b")).toBeNull();
     stop();
   });
 
@@ -1246,7 +1246,7 @@ describe("the toasts", () => {
         core.notifications.notify(DOCK, { severity: "message", code: "saved", message: "Saved." });
         core.notifications.notify(DOCK, { severity: "error", code: "share_failed", message: "Not shared." });
       });
-      const saved = toastOf(el, "Saved.");
+      const saved = toastWithMessage(el, "Saved.");
       flushSync(() => {
         saved.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
         vi.advanceTimersByTime(60_000);
@@ -1262,7 +1262,7 @@ describe("the toasts", () => {
         closeButton(saved).blur();
         vi.advanceTimersByTime(SHOWN_FOR);
       });
-      expect(toastOf(el, "Saved.").hasAttribute("data-fading")).toBe(true);
+      expect(toastWithMessage(el, "Saved.").hasAttribute("data-fading")).toBe(true);
       flushSync(() => {
         vi.advanceTimersByTime(FADES_FOR);
       });
