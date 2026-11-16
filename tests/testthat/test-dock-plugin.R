@@ -420,6 +420,10 @@ test_that("a view and a folder take a name that holds more than spaces", {
       "\u2514\u2500 50%: b"
     )
   )
+  expect_identical(
+    format(dock_view(dock_grid(), name = "A")),
+    "<dock_view> A (empty)"
+  )
   expect_output(print(dock_folder("F")), "<dock_folder> F", fixed = TRUE)
 })
 
