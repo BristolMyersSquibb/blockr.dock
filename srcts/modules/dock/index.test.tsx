@@ -796,6 +796,29 @@ describe("the panel picker", () => {
     s.stop();
   });
 
+  test("leaves it to core to say why the board refuses a pick", async () => {
+    const el = document.createElement("div");
+    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }], [{ block: "b" }]))));
+
+    // The picker opens from the "+" of a's tab group.
+    // A command then takes a's panel out of the view, and the picker stays
+    // open.
+    // So the pick goes near a panel that the view no longer shows, and the
+    // board refuses it.
+    click(el.querySelectorAll(".blockr-dock-add")[0]);
+    await drawn();
+    await s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { block: "a" } });
+    await s.settled();
+    await drawn();
+    click(entry(el, "Notes"));
+    await s.settled();
+
+    expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "b" }], active: { block: "b" } }]);
+    expect(s.core.notifications.get()).toMatchObject([{ severity: "error", source: { kind: "core", code: "board_edit_failed" } }]);
+    expect(toasts(el)).toEqual([["error", "Board", expect.stringContaining("which near names")]]);
+    s.stop();
+  });
+
   test("says why where the active view shows every block and plugin already", async () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }, { block: "b" }, { plugin: EDIT }, { plugin: NOTES }]))));

@@ -17,7 +17,8 @@
 // From a tab group's "+", the pick goes near the panel that the group shows,
 // so the panel becomes a new tab in that group.
 // From an empty view, the panel goes to the default place.
-// A command that the board refuses raises a notification of why.
+// Where the board refuses the command, core tells the user why, as an error of
+// the code board_edit_failed.
 //
 // The picker is a popover.
 // The browser draws it in the top layer, so no tab group clips it.
@@ -42,7 +43,7 @@ import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 import { activeView, stateOf } from "../../commands/index.ts";
 import { places } from "../../state/index.ts";
 import type { Panel } from "../../state/index.ts";
-import { notifyRefused, useBoard, useDock } from "./context.ts";
+import { useBoard, useDock } from "./context.ts";
 
 // An entry of the picker: the panel of a block or of a plugin, its name, and,
 // for a block, the name of its block class.
@@ -229,7 +230,7 @@ export function usePickerButton(near: () => Panel | undefined) {
 
 // What the open picker shows, which follows the board.
 function PickerMenu({ near }: { readonly near: Panel | undefined }): ReactElement {
-  const { core, plugin, drawn } = useDock();
+  const { core, drawn } = useDock();
   const { setPicking } = usePicker();
   const board = useBoard(core);
   const [query, setQuery] = useState("");
@@ -247,8 +248,8 @@ function PickerMenu({ near }: { readonly near: Panel | undefined }): ReactElemen
     const view = stateOf(core.store.board())?.active ?? null;
     if (view === null) return;
     const args: Json = near === undefined ? { view, panel } : { view, panel, near, side: "within" };
-    void core.commands.run("blockr.dock-add_panel", args).catch((error: unknown) => {
-      notifyRefused(core, plugin, error);
+    void core.commands.run("blockr.dock-add_panel", args).catch(() => {
+      // Core tells the user why the board refused the command.
     });
   };
 
