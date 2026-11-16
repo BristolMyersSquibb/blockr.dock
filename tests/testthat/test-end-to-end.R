@@ -9,5 +9,16 @@ test_that("serve() with the dock plugin serves a page that the dock draws", {
   # `._BLOCKR_MODULES_`.
   app <- local_example_app("empty")
 
+  # The dock draws only once its module has imported dockview from the vendor
+  # file beside it, which R serves with the module.
   expect_no_error(wait_for_dock(app))
+
+  # The dock's stylesheet imports dockview's from a vendor file as well.
+  # Only dockview's rules place its element `.dv-dockview` relative.
+  expect_identical(
+    app$get_js(
+      "getComputedStyle(document.querySelector('.dv-dockview')).position"
+    ),
+    "relative"
+  )
 })

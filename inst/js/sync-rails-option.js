@@ -1,1 +1,78 @@
-var r={compact:{type:"boolean",description:"Whether each block card shows a compact header over the block's content"},view_tabs:{type:"boolean",description:"Whether the views show as a line of tabs under the navbar"},sync_rails:{type:"boolean",description:"Whether collapsing or opening a view's rail does so on every view at once"}};import{Checkbox as m,reactModule as d,useValue as b}from"@blockr/core/react";import{jsx as f}from"react/jsx-runtime";function s(e){function o({host:t}){return f(m,{bound:b(t),label:e})}return d(o)}var O={label:"Compact",category:"Theme options",schema:r.compact,default:p("compact",!1),ui:s("Compact")},y={label:"Views as tabs",category:"Theme options",schema:r.view_tabs,default:p("view_tabs",!1),ui:s("Views as tabs")},a={label:"Sync rails across views",category:"Board options",schema:r.sync_rails,default:p("sync_rails",!0),ui:s("Sync rails across views")};function p(e,o){return t=>u(t,e,o,`which the board option ${e} does not take`)}async function u(e,o,t,c){return await h(e,o,t,c,i=>{let n=typeof i=="string"?k(i):i;return typeof n=="boolean"?n:void 0})}async function h(e,o,t,c,i){let n=await e.blockrOption(o);if(n===void 0)return t;let l=i(n);if(l!==void 0)return l;throw new TypeError(`The blockr option ${o} is ${JSON.stringify(n)}, ${c}.`)}function k(e){let o=e.trim();if(["TRUE","true","True","T"].includes(o))return!0;if(["FALSE","false","False","F"].includes(o))return!1}var E=1,F=a;export{E as api,F as default};
+// srcts/options/schemas.ts
+var optionSchemas = {
+  compact: {
+    type: "boolean",
+    description: "Whether each block card shows a compact header over the block's content"
+  },
+  view_tabs: {
+    type: "boolean",
+    description: "Whether the views show as a line of tabs under the navbar"
+  },
+  sync_rails: {
+    type: "boolean",
+    description: "Whether collapsing or opening a view's rail does so on every view at once"
+  }
+};
+
+// srcts/options/ui.tsx
+import { Checkbox, reactModule, useValue } from "@blockr/core/react";
+import { jsx } from "react/jsx-runtime";
+function checkboxUi(label) {
+  function CheckboxUi({ host }) {
+    return /* @__PURE__ */ jsx(Checkbox, { bound: useValue(host), label });
+  }
+  return reactModule(CheckboxUi);
+}
+
+// srcts/options/options.ts
+var compact = {
+  label: "Compact",
+  category: "Theme options",
+  schema: optionSchemas.compact,
+  default: logicalDefault("compact", false),
+  ui: checkboxUi("Compact")
+};
+var viewTabs = {
+  label: "Views as tabs",
+  category: "Theme options",
+  schema: optionSchemas.view_tabs,
+  default: logicalDefault("view_tabs", false),
+  ui: checkboxUi("Views as tabs")
+};
+var syncRails = {
+  label: "Sync rails across views",
+  category: "Board options",
+  schema: optionSchemas.sync_rails,
+  default: logicalDefault("sync_rails", true),
+  ui: checkboxUi("Sync rails across views")
+};
+function logicalDefault(id, fallback) {
+  return (core) => logicalOption(core, id, fallback, `which the board option ${id} does not take`);
+}
+async function logicalOption(core, name, fallback, refused) {
+  return await readOption(core, name, fallback, refused, (sent) => {
+    const value = typeof sent === "string" ? asLogical(sent) : sent;
+    return typeof value === "boolean" ? value : void 0;
+  });
+}
+async function readOption(core, name, fallback, refused, read) {
+  const sent = await core.blockrOption(name);
+  if (sent === void 0) return fallback;
+  const value = read(sent);
+  if (value !== void 0) return value;
+  throw new TypeError(`The blockr option ${name} is ${JSON.stringify(sent)}, ${refused}.`);
+}
+function asLogical(text) {
+  const trimmed = text.trim();
+  if (["TRUE", "true", "True", "T"].includes(trimmed)) return true;
+  if (["FALSE", "false", "False", "F"].includes(trimmed)) return false;
+  return void 0;
+}
+
+// srcts/modules/sync-rails-option/index.ts
+var api = 1;
+var sync_rails_option_default = syncRails;
+export {
+  api,
+  sync_rails_option_default as default
+};
