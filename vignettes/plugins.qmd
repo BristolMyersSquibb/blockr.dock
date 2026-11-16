@@ -243,7 +243,7 @@ The schema of the state ships with the dock, as `js/dock.schema.json` in the ins
 Under another frontend, the board holds no state for the dock, and `dockState()` above gives `undefined`.
 A plugin follows the state as it changes through `core.store.subscribe()`, as it follows the rest of the board.
 To tell which blocks and plugins the user sees, a plugin reads `core.onScreen` instead, and to tell which block the user works in, `core.focus`, since every frontend sets both.
-Under the dock, `core.onScreen` holds the panel that each tab group of the active view shows, and that of each open rail.
+Under the dock, `core.onScreen` holds the blocks and plugins whose panels the tab groups and the open rails of the active view show.
 
 ## Changing which views hold which panels
 

@@ -277,7 +277,7 @@ dock_grid("a", rail("b", collapsed = TRUE), rail("c", "d", position = "right"))
 └───┴─────────────────┴───────────────┘
 ```
 
-The board option `sync_rails` is on unless the board sets it to `FALSE`, with `new_sync_rails_option(FALSE)`.
+The board option `sync_rails` is on unless the board or the blockr option `sync_rails` turns it off, as `new_sync_rails_option(FALSE)` does for a board.
 While it is on, a rail that the user opens or collapses opens or collapses on that edge of every view that has a rail there.
 
 ## Plugins' panels
