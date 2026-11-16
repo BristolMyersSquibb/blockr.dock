@@ -35,10 +35,12 @@ import {
   gridChanges,
   locate,
   placedAt,
+  placeFailures,
   placePanel,
   places,
   prunePanels,
   resized,
+  resizeFailures,
   samePanel,
   showing,
   withStoredShares,
@@ -133,10 +135,12 @@ export const panelCommands = [
     preflight(board, { view, panel }, { lock }) {
       return !lock.board && boardView(board, view) !== undefined && !shows(board, view, panel) && holdsBlock(board, panel);
     },
-    run(board, { view, panel, near, side, rail }) {
+    run(board, { view, panel, near, side, rail }, context) {
       const held = boardView(board, view);
       if (held === undefined) return [];
-      return { patches: [gridPatch(view, placedAt(held.grid, panel, { near, side, rail }, "distribute"))] };
+      const place = { near, side, rail };
+      refuse(context, placeFailures(held.grid, place));
+      return { patches: [gridPatch(view, placedAt(held.grid, panel, place, "distribute"))] };
     },
   }),
 
@@ -178,7 +182,10 @@ export const panelCommands = [
       if (rail !== undefined && from !== undefined && "edge" in from && from.edge === rail) {
         if (held.grid.rails?.[rail]?.panels.length === 1) return [];
       }
-      return { patches: [gridPatch(view, placedAt(withoutPanel(held.grid, panel), panel, { near, side, rail }, "split"))] };
+      const place = { near, side, rail };
+      const rest = withoutPanel(held.grid, panel);
+      refuse(context, placeFailures(rest, place));
+      return { patches: [gridPatch(view, placedAt(rest, panel, place, "split"))] };
     },
   }),
 
@@ -210,6 +217,7 @@ export const panelCommands = [
       keep({ sizes: true }, locks, context);
       const held = boardView(board, view);
       if (held === undefined) return [];
+      refuse(context, resizeFailures(held.grid, panel, size));
       return { patches: [gridPatch(view, resized(held.grid, panel, size))] };
     },
   }),

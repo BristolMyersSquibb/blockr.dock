@@ -131,6 +131,9 @@
   or removes a panel.
   A command moves or resizes a panel only where the blockr options
   `lock_rearrange` or `lock_resize` are `FALSE`.
+  A command that refuses to run names each failure on a line of its own, as
+  core's commands do (#615).
+  Core logs no error for such a refusal.
 
 * The vignette "Migration notes for app scripts" lists each change that an app
   script of blockr.dock 0.2.0 needs to run on version 0.2.1 (#585).

@@ -444,12 +444,10 @@ describe("blockr.dock-add_panel", () => {
   });
 
   test("refuses a panel that the view shows, a block that the board lacks, and a `near` that the view does not show", async () => {
-    const { dock, preflight, run } = await start();
+    const { dock, preflight, refuses, run } = await start();
     expect(preflight("add_panel", { view: "main", panel: a })).toBe(false);
     expect(preflight("add_panel", { view: "main", panel: { block: "z" } })).toBe(false);
-    await expect(run("add_panel", { view: "inner", panel: a, near: c })).rejects.toThrow(
-      'The view does not show the panel of the block "c", which near names.',
-    );
+    await refuses("add_panel", { view: "inner", panel: a, near: c }, ['The view does not show the panel of the block "c", which near names.']);
     await expect(run("add_panel", { view: "main", panel: md, side: "beside" })).rejects.toThrow("/side");
     expect(dock()).toEqual(state);
   });
@@ -511,6 +509,15 @@ describe("blockr.dock-move_panel", () => {
     expect(preflight("move_panel", { view: "side", panel: a })).toBe(false);
     expect(preflight("move_panel", { view: "main", panel: a, near: a })).toBe(false);
   });
+
+  test("refuses a `near` that the view does not show, and one on a rail beside which the panel would go", async () => {
+    const { dock, refuses } = await start();
+    await refuses("move_panel", { view: "main", panel: c, near: md }, ['The view does not show the panel of the plugin "blockr.md-md_plugin", which near names.']);
+    await refuses("move_panel", { view: "main", panel: c, near: dag, side: "below" }, [
+      'The view shows the panel of the plugin "blockr.dag-dag_plugin", which near names, on a rail, which takes a panel only within.',
+    ]);
+    expect(dock()).toEqual(state);
+  });
 });
 
 describe("blockr.dock-resize_panel", () => {
@@ -523,9 +530,11 @@ describe("blockr.dock-resize_panel", () => {
   });
 
   test("refuses a share that is not below 1, and a tab group that fills its split alone", async () => {
-    const { dock, run } = await start();
-    await expect(run("resize_panel", { view: "main", panel: c, size: 1.5 })).rejects.toThrow("below 1");
-    await expect(run("resize_panel", { view: "side", panel: c, size: 0.5 })).rejects.toThrow("fills its split alone");
+    const { dock, refuses, run } = await start();
+    await refuses("resize_panel", { view: "main", panel: c, size: 1.5 }, ["A tab group takes a share of its split below 1, which 1.5 is not."]);
+    await refuses("resize_panel", { view: "side", panel: c, size: 0.5 }, [
+      'The tab group that holds the panel of the block "c" fills its split alone, so its share stays 1.',
+    ]);
     await expect(run("resize_panel", { view: "main", panel: c, size: 0 })).rejects.toThrow("/size");
     expect(dock()).toEqual(state);
   });
