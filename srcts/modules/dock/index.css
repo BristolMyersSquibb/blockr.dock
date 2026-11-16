@@ -94,7 +94,6 @@
     color-mix(in srgb, #2563eb 7%, transparent)
   );
   --blockr-dock-text-accent-strong: var(--blockr-color-text-accent-strong, #1d4ed8);
-  --blockr-dock-bg-tray: var(--blockr-color-bg-subtle, #f9fafb);
   --blockr-dock-logo: var(--blockr-logo, #089e76);
   --blockr-dock-text-danger: var(--blockr-color-text-danger, #b91c1c);
   --blockr-dock-bg-danger: var(--blockr-color-bg-danger, #fef2f2);
@@ -129,7 +128,6 @@
     color-mix(in srgb, #3b82f6 7%, transparent)
   );
   --blockr-dock-text-accent-strong: var(--blockr-color-text-accent-strong, #60a5fa);
-  --blockr-dock-bg-tray: var(--blockr-color-bg-page, #0e1219);
   --blockr-dock-logo: var(--blockr-logo, #089e76);
   --blockr-dock-text-danger: var(--blockr-color-text-danger, #f87171);
   --blockr-dock-bg-danger: var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1));
@@ -1230,22 +1228,31 @@ button.blockr-dock-bar-name:hover {
 }
 
 /*
- * The categories, an accordion of `details` elements, whose summaries are the
- * rows of a menu of actions in the design system, 34 pixels high with 10
- * pixels at each side.
- * The accordion reaches out by those 10 pixels, so that the categories line
- * up with the title.
- * The chevron goes before the category's name, and points down while the
- * category is expanded, or right while it is collapsed.
- * As the header of a group that folds in the design system, the name is at
- * weight 600, and the count of the category's board options follows it in
- * 13px `text-muted`, then a dot in the accent colour where the board holds a
- * value other than the default for one of them.
+ * The categories, an accordion of `details` elements, each a card as core's
+ * Edit board plugin draws each of its sections beside the sidebar: a 1px edge
+ * in `border-default` at a radius of 6, 12 pixels from the next card.
+ * A category's summary is the card's header, 12 pixels from the edges, with
+ * the category's name at weight 600 and the count of its board options in a
+ * pill with an edge, as the plugin draws its sections' counts.
+ * A dot in the accent colour follows the count where the board holds a value
+ * other than the default for one of the category's board options.
+ * The chevron goes at the header's end, and flips up while the category is
+ * expanded.
  * While the body scrolls, the summary of an expanded category stays at its
  * top, on the surface, so that what scrolls under it does not show through.
+ * The card clips what it holds to its rounded corners, but clips rather than
+ * scrolls, so that the summary still stays at the body's top.
  */
 .blockr-dock-sidebar-categories {
-  margin: 8px -10px;
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.blockr-dock-sidebar-category {
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-md, 6px);
+  overflow: clip;
 }
 
 .blockr-dock-sidebar-summary {
@@ -1256,9 +1263,8 @@ button.blockr-dock-bar-name:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 34px;
-  padding: 0 10px;
-  border-radius: var(--blockr-radius-sm, 4px);
+  min-height: 36px;
+  padding: 0 12px;
   background: var(--blockr-dock-bg-surface);
   list-style: none;
   cursor: pointer;
@@ -1286,8 +1292,12 @@ button.blockr-dock-bar-name:hover {
 
 .blockr-dock-sidebar-count {
   flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-pill, 999px);
   color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 16px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1301,12 +1311,12 @@ button.blockr-dock-bar-name:hover {
 
 .blockr-dock-sidebar-summary .blockr-dock-chevron {
   flex: none;
+  margin-left: auto;
   color: var(--blockr-dock-text-muted);
-  rotate: -90deg;
 }
 
 .blockr-dock-sidebar-category[open] > .blockr-dock-sidebar-summary .blockr-dock-chevron {
-  rotate: none;
+  rotate: 180deg;
 }
 
 /*
@@ -1351,34 +1361,34 @@ button.blockr-dock-bar-name:hover {
 }
 
 /*
- * The board options of an expanded category sit in a tray, as the design
- * system draws a block's gear tray: on the `bg-subtle` fill, or `bg-page`
- * under the dark theme, at a radius of 8, with no border, 16 pixels apart and
- * with no rules between them.
- * The tray is as wide as the category's summary, and its board options line
- * up with the category's name.
+ * The board options of an expanded category, under a rule that parts them
+ * from the card's header, each on a row of its own, 12 pixels from its edges.
+ * A rule parts each row from the one before, from edge to edge of the card,
+ * as rules part the rows of the Edit board plugin's tables, so that it shows
+ * where one board option ends and the next starts.
+ * The rules are 1px in `border-default`.
  */
 .blockr-dock-sidebar-options {
-  display: grid;
-  gap: 16px;
-  margin: 2px 0 8px;
-  padding: 12px 14px 16px 30px;
-  border-radius: var(--blockr-radius-lg, 8px);
-  background: var(--blockr-dock-bg-tray);
+  border-top: 1px solid var(--blockr-dock-border);
 }
 
 /*
- * A board option's UI, with its Reset button at the top right, on the line of
+ * A board option's row, with its Reset button at the top right, on the line of
  * the UI's label, as a quiet text button in 13px, in the muted colour.
  */
 .blockr-dock-sidebar-option {
   position: relative;
+  padding: 12px;
+}
+
+.blockr-dock-sidebar-option + .blockr-dock-sidebar-option {
+  border-top: 1px solid var(--blockr-dock-border);
 }
 
 .blockr-dock-sidebar-reset {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 12px;
+  right: 12px;
   padding: 0 6px;
   border: 0;
   border-radius: var(--blockr-radius-sm, 4px);

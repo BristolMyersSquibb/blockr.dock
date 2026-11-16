@@ -4,8 +4,9 @@
   The sidebar lists the categories of the board options that the board holds
   as an accordion, whose categories the user expands in place, several at
   once.
+  Each category is a card, as each section of core's Edit board plugin is.
   An expanded category shows the UI of each of its board options, which core
-  mounts, in a tray drawn as a block's gear tray.
+  mounts, on a row of its own, with a rule between rows.
   Each category shows how many board options it holds, and a dot where the
   board holds a value other than the default for one of them.
   A Reset button by the UI of such a board option sets its default again,

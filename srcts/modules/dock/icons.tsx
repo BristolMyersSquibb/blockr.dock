@@ -9,9 +9,8 @@ import type { ReactElement } from "react";
 // The one chevron of blockr.ui's design system: a 12 pixel box, stroked at
 // 1.4 pixels whatever its size, which points down, or right as a "go to"
 // arrow, such as that of a menu inside a menu.
-// A menu's chevron flips up while the menu is open, and a category of the
-// options sidebar turns its chevron to point right while it is collapsed
-// (./index.css).
+// The chevron of a menu, or of a category of the options sidebar, flips up
+// while the menu is open, or the category expanded (./index.css).
 export function Chevron({ right = false }: { readonly right?: boolean }): ReactElement {
   return (
     <svg

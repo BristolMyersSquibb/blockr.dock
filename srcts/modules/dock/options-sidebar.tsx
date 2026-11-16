@@ -15,10 +15,11 @@
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.11#board-options-on-a-locked-board).
 //
 // The sidebar lists the categories as an accordion of `details` elements, in
-// alphabetical order, of which the user may expand several at once:
+// alphabetical order, of which the user may expand several at once. It draws
+// each category as a card, as core's Edit board plugin draws its sections:
 // 1. A click on a category expands it in place. Core mounts the UI of each of
 //    its board options with mountOption(), in the alphabetical order of their
-//    labels, in a tray as the design system draws a block's gear tray.
+//    labels, each on a row of its own, which a rule parts from the next.
 // 2. Another click collapses it. Core ends those mounts once the category has
 //    folded shut.
 // The categories that the user expanded stay expanded as the sidebar closes
@@ -251,10 +252,10 @@ function Category({ category, ids, expanded, changed, sidebar }: CategoryProps):
       }}
     >
       <summary className="blockr-dock-sidebar-summary">
-        <Chevron />
         <span className="blockr-dock-sidebar-summary-name">{category}</span>
         <Count n={ids.length} />
         <Changed n={ids.filter((id) => changed.has(id)).length} />
+        <Chevron />
       </summary>
       {expanded || folding ? (
         <div className="blockr-dock-sidebar-options">
