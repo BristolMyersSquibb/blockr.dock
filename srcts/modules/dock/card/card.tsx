@@ -6,7 +6,8 @@
 // 16px, and the output runs to the card's edges.
 //
 // Core mounts the block's UI with mountBlock() in the `inputs` section, and
-// the block's output with mountOutput() in the `outputs` section.
+// the block's output with mountOutput() in the `outputs` section, each in an
+// element of ../mounted.tsx.
 // The card mounts both as dockview creates its panel, and calls their cleanups
 // as dockview disposes of the panel, as when the panel closes or the block
 // leaves the board.
@@ -42,8 +43,9 @@ import { useCallback, useState } from "react";
 import type { ReactElement } from "react";
 import { dockState, SECTIONS } from "../../../commands/index.ts";
 import { giveFocus, useBoard, useDock } from "../context.ts";
+import { Mounted } from "../mounted.tsx";
 import { Header } from "./header.tsx";
-import { Mounted, Section } from "./section.tsx";
+import { Section } from "./section.tsx";
 
 export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
   const { core } = useDock();

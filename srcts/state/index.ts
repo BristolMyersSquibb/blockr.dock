@@ -35,4 +35,4 @@ export type { Edge, GridChanges, Place } from "./grid.ts";
 export { compare, firstView, foldersHolding, inFolder, keyIn, sameEntry, sitsAt, viewOrder, within } from "./navigation.ts";
 export type { Entry } from "./navigation.ts";
 export { patched, pointer } from "./patch.ts";
-export { isObject } from "./json.ts";
+export { isObject, sameJson } from "./json.ts";

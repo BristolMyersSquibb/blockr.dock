@@ -1,5 +1,5 @@
-// The icons of the bar and its menus, each an inline SVG in the colour of the
-// text around it, which screen readers skip.
+// The icons of the bar, its menus and the options sidebar, each an inline SVG
+// in the colour of the text around it, which screen readers skip.
 // The chevron and the warning are those of blockr.ui's icons, chevron.svg and
 // warning.svg, as are the check, the grip, the plus, the cross and the sliders
 // of the views menu, check.svg, grip.svg, plus.svg, remove.svg and
@@ -10,7 +10,8 @@ import type { ReactElement } from "react";
 // The one chevron of blockr.ui's design system: a 12 pixel box, stroked at
 // 1.4 pixels whatever its size, which points down, or right as a "go to"
 // arrow, such as that of a menu inside a menu.
-// A menu's chevron flips up while the menu is open (./index.css).
+// The chevron of a menu, or of a category of the options sidebar, flips up
+// while the menu is open, or the category expanded (./index.css).
 export function Chevron({ right = false }: { readonly right?: boolean }): ReactElement {
   return (
     <svg
@@ -118,7 +119,8 @@ export function PlusIcon(): ReactElement {
   );
 }
 
-// The cross of a button that removes, as a row's in the views menu.
+// The cross of a button that removes, as a row's in the views menu, or that
+// closes, as the options sidebar's.
 export function RemoveIcon(): ReactElement {
   return (
     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" aria-hidden="true" focusable="false">
@@ -148,6 +150,30 @@ export function SlidersIcon(): ReactElement {
       <circle cx="5" cy="4" r="1.6" fill="var(--blockr-dock-bg-raised)" />
       <circle cx="10" cy="8" r="1.6" fill="var(--blockr-dock-bg-raised)" />
       <circle cx="6" cy="12" r="1.6" fill="var(--blockr-dock-bg-raised)" />
+    </svg>
+  );
+}
+
+// A pushpin, upright, in a 12 pixel box, stroked as the chevron is, for the
+// pin button of the options sidebar, which tilts it while the sidebar is not
+// pinned (./index.css).
+// The icons of blockr.ui hold no pin, and today's sidebar draws Bootstrap's
+// pin-angle through bsicons, which the dock no longer imports.
+export function PinIcon(): ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M5.5 2h5M6.5 2v4.25L4.5 9h7l-2-2.75V2M8 9v5" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
