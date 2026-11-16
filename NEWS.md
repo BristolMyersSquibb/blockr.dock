@@ -7,10 +7,9 @@
   Each category is a card, as each section of core's Edit board plugin is.
   An expanded category shows the UI of each of its board options, which core
   mounts, on a row of its own, with a rule between rows.
-  Each category shows how many board options it holds, and a dot where the
-  board holds a value other than the default for one of them.
-  A Reset button by the UI of such a board option sets its default again,
-  which undo cannot do.
+  Each category shows how many board options it holds.
+  A Reset button by the UI of a board option whose value differs from its
+  default sets the default again, which undo cannot do.
   A button in the sidebar's header expands every category, or collapses them
   all, and the summary of an expanded category stays in view as the sidebar
   scrolls.

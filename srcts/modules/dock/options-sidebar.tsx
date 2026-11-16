@@ -27,11 +27,11 @@
 // them all once every one is expanded. While the body scrolls, the summary of
 // an expanded category stays at its top.
 //
-// Each category's summary shows how many board options the category holds,
-// and a dot where the board holds a value other than the default for one of
-// them. Such a board option has a Reset button by its UI, which sets the
-// default as its value. Undo never takes back a board option's value, so the
-// Reset button is the way back to the default.
+// Each category's summary shows how many board options the category holds.
+// A board option for which the board holds a value other than its default has
+// a Reset button by its UI, which sets the default as its value. Undo never
+// takes back a board option's value, so the Reset button is the way back to
+// the default.
 // The sidebar works out each default as core does, from the board option's
 // definition, once for each board option while the sidebar lives. A default
 // that fails gives no Reset button.
@@ -254,7 +254,6 @@ function Category({ category, ids, expanded, changed, sidebar }: CategoryProps):
       <summary className="blockr-dock-sidebar-summary">
         <span className="blockr-dock-sidebar-summary-name">{category}</span>
         <Count n={ids.length} />
-        <Changed n={ids.filter((id) => changed.has(id)).length} />
         <Chevron />
       </summary>
       {expanded || folding ? (
@@ -275,20 +274,6 @@ function Count({ n }: { readonly n: number }): ReactElement {
     <span className="blockr-dock-sidebar-count">
       <span aria-hidden="true">{n}</span>
       <span className="blockr-dock-visually-hidden">{n === 1 ? ", 1 board option" : `, ${String(n)} board options`}</span>
-    </span>
-  );
-}
-
-// A dot after the count, where the board holds a value other than the default
-// for n of the category's board options, which a screen reader hears as
-// "2 changed from their defaults".
-function Changed({ n }: { readonly n: number }): ReactElement | null {
-  if (n === 0) return null;
-  return (
-    <span className="blockr-dock-sidebar-changed">
-      <span className="blockr-dock-visually-hidden">
-        {n === 1 ? ", 1 changed from its default" : `, ${String(n)} changed from their defaults`}
-      </span>
     </span>
   );
 }

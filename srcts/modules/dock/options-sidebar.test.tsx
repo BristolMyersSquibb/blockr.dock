@@ -267,17 +267,6 @@ describe("the options sidebar", () => {
     expect(summary(el, "View options").textContent).toBe("View options1, 1 board option");
   });
 
-  test("marks a category where the board holds a value other than the default for one of its board options", async () => {
-    const { el } = await startSidebar();
-    await open(el);
-    // The board of core's reply to hello holds 50 for n_rows, whose default is 10.
-    await vi.waitFor(() => {
-      expect(summary(el, "Table options").textContent).toBe("Table options1, 1 board option, 1 changed from its default");
-    });
-    const marked = categoriesIn(el).filter((details) => details.querySelector(".blockr-dock-sidebar-changed") !== null);
-    expect(marked.map(nameOf)).toEqual(["Table options"]);
-  });
-
   test("resets a board option to its default with the Reset button by its UI, which hands the focus to the UI", async () => {
     const { el, core } = await startSidebar({ options: { compact: { value: true, version: 1 } } });
     await open(el);
@@ -285,7 +274,6 @@ describe("the options sidebar", () => {
     await vi.waitFor(() => {
       expect(category(el, "Theme options").querySelectorAll(".blockr-dock-sidebar-reset")).toHaveLength(1);
     });
-    expect(summary(el, "Theme options").textContent).toBe("Theme options3, 3 board options, 1 changed from its default");
 
     const reset = button(category(el, "Theme options"), "Reset Compact to its default");
     reset.focus();
@@ -295,7 +283,6 @@ describe("the options sidebar", () => {
     });
     await drawn();
     expect(category(el, "Theme options").querySelectorAll(".blockr-dock-sidebar-reset")).toHaveLength(0);
-    expect(summary(el, "Theme options").querySelector(".blockr-dock-sidebar-changed")).toBeNull();
     expect(document.activeElement).toBe(fields(el, "Theme options")[0]);
   });
 

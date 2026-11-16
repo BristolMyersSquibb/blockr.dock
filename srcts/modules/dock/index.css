@@ -1234,8 +1234,6 @@ button.blockr-dock-bar-name:hover {
  * A category's summary is the card's header, 12 pixels from the edges, with
  * the category's name at weight 600 and the count of its board options in a
  * pill with an edge, as the plugin draws its sections' counts.
- * A dot in the accent colour follows the count where the board holds a value
- * other than the default for one of the category's board options.
  * The chevron goes at the header's end, and flips up while the category is
  * expanded.
  * While the body scrolls, the summary of an expanded category stays at its
@@ -1299,14 +1297,6 @@ button.blockr-dock-bar-name:hover {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   line-height: 16px;
   font-variant-numeric: tabular-nums;
-}
-
-.blockr-dock-sidebar-changed {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: var(--blockr-radius-pill, 999px);
-  background: var(--blockr-dock-border-accent);
 }
 
 .blockr-dock-sidebar-summary .blockr-dock-chevron {
