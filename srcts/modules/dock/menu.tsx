@@ -60,7 +60,9 @@ interface Opened {
 // The rows of a menu, those inside a menu that it holds left out.
 const ROWS = ':scope > [role="menuitem"], :scope > [role="none"] > [role="menuitem"]';
 
-function rowsOf(list: HTMLElement): HTMLElement[] {
+// The rows of the menu whose list is given, each an element of the role
+// menuitem.
+function menuItems(list: HTMLElement): HTMLElement[] {
   return [...list.querySelectorAll<HTMLElement>(ROWS)];
 }
 
@@ -125,7 +127,7 @@ export function MenuButton({ label, entries, className, onTip }: MenuButtonProps
         onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => {
           if (event.key !== "ArrowDown") return;
           event.preventDefault();
-          const first = list.current === null ? undefined : rowsOf(list.current)[0];
+          const first = list.current === null ? undefined : menuItems(list.current)[0];
           if (open) first?.focus();
           else setOpened({ keyboard: true });
         }}
@@ -158,7 +160,7 @@ function usePopover(
     el.style.setProperty("position-anchor", name);
     el.showPopover({ source: at });
     place(el, at, depth === 0 ? "below" : "beside");
-    const first = rowsOf(el)[0];
+    const first = menuItems(el)[0];
     if (opened.keyboard && first !== undefined) first.focus();
     else el.focus({ focusVisible: false });
     return () => {
@@ -210,7 +212,7 @@ function MenuList({ list, label, opened, close, closeAll, entries, depth }: Menu
 // Moves the focus through the rows of the menu whose popover hears the key.
 // A menu inside it hears its own keys first, and keeps them.
 function moveThrough(event: KeyboardEvent<HTMLDivElement>): void {
-  const rows = rowsOf(event.currentTarget);
+  const rows = menuItems(event.currentTarget);
   const at = rows.findIndex((row) => row === event.target);
   const last = rows.length - 1;
   let next: HTMLElement | undefined;

@@ -78,14 +78,14 @@ async function startBar(options: BarOptions = {}) {
   return { ...s, el };
 }
 
-function barOf(el: HTMLElement): HTMLElement {
+function dockBar(el: HTMLElement): HTMLElement {
   const bar = el.querySelector<HTMLElement>(".blockr-dock-bar");
   if (bar === null) throw new Error("The dock draws no bar.");
   return bar;
 }
 
 // What each child of the bar is, by its class.
-function partsOf(el: HTMLElement): string[] {
+function barItems(el: HTMLElement): string[] {
   const named: readonly (readonly [string, string])[] = [
     ["blockr-dock-logo", "logo"],
     ["blockr-dock-bar-name", "name"],
@@ -98,7 +98,7 @@ function partsOf(el: HTMLElement): string[] {
     ["blockr-dock-bar-warning", "warning"],
     ["blockr-dock-bar-status", "status"],
   ];
-  return [...barOf(el).children].flatMap((child) => {
+  return [...dockBar(el).children].flatMap((child) => {
     if (child.getAttribute("popover") !== null) return [];
     const name = named.find(([cls]) => child.classList.contains(cls))?.[1];
     if (name !== undefined) return [name];
@@ -174,7 +174,7 @@ describe("the bar", () => {
   test("draws the dock's own parts of the default bar in their order, where R sends no navbar", async () => {
     const { el } = await startBar();
 
-    expect(partsOf(el)).toEqual(["logo", "name", "storage", "undo_redo", "spacer", "options"]);
+    expect(barItems(el)).toEqual(["logo", "name", "storage", "undo_redo", "spacer", "options"]);
     // Core's storage plugin gives Save and Open.
     const storage = el.querySelector(".blockr-dock-bar-storage");
     expect([...(storage?.querySelectorAll("button") ?? [])].map((b) => b.textContent)).toEqual(["Save", "Open"]);
@@ -198,13 +198,13 @@ describe("the bar", () => {
     ];
     const { el } = await startBar({ navbar });
 
-    expect(partsOf(el)).toEqual(["logo", "a:Docs", "button:Help", "options"]);
-    const link = barOf(el).querySelector("a");
+    expect(barItems(el)).toEqual(["logo", "a:Docs", "button:Help", "options"]);
+    const link = dockBar(el).querySelector("a");
     expect(link?.getAttribute("href")).toBe("https://example.org/docs");
     expect(link?.getAttribute("target")).toBe("_blank");
     expect(link?.getAttribute("rel")).toBe("noopener noreferrer");
 
-    const help = button(barOf(el), "Help");
+    const help = button(dockBar(el), "Help");
     expect(help.getAttribute("aria-haspopup")).toBe("menu");
     click(help);
     await drawn();
@@ -298,8 +298,8 @@ describe("the storage plugin's controls on the bar", () => {
     ];
     const { el } = await startBar({ storage: "test", storageClass, navbar });
 
-    expect(partsOf(el)).toEqual(["storage", "spacer", "options", "status"]);
-    expect(barOf(el).lastElementChild?.textContent).toBe("NJ");
+    expect(barItems(el)).toEqual(["storage", "spacer", "options", "status"]);
+    expect(dockBar(el).lastElementChild?.textContent).toBe("NJ");
     expect(el.querySelector(".blockr-dock-bar-storage")?.textContent).not.toContain("NJ");
   });
 
@@ -332,7 +332,7 @@ describe("the storage plugin's controls on the bar", () => {
     const { runs, storageClass } = everyKind();
     const { el } = await startBar({ storage: "test", storageClass, navbar: [{ kind: "storage", id: "save" }] });
 
-    expect(partsOf(el)).toEqual(["button:Save"]);
+    expect(barItems(el)).toEqual(["button:Save"]);
     pressOnPage({ key: "o", ctrlKey: true });
     pressOnPage({ key: "s", ctrlKey: true });
     expect(runs).toEqual(["save"]);
@@ -360,7 +360,7 @@ describe("the storage plugin's controls on the bar", () => {
     };
     const s = await startBar({ storage: "test", storageClass });
 
-    click(button(barOf(s.el), "Save"));
+    click(button(dockBar(s.el), "Save"));
     await drawn();
     expect(core).toBe(s.core);
     expect(errors(s.logged, "blockr.dock")).toContain("HTTP 503");
@@ -382,7 +382,7 @@ describe("the storage plugin's controls on the bar", () => {
     const warning = s.el.querySelector<HTMLElement>(".blockr-dock-bar-warning");
     expect(warning?.title).toContain("blockr.test");
     expect(warning?.title).toContain("No token.");
-    expect(partsOf(s.el)).toEqual(["logo", "name", "warning", "undo_redo", "spacer", "options"]);
+    expect(barItems(s.el)).toEqual(["logo", "name", "warning", "undo_redo", "spacer", "options"]);
     expect(errors(s.logged, "blockr.dock").filter((m) => m.includes("No token."))).toHaveLength(1);
   });
 
@@ -406,7 +406,7 @@ describe("the storage plugin's controls on the bar", () => {
     const { storageClass } = everyKind();
     const { el } = await startBar({ storage: "test", storageClass });
 
-    const shrinking = [...barOf(el).children].filter((c) => c.classList.contains("blockr-dock-bar-shrinks"));
+    const shrinking = [...dockBar(el).children].filter((c) => c.classList.contains("blockr-dock-bar-shrinks"));
     expect(shrinking.map((c) => c.className.split(" ")[0])).toEqual(["blockr-dock-bar-name", "blockr-dock-bar-storage"]);
 
     const storage = el.querySelector<HTMLElement>(".blockr-dock-bar-storage");
@@ -449,7 +449,7 @@ describe("a module on the bar", () => {
     const s = await startBar({ navbar, modules: { "blockr.test-deck_button": deck } });
     await drawn();
 
-    expect(partsOf(s.el)).toEqual(["logo", "module"]);
+    expect(barItems(s.el)).toEqual(["logo", "module"]);
     const slot = s.el.querySelector(".blockr-dock-bar-module");
     expect(slot?.textContent).toBe("Deck");
     expect(rendered).toHaveLength(1);
@@ -484,7 +484,7 @@ describe("a module on the bar", () => {
     const s = await startBar({ navbar, modules });
     await drawn();
 
-    expect(partsOf(s.el)).toEqual(["logo", "warning", "warning", "warning", "options"]);
+    expect(barItems(s.el)).toEqual(["logo", "warning", "warning", "warning", "options"]);
     const titles = [...s.el.querySelectorAll<HTMLElement>(".blockr-dock-bar-warning")].map((w) => w.title);
     expect(titles[0]).toContain("blockr.test-missing");
     expect(titles[1]).toContain("blockr.test-newer");
@@ -493,9 +493,9 @@ describe("a module on the bar", () => {
     expect(titles[2]).toContain("No canvas.");
     expect(errors(s.logged, "blockr.dock")).toHaveLength(3);
 
-    click(button(barOf(s.el), "Options"));
+    click(button(dockBar(s.el), "Options"));
     await drawn();
-    expect(button(barOf(s.el), "Options").getAttribute("aria-expanded")).toBe("true");
+    expect(button(dockBar(s.el), "Options").getAttribute("aria-expanded")).toBe("true");
   });
 });
 
@@ -504,11 +504,11 @@ describe("the dock's own parts", () => {
     const { el, core } = await startBar();
     const before = core.store.board().name;
 
-    const name = barOf(el).querySelector<HTMLButtonElement>("button.blockr-dock-bar-name");
+    const name = dockBar(el).querySelector<HTMLButtonElement>("button.blockr-dock-bar-name");
     expect(name?.textContent).toBe(before);
     click(name);
     await drawn();
-    const field = barOf(el).querySelector<HTMLInputElement>("input.blockr-dock-bar-field");
+    const field = dockBar(el).querySelector<HTMLInputElement>("input.blockr-dock-bar-field");
     if (field === null) throw new Error("No field.");
     expect(document.activeElement).toBe(field);
     type(field, "  Quarterly  ");
@@ -516,7 +516,7 @@ describe("the dock's own parts", () => {
     await drawn();
 
     expect(core.store.board().name).toBe("Quarterly");
-    expect(barOf(el).querySelector("button.blockr-dock-bar-name")?.textContent).toBe("Quarterly");
+    expect(dockBar(el).querySelector("button.blockr-dock-bar-name")?.textContent).toBe("Quarterly");
     expect(core.store.canUndo()).toBe(true);
   });
 
@@ -528,9 +528,9 @@ describe("the dock's own parts", () => {
       ["Other", "Escape"],
       ["   ", "Enter"],
     ] as const) {
-      click(barOf(el).querySelector("button.blockr-dock-bar-name"));
+      click(dockBar(el).querySelector("button.blockr-dock-bar-name"));
       await drawn();
-      const field = barOf(el).querySelector<HTMLInputElement>("input.blockr-dock-bar-field");
+      const field = dockBar(el).querySelector<HTMLInputElement>("input.blockr-dock-bar-field");
       if (field === null) throw new Error("No field.");
       type(field, text);
       field.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
@@ -543,8 +543,8 @@ describe("the dock's own parts", () => {
   test("follow the store's history with Undo and Redo, which run on their shortcuts but not in a text field", async () => {
     const { el, core } = await startBar();
     const before = core.store.board().name;
-    const undo = button(barOf(el), "Undo");
-    const redo = button(barOf(el), "Redo");
+    const undo = button(dockBar(el), "Undo");
+    const redo = button(dockBar(el), "Redo");
     // Both show their labels, as the storage plugin's buttons beside them do.
     expect([undo.textContent, redo.textContent]).toEqual(["Undo", "Redo"]);
     expect(undo.disabled).toBe(true);
@@ -576,14 +576,14 @@ describe("the dock's own parts", () => {
   test("show under the board lock the name alone, the read-only pill, and Undo and Redo", async () => {
     const { el } = await startBar({ lock: { board: true } });
 
-    expect(partsOf(el)).toEqual(["logo", "name", "storage", "undo_redo", "spacer", "read_only", "options"]);
-    const name = barOf(el).querySelector<HTMLElement>(".blockr-dock-bar-name");
+    expect(barItems(el)).toEqual(["logo", "name", "storage", "undo_redo", "spacer", "read_only", "options"]);
+    const name = dockBar(el).querySelector<HTMLElement>(".blockr-dock-bar-name");
     expect(name?.tagName).toBe("SPAN");
     click(name);
     await drawn();
-    expect(barOf(el).querySelector("input")).toBeNull();
+    expect(dockBar(el).querySelector("input")).toBeNull();
 
-    const pill = barOf(el).querySelector<HTMLElement>(".blockr-dock-bar-pill");
+    const pill = dockBar(el).querySelector<HTMLElement>(".blockr-dock-bar-pill");
     expect(pill?.textContent).toBe("Read-only");
     expect(pill?.title).toBe("Editing is disabled by this deployment.");
     // Core's storage plugin keeps Save under the board lock.
@@ -592,7 +592,7 @@ describe("the dock's own parts", () => {
 
   test("draw no storage controls in an app without a storage plugin, and core's leave Open out under the load lock", async () => {
     const none = await startBar({ storage: "none" });
-    expect(partsOf(none.el)).toEqual(["logo", "name", "undo_redo", "spacer", "options"]);
+    expect(barItems(none.el)).toEqual(["logo", "name", "undo_redo", "spacer", "options"]);
     none.stop();
 
     const loaded = await startBar({ lock: { load: true } });
@@ -601,7 +601,7 @@ describe("the dock's own parts", () => {
 
   test("open and close the options sidebar from the options button", async () => {
     const { el } = await startBar();
-    const options = button(barOf(el), "Options");
+    const options = button(dockBar(el), "Options");
     expect(options.getAttribute("aria-expanded")).toBe("false");
 
     click(options);
@@ -614,7 +614,7 @@ describe("the dock's own parts", () => {
 
   test("take the board's name in full as its tooltip where the bar cuts it short", async () => {
     const { el, core } = await startBar();
-    const name = barOf(el).querySelector<HTMLElement>("button.blockr-dock-bar-name");
+    const name = dockBar(el).querySelector<HTMLElement>("button.blockr-dock-bar-name");
     if (name === null) throw new Error("No name.");
 
     name.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));

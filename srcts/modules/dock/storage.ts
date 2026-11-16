@@ -50,7 +50,7 @@ export function drawnControls(core: CoreApi): Drawn | undefined {
     controls = distinct(storage.controls({ core, plugin }), twice);
   } catch (error) {
     const failed = errorMessage(error);
-    return { failed, package: packageOf(plugin), problem: `The storage controls of ${plugin} failed: ${failed}` };
+    return { failed, package: packageFromId(plugin), problem: `The storage controls of ${plugin} failed: ${failed}` };
   }
   if (twice.size === 0) return { controls };
   const ids = [...twice].map((id) => JSON.stringify(id)).join(", ");
@@ -59,10 +59,10 @@ export function drawnControls(core: CoreApi): Drawn | undefined {
 
 // The buttons among the controls, those inside menus too, in the order in which
 // the bar draws them.
-export function buttonsOf(controls: readonly StorageControl[]): Button[] {
+export function allButtons(controls: readonly StorageControl[]): Button[] {
   return controls.flatMap((control) => {
     if (control.kind === "button") return [control];
-    if (control.kind === "menu") return buttonsOf(control.items);
+    if (control.kind === "menu") return allButtons(control.items);
     return [];
   });
 }
@@ -75,7 +75,7 @@ export function barButtons(core: CoreApi, items: readonly NavbarItem[]): Button[
   if (drawn === undefined || drawn.failed !== undefined) return [];
   const all = items.some((item) => item.kind === "part" && item.id === "storage");
   const apart = new Set(items.flatMap((item) => (item.kind === "storage" ? [item.id] : [])));
-  return buttonsOf(drawn.controls.filter((control) => all || apart.has(control.id)));
+  return allButtons(drawn.controls.filter((control) => all || apart.has(control.id)));
 }
 
 // Runs the button. It calls run() before it awaits anything, so that run()
@@ -93,7 +93,7 @@ export async function runButton(core: Pick<CoreApi, "log">, button: Button): Pro
 // as "blockr.core" for "blockr.core-file_storage_plugin".
 // A package's name holds no "-", so the package is all that comes before the
 // first.
-export function packageOf(id: string): string {
+export function packageFromId(id: string): string {
   const at = id.indexOf("-");
   return at < 0 ? id : id.slice(0, at);
 }
