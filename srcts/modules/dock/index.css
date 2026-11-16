@@ -97,6 +97,13 @@
   --blockr-dock-text-secondary: var(--blockr-color-text-secondary, #374151);
   --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #9ca3af);
   --blockr-dock-text-warning: var(--blockr-color-text-warning, #b45309);
+  --blockr-dock-bg-warning: var(--blockr-color-bg-warning, #fffbeb);
+  --blockr-dock-border-warning: var(--blockr-color-border-warning, #d97706);
+  --blockr-dock-border-warning-subtle: var(
+    --blockr-color-border-warning-subtle,
+    color-mix(in srgb, #d97706 45%, transparent)
+  );
+  --blockr-dock-border-success: var(--blockr-color-border-success, #16a34a);
   --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #ffffff);
   --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #f9fafb);
   --blockr-dock-border-strong: var(--blockr-color-border-strong, #d1d5db);
@@ -133,6 +140,13 @@
   --blockr-dock-text-secondary: var(--blockr-color-text-secondary, #c2c9d3);
   --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #6b7686);
   --blockr-dock-text-warning: var(--blockr-color-text-warning, #fbbf24);
+  --blockr-dock-bg-warning: var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1));
+  --blockr-dock-border-warning: var(--blockr-color-border-warning, #fbbf24);
+  --blockr-dock-border-warning-subtle: var(
+    --blockr-color-border-warning-subtle,
+    color-mix(in srgb, #fbbf24 45%, transparent)
+  );
+  --blockr-dock-border-success: var(--blockr-color-border-success, #4ade80);
   --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #161b23);
   --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #14181f);
   --blockr-dock-border-strong: var(--blockr-color-border-strong, #2d343f);

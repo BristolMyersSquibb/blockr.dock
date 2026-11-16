@@ -37,7 +37,10 @@
 /*
  * A mark is blockr.ui's: a square in its category's colour, tinted behind
  * the icon, at 32px in the header and at 24px in a row of the "+" menu.
- * Its position leaves room for the status dot on its corner.
+ * The colour of a category is core's, as --bc-color-category-input, which a
+ * frontend or a UI kit sets, and blockr.ui's until core has it
+ * (https://github.com/BristolMyersSquibb/blockr.core/issues/657).
+ * Blockr.ui gives a category the same colour under either theme.
  */
 .blockr-card-mark {
   position: relative;
@@ -49,7 +52,7 @@
   height: 24px;
   border-radius: 6px;
   font-size: 14px;
-  color: var(--blockr-category-uncategorized, #999999);
+  color: var(--bc-color-category-uncategorized, var(--blockr-category-uncategorized, #999999));
   background: color-mix(in srgb, currentColor 18%, transparent);
 }
 
@@ -65,14 +68,54 @@
   height: 1em;
 }
 
-.blockr-card-mark[data-category="input"] { color: var(--blockr-category-input, #0072b2); }
-.blockr-card-mark[data-category="transform"] { color: var(--blockr-category-transform, #009e73); }
-.blockr-card-mark[data-category="structured"] { color: var(--blockr-category-structured, #56b4e9); }
-.blockr-card-mark[data-category="plot"] { color: var(--blockr-category-plot, #e69f00); }
-.blockr-card-mark[data-category="table"] { color: var(--blockr-category-table, #cc79a7); }
-.blockr-card-mark[data-category="model"] { color: var(--blockr-category-model, #f0e442); }
-.blockr-card-mark[data-category="output"] { color: var(--blockr-category-output, #d55e00); }
-.blockr-card-mark[data-category="utility"] { color: var(--blockr-category-utility, #cccccc); }
+.blockr-card-mark[data-category="input"] { color: var(--bc-color-category-input, var(--blockr-category-input, #0072b2)); }
+.blockr-card-mark[data-category="transform"] { color: var(--bc-color-category-transform, var(--blockr-category-transform, #009e73)); }
+.blockr-card-mark[data-category="structured"] { color: var(--bc-color-category-structured, var(--blockr-category-structured, #56b4e9)); }
+.blockr-card-mark[data-category="plot"] { color: var(--bc-color-category-plot, var(--blockr-category-plot, #e69f00)); }
+.blockr-card-mark[data-category="table"] { color: var(--bc-color-category-table, var(--blockr-category-table, #cc79a7)); }
+.blockr-card-mark[data-category="model"] { color: var(--bc-color-category-model, var(--blockr-category-model, #f0e442)); }
+.blockr-card-mark[data-category="output"] { color: var(--bc-color-category-output, var(--blockr-category-output, #d55e00)); }
+.blockr-card-mark[data-category="utility"] { color: var(--bc-color-category-utility, var(--blockr-category-utility, #cccccc)); }
+
+/*
+ * The mark in a card's header, which carries the status dot on its upper
+ * right corner: an 8px dot with a 2px ring in the card's surface colour, as
+ * today's card draws it.
+ * The dot of a waiting or an unevaluated block is a ring of 1.5px inside the
+ * dot, on the surface.
+ * The colour of a status is core's, as --bc-color-status-failed, which a
+ * frontend or a UI kit sets, and until core has it the dock's, from the token
+ * of blockr.ui that the table of the status dot names
+ * (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.7#the-status-dot).
+ */
+.blockr-card-mark-frame {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.blockr-card-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+  box-shadow: 0 0 0 2px var(--blockr-dock-bg-surface);
+}
+
+.blockr-card-dot[data-ring] {
+  background-color: var(--blockr-dock-bg-surface);
+  box-shadow: inset 0 0 0 1.5px currentColor, 0 0 0 2px var(--blockr-dock-bg-surface);
+}
+
+.blockr-card-dot[data-status="stale"] { color: var(--bc-color-status-stale, var(--blockr-dock-text-muted)); }
+.blockr-card-dot[data-status="waiting"] { color: var(--bc-color-status-waiting, var(--blockr-dock-border-warning)); }
+.blockr-card-dot[data-status="invalid"] { color: var(--bc-color-status-invalid, var(--blockr-dock-border-warning)); }
+.blockr-card-dot[data-status="failed"] { color: var(--bc-color-status-failed, var(--blockr-dock-border-danger)); }
+.blockr-card-dot[data-status="ready"] { color: var(--bc-color-status-ready, var(--blockr-dock-border-success)); }
+.blockr-card-dot[data-status="unevaluated"] { color: var(--bc-color-status-unevaluated, var(--blockr-dock-text-muted)); }
 
 .blockr-card-title {
   position: relative;
@@ -269,6 +312,118 @@
 }
 
 /*
+ * The output of a stale block fades to 30%, after half a second, as Shiny
+ * fades an output that recalculates, so that an evaluation that ends at once
+ * does not flash it.
+ * It comes back at once.
+ */
+.blockr-card-output-frame[data-faded] {
+  opacity: 0.3;
+  transition: opacity 250ms ease 500ms;
+}
+
+/*
+ * The status note: one line of italic text-muted text at 13px, where the
+ * output would be, with the padding of the design system's empty line of a
+ * block, .blockr-empty--block.
+ */
+.blockr-card-status-note {
+  margin: 0;
+  padding: 28px 0 32px;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--blockr-dock-text-muted);
+}
+
+/*
+ * The errors and warnings above the sections, and the messages under the
+ * output, each in the message style of the design system: 13px on a fill
+ * and an edge for its severity, with a radius of 6px.
+ * An error takes the danger set and a warning the amber set.
+ * The design system gives a message no colour, so a message is neutral.
+ * A message keeps its line breaks and wraps a long word, such as a path.
+ */
+.blockr-card-notifications {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.blockr-card-header + .blockr-card-notifications {
+  margin-top: 12px;
+}
+
+.blockr-card-notification {
+  padding: 8px 12px;
+  border: 1px solid var(--blockr-dock-border);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-dock-bg-subtle);
+  color: var(--blockr-dock-text);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.blockr-card-notification[data-severity="error"] {
+  border-color: var(--blockr-dock-border-danger-subtle);
+  background: var(--blockr-dock-bg-danger);
+  color: var(--blockr-dock-text-danger);
+}
+
+.blockr-card-notification[data-severity="warning"] {
+  border-color: var(--blockr-dock-border-warning-subtle);
+  background: var(--blockr-dock-bg-warning);
+  color: var(--blockr-dock-text-warning);
+}
+
+/*
+ * The messages fold under the output behind their count, which reads as
+ * meta text, takes the hover wash, and turns its chevron up while they show,
+ * as today's card has it.
+ */
+.blockr-card-messages {
+  margin-top: 12px;
+}
+
+.blockr-card-messages-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: var(--blockr-radius-md, 6px);
+  list-style: none;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-dock-text-muted);
+  cursor: pointer;
+  transition: background-color var(--blockr-transition, 0.15s ease);
+}
+
+.blockr-card-messages-count::-webkit-details-marker {
+  display: none;
+}
+
+.blockr-card-messages-count:hover {
+  background-color: var(--blockr-dock-bg-hover);
+}
+
+.blockr-card-messages-count:focus-visible {
+  outline: none;
+  box-shadow: var(--blockr-dock-focus-ring);
+}
+
+.blockr-card-messages[open] .blockr-dock-chevron {
+  transform: rotate(180deg);
+}
+
+.blockr-card-messages > .blockr-card-notifications {
+  padding-top: 8px;
+}
+
+/*
  * A compact header is an eyebrow over the block's content: the mark at 20px
  * and the name at 11px, uppercase and muted, on one line with an ellipsis,
  * 6px above the content.
@@ -306,6 +461,7 @@
   font-size: var(--blockr-font-size-sm, 0.8125rem);
 }
 
+.blockr-card[data-compact] .blockr-card-header + .blockr-card-notifications,
 .blockr-card[data-compact] .blockr-card-sections {
   margin-top: 6px;
 }

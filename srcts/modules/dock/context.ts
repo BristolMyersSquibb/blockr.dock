@@ -5,12 +5,14 @@
 // Dockview draws the content of each panel and the header of each tab group
 // in a portal of the dock's React tree, so they read the context of the dock's
 // root as well.
-// A component that draws from the board follows it with useBoard().
+// A component that draws from the board follows it with useBoard(), and one
+// that draws a block's status or the notifications about it follows them with
+// useStatus() and useNotified(), as core's own cards do.
 // The module also holds how the dock runs one of its commands as an edit, and
 // how it gives a block focus.
 
-import type { BlockId, Board, CoreApi, Json, PluginClassId } from "@blockr/core";
-import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
+import type { BlockId, BlockStatus, Board, CoreApi, Json, Notification, PluginClassId } from "@blockr/core";
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
 
 export interface DockContextValue {
   readonly core: CoreApi;
@@ -54,6 +56,40 @@ export function useBoard(core: CoreApi): Board {
   );
   const board = useCallback(() => core.store.board(), [core]);
   return useSyncExternalStore(subscribe, board);
+}
+
+// The block's status, which the component draws again as the scheduler
+// announces that it changed, since the scheduler keeps the same object until
+// then.
+export function useStatus(core: CoreApi, block: BlockId): BlockStatus | undefined {
+  const subscribe = useCallback(
+    (changed: () => void) =>
+      core.scheduler.subscribe((blocks) => {
+        if (blocks.includes(block)) changed();
+      }),
+    [core, block],
+  );
+  const status = useCallback(() => core.scheduler.status(block), [core, block]);
+  return useSyncExternalStore(subscribe, status);
+}
+
+// The notifications about the block, in the order that they came, which the
+// component draws again as one comes or goes, since CoreApi keeps the same
+// array of them until then.
+export function useNotified(core: CoreApi, block: BlockId): readonly Notification[] {
+  const subscribe = useCallback(
+    (changed: () => void) =>
+      core.notifications.subscribe(() => {
+        changed();
+      }),
+    [core],
+  );
+  const notifications = useCallback(() => core.notifications.get(), [core]);
+  const all = useSyncExternalStore(subscribe, notifications);
+  return useMemo(
+    () => all.filter(({ about }) => about !== undefined && "block" in about && about.block === block),
+    [all, block],
+  );
 }
 
 // Runs one of the board's commands as an edit of the dock.
