@@ -25,7 +25,7 @@
 // and tells no plugin.
 
 import type { BlockId, Board, CoreApi, PluginClassId } from "@blockr/core";
-import { stateOf } from "../../commands/index.ts";
+import { dockState } from "../../commands/index.ts";
 import { gridToLayout, layoutToGrid } from "../../layout/index.ts";
 import { EDGES, tabGroups } from "../../state/index.ts";
 import type { Panel } from "../../state/index.ts";
@@ -43,7 +43,7 @@ export function onScreen(
   drawn: ReadonlyMap<PluginClassId, string>,
   narrow: boolean,
 ): { blocks: BlockId[]; plugins: PluginClassId[] } {
-  const state = stateOf(board);
+  const state = dockState(board);
   const active = state?.active ?? null;
   const view = active === null ? undefined : state?.views[active];
   if (view === undefined) return { blocks: [], plugins: [] };

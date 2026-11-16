@@ -14,14 +14,14 @@ export const DOCK = "blockr.dock-dock_plugin";
 
 // The dock's state on the board, or undefined where the board holds none of
 // its shape, as where the app does not run the dock.
-export function stateOf(board: Board): DockState | undefined {
+export function dockState(board: Board): DockState | undefined {
   const state = board.plugins[DOCK];
   return isDockState(state) ? state : undefined;
 }
 
 // The active view of the board's dock state, or undefined where it has none.
 export function activeView(board: Board): View | undefined {
-  const state = stateOf(board);
+  const state = dockState(board);
   const active = state?.active ?? null;
   return active === null ? undefined : state?.views[active];
 }

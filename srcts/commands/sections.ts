@@ -7,7 +7,7 @@
 
 import type { BlockId } from "@blockr/core";
 import type { Section } from "../state/index.ts";
-import { at, command, stateOf } from "./common.ts";
+import { at, command, dockState } from "./common.ts";
 import * as schemas from "./schemas.ts";
 
 // The sections of a card, in the order in which the card shows them.
@@ -37,10 +37,10 @@ export const sectionCommands = [
       ["block", "sections"],
     ),
     preflight(board, { block }, { lock }) {
-      return !lock.board && stateOf(board) !== undefined && Object.hasOwn(board.blocks, block);
+      return !lock.board && dockState(board) !== undefined && Object.hasOwn(board.blocks, block);
     },
     run(board, { block, sections }) {
-      const state = stateOf(board);
+      const state = dockState(board);
       if (state === undefined) return [];
       const shown = SECTIONS.filter((section) => sections.includes(section));
       if (shown.length === SECTIONS.length) {
