@@ -17,6 +17,22 @@
   The print of a view says on its first line how its grid's top split
   divides, in place of the grid's own first line.
 
+* The dock carries out core's `show()`, through which a plugin shows a block
+  or a plugin under every frontend (#599).
+  The dock's frontend runs `blockr.dock-show_panel` with what `show()` was
+  given.
+  The command has the active view show the panel, and adds the panel at the
+  default place where the view lacks it.
+  It never switches views.
+  Where the panel sits on a collapsed rail, it opens the rail, on every view
+  that has a rail on that edge while the board option `sync_rails` is on.
+  It takes no undo step, even where it adds the panel, so the next Undo takes
+  back the user's last edit, and the redo steps stay as they were.
+  On a locked board, it adds no panel, while the block still takes focus.
+  The dock also sets `CoreApi.onScreen` to the blocks and the plugins whose
+  panels are on screen, by the rule of its demand: the panel that each tab
+  group of the active view shows, and that of each open rail.
+
 * The dock places each plugin whose class has a `ui` in a panel of its own,
   and mounts the plugin's UI there with core's `mountPlugin()` (#584).
   The UI fills the panel's body.
@@ -76,7 +92,8 @@
   collapse or open a rail, and set the sections of a block's card.
   Each command returns one delta of patches inside the dock's state.
   Each is one undo step, except `blockr.dock-activate_view`,
-  `blockr.dock-activate_panel` and `blockr.dock-collapse_rail`.
+  `blockr.dock-activate_panel`, `blockr.dock-show_panel` and
+  `blockr.dock-collapse_rail`.
   On a locked board, a reader can still switch views, show another tab, and
   collapse or open a rail.
   No command adds, renames, moves or removes a view or folder there, or adds

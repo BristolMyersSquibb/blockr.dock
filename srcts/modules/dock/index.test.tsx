@@ -944,6 +944,125 @@ describe("an empty view", () => {
   });
 });
 
+// Whether dockview shows the frame of the block's panel or the plugin's,
+// which it hides behind another tab and on a collapsed rail.
+function showsFrame(el: HTMLElement, panel: Panel): boolean {
+  const frame = el.querySelector<HTMLElement>(
+    "block" in panel ? `.blockr-dock-panel[data-block="${panel.block}"]` : `.blockr-dock-panel[data-plugin="${panel.plugin}"]`,
+  );
+  return frame !== null && frame.closest<HTMLElement>(".dv-render-overlay")?.style.visibility !== "hidden";
+}
+
+describe("showing a block or a plugin", () => {
+  test("brings forward the panel of a block that the active view holds, which takes focus, without an undo step", async () => {
+    const el = document.createElement("div");
+    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }, { block: "b" }]))));
+    expect(showsFrame(el, { block: "a" })).toBe(false);
+
+    await s.core.show({ block: "a" });
+    expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "a" }, { block: "b" }], active: { block: "a" } }]);
+    await s.settled();
+    expect(showsFrame(el, { block: "a" })).toBe(true);
+    expect(s.core.focus.get()).toBe("a");
+    expect(s.core.store.canUndo()).toBe(false);
+    s.stop();
+  });
+
+  test("adds the panel of a plugin that the active view lacks at the default place, and switches no view", async () => {
+    const el = document.createElement("div");
+    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }]), groupsOf([{ plugin: NOTES }]))));
+
+    await s.core.show({ plugin: NOTES });
+    expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "a" }, { plugin: NOTES }], active: { plugin: NOTES } }]);
+    expect((s.core.store.board().plugins[DOCK] as DockState).active).toBe("main");
+    await s.settled();
+    expect(showsFrame(el, { plugin: NOTES })).toBe(true);
+    expect(s.notes.renders).toHaveLength(1);
+    expect(s.core.store.canUndo()).toBe(false);
+    s.stop();
+  });
+
+  test("opens a collapsed rail that holds the panel", async () => {
+    const el = document.createElement("div");
+    const s = await startWithNotes(el, boardWith(viewsOf(notesOnRail(true))));
+    expect(showsFrame(el, { plugin: NOTES })).toBe(false);
+
+    await s.core.show({ plugin: NOTES });
+    expect(mainGrid(s.core)?.rails?.left?.collapsed).toBe(false);
+    await s.settled();
+    expect(showsFrame(el, { plugin: NOTES })).toBe(true);
+    s.stop();
+  });
+
+  test("on a locked board, adds no panel, while the block still takes focus", async () => {
+    const el = document.createElement("div");
+    const s = await startWithNotes(el, boardWith(viewsOf(groupsOf([{ block: "a" }]))), true);
+
+    await s.core.show({ block: "b" });
+    await s.core.show({ plugin: NOTES });
+    expect(mainGrid(s.core)).toEqual(groupsOf([{ block: "a" }]));
+    expect(s.core.focus.get()).toBe("b");
+    expect(s.core.notifications.get()).toEqual([]);
+    s.stop();
+  });
+
+  test("leaves the keyboard's focus where it is", async () => {
+    const el = attached();
+    const s = await startWithNotes(el, boardWith(viewsOf({ ...notesOnRail(true), ...groupsOf([{ block: "a" }, { block: "b" }]) })));
+    const input = attached().appendChild(document.createElement("input"));
+    input.focus();
+
+    await s.core.show({ block: "a" });
+    await s.core.show({ plugin: NOTES });
+    await s.core.show({ plugin: EDIT });
+    expect(mainGrid(s.core)).toMatchObject({ children: [{ active: { plugin: EDIT } }], rails: { left: { collapsed: false } } });
+    expect(document.activeElement).toBe(input);
+    s.stop();
+  });
+});
+
+// Resizes happy-dom's window, which tells its listeners as a browser does.
+function setWindowWidth(width: number): void {
+  (window as unknown as { readonly happyDOM: { setInnerWidth(width: number): void } }).happyDOM.setInnerWidth(width);
+}
+
+describe("what is on screen", () => {
+  test("is the blocks and the plugins whose panels the active view shows, as the dock draws and as the view or its grid changes", async () => {
+    const el = document.createElement("div");
+    const main = { ...notesOnRail(false), ...groupsOf([{ block: "a" }, { block: "b" }]) };
+    const s = await startWithNotes(el, boardWith(viewsOf(main, groupsOf([{ block: "a" }, { plugin: EDIT }]))));
+    expect(s.core.onScreen.get()).toEqual({ blocks: ["b"], plugins: [NOTES] });
+
+    await s.core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "a" } });
+    expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [NOTES] });
+
+    await s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: true });
+    expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [] });
+
+    await s.core.commands.run("blockr.dock-activate_view", { view: "side" });
+    expect(s.core.onScreen.get()).toEqual({ blocks: [], plugins: [EDIT] });
+    s.stop();
+  });
+
+  test("holds the panel of a collapsed rail too while the window is narrower than narrow_breakpoint", async () => {
+    const width = window.innerWidth;
+    onTestFinished(() => {
+      setWindowWidth(width);
+    });
+    const grid: Grid = { ...groupsOf([{ block: "a" }]), rails: { left: { panels: [{ plugin: EDIT }], active: { plugin: EDIT }, collapsed: true, size: 260 } } };
+    const s = await startDock(document.createElement("div"), { narrow_breakpoint: width - 100 }, boardWith(viewsOf(grid)));
+    await s.settled();
+    expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [] });
+
+    setWindowWidth(width - 200);
+    expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [EDIT] });
+
+    setWindowWidth(width);
+    expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [] });
+    s.stop();
+  });
+});
+
 // A stylesheet without its comments, by its path from this file.
 // Vite rewrites `new URL()` of a string literal into the URL that its server
 // serves the file at, so the path comes in as an argument.
