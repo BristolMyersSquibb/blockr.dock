@@ -545,6 +545,8 @@ describe("the dock's own parts", () => {
     const before = core.store.board().name;
     const undo = button(barOf(el), "Undo");
     const redo = button(barOf(el), "Redo");
+    // Both show their labels, as the storage plugin's buttons beside them do.
+    expect([undo.textContent, redo.textContent]).toEqual(["Undo", "Redo"]);
     expect(undo.disabled).toBe(true);
     expect(redo.disabled).toBe(true);
     expect(undo.title).toMatch(/^Undo \((Ctrl\+Z|⌘Z)\)$/);

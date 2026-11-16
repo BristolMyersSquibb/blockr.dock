@@ -51,29 +51,6 @@ export function WarningIcon(): ReactElement {
   );
 }
 
-// An arrow that turns back, to the left for Undo and to the right for Redo.
-export function StepIcon({ back }: { readonly back: boolean }): ReactElement {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <g transform={back ? undefined : "matrix(-1 0 0 1 16 0)"}>
-        <path d="M5.5 3.5 2.5 6.5l3 3" />
-        <path d="M2.5 6.5h7a3.5 3.5 0 0 1 0 7H7" />
-      </g>
-    </svg>
-  );
-}
-
 // A window with a panel at its right edge, for the button that opens the
 // options sidebar, as today's options button draws Bootstrap's
 // layout-sidebar-reverse rather than a gear, since the gear stands for a

@@ -14,11 +14,12 @@
 //   unchanged, and Escape gives up. Under the board lock, the name only shows.
 // - The storage plugin's controls, those that no storage item places apart
 //   (./storage.ts).
-// - Undo and Redo, which run the store's undo() and redo(), each greyed out
-//   while the store has nothing to take back or to apply again. Their keys are
-//   bound on the document (./shortcuts.ts), and each tooltip names its
-//   shortcut. Both stay under the board lock, since what that lock leaves open
-//   still takes undo steps.
+// - Undo and Redo, two quiet buttons with their labels, as the storage
+//   plugin's buttons beside them have, which run the store's undo() and
+//   redo(), each greyed out while the store has nothing to take back or to
+//   apply again. Their keys are bound on the document (./shortcuts.ts), and
+//   each tooltip names its shortcut. Both stay under the board lock, since
+//   what that lock leaves open still takes undo steps.
 // - The spacer, which takes the free space, so that what follows it sits at
 //   the right end of the bar.
 // - The views menu, which the bar does not draw yet.
@@ -56,7 +57,7 @@ import { API } from "./api.ts";
 import type { Busy } from "./busy.ts";
 import { useBoard, useDock } from "./context.ts";
 import { asError, errorMessage } from "./errors.ts";
-import { LockIcon, SidebarIcon, StepIcon, WarningIcon } from "./icons.tsx";
+import { LockIcon, SidebarIcon, WarningIcon } from "./icons.tsx";
 import { MenuButton } from "./menu.tsx";
 import type { MenuEntry } from "./menu.tsx";
 import type { LinkItem, MenuItem, ModuleItem, NavbarItem, PartId } from "./navbar-items.ts";
@@ -390,8 +391,7 @@ function UndoRedo({ mac }: { readonly mac: boolean }): ReactElement {
     <div className="blockr-dock-bar-steps">
       <button
         type="button"
-        className="blockr-dock-bar-icon"
-        aria-label="Undo"
+        className="blockr-dock-bar-button"
         title={`Undo (${shortcutLabel("Mod+Z", mac)})`}
         aria-keyshortcuts="Control+Z Meta+Z"
         disabled={!canUndo}
@@ -399,12 +399,11 @@ function UndoRedo({ mac }: { readonly mac: boolean }): ReactElement {
           step(true);
         }}
       >
-        <StepIcon back />
+        Undo
       </button>
       <button
         type="button"
-        className="blockr-dock-bar-icon"
-        aria-label="Redo"
+        className="blockr-dock-bar-button"
         title={`Redo (${shortcutLabel("Mod+Shift+Z", mac)})`}
         aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
         disabled={!canRedo}
@@ -412,7 +411,7 @@ function UndoRedo({ mac }: { readonly mac: boolean }): ReactElement {
           step(false);
         }}
       >
-        <StepIcon back={false} />
+        Redo
       </button>
     </div>
   );

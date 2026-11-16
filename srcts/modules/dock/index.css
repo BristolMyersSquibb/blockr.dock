@@ -654,7 +654,7 @@
  * A quiet button of the design system, at its size s: text only, in the muted
  * colour, 30 pixels high with 8 pixels at each side, which takes the hover
  * wash.
- * Links, menus and the storage plugin's buttons all take it.
+ * Links, menus, the storage plugin's buttons, Undo and Redo all take it.
  * A menu's chevron follows its label, and flips up while the menu is open.
  */
 .blockr-dock-bar-button {
@@ -698,9 +698,8 @@
 }
 
 /*
- * The icon buttons of the bar, Undo, Redo and the options button: 30 pixels
- * square, the icon in the muted colour, greyed out while there is nothing to
- * take back or to apply again.
+ * The icon button of the bar, the options button: 30 pixels square, with the
+ * icon in the muted colour.
  */
 .blockr-dock-bar-icon {
   box-sizing: border-box;
@@ -720,21 +719,17 @@
     color var(--blockr-transition, 0.15s ease);
 }
 
-.blockr-dock-bar-icon:hover:not(:disabled),
+.blockr-dock-bar-icon:hover,
 .blockr-dock-bar-icon[aria-expanded="true"] {
   background: var(--blockr-dock-bg-hover);
   color: var(--blockr-dock-text);
 }
 
-.blockr-dock-bar-icon:disabled {
-  color: var(--blockr-dock-text-disabled);
-  cursor: default;
-}
-
+/* Undo and Redo sit as close together as the storage plugin's buttons. */
 .blockr-dock-bar-steps {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .blockr-dock-bar-button:focus-visible,
