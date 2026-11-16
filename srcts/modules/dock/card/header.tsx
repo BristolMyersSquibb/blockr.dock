@@ -58,7 +58,7 @@ export function Header({
   // Whether the block's UI has drawn anything.
   drawn: boolean;
 }): ReactElement {
-  const { core, plugin } = useDock();
+  const { core } = useDock();
   const locked = core.lock.board;
   const [renaming, setRenaming] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);

@@ -34,9 +34,36 @@ export const hello = {
   },
 };
 
+// A block's UI that draws a line, and one that draws nothing.
+const drawsLine = {
+  api: 1,
+  default: {
+    render({ el }: { el: HTMLElement }) {
+      const line = el.ownerDocument.createElement("p");
+      line.textContent = "The block's controls";
+      el.append(line);
+      return undefined;
+    },
+  },
+};
+const drawsNothing = { api: 1, default: { render: () => undefined } };
+
+// Stand-ins for the modules of core's block classes, by the module that each
+// entry of core's registry names, so that the cards that the dock draws mount
+// a UI and an output without a notification that a module failed.
+// The UI of the rbind block draws nothing, as core's does, and that of every
+// other class draws a line, and the renderer of each output draws nothing.
+const blockModules: Readonly<Record<string, unknown>> = Object.fromEntries(
+  Object.values(HELLO.block_registry).flatMap((entry): [string, unknown][] => [
+    [entry.module, entry.id === "blockr.core-rbind_block" ? drawsNothing : drawsLine],
+    ...(entry.renderer === undefined ? [] : [[entry.renderer.module, drawsNothing] as [string, unknown]]),
+  ]),
+);
+
 // What each module of the dock exports, by the id that R's reply names it
-// under.
+// under, and the stand-ins for core's block classes.
 export const modules = {
+  ...blockModules,
   [DOCK]: dock,
   compact: compactOption,
   view_tabs: viewTabsOption,

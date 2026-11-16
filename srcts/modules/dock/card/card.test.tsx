@@ -1,7 +1,7 @@
 // The card that the dock draws in each block's panel, on blockr.core's
-// CoreApi for tests, with stand-ins for the modules of core's block classes:
-// the UI of the rbind block draws nothing, as core's does, and that of every
-// other class draws a line.
+// CoreApi for tests, with the stand-ins for the modules of core's block
+// classes that ../testing.ts gives: the UI of the rbind block draws nothing,
+// as core's does, and that of every other class draws a line.
 
 import type { BlockId, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
@@ -10,29 +10,6 @@ import type { DockState } from "../../../state/index.ts";
 import { DOCK, hello, modules } from "../testing.ts";
 import { menuSpot, tooltipSpot } from "./place.ts";
 import { grouped } from "./picker.tsx";
-
-// A block's UI that draws a line, and one that draws nothing.
-const drawsLine = {
-  api: 1,
-  default: {
-    render({ el }: { el: HTMLElement }) {
-      const line = el.ownerDocument.createElement("p");
-      line.textContent = "The block's controls";
-      el.append(line);
-      return undefined;
-    },
-  },
-};
-const drawsNothing = { api: 1, default: { render: () => undefined } };
-
-// The stand-ins, by the module that each class of core's registry names,
-// and a renderer that draws nothing for the output of each class.
-const blockModules: Readonly<Record<string, unknown>> = Object.fromEntries(
-  Object.values(HELLO.block_registry).flatMap((entry): [string, unknown][] => [
-    [entry.module, entry.id === "blockr.core-rbind_block" ? drawsNothing : drawsLine],
-    ...(entry.renderer === undefined ? [] : [[entry.renderer.module, drawsNothing] as [string, unknown]]),
-  ]),
-);
 
 // The dock's state with one view, which shows Iris (a), Head (b), in front of
 // Merge (c), and Bind (e) side by side, with the Edit board plugin on the
@@ -92,7 +69,7 @@ async function startCards(board: JsonBoard = boardWith(shown), lock = false) {
   document.body.append(el);
   const s = await stubCore({
     hello: { ...hello, board, ...(lock ? { lock: { board: true, load: false } } : {}) },
-    modules: { ...modules, ...blockModules },
+    modules,
     el,
   });
   onTestFinished(() => {
