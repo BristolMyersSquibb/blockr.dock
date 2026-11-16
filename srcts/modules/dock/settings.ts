@@ -4,6 +4,8 @@
 // render(), with a message that names the value as R sent it, so that a
 // deployment that sets an option learns of its typo, as today's dock fails
 // in R.
+// The one exception is spinner_delay_ms, which falls back to its default
+// instead, as today's dock reads it.
 
 import type { CoreApi } from "@blockr/core";
 import { gridSizeTolerance, layoutLocks } from "../../commands/index.ts";
@@ -25,16 +27,20 @@ export interface Settings {
   // The most of the window's height that one row of the narrow column takes,
   // the blockr option narrow_group_fraction, 0.8 unless set.
   readonly fraction: number;
+  // How long the logo waits before it turns, in milliseconds, the blockr
+  // option spinner_delay_ms, 200 unless set.
+  readonly spinnerDelay: number;
 }
 
 export async function readSettings(core: Pick<CoreApi, "lock" | "blockrOption">): Promise<Settings> {
-  const [tolerance, locks, breakpoint, fraction] = await Promise.all([
+  const [tolerance, locks, breakpoint, fraction, spinnerDelay] = await Promise.all([
     gridSizeTolerance(core),
     layoutLocks(core),
     narrowBreakpoint(core),
     groupFraction(core),
+    spinnerDelayMs(core),
   ]);
-  return { tolerance, lockResize: locks.resize, lockRearrange: locks.rearrange, breakpoint, fraction };
+  return { tolerance, lockResize: locks.resize, lockRearrange: locks.rearrange, breakpoint, fraction, spinnerDelay };
 }
 
 // A breakpoint below this is a typo rather than a layout, as today's
@@ -63,6 +69,21 @@ async function groupFraction(core: Pick<CoreApi, "blockrOption">): Promise<numbe
   const value = typeof sent === "string" ? numberIn(sent) : sent;
   if (typeof value === "number" && value > 0 && value <= 1) return value;
   throw new TypeError(`The blockr option narrow_group_fraction is ${JSON.stringify(sent)}, where it takes a number above 0 and at most 1.`);
+}
+
+// The blockr option spinner_delay_ms, as Settings has it.
+// A value that is not a whole number of at least 0 reads as 200, as today's
+// spinner_delay_ms() in R/board-ui.R takes it, at 655e323.
+// R's as.integer() there cuts a fraction off, so 250.7 reads as 250, and a
+// string reads as the number that it holds.
+const SPINNER_DELAY = 200;
+
+async function spinnerDelayMs(core: Pick<CoreApi, "blockrOption">): Promise<number> {
+  const sent = await core.blockrOption("spinner_delay_ms");
+  const value = typeof sent === "string" ? numberIn(sent) : sent;
+  if (typeof value !== "number" || !Number.isFinite(value)) return SPINNER_DELAY;
+  const ms = Math.trunc(value);
+  return ms >= 0 ? ms : SPINNER_DELAY;
 }
 
 // The number that a string holds, with "Inf" as Infinity, as R's as.numeric()
