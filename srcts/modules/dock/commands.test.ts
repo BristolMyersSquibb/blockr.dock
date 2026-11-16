@@ -117,7 +117,7 @@ const modules = { [DOCK]: dock, compact: compactOption, view_tabs: viewTabsOptio
 async function start(
   options: { readonly dockState?: DockState; readonly locked?: boolean; readonly blockrOptions?: Readonly<Record<string, Json>> } = {},
 ) {
-  const { core, settled, stop } = await stubCore({
+  const { core, logged, settled, stop } = await stubCore({
     hello: helloWith(options.dockState ?? state, options.locked ?? false),
     modules,
     blockrOptions: options.blockrOptions ?? {},
@@ -130,6 +130,16 @@ async function start(
     dock: () => core.store.board().plugins[DOCK] as DockState,
     run: (name: string, args: Json = {}) => core.commands.run(`blockr.dock-${name}`, args),
     preflight: (name: string, args: Json = {}) => core.commands.preflight(`blockr.dock-${name}`, args),
+    // Runs a command that refuses to run with the failures given.
+    // It rejects as core's own commands refuse, naming the command, with a
+    // line for each failure, and nothing is logged at error.
+    refuses: async (name: string, args: Json, failures: readonly string[]) => {
+      const id = `blockr.dock-${name}`;
+      const refused = core.commands.run(id, args);
+      await expect(refused).rejects.toThrow([`The command "${id}" refused to run`, ...failures.map((failure) => `- ${failure}`)].join("\n"));
+      await expect(refused).rejects.toHaveProperty("failures", failures);
+      expect(logged.filter((line) => line.level === "error")).toEqual([]);
+    },
   };
 }
 
@@ -220,11 +230,11 @@ describe("blockr.dock-add_view", () => {
   });
 
   test("refuses a grid that fails its checks, or places a block that the board lacks", async () => {
-    const { dock, run } = await start();
+    const { dock, refuses } = await start();
     const sizes: Grid = { orientation: "horizontal", children: [group(a), group(b)], sizes: [0.5, 0.6] };
-    await expect(run("add_view", { grid: sizes })).rejects.toThrow('The shares of the split at "/" do not sum to 1.');
+    await refuses("add_view", { grid: sizes }, ['The shares of the split at "/" do not sum to 1.']);
     const lacking: Grid = { orientation: "horizontal", children: [group({ block: "z" })], sizes: [1] };
-    await expect(run("add_view", { grid: lacking })).rejects.toThrow('the block "z", which the board does not hold');
+    await refuses("add_view", { grid: lacking }, ['The grid places the panel of the block "z", which the board does not hold.']);
     expect(dock()).toEqual(state);
   });
 });
@@ -434,12 +444,10 @@ describe("blockr.dock-add_panel", () => {
   });
 
   test("refuses a panel that the view shows, a block that the board lacks, and a `near` that the view does not show", async () => {
-    const { dock, preflight, run } = await start();
+    const { dock, preflight, refuses, run } = await start();
     expect(preflight("add_panel", { view: "main", panel: a })).toBe(false);
     expect(preflight("add_panel", { view: "main", panel: { block: "z" } })).toBe(false);
-    await expect(run("add_panel", { view: "inner", panel: a, near: c })).rejects.toThrow(
-      'The view does not show the panel of the block "c", which near names.',
-    );
+    await refuses("add_panel", { view: "inner", panel: a, near: c }, ['The view does not show the panel of the block "c", which near names.']);
     await expect(run("add_panel", { view: "main", panel: md, side: "beside" })).rejects.toThrow("/side");
     expect(dock()).toEqual(state);
   });
@@ -501,6 +509,15 @@ describe("blockr.dock-move_panel", () => {
     expect(preflight("move_panel", { view: "side", panel: a })).toBe(false);
     expect(preflight("move_panel", { view: "main", panel: a, near: a })).toBe(false);
   });
+
+  test("refuses a `near` that the view does not show, and one on a rail beside which the panel would go", async () => {
+    const { dock, refuses } = await start();
+    await refuses("move_panel", { view: "main", panel: c, near: md }, ['The view does not show the panel of the plugin "blockr.md-md_plugin", which near names.']);
+    await refuses("move_panel", { view: "main", panel: c, near: dag, side: "below" }, [
+      'The view shows the panel of the plugin "blockr.dag-dag_plugin", which near names, on a rail, which takes a panel only within.',
+    ]);
+    expect(dock()).toEqual(state);
+  });
 });
 
 describe("blockr.dock-resize_panel", () => {
@@ -513,9 +530,11 @@ describe("blockr.dock-resize_panel", () => {
   });
 
   test("refuses a share that is not below 1, and a tab group that fills its split alone", async () => {
-    const { dock, run } = await start();
-    await expect(run("resize_panel", { view: "main", panel: c, size: 1.5 })).rejects.toThrow("below 1");
-    await expect(run("resize_panel", { view: "side", panel: c, size: 0.5 })).rejects.toThrow("fills its split alone");
+    const { dock, refuses, run } = await start();
+    await refuses("resize_panel", { view: "main", panel: c, size: 1.5 }, ["A tab group takes a share of its split below 1, which 1.5 is not."]);
+    await refuses("resize_panel", { view: "side", panel: c, size: 0.5 }, [
+      'The tab group that holds the panel of the block "c" fills its split alone, so its share stays 1.',
+    ]);
     await expect(run("resize_panel", { view: "main", panel: c, size: 0 })).rejects.toThrow("/size");
     expect(dock()).toEqual(state);
   });
@@ -618,12 +637,17 @@ describe("blockr.dock-set_grid", () => {
     expect(dock()).toEqual(state);
   });
 
-  test("refuses a grid that fails its checks, or places a block that the board lacks", async () => {
-    const { dock, run } = await start();
+  test("refuses a grid that fails its checks, or places a block that the board lacks, with a line for each failure", async () => {
+    const { dock, refuses, run } = await start();
     const twice: Grid = { orientation: "horizontal", children: [group(a), group(a)], sizes: [0.5, 0.5] };
-    await expect(run("set_grid", { view: "side", grid: twice })).rejects.toThrow('places the panel of the block "a" more than once');
+    await refuses("set_grid", { view: "side", grid: twice }, ['The grid places the panel of the block "a" more than once.']);
     const lacking: Grid = { orientation: "horizontal", children: [group({ block: "z" })], sizes: [1] };
-    await expect(run("set_grid", { view: "side", grid: lacking })).rejects.toThrow("which the board does not hold");
+    await refuses("set_grid", { view: "side", grid: lacking }, ['The grid places the panel of the block "z", which the board does not hold.']);
+    const both: Grid = { orientation: "horizontal", children: [group(a), group({ block: "z" })], sizes: [0.5, 0.6] };
+    await refuses("set_grid", { view: "side", grid: both }, [
+      'The shares of the split at "/" do not sum to 1.',
+      'The grid places the panel of the block "z", which the board does not hold.',
+    ]);
     await expect(run("set_grid", { view: "side", grid: { ...lacking, orientation: "diagonal" } })).rejects.toThrow("/grid");
     expect(dock()).toEqual(state);
   });
@@ -692,6 +716,14 @@ describe("blockr.dock-collapse_rail", () => {
 });
 
 describe("the commands for panels and rails on a locked board", () => {
+  // Why a locked board refuses a command, for each part of a grid that it
+  // keeps.
+  const kept = {
+    panels: "The board is locked, which keeps the panels that each view shows.",
+    arrangement: "The board is locked, and the blockr option lock_rearrange keeps where each panel sits.",
+    sizes: "The board is locked, and the blockr option lock_resize keeps the sizes of the splits and rails.",
+  };
+
   test("add and remove no panel, while a reader still has a tab group show another panel and collapses a rail", async () => {
     const { dock, preflight, run } = await start({ locked: true });
 
@@ -705,8 +737,8 @@ describe("the commands for panels and rails on a locked board", () => {
 
   test("move or resize no panel unless lock_rearrange or lock_resize leaves that open", async () => {
     const locked = await start({ locked: true });
-    await expect(locked.run("move_panel", { view: "main", panel: c, near: a })).rejects.toThrow("lock_rearrange");
-    await expect(locked.run("resize_panel", { view: "main", panel: c, size: 0.25 })).rejects.toThrow("lock_resize");
+    await locked.refuses("move_panel", { view: "main", panel: c, near: a }, [kept.arrangement]);
+    await locked.refuses("resize_panel", { view: "main", panel: c, size: 0.25 }, [kept.sizes]);
     expect(locked.dock()).toEqual(state);
 
     const open = await start({ locked: true, blockrOptions: { lock_rearrange: "FALSE", lock_resize: false } });
@@ -717,9 +749,9 @@ describe("the commands for panels and rails on a locked board", () => {
   });
 
   test("set no grid that holds other panels, under either blockr option", async () => {
-    const { run } = await start({ locked: true, blockrOptions: { lock_rearrange: false, lock_resize: false } });
+    const { refuses } = await start({ locked: true, blockrOptions: { lock_rearrange: false, lock_resize: false } });
     const fewer: Grid = { ...main, children: [{ panels: [a, b], active: b }], sizes: [1] };
-    await expect(run("set_grid", { view: "main", grid: fewer })).rejects.toThrow("keeps the panels that each view shows");
+    await refuses("set_grid", { view: "main", grid: fewer }, [kept.panels]);
   });
 
   test("set a grid that changes only the panels shown and the rails' collapse, under both blockr options", async () => {
@@ -737,14 +769,16 @@ describe("the commands for panels and rails on a locked board", () => {
     const reshaped: Grid = { ...main, children: [{ children: [{ panels: [a, b], active: b }, group(c)], sizes: [0.7, 0.3] }], sizes: [1] };
 
     const locked = await start({ locked: true });
-    await expect(locked.run("set_grid", { view: "main", grid: rearranged })).rejects.toThrow("lock_rearrange");
-    await expect(locked.run("set_grid", { view: "main", grid: resized })).rejects.toThrow("lock_resize");
+    await locked.refuses("set_grid", { view: "main", grid: rearranged }, [kept.arrangement]);
+    await locked.refuses("set_grid", { view: "main", grid: resized }, [kept.sizes]);
 
     const rearrange = await start({ locked: true, blockrOptions: { lock_rearrange: "F" } });
     await rearrange.run("set_grid", { view: "main", grid: rearranged });
     await rearrange.run("set_grid", { view: "main", grid: reshaped });
     expect(rearrange.dock().views.main?.grid).toEqual(reshaped);
-    await expect(rearrange.run("set_grid", { view: "main", grid: { ...reshaped, children: [{ children: [{ panels: [a, b], active: b }, group(c)], sizes: [0.5, 0.5] }] } })).rejects.toThrow("lock_resize");
+    await rearrange.refuses("set_grid", { view: "main", grid: { ...reshaped, children: [{ children: [{ panels: [a, b], active: b }, group(c)], sizes: [0.5, 0.5] }] } }, [
+      kept.sizes,
+    ]);
 
     const resize = await start({ locked: true, blockrOptions: { lock_resize: "false" } });
     await resize.run("set_grid", { view: "main", grid: resized });
@@ -752,19 +786,19 @@ describe("the commands for panels and rails on a locked board", () => {
   });
 
   test("set a grid that moves a tab under lock_resize, keeping the shares that it moves by no more than dock_grid_size_tol", async () => {
-    const { dock, run } = await start({ locked: true, blockrOptions: { lock_rearrange: false } });
+    const { dock, refuses, run } = await start({ locked: true, blockrOptions: { lock_rearrange: false } });
     // Moving b into the tab group of c keeps the splits and tab groups, whose
     // shares are compared.
     const moved: Grid = { ...main, children: [group(a), { panels: [b, c], active: b }], sizes: [0.497, 0.503] };
     await run("set_grid", { view: "main", grid: moved });
     expect(dock().views.main?.grid).toEqual({ ...moved, sizes: [0.5, 0.5] });
-    await expect(run("set_grid", { view: "main", grid: { ...moved, sizes: [0.49, 0.51] } })).rejects.toThrow("lock_resize");
+    await refuses("set_grid", { view: "main", grid: { ...moved, sizes: [0.49, 0.51] } }, [kept.sizes]);
   });
 
-  test("refuse to move a panel where a blockr option of the lock holds no logical", async () => {
+  test("fail to move a panel where a blockr option of the lock holds no logical", async () => {
     const { run } = await start({ locked: true, blockrOptions: { lock_rearrange: "maybe" } });
     await expect(run("move_panel", { view: "main", panel: c, near: a })).rejects.toThrow(
-      'The blockr option lock_rearrange is "maybe", where it takes TRUE or FALSE.',
+      'The command "blockr.dock-move_panel" failed\n- The blockr option lock_rearrange is "maybe", where it takes TRUE or FALSE.',
     );
   });
 });

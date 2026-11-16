@@ -14,11 +14,13 @@ A \code{board_option} object.
 }
 \description{
 A board option that shows the board's views as a line of tabs under the
-navbar, one tab per view, with the view menu reduced to its chevron at the
-end of the line. Off by default, it sits with the light/dark switch and
-"Compact" under "Theme options", and "Show views as tabs" at the foot of the
-view menu sets it as well. A board saved with the option on shows the tabs
-from its first paint.
+navbar, a tab for each view and folder at the top of the views menu, with
+the views menu reduced to its chevron at the end of the line.
+A folder's tab opens a menu of what the folder holds.
+Off by default, it sits with the light/dark switch and "Compact" under
+"Theme options", and "Show views as tabs" at the foot of the views menu
+sets it as well.
+A board saved with the option on shows the tabs from its first paint.
 }
 \details{
 A board that holds no value for it takes its default as it opens:

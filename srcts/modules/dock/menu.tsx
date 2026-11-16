@@ -23,10 +23,19 @@
 // A row is one of these:
 // - An action, which runs as the user picks it, and which is greyed out while
 //   it is disabled, with the reason as its tooltip.
+//   An action may be the current pick of a set, as the active view in the
+//   views menu, set in weight 600, or a toggle, which ends on a check while it
+//   is on, as the design system's rows show them.
 // - A link, which opens in a new tab.
 // - A status, text in the muted colour, which runs nothing, and which the
 //   arrows pass over.
 // - A menu, which opens beside the row that holds it.
+// - A fold, which opens and closes in place as the user picks it, as a folder
+//   in the views menu does (./views-menu.tsx).
+//   The rows that it holds follow it while it is open, one level deeper.
+//   Its chevron points right while it is closed and down while it is open,
+//   and every row of a group that has a fold leaves room for that chevron, so
+//   that the labels line up.
 //
 // The keys are the design system's: the focus stays in the search, or on the
 // menu where it has none, and the row that the keyboard is on is the menu's
@@ -42,6 +51,11 @@
 // - ArrowRight, Enter or a click opens the menu of a row that holds one, and
 //   ArrowLeft or Escape closes it again, with the focus back on the menu that
 //   holds the row.
+// - ArrowRight opens a closed fold, or moves into an open one, and ArrowLeft
+//   closes an open fold, or moves from a row inside a fold to the fold.
+//   Enter, Space and a click open and close a fold.
+// - A menu that the keyboard opened starts on its current pick, where it has
+//   one.
 // - Escape closes a menu that a button opened, and the focus goes back to the
 //   button.
 // - Tab closes every menu, and the focus moves on from the button.
@@ -49,9 +63,9 @@
 //   back to the button, without a ring after a click, and then the row runs.
 
 import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode, RefObject, SyntheticEvent } from "react";
+import type { CSSProperties, KeyboardEvent, MouseEvent, ReactElement, ReactNode, RefObject, SyntheticEvent } from "react";
 import { useFloating, usePopover } from "./floating.ts";
-import { Chevron } from "./icons.tsx";
+import { CheckIcon, Chevron } from "./icons.tsx";
 import { besideSpot, menuSpot } from "./place.ts";
 import type { Align, Box, Size } from "./place.ts";
 import { ariaShortcuts } from "./shortcuts.ts";
@@ -87,6 +101,17 @@ export interface MenuRow {
   readonly status?: boolean;
   // A menu, which opens beside the row.
   readonly rows?: readonly MenuRow[];
+  // Whether an action is the current pick of a set, where it is one of a set.
+  readonly current?: boolean;
+  // Whether a toggle is on, where the action is one.
+  readonly checked?: boolean;
+  // A fold, which opens and closes in place, with whether it is open and what
+  // opens and closes it.
+  // The rows that it holds follow it in the list while it is open, each one
+  // level deeper.
+  readonly fold?: { readonly open: boolean; readonly onToggle: (open: boolean) => void };
+  // How many folds hold the row, 0 unless given.
+  readonly depth?: number;
   // What an action runs.
   readonly onSelect?: () => void;
 }
@@ -152,6 +177,16 @@ export function stepped(at: number | null, step: 1 | -1, count: number): number 
   return (at + step + count) % count;
 }
 
+// The index of the fold that holds the row at `at`, among the rows that the
+// arrows stop on, or -1 where no fold holds it.
+function foldOf(rows: readonly MenuRow[], at: number): number {
+  const depth = rows[at]?.depth ?? 0;
+  for (let i = at - 1; i >= 0 && depth > 0; i -= 1) {
+    if ((rows[i]?.depth ?? 0) < depth) return i;
+  }
+  return -1;
+}
+
 // Whether the browser places a menu by CSS anchor positioning.
 function anchored(doc: Document): boolean {
   return doc.defaultView?.CSS.supports("position-area", "block-end") === true;
@@ -192,6 +227,44 @@ function useDismiss(menu: RefObject<HTMLElement | null>, anchor: HTMLElement, cl
   }, [menu, anchor, close]);
 }
 
+export interface MenuSurface {
+  // How deep the menu sits: 0 for a menu that a button opened.
+  readonly depth: number;
+  readonly align: Align;
+  // Whether the keyboard opened the menu.
+  readonly keyboard: boolean;
+  readonly onClose: (how: Closing) => void;
+}
+
+// Shows the element of the ref as the popover of a menu, by the button or the
+// row that opened it, from before the browser paints it on, and closes it as
+// a click or the focus lands outside it and its button.
+// The button or the row takes the anchor name of the menu's depth, by which
+// CSS anchor positioning places the popover, and script places it where the
+// browser has no anchor positioning (./place.ts).
+// Safari does not focus a button that the user clicks, so the menu does, and
+// the browser gives the focus back to the button as the menu closes.
+// A popover of the views menu that is no menu, its manage mode, shows the same
+// way (./views-menu.tsx).
+export function useMenuSurface(ref: RefObject<HTMLElement | null>, anchor: HTMLElement, { depth, align, keyboard, onClose }: MenuSurface): void {
+  const [placement] = useState(() => {
+    if (anchored(anchor.ownerDocument)) return null;
+    return depth === 0 ? (trigger: Box, size: Size, view: Size) => menuSpot(trigger, size, view, align) : besideSpot;
+  });
+  useLayoutEffect(() => {
+    const name = anchorName(depth);
+    if (depth === 0 && !keyboard) anchor.focus({ preventScroll: true, focusVisible: false });
+    anchor.style.setProperty("anchor-name", name);
+    ref.current?.style.setProperty("position-anchor", name);
+    return () => {
+      anchor.style.removeProperty("anchor-name");
+    };
+  }, [ref, anchor, keyboard, depth]);
+  usePopover(ref, anchor);
+  useFloating(ref, anchor, placement);
+  useDismiss(ref, anchor, onClose);
+}
+
 export function Menu({
   anchor,
   label,
@@ -210,12 +283,18 @@ export function Menu({
   const id = useId();
   const closeAll = onCloseAll ?? onClose;
   const [searched, setSearched] = useState("");
-  const [active, setActive] = useState<number | null>(search !== undefined || keyboard ? 0 : null);
-  const [sub, setSub] = useState<Sub | null>(null);
-  const [placement] = useState(() => {
-    if (anchored(anchor.ownerDocument)) return null;
-    return depth === 0 ? (trigger: Box, size: Size, view: Size) => menuSpot(trigger, size, view, align) : besideSpot;
+  const [active, setActive] = useState<number | null>(() => {
+    if (search !== undefined) return 0;
+    if (!keyboard) return null;
+    return Math.max(
+      0,
+      groups
+        .flatMap((group) => group.rows)
+        .filter(reachable)
+        .findIndex((row) => row.current === true),
+    );
   });
+  const [sub, setSub] = useState<Sub | null>(null);
 
   const listed = groups.some((group) => group.rows.length > 0);
   const shown = useMemo(
@@ -229,23 +308,10 @@ export function Menu({
   const rowId = (i: number) => `${id}-row-${String(i)}`;
   const activeId = active !== null && active < rows.length ? rowId(active) : undefined;
 
-  // Safari does not focus a button that the user clicks, so the menu does,
-  // and the browser gives the focus back to the button as the menu closes.
-  useLayoutEffect(() => {
-    const name = anchorName(depth);
-    if (depth === 0 && !keyboard) anchor.focus({ preventScroll: true, focusVisible: false });
-    anchor.style.setProperty("anchor-name", name);
-    ref.current?.style.setProperty("position-anchor", name);
-    return () => {
-      anchor.style.removeProperty("anchor-name");
-    };
-  }, [anchor, keyboard, depth]);
-  usePopover(ref, anchor);
-  useFloating(ref, anchor, placement);
+  useMenuSurface(ref, anchor, { depth, align, keyboard, onClose });
   useLayoutEffect(() => {
     (field.current ?? ref.current)?.focus({ preventScroll: true });
   }, []);
-  useDismiss(ref, anchor, onClose);
 
   // The active row stays in view as the arrows move it.
   useLayoutEffect(() => {
@@ -264,6 +330,11 @@ export function Menu({
 
   const pick = (row: MenuRow, i: number, pointer: boolean) => {
     if (row.disabled === true) return;
+    if (row.fold !== undefined) {
+      setActive(i);
+      row.fold.onToggle(!row.fold.open);
+      return;
+    }
     if (row.rows !== undefined) {
       const element = rowElement(i);
       if (element !== null) {
@@ -295,13 +366,25 @@ export function Menu({
         setActive(event.key === "Home" ? 0 : rows.length - 1);
         break;
       case "ArrowRight":
-        if (search !== undefined || row?.rows === undefined || active === null) return;
+        if (search !== undefined || row === undefined || active === null) return;
+        if (row.fold !== undefined) {
+          // An open fold holds the row after it, where it holds any.
+          if (!row.fold.open) row.fold.onToggle(true);
+          else if ((rows[active + 1]?.depth ?? 0) > (row.depth ?? 0)) setActive(active + 1);
+          break;
+        }
+        if (row.rows === undefined) return;
         pick(row, active, false);
         break;
-      case "ArrowLeft":
-        if (search !== undefined || depth === 0) return;
-        onClose({ restore: true, pointer: false });
+      case "ArrowLeft": {
+        if (search !== undefined) return;
+        const fold = active === null ? -1 : foldOf(rows, active);
+        if (row?.fold?.open === true) row.fold.onToggle(false);
+        else if (fold >= 0) setActive(fold);
+        else if (depth === 0) return;
+        else onClose({ restore: true, pointer: false });
         break;
+      }
       case " ":
         if (search !== undefined) return;
         if (row !== undefined && active !== null) pick(row, active, false);
@@ -329,10 +412,13 @@ export function Menu({
     shown.slice(0, g).reduce((count, group) => count + group.rows.filter(reachable).length, 0),
   );
 
-  const drawRow = (row: MenuRow, i: number) => {
+  // Draws a row, which leaves room for the chevron of a fold where its group
+  // has a fold.
+  const drawRow = (row: MenuRow, i: number, folds: boolean) => {
     const common = {
       id: rowId(i),
       className: "blockr-dock-menu-row",
+      style: row.depth === undefined ? undefined : ({ "--depth": row.depth } as CSSProperties),
       "data-active": i === active ? "" : undefined,
       "data-danger": row.danger === true ? "" : undefined,
       title: row.tooltip,
@@ -346,6 +432,13 @@ export function Menu({
     };
     const content = (
       <>
+        {row.fold !== undefined ? (
+          <span className="blockr-dock-menu-fold" aria-hidden="true">
+            <Chevron />
+          </span>
+        ) : folds ? (
+          <span className="blockr-dock-menu-fold" aria-hidden="true" />
+        ) : null}
         {row.lead === undefined ? null : (
           <span className="blockr-dock-menu-lead" aria-hidden="true">
             {row.lead}
@@ -355,6 +448,7 @@ export function Menu({
         {row.detail === undefined ? null : <span className="blockr-dock-menu-detail">{row.detail}</span>}
         {row.badge === undefined ? null : <span className="blockr-dock-menu-badge">{row.badge}</span>}
         {row.meta === undefined ? null : <span className="blockr-dock-menu-meta">{row.meta}</span>}
+        {row.checked === true ? <CheckIcon /> : null}
       </>
     );
     if (search !== undefined) {
@@ -430,8 +524,10 @@ export function Menu({
       <button
         {...common}
         type="button"
-        role="menuitem"
+        role={row.current !== undefined ? "menuitemradio" : row.checked !== undefined ? "menuitemcheckbox" : "menuitem"}
         tabIndex={-1}
+        aria-checked={row.current ?? row.checked}
+        aria-expanded={row.fold?.open}
         aria-disabled={row.disabled === true ? true : undefined}
         aria-keyshortcuts={ariaShortcuts(row.shortcut)}
         onClick={(event: MouseEvent) => {
@@ -444,6 +540,7 @@ export function Menu({
   };
 
   const drawGroup = (group: MenuGroup, g: number) => {
+    const folds = group.rows.some((row) => row.fold !== undefined);
     const drawn = group.rows.map((row, r) => {
       const element =
         row.status === true ? (
@@ -451,7 +548,7 @@ export function Menu({
             {row.label}
           </div>
         ) : (
-          drawRow(row, (starts[g] ?? 0) + group.rows.slice(0, r).filter(reachable).length)
+          drawRow(row, (starts[g] ?? 0) + group.rows.slice(0, r).filter(reachable).length, folds)
         );
       return (
         <Fragment key={row.key}>

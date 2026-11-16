@@ -534,18 +534,16 @@ function locate(grid2, panel2) {
   const held = rails(grid2).find(([, rail2]) => rail2.panels.some((placed) => samePanel(placed, panel2)));
   return held === void 0 ? void 0 : { edge: held[0] };
 }
-function placeFailure(grid2, place) {
-  if (place.rail !== void 0 || place.near === void 0) return void 0;
+function placeFailures(grid2, place) {
+  if (place.rail !== void 0 || place.near === void 0) return [];
   const at2 = locate(grid2, place.near);
-  if (at2 === void 0) return `The view does not show ${panelName(place.near)}, which near names.`;
+  if (at2 === void 0) return [`The view does not show ${panelName(place.near)}, which near names.`];
   if ("edge" in at2 && (place.side ?? "within") !== "within") {
-    return `The view shows ${panelName(place.near)}, which near names, on a rail, which takes a panel only within.`;
+    return [`The view shows ${panelName(place.near)}, which near names, on a rail, which takes a panel only within.`];
   }
-  return void 0;
+  return [];
 }
 function placedAt(grid2, panel2, place, sizing) {
-  const failure = placeFailure(grid2, place);
-  if (failure !== void 0) throw new Error(failure);
   if (place.rail !== void 0) return onRail(grid2, place.rail, panel2);
   const side2 = place.side ?? "within";
   if (place.near === void 0) return side2 === "within" ? placePanel(grid2, panel2) : atEdge(grid2, panel2, side2);
@@ -620,6 +618,12 @@ function withSplit(grid2, path, fn) {
   if (path.length === 0) return { ...grid2, ...fn({ children: grid2.children, sizes: grid2.sizes }) };
   return withNode(grid2, path, (node) => isTabGroup2(node) ? node : fn(node));
 }
+function splitAt(split, path) {
+  const [i, ...deeper] = path;
+  if (i === void 0) return split;
+  const child = split.children[i];
+  return child === void 0 || isTabGroup2(child) ? void 0 : splitAt(child, deeper);
+}
 function showing(grid2, panel2) {
   const at2 = locate(grid2, panel2);
   if (at2 === void 0) return grid2;
@@ -631,6 +635,17 @@ function collapsedRail(grid2, edge2, collapsed) {
   const rail2 = grid2.rails?.[edge2];
   return rail2 === void 0 ? grid2 : { ...grid2, rails: { ...grid2.rails, [edge2]: { ...rail2, collapsed } } };
 }
+function resizeFailures(grid2, panel2, size) {
+  const at2 = locate(grid2, panel2);
+  if (at2 === void 0 || "edge" in at2) return [];
+  const failures = [];
+  if (size >= 1) failures.push(`A tab group takes a share of its split below 1, which ${String(size)} is not.`);
+  const split = splitAt(grid2, at2.path.slice(0, -1));
+  if (split !== void 0 && split.children.length < 2) {
+    failures.push(`The tab group that holds ${panelName(panel2)} fills its split alone, so its share stays 1.`);
+  }
+  return failures;
+}
 function resized(grid2, panel2, size) {
   const at2 = locate(grid2, panel2);
   if (at2 === void 0) return grid2;
@@ -638,14 +653,8 @@ function resized(grid2, panel2, size) {
     const rail2 = grid2.rails?.[at2.edge];
     return rail2 === void 0 ? grid2 : { ...grid2, rails: { ...grid2.rails, [at2.edge]: { ...rail2, size } } };
   }
-  if (size >= 1) {
-    throw new Error(`A tab group takes a share of its split below 1, which ${String(size)} is not.`);
-  }
   const i = at2.path.at(-1) ?? 0;
   return withSplit(grid2, at2.path.slice(0, -1), (split) => {
-    if (split.children.length < 2) {
-      throw new Error(`The tab group that holds ${panelName(panel2)} fills its split alone, so its share stays 1.`);
-    }
     const shares2 = fitted(split.sizes, split.children.length);
     const rest = sum(shares2) - (shares2[i] ?? 0);
     return { ...split, sizes: shares2.map((share, j) => j === i ? size : share / rest * (1 - size)) };
@@ -653,22 +662,22 @@ function resized(grid2, panel2, size) {
 }
 function withStoredShares(stored, grid2, tolerance) {
   if (!sameShape(stored, grid2)) return grid2;
-  const kept = (before2, after) => {
-    const children2 = after.children.map((child, i) => {
+  const kept = (before2, after2) => {
+    const children2 = after2.children.map((child, i) => {
       const was = before2.children[i];
       return isTabGroup2(child) || was === void 0 || isTabGroup2(was) ? child : kept(was, child);
     });
     const shares2 = fitted(before2.sizes, before2.children.length);
-    const steady = shares2.every((share, i) => Math.abs(share - (after.sizes[i] ?? Number.NaN)) <= tolerance);
-    return { children: children2, sizes: steady ? shares2 : after.sizes };
+    const steady = shares2.every((share, i) => Math.abs(share - (after2.sizes[i] ?? Number.NaN)) <= tolerance);
+    return { children: children2, sizes: steady ? shares2 : after2.sizes };
   };
   return { ...grid2, ...kept(stored, grid2) };
 }
 function gridChanges(stored, grid2) {
   const before2 = gridPanels(stored);
-  const after = gridPanels(grid2);
+  const after2 = gridPanels(grid2);
   return {
-    panels: before2.length !== after.length || !after.every((panel2) => before2.some((other) => samePanel(other, panel2))),
+    panels: before2.length !== after2.length || !after2.every((panel2) => before2.some((other) => samePanel(other, panel2))),
     arrangement: JSON.stringify(arrangement(grid2)) !== JSON.stringify(arrangement(stored)),
     sizes: resizedFrom(stored, grid2)
   };
@@ -744,6 +753,15 @@ function sitsAt(state, entry, folder2, before2) {
   if (at2 === -1) return false;
   const next = listed[at2 + 1];
   return before2 === void 0 ? next === void 0 : next !== void 0 && sameEntry(next, before2);
+}
+function foldersHolding(state, entry) {
+  const folders = [];
+  let at2 = "view" in entry ? holder(state, state.views[entry.view]?.folder ?? null) : holder(state, state.folders[entry.folder]?.folder ?? null, entry.folder);
+  while (at2 !== null && !folders.includes(at2)) {
+    folders.push(at2);
+    at2 = holder(state, state.folders[at2]?.folder ?? null, at2);
+  }
+  return folders;
 }
 function within(state, folder2, outer) {
   const passed = /* @__PURE__ */ new Set();
@@ -867,9 +885,9 @@ function update(delta, board, plugin) {
   for (const block of removed) {
     if (Object.hasOwn(given.visible, block)) patches.push({ op: "remove", path: at2("visible", block) });
   }
-  for (const move of moves) {
-    patches.push({ op: "replace", path: at2(move.kind, move.id, "folder"), value: move.folder });
-    patches.push({ op: "replace", path: at2(move.kind, move.id, "index"), value: move.index });
+  for (const move2 of moves) {
+    patches.push({ op: "replace", path: at2(move2.kind, move2.id, "folder"), value: move2.folder });
+    patches.push({ op: "replace", path: at2(move2.kind, move2.id, "index"), value: move2.index });
   }
   if (state.active !== given.active) patches.push({ op: "replace", path: at2("active"), value: state.active });
   return patches;
@@ -928,12 +946,12 @@ function rehoused(state, before2) {
     group.sort((a, b) => pathOrder(a.path, b.path) || compare(a.kind, b.kind) || compare(a.id, b.id));
     const list = folderKeys(first.target);
     const place = first.place;
-    const after = place === null ? list.length : list.filter((held) => held.added || compare(held.index, place) <= 0).length;
-    const keys = keysBetween(list[after - 1]?.index ?? null, list[after]?.index ?? null, group.length);
+    const after2 = place === null ? list.length : list.filter((held) => held.added || compare(held.index, place) <= 0).length;
+    const keys = keysBetween(list[after2 - 1]?.index ?? null, list[after2]?.index ?? null, group.length);
     group.forEach((entry, i) => {
       const index = keys[i] ?? entry.index;
       moves.push({ kind: entry.kind, id: entry.id, folder: first.target, index });
-      list.splice(after + i, 0, { index, added: true });
+      list.splice(after2 + i, 0, { index, added: true });
     });
   }
   let next = state;
@@ -1087,8 +1105,8 @@ function givenGridFailures(board, grid2) {
   );
   return [...gridFailures(grid2), ...lacking.map((block) => `The grid places the panel of the block "${block}", which the board does not hold.`)];
 }
-function refuse(failures) {
-  if (failures.length > 0) throw new Error(failures.join(" "));
+function refuse(context, failures) {
+  if (failures.length > 0) throw context.refusal(failures);
 }
 function holdsBlock(board, panel2) {
   return !("block" in panel2) || Object.hasOwn(board.blocks, panel2.block);
@@ -1211,9 +1229,9 @@ var KEPT = {
   arrangement: "The board is locked, and the blockr option lock_rearrange keeps where each panel sits.",
   sizes: "The board is locked, and the blockr option lock_resize keeps the sizes of the splits and rails."
 };
-function keep(changes, locks, locked) {
-  if (!locked) return;
-  refuse([
+function keep(changes, locks, context) {
+  if (!context.lock.board) return;
+  refuse(context, [
     ...changes.panels === true ? [KEPT.panels] : [],
     ...changes.arrangement === true && locks.rearrange ? [KEPT.arrangement] : [],
     ...changes.sizes === true && locks.resize ? [KEPT.sizes] : []
@@ -1228,10 +1246,12 @@ var panelCommands = [
     preflight(board, { view: view2, panel: panel2 }, { lock }) {
       return !lock.board && boardView(board, view2) !== void 0 && !shows(board, view2, panel2) && holdsBlock(board, panel2);
     },
-    run(board, { view: view2, panel: panel2, near: near2, side: side2, rail: rail2 }) {
+    run(board, { view: view2, panel: panel2, near: near2, side: side2, rail: rail2 }, context) {
       const held = boardView(board, view2);
       if (held === void 0) return [];
-      return { patches: [gridPatch(view2, placedAt(held.grid, panel2, { near: near2, side: side2, rail: rail2 }, "distribute"))] };
+      const place = { near: near2, side: side2, rail: rail2 };
+      refuse(context, placeFailures(held.grid, place));
+      return { patches: [gridPatch(view2, placedAt(held.grid, panel2, place, "distribute"))] };
     }
   }),
   command({
@@ -1259,15 +1279,18 @@ var panelCommands = [
     async prepare(_board, args, context) {
       return { ...args, locks: await layoutLocks(context) };
     },
-    run(board, { view: view2, panel: panel2, near: near2, side: side2, rail: rail2, locks }, { lock }) {
-      keep({ arrangement: true }, locks, lock.board);
+    run(board, { view: view2, panel: panel2, near: near2, side: side2, rail: rail2, locks }, context) {
+      keep({ arrangement: true }, locks, context);
       const held = boardView(board, view2);
       if (held === void 0) return [];
       const from = locate(held.grid, panel2);
       if (rail2 !== void 0 && from !== void 0 && "edge" in from && from.edge === rail2) {
         if (held.grid.rails?.[rail2]?.panels.length === 1) return [];
       }
-      return { patches: [gridPatch(view2, placedAt(withoutPanel(held.grid, panel2), panel2, { near: near2, side: side2, rail: rail2 }, "split"))] };
+      const place = { near: near2, side: side2, rail: rail2 };
+      const rest = withoutPanel(held.grid, panel2);
+      refuse(context, placeFailures(rest, place));
+      return { patches: [gridPatch(view2, placedAt(rest, panel2, place, "split"))] };
     }
   }),
   command({
@@ -1292,10 +1315,11 @@ var panelCommands = [
     async prepare(_board, args, context) {
       return { ...args, locks: await layoutLocks(context) };
     },
-    run(board, { view: view2, panel: panel2, size, locks }, { lock }) {
-      keep({ sizes: true }, locks, lock.board);
+    run(board, { view: view2, panel: panel2, size, locks }, context) {
+      keep({ sizes: true }, locks, context);
       const held = boardView(board, view2);
       if (held === void 0) return [];
+      refuse(context, resizeFailures(held.grid, panel2, size));
       return { patches: [gridPatch(view2, resized(held.grid, panel2, size))] };
     }
   }),
@@ -1352,12 +1376,12 @@ var panelCommands = [
       const [locks, tolerance] = await Promise.all([layoutLocks(context), gridSizeTolerance(context)]);
       return { ...args, locks, tolerance };
     },
-    run(board, { view: view2, grid: grid2, locks, tolerance }, { lock }) {
+    run(board, { view: view2, grid: grid2, locks, tolerance }, context) {
       const held = boardView(board, view2);
       if (held === void 0) return [];
-      refuse(givenGridFailures(board, grid2));
+      refuse(context, givenGridFailures(board, grid2));
       const kept = withStoredShares(held.grid, grid2, tolerance);
-      keep(gridChanges(held.grid, kept), locks, lock.board);
+      keep(gridChanges(held.grid, kept), locks, context);
       return { patches: [gridPatch(view2, kept)] };
     }
   }),
@@ -1452,13 +1476,13 @@ var viewCommands = [
       const folder2 = args.folder ?? null;
       return editable(state, lock.board) && folderOrTop(state, folder2) && fits(state, folder2, args.before);
     },
-    run(board, args, { mintId }) {
+    run(board, args, context) {
       const state = dockState(board);
       if (state === void 0) return [];
       const grid2 = args.grid ?? EMPTY;
-      refuse(givenGridFailures(board, grid2));
+      refuse(context, givenGridFailures(board, grid2));
       const folder2 = args.folder ?? null;
-      const id = mintId(taken(state));
+      const id = context.mintId(taken(state));
       const view2 = {
         name: args.name ?? nextName("View", Object.values(state.views).map((other) => other.name)),
         folder: folder2,
@@ -1579,9 +1603,9 @@ var viewCommands = [
       return {
         patches: [
           { op: "remove", path: at("folders", folder2) },
-          ...moves.flatMap((move) => [
-            { op: "replace", path: at(move.kind, move.id, "folder"), value: move.folder },
-            { op: "replace", path: at(move.kind, move.id, "index"), value: move.index }
+          ...moves.flatMap((move2) => [
+            { op: "replace", path: at(move2.kind, move2.id, "folder"), value: move2.folder },
+            { op: "replace", path: at(move2.kind, move2.id, "index"), value: move2.index }
           ])
         ]
       };
@@ -1633,28 +1657,28 @@ var API = 1;
 // srcts/layout/gestures.ts
 function gestureRuns(view2, shown, read, stored, reading) {
   const before2 = withStoredRails(shown, stored);
-  const after = withStoredRails(
+  const after2 = withStoredRails(
     withStoredShares(shown, read, reading.shares ? reading.tolerance : Infinity),
     stored,
     reading.widths ? shown : void 0
   );
-  const changes = gridChanges(before2, after);
+  const changes = gridChanges(before2, after2);
   if (changes.panels || changes.arrangement || changes.sizes) {
-    return [{ id: "blockr.dock-set_grid", args: { view: view2, grid: after } }];
+    return [{ id: "blockr.dock-set_grid", args: { view: view2, grid: after2 } }];
   }
   const runs = [];
-  const activate = (panel2) => {
+  const activate2 = (panel2) => {
     runs.push({ id: "blockr.dock-activate_panel", args: { view: view2, panel: panel2 } });
   };
   const groups = tabGroups(before2);
-  tabGroups(after).forEach((group, i) => {
+  tabGroups(after2).forEach((group, i) => {
     const was = groups[i];
-    if (was !== void 0 && !samePanel(was.active, group.active)) activate(group.active);
+    if (was !== void 0 && !samePanel(was.active, group.active)) activate2(group.active);
   });
   for (const edge2 of EDGES) {
-    const [was, rail2] = [before2.rails?.[edge2], after.rails?.[edge2]];
+    const [was, rail2] = [before2.rails?.[edge2], after2.rails?.[edge2]];
     if (was === void 0 || rail2 === void 0) continue;
-    if (!samePanel(was.active, rail2.active)) activate(rail2.active);
+    if (!samePanel(was.active, rail2.active)) activate2(rail2.active);
     if (was.collapsed !== rail2.collapsed) {
       runs.push({ id: "blockr.dock-collapse_rail", args: { view: view2, edge: edge2, collapsed: rail2.collapsed } });
     }
@@ -2069,6 +2093,77 @@ function WarningIcon() {
 function LockIcon({ size = 12 }) {
   return /* @__PURE__ */ jsx2("svg", { width: size, height: size, viewBox: "0 0 16 16", fill: "currentColor", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx2("path", { d: "M8 1a3 3 0 0 0-3 3v3H4.5A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7H11V4a3 3 0 0 0-3-3Zm-1.75 6V4a1.75 1.75 0 1 1 3.5 0v3h-3.5Z" }) });
 }
+function CheckIcon() {
+  return /* @__PURE__ */ jsx2(
+    "svg",
+    {
+      className: "blockr-dock-check",
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "1.5",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": "true",
+      focusable: "false",
+      children: /* @__PURE__ */ jsx2("path", { d: "M3.5 8.5l3 3 6-7" })
+    }
+  );
+}
+function GripIcon() {
+  return /* @__PURE__ */ jsxs("svg", { width: "8", height: "12", viewBox: "0 0 8 12", fill: "currentColor", "aria-hidden": "true", focusable: "false", children: [
+    /* @__PURE__ */ jsx2("circle", { cx: "2", cy: "2", r: "1" }),
+    /* @__PURE__ */ jsx2("circle", { cx: "6", cy: "2", r: "1" }),
+    /* @__PURE__ */ jsx2("circle", { cx: "2", cy: "6", r: "1" }),
+    /* @__PURE__ */ jsx2("circle", { cx: "6", cy: "6", r: "1" }),
+    /* @__PURE__ */ jsx2("circle", { cx: "2", cy: "10", r: "1" }),
+    /* @__PURE__ */ jsx2("circle", { cx: "6", cy: "10", r: "1" })
+  ] });
+}
+function PlusIcon() {
+  return /* @__PURE__ */ jsx2(
+    "svg",
+    {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "1.25",
+      strokeLinecap: "round",
+      "aria-hidden": "true",
+      focusable: "false",
+      children: /* @__PURE__ */ jsx2("path", { d: "M8 3v10M3 8h10" })
+    }
+  );
+}
+function RemoveIcon() {
+  return /* @__PURE__ */ jsx2("svg", { width: "10", height: "10", viewBox: "0 0 10 10", fill: "none", stroke: "currentColor", strokeWidth: "1", strokeLinecap: "round", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx2("path", { d: "M2.5 2.5l5 5M7.5 2.5l-5 5" }) });
+}
+function SlidersIcon() {
+  return /* @__PURE__ */ jsxs(
+    "svg",
+    {
+      width: "14",
+      height: "14",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "1.25",
+      strokeLinecap: "round",
+      "aria-hidden": "true",
+      focusable: "false",
+      children: [
+        /* @__PURE__ */ jsx2("path", { d: "M2 4h12M2 8h12M2 12h12" }),
+        /* @__PURE__ */ jsx2("circle", { cx: "5", cy: "4", r: "1.6", fill: "var(--blockr-dock-bg-raised)" }),
+        /* @__PURE__ */ jsx2("circle", { cx: "10", cy: "8", r: "1.6", fill: "var(--blockr-dock-bg-raised)" }),
+        /* @__PURE__ */ jsx2("circle", { cx: "6", cy: "12", r: "1.6", fill: "var(--blockr-dock-bg-raised)" })
+      ]
+    }
+  );
+}
 
 // srcts/modules/dock/place.ts
 var EDGE = 8;
@@ -2274,6 +2369,13 @@ function stepped(at2, step, count2) {
   if (at2 === null) return step === 1 ? 0 : count2 - 1;
   return (at2 + step + count2) % count2;
 }
+function foldOf(rows, at2) {
+  const depth = rows[at2]?.depth ?? 0;
+  for (let i = at2 - 1; i >= 0 && depth > 0; i -= 1) {
+    if ((rows[i]?.depth ?? 0) < depth) return i;
+  }
+  return -1;
+}
 function anchored(doc) {
   return doc.defaultView?.CSS.supports("position-area", "block-end") === true;
 }
@@ -2299,6 +2401,24 @@ function useDismiss(menu, anchor, close) {
     };
   }, [menu, anchor, close]);
 }
+function useMenuSurface(ref2, anchor, { depth, align, keyboard, onClose }) {
+  const [placement] = useState(() => {
+    if (anchored(anchor.ownerDocument)) return null;
+    return depth === 0 ? (trigger, size, view2) => menuSpot(trigger, size, view2, align) : besideSpot;
+  });
+  useLayoutEffect2(() => {
+    const name2 = anchorName(depth);
+    if (depth === 0 && !keyboard) anchor.focus({ preventScroll: true, focusVisible: false });
+    anchor.style.setProperty("anchor-name", name2);
+    ref2.current?.style.setProperty("position-anchor", name2);
+    return () => {
+      anchor.style.removeProperty("anchor-name");
+    };
+  }, [ref2, anchor, keyboard, depth]);
+  usePopover(ref2, anchor);
+  useFloating(ref2, anchor, placement);
+  useDismiss(ref2, anchor, onClose);
+}
 function Menu({
   anchor,
   label,
@@ -2317,12 +2437,15 @@ function Menu({
   const id = useId();
   const closeAll = onCloseAll ?? onClose;
   const [searched, setSearched] = useState("");
-  const [active, setActive] = useState(search !== void 0 || keyboard ? 0 : null);
-  const [sub, setSub] = useState(null);
-  const [placement] = useState(() => {
-    if (anchored(anchor.ownerDocument)) return null;
-    return depth === 0 ? (trigger, size, view2) => menuSpot(trigger, size, view2, align) : besideSpot;
+  const [active, setActive] = useState(() => {
+    if (search !== void 0) return 0;
+    if (!keyboard) return null;
+    return Math.max(
+      0,
+      groups.flatMap((group) => group.rows).filter(reachable).findIndex((row) => row.current === true)
+    );
   });
+  const [sub, setSub] = useState(null);
   const listed = groups.some((group) => group.rows.length > 0);
   const shown = useMemo(
     () => groups.map((group) => ({ ...group, rows: group.rows.filter((row) => matches(row, searched)) })).filter((group) => group.rows.length > 0),
@@ -2331,21 +2454,10 @@ function Menu({
   const rows = shown.flatMap((group) => group.rows).filter(reachable);
   const rowId = (i) => `${id}-row-${String(i)}`;
   const activeId = active !== null && active < rows.length ? rowId(active) : void 0;
-  useLayoutEffect2(() => {
-    const name2 = anchorName(depth);
-    if (depth === 0 && !keyboard) anchor.focus({ preventScroll: true, focusVisible: false });
-    anchor.style.setProperty("anchor-name", name2);
-    ref2.current?.style.setProperty("position-anchor", name2);
-    return () => {
-      anchor.style.removeProperty("anchor-name");
-    };
-  }, [anchor, keyboard, depth]);
-  usePopover(ref2, anchor);
-  useFloating(ref2, anchor, placement);
+  useMenuSurface(ref2, anchor, { depth, align, keyboard, onClose });
   useLayoutEffect2(() => {
     (field.current ?? ref2.current)?.focus({ preventScroll: true });
   }, []);
-  useDismiss(ref2, anchor, onClose);
   useLayoutEffect2(() => {
     if (activeId !== void 0) ref2.current?.querySelector(`[id="${activeId}"]`)?.scrollIntoView({ block: "nearest" });
   }, [activeId]);
@@ -2356,6 +2468,11 @@ function Menu({
   const rowElement = (i) => ref2.current?.querySelector(`[id="${rowId(i)}"]`) ?? null;
   const pick = (row, i, pointer2) => {
     if (row.disabled === true) return;
+    if (row.fold !== void 0) {
+      setActive(i);
+      row.fold.onToggle(!row.fold.open);
+      return;
+    }
     if (row.rows !== void 0) {
       const element = rowElement(i);
       if (element !== null) {
@@ -2385,13 +2502,24 @@ function Menu({
         setActive(event.key === "Home" ? 0 : rows.length - 1);
         break;
       case "ArrowRight":
-        if (search !== void 0 || row?.rows === void 0 || active === null) return;
+        if (search !== void 0 || row === void 0 || active === null) return;
+        if (row.fold !== void 0) {
+          if (!row.fold.open) row.fold.onToggle(true);
+          else if ((rows[active + 1]?.depth ?? 0) > (row.depth ?? 0)) setActive(active + 1);
+          break;
+        }
+        if (row.rows === void 0) return;
         pick(row, active, false);
         break;
-      case "ArrowLeft":
-        if (search !== void 0 || depth === 0) return;
-        onClose({ restore: true, pointer: false });
+      case "ArrowLeft": {
+        if (search !== void 0) return;
+        const fold2 = active === null ? -1 : foldOf(rows, active);
+        if (row?.fold?.open === true) row.fold.onToggle(false);
+        else if (fold2 >= 0) setActive(fold2);
+        else if (depth === 0) return;
+        else onClose({ restore: true, pointer: false });
         break;
+      }
       case " ":
         if (search !== void 0) return;
         if (row !== void 0 && active !== null) pick(row, active, false);
@@ -2414,10 +2542,11 @@ function Menu({
   const starts = shown.map(
     (_, g) => shown.slice(0, g).reduce((count2, group) => count2 + group.rows.filter(reachable).length, 0)
   );
-  const drawRow = (row, i) => {
+  const drawRow = (row, i, folds) => {
     const common2 = {
       id: rowId(i),
       className: "blockr-dock-menu-row",
+      style: row.depth === void 0 ? void 0 : { "--depth": row.depth },
       "data-active": i === active ? "" : void 0,
       "data-danger": row.danger === true ? "" : void 0,
       title: row.tooltip,
@@ -2430,11 +2559,13 @@ function Menu({
       }
     };
     const content = /* @__PURE__ */ jsxs2(Fragment2, { children: [
+      row.fold !== void 0 ? /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-fold", "aria-hidden": "true", children: /* @__PURE__ */ jsx3(Chevron, {}) }) : folds ? /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-fold", "aria-hidden": "true" }) : null,
       row.lead === void 0 ? null : /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-lead", "aria-hidden": "true", children: row.lead }),
       /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-label", children: row.label }),
       row.detail === void 0 ? null : /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-detail", children: row.detail }),
       row.badge === void 0 ? null : /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-badge", children: row.badge }),
-      row.meta === void 0 ? null : /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-meta", children: row.meta })
+      row.meta === void 0 ? null : /* @__PURE__ */ jsx3("span", { className: "blockr-dock-menu-meta", children: row.meta }),
+      row.checked === true ? /* @__PURE__ */ jsx3(CheckIcon, {}) : null
     ] });
     if (search !== void 0) {
       return /* @__PURE__ */ jsx3(
@@ -2511,8 +2642,10 @@ function Menu({
       {
         ...common2,
         type: "button",
-        role: "menuitem",
+        role: row.current !== void 0 ? "menuitemradio" : row.checked !== void 0 ? "menuitemcheckbox" : "menuitem",
         tabIndex: -1,
+        "aria-checked": row.current ?? row.checked,
+        "aria-expanded": row.fold?.open,
         "aria-disabled": row.disabled === true ? true : void 0,
         "aria-keyshortcuts": ariaShortcuts(row.shortcut),
         onClick: (event) => {
@@ -2523,8 +2656,9 @@ function Menu({
     );
   };
   const drawGroup = (group, g) => {
+    const folds = group.rows.some((row) => row.fold !== void 0);
     const drawn = group.rows.map((row, r) => {
-      const element = row.status === true ? /* @__PURE__ */ jsx3("div", { role: "none", className: "blockr-dock-menu-status", title: row.tooltip, children: row.label }) : drawRow(row, (starts[g] ?? 0) + group.rows.slice(0, r).filter(reachable).length);
+      const element = row.status === true ? /* @__PURE__ */ jsx3("div", { role: "none", className: "blockr-dock-menu-status", title: row.tooltip, children: row.label }) : drawRow(row, (starts[g] ?? 0) + group.rows.slice(0, r).filter(reachable).length, folds);
       return /* @__PURE__ */ jsxs2(Fragment, { children: [
         row.divided === true && search === void 0 ? /* @__PURE__ */ jsx3("hr", { className: "blockr-dock-menu-divider" }) : null,
         element
@@ -2764,7 +2898,7 @@ function Icon({ width = 1.25, children: children2 }) {
     }
   );
 }
-function SlidersIcon() {
+function SlidersIcon2() {
   return /* @__PURE__ */ jsxs3(Icon, { children: [
     /* @__PURE__ */ jsx6("path", { d: "M2 4h12M2 8h12M2 12h12" }),
     /* @__PURE__ */ jsx6("circle", { className: "blockr-card-icon-knob", cx: "5", cy: "4", r: "1.6" }),
@@ -2905,7 +3039,7 @@ function Header({
       sections: SECTIONS.filter((each) => shown.includes(each))
     });
   };
-  const rename = () => {
+  const rename2 = () => {
     setRenaming(true);
   };
   return /* @__PURE__ */ jsxs5("header", { className: "blockr-card-header", children: [
@@ -2922,7 +3056,7 @@ function Header({
           if (restore) menuButton.current?.focus({ preventScroll: true });
         }
       }
-    ) : /* @__PURE__ */ jsx8(Name, { name: block.name, editable: !locked, onRename: rename }) }),
+    ) : /* @__PURE__ */ jsx8(Name, { name: block.name, editable: !locked, onRename: rename2 }) }),
     /* @__PURE__ */ jsxs5("div", { className: "blockr-card-tools", children: [
       locked ? null : /* @__PURE__ */ jsxs5(Fragment4, { children: [
         drawn ? /* @__PURE__ */ jsx8(
@@ -2933,7 +3067,7 @@ function Header({
             onClick: () => {
               toggle("inputs");
             },
-            children: /* @__PURE__ */ jsx8(SlidersIcon, {})
+            children: /* @__PURE__ */ jsx8(SlidersIcon2, {})
           }
         ) : null,
         /* @__PURE__ */ jsx8(
@@ -2959,7 +3093,7 @@ function Header({
           }
         )
       ] }),
-      /* @__PURE__ */ jsx8(MenuButton2, { ref: menuButton, id, block, onRename: rename })
+      /* @__PURE__ */ jsx8(MenuButton2, { ref: menuButton, id, block, onRename: rename2 })
     ] })
   ] });
 }
@@ -3287,7 +3421,7 @@ function BlockCard({ id }) {
 
 // srcts/modules/dock/dock.tsx
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./vendor-a3ad4872.js";
-import { useCallback as useCallback7, useEffect as useEffect3, useLayoutEffect as useLayoutEffect5, useMemo as useMemo3, useRef as useRef5, useState as useState6 } from "react";
+import { useCallback as useCallback8, useEffect as useEffect3, useLayoutEffect as useLayoutEffect7, useMemo as useMemo3, useRef as useRef7, useState as useState8 } from "react";
 
 // srcts/modules/dock/drawing.ts
 var EMPTY2 = { orientation: "horizontal", children: [], sizes: [] };
@@ -3439,7 +3573,7 @@ function drawDock(options) {
     if (dwell !== void 0) clearTimeout(dwell.timer);
     dwell = void 0;
   }
-  function reveal(edge2) {
+  function reveal2(edge2) {
     if (api2.isEdgeGroupVisible(edge2)) return;
     revealed.add(edge2);
     api2.setEdgeGroupVisible(edge2, true);
@@ -3459,7 +3593,7 @@ function drawDock(options) {
       edge: edge2,
       timer: setTimeout(() => {
         dwell = void 0;
-        if (dragging) reveal(edge2);
+        if (dragging) reveal2(edge2);
       }, DWELL_MS)
     };
   };
@@ -3681,16 +3815,676 @@ function nothingLeft(board, drawn) {
   return Object.keys(board.blocks).length === 0 && drawn.size === 0 ? "The board has no blocks yet. Add a new block to get started." : "All blocks and plugins are already in this view. Add a new block to the board first.";
 }
 
+// srcts/modules/dock/views-menu.tsx
+import { useCallback as useCallback7, useLayoutEffect as useLayoutEffect6, useRef as useRef6, useState as useState7, useSyncExternalStore as useSyncExternalStore2 } from "react";
+
+// srcts/modules/dock/name-field.tsx
+import { useLayoutEffect as useLayoutEffect5, useRef as useRef5, useState as useState6 } from "react";
+import { jsx as jsx12 } from "react/jsx-runtime";
+function NameField2({ name: name2, label, className, onSubmit, onDone }) {
+  const [text2, setText] = useState6(name2);
+  const ref2 = useRef5(null);
+  const done = useRef5(false);
+  useLayoutEffect5(() => {
+    ref2.current?.focus();
+    ref2.current?.select();
+  }, []);
+  function finish(submit) {
+    if (done.current) return;
+    done.current = true;
+    const trimmed = text2.trim();
+    if (submit && trimmed !== "" && trimmed !== name2) onSubmit(trimmed);
+    onDone();
+  }
+  return /* @__PURE__ */ jsx12(
+    "input",
+    {
+      ref: ref2,
+      type: "text",
+      "aria-label": label,
+      className,
+      value: text2,
+      spellCheck: false,
+      onChange: (event) => {
+        setText(event.target.value);
+      },
+      onKeyDown: (event) => {
+        if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+          event.preventDefault();
+          finish(true);
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          finish(false);
+        }
+      },
+      onBlur: () => {
+        finish(true);
+      }
+    }
+  );
+}
+
+// srcts/modules/dock/tips.ts
+function cutTip(text2) {
+  const tip = (event) => {
+    tipFor(event.currentTarget, text2);
+  };
+  return { onPointerEnter: tip, onFocus: tip };
+}
+function tipFor(el, text2) {
+  const label = el.querySelector(".blockr-dock-bar-label") ?? el;
+  const tooltip = text2(label.scrollWidth > label.clientWidth);
+  if (tooltip === void 0) el.removeAttribute("title");
+  else el.setAttribute("title", tooltip);
+}
+
+// srcts/modules/dock/views-list.ts
+function rowsOf(state, root, open) {
+  const rows = [];
+  const walked = new Set(root === null ? [] : [root]);
+  const walk = (folder2, depth) => {
+    for (const entry of inFolder(state, folder2)) {
+      const opens = "folder" in entry && open.has(entry.folder) && !walked.has(entry.folder);
+      rows.push({ entry, depth, folder: folder2, open: opens });
+      if (opens) {
+        walked.add(entry.folder);
+        walk(entry.folder, depth + 1);
+      }
+    }
+  };
+  walk(root, 0);
+  return rows;
+}
+function dropAt(state, rows, spans, y, moving) {
+  const drop = placeAt(state, rows, spans, y);
+  if (drop === void 0) return void 0;
+  if ("folder" in moving && drop.folder !== null && within(state, drop.folder, moving.folder)) return void 0;
+  if (drop.before !== void 0 && sameEntry(drop.before, moving)) return void 0;
+  const folder2 = "view" in moving ? state.views[moving.view]?.folder : state.folders[moving.folder]?.folder;
+  if (folder2 === drop.folder && sitsAt(state, moving, drop.folder, drop.before)) return void 0;
+  return drop;
+}
+function placeAt(state, rows, spans, y) {
+  const last = rows.length - 1;
+  const lastSpan = spans[last];
+  if (last < 0 || lastSpan === void 0) return void 0;
+  if (y >= lastSpan.bottom) return { folder: null, before: void 0, mark: { row: last, at: "below", depth: 0 } };
+  const at2 = spans.findIndex((span2) => y < span2.bottom);
+  const row = rows[at2];
+  const span = spans[at2];
+  if (row === void 0 || span === void 0) return void 0;
+  const share = (y - span.top) / Math.max(1, span.bottom - span.top);
+  const { entry } = row;
+  const isFolder2 = "folder" in entry;
+  if (share < (isFolder2 ? 0.25 : 0.5)) return { folder: row.folder, before: entry, mark: { row: at2, at: "above", depth: row.depth } };
+  if (!isFolder2) return { folder: row.folder, before: after(state, row), mark: { row: at2, at: "below", depth: row.depth } };
+  if (share <= 0.75) return { folder: entry.folder, before: void 0, mark: { row: at2, at: "into", depth: row.depth + 1 } };
+  if (row.open) return { folder: entry.folder, before: inFolder(state, entry.folder)[0], mark: { row: at2, at: "below", depth: row.depth + 1 } };
+  return { folder: row.folder, before: after(state, row), mark: { row: at2, at: "below", depth: row.depth } };
+}
+function after(state, row) {
+  const listed = inFolder(state, row.folder);
+  return listed[listed.findIndex((entry) => sameEntry(entry, row.entry)) + 1];
+}
+
+// srcts/modules/dock/views-menu.tsx
+import { Fragment as Fragment5, jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
+var ACTIVATE_VIEW = "blockr.dock-activate_view";
+var ADD_VIEW = "blockr.dock-add_view";
+var ADD_FOLDER = "blockr.dock-add_folder";
+var RENAME_VIEW = "blockr.dock-rename_view";
+var RENAME_FOLDER = "blockr.dock-rename_folder";
+var REMOVE_VIEW = "blockr.dock-remove_view";
+var REMOVE_FOLDER = "blockr.dock-remove_folder";
+var MOVE_VIEW = "blockr.dock-move_view";
+var MOVE_FOLDER = "blockr.dock-move_folder";
+var SET_OPTION = "blockr.core-set_option";
+var EDGE2 = 24;
+var STEP = 8;
+function useViewTabs(core) {
+  const subscribe = useCallback7(
+    (changed) => core.store.subscribe(() => {
+      changed();
+    }),
+    [core]
+  );
+  return useSyncExternalStore2(subscribe, () => core.store.board().options.view_tabs === true);
+}
+function Views({ openFolders }) {
+  const { core } = useDock();
+  const board = useBoard(core);
+  const state = dockState(board);
+  if (state === void 0) return null;
+  const tabs = board.options.view_tabs === true;
+  return /* @__PURE__ */ jsxs8("div", { className: "blockr-dock-bar-views", "data-tabs": tabs ? "" : void 0, children: [
+    tabs ? /* @__PURE__ */ jsx13(TabLine, { state, openFolders }) : null,
+    /* @__PURE__ */ jsx13(ViewsMenu, { state, openFolders, tabs }),
+    tabs ? null : /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-rule", "aria-hidden": "true" })
+  ] });
+}
+function ViewsMenu({ state, openFolders, tabs }) {
+  const { core } = useDock();
+  const open = useOpenFolders(openFolders);
+  const [opened, setOpened] = useState7(null);
+  const button = useRef6(null);
+  const props = useMenuButton(
+    opened !== null,
+    (anchor, keyboard) => {
+      openFolders.open(activeHolders(state));
+      setOpened({ anchor, keyboard, managing: false });
+    },
+    () => {
+      setOpened(null);
+    }
+  );
+  const close = useCallback7((how) => {
+    setOpened(null);
+    if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+  }, []);
+  const active = state.active === null ? void 0 : state.views[state.active];
+  const name2 = active?.name ?? "Views";
+  const actions = (at2) => core.lock.board ? [] : [
+    {
+      key: "manage",
+      label: "Manage views",
+      lead: /* @__PURE__ */ jsx13(SlidersIcon, {}),
+      divided: true,
+      onSelect: () => {
+        setOpened({ ...at2, managing: true });
+      }
+    },
+    {
+      key: "tabs",
+      label: "Show views as tabs",
+      checked: tabs,
+      onSelect: () => {
+        runEdit(core, SET_OPTION, { id: "view_tabs", value: !tabs });
+      }
+    }
+  ];
+  return /* @__PURE__ */ jsxs8(Fragment5, { children: [
+    /* @__PURE__ */ jsxs8(
+      "button",
+      {
+        ref: button,
+        type: "button",
+        className: tabs ? "blockr-dock-bar-button blockr-dock-views-chevron" : "blockr-dock-bar-button blockr-dock-views-button",
+        "aria-label": tabs ? "Views" : `Views: ${name2}`,
+        ...tabs ? { title: "Views" } : cutTip((cut) => cut ? name2 : void 0),
+        ...props,
+        children: [
+          tabs ? null : /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: name2 }),
+          /* @__PURE__ */ jsx13(Chevron, {})
+        ]
+      }
+    ),
+    opened === null ? null : opened.managing ? /* @__PURE__ */ jsx13(
+      Manage,
+      {
+        anchor: opened.anchor,
+        keyboard: opened.keyboard,
+        state,
+        openFolders,
+        onClose: close,
+        onDone: () => {
+          setOpened({ ...opened, managing: false });
+        }
+      }
+    ) : /* @__PURE__ */ jsx13(
+      Menu,
+      {
+        anchor: opened.anchor,
+        label: "Views",
+        align: "end",
+        groups: [
+          { key: "views", rows: viewRows(core, state, null, open, openFolders) },
+          { key: "actions", rows: actions(opened) }
+        ],
+        keyboard: opened.keyboard,
+        onClose: close
+      }
+    )
+  ] });
+}
+function viewRows(core, state, root, open, openFolders) {
+  return rowsOf(state, root, open).map(({ entry, depth, open: unfolded }) => {
+    const common2 = { key: keyOf(entry), label: nameOf(state, entry), depth };
+    if ("view" in entry) {
+      return {
+        ...common2,
+        current: entry.view === state.active,
+        onSelect: () => {
+          activate(core, state, entry.view);
+        }
+      };
+    }
+    return {
+      ...common2,
+      fold: {
+        open: unfolded,
+        onToggle: (on) => {
+          openFolders.set(entry.folder, on);
+        }
+      }
+    };
+  });
+}
+function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }) {
+  const { core } = useDock();
+  const ref2 = useRef6(null);
+  const open = useOpenFolders(openFolders);
+  const rows = rowsOf(state, null, open);
+  const slot = rows.some((row) => "folder" in row.entry);
+  const [renaming, setRenaming] = useState7(void 0);
+  const [confirming, setConfirming] = useState7(void 0);
+  const [drag, setDrag] = useState7(void 0);
+  const dragging = useRef6(void 0);
+  const rowList = useRef6(null);
+  useMenuSurface(ref2, anchor, { depth: 0, align: "end", keyboard, onClose });
+  useLayoutEffect6(() => {
+    ref2.current?.focus({ preventScroll: true });
+  }, []);
+  const keepFocus = () => {
+    ref2.current?.focus({ preventScroll: true, focusVisible: false });
+  };
+  const follow = (next) => {
+    dragging.current = next;
+    setDrag(next);
+  };
+  const addView = () => {
+    void applied2(core, ADD_VIEW, {}).then((done) => {
+      const added = done ? dockState(core.store.board())?.active : null;
+      if (added !== void 0 && added !== null) setRenaming(keyOf({ view: added }));
+    });
+  };
+  const addFolder = () => {
+    const before2 = new Set(Object.keys(state.folders));
+    void applied2(core, ADD_FOLDER, {}).then((done) => {
+      const after2 = done ? Object.keys(dockState(core.store.board())?.folders ?? {}) : [];
+      const added = after2.find((id) => !before2.has(id));
+      if (added !== void 0) setRenaming(keyOf({ folder: added }));
+    });
+  };
+  const grip = (entry) => ({
+    onPointerDown(event) {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setConfirming(void 0);
+      follow({ entry, drop: void 0 });
+    },
+    onPointerMove(event) {
+      const el = rowList.current;
+      if (dragging.current === void 0 || el === null) return;
+      scrollNearEdge(ref2.current, event.clientY);
+      follow({ entry, drop: dropAt(state, rows, spansOf(el), event.clientY, entry) });
+    },
+    onPointerUp() {
+      const drop = dragging.current?.drop;
+      follow(void 0);
+      if (drop !== void 0) move(core, openFolders, entry, drop);
+    },
+    onPointerCancel() {
+      follow(void 0);
+    }
+  });
+  return /* @__PURE__ */ jsxs8(
+    "div",
+    {
+      ref: ref2,
+      popover: "auto",
+      role: "dialog",
+      "aria-label": "Manage views",
+      tabIndex: -1,
+      className: "blockr-dock-menu blockr-dock-views-manage",
+      "data-align": "end",
+      "data-depth": 0,
+      onToggle: (event) => {
+        if (event.newState === "closed") onClose({ restore: false, pointer: false });
+      },
+      onKeyDown: (event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        onClose({ restore: true, pointer: false });
+      },
+      children: [
+        /* @__PURE__ */ jsx13("div", { ref: rowList, className: "blockr-dock-views-rows", children: rows.map((row, i) => {
+          const { entry } = row;
+          const key = keyOf(entry);
+          const name2 = nameOf(state, entry);
+          if (confirming === key) {
+            return /* @__PURE__ */ jsx13(
+              ConfirmRow,
+              {
+                name: name2,
+                depth: row.depth,
+                onRemove: () => {
+                  keepFocus();
+                  setConfirming(void 0);
+                  remove(core, entry);
+                },
+                onCancel: () => {
+                  setConfirming(void 0);
+                }
+              },
+              key
+            );
+          }
+          return /* @__PURE__ */ jsx13(
+            ManagedRow,
+            {
+              row,
+              name: name2,
+              slot,
+              renaming: renaming === key,
+              removable: removable(core, entry),
+              dragging: drag !== void 0 && sameEntry(drag.entry, entry),
+              mark: drag?.drop?.mark.row === i ? drag.drop.mark : void 0,
+              grip: grip(entry),
+              onFold: () => {
+                if ("folder" in entry) openFolders.set(entry.folder, !row.open);
+              },
+              onRename: () => {
+                setConfirming(void 0);
+                setRenaming(key);
+              },
+              onRenamed: (next) => {
+                rename(core, entry, next);
+              },
+              onRenameDone: () => {
+                setRenaming(void 0);
+              },
+              onConfirm: () => {
+                setRenaming(void 0);
+                setConfirming(key);
+              }
+            },
+            key
+          );
+        }) }),
+        /* @__PURE__ */ jsx13("hr", { className: "blockr-dock-menu-divider" }),
+        /* @__PURE__ */ jsxs8("div", { className: "blockr-dock-views-foot", children: [
+          /* @__PURE__ */ jsxs8("button", { type: "button", className: "blockr-dock-views-add", onClick: addView, children: [
+            /* @__PURE__ */ jsx13(PlusIcon, {}),
+            "New view"
+          ] }),
+          /* @__PURE__ */ jsxs8("button", { type: "button", className: "blockr-dock-views-add", onClick: addFolder, children: [
+            /* @__PURE__ */ jsx13(PlusIcon, {}),
+            "New folder"
+          ] }),
+          /* @__PURE__ */ jsx13(
+            "button",
+            {
+              type: "button",
+              className: "blockr-dock-views-done",
+              onClick: () => {
+                keepFocus();
+                onDone();
+              },
+              children: "Done"
+            }
+          )
+        ] })
+      ]
+    }
+  );
+}
+function ManagedRow({
+  row,
+  name: name2,
+  slot,
+  renaming,
+  removable: removable2,
+  dragging,
+  mark,
+  grip,
+  onFold,
+  onRename,
+  onRenamed,
+  onRenameDone,
+  onConfirm
+}) {
+  const el = useRef6(null);
+  const nameButton = useRef6(null);
+  const refocus = useRef6(false);
+  const { entry } = row;
+  const isView2 = "view" in entry;
+  useLayoutEffect6(() => {
+    if (renaming || !refocus.current) return;
+    refocus.current = false;
+    nameButton.current?.focus();
+  }, [renaming]);
+  const style = { ...depthStyle(row.depth), ...mark === void 0 ? {} : { "--drop-depth": mark.depth } };
+  return /* @__PURE__ */ jsxs8(
+    "div",
+    {
+      ref: el,
+      className: "blockr-dock-views-managed",
+      "data-row": "",
+      "data-drop": mark?.at,
+      "data-dragging": dragging ? "" : void 0,
+      style,
+      children: [
+        /* @__PURE__ */ jsx13("span", { className: "blockr-dock-views-grip", "aria-hidden": "true", ...grip, children: /* @__PURE__ */ jsx13(GripIcon, {}) }),
+        isView2 ? slot ? /* @__PURE__ */ jsx13("span", { className: "blockr-dock-views-slot" }) : null : /* @__PURE__ */ jsx13(
+          "button",
+          {
+            type: "button",
+            className: "blockr-dock-views-fold",
+            "aria-expanded": row.open,
+            "aria-label": `${row.open ? "Close" : "Open"} the folder ${name2}`,
+            onClick: onFold,
+            children: /* @__PURE__ */ jsx13(Chevron, {})
+          }
+        ),
+        renaming ? /* @__PURE__ */ jsx13(
+          NameField2,
+          {
+            name: name2,
+            label: isView2 ? "View name" : "Folder name",
+            className: "blockr-dock-views-field",
+            onSubmit: onRenamed,
+            onDone: () => {
+              const doc = el.current?.ownerDocument;
+              refocus.current = doc !== void 0 && el.current?.contains(doc.activeElement) === true;
+              onRenameDone();
+            }
+          }
+        ) : /* @__PURE__ */ jsx13(
+          "button",
+          {
+            ref: nameButton,
+            type: "button",
+            className: "blockr-dock-views-name",
+            onClick: onRename,
+            ...cutTip((cut) => cut ? `${name2}
+Click to rename` : "Click to rename"),
+            children: name2
+          }
+        ),
+        removable2 ? /* @__PURE__ */ jsx13(
+          "button",
+          {
+            type: "button",
+            className: "blockr-dock-views-remove",
+            "aria-label": `Remove ${name2}`,
+            title: isView2 ? "Remove view" : "Remove folder",
+            onClick: onConfirm,
+            children: /* @__PURE__ */ jsx13(RemoveIcon, {})
+          }
+        ) : null
+      ]
+    }
+  );
+}
+function ConfirmRow({ name: name2, depth, onRemove, onCancel }) {
+  const removeButton = useRef6(null);
+  useLayoutEffect6(() => {
+    removeButton.current?.focus();
+  }, []);
+  return /* @__PURE__ */ jsxs8(
+    "div",
+    {
+      className: "blockr-dock-views-managed",
+      "data-row": "",
+      "data-confirming": "",
+      style: depthStyle(depth),
+      onBlur: (event) => {
+        const next = event.relatedTarget;
+        if (!(next instanceof Node) || !event.currentTarget.contains(next)) onCancel();
+      },
+      onKeyDown: (event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        onCancel();
+      },
+      children: [
+        /* @__PURE__ */ jsx13("span", { className: "blockr-dock-views-confirm-text", children: `Remove \u201C${name2}\u201D?` }),
+        /* @__PURE__ */ jsx13("button", { ref: removeButton, type: "button", className: "blockr-dock-views-confirm", onClick: onRemove, children: "Remove" })
+      ]
+    }
+  );
+}
+function TabLine({ state, openFolders }) {
+  const { core } = useDock();
+  const line = useRef6(null);
+  const { active } = state;
+  const outer = activeHolders(state).at(-1);
+  useLayoutEffect6(() => {
+    reveal(line.current);
+  }, [active, outer]);
+  return /* @__PURE__ */ jsx13("nav", { ref: line, className: "blockr-dock-tabs", "aria-label": "Views", children: inFolder(state, null).map(
+    (entry) => "view" in entry ? /* @__PURE__ */ jsx13(
+      "button",
+      {
+        type: "button",
+        className: "blockr-dock-tab",
+        "aria-current": entry.view === active ? "page" : void 0,
+        onClick: () => {
+          activate(core, state, entry.view);
+        },
+        children: nameOf(state, entry)
+      },
+      keyOf(entry)
+    ) : /* @__PURE__ */ jsx13(FolderTab, { state, folder: entry.folder, current: entry.folder === outer, openFolders }, keyOf(entry))
+  ) });
+}
+function FolderTab({ state, folder: folder2, current, openFolders }) {
+  const { core } = useDock();
+  const open = useOpenFolders(openFolders);
+  const [opened, setOpened] = useState7(null);
+  const button = useRef6(null);
+  const props = useMenuButton(
+    opened !== null,
+    (anchor, keyboard) => {
+      openFolders.open(activeHolders(state));
+      setOpened({ anchor, keyboard });
+    },
+    () => {
+      setOpened(null);
+    }
+  );
+  const close = useCallback7((how) => {
+    setOpened(null);
+    if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+  }, []);
+  const name2 = nameOf(state, { folder: folder2 });
+  return /* @__PURE__ */ jsxs8(Fragment5, { children: [
+    /* @__PURE__ */ jsxs8("button", { ref: button, type: "button", className: "blockr-dock-tab", "aria-current": current ? "true" : void 0, ...props, children: [
+      name2,
+      /* @__PURE__ */ jsx13(Chevron, {})
+    ] }),
+    opened === null ? null : /* @__PURE__ */ jsx13(
+      Menu,
+      {
+        anchor: opened.anchor,
+        label: name2,
+        groups: [{ key: "views", rows: viewRows(core, state, folder2, open, openFolders) }],
+        note: "This folder is empty.",
+        keyboard: opened.keyboard,
+        onClose: close
+      }
+    )
+  ] });
+}
+function useOpenFolders(openFolders) {
+  return useSyncExternalStore2(openFolders.subscribe, openFolders.get);
+}
+function activeHolders(state) {
+  return state.active === null ? [] : foldersHolding(state, { view: state.active });
+}
+function reveal(line) {
+  if (line === null) return;
+  const tab = line.querySelector("[aria-current]");
+  if (tab === null) return;
+  const bounds = line.getBoundingClientRect();
+  const at2 = tab.getBoundingClientRect();
+  if (at2.left < bounds.left) line.scrollLeft -= bounds.left - at2.left;
+  else if (at2.right > bounds.right) line.scrollLeft += at2.right - bounds.right;
+}
+function scrollNearEdge(panel2, y) {
+  if (panel2 === null) return;
+  const { top, bottom } = panel2.getBoundingClientRect();
+  if (y < top + EDGE2) panel2.scrollTop -= STEP;
+  else if (y > bottom - EDGE2) panel2.scrollTop += STEP;
+}
+function spansOf(rowList) {
+  return [...rowList.querySelectorAll(":scope > [data-row]")].map((row) => {
+    const { top, bottom } = row.getBoundingClientRect();
+    return { top, bottom };
+  });
+}
+async function applied2(core, id, args) {
+  return await core.commands.run(id, args).then(
+    () => true,
+    () => false
+  );
+}
+function activate(core, state, view2) {
+  if (view2 !== state.active) runEdit(core, ACTIVATE_VIEW, { view: view2 });
+}
+function rename(core, entry, name2) {
+  if ("view" in entry) runEdit(core, RENAME_VIEW, { view: entry.view, name: name2 });
+  else runEdit(core, RENAME_FOLDER, { folder: entry.folder, name: name2 });
+}
+function remove(core, entry) {
+  if ("view" in entry) runEdit(core, REMOVE_VIEW, { view: entry.view });
+  else runEdit(core, REMOVE_FOLDER, { folder: entry.folder });
+}
+function removable(core, entry) {
+  return "view" in entry ? core.commands.preflight(REMOVE_VIEW, { view: entry.view }) : core.commands.preflight(REMOVE_FOLDER, { folder: entry.folder });
+}
+function move(core, openFolders, entry, drop) {
+  const args = "view" in entry ? { view: entry.view, folder: drop.folder } : { folder: entry.folder, into: drop.folder };
+  if (drop.before !== void 0) args.before = drop.before;
+  const id = "view" in entry ? MOVE_VIEW : MOVE_FOLDER;
+  if (!core.commands.preflight(id, args)) return;
+  if (drop.folder !== null) openFolders.open([drop.folder]);
+  runEdit(core, id, args);
+}
+function nameOf(state, entry) {
+  return ("view" in entry ? state.views[entry.view]?.name : state.folders[entry.folder]?.name) ?? "";
+}
+function keyOf(entry) {
+  return "view" in entry ? `view:${entry.view}` : `folder:${entry.folder}`;
+}
+function depthStyle(depth) {
+  return { "--depth": depth };
+}
+
 // srcts/modules/dock/dock.tsx
-import { Fragment as Fragment5, jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
+import { Fragment as Fragment6, jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
 function PanelFrame({ params }) {
   const { panel: panel2 } = params;
-  return "block" in panel2 ? /* @__PURE__ */ jsx12("div", { className: "blockr-dock-panel", "data-block": panel2.block, children: /* @__PURE__ */ jsx12(BlockCard, { id: panel2.block }) }) : /* @__PURE__ */ jsx12(PluginFrame, { plugin: panel2.plugin });
+  return "block" in panel2 ? /* @__PURE__ */ jsx14("div", { className: "blockr-dock-panel", "data-block": panel2.block, children: /* @__PURE__ */ jsx14(BlockCard, { id: panel2.block }) }) : /* @__PURE__ */ jsx14(PluginFrame, { plugin: panel2.plugin });
 }
 function PluginFrame({ plugin }) {
   const { core } = useDock();
-  const ref2 = useRef5(null);
-  useLayoutEffect5(() => {
+  const ref2 = useRef7(null);
+  useLayoutEffect7(() => {
     const el = ref2.current;
     if (el === null) return void 0;
     const end = core.mountPlugin(el, plugin);
@@ -3698,7 +4492,7 @@ function PluginFrame({ plugin }) {
       queueMicrotask(end);
     };
   }, [core, plugin]);
-  return /* @__PURE__ */ jsx12("div", { ref: ref2, className: "blockr-dock-panel", "data-plugin": plugin });
+  return /* @__PURE__ */ jsx14("div", { ref: ref2, className: "blockr-dock-panel", "data-plugin": plugin });
 }
 var components = { [PANEL_COMPONENT]: PanelFrame };
 function Tab(props) {
@@ -3707,7 +4501,7 @@ function Tab(props) {
   const onPointerDown = "block" in panel2 ? () => {
     giveFocus(core, panel2.block);
   } : void 0;
-  return /* @__PURE__ */ jsx12(DockviewDefaultTab, { ...props, hideClose: core.lock.board, onPointerDown });
+  return /* @__PURE__ */ jsx14(DockviewDefaultTab, { ...props, hideClose: core.lock.board, onPointerDown });
 }
 function AddPanelButton({ api: api2, group }) {
   const button = usePickerButton(() => {
@@ -3715,7 +4509,7 @@ function AddPanelButton({ api: api2, group }) {
     return shown === void 0 ? void 0 : panelFromId(shown.id);
   });
   if (api2.location.type === "edge") return null;
-  return /* @__PURE__ */ jsx12("div", { className: "blockr-dock-add-slot", children: /* @__PURE__ */ jsx12("button", { type: "button", className: "blockr-dock-add", "aria-label": "Add panel", ...button, children: /* @__PURE__ */ jsx12("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx12("path", { d: "M8 3v10M3 8h10", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }) }) }) });
+  return /* @__PURE__ */ jsx14("div", { className: "blockr-dock-add-slot", children: /* @__PURE__ */ jsx14("button", { type: "button", className: "blockr-dock-add", "aria-label": "Add panel", ...button, children: /* @__PURE__ */ jsx14("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx14("path", { d: "M8 3v10M3 8h10", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }) }) }) });
 }
 function showsNothing(board, drawn) {
   const view2 = activeView(board);
@@ -3726,30 +4520,31 @@ function EmptyView() {
   const { core, drawn } = useDock();
   const board = useBoard(core);
   if (!showsNothing(board, drawn)) return null;
-  if (!core.lock.board) return /* @__PURE__ */ jsx12(EmptyPrompt, {});
-  return /* @__PURE__ */ jsxs8("div", { className: "blockr-dock-empty", children: [
-    /* @__PURE__ */ jsx12(LockIcon, { size: 32 }),
-    /* @__PURE__ */ jsx12("p", { children: "This view is empty" })
+  if (!core.lock.board) return /* @__PURE__ */ jsx14(EmptyPrompt, {});
+  return /* @__PURE__ */ jsxs9("div", { className: "blockr-dock-empty", children: [
+    /* @__PURE__ */ jsx14(LockIcon, { size: 32 }),
+    /* @__PURE__ */ jsx14("p", { children: "This view is empty" })
   ] });
 }
 function EmptyPrompt() {
   const button = usePickerButton(() => void 0);
-  return /* @__PURE__ */ jsxs8("div", { className: "blockr-dock-empty", children: [
-    /* @__PURE__ */ jsxs8("svg", { viewBox: "0 0 16 16", width: "32", height: "32", "aria-hidden": "true", focusable: "false", children: [
-      /* @__PURE__ */ jsx12("circle", { cx: "8", cy: "8", r: "6.5", fill: "none", stroke: "currentColor" }),
-      /* @__PURE__ */ jsx12("path", { d: "M8 5v6M5 8h6", fill: "none", stroke: "currentColor", strokeLinecap: "round" })
+  return /* @__PURE__ */ jsxs9("div", { className: "blockr-dock-empty", children: [
+    /* @__PURE__ */ jsxs9("svg", { viewBox: "0 0 16 16", width: "32", height: "32", "aria-hidden": "true", focusable: "false", children: [
+      /* @__PURE__ */ jsx14("circle", { cx: "8", cy: "8", r: "6.5", fill: "none", stroke: "currentColor" }),
+      /* @__PURE__ */ jsx14("path", { d: "M8 5v6M5 8h6", fill: "none", stroke: "currentColor", strokeLinecap: "round" })
     ] }),
-    /* @__PURE__ */ jsx12("p", { children: "Start by adding a panel" }),
-    /* @__PURE__ */ jsx12("button", { type: "button", className: "blockr-dock-empty-add", ...button, children: "Add panel" })
+    /* @__PURE__ */ jsx14("p", { children: "Start by adding a panel" }),
+    /* @__PURE__ */ jsx14("button", { type: "button", className: "blockr-dock-empty-add", ...button, children: "Add panel" })
   ] });
 }
-function Dock({ core, plugin, settings, narrow, drawn }) {
-  const root = useRef5(null);
-  const stop = useRef5(void 0);
-  const [tooltips] = useState6(createTooltips);
+function Dock({ core, plugin, settings, narrow, drawn, viewsMenu }) {
+  const root = useRef7(null);
+  const stop = useRef7(void 0);
+  const [tooltips] = useState8(createTooltips);
   const shared = useMemo3(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
   const locked = core.lock.board;
-  const onReady = useCallback7(
+  const tabs = useViewTabs(core) && viewsMenu;
+  const onReady = useCallback8(
     (event) => {
       const el = root.current;
       if (el === null) return;
@@ -3765,8 +4560,8 @@ function Dock({ core, plugin, settings, narrow, drawn }) {
     },
     []
   );
-  const view2 = /* @__PURE__ */ jsxs8(Fragment5, { children: [
-    /* @__PURE__ */ jsx12(
+  const view2 = /* @__PURE__ */ jsxs9(Fragment6, { children: [
+    /* @__PURE__ */ jsx14(
       DockviewReact,
       {
         components,
@@ -3777,392 +4572,20 @@ function Dock({ core, plugin, settings, narrow, drawn }) {
         ...locked ? {} : { leftHeaderActionsComponent: AddPanelButton }
       }
     ),
-    /* @__PURE__ */ jsx12(EmptyView, {})
+    /* @__PURE__ */ jsx14(EmptyView, {})
   ] });
-  return /* @__PURE__ */ jsx12(DockContext, { value: shared, children: /* @__PURE__ */ jsx12("div", { className: "blockr-dock", ref: root, children: locked ? view2 : /* @__PURE__ */ jsx12(PanelPicker, { children: view2 }) }) });
+  return /* @__PURE__ */ jsx14(DockContext, { value: shared, children: /* @__PURE__ */ jsx14("div", { className: "blockr-dock", ref: root, "data-tabs": tabs ? "" : void 0, children: locked ? view2 : /* @__PURE__ */ jsx14(PanelPicker, { children: view2 }) }) });
 }
 
 // srcts/modules/dock/navbar.tsx
-import { useCallback as useCallback8, useEffect as useEffect4, useLayoutEffect as useLayoutEffect6, useReducer, useRef as useRef6, useState as useState7, useSyncExternalStore as useSyncExternalStore2 } from "react";
-import { jsx as jsx13, jsxs as jsxs9 } from "react/jsx-runtime";
-function Navbar({ items, busy, sidebar, mac }) {
-  const { core } = useDock();
-  const storage = useStorage(core);
-  const apart = new Set(items.flatMap((item) => item.kind === "storage" ? [item.id] : []));
-  return /* @__PURE__ */ jsx13("header", { className: "blockr-dock-bar", children: items.map((item) => /* @__PURE__ */ jsx13(Item, { item, storage, apart, busy, sidebar, mac }, item.id)) });
-}
-function Item({ item, storage, apart, busy, sidebar, mac }) {
-  switch (item.kind) {
-    case "part":
-      return /* @__PURE__ */ jsx13(Part, { id: item.id, storage, apart, busy, sidebar, mac });
-    case "storage": {
-      const control = storage?.failed === void 0 ? storage?.controls.find((c) => c.id === item.id) : void 0;
-      return control === void 0 ? null : /* @__PURE__ */ jsx13(StorageControlView, { control });
-    }
-    case "link":
-      return /* @__PURE__ */ jsx13(Link, { item });
-    case "menu":
-      return /* @__PURE__ */ jsx13(MenuButton, { label: item.label, entries: linkEntries(item.items), className: "blockr-dock-bar-button" });
-    case "module":
-      return /* @__PURE__ */ jsx13(ModuleSlot, { item });
-  }
-}
-function Part({ id, storage, apart, busy, sidebar, mac }) {
-  const { core } = useDock();
-  switch (id) {
-    case "logo":
-      return /* @__PURE__ */ jsx13(Logo, { busy });
-    case "name":
-      return /* @__PURE__ */ jsx13(BoardName, {});
-    case "storage":
-      return /* @__PURE__ */ jsx13(StorageControls, { storage, apart });
-    case "undo_redo":
-      return /* @__PURE__ */ jsx13(UndoRedo, { mac });
-    case "spacer":
-      return /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-spacer", "aria-hidden": "true" });
-    case "views":
-      return null;
-    case "read_only":
-      return core.lock.board ? /* @__PURE__ */ jsx13(ReadOnlyPill, {}) : null;
-    case "options":
-      return /* @__PURE__ */ jsx13(OptionsButton, { sidebar });
-  }
-}
-var CELLS = [
-  [0, 2],
-  [0, 1],
-  [0, 0],
-  [1, 0],
-  [2, 0],
-  [1, 1],
-  [2, 2]
-];
-function Logo({ busy }) {
-  const turning = useSyncExternalStore2(busy.subscribe, busy.get);
-  return /* @__PURE__ */ jsxs9("span", { className: turning ? "blockr-dock-logo is-computing" : "blockr-dock-logo", title: turning ? "Computing" : void 0, children: [
-    /* @__PURE__ */ jsx13("svg", { className: "blockr-dock-logo-mark", width: "20", height: "20", viewBox: "0 0 224 224", "aria-hidden": "true", focusable: "false", children: CELLS.map(([x, y], i) => /* @__PURE__ */ jsx13("rect", { style: { "--i": i }, x: x * 80, y: y * 80, width: "64", height: "64", rx: "7" }, i)) }),
-    /* @__PURE__ */ jsx13("span", { className: "blockr-dock-visually-hidden", role: "status", children: turning ? "Computing" : "" })
-  ] });
-}
-function BoardName() {
-  const { core } = useDock();
-  const board = useBoard(core);
-  const [renaming, setRenaming] = useState7(false);
-  const locked = core.lock.board;
-  if (renaming) {
-    return /* @__PURE__ */ jsx13(
-      NameField2,
-      {
-        name: board.name,
-        onSubmit: (name2) => {
-          core.commands.run("blockr.core-rename_board", { name: name2 }).catch(() => void 0);
-        },
-        onDone: () => {
-          setRenaming(false);
-        }
-      }
-    );
-  }
-  const tip = cutTip((cut) => {
-    if (locked) return cut ? board.name : void 0;
-    return cut ? `${board.name}
-Click to rename` : "Click to rename";
-  });
-  if (locked) {
-    return /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-name blockr-dock-bar-shrinks", ...tip, children: /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: board.name }) });
-  }
-  return /* @__PURE__ */ jsx13(
-    "button",
-    {
-      type: "button",
-      className: "blockr-dock-bar-name blockr-dock-bar-shrinks",
-      "aria-label": `Board name: ${board.name}. Rename`,
-      onClick: () => {
-        setRenaming(true);
-      },
-      ...tip,
-      children: /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: board.name })
-    }
-  );
-}
-function NameField2({
-  name: name2,
-  onSubmit,
-  onDone
-}) {
-  const [text2, setText] = useState7(name2);
-  const ref2 = useRef6(null);
-  const done = useRef6(false);
-  useLayoutEffect6(() => {
-    ref2.current?.focus();
-    ref2.current?.select();
-  }, []);
-  function finish(submit) {
-    if (done.current) return;
-    done.current = true;
-    const trimmed = text2.trim();
-    if (submit && trimmed !== "" && trimmed !== name2) onSubmit(trimmed);
-    onDone();
-  }
-  return /* @__PURE__ */ jsx13(
-    "input",
-    {
-      ref: ref2,
-      type: "text",
-      "aria-label": "Board name",
-      className: "blockr-dock-bar-field",
-      value: text2,
-      spellCheck: false,
-      onChange: (event) => {
-        setText(event.target.value);
-      },
-      onKeyDown: (event) => {
-        if (event.key === "Enter" && !event.nativeEvent.isComposing) finish(true);
-        else if (event.key === "Escape") finish(false);
-      },
-      onBlur: () => {
-        finish(true);
-      }
-    }
-  );
-}
-function StorageControls({ storage, apart }) {
-  if (storage === void 0) return null;
-  if (storage.failed !== void 0) {
-    return /* @__PURE__ */ jsx13(Warning, { message: `The storage controls of ${storage.package} failed: ${storage.failed}` });
-  }
-  const shown = storage.controls.filter((control) => !apart.has(control.id));
-  if (shown.length === 0) return null;
-  return /* @__PURE__ */ jsx13("div", { className: "blockr-dock-bar-storage blockr-dock-bar-shrinks", children: shown.map((control) => /* @__PURE__ */ jsx13(StorageControlView, { control }, control.id)) });
-}
-function StorageControlView({ control }) {
-  const { core } = useDock();
-  const tip = control.kind === "menu" || control.tooltip === void 0 ? cutTip((cut) => cut ? labelOf(control) : void 0) : {};
-  switch (control.kind) {
-    case "button":
-      return /* @__PURE__ */ jsx13(
-        "button",
-        {
-          type: "button",
-          className: "blockr-dock-bar-button blockr-dock-bar-shrinks",
-          disabled: control.disabled,
-          title: control.tooltip,
-          "aria-keyshortcuts": ariaShortcuts(control.shortcut),
-          onClick: () => {
-            void runButton(core, control);
-          },
-          ...tip,
-          children: /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: control.label })
-        }
-      );
-    case "menu":
-      return /* @__PURE__ */ jsx13(
-        MenuButton,
-        {
-          label: control.label,
-          entries: storageEntries(core, control.items),
-          className: "blockr-dock-bar-button blockr-dock-bar-shrinks",
-          onTip: (button) => {
-            tipFor(button, (cut) => cut ? control.label : void 0);
-          }
-        }
-      );
-    case "status":
-      return /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-status blockr-dock-bar-shrinks", title: control.tooltip, ...tip, children: /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: control.text }) });
-  }
-}
-function labelOf(control) {
-  return control.kind === "status" ? control.text : control.label;
-}
-function storageEntries(core, items) {
-  return items.map((item) => {
-    switch (item.kind) {
-      case "button":
-        return {
-          kind: "button",
-          id: item.id,
-          label: item.label,
-          ...item.tooltip === void 0 ? {} : { tooltip: item.tooltip },
-          ...item.shortcut === void 0 ? {} : { shortcut: item.shortcut },
-          ...item.disabled === void 0 ? {} : { disabled: item.disabled },
-          run: () => {
-            void runButton(core, item);
-          }
-        };
-      case "menu":
-        return { kind: "menu", id: item.id, label: item.label, entries: storageEntries(core, item.items) };
-      case "status":
-        return { kind: "status", id: item.id, text: item.text, ...item.tooltip === void 0 ? {} : { tooltip: item.tooltip } };
-    }
-  });
-}
-function linkEntries(items) {
-  return items.map(
-    (item) => item.kind === "link" ? { kind: "link", id: item.id, label: item.label, href: item.href } : { kind: "menu", id: item.id, label: item.label, entries: linkEntries(item.items) }
-  );
-}
-function Link({ item }) {
-  return /* @__PURE__ */ jsx13("a", { className: "blockr-dock-bar-button", href: item.href, target: "_blank", rel: "noopener noreferrer", children: /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-label", children: item.label }) });
-}
-function UndoRedo({ mac }) {
-  const { core } = useDock();
-  const { canUndo, canRedo } = useHistory(core);
-  const step = (back) => {
-    try {
-      if (back) core.store.undo();
-      else core.store.redo();
-    } catch {
-    }
-  };
-  return /* @__PURE__ */ jsxs9("div", { className: "blockr-dock-bar-steps", children: [
-    /* @__PURE__ */ jsx13(
-      "button",
-      {
-        type: "button",
-        className: "blockr-dock-bar-button",
-        title: `Undo (${shortcutLabel("Mod+Z", mac)})`,
-        "aria-keyshortcuts": "Control+Z Meta+Z",
-        disabled: !canUndo,
-        onClick: () => {
-          step(true);
-        },
-        children: "Undo"
-      }
-    ),
-    /* @__PURE__ */ jsx13(
-      "button",
-      {
-        type: "button",
-        className: "blockr-dock-bar-button",
-        title: `Redo (${shortcutLabel("Mod+Shift+Z", mac)})`,
-        "aria-keyshortcuts": "Control+Shift+Z Meta+Shift+Z Control+Y",
-        disabled: !canRedo,
-        onClick: () => {
-          step(false);
-        },
-        children: "Redo"
-      }
-    )
-  ] });
-}
-function ReadOnlyPill() {
-  return /* @__PURE__ */ jsxs9("span", { className: "blockr-dock-bar-pill", role: "status", "aria-label": "Read-only mode", title: "Editing is disabled by this deployment.", children: [
-    /* @__PURE__ */ jsx13(LockIcon, {}),
-    /* @__PURE__ */ jsx13("span", { children: "Read-only" })
-  ] });
-}
-function OptionsButton({ sidebar }) {
-  const open = useSyncExternalStore2(sidebar.subscribe, sidebar.isOpen);
-  return /* @__PURE__ */ jsx13(
-    "button",
-    {
-      type: "button",
-      className: "blockr-dock-bar-button blockr-dock-bar-options",
-      "aria-expanded": open,
-      onClick: () => {
-        sidebar.set(!open);
-      },
-      children: "Options"
-    }
-  );
-}
-function ModuleSlot({ item }) {
-  const { core } = useDock();
-  const ref2 = useRef6(null);
-  const [failure, setFailure] = useState7(void 0);
-  useEffect4(() => {
-    const el = ref2.current;
-    if (el === null) return void 0;
-    const controller = new AbortController();
-    const { signal } = controller;
-    const gone = () => signal.aborted;
-    let cleanup;
-    const draw = async () => {
-      const mod = navbarModule(await core.module(item.module));
-      if (gone()) return;
-      const done = await mod.render({ el, core, signal });
-      if (gone()) done?.();
-      else cleanup = done;
-    };
-    draw().catch((error) => {
-      if (gone()) return;
-      const message = `The module ${item.module} of the navbar item "${item.id}" cannot draw: ${errorMessage(error)}`;
-      core.log("blockr.dock").error(new Error(message, { cause: error }));
-      setFailure(message);
-    });
-    return () => {
-      controller.abort();
-      try {
-        cleanup?.();
-      } catch (error) {
-        core.log("blockr.dock").error(asError(error));
-      }
-    };
-  }, [core, item.id, item.module]);
-  if (failure !== void 0) return /* @__PURE__ */ jsx13(Warning, { message: failure });
-  return /* @__PURE__ */ jsx13("span", { ref: ref2, className: "blockr-dock-bar-module", "data-module": item.module });
-}
-function navbarModule(exports) {
-  if (!isObject(exports) || typeof exports.api !== "number") {
-    throw new Error("It declares no major of core's JS API, as `export const api = 1`.");
-  }
-  if (exports.api !== API) {
-    throw new Error(`It was built against major ${String(exports.api)} of core's JS API, where the dock's is ${String(API)}.`);
-  }
-  const mod = exports.default;
-  if (!isObject(mod) || typeof mod.render !== "function") throw new Error("It has no default export with a render() function.");
-  return mod;
-}
-function Warning({ message }) {
-  return /* @__PURE__ */ jsx13("span", { className: "blockr-dock-bar-warning", role: "img", "aria-label": message, title: message, children: /* @__PURE__ */ jsx13(WarningIcon, {}) });
-}
-function useStorage(core) {
-  const storage = core.plugins.storage();
-  const [, redraw] = useReducer((n) => n + 1, 0);
-  useEffect4(() => {
-    if (storage?.subscribe === void 0) return void 0;
-    try {
-      return storage.subscribe(redraw);
-    } catch (error) {
-      core.log("blockr.dock").error(asError(error));
-      return void 0;
-    }
-  }, [core, storage]);
-  useBoard(core);
-  const drawn = drawnControls(core);
-  const problem = drawn?.problem;
-  useEffect4(() => {
-    if (problem !== void 0) core.log("blockr.dock").error(problem);
-  }, [core, problem]);
-  return drawn;
-}
-function useHistory(core) {
-  const subscribe = useCallback8(
-    (changed) => core.store.subscribe(() => {
-      changed();
-    }),
-    [core]
-  );
-  const canUndo = useSyncExternalStore2(subscribe, () => core.store.canUndo());
-  const canRedo = useSyncExternalStore2(subscribe, () => core.store.canRedo());
-  return { canUndo, canRedo };
-}
-function cutTip(text2) {
-  const tip = (event) => {
-    tipFor(event.currentTarget, text2);
-  };
-  return { onPointerEnter: tip, onFocus: tip };
-}
-function tipFor(el, text2) {
-  const label = el.querySelector(".blockr-dock-bar-label") ?? el;
-  const tooltip = text2(label.scrollWidth > label.clientWidth);
-  if (tooltip === void 0) el.removeAttribute("title");
-  else el.setAttribute("title", tooltip);
-}
+import { useCallback as useCallback9, useEffect as useEffect4, useReducer, useRef as useRef8, useState as useState9, useSyncExternalStore as useSyncExternalStore3 } from "react";
 
 // srcts/modules/dock/navbar-items.ts
 var PARTS = ["logo", "name", "storage", "undo_redo", "spacer", "views", "read_only", "options"];
 var DEFAULT_NAVBAR = PARTS.map((id) => ({ kind: "part", id }));
+function holdsPart(items, id) {
+  return items.some((item) => item.kind === "part" && item.id === id);
+}
 function readNavbar(args) {
   const sent = args.navbar;
   if (sent === void 0) return DEFAULT_NAVBAR;
@@ -4230,6 +4653,345 @@ function isPart(id) {
   return PARTS.includes(id);
 }
 
+// srcts/modules/dock/navbar.tsx
+import { jsx as jsx15, jsxs as jsxs10 } from "react/jsx-runtime";
+function Navbar({ items, busy, sidebar, mac, openFolders }) {
+  const { core } = useDock();
+  const storage = useStorage(core);
+  const apart = new Set(items.flatMap((item) => item.kind === "storage" ? [item.id] : []));
+  const tabs = useViewTabs(core) && holdsPart(items, "views");
+  return /* @__PURE__ */ jsx15("header", { className: "blockr-dock-bar", "data-tabs": tabs ? "" : void 0, children: items.map((item) => /* @__PURE__ */ jsx15(
+    Item,
+    {
+      item,
+      storage,
+      apart,
+      busy,
+      sidebar,
+      mac,
+      openFolders
+    },
+    item.id
+  )) });
+}
+function Item({ item, storage, apart, busy, sidebar, mac, openFolders }) {
+  switch (item.kind) {
+    case "part":
+      return /* @__PURE__ */ jsx15(Part, { id: item.id, storage, apart, busy, sidebar, mac, openFolders });
+    case "storage": {
+      const control = storage?.failed === void 0 ? storage?.controls.find((c) => c.id === item.id) : void 0;
+      return control === void 0 ? null : /* @__PURE__ */ jsx15(StorageControlView, { control });
+    }
+    case "link":
+      return /* @__PURE__ */ jsx15(Link, { item });
+    case "menu":
+      return /* @__PURE__ */ jsx15(MenuButton, { label: item.label, entries: linkEntries(item.items), className: "blockr-dock-bar-button" });
+    case "module":
+      return /* @__PURE__ */ jsx15(ModuleSlot, { item });
+  }
+}
+function Part({ id, storage, apart, busy, sidebar, mac, openFolders }) {
+  const { core } = useDock();
+  switch (id) {
+    case "logo":
+      return /* @__PURE__ */ jsx15(Logo, { busy });
+    case "name":
+      return /* @__PURE__ */ jsx15(BoardName, {});
+    case "storage":
+      return /* @__PURE__ */ jsx15(StorageControls, { storage, apart });
+    case "undo_redo":
+      return /* @__PURE__ */ jsx15(UndoRedo, { mac });
+    case "spacer":
+      return /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-spacer", "aria-hidden": "true" });
+    case "views":
+      return /* @__PURE__ */ jsx15(Views, { openFolders });
+    case "read_only":
+      return core.lock.board ? /* @__PURE__ */ jsx15(ReadOnlyPill, {}) : null;
+    case "options":
+      return /* @__PURE__ */ jsx15(OptionsButton, { sidebar });
+  }
+}
+var CELLS = [
+  [0, 2],
+  [0, 1],
+  [0, 0],
+  [1, 0],
+  [2, 0],
+  [1, 1],
+  [2, 2]
+];
+function Logo({ busy }) {
+  const turning = useSyncExternalStore3(busy.subscribe, busy.get);
+  return /* @__PURE__ */ jsxs10("span", { className: turning ? "blockr-dock-logo is-computing" : "blockr-dock-logo", title: turning ? "Computing" : void 0, children: [
+    /* @__PURE__ */ jsx15("svg", { className: "blockr-dock-logo-mark", width: "20", height: "20", viewBox: "0 0 224 224", "aria-hidden": "true", focusable: "false", children: CELLS.map(([x, y], i) => /* @__PURE__ */ jsx15("rect", { style: { "--i": i }, x: x * 80, y: y * 80, width: "64", height: "64", rx: "7" }, i)) }),
+    /* @__PURE__ */ jsx15("span", { className: "blockr-dock-visually-hidden", role: "status", children: turning ? "Computing" : "" })
+  ] });
+}
+function BoardName() {
+  const { core } = useDock();
+  const board = useBoard(core);
+  const [renaming, setRenaming] = useState9(false);
+  const locked = core.lock.board;
+  if (renaming) {
+    return /* @__PURE__ */ jsx15(
+      NameField2,
+      {
+        name: board.name,
+        label: "Board name",
+        className: "blockr-dock-bar-field",
+        onSubmit: (name2) => {
+          core.commands.run("blockr.core-rename_board", { name: name2 }).catch(() => void 0);
+        },
+        onDone: () => {
+          setRenaming(false);
+        }
+      }
+    );
+  }
+  const tip = cutTip((cut) => {
+    if (locked) return cut ? board.name : void 0;
+    return cut ? `${board.name}
+Click to rename` : "Click to rename";
+  });
+  if (locked) {
+    return /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-name blockr-dock-bar-shrinks", ...tip, children: /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-label", children: board.name }) });
+  }
+  return /* @__PURE__ */ jsx15(
+    "button",
+    {
+      type: "button",
+      className: "blockr-dock-bar-name blockr-dock-bar-shrinks",
+      "aria-label": `Board name: ${board.name}. Rename`,
+      onClick: () => {
+        setRenaming(true);
+      },
+      ...tip,
+      children: /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-label", children: board.name })
+    }
+  );
+}
+function StorageControls({ storage, apart }) {
+  if (storage === void 0) return null;
+  if (storage.failed !== void 0) {
+    return /* @__PURE__ */ jsx15(Warning, { message: `The storage controls of ${storage.package} failed: ${storage.failed}` });
+  }
+  const shown = storage.controls.filter((control) => !apart.has(control.id));
+  if (shown.length === 0) return null;
+  return /* @__PURE__ */ jsx15("div", { className: "blockr-dock-bar-storage blockr-dock-bar-shrinks", children: shown.map((control) => /* @__PURE__ */ jsx15(StorageControlView, { control }, control.id)) });
+}
+function StorageControlView({ control }) {
+  const { core } = useDock();
+  const tip = control.kind === "menu" || control.tooltip === void 0 ? cutTip((cut) => cut ? labelOf(control) : void 0) : {};
+  switch (control.kind) {
+    case "button":
+      return /* @__PURE__ */ jsx15(
+        "button",
+        {
+          type: "button",
+          className: "blockr-dock-bar-button blockr-dock-bar-shrinks",
+          disabled: control.disabled,
+          title: control.tooltip,
+          "aria-keyshortcuts": ariaShortcuts(control.shortcut),
+          onClick: () => {
+            void runButton(core, control);
+          },
+          ...tip,
+          children: /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-label", children: control.label })
+        }
+      );
+    case "menu":
+      return /* @__PURE__ */ jsx15(
+        MenuButton,
+        {
+          label: control.label,
+          entries: storageEntries(core, control.items),
+          className: "blockr-dock-bar-button blockr-dock-bar-shrinks",
+          onTip: (button) => {
+            tipFor(button, (cut) => cut ? control.label : void 0);
+          }
+        }
+      );
+    case "status":
+      return /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-status blockr-dock-bar-shrinks", title: control.tooltip, ...tip, children: /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-label", children: control.text }) });
+  }
+}
+function labelOf(control) {
+  return control.kind === "status" ? control.text : control.label;
+}
+function storageEntries(core, items) {
+  return items.map((item) => {
+    switch (item.kind) {
+      case "button":
+        return {
+          kind: "button",
+          id: item.id,
+          label: item.label,
+          ...item.tooltip === void 0 ? {} : { tooltip: item.tooltip },
+          ...item.shortcut === void 0 ? {} : { shortcut: item.shortcut },
+          ...item.disabled === void 0 ? {} : { disabled: item.disabled },
+          run: () => {
+            void runButton(core, item);
+          }
+        };
+      case "menu":
+        return { kind: "menu", id: item.id, label: item.label, entries: storageEntries(core, item.items) };
+      case "status":
+        return { kind: "status", id: item.id, text: item.text, ...item.tooltip === void 0 ? {} : { tooltip: item.tooltip } };
+    }
+  });
+}
+function linkEntries(items) {
+  return items.map(
+    (item) => item.kind === "link" ? { kind: "link", id: item.id, label: item.label, href: item.href } : { kind: "menu", id: item.id, label: item.label, entries: linkEntries(item.items) }
+  );
+}
+function Link({ item }) {
+  return /* @__PURE__ */ jsx15("a", { className: "blockr-dock-bar-button", href: item.href, target: "_blank", rel: "noopener noreferrer", children: /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-label", children: item.label }) });
+}
+function UndoRedo({ mac }) {
+  const { core } = useDock();
+  const { canUndo, canRedo } = useHistory(core);
+  const step = (back) => {
+    try {
+      if (back) core.store.undo();
+      else core.store.redo();
+    } catch {
+    }
+  };
+  return /* @__PURE__ */ jsxs10("div", { className: "blockr-dock-bar-steps", children: [
+    /* @__PURE__ */ jsx15(
+      "button",
+      {
+        type: "button",
+        className: "blockr-dock-bar-button",
+        title: `Undo (${shortcutLabel("Mod+Z", mac)})`,
+        "aria-keyshortcuts": "Control+Z Meta+Z",
+        disabled: !canUndo,
+        onClick: () => {
+          step(true);
+        },
+        children: "Undo"
+      }
+    ),
+    /* @__PURE__ */ jsx15(
+      "button",
+      {
+        type: "button",
+        className: "blockr-dock-bar-button",
+        title: `Redo (${shortcutLabel("Mod+Shift+Z", mac)})`,
+        "aria-keyshortcuts": "Control+Shift+Z Meta+Shift+Z Control+Y",
+        disabled: !canRedo,
+        onClick: () => {
+          step(false);
+        },
+        children: "Redo"
+      }
+    )
+  ] });
+}
+function ReadOnlyPill() {
+  return /* @__PURE__ */ jsxs10("span", { className: "blockr-dock-bar-pill", role: "status", "aria-label": "Read-only mode", title: "Editing is disabled by this deployment.", children: [
+    /* @__PURE__ */ jsx15(LockIcon, {}),
+    /* @__PURE__ */ jsx15("span", { children: "Read-only" })
+  ] });
+}
+function OptionsButton({ sidebar }) {
+  const open = useSyncExternalStore3(sidebar.subscribe, sidebar.isOpen);
+  return /* @__PURE__ */ jsx15(
+    "button",
+    {
+      type: "button",
+      className: "blockr-dock-bar-button blockr-dock-bar-options",
+      "aria-expanded": open,
+      onClick: () => {
+        sidebar.set(!open);
+      },
+      children: "Options"
+    }
+  );
+}
+function ModuleSlot({ item }) {
+  const { core } = useDock();
+  const ref2 = useRef8(null);
+  const [failure, setFailure] = useState9(void 0);
+  useEffect4(() => {
+    const el = ref2.current;
+    if (el === null) return void 0;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const gone = () => signal.aborted;
+    let cleanup;
+    const draw = async () => {
+      const mod = navbarModule(await core.module(item.module));
+      if (gone()) return;
+      const done = await mod.render({ el, core, signal });
+      if (gone()) done?.();
+      else cleanup = done;
+    };
+    draw().catch((error) => {
+      if (gone()) return;
+      const message = `The module ${item.module} of the navbar item "${item.id}" cannot draw: ${errorMessage(error)}`;
+      core.log("blockr.dock").error(new Error(message, { cause: error }));
+      setFailure(message);
+    });
+    return () => {
+      controller.abort();
+      try {
+        cleanup?.();
+      } catch (error) {
+        core.log("blockr.dock").error(asError(error));
+      }
+    };
+  }, [core, item.id, item.module]);
+  if (failure !== void 0) return /* @__PURE__ */ jsx15(Warning, { message: failure });
+  return /* @__PURE__ */ jsx15("span", { ref: ref2, className: "blockr-dock-bar-module", "data-module": item.module });
+}
+function navbarModule(exports) {
+  if (!isObject(exports) || typeof exports.api !== "number") {
+    throw new Error("It declares no major of core's JS API, as `export const api = 1`.");
+  }
+  if (exports.api !== API) {
+    throw new Error(`It was built against major ${String(exports.api)} of core's JS API, where the dock's is ${String(API)}.`);
+  }
+  const mod = exports.default;
+  if (!isObject(mod) || typeof mod.render !== "function") throw new Error("It has no default export with a render() function.");
+  return mod;
+}
+function Warning({ message }) {
+  return /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-warning", role: "img", "aria-label": message, title: message, children: /* @__PURE__ */ jsx15(WarningIcon, {}) });
+}
+function useStorage(core) {
+  const storage = core.plugins.storage();
+  const [, redraw] = useReducer((n) => n + 1, 0);
+  useEffect4(() => {
+    if (storage?.subscribe === void 0) return void 0;
+    try {
+      return storage.subscribe(redraw);
+    } catch (error) {
+      core.log("blockr.dock").error(asError(error));
+      return void 0;
+    }
+  }, [core, storage]);
+  useBoard(core);
+  const drawn = drawnControls(core);
+  const problem = drawn?.problem;
+  useEffect4(() => {
+    if (problem !== void 0) core.log("blockr.dock").error(problem);
+  }, [core, problem]);
+  return drawn;
+}
+function useHistory(core) {
+  const subscribe = useCallback9(
+    (changed) => core.store.subscribe(() => {
+      changed();
+    }),
+    [core]
+  );
+  const canUndo = useSyncExternalStore3(subscribe, () => core.store.canUndo());
+  const canRedo = useSyncExternalStore3(subscribe, () => core.store.canRedo());
+  return { canUndo, canRedo };
+}
+
 // srcts/modules/dock/narrow.ts
 function trackNarrow(win, breakpoint) {
   const narrowNow = () => breakpoint !== void 0 && win.innerWidth < breakpoint;
@@ -4254,6 +5016,33 @@ function trackNarrow(win, breakpoint) {
     stop() {
       if (follows) win.removeEventListener("resize", onResize);
       listeners.clear();
+    }
+  };
+}
+
+// srcts/modules/dock/open-folders.ts
+function createOpenFolders() {
+  let open = /* @__PURE__ */ new Set();
+  const listeners = /* @__PURE__ */ new Set();
+  const change = (next) => {
+    open = next;
+    for (const fn of [...listeners]) fn();
+  };
+  return {
+    get: () => open,
+    set(folder2, on) {
+      if (open.has(folder2) === on) return;
+      change(on ? /* @__PURE__ */ new Set([...open, folder2]) : new Set([...open].filter((other) => other !== folder2)));
+    },
+    open(folders) {
+      const closed = folders.filter((folder2) => !open.has(folder2));
+      if (closed.length > 0) change(/* @__PURE__ */ new Set([...open, ...closed]));
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
     }
   };
 }
@@ -4373,7 +5162,7 @@ function startOnBoard(core, plugin, drawn, view2) {
 }
 
 // srcts/modules/dock/toasts.tsx
-import { useCallback as useCallback9, useSyncExternalStore as useSyncExternalStore3 } from "react";
+import { useCallback as useCallback10, useSyncExternalStore as useSyncExternalStore4 } from "react";
 
 // srcts/modules/dock/notifications.ts
 function onCard(notification) {
@@ -4387,7 +5176,7 @@ function plainText(message) {
 }
 
 // srcts/modules/dock/toasts.tsx
-import { jsx as jsx14, jsxs as jsxs10 } from "react/jsx-runtime";
+import { jsx as jsx16, jsxs as jsxs11 } from "react/jsx-runtime";
 var SHOWN_FOR = 5e3;
 var FADES_FOR = 300;
 function createToasts(notifications) {
@@ -4504,10 +5293,10 @@ function own(record, key) {
   return Object.hasOwn(record, key) ? record[key] : void 0;
 }
 function ToastList({ core, toasts }) {
-  const list = useSyncExternalStore3(toasts.subscribe, toasts.list);
+  const list = useSyncExternalStore4(toasts.subscribe, toasts.list);
   const board = useBoard2(core);
   if (list.length === 0) return null;
-  return /* @__PURE__ */ jsx14("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => /* @__PURE__ */ jsx14(
+  return /* @__PURE__ */ jsx16("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => /* @__PURE__ */ jsx16(
     ToastItem,
     {
       toast,
@@ -4521,7 +5310,7 @@ function ToastItem({ toast, title, toasts }) {
   const { notification, fading } = toast;
   const { id, severity } = notification;
   const pkg = sourcePackage(notification);
-  return /* @__PURE__ */ jsxs10(
+  return /* @__PURE__ */ jsxs11(
     "div",
     {
       className: "blockr-dock-toast",
@@ -4543,17 +5332,17 @@ function ToastItem({ toast, title, toasts }) {
         }
       },
       children: [
-        /* @__PURE__ */ jsxs10("div", { className: "blockr-dock-toast-text", children: [
-          /* @__PURE__ */ jsxs10("p", { className: "blockr-dock-toast-title", children: [
+        /* @__PURE__ */ jsxs11("div", { className: "blockr-dock-toast-text", children: [
+          /* @__PURE__ */ jsxs11("p", { className: "blockr-dock-toast-title", children: [
             title,
-            pkg === void 0 ? null : /* @__PURE__ */ jsxs10("span", { className: "blockr-dock-toast-package", children: [
+            pkg === void 0 ? null : /* @__PURE__ */ jsxs11("span", { className: "blockr-dock-toast-package", children: [
               " \xB7 ",
               pkg
             ] })
           ] }),
-          /* @__PURE__ */ jsx14("p", { className: "blockr-dock-toast-message", children: plainText(notification.message) })
+          /* @__PURE__ */ jsx16("p", { className: "blockr-dock-toast-message", children: plainText(notification.message) })
         ] }),
-        /* @__PURE__ */ jsx14(
+        /* @__PURE__ */ jsx16(
           "button",
           {
             type: "button",
@@ -4562,7 +5351,7 @@ function ToastItem({ toast, title, toasts }) {
             onClick: () => {
               toasts.close(id);
             },
-            children: /* @__PURE__ */ jsx14("span", { "aria-hidden": "true", children: "\xD7" })
+            children: /* @__PURE__ */ jsx16("span", { "aria-hidden": "true", children: "\xD7" })
           }
         )
       ]
@@ -4570,17 +5359,17 @@ function ToastItem({ toast, title, toasts }) {
   );
 }
 function useBoard2(core) {
-  const subscribe = useCallback9(
+  const subscribe = useCallback10(
     (fn) => core.store.subscribe(() => {
       fn();
     }),
     [core]
   );
-  return useSyncExternalStore3(subscribe, () => core.store.board());
+  return useSyncExternalStore4(subscribe, () => core.store.board());
 }
 
 // srcts/modules/dock/index.tsx
-import { Fragment as Fragment6, jsx as jsx15, jsxs as jsxs11 } from "react/jsx-runtime";
+import { Fragment as Fragment7, jsx as jsx17, jsxs as jsxs12 } from "react/jsx-runtime";
 var api = API;
 var SHOW_PANEL = "blockr.dock-show_panel";
 var frontend = {
@@ -4595,15 +5384,16 @@ var frontend = {
     const release = demandShown(core, drawn, narrow);
     const busy = trackBusy(core, drawn, narrow, settings.spinnerDelay);
     const sidebar = createSidebar();
+    const openFolders = createOpenFolders();
     const toasts = createToasts(core.notifications);
     const unbind = bindShortcuts(el.ownerDocument, core, () => barButtons(core, items));
     const root = createRoot(el);
     flushSync(() => {
       root.render(
-        /* @__PURE__ */ jsxs11(Fragment6, { children: [
-          /* @__PURE__ */ jsx15(DockContext, { value: { core, plugin, drawn, tooltips: createTooltips() }, children: /* @__PURE__ */ jsx15(Navbar, { items, busy, sidebar, mac: onMac(win) }) }),
-          /* @__PURE__ */ jsx15(Dock, { core, plugin, settings, narrow, drawn }),
-          /* @__PURE__ */ jsx15(ToastList, { core, toasts })
+        /* @__PURE__ */ jsxs12(Fragment7, { children: [
+          /* @__PURE__ */ jsx17(DockContext, { value: { core, plugin, drawn, tooltips: createTooltips() }, children: /* @__PURE__ */ jsx17(Navbar, { items, busy, sidebar, mac: onMac(win), openFolders }) }),
+          /* @__PURE__ */ jsx17(Dock, { core, plugin, settings, narrow, drawn, viewsMenu: holdsPart(items, "views") }),
+          /* @__PURE__ */ jsx17(ToastList, { core, toasts })
         ] })
       );
     });

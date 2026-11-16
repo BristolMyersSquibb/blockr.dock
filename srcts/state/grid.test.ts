@@ -10,11 +10,12 @@ import {
   gridPanels,
   locate,
   placedAt,
-  placeFailure,
+  placeFailures,
   placePanel,
   prunePanels,
   RAIL_SIZE,
   resized,
+  resizeFailures,
   showing,
   withStoredShares,
 } from "./grid.ts";
@@ -312,13 +313,21 @@ describe("placedAt()", () => {
     expect(placedAt(overview, { block: "d" }, {}, "distribute")).toEqual(placePanel(overview, { block: "d" }));
     expect(placedAt(overview, { block: "d" }, { side: "within" }, "distribute")).toEqual(placePanel(overview, { block: "d" }));
   });
+});
 
-  test("throws where `near` names a panel that the grid lacks, or one on a rail beside which it places", () => {
-    expect(() => placedAt(overview, { block: "d" }, { near: { block: "z" } }, "distribute")).toThrow(
-      'The view does not show the panel of the block "z", which near names.',
-    );
-    expect(() => placedAt(overview, { block: "d" }, { near: dag, side: "below" }, "distribute")).toThrow("on a rail");
-    expect(placeFailure(overview, { near: dag, side: "below", rail: "right" })).toBeUndefined();
+describe("placeFailures()", () => {
+  test("names a `near` that the grid lacks, and one on a rail beside which a panel would go", () => {
+    expect(placeFailures(overview, { near: { block: "z" } })).toEqual(['The view does not show the panel of the block "z", which near names.']);
+    expect(placeFailures(overview, { near: dag, side: "below" })).toEqual([
+      'The view shows the panel of the plugin "blockr.dag-dag_plugin", which near names, on a rail, which takes a panel only within.',
+    ]);
+  });
+
+  test("names none for a place in or beside a panel that the grid holds, within a rail, or on the rail that `rail` names", () => {
+    expect(placeFailures(overview, { near: c, side: "below" })).toEqual([]);
+    expect(placeFailures(overview, { near: dag })).toEqual([]);
+    expect(placeFailures(overview, { near: dag, side: "below", rail: "right" })).toEqual([]);
+    expect(placeFailures(overview, {})).toEqual([]);
   });
 });
 
@@ -354,11 +363,20 @@ describe("resized()", () => {
   test("sets the width of the rail that holds a panel", () => {
     expect(resized(overview, dag, 320).rails?.left).toEqual({ ...rail(dag), size: 320 });
   });
+});
 
-  test("throws for a share that is not below 1, and for a tab group that fills its split alone", () => {
-    expect(() => resized(overview, a, 1)).toThrow("below 1");
+describe("resizeFailures()", () => {
+  test("names a share that is not below 1, and a tab group that fills its split alone", () => {
+    expect(resizeFailures(overview, a, 1)).toEqual(["A tab group takes a share of its split below 1, which 1 is not."]);
     const one: Grid = { orientation: "horizontal", children: [group(a)], sizes: [1] };
-    expect(() => resized(one, a, 0.5)).toThrow('The tab group that holds the panel of the block "a" fills its split alone');
+    const alone = 'The tab group that holds the panel of the block "a" fills its split alone, so its share stays 1.';
+    expect(resizeFailures(one, a, 0.5)).toEqual([alone]);
+    expect(resizeFailures(one, a, 2)).toEqual(["A tab group takes a share of its split below 1, which 2 is not.", alone]);
+  });
+
+  test("names none for a share below 1 of a split that holds more, or for the width of a rail", () => {
+    expect(resizeFailures(overview, md, 0.25)).toEqual([]);
+    expect(resizeFailures(overview, dag, 320)).toEqual([]);
   });
 });
 

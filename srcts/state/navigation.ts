@@ -87,6 +87,22 @@ export function sitsAt(state: DockState, entry: Entry, folder: FolderId | null, 
   return before === undefined ? next === undefined : next !== undefined && sameEntry(next, before);
 }
 
+// The folders that hold a view or folder in the navigation, from the one that
+// it sits in out to the one at the top, as the navigation lists them, or none
+// where it sits at the top.
+export function foldersHolding(state: DockState, entry: Entry): FolderId[] {
+  const folders: FolderId[] = [];
+  let at =
+    "view" in entry
+      ? holder(state, state.views[entry.view]?.folder ?? null)
+      : holder(state, state.folders[entry.folder]?.folder ?? null, entry.folder);
+  while (at !== null && !folders.includes(at)) {
+    folders.push(at);
+    at = holder(state, state.folders[at]?.folder ?? null, at);
+  }
+  return folders;
+}
+
 // Whether a folder is `outer` or sits in it, through the folders that hold
 // it.
 export function within(state: DockState, folder: FolderId, outer: FolderId): boolean {

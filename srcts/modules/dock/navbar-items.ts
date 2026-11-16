@@ -66,6 +66,12 @@ export type NavbarItem = PartItem | StorageItem | LinkItem | MenuItem | ModuleIt
 // The default bar, which holds the dock's own parts.
 export const DEFAULT_NAVBAR: readonly NavbarItem[] = PARTS.map((id) => ({ kind: "part", id }));
 
+// Whether the bar holds one of the dock's own parts, as the views menu, whose
+// line of tabs takes room above the dock.
+export function holdsPart(items: readonly NavbarItem[], id: PartId): boolean {
+  return items.some((item) => item.kind === "part" && item.id === id);
+}
+
 // The navbar items that the frontend's `args` give.
 export function readNavbar(args: Readonly<Record<string, Json>>): readonly NavbarItem[] {
   const sent = args.navbar;
