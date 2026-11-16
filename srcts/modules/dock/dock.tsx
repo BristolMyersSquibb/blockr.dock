@@ -28,6 +28,9 @@
 // Under the board lock, no command adds or removes a panel.
 // So the dock draws no "+", no close button on a tab and no picker there, and
 // an empty view says "This view is empty".
+//
+// While the views menu on the bar draws its line of tabs, under the bar's row,
+// the dock's root starts below the line (./views-menu.tsx).
 
 import type { Board, CoreApi, PluginClassId } from "@blockr/core";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "dockview-react";
@@ -50,6 +53,7 @@ import { LockIcon } from "./icons.tsx";
 import type { Narrow } from "./narrow.ts";
 import { PanelPicker, usePickerButton } from "./picker.tsx";
 import type { Settings } from "./settings.ts";
+import { useViewTabs } from "./views-menu.tsx";
 
 // The frame of a panel, which names the block or the plugin whose panel it
 // is.
@@ -157,13 +161,17 @@ export interface DockProps {
   readonly settings: Settings;
   readonly narrow: Narrow;
   readonly drawn: ReadonlyMap<PluginClassId, string>;
+  // Whether the bar holds the views menu, which draws its line of tabs under
+  // the bar while the board option view_tabs is on.
+  readonly viewsMenu: boolean;
 }
 
-export function Dock({ core, plugin, settings, narrow, drawn }: DockProps): ReactElement {
+export function Dock({ core, plugin, settings, narrow, drawn, viewsMenu }: DockProps): ReactElement {
   const root = useRef<HTMLDivElement>(null);
   const stop = useRef<(() => void) | undefined>(undefined);
   const shared = useMemo(() => ({ core, drawn }), [core, drawn]);
   const locked = core.lock.board;
+  const tabs = useViewTabs(core) && viewsMenu;
 
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
@@ -198,7 +206,7 @@ export function Dock({ core, plugin, settings, narrow, drawn }: DockProps): Reac
 
   return (
     <DockContext value={shared}>
-      <div className="blockr-dock" ref={root}>
+      <div className="blockr-dock" ref={root} data-tabs={tabs ? "" : undefined}>
         {locked ? view : <PanelPicker>{view}</PanelPicker>}
       </div>
     </DockContext>

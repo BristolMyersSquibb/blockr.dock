@@ -30,9 +30,12 @@
 //   first and the last.
 // - Enter and Space pick a row, and ArrowRight opens a menu inside the menu.
 //   ArrowLeft closes that menu again, with the focus back on its row.
+// The views menu and the menu of a folder's tab open from their buttons the
+// same way, through useMenuButton(), with rows of their own
+// (./views-menu.tsx).
 
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import type { FocusEvent, KeyboardEvent, MouseEvent, ReactElement, RefObject, SyntheticEvent } from "react";
+import type { FocusEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode, RefObject, SyntheticEvent } from "react";
 import { Chevron } from "./icons.tsx";
 import { place } from "./popover.ts";
 import { ariaShortcuts } from "./shortcuts.ts";
@@ -53,7 +56,7 @@ export type MenuEntry =
   | { readonly kind: "menu"; readonly id: string; readonly label: string; readonly entries: readonly MenuEntry[] };
 
 // How a menu opened: from the keyboard, or by a click.
-interface Opened {
+export interface Opened {
   readonly keyboard: boolean;
 }
 
@@ -64,6 +67,11 @@ const ROWS = ':scope > [role="menuitem"], :scope > [role="none"] > [role="menuit
 // menuitem.
 function menuItems(list: HTMLElement): HTMLElement[] {
   return [...list.querySelectorAll<HTMLElement>(ROWS)];
+}
+
+// The row of a menu that takes the focus as the keyboard opens it: its first.
+function firstItem(list: HTMLElement): HTMLElement | undefined {
+  return menuItems(list)[0];
 }
 
 // The anchor name that the button or the row which opened a menu takes, by
@@ -86,18 +94,9 @@ export interface MenuButtonProps {
 
 // A menu, as a button that opens it.
 export function MenuButton({ label, entries, className, onTip }: MenuButtonProps): ReactElement {
-  const [opened, setOpened] = useState<Opened | undefined>(undefined);
   const button = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLDivElement>(null);
-  const open = opened !== undefined;
-  // Whether the menu was open as the pointer went down on the button.
-  // The browser may close the menu then, as the pointer goes down outside it,
-  // so the click that follows closes it rather than opens it again.
-  const pressedOpen = useRef(false);
-  const close = useCallback(() => {
-    setOpened(undefined);
-  }, []);
-  usePopover(list, button, opened, 0);
+  const { opened, close, handlers } = useMenuButton(button, list);
 
   const tip = (event: SyntheticEvent<HTMLElement>) => {
     onTip?.(event.currentTarget);
@@ -110,27 +109,10 @@ export function MenuButton({ label, entries, className, onTip }: MenuButtonProps
         type="button"
         className={className}
         aria-haspopup="menu"
-        aria-expanded={open}
+        aria-expanded={opened !== undefined}
         onPointerEnter={tip}
         onFocus={tip}
-        onPointerDown={() => {
-          pressedOpen.current = open;
-        }}
-        onClick={(event: MouseEvent<HTMLButtonElement>) => {
-          // A click that the keyboard made, with Enter or Space, has no detail,
-          // and no pointer went down for it.
-          const keyboard = event.detail === 0;
-          const wasOpen = open || (!keyboard && pressedOpen.current);
-          pressedOpen.current = false;
-          setOpened(wasOpen ? undefined : { keyboard });
-        }}
-        onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => {
-          if (event.key !== "ArrowDown") return;
-          event.preventDefault();
-          const first = list.current === null ? undefined : menuItems(list.current)[0];
-          if (open) first?.focus();
-          else setOpened({ keyboard: true });
-        }}
+        {...handlers}
       >
         <span className="blockr-dock-bar-label">{label}</span>
         <Chevron />
@@ -140,13 +122,88 @@ export function MenuButton({ label, entries, className, onTip }: MenuButtonProps
   );
 }
 
+export interface MenuButtonOptions {
+  // Runs as the menu opens, before it draws.
+  readonly onOpen?: () => void;
+  // The row that takes the focus as the keyboard opens the menu, its first
+  // row unless given.
+  readonly first?: (list: HTMLElement) => HTMLElement | undefined;
+}
+
+export interface MenuButtonState {
+  // How the menu opened, or undefined while it is closed.
+  readonly opened: Opened | undefined;
+  // Closes the menu.
+  readonly close: () => void;
+  // The handlers of the button that opens and closes the menu.
+  readonly handlers: {
+    readonly onPointerDown: () => void;
+    readonly onClick: (event: MouseEvent<HTMLElement>) => void;
+    readonly onKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
+  };
+}
+
+// Whether the menu that a button opens is open, with the handlers of the
+// button, which open and close it as a click or the keys of a menu button
+// ask.
+// The menu shows in the popover of `list`, below the button.
+export function useMenuButton(
+  button: RefObject<HTMLElement | null>,
+  list: RefObject<HTMLElement | null>,
+  { onOpen, first = firstItem }: MenuButtonOptions = {},
+): MenuButtonState {
+  const [opened, setOpened] = useState<Opened | undefined>(undefined);
+  const open = opened !== undefined;
+  // Whether the menu was open as the pointer went down on the button.
+  // The browser may close the menu then, as the pointer goes down outside it,
+  // so the click that follows closes it rather than opens it again.
+  const pressedOpen = useRef(false);
+  const close = useCallback(() => {
+    setOpened(undefined);
+  }, []);
+  usePopover(list, button, opened, 0, first);
+
+  const show = (how: Opened) => {
+    onOpen?.();
+    setOpened(how);
+  };
+
+  return {
+    opened,
+    close,
+    handlers: {
+      onPointerDown: () => {
+        pressedOpen.current = open;
+      },
+      onClick: (event) => {
+        // A click that the keyboard made, with Enter or Space, has no detail,
+        // and no pointer went down for it.
+        const keyboard = event.detail === 0;
+        const wasOpen = open || (!keyboard && pressedOpen.current);
+        pressedOpen.current = false;
+        if (wasOpen) close();
+        else show({ keyboard });
+      },
+      onKeyDown: (event) => {
+        if (event.key !== "ArrowDown") return;
+        event.preventDefault();
+        if (!open) show({ keyboard: true });
+        else if (list.current !== null) first(list.current)?.focus();
+      },
+    },
+  };
+}
+
 // Shows the popover of a menu while it is open, by the button or the row that
-// opened it, and moves the focus into it.
-function usePopover(
-  list: RefObject<HTMLDivElement | null>,
+// opened it, and moves the focus into it: onto the row that `first` gives
+// where the keyboard opened it, or onto the menu itself, so that no row looks
+// picked.
+export function usePopover(
+  list: RefObject<HTMLElement | null>,
   trigger: RefObject<HTMLElement | null>,
   opened: Opened | undefined,
   depth: number,
+  first: (list: HTMLElement) => HTMLElement | undefined = firstItem,
 ): void {
   useLayoutEffect(() => {
     const el = list.current;
@@ -160,14 +217,14 @@ function usePopover(
     el.style.setProperty("position-anchor", name);
     el.showPopover({ source: at });
     place(el, at, depth === 0 ? "below" : "beside");
-    const first = menuItems(el)[0];
-    if (opened.keyboard && first !== undefined) first.focus();
-    else el.focus({ focusVisible: false });
+    const row = opened.keyboard ? first(el) : undefined;
+    if (row === undefined) el.focus({ focusVisible: false });
+    else row.focus();
     return () => {
       at.style.removeProperty("anchor-name");
       el.hidePopover();
     };
-  }, [list, trigger, opened, depth]);
+  }, [list, trigger, opened, depth, first]);
 }
 
 interface MenuListProps {
@@ -185,13 +242,39 @@ interface MenuListProps {
 // The popover of a menu, which lists its rows while the menu is open.
 function MenuList({ list, label, opened, close, closeAll, entries, depth }: MenuListProps): ReactElement {
   return (
+    <MenuPopover list={list} label={label} depth={depth} close={close} onKeyDown={moveThrough}>
+      {opened === undefined
+        ? null
+        : entries.map((entry) => <Row key={entry.id} entry={entry} depth={depth} closeAll={closeAll} />)}
+    </MenuPopover>
+  );
+}
+
+export interface MenuPopoverProps {
+  readonly list: RefObject<HTMLDivElement | null>;
+  readonly label: string;
+  // How many menus it opens from, 0 for a menu that a button opens.
+  readonly depth: number;
+  // The role of what it holds, a menu unless given.
+  readonly role?: "menu" | "dialog";
+  // A class beside that of every menu, which styles a menu of its own kind.
+  readonly className?: string;
+  readonly close: () => void;
+  readonly onKeyDown?: ((event: KeyboardEvent<HTMLDivElement>) => void) | undefined;
+  readonly children: ReactNode;
+}
+
+// The popover of a menu, which closes as the browser closes it, or as the
+// focus moves out of it.
+export function MenuPopover({ list, label, depth, role = "menu", className, close, onKeyDown, children }: MenuPopoverProps): ReactElement {
+  return (
     <div
       ref={list}
       popover="auto"
-      role="menu"
+      role={role}
       aria-label={label}
       tabIndex={-1}
-      className="blockr-dock-menu"
+      className={className === undefined ? "blockr-dock-menu" : `blockr-dock-menu ${className}`}
       data-depth={depth}
       onToggle={(event) => {
         if (event.newState === "closed") close();
@@ -200,11 +283,9 @@ function MenuList({ list, label, opened, close, closeAll, entries, depth }: Menu
         const next = event.relatedTarget;
         if (next instanceof Node && !event.currentTarget.contains(next)) close();
       }}
-      onKeyDown={moveThrough}
+      onKeyDown={onKeyDown}
     >
-      {opened === undefined
-        ? null
-        : entries.map((entry) => <Row key={entry.id} entry={entry} depth={depth} closeAll={closeAll} />)}
+      {children}
     </div>
   );
 }
@@ -212,7 +293,15 @@ function MenuList({ list, label, opened, close, closeAll, entries, depth }: Menu
 // Moves the focus through the rows of the menu whose popover hears the key.
 // A menu inside it hears its own keys first, and keeps them.
 function moveThrough(event: KeyboardEvent<HTMLDivElement>): void {
-  const rows = menuItems(event.currentTarget);
+  moveFocus(menuItems(event.currentTarget), event);
+}
+
+// Moves the focus through a menu's rows as the keys of a menu move it:
+// ArrowDown and ArrowUp to the next and the previous row, from the last back
+// to the first and the other way round, and Home and End to the first and
+// the last.
+// Gives whether it took the key.
+export function moveFocus(rows: readonly HTMLElement[], event: KeyboardEvent<HTMLElement>): boolean {
   const at = rows.findIndex((row) => row === event.target);
   const last = rows.length - 1;
   let next: HTMLElement | undefined;
@@ -220,10 +309,11 @@ function moveThrough(event: KeyboardEvent<HTMLDivElement>): void {
   else if (event.key === "ArrowUp") next = rows[at <= 0 ? last : at - 1];
   else if (event.key === "Home") next = rows[0];
   else if (event.key === "End") next = rows[last];
-  else return;
+  else return false;
   event.preventDefault();
   event.stopPropagation();
   next?.focus();
+  return true;
 }
 
 function Row({ entry, depth, closeAll }: { readonly entry: MenuEntry; readonly depth: number; readonly closeAll: () => void }): ReactElement {

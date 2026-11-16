@@ -92,6 +92,7 @@ function barItems(el: HTMLElement): string[] {
     ["blockr-dock-bar-storage", "storage"],
     ["blockr-dock-bar-steps", "undo_redo"],
     ["blockr-dock-bar-spacer", "spacer"],
+    ["blockr-dock-bar-views", "views"],
     ["blockr-dock-bar-pill", "read_only"],
     ["blockr-dock-bar-options", "options"],
     ["blockr-dock-bar-module", "module"],
@@ -174,7 +175,7 @@ describe("the bar", () => {
   test("draws the dock's own parts of the default bar in their order, where R sends no navbar", async () => {
     const { el } = await startBar();
 
-    expect(barItems(el)).toEqual(["logo", "name", "storage", "undo_redo", "spacer", "options"]);
+    expect(barItems(el)).toEqual(["logo", "name", "storage", "undo_redo", "spacer", "views", "options"]);
     // Core's storage plugin gives Save and Open.
     const storage = el.querySelector(".blockr-dock-bar-storage");
     expect([...(storage?.querySelectorAll("button") ?? [])].map((b) => b.textContent)).toEqual(["Save", "Open"]);
@@ -382,7 +383,7 @@ describe("the storage plugin's controls on the bar", () => {
     const warning = s.el.querySelector<HTMLElement>(".blockr-dock-bar-warning");
     expect(warning?.title).toContain("blockr.test");
     expect(warning?.title).toContain("No token.");
-    expect(barItems(s.el)).toEqual(["logo", "name", "warning", "undo_redo", "spacer", "options"]);
+    expect(barItems(s.el)).toEqual(["logo", "name", "warning", "undo_redo", "spacer", "views", "options"]);
     expect(errors(s.logged, "blockr.dock").filter((m) => m.includes("No token."))).toHaveLength(1);
   });
 
@@ -576,7 +577,7 @@ describe("the dock's own parts", () => {
   test("show under the board lock the name alone, the read-only pill, and Undo and Redo", async () => {
     const { el } = await startBar({ lock: { board: true } });
 
-    expect(barItems(el)).toEqual(["logo", "name", "storage", "undo_redo", "spacer", "read_only", "options"]);
+    expect(barItems(el)).toEqual(["logo", "name", "storage", "undo_redo", "spacer", "views", "read_only", "options"]);
     const name = dockBar(el).querySelector<HTMLElement>(".blockr-dock-bar-name");
     expect(name?.tagName).toBe("SPAN");
     click(name);
@@ -592,7 +593,7 @@ describe("the dock's own parts", () => {
 
   test("draw no storage controls in an app without a storage plugin, and core's leave Open out under the load lock", async () => {
     const none = await startBar({ storage: "none" });
-    expect(barItems(none.el)).toEqual(["logo", "name", "undo_redo", "spacer", "options"]);
+    expect(barItems(none.el)).toEqual(["logo", "name", "undo_redo", "spacer", "views", "options"]);
     none.stop();
 
     const loaded = await startBar({ lock: { load: true } });

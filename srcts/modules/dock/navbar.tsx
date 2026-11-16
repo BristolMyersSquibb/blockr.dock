@@ -22,7 +22,8 @@
 //   what that lock leaves open still takes undo steps.
 // - The spacer, which takes the free space, so that what follows it sits at
 //   the right end of the bar.
-// - The views menu, which the bar does not draw yet.
+// - The views menu, with its line of tabs while the board option view_tabs is
+//   on (./views-menu.tsx). The bar grows by the line, under its row.
 // - The read-only pill, which shows while the board lock is on.
 // - The options button, a quiet button with its label as well, which opens and
 //   closes the options sidebar (./sidebar.ts).
@@ -50,8 +51,8 @@
 // the tooltip, where the control has no tooltip of its own.
 
 import type { CoreApi, StorageControl } from "@blockr/core";
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
-import type { CSSProperties, ReactElement, SyntheticEvent } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import type { CSSProperties, ReactElement } from "react";
 import { isObject } from "../../state/index.ts";
 import { API } from "./api.ts";
 import type { Busy } from "./busy.ts";
@@ -60,11 +61,16 @@ import { asError, errorMessage } from "./errors.ts";
 import { LockIcon, WarningIcon } from "./icons.tsx";
 import { MenuButton } from "./menu.tsx";
 import type { MenuEntry } from "./menu.tsx";
+import { NameField } from "./name-field.tsx";
+import { holdsPart } from "./navbar-items.ts";
 import type { LinkItem, MenuItem, ModuleItem, NavbarItem, PartId } from "./navbar-items.ts";
+import type { OpenFolders } from "./open-folders.ts";
 import { ariaShortcuts, shortcutLabel } from "./shortcuts.ts";
 import type { Sidebar } from "./sidebar.ts";
 import { drawnControls, runButton } from "./storage.ts";
 import type { Drawn } from "./storage.ts";
+import { cutTip, tipFor } from "./tips.ts";
+import { useViewTabs, Views } from "./views-menu.tsx";
 
 
 export interface NavbarProps {
@@ -73,17 +79,29 @@ export interface NavbarProps {
   readonly sidebar: Sidebar;
   // Whether the page runs on a Mac, where the tooltips name Mod as Command.
   readonly mac: boolean;
+  readonly openFolders: OpenFolders;
 }
 
-export function Navbar({ items, busy, sidebar, mac }: NavbarProps): ReactElement {
+export function Navbar({ items, busy, sidebar, mac, openFolders }: NavbarProps): ReactElement {
   const { core } = useDock();
   const storage = useStorage(core);
   // The ids of the controls that storage items place apart.
   const apart = new Set(items.flatMap((item) => (item.kind === "storage" ? [item.id] : [])));
+  // Whether the views menu draws its line of tabs, under the bar's row.
+  const tabs = useViewTabs(core) && holdsPart(items, "views");
   return (
-    <header className="blockr-dock-bar">
+    <header className="blockr-dock-bar" data-tabs={tabs ? "" : undefined}>
       {items.map((item) => (
-        <Item key={item.id} item={item} storage={storage} apart={apart} busy={busy} sidebar={sidebar} mac={mac} />
+        <Item
+          key={item.id}
+          item={item}
+          storage={storage}
+          apart={apart}
+          busy={busy}
+          sidebar={sidebar}
+          mac={mac}
+          openFolders={openFolders}
+        />
       ))}
     </header>
   );
@@ -96,12 +114,15 @@ interface ItemProps {
   readonly busy: Busy;
   readonly sidebar: Sidebar;
   readonly mac: boolean;
+  readonly openFolders: OpenFolders;
 }
 
-function Item({ item, storage, apart, busy, sidebar, mac }: ItemProps): ReactElement | null {
+function Item({ item, storage, apart, busy, sidebar, mac, openFolders }: ItemProps): ReactElement | null {
   switch (item.kind) {
     case "part":
-      return <Part id={item.id} storage={storage} apart={apart} busy={busy} sidebar={sidebar} mac={mac} />;
+      return (
+        <Part id={item.id} storage={storage} apart={apart} busy={busy} sidebar={sidebar} mac={mac} openFolders={openFolders} />
+      );
     case "storage": {
       const control = storage?.failed === undefined ? storage?.controls.find((c) => c.id === item.id) : undefined;
       return control === undefined ? null : <StorageControlView control={control} />;
@@ -115,7 +136,7 @@ function Item({ item, storage, apart, busy, sidebar, mac }: ItemProps): ReactEle
   }
 }
 
-function Part({ id, storage, apart, busy, sidebar, mac }: Omit<ItemProps, "item"> & { readonly id: PartId }): ReactElement | null {
+function Part({ id, storage, apart, busy, sidebar, mac, openFolders }: Omit<ItemProps, "item"> & { readonly id: PartId }): ReactElement | null {
   const { core } = useDock();
   switch (id) {
     case "logo":
@@ -129,7 +150,7 @@ function Part({ id, storage, apart, busy, sidebar, mac }: Omit<ItemProps, "item"
     case "spacer":
       return <span className="blockr-dock-bar-spacer" aria-hidden="true" />;
     case "views":
-      return null;
+      return <Views openFolders={openFolders} />;
     case "read_only":
       return core.lock.board ? <ReadOnlyPill /> : null;
     case "options":
@@ -178,6 +199,8 @@ function BoardName(): ReactElement {
     return (
       <NameField
         name={board.name}
+        label="Board name"
+        className="blockr-dock-bar-field"
         onSubmit={(name) => {
           // Core tells the user why the store refused the name.
           core.commands.run("blockr.core-rename_board", { name }).catch(() => undefined);
@@ -213,57 +236,6 @@ function BoardName(): ReactElement {
     >
       <span className="blockr-dock-bar-label">{board.name}</span>
     </button>
-  );
-}
-
-// A text field that edits the board's name in place: Enter or leaving the
-// field submits what it holds, unless it is empty or unchanged, and Escape
-// gives up, as core's basic frontend has it.
-function NameField({
-  name,
-  onSubmit,
-  onDone,
-}: {
-  readonly name: string;
-  readonly onSubmit: (name: string) => void;
-  readonly onDone: () => void;
-}): ReactElement {
-  const [text, setText] = useState(name);
-  const ref = useRef<HTMLInputElement>(null);
-  const done = useRef(false);
-
-  useLayoutEffect(() => {
-    ref.current?.focus();
-    ref.current?.select();
-  }, []);
-
-  function finish(submit: boolean): void {
-    if (done.current) return;
-    done.current = true;
-    const trimmed = text.trim();
-    if (submit && trimmed !== "" && trimmed !== name) onSubmit(trimmed);
-    onDone();
-  }
-
-  return (
-    <input
-      ref={ref}
-      type="text"
-      aria-label="Board name"
-      className="blockr-dock-bar-field"
-      value={text}
-      spellCheck={false}
-      onChange={(event) => {
-        setText(event.target.value);
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" && !event.nativeEvent.isComposing) finish(true);
-        else if (event.key === "Escape") finish(false);
-      }}
-      onBlur={() => {
-        finish(true);
-      }}
-    />
   );
 }
 
@@ -558,22 +530,4 @@ function useHistory(core: CoreApi): { readonly canUndo: boolean; readonly canRed
   const canUndo = useSyncExternalStore(subscribe, () => core.store.canUndo());
   const canRedo = useSyncExternalStore(subscribe, () => core.store.canRedo());
   return { canUndo, canRedo };
-}
-
-// Handlers that set an element's tooltip as the pointer comes onto it or the
-// focus moves into it, from whether the bar cuts its label short.
-function cutTip(text: (cut: boolean) => string | undefined) {
-  const tip = (event: SyntheticEvent<HTMLElement>) => {
-    tipFor(event.currentTarget, text);
-  };
-  return { onPointerEnter: tip, onFocus: tip };
-}
-
-// Sets the element's tooltip from whether its label is cut short, or takes
-// the tooltip away where `text` gives none.
-function tipFor(el: HTMLElement, text: (cut: boolean) => string | undefined): void {
-  const label = el.querySelector<HTMLElement>(".blockr-dock-bar-label") ?? el;
-  const tooltip = text(label.scrollWidth > label.clientWidth);
-  if (tooltip === undefined) el.removeAttribute("title");
-  else el.setAttribute("title", tooltip);
 }

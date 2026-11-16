@@ -1,7 +1,7 @@
 // The order in which the navigation lists the views and folders.
 
 import { describe, expect, test } from "vitest";
-import { compare, firstView, inFolder, keyIn, keysBetween, sameEntry, sitsAt, viewOrder, within } from "./navigation.ts";
+import { compare, firstView, foldersHolding, inFolder, keyIn, keysBetween, sameEntry, sitsAt, viewOrder, within } from "./navigation.ts";
 import { defaultState } from "./state.ts";
 import type { DockState, Folder, FolderId, View } from "./types.ts";
 
@@ -76,6 +76,27 @@ describe("firstView()", () => {
 
   test("gives null where the state holds no view", () => {
     expect(firstView(defaultState)).toBeNull();
+  });
+});
+
+describe("foldersHolding()", () => {
+  test("gives the folders that hold a view or folder, from its own out to the top", () => {
+    expect(foldersHolding(state, { view: "labs" })).toEqual(["nested", "safety"]);
+    expect(foldersHolding(state, { folder: "nested" })).toEqual(["safety"]);
+    expect(foldersHolding(state, { view: "overview" })).toEqual([]);
+    expect(foldersHolding(state, { folder: "safety" })).toEqual([]);
+  });
+
+  test("stops where the navigation lists a folder at the top, as one that the state lacks or that sits in itself", () => {
+    const stray: DockState = { ...state, views: { ...state.views, lost: view("gone", "a1V") } };
+    expect(foldersHolding(stray, { view: "lost" })).toEqual([]);
+    const loop: DockState = {
+      ...defaultState,
+      views: { inside: view("x", "a0") },
+      folders: { x: folder("y", "a0"), y: folder("x", "a2") },
+    };
+    expect(foldersHolding(loop, { view: "inside" })).toEqual(["x"]);
+    expect(foldersHolding(loop, { folder: "x" })).toEqual([]);
   });
 });
 

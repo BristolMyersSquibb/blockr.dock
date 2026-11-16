@@ -45,6 +45,20 @@
 }
 
 /*
+ * While the views menu draws its line of tabs under the bar's row, the bar is
+ * 87 pixels high, and the dock's root starts below it, as does the narrow
+ * column (./views-menu.tsx).
+ */
+.blockr-dock[data-tabs] {
+  top: 87px;
+}
+
+.blockr-dock[data-tabs][data-layout="narrow"] {
+  top: auto;
+  margin-top: 87px;
+}
+
+/*
  * A panel's frame, which the block's card or the plugin's UI fills.
  * The frame of a plugin's panel is the element that the dock gives
  * mountPlugin(), at the panel's width and height.
@@ -84,6 +98,17 @@
   --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #ffffff);
   --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #f9fafb);
   --blockr-dock-border-strong: var(--blockr-color-border-strong, #d1d5db);
+  --blockr-dock-border-accent-subtle: var(
+    --blockr-color-border-accent-subtle,
+    color-mix(in srgb, #2563eb 35%, transparent)
+  );
+  --blockr-dock-text-danger: var(--blockr-color-text-danger, #b91c1c);
+  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, #fef2f2);
+  --blockr-dock-border-danger: var(--blockr-color-border-danger, #dc2626);
+  --blockr-dock-border-danger-subtle: var(
+    --blockr-color-border-danger-subtle,
+    color-mix(in srgb, #dc2626 35%, transparent)
+  );
   --blockr-dock-logo: var(--blockr-logo, #089e76);
 }
 
@@ -108,6 +133,17 @@
   --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #161b23);
   --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #14181f);
   --blockr-dock-border-strong: var(--blockr-color-border-strong, #2d343f);
+  --blockr-dock-border-accent-subtle: var(
+    --blockr-color-border-accent-subtle,
+    color-mix(in srgb, #3b82f6 35%, transparent)
+  );
+  --blockr-dock-text-danger: var(--blockr-color-text-danger, #f87171);
+  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1));
+  --blockr-dock-border-danger: var(--blockr-color-border-danger, #f87171);
+  --blockr-dock-border-danger-subtle: var(
+    --blockr-color-border-danger-subtle,
+    color-mix(in srgb, #f87171 35%, transparent)
+  );
   --blockr-dock-logo: var(--blockr-logo, #089e76);
 }
 
@@ -712,6 +748,15 @@
 }
 
 /*
+ * While the views menu draws its line of tabs, the bar grows by the line, 39
+ * pixels with its rule, under its row, which keeps its height.
+ */
+.blockr-dock-bar[data-tabs] {
+  height: 87px;
+  padding-bottom: 39px;
+}
+
+/*
  * The board's name, in the body face at weight 600, as the design system
  * draws the workflow's name.
  * At rest it is plain text, and the hover wash shows that a click renames it.
@@ -987,7 +1032,7 @@ button.blockr-dock-bar-name:hover {
 
 .blockr-dock-menu-item:hover:not([aria-disabled="true"]),
 .blockr-dock-menu-item:focus-visible,
-.blockr-dock-menu-item[aria-expanded="true"] {
+.blockr-dock-menu-item[aria-haspopup][aria-expanded="true"] {
   background: var(--blockr-dock-bg-hover);
 }
 
@@ -1021,4 +1066,424 @@ button.blockr-dock-bar-name:hover {
   padding: 0 10px;
   color: var(--blockr-dock-text-muted);
   font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+/*
+ * A divider between two groups of a menu's rows: a rule from edge to edge,
+ * with the menu's inner padding above and below it.
+ */
+.blockr-dock-menu-divider {
+  height: 1px;
+  margin: 6px -6px;
+  background: var(--blockr-dock-border);
+}
+
+/*
+ * A row that acts on the menu rather than picks from it, as "Manage views",
+ * in the muted colour, which turns default under the pointer.
+ * A row that is on, as "Show views as tabs", ends on a check.
+ */
+.blockr-dock-menu-quiet {
+  color: var(--blockr-dock-text-muted);
+}
+
+.blockr-dock-menu-quiet:hover,
+.blockr-dock-menu-quiet:focus-visible {
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-menu-item .blockr-dock-check {
+  flex: none;
+}
+
+/*
+ * The views menu on the bar (./views-menu.tsx): a quiet button with the active
+ * view's name and the chevron, in the default colour, as today's, since the
+ * name is the board's rather than an action's, and a short rule after it.
+ * The name cuts short at 140 pixels, and the chevron is muted until the
+ * pointer comes onto the button.
+ */
+.blockr-dock-bar-views {
+  display: flex;
+  align-items: center;
+}
+
+.blockr-dock-views-button {
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-views-button .blockr-dock-bar-label {
+  max-width: 140px;
+}
+
+.blockr-dock-views-button .blockr-dock-chevron {
+  color: var(--blockr-dock-text-muted);
+}
+
+.blockr-dock-views-button:hover .blockr-dock-chevron {
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-bar-rule {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 2px 0 12px;
+  background: var(--blockr-dock-border);
+}
+
+/*
+ * The line of tabs, while the board option view_tabs is on: across the bar,
+ * under its row, 39 pixels high with the rule above it, as today's.
+ * It holds the tabs, then the menu as a chevron alone.
+ * The tabs scroll sideways where they outgrow the line, without a scrollbar.
+ */
+.blockr-dock-bar-views[data-tabs] {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  gap: 8px;
+  height: 39px;
+  padding: 0 12px;
+  border-top: 1px solid var(--blockr-dock-border);
+}
+
+.blockr-dock-tabs {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 38px;
+  margin-left: -4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.blockr-dock-views-chevron {
+  justify-content: center;
+  width: 30px;
+  padding: 0;
+}
+
+/*
+ * A tab: its name in the muted colour, which takes the hover wash.
+ * The tab of the active view, or of the folder that holds it, takes the
+ * default colour at weight 600, over a line in the accent colour.
+ * A folder's tab follows its name with the chevron, which flips up while the
+ * folder's menu is open.
+ */
+.blockr-dock-tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--blockr-dock-text-muted);
+  font: inherit;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blockr-dock-tab:hover,
+.blockr-dock-tab[aria-expanded="true"] {
+  background: var(--blockr-dock-bg-hover);
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-tab[aria-current] {
+  color: var(--blockr-dock-text);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  box-shadow: inset 0 -2px 0 var(--blockr-dock-border-accent);
+}
+
+.blockr-dock-tab:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: -2px;
+}
+
+.blockr-dock-tab .blockr-dock-chevron {
+  flex: none;
+  color: var(--blockr-dock-text-muted);
+  transition: transform var(--blockr-transition, 0.15s ease);
+}
+
+.blockr-dock-tab[aria-expanded="true"] .blockr-dock-chevron {
+  transform: rotate(180deg);
+}
+
+/*
+ * The menus of views and folders, the views menu and the menu of a folder's
+ * tab, at least 220 pixels wide, as today's views menu.
+ * A row sits 16 pixels deeper for each folder that holds it.
+ * Where a folder's row shows, every row leaves room for the folder's chevron,
+ * which points right while the folder is closed and down while it is open, as
+ * a fold of the design system does.
+ * The active view's row is set in weight 600.
+ */
+.blockr-dock-views-menu {
+  min-width: 220px;
+}
+
+.blockr-dock-views-row {
+  padding-inline-start: calc(10px + var(--depth, 0) * 16px);
+}
+
+.blockr-dock-views-row[aria-checked="true"] {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+
+.blockr-dock-views-slot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  color: var(--blockr-dock-text-muted);
+}
+
+.blockr-dock-views-slot .blockr-dock-chevron,
+.blockr-dock-views-fold .blockr-dock-chevron {
+  transition: transform var(--blockr-transition, 0.15s ease);
+}
+
+[aria-expanded="false"] > .blockr-dock-views-slot .blockr-dock-chevron,
+.blockr-dock-views-fold[aria-expanded="false"] .blockr-dock-chevron {
+  transform: rotate(-90deg);
+}
+
+/*
+ * The views menu in manage mode.
+ * A row holds its grip, a folder's chevron, which opens and closes the folder,
+ * the name, which shows a field's edge under the pointer, since a click
+ * renames it, and the cross, which turns red under the pointer.
+ */
+.blockr-dock-views-managed {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 4px 0 calc(4px + var(--depth, 0) * 16px);
+  border-radius: var(--blockr-radius-sm, 4px);
+}
+
+.blockr-dock-views-managed .blockr-dock-views-slot {
+  width: 22px;
+}
+
+.blockr-dock-views-grip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 22px;
+  color: var(--blockr-dock-text-disabled);
+  cursor: grab;
+  touch-action: none;
+}
+
+.blockr-dock-views-managed:hover .blockr-dock-views-grip {
+  color: var(--blockr-dock-text-muted);
+}
+
+.blockr-dock-views-managed[data-dragging] {
+  opacity: 0.4;
+}
+
+.blockr-dock-views-fold,
+.blockr-dock-views-remove {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: var(--blockr-dock-text-muted);
+  cursor: pointer;
+}
+
+.blockr-dock-views-fold:hover {
+  background: var(--blockr-dock-bg-hover);
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-views-remove:hover {
+  background: var(--blockr-dock-bg-hover);
+  color: var(--blockr-dock-text-danger);
+}
+
+.blockr-dock-views-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px 7px;
+  border: 1px solid transparent;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+}
+
+.blockr-dock-views-name:hover {
+  border-color: var(--blockr-dock-border);
+  background: var(--blockr-dock-bg-field);
+}
+
+/*
+ * The field that renames a view or a folder, at the row's size, in the place
+ * of the name, as the board's name on the bar has it.
+ */
+.blockr-dock-views-field {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  width: 0;
+  min-width: 0;
+  height: 26px;
+  padding: 0 7px;
+  border: 1px solid var(--blockr-dock-border-accent);
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: var(--blockr-dock-bg-surface);
+  color: var(--blockr-dock-text);
+  font: inherit;
+}
+
+.blockr-dock-views-field:focus-visible,
+.blockr-dock-views-name:focus-visible,
+.blockr-dock-views-fold:focus-visible,
+.blockr-dock-views-remove:focus-visible,
+.blockr-dock-views-confirm:focus-visible,
+.blockr-dock-views-add:focus-visible,
+.blockr-dock-views-done:focus-visible {
+  outline: 2px solid var(--blockr-dock-border-accent);
+  outline-offset: 1px;
+}
+
+/*
+ * A row that asks whether to remove its view or folder, on the danger wash,
+ * with a Remove button, as today's.
+ */
+.blockr-dock-views-managed[data-confirming] {
+  gap: 8px;
+  padding-left: calc(10px + var(--depth, 0) * 16px);
+  background: var(--blockr-dock-bg-danger);
+  color: var(--blockr-dock-text-danger);
+}
+
+.blockr-dock-views-confirm-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-dock-views-confirm {
+  flex: none;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--blockr-dock-border-danger-subtle);
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: var(--blockr-dock-bg-surface);
+  color: var(--blockr-dock-text-danger);
+  font: inherit;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  cursor: pointer;
+}
+
+.blockr-dock-views-confirm:hover {
+  border-color: var(--blockr-dock-border-danger);
+}
+
+/*
+ * Where a drag would land: a line in the accent colour above or below a row,
+ * which starts at the depth of the place, or the accent wash on the row of
+ * the folder that takes the view or folder.
+ */
+.blockr-dock-views-managed[data-drop="above"]::before,
+.blockr-dock-views-managed[data-drop="below"]::after {
+  position: absolute;
+  right: 4px;
+  left: calc(22px + var(--drop-depth, 0) * 16px);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--blockr-dock-border-accent);
+  content: "";
+  pointer-events: none;
+}
+
+.blockr-dock-views-managed[data-drop="above"]::before {
+  top: -1px;
+}
+
+.blockr-dock-views-managed[data-drop="below"]::after {
+  bottom: -1px;
+}
+
+.blockr-dock-views-managed[data-drop="into"] {
+  background: var(--blockr-dock-bg-accent-subtle);
+  box-shadow: inset 0 0 0 1px var(--blockr-dock-border-accent);
+}
+
+/*
+ * The foot of the menu in manage mode: "New view" and "New folder", quiet
+ * buttons with the plus, and Done at the end, on the accent tint, as today's.
+ */
+.blockr-dock-views-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 0 6px;
+}
+
+.blockr-dock-views-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: var(--blockr-dock-text-muted);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blockr-dock-views-add:hover {
+  color: var(--blockr-dock-text);
+}
+
+.blockr-dock-views-done {
+  flex: none;
+  height: 26px;
+  margin-left: auto;
+  padding: 0 10px;
+  border: 1px solid var(--blockr-dock-border-accent-subtle);
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: var(--blockr-dock-bg-accent-subtle);
+  color: var(--blockr-dock-text-accent);
+  font: inherit;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  cursor: pointer;
+}
+
+.blockr-dock-views-done:hover {
+  border-color: var(--blockr-dock-border-accent);
 }

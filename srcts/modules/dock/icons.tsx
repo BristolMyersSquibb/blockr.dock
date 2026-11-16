@@ -1,7 +1,9 @@
 // The icons of the bar and its menus, each an inline SVG in the colour of the
 // text around it, which screen readers skip.
 // The chevron and the warning are those of blockr.ui's icons, chevron.svg and
-// warning.svg, drawn here since blockr.ui gives the client no icons yet.
+// warning.svg, as are the check, the grip, the plus, the cross and the sliders
+// of the views menu, check.svg, grip.svg, plus.svg, remove.svg and
+// sliders.svg, drawn here since blockr.ui gives the client no icons yet.
 
 import type { ReactElement } from "react";
 
@@ -57,6 +59,95 @@ export function LockIcon({ size = 12 }: { readonly size?: number }): ReactElemen
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
       <path d="M8 1a3 3 0 0 0-3 3v3H4.5A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7H11V4a3 3 0 0 0-3-3Zm-1.75 6V4a1.75 1.75 0 1 1 3.5 0v3h-3.5Z" />
+    </svg>
+  );
+}
+
+// The mark of a row that is on, as "Show views as tabs" while the views show
+// as tabs.
+export function CheckIcon(): ReactElement {
+  return (
+    <svg
+      className="blockr-dock-check"
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M3.5 8.5l3 3 6-7" />
+    </svg>
+  );
+}
+
+// A drag handle: six small dots.
+export function GripIcon(): ReactElement {
+  return (
+    <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" aria-hidden="true" focusable="false">
+      <circle cx="2" cy="2" r="1" />
+      <circle cx="6" cy="2" r="1" />
+      <circle cx="2" cy="6" r="1" />
+      <circle cx="6" cy="6" r="1" />
+      <circle cx="2" cy="10" r="1" />
+      <circle cx="6" cy="10" r="1" />
+    </svg>
+  );
+}
+
+// The plus of a button that adds, as "New view".
+export function PlusIcon(): ReactElement {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M8 3v10M3 8h10" />
+    </svg>
+  );
+}
+
+// The cross of a button that removes, as a row's in the views menu.
+export function RemoveIcon(): ReactElement {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" aria-hidden="true" focusable="false">
+      <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" />
+    </svg>
+  );
+}
+
+// The sliders of a row that turns a menu to a mode of its own, as "Manage
+// views".
+// Its knobs take the raised surface of the menu, so that the lines stop at
+// them.
+export function SlidersIcon(): ReactElement {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M2 4h12M2 8h12M2 12h12" />
+      <circle cx="5" cy="4" r="1.6" fill="var(--blockr-dock-bg-raised)" />
+      <circle cx="10" cy="8" r="1.6" fill="var(--blockr-dock-bg-raised)" />
+      <circle cx="6" cy="12" r="1.6" fill="var(--blockr-dock-bg-raised)" />
     </svg>
   );
 }
