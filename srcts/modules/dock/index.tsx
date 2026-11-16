@@ -18,18 +18,25 @@
 // The frontend's render() takes these steps, which core awaits before it
 // starts the scheduler
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.8#starting-the-page):
-// 1. It reads the blockr options that the dock reads as it draws
+// 1. It reads the navbar items from what the method of R's frontend_args()
+//    for the class returned (./navbar-items.ts).
+// 2. It reads the blockr options that the dock reads as it draws
 //    (./settings.ts).
-// 2. It takes the step on starting, as one delta of the dock plugin's class
+// 3. It takes the step on starting, as one delta of the dock plugin's class
 //    that undo does not take back (./start.ts).
-// 3. It demands the blocks whose cards are on screen, so that the scheduler
+// 4. It demands the blocks whose cards are on screen, so that the scheduler
 //    evaluates the blocks of the opening view first, and sets CoreApi's
 //    onScreen to those blocks and to the plugins whose panels are on screen
 //    (./demand.ts).
-// 4. It starts the toasts of the opening, which follow the notifications of
+// 5. It starts to follow whether the logo turns (./busy.ts), and holds
+//    whether the options sidebar is open (./sidebar.ts).
+// 6. It starts the toasts of the opening, which follow the notifications of
 //    CoreApi (./toasts.tsx).
-// 5. It draws the page: the active view, with dockview (./dock.tsx,
-//    ./drawing.ts), and beside it the toasts of the notifications that no
+// 7. It binds the shortcuts of the bar on the page's document
+//    (./shortcuts.ts).
+// 8. It draws the page: the bar across the top, with the navbar items
+//    (./navbar.tsx), below it the active view, with dockview (./dock.tsx,
+//    ./drawing.ts), and beside them the toasts of the notifications that no
 //    card shows.
 // The cleanup that render() returns undoes all of them but the step on
 // starting, which is the board's.
@@ -52,20 +59,30 @@ import type { FrontendModule, JsonSchema, PluginClass } from "@blockr/core";
 import schema from "../../../inst/js/dock.schema.json" with { type: "json" };
 import { dockCommands } from "../../commands/index.ts";
 import { defaultState, update } from "../../state/index.ts";
+import { API } from "./api.ts";
+import { trackBusy } from "./busy.ts";
+import { createTooltips } from "./card/index.ts";
+import { DockContext } from "./context.ts";
 import { demandShown } from "./demand.ts";
 import { Dock } from "./dock.tsx";
+import { Navbar } from "./navbar.tsx";
+import { readNavbar } from "./navbar-items.ts";
 import { trackNarrow } from "./narrow.ts";
 import { readSettings } from "./settings.ts";
+import { bindShortcuts, onMac } from "./shortcuts.ts";
+import { createSidebar } from "./sidebar.ts";
+import { barButtons } from "./storage.ts";
 import { drawnPlugins, startOnBoard, urlView } from "./start.ts";
 import { createToasts, ToastList } from "./toasts.tsx";
 
-export const api = 1;
+export const api = API;
 
 // The command through which the frontend shows a panel.
 const SHOW_PANEL = "blockr.dock-show_panel";
 
 const frontend = {
-  async render({ el, core, plugin, signal }) {
+  async render({ el, core, plugin, signal, args }) {
+    const items = readNavbar(args);
     const settings = await readSettings(core);
     if (signal.aborted) return undefined;
 
@@ -75,13 +92,19 @@ const frontend = {
 
     const narrow = trackNarrow(win, settings.breakpoint);
     const release = demandShown(core, drawn, narrow);
+    const busy = trackBusy(core, drawn, narrow, settings.spinnerDelay);
+    const sidebar = createSidebar();
     const toasts = createToasts(core.notifications);
+    const unbind = bindShortcuts(el.ownerDocument, core, () => barButtons(core, items));
 
     const root = createRoot(el);
     // React draws the page before render() returns.
     flushSync(() => {
       root.render(
         <>
+          <DockContext value={{ core, plugin, drawn, tooltips: createTooltips() }}>
+            <Navbar items={items} busy={busy} sidebar={sidebar} mac={onMac(win)} />
+          </DockContext>
           <Dock core={core} plugin={plugin} settings={settings} narrow={narrow} drawn={drawn} />
           <ToastList core={core} toasts={toasts} />
         </>,
@@ -89,7 +112,9 @@ const frontend = {
     });
     return () => {
       root.unmount();
+      unbind();
       toasts.stop();
+      busy.stop();
       release();
       narrow.stop();
     };

@@ -1,7 +1,7 @@
 // Where a menu or a tooltip sits beside the element that it opens from, in
 // the window's coordinates, as the design system places them
 // (https://github.com/BristolMyersSquibb/blockr.ui/blob/e14e8310481e98b156871bf96669b41cb88c8435/vignettes/articles/design-system.Rmd#L1062-L1195).
-// Both stay 8px from the window's edges.
+// Each stays 8px from the window's edges.
 // The browser places a menu with CSS anchor positioning where it has it, and
 // script places it so where it does not (./menu.tsx).
 
@@ -47,6 +47,19 @@ export function menuSpot(trigger: Box, menu: Size, view: Size, align: Align = "s
   return {
     left: clamp(left, EDGE, view.width - EDGE - menu.width),
     top: clamp(top, EDGE, view.height - EDGE - menu.height),
+  };
+}
+
+// A menu inside a menu sits 4px beside the row that opened it, on its right,
+// or on its left where it fits there but not on the right, and lines up with
+// the row's top.
+export function besideSpot(row: Box, menu: Size, view: Size): Spot {
+  const right = row.right + MENU_GAP;
+  const left = row.left - MENU_GAP - menu.width;
+  const x = right + menu.width > view.width - EDGE && left >= EDGE ? left : right;
+  return {
+    left: clamp(x, EDGE, view.width - EDGE - menu.width),
+    top: clamp(row.top, EDGE, view.height - EDGE - menu.height),
   };
 }
 
