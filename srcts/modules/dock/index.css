@@ -654,7 +654,8 @@
  * A quiet button of the design system, at its size s: text only, in the muted
  * colour, 30 pixels high with 8 pixels at each side, which takes the hover
  * wash.
- * Links, menus, the storage plugin's buttons, Undo and Redo all take it.
+ * Links, menus, the storage plugin's buttons, Undo, Redo and the options
+ * button all take it, so that every control on the bar shows its label.
  * A menu's chevron follows its label, and flips up while the menu is open.
  */
 .blockr-dock-bar-button {
@@ -697,34 +698,6 @@
   transform: rotate(180deg);
 }
 
-/*
- * The icon button of the bar, the options button: 30 pixels square, with the
- * icon in the muted colour.
- */
-.blockr-dock-bar-icon {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--blockr-radius-md, 6px);
-  background: transparent;
-  color: var(--blockr-dock-text-muted);
-  cursor: pointer;
-  transition:
-    background-color var(--blockr-transition, 0.15s ease),
-    color var(--blockr-transition, 0.15s ease);
-}
-
-.blockr-dock-bar-icon:hover,
-.blockr-dock-bar-icon[aria-expanded="true"] {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
-}
-
 /* Undo and Redo sit as close together as the storage plugin's buttons. */
 .blockr-dock-bar-steps {
   display: flex;
@@ -733,7 +706,6 @@
 }
 
 .blockr-dock-bar-button:focus-visible,
-.blockr-dock-bar-icon:focus-visible,
 .blockr-dock-bar-name:focus-visible {
   outline: 2px solid var(--blockr-dock-border-accent);
   outline-offset: 1px;

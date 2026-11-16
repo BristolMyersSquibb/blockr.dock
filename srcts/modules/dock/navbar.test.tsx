@@ -93,13 +93,13 @@ function partsOf(el: HTMLElement): string[] {
     ["blockr-dock-bar-steps", "undo_redo"],
     ["blockr-dock-bar-spacer", "spacer"],
     ["blockr-dock-bar-pill", "read_only"],
+    ["blockr-dock-bar-options", "options"],
     ["blockr-dock-bar-module", "module"],
     ["blockr-dock-bar-warning", "warning"],
     ["blockr-dock-bar-status", "status"],
   ];
   return [...barOf(el).children].flatMap((child) => {
     if (child.getAttribute("popover") !== null) return [];
-    if (child.getAttribute("aria-label") === "Board options") return ["options"];
     const name = named.find(([cls]) => child.classList.contains(cls))?.[1];
     if (name !== undefined) return [name];
     return [`${child.tagName.toLowerCase()}:${child.textContent}`];
@@ -493,9 +493,9 @@ describe("a module on the bar", () => {
     expect(titles[2]).toContain("No canvas.");
     expect(errors(s.logged, "blockr.dock")).toHaveLength(3);
 
-    click(button(barOf(s.el), "Board options"));
+    click(button(barOf(s.el), "Options"));
     await drawn();
-    expect(button(barOf(s.el), "Board options").getAttribute("aria-expanded")).toBe("true");
+    expect(button(barOf(s.el), "Options").getAttribute("aria-expanded")).toBe("true");
   });
 });
 
@@ -601,7 +601,7 @@ describe("the dock's own parts", () => {
 
   test("open and close the options sidebar from the options button", async () => {
     const { el } = await startBar();
-    const options = button(barOf(el), "Board options");
+    const options = button(barOf(el), "Options");
     expect(options.getAttribute("aria-expanded")).toBe("false");
 
     click(options);

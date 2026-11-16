@@ -51,29 +51,6 @@ export function WarningIcon(): ReactElement {
   );
 }
 
-// A window with a panel at its right edge, for the button that opens the
-// options sidebar, as today's options button draws Bootstrap's
-// layout-sidebar-reverse rather than a gear, since the gear stands for a
-// block's settings.
-export function SidebarIcon(): ReactElement {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.75" />
-      <path d="M10.25 2.75v10.5" />
-    </svg>
-  );
-}
-
 // A closed padlock, for the read-only pill and a locked board's empty view,
 // 12 pixels square unless given.
 export function LockIcon({ size = 12 }: { readonly size?: number }): ReactElement {

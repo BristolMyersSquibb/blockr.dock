@@ -24,8 +24,8 @@
 //   the right end of the bar.
 // - The views menu, which the bar does not draw yet.
 // - The read-only pill, which shows while the board lock is on.
-// - The options button, which opens and closes the options sidebar
-//   (./sidebar.ts).
+// - The options button, a quiet button with its label as well, which opens and
+//   closes the options sidebar (./sidebar.ts).
 // Core tells the user why the store refused a rename, an undo or a redo,
 // through its notification board_edit_failed, which the dock shows as a toast.
 //
@@ -57,7 +57,7 @@ import { API } from "./api.ts";
 import type { Busy } from "./busy.ts";
 import { useBoard, useDock } from "./context.ts";
 import { asError, errorMessage } from "./errors.ts";
-import { LockIcon, SidebarIcon, WarningIcon } from "./icons.tsx";
+import { LockIcon, WarningIcon } from "./icons.tsx";
 import { MenuButton } from "./menu.tsx";
 import type { MenuEntry } from "./menu.tsx";
 import type { LinkItem, MenuItem, ModuleItem, NavbarItem, PartId } from "./navbar-items.ts";
@@ -433,15 +433,13 @@ function OptionsButton({ sidebar }: { readonly sidebar: Sidebar }): ReactElement
   return (
     <button
       type="button"
-      className="blockr-dock-bar-icon"
-      aria-label="Board options"
-      title="Board options"
+      className="blockr-dock-bar-button blockr-dock-bar-options"
       aria-expanded={open}
       onClick={() => {
         sidebar.set(!open);
       }}
     >
-      <SidebarIcon />
+      Options
     </button>
   );
 }
