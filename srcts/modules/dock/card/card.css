@@ -337,12 +337,12 @@
 }
 
 /*
- * The errors and warnings above the sections, and the messages under the
+ * The errors above the sections, and the warnings and messages under the
  * output, each in the message style of the design system: 13px on a fill
  * and an edge for its severity, with a radius of 6px.
  * An error takes the danger set and a warning the amber set.
  * The design system gives a message no colour, so a message is neutral.
- * A message keeps its line breaks and wraps a long word, such as a path.
+ * Each keeps its line breaks and wraps a long word, such as a path.
  */
 .blockr-card-notifications {
   display: grid;
@@ -381,9 +381,9 @@
 }
 
 /*
- * The messages fold under the output behind their count, which reads as
- * meta text, takes the hover wash, and turns its chevron up while they show,
- * as today's card has it.
+ * The warnings and the messages fold under the output behind their count,
+ * which reads as meta text, takes the hover wash, and turns its chevron up
+ * while they show, as today's card has it.
  */
 .blockr-card-messages {
   margin-top: 12px;

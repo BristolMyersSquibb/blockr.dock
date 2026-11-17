@@ -1,8 +1,7 @@
 // The card that the dock draws in a block's panel
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.7#the-card):
-// its header (./header.tsx), the block's errors and warnings
-// (./notifications.tsx), then its two sections, `inputs` above `outputs`
-// (./section.tsx).
+// its header (./header.tsx), the block's errors (./notifications.tsx), then
+// its two sections, `inputs` above `outputs` (./section.tsx).
 // The card fills its panel, on the panel's surface, with today's inset of
 // 16px, and the output runs to the card's edges.
 //
@@ -46,9 +45,10 @@
 // Core asks R for the output again only while its element measures more than
 // 0 by 0, and withdraws the error only as R replies, so a hidden output would
 // keep the error for good.
-// The messages about the block fold under the output.
+// The warnings and the messages about the block fold under the output.
 // The outputs section takes no room while it shows neither the output, the
-// status note nor a message, as for a block that failed with no messages.
+// status note, a warning nor a message, as for a block that failed with none
+// of them.
 //
 // The board option compact turns the header into an eyebrow over the block's
 // content (./card.css), which the card reads through core.options.
@@ -72,7 +72,7 @@ import { giveFocus, useDock } from "../context.ts";
 import { Mounted } from "../mounted.tsx";
 import { onCard, plainText } from "../notifications.ts";
 import { Header } from "./header.tsx";
-import { ErrorsAndWarnings, Messages } from "./notifications.tsx";
+import { Errors, WarningsAndMessages } from "./notifications.tsx";
 import { Section } from "./section.tsx";
 import { statusDot } from "./status-dot.ts";
 
@@ -129,7 +129,7 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
   const inputs = !core.store.locked(id);
   const hidden = status !== undefined && WITHOUT_OUTPUT.has(status.status);
   const note = status !== undefined && WITH_NOTE.has(status.status) ? status.reason : null;
-  const messages = shown.filter((notification) => notification.severity === "message");
+  const folded = shown.filter((notification) => notification.severity !== "error");
 
   return (
     <article
@@ -147,19 +147,19 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
         drawn={inputs && drawn}
         dot={statusDot(status, notified)}
       />
-      <ErrorsAndWarnings notifications={shown.filter((notification) => notification.severity !== "message")} />
+      <Errors notifications={shown.filter((notification) => notification.severity === "error")} />
       <div className="blockr-card-sections">
         {inputs ? (
           <Section name="inputs" open={sections.includes("inputs")} empty={!drawn}>
             <Mounted mount={mountUi} label="Inputs" />
           </Section>
         ) : null}
-        <Section name="outputs" open={sections.includes("outputs")} empty={hidden && note === null && messages.length === 0}>
+        <Section name="outputs" open={sections.includes("outputs")} empty={hidden && note === null && folded.length === 0}>
           <div className="blockr-card-output-frame" hidden={hidden} data-faded={status?.status === "stale" ? "" : undefined}>
             <Mounted mount={mountOutput} label="Output" className="blockr-card-output" />
           </div>
           {note === null ? null : <p className="blockr-card-status-note">{plainText(note)}</p>}
-          <Messages notifications={messages} />
+          <WarningsAndMessages notifications={folded} />
         </Section>
       </div>
     </article>

@@ -10,8 +10,8 @@
   The note says in one line what the block lacks.
   The card shows the notifications about the block that no plugin raised, of
   the severities that the board option `show_conditions` names.
-  Errors and warnings show above the sections, and messages fold under the
-  output behind their count.
+  Errors show above the sections, and warnings and messages fold under the
+  output behind their counts, as in blockr.dock 0.2.0.
   Each shows as text, without the ANSI escapes of cli's styling.
   The dot and the mark take their colours from core's theme, as
   `--bc-color-status-failed` and `--bc-color-category-input`, which a frontend

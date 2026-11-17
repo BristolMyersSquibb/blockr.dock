@@ -376,7 +376,8 @@ const listed = (list: Element | null): [string | null, string][] =>
     item.getAttribute("data-severity"),
     item.textContent,
   ]);
-const errorsAndWarnings = (card: HTMLElement) => listed(card.querySelector('[aria-label="Errors and warnings"]'));
+const errors = (card: HTMLElement) => listed(card.querySelector('[aria-label="Errors"]'));
+const foldOf = (card: HTMLElement) => sectionOf(card, "outputs")?.querySelector("details") ?? null;
 
 // A condition of R's reply to an evaluation of a block.
 const condition = (severity: "error" | "warning" | "message", message: string) => ({
@@ -438,7 +439,7 @@ describe("a block's status on its card", () => {
 
     const head = cardOf(el, "Head");
     expect(dotOf(head)?.getAttribute("data-status")).toBe("failed");
-    expect(errorsAndWarnings(head)).toEqual([["error", "Column Species is gone."]]);
+    expect(errors(head)).toEqual([["error", "Column Species is gone."]]);
     expect([...head.children].map((child) => child.className)).toEqual([
       "blockr-card-header",
       "blockr-card-notifications",
@@ -467,7 +468,7 @@ describe("a block's status on its card", () => {
     expect(dotOf(bind)?.hasAttribute("data-ring")).toBe(true);
     expect(outputOf(bind)?.hidden).toBe(true);
     expect(noteOf(bind)).toBe('This block is waiting for block "b".');
-    expect(errorsAndWarnings(bind)).toEqual([]);
+    expect(errors(bind)).toEqual([]);
   });
 
   test("keeps the output of a ready block whose output R could not make, while the dot reads failed", async () => {
@@ -484,7 +485,7 @@ describe("a block's status on its card", () => {
     const head = cardOf(el, "Head");
     expect(dotOf(head)?.getAttribute("data-status")).toBe("failed");
     expect(dotOf(head)?.getAttribute("aria-label")).toBe("Evaluation failed");
-    expect(errorsAndWarnings(head)).toEqual([["error", 'The fixtures hold no output of block "b".']]);
+    expect(errors(head)).toEqual([["error", 'The fixtures hold no output of block "b".']]);
     expect(outputOf(head)?.hidden).toBe(false);
   });
 });
@@ -494,21 +495,22 @@ describe("the notifications on a block's card", () => {
     evaluate: (request) => (request.block === block ? { conditions } : undefined),
   });
   const warned = [
-    condition("warning", "Dropped 2 rows."),
     condition("message", "Reading \u001b[1miris\u001b[22m."),
+    condition("warning", "Dropped 2 rows."),
     condition("message", "Done."),
   ];
 
-  test("show the errors and warnings above the sections, and fold the messages under the output behind their count", async () => {
+  test("fold the warnings and the messages under the output behind their counts, the warnings first", async () => {
     const { el } = await startCards(boardWith(shown, {}, ["message", "warning", "error"]), false, raising("b", warned));
 
     const head = cardOf(el, "Head");
-    expect(errorsAndWarnings(head)).toEqual([["warning", "Dropped 2 rows."]]);
+    expect(errors(head)).toEqual([]);
     expect(dotOf(head)?.getAttribute("data-status")).toBe("ready");
-    const fold = sectionOf(head, "outputs")?.querySelector("details");
+    const fold = foldOf(head);
     expect(fold?.open).toBe(false);
-    expect(fold?.querySelector("summary")?.textContent).toBe("2 messages");
-    expect(listed(fold ?? null)).toEqual([
+    expect(fold?.querySelector("summary")?.textContent).toBe("1 warning, 2 messages");
+    expect(listed(fold)).toEqual([
+      ["warning", "Dropped 2 rows."],
       ["message", "Reading iris."],
       ["message", "Done."],
     ]);
@@ -517,9 +519,9 @@ describe("the notifications on a block's card", () => {
   test("show only the severities that the board option show_conditions names", async () => {
     const { el } = await startCards(boardWith(shown), false, raising("b", warned));
 
-    const head = cardOf(el, "Head");
-    expect(errorsAndWarnings(head)).toEqual([["warning", "Dropped 2 rows."]]);
-    expect(head.querySelector("details")).toBeNull();
+    const fold = foldOf(cardOf(el, "Head"));
+    expect(fold?.querySelector("summary")?.textContent).toBe("1 warning");
+    expect(listed(fold)).toEqual([["warning", "Dropped 2 rows."]]);
   });
 
   test("leave the card as core withdraws them", async () => {
@@ -528,11 +530,11 @@ describe("the notifications on a block's card", () => {
       evaluate: (request) => (request.block === "b" ? { conditions } : undefined),
     });
 
-    expect(errorsAndWarnings(cardOf(el, "Head"))).toHaveLength(1);
+    expect(listed(foldOf(cardOf(el, "Head")))).toHaveLength(1);
     conditions = [];
     core.scheduler.invalidate("b");
     await settled();
-    expect(errorsAndWarnings(cardOf(el, "Head"))).toEqual([]);
+    expect(foldOf(cardOf(el, "Head"))).toBeNull();
   });
 
   test("leave out what a plugin raises about the block, which shows as a toast", async () => {
@@ -545,7 +547,7 @@ describe("the notifications on a block's card", () => {
       about: { block: "b" },
     });
     await settled();
-    expect(errorsAndWarnings(cardOf(el, "Head"))).toEqual([]);
+    expect(errors(cardOf(el, "Head"))).toEqual([]);
     expect(el.querySelector(".blockr-dock-toast")?.textContent).toContain("The edit was refused.");
   });
 });

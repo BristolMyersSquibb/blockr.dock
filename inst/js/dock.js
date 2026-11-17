@@ -3374,20 +3374,26 @@ function MenuButton2({
 
 // srcts/modules/dock/card/notifications.tsx
 import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
-function ErrorsAndWarnings({ notifications }) {
+function Errors({ notifications }) {
   if (notifications.length === 0) return null;
-  return /* @__PURE__ */ jsx10(Listed, { notifications, label: "Errors and warnings" });
+  return /* @__PURE__ */ jsx10(Listed, { notifications, label: "Errors" });
 }
-function Messages({ notifications }) {
-  const n = notifications.length;
-  if (n === 0) return null;
+function WarningsAndMessages({ notifications }) {
+  const warnings = notifications.filter((notification) => notification.severity === "warning");
+  const messages = notifications.filter((notification) => notification.severity === "message");
+  if (warnings.length + messages.length === 0) return null;
+  const count2 = [counted(warnings.length, "warning"), counted(messages.length, "message")].filter((part) => part !== null);
   return /* @__PURE__ */ jsxs6("details", { className: "blockr-card-messages", children: [
     /* @__PURE__ */ jsxs6("summary", { className: "blockr-card-messages-count", children: [
-      n === 1 ? "1 message" : `${String(n)} messages`,
+      count2.join(", "),
       /* @__PURE__ */ jsx10(Chevron, {})
     ] }),
-    /* @__PURE__ */ jsx10(Listed, { notifications })
+    /* @__PURE__ */ jsx10(Listed, { notifications: [...warnings, ...messages] })
   ] });
+}
+function counted(n, severity) {
+  if (n === 0) return null;
+  return `${String(n)} ${severity}${n === 1 ? "" : "s"}`;
 }
 function Listed({ notifications, label }) {
   return /* @__PURE__ */ jsx10("ul", { className: "blockr-card-notifications", "aria-label": label, children: notifications.map(({ id, severity, message }) => /* @__PURE__ */ jsx10("li", { className: "blockr-card-notification", "data-severity": severity, children: plainText(message) }, id)) });
@@ -3506,7 +3512,7 @@ function BlockCard({ id }) {
   const inputs = !core.store.locked(id);
   const hidden = status !== void 0 && WITHOUT_OUTPUT.has(status.status);
   const note = status !== void 0 && WITH_NOTE.has(status.status) ? status.reason : null;
-  const messages = shown.filter((notification) => notification.severity === "message");
+  const folded2 = shown.filter((notification) => notification.severity !== "error");
   return /* @__PURE__ */ jsxs7(
     "article",
     {
@@ -3527,13 +3533,13 @@ function BlockCard({ id }) {
             dot: statusDot(status, notified)
           }
         ),
-        /* @__PURE__ */ jsx12(ErrorsAndWarnings, { notifications: shown.filter((notification) => notification.severity !== "message") }),
+        /* @__PURE__ */ jsx12(Errors, { notifications: shown.filter((notification) => notification.severity === "error") }),
         /* @__PURE__ */ jsxs7("div", { className: "blockr-card-sections", children: [
           inputs ? /* @__PURE__ */ jsx12(Section, { name: "inputs", open: sections.includes("inputs"), empty: !drawn, children: /* @__PURE__ */ jsx12(Mounted, { mount: mountUi, label: "Inputs" }) }) : null,
-          /* @__PURE__ */ jsxs7(Section, { name: "outputs", open: sections.includes("outputs"), empty: hidden && note === null && messages.length === 0, children: [
+          /* @__PURE__ */ jsxs7(Section, { name: "outputs", open: sections.includes("outputs"), empty: hidden && note === null && folded2.length === 0, children: [
             /* @__PURE__ */ jsx12("div", { className: "blockr-card-output-frame", hidden, "data-faded": status?.status === "stale" ? "" : void 0, children: /* @__PURE__ */ jsx12(Mounted, { mount: mountOutput, label: "Output", className: "blockr-card-output" }) }),
             note === null ? null : /* @__PURE__ */ jsx12("p", { className: "blockr-card-status-note", children: plainText(note) }),
-            /* @__PURE__ */ jsx12(Messages, { notifications: messages })
+            /* @__PURE__ */ jsx12(WarningsAndMessages, { notifications: folded2 })
           ] })
         ] })
       ]
