@@ -2,8 +2,8 @@
 # They drive Chrome through shinytest2, and act on the page as a user does,
 # with the mouse input and the drags that they send through Chrome's DevTools
 # protocol.
-# They read what core gives end-to-end tests: the board and each block's
-# status, which the page gives through `blockrTest`.
+# They read what core gives end-to-end tests through `blockrTest` on the page:
+# the board, each block's status, and the block that has focus.
 
 # Starts an example app from `inst/examples`, by its name, with shinytest2, and
 # stops it as the test ends.
@@ -94,6 +94,12 @@ app_grid <- function(app, view) {
 # The status of each of the board's blocks, by block id, as the page gives it.
 app_statuses <- function(app) {
   app$get_js("blockrTest.statuses()")
+}
+
+# The id of the block that has focus, as the page gives it, or `NULL` where
+# none has.
+app_focus <- function(app) {
+  app$get_js("blockrTest.focus()")
 }
 
 # Whether R has evaluated each block given: whether the page holds a reply of
@@ -189,6 +195,19 @@ wait_for_evaluated <- function(app, blocks) {
           sep = ": ",
           collapse = ", "
         )
+      )
+    }
+  )
+}
+
+# Waits until the block given has focus.
+wait_for_focus <- function(app, block) {
+  wait_until(
+    function() identical(app_focus(app), block),
+    function() {
+      paste0(
+        "block ", block, " to take focus, where ",
+        coal(app_focus(app), "no block"), " has it"
       )
     }
   )

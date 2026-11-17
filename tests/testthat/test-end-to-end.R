@@ -1,12 +1,14 @@
 # End-to-end tests of the example apps, through shinytest2.
 # Core's client and the dock's run on the page in Chrome, and the app runs in
 # another R process.
-# Each test acts on the page as a user does, and reads the board that the page
-# gives, with the dock's state, and each block's status.
+# Each test acts on the page as a user does, and reads what the page gives:
+# the board, with the dock's state, each block's status, and the block that
+# has focus.
 # They check what the dock's tests on core's CoreApi for tests cannot check,
 # since happy-dom lays nothing out and runs no R:
 # dockview's gestures and what the dock writes back from them, the narrow
-# layout, the `?view=` link, which blocks the dock demands, and a locked board.
+# layout, the `?view=` link, the focus that a click gives a block, which blocks
+# the dock demands, and a locked board.
 
 test_that("serve() with the dock plugin serves a page that the dock draws", {
 
@@ -148,6 +150,37 @@ test_that("a click on a tab shows the panel, and its close button removes it", {
   )
 
   expect_true("c" %in% names(app_board(app)[["blocks"]]))
+})
+
+test_that("a click into a card or onto a tab gives its block focus", {
+
+  app <- local_example_app("narrow-stack")
+  wait_for_dock(app)
+
+  # No block has focus as the board opens.
+  expect_null(app_focus(app))
+
+  # The user clicks the name of block `a` on its card, which only a double
+  # click renames.
+  click_at(
+    app,
+    center_of(
+      app,
+      paste0(
+        "document.querySelector(",
+        "'.blockr-dock-panel[data-block=\"a\"] .blockr-card-name'",
+        ")"
+      )
+    )
+  )
+
+  wait_for_focus(app, "a")
+
+  # The user clicks the tab of block `c`, which the second tab group shows
+  # behind block `b`.
+  click_at(app, center_of(app, tab_js(2L, 2L)))
+
+  wait_for_focus(app, "c")
 })
 
 test_that("a click on a rail's tab collapses the rails of every view", {
