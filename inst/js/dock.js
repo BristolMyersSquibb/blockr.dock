@@ -1982,49 +1982,16 @@ function trackBusy(core, drawn, narrow, delay) {
 }
 
 // srcts/modules/dock/card/card.tsx
-import { useCallback as useCallback5, useMemo as useMemo3, useState as useState4 } from "react";
+import { useBoard, useNotified, useStatus } from "@blockr/core/react";
+import { useCallback as useCallback4, useMemo as useMemo2, useState as useState4 } from "react";
 
 // srcts/modules/dock/context.ts
-import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
+import { createContext, useContext } from "react";
 var DockContext = createContext(null);
 function useDock() {
   const value = useContext(DockContext);
   if (value === null) throw new Error("A component of the dock is drawn outside the dock.");
   return value;
-}
-function useBoard(core) {
-  const subscribe = useCallback(
-    (changed) => core.store.subscribe(() => {
-      changed();
-    }),
-    [core]
-  );
-  const board = useCallback(() => core.store.board(), [core]);
-  return useSyncExternalStore(subscribe, board);
-}
-function useStatus(core, block) {
-  const subscribe = useCallback(
-    (changed) => core.scheduler.subscribe((blocks) => {
-      if (blocks.includes(block)) changed();
-    }),
-    [core, block]
-  );
-  const status = useCallback(() => core.scheduler.status(block), [core, block]);
-  return useSyncExternalStore(subscribe, status);
-}
-function useNotified(core, block) {
-  const subscribe = useCallback(
-    (changed) => core.notifications.subscribe(() => {
-      changed();
-    }),
-    [core]
-  );
-  const notifications = useCallback(() => core.notifications.get(), [core]);
-  const all = useSyncExternalStore(subscribe, notifications);
-  return useMemo(
-    () => all.filter(({ about }) => about !== void 0 && "block" in about && about.block === block),
-    [all, block]
-  );
 }
 function runEdit(core, id, args) {
   core.commands.run(id, args).catch(() => {
@@ -2062,10 +2029,10 @@ function plainText(message) {
 }
 
 // srcts/modules/dock/card/header.tsx
-import { useCallback as useCallback4, useId as useId2, useLayoutEffect as useLayoutEffect4, useRef as useRef4, useState as useState3 } from "react";
+import { useCallback as useCallback3, useId as useId2, useLayoutEffect as useLayoutEffect4, useRef as useRef4, useState as useState3 } from "react";
 
 // srcts/modules/dock/menu.tsx
-import { Fragment, useCallback as useCallback2, useEffect, useId, useLayoutEffect as useLayoutEffect3, useMemo as useMemo2, useRef as useRef2, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useLayoutEffect as useLayoutEffect3, useMemo, useRef as useRef2, useState } from "react";
 
 // srcts/modules/dock/floating.ts
 import { useLayoutEffect as useLayoutEffect2 } from "react";
@@ -2525,7 +2492,7 @@ function Menu({
   });
   const [sub, setSub] = useState(null);
   const listed = groups.some((group) => group.rows.length > 0);
-  const shown = useMemo2(
+  const shown = useMemo(
     () => groups.map((group) => ({ ...group, rows: group.rows.filter((row) => matches(row, searched)) })).filter((group) => group.rows.length > 0),
     [groups, searched]
   );
@@ -2539,7 +2506,7 @@ function Menu({
   useLayoutEffect3(() => {
     if (activeId !== void 0) ref2.current?.querySelector(`[id="${activeId}"]`)?.scrollIntoView({ block: "nearest" });
   }, [activeId]);
-  const closeSub = useCallback2((how) => {
+  const closeSub = useCallback((how) => {
     setSub(null);
     if (how.restore) ref2.current?.focus({ preventScroll: true });
   }, []);
@@ -2847,7 +2814,7 @@ function MenuButton({ label, entries, className, onTip }) {
       setOpen(null);
     }
   );
-  const close = useCallback2((how) => {
+  const close = useCallback((how) => {
     setOpen(null);
     if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
   }, []);
@@ -3008,7 +2975,7 @@ function BinIcon() {
 }
 
 // srcts/modules/dock/card/tooltip.tsx
-import { useCallback as useCallback3, useEffect as useEffect2, useRef as useRef3, useState as useState2 } from "react";
+import { useCallback as useCallback2, useEffect as useEffect2, useRef as useRef3, useState as useState2 } from "react";
 import { Fragment as Fragment3, jsx as jsx8, jsxs as jsxs4 } from "react/jsx-runtime";
 var DELAY = 300;
 var WARM = 400;
@@ -3031,7 +2998,7 @@ function useTooltip(source) {
   const [shown, setShown] = useState2(null);
   const timer = useRef3(void 0);
   const showing2 = useRef3(false);
-  const hide = useCallback3(() => {
+  const hide = useCallback2(() => {
     clearTimeout(timer.current);
     timer.current = void 0;
     if (!showing2.current) return;
@@ -3305,7 +3272,7 @@ function MenuButton2({
       setOpen(null);
     }
   );
-  const close = useCallback4(
+  const close = useCallback3(
     (how) => {
       setOpen(null);
       if (how.restore) ref2.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
@@ -3505,16 +3472,16 @@ function BlockCard({ id }) {
   const notified = useNotified(core, id);
   const [drawn, setDrawn] = useState4(false);
   const severities = core.options.value("show_conditions");
-  const shown = useMemo3(
+  const shown = useMemo2(
     () => notified.filter(
       (notification) => onCard(notification) && Array.isArray(severities) && severities.includes(notification.severity)
     ),
     [notified, severities]
   );
-  const focus = useCallback5(() => {
+  const focus = useCallback4(() => {
     giveFocus(core, id);
   }, [core, id]);
-  const mountUi = useCallback5(
+  const mountUi = useCallback4(
     (el) => {
       const cleanup = core.mountBlock(el, id);
       const seen = () => {
@@ -3530,7 +3497,7 @@ function BlockCard({ id }) {
     },
     [core, id]
   );
-  const mountOutput = useCallback5((el) => core.mountOutput(el, id), [core, id]);
+  const mountOutput = useCallback4((el) => core.mountOutput(el, id), [core, id]);
   const block = board.blocks[id];
   if (block === void 0) return null;
   const sections = dockState(board)?.visible[id] ?? SECTIONS;
@@ -3575,8 +3542,9 @@ function BlockCard({ id }) {
 }
 
 // srcts/modules/dock/dock.tsx
+import { useBoard as useBoard4 } from "@blockr/core/react";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./vendor-a3ad4872.js";
-import { useCallback as useCallback8, useEffect as useEffect3, useMemo as useMemo5, useRef as useRef8, useState as useState8, useSyncExternalStore as useSyncExternalStore3 } from "react";
+import { useCallback as useCallback7, useEffect as useEffect3, useMemo as useMemo4, useRef as useRef8, useState as useState8, useSyncExternalStore as useSyncExternalStore2 } from "react";
 
 // srcts/modules/dock/drawing.ts
 var EMPTY2 = { orientation: "horizontal", children: [], sizes: [] };
@@ -3866,7 +3834,8 @@ function sharesNear(a, b, tolerance) {
 }
 
 // srcts/modules/dock/picker.tsx
-import { createContext as createContext2, useCallback as useCallback6, useContext as useContext2, useId as useId3, useMemo as useMemo4, useState as useState5 } from "react";
+import { useBoard as useBoard2 } from "@blockr/core/react";
+import { createContext as createContext2, useCallback as useCallback5, useContext as useContext2, useId as useId3, useMemo as useMemo3, useState as useState5 } from "react";
 import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
 var PickerContext = createContext2(null);
 function usePicker() {
@@ -3876,8 +3845,8 @@ function usePicker() {
 }
 function PanelPicker({ children: children2 }) {
   const [picking, setPicking] = useState5(void 0);
-  const state = useMemo4(() => ({ picking, setPicking }), [picking]);
-  const close = useCallback6(
+  const state = useMemo3(() => ({ picking, setPicking }), [picking]);
+  const close = useCallback5(
     (how) => {
       setPicking(void 0);
       if (how.restore) picking?.button.focus({ preventScroll: true, focusVisible: !how.pointer });
@@ -3940,9 +3909,9 @@ function pickerGroups(board, registry, drawn, pick) {
 }
 function PickerMenu({ picking, onClose }) {
   const { core, drawn } = useDock();
-  const board = useBoard(core);
+  const board = useBoard2(core);
   const { near: near2 } = picking;
-  const groups = useMemo4(() => {
+  const groups = useMemo3(() => {
     const pick = (panel2) => {
       const view2 = dockState(core.store.board())?.active ?? null;
       if (view2 === null) return;
@@ -3971,7 +3940,8 @@ function nothingLeft(board, drawn) {
 }
 
 // srcts/modules/dock/views-menu.tsx
-import { useCallback as useCallback7, useLayoutEffect as useLayoutEffect7, useRef as useRef7, useState as useState7, useSyncExternalStore as useSyncExternalStore2 } from "react";
+import { useBoard as useBoard3 } from "@blockr/core/react";
+import { useCallback as useCallback6, useLayoutEffect as useLayoutEffect7, useRef as useRef7, useState as useState7, useSyncExternalStore } from "react";
 
 // srcts/modules/dock/name-field.tsx
 import { useLayoutEffect as useLayoutEffect6, useRef as useRef6, useState as useState6 } from "react";
@@ -4098,17 +4068,17 @@ var SET_OPTION = "blockr.core-set_option";
 var EDGE2 = 24;
 var STEP = 8;
 function useViewTabs(core) {
-  const subscribe = useCallback7(
+  const subscribe = useCallback6(
     (changed) => core.store.subscribe(() => {
       changed();
     }),
     [core]
   );
-  return useSyncExternalStore2(subscribe, () => core.store.board().options.view_tabs === true);
+  return useSyncExternalStore(subscribe, () => core.store.board().options.view_tabs === true);
 }
 function Views({ openFolders }) {
   const { core } = useDock();
-  const board = useBoard(core);
+  const board = useBoard3(core);
   const state = dockState(board);
   if (state === void 0) return null;
   const tabs = board.options.view_tabs === true;
@@ -4133,7 +4103,7 @@ function ViewsMenu({ state, openFolders, tabs }) {
       setOpened(null);
     }
   );
-  const close = useCallback7((how) => {
+  const close = useCallback6((how) => {
     setOpened(null);
     if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
   }, []);
@@ -4542,7 +4512,7 @@ function FolderTab({ state, folder: folder2, current, openFolders }) {
       setOpened(null);
     }
   );
-  const close = useCallback7((how) => {
+  const close = useCallback6((how) => {
     setOpened(null);
     if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
   }, []);
@@ -4566,7 +4536,7 @@ function FolderTab({ state, folder: folder2, current, openFolders }) {
   ] });
 }
 function useOpenFolders(openFolders) {
-  return useSyncExternalStore2(openFolders.subscribe, openFolders.get);
+  return useSyncExternalStore(openFolders.subscribe, openFolders.get);
 }
 function activeHolders(state) {
   return state.active === null ? [] : foldersHolding(state, { view: state.active });
@@ -4638,7 +4608,7 @@ function PanelFrame({ params }) {
 }
 function PluginFrame({ plugin }) {
   const { core } = useDock();
-  const mount = useCallback8((el) => core.mountPlugin(el, plugin), [core, plugin]);
+  const mount = useCallback7((el) => core.mountPlugin(el, plugin), [core, plugin]);
   return /* @__PURE__ */ jsx16(Mounted, { mount, className: "blockr-dock-panel", data: { "data-plugin": plugin } });
 }
 var components = { [PANEL_COMPONENT]: PanelFrame };
@@ -4665,7 +4635,7 @@ function showsNothing(board, drawn) {
 }
 function EmptyView() {
   const { core, drawn } = useDock();
-  const board = useBoard(core);
+  const board = useBoard4(core);
   if (!showsNothing(board, drawn)) return null;
   if (!core.lock.board) return /* @__PURE__ */ jsx16(EmptyPrompt, {});
   return /* @__PURE__ */ jsxs10("div", { className: "blockr-dock-empty", children: [
@@ -4688,11 +4658,11 @@ function Dock({ core, plugin, settings, narrow, drawn, viewsMenu, sidebar }) {
   const root = useRef8(null);
   const stop = useRef8(void 0);
   const [tooltips] = useState8(createTooltips);
-  const shared = useMemo5(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
+  const shared = useMemo4(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
   const locked = core.lock.board;
   const tabs = useViewTabs(core) && viewsMenu;
-  const { pinned } = useSyncExternalStore3(sidebar.subscribe, sidebar.state);
-  const onReady = useCallback8(
+  const { pinned } = useSyncExternalStore2(sidebar.subscribe, sidebar.state);
+  const onReady = useCallback7(
     (event) => {
       const el = root.current;
       if (el === null) return;
@@ -4726,7 +4696,8 @@ function Dock({ core, plugin, settings, narrow, drawn, viewsMenu, sidebar }) {
 }
 
 // srcts/modules/dock/navbar.tsx
-import { useCallback as useCallback9, useEffect as useEffect4, useReducer, useRef as useRef9, useState as useState9, useSyncExternalStore as useSyncExternalStore4 } from "react";
+import { useBoard as useBoard5 } from "@blockr/core/react";
+import { useCallback as useCallback8, useEffect as useEffect4, useReducer, useRef as useRef9, useState as useState9, useSyncExternalStore as useSyncExternalStore3 } from "react";
 
 // srcts/modules/dock/navbar-items.ts
 var PARTS = ["logo", "name", "storage", "undo_redo", "spacer", "views", "read_only", "options"];
@@ -4806,7 +4777,7 @@ import { jsx as jsx17, jsxs as jsxs11 } from "react/jsx-runtime";
 function Navbar({ items, busy, sidebar, mac, openFolders }) {
   const { core } = useDock();
   const storage = useStorage(core);
-  const { pinned } = useSyncExternalStore4(sidebar.subscribe, sidebar.state);
+  const { pinned } = useSyncExternalStore3(sidebar.subscribe, sidebar.state);
   const apart = new Set(items.flatMap((item) => item.kind === "storage" ? [item.id] : []));
   const tabs = useViewTabs(core) && holdsPart(items, "views");
   return /* @__PURE__ */ jsx17("header", { className: "blockr-dock-bar", "data-tabs": tabs ? "" : void 0, "data-pushed": pinned ? "" : void 0, children: items.map((item) => /* @__PURE__ */ jsx17(
@@ -4870,7 +4841,7 @@ var CELLS = [
   [2, 2]
 ];
 function Logo({ busy }) {
-  const turning = useSyncExternalStore4(busy.subscribe, busy.get);
+  const turning = useSyncExternalStore3(busy.subscribe, busy.get);
   return /* @__PURE__ */ jsxs11("span", { className: turning ? "blockr-dock-logo is-computing" : "blockr-dock-logo", title: turning ? "Computing" : void 0, children: [
     /* @__PURE__ */ jsx17("svg", { className: "blockr-dock-logo-mark", width: "20", height: "20", viewBox: "0 0 224 224", "aria-hidden": "true", focusable: "false", children: CELLS.map(([x, y], i) => /* @__PURE__ */ jsx17("rect", { style: { "--i": i }, x: x * 80, y: y * 80, width: "64", height: "64", rx: "7" }, i)) }),
     /* @__PURE__ */ jsx17("span", { className: "blockr-dock-visually-hidden", role: "status", children: turning ? "Computing" : "" })
@@ -4878,7 +4849,7 @@ function Logo({ busy }) {
 }
 function BoardName() {
   const { core } = useDock();
-  const board = useBoard(core);
+  const board = useBoard5(core);
   const [renaming, setRenaming] = useState9(false);
   const locked = core.lock.board;
   if (renaming) {
@@ -5045,7 +5016,7 @@ function ReadOnlyPill() {
   ] });
 }
 function OptionsButton({ sidebar }) {
-  const { open } = useSyncExternalStore4(sidebar.subscribe, sidebar.state);
+  const { open } = useSyncExternalStore3(sidebar.subscribe, sidebar.state);
   return /* @__PURE__ */ jsx17(
     "button",
     {
@@ -5122,7 +5093,7 @@ function useStorage(core) {
       return void 0;
     }
   }, [core, storage]);
-  useBoard(core);
+  useBoard5(core);
   const drawn = drawnControls(core);
   const problem = drawn?.problem;
   useEffect4(() => {
@@ -5131,14 +5102,14 @@ function useStorage(core) {
   return drawn;
 }
 function useHistory(core) {
-  const subscribe = useCallback9(
+  const subscribe = useCallback8(
     (changed) => core.store.subscribe(() => {
       changed();
     }),
     [core]
   );
-  const canUndo = useSyncExternalStore4(subscribe, () => core.store.canUndo());
-  const canRedo = useSyncExternalStore4(subscribe, () => core.store.canRedo());
+  const canUndo = useSyncExternalStore3(subscribe, () => core.store.canUndo());
+  const canRedo = useSyncExternalStore3(subscribe, () => core.store.canRedo());
   return { canUndo, canRedo };
 }
 
@@ -5198,7 +5169,8 @@ function createOpenFolders() {
 }
 
 // srcts/modules/dock/options-sidebar.tsx
-import { useCallback as useCallback10, useEffect as useEffect5, useLayoutEffect as useLayoutEffect8, useRef as useRef10, useState as useState10, useSyncExternalStore as useSyncExternalStore5 } from "react";
+import { useBoard as useBoard6 } from "@blockr/core/react";
+import { useCallback as useCallback9, useEffect as useEffect5, useLayoutEffect as useLayoutEffect8, useRef as useRef10, useState as useState10, useSyncExternalStore as useSyncExternalStore4 } from "react";
 import { jsx as jsx18, jsxs as jsxs12 } from "react/jsx-runtime";
 var TITLE = "Board options";
 var FOCUSABLE = [
@@ -5223,8 +5195,8 @@ function categories(board, registered) {
 }
 function OptionsSidebar({ sidebar }) {
   const { core } = useDock();
-  const board = useBoard(core);
-  const { open, pinned, expanded } = useSyncExternalStore5(sidebar.subscribe, sidebar.state);
+  const board = useBoard6(core);
+  const { open, pinned, expanded } = useSyncExternalStore4(sidebar.subscribe, sidebar.state);
   const grouped = categories(board, core.options.registered());
   const defaults = useDefaults(core, [...grouped.values()].flat());
   const ref2 = useRef10(null);
@@ -5369,7 +5341,7 @@ function longest(durations, delays) {
 }
 function OptionLine({ option, reset }) {
   const { core } = useDock();
-  const mount = useCallback10((el) => core.mountOption(el, option), [core, option]);
+  const mount = useCallback9((el) => core.mountOption(el, option), [core, option]);
   const line = useRef10(null);
   const registered = core.options.registered();
   const label = Object.hasOwn(registered, option) ? registered[option]?.label ?? option : option;
@@ -5626,7 +5598,8 @@ function startOnBoard(core, plugin, drawn, view2) {
 }
 
 // srcts/modules/dock/toasts.tsx
-import { useCallback as useCallback11, useSyncExternalStore as useSyncExternalStore6 } from "react";
+import { useBoard as useBoard7 } from "@blockr/core/react";
+import { useSyncExternalStore as useSyncExternalStore5 } from "react";
 import { jsx as jsx19, jsxs as jsxs13 } from "react/jsx-runtime";
 var SHOWN_FOR = 5e3;
 var FADES_FOR = 300;
@@ -5744,8 +5717,8 @@ function own(record, key) {
   return Object.hasOwn(record, key) ? record[key] : void 0;
 }
 function ToastList({ core, toasts }) {
-  const list = useSyncExternalStore6(toasts.subscribe, toasts.list);
-  const board = useBoard2(core);
+  const list = useSyncExternalStore5(toasts.subscribe, toasts.list);
+  const board = useBoard7(core);
   if (list.length === 0) return null;
   return /* @__PURE__ */ jsx19("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => /* @__PURE__ */ jsx19(
     ToastItem,
@@ -5808,15 +5781,6 @@ function ToastItem({ toast, title, toasts }) {
       ]
     }
   );
-}
-function useBoard2(core) {
-  const subscribe = useCallback11(
-    (fn) => core.store.subscribe(() => {
-      fn();
-    }),
-    [core]
-  );
-  return useSyncExternalStore6(subscribe, () => core.store.board());
 }
 
 // srcts/modules/dock/index.tsx

@@ -64,10 +64,11 @@
 // any other block, whatever `visible` says.
 
 import type { BlockId, Status } from "@blockr/core";
+import { useBoard, useNotified, useStatus } from "@blockr/core/react";
 import { useCallback, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { dockState, SECTIONS } from "../../../commands/index.ts";
-import { giveFocus, useBoard, useDock, useNotified, useStatus } from "../context.ts";
+import { giveFocus, useDock } from "../context.ts";
 import { Mounted } from "../mounted.tsx";
 import { onCard, plainText } from "../notifications.ts";
 import { Header } from "./header.tsx";

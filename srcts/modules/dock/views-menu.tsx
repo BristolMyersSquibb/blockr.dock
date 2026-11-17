@@ -49,12 +49,13 @@
 // marked tab into view as the active view changes.
 
 import type { CoreApi, Json } from "@blockr/core";
+import { useBoard } from "@blockr/core/react";
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, FocusEvent, PointerEvent, ReactElement } from "react";
 import { dockState } from "../../commands/index.ts";
 import { foldersHolding, inFolder, sameEntry } from "../../state/index.ts";
 import type { DockState, Entry, FolderId, ViewId } from "../../state/index.ts";
-import { runEdit, useBoard, useDock } from "./context.ts";
+import { runEdit, useDock } from "./context.ts";
 import { Chevron, GripIcon, PlusIcon, RemoveIcon, SlidersIcon } from "./icons.tsx";
 import { Menu, useMenuButton, useMenuSurface } from "./menu.tsx";
 import type { Closing, MenuRow } from "./menu.tsx";
