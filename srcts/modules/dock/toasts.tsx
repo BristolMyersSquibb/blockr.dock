@@ -24,7 +24,8 @@
 //   neutral.
 
 import type { Board, BoardObject, CoreApi, Notification } from "@blockr/core";
-import { useCallback, useSyncExternalStore } from "react";
+import { useBoard } from "@blockr/core/react";
+import { useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
 import { onCard, plainText } from "./notifications.ts";
 
@@ -297,17 +298,4 @@ function ToastItem({ toast, title, toasts }: ToastItemProps): ReactElement {
       </button>
     </div>
   );
-}
-
-// The board, which the store keeps the same object until it announces a
-// change.
-function useBoard(core: CoreApi): Board {
-  const subscribe = useCallback(
-    (fn: () => void) =>
-      core.store.subscribe(() => {
-        fn();
-      }),
-    [core],
-  );
-  return useSyncExternalStore(subscribe, () => core.store.board());
 }

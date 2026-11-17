@@ -5,6 +5,7 @@
 
 import type { BlockId, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
+import type { StubCoreOptions } from "@blockr/core/stubs";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import type { DockState } from "../../../state/index.ts";
 import { DOCK, hello, modules } from "../testing.ts";
@@ -45,9 +46,13 @@ const shown: DockState = {
   visible: {},
 };
 
-// The board of core's fixture, with the dock's state given and the locks of
-// its blocks given.
-function boardWith(state: DockState, locked: Readonly<Record<BlockId, boolean | null>> = {}): JsonBoard {
+// The board of core's fixture, with the dock's state given, the locks of its
+// blocks given, and the severities that its cards show where given.
+function boardWith(
+  state: DockState,
+  locked: Readonly<Record<BlockId, boolean | null>> = {},
+  showConditions?: readonly string[],
+): JsonBoard {
   const { board } = HELLO.board;
   return {
     ...HELLO.board,
@@ -58,19 +63,36 @@ function boardWith(state: DockState, locked: Readonly<Record<BlockId, boolean | 
       blocks: Object.fromEntries(
         Object.entries(board.blocks).map(([id, block]) => [id, { ...block, locked: locked[id] ?? block.locked }]),
       ),
+      options:
+        showConditions === undefined
+          ? board.options
+          : { ...board.options, show_conditions: { value: [...showConditions], version: 1 } },
       plugins: { [DOCK]: state },
     },
   };
 }
 
+// What R does otherwise than in core's fixture: how it replies to an
+// evaluation, and the block registry that it gives.
+interface Played {
+  readonly evaluate?: StubCoreOptions["evaluate"];
+  readonly registry?: typeof hello.block_registry;
+}
+
 // Starts core with the dock drawing the board given in an element of the
-// page, under the board lock where asked.
-async function startCards(board: JsonBoard = boardWith(shown), lock = false) {
+// page, under the board lock where asked, with R played as given.
+async function startCards(board: JsonBoard = boardWith(shown), lock = false, played: Played = {}) {
   const el = document.createElement("div");
   document.body.append(el);
   const s = await stubCore({
-    hello: { ...hello, board, ...(lock ? { lock: { board: true, load: false } } : {}) },
+    hello: {
+      ...hello,
+      board,
+      ...(lock ? { lock: { board: true, load: false } } : {}),
+      ...(played.registry === undefined ? {} : { block_registry: played.registry }),
+    },
     modules,
+    ...(played.evaluate === undefined ? {} : { evaluate: played.evaluate }),
     el,
   });
   onTestFinished(() => {
@@ -341,6 +363,192 @@ describe("a block's card", () => {
     await core.commands.run("blockr.core-set_option", { id: "compact", value: true });
     await settled();
     expect(cardOf(el, "Head").hasAttribute("data-compact")).toBe(true);
+  });
+});
+
+// The parts of a card that show the block's status and the notifications
+// about it.
+const dotOf = (card: HTMLElement) => card.querySelector<HTMLElement>(".blockr-card-dot");
+const outputOf = (card: HTMLElement) => card.querySelector<HTMLElement>(".blockr-card-output-frame");
+const noteOf = (card: HTMLElement) => card.querySelector(".blockr-card-status-note")?.textContent ?? null;
+const listed = (list: Element | null): [string | null, string][] =>
+  [...(list?.querySelectorAll(".blockr-card-notification") ?? [])].map((item) => [
+    item.getAttribute("data-severity"),
+    item.textContent,
+  ]);
+const errors = (card: HTMLElement) => listed(card.querySelector('[aria-label="Errors"]'));
+const foldOf = (card: HTMLElement) => sectionOf(card, "outputs")?.querySelector("details") ?? null;
+
+// A condition of R's reply to an evaluation of a block.
+const condition = (severity: "error" | "warning" | "message", message: string) => ({
+  severity,
+  class: [severity === "message" ? "simpleMessage" : `simple${severity === "error" ? "Error" : "Warning"}`, severity, "condition"],
+  phase: "block_eval" as const,
+  message,
+});
+
+describe("a block's status on its card", () => {
+  test("shows in the status dot on the block's mark, filled for a ready block and a ring for one not yet evaluated", async () => {
+    const { el } = await startCards();
+
+    // Merge sits behind Head, so nothing demands it.
+    const head = dotOf(cardOf(el, "Head"));
+    expect([head?.getAttribute("data-status"), head?.getAttribute("aria-label"), head?.hasAttribute("data-ring")]).toEqual([
+      "ready",
+      "Up to date",
+      false,
+    ]);
+    const merge = dotOf(cardOf(el, "Merge"));
+    expect([merge?.getAttribute("data-status"), merge?.getAttribute("aria-label"), merge?.hasAttribute("data-ring")]).toEqual([
+      "unevaluated",
+      "Not evaluated yet",
+      true,
+    ]);
+    expect(outputOf(cardOf(el, "Merge"))?.hidden).toBe(false);
+  });
+
+  test("fades the output of a stale block, until the block is ready again", async () => {
+    const { core, el, settled } = await startCards();
+    const show = async (block: BlockId) => {
+      await core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block } });
+      await settled();
+    };
+
+    // Merge runs while it shows, and goes stale behind Head, where nothing
+    // demands it.
+    await show("c");
+    await show("b");
+    core.scheduler.invalidate("c");
+    await settled();
+    const merge = cardOf(el, "Merge");
+    expect(dotOf(merge)?.getAttribute("data-status")).toBe("stale");
+    expect(outputOf(merge)?.hasAttribute("data-faded")).toBe(true);
+
+    await show("c");
+    expect(dotOf(merge)?.getAttribute("data-status")).toBe("ready");
+    expect(outputOf(merge)?.hasAttribute("data-faded")).toBe(false);
+  });
+
+  test("hides the output of a block that failed, whose error shows above the sections as text", async () => {
+    const { el } = await startCards(boardWith(shown), false, {
+      evaluate: (request) =>
+        request.block === "b"
+          ? { status: "error", conditions: [condition("error", "Column \u001b[1m\u001b[34mSpecies\u001b[39m\u001b[22m is gone.")] }
+          : undefined,
+    });
+
+    const head = cardOf(el, "Head");
+    expect(dotOf(head)?.getAttribute("data-status")).toBe("failed");
+    expect(errors(head)).toEqual([["error", "Column Species is gone."]]);
+    expect([...head.children].map((child) => child.className)).toEqual([
+      "blockr-card-header",
+      "blockr-card-notifications",
+      "blockr-card-sections",
+    ]);
+    expect(outputOf(head)?.hidden).toBe(true);
+    // Nothing else shows in the outputs, which then take no room.
+    expect(sectionOf(head, "outputs")?.hidden).toBe(true);
+  });
+
+  test("hides the output of an invalid block and of the blocks waiting on it, with the status note in its place", async () => {
+    const { el } = await startCards(boardWith(shown), false, {
+      evaluate: (request) => (request.block === "b" ? { status: "invalid", reason: "Choose how many rows." } : undefined),
+    });
+
+    const head = cardOf(el, "Head");
+    expect(dotOf(head)?.getAttribute("data-status")).toBe("invalid");
+    expect(dotOf(head)?.hasAttribute("data-ring")).toBe(false);
+    expect(outputOf(head)?.hidden).toBe(true);
+    expect(noteOf(head)).toBe("Choose how many rows.");
+    expect(sectionOf(head, "outputs")?.hidden).toBe(false);
+
+    // Bind reads Head.
+    const bind = cardOf(el, "Bind");
+    expect(dotOf(bind)?.getAttribute("data-status")).toBe("waiting");
+    expect(dotOf(bind)?.hasAttribute("data-ring")).toBe(true);
+    expect(outputOf(bind)?.hidden).toBe(true);
+    expect(noteOf(bind)).toBe('This block is waiting for block "b".');
+    expect(errors(bind)).toEqual([]);
+  });
+
+  test("keeps the output of a ready block whose output R could not make, while the dot reads failed", async () => {
+    // R has no output to give for Head, whose renderer has no fixtures.
+    const entry = hello.block_registry["blockr.core-head_block"];
+    if (entry?.renderer === undefined) throw new Error("The fixture has no head block with a renderer.");
+    const { el } = await startCards(boardWith(shown), false, {
+      registry: {
+        ...hello.block_registry,
+        "blockr.core-head_block": { ...entry, renderer: { ...entry.renderer, id: "blockr.dock-no_fixtures" } },
+      },
+    });
+
+    const head = cardOf(el, "Head");
+    expect(dotOf(head)?.getAttribute("data-status")).toBe("failed");
+    expect(dotOf(head)?.getAttribute("aria-label")).toBe("Evaluation failed");
+    expect(errors(head)).toEqual([["error", 'The fixtures hold no output of block "b".']]);
+    expect(outputOf(head)?.hidden).toBe(false);
+  });
+});
+
+describe("the notifications on a block's card", () => {
+  const raising = (block: BlockId, conditions: ReturnType<typeof condition>[]): Played => ({
+    evaluate: (request) => (request.block === block ? { conditions } : undefined),
+  });
+  const warned = [
+    condition("message", "Reading \u001b[1miris\u001b[22m."),
+    condition("warning", "Dropped 2 rows."),
+    condition("message", "Done."),
+  ];
+
+  test("fold the warnings and the messages under the output behind their counts, the warnings first", async () => {
+    const { el } = await startCards(boardWith(shown, {}, ["message", "warning", "error"]), false, raising("b", warned));
+
+    const head = cardOf(el, "Head");
+    expect(errors(head)).toEqual([]);
+    expect(dotOf(head)?.getAttribute("data-status")).toBe("ready");
+    const fold = foldOf(head);
+    expect(fold?.open).toBe(false);
+    expect(fold?.querySelector("summary")?.textContent).toBe("1 warning, 2 messages");
+    expect(listed(fold)).toEqual([
+      ["warning", "Dropped 2 rows."],
+      ["message", "Reading iris."],
+      ["message", "Done."],
+    ]);
+  });
+
+  test("show only the severities that the board option show_conditions names", async () => {
+    const { el } = await startCards(boardWith(shown), false, raising("b", warned));
+
+    const fold = foldOf(cardOf(el, "Head"));
+    expect(fold?.querySelector("summary")?.textContent).toBe("1 warning");
+    expect(listed(fold)).toEqual([["warning", "Dropped 2 rows."]]);
+  });
+
+  test("leave the card as core withdraws them", async () => {
+    let conditions = warned;
+    const { core, el, settled } = await startCards(boardWith(shown), false, {
+      evaluate: (request) => (request.block === "b" ? { conditions } : undefined),
+    });
+
+    expect(listed(foldOf(cardOf(el, "Head")))).toHaveLength(1);
+    conditions = [];
+    core.scheduler.invalidate("b");
+    await settled();
+    expect(foldOf(cardOf(el, "Head"))).toBeNull();
+  });
+
+  test("leave out what a plugin raises about the block, which shows as a toast", async () => {
+    const { core, el, settled } = await startCards();
+
+    core.notifications.notify("blockr.core-edit_board_plugin", {
+      severity: "error",
+      message: "The edit was refused.",
+      code: "edit_refused",
+      about: { block: "b" },
+    });
+    await settled();
+    expect(errors(cardOf(el, "Head"))).toEqual([]);
+    expect(el.querySelector(".blockr-dock-toast")?.textContent).toContain("The edit was refused.");
   });
 });
 

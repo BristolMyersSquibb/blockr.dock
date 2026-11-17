@@ -25,13 +25,14 @@
 // keys it takes (./menu.tsx).
 
 import type { BlockRegistry, Board, Json, PluginClassId } from "@blockr/core";
+import { useBoard } from "@blockr/core/react";
 import { createContext, useCallback, useContext, useId, useMemo, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { activeView, dockState } from "../../commands/index.ts";
 import { places } from "../../state/index.ts";
 import type { Panel } from "../../state/index.ts";
 import { Mark } from "./card/index.ts";
-import { useBoard, useDock } from "./context.ts";
+import { useDock } from "./context.ts";
 import { Menu, useMenuButton } from "./menu.tsx";
 import type { Closing, MenuGroup } from "./menu.tsx";
 

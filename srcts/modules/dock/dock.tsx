@@ -38,6 +38,7 @@
 // the view out again, as for any change of the root's size.
 
 import type { Board, CoreApi, PluginClassId } from "@blockr/core";
+import { useBoard } from "@blockr/core/react";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "dockview-react";
 import type {
   DockviewReadyEvent,
@@ -53,7 +54,7 @@ import { PANEL_COMPONENT, panelFromId } from "../../layout/index.ts";
 import type { PanelParams } from "../../layout/index.ts";
 import { gridPanels } from "../../state/index.ts";
 import { BlockCard, createTooltips } from "./card/index.ts";
-import { DockContext, giveFocus, useBoard, useDock } from "./context.ts";
+import { DockContext, giveFocus, useDock } from "./context.ts";
 import { drawDock } from "./drawing.ts";
 import { LockIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";

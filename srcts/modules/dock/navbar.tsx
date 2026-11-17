@@ -53,12 +53,13 @@
 // the tooltip, where the control has no tooltip of its own.
 
 import type { CoreApi, StorageControl } from "@blockr/core";
+import { useBoard } from "@blockr/core/react";
 import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, ReactElement } from "react";
 import { isObject } from "../../state/index.ts";
 import { API } from "./api.ts";
 import type { Busy } from "./busy.ts";
-import { useBoard, useDock } from "./context.ts";
+import { useDock } from "./context.ts";
 import { asError, errorMessage } from "./errors.ts";
 import { LockIcon, WarningIcon } from "./icons.tsx";
 import { MenuButton } from "./menu.tsx";

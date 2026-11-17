@@ -64,10 +64,11 @@
 // board's name either, since the board's name is on the bar.
 
 import type { Board, CoreApi, Json, Option, OptionId } from "@blockr/core";
+import { useBoard } from "@blockr/core/react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
 import { sameJson } from "../../state/index.ts";
-import { runEdit, useBoard, useDock } from "./context.ts";
+import { runEdit, useDock } from "./context.ts";
 import { Chevron, PinIcon, RemoveIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
 import type { Sidebar } from "./sidebar.ts";

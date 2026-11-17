@@ -3,6 +3,8 @@
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.7#the-header):
 // 1. The block's mark, whose tooltip is the name of the block's class, with
 //    the package of its registry id as a badge.
+//    The status dot sits on the mark's upper right corner, filled or a ring as
+//    ./status-dot.ts gives it, with the status that it reads as its tooltip.
 // 2. The block's name, which wraps to a second line and is cut after it.
 //    A double-click on it, or Rename in the menu, turns it into a field that
 //    holds the name, selected.
@@ -40,6 +42,7 @@ import { classGroups } from "./classes.tsx";
 import { copyText } from "./clipboard.ts";
 import { BinIcon, DotsIcon, EyeIcon, LockIcon, SlidersIcon } from "./icons.tsx";
 import { Mark, packageOf } from "./mark.tsx";
+import type { StatusDot } from "./status-dot.ts";
 import { useTooltip } from "./tooltip.tsx";
 
 const GESTURE = "Double-click to edit";
@@ -50,6 +53,7 @@ export function Header({
   entry,
   sections,
   drawn,
+  dot,
 }: {
   id: BlockId;
   block: Block;
@@ -58,6 +62,9 @@ export function Header({
   sections: readonly Section[];
   // Whether the block's UI has drawn anything.
   drawn: boolean;
+  // The block's status dot, or none while the scheduler holds no status of
+  // the block.
+  dot: StatusDot | null;
 }): ReactElement {
   const { core } = useDock();
   const locked = core.lock.board;
@@ -78,7 +85,7 @@ export function Header({
 
   return (
     <header className="blockr-card-header">
-      <HeaderMark entry={entry} block={block} />
+      <HeaderMark entry={entry} block={block} dot={dot} />
       <div className="blockr-card-title">
         {renaming ? (
           <NameField
@@ -135,13 +142,41 @@ export function Header({
   );
 }
 
-function HeaderMark({ entry, block }: { entry: RegistryEntry | undefined; block: Block }): ReactElement {
+function HeaderMark({
+  entry,
+  block,
+  dot,
+}: {
+  entry: RegistryEntry | undefined;
+  block: Block;
+  dot: StatusDot | null;
+}): ReactElement {
   const pkg = packageOf(block.registry_id);
   const name = entry?.name ?? block.registry_id;
   const { props, tooltip } = useTooltip([pkg === null ? { text: name } : { text: name, badge: pkg }]);
   return (
-    <>
+    <span className="blockr-card-mark-frame">
       <Mark entry={entry} size={32} role="img" aria-label={pkg === null ? name : `${name}, ${pkg}`} {...props} />
+      {tooltip}
+      {dot === null ? null : <Dot dot={dot} />}
+    </span>
+  );
+}
+
+// The status dot, whose tooltip names the status that it reads, which a
+// screen reader reads as the dot's name.
+function Dot({ dot }: { dot: StatusDot }): ReactElement {
+  const { props, tooltip } = useTooltip(dot.tooltip);
+  return (
+    <>
+      <span
+        className="blockr-card-dot"
+        role="img"
+        aria-label={dot.tooltip}
+        data-status={dot.status}
+        data-ring={dot.ring ? "" : undefined}
+        {...props}
+      />
       {tooltip}
     </>
   );

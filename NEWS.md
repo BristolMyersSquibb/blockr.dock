@@ -1,5 +1,22 @@
 # blockr.dock 0.2.1
 
+* A block's card shows the block's status, the look of its output by status
+  and the notifications about the block (#579).
+  The status dot on the block's mark shows each of the six statuses, and reads
+  failed while an error about the block's output holds, unless the block is
+  stale.
+  The output fades while the block is stale, takes no room while it failed,
+  and gives way to the status note while it waits or is invalid.
+  The note says in one line what the block lacks.
+  The card shows the notifications about the block that no plugin raised, of
+  the severities that the board option `show_conditions` names.
+  Errors show above the sections, and warnings and messages fold under the
+  output behind their counts, as in blockr.dock 0.2.0.
+  Each shows as text, without the ANSI escapes of cli's styling.
+  The dot and the mark take their colours from core's theme, as
+  `--bc-color-status-failed` and `--bc-color-category-input`, which a frontend
+  or a UI kit sets.
+
 * The options button on the bar opens the dock's options sidebar (#583).
   The sidebar lists the categories of the board options that the board holds
   as an accordion, whose categories the user expands in place, several at

@@ -1982,25 +1982,16 @@ function trackBusy(core, drawn, narrow, delay) {
 }
 
 // srcts/modules/dock/card/card.tsx
-import { useCallback as useCallback5, useState as useState4 } from "react";
+import { useBoard, useNotified, useStatus } from "@blockr/core/react";
+import { useCallback as useCallback4, useMemo as useMemo2, useState as useState4 } from "react";
 
 // srcts/modules/dock/context.ts
-import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
+import { createContext, useContext } from "react";
 var DockContext = createContext(null);
 function useDock() {
   const value = useContext(DockContext);
   if (value === null) throw new Error("A component of the dock is drawn outside the dock.");
   return value;
-}
-function useBoard(core) {
-  const subscribe = useCallback(
-    (changed) => core.store.subscribe(() => {
-      changed();
-    }),
-    [core]
-  );
-  const board = useCallback(() => core.store.board(), [core]);
-  return useSyncExternalStore(subscribe, board);
 }
 function runEdit(core, id, args) {
   core.commands.run(id, args).catch(() => {
@@ -2026,11 +2017,22 @@ function Mounted({ mount, label, className, data }) {
   return /* @__PURE__ */ jsx2("div", { ref: ref2, role: label === void 0 ? void 0 : "region", "aria-label": label, className, ...data });
 }
 
+// srcts/modules/dock/notifications.ts
+function onCard(notification) {
+  const { about, source } = notification;
+  if (about === void 0 || !("block" in about)) return false;
+  return source.kind !== "module" || !("plugin" in source.module.object);
+}
+var ANSI = /(?:\u001b\[|\u009b)[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
+function plainText(message) {
+  return message.replace(ANSI, "");
+}
+
 // srcts/modules/dock/card/header.tsx
-import { useCallback as useCallback4, useId as useId2, useLayoutEffect as useLayoutEffect4, useRef as useRef4, useState as useState3 } from "react";
+import { useCallback as useCallback3, useId as useId2, useLayoutEffect as useLayoutEffect4, useRef as useRef4, useState as useState3 } from "react";
 
 // srcts/modules/dock/menu.tsx
-import { Fragment, useCallback as useCallback2, useEffect, useId, useLayoutEffect as useLayoutEffect3, useMemo, useRef as useRef2, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useLayoutEffect as useLayoutEffect3, useMemo, useRef as useRef2, useState } from "react";
 
 // srcts/modules/dock/floating.ts
 import { useLayoutEffect as useLayoutEffect2 } from "react";
@@ -2504,7 +2506,7 @@ function Menu({
   useLayoutEffect3(() => {
     if (activeId !== void 0) ref2.current?.querySelector(`[id="${activeId}"]`)?.scrollIntoView({ block: "nearest" });
   }, [activeId]);
-  const closeSub = useCallback2((how) => {
+  const closeSub = useCallback((how) => {
     setSub(null);
     if (how.restore) ref2.current?.focus({ preventScroll: true });
   }, []);
@@ -2812,7 +2814,7 @@ function MenuButton({ label, entries, className, onTip }) {
       setOpen(null);
     }
   );
-  const close = useCallback2((how) => {
+  const close = useCallback((how) => {
     setOpen(null);
     if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
   }, []);
@@ -2973,7 +2975,7 @@ function BinIcon() {
 }
 
 // srcts/modules/dock/card/tooltip.tsx
-import { useCallback as useCallback3, useEffect as useEffect2, useRef as useRef3, useState as useState2 } from "react";
+import { useCallback as useCallback2, useEffect as useEffect2, useRef as useRef3, useState as useState2 } from "react";
 import { Fragment as Fragment3, jsx as jsx8, jsxs as jsxs4 } from "react/jsx-runtime";
 var DELAY = 300;
 var WARM = 400;
@@ -2996,7 +2998,7 @@ function useTooltip(source) {
   const [shown, setShown] = useState2(null);
   const timer = useRef3(void 0);
   const showing2 = useRef3(false);
-  const hide = useCallback3(() => {
+  const hide = useCallback2(() => {
     clearTimeout(timer.current);
     timer.current = void 0;
     if (!showing2.current) return;
@@ -3068,7 +3070,8 @@ function Header({
   block,
   entry,
   sections,
-  drawn
+  drawn,
+  dot
 }) {
   const { core } = useDock();
   const locked = core.lock.board;
@@ -3086,7 +3089,7 @@ function Header({
     setRenaming(true);
   };
   return /* @__PURE__ */ jsxs5("header", { className: "blockr-card-header", children: [
-    /* @__PURE__ */ jsx9(HeaderMark, { entry, block }),
+    /* @__PURE__ */ jsx9(HeaderMark, { entry, block, dot }),
     /* @__PURE__ */ jsx9("div", { className: "blockr-card-title", children: renaming ? /* @__PURE__ */ jsx9(
       NameField,
       {
@@ -3140,12 +3143,34 @@ function Header({
     ] })
   ] });
 }
-function HeaderMark({ entry, block }) {
+function HeaderMark({
+  entry,
+  block,
+  dot
+}) {
   const pkg = packageOf(block.registry_id);
   const name2 = entry?.name ?? block.registry_id;
   const { props, tooltip } = useTooltip([pkg === null ? { text: name2 } : { text: name2, badge: pkg }]);
-  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+  return /* @__PURE__ */ jsxs5("span", { className: "blockr-card-mark-frame", children: [
     /* @__PURE__ */ jsx9(Mark, { entry, size: 32, role: "img", "aria-label": pkg === null ? name2 : `${name2}, ${pkg}`, ...props }),
+    tooltip,
+    dot === null ? null : /* @__PURE__ */ jsx9(Dot, { dot })
+  ] });
+}
+function Dot({ dot }) {
+  const { props, tooltip } = useTooltip(dot.tooltip);
+  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+    /* @__PURE__ */ jsx9(
+      "span",
+      {
+        className: "blockr-card-dot",
+        role: "img",
+        "aria-label": dot.tooltip,
+        "data-status": dot.status,
+        "data-ring": dot.ring ? "" : void 0,
+        ...props
+      }
+    ),
     tooltip
   ] });
 }
@@ -3247,7 +3272,7 @@ function MenuButton2({
       setOpen(null);
     }
   );
-  const close = useCallback4(
+  const close = useCallback3(
     (how) => {
       setOpen(null);
       if (how.restore) ref2.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
@@ -3347,9 +3372,36 @@ function MenuButton2({
   ] });
 }
 
+// srcts/modules/dock/card/notifications.tsx
+import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
+function Errors({ notifications }) {
+  if (notifications.length === 0) return null;
+  return /* @__PURE__ */ jsx10(Listed, { notifications, label: "Errors" });
+}
+function WarningsAndMessages({ notifications }) {
+  const warnings = notifications.filter((notification) => notification.severity === "warning");
+  const messages = notifications.filter((notification) => notification.severity === "message");
+  if (warnings.length + messages.length === 0) return null;
+  const count2 = [counted(warnings.length, "warning"), counted(messages.length, "message")].filter((part) => part !== null);
+  return /* @__PURE__ */ jsxs6("details", { className: "blockr-card-messages", children: [
+    /* @__PURE__ */ jsxs6("summary", { className: "blockr-card-messages-count", children: [
+      count2.join(", "),
+      /* @__PURE__ */ jsx10(Chevron, {})
+    ] }),
+    /* @__PURE__ */ jsx10(Listed, { notifications: [...warnings, ...messages] })
+  ] });
+}
+function counted(n, severity) {
+  if (n === 0) return null;
+  return `${String(n)} ${severity}${n === 1 ? "" : "s"}`;
+}
+function Listed({ notifications, label }) {
+  return /* @__PURE__ */ jsx10("ul", { className: "blockr-card-notifications", "aria-label": label, children: notifications.map(({ id, severity, message }) => /* @__PURE__ */ jsx10("li", { className: "blockr-card-notification", "data-severity": severity, children: plainText(message) }, id)) });
+}
+
 // srcts/modules/dock/card/section.tsx
 import { useLayoutEffect as useLayoutEffect5, useRef as useRef5 } from "react";
-import { jsx as jsx10 } from "react/jsx-runtime";
+import { jsx as jsx11 } from "react/jsx-runtime";
 function Section({
   name: name2,
   open,
@@ -3369,7 +3421,7 @@ function Section({
     }
     return fold(el, open);
   }, [open, empty]);
-  return /* @__PURE__ */ jsx10("section", { ref: ref2, className: "blockr-card-section", "data-section": name2, children: /* @__PURE__ */ jsx10("div", { className: "blockr-card-section-body", children: children2 }) });
+  return /* @__PURE__ */ jsx11("section", { ref: ref2, className: "blockr-card-section", "data-section": name2, children: /* @__PURE__ */ jsx11("div", { className: "blockr-card-section-body", children: children2 }) });
 }
 function settle(el, shows2) {
   delete el.dataset.folding;
@@ -3395,16 +3447,47 @@ function fold(el, open) {
   };
 }
 
+// srcts/modules/dock/card/status-dot.ts
+var DOTS = {
+  stale: { ring: false, tooltip: "Inputs changed since this block last ran" },
+  waiting: { ring: true, tooltip: "Waiting for a data input" },
+  invalid: { ring: false, tooltip: "Set this block's inputs" },
+  failed: { ring: false, tooltip: "Evaluation failed" },
+  ready: { ring: false, tooltip: "Up to date" },
+  unevaluated: { ring: true, tooltip: "Not evaluated yet" }
+};
+function statusDot(status, notifications) {
+  if (status === void 0) return null;
+  const reads = status.status !== "stale" && notifications.some(isOutputError) ? "failed" : status.status;
+  return { status: reads, ...DOTS[reads] };
+}
+function isOutputError({ severity, source }) {
+  if (severity !== "error") return false;
+  if (source.kind === "r") return source.request.type === "output";
+  return source.kind === "core" && source.code === "output_unanswered";
+}
+
 // srcts/modules/dock/card/card.tsx
-import { jsx as jsx11, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx12, jsxs as jsxs7 } from "react/jsx-runtime";
+var WITHOUT_OUTPUT = /* @__PURE__ */ new Set(["failed", "waiting", "invalid"]);
+var WITH_NOTE = /* @__PURE__ */ new Set(["waiting", "invalid"]);
 function BlockCard({ id }) {
   const { core } = useDock();
   const board = useBoard(core);
+  const status = useStatus(core, id);
+  const notified = useNotified(core, id);
   const [drawn, setDrawn] = useState4(false);
-  const focus = useCallback5(() => {
+  const severities = core.options.value("show_conditions");
+  const shown = useMemo2(
+    () => notified.filter(
+      (notification) => onCard(notification) && Array.isArray(severities) && severities.includes(notification.severity)
+    ),
+    [notified, severities]
+  );
+  const focus = useCallback4(() => {
     giveFocus(core, id);
   }, [core, id]);
-  const mountUi = useCallback5(
+  const mountUi = useCallback4(
     (el) => {
       const cleanup = core.mountBlock(el, id);
       const seen = () => {
@@ -3420,14 +3503,17 @@ function BlockCard({ id }) {
     },
     [core, id]
   );
-  const mountOutput = useCallback5((el) => core.mountOutput(el, id), [core, id]);
+  const mountOutput = useCallback4((el) => core.mountOutput(el, id), [core, id]);
   const block = board.blocks[id];
   if (block === void 0) return null;
   const sections = dockState(board)?.visible[id] ?? SECTIONS;
   const compact2 = core.options.value("compact") === true;
   const entry = core.blockRegistry()[block.registry_id];
   const inputs = !core.store.locked(id);
-  return /* @__PURE__ */ jsxs6(
+  const hidden = status !== void 0 && WITHOUT_OUTPUT.has(status.status);
+  const note = status !== void 0 && WITH_NOTE.has(status.status) ? status.reason : null;
+  const folded2 = shown.filter((notification) => notification.severity !== "error");
+  return /* @__PURE__ */ jsxs7(
     "article",
     {
       className: "blockr-card",
@@ -3436,10 +3522,25 @@ function BlockCard({ id }) {
       onPointerDown: focus,
       onFocus: focus,
       children: [
-        /* @__PURE__ */ jsx11(Header, { id, block, entry, sections, drawn: inputs && drawn }),
-        /* @__PURE__ */ jsxs6("div", { className: "blockr-card-sections", children: [
-          inputs ? /* @__PURE__ */ jsx11(Section, { name: "inputs", open: sections.includes("inputs"), empty: !drawn, children: /* @__PURE__ */ jsx11(Mounted, { mount: mountUi, label: "Inputs" }) }) : null,
-          /* @__PURE__ */ jsx11(Section, { name: "outputs", open: sections.includes("outputs"), children: /* @__PURE__ */ jsx11(Mounted, { mount: mountOutput, label: "Output", className: "blockr-card-output" }) })
+        /* @__PURE__ */ jsx12(
+          Header,
+          {
+            id,
+            block,
+            entry,
+            sections,
+            drawn: inputs && drawn,
+            dot: statusDot(status, notified)
+          }
+        ),
+        /* @__PURE__ */ jsx12(Errors, { notifications: shown.filter((notification) => notification.severity === "error") }),
+        /* @__PURE__ */ jsxs7("div", { className: "blockr-card-sections", children: [
+          inputs ? /* @__PURE__ */ jsx12(Section, { name: "inputs", open: sections.includes("inputs"), empty: !drawn, children: /* @__PURE__ */ jsx12(Mounted, { mount: mountUi, label: "Inputs" }) }) : null,
+          /* @__PURE__ */ jsxs7(Section, { name: "outputs", open: sections.includes("outputs"), empty: hidden && note === null && folded2.length === 0, children: [
+            /* @__PURE__ */ jsx12("div", { className: "blockr-card-output-frame", hidden, "data-faded": status?.status === "stale" ? "" : void 0, children: /* @__PURE__ */ jsx12(Mounted, { mount: mountOutput, label: "Output", className: "blockr-card-output" }) }),
+            note === null ? null : /* @__PURE__ */ jsx12("p", { className: "blockr-card-status-note", children: plainText(note) }),
+            /* @__PURE__ */ jsx12(WarningsAndMessages, { notifications: folded2 })
+          ] })
         ] })
       ]
     }
@@ -3447,8 +3548,9 @@ function BlockCard({ id }) {
 }
 
 // srcts/modules/dock/dock.tsx
+import { useBoard as useBoard4 } from "@blockr/core/react";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./vendor-a3ad4872.js";
-import { useCallback as useCallback8, useEffect as useEffect3, useMemo as useMemo3, useRef as useRef8, useState as useState8, useSyncExternalStore as useSyncExternalStore3 } from "react";
+import { useCallback as useCallback7, useEffect as useEffect3, useMemo as useMemo4, useRef as useRef8, useState as useState8, useSyncExternalStore as useSyncExternalStore2 } from "react";
 
 // srcts/modules/dock/drawing.ts
 var EMPTY2 = { orientation: "horizontal", children: [], sizes: [] };
@@ -3738,8 +3840,9 @@ function sharesNear(a, b, tolerance) {
 }
 
 // srcts/modules/dock/picker.tsx
-import { createContext as createContext2, useCallback as useCallback6, useContext as useContext2, useId as useId3, useMemo as useMemo2, useState as useState5 } from "react";
-import { jsx as jsx12, jsxs as jsxs7 } from "react/jsx-runtime";
+import { useBoard as useBoard2 } from "@blockr/core/react";
+import { createContext as createContext2, useCallback as useCallback5, useContext as useContext2, useId as useId3, useMemo as useMemo3, useState as useState5 } from "react";
+import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
 var PickerContext = createContext2(null);
 function usePicker() {
   const value = useContext2(PickerContext);
@@ -3748,17 +3851,17 @@ function usePicker() {
 }
 function PanelPicker({ children: children2 }) {
   const [picking, setPicking] = useState5(void 0);
-  const state = useMemo2(() => ({ picking, setPicking }), [picking]);
-  const close = useCallback6(
+  const state = useMemo3(() => ({ picking, setPicking }), [picking]);
+  const close = useCallback5(
     (how) => {
       setPicking(void 0);
       if (how.restore) picking?.button.focus({ preventScroll: true, focusVisible: !how.pointer });
     },
     [picking]
   );
-  return /* @__PURE__ */ jsxs7(PickerContext, { value: state, children: [
+  return /* @__PURE__ */ jsxs8(PickerContext, { value: state, children: [
     children2,
-    picking === void 0 ? null : /* @__PURE__ */ jsx12(PickerMenu, { picking, onClose: close })
+    picking === void 0 ? null : /* @__PURE__ */ jsx13(PickerMenu, { picking, onClose: close })
   ] });
 }
 function usePickerButton(near2) {
@@ -3784,7 +3887,7 @@ function pickerGroups(board, registry, drawn, pick) {
       {
         key: block,
         label: held.name,
-        lead: /* @__PURE__ */ jsx12(Mark, { entry, size: 24 }),
+        lead: /* @__PURE__ */ jsx13(Mark, { entry, size: 24 }),
         ...entry === void 0 ? {} : { detail: entry.name },
         search: block,
         onSelect: () => {
@@ -3812,9 +3915,9 @@ function pickerGroups(board, registry, drawn, pick) {
 }
 function PickerMenu({ picking, onClose }) {
   const { core, drawn } = useDock();
-  const board = useBoard(core);
+  const board = useBoard2(core);
   const { near: near2 } = picking;
-  const groups = useMemo2(() => {
+  const groups = useMemo3(() => {
     const pick = (panel2) => {
       const view2 = dockState(core.store.board())?.active ?? null;
       if (view2 === null) return;
@@ -3824,7 +3927,7 @@ function PickerMenu({ picking, onClose }) {
     };
     return pickerGroups(board, core.blockRegistry(), drawn, pick);
   }, [board, core, drawn, near2]);
-  return /* @__PURE__ */ jsx12(
+  return /* @__PURE__ */ jsx13(
     Menu,
     {
       anchor: picking.button,
@@ -3843,11 +3946,12 @@ function nothingLeft(board, drawn) {
 }
 
 // srcts/modules/dock/views-menu.tsx
-import { useCallback as useCallback7, useLayoutEffect as useLayoutEffect7, useRef as useRef7, useState as useState7, useSyncExternalStore as useSyncExternalStore2 } from "react";
+import { useBoard as useBoard3 } from "@blockr/core/react";
+import { useCallback as useCallback6, useLayoutEffect as useLayoutEffect7, useRef as useRef7, useState as useState7, useSyncExternalStore } from "react";
 
 // srcts/modules/dock/name-field.tsx
 import { useLayoutEffect as useLayoutEffect6, useRef as useRef6, useState as useState6 } from "react";
-import { jsx as jsx13 } from "react/jsx-runtime";
+import { jsx as jsx14 } from "react/jsx-runtime";
 function NameField2({ name: name2, label, className, onSubmit, onDone }) {
   const [text2, setText] = useState6(name2);
   const ref2 = useRef6(null);
@@ -3863,7 +3967,7 @@ function NameField2({ name: name2, label, className, onSubmit, onDone }) {
     if (submit && trimmed !== "" && trimmed !== name2) onSubmit(trimmed);
     onDone();
   }
-  return /* @__PURE__ */ jsx13(
+  return /* @__PURE__ */ jsx14(
     "input",
     {
       ref: ref2,
@@ -3956,7 +4060,7 @@ function after(state, row) {
 }
 
 // srcts/modules/dock/views-menu.tsx
-import { Fragment as Fragment5, jsx as jsx14, jsxs as jsxs8 } from "react/jsx-runtime";
+import { Fragment as Fragment5, jsx as jsx15, jsxs as jsxs9 } from "react/jsx-runtime";
 var ACTIVATE_VIEW = "blockr.dock-activate_view";
 var ADD_VIEW = "blockr.dock-add_view";
 var ADD_FOLDER = "blockr.dock-add_folder";
@@ -3970,24 +4074,24 @@ var SET_OPTION = "blockr.core-set_option";
 var EDGE2 = 24;
 var STEP = 8;
 function useViewTabs(core) {
-  const subscribe = useCallback7(
+  const subscribe = useCallback6(
     (changed) => core.store.subscribe(() => {
       changed();
     }),
     [core]
   );
-  return useSyncExternalStore2(subscribe, () => core.store.board().options.view_tabs === true);
+  return useSyncExternalStore(subscribe, () => core.store.board().options.view_tabs === true);
 }
 function Views({ openFolders }) {
   const { core } = useDock();
-  const board = useBoard(core);
+  const board = useBoard3(core);
   const state = dockState(board);
   if (state === void 0) return null;
   const tabs = board.options.view_tabs === true;
-  return /* @__PURE__ */ jsxs8("div", { className: "blockr-dock-bar-views", "data-tabs": tabs ? "" : void 0, children: [
-    tabs ? /* @__PURE__ */ jsx14(TabLine, { state, openFolders }) : null,
-    /* @__PURE__ */ jsx14(ViewsMenu, { state, openFolders, tabs }),
-    tabs ? null : /* @__PURE__ */ jsx14("span", { className: "blockr-dock-bar-rule", "aria-hidden": "true" })
+  return /* @__PURE__ */ jsxs9("div", { className: "blockr-dock-bar-views", "data-tabs": tabs ? "" : void 0, children: [
+    tabs ? /* @__PURE__ */ jsx15(TabLine, { state, openFolders }) : null,
+    /* @__PURE__ */ jsx15(ViewsMenu, { state, openFolders, tabs }),
+    tabs ? null : /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-rule", "aria-hidden": "true" })
   ] });
 }
 function ViewsMenu({ state, openFolders, tabs }) {
@@ -4005,7 +4109,7 @@ function ViewsMenu({ state, openFolders, tabs }) {
       setOpened(null);
     }
   );
-  const close = useCallback7((how) => {
+  const close = useCallback6((how) => {
     setOpened(null);
     if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
   }, []);
@@ -4015,7 +4119,7 @@ function ViewsMenu({ state, openFolders, tabs }) {
     {
       key: "manage",
       label: "Manage views",
-      lead: /* @__PURE__ */ jsx14(SlidersIcon, {}),
+      lead: /* @__PURE__ */ jsx15(SlidersIcon, {}),
       divided: true,
       onSelect: () => {
         setOpened({ ...at2, managing: true });
@@ -4030,8 +4134,8 @@ function ViewsMenu({ state, openFolders, tabs }) {
       }
     }
   ];
-  return /* @__PURE__ */ jsxs8(Fragment5, { children: [
-    /* @__PURE__ */ jsxs8(
+  return /* @__PURE__ */ jsxs9(Fragment5, { children: [
+    /* @__PURE__ */ jsxs9(
       "button",
       {
         ref: button,
@@ -4041,12 +4145,12 @@ function ViewsMenu({ state, openFolders, tabs }) {
         ...tabs ? { title: "Views" } : cutTip((cut) => cut ? name2 : void 0),
         ...props,
         children: [
-          tabs ? null : /* @__PURE__ */ jsx14("span", { className: "blockr-dock-bar-label", children: name2 }),
-          /* @__PURE__ */ jsx14(Chevron, {})
+          tabs ? null : /* @__PURE__ */ jsx15("span", { className: "blockr-dock-bar-label", children: name2 }),
+          /* @__PURE__ */ jsx15(Chevron, {})
         ]
       }
     ),
-    opened === null ? null : opened.managing ? /* @__PURE__ */ jsx14(
+    opened === null ? null : opened.managing ? /* @__PURE__ */ jsx15(
       Manage,
       {
         anchor: opened.anchor,
@@ -4058,7 +4162,7 @@ function ViewsMenu({ state, openFolders, tabs }) {
           setOpened({ ...opened, managing: false });
         }
       }
-    ) : /* @__PURE__ */ jsx14(
+    ) : /* @__PURE__ */ jsx15(
       Menu,
       {
         anchor: opened.anchor,
@@ -4156,7 +4260,7 @@ function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }) {
       follow(void 0);
     }
   });
-  return /* @__PURE__ */ jsxs8(
+  return /* @__PURE__ */ jsxs9(
     "div",
     {
       ref: ref2,
@@ -4177,12 +4281,12 @@ function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }) {
         onClose({ restore: true, pointer: false });
       },
       children: [
-        /* @__PURE__ */ jsx14("div", { ref: rowList, className: "blockr-dock-views-rows", children: rows.map((row, i) => {
+        /* @__PURE__ */ jsx15("div", { ref: rowList, className: "blockr-dock-views-rows", children: rows.map((row, i) => {
           const { entry } = row;
           const key = keyOf(entry);
           const name2 = nameOf(state, entry);
           if (confirming === key) {
-            return /* @__PURE__ */ jsx14(
+            return /* @__PURE__ */ jsx15(
               ConfirmRow,
               {
                 name: name2,
@@ -4199,7 +4303,7 @@ function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }) {
               key
             );
           }
-          return /* @__PURE__ */ jsx14(
+          return /* @__PURE__ */ jsx15(
             ManagedRow,
             {
               row,
@@ -4231,17 +4335,17 @@ function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }) {
             key
           );
         }) }),
-        /* @__PURE__ */ jsx14("hr", { className: "blockr-dock-menu-divider" }),
-        /* @__PURE__ */ jsxs8("div", { className: "blockr-dock-views-foot", children: [
-          /* @__PURE__ */ jsxs8("button", { type: "button", className: "blockr-dock-views-add", onClick: addView, children: [
-            /* @__PURE__ */ jsx14(PlusIcon, {}),
+        /* @__PURE__ */ jsx15("hr", { className: "blockr-dock-menu-divider" }),
+        /* @__PURE__ */ jsxs9("div", { className: "blockr-dock-views-foot", children: [
+          /* @__PURE__ */ jsxs9("button", { type: "button", className: "blockr-dock-views-add", onClick: addView, children: [
+            /* @__PURE__ */ jsx15(PlusIcon, {}),
             "New view"
           ] }),
-          /* @__PURE__ */ jsxs8("button", { type: "button", className: "blockr-dock-views-add", onClick: addFolder, children: [
-            /* @__PURE__ */ jsx14(PlusIcon, {}),
+          /* @__PURE__ */ jsxs9("button", { type: "button", className: "blockr-dock-views-add", onClick: addFolder, children: [
+            /* @__PURE__ */ jsx15(PlusIcon, {}),
             "New folder"
           ] }),
-          /* @__PURE__ */ jsx14(
+          /* @__PURE__ */ jsx15(
             "button",
             {
               type: "button",
@@ -4284,7 +4388,7 @@ function ManagedRow({
     nameButton.current?.focus();
   }, [renaming]);
   const style = { ...depthStyle(row.depth), ...mark === void 0 ? {} : { "--drop-depth": mark.depth } };
-  return /* @__PURE__ */ jsxs8(
+  return /* @__PURE__ */ jsxs9(
     "div",
     {
       ref: el,
@@ -4294,8 +4398,8 @@ function ManagedRow({
       "data-dragging": dragging ? "" : void 0,
       style,
       children: [
-        /* @__PURE__ */ jsx14("span", { className: "blockr-dock-views-grip", "aria-hidden": "true", ...grip, children: /* @__PURE__ */ jsx14(GripIcon, {}) }),
-        isView2 ? slot ? /* @__PURE__ */ jsx14("span", { className: "blockr-dock-views-slot" }) : null : /* @__PURE__ */ jsx14(
+        /* @__PURE__ */ jsx15("span", { className: "blockr-dock-views-grip", "aria-hidden": "true", ...grip, children: /* @__PURE__ */ jsx15(GripIcon, {}) }),
+        isView2 ? slot ? /* @__PURE__ */ jsx15("span", { className: "blockr-dock-views-slot" }) : null : /* @__PURE__ */ jsx15(
           "button",
           {
             type: "button",
@@ -4303,10 +4407,10 @@ function ManagedRow({
             "aria-expanded": row.open,
             "aria-label": `${row.open ? "Close" : "Open"} the folder ${name2}`,
             onClick: onFold,
-            children: /* @__PURE__ */ jsx14(Chevron, {})
+            children: /* @__PURE__ */ jsx15(Chevron, {})
           }
         ),
-        renaming ? /* @__PURE__ */ jsx14(
+        renaming ? /* @__PURE__ */ jsx15(
           NameField2,
           {
             name: name2,
@@ -4319,7 +4423,7 @@ function ManagedRow({
               onRenameDone();
             }
           }
-        ) : /* @__PURE__ */ jsx14(
+        ) : /* @__PURE__ */ jsx15(
           "button",
           {
             ref: nameButton,
@@ -4331,7 +4435,7 @@ Click to rename` : "Click to rename"),
             children: name2
           }
         ),
-        removable2 ? /* @__PURE__ */ jsx14(
+        removable2 ? /* @__PURE__ */ jsx15(
           "button",
           {
             type: "button",
@@ -4339,7 +4443,7 @@ Click to rename` : "Click to rename"),
             "aria-label": `Remove ${name2}`,
             title: isView2 ? "Remove view" : "Remove folder",
             onClick: onConfirm,
-            children: /* @__PURE__ */ jsx14(RemoveIcon, {})
+            children: /* @__PURE__ */ jsx15(RemoveIcon, {})
           }
         ) : null
       ]
@@ -4351,7 +4455,7 @@ function ConfirmRow({ name: name2, depth, onRemove, onCancel }) {
   useLayoutEffect7(() => {
     removeButton.current?.focus();
   }, []);
-  return /* @__PURE__ */ jsxs8(
+  return /* @__PURE__ */ jsxs9(
     "div",
     {
       className: "blockr-dock-views-managed",
@@ -4369,8 +4473,8 @@ function ConfirmRow({ name: name2, depth, onRemove, onCancel }) {
         onCancel();
       },
       children: [
-        /* @__PURE__ */ jsx14("span", { className: "blockr-dock-views-confirm-text", children: `Remove \u201C${name2}\u201D?` }),
-        /* @__PURE__ */ jsx14("button", { ref: removeButton, type: "button", className: "blockr-dock-views-confirm", onClick: onRemove, children: "Remove" })
+        /* @__PURE__ */ jsx15("span", { className: "blockr-dock-views-confirm-text", children: `Remove \u201C${name2}\u201D?` }),
+        /* @__PURE__ */ jsx15("button", { ref: removeButton, type: "button", className: "blockr-dock-views-confirm", onClick: onRemove, children: "Remove" })
       ]
     }
   );
@@ -4383,8 +4487,8 @@ function TabLine({ state, openFolders }) {
   useLayoutEffect7(() => {
     reveal(line.current);
   }, [active, outer]);
-  return /* @__PURE__ */ jsx14("nav", { ref: line, className: "blockr-dock-tabs", "aria-label": "Views", children: inFolder(state, null).map(
-    (entry) => "view" in entry ? /* @__PURE__ */ jsx14(
+  return /* @__PURE__ */ jsx15("nav", { ref: line, className: "blockr-dock-tabs", "aria-label": "Views", children: inFolder(state, null).map(
+    (entry) => "view" in entry ? /* @__PURE__ */ jsx15(
       "button",
       {
         type: "button",
@@ -4396,7 +4500,7 @@ function TabLine({ state, openFolders }) {
         children: nameOf(state, entry)
       },
       keyOf(entry)
-    ) : /* @__PURE__ */ jsx14(FolderTab, { state, folder: entry.folder, current: entry.folder === outer, openFolders }, keyOf(entry))
+    ) : /* @__PURE__ */ jsx15(FolderTab, { state, folder: entry.folder, current: entry.folder === outer, openFolders }, keyOf(entry))
   ) });
 }
 function FolderTab({ state, folder: folder2, current, openFolders }) {
@@ -4414,17 +4518,17 @@ function FolderTab({ state, folder: folder2, current, openFolders }) {
       setOpened(null);
     }
   );
-  const close = useCallback7((how) => {
+  const close = useCallback6((how) => {
     setOpened(null);
     if (how.restore) button.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
   }, []);
   const name2 = nameOf(state, { folder: folder2 });
-  return /* @__PURE__ */ jsxs8(Fragment5, { children: [
-    /* @__PURE__ */ jsxs8("button", { ref: button, type: "button", className: "blockr-dock-tab", "aria-current": current ? "true" : void 0, ...props, children: [
+  return /* @__PURE__ */ jsxs9(Fragment5, { children: [
+    /* @__PURE__ */ jsxs9("button", { ref: button, type: "button", className: "blockr-dock-tab", "aria-current": current ? "true" : void 0, ...props, children: [
       name2,
-      /* @__PURE__ */ jsx14(Chevron, {})
+      /* @__PURE__ */ jsx15(Chevron, {})
     ] }),
-    opened === null ? null : /* @__PURE__ */ jsx14(
+    opened === null ? null : /* @__PURE__ */ jsx15(
       Menu,
       {
         anchor: opened.anchor,
@@ -4438,7 +4542,7 @@ function FolderTab({ state, folder: folder2, current, openFolders }) {
   ] });
 }
 function useOpenFolders(openFolders) {
-  return useSyncExternalStore2(openFolders.subscribe, openFolders.get);
+  return useSyncExternalStore(openFolders.subscribe, openFolders.get);
 }
 function activeHolders(state) {
   return state.active === null ? [] : foldersHolding(state, { view: state.active });
@@ -4503,15 +4607,15 @@ function depthStyle(depth) {
 }
 
 // srcts/modules/dock/dock.tsx
-import { Fragment as Fragment6, jsx as jsx15, jsxs as jsxs9 } from "react/jsx-runtime";
+import { Fragment as Fragment6, jsx as jsx16, jsxs as jsxs10 } from "react/jsx-runtime";
 function PanelFrame({ params }) {
   const { panel: panel2 } = params;
-  return "block" in panel2 ? /* @__PURE__ */ jsx15("div", { className: "blockr-dock-panel", "data-block": panel2.block, children: /* @__PURE__ */ jsx15(BlockCard, { id: panel2.block }) }) : /* @__PURE__ */ jsx15(PluginFrame, { plugin: panel2.plugin });
+  return "block" in panel2 ? /* @__PURE__ */ jsx16("div", { className: "blockr-dock-panel", "data-block": panel2.block, children: /* @__PURE__ */ jsx16(BlockCard, { id: panel2.block }) }) : /* @__PURE__ */ jsx16(PluginFrame, { plugin: panel2.plugin });
 }
 function PluginFrame({ plugin }) {
   const { core } = useDock();
-  const mount = useCallback8((el) => core.mountPlugin(el, plugin), [core, plugin]);
-  return /* @__PURE__ */ jsx15(Mounted, { mount, className: "blockr-dock-panel", data: { "data-plugin": plugin } });
+  const mount = useCallback7((el) => core.mountPlugin(el, plugin), [core, plugin]);
+  return /* @__PURE__ */ jsx16(Mounted, { mount, className: "blockr-dock-panel", data: { "data-plugin": plugin } });
 }
 var components = { [PANEL_COMPONENT]: PanelFrame };
 function Tab(props) {
@@ -4520,7 +4624,7 @@ function Tab(props) {
   const onPointerDown = "block" in panel2 ? () => {
     giveFocus(core, panel2.block);
   } : void 0;
-  return /* @__PURE__ */ jsx15(DockviewDefaultTab, { ...props, hideClose: core.lock.board, onPointerDown });
+  return /* @__PURE__ */ jsx16(DockviewDefaultTab, { ...props, hideClose: core.lock.board, onPointerDown });
 }
 function AddPanelButton({ api: api2, group }) {
   const button = usePickerButton(() => {
@@ -4528,7 +4632,7 @@ function AddPanelButton({ api: api2, group }) {
     return shown === void 0 ? void 0 : panelFromId(shown.id);
   });
   if (api2.location.type === "edge") return null;
-  return /* @__PURE__ */ jsx15("div", { className: "blockr-dock-add-slot", children: /* @__PURE__ */ jsx15("button", { type: "button", className: "blockr-dock-add", "aria-label": "Add panel", ...button, children: /* @__PURE__ */ jsx15("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx15("path", { d: "M8 3v10M3 8h10", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }) }) }) });
+  return /* @__PURE__ */ jsx16("div", { className: "blockr-dock-add-slot", children: /* @__PURE__ */ jsx16("button", { type: "button", className: "blockr-dock-add", "aria-label": "Add panel", ...button, children: /* @__PURE__ */ jsx16("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx16("path", { d: "M8 3v10M3 8h10", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }) }) }) });
 }
 function showsNothing(board, drawn) {
   const view2 = activeView(board);
@@ -4537,34 +4641,34 @@ function showsNothing(board, drawn) {
 }
 function EmptyView() {
   const { core, drawn } = useDock();
-  const board = useBoard(core);
+  const board = useBoard4(core);
   if (!showsNothing(board, drawn)) return null;
-  if (!core.lock.board) return /* @__PURE__ */ jsx15(EmptyPrompt, {});
-  return /* @__PURE__ */ jsxs9("div", { className: "blockr-dock-empty", children: [
-    /* @__PURE__ */ jsx15(LockIcon, { size: 32 }),
-    /* @__PURE__ */ jsx15("p", { children: "This view is empty" })
+  if (!core.lock.board) return /* @__PURE__ */ jsx16(EmptyPrompt, {});
+  return /* @__PURE__ */ jsxs10("div", { className: "blockr-dock-empty", children: [
+    /* @__PURE__ */ jsx16(LockIcon, { size: 32 }),
+    /* @__PURE__ */ jsx16("p", { children: "This view is empty" })
   ] });
 }
 function EmptyPrompt() {
   const button = usePickerButton(() => void 0);
-  return /* @__PURE__ */ jsxs9("div", { className: "blockr-dock-empty", children: [
-    /* @__PURE__ */ jsxs9("svg", { viewBox: "0 0 16 16", width: "32", height: "32", "aria-hidden": "true", focusable: "false", children: [
-      /* @__PURE__ */ jsx15("circle", { cx: "8", cy: "8", r: "6.5", fill: "none", stroke: "currentColor" }),
-      /* @__PURE__ */ jsx15("path", { d: "M8 5v6M5 8h6", fill: "none", stroke: "currentColor", strokeLinecap: "round" })
+  return /* @__PURE__ */ jsxs10("div", { className: "blockr-dock-empty", children: [
+    /* @__PURE__ */ jsxs10("svg", { viewBox: "0 0 16 16", width: "32", height: "32", "aria-hidden": "true", focusable: "false", children: [
+      /* @__PURE__ */ jsx16("circle", { cx: "8", cy: "8", r: "6.5", fill: "none", stroke: "currentColor" }),
+      /* @__PURE__ */ jsx16("path", { d: "M8 5v6M5 8h6", fill: "none", stroke: "currentColor", strokeLinecap: "round" })
     ] }),
-    /* @__PURE__ */ jsx15("p", { children: "Start by adding a panel" }),
-    /* @__PURE__ */ jsx15("button", { type: "button", className: "blockr-dock-empty-add", ...button, children: "Add panel" })
+    /* @__PURE__ */ jsx16("p", { children: "Start by adding a panel" }),
+    /* @__PURE__ */ jsx16("button", { type: "button", className: "blockr-dock-empty-add", ...button, children: "Add panel" })
   ] });
 }
 function Dock({ core, plugin, settings, narrow, drawn, viewsMenu, sidebar }) {
   const root = useRef8(null);
   const stop = useRef8(void 0);
   const [tooltips] = useState8(createTooltips);
-  const shared = useMemo3(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
+  const shared = useMemo4(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
   const locked = core.lock.board;
   const tabs = useViewTabs(core) && viewsMenu;
-  const { pinned } = useSyncExternalStore3(sidebar.subscribe, sidebar.state);
-  const onReady = useCallback8(
+  const { pinned } = useSyncExternalStore2(sidebar.subscribe, sidebar.state);
+  const onReady = useCallback7(
     (event) => {
       const el = root.current;
       if (el === null) return;
@@ -4580,8 +4684,8 @@ function Dock({ core, plugin, settings, narrow, drawn, viewsMenu, sidebar }) {
     },
     []
   );
-  const view2 = /* @__PURE__ */ jsxs9(Fragment6, { children: [
-    /* @__PURE__ */ jsx15(
+  const view2 = /* @__PURE__ */ jsxs10(Fragment6, { children: [
+    /* @__PURE__ */ jsx16(
       DockviewReact,
       {
         components,
@@ -4592,13 +4696,14 @@ function Dock({ core, plugin, settings, narrow, drawn, viewsMenu, sidebar }) {
         ...locked ? {} : { leftHeaderActionsComponent: AddPanelButton }
       }
     ),
-    /* @__PURE__ */ jsx15(EmptyView, {})
+    /* @__PURE__ */ jsx16(EmptyView, {})
   ] });
-  return /* @__PURE__ */ jsx15(DockContext, { value: shared, children: /* @__PURE__ */ jsx15("div", { className: "blockr-dock", ref: root, "data-tabs": tabs ? "" : void 0, "data-pushed": pinned ? "" : void 0, children: locked ? view2 : /* @__PURE__ */ jsx15(PanelPicker, { children: view2 }) }) });
+  return /* @__PURE__ */ jsx16(DockContext, { value: shared, children: /* @__PURE__ */ jsx16("div", { className: "blockr-dock", ref: root, "data-tabs": tabs ? "" : void 0, "data-pushed": pinned ? "" : void 0, children: locked ? view2 : /* @__PURE__ */ jsx16(PanelPicker, { children: view2 }) }) });
 }
 
 // srcts/modules/dock/navbar.tsx
-import { useCallback as useCallback9, useEffect as useEffect4, useReducer, useRef as useRef9, useState as useState9, useSyncExternalStore as useSyncExternalStore4 } from "react";
+import { useBoard as useBoard5 } from "@blockr/core/react";
+import { useCallback as useCallback8, useEffect as useEffect4, useReducer, useRef as useRef9, useState as useState9, useSyncExternalStore as useSyncExternalStore3 } from "react";
 
 // srcts/modules/dock/navbar-items.ts
 var PARTS = ["logo", "name", "storage", "undo_redo", "spacer", "views", "read_only", "options"];
@@ -4674,14 +4779,14 @@ function isPart(id) {
 }
 
 // srcts/modules/dock/navbar.tsx
-import { jsx as jsx16, jsxs as jsxs10 } from "react/jsx-runtime";
+import { jsx as jsx17, jsxs as jsxs11 } from "react/jsx-runtime";
 function Navbar({ items, busy, sidebar, mac, openFolders }) {
   const { core } = useDock();
   const storage = useStorage(core);
-  const { pinned } = useSyncExternalStore4(sidebar.subscribe, sidebar.state);
+  const { pinned } = useSyncExternalStore3(sidebar.subscribe, sidebar.state);
   const apart = new Set(items.flatMap((item) => item.kind === "storage" ? [item.id] : []));
   const tabs = useViewTabs(core) && holdsPart(items, "views");
-  return /* @__PURE__ */ jsx16("header", { className: "blockr-dock-bar", "data-tabs": tabs ? "" : void 0, "data-pushed": pinned ? "" : void 0, children: items.map((item) => /* @__PURE__ */ jsx16(
+  return /* @__PURE__ */ jsx17("header", { className: "blockr-dock-bar", "data-tabs": tabs ? "" : void 0, "data-pushed": pinned ? "" : void 0, children: items.map((item) => /* @__PURE__ */ jsx17(
     Item,
     {
       item,
@@ -4698,38 +4803,38 @@ function Navbar({ items, busy, sidebar, mac, openFolders }) {
 function Item({ item, storage, apart, busy, sidebar, mac, openFolders }) {
   switch (item.kind) {
     case "part":
-      return /* @__PURE__ */ jsx16(Part, { id: item.id, storage, apart, busy, sidebar, mac, openFolders });
+      return /* @__PURE__ */ jsx17(Part, { id: item.id, storage, apart, busy, sidebar, mac, openFolders });
     case "storage": {
       const control = storage?.failed === void 0 ? storage?.controls.find((c) => c.id === item.id) : void 0;
-      return control === void 0 ? null : /* @__PURE__ */ jsx16(StorageControlView, { control });
+      return control === void 0 ? null : /* @__PURE__ */ jsx17(StorageControlView, { control });
     }
     case "link":
-      return /* @__PURE__ */ jsx16(Link, { item });
+      return /* @__PURE__ */ jsx17(Link, { item });
     case "menu":
-      return /* @__PURE__ */ jsx16(MenuButton, { label: item.label, entries: linkEntries(item.items), className: "blockr-dock-bar-button" });
+      return /* @__PURE__ */ jsx17(MenuButton, { label: item.label, entries: linkEntries(item.items), className: "blockr-dock-bar-button" });
     case "module":
-      return /* @__PURE__ */ jsx16(ModuleSlot, { item });
+      return /* @__PURE__ */ jsx17(ModuleSlot, { item });
   }
 }
 function Part({ id, storage, apart, busy, sidebar, mac, openFolders }) {
   const { core } = useDock();
   switch (id) {
     case "logo":
-      return /* @__PURE__ */ jsx16(Logo, { busy });
+      return /* @__PURE__ */ jsx17(Logo, { busy });
     case "name":
-      return /* @__PURE__ */ jsx16(BoardName, {});
+      return /* @__PURE__ */ jsx17(BoardName, {});
     case "storage":
-      return /* @__PURE__ */ jsx16(StorageControls, { storage, apart });
+      return /* @__PURE__ */ jsx17(StorageControls, { storage, apart });
     case "undo_redo":
-      return /* @__PURE__ */ jsx16(UndoRedo, { mac });
+      return /* @__PURE__ */ jsx17(UndoRedo, { mac });
     case "spacer":
-      return /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-spacer", "aria-hidden": "true" });
+      return /* @__PURE__ */ jsx17("span", { className: "blockr-dock-bar-spacer", "aria-hidden": "true" });
     case "views":
-      return /* @__PURE__ */ jsx16(Views, { openFolders });
+      return /* @__PURE__ */ jsx17(Views, { openFolders });
     case "read_only":
-      return core.lock.board ? /* @__PURE__ */ jsx16(ReadOnlyPill, {}) : null;
+      return core.lock.board ? /* @__PURE__ */ jsx17(ReadOnlyPill, {}) : null;
     case "options":
-      return /* @__PURE__ */ jsx16(OptionsButton, { sidebar });
+      return /* @__PURE__ */ jsx17(OptionsButton, { sidebar });
   }
 }
 var CELLS = [
@@ -4742,19 +4847,19 @@ var CELLS = [
   [2, 2]
 ];
 function Logo({ busy }) {
-  const turning = useSyncExternalStore4(busy.subscribe, busy.get);
-  return /* @__PURE__ */ jsxs10("span", { className: turning ? "blockr-dock-logo is-computing" : "blockr-dock-logo", title: turning ? "Computing" : void 0, children: [
-    /* @__PURE__ */ jsx16("svg", { className: "blockr-dock-logo-mark", width: "20", height: "20", viewBox: "0 0 224 224", "aria-hidden": "true", focusable: "false", children: CELLS.map(([x, y], i) => /* @__PURE__ */ jsx16("rect", { style: { "--i": i }, x: x * 80, y: y * 80, width: "64", height: "64", rx: "7" }, i)) }),
-    /* @__PURE__ */ jsx16("span", { className: "blockr-dock-visually-hidden", role: "status", children: turning ? "Computing" : "" })
+  const turning = useSyncExternalStore3(busy.subscribe, busy.get);
+  return /* @__PURE__ */ jsxs11("span", { className: turning ? "blockr-dock-logo is-computing" : "blockr-dock-logo", title: turning ? "Computing" : void 0, children: [
+    /* @__PURE__ */ jsx17("svg", { className: "blockr-dock-logo-mark", width: "20", height: "20", viewBox: "0 0 224 224", "aria-hidden": "true", focusable: "false", children: CELLS.map(([x, y], i) => /* @__PURE__ */ jsx17("rect", { style: { "--i": i }, x: x * 80, y: y * 80, width: "64", height: "64", rx: "7" }, i)) }),
+    /* @__PURE__ */ jsx17("span", { className: "blockr-dock-visually-hidden", role: "status", children: turning ? "Computing" : "" })
   ] });
 }
 function BoardName() {
   const { core } = useDock();
-  const board = useBoard(core);
+  const board = useBoard5(core);
   const [renaming, setRenaming] = useState9(false);
   const locked = core.lock.board;
   if (renaming) {
-    return /* @__PURE__ */ jsx16(
+    return /* @__PURE__ */ jsx17(
       NameField2,
       {
         name: board.name,
@@ -4775,9 +4880,9 @@ function BoardName() {
 Click to rename` : "Click to rename";
   });
   if (locked) {
-    return /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-name blockr-dock-bar-shrinks", ...tip, children: /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-label", children: board.name }) });
+    return /* @__PURE__ */ jsx17("span", { className: "blockr-dock-bar-name blockr-dock-bar-shrinks", ...tip, children: /* @__PURE__ */ jsx17("span", { className: "blockr-dock-bar-label", children: board.name }) });
   }
-  return /* @__PURE__ */ jsx16(
+  return /* @__PURE__ */ jsx17(
     "button",
     {
       type: "button",
@@ -4787,25 +4892,25 @@ Click to rename` : "Click to rename";
         setRenaming(true);
       },
       ...tip,
-      children: /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-label", children: board.name })
+      children: /* @__PURE__ */ jsx17("span", { className: "blockr-dock-bar-label", children: board.name })
     }
   );
 }
 function StorageControls({ storage, apart }) {
   if (storage === void 0) return null;
   if (storage.failed !== void 0) {
-    return /* @__PURE__ */ jsx16(Warning, { message: `The storage controls of ${storage.package} failed: ${storage.failed}` });
+    return /* @__PURE__ */ jsx17(Warning, { message: `The storage controls of ${storage.package} failed: ${storage.failed}` });
   }
   const shown = storage.controls.filter((control) => !apart.has(control.id));
   if (shown.length === 0) return null;
-  return /* @__PURE__ */ jsx16("div", { className: "blockr-dock-bar-storage blockr-dock-bar-shrinks", children: shown.map((control) => /* @__PURE__ */ jsx16(StorageControlView, { control }, control.id)) });
+  return /* @__PURE__ */ jsx17("div", { className: "blockr-dock-bar-storage blockr-dock-bar-shrinks", children: shown.map((control) => /* @__PURE__ */ jsx17(StorageControlView, { control }, control.id)) });
 }
 function StorageControlView({ control }) {
   const { core } = useDock();
   const tip = control.kind === "menu" || control.tooltip === void 0 ? cutTip((cut) => cut ? labelOf(control) : void 0) : {};
   switch (control.kind) {
     case "button":
-      return /* @__PURE__ */ jsx16(
+      return /* @__PURE__ */ jsx17(
         "button",
         {
           type: "button",
@@ -4817,11 +4922,11 @@ function StorageControlView({ control }) {
             void runButton(core, control);
           },
           ...tip,
-          children: /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-label", children: control.label })
+          children: /* @__PURE__ */ jsx17("span", { className: "blockr-dock-bar-label", children: control.label })
         }
       );
     case "menu":
-      return /* @__PURE__ */ jsx16(
+      return /* @__PURE__ */ jsx17(
         MenuButton,
         {
           label: control.label,
@@ -4833,7 +4938,7 @@ function StorageControlView({ control }) {
         }
       );
     case "status":
-      return /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-status blockr-dock-bar-shrinks", title: control.tooltip, ...tip, children: /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-label", children: control.text }) });
+      return /* @__PURE__ */ jsx17("span", { className: "blockr-dock-bar-status blockr-dock-bar-shrinks", title: control.tooltip, ...tip, children: /* @__PURE__ */ jsx17("span", { className: "blockr-dock-bar-label", children: control.text }) });
   }
 }
 function labelOf(control) {
@@ -4867,7 +4972,7 @@ function linkEntries(items) {
   );
 }
 function Link({ item }) {
-  return /* @__PURE__ */ jsx16("a", { className: "blockr-dock-bar-button", href: item.href, target: "_blank", rel: "noopener noreferrer", children: /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-label", children: item.label }) });
+  return /* @__PURE__ */ jsx17("a", { className: "blockr-dock-bar-button", href: item.href, target: "_blank", rel: "noopener noreferrer", children: /* @__PURE__ */ jsx17("span", { className: "blockr-dock-bar-label", children: item.label }) });
 }
 function UndoRedo({ mac }) {
   const { core } = useDock();
@@ -4879,8 +4984,8 @@ function UndoRedo({ mac }) {
     } catch {
     }
   };
-  return /* @__PURE__ */ jsxs10("div", { className: "blockr-dock-bar-steps", children: [
-    /* @__PURE__ */ jsx16(
+  return /* @__PURE__ */ jsxs11("div", { className: "blockr-dock-bar-steps", children: [
+    /* @__PURE__ */ jsx17(
       "button",
       {
         type: "button",
@@ -4894,7 +4999,7 @@ function UndoRedo({ mac }) {
         children: "Undo"
       }
     ),
-    /* @__PURE__ */ jsx16(
+    /* @__PURE__ */ jsx17(
       "button",
       {
         type: "button",
@@ -4911,14 +5016,14 @@ function UndoRedo({ mac }) {
   ] });
 }
 function ReadOnlyPill() {
-  return /* @__PURE__ */ jsxs10("span", { className: "blockr-dock-bar-pill", role: "status", "aria-label": "Read-only mode", title: "Editing is disabled by this deployment.", children: [
-    /* @__PURE__ */ jsx16(LockIcon, {}),
-    /* @__PURE__ */ jsx16("span", { children: "Read-only" })
+  return /* @__PURE__ */ jsxs11("span", { className: "blockr-dock-bar-pill", role: "status", "aria-label": "Read-only mode", title: "Editing is disabled by this deployment.", children: [
+    /* @__PURE__ */ jsx17(LockIcon, {}),
+    /* @__PURE__ */ jsx17("span", { children: "Read-only" })
   ] });
 }
 function OptionsButton({ sidebar }) {
-  const { open } = useSyncExternalStore4(sidebar.subscribe, sidebar.state);
-  return /* @__PURE__ */ jsx16(
+  const { open } = useSyncExternalStore3(sidebar.subscribe, sidebar.state);
+  return /* @__PURE__ */ jsx17(
     "button",
     {
       type: "button",
@@ -4965,8 +5070,8 @@ function ModuleSlot({ item }) {
       }
     };
   }, [core, item.id, item.module]);
-  if (failure !== void 0) return /* @__PURE__ */ jsx16(Warning, { message: failure });
-  return /* @__PURE__ */ jsx16("span", { ref: ref2, className: "blockr-dock-bar-module", "data-module": item.module });
+  if (failure !== void 0) return /* @__PURE__ */ jsx17(Warning, { message: failure });
+  return /* @__PURE__ */ jsx17("span", { ref: ref2, className: "blockr-dock-bar-module", "data-module": item.module });
 }
 function navbarModule(exports) {
   if (!isObject(exports) || typeof exports.api !== "number") {
@@ -4980,7 +5085,7 @@ function navbarModule(exports) {
   return mod;
 }
 function Warning({ message }) {
-  return /* @__PURE__ */ jsx16("span", { className: "blockr-dock-bar-warning", role: "img", "aria-label": message, title: message, children: /* @__PURE__ */ jsx16(WarningIcon, {}) });
+  return /* @__PURE__ */ jsx17("span", { className: "blockr-dock-bar-warning", role: "img", "aria-label": message, title: message, children: /* @__PURE__ */ jsx17(WarningIcon, {}) });
 }
 function useStorage(core) {
   const storage = core.plugins.storage();
@@ -4994,7 +5099,7 @@ function useStorage(core) {
       return void 0;
     }
   }, [core, storage]);
-  useBoard(core);
+  useBoard5(core);
   const drawn = drawnControls(core);
   const problem = drawn?.problem;
   useEffect4(() => {
@@ -5003,14 +5108,14 @@ function useStorage(core) {
   return drawn;
 }
 function useHistory(core) {
-  const subscribe = useCallback9(
+  const subscribe = useCallback8(
     (changed) => core.store.subscribe(() => {
       changed();
     }),
     [core]
   );
-  const canUndo = useSyncExternalStore4(subscribe, () => core.store.canUndo());
-  const canRedo = useSyncExternalStore4(subscribe, () => core.store.canRedo());
+  const canUndo = useSyncExternalStore3(subscribe, () => core.store.canUndo());
+  const canRedo = useSyncExternalStore3(subscribe, () => core.store.canRedo());
   return { canUndo, canRedo };
 }
 
@@ -5070,8 +5175,9 @@ function createOpenFolders() {
 }
 
 // srcts/modules/dock/options-sidebar.tsx
-import { useCallback as useCallback10, useEffect as useEffect5, useLayoutEffect as useLayoutEffect8, useRef as useRef10, useState as useState10, useSyncExternalStore as useSyncExternalStore5 } from "react";
-import { jsx as jsx17, jsxs as jsxs11 } from "react/jsx-runtime";
+import { useBoard as useBoard6 } from "@blockr/core/react";
+import { useCallback as useCallback9, useEffect as useEffect5, useLayoutEffect as useLayoutEffect8, useRef as useRef10, useState as useState10, useSyncExternalStore as useSyncExternalStore4 } from "react";
+import { jsx as jsx18, jsxs as jsxs12 } from "react/jsx-runtime";
 var TITLE = "Board options";
 var FOCUSABLE = [
   "a[href]",
@@ -5095,8 +5201,8 @@ function categories(board, registered) {
 }
 function OptionsSidebar({ sidebar }) {
   const { core } = useDock();
-  const board = useBoard(core);
-  const { open, pinned, expanded } = useSyncExternalStore5(sidebar.subscribe, sidebar.state);
+  const board = useBoard6(core);
+  const { open, pinned, expanded } = useSyncExternalStore4(sidebar.subscribe, sidebar.state);
   const grouped = categories(board, core.options.registered());
   const defaults = useDefaults(core, [...grouped.values()].flat());
   const ref2 = useRef10(null);
@@ -5109,7 +5215,7 @@ function OptionsSidebar({ sidebar }) {
   useFocus(ref2, open);
   useKeys(ref2, sidebar);
   usePressOutside(ref2, sidebar, open && !pinned);
-  return /* @__PURE__ */ jsxs11(
+  return /* @__PURE__ */ jsxs12(
     "div",
     {
       ref: ref2,
@@ -5121,10 +5227,10 @@ function OptionsSidebar({ sidebar }) {
       inert: !open,
       "data-open": open ? "" : void 0,
       children: [
-        /* @__PURE__ */ jsxs11("header", { className: "blockr-dock-sidebar-header", children: [
-          /* @__PURE__ */ jsx17("h2", { id: title, className: "blockr-dock-sidebar-title", children: TITLE }),
-          grouped.size === 0 ? null : /* @__PURE__ */ jsx17(ExpandAll, { categories: [...grouped.keys()], expanded, sidebar }),
-          /* @__PURE__ */ jsx17(
+        /* @__PURE__ */ jsxs12("header", { className: "blockr-dock-sidebar-header", children: [
+          /* @__PURE__ */ jsx18("h2", { id: title, className: "blockr-dock-sidebar-title", children: TITLE }),
+          grouped.size === 0 ? null : /* @__PURE__ */ jsx18(ExpandAll, { categories: [...grouped.keys()], expanded, sidebar }),
+          /* @__PURE__ */ jsx18(
             "button",
             {
               type: "button",
@@ -5135,10 +5241,10 @@ function OptionsSidebar({ sidebar }) {
               onClick: () => {
                 sidebar.pin(!pinned);
               },
-              children: /* @__PURE__ */ jsx17(PinIcon, {})
+              children: /* @__PURE__ */ jsx18(PinIcon, {})
             }
           ),
-          /* @__PURE__ */ jsx17(
+          /* @__PURE__ */ jsx18(
             "button",
             {
               type: "button",
@@ -5148,11 +5254,11 @@ function OptionsSidebar({ sidebar }) {
               onClick: () => {
                 sidebar.set(false);
               },
-              children: /* @__PURE__ */ jsx17(RemoveIcon, {})
+              children: /* @__PURE__ */ jsx18(RemoveIcon, {})
             }
           )
         ] }),
-        /* @__PURE__ */ jsx17("div", { className: "blockr-dock-sidebar-body", children: grouped.size === 0 ? /* @__PURE__ */ jsx17("p", { className: "blockr-dock-sidebar-note", children: "The board holds no board options." }) : /* @__PURE__ */ jsx17("div", { className: "blockr-dock-sidebar-categories", children: [...grouped].map(([category, ids]) => /* @__PURE__ */ jsx17(
+        /* @__PURE__ */ jsx18("div", { className: "blockr-dock-sidebar-body", children: grouped.size === 0 ? /* @__PURE__ */ jsx18("p", { className: "blockr-dock-sidebar-note", children: "The board holds no board options." }) : /* @__PURE__ */ jsx18("div", { className: "blockr-dock-sidebar-categories", children: [...grouped].map(([category, ids]) => /* @__PURE__ */ jsx18(
           Category,
           {
             category,
@@ -5173,7 +5279,7 @@ function ExpandAll({
   sidebar
 }) {
   const all = categories2.every((category) => expanded.includes(category));
-  return /* @__PURE__ */ jsx17(
+  return /* @__PURE__ */ jsx18(
     "button",
     {
       type: "button",
@@ -5189,7 +5295,7 @@ function ExpandAll({
 function Category({ category, ids, expanded, changed, sidebar }) {
   const [folding, setFolding] = useState10(false);
   const folds = useRef10(0);
-  return /* @__PURE__ */ jsxs11(
+  return /* @__PURE__ */ jsxs12(
     "details",
     {
       className: "blockr-dock-sidebar-category",
@@ -5206,20 +5312,20 @@ function Category({ category, ids, expanded, changed, sidebar }) {
         });
       },
       children: [
-        /* @__PURE__ */ jsxs11("summary", { className: "blockr-dock-sidebar-summary", children: [
-          /* @__PURE__ */ jsx17("span", { className: "blockr-dock-sidebar-summary-name", children: category }),
-          /* @__PURE__ */ jsx17(Count, { n: ids.length }),
-          /* @__PURE__ */ jsx17(Chevron, {})
+        /* @__PURE__ */ jsxs12("summary", { className: "blockr-dock-sidebar-summary", children: [
+          /* @__PURE__ */ jsx18("span", { className: "blockr-dock-sidebar-summary-name", children: category }),
+          /* @__PURE__ */ jsx18(Count, { n: ids.length }),
+          /* @__PURE__ */ jsx18(Chevron, {})
         ] }),
-        expanded || folding ? /* @__PURE__ */ jsx17("div", { className: "blockr-dock-sidebar-options", children: ids.map((id) => /* @__PURE__ */ jsx17(OptionLine, { option: id, reset: changed.get(id) }, id)) }) : null
+        expanded || folding ? /* @__PURE__ */ jsx18("div", { className: "blockr-dock-sidebar-options", children: ids.map((id) => /* @__PURE__ */ jsx18(OptionLine, { option: id, reset: changed.get(id) }, id)) }) : null
       ]
     }
   );
 }
 function Count({ n }) {
-  return /* @__PURE__ */ jsxs11("span", { className: "blockr-dock-sidebar-count", children: [
-    /* @__PURE__ */ jsx17("span", { "aria-hidden": "true", children: n }),
-    /* @__PURE__ */ jsx17("span", { className: "blockr-dock-visually-hidden", children: n === 1 ? ", 1 board option" : `, ${String(n)} board options` })
+  return /* @__PURE__ */ jsxs12("span", { className: "blockr-dock-sidebar-count", children: [
+    /* @__PURE__ */ jsx18("span", { "aria-hidden": "true", children: n }),
+    /* @__PURE__ */ jsx18("span", { className: "blockr-dock-visually-hidden", children: n === 1 ? ", 1 board option" : `, ${String(n)} board options` })
   ] });
 }
 async function folded(el) {
@@ -5241,13 +5347,13 @@ function longest(durations, delays) {
 }
 function OptionLine({ option, reset }) {
   const { core } = useDock();
-  const mount = useCallback10((el) => core.mountOption(el, option), [core, option]);
+  const mount = useCallback9((el) => core.mountOption(el, option), [core, option]);
   const line = useRef10(null);
   const registered = core.options.registered();
   const label = Object.hasOwn(registered, option) ? registered[option]?.label ?? option : option;
-  return /* @__PURE__ */ jsxs11("div", { ref: line, className: "blockr-dock-sidebar-option", "data-option": option, children: [
-    /* @__PURE__ */ jsx17(Mounted, { mount, className: "blockr-dock-sidebar-option-ui" }),
-    reset === void 0 ? null : /* @__PURE__ */ jsx17(
+  return /* @__PURE__ */ jsxs12("div", { ref: line, className: "blockr-dock-sidebar-option", "data-option": option, children: [
+    /* @__PURE__ */ jsx18(Mounted, { mount, className: "blockr-dock-sidebar-option-ui" }),
+    reset === void 0 ? null : /* @__PURE__ */ jsx18(
       "button",
       {
         type: "button",
@@ -5498,21 +5604,9 @@ function startOnBoard(core, plugin, drawn, view2) {
 }
 
 // srcts/modules/dock/toasts.tsx
-import { useCallback as useCallback11, useSyncExternalStore as useSyncExternalStore6 } from "react";
-
-// srcts/modules/dock/notifications.ts
-function onCard(notification) {
-  const { about, source } = notification;
-  if (about === void 0 || !("block" in about)) return false;
-  return source.kind !== "module" || !("plugin" in source.module.object);
-}
-var ANSI = /(?:\u001b\[|\u009b)[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
-function plainText(message) {
-  return message.replace(ANSI, "");
-}
-
-// srcts/modules/dock/toasts.tsx
-import { jsx as jsx18, jsxs as jsxs12 } from "react/jsx-runtime";
+import { useBoard as useBoard7 } from "@blockr/core/react";
+import { useSyncExternalStore as useSyncExternalStore5 } from "react";
+import { jsx as jsx19, jsxs as jsxs13 } from "react/jsx-runtime";
 var SHOWN_FOR = 5e3;
 var FADES_FOR = 300;
 function createToasts(notifications) {
@@ -5629,10 +5723,10 @@ function own(record, key) {
   return Object.hasOwn(record, key) ? record[key] : void 0;
 }
 function ToastList({ core, toasts }) {
-  const list = useSyncExternalStore6(toasts.subscribe, toasts.list);
-  const board = useBoard2(core);
+  const list = useSyncExternalStore5(toasts.subscribe, toasts.list);
+  const board = useBoard7(core);
   if (list.length === 0) return null;
-  return /* @__PURE__ */ jsx18("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => /* @__PURE__ */ jsx18(
+  return /* @__PURE__ */ jsx19("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => /* @__PURE__ */ jsx19(
     ToastItem,
     {
       toast,
@@ -5646,7 +5740,7 @@ function ToastItem({ toast, title, toasts }) {
   const { notification, fading } = toast;
   const { id, severity } = notification;
   const pkg = sourcePackage(notification);
-  return /* @__PURE__ */ jsxs12(
+  return /* @__PURE__ */ jsxs13(
     "div",
     {
       className: "blockr-dock-toast",
@@ -5668,17 +5762,17 @@ function ToastItem({ toast, title, toasts }) {
         }
       },
       children: [
-        /* @__PURE__ */ jsxs12("div", { className: "blockr-dock-toast-text", children: [
-          /* @__PURE__ */ jsxs12("p", { className: "blockr-dock-toast-title", children: [
+        /* @__PURE__ */ jsxs13("div", { className: "blockr-dock-toast-text", children: [
+          /* @__PURE__ */ jsxs13("p", { className: "blockr-dock-toast-title", children: [
             title,
-            pkg === void 0 ? null : /* @__PURE__ */ jsxs12("span", { className: "blockr-dock-toast-package", children: [
+            pkg === void 0 ? null : /* @__PURE__ */ jsxs13("span", { className: "blockr-dock-toast-package", children: [
               " \xB7 ",
               pkg
             ] })
           ] }),
-          /* @__PURE__ */ jsx18("p", { className: "blockr-dock-toast-message", children: plainText(notification.message) })
+          /* @__PURE__ */ jsx19("p", { className: "blockr-dock-toast-message", children: plainText(notification.message) })
         ] }),
-        /* @__PURE__ */ jsx18(
+        /* @__PURE__ */ jsx19(
           "button",
           {
             type: "button",
@@ -5687,25 +5781,16 @@ function ToastItem({ toast, title, toasts }) {
             onClick: () => {
               toasts.close(id);
             },
-            children: /* @__PURE__ */ jsx18("span", { "aria-hidden": "true", children: "\xD7" })
+            children: /* @__PURE__ */ jsx19("span", { "aria-hidden": "true", children: "\xD7" })
           }
         )
       ]
     }
   );
 }
-function useBoard2(core) {
-  const subscribe = useCallback11(
-    (fn) => core.store.subscribe(() => {
-      fn();
-    }),
-    [core]
-  );
-  return useSyncExternalStore6(subscribe, () => core.store.board());
-}
 
 // srcts/modules/dock/index.tsx
-import { Fragment as Fragment7, jsx as jsx19, jsxs as jsxs13 } from "react/jsx-runtime";
+import { Fragment as Fragment7, jsx as jsx20, jsxs as jsxs14 } from "react/jsx-runtime";
 var api = API;
 var SHOW_PANEL = "blockr.dock-show_panel";
 var frontend = {
@@ -5727,9 +5812,9 @@ var frontend = {
     const shared = { core, plugin, drawn, tooltips: createTooltips() };
     flushSync(() => {
       root.render(
-        /* @__PURE__ */ jsxs13(Fragment7, { children: [
-          /* @__PURE__ */ jsx19(DockContext, { value: shared, children: /* @__PURE__ */ jsx19(Navbar, { items, busy, sidebar, mac: onMac(win), openFolders }) }),
-          /* @__PURE__ */ jsx19(
+        /* @__PURE__ */ jsxs14(Fragment7, { children: [
+          /* @__PURE__ */ jsx20(DockContext, { value: shared, children: /* @__PURE__ */ jsx20(Navbar, { items, busy, sidebar, mac: onMac(win), openFolders }) }),
+          /* @__PURE__ */ jsx20(
             Dock,
             {
               core,
@@ -5741,8 +5826,8 @@ var frontend = {
               sidebar
             }
           ),
-          /* @__PURE__ */ jsx19(DockContext, { value: shared, children: /* @__PURE__ */ jsx19(OptionsSidebar, { sidebar }) }),
-          /* @__PURE__ */ jsx19(ToastList, { core, toasts })
+          /* @__PURE__ */ jsx20(DockContext, { value: shared, children: /* @__PURE__ */ jsx20(OptionsSidebar, { sidebar }) }),
+          /* @__PURE__ */ jsx20(ToastList, { core, toasts })
         ] })
       );
     });
