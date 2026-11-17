@@ -179,6 +179,10 @@ test_that("print.dock_grid returns its input invisibly", {
   )
 })
 
+test_that("dock_grid() returns its grid visibly, so that it prints", {
+  expect_visible(dock_grid("a"))
+})
+
 test_that("str_value.dock_grid lists the ids of the panels", {
 
   grid <- dock_grid("b", blk("a"), rail(plg("dag")))
