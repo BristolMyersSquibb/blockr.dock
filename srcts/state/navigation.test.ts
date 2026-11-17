@@ -1,7 +1,7 @@
 // The order in which the navigation lists the views and folders.
 
 import { describe, expect, test } from "vitest";
-import { compare, firstView, foldersHolding, inFolder, keyIn, keysBetween, sameEntry, sitsAt, viewOrder, within } from "./navigation.ts";
+import { compare, firstView, foldersHolding, inFolder, keysBetween, mintKey, sameEntry, sitsAt, viewOrder, within } from "./navigation.ts";
 import { defaultState } from "./state.ts";
 import type { DockState, Folder, FolderId, View } from "./types.ts";
 
@@ -109,37 +109,37 @@ describe("sameEntry()", () => {
   });
 });
 
-describe("keyIn()", () => {
+describe("mintKey()", () => {
   test("gives a key after the last view or folder of a folder, or of the top", () => {
-    expect(keyIn(state, null, undefined)).toBe("a3");
-    expect(keyIn(state, "safety", undefined)).toBe("a2");
+    expect(mintKey(state, null, undefined)).toBe("a3");
+    expect(mintKey(state, "safety", undefined)).toBe("a2");
   });
 
   test("gives a key between the neighbours of the view or folder that it goes before", () => {
-    const key = keyIn(state, null, { folder: "safety" });
+    const key = mintKey(state, null, { folder: "safety" });
     expect(compare("a0", key)).toBe(-1);
     expect(compare(key, "a1")).toBe(-1);
-    expect(keyIn(state, null, { view: "overview" })).toBe("Zz");
+    expect(mintKey(state, null, { view: "overview" })).toBe("Zz");
   });
 
   test("gives a key in an empty folder, or one that the state lacks", () => {
-    expect(keyIn(state, "nested", { view: "labs" })).toBe("Zz");
-    expect(keyIn({ ...state, views: {} }, "safety", undefined)).toBe("a2");
+    expect(mintKey(state, "nested", { view: "labs" })).toBe("Zz");
+    expect(mintKey({ ...state, views: {} }, "safety", undefined)).toBe("a2");
   });
 
   test("leaves out the view or folder that moves", () => {
     // Moving Overview to the end of the top puts it after Listing, which the
     // key of Listing, a2, is the last before.
-    expect(keyIn(state, null, undefined, { view: "overview" })).toBe("a3");
+    expect(mintKey(state, null, undefined, { view: "overview" })).toBe("a3");
     // Moving Listing before Safety puts it between Overview and Safety.
-    const key = keyIn(state, null, { folder: "safety" }, { view: "listing" });
+    const key = mintKey(state, null, { folder: "safety" }, { view: "listing" });
     expect(compare("a0", key)).toBe(-1);
     expect(compare(key, "a1")).toBe(-1);
   });
 
   test("gives a key after the one before where two neighbours have the same key", () => {
     const tied: DockState = { ...defaultState, views: { a: view(null, "a0"), b: view(null, "a0") } };
-    expect(keyIn(tied, null, { view: "b" })).toBe("a1");
+    expect(mintKey(tied, null, { view: "b" })).toBe("a1");
   });
 });
 

@@ -201,12 +201,6 @@ async function start(options: StartOptions = {}) {
     el.remove();
   });
 
-  // Waits for the microtask in which dockview tells of a change to its
-  // layout, and for every command that it runs.
-  const after = async () => {
-    await Promise.resolve();
-    await settled();
-  };
   return {
     core,
     api,
@@ -214,7 +208,13 @@ async function start(options: StartOptions = {}) {
     made,
     disposed,
     updateOptions,
-    after,
+    // Waits for the microtask in which dockview tells of a change to its
+    // layout, and for every command that it runs.
+    // It calls the settled() that stubCore() gave above.
+    settled: async () => {
+      await Promise.resolve();
+      await settled();
+    },
     dock: () => core.store.board().plugins[DOCK] as DockState,
     grid: (view = "main") => (core.store.board().plugins[DOCK] as DockState).views[view]?.grid,
     shown: () => layoutToGrid(api.toJSON()),
@@ -252,7 +252,7 @@ describe("drawing a view", () => {
     const panel = s.panel(c);
 
     await s.core.commands.run("blockr.dock-activate_view", { view: "side" });
-    await s.after();
+    await s.settled();
 
     expect(s.shown()).toEqual(side);
     expect(s.panel(c)).toBe(panel);
@@ -274,7 +274,7 @@ describe("a gesture", () => {
     const s = await start();
 
     s.panel(a).api.setActive();
-    await s.after();
+    await s.settled();
 
     expect(s.grid()).toEqual({ ...main, children: [group(a, b), group(c)] });
     expect(s.core.store.canUndo()).toBe(false);
@@ -285,13 +285,13 @@ describe("a gesture", () => {
     const panel = s.panel(b);
 
     panel.api.moveTo({ group: s.panel(c).group, position: "center" });
-    await s.after();
+    await s.settled();
 
     expect(s.grid()).toEqual({ ...main, children: [group(a), { panels: [c, b], active: b }] });
     expect(s.core.store.canUndo()).toBe(true);
 
     s.core.store.undo();
-    await s.after();
+    await s.settled();
 
     expect(s.grid()).toEqual(main);
     expect(s.shown()).toEqual(main);
@@ -303,7 +303,7 @@ describe("a gesture", () => {
     const s = await start();
 
     s.panel(a).api.close();
-    await s.after();
+    await s.settled();
 
     expect(s.grid()).toEqual({ ...main, children: [{ panels: [b], active: b }, group(c)] });
   });
@@ -325,7 +325,7 @@ describe("a gesture", () => {
 
     s.api.layout(1003, 800, true);
     s.panel(a).group.api.setSize({ width: 400 });
-    await s.after();
+    await s.settled();
 
     expect(s.grid()).toEqual(main);
     expect(s.core.store.canUndo()).toBe(false);
@@ -339,11 +339,11 @@ describe("a gesture", () => {
     s.panel(a).api.setActive();
     s.panel(b).api.setActive();
     s.panel(a).api.setActive();
-    await s.after();
+    await s.settled();
     expect(run).not.toHaveBeenCalled();
 
     window.dispatchEvent(new PointerEvent("pointerup"));
-    await s.after();
+    await s.settled();
     expect(run.mock.calls).toEqual([["blockr.dock-activate_panel", { view: "main", panel: a }]]);
   });
 
@@ -355,11 +355,11 @@ describe("a gesture", () => {
     // after the drop.
     s.el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     s.panel(b).api.moveTo({ group: s.panel(c).group, position: "right" });
-    await s.after();
+    await s.settled();
     expect(run).not.toHaveBeenCalled();
 
     document.dispatchEvent(new Event("dragend"));
-    await s.after();
+    await s.settled();
     expect(run.mock.calls.map(([id]) => id)).toEqual(["blockr.dock-set_grid"]);
     const stored = s.grid();
     if (stored === undefined) throw new Error("The view Main has no grid.");
@@ -370,7 +370,7 @@ describe("a gesture", () => {
     const s = await start();
 
     s.api.getEdgeGroup("left")?.collapse();
-    await s.after();
+    await s.settled();
 
     expect(s.grid()?.rails?.left?.collapsed).toBe(true);
     expect(s.grid("side")?.rails?.left?.collapsed).toBe(true);
@@ -381,7 +381,7 @@ describe("a gesture", () => {
     const s = await start({ locked: true });
 
     s.panel(b).api.moveTo({ group: s.panel(c).group, position: "center" });
-    await s.after();
+    await s.settled();
 
     expect(s.grid()).toEqual(main);
     expect(s.shown()).toEqual(main);
@@ -394,7 +394,7 @@ describe("a grid that changes otherwise", () => {
     const s = await start();
 
     await s.core.commands.run("blockr.dock-show_panel", { panel: a });
-    await s.after();
+    await s.settled();
 
     expect(s.shown()).toEqual({ ...main, children: [group(a, b), group(c)] });
     expect(s.made).toEqual([a, b, c, edit].map(panelId));
@@ -405,7 +405,7 @@ describe("a grid that changes otherwise", () => {
     const panel = s.panel(a);
 
     await s.core.commands.run("blockr.dock-move_panel", { view: "main", panel: a, near: c, side: "below" });
-    await s.after();
+    await s.settled();
 
     expect(s.shown()).toEqual(s.grid());
     expect(s.panel(a)).toBe(panel);
@@ -416,11 +416,11 @@ describe("a grid that changes otherwise", () => {
     const s = await start();
 
     await s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: true });
-    await s.after();
+    await s.settled();
     expect(s.api.getEdgeGroup("left")?.isCollapsed()).toBe(true);
 
     await s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: false });
-    await s.after();
+    await s.settled();
     expect(s.api.getEdgeGroup("left")?.isCollapsed()).toBe(false);
   });
 
@@ -428,7 +428,7 @@ describe("a grid that changes otherwise", () => {
     const s = await start();
 
     await s.core.commands.run("blockr.core-rename_block", { id: "b", name: "Top rows" });
-    await s.after();
+    await s.settled();
 
     expect(s.panel(b).title).toBe("Top rows");
   });
@@ -437,7 +437,7 @@ describe("a grid that changes otherwise", () => {
     const s = await start();
 
     await s.core.commands.run("blockr.core-remove_block", { id: "b" });
-    await s.after();
+    await s.settled();
 
     expect(s.api.getPanel(panelId(b))).toBeUndefined();
     expect(s.shown()).toEqual({ ...main, children: [group(a), group(c)] });
@@ -461,7 +461,7 @@ describe("the rails", () => {
 
     s.api.layout(1000, 800, true);
     await Resizes.resized(s.el);
-    await s.after();
+    await s.settled();
 
     expect(width()).toBe(400);
     expect(s.grid()).toEqual(wide);
@@ -472,7 +472,7 @@ describe("the rails", () => {
     const s = await start();
 
     s.panel(edit).api.moveTo({ group: s.panel(c).group, position: "center" });
-    await s.after();
+    await s.settled();
 
     expect(s.api.isEdgeGroupVisible("left")).toBe(false);
     expect(s.grid()?.rails).toBeUndefined();
@@ -504,11 +504,11 @@ describe("the narrow column", () => {
     const s = await start({ breakpoint: Infinity });
 
     s.panel(a).api.setActive();
-    await s.after();
+    await s.settled();
     expect(s.grid()).toEqual({ ...main, children: [group(a, b), group(c)] });
 
     s.panel(c).api.close();
-    await s.after();
+    await s.settled();
     expect(s.grid()).toEqual({ ...main, children: [group(a, b)], sizes: [1] });
   });
 
@@ -528,11 +528,11 @@ describe("the narrow column", () => {
     expect(s.shown()).toEqual(main);
 
     setWindowWidth(500);
-    await s.after();
+    await s.settled();
     expectShows(s.shown(), stackGrid(main, 0.8).grid);
 
     setWindowWidth(1024);
-    await s.after();
+    await s.settled();
     expect(s.shown()).toEqual(main);
     expect(s.el.dataset.layout).toBe("wide");
     expect(s.el.style.height).toBe("");

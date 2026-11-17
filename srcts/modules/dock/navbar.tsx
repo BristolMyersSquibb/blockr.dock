@@ -72,7 +72,7 @@ import { ariaShortcuts, shortcutLabel } from "./shortcuts.ts";
 import type { Sidebar } from "./sidebar.ts";
 import { drawnControls, runButton } from "./storage.ts";
 import type { Drawn } from "./storage.ts";
-import { cutTip, tipFor } from "./tips.ts";
+import { cutTip, setTip } from "./tips.ts";
 import { useViewTabs, Views } from "./views-menu.tsx";
 
 
@@ -294,7 +294,7 @@ function StorageControlView({ control }: { readonly control: StorageControl }): 
           entries={storageEntries(core, control.items)}
           className="blockr-dock-bar-button blockr-dock-bar-shrinks"
           onTip={(button) => {
-            tipFor(button, (cut) => (cut ? control.label : undefined));
+            setTip(button, (cut) => (cut ? control.label : undefined));
           }}
         />
       );
