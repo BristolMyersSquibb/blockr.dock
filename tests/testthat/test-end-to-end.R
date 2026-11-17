@@ -9,6 +9,8 @@
 # dockview's gestures and what the dock writes back from them, the narrow
 # layout, the `?view=` link, the focus that a click gives a block, which blocks
 # the dock demands, and a locked board.
+# Between them, they start every example in `inst/examples`, so that an example
+# that stops working fails a test.
 
 test_that("serve() with the dock plugin serves a page that the dock draws", {
 
@@ -31,12 +33,27 @@ test_that("serve() with the dock plugin serves a page that the dock draws", {
   )
 })
 
+test_that("the dock draws each example that no other test starts", {
+
+  # The other tests act on the examples that they start.
+  # The examples left over are demos, and starting each shows that its script
+  # still serves a page that the dock draws.
+  draws <- function(example) {
+    app <- local_example_app(example)
+    wait_for_dock(app)
+  }
+
+  for (example in c("edit-board", "navbar", "views")) {
+    expect_no_error(draws(example))
+  }
+})
+
 test_that("a sash drag writes the shares that dockview shows, once it ends", {
 
-  app <- local_example_app("sized-grid")
+  app <- local_example_app("narrow-stack")
   wait_for_dock(app)
 
-  expect_equal(grid_sizes(app_grid(app, "Main")), c(0.3, 0.7))
+  expect_equal(grid_sizes(app_grid(app, "Main")), c(0.4, 0.6))
 
   # The user drags the sash between the view's two tab groups to the middle
   # between the groups' outer edges.
@@ -59,7 +76,7 @@ test_that("a sash drag writes the shares that dockview shows, once it ends", {
     middle,
     held = function() {
       Sys.sleep(0.5)
-      expect_equal(grid_sizes(app_grid(app, "Main")), c(0.3, 0.7))
+      expect_equal(grid_sizes(app_grid(app, "Main")), c(0.4, 0.6))
     }
   )
 
@@ -185,7 +202,7 @@ test_that("a click into a card or onto a tab gives its block focus", {
 
 test_that("a click on a rail's tab collapses the rails of every view", {
 
-  app <- local_example_app("rail-sync")
+  app <- local_example_app("rails")
   wait_for_dock(app)
 
   collapsed <- function() {

@@ -2,15 +2,18 @@
 
 * The examples in `inst/examples` are back for the new stack, each changed as
   the migration notes say (#587).
-  Beside `empty`, 13 come back: `block-status`, `edit-board`, `locked-dock`,
-  `multi-view`, `narrow-stack`, `navbar`, `rails`, `rail-sync`, `serdes`,
-  `single-page`, `sized-grid`, `views` and `view-tabs`.
+  Beside `empty`, eight come back: `edit-board`, `locked-dock`,
+  `narrow-stack`, `navbar`, `rails`, `serdes`, `views` and `view-tabs`.
+  The example `narrow-stack` takes in `sized-grid`, and `rails` takes in
+  `rail-sync`.
   Each runs as `serve()` serves it, and core's Edit board plugin takes the
   place of the Edit board extension.
   The `views` example places that plugin where it placed the DAG, since
   blockr.dag has no plugin yet.
   The examples of what the new stack drops are gone: `edit-add`, `panel-ops`,
   `sidebar-inputs`, `sidebar-menus`, `sidebar-owner` and `static-widget`.
+  So are `block-status`, `multi-view` and `single-page`, since other examples
+  and the tests cover what they showed.
 
 * A block's card shows the block's status, the look of its output by status
   and the notifications about the block (#579).
