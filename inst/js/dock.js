@@ -749,7 +749,7 @@ function firstView(state) {
 function sameEntry(a, b) {
   return "view" in a ? "view" in b && a.view === b.view : "folder" in b && a.folder === b.folder;
 }
-function keyIn(state, folder2, before2, moving) {
+function mintKey(state, folder2, before2, moving) {
   const others = inFolder(state, folder2).filter((entry) => moving === void 0 || !sameEntry(entry, moving));
   const at2 = before2 === void 0 ? others.length : others.findIndex((entry) => sameEntry(entry, before2));
   const index = (entry) => entry === void 0 ? null : entryIndex(state, entry);
@@ -1495,7 +1495,7 @@ var viewCommands = [
       const view2 = {
         name: args.name ?? nextName("View", Object.values(state.views).map((other) => other.name)),
         folder: folder2,
-        index: keyIn(state, folder2, args.before),
+        index: mintKey(state, folder2, args.before),
         grid: grid2
       };
       return {
@@ -1552,7 +1552,7 @@ var viewCommands = [
       return {
         patches: [
           { op: "replace", path: at("views", view2, "folder"), value: folder2 },
-          { op: "replace", path: at("views", view2, "index"), value: keyIn(state, folder2, before2, { view: view2 }) }
+          { op: "replace", path: at("views", view2, "index"), value: mintKey(state, folder2, before2, { view: view2 }) }
         ]
       };
     }
@@ -1590,7 +1590,7 @@ var viewCommands = [
       const value = {
         name: args.name ?? nextName("Folder", Object.values(state.folders).map((other) => other.name)),
         folder: folder2,
-        index: keyIn(state, folder2, args.before)
+        index: mintKey(state, folder2, args.before)
       };
       return { patches: [{ op: "add", path: at("folders", mintId(taken(state))), value }] };
     }
@@ -1650,7 +1650,7 @@ var viewCommands = [
       return {
         patches: [
           { op: "replace", path: at("folders", folder2, "folder"), value: into2 },
-          { op: "replace", path: at("folders", folder2, "index"), value: keyIn(state, into2, before2, { folder: folder2 }) }
+          { op: "replace", path: at("folders", folder2, "index"), value: mintKey(state, into2, before2, { folder: folder2 }) }
         ]
       };
     }
@@ -3999,11 +3999,11 @@ function NameField2({ name: name2, label, className, onSubmit, onDone }) {
 // srcts/modules/dock/tips.ts
 function cutTip(text2) {
   const tip = (event) => {
-    tipFor(event.currentTarget, text2);
+    setTip(event.currentTarget, text2);
   };
   return { onPointerEnter: tip, onFocus: tip };
 }
-function tipFor(el, text2) {
+function setTip(el, text2) {
   const label = el.querySelector(".blockr-dock-bar-label") ?? el;
   const tooltip = text2(label.scrollWidth > label.clientWidth);
   if (tooltip === void 0) el.removeAttribute("title");
@@ -4933,7 +4933,7 @@ function StorageControlView({ control }) {
           entries: storageEntries(core, control.items),
           className: "blockr-dock-bar-button blockr-dock-bar-shrinks",
           onTip: (button) => {
-            tipFor(button, (cut) => cut ? control.label : void 0);
+            setTip(button, (cut) => cut ? control.label : void 0);
           }
         }
       );
@@ -5562,7 +5562,7 @@ function startingPatches(board, drawn, view2) {
   const added = Object.keys(state.views).length === 0;
   let views = state.views;
   if (added) {
-    const page = { name: PAGE_NAME, folder: null, index: keyIn(state, null, void 0), grid: startingGrid(board, drawn) };
+    const page = { name: PAGE_NAME, folder: null, index: mintKey(state, null, void 0), grid: startingGrid(board, drawn) };
     patches.push({ op: "add", path: at2("views", PAGE_ID), value: page });
     views = { [PAGE_ID]: page };
   }

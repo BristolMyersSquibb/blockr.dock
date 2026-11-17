@@ -68,7 +68,7 @@ export function sameEntry(a: Entry, b: Entry): boolean {
 // It goes among the views and folders that the folder lists, but for
 // `moving`, the view or folder that the key is for.
 // The caller checks that the folder lists `before`.
-export function keyIn(state: DockState, folder: FolderId | null, before: Entry | undefined, moving?: Entry): string {
+export function mintKey(state: DockState, folder: FolderId | null, before: Entry | undefined, moving?: Entry): string {
   const others = inFolder(state, folder).filter((entry) => moving === undefined || !sameEntry(entry, moving));
   const at = before === undefined ? others.length : others.findIndex((entry) => sameEntry(entry, before));
   const index = (entry: Entry | undefined) => (entry === undefined ? null : entryIndex(state, entry));

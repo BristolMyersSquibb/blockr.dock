@@ -13,7 +13,7 @@
 // renames, moves or removes a view or a folder.
 
 import type { Patch } from "@blockr/core";
-import { firstView, keyIn, rehoused, sitsAt, within } from "../state/index.ts";
+import { firstView, mintKey, rehoused, sitsAt, within } from "../state/index.ts";
 import type { DockState, Entry, FolderId, Grid, ViewId } from "../state/index.ts";
 import { at, command, dockState, fits, folderOrTop, givenGridFailures, nextName, refuse } from "./common.ts";
 import * as schemas from "./schemas.ts";
@@ -85,7 +85,7 @@ export const viewCommands = [
       const view = {
         name: args.name ?? nextName("View", Object.values(state.views).map((other) => other.name)),
         folder,
-        index: keyIn(state, folder, args.before),
+        index: mintKey(state, folder, args.before),
         grid,
       };
       return {
@@ -152,7 +152,7 @@ export const viewCommands = [
       return {
         patches: [
           { op: "replace", path: at("views", view, "folder"), value: folder },
-          { op: "replace", path: at("views", view, "index"), value: keyIn(state, folder, before, { view }) },
+          { op: "replace", path: at("views", view, "index"), value: mintKey(state, folder, before, { view }) },
         ],
       };
     },
@@ -194,7 +194,7 @@ export const viewCommands = [
       const value = {
         name: args.name ?? nextName("Folder", Object.values(state.folders).map((other) => other.name)),
         folder,
-        index: keyIn(state, folder, args.before),
+        index: mintKey(state, folder, args.before),
       };
       return { patches: [{ op: "add", path: at("folders", mintId(taken(state))), value }] };
     },
@@ -265,7 +265,7 @@ export const viewCommands = [
       return {
         patches: [
           { op: "replace", path: at("folders", folder, "folder"), value: into },
-          { op: "replace", path: at("folders", folder, "index"), value: keyIn(state, into, before, { folder }) },
+          { op: "replace", path: at("folders", folder, "index"), value: mintKey(state, into, before, { folder }) },
         ],
       };
     },

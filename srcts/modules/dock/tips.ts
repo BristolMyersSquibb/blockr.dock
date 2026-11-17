@@ -12,14 +12,14 @@ import type { SyntheticEvent } from "react";
 // focus moves into it, from whether the bar cuts its label short.
 export function cutTip(text: (cut: boolean) => string | undefined) {
   const tip = (event: SyntheticEvent<HTMLElement>) => {
-    tipFor(event.currentTarget, text);
+    setTip(event.currentTarget, text);
   };
   return { onPointerEnter: tip, onFocus: tip };
 }
 
 // Sets the element's tooltip from whether its label is cut short, or takes
 // the tooltip away where `text` gives none.
-export function tipFor(el: HTMLElement, text: (cut: boolean) => string | undefined): void {
+export function setTip(el: HTMLElement, text: (cut: boolean) => string | undefined): void {
   const label = el.querySelector<HTMLElement>(".blockr-dock-bar-label") ?? el;
   const tooltip = text(label.scrollWidth > label.clientWidth);
   if (tooltip === undefined) el.removeAttribute("title");

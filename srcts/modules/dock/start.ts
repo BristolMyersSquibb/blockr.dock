@@ -21,7 +21,7 @@
 
 import type { Board, CoreApi, Patch, PluginClassId } from "@blockr/core";
 import { DOCK, dockState } from "../../commands/index.ts";
-import { gridPanels, keyIn, pointer, prunePanels, RAIL_SIZE } from "../../state/index.ts";
+import { gridPanels, mintKey, pointer, prunePanels, RAIL_SIZE } from "../../state/index.ts";
 import type { Grid, Panel, View, ViewId } from "../../state/index.ts";
 
 // The id and the name of the view that the dock adds to a state that holds
@@ -41,7 +41,7 @@ export function startingPatches(board: Board, drawn: readonly PluginClassId[], v
   const added = Object.keys(state.views).length === 0;
   let views: Readonly<Record<ViewId, View>> = state.views;
   if (added) {
-    const page: View = { name: PAGE_NAME, folder: null, index: keyIn(state, null, undefined), grid: startingGrid(board, drawn) };
+    const page: View = { name: PAGE_NAME, folder: null, index: mintKey(state, null, undefined), grid: startingGrid(board, drawn) };
     patches.push({ op: "add", path: at("views", PAGE_ID), value: page });
     views = { [PAGE_ID]: page };
   }
