@@ -22,6 +22,29 @@ test_that("the dock's state has version 1 and a schema beside its module", {
   )
 })
 
+test_that("the list beside the dock's module names the vendor files", {
+
+  # Core reads this list as it makes the page.
+  # It names in the page's head what the dock's files import up front.
+  dir <- system.file("js", package = "blockr.dock")
+  lists <- yyjsonr::read_json_file(
+    file.path(dir, "preload.json"),
+    opts = yyjsonr::opts_read_json(obj_of_arrs_to_df = FALSE)
+  )
+
+  script <- list.files(dir, "^vendor-[0-9a-f]{8}[.]js$")
+  sheet <- list.files(dir, "^vendor-[0-9a-f]{8}[.]css$")
+
+  expect_length(script, 1L)
+  expect_length(sheet, 1L)
+
+  expect_contains(lists[["dock.js"]], paste0("./", script))
+  expect_contains(lists[["dock.css"]], paste0("./", sheet))
+
+  # The vendor file of scripts has a list of its own, as it imports React.
+  expect_contains(lists[[script]], c("react", "react-dom"))
+})
+
 test_that("core finds the dock's plugin class in the package's listing", {
 
   plugins <- available_plugins()

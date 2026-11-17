@@ -38,6 +38,14 @@
 //   dock.schema.json, where R finds it. The dock's module imports the file as
 //   the schema of its class's state, so the build writes it before it
 //   bundles.
+// - What each file that the build writes imports up front goes into
+//   preload.json, by staticImports() from `@blockr/core/build`, as core's
+//   build writes its own.
+//   R names those files in the head of the page that it serves, as the vendor
+//   files that dock.js and dock.css import.
+//   So the browser fetches them as the page loads, rather than each once the
+//   file that imports it has loaded.
+//   The vendor file of scripts imports React, so it has a list of its own.
 //
 // The build owns inst/js and empties it first, so that nothing is left of a
 // module that is gone.
@@ -47,7 +55,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { preset, vendorCheck } from "@blockr/core/build";
+import { preset, staticImports, vendorCheck } from "@blockr/core/build";
 import * as esbuild from "esbuild";
 import { createGenerator } from "ts-json-schema-generator";
 
@@ -113,6 +121,7 @@ export async function build(root: string): Promise<string[]> {
     sheets.length === 0
       ? undefined
       : await vendorBundle(root, out, "css", sheets.map((path) => `@import ${JSON.stringify(path)};`));
+  const vendors = [vendorJs, vendorCss].filter((vendor) => vendor !== undefined);
 
   const results = [
     ...(entries.length === 0
@@ -122,7 +131,7 @@ export async function build(root: string): Promise<string[]> {
             ...preset,
             ...options,
             plugins: [
-              ...(vendorJs === undefined ? [] : [vendorImports(packages, vendorJs)]),
+              ...(vendorJs === undefined ? [] : [vendorImports(packages, vendorJs.file)]),
               ...preset.plugins,
               vendorCheck,
             ],
@@ -136,7 +145,7 @@ export async function build(root: string): Promise<string[]> {
             ...options,
             bundle: true,
             plugins: [
-              ...(vendorCss === undefined ? [] : [vendorStylesheetImports(packages, () => `./${vendorCss}`)]),
+              ...(vendorCss === undefined ? [] : [vendorStylesheetImports(packages, () => `./${vendorCss.file}`)]),
               vendorCheck,
             ],
             entryPoints: stylesheets,
@@ -150,14 +159,23 @@ export async function build(root: string): Promise<string[]> {
 
   return [
     ...results.flatMap((result) => Object.keys(result.metafile.outputs)),
-    ...[vendorJs, vendorCss].flatMap((file) => (file === undefined ? [] : [relative(root, join(out, file))])),
+    ...vendors.map((vendor) => relative(root, join(out, vendor.file))),
     ...schemas,
     ...(await optionSchemas(root, out)),
+    await preloadList(root, out, results.map((result) => result.metafile), vendors),
   ].sort();
 }
 
+// A vendor file that vendorBundle() wrote: its name, and what it imports up
+// front, as staticImports() lists it.
+interface Vendor {
+  readonly file: string;
+  readonly imports: readonly string[];
+}
+
 // Bundles what the lines of a script or a stylesheet import from the vendored
-// packages, minified, into a vendor file in `out`, and gives the file's name.
+// packages, minified, into a vendor file in `out`. It gives the file's name and
+// what the file imports up front, as the script imports React.
 // The name holds a hash of the file's content, as vendor-3f2a9c1d.js. A script
 // takes the build preset, so that dockview's imports of React stay imports.
 async function vendorBundle(
@@ -165,12 +183,13 @@ async function vendorBundle(
   out: string,
   loader: "js" | "css",
   lines: readonly string[],
-): Promise<string> {
+): Promise<Vendor> {
   const result = await esbuild.build({
     ...(loader === "js" ? preset : { bundle: true }),
     absWorkingDir: root,
     stdin: { contents: lines.join("\n"), resolveDir: root, loader },
     write: false,
+    metafile: true,
     minify: true,
     logLevel: "warning",
   });
@@ -181,7 +200,33 @@ async function vendorBundle(
   const text = result.outputFiles[0]?.text ?? "";
   const file = `vendor-${createHash("sha256").update(text).digest("hex").slice(0, 8)}.${loader}`;
   await writeFile(join(out, file), text);
-  return file;
+  // The build has no path for its output, so its metafile names it after
+  // stdin, as stdin.js.
+  // The file's imports go under the file's name instead.
+  return { file, imports: Object.values(staticImports([result.metafile])).flat() };
+}
+
+// Writes what the files in `out` import up front into `out`, as preload.json,
+// and gives its path from `root`.
+// The file holds the static imports of the files that the builds of
+// `metafiles` wrote, and those of each of `vendors` that imports any, under
+// the vendor file's name.
+async function preloadList(
+  root: string,
+  out: string,
+  metafiles: readonly esbuild.Metafile[],
+  vendors: readonly Vendor[],
+): Promise<string> {
+  const lists: Record<string, readonly string[]> = {
+    ...staticImports(metafiles),
+    ...Object.fromEntries(
+      vendors.filter((vendor) => vendor.imports.length > 0).map((vendor) => [vendor.file, vendor.imports] as const),
+    ),
+  };
+  const file = join(out, "preload.json");
+  const sorted = Object.entries(lists).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  await writeFile(file, `${JSON.stringify(Object.fromEntries(sorted), null, 2)}\n`);
+  return relative(root, file);
 }
 
 // Leaves each import of a vendored package in a module an import of the
