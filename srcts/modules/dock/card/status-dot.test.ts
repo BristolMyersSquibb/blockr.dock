@@ -47,13 +47,20 @@ describe("the status dot", () => {
     }
   });
 
-  test("of each status takes core's colour for it, or else the dock's for the token of the table", () => {
+  test("of each status takes core's colour for it, with the light value of the table's token as the fallback", () => {
+    // The light values of the tokens, as the notes of the page give them.
+    const light: Readonly<Record<string, string>> = {
+      "text-muted": "#6b7280",
+      "border-warning": "#d97706",
+      "border-danger": "#dc2626",
+      "border-success": "#16a34a",
+    };
     // The card's stylesheet without its comments, by its path from this file.
     const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
     const css = read("./card.css").replace(/\/\*[\s\S]*?\*\//g, "");
     for (const [status, , token] of TABLE) {
       expect(css).toContain(
-        `.blockr-card-dot[data-status="${status}"] { color: var(--bc-color-status-${status}, var(--blockr-dock-${token})); }`,
+        `.blockr-card-dot[data-status="${status}"] { color: var(--bc-color-status-${status}, ${light[token] ?? token}); }`,
       );
     }
   });

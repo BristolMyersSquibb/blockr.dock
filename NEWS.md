@@ -13,9 +13,9 @@
   Errors and warnings show above the sections, and messages fold under the
   output behind their count.
   Each shows as text, without the ANSI escapes of cli's styling.
-  The dot and the mark take their colours from core's tokens, as
-  `--bc-color-status-failed` and `--bc-color-category-input`, and from
-  blockr.ui's until core has them.
+  The dot and the mark take their colours from core's theme, as
+  `--bc-color-status-failed` and `--bc-color-category-input`, which a frontend
+  or a UI kit sets.
 
 * The options button on the bar opens the dock's options sidebar (#583).
   The sidebar lists the categories of the board options that the board holds

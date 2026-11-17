@@ -27,7 +27,7 @@
   height: 24px;
   border-radius: 6px;
   font-size: 14px;
-  color: var(--bc-color-category-uncategorized, var(--blockr-category-uncategorized, #999999));
+  color: var(--bc-color-category-uncategorized, #999999);
   background: color-mix(in srgb, currentColor 18%, transparent);
 }
 .blockr-card-mark[data-size="32"] {
@@ -41,28 +41,28 @@
   height: 1em;
 }
 .blockr-card-mark[data-category=input] {
-  color: var(--bc-color-category-input, var(--blockr-category-input, #0072b2));
+  color: var(--bc-color-category-input, #0072b2);
 }
 .blockr-card-mark[data-category=transform] {
-  color: var(--bc-color-category-transform, var(--blockr-category-transform, #009e73));
+  color: var(--bc-color-category-transform, #009e73);
 }
 .blockr-card-mark[data-category=structured] {
-  color: var(--bc-color-category-structured, var(--blockr-category-structured, #56b4e9));
+  color: var(--bc-color-category-structured, #56b4e9);
 }
 .blockr-card-mark[data-category=plot] {
-  color: var(--bc-color-category-plot, var(--blockr-category-plot, #e69f00));
+  color: var(--bc-color-category-plot, #e69f00);
 }
 .blockr-card-mark[data-category=table] {
-  color: var(--bc-color-category-table, var(--blockr-category-table, #cc79a7));
+  color: var(--bc-color-category-table, #cc79a7);
 }
 .blockr-card-mark[data-category=model] {
-  color: var(--bc-color-category-model, var(--blockr-category-model, #f0e442));
+  color: var(--bc-color-category-model, #f0e442);
 }
 .blockr-card-mark[data-category=output] {
-  color: var(--bc-color-category-output, var(--blockr-category-output, #d55e00));
+  color: var(--bc-color-category-output, #d55e00);
 }
 .blockr-card-mark[data-category=utility] {
-  color: var(--bc-color-category-utility, var(--blockr-category-utility, #cccccc));
+  color: var(--bc-color-category-utility, #cccccc);
 }
 .blockr-card-mark-frame {
   position: relative;
@@ -84,22 +84,22 @@
   box-shadow: inset 0 0 0 1.5px currentColor, 0 0 0 2px var(--blockr-dock-bg-surface);
 }
 .blockr-card-dot[data-status=stale] {
-  color: var(--bc-color-status-stale, var(--blockr-dock-text-muted));
+  color: var(--bc-color-status-stale, #6b7280);
 }
 .blockr-card-dot[data-status=waiting] {
-  color: var(--bc-color-status-waiting, var(--blockr-dock-border-warning));
+  color: var(--bc-color-status-waiting, #d97706);
 }
 .blockr-card-dot[data-status=invalid] {
-  color: var(--bc-color-status-invalid, var(--blockr-dock-border-warning));
+  color: var(--bc-color-status-invalid, #d97706);
 }
 .blockr-card-dot[data-status=failed] {
-  color: var(--bc-color-status-failed, var(--blockr-dock-border-danger));
+  color: var(--bc-color-status-failed, #dc2626);
 }
 .blockr-card-dot[data-status=ready] {
-  color: var(--bc-color-status-ready, var(--blockr-dock-border-success));
+  color: var(--bc-color-status-ready, #16a34a);
 }
 .blockr-card-dot[data-status=unevaluated] {
-  color: var(--bc-color-status-unevaluated, var(--blockr-dock-text-muted));
+  color: var(--bc-color-status-unevaluated, #6b7280);
 }
 .blockr-card-title {
   position: relative;
@@ -426,9 +426,7 @@
   --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #9ca3af);
   --blockr-dock-text-warning: var(--blockr-color-text-warning, #b45309);
   --blockr-dock-bg-warning: var(--blockr-color-bg-warning, #fffbeb);
-  --blockr-dock-border-warning: var(--blockr-color-border-warning, #d97706);
   --blockr-dock-border-warning-subtle: var( --blockr-color-border-warning-subtle, color-mix(in srgb, #d97706 45%, transparent) );
-  --blockr-dock-border-success: var(--blockr-color-border-success, #16a34a);
   --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #ffffff);
   --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #f9fafb);
   --blockr-dock-border-strong: var(--blockr-color-border-strong, #d1d5db);
@@ -459,9 +457,7 @@
   --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #6b7686);
   --blockr-dock-text-warning: var(--blockr-color-text-warning, #fbbf24);
   --blockr-dock-bg-warning: var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1));
-  --blockr-dock-border-warning: var(--blockr-color-border-warning, #fbbf24);
   --blockr-dock-border-warning-subtle: var( --blockr-color-border-warning-subtle, color-mix(in srgb, #fbbf24 45%, transparent) );
-  --blockr-dock-border-success: var(--blockr-color-border-success, #4ade80);
   --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #161b23);
   --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #14181f);
   --blockr-dock-border-strong: var(--blockr-color-border-strong, #2d343f);
