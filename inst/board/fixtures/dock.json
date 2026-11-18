@@ -7,9 +7,6 @@
   },
   "board": {
     "id": "curious_otter",
-    "versions": {
-      "blockr.dock-dock_plugin": 1
-    },
     "name": "Curious otter",
     "blocks": {
       "a": {
@@ -58,91 +55,94 @@
     },
     "plugins": {
       "blockr.dock-dock_plugin": {
-        "views": {
-          "main": {
-            "name": "Main",
-            "folder": null,
-            "index": "a0",
-            "grid": {
-              "orientation": "horizontal",
-              "children": [
-                {
-                  "children": [
-                    {
-                      "panels": [
-                        {
-                          "block": "a"
-                        },
-                        {
+        "state": {
+          "views": {
+            "main": {
+              "name": "Main",
+              "folder": null,
+              "index": "a0",
+              "grid": {
+                "orientation": "horizontal",
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "panels": [
+                          {
+                            "block": "a"
+                          },
+                          {
+                            "block": "b"
+                          }
+                        ],
+                        "active": {
                           "block": "b"
                         }
-                      ],
-                      "active": {
+                      }
+                    ],
+                    "sizes": [
+                      1.0
+                    ]
+                  }
+                ],
+                "sizes": [
+                  1.0
+                ],
+                "rails": {
+                  "left": {
+                    "panels": [
+                      {
+                        "plugin": "blockr.core-edit_board_plugin"
+                      }
+                    ],
+                    "active": {
+                      "plugin": "blockr.core-edit_board_plugin"
+                    },
+                    "collapsed": true,
+                    "size": 300.0
+                  }
+                }
+              }
+            },
+            "side": {
+              "name": "Side",
+              "folder": "more",
+              "index": "a0",
+              "grid": {
+                "orientation": "horizontal",
+                "children": [
+                  {
+                    "panels": [
+                      {
                         "block": "b"
                       }
+                    ],
+                    "active": {
+                      "block": "b"
                     }
-                  ],
-                  "sizes": [
-                    1.0
-                  ]
-                }
-              ],
-              "sizes": [
-                1.0
-              ],
-              "rails": {
-                "left": {
-                  "panels": [
-                    {
-                      "plugin": "blockr.core-edit_board_plugin"
-                    }
-                  ],
-                  "active": {
-                    "plugin": "blockr.core-edit_board_plugin"
-                  },
-                  "collapsed": true,
-                  "size": 300.0
-                }
+                  }
+                ],
+                "sizes": [
+                  1.0
+                ]
               }
             }
           },
-          "side": {
-            "name": "Side",
-            "folder": "more",
-            "index": "a0",
-            "grid": {
-              "orientation": "horizontal",
-              "children": [
-                {
-                  "panels": [
-                    {
-                      "block": "b"
-                    }
-                  ],
-                  "active": {
-                    "block": "b"
-                  }
-                }
-              ],
-              "sizes": [
-                1.0
-              ]
+          "folders": {
+            "more": {
+              "name": "More",
+              "folder": null,
+              "index": "a1"
             }
+          },
+          "active": "side",
+          "visible": {
+            "b": [
+              "outputs"
+            ]
           }
         },
-        "folders": {
-          "more": {
-            "name": "More",
-            "folder": null,
-            "index": "a1"
-          }
-        },
-        "active": "side",
-        "visible": {
-          "b": [
-            "outputs"
-          ]
-        }
+        "version": 1
       }
     }
   }

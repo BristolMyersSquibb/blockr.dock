@@ -59,7 +59,6 @@ function boardWith(
     packages: { ...HELLO.board.packages, "blockr.dock": "0.2.1" },
     board: {
       ...board,
-      versions: { ...board.versions, [DOCK]: 1 },
       blocks: Object.fromEntries(
         Object.entries(board.blocks).map(([id, block]) => [id, { ...block, locked: locked[id] ?? block.locked }]),
       ),
@@ -67,7 +66,7 @@ function boardWith(
         showConditions === undefined
           ? board.options
           : { ...board.options, show_conditions: { value: [...showConditions], version: 1 } },
-      plugins: { [DOCK]: state },
+      plugins: { [DOCK]: { state, version: 1 } },
     },
   };
 }
