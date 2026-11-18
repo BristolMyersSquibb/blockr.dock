@@ -301,7 +301,7 @@ board <- new_board(
 ```
 
 The script gives core's Edit board plugin the name `edit`, and the left rail of the view `main` holds the plugin's panel.
-A grid may name a plugin by the id of its class instead, as `plg("blockr.core-edit_board_plugin")`, without the plugin in `plugins`.
+A grid may name a plugin by the id of its class instead, as `plg("blockr.core-edit_board_plugin")`.
 As `new_board()` builds the board, the dock names each plugin by the id of its class, as `board_views()` shows:
 
 ```{r}
@@ -309,7 +309,9 @@ board_views(board)
 ```
 
 An app runs every plugin class that `available_plugins()` gives, unless its script narrows them in the `plugins` of `serve()`.
-So an app runs core's Edit board plugin whether or not its board holds the plugin, and the script above gives the plugin in `plugins` only to name it.
+That default is a convenience for interactive use, and it may change.
+So a script puts each plugin that its app relies on in the board's `plugins`, as the script above does for core's Edit board plugin.
+Where the app does not run the class of such a plugin, `serve()` stops with the error `board_plugins_invalid`, rather than serve the board without it.
 As the dock starts, it drops from each view the panel of a plugin that the app does not run, or whose class has no UI, since it cannot draw that panel.
 
 ## Several views
