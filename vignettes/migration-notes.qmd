@@ -261,12 +261,12 @@ In version 0.2.0, an extension without a name in `extensions` has the name of it
 In version 0.2.1, a plugin without a name has none.
 So a script that places the panel of such an extension, as `ext("dag")` does, gives its plugin that name, as `dag = blockr.dag::new_dag_plugin()`.
 A grid may also name a plugin by the id of its class, as `plg("blockr.dag-dag_plugin")`, which needs no name.
-Such a reference also places the panel of a plugin that the board does not hold, such as one that keeps no state.
 Core's `new_board()` refuses a `plg()` whose id is neither a name in `plugins` nor the id of a plugin class.
 
-The Edit board extension goes, since core's Edit board plugin makes the same edits and runs by default.
-So a script drops `new_edit_board_extension()`.
-It gives core's plugin in `plugins` only where a grid places the plugin's panel:
+The Edit board extension goes, since core's Edit board plugin makes the same edits.
+So a script puts `edit = new_edit_board_plugin()` in the `plugins` of `new_board()`, in place of `new_edit_board_extension()`.
+It does so whether or not a grid places the plugin's panel.
+A grid that places the panel names it as `plg("edit")`:
 
 ```{r, eval = FALSE}
 # blockr.dock 0.2.0
@@ -291,7 +291,12 @@ board <- new_board(
 )
 ```
 
-The grid may name the plugin as `plg("blockr.core-edit_board_plugin")` instead, without the plugin in `plugins`.
+The function `serve()` runs the Edit board plugin even where the board holds no plugin of its class.
+Its `plugins` default to every plugin class that `available_plugins()` lists, the class of the Edit board plugin among them.
+The default is a convenience for interactive use, and it may change.
+Once the default lacks the class, a board without the plugin opens without it, and nothing says so.
+So a script puts the plugin on its board, rather than rely on the default.
+Where the app's plugins then lack the plugin's class, `serve()` stops with the error `board_plugins_invalid`, which names the class.
 
 The function `dock_extensions()` goes, with `dock_ext_ids()`.
 Core's `board_plugins()` gives the plugins that a board holds, by the id of each plugin's class, the dock plugin among them.
@@ -593,7 +598,7 @@ The table gives each function of version 0.2.0 that is gone, with what takes its
 | `board_views<-()`, `board_grids<-()`, `active_view<-()`, `view_name<-()`, `dock_extensions<-()` and `stack_color<-()` | Nothing, since nothing changes a board in R |
 | `new_dock_stack()`, `as_dock_stack()`, `is_dock_stack()` and `suggest_new_colors()` | Core's `new_stack()`, which takes the stack's `color` |
 | `stack_color()` | Core's `stack_color()`, which reads the colour of one stack |
-| `new_edit_board_extension()` | Core's Edit board plugin, `new_edit_board_plugin()`, which runs by default |
+| `new_edit_board_extension()` | Core's Edit board plugin, `new_edit_board_plugin()`, in the `plugins` of `new_board()` |
 | `default_navbar_items()` | `default_navbar()` |
 | `blockr_app_navbar()` and `plugin_navbar_item()` | Nothing, since the dock draws the storage plugin's controls itself |
 | `new_dock_extension()`, `new_dock_extensions()`, `as_dock_extensions()`, `is_dock_extension()`, `is_dock_extensions()`, `validate_extension()`, `validate_extensions()`, `extension_ui()`, `extension_server()`, `extension_ctor()`, `extension_id()`, `extension_name()`, `extension_description()`, `extension_block_callback()`, `new_ext_meta()`, `is_ext_meta()`, `ext_meta()`, `ext_args()`, `ext_desc()`, `ext_examples()` and `ext_guidance()` | A plugin class, which a package defines |
