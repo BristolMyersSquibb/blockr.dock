@@ -204,6 +204,11 @@ In version 0.2.1, a bare id names a block, in a grid and among the panels of a v
 In version 0.2.0, it named an extension too, where no block had that id, as `"edit_board"` named the Edit board extension.
 A script names such a panel with `plg()` instead ([Plugins in place of extensions](#plugins-in-place-of-extensions)).
 
+In version 0.2.0, a grid and the members of a view also named a panel by its panel id, as `"block_panel-a"` named the panel of block `a`, and `"ext_panel-dag"` that of the extension `dag`.
+Version 0.2.1 has no panel ids.
+So a script names a block by its id alone, as `dock_grid("a", "b")` does in place of `dock_grid("block_panel-a", "block_panel-b")`.
+It names a plugin with `plg()`, as `plg("dag")` does in place of `"ext_panel-dag"`.
+
 The functions `dock_grid()`, `panels()`, `group()` and `rail()` take the arguments that they took in version 0.2.0.
 The function `blk()` takes the block's id alone.
 Its `near`, `side`, `size` and `rail` served the grammar of `views$mod` in a board's updates.
