@@ -23,9 +23,6 @@ screenshot <- function(app, file) {
   port <- httpuv::randomPort()
   server <- callr::r_bg(
     function(app, port) {
-      # Core finds the board options that the dock requires among the
-      # packages that the process has loaded.
-      loadNamespace("blockr.dock")
       shiny::runApp(app, port = port, launch.browser = FALSE)
     },
     args = list(app = app, port = port)
