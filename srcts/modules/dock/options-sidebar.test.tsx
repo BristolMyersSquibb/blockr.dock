@@ -504,11 +504,16 @@ describe("the options sidebar", () => {
   test("shows a board option that comes onto the board later", async () => {
     const { el, core } = await startSidebar({ options: { show_conditions: { value: ["error"], version: 1 } } });
     await open(el);
-    expect(names(el)).toEqual(["Board options", "Theme options", "View options"]);
+    // Core puts on the board the board options that the dock and blockr.test
+    // require, and those that the outputs of the board's blocks read, such as
+    // n_rows. Nothing puts grain on it.
+    await vi.waitFor(() => {
+      expect(names(el)).toEqual(CATEGORIES);
+    });
 
-    await core.commands.run("blockr.core-set_option", { id: "n_rows", value: 25 });
+    await core.commands.run("blockr.core-set_option", { id: "grain", value: 5 });
     await drawn();
-    expect(names(el)).toEqual(CATEGORIES);
+    expect(names(el)).toEqual(["Board options", "Extra options", "Table options", "Theme options", "View options"]);
   });
 
   test("drops a category whose board options leave the board, though the user expanded it", async () => {

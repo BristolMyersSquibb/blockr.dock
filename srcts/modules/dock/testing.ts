@@ -62,11 +62,12 @@ const drawsNothing = { api: 1, default: { render: () => undefined } };
 // entry of core's registry names, so that the cards that the dock draws mount
 // a UI and an output without a notification that a module failed.
 // The UI of the rbind block draws nothing, as core's does, and that of every
-// other class draws a line, and the renderer of each output draws nothing.
+// other class draws a line, and each renderer of a class's outputs draws
+// nothing.
 const blockModules: Readonly<Record<string, unknown>> = Object.fromEntries(
   Object.values(HELLO.block_registry).flatMap((entry): [string, unknown][] => [
     [entry.module, entry.id === "blockr.core-rbind_block" ? drawsNothing : drawsLine],
-    ...(entry.renderer === undefined ? [] : [[entry.renderer.module, drawsNothing] as [string, unknown]]),
+    ...(entry.renderers ?? []).map((renderer): [string, unknown] => [renderer.module, drawsNothing]),
   ]),
 );
 
