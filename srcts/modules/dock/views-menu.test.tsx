@@ -48,7 +48,6 @@ async function startViews(options: StartOptions = {}) {
     packages: { "blockr.core": "0.2.0", "blockr.dock": "0.2.1" },
     board: {
       id: "curious_otter",
-      versions: { [DOCK]: 1 },
       name: "Curious otter",
       blocks: {},
       links: {},
@@ -59,7 +58,7 @@ async function startViews(options: StartOptions = {}) {
         view_tabs: { value: options.tabs ?? false, version: 1 },
         sync_rails: { value: true, version: 1 },
       },
-      plugins: { [DOCK]: options.state ?? navigation },
+      plugins: { [DOCK]: { state: options.state ?? navigation, version: 1 } },
     },
   };
   const frontend: Record<string, Json> = options.navbar === undefined ? {} : { navbar: [...options.navbar] };

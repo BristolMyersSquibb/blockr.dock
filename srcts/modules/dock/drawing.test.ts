@@ -119,7 +119,6 @@ function helloWith(dockState: DockState, locked: boolean) {
     packages: { "blockr.core": "0.2.0", "blockr.dock": "0.2.1" },
     board: {
       id: "curious_otter",
-      versions: { [DOCK]: 1 },
       name: "Curious otter",
       blocks: {
         a: { registry_id: "blockr.core-dataset_block", version: 1, state: { dataset: "iris", package: "datasets" }, name: "Data", locked: null },
@@ -129,7 +128,7 @@ function helloWith(dockState: DockState, locked: boolean) {
       links: { ab: { from: "a", to: "b", input: "data" }, ac: { from: "a", to: "c", input: "data" } },
       stacks: {},
       options: {},
-      plugins: { [DOCK]: dockState },
+      plugins: { [DOCK]: { state: dockState, version: 1 } },
     },
   };
   return {

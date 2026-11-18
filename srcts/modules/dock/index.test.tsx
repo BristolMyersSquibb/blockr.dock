@@ -182,7 +182,6 @@ function boardWith(dockState: DockState): JsonBoard {
     packages: { "blockr.core": "0.2.0", "blockr.dock": "0.2.1" },
     board: {
       id: "curious_otter",
-      versions: { [DOCK]: 1 },
       name: "Curious otter",
       blocks: {
         a: { registry_id: "blockr.core-dataset_block", version: 1, state: { dataset: "iris", package: "datasets" }, name: "Dataset", locked: null },
@@ -196,7 +195,7 @@ function boardWith(dockState: DockState): JsonBoard {
         view_tabs: { value: false, version: 1 },
         sync_rails: { value: true, version: 1 },
       },
-      plugins: { [DOCK]: dockState },
+      plugins: { [DOCK]: { state: dockState, version: 1 } },
     },
   };
 }
@@ -260,8 +259,8 @@ describe("the dock plugin's state", () => {
     const { core, settled, stop } = await startDock(undefined, {}, board);
     await settled();
 
-    expect(core.store.board().plugins[DOCK]).toEqual(board.board.plugins[DOCK]);
-    expect(core.store.jsonBoard().board.versions).toEqual({ [DOCK]: 1 });
+    expect(core.store.board().plugins[DOCK]).toEqual(board.board.plugins[DOCK]?.state);
+    expect(core.store.jsonBoard().board.plugins[DOCK]?.version).toBe(1);
     stop();
   });
 
@@ -279,7 +278,7 @@ describe("the dock plugin's state", () => {
     await settled();
 
     expect(core.store.board().plugins[DOCK]).toEqual(twoViews);
-    expect(core.store.jsonBoard().board.versions).toEqual({ [DOCK]: 1 });
+    expect(core.store.jsonBoard().board.plugins[DOCK]?.version).toBe(1);
     stop();
   });
 
