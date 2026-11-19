@@ -31,8 +31,8 @@
 // The tooltip shows as the pointer rests on the tab, or as the keyboard's
 // focus moves onto it, and a screen reader reads the messages as the tab's
 // description.
-// Dockview draws the tab's element itself, around the dock's tab, so the dock
-// gives that element the tooltip and the description.
+// The tab's element is dockview's, which it draws around the dock's tab, so
+// the dock gives that element the tooltip and the description.
 //
 // The header of each tab group holds a "+", which opens the panel picker
 // (./picker.tsx).
