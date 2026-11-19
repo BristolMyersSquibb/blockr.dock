@@ -85,7 +85,7 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
   const { core } = useDock();
   const board = useBoard(core);
   const status = useStatus(core, id);
-  const notified = useNotified(core, id);
+  const notified = useNotified(core, { block: id });
   const [drawn, setDrawn] = useState(false);
 
   // The notifications that the card shows: those that no plugin raised, of

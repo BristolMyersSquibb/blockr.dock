@@ -3481,7 +3481,7 @@ function BlockCard({ id }) {
   const { core } = useDock();
   const board = useBoard(core);
   const status = useStatus(core, id);
-  const notified = useNotified(core, id);
+  const notified = useNotified(core, { block: id });
   const [drawn, setDrawn] = useState4(false);
   const severities = core.options.value("show_conditions");
   const shown = useMemo2(
