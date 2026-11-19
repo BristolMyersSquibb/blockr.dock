@@ -473,11 +473,12 @@ describe("a block's status on its card", () => {
   test("keeps the output of a ready block whose output R could not make, while the dot reads failed", async () => {
     // R has no output to give for Head, whose renderer has no fixtures.
     const entry = hello.block_registry["blockr.core-head_block"];
-    if (entry?.renderer === undefined) throw new Error("The fixture has no head block with a renderer.");
+    const renderer = entry?.renderers?.[0];
+    if (entry === undefined || renderer === undefined) throw new Error("The fixture has no head block with a renderer.");
     const { el } = await startCards(boardWith(shown), false, {
       registry: {
         ...hello.block_registry,
-        "blockr.core-head_block": { ...entry, renderer: { ...entry.renderer, id: "blockr.dock-no_fixtures" } },
+        "blockr.core-head_block": { ...entry, renderers: [{ ...renderer, id: "blockr.dock-no_fixtures" }] },
       },
     });
 
