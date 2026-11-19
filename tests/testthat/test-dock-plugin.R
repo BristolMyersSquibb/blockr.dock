@@ -22,6 +22,21 @@ test_that("the dock's state has version 1 and a schema beside its module", {
   )
 })
 
+test_that("the dock reads its own board options and two of core's", {
+
+  # R sends the ids of the board options that the constructors make, each
+  # called without a value.
+  ids <- chr_ply(
+    plugin_options(new_dock_plugin()),
+    function(new) board_option_id(new())
+  )
+
+  expect_identical(
+    ids,
+    c("compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode")
+  )
+})
+
 test_that("the list beside the dock's module names the vendor files", {
 
   # Core reads this list as it makes the page.

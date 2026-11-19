@@ -78,7 +78,10 @@ const grain: Omit<Option, "id"> = {
   ui: numberUi(),
 };
 
-const viewer: Omit<PluginClass, "id"> = { options: ["zoom"] };
+// The plugin class of blockr.test, which names no board option itself.
+// Its entry in R's reply to hello names zoom, as the method of R's
+// plugin_options() for the class would.
+const viewer: Omit<PluginClass, "id"> = {};
 
 interface Start {
   // Whether the app sets the board lock.
@@ -98,8 +101,13 @@ async function startSidebar(start: Start = {}) {
     packages: { ...HELLO.packages, "blockr.dock": "0.2.1", "blockr.test": "1.0.0" },
     plugins: {
       ...Object.fromEntries(Object.entries(HELLO.plugins).filter(([id]) => id !== BASIC)),
-      [DOCK]: { name: "Dock", version: 1, module: "blockr.dock/js/dock.js" },
-      [VIEWER]: { name: "Viewer", version: 1, module: "blockr.test/viewer.js" },
+      [DOCK]: {
+        name: "Dock",
+        version: 1,
+        options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
+        module: "blockr.dock/js/dock.js",
+      },
+      [VIEWER]: { name: "Viewer", version: 1, options: ["zoom"], module: "blockr.test/viewer.js" },
     },
     options: {
       ...HELLO.options,

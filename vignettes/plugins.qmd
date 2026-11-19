@@ -300,7 +300,8 @@ The guidance that the dock gives the assistant's model says how they fit togethe
 A plugin keeps a setting of its own in its state first, so that the setting saves and migrates with the plugin.
 Its UI shows the setting and changes it through the plugin's commands, in its panel or in the top layer.
 A board option is meant for how the board is shown, such as the dock's `view_tabs`, and is no substitute for that state.
-A plugin's class names the board options of that kind that it requires in `options`, and its package registers those that it ships (see `?blockr.core::new_board_option`).
+A plugin's class names the board options of that kind that its plugin reads in R, through its method of `plugin_options()` (see `?blockr.core::plugin_options`).
+Its package registers those that it ships (see `?blockr.core::new_board_option`).
 
 The dock's options sidebar, which the options button in the navbar opens, shows each board option that the board holds, under its category.
 It mounts the UI of each with `core.mountOption()`, a board option that a plugin requires among them.
