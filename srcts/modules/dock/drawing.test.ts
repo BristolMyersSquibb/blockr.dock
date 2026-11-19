@@ -138,7 +138,12 @@ function helloWith(dockState: DockState, locked: boolean) {
     packages: { ...HELLO.packages, "blockr.dock": "0.2.1" },
     plugins: {
       ...Object.fromEntries(Object.entries(HELLO.plugins).filter(([id]) => id !== "blockr.core-basic_frontend_plugin")),
-      [DOCK]: { name: "Dock", version: 1, module: "blockr.dock/js/dock.js" },
+      [DOCK]: {
+        name: "Dock",
+        version: 1,
+        options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
+        module: "blockr.dock/js/dock.js",
+      },
     },
     options: {
       ...HELLO.options,

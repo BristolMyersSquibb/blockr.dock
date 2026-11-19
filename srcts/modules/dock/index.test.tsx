@@ -20,12 +20,11 @@ import { FADES_FOR, SHOWN_FOR } from "./toasts.tsx";
 import dockFixture from "../../../inst/board/fixtures/dock.json" with { type: "json" };
 
 describe("the dock's frontend", () => {
-  test("is the frontend of the dock plugin's class, which requires the dock's board options and two of core's", async () => {
+  test("is the frontend of the dock plugin's class", async () => {
     const { core, stop } = await startDock();
 
     const cls = core.plugins.pluginClass(DOCK);
     expect(cls.frontend).toBe(dock.default.frontend);
-    expect(cls.options).toEqual(["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"]);
     stop();
   });
 

@@ -5,10 +5,13 @@
 // The frontend draws the page as a React app on the one copy of React that
 // core puts on the page, with the layout drawn by dockview, which the module's
 // bundle holds.
-// The class requires five board options: the dock's own, compact, view_tabs
-// and sync_rails, which ../../options defines, and core's show_conditions and
-// dark_mode. So core gives each board that lacks a value for one of them its
-// default as the board opens, before the dock draws it.
+// The dock reads five board options: its own, compact, view_tabs and
+// sync_rails, which ../../options defines, and core's show_conditions and
+// dark_mode.
+// The method of R's plugin_options() for the class names them.
+// R sends their ids in the class's entry of its reply to hello.
+// So core gives each board that lacks a value for one of them its default as
+// the board opens, before the dock draws it.
 // The class keeps the dock's state, which ../../state defines.
 // It gives core the schema of the state, which the build generates from the
 // state's types, and the default of the state, which holds no view.
@@ -147,7 +150,6 @@ const frontend = {
 } satisfies FrontendModule;
 
 export default {
-  options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
   // TypeScript gives the objects in the JSON's arrays properties that may be
   // undefined, which no Json has, so it does not take the schema for a Json,
   // though it is one.

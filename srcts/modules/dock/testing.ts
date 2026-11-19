@@ -24,9 +24,13 @@ for (const method of ["showPopover", "hidePopover"]) {
 }
 
 // R's reply to hello in an app that runs the dock in place of core's basic
-// frontend, beside core's other plugins, with where R serves the module of
-// the dock plugin's class, at version 1, and those of the dock's board
-// options, beside core's.
+// frontend, beside core's other plugins.
+// The entry of the dock plugin's class gives the class's version, 1, the
+// board options that the dock reads and where R serves the class's module.
+// It names the board options as the method of R's plugin_options() for the
+// class does.
+// The reply also says where R serves the modules of the dock's board options,
+// beside core's.
 export const hello = {
   ...HELLO,
   packages: { ...HELLO.packages, "blockr.dock": "0.2.1" },
@@ -34,7 +38,12 @@ export const hello = {
     ...Object.fromEntries(
       Object.entries(HELLO.plugins).filter(([id]) => id !== "blockr.core-basic_frontend_plugin"),
     ),
-    [DOCK]: { name: "Dock", version: 1, module: "blockr.dock/js/dock.js" },
+    [DOCK]: {
+      name: "Dock",
+      version: 1,
+      options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
+      module: "blockr.dock/js/dock.js",
+    },
   },
   options: {
     ...HELLO.options,

@@ -73,9 +73,12 @@
 #' The dock takes them through its method of [blockr.core::frontend_args()]
 #' (see [default_navbar()]).
 #'
-#' The class requires five board options: the dock's own, `compact`,
-#' `view_tabs` and `sync_rails` (see [new_compact_option()]), and core's
-#' `show_conditions` and `dark_mode`.
+#' The dock reads five board options: its own, `compact`, `view_tabs` and
+#' `sync_rails` (see [new_compact_option()]), and core's `show_conditions` and
+#' `dark_mode`.
+#' The class names them through its method of [blockr.core::plugin_options()],
+#' by their constructors.
+#' R sends their ids in its reply to `hello`.
 #' So the client gives every board that lacks a value of one of them its
 #' default as the board opens, before the dock draws it.
 #' The package lists each of its own board options in `._BLOCKR_MODULES_`
@@ -115,6 +118,21 @@ new_dock_plugin <- function(views = NULL, folders = list(), active = NULL,
     dock_state(views, folders, active, visible),
     "dock_plugin",
     c("dock_plugin", "frontend_plugin")
+  )
+}
+
+# The board options that the dock reads, by their constructors: the dock's
+# own, and core's `show_conditions` and `dark_mode`.
+# R sends their ids in the class's entry of its reply to `hello`.
+# The client puts them on the board as the board opens.
+#' @export
+plugin_options.dock_plugin <- function(x, ...) {
+  list(
+    new_compact_option,
+    new_view_tabs_option,
+    new_sync_rails_option,
+    new_show_conditions_option,
+    new_dark_mode_option
   )
 }
 
