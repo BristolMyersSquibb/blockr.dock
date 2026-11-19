@@ -638,10 +638,11 @@ describe("a block's menu", () => {
     expect(openMenu(el)).toBeNull();
   });
 
-  test("appends a block of the class picked in the dock's + menu, as blockr.core-append_block does", async () => {
+  test("appends a block of the class picked in the dock's + menu, which one undo takes back", async () => {
     const { core, el, settled } = await startCards();
 
     const before = Object.keys(core.store.board().blocks);
+    const links = core.store.board().links;
     toolOf(cardOf(el, "Head"), "More actions").click();
     await settled();
     const menu = openMenu(el);
@@ -669,6 +670,10 @@ describe("a block's menu", () => {
     const added = Object.keys(board.blocks).filter((id) => !before.includes(id));
     expect(added.map((id) => board.blocks[id]?.registry_id)).toEqual(["blockr.core-scatter_block"]);
     expect(Object.values(board.links)).toContainEqual({ from: "b", to: added[0], input: "data" });
+
+    core.store.undo();
+    expect(Object.keys(core.store.board().blocks)).toEqual(before);
+    expect(core.store.board().links).toEqual(links);
   });
 
   test("links a block of a class with several inputs from its first input", async () => {

@@ -1993,8 +1993,9 @@ function useDock() {
   if (value === null) throw new Error("A component of the dock is drawn outside the dock.");
   return value;
 }
-function runEdit(core, id, args) {
-  core.commands.run(id, args).catch(() => {
+function runEdit(core, edit, args) {
+  const running = typeof edit === "string" ? core.commands.run(edit, args) : core.commands.run(edit);
+  running.catch(() => {
   });
 }
 function giveFocus(core, block) {
@@ -3322,7 +3323,12 @@ function MenuButton2({
   const append = (entry) => {
     const [first] = entry.inputs;
     const input = entry.inputs.length > 1 && !entry.inputs.includes("...") && first !== void 0 ? { input: first } : {};
-    runEdit(core, "blockr.core-append_block", { from: id, registry_id: entry.id, ...input });
+    const { blocks } = core.store.board();
+    const added = core.mintId((candidate) => Object.hasOwn(blocks, candidate));
+    runEdit(core, [
+      { id: "blockr.core-add_block", args: { registry_id: entry.id, id: added } },
+      { id: "blockr.core-add_link", args: { from: id, to: added, ...input } }
+    ]);
   };
   return /* @__PURE__ */ jsxs5(Fragment4, { children: [
     /* @__PURE__ */ jsx9(

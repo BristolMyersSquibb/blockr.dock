@@ -376,13 +376,23 @@ function MenuButton({
     ];
   };
 
-  // Appends a block of the class, whose link from this block lands on the
-  // class's first input where the class has several, of which core picks none.
+  // Appends a block of the class to this block in one step, with a batch of
+  // two commands: blockr.core-add_block adds the block, and
+  // blockr.core-add_link links this block to it.
+  // A batch hands no value from one command to the next, so the menu mints the
+  // new block's id first, for the link to name.
+  // The link lands on the class's first input where the class has several, of
+  // which add_link picks none.
   const append = (entry: RegistryEntry) => {
     const [first] = entry.inputs;
     const input: Readonly<Record<string, string>> =
       entry.inputs.length > 1 && !entry.inputs.includes("...") && first !== undefined ? { input: first } : {};
-    runEdit(core, "blockr.core-append_block", { from: id, registry_id: entry.id, ...input });
+    const { blocks } = core.store.board();
+    const added = core.mintId((candidate) => Object.hasOwn(blocks, candidate));
+    runEdit(core, [
+      { id: "blockr.core-add_block", args: { registry_id: entry.id, id: added } },
+      { id: "blockr.core-add_link", args: { from: id, to: added, ...input } },
+    ]);
   };
 
   return (
