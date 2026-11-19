@@ -67,11 +67,10 @@ export function asToast(notification: Notification, board: Board, drawn: Readonl
 const TAB_SEVERITIES: readonly Severity[] = ["error", "warning"];
 
 // The notifications that the tab of a plugin's panel tells of with its dot,
-// of all that hold: the errors about the plugin, then its warnings, each in
-// the order they came, whatever the board option show_conditions names.
-export function tabNotifications(all: readonly Notification[], plugin: PluginClassId): Notification[] {
-  const concerning = all.filter(({ about }) => about !== undefined && "plugin" in about && about.plugin === plugin);
-  return TAB_SEVERITIES.flatMap((severity) => concerning.filter((notification) => notification.severity === severity));
+// of those about the plugin: its errors, then its warnings, each in the order
+// they came, whatever the board option show_conditions names.
+export function tabNotifications(about: readonly Notification[]): Notification[] {
+  return TAB_SEVERITIES.flatMap((severity) => about.filter((notification) => notification.severity === severity));
 }
 
 // The ANSI escapes that a message may hold:

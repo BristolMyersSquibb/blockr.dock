@@ -2038,9 +2038,8 @@ function asToast(notification, board, drawn) {
   return plugin === void 0 || !inActiveView(board, plugin);
 }
 var TAB_SEVERITIES = ["error", "warning"];
-function tabNotifications(all, plugin) {
-  const concerning = all.filter(({ about }) => about !== void 0 && "plugin" in about && about.plugin === plugin);
-  return TAB_SEVERITIES.flatMap((severity) => concerning.filter((notification) => notification.severity === severity));
+function tabNotifications(about) {
+  return TAB_SEVERITIES.flatMap((severity) => about.filter((notification) => notification.severity === severity));
 }
 var ANSI = /(?:\u001b\[|\u009b)[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
 function plainText(message) {
@@ -4688,8 +4687,8 @@ function Tab(props) {
 }
 function PluginTab({ plugin, ...props }) {
   const { core } = useDock();
-  const all = useNotified2(core, null);
-  const told = useMemo4(() => tabNotifications(all, plugin), [all, plugin]);
+  const notified = useNotified2(core, { plugin });
+  const told = useMemo4(() => tabNotifications(notified), [notified]);
   const messages = told.map((notification) => plainText(notification.message));
   const lines = messages.flatMap((message) => message.split("\n")).map((text2) => ({ text: text2 }));
   const { props: tip, tooltip } = useTooltip(lines.length === 0 ? null : lines);

@@ -114,26 +114,19 @@ describe("where the dock shows a notification", () => {
 });
 
 describe("what the tab of a plugin's panel tells of", () => {
-  // A notification about the plugin given, the DAG's unless given, of the
-  // severity given, under the id given.
-  const about = (id: string, severity: Notification["severity"], plugin = DAG): Notification => ({
-    ...from(sources.plugin, { plugin }),
+  // A notification about the DAG's plugin, of the severity given, under the
+  // id given.
+  const about = (id: string, severity: Notification["severity"]): Notification => ({
+    ...from(sources.plugin, { plugin: DAG }),
     id,
     severity,
   });
 
   test("is the errors about the plugin, then its warnings, each in the order they came, and none of its messages", () => {
-    const all = [
-      about("w1", "warning"),
-      about("e1", "error"),
-      about("m1", "message"),
-      about("other", "error", "blockr.md-md_plugin"),
-      from(sources.plugin, { block: "a" }),
-      about("w2", "warning"),
-      about("e2", "error"),
-    ];
-    expect(tabNotifications(all, DAG).map((notification) => notification.id)).toEqual(["e1", "e2", "w1", "w2"]);
-    expect(tabNotifications([about("m1", "message")], DAG)).toEqual([]);
+    // The notifications about the plugin, which useNotified() gives the tab.
+    const notified = [about("w1", "warning"), about("e1", "error"), about("m1", "message"), about("w2", "warning"), about("e2", "error")];
+    expect(tabNotifications(notified).map((notification) => notification.id)).toEqual(["e1", "e2", "w1", "w2"]);
+    expect(tabNotifications([about("m1", "message")])).toEqual([]);
   });
 });
 

@@ -122,8 +122,8 @@ function Tab(props: IDockviewPanelHeaderProps<PanelParams>): ReactElement {
 // from it the tab's element that dockview draws.
 function PluginTab({ plugin, ...props }: IDockviewPanelHeaderProps<PanelParams> & { readonly plugin: PluginClassId }): ReactElement {
   const { core } = useDock();
-  const all = useNotified(core, null);
-  const told = useMemo(() => tabNotifications(all, plugin), [all, plugin]);
+  const notified = useNotified(core, { plugin });
+  const told = useMemo(() => tabNotifications(notified), [notified]);
   const messages = told.map((notification) => plainText(notification.message));
   // A message of several lines takes a line of the tooltip for each.
   const lines = messages.flatMap((message) => message.split("\n")).map((text) => ({ text }));
