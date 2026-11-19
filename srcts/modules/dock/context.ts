@@ -5,8 +5,8 @@
 // Dockview draws the content of each panel and the header of each tab group
 // in a portal of the dock's React tree, so they read the context of the dock's
 // root as well.
-// The module also holds how the dock runs one of its commands as an edit, and
-// how it gives a block focus.
+// The module also holds how the dock runs one of its commands, or a batch of
+// them, as an edit, and how it gives a block focus.
 
 import type { BlockId, CoreApi, Json, PluginClassId } from "@blockr/core";
 import { createContext, useContext } from "react";
@@ -42,12 +42,19 @@ export function useDock(): DockContextValue {
   return value;
 }
 
-// Runs one of the board's commands as an edit of the dock.
-// Where the board refuses it, core tells the user why, as an error of the code
-// board_edit_failed.
-export function runEdit(core: CoreApi, id: string, args: Json): void {
-  core.commands.run(id, args).catch(() => {
-    // Core tells the user why the board refused the command.
+// Commands of the board, each with its args, which run in order as one step.
+type Batch = readonly { readonly id: string; readonly args?: Json }[];
+
+// Runs one of the board's commands as an edit of the dock, or the commands of
+// a batch.
+// Where the board refuses the edit, core tells the user why, as an error of
+// the code board_edit_failed.
+export function runEdit(core: CoreApi, id: string, args: Json): void;
+export function runEdit(core: CoreApi, batch: Batch): void;
+export function runEdit(core: CoreApi, edit: string | Batch, args?: Json): void {
+  const running = typeof edit === "string" ? core.commands.run(edit, args) : core.commands.run(edit);
+  running.catch(() => {
+    // Core tells the user why the board refused the edit.
   });
 }
 
