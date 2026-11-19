@@ -5853,7 +5853,6 @@ var frontend = {
   }
 };
 var dock_default = {
-  options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
   // TypeScript gives the objects in the JSON's arrays properties that may be
   // undefined, which no Json has, so it does not take the schema for a Json,
   // though it is one.

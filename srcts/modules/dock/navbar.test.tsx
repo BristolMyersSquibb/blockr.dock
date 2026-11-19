@@ -46,7 +46,12 @@ async function startBar(options: BarOptions = {}) {
     packages: { ...HELLO.packages, "blockr.dock": "0.2.1", "blockr.test": "1.0.0" },
     plugins: {
       ...plugins,
-      [DOCK]: { name: "Dock", version: 1, module: "blockr.dock/js/dock.js" },
+      [DOCK]: {
+        name: "Dock",
+        version: 1,
+        options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
+        module: "blockr.dock/js/dock.js",
+      },
       ...(storage === "test" ? { [STORAGE]: { name: "Test storage", version: 1, module: "blockr.test/storage.js" } } : {}),
     },
     options: {
