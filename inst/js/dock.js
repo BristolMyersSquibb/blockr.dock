@@ -2019,10 +2019,30 @@ function Mounted({ mount, label, className, data }) {
 }
 
 // srcts/modules/dock/notifications.ts
-function onCard(notification) {
-  const { about, source } = notification;
-  if (about === void 0 || !("block" in about)) return false;
-  return source.kind !== "module" || !("plugin" in source.module.object);
+function onCard({ about }) {
+  return about !== void 0 && "block" in about;
+}
+function showsSeverity(showConditions, severity) {
+  return Array.isArray(showConditions) && showConditions.includes(severity);
+}
+function panelPlugin({ about }, drawn) {
+  return about !== void 0 && "plugin" in about && drawn.has(about.plugin) ? about.plugin : void 0;
+}
+function inActiveView(board, plugin) {
+  const view2 = activeView(board);
+  return view2 !== void 0 && places(view2.grid, { plugin });
+}
+function asToast(notification, board, drawn) {
+  if (onCard(notification)) return false;
+  const plugin = panelPlugin(notification, drawn);
+  return plugin === void 0 || !inActiveView(board, plugin);
+}
+var TAB_SEVERITIES = ["error", "warning"];
+function tabNotifications(all, plugin, showConditions) {
+  const concerning = all.filter(({ about }) => about !== void 0 && "plugin" in about && about.plugin === plugin);
+  return TAB_SEVERITIES.filter((severity) => showsSeverity(showConditions, severity)).flatMap(
+    (severity) => concerning.filter((notification) => notification.severity === severity)
+  );
 }
 var ANSI = /(?:\u001b\[|\u009b)[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
 function plainText(message) {
@@ -3049,6 +3069,37 @@ function useTooltip(source) {
   const tooltip = shown === null ? null : /* @__PURE__ */ jsx8(TooltipCard, { anchor: shown.el, tip: shown.tip });
   return { props, tooltip };
 }
+function bindTip(el, props) {
+  const handlers = {
+    pointerenter: (event) => {
+      props.onPointerEnter({ currentTarget: el, pointerType: event.pointerType });
+    },
+    pointerleave: () => {
+      props.onPointerLeave();
+    },
+    pointerdown: () => {
+      props.onPointerDown();
+    },
+    focus: () => {
+      props.onFocus({ currentTarget: el });
+    },
+    blur: () => {
+      props.onBlur();
+    }
+  };
+  el.addEventListener("pointerenter", handlers.pointerenter);
+  el.addEventListener("pointerleave", handlers.pointerleave);
+  el.addEventListener("pointerdown", handlers.pointerdown);
+  el.addEventListener("focus", handlers.focus);
+  el.addEventListener("blur", handlers.blur);
+  return () => {
+    el.removeEventListener("pointerenter", handlers.pointerenter);
+    el.removeEventListener("pointerleave", handlers.pointerleave);
+    el.removeEventListener("pointerdown", handlers.pointerdown);
+    el.removeEventListener("focus", handlers.focus);
+    el.removeEventListener("blur", handlers.blur);
+  };
+}
 function TooltipCard({ anchor, tip }) {
   const ref2 = useRef3(null);
   usePopover(ref2, anchor);
@@ -3485,9 +3536,7 @@ function BlockCard({ id }) {
   const [drawn, setDrawn] = useState4(false);
   const severities = core.options.value("show_conditions");
   const shown = useMemo2(
-    () => notified.filter(
-      (notification) => onCard(notification) && Array.isArray(severities) && severities.includes(notification.severity)
-    ),
+    () => notified.filter((notification) => showsSeverity(severities, notification.severity)),
     [notified, severities]
   );
   const focus = useCallback4(() => {
@@ -3554,7 +3603,7 @@ function BlockCard({ id }) {
 }
 
 // srcts/modules/dock/dock.tsx
-import { useBoard as useBoard4 } from "@blockr/core/react";
+import { useBoard as useBoard4, useNotified as useNotified2 } from "@blockr/core/react";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./vendor-a3ad4872.js";
 import { useCallback as useCallback7, useEffect as useEffect3, useMemo as useMemo4, useRef as useRef8, useState as useState8, useSyncExternalStore as useSyncExternalStore2 } from "react";
 
@@ -4627,10 +4676,44 @@ var components = { [PANEL_COMPONENT]: PanelFrame };
 function Tab(props) {
   const { core } = useDock();
   const { panel: panel2 } = props.params;
-  const onPointerDown = "block" in panel2 ? () => {
-    giveFocus(core, panel2.block);
-  } : void 0;
-  return /* @__PURE__ */ jsx16(DockviewDefaultTab, { ...props, hideClose: core.lock.board, onPointerDown });
+  if ("plugin" in panel2) return /* @__PURE__ */ jsx16(PluginTab, { ...props, plugin: panel2.plugin });
+  return /* @__PURE__ */ jsx16(
+    DockviewDefaultTab,
+    {
+      ...props,
+      hideClose: core.lock.board,
+      onPointerDown: () => {
+        giveFocus(core, panel2.block);
+      }
+    }
+  );
+}
+function PluginTab({ plugin, ...props }) {
+  const { core } = useDock();
+  useBoard4(core);
+  const all = useNotified2(core, null);
+  const showConditions = core.options.value("show_conditions");
+  const told = useMemo4(() => tabNotifications(all, plugin, showConditions), [all, plugin, showConditions]);
+  const messages = told.map((notification) => plainText(notification.message));
+  const lines = messages.flatMap((message) => message.split("\n")).map((text2) => ({ text: text2 }));
+  const { props: tip, tooltip } = useTooltip(lines.length === 0 ? null : lines);
+  const frame = useRef8(null);
+  const description = messages.join("\n");
+  useEffect3(() => {
+    const tab = frame.current?.closest('[role="tab"]');
+    if (tab === null || tab === void 0) return void 0;
+    const unbind = bindTip(tab, tip);
+    if (description === "") tab.removeAttribute("aria-description");
+    else tab.setAttribute("aria-description", description);
+    return () => {
+      unbind();
+      tab.removeAttribute("aria-description");
+    };
+  }, [tip, description]);
+  return /* @__PURE__ */ jsxs10("div", { ref: frame, className: "blockr-dock-tab-frame", "data-notified": told[0]?.severity, children: [
+    /* @__PURE__ */ jsx16(DockviewDefaultTab, { ...props, hideClose: core.lock.board }),
+    tooltip
+  ] });
 }
 function AddPanelButton({ api: api2, group }) {
   const button = usePickerButton(() => {
@@ -5615,7 +5698,8 @@ import { useSyncExternalStore as useSyncExternalStore5 } from "react";
 import { jsx as jsx19, jsxs as jsxs13 } from "react/jsx-runtime";
 var SHOWN_FOR = 5e3;
 var FADES_FOR = 300;
-function createToasts(notifications) {
+function createToasts(core, drawn) {
+  const { notifications, store } = core;
   const shown = /* @__PURE__ */ new Map();
   const gone = /* @__PURE__ */ new Set();
   const listeners = /* @__PURE__ */ new Set();
@@ -5651,17 +5735,19 @@ function createToasts(notifications) {
     publish();
   }
   function update2() {
-    const holding = new Set(heard.map((notification) => notification.id));
+    const board = store.board();
+    const toasted = new Set(heard.filter((notification) => asToast(notification, board, drawn)).map((notification) => notification.id));
     for (const [id, toast] of shown) {
-      if (holding.has(id)) continue;
+      if (toasted.has(id)) continue;
       clearTimeout(toast.timer);
       shown.delete(id);
     }
+    const holding = new Set(heard.map((notification) => notification.id));
     for (const id of gone) {
       if (!holding.has(id)) gone.delete(id);
     }
     for (const notification of heard) {
-      if (onCard(notification) || gone.has(notification.id)) continue;
+      if (!toasted.has(notification.id) || gone.has(notification.id)) continue;
       const toast = shown.get(notification.id);
       if (toast === void 0) {
         const added = { toast: { notification, fading: false }, timer: void 0, kept: /* @__PURE__ */ new Set() };
@@ -5673,8 +5759,11 @@ function createToasts(notifications) {
     }
     publish();
   }
-  const off = notifications.subscribe((all) => {
+  const offNotifications = notifications.subscribe((all) => {
     heard = all;
+    update2();
+  });
+  const offBoard = store.subscribe(() => {
     update2();
   });
   update2();
@@ -5707,7 +5796,8 @@ function createToasts(notifications) {
     },
     stop() {
       stopped = true;
-      off();
+      offNotifications();
+      offBoard();
       for (const toast of shown.values()) clearTimeout(toast.timer);
     }
   };
@@ -5728,21 +5818,42 @@ function sourcePackage(notification) {
 function own(record, key) {
   return Object.hasOwn(record, key) ? record[key] : void 0;
 }
-function ToastList({ core, toasts }) {
+var ACTIVATE_VIEW2 = "blockr.dock-activate_view";
+var SHOW_PANEL = "blockr.dock-show_panel";
+function panelShowing(board, plugin, commands) {
+  const state = dockState(board);
+  if (state === void 0) return void 0;
+  const panel2 = { plugin };
+  const show = { id: SHOW_PANEL, args: { panel: panel2 } };
+  const view2 = viewOrder(state).find((id) => {
+    const held = state.views[id];
+    return held !== void 0 && places(held.grid, panel2);
+  });
+  if (view2 === void 0) return commands.preflight(SHOW_PANEL, { panel: panel2 }) ? [show] : void 0;
+  return view2 === state.active ? [show] : [{ id: ACTIVATE_VIEW2, args: { view: view2 } }, show];
+}
+function ToastList({ core, toasts, drawn }) {
   const list = useSyncExternalStore5(toasts.subscribe, toasts.list);
   const board = useBoard7(core);
   if (list.length === 0) return null;
-  return /* @__PURE__ */ jsx19("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => /* @__PURE__ */ jsx19(
-    ToastItem,
-    {
-      toast,
-      title: concerned(toast.notification.about, core, board),
-      toasts
-    },
-    toast.notification.id
-  )) });
+  return /* @__PURE__ */ jsx19("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => {
+    const plugin = panelPlugin(toast.notification, drawn);
+    const showing2 = plugin === void 0 ? void 0 : panelShowing(board, plugin, core.commands);
+    return /* @__PURE__ */ jsx19(
+      ToastItem,
+      {
+        toast,
+        title: concerned(toast.notification.about, core, board),
+        toasts,
+        show: showing2 === void 0 ? void 0 : () => {
+          runEdit(core, showing2);
+        }
+      },
+      toast.notification.id
+    );
+  }) });
 }
-function ToastItem({ toast, title, toasts }) {
+function ToastItem({ toast, title, toasts, show }) {
   const { notification, fading } = toast;
   const { id, severity } = notification;
   const pkg = sourcePackage(notification);
@@ -5776,7 +5887,8 @@ function ToastItem({ toast, title, toasts }) {
               pkg
             ] })
           ] }),
-          /* @__PURE__ */ jsx19("p", { className: "blockr-dock-toast-message", children: plainText(notification.message) })
+          /* @__PURE__ */ jsx19("p", { className: "blockr-dock-toast-message", children: plainText(notification.message) }),
+          show === void 0 ? null : /* @__PURE__ */ jsx19("button", { type: "button", className: "blockr-dock-toast-link", onClick: show, children: "Show panel" })
         ] }),
         /* @__PURE__ */ jsx19(
           "button",
@@ -5798,7 +5910,7 @@ function ToastItem({ toast, title, toasts }) {
 // srcts/modules/dock/index.tsx
 import { Fragment as Fragment7, jsx as jsx20, jsxs as jsxs14 } from "react/jsx-runtime";
 var api = API;
-var SHOW_PANEL = "blockr.dock-show_panel";
+var SHOW_PANEL2 = "blockr.dock-show_panel";
 var frontend = {
   async render({ el, core, plugin, signal, args }) {
     const items = readNavbar(args);
@@ -5812,7 +5924,7 @@ var frontend = {
     const busy = trackBusy(core, drawn, narrow, settings.spinnerDelay);
     const sidebar = createSidebar();
     const openFolders = createOpenFolders();
-    const toasts = createToasts(core.notifications);
+    const toasts = createToasts(core, drawn);
     const unbind = bindShortcuts(el.ownerDocument, core, () => barButtons(core, items));
     const root = createRoot(el);
     const shared = { core, plugin, drawn, tooltips: createTooltips() };
@@ -5833,7 +5945,7 @@ var frontend = {
             }
           ),
           /* @__PURE__ */ jsx20(DockContext, { value: shared, children: /* @__PURE__ */ jsx20(OptionsSidebar, { sidebar }) }),
-          /* @__PURE__ */ jsx20(ToastList, { core, toasts })
+          /* @__PURE__ */ jsx20(ToastList, { core, toasts, drawn })
         ] })
       );
     });
@@ -5848,8 +5960,8 @@ var frontend = {
   },
   async show({ object: object2, core }) {
     const args = { panel: object2 };
-    if (!core.commands.preflight(SHOW_PANEL, args)) return;
-    await core.commands.run(SHOW_PANEL, args);
+    if (!core.commands.preflight(SHOW_PANEL2, args)) return;
+    await core.commands.run(SHOW_PANEL2, args);
   }
 };
 var dock_default = {

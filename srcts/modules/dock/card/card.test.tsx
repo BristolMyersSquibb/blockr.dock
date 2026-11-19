@@ -537,18 +537,22 @@ describe("the notifications on a block's card", () => {
     expect(foldOf(cardOf(el, "Head"))).toBeNull();
   });
 
-  test("leave out what a plugin raises about the block, which shows as a toast", async () => {
+  test("hold what a plugin raises about the block too, which shows as no toast", async () => {
     const { core, el, settled } = await startCards();
 
-    core.notifications.notify("blockr.core-edit_board_plugin", {
+    const withdraw = core.notifications.notify("blockr.core-edit_board_plugin", {
       severity: "error",
       message: "The edit was refused.",
       code: "edit_refused",
       about: { block: "b" },
     });
     await settled();
+    expect(errors(cardOf(el, "Head"))).toEqual([["error", "The edit was refused."]]);
+    expect(el.querySelector(".blockr-dock-toast")).toBeNull();
+
+    withdraw();
+    await settled();
     expect(errors(cardOf(el, "Head"))).toEqual([]);
-    expect(el.querySelector(".blockr-dock-toast")?.textContent).toContain("The edit was refused.");
   });
 });
 
