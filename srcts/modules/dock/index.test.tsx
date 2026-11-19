@@ -721,7 +721,7 @@ describe("the tab of a plugin's panel", () => {
     s.stop();
   });
 
-  test("tells of the severities that the board option show_conditions names", async () => {
+  test("tells of every warning and error, whatever the board option show_conditions names", async () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));
     await s.core.commands.run("blockr.core-set_option", { id: "show_conditions", value: ["error"] });
@@ -730,11 +730,7 @@ describe("the tab of a plugin's panel", () => {
     flushSync(() => {
       s.core.notifications.notify(NOTES, slow);
     });
-    expect(dotOn(el, "Notes")).toBeNull();
-    flushSync(() => {
-      s.core.notifications.notify(NOTES, lost);
-    });
-    expect(dotOn(el, "Notes")).toBe("error");
+    expect(dotOn(el, "Notes")).toBe("warning");
     s.stop();
   });
 

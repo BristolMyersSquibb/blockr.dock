@@ -8,8 +8,8 @@
 // - A notification about a plugin whose panel the dock draws, as for a plugin
 //   whose class has a `ui`, shows in the plugin's panel, which the plugin
 //   draws, while the active view holds the panel. The panel's tab then shows a
-//   dot for the warnings and the errors about the plugin of the severities
-//   that show_conditions names, whose messages its tooltip holds (./dock.tsx).
+//   dot while a warning or an error about the plugin holds, whose messages its
+//   tooltip holds (./dock.tsx).
 // - Where the active view holds no panel of the plugin, the notification
 //   shows as a toast, with a link that shows the panel (./toasts.tsx).
 //   Once the active view holds the panel, the toast goes, and it comes back
@@ -68,17 +68,10 @@ const TAB_SEVERITIES: readonly Severity[] = ["error", "warning"];
 
 // The notifications that the tab of a plugin's panel tells of with its dot,
 // of all that hold: the errors about the plugin, then its warnings, each in
-// the order they came, of the severities that the value of the board option
-// show_conditions names.
-export function tabNotifications(
-  all: readonly Notification[],
-  plugin: PluginClassId,
-  showConditions: Json | undefined,
-): Notification[] {
+// the order they came, whatever the board option show_conditions names.
+export function tabNotifications(all: readonly Notification[], plugin: PluginClassId): Notification[] {
   const concerning = all.filter(({ about }) => about !== undefined && "plugin" in about && about.plugin === plugin);
-  return TAB_SEVERITIES.filter((severity) => showsSeverity(showConditions, severity)).flatMap((severity) =>
-    concerning.filter((notification) => notification.severity === severity),
-  );
+  return TAB_SEVERITIES.flatMap((severity) => concerning.filter((notification) => notification.severity === severity));
 }
 
 // The ANSI escapes that a message may hold:

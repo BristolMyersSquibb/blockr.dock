@@ -639,20 +639,26 @@
  * plugin's name on the tab: 6px, in the danger colour for an error and in the
  * amber for a warning.
  * It follows the name on a rail's tabs too, whose names run downwards.
+ * The name and the dot sit in a row of their own, which centres the dot on
+ * the name's line, across the line in either direction.
  */
 .blockr-dock-tab-frame {
   display: contents;
 }
 
+.blockr-dock-tab-frame[data-notified] .dv-default-tab-content {
+  display: inline-flex;
+  align-items: center;
+}
+
 .blockr-dock-tab-frame[data-notified] .dv-default-tab-content::after {
   content: "";
-  display: inline-block;
+  flex: none;
   width: 6px;
   height: 6px;
   margin-inline-start: 6px;
   border-radius: 50%;
   background-color: var(--blockr-dock-border-danger);
-  vertical-align: middle;
 }
 
 .blockr-dock-tab-frame[data-notified="warning"] .dv-default-tab-content::after {

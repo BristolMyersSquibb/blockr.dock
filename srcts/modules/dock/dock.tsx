@@ -22,10 +22,10 @@
 // into its card does, while a click on a plugin's tab leaves the focus where
 // it is.
 // The tab of a plugin's panel shows a dot while a warning or an error about
-// the plugin holds, of the severities that the board option show_conditions
-// names, in blockr.ui's danger colour for an error and its amber for a
-// warning, whichever panel its tab group or rail shows, a collapsed rail's
-// included (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#places-besides-the-panel).
+// the plugin holds, whatever the board option show_conditions names, in
+// blockr.ui's danger colour for an error and its amber for a warning,
+// whichever panel its tab group or rail shows, a collapsed rail's included
+// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#places-besides-the-panel).
 // Its tooltip holds their messages, the errors first, so that the user can
 // read one that the plugin does not show, such as why its UI cannot draw.
 // The tooltip shows as the pointer rests on the tab, or as the keyboard's
@@ -122,11 +122,8 @@ function Tab(props: IDockviewPanelHeaderProps<PanelParams>): ReactElement {
 // from it the tab's element that dockview draws.
 function PluginTab({ plugin, ...props }: IDockviewPanelHeaderProps<PanelParams> & { readonly plugin: PluginClassId }): ReactElement {
   const { core } = useDock();
-  // The board holds the value of show_conditions, so the tab follows it.
-  useBoard(core);
   const all = useNotified(core, null);
-  const showConditions = core.options.value("show_conditions");
-  const told = useMemo(() => tabNotifications(all, plugin, showConditions), [all, plugin, showConditions]);
+  const told = useMemo(() => tabNotifications(all, plugin), [all, plugin]);
   const messages = told.map((notification) => plainText(notification.message));
   // A message of several lines takes a line of the tooltip for each.
   const lines = messages.flatMap((message) => message.split("\n")).map((text) => ({ text }));

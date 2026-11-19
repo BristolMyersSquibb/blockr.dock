@@ -792,15 +792,18 @@
 .blockr-dock-tab-frame {
   display: contents;
 }
+.blockr-dock-tab-frame[data-notified] .dv-default-tab-content {
+  display: inline-flex;
+  align-items: center;
+}
 .blockr-dock-tab-frame[data-notified] .dv-default-tab-content::after {
   content: "";
-  display: inline-block;
+  flex: none;
   width: 6px;
   height: 6px;
   margin-inline-start: 6px;
   border-radius: 50%;
   background-color: var(--blockr-dock-border-danger);
-  vertical-align: middle;
 }
 .blockr-dock-tab-frame[data-notified=warning] .dv-default-tab-content::after {
   background-color: var(--blockr-dock-border-warning);

@@ -1,7 +1,7 @@
 // Where the dock shows each notification of CoreApi, by what it concerns and
 // by the active view, and how the dock shows the message of one.
 
-import type { Board, BoardObject, Json, Notification, NotificationSource } from "@blockr/core";
+import type { Board, BoardObject, Notification, NotificationSource } from "@blockr/core";
 import { describe, expect, test } from "vitest";
 import { DOCK } from "../../commands/index.ts";
 import type { DockState, Grid } from "../../state/index.ts";
@@ -122,7 +122,7 @@ describe("what the tab of a plugin's panel tells of", () => {
     severity,
   });
 
-  test("is the errors about the plugin, then its warnings, each in the order they came, of the severities that show_conditions names", () => {
+  test("is the errors about the plugin, then its warnings, each in the order they came, and none of its messages", () => {
     const all = [
       about("w1", "warning"),
       about("e1", "error"),
@@ -132,18 +132,8 @@ describe("what the tab of a plugin's panel tells of", () => {
       about("w2", "warning"),
       about("e2", "error"),
     ];
-    const ids = (showConditions: Json) => tabNotifications(all, DAG, showConditions).map((notification) => notification.id);
-
-    expect(ids(["warning", "error"])).toEqual(["e1", "e2", "w1", "w2"]);
-    expect(ids(["message", "warning", "error"])).toEqual(["e1", "e2", "w1", "w2"]);
-    expect(ids(["error"])).toEqual(["e1", "e2"]);
-    expect(ids(["message"])).toEqual([]);
-    expect(ids([])).toEqual([]);
-  });
-
-  test("is none while show_conditions holds no list, as a value that does not fit its schema", () => {
-    expect(tabNotifications([about("e1", "error")], DAG, undefined)).toEqual([]);
-    expect(tabNotifications([about("e1", "error")], DAG, "error")).toEqual([]);
+    expect(tabNotifications(all, DAG).map((notification) => notification.id)).toEqual(["e1", "e2", "w1", "w2"]);
+    expect(tabNotifications([about("m1", "message")], DAG)).toEqual([]);
   });
 });
 

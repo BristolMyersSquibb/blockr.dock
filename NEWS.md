@@ -3,8 +3,8 @@
 * The dock shows the notifications about a plugin by the plugin's panel
   (#637).
   The panel's tab shows a dot while a warning or an error about the plugin
-  holds, of the severities that the board option `show_conditions` names, in
-  the danger colour for an error and in amber for a warning.
+  holds, whatever the board option `show_conditions` names, in the danger
+  colour for an error and in amber for a warning.
   The dot shows on a tab behind another and on a collapsed rail too.
   The tab's tooltip holds their messages, the errors first, and a screen
   reader reads them as the tab's description.
