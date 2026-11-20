@@ -481,6 +481,9 @@
  * - Remove block shows the bin icon before its label, and is plain at rest
  *   and red, on the danger wash, as the item that the pointer or the keyboard
  *   is on.
+ * These rules go once core gives the block's menu, whose menus of board
+ * objects draw all three themselves
+ * (https://github.com/BristolMyersSquibb/blockr.core/issues/743).
  */
 .blockr-card-menu .blockr-card-menu-meta {
   grid-column: 2;
