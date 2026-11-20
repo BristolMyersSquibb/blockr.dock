@@ -4,3 +4,4 @@ docs
 inst/doc
 .claude/
 node_modules/
+coverage/

@@ -5,9 +5,8 @@
 // The frontend draws the page as a React app on the one copy of React that
 // core puts on the page, with the layout drawn by dockview, which the module's
 // bundle holds.
-// The dock reads five board options: its own, compact, view_tabs and
-// sync_rails, which ../../options defines, and core's show_conditions and
-// dark_mode.
+// The dock reads four board options: its own, compact, view_tabs and
+// sync_rails, which ../../options defines, and core's dark_mode.
 // The method of R's plugin_options() for the class names them.
 // R sends their ids in the class's entry of its reply to hello.
 // So core gives each board that lacks a value for one of them its default as

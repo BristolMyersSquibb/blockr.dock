@@ -46,13 +46,9 @@ const shown: DockState = {
   visible: {},
 };
 
-// The board of core's fixture, with the dock's state given, the locks of its
-// blocks given, and the severities that its cards show where given.
-function boardWith(
-  state: DockState,
-  locked: Readonly<Record<BlockId, boolean | null>> = {},
-  showConditions?: readonly string[],
-): JsonBoard {
+// The board of core's fixture, with the dock's state given and the locks of
+// its blocks given.
+function boardWith(state: DockState, locked: Readonly<Record<BlockId, boolean | null>> = {}): JsonBoard {
   const { board } = HELLO.board;
   return {
     ...HELLO.board,
@@ -62,10 +58,6 @@ function boardWith(
       blocks: Object.fromEntries(
         Object.entries(board.blocks).map(([id, block]) => [id, { ...block, locked: locked[id] ?? block.locked }]),
       ),
-      options:
-        showConditions === undefined
-          ? board.options
-          : { ...board.options, show_conditions: { value: [...showConditions], version: 1 } },
       plugins: { [DOCK]: { state, version: 1 } },
     },
   };
@@ -547,7 +539,7 @@ describe("the notifications on a block's card", () => {
   ];
 
   test("fold the warnings and the messages under the output behind their counts, the warnings first", async () => {
-    const { el } = await startCards(boardWith(shown, {}, ["message", "warning", "error"]), false, raising("b", warned));
+    const { el } = await startCards(boardWith(shown), false, raising("b", warned));
 
     const head = cardOf(el, "Head");
     expect(errors(head)).toEqual([]);
@@ -562,21 +554,13 @@ describe("the notifications on a block's card", () => {
     ]);
   });
 
-  test("show only the severities that the board option show_conditions names", async () => {
-    const { el } = await startCards(boardWith(shown), false, raising("b", warned));
-
-    const fold = foldOf(cardOf(el, "Head"));
-    expect(fold?.querySelector("summary")?.textContent).toBe("1 warning");
-    expect(listed(fold)).toEqual([["warning", "Dropped 2 rows."]]);
-  });
-
   test("leave the card as core withdraws them", async () => {
     let conditions = warned;
     const { core, el, settled } = await startCards(boardWith(shown), false, {
       evaluate: (request) => (request.block === "b" ? { conditions } : undefined),
     });
 
-    expect(listed(foldOf(cardOf(el, "Head")))).toHaveLength(1);
+    expect(listed(foldOf(cardOf(el, "Head")))).toHaveLength(3);
     conditions = [];
     core.scheduler.invalidate("b");
     await settled();

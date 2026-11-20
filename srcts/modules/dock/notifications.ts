@@ -3,8 +3,8 @@
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.7#notifications,
 // https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#places-besides-the-panel):
 // - A notification about a block shows on the block's card, whoever raised
-//   it: R, core, one of the block's modules or a plugin. The card shows those
-//   of the severities that the board option show_conditions names.
+//   it: R, core, one of the block's modules or a plugin, whatever its
+//   severity.
 // - A notification about a plugin whose panel the dock draws, as for a plugin
 //   whose class has a `ui`, shows in the plugin's panel, which the plugin
 //   draws, while the active view holds the panel. The panel's tab then shows a
@@ -22,7 +22,7 @@
 //   condition's message holds where R runs with colours on, as cli styles it
 //   there.
 
-import type { Board, Json, Notification, PluginClassId, Severity } from "@blockr/core";
+import type { Board, Notification, PluginClassId, Severity } from "@blockr/core";
 import { activeView } from "../../commands/index.ts";
 import { places } from "../../state/index.ts";
 
@@ -30,12 +30,6 @@ import { places } from "../../state/index.ts";
 // rather than as a toast.
 export function onCard({ about }: Notification): boolean {
   return about !== undefined && "block" in about;
-}
-
-// Whether the value of the board option show_conditions names the severity,
-// so that a card or a tab shows the notifications of that severity.
-export function showsSeverity(showConditions: Json | undefined, severity: Severity): boolean {
-  return Array.isArray(showConditions) && showConditions.includes(severity);
 }
 
 // The plugin that the notification concerns, where the dock draws a panel for
@@ -68,7 +62,7 @@ const TAB_SEVERITIES: readonly Severity[] = ["error", "warning"];
 
 // The notifications that the tab of a plugin's panel tells of with its dot,
 // of those about the plugin: its errors, then its warnings, each in the order
-// they came, whatever the board option show_conditions names.
+// they came.
 export function tabNotifications(about: readonly Notification[]): Notification[] {
   return TAB_SEVERITIES.flatMap((severity) => about.filter((notification) => notification.severity === severity));
 }

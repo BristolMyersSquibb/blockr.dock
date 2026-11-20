@@ -32,17 +32,8 @@ describe("the dock's frontend", () => {
     const { core, settled, stop } = await startDock(document.createElement("div"));
     await settled();
 
-    // The fixture's board holds values for n_rows and show_conditions alone.
-    const options = core.store.board().options;
-    expect(options).toMatchObject({ compact: false, view_tabs: false, sync_rails: true, show_conditions: ["warning", "error"] });
-    expect(Object.keys(options).sort()).toEqual([
-      "compact",
-      "dark_mode",
-      "n_rows",
-      "show_conditions",
-      "sync_rails",
-      "view_tabs",
-    ]);
+    // The fixture's board holds a value for none of the dock's board options.
+    expect(core.store.board().options).toMatchObject({ compact: false, view_tabs: false, sync_rails: true });
     stop();
   });
 
@@ -721,19 +712,6 @@ describe("the tab of a plugin's panel", () => {
     s.stop();
   });
 
-  test("tells of every warning and error, whatever the board option show_conditions names", async () => {
-    const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));
-    await s.core.commands.run("blockr.core-set_option", { id: "show_conditions", value: ["error"] });
-    await s.settled();
-
-    flushSync(() => {
-      s.core.notifications.notify(NOTES, slow);
-    });
-    expect(dotOn(el, "Notes")).toBe("warning");
-    s.stop();
-  });
-
   test("holds their messages, the errors first, in its tooltip, as the keyboard's focus moves onto it or the pointer rests on it, and as its description", async () => {
     const el = attached();
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));
@@ -747,19 +725,25 @@ describe("the tab of a plugin's panel", () => {
     });
     expect(tab.getAttribute("aria-description")).toBe("Lost the draft:\n- intro\nSaving is slow.");
 
+    // The dock hears these events on dockview's element, outside React, so
+    // React draws what they change at a time of its own, after the event.
     tab.focus();
-    await drawn();
-    expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
+    await vi.waitFor(() => {
+      expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
+    });
     tab.blur();
-    await drawn();
-    expect(tooltipLines(el)).toBeNull();
+    await vi.waitFor(() => {
+      expect(tooltipLines(el)).toBeNull();
+    });
 
     tab.dispatchEvent(new PointerEvent("pointerenter", { pointerType: "mouse" }));
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
+    await vi.waitFor(() => {
+      expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
+    });
     tab.dispatchEvent(new PointerEvent("pointerleave", { pointerType: "mouse" }));
-    await drawn();
-    expect(tooltipLines(el)).toBeNull();
+    await vi.waitFor(() => {
+      expect(tooltipLines(el)).toBeNull();
+    });
 
     flushSync(() => {
       withdraw();

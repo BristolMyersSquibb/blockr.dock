@@ -22,9 +22,9 @@
 // into its card does, while a click on a plugin's tab leaves the focus where
 // it is.
 // The tab of a plugin's panel shows a dot while a warning or an error about
-// the plugin holds, whatever the board option show_conditions names, in
-// blockr.ui's danger colour for an error and its amber for a warning,
-// whichever panel its tab group or rail shows, a collapsed rail's included
+// the plugin holds, in blockr.ui's danger colour for an error and its amber
+// for a warning, whichever panel its tab group or rail shows, a collapsed
+// rail's included
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#places-besides-the-panel).
 // Its tooltip holds their messages, the errors first, so that the user can
 // read one that the plugin does not show, such as why its UI cannot draw.
