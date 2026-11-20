@@ -156,8 +156,12 @@ grids_stable <- function(stored, live) {
 #   * `stored_grids` -- the board's stored placement, for asserting that no
 #     write-back happened. The update tally cannot say that on its own: the
 #     dock's `eager` payloads ride the same channel as its commits.
+#
+# `NextMethod()` keeps blockr.core's own exports (`result`) alongside these.
 #' @exportS3Method blockr.core::blockr_test_exports
 blockr_test_exports.dock_board <- function(x, rv, ...) {
+
+  NextMethod()
 
   exportTestValues(
     commit_count = coal(rv[["board"]]$last_update$seq, 0L, fail_all = FALSE),
