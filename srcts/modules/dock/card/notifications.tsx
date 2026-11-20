@@ -10,8 +10,8 @@
 //   messages after them.
 // Each shows its message as text, in the order that the notifications of its
 // severity came.
-// The card shows those that ../notifications.ts gives the card, of the
-// severities that the board option show_conditions names.
+// The card shows every notification that ../notifications.ts gives the card,
+// whatever its severity.
 
 import type { Notification } from "@blockr/core";
 import type { ReactElement } from "react";

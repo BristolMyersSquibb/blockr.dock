@@ -3,8 +3,9 @@
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#settings).
 // Besides core's plugins and the dock, the app runs a plugin class of a
 // package that only the tests know, blockr.test, which requires a board option
-// of that package, zoom. The package defines a second board option, grain,
-// which nothing requires, and whose default fails.
+// of that package, zoom. The package defines two more board options, grain and
+// texture, which nothing requires. They share a category that no other board
+// option has. The default of grain fails.
 
 import type { CoreApi, Json, JsonBoard, Option, OptionModule, PluginClass } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
@@ -18,9 +19,10 @@ const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";
 const VIEWER = "blockr.test-viewer_plugin";
 
-// The categories of the board options that the board of core's reply to hello
-// holds, once core has put on it those that the dock and blockr.test require.
-const CATEGORIES = ["Board options", "Table options", "Theme options", "View options"];
+// The categories of the board options of the dock and of blockr.test.
+// Core puts board options of its own on the board too, for reasons of its own.
+// A test that lists categories leaves out those that hold core's alone.
+const OWN_CATEGORIES = ["Board options", "Extra options", "Theme options", "View options"];
 
 // A UI that shows the board option's value in a number field, and submits the
 // number that the user types as the field changes. Escape in a field whose
@@ -78,6 +80,16 @@ const grain: Omit<Option, "id"> = {
   ui: numberUi(),
 };
 
+// The board option of blockr.test that nothing requires, in the category of
+// grain.
+const texture: Omit<Option, "id"> = {
+  label: "Texture",
+  category: "Extra options",
+  schema: { type: "integer" },
+  default: 1,
+  ui: numberUi(),
+};
+
 // The plugin class of blockr.test, which names no board option itself.
 // Its entry in R's reply to hello names zoom, as the method of R's
 // plugin_options() for the class would.
@@ -104,7 +116,7 @@ async function startSidebar(start: Start = {}) {
       [DOCK]: {
         name: "Dock",
         version: 1,
-        options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
+        options: ["compact", "view_tabs", "sync_rails", "dark_mode"],
         module: "blockr.dock/js/dock.js",
       },
       [VIEWER]: { name: "Viewer", version: 1, options: ["zoom"], module: "blockr.test/viewer.js" },
@@ -116,6 +128,7 @@ async function startSidebar(start: Start = {}) {
       sync_rails: { package: "blockr.dock", module: "blockr.dock/sync-rails-option.js", version: 1 },
       zoom: { package: "blockr.test", module: "blockr.test/zoom-option.js", version: 1 },
       grain: { package: "blockr.test", module: "blockr.test/grain-option.js", version: 1 },
+      texture: { package: "blockr.test", module: "blockr.test/texture-option.js", version: 1 },
     },
     lock: { board: start.locked ?? false, load: false },
     board,
@@ -128,6 +141,7 @@ async function startSidebar(start: Start = {}) {
     [VIEWER]: { api: 1, default: viewer },
     zoom: { api: 1, default: zoom },
     grain: { api: 1, default: grain },
+    texture: { api: 1, default: texture },
   };
   const el = document.createElement("div");
   document.body.append(el);
@@ -155,6 +169,7 @@ const isOpen = (el: HTMLElement): boolean => sidebarIn(el).hasAttribute("data-op
 const categoriesIn = (el: HTMLElement): HTMLDetailsElement[] => [...sidebarIn(el).querySelectorAll<HTMLDetailsElement>("details")];
 const nameOf = (details: HTMLDetailsElement): string | null => find(details, ".blockr-dock-sidebar-summary-name").textContent;
 const names = (el: HTMLElement): (string | null)[] => categoriesIn(el).map(nameOf);
+const ownNames = (el: HTMLElement): (string | null)[] => names(el).filter((name) => name !== null && OWN_CATEGORIES.includes(name));
 const expanded = (el: HTMLElement): (string | null)[] => categoriesIn(el).filter((details) => details.open).map(nameOf);
 
 function category(el: HTMLElement, name: string): HTMLDetailsElement {
@@ -164,15 +179,24 @@ function category(el: HTMLElement, name: string): HTMLDetailsElement {
 }
 
 const summary = (el: HTMLElement, name: string): HTMLElement => find(category(el, name), "summary");
+const summaries = (el: HTMLElement): HTMLElement[] => categoriesIn(el).map((details) => find(details, "summary"));
 
 // The ids of the board options whose UIs the category holds, in order.
 const optionsIn = (el: HTMLElement, name: string): (string | undefined)[] =>
   [...category(el, name).querySelectorAll<HTMLElement>(".blockr-dock-sidebar-option")].map((frame) => frame.dataset.option);
 
-// The fields that the UIs of the category's board options drew, in order.
-const fields = (el: HTMLElement, name: string): HTMLElement[] => [
-  ...category(el, name).querySelectorAll<HTMLElement>(".blockr-dock-sidebar-option :is(input, select)"),
-];
+// The row of the board option given, which holds the option's UI and its
+// Reset button, or null where no expanded category shows the option.
+const rowOf = (el: HTMLElement, option: string): HTMLElement | null =>
+  sidebarIn(el).querySelector<HTMLElement>(`.blockr-dock-sidebar-option[data-option="${option}"]`);
+
+// The field that the UI of the board option given drew, or null for none.
+const fieldOf = (el: HTMLElement, option: string): HTMLElement | null =>
+  rowOf(el, option)?.querySelector<HTMLElement>(":is(input, select)") ?? null;
+
+// The Reset button of the board option given, or null for none.
+const resetOf = (el: HTMLElement, option: string): HTMLElement | null =>
+  rowOf(el, option)?.querySelector<HTMLElement>(".blockr-dock-sidebar-reset") ?? null;
 
 // The button whose accessible name, or else whose text, is the one given.
 function button(root: ParentNode, name: string): HTMLElement {
@@ -200,7 +224,7 @@ function press(key: string, init: KeyboardEventInit = {}): boolean {
 
 // Types the number into the field, as React hears it, and has the field
 // change.
-function type(field: HTMLElement | undefined, text: string): void {
+function type(field: HTMLElement | null, text: string): void {
   if (!(field instanceof HTMLInputElement)) throw new Error("The field is no input.");
   field.value = text;
   field.dispatchEvent(new Event("input", { bubbles: true }));
@@ -216,11 +240,11 @@ async function open(el: HTMLElement): Promise<void> {
 }
 
 // Expands the category by a click on its summary, and waits for core to draw
-// the UI of each of its board options.
-async function expand(el: HTMLElement, name: string, count: number): Promise<void> {
+// the UIs of the board options given, of that category.
+async function expand(el: HTMLElement, name: string, ...options: readonly string[]): Promise<void> {
   click(summary(el, name));
   await vi.waitFor(() => {
-    expect(fields(el, name)).toHaveLength(count);
+    for (const option of options) expect(fieldOf(el, option)).not.toBeNull();
   });
 }
 
@@ -257,31 +281,35 @@ describe("the options sidebar", () => {
     expect(find(sidebar, "h2").textContent).toBe("Board options");
     expect(expanded(el)).toEqual([]);
     expect(sidebar.querySelectorAll(".blockr-dock-sidebar-option")).toHaveLength(0);
-    expect(document.activeElement).toBe(summary(el, "Board options"));
+    expect(document.activeElement).toBe(summaries(el)[0]);
   });
 
   test("lists the categories of the board options that the board holds in alphabetical order, those that a plugin class of another package requires among them", async () => {
-    const { el } = await startSidebar();
+    const { el } = await startSidebar({ options: { grain: { value: 5, version: 1 } } });
     await open(el);
-    expect(names(el)).toEqual(CATEGORIES);
+    expect(ownNames(el)).toEqual(["Board options", "Extra options", "Theme options", "View options"]);
   });
 
   test("shows how many board options each category holds, which a screen reader hears as a phrase", async () => {
-    const { el } = await startSidebar();
+    // The category of grain and texture holds no other board option.
+    const { el, core } = await startSidebar({ options: { grain: { value: 5, version: 1 } } });
     await open(el);
-    const counts = categoriesIn(el).map((details) => find(details, ".blockr-dock-sidebar-count [aria-hidden='true']").textContent);
-    expect(counts).toEqual(["2", "1", "3", "1"]);
-    expect(summary(el, "Theme options").textContent).toBe("Theme options3, 3 board options");
-    expect(summary(el, "View options").textContent).toBe("View options1, 1 board option");
+    expect(summary(el, "Extra options").textContent).toBe("Extra options1, 1 board option");
+
+    await core.commands.run("blockr.core-set_option", { id: "texture", value: 2 });
+    await drawn();
+    expect(summary(el, "Extra options").textContent).toBe("Extra options2, 2 board options");
   });
 
   test("resets a board option to its default with the Reset button by its UI, which hands the focus to the UI", async () => {
     const { el, core } = await startSidebar({ options: { compact: { value: true, version: 1 } } });
     await open(el);
-    await expand(el, "Theme options", 3);
+    await expand(el, "Theme options", "compact", "view_tabs");
     await vi.waitFor(() => {
-      expect(category(el, "Theme options").querySelectorAll(".blockr-dock-sidebar-reset")).toHaveLength(1);
+      expect(resetOf(el, "compact")).not.toBeNull();
     });
+    // The board holds the default of view_tabs.
+    expect(resetOf(el, "view_tabs")).toBeNull();
 
     const reset = button(category(el, "Theme options"), "Reset Compact to its default");
     reset.focus();
@@ -290,8 +318,8 @@ describe("the options sidebar", () => {
       expect(core.store.board().options.compact).toBe(false);
     });
     await drawn();
-    expect(category(el, "Theme options").querySelectorAll(".blockr-dock-sidebar-reset")).toHaveLength(0);
-    expect(document.activeElement).toBe(fields(el, "Theme options")[0]);
+    expect(resetOf(el, "compact")).toBeNull();
+    expect(document.activeElement).toBe(fieldOf(el, "compact"));
   });
 
   test("expands every category from its header, and collapses them all once every one is expanded", async () => {
@@ -301,11 +329,11 @@ describe("the options sidebar", () => {
     expect(toggle.textContent).toBe("Expand all");
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
 
-    await expand(el, "Theme options", 3);
+    await expand(el, "Theme options", "compact");
     expect(toggle.textContent).toBe("Expand all");
     click(toggle);
     await vi.waitFor(() => {
-      expect(expanded(el)).toEqual(CATEGORIES);
+      expect(expanded(el)).toEqual(names(el));
     });
     expect(toggle.textContent).toBe("Collapse all");
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
@@ -318,41 +346,41 @@ describe("the options sidebar", () => {
   });
 
   test("expands a category in place, where core mounts the UI of each of its board options, in the alphabetical order of their labels", async () => {
-    const { el, core } = await startSidebar();
+    const { el, core } = await startSidebar({ options: { grain: { value: 5, version: 1 }, texture: { value: 2, version: 1 } } });
     const mounts = countMounts(core);
     await open(el);
 
-    await expand(el, "Theme options", 3);
-    expect(expanded(el)).toEqual(["Theme options"]);
-    expect(optionsIn(el, "Theme options")).toEqual(["compact", "dark_mode", "view_tabs"]);
-    expect(mounts.started).toEqual(["compact", "dark_mode", "view_tabs"]);
+    await expand(el, "Extra options", "grain", "texture");
+    expect(expanded(el)).toEqual(["Extra options"]);
+    expect(optionsIn(el, "Extra options")).toEqual(["grain", "texture"]);
+    expect(mounts.started).toEqual(["grain", "texture"]);
 
-    fields(el, "Theme options")[0]?.click();
+    type(fieldOf(el, "texture"), "3");
     await vi.waitFor(() => {
-      expect(core.store.board().options.compact).toBe(true);
+      expect(core.store.board().options.texture).toBe(3);
     });
   });
 
   test("expands several categories at once, and ends the mounts of a category as it collapses", async () => {
-    const { el, core } = await startSidebar();
+    const { el, core } = await startSidebar({ options: { grain: { value: 5, version: 1 }, texture: { value: 2, version: 1 } } });
     const mounts = countMounts(core);
     await open(el);
 
-    await expand(el, "Theme options", 3);
-    await expand(el, "View options", 1);
-    expect(expanded(el)).toEqual(["Theme options", "View options"]);
+    await expand(el, "Extra options", "grain", "texture");
+    await expand(el, "View options", "zoom");
+    expect(expanded(el)).toEqual(["Extra options", "View options"]);
 
-    click(summary(el, "Theme options"));
+    click(summary(el, "Extra options"));
     await vi.waitFor(() => {
-      expect(mounts.ended).toEqual(["compact", "dark_mode", "view_tabs"]);
+      expect(mounts.ended).toEqual(["grain", "texture"]);
     });
     expect(expanded(el)).toEqual(["View options"]);
-    expect(optionsIn(el, "Theme options")).toEqual([]);
-    expect(fields(el, "View options")).toHaveLength(1);
+    expect(optionsIn(el, "Extra options")).toEqual([]);
+    expect(fieldOf(el, "zoom")).not.toBeNull();
   });
 
   test("keeps the UIs of a category until it has folded shut, as long as the longest transition of its content", async () => {
-    const { el, core } = await startSidebar();
+    const { el, core } = await startSidebar({ options: { texture: { value: 2, version: 1 } } });
     const mounts = countMounts(core);
     const computed = window.getComputedStyle.bind(window);
     vi.spyOn(window, "getComputedStyle").mockImplementation((element, pseudo) =>
@@ -361,30 +389,30 @@ describe("the options sidebar", () => {
         : computed(element, pseudo),
     );
     await open(el);
-    await expand(el, "View options", 1);
+    await expand(el, "Extra options", "texture");
 
-    click(summary(el, "View options"));
+    click(summary(el, "Extra options"));
     await new Promise((resolve) => setTimeout(resolve, 40));
     expect(expanded(el)).toEqual([]);
-    expect(optionsIn(el, "View options")).toEqual(["zoom"]);
+    expect(optionsIn(el, "Extra options")).toEqual(["texture"]);
     expect(mounts.ended).toEqual([]);
     await vi.waitFor(() => {
-      expect(mounts.ended).toEqual(["zoom"]);
+      expect(mounts.ended).toEqual(["texture"]);
     });
-    expect(optionsIn(el, "View options")).toEqual([]);
+    expect(optionsIn(el, "Extra options")).toEqual([]);
   });
 
   test("keeps its categories expanded as it closes and opens again, unpinned", async () => {
     const { el } = await startSidebar();
     await open(el);
     click(button(sidebarIn(el), "Pin sidebar"));
-    await expand(el, "View options", 1);
+    await expand(el, "View options", "zoom");
     click(button(sidebarIn(el), "Close sidebar"));
     await drawn();
 
     await open(el);
     expect(expanded(el)).toEqual(["View options"]);
-    expect(fields(el, "View options")).toHaveLength(1);
+    expect(fieldOf(el, "zoom")).not.toBeNull();
     expect(button(sidebarIn(el), "Pin sidebar").getAttribute("aria-pressed")).toBe("false");
   });
 
@@ -414,8 +442,8 @@ describe("the options sidebar", () => {
   test("leaves Escape to a UI in it that takes the key, as a field that reverts what the user typed", async () => {
     const { el, core } = await startSidebar();
     await open(el);
-    await expand(el, "View options", 1);
-    const [field] = fields(el, "View options");
+    await expand(el, "View options", "zoom");
+    const field = fieldOf(el, "zoom");
     if (!(field instanceof HTMLInputElement)) throw new Error("No field.");
 
     field.focus();
@@ -483,7 +511,8 @@ describe("the options sidebar", () => {
     const { el } = await startSidebar();
     await open(el);
     const first = button(sidebarIn(el), "Expand all");
-    const last = summary(el, "View options");
+    const last = summaries(el).at(-1);
+    if (last === undefined) throw new Error("The sidebar lists no category.");
 
     last.focus();
     expect(press("Tab")).toBe(true);
@@ -503,31 +532,29 @@ describe("the options sidebar", () => {
   test("leaves a control that a board option's UI hides out as Tab wraps around", async () => {
     const { el } = await startSidebar();
     await open(el);
-    await expand(el, "View options", 1);
-    fields(el, "View options")[0]?.focus();
+    // View options, the category of zoom, is the last that the sidebar lists,
+    // and the field of zoom is the last control in it that the user can reach.
+    await expand(el, "View options", "zoom");
+    fieldOf(el, "zoom")?.focus();
     expect(press("Tab")).toBe(true);
     expect(document.activeElement).toBe(button(sidebarIn(el), "Expand all"));
   });
 
   test("shows a board option that comes onto the board later", async () => {
-    const { el, core } = await startSidebar({ options: { show_conditions: { value: ["error"], version: 1 } } });
+    const { el, core } = await startSidebar();
     await open(el);
-    // Core puts on the board the board options that the dock and blockr.test
-    // require, and those that the outputs of the board's blocks read, such as
-    // n_rows. Nothing puts grain on it.
-    await vi.waitFor(() => {
-      expect(names(el)).toEqual(CATEGORIES);
-    });
+    // Nothing puts grain on the board.
+    expect(ownNames(el)).toEqual(["Board options", "Theme options", "View options"]);
 
     await core.commands.run("blockr.core-set_option", { id: "grain", value: 5 });
     await drawn();
-    expect(names(el)).toEqual(["Board options", "Extra options", "Table options", "Theme options", "View options"]);
+    expect(ownNames(el)).toEqual(["Board options", "Extra options", "Theme options", "View options"]);
   });
 
   test("drops a category whose board options leave the board, though the user expanded it", async () => {
     const { el, core } = await startSidebar({ options: { grain: { value: 5, version: 1 } } });
     await open(el);
-    await expand(el, "Extra options", 1);
+    await expand(el, "Extra options", "grain");
 
     core.store.apply({ options: { unset: ["grain"] } });
     await vi.waitFor(() => {
@@ -539,10 +566,10 @@ describe("the options sidebar", () => {
   test("shows the board options on a locked board too, where a change goes onto the board", async () => {
     const { el, core } = await startSidebar({ locked: true });
     await open(el);
-    expect(names(el)).toEqual(CATEGORIES);
+    expect(ownNames(el)).toEqual(["Board options", "Theme options", "View options"]);
 
-    await expand(el, "View options", 1);
-    type(fields(el, "View options")[0], "4");
+    await expand(el, "View options", "zoom");
+    type(fieldOf(el, "zoom"), "4");
     await vi.waitFor(() => {
       expect(core.store.board().options.zoom).toBe(4);
     });

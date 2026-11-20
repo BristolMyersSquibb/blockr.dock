@@ -22,7 +22,7 @@ test_that("the dock's state has version 1 and a schema beside its module", {
   )
 })
 
-test_that("the dock reads its own board options and two of core's", {
+test_that("the dock reads its own board options and one of core's", {
 
   # R sends the ids of the board options that the constructors make, each
   # called without a value.
@@ -33,7 +33,7 @@ test_that("the dock reads its own board options and two of core's", {
 
   expect_identical(
     ids,
-    c("compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode")
+    c("compact", "view_tabs", "sync_rails", "dark_mode")
   )
 })
 

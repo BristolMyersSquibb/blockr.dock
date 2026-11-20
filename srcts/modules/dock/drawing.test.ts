@@ -141,7 +141,7 @@ function helloWith(dockState: DockState, locked: boolean) {
       [DOCK]: {
         name: "Dock",
         version: 1,
-        options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
+        options: ["compact", "view_tabs", "sync_rails", "dark_mode"],
         module: "blockr.dock/js/dock.js",
       },
     },

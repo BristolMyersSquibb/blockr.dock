@@ -1983,7 +1983,7 @@ function trackBusy(core, drawn, narrow, delay) {
 
 // srcts/modules/dock/card/card.tsx
 import { useBoard, useNotified, useStatus } from "@blockr/core/react";
-import { useCallback as useCallback4, useMemo as useMemo2, useState as useState4 } from "react";
+import { useCallback as useCallback4, useState as useState4 } from "react";
 
 // srcts/modules/dock/context.ts
 import { createContext, useContext } from "react";
@@ -2021,9 +2021,6 @@ function Mounted({ mount, label, className, data }) {
 // srcts/modules/dock/notifications.ts
 function onCard({ about }) {
   return about !== void 0 && "block" in about;
-}
-function showsSeverity(showConditions, severity) {
-  return Array.isArray(showConditions) && showConditions.includes(severity);
 }
 function panelPlugin({ about }, drawn) {
   return about !== void 0 && "plugin" in about && drawn.has(about.plugin) ? about.plugin : void 0;
@@ -3531,11 +3528,6 @@ function BlockCard({ id }) {
   const status = useStatus(core, id);
   const notified = useNotified(core, { block: id });
   const [drawn, setDrawn] = useState4(false);
-  const severities = core.options.value("show_conditions");
-  const shown = useMemo2(
-    () => notified.filter((notification) => showsSeverity(severities, notification.severity)),
-    [notified, severities]
-  );
   const focus = useCallback4(() => {
     giveFocus(core, id);
   }, [core, id]);
@@ -3564,7 +3556,7 @@ function BlockCard({ id }) {
   const inputs = !core.store.locked(id);
   const hidden = status !== void 0 && WITHOUT_OUTPUT.has(status.status);
   const note = status !== void 0 && WITH_NOTE.has(status.status) ? status.reason : null;
-  const folded2 = shown.filter((notification) => notification.severity !== "error");
+  const folded2 = notified.filter((notification) => notification.severity !== "error");
   return /* @__PURE__ */ jsxs7(
     "article",
     {
@@ -3585,7 +3577,7 @@ function BlockCard({ id }) {
             dot: statusDot(status, notified)
           }
         ),
-        /* @__PURE__ */ jsx12(Errors, { notifications: shown.filter((notification) => notification.severity === "error") }),
+        /* @__PURE__ */ jsx12(Errors, { notifications: notified.filter((notification) => notification.severity === "error") }),
         /* @__PURE__ */ jsxs7("div", { className: "blockr-card-sections", children: [
           inputs ? /* @__PURE__ */ jsx12(Section, { name: "inputs", open: sections.includes("inputs"), empty: !drawn, children: /* @__PURE__ */ jsx12(Mounted, { mount: mountUi, label: "Inputs" }) }) : null,
           /* @__PURE__ */ jsxs7(Section, { name: "outputs", open: sections.includes("outputs"), empty: hidden && note === null && folded2.length === 0, children: [
@@ -3602,7 +3594,7 @@ function BlockCard({ id }) {
 // srcts/modules/dock/dock.tsx
 import { useBoard as useBoard4, useNotified as useNotified2 } from "@blockr/core/react";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./vendor-a3ad4872.js";
-import { useCallback as useCallback7, useEffect as useEffect3, useMemo as useMemo4, useRef as useRef8, useState as useState8, useSyncExternalStore as useSyncExternalStore2 } from "react";
+import { useCallback as useCallback7, useEffect as useEffect3, useMemo as useMemo3, useRef as useRef8, useState as useState8, useSyncExternalStore as useSyncExternalStore2 } from "react";
 
 // srcts/modules/dock/drawing.ts
 var EMPTY2 = { orientation: "horizontal", children: [], sizes: [] };
@@ -3893,7 +3885,7 @@ function sharesNear(a, b, tolerance) {
 
 // srcts/modules/dock/picker.tsx
 import { useBoard as useBoard2 } from "@blockr/core/react";
-import { createContext as createContext2, useCallback as useCallback5, useContext as useContext2, useId as useId3, useMemo as useMemo3, useState as useState5 } from "react";
+import { createContext as createContext2, useCallback as useCallback5, useContext as useContext2, useId as useId3, useMemo as useMemo2, useState as useState5 } from "react";
 import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
 var PickerContext = createContext2(null);
 function usePicker() {
@@ -3903,7 +3895,7 @@ function usePicker() {
 }
 function PanelPicker({ children: children2 }) {
   const [picking, setPicking] = useState5(void 0);
-  const state = useMemo3(() => ({ picking, setPicking }), [picking]);
+  const state = useMemo2(() => ({ picking, setPicking }), [picking]);
   const close = useCallback5(
     (how) => {
       setPicking(void 0);
@@ -3969,7 +3961,7 @@ function PickerMenu({ picking, onClose }) {
   const { core, drawn } = useDock();
   const board = useBoard2(core);
   const { near: near2 } = picking;
-  const groups = useMemo3(() => {
+  const groups = useMemo2(() => {
     const pick = (panel2) => {
       const view2 = dockState(core.store.board())?.active ?? null;
       if (view2 === null) return;
@@ -4688,7 +4680,7 @@ function Tab(props) {
 function PluginTab({ plugin, ...props }) {
   const { core } = useDock();
   const notified = useNotified2(core, { plugin });
-  const told = useMemo4(() => tabNotifications(notified), [notified]);
+  const told = useMemo3(() => tabNotifications(notified), [notified]);
   const messages = told.map((notification) => plainText(notification.message));
   const lines = messages.flatMap((message) => message.split("\n")).map((text2) => ({ text: text2 }));
   const { props: tip, tooltip } = useTooltip(lines.length === 0 ? null : lines);
@@ -4748,7 +4740,7 @@ function Dock({ core, plugin, settings, narrow, drawn, viewsMenu, sidebar }) {
   const root = useRef8(null);
   const stop = useRef8(void 0);
   const [tooltips] = useState8(createTooltips);
-  const shared = useMemo4(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
+  const shared = useMemo3(() => ({ core, plugin, drawn, tooltips }), [core, plugin, drawn, tooltips]);
   const locked = core.lock.board;
   const tabs = useViewTabs(core) && viewsMenu;
   const { pinned } = useSyncExternalStore2(sidebar.subscribe, sidebar.state);

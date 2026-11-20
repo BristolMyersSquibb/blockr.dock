@@ -5,7 +5,7 @@ import type { Board, BoardObject, Notification, NotificationSource } from "@bloc
 import { describe, expect, test } from "vitest";
 import { DOCK } from "../../commands/index.ts";
 import type { DockState, Grid } from "../../state/index.ts";
-import { asToast, inActiveView, onCard, panelPlugin, plainText, showsSeverity, tabNotifications } from "./notifications.ts";
+import { asToast, inActiveView, onCard, panelPlugin, plainText, tabNotifications } from "./notifications.ts";
 
 // A notification from the source given, about the board object given, or
 // about the board.
@@ -127,15 +127,6 @@ describe("what the tab of a plugin's panel tells of", () => {
     const notified = [about("w1", "warning"), about("e1", "error"), about("m1", "message"), about("w2", "warning"), about("e2", "error")];
     expect(tabNotifications(notified).map((notification) => notification.id)).toEqual(["e1", "e2", "w1", "w2"]);
     expect(tabNotifications([about("m1", "message")])).toEqual([]);
-  });
-});
-
-describe("whether show_conditions names a severity", () => {
-  test("is whether its list holds the severity", () => {
-    expect(showsSeverity(["warning", "error"], "error")).toBe(true);
-    expect(showsSeverity(["warning", "error"], "message")).toBe(false);
-    expect(showsSeverity(undefined, "error")).toBe(false);
-    expect(showsSeverity({ error: true }, "error")).toBe(false);
   });
 });
 
