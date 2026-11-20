@@ -1508,8 +1508,10 @@ describe("the stylesheet of the dot on a plugin's tab", () => {
   });
 
   test("takes the amber from blockr.ui's token, with its value in each scheme as the fallback", () => {
-    const light = rules.get(".blockr-dock, .blockr-dock-bar, .blockr-dock-sidebar");
-    const dark = rules.get('[data-bc-theme="dark"] .blockr-dock, [data-bc-theme="dark"] .blockr-dock-bar, [data-bc-theme="dark"] .blockr-dock-sidebar');
+    const light = rules.get(".blockr-dock, .blockr-dock-bar, .blockr-dock-sidebar, .blockr-card-menu");
+    const dark = rules.get(
+      '[data-bc-theme="dark"] .blockr-dock, [data-bc-theme="dark"] .blockr-dock-bar, [data-bc-theme="dark"] .blockr-dock-sidebar, [data-bc-theme="dark"] .blockr-card-menu',
+    );
     expect(light?.get("--blockr-dock-border-warning")).toBe("var(--blockr-color-border-warning, #d97706)");
     expect(dark?.get("--blockr-dock-border-warning")).toBe("var(--blockr-color-border-warning, #fbbf24)");
     expect(light?.get("--blockr-dock-border-danger")).toBe("var(--blockr-color-border-danger, #dc2626)");

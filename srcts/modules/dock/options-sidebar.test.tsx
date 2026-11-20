@@ -6,9 +6,14 @@
 // of that package, zoom. The package defines two more board options, grain and
 // texture, which nothing requires. They share a category that no other board
 // option has. The default of grain fails.
+// Where a test asks, the class requires two more, layout and shade, whose UIs
+// are a menu and a select of core's React SDK.
 
-import type { CoreApi, Json, JsonBoard, Option, OptionModule, PluginClass } from "@blockr/core";
+import type { CoreApi, Json, JsonBoard, Option, OptionHost, OptionModule, PluginClass } from "@blockr/core";
+import { Button, ComboBox, ComboBoxItem, Menu, MenuItem, MenuTrigger, reactModule, useValue } from "@blockr/core/react";
+import type { ModuleProps } from "@blockr/core/react";
 import { HELLO, stubCore } from "@blockr/core/stubs";
+import type { ReactElement } from "react";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
@@ -90,6 +95,69 @@ const texture: Omit<Option, "id"> = {
   ui: numberUi(),
 };
 
+// A UI that sets the board option's value from a menu of core's React SDK,
+// which React Aria opens in a portal at the end of the page's body, over an
+// element that it lays over the whole page.
+function menuUi(): OptionModule<string> {
+  function MenuUi({ host }: ModuleProps<OptionHost<string>>): ReactElement {
+    return (
+      <MenuTrigger>
+        <Button variant="secondary">Layout</Button>
+        <Menu
+          aria-label="Layouts"
+          onAction={(key) => {
+            void host.submit(String(key));
+          }}
+        >
+          <MenuItem id="grid">Grid</MenuItem>
+          <MenuItem id="list">List</MenuItem>
+        </Menu>
+      </MenuTrigger>
+    );
+  }
+  return reactModule(MenuUi);
+}
+
+// The board option of blockr.test whose UI is a menu, which its plugin class
+// requires where a test asks.
+const layout: Omit<Option, "id"> = {
+  label: "Layout",
+  category: "Overlay options",
+  schema: { type: "string", enum: ["grid", "list"] },
+  default: "grid",
+  ui: menuUi(),
+};
+
+// The shades that shade's select offers.
+const SHADES = [
+  { id: "pale", name: "Pale" },
+  { id: "deep", name: "Deep" },
+];
+
+// A UI that binds the board option's value to a select of core's React SDK,
+// which React Aria opens in a portal at the end of the page's body, while the
+// focus stays in its field.
+function selectUi(): OptionModule<string> {
+  function SelectUi({ host }: ModuleProps<OptionHost<string>>): ReactElement {
+    return (
+      <ComboBox bound={useValue(host)} label="Shade" defaultItems={SHADES} isRequired>
+        {(item) => <ComboBoxItem id={item.id}>{item.name}</ComboBoxItem>}
+      </ComboBox>
+    );
+  }
+  return reactModule(SelectUi);
+}
+
+// The board option of blockr.test whose UI is a select, which its plugin class
+// requires where a test asks, with layout.
+const shade: Omit<Option, "id"> = {
+  label: "Shade",
+  category: "Overlay options",
+  schema: { type: "string", enum: ["pale", "deep"] },
+  default: "pale",
+  ui: selectUi(),
+};
+
 // The plugin class of blockr.test, which names no board option itself.
 // Its entry in R's reply to hello names zoom, as the method of R's
 // plugin_options() for the class would.
@@ -98,6 +166,8 @@ const viewer: Omit<PluginClass, "id"> = {};
 interface Start {
   // Whether the app sets the board lock.
   readonly locked?: boolean;
+  // Whether the plugin class of blockr.test requires layout and shade too.
+  readonly overlays?: boolean;
   // The board options that the board holds as it opens, as a JSON board
   // records them, those of the board of core's reply to hello unless given.
   readonly options?: Readonly<Record<string, { readonly value: Json; readonly version: number }>>;
@@ -119,7 +189,7 @@ async function startSidebar(start: Start = {}) {
         options: ["compact", "view_tabs", "sync_rails", "dark_mode"],
         module: "blockr.dock/js/dock.js",
       },
-      [VIEWER]: { name: "Viewer", version: 1, options: ["zoom"], module: "blockr.test/viewer.js" },
+      [VIEWER]: { name: "Viewer", version: 1, options: start.overlays === true ? ["zoom", "layout", "shade"] : ["zoom"], module: "blockr.test/viewer.js" },
     },
     options: {
       ...HELLO.options,
@@ -129,6 +199,8 @@ async function startSidebar(start: Start = {}) {
       zoom: { package: "blockr.test", module: "blockr.test/zoom-option.js", version: 1 },
       grain: { package: "blockr.test", module: "blockr.test/grain-option.js", version: 1 },
       texture: { package: "blockr.test", module: "blockr.test/texture-option.js", version: 1 },
+      layout: { package: "blockr.test", module: "blockr.test/layout-option.js", version: 1 },
+      shade: { package: "blockr.test", module: "blockr.test/shade-option.js", version: 1 },
     },
     lock: { board: start.locked ?? false, load: false },
     board,
@@ -142,6 +214,8 @@ async function startSidebar(start: Start = {}) {
     zoom: { api: 1, default: zoom },
     grain: { api: 1, default: grain },
     texture: { api: 1, default: texture },
+    layout: { api: 1, default: layout },
+    shade: { api: 1, default: shade },
   };
   const el = document.createElement("div");
   document.body.append(el);
@@ -206,6 +280,29 @@ function button(root: ParentNode, name: string): HTMLElement {
   if (found === undefined) throw new Error(`No button "${name}".`);
   return found;
 }
+
+// The field of shade's select, its combobox.
+function shadeField(el: HTMLElement): HTMLInputElement {
+  const field = fieldOf(el, "shade");
+  if (!(field instanceof HTMLInputElement)) throw new Error("No field of shade.");
+  return field;
+}
+
+// The list of the select while it is open, which the field names in
+// aria-controls.
+function listOf(field: HTMLElement): HTMLElement | null {
+  const id = field.getAttribute("aria-controls");
+  return id === null ? null : document.getElementById(id);
+}
+
+function optionOf(list: HTMLElement, label: string): HTMLElement {
+  const found = [...list.querySelectorAll<HTMLElement>('[role="option"]')].find((option) => option.textContent.trim() === label);
+  if (found === undefined) throw new Error(`The list has no option "${label}".`);
+  return found;
+}
+
+// The menu of layout's UI while it is open.
+const layouts = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="menu"][aria-label="Layouts"]');
 
 // Clicks the element as a pointer does, which goes down on it first.
 function click(target: Element): void {
@@ -312,6 +409,8 @@ describe("the options sidebar", () => {
     expect(resetOf(el, "view_tabs")).toBeNull();
 
     const reset = button(category(el, "Theme options"), "Reset Compact to its default");
+    expect(reset.hasAttribute("data-rac")).toBe(true);
+    expect(reset.title).toBe("Reset to the default");
     reset.focus();
     click(reset);
     await vi.waitFor(() => {
@@ -326,6 +425,7 @@ describe("the options sidebar", () => {
     const { el } = await startSidebar();
     await open(el);
     const toggle = find(sidebarIn(el), ".blockr-dock-sidebar-expand");
+    expect(toggle.hasAttribute("data-rac")).toBe(true);
     expect(toggle.textContent).toBe("Expand all");
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
 
@@ -428,7 +528,10 @@ describe("the options sidebar", () => {
     expect(document.activeElement).toBe(optionsButton(el));
 
     await open(el);
-    click(button(sidebarIn(el), "Close sidebar"));
+    const close = button(sidebarIn(el), "Close sidebar");
+    expect(close.hasAttribute("data-rac")).toBe(true);
+    expect(close.title).toBe("Close");
+    click(close);
     await drawn();
     expect(isOpen(el)).toBe(false);
     expect(document.activeElement).toBe(optionsButton(el));
@@ -460,6 +563,96 @@ describe("the options sidebar", () => {
     press("Escape");
     await drawn();
     expect(isOpen(el)).toBe(false);
+  });
+
+  test("stays open as the user picks from the list of a select in a board option's UI, which React Aria draws outside it, and closes on a press on the dock", async () => {
+    const { el, core } = await startSidebar({ overlays: true });
+    await open(el);
+    await expand(el, "Overlay options", "shade");
+    const field = shadeField(el);
+
+    field.click();
+    await drawn();
+    const list = listOf(field);
+    if (list === null) throw new Error("The select's list did not open.");
+    expect(sidebarIn(el).contains(list)).toBe(false);
+    const deep = optionOf(list, "Deep");
+    deep.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    deep.click();
+    await vi.waitFor(() => {
+      expect(core.store.board().options.shade).toBe("deep");
+    });
+    expect(isOpen(el)).toBe(true);
+
+    // A press outside the sidebar and outside its overlays closes it, as it
+    // closes the list.
+    field.focus();
+    press("ArrowDown");
+    await drawn();
+    expect(listOf(field)).not.toBeNull();
+    find(el, ".blockr-dock").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    await drawn();
+    expect(isOpen(el)).toBe(false);
+  });
+
+  test("leaves Escape to the list of a select in a board option's UI, which closes before the sidebar", async () => {
+    const { el } = await startSidebar({ overlays: true });
+    await open(el);
+    await expand(el, "Overlay options", "shade");
+    const field = shadeField(el);
+
+    field.focus();
+    press("ArrowDown");
+    await drawn();
+    expect(listOf(field)).not.toBeNull();
+    press("Escape");
+    await drawn();
+    expect(listOf(field)).toBeNull();
+    expect(isOpen(el)).toBe(true);
+
+    press("Escape");
+    await drawn();
+    expect(isOpen(el)).toBe(false);
+  });
+
+  test("stays open on a press on what a menu in a board option's UI lays over the page, which closes the menu, and on Escape in the menu", async () => {
+    const { el, core } = await startSidebar({ overlays: true });
+    await open(el);
+    click(summary(el, "Overlay options"));
+    const trigger = await vi.waitFor(() => button(sidebarIn(el), "Layout"));
+
+    trigger.click();
+    await drawn();
+    const menu = layouts();
+    if (menu === null) throw new Error("The menu did not open.");
+    expect(sidebarIn(el).contains(menu)).toBe(false);
+    const underlay = find(document, '[data-testid="underlay"]');
+    expect(el.contains(underlay)).toBe(false);
+    underlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    underlay.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+    await drawn();
+    expect(layouts()).toBeNull();
+    expect(isOpen(el)).toBe(true);
+
+    trigger.click();
+    await drawn();
+    expect(layouts()).not.toBeNull();
+    press("Escape");
+    await drawn();
+    expect(layouts()).toBeNull();
+    expect(isOpen(el)).toBe(true);
+
+    trigger.click();
+    await drawn();
+    const list = layouts();
+    if (list === null) throw new Error("The menu did not open.");
+    const item = [...list.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((each) => each.textContent === "List");
+    item?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    item?.click();
+    await vi.waitFor(() => {
+      expect(core.store.board().options.layout).toBe("list");
+    });
+    expect(isOpen(el)).toBe(true);
   });
 
   test("stays open on a press on the options button, which toggles it, and on a toast, which lies over it", async () => {

@@ -1,5 +1,17 @@
 # blockr.dock 0.2.1
 
+* The block's menu of a card and the dock's buttons draw with core's React SDK
+  (#645).
+  The menu opens below the "…" button in React Aria's portal at the end of the
+  page's body, and holds Rename, Append block, Copy block ID and Remove block,
+  as before.
+  The storage plugin's buttons, Undo, Redo and Options on the bar, and Close,
+  Expand all and Reset in the options sidebar, are the SDK's Button, in the
+  dock's look.
+  The unpinned options sidebar no longer closes as the user picks from an
+  overlay that a board option's UI opened, such as the list of a select, which
+  React Aria draws outside the sidebar.
+
 * The dock shows the notifications about a plugin by the plugin's panel
   (#637).
   The panel's tab shows a dot while a warning or an error about the plugin
