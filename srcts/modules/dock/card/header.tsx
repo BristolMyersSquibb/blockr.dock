@@ -21,23 +21,39 @@
 //    false, and is pressed while the block is open.
 //    A click on a closed padlock runs blockr.core-set_block_lock with false,
 //    and one on an open padlock runs it with null.
-// 4. The "…" button, which opens the block's menu on a click, or on ArrowDown
-//    while it has the keyboard's focus, one of the dock's menus
-//    (../menu.tsx): Rename, Append block, which opens the dock's "+" menu
-//    from the button (./classes.tsx), Copy block ID and, after a divider,
-//    Remove block.
+// 4. The "…" button, which opens the block's menu on a press, or on ArrowDown
+//    while it has the keyboard's focus.
+//    The button and the menu are core's React SDK's, its MenuTrigger, Button,
+//    Menu, MenuItem and MenuSection, and React Aria draws the menu in a portal
+//    at the end of the page's body, below the button and lined up with its
+//    right end.
+//    The menu holds Rename, Append block, Copy block ID, with the id as meta
+//    text, and, after a divider, Remove block, with the bin icon.
+//    React Aria closes the menu as the user picks an item, on Escape and on a
+//    press elsewhere, and gives the focus back to the button.
+//    Rename and Append block run once the menu has closed, since they move the
+//    focus out of the menu, which React Aria keeps from the rest of the page
+//    until then.
+//    Copy block ID copies within the click that picks it, which the
+//    document's copy command needs (./clipboard.ts).
+//    Append block opens the dock's "+" menu (../menu.tsx, ./classes.tsx) from
+//    the same button, which stays the dock's own until core's React SDK draws
+//    it (https://github.com/BristolMyersSquibb/blockr.dock/issues/630).
+//    A press on the button while the "+" menu is open closes that menu alone.
 // Under the board lock, the header has no toggle and no padlock, its name
 // starts no rename, and its menu holds Copy block ID alone, since no command
 // changes the rest there.
 
 import type { Block, BlockId, RegistryEntry } from "@blockr/core";
-import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
-import type { ReactElement, ReactNode, RefObject } from "react";
+import { Button, Menu, MenuItem, MenuSection, MenuTrigger, Text } from "@blockr/core/react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { SECTIONS } from "../../../commands/index.ts";
 import type { Section } from "../../../state/index.ts";
+import { withAttributes } from "../attributes.tsx";
 import { runEdit, useDock } from "../context.ts";
-import { Menu, useMenuButton } from "../menu.tsx";
-import type { Closing, MenuRow } from "../menu.tsx";
+import { Menu as DockMenu } from "../menu.tsx";
+import type { Closing } from "../menu.tsx";
 import { classGroups } from "./classes.tsx";
 import { copyText } from "./clipboard.ts";
 import { BinIcon, DotsIcon, EyeIcon, LockIcon, SlidersIcon } from "./icons.tsx";
@@ -69,7 +85,8 @@ export function Header({
   const { core } = useDock();
   const locked = core.lock.board;
   const [renaming, setRenaming] = useState(false);
-  const menuButton = useRef<HTMLButtonElement>(null);
+  // The "…" button, once it is drawn.
+  const [menuButton, setMenuButton] = useState<HTMLButtonElement | null>(null);
   const open = block.locked === false;
 
   const toggle = (section: Section) => {
@@ -95,7 +112,7 @@ export function Header({
             }}
             onDone={(restore) => {
               setRenaming(false);
-              if (restore) menuButton.current?.focus({ preventScroll: true });
+              if (restore) menuButton?.focus({ preventScroll: true });
             }}
           />
         ) : (
@@ -136,7 +153,7 @@ export function Header({
             </Tool>
           </>
         )}
-        <MenuButton ref={menuButton} id={id} block={block} onRename={rename} />
+        <MenuButton button={menuButton} onButton={setMenuButton} id={id} block={block} onRename={rename} />
       </div>
     </header>
   );
@@ -295,85 +312,48 @@ function Tool({
   );
 }
 
-// Which menu of the "…" button is open, with the button it opens from, and
-// whether the keyboard opened it.
-interface Open {
-  readonly menu: "actions" | "append";
-  readonly anchor: HTMLElement;
-  readonly keyboard: boolean;
-}
-
+// The "…" button and the block's menu, as the comment at the top of this file
+// says.
 function MenuButton({
-  ref,
+  button,
+  onButton,
   id,
   block,
   onRename,
 }: {
-  ref: RefObject<HTMLButtonElement | null>;
+  // The button, once it is drawn, which `onButton` takes.
+  button: HTMLButtonElement | null;
+  onButton: (el: HTMLButtonElement | null) => void;
   id: BlockId;
   block: Block;
   onRename: () => void;
 }): ReactElement {
   const { core, plugin } = useDock();
-  const [open, setOpen] = useState<Open | null>(null);
-  const { props: tip, tooltip } = useTooltip(open === null ? "More actions" : null);
-  const button = useMenuButton(
-    open !== null,
-    (anchor, keyboard) => {
-      setOpen({ menu: "actions", anchor, keyboard });
-    },
-    () => {
-      setOpen(null);
-    },
-  );
+  const [open, setOpen] = useState(false);
+  // The button from which the "+" menu is open, or null while it is closed.
+  const [plus, setPlus] = useState<HTMLElement | null>(null);
+  const afterClose = useAfterClose(open);
+  const { props: tip, tooltip } = useTooltip(open || plus !== null ? null : "More actions");
+  const render = useMemo(() => withAttributes({ ref: onButton }), [onButton]);
 
-  const close = useCallback(
+  const closePlus = useCallback(
     (how: Closing) => {
-      setOpen(null);
-      if (how.restore) ref.current?.focus({ preventScroll: true, focusVisible: !how.pointer });
+      if (how.restore) button?.focus({ preventScroll: true, focusVisible: !how.pointer });
+      setPlus(null);
     },
-    [ref],
+    [button],
   );
 
-  const actions = (anchor: HTMLElement): MenuRow[] => {
-    const copy: MenuRow = {
-      key: "copy",
-      label: "Copy block ID",
-      meta: id,
-      onSelect() {
-        void copyText(anchor.ownerDocument, id).then((copied) => {
-          if (!copied) {
-            core.notifications.notify(plugin, {
-              severity: "error",
-              code: "copy_failed",
-              message: `The browser did not let the dock copy the block ID "${id}".`,
-            });
-          }
+  const copy = () => {
+    void copyText(button?.ownerDocument ?? document, id).then((copied) => {
+      if (!copied) {
+        core.notifications.notify(plugin, {
+          severity: "error",
+          code: "copy_failed",
+          message: `The browser did not let the dock copy the block ID "${id}".`,
         });
-      },
-    };
-    if (core.lock.board) return [copy];
-    return [
-      { key: "rename", label: "Rename", onSelect: onRename },
-      {
-        key: "append",
-        label: "Append block",
-        onSelect() {
-          setOpen({ menu: "append", anchor, keyboard: false });
-        },
-      },
-      copy,
-      {
-        key: "remove",
-        label: "Remove block",
-        lead: <BinIcon />,
-        danger: true,
-        divided: true,
-        onSelect() {
-          runEdit(core, "blockr.core-remove_block", { id });
-        },
-      },
-    ];
+      }
+    });
   };
 
   // Appends a block of the class to this block in one step, with a batch of
@@ -395,36 +375,99 @@ function MenuButton({
     ]);
   };
 
+  const copyItem = (
+    <MenuItem key="copy" id="copy" textValue="Copy block ID" onAction={copy}>
+      <Text slot="label">Copy block ID</Text>
+      <Text slot="description" className="blockr-card-menu-meta">
+        {id}
+      </Text>
+    </MenuItem>
+  );
+  // Under the board lock, the menu holds Copy block ID alone.
+  const sections = core.lock.board
+    ? [
+        <MenuSection key="actions" id="actions">
+          {copyItem}
+        </MenuSection>,
+      ]
+    : [
+        <MenuSection key="actions" id="actions">
+          <MenuItem
+            id="rename"
+            onAction={() => {
+              afterClose(onRename);
+            }}
+          >
+            Rename
+          </MenuItem>
+          <MenuItem
+            id="append"
+            onAction={() => {
+              afterClose(() => {
+                setPlus(button);
+              });
+            }}
+          >
+            Append block
+          </MenuItem>
+          {copyItem}
+        </MenuSection>,
+        <MenuSection key="last" id="last" className="blockr-card-menu-divided">
+          <MenuItem
+            id="remove"
+            textValue="Remove block"
+            className="blockr-card-menu-danger"
+            onAction={() => {
+              runEdit(core, "blockr.core-remove_block", { id });
+            }}
+          >
+            <Text slot="label" className="blockr-card-menu-lead">
+              <BinIcon />
+              Remove block
+            </Text>
+          </MenuItem>
+        </MenuSection>,
+      ];
+
   return (
     <>
-      <button
-        ref={ref}
-        type="button"
-        className="blockr-card-tool"
-        aria-label="More actions"
-        {...tip}
-        {...button}
-        onPointerDown={() => {
-          button.onPointerDown();
-          tip.onPointerDown();
+      <MenuTrigger
+        placement="bottom end"
+        isOpen={open}
+        onOpenChange={(next) => {
+          // A press on the button while the "+" menu is open closes that
+          // menu alone, which closes on no press on its button itself.
+          if (next && plus !== null) {
+            setPlus(null);
+            return;
+          }
+          setOpen(next);
         }}
       >
-        <DotsIcon />
-      </button>
+        <Button
+          variant="quiet"
+          className="blockr-card-tool"
+          aria-label="More actions"
+          // The button says it is expanded while the "+" menu that it opened
+          // is open too, as React Aria says it while the block's menu is.
+          aria-expanded={plus === null ? undefined : true}
+          render={render}
+          {...tip}
+          onFocus={(event) => {
+            // React Aria's focus event names the button as an Element.
+            if (event.currentTarget instanceof HTMLElement) tip.onFocus({ currentTarget: event.currentTarget });
+          }}
+        >
+          <DotsIcon />
+        </Button>
+        <Menu aria-label="More actions" className="blockr-card-menu">
+          {sections}
+        </Menu>
+      </MenuTrigger>
       {tooltip}
-      {open?.menu === "actions" ? (
-        <Menu
-          anchor={open.anchor}
-          label="More actions"
-          align="end"
-          groups={[{ key: "actions", rows: actions(open.anchor) }]}
-          keyboard={open.keyboard}
-          onClose={close}
-        />
-      ) : null}
-      {open?.menu === "append" ? (
-        <Menu
-          anchor={open.anchor}
+      {plus === null ? null : (
+        <DockMenu
+          anchor={plus}
           label="Block classes"
           align="end"
           caption={`Append to ${block.name}`}
@@ -433,10 +476,29 @@ function MenuButton({
             Object.values(core.blockRegistry()).filter((entry) => entry.inputs.length > 0),
             append,
           )}
-          keyboard={open.keyboard}
-          onClose={close}
+          keyboard={false}
+          onClose={closePlus}
         />
-      ) : null}
+      )}
     </>
   );
+}
+
+// Runs what the user picked in the block's menu once the menu has closed, as
+// Rename and Append block, which move the focus out of the menu.
+// Until the menu has closed, React Aria keeps the rest of the page inert, so
+// that no element there takes the focus.
+// React Aria frees the page in the cleanup of an effect as the menu goes, and
+// React runs every cleanup before it runs the effect here.
+function useAfterClose(open: boolean): (run: () => void) => void {
+  const [queued, setQueued] = useState<(() => void) | null>(null);
+  useEffect(() => {
+    if (queued === null || open) return;
+    queued();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- What the user picked waits for React Aria to free the page, which it does in an effect.
+    setQueued(null);
+  }, [queued, open]);
+  return useCallback((run: () => void) => {
+    setQueued(() => run);
+  }, []);
 }

@@ -124,13 +124,51 @@ function sectionOf(card: HTMLElement, name: string): HTMLElement | null {
   return card.querySelector<HTMLElement>(`.blockr-card-section[data-section="${name}"]`);
 }
 
-// The menu or the "+" menu that is open, in the dock's layer.
+// The block's menu that is open, which React Aria draws in a portal at the end
+// of the page's body.
+function blockMenu(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('[role="menu"][aria-label="More actions"]');
+}
+
+// The "+" menu that is open, the dock's own, in the dock's layer.
 function openMenu(el: HTMLElement): HTMLElement | null {
   return el.querySelector<HTMLElement>(".blockr-dock-menu");
 }
 
 function rows(menu: HTMLElement): string[] {
   return [...menu.querySelectorAll(".blockr-dock-menu-label")].map((label) => label.textContent);
+}
+
+// What names the element to assistive technology through the attribute given,
+// as aria-labelledby or aria-describedby, or else its text.
+function named(el: Element, attribute: string): string {
+  const ids = (el.getAttribute(attribute) ?? "").split(" ").filter((id) => id !== "");
+  if (ids.length === 0) return el.textContent.trim();
+  return ids.map((id) => el.ownerDocument.getElementById(id)?.textContent.trim() ?? "").join(" ");
+}
+
+// The items of the block's menu, by their labels, in order.
+function items(menu: HTMLElement): string[] {
+  return [...menu.querySelectorAll('[role="menuitem"]')].map((item) => named(item, "aria-labelledby"));
+}
+
+function itemOf(menu: HTMLElement, label: string): HTMLElement {
+  const item = [...menu.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((each) => named(each, "aria-labelledby") === label);
+  if (item === undefined) throw new Error(`The menu has no item ${label}.`);
+  return item;
+}
+
+// Opens the block's menu of the card as the pointer does, which React Aria
+// opens as the pointer goes down on the button.
+async function pressMenu(card: HTMLElement, settled: () => Promise<void>): Promise<HTMLElement> {
+  const button = toolOf(card, "More actions");
+  mouse(button, "pointerdown");
+  mouse(button, "pointerup");
+  clickOn(button);
+  await settled();
+  const menu = blockMenu();
+  if (menu === null) throw new Error("No menu opened.");
+  return menu;
 }
 
 function rowOf(menu: HTMLElement, label: string): HTMLElement {
@@ -147,6 +185,14 @@ const press = (target: Element, key: string) => {
 
 const pointer = (target: Element, type: string) => {
   target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: "mouse" }));
+};
+
+// A pointer event of a mouse that has a size and a pressure, which React Aria
+// tells from the event that a screen reader makes.
+const mouse = (target: Element, type: string) => {
+  target.dispatchEvent(
+    new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: "mouse", pointerId: 1, width: 1, height: 1, pressure: 0.5, detail: 1 }),
+  );
 };
 
 // A click of the pointer, whose detail counts the clicks, while a click that
@@ -557,28 +603,34 @@ describe("the notifications on a block's card", () => {
 });
 
 describe("a block's menu", () => {
-  test("opens on a click with Rename, Append block, Copy block ID and Remove block", async () => {
-    const { el, settled } = await startCards();
+  test("opens on a press, at the end of the page's body, with Rename, Append block, Copy block ID and, after a divider, Remove block", async () => {
+    const { core, el, settled } = await startCards();
 
-    const button = toolOf(cardOf(el, "Head"), "More actions");
-    clickOn(button);
-    await settled();
-    const menu = openMenu(el);
-    if (menu === null) throw new Error("No menu opened.");
-    expect(menu.getAttribute("role")).toBe("menu");
-    expect(rows(menu)).toEqual(["Rename", "Append block", "Copy block ID", "Remove block"]);
-    expect(rowOf(menu, "Copy block ID").querySelector(".blockr-dock-menu-meta")?.textContent).toBe("b");
+    const card = cardOf(el, "Head");
+    const button = toolOf(card, "More actions");
+    // The button and the menu are core's React SDK's, React Aria's.
+    expect(button.hasAttribute("data-rac")).toBe(true);
+    const menu = await pressMenu(card, settled);
+    expect(el.contains(menu)).toBe(false);
+    expect(items(menu)).toEqual(["Rename", "Append block", "Copy block ID", "Remove block"]);
+    const copy = itemOf(menu, "Copy block ID");
+    expect(copy.querySelector(".blockr-card-menu-meta")?.textContent).toBe("b");
+    expect(named(copy, "aria-describedby")).toBe("b");
+    const remove = itemOf(menu, "Remove block");
+    expect(remove.closest('[role="group"]')).not.toBe(itemOf(menu, "Rename").closest('[role="group"]'));
+    expect(remove.closest('[role="group"]')?.classList.contains("blockr-card-menu-divided")).toBe(true);
+    expect(remove.querySelector("svg")).not.toBeNull();
     expect(button.getAttribute("aria-expanded")).toBe("true");
-    expect(document.activeElement).toBe(menu);
-    expect(menu.hasAttribute("aria-activedescendant")).toBe(false);
+    // The block takes the focus, as on any press into its card.
+    expect(core.focus.get()).toBe("b");
 
-    press(menu, "Escape");
+    press(document.activeElement ?? menu, "Escape");
     await settled();
-    expect(openMenu(el)).toBeNull();
-    expect(document.activeElement).toBe(button);
+    expect(blockMenu()).toBeNull();
+    expect(button.getAttribute("aria-expanded")).toBe("false");
   });
 
-  test("opens on ArrowDown on its first row, which the arrows move and Enter picks", async () => {
+  test("opens on ArrowDown while the button has the keyboard's focus, and picks an item on Enter", async () => {
     const { el, settled } = await startCards();
 
     const card = cardOf(el, "Head");
@@ -586,31 +638,25 @@ describe("a block's menu", () => {
     button.focus();
     press(button, "ArrowDown");
     await settled();
-    const menu = openMenu(el);
+    const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    const active = () => document.getElementById(menu.getAttribute("aria-activedescendant") ?? "")?.textContent;
-    expect(active()).toBe("Rename");
-    press(menu, "ArrowUp");
-    await settled();
-    expect(active()).toBe("Remove block");
-    press(menu, "Home");
-    await settled();
-    expect(active()).toBe("Rename");
 
-    press(menu, "Enter");
+    const rename = itemOf(menu, "Rename");
+    press(rename, "Enter");
+    rename.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true, cancelable: true }));
     await settled();
-    expect(openMenu(el)).toBeNull();
+    expect(blockMenu()).toBeNull();
     expect(document.activeElement).toBe(card.querySelector(".blockr-card-name-field"));
   });
 
-  test("closes on a click elsewhere", async () => {
+  test("closes on a press elsewhere", async () => {
     const { el, settled } = await startCards();
 
-    toolOf(cardOf(el, "Head"), "More actions").click();
+    await pressMenu(cardOf(el, "Head"), settled);
+    mouse(cardOf(el, "Iris"), "pointerdown");
+    clickOn(cardOf(el, "Iris"));
     await settled();
-    pointer(cardOf(el, "Iris"), "pointerdown");
-    await settled();
-    expect(openMenu(el)).toBeNull();
+    expect(blockMenu()).toBeNull();
   });
 
   test("removes the block with Remove block", async () => {
@@ -618,14 +664,14 @@ describe("a block's menu", () => {
 
     toolOf(cardOf(el, "Head"), "More actions").click();
     await settled();
-    const menu = openMenu(el);
+    const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    rowOf(menu, "Remove block").click();
+    itemOf(menu, "Remove block").click();
     await settled();
     expect(Object.hasOwn(core.store.board().blocks, "b")).toBe(false);
   });
 
-  test("puts the block's id on the clipboard with Copy block ID", async () => {
+  test("puts the block's id on the clipboard with Copy block ID, within the click that picks it", async () => {
     const { el, settled } = await startCards();
     const written = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
     onTestFinished(() => {
@@ -634,28 +680,32 @@ describe("a block's menu", () => {
 
     toolOf(cardOf(el, "Head"), "More actions").click();
     await settled();
-    const menu = openMenu(el);
+    const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    rowOf(menu, "Copy block ID").click();
-    await settled();
+    itemOf(menu, "Copy block ID").click();
+    // The copy has run before anything that the click set off.
     expect(written).toHaveBeenCalledWith("b");
-    expect(openMenu(el)).toBeNull();
+    await settled();
+    expect(blockMenu()).toBeNull();
   });
 
-  test("appends a block of the class picked in the dock's + menu, which one undo takes back", async () => {
+  test("appends a block of the class picked in the dock's + menu, which opens from the same button, and one undo takes back", async () => {
     const { core, el, settled } = await startCards();
 
     const before = Object.keys(core.store.board().blocks);
     const links = core.store.board().links;
-    toolOf(cardOf(el, "Head"), "More actions").click();
+    const button = toolOf(cardOf(el, "Head"), "More actions");
+    button.click();
     await settled();
-    const menu = openMenu(el);
+    const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    rowOf(menu, "Append block").click();
+    itemOf(menu, "Append block").click();
     await settled();
 
+    expect(blockMenu()).toBeNull();
     const picker = openMenu(el);
     if (picker === null) throw new Error("No + menu opened.");
+    expect(button.getAttribute("aria-expanded")).toBe("true");
     expect(picker.querySelector(".blockr-dock-menu-caption")?.textContent).toBe("Append to Head");
     // Only classes that take a link, so neither of the input blocks.
     expect(rows(picker)).toEqual(["scatter plot block", "head/tail block", "merge block", "rbind block", "subset block"]);
@@ -680,14 +730,33 @@ describe("a block's menu", () => {
     expect(core.store.board().links).toEqual(links);
   });
 
+  test("closes the + menu alone on a press on its button", async () => {
+    const { el, settled } = await startCards();
+
+    const card = cardOf(el, "Head");
+    const menu = await pressMenu(card, settled);
+    itemOf(menu, "Append block").click();
+    await settled();
+    expect(openMenu(el)).not.toBeNull();
+
+    const button = toolOf(card, "More actions");
+    mouse(button, "pointerdown");
+    mouse(button, "pointerup");
+    clickOn(button);
+    await settled();
+    expect(openMenu(el)).toBeNull();
+    expect(blockMenu()).toBeNull();
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+  });
+
   test("links a block of a class with several inputs from its first input", async () => {
     const { core, el, settled } = await startCards();
 
     toolOf(cardOf(el, "Head"), "More actions").click();
     await settled();
-    const menu = openMenu(el);
+    const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    rowOf(menu, "Append block").click();
+    itemOf(menu, "Append block").click();
     await settled();
     const picker = openMenu(el);
     if (picker === null) throw new Error("No + menu opened.");
@@ -752,9 +821,9 @@ describe("the card on a locked board", () => {
 
     toolOf(card, "More actions").click();
     await settled();
-    const menu = openMenu(el);
+    const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    expect(rows(menu)).toEqual(["Copy block ID"]);
+    expect(items(menu)).toEqual(["Copy block ID"]);
   });
 
   test("mounts the UI only of a block that the board lock leaves open, whatever visible says", async () => {

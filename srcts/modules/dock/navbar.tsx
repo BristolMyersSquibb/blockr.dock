@@ -27,6 +27,9 @@
 // - The read-only pill, which shows while the board lock is on.
 // - The options button, a quiet button with its label as well, which opens and
 //   closes the options sidebar (./options-sidebar.tsx).
+// The storage plugin's buttons, Undo, Redo and the options button are the
+// Button of core's React SDK, in the bar's look (./index.css).
+// Those with a tooltip keep it as the browser's (./attributes.tsx).
 // While the options sidebar is pinned, the bar makes room for it at its right
 // end (./index.css).
 // Core tells the user why the store refused a rename, an undo or a redo,
@@ -53,11 +56,12 @@
 // the tooltip, where the control has no tooltip of its own.
 
 import type { CoreApi, StorageControl } from "@blockr/core";
-import { useBoard } from "@blockr/core/react";
+import { Button, useBoard } from "@blockr/core/react";
 import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, ReactElement } from "react";
 import { isObject } from "../../state/index.ts";
 import { API } from "./api.ts";
+import { withAttributes } from "./attributes.tsx";
 import type { Busy } from "./busy.ts";
 import { useDock } from "./context.ts";
 import { asError, errorMessage } from "./errors.ts";
@@ -263,7 +267,8 @@ function StorageControls({ storage, apart }: { readonly storage: Drawn | undefin
 
 // A storage control, in the look of the bar:
 // - A button is a quiet button with its label, greyed out while it is
-//   disabled.
+//   disabled, which runs the control within the click, since the file picker
+//   of core's Open opens only within the user's click.
 // - A menu is a quiet button with its label and the chevron, which opens a
 //   menu that holds its items (./menu.tsx).
 // - A status is text in the muted colour.
@@ -273,19 +278,18 @@ function StorageControlView({ control }: { readonly control: StorageControl }): 
   switch (control.kind) {
     case "button":
       return (
-        <button
-          type="button"
+        <Button
+          variant="quiet"
           className="blockr-dock-bar-button blockr-dock-bar-shrinks"
-          disabled={control.disabled}
-          title={control.tooltip}
-          aria-keyshortcuts={ariaShortcuts(control.shortcut)}
-          onClick={() => {
+          isDisabled={control.disabled === true}
+          render={withAttributes({ title: control.tooltip, "aria-keyshortcuts": ariaShortcuts(control.shortcut) })}
+          onPress={() => {
             void runButton(core, control);
           }}
           {...tip}
         >
           <span className="blockr-dock-bar-label">{control.label}</span>
-        </button>
+        </Button>
       );
     case "menu":
       return (
@@ -365,30 +369,31 @@ function UndoRedo({ mac }: { readonly mac: boolean }): ReactElement {
   };
   return (
     <div className="blockr-dock-bar-steps">
-      <button
-        type="button"
+      <Button
+        variant="quiet"
         className="blockr-dock-bar-button"
-        title={`Undo (${shortcutLabel("Mod+Z", mac)})`}
-        aria-keyshortcuts="Control+Z Meta+Z"
-        disabled={!canUndo}
-        onClick={() => {
+        isDisabled={!canUndo}
+        render={withAttributes({ title: `Undo (${shortcutLabel("Mod+Z", mac)})`, "aria-keyshortcuts": "Control+Z Meta+Z" })}
+        onPress={() => {
           step(true);
         }}
       >
         Undo
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        variant="quiet"
         className="blockr-dock-bar-button"
-        title={`Redo (${shortcutLabel("Mod+Shift+Z", mac)})`}
-        aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
-        disabled={!canRedo}
-        onClick={() => {
+        isDisabled={!canRedo}
+        render={withAttributes({
+          title: `Redo (${shortcutLabel("Mod+Shift+Z", mac)})`,
+          "aria-keyshortcuts": "Control+Shift+Z Meta+Shift+Z Control+Y",
+        })}
+        onPress={() => {
           step(false);
         }}
       >
         Redo
-      </button>
+      </Button>
     </div>
   );
 }
@@ -407,17 +412,17 @@ function ReadOnlyPill(): ReactElement {
 function OptionsButton({ sidebar }: { readonly sidebar: Sidebar }): ReactElement {
   const { open } = useSyncExternalStore(sidebar.subscribe, sidebar.state);
   return (
-    <button
-      type="button"
+    <Button
+      variant="quiet"
       className="blockr-dock-bar-button blockr-dock-bar-options"
       aria-expanded={open}
       aria-controls={sidebar.id}
-      onClick={() => {
+      onPress={() => {
         sidebar.set(!open);
       }}
     >
       Options
-    </button>
+    </Button>
   );
 }
 

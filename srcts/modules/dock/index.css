@@ -3,8 +3,10 @@
  * inst/js/dock.css: dockview's stylesheet, the card's (./card/card.css),
  * then the dock's own rules, which style only what sits under the dock's
  * root, `.blockr-dock`, under the bar above it, `.blockr-dock-bar`, under the
- * options sidebar beside it, `.blockr-dock-sidebar`, and under the column of
- * toasts beside it, `.blockr-dock-toasts`.
+ * options sidebar beside it, `.blockr-dock-sidebar`, under the column of
+ * toasts beside it, `.blockr-dock-toasts`, and under the block's menu,
+ * `.blockr-card-menu`, which core's React SDK draws at the end of the page's
+ * body.
  */
 @import "dockview-react/dist/styles/dockview.css";
 @import "./card/card.css";
@@ -76,6 +78,8 @@
  * below: the "+" of a tab group, the prompt of an empty view, the panel
  * picker, the bar, the dock's menus, the block cards (./card/card.css) and
  * the options sidebar.
+ * So does the block's menu, which sits outside the dock's root, at the end of
+ * the page's body, so that the dock sets the variables on the menu too.
  * Each reads a variable of the dock's, which reads a token of blockr.ui's with
  * the token's value in the light scheme as the fallback, or in the dark scheme
  * under the dark theme.
@@ -83,7 +87,8 @@
  */
 .blockr-dock,
 .blockr-dock-bar,
-.blockr-dock-sidebar {
+.blockr-dock-sidebar,
+.blockr-card-menu {
   --blockr-dock-text: var(--blockr-color-text-default, #111827);
   --blockr-dock-text-muted: var(--blockr-color-text-muted, #6b7280);
   --blockr-dock-text-accent: var(--blockr-color-text-accent, #2563eb);
@@ -131,7 +136,8 @@
 
 [data-bc-theme="dark"] .blockr-dock,
 [data-bc-theme="dark"] .blockr-dock-bar,
-[data-bc-theme="dark"] .blockr-dock-sidebar {
+[data-bc-theme="dark"] .blockr-dock-sidebar,
+[data-bc-theme="dark"] .blockr-card-menu {
   --blockr-dock-text: var(--blockr-color-text-default, #f0f3f7);
   --blockr-dock-text-muted: var(--blockr-color-text-muted, #8a94a3);
   --blockr-dock-text-accent: var(--blockr-color-text-accent, #60a5fa);
@@ -961,6 +967,9 @@
  * Links, menus, the storage plugin's buttons, Undo, Redo and the options
  * button all take it, so that every control on the bar shows its label.
  * A menu's chevron follows its label, and flips up while the menu is open.
+ * The storage plugin's buttons, Undo, Redo and the options button are the
+ * Button of core's React SDK, whose quiet look these rules override, its wash
+ * on a disabled button included.
  */
 .blockr-dock-bar-button {
   box-sizing: border-box;
@@ -989,6 +998,7 @@
 }
 
 .blockr-dock-bar-button:disabled {
+  background: transparent;
   color: var(--blockr-dock-text-disabled);
   cursor: default;
 }

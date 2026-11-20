@@ -4,8 +4,8 @@
  * at 655e323, and as the design system's header, menus and tooltips are.
  * The colours are the dock's variables (../index.css), which read blockr.ui's
  * tokens under either theme.
- * The card's menus are the dock's (../menu.tsx), whose rules are the dock's
- * (../index.css).
+ * The block's menu is core's React SDK's, in core's theme, and the "+" menu is
+ * the dock's (../menu.tsx), whose rules are the dock's (../index.css).
  */
 
 /*
@@ -464,6 +464,60 @@
 .blockr-card[data-compact] .blockr-card-header + .blockr-card-notifications,
 .blockr-card[data-compact] .blockr-card-sections {
   margin-top: 6px;
+}
+
+/*
+ * The block's menu, which core's React SDK draws in core's theme, in a portal
+ * at the end of the page's body (./header.tsx).
+ * The dock sets its variables on the menu, as on its own elements, since the
+ * menu sits outside them (../index.css).
+ * What the dock draws besides core's theme:
+ * - Copy block ID shows the block's id as meta text after its label, in a
+ *   monospaced face at 13px, where core's menu puts an item's description in
+ *   a line below its label.
+ *   The id turns the item's colour on the item that the pointer or the
+ *   keyboard is on.
+ * - A divider parts Remove block from the items above it.
+ * - Remove block shows the bin icon before its label, and is plain at rest
+ *   and red, on the danger wash, as the item that the pointer or the keyboard
+ *   is on.
+ */
+.blockr-card-menu .blockr-card-menu-meta {
+  grid-column: 2;
+  grid-row: 1;
+  padding-left: 16px;
+  color: var(--blockr-dock-text-muted);
+  font-family: var(--blockr-font-mono, "SF Mono", "Fira Code", "Consolas", "Monaco", monospace);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+.blockr-card-menu :is([data-focused], [data-hovered]) .blockr-card-menu-meta {
+  color: inherit;
+}
+
+.blockr-card-menu-divided {
+  padding-top: 4px;
+  border-top: 1px solid var(--blockr-dock-border);
+}
+
+.blockr-card-menu-lead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blockr-card-menu-lead svg {
+  flex: none;
+  color: var(--blockr-dock-text-muted);
+}
+
+.blockr-card-menu-danger:is([data-focused], [data-hovered]) {
+  background: var(--blockr-dock-bg-danger);
+  color: var(--blockr-dock-text-danger);
+}
+
+.blockr-card-menu-danger:is([data-focused], [data-hovered]) .blockr-card-menu-lead svg {
+  color: inherit;
 }
 
 /*

@@ -57,17 +57,41 @@
 //   design system has a side panel
 //   (https://bristolmyerssquibb.github.io/blockr.ui/articles/design-system.html#floating).
 // - Tab and Shift+Tab keep the focus inside it, pinned or not.
-// A board option's UI may open a popover or a modal dialog in the sidebar.
-// Escape then closes that, and the sidebar leaves the key alone.
+// A board option's UI may open an overlay of core's React SDK, such as the
+// list of a select, a menu or a dialog.
+// React Aria draws the overlay in a portal at the end of the page's body, so
+// the overlay lies outside the sidebar.
+// While it is open, React Aria names it in the aria-controls of the control
+// that opened it, from which the sidebar tells an overlay that opened from
+// inside it.
+// While such an overlay is open, a press outside the element that the dock
+// draws in counts as a press inside the sidebar. Such a press lands on the
+// overlay, or on what a modal overlay lays over the page, which takes the
+// press that closes the overlay.
+// Escape closes such an overlay before the sidebar, which needs nothing of its
+// own for it:
+// - An overlay that takes the focus, as a menu or a dialog, hears the key
+//   where the focus is, at the end of the page's body, so the key never
+//   reaches the sidebar.
+// - A select of core's keeps the focus in its field, in the sidebar, and
+//   prevents the default of the Escape that closes its list, so that the key
+//   closes nothing else, and the sidebar leaves such a key alone.
+// The close button, Expand all and Reset are the Button of core's React SDK,
+// in the sidebar's look (./index.css).
+// The close button and Reset keep their tooltips as the browser's
+// (./attributes.tsx).
+// The pin stays the dock's own button until core's React SDK draws toggles
+// (https://github.com/BristolMyersSquibb/blockr.dock/issues/646).
 // Today's sidebar ends its list with the code export. That row goes, since
 // code export becomes blockr.code's plugin. The sidebar shows no field for the
 // board's name either, since the board's name is on the bar.
 
 import type { Board, CoreApi, Json, Option, OptionId } from "@blockr/core";
-import { useBoard } from "@blockr/core/react";
+import { Button, useBoard } from "@blockr/core/react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
 import { sameJson } from "../../state/index.ts";
+import { withAttributes } from "./attributes.tsx";
 import { runEdit, useDock } from "./context.ts";
 import { Chevron, PinIcon, RemoveIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
@@ -87,10 +111,6 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
   "details > summary:first-of-type",
 ].join(", ");
-
-// What closes before the sidebar on Escape: an open popover and a modal
-// dialog.
-const OVERLAYS = [":popover-open", "dialog:modal"];
 
 // The categories of the board options that the board holds, in alphabetical
 // order, each with the ids of its board options, in the alphabetical order of
@@ -156,17 +176,17 @@ export function OptionsSidebar({ sidebar }: { readonly sidebar: Sidebar }): Reac
         >
           <PinIcon />
         </button>
-        <button
-          type="button"
+        <Button
+          variant="quiet"
           className="blockr-dock-sidebar-button"
           aria-label="Close sidebar"
-          title="Close"
-          onClick={() => {
+          render={withAttributes({ title: "Close" })}
+          onPress={() => {
             sidebar.set(false);
           }}
         >
           <RemoveIcon />
-        </button>
+        </Button>
       </header>
       <div className="blockr-dock-sidebar-body">
         {grouped.size === 0 ? (
@@ -203,16 +223,16 @@ function ExpandAll({
 }): ReactElement {
   const all = categories.every((category) => expanded.includes(category));
   return (
-    <button
-      type="button"
+    <Button
+      variant="quiet"
       className="blockr-dock-sidebar-expand"
       aria-expanded={all}
-      onClick={() => {
+      onPress={() => {
         for (const category of categories) sidebar.expand(category, !all);
       }}
     >
       {all ? "Collapse all" : "Expand all"}
-    </button>
+    </Button>
   );
 }
 
@@ -323,18 +343,18 @@ function OptionLine({ option, reset }: { readonly option: OptionId; readonly res
     <div ref={line} className="blockr-dock-sidebar-option" data-option={option}>
       <Mounted mount={mount} className="blockr-dock-sidebar-option-ui" />
       {reset === undefined ? null : (
-        <button
-          type="button"
+        <Button
+          variant="quiet"
           className="blockr-dock-sidebar-reset"
           aria-label={`Reset ${label} to its default`}
-          title="Reset to the default"
-          onClick={() => {
+          render={withAttributes({ title: "Reset to the default" })}
+          onPress={() => {
             line.current?.querySelector(".blockr-dock-sidebar-option-ui")?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
             runEdit(core, "blockr.core-set_option", { id: option, value: reset });
           }}
         >
           Reset
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -407,7 +427,7 @@ function useKeys(ref: { readonly current: HTMLElement | null }, sidebar: Sidebar
         keepFocus(root, event);
         return;
       }
-      if (event.key !== "Escape" || holdsOverlay(root) || sidebar.state().pinned) return;
+      if (event.key !== "Escape" || sidebar.state().pinned) return;
       sidebar.set(false);
       event.preventDefault();
     };
@@ -440,30 +460,37 @@ function keepFocus(root: HTMLElement, event: KeyboardEvent): void {
   }
 }
 
-// Whether the sidebar holds an open popover or a modal dialog.
-// A browser that does not know one of the selectors opens no such overlay.
-function holdsOverlay(root: HTMLElement): boolean {
-  return OVERLAYS.some((selector) => {
-    try {
-      return root.querySelector(selector) !== null;
-    } catch {
-      return false;
-    }
-  });
+// Whether an overlay that a control in the sidebar opened is open: an element
+// outside the sidebar that a control in the sidebar names in aria-controls
+// while the control is expanded, as React Aria names the list of a select,
+// a menu and a dialog.
+function overlayOpen(root: HTMLElement): boolean {
+  const doc = root.ownerDocument;
+  return [...root.querySelectorAll('[aria-expanded="true"][aria-controls]')].some((control) =>
+    (control.getAttribute("aria-controls") ?? "").split(" ").some((id) => {
+      const overlay = id === "" ? null : doc.getElementById(id);
+      return overlay !== null && !root.contains(overlay);
+    }),
+  );
 }
 
 // Closes the sidebar on a press outside it, while `armed`.
 // A press on the options button, which names the sidebar in aria-controls, or
 // on a toast, does not count as outside.
+// Neither does a press outside the element that the dock draws in, while an
+// overlay of the sidebar is open, as the comment at the top of this file says.
+// The sidebar is a child of that element.
 function usePressOutside(ref: { readonly current: HTMLElement | null }, sidebar: Sidebar, armed: boolean): void {
   useEffect(() => {
     const root = ref.current;
     if (root === null || !armed) return undefined;
     const doc = root.ownerDocument;
+    const page = root.parentElement ?? doc.body;
     const onPress = (event: PointerEvent): void => {
       const target = event.target;
       if (!(target instanceof Element) || root.contains(target)) return;
       if (target.closest(`[aria-controls="${sidebar.id}"], .blockr-dock-toasts`) !== null) return;
+      if (!page.contains(target) && overlayOpen(root)) return;
       sidebar.set(false);
     };
     doc.addEventListener("pointerdown", onPress, true);

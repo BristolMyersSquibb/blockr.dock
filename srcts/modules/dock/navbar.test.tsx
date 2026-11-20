@@ -246,10 +246,11 @@ describe("the storage plugin's controls on the bar", () => {
       "NJ",
     ]);
 
-    // A button is a quiet button, greyed out while it is disabled, with its
-    // tooltip where it has one.
+    // A button is a quiet button, the Button of core's React SDK, greyed out
+    // while it is disabled, with its tooltip where it has one.
     const share = button(storage, "Share");
     expect(share.classList).toContain("blockr-dock-bar-button");
+    expect(share.hasAttribute("data-rac")).toBe(true);
     expect(share.disabled).toBe(true);
     expect(share.title).toBe("Save first");
     expect(button(storage, "Save").getAttribute("aria-keyshortcuts")).toBe("Control+S Meta+S");
@@ -278,6 +279,8 @@ describe("the storage plugin's controls on the bar", () => {
     const storage = el.querySelector<HTMLElement>(".blockr-dock-bar-storage");
     if (storage === null) throw new Error("No storage controls.");
 
+    // A button runs within the click, which the file picker of core's Open
+    // needs.
     click(button(storage, "Save"));
     click(button(storage, "Share"));
     expect(runs).toEqual(["save"]);
@@ -590,11 +593,16 @@ describe("the dock's own parts", () => {
     const before = core.store.board().name;
     const undo = button(dockBar(el), "Undo");
     const redo = button(dockBar(el), "Redo");
-    // Both show their labels, as the storage plugin's buttons beside them do.
+    // Both show their labels, as the storage plugin's buttons beside them do,
+    // and both are the Button of core's React SDK.
     expect([undo.textContent, redo.textContent]).toEqual(["Undo", "Redo"]);
+    expect([undo.hasAttribute("data-rac"), redo.hasAttribute("data-rac")]).toEqual([true, true]);
     expect(undo.disabled).toBe(true);
     expect(redo.disabled).toBe(true);
     expect(undo.title).toMatch(/^Undo \((Ctrl\+Z|⌘Z)\)$/);
+    expect(redo.title).toMatch(/^Redo \((Ctrl\+Shift\+Z|⌘⇧Z)\)$/);
+    expect(undo.getAttribute("aria-keyshortcuts")).toBe("Control+Z Meta+Z");
+    expect(redo.getAttribute("aria-keyshortcuts")).toBe("Control+Shift+Z Meta+Shift+Z Control+Y");
 
     await core.commands.run("blockr.core-rename_board", { name: "Renamed" });
     await drawn();
@@ -647,6 +655,7 @@ describe("the dock's own parts", () => {
   test("open and close the options sidebar from the options button", async () => {
     const { el } = await startBar();
     const options = button(dockBar(el), "Options");
+    expect(options.hasAttribute("data-rac")).toBe(true);
     expect(options.getAttribute("aria-expanded")).toBe("false");
 
     click(options);
