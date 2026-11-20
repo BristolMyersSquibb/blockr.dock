@@ -3,8 +3,9 @@
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#settings).
 // Besides core's plugins and the dock, the app runs a plugin class of a
 // package that only the tests know, blockr.test, which requires a board option
-// of that package, zoom. The package defines a second board option, grain,
-// which nothing requires, and whose default fails.
+// of that package, zoom. The package defines two more board options, grain and
+// texture, which nothing requires. They share a category that no other board
+// option has. The default of grain fails.
 
 import type { CoreApi, Json, JsonBoard, Option, OptionModule, PluginClass } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
@@ -78,6 +79,16 @@ const grain: Omit<Option, "id"> = {
   ui: numberUi(),
 };
 
+// The board option of blockr.test that nothing requires, in the category of
+// grain.
+const texture: Omit<Option, "id"> = {
+  label: "Texture",
+  category: "Extra options",
+  schema: { type: "integer" },
+  default: 1,
+  ui: numberUi(),
+};
+
 // The plugin class of blockr.test, which names no board option itself.
 // Its entry in R's reply to hello names zoom, as the method of R's
 // plugin_options() for the class would.
@@ -116,6 +127,7 @@ async function startSidebar(start: Start = {}) {
       sync_rails: { package: "blockr.dock", module: "blockr.dock/sync-rails-option.js", version: 1 },
       zoom: { package: "blockr.test", module: "blockr.test/zoom-option.js", version: 1 },
       grain: { package: "blockr.test", module: "blockr.test/grain-option.js", version: 1 },
+      texture: { package: "blockr.test", module: "blockr.test/texture-option.js", version: 1 },
     },
     lock: { board: start.locked ?? false, load: false },
     board,
@@ -128,6 +140,7 @@ async function startSidebar(start: Start = {}) {
     [VIEWER]: { api: 1, default: viewer },
     zoom: { api: 1, default: zoom },
     grain: { api: 1, default: grain },
+    texture: { api: 1, default: texture },
   };
   const el = document.createElement("div");
   document.body.append(el);
@@ -267,12 +280,14 @@ describe("the options sidebar", () => {
   });
 
   test("shows how many board options each category holds, which a screen reader hears as a phrase", async () => {
-    const { el } = await startSidebar();
+    // The category of grain and texture holds no other board option.
+    const { el, core } = await startSidebar({ options: { grain: { value: 5, version: 1 } } });
     await open(el);
-    // Theme options holds the dock's compact and view_tabs, and core's
-    // dark_mode, which the dock requires. View options holds zoom alone.
-    expect(summary(el, "Theme options").textContent).toBe("Theme options3, 3 board options");
-    expect(summary(el, "View options").textContent).toBe("View options1, 1 board option");
+    expect(summary(el, "Extra options").textContent).toBe("Extra options1, 1 board option");
+
+    await core.commands.run("blockr.core-set_option", { id: "texture", value: 2 });
+    await drawn();
+    expect(summary(el, "Extra options").textContent).toBe("Extra options2, 2 board options");
   });
 
   test("resets a board option to its default with the Reset button by its UI, which hands the focus to the UI", async () => {
