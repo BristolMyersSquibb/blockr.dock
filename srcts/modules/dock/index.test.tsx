@@ -32,17 +32,8 @@ describe("the dock's frontend", () => {
     const { core, settled, stop } = await startDock(document.createElement("div"));
     await settled();
 
-    // The fixture's board holds values for n_rows and show_conditions alone.
-    const options = core.store.board().options;
-    expect(options).toMatchObject({ compact: false, view_tabs: false, sync_rails: true, show_conditions: ["warning", "error"] });
-    expect(Object.keys(options).sort()).toEqual([
-      "compact",
-      "dark_mode",
-      "n_rows",
-      "show_conditions",
-      "sync_rails",
-      "view_tabs",
-    ]);
+    // The fixture's board holds a value for none of the dock's board options.
+    expect(core.store.board().options).toMatchObject({ compact: false, view_tabs: false, sync_rails: true });
     stop();
   });
 

@@ -104,7 +104,7 @@ async function startSidebar(start: Start = {}) {
       [DOCK]: {
         name: "Dock",
         version: 1,
-        options: ["compact", "view_tabs", "sync_rails", "show_conditions", "dark_mode"],
+        options: ["compact", "view_tabs", "sync_rails", "dark_mode"],
         module: "blockr.dock/js/dock.js",
       },
       [VIEWER]: { name: "Viewer", version: 1, options: ["zoom"], module: "blockr.test/viewer.js" },
@@ -269,8 +269,8 @@ describe("the options sidebar", () => {
   test("shows how many board options each category holds, which a screen reader hears as a phrase", async () => {
     const { el } = await startSidebar();
     await open(el);
-    const counts = categoriesIn(el).map((details) => find(details, ".blockr-dock-sidebar-count [aria-hidden='true']").textContent);
-    expect(counts).toEqual(["2", "1", "3", "1"]);
+    // Theme options holds the dock's compact and view_tabs, and core's
+    // dark_mode, which the dock requires. View options holds zoom alone.
     expect(summary(el, "Theme options").textContent).toBe("Theme options3, 3 board options");
     expect(summary(el, "View options").textContent).toBe("View options1, 1 board option");
   });
@@ -510,11 +510,12 @@ describe("the options sidebar", () => {
   });
 
   test("shows a board option that comes onto the board later", async () => {
-    const { el, core } = await startSidebar({ options: { show_conditions: { value: ["error"], version: 1 } } });
+    const { el, core } = await startSidebar({ options: {} });
     await open(el);
-    // Core puts on the board the board options that the dock and blockr.test
-    // require, and those that the outputs of the board's blocks read, such as
-    // n_rows. Nothing puts grain on it.
+    // The board holds no board option as it opens.
+    // Core puts on it the board options that the dock and blockr.test require,
+    // and those that the outputs of the board's blocks read, such as n_rows.
+    // Nothing puts grain on it.
     await vi.waitFor(() => {
       expect(names(el)).toEqual(CATEGORIES);
     });

@@ -103,9 +103,8 @@ An app script gives the items of the dock's navbar to \code{serve()} in
 The dock takes them through its method of \code{\link[blockr.core:frontend_args]{blockr.core::frontend_args()}}
 (see \code{\link[=default_navbar]{default_navbar()}}).
 
-The dock reads five board options: its own, \code{compact}, \code{view_tabs} and
-\code{sync_rails} (see \code{\link[=new_compact_option]{new_compact_option()}}), and core's \code{show_conditions} and
-\code{dark_mode}.
+The dock reads four board options: its own, \code{compact}, \code{view_tabs} and
+\code{sync_rails} (see \code{\link[=new_compact_option]{new_compact_option()}}), and core's \code{dark_mode}.
 The class names them through its method of \code{\link[blockr.core:plugin_options]{blockr.core::plugin_options()}},
 by their constructors.
 R sends their ids in its reply to \code{hello}.
