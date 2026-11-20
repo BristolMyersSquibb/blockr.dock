@@ -640,7 +640,8 @@
  * pushes the name 2px off the tab's centre, and leaves the close button 4px
  * nearer the name than in a tab group.
  * So on a rail's tabs, the margin goes at the end of the name's line, where it
- * lies in a tab group.
+ * lies in a tab group, until dockview puts it there itself
+ * (https://github.com/dockview/dockview/issues/1773).
  */
 .blockr-dock .dv-tabs-container-vertical .dv-default-tab-content {
   margin-right: 0;
