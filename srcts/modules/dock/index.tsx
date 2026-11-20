@@ -36,14 +36,14 @@
 //    categories it has expanded (./sidebar.ts), and which folders are open in
 //    the views menu (./open-folders.ts).
 // 6. It starts the toasts of the opening, which follow the notifications of
-//    CoreApi (./toasts.tsx).
+//    CoreApi and the active view (./toasts.tsx).
 // 7. It binds the shortcuts of the bar on the page's document
 //    (./shortcuts.ts).
 // 8. It draws the page: the bar across the top, with the navbar items
 //    (./navbar.tsx), below it the active view, with dockview (./dock.tsx,
 //    ./drawing.ts), and beside them the options sidebar
 //    (./options-sidebar.tsx) and the toasts of the notifications that no card
-//    shows.
+//    and no panel of the active view shows.
 //    The active view starts lower while the views menu draws its line of tabs
 //    under the bar.
 // The cleanup that render() returns undoes all of them but the step on
@@ -105,7 +105,7 @@ const frontend = {
     const busy = trackBusy(core, drawn, narrow, settings.spinnerDelay);
     const sidebar = createSidebar();
     const openFolders = createOpenFolders();
-    const toasts = createToasts(core.notifications);
+    const toasts = createToasts(core, drawn);
     const unbind = bindShortcuts(el.ownerDocument, core, () => barButtons(core, items));
 
     const root = createRoot(el);
@@ -129,7 +129,7 @@ const frontend = {
           <DockContext value={shared}>
             <OptionsSidebar sidebar={sidebar} />
           </DockContext>
-          <ToastList core={core} toasts={toasts} />
+          <ToastList core={core} toasts={toasts} drawn={drawn} />
         </>,
       );
     });

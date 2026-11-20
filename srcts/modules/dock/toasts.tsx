@@ -1,6 +1,6 @@
 // The toasts of the dock, which show every notification of CoreApi that no
-// card shows, as ./notifications.ts sorts them, the way core's basic frontend
-// shows its toasts
+// card and no panel of the active view shows, as ./notifications.ts sorts
+// them, the way core's basic frontend shows its toasts
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2#proposal,
 // https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.14#cores-basic-frontend).
 // - The toasts sit in the window's bottom right corner, one above the other,
@@ -16,6 +16,19 @@
 //   faded or that the user closed does not come back while its notification
 //   holds. The dock keeps the ids of those notifications for the opening, and
 //   forgets each id once core withdraws its notification.
+// - The toast of a notification about a plugin whose panel the dock draws
+//   shows while the active view holds no panel of the plugin
+//   (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#places-besides-the-panel).
+//   Its link "Show panel" makes the first view of the navigation that holds
+//   the panel the active one and shows the panel there. Where no view holds
+//   the panel, the link shows it in the active view, which adds it at the
+//   default place, as blockr.dock-show_panel does.
+//   The toast goes once the active view holds the panel, since the panel's
+//   tab then shows a dot (./dock.tsx). It comes back, with its five seconds
+//   anew for a message, where the active view changes to one that holds no
+//   panel of the plugin, unless it faded or the user closed it before.
+//   On a locked board, where no view holds the panel, the toast has no link,
+//   since a locked dock adds no panel.
 // - A message's toast is a status, and a warning's or an error's is an alert,
 //   which a screen reader reads out at once.
 // - The stylesheet draws an error's toast and a warning's in the message style
@@ -23,11 +36,15 @@
 //   message no colour, since blue means "on" there, so a message's toast is
 //   neutral.
 
-import type { Board, BoardObject, CoreApi, Notification } from "@blockr/core";
+import type { Board, BoardObject, CoreApi, Notification, PluginClassId } from "@blockr/core";
 import { useBoard } from "@blockr/core/react";
 import { useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
-import { onCard, plainText } from "./notifications.ts";
+import { dockState } from "../../commands/index.ts";
+import { places, viewOrder } from "../../state/index.ts";
+import { runEdit } from "./context.ts";
+import type { Batch } from "./context.ts";
+import { asToast, panelPlugin, plainText } from "./notifications.ts";
 
 // How long a message's toast shows before it fades, and how long it takes to
 // fade, in milliseconds.
@@ -71,7 +88,17 @@ interface Shown {
   readonly kept: Set<Keeper>;
 }
 
-export function createToasts(notifications: Pick<CoreApi["notifications"], "get" | "subscribe">): Toasts {
+// Follows the notifications of CoreApi, and the board, on which the active
+// view decides whether a notification about a plugin shows as a toast, given
+// the plugins whose panels the dock draws.
+export function createToasts(
+  core: {
+    readonly notifications: Pick<CoreApi["notifications"], "get" | "subscribe">;
+    readonly store: Pick<CoreApi["store"], "board" | "subscribe">;
+  },
+  drawn: ReadonlyMap<PluginClassId, string>,
+): Toasts {
+  const { notifications, store } = core;
   // The toasts that show, by the ids of their notifications.
   const shown = new Map<string, Shown>();
   // The ids of the notifications whose toasts faded or that the user closed,
@@ -118,20 +145,24 @@ export function createToasts(notifications: Pick<CoreApi["notifications"], "get"
     publish();
   }
 
-  // Follows the notifications that hold: drops the toasts of those that core
-  // withdrew, and shows each new one that no card shows.
+  // Follows the notifications that hold, on the board as it is: drops the
+  // toasts of those that core withdrew and of those that a panel of the
+  // active view now shows, and shows each new one that no card and no panel
+  // of the active view shows.
   function update(): void {
-    const holding = new Set(heard.map((notification) => notification.id));
+    const board = store.board();
+    const toasted = new Set(heard.filter((notification) => asToast(notification, board, drawn)).map((notification) => notification.id));
     for (const [id, toast] of shown) {
-      if (holding.has(id)) continue;
+      if (toasted.has(id)) continue;
       clearTimeout(toast.timer);
       shown.delete(id);
     }
+    const holding = new Set(heard.map((notification) => notification.id));
     for (const id of gone) {
       if (!holding.has(id)) gone.delete(id);
     }
     for (const notification of heard) {
-      if (onCard(notification) || gone.has(notification.id)) continue;
+      if (!toasted.has(notification.id) || gone.has(notification.id)) continue;
       const toast = shown.get(notification.id);
       if (toast === undefined) {
         const added: Shown = { toast: { notification, fading: false }, timer: undefined, kept: new Set() };
@@ -144,8 +175,11 @@ export function createToasts(notifications: Pick<CoreApi["notifications"], "get"
     publish();
   }
 
-  const off = notifications.subscribe((all) => {
+  const offNotifications = notifications.subscribe((all) => {
     heard = all;
+    update();
+  });
+  const offBoard = store.subscribe(() => {
     update();
   });
   update();
@@ -179,7 +213,8 @@ export function createToasts(notifications: Pick<CoreApi["notifications"], "get"
     },
     stop() {
       stopped = true;
-      off();
+      offNotifications();
+      offBoard();
       for (const toast of shown.values()) clearTimeout(toast.timer);
     },
   };
@@ -219,29 +254,73 @@ function own<T>(record: Readonly<Record<string, T>>, key: string): T | undefined
   return Object.hasOwn(record, key) ? record[key] : undefined;
 }
 
+// The dock's commands that the link of a toast runs to show a plugin's panel.
+const ACTIVATE_VIEW = "blockr.dock-activate_view";
+const SHOW_PANEL = "blockr.dock-show_panel";
+
+// The commands that show the plugin's panel, which the link of a toast runs as
+// one step: they make the first view of the navigation that holds the panel
+// the active one, where it is not, and show the panel there, or, where no view
+// holds the panel, show it in the active view, which adds it at the default
+// place.
+// Neither command takes an undo step, so the step takes none.
+// Where no view holds the panel and blockr.dock-show_panel fails its
+// preflight, as on a locked board, the dock cannot show the panel, so the
+// toast has no link.
+export function panelShowing(
+  board: Board,
+  plugin: PluginClassId,
+  commands: Pick<CoreApi["commands"], "preflight">,
+): Batch | undefined {
+  const state = dockState(board);
+  if (state === undefined) return undefined;
+  const panel = { plugin };
+  const show = { id: SHOW_PANEL, args: { panel } };
+  const view = viewOrder(state).find((id) => {
+    const held = state.views[id];
+    return held !== undefined && places(held.grid, panel);
+  });
+  if (view === undefined) return commands.preflight(SHOW_PANEL, { panel }) ? [show] : undefined;
+  return view === state.active ? [show] : [{ id: ACTIVATE_VIEW, args: { view } }, show];
+}
+
 export interface ToastListProps {
   readonly core: CoreApi;
   readonly toasts: Toasts;
+  // The app's plugins whose class has a `ui`, each with its name, whose panels
+  // the dock draws.
+  readonly drawn: ReadonlyMap<PluginClassId, string>;
 }
 
 // The toasts that show, one above the other in the window's bottom right
 // corner, the latest lowest, or nothing while none shows.
 // The toasts follow the board, so that a block renamed while its toast shows
 // goes by its new name there.
-export function ToastList({ core, toasts }: ToastListProps): ReactElement | null {
+export function ToastList({ core, toasts, drawn }: ToastListProps): ReactElement | null {
   const list = useSyncExternalStore(toasts.subscribe, toasts.list);
   const board = useBoard(core);
   if (list.length === 0) return null;
   return (
     <section className="blockr-dock-toasts" aria-label="Notifications">
-      {list.map((toast) => (
-        <ToastItem
-          key={toast.notification.id}
-          toast={toast}
-          title={concerned(toast.notification.about, core, board)}
-          toasts={toasts}
-        />
-      ))}
+      {list.map((toast) => {
+        const plugin = panelPlugin(toast.notification, drawn);
+        const showing = plugin === undefined ? undefined : panelShowing(board, plugin, core.commands);
+        return (
+          <ToastItem
+            key={toast.notification.id}
+            toast={toast}
+            title={concerned(toast.notification.about, core, board)}
+            toasts={toasts}
+            show={
+              showing === undefined
+                ? undefined
+                : () => {
+                    runEdit(core, showing);
+                  }
+            }
+          />
+        );
+      })}
     </section>
   );
 }
@@ -250,11 +329,15 @@ interface ToastItemProps {
   readonly toast: Toast;
   readonly title: string;
   readonly toasts: Toasts;
+  // Shows the panel of the plugin that the notification concerns, where the
+  // toast has a link that shows it.
+  readonly show: (() => void) | undefined;
 }
 
 // A toast: what its notification concerns, with the package that its source
-// names, its message, and a button that closes it.
-function ToastItem({ toast, title, toasts }: ToastItemProps): ReactElement {
+// names, its message, the link that shows the panel of the plugin that it
+// concerns, where it has one, and a button that closes it.
+function ToastItem({ toast, title, toasts, show }: ToastItemProps): ReactElement {
   const { notification, fading } = toast;
   const { id, severity } = notification;
   const pkg = sourcePackage(notification);
@@ -285,6 +368,11 @@ function ToastItem({ toast, title, toasts }: ToastItemProps): ReactElement {
           {pkg === undefined ? null : <span className="blockr-dock-toast-package"> · {pkg}</span>}
         </p>
         <p className="blockr-dock-toast-message">{plainText(notification.message)}</p>
+        {show === undefined ? null : (
+          <button type="button" className="blockr-dock-toast-link" onClick={show}>
+            Show panel
+          </button>
+        )}
       </div>
       <button
         type="button"

@@ -70,7 +70,7 @@ import type { ReactElement } from "react";
 import { dockState, SECTIONS } from "../../../commands/index.ts";
 import { giveFocus, useDock } from "../context.ts";
 import { Mounted } from "../mounted.tsx";
-import { onCard, plainText } from "../notifications.ts";
+import { plainText, showsSeverity } from "../notifications.ts";
 import { Header } from "./header.tsx";
 import { Errors, WarningsAndMessages } from "./notifications.tsx";
 import { Section } from "./section.tsx";
@@ -88,14 +88,12 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
   const notified = useNotified(core, { block: id });
   const [drawn, setDrawn] = useState(false);
 
-  // The notifications that the card shows: those that no plugin raised, of
-  // the severities that the board option show_conditions names.
+  // The notifications that the card shows: those about the block, whoever
+  // raised them, of the severities that the board option show_conditions
+  // names.
   const severities = core.options.value("show_conditions");
   const shown = useMemo(
-    () =>
-      notified.filter(
-        (notification) => onCard(notification) && Array.isArray(severities) && severities.includes(notification.severity),
-      ),
+    () => notified.filter((notification) => showsSeverity(severities, notification.severity)),
     [notified, severities],
   );
 

@@ -43,7 +43,7 @@ export function useDock(): DockContextValue {
 }
 
 // Commands of the board, each with its args, which run in order as one step.
-type Batch = readonly { readonly id: string; readonly args?: Json }[];
+export type Batch = readonly { readonly id: string; readonly args?: Json }[];
 
 // Runs one of the board's commands as an edit of the dock, or the commands of
 // a batch.

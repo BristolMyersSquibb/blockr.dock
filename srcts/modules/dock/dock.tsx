@@ -21,6 +21,18 @@
 // A click on a block's tab gives the block focus in CoreApi.focus, as a click
 // into its card does, while a click on a plugin's tab leaves the focus where
 // it is.
+// The tab of a plugin's panel shows a dot while a warning or an error about
+// the plugin holds, whatever the board option show_conditions names, in
+// blockr.ui's danger colour for an error and its amber for a warning,
+// whichever panel its tab group or rail shows, a collapsed rail's included
+// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#places-besides-the-panel).
+// Its tooltip holds their messages, the errors first, so that the user can
+// read one that the plugin does not show, such as why its UI cannot draw.
+// The tooltip shows as the pointer rests on the tab, or as the keyboard's
+// focus moves onto it, and a screen reader reads the messages as the tab's
+// description.
+// The tab's element is dockview's, which it draws around the dock's tab, so
+// the dock gives that element the tooltip and the description.
 //
 // The header of each tab group holds a "+", which opens the panel picker
 // (./picker.tsx).
@@ -38,7 +50,7 @@
 // the view out again, as for any change of the root's size.
 
 import type { Board, CoreApi, PluginClassId } from "@blockr/core";
-import { useBoard } from "@blockr/core/react";
+import { useBoard, useNotified } from "@blockr/core/react";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "dockview-react";
 import type {
   DockviewReadyEvent,
@@ -53,11 +65,12 @@ import { activeView } from "../../commands/index.ts";
 import { PANEL_COMPONENT, panelFromId } from "../../layout/index.ts";
 import type { PanelParams } from "../../layout/index.ts";
 import { gridPanels } from "../../state/index.ts";
-import { BlockCard, createTooltips } from "./card/index.ts";
+import { bindTip, BlockCard, createTooltips, useTooltip } from "./card/index.ts";
 import { DockContext, giveFocus, useDock } from "./context.ts";
 import { drawDock } from "./drawing.ts";
 import { LockIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
+import { plainText, tabNotifications } from "./notifications.ts";
 import type { Narrow } from "./narrow.ts";
 import { PanelPicker, usePickerButton } from "./picker.tsx";
 import type { Settings } from "./settings.ts";
@@ -91,13 +104,51 @@ const components: IDockviewReactProps["components"] = { [PANEL_COMPONENT]: Panel
 function Tab(props: IDockviewPanelHeaderProps<PanelParams>): ReactElement {
   const { core } = useDock();
   const { panel } = props.params;
-  const onPointerDown =
-    "block" in panel
-      ? () => {
-          giveFocus(core, panel.block);
-        }
-      : undefined;
-  return <DockviewDefaultTab {...props} hideClose={core.lock.board} onPointerDown={onPointerDown} />;
+  if ("plugin" in panel) return <PluginTab {...props} plugin={panel.plugin} />;
+  return (
+    <DockviewDefaultTab
+      {...props}
+      hideClose={core.lock.board}
+      onPointerDown={() => {
+        giveFocus(core, panel.block);
+      }}
+    />
+  );
+}
+
+// The tab of a plugin's panel, with the dot while a warning or an error about
+// the plugin holds, and their messages in its tooltip and description.
+// Its frame lays out as dockview's tab alone (./index.css), and the dock finds
+// from it the tab's element that dockview draws.
+function PluginTab({ plugin, ...props }: IDockviewPanelHeaderProps<PanelParams> & { readonly plugin: PluginClassId }): ReactElement {
+  const { core } = useDock();
+  const notified = useNotified(core, { plugin });
+  const told = useMemo(() => tabNotifications(notified), [notified]);
+  const messages = told.map((notification) => plainText(notification.message));
+  // A message of several lines takes a line of the tooltip for each.
+  const lines = messages.flatMap((message) => message.split("\n")).map((text) => ({ text }));
+  const { props: tip, tooltip } = useTooltip(lines.length === 0 ? null : lines);
+  const frame = useRef<HTMLDivElement>(null);
+  const description = messages.join("\n");
+
+  useEffect(() => {
+    const tab = frame.current?.closest<HTMLElement>('[role="tab"]');
+    if (tab === null || tab === undefined) return undefined;
+    const unbind = bindTip(tab, tip);
+    if (description === "") tab.removeAttribute("aria-description");
+    else tab.setAttribute("aria-description", description);
+    return () => {
+      unbind();
+      tab.removeAttribute("aria-description");
+    };
+  }, [tip, description]);
+
+  return (
+    <div ref={frame} className="blockr-dock-tab-frame" data-notified={told[0]?.severity}>
+      <DockviewDefaultTab {...props} hideClose={core.lock.board} />
+      {tooltip}
+    </div>
+  );
 }
 
 // The "+" in the header of a tab group, which opens the panel picker.

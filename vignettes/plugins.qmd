@@ -312,8 +312,11 @@ So a plugin's board options need no place of their own, and they show under ever
 
 Besides the panel, the dock draws what every frontend draws for plugins:
 
-- The notifications that a plugin raises with `core.notifications.notify()` show as toasts, even one about a block.
-  Those that R, core or a block's modules raise about a block show on the block's card.
+- The notifications of `CoreApi`, each by what it concerns.
+  Those about a block show on the block's card, whoever raised them, a plugin included.
+  A plugin shows those about itself in its panel, and while a warning or an error about the plugin holds, the dock draws a dot on the panel's tab, whose tooltip holds their messages.
+  Where the active view holds no panel of the plugin, each notification about the plugin shows as a toast, with a link that shows the panel.
+  Every other notification shows as a toast, such as one about the board or one about a plugin without a `ui`.
 - The controls of the app's storage plugin, which its class's `storage` gives, show in the navbar, in the navbar's look.
   What the controls cannot hold, the storage plugin opens in a dialog of its own, in the top layer.
 

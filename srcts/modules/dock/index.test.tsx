@@ -650,6 +650,139 @@ describe("a plugin's panel", () => {
   });
 });
 
+// The tab that dockview draws for the panel of the name given.
+function tabNamed(el: HTMLElement, name: string): HTMLElement {
+  const tab = [...el.querySelectorAll<HTMLElement>(".dv-tab")].find(
+    (each) => each.querySelector(".dv-default-tab-content")?.textContent === name,
+  );
+  if (tab === undefined) throw new Error(`No tab shows ${name}.`);
+  return tab;
+}
+
+// The severity of the dot on the tab of the name given, or null for none.
+function dotOn(el: HTMLElement, name: string): string | null {
+  return tabNamed(el, name).querySelector(".blockr-dock-tab-frame")?.getAttribute("data-notified") ?? null;
+}
+
+// The lines of the tooltip that shows, or null where none shows.
+function tooltipLines(el: HTMLElement): string[] | null {
+  const tooltip = el.querySelector('[role="tooltip"]');
+  return tooltip === null ? null : [...tooltip.querySelectorAll(".blockr-card-tooltip-line")].map((line) => line.textContent);
+}
+
+// What the notes plugin raises about itself.
+const lost = { severity: "error", code: "lost", message: "Lost the draft." } as const;
+const slow = { severity: "warning", code: "slow", message: "Saving is slow." } as const;
+const saved = { severity: "message", code: "saved", message: "Saved." } as const;
+
+describe("the tab of a plugin's panel", () => {
+  test("shows a dot while a warning or an error about the plugin holds, the error's while both hold, and none for a message", async () => {
+    const el = document.createElement("div");
+    // The tab group shows a's panel, with the notes plugin's behind it.
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: NOTES }, { block: "a" }]))));
+    expect(dotOn(el, "Notes")).toBeNull();
+
+    let withdrawLost: () => void = () => undefined;
+    let withdrawSlow: () => void = () => undefined;
+    flushSync(() => {
+      withdrawSlow = s.core.notifications.notify(NOTES, slow);
+    });
+    expect(dotOn(el, "Notes")).toBe("warning");
+    flushSync(() => {
+      withdrawLost = s.core.notifications.notify(NOTES, lost);
+    });
+    expect(dotOn(el, "Notes")).toBe("error");
+    flushSync(() => {
+      withdrawLost();
+    });
+    expect(dotOn(el, "Notes")).toBe("warning");
+    flushSync(() => {
+      withdrawSlow();
+      s.core.notifications.notify(NOTES, saved);
+    });
+    expect(dotOn(el, "Notes")).toBeNull();
+    // A block's tab shows none, nor does another plugin's.
+    flushSync(() => {
+      s.core.notifications.notify(EDIT, { ...lost, about: { block: "a" } });
+    });
+    expect(el.querySelectorAll(".blockr-dock-tab-frame[data-notified]")).toHaveLength(0);
+    s.stop();
+  });
+
+  test("shows the dot on the tab of a collapsed rail, which shows its tabs alone", async () => {
+    const el = document.createElement("div");
+    const s = await startWithNotes(el, boardWith(dockStateWith(notesOnRail(true))));
+
+    flushSync(() => {
+      s.core.notifications.notify(NOTES, lost);
+    });
+    expect(dotOn(el, "Notes")).toBe("error");
+    expect(toasts(el)).toEqual([]);
+    s.stop();
+  });
+
+  test("tells of every warning and error, whatever the board option show_conditions names", async () => {
+    const el = document.createElement("div");
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));
+    await s.core.commands.run("blockr.core-set_option", { id: "show_conditions", value: ["error"] });
+    await s.settled();
+
+    flushSync(() => {
+      s.core.notifications.notify(NOTES, slow);
+    });
+    expect(dotOn(el, "Notes")).toBe("warning");
+    s.stop();
+  });
+
+  test("holds their messages, the errors first, in its tooltip, as the keyboard's focus moves onto it or the pointer rests on it, and as its description", async () => {
+    const el = attached();
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));
+    const tab = tabNamed(el, "Notes");
+    expect(tab.hasAttribute("aria-description")).toBe(false);
+
+    let withdraw: () => void = () => undefined;
+    flushSync(() => {
+      s.core.notifications.notify(NOTES, slow);
+      withdraw = s.core.notifications.notify(NOTES, { ...lost, message: "Lost the draft:\n- \u001b[1mintro\u001b[22m" });
+    });
+    expect(tab.getAttribute("aria-description")).toBe("Lost the draft:\n- intro\nSaving is slow.");
+
+    tab.focus();
+    await drawn();
+    expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
+    tab.blur();
+    await drawn();
+    expect(tooltipLines(el)).toBeNull();
+
+    tab.dispatchEvent(new PointerEvent("pointerenter", { pointerType: "mouse" }));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
+    tab.dispatchEvent(new PointerEvent("pointerleave", { pointerType: "mouse" }));
+    await drawn();
+    expect(tooltipLines(el)).toBeNull();
+
+    flushSync(() => {
+      withdraw();
+    });
+    expect(tab.getAttribute("aria-description")).toBe("Saving is slow.");
+    s.stop();
+  });
+
+  test("has no tooltip while no warning or error about the plugin holds", async () => {
+    const el = attached();
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));
+    flushSync(() => {
+      s.core.notifications.notify(NOTES, saved);
+    });
+
+    tabNamed(el, "Notes").focus();
+    await drawn();
+    expect(tooltipLines(el)).toBeNull();
+    expect(tabNamed(el, "Notes").hasAttribute("aria-description")).toBe(false);
+    s.stop();
+  });
+});
+
 // Clicks the button as a pointer does, which goes down on it first.
 function click(button: Element | null | undefined): void {
   if (button === null || button === undefined) throw new Error("No button to click.");
@@ -1137,31 +1270,106 @@ describe("the toasts", () => {
     await settled();
     expect(core.notifications.get().some((n) => n.source.kind === "r" && n.message === "Few rows.")).toBe(true);
 
-    let placed: () => void = () => undefined;
+    let crowded: () => void = () => undefined;
     flushSync(() => {
       core.notifications.notify(DOCK, { severity: "message", code: "saved", message: "Saved." });
-      placed = core.notifications.notify(DOCK, { severity: "error", code: "not_placed", message: "Not placed.", about: { block: "b" } });
-      core.notifications.notify(DOCK, { severity: "warning", code: "crowded", message: "The view is crowded.", about: null });
+      // What a plugin raises about a block shows on the block's card.
+      core.notifications.notify(DOCK, { severity: "error", code: "not_placed", message: "Not placed.", about: { block: "b" } });
+      crowded = core.notifications.notify(DOCK, { severity: "warning", code: "crowded", message: "The view is crowded.", about: null });
+      core.notifications.notify(DOCK, { severity: "error", code: "not_shared", message: "Not shared.", about: null });
     });
     expect(toasts(el)).toEqual([
       ["message", 'Plugin "Dock" · blockr.dock', "Saved."],
-      ["error", 'Block "Head" · blockr.dock', "Not placed."],
       ["warning", "Board · blockr.dock", "The view is crowded."],
+      ["error", "Board · blockr.dock", "Not shared."],
     ]);
     expect(toastsIn(el).map((toast) => toast.getAttribute("role"))).toEqual(["status", "alert", "alert"]);
     // The toasts sit beside the dock's root, outside it.
     expect(el.querySelector(".blockr-dock .blockr-dock-toasts")).toBeNull();
 
     flushSync(() => {
-      closeButton(toastWithMessage(el, "The view is crowded.")).click();
+      closeButton(toastWithMessage(el, "Not shared.")).click();
     });
-    expect(messages(el)).toEqual(["Saved.", "Not placed."]);
-    expect(core.notifications.get().some((n) => n.message === "The view is crowded.")).toBe(true);
+    expect(messages(el)).toEqual(["Saved.", "The view is crowded."]);
+    expect(core.notifications.get().some((n) => n.message === "Not shared.")).toBe(true);
     flushSync(() => {
-      placed();
+      crowded();
     });
     expect(messages(el)).toEqual(["Saved."]);
     stop();
+  });
+
+  test("show a notification about a plugin whose panel the active view does not hold, whose link makes the first view that holds the panel the active one", async () => {
+    const el = document.createElement("div");
+    // The view side holds the notes plugin's panel, behind b's, and main,
+    // which is active, holds none.
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ plugin: NOTES }, { block: "b" }]))));
+
+    flushSync(() => {
+      s.core.notifications.notify(NOTES, lost);
+      s.core.notifications.notify(NOTES, saved);
+    });
+    expect(toasts(el)).toEqual([
+      ["error", 'Plugin "Notes" · blockr.test', "Lost the draft."],
+      ["message", 'Plugin "Notes" · blockr.test', "Saved."],
+    ]);
+    const link = toastWithMessage(el, "Lost the draft.").querySelector("button.blockr-dock-toast-link");
+    expect(link?.textContent).toBe("Show panel");
+    expect(s.core.store.canUndo()).toBe(false);
+
+    click(link);
+    await s.settled();
+    const state = s.core.store.board().plugins[DOCK] as DockState;
+    expect(state.active).toBe("side");
+    expect(state.views.side?.grid.children[0]).toMatchObject({ active: { plugin: NOTES } });
+    expect(s.core.store.canUndo()).toBe(false);
+    // The toasts go, and the dot on the panel's tab tells of the error.
+    expect(toasts(el)).toEqual([]);
+    expect(dotOn(el, "Notes")).toBe("error");
+
+    // Back on main, the toasts come back.
+    await s.core.commands.run("blockr.dock-activate_view", { view: "main" });
+    await s.settled();
+    expect(messages(el)).toEqual(["Lost the draft.", "Saved."]);
+    s.stop();
+  });
+
+  test("show the panel in the active view where no view holds it, at the default place, through the link", async () => {
+    const el = document.createElement("div");
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ block: "b" }]))));
+
+    flushSync(() => {
+      s.core.notifications.notify(NOTES, lost);
+    });
+    click(toastWithMessage(el, "Lost the draft.").querySelector("button.blockr-dock-toast-link"));
+    await s.settled();
+
+    expect(mainGrid(s.core)).toMatchObject({ children: [{ panels: [{ block: "a" }, { plugin: NOTES }], active: { plugin: NOTES } }] });
+    expect(toasts(el)).toEqual([]);
+    expect(dotOn(el, "Notes")).toBe("error");
+    s.stop();
+  });
+
+  test("give no link on a locked board where no view holds the panel, since a locked dock adds none, and one where a view holds it", async () => {
+    const el = document.createElement("div");
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]))), true);
+    flushSync(() => {
+      s.core.notifications.notify(NOTES, lost);
+    });
+    expect(messages(el)).toEqual(["Lost the draft."]);
+    expect(toastWithMessage(el, "Lost the draft.").querySelector("button.blockr-dock-toast-link")).toBeNull();
+    s.stop();
+
+    const other = document.createElement("div");
+    const t = await startWithNotes(other, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ plugin: NOTES }]))), true);
+    flushSync(() => {
+      t.core.notifications.notify(NOTES, lost);
+    });
+    click(toastWithMessage(other, "Lost the draft.").querySelector("button.blockr-dock-toast-link"));
+    await t.settled();
+    expect((t.core.store.board().plugins[DOCK] as DockState).active).toBe("side");
+    expect(toasts(other)).toEqual([]);
+    t.stop();
   });
 
   test("show what the store dropped as the board opened, which core raised before the dock drew", async () => {
@@ -1291,6 +1499,57 @@ describe("the stylesheet of the toasts", () => {
     }
     expect(rules.get('.blockr-dock-toast[data-severity="error"]')?.get("color")).toBe("var(--blockr-color-text-danger, #b91c1c)");
     expect(rules.get(`${dark}.blockr-dock-toast[data-severity="error"]`)?.get("color")).toBe("var(--blockr-color-text-danger, #f87171)");
+  });
+});
+
+describe("the stylesheet of the dot on a plugin's tab", () => {
+  // The declarations of each rule, by the rule's selector, on one line.
+  const rules = new Map(
+    [...read("./index.css").matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+      ([, selector = "", body = ""]) => [selector.trim().replace(/\s+/g, " "), declarations(body)] as const,
+    ),
+  );
+  const dot = ".dv-default-tab-content::before";
+
+  test("puts the dot before the plugin's name, 6px from it, so that the name keeps it apart from the close button", () => {
+    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("margin-inline-end")).toBe("6px");
+    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("margin-inline-start")).toBeUndefined();
+  });
+
+  test("draws the dot in the dock's danger colour for an error and in its amber for a warning", () => {
+    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("background-color")).toBe("var(--blockr-dock-border-danger)");
+    expect(rules.get(`.blockr-dock-tab-frame[data-notified="warning"] ${dot}`)?.get("background-color")).toBe(
+      "var(--blockr-dock-border-warning)",
+    );
+  });
+
+  test("takes the amber from blockr.ui's token, with its value in each scheme as the fallback", () => {
+    const light = rules.get(".blockr-dock, .blockr-dock-bar, .blockr-dock-sidebar");
+    const dark = rules.get('[data-bc-theme="dark"] .blockr-dock, [data-bc-theme="dark"] .blockr-dock-bar, [data-bc-theme="dark"] .blockr-dock-sidebar');
+    expect(light?.get("--blockr-dock-border-warning")).toBe("var(--blockr-color-border-warning, #d97706)");
+    expect(dark?.get("--blockr-dock-border-warning")).toBe("var(--blockr-color-border-warning, #fbbf24)");
+    expect(light?.get("--blockr-dock-border-danger")).toBe("var(--blockr-color-border-danger, #dc2626)");
+    expect(dark?.get("--blockr-dock-border-danger")).toBe("var(--blockr-color-border-danger, #f87171)");
+  });
+});
+
+describe("the stylesheet of a rail's tabs", () => {
+  // The declarations of each rule of a stylesheet, by the rule's selector, on
+  // one line.
+  const rules = (css: string) =>
+    new Map(
+      [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+        ([, selector = "", body = ""]) => [selector.trim().replace(/\s+/g, " "), declarations(body)] as const,
+      ),
+    );
+  const dockview = rules(read("../../../node_modules/dockview-react/dist/styles/dockview.css"));
+  const own = rules(read("./index.css"));
+
+  test("puts the space between a tab's name and its close button at the end of the name's line, where dockview puts it on the name's right", () => {
+    expect(dockview.get(".dv-tab .dv-default-tab .dv-default-tab-content")?.get("margin-right")).toBe("4px");
+    const rail = own.get(".blockr-dock .dv-tabs-container-vertical .dv-default-tab-content");
+    expect(rail?.get("margin-right")).toBe("0");
+    expect(rail?.get("margin-inline-end")).toBe("4px");
   });
 });
 

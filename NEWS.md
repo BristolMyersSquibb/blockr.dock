@@ -1,5 +1,21 @@
 # blockr.dock 0.2.1
 
+* The dock shows the notifications about a plugin by the plugin's panel
+  (#637).
+  The panel's tab shows a dot while a warning or an error about the plugin
+  holds, whatever the board option `show_conditions` names, in the danger
+  colour for an error and in amber for a warning.
+  The dot shows on a tab behind another and on a collapsed rail too.
+  The tab's tooltip holds their messages, the errors first, and a screen
+  reader reads them as the tab's description.
+  Where the active view holds no panel of the plugin, each notification about
+  the plugin shows as a toast, whose link "Show panel" makes the first view
+  that holds the panel the active one, or adds the panel to the active view
+  where no view holds it.
+  The toast goes once the active view holds the panel, and comes back where
+  the active view changes to one that holds none.
+  A block's card now shows what a plugin raises about the block too.
+
 * The examples in `inst/examples` are back for the new stack, each changed as
   the migration notes say (#587).
   Beside `empty`, eight come back: `edit-board`, `locked-dock`,
@@ -23,8 +39,8 @@
   The output fades while the block is stale, takes no room while it failed,
   and gives way to the status note while it waits or is invalid.
   The note says in one line what the block lacks.
-  The card shows the notifications about the block that no plugin raised, of
-  the severities that the board option `show_conditions` names.
+  The card shows the notifications about the block, of the severities that
+  the board option `show_conditions` names.
   Errors show above the sections, and warnings and messages fold under the
   output behind their counts, as in blockr.dock 0.2.0.
   Each shows as text, without the ANSI escapes of cli's styling.
@@ -180,10 +196,8 @@
 
 * The dock shows as a toast every notification of `CoreApi` that no card shows
   (#580).
-  It leaves a notification about a block to the block's card, unless a plugin
-  raised it.
-  Every other notification shows as a toast: what a plugin raised, even about
-  a block, and every notification about no block, such as the error that core
+  It leaves a notification about a block to the block's card.
+  Every other notification shows as a toast, such as the error that core
   raises for a refused gesture.
   The toasts stack in the window's bottom right corner, and each names what
   its notification concerns.

@@ -101,6 +101,7 @@
   --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #9ca3af);
   --blockr-dock-text-warning: var(--blockr-color-text-warning, #b45309);
   --blockr-dock-bg-warning: var(--blockr-color-bg-warning, #fffbeb);
+  --blockr-dock-border-warning: var(--blockr-color-border-warning, #d97706);
   --blockr-dock-border-warning-subtle: var(
     --blockr-color-border-warning-subtle,
     color-mix(in srgb, #d97706 45%, transparent)
@@ -148,6 +149,7 @@
   --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #6b7686);
   --blockr-dock-text-warning: var(--blockr-color-text-warning, #fbbf24);
   --blockr-dock-bg-warning: var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1));
+  --blockr-dock-border-warning: var(--blockr-color-border-warning, #fbbf24);
   --blockr-dock-border-warning-subtle: var(
     --blockr-color-border-warning-subtle,
     color-mix(in srgb, #fbbf24 45%, transparent)
@@ -631,6 +633,57 @@
 }
 
 /*
+ * The names on a rail's tabs run downwards, as dockview turns the tabs of a
+ * header at a group's side with writing-mode.
+ * Its default tab keeps the name apart from the close button with a margin on
+ * the name's right, which on a turned tab lies across the name's line: it
+ * pushes the name 2px off the tab's centre, and leaves the close button 4px
+ * nearer the name than in a tab group.
+ * So on a rail's tabs, the margin goes at the end of the name's line, where it
+ * lies in a tab group, until dockview puts it there itself
+ * (https://github.com/dockview/dockview/issues/1773).
+ */
+.blockr-dock .dv-tabs-container-vertical .dv-default-tab-content {
+  margin-right: 0;
+  margin-inline-end: 4px;
+}
+
+/*
+ * The frame of a plugin's tab, which lays out as dockview's tab alone
+ * (./dock.tsx).
+ * While a warning or an error about the plugin holds, a dot comes before the
+ * plugin's name on the tab: 6px, in the danger colour for an error and in the
+ * amber for a warning.
+ * It comes before the name on a rail's tabs too, whose names run downwards.
+ * So the name keeps the dot apart from the tab's close button, which sits off
+ * the name's line on a rail.
+ * The dot and the name sit in a row of their own, which centres the dot on
+ * the name's line, across the line in either direction.
+ */
+.blockr-dock-tab-frame {
+  display: contents;
+}
+
+.blockr-dock-tab-frame[data-notified] .dv-default-tab-content {
+  display: inline-flex;
+  align-items: center;
+}
+
+.blockr-dock-tab-frame[data-notified] .dv-default-tab-content::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-inline-end: 6px;
+  border-radius: 50%;
+  background-color: var(--blockr-dock-border-danger);
+}
+
+.blockr-dock-tab-frame[data-notified="warning"] .dv-default-tab-content::before {
+  background-color: var(--blockr-dock-border-warning);
+}
+
+/*
  * The toasts, one above the other in the window's bottom right corner, beside
  * the dock's root (./toasts.tsx).
  * They sit in the toast layer of blockr.ui's design system, above every other
@@ -762,6 +815,38 @@
 .blockr-dock-toast-message {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/*
+ * The link of a toast that shows a plugin's panel, under the message: a quiet
+ * text button in the toast's colour, at weight 500 and underlined, with the
+ * focus outline of blockr.ui's design system.
+ */
+.blockr-dock-toast-link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.blockr-dock-toast-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.blockr-dock-toast-link:focus-visible {
+  border-radius: var(--blockr-radius-sm, 4px);
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
+}
+
+[data-bc-theme="dark"] .blockr-dock-toast-link:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #3b82f6);
 }
 
 /*

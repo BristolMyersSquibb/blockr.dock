@@ -17,9 +17,11 @@
 // - It is a popover of the manual kind, which the browser draws in the top
 //   layer, so that no panel clips it, and which closes no menu as it shows.
 // No tooltip shows for a touch, which has no hover.
+// An element that React does not draw, such as the tab that dockview draws
+// around a panel's tab, takes a tooltip through bindTip().
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FocusEvent, PointerEvent, ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useDock } from "../context.ts";
 import type { Tooltips } from "../context.ts";
 import { useFloating, usePopover } from "../floating.ts";
@@ -36,11 +38,22 @@ export interface TipLine {
 export type Tip = string | readonly TipLine[];
 export type TipSource = Tip | ((el: HTMLElement) => Tip | null) | null;
 
+// What the handlers of a tooltip read of an event: the element whose handler
+// runs, and the type of the pointer, which React's events and the browser's
+// both give.
+export interface TipEvent {
+  readonly currentTarget: HTMLElement;
+}
+
+export interface TipPointerEvent extends TipEvent {
+  readonly pointerType: string;
+}
+
 export interface TipProps {
-  readonly onPointerEnter: (event: PointerEvent<HTMLElement>) => void;
+  readonly onPointerEnter: (event: TipPointerEvent) => void;
   readonly onPointerLeave: () => void;
   readonly onPointerDown: () => void;
-  readonly onFocus: (event: FocusEvent<HTMLElement>) => void;
+  readonly onFocus: (event: TipEvent) => void;
   readonly onBlur: () => void;
 }
 
@@ -133,6 +146,41 @@ export function useTooltip(source: TipSource): { readonly props: TipProps; reado
 
   const tooltip = shown === null ? null : <TooltipCard anchor={shown.el} tip={shown.tip} />;
   return { props, tooltip };
+}
+
+// Gives an element that React does not draw the tooltip whose props are
+// given, as React gives one through the props, until the returned function
+// runs.
+export function bindTip(el: HTMLElement, props: TipProps): () => void {
+  const handlers = {
+    pointerenter: (event: PointerEvent) => {
+      props.onPointerEnter({ currentTarget: el, pointerType: event.pointerType });
+    },
+    pointerleave: () => {
+      props.onPointerLeave();
+    },
+    pointerdown: () => {
+      props.onPointerDown();
+    },
+    focus: () => {
+      props.onFocus({ currentTarget: el });
+    },
+    blur: () => {
+      props.onBlur();
+    },
+  };
+  el.addEventListener("pointerenter", handlers.pointerenter);
+  el.addEventListener("pointerleave", handlers.pointerleave);
+  el.addEventListener("pointerdown", handlers.pointerdown);
+  el.addEventListener("focus", handlers.focus);
+  el.addEventListener("blur", handlers.blur);
+  return () => {
+    el.removeEventListener("pointerenter", handlers.pointerenter);
+    el.removeEventListener("pointerleave", handlers.pointerleave);
+    el.removeEventListener("pointerdown", handlers.pointerdown);
+    el.removeEventListener("focus", handlers.focus);
+    el.removeEventListener("blur", handlers.blur);
+  };
 }
 
 function TooltipCard({ anchor, tip }: { anchor: HTMLElement; tip: Tip }): ReactElement {
