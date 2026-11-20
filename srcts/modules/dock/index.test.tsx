@@ -721,19 +721,6 @@ describe("the tab of a plugin's panel", () => {
     s.stop();
   });
 
-  test("tells of every warning and error, whatever the board option show_conditions names", async () => {
-    const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));
-    await s.core.commands.run("blockr.core-set_option", { id: "show_conditions", value: ["error"] });
-    await s.settled();
-
-    flushSync(() => {
-      s.core.notifications.notify(NOTES, slow);
-    });
-    expect(dotOn(el, "Notes")).toBe("warning");
-    s.stop();
-  });
-
   test("holds their messages, the errors first, in its tooltip, as the keyboard's focus moves onto it or the pointer rests on it, and as its description", async () => {
     const el = attached();
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));

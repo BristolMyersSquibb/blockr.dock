@@ -3,8 +3,7 @@
 * The dock shows the notifications about a plugin by the plugin's panel
   (#637).
   The panel's tab shows a dot while a warning or an error about the plugin
-  holds, whatever the board option `show_conditions` names, in the danger
-  colour for an error and in amber for a warning.
+  holds, in the danger colour for an error and in amber for a warning.
   The dot shows on a tab behind another and on a collapsed rail too.
   The tab's tooltip holds their messages, the errors first, and a screen
   reader reads them as the tab's description.
@@ -39,8 +38,7 @@
   The output fades while the block is stale, takes no room while it failed,
   and gives way to the status note while it waits or is invalid.
   The note says in one line what the block lacks.
-  The card shows the notifications about the block, of the severities that
-  the board option `show_conditions` names.
+  The card shows every notification about the block, whatever its severity.
   Errors show above the sections, and warnings and messages fold under the
   output behind their counts, as in blockr.dock 0.2.0.
   Each shows as text, without the ANSI escapes of cli's styling.

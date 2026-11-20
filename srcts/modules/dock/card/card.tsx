@@ -65,12 +65,12 @@
 
 import type { BlockId, Status } from "@blockr/core";
 import { useBoard, useNotified, useStatus } from "@blockr/core/react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactElement } from "react";
 import { dockState, SECTIONS } from "../../../commands/index.ts";
 import { giveFocus, useDock } from "../context.ts";
 import { Mounted } from "../mounted.tsx";
-import { plainText, showsSeverity } from "../notifications.ts";
+import { plainText } from "../notifications.ts";
 import { Header } from "./header.tsx";
 import { Errors, WarningsAndMessages } from "./notifications.tsx";
 import { Section } from "./section.tsx";
@@ -87,15 +87,6 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
   const status = useStatus(core, id);
   const notified = useNotified(core, { block: id });
   const [drawn, setDrawn] = useState(false);
-
-  // The notifications that the card shows: those about the block, whoever
-  // raised them, of the severities that the board option show_conditions
-  // names.
-  const severities = core.options.value("show_conditions");
-  const shown = useMemo(
-    () => notified.filter((notification) => showsSeverity(severities, notification.severity)),
-    [notified, severities],
-  );
 
   const focus = useCallback(() => {
     giveFocus(core, id);
@@ -127,7 +118,7 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
   const inputs = !core.store.locked(id);
   const hidden = status !== undefined && WITHOUT_OUTPUT.has(status.status);
   const note = status !== undefined && WITH_NOTE.has(status.status) ? status.reason : null;
-  const folded = shown.filter((notification) => notification.severity !== "error");
+  const folded = notified.filter((notification) => notification.severity !== "error");
 
   return (
     <article
@@ -145,7 +136,7 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
         drawn={inputs && drawn}
         dot={statusDot(status, notified)}
       />
-      <Errors notifications={shown.filter((notification) => notification.severity === "error")} />
+      <Errors notifications={notified.filter((notification) => notification.severity === "error")} />
       <div className="blockr-card-sections">
         {inputs ? (
           <Section name="inputs" open={sections.includes("inputs")} empty={!drawn}>
