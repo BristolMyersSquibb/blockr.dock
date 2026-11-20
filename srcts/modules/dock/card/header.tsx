@@ -31,9 +31,13 @@
 //    text, and, after a divider, Remove block, with the bin icon.
 //    React Aria closes the menu as the user picks an item, on Escape and on a
 //    press elsewhere, and gives the focus back to the button.
-//    Rename and Append block run once the menu has closed, since they move the
-//    focus out of the menu, which React Aria keeps from the rest of the page
-//    until then.
+//    React Aria keeps the rest of the page inert while the menu is open, and
+//    frees it in the cleanup of an effect once the menu has gone.
+//    So the name field that Rename shows takes the focus in an effect of its
+//    own, as React Aria's autoFocus does. React runs that effect after the
+//    cleanup.
+//    Append block opens the "+" menu once the block's menu has closed, since
+//    the "+" menu's search takes the focus as it mounts.
 //    Copy block ID copies within the click that picks it, which the
 //    document's copy command needs (./clipboard.ts).
 //    Append block opens the dock's "+" menu (../menu.tsx, ./classes.tsx) from
@@ -46,7 +50,7 @@
 
 import type { Block, BlockId, RegistryEntry } from "@blockr/core";
 import { Button, Menu, MenuItem, MenuSection, MenuTrigger, Text } from "@blockr/core/react";
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { SECTIONS } from "../../../commands/index.ts";
 import type { Section } from "../../../state/index.ts";
@@ -240,7 +244,11 @@ function NameField({
   const ended = useRef(false);
   const error = useId();
 
-  useLayoutEffect(() => {
+  // The field takes the focus in an effect, rather than as it mounts.
+  // So it takes the focus after Rename in the block's menu too, since React
+  // Aria has freed the page by then, as the comment at the top of this file
+  // says.
+  useEffect(() => {
     field.current?.focus({ preventScroll: true });
     field.current?.select();
   }, []);
@@ -392,12 +400,7 @@ function MenuButton({
       ]
     : [
         <MenuSection key="actions" id="actions">
-          <MenuItem
-            id="rename"
-            onAction={() => {
-              afterClose(onRename);
-            }}
-          >
+          <MenuItem id="rename" onAction={onRename}>
             Rename
           </MenuItem>
           <MenuItem
@@ -484,12 +487,16 @@ function MenuButton({
   );
 }
 
-// Runs what the user picked in the block's menu once the menu has closed, as
-// Rename and Append block, which move the focus out of the menu.
+// Runs what the user picked in the block's menu once the menu has closed.
+// Append block needs it, since the "+" menu's search takes the focus as it
+// mounts.
 // Until the menu has closed, React Aria keeps the rest of the page inert, so
 // that no element there takes the focus.
 // React Aria frees the page in the cleanup of an effect as the menu goes, and
 // React runs every cleanup before it runs the effect here.
+// It can go once core's React SDK draws the "+" menu
+// (https://github.com/BristolMyersSquibb/blockr.dock/issues/630), where the
+// SDK's list takes the focus in an effect, as React Aria's autoFocus does.
 function useAfterClose(open: boolean): (run: () => void) => void {
   const [queued, setQueued] = useState<(() => void) | null>(null);
   useEffect(() => {

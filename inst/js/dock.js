@@ -2048,7 +2048,7 @@ function plainText(message) {
 
 // srcts/modules/dock/card/header.tsx
 import { Button, Menu as Menu2, MenuItem, MenuSection, MenuTrigger, Text } from "@blockr/core/react";
-import { useCallback as useCallback3, useEffect as useEffect3, useId as useId2, useLayoutEffect as useLayoutEffect4, useMemo as useMemo2, useRef as useRef4, useState as useState3 } from "react";
+import { useCallback as useCallback3, useEffect as useEffect3, useId as useId2, useMemo as useMemo2, useRef as useRef4, useState as useState3 } from "react";
 
 // srcts/modules/dock/attributes.tsx
 import { jsx as jsx3 } from "react/jsx-runtime";
@@ -3280,7 +3280,7 @@ function NameField({
   const field = useRef4(null);
   const ended = useRef4(false);
   const error = useId2();
-  useLayoutEffect4(() => {
+  useEffect3(() => {
     field.current?.focus({ preventScroll: true });
     field.current?.select();
   }, []);
@@ -3385,16 +3385,7 @@ function MenuButton2({
     /* @__PURE__ */ jsx10(MenuSection, { id: "actions", children: copyItem }, "actions")
   ] : [
     /* @__PURE__ */ jsxs5(MenuSection, { id: "actions", children: [
-      /* @__PURE__ */ jsx10(
-        MenuItem,
-        {
-          id: "rename",
-          onAction: () => {
-            afterClose(onRename);
-          },
-          children: "Rename"
-        }
-      ),
+      /* @__PURE__ */ jsx10(MenuItem, { id: "rename", onAction: onRename, children: "Rename" }),
       /* @__PURE__ */ jsx10(
         MenuItem,
         {
@@ -3517,7 +3508,7 @@ function Listed({ notifications, label }) {
 }
 
 // srcts/modules/dock/card/section.tsx
-import { useLayoutEffect as useLayoutEffect5, useRef as useRef5 } from "react";
+import { useLayoutEffect as useLayoutEffect4, useRef as useRef5 } from "react";
 import { jsx as jsx12 } from "react/jsx-runtime";
 function Section({
   name: name2,
@@ -3527,7 +3518,7 @@ function Section({
 }) {
   const ref2 = useRef5(null);
   const was = useRef5(null);
-  useLayoutEffect5(() => {
+  useLayoutEffect4(() => {
     const el = ref2.current;
     if (el === null) return;
     const before2 = was.current;
@@ -4062,16 +4053,16 @@ function nothingLeft(board, drawn) {
 
 // srcts/modules/dock/views-menu.tsx
 import { useBoard as useBoard3 } from "@blockr/core/react";
-import { useCallback as useCallback6, useLayoutEffect as useLayoutEffect7, useRef as useRef7, useState as useState7, useSyncExternalStore } from "react";
+import { useCallback as useCallback6, useLayoutEffect as useLayoutEffect6, useRef as useRef7, useState as useState7, useSyncExternalStore } from "react";
 
 // srcts/modules/dock/name-field.tsx
-import { useLayoutEffect as useLayoutEffect6, useRef as useRef6, useState as useState6 } from "react";
+import { useLayoutEffect as useLayoutEffect5, useRef as useRef6, useState as useState6 } from "react";
 import { jsx as jsx15 } from "react/jsx-runtime";
 function NameField2({ name: name2, label, className, onSubmit, onDone }) {
   const [text2, setText] = useState6(name2);
   const ref2 = useRef6(null);
   const done = useRef6(false);
-  useLayoutEffect6(() => {
+  useLayoutEffect5(() => {
     ref2.current?.focus();
     ref2.current?.select();
   }, []);
@@ -4328,7 +4319,7 @@ function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }) {
   const dragging = useRef7(void 0);
   const rowList = useRef7(null);
   useMenuSurface(ref2, anchor, { depth: 0, align: "end", keyboard, onClose });
-  useLayoutEffect7(() => {
+  useLayoutEffect6(() => {
     ref2.current?.focus({ preventScroll: true });
   }, []);
   const keepFocus2 = () => {
@@ -4497,7 +4488,7 @@ function ManagedRow({
   const refocus = useRef7(false);
   const { entry } = row;
   const isView2 = "view" in entry;
-  useLayoutEffect7(() => {
+  useLayoutEffect6(() => {
     if (renaming || !refocus.current) return;
     refocus.current = false;
     nameButton.current?.focus();
@@ -4567,7 +4558,7 @@ Click to rename` : "Click to rename"),
 }
 function ConfirmRow({ name: name2, depth, onRemove, onCancel }) {
   const removeButton = useRef7(null);
-  useLayoutEffect7(() => {
+  useLayoutEffect6(() => {
     removeButton.current?.focus();
   }, []);
   return /* @__PURE__ */ jsxs9(
@@ -4599,7 +4590,7 @@ function TabLine({ state, openFolders }) {
   const line = useRef7(null);
   const { active } = state;
   const outer = activeHolders(state).at(-1);
-  useLayoutEffect7(() => {
+  useLayoutEffect6(() => {
     reveal(line.current);
   }, [active, outer]);
   return /* @__PURE__ */ jsx16("nav", { ref: line, className: "blockr-dock-tabs", "aria-label": "Views", children: inFolder(state, null).map(
@@ -5323,7 +5314,7 @@ function createOpenFolders() {
 
 // srcts/modules/dock/options-sidebar.tsx
 import { Button as Button3, useBoard as useBoard6 } from "@blockr/core/react";
-import { useCallback as useCallback9, useEffect as useEffect6, useLayoutEffect as useLayoutEffect8, useRef as useRef10, useState as useState10, useSyncExternalStore as useSyncExternalStore4 } from "react";
+import { useCallback as useCallback9, useEffect as useEffect6, useLayoutEffect as useLayoutEffect7, useRef as useRef10, useState as useState10, useSyncExternalStore as useSyncExternalStore4 } from "react";
 import { jsx as jsx19, jsxs as jsxs12 } from "react/jsx-runtime";
 var TITLE = "Board options";
 var FOCUSABLE = [
@@ -5538,7 +5529,7 @@ function useDefaults(core, ids) {
 }
 function useFocus(ref2, open) {
   const before2 = useRef10(null);
-  useLayoutEffect8(() => {
+  useLayoutEffect7(() => {
     const root = ref2.current;
     if (root === null) return;
     const doc = root.ownerDocument;

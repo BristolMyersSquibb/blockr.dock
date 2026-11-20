@@ -649,6 +649,19 @@ describe("a block's menu", () => {
     expect(document.activeElement).toBe(card.querySelector(".blockr-card-name-field"));
   });
 
+  test("turns the name into a field on Rename, which takes the focus once the menu has closed", async () => {
+    const { el, settled } = await startCards();
+
+    const card = cardOf(el, "Head");
+    const menu = await pressMenu(card, settled);
+    itemOf(menu, "Rename").click();
+    await settled();
+    expect(blockMenu()).toBeNull();
+    const field = card.querySelector<HTMLInputElement>(".blockr-card-name-field");
+    expect(document.activeElement).toBe(field);
+    expect([field?.selectionStart, field?.selectionEnd]).toEqual([0, "Head".length]);
+  });
+
   test("closes on a press elsewhere", async () => {
     const { el, settled } = await startCards();
 
