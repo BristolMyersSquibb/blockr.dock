@@ -8,16 +8,23 @@ export default defineConfig({
     environment: "happy-dom",
     include: ["srcts/**/*.test.{ts,tsx}"],
     // The typescript job of blockr.ci uploads coverage/lcov.info to Codecov.
-    // The lcov reporter writes that file.
-    // The other reporters are those that Vitest runs by default.
+    // The lcov reporter writes that file, and an HTML report beside it in
+    // coverage/lcov-report.
+    // Istanbul measures the coverage, as it does in blockr.core.
+    // Istanbul counts the code of the sources in srcts alone.
+    // V8 counts all the code that runs, that of node_modules included.
+    // That makes the tests slower under V8.
     // The coverage counts every source under srcts/, so that a file that no
     // test imports counts as uncovered.
-    // It leaves out the tests and testing.ts, which starts the dock for them.
+    // Vitest leaves out the test files by itself.
+    // The `exclude` option leaves out testing.ts, which starts the dock for
+    // the tests.
     coverage: {
       enabled: true,
+      provider: "istanbul",
+      reporter: ["text", "lcov"],
       include: ["srcts/**/*.{ts,tsx}"],
-      exclude: ["srcts/**/*.test.{ts,tsx}", "srcts/modules/dock/testing.ts"],
-      reporter: ["text", "html", "clover", "json", "lcov"],
+      exclude: ["srcts/modules/dock/testing.ts"],
     },
   },
 });
