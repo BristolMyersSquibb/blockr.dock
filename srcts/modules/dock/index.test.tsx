@@ -1533,6 +1533,26 @@ describe("the stylesheet of the dot on a plugin's tab", () => {
   });
 });
 
+describe("the stylesheet of a rail's tabs", () => {
+  // The declarations of each rule of a stylesheet, by the rule's selector, on
+  // one line.
+  const rules = (css: string) =>
+    new Map(
+      [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+        ([, selector = "", body = ""]) => [selector.trim().replace(/\s+/g, " "), declarations(body)] as const,
+      ),
+    );
+  const dockview = rules(read("../../../node_modules/dockview-react/dist/styles/dockview.css"));
+  const own = rules(read("./index.css"));
+
+  test("puts the space between a tab's name and its close button at the end of the name's line, where dockview puts it on the name's right", () => {
+    expect(dockview.get(".dv-tab .dv-default-tab .dv-default-tab-content")?.get("margin-right")).toBe("4px");
+    const rail = own.get(".blockr-dock .dv-tabs-container-vertical .dv-default-tab-content");
+    expect(rail?.get("margin-right")).toBe("0");
+    expect(rail?.get("margin-inline-end")).toBe("4px");
+  });
+});
+
 // The declarations of a rule's body, each by its property, with its value.
 function declarations(body: string): Map<string, string> {
   return new Map(

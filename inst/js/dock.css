@@ -789,6 +789,10 @@
   --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
   --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
 }
+.blockr-dock .dv-tabs-container-vertical .dv-default-tab-content {
+  margin-right: 0;
+  margin-inline-end: 4px;
+}
 .blockr-dock-tab-frame {
   display: contents;
 }

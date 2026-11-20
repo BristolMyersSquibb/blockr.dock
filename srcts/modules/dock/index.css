@@ -633,6 +633,21 @@
 }
 
 /*
+ * The names on a rail's tabs run downwards, as dockview turns the tabs of a
+ * header at a group's side with writing-mode.
+ * Its default tab keeps the name apart from the close button with a margin on
+ * the name's right, which on a turned tab lies across the name's line: it
+ * pushes the name 2px off the tab's centre, and leaves the close button 4px
+ * nearer the name than in a tab group.
+ * So on a rail's tabs, the margin goes at the end of the name's line, where it
+ * lies in a tab group.
+ */
+.blockr-dock .dv-tabs-container-vertical .dv-default-tab-content {
+  margin-right: 0;
+  margin-inline-end: 4px;
+}
+
+/*
  * The frame of a plugin's tab, which lays out as dockview's tab alone
  * (./dock.tsx).
  * While a warning or an error about the plugin holds, a dot comes before the
