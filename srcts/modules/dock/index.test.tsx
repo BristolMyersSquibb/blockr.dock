@@ -725,19 +725,25 @@ describe("the tab of a plugin's panel", () => {
     });
     expect(tab.getAttribute("aria-description")).toBe("Lost the draft:\n- intro\nSaving is slow.");
 
+    // The dock hears these events on dockview's element, outside React, so
+    // React draws what they change at a time of its own, after the event.
     tab.focus();
-    await drawn();
-    expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
+    await vi.waitFor(() => {
+      expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
+    });
     tab.blur();
-    await drawn();
-    expect(tooltipLines(el)).toBeNull();
+    await vi.waitFor(() => {
+      expect(tooltipLines(el)).toBeNull();
+    });
 
     tab.dispatchEvent(new PointerEvent("pointerenter", { pointerType: "mouse" }));
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
+    await vi.waitFor(() => {
+      expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
+    });
     tab.dispatchEvent(new PointerEvent("pointerleave", { pointerType: "mouse" }));
-    await drawn();
-    expect(tooltipLines(el)).toBeNull();
+    await vi.waitFor(() => {
+      expect(tooltipLines(el)).toBeNull();
+    });
 
     flushSync(() => {
       withdraw();
