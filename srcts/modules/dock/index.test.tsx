@@ -1509,7 +1509,12 @@ describe("the stylesheet of the dot on a plugin's tab", () => {
       ([, selector = "", body = ""]) => [selector.trim().replace(/\s+/g, " "), declarations(body)] as const,
     ),
   );
-  const dot = ".dv-default-tab-content::after";
+  const dot = ".dv-default-tab-content::before";
+
+  test("puts the dot before the plugin's name, 6px from it, so that the name keeps it apart from the close button", () => {
+    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("margin-inline-end")).toBe("6px");
+    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("margin-inline-start")).toBeUndefined();
+  });
 
   test("draws the dot in the dock's danger colour for an error and in its amber for a warning", () => {
     expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("background-color")).toBe("var(--blockr-dock-border-danger)");

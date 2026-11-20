@@ -635,11 +635,13 @@
 /*
  * The frame of a plugin's tab, which lays out as dockview's tab alone
  * (./dock.tsx).
- * While a warning or an error about the plugin holds, a dot follows the
+ * While a warning or an error about the plugin holds, a dot comes before the
  * plugin's name on the tab: 6px, in the danger colour for an error and in the
  * amber for a warning.
- * It follows the name on a rail's tabs too, whose names run downwards.
- * The name and the dot sit in a row of their own, which centres the dot on
+ * It comes before the name on a rail's tabs too, whose names run downwards.
+ * So the name keeps the dot apart from the tab's close button, which sits off
+ * the name's line on a rail.
+ * The dot and the name sit in a row of their own, which centres the dot on
  * the name's line, across the line in either direction.
  */
 .blockr-dock-tab-frame {
@@ -651,17 +653,17 @@
   align-items: center;
 }
 
-.blockr-dock-tab-frame[data-notified] .dv-default-tab-content::after {
+.blockr-dock-tab-frame[data-notified] .dv-default-tab-content::before {
   content: "";
   flex: none;
   width: 6px;
   height: 6px;
-  margin-inline-start: 6px;
+  margin-inline-end: 6px;
   border-radius: 50%;
   background-color: var(--blockr-dock-border-danger);
 }
 
-.blockr-dock-tab-frame[data-notified="warning"] .dv-default-tab-content::after {
+.blockr-dock-tab-frame[data-notified="warning"] .dv-default-tab-content::before {
   background-color: var(--blockr-dock-border-warning);
 }
 

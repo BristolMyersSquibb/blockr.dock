@@ -796,16 +796,16 @@
   display: inline-flex;
   align-items: center;
 }
-.blockr-dock-tab-frame[data-notified] .dv-default-tab-content::after {
+.blockr-dock-tab-frame[data-notified] .dv-default-tab-content::before {
   content: "";
   flex: none;
   width: 6px;
   height: 6px;
-  margin-inline-start: 6px;
+  margin-inline-end: 6px;
   border-radius: 50%;
   background-color: var(--blockr-dock-border-danger);
 }
-.blockr-dock-tab-frame[data-notified=warning] .dv-default-tab-content::after {
+.blockr-dock-tab-frame[data-notified=warning] .dv-default-tab-content::before {
   background-color: var(--blockr-dock-border-warning);
 }
 .blockr-dock-toasts {
