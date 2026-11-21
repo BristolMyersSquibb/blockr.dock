@@ -37,5 +37,9 @@
   "dependencies": {
     "dockview-react": "^8.8.3",
     "fractional-indexing": "^4.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
   }
 }
