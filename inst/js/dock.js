@@ -5280,8 +5280,8 @@ function createOpenFolders() {
 // srcts/modules/dock/options-sidebar.tsx
 import { Button as Button3, useBoard as useBoard6 } from "@blockr/core/react";
 import { useCallback as useCallback9, useEffect as useEffect6, useLayoutEffect as useLayoutEffect7, useRef as useRef10, useState as useState10, useSyncExternalStore as useSyncExternalStore4 } from "react";
-import { jsx as jsx19, jsxs as jsxs12 } from "react/jsx-runtime";
-var TITLE = "Board options";
+
+// srcts/modules/dock/focus.ts
 var FOCUSABLE = [
   "a[href]",
   "button:not([disabled])",
@@ -5291,6 +5291,28 @@ var FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
   "details > summary:first-of-type"
 ].join(", ");
+function keepFocus(root, event) {
+  const focusable = [...root.querySelectorAll(FOCUSABLE)].filter(
+    (el) => el.checkVisibility({ visibilityProperty: true }) && el.closest("[inert]") === null
+  );
+  const first = focusable[0];
+  const last = focusable.at(-1);
+  const active = root.ownerDocument.activeElement;
+  if (first === void 0 || last === void 0) {
+    event.preventDefault();
+    root.focus();
+  } else if (event.shiftKey && (active === first || active === root)) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (active === last || active === root)) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+// srcts/modules/dock/options-sidebar.tsx
+import { jsx as jsx19, jsxs as jsxs12 } from "react/jsx-runtime";
+var TITLE = "Board options";
 function categories(board, registered) {
   const held = Object.keys(board.options).flatMap((id) => {
     const def = Object.hasOwn(registered, id) ? registered[id] : void 0;
@@ -5530,24 +5552,6 @@ function useKeys(ref2, sidebar) {
       root.removeEventListener("keydown", onKey);
     };
   }, [ref2, sidebar]);
-}
-function keepFocus(root, event) {
-  const focusable = [...root.querySelectorAll(FOCUSABLE)].filter(
-    (el) => el.checkVisibility({ visibilityProperty: true }) && el.closest("[inert]") === null
-  );
-  const first = focusable[0];
-  const last = focusable.at(-1);
-  const active = root.ownerDocument.activeElement;
-  if (first === void 0 || last === void 0) {
-    event.preventDefault();
-    root.focus();
-  } else if (event.shiftKey && (active === first || active === root)) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && (active === last || active === root)) {
-    event.preventDefault();
-    first.focus();
-  }
 }
 function overlayOpen(root) {
   const doc = root.ownerDocument;
