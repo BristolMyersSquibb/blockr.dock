@@ -50,11 +50,10 @@
 
 import type { Block, BlockId, RegistryEntry } from "@blockr/core";
 import { Button, Menu, MenuItem, MenuSection, MenuTrigger, Text } from "@blockr/core/react";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { SECTIONS } from "../../../commands/index.ts";
 import type { Section } from "../../../state/index.ts";
-import { withAttributes } from "../attributes.tsx";
 import { runEdit, useDock } from "../context.ts";
 import { Menu as DockMenu } from "../menu.tsx";
 import type { Closing } from "../menu.tsx";
@@ -342,7 +341,6 @@ function MenuButton({
   const [plus, setPlus] = useState<HTMLElement | null>(null);
   const afterClose = useAfterClose(open);
   const { props: tip, tooltip } = useTooltip(open || plus !== null ? null : "More actions");
-  const render = useMemo(() => withAttributes({ ref: onButton }), [onButton]);
 
   const closePlus = useCallback(
     (how: Closing) => {
@@ -454,7 +452,7 @@ function MenuButton({
           // The button says it is expanded while the "+" menu that it opened
           // is open too, as React Aria says it while the block's menu is.
           aria-expanded={plus === null ? undefined : true}
-          render={render}
+          ref={onButton}
           {...tip}
           onFocus={(event) => {
             // React Aria's focus event names the button as an Element.
