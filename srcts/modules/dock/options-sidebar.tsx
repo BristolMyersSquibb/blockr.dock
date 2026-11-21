@@ -93,24 +93,13 @@ import type { ReactElement } from "react";
 import { sameJson } from "../../state/index.ts";
 import { withAttributes } from "./attributes.tsx";
 import { runEdit, useDock } from "./context.ts";
+import { FOCUSABLE, keepFocus } from "./focus.ts";
 import { Chevron, PinIcon, RemoveIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
 import type { Sidebar } from "./sidebar.ts";
 
 // The sidebar's title, as today's.
 const TITLE = "Board options";
-
-// What Tab moves the focus to, as today's sidebar finds it, and the summary
-// of a category.
-const FOCUSABLE = [
-  "a[href]",
-  "button:not([disabled])",
-  'input:not([disabled]):not([type="hidden"])',
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
-  "details > summary:first-of-type",
-].join(", ");
 
 // The categories of the board options that the board holds, in alphabetical
 // order, each with the ids of its board options, in the alphabetical order of
@@ -436,28 +425,6 @@ function useKeys(ref: { readonly current: HTMLElement | null }, sidebar: Sidebar
       root.removeEventListener("keydown", onKey);
     };
   }, [ref, sidebar]);
-}
-
-// Keeps the focus in the sidebar where Tab or Shift+Tab would take it out, by
-// moving it to the sidebar's other end.
-// A control that a board option's UI hides takes no part, since Tab skips it.
-function keepFocus(root: HTMLElement, event: KeyboardEvent): void {
-  const focusable = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-    (el) => el.checkVisibility({ visibilityProperty: true }) && el.closest("[inert]") === null,
-  );
-  const first = focusable[0];
-  const last = focusable.at(-1);
-  const active = root.ownerDocument.activeElement;
-  if (first === undefined || last === undefined) {
-    event.preventDefault();
-    root.focus();
-  } else if (event.shiftKey && (active === first || active === root)) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && (active === last || active === root)) {
-    event.preventDefault();
-    first.focus();
-  }
 }
 
 // Whether an overlay that a control in the sidebar opened is open: an element
