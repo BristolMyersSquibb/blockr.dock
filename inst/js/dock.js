@@ -1023,7 +1023,7 @@ import { Checkbox, reactModule, useValue } from "@blockr/core/react";
 import { jsx } from "react/jsx-runtime";
 function checkboxUi(label) {
   function CheckboxUi({ host }) {
-    return /* @__PURE__ */ jsx(Checkbox, { bound: useValue(host), label });
+    return /* @__PURE__ */ jsx(Checkbox, { bound: useValue(host), children: label });
   }
   return reactModule(CheckboxUi);
 }

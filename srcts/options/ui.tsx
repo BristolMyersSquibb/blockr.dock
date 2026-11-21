@@ -13,7 +13,7 @@ import type { ReactElement } from "react";
 // checked as the user clicks it.
 export function checkboxUi(label: string): OptionModule<boolean> {
   function CheckboxUi({ host }: ModuleProps<OptionHost<boolean>>): ReactElement {
-    return <Checkbox bound={useValue(host)} label={label} />;
+    return <Checkbox bound={useValue(host)}>{label}</Checkbox>;
   }
   return reactModule(CheckboxUi);
 }
