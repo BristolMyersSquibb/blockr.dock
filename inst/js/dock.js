@@ -2648,7 +2648,6 @@ function MenuButton({
   const { core, plugin } = useDock();
   const [open, setOpen] = useState2(false);
   const [plus, setPlus] = useState2(false);
-  useFocusBack(plus, button);
   const { props: tip, tooltip } = useTooltip(open || plus ? null : "More actions");
   const copy = () => {
     void copyText(button?.ownerDocument ?? document, id).then((copied) => {
@@ -2746,16 +2745,6 @@ function MenuButton({
       }
     ) : null
   ] });
-}
-function useFocusBack(plus, button) {
-  const wasOpen = useRef3(false);
-  useEffect2(() => {
-    const closed = wasOpen.current && !plus;
-    wasOpen.current = plus;
-    if (!closed || button === null) return;
-    const doc = button.ownerDocument;
-    if (doc.activeElement === null || doc.activeElement === doc.body) button.focus({ preventScroll: true });
-  }, [plus, button]);
 }
 
 // srcts/modules/dock/icons.tsx

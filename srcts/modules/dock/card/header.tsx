@@ -44,7 +44,10 @@
 //    (../picker.tsx).
 //    Its search takes the focus as React Aria's autoFocus does, once React Aria
 //    has freed the page.
-//    As the "+" menu closes, the focus goes back to the button.
+//    As the "+" menu closes, React Aria returns the focus to the element that
+//    had it as the menu opened.
+//    That was the item Append block, which has gone by then, so the focus lands
+//    on the page's body.
 // Under the board lock, the header has no toggle and no padlock, its name
 // starts no rename, and its menu holds Copy block ID alone, since no command
 // changes the rest there.
@@ -339,7 +342,6 @@ function MenuButton({
   const [open, setOpen] = useState(false);
   // Whether the "+" menu is open.
   const [plus, setPlus] = useState(false);
-  useFocusBack(plus, button);
   const { props: tip, tooltip } = useTooltip(open || plus ? null : "More actions");
 
   const copy = () => {
@@ -462,23 +464,4 @@ function MenuButton({
       ) : null}
     </>
   );
-}
-
-// Gives the focus back to the "…" button as the "+" menu closes.
-// React Aria gives the focus back to the element that had it as the "+" menu
-// opened.
-// That element was the item Append block of the block's menu, which has gone
-// by then.
-// React Aria frees the page in the cleanup of an effect as the "+" menu goes,
-// and React runs every cleanup before it runs the effect here.
-// Where the focus is on an element of the page by then, it stays there.
-function useFocusBack(plus: boolean, button: HTMLElement | null): void {
-  const wasOpen = useRef(false);
-  useEffect(() => {
-    const closed = wasOpen.current && !plus;
-    wasOpen.current = plus;
-    if (!closed || button === null) return;
-    const doc = button.ownerDocument;
-    if (doc.activeElement === null || doc.activeElement === doc.body) button.focus({ preventScroll: true });
-  }, [plus, button]);
 }

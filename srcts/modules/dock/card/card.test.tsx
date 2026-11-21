@@ -747,7 +747,7 @@ describe("a block's menu", () => {
     expect(core.store.board().links).toEqual(links);
   });
 
-  test("closes the + menu alone on a press on its button, and gives the focus back to the button", async () => {
+  test("closes the + menu alone on a press on its button", async () => {
     const { el, settled } = await startCards();
 
     const card = cardOf(el, "Head");
@@ -766,10 +766,9 @@ describe("a block's menu", () => {
     expect(plusMenu()).toBeNull();
     expect(blockMenu()).toBeNull();
     expect(button.getAttribute("aria-expanded")).toBe("false");
-    expect(document.activeElement).toBe(button);
   });
 
-  test("clears the search of the + menu on Escape, and closes the menu on a second, with the focus back on the button", async () => {
+  test("clears the search of the + menu on Escape, and closes the menu on a second", async () => {
     const { el, settled } = await startCards();
 
     const button = toolOf(cardOf(el, "Head"), "More actions");
@@ -795,7 +794,6 @@ describe("a block's menu", () => {
     await settled();
     expect(plusMenu()).toBeNull();
     expect(button.getAttribute("aria-expanded")).toBe("false");
-    expect(document.activeElement).toBe(button);
   });
 
   test("links a block of a class with several inputs from its first input", async () => {
