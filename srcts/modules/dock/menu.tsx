@@ -1,10 +1,9 @@
 // The dock's menus, drawn as the design system's menus are
 // (https://github.com/BristolMyersSquibb/blockr.ui/blob/e14e8310481e98b156871bf96669b41cb88c8435/vignettes/articles/design-system.Rmd#L1062-L1165):
-// the panel picker (./picker.tsx), the menus of the bar (./navbar.tsx), and
-// the "+" menu of a block's card (./card).
+// the menus of the bar (./navbar.tsx) and the views menu (./views-menu.tsx).
 // The dock draws them itself, since blockr.ui gives the client no menus yet.
-// The block's menu of a card is core's React SDK's instead
-// (./card/header.tsx).
+// The block's menu of a card and the dock's pickers are core's React SDK's
+// instead (./card/header.tsx, ./picker.tsx).
 //
 // A menu is a popover, which the browser draws in the top layer, so that
 // nothing on the page clips it, and which it closes as the user clicks
@@ -16,12 +15,9 @@
 // its other side where the window has no room.
 // In a browser without anchor positioning, script places it so (./place.ts).
 //
-// A menu may have a caption, a search on top, and rows in groups, a group
-// under its title.
-// The search keeps the rows whose label, detail or search text holds every
-// word typed.
+// A menu has rows in groups.
 // Where a menu has no row to list at all, a note says why in place of its
-// search and its rows.
+// rows.
 // A row is one of these:
 // - An action, which runs as the user picks it, and which is greyed out while
 //   it is disabled, with the reason as its tooltip.
@@ -39,16 +35,11 @@
 //   and every row of a group that has a fold leaves room for that chevron, so
 //   that the labels line up.
 //
-// The keys are the design system's: the focus stays in the search, or on the
-// menu where it has none, and the row that the keyboard is on is the menu's
-// active descendant.
-// - The arrows move the row, from the last round to the first, and Enter picks
-//   it, as a click does.
-// - In a menu without a search, Home and End jump to the first and the last
-//   row, and Space picks too.
-// - A menu with a search starts on its first row, so that Enter picks the
-//   first row that the search keeps, and a menu without one does where the
-//   keyboard opened it.
+// The keys are the design system's: the focus stays on the menu, and the row
+// that the keyboard is on is the menu's active descendant.
+// - The arrows move the row, from the last round to the first, and Enter and
+//   Space pick it, as a click does.
+// - Home and End jump to the first and the last row.
 // - The pointer moves the same row.
 // - ArrowRight, Enter or a click opens the menu of a row that holds one, and
 //   ArrowLeft or Escape closes it again, with the focus back on the menu that
@@ -57,7 +48,7 @@
 //   closes an open fold, or moves from a row inside a fold to the fold.
 //   Enter, Space and a click open and close a fold.
 // - A menu that the keyboard opened starts on its current pick, where it has
-//   one.
+//   one, and on its first row where not.
 // - Escape closes a menu that a button opened, and the focus goes back to the
 //   button.
 // - Tab closes every menu, and the focus moves on from the button.
@@ -75,17 +66,10 @@ import { ariaShortcuts } from "./shortcuts.ts";
 export interface MenuRow {
   readonly key: string;
   readonly label: string;
-  // What comes before the label: an icon, or the mark of a block's class.
+  // What comes before the label, as an icon.
   readonly lead?: ReactNode;
-  // Muted text after the label, as the name of a block's class.
-  readonly detail?: string;
-  // A neutral badge after the label, as the package of a block class.
-  readonly badge?: string;
   // Text after the label in a monospaced face, as the id of a block.
   readonly meta?: string;
-  // Text by which the search finds the row besides its label and its detail,
-  // as an id.
-  readonly search?: string;
   // Whether the row destroys something, which it shows as the active row.
   readonly danger?: boolean;
   // Whether a divider comes before the row.
@@ -120,7 +104,6 @@ export interface MenuRow {
 
 export interface MenuGroup {
   readonly key: string;
-  readonly title?: string;
   readonly rows: readonly MenuRow[];
 }
 
@@ -138,9 +121,6 @@ export interface MenuProps {
   // The menu's name, which its list takes.
   readonly label: string;
   readonly align?: Align;
-  readonly caption?: string;
-  // The search, by its name and what it says where it keeps no row.
-  readonly search?: { readonly label: string; readonly empty: string };
   readonly groups: readonly MenuGroup[];
   // What the menu says where it has no row to list.
   readonly note?: string;
@@ -161,14 +141,6 @@ interface Sub {
   readonly key: string;
   readonly row: HTMLElement;
   readonly keyboard: boolean;
-}
-
-// Whether a row holds every word of what the user searched, in its label, its
-// detail or its search text, in any case.
-export function matches(row: MenuRow, searched: string): boolean {
-  const words = searched.toLowerCase().split(/\s+/).filter((word) => word !== "");
-  const text = [row.label, row.detail ?? "", row.search ?? ""].join(" ").toLowerCase();
-  return words.every((word) => text.includes(word));
 }
 
 // The index of the row after `at`, or before it for a step of -1, from the
@@ -267,26 +239,11 @@ export function useMenuSurface(ref: RefObject<HTMLElement | null>, anchor: HTMLE
   useDismiss(ref, anchor, onClose);
 }
 
-export function Menu({
-  anchor,
-  label,
-  align = "start",
-  caption,
-  search,
-  groups,
-  note,
-  keyboard,
-  depth = 0,
-  onClose,
-  onCloseAll,
-}: MenuProps): ReactElement {
+export function Menu({ anchor, label, align = "start", groups, note, keyboard, depth = 0, onClose, onCloseAll }: MenuProps): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
-  const field = useRef<HTMLInputElement>(null);
   const id = useId();
   const closeAll = onCloseAll ?? onClose;
-  const [searched, setSearched] = useState("");
   const [active, setActive] = useState<number | null>(() => {
-    if (search !== undefined) return 0;
     if (!keyboard) return null;
     return Math.max(
       0,
@@ -299,20 +256,14 @@ export function Menu({
   const [sub, setSub] = useState<Sub | null>(null);
 
   const listed = groups.some((group) => group.rows.length > 0);
-  const shown = useMemo(
-    () =>
-      groups
-        .map((group) => ({ ...group, rows: group.rows.filter((row) => matches(row, searched)) }))
-        .filter((group) => group.rows.length > 0),
-    [groups, searched],
-  );
+  const shown = useMemo(() => groups.filter((group) => group.rows.length > 0), [groups]);
   const rows = shown.flatMap((group) => group.rows).filter(reachable);
   const rowId = (i: number) => `${id}-row-${String(i)}`;
   const activeId = active !== null && active < rows.length ? rowId(active) : undefined;
 
   useMenuSurface(ref, anchor, { depth, align, keyboard, onClose });
   useLayoutEffect(() => {
-    (field.current ?? ref.current)?.focus({ preventScroll: true });
+    ref.current?.focus({ preventScroll: true });
   }, []);
 
   // The active row stays in view as the arrows move it.
@@ -364,11 +315,10 @@ export function Menu({
         break;
       case "Home":
       case "End":
-        if (search !== undefined) return;
         setActive(event.key === "Home" ? 0 : rows.length - 1);
         break;
       case "ArrowRight":
-        if (search !== undefined || row === undefined || active === null) return;
+        if (row === undefined || active === null) return;
         if (row.fold !== undefined) {
           // An open fold holds the row after it, where it holds any.
           if (!row.fold.open) row.fold.onToggle(true);
@@ -379,7 +329,6 @@ export function Menu({
         pick(row, active, false);
         break;
       case "ArrowLeft": {
-        if (search !== undefined) return;
         const fold = active === null ? -1 : foldOf(rows, active);
         if (row?.fold?.open === true) row.fold.onToggle(false);
         else if (fold >= 0) setActive(fold);
@@ -388,9 +337,6 @@ export function Menu({
         break;
       }
       case " ":
-        if (search !== undefined) return;
-        if (row !== undefined && active !== null) pick(row, active, false);
-        break;
       case "Enter":
         if (row !== undefined && active !== null) pick(row, active, false);
         break;
@@ -447,26 +393,10 @@ export function Menu({
           </span>
         )}
         <span className="blockr-dock-menu-label">{row.label}</span>
-        {row.detail === undefined ? null : <span className="blockr-dock-menu-detail">{row.detail}</span>}
-        {row.badge === undefined ? null : <span className="blockr-dock-menu-badge">{row.badge}</span>}
         {row.meta === undefined ? null : <span className="blockr-dock-menu-meta">{row.meta}</span>}
         {row.checked === true ? <CheckIcon /> : null}
       </>
     );
-    if (search !== undefined) {
-      return (
-        <div
-          {...common}
-          role="option"
-          aria-selected={i === active}
-          onClick={(event: MouseEvent) => {
-            pick(row, i, event.detail !== 0);
-          }}
-        >
-          {content}
-        </div>
-      );
-    }
     if (row.href !== undefined) {
       return (
         <a
@@ -554,21 +484,12 @@ export function Menu({
         );
       return (
         <Fragment key={row.key}>
-          {row.divided === true && search === undefined ? <hr className="blockr-dock-menu-divider" /> : null}
+          {row.divided === true ? <hr className="blockr-dock-menu-divider" /> : null}
           {element}
         </Fragment>
       );
     });
-    return group.title === undefined ? (
-      <Fragment key={group.key}>{drawn}</Fragment>
-    ) : (
-      <div key={group.key} role="group" aria-labelledby={`${id}-${group.key}`}>
-        <div id={`${id}-${group.key}`} role="presentation" className="blockr-dock-menu-title">
-          {group.title}
-        </div>
-        {drawn}
-      </div>
-    );
+    return <Fragment key={group.key}>{drawn}</Fragment>;
   };
 
   return (
@@ -583,41 +504,9 @@ export function Menu({
       onToggle={(event) => {
         if (event.newState === "closed") onClose({ restore: false, pointer: false });
       }}
-      {...(search === undefined && listed ? { role: "menu", "aria-label": label, "aria-activedescendant": activeId } : {})}
+      {...(listed ? { role: "menu", "aria-label": label, "aria-activedescendant": activeId } : {})}
     >
-      {caption === undefined ? null : <p className="blockr-dock-menu-caption">{caption}</p>}
-      {!listed ? (
-        <p className="blockr-dock-menu-note">{note}</p>
-      ) : search === undefined ? (
-        shown.map(drawGroup)
-      ) : (
-        <>
-          <div className="blockr-dock-menu-search">
-            <input
-              ref={field}
-              type="search"
-              role="combobox"
-              aria-label={search.label}
-              aria-expanded="true"
-              aria-controls={`${id}-list`}
-              aria-autocomplete="list"
-              aria-activedescendant={activeId}
-              placeholder={search.label}
-              autoComplete="off"
-              spellCheck={false}
-              value={searched}
-              onChange={(event) => {
-                setSearched(event.target.value);
-                setActive(0);
-              }}
-            />
-          </div>
-          <div id={`${id}-list`} role="listbox" aria-label={label}>
-            {shown.map(drawGroup)}
-          </div>
-          {rows.length === 0 ? <p className="blockr-dock-menu-note">{search.empty}</p> : null}
-        </>
-      )}
+      {listed ? shown.map(drawGroup) : <p className="blockr-dock-menu-note">{note}</p>}
     </div>
   );
 }

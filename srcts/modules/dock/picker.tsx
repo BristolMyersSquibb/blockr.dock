@@ -1,185 +1,163 @@
-// The panel picker, which lists what the active view does not show, and adds
-// the panel that the user picks to the view
-// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#a-plugins-panel).
-// It lists the board's blocks that the view does not show, each by the mark of
-// its class, its name and the name of its class, in the order of the board,
-// as the design system lists the blocks of a board in a menu.
-// After them, under "Plugins", it lists the app's plugins with a `ui` that the
-// view does not show, by their names, in the order of the app's plugins.
-// A search at its top filters them by name, by the name of a block's class
-// and by id, so that the picker serves a board of many blocks.
-// Today's Blockr.menu shows one only where it lists more than eight, at
-// 655e323.
-// Where the picker has nothing to list, it says why in place of the list.
-//
-// Two buttons open it: the "+" in the header of each tab group, and the "Add
-// panel" button of an empty view.
-// A pick runs blockr.dock-add_panel on the active view.
-// From a tab group's "+", the pick goes near the panel that the group shows,
-// so the panel becomes a new tab in that group.
-// From an empty view, the panel goes to the default place.
-// Where the board refuses the command, core tells the user why, as an error of
-// the code board_edit_failed.
-//
-// The picker is one of the dock's menus, which it draws and places, and whose
-// keys it takes (./menu.tsx).
+// The dock's pickers, which pick from a list that the user searches: the panel
+// picker, which adds a panel to the active view (./panel-picker.tsx), and the
+// "+" menu of a block's card, which appends a block of the class that the user
+// picks (./card/header.tsx, ./card/classes.tsx).
+// Each draws with core's React SDK, as Picker below
+// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.7#react):
+// - The SDK's Popover holds it.
+//   React Aria draws the popover in a portal at the end of the page's body,
+//   never in the browser's top layer.
+//   It opens 4px below the button that opened it, lined up with the button's
+//   left edge, or with its right edge for a button at the end of a row, and
+//   above the button where the window has no room below.
+// - A caption on top says what the picker is for, and names the popover.
+// - React Aria's Autocomplete holds the SDK's SearchField and Menu below the
+//   caption.
+//   The menu's rows come in groups, a group under its title where it has one.
+//   The search keeps the rows whose label, detail or search text holds every
+//   word typed, in any case, and the menu says so where it keeps none.
+// - Where the picker has no row to list at all, a note says why in place of
+//   the search and the menu.
+// The keys are React Aria's:
+// - The search takes the focus as the picker opens, and keeps it.
+// - The arrows move through the rows, and Enter picks the row that they are
+//   on.
+//   Once the user has typed, that is the first row that the search keeps.
+// - Escape clears the search, and closes the picker where the search is
+//   empty.
+// A pick closes the picker, and then the row runs.
+// While the picker is open, React Aria keeps the rest of the page inert, and
+// a press outside the picker closes it and reaches nothing else.
+// As it closes, React Aria gives the focus back to the element that had it as
+// the picker opened, as the button.
+// A button that opens a picker says whether its picker is open.
 
-import type { BlockRegistry, Board, Json, PluginClassId } from "@blockr/core";
-import { useBoard } from "@blockr/core/react";
-import { createContext, useCallback, useContext, useId, useMemo, useState } from "react";
+import { Autocomplete, Menu, MenuItem, MenuSection, Popover, SearchField } from "@blockr/core/react";
+import { useId, useMemo } from "react";
 import type { ReactElement, ReactNode } from "react";
-import { activeView, dockState } from "../../commands/index.ts";
-import { places } from "../../state/index.ts";
-import type { Panel } from "../../state/index.ts";
-import { Mark } from "./card/index.ts";
-import { useDock } from "./context.ts";
-import { Menu, useMenuButton } from "./menu.tsx";
-import type { Closing, MenuGroup } from "./menu.tsx";
 
-// The open picker.
-interface Picking {
-  // The button that opened it, with an id of the button's own.
-  readonly id: string;
+export interface PickerRow {
+  readonly key: string;
+  readonly label: string;
+  // What comes before the label, as the mark of a block's class.
+  readonly lead?: ReactNode;
+  // Muted text after the label, as the name of a block's class.
+  readonly detail?: string;
+  // A neutral badge at the row's end, as the package of a block class.
+  readonly badge?: string;
+  // Text by which the search finds the row besides its label and its detail,
+  // as an id.
+  readonly search?: string;
+  // What the pick runs.
+  readonly onPick: () => void;
+}
+
+export interface PickerGroup {
+  readonly key: string;
+  readonly title?: string;
+  readonly rows: readonly PickerRow[];
+}
+
+export interface PickerProps {
+  // The button that opened the picker.
   readonly button: HTMLElement;
-  // The panel near which a pick goes, the one that the group of a tab group's
-  // "+" shows, or undefined for the default place.
-  readonly near: Panel | undefined;
-  // Whether the keyboard opened it.
-  readonly keyboard: boolean;
+  // Whether the picker lines up with the button's left edge, or with its right
+  // edge.
+  readonly align: "start" | "end";
+  // The name of the picker's menu.
+  readonly label: string;
+  readonly caption: string;
+  // The search, by its name and what the menu says where it keeps no row.
+  readonly search: { readonly label: string; readonly empty: string };
+  readonly groups: readonly PickerGroup[];
+  // What the picker says where it has no row to list.
+  readonly note?: string;
+  // Closes the picker.
+  readonly onClose: () => void;
 }
 
-interface PickerState {
-  readonly picking: Picking | undefined;
-  readonly setPicking: (picking: Picking | undefined) => void;
+// Whether a row holds every word of what the user searched, in its label, its
+// detail or its search text, in any case.
+export function matches(row: PickerRow, searched: string): boolean {
+  const words = searched.toLowerCase().split(/\s+/).filter((word) => word !== "");
+  const text = [row.label, row.detail ?? "", row.search ?? ""].join(" ").toLowerCase();
+  return words.every((word) => text.includes(word));
 }
 
-const PickerContext = createContext<PickerState | null>(null);
-
-function usePicker(): PickerState {
-  const value = useContext(PickerContext);
-  if (value === null) throw new Error("A button of the panel picker is drawn outside the picker.");
-  return value;
-}
-
-// The picker, which the buttons among its children open.
-export function PanelPicker({ children }: { readonly children: ReactNode }): ReactElement {
-  const [picking, setPicking] = useState<Picking | undefined>(undefined);
-  const state = useMemo(() => ({ picking, setPicking }), [picking]);
-  const close = useCallback(
-    (how: Closing) => {
-      setPicking(undefined);
-      if (how.restore) picking?.button.focus({ preventScroll: true, focusVisible: !how.pointer });
-    },
-    [picking],
-  );
-  return (
-    <PickerContext value={state}>
-      {children}
-      {picking === undefined ? null : <PickerMenu picking={picking} onClose={close} />}
-    </PickerContext>
-  );
-}
-
-// The props of a button that opens the picker.
-// The function `near` gives the panel near which a pick goes, or undefined for
-// the default place, as the user opens the picker.
-export function usePickerButton(near: () => Panel | undefined) {
-  const { picking, setPicking } = usePicker();
-  const id = useId();
-  return useMenuButton(
-    picking?.id === id,
-    (button, keyboard) => {
-      setPicking({ id, button, near: near(), keyboard });
-    },
-    () => {
-      setPicking(undefined);
-    },
-  );
-}
-
-// The rows of the picker on a board, where the dock draws the panels of the
-// plugins given: those that the active view does not show, none where there
-// is no active view.
-function pickerGroups(
-  board: Board,
-  registry: BlockRegistry,
-  drawn: ReadonlyMap<PluginClassId, string>,
-  pick: (panel: Panel) => void,
-): MenuGroup[] {
-  const view = activeView(board);
-  if (view === undefined) return [];
-  const blocks = Object.entries(board.blocks).flatMap(([block, held]) => {
-    if (places(view.grid, { block })) return [];
-    const entry = registry[held.registry_id];
-    return [
-      {
-        key: block,
-        label: held.name,
-        lead: <Mark entry={entry} size={24} />,
-        ...(entry === undefined ? {} : { detail: entry.name }),
-        search: block,
-        onSelect: () => {
-          pick({ block });
-        },
-      },
-    ];
-  });
-  const plugins = [...drawn].flatMap(([plugin, name]) =>
-    places(view.grid, { plugin })
-      ? []
-      : [
-          {
-            key: plugin,
-            label: name,
-            search: plugin,
-            onSelect: () => {
-              pick({ plugin });
-            },
-          },
-        ],
-  );
-  return [
-    { key: "blocks", rows: blocks },
-    { key: "plugins", title: "Plugins", rows: plugins },
-  ];
-}
-
-// What the open picker shows, which follows the board.
-function PickerMenu({ picking, onClose }: { readonly picking: Picking; readonly onClose: (how: Closing) => void }): ReactElement {
-  const { core, drawn } = useDock();
-  const board = useBoard(core);
-  const { near } = picking;
-
-  const groups = useMemo(() => {
-    const pick = (panel: Panel) => {
-      const view = dockState(core.store.board())?.active ?? null;
-      if (view === null) return;
-      const args: Json = near === undefined ? { view, panel } : { view, panel, near, side: "within" };
-      core.commands.run("blockr.dock-add_panel", args).catch(() => {
-        // Core tells the user why the board refused the command.
-      });
-    };
-    return pickerGroups(board, core.blockRegistry(), drawn, pick);
-  }, [board, core, drawn, near]);
+// A picker, open, as the comment at the top of this file says.
+export function Picker({ button, align, label, caption, search, groups, note, onClose }: PickerProps): ReactElement {
+  const captionId = useId();
+  const trigger = useMemo(() => ({ current: button }), [button]);
+  const rows = useMemo(() => new Map(groups.flatMap((group) => group.rows.map((row) => [row.key, row]))), [groups]);
 
   return (
-    <Menu
-      anchor={picking.button}
-      label="Panels"
-      caption="Show in this view"
-      search={{ label: "Search", empty: "No panel matches." }}
-      groups={groups}
-      note={nothingLeft(board, drawn)}
-      keyboard={picking.keyboard}
-      onClose={onClose}
-    />
+    <Popover
+      triggerRef={trigger}
+      isOpen
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      placement={align === "end" ? "bottom end" : "bottom start"}
+      maxHeight={320}
+      aria-labelledby={captionId}
+      className="blockr-dock-picker"
+    >
+      <p id={captionId} className="blockr-dock-picker-caption">
+        {caption}
+      </p>
+      {rows.size === 0 ? (
+        note === undefined ? null : <p className="blockr-dock-picker-note">{note}</p>
+      ) : (
+        <Autocomplete
+          filter={(_, searched, node) => {
+            // A node that is no row, if React Aria hands one, stays.
+            const row = rows.get(String(node.key));
+            return row === undefined || matches(row, searched);
+          }}
+        >
+          <SearchField autoFocus aria-label={search.label} placeholder={search.label} className="blockr-dock-picker-search" />
+          <Menu
+            aria-label={label}
+            className="blockr-dock-picker-menu"
+            renderEmptyState={() => <p className="blockr-dock-picker-note">{search.empty}</p>}
+            onAction={(key) => {
+              const row = rows.get(String(key));
+              onClose();
+              row?.onPick();
+            }}
+          >
+            {groups
+              .filter((group) => group.rows.length > 0)
+              .map((group) => (
+                <MenuSection key={group.key} id={group.key} title={group.title}>
+                  {group.rows.map((row) => (
+                    <Row key={row.key} row={row} />
+                  ))}
+                </MenuSection>
+              ))}
+          </Menu>
+        </Autocomplete>
+      )}
+    </Popover>
   );
 }
 
-// Why the picker has nothing to list, as today's suggest_panels_to_add() says
-// it, at 655e323.
-function nothingLeft(board: Board, drawn: ReadonlyMap<PluginClassId, string>): string {
-  return Object.keys(board.blocks).length === 0 && drawn.size === 0
-    ? "The board has no blocks yet. Add a new block to get started."
-    : "All blocks and plugins are already in this view. Add a new block to the board first.";
+// A row of the picker, which assistive technology names by its label, its
+// detail and its badge.
+function Row({ row }: { readonly row: PickerRow }): ReactElement {
+  const named = [row.label, row.detail, row.badge].filter((part) => part !== undefined);
+  return (
+    <MenuItem id={row.key} textValue={row.label} aria-label={named.join(", ")} className="blockr-dock-picker-row">
+      <span className="blockr-dock-picker-name">
+        {row.lead === undefined ? null : (
+          <span className="blockr-dock-picker-lead" aria-hidden="true">
+            {row.lead}
+          </span>
+        )}
+        <span className="blockr-dock-picker-label">{row.label}</span>
+        {row.detail === undefined ? null : <span className="blockr-dock-picker-detail">{row.detail}</span>}
+      </span>
+      {row.badge === undefined ? null : <span className="blockr-dock-picker-badge">{row.badge}</span>}
+    </MenuItem>
+  );
 }
