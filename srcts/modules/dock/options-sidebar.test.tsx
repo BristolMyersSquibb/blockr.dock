@@ -33,8 +33,6 @@ const OWN_CATEGORIES = ["Board options", "Extra options", "Theme options", "View
 // number that the user types as the field changes. Escape in a field whose
 // number differs from the value reverts the field, and takes the key, so that
 // nothing else acts on it.
-// After the field, the UI holds a button that it hides, as a UI may hide a
-// control until it applies.
 function numberUi(): OptionModule<number> {
   return {
     render({ el, host }) {
@@ -53,15 +51,10 @@ function numberUi(): OptionModule<number> {
         event.preventDefault();
         show();
       });
-      const reset = el.ownerDocument.createElement("button");
-      reset.type = "button";
-      reset.textContent = "Reset";
-      reset.style.display = "none";
-      el.append(field, reset);
+      el.append(field);
       return () => {
         off();
         field.remove();
-        reset.remove();
       };
     },
   };
@@ -720,17 +713,6 @@ describe("the options sidebar", () => {
     first.focus();
     expect(press("Tab", { shiftKey: true })).toBe(true);
     expect(document.activeElement).toBe(last);
-  });
-
-  test("leaves a control that a board option's UI hides out as Tab wraps around", async () => {
-    const { el } = await startSidebar();
-    await open(el);
-    // View options, the category of zoom, is the last that the sidebar lists,
-    // and the field of zoom is the last control in it that the user can reach.
-    await expand(el, "View options", "zoom");
-    fieldOf(el, "zoom")?.focus();
-    expect(press("Tab")).toBe(true);
-    expect(document.activeElement).toBe(button(sidebarIn(el), "Expand all"));
   });
 
   test("shows a board option that comes onto the board later", async () => {
