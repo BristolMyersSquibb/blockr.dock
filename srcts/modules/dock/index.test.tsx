@@ -784,19 +784,48 @@ async function drawn(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+// The panel picker that is open, which core's React SDK draws in a portal at
+// the end of the page's body.
+function picker(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(".blockr-dock-picker");
+}
+
 // The entries that the picker lists, each by its name, with the name of the
 // block's class where it has one.
-function entries(el: HTMLElement): string[][] {
-  return [...el.querySelectorAll(".blockr-dock-menu [role='option']")].map((item) =>
-    [...item.querySelectorAll(".blockr-dock-menu-label, .blockr-dock-menu-detail")].map((part) => part.textContent),
+function entries(): string[][] {
+  return [...document.querySelectorAll(".blockr-dock-picker-row")].map((item) =>
+    [...item.querySelectorAll(".blockr-dock-picker-label, .blockr-dock-picker-detail")].map((part) => part.textContent),
   );
 }
 
 // The entry of the picker of the name given.
-function entry(el: HTMLElement, name: string): Element | undefined {
-  return [...el.querySelectorAll(".blockr-dock-menu [role='option']")].find(
-    (item) => item.querySelector(".blockr-dock-menu-label")?.textContent === name,
+function entry(name: string): Element | undefined {
+  return [...document.querySelectorAll(".blockr-dock-picker-row")].find(
+    (item) => item.querySelector(".blockr-dock-picker-label")?.textContent === name,
   );
+}
+
+// The picker's search field.
+function searchField(): HTMLInputElement | null {
+  return document.querySelector<HTMLInputElement>(".blockr-dock-picker input");
+}
+
+// Opens the picker as the keyboard does, by a click without a pointer, as on
+// Enter on the button, and waits for the search to take the focus, which React
+// Aria moves after a frame.
+// On happy-dom, `document instanceof window.Document` is false, so that React
+// Aria finds the focus within no element, and the picker takes the focus from
+// its search where the pointer opens it.
+// A browser leaves the focus in the search either way.
+async function openByKeyboard(button: HTMLElement | null): Promise<HTMLInputElement> {
+  if (button === null) throw new Error("No button opens the picker.");
+  button.focus();
+  button.click();
+  return await vi.waitFor(() => {
+    const search = searchField();
+    if (search === null || document.activeElement !== search) throw new Error("The search has not taken the focus.");
+    return search;
+  });
 }
 
 // The view main's grid in the dock's state.
@@ -812,13 +841,23 @@ describe("the panel picker", () => {
     const buttons = [...el.querySelectorAll(".blockr-dock-add")];
     expect(buttons).toHaveLength(2);
     expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual(["Add panel", "Add panel"]);
+    // The buttons are core's React SDK's, React Aria's.
+    expect(buttons.every((button) => button.hasAttribute("data-rac"))).toBe(true);
     expect(el.querySelector(".dv-groupview-edge .blockr-dock-add")).toBeNull();
-    expect(el.querySelector(".blockr-dock-menu [role='listbox']")).toBeNull();
+    expect(picker()).toBeNull();
 
     click(buttons[0]);
     await drawn();
     expect(buttons[0]?.getAttribute("aria-expanded")).toBe("true");
-    expect(el.querySelector(".blockr-dock-menu-caption")?.textContent).toBe("Show in this view");
+    expect(buttons[1]?.getAttribute("aria-expanded")).toBe("false");
+    const shown = picker();
+    // The picker is a dialog at the end of the page's body, outside the
+    // browser's top layer, which its caption names.
+    expect(el.contains(shown)).toBe(false);
+    expect(shown?.hasAttribute("popover")).toBe(false);
+    expect(shown?.getAttribute("role")).toBe("dialog");
+    expect(document.getElementById(shown?.getAttribute("aria-labelledby") ?? "")?.textContent).toBe("Show in this view");
+    expect(shown?.querySelector("[role='menu']")?.getAttribute("aria-label")).toBe("Panels");
     s.stop();
   });
 
@@ -830,12 +869,14 @@ describe("the panel picker", () => {
     await drawn();
 
     // Core's file storage plugin, whose class has no ui, has no panel.
-    expect(entries(el)).toEqual([["Dataset", "dataset block"], ["Edit board"], ["Notes"]]);
-    const group = el.querySelector(".blockr-dock-menu [role='group']");
-    const heading = el.querySelector(`[id="${group?.getAttribute("aria-labelledby") ?? ""}"]`);
+    expect(entries()).toEqual([["Dataset", "dataset block"], ["Edit board"], ["Notes"]]);
+    expect(entry("Dataset")?.getAttribute("aria-label")).toBe("Dataset, dataset block");
+    const groups = [...document.querySelectorAll(".blockr-dock-picker [role='menu'] [role='group']")];
+    expect(groups).toHaveLength(2);
+    const heading = document.getElementById(groups[1]?.getAttribute("aria-labelledby") ?? "");
     expect(heading?.textContent).toBe("Plugins");
-    expect([...(group?.querySelectorAll(".blockr-dock-menu-label") ?? [])].map((item) => item.textContent)).toEqual(["Edit board", "Notes"]);
-    expect(el.querySelector(".blockr-dock-menu-search input")).not.toBeNull();
+    expect([...(groups[1]?.querySelectorAll(".blockr-dock-picker-label") ?? [])].map((item) => item.textContent)).toEqual(["Edit board", "Notes"]);
+    expect(searchField()).not.toBeNull();
     s.stop();
   });
 
@@ -845,7 +886,7 @@ describe("the panel picker", () => {
 
     click(el.querySelectorAll(".blockr-dock-add")[0]);
     await drawn();
-    click(entry(el, "Edit board"));
+    click(entry("Edit board"));
     await s.settled();
 
     expect(mainGrid(s.core)?.children).toEqual([
@@ -853,7 +894,7 @@ describe("the panel picker", () => {
       { panels: [{ plugin: NOTES }], active: { plugin: NOTES } },
     ]);
     expect(panelFrame(el, EDIT)?.querySelector('section[aria-label="Links"]')).not.toBeNull();
-    expect(el.querySelector(".blockr-dock-menu [role='listbox']")).toBeNull();
+    expect(picker()).toBeNull();
     s.stop();
   });
 
@@ -871,7 +912,7 @@ describe("the panel picker", () => {
     await s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { block: "a" } });
     await s.settled();
     await drawn();
-    click(entry(el, "Notes"));
+    click(entry("Notes"));
     await s.settled();
 
     expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "b" }], active: { block: "b" } }]);
@@ -887,44 +928,53 @@ describe("the panel picker", () => {
     click(el.querySelector(".blockr-dock-add"));
     await drawn();
 
-    expect(el.querySelector(".blockr-dock-menu [role='listbox']")).toBeNull();
-    expect(el.querySelector(".blockr-dock-menu-note")?.textContent).toBe(
+    expect(picker()?.querySelector("[role='menu']")).toBeNull();
+    expect(searchField()).toBeNull();
+    expect(picker()?.querySelector(".blockr-dock-picker-note")?.textContent).toBe(
       "All blocks and plugins are already in this view. Add a new block to the board first.",
     );
+    // The picker holds the focus, where Escape closes it.
+    expect(document.activeElement).toBe(picker());
+    press("Escape");
+    await drawn();
+    expect(picker()).toBeNull();
     s.stop();
   });
 
-  test("filters its entries by the search field that has the focus as it opens, where Enter picks the first", async () => {
+  test("filters its entries by every word typed into the search field, which has the focus as it opens, and Enter picks the first", async () => {
     const el = attached();
     const s = await startWithNotes(el, boardWith(dockStateWith(EMPTY_GRID)));
 
-    click(el.querySelector(".blockr-dock-empty-add"));
-    await drawn();
-    const search = el.querySelector<HTMLInputElement>(".blockr-dock-menu-search input");
-    expect(document.activeElement).toBe(search);
-    expect(entries(el)).toHaveLength(4);
+    // The search has the focus once the picker has opened.
+    const search = await openByKeyboard(el.querySelector(".blockr-dock-empty-add"));
+    expect(entries()).toHaveLength(4);
 
-    // The search finds an entry by its name, its block class or its id.
+    // The search finds an entry by its name, its block class or its id, and
+    // by every word typed.
     type(search, "set");
     await drawn();
-    expect(entries(el)).toEqual([["Dataset", "dataset block"]]);
+    expect(entries()).toEqual([["Dataset", "dataset block"]]);
     type(search, "tail");
     await drawn();
-    expect(entries(el)).toEqual([["Head", "head/tail block"]]);
+    expect(entries()).toEqual([["Head", "head/tail block"]]);
     type(search, "test-notes");
     await drawn();
-    expect(entries(el)).toEqual([["Notes"]]);
+    expect(entries()).toEqual([["Notes"]]);
+    type(search, "BLOCK head");
+    await drawn();
+    expect(entries()).toEqual([["Head", "head/tail block"]]);
 
     type(search, "zzz");
     await drawn();
-    expect(entries(el)).toEqual([]);
-    expect(el.querySelector(".blockr-dock-menu-note")?.textContent).toBe("No panel matches.");
+    expect(entries()).toEqual([]);
+    expect(picker()?.querySelector(".blockr-dock-picker-note")?.textContent).toBe("No panel matches.");
 
     type(search, "hea");
     await drawn();
     press("Enter");
     await s.settled();
     expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "b" }], active: { block: "b" } }]);
+    expect(picker()).toBeNull();
     s.stop();
   });
 
@@ -932,19 +982,14 @@ describe("the panel picker", () => {
     const el = attached();
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "b" }]))));
 
-    const button = el.querySelector<HTMLElement>(".blockr-dock-add");
-    button?.focus();
-    press("ArrowDown");
-    await drawn();
-    const search = el.querySelector<HTMLInputElement>(".blockr-dock-menu-search input");
-    expect(document.activeElement).toBe(search);
+    const search = await openByKeyboard(el.querySelector(".blockr-dock-add"));
 
     // The entry that the search names as its active descendant.
     const active = () =>
-      document.getElementById(search?.getAttribute("aria-activedescendant") ?? "")?.querySelector(".blockr-dock-menu-label")
+      document.getElementById(search.getAttribute("aria-activedescendant") ?? "")?.querySelector(".blockr-dock-picker-label")
         ?.textContent;
-    expect(active()).toBe("Dataset");
     for (const [key, name] of [
+      ["ArrowDown", "Dataset"],
       ["ArrowDown", "Edit board"],
       ["ArrowDown", "Notes"],
       ["ArrowDown", "Dataset"],
@@ -961,12 +1006,40 @@ describe("the panel picker", () => {
     expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "b" }, { plugin: NOTES }], active: { plugin: NOTES } }]);
     s.stop();
   });
+
+  test("clears its search on Escape, closes on a second, and gives the focus back to the button that opened it", async () => {
+    const el = attached();
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "b" }]))));
+
+    const button = el.querySelector<HTMLElement>(".blockr-dock-add");
+    const search = await openByKeyboard(button);
+    type(search, "notes");
+    await drawn();
+    expect(entries()).toEqual([["Notes"]]);
+
+    press("Escape");
+    await drawn();
+    expect(search.value).toBe("");
+    expect(entries()).toHaveLength(3);
+
+    press("Escape");
+    await drawn();
+    expect(picker()).toBeNull();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(document.activeElement).toBe(button);
+    expect(button?.getAttribute("aria-expanded")).toBe("false");
+    s.stop();
+  });
 });
 
 // Types the text into the search field, as the user does, in place of what it
 // held.
+// The browser first tells React Aria that the user inserts text, by the event
+// beforeinput, on which React Aria has the first entry that the search keeps
+// take the virtual focus.
 function type(input: HTMLInputElement | null, text: string): void {
   if (input === null) throw new Error("No field to type in.");
+  input.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: text, bubbles: true, cancelable: true }));
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, text);
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
@@ -984,9 +1057,9 @@ describe("an empty view", () => {
 
     click(prompt?.querySelector("button"));
     await drawn();
-    expect(entries(el)).toEqual([["Dataset", "dataset block"], ["Head", "head/tail block"], ["Edit board"], ["Notes"]]);
+    expect(entries()).toEqual([["Dataset", "dataset block"], ["Head", "head/tail block"], ["Edit board"], ["Notes"]]);
 
-    click(entry(el, "Head"));
+    click(entry("Head"));
     await s.settled();
     expect(mainGrid(s.core)).toEqual({ orientation: "horizontal", children: [{ panels: [{ block: "b" }], active: { block: "b" } }], sizes: [1] });
     expect(el.querySelector(".blockr-dock-empty")).toBeNull();
@@ -999,7 +1072,7 @@ describe("an empty view", () => {
 
     expect(el.querySelector(".blockr-dock-empty p")?.textContent).toBe("This view is empty");
     expect(el.querySelector(".blockr-dock-empty button")).toBeNull();
-    expect(el.querySelector(".blockr-dock-menu")).toBeNull();
+    expect(picker()).toBeNull();
     s.stop();
 
     const shown = document.createElement("div");
@@ -1508,9 +1581,9 @@ describe("the stylesheet of the dot on a plugin's tab", () => {
   });
 
   test("takes the amber from blockr.ui's token, with its value in each scheme as the fallback", () => {
-    const light = rules.get(".blockr-dock, .blockr-dock-bar, .blockr-dock-sidebar, .blockr-card-menu");
+    const light = rules.get(".blockr-dock, .blockr-dock-bar, .blockr-dock-sidebar, .blockr-card-menu, .blockr-dock-picker");
     const dark = rules.get(
-      '[data-bc-theme="dark"] .blockr-dock, [data-bc-theme="dark"] .blockr-dock-bar, [data-bc-theme="dark"] .blockr-dock-sidebar, [data-bc-theme="dark"] .blockr-card-menu',
+      '[data-bc-theme="dark"] .blockr-dock, [data-bc-theme="dark"] .blockr-dock-bar, [data-bc-theme="dark"] .blockr-dock-sidebar, [data-bc-theme="dark"] .blockr-card-menu, [data-bc-theme="dark"] .blockr-dock-picker',
     );
     expect(light?.get("--blockr-dock-border-warning")).toBe("var(--blockr-color-border-warning, #d97706)");
     expect(dark?.get("--blockr-dock-border-warning")).toBe("var(--blockr-color-border-warning, #fbbf24)");

@@ -14,13 +14,13 @@
 // has no block browser for it to open.
 
 import type { RegistryEntry } from "@blockr/core";
-import type { MenuGroup } from "../menu.tsx";
+import type { PickerGroup } from "../picker.tsx";
 import { categoryOf, Mark, packageOf } from "./mark.tsx";
 
 const UNCATEGORIZED = categoryOf(undefined);
 
 // The rows of the classes given, by category, each of which picks its class.
-export function classGroups(entries: readonly RegistryEntry[], pick: (entry: RegistryEntry) => void): MenuGroup[] {
+export function classGroups(entries: readonly RegistryEntry[], pick: (entry: RegistryEntry) => void): PickerGroup[] {
   const groups = new Map<string, RegistryEntry[]>();
   for (const entry of entries) {
     const category = categoryOf(entry);
@@ -42,7 +42,7 @@ export function classGroups(entries: readonly RegistryEntry[], pick: (entry: Reg
             lead: <Mark entry={entry} size={24} />,
             ...(pkg === null ? {} : { badge: pkg }),
             search: [entry.id, entry.category, ...entry.keywords].join(" "),
-            onSelect: () => {
+            onPick: () => {
               pick(entry);
             },
           };

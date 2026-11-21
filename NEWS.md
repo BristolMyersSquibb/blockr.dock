@@ -1,5 +1,18 @@
 # blockr.dock 0.2.1
 
+* The panel picker and the "+" menu of a card draw with core's React SDK
+  (#630).
+  Each opens below its button in React Aria's portal at the end of the page's
+  body, with its caption, a search field and a menu.
+  They list the same rows as before, and the search still keeps the rows that
+  hold every word typed.
+  Append block opens the "+" menu at once, and the "+" of a tab group and the
+  "Add panel" button of an empty view are the SDK's Button.
+  The keys are React Aria's.
+  Enter picks the row that the arrows moved to, or once the user has typed, the
+  first row that the search keeps.
+  Escape clears the search before it closes the picker.
+
 * The block's menu of a card and the dock's buttons draw with core's React SDK
   (#645).
   The menu opens below the "…" button in React Aria's portal at the end of the

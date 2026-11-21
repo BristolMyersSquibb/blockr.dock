@@ -4,9 +4,9 @@
  * then the dock's own rules, which style only what sits under the dock's
  * root, `.blockr-dock`, under the bar above it, `.blockr-dock-bar`, under the
  * options sidebar beside it, `.blockr-dock-sidebar`, under the column of
- * toasts beside it, `.blockr-dock-toasts`, and under the block's menu,
- * `.blockr-card-menu`, which core's React SDK draws at the end of the page's
- * body.
+ * toasts beside it, `.blockr-dock-toasts`, under the block's menu,
+ * `.blockr-card-menu`, and under the dock's pickers, `.blockr-dock-picker`,
+ * which core's React SDK draws at the end of the page's body.
  */
 @import "dockview-react/dist/styles/dockview.css";
 @import "./card/card.css";
@@ -25,9 +25,9 @@
  * The dock draws in the face of core's UIs, such as the Edit board plugin's,
  * the theme variable --bc-font-sans of core's stylesheet, since the page sets
  * none.
- * The tabs, the panel picker and the prompt of an empty view take it from the
- * dock's root, and the bar, the options sidebar and the toasts, which sit
- * beside the root, take it too.
+ * The tabs and the prompt of an empty view take it from the dock's root, and
+ * the bar, the options sidebar and the toasts, which sit beside the root,
+ * take it too.
  */
 .blockr-dock,
 .blockr-dock-bar,
@@ -75,11 +75,11 @@
 
 /*
  * The dock's own pieces read the design tokens as dockview's variables do
- * below: the "+" of a tab group, the prompt of an empty view, the panel
- * picker, the bar, the dock's menus, the block cards (./card/card.css) and
- * the options sidebar.
- * So does the block's menu, which sits outside the dock's root, at the end of
- * the page's body, so that the dock sets the variables on the menu too.
+ * below: the "+" of a tab group, the prompt of an empty view, the bar, the
+ * dock's menus, the block cards (./card/card.css) and the options sidebar.
+ * So do the block's menu and the dock's pickers, which sit outside the dock's
+ * root, at the end of the page's body, so that the dock sets the variables on
+ * them too.
  * Each reads a variable of the dock's, which reads a token of blockr.ui's with
  * the token's value in the light scheme as the fallback, or in the dark scheme
  * under the dark theme.
@@ -88,7 +88,8 @@
 .blockr-dock,
 .blockr-dock-bar,
 .blockr-dock-sidebar,
-.blockr-card-menu {
+.blockr-card-menu,
+.blockr-dock-picker {
   --blockr-dock-text: var(--blockr-color-text-default, #111827);
   --blockr-dock-text-muted: var(--blockr-color-text-muted, #6b7280);
   --blockr-dock-text-accent: var(--blockr-color-text-accent, #2563eb);
@@ -137,7 +138,8 @@
 [data-bc-theme="dark"] .blockr-dock,
 [data-bc-theme="dark"] .blockr-dock-bar,
 [data-bc-theme="dark"] .blockr-dock-sidebar,
-[data-bc-theme="dark"] .blockr-card-menu {
+[data-bc-theme="dark"] .blockr-card-menu,
+[data-bc-theme="dark"] .blockr-dock-picker {
   --blockr-dock-text: var(--blockr-color-text-default, #f0f3f7);
   --blockr-dock-text-muted: var(--blockr-color-text-muted, #8a94a3);
   --blockr-dock-text-accent: var(--blockr-color-text-accent, #60a5fa);
@@ -262,11 +264,10 @@
 }
 
 /*
- * A menu of the dock (./menu.tsx): the panel picker, the menus of the bar,
- * and the menu and the "+" menu of a block's card.
+ * A menu of the dock (./menu.tsx): the menus of the bar and the views menu.
  * It is the design system's floating surface, a popover in the top layer:
  * bg-raised, 1px border, radius 8 and shadow-md, 180 to 320 pixels wide and
- * up to 320 pixels tall, then scrolling under its search.
+ * up to 320 pixels tall, then scrolling.
  * Its rows are 34 pixels tall at 14px, radius 4 and 10px to the sides,
  * inside 6px of padding.
  * It sits 4px below the button that opened it, lined up with the button's
@@ -327,70 +328,8 @@
   }
 }
 
-/* One muted line on top, saying what the menu is for. */
-.blockr-dock-menu-caption {
-  margin: 0;
-  padding: 0 10px 4px;
-  overflow: hidden;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /*
- * The search: part of the menu, not a field, 30 pixels tall at 13px, with no
- * focus ring, since it holds the focus as long as the menu is open.
- * It stays on top while the rows scroll under it.
- */
-.blockr-dock-menu-search {
-  position: sticky;
-  top: -6px;
-  z-index: 1;
-  margin: 0 -6px 4px;
-  padding: 4px 6px;
-  background: var(--blockr-dock-bg-raised);
-}
-
-.blockr-dock-menu-search input {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  height: 30px;
-  margin: 0;
-  padding: 0 9px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-md, 6px);
-  background: var(--blockr-dock-bg-field);
-  color: var(--blockr-dock-text);
-  font: inherit;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  outline: none;
-}
-
-.blockr-dock-menu-search input::placeholder {
-  color: var(--blockr-dock-text-muted);
-}
-
-/*
- * A group's title: 12px, weight 600, uppercase and muted, inset to the rows'
- * text, and on top while its rows scroll under it.
- */
-.blockr-dock-menu-title {
-  position: sticky;
-  top: 32px;
-  padding: 8px 10px 4px;
-  background: var(--blockr-dock-bg-raised);
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-/*
- * A row is a button, a link or, in a menu with a search, an option, each
- * drawn alike.
+ * A row is a button or a link, each drawn alike.
  * A row that a fold holds sits 16px deeper for each fold that holds it.
  */
 .blockr-dock-menu-row {
@@ -492,8 +431,7 @@
 }
 
 .blockr-dock-menu-row[data-active] .blockr-dock-menu-lead,
-.blockr-dock-menu-row[data-active] .blockr-dock-menu-meta,
-.blockr-dock-menu-row[data-active] .blockr-dock-menu-detail {
+.blockr-dock-menu-row[data-active] .blockr-dock-menu-meta {
   color: var(--blockr-dock-text);
 }
 
@@ -508,14 +446,6 @@
   text-overflow: ellipsis;
 }
 
-/* Muted text after the label, as the name of a block's class. */
-.blockr-dock-menu-detail {
-  flex-shrink: 0;
-  margin-left: 12px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-}
-
 /* Text in a monospaced face after the label, as the id of a block. */
 .blockr-dock-menu-meta {
   flex-shrink: 0;
@@ -526,13 +456,104 @@
   font-size: var(--blockr-font-size-sm, 0.8125rem);
 }
 
-/* The neutral badge of a package: an 18 pixel capsule at 11px, weight 500. */
-.blockr-dock-menu-badge {
+.blockr-dock-menu-divider {
+  height: 1px;
+  margin: 6px -6px;
+  border: 0;
+  background: var(--blockr-dock-border);
+}
+
+/* What the menu says where it lists no row. */
+.blockr-dock-menu-note {
+  margin: 0;
+  padding: 10px;
+  color: var(--blockr-dock-text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+/*
+ * The dock's pickers, the panel picker and the "+" menu of a block's card,
+ * which core's React SDK draws in core's theme, in a portal at the end of the
+ * page's body (./picker.tsx).
+ * A picker is 180 to 320 pixels wide and up to 320 pixels tall, which React
+ * Aria gives it as its most, inside 6px of padding.
+ * Its menu alone scrolls, under the caption and the search.
+ * What the dock draws besides core's theme:
+ * - The caption, one muted line at 12px, which says what the picker is for.
+ * - The mark of a row's block class before its label, and the name of the
+ *   class as muted text after it.
+ *   The muted text turns the row's colour on the row that the pointer or the
+ *   keyboard is on.
+ * - The package of a block class as a neutral badge at the row's end: an 18
+ *   pixel capsule at 11px, weight 500.
+ * - The note in place of the rows, where there is none to list, or the search
+ *   keeps none.
+ */
+.blockr-dock-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  min-width: 180px;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 6px;
+}
+
+.blockr-dock-picker-caption {
+  flex: none;
+  margin: 0;
+  padding: 0 4px;
+  overflow: hidden;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-dock-picker .blockr-dock-picker-search {
+  flex: none;
+}
+
+.blockr-dock-picker .blockr-dock-picker-menu {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
+}
+
+.blockr-dock-picker-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.blockr-dock-picker-lead {
   display: inline-flex;
-  flex-shrink: 0;
+  flex: none;
+}
+
+.blockr-dock-picker-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blockr-dock-picker-detail {
+  flex: none;
+  color: var(--blockr-dock-text-muted);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+.blockr-dock-picker :is([data-focused], [data-hovered]) .blockr-dock-picker-detail {
+  color: inherit;
+}
+
+.blockr-dock-picker-badge {
+  display: inline-flex;
   align-items: center;
   height: 18px;
-  margin-left: 12px;
   padding: 0 7px;
   border: 1px solid var(--blockr-dock-border);
   border-radius: var(--blockr-radius-pill, 999px);
@@ -542,15 +563,7 @@
   font-weight: var(--blockr-font-weight-medium, 500);
 }
 
-.blockr-dock-menu-divider {
-  height: 1px;
-  margin: 6px -6px;
-  border: 0;
-  background: var(--blockr-dock-border);
-}
-
-/* What the menu says where it lists no row, or keeps none of its search. */
-.blockr-dock-menu-note {
+.blockr-dock-picker-note {
   margin: 0;
   padding: 10px;
   color: var(--blockr-dock-text-muted);

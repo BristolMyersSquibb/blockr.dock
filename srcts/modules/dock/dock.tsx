@@ -35,7 +35,7 @@
 // the dock gives that element the tooltip and the description.
 //
 // The header of each tab group holds a "+", which opens the panel picker
-// (./picker.tsx).
+// (./panel-picker.tsx).
 // A rail's header holds none.
 // An active view that shows no panel says "Start by adding a panel", with a
 // button that opens the picker too.
@@ -50,7 +50,7 @@
 // the view out again, as for any change of the root's size.
 
 import type { Board, CoreApi, PluginClassId } from "@blockr/core";
-import { useBoard, useNotified } from "@blockr/core/react";
+import { Button, useBoard, useNotified } from "@blockr/core/react";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "dockview-react";
 import type {
   DockviewReadyEvent,
@@ -72,7 +72,7 @@ import { LockIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
 import { plainText, tabNotifications } from "./notifications.ts";
 import type { Narrow } from "./narrow.ts";
-import { PanelPicker, usePickerButton } from "./picker.tsx";
+import { PanelPicker, usePickerButton } from "./panel-picker.tsx";
 import type { Settings } from "./settings.ts";
 import type { Sidebar } from "./sidebar.ts";
 import { useViewTabs } from "./views-menu.tsx";
@@ -161,11 +161,11 @@ function AddPanelButton({ api, group }: IDockviewHeaderActionsProps): ReactEleme
   if (api.location.type === "edge") return null;
   return (
     <div className="blockr-dock-add-slot">
-      <button type="button" className="blockr-dock-add" aria-label="Add panel" {...button}>
+      <Button variant="quiet" className="blockr-dock-add" aria-label="Add panel" {...button}>
         <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
           <path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
-      </button>
+      </Button>
     </div>
   );
 }
@@ -202,9 +202,9 @@ function EmptyPrompt(): ReactElement {
         <path d="M8 5v6M5 8h6" fill="none" stroke="currentColor" strokeLinecap="round" />
       </svg>
       <p>Start by adding a panel</p>
-      <button type="button" className="blockr-dock-empty-add" {...button}>
+      <Button variant="quiet" className="blockr-dock-empty-add" {...button}>
         Add panel
-      </button>
+      </Button>
     </div>
   );
 }

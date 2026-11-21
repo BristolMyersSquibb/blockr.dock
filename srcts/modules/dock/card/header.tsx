@@ -36,27 +36,27 @@
 //    So the name field that Rename shows takes the focus in an effect of its
 //    own, as React Aria's autoFocus does. React runs that effect after the
 //    cleanup.
-//    Append block opens the "+" menu once the block's menu has closed, since
-//    the "+" menu's search takes the focus as it mounts.
 //    Copy block ID copies within the click that picks it, which the
 //    document's copy command needs (./clipboard.ts).
-//    Append block opens the dock's "+" menu (../menu.tsx, ./classes.tsx) from
-//    the same button, which stays the dock's own until core's React SDK draws
-//    it (https://github.com/BristolMyersSquibb/blockr.dock/issues/630).
-//    A press on the button while the "+" menu is open closes that menu alone.
+//    Append block opens the dock's "+" menu at the same button
+//    (./classes.tsx).
+//    The "+" menu is one of the dock's pickers, drawn with core's React SDK
+//    (../picker.tsx).
+//    Its search takes the focus as React Aria's autoFocus does, once React Aria
+//    has freed the page.
+//    As the "+" menu closes, the focus goes back to the button.
 // Under the board lock, the header has no toggle and no padlock, its name
 // starts no rename, and its menu holds Copy block ID alone, since no command
 // changes the rest there.
 
 import type { Block, BlockId, RegistryEntry } from "@blockr/core";
 import { Button, Menu, MenuItem, MenuSection, MenuTrigger, Text } from "@blockr/core/react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { SECTIONS } from "../../../commands/index.ts";
 import type { Section } from "../../../state/index.ts";
 import { runEdit, useDock } from "../context.ts";
-import { Menu as DockMenu } from "../menu.tsx";
-import type { Closing } from "../menu.tsx";
+import { Picker } from "../picker.tsx";
 import { classGroups } from "./classes.tsx";
 import { copyText } from "./clipboard.ts";
 import { BinIcon, DotsIcon, EyeIcon, LockIcon, SlidersIcon } from "./icons.tsx";
@@ -337,18 +337,10 @@ function MenuButton({
 }): ReactElement {
   const { core, plugin } = useDock();
   const [open, setOpen] = useState(false);
-  // The button from which the "+" menu is open, or null while it is closed.
-  const [plus, setPlus] = useState<HTMLElement | null>(null);
-  const afterClose = useAfterClose(open);
-  const { props: tip, tooltip } = useTooltip(open || plus !== null ? null : "More actions");
-
-  const closePlus = useCallback(
-    (how: Closing) => {
-      if (how.restore) button?.focus({ preventScroll: true, focusVisible: !how.pointer });
-      setPlus(null);
-    },
-    [button],
-  );
+  // Whether the "+" menu is open.
+  const [plus, setPlus] = useState(false);
+  useFocusBack(plus, button);
+  const { props: tip, tooltip } = useTooltip(open || plus ? null : "More actions");
 
   const copy = () => {
     void copyText(button?.ownerDocument ?? document, id).then((copied) => {
@@ -404,9 +396,7 @@ function MenuButton({
           <MenuItem
             id="append"
             onAction={() => {
-              afterClose(() => {
-                setPlus(button);
-              });
+              setPlus(true);
             }}
           >
             Append block
@@ -432,26 +422,14 @@ function MenuButton({
 
   return (
     <>
-      <MenuTrigger
-        placement="bottom end"
-        isOpen={open}
-        onOpenChange={(next) => {
-          // A press on the button while the "+" menu is open closes that
-          // menu alone, which closes on no press on its button itself.
-          if (next && plus !== null) {
-            setPlus(null);
-            return;
-          }
-          setOpen(next);
-        }}
-      >
+      <MenuTrigger placement="bottom end" isOpen={open} onOpenChange={setOpen}>
         <Button
           variant="quiet"
           className="blockr-card-tool"
           aria-label="More actions"
           // The button says it is expanded while the "+" menu that it opened
           // is open too, as React Aria says it while the block's menu is.
-          aria-expanded={plus === null ? undefined : true}
+          aria-expanded={plus ? true : undefined}
           ref={onButton}
           {...tip}
           onFocus={(event) => {
@@ -466,44 +444,41 @@ function MenuButton({
         </Menu>
       </MenuTrigger>
       {tooltip}
-      {plus === null ? null : (
-        <DockMenu
-          anchor={plus}
-          label="Block classes"
+      {plus && button !== null ? (
+        <Picker
+          button={button}
           align="end"
+          label="Block classes"
           caption={`Append to ${block.name}`}
           search={{ label: "Search blocks", empty: "No matches" }}
           groups={classGroups(
             Object.values(core.blockRegistry()).filter((entry) => entry.inputs.length > 0),
             append,
           )}
-          keyboard={false}
-          onClose={closePlus}
+          onClose={() => {
+            setPlus(false);
+          }}
         />
-      )}
+      ) : null}
     </>
   );
 }
 
-// Runs what the user picked in the block's menu once the menu has closed.
-// Append block needs it, since the "+" menu's search takes the focus as it
-// mounts.
-// Until the menu has closed, React Aria keeps the rest of the page inert, so
-// that no element there takes the focus.
-// React Aria frees the page in the cleanup of an effect as the menu goes, and
-// React runs every cleanup before it runs the effect here.
-// It can go once core's React SDK draws the "+" menu
-// (https://github.com/BristolMyersSquibb/blockr.dock/issues/630), where the
-// SDK's list takes the focus in an effect, as React Aria's autoFocus does.
-function useAfterClose(open: boolean): (run: () => void) => void {
-  const [queued, setQueued] = useState<(() => void) | null>(null);
+// Gives the focus back to the "…" button as the "+" menu closes.
+// React Aria gives the focus back to the element that had it as the "+" menu
+// opened.
+// That element was the item Append block of the block's menu, which has gone
+// by then.
+// React Aria frees the page in the cleanup of an effect as the "+" menu goes,
+// and React runs every cleanup before it runs the effect here.
+// Where the focus is on an element of the page by then, it stays there.
+function useFocusBack(plus: boolean, button: HTMLElement | null): void {
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (queued === null || open) return;
-    queued();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- What the user picked waits for React Aria to free the page, which it does in an effect.
-    setQueued(null);
-  }, [queued, open]);
-  return useCallback((run: () => void) => {
-    setQueued(() => run);
-  }, []);
+    const closed = wasOpen.current && !plus;
+    wasOpen.current = plus;
+    if (!closed || button === null) return;
+    const doc = button.ownerDocument;
+    if (doc.activeElement === null || doc.activeElement === doc.body) button.focus({ preventScroll: true });
+  }, [plus, button]);
 }
