@@ -9,7 +9,7 @@ import type { StubCoreOptions } from "@blockr/core/stubs";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import type { DockState } from "../../../state/index.ts";
 import { DOCK, hello, modules } from "../testing.ts";
-import { matches } from "../menu.tsx";
+import { matches } from "../picker.tsx";
 import { menuSpot, tooltipSpot } from "../place.ts";
 import { classGroups } from "./classes.tsx";
 
@@ -122,13 +122,24 @@ function blockMenu(): HTMLElement | null {
   return document.querySelector<HTMLElement>('[role="menu"][aria-label="More actions"]');
 }
 
-// The "+" menu that is open, the dock's own, in the dock's layer.
-function openMenu(el: HTMLElement): HTMLElement | null {
-  return el.querySelector<HTMLElement>(".blockr-dock-menu");
+// The "+" menu that is open, one of the dock's pickers, which core's React SDK
+// draws in a portal at the end of the page's body.
+function plusMenu(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(".blockr-dock-picker");
 }
 
 function rows(menu: HTMLElement): string[] {
-  return [...menu.querySelectorAll(".blockr-dock-menu-label")].map((label) => label.textContent);
+  return [...menu.querySelectorAll(".blockr-dock-picker-label")].map((label) => label.textContent);
+}
+
+// Waits for the search of the "+" menu to take the focus, which React Aria
+// moves a frame after a click without a pointer, as click() makes.
+async function focusedSearch(menu: HTMLElement): Promise<HTMLInputElement> {
+  return await vi.waitFor(() => {
+    const search = menu.querySelector("input");
+    if (search === null || document.activeElement !== search) throw new Error("The search of the + menu has not taken the focus.");
+    return search;
+  });
 }
 
 // What names the element to assistive technology through the attribute given,
@@ -164,8 +175,8 @@ async function pressMenu(card: HTMLElement, settled: () => Promise<void>): Promi
 }
 
 function rowOf(menu: HTMLElement, label: string): HTMLElement {
-  const row = [...menu.querySelectorAll<HTMLElement>(".blockr-dock-menu-row")].find(
-    (each) => each.querySelector(".blockr-dock-menu-label")?.textContent === label,
+  const row = [...menu.querySelectorAll<HTMLElement>(".blockr-dock-picker-row")].find(
+    (each) => each.querySelector(".blockr-dock-picker-label")?.textContent === label,
   );
   if (row === undefined) throw new Error(`The menu has no row ${label}.`);
   return row;
@@ -194,7 +205,11 @@ const clickOn = (target: Element) => {
 };
 
 // Types `value` into a field, as React reads it.
+// The browser first tells React Aria that the user inserts text, by the event
+// beforeinput, on which React Aria has the first row that a search keeps take
+// the virtual focus.
 function typeInto(field: HTMLInputElement, value: string): void {
+  field.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: value, bubbles: true, cancelable: true }));
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, value);
   field.dispatchEvent(new Event("input", { bubbles: true }));
 }
@@ -700,17 +715,22 @@ describe("a block's menu", () => {
     await settled();
 
     expect(blockMenu()).toBeNull();
-    const picker = openMenu(el);
+    const picker = plusMenu();
     if (picker === null) throw new Error("No + menu opened.");
+    // The + menu is core's React SDK's, at the end of the page's body, outside
+    // the browser's top layer.
+    expect(el.contains(picker)).toBe(false);
+    expect(picker.hasAttribute("popover")).toBe(false);
     expect(button.getAttribute("aria-expanded")).toBe("true");
-    expect(picker.querySelector(".blockr-dock-menu-caption")?.textContent).toBe("Append to Head");
+    expect(picker.querySelector(".blockr-dock-picker-caption")?.textContent).toBe("Append to Head");
     // Only classes that take a link, so neither of the input blocks.
     expect(rows(picker)).toEqual(["scatter plot block", "head/tail block", "merge block", "rbind block", "subset block"]);
-    expect([...picker.querySelectorAll(".blockr-dock-menu-title")].map((title) => title.textContent)).toEqual(["plot", "transform"]);
+    expect([...picker.querySelectorAll("header")].map((title) => title.textContent)).toEqual(["plot", "transform"]);
+    expect(rowOf(picker, "merge block").getAttribute("aria-label")).toBe("merge block, blockr.core");
 
-    const search = picker.querySelector<HTMLInputElement>('input[role="combobox"]');
-    if (search === null) throw new Error("The + menu has no search.");
-    expect(document.activeElement).toBe(search);
+    // The search takes the focus as the + menu opens, with no wait for the
+    // block's menu.
+    const search = await focusedSearch(picker);
     typeInto(search, "scatter");
     await settled();
     expect(rows(picker)).toEqual(["scatter plot block"]);
@@ -734,15 +754,45 @@ describe("a block's menu", () => {
     const menu = await pressMenu(card, settled);
     itemOf(menu, "Append block").click();
     await settled();
-    expect(openMenu(el)).not.toBeNull();
+    const picker = plusMenu();
+    if (picker === null) throw new Error("No + menu opened.");
+    await focusedSearch(picker);
 
     const button = toolOf(card, "More actions");
     mouse(button, "pointerdown");
     mouse(button, "pointerup");
     clickOn(button);
     await settled();
-    expect(openMenu(el)).toBeNull();
+    expect(plusMenu()).toBeNull();
     expect(blockMenu()).toBeNull();
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  test("clears the search of the + menu on Escape, and closes the menu on a second", async () => {
+    const { el, settled } = await startCards();
+
+    const button = toolOf(cardOf(el, "Head"), "More actions");
+    button.click();
+    await settled();
+    const menu = blockMenu();
+    if (menu === null) throw new Error("No menu opened.");
+    itemOf(menu, "Append block").click();
+    await settled();
+    const picker = plusMenu();
+    if (picker === null) throw new Error("No + menu opened.");
+    const search = await focusedSearch(picker);
+
+    typeInto(search, "merge");
+    await settled();
+    expect(rows(picker)).toEqual(["merge block"]);
+    press(search, "Escape");
+    await settled();
+    expect(search.value).toBe("");
+    expect(plusMenu()).not.toBeNull();
+
+    press(search, "Escape");
+    await settled();
+    expect(plusMenu()).toBeNull();
     expect(button.getAttribute("aria-expanded")).toBe("false");
   });
 
@@ -755,7 +805,7 @@ describe("a block's menu", () => {
     if (menu === null) throw new Error("No menu opened.");
     itemOf(menu, "Append block").click();
     await settled();
-    const picker = openMenu(el);
+    const picker = plusMenu();
     if (picker === null) throw new Error("No + menu opened.");
     rowOf(picker, "merge block").click();
     await settled();
