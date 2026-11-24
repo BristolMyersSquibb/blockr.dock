@@ -18,9 +18,8 @@
 //   a stack, a board option, or a plugin without a `ui`, such as the storage
 //   plugin, which has no panel.
 // So each notification shows in one place.
-// - The dock shows a message as text, without the ANSI escapes that a
-//   condition's message holds where R runs with colours on, as cli styles it
-//   there.
+// - The dock shows a message as text, as it comes.
+//   R sends a condition's message without ANSI escapes.
 
 import type { Board, Notification, PluginClassId, Severity } from "@blockr/core";
 import { activeView } from "../../commands/index.ts";
@@ -65,18 +64,4 @@ const TAB_SEVERITIES: readonly Severity[] = ["error", "warning"];
 // they came.
 export function tabNotifications(about: readonly Notification[]): Notification[] {
   return TAB_SEVERITIES.flatMap((severity) => about.filter((notification) => notification.severity === severity));
-}
-
-// The ANSI escapes that a message may hold:
-// - Control sequences, which open with ESC and "[" or with the one-byte CSI,
-//   as cli's colours and styles do.
-// - Operating system commands, which open with ESC and "]" and end with BEL or
-//   with ESC and "\", as cli's hyperlinks do.
-// eslint-disable-next-line no-control-regex -- ANSI escapes open with the control characters ESC and CSI.
-const ANSI = /(?:\u001b\[|\u009b)[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
-
-// A notification's message as the dock shows it: the text alone, without
-// ANSI escapes.
-export function plainText(message: string): string {
-  return message.replace(ANSI, "");
 }

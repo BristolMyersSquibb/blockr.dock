@@ -16,7 +16,6 @@
 import type { Notification } from "@blockr/core";
 import type { ReactElement } from "react";
 import { Chevron } from "../icons.tsx";
-import { plainText } from "../notifications.ts";
 
 // The errors, or nothing while there are none.
 export function Errors({ notifications }: { notifications: readonly Notification[] }): ReactElement | null {
@@ -53,7 +52,7 @@ function Listed({ notifications, label }: { notifications: readonly Notification
     <ul className="blockr-card-notifications" aria-label={label}>
       {notifications.map(({ id, severity, message }) => (
         <li key={id} className="blockr-card-notification" data-severity={severity}>
-          {plainText(message)}
+          {message}
         </li>
       ))}
     </ul>

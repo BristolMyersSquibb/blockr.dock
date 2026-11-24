@@ -70,7 +70,7 @@ import { DockContext, giveFocus, useDock } from "./context.ts";
 import { drawDock } from "./drawing.ts";
 import { LockIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
-import { plainText, tabNotifications } from "./notifications.ts";
+import { tabNotifications } from "./notifications.ts";
 import type { Narrow } from "./narrow.ts";
 import { PanelPicker, usePickerButton } from "./panel-picker.tsx";
 import type { Settings } from "./settings.ts";
@@ -124,7 +124,7 @@ function PluginTab({ plugin, ...props }: IDockviewPanelHeaderProps<PanelParams> 
   const { core } = useDock();
   const notified = useNotified(core, { plugin });
   const told = useMemo(() => tabNotifications(notified), [notified]);
-  const messages = told.map((notification) => plainText(notification.message));
+  const messages = told.map((notification) => notification.message);
   // A message of several lines takes a line of the tooltip for each.
   const lines = messages.flatMap((message) => message.split("\n")).map((text) => ({ text }));
   const { props: tip, tooltip } = useTooltip(lines.length === 0 ? null : lines);

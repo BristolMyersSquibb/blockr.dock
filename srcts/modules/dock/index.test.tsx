@@ -721,7 +721,7 @@ describe("the tab of a plugin's panel", () => {
     let withdraw: () => void = () => undefined;
     flushSync(() => {
       s.core.notifications.notify(NOTES, slow);
-      withdraw = s.core.notifications.notify(NOTES, { ...lost, message: "Lost the draft:\n- \u001b[1mintro\u001b[22m" });
+      withdraw = s.core.notifications.notify(NOTES, { ...lost, message: "Lost the draft:\n- intro" });
     });
     expect(tab.getAttribute("aria-description")).toBe("Lost the draft:\n- intro\nSaving is slow.");
 
@@ -1440,13 +1440,13 @@ describe("the toasts", () => {
     stop();
   });
 
-  test("show a message as text, never as HTML, and without the escapes of cli's styles", async () => {
+  test("show a message as text, never as HTML", async () => {
     const el = document.createElement("div");
     const { core, settled, stop } = await startDock(el);
     await settled();
 
     flushSync(() => {
-      core.notifications.notify(DOCK, { severity: "error", code: "failed", message: "<b>Not</b> \u001b[1msaved\u001b[22m." });
+      core.notifications.notify(DOCK, { severity: "error", code: "failed", message: "<b>Not</b> saved." });
     });
     expect(messages(el)).toEqual(["<b>Not</b> saved."]);
     expect(toastWithMessage(el, "<b>Not</b> saved.").querySelector("b")).toBeNull();

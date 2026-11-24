@@ -485,7 +485,7 @@ describe("a block's status on its card", () => {
     const { el } = await startCards(boardWith(shown), false, {
       evaluate: (request) =>
         request.block === "b"
-          ? { status: "error", conditions: [condition("error", "Column \u001b[1m\u001b[34mSpecies\u001b[39m\u001b[22m is gone.")] }
+          ? { status: "error", conditions: [condition("error", "Column Species is gone.")] }
           : undefined,
     });
 
@@ -548,7 +548,7 @@ describe("the notifications on a block's card", () => {
     evaluate: (request) => (request.block === block ? { conditions } : undefined),
   });
   const warned = [
-    condition("message", "Reading \u001b[1miris\u001b[22m."),
+    condition("message", "Reading iris."),
     condition("warning", "Dropped 2 rows."),
     condition("message", "Done."),
   ];
