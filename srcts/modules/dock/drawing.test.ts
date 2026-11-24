@@ -431,7 +431,7 @@ describe("a grid that changes otherwise", () => {
   test("renames the tab of a block that is renamed", async () => {
     const s = await start();
 
-    await s.core.commands.run("blockr.core-rename_block", { id: "b", name: "Top rows" });
+    await s.core.commands.run("blockr.core-change_block", { id: "b", name: "Top rows" });
     await s.settled();
 
     expect(s.panel(b).title).toBe("Top rows");

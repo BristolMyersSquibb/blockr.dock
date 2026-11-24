@@ -8,7 +8,7 @@
 // 2. The block's name, which wraps to a second line and is cut after it.
 //    A double-click on it, or Rename in the menu, turns it into a field that
 //    holds the name, selected.
-//    Enter or a click elsewhere runs blockr.core-rename_block with the new
+//    Enter or a click elsewhere runs blockr.core-change_block with the new
 //    name, Escape keeps the name, and an empty name, or one of spaces alone,
 //    is refused on Enter and dropped on a click elsewhere.
 // 3. The Controls toggle, once the block's UI has drawn anything, the
@@ -19,8 +19,8 @@
 //    The padlock shows whether the board lock leaves the block open to
 //    readers, from the block's `locked`, closed for true or null and open for
 //    false, and is pressed while the block is open.
-//    A click on a closed padlock runs blockr.core-set_block_lock with false,
-//    and one on an open padlock runs it with null.
+//    A click on a closed padlock sets the block's `locked` to false through
+//    blockr.core-change_block, and one on an open padlock sets it to null.
 // 4. The "…" button, which opens the block's menu on a press, or on ArrowDown
 //    while it has the keyboard's focus.
 //    The button and the menu are core's React SDK's, its MenuTrigger, Button,
@@ -114,7 +114,7 @@ export function Header({
           <NameField
             name={block.name}
             onCommit={(name) => {
-              runEdit(core, "blockr.core-rename_block", { id, name });
+              runEdit(core, "blockr.core-change_block", { id, name });
             }}
             onDone={(restore) => {
               setRenaming(false);
@@ -152,7 +152,7 @@ export function Header({
               label={open ? "Open to readers" : "Locked for readers"}
               pressed={open}
               onClick={() => {
-                runEdit(core, "blockr.core-set_block_lock", { id, locked: open ? null : false });
+                runEdit(core, "blockr.core-change_block", { id, locked: open ? null : false });
               }}
             >
               <LockIcon open={open} />

@@ -2479,7 +2479,7 @@ function Header({
       {
         name: block.name,
         onCommit: (name2) => {
-          runEdit(core, "blockr.core-rename_block", { id, name: name2 });
+          runEdit(core, "blockr.core-change_block", { id, name: name2 });
         },
         onDone: (restore) => {
           setRenaming(false);
@@ -2517,7 +2517,7 @@ function Header({
             label: open ? "Open to readers" : "Locked for readers",
             pressed: open,
             onClick: () => {
-              runEdit(core, "blockr.core-set_block_lock", { id, locked: open ? null : false });
+              runEdit(core, "blockr.core-change_block", { id, locked: open ? null : false });
             },
             children: /* @__PURE__ */ jsx8(LockIcon, { open })
           }
@@ -4933,7 +4933,7 @@ function BoardName() {
         label: "Board name",
         className: "blockr-dock-bar-field",
         onSubmit: (name2) => {
-          core.commands.run("blockr.core-rename_board", { name: name2 }).catch(() => void 0);
+          core.commands.run("blockr.core-change_board", { name: name2 }).catch(() => void 0);
         },
         onDone: () => {
           setRenaming(false);
