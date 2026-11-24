@@ -364,4 +364,10 @@ test_that("serve() hands navbar to the dock's frontend_args()", {
     fixed = TRUE,
     class = "frontend_args_invalid"
   )
+  expect_error(
+    serve(board, "my_board", title = no_such_function()),
+    "and was given an unnamed argument and `title`.",
+    fixed = TRUE,
+    class = "frontend_args_invalid"
+  )
 })
