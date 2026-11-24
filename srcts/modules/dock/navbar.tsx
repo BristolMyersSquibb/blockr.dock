@@ -9,7 +9,7 @@
 // - The logo, which turns while R evaluates a block that the dock demands
 //   (./busy.ts). Its tooltip says "Computing" while it turns.
 // - The board's name. A click turns it into a field, which runs core's
-//   command blockr.core-rename_board with the name that the user gives. Enter
+//   command blockr.core-change_board with the name that the user gives. Enter
 //   and leaving the field rename the board, unless the name is empty or
 //   unchanged, and Escape gives up. Under the board lock, the name only shows.
 // - The storage plugin's controls, those that no storage item places apart
@@ -211,7 +211,7 @@ function BoardName(): ReactElement {
         className="blockr-dock-bar-field"
         onSubmit={(name) => {
           // Core tells the user why the store refused the name.
-          core.commands.run("blockr.core-rename_board", { name }).catch(() => undefined);
+          core.commands.run("blockr.core-change_board", { name }).catch(() => undefined);
         }}
         onDone={() => {
           setRenaming(false);

@@ -115,8 +115,8 @@
   Its header holds the block's mark, its name, the Controls and Preview
   toggles, the padlock and the "…" button.
   A double-click on the name renames the block, the toggles run
-  `blockr.dock-set_sections`, and the padlock runs
-  `blockr.core-set_block_lock`.
+  `blockr.dock-set_sections`, and the padlock sets the block's lock through
+  `blockr.core-change_block`.
   The menu holds Rename, Append block, which opens the dock's "+" menu of block
   classes, Copy block ID and Remove block.
   Core mounts the block's UI and its output in the card's two sections, which

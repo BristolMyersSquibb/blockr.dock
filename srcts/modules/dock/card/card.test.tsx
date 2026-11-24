@@ -338,7 +338,7 @@ describe("a block's card", () => {
     expect(outputs.hasAttribute("data-folding")).toBe(false);
   });
 
-  test("shows the padlock closed while the block follows the board lock, and opens it with blockr.core-set_block_lock", async () => {
+  test("shows the padlock closed while the block follows the board lock, and opens it with blockr.core-change_block", async () => {
     const { core, el, settled } = await startCards();
 
     const card = cardOf(el, "Head");

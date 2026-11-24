@@ -604,7 +604,7 @@ describe("the dock's own parts", () => {
     expect(undo.getAttribute("aria-keyshortcuts")).toBe("Control+Z Meta+Z");
     expect(redo.getAttribute("aria-keyshortcuts")).toBe("Control+Shift+Z Meta+Shift+Z Control+Y");
 
-    await core.commands.run("blockr.core-rename_board", { name: "Renamed" });
+    await core.commands.run("blockr.core-change_board", { name: "Renamed" });
     await drawn();
     expect(undo.disabled).toBe(false);
 
