@@ -2018,31 +2018,6 @@ function Mounted({ mount, label, className, data }) {
   return /* @__PURE__ */ jsx2("div", { ref: ref2, role: label === void 0 ? void 0 : "region", "aria-label": label, className, ...data });
 }
 
-// srcts/modules/dock/notifications.ts
-function onCard({ about }) {
-  return about !== void 0 && "block" in about;
-}
-function panelPlugin({ about }, drawn) {
-  return about !== void 0 && "plugin" in about && drawn.has(about.plugin) ? about.plugin : void 0;
-}
-function inActiveView(board, plugin) {
-  const view2 = activeView(board);
-  return view2 !== void 0 && places(view2.grid, { plugin });
-}
-function asToast(notification, board, drawn) {
-  if (onCard(notification)) return false;
-  const plugin = panelPlugin(notification, drawn);
-  return plugin === void 0 || !inActiveView(board, plugin);
-}
-var TAB_SEVERITIES = ["error", "warning"];
-function tabNotifications(about) {
-  return TAB_SEVERITIES.flatMap((severity) => about.filter((notification) => notification.severity === severity));
-}
-var ANSI = /(?:\u001b\[|\u009b)[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
-function plainText(message) {
-  return message.replace(ANSI, "");
-}
-
 // srcts/modules/dock/card/header.tsx
 import { Button, Menu as Menu2, MenuItem as MenuItem2, MenuSection as MenuSection2, MenuTrigger, Text } from "@blockr/core/react";
 import { useEffect as useEffect2, useId as useId2, useRef as useRef3, useState as useState2 } from "react";
@@ -2907,7 +2882,7 @@ function counted(n, severity) {
   return `${String(n)} ${severity}${n === 1 ? "" : "s"}`;
 }
 function Listed({ notifications, label }) {
-  return /* @__PURE__ */ jsx10("ul", { className: "blockr-card-notifications", "aria-label": label, children: notifications.map(({ id, severity, message }) => /* @__PURE__ */ jsx10("li", { className: "blockr-card-notification", "data-severity": severity, children: plainText(message) }, id)) });
+  return /* @__PURE__ */ jsx10("ul", { className: "blockr-card-notifications", "aria-label": label, children: notifications.map(({ id, severity, message }) => /* @__PURE__ */ jsx10("li", { className: "blockr-card-notification", "data-severity": severity, children: message }, id)) });
 }
 
 // srcts/modules/dock/card/section.tsx
@@ -3042,7 +3017,7 @@ function BlockCard({ id }) {
           inputs ? /* @__PURE__ */ jsx12(Section, { name: "inputs", open: sections.includes("inputs"), empty: !drawn, children: /* @__PURE__ */ jsx12(Mounted, { mount: mountUi, label: "Inputs" }) }) : null,
           /* @__PURE__ */ jsxs7(Section, { name: "outputs", open: sections.includes("outputs"), empty: hidden && note === null && folded2.length === 0, children: [
             /* @__PURE__ */ jsx12("div", { className: "blockr-card-output-frame", hidden, "data-faded": status?.status === "stale" ? "" : void 0, children: /* @__PURE__ */ jsx12(Mounted, { mount: mountOutput, label: "Output", className: "blockr-card-output" }) }),
-            note === null ? null : /* @__PURE__ */ jsx12("p", { className: "blockr-card-status-note", children: plainText(note) }),
+            note === null ? null : /* @__PURE__ */ jsx12("p", { className: "blockr-card-status-note", children: note }),
             /* @__PURE__ */ jsx12(WarningsAndMessages, { notifications: folded2 })
           ] })
         ] })
@@ -3341,6 +3316,27 @@ function drawDock(options) {
 function sharesNear(a, b, tolerance) {
   const bare = (grid2) => ({ orientation: grid2.orientation, children: grid2.children, sizes: grid2.sizes });
   return !gridChanges(bare(a), bare(withStoredShares(a, b, tolerance))).sizes;
+}
+
+// srcts/modules/dock/notifications.ts
+function onCard({ about }) {
+  return about !== void 0 && "block" in about;
+}
+function panelPlugin({ about }, drawn) {
+  return about !== void 0 && "plugin" in about && drawn.has(about.plugin) ? about.plugin : void 0;
+}
+function inActiveView(board, plugin) {
+  const view2 = activeView(board);
+  return view2 !== void 0 && places(view2.grid, { plugin });
+}
+function asToast(notification, board, drawn) {
+  if (onCard(notification)) return false;
+  const plugin = panelPlugin(notification, drawn);
+  return plugin === void 0 || !inActiveView(board, plugin);
+}
+var TAB_SEVERITIES = ["error", "warning"];
+function tabNotifications(about) {
+  return TAB_SEVERITIES.flatMap((severity) => about.filter((notification) => notification.severity === severity));
 }
 
 // srcts/modules/dock/panel-picker.tsx
@@ -4666,7 +4662,7 @@ function PluginTab({ plugin, ...props }) {
   const { core } = useDock();
   const notified = useNotified2(core, { plugin });
   const told = useMemo4(() => tabNotifications(notified), [notified]);
-  const messages = told.map((notification) => plainText(notification.message));
+  const messages = told.map((notification) => notification.message);
   const lines = messages.flatMap((message) => message.split("\n")).map((text2) => ({ text: text2 }));
   const { props: tip, tooltip } = useTooltip(lines.length === 0 ? null : lines);
   const frame = useRef8(null);
@@ -5870,7 +5866,7 @@ function ToastItem({ toast, title, toasts, show }) {
               pkg
             ] })
           ] }),
-          /* @__PURE__ */ jsx21("p", { className: "blockr-dock-toast-message", children: plainText(notification.message) }),
+          /* @__PURE__ */ jsx21("p", { className: "blockr-dock-toast-message", children: notification.message }),
           show === void 0 ? null : /* @__PURE__ */ jsx21("button", { type: "button", className: "blockr-dock-toast-link", onClick: show, children: "Show panel" })
         ] }),
         /* @__PURE__ */ jsx21(

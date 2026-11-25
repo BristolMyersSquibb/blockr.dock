@@ -44,7 +44,7 @@ import { dockState } from "../../commands/index.ts";
 import { places, viewOrder } from "../../state/index.ts";
 import { runEdit } from "./context.ts";
 import type { Batch } from "./context.ts";
-import { asToast, panelPlugin, plainText } from "./notifications.ts";
+import { asToast, panelPlugin } from "./notifications.ts";
 
 // How long a message's toast shows before it fades, and how long it takes to
 // fade, in milliseconds.
@@ -367,7 +367,7 @@ function ToastItem({ toast, title, toasts, show }: ToastItemProps): ReactElement
           {title}
           {pkg === undefined ? null : <span className="blockr-dock-toast-package"> · {pkg}</span>}
         </p>
-        <p className="blockr-dock-toast-message">{plainText(notification.message)}</p>
+        <p className="blockr-dock-toast-message">{notification.message}</p>
         {show === undefined ? null : (
           <button type="button" className="blockr-dock-toast-link" onClick={show}>
             Show panel

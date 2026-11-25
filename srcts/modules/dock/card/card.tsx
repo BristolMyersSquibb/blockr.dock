@@ -70,7 +70,6 @@ import type { ReactElement } from "react";
 import { dockState, SECTIONS } from "../../../commands/index.ts";
 import { giveFocus, useDock } from "../context.ts";
 import { Mounted } from "../mounted.tsx";
-import { plainText } from "../notifications.ts";
 import { Header } from "./header.tsx";
 import { Errors, WarningsAndMessages } from "./notifications.tsx";
 import { Section } from "./section.tsx";
@@ -147,7 +146,7 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
           <div className="blockr-card-output-frame" hidden={hidden} data-faded={status?.status === "stale" ? "" : undefined}>
             <Mounted mount={mountOutput} label="Output" className="blockr-card-output" />
           </div>
-          {note === null ? null : <p className="blockr-card-status-note">{plainText(note)}</p>}
+          {note === null ? null : <p className="blockr-card-status-note">{note}</p>}
           <WarningsAndMessages notifications={folded} />
         </Section>
       </div>

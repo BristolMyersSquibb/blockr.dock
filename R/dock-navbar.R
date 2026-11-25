@@ -444,14 +444,13 @@ custom_navbar <- function(items = list(), drop = character()) {
 #' @export
 frontend_args.dock_plugin <- function(x, ..., navbar = default_navbar()) {
 
-  # R reads the other arguments without evaluating them, as core's method
-  # does. So an argument that calls a function of a package that the app has
-  # not loaded fails with this error too.
-  others <- as.list(substitute(list(...)))[-1L]
+  # R counts and names the other arguments without evaluating them,
+  # as core's method does.
+  # So an argument that calls a function of a package that the app has not
+  # loaded fails with this error too.
+  if (...length()) {
 
-  if (length(others)) {
-
-    nms <- coal(names(others), character(length(others)))
+    nms <- coal(...names(), character(...length()))
     nms <- ifelse(nzchar(nms), paste0("`", nms, "`"), "an unnamed argument")
 
     blockr_abort(
