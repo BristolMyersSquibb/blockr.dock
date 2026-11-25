@@ -30,6 +30,7 @@ function blockStatus(status: Status): BlockStatus {
     stderr: "",
     summary: null,
     reason: null,
+    keptWaiting: null,
     unsent: null,
   };
 }
