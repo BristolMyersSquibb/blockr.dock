@@ -12,10 +12,12 @@
 // So core gives each board that lacks a value for one of them its default as
 // the board opens, before the dock draws it.
 // The class keeps the dock's state, which ../../state defines.
-// It gives core the schema of the state, which the build generates from the
-// state's types, and the default of the state, which holds no view.
-// It also gives core the `update` of ../../state, and the dock's commands,
-// which ../../commands defines and core registers with the class.
+// The class's `state` gives core the schema of the state, the default of the
+// state and the `update` of ../../state.
+// The build generates the schema from the state's types, and the default
+// holds no view.
+// The class also gives core the dock's commands, which ../../commands defines
+// and core registers with the class.
 //
 // The frontend's render() takes these steps, which core awaits before it
 // starts the scheduler
@@ -152,8 +154,7 @@ export default {
   // TypeScript gives the objects in the JSON's arrays properties that may be
   // undefined, which no Json has, so it does not take the schema for a Json,
   // though it is one.
-  state: { schema: schema as unknown as JsonSchema, default: defaultState },
-  update,
+  state: { schema: schema as unknown as JsonSchema, default: defaultState, update },
   commands: dockCommands,
   frontend,
 } satisfies Omit<PluginClass, "id">;

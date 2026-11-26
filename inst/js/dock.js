@@ -5947,8 +5947,7 @@ var dock_default = {
   // TypeScript gives the objects in the JSON's arrays properties that may be
   // undefined, which no Json has, so it does not take the schema for a Json,
   // though it is one.
-  state: { schema: dock_schema_default, default: defaultState },
-  update,
+  state: { schema: dock_schema_default, default: defaultState, update },
   commands: dockCommands,
   frontend
 };
