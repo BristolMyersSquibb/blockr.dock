@@ -63,8 +63,8 @@
 #'   `c()`.
 #'   For `frontend_args()`, the other arguments of [blockr.core::serve()].
 #'   The dock refuses them.
-#' @param module The id of a module that a package offers, as
-#'   `"blockr.topline-deck_button"`
+#' @param module The id of a module that a package offers, which has the form
+#'   `{package}-{name}`
 #' @param items The items to append: an item, a `navbar_items` collection or
 #'   a list of items
 #' @param drop The ids of default items to leave out

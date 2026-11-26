@@ -8,7 +8,8 @@ const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
 const edit = { plugin: "blockr.core-edit_board_plugin" };
-const md = { plugin: "blockr.md-md_plugin" };
+// The notes plugin, of blockr.test, a package that only the tests know.
+const notes = { plugin: "blockr.test-notes_plugin" };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -24,21 +25,22 @@ describe("stackGrid()", () => {
   test("stacks the tab groups in reading order, then the rails, left before right", () => {
     const grid: Grid = {
       orientation: "horizontal",
-      children: [{ panels: [a, b], active: b }, { children: [group(c), group(md)], sizes: [0.6, 0.4] }],
+      children: [{ panels: [a, b], active: b }, { children: [group(c), group(notes)], sizes: [0.6, 0.4] }],
       sizes: [0.3, 0.7],
       rails: { right: rail(edit), left: { ...rail(edit), panels: [{ block: "d" }], active: { block: "d" } } },
     };
     const column = stackGrid(grid, 0.8);
     expect(column.grid.orientation).toBe("vertical");
-    expect(column.grid.children).toEqual([{ panels: [a, b], active: b }, group(c), group(md), group({ block: "d" }), group(edit)]);
+    expect(column.grid.children).toEqual([{ panels: [a, b], active: b }, group(c), group(notes), group({ block: "d" }), group(edit)]);
   });
 
   test("makes each tab group as tall as the wide grid makes it, up to the cap", () => {
     // The top split divides the width, so a and the split beside it are as
-    // tall as the window, which the split divides between c and md.
+    // tall as the window, which the split divides between c and the notes
+    // plugin.
     const grid: Grid = {
       orientation: "horizontal",
-      children: [group(a), { children: [group(c), group(md)], sizes: [0.75, 0.25] }],
+      children: [group(a), { children: [group(c), group(notes)], sizes: [0.75, 0.25] }],
       sizes: [0.5, 0.5],
     };
     const column = stackGrid(grid, 0.6);

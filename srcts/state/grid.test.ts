@@ -25,7 +25,8 @@ const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
 const edit = { plugin: "blockr.core-edit_board_plugin" };
-const md = { plugin: "blockr.md-md_plugin" };
+// The notes plugin, of blockr.test, a package that only the tests know.
+const notes = { plugin: "blockr.test-notes_plugin" };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -38,13 +39,13 @@ function rail(...panels: Panel[]): Rail {
 }
 
 // The view Overview of the page: a tab group of a and b, which shows b, in
-// its left 30%, and in the rest c above blockr.md's document, with core's
+// its left 30%, and in the rest c above the notes plugin, with core's
 // Edit board plugin on a rail at its left edge.
 const overview: Grid = {
   orientation: "horizontal",
   children: [
     { panels: [a, b], active: b },
-    { children: [group(c), group(md)], sizes: [0.6, 0.4] },
+    { children: [group(c), group(notes)], sizes: [0.6, 0.4] },
   ],
   sizes: [0.3, 0.7],
   rails: { left: rail(edit) },
@@ -52,7 +53,7 @@ const overview: Grid = {
 
 describe("gridPanels()", () => {
   test("gives the panels that a grid places in reading order, its tab groups before its rails", () => {
-    expect(gridPanels(overview)).toEqual([a, b, c, md, edit]);
+    expect(gridPanels(overview)).toEqual([a, b, c, notes, edit]);
   });
 });
 
@@ -94,13 +95,13 @@ describe("canonicalGrid()", () => {
       orientation: "horizontal",
       children: [{ panels: [a, b], active: c }],
       sizes: [1],
-      rails: { left: { ...rail(edit, md), active: c } },
+      rails: { left: { ...rail(edit, notes), active: c } },
     };
     expect(canonicalGrid(grid)).toEqual({
       orientation: "horizontal",
       children: [{ panels: [a, b], active: a }],
       sizes: [1],
-      rails: { left: rail(edit, md) },
+      rails: { left: rail(edit, notes) },
     });
   });
 
@@ -115,7 +116,7 @@ describe("prunePanels()", () => {
     const pruned = prunePanels(overview, (panel) => !("block" in panel && panel.block === "c"));
     expect(pruned).toEqual({
       orientation: "horizontal",
-      children: [{ panels: [a, b], active: b }, { children: [group(md)], sizes: [1] }],
+      children: [{ panels: [a, b], active: b }, { children: [group(notes)], sizes: [1] }],
       sizes: [0.3, 0.7],
       rails: { left: rail(edit) },
     });
@@ -152,7 +153,7 @@ describe("gridFailures()", () => {
       orientation: "horizontal",
       children: [
         { children: [group(a), group(b)], sizes: [1] },
-        { children: [group(c), group(md)], sizes: [0, 1] },
+        { children: [group(c), group(notes)], sizes: [0, 1] },
         { children: [group(edit)], sizes: [0.5] },
       ],
       sizes: [0.2, 0.2, 0.2],
@@ -191,20 +192,20 @@ describe("placePanel()", () => {
   test("adds a panel as a new tab, which it shows, in the last tab group that holds no plugin's panel", () => {
     const grid: Grid = {
       orientation: "horizontal",
-      children: [group(a), { children: [group(b), group(md)], sizes: [0.5, 0.5] }],
+      children: [group(a), { children: [group(b), group(notes)], sizes: [0.5, 0.5] }],
       sizes: [0.4, 0.6],
     };
     expect(placePanel(grid, c)).toEqual({
       ...grid,
-      children: [group(a), { children: [{ panels: [b, c], active: c }, group(md)], sizes: [0.5, 0.5] }],
+      children: [group(a), { children: [{ panels: [b, c], active: c }, group(notes)], sizes: [0.5, 0.5] }],
     });
   });
 
   test("adds a tab group at the end of the top split, which evens it out, where every tab group holds a plugin's panel", () => {
-    const grid: Grid = { orientation: "horizontal", children: [group(edit), { panels: [a, md], active: a }], sizes: [0.25, 0.75] };
+    const grid: Grid = { orientation: "horizontal", children: [group(edit), { panels: [a, notes], active: a }], sizes: [0.25, 0.75] };
     expect(placePanel(grid, b)).toEqual({
       orientation: "horizontal",
-      children: [group(edit), { panels: [a, md], active: a }, group(b)],
+      children: [group(edit), { panels: [a, notes], active: a }, group(b)],
       sizes: [1 / 3, 1 / 3, 1 / 3],
     });
   });
@@ -226,7 +227,7 @@ describe("placePanel()", () => {
 describe("locate()", () => {
   test("gives the path of the tab group that holds a panel, or the edge of its rail", () => {
     expect(locate(overview, b)).toEqual({ path: [0] });
-    expect(locate(overview, md)).toEqual({ path: [1, 1] });
+    expect(locate(overview, notes)).toEqual({ path: [1, 1] });
     expect(locate(overview, edit)).toEqual({ edge: "left" });
     expect(locate(overview, { block: "z" })).toBeUndefined();
   });
@@ -236,7 +237,7 @@ describe("placedAt()", () => {
   test("adds a panel as a new tab of the tab group of the panel that `near` names, which it shows", () => {
     const placed = placedAt(overview, { block: "d" }, { near: c }, "distribute");
     expect(placed.children[1]).toEqual({
-      children: [{ panels: [c, { block: "d" }], active: { block: "d" } }, group(md)],
+      children: [{ panels: [c, { block: "d" }], active: { block: "d" } }, group(notes)],
       sizes: [0.6, 0.4],
     });
   });
@@ -244,7 +245,7 @@ describe("placedAt()", () => {
   test("adds a tab group beside it, which evens out its split where it divides that way, as dockview's addPanel() does", () => {
     // The split that holds c divides vertically, the other way from the top.
     const placed = placedAt(overview, { block: "d" }, { near: c, side: "below" }, "distribute");
-    expect(placed.children[1]).toEqual({ children: [group(c), group({ block: "d" }), group(md)], sizes: [1 / 3, 1 / 3, 1 / 3] });
+    expect(placed.children[1]).toEqual({ children: [group(c), group({ block: "d" }), group(notes)], sizes: [1 / 3, 1 / 3, 1 / 3] });
     const left = placedAt(overview, { block: "d" }, { near: a, side: "left" }, "distribute");
     expect(left.children).toEqual([group({ block: "d" }), overview.children[0], overview.children[1]]);
     expect(left.sizes).toEqual([1 / 3, 1 / 3, 1 / 3]);
@@ -252,7 +253,7 @@ describe("placedAt()", () => {
 
   test("halves the tab group's share there with \"split\", as dockview's moveTo() and a drag do", () => {
     const placed = placedAt(overview, { block: "d" }, { near: c, side: "below" }, "split");
-    expect(placed.children[1]).toEqual({ children: [group(c), group({ block: "d" }), group(md)], sizes: [0.3, 0.3, 0.4] });
+    expect(placed.children[1]).toEqual({ children: [group(c), group({ block: "d" }), group(notes)], sizes: [0.3, 0.3, 0.4] });
     const left = placedAt(overview, { block: "d" }, { near: a, side: "left" }, "split");
     expect(left.children).toEqual([group({ block: "d" }), overview.children[0], overview.children[1]]);
     expect(left.sizes).toEqual([0.15, 0.15, 0.7]);
@@ -262,7 +263,7 @@ describe("placedAt()", () => {
     for (const sizing of ["split", "distribute"] as const) {
       const placed = placedAt(overview, { block: "d" }, { near: c, side: "right" }, sizing);
       expect(placed.children[1]).toEqual({
-        children: [{ children: [group(c), group({ block: "d" })], sizes: [0.5, 0.5] }, group(md)],
+        children: [{ children: [group(c), group({ block: "d" })], sizes: [0.5, 0.5] }, group(notes)],
         sizes: [0.6, 0.4],
       });
       const above = placedAt(overview, { block: "d" }, { near: b, side: "above" }, sizing);
@@ -357,7 +358,7 @@ describe("resized()", () => {
     expect(sizes[0]).toBeCloseTo(0.5 * (2 / 7), 12);
     expect(sizes[2]).toBeCloseTo(0.5 * (5 / 7), 12);
     expect(gridFailures(resized(grid, b, 0.5))).toEqual([]);
-    expect(resized(overview, md, 0.25).children[1]).toEqual({ children: [group(c), group(md)], sizes: [0.75, 0.25] });
+    expect(resized(overview, notes, 0.25).children[1]).toEqual({ children: [group(c), group(notes)], sizes: [0.75, 0.25] });
   });
 
   test("sets the width of the rail that holds a panel", () => {
@@ -375,7 +376,7 @@ describe("resizeFailures()", () => {
   });
 
   test("names none for a share below 1 of a split that holds more, or for the width of a rail", () => {
-    expect(resizeFailures(overview, md, 0.25)).toEqual([]);
+    expect(resizeFailures(overview, notes, 0.25)).toEqual([]);
     expect(resizeFailures(overview, edit, 320)).toEqual([]);
   });
 });
@@ -411,7 +412,7 @@ describe("gridChanges()", () => {
 });
 
 describe("withStoredShares()", () => {
-  const inner = (sizes: number[]): Split => ({ children: [group(c), group(md)], sizes });
+  const inner = (sizes: number[]): Split => ({ children: [group(c), group(notes)], sizes });
 
   test("keeps the stored shares of each split that the new grid moves by no more than the tolerance", () => {
     const jittered: Grid = { ...overview, children: [{ panels: [a, b], active: a }, inner([0.603, 0.397])], sizes: [0.302, 0.698] };
@@ -440,7 +441,7 @@ describe("withStoredShares()", () => {
   });
 
   test("keeps the stored shares where the new grid differs in its rails alone", () => {
-    const railed: Grid = { ...overview, sizes: [0.302, 0.698], rails: { ...overview.rails, right: rail(md) } };
+    const railed: Grid = { ...overview, sizes: [0.302, 0.698], rails: { ...overview.rails, right: rail(notes) } };
     expect(withStoredShares(overview, railed, 0.005)).toEqual({ ...railed, sizes: [0.3, 0.7] });
     const bare: Grid = { orientation: overview.orientation, children: overview.children, sizes: overview.sizes };
     expect(withStoredShares(overview, { ...bare, sizes: [0.302, 0.698] }, 0.005)).toEqual(bare);

@@ -417,7 +417,7 @@ Nothing draws UI in R in version 0.2.1, so a script gives one of these items in 
 
 - A link, `navbar_link(id, label, href)`, which opens in a new tab.
 - A menu of links and further menus, `navbar_menu(id, label, ...)`.
-- A module that a package offers, `navbar_item(id, module)`, by the module's id, as `"blockr.topline-deck_button"`.
+- A module that a package offers, `navbar_item(id, module)`, by the module's id, which has the form `{package}-{name}`.
   Where the item needs R, that package gives a plugin class, whose requests the module calls.
 
 ```{r, eval = FALSE}

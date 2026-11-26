@@ -14,7 +14,8 @@ const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
 const edit = { plugin: "blockr.core-edit_board_plugin" };
-const md = { plugin: "blockr.md-md_plugin" };
+// The notes plugin, of blockr.test, a package that only the tests know.
+const notes = { plugin: "blockr.test-notes_plugin" };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -27,13 +28,13 @@ function rail(...panels: Panel[]): Rail {
 }
 
 // The view Overview of The dock's state: a tab group of a and b, which shows
-// b, in its left 30%, and in the rest c above blockr.md's document, with
+// b, in its left 30%, and in the rest c above the notes plugin, with
 // core's Edit board plugin on a rail at its left edge.
 const overview: Grid = {
   orientation: "horizontal",
   children: [
     { panels: [a, b], active: b },
-    { children: [group(c), group(md)], sizes: [0.6, 0.4] },
+    { children: [group(c), group(notes)], sizes: [0.6, 0.4] },
   ],
   sizes: [0.3, 0.7],
   rails: { left: rail(edit) },
@@ -106,13 +107,13 @@ describe("gridToLayout()", () => {
           size: 0.7,
           data: [
             { type: "leaf", size: 0.6, data: { id: "group-2", views: [panelId(c)], activeView: panelId(c) } },
-            { type: "leaf", size: 0.4, data: { id: "group-3", views: [panelId(md)], activeView: panelId(md) } },
+            { type: "leaf", size: 0.4, data: { id: "group-3", views: [panelId(notes)], activeView: panelId(notes) } },
           ],
         },
       ],
     });
     expect(layout.panels[panelId(b)]).toEqual({ id: panelId(b), contentComponent: PANEL_COMPONENT, title: "b", params: { panel: b } });
-    expect(Object.keys(layout.panels)).toEqual([a, b, c, md, edit].map(panelId));
+    expect(Object.keys(layout.panels)).toEqual([a, b, c, notes, edit].map(panelId));
   });
 
   test("always gives both rails an edge group, which shows only while it holds panels", () => {
@@ -234,13 +235,13 @@ describe("drawing a layout with dockview", () => {
     api.fromJSON(gridToLayout(overview, named, SIZE), { reuseExistingPanels: true });
     const before = api.getPanel(panelId(c));
 
-    const moved: Grid = { orientation: "vertical", children: [group(a, b, c), group(md)], sizes: [0.5, 0.5] };
+    const moved: Grid = { orientation: "vertical", children: [group(a, b, c), group(notes)], sizes: [0.5, 0.5] };
     api.fromJSON(gridToLayout(moved, named, SIZE), { reuseExistingPanels: true });
 
     expect(api.getPanel(panelId(c))).toBe(before);
-    expect(made).toEqual([a, b, c, md, edit].map(panelId));
+    expect(made).toEqual([a, b, c, notes, edit].map(panelId));
     expect(disposed).toEqual([panelId(edit)]);
-    expect(layoutToGrid(api.toJSON())).toEqual({ ...moved, children: [{ ...group(a, b, c), active: a }, group(md)] });
+    expect(layoutToGrid(api.toJSON())).toEqual({ ...moved, children: [{ ...group(a, b, c), active: a }, group(notes)] });
     expect(api.isEdgeGroupVisible("left")).toBe(false);
     expect(api.isEdgeGroupVisible("right")).toBe(false);
   });

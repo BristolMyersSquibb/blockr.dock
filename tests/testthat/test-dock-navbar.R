@@ -39,8 +39,8 @@ test_that("each function makes a navbar item of its kind", {
     list(kind = "storage", id = "avatar")
   )
   expect_identical(
-    unclass(navbar_item("deck", "blockr.topline-deck_button")),
-    list(kind = "module", id = "deck", module = "blockr.topline-deck_button")
+    unclass(navbar_item("deck", "blockr.test-deck_button")),
+    list(kind = "module", id = "deck", module = "blockr.test-deck_button")
   )
 })
 
@@ -267,10 +267,10 @@ test_that("the dock's frontend_args() returns the items of the bar", {
   # R checks a module's id alone, and leaves it to the client to find the
   # module
   expect_identical(
-    frontend_args(dock, navbar = navbar_item("deck", "blockr.topline-deck"))[[
+    frontend_args(dock, navbar = navbar_item("deck", "blockr.test-deck"))[[
       "navbar"
     ]],
-    list(list(kind = "module", id = "deck", module = "blockr.topline-deck"))
+    list(list(kind = "module", id = "deck", module = "blockr.test-deck"))
   )
 })
 
