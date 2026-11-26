@@ -10,6 +10,47 @@ test_that("the dock plugin is a frontend of its own class", {
   expect_identical(plugin_class_id(x), "blockr.dock-dock_plugin")
 })
 
+test_that("the dock keeps every default of blockr.ui's theme variables", {
+
+  theme <- frontend_theme(new_dock_plugin())
+
+  expect_true(blockr.ui::is_blockr_theme(theme))
+
+  # The look of the dock is blockr.ui's, so the dock's class has no method of
+  # frontend_theme(), and its theme sets no theme variable: the dock keeps the
+  # default of each in light mode and in dark mode.
+  # A theme variable that a later blockr.ui adds fails this test, until the
+  # dock sets it or adds it here as a default that it keeps.
+  kept <- c(
+    "--bk-color-background", "--bk-color-foreground",
+    "--bk-color-card", "--bk-color-card-foreground",
+    "--bk-color-popover", "--bk-color-popover-foreground",
+    "--bk-color-primary", "--bk-color-primary-foreground",
+    "--bk-color-primary-text",
+    "--bk-color-secondary", "--bk-color-secondary-foreground",
+    "--bk-color-muted", "--bk-color-muted-foreground",
+    "--bk-color-accent", "--bk-color-accent-foreground",
+    "--bk-color-destructive", "--bk-color-destructive-foreground",
+    "--bk-color-destructive-text",
+    "--bk-color-warning", "--bk-color-warning-foreground",
+    "--bk-color-warning-text",
+    "--bk-color-success", "--bk-color-success-foreground",
+    "--bk-color-success-text",
+    "--bk-color-border", "--bk-color-input", "--bk-color-ring",
+    "--bk-font-sans", "--bk-font-mono",
+    "--bk-text-xs", "--bk-text-sm", "--bk-text-base", "--bk-text-lg",
+    "--bk-radius",
+    "--bk-shadow-sm", "--bk-shadow-md", "--bk-shadow-lg",
+    "--bk-spacing",
+    "--bk-z-index-overlay"
+  )
+
+  expect_identical(
+    blockr.ui::unset_variables(theme),
+    list(light = kept, dark = kept)
+  )
+})
+
 test_that("the dock's state has version 1 and a schema beside its module", {
 
   expect_identical(plugin_version(new_dock_plugin()), 1L)

@@ -73,6 +73,12 @@
 #' The dock takes them through its method of [blockr.core::frontend_args()]
 #' (see [default_navbar()]).
 #'
+#' The dock draws its cards, its navbar, its options sidebar and the frame of
+#' its panels with the theme variables of blockr.ui, and keeps the default of
+#' each, since its look is blockr.ui's.
+#' So the class has no method of [blockr.core::frontend_theme()], and takes
+#' core's, which returns a theme with no values.
+#'
 #' The dock reads four board options: its own, `compact`, `view_tabs` and
 #' `sync_rails` (see [new_compact_option()]), and core's `dark_mode`.
 #' The class names them through its method of [blockr.core::plugin_options()],

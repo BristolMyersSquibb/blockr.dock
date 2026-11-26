@@ -25,6 +25,7 @@ Imports:
     blockr.core (>= 0.2.0),
     utils
 Suggests:
+    blockr.ui (>= 0.2.0),
     testthat (>= 3.0.0),
     withr,
     knitr,
