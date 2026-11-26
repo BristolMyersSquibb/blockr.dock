@@ -1,5 +1,16 @@
 # blockr.dock 0.2.1
 
+* The dock describes its views and the active view to blockr.assistant's
+  model, through a module named `assistant` (#687).
+  The package offers the module in the `modules` of its `._BLOCKR_MODULES_`,
+  so that its id is `blockr.dock-assistant`.
+  As each call of the model goes out, the assistant calls the module's
+  `describe()` with the dock's state.
+  The lines that it returns name the active view.
+  Then they list each view in the order of the navigation, with the panels
+  that its grid places.
+  So the assistant need not know the shape of the dock's state.
+
 * The panel picker and the "+" menu of a card draw with core's React SDK
   (#630).
   Each opens below its button in React Aria's portal at the end of the page's

@@ -1,4 +1,7 @@
 {
+  "assistant.js": [
+    "./vendor-a3ad4872.js"
+  ],
   "compact-option.js": [
     "@blockr/core/react",
     "react/jsx-runtime"
