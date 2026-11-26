@@ -9,11 +9,13 @@
 
 import type { CoreApi, Json, LogLine, PluginClass, StorageControl } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
+import { type } from "@blockr/ui/stubs";
 import { beforeAll, describe, expect, onTestFinished, test } from "vitest";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
+import { pressOn } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";
@@ -246,7 +248,7 @@ describe("the storage plugin's controls on the bar", () => {
       "NJ",
     ]);
 
-    // A button is a quiet button, the Button of core's React SDK, greyed out
+    // A button is a quiet button, the Button of blockr.ui, greyed out
     // while it is disabled, with its tooltip where it has one.
     const share = button(storage, "Share");
     expect(share.classList).toContain("blockr-dock-bar-button");
@@ -364,10 +366,10 @@ describe("the storage plugin's controls on the bar", () => {
     const { runs, storageClass } = everyKind();
     const { el } = await startBar({ storage: "test", storageClass });
 
-    pressOnPage({ key: "s", ctrlKey: true });
-    pressOnPage({ key: "o", metaKey: true });
-    pressOnPage({ key: "e", ctrlKey: true });
-    pressOnPage({ key: "s", ctrlKey: true, repeat: true });
+    pressOn(document.body, "s", { ctrlKey: true });
+    pressOn(document.body, "o", { metaKey: true });
+    pressOn(document.body, "e", { ctrlKey: true });
+    pressOn(document.body, "s", { ctrlKey: true, repeat: true });
     expect(runs).toEqual(["save", "open-a"]);
 
     const field = document.createElement("input");
@@ -381,8 +383,8 @@ describe("the storage plugin's controls on the bar", () => {
     const { el } = await startBar({ storage: "test", storageClass, navbar: [{ kind: "storage", id: "save" }] });
 
     expect(barItems(el)).toEqual(["button:Save"]);
-    pressOnPage({ key: "o", ctrlKey: true });
-    pressOnPage({ key: "s", ctrlKey: true });
+    pressOn(document.body, "o", { ctrlKey: true });
+    pressOn(document.body, "s", { ctrlKey: true });
     expect(runs).toEqual(["save"]);
   });
 
@@ -594,7 +596,7 @@ describe("the dock's own parts", () => {
     const undo = button(dockBar(el), "Undo");
     const redo = button(dockBar(el), "Redo");
     // Both show their labels, as the storage plugin's buttons beside them do,
-    // and both are the Button of core's React SDK.
+    // and both are the Button of blockr.ui.
     expect([undo.textContent, redo.textContent]).toEqual(["Undo", "Redo"]);
     expect([undo.hasAttribute("data-rac"), redo.hasAttribute("data-rac")]).toEqual([true, true]);
     expect(undo.disabled).toBe(true);
@@ -613,11 +615,11 @@ describe("the dock's own parts", () => {
     expect(core.store.board().name).toBe(before);
     expect(redo.disabled).toBe(false);
 
-    pressOnPage({ key: "z", ctrlKey: true, shiftKey: true });
+    pressOn(document.body, "z", { ctrlKey: true, shiftKey: true });
     expect(core.store.board().name).toBe("Renamed");
-    pressOnPage({ key: "z", metaKey: true });
+    pressOn(document.body, "z", { metaKey: true });
     expect(core.store.board().name).toBe(before);
-    pressOnPage({ key: "y", ctrlKey: true });
+    pressOn(document.body, "y", { ctrlKey: true });
     expect(core.store.board().name).toBe("Renamed");
 
     const field = document.createElement("input");
@@ -699,16 +701,6 @@ function click(target: Element | null | undefined): void {
   target.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
 }
 
-// Presses keys on the page, outside every field.
-function pressOnPage(init: KeyboardEventInit): void {
-  document.body.dispatchEvent(new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true }));
-}
-
-// Types the text into the field, as React hears it.
-function type(field: HTMLInputElement, text: string): void {
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, text);
-  field.dispatchEvent(new Event("input", { bubbles: true }));
-}
 
 // Has the element's label measure wider than the room that it has, as where
 // the bar cuts it short.

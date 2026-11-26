@@ -2,17 +2,17 @@
 // picker, which adds a panel to the active view (./panel-picker.tsx), and the
 // "+" menu of a block's card, which appends a block of the class that the user
 // picks (./card/header.tsx, ./card/classes.tsx).
-// Each draws with core's React SDK, as Picker below
-// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.7#react):
-// - The SDK's Popover holds it.
+// Each draws with blockr.ui's components, as Picker below
+// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.7.3):
+// - The Popover of blockr.ui holds it.
 //   React Aria draws the popover in a portal at the end of the page's body,
 //   never in the browser's top layer.
 //   It opens 4px below the button that opened it, lined up with the button's
 //   left edge, or with its right edge for a button at the end of a row, and
 //   above the button where the window has no room below.
 // - A caption on top says what the picker is for, and names the popover.
-// - React Aria's Autocomplete holds the SDK's SearchField and Menu below the
-//   caption.
+// - React Aria's Autocomplete holds the SearchField and the Menu of blockr.ui
+//   below the caption.
 //   The menu's rows come in groups, a group under its title where it has one.
 //   The search keeps the rows whose label, detail or search text holds every
 //   word typed, in any case, and the menu says so where it keeps none.
@@ -32,7 +32,7 @@
 // the picker opened, as the button.
 // A button that opens a picker says whether its picker is open.
 
-import { Autocomplete, Menu, MenuItem, MenuSection, Popover, SearchField } from "@blockr/core/react";
+import { Autocomplete, Menu, MenuItem, MenuSection, Popover, SearchField } from "@blockr/ui";
 import { useId, useMemo } from "react";
 import type { ReactElement, ReactNode } from "react";
 

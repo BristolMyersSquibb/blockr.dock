@@ -28,7 +28,7 @@
 // - The options button, a quiet button with its label as well, which opens and
 //   closes the options sidebar (./options-sidebar.tsx).
 // The storage plugin's buttons, Undo, Redo and the options button are the
-// Button of core's React SDK, in the bar's look (./index.css).
+// Button of blockr.ui, in the bar's look (./index.css).
 // Those with a tooltip keep it as the browser's (./attributes.tsx).
 // While the options sidebar is pinned, the bar makes room for it at its right
 // end (./index.css).
@@ -56,7 +56,8 @@
 // the tooltip, where the control has no tooltip of its own.
 
 import type { CoreApi, StorageControl } from "@blockr/core";
-import { Button, useBoard } from "@blockr/core/react";
+import { useBoard } from "@blockr/core/react";
+import { Button } from "@blockr/ui";
 import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, ReactElement } from "react";
 import { isObject } from "../../state/index.ts";

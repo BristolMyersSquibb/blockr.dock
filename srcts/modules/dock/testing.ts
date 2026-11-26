@@ -3,15 +3,46 @@
 // fixtures of core's wire protocol, so that the tests need neither R nor a
 // browser (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.8#testing).
 // The tests of the dock's frontend and of its cards start core through it.
+// It also gives the tests the keys that a user presses and what the user types
+// into a picker's search, through blockr.ui's press() and type().
 
 import type { Json, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
+import { press, type } from "@blockr/ui/stubs";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
 
 export const DOCK = "blockr.dock-dock_plugin";
+
+// Presses a key on the element, as blockr.ui's press() does, in an event that
+// a handler can take, as a browser's is, and says whether one took it.
+// A handler of the dock takes a key that it acts on, so that nothing else acts
+// on it.
+export function pressOn(el: Element | null, key: string, init: KeyboardEventInit = {}): boolean {
+  if (!(el instanceof HTMLElement)) throw new Error(`Found no element to press ${key} on.`);
+  const heard: Event[] = [];
+  el.addEventListener("keydown", (event) => heard.push(event), { once: true });
+  press(el, key, { cancelable: true, ...init });
+  return heard[0]?.defaultPrevented ?? false;
+}
+
+// Presses a key on the element that has the focus, as pressOn() does.
+export function pressFocused(key: string, init: KeyboardEventInit = {}): boolean {
+  return pressOn(document.activeElement, key, init);
+}
+
+// Types the text into the search of one of the dock's pickers, as blockr.ui's
+// type() does, after the event beforeinput, which a browser fires as the user
+// types, and on which React Aria's Autocomplete has the first row that the
+// search keeps take the virtual focus.
+// The type() of blockr.ui fires no beforeinput.
+export function typeSearch(search: HTMLInputElement, text: string): void {
+  search.focus();
+  search.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: text, bubbles: true, cancelable: true }));
+  type(search, text);
+}
 
 // The tests run on happy-dom, which has no Popover API, with which the dock
 // shows its menus and tooltips in the top layer and hides them again.

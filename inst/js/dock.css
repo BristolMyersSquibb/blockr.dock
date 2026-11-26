@@ -3,13 +3,17 @@
 /* srcts/modules/dock/card/card.css */
 .blockr-card {
   --blockr-card-inset: 16px;
+  --blockr-card-focus-ring: 0 0 0 3px color-mix(in oklab, var(--bk-color-ring) 12%, transparent);
   box-sizing: border-box;
   min-height: 100%;
   min-width: 0;
   padding: var(--blockr-card-inset, 16px);
   overflow-wrap: break-word;
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-card);
+  color: var(--bk-color-card-foreground);
+}
+[data-bk-mode=dark] .blockr-card {
+  --blockr-card-focus-ring: 0 0 0 3px color-mix(in oklab, var(--bk-color-ring) 28%, transparent);
 }
 .blockr-card-header {
   display: flex;
@@ -25,15 +29,15 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: calc(var(--bk-radius) * 0.8);
   font-size: 14px;
-  color: var(--bc-color-category-uncategorized, #999999);
-  background: color-mix(in srgb, currentColor 18%, transparent);
+  color: var(--bc-color-category-uncategorized);
+  background: color-mix(in oklab, currentColor 18%, transparent);
 }
 .blockr-card-mark[data-size="32"] {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--bk-radius);
   font-size: 18px;
 }
 .blockr-card-mark svg {
@@ -41,28 +45,28 @@
   height: 1em;
 }
 .blockr-card-mark[data-category=input] {
-  color: var(--bc-color-category-input, #0072b2);
+  color: var(--bc-color-category-input);
 }
 .blockr-card-mark[data-category=transform] {
-  color: var(--bc-color-category-transform, #009e73);
+  color: var(--bc-color-category-transform);
 }
 .blockr-card-mark[data-category=structured] {
-  color: var(--bc-color-category-structured, #56b4e9);
+  color: var(--bc-color-category-structured);
 }
 .blockr-card-mark[data-category=plot] {
-  color: var(--bc-color-category-plot, #e69f00);
+  color: var(--bc-color-category-plot);
 }
 .blockr-card-mark[data-category=table] {
-  color: var(--bc-color-category-table, #cc79a7);
+  color: var(--bc-color-category-table);
 }
 .blockr-card-mark[data-category=model] {
-  color: var(--bc-color-category-model, #f0e442);
+  color: var(--bc-color-category-model);
 }
 .blockr-card-mark[data-category=output] {
-  color: var(--bc-color-category-output, #d55e00);
+  color: var(--bc-color-category-output);
 }
 .blockr-card-mark[data-category=utility] {
-  color: var(--bc-color-category-utility, #cccccc);
+  color: var(--bc-color-category-utility);
 }
 .blockr-card-mark-frame {
   position: relative;
@@ -77,29 +81,29 @@
   height: 8px;
   border-radius: 50%;
   background-color: currentColor;
-  box-shadow: 0 0 0 2px var(--blockr-dock-bg-surface);
+  box-shadow: 0 0 0 2px var(--bk-color-card);
 }
 .blockr-card-dot[data-ring] {
-  background-color: var(--blockr-dock-bg-surface);
-  box-shadow: inset 0 0 0 1.5px currentColor, 0 0 0 2px var(--blockr-dock-bg-surface);
+  background-color: var(--bk-color-card);
+  box-shadow: inset 0 0 0 1.5px currentColor, 0 0 0 2px var(--bk-color-card);
 }
 .blockr-card-dot[data-status=stale] {
-  color: var(--bc-color-status-stale, #6b7280);
+  color: var(--bc-color-status-stale);
 }
 .blockr-card-dot[data-status=waiting] {
-  color: var(--bc-color-status-waiting, #d97706);
+  color: var(--bc-color-status-waiting);
 }
 .blockr-card-dot[data-status=invalid] {
-  color: var(--bc-color-status-invalid, #d97706);
+  color: var(--bc-color-status-invalid);
 }
 .blockr-card-dot[data-status=failed] {
-  color: var(--bc-color-status-failed, #dc2626);
+  color: var(--bc-color-status-failed);
 }
 .blockr-card-dot[data-status=ready] {
-  color: var(--bc-color-status-ready, #16a34a);
+  color: var(--bc-color-status-ready);
 }
 .blockr-card-dot[data-status=unevaluated] {
-  color: var(--bc-color-status-unevaluated, #6b7280);
+  color: var(--bc-color-status-unevaluated);
 }
 .blockr-card-title {
   position: relative;
@@ -117,18 +121,19 @@
   padding: 4px 8px;
   overflow: hidden;
   overflow-wrap: anywhere;
-  border-radius: var(--blockr-radius-md, 6px);
-  font-size: var(--blockr-font-size-lg, 1rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  border-radius: calc(var(--bk-radius) * 0.8);
+  font-size: var(--bk-text-lg);
+  font-weight: 600;
   line-height: 1.3;
-  color: var(--blockr-dock-text);
-  transition: background-color var(--blockr-transition, 0.15s ease);
+  color: var(--bk-color-card-foreground);
+  transition: background-color 0.15s ease;
 }
 .blockr-card-name[data-editable] {
   cursor: text;
 }
 .blockr-card-name[data-editable]:hover {
-  background-color: var(--blockr-dock-bg-hover);
+  background-color: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-card-name-edit {
   margin: -5px 0 -5px -9px;
@@ -139,24 +144,24 @@
   width: 100%;
   margin: 0;
   padding: 4px 8px;
-  border: 1px solid var(--blockr-dock-border-accent);
-  border-radius: var(--blockr-radius-md, 6px);
-  background: var(--blockr-dock-bg-surface);
-  box-shadow: var(--blockr-dock-focus-ring);
+  border: 1px solid var(--bk-color-ring);
+  border-radius: calc(var(--bk-radius) * 0.8);
+  background: transparent;
+  box-shadow: var(--blockr-card-focus-ring);
   font: inherit;
-  font-size: var(--blockr-font-size-lg, 1rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--bk-text-lg);
+  font-weight: 600;
   line-height: 1.3;
-  color: var(--blockr-dock-text);
+  color: inherit;
   outline: none;
 }
 .blockr-card-name-field[aria-invalid=true] {
-  border-color: var(--blockr-dock-border-danger);
+  border-color: var(--bk-color-destructive);
 }
 .blockr-card-name-error {
   margin-top: 4px;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-dock-text-danger);
+  font-size: var(--bk-text-xs);
+  color: var(--bk-color-destructive-text);
   white-space: nowrap;
 }
 .blockr-card-tools {
@@ -169,35 +174,35 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--blockr-control-h-xs, 26px);
-  height: var(--blockr-control-h-xs, 26px);
+  width: 26px;
+  height: 26px;
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   cursor: pointer;
-  transition: background-color var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 .blockr-card-tool:hover,
 .blockr-card-tool:focus-visible,
 .blockr-card-tool[aria-expanded=true] {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-card-tool:focus-visible {
   outline: none;
-  box-shadow: var(--blockr-dock-focus-ring);
+  box-shadow: var(--blockr-card-focus-ring);
 }
 .blockr-card-tool[aria-pressed=true] {
-  color: color-mix(in srgb, var(--blockr-dock-text-accent) 70%, var(--blockr-dock-bg-surface));
+  color: color-mix(in oklab, var(--bk-color-primary-text) 70%, var(--bk-color-card));
 }
 .blockr-card-tool[aria-pressed=true]:hover {
-  color: var(--blockr-dock-text-accent);
+  color: var(--bk-color-primary-text);
 }
 .blockr-card-icon-knob {
-  fill: var(--blockr-dock-bg-raised);
+  fill: var(--bk-color-popover);
 }
 .blockr-card-sections {
   margin-top: 12px;
@@ -225,7 +230,7 @@
 }
 .blockr-card-section[data-section=inputs][data-open=true] + .blockr-card-section[data-section=outputs] > .blockr-card-section-body {
   padding-top: 33px;
-  background: linear-gradient(var(--blockr-dock-border), var(--blockr-dock-border)) 0 16px / 100% 1px no-repeat;
+  background: linear-gradient(var(--bk-color-border), var(--bk-color-border)) 0 16px / 100% 1px no-repeat;
 }
 .blockr-card-section[data-folding] > .blockr-card-section-body {
   overflow: hidden;
@@ -245,10 +250,10 @@
 .blockr-card-status-note {
   margin: 0;
   padding: 28px 0 32px;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-size: var(--bk-text-sm);
   font-style: italic;
   line-height: 1.5;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 .blockr-card-notifications {
   display: grid;
@@ -262,24 +267,24 @@
 }
 .blockr-card-notification {
   padding: 8px 12px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-md, 6px);
-  background: var(--blockr-dock-bg-subtle);
-  color: var(--blockr-dock-text);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  border: 1px solid var(--bk-color-border);
+  border-radius: calc(var(--bk-radius) * 0.8);
+  background: var(--bk-color-muted);
+  color: var(--bk-color-card-foreground);
+  font-size: var(--bk-text-sm);
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .blockr-card-notification[data-severity=error] {
-  border-color: var(--blockr-dock-border-danger-subtle);
-  background: var(--blockr-dock-bg-danger);
-  color: var(--blockr-dock-text-danger);
+  border-color: color-mix(in oklab, var(--bk-color-destructive) 35%, transparent);
+  background: color-mix(in oklab, var(--bk-color-destructive) 10%, transparent);
+  color: var(--bk-color-destructive-text);
 }
 .blockr-card-notification[data-severity=warning] {
-  border-color: var(--blockr-dock-border-warning-subtle);
-  background: var(--blockr-dock-bg-warning);
-  color: var(--blockr-dock-text-warning);
+  border-color: color-mix(in oklab, var(--bk-color-warning) 45%, transparent);
+  background: color-mix(in oklab, var(--bk-color-warning) 10%, transparent);
+  color: var(--bk-color-warning-text);
 }
 .blockr-card-messages {
   margin-top: 12px;
@@ -289,22 +294,22 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border-radius: var(--blockr-radius-md, 6px);
+  border-radius: calc(var(--bk-radius) * 0.8);
   list-style: none;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-dock-text-muted);
+  font-size: var(--bk-text-sm);
+  color: var(--bk-color-muted-foreground);
   cursor: pointer;
-  transition: background-color var(--blockr-transition, 0.15s ease);
+  transition: background-color 0.15s ease;
 }
 .blockr-card-messages-count::-webkit-details-marker {
   display: none;
 }
 .blockr-card-messages-count:hover {
-  background-color: var(--blockr-dock-bg-hover);
+  background-color: var(--bk-color-accent);
 }
 .blockr-card-messages-count:focus-visible {
   outline: none;
-  box-shadow: var(--blockr-dock-focus-ring);
+  box-shadow: var(--blockr-card-focus-ring);
 }
 .blockr-card-messages[open] .blockr-dock-chevron {
   transform: rotate(180deg);
@@ -319,26 +324,26 @@
 .blockr-card[data-compact] .blockr-card-header .blockr-card-mark {
   width: 20px;
   height: 20px;
-  border-radius: 5px;
+  border-radius: calc(var(--bk-radius) * 0.6);
   font-size: 12px;
 }
 .blockr-card[data-compact] .blockr-card-name {
   display: block;
   margin: -2px -6px;
   padding: 2px 6px;
-  font-size: 11px;
+  font-size: calc(var(--bk-text-xs) * 11 / 12);
   letter-spacing: 0.06em;
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 .blockr-card[data-compact] .blockr-card-name-edit {
   margin: -3px 0 -3px -7px;
 }
 .blockr-card[data-compact] .blockr-card-name-field {
   padding: 2px 6px;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-size: var(--bk-text-sm);
 }
 .blockr-card[data-compact] .blockr-card-header + .blockr-card-notifications,
 .blockr-card[data-compact] .blockr-card-sections {
@@ -348,16 +353,16 @@
   grid-column: 2;
   grid-row: 1;
   padding-left: 16px;
-  color: var(--blockr-dock-text-muted);
-  font-family: var(--blockr-font-mono, "SF Mono", "Fira Code", "Consolas", "Monaco", monospace);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--bk-color-muted-foreground);
+  font-family: var(--bk-font-mono);
+  font-size: var(--bk-text-sm);
 }
 .blockr-card-menu :is([data-focused], [data-hovered]) .blockr-card-menu-meta {
   color: inherit;
 }
 .blockr-card-menu-divided {
   padding-top: 4px;
-  border-top: 1px solid var(--blockr-dock-border);
+  border-top: 1px solid var(--bk-color-border);
 }
 .blockr-card-menu-lead {
   display: flex;
@@ -366,11 +371,11 @@
 }
 .blockr-card-menu-lead svg {
   flex: none;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 .blockr-card-menu-danger:is([data-focused], [data-hovered]) {
-  background: var(--blockr-dock-bg-danger);
-  color: var(--blockr-dock-text-danger);
+  background: color-mix(in oklab, var(--bk-color-destructive) 10%, transparent);
+  color: var(--bk-color-destructive-text);
 }
 .blockr-card-menu-danger:is([data-focused], [data-hovered]) .blockr-card-menu-lead svg {
   color: inherit;
@@ -383,20 +388,20 @@
   box-sizing: border-box;
   max-width: 320px;
   padding: 5px 9px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-lg, 8px);
-  background: var(--blockr-dock-bg-raised);
-  box-shadow: var(--blockr-dock-shadow);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
+  border: 1px solid var(--bk-color-border);
+  border-radius: var(--bk-radius);
+  background: var(--bk-color-popover);
+  box-shadow: var(--bk-shadow-md);
+  font-size: var(--bk-text-xs);
   line-height: 1.4;
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-popover-foreground);
   overflow-wrap: anywhere;
 }
 .blockr-card-tooltip-line + .blockr-card-tooltip-line {
   margin-top: 2px;
 }
 .blockr-card-tooltip-line[data-muted] {
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 .blockr-card-tooltip-badge {
   display: inline-flex;
@@ -404,12 +409,12 @@
   height: 18px;
   margin-left: 2px;
   padding: 0 7px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-pill, 999px);
-  background: var(--blockr-dock-bg-subtle);
-  color: var(--blockr-dock-text-muted);
-  font-size: 11px;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  border: 1px solid var(--bk-color-border);
+  border-radius: 999px;
+  background: var(--bk-color-muted);
+  color: var(--bk-color-muted-foreground);
+  font-size: calc(var(--bk-text-xs) * 11 / 12);
+  font-weight: 500;
   vertical-align: middle;
 }
 
@@ -422,7 +427,10 @@
 .blockr-dock-bar,
 .blockr-dock-sidebar,
 .blockr-dock-toasts {
-  font-family: var(--bc-font-sans, system-ui, sans-serif);
+  font-family: var(--bk-font-sans);
+}
+.blockr-dock {
+  color: var(--bk-color-foreground);
 }
 .blockr-dock[data-layout=narrow] {
   position: relative;
@@ -440,74 +448,6 @@
   height: 100%;
   overflow: auto;
 }
-.blockr-dock,
-.blockr-dock-bar,
-.blockr-dock-sidebar,
-.blockr-card-menu,
-.blockr-dock-picker {
-  --blockr-dock-text: var(--blockr-color-text-default, #111827);
-  --blockr-dock-text-muted: var(--blockr-color-text-muted, #6b7280);
-  --blockr-dock-text-accent: var(--blockr-color-text-accent, #2563eb);
-  --blockr-dock-bg-raised: var(--blockr-color-bg-raised, #ffffff);
-  --blockr-dock-bg-field: var(--blockr-color-bg-field, #f9fafb);
-  --blockr-dock-bg-hover: var(--blockr-color-bg-hover, #f3f4f6);
-  --blockr-dock-bg-accent-subtle: var( --blockr-color-bg-accent-subtle, color-mix(in srgb, #2563eb 7%, transparent) );
-  --blockr-dock-border: var(--blockr-color-border-default, #e5e7eb);
-  --blockr-dock-border-accent: var(--blockr-color-border-accent, #2563eb);
-  --blockr-dock-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.1));
-  --blockr-dock-text-secondary: var(--blockr-color-text-secondary, #374151);
-  --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #9ca3af);
-  --blockr-dock-text-warning: var(--blockr-color-text-warning, #b45309);
-  --blockr-dock-bg-warning: var(--blockr-color-bg-warning, #fffbeb);
-  --blockr-dock-border-warning: var(--blockr-color-border-warning, #d97706);
-  --blockr-dock-border-warning-subtle: var( --blockr-color-border-warning-subtle, color-mix(in srgb, #d97706 45%, transparent) );
-  --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #ffffff);
-  --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #f9fafb);
-  --blockr-dock-border-strong: var(--blockr-color-border-strong, #d1d5db);
-  --blockr-dock-border-accent-subtle: var( --blockr-color-border-accent-subtle, color-mix(in srgb, #2563eb 35%, transparent) );
-  --blockr-dock-border-danger-subtle: var( --blockr-color-border-danger-subtle, color-mix(in srgb, #dc2626 35%, transparent) );
-  --blockr-dock-logo: var(--blockr-logo, #089e76);
-  --blockr-dock-text-danger: var(--blockr-color-text-danger, #b91c1c);
-  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, #fef2f2);
-  --blockr-dock-border-danger: var(--blockr-color-border-danger, #dc2626);
-  --blockr-dock-focus-ring: var(--blockr-focus-ring, 0 0 0 3px rgb(37 99 235 / 0.12));
-  --blockr-dock-bg-selected: var( --blockr-color-bg-selected, color-mix(in srgb, #2563eb 7%, transparent) );
-  --blockr-dock-text-accent-strong: var(--blockr-color-text-accent-strong, #1d4ed8);
-}
-[data-bc-theme=dark] .blockr-dock,
-[data-bc-theme=dark] .blockr-dock-bar,
-[data-bc-theme=dark] .blockr-dock-sidebar,
-[data-bc-theme=dark] .blockr-card-menu,
-[data-bc-theme=dark] .blockr-dock-picker {
-  --blockr-dock-text: var(--blockr-color-text-default, #f0f3f7);
-  --blockr-dock-text-muted: var(--blockr-color-text-muted, #8a94a3);
-  --blockr-dock-text-accent: var(--blockr-color-text-accent, #60a5fa);
-  --blockr-dock-bg-raised: var(--blockr-color-bg-raised, #1e242e);
-  --blockr-dock-bg-field: var(--blockr-color-bg-field, #14181f);
-  --blockr-dock-bg-hover: var(--blockr-color-bg-hover, color-mix(in srgb, #f0f3f7 6%, transparent));
-  --blockr-dock-bg-accent-subtle: var( --blockr-color-bg-accent-subtle, color-mix(in srgb, #3b82f6 7%, transparent) );
-  --blockr-dock-border: var(--blockr-color-border-default, #232932);
-  --blockr-dock-border-accent: var(--blockr-color-border-accent, #3b82f6);
-  --blockr-dock-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.5));
-  --blockr-dock-text-secondary: var(--blockr-color-text-secondary, #c2c9d3);
-  --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #6b7686);
-  --blockr-dock-text-warning: var(--blockr-color-text-warning, #fbbf24);
-  --blockr-dock-bg-warning: var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1));
-  --blockr-dock-border-warning: var(--blockr-color-border-warning, #fbbf24);
-  --blockr-dock-border-warning-subtle: var( --blockr-color-border-warning-subtle, color-mix(in srgb, #fbbf24 45%, transparent) );
-  --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #161b23);
-  --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #14181f);
-  --blockr-dock-border-strong: var(--blockr-color-border-strong, #2d343f);
-  --blockr-dock-border-accent-subtle: var( --blockr-color-border-accent-subtle, color-mix(in srgb, #3b82f6 35%, transparent) );
-  --blockr-dock-border-danger-subtle: var( --blockr-color-border-danger-subtle, color-mix(in srgb, #f87171 35%, transparent) );
-  --blockr-dock-logo: var(--blockr-logo, #089e76);
-  --blockr-dock-text-danger: var(--blockr-color-text-danger, #f87171);
-  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1));
-  --blockr-dock-border-danger: var(--blockr-color-border-danger, #f87171);
-  --blockr-dock-focus-ring: var(--blockr-focus-ring, 0 0 0 3px rgb(96 165 250 / 0.28));
-  --blockr-dock-bg-selected: var( --blockr-color-bg-selected, color-mix(in srgb, #3b82f6 7%, transparent) );
-  --blockr-dock-text-accent-strong: var(--blockr-color-text-accent-strong, #60a5fa);
-}
 .blockr-dock-add-slot {
   display: flex;
   align-items: center;
@@ -522,18 +462,18 @@
   height: 24px;
   padding: 0;
   border: 0;
-  border-radius: var(--blockr-radius-md, 6px);
+  border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   cursor: pointer;
 }
 .blockr-dock-add:hover,
 .blockr-dock-add[aria-expanded=true] {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-add:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 1px;
 }
 .blockr-dock-empty {
@@ -545,27 +485,27 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-sm);
 }
 .blockr-dock-empty p {
   margin: 0;
 }
 .blockr-dock-empty-add {
   padding: 4px 12px;
-  border: 1px solid var(--blockr-dock-border-accent);
-  border-radius: var(--blockr-radius-md, 6px);
+  border: 1px solid var(--bk-color-primary);
+  border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
-  color: var(--blockr-dock-text-accent);
+  color: var(--bk-color-primary-text);
   font: inherit;
   cursor: pointer;
 }
 .blockr-dock-empty-add:hover,
 .blockr-dock-empty-add[aria-expanded=true] {
-  background: var(--blockr-dock-bg-accent-subtle);
+  background: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
 }
 .blockr-dock-empty-add:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 2px;
 }
 .blockr-dock-menu {
@@ -575,13 +515,13 @@
   max-height: min(320px, calc(100vh - 16px));
   overflow-y: auto;
   padding: 6px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-lg, 8px);
-  background: var(--blockr-dock-bg-raised);
-  box-shadow: var(--blockr-dock-shadow);
-  color: var(--blockr-dock-text);
-  font-family: var(--bc-font-sans, system-ui, sans-serif);
-  font-size: var(--blockr-font-size-base, 0.875rem);
+  border: 1px solid var(--bk-color-border);
+  border-radius: var(--bk-radius);
+  background: var(--bk-color-popover);
+  box-shadow: var(--bk-shadow-md);
+  color: var(--bk-color-popover-foreground);
+  font-family: var(--bk-font-sans);
+  font-size: var(--bk-text-base);
   outline: none;
 }
 @supports (position-area: block-end) {
@@ -623,9 +563,9 @@
   margin: 0;
   padding: 7px 10px 7px calc(10px + var(--depth, 0) * 16px);
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-popover-foreground);
   font: inherit;
   text-align: start;
   text-decoration: none;
@@ -634,10 +574,11 @@
 }
 .blockr-dock-menu-row[data-active],
 .blockr-dock-menu-row[aria-haspopup][aria-expanded=true] {
-  background: var(--blockr-dock-bg-hover);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-menu-row[role=menuitemradio][aria-checked=true] {
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-weight: 600;
 }
 .blockr-dock-menu-row .blockr-dock-check {
   flex: none;
@@ -650,13 +591,13 @@
   width: 12px;
 }
 .blockr-dock-menu-fold .blockr-dock-chevron {
-  transition: transform var(--blockr-transition, 0.15s ease);
+  transition: transform 0.15s ease;
 }
 [aria-expanded=false] > .blockr-dock-menu-fold .blockr-dock-chevron {
   transform: rotate(-90deg);
 }
 .blockr-dock-menu-row[aria-disabled=true] {
-  color: var(--blockr-dock-text-disabled);
+  opacity: 0.5;
   cursor: default;
 }
 .blockr-dock-menu-row[aria-disabled=true][data-active] {
@@ -664,33 +605,33 @@
 }
 .blockr-dock-menu-row .blockr-dock-chevron {
   flex: none;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 .blockr-dock-menu-status {
   display: flex;
   align-items: center;
   min-height: 34px;
   padding: 0 10px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-sm);
 }
 .blockr-dock-menu-row[data-danger][data-active] {
-  background: var(--blockr-dock-bg-danger);
-  color: var(--blockr-dock-text-danger);
+  background: color-mix(in oklab, var(--bk-color-destructive) 10%, transparent);
+  color: var(--bk-color-destructive-text);
 }
 .blockr-dock-menu-lead {
   display: inline-flex;
   flex-shrink: 0;
   justify-content: center;
   min-width: 16px;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 .blockr-dock-menu-row[data-active] .blockr-dock-menu-lead,
 .blockr-dock-menu-row[data-active] .blockr-dock-menu-meta {
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-menu-row[data-danger][data-active] .blockr-dock-menu-lead {
-  color: var(--blockr-dock-text-danger);
+  color: var(--bk-color-destructive-text);
 }
 .blockr-dock-menu-label {
   flex: 1 1 auto;
@@ -702,20 +643,20 @@
   flex-shrink: 0;
   margin-left: 12px;
   padding-left: 16px;
-  color: var(--blockr-dock-text-muted);
-  font-family: var(--blockr-font-mono, "SF Mono", "Fira Code", "Consolas", "Monaco", monospace);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--bk-color-muted-foreground);
+  font-family: var(--bk-font-mono);
+  font-size: var(--bk-text-sm);
 }
 .blockr-dock-menu-divider {
   height: 1px;
   margin: 6px -6px;
   border: 0;
-  background: var(--blockr-dock-border);
+  background: var(--bk-color-border);
 }
 .blockr-dock-menu-note {
   margin: 0;
   padding: 10px;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font-style: italic;
   text-align: center;
 }
@@ -733,8 +674,8 @@
   margin: 0;
   padding: 0 4px;
   overflow: hidden;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -764,8 +705,8 @@
 }
 .blockr-dock-picker-detail {
   flex: none;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-sm);
 }
 .blockr-dock-picker :is([data-focused], [data-hovered]) .blockr-dock-picker-detail {
   color: inherit;
@@ -775,57 +716,39 @@
   align-items: center;
   height: 18px;
   padding: 0 7px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-pill, 999px);
-  background: var(--blockr-dock-bg-subtle);
-  color: var(--blockr-dock-text-muted);
-  font-size: 11px;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  border: 1px solid var(--bk-color-border);
+  border-radius: 999px;
+  background: var(--bk-color-muted);
+  color: var(--bk-color-muted-foreground);
+  font-size: calc(var(--bk-text-xs) * 11 / 12);
+  font-weight: 500;
 }
 .blockr-dock-picker-note {
   margin: 0;
   padding: 10px;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font-style: italic;
   text-align: center;
 }
 .blockr-dock .dv-shell {
-  --dv-group-view-background-color: var(--blockr-color-bg-page, #f9fafb);
-  --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface, #ffffff);
-  --dv-activegroup-visiblepanel-tab-background-color: var( --blockr-color-bg-selected, color-mix(in srgb, #2563eb 7%, transparent) );
-  --dv-activegroup-visiblepanel-tab-color: var(--blockr-color-text-accent, #2563eb);
-  --dv-inactivegroup-visiblepanel-tab-background-color: var( --blockr-color-bg-selected-inactive, color-mix(in srgb, #111827 10%, transparent) );
-  --dv-inactivegroup-visiblepanel-tab-color: var(--blockr-color-text-default, #111827);
+  --dv-group-view-background-color: var(--bk-color-background);
+  --dv-tabs-and-actions-container-background-color: var(--bk-color-card);
+  --dv-activegroup-visiblepanel-tab-background-color: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
+  --dv-activegroup-visiblepanel-tab-color: var(--bk-color-primary-text);
+  --dv-inactivegroup-visiblepanel-tab-background-color: color-mix( in oklab, var(--bk-color-card-foreground) 10%, transparent );
+  --dv-inactivegroup-visiblepanel-tab-color: var(--bk-color-card-foreground);
   --dv-activegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-activegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #6b7280);
+  --dv-activegroup-hiddenpanel-tab-color: var(--bk-color-muted-foreground);
   --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-inactivegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #6b7280);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--bk-color-muted-foreground);
   --dv-separator-border: transparent;
   --dv-sash-color: transparent;
   --dv-tab-divider-color: transparent;
-  --dv-active-sash-color: var(--blockr-color-border-accent, #2563eb);
-  --dv-border-radius: var(--blockr-radius-xl, 12px);
-  --dv-tab-border-radius: var(--blockr-radius-lg, 8px);
-}
-[data-bc-theme=dark] .blockr-dock .dv-shell {
-  --dv-group-view-background-color: var(--blockr-color-bg-page, #0e1219);
-  --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface, #161b23);
-  --dv-activegroup-visiblepanel-tab-background-color: var( --blockr-color-bg-selected, color-mix(in srgb, #3b82f6 7%, transparent) );
-  --dv-activegroup-visiblepanel-tab-color: var(--blockr-color-text-accent, #60a5fa);
-  --dv-inactivegroup-visiblepanel-tab-background-color: var( --blockr-color-bg-selected-inactive, color-mix(in srgb, #f0f3f7 10%, transparent) );
-  --dv-inactivegroup-visiblepanel-tab-color: var(--blockr-color-text-default, #f0f3f7);
-  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-activegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #8a94a3);
-  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-inactivegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #8a94a3);
-  --dv-separator-border: transparent;
-  --dv-sash-color: transparent;
-  --dv-tab-divider-color: transparent;
-  --dv-active-sash-color: var(--blockr-color-border-accent, #3b82f6);
-  --dv-border-radius: var(--blockr-radius-xl, 12px);
-  --dv-tab-border-radius: var(--blockr-radius-lg, 8px);
-  --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
-  --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
+  --dv-active-sash-color: var(--bk-color-primary);
+  --dv-border-radius: calc(var(--bk-radius) * 1.4);
+  --dv-tab-border-radius: var(--bk-radius);
+  --dv-scrollbar-background-color: color-mix(in oklab, var(--bk-color-foreground) 25%, transparent);
+  --dv-icon-hover-background-color: var(--bk-color-accent);
 }
 .blockr-dock .dv-tabs-container-vertical .dv-default-tab-content {
   margin-right: 0;
@@ -845,16 +768,16 @@
   height: 6px;
   margin-inline-end: 6px;
   border-radius: 50%;
-  background-color: var(--blockr-dock-border-danger);
+  background-color: var(--bk-color-destructive);
 }
 .blockr-dock-tab-frame[data-notified=warning] .dv-default-tab-content::before {
-  background-color: var(--blockr-dock-border-warning);
+  background-color: var(--bk-color-warning);
 }
 .blockr-dock-toasts {
   position: fixed;
   right: 0.5rem;
   bottom: 0.5rem;
-  z-index: var(--blockr-z-toast, 1090);
+  z-index: 1090;
   box-sizing: border-box;
   display: grid;
   gap: 0.5rem;
@@ -871,40 +794,24 @@
   align-items: flex-start;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  border-radius: var(--blockr-radius-md, 6px);
-  background-color: var(--blockr-color-bg-raised, #ffffff);
-  color: var(--blockr-color-text-default, #111827);
-  box-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.1));
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  border: 1px solid var(--bk-color-border);
+  border-radius: calc(var(--bk-radius) * 0.8);
+  background-color: var(--bk-color-popover);
+  color: var(--bk-color-popover-foreground);
+  box-shadow: var(--bk-shadow-md);
+  font-size: var(--bk-text-sm);
   pointer-events: auto;
   transition: opacity 300ms;
 }
 .blockr-dock-toast[data-severity=error] {
-  border-color: var(--blockr-color-border-danger-subtle, color-mix(in srgb, #dc2626 35%, transparent));
-  background-image: linear-gradient(var(--blockr-color-bg-danger, #fef2f2), var(--blockr-color-bg-danger, #fef2f2));
-  color: var(--blockr-color-text-danger, #b91c1c);
+  border-color: color-mix(in oklab, var(--bk-color-destructive) 35%, transparent);
+  background-image: linear-gradient(color-mix(in oklab, var(--bk-color-destructive) 10%, transparent), color-mix(in oklab, var(--bk-color-destructive) 10%, transparent));
+  color: var(--bk-color-destructive-text);
 }
 .blockr-dock-toast[data-severity=warning] {
-  border-color: var(--blockr-color-border-warning-subtle, color-mix(in srgb, #d97706 45%, transparent));
-  background-image: linear-gradient(var(--blockr-color-bg-warning, #fffbeb), var(--blockr-color-bg-warning, #fffbeb));
-  color: var(--blockr-color-text-warning, #b45309);
-}
-[data-bc-theme=dark] .blockr-dock-toast {
-  border-color: var(--blockr-color-border-default, #232932);
-  background-color: var(--blockr-color-bg-raised, #1e242e);
-  color: var(--blockr-color-text-default, #f0f3f7);
-  box-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.5));
-}
-[data-bc-theme=dark] .blockr-dock-toast[data-severity=error] {
-  border-color: var(--blockr-color-border-danger-subtle, color-mix(in srgb, #f87171 35%, transparent));
-  background-image: linear-gradient(var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1)), var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1)));
-  color: var(--blockr-color-text-danger, #f87171);
-}
-[data-bc-theme=dark] .blockr-dock-toast[data-severity=warning] {
-  border-color: var(--blockr-color-border-warning-subtle, color-mix(in srgb, #fbbf24 45%, transparent));
-  background-image: linear-gradient(var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1)), var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1)));
-  color: var(--blockr-color-text-warning, #fbbf24);
+  border-color: color-mix(in oklab, var(--bk-color-warning) 45%, transparent);
+  background-image: linear-gradient(color-mix(in oklab, var(--bk-color-warning) 10%, transparent), color-mix(in oklab, var(--bk-color-warning) 10%, transparent));
+  color: var(--bk-color-warning-text);
 }
 .blockr-dock-toast[data-fading] {
   opacity: 0;
@@ -925,7 +832,7 @@
   margin: 0;
 }
 .blockr-dock-toast-title {
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-weight: 600;
 }
 .blockr-dock-toast-package {
   font-weight: normal;
@@ -941,7 +848,7 @@
   background: transparent;
   color: inherit;
   font: inherit;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
@@ -950,45 +857,36 @@
   text-decoration-thickness: 2px;
 }
 .blockr-dock-toast-link:focus-visible {
-  border-radius: var(--blockr-radius-sm, 4px);
-  outline: var(--blockr-focus-outline, 2px solid #2563eb);
-  outline-offset: var(--blockr-focus-offset, 2px);
-}
-[data-bc-theme=dark] .blockr-dock-toast-link:focus-visible {
-  outline: var(--blockr-focus-outline, 2px solid #3b82f6);
+  border-radius: calc(var(--bk-radius) * 0.6);
+  outline: 2px solid var(--bk-color-ring);
+  outline-offset: 2px;
 }
 .blockr-dock-toast-close {
   flex: none;
   margin: -0.125rem -0.25rem 0 0;
   padding: 0 0.375rem;
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--bk-text-lg);
   line-height: 1.5;
   cursor: pointer;
 }
 .blockr-dock-toast-close:hover {
-  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+  background-color: var(--bk-color-accent);
 }
 .blockr-dock-toast-close:focus-visible {
-  outline: var(--blockr-focus-outline, 2px solid #2563eb);
-  outline-offset: var(--blockr-focus-offset, 2px);
-}
-[data-bc-theme=dark] .blockr-dock-toast-close:hover {
-  background-color: var(--blockr-color-bg-hover, color-mix(in srgb, #f0f3f7 6%, transparent));
-}
-[data-bc-theme=dark] .blockr-dock-toast-close:focus-visible {
-  outline: var(--blockr-focus-outline, 2px solid #3b82f6);
+  outline: 2px solid var(--bk-color-ring);
+  outline-offset: 2px;
 }
 .blockr-dock-bar {
   position: fixed;
   top: 0;
   right: 0;
   left: 0;
-  z-index: var(--blockr-z-fixed, 1030);
+  z-index: 1030;
   box-sizing: border-box;
   display: flex;
   flex-wrap: nowrap;
@@ -996,10 +894,10 @@
   gap: 8px;
   height: 48px;
   padding: 0 12px;
-  border-bottom: 1px solid var(--blockr-dock-border);
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  border-bottom: 1px solid var(--bk-color-border);
+  background: var(--bk-color-card);
+  color: var(--bk-color-card-foreground);
+  font-size: var(--bk-text-sm);
 }
 .blockr-dock-bar > * {
   flex: none;
@@ -1030,28 +928,28 @@
   height: 30px;
   padding: 0 8px;
   border: 0;
-  border-radius: var(--blockr-radius-md, 6px);
+  border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font: inherit;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-weight: 500;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 .blockr-dock-bar-button:hover:not(:disabled),
 .blockr-dock-bar-button[aria-expanded=true] {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-bar-button:disabled {
   background: transparent;
-  color: var(--blockr-dock-text-disabled);
+  opacity: 0.5;
   cursor: default;
 }
 .blockr-dock-bar-button .blockr-dock-chevron {
   flex: none;
-  transition: transform var(--blockr-transition, 0.15s ease);
+  transition: transform 0.15s ease;
 }
 .blockr-dock-bar-button[aria-expanded=true] .blockr-dock-chevron {
   transform: rotate(180deg);
@@ -1063,7 +961,7 @@
 }
 .blockr-dock-bar-button:focus-visible,
 .blockr-dock-bar-name:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 1px;
 }
 .blockr-dock-bar[data-tabs] {
@@ -1077,18 +975,19 @@
   height: 30px;
   padding: 0 8px;
   border: 0;
-  border-radius: var(--blockr-radius-md, 6px);
+  border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-card-foreground);
   font: inherit;
-  font-size: var(--blockr-font-size-base, 0.875rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--bk-text-base);
+  font-weight: 600;
 }
 button.blockr-dock-bar-name {
   cursor: text;
 }
 button.blockr-dock-bar-name:hover {
-  background: var(--blockr-dock-bg-hover);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-bar-field {
   box-sizing: border-box;
@@ -1096,16 +995,16 @@ button.blockr-dock-bar-name:hover {
   max-width: 40vw;
   height: 30px;
   padding: 0 8px;
-  border: 1px solid var(--blockr-dock-border-accent);
-  border-radius: var(--blockr-radius-md, 6px);
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text);
+  border: 1px solid var(--bk-color-ring);
+  border-radius: calc(var(--bk-radius) * 0.8);
+  background: transparent;
+  color: inherit;
   font: inherit;
-  font-size: var(--blockr-font-size-base, 0.875rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--bk-text-base);
+  font-weight: 600;
 }
 .blockr-dock-bar-field:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 1px;
 }
 .blockr-dock-bar-storage {
@@ -1122,8 +1021,8 @@ button.blockr-dock-bar-name:hover {
   align-items: center;
   height: 30px;
   padding: 0 4px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-xs);
 }
 .blockr-dock-bar-pill {
   box-sizing: border-box;
@@ -1132,11 +1031,11 @@ button.blockr-dock-bar-name:hover {
   gap: 6px;
   height: 28px;
   padding: 0 10px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-pill, 999px);
-  background: var(--blockr-dock-bg-subtle);
-  color: var(--blockr-dock-text-secondary);
-  font-weight: var(--blockr-font-weight-medium, 500);
+  border: 1px solid var(--bk-color-border);
+  border-radius: 999px;
+  background: var(--bk-color-muted);
+  color: var(--bk-color-muted-foreground);
+  font-weight: 500;
   white-space: nowrap;
   cursor: default;
   user-select: none;
@@ -1154,7 +1053,7 @@ button.blockr-dock-bar-name:hover {
   justify-content: center;
   width: 30px;
   height: 30px;
-  color: var(--blockr-dock-text-warning);
+  color: var(--bk-color-warning-text);
 }
 .blockr-dock-logo {
   display: inline-flex;
@@ -1162,7 +1061,7 @@ button.blockr-dock-bar-name:hover {
   justify-content: center;
   height: 30px;
   padding: 0 5px;
-  color: var(--blockr-dock-logo);
+  color: var(--bk-color-primary);
 }
 .blockr-dock-logo-mark {
   display: block;
@@ -1176,7 +1075,7 @@ button.blockr-dock-bar-name:hover {
 }
 @keyframes blockr-dock-logo-fill {
   0%, 47% {
-    fill: color-mix(in srgb, currentColor 16%, var(--blockr-dock-bg-surface));
+    fill: color-mix(in oklab, currentColor 16%, var(--bk-color-card));
   }
   53%, 100% {
     fill: currentColor;
@@ -1204,23 +1103,23 @@ button.blockr-dock-bar-name:hover {
   align-items: center;
 }
 .blockr-dock-views-button {
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-card-foreground);
 }
 .blockr-dock-views-button .blockr-dock-bar-label {
   max-width: 140px;
 }
 .blockr-dock-views-button .blockr-dock-chevron {
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 .blockr-dock-views-button:hover .blockr-dock-chevron {
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-bar-rule {
   flex: none;
   width: 1px;
   height: 20px;
   margin: 0 2px 0 12px;
-  background: var(--blockr-dock-border);
+  background: var(--bk-color-border);
 }
 .blockr-dock-bar-views[data-tabs] {
   position: absolute;
@@ -1231,7 +1130,7 @@ button.blockr-dock-bar-name:hover {
   gap: 8px;
   height: 39px;
   padding: 0 12px;
-  border-top: 1px solid var(--blockr-dock-border);
+  border-top: 1px solid var(--bk-color-border);
 }
 .blockr-dock-tabs {
   display: flex;
@@ -1255,30 +1154,30 @@ button.blockr-dock-bar-name:hover {
   padding: 0 12px;
   border: 0;
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font: inherit;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
 }
 .blockr-dock-tab:hover,
 .blockr-dock-tab[aria-expanded=true] {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-tab[aria-current] {
-  color: var(--blockr-dock-text);
-  font-weight: var(--blockr-font-weight-semibold, 600);
-  box-shadow: inset 0 -2px 0 var(--blockr-dock-border-accent);
+  color: var(--bk-color-card-foreground);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--bk-color-primary);
 }
 .blockr-dock-tab:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: -2px;
 }
 .blockr-dock-tab .blockr-dock-chevron {
   flex: none;
-  color: var(--blockr-dock-text-muted);
-  transition: transform var(--blockr-transition, 0.15s ease);
+  color: var(--bk-color-muted-foreground);
+  transition: transform 0.15s ease;
 }
 .blockr-dock-tab[aria-expanded=true] .blockr-dock-chevron {
   transform: rotate(180deg);
@@ -1294,7 +1193,7 @@ button.blockr-dock-bar-name:hover {
   gap: 4px;
   min-height: 34px;
   padding: 0 4px 0 calc(4px + var(--depth, 0) * 16px);
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
 }
 .blockr-dock-views-slot {
   flex: none;
@@ -1307,12 +1206,13 @@ button.blockr-dock-bar-name:hover {
   justify-content: center;
   width: 14px;
   height: 22px;
-  color: var(--blockr-dock-text-disabled);
+  color: var(--bk-color-muted-foreground);
+  opacity: 0.5;
   cursor: grab;
   touch-action: none;
 }
 .blockr-dock-views-managed:hover .blockr-dock-views-grip {
-  color: var(--blockr-dock-text-muted);
+  opacity: 1;
 }
 .blockr-dock-views-managed[data-dragging] {
   opacity: 0.4;
@@ -1327,24 +1227,24 @@ button.blockr-dock-bar-name:hover {
   height: 22px;
   padding: 0;
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   cursor: pointer;
 }
 .blockr-dock-views-fold:hover {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-views-fold .blockr-dock-chevron {
-  transition: transform var(--blockr-transition, 0.15s ease);
+  transition: transform 0.15s ease;
 }
 .blockr-dock-views-fold[aria-expanded=false] .blockr-dock-chevron {
   transform: rotate(-90deg);
 }
 .blockr-dock-views-remove:hover {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text-danger);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-destructive-text);
 }
 .blockr-dock-views-name {
   flex: 1 1 auto;
@@ -1352,7 +1252,7 @@ button.blockr-dock-bar-name:hover {
   overflow: hidden;
   padding: 2px 7px;
   border: 1px solid transparent;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -1362,8 +1262,8 @@ button.blockr-dock-bar-name:hover {
   cursor: text;
 }
 .blockr-dock-views-name:hover {
-  border-color: var(--blockr-dock-border);
-  background: var(--blockr-dock-bg-field);
+  border-color: var(--bk-color-border);
+  background: var(--bk-color-muted);
 }
 .blockr-dock-views-field {
   flex: 1 1 auto;
@@ -1372,10 +1272,10 @@ button.blockr-dock-bar-name:hover {
   min-width: 0;
   height: 26px;
   padding: 0 7px;
-  border: 1px solid var(--blockr-dock-border-accent);
-  border-radius: var(--blockr-radius-sm, 4px);
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text);
+  border: 1px solid var(--bk-color-ring);
+  border-radius: calc(var(--bk-radius) * 0.6);
+  background: transparent;
+  color: inherit;
   font: inherit;
 }
 .blockr-dock-views-field:focus-visible,
@@ -1385,14 +1285,14 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-views-confirm:focus-visible,
 .blockr-dock-views-add:focus-visible,
 .blockr-dock-views-done:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 1px;
 }
 .blockr-dock-views-managed[data-confirming] {
   gap: 8px;
   padding-left: calc(10px + var(--depth, 0) * 16px);
-  background: var(--blockr-dock-bg-danger);
-  color: var(--blockr-dock-text-danger);
+  background: color-mix(in oklab, var(--bk-color-destructive) 10%, transparent);
+  color: var(--bk-color-destructive-text);
 }
 .blockr-dock-views-confirm-text {
   flex: 1 1 auto;
@@ -1405,17 +1305,17 @@ button.blockr-dock-bar-name:hover {
   flex: none;
   height: 26px;
   padding: 0 9px;
-  border: 1px solid var(--blockr-dock-border-danger-subtle);
-  border-radius: var(--blockr-radius-sm, 4px);
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text-danger);
+  border: 1px solid color-mix(in oklab, var(--bk-color-destructive) 35%, transparent);
+  border-radius: calc(var(--bk-radius) * 0.6);
+  background: var(--bk-color-popover);
+  color: var(--bk-color-destructive-text);
   font: inherit;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-size: var(--bk-text-xs);
+  font-weight: 500;
   cursor: pointer;
 }
 .blockr-dock-views-confirm:hover {
-  border-color: var(--blockr-dock-border-danger);
+  border-color: var(--bk-color-destructive);
 }
 .blockr-dock-views-managed[data-drop=above]::before,
 .blockr-dock-views-managed[data-drop=below]::after {
@@ -1423,8 +1323,8 @@ button.blockr-dock-bar-name:hover {
   right: 4px;
   left: calc(22px + var(--drop-depth, 0) * 16px);
   height: 2px;
-  border-radius: 1px;
-  background: var(--blockr-dock-border-accent);
+  border-radius: 999px;
+  background: var(--bk-color-primary);
   content: "";
   pointer-events: none;
 }
@@ -1435,8 +1335,8 @@ button.blockr-dock-bar-name:hover {
   bottom: -1px;
 }
 .blockr-dock-views-managed[data-drop=into] {
-  background: var(--blockr-dock-bg-accent-subtle);
-  box-shadow: inset 0 0 0 1px var(--blockr-dock-border-accent);
+  background: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
+  box-shadow: inset 0 0 0 1px var(--bk-color-primary);
 }
 .blockr-dock-views-foot {
   display: flex;
@@ -1451,48 +1351,48 @@ button.blockr-dock-bar-name:hover {
   height: 30px;
   padding: 0 4px;
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font: inherit;
   white-space: nowrap;
   cursor: pointer;
 }
 .blockr-dock-views-add:hover {
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-popover-foreground);
 }
 .blockr-dock-views-done {
   flex: none;
   height: 26px;
   margin-left: auto;
   padding: 0 10px;
-  border: 1px solid var(--blockr-dock-border-accent-subtle);
-  border-radius: var(--blockr-radius-sm, 4px);
-  background: var(--blockr-dock-bg-accent-subtle);
-  color: var(--blockr-dock-text-accent);
+  border: 1px solid color-mix(in oklab, var(--bk-color-primary) 35%, transparent);
+  border-radius: calc(var(--bk-radius) * 0.6);
+  background: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
+  color: var(--bk-color-primary-text);
   font: inherit;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-size: var(--bk-text-xs);
+  font-weight: 500;
   cursor: pointer;
 }
 .blockr-dock-views-done:hover {
-  border-color: var(--blockr-dock-border-accent);
+  border-color: var(--bk-color-primary);
 }
 .blockr-dock-sidebar {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: var(--blockr-z-offcanvas, 1045);
+  z-index: 1045;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   width: min(420px, 100vw);
-  border-left: 1px solid var(--blockr-dock-border);
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text);
-  box-shadow: -8px 0 24px rgb(15 23 42 / 0.08);
-  font-size: var(--blockr-font-size-base, 0.875rem);
+  border-left: 1px solid var(--bk-color-border);
+  background: var(--bk-color-card);
+  color: var(--bk-color-card-foreground);
+  box-shadow: var(--bk-shadow-lg);
+  font-size: var(--bk-text-base);
   transform: translateX(100%);
   visibility: hidden;
   transition: transform 200ms ease, visibility 0s linear 200ms;
@@ -1519,15 +1419,15 @@ button.blockr-dock-bar-name:hover {
   gap: 4px;
   height: 48px;
   padding: 0 14px 0 20px;
-  border-bottom: 1px solid var(--blockr-dock-border);
+  border-bottom: 1px solid var(--bk-color-border);
 }
 .blockr-dock-sidebar-title {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0 8px 0 0;
   overflow: hidden;
-  font-size: var(--blockr-font-size-lg, 1rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--bk-text-lg);
+  font-weight: 600;
   line-height: normal;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1538,52 +1438,52 @@ button.blockr-dock-bar-name:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--blockr-control-h-xs, 26px);
-  height: var(--blockr-control-h-xs, 26px);
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   cursor: pointer;
-  transition: background-color var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 .blockr-dock-sidebar-button:hover {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-sidebar-button:focus-visible,
 .blockr-dock-sidebar-expand:focus-visible,
 .blockr-dock-sidebar-summary:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: -2px;
 }
 .blockr-dock-sidebar-expand {
   flex: none;
   box-sizing: border-box;
-  height: var(--blockr-control-h-xs, 26px);
+  height: 26px;
   margin-right: 4px;
   padding: 0 8px;
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font: inherit;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-size: var(--bk-text-sm);
+  font-weight: 500;
   cursor: pointer;
 }
 .blockr-dock-sidebar-expand:hover {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-sidebar-pin svg {
   transform: rotate(45deg);
   transition: transform 180ms ease;
 }
 .blockr-dock-sidebar-pin[aria-pressed=true] {
-  background: var(--blockr-dock-bg-selected);
-  color: var(--blockr-dock-text-accent-strong);
+  background: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
+  color: var(--bk-color-primary-text);
 }
 .blockr-dock-sidebar-pin[aria-pressed=true] svg {
   transform: none;
@@ -1605,8 +1505,8 @@ button.blockr-dock-bar-name:hover {
   margin: 16px 0;
 }
 .blockr-dock-sidebar-category {
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-md, 6px);
+  border: 1px solid var(--bk-color-border);
+  border-radius: calc(var(--bk-radius) * 0.8);
   overflow: clip;
 }
 .blockr-dock-sidebar-summary {
@@ -1619,7 +1519,7 @@ button.blockr-dock-bar-name:hover {
   gap: 8px;
   min-height: 36px;
   padding: 0 12px;
-  background: var(--blockr-dock-bg-surface);
+  background: var(--bk-color-card);
   list-style: none;
   cursor: pointer;
 }
@@ -1628,30 +1528,30 @@ button.blockr-dock-bar-name:hover {
 }
 .blockr-dock-sidebar-summary:hover,
 .blockr-dock-sidebar-summary:focus-visible {
-  background: linear-gradient(var(--blockr-dock-bg-hover), var(--blockr-dock-bg-hover)), var(--blockr-dock-bg-surface);
+  background: linear-gradient(var(--bk-color-accent), var(--bk-color-accent)), var(--bk-color-card);
 }
 .blockr-dock-sidebar-summary-name {
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .blockr-dock-sidebar-count {
   flex: none;
   padding: 0 6px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-pill, 999px);
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
+  border: 1px solid var(--bk-color-border);
+  border-radius: 999px;
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-xs);
   line-height: 16px;
   font-variant-numeric: tabular-nums;
 }
 .blockr-dock-sidebar-summary .blockr-dock-chevron {
   flex: none;
   margin-left: auto;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 .blockr-dock-sidebar-category[open] > .blockr-dock-sidebar-summary .blockr-dock-chevron {
   rotate: 180deg;
@@ -1686,14 +1586,14 @@ button.blockr-dock-bar-name:hover {
   }
 }
 .blockr-dock-sidebar-options {
-  border-top: 1px solid var(--blockr-dock-border);
+  border-top: 1px solid var(--bk-color-border);
 }
 .blockr-dock-sidebar-option {
   position: relative;
   padding: 12px;
 }
 .blockr-dock-sidebar-option + .blockr-dock-sidebar-option {
-  border-top: 1px solid var(--blockr-dock-border);
+  border-top: 1px solid var(--bk-color-border);
 }
 .blockr-dock-sidebar-reset {
   position: absolute;
@@ -1701,25 +1601,25 @@ button.blockr-dock-bar-name:hover {
   right: 12px;
   padding: 0 6px;
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font: inherit;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-size: var(--bk-text-sm);
   line-height: 20px;
   cursor: pointer;
 }
 .blockr-dock-sidebar-reset:hover {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 .blockr-dock-sidebar-reset:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 1px;
 }
 .blockr-dock-sidebar-note {
   margin: 16px 0;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 .blockr-dock-bar[data-pushed],
 .blockr-dock[data-pushed]:not([data-layout=narrow]) {

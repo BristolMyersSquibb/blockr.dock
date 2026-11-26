@@ -2,28 +2,37 @@
  * The block's card, its menus and its tooltips (./card.tsx), drawn as
  * today's card is in the first 501 lines of inst/assets/css/blockr-dock.css,
  * at 655e323, and as the design system's header, menus and tooltips are.
- * The colours are the dock's variables (../index.css), which read blockr.ui's
- * tokens under either theme.
- * The block's menu is core's React SDK's, in core's theme, and the "+" menu is
- * the dock's (../menu.tsx), whose rules are the dock's (../index.css).
+ * The card draws with the theme variables of blockr.ui, as the dock's other
+ * pieces do (../index.css): the card is a card, and its menus and tooltips
+ * are popovers.
+ * The block's menu is blockr.ui's, and the "+" menu is the dock's
+ * (../menu.tsx), whose rules are the dock's (../index.css).
  */
 
 /*
- * The card fills its panel on the panel's surface.
+ * The card fills its panel, as a card.
  * Its padding is its inset, which an output that runs to the card's edges,
  * as a table, reads: it pulls itself out by this much and pads its text back
  * in, so that its rules and scroll area reach the edges while its text keeps
  * the card's alignment.
+ * Its focus ring, which the field of its name and its tools draw, is a soft
+ * ring of ring, at 12% in light mode and at 28% in dark mode, where a fainter
+ * one would not show.
  */
 .blockr-card {
   --blockr-card-inset: 16px;
+  --blockr-card-focus-ring: 0 0 0 3px color-mix(in oklab, var(--bk-color-ring) 12%, transparent);
   box-sizing: border-box;
   min-height: 100%;
   min-width: 0;
   padding: var(--blockr-card-inset, 16px);
   overflow-wrap: break-word;
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-card);
+  color: var(--bk-color-card-foreground);
+}
+
+[data-bk-mode="dark"] .blockr-card {
+  --blockr-card-focus-ring: 0 0 0 3px color-mix(in oklab, var(--bk-color-ring) 28%, transparent);
 }
 
 /* The header: one row of the mark, the name and the tools. */
@@ -35,11 +44,15 @@
 }
 
 /*
- * A mark is blockr.ui's: a square in its category's colour, tinted behind
- * the icon, at 32px in the header and at 24px in a row of the "+" menu.
- * The colour of a category is core's, as --bc-color-category-input, which a
- * frontend or a UI kit sets, the same under either theme.
- * Each falls back to core's value of it.
+ * A mark is blockr.ui's on main: a square in its category's colour, tinted
+ * behind the icon, at 32px in the header and at 24px in a row of the "+"
+ * menu, with corners that derive from --bk-radius.
+ * Its icon is SVG markup sized in em, so the mark's font size sizes the icon,
+ * in pixels, as the mark's own sizes are.
+ * The colour of a category is core's, as --bc-color-category-input, which
+ * core's stylesheet gives, the same in either mode, until the dock draws
+ * core's mark
+ * (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.7.2#the-defaults).
  */
 .blockr-card-mark {
   position: relative;
@@ -49,16 +62,16 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: calc(var(--bk-radius) * 0.8);
   font-size: 14px;
-  color: var(--bc-color-category-uncategorized, #999999);
-  background: color-mix(in srgb, currentColor 18%, transparent);
+  color: var(--bc-color-category-uncategorized);
+  background: color-mix(in oklab, currentColor 18%, transparent);
 }
 
 .blockr-card-mark[data-size="32"] {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--bk-radius);
   font-size: 18px;
 }
 
@@ -67,26 +80,24 @@
   height: 1em;
 }
 
-.blockr-card-mark[data-category="input"] { color: var(--bc-color-category-input, #0072b2); }
-.blockr-card-mark[data-category="transform"] { color: var(--bc-color-category-transform, #009e73); }
-.blockr-card-mark[data-category="structured"] { color: var(--bc-color-category-structured, #56b4e9); }
-.blockr-card-mark[data-category="plot"] { color: var(--bc-color-category-plot, #e69f00); }
-.blockr-card-mark[data-category="table"] { color: var(--bc-color-category-table, #cc79a7); }
-.blockr-card-mark[data-category="model"] { color: var(--bc-color-category-model, #f0e442); }
-.blockr-card-mark[data-category="output"] { color: var(--bc-color-category-output, #d55e00); }
-.blockr-card-mark[data-category="utility"] { color: var(--bc-color-category-utility, #cccccc); }
+.blockr-card-mark[data-category="input"] { color: var(--bc-color-category-input); }
+.blockr-card-mark[data-category="transform"] { color: var(--bc-color-category-transform); }
+.blockr-card-mark[data-category="structured"] { color: var(--bc-color-category-structured); }
+.blockr-card-mark[data-category="plot"] { color: var(--bc-color-category-plot); }
+.blockr-card-mark[data-category="table"] { color: var(--bc-color-category-table); }
+.blockr-card-mark[data-category="model"] { color: var(--bc-color-category-model); }
+.blockr-card-mark[data-category="output"] { color: var(--bc-color-category-output); }
+.blockr-card-mark[data-category="utility"] { color: var(--bc-color-category-utility); }
 
 /*
  * The mark in a card's header, which carries the status dot on its upper
- * right corner: an 8px dot with a 2px ring in the card's surface colour, as
- * today's card draws it.
+ * right corner: an 8px dot with a 2px ring in the card's colour, as today's
+ * card draws it.
  * The dot of a waiting or an unevaluated block is a ring of 1.5px inside the
- * dot, on the surface.
- * The colour of a status is core's, as --bc-color-status-failed, which a
- * frontend or a UI kit sets, under either theme.
- * Each falls back to core's value of it under the light theme, which is that
- * of the token that the table of the status dot names
- * (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.7#the-status-dot).
+ * dot, on the card.
+ * The colour of a status is core's, as --bc-color-status-failed, which core's
+ * stylesheet gives for each mode, until the dock draws core's status dot
+ * (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.7.2#the-defaults).
  */
 .blockr-card-mark-frame {
   position: relative;
@@ -102,20 +113,20 @@
   height: 8px;
   border-radius: 50%;
   background-color: currentColor;
-  box-shadow: 0 0 0 2px var(--blockr-dock-bg-surface);
+  box-shadow: 0 0 0 2px var(--bk-color-card);
 }
 
 .blockr-card-dot[data-ring] {
-  background-color: var(--blockr-dock-bg-surface);
-  box-shadow: inset 0 0 0 1.5px currentColor, 0 0 0 2px var(--blockr-dock-bg-surface);
+  background-color: var(--bk-color-card);
+  box-shadow: inset 0 0 0 1.5px currentColor, 0 0 0 2px var(--bk-color-card);
 }
 
-.blockr-card-dot[data-status="stale"] { color: var(--bc-color-status-stale, #6b7280); }
-.blockr-card-dot[data-status="waiting"] { color: var(--bc-color-status-waiting, #d97706); }
-.blockr-card-dot[data-status="invalid"] { color: var(--bc-color-status-invalid, #d97706); }
-.blockr-card-dot[data-status="failed"] { color: var(--bc-color-status-failed, #dc2626); }
-.blockr-card-dot[data-status="ready"] { color: var(--bc-color-status-ready, #16a34a); }
-.blockr-card-dot[data-status="unevaluated"] { color: var(--bc-color-status-unevaluated, #6b7280); }
+.blockr-card-dot[data-status="stale"] { color: var(--bc-color-status-stale); }
+.blockr-card-dot[data-status="waiting"] { color: var(--bc-color-status-waiting); }
+.blockr-card-dot[data-status="invalid"] { color: var(--bc-color-status-invalid); }
+.blockr-card-dot[data-status="failed"] { color: var(--bc-color-status-failed); }
+.blockr-card-dot[data-status="ready"] { color: var(--bc-color-status-ready); }
+.blockr-card-dot[data-status="unevaluated"] { color: var(--bc-color-status-unevaluated); }
 
 .blockr-card-title {
   position: relative;
@@ -127,8 +138,9 @@
 /*
  * The name, at 16px and weight 600, which wraps to a second line and is cut
  * after it.
- * A name that can be renamed takes the hover wash, whose padding the negative
- * margin pulls back, so that the name sits where it would without it.
+ * A name that can be renamed takes the fill of a hover, whose padding the
+ * negative margin pulls back, so that the name sits where it would without
+ * it.
  */
 .blockr-card-name {
   display: -webkit-box;
@@ -140,12 +152,12 @@
   padding: 4px 8px;
   overflow: hidden;
   overflow-wrap: anywhere;
-  border-radius: var(--blockr-radius-md, 6px);
-  font-size: var(--blockr-font-size-lg, 1rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  border-radius: calc(var(--bk-radius) * 0.8);
+  font-size: var(--bk-text-lg);
+  font-weight: 600;
   line-height: 1.3;
-  color: var(--blockr-dock-text);
-  transition: background-color var(--blockr-transition, 0.15s ease);
+  color: var(--bk-color-card-foreground);
+  transition: background-color 0.15s ease;
 }
 
 .blockr-card-name[data-editable] {
@@ -153,12 +165,13 @@
 }
 
 .blockr-card-name[data-editable]:hover {
-  background-color: var(--blockr-dock-bg-hover);
+  background-color: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 /*
  * The field that renames the block, at the name's own size and weight, in
- * the name's place, on the surface with the accent's edge and the focus ring.
+ * the name's place, with the edge in ring and the card's focus ring.
  */
 .blockr-card-name-edit {
   margin: -5px 0 -5px -9px;
@@ -170,34 +183,34 @@
   width: 100%;
   margin: 0;
   padding: 4px 8px;
-  border: 1px solid var(--blockr-dock-border-accent);
-  border-radius: var(--blockr-radius-md, 6px);
-  background: var(--blockr-dock-bg-surface);
-  box-shadow: var(--blockr-dock-focus-ring);
+  border: 1px solid var(--bk-color-ring);
+  border-radius: calc(var(--bk-radius) * 0.8);
+  background: transparent;
+  box-shadow: var(--blockr-card-focus-ring);
   font: inherit;
-  font-size: var(--blockr-font-size-lg, 1rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--bk-text-lg);
+  font-weight: 600;
   line-height: 1.3;
-  color: var(--blockr-dock-text);
+  color: inherit;
   outline: none;
 }
 
 .blockr-card-name-field[aria-invalid="true"] {
-  border-color: var(--blockr-dock-border-danger);
+  border-color: var(--bk-color-destructive);
 }
 
 .blockr-card-name-error {
   margin-top: 4px;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-dock-text-danger);
+  font-size: var(--bk-text-xs);
+  color: var(--bk-color-destructive-text);
   white-space: nowrap;
 }
 
 /*
- * The tools: the toggles, the padlock and the "…" button, bare, 26px,
- * text-muted, and text-default on the hover wash.
- * A pressed toggle is lighter than text-accent, since the toggles are on in
- * almost every card, and takes text-accent under the pointer.
+ * The tools: the toggles, the padlock and the "…" button, bare, 26px, in
+ * muted-foreground, and in accent-foreground on the fill of a hover.
+ * A pressed toggle is lighter than primary-text, since the toggles are on in
+ * almost every card, and takes primary-text under the pointer.
  */
 .blockr-card-tools {
   display: flex;
@@ -210,40 +223,40 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--blockr-control-h-xs, 26px);
-  height: var(--blockr-control-h-xs, 26px);
+  width: 26px;
+  height: 26px;
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   cursor: pointer;
-  transition: background-color var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .blockr-card-tool:hover,
 .blockr-card-tool:focus-visible,
 .blockr-card-tool[aria-expanded="true"] {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 .blockr-card-tool:focus-visible {
   outline: none;
-  box-shadow: var(--blockr-dock-focus-ring);
+  box-shadow: var(--blockr-card-focus-ring);
 }
 
 .blockr-card-tool[aria-pressed="true"] {
-  color: color-mix(in srgb, var(--blockr-dock-text-accent) 70%, var(--blockr-dock-bg-surface));
+  color: color-mix(in oklab, var(--bk-color-primary-text) 70%, var(--bk-color-card));
 }
 
 .blockr-card-tool[aria-pressed="true"]:hover {
-  color: var(--blockr-dock-text-accent);
+  color: var(--bk-color-primary-text);
 }
 
 .blockr-card-icon-knob {
-  fill: var(--blockr-dock-bg-raised);
+  fill: var(--bk-color-popover);
 }
 
 /*
@@ -293,7 +306,7 @@
 
 .blockr-card-section[data-section="inputs"][data-open="true"] + .blockr-card-section[data-section="outputs"] > .blockr-card-section-body {
   padding-top: 33px;
-  background: linear-gradient(var(--blockr-dock-border), var(--blockr-dock-border)) 0 16px / 100% 1px no-repeat;
+  background: linear-gradient(var(--bk-color-border), var(--bk-color-border)) 0 16px / 100% 1px no-repeat;
 }
 
 .blockr-card-section[data-folding] > .blockr-card-section-body {
@@ -323,25 +336,28 @@
 }
 
 /*
- * The status note: one line of italic text-muted text at 13px, where the
+ * The status note: one line of italic muted-foreground text, in the small
+ * size of text, where the
  * output would be, with the padding of the design system's empty line of a
  * block, .blockr-empty--block.
  */
 .blockr-card-status-note {
   margin: 0;
   padding: 28px 0 32px;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-size: var(--bk-text-sm);
   font-style: italic;
   line-height: 1.5;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 
 /*
  * The errors above the sections, and the warnings and messages under the
- * output, each in the message style of the design system: 13px on a fill
- * and an edge for its severity, with a radius of 6px.
- * An error takes the danger set and a warning the amber set.
- * The design system gives a message no colour, so a message is neutral.
+ * output, each in the message style of the design system: the small size of
+ * text on a fill and an edge for its severity, with the medium radius.
+ * An error takes the colours of destructive and a warning those of warning,
+ * as core's notifications do: the text of the colour, its tint at 10%, and
+ * an edge of the colour at 35% or 45%.
+ * A message is neutral, on muted, as in core's notifications.
  * Each keeps its line breaks and wraps a long word, such as a path.
  */
 .blockr-card-notifications {
@@ -358,31 +374,31 @@
 
 .blockr-card-notification {
   padding: 8px 12px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-md, 6px);
-  background: var(--blockr-dock-bg-subtle);
-  color: var(--blockr-dock-text);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  border: 1px solid var(--bk-color-border);
+  border-radius: calc(var(--bk-radius) * 0.8);
+  background: var(--bk-color-muted);
+  color: var(--bk-color-card-foreground);
+  font-size: var(--bk-text-sm);
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .blockr-card-notification[data-severity="error"] {
-  border-color: var(--blockr-dock-border-danger-subtle);
-  background: var(--blockr-dock-bg-danger);
-  color: var(--blockr-dock-text-danger);
+  border-color: color-mix(in oklab, var(--bk-color-destructive) 35%, transparent);
+  background: color-mix(in oklab, var(--bk-color-destructive) 10%, transparent);
+  color: var(--bk-color-destructive-text);
 }
 
 .blockr-card-notification[data-severity="warning"] {
-  border-color: var(--blockr-dock-border-warning-subtle);
-  background: var(--blockr-dock-bg-warning);
-  color: var(--blockr-dock-text-warning);
+  border-color: color-mix(in oklab, var(--bk-color-warning) 45%, transparent);
+  background: color-mix(in oklab, var(--bk-color-warning) 10%, transparent);
+  color: var(--bk-color-warning-text);
 }
 
 /*
  * The warnings and the messages fold under the output behind their count,
- * which reads as meta text, takes the hover wash, and turns its chevron up
+ * which reads as meta text, takes the fill of a hover, and turns its chevron up
  * while they show, as today's card has it.
  */
 .blockr-card-messages {
@@ -394,12 +410,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border-radius: var(--blockr-radius-md, 6px);
+  border-radius: calc(var(--bk-radius) * 0.8);
   list-style: none;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-dock-text-muted);
+  font-size: var(--bk-text-sm);
+  color: var(--bk-color-muted-foreground);
   cursor: pointer;
-  transition: background-color var(--blockr-transition, 0.15s ease);
+  transition: background-color 0.15s ease;
 }
 
 .blockr-card-messages-count::-webkit-details-marker {
@@ -407,12 +423,12 @@
 }
 
 .blockr-card-messages-count:hover {
-  background-color: var(--blockr-dock-bg-hover);
+  background-color: var(--bk-color-accent);
 }
 
 .blockr-card-messages-count:focus-visible {
   outline: none;
-  box-shadow: var(--blockr-dock-focus-ring);
+  box-shadow: var(--blockr-card-focus-ring);
 }
 
 .blockr-card-messages[open] .blockr-dock-chevron {
@@ -425,8 +441,8 @@
 
 /*
  * A compact header is an eyebrow over the block's content: the mark at 20px
- * and the name at 11px, uppercase and muted, on one line with an ellipsis,
- * 6px above the content.
+ * and the name at 11/12 of the extra small size of text, uppercase and muted,
+ * on one line with an ellipsis, 6px above the content.
  */
 .blockr-card[data-compact] .blockr-card-header {
   gap: 8px;
@@ -436,7 +452,7 @@
 .blockr-card[data-compact] .blockr-card-header .blockr-card-mark {
   width: 20px;
   height: 20px;
-  border-radius: 5px;
+  border-radius: calc(var(--bk-radius) * 0.6);
   font-size: 12px;
 }
 
@@ -444,12 +460,12 @@
   display: block;
   margin: -2px -6px;
   padding: 2px 6px;
-  font-size: 11px;
+  font-size: calc(var(--bk-text-xs) * 11 / 12);
   letter-spacing: 0.06em;
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 
 .blockr-card[data-compact] .blockr-card-name-edit {
@@ -458,7 +474,7 @@
 
 .blockr-card[data-compact] .blockr-card-name-field {
   padding: 2px 6px;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-size: var(--bk-text-sm);
 }
 
 .blockr-card[data-compact] .blockr-card-header + .blockr-card-notifications,
@@ -467,20 +483,18 @@
 }
 
 /*
- * The block's menu, which core's React SDK draws in core's theme, in a portal
- * at the end of the page's body (./header.tsx).
- * The dock sets its variables on the menu, as on its own elements, since the
- * menu sits outside them (../index.css).
- * What the dock draws besides core's theme:
- * - Copy block ID shows the block's id as meta text after its label, in a
- *   monospaced face at 13px, where core's menu puts an item's description in
- *   a line below its label.
+ * The block's menu, which blockr.ui's components draw, in a portal at the
+ * end of the page's body (./header.tsx).
+ * What the dock draws besides blockr.ui's menu:
+ * - Copy block ID shows the block's id as meta text after its label, in the
+ *   monospaced face and the small size of text, where blockr.ui's menu puts
+ *   an item's description in a line below its label.
  *   The id turns the item's colour on the item that the pointer or the
  *   keyboard is on.
  * - A divider parts Remove block from the items above it.
  * - Remove block shows the bin icon before its label, and is plain at rest
- *   and red, on the danger wash, as the item that the pointer or the keyboard
- *   is on.
+ *   and red, on the tint of destructive, as the item that the pointer or the
+ *   keyboard is on.
  * These rules go once core gives the block's menu, whose menus of board
  * objects draw all three themselves
  * (https://github.com/BristolMyersSquibb/blockr.core/issues/743).
@@ -489,9 +503,9 @@
   grid-column: 2;
   grid-row: 1;
   padding-left: 16px;
-  color: var(--blockr-dock-text-muted);
-  font-family: var(--blockr-font-mono, "SF Mono", "Fira Code", "Consolas", "Monaco", monospace);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--bk-color-muted-foreground);
+  font-family: var(--bk-font-mono);
+  font-size: var(--bk-text-sm);
 }
 
 .blockr-card-menu :is([data-focused], [data-hovered]) .blockr-card-menu-meta {
@@ -500,7 +514,7 @@
 
 .blockr-card-menu-divided {
   padding-top: 4px;
-  border-top: 1px solid var(--blockr-dock-border);
+  border-top: 1px solid var(--bk-color-border);
 }
 
 .blockr-card-menu-lead {
@@ -511,12 +525,12 @@
 
 .blockr-card-menu-lead svg {
   flex: none;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 
 .blockr-card-menu-danger:is([data-focused], [data-hovered]) {
-  background: var(--blockr-dock-bg-danger);
-  color: var(--blockr-dock-text-danger);
+  background: color-mix(in oklab, var(--bk-color-destructive) 10%, transparent);
+  color: var(--bk-color-destructive-text);
 }
 
 .blockr-card-menu-danger:is([data-focused], [data-hovered]) .blockr-card-menu-lead svg {
@@ -524,9 +538,9 @@
 }
 
 /*
- * The tooltip: a small light card, bg-raised, 1px border-default, shadow-md,
- * radius 8, 12px text-default and 5px 9px of padding, which the pointer
- * passes through.
+ * The tooltip: a small popover, with a 1px border, shadow-md, the large
+ * radius, the popover's text in the extra small size, and 5px 9px of padding,
+ * which the pointer passes through.
  * It is a popover in the top layer, which script places in the window.
  */
 .blockr-card-tooltip {
@@ -537,13 +551,13 @@
   box-sizing: border-box;
   max-width: 320px;
   padding: 5px 9px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-lg, 8px);
-  background: var(--blockr-dock-bg-raised);
-  box-shadow: var(--blockr-dock-shadow);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
+  border: 1px solid var(--bk-color-border);
+  border-radius: var(--bk-radius);
+  background: var(--bk-color-popover);
+  box-shadow: var(--bk-shadow-md);
+  font-size: var(--bk-text-xs);
   line-height: 1.4;
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-popover-foreground);
   overflow-wrap: anywhere;
 }
 
@@ -552,21 +566,24 @@
 }
 
 .blockr-card-tooltip-line[data-muted] {
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 
-/* The neutral badge of a package: an 18px capsule at 11px, weight 500. */
+/*
+ * The neutral badge of a package: an 18px capsule at 11/12 of the extra small
+ * size of text, weight 500.
+ */
 .blockr-card-tooltip-badge {
   display: inline-flex;
   align-items: center;
   height: 18px;
   margin-left: 2px;
   padding: 0 7px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-pill, 999px);
-  background: var(--blockr-dock-bg-subtle);
-  color: var(--blockr-dock-text-muted);
-  font-size: 11px;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  border: 1px solid var(--bk-color-border);
+  border-radius: 999px;
+  background: var(--bk-color-muted);
+  color: var(--bk-color-muted-foreground);
+  font-size: calc(var(--bk-text-xs) * 11 / 12);
+  font-weight: 500;
   vertical-align: middle;
 }

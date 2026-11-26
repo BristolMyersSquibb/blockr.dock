@@ -1,5 +1,20 @@
 # blockr.dock 0.2.1
 
+* The dock draws with blockr.ui's components and takes its look from
+  blockr.ui's theme variables (#673).
+  Its pickers, the block's menu, its buttons and the checkbox of its board
+  options are blockr.ui's, where they were core's React SDK's.
+  Its cards, its bar, its options sidebar, its toasts and the frame of
+  dockview's panels take each colour, face, size of text, radius and shadow
+  from a theme variable, such as `--bk-color-card`, and keep blockr.ui's
+  defaults.
+  So they wear the colours of the menus, lists and fields that open in the
+  dock, in dark mode too.
+  Dark mode follows the attribute `data-bk-mode`, which core's board option
+  `dark_mode` sets.
+  Secondary and disabled text take the one muted grey, a disabled button draws
+  at half its opacity, and the logo takes the brand colour, `primary`.
+
 * The panel picker and the "+" menu of a card draw with core's React SDK
   (#630).
   Each opens below its button in React Aria's portal at the end of the page's

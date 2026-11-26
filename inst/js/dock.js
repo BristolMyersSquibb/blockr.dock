@@ -1019,7 +1019,8 @@ var optionSchemas = {
 };
 
 // srcts/options/ui.tsx
-import { Checkbox, reactModule, useValue } from "@blockr/core/react";
+import { reactModule, useValue } from "@blockr/core/react";
+import { Checkbox } from "@blockr/ui";
 import { jsx } from "react/jsx-runtime";
 function checkboxUi(label) {
   function CheckboxUi({ host }) {
@@ -2019,11 +2020,11 @@ function Mounted({ mount, label, className, data }) {
 }
 
 // srcts/modules/dock/card/header.tsx
-import { Button, Menu as Menu2, MenuItem as MenuItem2, MenuSection as MenuSection2, MenuTrigger, Text } from "@blockr/core/react";
+import { Button, Menu as Menu2, MenuItem as MenuItem2, MenuSection as MenuSection2, MenuTrigger, Text } from "@blockr/ui";
 import { useEffect as useEffect2, useId as useId2, useRef as useRef3, useState as useState2 } from "react";
 
 // srcts/modules/dock/picker.tsx
-import { Autocomplete, Menu, MenuItem, MenuSection, Popover, SearchField } from "@blockr/core/react";
+import { Autocomplete, Menu, MenuItem, MenuSection, Popover, SearchField } from "@blockr/ui";
 import { useId, useMemo } from "react";
 import { jsx as jsx3, jsxs } from "react/jsx-runtime";
 function matches(row, searched) {
@@ -2832,9 +2833,9 @@ function SlidersIcon2() {
       focusable: "false",
       children: [
         /* @__PURE__ */ jsx9("path", { d: "M2 4h12M2 8h12M2 12h12" }),
-        /* @__PURE__ */ jsx9("circle", { cx: "5", cy: "4", r: "1.6", fill: "var(--blockr-dock-bg-raised)" }),
-        /* @__PURE__ */ jsx9("circle", { cx: "10", cy: "8", r: "1.6", fill: "var(--blockr-dock-bg-raised)" }),
-        /* @__PURE__ */ jsx9("circle", { cx: "6", cy: "12", r: "1.6", fill: "var(--blockr-dock-bg-raised)" })
+        /* @__PURE__ */ jsx9("circle", { cx: "5", cy: "4", r: "1.6", fill: "var(--bk-color-popover)" }),
+        /* @__PURE__ */ jsx9("circle", { cx: "10", cy: "8", r: "1.6", fill: "var(--bk-color-popover)" }),
+        /* @__PURE__ */ jsx9("circle", { cx: "6", cy: "12", r: "1.6", fill: "var(--bk-color-popover)" })
       ]
     }
   );
@@ -3027,7 +3028,8 @@ function BlockCard({ id }) {
 }
 
 // srcts/modules/dock/dock.tsx
-import { Button as Button2, useBoard as useBoard4, useNotified as useNotified2 } from "@blockr/core/react";
+import { useBoard as useBoard4, useNotified as useNotified2 } from "@blockr/core/react";
+import { Button as Button2 } from "@blockr/ui";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "./vendor-a3ad4872.js";
 import { useCallback as useCallback5, useEffect as useEffect4, useMemo as useMemo4, useRef as useRef8, useState as useState8, useSyncExternalStore as useSyncExternalStore2 } from "react";
 
@@ -4759,7 +4761,8 @@ function Dock({ core, plugin, settings, narrow, drawn, viewsMenu, sidebar }) {
 }
 
 // srcts/modules/dock/navbar.tsx
-import { Button as Button3, useBoard as useBoard5 } from "@blockr/core/react";
+import { useBoard as useBoard5 } from "@blockr/core/react";
+import { Button as Button3 } from "@blockr/ui";
 import { useCallback as useCallback6, useEffect as useEffect5, useReducer, useRef as useRef9, useState as useState9, useSyncExternalStore as useSyncExternalStore3 } from "react";
 
 // srcts/modules/dock/attributes.tsx
@@ -5238,7 +5241,8 @@ function createOpenFolders() {
 }
 
 // srcts/modules/dock/options-sidebar.tsx
-import { Button as Button4, useBoard as useBoard6 } from "@blockr/core/react";
+import { useBoard as useBoard6 } from "@blockr/core/react";
+import { Button as Button4 } from "@blockr/ui";
 import { useCallback as useCallback7, useEffect as useEffect6, useLayoutEffect as useLayoutEffect7, useRef as useRef10, useState as useState10, useSyncExternalStore as useSyncExternalStore4 } from "react";
 
 // srcts/modules/dock/focus.ts

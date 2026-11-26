@@ -57,8 +57,8 @@
 //   design system has a side panel
 //   (https://bristolmyerssquibb.github.io/blockr.ui/articles/design-system.html#floating).
 // - Tab and Shift+Tab keep the focus inside it, pinned or not.
-// A board option's UI may open an overlay of core's React SDK, such as the
-// list of a select, a menu or a dialog.
+// A board option's UI may open an overlay of blockr.ui, such as the list of a
+// select, a menu or a dialog.
 // React Aria draws the overlay in a portal at the end of the page's body, so
 // the overlay lies outside the sidebar.
 // While it is open, React Aria names it in the aria-controls of the control
@@ -73,21 +73,22 @@
 // - An overlay that takes the focus, as a menu or a dialog, hears the key
 //   where the focus is, at the end of the page's body, so the key never
 //   reaches the sidebar.
-// - A select of core's keeps the focus in its field, in the sidebar, and
+// - A select of blockr.ui keeps the focus in its field, in the sidebar, and
 //   prevents the default of the Escape that closes its list, so that the key
 //   closes nothing else, and the sidebar leaves such a key alone.
-// The close button, Expand all and Reset are the Button of core's React SDK,
-// in the sidebar's look (./index.css).
+// The close button, Expand all and Reset are the Button of blockr.ui, in the
+// sidebar's look (./index.css).
 // The close button and Reset keep their tooltips as the browser's
 // (./attributes.tsx).
-// The pin stays the dock's own button until core's React SDK draws toggles
-// (https://github.com/BristolMyersSquibb/blockr.dock/issues/646).
+// The pin stays the dock's own button until the dock draws it as a toggle of
+// blockr.ui (https://github.com/BristolMyersSquibb/blockr.dock/issues/646).
 // Today's sidebar ends its list with the code export. That row goes, since
 // code export becomes blockr.code's plugin. The sidebar shows no field for the
 // board's name either, since the board's name is on the bar.
 
 import type { Board, CoreApi, Json, Option, OptionId } from "@blockr/core";
-import { Button, useBoard } from "@blockr/core/react";
+import { useBoard } from "@blockr/core/react";
+import { Button } from "@blockr/ui";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
 import { sameJson } from "../../state/index.ts";

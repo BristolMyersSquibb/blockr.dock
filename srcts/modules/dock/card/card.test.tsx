@@ -6,9 +6,10 @@
 import type { BlockId, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
 import type { StubCoreOptions } from "@blockr/core/stubs";
+import { type } from "@blockr/ui/stubs";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import type { DockState } from "../../../state/index.ts";
-import { DOCK, hello, modules } from "../testing.ts";
+import { DOCK, hello, modules, pressOn, typeSearch } from "../testing.ts";
 import { matches } from "../picker.tsx";
 import { menuSpot, tooltipSpot } from "../place.ts";
 import { classGroups } from "./classes.tsx";
@@ -122,8 +123,8 @@ function blockMenu(): HTMLElement | null {
   return document.querySelector<HTMLElement>('[role="menu"][aria-label="More actions"]');
 }
 
-// The "+" menu that is open, one of the dock's pickers, which core's React SDK
-// draws in a portal at the end of the page's body.
+// The "+" menu that is open, one of the dock's pickers, which blockr.ui draws
+// in a portal at the end of the page's body.
 function plusMenu(): HTMLElement | null {
   return document.querySelector<HTMLElement>(".blockr-dock-picker");
 }
@@ -182,10 +183,6 @@ function rowOf(menu: HTMLElement, label: string): HTMLElement {
   return row;
 }
 
-const press = (target: Element, key: string) => {
-  target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
-};
-
 const pointer = (target: Element, type: string) => {
   target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: "mouse" }));
 };
@@ -203,16 +200,6 @@ const mouse = (target: Element, type: string) => {
 const clickOn = (target: Element) => {
   target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
 };
-
-// Types `value` into a field, as React reads it.
-// The browser first tells React Aria that the user inserts text, by the event
-// beforeinput, on which React Aria has the first row that a search keeps take
-// the virtual focus.
-function typeInto(field: HTMLInputElement, value: string): void {
-  field.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: value, bubbles: true, cancelable: true }));
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, value);
-  field.dispatchEvent(new Event("input", { bubbles: true }));
-}
 
 const visibleOf = (core: { store: { board(): { plugins: Readonly<Record<string, unknown>> } } }) =>
   (core.store.board().plugins[DOCK] as DockState).visible;
@@ -365,8 +352,8 @@ describe("a block's card", () => {
     expect(document.activeElement).toBe(field);
     expect([field.selectionStart, field.selectionEnd]).toEqual([0, 4]);
 
-    typeInto(field, "First rows");
-    press(field, "Enter");
+    type(field, "First rows");
+    pressOn(field, "Enter");
     await settled();
     expect(core.store.board().blocks.b?.name).toBe("First rows");
     expect(card.querySelector(".blockr-card-name")?.textContent).toBe("First rows");
@@ -389,15 +376,15 @@ describe("a block's card", () => {
     };
 
     const first = await rename();
-    typeInto(first, "Gone");
-    press(first, "Escape");
+    type(first, "Gone");
+    pressOn(first, "Escape");
     await settled();
     expect(card.querySelector(".blockr-card-name-field")).toBeNull();
     expect(core.store.board().blocks.b?.name).toBe("Head");
 
     const second = await rename();
-    typeInto(second, "  ");
-    press(second, "Enter");
+    type(second, "  ");
+    pressOn(second, "Enter");
     await settled();
     expect(card.querySelector(".blockr-card-name-error")?.textContent).toBe("A block needs a name");
     expect(second.getAttribute("aria-invalid")).toBe("true");
@@ -607,7 +594,7 @@ describe("a block's menu", () => {
 
     const card = cardOf(el, "Head");
     const button = toolOf(card, "More actions");
-    // The button and the menu are core's React SDK's, React Aria's.
+    // The button and the menu are blockr.ui's, React Aria's.
     expect(button.hasAttribute("data-rac")).toBe(true);
     const menu = await pressMenu(card, settled);
     expect(el.contains(menu)).toBe(false);
@@ -623,7 +610,7 @@ describe("a block's menu", () => {
     // The block takes the focus, as on any press into its card.
     expect(core.focus.get()).toBe("b");
 
-    press(document.activeElement ?? menu, "Escape");
+    pressOn(document.activeElement ?? menu, "Escape");
     await settled();
     expect(blockMenu()).toBeNull();
     expect(button.getAttribute("aria-expanded")).toBe("false");
@@ -635,13 +622,13 @@ describe("a block's menu", () => {
     const card = cardOf(el, "Head");
     const button = toolOf(card, "More actions");
     button.focus();
-    press(button, "ArrowDown");
+    pressOn(button, "ArrowDown");
     await settled();
     const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
 
     const rename = itemOf(menu, "Rename");
-    press(rename, "Enter");
+    pressOn(rename, "Enter");
     rename.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true, cancelable: true }));
     await settled();
     expect(blockMenu()).toBeNull();
@@ -717,7 +704,7 @@ describe("a block's menu", () => {
     expect(blockMenu()).toBeNull();
     const picker = plusMenu();
     if (picker === null) throw new Error("No + menu opened.");
-    // The + menu is core's React SDK's, at the end of the page's body, outside
+    // The + menu is blockr.ui's, at the end of the page's body, outside
     // the browser's top layer.
     expect(el.contains(picker)).toBe(false);
     expect(picker.hasAttribute("popover")).toBe(false);
@@ -731,10 +718,10 @@ describe("a block's menu", () => {
     // The search takes the focus as the + menu opens, with no wait for the
     // block's menu.
     const search = await focusedSearch(picker);
-    typeInto(search, "scatter");
+    typeSearch(search, "scatter");
     await settled();
     expect(rows(picker)).toEqual(["scatter plot block"]);
-    press(search, "Enter");
+    pressOn(search, "Enter");
     await settled();
 
     const board = core.store.board();
@@ -782,15 +769,15 @@ describe("a block's menu", () => {
     if (picker === null) throw new Error("No + menu opened.");
     const search = await focusedSearch(picker);
 
-    typeInto(search, "merge");
+    typeSearch(search, "merge");
     await settled();
     expect(rows(picker)).toEqual(["merge block"]);
-    press(search, "Escape");
+    pressOn(search, "Escape");
     await settled();
     expect(search.value).toBe("");
     expect(plusMenu()).not.toBeNull();
 
-    press(search, "Escape");
+    pressOn(search, "Escape");
     await settled();
     expect(plusMenu()).toBeNull();
     expect(button.getAttribute("aria-expanded")).toBe("false");
@@ -911,7 +898,7 @@ describe("the card's tooltips", () => {
     toolOf(cardOf(el, "Head"), "More actions").focus();
     await settled();
     expect(tooltip(el)?.textContent).toBe("More actions");
-    press(document.body, "Escape");
+    pressOn(document.body, "Escape");
     await settled();
     expect(tooltip(el)).toBeNull();
   });

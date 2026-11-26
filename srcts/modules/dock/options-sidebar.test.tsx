@@ -7,18 +7,21 @@
 // texture, which nothing requires. They share a category that no other board
 // option has. The default of grain fails.
 // Where a test asks, the class requires two more, layout and shade, whose UIs
-// are a menu and a select of core's React SDK.
+// are a menu and a select of blockr.ui.
 
 import type { CoreApi, Json, JsonBoard, Option, OptionHost, OptionModule, PluginClass } from "@blockr/core";
-import { Button, ComboBox, ComboBoxItem, Menu, MenuItem, MenuTrigger, reactModule, useValue } from "@blockr/core/react";
+import { reactModule, useValue } from "@blockr/core/react";
 import type { ModuleProps } from "@blockr/core/react";
 import { HELLO, stubCore } from "@blockr/core/stubs";
+import { Button, ComboBox, ComboBoxItem, Menu, MenuItem, MenuTrigger } from "@blockr/ui";
+import { find, listFromField, menuItem, openMenu, optionFromLabel, type } from "@blockr/ui/stubs";
 import type { ReactElement } from "react";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
+import { pressFocused } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";
@@ -30,7 +33,7 @@ const VIEWER = "blockr.test-viewer_plugin";
 const OWN_CATEGORIES = ["Board options", "Extra options", "Theme options", "View options"];
 
 // A UI that shows the board option's value in a number field, and submits the
-// number that the user types as the field changes. Escape in a field whose
+// number that the user types as the user types it. Escape in a field whose
 // number differs from the value reverts the field, and takes the key, so that
 // nothing else acts on it.
 function numberUi(): OptionModule<number> {
@@ -43,7 +46,7 @@ function numberUi(): OptionModule<number> {
       };
       show();
       const off = host.on("value", show);
-      field.addEventListener("change", () => {
+      field.addEventListener("input", () => {
         void host.submit(Number(field.value));
       });
       field.addEventListener("keydown", (event) => {
@@ -88,7 +91,7 @@ const texture: Omit<Option, "id"> = {
   ui: numberUi(),
 };
 
-// A UI that sets the board option's value from a menu of core's React SDK,
+// A UI that sets the board option's value from a menu of blockr.ui,
 // which React Aria opens in a portal at the end of the page's body, over an
 // element that it lays over the whole page.
 function menuUi(): OptionModule<string> {
@@ -127,7 +130,7 @@ const SHADES = [
   { id: "deep", name: "Deep" },
 ];
 
-// A UI that binds the board option's value to a select of core's React SDK,
+// A UI that binds the board option's value to a select of blockr.ui,
 // which React Aria opens in a portal at the end of the page's body, while the
 // focus stays in its field.
 function selectUi(): OptionModule<string> {
@@ -239,12 +242,6 @@ async function startSidebar(start: Start = {}) {
   return { ...s, el };
 }
 
-function find(root: ParentNode, selector: string): HTMLElement {
-  const found = root.querySelector<HTMLElement>(selector);
-  if (found === null) throw new Error(`Found nothing for ${selector}.`);
-  return found;
-}
-
 const sidebarIn = (el: HTMLElement): HTMLElement => find(el, ".blockr-dock-sidebar");
 const optionsButton = (el: HTMLElement): HTMLElement => find(el, ".blockr-dock-bar-options");
 const isOpen = (el: HTMLElement): boolean => sidebarIn(el).hasAttribute("data-open");
@@ -278,6 +275,10 @@ const rowOf = (el: HTMLElement, option: string): HTMLElement | null =>
 const fieldOf = (el: HTMLElement, option: string): HTMLElement | null =>
   rowOf(el, option)?.querySelector<HTMLElement>(":is(input, select)") ?? null;
 
+// The input that the UI of the board option given drew.
+const inputOf = (el: HTMLElement, option: string): HTMLInputElement =>
+  find(sidebarIn(el), `.blockr-dock-sidebar-option[data-option="${option}"] input`, HTMLInputElement);
+
 // The Reset button of the board option given, or null for none.
 const resetOf = (el: HTMLElement, option: string): HTMLElement | null =>
   rowOf(el, option)?.querySelector<HTMLElement>(".blockr-dock-sidebar-reset") ?? null;
@@ -298,44 +299,10 @@ function shadeField(el: HTMLElement): HTMLInputElement {
   return field;
 }
 
-// The list of the select while it is open, which the field names in
-// aria-controls.
-function listOf(field: HTMLElement): HTMLElement | null {
-  const id = field.getAttribute("aria-controls");
-  return id === null ? null : document.getElementById(id);
-}
-
-function optionOf(list: HTMLElement, label: string): HTMLElement {
-  const found = [...list.querySelectorAll<HTMLElement>('[role="option"]')].find((option) => option.textContent.trim() === label);
-  if (found === undefined) throw new Error(`The list has no option "${label}".`);
-  return found;
-}
-
-// The menu of layout's UI while it is open.
-const layouts = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="menu"][aria-label="Layouts"]');
-
 // Clicks the element as a pointer does, which goes down on it first.
 function click(target: Element): void {
   target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
   target.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
-}
-
-// Presses a key on the element that has the focus, and says whether something
-// took it.
-function press(key: string, init: KeyboardEventInit = {}): boolean {
-  const target = document.activeElement ?? document.body;
-  const event = new KeyboardEvent("keydown", { ...init, key, bubbles: true, cancelable: true });
-  target.dispatchEvent(event);
-  return event.defaultPrevented;
-}
-
-// Types the number into the field, as React hears it, and has the field
-// change.
-function type(field: HTMLElement | null, text: string): void {
-  if (!(field instanceof HTMLInputElement)) throw new Error("The field is no input.");
-  field.value = text;
-  field.dispatchEvent(new Event("input", { bubbles: true }));
-  field.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 // Opens the sidebar from the options button, which has the focus first, as a
@@ -465,7 +432,7 @@ describe("the options sidebar", () => {
     expect(optionsIn(el, "Extra options")).toEqual(["grain", "texture"]);
     expect(mounts.started).toEqual(["grain", "texture"]);
 
-    type(fieldOf(el, "texture"), "3");
+    type(inputOf(el, "texture"), "3");
     await vi.waitFor(() => {
       expect(core.store.board().options.texture).toBe(3);
     });
@@ -530,7 +497,7 @@ describe("the options sidebar", () => {
     const { el } = await startSidebar();
 
     await open(el);
-    expect(press("Escape")).toBe(true);
+    expect(pressFocused("Escape")).toBe(true);
     await drawn();
     expect(isOpen(el)).toBe(false);
     expect(sidebarIn(el).hasAttribute("inert")).toBe(true);
@@ -561,7 +528,7 @@ describe("the options sidebar", () => {
 
     field.focus();
     field.value = "7";
-    expect(press("Escape")).toBe(true);
+    expect(pressFocused("Escape")).toBe(true);
     await drawn();
     expect(field.value).toBe("2");
     expect(isOpen(el)).toBe(true);
@@ -570,7 +537,7 @@ describe("the options sidebar", () => {
     await vi.waitFor(() => {
       expect(core.store.board().options.zoom).toBe(3);
     });
-    press("Escape");
+    pressFocused("Escape");
     await drawn();
     expect(isOpen(el)).toBe(false);
   });
@@ -583,10 +550,10 @@ describe("the options sidebar", () => {
 
     field.click();
     await drawn();
-    const list = listOf(field);
+    const list = listFromField(field);
     if (list === null) throw new Error("The select's list did not open.");
     expect(sidebarIn(el).contains(list)).toBe(false);
-    const deep = optionOf(list, "Deep");
+    const deep = optionFromLabel(field, "Deep");
     deep.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     deep.click();
     await vi.waitFor(() => {
@@ -597,9 +564,9 @@ describe("the options sidebar", () => {
     // A press outside the sidebar and outside its overlays closes it, as it
     // closes the list.
     field.focus();
-    press("ArrowDown");
+    pressFocused("ArrowDown");
     await drawn();
-    expect(listOf(field)).not.toBeNull();
+    expect(listFromField(field)).not.toBeNull();
     find(el, ".blockr-dock").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     await drawn();
     expect(isOpen(el)).toBe(false);
@@ -612,15 +579,15 @@ describe("the options sidebar", () => {
     const field = shadeField(el);
 
     field.focus();
-    press("ArrowDown");
+    pressFocused("ArrowDown");
     await drawn();
-    expect(listOf(field)).not.toBeNull();
-    press("Escape");
+    expect(listFromField(field)).not.toBeNull();
+    pressFocused("Escape");
     await drawn();
-    expect(listOf(field)).toBeNull();
+    expect(listFromField(field)).toBeNull();
     expect(isOpen(el)).toBe(true);
 
-    press("Escape");
+    pressFocused("Escape");
     await drawn();
     expect(isOpen(el)).toBe(false);
   });
@@ -633,32 +600,29 @@ describe("the options sidebar", () => {
 
     trigger.click();
     await drawn();
-    const menu = layouts();
-    if (menu === null) throw new Error("The menu did not open.");
+    const menu = openMenu("Layouts");
     expect(sidebarIn(el).contains(menu)).toBe(false);
     const underlay = find(document, '[data-testid="underlay"]');
     expect(el.contains(underlay)).toBe(false);
     underlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     underlay.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
     await drawn();
-    expect(layouts()).toBeNull();
+    expect(() => openMenu("Layouts")).toThrow();
     expect(isOpen(el)).toBe(true);
 
     trigger.click();
     await drawn();
-    expect(layouts()).not.toBeNull();
-    press("Escape");
+    openMenu("Layouts");
+    pressFocused("Escape");
     await drawn();
-    expect(layouts()).toBeNull();
+    expect(() => openMenu("Layouts")).toThrow();
     expect(isOpen(el)).toBe(true);
 
     trigger.click();
     await drawn();
-    const list = layouts();
-    if (list === null) throw new Error("The menu did not open.");
-    const item = [...list.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((each) => each.textContent === "List");
-    item?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-    item?.click();
+    const item = menuItem(openMenu("Layouts"), "List");
+    item.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    item.click();
     await vi.waitFor(() => {
       expect(core.store.board().options.layout).toBe("list");
     });
@@ -698,7 +662,7 @@ describe("the options sidebar", () => {
     expect(root.hasAttribute("data-pushed")).toBe(true);
 
     summary(el, "Board options").focus();
-    expect(press("Escape")).toBe(false);
+    expect(pressFocused("Escape")).toBe(false);
     root.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     await drawn();
     expect(isOpen(el)).toBe(true);
@@ -718,17 +682,17 @@ describe("the options sidebar", () => {
     if (last === undefined) throw new Error("The sidebar lists no category.");
 
     last.focus();
-    expect(press("Tab")).toBe(true);
+    expect(pressFocused("Tab")).toBe(true);
     expect(document.activeElement).toBe(first);
-    expect(press("Tab", { shiftKey: true })).toBe(true);
+    expect(pressFocused("Tab", { shiftKey: true })).toBe(true);
     expect(document.activeElement).toBe(last);
 
     click(button(sidebarIn(el), "Pin sidebar"));
     await drawn();
     summary(el, "Board options").focus();
-    expect(press("Tab")).toBe(false);
+    expect(pressFocused("Tab")).toBe(false);
     first.focus();
-    expect(press("Tab", { shiftKey: true })).toBe(true);
+    expect(pressFocused("Tab", { shiftKey: true })).toBe(true);
     expect(document.activeElement).toBe(last);
   });
 
@@ -761,7 +725,7 @@ describe("the options sidebar", () => {
     expect(ownNames(el)).toEqual(["Board options", "Theme options", "View options"]);
 
     await expand(el, "View options", "zoom");
-    type(fieldOf(el, "zoom"), "4");
+    type(inputOf(el, "zoom"), "4");
     await vi.waitFor(() => {
       expect(core.store.board().options.zoom).toBe(4);
     });
