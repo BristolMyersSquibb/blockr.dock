@@ -77,9 +77,9 @@ test_that("R writes the value of a dock board option that a script gives", {
   expect_identical(
     blockr_ser(board)[["board"]][["options"]],
     list(
-      compact = list(value = TRUE, version = 1L),
-      view_tabs = list(value = FALSE, version = 1L),
-      sync_rails = list(value = FALSE, version = 1L)
+      compact = list(value = TRUE, version = 1L, package = "blockr.dock"),
+      view_tabs = list(value = FALSE, version = 1L, package = "blockr.dock"),
+      sync_rails = list(value = FALSE, version = 1L, package = "blockr.dock")
     )
   )
 })

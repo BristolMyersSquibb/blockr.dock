@@ -161,16 +161,43 @@ interface Start {
   readonly locked?: boolean;
   // Whether the plugin class of blockr.test requires layout and shade too.
   readonly overlays?: boolean;
-  // The board options that the board holds as it opens, as a JSON board
-  // records them, those of the board of core's reply to hello unless given.
+  // The board options that the board holds as it opens, each as its value with
+  // the version of its shape, those of the board of core's reply to hello
+  // unless given.
   readonly options?: Readonly<Record<string, { readonly value: Json; readonly version: number }>>;
 }
 
 // Starts core with the dock as the app's frontend, which draws the page in an
 // element of the document, and stops it as the test finishes.
 async function startSidebar(start: Start = {}) {
+  const options: typeof HELLO.options = {
+    ...HELLO.options,
+    compact: { package: "blockr.dock", module: "blockr.dock/compact-option.js", version: 1 },
+    view_tabs: { package: "blockr.dock", module: "blockr.dock/view-tabs-option.js", version: 1 },
+    sync_rails: { package: "blockr.dock", module: "blockr.dock/sync-rails-option.js", version: 1 },
+    zoom: { package: "blockr.test", module: "blockr.test/zoom-option.js", version: 1 },
+    grain: { package: "blockr.test", module: "blockr.test/grain-option.js", version: 1 },
+    texture: { package: "blockr.test", module: "blockr.test/texture-option.js", version: 1 },
+    layout: { package: "blockr.test", module: "blockr.test/layout-option.js", version: 1 },
+    shade: { package: "blockr.test", module: "blockr.test/shade-option.js", version: 1 },
+  };
+  // A JSON board records the package that lists each board option beside the
+  // board option's value.
+  // The helper takes it from the board option's entry in the reply's
+  // `options`, as the store does when it saves a board.
   const given: JsonBoard = HELLO.board;
-  const board = start.options === undefined ? given : { ...given, board: { ...given.board, options: start.options } };
+  const board =
+    start.options === undefined
+      ? given
+      : {
+          ...given,
+          board: {
+            ...given.board,
+            options: Object.fromEntries(
+              Object.entries(start.options).map(([id, option]) => [id, { ...option, package: options[id]?.package ?? null }]),
+            ),
+          },
+        };
   const hello = {
     ...HELLO,
     packages: { ...HELLO.packages, "blockr.dock": "0.2.1", "blockr.test": "1.0.0" },
@@ -184,17 +211,7 @@ async function startSidebar(start: Start = {}) {
       },
       [VIEWER]: { name: "Viewer", version: 1, options: start.overlays === true ? ["zoom", "layout", "shade"] : ["zoom"], module: "blockr.test/viewer.js" },
     },
-    options: {
-      ...HELLO.options,
-      compact: { package: "blockr.dock", module: "blockr.dock/compact-option.js", version: 1 },
-      view_tabs: { package: "blockr.dock", module: "blockr.dock/view-tabs-option.js", version: 1 },
-      sync_rails: { package: "blockr.dock", module: "blockr.dock/sync-rails-option.js", version: 1 },
-      zoom: { package: "blockr.test", module: "blockr.test/zoom-option.js", version: 1 },
-      grain: { package: "blockr.test", module: "blockr.test/grain-option.js", version: 1 },
-      texture: { package: "blockr.test", module: "blockr.test/texture-option.js", version: 1 },
-      layout: { package: "blockr.test", module: "blockr.test/layout-option.js", version: 1 },
-      shade: { package: "blockr.test", module: "blockr.test/shade-option.js", version: 1 },
-    },
+    options,
     lock: { board: start.locked ?? false, load: false },
     board,
   };
