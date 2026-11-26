@@ -266,8 +266,11 @@ dock_panel <- function(...) {
       !is_dock_locked(),
       mode = "manual"
     ),
+    # The gutter is reserved up front: with classic scrollbars, a panel that
+    # starts scrolling would otherwise narrow its content and resize charts.
     style = list(
       overflow = "auto",
+      `scrollbar-gutter` = "stable",
       height = "100%"
     )
   )
