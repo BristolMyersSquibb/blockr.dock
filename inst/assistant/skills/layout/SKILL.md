@@ -108,8 +108,8 @@ A grid holds nested splits of tab groups, and a rail on either edge of the view:
   "sizes": [0.3, 0.7],
   "rails": {
     "left": {
-      "panels": [{ "plugin": "blockr.graph-graph_plugin" }],
-      "active": { "plugin": "blockr.graph-graph_plugin" },
+      "panels": [{ "plugin": "blockr.core-edit_board_plugin" }],
+      "active": { "plugin": "blockr.core-edit_board_plugin" },
       "collapsed": false,
       "size": 500
     }
@@ -119,7 +119,7 @@ A grid holds nested splits of tab groups, and a rail on either edge of the view:
 
 This view shows a tab group of `data` and `head` in its left 30%, with `data` in front.
 The other 70% shows `plot` above `table`.
-The DAG sits on a rail at the left edge of the view.
+Core's Edit board plugin sits on a rail at the left edge of the view.
 
 A grid follows these rules:
 

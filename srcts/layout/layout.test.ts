@@ -13,7 +13,7 @@ import { gridToLayout, layoutToGrid, PANEL_COMPONENT, panelFromId, panelId, rail
 const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
-const dag = { plugin: "blockr.dag-dag_plugin" };
+const edit = { plugin: "blockr.core-edit_board_plugin" };
 const md = { plugin: "blockr.md-md_plugin" };
 
 function group(...panels: Panel[]): TabGroup {
@@ -27,8 +27,8 @@ function rail(...panels: Panel[]): Rail {
 }
 
 // The view Overview of The dock's state: a tab group of a and b, which shows
-// b, in its left 30%, and in the rest c above blockr.md's document, with the
-// DAG on a rail at its left edge.
+// b, in its left 30%, and in the rest c above blockr.md's document, with
+// core's Edit board plugin on a rail at its left edge.
 const overview: Grid = {
   orientation: "horizontal",
   children: [
@@ -36,7 +36,7 @@ const overview: Grid = {
     { children: [group(c), group(md)], sizes: [0.6, 0.4] },
   ],
   sizes: [0.3, 0.7],
-  rails: { left: rail(dag) },
+  rails: { left: rail(edit) },
 };
 
 // The title of every panel's tab: the block's id or the plugin class's id.
@@ -70,8 +70,8 @@ function dockview(size = SIZE) {
 describe("panelId()", () => {
   test("names a panel by the JSON of its block or its plugin class", () => {
     expect(panelId(a)).toBe('{"block":"a"}');
-    expect(panelId(dag)).toBe('{"plugin":"blockr.dag-dag_plugin"}');
-    expect(panelFromId(panelId(dag))).toEqual(dag);
+    expect(panelId(edit)).toBe('{"plugin":"blockr.core-edit_board_plugin"}');
+    expect(panelFromId(panelId(edit))).toEqual(edit);
   });
 
   test("names the panel of a block whose id holds any character", () => {
@@ -112,7 +112,7 @@ describe("gridToLayout()", () => {
       ],
     });
     expect(layout.panels[panelId(b)]).toEqual({ id: panelId(b), contentComponent: PANEL_COMPONENT, title: "b", params: { panel: b } });
-    expect(Object.keys(layout.panels)).toEqual([a, b, c, md, dag].map(panelId));
+    expect(Object.keys(layout.panels)).toEqual([a, b, c, md, edit].map(panelId));
   });
 
   test("always gives both rails an edge group, which shows only while it holds panels", () => {
@@ -121,7 +121,7 @@ describe("gridToLayout()", () => {
         size: 260,
         visible: true,
         collapsed: false,
-        group: { id: "rail-left", views: [panelId(dag)], activeView: panelId(dag) },
+        group: { id: "rail-left", views: [panelId(edit)], activeView: panelId(edit) },
       },
       right: { size: RAIL_SIZE, visible: false, collapsed: false, group: { id: "rail-right", views: [] } },
     });
@@ -155,14 +155,14 @@ describe("gridToLayout()", () => {
       orientation: "horizontal",
       children: [group(a, b), { panels: [b, c], active: b }],
       sizes: [0.5, 0.5],
-      rails: { left: rail(a, dag) },
+      rails: { left: rail(a, edit) },
     };
     const layout = gridToLayout(grid, named, SIZE);
     expect(layout.grid.root.data).toMatchObject([
       { data: { views: [panelId(a), panelId(b)] } },
       { data: { views: [panelId(c)], activeView: panelId(c) } },
     ]);
-    expect(layout.edgeGroups?.left?.group).toEqual({ id: "rail-left", views: [panelId(dag)], activeView: panelId(dag) });
+    expect(layout.edgeGroups?.left?.group).toEqual({ id: "rail-left", views: [panelId(edit)], activeView: panelId(edit) });
   });
 
   test("leaves out each panel that it cannot draw, and each tab group, split and rail that this empties", () => {
@@ -176,13 +176,13 @@ describe("gridToLayout()", () => {
   });
 
   test("gives the siblings of a split that it leaves out its place in proportion", () => {
-    const grid: Grid = { orientation: "horizontal", children: [group(a), group(dag), group(b)], sizes: [0.2, 0.3, 0.5] };
+    const grid: Grid = { orientation: "horizontal", children: [group(a), group(edit), group(b)], sizes: [0.2, 0.3, 0.5] };
     const layout = gridToLayout(grid, (panel) => ("plugin" in panel ? undefined : named(panel)), SIZE);
     expect(layout.grid.root.data).toMatchObject([{ size: 0.2 / 0.7 }, { size: 0.5 / 0.7 }]);
   });
 
   test("gives a rail that the grid collapsed its collapse and its width", () => {
-    const grid: Grid = { ...overview, rails: { right: { ...rail(dag), collapsed: true, size: 300 } } };
+    const grid: Grid = { ...overview, rails: { right: { ...rail(edit), collapsed: true, size: 300 } } };
     expect(gridToLayout(grid, named, SIZE).edgeGroups?.right).toMatchObject({ size: 300, visible: true, collapsed: true });
   });
 });
@@ -223,7 +223,7 @@ describe("layoutToGrid()", () => {
   test("reads a rail's collapse and its width in whole pixels, and no rail on an edge group without panels", () => {
     const layout = gridToLayout(overview, named, SIZE);
     const left = { ...layout.edgeGroups?.left, size: 259.6, collapsed: true, visible: true, group: layout.edgeGroups?.left?.group };
-    expect(layoutToGrid({ ...layout, edgeGroups: { left } }).rails).toEqual({ left: { ...rail(dag), collapsed: true, size: 260 } });
+    expect(layoutToGrid({ ...layout, edgeGroups: { left } }).rails).toEqual({ left: { ...rail(edit), collapsed: true, size: 260 } });
     expect(layoutToGrid({ ...layout, edgeGroups: {} }).rails).toBeUndefined();
   });
 });
@@ -238,8 +238,8 @@ describe("drawing a layout with dockview", () => {
     api.fromJSON(gridToLayout(moved, named, SIZE), { reuseExistingPanels: true });
 
     expect(api.getPanel(panelId(c))).toBe(before);
-    expect(made).toEqual([a, b, c, md, dag].map(panelId));
-    expect(disposed).toEqual([panelId(dag)]);
+    expect(made).toEqual([a, b, c, md, edit].map(panelId));
+    expect(disposed).toEqual([panelId(edit)]);
     expect(layoutToGrid(api.toJSON())).toEqual({ ...moved, children: [{ ...group(a, b, c), active: a }, group(md)] });
     expect(api.isEdgeGroupVisible("left")).toBe(false);
     expect(api.isEdgeGroupVisible("right")).toBe(false);

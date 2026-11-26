@@ -12,7 +12,7 @@
       main<dock_view> Main (horizontal)
       ├─ 30%: a (active), b (o)
       └─ 70%: c (n)
-      left rail: dag (plugin)
+      left rail: edit (plugin)
       ae<dock_view> Adverse events
       └─ d
       lab<dock_view> Lab

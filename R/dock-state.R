@@ -5,7 +5,7 @@
 # The board holds it at /plugins/blockr.dock-dock_plugin, and core's
 # `blockr_ser()` writes it by `js/dock.schema.json`.
 # A panel there is `list(block = "a")` or
-# `list(plugin = "blockr.graph-graph_plugin")`.
+# `list(plugin = "blockr.core-edit_board_plugin")`.
 
 # The dock's state from `views`, `folders`, `active` and `visible`, as
 # `new_dock_plugin()` takes them.

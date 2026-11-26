@@ -84,7 +84,9 @@ test_that("the state holds each view's grid, name, folder and index", {
   dock <- new_dock_plugin(
     views = list(
       overview = dock_view(
-        dock_grid(c("a", "b"), plg("blockr.dag-dag_plugin"), sizes = c(3, 7)),
+        dock_grid(
+          c("a", "b"), plg("blockr.core-edit_board_plugin"), sizes = c(3, 7)
+        ),
         name = "Overview"
       ),
       ae = dock_view("d", name = "Adverse events", folder = "safety")
@@ -94,7 +96,7 @@ test_that("the state holds each view's grid, name, folder and index", {
     visible = list(b = "outputs")
   )
 
-  dag <- list(plugin = "blockr.dag-dag_plugin")
+  edit <- list(plugin = "blockr.core-edit_board_plugin")
 
   expect_identical(
     plugin_state(dock),
@@ -111,7 +113,7 @@ test_that("the state holds each view's grid, name, folder and index", {
                 panels = list(list(block = "a"), list(block = "b")),
                 active = list(block = "a")
               ),
-              list(panels = list(dag), active = dag)
+              list(panels = list(edit), active = edit)
             ),
             sizes = c(0.3, 0.7)
           )
@@ -473,7 +475,7 @@ test_that("the plugin prints its views and folders in the views menu's order", {
     views = list(
       lab = dock_view(c("e", "f"), folder = "labs"),
       main = dock_view(
-        dock_grid(panels("a", "b"), "c", rail(plg("dag")), sizes = c(3, 7)),
+        dock_grid(panels("a", "b"), "c", rail(plg("edit")), sizes = c(3, 7)),
         name = "Main"
       ),
       ae = dock_view("d", name = "Adverse events", folder = "safety")
@@ -559,19 +561,19 @@ test_that("view_blocks() reads the blocks of a view in the grid's order", {
 
   grid <- dock_grid(
     "c",
-    group(panels(blk("a"), plg("dag")), "d"),
-    rail(plg("blockr.dag-dag_plugin")),
+    group(panels(blk("a"), plg("edit")), "d"),
+    rail(plg("blockr.core-file_storage_plugin")),
     rail("b", position = "right")
   )
 
   expect_identical(view_blocks(dock_view(grid)), c("c", "a", "d", "b"))
 
   expect_identical(
-    view_blocks(dock_view(list(plg("dag"), "b", blk("a")))),
+    view_blocks(dock_view(list(plg("edit"), "b", blk("a")))),
     c("b", "a")
   )
 
-  expect_identical(view_blocks(dock_view(plg("dag"))), character())
+  expect_identical(view_blocks(dock_view(plg("edit"))), character())
   expect_identical(view_blocks(dock_view(list())), character())
 
   expect_error(view_blocks(list()), class = "dock_view_invalid")

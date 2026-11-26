@@ -29,7 +29,7 @@ names each panel by a panel reference (see \code{\link[=dock_grid]{dock_grid()}}
 The function \code{blk()} names the panel of a block, by the block's id.
 The function \code{plg()} names the panel of a plugin, by the name that the app
 script gives the plugin in the \code{plugins} of \code{\link[blockr.core:new_board]{blockr.core::new_board()}}, or
-else by the id of the plugin's class, as \code{"blockr.graph-graph_plugin"}.
+else by the id of the plugin's class, as \code{"blockr.core-edit_board_plugin"}.
 A bare id names a panel too, that of the block of that id.
 }
 \details{
@@ -42,9 +42,9 @@ run.
 }
 \examples{
 blk("a")
-plg("dag")
-plg("blockr.graph-graph_plugin")
+plg("edit")
+plg("blockr.core-edit_board_plugin")
 
-dock_grid(blk("a"), "b", rail(plg("dag")))
+dock_grid(blk("a"), "b", rail(plg("edit")))
 
 }

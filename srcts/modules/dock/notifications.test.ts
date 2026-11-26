@@ -22,7 +22,7 @@ const sources = {
     kind: "r",
     class: ["simpleError", "error", "condition"],
     request: { type: "plugin", name: "layout" },
-    module: { object: { plugin: "blockr.dag-dag_plugin" }, package: "blockr.dag" },
+    module: { object: { plugin: "blockr.core-edit_board_plugin" }, package: "blockr.core" },
   },
   core: { kind: "core", code: "module_failed", module: { object: { block: "a" }, package: "blockr.core" } },
   renderer: {
@@ -31,25 +31,25 @@ const sources = {
     code: "render_failed",
   },
   option: { kind: "module", module: { object: { option: "n_rows" }, package: "blockr.core" }, code: "rows_capped" },
-  plugin: { kind: "module", module: { object: { plugin: "blockr.dag-dag_plugin" }, package: "blockr.dag" }, code: "link_refused" },
+  plugin: { kind: "module", module: { object: { plugin: "blockr.core-edit_board_plugin" }, package: "blockr.core" }, code: "link_refused" },
 } satisfies Record<string, NotificationSource>;
 
-// The DAG's plugin, whose panel the dock draws, and the storage plugin, which
-// has no `ui`, so that the dock draws no panel for it.
-const DAG = "blockr.dag-dag_plugin";
+// Core's Edit board plugin, whose panel the dock draws, and the storage
+// plugin, which has no `ui`, so that the dock draws no panel for it.
+const EDIT = "blockr.core-edit_board_plugin";
 const STORAGE = "blockr.core-file_storage_plugin";
-const drawn = new Map([[DAG, "DAG"]]);
+const drawn = new Map([[EDIT, "Edit board"]]);
 
-// A grid of one tab group that shows a's panel, with the DAG's panel beside
-// it where `dag` says where: in the tab group, behind a's panel, or on a
-// collapsed rail.
-function gridWith(dag?: "group" | "rail"): Grid {
-  const panels = dag === "group" ? [{ block: "a" }, { plugin: DAG }] : [{ block: "a" }];
+// A grid of one tab group that shows a's panel, with the Edit board plugin's
+// panel beside it where `edit` says where: in the tab group, behind a's
+// panel, or on a collapsed rail.
+function gridWith(edit?: "group" | "rail"): Grid {
+  const panels = edit === "group" ? [{ block: "a" }, { plugin: EDIT }] : [{ block: "a" }];
   return {
     orientation: "horizontal",
     children: [{ panels, active: { block: "a" } }],
     sizes: [1],
-    ...(dag === "rail" ? { rails: { left: { panels: [{ plugin: DAG }], active: { plugin: DAG }, collapsed: true, size: 260 } } } : {}),
+    ...(edit === "rail" ? { rails: { left: { panels: [{ plugin: EDIT }], active: { plugin: EDIT }, collapsed: true, size: 260 } } } : {}),
   };
 }
 
@@ -78,7 +78,8 @@ describe("where the dock shows a notification", () => {
 
   test("is a toast where it concerns no block and no plugin whose panel the dock draws, whoever raised it", () => {
     const abouts: (BoardObject | undefined)[] = [undefined, { link: "ab" }, { stack: "s" }, { option: "n_rows" }, { plugin: STORAGE }];
-    // The active view holds the DAG's panel, which changes nothing for them.
+    // The active view holds the Edit board plugin's panel, which changes
+    // nothing for them.
     const board = boardWith(gridWith("group"), gridWith());
     for (const source of Object.values(sources)) {
       expect(abouts.map((about) => onCard(from(source, about)))).toEqual([false, false, false, false, false]);
@@ -88,10 +89,10 @@ describe("where the dock shows a notification", () => {
 
   test("is the panel of the plugin that it concerns while the active view holds the panel, behind another tab or on a collapsed rail too, and a toast otherwise", () => {
     const { request, core, plugin } = sources;
-    const about = { plugin: DAG };
+    const about = { plugin: EDIT };
     for (const source of [request, core, plugin]) {
       const notification = from(source, about);
-      expect(panelPlugin(notification, drawn)).toBe(DAG);
+      expect(panelPlugin(notification, drawn)).toBe(EDIT);
       expect(asToast(notification, boardWith(gridWith("group"), gridWith()), drawn)).toBe(false);
       expect(asToast(notification, boardWith(gridWith("rail"), gridWith()), drawn)).toBe(false);
       // The view side holds the panel, but main is active.
@@ -105,19 +106,19 @@ describe("where the dock shows a notification", () => {
   });
 
   test("holds a plugin's panel in the active view where its grid places the panel, in a tab group or on a rail", () => {
-    expect(inActiveView(boardWith(gridWith("group"), gridWith()), DAG)).toBe(true);
-    expect(inActiveView(boardWith(gridWith("rail"), gridWith()), DAG)).toBe(true);
-    expect(inActiveView(boardWith(gridWith(), gridWith("rail")), DAG)).toBe(false);
+    expect(inActiveView(boardWith(gridWith("group"), gridWith()), EDIT)).toBe(true);
+    expect(inActiveView(boardWith(gridWith("rail"), gridWith()), EDIT)).toBe(true);
+    expect(inActiveView(boardWith(gridWith(), gridWith("rail")), EDIT)).toBe(false);
     // A board that holds no state of the dock's holds no view.
-    expect(inActiveView({ ...boardWith(gridWith("group"), gridWith()), plugins: {} }, DAG)).toBe(false);
+    expect(inActiveView({ ...boardWith(gridWith("group"), gridWith()), plugins: {} }, EDIT)).toBe(false);
   });
 });
 
 describe("what the tab of a plugin's panel tells of", () => {
-  // A notification about the DAG's plugin, of the severity given, under the
-  // id given.
+  // A notification about the Edit board plugin, of the severity given, under
+  // the id given.
   const about = (id: string, severity: Notification["severity"]): Notification => ({
-    ...from(sources.plugin, { plugin: DAG }),
+    ...from(sources.plugin, { plugin: EDIT }),
     id,
     severity,
   });

@@ -81,8 +81,8 @@
 #' # The block a above a split of b and c
 #' dock_grid("a", group("b", "c"), orientation = "vertical")
 #'
-#' # The block a, with the DAG on a rail on the left edge
-#' dock_grid(blk("a"), rail(plg("blockr.graph-graph_plugin")))
+#' # The block a, with core's Edit board plugin on a rail on the left edge
+#' dock_grid(blk("a"), rail(plg("blockr.core-edit_board_plugin")))
 #'
 #' @return The function `dock_grid()` returns a `dock_grid`.
 #'   The function `panels()` returns a tab group, `group()` a split and

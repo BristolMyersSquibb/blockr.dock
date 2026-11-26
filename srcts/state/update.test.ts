@@ -15,7 +15,7 @@ const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
 const d = { block: "d" };
-const dag = { plugin: "blockr.dag-dag_plugin" };
+const edit = { plugin: "blockr.core-edit_board_plugin" };
 
 const head: Block = { registry_id: "blockr.core-head_block", state: {}, name: "Head", locked: null };
 
@@ -63,7 +63,7 @@ function updated(delta: Delta, board: Board): Patch[] {
 const state: DockState = {
   views: {
     v1: view("a0", grid([{ panels: [a, b], active: b }, group(c)], [0.5, 0.5])),
-    v2: view("a1", grid([group(a)], [1], { left: { ...group(dag), collapsed: false, size: 260 } })),
+    v2: view("a1", grid([group(a)], [1], { left: { ...group(edit), collapsed: false, size: 260 } })),
     v3: view("a2", grid([group(c)], [1])),
   },
   folders: {},
@@ -232,7 +232,7 @@ describe("the update, for a delta that it cannot read", () => {
   });
 
   test("reads past the patches of other plugins", () => {
-    const delta: Delta = { blocks: { rm: ["c"] }, patches: [{ op: "replace", path: "/plugins/blockr.dag-dag_plugin/positions", value: {} }] };
+    const delta: Delta = { blocks: { rm: ["c"] }, patches: [{ op: "replace", path: "/plugins/blockr.core-edit_board_plugin", value: {} }] };
     expect(updated(delta, boardWith(state)).map(({ path }) => path)).toEqual([
       at("views", "v1", "grid"),
       at("views", "v3", "grid"),

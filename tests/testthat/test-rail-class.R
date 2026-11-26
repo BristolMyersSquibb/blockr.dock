@@ -97,6 +97,6 @@ test_that("validate_dock_grid() checks the rails of a grid", {
 
 test_that("a rail prints the ids of its panels", {
 
-  expect_output(print(rail("a", plg("dag"))), "<dock_rail> left: a, dag")
+  expect_output(print(rail("a", plg("edit"))), "<dock_rail> left: a, edit")
   expect_identical(str_value(rail()), "<dock_rail> left: (empty)")
 })

@@ -24,7 +24,7 @@ import type { Grid, Panel, Rail, Split, TabGroup } from "./types.ts";
 const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
-const dag = { plugin: "blockr.dag-dag_plugin" };
+const edit = { plugin: "blockr.core-edit_board_plugin" };
 const md = { plugin: "blockr.md-md_plugin" };
 
 function group(...panels: Panel[]): TabGroup {
@@ -38,8 +38,8 @@ function rail(...panels: Panel[]): Rail {
 }
 
 // The view Overview of the page: a tab group of a and b, which shows b, in
-// its left 30%, and in the rest c above blockr.md's document, with the DAG on
-// a rail at its left edge.
+// its left 30%, and in the rest c above blockr.md's document, with core's
+// Edit board plugin on a rail at its left edge.
 const overview: Grid = {
   orientation: "horizontal",
   children: [
@@ -47,12 +47,12 @@ const overview: Grid = {
     { children: [group(c), group(md)], sizes: [0.6, 0.4] },
   ],
   sizes: [0.3, 0.7],
-  rails: { left: rail(dag) },
+  rails: { left: rail(edit) },
 };
 
 describe("gridPanels()", () => {
   test("gives the panels that a grid places in reading order, its tab groups before its rails", () => {
-    expect(gridPanels(overview)).toEqual([a, b, c, md, dag]);
+    expect(gridPanels(overview)).toEqual([a, b, c, md, edit]);
   });
 });
 
@@ -82,7 +82,7 @@ describe("canonicalGrid()", () => {
         group(b),
       ],
       sizes: [0.2, 0.3, 0.5],
-      rails: { right: { ...rail(dag), panels: [] } },
+      rails: { right: { ...rail(edit), panels: [] } },
     };
     expect(canonicalGrid(grid)).toEqual({ orientation: "horizontal", children: [group(b)], sizes: [1] });
     const three: Grid = { orientation: "horizontal", children: [{ panels: [], active: a }, group(a), group(b)], sizes: [0.2, 0.3, 0.5] };
@@ -94,13 +94,13 @@ describe("canonicalGrid()", () => {
       orientation: "horizontal",
       children: [{ panels: [a, b], active: c }],
       sizes: [1],
-      rails: { left: { ...rail(dag, md), active: c } },
+      rails: { left: { ...rail(edit, md), active: c } },
     };
     expect(canonicalGrid(grid)).toEqual({
       orientation: "horizontal",
       children: [{ panels: [a, b], active: a }],
       sizes: [1],
-      rails: { left: rail(dag, md) },
+      rails: { left: rail(edit, md) },
     });
   });
 
@@ -117,7 +117,7 @@ describe("prunePanels()", () => {
       orientation: "horizontal",
       children: [{ panels: [a, b], active: b }, { children: [group(md)], sizes: [1] }],
       sizes: [0.3, 0.7],
-      rails: { left: rail(dag) },
+      rails: { left: rail(edit) },
     });
   });
 
@@ -153,7 +153,7 @@ describe("gridFailures()", () => {
       children: [
         { children: [group(a), group(b)], sizes: [1] },
         { children: [group(c), group(md)], sizes: [0, 1] },
-        { children: [group(dag)], sizes: [0.5] },
+        { children: [group(edit)], sizes: [0.5] },
       ],
       sizes: [0.2, 0.2, 0.2],
     };
@@ -170,7 +170,7 @@ describe("gridFailures()", () => {
       orientation: "horizontal",
       children: [{ panels: [], active: a }, { children: [], sizes: [] }, { panels: [a, b], active: c }],
       sizes: [0.25, 0.25, 0.5],
-      rails: { left: rail(a), right: { ...rail(dag), panels: [] } },
+      rails: { left: rail(a), right: { ...rail(edit), panels: [] } },
     };
     expect(gridFailures(grid)).toEqual([
       'The tab group at "/children/0" holds no panel.',
@@ -201,10 +201,10 @@ describe("placePanel()", () => {
   });
 
   test("adds a tab group at the end of the top split, which evens it out, where every tab group holds a plugin's panel", () => {
-    const grid: Grid = { orientation: "horizontal", children: [group(dag), { panels: [a, md], active: a }], sizes: [0.25, 0.75] };
+    const grid: Grid = { orientation: "horizontal", children: [group(edit), { panels: [a, md], active: a }], sizes: [0.25, 0.75] };
     expect(placePanel(grid, b)).toEqual({
       orientation: "horizontal",
-      children: [group(dag), { panels: [a, md], active: a }, group(b)],
+      children: [group(edit), { panels: [a, md], active: a }, group(b)],
       sizes: [1 / 3, 1 / 3, 1 / 3],
     });
   });
@@ -218,7 +218,7 @@ describe("placePanel()", () => {
   });
 
   test("leaves a grid that places the panel already, on a rail too, as it is", () => {
-    expect(placePanel(overview, dag)).toBe(overview);
+    expect(placePanel(overview, edit)).toBe(overview);
     expect(placePanel(overview, c)).toBe(overview);
   });
 });
@@ -227,7 +227,7 @@ describe("locate()", () => {
   test("gives the path of the tab group that holds a panel, or the edge of its rail", () => {
     expect(locate(overview, b)).toEqual({ path: [0] });
     expect(locate(overview, md)).toEqual({ path: [1, 1] });
-    expect(locate(overview, dag)).toEqual({ edge: "left" });
+    expect(locate(overview, edit)).toEqual({ edge: "left" });
     expect(locate(overview, { block: "z" })).toBeUndefined();
   });
 });
@@ -273,13 +273,13 @@ describe("placedAt()", () => {
 
   test("adds a panel to the rail that `rail` names, before `near` and `side`, or opens a rail there", () => {
     expect(placedAt(overview, { block: "d" }, { rail: "left", near: a, side: "right" }, "distribute").rails).toEqual({
-      left: { ...rail(dag), panels: [dag, { block: "d" }], active: { block: "d" } },
+      left: { ...rail(edit), panels: [edit, { block: "d" }], active: { block: "d" } },
     });
-    expect(placedAt(overview, { block: "d" }, { rail: "right" }, "distribute").rails).toEqual({ left: rail(dag), right: rail({ block: "d" }) });
+    expect(placedAt(overview, { block: "d" }, { rail: "right" }, "distribute").rails).toEqual({ left: rail(edit), right: rail({ block: "d" }) });
   });
 
   test("adds a panel to the rail of the panel that `near` names, within", () => {
-    expect(placedAt(overview, { block: "d" }, { near: dag }, "distribute").rails?.left?.panels).toEqual([dag, { block: "d" }]);
+    expect(placedAt(overview, { block: "d" }, { near: edit }, "distribute").rails?.left?.panels).toEqual([edit, { block: "d" }]);
   });
 
   test("places a panel at an edge of the whole grid where `side` comes without `near`, evening out the top split", () => {
@@ -318,15 +318,15 @@ describe("placedAt()", () => {
 describe("placeFailures()", () => {
   test("names a `near` that the grid lacks, and one on a rail beside which a panel would go", () => {
     expect(placeFailures(overview, { near: { block: "z" } })).toEqual(['The view does not show the panel of the block "z", which near names.']);
-    expect(placeFailures(overview, { near: dag, side: "below" })).toEqual([
-      'The view shows the panel of the plugin "blockr.dag-dag_plugin", which near names, on a rail, which takes a panel only within.',
+    expect(placeFailures(overview, { near: edit, side: "below" })).toEqual([
+      'The view shows the panel of the plugin "blockr.core-edit_board_plugin", which near names, on a rail, which takes a panel only within.',
     ]);
   });
 
   test("names none for a place in or beside a panel that the grid holds, within a rail, or on the rail that `rail` names", () => {
     expect(placeFailures(overview, { near: c, side: "below" })).toEqual([]);
-    expect(placeFailures(overview, { near: dag })).toEqual([]);
-    expect(placeFailures(overview, { near: dag, side: "below", rail: "right" })).toEqual([]);
+    expect(placeFailures(overview, { near: edit })).toEqual([]);
+    expect(placeFailures(overview, { near: edit, side: "below", rail: "right" })).toEqual([]);
     expect(placeFailures(overview, {})).toEqual([]);
   });
 });
@@ -334,7 +334,7 @@ describe("placeFailures()", () => {
 describe("showing()", () => {
   test("has the tab group or rail that holds a panel show it", () => {
     expect(showing(overview, a).children[0]).toEqual(group(a, b));
-    const twoOnRail: Grid = { ...overview, rails: { left: rail(dag, { block: "d" }) } };
+    const twoOnRail: Grid = { ...overview, rails: { left: rail(edit, { block: "d" }) } };
     expect(showing(twoOnRail, { block: "d" }).rails?.left?.active).toEqual({ block: "d" });
     expect(showing(overview, { block: "z" })).toBe(overview);
   });
@@ -342,7 +342,7 @@ describe("showing()", () => {
 
 describe("collapsedRail()", () => {
   test("collapses or opens the rail of an edge, and leaves a grid without one as it is", () => {
-    expect(collapsedRail(overview, "left", true).rails?.left).toEqual({ ...rail(dag), collapsed: true });
+    expect(collapsedRail(overview, "left", true).rails?.left).toEqual({ ...rail(edit), collapsed: true });
     expect(collapsedRail(overview, "right", true)).toBe(overview);
   });
 });
@@ -361,7 +361,7 @@ describe("resized()", () => {
   });
 
   test("sets the width of the rail that holds a panel", () => {
-    expect(resized(overview, dag, 320).rails?.left).toEqual({ ...rail(dag), size: 320 });
+    expect(resized(overview, edit, 320).rails?.left).toEqual({ ...rail(edit), size: 320 });
   });
 });
 
@@ -376,7 +376,7 @@ describe("resizeFailures()", () => {
 
   test("names none for a share below 1 of a split that holds more, or for the width of a rail", () => {
     expect(resizeFailures(overview, md, 0.25)).toEqual([]);
-    expect(resizeFailures(overview, dag, 320)).toEqual([]);
+    expect(resizeFailures(overview, edit, 320)).toEqual([]);
   });
 });
 
@@ -401,7 +401,7 @@ describe("gridChanges()", () => {
 
   test("finds other shares in the same splits, and another width of a rail that both grids hold", () => {
     expect(gridChanges(overview, { ...overview, sizes: [0.4, 0.6] })).toEqual({ ...none, sizes: true });
-    expect(gridChanges(overview, resized(overview, dag, 300))).toEqual({ ...none, sizes: true });
+    expect(gridChanges(overview, resized(overview, edit, 300))).toEqual({ ...none, sizes: true });
     // It compares shares exactly, which withStoredShares() keeps where they
     // moved a little.
     const jittered: Grid = { ...overview, sizes: [0.3 + 1e-12, 0.7 - 1e-12] };

@@ -153,7 +153,7 @@ test_that("dock_grid has a tree-style print method", {
     print(
       dock_grid(
         "a",
-        rail(plg("dag"), "b", active = "b", collapsed = TRUE),
+        rail(plg("edit"), "b", active = "b", collapsed = TRUE),
         rail("c", position = "right")
       )
     )
@@ -185,10 +185,10 @@ test_that("dock_grid() returns its grid visibly, so that it prints", {
 
 test_that("str_value.dock_grid lists the ids of the panels", {
 
-  grid <- dock_grid("b", blk("a"), rail(plg("dag")))
+  grid <- dock_grid("b", blk("a"), rail(plg("edit")))
 
-  expect_identical(str_value(grid), "<dock_grid> b, a, dag")
-  expect_output(str(grid), "<dock_grid> b, a, dag", fixed = TRUE)
+  expect_identical(str_value(grid), "<dock_grid> b, a, edit")
+  expect_output(str(grid), "<dock_grid> b, a, edit", fixed = TRUE)
 
   expect_identical(str_value(dock_grid()), "<dock_grid> (empty)")
 })

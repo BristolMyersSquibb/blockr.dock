@@ -503,7 +503,7 @@ The notes of blockr.core describe this for core's parts, and the readers of the 
 - Core's `board_plugins()` reads the plugins of a board, the dock plugin among them, in place of `dock_extensions()`.
 
 The function `board_grids()` goes, since each view that `board_views()` reads holds its grid.
-Such a grid names the panel of each plugin by the id of the plugin's class, as `plg("blockr.graph-graph_plugin")`.
+Such a grid names the panel of each plugin by the id of the plugin's class, as `plg("blockr.core-edit_board_plugin")`.
 The board keeps no name that a script gives a plugin.
 
 Take a board with two views, `main` and `side`, as version 0.2.1 builds it:

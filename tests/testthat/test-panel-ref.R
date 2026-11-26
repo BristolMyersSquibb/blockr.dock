@@ -1,11 +1,11 @@
 test_that("blk() and plg() name the panel of a block and that of a plugin", {
 
   expect_true(is_panel_ref(blk("a")))
-  expect_true(is_panel_ref(plg("blockr.dag-dag_plugin")))
+  expect_true(is_panel_ref(plg("blockr.core-edit_board_plugin")))
   expect_false(is_panel_ref("a"))
 
   expect_output(print(blk("a")), "<panel_ref> blk(\"a\")", fixed = TRUE)
-  expect_output(print(plg("dag")), "<panel_ref> plg(\"dag\")", fixed = TRUE)
+  expect_output(print(plg("edit")), "<panel_ref> plg(\"edit\")", fixed = TRUE)
 
   expect_error(blk(""), class = "dock_panel_ref_invalid")
   expect_error(plg(c("a", "b")), class = "dock_panel_ref_invalid")

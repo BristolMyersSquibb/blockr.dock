@@ -17,7 +17,7 @@ const DOCK = "blockr.dock-dock_plugin";
 const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
-const dag = { plugin: "blockr.dag-dag_plugin" };
+const edit = { plugin: "blockr.core-edit_board_plugin" };
 const md = { plugin: "blockr.md-md_plugin" };
 
 function group(...panels: Panel[]): TabGroup {
@@ -40,14 +40,15 @@ function viewIn(dockState: DockState, id: string): View {
 }
 
 // The view Main shows a tab group of a and b, which shows b, beside c, with
-// the DAG on a rail at its left edge. The folder Safety follows it at the top
-// and holds the view Inner and the empty folder Nested, and the view Side,
-// which shows c, comes last. The card of b shows its output alone.
+// core's Edit board plugin on a rail at its left edge. The folder Safety
+// follows it at the top and holds the view Inner and the empty folder
+// Nested, and the view Side, which shows c, comes last. The card of b shows
+// its output alone.
 const main: Grid = {
   orientation: "horizontal",
   children: [{ panels: [a, b], active: b }, group(c)],
   sizes: [0.5, 0.5],
-  rails: { left: rail(dag) },
+  rails: { left: rail(edit) },
 };
 
 const state: DockState = {
@@ -57,7 +58,7 @@ const state: DockState = {
       name: "Inner",
       folder: "f",
       index: "a0",
-      grid: { orientation: "horizontal", children: [group(b)], sizes: [1], rails: { left: rail(dag) } },
+      grid: { orientation: "horizontal", children: [group(b)], sizes: [1], rails: { left: rail(edit) } },
     },
     side: { name: "Side", folder: null, index: "a2", grid: { orientation: "horizontal", children: [group(c)], sizes: [1] } },
   },
@@ -437,8 +438,8 @@ describe("blockr.dock-add_panel", () => {
     await run("add_panel", { view: "main", panel: md, near: c, side: "below" });
     expect(dock().views.main?.grid.children[1]).toEqual({ children: [group(c), group(md)], sizes: [0.5, 0.5] });
 
-    await run("add_panel", { view: "side", panel: dag, rail: "right" });
-    expect(dock().views.side?.grid.rails).toEqual({ right: rail(dag) });
+    await run("add_panel", { view: "side", panel: edit, rail: "right" });
+    expect(dock().views.side?.grid.rails).toEqual({ right: rail(edit) });
   });
 
   test("evens out the split that takes a new tab group, as dockview's addPanel() does", async () => {
@@ -462,7 +463,7 @@ describe("blockr.dock-remove_panel", () => {
     const { core, dock, run } = await start();
 
     await run("remove_panel", { view: "main", panel: c });
-    await run("remove_panel", { view: "main", panel: dag });
+    await run("remove_panel", { view: "main", panel: edit });
     expect(dock().views.main?.grid).toEqual({ orientation: "horizontal", children: [{ panels: [a, b], active: b }], sizes: [1] });
     expect(dock().views.inner).toEqual(state.views.inner);
 
@@ -482,12 +483,12 @@ describe("blockr.dock-move_panel", () => {
     const { dock, run } = await start();
 
     await run("move_panel", { view: "main", panel: c, near: a });
-    await run("move_panel", { view: "main", panel: dag, rail: "right" });
+    await run("move_panel", { view: "main", panel: edit, rail: "right" });
     expect(dock().views.main?.grid).toEqual({
       orientation: "horizontal",
       children: [{ panels: [a, b, c], active: c }],
       sizes: [1],
-      rails: { right: rail(dag) },
+      rails: { right: rail(edit) },
     });
   });
 
@@ -500,10 +501,10 @@ describe("blockr.dock-move_panel", () => {
   test("changes nothing where a panel alone on a rail moves to that rail, whose width stays", async () => {
     const wide: DockState = {
       ...state,
-      views: { ...state.views, main: { ...viewIn(state, "main"), grid: { ...main, rails: { left: { ...rail(dag), size: 400 } } } } },
+      views: { ...state.views, main: { ...viewIn(state, "main"), grid: { ...main, rails: { left: { ...rail(edit), size: 400 } } } } },
     };
     const { core, dock, run } = await start({ dockState: wide });
-    await run("move_panel", { view: "main", panel: dag, rail: "left" });
+    await run("move_panel", { view: "main", panel: edit, rail: "left" });
     expect(dock()).toEqual(wide);
     expect(core.store.canUndo()).toBe(false);
   });
@@ -517,8 +518,8 @@ describe("blockr.dock-move_panel", () => {
   test("refuses a `near` that the view does not show, and one on a rail beside which the panel would go", async () => {
     const { dock, refuses } = await start();
     await refuses("move_panel", { view: "main", panel: c, near: md }, ['The view does not show the panel of the plugin "blockr.md-md_plugin", which near names.']);
-    await refuses("move_panel", { view: "main", panel: c, near: dag, side: "below" }, [
-      'The view shows the panel of the plugin "blockr.dag-dag_plugin", which near names, on a rail, which takes a panel only within.',
+    await refuses("move_panel", { view: "main", panel: c, near: edit, side: "below" }, [
+      'The view shows the panel of the plugin "blockr.core-edit_board_plugin", which near names, on a rail, which takes a panel only within.',
     ]);
     expect(dock()).toEqual(state);
   });
@@ -529,7 +530,7 @@ describe("blockr.dock-resize_panel", () => {
     const { dock, run } = await start();
 
     await run("resize_panel", { view: "main", panel: c, size: 0.25 });
-    await run("resize_panel", { view: "main", panel: dag, size: 300 });
+    await run("resize_panel", { view: "main", panel: edit, size: 300 });
     expect(dock().views.main?.grid).toMatchObject({ sizes: [0.75, 0.25], rails: { left: { size: 300 } } });
   });
 
@@ -588,24 +589,24 @@ describe("blockr.dock-show_panel", () => {
     expect(gridPanels(viewIn(dock(), "main").grid)).toContainEqual(md);
   });
 
-  // The views main and inner, with the DAG on the left rail of each,
-  // collapsed, and on main beside the panel of blockr.md, which the rail
-  // shows.
+  // The views main and inner, with core's Edit board plugin on the left rail
+  // of each, collapsed, and on main beside the panel of blockr.md, which the
+  // rail shows.
   const collapsed: DockState = {
     ...state,
     views: {
       ...state.views,
-      main: { ...viewIn(state, "main"), grid: { ...main, rails: { left: { ...rail(md, dag), active: md, collapsed: true } } } },
-      inner: { ...viewIn(state, "inner"), grid: { ...viewIn(state, "inner").grid, rails: { left: { ...rail(dag), collapsed: true } } } },
+      main: { ...viewIn(state, "main"), grid: { ...main, rails: { left: { ...rail(md, edit), active: md, collapsed: true } } } },
+      inner: { ...viewIn(state, "inner"), grid: { ...viewIn(state, "inner").grid, rails: { left: { ...rail(edit), collapsed: true } } } },
     },
   };
 
   test("opens a collapsed rail that holds the panel, on every view that has a rail on that edge while sync_rails is on", async () => {
     const { dock, run } = await start({ dockState: collapsed });
 
-    await run("show_panel", { panel: dag });
-    expect(dock().views.main?.grid.rails?.left).toEqual({ ...rail(md, dag), active: dag });
-    expect(dock().views.inner?.grid.rails?.left).toEqual(rail(dag));
+    await run("show_panel", { panel: edit });
+    expect(dock().views.main?.grid.rails?.left).toEqual({ ...rail(md, edit), active: edit });
+    expect(dock().views.inner?.grid.rails?.left).toEqual(rail(edit));
     expect(dock().views.side).toEqual(state.views.side);
   });
 
@@ -613,8 +614,8 @@ describe("blockr.dock-show_panel", () => {
     const { core, dock, run } = await start({ dockState: collapsed });
     await core.commands.run("blockr.core-set_option", { id: "sync_rails", value: false });
 
-    await run("show_panel", { panel: dag });
-    expect(dock().views.main?.grid.rails?.left).toEqual({ ...rail(md, dag), active: dag });
+    await run("show_panel", { panel: edit });
+    expect(dock().views.main?.grid.rails?.left).toEqual({ ...rail(md, edit), active: edit });
     expect(dock().views.inner?.grid.rails?.left?.collapsed).toBe(true);
   });
 
@@ -624,8 +625,8 @@ describe("blockr.dock-show_panel", () => {
 
     await run("show_panel", { panel: a });
     expect(dock().views.main?.grid.children[0]).toEqual({ panels: [a, b], active: a });
-    await run("show_panel", { panel: dag });
-    expect(dock().views.main?.grid.rails?.left).toEqual({ ...rail(md, dag), active: dag });
+    await run("show_panel", { panel: edit });
+    expect(dock().views.main?.grid.rails?.left).toEqual({ ...rail(md, edit), active: edit });
   });
 });
 
@@ -747,8 +748,8 @@ describe("the commands for panels and rails on a locked board", () => {
 
     const open = await start({ locked: true, blockrOptions: { lock_rearrange: "FALSE", lock_resize: false } });
     await open.run("move_panel", { view: "main", panel: c, near: a });
-    await open.run("resize_panel", { view: "inner", panel: dag, size: 300 });
-    expect(gridPanels(open.dock().views.main?.grid ?? empty)).toEqual([a, b, c, dag]);
+    await open.run("resize_panel", { view: "inner", panel: edit, size: 300 });
+    expect(gridPanels(open.dock().views.main?.grid ?? empty)).toEqual([a, b, c, edit]);
     expect(open.dock().views.inner?.grid.rails?.left?.size).toBe(300);
   });
 
@@ -760,7 +761,7 @@ describe("the commands for panels and rails on a locked board", () => {
 
   test("set a grid that changes only the panels shown and the rails' collapse, under both blockr options", async () => {
     const { dock, run } = await start({ locked: true });
-    const grid: Grid = { ...main, children: [{ panels: [a, b], active: a }, group(c)], rails: { left: { ...rail(dag), collapsed: true } } };
+    const grid: Grid = { ...main, children: [{ panels: [a, b], active: a }, group(c)], rails: { left: { ...rail(edit), collapsed: true } } };
     await run("set_grid", { view: "main", grid });
     expect(dock().views.main?.grid).toEqual(grid);
   });

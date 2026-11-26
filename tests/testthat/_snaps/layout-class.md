@@ -56,12 +56,12 @@
 ---
 
     Code
-      print(dock_grid("a", rail(plg("dag"), "b", active = "b", collapsed = TRUE),
+      print(dock_grid("a", rail(plg("edit"), "b", active = "b", collapsed = TRUE),
       rail("c", position = "right")))
     Output
       <dock_grid>
       └─ a
-      left rail (collapsed): dag (plugin), b (active)
+      left rail (collapsed): edit (plugin), b (active)
       right rail: c
 
 ---

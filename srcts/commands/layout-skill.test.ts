@@ -65,8 +65,11 @@ test("the skill names only commands that the dock and core register", async () =
   await settled();
   const registered = new Set([...Object.keys(core.commands.registered()), ...dockCommands.map((command) => command.id)]);
 
+  // The skill names plugins too, by the ids of their classes, as the dock's
+  // and that of core's Edit board plugin.
   const named = new Set(SKILL.match(/\bblockr\.(?:core|dock)-\w+/g));
   named.delete(DOCK);
+  for (const plugin of Object.keys(core.plugins.appPlugins())) named.delete(plugin);
 
   expect(named.size).toBeGreaterThan(0);
   expect([...named].filter((id) => !registered.has(id))).toEqual([]);
