@@ -1,6 +1,6 @@
 // The spec of the status dot, against the table of the page
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.7#the-status-dot),
-// as blockr.dag checks its copy of the spec too.
+// as blockr.graph checks its copy of the spec too.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

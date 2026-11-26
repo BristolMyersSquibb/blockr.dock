@@ -27,10 +27,10 @@ An app script builds its board with \code{\link[blockr.core:new_board]{blockr.co
 the dock's state among the board's \code{plugins}, as the dock plugin that
 \code{\link[=new_dock_plugin]{new_dock_plugin()}} makes.
 The script may name the board's other plugins there, as
-\code{plugins = list(new_dock_plugin(...), dag = new_dag_plugin())}, and a grid
+\code{plugins = list(new_dock_plugin(...), dag = new_graph_plugin())}, and a grid
 then names a plugin's panel by that name, as \code{plg("dag")}.
 A grid may also name a plugin by the id of its class, as
-\code{plg("blockr.dag-dag_plugin")}, and so name a plugin that the board does
+\code{plg("blockr.graph-graph_plugin")}, and so name a plugin that the board does
 not hold, such as one that keeps no state.
 }
 \details{

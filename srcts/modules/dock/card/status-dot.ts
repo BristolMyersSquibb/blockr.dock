@@ -1,9 +1,9 @@
 // The spec of a block's status dot, which the card draws on the block's mark
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.7#the-status-dot).
 // It takes the block's status and the notifications about the block, and
-// nothing else, and it imports nothing of the dock's, so that blockr.dag can
-// keep a copy of it for the badge on its node, which gives the same dot for the
-// same block.
+// nothing else, and it imports nothing of the dock's, so that blockr.graph
+// can keep a copy of it for the nodes of the DAG, which give the same dot for
+// the same block.
 // A test in each package checks its copy against the table of the page.
 //
 // - The dot reads the block's status, except that it reads failed while an

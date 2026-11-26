@@ -108,8 +108,8 @@ A grid holds nested splits of tab groups, and a rail on either edge of the view:
   "sizes": [0.3, 0.7],
   "rails": {
     "left": {
-      "panels": [{ "plugin": "blockr.dag-dag_plugin" }],
-      "active": { "plugin": "blockr.dag-dag_plugin" },
+      "panels": [{ "plugin": "blockr.graph-graph_plugin" }],
+      "active": { "plugin": "blockr.graph-graph_plugin" },
       "collapsed": false,
       "size": 500
     }

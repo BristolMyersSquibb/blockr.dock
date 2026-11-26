@@ -7,7 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-A plugin extends a board as a whole, as the DAG of blockr.dag does, and its class comes from a package (see `?blockr.core::new_plugin`).
+A plugin extends a board as a whole, as the DAG of blockr.graph does, and its class comes from a package (see `?blockr.core::new_plugin`).
 Where the class has a `ui`, every frontend places that UI on the page, and the dock places it in a panel.
 This vignette is for the author of such a package.
 It says how a plugin draws in its panel and sizes itself there, where it opens what needs more room, how it shows a block or a plugin, how it reads the dock's state and changes which views hold which panels, and where its settings go.
@@ -173,7 +173,7 @@ A plugin shows a block or a plugin through core's `show()`, as under every front
 
 ```ts
 await core.show({ block: note.block });
-await core.show({ plugin: "blockr.dag-dag_plugin" });
+await core.show({ plugin: "blockr.graph-graph_plugin" });
 ```
 
 Under the dock, `show()` takes these steps:

@@ -82,7 +82,7 @@
 #' dock_grid("a", group("b", "c"), orientation = "vertical")
 #'
 #' # The block a, with the DAG on a rail on the left edge
-#' dock_grid(blk("a"), rail(plg("blockr.dag-dag_plugin")))
+#' dock_grid(blk("a"), rail(plg("blockr.graph-graph_plugin")))
 #'
 #' @return The function `dock_grid()` returns a `dock_grid`.
 #'   The function `panels()` returns a tab group, `group()` a split and
