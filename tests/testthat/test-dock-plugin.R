@@ -70,6 +70,17 @@ test_that("core finds the dock's plugin class in the package's listing", {
   )
 })
 
+test_that("the package offers blockr.assistant its module `assistant`", {
+
+  # Core gives the module the id blockr.dock-assistant, by which
+  # blockr.assistant loads it as each call of its model goes out.
+  expect_identical(
+    ._BLOCKR_MODULES_[["modules"]],
+    list(assistant = "js/assistant.js")
+  )
+  expect_true(nzchar(system.file("js/assistant.js", package = "blockr.dock")))
+})
+
 test_that("the dock plugin holds no state where the script gives none", {
 
   expect_length(plugin_state(new_dock_plugin()), 0L)
