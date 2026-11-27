@@ -4,6 +4,7 @@
 
 import type { Json, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
+import { expectedErrors } from "@blockr/ui/stubs";
 import { describe, expect, onTestFinished, test } from "vitest";
 import { compare, gridPanels, inFolder, RAIL_SIZE, viewOrder } from "../../state/index.ts";
 import type { DockState, Grid, Panel, Rail, TabGroup, View } from "../../state/index.ts";
@@ -11,7 +12,6 @@ import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
-import { expectedErrors } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 

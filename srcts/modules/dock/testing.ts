@@ -14,7 +14,6 @@ import type { Json, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
 import { press, type } from "@blockr/ui/stubs";
 import { act } from "react";
-import { onTestFinished } from "vitest";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
@@ -59,26 +58,6 @@ export function typeSearch(search: HTMLInputElement, text: string): void {
     search.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: text, bubbles: true, cancelable: true }));
     type(search, text);
   });
-}
-
-// Takes the errors that a test sets off on purpose off the console, those whose
-// messages match one of the patterns, for the rest of the test, and gives the
-// messages that it took, in order, which the test counts.
-// Core's stub prints each error that core or the dock logs, and the setup of
-// the tests fails a test on any other error that it prints
-// (../../../vitest.setup.ts).
-export function expectedErrors(...patterns: readonly RegExp[]): string[] {
-  const taken: string[] = [];
-  const print = console.error;
-  console.error = (...args: unknown[]) => {
-    const message = args.map(String).join(" ");
-    if (patterns.some((pattern) => pattern.test(message))) taken.push(message);
-    else print(...args);
-  };
-  onTestFinished(() => {
-    console.error = print;
-  });
-  return taken;
 }
 
 // Clicks the element as a user's pointer does: it goes down on it, then
